@@ -24,9 +24,8 @@
 #include <unistd.h>
 #include <dlfcn.h>
 
-#define LOG_TAG "AudioStreamInALSA"
+#define LOG_TAG "audio.primary.msm8960"
 //#define LOG_NDEBUG 0
-#define LOG_NDDEBUG 0
 #include <utils/Log.h>
 #include <utils/String8.h>
 
@@ -92,7 +91,7 @@ AudioStreamInALSA::AudioStreamInALSA(AudioHardwareALSA *parent,
 
             err = initSurroundSoundLibrary(handle->bufferSize);
             if ( NO_ERROR != err) {
-                LOGE("initSurroundSoundLibrary failed: %d  handle->bufferSize:%d", err,handle->bufferSize);
+                ALOGE("initSurroundSoundLibrary failed: %d  handle->bufferSize:%d", err,handle->bufferSize);
             }
 
             property_get("ssr.pcmdump",c_multi_ch_dump,"0");
@@ -104,7 +103,7 @@ AudioStreamInALSA::AudioStreamInALSA(AudioHardwareALSA *parent,
                 if ( !mFp_6ch)
                     mFp_6ch = fopen("/data/6ch_ssr.pcm", "wb");
                 if ((!mFp_4ch) || (!mFp_6ch))
-                    LOGE("mfp_4ch or mfp_6ch open failed: mfp_4ch:%p mfp_6ch:%p",mFp_4ch,mFp_6ch);
+                    ALOGE("mfp_4ch or mfp_6ch open failed: mfp_4ch:%p mfp_6ch:%p",mFp_4ch,mFp_6ch);
             }
         }
     }
@@ -125,7 +124,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
 {
     int period_size;
 
-    LOGV("read:: buffer %p, bytes %d", buffer, bytes);
+    ALOGV("read:: buffer %p, bytes %d", buffer, bytes);
 
     int n;
     status_t          err;
@@ -141,7 +140,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
         if ((use_case != NULL) && (strcmp(use_case, SND_USE_CASE_VERB_INACTIVE))) {
             if ((mHandle->devices == AudioSystem::DEVICE_IN_VOICE_CALL) &&
                 (newMode == AudioSystem::MODE_IN_CALL)) {
-                LOGD("read:: mParent->mIncallMode=%d", mParent->mIncallMode);
+                ALOGD("read:: mParent->mIncallMode=%d", mParent->mIncallMode);
                 if ((mParent->mIncallMode & AudioSystem::CHANNEL_IN_VOICE_UPLINK) &&
                     (mParent->mIncallMode & AudioSystem::CHANNEL_IN_VOICE_DNLINK)) {
 #if 0
@@ -184,7 +183,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
         } else {
             if ((mHandle->devices == AudioSystem::DEVICE_IN_VOICE_CALL) &&
                 (newMode == AudioSystem::MODE_IN_CALL)) {
-                LOGD("read:: ---- mParent->mIncallMode=%d", mParent->mIncallMode);
+                ALOGD("read:: ---- mParent->mIncallMode=%d", mParent->mIncallMode);
                 if ((mParent->mIncallMode & AudioSystem::CHANNEL_IN_VOICE_UPLINK) &&
                     (mParent->mIncallMode & AudioSystem::CHANNEL_IN_VOICE_DNLINK)) {
 #if 0
@@ -268,7 +267,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
         else
             mHandle->module->open(mHandle);
         if(mHandle->handle == NULL) {
-            LOGE("read:: PCM device open failed");
+            ALOGE("read:: PCM device open failed");
             mParent->mLock.unlock();
 
             return 0;
@@ -292,14 +291,14 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
        (mDevices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)) &&
        (!mParent->musbRecordingState)) {
         mParent->mLock.lock();
-        LOGD("Starting UsbRecording thread");
+        ALOGD("Starting UsbRecording thread");
         mParent->startUsbRecordingIfNotStarted();
         if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL) ||
            !strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP)) {
-            LOGD("Enabling voip recording bit");
+            ALOGD("Enabling voip recording bit");
             mParent->musbRecordingState |= USBRECBIT_VOIPCALL;
         }else{
-            LOGD("Enabling HiFi Recording bit");
+            ALOGD("Enabling HiFi Recording bit");
             mParent->musbRecordingState |= USBRECBIT_REC;
         }
         mParent->mLock.unlock();
@@ -319,7 +318,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
 
         do {
             if (mSurroundOutputBufferIdx > 0) {
-                LOGV("AudioStreamInALSA::read() - copy processed output "
+                ALOGV("AudioStreamInALSA::read() - copy processed output "
                      "to buffer, mSurroundOutputBufferIdx = %d",
                      mSurroundOutputBufferIdx);
                 // Copy processed output to buffer
@@ -340,7 +339,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
             }
 
             if (processed >= samples) {
-                LOGV("AudioStreamInALSA::read() - done processing buffer, "
+                ALOGV("AudioStreamInALSA::read() - done processing buffer, "
                      "processed = %d", processed);
                 // Done processing this buffer
                 break;
@@ -352,7 +351,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
             while (mHandle->handle && read_pending > 0) {
                 n = pcm_read(mHandle->handle, &mSurroundInputBuffer[read],
                              period_bytes);
-                LOGV("pcm_read() returned n = %d buffer:%p size:%d", n, &mSurroundInputBuffer[read], period_bytes);
+                ALOGV("pcm_read() returned n = %d buffer:%p size:%d", n, &mSurroundInputBuffer[read], period_bytes);
                 if (n && n != -EAGAIN) {
                     //Recovery part of pcm_read. TODO:split recovery.
                     return static_cast<ssize_t>(n);
@@ -392,7 +391,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
             }
 
             mSurroundOutputBufferIdx += SSR_OUTPUT_FRAME_SIZE;
-            LOGV("do_while loop: processed=%d, samples=%d\n", processed, samples);
+            ALOGV("do_while loop: processed=%d, samples=%d\n", processed, samples);
         } while (mHandle->handle && processed < samples);
         read = processed * sizeof(Word16);
         buffer = buffer_start;
@@ -407,10 +406,10 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
 
             n = pcm_read(mHandle->handle, buffer,
                 period_size);
-            LOGV("pcm_read() returned n = %d", n);
+            ALOGV("pcm_read() returned n = %d", n);
             if (n && (n == -EIO || n == -EAGAIN || n == -EPIPE || n == -EBADFD)) {
                 mParent->mLock.lock();
-                LOGW("pcm_read() returned error n %d, Recovering from error\n", n);
+                ALOGW("pcm_read() returned error n %d, Recovering from error\n", n);
                 pcm_close(mHandle->handle);
                 mHandle->handle = NULL;
                 if((!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL, strlen(SND_USE_CASE_VERB_IP_VOICECALL))) ||
@@ -425,7 +424,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                 continue;
             }
             else if (n < 0) {
-                LOGD("pcm_read() returned n < 0");
+                ALOGD("pcm_read() returned n < 0");
                 return static_cast<ssize_t>(n);
             }
             else {
@@ -458,14 +457,14 @@ status_t AudioStreamInALSA::close()
 {
     Mutex::Autolock autoLock(mParent->mLock);
 
-    LOGD("close");
+    ALOGD("close");
     if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
         (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
         if((mParent->mVoipStreamCount)) {
-            LOGD("musbRecordingState: %d, mVoipStreamCount:%d",mParent->musbRecordingState,
+            ALOGD("musbRecordingState: %d, mVoipStreamCount:%d",mParent->musbRecordingState,
                   mParent->mVoipStreamCount );
             if(mParent->mVoipStreamCount == 1) {
-                LOGE("Deregistering VOIP Call bit, musbPlaybackState:%d,"
+                ALOGE("Deregistering VOIP Call bit, musbPlaybackState:%d,"
                        "musbRecordingState:%d", mParent->musbPlaybackState, mParent->musbRecordingState);
                 mParent->musbPlaybackState &= ~USBPLAYBACKBIT_VOIPCALL;
                 mParent->musbRecordingState &= ~USBRECBIT_VOIPCALL;
@@ -477,7 +476,7 @@ status_t AudioStreamInALSA::close()
         mParent->mVoipStreamCount = 0;
         mParent->mVoipMicMute = 0;
     } else {
-        LOGD("Deregistering REC bit, musbRecordingState:%d", mParent->musbRecordingState);
+        ALOGD("Deregistering REC bit, musbRecordingState:%d", mParent->musbRecordingState);
         mParent->musbRecordingState &= ~USBRECBIT_REC;
      }
 #if 0
@@ -488,7 +487,7 @@ status_t AudioStreamInALSA::close()
        }
     }
 #endif
-    LOGD("close");
+    ALOGD("close");
     mParent->closeUsbRecordingIfNothingActive();
 
     ALSAStreamOps::close();
@@ -541,7 +540,7 @@ status_t AudioStreamInALSA::standby()
 {
     Mutex::Autolock autoLock(mParent->mLock);
 
-    LOGD("standby");
+    ALOGD("standby");
 
     if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
         (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
@@ -549,18 +548,18 @@ status_t AudioStreamInALSA::standby()
     }
 
 #if 0
-    LOGD("standby");
+    ALOGD("standby");
     if (mParent->mFusion3Platform) {
        if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_INCALL_REC)) ||
            (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_CAPTURE_VOICE))) {
-           LOGD(" into standby, stop record");
+           ALOGD(" into standby, stop record");
            csd_client_stop_record();
        }
     }
 #endif
     mHandle->module->standby(mHandle);
 
-    LOGD("Checking for musbRecordingState %d", mParent->musbRecordingState);
+    ALOGD("Checking for musbRecordingState %d", mParent->musbRecordingState);
     mParent->musbRecordingState &= ~USBRECBIT_REC;
     mParent->closeUsbRecordingIfNothingActive();
 
@@ -600,7 +599,7 @@ status_t AudioStreamInALSA::initSurroundSoundLibrary(unsigned long buffersize)
     mSurroundOutputBufferIdx = 0;
 
     if ( mSurroundObj ) {
-        LOGE("ola filter library is already initialized");
+        ALOGE("ola filter library is already initialized");
         return ALREADY_EXISTS;
     }
 
@@ -608,7 +607,7 @@ status_t AudioStreamInALSA::initSurroundSoundLibrary(unsigned long buffersize)
     mSurroundInputBuffer = (Word16 *) calloc(2 * SSR_INPUT_FRAME_SIZE,
                                               sizeof(Word16));
     if ( !mSurroundInputBuffer ) {
-       LOGE("Memory allocation failure. Not able to allocate memory for surroundInputBuffer");
+       ALOGE("Memory allocation failure. Not able to allocate memory for surroundInputBuffer");
        goto init_fail;
     }
 
@@ -616,25 +615,25 @@ status_t AudioStreamInALSA::initSurroundSoundLibrary(unsigned long buffersize)
     mSurroundOutputBuffer = (Word16 *) calloc(2 * SSR_OUTPUT_FRAME_SIZE,
                                                sizeof(Word16));
     if ( !mSurroundOutputBuffer ) {
-       LOGE("Memory allocation failure. Not able to allocate memory for surroundOutputBuffer");
+       ALOGE("Memory allocation failure. Not able to allocate memory for surroundOutputBuffer");
        goto init_fail;
     }
 
     // Allocate memory for real and imag coeffs array
     mRealCoeffs = (Word16 **) calloc(COEFF_ARRAY_SIZE, sizeof(Word16 *));
     if ( !mRealCoeffs ) {
-        LOGE("Memory allocation failure during real Coefficient array");
+        ALOGE("Memory allocation failure during real Coefficient array");
         goto init_fail;
     }
 
     mImagCoeffs = (Word16 **) calloc(COEFF_ARRAY_SIZE, sizeof(Word16 *));
     if ( !mImagCoeffs ) {
-        LOGE("Memory allocation failure during imaginary Coefficient array");
+        ALOGE("Memory allocation failure during imaginary Coefficient array");
         goto init_fail;
     }
 
     if( readCoeffsFromFile() != NO_ERROR) {
-        LOGE("Error while loading coeffs from file");
+        ALOGE("Error while loading coeffs from file");
         goto init_fail;
     }
 
@@ -650,7 +649,7 @@ status_t AudioStreamInALSA::initSurroundSoundLibrary(unsigned long buffersize)
                   NULL);
 
     if ( ret > 0 ) {
-        LOGV("Allocating surroundObj size is %d", ret);
+        ALOGV("Allocating surroundObj size is %d", ret);
         mSurroundObj = (void *)malloc(ret);
         memset(mSurroundObj,0,ret);
         if (NULL != mSurroundObj) {
@@ -665,16 +664,16 @@ status_t AudioStreamInALSA::initSurroundSoundLibrary(unsigned long buffersize)
                         high_freq,
                         NULL);
             if (0 != ret) {
-               LOGE("surround_filters_init failed with ret:%d",ret);
+               ALOGE("surround_filters_init failed with ret:%d",ret);
                surround_filters_release(mSurroundObj);
                goto init_fail;
             }
         } else {
-            LOGE("Allocationg mSurroundObj failed");
+            ALOGE("Allocationg mSurroundObj failed");
             goto init_fail;
         }
     } else {
-        LOGE("surround_filters_init(mSurroundObj=Null) failed with ret: %d",ret);
+        ALOGE("surround_filters_init(mSurroundObj=Null) failed with ret: %d",ret);
         goto init_fail;
     }
 
@@ -735,45 +734,45 @@ status_t AudioStreamInALSA::readCoeffsFromFile()
     FILE    *flt4i;
 
     if ( (flt1r = fopen(SURROUND_FILE_1R, "rb")) == NULL ) {
-        LOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_1R);
+        ALOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_1R);
         return NAME_NOT_FOUND;
     }
 
     if ( (flt2r = fopen(SURROUND_FILE_2R, "rb")) == NULL ) {
-        LOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_2R);
+        ALOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_2R);
         return NAME_NOT_FOUND;
     }
 
     if ( (flt3r = fopen(SURROUND_FILE_3R, "rb")) == NULL ) {
-        LOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_3R);
+        ALOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_3R);
         return  NAME_NOT_FOUND;
     }
 
     if ( (flt4r = fopen(SURROUND_FILE_4R, "rb")) == NULL ) {
-        LOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_4R);
+        ALOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_4R);
         return  NAME_NOT_FOUND;
     }
 
     if ( (flt1i = fopen(SURROUND_FILE_1I, "rb")) == NULL ) {
-        LOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_1I);
+        ALOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_1I);
         return NAME_NOT_FOUND;
     }
 
     if ( (flt2i = fopen(SURROUND_FILE_2I, "rb")) == NULL ) {
-        LOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_2I);
+        ALOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_2I);
         return NAME_NOT_FOUND;
     }
 
     if ( (flt3i = fopen(SURROUND_FILE_3I, "rb")) == NULL ) {
-        LOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_3I);
+        ALOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_3I);
         return NAME_NOT_FOUND;
     }
 
     if ( (flt4i = fopen(SURROUND_FILE_4I, "rb")) == NULL ) {
-        LOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_4I);
+        ALOGE("Cannot open filter co-efficient file %s", SURROUND_FILE_4I);
         return NAME_NOT_FOUND;
     }
-    LOGV("readCoeffsFromFile all filter files opened");
+    ALOGV("readCoeffsFromFile all filter files opened");
 
     for (int i=0; i<COEFF_ARRAY_SIZE; i++) {
         mRealCoeffs[i] = (Word16 *)calloc(FILT_SIZE, sizeof(Word16));

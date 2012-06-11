@@ -24,10 +24,10 @@
 #include <unistd.h>
 #include <dlfcn.h>
 
-#define LOG_TAG "ALSAControl"
+#define LOG_TAG "alsa.msm8960"
 //#define LOG_NDEBUG 0
-#define LOG_NDDEBUG 0
 #include <utils/Log.h>
+
 #include <utils/String8.h>
 
 #include <cutils/properties.h>
@@ -41,9 +41,9 @@ namespace android_audio_legacy
 
 ALSAControl::ALSAControl(const char *device)
 {
-    LOGD("ALSAControl: ctor device %s", device);
+    ALOGD("ALSAControl: ctor device %s", device);
     mHandle = mixer_open(device);
-    LOGV("ALSAControl: ctor mixer %p", mHandle);
+    ALOGV("ALSAControl: ctor mixer %p", mHandle);
 }
 
 ALSAControl::~ALSAControl()
@@ -56,7 +56,7 @@ status_t ALSAControl::get(const char *name, unsigned int &value, int index)
     struct mixer_ctl *ctl;
 
     if (!mHandle) {
-        LOGE("Control not initialized");
+        ALOGE("Control not initialized");
         return NO_INIT;
     }
 
@@ -72,16 +72,16 @@ status_t ALSAControl::set(const char *name, unsigned int value, int index)
 {
     struct mixer_ctl *ctl;
     int ret = 0;
-    LOGD("set:: name %s value %d index %d", name, value, index);
+    ALOGD("set:: name %s value %d index %d", name, value, index);
     if (!mHandle) {
-        LOGE("Control not initialized");
+        ALOGE("Control not initialized");
         return NO_INIT;
     }
 
     // ToDo: Do we need to send index here? Right now it works with 0
     ctl = mixer_get_control(mHandle, name, 0);
     if(ctl == NULL) {
-        LOGE("Could not get the mixer control");
+        ALOGE("Could not get the mixer control");
         return BAD_VALUE;
     }
     ret = mixer_ctl_set(ctl, value);
@@ -92,16 +92,16 @@ status_t ALSAControl::set(const char *name, const char *value)
 {
     struct mixer_ctl *ctl;
     int ret = 0;
-    LOGD("set:: name %s value %s", name, value);
+    ALOGD("set:: name %s value %s", name, value);
 
     if (!mHandle) {
-        LOGE("Control not initialized");
+        ALOGE("Control not initialized");
         return NO_INIT;
     }
 
     ctl = mixer_get_control(mHandle, name, 0);
     if(ctl == NULL) {
-        LOGE("Could not get the mixer control");
+        ALOGE("Could not get the mixer control");
         return BAD_VALUE;
     }
     ret = mixer_ctl_select(ctl, value);
@@ -112,16 +112,16 @@ status_t ALSAControl::setext(const char *name, int count, char **setValues)
 {
     struct mixer_ctl *ctl;
     int ret = 0;
-    LOGD("setext:: name %s count %d", name, count);
+    ALOGD("setext:: name %s count %d", name, count);
     if (!mHandle) {
-        LOGE("Control not initialized");
+        ALOGE("Control not initialized");
         return NO_INIT;
     }
 
     // ToDo: Do we need to send index here? Right now it works with 0
     ctl = mixer_get_control(mHandle, name, 0);
     if(ctl == NULL) {
-        LOGE("Could not get the mixer control");
+        ALOGE("Could not get the mixer control");
         return BAD_VALUE;
     }
     ret = mixer_ctl_set_value(ctl, count, setValues);

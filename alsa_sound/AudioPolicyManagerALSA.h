@@ -33,9 +33,7 @@ namespace android_audio_legacy {
 #define SONIFICATION_HEADSET_VOLUME_FACTOR 0.5
 // Min volume for STRATEGY_SONIFICATION streams when limited by music volume: -36dB
 #define SONIFICATION_HEADSET_VOLUME_MIN  0.016
-// Time in seconds during which we consider that music is still active after a music
-// track was stopped - see computeVolume()
-#define SONIFICATION_HEADSET_MUSIC_DELAY  5
+
 class AudioPolicyManager: public AudioPolicyManagerBase
 {
 
@@ -65,7 +63,9 @@ public:
         // "future" device selection (fromCache == false) when called from a context
         //  where conditions are changing (setDeviceConnectionState(), setPhoneState()...) AND
         //  before updateDeviceForStrategy() is called.
-        virtual uint32_t getDeviceForStrategy(routing_strategy strategy, bool fromCache = true);
+        virtual audio_devices_t getDeviceForStrategy(routing_strategy strategy,
+                                                     bool fromCache);
+
 
 #ifdef TUNNEL_LPA_ENABLED
         virtual audio_io_handle_t getSession(AudioSystem::stream_type stream,
@@ -95,7 +95,7 @@ protected:
         // check that volume change is permitted, compute and send new volume to audio hardware
         status_t checkAndSetVolume(int stream, int index, audio_io_handle_t output, uint32_t device, int delayMs = 0, bool force = false);
         // select input device corresponding to requested audio source
-        virtual uint32_t getDeviceForInputSource(int inputSource);
+        virtual audio_devices_t getDeviceForInputSource(int inputSource);
         // Mute or unmute the stream on the specified output
         void setStreamMute(int stream, bool on, audio_io_handle_t output, int delayMs = 0);
         audio_io_handle_t mLPADecodeOutput;           // active output handler
