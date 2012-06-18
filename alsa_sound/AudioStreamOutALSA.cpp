@@ -25,8 +25,9 @@
 #include <dlfcn.h>
 #include <math.h>
 
-#define LOG_TAG "audio.primary.msm8960"
+#define LOG_TAG "AudioStreamOutALSA"
 //#define LOG_NDEBUG 0
+#define LOG_NDDEBUG 0
 #include <utils/Log.h>
 #include <utils/String8.h>
 
@@ -144,7 +145,7 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
             free(use_case);
             if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
                (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
-#if 0
+#ifdef QCOM_USBAUDIO_ENABLED
                 if((mDevices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
                       (mDevices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)||
                       (mDevices & AudioSystem::DEVICE_OUT_PROXY)) {
@@ -155,7 +156,7 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
                 {
                   mHandle->module->route(mHandle, mDevices , AudioSystem::MODE_IN_COMMUNICATION);
                 }
-#if 0
+#ifdef QCOM_USBAUDIO_ENABLED
             } else if((mDevices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
                       (mDevices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)||
                       (mDevices & AudioSystem::DEVICE_OUT_PROXY)) {
@@ -183,7 +184,7 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
                 mParent->mLock.unlock();
                 return 0;
             }
-#if 0
+#ifdef QCOM_USBAUDIO_ENABLED
             if((mHandle->devices == AudioSystem::DEVICE_IN_ANLG_DOCK_HEADSET)||
                    (mHandle->devices == AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)){
                 if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
@@ -199,6 +200,7 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
         mParent->mLock.unlock();
     }
 
+#ifdef QCOM_USBAUDIO_ENABLED
     if(((mDevices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET) ||
         (mDevices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)) &&
         (!mParent->musbPlaybackState)) {
@@ -215,6 +217,7 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
         }
         mParent->mLock.unlock();
     }
+#endif
 
     period_size = mHandle->periodSize;
     do {
@@ -231,8 +234,8 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
                       period_size);
         }
         if (n < 0) {
-	    mParent->mLock.lock();
-            ALOGE("pcm_write returned error %d, trying to recover\n", n);
+            mParent->mLock.lock();
+            ALOGE("pcm_write returned error %l, trying to recover\n", n);
             pcm_close(mHandle->handle);
             mHandle->handle = NULL;
             if((!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL, strlen(SND_USE_CASE_VERB_IP_VOICECALL))) ||
@@ -277,6 +280,7 @@ status_t AudioStreamOutALSA::close()
     if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
         (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
          if((mParent->mVoipStreamCount)) {
+#ifdef QCOM_USBAUDIO_ENABLED
              if(mParent->mVoipStreamCount == 1) {
                  ALOGD("Deregistering VOIP Call bit, musbPlaybackState:%d, musbRecordingState: %d",
                        mParent->musbPlaybackState, mParent->musbRecordingState);
@@ -285,11 +289,14 @@ status_t AudioStreamOutALSA::close()
                  mParent->closeUsbPlaybackIfNothingActive();
                  mParent->closeUsbRecordingIfNothingActive();
              }
+#endif
                 return NO_ERROR;
          }
          mParent->mVoipStreamCount = 0;
          mParent->mVoipMicMute = 0;
-    } else if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) ||
+    }
+#ifdef QCOM_USBAUDIO_ENABLED
+      else if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) ||
               (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_LPA))) {
         mParent->musbPlaybackState &= ~USBPLAYBACKBIT_LPA;
     } else {
@@ -297,6 +304,7 @@ status_t AudioStreamOutALSA::close()
     }
 
     mParent->closeUsbPlaybackIfNothingActive();
+#endif
 
     ALSAStreamOps::close();
 
@@ -314,6 +322,7 @@ status_t AudioStreamOutALSA::standby()
         return NO_ERROR;
     }
 
+#ifdef QCOM_USBAUDIO_ENABLED
     if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) ||
         (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_LPA))) {
         ALOGD("Deregistering LPA bit");
@@ -322,10 +331,13 @@ status_t AudioStreamOutALSA::standby()
         ALOGD("Deregistering MUSIC bit, musbPlaybackState: %d", mParent->musbPlaybackState);
         mParent->musbPlaybackState &= ~USBPLAYBACKBIT_MUSIC;
     }
+#endif
 
     mHandle->module->standby(mHandle);
 
+#ifdef QCOM_USBAUDIO_ENABLED
     mParent->closeUsbPlaybackIfNothingActive();
+#endif
 
     mFrameCount = 0;
 

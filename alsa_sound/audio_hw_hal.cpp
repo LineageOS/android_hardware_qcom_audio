@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "audio.primary.msm8960"
+#define LOG_TAG "qcom_audio_hw_hal"
 //#define LOG_NDEBUG 0
 
 #include <stdint.h>
@@ -176,7 +176,9 @@ static int out_remove_audio_effect(const struct audio_stream *stream, effect_han
 static int out_get_next_write_timestamp(const struct audio_stream_out *stream,
                                         int64_t *timestamp)
 {
-    return -EINVAL;
+    const struct qcom_stream_out *out =
+        reinterpret_cast<const struct qcom_stream_out *>(stream);
+    return out->qcom_out->getNextWriteTimestamp(timestamp);
 }
 
 /** audio_stream_in implementation **/
@@ -319,14 +321,24 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_OUT_WIRED_HEADPHONE |
             AUDIO_DEVICE_OUT_AUX_DIGITAL |
             AUDIO_DEVICE_OUT_ALL_SCO |
-//          AUDIO_DEVICE_OUT_ANC_HEADSET |
+#ifdef QCOM_ANC_HEADSET_ENABLED
+            AUDIO_DEVICE_OUT_ANC_HEADSET |
+            AUDIO_DEVICE_OUT_ANC_HEADPHONE |
+#endif
             AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET |
             AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET |
-//          AUDIO_DEVICE_OUT_ANC_HEADPHONE |
-//          AUDIO_DEVICE_OUT_FM |
-//          AUDIO_DEVICE_OUT_FM_TX |
-//          AUDIO_DEVICE_OUT_DIRECTOUTPUT |
-//          AUDIO_DEVICE_OUT_PROXY |
+#ifdef QCOM_FM_ENABLED
+            AUDIO_DEVICE_OUT_FM |
+#endif
+#ifdef QCOM_FM_TX_ENABLED
+            AUDIO_DEVICE_OUT_FM_TX |
+#endif
+#ifdef QCOM_VOIP_ENABLED
+            AUDIO_DEVICE_OUT_DIRECTOUTPUT |
+#endif
+#ifdef QCOM_PROXY_DEVICE_ENABLED
+            AUDIO_DEVICE_OUT_PROXY |
+#endif
             AUDIO_DEVICE_OUT_DEFAULT |
             /* IN */
             AUDIO_DEVICE_IN_VOICE_CALL |
@@ -337,9 +349,13 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_IN_AUX_DIGITAL |
             AUDIO_DEVICE_IN_BACK_MIC |
             AUDIO_DEVICE_IN_ALL_SCO |
-//          AUDIO_DEVICE_IN_ANC_HEADSET |
-//          AUDIO_DEVICE_IN_FM_RX |
-//          AUDIO_DEVICE_IN_FM_RX_A2DP |
+#ifdef QCOM_ANC_HEADSET_ENABLED
+            AUDIO_DEVICE_IN_ANC_HEADSET |
+#endif
+#ifdef QCOM_FM_ENABLED
+            AUDIO_DEVICE_IN_FM_RX |
+            AUDIO_DEVICE_IN_FM_RX_A2DP |
+#endif
             AUDIO_DEVICE_IN_DEFAULT);
 }
 
@@ -367,7 +383,8 @@ static int adev_get_master_volume(struct audio_hw_device *dev, float *volume) {
     struct qcom_audio_device *qadev = to_ladev(dev);
     return qadev->hwif->getMasterVolume(volume);
 }
-#ifdef QUALCOMM_FEATURES_ENABLED
+
+#ifdef QCOM_FM_ENABLED
 static int adev_set_fm_volume(struct audio_hw_device *dev, float volume)
 {
     struct qcom_audio_device *qadev = to_ladev(dev);
@@ -416,7 +433,7 @@ static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev,
     return qadev->hwif->getInputBufferSize(config->sample_rate, config->format, config->channel_mask);
 }
 
-#ifdef QUALCOMM_FEATURES_ENABLED
+#ifdef QCOM_TUNNEL_LPA_ENABLED
 static int adev_open_output_session(struct audio_hw_device *dev,
                                    uint32_t devices,
                                    int *format,
@@ -626,7 +643,7 @@ static int qcom_adev_open(const hw_module_t* module, const char* name,
     qadev->device.set_voice_volume = adev_set_voice_volume;
     qadev->device.set_master_volume = adev_set_master_volume;
     qadev->device.get_master_volume = adev_get_master_volume;
-#ifdef QUALCOMM_FEATURES_ENABLED
+#ifdef QCOM_FM_ENABLED
     qadev->device.set_fm_volume = adev_set_fm_volume;
 #endif
     qadev->device.set_mode = adev_set_mode;
@@ -636,7 +653,7 @@ static int qcom_adev_open(const hw_module_t* module, const char* name,
     qadev->device.get_parameters = adev_get_parameters;
     qadev->device.get_input_buffer_size = adev_get_input_buffer_size;
     qadev->device.open_output_stream = adev_open_output_stream;
-#ifdef QUALCOMM_FEATURES_ENABLED
+#ifdef QCOM_TUNNEL_LPA_ENABLED
     qadev->device.open_output_session = adev_open_output_session;
 #endif
     qadev->device.close_output_stream = adev_close_output_stream;

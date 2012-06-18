@@ -45,9 +45,9 @@
 static struct wav_header hdr;
 static int fd;
 static struct pcm *pcm;
-static debug = 0;
-static pcm_flag = 1;
-static duration = 0;
+static int debug = 0;
+static int pcm_flag = 1;
+static int duration = 0;
 static char *filename;
 static char *data;
 static int format = SNDRV_PCM_FORMAT_S16_LE;

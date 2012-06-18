@@ -27,7 +27,9 @@
 #include <system/audio.h>
 #include <hardware/audio.h>
 #include <utils/threads.h>
+#ifdef QCOM_USBAUDIO_ENABLED
 #include <AudioUsbALSA.h>
+#endif
 
 extern "C" {
    #include <sound/asound.h>
@@ -91,8 +93,7 @@ class AudioHardwareALSA;
 #define ANC_FLAG        0x00000001
 #define DMIC_FLAG       0x00000002
 #define QMIC_FLAG       0x00000004
-
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
 #define SSRQMIC_FLAG    0x00000008
 #endif
 
@@ -104,6 +105,7 @@ class AudioHardwareALSA;
 
 #define LPA_SESSION_ID 1
 #define TUNNEL_SESSION_ID 2
+#ifdef QCOM_USBAUDIO_ENABLED
 static int USBPLAYBACKBIT_MUSIC = (1 << 0);
 static int USBPLAYBACKBIT_VOICECALL = (1 << 1);
 static int USBPLAYBACKBIT_VOIPCALL = (1 << 2);
@@ -114,12 +116,13 @@ static int USBRECBIT_REC = (1 << 0);
 static int USBRECBIT_VOICECALL = (1 << 1);
 static int USBRECBIT_VOIPCALL = (1 << 2);
 static int USBRECBIT_FM = (1 << 3);
+#endif
 
 #define DEVICE_SPEAKER_HEADSET "Speaker Headset"
 #define DEVICE_HEADSET "Headset"
 #define DEVICE_HEADPHONES "Headphones"
 
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
 #define COEFF_ARRAY_SIZE          4
 #define FILT_SIZE                 ((512+1)* 6)    /* # ((FFT bins)/2+1)*numOutputs */
 #define SSR_FRAME_SIZE            512
@@ -137,6 +140,16 @@ enum {
     INCALL_REC_MONO,
     INCALL_REC_STEREO,
 };
+
+enum audio_call_mode {
+    CS_INACTIVE   = 0x0,
+    CS_ACTIVE     = 0x1,
+    CS_HOLD       = 0x2,
+    IMS_INACTIVE  = 0x0,
+    IMS_ACTIVE    = 0x10,
+    IMS_HOLD      = 0x20
+};
+
 
 struct alsa_handle_t {
     alsa_device_t *     module;
@@ -374,7 +387,7 @@ public:
 
     status_t            open(int mode);
     status_t            close();
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
     // Helper function to initialize the Surround Sound library.
     status_t initSurroundSoundLibrary(unsigned long buffersize);
 #endif
@@ -385,7 +398,7 @@ private:
     unsigned int        mFramesLost;
     AudioSystem::audio_in_acoustics mAcoustics;
 
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
     // Function to read coefficients from files.
     status_t            readCoeffsFromFile();
 
@@ -426,7 +439,7 @@ public:
      * the software mixer will emulate this capability.
      */
     virtual status_t    setMasterVolume(float volume);
-#ifdef FM_ENABLED
+#ifdef QCOM_FM_ENABLED
     virtual status_t    setFmVolume(float volume);
 #endif
     /**
@@ -448,6 +461,7 @@ public:
     // parameters is not supported
     virtual size_t    getInputBufferSize(uint32_t sampleRate, int format, int channels);
 
+#ifdef QCOM_TUNNEL_LPA_ENABLED
     /** This method creates and opens the audio hardware output
       *  session for LPA */
     virtual AudioStreamOut* openOutputSession(
@@ -458,6 +472,7 @@ public:
             uint32_t samplingRate=0,
             uint32_t channels=0);
     virtual void closeOutputSession(AudioStreamOut* out);
+#endif
 
     /** This method creates and opens the audio hardware output stream */
     virtual AudioStreamOut* openOutputStream(
@@ -492,15 +507,17 @@ protected:
     virtual status_t    dump(int fd, const Vector<String16>& args);
     virtual uint32_t    getVoipMode(int format);
     void                doRouting(int device);
-#ifdef EM_ENABLED
+#ifdef QCOM_FM_ENABLED
     void                handleFm(int device);
 #endif
+#ifdef QCOM_USBAUDIO_ENABLED
     void                closeUSBPlayback();
     void                closeUSBRecording();
     void                closeUsbRecordingIfNothingActive();
     void                closeUsbPlaybackIfNothingActive();
     void                startUsbPlaybackIfNotStarted();
     void                startUsbRecordingIfNotStarted();
+#endif
 
     void                disableVoiceCall(char* verb, char* modifier, int mode, int device);
     void                enableVoiceCall(char* verb, char* modifier, int mode, int device);
@@ -514,7 +531,9 @@ protected:
 
     ALSAHandleList      mDeviceList;
 
+#ifdef QCOM_USBAUDIO_ENABLED
     AudioUsbALSA        *mAudioUsbALSA;
+#endif
 
     Mutex                   mLock;
 
@@ -536,9 +555,10 @@ protected:
     int mIsFmActive;
     bool mBluetoothVGS;
     bool mFusion3Platform;
-
+#ifdef QCOM_USBAUDIO_ENABLED
     int musbPlaybackState;
     int musbRecordingState;
+#endif
 };
 
 // ----------------------------------------------------------------------------

@@ -202,6 +202,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
         return -EBADFD;
     }
 
+#ifdef QCOM_COMPRESSED_AUDIO_ENABLED
     if (compressed) {
        struct snd_compr_caps compr_cap;
        struct snd_compr_params compr_params;
@@ -229,6 +230,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
           return -errno;
        }
     }
+#endif
     pcm->channels = channels;
     pcm->rate = rate;
     pcm->flags = flags;
@@ -372,6 +374,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
                  fprintf(stderr, "Aplay:sync_ptr->s.status.hw_ptr %ld  sync_ptr->c.control.appl_ptr %ld\n",
                             pcm->sync_ptr->s.status.hw_ptr,
                             pcm->sync_ptr->c.control.appl_ptr);
+#ifdef QCOM_COMPRESSED_AUDIO_ENABLED
                  if (compressed && start) {
                     struct snd_compr_tstamp tstamp;
 		    if (ioctl(pcm->fd, SNDRV_COMPRESS_TSTAMP, &tstamp))
@@ -379,6 +382,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
                     else
 	                fprintf(stderr, "timestamp = %lld\n", tstamp.timestamp);
 		}
+#endif
              }
              /*
               * If we have reached start threshold of buffer prefill,

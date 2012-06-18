@@ -25,7 +25,6 @@
 
 #define LOG_TAG "AudioHardwareALSA"
 #include <utils/Log.h>
-
 #include <utils/String8.h>
 
 #include <cutils/properties.h>

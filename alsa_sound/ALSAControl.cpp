@@ -24,10 +24,10 @@
 #include <unistd.h>
 #include <dlfcn.h>
 
-#define LOG_TAG "alsa.msm8960"
+#define LOG_TAG "ALSAControl"
 //#define LOG_NDEBUG 0
+#define LOG_NDDEBUG 0
 #include <utils/Log.h>
-
 #include <utils/String8.h>
 
 #include <cutils/properties.h>

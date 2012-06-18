@@ -24,8 +24,9 @@
 #include <unistd.h>
 #include <dlfcn.h>
 
-#define LOG_TAG "audio.primary.msm8960"
+#define LOG_TAG "ALSAStreamOps"
 //#define LOG_NDEBUG 0
+#define LOG_NDDEBUG 0
 #include <utils/Log.h>
 #include <utils/String8.h>
 
@@ -114,7 +115,7 @@ status_t ALSAStreamOps::set(int      *format,
             }
         } else {
             switch(mHandle->channels) {
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
                 // For 5.1 recording
                 case 6 :
                     *channels |= AudioSystem::CHANNEL_IN_5POINT1;
@@ -151,7 +152,7 @@ status_t ALSAStreamOps::set(int      *format,
                 break;
             case AudioSystem::AMR_NB:
             case AudioSystem::AMR_WB:
-#if 0
+#ifdef QCOM_QCHAT_ENABLED
             case AudioSystem::EVRC:
             case AudioSystem::EVRCB:
             case AudioSystem::EVRCWB:
@@ -200,7 +201,7 @@ status_t ALSAStreamOps::setParameters(const String8& keyValuePairs)
         }
         param.remove(key);
     }
-#ifdef FM_ENABLED
+#ifdef QCOM_FM_ENABLED
     else {
         key = String8(AudioParameter::keyHandleFm);
         if (param.getInt(key, device) == NO_ERROR) {
@@ -227,7 +228,7 @@ String8 ALSAStreamOps::getParameters(const String8& keys)
         param.addInt(key, (int)mDevices);
     }
     else {
-#if 0
+#ifdef QCOM_VOIP_ENABLED
         key = String8(AudioParameter::keyVoipCheck);
         if (param.get(key, value) == NO_ERROR) {
             if((!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL, strlen(SND_USE_CASE_VERB_IP_VOICECALL))) ||
@@ -269,7 +270,7 @@ int ALSAStreamOps::format() const
 
         case AudioSystem::AMR_NB:
         case AudioSystem::AMR_WB:
-#if 0
+#ifdef QCOM_QCHAT_ENABLED
         case AudioSystem::EVRC:
         case AudioSystem::EVRCB:
         case AudioSystem::EVRCWB:
@@ -311,7 +312,7 @@ uint32_t ALSAStreamOps::channels() const
         }
     else
         switch(count) {
-#ifdef SSR_ENABLED            
+#ifdef QCOM_SSR_ENABLED
             // For 5.1 recording
             case 6 :
                 channels |= AudioSystem::CHANNEL_IN_5POINT1;
