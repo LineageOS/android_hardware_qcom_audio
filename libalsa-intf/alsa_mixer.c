@@ -34,8 +34,8 @@
 
 #include "alsa_audio.h"
 
-#define ALOG_TAG "alsa_mixer"
-#define ALOG_NDEBUG 1
+#define LOG_TAG "alsa_mixer"
+#define LOG_NDEBUG 1
 
 #ifdef ANDROID
 /* definitions for Android logging */

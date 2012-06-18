@@ -24,8 +24,9 @@
 #include <unistd.h>
 #include <dlfcn.h>
 
-#define LOG_TAG "audio.primary.msm8960"
+#define LOG_TAG "AudioStreamInALSA"
 //#define LOG_NDEBUG 0
+#define LOG_NDDEBUG 0
 #include <utils/Log.h>
 #include <utils/String8.h>
 
@@ -36,17 +37,17 @@
 #include "AudioHardwareALSA.h"
 
 extern "C" {
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
 #include "csd_client.h"
 #endif
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
 #include "surround_filters_interface.h"
 #endif
 }
 
 namespace android_audio_legacy
 {
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
 #define SURROUND_FILE_1R "/system/etc/surround_sound/filter1r.pcm"
 #define SURROUND_FILE_2R "/system/etc/surround_sound/filter2r.pcm"
 #define SURROUND_FILE_3R "/system/etc/surround_sound/filter3r.pcm"
@@ -68,7 +69,7 @@ AudioStreamInALSA::AudioStreamInALSA(AudioHardwareALSA *parent,
     mFramesLost(0),
     mParent(parent),
     mAcoustics(audio_acoustics)
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
     , mFp_4ch(NULL),
     mFp_6ch(NULL),
     mRealCoeffs(NULL),
@@ -80,7 +81,7 @@ AudioStreamInALSA::AudioStreamInALSA(AudioHardwareALSA *parent,
     mSurroundInputBufferIdx(0)
 #endif
 {
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
     char c_multi_ch_dump[128] = {0};
     status_t err = NO_ERROR;
 
@@ -143,7 +144,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                 ALOGD("read:: mParent->mIncallMode=%d", mParent->mIncallMode);
                 if ((mParent->mIncallMode & AudioSystem::CHANNEL_IN_VOICE_UPLINK) &&
                     (mParent->mIncallMode & AudioSystem::CHANNEL_IN_VOICE_DNLINK)) {
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
                     if (mParent->mFusion3Platform) {
                         mParent->mALSADevice->setVocRecMode(INCALL_REC_STEREO);
                         strlcpy(mHandle->useCase, SND_USE_CASE_MOD_CAPTURE_VOICE,
@@ -156,7 +157,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                                 sizeof(mHandle->useCase));
                     }
                 } else if (mParent->mIncallMode & AudioSystem::CHANNEL_IN_VOICE_DNLINK) {
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
                     if (mParent->mFusion3Platform) {
                         mParent->mALSADevice->setVocRecMode(INCALL_REC_MONO);
                         strlcpy(mHandle->useCase, SND_USE_CASE_MOD_CAPTURE_VOICE,
@@ -169,7 +170,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                                 sizeof(mHandle->useCase));
                     }
                 }
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
             } else if(mHandle->devices == AudioSystem::DEVICE_IN_FM_RX) {
                 strlcpy(mHandle->useCase, SND_USE_CASE_MOD_CAPTURE_FM, sizeof(mHandle->useCase));
             } else if (mHandle->devices == AudioSystem::DEVICE_IN_FM_RX_A2DP) {
@@ -186,7 +187,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                 ALOGD("read:: ---- mParent->mIncallMode=%d", mParent->mIncallMode);
                 if ((mParent->mIncallMode & AudioSystem::CHANNEL_IN_VOICE_UPLINK) &&
                     (mParent->mIncallMode & AudioSystem::CHANNEL_IN_VOICE_DNLINK)) {
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
                     if (mParent->mFusion3Platform) {
                         mParent->mALSADevice->setVocRecMode(INCALL_REC_STEREO);
                         strlcpy(mHandle->useCase, SND_USE_CASE_VERB_INCALL_REC,
@@ -199,7 +200,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                                 sizeof(mHandle->useCase));
                     }
                 } else if (mParent->mIncallMode & AudioSystem::CHANNEL_IN_VOICE_DNLINK) {
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
                    if (mParent->mFusion3Platform) {
                        mParent->mALSADevice->setVocRecMode(INCALL_REC_MONO);
                        strlcpy(mHandle->useCase, SND_USE_CASE_VERB_INCALL_REC,
@@ -212,7 +213,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                                sizeof(mHandle->useCase));
                    }
                 }
-#if 0
+#ifdef QCOM_FM_ENABLED
             } else if(mHandle->devices == AudioSystem::DEVICE_IN_FM_RX) {
                 strlcpy(mHandle->useCase, SND_USE_CASE_VERB_FM_REC, sizeof(mHandle->useCase));
         } else if (mHandle->devices == AudioSystem::DEVICE_IN_FM_RX_A2DP) {
@@ -227,7 +228,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
         free(use_case);
         if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
             (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
-#if 0
+#ifdef QCOM_USBAUDIO_ENABLED
             if((mDevices & AudioSystem::DEVICE_IN_ANLG_DOCK_HEADSET) ||
                (mDevices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)) {
                 mHandle->module->route(mHandle, (mDevices | AudioSystem::DEVICE_IN_PROXY) , AudioSystem::MODE_IN_COMMUNICATION);
@@ -237,8 +238,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                 mHandle->module->route(mHandle, mDevices , AudioSystem::MODE_IN_COMMUNICATION);
             }
         } else {
-#if 0
-
+#ifdef QCOM_USBAUDIO_ENABLED
             if((mHandle->devices == AudioSystem::DEVICE_IN_ANLG_DOCK_HEADSET)||
                (mHandle->devices == AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)){
                 mHandle->module->route(mHandle, AudioSystem::DEVICE_IN_PROXY , mParent->mode());
@@ -272,7 +272,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
 
             return 0;
         }
-#if 0
+#ifdef QCOM_USBAUDIO_ENABLED
         if((mHandle->devices == AudioSystem::DEVICE_IN_ANLG_DOCK_HEADSET)||
            (mHandle->devices == AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)){
             if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
@@ -286,7 +286,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
 #endif
         mParent->mLock.unlock();
     }
-#if 0
+#ifdef QCOM_USBAUDIO_ENABLED
     if(((mDevices & AudioSystem::DEVICE_IN_ANLG_DOCK_HEADSET) ||
        (mDevices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)) &&
        (!mParent->musbRecordingState)) {
@@ -307,7 +307,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
     period_size = mHandle->periodSize;
     int read_pending = bytes;
 
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
     if (mSurroundObj) {
         int processed = 0;
         int processed_pending;
@@ -396,7 +396,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
         read = processed * sizeof(Word16);
         buffer = buffer_start;
     } else
-#endif 
+#endif
     {
 
         do {
@@ -461,6 +461,7 @@ status_t AudioStreamInALSA::close()
     if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
         (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
         if((mParent->mVoipStreamCount)) {
+#ifdef QCOM_USBAUDIO_ENABLED
             ALOGD("musbRecordingState: %d, mVoipStreamCount:%d",mParent->musbRecordingState,
                   mParent->mVoipStreamCount );
             if(mParent->mVoipStreamCount == 1) {
@@ -471,15 +472,18 @@ status_t AudioStreamInALSA::close()
                 mParent->closeUsbRecordingIfNothingActive();
                 mParent->closeUsbPlaybackIfNothingActive();
             }
+#endif
                return NO_ERROR;
         }
         mParent->mVoipStreamCount = 0;
         mParent->mVoipMicMute = 0;
+#ifdef QCOM_USBAUDIO_ENABLED
     } else {
         ALOGD("Deregistering REC bit, musbRecordingState:%d", mParent->musbRecordingState);
         mParent->musbRecordingState &= ~USBRECBIT_REC;
+#endif
      }
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
     if (mParent->mFusion3Platform) {
        if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_INCALL_REC)) ||
            (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_CAPTURE_VOICE))) {
@@ -488,11 +492,13 @@ status_t AudioStreamInALSA::close()
     }
 #endif
     ALOGD("close");
+#ifdef QCOM_USBAUDIO_ENABLED
     mParent->closeUsbRecordingIfNothingActive();
+#endif
 
     ALSAStreamOps::close();
 
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
     if (mSurroundObj) {
         surround_filters_release(mSurroundObj);
         if (mSurroundObj)
@@ -547,7 +553,7 @@ status_t AudioStreamInALSA::standby()
          return NO_ERROR;
     }
 
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
     ALOGD("standby");
     if (mParent->mFusion3Platform) {
        if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_INCALL_REC)) ||
@@ -559,9 +565,11 @@ status_t AudioStreamInALSA::standby()
 #endif
     mHandle->module->standby(mHandle);
 
+#ifdef QCOM_USBAUDIO_ENABLED
     ALOGD("Checking for musbRecordingState %d", mParent->musbRecordingState);
     mParent->musbRecordingState &= ~USBRECBIT_REC;
     mParent->closeUsbRecordingIfNothingActive();
+#endif
 
     return NO_ERROR;
 }
@@ -587,7 +595,7 @@ status_t AudioStreamInALSA::setAcousticParams(void *params)
     return (status_t)NO_ERROR;
 }
 
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
 status_t AudioStreamInALSA::initSurroundSoundLibrary(unsigned long buffersize)
 {
     int subwoofer = 0;  // subwoofer channel assignment: default as first microphone input channel
