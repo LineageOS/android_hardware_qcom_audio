@@ -1721,9 +1721,9 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input)
                      || isStreamOnAndActive(LPA_DECODE)
 #endif
               ) {
-                if (outputDevices & AudioSystem::DEVICE_OUT_SPEAKER) {
-                    ALOGI("Routing audio to Speakerphone\n");
-                    sndDevice = SND_DEVICE_SPEAKER;
+                if (outputDevices & AudioSystem::DEVICE_OUT_EARPIECE) {
+                    ALOGI("Routing audio to Handset\n");
+                    sndDevice = SND_DEVICE_HANDSET;
                 } else if (outputDevices & AudioSystem::DEVICE_OUT_WIRED_HEADPHONE) {
                     ALOGI("Routing audio to Speakerphone\n");
                     sndDevice = SND_DEVICE_NO_MIC_HEADSET;
@@ -1734,13 +1734,13 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input)
                     sndDevice = SND_DEVICE_SPEAKER_TX;
                 }
 #endif
-                 else {
-                    ALOGI("Routing audio to Handset\n");
-                    sndDevice = SND_DEVICE_HANDSET;
+                else {
+                    ALOGI("Routing audio to Speaker\n");
+                    sndDevice = SND_DEVICE_SPEAKER;
                 }
             } else {
-                ALOGI("Routing audio to Handset\n");
-                sndDevice = SND_DEVICE_HANDSET;
+                ALOGI("Routing audio to Speaker (default)\n");
+                sndDevice = SND_DEVICE_SPEAKER;
             }
 #ifdef SAMSUNG_AUDIO
             if (input->isForVR()) {
