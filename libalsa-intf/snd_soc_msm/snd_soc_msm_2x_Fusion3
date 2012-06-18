@@ -2244,6 +2244,44 @@ SectionModifier
 EndSection
 
 SectionModifier
+	Name "Play VoiceHDMI"
+
+	EnableSequence
+	EndSequence
+
+	DisableSequence
+		'Voice Stub Tx Mixer SLIM_3_TX':1:0
+		'HDMI_RX_Voice Mixer Voice Stub':1:0
+		'HDMI_RX Port Mixer SLIM_3_TX':1:0
+		'Voice Stub Tx Mixer STUB_TX_HL':1:0
+	EndSequence
+
+	# ALSA PCMs
+	PlaybackPCM 12
+	CapturePCM 12
+
+EndSection
+
+SectionModifier
+	Name "Play VoiceHDMI Tx"
+
+	EnableSequence
+		'Voice Stub Tx Mixer SLIM_3_TX':1:1
+		'HDMI_RX_Voice Mixer Voice Stub':1:1
+		'HDMI_RX Port Mixer SLIM_3_TX':1:1
+		'Voice Stub Tx Mixer STUB_TX_HL':1:1
+	EndSequence
+
+	DisableSequence
+	EndSequence
+
+	# ALSA PCMs
+	PlaybackPCM 12
+	CapturePCM 12
+
+EndSection
+
+SectionModifier
 	Name "Play VoiceBT SCO Rx"
 
 	EnableSequence

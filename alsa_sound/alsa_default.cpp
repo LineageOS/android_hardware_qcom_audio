@@ -16,15 +16,15 @@
  ** limitations under the License.
  */
 
-#define LOG_TAG "alsa.msm8960"
+#define LOG_TAG "ALSAModule"
 //#define LOG_NDEBUG 0
+#define LOG_NDDEBUG 0
 #include <utils/Log.h>
-
 #include <cutils/properties.h>
 #include <linux/ioctl.h>
 #include "AudioHardwareALSA.h"
 #include <media/AudioRecord.h>
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
 extern "C" {
 #include "csd_client.h"
 }
@@ -217,7 +217,7 @@ status_t setHardwareParams(alsa_handle_t *handle)
     ALOGD("setHardwareParams: reqBuffSize %d channels %d sampleRate %d",
          (int) reqBuffSize, handle->channels, handle->sampleRate);
 
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
     if (channels == 6) {
         if (!strncmp(handle->useCase, SND_USE_CASE_VERB_HIFI_REC, strlen(SND_USE_CASE_VERB_HIFI_REC))
             || !strncmp(handle->useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC, strlen(SND_USE_CASE_MOD_CAPTURE_MUSIC))) {
@@ -232,11 +232,14 @@ status_t setHardwareParams(alsa_handle_t *handle)
     param_set_mask(params, SNDRV_PCM_HW_PARAM_ACCESS,
                    SNDRV_PCM_ACCESS_RW_INTERLEAVED);
     if (handle->format != SNDRV_PCM_FORMAT_S16_LE) {
-        if (handle->format == AudioSystem::AMR_NB ||
-            handle->format == AudioSystem::AMR_WB ||
-            handle->format == AudioSystem::EVRC ||
-            handle->format == AudioSystem::EVRCB ||
-            handle->format == AudioSystem::EVRCWB)
+        if (handle->format == AudioSystem::AMR_NB
+            || handle->format == AudioSystem::AMR_WB
+#ifdef QCOM_QCHAT_ENABLED
+            || handle->format == AudioSystem::EVRC
+            || handle->format == AudioSystem::EVRCB
+            || handle->format == AudioSystem::EVRCWB
+#endif
+            )
               format = SNDRV_PCM_FORMAT_SPECIAL;
     }
     param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
@@ -291,7 +294,7 @@ status_t setSoftwareParams(alsa_handle_t *handle)
         return NO_INIT;
     }
 
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
     if (channels == 6) {
         if (!strncmp(handle->useCase, SND_USE_CASE_VERB_HIFI_REC, strlen(SND_USE_CASE_VERB_HIFI_REC))
             || !strncmp(handle->useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC, strlen(SND_USE_CASE_MOD_CAPTURE_MUSIC))) {
@@ -356,7 +359,7 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
                    (devices & AudioSystem::DEVICE_IN_BLUETOOTH_SCO_HEADSET)) {
             devices = devices | (AudioSystem::DEVICE_IN_BLUETOOTH_SCO_HEADSET |
                       AudioSystem::DEVICE_OUT_BLUETOOTH_SCO);
-#if 0
+#ifdef QCOM_ANC_HEADSET_ENABLED
         } else if ((devices & AudioSystem::DEVICE_OUT_ANC_HEADSET) ||
                    (devices & AudioSystem::DEVICE_IN_ANC_HEADSET)) {
             devices = devices | (AudioSystem::DEVICE_OUT_ANC_HEADSET |
@@ -368,7 +371,7 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
         } else if (devices & AudioSystem::DEVICE_OUT_AUX_DIGITAL) {
             devices = devices | (AudioSystem::DEVICE_OUT_AUX_DIGITAL |
                       AudioSystem::DEVICE_IN_AUX_DIGITAL);
-#if 0
+#ifdef QCOM_PROXY_DEVICE_ENABLED
         } else if ((devices & AudioSystem::DEVICE_OUT_PROXY) ||
                   (devices & AudioSystem::DEVICE_IN_PROXY)) {
             devices = devices | (AudioSystem::DEVICE_OUT_PROXY |
@@ -376,7 +379,7 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
 #endif
         }
     }
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
     if ((devices & AudioSystem::DEVICE_IN_BUILTIN_MIC) && ( 6 == handle->channels)) {
         if (!strncmp(handle->useCase, SND_USE_CASE_VERB_HIFI_REC, strlen(SND_USE_CASE_VERB_HIFI_REC))
             || !strncmp(handle->useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC, strlen(SND_USE_CASE_MOD_CAPTURE_MUSIC))) {
@@ -467,7 +470,7 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
        }
     }
     ALOGV("%s,rxDev:%s, txDev:%s, curRxDev:%s, curTxDev:%s\n", __FUNCTION__, rxDevice, txDevice, curRxUCMDevice, curTxUCMDevice);
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
     if (mode == AudioSystem::MODE_IN_CALL && platform_is_Fusion3() && (inCallDevSwitch == true)) {
         err = csd_client_disable_device();
         if (err < 0)
@@ -480,7 +483,7 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
     if (rxDevice != NULL) {
         snd_use_case_set(handle->ucMgr, "_enadev", rxDevice);
         strlcpy(curRxUCMDevice, rxDevice, sizeof(curRxUCMDevice));
-#if 0
+#ifdef QCOM_FM_ENABLED
         if (devices & AudioSystem::DEVICE_OUT_FM)
             s_set_fm_vol(fmVolume);
 #endif
@@ -523,7 +526,7 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
             tx_dev_id = DEVICE_SPEAKER_TX_ACDB_ID;
         }
 
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
         ALOGV("rx_dev_id=%d, tx_dev_id=%d\n", rx_dev_id, tx_dev_id);
         err = csd_client_enable_device(rx_dev_id, tx_dev_id, mDevSettingsFlag);
         if (err < 0)
@@ -600,7 +603,7 @@ static status_t s_open(alsa_handle_t *handle)
     if (handle->channels == 1) {
         flags |= PCM_MONO;
     } 
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
     else if (handle->channels == 4 ) {
         flags |= PCM_QUAD;
     } else if (handle->channels == 6 ) {
@@ -843,7 +846,7 @@ static status_t s_start_voice_call(alsa_handle_t *handle)
     }
 
     if (platform_is_Fusion3()) {
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
         err = csd_client_start_voice();
         if (err < 0) {
             ALOGE("s_start_voice_call: csd_client error %d\n", err);
@@ -1031,7 +1034,7 @@ static status_t s_close(alsa_handle_t *handle)
         if ((!strcmp(handle->useCase, SND_USE_CASE_VERB_VOICECALL) ||
              !strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_VOICE)) &&
             platform_is_Fusion3()) {
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
             err = csd_client_stop_voice();
             if (err < 0) {
                 ALOGE("s_close: csd_client error %d\n", err);
@@ -1208,7 +1211,7 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             (callMode == AudioSystem::MODE_IN_CALL) &&
             ((devices & AudioSystem::DEVICE_OUT_WIRED_HEADSET) ||
              (devices & AudioSystem::DEVICE_OUT_WIRED_HEADPHONE))) { 
-#if 0 
+#ifdef QCOM_ANC_HEADSET_ENABLED
              ||
              (devices & AudioSystem::DEVICE_OUT_ANC_HEADSET) ||
              (devices & AudioSystem::DEVICE_OUT_ANC_HEADPHONE))) {
@@ -1231,7 +1234,7 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             } else {
                 return strdup(SND_USE_CASE_DEV_SPEAKER_HEADSET); /* COMBO SPEAKER+HEADSET RX */
             }
-#if 0
+#ifdef QCOM_ANC_HEADSET_ENABLED
         } else if ((devices & AudioSystem::DEVICE_OUT_SPEAKER) &&
             ((devices & AudioSystem::DEVICE_OUT_ANC_HEADSET) ||
             (devices & AudioSystem::DEVICE_OUT_ANC_HEADPHONE))) {
@@ -1251,7 +1254,7 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             } else {
                 return strdup(SND_USE_CASE_DEV_HEADPHONES); /* HEADSET RX */
             }
-#if 0
+#ifdef QCOM_ANC_HEADSET_ENABLED
         } else if ((devices & AudioSystem::DEVICE_OUT_ANC_HEADSET) ||
                    (devices & AudioSystem::DEVICE_OUT_ANC_HEADPHONE)) {
             return strdup(SND_USE_CASE_DEV_ANC_HEADSET); /* ANC HEADSET RX */
@@ -1265,8 +1268,9 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                 return strdup(SND_USE_CASE_DEV_BTSCO_NB_RX); /* BTSCO RX*/
         } else if ((devices & AudioSystem::DEVICE_OUT_BLUETOOTH_A2DP) ||
                    (devices & AudioSystem::DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES) ||
-//commented JB
-/*                   (devices & AudioSystem::DEVICE_OUT_DIRECTOUTPUT) ||*/
+#ifdef QCOM_VOIP_ENABLED
+                   (devices & AudioSystem::DEVICE_OUT_DIRECTOUTPUT) ||
+#endif
                    (devices & AudioSystem::DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER)) {
             /* Nothing to be done, use current active device */
             if (strncmp(curRxUCMDevice, "None", 4)) {
@@ -1274,9 +1278,11 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             }
         } else if (devices & AudioSystem::DEVICE_OUT_AUX_DIGITAL) {
             return strdup(SND_USE_CASE_DEV_HDMI); /* HDMI RX */
-#if 0
+#ifdef QCOM_PROXY_DEVICE_ENABLED
         } else if (devices & AudioSystem::DEVICE_OUT_PROXY) {
             return strdup(SND_USE_CASE_DEV_PROXY_RX); /* PROXY RX */
+#endif
+#ifdef QCOM_FM_TX_ENABLED
         } else if (devices & AudioSystem::DEVICE_OUT_FM_TX) {
             return strdup(SND_USE_CASE_DEV_FM_TX); /* FM Tx */
 #endif
@@ -1289,7 +1295,7 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
         if (!(mDevSettingsFlag & TTY_OFF) &&
             (callMode == AudioSystem::MODE_IN_CALL) &&
             ((devices & AudioSystem::DEVICE_IN_WIRED_HEADSET))) { 
-#if 0
+#ifdef QCOM_ANC_HEADSET_ENABLED
             ||(devices & AudioSystem::DEVICE_IN_ANC_HEADSET))) {
 #endif
              if (mDevSettingsFlag & TTY_HCO) {
@@ -1297,15 +1303,11 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
              } else if (mDevSettingsFlag & TTY_FULL) {
                  return strdup(SND_USE_CASE_DEV_TTY_FULL_TX);
              } else if (mDevSettingsFlag & TTY_VCO) {
-#if 0
                  if (!strncmp(mic_type, "analog", 6)) {
-                     return strdup(SND_USE_CASE_DEV_TTY_HANDSET_ANAALOG_TX);
+                     return strdup(SND_USE_CASE_DEV_TTY_HANDSET_ANALOG_TX);
                  } else {
                      return strdup(SND_USE_CASE_DEV_TTY_HANDSET_TX);
                  }
-#else
-                 return strdup(SND_USE_CASE_DEV_TTY_HANDSET_TX);
-#endif
              }
         } else if (devices & AudioSystem::DEVICE_IN_BUILTIN_MIC) {
             if (!strncmp(mic_type, "analog", 6)) {
@@ -1332,7 +1334,7 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                 } else if (mDevSettingsFlag & QMIC_FLAG){
                     return strdup(SND_USE_CASE_DEV_QUAD_MIC);
                 } 
-#ifdef SSR_ENABLED
+#ifdef QCOM_SSR_ENABLED
                 else if (mDevSettingsFlag & SSRQMIC_FLAG){
                     ALOGV("return SSRQMIC_FLAG: 0x%x devices:0x%x",mDevSettingsFlag,devices);
                     // Mapping for quad mic input device.
@@ -1345,7 +1347,7 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             }
         } else if (devices & AudioSystem::DEVICE_IN_AUX_DIGITAL) {
             return strdup(SND_USE_CASE_DEV_HDMI_TX); /* HDMI TX */
-#if 0
+#ifdef QCOM_ANC_HEADSET_ENABLED
         } else if ((devices & AudioSystem::DEVICE_IN_WIRED_HEADSET) ||
                    (devices & AudioSystem::DEVICE_IN_ANC_HEADSET)) {
             return strdup(SND_USE_CASE_DEV_HEADSET); /* HEADSET TX */
@@ -1355,7 +1357,7 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                  return strdup(SND_USE_CASE_DEV_BTSCO_WB_TX); /* BTSCO TX*/
              else
                  return strdup(SND_USE_CASE_DEV_BTSCO_NB_TX); /* BTSCO TX*/
-#if 0
+#ifdef QCOM_USBAUDIO_ENABLED
         } else if ((devices & AudioSystem::DEVICE_IN_ANLG_DOCK_HEADSET) ||
                    (devices & AudioSystem::DEVICE_IN_PROXY)) {
             return strdup(SND_USE_CASE_DEV_PROXY_TX); /* PROXY TX */
@@ -1366,7 +1368,7 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             if (strncmp(curTxUCMDevice, "None", 4)) {
                 return strdup(curTxUCMDevice);
             }
-#if 0
+#ifdef QCOM_FM_ENABLED
         } else if ((devices & AudioSystem::DEVICE_IN_FM_RX) ||
                    (devices & AudioSystem::DEVICE_IN_FM_RX_A2DP)) {
             /* Nothing to be done, use current tx device or set dummy device */
@@ -1399,7 +1401,7 @@ void s_set_voice_volume(int vol)
     control.set("Voice Rx Volume", vol, 0);
 
     if (platform_is_Fusion3()) {
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
         err = csd_client_volume(vol);
         if (err < 0) {
             ALOGE("s_set_voice_volume: csd_client error %d", err);
@@ -1430,7 +1432,7 @@ void s_set_mic_mute(int state)
     control.set("Voice Tx Mute", state, 0);
 
     if (platform_is_Fusion3()) {
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
         err = csd_client_mic_mute(state);
         if (err < 0) {
             ALOGE("s_set_mic_mute: csd_client error %d", err);
@@ -1502,7 +1504,7 @@ void s_enable_wide_voice(bool flag)
     }
 
     if (platform_is_Fusion3()) {
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
         err == csd_client_wide_voice(flag);
         if (err < 0) {
             ALOGE("s_enable_wide_voice: csd_client error %d", err);
@@ -1531,7 +1533,7 @@ void s_enable_fens(bool flag)
     }
 
     if (platform_is_Fusion3()) {
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
         err = csd_client_fens(flag);
         if (err < 0) {
             ALOGE("s_enable_fens: csd_client error %d", err);
@@ -1553,7 +1555,7 @@ void s_enable_slow_talk(bool flag)
     }
 
     if (platform_is_Fusion3()) {
-#if 0
+#ifdef QCOM_CSDCLIENT_ENABLED
         err = csd_client_slow_talk(flag);
         if (err < 0) {
             ALOGE("s_enable_slow_talk: csd_client error %d", err);

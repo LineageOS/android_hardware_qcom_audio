@@ -189,6 +189,7 @@ int mixer_ctl_set_value(struct mixer_ctl *ctl, int count, char ** argv);
 #define MAX_NUM_CODECS 32
 
 /* compressed audio support */
+#ifdef QCOM_COMPRESSED_AUDIO_ENABLED
 struct snd_compr_caps {
         __u32 num_codecs;
         __u32 min_fragment_size;
@@ -285,5 +286,6 @@ struct snd_compr_tstamp {
 #define SNDRV_COMPRESS_START            _IO('C', 0x22)
 #define SNDRV_COMPRESS_STOP             _IO('C', 0x23)
 #define SNDRV_COMPRESS_DRAIN            _IO('C', 0x24)
+#endif
 
 #endif

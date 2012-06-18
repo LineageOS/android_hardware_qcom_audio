@@ -15,8 +15,8 @@
 ** limitations under the License.
 */
 
-#define ALOG_TAG "alsa_pcm"
-#define ALOG_NDEBUG 1
+#define LOG_TAG "alsa_pcm"
+#define LOG_NDEBUG 1
 #ifdef ANDROID
 /* definitions for Android logging */
 #include <utils/Log.h>

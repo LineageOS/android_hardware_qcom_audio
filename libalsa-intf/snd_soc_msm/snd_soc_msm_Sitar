@@ -954,7 +954,7 @@ SectionDevice
 		'DAC2 MUX':0:ZERO
 		'RX1 Digital Volume':1:0
 	EndSequence
-	ACDBID	15:1
+	ACDBID	14:1
 	EffectsMixerCTL "SRS TruMedia"
 
 EndSection

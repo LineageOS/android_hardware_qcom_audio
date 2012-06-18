@@ -86,15 +86,8 @@ private:
     pthread_t mRecordingUsb;
     snd_use_case_mgr_t *mUcMgr;
 
-public:
-    AudioUsbALSA();
-    virtual            ~AudioUsbALSA();
-
     //Helper functions
-    status_t configureUsbDevice();
-    status_t configureProxyDevice();
-    status_t configureUsbDeviceForRecording();
-    status_t configureProxyDeviceForRecording();
+    struct pcm * configureDevice(unsigned flags, char* hw, int sampleRate, int channelCount, int periodSize, bool playback);
     status_t syncPtr(struct pcm *handle, bool *killThread);
 
     //playback
@@ -107,6 +100,29 @@ public:
 
     status_t startDevice(pcm *handle, bool *killThread);
 
+    void PlaybackThreadEntry();
+    static void *PlaybackThreadWrapper(void *me);
+
+    void RecordingThreadEntry();
+    static void *RecordingThreadWrapper(void *me);
+
+    status_t setHardwareParams(pcm *local_handle, uint32_t sampleRate, uint32_t channels, int periodSize);
+
+    status_t setSoftwareParams(pcm *pcm, bool playback);
+
+    status_t closeDevice(pcm *handle);
+
+    status_t getCap(char * type, int &channels, int &sampleRate);
+    int         getnumOfRates(char *rateStr);
+    int         mchannelsPlayback;
+    int         msampleRatePlayback;
+    int         mchannelsCapture;
+    int         msampleRateCapture;
+
+public:
+    AudioUsbALSA();
+    virtual            ~AudioUsbALSA();
+
     void exitPlaybackThread(uint64_t writeVal);
     void exitRecordingThread(uint64_t writeVal);
     void setkillUsbRecordingThread(bool val);
@@ -116,32 +132,11 @@ public:
     bool getkillUsbRecordingThread() {
         return mkillRecordingThread;
     }
-    void closePlaybackDevices();
-    void closeRecordingDevices();
     //Playback
     void startPlayback();
-    void PlaybackThreadEntry();
-    static void *PlaybackThreadWrapper(void *me);
 
     //Capture
     void startRecording();
-    void RecordingThreadEntry();
-
-    static void *RecordingThreadWrapper(void *me);
-
-    status_t setHardwareParams(pcm *local_handle, uint32_t sampleRate, uint32_t channels);
-
-    status_t setSoftwareParams(pcm *pcm);
-
-    status_t closeDevice(pcm *handle);
-
-    status_t    getPlaybackCap();
-    status_t    getCaptureCap();
-    int         getnumOfRates(char *rateStr);
-    int         mchannelsPlayback;
-    int         msampleRatePlayback;
-    int         mchannelsCapture;
-    int         msampleRateCapture;
 };
 
 };        // namespace android_audio_legacy

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "audio_policy.msm8960"
+#define LOG_TAG "qcom_audio_policy_hal"
 //#define LOG_NDEBUG 0
 
 #include <stdint.h>
@@ -90,16 +90,6 @@ static void ap_set_phone_state(struct audio_policy *pol, audio_mode_t state)
     qap->apm->setPhoneState(state);
 }
 
-    /* indicate a change in ringer mode */
-static void ap_set_ringer_mode(struct audio_policy *pol, uint32_t mode,
-                               uint32_t mask)
-{
-#if 0
-    struct qcom_audio_policy *qap = to_qap(pol);
-    qap->apm->setRingerMode(mode, mask);
-#endif
-}
-
     /* force using a specific device category for the specified usage */
 static void ap_set_force_use(struct audio_policy *pol,
                           audio_policy_force_use_t usage,
@@ -135,7 +125,7 @@ static int ap_init_check(const struct audio_policy *pol)
     return qap->apm->initCheck();
 }
 
-#ifdef TUNNEL_LPA_ENABLED 
+#ifdef QCOM_TUNNEL_LPA_ENABLED
 static audio_io_handle_t ap_get_session(struct audio_policy *pol,
                                        audio_stream_type_t stream,
                                        audio_format_t format,
@@ -369,14 +359,13 @@ static int create_qcom_ap(const struct audio_policy_device *device,
     qap->policy.set_device_connection_state = ap_set_device_connection_state;
     qap->policy.get_device_connection_state = ap_get_device_connection_state;
     qap->policy.set_phone_state = ap_set_phone_state;
-    qap->policy.set_ringer_mode = ap_set_ringer_mode;
     qap->policy.set_force_use = ap_set_force_use;
     qap->policy.get_force_use = ap_get_force_use;
     qap->policy.set_can_mute_enforced_audible =
         ap_set_can_mute_enforced_audible;
     qap->policy.init_check = ap_init_check;
     qap->policy.get_output = ap_get_output;
-#ifdef TUNNEL_LPA_ENABLED
+#ifdef QCOM_TUNNEL_LPA_ENABLED
     qap->policy.get_session = ap_get_session;
     qap->policy.pause_session = ap_pause_session;
     qap->policy.resume_session = ap_resume_session;
