@@ -409,17 +409,19 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
             ALOGV("pcm_read() returned n = %d", n);
             if (n && (n == -EIO || n == -EAGAIN || n == -EPIPE || n == -EBADFD)) {
                 mParent->mLock.lock();
-                ALOGW("pcm_read() returned error n %d, Recovering from error\n", n);
-                pcm_close(mHandle->handle);
-                mHandle->handle = NULL;
-                if((!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL, strlen(SND_USE_CASE_VERB_IP_VOICECALL))) ||
-                (!strncmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP, strlen(SND_USE_CASE_MOD_PLAY_VOIP)))) {
-                    pcm_close(mHandle->rxHandle);
-                    mHandle->rxHandle = NULL;
-                    mHandle->module->startVoipCall(mHandle);
+                if (mHandle->handle != NULL) {
+                    ALOGW("pcm_read() returned error n %d, Recovering from error\n", n);
+                    pcm_close(mHandle->handle);
+                    mHandle->handle = NULL;
+                    if((!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL, strlen(SND_USE_CASE_VERB_IP_VOICECALL))) ||
+                    (!strncmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP, strlen(SND_USE_CASE_MOD_PLAY_VOIP)))) {
+                        pcm_close(mHandle->rxHandle);
+                        mHandle->rxHandle = NULL;
+                        mHandle->module->startVoipCall(mHandle);
+                    }
+                    else
+                        mHandle->module->open(mHandle);
                 }
-                else
-                    mHandle->module->open(mHandle);
                 mParent->mLock.unlock();
                 continue;
             }
