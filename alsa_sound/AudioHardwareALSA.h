@@ -19,6 +19,8 @@
 #ifndef ANDROID_AUDIO_HARDWARE_ALSA_H
 #define ANDROID_AUDIO_HARDWARE_ALSA_H
 
+#define QCOM_CSDCLIENT_ENABLED 1
+
 #include <utils/List.h>
 #include <hardware_legacy/AudioHardwareBase.h>
 
