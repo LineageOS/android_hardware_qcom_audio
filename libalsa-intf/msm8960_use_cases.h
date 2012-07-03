@@ -44,7 +44,8 @@ extern "C" {
 #define CAP_VOICE 0x4
 #define DEVICE_HANDSET_RX_ACDB_ID                       7 // HANDSET_SPKR
 #define DEVICE_HANDSET_TX_ACDB_ID                       4 // HANDSET_MIC
-#define DEVICE_SPEAKER_RX_ACDB_ID                       15// SPKR_PHONE_SPKR_STEREO
+#define DEVICE_SPEAKER_MONO_RX_ACDB_ID                  14// SPKR_PHONE_SPKR_MONO
+#define DEVICE_SPEAKER_STEREO_RX_ACDB_ID                15// SPKR_PHONE_SPKR_STEREO
 #define DEVICE_SPEAKER_TX_ACDB_ID                       11// SPKR_PHONE_MIC
 #define DEVICE_HEADSET_RX_ACDB_ID                       10// HEADSET_SPKR_STEREO
 #define DEVICE_HEADSET_TX_ACDB_ID                       8 // HEADSET_MIC

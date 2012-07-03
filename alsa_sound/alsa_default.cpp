@@ -522,7 +522,8 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
         strlcat(ident, curRxUCMDevice, sizeof(ident));
         rx_dev_id = snd_use_case_get(handle->ucMgr, ident, NULL);
 
-        if (rx_dev_id == DEVICE_SPEAKER_RX_ACDB_ID && tx_dev_id == DEVICE_HANDSET_TX_ACDB_ID) {
+        if (((rx_dev_id == DEVICE_SPEAKER_MONO_RX_ACDB_ID ) || (rx_dev_id == DEVICE_SPEAKER_STEREO_RX_ACDB_ID ))
+		 && tx_dev_id == DEVICE_HANDSET_TX_ACDB_ID) {
             tx_dev_id = DEVICE_SPEAKER_TX_ACDB_ID;
         }
 

@@ -620,11 +620,11 @@ int use_case_index)
                     rx_id = ctrl_list[index].acdb_id;
                     tx_id = ctrl_list[use_case_index].acdb_id;
                 }
-                if(rx_id == DEVICE_SPEAKER_RX_ACDB_ID &&
-                   tx_id == DEVICE_HANDSET_TX_ACDB_ID) {
+                if(((rx_id == DEVICE_SPEAKER_MONO_RX_ACDB_ID)||(rx_id == DEVICE_SPEAKER_STEREO_RX_ACDB_ID))
+                    && tx_id == DEVICE_HANDSET_TX_ACDB_ID) {
                     tx_id = DEVICE_SPEAKER_TX_ACDB_ID;
-                } else if (rx_id == DEVICE_SPEAKER_RX_ACDB_ID &&
-                           tx_id == DEVICE_HANDSET_TX_FV5_ACDB_ID) {
+                } else if (((rx_id == DEVICE_SPEAKER_MONO_RX_ACDB_ID )||(rx_id == DEVICE_SPEAKER_STEREO_RX_ACDB_ID))
+                    && tx_id == DEVICE_HANDSET_TX_FV5_ACDB_ID) {
                     tx_id = DEVICE_SPEAKER_TX_FV5_ACDB_ID;
                 }
 
