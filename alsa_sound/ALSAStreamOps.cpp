@@ -24,9 +24,8 @@
 #include <unistd.h>
 #include <dlfcn.h>
 
-#define LOG_TAG "ALSAStreamOps"
+#define LOG_TAG "audio.primary.msm8960"
 //#define LOG_NDEBUG 0
-#define LOG_NDDEBUG 0
 #include <utils/Log.h>
 #include <utils/String8.h>
 
@@ -56,7 +55,7 @@ ALSAStreamOps::~ALSAStreamOps()
         if((mParent->mVoipStreamCount)) {
             mParent->mVoipStreamCount--;
             if(mParent->mVoipStreamCount > 0) {
-                LOGD("ALSAStreamOps::close() Ignore");
+                ALOGD("ALSAStreamOps::close() Ignore");
                 return ;
             }
        }
@@ -165,7 +164,7 @@ status_t ALSAStreamOps::set(int      *format,
                 break;
 
             default:
-                LOGE("Unknown PCM format %i. Forcing default", *format);
+                ALOGE("Unknown PCM format %i. Forcing default", *format);
                 break;
         }
 
@@ -194,7 +193,7 @@ status_t ALSAStreamOps::setParameters(const String8& keyValuePairs)
     int device;
     if (param.getInt(key, device) == NO_ERROR) {
         // Ignore routing if device is 0.
-        LOGD("setParameters(): keyRouting with device %d", device);
+        ALOGD("setParameters(): keyRouting with device %d", device);
         mDevices = device;
         if(device) {
             mParent->doRouting(device);
@@ -205,7 +204,7 @@ status_t ALSAStreamOps::setParameters(const String8& keyValuePairs)
     else {
         key = String8(AudioParameter::keyHandleFm);
         if (param.getInt(key, device) == NO_ERROR) {
-        LOGD("setParameters(): handleFm with device %d", device);
+        ALOGD("setParameters(): handleFm with device %d", device);
         mDevices = device;
             if(device) {
                 mParent->handleFm(device);
@@ -228,6 +227,7 @@ String8 ALSAStreamOps::getParameters(const String8& keys)
         param.addInt(key, (int)mDevices);
     }
     else {
+#if 0
         key = String8(AudioParameter::keyVoipCheck);
         if (param.get(key, value) == NO_ERROR) {
             if((!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL, strlen(SND_USE_CASE_VERB_IP_VOICECALL))) ||
@@ -236,8 +236,9 @@ String8 ALSAStreamOps::getParameters(const String8& keys)
             else
                 param.addInt(key, false);
         }
+#endif
     }
-    LOGV("getParameters() %s", param.toString().string());
+    ALOGV("getParameters() %s", param.toString().string());
     return param.toString();
 }
 
@@ -251,7 +252,7 @@ uint32_t ALSAStreamOps::sampleRate() const
 //
 size_t ALSAStreamOps::bufferSize() const
 {
-    LOGV("bufferSize() returns %d", mHandle->bufferSize);
+    ALOGV("bufferSize() returns %d", mHandle->bufferSize);
     return mHandle->bufferSize;
 }
 
@@ -285,7 +286,7 @@ int ALSAStreamOps::format() const
             break;
     }
 
-    LOGD("ALSAFormat:0x%x,audioSystemFormat:0x%x",ALSAFormat,audioSystemFormat);
+    ALOGD("ALSAFormat:0x%x,audioSystemFormat:0x%x",ALSAFormat,audioSystemFormat);
     return audioSystemFormat;
 }
 
@@ -331,7 +332,7 @@ uint32_t ALSAStreamOps::channels() const
 
 void ALSAStreamOps::close()
 {
-    LOGD("close");
+    ALOGD("close");
     if((!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL, strlen(SND_USE_CASE_VERB_IP_VOICECALL))) ||
        (!strncmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP, strlen(SND_USE_CASE_MOD_PLAY_VOIP)))) {
        mParent->mVoipMicMute = false;
@@ -353,7 +354,7 @@ void ALSAStreamOps::close()
 //
 status_t ALSAStreamOps::open(int mode)
 {
-    LOGD("open");
+    ALOGD("open");
     return mParent->mALSADevice->open(mHandle);
 }
 

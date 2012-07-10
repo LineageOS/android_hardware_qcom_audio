@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "qcom_audio_hw_hal"
+#define LOG_TAG "audio.primary.msm8960"
 //#define LOG_NDEBUG 0
 
 #include <stdint.h>
@@ -66,7 +66,7 @@ static int out_set_sample_rate(struct audio_stream *stream, uint32_t rate)
     struct qcom_stream_out *out =
         reinterpret_cast<struct qcom_stream_out *>(stream);
 
-    LOGE("(%s:%d) %s: Implement me!", __FILE__, __LINE__, __func__);
+    ALOGE("(%s:%d) %s: Implement me!", __FILE__, __LINE__, __func__);
     /* TODO: implement this */
     return 0;
 }
@@ -89,14 +89,14 @@ static audio_format_t out_get_format(const struct audio_stream *stream)
 {
     const struct qcom_stream_out *out =
         reinterpret_cast<const struct qcom_stream_out *>(stream);
-    return out->qcom_out->format();
+    return (audio_format_t)out->qcom_out->format();
 }
 
 static int out_set_format(struct audio_stream *stream, audio_format_t format)
 {
     struct qcom_stream_out *out =
         reinterpret_cast<struct qcom_stream_out *>(stream);
-    LOGE("(%s:%d) %s: Implement me!", __FILE__, __LINE__, __func__);
+    ALOGE("(%s:%d) %s: Implement me!", __FILE__, __LINE__, __func__);
     /* TODO: implement me */
     return 0;
 }
@@ -192,7 +192,7 @@ static int in_set_sample_rate(struct audio_stream *stream, uint32_t rate)
     struct qcom_stream_in *in =
         reinterpret_cast<struct qcom_stream_in *>(stream);
 
-    LOGE("(%s:%d) %s: Implement me!", __FILE__, __LINE__, __func__);
+    ALOGE("(%s:%d) %s: Implement me!", __FILE__, __LINE__, __func__);
     /* TODO: implement this */
     return 0;
 }
@@ -215,14 +215,14 @@ static audio_format_t in_get_format(const struct audio_stream *stream)
 {
     const struct qcom_stream_in *in =
         reinterpret_cast<const struct qcom_stream_in *>(stream);
-    return in->qcom_in->format();
+    return (audio_format_t)in->qcom_in->format();
 }
 
 static int in_set_format(struct audio_stream *stream, audio_format_t format)
 {
     struct qcom_stream_in *in =
         reinterpret_cast<struct qcom_stream_in *>(stream);
-    LOGE("(%s:%d) %s: Implement me!", __FILE__, __LINE__, __func__);
+    ALOGE("(%s:%d) %s: Implement me!", __FILE__, __LINE__, __func__);
     /* TODO: implement me */
     return 0;
 }
@@ -319,14 +319,14 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_OUT_WIRED_HEADPHONE |
             AUDIO_DEVICE_OUT_AUX_DIGITAL |
             AUDIO_DEVICE_OUT_ALL_SCO |
-            AUDIO_DEVICE_OUT_ANC_HEADSET |
+//          AUDIO_DEVICE_OUT_ANC_HEADSET |
             AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET |
             AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET |
-            AUDIO_DEVICE_OUT_ANC_HEADPHONE |
-            AUDIO_DEVICE_OUT_FM |
-            AUDIO_DEVICE_OUT_FM_TX |
-            AUDIO_DEVICE_OUT_DIRECTOUTPUT |
-            AUDIO_DEVICE_OUT_PROXY |
+//          AUDIO_DEVICE_OUT_ANC_HEADPHONE |
+//          AUDIO_DEVICE_OUT_FM |
+//          AUDIO_DEVICE_OUT_FM_TX |
+//          AUDIO_DEVICE_OUT_DIRECTOUTPUT |
+//          AUDIO_DEVICE_OUT_PROXY |
             AUDIO_DEVICE_OUT_DEFAULT |
             /* IN */
             AUDIO_DEVICE_IN_VOICE_CALL |
@@ -337,9 +337,9 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_IN_AUX_DIGITAL |
             AUDIO_DEVICE_IN_BACK_MIC |
             AUDIO_DEVICE_IN_ALL_SCO |
-            AUDIO_DEVICE_IN_ANC_HEADSET |
-            AUDIO_DEVICE_IN_FM_RX |
-            AUDIO_DEVICE_IN_FM_RX_A2DP |
+//          AUDIO_DEVICE_IN_ANC_HEADSET |
+//          AUDIO_DEVICE_IN_FM_RX |
+//          AUDIO_DEVICE_IN_FM_RX_A2DP |
             AUDIO_DEVICE_IN_DEFAULT);
 }
 
@@ -364,7 +364,8 @@ static int adev_set_master_volume(struct audio_hw_device *dev, float volume)
 
 static int adev_get_master_volume(struct audio_hw_device *dev, float *volume) {
 
-    return -ENOSYS;
+    struct qcom_audio_device *qadev = to_ladev(dev);
+    return qadev->hwif->getMasterVolume(volume);
 }
 #ifdef QUALCOMM_FEATURES_ENABLED
 static int adev_set_fm_volume(struct audio_hw_device *dev, float volume)
@@ -412,7 +413,7 @@ static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev,
                                          const struct audio_config *config)
 {
     const struct qcom_audio_device *qadev = to_cladev(dev);
-    return qadev->hwif->getInputBufferSize(sample_rate, format, channel_count);
+    return qadev->hwif->getInputBufferSize(config->sample_rate, config->format, config->channel_mask);
 }
 
 #ifdef QUALCOMM_FEATURES_ENABLED
@@ -469,8 +470,11 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     if (!out)
         return -ENOMEM;
 
-    out->qcom_out = qadev->hwif->openOutputStream(devices, config->format, config->channels_mask,
-                                                    config->sample_rate, &status);
+    out->qcom_out = qadev->hwif->openOutputStream(devices,
+                                                    (int *)&config->format,
+                                                    &config->channel_mask,
+                                                    &config->sample_rate,
+                                                    &status);
     if (!out->qcom_out) {
         ret = status;
         goto err_open;
@@ -529,9 +533,11 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     if (!in)
         return -ENOMEM;
 
-    in->qcom_in = qadev->hwif->openInputStream(devices, config->format, config->channels_mask,
-                                    config->sample_rate, &status,
-                                    (AudioSystem::audio_in_acoustics)acoustics);
+    in->qcom_in = qadev->hwif->openInputStream(devices, (int *)&config->format,
+                                    &config->channel_mask,
+                                    &config->sample_rate,
+                                    &status,
+                                    (AudioSystem::audio_in_acoustics)0);
     if (!in->qcom_in) {
         ret = status;
         goto err_open;

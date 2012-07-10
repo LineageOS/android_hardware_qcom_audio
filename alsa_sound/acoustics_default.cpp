@@ -35,7 +35,7 @@ static hw_module_methods_t s_module_methods = {
     open            : s_device_open
 };
 
-extern "C" const hw_module_t HAL_MODULE_INFO_SYM = {
+extern "C" hw_module_t HAL_MODULE_INFO_SYM = {
     tag             : HARDWARE_MODULE_TAG,
     version_major   : 1,
     version_minor   : 0,

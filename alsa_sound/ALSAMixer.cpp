@@ -25,6 +25,7 @@
 
 #define LOG_TAG "AudioHardwareALSA"
 #include <utils/Log.h>
+
 #include <utils/String8.h>
 
 #include <cutils/properties.h>
@@ -100,16 +101,16 @@ static int initMixer (snd_mixer_t **mixer, const char *name)
     int err;
 
     if ((err = snd_mixer_open(mixer, 0)) < 0) {
-        LOGE("Unable to open mixer: %s", snd_strerror(err));
+        ALOGE("Unable to open mixer: %s", snd_strerror(err));
         return err;
     }
 
     if ((err = snd_mixer_attach(*mixer, name)) < 0) {
-        LOGW("Unable to attach mixer to device %s: %s",
+        ALOGW("Unable to attach mixer to device %s: %s",
             name, snd_strerror(err));
 
         if ((err = snd_mixer_attach(*mixer, "hw:00")) < 0) {
-            LOGE("Unable to attach mixer to device default: %s",
+            ALOGE("Unable to attach mixer to device default: %s",
                 snd_strerror(err));
 
             snd_mixer_close (*mixer);
@@ -119,7 +120,7 @@ static int initMixer (snd_mixer_t **mixer, const char *name)
     }
 
     if ((err = snd_mixer_selem_register(*mixer, NULL, NULL)) < 0) {
-        LOGE("Unable to register mixer elements: %s", snd_strerror(err));
+        ALOGE("Unable to register mixer elements: %s", snd_strerror(err));
         snd_mixer_close (*mixer);
         *mixer = NULL;
         return err;
@@ -127,7 +128,7 @@ static int initMixer (snd_mixer_t **mixer, const char *name)
 
     // Get the mixer controls from the kernel
     if ((err = snd_mixer_load(*mixer)) < 0) {
-        LOGE("Unable to load mixer elements: %s", snd_strerror(err));
+        ALOGE("Unable to load mixer elements: %s", snd_strerror(err));
         snd_mixer_close (*mixer);
         *mixer = NULL;
         return err;
@@ -204,7 +205,7 @@ ALSAMixer::ALSAMixer()
             }
         }
 
-        LOGV("Mixer: master '%s' %s.", info->name, info->elem ? "found" : "not found");
+        ALOGV("Mixer: master '%s' %s.", info->name, info->elem ? "found" : "not found");
 
         for (int j = 0; mixerProp[j][i].device; j++) {
 
@@ -240,10 +241,10 @@ ALSAMixer::ALSAMixer()
                     break;
                 }
             }
-            LOGV("Mixer: route '%s' %s.", info->name, info->elem ? "found" : "not found");
+            ALOGV("Mixer: route '%s' %s.", info->name, info->elem ? "found" : "not found");
         }
     }
-    LOGV("mixer initialized.");
+    ALOGV("mixer initialized.");
 }
 
 ALSAMixer::~ALSAMixer()
@@ -261,7 +262,7 @@ ALSAMixer::~ALSAMixer()
             }
         }
     }
-    LOGV("mixer destroyed.");
+    ALOGV("mixer destroyed.");
 }
 
 status_t ALSAMixer::setMasterVolume(float volume)
@@ -360,7 +361,7 @@ status_t ALSAMixer::setCaptureMuteState(uint32_t device, bool state)
 
                 int err = snd_mixer_selem_set_capture_switch_all (info->elem, static_cast<int>(!state));
                 if (err < 0) {
-                    LOGE("Unable to %s capture mixer switch %s",
+                    ALOGE("Unable to %s capture mixer switch %s",
                         state ? "enable" : "disable", info->name);
                     return INVALID_OPERATION;
                 }
@@ -401,7 +402,7 @@ status_t ALSAMixer::setPlaybackMuteState(uint32_t device, bool state)
 
                 int err = snd_mixer_selem_set_playback_switch_all (info->elem, static_cast<int>(!state));
                 if (err < 0) {
-                    LOGE("Unable to %s playback mixer switch %s",
+                    ALOGE("Unable to %s playback mixer switch %s",
                         state ? "enable" : "disable", info->name);
                     return INVALID_OPERATION;
                 }

@@ -25,9 +25,8 @@
 #include <dlfcn.h>
 #include <math.h>
 
-#define LOG_TAG "AudioStreamOutALSA"
+#define LOG_TAG "audio.primary.msm8960"
 //#define LOG_NDEBUG 0
-#define LOG_NDDEBUG 0
 #include <utils/Log.h>
 #include <utils/String8.h>
 
@@ -76,32 +75,32 @@ status_t AudioStreamOutALSA::setVolume(float left, float right)
 
     volume = (left + right) / 2;
     if (volume < 0.0) {
-        LOGW("AudioSessionOutALSA::setVolume(%f) under 0.0, assuming 0.0\n", volume);
+        ALOGW("AudioSessionOutALSA::setVolume(%f) under 0.0, assuming 0.0\n", volume);
         volume = 0.0;
     } else if (volume > 1.0) {
-        LOGW("AudioSessionOutALSA::setVolume(%f) over 1.0, assuming 1.0\n", volume);
+        ALOGW("AudioSessionOutALSA::setVolume(%f) over 1.0, assuming 1.0\n", volume);
         volume = 1.0;
     }
     vol = lrint((volume * 0x2000)+0.5);
 
     if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER) ||
        !strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_LPA)) {
-        LOGD("setLpaVolume(%f)\n", volume);
-        LOGD("Setting LPA volume to %d (available range is 0 to 100)\n", vol);
+        ALOGD("setLpaVolume(%f)\n", volume);
+        ALOGD("Setting LPA volume to %d (available range is 0 to 100)\n", vol);
         mHandle->module->setLpaVolume(vol);
         return status;
     }
     else if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_TUNNEL) ||
             !strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_TUNNEL)) {
-        LOGD("setCompressedVolume(%f)\n", volume);
-        LOGD("Setting Compressed volume to %d (available range is 0 to 100)\n", vol);
+        ALOGD("setCompressedVolume(%f)\n", volume);
+        ALOGD("Setting Compressed volume to %d (available range is 0 to 100)\n", vol);
         mHandle->module->setCompressedVolume(vol);
         return status;
     }
     else if(!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL,
             sizeof(mHandle->useCase)) || !strncmp(mHandle->useCase,
             SND_USE_CASE_MOD_PLAY_VOIP, sizeof(mHandle->useCase))) {
-        LOGV("Avoid Software volume by returning success\n");
+        ALOGV("Avoid Software volume by returning success\n");
         return status;
     }
     return INVALID_OPERATION;
@@ -112,7 +111,7 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
     int period_size;
     char *use_case;
 
-    LOGV("write:: buffer %p, bytes %d", buffer, bytes);
+    ALOGV("write:: buffer %p, bytes %d", buffer, bytes);
 
     snd_pcm_sframes_t n = 0;
     size_t            sent = 0;
@@ -180,7 +179,7 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
             else
                  mHandle->module->open(mHandle);
             if(mHandle->handle == NULL) {
-                LOGE("write:: device open failed");
+                ALOGE("write:: device open failed");
                 mParent->mLock.unlock();
                 return 0;
             }
@@ -205,13 +204,13 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
         (!mParent->musbPlaybackState)) {
         mParent->mLock.lock();
         mParent->startUsbPlaybackIfNotStarted();
-        LOGD("Starting playback on USB");
+        ALOGD("Starting playback on USB");
         if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL) ||
            !strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP)) {
-            LOGE("Setting VOIPCALL bit here, musbPlaybackState %d", mParent->musbPlaybackState);
+            ALOGE("Setting VOIPCALL bit here, musbPlaybackState %d", mParent->musbPlaybackState);
             mParent->musbPlaybackState |= USBPLAYBACKBIT_VOIPCALL;
         }else{
-            LOGD("enabling music, musbPlaybackState: %d ", mParent->musbPlaybackState);
+            ALOGD("enabling music, musbPlaybackState: %d ", mParent->musbPlaybackState);
             mParent->musbPlaybackState |= USBPLAYBACKBIT_MUSIC;
         }
         mParent->mLock.unlock();
@@ -233,7 +232,7 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
         }
         if (n < 0) {
 	    mParent->mLock.lock();
-            LOGE("pcm_write returned error %d, trying to recover\n", n);
+            ALOGE("pcm_write returned error %d, trying to recover\n", n);
             pcm_close(mHandle->handle);
             mHandle->handle = NULL;
             if((!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL, strlen(SND_USE_CASE_VERB_IP_VOICECALL))) ||
@@ -274,12 +273,12 @@ status_t AudioStreamOutALSA::close()
 {
     Mutex::Autolock autoLock(mParent->mLock);
 
-    LOGD("close");
+    ALOGD("close");
     if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
         (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
          if((mParent->mVoipStreamCount)) {
              if(mParent->mVoipStreamCount == 1) {
-                 LOGD("Deregistering VOIP Call bit, musbPlaybackState:%d, musbRecordingState: %d",
+                 ALOGD("Deregistering VOIP Call bit, musbPlaybackState:%d, musbRecordingState: %d",
                        mParent->musbPlaybackState, mParent->musbRecordingState);
                  mParent->musbPlaybackState &= ~USBPLAYBACKBIT_VOIPCALL;
                  mParent->musbRecordingState &= ~USBRECBIT_VOIPCALL;
@@ -308,7 +307,7 @@ status_t AudioStreamOutALSA::standby()
 {
     Mutex::Autolock autoLock(mParent->mLock);
 
-    LOGD("standby");
+    ALOGD("standby");
 
     if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
       (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
@@ -317,10 +316,10 @@ status_t AudioStreamOutALSA::standby()
 
     if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) ||
         (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_LPA))) {
-        LOGD("Deregistering LPA bit");
+        ALOGD("Deregistering LPA bit");
         mParent->musbPlaybackState &= ~USBPLAYBACKBIT_LPA;
     } else {
-        LOGD("Deregistering MUSIC bit, musbPlaybackState: %d", mParent->musbPlaybackState);
+        ALOGD("Deregistering MUSIC bit, musbPlaybackState: %d", mParent->musbPlaybackState);
         mParent->musbPlaybackState &= ~USBPLAYBACKBIT_MUSIC;
     }
 
