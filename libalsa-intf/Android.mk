@@ -77,7 +77,9 @@ LOCAL_CFLAGS := -DCONFIG_DIR=\"/system/etc/snd_soc_msm/\"
 ifeq ($(strip $(QC_PROP)),true)
 LOCAL_CFLAGS := -DQC_PROP -DCONFIG_DIR=\"/system/etc/snd_soc_msm/\"
 LOCAL_SHARED_LIBRARIES += libacdbloader
+LOCAL_ADDITIONAL_DEPENDENCIES  := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-acdb-util
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 endif
 ifeq ($(TARGET_SIMULATOR),true)
  LOCAL_LDLIBS += -ldl
