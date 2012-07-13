@@ -163,6 +163,42 @@ static int out_get_render_position(const struct audio_stream_out *stream,
     return out->qcom_out->getRenderPosition(dsp_frames);
 }
 
+static int out_set_observer(const struct audio_stream_out *stream,
+                                   void *observer)
+{
+    const struct qcom_stream_out *out =
+        reinterpret_cast<const struct qcom_stream_out *>(stream);
+    return out->qcom_out->setObserver(observer);
+}
+
+static status_t out_start(struct audio_stream_out *stream)
+{
+    struct qcom_stream_out *out =
+        reinterpret_cast<struct qcom_stream_out *>(stream);
+    return out->qcom_out->start();
+}
+
+static status_t out_pause(struct audio_stream_out *stream)
+{
+    struct qcom_stream_out *out =
+        reinterpret_cast<struct qcom_stream_out *>(stream);
+    return out->qcom_out->pause();
+}
+
+static status_t out_flush(struct audio_stream_out *stream)
+{
+    struct qcom_stream_out *out =
+        reinterpret_cast<struct qcom_stream_out *>(stream);
+    return out->qcom_out->flush();
+}
+
+static status_t out_stop(struct audio_stream_out *stream)
+{
+    struct qcom_stream_out *out =
+        reinterpret_cast<struct qcom_stream_out *>(stream);
+    return NO_ERROR;//return out->qcom_out->stop();
+}
+
 static int out_add_audio_effect(const struct audio_stream *stream, effect_handle_t effect)
 {
     return 0;
@@ -489,6 +525,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         return -ENOMEM;
 
     out->qcom_out = qadev->hwif->openOutputStream(devices,
+                                                    flags,
                                                     (int *)&config->format,
                                                     &config->channel_mask,
                                                     &config->sample_rate,
@@ -515,6 +552,11 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->stream.write = out_write;
     out->stream.get_render_position = out_get_render_position;
     out->stream.get_next_write_timestamp = out_get_next_write_timestamp;
+    out->stream.start = out_start;
+    out->stream.pause = out_pause;
+    out->stream.flush = out_flush;
+    out->stream.stop = out_stop;
+    out->stream.set_observer = out_set_observer;
 
     *stream_out = &out->stream;
     return 0;

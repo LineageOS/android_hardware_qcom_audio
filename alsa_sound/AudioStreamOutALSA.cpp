@@ -84,21 +84,7 @@ status_t AudioStreamOutALSA::setVolume(float left, float right)
     }
     vol = lrint((volume * 0x2000)+0.5);
 
-    if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER) ||
-       !strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_LPA)) {
-        ALOGD("setLpaVolume(%f)\n", volume);
-        ALOGD("Setting LPA volume to %d (available range is 0 to 100)\n", vol);
-        mHandle->module->setLpaVolume(vol);
-        return status;
-    }
-    else if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_TUNNEL) ||
-            !strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_TUNNEL)) {
-        ALOGD("setCompressedVolume(%f)\n", volume);
-        ALOGD("Setting Compressed volume to %d (available range is 0 to 100)\n", vol);
-        mHandle->module->setCompressedVolume(vol);
-        return status;
-    }
-    else if(!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL,
+    if(!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL,
             sizeof(mHandle->useCase)) || !strncmp(mHandle->useCase,
             SND_USE_CASE_MOD_PLAY_VOIP, sizeof(mHandle->useCase))) {
         ALOGV("Avoid Software volume by returning success\n");

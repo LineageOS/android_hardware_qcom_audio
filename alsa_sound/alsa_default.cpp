@@ -205,7 +205,36 @@ status_t setHardwareParams(alsa_handle_t *handle)
     unsigned int requestedRate = handle->sampleRate;
     int status = 0;
     int channels = handle->channels;
+    status_t err;
     snd_pcm_format_t format = SNDRV_PCM_FORMAT_S16_LE;
+    struct snd_compr_caps compr_cap;
+    struct snd_compr_params compr_params;
+
+    if ((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_TUNNEL)) ||
+        (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_TUNNEL))) {
+        if (ioctl(handle->handle->fd, SNDRV_COMPRESS_GET_CAPS, &compr_cap)) {
+            ALOGE("SNDRV_COMPRESS_GET_CAPS, failed Error no %d \n", errno);
+            err = -errno;
+            return err;
+        }
+        if( handle->format == AUDIO_FORMAT_AAC ) {
+            ALOGW("### AAC CODEC");
+            compr_params.codec.id = compr_cap.codecs[1];
+        }
+        else if (handle->format == AUDIO_FORMAT_MP3) {
+            ALOGW("### MP3 CODEC");
+            compr_params.codec.id = compr_cap.codecs[0];
+        }
+        else {
+            return UNKNOWN_ERROR;
+        }
+
+        if (ioctl(handle->handle->fd, SNDRV_COMPRESS_SET_PARAMS, &compr_params)) {
+            ALOGE("SNDRV_COMPRESS_SET_PARAMS,failed Error no %d \n", errno);
+            err = -errno;
+            return err;
+        }
+    }
 
     params = (snd_pcm_hw_params*) calloc(1, sizeof(struct snd_pcm_hw_params));
     if (!params) {
@@ -229,8 +258,18 @@ status_t setHardwareParams(alsa_handle_t *handle)
 #endif
 
     param_init(params);
-    param_set_mask(params, SNDRV_PCM_HW_PARAM_ACCESS,
-                   SNDRV_PCM_ACCESS_RW_INTERLEAVED);
+    if ((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) ||
+        (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_LPA)) ||
+        (!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_TUNNEL)) ||
+        (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_TUNNEL))) {
+        param_set_mask(params, SNDRV_PCM_HW_PARAM_ACCESS,
+                       SNDRV_PCM_ACCESS_MMAP_INTERLEAVED);
+    }
+    else {
+        param_set_mask(params, SNDRV_PCM_HW_PARAM_ACCESS,
+                       SNDRV_PCM_ACCESS_RW_INTERLEAVED);
+    }
+
     if (handle->format != SNDRV_PCM_FORMAT_S16_LE) {
         if (handle->format == AudioSystem::AMR_NB
             || handle->format == AudioSystem::AMR_WB
@@ -242,6 +281,7 @@ status_t setHardwareParams(alsa_handle_t *handle)
             )
               format = SNDRV_PCM_FORMAT_SPECIAL;
     }
+    //TODO: Add format setting for tunnel mode using the usecase.
     param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
                    format);
     param_set_mask(params, SNDRV_PCM_HW_PARAM_SUBFORMAT,
@@ -577,13 +617,6 @@ static status_t s_open(alsa_handle_t *handle)
     unsigned flags = 0;
     int err = NO_ERROR;
 
-    /* No need to call s_close for LPA as pcm device open and close is handled by LPAPlayer in stagefright */
-    if((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) || (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_LPA))
-    ||(!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_TUNNEL)) || (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_TUNNEL))) {
-        ALOGD("s_open: Opening LPA /Tunnel playback");
-        return NO_ERROR;
-    }
-
     s_close(handle);
 
     ALOGD("s_open: handle %p", handle);
@@ -594,12 +627,21 @@ static status_t s_open(alsa_handle_t *handle)
     // The PCM stream is opened in blocking mode, per ALSA defaults.  The
     // AudioFlinger seems to assume blocking mode too, so asynchronous mode
     // should not be used.
-    if ((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI)) ||
+    if ((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) ||
+        (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_LPA)) ||
+        (!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_TUNNEL)) ||
+        (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_TUNNEL))) {
+        ALOGE("LPA/tunnel use case");
+        flags |= PCM_MMAP;
+        flags |= DEBUG_ON;
+    } else if ((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI)) ||
         (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_MUSIC))) {
+        ALOGE("Music case");
         flags = PCM_OUT;
     } else {
         flags = PCM_IN;
     }
+
     if (handle->channels == 1) {
         flags |= PCM_MONO;
     } 
@@ -618,18 +660,21 @@ static status_t s_open(alsa_handle_t *handle)
     else {
         flags |= PCM_STEREO;
     }
+
     if (deviceName(handle, flags, &devName) < 0) {
         ALOGE("Failed to get pcm device node: %s", devName);
         return NO_INIT;
     }
     if (devName != NULL) {
+        ALOGV("flags %x, devName %s",flags,devName);
         handle->handle = pcm_open(flags, (char*)devName);
     } else {
         ALOGE("Failed to get pcm device node");
         return NO_INIT;
     }
+    ALOGV("pcm_open returned fd %d", handle->handle->fd);
 
-    if (!handle->handle) {
+    if (handle->handle->fd == -1) {
         ALOGE("s_open: Failed to initialize ALSA device '%s'", devName);
         free(devName);
         return NO_INIT;
@@ -1043,11 +1088,6 @@ static status_t s_close(alsa_handle_t *handle)
         }
 
         disableDevice(handle);
-    } else if((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) ||
-              (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_LPA)) ||
-              (!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_TUNNEL)) ||
-              (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_TUNNEL))){
-        disableDevice(handle);
     }
 
     return err;
@@ -1083,11 +1123,6 @@ static status_t s_standby(alsa_handle_t *handle)
         if(err != NO_ERROR) {
             ALOGE("s_standby: pcm_close failed for handle with err %d", err);
         }
-        disableDevice(handle);
-    } else if((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) ||
-              (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_LPA)) ||
-              (!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_TUNNEL)) ||
-              (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_TUNNEL))) {
         disableDevice(handle);
     }
 

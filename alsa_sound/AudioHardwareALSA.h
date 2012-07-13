@@ -32,9 +32,11 @@
 #endif
 
 extern "C" {
-   #include <sound/asound.h>
-   #include "alsa_audio.h"
-   #include "msm8960_use_cases.h"
+    #include <sound/asound.h>
+    #include <sound/compress_params.h>
+    #include <sound/compress_offload.h>
+    #include "alsa_audio.h"
+    #include "msm8960_use_cases.h"
 }
 
 #include <hardware/hardware.h>
@@ -43,6 +45,7 @@ namespace android_audio_legacy
 {
 using android::List;
 using android::Mutex;
+using android::Condition;
 class AudioHardwareALSA;
 
 /**
@@ -323,6 +326,142 @@ protected:
     AudioHardwareALSA *     mParent;
 };
 
+// ----------------------------------------------------------------------------
+
+class AudioSessionOutALSA : public AudioStreamOut
+{
+public:
+    AudioSessionOutALSA(AudioHardwareALSA *parent,
+                        uint32_t   devices,
+                        int        format,
+                        uint32_t   channels,
+                        uint32_t   samplingRate,
+                        int        type,
+                        status_t   *status);
+    virtual            ~AudioSessionOutALSA();
+
+    virtual uint32_t    sampleRate() const
+    {
+        return mSampleRate;
+    }
+
+    virtual size_t      bufferSize() const
+    {
+        return mBufferSize;
+    }
+
+    virtual uint32_t    channels() const
+    {
+        return mChannels;
+    }
+
+    virtual int         format() const
+    {
+        return mFormat;
+    }
+
+    virtual uint32_t    latency() const;
+
+    virtual ssize_t     write(const void *buffer, size_t bytes);
+
+    virtual status_t    start();
+    virtual status_t    pause();
+    virtual status_t    flush();
+    virtual status_t    stop();
+
+    virtual status_t    dump(int fd, const Vector<String16>& args);
+
+    status_t            setVolume(float left, float right);
+
+    virtual status_t    standby();
+
+    virtual status_t    setParameters(const String8& keyValuePairs)
+    {
+        return NO_ERROR;
+    }
+
+    virtual String8     getParameters(const String8& keys)
+    {
+        return String8("");
+    }
+
+
+    // return the number of audio frames written by the audio dsp to DAC since
+    // the output has exited standby
+    virtual status_t    getRenderPosition(uint32_t *dspFrames);
+
+    virtual status_t    getNextWriteTimestamp(int64_t *timestamp);
+
+    virtual status_t    setObserver(void *observer);
+
+private:
+    Mutex               mLock;
+    uint32_t            mFrameCount;
+    uint32_t            mSampleRate;
+    uint32_t            mChannels;
+    size_t              mBufferSize;
+    int                 mFormat;
+    uint32_t            mStreamVol;
+
+    bool                mPaused;
+    bool                mSeeking;
+    bool                mReachedEOS;
+    bool                mSkipWrite;
+    AudioHardwareALSA  *mParent;
+    alsa_handle_t *     mAlsaHandle;
+    alsa_device_t *     mAlsaDevice;
+    snd_use_case_mgr_t *mUcMgr;
+    AudioEventObserver *mObserver;
+
+    status_t            openDevice(char *pUseCase, bool bIsUseCase, int devices);
+
+    status_t            closeDevice(alsa_handle_t *pDevice);
+    void                createEventThread();
+    void                bufferAlloc(alsa_handle_t *handle);
+    void                bufferDeAlloc();
+    bool                isReadyToPostEOS(int errPoll, void *fd);
+    status_t            drain();
+    status_t            openAudioSessionDevice(int type, int devices);
+    // make sure the event thread also exited
+    void                requestAndWaitForEventThreadExit();
+    int32_t             writeToDriver(char *buffer, int bytes);
+    static void *       eventThreadWrapper(void *me);
+    void                eventThreadEntry();
+    void                reset();
+
+    //Structure to hold mem buffer information
+    class BuffersAllocated {
+    public:
+        BuffersAllocated(void *buf1, int32_t nSize) :
+        memBuf(buf1), memBufsize(nSize), bytesToWrite(0)
+        {}
+        void* memBuf;
+        int32_t memBufsize;
+        uint32_t bytesToWrite;
+    };
+    List<BuffersAllocated> mEmptyQueue;
+    List<BuffersAllocated> mFilledQueue;
+    List<BuffersAllocated> mBufPool;
+
+    //Declare all the threads
+    pthread_t mEventThread;
+
+    //Declare the condition Variables and Mutex
+    Mutex mEmptyQueueMutex;
+    Mutex mFilledQueueMutex;
+
+    Condition mWriteCv;
+    Condition mEventCv;
+    bool mKillEventThread;
+    bool mEventThreadAlive;
+    int mInputBufferSize;
+    int mInputBufferCount;
+
+    //event fd to signal the EOS and Kill from the userspace
+    int mEfd;
+};
+
+
 class AudioStreamInALSA : public AudioStreamIn, public ALSAStreamOps
 {
 public:
@@ -477,6 +616,7 @@ public:
     /** This method creates and opens the audio hardware output stream */
     virtual AudioStreamOut* openOutputStream(
             uint32_t devices,
+            audio_output_flags_t flags,
             int *format=0,
             uint32_t *channels=0,
             uint32_t *sampleRate=0,
@@ -523,6 +663,7 @@ protected:
     void                enableVoiceCall(char* verb, char* modifier, int mode, int device);
     bool                routeVoiceCall(int device, int	newMode);
     bool                routeVoLTECall(int device, int newMode);
+    friend class AudioSessionOutALSA;
     friend class AudioStreamOutALSA;
     friend class AudioStreamInALSA;
     friend class ALSAStreamOps;
