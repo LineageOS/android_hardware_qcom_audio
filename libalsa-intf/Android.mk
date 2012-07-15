@@ -65,6 +65,11 @@ LOCAL_MODULE_TAGS:= debug
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
+
+# hack for prebuilt libacdbloader
+$(shell mkdir -p $(OUT)/obj/SHARED_LIBRARIES/libacdbloader_intermediates)
+$(shell touch $(OUT)/obj/SHARED_LIBRARIES/libacdbloader_intermediates/export_includes)
+
 LOCAL_COPY_HEADERS_TO   := mm-audio/libalsa-intf
 LOCAL_COPY_HEADERS      := alsa_audio.h
 LOCAL_COPY_HEADERS      += alsa_ucm.h
