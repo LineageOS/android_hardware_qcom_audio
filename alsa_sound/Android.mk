@@ -3,7 +3,7 @@
 # Copyright 2008 Wind River Systems
 #
 
-ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)
+ifeq ($(BOARD_USES_ALSA_AUDIO),true)
 
 LOCAL_PATH := $(call my-dir)
 
@@ -129,5 +129,6 @@ LOCAL_SHARED_LIBRARIES := \
 LOCAL_MODULE:= alsa.msm8960
 LOCAL_MODULE_TAGS := optional
 
-  include $(BUILD_SHARED_LIBRARY)
-endif
+include $(BUILD_SHARED_LIBRARY)
+
+endif # BOARD_USES_ALSA_AUDIO

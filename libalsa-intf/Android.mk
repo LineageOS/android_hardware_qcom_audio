@@ -1,6 +1,6 @@
 LOCAL_PATH:= $(call my-dir)
 
-ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)
+ifeq ($(BOARD_USES_ALSA_AUDIO),true)
 # Any prebuilt files with default TAGS can use the below:
 include $(CLEAR_VARS)
 LOCAL_MODULE       := snd_soc_msm
@@ -72,15 +72,8 @@ LOCAL_COPY_HEADERS      += msm8960_use_cases.h
 LOCAL_SRC_FILES:= alsa_mixer.c alsa_pcm.c alsa_ucm.c
 LOCAL_MODULE:= libalsa-intf
 LOCAL_MODULE_TAGS := optional
-LOCAL_SHARED_LIBRARIES:= libc libcutils #libutils #libmedia libhardware_legacy
+LOCAL_SHARED_LIBRARIES := libc libcutils libacdbloader #libutils #libmedia #libhardware_legacy
 LOCAL_CFLAGS := -DCONFIG_DIR=\"/system/etc/snd_soc_msm/\"
-ifeq ($(strip $(QC_PROP)),true)
-LOCAL_CFLAGS := -DQC_PROP -DCONFIG_DIR=\"/system/etc/snd_soc_msm/\"
-LOCAL_SHARED_LIBRARIES += libacdbloader
-LOCAL_ADDITIONAL_DEPENDENCIES  := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-acdb-util
-LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-endif
 ifeq ($(TARGET_SIMULATOR),true)
  LOCAL_LDLIBS += -ldl
 else
