@@ -38,62 +38,10 @@
 #endif
 #include <linux/msm_audio_mvs.h>
 #include <sys/mman.h>
+#include "control.h"
+#include "acdb.h"
 
-
-// ToDo: Remove this definition
-#define QC_PROP
-#if defined(QC_PROP)
-    #include "control.h"
-
-    extern "C" {
-#ifdef QCOM_ACDB_ENABLED
-    #include "acdb-loader.h"
-    #include "acdb-id-mapper.h"
-#endif
-    }
-#else
-        #define msm_mixer_count() (-EPERM)
-        #define msm_mixer_open(name, card) (-EPERM)
-        #define msm_mixer_close() (-EPERM)
-        #define msm_get_device(name) (-EPERM)
-        #define msm_en_device(dev_id, set) (-EPERM)
-        #define msm_route_stream(dir, dec_id, dev_id, set) (-EPERM)
-        #define msm_route_voice(tx, rx, set) (-EPERM)
-        #define msm_set_volume(dec_id, vol) (-EPERM)
-        #define msm_get_device_class(device_id) (-EPERM)
-        #define msm_get_device_capability(device_id) (-EPERM)
-        #define msm_get_device_list() (-EPERM)
-        #define msm_get_device_count() (-EPERM)
-        #define msm_start_voice() (-EPERM)
-        #define msm_end_voice() (-EPERM)
-        #define msm_set_voice_tx_mute(mute) (-EPERM)
-        #define msm_set_voice_rx_vol(volume) (-EPERM)
-        #define msm_set_device_volume(dev_id,volume) (-EPERM)
-        #define msm_reset_all_device() (-EPERM)
-        #define acdb_ioctl(ioctl, cmd, cmd_len, res, res_len) (-EPERM)
-        #define acdb_loader_send_anc_cal(arg1) (-EPERM)
-        #define msm_enable_anc(arg1, arg2) (-EPERM)
-        #define acdb_loader_send_audio_cal(arg1, arg2) (-EPERM)
-        #define acdb_loader_send_voice_cal(arg1, arg2) (-EPERM)
-        #define acdb_mapper_get_acdb_id_from_dev_name(arg1, arg2) (-EPERM)
-        #define acdb_loader_init_ACDB() (-EPERM)
-        #define acdb_loader_deallocate_ACDB() (-EPERM)
-        #define INVALID_ACDB_ID -1
-#endif
-
-#ifndef QCOM_ACDB_ENABLED
-        #define acdb_ioctl(ioctl, cmd, cmd_len, res, res_len) (-EPERM)
-        #define acdb_loader_send_anc_cal(arg1) (-EPERM)
-        #define msm_enable_anc(arg1, arg2) (-EPERM)
-        #define acdb_loader_send_audio_cal(arg1, arg2) (-EPERM)
-        #define acdb_loader_send_voice_cal(arg1, arg2) (-EPERM)
-        #define acdb_mapper_get_acdb_id_from_dev_name(arg1, arg2) (-EPERM)
-        #define acdb_loader_init_ACDB() (-EPERM)
-        #define acdb_loader_deallocate_ACDB() (-EPERM)
-        #define INVALID_ACDB_ID -1
-#endif
-
-
+#define VOICE_SESSION_NAME "Voice session"
 
 // hardware specific functions
 

@@ -1,6 +1,3 @@
-ifneq ($(BUILD_TINY_ANDROID),true)
-ifeq ($(strip $(QC_PROP)),true)
-
 #AUDIO_POLICY_TEST := true
 #ENABLE_AUDIO_DUMP := true
 
@@ -97,6 +94,3 @@ LOCAL_MODULE_CLASS := ETC
 LOCAL_MODULE_PATH  := $(TARGET_OUT_ETC)/
 LOCAL_SRC_FILES    := audio_policy.conf
 include $(BUILD_PREBUILT)
-
-endif #QC_PROP
-endif # not BUILD_TINY_ANDROID
