@@ -1243,8 +1243,18 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                  (devices & AudioSystem::DEVICE_OUT_FM_TX)) {
             return strdup(SND_USE_CASE_DEV_SPEAKER_FM_TX); /* COMBO SPEAKER+FM_TX RX */
 #endif
+#ifdef USES_HTC_VOICE_CONFIG
+        } else if ((callMode == AudioSystem::MODE_IN_CALL) &&
+                   (devices & AudioSystem::DEVICE_OUT_EARPIECE)) {
+            return strdup(SND_USE_CASE_DEV_EARPIECE_VOICE);
+#endif
         } else if (devices & AudioSystem::DEVICE_OUT_EARPIECE) {
             return strdup(SND_USE_CASE_DEV_EARPIECE); /* HANDSET RX */
+#ifdef USES_HTC_VOICE_CONFIG
+        } else if ((callMode == AudioSystem::MODE_IN_CALL) &&
+                   (devices & AudioSystem::DEVICE_OUT_SPEAKER)) {
+            return strdup(SND_USE_CASE_DEV_SPEAKER_VOICE);
+#endif
         } else if (devices & AudioSystem::DEVICE_OUT_SPEAKER) {
             return strdup(SND_USE_CASE_DEV_SPEAKER); /* SPEAKER RX */
         } else if ((devices & AudioSystem::DEVICE_OUT_WIRED_HEADSET) ||
@@ -1309,6 +1319,11 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                      return strdup(SND_USE_CASE_DEV_TTY_HANDSET_TX);
                  }
              }
+#ifdef USES_HTC_VOICE_CONFIG
+        } else if ((callMode == AudioSystem::MODE_IN_CALL) &&
+                   (devices & AudioSystem::DEVICE_IN_BUILTIN_MIC)) {
+            return strdup(SND_USE_CASE_DEV_HANDSET_VOICE);
+#endif
         } else if (devices & AudioSystem::DEVICE_IN_BUILTIN_MIC) {
             if (!strncmp(mic_type, "analog", 6)) {
                 return strdup(SND_USE_CASE_DEV_HANDSET); /* HANDSET TX */
@@ -1357,6 +1372,11 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                  return strdup(SND_USE_CASE_DEV_BTSCO_WB_TX); /* BTSCO TX*/
              else
                  return strdup(SND_USE_CASE_DEV_BTSCO_NB_TX); /* BTSCO TX*/
+#ifdef USES_HTC_VOICE_CONFIG
+        } else if ((callMode == AudioSystem::MODE_IN_CALL) &&
+                   (devices & AudioSystem::DEVICE_IN_DEFAULT)) {
+            return strdup(SND_USE_CASE_DEV_LINE_VOICE);
+#endif
 #ifdef QCOM_USBAUDIO_ENABLED
         } else if ((devices & AudioSystem::DEVICE_IN_ANLG_DOCK_HEADSET) ||
                    (devices & AudioSystem::DEVICE_IN_PROXY)) {
