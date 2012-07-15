@@ -61,13 +61,7 @@
 
 #include <linux/ioctl.h>
 #include "msm8960_use_cases.h"
-#if defined(QC_PROP)
-    #include "acdb-loader.h"
-#else
-    #define acdb_loader_send_voice_cal(rxacdb_id, txacdb_id) (-EPERM)
-    #define acdb_loader_send_audio_cal(acdb_id, capability) (-EPERM)
-    #define acdb_loader_send_anc_cal(acdb_id) (-EPERM)
-#endif
+#include "acdb-loader.h"
 #define PARSE_DEBUG 0
 
 /**
