@@ -39,8 +39,6 @@ extern "C" {
 
 #include <hardware/hardware.h>
 
-#define QCOM_CSDCLIENT_ENABLED
-
 namespace android_audio_legacy
 {
 using android::List;

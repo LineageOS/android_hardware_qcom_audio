@@ -287,7 +287,7 @@ int ALSAStreamOps::format() const
             break;
     }
 
-    ALOGV("ALSAFormat:0x%x,audioSystemFormat:0x%x",ALSAFormat,audioSystemFormat);
+    ALOGD("ALSAFormat:0x%x,audioSystemFormat:0x%x",ALSAFormat,audioSystemFormat);
     return audioSystemFormat;
 }
 
