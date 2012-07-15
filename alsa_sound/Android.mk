@@ -11,7 +11,6 @@ include $(CLEAR_VARS)
 
 LOCAL_ARM_MODE := arm
 LOCAL_CFLAGS := -D_POSIX_SOURCE
-LOCAL_CFLAGS += -DQCOM_CSDCLIENT_ENABLED
 
 LOCAL_SRC_FILES := \
   AudioHardwareALSA.cpp 	\
@@ -27,22 +26,18 @@ LOCAL_STATIC_LIBRARIES := \
     libaudiopolicy_legacy \
 
 LOCAL_SHARED_LIBRARIES := \
-    libacdbloader \
     libcutils \
     libutils \
     libmedia \
     libhardware \
     libc        \
     libpower    \
-    libalsa-intf \
-    libcsd-client \
-    libsurround_proc
+    libalsa-intf
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-alsa
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audcal
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-acdb-util
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/libalsa-intf
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-qmi/csd-client
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/surround_sound/
 LOCAL_C_INCLUDES += hardware/libhardware/include
 LOCAL_C_INCLUDES += hardware/libhardware_legacy/include
@@ -114,7 +109,6 @@ ifneq ($(ALSA_DEFAULT_SAMPLE_RATE),)
 endif
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/libalsa-intf
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-qmi/csd-client
 
 LOCAL_SRC_FILES:= \
     alsa_default.cpp \
@@ -123,8 +117,7 @@ LOCAL_SRC_FILES:= \
 LOCAL_SHARED_LIBRARIES := \
     libcutils \
     liblog    \
-    libalsa-intf \
-    libcsd-client
+    libalsa-intf
 
 LOCAL_MODULE:= alsa.msm8960
 LOCAL_MODULE_TAGS := optional
