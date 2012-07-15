@@ -170,7 +170,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                                 sizeof(mHandle->useCase));
                     }
                 }
-#ifdef QCOM_FM_ENABLED
+#ifdef QCOM_CSDCLIENT_ENABLED
             } else if(mHandle->devices == AudioSystem::DEVICE_IN_FM_RX) {
                 strlcpy(mHandle->useCase, SND_USE_CASE_MOD_CAPTURE_FM, sizeof(mHandle->useCase));
             } else if (mHandle->devices == AudioSystem::DEVICE_IN_FM_RX_A2DP) {
