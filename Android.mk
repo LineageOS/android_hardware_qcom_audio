@@ -12,6 +12,10 @@ ifeq ($(TARGET_BOARD_PLATFORM),msm7x27a)
 endif
 ifeq ($(TARGET_BOARD_PLATFORM),msm8660)
     include $(AUDIO_HW_ROOT)/msm8660/Android.mk
+    include $(AUDIO_HW_ROOT)/mm-audio/Android.mk
+endif
+ifeq ($(TARGET_BOARD_PLATFORM),msm8960)
+    include $(AUDIO_HW_ROOT)/mm-audio/Android.mk
 endif
 
 endif
