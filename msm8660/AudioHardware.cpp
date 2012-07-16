@@ -943,7 +943,7 @@ AudioStreamIn* AudioHardware::openInputStream(
         return inVoip;
     } else
 #endif
-      {
+    {
         AudioStreamInMSM8x60* in8x60 = new AudioStreamInMSM8x60();
         status_t lStatus = in8x60->set(this, devices, format, channels, sampleRate, acoustic_flags);
         if (status) {
@@ -2796,8 +2796,9 @@ status_t AudioHardware::AudioStreamOutDirect::getRenderPosition(uint32_t *dspFra
 #endif
 
 //.----------------------------------------------------------------------------
+int mFdin = -1;
 AudioHardware::AudioStreamInMSM8x60::AudioStreamInMSM8x60() :
-    mHardware(0), mFd(-1), mState(AUDIO_INPUT_CLOSED), mRetryCount(0),
+    mHardware(0), mState(AUDIO_INPUT_CLOSED), mRetryCount(0),
     mFormat(AUDIO_HW_IN_FORMAT), mChannels(AUDIO_HW_IN_CHANNELS),
     mSampleRate(AUDIO_HW_IN_SAMPLERATE), mBufferSize(AUDIO_HW_IN_BUFFERSIZE),
     mAcoustics((AudioSystem::audio_in_acoustics)0), mDevices(0)
@@ -2833,7 +2834,7 @@ status_t AudioHardware::AudioStreamInMSM8x60::set(
     mHardware = hw;
 
     ALOGV("AudioStreamInMSM8x60::set(%d, %d, %u)", *pFormat, *pChannels, *pRate);
-    if (mFd >= 0) {
+    if (mFdin >= 0) {
         ALOGE("Audio record already open");
         return -EPERM;
     }
@@ -2908,12 +2909,12 @@ status_t AudioHardware::AudioStreamInMSM8x60::set(
             goto Error;
         }
         mHardware->mNumPcmRec ++;
-        mFd = status;
+        mFdin = status;
 
         // configuration
         ALOGV("get config");
         struct msm_audio_config config;
-        status = ioctl(mFd, AUDIO_GET_CONFIG, &config);
+        status = ioctl(mFdin, AUDIO_GET_CONFIG, &config);
         if (status < 0) {
             ALOGE("Cannot read config");
             goto Error;
@@ -2934,10 +2935,10 @@ status_t AudioHardware::AudioStreamInMSM8x60::set(
         // that AudioFlinger allocates (Shared memory)
         config.buffer_count = 4;
         config.codec_type = CODEC_TYPE_PCM;
-        status = ioctl(mFd, AUDIO_SET_CONFIG, &config);
+        status = ioctl(mFdin, AUDIO_SET_CONFIG, &config);
         if (status < 0) {
             ALOGE("Cannot set config");
-            if (ioctl(mFd, AUDIO_GET_CONFIG, &config) == 0) {
+            if (ioctl(mFdin, AUDIO_GET_CONFIG, &config) == 0) {
                 if (config.channel_count == 1) {
                     *pChannels = AudioSystem::CHANNEL_IN_MONO;
                 } else {
@@ -2949,7 +2950,7 @@ status_t AudioHardware::AudioStreamInMSM8x60::set(
         }
 
         ALOGV("confirm config");
-        status = ioctl(mFd, AUDIO_GET_CONFIG, &config);
+        status = ioctl(mFdin, AUDIO_GET_CONFIG, &config);
         if (status < 0) {
             ALOGE("Cannot read config");
             goto Error;
@@ -2977,29 +2978,32 @@ status_t AudioHardware::AudioStreamInMSM8x60::set(
                 ALOGV("Recording Source: Voice Call UpLink");
                 voc_rec_cfg.rec_mode = VOC_REC_UPLINK;
             }
-            if (ioctl(mFd, AUDIO_SET_INCALL, &voc_rec_cfg)) {
+            if (ioctl(mFdin, AUDIO_SET_INCALL, &voc_rec_cfg)) {
                 ALOGE("Error: AUDIO_SET_INCALL failed\n");
                 goto  Error;
             }
         }
-
+#ifdef QCOM_ACDB_ENABLED
     if(vr_enable && dualmic_enabled) {
         int audpre_mask = 0;
         audpre_mask = FLUENCE_ENABLE;
 
             ALOGV("enable fluence");
-            if (ioctl(mFd, AUDIO_ENABLE_AUDPRE, &audpre_mask)) {
+            if (ioctl(mFdin, AUDIO_ENABLE_AUDPRE, &audpre_mask)) {
                 ALOGV("cannot write audio config");
                 goto Error;
             }
         }
+#endif
     }
     //mHardware->setMicMute_nosync(false);
     mState = AUDIO_INPUT_OPENED;
 
     if (!acoustic)
+	{
         return NO_ERROR;
-
+    }
+#ifdef QCOM_ACDB_ENABLED
     audpre_index = calculate_audpre_table_index(mSampleRate);
     tx_iir_index = (audpre_index * 2) + (hw->checkOutputStandby() ? 0 : 1);
     ALOGD("audpre_index = %d, tx_iir_index = %d\n", audpre_index, tx_iir_index);
@@ -3019,13 +3023,13 @@ status_t AudioHardware::AudioStreamInMSM8x60::set(
     status = msm8x60_enable_audpre((int)acoustic_flags, audpre_index, tx_iir_index);
     if (status < 0)
         ALOGE("Cannot enable audpre");
-
+#endif
     return NO_ERROR;
 
 Error:
-    if (mFd >= 0) {
-        ::close(mFd);
-        mFd = -1;
+    if (mFdin >= 0) {
+        ::close(mFdin);
+        mFdin = -1;
     }
     return status;
 }
@@ -3070,10 +3074,10 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
                 hw->mLock.unlock();
                 return -1;
              }
-#ifdef QCOM_ACDB_ENABLED
+
             acdb_loader_send_audio_cal(ACDB_ID(DEVICE_FMRADIO_STEREO_TX),
             CAPABILITY(DEVICE_FMRADIO_STEREO_TX));
-#endif
+
             ALOGV("route FM");
             if(msm_route_stream(PCM_REC, dec_id, DEV_ID(DEVICE_FMRADIO_STEREO_TX), 1)) {
                 ALOGE("msm_route_stream failed");
@@ -3093,18 +3097,16 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
             hw->mLock.unlock();
         } else
 #endif
-        {
+//        {
             hw->mLock.unlock();
-            if(ioctl(mFd, AUDIO_GET_SESSION_ID, &dec_id)) {
+            if(ioctl(mFdin, AUDIO_GET_SESSION_ID, &dec_id)) {
                 ALOGE("AUDIO_GET_SESSION_ID failed*********");
                 return -1;
             }
-
             Mutex::Autolock lock(mDeviceSwitchLock);
-
             if (!(mChannels & AudioSystem::CHANNEL_IN_VOICE_DNLINK ||
                   mChannels & AudioSystem::CHANNEL_IN_VOICE_UPLINK)) {
-                ALOGV("dec_id = %d,cur_tx= %d",dec_id,cur_tx);
+                 ALOGV("dec_id = %d,cur_tx= %d",dec_id,cur_tx);
                  if(cur_tx == INVALID_DEVICE)
                      cur_tx = DEVICE_HANDSET_TX;
                  if(enableDevice(cur_tx, 1)) {
@@ -3121,7 +3123,7 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
                  addToTable(dec_id,cur_tx,INVALID_DEVICE,PCM_REC,true);
             }
             mFirstread = false;
-        }
+//        }
     }
 
 
@@ -3137,7 +3139,7 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
             }
 #endif
         }
-        if (ioctl(mFd, AUDIO_START, 0)) {
+        if (ioctl(mFdin, AUDIO_START, 0)) {
             ALOGE("Error starting record");
             standby();
             return -1;
@@ -3153,7 +3155,7 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
             return 0;
         }
         while (count >= mBufferSize) {
-            ssize_t bytesRead = ::read(mFd, buffer, count);
+            ssize_t bytesRead = ::read(mFdin, buffer, count);
             if (bytesRead >= 0) {
                 count -= bytesRead;
                 p += bytesRead;
@@ -3161,6 +3163,7 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
                 if(!mFirstread)
                 {
                    mFirstread = true;
+                   ALOGE(" FirstRead Done bytesRead = %d count = %d",bytesRead,count);
                    break;
                 }
             } else {
@@ -3181,9 +3184,9 @@ status_t AudioHardware::AudioStreamInMSM8x60::standby()
     Routing_table* temp = NULL;
     if (!mHardware) return -1;
     if (mState > AUDIO_INPUT_CLOSED) {
-        if (mFd >= 0) {
-            ::close(mFd);
-            mFd = -1;
+        if (mFdin >= 0) {
+            ::close(mFdin);
+            mFdin = -1;
             ALOGV("driver closed");
             isDriverClosed = true;
             if(mHardware->mNumPcmRec && mFormat == AUDIO_HW_IN_FORMAT) {
@@ -3222,6 +3225,7 @@ status_t AudioHardware::AudioStreamInMSM8x60::standby()
     temp = getNodeByStreamType(PCM_REC);
     if(temp == NULL)
         return NO_ERROR;
+
     if(isDriverClosed){
         ALOGV("Deroute pcm stream");
         if (!(mChannels & AudioSystem::CHANNEL_IN_VOICE_DNLINK ||
@@ -3267,7 +3271,7 @@ status_t AudioHardware::AudioStreamInMSM8x60::dump(int fd, const Vector<String16
     result.append(buffer);
     snprintf(buffer, SIZE, "\tmHardware: %p\n", mHardware);
     result.append(buffer);
-    snprintf(buffer, SIZE, "\tmFd count: %d\n", mFd);
+    snprintf(buffer, SIZE, "\tmFd count: %d\n", mFdin);
     result.append(buffer);
     snprintf(buffer, SIZE, "\tmState: %d\n", mState);
     result.append(buffer);
