@@ -334,7 +334,6 @@ private:
 
     private:
                 AudioHardware* mHardware;
-                int         mFd;
                 int         mState;
                 int         mRetryCount;
                 int         mFormat;
