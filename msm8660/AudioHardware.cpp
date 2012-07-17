@@ -62,6 +62,10 @@
 #define FM_FILE_REC 2
 #endif
 
+#ifdef QCOM_ACDB_ENABLED
+#define INVALID_ACDB_ID -1
+#endif
+
 namespace android_audio_legacy {
 
 Mutex   mDeviceSwitchLock;
