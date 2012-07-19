@@ -146,7 +146,9 @@ static int s_device_open(const hw_module_t* module, const char* name,
     }
     strlcpy(curRxUCMDevice, "None", sizeof(curRxUCMDevice));
     strlcpy(curTxUCMDevice, "None", sizeof(curTxUCMDevice));
+#if LOCAL_LOGD
     ALOGD("ALSA module opened");
+#endif
 
     return 0;
 }
@@ -214,8 +216,10 @@ status_t setHardwareParams(alsa_handle_t *handle)
     }
 
     reqBuffSize = handle->bufferSize;
+#if LOCAL_LOGD
     ALOGD("setHardwareParams: reqBuffSize %d channels %d sampleRate %d",
          (int) reqBuffSize, handle->channels, handle->sampleRate);
+#endif
 
 #ifdef QCOM_SSR_ENABLED
     if (channels == 6) {
@@ -264,9 +268,11 @@ status_t setHardwareParams(alsa_handle_t *handle)
     handle->handle->buffer_size = pcm_buffer_size(params);
     handle->handle->period_size = pcm_period_size(params);
     handle->handle->period_cnt = handle->handle->buffer_size/handle->handle->period_size;
+#if LOCAL_LOGD
     ALOGD("setHardwareParams: buffer_size %d, period_size %d, period_cnt %d",
         handle->handle->buffer_size, handle->handle->period_size,
         handle->handle->period_cnt);
+#endif
     handle->handle->rate = handle->sampleRate;
     handle->handle->channels = handle->channels;
     handle->periodSize = handle->handle->period_size;
@@ -565,7 +571,9 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
 
 static status_t s_init(alsa_device_t *module, ALSAHandleList &list)
 {
+#if LOCAL_LOGD
     ALOGD("s_init: Initializing devices for ALSA module");
+#endif
 
     list.clear();
 
@@ -587,7 +595,9 @@ static status_t s_open(alsa_handle_t *handle)
 
     s_close(handle);
 
+#if LOCAL_LOGD
     ALOGD("s_open: handle %p", handle);
+#endif
 
     // ASoC multicomponent requires a valid path (frontend/backend) for
     // the device to be opened
@@ -757,7 +767,10 @@ static status_t s_start_voice_call(alsa_handle_t *handle)
     unsigned flags = 0;
     int err = NO_ERROR;
 
+#if LOCAL_LOGD
     ALOGD("s_start_voice_call: handle %p", handle);
+#endif
+
     // ASoC multicomponent requires a valid path (frontend/backend) for
     // the device to be opened
 
@@ -1013,7 +1026,9 @@ static status_t s_close(alsa_handle_t *handle)
      struct pcm *h = handle->rxHandle;
 
     handle->rxHandle = 0;
+#if LOCAL_LOGD
     ALOGD("s_close: handle %p h %p", handle, h);
+#endif
     if (h) {
         ALOGV("s_close rxHandle\n");
         err = pcm_close(h);
@@ -1066,7 +1081,9 @@ static status_t s_standby(alsa_handle_t *handle)
     status_t err = NO_ERROR;  
     struct pcm *h = handle->rxHandle;
     handle->rxHandle = 0;
+#if LOCAL_LOGD
     ALOGD("s_standby: handle %p h %p", handle, h);
+#endif
     if (h) {
         ALOGE("s_standby  rxHandle\n");
         err = pcm_close(h);
@@ -1079,7 +1096,9 @@ static status_t s_standby(alsa_handle_t *handle)
     handle->handle = 0;
 
     if (h) {
-          ALOGE("s_standby handle h %p\n", h);
+#if LOCAL_LOGD
+          ALOGD("s_standby handle h %p\n", h);
+#endif
         err = pcm_close(h);
         if(err != NO_ERROR) {
             ALOGE("s_standby: pcm_close failed for handle with err %d", err);
@@ -1099,7 +1118,9 @@ static status_t s_route(alsa_handle_t *handle, uint32_t devices, int mode)
 {
     status_t status = NO_ERROR;
 
+#if LOCAL_LOGD
     ALOGD("s_route: devices 0x%x in mode %d", devices, mode);
+#endif
     callMode = mode;
     switchDevice(handle, devices, mode);
     return status;
@@ -1187,14 +1208,18 @@ static void disableDevice(alsa_handle_t *handle)
                strlen(SND_USE_CASE_VERB_INACTIVE)))
             usecase_type |= getUseCaseType(useCase);
         mods_size = snd_use_case_get_list(handle->ucMgr, "_enamods", &mods_list);
-        ALOGE("Number of modifiers %d\n", mods_size);
+#if LOCAL_LOGD
+        ALOGD("Number of modifiers %d\n", mods_size);
+#endif
         if (mods_size) {
             for(i = 0; i < mods_size; i++) {
                 ALOGE("index %d modifier %s\n", i, mods_list[i]);
                 usecase_type |= getUseCaseType(mods_list[i]);
             }
         }
-        ALOGE("usecase_type is %d\n", usecase_type);
+#if LOCAL_LOGD
+        ALOGD("usecase_type is %d\n", usecase_type);
+#endif
         if (!(usecase_type & USECASE_TYPE_TX) && (strncmp(curTxUCMDevice, "None", 4)))
             snd_use_case_set(handle->ucMgr, "_disdev", curTxUCMDevice);
         if (!(usecase_type & USECASE_TYPE_RX) && (strncmp(curRxUCMDevice, "None", 4)))
@@ -1397,7 +1422,9 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
 void s_set_voice_volume(int vol)
 {
     int err = 0;
+#if LOCAL_LOGD
     ALOGD("s_set_voice_volume: volume %d", vol);
+#endif
     ALSAControl control("/dev/snd/controlC0");
     control.set("Voice Rx Volume", vol, 0);
 
@@ -1413,7 +1440,9 @@ void s_set_voice_volume(int vol)
 
 void s_set_volte_volume(int vol)
 {
+#if LOCAL_LOGD
     ALOGD("s_set_volte_volume: volume %d", vol);
+#endif
     ALSAControl control("/dev/snd/controlC0");
     control.set("VoLTE Rx Volume", vol, 0);
 }
@@ -1421,14 +1450,18 @@ void s_set_volte_volume(int vol)
 
 void s_set_voip_volume(int vol)
 {
+#if LOCAL_LOGD
     ALOGD("s_set_voip_volume: volume %d", vol);
+#endif
     ALSAControl control("/dev/snd/controlC0");
     control.set("Voip Rx Volume", vol, 0);
 }
 void s_set_mic_mute(int state)
 {
     int err = 0;
+#if LOCAL_LOGD
     ALOGD("s_set_mic_mute: state %d", state);
+#endif
     ALSAControl control("/dev/snd/controlC0");
     control.set("Voice Tx Mute", state, 0);
 
@@ -1443,21 +1476,27 @@ void s_set_mic_mute(int state)
 }
 void s_set_volte_mic_mute(int state)
 {
+#if LOCAL_LOGD
     ALOGD("s_set_volte_mic_mute: state %d", state);
+#endif
     ALSAControl control("/dev/snd/controlC0");
     control.set("VoLTE Tx Mute", state, 0);
 }
 
 void s_set_voip_mic_mute(int state)
 {
+#if LOCAL_LOGD
     ALOGD("s_set_voip_mic_mute: state %d", state);
+#endif
     ALSAControl control("/dev/snd/controlC0");
     control.set("Voip Tx Mute", state, 0);
 }
 
 void s_set_voip_config(int mode, int rate)
 {
+#if LOCAL_LOGD
     ALOGD("s_set_voip_config: mode %d,rate %d", mode, rate);
+#endif
     ALSAControl control("/dev/snd/controlC0");
     char** setValues;
     setValues = (char**)malloc(2*sizeof(char*));
@@ -1496,7 +1535,9 @@ void s_enable_wide_voice(bool flag)
 {
     int err = 0;
 
+#if LOCAL_LOGD
     ALOGD("s_enable_wide_voice: flag %d", flag);
+#endif
     ALSAControl control("/dev/snd/controlC0");
     if(flag == true) {
         control.set("Widevoice Enable", 1, 0);
@@ -1516,7 +1557,9 @@ void s_enable_wide_voice(bool flag)
 
 void s_set_voc_rec_mode(uint8_t mode)
 {
+#if LOCAL_LOGD
     ALOGD("s_set_voc_rec_mode: mode %d", mode);
+#endif
     ALSAControl control("/dev/snd/controlC0");
     control.set("Incall Rec Mode", mode, 0);
 }
@@ -1525,7 +1568,9 @@ void s_enable_fens(bool flag)
 {
     int err = 0;
 
+#if LOCAL_LOGD
     ALOGD("s_enable_fens: flag %d", flag);
+#endif
     ALSAControl control("/dev/snd/controlC0");
     if(flag == true) {
         control.set("FENS Enable", 1, 0);
@@ -1547,7 +1592,9 @@ void s_enable_slow_talk(bool flag)
 {
     int err = 0;
 
+#if LOCAL_LOGD
     ALOGD("s_enable_slow_talk: flag %d", flag);
+#endif
     ALSAControl control("/dev/snd/controlC0");
     if(flag == true) {
         control.set("Slowtalk Enable", 1, 0);

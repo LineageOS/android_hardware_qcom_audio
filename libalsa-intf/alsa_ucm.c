@@ -743,13 +743,17 @@ const char *use_case, int enable, int ctrl_list_type, int uc_index)
             ALOGE("Control device not initialized");
             ret = -ENODEV;
         } else {
+#if LOCAL_LOGD
             ALOGD("Set mixer controls for %s enable %d", use_case, enable);
+#endif
             if (ctrl_list[uc_index].acdb_id && ctrl_list[uc_index].capability) {
                 if (enable) {
                     if (snd_use_case_apply_voice_acdb(uc_mgr, uc_index)) {
+#if LOCAL_LOGD
                         ALOGD("acdb_id %d cap %d enable %d",
                             ctrl_list[uc_index].acdb_id,
                             ctrl_list[uc_index].capability, enable);
+#endif
                         acdb_loader_send_audio_cal(ctrl_list[uc_index].acdb_id,
                             ctrl_list[uc_index].capability);
                     }
@@ -771,9 +775,11 @@ const char *use_case, int enable, int ctrl_list_type, int uc_index)
                           mixer_list[index].control_name, 0);
                 if (ctl) {
                     if (mixer_list[index].type == TYPE_INT) {
+#if LOCAL_LOGD
                         ALOGD("Setting mixer control: %s, value: %d",
                              mixer_list[index].control_name,
                              mixer_list[index].value);
+#endif
                         ret = mixer_ctl_set(ctl, mixer_list[index].value);
                     } else if (mixer_list[index].type == TYPE_MULTI_VAL) {
                         ALOGD("Setting multi value: %s",
@@ -784,9 +790,11 @@ const char *use_case, int enable, int ctrl_list_type, int uc_index)
                             ALOGE("Failed to set multi value control %s\n",
                                 mixer_list[index].control_name);
                     } else {
+#if LOCAL_LOGD
                         ALOGD("Setting mixer control: %s, value: %s",
                             mixer_list[index].control_name,
                             mixer_list[index].string);
+#endif
                         ret = mixer_ctl_select(ctl, mixer_list[index].string);
                     }
                     if ((ret != 0) && enable) {
@@ -1309,8 +1317,10 @@ int snd_use_case_set(snd_use_case_mgr_t *uc_mgr,
         return -EINVAL;
     }
 
+#if LOCAL_LOGD
     ALOGD("snd_use_case_set(): uc_mgr %p identifier %s value %s", uc_mgr,
          identifier, value);
+#endif
     strlcpy(ident, identifier, sizeof(ident));
     if(!(ident1 = strtok_r(ident, "/", &temp_ptr))) {
         ALOGV("No multiple identifiers found in identifier value");
