@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAVX///VU\u003d",
+        "filename": "msm8660/AudioHardware.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1571,
+      "author": {
+        "id": 19
+      },
+      "writtenOn": "2012-07-19T22:34:02Z",
+      "side": 1,
+      "message": "ALOGV",
+      "revId": "e29a7aeb15157a021b138bc020bd2bdc082411dd",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAVX///VQ\u003d",
+        "filename": "msm8660/AudioHardware.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1704,
+      "author": {
+        "id": 19
+      },
+      "writtenOn": "2012-07-19T22:34:02Z",
+      "side": 1,
+      "message": "ALOGI",
+      "revId": "e29a7aeb15157a021b138bc020bd2bdc082411dd",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
