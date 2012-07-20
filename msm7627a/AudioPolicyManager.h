@@ -37,11 +37,7 @@ class AudioPolicyManager: public AudioPolicyManagerBase
 
 public:
                 AudioPolicyManager(AudioPolicyClientInterface *clientInterface)
-                : AudioPolicyManagerBase(clientInterface),fmMode(FM_NONE){
-                  mLPADecodeOutput = -1;
-                  mLPAMuted = false;
-                  mLPAStreamType = AudioSystem::DEFAULT;
-                }
+                : AudioPolicyManagerBase(clientInterface),fmMode(FM_NONE){}
 
         virtual ~AudioPolicyManager() {}
 
@@ -49,44 +45,31 @@ public:
                                                           AudioSystem::device_connection_state state,
                                                           const char *device_address);
 
-        virtual uint32_t getDeviceForStrategy(routing_strategy strategy, bool fromCache = true);
-        virtual audio_io_handle_t getSession(AudioSystem::stream_type stream,
-                                            uint32_t format,
-                                            AudioSystem::output_flags flags,
-                                            int32_t  sessionId, uint32_t samplingRate,
-                                            uint32_t channels);
-        virtual void pauseSession(audio_io_handle_t output, AudioSystem::stream_type stream);
-        virtual void resumeSession(audio_io_handle_t output, AudioSystem::stream_type stream);
-        virtual void releaseSession(audio_io_handle_t output);
+        virtual audio_devices_t getDeviceForStrategy(routing_strategy strategy, bool fromCache = true);
         virtual void setForceUse(AudioSystem::force_use usage, AudioSystem::forced_config config);
 protected:
         fm_modes fmMode;
 
-        // true is current platform implements a back microphone
-        virtual bool hasBackMicrophone() const { return false; }
 #ifdef WITH_A2DP
         // true is current platform supports suplication of notifications and ringtones over A2DP output
-        virtual bool a2dpUsedForSonification() const { return true; }
+        //virtual bool a2dpUsedForSonification() const { return true; }
 #endif
         // check that volume change is permitted, compute and send new volume to audio hardware
-        status_t checkAndSetVolume(int stream, int index, audio_io_handle_t output, uint32_t device, int delayMs = 0, bool force = false);
+        status_t checkAndSetVolume(int stream, int index, audio_io_handle_t output, audio_devices_t device, int delayMs = 0, bool force = false);
         // select input device corresponding to requested audio source
-        virtual uint32_t getDeviceForInputSource(int inputSource);
-        status_t stopInput(audio_io_handle_t input);
-        // change the route of the specified output
-   virtual void setPhoneState(int state);
-   virtual void setOutputDevice(audio_io_handle_t output,uint32_t device,bool force = false,int delayMs = 0);
-   virtual status_t startOutput(audio_io_handle_t output,AudioSystem::stream_type stream,int session = 0);
-   virtual status_t stopOutput(audio_io_handle_t output,AudioSystem::stream_type stream,int session = 0);
-   void setStreamMute(int stream, bool on, audio_io_handle_t output, int delayMs = 0);
-   virtual void setFmMode(fm_modes mode) {  fmMode = mode; }
-   virtual fm_modes getFMMode() const {  return fmMode; }
-   audio_io_handle_t mLPADecodeOutput;           // active output handler
-   audio_io_handle_t mLPAActiveOuput;           // LPA Output Handler during inactive state
-   bool    mLPAMuted;
-   AudioSystem::stream_type  mLPAStreamType;
-   AudioSystem::stream_type  mLPAActiveStreamType;
+        virtual audio_devices_t getDeviceForInputSource(int inputSource);
 
-
+        virtual uint32_t setOutputDevice(audio_io_handle_t output,
+                        audio_devices_t device,
+                        bool force = false,
+                        int delayMs = 0);
+        virtual status_t startOutput(audio_io_handle_t output,
+                                AudioSystem::stream_type stream,
+                                int session = 0);
+        virtual status_t stopOutput(audio_io_handle_t output,
+                               AudioSystem::stream_type stream,
+                               int session = 0);
+        virtual void setFmMode(fm_modes mode) {  fmMode = mode; }
+        virtual fm_modes getFMMode() const {  return fmMode; }
 };
 };

@@ -368,7 +368,7 @@ static int adev_get_master_volume(struct audio_hw_device *dev, float *volume) {
     struct qcom_audio_device *qadev = to_ladev(dev);
     return qadev->hwif->getMasterVolume(volume);
 }
-#ifdef QUALCOMM_FEATURES_ENABLED
+#ifdef QCOM_FM_ENABLED
 static int adev_set_fm_volume(struct audio_hw_device *dev, float volume)
 {
     struct qcom_audio_device *qadev = to_ladev(dev);
@@ -417,7 +417,7 @@ static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev,
     return qadev->hwif->getInputBufferSize(config->sample_rate, config->format, popcount(config->channel_mask));
 }
 
-#ifdef QUALCOMM_FEATURES_ENABLED
+#ifdef QCOM_TUNNEL_LPA_ENABLED
 static int adev_open_output_session(struct audio_hw_device *dev,
                                    uint32_t devices,
                                    int *format,
@@ -628,7 +628,7 @@ static int qcom_adev_open(const hw_module_t* module, const char* name,
     qadev->device.set_voice_volume = adev_set_voice_volume;
     qadev->device.set_master_volume = adev_set_master_volume;
     qadev->device.get_master_volume = adev_get_master_volume;
-#ifdef QUALCOMM_FEATURES_ENABLED
+#ifdef QCOM_FM_ENABLED
     qadev->device.set_fm_volume = adev_set_fm_volume;
 #endif
     qadev->device.set_mode = adev_set_mode;
@@ -638,7 +638,7 @@ static int qcom_adev_open(const hw_module_t* module, const char* name,
     qadev->device.get_parameters = adev_get_parameters;
     qadev->device.get_input_buffer_size = adev_get_input_buffer_size;
     qadev->device.open_output_stream = adev_open_output_stream;
-#ifdef QUALCOMM_FEATURES_ENABLED
+#ifdef QCOM_TUNNEL_LPA_ENABLED
     qadev->device.open_output_session = adev_open_output_session;
 #endif
     qadev->device.close_output_stream = adev_close_output_stream;
