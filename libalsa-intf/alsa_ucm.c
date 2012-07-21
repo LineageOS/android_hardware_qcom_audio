@@ -1880,6 +1880,9 @@ int snd_use_case_mgr_open(snd_use_case_mgr_t **uc_mgr, const char *card_name)
         uc_mgr_ptr->card_ctxt_ptr->mixer_handle =
             mixer_open(uc_mgr_ptr->card_ctxt_ptr->control_device);
         ALOGV("Mixer handle %p", uc_mgr_ptr->card_ctxt_ptr->mixer_handle);
+        if ((acdb_loader_init_ACDB()) < 0) {
+            ALOGE("Failed to initialize ACDB");
+        }
         *uc_mgr = uc_mgr_ptr;
     }
     ALOGV("snd_use_case_open(): returning instance %p", uc_mgr_ptr);
