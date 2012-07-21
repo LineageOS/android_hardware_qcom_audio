@@ -16,6 +16,24 @@
       "revId": "f3750fcda6aa174ee52e8388f51198ab83b3a88a",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAVX//+6c\u003d",
+        "filename": "alsa_sound/AudioStreamInALSA.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 173,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2012-07-21T13:41:58Z",
+      "side": 1,
+      "message": "I think CAF messed up here originally. They fixed it in one of the patches that got reverted.",
+      "parentUuid": "AAAAVX//+6k\u003d",
+      "revId": "f3750fcda6aa174ee52e8388f51198ab83b3a88a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
