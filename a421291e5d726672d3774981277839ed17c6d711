@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAVX//+bY\u003d",
+        "filename": "msm8660/AudioHardware.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1504,
+      "author": {
+        "id": 19
+      },
+      "writtenOn": "2012-07-23T02:23:34Z",
+      "side": 1,
+      "message": "i think we can remove this if",
+      "revId": "a421291e5d726672d3774981277839ed17c6d711",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
