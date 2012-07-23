@@ -58,6 +58,31 @@ using android::Mutex;
 #define RX_IIR_ENABLE   0x0004
 #define RX_IIR_DISABLE  0x0000
 
+#ifdef HTC_ACOUSTIC_AUDIO
+    #define MOD_PLAY 1
+    #define MOD_REC  2
+    #define MOD_TX   3
+    #define MOD_RX   4
+
+    #define ACDB_ID_HEADSET_PLAYBACK          10
+    #define ACDB_ID_ALT_SPKR_PLAYBACK         601
+
+    #define ACDB_ID_HAC_HANDSET_MIC           107
+    #define ACDB_ID_HAC_HANDSET_SPKR          207
+    #define ACDB_ID_EXT_MIC_REC               307
+    #define ACDB_ID_HEADSET_RINGTONE_PLAYBACK 408
+    #define ACDB_ID_INT_MIC_REC               507
+    #define ACDB_ID_CAMCORDER                 508
+    #define ACDB_ID_INT_MIC_VR                509
+    #define ACDB_ID_SPKR_PLAYBACK             607
+
+    struct msm_bt_endpoint {
+        int tx;
+        int rx;
+        char name[64];
+    };
+#endif
+
 struct eq_filter_type {
     int16_t  gain;
     uint16_t freq;
@@ -183,7 +208,21 @@ private:
     status_t    dumpInternals(int fd, const Vector<String16>& args);
     uint32_t    getInputSampleRate(uint32_t sampleRate);
     bool        checkOutputStandby();
+#ifdef HTC_ACOUSTIC_AUDIO
+    status_t    get_mMode();
+    status_t    set_mRecordState(bool onoff);
+    status_t    get_mRecordState();
+    status_t    get_snd_dev();
+#endif
     status_t    doRouting(AudioStreamInMSM8x60 *input);
+#ifdef HTC_ACOUSTIC_AUDIO
+    void        getACDB(uint32_t device);
+    status_t    do_aic3254_control(uint32_t device);
+    bool        isAic3254Device(uint32_t device);
+    status_t    aic3254_config(uint32_t device);
+    int         aic3254_ioctl(int cmd, const int argc);
+    void        aic3254_powerdown();
+#endif
 #ifdef QCOM_FM_ENABLED
     status_t    enableFM(int sndDevice);
 #endif
@@ -401,6 +440,11 @@ private:
             bool        mBluetoothNrec;
             bool        mBluetoothVGS;
             uint32_t    mBluetoothId;
+#ifdef HTC_ACOUSTIC_AUDIO
+            bool        mHACSetting;
+            uint32_t    mBluetoothIdTx;
+            uint32_t    mBluetoothIdRx;
+#endif
             AudioStreamOutMSM8x60*  mOutput;
 #ifdef QCOM_VOIP_ENABLED
             AudioStreamOutDirect*  mDirectOutput;
@@ -409,13 +453,29 @@ private:
 #ifdef QCOM_VOIP_ENABLED
             SortedVector <AudioStreamInVoip*>   mVoipInputs;
 #endif
+#ifdef HTC_ACOUSTIC_AUDIO
+            msm_bt_endpoint *mBTEndpoints;
+            int mNumBTEndpoints;
+#endif
             int mCurSndDevice;
+#ifdef HTC_ACOUSTIC_AUDIO
+            float mVoiceVolume;
+#endif
             int mTtyMode;
             int mNumPcmRec;
             Mutex mLock;
 #ifdef QCOM_VOIP_ENABLED
             int mVoipFd;
             int mNumVoipStreams;
+#endif
+#ifdef HTC_ACOUSTIC_AUDIO
+            int mNoiseSuppressionState;
+            bool mDualMicEnabled;
+            bool mRecordState;
+            char mCurDspProfile[22];
+            bool mEffectEnabled;
+            char mActiveAP[10];
+            char mEffect[10];
 #endif
 
 };
