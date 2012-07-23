@@ -30,7 +30,6 @@ extern "C" {
 #include <linux/msm_audio.h>
 #include <linux/msm_audio_aac.h>
 }
-
 namespace android_audio_legacy {
 using android::SortedVector;
 using android::Mutex;
@@ -204,11 +203,11 @@ private:
                                 int *pFormat,
                                 uint32_t *pChannels,
                                 uint32_t *pRate);
-        virtual uint32_t    sampleRate() const { ALOGV(" AudioStreamOutMSM8x60 : sampleRate\n"); return 44100; }
+        virtual uint32_t    sampleRate() const { return 44100; }
         // must be 32-bit aligned - driver only seems to like 4800
         virtual size_t      bufferSize() const { return 4800; }
-        virtual uint32_t    channels() const {ALOGV(" AudioStreamOutMSM8x60: channels\n"); return AudioSystem::CHANNEL_OUT_STEREO; }
-        virtual int         format() const {ALOGV(" AudioStreamOutMSM8x60: format\n"); return AudioSystem::PCM_16_BIT; }
+        virtual uint32_t    channels() const { return AudioSystem::CHANNEL_OUT_STEREO; }
+        virtual int         format() const { return AudioSystem::PCM_16_BIT; }
         virtual uint32_t    latency() const { return (1000*AUDIO_HW_NUM_OUT_BUF*(bufferSize()/frameSize()))/sampleRate()+AUDIO_HW_OUT_LATENCY_MS; }
         virtual status_t    setVolume(float left, float right) { return INVALID_OPERATION; }
         virtual ssize_t     write(const void* buffer, size_t bytes);
@@ -238,10 +237,10 @@ private:
                                 int *pFormat,
                                 uint32_t *pChannels,
                                 uint32_t *pRate);
-        virtual uint32_t    sampleRate() const { ALOGD(" AudioStreamOutDirect: sampleRate %d\n",mSampleRate); return mSampleRate; }
-        virtual size_t      bufferSize() const { ALOGD(" AudioStreamOutDirect: bufferSize %d\n",mBufferSize); return mBufferSize; }
-        virtual uint32_t    channels() const {ALOGD(" AudioStreamOutDirect: channels\n");  return mChannels; }
-        virtual int         format() const {ALOGD(" AudioStreamOutDirect: format\n"); return AudioSystem::PCM_16_BIT; }
+        virtual uint32_t    sampleRate() const { return mSampleRate; }
+        virtual size_t      bufferSize() const { return mBufferSize; }
+        virtual uint32_t    channels() const { return mChannels; }
+        virtual int         format() const { return AudioSystem::PCM_16_BIT; }
         virtual uint32_t    latency() const { return (1000*AUDIO_HW_NUM_OUT_BUF*(bufferSize()/frameSize()))/sampleRate()+AUDIO_HW_OUT_LATENCY_MS; }
         virtual status_t    setVolume(float left, float right) { return INVALID_OPERATION; }
         virtual ssize_t     write(const void* buffer, size_t bytes);
@@ -364,10 +363,10 @@ private:
                                 uint32_t *pChannels,
                                 uint32_t *pRate,
                                 AudioSystem::audio_in_acoustics acoustics);
-        virtual size_t      bufferSize() const { ALOGD("AudioStreamInVoip mBufferSize %d ",mBufferSize);return mBufferSize; }
+        virtual size_t      bufferSize() const { return mBufferSize; }
         virtual uint32_t    channels() const { return mChannels; }
         virtual int         format() const { return AUDIO_HW_IN_FORMAT; }
-        virtual uint32_t    sampleRate() const { ALOGD("AudioStreamInVoip samplerate %d ",mSampleRate);return mSampleRate; }
+        virtual uint32_t    sampleRate() const { return mSampleRate; }
         virtual status_t    setGain(float gain) { return INVALID_OPERATION; }
         virtual ssize_t     read(void* buffer, ssize_t bytes);
         virtual status_t    dump(int fd, const Vector<String16>& args);
