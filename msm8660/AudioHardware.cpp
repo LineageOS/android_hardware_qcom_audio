@@ -41,6 +41,14 @@
 #include "control.h"
 #include "acdb.h"
 
+#ifdef HTC_ACOUSTIC_AUDIO
+    extern "C" {
+    #include <linux/spi_aic3254.h>
+    #include <linux/tpa2051d3.h>
+    }
+    #define DSP_EFFECT_KEY "dolby_srs_eq"
+#endif
+
 #define VOICE_SESSION_NAME "Voice session"
 
 // hardware specific functions
@@ -69,38 +77,52 @@
 namespace android_audio_legacy {
 
 Mutex   mDeviceSwitchLock;
+#ifdef HTC_ACOUSTIC_AUDIO
+Mutex   mAIC3254ConfigLock;
+#endif
 static int audpre_index, tx_iir_index;
 static void * acoustic;
 const uint32_t AudioHardware::inputSamplingRates[] = {
         8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000
 };
-static uint32_t INVALID_DEVICE                        = 65535;
-static uint32_t SND_DEVICE_CURRENT                    = -1;
-static uint32_t SND_DEVICE_HANDSET                    = 0;
-static uint32_t SND_DEVICE_SPEAKER                    = 1;
-static uint32_t SND_DEVICE_HEADSET                    = 2;
-static uint32_t SND_DEVICE_FM_HANDSET                 = 3;
-static uint32_t SND_DEVICE_FM_SPEAKER                 = 4;
-static uint32_t SND_DEVICE_FM_HEADSET                 = 5;
-static uint32_t SND_DEVICE_BT                         = 6;
-static uint32_t SND_DEVICE_BT_EC_OFF                  = -1;
-static uint32_t SND_DEVICE_HEADSET_AND_SPEAKER        = 7;
-static uint32_t SND_DEVICE_NO_MIC_HEADSET             = 8;
-static uint32_t SND_DEVICE_IN_S_SADC_OUT_HANDSET      = 9;
-static uint32_t SND_DEVICE_IN_S_SADC_OUT_SPEAKER_PHONE= 10;
-static uint32_t SND_DEVICE_TTY_HEADSET                = 11;
-static uint32_t SND_DEVICE_TTY_HCO                    = 12;
-static uint32_t SND_DEVICE_TTY_VCO                    = 13;
-static uint32_t SND_DEVICE_TTY_FULL                   = 14;
-static uint32_t SND_DEVICE_HDMI                       = 15;
-static uint32_t SND_DEVICE_CARKIT                     = -1;
-static uint32_t SND_DEVICE_ANC_HEADSET                = 16;
-static uint32_t SND_DEVICE_NO_MIC_ANC_HEADSET         = 17;
-static uint32_t SND_DEVICE_HEADPHONE_AND_SPEAKER      = 18;
-static uint32_t SND_DEVICE_FM_TX                      = 19;
-static uint32_t SND_DEVICE_FM_TX_AND_SPEAKER          = 20;
-static uint32_t SND_DEVICE_SPEAKER_TX                 = 21;
-static uint32_t SND_DEVICE_BACK_MIC_CAMCORDER         = 33;
+static const uint32_t INVALID_DEVICE                        = 65535;
+static const uint32_t SND_DEVICE_CURRENT                    = -1;
+static const uint32_t SND_DEVICE_HANDSET                    = 0;
+static const uint32_t SND_DEVICE_SPEAKER                    = 1;
+static const uint32_t SND_DEVICE_HEADSET                    = 2;
+static const uint32_t SND_DEVICE_FM_HANDSET                 = 3;
+static const uint32_t SND_DEVICE_FM_SPEAKER                 = 4;
+static const uint32_t SND_DEVICE_FM_HEADSET                 = 5;
+static const uint32_t SND_DEVICE_BT                         = 6;
+static const uint32_t SND_DEVICE_HEADSET_AND_SPEAKER        = 7;
+static const uint32_t SND_DEVICE_NO_MIC_HEADSET             = 8;
+static const uint32_t SND_DEVICE_IN_S_SADC_OUT_HANDSET      = 9;
+static const uint32_t SND_DEVICE_IN_S_SADC_OUT_SPEAKER_PHONE= 10;
+static const uint32_t SND_DEVICE_TTY_HEADSET                = 11;
+static const uint32_t SND_DEVICE_TTY_HCO                    = 12;
+static const uint32_t SND_DEVICE_TTY_VCO                    = 13;
+static const uint32_t SND_DEVICE_TTY_FULL                   = 14;
+static const uint32_t SND_DEVICE_HDMI                       = 15;
+static const uint32_t SND_DEVICE_CARKIT                     = -1;
+static const uint32_t SND_DEVICE_ANC_HEADSET                = 16;
+static const uint32_t SND_DEVICE_NO_MIC_ANC_HEADSET         = 17;
+static const uint32_t SND_DEVICE_HEADPHONE_AND_SPEAKER      = 18;
+static const uint32_t SND_DEVICE_FM_TX                      = 19;
+static const uint32_t SND_DEVICE_FM_TX_AND_SPEAKER          = 20;
+static const uint32_t SND_DEVICE_SPEAKER_TX                 = 21;
+static const uint32_t SND_DEVICE_BACK_MIC_CAMCORDER         = 33;
+#ifdef HTC_ACOUSTIC_AUDIO
+static const uint32_t SND_DEVICE_SPEAKER_BACK_MIC           = 26;
+static const uint32_t SND_DEVICE_HANDSET_BACK_MIC           = 27;
+static const uint32_t SND_DEVICE_NO_MIC_HEADSET_BACK_MIC    = 28;
+static const uint32_t SND_DEVICE_HEADSET_AND_SPEAKER_BACK_MIC = 30;
+static const uint32_t SND_DEVICE_I2S_SPEAKER                = 32;
+static const uint32_t SND_DEVICE_BT_EC_OFF                  = 45;
+static const uint32_t SND_DEVICE_HAC                        = 252;
+static const uint32_t SND_DEVICE_USB_HEADSET                = 253;
+#else
+static const uint32_t SND_DEVICE_BT_EC_OFF                  = -1;
+#endif
 #ifdef SAMSUNG_AUDIO
 static uint32_t SND_DEVICE_VOIP_HANDSET               = 50;
 static uint32_t SND_DEVICE_VOIP_SPEAKER               = 51;
@@ -113,27 +135,26 @@ static uint32_t SND_DEVICE_VR_HEADSET                 = 71;
 static uint32_t SND_DEVICE_HAC                        = 252;
 static uint32_t SND_DEVICE_USB_HEADSET                = 253;
 #endif
-
-static uint32_t DEVICE_HANDSET_RX            = 0; // handset_rx
-static uint32_t DEVICE_HANDSET_TX            = 1;//handset_tx
-static uint32_t DEVICE_SPEAKER_RX            = 2; //speaker_stereo_rx
-static uint32_t DEVICE_SPEAKER_TX            = 3;//speaker_mono_tx
-static uint32_t DEVICE_HEADSET_RX            = 4; //headset_stereo_rx
-static uint32_t DEVICE_HEADSET_TX            = 5; //headset_mono_tx
-static uint32_t DEVICE_FMRADIO_HANDSET_RX    = 6; //fmradio_handset_rx
-static uint32_t DEVICE_FMRADIO_HEADSET_RX    = 7; //fmradio_headset_rx
-static uint32_t DEVICE_FMRADIO_SPEAKER_RX    = 8; //fmradio_speaker_rx
-static uint32_t DEVICE_DUALMIC_HANDSET_TX    = 9; //handset_dual_mic_endfire_tx
-static uint32_t DEVICE_DUALMIC_SPEAKER_TX    = 10; //speaker_dual_mic_endfire_tx
-static uint32_t DEVICE_TTY_HEADSET_MONO_RX   = 11; //tty_headset_mono_rx
-static uint32_t DEVICE_TTY_HEADSET_MONO_TX   = 12; //tty_headset_mono_tx
-static uint32_t DEVICE_SPEAKER_HEADSET_RX    = 13; //headset_stereo_speaker_stereo_rx
-static uint32_t DEVICE_FMRADIO_STEREO_TX     = 14;
-static uint32_t DEVICE_HDMI_STERO_RX         = 15; //hdmi_stereo_rx
-static uint32_t DEVICE_ANC_HEADSET_STEREO_RX = 16; //ANC RX
-static uint32_t DEVICE_BT_SCO_RX             = 17; //bt_sco_rx
-static uint32_t DEVICE_BT_SCO_TX             = 18; //bt_sco_tx
-static uint32_t DEVICE_FMRADIO_STEREO_RX     = 19;
+static const uint32_t DEVICE_HANDSET_RX            = 0; // handset_rx
+static const uint32_t DEVICE_HANDSET_TX            = 1;//handset_tx
+static const uint32_t DEVICE_SPEAKER_RX            = 2; //speaker_stereo_rx
+static const uint32_t DEVICE_SPEAKER_TX            = 3;//speaker_mono_tx
+static const uint32_t DEVICE_HEADSET_RX            = 4; //headset_stereo_rx
+static const uint32_t DEVICE_HEADSET_TX            = 5; //headset_mono_tx
+static const uint32_t DEVICE_FMRADIO_HANDSET_RX    = 6; //fmradio_handset_rx
+static const uint32_t DEVICE_FMRADIO_HEADSET_RX    = 7; //fmradio_headset_rx
+static const uint32_t DEVICE_FMRADIO_SPEAKER_RX    = 8; //fmradio_speaker_rx
+static const uint32_t DEVICE_DUALMIC_HANDSET_TX    = 9; //handset_dual_mic_endfire_tx
+static const uint32_t DEVICE_DUALMIC_SPEAKER_TX    = 10; //speaker_dual_mic_endfire_tx
+static const uint32_t DEVICE_TTY_HEADSET_MONO_RX   = 11; //tty_headset_mono_rx
+static const uint32_t DEVICE_TTY_HEADSET_MONO_TX   = 12; //tty_headset_mono_tx
+static const uint32_t DEVICE_SPEAKER_HEADSET_RX    = 13; //headset_stereo_speaker_stereo_rx
+static const uint32_t DEVICE_FMRADIO_STEREO_TX     = 14;
+static const uint32_t DEVICE_HDMI_STERO_RX         = 15; //hdmi_stereo_rx
+static const uint32_t DEVICE_ANC_HEADSET_STEREO_RX = 16; //ANC RX
+static const uint32_t DEVICE_BT_SCO_RX             = 17; //bt_sco_rx
+static const uint32_t DEVICE_BT_SCO_TX             = 18; //bt_sco_tx
+static const uint32_t DEVICE_FMRADIO_STEREO_RX     = 19;
 #ifdef SAMSUNG_AUDIO
 // Samsung devices
 static uint32_t DEVICE_HANDSET_VOIP_RX       = 40; // handset_voip_rx
@@ -180,6 +201,21 @@ bool vMicMute = false;
 
 #ifdef QCOM_ACDB_ENABLED
 static bool bInitACDB = false;
+#endif
+#ifdef HTC_ACOUSTIC_AUDIO
+int rx_htc_acdb = 0;
+int tx_htc_acdb = 0;
+static bool support_aic3254 = true;
+static bool aic3254_enabled = true;
+int (*set_sound_effect)(const char* effect);
+static bool support_tpa2051 = true;
+static bool support_htc_backmic = true;
+static bool fm_enabled = false;
+static int alt_enable = 0;
+static int hac_enable = 0;
+static uint32_t cur_aic_tx = UPLINK_OFF;
+static uint32_t cur_aic_rx = DOWNLINK_OFF;
+static int cur_tpa_mode = 0;
 #endif
 
 typedef struct routing_table
@@ -571,7 +607,16 @@ static status_t updateDeviceInfo(int rx_device,int tx_device) {
                     return -1;
                 ALOGD("case VOICE_CALL\VOIP CALL %d",temp_ptr->stream_type);
 #ifdef QCOM_ACDB_ENABLED
+    #ifdef HTC_ACOUSTIC_AUDIO
+                if (rx_htc_acdb == 0)
+                    rx_htc_acdb = ACDB_ID(rx_device);
+                if (tx_htc_acdb == 0)
+                    tx_htc_acdb = ACDB_ID(tx_device);
+                ALOGD("acdb_loader_send_voice_cal acdb_rx = %d, acdb_tx = %d", rx_htc_acdb, tx_htc_acdb);
+                acdb_loader_send_voice_cal(rx_htc_acdb, tx_htc_acdb);
+    #else
                 acdb_loader_send_voice_cal(ACDB_ID(rx_device),ACDB_ID(tx_device));
+    #endif
 #endif
                 msm_route_voice(DEV_ID(rx_device),DEV_ID(tx_device),1);
 
@@ -630,11 +675,17 @@ free(device_list);
 
 AudioHardware::AudioHardware() :
     mInit(false), mMicMute(true), mBluetoothNrec(true), mBluetoothId(0),
+#ifdef HTC_ACOUSTIC_AUDIO
+    mHACSetting(false), mBluetoothIdTx(0), mBluetoothIdRx(0),
+#endif
     mOutput(0),mBluetoothVGS(false),
     mCurSndDevice(-1),
     mTtyMode(TTY_OFF), mFmFd(-1), mNumPcmRec(0)
 #ifdef QCOM_VOIP_ENABLED
     , mVoipFd(-1), mNumVoipStreams(0), mDirectOutput(0)
+#endif
+#ifdef HTC_ACOUSTIC_AUDIO
+    , mRecordState(false), mEffectEnabled(false)
 #endif
 {
 
@@ -645,9 +696,30 @@ AudioHardware::AudioHardware() :
 #endif
     int fluence_mode = FLUENCE_MODE_ENDFIRE;
     char value[128];
+#ifdef HTC_ACOUSTIC_AUDIO
+    int (*snd_get_num)();
+    int (*snd_get_bt_endpoint)(msm_bt_endpoint *);
+    int (*set_acoustic_parameters)();
+    int (*set_tpa2051_parameters)();
+    int (*set_aic3254_parameters)();
+    int (*support_back_mic)();
 
+    struct msm_bt_endpoint *ept;
+#endif
         head = (Routing_table* ) malloc(sizeof(Routing_table));
         head->next = NULL;
+
+#ifdef HTC_ACOUSTIC_AUDIO
+        acoustic =:: dlopen("/system/lib/libhtc_acoustic.so", RTLD_NOW);
+        if (acoustic == NULL ) {
+            ALOGD("Could not open libhtc_acoustic.so");
+            /* this is not really an error on non-htc devices... */
+            mNumBTEndpoints = 0;
+            support_aic3254 = false;
+            support_tpa2051 = false;
+            support_htc_backmic = false;
+        }
+#endif
 
         ALOGD("msm_mixer_open: Opening the device");
         control = msm_mixer_open("/dev/snd/controlC0", 0);
@@ -834,10 +906,102 @@ AudioHardware::AudioHardware() :
 #endif
         }
 
-        mInit = true;
-
         CurrentComboDeviceData.DeviceId = INVALID_DEVICE;
         CurrentComboDeviceData.StreamType = INVALID_STREAM;
+#ifdef HTC_ACOUSTIC_AUDIO
+    set_acoustic_parameters = (int (*)(void))::dlsym(acoustic, "set_acoustic_parameters");
+    if ((*set_acoustic_parameters) == 0 ) {
+        ALOGE("Could not open set_acoustic_parameters()");
+        return;
+    }
+
+    int rc = set_acoustic_parameters();
+    if (rc < 0) {
+        ALOGD("Could not set acoustic parameters to share memory: %d", rc);
+    }
+
+    /* Check the system property for enable or not the ALT function */
+    property_get("htc.audio.alt.enable", value, "0");
+    alt_enable = atoi(value);
+    ALOGV("Enable ALT function: %d", alt_enable);
+
+    /* Check the system property for enable or not the HAC function */
+    property_get("htc.audio.hac.enable", value, "0");
+    hac_enable = atoi(value);
+    ALOGV("Enable HAC function: %d", hac_enable);
+
+    set_tpa2051_parameters = (int (*)(void))::dlsym(acoustic, "set_tpa2051_parameters");
+    if ((*set_tpa2051_parameters) == 0) {
+        ALOGI("set_tpa2051_parameters() not present");
+        support_tpa2051 = false;
+    }
+
+    if (support_tpa2051) {
+        if (set_tpa2051_parameters() < 0) {
+            ALOGI("Speaker amplifies tpa2051 is not supported");
+            support_tpa2051 = false;
+        }
+    }
+
+    set_aic3254_parameters = (int (*)(void))::dlsym(acoustic, "set_aic3254_parameters");
+    if ((*set_aic3254_parameters) == 0 ) {
+        ALOGI("set_aic3254_parameters() not present");
+        support_aic3254 = false;
+    }
+
+    if (support_aic3254) {
+        if (set_aic3254_parameters() < 0) {
+            ALOGI("AIC3254 DSP is not supported");
+            support_aic3254 = false;
+        }
+    }
+
+    if (support_aic3254) {
+        set_sound_effect = (int (*)(const char*))::dlsym(acoustic, "set_sound_effect");
+        if ((*set_sound_effect) == 0 ) {
+            ALOGI("set_sound_effect() not present");
+            ALOGI("AIC3254 DSP is not supported");
+            support_aic3254 = false;
+        } else
+            strcpy(mEffect, "\0");
+    }
+
+    support_back_mic = (int (*)(void))::dlsym(acoustic, "support_back_mic");
+    if ((*support_back_mic) == 0 ) {
+        ALOGI("support_back_mic() not present");
+        support_htc_backmic = false;
+    }
+
+    if (support_htc_backmic) {
+        if (support_back_mic() != 1) {
+            ALOGI("HTC DualMic is not supported");
+            support_htc_backmic = false;
+        }
+    }
+
+    snd_get_num = (int (*)(void))::dlsym(acoustic, "snd_get_num");
+    if ((*snd_get_num) == 0 ) {
+        ALOGD("Could not open snd_get_num()");
+    }
+
+    mNumBTEndpoints = snd_get_num();
+    ALOGV("mNumBTEndpoints = %d", mNumBTEndpoints);
+    mBTEndpoints = new msm_bt_endpoint[mNumBTEndpoints];
+    ALOGV("constructed %d SND endpoints)", mNumBTEndpoints);
+    ept = mBTEndpoints;
+    snd_get_bt_endpoint = (int (*)(msm_bt_endpoint *))::dlsym(acoustic, "snd_get_bt_endpoint");
+    if ((*snd_get_bt_endpoint) == 0 ) {
+        mInit = true;
+        ALOGE("Could not open snd_get_bt_endpoint()");
+        return;
+    }
+    snd_get_bt_endpoint(mBTEndpoints);
+
+    for (int i = 0; i < mNumBTEndpoints; i++) {
+        ALOGV("BT name %s (tx,rx)=(%d,%d)", mBTEndpoints[i].name, mBTEndpoints[i].tx, mBTEndpoints[i].rx);
+    }
+#endif
+    mInit = true;
 }
 
 AudioHardware::~AudioHardware()
@@ -1142,6 +1306,10 @@ status_t AudioHardware::setParameters(const String8& keyValuePairs)
     const char FM_VALUE_HEADSET[] = "headset";
     const char FM_VALUE_FALSE[] = "false";
 #endif
+#ifdef HTC_ACOUSTIC_AUDIO
+    const char ACTIVE_AP[] = "active_ap";
+    const char EFFECT_ENABLED[] = "sound_effect_enable";
+#endif
 
     ALOGV("setParameters() %s", keyValuePairs.string());
 
@@ -1167,6 +1335,22 @@ status_t AudioHardware::setParameters(const String8& keyValuePairs)
     }
     key = String8(BT_NAME_KEY);
     if (param.get(key, value) == NO_ERROR) {
+#ifdef HTC_ACOUSTIC_AUDIO
+        mBluetoothIdTx = 0;
+        mBluetoothIdRx = 0;
+        for (int i = 0; i < mNumBTEndpoints; i++) {
+            if (!strcasecmp(value.string(), mBTEndpoints[i].name)) {
+                mBluetoothIdTx = mBTEndpoints[i].tx;
+                mBluetoothIdRx = mBTEndpoints[i].rx;
+                ALOGD("Using custom acoustic parameters for %s", value.string());
+                break;
+            }
+        }
+        if (mBluetoothIdTx == 0) {
+            ALOGD("Using default acoustic parameters "
+                 "(%s not in acoustic database)", value.string());
+        }
+#endif
         doRouting(NULL);
     }
 
@@ -1218,6 +1402,36 @@ status_t AudioHardware::setParameters(const String8& keyValuePairs)
            (cur_tx == DEVICE_HEADSET_TX))
            doRouting(NULL);
     }
+#ifdef HTC_ACOUSTIC_AUDIO
+    key = String8(ACTIVE_AP);
+    if (param.get(key, value) == NO_ERROR) {
+        const char* active_ap = value.string();
+        ALOGD("Active AP = %s", active_ap);
+        strcpy(mActiveAP, active_ap);
+
+        const char* dsp_effect = "\0";
+        key = String8(DSP_EFFECT_KEY);
+        if (param.get(key, value) == NO_ERROR) {
+            ALOGD("DSP Effect = %s", value.string());
+            dsp_effect = value.string();
+            strcpy(mEffect, dsp_effect);
+        }
+
+        key = String8(EFFECT_ENABLED);
+        if (param.get(key, value) == NO_ERROR) {
+            const char* sound_effect_enable = value.string();
+            ALOGD("Sound Effect Enabled = %s", sound_effect_enable);
+            if (value == "on") {
+                mEffectEnabled = true;
+                if (support_aic3254)
+                    aic3254_config(get_snd_dev());
+            } else {
+                strcpy(mEffect, "\0");
+                mEffectEnabled = false;
+            }
+        }
+    }
+#endif
 
     return NO_ERROR;
 }
@@ -1251,6 +1465,13 @@ String8 AudioHardware::getParameters(const String8& keys)
         param.add(key, value);
     }
 
+#ifdef HTC_ACOUSTIC_AUDIO
+    key = String8(DSP_EFFECT_KEY);
+    if (param.get(key, value) == NO_ERROR) {
+        value = String8(mCurDspProfile);
+        param.add(key, value);
+    }
+#endif
     ALOGV("AudioHardware::getParameters() %s", param.toString().string());
     return param.toString();
 }
@@ -1399,6 +1620,84 @@ status_t AudioHardware::setMasterVolume(float v)
     return -1;
 }
 
+#ifdef HTC_ACOUSTIC_AUDIO
+status_t get_batt_temp(int *batt_temp) {
+    ALOGD("Enable ALT for speaker");
+
+    int i, fd, len;
+    char get_batt_temp[6] = { 0 };
+    const char *fn = "/sys/class/power_supply/battery/batt_temp";
+
+    if ((fd = open(fn, O_RDONLY)) < 0) {
+        ALOGE("Couldn't open sysfs file batt_temp");
+        return UNKNOWN_ERROR;
+    }
+
+    if ((len = read(fd, get_batt_temp, sizeof(get_batt_temp))) <= 1) {
+        ALOGE("read battery temp fail: %s", strerror(errno));
+        close(fd);
+        return BAD_VALUE;
+    }
+
+    *batt_temp = strtol(get_batt_temp, NULL, 10);
+    ALOGD("ALT batt_temp = %d", *batt_temp);
+
+    close(fd);
+    return NO_ERROR;
+}
+
+status_t do_tpa2051_control(int mode)
+{
+    int fd, rc;
+    int tpa_mode = 0;
+
+    if (mode) {
+        if (cur_rx == DEVICE_HEADSET_RX)
+            tpa_mode = TPA2051_MODE_VOICECALL_HEADSET;
+        else if (cur_rx == DEVICE_SPEAKER_RX)
+            tpa_mode = TPA2051_MODE_VOICECALL_SPKR;
+    } else {
+        switch (cur_rx) {
+            case DEVICE_FMRADIO_HEADSET_RX:
+                tpa_mode = TPA2051_MODE_FM_HEADSET;
+                break;
+            case DEVICE_FMRADIO_SPEAKER_RX:
+                tpa_mode = TPA2051_MODE_FM_SPKR;
+                break;
+            case DEVICE_SPEAKER_HEADSET_RX:
+                tpa_mode = TPA2051_MODE_RING;
+                break;
+            case DEVICE_HEADSET_RX:
+                tpa_mode = TPA2051_MODE_PLAYBACK_HEADSET;
+                break;
+            case DEVICE_SPEAKER_RX:
+                tpa_mode = TPA2051_MODE_PLAYBACK_SPKR;
+                break;
+            default:
+                break;
+        }
+    }
+
+    fd = open("/dev/tpa2051d3", O_RDWR);
+    if (fd < 0) {
+        ALOGE("can't open /dev/tpa2051d3 %d", fd);
+        return -1;
+    }
+
+    if (tpa_mode != cur_tpa_mode) {
+        cur_tpa_mode = tpa_mode;
+        rc = ioctl(fd, TPA2051_SET_MODE, &tpa_mode);
+        if (rc < 0)
+            ALOGE("ioctl TPA2051_SET_MODE failed: %s", strerror(errno));
+        else
+            ALOGD("update TPA2051_SET_MODE to mode %d success", tpa_mode);
+    }
+
+    close(fd);
+    return 0;
+}
+#endif
+
 static status_t do_route_audio_rpc(uint32_t device,
                                    int mode, bool mic_mute)
 {
@@ -1488,7 +1787,12 @@ static status_t do_route_audio_rpc(uint32_t device,
         new_tx_device = DEVICE_TTY_HEADSET_MONO_TX;
         ALOGV("In TTY_HCO");
     }
+#ifdef HTC_ACOUSTIC_AUDIO
+    else if((device == SND_DEVICE_BT) ||
+            (device == SND_DEVICE_BT_EC_OFF)) {
+#else
     else if(device == SND_DEVICE_BT) {
+#endif
         new_rx_device = DEVICE_BT_SCO_RX;
         new_tx_device = DEVICE_BT_SCO_TX;
         ALOGV("In BT_HCO");
@@ -1677,6 +1981,10 @@ static status_t do_route_audio_rpc(uint32_t device,
         ALOGD("updateDeviceInfo() called for default case");
         updateDeviceInfo(new_rx_device,new_tx_device);
     }
+#ifdef HTC_ACOUSTIC_AUDIO
+    if (support_tpa2051)
+        do_tpa2051_control(mode ^1);
+#endif
     return NO_ERROR;
 }
 
@@ -1695,9 +2003,316 @@ status_t AudioHardware::doAudioRouteOrMute(uint32_t device)
     }
 #endif
 
+    if (device == SND_DEVICE_BT) {
+        if (!mBluetoothNrec)
+            device = SND_DEVICE_BT_EC_OFF;
+    }
+
+#ifdef HTC_ACOUSTIC_AUDIO
+    if (support_aic3254) {
+        aic3254_config(device);
+        do_aic3254_control(device);
+    }
+
+    getACDB(device);
+#endif
+
+    if (isStreamOnAndActive(VOICE_CALL) && mMicMute == false)
+        msm_set_voice_tx_mute(0);
+
+#ifdef HTC_ACOUSTIC_AUDIO
+    if (isInCall())
+        setVoiceVolume(mVoiceVolume);
+#endif
     ALOGV("doAudioRouteOrMute() device %x, mMode %d, mMicMute %d", device, mMode, mMicMute);
     return do_route_audio_rpc(device, mMode, mMicMute);
 }
+
+#ifdef HTC_ACOUSTIC_AUDIO
+status_t AudioHardware::set_mRecordState(bool onoff) {
+    mRecordState = onoff;
+    return 0;
+}
+
+status_t AudioHardware::get_mRecordState(void) {
+    return mRecordState;
+}
+
+status_t AudioHardware::get_snd_dev(void) {
+    return mCurSndDevice;
+}
+
+void AudioHardware::getACDB(uint32_t device) {
+    rx_htc_acdb = 0;
+    tx_htc_acdb = 0;
+
+    if (device == SND_DEVICE_BT) {
+        if (mBluetoothIdTx != 0) {
+            rx_htc_acdb = mBluetoothIdRx;
+            tx_htc_acdb = mBluetoothIdTx;
+        } else {
+            /* use default BT entry defined in AudioBTID.csv */
+            rx_htc_acdb = mBTEndpoints[0].rx;
+            tx_htc_acdb = mBTEndpoints[0].tx;
+        }
+    } else if (device == SND_DEVICE_CARKIT ||
+               device == SND_DEVICE_BT_EC_OFF) {
+        if (mBluetoothIdTx != 0) {
+            rx_htc_acdb = mBluetoothIdRx;
+            tx_htc_acdb = mBluetoothIdTx;
+        } else {
+            /* use default carkit entry defined in AudioBTID.csv */
+            rx_htc_acdb = mBTEndpoints[1].rx;
+            tx_htc_acdb = mBTEndpoints[1].tx;
+        }
+    }
+
+    ALOGV("getACDB: device = %d, HTC RX ACDB ID = %d, HTC TX ACDB ID = %d",
+         device, rx_htc_acdb, tx_htc_acdb);
+}
+
+status_t AudioHardware::do_aic3254_control(uint32_t device) {
+    ALOGD("do_aic3254_control device: %d mode: %d record: %d", device, mMode, mRecordState);
+
+    uint32_t new_aic_txmode = UPLINK_OFF;
+    uint32_t new_aic_rxmode = DOWNLINK_OFF;
+
+    Mutex::Autolock lock(mAIC3254ConfigLock);
+
+    if (isInCall()) {
+        switch (device) {
+            case SND_DEVICE_HEADSET:
+                new_aic_rxmode = CALL_DOWNLINK_EMIC_HEADSET;
+                new_aic_txmode = CALL_UPLINK_EMIC_HEADSET;
+                break;
+            case SND_DEVICE_SPEAKER:
+            case SND_DEVICE_SPEAKER_BACK_MIC:
+                new_aic_rxmode = CALL_DOWNLINK_IMIC_SPEAKER;
+                new_aic_txmode = CALL_UPLINK_IMIC_SPEAKER;
+                break;
+            case SND_DEVICE_HEADSET_AND_SPEAKER:
+            case SND_DEVICE_HEADSET_AND_SPEAKER_BACK_MIC:
+                new_aic_rxmode = RING_HEADSET_SPEAKER;
+                break;
+            case SND_DEVICE_NO_MIC_HEADSET:
+            case SND_DEVICE_NO_MIC_HEADSET_BACK_MIC:
+                new_aic_rxmode = CALL_DOWNLINK_IMIC_HEADSET;
+                new_aic_txmode = CALL_UPLINK_IMIC_HEADSET;
+                break;
+            case SND_DEVICE_HANDSET:
+            case SND_DEVICE_HANDSET_BACK_MIC:
+                new_aic_rxmode = CALL_DOWNLINK_IMIC_RECEIVER;
+                new_aic_txmode = CALL_UPLINK_IMIC_RECEIVER;
+                break;
+            default:
+                break;
+        }
+    } else {
+#ifdef QCOM_TUNNEL_LPA_ENABLED
+        if (checkOutputStandby() && !isStreamOnAndActive(LPA_DECODE)) {
+#else
+        if (checkOutputStandby()) {
+#endif
+            if (device == SND_DEVICE_FM_HEADSET) {
+                new_aic_rxmode = FM_OUT_HEADSET;
+                new_aic_txmode = FM_IN_HEADSET;
+            } else if (device == SND_DEVICE_FM_SPEAKER) {
+                new_aic_rxmode = FM_OUT_SPEAKER;
+                new_aic_txmode = FM_IN_SPEAKER;
+            }
+        } else {
+            switch (device) {
+                case SND_DEVICE_HEADSET_AND_SPEAKER:
+                case SND_DEVICE_HEADSET_AND_SPEAKER_BACK_MIC:
+                case SND_DEVICE_HEADPHONE_AND_SPEAKER:
+                    new_aic_rxmode = RING_HEADSET_SPEAKER;
+                    break;
+                case SND_DEVICE_SPEAKER:
+                case SND_DEVICE_SPEAKER_BACK_MIC:
+                    new_aic_rxmode = PLAYBACK_SPEAKER;
+                    break;
+                case SND_DEVICE_HANDSET:
+                case SND_DEVICE_HANDSET_BACK_MIC:
+                    new_aic_rxmode = PLAYBACK_RECEIVER;
+                    break;
+                case SND_DEVICE_HEADSET:
+                case SND_DEVICE_NO_MIC_HEADSET:
+                case SND_DEVICE_NO_MIC_HEADSET_BACK_MIC:
+                    new_aic_rxmode = PLAYBACK_HEADSET;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        if (mRecordState) {
+            switch (device) {
+                case SND_DEVICE_HEADSET:
+                    new_aic_txmode = VOICERECORD_EMIC;
+                    break;
+                case SND_DEVICE_HANDSET_BACK_MIC:
+                case SND_DEVICE_SPEAKER_BACK_MIC:
+                case SND_DEVICE_NO_MIC_HEADSET_BACK_MIC:
+                case SND_DEVICE_HEADSET_AND_SPEAKER_BACK_MIC:
+                    new_aic_txmode = VIDEORECORD_IMIC;
+                    break;
+                case SND_DEVICE_HANDSET:
+                case SND_DEVICE_SPEAKER:
+                case SND_DEVICE_NO_MIC_HEADSET:
+                case SND_DEVICE_HEADSET_AND_SPEAKER:
+                    new_aic_txmode = VOICERECORD_IMIC;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    if (new_aic_rxmode != cur_aic_rx)
+        ALOGD("do_aic3254_control: set aic3254 rx to %d", new_aic_rxmode);
+    if (aic3254_ioctl(AIC3254_CONFIG_RX, new_aic_rxmode) >= 0)
+        cur_aic_rx = new_aic_rxmode;
+
+    if (new_aic_txmode != cur_aic_tx)
+        ALOGD("do_aic3254_control: set aic3254 tx to %d", new_aic_txmode);
+    if (aic3254_ioctl(AIC3254_CONFIG_TX, new_aic_txmode) >= 0)
+        cur_aic_tx = new_aic_txmode;
+
+    if (cur_aic_tx == UPLINK_OFF && cur_aic_rx == DOWNLINK_OFF && aic3254_enabled) {
+        strcpy(mCurDspProfile, "\0");
+        aic3254_enabled = false;
+        aic3254_powerdown();
+    } else if (cur_aic_tx != UPLINK_OFF || cur_aic_rx != DOWNLINK_OFF)
+        aic3254_enabled = true;
+
+    return NO_ERROR;
+}
+
+bool AudioHardware::isAic3254Device(uint32_t device) {
+    switch(device) {
+        case SND_DEVICE_HANDSET:
+        case SND_DEVICE_SPEAKER:
+        case SND_DEVICE_HEADSET:
+        case SND_DEVICE_NO_MIC_HEADSET:
+        case SND_DEVICE_FM_HEADSET:
+        case SND_DEVICE_HEADSET_AND_SPEAKER:
+        case SND_DEVICE_FM_SPEAKER:
+        case SND_DEVICE_HEADPHONE_AND_SPEAKER:
+        case SND_DEVICE_HANDSET_BACK_MIC:
+        case SND_DEVICE_SPEAKER_BACK_MIC:
+        case SND_DEVICE_NO_MIC_HEADSET_BACK_MIC:
+        case SND_DEVICE_HEADSET_AND_SPEAKER_BACK_MIC:
+            return true;
+            break;
+        default:
+            return false;
+            break;
+    }
+}
+
+status_t AudioHardware::aic3254_config(uint32_t device) {
+    ALOGD("aic3254_config: device %d enabled %d", device, aic3254_enabled);
+    char name[22] = "\0";
+    char aap[9] = "\0";
+
+    if ((!isAic3254Device(device) ||
+         !aic3254_enabled) &&
+        strlen(mCurDspProfile) != 0)
+        return NO_ERROR;
+
+    Mutex::Autolock lock(mAIC3254ConfigLock);
+
+    if (mMode == AudioSystem::MODE_IN_CALL) {
+        strcpy(name, "Phone_Default");
+        switch (device) {
+            case SND_DEVICE_HANDSET:
+            case SND_DEVICE_HANDSET_BACK_MIC:
+                strcpy(name, "Phone_Handset_Dualmic");
+                break;
+            case SND_DEVICE_HEADSET:
+            case SND_DEVICE_HEADSET_AND_SPEAKER:
+            case SND_DEVICE_HEADSET_AND_SPEAKER_BACK_MIC:
+            case SND_DEVICE_NO_MIC_HEADSET:
+                strcpy(name, "Phone_Headset");
+                break;
+            case SND_DEVICE_SPEAKER:
+                strcpy(name, "Phone_Speaker_Dualmic");
+                break;
+            default:
+                break;
+        }
+    } else {
+        if ((strcasecmp(mActiveAP, "Camcorder") == 0)) {
+            if (strlen(mEffect) != 0) {
+                strcpy(name, "Recording_");
+                strcat(name, mEffect);
+            } else
+                strcpy(name, "Playback_Default");
+        } else if (mRecordState) {
+            strcpy(name, "Record_Default");
+        } else if (strlen(mEffect) == 0 && !mEffectEnabled)
+            strcpy(name, "Playback_Default");
+        else {
+            if (mEffectEnabled)
+                strcpy(name, mEffect);
+
+            if ((strcasecmp(name, "Srs") == 0) ||
+                (strcasecmp(name, "Dolby") == 0)) {
+                strcpy(mEffect, name);
+                if (strcasecmp(mActiveAP, "Music") == 0)
+                    strcat(name, "_a");
+                else if (strcasecmp(mActiveAP, "Video") == 0)
+                    strcat(name, "_v");
+                if (device == SND_DEVICE_SPEAKER)
+                    strcat(name, "_spk");
+                else
+                    strcat(name, "_hp");
+            }
+        }
+    }
+
+    if (strcasecmp(mCurDspProfile, name)) {
+        ALOGD("aic3254_config: loading effect %s", name);
+        strcpy(mCurDspProfile, name);
+    } else {
+        ALOGD("aic3254_config: effect %s already loaded", name);
+        return NO_ERROR;
+    }
+
+    int rc = set_sound_effect(name);
+    if (rc < 0) {
+        ALOGE("Could not set sound effect %s: %d", name, rc);
+        return rc;
+    }
+
+    return NO_ERROR;
+}
+
+int AudioHardware::aic3254_ioctl(int cmd, const int argc) {
+    int rc = -1;
+    int (*set_aic3254_ioctl)(int, const int*);
+
+    set_aic3254_ioctl = (int (*)(int, const int*))::dlsym(acoustic, "set_aic3254_ioctl");
+    if ((*set_aic3254_ioctl) == 0) {
+        ALOGE("Could not open set_aic3254_ioctl()");
+        return rc;
+    }
+
+    rc = set_aic3254_ioctl(cmd, &argc);
+    if (rc < 0)
+        ALOGE("aic3254_ioctl failed");
+
+    return rc;
+}
+
+void AudioHardware::aic3254_powerdown() {
+    int rc = aic3254_ioctl(AIC3254_POWERDOWN, 0);
+    if (rc < 0)
+        ALOGE("aic3254_powerdown failed");
+    else
+        ALOGI("aic3254 powered off");
+}
+#endif
 
 status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input)
 {
@@ -2468,6 +3083,10 @@ ssize_t AudioHardware::AudioStreamOutMSM8x60::write(const void* buffer, size_t b
         // fill 2 buffers before AUDIO_START
         mStartCount = AUDIO_HW_NUM_OUT_BUF;
         mStandby = false;
+#ifdef HTC_ACOUSTIC_AUDIO
+        if (support_tpa2051)
+            do_tpa2051_control(0);
+#endif
     }
 
     while (count) {
@@ -2498,6 +3117,11 @@ ssize_t AudioHardware::AudioStreamOutMSM8x60::write(const void* buffer, size_t b
 
             Mutex::Autolock lock(mDeviceSwitchLock);
 
+#ifdef HTC_ACOUSTIC_AUDIO
+            int snd_dev = mHardware->get_snd_dev();
+            if (support_aic3254)
+                mHardware->do_aic3254_control(snd_dev);
+#endif
             ALOGE("cur_rx for pcm playback = %d",cur_rx);
             if(enableDevice(cur_rx, 1)) {
                 ALOGE("enableDevice failed for device cur_rx %d", cur_rx);
@@ -2601,6 +3225,10 @@ status_t AudioHardware::AudioStreamOutMSM8x60::standby()
     }
 
     mStandby = true;
+#ifdef HTC_ACOUSTIC_AUDIO
+    if (support_aic3254)
+        mHardware->do_aic3254_control(mHardware->get_snd_dev());
+#endif
     return status;
 }
 
@@ -3335,6 +3963,13 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
             if (mFmRec != FM_FILE_REC) {
                 mHardware->clearCurDevice();
                 mHardware->doRouting(this);
+#ifdef HTC_ACOUSTIC_AUDIO
+                if (support_aic3254) {
+                    int snd_dev = mHardware->get_snd_dev();
+                    mHardware->aic3254_config(snd_dev);
+                    mHardware->do_aic3254_control(snd_dev);
+                }
+#endif
             }
 #endif
         }
@@ -3382,6 +4017,14 @@ status_t AudioHardware::AudioStreamInMSM8x60::standby()
     ALOGD("AudioStreamInMSM8x60::standby()");
     Routing_table* temp = NULL;
     if (!mHardware) return -1;
+#ifdef HTC_ACOUSTIC_AUDIO
+    mHardware->set_mRecordState(false);
+    if (support_aic3254) {
+        int snd_dev = mHardware->get_snd_dev();
+        mHardware->aic3254_config(snd_dev);
+        mHardware->do_aic3254_control(snd_dev);
+    }
+#endif
     if (mState > AUDIO_INPUT_CLOSED) {
         if (mFdin >= 0) {
             ::close(mFdin);
