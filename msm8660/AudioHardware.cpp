@@ -42,6 +42,7 @@
 #include "acdb.h"
 
 #define VOICE_SESSION_NAME "Voice session"
+#define VOIP_SESSION_NAME "VoIP session"
 
 // hardware specific functions
 
@@ -876,6 +877,7 @@ AudioStreamOut* AudioHardware::openOutputStream(
         Mutex::Autolock lock(mLock);
 #ifdef QCOM_VOIP_ENABLED
         // only one output stream allowed
+#if 0 // not working yet
         if (mOutput && (devices != AudioSystem::DEVICE_OUT_DIRECTOUTPUT)) {
             if (status) {
                 *status = INVALID_OPERATION;
@@ -906,6 +908,7 @@ AudioStreamOut* AudioHardware::openOutputStream(
             }
             return mDirectOutput;
         } else
+#endif
 #endif
         {
             ALOGV(" AudioHardware::openOutputStream AudioStreamOutMSM8x60 output stream \n");
@@ -3806,6 +3809,8 @@ status_t AudioHardware::AudioStreamInVoip::standby()
         }
 
         if((temp->dev_id != INVALID_DEVICE && temp->dev_id_tx != INVALID_DEVICE)) {
+#ifdef QCOM_ANC_HEADSET_ENABLED
+#if defined(QCOM_TUNNEL_LPA_ENABLED) && defined(QCOM_FM_ENABLED)
            if(!getNodeByStreamType(VOICE_CALL) && !getNodeByStreamType(LPA_DECODE)
               && !getNodeByStreamType(PCM_PLAY) && !getNodeByStreamType(FM_RADIO)) {
                if (anc_running == false) {
@@ -3813,6 +3818,8 @@ status_t AudioHardware::AudioStreamInVoip::standby()
                    ALOGV("Voipin: disable voip rx");
                }
             }
+#endif
+#endif
             if(!getNodeByStreamType(VOICE_CALL) && !getNodeByStreamType(PCM_REC)) {
                  enableDevice(temp->dev_id_tx,0);
                  ALOGD("VOIPin: disable voip tx");
