@@ -1101,10 +1101,10 @@ status_t AudioHardware::setMicMute_nosync(bool state)
             ALOGE(" unknown voice stream");
             return -1;
         }
-#ifdef QCOM_VOIP_ENABLED
-        msm_set_voice_tx_mute_ext(mMicMute,session_id);
-#else
+#ifdef HAS_OLDER_QCOM_VOICE
         msm_set_voice_tx_mute(mMicMute);
+#else
+        msm_set_voice_tx_mute_ext(mMicMute,session_id);
 #endif
     }
     return NO_ERROR;
@@ -1340,14 +1340,15 @@ status_t AudioHardware::setVoiceVolume(float v)
     ALOGD("setVoiceVolume(%f)\n", v);
     ALOGI("Setting in-call volume to %d (available range is 5(MIN VOLUME)  to 0(MAX VOLUME)\n", vol);
 
-#ifdef QCOM_VOIP_ENABLED
-    if(msm_set_voice_rx_vol_ext(vol,session_id)) {
-        ALOGE("msm_set_voice_rx_vol(%d) failed errno = %d",vol,errno);
+#ifdef HAS_OLDER_QCOM_VOICE
+    if (msm_set_voice_rx_vol(vol)) {
+        ALOGE("msm_set_voice_rx_vol(%d) failed errno = %d", vol, errno);
         return -1;
     }
 #else
-    if (msm_set_voice_rx_vol(vol)) {
-        ALOGE("msm_set_voice_rx_vol(%d) failed errno = %d", vol, errno);
+    if(msm_set_voice_rx_vol_ext(vol,session_id)) {
+        ALOGE("msm_set_voice_rx_vol(%d) failed errno = %d",vol,errno);
+        return -1;
     }
 #endif
     ALOGV("msm_set_voice_rx_vol(%d) succeeded session_id %d",vol,session_id);
@@ -1624,7 +1625,9 @@ static status_t do_route_audio_rpc(uint32_t device,
             //Enable TX device
            if(new_tx_device !=INVALID_DEVICE && (enableDevice(new_tx_device,1) == -1))
                return -1;
-#ifdef QCOM_VOIP_ENABLED
+#ifdef HAS_OLDER_QCOM_VOICE
+           msm_set_voice_tx_mute(0);
+#else
            voice_session_id = msm_get_voc_session(VOICE_SESSION_NAME);
            if(voice_session_id <=0) {
                 ALOGE("voice session invalid");
@@ -1632,8 +1635,6 @@ static status_t do_route_audio_rpc(uint32_t device,
            }
            msm_start_voice_ext(voice_session_id);
            msm_set_voice_tx_mute_ext(voice_session_mute,voice_session_id);
-#else
-           msm_set_voice_tx_mute(0);
 #endif
 
            if(!isDeviceListEmpty())
@@ -1648,14 +1649,14 @@ static status_t do_route_audio_rpc(uint32_t device,
         if(temp == NULL)
             return 0;
 
-#ifdef QCOM_VOIP_ENABLED
         // Ending voice call
         ALOGD("Ending Voice call");
+#ifdef HAS_OLDER_QCOM_VOICE
+        msm_end_voice();
+#else
         msm_end_voice_ext(voice_session_id);
         voice_session_id = 0;
         voice_session_mute = 0;
-#else
-        msm_end_voice();
 #endif
 
         if((temp->dev_id != INVALID_DEVICE && temp->dev_id_tx != INVALID_DEVICE)
