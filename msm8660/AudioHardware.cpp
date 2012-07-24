@@ -42,6 +42,7 @@
 #include "acdb.h"
 
 #define VOICE_SESSION_NAME "Voice session"
+#define VOIP_SESSION_NAME "VoIP session"
 
 // hardware specific functions
 
@@ -3806,12 +3807,22 @@ status_t AudioHardware::AudioStreamInVoip::standby()
         }
 
         if((temp->dev_id != INVALID_DEVICE && temp->dev_id_tx != INVALID_DEVICE)) {
-           if(!getNodeByStreamType(VOICE_CALL) && !getNodeByStreamType(LPA_DECODE)
-              && !getNodeByStreamType(PCM_PLAY) && !getNodeByStreamType(FM_RADIO)) {
+           if(!getNodeByStreamType(VOICE_CALL) && !getNodeByStreamType(PCM_PLAY) &&
+#ifdef QCOM_TUNNEL_LPA_ENABLED
+              !getNodeByStreamType(LPA_DECODE) &&
+#endif
+#ifdef QCOM_FM_ENABLED
+              !getNodeByStreamType(FM_RADIO)
+#endif
+             ) {
+#ifdef QCOM_ANC_HEADSET_ENABLED
                if (anc_running == false) {
+#endif
                    enableDevice(temp->dev_id, 0);
                    ALOGV("Voipin: disable voip rx");
+#ifdef QCOM_ANC_HEADSET_ENABLED
                }
+#endif
             }
             if(!getNodeByStreamType(VOICE_CALL) && !getNodeByStreamType(PCM_REC)) {
                  enableDevice(temp->dev_id_tx,0);
