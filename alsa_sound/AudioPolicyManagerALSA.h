@@ -37,5 +37,17 @@ public:
 
         virtual ~AudioPolicyManager() {}
 
+        // return appropriate device for streams handled by the specified strategy according to current
+        // phone state, connected devices...
+        // if fromCache is true, the device is returned from mDeviceForStrategy[], otherwise it is determined
+        // by current state (device connected, phone state, force use, a2dp output...)
+        // This allows to:
+        //  1 speed up process when the state is stable (when starting or stopping an output)
+        //  2 access to either current device selection (fromCache == true) or
+        // "future" device selection (fromCache == false) when called from a context
+        //  where conditions are changing (setDeviceConnectionState(), setPhoneState()...) AND
+        //  before updateDeviceForStrategy() is called.
+        virtual audio_devices_t getDeviceForStrategy(routing_strategy strategy,
+                                                     bool fromCache = true);
 };
 };

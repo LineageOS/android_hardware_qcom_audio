@@ -60,9 +60,6 @@ LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
 
-ifeq (1,0) # use default audio policy manager
-# This is the ALSA audio policy manager
-
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS := -D_POSIX_SOURCE
@@ -90,12 +87,12 @@ LOCAL_STATIC_LIBRARIES := \
 LOCAL_SHARED_LIBRARIES := \
     libcutils \
     libutils \
-    libmedia
+    libmedia \
+    libaudioparameter
 
 LOCAL_C_INCLUDES += hardware/libhardware_legacy/audio
 
 include $(BUILD_SHARED_LIBRARY)
-endif
 
 # Load audio_policy.conf to system/etc/
 include $(CLEAR_VARS)
