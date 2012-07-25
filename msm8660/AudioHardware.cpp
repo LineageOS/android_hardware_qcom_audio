@@ -2960,7 +2960,8 @@ status_t AudioHardware::AudioStreamOutMSM8x60::set(
         if (pFormat) *pFormat = format();
         if (pChannels) *pChannels = channels();
         if (pRate) *pRate = sampleRate();
-        return BAD_VALUE;
+        ALOGE("%s: Setting up correct values", __func__);
+        return NO_ERROR;
     }
 
     if (pFormat) *pFormat = lFormat;

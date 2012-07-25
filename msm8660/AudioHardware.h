@@ -25,6 +25,7 @@
 #include <utils/threads.h>
 #include <sys/prctl.h>
 #include <utils/SortedVector.h>
+#include <cutils/properties.h>
 
 #include <hardware_legacy/AudioHardwareBase.h>
 
@@ -229,11 +230,31 @@ private:
                                 int *pFormat,
                                 uint32_t *pChannels,
                                 uint32_t *pRate);
-        virtual uint32_t    sampleRate() const { return 44100; }
-        // must be 32-bit aligned - driver only seems to like 4800
-        virtual size_t      bufferSize() const { return 4800; }
+        virtual uint32_t sampleRate() const {
+            char af_quality[32];
+            property_get("af.resampler.quality",af_quality,"0");
+            if(strcmp("255",af_quality) == 0) {
+                ALOGD("SampleRate 48k");
+                return 48000;
+            } else {
+                ALOGD("SampleRate 44.1k");
+                return 44100;
+            }
+        }
+        virtual size_t bufferSize() const {
+            char af_quality[32];
+            property_get("af.resampler.quality",af_quality,"0");
+            if(strcmp("255",af_quality) == 0) {
+                ALOGD("Bufsize 5248");
+                return 5248;
+            } else {
+                ALOGD("Bufsize 4800");
+                return 4800;
+            }
+        }
         virtual uint32_t    channels() const { return AUDIO_CHANNEL_OUT_STEREO; }
         virtual int         format() const { return AUDIO_FORMAT_PCM_16_BIT; }
+
         virtual uint32_t    latency() const { return (1000*AUDIO_HW_NUM_OUT_BUF*(bufferSize()/frameSize()))/sampleRate()+AUDIO_HW_OUT_LATENCY_MS; }
         virtual status_t    setVolume(float left, float right) { return INVALID_OPERATION; }
         virtual ssize_t     write(const void* buffer, size_t bytes);
