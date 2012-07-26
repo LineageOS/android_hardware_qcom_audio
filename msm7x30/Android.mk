@@ -7,6 +7,9 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
+LOCAL_ARM_MODE := arm
+LOCAL_CFLAGS := -D_POSIX_SOURCE
+
 LOCAL_SRC_FILES := \
     AudioHardware.cpp \
     audio_hw_hal.cpp
@@ -16,7 +19,7 @@ ifeq ($(BOARD_HAVE_BLUETOOTH),true)
 endif
 
 ifeq ($(BOARD_USES_QCOM_AUDIO_LPA),true)
-    LOCAL_CFLAGS += -DWITH_QCOM_LPA
+    LOCAL_CFLAGS += -DQCOM_TUNNEL_LPA_ENABLED
 endif
 
 ifeq ($(BOARD_USES_QCOM_AUDIO_SPEECH),true)
@@ -40,6 +43,10 @@ LOCAL_SHARED_LIBRARIES := \
     libutils        \
     libmedia        \
     libaudioalsa
+
+# hack for prebuilt
+$(shell mkdir -p $(OUT)/obj/SHARED_LIBRARIES/libaudioalsa_intermediates/)
+$(shell touch $(OUT)/obj/SHARED_LIBRARIES/libaudioalsa_intermediates/export_includes)
 
 ifeq ($(BOARD_USES_QCOM_AUDIO_CALIBRATION),true)
     LOCAL_SHARED_LIBRARIES += libaudcal
@@ -71,6 +78,7 @@ LOCAL_C_INCLUDES += system/core/include
 
 include $(BUILD_SHARED_LIBRARY)
 
+ifeq ("x","y") # use default audio policy manager
 
 # The audio policy is implemented on top of legacy policy code
 include $(CLEAR_VARS)
@@ -97,9 +105,19 @@ ifeq ($(BOARD_HAVE_BLUETOOTH),true)
 endif
 
 ifeq ($(BOARD_USES_QCOM_AUDIO_LPA),true)
-    LOCAL_CFLAGS += -DWITH_QCOM_LPA
+    LOCAL_CFLAGS += -DQCOM_TUNNEL_LPA_ENABLED
 endif
 
 LOCAL_C_INCLUDES := hardware/libhardware_legacy/audio
 
 include $(BUILD_SHARED_LIBRARY)
+endif
+
+# Load audio_policy.conf to system/etc/
+include $(CLEAR_VARS)
+LOCAL_MODULE       := audio_policy.conf
+LOCAL_MODULE_TAGS  := optional
+LOCAL_MODULE_CLASS := ETC
+LOCAL_MODULE_PATH  := $(TARGET_OUT_ETC)
+LOCAL_SRC_FILES    := audio_policy.conf
+include $(BUILD_PREBUILT)

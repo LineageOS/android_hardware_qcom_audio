@@ -305,7 +305,7 @@ using android_audio_legacy::AudioHardwareInterface;
 class AudioHardware : public  AudioHardwareBase
 {
     class AudioStreamOutMSM72xx;
-#ifdef WITH_QCOM_LPA
+#ifdef QCOM_TUNNEL_LPA_ENABLED
     class AudioSessionOutMSM7xxx;
 #endif
     class AudioStreamInMSM72xx;
@@ -317,7 +317,7 @@ public:
 
     virtual status_t    setVoiceVolume(float volume);
     virtual status_t    setMasterVolume(float volume);
-#ifdef HAVE_FM_RADIO
+#ifdef QCOM_FM_ENABLED
     virtual status_t    setFmVolume(float volume);
 #endif
     virtual status_t    setMode(int mode);
@@ -337,7 +337,7 @@ public:
                                 uint32_t *sampleRate=0,
                                 status_t *status=0);
 
-#ifdef WITH_QCOM_LPA
+#ifdef QCOM_TUNNEL_LPA_ENABLED
     virtual AudioStreamOut* openOutputSession(
                                 uint32_t devices,
                                 int *format=0,
@@ -383,7 +383,7 @@ private:
     int         aic3254_ioctl(int cmd, const int argc);
     void        aic3254_powerdown();
     int         aic3254_set_volume(int volume);
-#ifdef HAVE_FM_RADIO
+#ifdef QCOM_FM_ENABLED
     status_t    enableFM(int sndDevice);
     status_t enableComboDevice(uint32_t sndDevice, bool enableOrDisable);
     status_t    disableFM();
@@ -425,7 +425,7 @@ private:
                 uint32_t    mDevices;
     };
 
-#ifdef WITH_QCOM_LPA
+#ifdef QCOM_TUNNEL_LPA_ENABLED
     class AudioSessionOutMSM7xxx : public AudioStreamOut {
     public:
                             AudioSessionOutMSM7xxx();
