@@ -1,7 +1,7 @@
 /*
 ** Copyright 2008, The Android Open-Source Project
-** Copyright (c) 2011, Code Aurora Forum. All rights reserved.
-** Copyright (c) 2011, The CyanogenMod Project
+** Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+** Copyright (c) 2011-2012, The CyanogenMod Project
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
 ** you may not use this file except in compliance with the License.
@@ -304,11 +304,11 @@ using android_audio_legacy::AudioHardwareInterface;
 
 class AudioHardware : public  AudioHardwareBase
 {
-    class AudioStreamOutMSM72xx;
-#ifdef WITH_QCOM_LPA
+    class AudioStreamOutMSM7x30;
+#ifdef QCOM_TUNNEL_LPA_ENABLED
     class AudioSessionOutMSM7xxx;
 #endif
-    class AudioStreamInMSM72xx;
+    class AudioStreamInMSM7x30;
 
 public:
                         AudioHardware();
@@ -317,7 +317,7 @@ public:
 
     virtual status_t    setVoiceVolume(float volume);
     virtual status_t    setMasterVolume(float volume);
-#ifdef HAVE_FM_RADIO
+#ifdef QCOM_FM_ENABLED
     virtual status_t    setFmVolume(float volume);
 #endif
     virtual status_t    setMode(int mode);
@@ -337,7 +337,7 @@ public:
                                 uint32_t *sampleRate=0,
                                 status_t *status=0);
 
-#ifdef WITH_QCOM_LPA
+#ifdef QCOM_TUNNEL_LPA_ENABLED
     virtual AudioStreamOut* openOutputSession(
                                 uint32_t devices,
                                 int *format=0,
@@ -375,7 +375,7 @@ private:
     status_t    set_mRecordState(bool onoff);
     status_t    get_mRecordState();
     status_t    get_snd_dev();
-    status_t    doRouting(AudioStreamInMSM72xx *input);
+    status_t    doRouting(AudioStreamInMSM7x30 *input);
     uint32_t    getACDB(int mode, uint32_t device);
     status_t    do_aic3254_control(uint32_t device);
     bool        isAic3254Device(uint32_t device);
@@ -383,18 +383,20 @@ private:
     int         aic3254_ioctl(int cmd, const int argc);
     void        aic3254_powerdown();
     int         aic3254_set_volume(int volume);
-#ifdef HAVE_FM_RADIO
+#ifdef QCOM_FM_ENABLED
     status_t    enableFM(int sndDevice);
+#endif
     status_t enableComboDevice(uint32_t sndDevice, bool enableOrDisable);
+#ifdef QCOM_FM_ENABLED
     status_t    disableFM();
 #endif
-    AudioStreamInMSM72xx*   getActiveInput_l();
+    AudioStreamInMSM7x30*   getActiveInput_l();
     FILE *fp;
 
-    class AudioStreamOutMSM72xx : public AudioStreamOut {
+    class AudioStreamOutMSM7x30 : public AudioStreamOut {
     public:
-                            AudioStreamOutMSM72xx();
-        virtual             ~AudioStreamOutMSM72xx();
+                            AudioStreamOutMSM7x30();
+        virtual             ~AudioStreamOutMSM7x30();
                 status_t    set(AudioHardware* mHardware,
                                 uint32_t devices,
                                 int *pFormat,
@@ -425,7 +427,7 @@ private:
                 uint32_t    mDevices;
     };
 
-#ifdef WITH_QCOM_LPA
+#ifdef QCOM_TUNNEL_LPA_ENABLED
     class AudioSessionOutMSM7xxx : public AudioStreamOut {
     public:
                             AudioSessionOutMSM7xxx();
@@ -460,7 +462,7 @@ private:
     };
 #endif
 
-    class AudioStreamInMSM72xx : public AudioStreamIn {
+    class AudioStreamInMSM7x30 : public AudioStreamIn {
     public:
         enum input_state {
             AUDIO_INPUT_CLOSED,
@@ -468,8 +470,8 @@ private:
             AUDIO_INPUT_STARTED
         };
 
-                            AudioStreamInMSM72xx();
-        virtual             ~AudioStreamInMSM72xx();
+                            AudioStreamInMSM7x30();
+        virtual             ~AudioStreamInMSM7x30();
                 status_t    set(AudioHardware* mHardware,
                                 uint32_t devices,
                                 int *pFormat,
@@ -517,8 +519,8 @@ private:
             bool        mHACSetting;
             uint32_t    mBluetoothIdTx;
             uint32_t    mBluetoothIdRx;
-            AudioStreamOutMSM72xx*  mOutput;
-            SortedVector <AudioStreamInMSM72xx*>   mInputs;
+            AudioStreamOutMSM7x30*  mOutput;
+            SortedVector <AudioStreamInMSM7x30*>   mInputs;
             msm_bt_endpoint *mBTEndpoints;
             int         mNumBTEndpoints;
             int mCurSndDevice;
@@ -533,7 +535,7 @@ private:
             char        mActiveAP[10];
             char        mEffect[10];
 
-     friend class AudioStreamInMSM72xx;
+     friend class AudioStreamInMSM7x30;
             Mutex       mLock;
 };
 
