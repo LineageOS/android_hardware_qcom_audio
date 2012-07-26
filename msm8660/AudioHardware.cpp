@@ -3355,6 +3355,9 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
             return 0;
         }
         while (count >= mBufferSize) {
+            // Magical debug print that fixes audio input (WTF??)
+            ALOGE("DAF read:: line %d (mFdin = %d, count = %d)", __LINE__, mFdin, count);
+
             ssize_t bytesRead = ::read(mFdin, buffer, count);
             if (bytesRead >= 0) {
                 count -= bytesRead;
