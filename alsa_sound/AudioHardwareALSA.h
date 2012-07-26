@@ -30,6 +30,8 @@
 #ifdef QCOM_USBAUDIO_ENABLED
 #include <AudioUsbALSA.h>
 #endif
+#include <sys/poll.h>
+#include <sys/eventfd.h>
 
 extern "C" {
     #include <sound/asound.h>
@@ -133,10 +135,17 @@ static int USBRECBIT_FM = (1 << 3);
 #endif
 
 #define MODE_CALL_KEY  "CALL_KEY"
+#ifndef ALSA_DEFAULT_SAMPLE_RATE
+#define ALSA_DEFAULT_SAMPLE_RATE 44100 // in Hz
+#endif
 
-struct alsa_device_t;
+#define NUM_FDS 2
+#define AFE_PROXY_SAMPLE_RATE 48000
+#define AFE_PROXY_CHANNEL_COUNT 2
+
 static uint32_t FLUENCE_MODE_ENDFIRE   = 0;
 static uint32_t FLUENCE_MODE_BROADSIDE = 1;
+class ALSADevice;
 
 enum {
     INCALL_REC_MONO,
@@ -152,20 +161,22 @@ enum audio_call_mode {
     IMS_HOLD      = 0x20
 };
 
-
+class AudioSessionOutALSA;
 struct alsa_handle_t {
-    alsa_device_t *     module;
+    ALSADevice*         module;
     uint32_t            devices;
     char                useCase[MAX_STR_LEN];
     struct pcm *        handle;
     snd_pcm_format_t    format;
     uint32_t            channels;
     uint32_t            sampleRate;
+    int                 mode;
     unsigned int        latency;         // Delay in usec
     unsigned int        bufferSize;      // Size of sample buffer
     unsigned int        periodSize;
     struct pcm *        rxHandle;
     snd_use_case_mgr_t  *ucMgr;
+    AudioSessionOutALSA *session;
 };
 
 typedef List < alsa_handle_t > ALSAHandleList;
@@ -176,34 +187,108 @@ struct use_case_t {
 
 typedef List < use_case_t > ALSAUseCaseList;
 
-struct alsa_device_t {
-    hw_device_t common;
+class ALSADevice
+{
 
-    status_t (*init)(alsa_device_t *, ALSAHandleList &);
-    status_t (*open)(alsa_handle_t *);
-    status_t (*close)(alsa_handle_t *);
-    status_t (*standby)(alsa_handle_t *);
-    status_t (*route)(alsa_handle_t *, uint32_t, int);
-    status_t (*startVoiceCall)(alsa_handle_t *);
-    status_t (*startVoipCall)(alsa_handle_t *);
-    status_t (*startFm)(alsa_handle_t *);
-    void     (*setVoiceVolume)(int);
-    void     (*setVoipVolume)(int);
-    void     (*setMicMute)(int);
-    void     (*setVoipMicMute)(int);
-    void     (*setVoipConfig)(int, int);
-    status_t (*setFmVolume)(int);
-    void     (*setBtscoRate)(int);
-    status_t (*setLpaVolume)(int);
-    void     (*enableWideVoice)(bool);
-    void     (*enableFENS)(bool);
-    void     (*setFlags)(uint32_t);
-    status_t (*setCompressedVolume)(int);
-    void     (*enableSlowTalk)(bool);
-    void     (*setVocRecMode)(uint8_t);
-    void     (*setVoLTEMicMute)(int);
-    void     (*setVoLTEVolume)(int);
-    void     (*setInChannels)(int);
+public:
+
+    ALSADevice();
+    virtual ~ALSADevice();
+//    status_t init(alsa_device_t *module, ALSAHandleList &list);
+    status_t open(alsa_handle_t *handle);
+    status_t close(alsa_handle_t *handle);
+    status_t standby(alsa_handle_t *handle);
+    status_t route(alsa_handle_t *handle, uint32_t devices, int mode);
+    status_t startVoiceCall(alsa_handle_t *handle);
+    status_t startVoipCall(alsa_handle_t *handle);
+    status_t startFm(alsa_handle_t *handle);
+    void     setVoiceVolume(int volume);
+    void     setVoipVolume(int volume);
+    void     setMicMute(int state);
+    void     setVoipMicMute(int state);
+    void     setVoipConfig(int mode, int rate);
+    status_t setFmVolume(int vol);
+    void     setBtscoRate(int rate);
+    status_t setLpaVolume(int vol);
+    void     enableWideVoice(bool flag);
+    void     enableFENS(bool flag);
+    void     setFlags(uint32_t flag);
+    status_t setCompressedVolume(int vol);
+    void     enableSlowTalk(bool flag);
+    void     setVocRecMode(uint8_t mode);
+    void     setVoLTEMicMute(int state);
+    void     setVoLTEVolume(int vol);
+    void     setSGLTEMicMute(int state);
+    void     setSGLTEVolume(int vol);
+    status_t setEcrxDevice(char *device);
+    void     setInChannels(int);
+    //TODO:check if this needs to be public
+    void     disableDevice(alsa_handle_t *handle);
+    char *getUCMDeviceFromAcdbId(int acdb_id);
+
+protected:
+    friend class AudioHardwareALSA;
+private:
+    void     switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode);
+    int      getUseCaseType(const char *useCase);
+    status_t setHardwareParams(alsa_handle_t *handle);
+    int      deviceName(alsa_handle_t *handle, unsigned flags, char **value);
+    status_t setSoftwareParams(alsa_handle_t *handle);
+    bool     platform_is_Fusion3();
+    status_t getMixerControl(const char *name, unsigned int &value, int index = 0);
+    status_t setMixerControl(const char *name, unsigned int value, int index = -1);
+    status_t setMixerControl(const char *name, const char *);
+    status_t setMixerControlExt(const char *name, int count, char **setValues);
+    char *   getUCMDevice(uint32_t devices, int input, char *rxDevice);
+    status_t  start(alsa_handle_t *handle);
+
+    status_t   openProxyDevice();
+    status_t   closeProxyDevice();
+    bool       isProxyDeviceOpened();
+    bool       isProxyDeviceSuspended();
+    bool       suspendProxy();
+    bool       resumeProxy();
+    void       resetProxyVariables();
+    ssize_t    readFromProxy(void **captureBuffer , ssize_t *bufferSize);
+    status_t   exitReadFromProxy();
+    void       initProxyParams();
+    status_t   startProxy();
+
+private:
+    char mMicType[25];
+    char mCurRxUCMDevice[50];
+    char mCurTxUCMDevice[50];
+    uint32_t mFluenceMode;
+    int mFmVolume;
+    uint32_t mDevSettingsFlag;
+    int mBtscoSamplerate;
+    bool mPflag;
+    ALSAUseCaseList mUseCaseList;
+    int mCallMode;
+    struct mixer*  mMixer;
+    int mInChannels;
+//   ALSAHandleList  *mDeviceList;
+
+    struct proxy_params {
+        bool                mExitRead;
+        struct pcm          *mProxyPcmHandle;
+        uint32_t            mCaptureBufferSize;
+        void                *mCaptureBuffer;
+        enum {
+            EProxyClosed    = 0,
+            EProxyOpened    = 1,
+            EProxySuspended = 2,
+            EProxyCapture   = 3,
+        };
+
+        uint32_t mProxyState;
+        struct snd_xferi mX;
+        unsigned mAvail;
+        struct pollfd mPfdProxy[NUM_FDS];
+        long mFrames;
+    };
+    struct proxy_params mProxyParams;
+
 };
 
 // ----------------------------------------------------------------------------
@@ -226,21 +311,6 @@ public:
     status_t                setPlaybackMuteState(uint32_t device, bool state);
     status_t                getPlaybackMuteState(uint32_t device, bool *state);
 
-};
-
-class ALSAControl
-{
-public:
-    ALSAControl(const char *device = "/dev/snd/controlC0");
-    virtual                ~ALSAControl();
-
-    status_t                get(const char *name, unsigned int &value, int index = 0);
-    status_t                set(const char *name, unsigned int value, int index = -1);
-    status_t                set(const char *name, const char *);
-    status_t                setext(const char *name, int count, char **setValues);
-
-private:
-    struct mixer*             mHandle;
 };
 
 class ALSAStreamOps
@@ -321,6 +391,7 @@ public:
 
 private:
     uint32_t            mFrameCount;
+    uint32_t            mUseCase;
 
 protected:
     AudioHardwareALSA *     mParent;
@@ -391,6 +462,9 @@ public:
     virtual status_t    getBufferInfo(buf_info **buf);
     virtual status_t    isBufferAvailable(int *isAvail);
 
+    status_t            pause_l();
+    status_t            resume_l();
+
 private:
     Mutex               mLock;
     uint32_t            mFrameCount;
@@ -407,10 +481,11 @@ private:
     bool                mEosEventReceived;
     AudioHardwareALSA  *mParent;
     alsa_handle_t *     mAlsaHandle;
-    alsa_device_t *     mAlsaDevice;
+    ALSADevice *     mAlsaDevice;
     snd_use_case_mgr_t *mUcMgr;
     AudioEventObserver *mObserver;
 
+    uint32_t            mUseCase;
     status_t            openDevice(char *pUseCase, bool bIsUseCase, int devices);
 
     status_t            closeDevice(alsa_handle_t *pDevice);
@@ -457,6 +532,17 @@ private:
 
     //event fd to signal the EOS and Kill from the userspace
     int mEfd;
+
+#ifdef USE_A2220
+    int mA2220Fd = -1;
+    int mA2220Mode = A2220_PATH_INCALL_RECEIVER_NSOFF;
+    Mutex mA2220Lock;
+
+    int a2220_ctl(int mode);
+#endif
+
+public:
+    bool mRouteAudioToA2dp;
 };
 
 
@@ -631,6 +717,14 @@ public:
             AudioSystem::audio_in_acoustics acoustics);
     virtual    void        closeInputStream(AudioStreamIn* in);
 
+    status_t    startA2dpPlayback(uint32_t activeUsecase);
+    status_t    stopA2dpPlayback(uint32_t activeUsecase);
+    bool        suspendA2dpPlayback(uint32_t activeUsecase);
+
+    status_t    startA2dpPlayback_l(uint32_t activeUsecase);
+    status_t    stopA2dpPlayback_l(uint32_t activeUsecase);
+    bool        suspendA2dpPlayback_l(uint32_t activeUsecase);
+
     /**This method dumps the state of the audio hardware */
     //virtual status_t dumpState(int fd, const Vector<String16>& args);
 
@@ -641,10 +735,24 @@ public:
         return mMode;
     }
 
+    void pauseIfUseCaseTunnelOrLPA();
+    void resumeIfUseCaseTunnelOrLPA();
+
+private:
+    status_t     openA2dpOutput();
+    status_t     closeA2dpOutput();
+    status_t     stopA2dpThread();
+    void       a2dpThreadFunc();
+    static void*        a2dpThreadWrapper(void *context);
+    void        setA2DPActiveUseCases_l(uint32_t activeUsecase);
+    uint32_t    getA2DPActiveUseCases_l();
+    void        clearA2DPActiveUseCases_l(uint32_t activeUsecase);
+    uint32_t    useCaseStringToEnum(const char *usecase);
+
 protected:
     virtual status_t    dump(int fd, const Vector<String16>& args);
     virtual uint32_t    getVoipMode(int format);
-    void                doRouting(int device);
+    status_t            doRouting(int device);
 #ifdef QCOM_FM_ENABLED
     void                handleFm(int device);
 #endif
@@ -667,7 +775,7 @@ protected:
     friend class AudioStreamInALSA;
     friend class ALSAStreamOps;
 
-    alsa_device_t *     mALSADevice;
+    ALSADevice*     mALSADevice;
 
     ALSAHandleList      mDeviceList;
 
@@ -679,7 +787,7 @@ protected:
 
     snd_use_case_mgr_t *mUcMgr;
 
-    uint32_t            mCurDevice;
+    int32_t            mCurDevice;
     /* The flag holds all the audio related device settings from
      * Settings and Qualcomm Settings applications */
     uint32_t            mDevSettingsFlag;
@@ -699,6 +807,30 @@ protected:
     int musbPlaybackState;
     int musbRecordingState;
 #endif
+
+    //A2DP variables
+    audio_stream_out   *mA2dpStream;
+    audio_hw_device_t  *mA2dpDevice;
+
+    bool                mKillA2DPThread;
+    bool                mA2dpThreadAlive;
+    pthread_t           mA2dpThread;
+    Mutex               mA2dpMutex;
+    Condition           mA2dpCv;
+    volatile bool       mIsA2DPEnabled;
+
+    enum {
+      USECASE_NONE = 0x0,
+      USECASE_HIFI = 0x1,
+      USECASE_HIFI_LOWLATENCY = 0x2,
+      USECASE_HIFI_LOW_POWER = 0x4,
+      USECASE_HIFI_TUNNEL = 0x8,
+      USECASE_FM = 0x10,
+    };
+    uint32_t mA2DPActiveUseCases;
+
+public:
+    bool mRouteAudioToA2dp;
 };
 
 // ----------------------------------------------------------------------------

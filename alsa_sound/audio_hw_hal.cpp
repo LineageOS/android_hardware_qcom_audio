@@ -212,7 +212,7 @@ static status_t out_stop(struct audio_stream_out *stream)
 {
     struct qcom_stream_out *out =
         reinterpret_cast<struct qcom_stream_out *>(stream);
-    return NO_ERROR;//return out->qcom_out->stop();
+    return out->qcom_out->stop();
 }
 
 static int out_add_audio_effect(const struct audio_stream *stream, effect_handle_t effect)
@@ -373,6 +373,7 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_OUT_WIRED_HEADPHONE |
             AUDIO_DEVICE_OUT_AUX_DIGITAL |
             AUDIO_DEVICE_OUT_ALL_SCO |
+            AUDIO_DEVICE_OUT_ALL_A2DP |
 #ifdef QCOM_ANC_HEADSET_ENABLED
             AUDIO_DEVICE_OUT_ANC_HEADSET |
             AUDIO_DEVICE_OUT_ANC_HEADPHONE |

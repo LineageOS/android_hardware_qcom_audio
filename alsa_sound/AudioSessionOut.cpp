@@ -28,8 +28,8 @@
 #include <math.h>
 
 #define LOG_TAG "AudioSessionOutALSA"
-#define LOG_NDEBUG 0
-#define LOG_NDDEBUG 0
+//#define LOG_NDEBUG 0
+//#define LOG_NDDEBUG 0
 #include <utils/Log.h>
 #include <utils/String8.h>
 
@@ -96,6 +96,7 @@ AudioSessionOutALSA::AudioSessionOutALSA(AudioHardwareALSA *parent,
     mSkipWrite          = false;
 
     mAlsaHandle         = NULL;
+    mUseCase            = AudioHardwareALSA::USECASE_NONE;
 
     mInputBufferSize    = type ? TUNNEL_BUFFER_SIZE : LPA_BUFFER_SIZE;
     mInputBufferCount   = BUFFER_COUNT;
@@ -115,21 +116,41 @@ AudioSessionOutALSA::AudioSessionOutALSA(AudioHardwareALSA *parent,
         return;
     }
 
+    if(devices & AudioSystem::DEVICE_OUT_ALL_A2DP) {
+        ALOGE("Set Capture from proxy true");
+        mParent->mRouteAudioToA2dp = true;
+    }
+
     //open device based on the type (LPA or Tunnel) and devices
+    //TODO: Check format type for linear vs non-linear to determine LPA/Tunnel
     openAudioSessionDevice(type, devices);
 
     //Creates the event thread to poll events from LPA/Compress Driver
     createEventThread();
+
+    ALOGV("mParent->mRouteAudioToA2dp = %d", mParent->mRouteAudioToA2dp);
+    if (mParent->mRouteAudioToA2dp) {
+        status_t err = NO_ERROR;
+        mUseCase = mParent->useCaseStringToEnum(mAlsaHandle->useCase);
+        err = mParent->startA2dpPlayback_l(mUseCase);
+        *status = err;
+    }
+
     *status = NO_ERROR;
 }
 
 AudioSessionOutALSA::~AudioSessionOutALSA()
 {
-    ALOGV("~AudioSessionOutALSA");
+    ALOGD("~AudioSessionOutALSA");
 
     mSkipWrite = true;
     mWriteCv.signal();
-
+    if (mParent->mRouteAudioToA2dp) {
+         status_t err = mParent->stopA2dpPlayback(mUseCase);
+         if(err){
+             ALOGE("stopA2dpPlayback return err  %d", err);
+         }
+    }
     //TODO: This might need to be Locked using Parent lock
     reset();
 }
@@ -453,6 +474,13 @@ status_t AudioSessionOutALSA::start()
             return UNKNOWN_ERROR;
         }
         mPaused = false;
+        if (mParent->mRouteAudioToA2dp) {
+            err = mParent->startA2dpPlayback_l(mUseCase);
+            if(err != NO_ERROR) {
+                ALOGE("start Proxy from start returned error = %d",err);
+                return err;
+            }
+        }
     }
     else {
         //Signal the driver to start rendering data
@@ -467,16 +495,52 @@ status_t AudioSessionOutALSA::start()
 status_t AudioSessionOutALSA::pause()
 {
     Mutex::Autolock autoLock(mLock);
-    ALOGV("Pausing the driver");
+    status_t err = NO_ERROR;
+    ALOGD("Pausing the driver");
     //Signal the driver to pause rendering data
     if (ioctl(mAlsaHandle->handle->fd, SNDRV_PCM_IOCTL_PAUSE,1) < 0) {
         ALOGE("PAUSE failed on use case %s", mAlsaHandle->useCase);
         return UNKNOWN_ERROR;
     }
     mPaused = true;
+
+    if(err) {
+        ALOGE("pause returned error");
+        return err;
+    }
+    if (mParent->mRouteAudioToA2dp) {
+        err = mParent->suspendA2dpPlayback(mUseCase);
+        if(err != NO_ERROR) {
+            ALOGE("Suspend Proxy from Pause returned error = %d",err);
+            return err;
+        }
+    }
+    return err;
+
+}
+
+status_t AudioSessionOutALSA::pause_l()
+{
+    if (!mPaused) {
+        if (ioctl(mAlsaHandle->handle->fd, SNDRV_PCM_IOCTL_PAUSE,1) < 0) {
+            ALOGE("PAUSE failed on use case %s", mAlsaHandle->useCase);
+            return UNKNOWN_ERROR;
+        }
+    }
     return NO_ERROR;
 }
 
+status_t AudioSessionOutALSA::resume_l()
+{
+    status_t err = NO_ERROR;
+    if (!mPaused) {
+        if (ioctl(mAlsaHandle->handle->fd, SNDRV_PCM_IOCTL_PAUSE,0) < 0) {
+            ALOGE("Resume failed on use case %s", mAlsaHandle->useCase);
+            return UNKNOWN_ERROR;
+        }
+    }
+    return NO_ERROR;
+}
 
 status_t AudioSessionOutALSA::drain()
 {
@@ -549,6 +613,8 @@ status_t AudioSessionOutALSA::flush()
     return NO_ERROR;
 }
 
+
+
 status_t AudioSessionOutALSA::stop()
 {
     Mutex::Autolock autoLock(mLock);
@@ -557,15 +623,29 @@ status_t AudioSessionOutALSA::stop()
     mSkipWrite = true;
     mWriteCv.signal();
 
-    ALOGV("stop -");
+    if (mParent->mRouteAudioToA2dp) {
+        status_t err = mParent->suspendA2dpPlayback(mUseCase);
+        if(err) {
+            ALOGE("stop-suspendA2dpPlayback- return err = %d", err);
+            return err;
+        }
+    }
 
     return NO_ERROR;
 }
 
 status_t AudioSessionOutALSA::standby()
 {
-    //ToDO
-    return NO_ERROR;
+    Mutex::Autolock autoLock(mParent->mLock);
+    status_t err = NO_ERROR;
+    if (mParent->mRouteAudioToA2dp) {
+         ALOGD("Standby - stopA2dpPlayback_l - mUseCase = %d",mUseCase);
+         err = mParent->stopA2dpPlayback_l(mUseCase);
+         if(err){
+             ALOGE("stopA2dpPlayback return err  %d", err);
+         }
+    }
+    return err;
 }
 
 #define USEC_TO_MSEC(x) ((x + 999) / 1000)
@@ -676,6 +756,7 @@ status_t AudioSessionOutALSA::openDevice(char *useCase, bool bIsUseCase, int dev
     alsa_handle.latency     = PLAYBACK_LATENCY;
     alsa_handle.rxHandle    = 0;
     alsa_handle.ucMgr       = mUcMgr;
+    alsa_handle.session     = this;
     strlcpy(alsa_handle.useCase, useCase, sizeof(alsa_handle.useCase));
 
     mAlsaDevice->route(&alsa_handle, devices, mParent->mode());
@@ -716,12 +797,10 @@ status_t AudioSessionOutALSA::setParameters(const String8& keyValuePairs)
         // Ignore routing if device is 0.
         if(device) {
             ALOGV("setParameters(): keyRouting with device %d", device);
-            /*if(device & AudioSystem::DEVICE_OUT_ALL_A2DP) {
-                device &= ~AudioSystem::DEVICE_OUT_ALL_A2DP;
-                device |=  AudioSystem::DEVICE_OUT_PROXY;
+            if(device & AudioSystem::DEVICE_OUT_ALL_A2DP) {
                 mParent->mRouteAudioToA2dp = true;
                 ALOGD("setParameters(): A2DP device %d", device);
-            }*/
+            }
             mParent->doRouting(device);
         }
         param.remove(key);

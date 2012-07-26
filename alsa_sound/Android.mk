@@ -18,14 +18,19 @@ LOCAL_CFLAGS := -D_POSIX_SOURCE
 LOCAL_CFLAGS += -DQCOM_ACDB_ENABLED
 LOCAL_CFLAGS += -DQCOM_PROXY_DEVICE_ENABLED
 
+ifneq ($(ALSA_DEFAULT_SAMPLE_RATE),)
+    LOCAL_CFLAGS += -DALSA_DEFAULT_SAMPLE_RATE=$(ALSA_DEFAULT_SAMPLE_RATE)
+endif
+
 LOCAL_SRC_FILES := \
-  AudioHardwareALSA.cpp 	\
-  AudioStreamOutALSA.cpp 	\
-  AudioStreamInALSA.cpp 	\
-  ALSAStreamOps.cpp		\
-  audio_hw_hal.cpp \
-  AudioUsbALSA.cpp \
-  AudioSessionOut.cpp
+  AudioHardwareALSA.cpp         \
+  AudioStreamOutALSA.cpp        \
+  AudioStreamInALSA.cpp         \
+  ALSAStreamOps.cpp             \
+  audio_hw_hal.cpp              \
+  AudioUsbALSA.cpp              \
+  AudioSessionOut.cpp           \
+  ALSADevice.cpp
 
 LOCAL_STATIC_LIBRARIES := \
     libmedia_helper \
@@ -104,53 +109,4 @@ LOCAL_MODULE_PATH  := $(TARGET_OUT_ETC)/
 LOCAL_SRC_FILES    := audio_policy.conf
 include $(BUILD_PREBUILT)
 
-# This is the ALSA module which behaves closely like the original
-
-include $(CLEAR_VARS)
-
-LOCAL_PRELINK_MODULE := false
-
-LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
-
-LOCAL_CFLAGS := -D_POSIX_SOURCE -Wno-multichar
-
-LOCAL_CFLAGS += -DQCOM_ACDB_ENABLED
-LOCAL_CFLAGS += -DQCOM_PROXY_DEVICE_ENABLED
-
-ifneq ($(ALSA_DEFAULT_SAMPLE_RATE),)
-    LOCAL_CFLAGS += -DALSA_DEFAULT_SAMPLE_RATE=$(ALSA_DEFAULT_SAMPLE_RATE)
 endif
-
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/libalsa-intf
-
-LOCAL_SRC_FILES:= \
-    alsa_default.cpp \
-    ALSAControl.cpp
-
-LOCAL_SHARED_LIBRARIES := \
-    libcutils \
-    liblog    \
-    libalsa-intf
-
-ifeq ($(BOARD_HAVE_HTC_AUDIO),true)
-  LOCAL_CFLAGS += -DHTC_AUDIO
-endif
-
-ifeq ($(BOARD_HAVE_SAMSUNG_AUDIO),true)
-  LOCAL_CFLAGS += -DSAMSUNG_AUDIO
-endif
-
-ifeq ($(BOARD_HAVE_DOCK_USBAUDIO),true)
-  LOCAL_CFLAGS += -DDOCK_USBAUDIO
-endif
-
-ifeq ($(BOARD_HAVE_AUDIENCE_A2220),true)
-  LOCAL_CFLAGS += -DUSE_A2220
-endif
-
-LOCAL_MODULE:= alsa.msm8960
-LOCAL_MODULE_TAGS := optional
-
-include $(BUILD_SHARED_LIBRARY)
-
-endif # BOARD_USES_ALSA_AUDIO

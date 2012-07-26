@@ -57,6 +57,13 @@ public:
         //  before updateDeviceForStrategy() is called.
         virtual audio_devices_t getDeviceForStrategy(routing_strategy strategy, bool fromCache = true);
 
+        virtual AudioSystem::device_connection_state getDeviceConnectionState(AudioSystem::audio_devices device,
+                                                                              const char *device_address);
+
+        void checkA2dpSuspend();
+
+        // returns the A2DP output handle if it is open or 0 otherwise
+        audio_io_handle_t getA2dpOutput();
 
 protected:
         // true is current platform implements a back microphone
@@ -72,5 +79,7 @@ protected:
         // Mute or unmute the stream on the specified output
         virtual void setStreamMute(int stream, bool on, audio_io_handle_t output, int delayMs = 0, audio_devices_t device = (audio_devices_t)0);
 
+private:
+        void handleNotificationRoutingForStream(AudioSystem::stream_type stream);
 };
 };
