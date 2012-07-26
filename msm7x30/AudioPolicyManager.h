@@ -30,7 +30,7 @@ class AudioPolicyManager: public AudioPolicyManagerBase
 public:
                 AudioPolicyManager(AudioPolicyClientInterface *clientInterface)
                 : AudioPolicyManagerBase(clientInterface) {
-#ifdef WITH_QCOM_LPA
+#ifdef QCOM_TUNNEL_LPA_ENABLED
                     mLPADecodeOutput = -1;
                     mLPAMuted = false;
                     mLPAStreamType = AudioSystem::DEFAULT;
@@ -56,7 +56,7 @@ public:
         //  where conditions are changing (setDeviceConnectionState(), setPhoneState()...) AND
         //  before updateDeviceForStrategy() is called.
         virtual uint32_t getDeviceForStrategy(routing_strategy strategy, bool fromCache = true);
-#ifdef WITH_QCOM_LPA
+#ifdef QCOM_TUNNEL_LPA_ENABLED
         virtual audio_io_handle_t getSession(AudioSystem::stream_type stream,
                                             uint32_t format,
                                             AudioSystem::output_flags flags,
@@ -90,7 +90,7 @@ protected:
         status_t stopInput(audio_io_handle_t input);
         // Mute or unmute the stream on the specified output
         void setStreamMute(int stream, bool on, audio_io_handle_t output, int delayMs = 0);
-#ifdef WITH_QCOM_LPA
+#ifdef QCOM_TUNNEL_LPA_ENABLED
         audio_io_handle_t mLPADecodeOutput;           // active output handler
         audio_io_handle_t mLPAActiveOuput;           // LPA Output Handler during inactive state
         bool    mLPAMuted;
