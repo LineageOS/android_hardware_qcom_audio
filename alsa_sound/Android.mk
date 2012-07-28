@@ -126,6 +126,10 @@ LOCAL_SHARED_LIBRARIES := \
     libalsa-intf \
     libcsd-client
 
+ifeq ($(BOARD_HAVE_HTC_AUDIO),true)
+  LOCAL_CFLAGS += -DHTC_VOICE_CONFIG
+endif
+
 LOCAL_MODULE:= alsa.msm8960
 LOCAL_MODULE_TAGS := optional
 
