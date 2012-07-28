@@ -9,6 +9,10 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
+# hack for prebuilt libacdbloader
+$(shell mkdir -p $(OUT)/obj/SHARED_LIBRARIES/libacdbloader_intermediates)
+$(shell touch $(OUT)/obj/SHARED_LIBRARIES/libacdbloader_intermediates/export_includes)
+
 LOCAL_ARM_MODE := arm
 LOCAL_CFLAGS := -D_POSIX_SOURCE
 
@@ -32,11 +36,11 @@ LOCAL_SHARED_LIBRARIES := \
     libhardware \
     libc        \
     libpower    \
+    libacdbloader \
     libalsa-intf
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-alsa
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audcal
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-acdb-util
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/libalsa-intf
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/surround_sound/
 LOCAL_C_INCLUDES += hardware/libhardware/include
@@ -44,6 +48,9 @@ LOCAL_C_INCLUDES += hardware/libhardware_legacy/include
 LOCAL_C_INCLUDES += frameworks/base/include
 LOCAL_C_INCLUDES += system/core/include
 
+ifeq ($(BOARD_HAVE_HTC_AUDIO),true)
+LOCAL_CFLAGS += -DHTC_VOICE_CONFIG -DQCOM_ACDB_ENABLED
+endif
 
 LOCAL_MODULE := audio.primary.msm8960
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
