@@ -243,6 +243,10 @@ static card_mapping_t card_mapping_list[] = {
 #define SND_USE_CASE_DEV_PROXY_RX_ANC_HEADSET     "PROXY Rx ANC Headset"
 #define SND_USE_CASE_DEV_PROXY_RX_SPEAKER_HEADSET "PROXY Rx Speaker Headset"
 #define SND_USE_CASE_DEV_PROXY_RX_SPEAKER_ANC_HEADSET "PROXY Rx Speaker ANC Headset"
+#define SND_USE_CASE_DEV_HANDSET_VOICE "Handset Voice"
+#define SND_USE_CASE_DEV_EARPIECE_VOICE "Earpiece Voice"
+#define SND_USE_CASE_DEV_SPEAKER_VOICE "Speaker Voice"
+#define SND_USE_CASE_DEV_LINE_VOICE "Line Voice"
 
 #define SND_USE_CASE_MOD_PLAY_FM         "Play FM"
 #define SND_USE_CASE_MOD_CAPTURE_FM      "Capture FM"
