@@ -3253,9 +3253,9 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
     uint16_t* frameCountPtr;
     uint16_t* frameSizePtr;
 
+    AudioHardware *hw = mHardware;
+    hw->mLock.lock();
     if (mState < AUDIO_INPUT_OPENED) {
-        AudioHardware *hw = mHardware;
-        hw->mLock.lock();
         status_t status = set(hw, mDevices, &mFormat, &mChannels, &mSampleRate, mAcoustics);
         if (status != NO_ERROR) {
             hw->mLock.unlock();
@@ -3294,13 +3294,12 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
                 addToTable(dec_id,cur_tx,INVALID_DEVICE,FM_REC,true);
                 mFmRec = FM_FILE_REC;
             }
-            hw->mLock.unlock();
-        } else
+        }
 #endif
 //        {
-            hw->mLock.unlock();
             if(ioctl(mFdin, AUDIO_GET_SESSION_ID, &dec_id)) {
                 ALOGE("AUDIO_GET_SESSION_ID failed*********");
+                hw->mLock.unlock();
                 return -1;
             }
             Mutex::Autolock lock(mDeviceSwitchLock);
@@ -3311,6 +3310,7 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
                      cur_tx = DEVICE_HANDSET_TX;
                  if(enableDevice(cur_tx, 1)) {
                      ALOGE("enableDevice failed for device cur_rx %d",cur_rx);
+                     hw->mLock.unlock();
                      return -1;
                  }
 #ifdef QCOM_ACDB_ENABLED
@@ -3318,6 +3318,7 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
 #endif
                  if(msm_route_stream(PCM_REC, dec_id, DEV_ID(cur_tx), 1)) {
                     ALOGE("msm_route_stream failed");
+                    hw->mLock.unlock();
                     return -1;
                  }
                  addToTable(dec_id,cur_tx,INVALID_DEVICE,PCM_REC,true);
@@ -3342,6 +3343,7 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
         if (ioctl(mFdin, AUDIO_START, 0)) {
             ALOGE("Error starting record");
             standby();
+            hw->mLock.unlock();
             return -1;
         }
         mState = AUDIO_INPUT_STARTED;
@@ -3352,6 +3354,7 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
     {
         if(count < mBufferSize) {
             ALOGE("read:: read size requested is less than min input buffer size");
+            hw->mLock.unlock();
             return 0;
         }
         while (count >= mBufferSize) {
@@ -3367,13 +3370,17 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
                    break;
                 }
             } else {
-                if (errno != EAGAIN) return bytesRead;
+                if (errno != EAGAIN) {
+                    hw->mLock.unlock();
+                    return bytesRead;
+                }
                 mRetryCount++;
                 ALOGW("EAGAIN - retrying");
             }
         }
     }
 
+    hw->mLock.unlock();
     return bytes;
 }
 
