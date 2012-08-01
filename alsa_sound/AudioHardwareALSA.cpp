@@ -98,7 +98,11 @@ AudioHardwareALSA::AudioHardwareALSA() :
             musbPlaybackState = 0;
             musbRecordingState = 0;
 #endif
+#ifdef USES_FLUENCE_INCALL
+            mDevSettingsFlag |= TTY_OFF | DMIC_FLAG;
+#else
             mDevSettingsFlag |= TTY_OFF;
+#endif
             mBluetoothVGS = false;
             mFusion3Platform = false;
 

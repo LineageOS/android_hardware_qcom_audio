@@ -73,7 +73,11 @@ static char curRxUCMDevice[50];
 static char curTxUCMDevice[50];
 static int fluence_mode;
 static int fmVolume;
+#ifdef USES_FLUENCE_INCALL
+static uint32_t mDevSettingsFlag = TTY_OFF | DMIC_FLAG;
+#else
 static uint32_t mDevSettingsFlag = TTY_OFF;
+#endif
 static int btsco_samplerate = 8000;
 static bool pflag = false;
 static ALSAUseCaseList mUseCaseList;
@@ -1236,7 +1240,7 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
         if (!(mDevSettingsFlag & TTY_OFF) &&
             (callMode == AudioSystem::MODE_IN_CALL) &&
             ((devices & AudioSystem::DEVICE_OUT_WIRED_HEADSET) ||
-             (devices & AudioSystem::DEVICE_OUT_WIRED_HEADPHONE))) { 
+             (devices & AudioSystem::DEVICE_OUT_WIRED_HEADPHONE))) {
 #ifdef QCOM_ANC_HEADSET_ENABLED
              ||
              (devices & AudioSystem::DEVICE_OUT_ANC_HEADSET) ||
@@ -1320,7 +1324,7 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
     } else {
         if (!(mDevSettingsFlag & TTY_OFF) &&
             (callMode == AudioSystem::MODE_IN_CALL) &&
-            ((devices & AudioSystem::DEVICE_IN_WIRED_HEADSET))) { 
+            ((devices & AudioSystem::DEVICE_IN_WIRED_HEADSET))) {
 #ifdef QCOM_ANC_HEADSET_ENABLED
             ||(devices & AudioSystem::DEVICE_IN_ANC_HEADSET))) {
 #endif
@@ -1340,6 +1344,17 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                 return strdup(SND_USE_CASE_DEV_HANDSET); /* HANDSET TX */
             } else {
                 if (mDevSettingsFlag & DMIC_FLAG) {
+#ifdef USES_FLUENCE_INCALL
+                    if(callMode == AudioSystem::MODE_IN_CALL) {
+                        if (fluence_mode == FLUENCE_MODE_ENDFIRE) {
+                            return strdup(SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE); /* DUALMIC EF TX */
+                        } else if (fluence_mode == FLUENCE_MODE_BROADSIDE) {
+                            return strdup(SND_USE_CASE_DEV_DUAL_MIC_BROADSIDE); /* DUALMIC BS TX */
+                        } else {
+                            return strdup(SND_USE_CASE_DEV_HANDSET); /* BUILTIN-MIC TX */
+                        }
+                    }
+#else
                     if (((rxDevice != NULL) &&
                         !strncmp(rxDevice, SND_USE_CASE_DEV_SPEAKER,
                         (strlen(SND_USE_CASE_DEV_SPEAKER)+1))) ||
@@ -1357,15 +1372,16 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                             return strdup(SND_USE_CASE_DEV_DUAL_MIC_BROADSIDE); /* DUALMIC BS TX */
                         }
                     }
+#endif
                 } else if (mDevSettingsFlag & QMIC_FLAG){
                     return strdup(SND_USE_CASE_DEV_QUAD_MIC);
-                } 
+                }
 #ifdef QCOM_SSR_ENABLED
                 else if (mDevSettingsFlag & SSRQMIC_FLAG){
                     ALOGV("return SSRQMIC_FLAG: 0x%x devices:0x%x",mDevSettingsFlag,devices);
                     // Mapping for quad mic input device.
                     return strdup(SND_USE_CASE_DEV_SSR_QUAD_MIC); /* SSR Quad MIC */
-                } 
+                }
 #endif
                 else {
                     return strdup(SND_USE_CASE_DEV_LINE); /* BUILTIN-MIC TX */
