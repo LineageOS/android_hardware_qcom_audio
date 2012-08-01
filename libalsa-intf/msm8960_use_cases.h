@@ -61,11 +61,11 @@ extern "C" {
 #define DEVICE_BT_SCO_TX_WB_ACDB_ID                     38// BT_SCO_WB_MIC
 #define DEVICE_SPEAKER_HEADSET_RX_ACDB_ID               DEVICE_HEADSET_RX_ACDB_ID // Use headset calibration
 #define DEVICE_HDMI_STEREO_RX_ACDB_ID                   18// HDMI_SPKR
-#define DEVICE_ANC_HEADSET_STEREO_RX_ACDB_ID            26//ANC RX, same as regular headset
+#define DEVICE_ANC_HEADSET_STEREO_RX_ACDB_ID            26// ANC RX, same as regular headset
 #define DEVICE_QUADMIC_ACDB_ID                          19// QUADMIC_SKPR
-#define DEVICE_PROXY_RX_ACDB_ID   	               DEVICE_HDMI_STEREO_RX_ACDB_ID
-#define DEVICE_TTY_VCO_HANDSET_TX_ACDB_ID		36 //TTY_VCO_HANDSET_MIC
-#define DEVICE_TTY_HCO_HANDSET_RX_ACDB_ID               37 //TTY_HCO_HANDSET_SPRK
+#define DEVICE_PROXY_RX_ACDB_ID                         DEVICE_HDMI_STEREO_RX_ACDB_ID
+#define DEVICE_TTY_VCO_HANDSET_TX_ACDB_ID               36// TTY_VCO_HANDSET_MIC
+#define DEVICE_TTY_HCO_HANDSET_RX_ACDB_ID               37// TTY_HCO_HANDSET_SPRK
 #define DEVICE_HANDSET_TX_FV5_ACDB_ID                   40
 #define DEVICE_DUALMIC_HANDSET_TX_ENDFIRE_FV5_ACDB_ID   41
 #define DEVICE_SPEAKER_TX_FV5_ACDB_ID                   42
@@ -73,6 +73,8 @@ extern "C" {
 #define DEVICE_INCALL_VOICE_RECORD_STEREO_ACDB_ID       45
 #define DEVICE_INCALL_MUSIC_DELIVERY_MONO_ACDB_ID       46
 #define DEVICE_INCALL_VOICE_RECORD_MONO_ACDB_ID         47
+#define DEVICE_CAMCORDER_TX_ACDB_ID                     61// CAMCORDER_TX
+#define DEVICE_VOICE_RECOGNITION_ACDB_ID                62// VOICE_RECOGNITION
 
 /* mixer control type */
 #define TYPE_INT            0
@@ -244,6 +246,8 @@ static card_mapping_t card_mapping_list[] = {
 #define SND_USE_CASE_DEV_PROXY_RX_ANC_HEADSET     "PROXY Rx ANC Headset"
 #define SND_USE_CASE_DEV_PROXY_RX_SPEAKER_HEADSET "PROXY Rx Speaker Headset"
 #define SND_USE_CASE_DEV_PROXY_RX_SPEAKER_ANC_HEADSET "PROXY Rx Speaker ANC Headset"
+#define SND_USE_CASE_DEV_CAMCORDER_TX        "Camcorder Tx"
+#define SND_USE_CASE_DEV_VOICE_RECOGNITION   "Voice Recognition"
 
 #define SND_USE_CASE_MOD_PLAY_FM         "Play FM"
 #define SND_USE_CASE_MOD_CAPTURE_FM      "Capture FM"

@@ -17,6 +17,10 @@ ifeq ($(strip $(BOARD_USES_FLUENCE_INCALL)),true)
 LOCAL_CFLAGS += -DUSES_FLUENCE_INCALL
 endif
 
+ifeq ($(strip $(BOARD_USES_SEPERATED_AUDIO_INPUT)),true)
+LOCAL_CFLAGS += -DSEPERATED_AUDIO_INPUT
+endif
+
 LOCAL_SRC_FILES := \
   AudioHardwareALSA.cpp 	\
   AudioStreamOutALSA.cpp 	\
@@ -114,6 +118,10 @@ LOCAL_CFLAGS := -D_POSIX_SOURCE -Wno-multichar
 
 ifeq ($(strip $(BOARD_USES_FLUENCE_INCALL)),true)
 LOCAL_CFLAGS += -DUSES_FLUENCE_INCALL
+endif
+
+ifeq ($(strip $(BOARD_USES_SEPERATED_AUDIO_INPUT)),true)
+LOCAL_CFLAGS += -DSEPERATED_AUDIO_INPUT
 endif
 
 ifneq ($(ALSA_DEFAULT_SAMPLE_RATE),)

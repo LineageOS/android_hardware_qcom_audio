@@ -203,6 +203,9 @@ struct alsa_device_t {
     void     (*setVocRecMode)(uint8_t);
     void     (*setVoLTEMicMute)(int);
     void     (*setVoLTEVolume)(int);
+#ifdef SEPERATED_AUDIO_INPUT
+    void     (*setInput)(int);
+#endif
 };
 
 // ----------------------------------------------------------------------------

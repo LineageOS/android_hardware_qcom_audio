@@ -67,6 +67,11 @@ static void     s_enable_slow_talk(bool flag);
 static void     s_set_voc_rec_mode(uint8_t mode);
 static void     s_set_volte_mic_mute(int state);
 static void     s_set_volte_volume(int vol);
+#ifdef SEPERATED_AUDIO_INPUT
+static void     s_setInput(int);
+
+static int input_source;
+#endif
 
 static char mic_type[25];
 static char curRxUCMDevice[50];
@@ -137,6 +142,9 @@ static int s_device_open(const hw_module_t* module, const char* name,
     dev->setVocRecMode = s_set_voc_rec_mode;
     dev->setVoLTEMicMute = s_set_volte_mic_mute;
     dev->setVoLTEVolume = s_set_volte_volume;
+#ifdef SEPERATED_AUDIO_INPUT
+    dev->setInput = s_setInput;
+#endif
 
     *device = &dev->common;
 
@@ -1383,8 +1391,17 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                     return strdup(SND_USE_CASE_DEV_SSR_QUAD_MIC); /* SSR Quad MIC */
                 }
 #endif
+#ifdef SEPERATED_AUDIO_INPUT
+                if(input_source == AUDIO_SOURCE_VOICE_RECOGNITION) {
+                    ALOGV("getUCMdevice returned the VOICE_RECOGNITION UCM by  input source = %d", input_source);
+                    return strdup(SND_USE_CASE_DEV_VOICE_RECOGNITION ); /* VOICE RECOGNITION TX */
+                } else if(input_source == AUDIO_SOURCE_CAMCORDER) {
+                    ALOGV("getUCMdevice returned the Camcorder Tx UCM by  input source = %d", input_source);
+                    return strdup(SND_USE_CASE_DEV_CAMCORDER_TX ); /* CAMCORDER TX */
+                }
+#endif
                 else {
-                    return strdup(SND_USE_CASE_DEV_LINE); /* BUILTIN-MIC TX */
+                    return strdup(SND_USE_CASE_DEV_HANDSET); /* BUILTIN-MIC TX */
                 }
             }
         } else if (devices & AudioSystem::DEVICE_IN_AUX_DIGITAL) {
@@ -1644,4 +1661,11 @@ static status_t s_set_compressed_vol(int value)
     return err;
 }
 
+#ifdef SEPERATED_AUDIO_INPUT
+void s_setInput(int input)
+{
+    input_source = input;
+    ALOGD("s_setInput() : input_source = %d",input_source);
+}
+#endif
 }
