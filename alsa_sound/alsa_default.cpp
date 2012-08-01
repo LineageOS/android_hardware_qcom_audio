@@ -358,7 +358,7 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
             devices = devices | (AudioSystem::DEVICE_IN_BUILTIN_MIC |
                       AudioSystem::DEVICE_OUT_EARPIECE);
         } else if (devices & AudioSystem::DEVICE_OUT_SPEAKER) {
-            devices = devices | (AudioSystem::DEVICE_IN_BUILTIN_MIC |
+            devices = devices | (AudioSystem::DEVICE_IN_BACK_MIC |
                        AudioSystem::DEVICE_OUT_SPEAKER);
         } else if ((devices & AudioSystem::DEVICE_OUT_BLUETOOTH_SCO) ||
                    (devices & AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_HEADSET) ||
