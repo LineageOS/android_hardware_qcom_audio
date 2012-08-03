@@ -1164,6 +1164,10 @@ static int msm72xx_enable_postproc(bool state)
     property_get("audio.legacy.postproc",postProc,"0");
 
     if(!(strcmp("true",postProc) == 0)){
+        post_proc_feature_mask &= MBADRC_DISABLE;
+        post_proc_feature_mask &= ADRC_DISABLE;
+        post_proc_feature_mask &= EQ_DISABLE;
+        post_proc_feature_mask &= RX_IIR_DISABLE;
         ALOGV("Legacy Post Proc disabled.");
         return 0;
     }
@@ -1171,10 +1175,18 @@ static int msm72xx_enable_postproc(bool state)
     if (!audpp_filter_inited)
     {
         ALOGE("Parsing error in AudioFilter.csv.");
+        post_proc_feature_mask &= MBADRC_DISABLE;
+        post_proc_feature_mask &= ADRC_DISABLE;
+        post_proc_feature_mask &= EQ_DISABLE;
+        post_proc_feature_mask &= RX_IIR_DISABLE;
         return -EINVAL;
     }
     if(snd_device < 0) {
         ALOGE("Enabling/Disabling post proc features for device: %d", snd_device);
+        post_proc_feature_mask &= MBADRC_DISABLE;
+        post_proc_feature_mask &= ADRC_DISABLE;
+        post_proc_feature_mask &= EQ_DISABLE;
+        post_proc_feature_mask &= RX_IIR_DISABLE;
         return -EINVAL;
     }
 
