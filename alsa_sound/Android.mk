@@ -12,6 +12,7 @@ include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
 LOCAL_CFLAGS := -D_POSIX_SOURCE
 LOCAL_CFLAGS += -DQCOM_CSDCLIENT_ENABLED
+LOCAL_CFLAGS += -DQCOM_ACDB_ENABLED
 
 ifeq ($(strip $(BOARD_USES_FLUENCE_INCALL)),true)
 LOCAL_CFLAGS += -DUSES_FLUENCE_INCALL
@@ -69,6 +70,7 @@ ifeq (1,0) # use default audio policy manager
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS := -D_POSIX_SOURCE
+LOCAL_CFLAGS += -DQCOM_ACDB_ENABLED
 
 ifeq ($(BOARD_HAVE_BLUETOOTH),true)
   LOCAL_CFLAGS += -DWITH_A2DP
@@ -115,6 +117,7 @@ LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 
 LOCAL_CFLAGS := -D_POSIX_SOURCE -Wno-multichar
+LOCAL_CFLAGS += -DQCOM_ACDB_ENABLED
 
 ifeq ($(strip $(BOARD_USES_FLUENCE_INCALL)),true)
 LOCAL_CFLAGS += -DUSES_FLUENCE_INCALL
@@ -130,12 +133,14 @@ endif
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/libalsa-intf
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-qmi/csd-client
+LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-acdb-util
 
 LOCAL_SRC_FILES:= \
     alsa_default.cpp \
     ALSAControl.cpp
 
 LOCAL_SHARED_LIBRARIES := \
+    libacdbloader \
     libcutils \
     liblog    \
     libalsa-intf \
