@@ -708,8 +708,8 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
         ALOGE("openOutputStream called with bad devices");
         return out;
     }
-# if 0
-    if((devices == AudioSystem::DEVICE_OUT_DIRECTOUTPUT) &&
+#if 1
+    if((flags & AUDIO_OUTPUT_FLAG_DIRECT) && (flags & AUDIO_OUTPUT_FLAG_VOIP_RX)&&
        ((*sampleRate == VOIP_SAMPLING_RATE_8K) || (*sampleRate == VOIP_SAMPLING_RATE_16K))) {
         bool voipstream_active = false;
         for(it = mDeviceList.begin();
@@ -770,13 +770,15 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
               mCurDevice |= AudioSystem::DEVICE_OUT_PROXY;
               alsa_handle.devices = AudioSystem::DEVICE_OUT_PROXY;
               mALSADevice->route(&(*it), mCurDevice, AudioSystem::MODE_IN_COMMUNICATION);
-              ALOGD("enabling VOIP in openoutputstream, musbPlaybackState: %d", musbPlaybackState);
+#ifdef QCOM_USBAUDIO_ENABLED
+                ALOGD("enabling VOIP in openoutputstream, musbPlaybackState: %d", musbPlaybackState);
               startUsbPlaybackIfNotStarted();
               musbPlaybackState |= USBPLAYBACKBIT_VOIPCALL;
               ALOGD("Starting recording in openoutputstream, musbRecordingState: %d", musbRecordingState);
               startUsbRecordingIfNotStarted();
               musbRecordingState |= USBRECBIT_VOIPCALL;
-          } else{
+#endif
+           } else{
               mALSADevice->route(&(*it), mCurDevice, AudioSystem::MODE_IN_COMMUNICATION);
           }
           if(!strcmp(it->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) {
