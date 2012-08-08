@@ -3314,7 +3314,7 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
             hw->mLock.unlock();
         } else
 #endif
-//        {
+        {
             hw->mLock.unlock();
             if(ioctl(mFdin, AUDIO_GET_SESSION_ID, &dec_id)) {
                 ALOGE("AUDIO_GET_SESSION_ID failed*********");
@@ -3340,7 +3340,7 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
                  addToTable(dec_id,cur_tx,INVALID_DEVICE,PCM_REC,true);
             }
             mFirstread = false;
-//        }
+        }
     }
 
 
@@ -3373,6 +3373,7 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
         }
         while (count >= mBufferSize) {
             ssize_t bytesRead = ::read(mFdin, buffer, count);
+            usleep(1);
             if (bytesRead >= 0) {
                 count -= bytesRead;
                 p += bytesRead;
