@@ -3204,6 +3204,20 @@ status_t AudioHardware::AudioStreamInMSM8x60::set(
         return NO_ERROR;
     }
 #ifdef QCOM_ACDB_ENABLED
+    int (*msm8x60_set_audpre_params)(int, int);
+    msm8x60_set_audpre_params = (int (*)(int, int))::dlsym(acoustic, "msm8x60_set_audpre_params");
+    if ((*msm8x60_set_audpre_params) == 0) {
+        ALOGI("msm8x60_set_audpre_params not present");
+        return NO_ERROR;
+    }
+
+    int (*msm8x60_enable_audpre)(int, int, int);
+    msm8x60_enable_audpre = (int (*)(int, int, int))::dlsym(acoustic, "msm8x60_enable_audpre");
+    if ((*msm8x60_enable_audpre) == 0) {
+        ALOGI("msm8x60_enable_audpre not present");
+        return NO_ERROR;
+    }
+
     audpre_index = calculate_audpre_table_index(mSampleRate);
     tx_iir_index = (audpre_index * 2) + (hw->checkOutputStandby() ? 0 : 1);
     ALOGD("audpre_index = %d, tx_iir_index = %d\n", audpre_index, tx_iir_index);
@@ -3211,14 +3225,10 @@ status_t AudioHardware::AudioStreamInMSM8x60::set(
     /**
      * If audio-preprocessing failed, we should not block record.
      */
-    int (*msm8x60_set_audpre_params)(int, int);
-    msm8x60_set_audpre_params = (int (*)(int, int))::dlsym(acoustic, "msm8x60_set_audpre_params");
     status = msm8x60_set_audpre_params(audpre_index, tx_iir_index);
     if (status < 0)
         ALOGE("Cannot set audpre parameters");
 
-    int (*msm8x60_enable_audpre)(int, int, int);
-    msm8x60_enable_audpre = (int (*)(int, int, int))::dlsym(acoustic, "msm8x60_enable_audpre");
     mAcoustics = acoustic_flags;
     status = msm8x60_enable_audpre((int)acoustic_flags, audpre_index, tx_iir_index);
     if (status < 0)
