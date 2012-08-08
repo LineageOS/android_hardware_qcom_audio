@@ -170,12 +170,10 @@ int voip_session_mute = 0;
 int voice_session_id = 0;
 int voice_session_mute = 0;
 static bool dualmic_enabled = false;
-#ifdef QCOM_ANC_HEADSET_ENABLED
 static bool anc_running = false;
 static bool anc_setting = false;
 // This flag is used for avoiding multiple init/deinit of ANC driver.
 static bool anc_enabled = false;
-#endif
 bool vMicMute = false;
 
 #ifdef QCOM_ACDB_ENABLED
@@ -877,7 +875,7 @@ AudioStreamOut* AudioHardware::openOutputStream(
         Mutex::Autolock lock(mLock);
 #ifdef QCOM_VOIP_ENABLED
         // only one output stream allowed
-        if (mOutput && (devices != AudioSystem::DEVICE_OUT_DIRECTOUTPUT)) {
+        if (mOutput && !((flags & AUDIO_OUTPUT_FLAG_DIRECT) && (flags & AUDIO_OUTPUT_FLAG_VOIP_RX))) {
             if (status) {
                 *status = INVALID_OPERATION;
             }
@@ -885,7 +883,7 @@ AudioStreamOut* AudioHardware::openOutputStream(
             return 0;
         }
 
-        if(devices == AudioSystem::DEVICE_OUT_DIRECTOUTPUT) {
+        if ((flags & AUDIO_OUTPUT_FLAG_DIRECT) && (flags & AUDIO_OUTPUT_FLAG_VOIP_RX)) {
             // open direct output stream
             if(mDirectOutput == 0) {
                ALOGV(" AudioHardware::openOutputStream Direct output stream \n");
@@ -4424,8 +4422,15 @@ status_t AudioHardware::AudioStreamInVoip::standby()
         }
 
         if((temp->dev_id != INVALID_DEVICE && temp->dev_id_tx != INVALID_DEVICE)) {
-           if(!getNodeByStreamType(VOICE_CALL) && !getNodeByStreamType(LPA_DECODE)
-              && !getNodeByStreamType(PCM_PLAY) && !getNodeByStreamType(FM_RADIO)) {
+           if(!getNodeByStreamType(VOICE_CALL)
+#ifdef QCOM_TUNNEL_LPA_ENABLED
+              && !getNodeByStreamType(LPA_DECODE)
+#endif /*QCOM_TUNNEL_LPA_ENABLED*/
+              && !getNodeByStreamType(PCM_PLAY)
+#ifdef QCOM_FM_ENABLED
+              && !getNodeByStreamType(FM_RADIO)
+#endif /*QCOM_FM_ENABLED*/
+            ) {
                if (anc_running == false) {
                    enableDevice(temp->dev_id, 0);
                    ALOGV("Voipin: disable voip rx");
