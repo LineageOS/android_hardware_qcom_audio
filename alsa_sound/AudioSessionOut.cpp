@@ -61,6 +61,7 @@ namespace android_audio_legacy
 #define BUFFER_COUNT 4
 #define LPA_BUFFER_SIZE 256*1024
 #define TUNNEL_BUFFER_SIZE 600*1024
+#define MONO_CHANNEL_MODE 1
 // ----------------------------------------------------------------------------
 
 AudioSessionOutALSA::AudioSessionOutALSA(AudioHardwareALSA *parent,
@@ -99,7 +100,7 @@ AudioSessionOutALSA::AudioSessionOutALSA(AudioHardwareALSA *parent,
     mInputBufferSize    = type ? TUNNEL_BUFFER_SIZE : LPA_BUFFER_SIZE;
     mInputBufferCount   = BUFFER_COUNT;
     mEfd = -1;
-
+    mEosEventReceived   =false;
     mEventThread        = NULL;
     mEventThreadAlive   = false;
     mKillEventThread    = false;
@@ -271,6 +272,11 @@ ssize_t AudioSessionOutALSA::write(const void *buffer, size_t bytes)
     ALOGV("PCM write complete");
     if (bytes < mAlsaHandle->handle->period_size) {
         ALOGV("Last buffer case");
+        if ( ioctl(mAlsaHandle->handle->fd, SNDRV_PCM_IOCTL_START) < 0 ) {
+            ALOGE("Audio Start failed");
+        } else {
+            mAlsaHandle->handle->start = 1;
+        }
         mReachedEOS = true;
     }
     return err;
@@ -405,6 +411,7 @@ void  AudioSessionOutALSA::eventThreadEntry() {
             //Post EOS in case the filled queue is empty and EOS is reached.
             if (mFilledQueue.empty() && mReachedEOS) {
                 ALOGV("Posting the EOS to the observer player %p", mObserver);
+                mEosEventReceived = true;
                 if (mObserver != NULL) {
                     ALOGV("mObserver: posting EOS");
                     mObserver->postEOS(0);
@@ -528,7 +535,7 @@ status_t AudioSessionOutALSA::flush()
     //    If its in paused state,
     //          Set the seek flag, Resume will take care of flushing the
     //          driver
-    if (!mPaused) {
+    if (!mPaused && !mEosEventReceived) {
         if ((err = ioctl(mAlsaHandle->handle->fd, SNDRV_PCM_IOCTL_PAUSE,1)) < 0) {
             ALOGE("Audio Pause failed");
             return UNKNOWN_ERROR;
@@ -623,7 +630,10 @@ status_t AudioSessionOutALSA::openDevice(char *useCase, bool bIsUseCase, int dev
     alsa_handle.handle      = 0;
     alsa_handle.format      = (mFormat == AUDIO_FORMAT_PCM_16_BIT ? SNDRV_PCM_FORMAT_S16_LE : mFormat);
     //ToDo: Add conversion from channel Mask to channel count.
-    alsa_handle.channels    = DEFAULT_CHANNEL_MODE;
+    if (mChannels == AUDIO_CHANNEL_OUT_MONO)
+        alsa_handle.channels = MONO_CHANNEL_MODE;
+    else
+        alsa_handle.channels = DEFAULT_CHANNEL_MODE;
     alsa_handle.sampleRate  = mSampleRate;
     alsa_handle.latency     = PLAYBACK_LATENCY;
     alsa_handle.rxHandle    = 0;
@@ -658,7 +668,47 @@ status_t AudioSessionOutALSA::closeDevice(alsa_handle_t *pHandle)
     return status;
 }
 
+status_t AudioSessionOutALSA::setParameters(const String8& keyValuePairs)
+{
+    Mutex::Autolock autoLock(mLock);
+    AudioParameter param = AudioParameter(keyValuePairs);
+    String8 key = String8(AudioParameter::keyRouting);
+    int device;
+    if (param.getInt(key, device) == NO_ERROR) {
+        // Ignore routing if device is 0.
+        if(device) {
+            ALOGV("setParameters(): keyRouting with device %d", device);
+            /*if(device & AudioSystem::DEVICE_OUT_ALL_A2DP) {
+                device &= ~AudioSystem::DEVICE_OUT_ALL_A2DP;
+                device |=  AudioSystem::DEVICE_OUT_PROXY;
+                mParent->mRouteAudioToA2dp = true;
+                ALOGD("setParameters(): A2DP device %d", device);
+            }*/
+            mParent->doRouting(device);
+        }
+        param.remove(key);
+    }
+    return NO_ERROR;
+}
+
+String8 AudioSessionOutALSA::getParameters(const String8& keys)
+{
+    Mutex::Autolock autoLock(mLock);
+    AudioParameter param = AudioParameter(keys);
+    String8 value;
+    String8 key = String8(AudioParameter::keyRouting);
+
+    if (param.get(key, value) == NO_ERROR) {
+        param.addInt(key, (int)mAlsaHandle->devices);
+    }
+
+    ALOGV("getParameters() %s", param.toString().string());
+    return param.toString();
+}
+
 void AudioSessionOutALSA::reset() {
+    mParent->mLock.lock();
+    requestAndWaitForEventThreadExit();
 
     if(mAlsaHandle) {
         closeDevice(mAlsaHandle);
@@ -677,6 +727,7 @@ void AudioSessionOutALSA::reset() {
             mParent->mDeviceList.erase(it);
         }
     }
+    mParent->mLock.unlock();
 }
 
 }       // namespace android_audio_legacy
