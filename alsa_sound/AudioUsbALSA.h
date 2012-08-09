@@ -85,6 +85,7 @@ private:
     pthread_t mPlaybackUsb;
     pthread_t mRecordingUsb;
     snd_use_case_mgr_t *mUcMgr;
+    Mutex    mLock;
 
     //Helper functions
     struct pcm * configureDevice(unsigned flags, char* hw, int sampleRate, int channelCount, int periodSize, bool playback);
