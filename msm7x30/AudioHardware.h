@@ -99,15 +99,6 @@ struct rx_iir_filter {
     uint16_t iir_params[48];
 };
 
-struct msm_audio_config {
-    uint32_t buffer_size;
-    uint32_t buffer_count;
-    uint32_t channel_count;
-    uint32_t sample_rate;
-    uint32_t codec_type;
-    uint32_t unused[3];
-};
-
 struct msm_bt_endpoint {
     int tx;
     int rx;
@@ -132,11 +123,6 @@ enum tty_modes {
 #define AUDIO_HW_IN_FORMAT (AudioSystem::PCM_16_BIT)  // Default audio input sample format
 
 #define VOICE_VOLUME_MAX        100  /* Maximum voice volume */
-
-struct msm_audio_stats {
-    uint32_t out_bytes;
-    uint32_t unused[3];
-};
 
 #ifdef WITH_QCOM_SPEECH
 /* AMR frame type definitions */

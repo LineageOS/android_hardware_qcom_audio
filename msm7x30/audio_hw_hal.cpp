@@ -328,7 +328,11 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET |
 #ifdef QCOM_FM_ENABLED
             AUDIO_DEVICE_OUT_FM |
+#endif
+#ifdef QCOM_FM_TX_ENABLED
             AUDIO_DEVICE_OUT_FM_TX |
+#endif
+#ifdef QCOM_VOIP_ENABLED
             AUDIO_DEVICE_OUT_DIRECTOUTPUT |
 #endif
             AUDIO_DEVICE_OUT_DEFAULT |
