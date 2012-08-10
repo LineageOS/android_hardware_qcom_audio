@@ -39,6 +39,8 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES:= aplay.c
 LOCAL_MODULE:= aplay
 LOCAL_SHARED_LIBRARIES:= libc libcutils libalsa-intf
+LOCAL_C_INCLUDES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_MODULE_TAGS:= debug
 include $(BUILD_EXECUTABLE)
 
@@ -47,6 +49,8 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES:= arec.c
 LOCAL_MODULE:= arec
 LOCAL_SHARED_LIBRARIES:= libc libcutils libalsa-intf
+LOCAL_C_INCLUDES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_MODULE_TAGS:= debug
 include $(BUILD_EXECUTABLE)
 
@@ -54,6 +58,8 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES:= amix.c
 LOCAL_MODULE:= amix
 LOCAL_SHARED_LIBRARIES := libc libcutils libalsa-intf
+LOCAL_C_INCLUDES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_MODULE_TAGS:= debug
 include $(BUILD_EXECUTABLE)
 
@@ -61,6 +67,8 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES:= alsaucm_test.c
 LOCAL_MODULE:= alsaucm_test
 LOCAL_SHARED_LIBRARIES:= libc libcutils libalsa-intf
+LOCAL_C_INCLUDES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_MODULE_TAGS:= debug
 include $(BUILD_EXECUTABLE)
 
@@ -78,7 +86,8 @@ LOCAL_SRC_FILES:= alsa_mixer.c alsa_pcm.c alsa_ucm.c
 LOCAL_MODULE:= libalsa-intf
 LOCAL_MODULE_TAGS := optional
 LOCAL_SHARED_LIBRARIES := libc libcutils libacdbloader #libutils #libmedia #libhardware_legacy
-LOCAL_CFLAGS := -DCONFIG_DIR=\"/system/etc/snd_soc_msm/\"
+LOCAL_CFLAGS += -DCONFIG_DIR=\"/system/etc/snd_soc_msm/\"
+
 ifeq ($(TARGET_SIMULATOR),true)
  LOCAL_LDLIBS += -ldl
 else

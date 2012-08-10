@@ -647,6 +647,20 @@ int pcm_read(struct pcm *pcm, void *data, unsigned count)
                 pcm->underruns++;
                 pcm->running = 0;
                 continue;
+            } else if (errno == ESTRPIPE) {
+                ALOGV("Resume from suspended\n");
+                for (;;) {
+                    if (ioctl(pcm->fd, SNDRV_PCM_IOCTL_RESUME)) {
+                        if (errno == EAGAIN ) {
+                            if (pcm_prepare(pcm))
+                                return -errno;
+                        }
+                        /* send resume command again */
+                        continue;
+                    } else
+                        break;
+                }
+                continue;
             }
             ALOGE("Arec: error%d\n", errno);
             return -errno;

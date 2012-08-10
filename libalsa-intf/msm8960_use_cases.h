@@ -45,6 +45,7 @@ extern "C" {
 #define DEVICE_HANDSET_RX_ACDB_ID                       7 // HANDSET_SPKR
 #define DEVICE_HANDSET_TX_ACDB_ID                       4 // HANDSET_MIC
 #define DEVICE_SPEAKER_RX_ACDB_ID                       15// SPKR_PHONE_SPKR_STEREO
+#define DEVICE_SPEAKER_MONO_RX_ACDB_ID                  14// SPKR_PHONE_SPKR_MONO
 #define DEVICE_SPEAKER_TX_ACDB_ID                       11// SPKR_PHONE_MIC
 #define DEVICE_HEADSET_RX_ACDB_ID                       10// HEADSET_SPKR_STEREO
 #define DEVICE_HEADSET_TX_ACDB_ID                       8 // HEADSET_MIC
@@ -52,6 +53,8 @@ extern "C" {
 #define DEVICE_DUALMIC_HANDSET_TX_ENDFIRE_ACDB_ID       6 // HANDSET_MIC_ENDFIRE
 #define DEVICE_DUALMIC_SPEAKER_TX_BROADSIDE_ACDB_ID     12// SPKR_PHONE_MIC_BROADSIDE
 #define DEVICE_DUALMIC_SPEAKER_TX_ENDFIRE_ACDB_ID       13// SPKR_PHONE_MIC_ENDFIRE
+#define DEVICE_DUALMIC_HANDSET_STEREO_ACDB_ID           34
+#define DEVICE_DUALMIC_SPEAKER_PHONE_STEREO_ACDB_ID     35
 #define DEVICE_TTY_HEADSET_MONO_RX_ACDB_ID              17// TTY_HEADSET_SPKR
 #define DEVICE_TTY_HEADSET_MONO_TX_ACDB_ID              16// TTY_HEADSET_MIC
 #define DEVICE_BT_SCO_RX_ACDB_ID                        22// BT_SCO_SPKR
@@ -114,11 +117,13 @@ typedef struct card_mctrl {
     int acdb_id;
     int capability;
     char *effects_mixer_ctl;
+    char *ec_ref_rx_mixer_ctl;
 }card_mctrl_t;
 
 /* identifier node structure for identifier list*/
 struct snd_ucm_ident_node {
     int active;
+    int capability;
     char ident[MAX_STR_LEN];
     struct snd_ucm_ident_node *next;
 };
@@ -174,6 +179,7 @@ static const char *card_list[] = {
     "snd_soc_msm_2x",
     "snd_soc_msm_2x_Fusion3",
     "snd_soc_msm_Sitar",
+    "snd_soc_msm_I2S",
 };
 
 typedef struct card_mapping {
@@ -187,6 +193,7 @@ static card_mapping_t card_mapping_list[] = {
     {"snd_soc_msm_2x", 0},
     {"snd_soc_msm_2x_Fusion3", 0},
     {"snd_soc_msm_Sitar", 0},
+    {"snd_soc_msm_I2S", 0},
 };
 
 /* New use cases, devices and modifiers added
@@ -222,8 +229,10 @@ static card_mapping_t card_mapping_list[] = {
 #define SND_USE_CASE_DEV_TTY_HANDSET_ANALOG_TX  "TTY Handset Analog Tx"
 #define SND_USE_CASE_DEV_DUAL_MIC_BROADSIDE "DMIC Broadside"
 #define SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE "DMIC Endfire"
+#define SND_USE_CASE_DEV_DUAL_MIC_HANDSET_STEREO "Handset DMIC Stereo"
 #define SND_USE_CASE_DEV_SPEAKER_DUAL_MIC_BROADSIDE "Speaker DMIC Broadside"
 #define SND_USE_CASE_DEV_SPEAKER_DUAL_MIC_ENDFIRE "Speaker DMIC Endfire"
+#define SND_USE_CASE_DEV_SPEAKER_DUAL_MIC_STEREO "Speaker DMIC Stereo"
 #define SND_USE_CASE_DEV_HDMI_TX             "HDMI Tx"
 #define SND_USE_CASE_DEV_HDMI_SPDIF          "HDMI SPDIF"
 #define SND_USE_CASE_DEV_QUAD_MIC "QMIC"
@@ -247,6 +256,9 @@ static card_mapping_t card_mapping_list[] = {
 #define SND_USE_CASE_DEV_EARPIECE_VOICE "Earpiece Voice"
 #define SND_USE_CASE_DEV_SPEAKER_VOICE "Speaker Voice"
 #define SND_USE_CASE_DEV_LINE_VOICE "Line Voice"
+#define SND_USE_CASE_DEV_VOC_EARPIECE "Voice Earpiece"
+#define SND_USE_CASE_DEV_VOC_HEADPHONE "Voice Headphones"
+#define SND_USE_CASE_DEV_VOC_ANC_HEADSET "Voice ANC Headset"
 
 #define SND_USE_CASE_MOD_PLAY_FM         "Play FM"
 #define SND_USE_CASE_MOD_CAPTURE_FM      "Capture FM"
@@ -268,8 +280,9 @@ static int snd_ucm_get_size_of_list(struct snd_ucm_ident_node *head);
 static int snd_ucm_del_ident_from_list(struct snd_ucm_ident_node **head, const char *value);
 static int snd_ucm_free_list(struct snd_ucm_ident_node **head);
 static void snd_ucm_print_list(struct snd_ucm_ident_node *head);
-static void snd_ucm_set_status_at_index(struct snd_ucm_ident_node *head, const char *ident, int status);
+static void snd_ucm_set_status_at_index(struct snd_ucm_ident_node *head, const char *ident, int status, int capability);
 static int snd_ucm_get_status_at_index(struct snd_ucm_ident_node *head, const char *ident);
+struct snd_ucm_ident_node *snd_ucm_get_device_node(struct snd_ucm_ident_node *head, int index);
 static int snd_ucm_parse_verb(snd_use_case_mgr_t **uc_mgr, const char *file_name, int index);
 static int get_verb_count(const char *nxt_str);
 int snd_use_case_mgr_wait_for_parsing(snd_use_case_mgr_t *uc_mgr);
@@ -287,6 +300,7 @@ static int snd_ucm_parse_section(snd_use_case_mgr_t **uc_mgr, char **cur_str, ch
 static int snd_ucm_extract_name(char *buf, char **case_name);
 static int snd_ucm_extract_acdb(char *buf, int *id, int *cap);
 static int snd_ucm_extract_effects_mixer_ctl(char *buf, char **mixer_name);
+static int snd_ucm_extract_ec_ref_rx_mixer_ctl(char *buf, char **mixer_name);
 static int snd_ucm_extract_dev_name(char *buf, char **dev_name);
 static int snd_ucm_extract_controls(char *buf, mixer_control_t **mixer_list, int count);
 static int snd_ucm_print(snd_use_case_mgr_t *uc_mgr);
