@@ -2285,9 +2285,10 @@ status_t AudioHardware::enableComboDevice(uint32_t sndDevice, bool enableOrDisab
 {
     ALOGD("enableComboDevice %u",enableOrDisable);
     status_t status = NO_ERROR;
+#ifdef QCOM_TUNNEL_LPA_ENABLED
     Routing_table *LpaNode = getNodeByStreamType(LPA_DECODE);
+#endif
     Routing_table *PcmNode = getNodeByStreamType(PCM_PLAY);
-
 
     if(SND_DEVICE_FM_TX_AND_SPEAKER == sndDevice){
 
@@ -2297,7 +2298,11 @@ status_t AudioHardware::enableComboDevice(uint32_t sndDevice, bool enableOrDisab
             return NO_ERROR;
         }
 
-        if(!LpaNode && !PcmNode) {
+        if(
+#ifdef QCOM_TUNNEL_LPA_ENABLED
+         !LpaNode &&
+#endif
+         !PcmNode) {
             ALOGE("No active playback session active bailing out ");
             return NO_ERROR;
         }
@@ -2319,10 +2324,12 @@ status_t AudioHardware::enableComboDevice(uint32_t sndDevice, bool enableOrDisab
                     temp = PcmNode;
                     CurrentComboDeviceData.StreamType = PCM_PLAY;
                     ALOGD("PCM_PLAY session Active ");
+#ifdef QCOM_TUNNEL_LPA_ENABLED
                 }else if(LpaNode){
                     temp = LpaNode;
                     CurrentComboDeviceData.StreamType = LPA_DECODE;
                     ALOGD("LPA_DECODE session Active ");
+#endif
                 } else {
                     ALOGE("no PLAYback session Active ");
                     return -1;
@@ -2807,6 +2814,7 @@ ssize_t AudioHardware::AudioStreamOutMSM7x30::write(const void* buffer, size_t b
             Mutex::Autolock lock_1(mComboDeviceLock);
 
             if(CurrentComboDeviceData.DeviceId == SND_DEVICE_FM_TX_AND_SPEAKER){
+#ifdef QCOM_TUNNEL_LPA_ENABLED
                 Routing_table *LpaNode = getNodeByStreamType(LPA_DECODE);
 
                 /* This de-routes the LPA being routed on to speaker, which is done in
@@ -2823,7 +2831,7 @@ ssize_t AudioHardware::AudioStreamOutMSM7x30::write(const void* buffer, size_t b
                     ALOGE("msm_route_stream failed");
                     return -1;
                 }
-
+#endif
 
                 ALOGD("Routing PCM stream to speaker for combo device");
                 ALOGD("combo:msm_route_stream(PCM_PLAY,session id:%d,dev id:%d,1)",dec_id,
