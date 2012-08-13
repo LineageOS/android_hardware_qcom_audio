@@ -18,6 +18,10 @@ ifeq ($(BOARD_HAVE_BLUETOOTH),true)
     LOCAL_CFLAGS += -DWITH_A2DP
 endif
 
+ifeq ($(BOARD_HAVE_QCOM_FM),true)
+    LOCAL_CFLAGS += -DQCOM_FM_ENABLED
+endif
+
 ifeq ($(BOARD_USES_QCOM_AUDIO_LPA),true)
     LOCAL_CFLAGS += -DQCOM_TUNNEL_LPA_ENABLED
 endif
@@ -79,8 +83,6 @@ LOCAL_C_INCLUDES += system/core/include
 
 include $(BUILD_SHARED_LIBRARY)
 
-ifeq ("x","y") # use default audio policy manager
-
 # The audio policy is implemented on top of legacy policy code
 include $(CLEAR_VARS)
 
@@ -113,7 +115,6 @@ endif
 LOCAL_C_INCLUDES := hardware/libhardware_legacy/audio
 
 include $(BUILD_SHARED_LIBRARY)
-endif
 
 # Load audio_policy.conf to system/etc/
 include $(CLEAR_VARS)

@@ -2285,9 +2285,10 @@ status_t AudioHardware::enableComboDevice(uint32_t sndDevice, bool enableOrDisab
 {
     ALOGD("enableComboDevice %u",enableOrDisable);
     status_t status = NO_ERROR;
+#ifdef QCOM_TUNNEL_LPA_ENABLED
     Routing_table *LpaNode = getNodeByStreamType(LPA_DECODE);
+#endif
     Routing_table *PcmNode = getNodeByStreamType(PCM_PLAY);
-
 
     if(SND_DEVICE_FM_TX_AND_SPEAKER == sndDevice){
 
@@ -2297,7 +2298,11 @@ status_t AudioHardware::enableComboDevice(uint32_t sndDevice, bool enableOrDisab
             return NO_ERROR;
         }
 
-        if(!LpaNode && !PcmNode) {
+        if(
+#ifdef QCOM_TUNNEL_LPA_ENABLED
+         !LpaNode &&
+#endif
+         !PcmNode) {
             ALOGE("No active playback session active bailing out ");
             return NO_ERROR;
         }
@@ -2319,10 +2324,12 @@ status_t AudioHardware::enableComboDevice(uint32_t sndDevice, bool enableOrDisab
                     temp = PcmNode;
                     CurrentComboDeviceData.StreamType = PCM_PLAY;
                     ALOGD("PCM_PLAY session Active ");
+#ifdef QCOM_TUNNEL_LPA_ENABLED
                 }else if(LpaNode){
                     temp = LpaNode;
                     CurrentComboDeviceData.StreamType = LPA_DECODE;
                     ALOGD("LPA_DECODE session Active ");
+#endif
                 } else {
                     ALOGE("no PLAYback session Active ");
                     return -1;
@@ -2731,7 +2738,7 @@ ssize_t AudioHardware::AudioStreamOutMSM7x30::write(const void* buffer, size_t b
         config.sample_rate = sampleRate();
         config.buffer_size = bufferSize();
         config.buffer_count = AUDIO_HW_NUM_OUT_BUF;
-        config.codec_type = CODEC_TYPE_PCM;
+        config.type = CODEC_TYPE_PCM;
         status = ioctl(mFd, AUDIO_SET_CONFIG, &config);
         if (status < 0) {
             ALOGE("Cannot set config");
@@ -2807,6 +2814,7 @@ ssize_t AudioHardware::AudioStreamOutMSM7x30::write(const void* buffer, size_t b
             Mutex::Autolock lock_1(mComboDeviceLock);
 
             if(CurrentComboDeviceData.DeviceId == SND_DEVICE_FM_TX_AND_SPEAKER){
+#ifdef QCOM_TUNNEL_LPA_ENABLED
                 Routing_table *LpaNode = getNodeByStreamType(LPA_DECODE);
 
                 /* This de-routes the LPA being routed on to speaker, which is done in
@@ -2823,7 +2831,7 @@ ssize_t AudioHardware::AudioStreamOutMSM7x30::write(const void* buffer, size_t b
                     ALOGE("msm_route_stream failed");
                     return -1;
                 }
-
+#endif
 
                 ALOGD("Routing PCM stream to speaker for combo device");
                 ALOGD("combo:msm_route_stream(PCM_PLAY,session id:%d,dev id:%d,1)",dec_id,
@@ -2965,9 +2973,9 @@ status_t AudioHardware::AudioStreamOutMSM7x30::getRenderPosition(uint32_t *dspFr
 
 
 // ----------------------------------------------------------------------------
-
+int mFdin = -1;
 AudioHardware::AudioStreamInMSM7x30::AudioStreamInMSM7x30() :
-    mHardware(0), mFd(-1), mState(AUDIO_INPUT_CLOSED), mRetryCount(0),
+    mHardware(0), mState(AUDIO_INPUT_CLOSED), mRetryCount(0),
     mFormat(AUDIO_HW_IN_FORMAT), mChannels(AUDIO_HW_IN_CHANNELS),
     mSampleRate(AUDIO_HW_IN_SAMPLERATE), mBufferSize(AUDIO_HW_IN_BUFFERSIZE),
     mAcoustics((AudioSystem::audio_in_acoustics)0), mDevices(0)
@@ -3013,7 +3021,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
     mHardware = hw;
 
     ALOGV("AudioStreamInMSM7x30::set(%d, %d, %u)", *pFormat, *pChannels, *pRate);
-    if (mFd >= 0) {
+    if (mFdin >= 0) {
         ALOGE("Audio record already open");
         return -EPERM;
     }
@@ -3026,11 +3034,11 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
             ALOGE("Cannot open /dev/msm_a2dp_in errno: %d", errno);
             goto Error;
         }
-        mFd = status;
+        mFdin = status;
         // configuration
         ALOGV("get config");
         struct msm_audio_config config;
-        status = ioctl(mFd, AUDIO_GET_CONFIG, &config);
+        status = ioctl(mFdin, AUDIO_GET_CONFIG, &config);
         if (status < 0) {
             ALOGE("Cannot read config");
             goto Error;
@@ -3041,11 +3049,11 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
         config.sample_rate = *pRate;
         config.buffer_size = bufferSize();
         config.buffer_count = 2;
-        config.codec_type = CODEC_TYPE_PCM;
-        status = ioctl(mFd, AUDIO_SET_CONFIG, &config);
+        config.type = CODEC_TYPE_PCM;
+        status = ioctl(mFdin, AUDIO_SET_CONFIG, &config);
         if (status < 0) {
             ALOGE("Cannot set config");
-            if (ioctl(mFd, AUDIO_GET_CONFIG, &config) == 0) {
+            if (ioctl(mFdin, AUDIO_GET_CONFIG, &config) == 0) {
                 if (config.channel_count == 1) {
                     *pChannels = AudioSystem::CHANNEL_IN_MONO;
                 } else {
@@ -3057,7 +3065,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
         }
 
         ALOGV("confirm config");
-        status = ioctl(mFd, AUDIO_GET_CONFIG, &config);
+        status = ioctl(mFdin, AUDIO_GET_CONFIG, &config);
         if (status < 0) {
             ALOGE("Cannot read config");
             goto Error;
@@ -3083,12 +3091,12 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
             ALOGE("Cannot open /dev/msm_pcm_in errno: %d", errno);
             goto Error;
         }
-        mFd = status;
+        mFdin = status;
 
         // configuration
         ALOGV("get config");
         struct msm_audio_config config;
-        status = ioctl(mFd, AUDIO_GET_CONFIG, &config);
+        status = ioctl(mFdin, AUDIO_GET_CONFIG, &config);
         if (status < 0) {
             ALOGE("Cannot read config");
             goto Error;
@@ -3099,7 +3107,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
         config.sample_rate = *pRate;
         config.buffer_size = bufferSize();
         config.buffer_count = 2;
-        config.codec_type = CODEC_TYPE_PCM;
+        config.type = CODEC_TYPE_PCM;
         if (build_id[17] == '1') {//build 4.1
            /*
              Configure pcm record buffer size based on the sampling rate:
@@ -3111,10 +3119,10 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
             else
                 config.buffer_size = 512 * config.channel_count;
         }
-        status = ioctl(mFd, AUDIO_SET_CONFIG, &config);
+        status = ioctl(mFdin, AUDIO_SET_CONFIG, &config);
         if (status < 0) {
             ALOGE("Cannot set config");
-            if (ioctl(mFd, AUDIO_GET_CONFIG, &config) == 0) {
+            if (ioctl(mFdin, AUDIO_GET_CONFIG, &config) == 0) {
                 if (config.channel_count == 1) {
                     *pChannels = AudioSystem::CHANNEL_IN_MONO;
                 } else {
@@ -3126,7 +3134,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
         }
 
         ALOGV("confirm config");
-        status = ioctl(mFd, AUDIO_GET_CONFIG, &config);
+        status = ioctl(mFdin, AUDIO_GET_CONFIG, &config);
         if (status < 0) {
             ALOGE("Cannot read config");
             goto Error;
@@ -3152,7 +3160,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
                  ALOGI("Recording Source: Voice Call UpLink");
                  voc_rec_cfg.rec_mode = VOC_REC_UPLINK;
             }
-            if (ioctl(mFd, AUDIO_SET_INCALL, &voc_rec_cfg))
+            if (ioctl(mFdin, AUDIO_SET_INCALL, &voc_rec_cfg))
             {
                 ALOGE("Error: AUDIO_SET_INCALL failed\n");
                 goto  Error;
@@ -3171,7 +3179,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
               ALOGE("Cannot open evrc device for read");
               goto Error;
           }
-          mFd = status;
+          mFdin = status;
           mDevices = devices;
           mChannels = *pChannels;
 
@@ -3189,7 +3197,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
                   voc_rec_cfg.rec_mode = VOC_REC_UPLINK;
               }
 
-              if (ioctl(mFd, AUDIO_SET_INCALL, &voc_rec_cfg))
+              if (ioctl(mFdin, AUDIO_SET_INCALL, &voc_rec_cfg))
               {
                  ALOGE("Error: AUDIO_SET_INCALL failed\n");
                  goto  Error;
@@ -3198,7 +3206,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
 
           /* Config param */
           struct msm_audio_stream_config config;
-          if(ioctl(mFd, AUDIO_GET_STREAM_CONFIG, &config))
+          if(ioctl(mFdin, AUDIO_GET_STREAM_CONFIG, &config))
           {
             ALOGE(" Error getting buf config param AUDIO_GET_STREAM_CONFIG \n");
             goto  Error;
@@ -3212,7 +3220,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
           mBufferSize = 230;
           struct msm_audio_evrc_enc_config evrc_enc_cfg;
 
-          if (ioctl(mFd, AUDIO_GET_EVRC_ENC_CONFIG, &evrc_enc_cfg))
+          if (ioctl(mFdin, AUDIO_GET_EVRC_ENC_CONFIG, &evrc_enc_cfg))
           {
             ALOGE("Error: AUDIO_GET_EVRC_ENC_CONFIG failed\n");
             goto  Error;
@@ -3225,7 +3233,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
           evrc_enc_cfg.min_bit_rate = 4;
           evrc_enc_cfg.max_bit_rate = 4;
 
-          if (ioctl(mFd, AUDIO_SET_EVRC_ENC_CONFIG, &evrc_enc_cfg))
+          if (ioctl(mFdin, AUDIO_SET_EVRC_ENC_CONFIG, &evrc_enc_cfg))
           {
             ALOGE("Error: AUDIO_SET_EVRC_ENC_CONFIG failed\n");
             goto  Error;
@@ -3240,7 +3248,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
               ALOGE("Cannot open qcelp device for read");
               goto Error;
           }
-          mFd = status;
+          mFdin = status;
           mDevices = devices;
           mChannels = *pChannels;
 
@@ -3258,7 +3266,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
                   voc_rec_cfg.rec_mode = VOC_REC_UPLINK;
               }
 
-              if (ioctl(mFd, AUDIO_SET_INCALL, &voc_rec_cfg))
+              if (ioctl(mFdin, AUDIO_SET_INCALL, &voc_rec_cfg))
               {
                  ALOGE("Error: AUDIO_SET_INCALL failed\n");
                  goto  Error;
@@ -3267,7 +3275,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
 
           /* Config param */
           struct msm_audio_stream_config config;
-          if(ioctl(mFd, AUDIO_GET_STREAM_CONFIG, &config))
+          if(ioctl(mFdin, AUDIO_GET_STREAM_CONFIG, &config))
           {
             ALOGE(" Error getting buf config param AUDIO_GET_STREAM_CONFIG \n");
             goto  Error;
@@ -3282,7 +3290,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
 
           struct msm_audio_qcelp_enc_config qcelp_enc_cfg;
 
-          if (ioctl(mFd, AUDIO_GET_QCELP_ENC_CONFIG, &qcelp_enc_cfg))
+          if (ioctl(mFdin, AUDIO_GET_QCELP_ENC_CONFIG, &qcelp_enc_cfg))
           {
             ALOGE("Error: AUDIO_GET_QCELP_ENC_CONFIG failed\n");
             goto  Error;
@@ -3295,7 +3303,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
           qcelp_enc_cfg.min_bit_rate = 4;
           qcelp_enc_cfg.max_bit_rate = 4;
 
-          if (ioctl(mFd, AUDIO_SET_QCELP_ENC_CONFIG, &qcelp_enc_cfg))
+          if (ioctl(mFdin, AUDIO_SET_QCELP_ENC_CONFIG, &qcelp_enc_cfg))
           {
             ALOGE("Error: AUDIO_SET_QCELP_ENC_CONFIG failed\n");
             goto  Error;
@@ -3310,7 +3318,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
               ALOGE("Cannot open amr_nb device for read");
               goto Error;
           }
-          mFd = status;
+          mFdin = status;
           mDevices = devices;
           mChannels = *pChannels;
 
@@ -3328,7 +3336,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
                   voc_rec_cfg.rec_mode = VOC_REC_UPLINK;
               }
 
-              if (ioctl(mFd, AUDIO_SET_INCALL, &voc_rec_cfg))
+              if (ioctl(mFdin, AUDIO_SET_INCALL, &voc_rec_cfg))
               {
                  ALOGE("Error: AUDIO_SET_INCALL failed\n");
                  goto  Error;
@@ -3337,7 +3345,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
 
           /* Config param */
           struct msm_audio_stream_config config;
-          if(ioctl(mFd, AUDIO_GET_STREAM_CONFIG, &config))
+          if(ioctl(mFdin, AUDIO_GET_STREAM_CONFIG, &config))
           {
             ALOGE(" Error getting buf config param AUDIO_GET_STREAM_CONFIG \n");
             goto  Error;
@@ -3351,7 +3359,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
           mBufferSize = 320;
           struct msm_audio_amrnb_enc_config_v2 amr_nb_cfg;
 
-          if (ioctl(mFd, AUDIO_GET_AMRNB_ENC_CONFIG_V2, &amr_nb_cfg))
+          if (ioctl(mFdin, AUDIO_GET_AMRNB_ENC_CONFIG_V2, &amr_nb_cfg))
           {
             ALOGE("Error: AUDIO_GET_AMRNB_ENC_CONFIG_V2 failed\n");
             goto  Error;
@@ -3365,7 +3373,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
           amr_nb_cfg.dtx_enable= 0;
           amr_nb_cfg.frame_format = 0; /* IF1 */
 
-          if (ioctl(mFd, AUDIO_SET_AMRNB_ENC_CONFIG_V2, &amr_nb_cfg))
+          if (ioctl(mFdin, AUDIO_SET_AMRNB_ENC_CONFIG_V2, &amr_nb_cfg))
           {
             ALOGE("Error: AUDIO_SET_AMRNB_ENC_CONFIG_V2 failed\n");
             goto  Error;
@@ -3381,10 +3389,10 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
               ALOGE("Cannot open aac device for read");
               goto Error;
           }
-          mFd = status;
+          mFdin = status;
 
           struct msm_audio_stream_config config;
-          if(ioctl(mFd, AUDIO_GET_STREAM_CONFIG, &config))
+          if(ioctl(mFdin, AUDIO_GET_STREAM_CONFIG, &config))
           {
             ALOGE(" Error getting buf config param AUDIO_GET_STREAM_CONFIG \n");
             goto  Error;
@@ -3395,7 +3403,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
 
 
           struct msm_audio_aac_enc_config aac_enc_cfg;
-          if (ioctl(mFd, AUDIO_GET_AAC_ENC_CONFIG, &aac_enc_cfg))
+          if (ioctl(mFdin, AUDIO_GET_AAC_ENC_CONFIG, &aac_enc_cfg))
           {
             ALOGE("Error: AUDIO_GET_AAC_ENC_CONFIG failed\n");
             goto  Error;
@@ -3422,7 +3430,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
           ALOGV("Setting the Config bit_rate is %d", aac_enc_cfg.bit_rate);
           ALOGV("Setting the Config stream_format is %d", aac_enc_cfg.stream_format);
 
-          if (ioctl(mFd, AUDIO_SET_AAC_ENC_CONFIG, &aac_enc_cfg))
+          if (ioctl(mFdin, AUDIO_SET_AAC_ENC_CONFIG, &aac_enc_cfg))
           {
             ALOGE("Error: AUDIO_SET_AAC_ENC_CONFIG failed\n");
             goto  Error;
@@ -3468,9 +3476,9 @@ status_t AudioHardware::AudioStreamInMSM7x30::set(
     return NO_ERROR;
 
 Error:
-    if (mFd >= 0) {
-        ::close(mFd);
-        mFd = -1;
+    if (mFdin >= 0) {
+        ::close(mFdin);
+        mFdin = -1;
     }
     return status;
 }
@@ -3504,7 +3512,7 @@ ssize_t AudioHardware::AudioStreamInMSM7x30::read( void* buffer, ssize_t bytes)
         }
 #ifdef QCOM_FM_ENABLED
         if((mDevices == AudioSystem::DEVICE_IN_FM_RX) || (mDevices == AudioSystem::DEVICE_IN_FM_RX_A2DP) ){
-            if(ioctl(mFd, AUDIO_GET_SESSION_ID, &dec_id)) {
+            if(ioctl(mFdin, AUDIO_GET_SESSION_ID, &dec_id)) {
                 ALOGE("AUDIO_GET_SESSION_ID failed*********");
                 hw->mLock.unlock();
                 return -1;
@@ -3531,12 +3539,11 @@ ssize_t AudioHardware::AudioStreamInMSM7x30::read( void* buffer, ssize_t bytes)
                 mFmRec = FM_FILE_REC;
             }
             hw->mLock.unlock();
-        }
-        else{
+        } else
 #endif
         {
             hw->mLock.unlock();
-            if(ioctl(mFd, AUDIO_GET_SESSION_ID, &dec_id)) {
+            if(ioctl(mFdin, AUDIO_GET_SESSION_ID, &dec_id)) {
                 ALOGE("AUDIO_GET_SESSION_ID failed*********");
                 return -1;
             }
@@ -3557,9 +3564,6 @@ ssize_t AudioHardware::AudioStreamInMSM7x30::read( void* buffer, ssize_t bytes)
             addToTable(dec_id,cur_tx,INVALID_DEVICE,PCM_REC,true);
             mFirstread = false;
         }
-#ifdef QCOM_FM_ENABLED
-        }
-#endif
     }
 
 
@@ -3572,7 +3576,7 @@ ssize_t AudioHardware::AudioStreamInMSM7x30::read( void* buffer, ssize_t bytes)
             mHardware->aic3254_config(snd_dev);
             mHardware->do_aic3254_control(snd_dev);
         }
-        if (ioctl(mFd, AUDIO_START, 0)) {
+        if (ioctl(mFdin, AUDIO_START, 0)) {
             ALOGE("Error starting record");
             standby();
             return -1;
@@ -3584,7 +3588,7 @@ ssize_t AudioHardware::AudioStreamInMSM7x30::read( void* buffer, ssize_t bytes)
     if(mFormat == AUDIO_HW_IN_FORMAT)
     {
         while (count) {
-            ssize_t bytesRead = ::read(mFd, buffer, count);
+            ssize_t bytesRead = ::read(mFdin, buffer, count);
             usleep(1);
             if (bytesRead >= 0) {
                 count -= bytesRead;
@@ -3609,7 +3613,7 @@ ssize_t AudioHardware::AudioStreamInMSM7x30::read( void* buffer, ssize_t bytes)
         uint8_t *dataPtr;
         while (count) {
             dataPtr = readBuf;
-            ssize_t bytesRead = ::read(mFd, readBuf, 36);
+            ssize_t bytesRead = ::read(mFdin, readBuf, 36);
             if (bytesRead >= 0) {
                 if (mFormat == AudioSystem::AMR_NB){
                    amr_transcode(dataPtr,p);
@@ -3671,7 +3675,7 @@ ssize_t AudioHardware::AudioStreamInMSM7x30::read( void* buffer, ssize_t bytes)
             if(!(count > 2)) break;
             count -= sizeof(uint16_t);
 
-            ssize_t bytesRead = ::read(mFd, p, count);
+            ssize_t bytesRead = ::read(mFdin, p, count);
             if (bytesRead > 0) {
                 ALOGV("Number of Bytes read = %d", bytesRead);
                 count -= bytesRead;
@@ -3728,9 +3732,9 @@ status_t AudioHardware::AudioStreamInMSM7x30::standby()
     }
 
     if (mState > AUDIO_INPUT_CLOSED) {
-        if (mFd >= 0) {
-            ::close(mFd);
-            mFd = -1;
+        if (mFdin >= 0) {
+            ::close(mFdin);
+            mFdin = -1;
             ALOGV("driver closed");
             isDriverClosed = true;
         }
@@ -3801,7 +3805,7 @@ status_t AudioHardware::AudioStreamInMSM7x30::dump(int fd, const Vector<String16
     result.append(buffer);
     snprintf(buffer, SIZE, "\tmHardware: %p\n", mHardware);
     result.append(buffer);
-    snprintf(buffer, SIZE, "\tmFd count: %d\n", mFd);
+    snprintf(buffer, SIZE, "\tmFd count: %d\n", mFdin);
     result.append(buffer);
     snprintf(buffer, SIZE, "\tmState: %d\n", mState);
     result.append(buffer);
