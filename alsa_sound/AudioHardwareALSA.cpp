@@ -157,6 +157,35 @@ AudioHardwareALSA::AudioHardwareALSA() :
     } else {
         ALOGE("ALSA Module not found!!!");
     }
+
+    //set default AudioParameters
+    AudioParameter param;
+    String8 key;
+    String8 value;
+
+    //Set default AudioParameter for fluencetype
+    key  = String8(AudioParameter::keyFluenceType);
+    char fluence_key[20] = "none";
+    property_get("ro.qc.sdk.audio.fluencetype",fluence_key,"0");
+    if (0 == strncmp("fluencepro", fluence_key, sizeof("fluencepro"))) {
+        mDevSettingsFlag |= QMIC_FLAG;
+        mDevSettingsFlag &= (~DMIC_FLAG);
+        value = String8("fluencepro");
+        ALOGD("FluencePro quadMic feature Enabled");
+    } else if (0 == strncmp("fluence", fluence_key, sizeof("fluence"))) {
+        mDevSettingsFlag |= DMIC_FLAG;
+        mDevSettingsFlag &= (~QMIC_FLAG);
+        value = String8("fluence");
+        ALOGD("Fluence dualmic feature Enabled");
+    } else if (0 == strncmp("none", fluence_key, sizeof("none"))) {
+        mDevSettingsFlag &= (~DMIC_FLAG);
+        mDevSettingsFlag &= (~QMIC_FLAG);
+        value = String8("none");
+        ALOGD("Fluence feature Disabled");
+    }
+    param.add(key, value);
+    mALSADevice->setFlags(mDevSettingsFlag);
+
 }
 
 AudioHardwareALSA::~AudioHardwareALSA()
@@ -302,25 +331,6 @@ status_t AudioHardwareALSA::setParameters(const String8& keyValuePairs)
         doRouting(0);
     }
 
-    key = String8(AudioParameter::keyFluenceType);
-    if (param.get(key, value) == NO_ERROR) {
-        if (value == "quadmic") {
-            mDevSettingsFlag |= QMIC_FLAG;
-            mDevSettingsFlag &= (~DMIC_FLAG);
-            ALOGV("Fluence quadMic feature Enabled");
-        } else if (value == "dualmic") {
-            mDevSettingsFlag |= DMIC_FLAG;
-            mDevSettingsFlag &= (~QMIC_FLAG);
-            ALOGV("Fluence dualmic feature Enabled");
-        } else if (value == "none") {
-            mDevSettingsFlag &= (~DMIC_FLAG);
-            mDevSettingsFlag &= (~QMIC_FLAG);
-            ALOGV("Fluence feature Disabled");
-        }
-        mALSADevice->setFlags(mDevSettingsFlag);
-        doRouting(0);
-    }
-
 #ifdef QCOM_CSDCLIENT_ENABLED
     if (mFusion3Platform) {
         key = String8(INCALLMUSIC_KEY);
@@ -452,16 +462,27 @@ String8 AudioHardwareALSA::getParameters(const String8& keys)
 
     key = String8(AudioParameter::keyFluenceType);
     if (param.get(key, value) == NO_ERROR) {
-    if ((mDevSettingsFlag & QMIC_FLAG) &&
-                               (mDevSettingsFlag & ~DMIC_FLAG))
-            value = String8("quadmic");
-    else if ((mDevSettingsFlag & DMIC_FLAG) &&
-                                (mDevSettingsFlag & ~QMIC_FLAG))
-            value = String8("dualmic");
-    else if ((mDevSettingsFlag & ~DMIC_FLAG) &&
-                                (mDevSettingsFlag & ~QMIC_FLAG))
+        char fluence_key[20] = "none";
+        property_get("ro.qc.sdk.audio.fluencetype",fluence_key,"0");
+
+        if (0 == strncmp("fluencepro", fluence_key, sizeof("fluencepro"))) {
+            mDevSettingsFlag |= QMIC_FLAG;
+            mDevSettingsFlag &= (~DMIC_FLAG);
+            value = String8("fluencepro");
+            ALOGD("FluencePro quadMic feature Enabled");
+        } else if (0 == strncmp("fluence", fluence_key, sizeof("fluence"))) {
+            mDevSettingsFlag |= DMIC_FLAG;
+            mDevSettingsFlag &= (~QMIC_FLAG);
+            value = String8("fluence");
+            ALOGD("Fluence dualmic feature Enabled");
+        } else {
+            mDevSettingsFlag &= (~DMIC_FLAG);
+            mDevSettingsFlag &= (~QMIC_FLAG);
             value = String8("none");
+            ALOGD("Fluence feature Disabled");
+        }
         param.add(key, value);
+        mALSADevice->setFlags(mDevSettingsFlag);
     }
 
 #ifdef QCOM_FM_ENABLED
