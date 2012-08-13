@@ -3534,6 +3534,7 @@ ssize_t AudioHardware::AudioStreamInMSM7x30::read( void* buffer, ssize_t bytes)
         }
         else{
 #endif
+        {
             hw->mLock.unlock();
             if(ioctl(mFd, AUDIO_GET_SESSION_ID, &dec_id)) {
                 ALOGE("AUDIO_GET_SESSION_ID failed*********");
@@ -3555,6 +3556,7 @@ ssize_t AudioHardware::AudioStreamInMSM7x30::read( void* buffer, ssize_t bytes)
             }
             addToTable(dec_id,cur_tx,INVALID_DEVICE,PCM_REC,true);
             mFirstread = false;
+        }
 #ifdef QCOM_FM_ENABLED
         }
 #endif
@@ -3583,6 +3585,7 @@ ssize_t AudioHardware::AudioStreamInMSM7x30::read( void* buffer, ssize_t bytes)
     {
         while (count) {
             ssize_t bytesRead = ::read(mFd, buffer, count);
+            usleep(1);
             if (bytesRead >= 0) {
                 count -= bytesRead;
                 p += bytesRead;
