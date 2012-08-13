@@ -2469,7 +2469,7 @@ ssize_t AudioHardware::AudioStreamOutMSM8x60::write(const void* buffer, size_t b
         config.sample_rate = sampleRate();
         config.buffer_size = bufferSize();
         config.buffer_count = AUDIO_HW_NUM_OUT_BUF;
-        config.codec_type = CODEC_TYPE_PCM;
+        config.type = CODEC_TYPE_PCM;
         status = ioctl(mFd, AUDIO_SET_CONFIG, &config);
         if (status < 0) {
             ALOGE("Cannot set config");
@@ -3079,7 +3079,7 @@ status_t AudioHardware::AudioStreamInMSM8x60::set(
         config.sample_rate = *pRate;
         config.buffer_size = bufferSize();
         config.buffer_count = 2;
-        config.codec_type = CODEC_TYPE_PCM;
+        config.type = CODEC_TYPE_PCM;
         status = ioctl(mFdin, AUDIO_SET_CONFIG, &config);
         if (status < 0) {
             ALOGE("Cannot set config");
@@ -3151,7 +3151,7 @@ status_t AudioHardware::AudioStreamInMSM8x60::set(
         // Make buffers to be allocated in driver equal to the number of buffers
         // that AudioFlinger allocates (Shared memory)
         config.buffer_count = 4;
-        config.codec_type = CODEC_TYPE_PCM;
+        config.type = CODEC_TYPE_PCM;
         status = ioctl(mFdin, AUDIO_SET_CONFIG, &config);
         if (status < 0) {
             ALOGE("Cannot set config");
