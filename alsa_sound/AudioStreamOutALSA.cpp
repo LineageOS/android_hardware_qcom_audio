@@ -131,16 +131,19 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
             if ((use_case == NULL) || (!strcmp(use_case, SND_USE_CASE_VERB_INACTIVE))) {
                 if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)){
                      strlcpy(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL,sizeof(mHandle->useCase));
-                 }
-                 else {
-                     strlcpy(mHandle->useCase, SND_USE_CASE_VERB_HIFI, sizeof(mHandle->useCase));
-                 }
+                } else if (mHandle->isDeepbufferOutput){
+                           strlcpy(mHandle->useCase, SND_USE_CASE_VERB_HIFI, sizeof(mHandle->useCase));
+                } else {
+                           strlcpy(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC, sizeof(mHandle->useCase));
+                }
             } else {
                 if(!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP)) {
                     strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP,sizeof(mHandle->useCase));
-                 } else {
-                     strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_MUSIC, sizeof(mHandle->useCase));
-                 }
+                } else if (mHandle->isDeepbufferOutput){
+                           strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_MUSIC, sizeof(mHandle->useCase));
+                } else {
+                           strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC, sizeof(mHandle->useCase));
+                }
             }
             free(use_case);
             if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
@@ -168,6 +171,7 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
                   mHandle->module->route(mHandle, mDevices , mParent->mode());
             }
             if (!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI) ||
+                !strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC) ||
                 !strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) {
                 snd_use_case_set(mHandle->ucMgr, "_verb", mHandle->useCase);
             } else {

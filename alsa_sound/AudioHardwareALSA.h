@@ -61,7 +61,9 @@ class AudioHardwareALSA;
 #define RECORD_LATENCY        96000
 #define VOICE_LATENCY         85333
 #define DEFAULT_BUFFER_SIZE   2048
-#define DEFAULT_IN_BUFFER_SIZE   320
+#define PLAYBACK_LOW_LATENCY_BUFFER_SIZE   2048
+#define PLAYBACK_LOW_LATENCY  21500
+#define DEFAULT_IN_BUFFER_SIZE 320
 #define FM_BUFFER_SIZE        1024
 
 #define VOIP_SAMPLING_RATE_8K 8000
@@ -164,6 +166,7 @@ struct alsa_handle_t {
     unsigned int        latency;         // Delay in usec
     unsigned int        bufferSize;      // Size of sample buffer
     unsigned int        periodSize;
+    bool                isDeepbufferOutput;
     struct pcm *        rxHandle;
     snd_use_case_mgr_t  *ucMgr;
 };

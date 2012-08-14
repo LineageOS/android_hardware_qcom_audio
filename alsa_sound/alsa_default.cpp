@@ -625,8 +625,18 @@ static status_t s_open(alsa_handle_t *handle)
     // The PCM stream is opened in blocking mode, per ALSA defaults.  The
     // AudioFlinger seems to assume blocking mode too, so asynchronous mode
     // should not be used.
-    if ((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI)) ||
+    if ((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) ||
+        (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_LPA)) ||
+        (!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_TUNNEL)) ||
+        (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_TUNNEL))) {
+        ALOGV("LPA/tunnel use case");
+        flags |= PCM_MMAP;
+        flags |= DEBUG_ON;
+    } else if ((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI)) ||
+        (!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC)) ||
+        (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC)) ||
         (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_MUSIC))) {
+        ALOGV("Music case");
         flags = PCM_OUT;
     } else {
         flags = PCM_IN;
@@ -1151,6 +1161,8 @@ int getUseCaseType(const char *useCase)
     ALOGD("use case is %s\n", useCase);
     if (!strncmp(useCase, SND_USE_CASE_VERB_HIFI,
            strlen(SND_USE_CASE_VERB_HIFI)) ||
+        !strncmp(useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC,
+           strlen(SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC)) ||
         !strncmp(useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER,
             strlen(SND_USE_CASE_VERB_HIFI_LOW_POWER)) ||
         !strncmp(useCase, SND_USE_CASE_VERB_HIFI_TUNNEL,
@@ -1159,6 +1171,8 @@ int getUseCaseType(const char *useCase)
             strlen(SND_USE_CASE_VERB_DIGITAL_RADIO)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_PLAY_MUSIC,
             strlen(SND_USE_CASE_MOD_PLAY_MUSIC)) ||
+        !strncmp(useCase, SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC,
+            strlen(SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_PLAY_LPA,
             strlen(SND_USE_CASE_MOD_PLAY_LPA)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_PLAY_TUNNEL,
@@ -1168,12 +1182,16 @@ int getUseCaseType(const char *useCase)
         return USECASE_TYPE_RX;
     } else if (!strncmp(useCase, SND_USE_CASE_VERB_HIFI_REC,
             strlen(SND_USE_CASE_VERB_HIFI_REC)) ||
+        !strncmp(useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_REC,
+            strlen(SND_USE_CASE_VERB_HIFI_LOWLATENCY_REC)) ||
         !strncmp(useCase, SND_USE_CASE_VERB_FM_REC,
             strlen(SND_USE_CASE_VERB_FM_REC)) ||
         !strncmp(useCase, SND_USE_CASE_VERB_FM_A2DP_REC,
             strlen(SND_USE_CASE_VERB_FM_A2DP_REC)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC,
             strlen(SND_USE_CASE_MOD_CAPTURE_MUSIC)) ||
+        !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_LOWLATENCY_MUSIC,
+            strlen(SND_USE_CASE_MOD_CAPTURE_LOWLATENCY_MUSIC)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_FM,
             strlen(SND_USE_CASE_MOD_CAPTURE_FM)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_A2DP_FM,
