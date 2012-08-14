@@ -37,6 +37,14 @@ public:
 
         virtual ~AudioPolicyManager() {}
 
+        // AudioPolicyInterface
+        virtual status_t setDeviceConnectionState(AudioSystem::audio_devices device, AudioSystem::device_connection_state state, const char *device_address);
+        virtual void setPhoneState(int state);
+        virtual void setForceUse(AudioSystem::force_use usage, AudioSystem::forced_config config);
+        virtual status_t startOutput(audio_io_handle_t output, AudioSystem::stream_type stream, int session = 0);
+        virtual status_t stopOutput(audio_io_handle_t output, AudioSystem::stream_type stream, int session = 0);
+        virtual status_t startInput(audio_io_handle_t input);
+
         // return appropriate device for streams handled by the specified strategy according to current
         // phone state, connected devices...
         // if fromCache is true, the device is returned from mDeviceForStrategy[], otherwise it is determined
@@ -47,7 +55,22 @@ public:
         // "future" device selection (fromCache == false) when called from a context
         //  where conditions are changing (setDeviceConnectionState(), setPhoneState()...) AND
         //  before updateDeviceForStrategy() is called.
-        virtual audio_devices_t getDeviceForStrategy(routing_strategy strategy,
-                                                     bool fromCache = true);
+        virtual audio_devices_t getDeviceForStrategy(routing_strategy strategy, bool fromCache = true);
+
+
+protected:
+        // true is current platform implements a back microphone
+        virtual bool hasBackMicrophone() const { return false; }
+        // true is current platform supports suplication of notifications and ringtones over A2DP output
+        virtual bool a2dpUsedForSonification() const { return true; }
+        // change the route of the specified output
+        virtual uint32_t setOutputDevice(audio_io_handle_t output, audio_devices_t device, bool force = false, int delayMs = 0);
+        // select input device corresponding to requested audio source
+        virtual audio_devices_t getDeviceForInputSource(int inputSource);
+        // check that volume change is permitted, compute and send new volume to audio hardware
+        virtual status_t checkAndSetVolume(int stream, int index, audio_io_handle_t output, audio_devices_t device, int delayMs = 0, bool force = false);
+        // Mute or unmute the stream on the specified output
+        virtual void setStreamMute(int stream, bool on, audio_io_handle_t output, int delayMs = 0, audio_devices_t device = (audio_devices_t)0);
+
 };
 };
