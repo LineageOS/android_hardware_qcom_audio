@@ -832,6 +832,8 @@ int getUseCaseType(const char *useCase)
     ALOGV("getUseCaseType: use case is %s\n", useCase);
     if (!strncmp(useCase, SND_USE_CASE_VERB_HIFI,
            MAX_LEN(useCase,SND_USE_CASE_VERB_HIFI)) ||
+        !strncmp(useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC,
+           MAX_LEN(useCase,SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC)) ||
         !strncmp(useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER,
            MAX_LEN(useCase,SND_USE_CASE_VERB_HIFI_LOW_POWER)) ||
         !strncmp(useCase, SND_USE_CASE_VERB_HIFI_TUNNEL,
@@ -842,6 +844,8 @@ int getUseCaseType(const char *useCase)
             MAX_LEN(useCase,SND_USE_CASE_VERB_DIGITAL_RADIO)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_PLAY_MUSIC,
             MAX_LEN(useCase,SND_USE_CASE_MOD_PLAY_MUSIC)) ||
+        !strncmp(useCase, SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC,
+            MAX_LEN(useCase,SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_PLAY_MUSIC2,
             MAX_LEN(useCase,SND_USE_CASE_MOD_PLAY_MUSIC2)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_PLAY_LPA,
@@ -859,6 +863,10 @@ int getUseCaseType(const char *useCase)
             MAX_LEN(useCase,SND_USE_CASE_VERB_FM_A2DP_REC)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC,
             MAX_LEN(useCase,SND_USE_CASE_MOD_CAPTURE_MUSIC)) ||
+        !strncmp(useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_REC,
+            MAX_LEN(useCase,SND_USE_CASE_VERB_HIFI_LOWLATENCY_REC)) ||
+        !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_LOWLATENCY_MUSIC,
+            MAX_LEN(useCase,SND_USE_CASE_MOD_CAPTURE_LOWLATENCY_MUSIC)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_FM,
             MAX_LEN(useCase,SND_USE_CASE_MOD_CAPTURE_FM)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_A2DP_FM,
