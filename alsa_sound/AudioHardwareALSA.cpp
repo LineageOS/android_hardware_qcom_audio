@@ -288,11 +288,11 @@ status_t AudioHardwareALSA::setParameters(const String8& keyValuePairs)
     key = String8(TTY_MODE_KEY);
     if (param.get(key, value) == NO_ERROR) {
         mDevSettingsFlag &= TTY_CLEAR;
-        if (value == "full") {
+        if (value == "tty_full") {
             mDevSettingsFlag |= TTY_FULL;
-        } else if (value == "hco") {
+        } else if (value == "tty_hco") {
             mDevSettingsFlag |= TTY_HCO;
-        } else if (value == "vco") {
+        } else if (value == "tty_vco") {
             mDevSettingsFlag |= TTY_VCO;
         } else {
             mDevSettingsFlag |= TTY_OFF;
