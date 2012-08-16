@@ -1079,6 +1079,8 @@ SectionDevice
 		'HPHR Volume':1:80
 		'SLIM TX3 MUX':0:RMIX1
 		'SLIM TX5 MUX':0:RMIX2
+		'RX1 Digital Volume':1:68
+		'RX2 Digital Volume':1:68
 	EndSequence
 
 	DisableSequence
@@ -1092,6 +1094,8 @@ SectionDevice
 		'HPHR Volume':1:0
 		'SLIM TX3 MUX':0:ZERO
 		'SLIM TX5 MUX':0:ZERO
+		'RX1 Digital Volume':1:0
+		'RX2 Digital Volume':1:0
 	EndSequence
 
 	ACDBID	10:1
@@ -1128,6 +1132,8 @@ SectionDevice
 		'IIR1 Enable Band5':1:1
 		'RX1 MIX2 INP1':0:IIR1
 		'RX2 MIX2 INP1':0:IIR1
+		'RX1 Digital Volume':1:68
+		'RX2 Digital Volume':1:68
 	EndSequence
 
 	DisableSequence
@@ -1153,6 +1159,8 @@ SectionDevice
 		'IIR1 Band5':2:0x0 0x0 0x0 0x0 0x0
 		'RX1 MIX2 INP1':0:ZERO
 		'RX2 MIX2 INP1':0:ZERO
+		'RX1 Digital Volume':1:0
+		'RX2 Digital Volume':1:0
 	EndSequence
 
 	ACDBID	10:1
