@@ -735,7 +735,6 @@ static status_t s_start_voip_call(alsa_handle_t *handle)
 {
 
     char* devName = NULL;
-    char* devName1;
     unsigned flags = 0;
     int err = NO_ERROR;
     uint8_t voc_pkt[VOIP_BUFFER_MAX_SIZE];
@@ -779,7 +778,7 @@ static status_t s_start_voip_call(alsa_handle_t *handle)
 
      err = pcm_prepare(handle->handle);
      if(err != NO_ERROR) {
-         ALOGE("DEVICE_OUT_DIRECTOUTPUT: pcm_prepare failed");
+         ALOGE("startVoipCall: pcm_prepare failed");
      }
 
      /* first write required start dsp */
@@ -795,12 +794,12 @@ static status_t s_start_voip_call(alsa_handle_t *handle)
      flags |= PCM_MONO;
      handle->handle = 0;
 
-     if (deviceName(handle, flags, &devName1) < 0) {
+     if (deviceName(handle, flags, &devName) < 0) {
         ALOGE("Failed to get pcm device node");
         return NO_INIT;
      }
     if (devName != NULL) {
-        handle->handle = pcm_open(flags, (char*)devName1);
+        handle->handle = pcm_open(flags, (char*)devName);
     } else {
          ALOGE("Failed to get pcm device node");
          return NO_INIT;
