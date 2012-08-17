@@ -89,9 +89,6 @@ static uint32_t audio_device_conv_table[][HAL_API_REV_NUM] =
 #ifdef QCOM_VOIP_ENABLED
     //{ AudioSystem::DEVICE_OUT_DIRECTOUTPUT, AUDIO_DEVICE_OUT_DIRECTOUTPUT },
 #endif
-#ifdef QCOM_PROXY_DEVICE_ENABLED
-    { AudioSystem::DEVICE_OUT_PROXY, AUDIO_DEVICE_OUT_PROXY },
-#endif
     /* input devices */
     { AudioSystem::DEVICE_IN_COMMUNICATION, AUDIO_DEVICE_IN_COMMUNICATION },
     { AudioSystem::DEVICE_IN_AMBIENT, AUDIO_DEVICE_IN_AMBIENT },
@@ -516,9 +513,6 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_OUT_ANC_HEADSET |
             AUDIO_DEVICE_OUT_ANC_HEADPHONE |
 #endif
-#ifdef QCOM_PROXY_DEVICE_ENABLED
-            AUDIO_DEVICE_OUT_PROXY |
-#endif
 #if defined(QCOM_FM_ENABLED) || defined(STE_FM)
             AUDIO_DEVICE_OUT_FM |
             AUDIO_DEVICE_OUT_FM_TX |
@@ -540,9 +534,6 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_IN_USB_DEVICE |
 #ifdef QCOM_ANC_HEADSET_ENABLED
             AUDIO_DEVICE_IN_ANC_HEADSET |
-#endif
-#ifdef QCOM_PROXY_DEVICE_ENABLED
-            AUDIO_DEVICE_IN_PROXY |
 #endif
 #if defined(QCOM_FM_ENABLED) || defined(STE_FM)
             AUDIO_DEVICE_IN_FM_RX |
