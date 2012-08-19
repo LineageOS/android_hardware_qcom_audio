@@ -27,9 +27,9 @@
 #ifdef QCOM_CSDCLIENT_ENABLED
 extern "C" {
 #include "csd_client.h"
-#include "acdb-loader.h"
 }
 #endif
+#include "acdb-loader.h"
 
 #ifndef ALSA_DEFAULT_SAMPLE_RATE
 #define ALSA_DEFAULT_SAMPLE_RATE 44100 // in Hz
@@ -569,7 +569,11 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
         strlcpy(ident, "ACDBID/", sizeof(ident));
         strlcat(ident, curTxUCMDevice, sizeof(ident));
         tx_dev_id = snd_use_case_get(handle->ucMgr, ident, NULL);
+#if HAVE_ECRX_IN_ACDB
         ec_acdbid = acdb_loader_get_ecrx_device(tx_dev_id);
+#else
+        ec_acdbid = -1;
+#endif
         ec_dev = getUCMDeviceFromAcdbId(ec_acdbid);
         if (ec_dev) {
             memset(&ident,0,sizeof(ident));

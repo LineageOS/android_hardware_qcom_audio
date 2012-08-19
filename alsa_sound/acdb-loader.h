@@ -25,7 +25,7 @@ void acdb_loader_send_voice_cal(int tx_id, int rx_id);
 void acdb_mapper_get_acdb_id_from_dev_name(char *name, int *id);
 int acdb_loader_init_ACDB();
 void acdb_loader_deallocate_ACDB();
-
+int acdb_loader_get_ecrx_device(int tx_id);
 __END_DECLS
 
 #endif
