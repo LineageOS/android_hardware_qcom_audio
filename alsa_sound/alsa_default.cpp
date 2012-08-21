@@ -431,6 +431,17 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
              (strncmp(txDevice, curTxUCMDevice, MAX_STR_LEN))) && (mode == AudioSystem::MODE_IN_CALL))
             inCallDevSwitch = true;
     }
+
+#ifdef QCOM_CSDCLIENT_ENABLED
+    if (mode == AudioSystem::MODE_IN_CALL && platform_is_Fusion3() && (inCallDevSwitch == true)) {
+        err = csd_client_disable_device();
+        if (err < 0)
+        {
+            ALOGE("csd_client_disable_device, failed, error %d", err);
+        }
+    }
+#endif
+
     snd_use_case_get(handle->ucMgr, "_verb", (const char **)&use_case);
     mods_size = snd_use_case_get_list(handle->ucMgr, "_enamods", &mods_list);
     if (rxDevice != NULL) {
@@ -488,15 +499,6 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
        }
     }
     ALOGV("%s,rxDev:%s, txDev:%s, curRxDev:%s, curTxDev:%s\n", __FUNCTION__, rxDevice, txDevice, curRxUCMDevice, curTxUCMDevice);
-#ifdef QCOM_CSDCLIENT_ENABLED
-    if (mode == AudioSystem::MODE_IN_CALL && platform_is_Fusion3() && (inCallDevSwitch == true)) {
-        err = csd_client_disable_device();
-        if (err < 0)
-        {
-            ALOGE("csd_client_disable_device, failed, error %d", err);
-        }
-    }
-#endif
 
     if (rxDevice != NULL) {
         snd_use_case_set(handle->ucMgr, "_enadev", rxDevice);
