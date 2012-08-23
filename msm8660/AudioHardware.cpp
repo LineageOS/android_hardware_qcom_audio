@@ -814,7 +814,8 @@ AudioHardware::AudioHardware() :
 #ifdef SONY_AUDIO
                     (strcmp((char* )name[i], "secondary_mic_tx") == 0))
 #else
-                    (strcmp((char* )name[i], "camcorder_tx") == 0))
+                    (strcmp((char* )name[i], "camcorder_tx") == 0) ||
+                    (strcmp((char* )name[i], "handset_lgcam_tx") == 0))
 #endif
                 index = DEVICE_CAMCORDER_TX;
             else
