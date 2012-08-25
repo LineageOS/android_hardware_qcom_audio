@@ -33,8 +33,6 @@
 
 extern "C" {
     #include <sound/asound.h>
-    #include <sound/compress_params.h>
-    #include <sound/compress_offload.h>
     #include "alsa_audio.h"
     #include "msm8960_use_cases.h"
 }
