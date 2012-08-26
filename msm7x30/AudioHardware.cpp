@@ -809,7 +809,7 @@ status_t AudioHardware::initCheck()
 }
 
 AudioStreamOut* AudioHardware::openOutputStream(
-        uint32_t devices, int *format, uint32_t *channels, uint32_t *sampleRate, status_t *status)
+        uint32_t devices, audio_output_flags_t flags, int *format, uint32_t *channels, uint32_t *sampleRate, status_t *status)
 {
     { // scope for the lock
         Mutex::Autolock lock(mLock);
