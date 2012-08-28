@@ -3326,6 +3326,10 @@ void  AudioHardware::AudioSessionOutLPA::eventThreadEntry()
                 int nBytesConsumed = 0;
 
                 ALOGV("AUDIO_EVENT_SUSPEND received\n");
+                if (!mPaused) {
+                    ALOGV("Not in paused, no need to honor SUSPEND event");
+                    break;
+                }
                 // 1. Get the Byte count that is consumed
                 if ( ioctl(afd, AUDIO_GET_STATS, &stats)  < 0 ) {
                     ALOGE("AUDIO_GET_STATUS failed");
