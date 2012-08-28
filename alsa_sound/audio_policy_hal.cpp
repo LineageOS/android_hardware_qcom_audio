@@ -68,7 +68,7 @@ static int ap_set_device_connection_state(struct audio_policy *pol,
 {
     struct qcom_audio_policy *qap = to_qap(pol);
     return qap->apm->setDeviceConnectionState(
-                    (AudioSystem::audio_devices)device,
+                    device,
                     (AudioSystem::device_connection_state)state,
                     device_address);
 }
@@ -80,7 +80,7 @@ static audio_policy_dev_state_t ap_get_device_connection_state(
 {
     const struct qcom_audio_policy *qap = to_cqap(pol);
     return (audio_policy_dev_state_t)qap->apm->getDeviceConnectionState(
-                    (AudioSystem::audio_devices)device,
+                    device,
                     device_address);
 }
 
