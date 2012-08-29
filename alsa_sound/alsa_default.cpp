@@ -1481,11 +1481,15 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                         }
 #endif
                     } else {
+#ifdef SAMSUNG_AUDIO
+                        ALOGD("Not using DUALMIC for earpeice");
+#else
                         if (fluence_mode == FLUENCE_MODE_ENDFIRE) {
                             return strdup(SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE); /* DUALMIC EF TX */
                         } else if (fluence_mode == FLUENCE_MODE_BROADSIDE) {
                             return strdup(SND_USE_CASE_DEV_DUAL_MIC_BROADSIDE); /* DUALMIC BS TX */
                         }
+#endif
                     }
                 } else if ((mDevSettingsFlag & DMIC_FLAG) && (nInChannels > 1)) {
                     if (((rxDevice != NULL) &&
