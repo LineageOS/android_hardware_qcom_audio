@@ -412,22 +412,6 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
     rxDevice = getUCMDevice(devices & AudioSystem::DEVICE_OUT_ALL, 0, NULL);
     txDevice = getUCMDevice(devices & AudioSystem::DEVICE_IN_ALL, 1, rxDevice);
 
-    if (rxDevice != NULL) {
-        if ((handle->handle) && (((!strncmp(rxDevice, DEVICE_SPEAKER_HEADSET, strlen(DEVICE_SPEAKER_HEADSET))) &&
-            ((!strncmp(curRxUCMDevice, DEVICE_HEADPHONES, strlen(DEVICE_HEADPHONES))) ||
-            (!strncmp(curRxUCMDevice, DEVICE_HEADSET, strlen(DEVICE_HEADSET))))) ||
-            (((!strncmp(curRxUCMDevice, DEVICE_SPEAKER_HEADSET, strlen(DEVICE_SPEAKER_HEADSET))) &&
-            ((!strncmp(rxDevice, DEVICE_HEADPHONES, strlen(DEVICE_HEADPHONES))) ||
-            (!strncmp(rxDevice, DEVICE_HEADSET, strlen(DEVICE_HEADSET))))))) &&
-            ((!strncmp(handle->useCase, SND_USE_CASE_VERB_HIFI, strlen(SND_USE_CASE_VERB_HIFI))) ||
-            (!strncmp(handle->useCase, SND_USE_CASE_MOD_PLAY_MUSIC, strlen(SND_USE_CASE_MOD_PLAY_MUSIC))))) {
-            pcm_close(handle->handle);
-            handle->handle=NULL;
-            handle->rxHandle=NULL;
-            pflag = true;
-        }
-    }
-
     if ((rxDevice != NULL) && (txDevice != NULL)) {
         if (((strncmp(rxDevice, curRxUCMDevice, MAX_STR_LEN)) ||
              (strncmp(txDevice, curTxUCMDevice, MAX_STR_LEN))) && (mode == AudioSystem::MODE_IN_CALL))
@@ -643,7 +627,7 @@ static status_t s_open(alsa_handle_t *handle)
     }
     if (handle->channels == 1) {
         flags |= PCM_MONO;
-    } 
+    }
 #ifdef QCOM_SSR_ENABLED
     else if (handle->channels == 4 ) {
         flags |= PCM_QUAD;
@@ -654,7 +638,7 @@ static status_t s_open(alsa_handle_t *handle)
         } else {
             flags |= PCM_5POINT1;
         }
-    } 
+    }
 #endif
     else {
         flags |= PCM_STEREO;
@@ -1108,7 +1092,7 @@ static status_t s_close(alsa_handle_t *handle)
 static status_t s_standby(alsa_handle_t *handle)
 {
     int ret;
-    status_t err = NO_ERROR;  
+    status_t err = NO_ERROR;
     struct pcm *h = handle->rxHandle;
     handle->rxHandle = 0;
 #if LOCAL_LOGD
@@ -1495,7 +1479,7 @@ void s_set_voice_volume(int vol)
         err = csd_client_volume(vol);
         if (err < 0) {
             ALOGE("s_set_voice_volume: csd_client error %d", err);
-        } 
+        }
 #endif
     }
 }

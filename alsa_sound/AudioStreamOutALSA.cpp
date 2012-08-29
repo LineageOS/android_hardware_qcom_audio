@@ -124,83 +124,81 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
          (strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) &&
          (strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
         mParent->mLock.lock();
-        /* PCM handle might be closed and reopened immediately to flush
-         * the buffers, recheck and break if PCM handle is valid */
-        if (mHandle->handle == NULL && mHandle->rxHandle == NULL) {
-            snd_use_case_get(mHandle->ucMgr, "_verb", (const char **)&use_case);
-            if ((use_case == NULL) || (!strcmp(use_case, SND_USE_CASE_VERB_INACTIVE))) {
-                if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)){
-                     strlcpy(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL,sizeof(mHandle->useCase));
-                } else if (mHandle->isDeepbufferOutput){
-                           strlcpy(mHandle->useCase, SND_USE_CASE_VERB_HIFI, sizeof(mHandle->useCase));
-                } else {
-                           strlcpy(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC, sizeof(mHandle->useCase));
-                }
+
+        snd_use_case_get(mHandle->ucMgr, "_verb", (const char **)&use_case);
+        if ((use_case == NULL) || (!strcmp(use_case, SND_USE_CASE_VERB_INACTIVE))) {
+            if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)){
+                 strlcpy(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL,sizeof(mHandle->useCase));
+            } else if (mHandle->isDeepbufferOutput){
+                       strlcpy(mHandle->useCase, SND_USE_CASE_VERB_HIFI, sizeof(mHandle->useCase));
             } else {
-                if(!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP)) {
-                    strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP,sizeof(mHandle->useCase));
-                } else if (mHandle->isDeepbufferOutput){
-                           strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_MUSIC, sizeof(mHandle->useCase));
-                } else {
-                           strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC, sizeof(mHandle->useCase));
-                }
+                       strlcpy(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC, sizeof(mHandle->useCase));
             }
-            free(use_case);
-            if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
-               (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
+        } else {
+            if(!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP)) {
+                strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP,sizeof(mHandle->useCase));
+            } else if (mHandle->isDeepbufferOutput){
+                       strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_MUSIC, sizeof(mHandle->useCase));
+            } else {
+                       strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC, sizeof(mHandle->useCase));
+            }
+        }
+        free(use_case);
+        if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
+           (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
 #ifdef QCOM_USBAUDIO_ENABLED
-                if((mDevices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
-                      (mDevices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)||
-                      (mDevices & AudioSystem::DEVICE_OUT_PROXY)) {
-                    mDevices |= AudioSystem::DEVICE_OUT_PROXY;
-                    mHandle->module->route(mHandle, mDevices , mParent->mode());
-                }else
-#endif         
-                {
-                  mHandle->module->route(mHandle, mDevices , AudioSystem::MODE_IN_COMMUNICATION);
-                }
-#ifdef QCOM_USBAUDIO_ENABLED
-            } else if((mDevices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
-                      (mDevices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)||
-                      (mDevices & AudioSystem::DEVICE_OUT_PROXY)) {
+            if((mDevices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
+                  (mDevices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)||
+                  (mDevices & AudioSystem::DEVICE_OUT_PROXY)) {
                 mDevices |= AudioSystem::DEVICE_OUT_PROXY;
                 mHandle->module->route(mHandle, mDevices , mParent->mode());
+            }else
 #endif
-            } else {
- 
-                  mHandle->module->route(mHandle, mDevices , mParent->mode());
-            }
-            if (!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI) ||
-                !strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC) ||
-                !strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) {
-                snd_use_case_set(mHandle->ucMgr, "_verb", mHandle->useCase);
-            } else {
-                snd_use_case_set(mHandle->ucMgr, "_enamod", mHandle->useCase);
-            }
-            if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
-              (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
-                 err = mHandle->module->startVoipCall(mHandle);
-            }
-            else
-                 mHandle->module->open(mHandle);
-            if(mHandle->handle == NULL) {
-                ALOGE("write:: device open failed");
-                mParent->mLock.unlock();
-                return 0;
+            {
+              mHandle->module->route(mHandle, mDevices , AudioSystem::MODE_IN_COMMUNICATION);
             }
 #ifdef QCOM_USBAUDIO_ENABLED
-            if((mHandle->devices == AudioSystem::DEVICE_IN_ANLG_DOCK_HEADSET)||
-                   (mHandle->devices == AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)){
-                if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
-                   (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
-                    mParent->musbPlaybackState |= USBPLAYBACKBIT_VOIPCALL;
-                } else {
-                    mParent->startUsbPlaybackIfNotStarted();
-                    mParent->musbPlaybackState |= USBPLAYBACKBIT_MUSIC;
-                }
-            }
+        } else if((mDevices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
+                  (mDevices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)||
+                  (mDevices & AudioSystem::DEVICE_OUT_PROXY)) {
+            mDevices |= AudioSystem::DEVICE_OUT_PROXY;
+            mHandle->module->route(mHandle, mDevices , mParent->mode());
 #endif
+        } else {
+
+              mHandle->module->route(mHandle, mDevices , mParent->mode());
         }
+        if (!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI) ||
+            !strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC) ||
+            !strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) {
+            snd_use_case_set(mHandle->ucMgr, "_verb", mHandle->useCase);
+        } else {
+            snd_use_case_set(mHandle->ucMgr, "_enamod", mHandle->useCase);
+        }
+        if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
+          (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
+             err = mHandle->module->startVoipCall(mHandle);
+        }
+        else
+             mHandle->module->open(mHandle);
+        if(mHandle->handle == NULL) {
+            ALOGE("write:: device open failed");
+            mParent->mLock.unlock();
+            return 0;
+        }
+#ifdef QCOM_USBAUDIO_ENABLED
+        if((mHandle->devices == AudioSystem::DEVICE_IN_ANLG_DOCK_HEADSET)||
+               (mHandle->devices == AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)){
+            if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
+               (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
+                mParent->musbPlaybackState |= USBPLAYBACKBIT_VOIPCALL;
+            } else {
+                mParent->startUsbPlaybackIfNotStarted();
+                mParent->musbPlaybackState |= USBPLAYBACKBIT_MUSIC;
+            }
+        }
+#endif
+
         mParent->mLock.unlock();
     }
 
@@ -239,17 +237,20 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
         }
         if (n < 0) {
             mParent->mLock.lock();
-            ALOGE("pcm_write returned error %l, trying to recover\n", n);
-            pcm_close(mHandle->handle);
-            mHandle->handle = NULL;
-            if((!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL, strlen(SND_USE_CASE_VERB_IP_VOICECALL))) ||
-              (!strncmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP, strlen(SND_USE_CASE_MOD_PLAY_VOIP)))) {
-                 pcm_close(mHandle->rxHandle);
-                 mHandle->rxHandle = NULL;
-                 mHandle->module->startVoipCall(mHandle);
+            if (mHandle->handle != NULL) {
+                ALOGE("pcm_write returned error %d, trying to recover\n", n);
+                pcm_close(mHandle->handle);
+                mHandle->handle = NULL;
+                if((!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL, strlen(SND_USE_CASE_VERB_IP_VOICECALL))) ||
+                  (!strncmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP, strlen(SND_USE_CASE_MOD_PLAY_VOIP)))) {
+                     pcm_close(mHandle->rxHandle);
+                     mHandle->rxHandle = NULL;
+                     mHandle->module->startVoipCall(mHandle);
+                }
+                else {
+                    mHandle->module->open(mHandle);
+                }
             }
-            else
-            mHandle->module->open(mHandle);
             mParent->mLock.unlock();
             continue;
         }
