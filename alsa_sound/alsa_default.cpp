@@ -19,17 +19,22 @@
 #define LOG_TAG "ALSAModule"
 //#define LOG_NDEBUG 0
 #define LOG_NDDEBUG 0
+#include <fcntl.h>
 #include <utils/Log.h>
 #include <cutils/properties.h>
 #include <linux/ioctl.h>
 #include "AudioHardwareALSA.h"
 #include <media/AudioRecord.h>
+#include <utils/threads.h>
 #ifdef QCOM_CSDCLIENT_ENABLED
 extern "C" {
 #include "csd_client.h"
 }
 #endif
 #include "acdb-loader.h"
+#ifdef USE_A2220
+#include <sound/a2220.h>
+#endif
 
 #ifndef ALSA_DEFAULT_SAMPLE_RATE
 #define ALSA_DEFAULT_SAMPLE_RATE 44100 // in Hz
@@ -41,6 +46,7 @@ extern "C" {
 
 namespace android_audio_legacy
 {
+using android::Mutex;
 
 static int      s_device_open(const hw_module_t*, const char*, hw_device_t**);
 static int      s_device_close(hw_device_t*);
@@ -162,6 +168,39 @@ static int s_device_close(hw_device_t* device)
     device = NULL;
     return 0;
 }
+
+#ifdef USE_A2220
+static int a2220_fd = -1;
+static int a2220_mode = A2220_PATH_INCALL_RECEIVER_NSOFF;
+static Mutex a2220_lock;
+
+static int a2220_ctl(int mode)
+{
+    Mutex::Autolock autoLock(a2220_lock);
+    int rc = -1;
+
+    if (a2220_mode != mode) {
+        if (a2220_fd < 0) {
+            a2220_fd = open("/dev/audience_a2220", O_RDWR);
+            if (!a2220_fd) {
+                ALOGE("%s: unable to open a2220 device!", __func__);
+                return rc;
+            } else {
+                ALOGI("%s: device opened, fd=%d", __func__, a2220_fd);
+            }
+        }
+
+        rc = ioctl(a2220_fd, A2220_SET_CONFIG, mode);
+        if (rc < 0)
+            ALOGE("%s: ioctl failed, errno=%d", __func__, errno);
+        else {
+            a2220_mode = mode;
+            ALOGD("%s: set mode=%d", __func__, mode);
+        }
+    }
+    return rc;
+}
+#endif
 
 // ----------------------------------------------------------------------------
 
@@ -1438,9 +1477,13 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             ALOGD("No valid output device: %u", devices);
         }
     } else {
+#ifdef USE_A2220
+        if (!(mDevSettingsFlag & DMIC_FLAG))
+            a2220_ctl(A2220_PATH_INCALL_RECEIVER_NSOFF);
+#endif
         if (!(mDevSettingsFlag & TTY_OFF) &&
             (callMode == AudioSystem::MODE_IN_CALL) &&
-            ((devices & AudioSystem::DEVICE_IN_WIRED_HEADSET))) { 
+            ((devices & AudioSystem::DEVICE_IN_WIRED_HEADSET))) {
 #ifdef QCOM_ANC_HEADSET_ENABLED
             ||(devices & AudioSystem::DEVICE_IN_ANC_HEADSET))) {
 #endif
@@ -1471,16 +1514,18 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                         ((rxDevice == NULL) &&
                         !strncmp(curRxUCMDevice, SND_USE_CASE_DEV_SPEAKER,
                         (strlen(SND_USE_CASE_DEV_SPEAKER)+1)))) {
-#ifdef SAMSUNG_AUDIO
-                        ALOGD("Not using DUALMIC for Speaker");
-#else
+#ifdef USE_A2220
+                        a2220_ctl(A2220_PATH_INCALL_SPEAKER);
+#endif
                         if (fluence_mode == FLUENCE_MODE_ENDFIRE) {
                             return strdup(SND_USE_CASE_DEV_SPEAKER_DUAL_MIC_ENDFIRE); /* DUALMIC EF TX */
                         } else if (fluence_mode == FLUENCE_MODE_BROADSIDE) {
                             return strdup(SND_USE_CASE_DEV_SPEAKER_DUAL_MIC_BROADSIDE); /* DUALMIC BS TX */
                         }
-#endif
                     } else {
+#ifdef USE_A2220
+                        a2220_ctl(A2220_PATH_INCALL_RECEIVER_NSON);
+#endif
                         if (fluence_mode == FLUENCE_MODE_ENDFIRE) {
                             return strdup(SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE); /* DUALMIC EF TX */
                         } else if (fluence_mode == FLUENCE_MODE_BROADSIDE) {
