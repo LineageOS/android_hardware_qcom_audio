@@ -876,7 +876,8 @@ AudioStreamOut* AudioHardware::openOutputStream(
         Mutex::Autolock lock(mLock);
 #ifdef QCOM_VOIP_ENABLED
         // only one output stream allowed
-        if (mOutput && !((flags & AUDIO_OUTPUT_FLAG_DIRECT) && (flags & AUDIO_OUTPUT_FLAG_VOIP_RX))) {
+        if (mOutput && !((flags & AUDIO_OUTPUT_FLAG_DIRECT) && (flags & AUDIO_OUTPUT_FLAG_VOIP_RX))
+                    && !(flags & AUDIO_OUTPUT_FLAG_LPA)) {
             if (status) {
                 *status = INVALID_OPERATION;
             }
