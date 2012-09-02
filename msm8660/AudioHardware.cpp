@@ -42,6 +42,7 @@
 #include "acdb.h"
 
 #define VOICE_SESSION_NAME "Voice session"
+#define VOIP_SESSION_NAME "VoIP session"
 
 // hardware specific functions
 
@@ -567,7 +568,7 @@ static status_t updateDeviceInfo(int rx_device,int tx_device) {
 #endif
                 if(rx_device == INVALID_DEVICE || tx_device == INVALID_DEVICE)
                     return -1;
-                ALOGD("case VOICE_CALL\VOIP CALL %d",temp_ptr->stream_type);
+                ALOGD("case VOICE_CALL/VOIP CALL %d",temp_ptr->stream_type);
 #ifdef QCOM_ACDB_ENABLED
                 acdb_loader_send_voice_cal(ACDB_ID(rx_device),ACDB_ID(tx_device));
 #endif
