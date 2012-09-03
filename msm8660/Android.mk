@@ -19,6 +19,10 @@ ifeq ($(BOARD_HAVE_QCOM_FM),true)
   LOCAL_CFLAGS += -DQCOM_FM_ENABLED
 endif
 
+ifeq ($(BOARD_USE_QCOM_LPA),true)
+  LOCAL_CFLAGS += -DQCOM_TUNNEL_LPA_ENABLED
+endif
+
 LOCAL_SHARED_LIBRARIES := \
     libcutils       \
     libutils        \
