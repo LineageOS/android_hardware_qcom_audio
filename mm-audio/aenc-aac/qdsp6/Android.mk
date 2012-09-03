@@ -10,9 +10,9 @@ include $(CLEAR_VARS)
 libOmxAacEnc-def := -g -O3
 libOmxAacEnc-def += -DQC_MODIFIED
 libOmxAacEnc-def += -D_ANDROID_
-libOmxAacEnc-def += -D_ENABLE_QC_MSG_LOG_
-libOmxAacEnc-def += -DVERBOSE
-libOmxAacEnc-def += -D_DEBUG
+#libOmxAacEnc-def += -D_ENABLE_QC_MSG_LOG_
+#libOmxAacEnc-def += -DVERBOSE
+#libOmxAacEnc-def += -D_DEBUG
 ifeq ($(strip $(QC_PROP)),true)
 libOmxAacEnc-def += -DAUDIOV2
 endif
