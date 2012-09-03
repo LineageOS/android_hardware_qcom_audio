@@ -1064,7 +1064,8 @@ const char *device, int enable)
     dev_list =
          uc_mgr->card_ctxt_ptr->use_case_verb_list[verb_index].device_ctrls;
     dev_index = get_use_case_index(uc_mgr, device, CTRL_LIST_DEVICE);
-    capability = dev_list[dev_index].capability;
+    if (dev_index >= 0)
+        capability = dev_list[dev_index].capability;
     if (strncmp(uc_mgr->card_ctxt_ptr->current_verb, SND_USE_CASE_VERB_INACTIVE,
         strlen(SND_USE_CASE_VERB_INACTIVE))) {
         uc_list =
