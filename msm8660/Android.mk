@@ -72,8 +72,6 @@ endif
 
 include $(BUILD_SHARED_LIBRARY)
 
-ifeq ("x","y") # use default audio policy manager
-
 # The audio policy is implemented on top of legacy policy code
 include $(CLEAR_VARS)
 
@@ -110,7 +108,6 @@ LOCAL_CFLAGS += -DBACK_MIC_CAMCORDER
 endif
 
 include $(BUILD_SHARED_LIBRARY)
-endif
 
 # Load audio_policy.conf to system/etc/
 include $(CLEAR_VARS)
