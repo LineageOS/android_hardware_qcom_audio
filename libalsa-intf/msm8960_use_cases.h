@@ -237,6 +237,7 @@ static card_mapping_t card_mapping_list[] = {
 #define SND_USE_CASE_DEV_HDMI_SPDIF          "HDMI SPDIF"
 #define SND_USE_CASE_DEV_QUAD_MIC "QMIC"
 #define SND_USE_CASE_DEV_SSR_QUAD_MIC "SSR QMIC"
+#define SND_USE_CASE_DEV_SUB_MIC "Sub Mic"
 #define SND_USE_CASE_DEV_PROXY_RX     "PROXY Rx"
 #define SND_USE_CASE_DEV_PROXY_TX     "PROXY Tx"
 #define SND_USE_CASE_DEV_SPDIF_SPEAKER     "SPDIF Speaker"
@@ -259,6 +260,7 @@ static card_mapping_t card_mapping_list[] = {
 #define SND_USE_CASE_DEV_VOC_EARPIECE "Voice Earpiece"
 #define SND_USE_CASE_DEV_VOC_HEADPHONE "Voice Headphones"
 #define SND_USE_CASE_DEV_VOC_ANC_HEADSET "Voice ANC Headset"
+#define SND_USE_CASE_DEV_VOC_SPEAKER "Voice Speaker"
 
 #define SND_USE_CASE_MOD_PLAY_FM         "Play FM"
 #define SND_USE_CASE_MOD_CAPTURE_FM      "Capture FM"

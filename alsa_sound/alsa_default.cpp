@@ -658,6 +658,18 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
         pflag = false;
     }
 
+#ifdef USE_A2220
+    ALOGI("a2220: txDevice=%s rxDevice=%s", txDevice, rxDevice);
+    if (rxDevice != NULL && txDevice != NULL &&
+            (!strcmp(txDevice, SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE) ||
+            !strcmp(txDevice, SND_USE_CASE_DEV_DUAL_MIC_BROADSIDE)) &&
+            !strcmp(rxDevice, SND_USE_CASE_DEV_VOC_EARPIECE)) {
+        a2220_ctl(A2220_PATH_INCALL_RECEIVER_NSON);
+    } else {
+        a2220_ctl(A2220_PATH_INCALL_RECEIVER_NSOFF);
+    }
+#endif
+
     if (rxDevice != NULL) {
         free(rxDevice);
         rxDevice = NULL;
@@ -1416,7 +1428,13 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             return strdup(SND_USE_CASE_DEV_SPEAKER_VOICE);
 #endif
         } else if (devices & AudioSystem::DEVICE_OUT_SPEAKER) {
-            return strdup(SND_USE_CASE_DEV_SPEAKER); /* SPEAKER RX */
+#ifdef SAMSUNG_AUDIO
+            if (callMode == AudioSystem::MODE_IN_CALL ||
+                callMode == AudioSystem::MODE_IN_COMMUNICATION)
+                return strdup(SND_USE_CASE_DEV_VOC_SPEAKER); /* Voice SPEAKER RX */
+            else
+#endif
+                return strdup(SND_USE_CASE_DEV_SPEAKER); /* SPEAKER RX */
         } else if ((devices & AudioSystem::DEVICE_OUT_WIRED_HEADSET) ||
                    (devices & AudioSystem::DEVICE_OUT_WIRED_HEADPHONE)) {
             if (mDevSettingsFlag & ANC_FLAG) {
@@ -1477,10 +1495,6 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             ALOGD("No valid output device: %u", devices);
         }
     } else {
-#ifdef USE_A2220
-        if (!(mDevSettingsFlag & DMIC_FLAG))
-            a2220_ctl(A2220_PATH_INCALL_RECEIVER_NSOFF);
-#endif
         if (!(mDevSettingsFlag & TTY_OFF) &&
             (callMode == AudioSystem::MODE_IN_CALL) &&
             ((devices & AudioSystem::DEVICE_IN_WIRED_HEADSET))) {
@@ -1509,23 +1523,25 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             } else {
                 if ((mDevSettingsFlag & DMIC_FLAG) && (nInChannels == 1)) {
                     if (((rxDevice != NULL) &&
-                        !strncmp(rxDevice, SND_USE_CASE_DEV_SPEAKER,
-                        (strlen(SND_USE_CASE_DEV_SPEAKER)+1))) ||
+                        (!strncmp(rxDevice, SND_USE_CASE_DEV_SPEAKER,
+                        (strlen(SND_USE_CASE_DEV_SPEAKER)+1)) ||
+                        !strncmp(rxDevice, SND_USE_CASE_DEV_VOC_SPEAKER,
+                        (strlen(SND_USE_CASE_DEV_VOC_SPEAKER)+1)))) ||
                         ((rxDevice == NULL) &&
-                        !strncmp(curRxUCMDevice, SND_USE_CASE_DEV_SPEAKER,
-                        (strlen(SND_USE_CASE_DEV_SPEAKER)+1)))) {
-#ifdef USE_A2220
-                        a2220_ctl(A2220_PATH_INCALL_SPEAKER);
-#endif
+                        (!strncmp(curRxUCMDevice, SND_USE_CASE_DEV_SPEAKER,
+                        (strlen(SND_USE_CASE_DEV_SPEAKER)+1)) ||
+                        !strncmp(curRxUCMDevice, SND_USE_CASE_DEV_VOC_SPEAKER,
+                        (strlen(SND_USE_CASE_DEV_VOC_SPEAKER)+1))))) {
+#ifdef SAMSUNG_AUDIO
+                        return strdup(SND_USE_CASE_DEV_SUB_MIC);
+#else
                         if (fluence_mode == FLUENCE_MODE_ENDFIRE) {
                             return strdup(SND_USE_CASE_DEV_SPEAKER_DUAL_MIC_ENDFIRE); /* DUALMIC EF TX */
                         } else if (fluence_mode == FLUENCE_MODE_BROADSIDE) {
                             return strdup(SND_USE_CASE_DEV_SPEAKER_DUAL_MIC_BROADSIDE); /* DUALMIC BS TX */
                         }
-                    } else {
-#ifdef USE_A2220
-                        a2220_ctl(A2220_PATH_INCALL_RECEIVER_NSON);
 #endif
+                    } else {
                         if (fluence_mode == FLUENCE_MODE_ENDFIRE) {
                             return strdup(SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE); /* DUALMIC EF TX */
                         } else if (fluence_mode == FLUENCE_MODE_BROADSIDE) {
@@ -1604,7 +1620,11 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             if (!strncmp(mic_type, "analog", 6)) {
                 return strdup(SND_USE_CASE_DEV_HANDSET); /* HANDSET TX */
             } else {
+#ifdef SAMSUNG_AUDIO
+                return strdup(SND_USE_CASE_DEV_SUB_MIC); /* BUILTIN-MIC TX */
+#else
                 return strdup(SND_USE_CASE_DEV_LINE); /* BUILTIN-MIC TX */
+#endif
             }
         } else {
             ALOGD("No valid input device: %u", devices);
