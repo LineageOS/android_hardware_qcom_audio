@@ -373,8 +373,8 @@ status_t AudioPolicyManager::setDeviceConnectionState(AudioSystem::audio_devices
             return BAD_VALUE;
         }
 
-#ifdef QCOM_FM_ENABLED
         audio_devices_t NewDevice = AudioPolicyManagerBase::getNewDevice(mPrimaryOutput, false /*fromCache*/);
+#ifdef QCOM_FM_ENABLED
         if (device == AudioSystem::DEVICE_OUT_FM) {
             if (state == AudioSystem::DEVICE_STATE_AVAILABLE) {
                 mOutputs.valueFor(mPrimaryOutput)->changeRefCount(AudioSystem::FM, 1);
