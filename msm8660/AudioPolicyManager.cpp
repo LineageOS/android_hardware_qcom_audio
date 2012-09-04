@@ -515,13 +515,8 @@ status_t AudioPolicyManager::startOutput(audio_io_handle_t output, AudioSystem::
                 }
             }
         }
-#ifdef QCOM_FM_ENABLED
-    if(stream == AudioSystem::FM && output == getA2dpOutput()) {
+
         setOutputDevice(output, AudioPolicyManagerBase::getNewDevice((output), true));
-    } else {
-        setOutputDevice(output, AudioPolicyManagerBase::getNewDevice((output), true));
-    }
-#endif
 
         // handle special case for sonification while in call
         if (isInCall()) {
