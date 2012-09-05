@@ -817,19 +817,21 @@ AudioHardware::AudioHardware() :
                     (strcmp((char* )name[i], "handset_lgcam_tx") == 0))
 #endif
                 index = DEVICE_CAMCORDER_TX;
-            else
+            else {
+                ALOGI("Not used device: %s", ( char* )name[i]);
                 continue;
-            ALOGV("index = %d",index);
+            }
+            ALOGI("index = %d",index);
 
             device_list[index].dev_id = msm_get_device((char* )name[i]);
             if(device_list[index].dev_id >= 0) {
-                    ALOGV("Found device: %s:index = %d,dev_id: %d",( char* )name[i], index,device_list[index].dev_id);
+                    ALOGI("Found device: %s:index = %d,dev_id: %d",( char* )name[i], index,device_list[index].dev_id);
             }
 #ifdef QCOM_ACDB_ENABLED
             acdb_mapper_get_acdb_id_from_dev_name((char* )name[i], &device_list[index].acdb_id);
             device_list[index].class_id = msm_get_device_class(device_list[index].dev_id);
             device_list[index].capability = msm_get_device_capability(device_list[index].dev_id);
-            ALOGV("acdb ID = %d,class ID = %d,capablity = %d for device %d",device_list[index].acdb_id,
+            ALOGI("acdb ID = %d,class ID = %d,capablity = %d for device %d",device_list[index].acdb_id,
             device_list[index].class_id,device_list[index].capability,device_list[index].dev_id);
 #endif
         }
