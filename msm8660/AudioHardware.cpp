@@ -922,11 +922,14 @@ AudioStreamOut* AudioHardware::openOutputStream(
             }
 #endif
             // create new output LPA stream
-            AudioSessionOutLPA* out = new AudioSessionOutLPA(this, devices, *format, *channels,*sampleRate,0,&err);
+            AudioSessionOutLPA* out = NULL;
+#ifdef QCOM_TUNNEL_LPA_ENABLED
+            out = new AudioSessionOutLPA(this, devices, *format, *channels,*sampleRate,0,&err);
             if(err != NO_ERROR) {
                 delete out;
                 out = NULL;
             }
+#endif
             if (status) *status = err;
             mOutputLPA = out;
             return mOutputLPA;
@@ -2834,6 +2837,7 @@ status_t AudioHardware::AudioStreamOutDirect::getRenderPosition(uint32_t *dspFra
 //.----------------------------------------------------------------------------
 #endif
 
+#ifdef QCOM_TUNNEL_LPA_ENABLED
 // ----------------------------------------------------------------------------
 // Audio Stream from LPA output
 // Start AudioSessionOutLPA
@@ -3609,6 +3613,8 @@ status_t AudioHardware::AudioSessionOutLPA::getRenderPosition(uint32_t *dspFrame
 
 // End AudioSessionOutLPA
 //.----------------------------------------------------------------------------
+#endif
+
 int mFdin = -1;
 AudioHardware::AudioStreamInMSM8x60::AudioStreamInMSM8x60() :
     mHardware(0), mState(AUDIO_INPUT_CLOSED), mRetryCount(0),
