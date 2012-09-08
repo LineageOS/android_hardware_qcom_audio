@@ -1410,11 +1410,6 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                  (devices & AudioSystem::DEVICE_OUT_FM_TX)) {
             return strdup(SND_USE_CASE_DEV_SPEAKER_FM_TX); /* COMBO SPEAKER+FM_TX RX */
 #endif
-#ifdef HTC_VOICE_CONFIG
-        } else if ((callMode == AudioSystem::MODE_IN_CALL) &&
-                   (devices & AudioSystem::DEVICE_OUT_EARPIECE)) {
-            return strdup(SND_USE_CASE_DEV_EARPIECE_VOICE);
-#endif
         } else if (devices & AudioSystem::DEVICE_OUT_EARPIECE) {
             if (callMode == AudioSystem::MODE_IN_CALL ||
                 callMode == AudioSystem::MODE_IN_COMMUNICATION) {
@@ -1422,13 +1417,8 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             } else {
                 return strdup(SND_USE_CASE_DEV_EARPIECE); /* HANDSET RX */
             }
-#ifdef HTC_VOICE_CONFIG
-        } else if ((callMode == AudioSystem::MODE_IN_CALL) &&
-                   (devices & AudioSystem::DEVICE_OUT_SPEAKER)) {
-            return strdup(SND_USE_CASE_DEV_SPEAKER_VOICE);
-#endif
         } else if (devices & AudioSystem::DEVICE_OUT_SPEAKER) {
-#ifdef SAMSUNG_AUDIO
+#if defined(SAMSUNG_AUDIO) || defined(HTC_AUDIO)
             if (callMode == AudioSystem::MODE_IN_CALL ||
                 callMode == AudioSystem::MODE_IN_COMMUNICATION)
                 return strdup(SND_USE_CASE_DEV_VOC_SPEAKER); /* Voice SPEAKER RX */
@@ -1512,11 +1502,6 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                      return strdup(SND_USE_CASE_DEV_TTY_HANDSET_TX);
                  }
              }
-#ifdef HTC_VOICE_CONFIG
-        } else if ((callMode == AudioSystem::MODE_IN_CALL) &&
-                   (devices & AudioSystem::DEVICE_IN_BUILTIN_MIC)) {
-            return strdup(SND_USE_CASE_DEV_HANDSET_VOICE);
-#endif
         } else if (devices & AudioSystem::DEVICE_IN_BUILTIN_MIC) {
             if (!strncmp(mic_type, "analog", 6)) {
                 return strdup(SND_USE_CASE_DEV_HANDSET); /* HANDSET TX */
@@ -1588,11 +1573,6 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                  return strdup(SND_USE_CASE_DEV_BTSCO_WB_TX); /* BTSCO TX*/
              else
                  return strdup(SND_USE_CASE_DEV_BTSCO_NB_TX); /* BTSCO TX*/
-#ifdef HTC_VOICE_CONFIG
-        } else if ((callMode == AudioSystem::MODE_IN_CALL) &&
-                   (devices & AudioSystem::DEVICE_IN_DEFAULT)) {
-            return strdup(SND_USE_CASE_DEV_LINE_VOICE);
-#endif
 #ifdef QCOM_USBAUDIO_ENABLED
         } else if ((devices & AudioSystem::DEVICE_IN_ANLG_DOCK_HEADSET) ||
                    (devices & AudioSystem::DEVICE_IN_PROXY)) {
@@ -1622,6 +1602,8 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             } else {
 #ifdef SAMSUNG_AUDIO
                 return strdup(SND_USE_CASE_DEV_SUB_MIC); /* BUILTIN-MIC TX */
+#elif HTC_AUDIO
+                return strdup(SND_USE_CASE_DEV_VOC_LINE); /* BUILTIN-MIC TX */
 #else
                 return strdup(SND_USE_CASE_DEV_LINE); /* BUILTIN-MIC TX */
 #endif

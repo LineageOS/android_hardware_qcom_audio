@@ -133,7 +133,7 @@ LOCAL_SHARED_LIBRARIES := \
     libalsa-intf
 
 ifeq ($(BOARD_HAVE_HTC_AUDIO),true)
-  LOCAL_CFLAGS += -DHTC_VOICE_CONFIG
+  LOCAL_CFLAGS += -DHTC_AUDIO
 endif
 
 ifeq ($(BOARD_HAVE_SAMSUNG_AUDIO),true)
