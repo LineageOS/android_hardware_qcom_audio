@@ -905,7 +905,7 @@ static status_t s_start_fm(alsa_handle_t *handle)
     unsigned flags = 0;
     int err = NO_ERROR;
 
-    ALOGE("s_start_fm: handle %p", handle);
+    ALOGD("s_start_fm: handle %p", handle);
 
     // ASoC multicomponent requires a valid path (frontend/backend) for
     // the device to be opened
@@ -1105,7 +1105,7 @@ static status_t s_standby(alsa_handle_t *handle)
     ALOGD("s_standby: handle %p h %p", handle, h);
 #endif
     if (h) {
-        ALOGE("s_standby  rxHandle\n");
+        ALOGD("s_standby  rxHandle\n");
         err = pcm_close(h);
         if(err != NO_ERROR) {
             ALOGE("s_standby: pcm_close failed for rxHandle with err %d", err);
@@ -1148,7 +1148,7 @@ static status_t s_route(alsa_handle_t *handle, uint32_t devices, int mode)
 
 int getUseCaseType(const char *useCase)
 {
-    ALOGV("use case is %s\n", useCase);
+    ALOGD("use case is %s\n", useCase);
     if (!strncmp(useCase, SND_USE_CASE_VERB_HIFI,
            strlen(SND_USE_CASE_VERB_HIFI)) ||
         !strncmp(useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER,

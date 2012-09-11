@@ -465,7 +465,7 @@ status_t AudioStreamInALSA::close()
             ALOGD("musbRecordingState: %d, mVoipStreamCount:%d",mParent->musbRecordingState,
                   mParent->mVoipStreamCount );
             if(mParent->mVoipStreamCount == 1) {
-                ALOGE("Deregistering VOIP Call bit, musbPlaybackState:%d,"
+                ALOGD("Deregistering VOIP Call bit, musbPlaybackState:%d,"
                        "musbRecordingState:%d", mParent->musbPlaybackState, mParent->musbRecordingState);
                 mParent->musbPlaybackState &= ~USBPLAYBACKBIT_VOIPCALL;
                 mParent->musbRecordingState &= ~USBRECBIT_VOIPCALL;

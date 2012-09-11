@@ -566,7 +566,7 @@ static int pcm_write_mmap(struct pcm *pcm, void *data, unsigned count)
                 return -errno;
             }
         } else {
-             ALOGE(" start\n");
+             ALOGD(" start\n");
              pcm->start = 1;
         }
     }
@@ -684,11 +684,11 @@ static int enable_timer(struct pcm *pcm) {
         sel.id.subdevice = 0;
 
     if (pcm->flags & DEBUG_ON) {
-        ALOGE("sel.id.dev_class= %d\n", sel.id.dev_class);
-        ALOGE("sel.id.dev_sclass = %d\n", sel.id.dev_sclass);
-        ALOGE("sel.id.card = %d\n", sel.id.card);
-        ALOGE("sel.id.device = %d\n", sel.id.device);
-        ALOGE("sel.id.subdevice = %d\n", sel.id.subdevice);
+        ALOGD("sel.id.dev_class= %d\n", sel.id.dev_class);
+        ALOGD("sel.id.dev_sclass = %d\n", sel.id.dev_sclass);
+        ALOGD("sel.id.card = %d\n", sel.id.card);
+        ALOGD("sel.id.device = %d\n", sel.id.device);
+        ALOGD("sel.id.subdevice = %d\n", sel.id.subdevice);
     }
     if (ioctl(pcm->timer_fd, SNDRV_TIMER_IOCTL_SELECT, &sel) < 0) {
           ALOGE("SNDRV_TIMER_IOCTL_SELECT failed.\n");

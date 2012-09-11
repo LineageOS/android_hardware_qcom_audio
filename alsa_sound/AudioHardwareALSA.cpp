@@ -577,14 +577,14 @@ void AudioHardwareALSA::doRouting(int device)
                 ALSAHandleList::iterator it = mDeviceList.end();
                 it--;
                 mALSADevice->route(&(*it), (uint32_t)device, newMode);
-                ALOGE("USB UNPLUGGED, setting musbPlaybackState to 0");
+                ALOGD("USB UNPLUGGED, setting musbPlaybackState to 0");
                 musbPlaybackState = 0;
                 musbRecordingState = 0;
                 closeUSBRecording();
                 closeUSBPlayback();
         } else if((device & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
                   (device & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)){
-                    ALOGE("Routing everything to prox now");
+                    ALOGD("Routing everything to prox now");
                     ALSAHandleList::iterator it = mDeviceList.end();
                     it--;
                     mALSADevice->route(&(*it), AudioSystem::DEVICE_OUT_PROXY,
@@ -820,7 +820,7 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
 #ifdef QCOM_USBAUDIO_ENABLED
       if((devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
          (devices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)){
-          ALOGE("Routing to proxy for normal playback in openOutputStream");
+          ALOGD("Routing to proxy for normal playback in openOutputStream");
           devices |= AudioSystem::DEVICE_OUT_PROXY;
       }
 #endif
@@ -904,7 +904,7 @@ AudioHardwareALSA::openOutputSession(uint32_t devices,
 #ifdef QCOM_USBAUDIO_ENABLED
     if((devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
        (devices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)){
-        ALOGE("Routing to proxy for LPA in openOutputSession");
+        ALOGD("Routing to proxy for LPA in openOutputSession");
         devices |= AudioSystem::DEVICE_OUT_PROXY;
         mALSADevice->route(&(*it), devices, mode());
         devices = AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET;
@@ -1019,11 +1019,11 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
            mDeviceList.push_back(alsa_handle);
            it = mDeviceList.end();
            it--;
-           ALOGE("mCurrDevice: %d", mCurDevice);
+           ALOGD("mCurrDevice: %d", mCurDevice);
 #ifdef QCOM_USBAUDIO_ENABLED
            if((mCurDevice == AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
               (mCurDevice == AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)){
-              ALOGE("Routing everything from proxy for voipcall");
+              ALOGD("Routing everything from proxy for voipcall");
               mALSADevice->route(&(*it), AudioSystem::DEVICE_IN_PROXY, AudioSystem::MODE_IN_COMMUNICATION);
               ALOGD("enabling VOIP in openInputstream, musbPlaybackState: %d", musbPlaybackState);
               startUsbPlaybackIfNotStarted();
@@ -1058,7 +1058,7 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
             mVoipStreamCount++;   //increment VoipstreamCount only if success
             ALOGD("OpenInput mVoipStreamCount %d",mVoipStreamCount);
         }
-        ALOGE("openInput: After Get alsahandle");
+        ALOGD("openInput: After Get alsahandle");
         if (status) *status = err;
         return in;
       } else
@@ -1211,7 +1211,7 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
             if(devices & AudioSystem::DEVICE_IN_ANLG_DOCK_HEADSET ||
                devices & AudioSystem::DEVICE_IN_PROXY) {
                 devices |= AudioSystem::DEVICE_IN_PROXY;
-                ALOGE("routing everything from proxy");
+                ALOGD("routing everything from proxy");
             mALSADevice->route(&(*it), devices, mode());
             } else
 #endif
@@ -1368,7 +1368,7 @@ int newMode = mode();
            (device & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)){
             device |= AudioSystem::DEVICE_OUT_PROXY;
             alsa_handle.devices = AudioSystem::DEVICE_OUT_PROXY;
-            ALOGE("Routing to proxy for FM case");
+            ALOGD("Routing to proxy for FM case");
         }
         mALSADevice->route(&(*it), (uint32_t)device, newMode);
         if(!strcmp(it->useCase, SND_USE_CASE_VERB_DIGITAL_RADIO)) {
@@ -1379,7 +1379,7 @@ int newMode = mode();
         mALSADevice->startFm(&(*it));
         if((device & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
            (device & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)){
-            ALOGE("Starting FM, musbPlaybackState %d", musbPlaybackState);
+            ALOGD("Starting FM, musbPlaybackState %d", musbPlaybackState);
             startUsbPlaybackIfNotStarted();
             musbPlaybackState |= USBPLAYBACKBIT_FM;
         }
@@ -1421,7 +1421,7 @@ void AudioHardwareALSA::disableVoiceCall(char* verb, char* modifier, int mode, i
     }
 #ifdef QCOM_USBAUDIO_ENABLED
    if(musbPlaybackState & USBPLAYBACKBIT_VOICECALL) {
-          ALOGE("Voice call ended on USB");
+          ALOGD("Voice call ended on USB");
           musbPlaybackState &= ~USBPLAYBACKBIT_VOICECALL;
           musbRecordingState &= ~USBRECBIT_VOICECALL;
           closeUsbRecordingIfNothingActive();

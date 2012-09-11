@@ -209,7 +209,7 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
         ALOGV("Starting playback on USB");
         if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL) ||
            !strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP)) {
-            ALOGE("Setting VOIPCALL bit here, musbPlaybackState %d", mParent->musbPlaybackState);
+            ALOGD("Setting VOIPCALL bit here, musbPlaybackState %d", mParent->musbPlaybackState);
             mParent->musbPlaybackState |= USBPLAYBACKBIT_VOIPCALL;
         }else{
             ALOGV("enabling music, musbPlaybackState: %d ", mParent->musbPlaybackState);

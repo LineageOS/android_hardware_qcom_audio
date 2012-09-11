@@ -3040,7 +3040,7 @@ static int print_list(card_mctrl_t *list, int verb_index, int count)
         ALOGD("\tcase name: %s\n", list[i].case_name);
         ALOGD("\tEnable sequence: %d\n", list[i].ena_mixer_count);
         for(j=0; j<list[i].ena_mixer_count; j++) {
-            ALOGE("\t\t%s : %d : %d: %s\n",
+            ALOGD("\t\t%s : %d : %d: %s\n",
                 list[i].ena_mixer_list[j].control_name,
                 list[i].ena_mixer_list[j].type,
                 list[i].ena_mixer_list[j].value,
@@ -3048,7 +3048,7 @@ static int print_list(card_mctrl_t *list, int verb_index, int count)
         }
         ALOGD("\tDisable sequence: %d\n", list[i].dis_mixer_count);
         for(j=0; j<list[i].dis_mixer_count; j++) {
-            ALOGE("\t\t%s : %d : %d : %s\n",
+            ALOGD("\t\t%s : %d : %d : %s\n",
                 list[i].dis_mixer_list[j].control_name,
                 list[i].dis_mixer_list[j].type,
                 list[i].dis_mixer_list[j].value,
