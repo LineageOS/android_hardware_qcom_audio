@@ -1475,7 +1475,7 @@ void AudioHardwareALSA::disableVoiceCall(char* verb, char* modifier, int mode, i
 void AudioHardwareALSA::enableVoiceCall(char* verb, char* modifier, int mode, int device)
 {
 // Start voice call
-unsigned long bufferSize = DEFAULT_BUFFER_SIZE;
+unsigned long bufferSize = DEFAULT_VOICE_BUFFER_SIZE;
 alsa_handle_t alsa_handle;
 char *use_case;
     snd_use_case_get(mUcMgr, "_verb", (const char **)&use_case);
