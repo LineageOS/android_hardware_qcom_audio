@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAXX//+7w\u003d",
+        "filename": "msm8660/AudioHardware.cpp",
+        "patchSetId": 3
+      },
+      "lineNbr": 4455,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2012-09-11T09:56:27Z",
+      "side": 1,
+      "message": "missing ifdef from the first patchset is here",
+      "revId": "bead7732a2b2221b997a556fbdc8d1464b6bd468",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
