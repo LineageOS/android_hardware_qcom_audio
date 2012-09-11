@@ -166,7 +166,9 @@ AudioHardwareALSA::AudioHardwareALSA() :
 AudioHardwareALSA::~AudioHardwareALSA()
 {
     if (mUcMgr != NULL) {
+#if LOCAL_LOGD
         ALOGD("closing ucm instance: %u", (unsigned)mUcMgr);
+#endif
         snd_use_case_mgr_close(mUcMgr);
     }
     if (mALSADevice) {
@@ -195,7 +197,7 @@ status_t AudioHardwareALSA::initCheck()
 
 status_t AudioHardwareALSA::setVoiceVolume(float v)
 {
-    ALOGD("setVoiceVolume(%f)\n", v);
+    ALOGV("setVoiceVolume(%f)\n", v);
     if (v < 0.0) {
         ALOGW("setVoiceVolume(%f) under 0.0, assuming 0.0\n", v);
         v = 0.0;
@@ -205,7 +207,7 @@ status_t AudioHardwareALSA::setVoiceVolume(float v)
     }
 
     int newMode = mode();
-    ALOGD("setVoiceVolume  newMode %d",newMode);
+    ALOGV("setVoiceVolume  newMode %d",newMode);
     int vol = lrint(v * 100.0);
 
     // Voice volume levels from android are mapped to driver volume levels as follows.
@@ -243,8 +245,10 @@ status_t  AudioHardwareALSA::setFmVolume(float value)
     }
     vol  = lrint((value * 0x2000) + 0.5);
 
+#if LOCAL_LOGD
     ALOGD("setFmVolume(%f)\n", value);
     ALOGD("Setting FM volume to %d (available range is 0 to 0x2000)\n", vol);
+#endif
 
     mALSADevice->setFmVolume(vol);
 
@@ -283,7 +287,9 @@ status_t AudioHardwareALSA::setParameters(const String8& keyValuePairs)
     int device;
     int btRate;
     int state;
+#if LOCAL_LOGD
     ALOGD("setParameters() %s", keyValuePairs.string());
+#endif
 
     key = String8(TTY_MODE_KEY);
     if (param.get(key, value) == NO_ERROR) {
@@ -586,13 +592,13 @@ void AudioHardwareALSA::doRouting(int device)
                     for(it = mDeviceList.begin(); it != mDeviceList.end(); ++it) {
                          if((!strcmp(it->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) ||
                             (!strcmp(it->useCase, SND_USE_CASE_MOD_PLAY_LPA))) {
-                                 ALOGD("doRouting: LPA device switch to proxy");
+                                 ALOGV("doRouting: LPA device switch to proxy");
                                  startUsbPlaybackIfNotStarted();
                                  musbPlaybackState |= USBPLAYBACKBIT_LPA;
                                  break;
                          } else if((!strcmp(it->useCase, SND_USE_CASE_VERB_VOICECALL)) ||
                                    (!strcmp(it->useCase, SND_USE_CASE_MOD_PLAY_VOICE))) {
-                                    ALOGD("doRouting: VOICE device switch to proxy");
+                                    ALOGV("doRouting: VOICE device switch to proxy");
                                     startUsbRecordingIfNotStarted();
                                     startUsbPlaybackIfNotStarted();
                                     musbPlaybackState |= USBPLAYBACKBIT_VOICECALL;
@@ -600,7 +606,7 @@ void AudioHardwareALSA::doRouting(int device)
                                     break;
                         }else if((!strcmp(it->useCase, SND_USE_CASE_VERB_DIGITAL_RADIO)) ||
                                  (!strcmp(it->useCase, SND_USE_CASE_MOD_PLAY_FM))) {
-                                    ALOGD("doRouting: FM device switch to proxy");
+                                    ALOGV("doRouting: FM device switch to proxy");
                                     startUsbPlaybackIfNotStarted();
                                     musbPlaybackState |= USBPLAYBACKBIT_FM;
                                     break;
@@ -676,7 +682,7 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
                                     status_t *status)
 {
     Mutex::Autolock autoLock(mLock);
-    ALOGD("openOutputStream: devices 0x%x channels %d sampleRate %d",
+    ALOGV("openOutputStream: devices 0x%x channels %d sampleRate %d",
          devices, *channels, *sampleRate);
 
     status_t err = BAD_VALUE;
@@ -810,7 +816,7 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
       mDeviceList.push_back(alsa_handle);
       ALSAHandleList::iterator it = mDeviceList.end();
       it--;
-      ALOGD("useCase %s", it->useCase);
+      ALOGV("useCase %s", it->useCase);
 #ifdef QCOM_USBAUDIO_ENABLED
       if((devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
          (devices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)){

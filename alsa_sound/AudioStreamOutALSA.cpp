@@ -86,15 +86,15 @@ status_t AudioStreamOutALSA::setVolume(float left, float right)
 
     if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER) ||
        !strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_LPA)) {
-        ALOGD("setLpaVolume(%f)\n", volume);
-        ALOGD("Setting LPA volume to %d (available range is 0 to 100)\n", vol);
+        ALOGV("setLpaVolume(%f)\n", volume);
+        ALOGV("Setting LPA volume to %d (available range is 0 to 100)\n", vol);
         mHandle->module->setLpaVolume(vol);
         return status;
     }
     else if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_TUNNEL) ||
             !strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_TUNNEL)) {
-        ALOGD("setCompressedVolume(%f)\n", volume);
-        ALOGD("Setting Compressed volume to %d (available range is 0 to 100)\n", vol);
+        ALOGV("setCompressedVolume(%f)\n", volume);
+        ALOGV("Setting Compressed volume to %d (available range is 0 to 100)\n", vol);
         mHandle->module->setCompressedVolume(vol);
         return status;
     }
@@ -206,13 +206,13 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
         (!mParent->musbPlaybackState)) {
         mParent->mLock.lock();
         mParent->startUsbPlaybackIfNotStarted();
-        ALOGD("Starting playback on USB");
+        ALOGV("Starting playback on USB");
         if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL) ||
            !strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP)) {
             ALOGE("Setting VOIPCALL bit here, musbPlaybackState %d", mParent->musbPlaybackState);
             mParent->musbPlaybackState |= USBPLAYBACKBIT_VOIPCALL;
         }else{
-            ALOGD("enabling music, musbPlaybackState: %d ", mParent->musbPlaybackState);
+            ALOGV("enabling music, musbPlaybackState: %d ", mParent->musbPlaybackState);
             mParent->musbPlaybackState |= USBPLAYBACKBIT_MUSIC;
         }
         mParent->mLock.unlock();
@@ -276,13 +276,13 @@ status_t AudioStreamOutALSA::close()
 {
     Mutex::Autolock autoLock(mParent->mLock);
 
-    ALOGD("close");
+    ALOGV("close");
     if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
         (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
          if((mParent->mVoipStreamCount)) {
 #ifdef QCOM_USBAUDIO_ENABLED
              if(mParent->mVoipStreamCount == 1) {
-                 ALOGD("Deregistering VOIP Call bit, musbPlaybackState:%d, musbRecordingState: %d",
+                 ALOGV("Deregistering VOIP Call bit, musbPlaybackState:%d, musbRecordingState: %d",
                        mParent->musbPlaybackState, mParent->musbRecordingState);
                  mParent->musbPlaybackState &= ~USBPLAYBACKBIT_VOIPCALL;
                  mParent->musbRecordingState &= ~USBRECBIT_VOIPCALL;
@@ -315,7 +315,7 @@ status_t AudioStreamOutALSA::standby()
 {
     Mutex::Autolock autoLock(mParent->mLock);
 
-    ALOGD("standby");
+    ALOGV("standby");
 
     if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
       (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
@@ -325,10 +325,10 @@ status_t AudioStreamOutALSA::standby()
 #ifdef QCOM_USBAUDIO_ENABLED
     if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) ||
         (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_LPA))) {
-        ALOGD("Deregistering LPA bit");
+        ALOGV("Deregistering LPA bit");
         mParent->musbPlaybackState &= ~USBPLAYBACKBIT_LPA;
     } else {
-        ALOGD("Deregistering MUSIC bit, musbPlaybackState: %d", mParent->musbPlaybackState);
+        ALOGV("Deregistering MUSIC bit, musbPlaybackState: %d", mParent->musbPlaybackState);
         mParent->musbPlaybackState &= ~USBPLAYBACKBIT_MUSIC;
     }
 #endif

@@ -207,7 +207,9 @@ int deviceName(alsa_handle_t *handle, unsigned flags, char **value)
     }
     strlcat(ident, handle->useCase, sizeof(ident));
     ret = snd_use_case_get(handle->ucMgr, ident, (const char **)value);
+#if LOCAL_LOGD
     ALOGD("Device value returned is %s", (*value));
+#endif
     return ret;
 }
 
@@ -527,7 +529,9 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
         free(use_case);
         use_case = NULL;
     }
+#if LOCAL_LOGD
     ALOGD("switchDevice: curTxUCMDevivce %s curRxDevDevice %s", curTxUCMDevice, curRxUCMDevice);
+#endif
 
     if (mode == AudioSystem::MODE_IN_CALL && platform_is_Fusion3() && (inCallDevSwitch == true)) {
         /* get tx acdb id */
@@ -603,7 +607,9 @@ static status_t s_open(alsa_handle_t *handle)
     /* No need to call s_close for LPA as pcm device open and close is handled by LPAPlayer in stagefright */
     if((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) || (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_LPA))
     ||(!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_TUNNEL)) || (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_TUNNEL))) {
+#if LOCAL_LOGD
         ALOGD("s_open: Opening LPA /Tunnel playback");
+#endif
         return NO_ERROR;
     }
 
@@ -1142,7 +1148,7 @@ static status_t s_route(alsa_handle_t *handle, uint32_t devices, int mode)
 
 int getUseCaseType(const char *useCase)
 {
-    ALOGE("use case is %s\n", useCase);
+    ALOGV("use case is %s\n", useCase);
     if (!strncmp(useCase, SND_USE_CASE_VERB_HIFI,
            strlen(SND_USE_CASE_VERB_HIFI)) ||
         !strncmp(useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER,
@@ -1227,7 +1233,9 @@ static void disableDevice(alsa_handle_t *handle)
 #endif
         if (mods_size) {
             for(i = 0; i < mods_size; i++) {
-                ALOGE("index %d modifier %s\n", i, mods_list[i]);
+#if LOCAL_LOGD
+                ALOGD("index %d modifier %s\n", i, mods_list[i]);
+#endif
                 usecase_type |= getUseCaseType(mods_list[i]);
             }
         }
