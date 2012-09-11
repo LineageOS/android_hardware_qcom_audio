@@ -1438,12 +1438,14 @@ int newMode = mode();
             snd_use_case_set(mUcMgr, "_enamod", SND_USE_CASE_MOD_PLAY_FM);
         }
         mALSADevice->startFm(&(*it));
+#ifdef QCOM_USBAUDIO_ENABLED
         if((device & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
            (device & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)){
             ALOGE("Starting FM, musbPlaybackState %d", musbPlaybackState);
             startUsbPlaybackIfNotStarted();
             musbPlaybackState |= USBPLAYBACKBIT_FM;
         }
+#endif
     } else if (!(device & AudioSystem::DEVICE_OUT_FM) && mIsFmActive == 1) {
         //i Stop FM Radio
         ALOGV("Stop FM");
@@ -1458,11 +1460,13 @@ int newMode = mode();
             }
         }
         mIsFmActive = 0;
+#ifdef QCOM_USBAUDIO_ENABLED
         musbPlaybackState &= ~USBPLAYBACKBIT_FM;
         if((device & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
            (device & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)){
             closeUsbPlaybackIfNothingActive();
         }
+#endif
     }
 }
 #endif
