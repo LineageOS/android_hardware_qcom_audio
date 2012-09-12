@@ -1295,20 +1295,35 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             return strdup(SND_USE_CASE_DEV_SPEAKER_FM_TX); /* COMBO SPEAKER+FM_TX RX */
 #endif
         } else if (devices & AudioSystem::DEVICE_OUT_EARPIECE) {
-            return strdup(SND_USE_CASE_DEV_EARPIECE); /* HANDSET RX */
+            if (callMode == AudioSystem::MODE_IN_CALL) {
+                return strdup(SND_USE_CASE_DEV_VOC_EARPIECE); /* Voice HANDSET RX */
+            } else
+                return strdup(SND_USE_CASE_DEV_EARPIECE); /* HANDSET RX */
         } else if (devices & AudioSystem::DEVICE_OUT_SPEAKER) {
-            return strdup(SND_USE_CASE_DEV_SPEAKER); /* SPEAKER RX */
+            if (callMode == AudioSystem::MODE_IN_CALL) {
+                return strdup(SND_USE_CASE_DEV_VOC_SPEAKER); /* Voice SPEAKER RX */
+            } else
+                return strdup(SND_USE_CASE_DEV_SPEAKER); /* SPEAKER RX */
         } else if ((devices & AudioSystem::DEVICE_OUT_WIRED_HEADSET) ||
                    (devices & AudioSystem::DEVICE_OUT_WIRED_HEADPHONE)) {
             if (mDevSettingsFlag & ANC_FLAG) {
-                return strdup(SND_USE_CASE_DEV_ANC_HEADSET); /* ANC HEADSET RX */
+                if (callMode == AudioSystem::MODE_IN_CALL) {
+                    return strdup(SND_USE_CASE_DEV_VOC_ANC_HEADSET); /* Voice ANC HEADSET RX */
+                } else
+                    return strdup(SND_USE_CASE_DEV_ANC_HEADSET); /* ANC HEADSET RX */
             } else {
-                return strdup(SND_USE_CASE_DEV_HEADPHONES); /* HEADSET RX */
+                if (callMode == AudioSystem::MODE_IN_CALL) {
+                    return strdup(SND_USE_CASE_DEV_VOC_HEADPHONE); /* Voice HEADSET RX */
+                } else
+                    return strdup(SND_USE_CASE_DEV_HEADPHONES); /* HEADSET RX */
             }
 #ifdef QCOM_ANC_HEADSET_ENABLED
         } else if ((devices & AudioSystem::DEVICE_OUT_ANC_HEADSET) ||
                    (devices & AudioSystem::DEVICE_OUT_ANC_HEADPHONE)) {
-            return strdup(SND_USE_CASE_DEV_ANC_HEADSET); /* ANC HEADSET RX */
+            if (callMode == AudioSystem::MODE_IN_CALL) {
+                return strdup(SND_USE_CASE_DEV_VOC_ANC_HEADSET); /* Voice ANC HEADSET RX */
+            } else
+                return strdup(SND_USE_CASE_DEV_ANC_HEADSET); /* ANC HEADSET RX */
 #endif
         } else if ((devices & AudioSystem::DEVICE_OUT_BLUETOOTH_SCO) ||
                   (devices & AudioSystem::DEVICE_OUT_BLUETOOTH_SCO_HEADSET) ||
@@ -1338,7 +1353,10 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             return strdup(SND_USE_CASE_DEV_FM_TX); /* FM Tx */
 #endif
         } else if (devices & AudioSystem::DEVICE_OUT_DEFAULT) {
-            return strdup(SND_USE_CASE_DEV_SPEAKER); /* SPEAKER RX */
+            if (callMode == AudioSystem::MODE_IN_CALL) {
+                return strdup(SND_USE_CASE_DEV_VOC_SPEAKER); /* Voice SPEAKER RX */
+            } else
+                return strdup(SND_USE_CASE_DEV_SPEAKER); /* SPEAKER RX */
         } else {
             ALOGD("No valid output device: %u", devices);
         }
@@ -1406,10 +1424,8 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
 #endif
 #ifdef SEPERATED_AUDIO_INPUT
                 if(input_source == AUDIO_SOURCE_VOICE_RECOGNITION) {
-                    ALOGV("getUCMdevice returned the VOICE_RECOGNITION UCM by  input source = %d", input_source);
                     return strdup(SND_USE_CASE_DEV_VOICE_RECOGNITION ); /* VOICE RECOGNITION TX */
                 } else if(input_source == AUDIO_SOURCE_CAMCORDER) {
-                    ALOGV("getUCMdevice returned the Camcorder Tx UCM by  input source = %d", input_source);
                     return strdup(SND_USE_CASE_DEV_CAMCORDER_TX ); /* CAMCORDER TX */
                 }
 #endif
@@ -1424,7 +1440,10 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             return strdup(SND_USE_CASE_DEV_HEADSET); /* HEADSET TX */
 #endif
         } else if (devices & AudioSystem::DEVICE_IN_WIRED_HEADSET) {
-            return strdup(SND_USE_CASE_DEV_HEADSET); /* HEADSET TX */
+            if (callMode == AudioSystem::MODE_IN_CALL) {
+                return strdup(SND_USE_CASE_DEV_VOC_HEADSET); /* Voice HEADSET TX */
+            } else
+                return strdup(SND_USE_CASE_DEV_HEADSET); /* HEADSET TX */
         } else if (devices & AudioSystem::DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
              if (btsco_samplerate == BTSCO_RATE_16KHZ)
                  return strdup(SND_USE_CASE_DEV_BTSCO_WB_TX); /* BTSCO TX*/
@@ -1457,7 +1476,10 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             if (!strncmp(mic_type, "analog", 6)) {
                 return strdup(SND_USE_CASE_DEV_HANDSET); /* HANDSET TX */
             } else {
-                return strdup(SND_USE_CASE_DEV_LINE); /* BUILTIN-MIC TX */
+                if (callMode == AudioSystem::MODE_IN_CALL) {
+                    return strdup(SND_USE_CASE_DEV_VOC_LINE); /* Voice BUILTIN-MIC TX */
+                } else
+                    return strdup(SND_USE_CASE_DEV_LINE); /* BUILTIN-MIC TX */
             }
         } else {
             ALOGD("No valid input device: %u", devices);
