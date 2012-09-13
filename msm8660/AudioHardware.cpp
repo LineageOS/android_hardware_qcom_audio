@@ -4874,7 +4874,7 @@ void  AudioHardware::AudioSessionOutTunnel::eventThreadEntry()
         rc = ioctl(afd, AUDIO_GET_EVENT, &cur_pcmdec_event);
         ALOGD("AudioSessionOutTunnel::event thread:wakes up with retval %d and errno is %d",rc, errno);
 
-        if ( (rc < 0) && (errno == ENODEV ) ) {
+        if ( (rc < 0) && ((errno == ENODEV) || (errno == EBADF) ) ) {
             ALOGV("AudioSessionOutTunnel::event thread: Exit the thread");
             break;
         }
