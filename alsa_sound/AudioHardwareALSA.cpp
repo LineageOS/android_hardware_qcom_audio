@@ -60,6 +60,14 @@ extern "C"
     android_audio_legacy::AudioHardwareInterface *createAudioHardware(void) {
         return android_audio_legacy::AudioHardwareALSA::create();
     }
+#ifdef QCOM_ACDB_ENABLED
+    static int (*acdb_init)();
+    static void (*acdb_deallocate)();
+#endif
+#ifdef QCOM_CSDCLIENT_ENABLED
+    static int (*csd_start_playback)();
+    static int (*csd_stop_playback)();
+#endif
 }         // extern "C"
 
 namespace android_audio_legacy
@@ -73,7 +81,7 @@ AudioHardwareInterface *AudioHardwareALSA::create() {
 
 AudioHardwareALSA::AudioHardwareALSA() :
     mALSADevice(0),mVoipStreamCount(0),mVoipMicMute(false),mVoipBitRate(0)
-    ,mCallState(0)
+    ,mCallState(0),mAcdbHandle(NULL),mCsdHandle(NULL)
 {
     FILE *fp;
     char soundCardInfo[200];
@@ -107,11 +115,32 @@ AudioHardwareALSA::AudioHardwareALSA() :
             mFusion3Platform = false;
 
 #ifdef QCOM_ACDB_ENABLED
-            if ((acdb_loader_init_ACDB()) < 0) {
-                ALOGE("Failed to initialize ACDB");
+            mAcdbHandle = ::dlopen("/system/lib/libacdbloader.so", RTLD_NOW);
+            if (mAcdbHandle == NULL) {
+                ALOGE("AudioHardware: DLOPEN not successful for ACDBLOADER");
+            } else {
+                ALOGD("AudioHardware: DLOPEN successful for ACDBLOADER");
+                acdb_init = (int (*)())::dlsym(mAcdbHandle,"acdb_loader_init_ACDB");
+                if (acdb_init == NULL) {
+                    ALOGE("dlsym:Error:%s Loading acdb_loader_init_ACDB", dlerror());
+                }else {
+                   acdb_init();
+                   acdb_deallocate = (void (*)())::dlsym(mAcdbHandle,"acdb_loader_deallocate_ACDB");
+                }
             }
 #endif
 
+#ifdef QCOM_CSDCLIENT_ENABLED
+             mCsdHandle = ::dlopen("/system/lib/libcsd-client.so", RTLD_NOW);
+             if (mCsdHandle == NULL) {
+                 ALOGE("AudioHardware: DLOPEN not successful for CSD CLIENT");
+             } else {
+                 ALOGD("AudioHardware: DLOPEN successful for CSD CLIENT");
+                 csd_start_playback = (int (*)())::dlsym(mCsdHandle,"csd_client_start_playback");
+                 csd_stop_playback = (int (*)())::dlsym(mCsdHandle,"csd_client_stop_playback");
+             }
+             mALSADevice->setCsdHandle(mCsdHandle);
+#endif
             if((fp = fopen("/proc/asound/cards","r")) == NULL) {
                 ALOGE("Cannot open /proc/asound/cards file to get sound card info");
             } else {
@@ -154,6 +183,12 @@ AudioHardwareALSA::AudioHardwareALSA() :
                 ALOGE("Failed to open ucm instance: %d", errno);
             } else {
                 ALOGI("ucm instance opened: %u", (unsigned)mUcMgr);
+                mUcMgr->acdb_handle = NULL;
+#ifdef QCOM_ACDB_ENABLED
+                if (mAcdbHandle) {
+                    mUcMgr->acdb_handle = static_cast<void*> (mAcdbHandle);
+                }
+#endif
             }
         } else {
             ALOGE("ALSA Module could not be opened!!!");
@@ -180,10 +215,25 @@ AudioHardwareALSA::~AudioHardwareALSA()
         mDeviceList.erase(it);
     }
 #ifdef QCOM_ACDB_ENABLED
-    acdb_loader_deallocate_ACDB();
+     if (acdb_deallocate == NULL) {
+        ALOGE("dlsym: Error:%s Loading acdb_deallocate_ACDB", dlerror());
+     } else {
+        acdb_deallocate();
+     }
+     if (mAcdbHandle) {
+        ::dlclose(mAcdbHandle);
+        mAcdbHandle = NULL;
+     }
 #endif
 #ifdef QCOM_USBAUDIO_ENABLED
     delete mAudioUsbALSA;
+#endif
+
+#ifdef QCOM_CSDCLEINT_ENABLED
+     if (mCsdHandle) {
+        ::dlclose(mCsdHandle);
+        mCsdHandle = NULL;
+     }
 #endif
 }
 
@@ -336,10 +386,18 @@ status_t AudioHardwareALSA::setParameters(const String8& keyValuePairs)
         if (param.get(key, value) == NO_ERROR) {
             if (value == "true") {
                 ALOGV("Enabling Incall Music setting in the setparameter\n");
-                csd_client_start_playback();
+                if (csd_start_playback == NULL) {
+                    ALOGE("dlsym: Error:%s Loading csd_client_start_playback", dlerror());
+                } else {
+                    csd_start_playback();
+                }
             } else {
                 ALOGV("Disabling Incall Music setting in the setparameter\n");
-                csd_client_stop_playback();
+                if (csd_stop_playback == NULL) {
+                    ALOGE("dlsym: Error:%s Loading csd_client_stop_playback", dlerror());
+                } else {
+                    csd_stop_playback();
+                }
             }
         }
     }

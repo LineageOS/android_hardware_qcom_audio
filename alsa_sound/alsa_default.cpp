@@ -24,9 +24,19 @@
 #include <linux/ioctl.h>
 #include "AudioHardwareALSA.h"
 #include <media/AudioRecord.h>
+#include <dlfcn.h>
 #ifdef QCOM_CSDCLIENT_ENABLED
 extern "C" {
 #include "csd_client.h"
+static int (*csd_disable_device)();
+static int (*csd_enable_device)(int, int, uint32_t);
+static int (*csd_volume)(int);
+static int (*csd_mic_mute)(int);
+static int (*csd_wide_voice)(uint8_t);
+static int (*csd_slow_talk)(uint8_t);
+static int (*csd_fens)(uint8_t);
+static int (*csd_start_voice)();
+static int (*csd_stop_voice)();
 }
 #endif
 
@@ -72,6 +82,9 @@ static void     s_setInput(int);
 
 static int input_source;
 #endif
+#ifdef QCOM_CSDCLIENT_ENABLED
+static void     s_set_csd_handle(void*);
+#endif
 
 static char mic_type[25];
 static char curRxUCMDevice[50];
@@ -86,12 +99,14 @@ static uint32_t mDevSettingsFlag = TTY_OFF;
 static int btsco_samplerate = 8000;
 static bool pflag = false;
 static ALSAUseCaseList mUseCaseList;
+static void *csd_handle;
 
 static hw_module_methods_t s_module_methods = {
     open            : s_device_open
 };
 
-extern "C" hw_module_t HAL_MODULE_INFO_SYM = {
+extern "C" {
+hw_module_t HAL_MODULE_INFO_SYM = {
     tag             : HARDWARE_MODULE_TAG,
     version_major   : 1,
     version_minor   : 0,
@@ -102,6 +117,7 @@ extern "C" hw_module_t HAL_MODULE_INFO_SYM = {
     dso             : 0,
     reserved        : {0,},
 };
+}
 
 static int s_device_open(const hw_module_t* module, const char* name,
         hw_device_t** device)
@@ -145,7 +161,9 @@ static int s_device_open(const hw_module_t* module, const char* name,
 #ifdef SEPERATED_AUDIO_INPUT
     dev->setInput = s_setInput;
 #endif
-
+#ifdef QCOM_CSDCLIENT_ENABLED
+    dev->setCsdHandle = s_set_csd_handle;
+#endif
     *device = &dev->common;
 
     property_get("persist.audio.handset.mic",value,"0");
@@ -420,10 +438,14 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
 
 #ifdef QCOM_CSDCLIENT_ENABLED
     if (mode == AudioSystem::MODE_IN_CALL && platform_is_Fusion3() && (inCallDevSwitch == true)) {
-        err = csd_client_disable_device();
-        if (err < 0)
-        {
-            ALOGE("csd_client_disable_device, failed, error %d", err);
+        if (csd_disable_device == NULL) {
+            ALOGE("dlsym:Error:%s Loading csd_client_disable_device", dlerror());
+        } else {
+            err = csd_disable_device();
+            if (err < 0)
+            {
+                ALOGE("csd_client_disable_device, failed, error %d", err);
+            }
         }
     }
 #endif
@@ -537,10 +559,14 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
 
 #ifdef QCOM_CSDCLIENT_ENABLED
         ALOGV("rx_dev_id=%d, tx_dev_id=%d\n", rx_dev_id, tx_dev_id);
-        err = csd_client_enable_device(rx_dev_id, tx_dev_id, mDevSettingsFlag);
-        if (err < 0)
-        {
-            ALOGE("csd_client_disable_device failed, error %d", err);
+        if (csd_enable_device == NULL) {
+            ALOGE("dlsym:Error:%s Loading csd_client_enable_device", dlerror());
+        } else {
+            err = csd_enable_device(rx_dev_id, tx_dev_id, mDevSettingsFlag);
+            if (err < 0)
+            {
+                ALOGE("csd_client_disable_device failed, error %d", err);
+            }
         }
 #endif
     }
@@ -875,10 +901,14 @@ static status_t s_start_voice_call(alsa_handle_t *handle)
 
     if (platform_is_Fusion3()) {
 #ifdef QCOM_CSDCLIENT_ENABLED
-        err = csd_client_start_voice();
-        if (err < 0) {
-            ALOGE("s_start_voice_call: csd_client error %d\n", err);
-            goto Error;
+        if (csd_start_voice == NULL) {
+            ALOGE("dlsym:Error:%s Loading csd_client_start_voice", dlerror());
+        } else {
+            err = csd_start_voice();
+            if (err < 0){
+                ALOGE("s_start_voice_call: csd_client error %d\n", err);
+                goto Error;
+            }
         }
 #endif
     }
@@ -1065,9 +1095,13 @@ static status_t s_close(alsa_handle_t *handle)
              !strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_VOICE)) &&
             platform_is_Fusion3()) {
 #ifdef QCOM_CSDCLIENT_ENABLED
-            err = csd_client_stop_voice();
-            if (err < 0) {
-                ALOGE("s_close: csd_client error %d\n", err);
+            if (csd_stop_voice == NULL) {
+                ALOGE("dlsym:Error:%s Loading csd_client_disable_device", dlerror());
+            } else {
+                err = csd_stop_voice();
+                if (err < 0) {
+                    ALOGE("s_close: csd_client error %d\n", err);
+                }
             }
 #endif
         }
@@ -1476,9 +1510,13 @@ void s_set_voice_volume(int vol)
 
     if (platform_is_Fusion3()) {
 #ifdef QCOM_CSDCLIENT_ENABLED
-        err = csd_client_volume(vol);
-        if (err < 0) {
-            ALOGE("s_set_voice_volume: csd_client error %d", err);
+        if (csd_volume == NULL) {
+            ALOGE("dlsym:Error:%s Loading csd_client_volume", dlerror());
+        } else {
+            err = csd_volume(vol);
+            if (err < 0) {
+                ALOGE("s_set_voice_volume: csd_client error %d", err);
+            }
         }
 #endif
     }
@@ -1513,9 +1551,13 @@ void s_set_mic_mute(int state)
 
     if (platform_is_Fusion3()) {
 #ifdef QCOM_CSDCLIENT_ENABLED
-        err = csd_client_mic_mute(state);
-        if (err < 0) {
-            ALOGE("s_set_mic_mute: csd_client error %d", err);
+        if (csd_mic_mute == NULL) {
+            ALOGE("dlsym:Error:%s Loading csd_mic_mute", dlerror());
+        } else {
+            err=csd_mic_mute(state);
+            if (err < 0) {
+                ALOGE("s_set_mic_mute: csd_client error %d", err);
+            }
         }
 #endif
     }
@@ -1593,9 +1635,13 @@ void s_enable_wide_voice(bool flag)
 
     if (platform_is_Fusion3()) {
 #ifdef QCOM_CSDCLIENT_ENABLED
-        err == csd_client_wide_voice(flag);
-        if (err < 0) {
-            ALOGE("s_enable_wide_voice: csd_client error %d", err);
+        if (csd_wide_voice == NULL) {
+            ALOGE("dlsym:Error:%s Loading csd_wide_voice", dlerror());
+        } else {
+            err = csd_wide_voice(flag);
+            if (err < 0) {
+                ALOGE("enableWideVoice: csd_client_wide_voice error %d", err);
+            }
         }
 #endif
     }
@@ -1626,9 +1672,13 @@ void s_enable_fens(bool flag)
 
     if (platform_is_Fusion3()) {
 #ifdef QCOM_CSDCLIENT_ENABLED
-        err = csd_client_fens(flag);
-        if (err < 0) {
-            ALOGE("s_enable_fens: csd_client error %d", err);
+        if (csd_fens == NULL) {
+            ALOGE("dlsym:Error:%s Loading csd_fens", dlerror());
+        } else {
+            err = csd_fens(flag);
+            if (err < 0) {
+                ALOGE("s_enable_fens: csd_client error %d", err);
+            }
         }
 #endif
     }
@@ -1650,9 +1700,13 @@ void s_enable_slow_talk(bool flag)
 
     if (platform_is_Fusion3()) {
 #ifdef QCOM_CSDCLIENT_ENABLED
-        err = csd_client_slow_talk(flag);
-        if (err < 0) {
-            ALOGE("s_enable_slow_talk: csd_client error %d", err);
+        if (csd_slow_talk == NULL) {
+            ALOGE("dlsym:Error:%s Loading csd_slow_talk", dlerror());
+        } else {
+            err = csd_slow_talk(flag);
+            if (err < 0) {
+                ALOGE("s_enable_slow_talk: csd_client error %d", err);
+            }
         }
 #endif
     }
@@ -1681,4 +1735,23 @@ void s_setInput(int input)
     ALOGD("s_setInput() : input_source = %d",input_source);
 }
 #endif
+
+#ifdef QCOM_CSDCLIENT_ENABLED
+static void  s_set_csd_handle(void* handle)
+{
+    csd_handle = static_cast<void*>(handle);
+    ALOGI("%s csd_handle: %p", __func__, csd_handle);
+
+    csd_disable_device = (int (*)())::dlsym(csd_handle,"csd_client_disable_device");
+    csd_enable_device = (int (*)(int,int,uint32_t))::dlsym(csd_handle,"csd_client_enable_device");
+    csd_start_voice = (int (*)())::dlsym(csd_handle,"csd_client_start_voice");
+    csd_stop_voice = (int (*)())::dlsym(csd_handle,"csd_client_stop_voice");
+    csd_volume = (int (*)(int))::dlsym(csd_handle,"csd_client_volume");
+    csd_mic_mute = (int (*)(int))::dlsym(csd_handle,"csd_client_mic_mute");
+    csd_wide_voice = (int (*)(uint8_t))::dlsym(csd_handle,"csd_client_wide_voice");
+    csd_fens = (int (*)(uint8_t))::dlsym(csd_handle,"csd_client_fens");
+    csd_slow_talk = (int (*)(uint8_t))::dlsym(csd_handle,"csd_client_slow_talk");
+}
+#endif
+
 }

@@ -58,11 +58,14 @@
 #include <sys/time.h>
 #include <sys/poll.h>
 #include <stdint.h>
+#include <dlfcn.h>
 
 #include <linux/ioctl.h>
 #include "msm8960_use_cases.h"
 #if defined(QC_PROP)
-    #include "acdb-loader.h"
+     #include "acdb-loader.h"
+    static void (*acdb_send_audio_cal)(int,int);
+    static void (*acdb_send_voice_cal)(int,int);
 #else
     #define acdb_loader_send_voice_cal(rxacdb_id, txacdb_id) (-EPERM)
     #define acdb_loader_send_audio_cal(acdb_id, capability) (-EPERM)
@@ -635,8 +638,15 @@ int use_case_index)
                     ALOGD("Voice acdb: rx id %d tx id %d",
                           uc_mgr->current_rx_device,
                           uc_mgr->current_tx_device);
-                    acdb_loader_send_voice_cal(uc_mgr->current_rx_device,
-                        uc_mgr->current_tx_device);
+                    if (uc_mgr->acdb_handle) {
+                        acdb_send_voice_cal = dlsym(uc_mgr->acdb_handle,"acdb_loader_send_voice_cal");
+                        if (acdb_send_voice_cal == NULL) {
+                            ALOGE("ucm: dlsym: Error:%s Loading acdb_loader_send_voice_cal", dlerror());
+                        }else {
+                            acdb_send_voice_cal(uc_mgr->current_rx_device,
+                                       uc_mgr->current_tx_device);
+                        }
+                   }
                 } else {
                     ALOGV("Voice acdb: Required acdb already pushed \
                          rx id %d tx id %d", uc_mgr->current_rx_device,
@@ -754,8 +764,15 @@ const char *use_case, int enable, int ctrl_list_type, int uc_index)
                             ctrl_list[uc_index].acdb_id,
                             ctrl_list[uc_index].capability, enable);
 #endif
-                        acdb_loader_send_audio_cal(ctrl_list[uc_index].acdb_id,
-                            ctrl_list[uc_index].capability);
+                        if (uc_mgr->acdb_handle) {
+                            acdb_send_audio_cal = dlsym(uc_mgr->acdb_handle,"acdb_loader_send_audio_cal");
+                            if (acdb_send_audio_cal == NULL) {
+                                ALOGE("ucm:dlsym:Error:%s Loading acdb_loader_send_audio_cal", dlerror());
+                            } else {
+                                acdb_send_audio_cal(ctrl_list[uc_index].acdb_id,
+                                                     ctrl_list[uc_index].capability);
+                            }
+                        }
                     }
                 }
             }

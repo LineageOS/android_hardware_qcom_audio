@@ -29,6 +29,8 @@
 #include <system/audio.h>
 #include <hardware/audio.h>
 #include <utils/threads.h>
+#include <dlfcn.h>
+
 #ifdef QCOM_USBAUDIO_ENABLED
 #include <AudioUsbALSA.h>
 #endif
@@ -209,6 +211,9 @@ struct alsa_device_t {
     void     (*setVoLTEVolume)(int);
 #ifdef SEPERATED_AUDIO_INPUT
     void     (*setInput)(int);
+#endif
+#ifdef QCOM_CSDCLIENT_ENABLED
+    void     (*setCsdHandle)(void*);
 #endif
 };
 
@@ -404,6 +409,11 @@ public:
 private:
     void                resetFramesLost();
 
+#ifdef QCOM_CSDCLIENT_ENABLED
+    int                 start_csd_record(int);
+    int                 stop_csd_record(void);
+#endif
+
     unsigned int        mFramesLost;
     AudioSystem::audio_in_acoustics mAcoustics;
 
@@ -568,6 +578,8 @@ protected:
     int musbPlaybackState;
     int musbRecordingState;
 #endif
+    void *mAcdbHandle;
+    void *mCsdHandle;
 };
 
 // ----------------------------------------------------------------------------

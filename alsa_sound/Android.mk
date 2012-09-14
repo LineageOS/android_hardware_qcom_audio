@@ -36,15 +36,19 @@ LOCAL_STATIC_LIBRARIES := \
     libaudiopolicy_legacy \
 
 LOCAL_SHARED_LIBRARIES := \
-    libacdbloader \
     libcutils \
     libutils \
     libmedia \
     libhardware \
     libc        \
     libpower    \
-    libalsa-intf \
-    libcsd-client
+    libalsa-intf
+
+ifeq ($(TARGET_SIMULATOR),true)
+ LOCAL_LDLIBS += -ldl
+else
+ LOCAL_SHARED_LIBRARIES += libdl
+endif
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-alsa
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audcal
@@ -140,11 +144,15 @@ LOCAL_SRC_FILES:= \
     ALSAControl.cpp
 
 LOCAL_SHARED_LIBRARIES := \
-    libacdbloader \
     libcutils \
     liblog    \
-    libalsa-intf \
-    libcsd-client
+    libalsa-intf
+
+ifeq ($(TARGET_SIMULATOR),true)
+ LOCAL_LDLIBS += -ldl
+else
+ LOCAL_SHARED_LIBRARIES += libdl
+endif
 
 LOCAL_MODULE:= alsa.msm8960
 LOCAL_MODULE_TAGS := optional
