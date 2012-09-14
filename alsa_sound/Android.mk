@@ -103,15 +103,6 @@ LOCAL_C_INCLUDES += hardware/libhardware_legacy/audio
 include $(BUILD_SHARED_LIBRARY)
 endif
 
-# Load audio_policy.conf to system/etc/
-include $(CLEAR_VARS)
-LOCAL_MODULE       := audio_policy.conf
-LOCAL_MODULE_TAGS  := optional
-LOCAL_MODULE_CLASS := ETC
-LOCAL_MODULE_PATH  := $(TARGET_OUT_ETC)/
-LOCAL_SRC_FILES    := audio_policy.conf
-include $(BUILD_PREBUILT)
-
 # This is the ALSA module which behaves closely like the original
 
 include $(CLEAR_VARS)
