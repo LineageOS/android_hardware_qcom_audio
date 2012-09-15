@@ -1,7 +1,9 @@
 /*
  * Copyright (C) 2011 The Android Open Source Project
- * Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2012, The Linux Foundation. All rights reserved.
  * Copyright (c) 2012, The CyanogenMod Project
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -178,9 +180,7 @@ static int out_remove_audio_effect(const struct audio_stream *stream, effect_han
 static int out_get_next_write_timestamp(const struct audio_stream_out *stream,
                                         int64_t *timestamp)
 {
-    const struct qcom_stream_out *out =
-        reinterpret_cast<const struct qcom_stream_out *>(stream);
-    return out->qcom_out->getNextWriteTimestamp(timestamp);
+    return -EINVAL;
 }
 
 /** audio_stream_in implementation **/
@@ -326,14 +326,15 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_OUT_ALL_SCO |
             AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET |
             AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET |
+#ifdef QCOM_ANC_HEADSET_ENABLED
+            AUDIO_DEVICE_OUT_ANC_HEADSET |
+            AUDIO_DEVICE_OUT_ANC_HEADPHONE |
+#endif
 #ifdef QCOM_FM_ENABLED
             AUDIO_DEVICE_OUT_FM |
 #endif
 #ifdef QCOM_FM_TX_ENABLED
             AUDIO_DEVICE_OUT_FM_TX |
-#endif
-#ifdef QCOM_VOIP_ENABLED
-            AUDIO_DEVICE_OUT_DIRECTOUTPUT |
 #endif
             AUDIO_DEVICE_OUT_DEFAULT |
             /* IN */
@@ -345,6 +346,9 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_IN_AUX_DIGITAL |
             AUDIO_DEVICE_IN_BACK_MIC |
             AUDIO_DEVICE_IN_ALL_SCO |
+#ifdef QCOM_ANC_HEADSET_ENABLED
+            AUDIO_DEVICE_IN_ANC_HEADSET |
+#endif
 #ifdef QCOM_FM_ENABLED
             AUDIO_DEVICE_IN_FM_RX |
             AUDIO_DEVICE_IN_FM_RX_A2DP |
@@ -370,7 +374,6 @@ static int adev_set_master_volume(struct audio_hw_device *dev, float volume)
     struct qcom_audio_device *qadev = to_ladev(dev);
     return qadev->hwif->setMasterVolume(volume);
 }
-
 static int adev_get_master_volume(struct audio_hw_device *dev, float *volume) {
 
     struct qcom_audio_device *qadev = to_ladev(dev);
@@ -462,8 +465,7 @@ err_open:
     *stream_out = NULL;
     return ret;
 }
-#endif
-
+#endif /* QCOM_TUNNEL_LPA_ENABLED */
 static int adev_open_output_stream(struct audio_hw_device *dev,
                                    audio_io_handle_t handle,
                                    audio_devices_t devices,
@@ -636,7 +638,6 @@ static int qcom_adev_open(const hw_module_t* module, const char* name,
     qadev->device.init_check = adev_init_check;
     qadev->device.set_voice_volume = adev_set_voice_volume;
     qadev->device.set_master_volume = adev_set_master_volume;
-    qadev->device.get_master_volume = adev_get_master_volume;
 #ifdef QCOM_FM_ENABLED
     qadev->device.set_fm_volume = adev_set_fm_volume;
 #endif
@@ -649,7 +650,7 @@ static int qcom_adev_open(const hw_module_t* module, const char* name,
     qadev->device.open_output_stream = adev_open_output_stream;
 #ifdef QCOM_TUNNEL_LPA_ENABLED
     qadev->device.open_output_session = adev_open_output_session;
-#endif
+#endif /* QCOM_TUNNEL_LPA_ENABLED */
     qadev->device.close_output_stream = adev_close_output_stream;
     qadev->device.open_input_stream = adev_open_input_stream;
     qadev->device.close_input_stream = adev_close_input_stream;
