@@ -267,6 +267,10 @@ ssize_t AudioSessionOutALSA::write(const void *buffer, size_t bytes)
         }
         mReachedEOS = true;
     }
+
+    mFilledQueueMutex.lock();
+    mFilledQueue.push_back(buf);
+    mFilledQueueMutex.unlock();
     return err;
 }
 
