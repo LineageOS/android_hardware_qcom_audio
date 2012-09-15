@@ -716,6 +716,22 @@ status_t AudioPolicyManager::checkAndSetVolume(int stream, int index, audio_io_h
         mpClientInterface->setStreamVolume((AudioSystem::stream_type)stream, volume, output, delayMs);
     }
 
+    if (stream == AudioSystem::VOICE_CALL ||
+        stream == AudioSystem::BLUETOOTH_SCO) {
+        float voiceVolume;
+        // Force voice volume to max for bluetooth SCO as volume is managed by the headset
+        if (stream == AudioSystem::VOICE_CALL) {
+            voiceVolume = (float)index/(float)mStreams[stream].mIndexMax;
+        } else {
+            voiceVolume = 1.0;
+        }
+
+        if (voiceVolume != mLastVoiceVolume && output == mPrimaryOutput) {
+            mpClientInterface->setVoiceVolume(voiceVolume, delayMs);
+            mLastVoiceVolume = voiceVolume;
+        }
+    }
+
     return NO_ERROR;
 }
 
