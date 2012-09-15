@@ -1,7 +1,9 @@
 /*
  * Copyright (C) 2011 The Android Open Source Project
- * Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2012, The Linux Foundation. All rights reserved.
  * Copyright (c) 2012, The CyanogenMod Project
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,6 +129,7 @@ static int ap_init_check(const struct audio_policy *pol)
     const struct qcom_audio_policy *qap = to_cqap(pol);
     return qap->apm->initCheck();
 }
+
 #ifdef QCOM_TUNNEL_LPA_ENABLED
 static audio_io_handle_t ap_get_session(struct audio_policy *pol,
                                        audio_stream_type_t stream,
@@ -145,6 +148,7 @@ static audio_io_handle_t ap_get_session(struct audio_policy *pol,
                                samplingRate,
                                channels);
 }
+
 static void ap_pause_session(struct audio_policy *pol, audio_io_handle_t output,
                           audio_stream_type_t stream)
 {
@@ -188,6 +192,7 @@ static int ap_start_output(struct audio_policy *pol, audio_io_handle_t output,
     return qap->apm->startOutput(output, (AudioSystem::stream_type)stream,
                                  session);
 }
+
 static int ap_stop_output(struct audio_policy *pol, audio_io_handle_t output,
                           audio_stream_type_t stream, int session)
 {
@@ -327,7 +332,7 @@ static int ap_set_effect_enabled(struct audio_policy *pol, int id, bool enabled)
     return qap->apm->setEffectEnabled(id, enabled);
 }
 
-static bool ap_is_stream_active(const struct audio_policy *pol, 
+static bool ap_is_stream_active(const struct audio_policy *pol,
                                 audio_stream_type_t stream,
                                 uint32_t in_past_ms)
 {
