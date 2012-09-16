@@ -906,7 +906,9 @@ status_t AudioPolicyManager::checkAndSetVolume(int stream,
             volume = 0.01 + 0.99 * volume;
             // Force VOICE_CALL to track BLUETOOTH_SCO stream volume when bluetooth audio is
             // enabled
-            if (stream == AudioSystem::BLUETOOTH_SCO) {
+            if (stream == AudioSystem::VOICE_CALL) {
+                voiceVolume = (float)index/(float)mStreams[stream].mIndexMax;
+            } else if (stream == AudioSystem::BLUETOOTH_SCO) {
                 mpClientInterface->setStreamVolume(AudioSystem::VOICE_CALL, volume, output, delayMs);
             }
         }
