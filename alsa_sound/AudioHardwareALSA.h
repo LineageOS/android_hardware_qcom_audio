@@ -93,6 +93,7 @@ class AudioHardwareALSA;
 #define FENS_KEY            "fens_enable"
 #define ST_KEY              "st_enable"
 #define INCALLMUSIC_KEY     "incall_music_enabled"
+#define VOICE_PATH_ACTIVE   "voice_path_active"
 
 #define ANC_FLAG        0x00000001
 #define DMIC_FLAG       0x00000002
@@ -807,6 +808,7 @@ protected:
     int musbPlaybackState;
     int musbRecordingState;
 #endif
+    bool mIsVoicePathActive;
 
     //A2DP variables
     audio_stream_out   *mA2dpStream;

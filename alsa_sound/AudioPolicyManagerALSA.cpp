@@ -35,6 +35,8 @@
 #include <media/mediarecorder.h>
 #include <stdio.h>
 
+#define MAX_POLL_VOICE_SETUP 20
+
 namespace android_audio_legacy {
 
 // ----------------------------------------------------------------------------
@@ -303,6 +305,28 @@ void AudioPolicyManager::setPhoneState(int state)
     // if entering in call state, handle special case of active streams
     // pertaining to sonification strategy see handleIncallSonification()
     if (isStateInCall(state)) {
+
+        if(!isStateInCall(oldState)) {
+            audio_io_handle_t activeInput = getActiveInput();
+
+            /* Block the policy manager until voice path is setup. This is
+             * done to prevent telephony from signaling call connect before the
+             * entire voice path is established.
+             */
+            for (int i = 0; i < MAX_POLL_VOICE_SETUP; i++) {
+                usleep(100000);
+                String8 voiceActive = mpClientInterface->getParameters(activeInput,
+                                             String8("voice_path_active"));
+
+                if (!voiceActive.compare(String8("voice_path_active=true"))) {
+                    ALOGV("setPhoneState: Voice path is active");
+                    break;
+                } else {
+                    ALOGV("setPhoneState: voice path is not active");
+                }
+            }
+        }
+
         ALOGV("setPhoneState() in call state management: new state is %d", state);
         // unmute the ringing tone after a sufficient delay if it was muted before
         // setting output device above
