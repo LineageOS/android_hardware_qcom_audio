@@ -176,9 +176,7 @@ static int s_device_open(const hw_module_t* module, const char* name,
     }
     strlcpy(curRxUCMDevice, "None", sizeof(curRxUCMDevice));
     strlcpy(curTxUCMDevice, "None", sizeof(curTxUCMDevice));
-#if LOCAL_LOGD
-    ALOGD("ALSA module opened");
-#endif
+    ALOGV("ALSA module opened");
 
     return 0;
 }
@@ -225,9 +223,7 @@ int deviceName(alsa_handle_t *handle, unsigned flags, char **value)
     }
     strlcat(ident, handle->useCase, sizeof(ident));
     ret = snd_use_case_get(handle->ucMgr, ident, (const char **)value);
-#if LOCAL_LOGD
     ALOGD("Device value returned is %s", (*value));
-#endif
     return ret;
 }
 
@@ -248,10 +244,8 @@ status_t setHardwareParams(alsa_handle_t *handle)
     }
 
     reqBuffSize = handle->bufferSize;
-#if LOCAL_LOGD
     ALOGD("setHardwareParams: reqBuffSize %d channels %d sampleRate %d",
          (int) reqBuffSize, handle->channels, handle->sampleRate);
-#endif
 
 #ifdef QCOM_SSR_ENABLED
     if (channels == 6) {
@@ -300,11 +294,9 @@ status_t setHardwareParams(alsa_handle_t *handle)
     handle->handle->buffer_size = pcm_buffer_size(params);
     handle->handle->period_size = pcm_period_size(params);
     handle->handle->period_cnt = handle->handle->buffer_size/handle->handle->period_size;
-#if LOCAL_LOGD
     ALOGD("setHardwareParams: buffer_size %d, period_size %d, period_cnt %d",
         handle->handle->buffer_size, handle->handle->period_size,
         handle->handle->period_cnt);
-#endif
     handle->handle->rate = handle->sampleRate;
     handle->handle->channels = handle->channels;
     handle->periodSize = handle->handle->period_size;
@@ -375,7 +367,7 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
     char *rxDevice, *txDevice, ident[70], *use_case = NULL;
     int err = 0, index, mods_size;
     int rx_dev_id, tx_dev_id;
-    ALOGV("%s: device %d", __FUNCTION__, devices);
+    ALOGD("%s: device %d mode:%d", __FUNCTION__, devices, mode);
 
     if ((mode == AudioSystem::MODE_IN_CALL)  || (mode == AudioSystem::MODE_IN_COMMUNICATION)) {
         if ((devices & AudioSystem::DEVICE_OUT_WIRED_HEADSET) ||
@@ -506,7 +498,7 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
             snd_use_case_set(handle->ucMgr, "_disdev", curTxUCMDevice);
        }
     }
-    ALOGV("%s,rxDev:%s, txDev:%s, curRxDev:%s, curTxDev:%s\n", __FUNCTION__, rxDevice, txDevice, curRxUCMDevice, curTxUCMDevice);
+    ALOGD("%s,rxDev:%s, txDev:%s, curRxDev:%s, curTxDev:%s\n", __FUNCTION__, rxDevice, txDevice, curRxUCMDevice, curTxUCMDevice);
 
     if (rxDevice != NULL) {
         snd_use_case_set(handle->ucMgr, "_enadev", rxDevice);
@@ -535,9 +527,7 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
         free(use_case);
         use_case = NULL;
     }
-#if LOCAL_LOGD
     ALOGD("switchDevice: curTxUCMDevivce %s curRxDevDevice %s", curTxUCMDevice, curRxUCMDevice);
-#endif
 
     if (mode == AudioSystem::MODE_IN_CALL && platform_is_Fusion3() && (inCallDevSwitch == true)) {
         /* get tx acdb id */
@@ -599,9 +589,7 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
 
 static status_t s_init(alsa_device_t *module, ALSAHandleList &list)
 {
-#if LOCAL_LOGD
-    ALOGD("s_init: Initializing devices for ALSA module");
-#endif
+    ALOGV("s_init: Initializing devices for ALSA module");
 
     list.clear();
 
@@ -617,17 +605,13 @@ static status_t s_open(alsa_handle_t *handle)
     /* No need to call s_close for LPA as pcm device open and close is handled by LPAPlayer in stagefright */
     if((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) || (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_LPA))
     ||(!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_TUNNEL)) || (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_TUNNEL))) {
-#if LOCAL_LOGD
-        ALOGD("s_open: Opening LPA /Tunnel playback");
-#endif
+        ALOGV("s_open: Opening LPA /Tunnel playback");
         return NO_ERROR;
     }
 
     s_close(handle);
 
-#if LOCAL_LOGD
-    ALOGD("s_open: handle %p", handle);
-#endif
+    ALOGV("s_open: handle %p", handle);
 
     // ASoC multicomponent requires a valid path (frontend/backend) for
     // the device to be opened
@@ -807,9 +791,7 @@ static status_t s_start_voice_call(alsa_handle_t *handle)
     unsigned flags = 0;
     int err = NO_ERROR;
 
-#if LOCAL_LOGD
-    ALOGD("s_start_voice_call: handle %p", handle);
-#endif
+    ALOGV("s_start_voice_call: handle %p", handle);
 
     // ASoC multicomponent requires a valid path (frontend/backend) for
     // the device to be opened
@@ -929,7 +911,7 @@ static status_t s_start_fm(alsa_handle_t *handle)
     unsigned flags = 0;
     int err = NO_ERROR;
 
-    ALOGD("s_start_fm: handle %p", handle);
+    ALOGV("s_start_fm: handle %p", handle);
 
     // ASoC multicomponent requires a valid path (frontend/backend) for
     // the device to be opened
@@ -1070,9 +1052,7 @@ static status_t s_close(alsa_handle_t *handle)
      struct pcm *h = handle->rxHandle;
 
     handle->rxHandle = 0;
-#if LOCAL_LOGD
-    ALOGD("s_close: handle %p h %p", handle, h);
-#endif
+    ALOGV("s_close: handle %p h %p", handle, h);
     if (h) {
         ALOGV("s_close rxHandle\n");
         err = pcm_close(h);
@@ -1085,7 +1065,7 @@ static status_t s_close(alsa_handle_t *handle)
     handle->handle = 0;
 
     if (h) {
-          ALOGV("s_close handle h %p\n", h);
+        ALOGV("s_close handle h %p\n", h);
         err = pcm_close(h);
         if(err != NO_ERROR) {
             ALOGE("s_close: pcm_close failed for handle with err %d", err);
@@ -1129,9 +1109,7 @@ static status_t s_standby(alsa_handle_t *handle)
     status_t err = NO_ERROR;
     struct pcm *h = handle->rxHandle;
     handle->rxHandle = 0;
-#if LOCAL_LOGD
-    ALOGD("s_standby: handle %p h %p", handle, h);
-#endif
+    ALOGV("s_standby: handle %p h %p", handle, h);
     if (h) {
         ALOGD("s_standby  rxHandle\n");
         err = pcm_close(h);
@@ -1144,9 +1122,7 @@ static status_t s_standby(alsa_handle_t *handle)
     handle->handle = 0;
 
     if (h) {
-#if LOCAL_LOGD
-          ALOGD("s_standby handle h %p\n", h);
-#endif
+          ALOGV("s_standby handle h %p\n", h);
         err = pcm_close(h);
         if(err != NO_ERROR) {
             ALOGE("s_standby: pcm_close failed for handle with err %d", err);
@@ -1166,9 +1142,7 @@ static status_t s_route(alsa_handle_t *handle, uint32_t devices, int mode)
 {
     status_t status = NO_ERROR;
 
-#if LOCAL_LOGD
     ALOGD("s_route: devices 0x%x in mode %d", devices, mode);
-#endif
     callMode = mode;
     switchDevice(handle, devices, mode);
     return status;
@@ -1264,20 +1238,14 @@ static void disableDevice(alsa_handle_t *handle)
                strlen(SND_USE_CASE_VERB_INACTIVE)))
             usecase_type |= getUseCaseType(useCase);
         mods_size = snd_use_case_get_list(handle->ucMgr, "_enamods", &mods_list);
-#if LOCAL_LOGD
-        ALOGD("Number of modifiers %d\n", mods_size);
-#endif
+        ALOGV("Number of modifiers %d\n", mods_size);
         if (mods_size) {
             for(i = 0; i < mods_size; i++) {
-#if LOCAL_LOGD
-                ALOGD("index %d modifier %s\n", i, mods_list[i]);
-#endif
+                ALOGV("index %d modifier %s\n", i, mods_list[i]);
                 usecase_type |= getUseCaseType(mods_list[i]);
             }
         }
-#if LOCAL_LOGD
-        ALOGD("usecase_type is %d\n", usecase_type);
-#endif
+        ALOGV("usecase_type is %d\n", usecase_type);
         if (!(usecase_type & USECASE_TYPE_TX) && (strncmp(curTxUCMDevice, "None", 4)))
             snd_use_case_set(handle->ucMgr, "_disdev", curTxUCMDevice);
         if (!(usecase_type & USECASE_TYPE_RX) && (strncmp(curRxUCMDevice, "None", 4)))
@@ -1502,9 +1470,7 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
 void s_set_voice_volume(int vol)
 {
     int err = 0;
-#if LOCAL_LOGD
-    ALOGD("s_set_voice_volume: volume %d", vol);
-#endif
+    ALOGV("s_set_voice_volume: volume %d", vol);
     ALSAControl control("/dev/snd/controlC0");
     control.set("Voice Rx Volume", vol, 0);
 
@@ -1524,9 +1490,7 @@ void s_set_voice_volume(int vol)
 
 void s_set_volte_volume(int vol)
 {
-#if LOCAL_LOGD
-    ALOGD("s_set_volte_volume: volume %d", vol);
-#endif
+    ALOGV("s_set_volte_volume: volume %d", vol);
     ALSAControl control("/dev/snd/controlC0");
     control.set("VoLTE Rx Volume", vol, 0);
 }
@@ -1534,18 +1498,14 @@ void s_set_volte_volume(int vol)
 
 void s_set_voip_volume(int vol)
 {
-#if LOCAL_LOGD
-    ALOGD("s_set_voip_volume: volume %d", vol);
-#endif
+    ALOGV("s_set_voip_volume: volume %d", vol);
     ALSAControl control("/dev/snd/controlC0");
     control.set("Voip Rx Volume", vol, 0);
 }
 void s_set_mic_mute(int state)
 {
     int err = 0;
-#if LOCAL_LOGD
-    ALOGD("s_set_mic_mute: state %d", state);
-#endif
+    ALOGV("s_set_mic_mute: state %d", state);
     ALSAControl control("/dev/snd/controlC0");
     control.set("Voice Tx Mute", state, 0);
 
@@ -1564,27 +1524,21 @@ void s_set_mic_mute(int state)
 }
 void s_set_volte_mic_mute(int state)
 {
-#if LOCAL_LOGD
-    ALOGD("s_set_volte_mic_mute: state %d", state);
-#endif
+    ALOGV("s_set_volte_mic_mute: state %d", state);
     ALSAControl control("/dev/snd/controlC0");
     control.set("VoLTE Tx Mute", state, 0);
 }
 
 void s_set_voip_mic_mute(int state)
 {
-#if LOCAL_LOGD
-    ALOGD("s_set_voip_mic_mute: state %d", state);
-#endif
+    ALOGV("s_set_voip_mic_mute: state %d", state);
     ALSAControl control("/dev/snd/controlC0");
     control.set("Voip Tx Mute", state, 0);
 }
 
 void s_set_voip_config(int mode, int rate)
 {
-#if LOCAL_LOGD
-    ALOGD("s_set_voip_config: mode %d,rate %d", mode, rate);
-#endif
+    ALOGV("s_set_voip_config: mode %d,rate %d", mode, rate);
     ALSAControl control("/dev/snd/controlC0");
     char** setValues;
     setValues = (char**)malloc(2*sizeof(char*));
@@ -1623,9 +1577,7 @@ void s_enable_wide_voice(bool flag)
 {
     int err = 0;
 
-#if LOCAL_LOGD
-    ALOGD("s_enable_wide_voice: flag %d", flag);
-#endif
+    ALOGV("s_enable_wide_voice: flag %d", flag);
     ALSAControl control("/dev/snd/controlC0");
     if(flag == true) {
         control.set("Widevoice Enable", 1, 0);
@@ -1649,9 +1601,7 @@ void s_enable_wide_voice(bool flag)
 
 void s_set_voc_rec_mode(uint8_t mode)
 {
-#if LOCAL_LOGD
-    ALOGD("s_set_voc_rec_mode: mode %d", mode);
-#endif
+    ALOGV("s_set_voc_rec_mode: mode %d", mode);
     ALSAControl control("/dev/snd/controlC0");
     control.set("Incall Rec Mode", mode, 0);
 }
@@ -1660,9 +1610,7 @@ void s_enable_fens(bool flag)
 {
     int err = 0;
 
-#if LOCAL_LOGD
-    ALOGD("s_enable_fens: flag %d", flag);
-#endif
+    ALOGV("s_enable_fens: flag %d", flag);
     ALSAControl control("/dev/snd/controlC0");
     if(flag == true) {
         control.set("FENS Enable", 1, 0);
@@ -1688,9 +1636,7 @@ void s_enable_slow_talk(bool flag)
 {
     int err = 0;
 
-#if LOCAL_LOGD
-    ALOGD("s_enable_slow_talk: flag %d", flag);
-#endif
+    ALOGV("s_enable_slow_talk: flag %d", flag);
     ALSAControl control("/dev/snd/controlC0");
     if(flag == true) {
         control.set("Slowtalk Enable", 1, 0);

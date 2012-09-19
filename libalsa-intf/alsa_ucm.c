@@ -198,7 +198,7 @@ int snd_use_case_get_list(snd_use_case_mgr_t *uc_mgr,
         list_size =
             snd_ucm_get_size_of_list(uc_mgr->card_ctxt_ptr->dev_list_head);
         uc_mgr->device_list_count = list_size;
-	if (list_size > 0) {
+    if (list_size > 0) {
             uc_mgr->current_device_list =
                 (char **)malloc(sizeof(char *)*list_size);
             if (uc_mgr->current_device_list == NULL) {
@@ -228,7 +228,7 @@ int snd_use_case_get_list(snd_use_case_mgr_t *uc_mgr,
         list_size =
             snd_ucm_get_size_of_list(uc_mgr->card_ctxt_ptr->mod_list_head);
         uc_mgr->modifier_list_count = list_size;
-	if (list_size > 0) {
+    if (list_size > 0) {
             uc_mgr->current_modifier_list =
                 (char **)malloc(sizeof(char *) * list_size);
             if (uc_mgr->current_modifier_list == NULL) {
@@ -753,17 +753,13 @@ const char *use_case, int enable, int ctrl_list_type, int uc_index)
             ALOGE("Control device not initialized");
             ret = -ENODEV;
         } else {
-#if LOCAL_LOGD
             ALOGD("Set mixer controls for %s enable %d", use_case, enable);
-#endif
             if (ctrl_list[uc_index].acdb_id && ctrl_list[uc_index].capability) {
                 if (enable) {
                     if (snd_use_case_apply_voice_acdb(uc_mgr, uc_index)) {
-#if LOCAL_LOGD
-                        ALOGD("acdb_id %d cap %d enable %d",
+                        ALOGV("acdb_id %d cap %d enable %d",
                             ctrl_list[uc_index].acdb_id,
                             ctrl_list[uc_index].capability, enable);
-#endif
                         if (uc_mgr->acdb_handle) {
                             acdb_send_audio_cal = dlsym(uc_mgr->acdb_handle,"acdb_loader_send_audio_cal");
                             if (acdb_send_audio_cal == NULL) {
@@ -792,11 +788,9 @@ const char *use_case, int enable, int ctrl_list_type, int uc_index)
                           mixer_list[index].control_name, 0);
                 if (ctl) {
                     if (mixer_list[index].type == TYPE_INT) {
-#if LOCAL_LOGD
-                        ALOGD("Setting mixer control: %s, value: %d",
+                        ALOGV("Setting mixer control: %s, value: %d",
                              mixer_list[index].control_name,
                              mixer_list[index].value);
-#endif
                         ret = mixer_ctl_set(ctl, mixer_list[index].value);
                     } else if (mixer_list[index].type == TYPE_MULTI_VAL) {
                         ALOGD("Setting multi value: %s",
@@ -807,11 +801,9 @@ const char *use_case, int enable, int ctrl_list_type, int uc_index)
                             ALOGE("Failed to set multi value control %s\n",
                                 mixer_list[index].control_name);
                     } else {
-#if LOCAL_LOGD
-                        ALOGD("Setting mixer control: %s, value: %s",
+                        ALOGV("Setting mixer control: %s, value: %s",
                             mixer_list[index].control_name,
                             mixer_list[index].string);
-#endif
                         ret = mixer_ctl_select(ctl, mixer_list[index].string);
                     }
                     if ((ret != 0) && enable) {
@@ -1037,7 +1029,7 @@ const char *ident, const char *device, int enable, int ctrl_list_type)
         }
         strlcpy(use_case, ident, sizeof(use_case));
         strlcat(use_case, device, sizeof(use_case));
-	ALOGV("Applying mixer controls for use case: %s", use_case);
+    ALOGV("Applying mixer controls for use case: %s", use_case);
         if ((uc_index = get_use_case_index(uc_mgr, use_case, ctrl_list_type)) < 0) {
             ALOGV("No valid use case found: %s", use_case );
             uc_index = get_use_case_index(uc_mgr, ident, ctrl_list_type);
@@ -1343,10 +1335,8 @@ int snd_use_case_set(snd_use_case_mgr_t *uc_mgr,
         return -EINVAL;
     }
 
-#if LOCAL_LOGD
     ALOGD("snd_use_case_set(): uc_mgr %p identifier %s value %s", uc_mgr,
          identifier, value);
-#endif
     strlcpy(ident, identifier, sizeof(ident));
     if(!(ident1 = strtok_r(ident, "/", &temp_ptr))) {
         ALOGV("No multiple identifiers found in identifier value");
@@ -1909,7 +1899,7 @@ int snd_use_case_mgr_open(snd_use_case_mgr_t **uc_mgr, const char *card_name)
                 SND_USE_CASE_VERB_INACTIVE, MAX_STR_LEN);
         /* Reset all mixer controls if any applied
          * previously for the same card */
-	snd_use_case_mgr_reset(uc_mgr_ptr);
+    snd_use_case_mgr_reset(uc_mgr_ptr);
         uc_mgr_ptr->card_ctxt_ptr->current_verb_index = -1;
         /* Parse config files and update mixer controls */
         ret = snd_ucm_parse(&uc_mgr_ptr);
@@ -2007,7 +1997,7 @@ int snd_use_case_mgr_reset(snd_use_case_mgr_t *uc_mgr)
                 ident_value);
             ret = set_controls_of_usecase_for_all_devices(uc_mgr,
                       ident_value, 0, CTRL_LIST_MODIFIER);
-	    if (ret != 0)
+        if (ret != 0)
                 ALOGE("Failed to disable mixer controls for %s", ident_value);
             free(ident_value);
         }
@@ -2043,10 +2033,10 @@ int snd_use_case_mgr_reset(snd_use_case_mgr_t *uc_mgr)
                 ident_value);
             ret = set_controls_of_device_for_all_usecases(uc_mgr,
                       ident_value, 0);
-	    if (ret != 0)
+        if (ret != 0)
                 ALOGE("Failed to disable or no mixer controls set for %s",
                     ident_value);
-	    free(ident_value);
+        free(ident_value);
         }
     }
     /* Clear the enabled devices list */

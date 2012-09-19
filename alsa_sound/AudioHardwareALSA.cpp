@@ -201,9 +201,7 @@ AudioHardwareALSA::AudioHardwareALSA() :
 AudioHardwareALSA::~AudioHardwareALSA()
 {
     if (mUcMgr != NULL) {
-#if LOCAL_LOGD
-        ALOGD("closing ucm instance: %u", (unsigned)mUcMgr);
-#endif
+        ALOGV("closing ucm instance: %u", (unsigned)mUcMgr);
         snd_use_case_mgr_close(mUcMgr);
     }
     if (mALSADevice) {
@@ -295,10 +293,8 @@ status_t  AudioHardwareALSA::setFmVolume(float value)
     }
     vol  = lrint((value * 0x2000) + 0.5);
 
-#if LOCAL_LOGD
-    ALOGD("setFmVolume(%f)\n", value);
-    ALOGD("Setting FM volume to %d (available range is 0 to 0x2000)\n", vol);
-#endif
+    ALOGV("setFmVolume(%f)\n", value);
+    ALOGV("Setting FM volume to %d (available range is 0 to 0x2000)\n", vol);
 
     mALSADevice->setFmVolume(vol);
 
@@ -337,9 +333,7 @@ status_t AudioHardwareALSA::setParameters(const String8& keyValuePairs)
     int device;
     int btRate;
     int state;
-#if LOCAL_LOGD
-    ALOGD("setParameters() %s", keyValuePairs.string());
-#endif
+    ALOGV("setParameters() %s", keyValuePairs.string());
 
     key = String8(TTY_MODE_KEY);
     if (param.get(key, value) == NO_ERROR) {
@@ -853,7 +847,7 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
       snd_use_case_get(mUcMgr, "_verb", (const char **)&use_case);
 
       if (flag & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
-	  ALOGD("openOutputStream: DeepBuffer Output");
+      ALOGD("openOutputStream: DeepBuffer Output");
           alsa_handle.isDeepbufferOutput = true;
           if ((use_case == NULL) || (!strcmp(use_case, SND_USE_CASE_VERB_INACTIVE))) {
                strlcpy(alsa_handle.useCase, SND_USE_CASE_VERB_HIFI, sizeof(alsa_handle.useCase));
@@ -861,7 +855,7 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
                strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_PLAY_MUSIC, sizeof(alsa_handle.useCase));
           }
       } else {
-	  ALOGD("openOutputStream: Lowlatency Output");
+      ALOGD("openOutputStream: Lowlatency Output");
           alsa_handle.bufferSize = PLAYBACK_LOW_LATENCY_BUFFER_SIZE;
           alsa_handle.latency = PLAYBACK_LOW_LATENCY;
           if ((use_case == NULL) || (!strcmp(use_case, SND_USE_CASE_VERB_INACTIVE))) {
@@ -1209,8 +1203,8 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
                 strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_CAPTURE_A2DP_FM, sizeof(alsa_handle.useCase));
 #endif
             } else {
-		char value[128];
-		property_get("persist.audio.lowlatency.rec",value,"0");
+        char value[128];
+        property_get("persist.audio.lowlatency.rec",value,"0");
                 if (!strcmp("true", value)) {
                     strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_CAPTURE_LOWLATENCY_MUSIC, sizeof(alsa_handle.useCase));
                 } else {
