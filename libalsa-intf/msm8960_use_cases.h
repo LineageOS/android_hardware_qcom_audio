@@ -122,6 +122,7 @@ typedef struct card_mctrl {
 /* identifier node structure for identifier list*/
 struct snd_ucm_ident_node {
     int active;
+    int capability;
     char ident[MAX_STR_LEN];
     struct snd_ucm_ident_node *next;
 };
@@ -274,8 +275,9 @@ static int snd_ucm_get_size_of_list(struct snd_ucm_ident_node *head);
 static int snd_ucm_del_ident_from_list(struct snd_ucm_ident_node **head, const char *value);
 static int snd_ucm_free_list(struct snd_ucm_ident_node **head);
 static void snd_ucm_print_list(struct snd_ucm_ident_node *head);
-static void snd_ucm_set_status_at_index(struct snd_ucm_ident_node *head, const char *ident, int status);
+static void snd_ucm_set_status_at_index(struct snd_ucm_ident_node *head, const char *ident, int status, int capability);
 static int snd_ucm_get_status_at_index(struct snd_ucm_ident_node *head, const char *ident);
+struct snd_ucm_ident_node *snd_ucm_get_device_node(struct snd_ucm_ident_node *head, int index);
 static int snd_ucm_parse_verb(snd_use_case_mgr_t **uc_mgr, const char *file_name, int index);
 static int get_verb_count(const char *nxt_str);
 int snd_use_case_mgr_wait_for_parsing(snd_use_case_mgr_t *uc_mgr);
