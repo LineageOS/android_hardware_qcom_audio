@@ -27,7 +27,6 @@
 #include <dlfcn.h>
 #ifdef QCOM_CSDCLIENT_ENABLED
 extern "C" {
-#include "csd_client.h"
 static int (*csd_disable_device)();
 static int (*csd_enable_device)(int, int, uint32_t);
 static int (*csd_volume)(int);

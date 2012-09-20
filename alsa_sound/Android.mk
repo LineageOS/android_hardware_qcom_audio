@@ -51,10 +51,7 @@ else
 endif
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-alsa
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audcal
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-acdb-util
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/libalsa-intf
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-qmi/csd-client
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/surround_sound/
 LOCAL_C_INCLUDES += hardware/libhardware/include
 LOCAL_C_INCLUDES += hardware/libhardware_legacy/include
@@ -127,8 +124,6 @@ ifneq ($(ALSA_DEFAULT_SAMPLE_RATE),)
 endif
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/libalsa-intf
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-qmi/csd-client
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-acdb-util
 
 LOCAL_SRC_FILES:= \
     alsa_default.cpp \

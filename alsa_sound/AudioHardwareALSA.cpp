@@ -43,15 +43,6 @@
 #include "AudioUsbALSA.h"
 #endif
 
-extern "C" {
-#ifdef QCOM_CSDCLIENT_ENABLED
-#include "csd_client.h"
-#endif
-#ifdef QCOM_ACDB_ENABLED
-#include "acdb-loader.h"
-#endif
-}
-
 extern "C"
 {
     //

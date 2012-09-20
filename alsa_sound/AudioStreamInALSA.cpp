@@ -38,7 +38,6 @@
 
 extern "C" {
 #ifdef QCOM_CSDCLIENT_ENABLED
-#include "csd_client.h"
 static int (*csd_start_record)(int);
 static int (*csd_stop_record)(void);
 #endif
