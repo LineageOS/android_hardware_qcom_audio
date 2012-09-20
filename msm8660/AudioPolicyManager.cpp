@@ -606,6 +606,36 @@ status_t AudioPolicyManager::stopOutput(audio_io_handle_t output, AudioSystem::s
     }
 }
 
+status_t AudioPolicyManager::stopInput(audio_io_handle_t input)
+{
+    ALOGV("stopInput() input %d", input);
+    uint32_t newDevice = NULL;
+    ssize_t index = mInputs.indexOfKey(input);
+    if (index < 0) {
+        ALOGW("stopInput() unknow input %d", input);
+        return BAD_VALUE;
+    }
+    AudioInputDescriptor *inputDesc = mInputs.valueAt(index);
+
+    if (inputDesc->mRefCount == 0) {
+        ALOGW("stopInput() input %d already stopped", input);
+        return INVALID_OPERATION;
+    } else {
+        AudioParameter param = AudioParameter();
+        param.addInt(String8(AudioParameter::keyRouting), 0);
+        ALOGV("stopInput string to setParam %s\n",  param.toString().string());
+        mpClientInterface->setParameters(input, param.toString());
+        inputDesc->mRefCount = 0;
+
+        newDevice = AudioPolicyManagerBase::getNewDevice(mPrimaryOutput, false);
+        param.addInt(String8(AudioParameter::keyRouting), (int)newDevice);
+        mpClientInterface->setParameters(mPrimaryOutput, param.toString());
+        return NO_ERROR;
+    }
+    return NO_ERROR;
+}
+
+
 // ----------------------------------------------------------------------------
 // AudioPolicyManager
 // ----------------------------------------------------------------------------
