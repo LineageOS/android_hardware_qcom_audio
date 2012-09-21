@@ -1112,42 +1112,7 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
         ALOGD("openInput: After Get alsahandle");
         if (status) *status = err;
         return in;
-      } else
-      {
-        for(ALSAHandleList::iterator itDev = mDeviceList.begin();
-              itDev != mDeviceList.end(); ++itDev)
-        {
-            if((0 == strncmp(itDev->useCase, SND_USE_CASE_VERB_HIFI_REC, MAX_UC_LEN))
-              ||(0 == strncmp(itDev->useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC, MAX_UC_LEN))
-              ||(0 == strncmp(itDev->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_REC, MAX_UC_LEN))
-              ||(0 == strncmp(itDev->useCase, SND_USE_CASE_MOD_CAPTURE_LOWLATENCY_MUSIC, MAX_UC_LEN))
-              ||(0 == strncmp(itDev->useCase, SND_USE_CASE_MOD_CAPTURE_FM, MAX_UC_LEN))
-#ifdef QCOM_FM_ENABLED
-              ||(0 == strncmp(itDev->useCase, SND_USE_CASE_VERB_FM_REC, MAX_UC_LEN))
-#endif
-              )
-            {
-#ifdef QCOM_FM_ENABLED
-                if(!(devices == AudioSystem::DEVICE_IN_FM_RX_A2DP)){
-                    ALOGD("Input stream already exists, new stream not permitted: useCase:%s, devices:0x%x, module:%p",
-                        itDev->useCase, itDev->devices, itDev->module);
-                    return in;
-                }
-#endif
-            }
-#ifdef QCOM_FM_ENABLED
-        else if ((0 == strncmp(itDev->useCase, SND_USE_CASE_VERB_FM_A2DP_REC, MAX_UC_LEN))
-                ||(0 == strncmp(itDev->useCase, SND_USE_CASE_MOD_CAPTURE_A2DP_FM, MAX_UC_LEN)))
-             {
-                 if((devices == AudioSystem::DEVICE_IN_FM_RX_A2DP)){
-                     ALOGD("Input stream already exists, new stream not permitted: useCase:%s, devices:0x%x, module:%p",
-                         itDev->useCase, itDev->devices, itDev->module);
-                     return in;
-                 }
-             }
-#endif
-        }
-
+      } else {
         alsa_handle_t alsa_handle;
         unsigned long bufferSize = DEFAULT_IN_BUFFER_SIZE;
 
