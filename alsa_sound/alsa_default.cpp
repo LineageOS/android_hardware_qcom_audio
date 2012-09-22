@@ -376,10 +376,12 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
         } else if (devices & AudioSystem::DEVICE_OUT_WIRED_HEADPHONE) {
             devices = devices | (AudioSystem::DEVICE_OUT_WIRED_HEADPHONE |
                       AudioSystem::DEVICE_IN_BUILTIN_MIC);
-        } else if ((devices & AudioSystem::DEVICE_OUT_EARPIECE) ||
-                  (devices & AudioSystem::DEVICE_IN_BUILTIN_MIC)) {
-            devices = devices | (AudioSystem::DEVICE_IN_BUILTIN_MIC |
-                      AudioSystem::DEVICE_OUT_EARPIECE);
+        } else if (devices & AudioSystem::DEVICE_IN_BUILTIN_MIC) {
+            if (mode == AudioSystem::MODE_IN_CALL) {
+                devices |= AudioSystem::DEVICE_OUT_EARPIECE;
+            }
+        } else if (devices & AudioSystem::DEVICE_OUT_EARPIECE) {
+            devices = devices | AudioSystem::DEVICE_IN_BUILTIN_MIC;
         } else if (devices & AudioSystem::DEVICE_OUT_SPEAKER) {
             devices = devices | (AudioSystem::DEVICE_IN_BACK_MIC |
                        AudioSystem::DEVICE_OUT_SPEAKER);
@@ -423,12 +425,14 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
 
     if ((rxDevice != NULL) && (txDevice != NULL)) {
         if (((strncmp(rxDevice, curRxUCMDevice, MAX_STR_LEN)) ||
-             (strncmp(txDevice, curTxUCMDevice, MAX_STR_LEN))) && (mode == AudioSystem::MODE_IN_CALL))
+            (strncmp(txDevice, curTxUCMDevice, MAX_STR_LEN))) &&
+            ((mode == AudioSystem::MODE_IN_CALL)  ||
+            (mode == AudioSystem::MODE_IN_COMMUNICATION)))
             inCallDevSwitch = true;
     }
 
 #ifdef QCOM_CSDCLIENT_ENABLED
-    if (mode == AudioSystem::MODE_IN_CALL && platform_is_Fusion3() && (inCallDevSwitch == true)) {
+    if (platform_is_Fusion3() && (inCallDevSwitch == true)) {
         if (csd_disable_device == NULL) {
             ALOGE("dlsym:Error:%s Loading csd_client_disable_device", dlerror());
         } else {
@@ -528,7 +532,7 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
     }
     ALOGD("switchDevice: curTxUCMDevivce %s curRxDevDevice %s", curTxUCMDevice, curRxUCMDevice);
 
-    if (mode == AudioSystem::MODE_IN_CALL && platform_is_Fusion3() && (inCallDevSwitch == true)) {
+    if (platform_is_Fusion3() && (inCallDevSwitch == true)) {
         /* get tx acdb id */
         memset(&ident,0,sizeof(ident));
         strlcpy(ident, "ACDBID/", sizeof(ident));
