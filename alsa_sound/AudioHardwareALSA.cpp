@@ -848,7 +848,7 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
       } else {
       ALOGD("openOutputStream: Lowlatency Output");
           alsa_handle.bufferSize = PLAYBACK_LOW_LATENCY_BUFFER_SIZE;
-          alsa_handle.latency = PLAYBACK_LOW_LATENCY;
+          alsa_handle.latency = PLAYBACK_LOW_LATENCY_MEASURED;
           if ((use_case == NULL) || (!strcmp(use_case, SND_USE_CASE_VERB_INACTIVE))) {
                strlcpy(alsa_handle.useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC, sizeof(alsa_handle.useCase));
           } else {
@@ -1114,7 +1114,7 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
         return in;
       } else {
         alsa_handle_t alsa_handle;
-        unsigned long bufferSize = DEFAULT_IN_BUFFER_SIZE;
+        unsigned long bufferSize = MIN_CAPTURE_BUFFER_SIZE_PER_CH;
 
         alsa_handle.module = mALSADevice;
         alsa_handle.bufferSize = bufferSize;
@@ -1266,15 +1266,11 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
         if(sampleRate) {
             it->sampleRate = *sampleRate;
         }
-#ifdef QCOM_SSR_ENABLED
-        if (6 == it->channels) {
-            if (!strncmp(it->useCase, SND_USE_CASE_VERB_HIFI_REC, strlen(SND_USE_CASE_VERB_HIFI_REC))
-                || !strncmp(it->useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC, strlen(SND_USE_CASE_MOD_CAPTURE_MUSIC))) {
-                ALOGV("OpenInoutStream: Use larger buffer size for 5.1(%s) recording ", it->useCase);
-                it->bufferSize = getInputBufferSize(it->sampleRate,*format,it->channels);
-            }
+        if (!strncmp(it->useCase, SND_USE_CASE_VERB_HIFI_REC, strlen(SND_USE_CASE_VERB_HIFI_REC))
+            || !strncmp(it->useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC, strlen(SND_USE_CASE_MOD_CAPTURE_MUSIC))) {
+            ALOGV("OpenInoutStream: Use larger buffer size for 5.1(%s) recording ", it->useCase);
+            it->bufferSize = getInputBufferSize(it->sampleRate,*format,it->channels);
         }
-#endif
         err = mALSADevice->open(&(*it));
         if (err) {
            ALOGE("Error opening pcm input device");
@@ -1338,25 +1334,19 @@ status_t AudioHardwareALSA::dump(int fd, const Vector<String16>& args)
 
 size_t AudioHardwareALSA::getInputBufferSize(uint32_t sampleRate, int format, int channelCount)
 {
-    size_t bufferSize;
-    if (format != AudioSystem::PCM_16_BIT
-        && format != AudioSystem::AMR_NB
-        && format != AudioSystem::AMR_WB
-#ifdef QCOM_QCHAT_ENABLED
-        && format != AudioSystem::EVRC
-        && format != AudioSystem::EVRCB
-        && format != AudioSystem::EVRCWB
-#endif
-        ) {
-         ALOGW("getInputBufferSize bad format: %d", format);
-         return 0;
-    }
-    if(sampleRate == 16000) {
-        bufferSize = DEFAULT_IN_BUFFER_SIZE * 2 * channelCount;
-    } else if(sampleRate < 44100) {
-        bufferSize = DEFAULT_IN_BUFFER_SIZE * channelCount;
+    size_t bufferSize = 0;
+    if (format == AudioSystem::PCM_16_BIT) {
+        if(sampleRate == 8000 || sampleRate == 16000 || sampleRate == 32000) {
+            bufferSize = (sampleRate * channelCount * 20 * sizeof(int16_t)) / 1000;
+        } else if (sampleRate == 11025 || sampleRate == 12000) {
+            bufferSize = 256 * sizeof(int16_t)  * channelCount;
+        } else if (sampleRate == 22050 || sampleRate == 24000) {
+            bufferSize = 512 * sizeof(int16_t)  * channelCount;
+        } else if (sampleRate == 44100 || sampleRate == 48000) {
+            bufferSize = 1024 * sizeof(int16_t) * channelCount;
+        }
     } else {
-        bufferSize = DEFAULT_IN_BUFFER_SIZE * 12;
+        ALOGE("getInputBufferSize bad format: %d", format);
     }
     return bufferSize;
 }
