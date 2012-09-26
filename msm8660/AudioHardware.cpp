@@ -3500,6 +3500,7 @@ AudioHardware::AudioSessionOutLPA::AudioSessionOutLPA( AudioHardware *hw,
     *status             = BAD_VALUE;
 
     mPaused             = false;
+    mIsDriverStarted    = false;
     mSeeking            = false;
     mReachedEOS         = false;
     mSkipWrite          = false;
@@ -3520,11 +3521,11 @@ AudioHardware::AudioSessionOutLPA::AudioSessionOutLPA( AudioHardware *hw,
         return;
     }
 
-    openAudioSessionDevice();
+    *status = openAudioSessionDevice();
 
     //Creates the event thread to poll events from LPA Driver
+    if (*status == NO_ERROR)
     createEventThread();
-    *status = NO_ERROR;
 }
 
 AudioHardware::AudioSessionOutLPA::~AudioSessionOutLPA()
@@ -3534,7 +3535,7 @@ AudioHardware::AudioSessionOutLPA::~AudioSessionOutLPA()
     mWriteCv.signal();
 
     //TODO: This might need to be Locked using Parent lock
-//    reset();
+    reset();
     //standby();//TODO Do we really need standby?
 
 }
@@ -3557,10 +3558,15 @@ ssize_t AudioHardware::AudioSessionOutLPA::write(const void* buffer, size_t byte
             ALOGV("Write: Flushing the previous write buffer");
             mSkipWrite = false;
             mEmptyQueueMutex.unlock();
-            return 0;
+            if (bytes < LPA_BUFFER_SIZE)
+                bytes = 0;
+            else
+                return 0;
         }
         ALOGV("Write: received a signal to wake up");
     }
+    if (mSkipWrite)
+        mSkipWrite = false;
 
     //2.) Dequeue the buffer from empty buffer queue. Copy the data to be
     //    written into the buffer. Then Enqueue the buffer to the filled
@@ -3586,9 +3592,8 @@ ssize_t AudioHardware::AudioSessionOutLPA::write(const void* buffer, size_t byte
             ALOGV("Increment for even bytes");
             aio_buf_local.data_len += 1;
         }
-        if (timeStarted == 0) {
+        if (timeStarted == 0)
             timeStarted = nanoseconds_to_microseconds(systemTime(SYSTEM_TIME_MONOTONIC));
-        }
     } else {
             /* Put the buffer back into requestQ */
             ALOGV("mEmptyQueueMutex locking: %d", __LINE__);
@@ -3599,10 +3604,18 @@ ssize_t AudioHardware::AudioSessionOutLPA::write(const void* buffer, size_t byte
             mEmptyQueueMutex.unlock();
             ALOGV("mEmptyQueueMutex unlocked: %d", __LINE__);
             //Post EOS in case the filled queue is empty and EOS is reached.
-            if (mFilledQueue.empty() && mReachedEOS) {
-                ALOGV("mEosEventReceived made true");
-                mEosEventReceived = true;
+        mReachedEOS = true;
+        mFilledQueueMutex.lock();
+        if (mFilledQueue.empty() && !mEosEventReceived) {
+            ALOGV("mEosEventReceived made true");
+            mEosEventReceived = true;
+            if (mObserver != NULL) {
+                ALOGV("mObserver: posting EOS");
+                mObserver->postEOS(0);
             }
+        }
+        mFilledQueueMutex.unlock();
+        return NO_ERROR;
     }
     mFilledQueueMutex.lock();
     mFilledQueue.push_back(buf);
@@ -3610,8 +3623,10 @@ ssize_t AudioHardware::AudioSessionOutLPA::write(const void* buffer, size_t byte
 
     ALOGV("PCM write start");
     //3.) Write the buffer to the Driver
+    if(mIsDriverStarted) {
     if ( ioctl(afd, AUDIO_ASYNC_WRITE, &aio_buf_local ) < 0 ) {
         ALOGE("error on async write\n");
+       }
     }
     ALOGV("PCM write complete");
 
@@ -3683,10 +3698,10 @@ status_t AudioHardware::AudioSessionOutLPA::setVolume(float left, float right)
     int sessionId = 0;
     unsigned short decId;
     if (v < 0.0) {
-        ALOGW("AudioSessionOutMSM8x60::setVolume(%f) under 0.0, assuming 0.0\n", v);
+        ALOGW("AudioSessionOutLPA::setVolume(%f) under 0.0, assuming 0.0\n", v);
         v = 0.0;
     } else if (v > 1.0) {
-        ALOGW("AudioSessionOutMSM8x60::setVolume(%f) over 1.0, assuming 1.0\n", v);
+        ALOGW("AudioSessionOutLPA::setVolume(%f) over 1.0, assuming 1.0\n", v);
         v = 1.0;
     }
     if ( ioctl(afd, AUDIO_GET_SESSION_ID, &decId) == -1 ) {
@@ -3698,14 +3713,14 @@ status_t AudioHardware::AudioSessionOutLPA::setVolume(float left, float right)
     }
     // Ensure to convert the log volume back to linear for LPA
     float vol = v * 100;
-    ALOGV("AudioSessionOutMSM8x60::setVolume(%f)\n", v);
+    ALOGV("AudioSessionOutLPA::setVolume(%f)\n", v);
     ALOGV("Setting session volume to %f (available range is 0 to 100)\n", vol);
 
     if(msm_set_volume(sessionId, vol)) {
         ALOGE("msm_set_volume(%d %f) failed errno = %d",sessionId, vol,errno);
         return -1;
     }
-    ALOGV("msm_set_volume(%f) succeeded",vol);
+    ALOGV("LPA volume set (%f) succeeded",vol);
     return NO_ERROR;
 }
 
@@ -3726,6 +3741,7 @@ status_t AudioHardware::AudioSessionOutLPA::openAudioSessionDevice( )
     }
 
     start();
+        bufferAlloc();
 
     return status;
 }
@@ -3824,6 +3840,7 @@ void AudioHardware::AudioSessionOutLPA::bufferDeAlloc()
     // De-Allocate ION buffers
     int rc = 0;
     //Remove all the buffers from empty queue
+    mEmptyQueueMutex.lock();
     while (!mEmptyQueue.empty())  {
         List<BuffersAllocated>::iterator it = mEmptyQueue.begin();
         BuffersAllocated &ionBuffer = *it;
@@ -3846,8 +3863,10 @@ void AudioHardware::AudioSessionOutLPA::bufferDeAlloc()
         ALOGE("Removing from empty Q");
         mEmptyQueue.erase(it);
     }
+    mEmptyQueueMutex.unlock();
 
     //Remove all the buffers from Filled queue
+    mFilledQueueMutex.lock();
     while(!mFilledQueue.empty()){
         List<BuffersAllocated>::iterator it = mFilledQueue.begin();
         BuffersAllocated &ionBuffer = *it;
@@ -3870,6 +3889,7 @@ void AudioHardware::AudioSessionOutLPA::bufferDeAlloc()
         ALOGV("Removing from Filled Q");
         mFilledQueue.erase(it);
     }
+    mFilledQueueMutex.unlock();
     if (ionfd >= 0) {
         close(ionfd);
         ionfd = -1;
@@ -3919,7 +3939,7 @@ void  AudioHardware::AudioSessionOutLPA::eventThreadEntry()
         rc = ioctl(afd, AUDIO_GET_EVENT, &cur_pcmdec_event);
         ALOGE("pcm dec Event Thread rc = %d and errno is %d",rc, errno);
 
-        if ( (rc < 0) && (errno == ENODEV ) ) {
+        if ( (rc < 0) && ((errno == ENODEV) || (errno == EBADF)) ) {
             ALOGV("AUDIO__GET_EVENT called. Exit the thread");
             break;
         }
@@ -3955,8 +3975,6 @@ void  AudioHardware::AudioSessionOutLPA::eventThreadEntry()
                                 mObserver->postEOS(0);
                             }
                         }
-                        if (mPaused)
-                            continue;
                         break;
                     }
                 }
@@ -3988,6 +4006,7 @@ void  AudioHardware::AudioSessionOutLPA::eventThreadEntry()
                     if ( ioctl(afd, AUDIO_STOP, 0) < 0 ) {
                          ALOGE("AUDIO_STOP failed");
                     }
+                    mIsDriverStarted = false;
                     break;
             }
             break;
@@ -4022,19 +4041,16 @@ status_t AudioHardware::AudioSessionOutLPA::start( )
 {
 
     ALOGV("LPA playback start");
-    if (mPaused) {
-        if (mSeeking) {
-            mSeeking = false;
-	} else {
-            if (ioctl(afd, AUDIO_PAUSE, 0) < 0) {
-                ALOGE("Resume:: LPA driver resume failed");
-                return UNKNOWN_ERROR;
-            }
-            mPaused = false;
+    if (mPaused && mIsDriverStarted) {
+        mPaused = false;
+        if (ioctl(afd, AUDIO_PAUSE, 0) < 0) {
+            ALOGE("Resume:: LPA driver resume failed");
+            return UNKNOWN_ERROR;
         }
     } else {
 	 //get config, set config and AUDIO_START LPA driver
-	int sessionId = 0;
+	 int sessionId = 0;
+        mPaused = false;
         if ( afd >= 0 ) {
            struct msm_audio_config config;
            if ( ioctl(afd, AUDIO_GET_CONFIG, &config) < 0 ) {
@@ -4113,10 +4129,9 @@ status_t AudioHardware::AudioSessionOutLPA::start( )
         ALOGE("Driver start failed!");
         return BAD_VALUE;
     }
-    bufferAlloc();
-    if (timeStarted == 0) {
+    mIsDriverStarted = true;
+    if (timeStarted == 0)
         timeStarted = nanoseconds_to_microseconds(systemTime(SYSTEM_TIME_MONOTONIC));// Needed
-    }
 	}
 	return NO_ERROR;
 }
@@ -4141,33 +4156,46 @@ status_t AudioHardware::AudioSessionOutLPA::drain()
 status_t AudioHardware::AudioSessionOutLPA::flush()
 {
     ALOGV("LPA playback flush ");
-    Mutex::Autolock autoLock(mLock);
     int err;
 
     // 2.) Add all the available buffers to Empty Queue (Maintain order)
     mFilledQueueMutex.lock();
     mEmptyQueueMutex.lock();
-    List<BuffersAllocated>::iterator it = mBufPool.begin();
-    for (; it!=mBufPool.end(); ++it) {
-        memset(it->memBuf, 0x0, (*it).memBufsize);
-        mEmptyQueue.push_back(*it);
+    while (!mFilledQueue.empty()) {
+        List<BuffersAllocated>::iterator it = mFilledQueue.begin();
+        BuffersAllocated buf = *it;
+        buf.bytesToWrite = 0;
+        mEmptyQueue.push_back(buf);
         mFilledQueue.erase(it);
     }
     mEmptyQueueMutex.unlock();
     mFilledQueueMutex.unlock();
     ALOGV("Transferred all the buffers from Filled queue to "
           "Empty queue to handle seek");
-
-    if (!mPaused && !mEosEventReceived) {
+    mReachedEOS = false;
+    if (!mPaused) {
+        if (!mEosEventReceived) {
+            if (ioctl(afd, AUDIO_PAUSE, 1) < 0) {
+                ALOGE("Audio Pause failed");
+                return UNKNOWN_ERROR;
+            }
+            if (ioctl(afd, AUDIO_FLUSH, 0) < 0) {
+                ALOGE("Audio Flush failed");
+                return UNKNOWN_ERROR;
+            }
+        }
+    } else {
+        timeStarted = 0;
         if (ioctl(afd, AUDIO_FLUSH, 0) < 0) {
             ALOGE("Audio Flush failed");
-	    return UNKNOWN_ERROR;
+            return UNKNOWN_ERROR;
         }
-	mReachedEOS = false;
-    } else {
-         mSeeking = true;
-         timeStarted = 0; // needed
+        if (ioctl(afd, AUDIO_PAUSE, 1) < 0) {
+            ALOGE("Audio Pause failed");
+            return UNKNOWN_ERROR;
+        }
     }
+    mEosEventReceived = false;
     //4.) Skip the current write from the decoder and signal to the Write get
     //   the next set of data from the decoder
     mSkipWrite = true;
@@ -4181,9 +4209,6 @@ status_t AudioHardware::AudioSessionOutLPA::stop()
     // close all the existing PCM devices
     mSkipWrite = true;
     mWriteCv.signal();
-
-    reset();
-
     return NO_ERROR;
 }
 
@@ -4205,9 +4230,12 @@ status_t  AudioHardware::AudioSessionOutLPA::getNextWriteTimestamp(int64_t *time
 void AudioHardware::AudioSessionOutLPA::reset()
 {
 	Routing_table* temp = NULL;
-    ALOGD("AudioSessionOutMSM8x60::reset()");
+    ALOGD("AudioSessionOutLPA::reset()");
+    ioctl(afd,AUDIO_STOP,0);
+    mIsDriverStarted = false;
 	requestAndWaitForEventThreadExit();
     status_t status = NO_ERROR;
+    bufferDeAlloc();
     temp = getNodeByStreamType(LPA_DECODE);
 
     if (temp == NULL) {
@@ -4239,8 +4267,8 @@ void AudioHardware::AudioSessionOutLPA::reset()
 #endif
     }
     //Close the LPA driver
-    ioctl(afd,AUDIO_STOP,0);
     ::close(afd);
+    ALOGD("AudioSessionOutLPA::reset() complete");
 }
 
 status_t AudioHardware::AudioSessionOutLPA::getRenderPosition(uint32_t *dspFrames)

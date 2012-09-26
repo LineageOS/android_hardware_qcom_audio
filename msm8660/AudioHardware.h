@@ -360,6 +360,7 @@ private:
     uint32_t            mStreamVol;
 
     bool                mPaused;
+    bool                mIsDriverStarted;
     bool                mSeeking;
     bool                mReachedEOS;
     bool                mSkipWrite;
@@ -368,9 +369,6 @@ private:
     AudioHardware* mHardware;
     AudioEventObserver *mObserver;
 
-    //status_t            openDevice(char *pUseCase, bool bIsUseCase, int devices);
-
-    //status_t            closeDevice(alsa_handle_t *pDevice);
     void                createEventThread();
     void                bufferAlloc();
     void                bufferDeAlloc();
