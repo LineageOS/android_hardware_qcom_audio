@@ -22,6 +22,7 @@
 #include <utils/Log.h>
 #include <cutils/properties.h>
 #include <linux/ioctl.h>
+#include "AudioUtil.h"
 #include "AudioHardwareALSA.h"
 #include <media/AudioRecord.h>
 #include <dlfcn.h>
@@ -46,6 +47,7 @@ static int (*csd_stop_voice)();
 #define BTSCO_RATE_16KHZ 16000
 #define USECASE_TYPE_RX 1
 #define USECASE_TYPE_TX 2
+#define MAX_HDMI_CHANNEL_CNT 6
 
 namespace android_audio_legacy
 {
@@ -224,6 +226,36 @@ int deviceName(alsa_handle_t *handle, unsigned flags, char **value)
     ret = snd_use_case_get(handle->ucMgr, ident, (const char **)value);
     ALOGD("Device value returned is %s", (*value));
     return ret;
+}
+
+status_t setHDMIChannelCount()
+{
+    status_t err = NO_ERROR;
+    int channel_count = 0;
+    const char *channel_cnt_str = NULL;
+    EDID_AUDIO_INFO info = { 0 };
+
+    ALSAControl control("/dev/snd/controlC0");
+    if (AudioUtil::getHDMIAudioSinkCaps(&info)) {
+        for (int i = 0; i < info.nAudioBlocks && i < MAX_EDID_BLOCKS; i++) {
+            if (info.AudioBlocksArray[i].nChannels > channel_count &&
+                  info.AudioBlocksArray[i].nChannels <= MAX_HDMI_CHANNEL_CNT) {
+                channel_count = info.AudioBlocksArray[i].nChannels;
+            }
+        }
+    }
+
+    switch (channel_count) {
+    case 6: channel_cnt_str = "Six"; break;
+    case 5: channel_cnt_str = "Five"; break;
+    case 4: channel_cnt_str = "Four"; break;
+    case 3: channel_cnt_str = "Three"; break;
+    default: channel_cnt_str = "Two"; break;
+    }
+    ALOGD("HDMI channel count: %s", channel_cnt_str);
+    control.set("HDMI_RX Channels", channel_cnt_str);
+
+    return err;
 }
 
 status_t setHardwareParams(alsa_handle_t *handle)
@@ -608,6 +640,13 @@ static status_t s_open(alsa_handle_t *handle)
     unsigned flags = 0;
     int err = NO_ERROR;
 
+    if(handle->devices & AudioSystem::DEVICE_OUT_AUX_DIGITAL) {
+        err = setHDMIChannelCount();
+        if(err != OK) {
+            ALOGE("setHDMIChannelCount err = %d", err);
+            return err;
+        }
+    }
     /* No need to call s_close for LPA as pcm device open and close is handled by LPAPlayer in stagefright */
     if((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) || (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_LPA))
     ||(!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_TUNNEL)) || (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_TUNNEL))) {
