@@ -42,6 +42,7 @@
 #ifdef QCOM_USBAUDIO_ENABLED
 #include "AudioUsbALSA.h"
 #endif
+#include "AudioUtil.h"
 
 extern "C"
 {
@@ -813,7 +814,76 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
       return out;
     } else
 #endif
-    {
+    if ((flag & AUDIO_OUTPUT_FLAG_DIRECT) &&
+        (devices == AudioSystem::DEVICE_OUT_AUX_DIGITAL)) {
+        ALOGD("Multi channel PCM");
+        alsa_handle_t alsa_handle;
+        EDID_AUDIO_INFO info = { 0 };
+
+        alsa_handle.module = mALSADevice;
+        alsa_handle.devices = devices;
+        alsa_handle.handle = 0;
+        alsa_handle.format = SNDRV_PCM_FORMAT_S16_LE;
+
+        if (!AudioUtil::getHDMIAudioSinkCaps(&info)) {
+            ALOGE("openOutputStream: Failed to get HDMI sink capabilities");
+            return NULL;
+        }
+        if (0 == *channels) {
+            alsa_handle.channels = info.AudioBlocksArray[info.nAudioBlocks-1].nChannels;
+            if (alsa_handle.channels > 6) {
+                alsa_handle.channels = 6;
+            }
+            *channels = audio_channel_out_mask_from_count(alsa_handle.channels);
+        } else {
+            alsa_handle.channels = AudioSystem::popCount(*channels);
+        }
+        if (6 == alsa_handle.channels) {
+            alsa_handle.bufferSize = DEFAULT_MULTI_CHANNEL_BUF_SIZE;
+        } else {
+            alsa_handle.bufferSize = DEFAULT_BUFFER_SIZE;
+        }
+        if (0 == *sampleRate) {
+            alsa_handle.sampleRate = info.AudioBlocksArray[info.nAudioBlocks-1].nSamplingFreq;
+            *sampleRate = alsa_handle.sampleRate;
+        } else {
+            alsa_handle.sampleRate = *sampleRate;
+        }
+        alsa_handle.latency = PLAYBACK_LATENCY;
+        alsa_handle.rxHandle = 0;
+        alsa_handle.ucMgr = mUcMgr;
+        ALOGD("alsa_handle.channels %d alsa_handle.sampleRate %d",alsa_handle.channels,alsa_handle.sampleRate);
+
+        char *use_case;
+        snd_use_case_get(mUcMgr, "_verb", (const char **)&use_case);
+        if ((use_case == NULL) || (!strcmp(use_case, SND_USE_CASE_VERB_INACTIVE))) {
+            strlcpy(alsa_handle.useCase, SND_USE_CASE_VERB_HIFI2 , sizeof(alsa_handle.useCase));
+        } else {
+            strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_PLAY_MUSIC2, sizeof(alsa_handle.useCase));
+        }
+        free(use_case);
+        mDeviceList.push_back(alsa_handle);
+        ALSAHandleList::iterator it = mDeviceList.end();
+        it--;
+        ALOGD("it->useCase %s", it->useCase);
+        mALSADevice->route(&(*it), devices, mode());
+        if(!strcmp(it->useCase, SND_USE_CASE_VERB_HIFI2)) {
+            snd_use_case_set(mUcMgr, "_verb", SND_USE_CASE_VERB_HIFI2 );
+        } else {
+            snd_use_case_set(mUcMgr, "_enamod", SND_USE_CASE_MOD_PLAY_MUSIC2);
+        }
+        ALOGD("channels: %d", AudioSystem::popCount(*channels));
+        err = mALSADevice->open(&(*it));
+
+        if (err) {
+            ALOGE("Device open failed err:%d",err);
+        } else {
+            out = new AudioStreamOutALSA(this, &(*it));
+            err = out->set(format, channels, sampleRate, devices);
+        }
+        if (status) *status = err;
+        return out;
+    } else {
 
       alsa_handle_t alsa_handle;
       unsigned long bufferSize = DEFAULT_BUFFER_SIZE;
