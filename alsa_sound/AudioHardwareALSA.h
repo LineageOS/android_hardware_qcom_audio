@@ -566,7 +566,6 @@ protected:
      * Settings and Qualcomm Settings applications */
     uint32_t            mDevSettingsFlag;
     uint32_t            mVoipStreamCount;
-    bool                mVoipMicMute;
     uint32_t            mVoipBitRate;
     uint32_t            mIncallMode;
 

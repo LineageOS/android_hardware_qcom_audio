@@ -61,7 +61,6 @@ ALSAStreamOps::~ALSAStreamOps()
             }
        }
        mParent->mVoipStreamCount = 0;
-       mParent->mVoipMicMute = 0;
        mParent->mVoipBitRate = 0;
     }
     close();
@@ -348,7 +347,6 @@ void ALSAStreamOps::close()
     ALOGD("close");
     if((!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL, strlen(SND_USE_CASE_VERB_IP_VOICECALL))) ||
        (!strncmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP, strlen(SND_USE_CASE_MOD_PLAY_VOIP)))) {
-       mParent->mVoipMicMute = false;
        mParent->mVoipBitRate = 0;
        mParent->mVoipStreamCount = 0;
     }
