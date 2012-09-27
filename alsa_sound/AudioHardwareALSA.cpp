@@ -71,8 +71,8 @@ AudioHardwareInterface *AudioHardwareALSA::create() {
 }
 
 AudioHardwareALSA::AudioHardwareALSA() :
-    mALSADevice(0),mVoipStreamCount(0),mVoipMicMute(false),mVoipBitRate(0)
-    ,mCallState(0),mAcdbHandle(NULL),mCsdHandle(NULL)
+    mALSADevice(0),mVoipStreamCount(0),mVoipBitRate(0)
+    ,mCallState(0),mAcdbHandle(NULL),mCsdHandle(NULL),mMicMute(0)
 {
     FILE *fp;
     char soundCardInfo[200];
@@ -737,7 +737,6 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
         }
       if(voipstream_active == false) {
          mVoipStreamCount = 0;
-         mVoipMicMute = false;
          alsa_handle_t alsa_handle;
          unsigned long bufferSize;
          if(*sampleRate == VOIP_SAMPLING_RATE_8K) {
@@ -1032,7 +1031,6 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
         }
         if(voipstream_active == false) {
            mVoipStreamCount = 0;
-           mVoipMicMute = false;
            alsa_handle_t alsa_handle;
            unsigned long bufferSize;
            if(*sampleRate == VOIP_SAMPLING_RATE_8K) {
@@ -1291,26 +1289,11 @@ AudioHardwareALSA::closeInputStream(AudioStreamIn* in)
 
 status_t AudioHardwareALSA::setMicMute(bool state)
 {
-    int newMode = mode();
-    ALOGD("setMicMute  newMode %d",newMode);
-    if(newMode == AudioSystem::MODE_IN_COMMUNICATION) {
-        if (mVoipMicMute != state) {
-             mVoipMicMute = state;
-            ALOGD("setMicMute: mVoipMicMute %d", mVoipMicMute);
-            if(mALSADevice) {
-                mALSADevice->setVoipMicMute(state);
-            }
-        }
-    } else {
-        if (mMicMute != state) {
-              mMicMute = state;
-              ALOGD("setMicMute: mMicMute %d", mMicMute);
-              if(mALSADevice) {
-                 if(mCSCallActive == CS_ACTIVE)
-                    mALSADevice->setMicMute(state);
-                 if(mVolteCallActive == IMS_ACTIVE)
-                    mALSADevice->setVoLTEMicMute(state);
-              }
+    if (mMicMute != state) {
+        mMicMute = state;
+        ALOGD("setMicMute: mMicMute %d", mMicMute);
+        if(mALSADevice) {
+            mALSADevice->setMicMute(state);
         }
     }
     return NO_ERROR;
@@ -1318,12 +1301,7 @@ status_t AudioHardwareALSA::setMicMute(bool state)
 
 status_t AudioHardwareALSA::getMicMute(bool *state)
 {
-    int newMode = mode();
-    if(newMode == AudioSystem::MODE_IN_COMMUNICATION) {
-        *state = mVoipMicMute;
-    } else {
-        *state = mMicMute;
-    }
+    *state = mMicMute;
     return NO_ERROR;
 }
 
