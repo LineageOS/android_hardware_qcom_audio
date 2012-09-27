@@ -206,6 +206,10 @@ status_t ALSAStreamOps::setParameters(const String8& keyValuePairs)
     if (param.getInt(key, device) == NO_ERROR) {
         // Ignore routing if device is 0.
         ALOGD("setParameters(): keyRouting with device %d", device);
+        // reset to speaker when disconnecting HDMI to avoid timeout due to write errors
+        if ((device == 0) && (mDevices == AudioSystem::DEVICE_OUT_AUX_DIGITAL)) {
+            device = AudioSystem::DEVICE_OUT_SPEAKER;
+        }
         mDevices = device;
         if(device) {
             mParent->doRouting(device);
