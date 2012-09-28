@@ -399,8 +399,12 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
                       AudioSystem::DEVICE_IN_BUILTIN_MIC);
 #endif
         } else if (devices & AudioSystem::DEVICE_OUT_AUX_DIGITAL) {
-            devices = devices | (AudioSystem::DEVICE_OUT_AUX_DIGITAL |
-                      AudioSystem::DEVICE_IN_AUX_DIGITAL);
+            if (mode == AudioSystem::MODE_IN_CALL)
+                devices = devices | (AudioSystem::DEVICE_IN_BACK_MIC |
+                           AudioSystem::DEVICE_OUT_SPEAKER);
+            else
+                devices = devices | (AudioSystem::DEVICE_OUT_AUX_DIGITAL |
+                          AudioSystem::DEVICE_IN_BACK_MIC);
 #ifdef QCOM_PROXY_DEVICE_ENABLED
         } else if ((devices & AudioSystem::DEVICE_OUT_PROXY) ||
                   (devices & AudioSystem::DEVICE_IN_PROXY)) {
