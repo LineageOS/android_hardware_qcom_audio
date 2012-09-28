@@ -299,6 +299,7 @@ status_t AudioStreamOutALSA::close()
                 return NO_ERROR;
          }
          mParent->mVoipStreamCount = 0;
+         mParent->mVoipMicMute = 0;
     }
 #ifdef QCOM_USBAUDIO_ENABLED
       else if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER)) ||
