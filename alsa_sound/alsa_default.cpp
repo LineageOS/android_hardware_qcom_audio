@@ -1438,8 +1438,6 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
 #ifdef SEPERATED_AUDIO_INPUT
                 if(input_source == AUDIO_SOURCE_VOICE_RECOGNITION) {
                     return strdup(SND_USE_CASE_DEV_VOICE_RECOGNITION ); /* VOICE RECOGNITION TX */
-                } else if(input_source == AUDIO_SOURCE_CAMCORDER) {
-                    return strdup(SND_USE_CASE_DEV_CAMCORDER_TX ); /* CAMCORDER TX */
                 }
 #endif
                 else {
@@ -1491,6 +1489,10 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
             } else {
                 if (callMode == AudioSystem::MODE_IN_CALL) {
                     return strdup(SND_USE_CASE_DEV_VOC_LINE); /* Voice BUILTIN-MIC TX */
+#ifdef SEPERATED_AUDIO_INPUT
+                } else if(input_source == AUDIO_SOURCE_CAMCORDER) {
+                    return strdup(SND_USE_CASE_DEV_CAMCORDER_TX ); /* CAMCORDER TX */
+#endif
                 } else
                     return strdup(SND_USE_CASE_DEV_LINE); /* BUILTIN-MIC TX */
             }
