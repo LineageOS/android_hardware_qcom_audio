@@ -41,7 +41,7 @@ extern "C" {
 // hardware specific functions
 
 #include "AudioHardware.h"
-//#include <media/AudioSystem.h>
+#include <media/AudioSystem.h>
 //#include <media/AudioRecord.h>
 
 #define LOG_SND_RPC 0  // Set to 1 to log sound RPC's
@@ -1290,7 +1290,7 @@ status_t AudioHardware::setFmVolume(float v)
     }
     vol = lrint(v * 100.0);
 #else
-    vol = AudioSystem::logToLinear( v );
+    vol = android::AudioSystem::logToLinear( v );
     if ( vol > 100 ) {
         vol = 100;
     }
