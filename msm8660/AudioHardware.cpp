@@ -2025,12 +2025,12 @@ status_t AudioHardware::doAudioRouteOrMute(uint32_t device)
     }
 #endif
 
+#ifdef HTC_ACOUSTIC_AUDIO
     if (device == SND_DEVICE_BT) {
         if (!mBluetoothNrec)
             device = SND_DEVICE_BT_EC_OFF;
     }
 
-#ifdef HTC_ACOUSTIC_AUDIO
     if (support_aic3254) {
         aic3254_config(device);
         do_aic3254_control(device);
