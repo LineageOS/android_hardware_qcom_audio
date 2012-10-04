@@ -1054,7 +1054,11 @@ AudioStreamOut* AudioHardware::openOutputStream(
 #ifdef QCOM_VOIP_ENABLED
         // only one output stream allowed
         if (mOutput && !((flags & AUDIO_OUTPUT_FLAG_DIRECT) && (flags & AUDIO_OUTPUT_FLAG_VOIP_RX))
+#ifdef QCOM_TUNNEL_LPA_ENABLED
+                    && !(flags & AUDIO_OUTPUT_FLAG_TUNNEL)
+#endif /* QCOM_TUNNEL_LPA_ENABLED */
                     && !(flags & AUDIO_OUTPUT_FLAG_LPA)) {
+
             if (status) {
                 *status = INVALID_OPERATION;
             }
@@ -1120,6 +1124,20 @@ AudioStreamOut* AudioHardware::openOutputStream(
                 return 0;
             }
 #endif
+#ifdef TUNNEL_PLAYBACK
+        if (flags & AUDIO_OUTPUT_FLAG_TUNNEL) {
+                status_t err = BAD_VALUE;
+                // create new Tunnel output stream
+                AudioSessionOutTunnel* out = new AudioSessionOutTunnel(this, devices, *format, *channels,*sampleRate,0,&err);
+                if(err != NO_ERROR) {
+                    delete out;
+                    out = NULL;
+                }
+                if (status) *status = err;
+                mOutputTunnel = out;
+                return mOutputTunnel;
+        }
+#endif /*TUNNEL_PLAYBACK*/
             // create new output stream
             AudioStreamOutMSM8x60* out = new AudioStreamOutMSM8x60();
             lStatus = out->set(this, devices, format, channels, sampleRate);
@@ -1139,6 +1157,8 @@ AudioStreamOut* AudioHardware::openOutputStream(
 
 
 void AudioHardware::closeOutputStream(AudioStreamOut* out) {
+    ALOGD("closeOutputStream called");
+
     Mutex::Autolock lock(mLock);
     if ((mOutput == 0
 #ifdef QCOM_VOIP_ENABLED
@@ -1148,6 +1168,9 @@ void AudioHardware::closeOutputStream(AudioStreamOut* out) {
 #ifdef QCOM_VOIP_ENABLED
          && (mDirectOutput != out)
 #endif
+#ifdef TUNNEL_PLAYBACK
+        && (mOutputTunnel!= out)
+#endif /*TUNNEL_PLAYBACK*/
        && (mOutputLPA != out))) {
         ALOGW("Attempt to close invalid output stream");
     }
@@ -1167,6 +1190,14 @@ void AudioHardware::closeOutputStream(AudioStreamOut* out) {
         delete mOutputLPA;
         mOutputLPA = 0;
 	}
+#ifdef TUNNEL_PLAYBACK
+    else if (mOutputTunnel == out) {
+        ALOGD("Closing Tunnel Output");
+        delete mOutputTunnel;
+        mOutputTunnel = 0;
+    }
+#endif /*TUNNEL_PLAYBACK*/
+
 }
 
 AudioStreamIn* AudioHardware::openInputStream(
@@ -4406,6 +4437,768 @@ status_t AudioHardware::AudioSessionOutLPA::isBufferAvailable(int *isAvail) {
     *isAvail = true;
     return NO_ERROR;
 }
+
+#ifdef TUNNEL_PLAYBACK
+AudioHardware::AudioSessionOutTunnel::AudioSessionOutTunnel( AudioHardware *hw,
+                                         uint32_t   devices,
+                                         int        format,
+                                         uint32_t   channels,
+                                         uint32_t   samplingRate,
+                                         int        type,
+                                         status_t   *status)
+{
+    Mutex::Autolock autoLock(mLock);
+    // Default initilization
+    mHardware = hw;
+    ALOGE("AudioSessionOutTunnel constructor");
+    mFormat             = format;
+    mSampleRate         = samplingRate;
+    mChannels           = popcount(channels);
+    *status            = BAD_VALUE;
+    mInputBufferSize    = TUNNEL_BUFFER_SIZE;
+    mInputBufferCount   = TUNNEL_BUFFER_COUNT;
+
+    mPaused             = false;
+    mSeeking            = false;
+    mSkipWrite          = false;
+
+    efd = -1;
+    mEosEventReceived   =false;
+
+    mEventThread        = NULL;
+    mEventThreadAlive   = false;
+    mKillEventThread    = false;
+    mObserver           = NULL;
+    if((format == AUDIO_FORMAT_PCM_16_BIT) && (mChannels == 0 || mChannels > 2)) {
+        ALOGE("Invalid number of channels %d", channels);
+        return;
+    }
+
+    *status = initSession();
+    if ( *status != NO_ERROR)
+        return;
+
+    //Creates the event thread to poll events from Tunnel Driver
+    createEventThread();
+    *status = NO_ERROR;
+}
+
+AudioHardware::AudioSessionOutTunnel::~AudioSessionOutTunnel()
+{
+    ALOGV("AudioSessionOutTunnel destructor");
+    mSkipWrite = true;
+    mWriteCv.signal();
+    reset();
+
+}
+
+ssize_t AudioHardware::AudioSessionOutTunnel::write(const void* buffer, size_t bytes)
+{
+    Mutex::Autolock autoLock(mLock);
+    int err;
+    ALOGV("AudioSessionOutTunnel::write for bytes %d QueueStats empty q %d filled q %d",
+         bytes, mEmptyQueue.size(), mFilledQueue.size());
+
+    mEmptyQueueMutex.lock();
+    if (mEmptyQueue.empty()) {
+        ALOGV("AudioSessionOutTunnel::write: waiting for want of buffers");
+        mLock.unlock();
+        mWriteCv.wait(mEmptyQueueMutex);
+        mLock.lock();
+        if (mSkipWrite) {
+            ALOGV("AudioSessionOutTunnel::write: Skipping the previous write buffer");
+            mSkipWrite = false;
+            mEmptyQueueMutex.unlock();
+            return 0;
+        }
+        ALOGV("AudioSessionOutTunnel::write: received a signal to wake up");
+    }
+
+    List<BuffersAllocated>::iterator it = mEmptyQueue.begin();
+    BuffersAllocated buf = *it;
+    mEmptyQueue.erase(it);
+    mEmptyQueueMutex.unlock();
+
+    struct msm_audio_aio_buf aio_buf_local;
+    if (bytes > 0) {
+        memcpy(buf.memBuf, buffer, bytes);
+        buf.bytesToWrite = bytes;
+
+        memset(&aio_buf_local, 0, sizeof(msm_audio_aio_buf));
+        aio_buf_local.buf_addr = buf.memBuf;
+        aio_buf_local.buf_len = buf.bytesToWrite;
+        aio_buf_local.data_len = buf.bytesToWrite;
+        aio_buf_local.private_data = (void*) buf.memFd;
+
+        if ( (buf.bytesToWrite % 2) != 0 ) {
+            ALOGV("AudioSessionOutTunnel::writeIncrement for even bytes");
+            aio_buf_local.data_len += 1;
+        }
+    } else {
+        /* Put the buffer back into emptyQ */
+        ALOGV("AudioSessionOutTunnel::writemEmptyQueueMutex locking: %d", __LINE__);
+        mEmptyQueueMutex.lock();
+        ALOGV("AudioSessionOutTunnel::writemEmptyQueueMutex locked: %d", __LINE__);
+        mEmptyQueue.push_back(buf);
+        ALOGV("AudioSessionOutTunnel::writemEmptyQueueMutex unlocking: %d", __LINE__);
+        mEmptyQueueMutex.unlock();
+        ALOGV("AudioSessionOutTunnel::writemEmptyQueueMutex unlocked: %d", __LINE__);
+
+        ALOGD("AudioSessionOutTunnel: Invalid bytes(%d), nothing to write", buf.bytesToWrite);
+        return 0;
+    }
+    mFilledQueueMutex.lock();
+    mFilledQueue.push_back(buf);
+    mFilledQueueMutex.unlock();
+
+    ALOGV("AudioSessionOutTunnel::write Buffer: QueueStats empty q %d filled q %d %d"
+        , mEmptyQueue.size(), mFilledQueue.size(), __LINE__);
+
+    mFlushLock.lock(); /*Dont push buffers when flushing*/
+    if ( ioctl(afd, AUDIO_ASYNC_WRITE, &aio_buf_local ) < 0 ) {
+        ALOGE("AudioSessionOutTunnel:error on async write\n");
+    }
+    ALOGV("AudioSessionOutTunnel::Write Buffer done.");
+    mFlushLock.unlock();
+
+    if (bytes < TUNNEL_BUFFER_SIZE) {
+        ALOGD("AudioSessionOutTunnel::Write Calling Fsync");
+        if (!fsync(afd)){
+            ALOGD("AudioSessionOutTunnel::EOS");
+            mObserver->postEOS(0);
+        }
+        else
+            ALOGE("AudioSessionOutTunnel::Write Thrown out of Fsync probably because of Flush");
+
+        ALOGD("AudioSessionOutTunnel::Write Outof Fsync");
+    }
+
+    return NO_ERROR; //TODO Do we need to send error
+}
+
+
+status_t AudioHardware::AudioSessionOutTunnel::standby()
+{
+    ALOGD("AudioSessionOutTunnel::standby()");
+    status_t status = NO_ERROR;
+    //TODO  Do we really need standby()
+    return status;
+}
+
+
+status_t AudioHardware::AudioSessionOutTunnel::dump(int fd, const Vector<String16>& args)
+{
+    return NO_ERROR;
+}
+
+status_t AudioHardware::AudioSessionOutTunnel::setParameters(const String8& keyValuePairs)
+{
+    AudioParameter param = AudioParameter(keyValuePairs);
+    String8 key = String8(AudioParameter::keyRouting);
+    status_t status = NO_ERROR;
+    int device;
+    ALOGV("AudioSessionOutTunnel::setParameters() %s", keyValuePairs.string());
+
+    if (param.getInt(key, device) == NO_ERROR) {
+        mDevices = device;
+        ALOGE("set output routing %x", mDevices);
+        status = mHardware->doRouting(NULL);
+        param.remove(key);
+    }
+
+    if (param.size()) {
+        status = BAD_VALUE;
+    }
+    return status;
+}
+
+String8 AudioHardware::AudioSessionOutTunnel::getParameters(const String8& keys)
+{
+    AudioParameter param = AudioParameter(keys);
+    String8 value;
+    String8 key = String8(AudioParameter::keyRouting);
+
+    if (param.get(key, value) == NO_ERROR) {
+        ALOGV("get routing %x", mDevices);
+        param.addInt(key, (int)mDevices);
+    }
+
+    ALOGV("AudioSessionOutTunnel::getParameters() %s", param.toString().string());
+    return param.toString();
+}
+
+status_t AudioHardware::AudioSessionOutTunnel::setVolume(float left, float right)
+{
+    float v = (left + right) / 2;
+    int sessionId = 0;
+    unsigned short decId;
+    if (v < 0.0) {
+        ALOGW("AudioSessionOutTunnel::setVolume(%f) under 0.0, assuming 0.0\n", v);
+        v = 0.0;
+    } else if (v > 1.0) {
+        ALOGW("AudioSessionOutTunnel::setVolume(%f) over 1.0, assuming 1.0\n", v);
+        v = 1.0;
+    }
+    if ( ioctl(afd, AUDIO_GET_SESSION_ID, &decId) == -1 ) {
+        ALOGE("AUDIO_GET_SESSION_ID FAILED\n");
+        return BAD_VALUE;
+    } else {
+        sessionId = (int)decId;
+        ALOGD("AUDIO_GET_SESSION_ID success : decId = %d", decId);
+    }
+    // Ensure to convert the log volume back to linear for Tunnel
+    float vol = v * 100;
+    ALOGV("AudioSessionOutTunnel::setVolume(%f)\n", v);
+    ALOGV("Setting session volume to %f (available range is 0 to 100)\n", vol);
+
+    if(msm_set_volume(sessionId, vol)) {
+        ALOGE("msm_set_volume(%d %f) failed errno = %d",sessionId, vol,errno);
+        return -1;
+    }
+    ALOGV("AudioSessionOutTunnel:msm_set_volume(%f) succeeded",vol);
+    return NO_ERROR;
+}
+
+status_t AudioHardware::AudioSessionOutTunnel::initSession()
+{
+    status_t status = NO_ERROR;
+    char *drvr=NULL;
+
+    if(mFormat == AUDIO_FORMAT_MP3) {
+        drvr = "/dev/msm_mp3";
+    } else if(mFormat == AUDIO_FORMAT_AAC) {
+        drvr = "/dev/msm_aac";
+    } else {
+        ALOGE("AudioSessionOutTunnel::initSession:Tunnel session supported only for MP3 and AAC");
+        return -1;
+    }
+
+    ALOGD("AudioSessionOutTunnel::initSession:Opening Tunnel Mode driver %s", drvr);
+    afd = open(drvr, O_WRONLY|O_NONBLOCK);
+    if ( afd < 0 ) {
+        ALOGE("AudioSessionOutTunnel::initSession:Error Opening Tunnel Mode driver %s err %d", drvr, errno);
+        return UNKNOWN_ERROR;
+    } else {
+        ALOGV("AudioSessionOutTunnel::initSession:Tunnel mode Drvr Opened");
+    }
+
+    start();
+
+    return status;
+}
+
+void AudioHardware::AudioSessionOutTunnel::allocAndRegisterbuffs( )
+{
+    // Allocate ION buffers
+    void *ion_buf; int32_t ion_fd;
+    struct msm_audio_ion_info ion_info;
+    //1. Open the ion_audio
+    ionfd = open("/dev/ion", O_RDONLY | O_SYNC);
+    if (ionfd < 0) {
+        ALOGE("AudioSessionOutTunnel:/dev/ion open failed \n");
+        return;
+    }
+    for (int i = 0; i < mInputBufferCount; i++) {
+        ion_buf = memBufferAlloc(mInputBufferSize, &ion_fd);
+        memset(&ion_info, 0, sizeof(msm_audio_ion_info));
+        ALOGD("AudioSessionOutTunnel:Registering ION with fd %d and address as %p", ion_fd, ion_buf);
+        ion_info.fd = ion_fd;
+        ion_info.vaddr = ion_buf;
+        if ( ioctl(afd, AUDIO_REGISTER_ION, &ion_info) < 0 ) {
+            ALOGE("AudioSessionOutTunnel:Registration of ION with the Driver failed with fd %d and memory %x",
+                 ion_info.fd, (unsigned int)ion_info.vaddr);
+        }
+    }
+}
+
+
+void* AudioHardware::AudioSessionOutTunnel::memBufferAlloc(int nSize, int32_t *ion_fd)
+{
+    void  *ion_buf = NULL;
+    void  *local_buf = NULL;
+    struct ion_fd_data fd_data;
+    struct ion_allocation_data alloc_data;
+
+    alloc_data.len =   nSize;
+    alloc_data.align = 0x1000;
+    alloc_data.flags = ION_HEAP(ION_AUDIO_HEAP_ID);
+    int rc = ioctl(ionfd, ION_IOC_ALLOC, &alloc_data);
+    if (rc) {
+        ALOGE("ION_IOC_ALLOC ioctl failed\n");
+        return ion_buf;
+    }
+    fd_data.handle = alloc_data.handle;
+
+    rc = ioctl(ionfd, ION_IOC_SHARE, &fd_data);
+    if (rc) {
+        ALOGE("ION_IOC_SHARE ioctl failed\n");
+        rc = ioctl(ionfd, ION_IOC_FREE, &(alloc_data.handle));
+        if (rc) {
+            ALOGE("ION_IOC_FREE ioctl failed\n");
+        }
+        return ion_buf;
+    }
+
+    // 2. MMAP to get the virtual address
+    ion_buf = mmap(NULL, nSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd_data.fd, 0);
+    if(MAP_FAILED == ion_buf) {
+        ALOGE("mmap() failed \n");
+        close(fd_data.fd);
+        rc = ioctl(ionfd, ION_IOC_FREE, &(alloc_data.handle));
+        if (rc) {
+            ALOGE("ION_IOC_FREE ioctl failed\n");
+        }
+        return ion_buf;
+    }
+
+    local_buf = malloc(nSize);
+    if (NULL == local_buf) {
+        // unmap the corresponding ION buffer and close the fd
+        munmap(ion_buf, mInputBufferSize);
+        close(fd_data.fd);
+        rc = ioctl(ionfd, ION_IOC_FREE, &(alloc_data.handle));
+        if (rc) {
+            ALOGE("ION_IOC_FREE ioctl failed\n");
+        }
+        return NULL;
+    }
+
+    // 3. Store this information for internal mapping / maintanence
+    BuffersAllocated buf(local_buf, ion_buf, nSize, fd_data.fd, alloc_data.handle);
+    mEmptyQueue.push_back(buf);
+
+    // 4. Send the mem fd information
+    *ion_fd = fd_data.fd;
+    ALOGV("IONBufferAlloc calling with required size %d", nSize);
+    ALOGV("ION allocated is %d, fd_data.fd %d and buffer is %x", *ion_fd, fd_data.fd, (unsigned int)ion_buf);
+
+    // 5. Return the virtual address
+    return ion_buf;
+}
+
+void AudioHardware::AudioSessionOutTunnel::deallocAndDeregisterbuffs()
+{
+    // De-Allocate ION buffers
+    int rc = 0;
+    //Remove all the buffers from empty queue
+    while (!mEmptyQueue.empty())  {
+        List<BuffersAllocated>::iterator it = mEmptyQueue.begin();
+        BuffersAllocated &ionBuffer = *it;
+        struct msm_audio_ion_info ion_info;
+        ion_info.vaddr = (*it).memBuf;
+        ion_info.fd = (*it).memFd;
+        if (ioctl(afd, AUDIO_DEREGISTER_ION, &ion_info) < 0) {
+            ALOGE("ION deregister failed");
+        }
+        ALOGV("Ion Unmapping the address %p, size %d, fd %d from empty",ionBuffer.memBuf,ionBuffer.bytesToWrite,ionBuffer.memFd);
+        munmap(ionBuffer.memBuf, mInputBufferSize);
+        ALOGV("closing the ion shared fd");
+        close(ionBuffer.memFd);
+        rc = ioctl(ionfd, ION_IOC_FREE, &ionBuffer.ion_handle);
+        if (rc) {
+            ALOGE("ION_IOC_FREE ioctl failed\n");
+        }
+        // free the local buffer corresponding to ion buffer
+        free(ionBuffer.localBuf);
+        ALOGD("Removing from empty Q");
+        mEmptyQueue.erase(it);
+    }
+
+    //Remove all the buffers from Filled queue
+    while(!mFilledQueue.empty()){
+        List<BuffersAllocated>::iterator it = mFilledQueue.begin();
+        BuffersAllocated &ionBuffer = *it;
+        struct msm_audio_ion_info ion_info;
+        ion_info.vaddr = (*it).memBuf;
+        ion_info.fd = (*it).memFd;
+        if (ioctl(afd, AUDIO_DEREGISTER_ION, &ion_info) < 0) {
+            ALOGE("ION deregister failed");
+        }
+        ALOGV("Ion Unmapping the address %p, size %d, fd %d from Request",ionBuffer.memBuf,ionBuffer.bytesToWrite,ionBuffer.memFd);
+        munmap(ionBuffer.memBuf, mInputBufferSize);
+        ALOGV("closing the ion shared fd");
+        close(ionBuffer.memFd);
+        rc = ioctl(ionfd, ION_IOC_FREE, &ionBuffer.ion_handle);
+        if (rc) {
+            ALOGE("ION_IOC_FREE ioctl failed\n");
+        }
+        // free the local buffer corresponding to ion buffer
+        free(ionBuffer.localBuf);
+        ALOGV("Removing from Filled Q");
+        mFilledQueue.erase(it);
+    }
+    if (ionfd >= 0) {
+        close(ionfd);
+        ionfd = -1;
+    }
+}
+
+uint32_t AudioHardware::AudioSessionOutTunnel::latency() const
+{
+    // Android wants latency in milliseconds.
+    return 1000;//TODO to correct the value
+}
+
+void AudioHardware::AudioSessionOutTunnel::requestAndWaitForEventThreadExit()
+{
+    if (!mEventThreadAlive)
+        return;
+    mKillEventThread = true;
+    if (ioctl(afd, AUDIO_ABORT_GET_EVENT, 0) < 0) {
+        ALOGE("AudioSessionOutTunnel:Audio Abort event failed");
+    }
+    pthread_join(mEventThread,NULL);
+}
+
+void * AudioHardware::AudioSessionOutTunnel::eventThreadWrapper(void *me)
+{
+    static_cast<AudioSessionOutTunnel *>(me)->eventThreadEntry();
+    return NULL;
+}
+
+void  AudioHardware::AudioSessionOutTunnel::eventThreadEntry()
+{
+    struct msm_audio_event cur_pcmdec_event;
+    mEventThreadAlive = true;
+    int rc = 0;
+    pid_t tid  = gettid();
+    androidSetThreadPriority(tid, ANDROID_PRIORITY_AUDIO);
+    prctl(PR_SET_NAME, (unsigned long)"HAL Audio EventThread", 0, 0, 0);
+    ALOGV("AudioSessionOutTunnel::event thread: created ");
+    if (mKillEventThread) {
+        mEventThreadAlive = false;
+        ALOGV("AudioSessionOutTunnel::event thread: is dying.");
+        return;
+    }
+    while (1) {
+        ALOGD("AudioSessionOutTunnel::event thread:: wait for an event");
+        rc = ioctl(afd, AUDIO_GET_EVENT, &cur_pcmdec_event);
+        ALOGD("AudioSessionOutTunnel::event thread:wakes up with retval %d and errno is %d",rc, errno);
+
+        if ( (rc < 0) && (errno == ENODEV ) ) {
+            ALOGV("AudioSessionOutTunnel::event thread: Exit the thread");
+            break;
+        }
+
+        switch ( cur_pcmdec_event.event_type ) {
+        case AUDIO_EVENT_WRITE_DONE:
+            {
+                ALOGD("AudioSessionOutTunnel::event thread:WRITE_DONE: addr %p len %d and fd is %d\n",
+                     cur_pcmdec_event.event_payload.aio_buf.buf_addr,
+                     cur_pcmdec_event.event_payload.aio_buf.data_len,
+                     (int32_t) cur_pcmdec_event.event_payload.aio_buf.private_data);
+                mFilledQueueMutex.lock();
+                BuffersAllocated buf = *(mFilledQueue.begin());
+                ALOGV("AudioSessionOutTunnel::event thread:Write Buffer Done: QueueStats empty q %d filled q %d"
+                    , mEmptyQueue.size(), mFilledQueue.size(), __LINE__);
+                for (List<BuffersAllocated>::iterator it = mFilledQueue.begin();
+                    it != mFilledQueue.end(); ++it) {
+                    if (it->memBuf == cur_pcmdec_event.event_payload.aio_buf.buf_addr) {
+                        buf = *it;
+                        mFilledQueue.erase(it);
+                        // Post buffer to Empty Q
+                        ALOGV("mEmptyQueueMutex locking: %d", __LINE__);
+                        mEmptyQueueMutex.lock();
+                        ALOGV("mEmptyQueueMutex locked: %d", __LINE__);
+                        mEmptyQueue.push_back(buf);
+                        ALOGV("mEmptyQueueMutex unlocking: %d", __LINE__);
+                        mEmptyQueueMutex.unlock();
+                        ALOGV("mEmptyQueueMutex unlocked: %d", __LINE__);
+                        ALOGV("Write Buffer Done: QueueStats empty q %d filled q %d %d"
+                            , mEmptyQueue.size(), mFilledQueue.size(), __LINE__);
+                        mWriteCv.signal();
+                        if (mPaused)
+                            continue;
+                        break;
+                    }
+                }
+                mFilledQueueMutex.unlock();
+            }
+            break;
+        case AUDIO_EVENT_SUSPEND:
+            {
+                struct msm_audio_stats stats;
+                int nBytesConsumed = 0;
+
+                ALOGV("AudioSessionOutTunnel::event thread:AUDIO_EVENT_SUSPEND received\n");
+                if (!mPaused) {
+                    ALOGV("AudioSessionOutTunnel::event thread:Not in paused, no need to honor SUSPEND event");
+                    break;
+                }
+                // 1. Get the Byte count that is consumed
+                if ( ioctl(afd, AUDIO_GET_STATS, &stats)  < 0 ) {
+                    ALOGE("AudioSessionOutTunnel::event thread:AUDIO_GET_STATUS failed");
+                } else {
+                    ALOGV("AudioSessionOutTunnel::event thread:Number of bytes consumed by DSP is %u", stats.byte_count);
+                    nBytesConsumed = stats.byte_count;
+                    }
+                    // 3. Call AUDIO_STOP on the Driver.
+                    ALOGV("AudioSessionOutTunnel::event thread:Received AUDIO_EVENT_SUSPEND and calling AUDIO_STOP");
+                    if ( ioctl(afd, AUDIO_STOP, 0) < 0 ) {
+                         ALOGE("AUDIO_STOP failed");
+                    }
+                    break;
+            }
+            break;
+        case AUDIO_EVENT_RESUME:
+            {
+                ALOGV("AudioSessionOutTunnel::event thread:AUDIO_EVENT_RESUME received\n");
+            }
+            break;
+        default:
+            ALOGE("AudioSessionOutTunnel::event thread:Received Invalid Event from driver\n");
+            break;
+        }
+    }
+    mEventThreadAlive = false;
+    ALOGV("Event Thread is dying.");
+}
+
+
+void AudioHardware::AudioSessionOutTunnel::createEventThread()
+{
+    ALOGV("Creating Event Thread");
+    mKillEventThread = false;
+    mEventThreadAlive = true;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    pthread_create(&mEventThread, &attr, eventThreadWrapper, this);
+    ALOGV("Event Thread created");
+}
+
+status_t AudioHardware::AudioSessionOutTunnel::start( )
+{
+
+    ALOGV("AudioSessionOutTunnel::start Tunnel playback start");
+    if (mPaused) {
+        if (mSeeking) {
+            mSeeking = false;
+        } else {
+            if (ioctl(afd, AUDIO_PAUSE, 0) < 0) {
+                ALOGE("AudioSessionOutTunnel::start: Resume:: Tunnel driver resume failed");
+                return UNKNOWN_ERROR;
+            }
+            mPaused = false;
+        }
+    } else {
+        int sessionId = 0;
+        struct msm_audio_aac_config aac_config;
+        unsigned short decId;
+
+        if ( ioctl(afd, AUDIO_GET_SESSION_ID, &decId) == -1 ) {
+            ALOGE("AudioSessionOutTunnel::start:AUDIO_GET_SESSION_ID FAILED\n");
+            return BAD_VALUE;
+        } else {
+            sessionId = (int)decId;
+            ALOGV("AudioSessionOutTunnel::start:AUDIO_GET_SESSION_ID success : decId = %d", decId);
+        }
+
+        if(mFormat == AUDIO_FORMAT_AAC) {
+            memset(&aac_config,0,sizeof(aac_config));
+            aac_config.format = AUDIO_AAC_FORMAT_RAW;
+            //aac_config.sample_rate = mSampleRate;
+            aac_config.channel_configuration = mChannels;
+            ALOGD("AudioSessionOutTunnel::start:sample_rate=%d and channel count=%d \n", mSampleRate, mChannels);
+
+            if (ioctl(afd, AUDIO_SET_AAC_CONFIG, &aac_config)) {
+                ALOGE("AudioSessionOutTunnel::start:could not set AUDIO_SET_AAC_CONFIG_V2 %d", errno);
+                afd = -1;
+                return BAD_VALUE;
+            }
+        }
+
+
+        Mutex::Autolock lock(mDeviceSwitchLock);
+#ifdef QCOM_TUNNEL_LPA_ENABLED
+        if(getNodeByStreamType(LPA_DECODE) != NULL) {
+            ALOGE("AudioSessionOutTunnel::start:Not allowed, There is alread an LPA Node existing");
+            return -1;
+        }
+        ALOGV("AudioSessionOutTunnel::start:AudioSessionOutTunnel::set() Adding LPA_DECODE Node to Table");
+        addToTable(sessionId,cur_rx,INVALID_DEVICE,LPA_DECODE,true);
+#endif
+        ALOGV("AudioSessionOutTunnel::start:enableDevice(cur_rx = %d, dev_id = %d)",cur_rx,DEV_ID(cur_rx));
+        if (enableDevice(cur_rx, 1)) {
+            ALOGE("AudioSessionOutTunnel::start:enableDevice failed for device cur_rx %d", cur_rx);
+            return -1;
+        }
+
+        ALOGV("AudioSessionOutTunnel::start:msm_route_stream(PCM_PLAY,%d,%d,0)",sessionId,DEV_ID(cur_rx));
+#ifdef QCOM_ACDB_ENABLED
+        acdb_loader_send_audio_cal(ACDB_ID(cur_rx), CAPABILITY(cur_rx));
+#endif
+        if(msm_route_stream(PCM_PLAY,sessionId,DEV_ID(cur_rx),1)) {
+            ALOGE("AudioSessionOutTunnel::start:msm_route_stream(PCM_PLAY,%d,%d,1) failed",sessionId,DEV_ID(cur_rx));
+            return -1;
+        }
+
+        Mutex::Autolock lock_1(mComboDeviceLock);
+#ifdef QCOM_FM_ENABLED
+        if(CurrentComboDeviceData.DeviceId == SND_DEVICE_FM_TX_AND_SPEAKER){
+            ALOGD("AudioSessionOutTunnel::start:Routing LPA steam to speaker for combo device");
+            ALOGD("AudioSessionOutTunnel::start:combo:msm_route_stream(LPA_DECODE,session id:%d,dev id:%d,1)",sessionId,
+                DEV_ID(DEVICE_SPEAKER_RX));
+                /* music session is already routed to speaker in
+                 * enableComboDevice(), but at this point it can
+                 * be said that it was done with incorrect session id,
+                 * so re-routing with correct session id here.
+                 */
+            if(msm_route_stream(PCM_PLAY, sessionId, DEV_ID(DEVICE_SPEAKER_RX),
+               1)) {
+                ALOGE("AudioSessionOutTunnel::start:msm_route_stream failed");
+                return -1;
+            }
+            CurrentComboDeviceData.StreamType = LPA_DECODE;
+        }
+#endif
+        if (ioctl(afd, AUDIO_START,0) < 0) {
+            ALOGE("AudioSessionOutTunnel::start:Driver start failed!");
+            return BAD_VALUE;
+        }
+        allocAndRegisterbuffs();
+    }
+    return NO_ERROR;
+}
+
+status_t AudioHardware::AudioSessionOutTunnel::pause()
+{
+    ALOGV("AudioSessionOutTunnel::pause:Tunnel playback pause");
+    if (ioctl(afd, AUDIO_PAUSE, 1) < 0) {
+    ALOGE("AudioSessionOutTunnel::pause:Audio Pause failed");
+    }
+    mPaused = true;
+    return NO_ERROR;
+}
+
+status_t AudioHardware::AudioSessionOutTunnel::drain()
+{
+    ALOGV("Tunnel playback EOS");
+    return NO_ERROR;
+}
+
+status_t AudioHardware::AudioSessionOutTunnel::flush()
+{
+    ALOGE("AudioSessionOutTunnel::flush Tunnel playback flush ");
+    Mutex::Autolock autoLock(mFlushLock);
+    int err;
+
+    // 2.) Add all the available buffers to Empty Queue (Maintain order)
+    mFilledQueueMutex.lock();
+    mEmptyQueueMutex.lock();
+    List<BuffersAllocated>::iterator it = mBufPool.begin();
+    ALOGV("AudioSessionOutTunnel::flush : QueueStats empty q %d filled q %d %d"
+        , mEmptyQueue.size(), mFilledQueue.size(), __LINE__);
+
+    while (!mFilledQueue.empty()) {
+        List<BuffersAllocated>::iterator it = mFilledQueue.begin();
+        BuffersAllocated buf = *it;
+        buf.bytesToWrite = 0;
+        mEmptyQueue.push_back(buf);
+        mFilledQueue.erase(it);
+    }
+    mEmptyQueueMutex.unlock();
+    mFilledQueueMutex.unlock();
+
+    ALOGV("AudioSessionOutTunnel::flush : QueueStats empty q %d filled q %d %d"
+        , mEmptyQueue.size(), mFilledQueue.size(), __LINE__);
+
+    /* If Write is blocked on empty buffers, then it's better skip
+     * that buffer.
+     */
+    mSkipWrite = true;
+    mWriteCv.signal();
+    if (!mPaused) {
+        if (ioctl(afd, AUDIO_FLUSH, 0) < 0) {
+            ALOGE("Audio Flush failed");
+            return UNKNOWN_ERROR;
+        }
+    } else
+         mSeeking = true;
+
+    ALOGD("AudioSessionOutTunnel::flush exit");
+    return NO_ERROR;
+}
+status_t AudioHardware::AudioSessionOutTunnel::stop()
+{
+    Mutex::Autolock autoLock(mLock);
+    ALOGV("AudioSessionOutTunnel- stop");
+    // close all the existing PCM devices
+    mSkipWrite = true;
+    mWriteCv.signal();
+
+    return NO_ERROR;
+}
+
+status_t AudioHardware::AudioSessionOutTunnel::setObserver(void *observer)
+{
+    ALOGV("Registering the callback \n");
+    mObserver = reinterpret_cast<AudioEventObserver *>(observer);
+    return NO_ERROR;
+}
+
+status_t  AudioHardware::AudioSessionOutTunnel::getNextWriteTimestamp(int64_t *timestamp)
+{
+    msm_audio_stats stats;
+    ioctl(afd, AUDIO_GET_STATS, &stats);
+    memcpy(timestamp ,&stats.unused[0],sizeof(int64_t));
+    ALOGV("Timestamp returned = %lld\n", *timestamp);
+    return NO_ERROR;
+}
+
+void AudioHardware::AudioSessionOutTunnel::reset()
+{
+    Routing_table* temp = NULL;
+    ALOGD("AudioSessionOutTunnel::reset()");
+    requestAndWaitForEventThreadExit();
+    status_t status = NO_ERROR;
+    temp = getNodeByStreamType(LPA_DECODE);
+
+    if (temp == NULL) {
+        ALOGE("AudioSessionOutTunnel::resetTunnel node does not exist");
+        return ;
+    }
+    ALOGD("AudioSessionOutTunnel::resetDeroute Tunnel playback stream");
+    if(msm_route_stream(PCM_PLAY, temp->dec_id,DEV_ID(temp->dev_id), 0)) {
+        ALOGE("AudioSessionOutTunnel::resetcould not set stream routing\n");
+        deleteFromTable(LPA_DECODE);
+    }
+    deleteFromTable(LPA_DECODE);
+    if (!getNodeByStreamType(VOICE_CALL) && !getNodeByStreamType(PCM_PLAY)
+#ifdef QCOM_FM_ENABLED
+        && !getNodeByStreamType(FM_RADIO)
+#endif
+#ifdef QCOM_VOIP_ENABLED
+        && !getNodeByStreamType(VOIP_CALL)
+#endif
+       ) {
+#ifdef QCOM_ANC_HEADSET_ENABLED
+        if (anc_running == false) {
+#endif
+            if (enableDevice(cur_rx, 0)) {
+                ALOGE("AudioSessionOutTunnel::resetDisabling device failed for cur_rx %d", cur_rx);
+            }
+#ifdef QCOM_ANC_HEADSET_ENABLED
+        }
+#endif
+    }
+
+    ALOGD("AudioSessionOutTunnel::reset:dealloc buffers");
+    deallocAndDeregisterbuffs();
+
+    ALOGD("AudioSessionOutTunnel::resetStop and close Tunnel Driver");
+    status = ioctl(afd, AUDIO_STOP, 0);
+    ::close(afd);
+    ALOGD("AudioSessionOutTunnel::reset ends %d", status);
+}
+
+status_t AudioHardware::AudioSessionOutTunnel::getRenderPosition(uint32_t *dspFrames)
+{
+    //TODO: enable when supported by driver
+    return INVALID_OPERATION;
+}
+
+#endif /*TUNNEL_PLAYBACK*/
 
 // End AudioSessionOutLPA
 //.----------------------------------------------------------------------------
