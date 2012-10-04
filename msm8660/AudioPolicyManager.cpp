@@ -262,6 +262,14 @@ audio_devices_t AudioPolicyManager::getDeviceForStrategy(routing_strategy strate
            device |= AudioSystem::DEVICE_OUT_ANC_HEADPHONE;
        }
 #endif
+       // Do not play media stream if in call and the requested device would change the hardware
+       // output routing
+       if (mPhoneState == AudioSystem::MODE_IN_CALL &&
+          !AudioSystem::isA2dpDevice((AudioSystem::audio_devices)device) &&
+           device != getDeviceForStrategy(STRATEGY_PHONE)) {
+           device = getDeviceForStrategy(STRATEGY_PHONE);
+           ALOGV("getDeviceForStrategy() incompatible media and phone devices");
+       }
        if (device == 0) {
            ALOGE("getDeviceForStrategy() no device found for STRATEGY_MEDIA");
        }
