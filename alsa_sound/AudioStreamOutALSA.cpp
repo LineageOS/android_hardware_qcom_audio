@@ -178,8 +178,6 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
             mHandle->module->route(mHandle, mDevices , mParent->mode());
 #endif
         } else {
-            if (!mDevices)
-               mDevices = mParent->mCurDevice;
             mHandle->module->route(mHandle, mDevices , mParent->mode());
         }
         if (!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI) ||
