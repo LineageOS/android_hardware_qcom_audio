@@ -125,22 +125,35 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
          (strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
         mParent->mLock.lock();
 
+        ALOGD("mHandle->useCase: %s", mHandle->useCase);
         snd_use_case_get(mHandle->ucMgr, "_verb", (const char **)&use_case);
         if ((use_case == NULL) || (!strcmp(use_case, SND_USE_CASE_VERB_INACTIVE))) {
-            if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)){
-                 strlcpy(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL,sizeof(mHandle->useCase));
-            } else if (mHandle->isDeepbufferOutput){
-                       strlcpy(mHandle->useCase, SND_USE_CASE_VERB_HIFI, sizeof(mHandle->useCase));
-            } else {
-                       strlcpy(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC, sizeof(mHandle->useCase));
+            if(!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP)){
+                strlcpy(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL,
+                        sizeof(SND_USE_CASE_VERB_IP_VOICECALL));
+            } else if(!strcmp(mHandle->useCase,SND_USE_CASE_MOD_PLAY_MUSIC2)) {
+                strlcpy(mHandle->useCase, SND_USE_CASE_VERB_HIFI2,
+                        sizeof(SND_USE_CASE_MOD_PLAY_MUSIC2));
+            } else if (!strcmp(mHandle->useCase,SND_USE_CASE_MOD_PLAY_MUSIC)){
+                strlcpy(mHandle->useCase, SND_USE_CASE_VERB_HIFI,
+                        sizeof(SND_USE_CASE_MOD_PLAY_MUSIC));
+            } else if(!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC)) {
+                strlcpy(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC,
+                        sizeof(SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC));
             }
         } else {
-            if(!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP)) {
-                strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP,sizeof(mHandle->useCase));
-            } else if (mHandle->isDeepbufferOutput){
-                       strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_MUSIC, sizeof(mHandle->useCase));
-            } else {
-                       strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC, sizeof(mHandle->useCase));
+            if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)){
+                strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP,
+                        sizeof(SND_USE_CASE_MOD_PLAY_VOIP));
+            } else if(!strcmp(mHandle->useCase,SND_USE_CASE_VERB_HIFI2)) {
+                strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_MUSIC2,
+                        sizeof(SND_USE_CASE_MOD_PLAY_MUSIC2));
+            } else if (!strcmp(mHandle->useCase,SND_USE_CASE_VERB_HIFI)){
+                strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_MUSIC,
+                        sizeof(SND_USE_CASE_MOD_PLAY_MUSIC));
+            } else if(!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC)) {
+                strlcpy(mHandle->useCase, SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC,
+                        sizeof(SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC));
             }
         }
         free(use_case);
@@ -170,6 +183,7 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
             mHandle->module->route(mHandle, mDevices , mParent->mode());
         }
         if (!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI) ||
+            !strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI2) ||
             !strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC) ||
             !strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) {
             snd_use_case_set(mHandle->ucMgr, "_verb", mHandle->useCase);
