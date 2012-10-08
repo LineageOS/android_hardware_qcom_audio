@@ -28,7 +28,8 @@ LOCAL_SRC_FILES := \
   AudioStreamInALSA.cpp 	\
   ALSAStreamOps.cpp		\
   audio_hw_hal.cpp \
-  AudioUsbALSA.cpp
+  AudioUsbALSA.cpp \
+  AudioUtil.cpp
 
 LOCAL_STATIC_LIBRARIES := \
     libmedia_helper \
@@ -127,7 +128,8 @@ LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/libalsa-intf
 
 LOCAL_SRC_FILES:= \
     alsa_default.cpp \
-    ALSAControl.cpp
+    ALSAControl.cpp \
+    AudioUtil.cpp
 
 LOCAL_SHARED_LIBRARIES := \
     libcutils \
