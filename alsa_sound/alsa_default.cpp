@@ -98,7 +98,6 @@ static uint32_t mDevSettingsFlag = TTY_OFF | DMIC_FLAG;
 static uint32_t mDevSettingsFlag = TTY_OFF;
 #endif
 static int btsco_samplerate = 8000;
-static bool pflag = false;
 static ALSAUseCaseList mUseCaseList;
 static void *csd_handle;
 
@@ -374,8 +373,8 @@ status_t setSoftwareParams(alsa_handle_t *handle)
           params->start_threshold = periodSize/2;
           params->stop_threshold = INT_MAX;
      } else {
-         params->avail_min = periodSize/2;
-         params->start_threshold = channels * (periodSize/4);
+         params->avail_min = periodSize/(channels * 2);
+         params->start_threshold = periodSize/(channels * 2);
          params->stop_threshold = INT_MAX;
      }
     params->silence_threshold = 0;
@@ -581,7 +580,7 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
         rx_dev_id = snd_use_case_get(handle->ucMgr, ident, NULL);
 
         if (((rx_dev_id == DEVICE_SPEAKER_MONO_RX_ACDB_ID ) || (rx_dev_id == DEVICE_SPEAKER_STEREO_RX_ACDB_ID ))
-		 && tx_dev_id == DEVICE_HANDSET_TX_ACDB_ID) {
+         && tx_dev_id == DEVICE_HANDSET_TX_ACDB_ID) {
             tx_dev_id = DEVICE_SPEAKER_TX_ACDB_ID;
         }
 
@@ -597,20 +596,6 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
             }
         }
 #endif
-    }
-
-    if (rxDevice != NULL) {
-        if (pflag && (((!strncmp(rxDevice, DEVICE_SPEAKER_HEADSET, strlen(DEVICE_SPEAKER_HEADSET))) &&
-            ((!strncmp(curRxUCMDevice, DEVICE_HEADPHONES, strlen(DEVICE_HEADPHONES))) ||
-            (!strncmp(curRxUCMDevice, DEVICE_HEADSET, strlen(DEVICE_HEADSET))))) ||
-            (((!strncmp(curRxUCMDevice, DEVICE_SPEAKER_HEADSET, strlen(DEVICE_SPEAKER_HEADSET))) &&
-            ((!strncmp(rxDevice, DEVICE_HEADPHONES, strlen(DEVICE_HEADPHONES))) ||
-            (!strncmp(rxDevice, DEVICE_HEADSET, strlen(DEVICE_HEADSET))))))) &&
-            ((!strncmp(handle->useCase, SND_USE_CASE_VERB_HIFI, strlen(SND_USE_CASE_VERB_HIFI))) ||
-            (!strncmp(handle->useCase, SND_USE_CASE_MOD_PLAY_MUSIC, strlen(SND_USE_CASE_MOD_PLAY_MUSIC))))) {
-            s_open(handle);
-            pflag = false;
-        }
     }
 
     if (rxDevice != NULL) {
@@ -672,8 +657,10 @@ static status_t s_open(alsa_handle_t *handle)
         flags |= PCM_MMAP;
         flags |= DEBUG_ON;
     } else if ((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI)) ||
+        (!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI2)) ||
         (!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC)) ||
         (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC)) ||
+        (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_MUSIC2)) ||
         (!strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_MUSIC))) {
         ALOGV("Music case");
         flags = PCM_OUT;
@@ -683,18 +670,20 @@ static status_t s_open(alsa_handle_t *handle)
     if (handle->channels == 1) {
         flags |= PCM_MONO;
     }
-#ifdef QCOM_SSR_ENABLED
     else if (handle->channels == 4 ) {
         flags |= PCM_QUAD;
     } else if (handle->channels == 6 ) {
+#ifdef QCOM_SSR_ENABLED
         if (!strncmp(handle->useCase, SND_USE_CASE_VERB_HIFI_REC, strlen(SND_USE_CASE_VERB_HIFI_REC))
             || !strncmp(handle->useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC, strlen(SND_USE_CASE_MOD_CAPTURE_MUSIC))) {
             flags |= PCM_QUAD;
         } else {
             flags |= PCM_5POINT1;
         }
-    }
+#else
+        flags |= PCM_5POINT1;
 #endif
+    }
     else {
         flags |= PCM_STEREO;
     }
@@ -1198,6 +1187,8 @@ int getUseCaseType(const char *useCase)
     ALOGD("use case is %s\n", useCase);
     if (!strncmp(useCase, SND_USE_CASE_VERB_HIFI,
             MAX_LEN(useCase,SND_USE_CASE_VERB_HIFI)) ||
+        !strncmp(useCase, SND_USE_CASE_VERB_HIFI2,
+            MAX_LEN(useCase, SND_USE_CASE_VERB_HIFI2)) ||
         !strncmp(useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC,
             MAX_LEN(useCase,SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC)) ||
         !strncmp(useCase, SND_USE_CASE_VERB_HIFI_LOW_POWER,
@@ -1210,6 +1201,8 @@ int getUseCaseType(const char *useCase)
             MAX_LEN(useCase,SND_USE_CASE_VERB_DIGITAL_RADIO)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_PLAY_MUSIC,
             MAX_LEN(useCase,SND_USE_CASE_MOD_PLAY_MUSIC)) ||
+        !strncmp(useCase, SND_USE_CASE_MOD_PLAY_MUSIC2,
+            MAX_LEN(useCase, SND_USE_CASE_MOD_PLAY_MUSIC2)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC,
             MAX_LEN(useCase,SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_PLAY_MUSIC2,
