@@ -294,6 +294,12 @@ void AudioPolicyManager::setPhoneState(int state)
         setStreamMute(AudioSystem::RING, true, mPrimaryOutput);
     }
 
+    if (isStateInCall(state)) {
+        // Force calling of setVoiceVolume (in checkAndSetVolume) at the start of
+        // every call.  Otherwise calls start at max volume regardless of setting.
+        mLastVoiceVolume = -1.0f;
+    }
+
     // change routing is necessary
     setOutputDevice(mPrimaryOutput, newDevice, force, delayMs);
 
