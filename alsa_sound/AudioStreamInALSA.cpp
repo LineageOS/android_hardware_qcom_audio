@@ -435,6 +435,13 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                 }
                 else
                     mHandle->module->open(mHandle);
+
+                if(mHandle->handle == NULL) {
+                   ALOGE("read:: PCM device re-open failed");
+                   mParent->mLock.unlock();
+                   return 0;
+                }
+
                 mParent->mLock.unlock();
                 continue;
             }
