@@ -260,8 +260,12 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
                      mHandle->rxHandle = NULL;
                      mHandle->module->startVoipCall(mHandle);
                 }
-                else {
+                else
                     mHandle->module->open(mHandle);
+                if(mHandle->handle == NULL) {
+                   ALOGE("write:: device re-open failed");
+                   mParent->mLock.unlock();
+                   return bytes;
                 }
             }
             mParent->mLock.unlock();
