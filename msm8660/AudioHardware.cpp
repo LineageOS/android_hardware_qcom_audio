@@ -4459,7 +4459,6 @@ AudioHardware::AudioSessionOutTunnel::AudioSessionOutTunnel( AudioHardware *hw,
     mInputBufferCount   = TUNNEL_BUFFER_COUNT;
 
     mPaused             = false;
-    mSeeking            = false;
     mSkipWrite          = false;
 
     efd = -1;
@@ -4972,15 +4971,11 @@ status_t AudioHardware::AudioSessionOutTunnel::start( )
 
     ALOGV("AudioSessionOutTunnel::start Tunnel playback start");
     if (mPaused) {
-        if (mSeeking) {
-            mSeeking = false;
-        } else {
-            if (ioctl(afd, AUDIO_PAUSE, 0) < 0) {
-                ALOGE("AudioSessionOutTunnel::start: Resume:: Tunnel driver resume failed");
-                return UNKNOWN_ERROR;
-            }
-            mPaused = false;
+        if (ioctl(afd, AUDIO_PAUSE, 0) < 0) {
+            ALOGE("AudioSessionOutTunnel::start: Resume:: Tunnel driver resume failed");
+            return UNKNOWN_ERROR;
         }
+        mPaused = false;
     } else {
         int sessionId = 0;
         struct msm_audio_aac_config aac_config;
@@ -5108,14 +5103,10 @@ status_t AudioHardware::AudioSessionOutTunnel::flush()
      */
     mSkipWrite = true;
     mWriteCv.signal();
-    if (!mPaused) {
-        if (ioctl(afd, AUDIO_FLUSH, 0) < 0) {
-            ALOGE("Audio Flush failed");
-            return UNKNOWN_ERROR;
-        }
-    } else
-         mSeeking = true;
-
+    if (ioctl(afd, AUDIO_FLUSH, 0) < 0) {
+        ALOGE("Audio Flush failed");
+        return UNKNOWN_ERROR;
+    }
     ALOGD("AudioSessionOutTunnel::flush exit");
     return NO_ERROR;
 }
