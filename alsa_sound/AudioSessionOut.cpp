@@ -234,6 +234,13 @@ ssize_t AudioSessionOutALSA::write(const void *buffer, size_t bytes)
     ALOGV("write Empty Queue size() = %d, Filled Queue size() = %d ",
          mEmptyQueue.size(),mFilledQueue.size());
 
+    if(mFilledQueue.empty() && !bytes) {
+        mReachedEOS = true;
+        mEosEventReceived = true;
+        ALOGV("mObserver: posting EOS");
+        mObserver->postEOS(0);
+    }
+
     //1.) Dequeue the buffer from empty buffer queue. Copy the data to be
     //    written into the buffer. Then Enqueue the buffer to the filled
     //    buffer queue
@@ -246,10 +253,6 @@ ssize_t AudioSessionOutALSA::write(const void *buffer, size_t bytes)
     memset(buf.memBuf, 0, mAlsaHandle->handle->period_size);
     memcpy(buf.memBuf, buffer, bytes);
     buf.bytesToWrite = bytes;
-
-    mFilledQueueMutex.lock();
-    mFilledQueue.push_back(buf);
-    mFilledQueueMutex.unlock();
 
     //2.) Write the buffer to the Driver
     ALOGV("PCM write start");
