@@ -1,14 +1,8 @@
-# Copyright 2011 The Android Open Source Project
-
 #AUDIO_POLICY_TEST := true
 #ENABLE_AUDIO_DUMP := true
 
 LOCAL_PATH := $(call my-dir)
-
 include $(CLEAR_VARS)
-
-LOCAL_ARM_MODE := arm
-LOCAL_CFLAGS := -D_POSIX_SOURCE
 
 LOCAL_SRC_FILES := \
     AudioHardware.cpp \
@@ -63,8 +57,7 @@ endif
 
 LOCAL_STATIC_LIBRARIES := \
     libmedia_helper \
-    libaudiohw_legacy \
-    libaudiopolicy_legacy
+    libaudiohw_legacy
 
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
@@ -74,7 +67,7 @@ LOCAL_CFLAGS += -fno-short-enums
 
 LOCAL_C_INCLUDES := $(TARGET_OUT_HEADERS)/mm-audio/audio-alsa
 ifeq ($(BOARD_USES_QCOM_AUDIO_CALIBRATION),true)
-    LOCAL_C_INCLUDES := $(TARGET_OUT_HEADERS)/mm-audio/audcal
+    LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audcal
 endif
 LOCAL_C_INCLUDES += hardware/libhardware/include
 LOCAL_C_INCLUDES += hardware/libhardware_legacy/include
@@ -96,7 +89,6 @@ LOCAL_SHARED_LIBRARIES := \
     libmedia
 
 LOCAL_STATIC_LIBRARIES := \
-    libaudiohw_legacy \
     libmedia_helper \
     libaudiopolicy_legacy
 
@@ -121,6 +113,6 @@ include $(CLEAR_VARS)
 LOCAL_MODULE       := audio_policy.conf
 LOCAL_MODULE_TAGS  := optional
 LOCAL_MODULE_CLASS := ETC
-LOCAL_MODULE_PATH  := $(TARGET_OUT_ETC)
+LOCAL_MODULE_PATH  := $(TARGET_OUT_ETC)/
 LOCAL_SRC_FILES    := audio_policy.conf
 include $(BUILD_PREBUILT)
