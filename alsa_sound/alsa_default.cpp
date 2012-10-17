@@ -409,6 +409,11 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
         } else if (devices & AudioSystem::DEVICE_IN_BUILTIN_MIC) {
             if (mode == AudioSystem::MODE_IN_CALL) {
                 devices |= AudioSystem::DEVICE_OUT_EARPIECE;
+            } else if (mode == AudioSystem::MODE_IN_COMMUNICATION) {
+                if (!strncmp(curRxUCMDevice, SND_USE_CASE_DEV_SPEAKER, MAX_LEN(curRxUCMDevice, SND_USE_CASE_DEV_SPEAKER))) {
+                    devices &= ~AudioSystem::DEVICE_IN_BUILTIN_MIC;
+                    devices |= AudioSystem::DEVICE_IN_BACK_MIC;
+                }
             }
         } else if (devices & AudioSystem::DEVICE_OUT_EARPIECE) {
             devices = devices | AudioSystem::DEVICE_IN_BUILTIN_MIC;
