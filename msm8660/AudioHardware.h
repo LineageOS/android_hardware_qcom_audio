@@ -185,7 +185,7 @@ public:
 
 protected:
     virtual status_t    dump(int fd, const Vector<String16>& args);
-    uint32_t getMvsMode(int format);
+    uint32_t getMvsMode(int format, int rate);
     uint32_t getMvsRateType(uint32_t MvsMode, uint32_t *rateType);
     status_t setupDeviceforVoipCall(bool value);
 
@@ -664,7 +664,7 @@ private:
                                 uint32_t *pRate,
                                 AudioSystem::audio_in_acoustics acoustics);
         virtual size_t      bufferSize() const { return mBufferSize; }
-        virtual uint32_t    channels() const { return mChannels; }
+        virtual uint32_t    channels() const {ALOGD(" AudioStreamInVoip: channels %d \n",mChannels); return mChannels; }
         virtual int         format() const { return AUDIO_HW_IN_FORMAT; }
         virtual uint32_t    sampleRate() const { return mSampleRate; }
         virtual status_t    setGain(float gain) { return INVALID_OPERATION; }
