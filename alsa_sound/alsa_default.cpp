@@ -1088,21 +1088,6 @@ static status_t s_close(alsa_handle_t *handle)
     handle->rxHandle = 0;
     ALOGV("s_close: handle %p h %p", handle, h);
     if (h) {
-        if ((!strcmp(handle->useCase, SND_USE_CASE_VERB_VOICECALL) ||
-             !strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_VOICE)) &&
-            platform_is_Fusion3()) {
-#ifdef QCOM_CSDCLIENT_ENABLED
-            if (csd_stop_voice == NULL) {
-                ALOGE("dlsym:Error:%s Loading csd_client_disable_device", dlerror());
-            } else {
-                err = csd_stop_voice();
-                if (err < 0) {
-                    ALOGE("s_close: csd_client error %d\n", err);
-                }
-            }
-#endif
-        }
-
         ALOGV("s_close rxHandle\n");
         err = pcm_close(h);
         if(err != NO_ERROR) {
@@ -1118,6 +1103,21 @@ static status_t s_close(alsa_handle_t *handle)
         err = pcm_close(h);
         if(err != NO_ERROR) {
             ALOGE("s_close: pcm_close failed for handle with err %d", err);
+        }
+
+        if ((!strcmp(handle->useCase, SND_USE_CASE_VERB_VOICECALL) ||
+             !strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_VOICE)) &&
+            platform_is_Fusion3()) {
+#ifdef QCOM_CSDCLIENT_ENABLED
+            if (csd_stop_voice == NULL) {
+                ALOGE("dlsym:Error:%s Loading csd_client_disable_device", dlerror());
+            } else {
+                err = csd_stop_voice();
+                if (err < 0) {
+                    ALOGE("s_close: csd_client error %d\n", err);
+                }
+            }
+#endif
         }
 
         disableDevice(handle);
