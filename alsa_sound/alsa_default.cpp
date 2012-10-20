@@ -433,7 +433,8 @@ void switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
             devices = devices | (AudioSystem::DEVICE_OUT_WIRED_HEADPHONE |
                       AudioSystem::DEVICE_IN_BUILTIN_MIC);
         } else if ((devices & AudioSystem::DEVICE_OUT_EARPIECE) ||
-                  (devices & AudioSystem::DEVICE_IN_BUILTIN_MIC)) {
+                   (devices & AudioSystem::DEVICE_IN_BUILTIN_MIC) ||
+                   (devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)) {
             devices = devices | (AudioSystem::DEVICE_IN_BUILTIN_MIC |
                       AudioSystem::DEVICE_OUT_EARPIECE);
         } else if (devices & AudioSystem::DEVICE_OUT_SPEAKER) {
@@ -1390,9 +1391,17 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
              } else if (mDevSettingsFlag & TTY_HCO) {
                  return strdup(SND_USE_CASE_DEV_TTY_HANDSET_RX); /* HANDSET RX */
              }
-        }else if ((devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET) ||
-                  (devices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)) {
+        } else if ((devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET) ||
+                   (devices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)) {
+#ifdef DOCK_USBAUDIO
+             if (callMode == AudioSystem::MODE_RINGTONE) {
+                 return strdup(SND_USE_CASE_DEV_SPEAKER); /* Voice SPEAKER RX */
+             } else {
+                 return strdup(SND_USE_CASE_DEV_DOCK); /* DOCK */
+             }
+#else
              return strdup(SND_USE_CASE_DEV_PROXY_RX); /* PROXY RX */
+#endif
         } else if ((devices & AudioSystem::DEVICE_OUT_SPEAKER) &&
             ((devices & AudioSystem::DEVICE_OUT_WIRED_HEADSET) ||
             (devices & AudioSystem::DEVICE_OUT_WIRED_HEADPHONE))) {
