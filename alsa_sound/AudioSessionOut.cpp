@@ -509,6 +509,9 @@ status_t AudioSessionOutALSA::pause()
         return err;
     }
     if (mParent->mRouteAudioToA2dp) {
+        if (!mUseCase) {
+            mUseCase = mParent->useCaseStringToEnum(mAlsaHandle->useCase);
+        }
         err = mParent->suspendA2dpPlayback(mUseCase);
         if(err != NO_ERROR) {
             ALOGE("Suspend Proxy from Pause returned error = %d",err);
