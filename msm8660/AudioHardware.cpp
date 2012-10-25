@@ -3202,9 +3202,11 @@ status_t AudioHardware::AudioStreamOutDirect::set(
 
     mDevices = devices;
 
+#ifndef LEGACY_QCOM_VOICE
     if((voip_session_id <= 0)) {
         voip_session_id = msm_get_voc_session(VOIP_SESSION_NAME);
     }
+#endif
     mHardware->mNumVoipStreams++;
     return NO_ERROR;
 }
@@ -3302,8 +3304,13 @@ ssize_t AudioHardware::AudioStreamOutDirect::write(const void* buffer, size_t by
 #endif
             // start Voip call
             ALOGD("Starting voip call and UnMuting the call");
+#ifdef LEGACY_QCOM_VOICE
+            msm_start_voice();
+            msm_set_voice_tx_mute(0);
+#else
             msm_start_voice_ext(voip_session_id);
             msm_set_voice_tx_mute_ext(voip_session_mute,voip_session_id);
+#endif
             addToTable(0,cur_rx,cur_tx,VOIP_CALL,true);
         }
     }
@@ -3364,10 +3371,13 @@ status_t AudioHardware::AudioStreamOutDirect::standby()
 
     ALOGV(" AudioStreamOutDirect::standby mHardware->mNumVoipStreams = %d mFd = %d\n", mHardware->mNumVoipStreams, mFd);
     if (mFd >= 0 && (mHardware->mNumVoipStreams == 1)) {
+#ifdef LEGACY_QCOM_VOICE
+        msm_end_voice();
+#else
         ret = msm_end_voice_ext(voip_session_id);
         if (ret < 0)
                 ALOGE("Error %d ending voip\n", ret);
-
+#endif
         temp = getNodeByStreamType(VOIP_CALL);
         if(temp == NULL)
         {
@@ -4960,12 +4970,17 @@ status_t AudioHardware::AudioStreamInVoip::set(
            acdb_loader_send_voice_cal(ACDB_ID(cur_rx),ACDB_ID(cur_tx));
 #endif
            // start Voice call
+#ifdef LEGACY_QCOM_VOICE
+           msm_start_voice();
+           msm_set_voice_tx_mute(0);
+#else
            if(voip_session_id <= 0) {
                 voip_session_id = msm_get_voc_session(VOIP_SESSION_NAME);
            }
            ALOGD("Starting voip call and UnMuting the call");
            msm_start_voice_ext(voip_session_id);
            msm_set_voice_tx_mute_ext(voip_session_mute,voip_session_id);
+#endif
            addToTable(0,cur_rx,cur_tx,VOIP_CALL,true);
     }
     mFormat =  *pFormat;
@@ -5084,9 +5099,13 @@ status_t AudioHardware::AudioStreamInVoip::standby()
          ALOGE(" closing mvs driver\n");
          //Mute and disable the device.
          int ret = 0;
+#ifdef LEGACY_QCOM_VOICE
+        msm_end_voice();
+#else
          ret = msm_end_voice_ext(voip_session_id);
          if (ret < 0)
                  ALOGE("Error %d ending voice\n", ret);
+#endif
         temp = getNodeByStreamType(VOIP_CALL);
         if(temp == NULL)
         {
@@ -5104,10 +5123,14 @@ status_t AudioHardware::AudioStreamInVoip::standby()
               && !getNodeByStreamType(FM_RADIO)
 #endif /*QCOM_FM_ENABLED*/
             ) {
+#ifdef QCOM_ANC_HEADSET_ENABLED
                if (anc_running == false) {
+#endif
                    enableDevice(temp->dev_id, 0);
                    ALOGV("Voipin: disable voip rx");
+#ifdef QCOM_ANC_HEADSET_ENABLED
                }
+#endif
             }
             if(!getNodeByStreamType(VOICE_CALL) && !getNodeByStreamType(PCM_REC)) {
                  enableDevice(temp->dev_id_tx,0);
