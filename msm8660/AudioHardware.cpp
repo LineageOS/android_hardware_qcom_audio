@@ -1078,6 +1078,10 @@ AudioStreamOut* AudioHardware::openOutputStream(
                }
                if (lStatus == NO_ERROR) {
                    mDirectOutput = out;
+                   mLock.unlock();
+                   if (mVoipInActive)
+                       setupDeviceforVoipCall(true);
+                   mLock.lock();
                    ALOGV(" \n set sucessful for AudioStreamOutDirect");
                } else {
                    ALOGE(" \n set Failed for AudioStreamOutDirect");
@@ -1231,6 +1235,8 @@ AudioStreamIn* AudioHardware::openInputStream(
         }
         mVoipInputs.add(inVoip);
         mLock.unlock();
+        if (mVoipOutActive)
+            setupDeviceforVoipCall(true);
         return inVoip;
     } else
 #endif /*QCOM_VOIP_ENABLED*/
@@ -3242,9 +3248,6 @@ status_t AudioHardware::AudioStreamInVoip::set(
 
     mHardware->mVoipInActive = true;
 
-    if (mHardware->mVoipOutActive)
-        mHardware->setupDeviceforVoipCall(true);
-
     if (!acoustic)
         return NO_ERROR;
 
@@ -3837,9 +3840,6 @@ status_t AudioHardware::AudioStreamOutDirect::set(
     mDevices = devices;
     mHardware->mVoipOutActive = true;
     
-    if (mHardware->mVoipInActive)
-        mHardware->setupDeviceforVoipCall(true);
-        
     return NO_ERROR;
 }   
 

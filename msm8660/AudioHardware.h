@@ -647,7 +647,7 @@ private:
                 int         mForVR;
     };
 #ifdef QCOM_VOIP_ENABLED
-        class AudioStreamInVoip : public AudioStreamInMSM8x60 {
+    class AudioStreamInVoip : public AudioStreamInMSM8x60 {
     public:
         enum input_state {
             AUDIO_INPUT_CLOSED,
@@ -744,7 +744,7 @@ private:
             char mActiveAP[10];
             char mEffect[10];
 #endif
-
+    friend class AudioStreamInMSM8x60;
 };
 
 
