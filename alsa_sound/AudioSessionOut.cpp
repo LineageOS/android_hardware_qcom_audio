@@ -145,14 +145,14 @@ AudioSessionOutALSA::~AudioSessionOutALSA()
 
     mSkipWrite = true;
     mWriteCv.signal();
+    //TODO: This might need to be Locked using Parent lock
+    reset();
     if (mParent->mRouteAudioToA2dp) {
          status_t err = mParent->stopA2dpPlayback(mUseCase);
          if(err){
              ALOGE("stopA2dpPlayback return err  %d", err);
          }
     }
-    //TODO: This might need to be Locked using Parent lock
-    reset();
 }
 
 status_t AudioSessionOutALSA::setVolume(float left, float right)
@@ -638,6 +638,7 @@ status_t AudioSessionOutALSA::standby()
 {
     Mutex::Autolock autoLock(mParent->mLock);
     status_t err = NO_ERROR;
+    mAlsaHandle->module->standby(mAlsaHandle);
     if (mParent->mRouteAudioToA2dp) {
          ALOGD("Standby - stopA2dpPlayback_l - mUseCase = %d",mUseCase);
          err = mParent->stopA2dpPlayback_l(mUseCase);

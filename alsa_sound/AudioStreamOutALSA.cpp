@@ -358,13 +358,13 @@ status_t AudioStreamOutALSA::standby()
     }
 #endif
 
+    mHandle->module->standby(mHandle);
     if (mParent->mRouteAudioToA2dp) {
         status_t err = mParent->stopA2dpPlayback_l(mUseCase);
         if(err) {
             ALOGE("stopA2dpPlayback return err  %d", err);
         }
     }
-    mHandle->module->standby(mHandle);
 
 #ifdef QCOM_USBAUDIO_ENABLED
     mParent->closeUsbPlaybackIfNothingActive();
