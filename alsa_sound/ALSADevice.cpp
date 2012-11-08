@@ -1316,7 +1316,7 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
         } else if ((devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET) ||
                    (devices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)) {
 #ifdef DOCK_USBAUDIO
-             if (callMode == AudioSystem::MODE_RINGTONE) {
+             if (mCallMode == AudioSystem::MODE_RINGTONE) {
                  return strdup(SND_USE_CASE_DEV_SPEAKER); /* Voice SPEAKER RX */
              } else {
                  return strdup(SND_USE_CASE_DEV_DOCK); /* DOCK */
