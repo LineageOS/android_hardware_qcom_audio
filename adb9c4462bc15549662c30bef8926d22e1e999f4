@@ -1,0 +1,8 @@
+Change-Id: Iadb9c4462bc15549662c30bef8926d22e1e999f4
+Code-Review+2: Steve Kondik <shade@chemlab.org>
+Verified+1: Steve Kondik <shade@chemlab.org>
+Submitted-by: Steve Kondik <shade@chemlab.org>
+Submitted-at: Mon, 12 Nov 2012 10:30:38 -0800
+Reviewed-on: http://review.cyanogenmod.org/26348
+Project: CyanogenMod/android_hardware_qcom_audio
+Branch: refs/heads/jellybean
