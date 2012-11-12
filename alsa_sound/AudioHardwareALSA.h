@@ -289,6 +289,14 @@ private:
     };
     struct proxy_params mProxyParams;
 
+#ifdef USE_A2220
+    int mA2220Fd;
+    int mA2220Mode;
+    Mutex mA2220Lock;
+
+    int a2220_ctl(int mode);
+#endif
+
 };
 
 // ----------------------------------------------------------------------------
@@ -532,14 +540,6 @@ private:
 
     //event fd to signal the EOS and Kill from the userspace
     int mEfd;
-
-#ifdef USE_A2220
-    int mA2220Fd = -1;
-    int mA2220Mode = A2220_PATH_INCALL_RECEIVER_NSOFF;
-    Mutex mA2220Lock;
-
-    int a2220_ctl(int mode);
-#endif
 
 public:
     bool mRouteAudioToA2dp;

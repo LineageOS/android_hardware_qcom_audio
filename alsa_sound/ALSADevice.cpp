@@ -81,6 +81,11 @@ ALSADevice::ALSADevice() {
     mProxyParams.mProxyState = proxy_params::EProxyClosed;
     mProxyParams.mProxyPcmHandle = NULL;
 
+#ifdef USE_A2220
+    mA2220Fd = -1;
+    mA2220Mode = A2220_PATH_INCALL_RECEIVER_NSOFF;
+#endif
+
 }
 
 #ifdef USE_A2220
@@ -92,12 +97,12 @@ int ALSADevice::a2220_ctl(int mode)
 
     if (mA2220Mode != mode) {
         if (mA2220Fd < 0) {
-            mA2220Fd = open("/dev/audience_a2220", O_RDWR);
+            mA2220Fd = ::open("/dev/audience_a2220", O_RDWR);
             if (!mA2220Fd) {
                 ALOGE("%s: unable to open a2220 device!", __func__);
                 return rc;
             } else {
-                ALOGI("%s: device opened, fd=%d", __func__, a2220_fd);
+                ALOGI("%s: device opened, fd=%d", __func__, mA2220Fd);
             }
         }
 
@@ -1379,8 +1384,8 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
             }
         } else if (devices & AudioSystem::DEVICE_OUT_SPEAKER) {
 #if defined(SAMSUNG_AUDIO) || defined(HTC_AUDIO)
-            if (callMode == AudioSystem::MODE_IN_CALL ||
-                callMode == AudioSystem::MODE_IN_COMMUNICATION)
+            if (mCallMode == AudioSystem::MODE_IN_CALL ||
+                mCallMode == AudioSystem::MODE_IN_COMMUNICATION)
                 return strdup(SND_USE_CASE_DEV_VOC_SPEAKER); /* Voice SPEAKER RX */
             else
 #endif
