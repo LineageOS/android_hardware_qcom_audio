@@ -915,6 +915,7 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
                strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_PLAY_MUSIC, sizeof(alsa_handle.useCase));
           }
       } else {
+#ifdef QCOM_LOW_LATENCY_AUDIO_ENABLED
       ALOGD("openOutputStream: Lowlatency Output");
           alsa_handle.bufferSize = PLAYBACK_LOW_LATENCY_BUFFER_SIZE;
           alsa_handle.latency = PLAYBACK_LOW_LATENCY_MEASURED;
@@ -923,6 +924,14 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
           } else {
                strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC, sizeof(alsa_handle.useCase));
           }
+#else
+      ALOGD("openOutputStream: Standard Output");
+          if ((use_case == NULL) || (!strcmp(use_case, SND_USE_CASE_VERB_INACTIVE))) {
+               strlcpy(alsa_handle.useCase, SND_USE_CASE_VERB_HIFI, sizeof(alsa_handle.useCase));
+          } else {
+               strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_PLAY_MUSIC, sizeof(alsa_handle.useCase));
+          }
+#endif
       }
       free(use_case);
       mDeviceList.push_back(alsa_handle);
@@ -944,11 +953,19 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
              snd_use_case_set(mUcMgr, "_enamod", SND_USE_CASE_MOD_PLAY_MUSIC);
           }
       } else {
+#ifdef QCOM_LOW_LATENCY_AUDIO_ENABLED
           if(!strcmp(it->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC)) {
              snd_use_case_set(mUcMgr, "_verb", SND_USE_CASE_VERB_HIFI_LOWLATENCY_MUSIC);
           } else {
              snd_use_case_set(mUcMgr, "_enamod", SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC);
           }
+#else
+          if(!strcmp(it->useCase, SND_USE_CASE_VERB_HIFI)) {
+             snd_use_case_set(mUcMgr, "_verb", SND_USE_CASE_VERB_HIFI);
+          } else {
+             snd_use_case_set(mUcMgr, "_enamod", SND_USE_CASE_MOD_PLAY_MUSIC);
+          }
+#endif
       }
       err = mALSADevice->open(&(*it));
       if (err) {
