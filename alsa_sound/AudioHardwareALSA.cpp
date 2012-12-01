@@ -905,7 +905,7 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
 
       char *use_case;
       snd_use_case_get(mUcMgr, "_verb", (const char **)&use_case);
-
+#ifdef QCOM_LOW_LATENCY_AUDIO_ENABLED
       if (flag & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
       ALOGD("openOutputStream: DeepBuffer Output");
           alsa_handle.isDeepbufferOutput = true;
@@ -924,6 +924,14 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
                strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC, sizeof(alsa_handle.useCase));
           }
       }
+#else
+      ALOGD("openOutputStream: Standard Output");
+      if ((use_case == NULL) || (!strcmp(use_case, SND_USE_CASE_VERB_INACTIVE))) {
+           strlcpy(alsa_handle.useCase, SND_USE_CASE_VERB_HIFI, sizeof(alsa_handle.useCase));
+      } else {
+           strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_PLAY_MUSIC, sizeof(alsa_handle.useCase));
+      }
+#endif
       free(use_case);
       mDeviceList.push_back(alsa_handle);
       ALSAHandleList::iterator it = mDeviceList.end();
@@ -937,6 +945,7 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
       }
 #endif
       mALSADevice->route(&(*it), devices, mode());
+#ifdef QCOM_LOW_LATENCY_AUDIO_ENABLED
       if (flag & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
           if(!strcmp(it->useCase, SND_USE_CASE_VERB_HIFI)) {
              snd_use_case_set(mUcMgr, "_verb", SND_USE_CASE_VERB_HIFI);
@@ -950,6 +959,13 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
              snd_use_case_set(mUcMgr, "_enamod", SND_USE_CASE_MOD_PLAY_LOWLATENCY_MUSIC);
           }
       }
+#else
+      if(!strcmp(it->useCase, SND_USE_CASE_VERB_HIFI)) {
+         snd_use_case_set(mUcMgr, "_verb", SND_USE_CASE_VERB_HIFI);
+      } else {
+         snd_use_case_set(mUcMgr, "_enamod", SND_USE_CASE_MOD_PLAY_MUSIC);
+      }
+#endif
       err = mALSADevice->open(&(*it));
       if (err) {
           ALOGE("Device open failed");
