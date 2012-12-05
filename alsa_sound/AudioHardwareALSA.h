@@ -59,10 +59,17 @@ class AudioHardwareALSA;
 #define DEFAULT_CHANNEL_MODE  2
 #define VOICE_SAMPLING_RATE   8000
 #define VOICE_CHANNEL_MODE    1
-#define PLAYBACK_LATENCY      170000
 #define RECORD_LATENCY        96000
 #define VOICE_LATENCY         85333
+
+#ifdef QCOM_LOW_LATENCY_AUDIO_ENABLED
+#define PLAYBACK_LATENCY      170000
 #define DEFAULT_BUFFER_SIZE   4096
+#else
+#define PLAYBACK_LATENCY      96000
+#define DEFAULT_BUFFER_SIZE   2048
+#endif
+
 //4032 = 336(kernel buffer size) * 2(bytes pcm_16) * 6(number of channels)
 #define DEFAULT_MULTI_CHANNEL_BUF_SIZE    4032
 #define DEFAULT_VOICE_BUFFER_SIZE   2048
