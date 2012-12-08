@@ -35,6 +35,7 @@ extern "C" {
 
 #include "alsa_ucm.h"
 #include "alsa_audio.h"
+#include <stdbool.h>
 #include <pthread.h>
 #define SND_UCM_END_OF_LIST "end"
 
@@ -169,6 +170,7 @@ struct snd_use_case_mgr {
     card_ctxt_t *card_ctxt_ptr;
     pthread_t thr;
     void *acdb_handle;
+    bool isFusion3Platform;
 };
 
 #define MAX_NUM_CARDS (sizeof(card_list)/sizeof(char *))

@@ -57,6 +57,8 @@ extern "C"
     static void (*acdb_deallocate)();
 #endif
 #ifdef QCOM_CSDCLIENT_ENABLED
+    static int (*csd_client_init)();
+    static int (*csd_client_deinit)();
     static int (*csd_start_playback)();
     static int (*csd_stop_playback)();
 #endif
@@ -128,8 +130,16 @@ AudioHardwareALSA::AudioHardwareALSA() :
                  ALOGE("AudioHardware: DLOPEN not successful for CSD CLIENT");
              } else {
                  ALOGD("AudioHardware: DLOPEN successful for CSD CLIENT");
+                 csd_client_init = (int (*)())::dlsym(mCsdHandle,"csd_client_init");
+                 csd_client_deinit = (int (*)())::dlsym(mCsdHandle,"csd_client_deinit");
                  csd_start_playback = (int (*)())::dlsym(mCsdHandle,"csd_client_start_playback");
                  csd_stop_playback = (int (*)())::dlsym(mCsdHandle,"csd_client_stop_playback");
+
+                 if (csd_client_init == NULL) {
+                    ALOGE("dlsym: Error:%s Loading csd_client_init", dlerror());
+                 } else {
+                    csd_client_init();
+                 }
              }
              mALSADevice->setCsdHandle(mCsdHandle);
 #endif
@@ -179,6 +189,10 @@ AudioHardwareALSA::AudioHardwareALSA() :
 #ifdef QCOM_ACDB_ENABLED
                 if (mAcdbHandle) {
                     mUcMgr->acdb_handle = static_cast<void*> (mAcdbHandle);
+                    if (mFusion3Platform)
+                        mUcMgr->isFusion3Platform = true;
+                    else
+                        mUcMgr->isFusion3Platform = false;
                 }
 #endif
             }
@@ -221,8 +235,13 @@ AudioHardwareALSA::~AudioHardwareALSA()
 
 #ifdef QCOM_CSDCLEINT_ENABLED
      if (mCsdHandle) {
-        ::dlclose(mCsdHandle);
-        mCsdHandle = NULL;
+         if (csd_client_deinit == NULL) {
+             ALOGE("dlsym: Error:%s Loading csd_client_deinit", dlerror());
+         } else {
+             csd_client_deinit();
+         }
+         ::dlclose(mCsdHandle);
+         mCsdHandle = NULL;
      }
 #endif
 }

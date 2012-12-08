@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #define LOG_TAG "alsa_ucm"
-#define LOG_NDDEBUG 0
+//#define LOG_NDDEBUG 0
 
 #ifdef ANDROID
 /* definitions for Android logging */
@@ -673,7 +673,7 @@ int use_case_index)
                     ALOGD("Voice acdb: rx id %d tx id %d",
                           uc_mgr->current_rx_device,
                           uc_mgr->current_tx_device);
-                    if (uc_mgr->acdb_handle) {
+                    if (uc_mgr->acdb_handle && !uc_mgr->isFusion3Platform) {
                         acdb_send_voice_cal = dlsym(uc_mgr->acdb_handle,"acdb_loader_send_voice_cal");
                         if (acdb_send_voice_cal == NULL) {
                             ALOGE("ucm: dlsym: Error:%s Loading acdb_loader_send_voice_cal", dlerror());
