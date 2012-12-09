@@ -66,17 +66,12 @@ LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
 
-ifeq (1,0) # use default audio policy manager
 # This is the ALSA audio policy manager
 
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS := -D_POSIX_SOURCE
 LOCAL_CFLAGS += -DQCOM_ACDB_ENABLED
-
-ifeq ($(BOARD_HAVE_BLUETOOTH),true)
-  LOCAL_CFLAGS += -DWITH_A2DP
-endif
 
 LOCAL_SRC_FILES := \
     audio_policy_hal.cpp \
@@ -88,18 +83,15 @@ LOCAL_MODULE_TAGS := optional
 
 LOCAL_STATIC_LIBRARIES := \
     libmedia_helper \
-    libaudiohw_legacy \
     libaudiopolicy_legacy
 
 LOCAL_SHARED_LIBRARIES := \
     libcutils \
-    libutils \
-    libmedia
+    libutils
 
 LOCAL_C_INCLUDES += hardware/libhardware_legacy/audio
 
 include $(BUILD_SHARED_LIBRARY)
-endif
 
 # This is the ALSA module which behaves closely like the original
 
