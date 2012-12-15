@@ -82,6 +82,10 @@ ifeq ($(BOARD_HAVE_BLUETOOTH),true)
   LOCAL_CFLAGS += -DWITH_A2DP
 endif
 
+ifeq ($(BOARD_AUDIO_EXPECTS_MIN_BUFFERSIZE),true)
+  LOCAL_CFLAGS += -DSET_MIN_PERIOD_BYTES
+endif
+
 LOCAL_SRC_FILES := \
     audio_policy_hal.cpp \
     AudioPolicyManagerALSA.cpp
