@@ -15,25 +15,25 @@ LOCAL_CFLAGS += -DQCOM_CSDCLIENT_ENABLED
 LOCAL_CFLAGS += -DQCOM_ACDB_ENABLED
 
 ifeq ($(strip $(BOARD_USES_FLUENCE_INCALL)),true)
-LOCAL_CFLAGS += -DUSES_FLUENCE_INCALL
+	LOCAL_CFLAGS += -DUSES_FLUENCE_INCALL
 endif
 
 ifeq ($(strip $(BOARD_USES_SEPERATED_AUDIO_INPUT)),true)
-LOCAL_CFLAGS += -DSEPERATED_AUDIO_INPUT
+	LOCAL_CFLAGS += -DSEPERATED_AUDIO_INPUT
 endif
 
 ifeq ($(strip $(BOARD_HAVE_LOW_LATENCY_AUDIO)),true)
-LOCAL_CFLAGS += -DQCOM_LOW_LATENCY_AUDIO_ENABLED
+	LOCAL_CFLAGS += -DQCOM_LOW_LATENCY_AUDIO_ENABLED
 endif
 
 LOCAL_SRC_FILES := \
-  AudioHardwareALSA.cpp 	\
-  AudioStreamOutALSA.cpp 	\
-  AudioStreamInALSA.cpp 	\
-  ALSAStreamOps.cpp		\
-  audio_hw_hal.cpp \
-  AudioUsbALSA.cpp \
-  AudioUtil.cpp
+	AudioHardwareALSA.cpp \
+	AudioStreamOutALSA.cpp \
+	AudioStreamInALSA.cpp \
+	ALSAStreamOps.cpp \
+	audio_hw_hal.cpp \
+	AudioUsbALSA.cpp \
+	AudioUtil.cpp
 
 LOCAL_STATIC_LIBRARIES := \
     libmedia_helper \
@@ -50,9 +50,9 @@ LOCAL_SHARED_LIBRARIES := \
     libalsa-intf
 
 ifeq ($(TARGET_SIMULATOR),true)
- LOCAL_LDLIBS += -ldl
+	LOCAL_LDLIBS += -ldl
 else
- LOCAL_SHARED_LIBRARIES += libdl
+	LOCAL_SHARED_LIBRARIES += libdl
 endif
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-alsa
@@ -79,26 +79,26 @@ LOCAL_CFLAGS := -D_POSIX_SOURCE
 LOCAL_CFLAGS += -DQCOM_ACDB_ENABLED
 
 ifeq ($(BOARD_HAVE_BLUETOOTH),true)
-  LOCAL_CFLAGS += -DWITH_A2DP
+	LOCAL_CFLAGS += -DWITH_A2DP
 endif
 
 LOCAL_SRC_FILES := \
-    audio_policy_hal.cpp \
-    AudioPolicyManagerALSA.cpp
+	audio_policy_hal.cpp \
+	AudioPolicyManagerALSA.cpp
 
 LOCAL_MODULE := audio_policy.msm8960
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 LOCAL_MODULE_TAGS := optional
 
 LOCAL_STATIC_LIBRARIES := \
-    libmedia_helper \
-    libaudiohw_legacy \
-    libaudiopolicy_legacy
+	libmedia_helper \
+	libaudiohw_legacy \
+	libaudiopolicy_legacy
 
 LOCAL_SHARED_LIBRARIES := \
-    libcutils \
-    libutils \
-    libmedia
+	libcutils \
+	libutils \
+	libmedia
 
 LOCAL_C_INCLUDES += hardware/libhardware_legacy/audio
 
@@ -117,15 +117,19 @@ LOCAL_CFLAGS := -D_POSIX_SOURCE -Wno-multichar
 LOCAL_CFLAGS += -DQCOM_ACDB_ENABLED
 
 ifeq ($(strip $(BOARD_USES_FLUENCE_INCALL)),true)
-LOCAL_CFLAGS += -DUSES_FLUENCE_INCALL
+	LOCAL_CFLAGS += -DUSES_FLUENCE_INCALL
 endif
 
 ifeq ($(strip $(BOARD_USES_SEPERATED_AUDIO_INPUT)),true)
-LOCAL_CFLAGS += -DSEPERATED_AUDIO_INPUT
+	LOCAL_CFLAGS += -DSEPERATED_AUDIO_INPUT
 endif
 
 ifneq ($(ALSA_DEFAULT_SAMPLE_RATE),)
-    LOCAL_CFLAGS += -DALSA_DEFAULT_SAMPLE_RATE=$(ALSA_DEFAULT_SAMPLE_RATE)
+	LOCAL_CFLAGS += -DALSA_DEFAULT_SAMPLE_RATE=$(ALSA_DEFAULT_SAMPLE_RATE)
+endif
+
+ifeq ($(BOARD_AUDIO_EXPECTS_MIN_BUFFERSIZE),true)
+	LOCAL_CFLAGS += -DSET_MIN_PERIOD_BYTES
 endif
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/libalsa-intf
@@ -141,13 +145,13 @@ LOCAL_SHARED_LIBRARIES := \
     libalsa-intf
 
 ifeq ($(TARGET_SIMULATOR),true)
- LOCAL_LDLIBS += -ldl
+	LOCAL_LDLIBS += -ldl
 else
- LOCAL_SHARED_LIBRARIES += libdl
+	LOCAL_SHARED_LIBRARIES += libdl
 endif
 
 LOCAL_MODULE:= alsa.msm8960
 LOCAL_MODULE_TAGS := optional
 
-  include $(BUILD_SHARED_LIBRARY)
+include $(BUILD_SHARED_LIBRARY)
 endif
