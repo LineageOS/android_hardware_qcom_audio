@@ -78,11 +78,13 @@ static void     s_enable_slow_talk(bool flag);
 static void     s_set_voc_rec_mode(uint8_t mode);
 static void     s_set_volte_mic_mute(int state);
 static void     s_set_volte_volume(int vol);
+static bool     s_is_tmus();
 #ifdef SEPERATED_AUDIO_INPUT
 static void     s_setInput(int);
 
 static int input_source;
 #endif
+static int mccmnc;
 #ifdef QCOM_CSDCLIENT_ENABLED
 static void     s_set_csd_handle(void*);
 #endif
@@ -1307,6 +1309,8 @@ static void disableDevice(alsa_handle_t *handle)
 
 char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
 {
+    bool is_tmus = s_is_tmus();
+
     if (!input) {
         if (!(mDevSettingsFlag & TTY_OFF) &&
             (callMode == AudioSystem::MODE_IN_CALL) &&
@@ -1349,7 +1353,10 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
 #endif
         } else if (devices & AudioSystem::DEVICE_OUT_EARPIECE) {
             if (callMode == AudioSystem::MODE_IN_CALL) {
-                return strdup(SND_USE_CASE_DEV_VOC_EARPIECE); /* Voice HANDSET RX */
+                if(is_tmus)
+                    return strdup(SND_USE_CASE_DEV_VOC_EARPIECE_TMUS); /* Voice HANDSET RX for TMUS */
+                else
+                    return strdup(SND_USE_CASE_DEV_VOC_EARPIECE); /* Voice HANDSET RX */
             } else
                 return strdup(SND_USE_CASE_DEV_EARPIECE); /* HANDSET RX */
         } else if (devices & AudioSystem::DEVICE_OUT_SPEAKER) {
@@ -1439,7 +1446,10 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
 #ifdef USES_FLUENCE_INCALL
                     if(callMode == AudioSystem::MODE_IN_CALL) {
                         if (fluence_mode == FLUENCE_MODE_ENDFIRE) {
-                            return strdup(SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE); /* DUALMIC EF TX */
+                            if(is_tmus)
+                                return strdup(SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE_TMUS); /* DUALMIC EF TX */
+                            else
+                                return strdup(SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE); /* DUALMIC EF TX */
                         } else if (fluence_mode == FLUENCE_MODE_BROADSIDE) {
                             return strdup(SND_USE_CASE_DEV_DUAL_MIC_BROADSIDE); /* DUALMIC BS TX */
                         } else {
@@ -1775,5 +1785,32 @@ static void  s_set_csd_handle(void* handle)
     csd_slow_talk = (int (*)(uint8_t))::dlsym(csd_handle,"csd_client_slow_talk");
 }
 #endif
+
+static bool s_is_tmus()
+{
+    char value[128];
+    bool ret = false;
+
+    if (mccmnc == 0) {
+        property_get("gsm.sim.operator.numeric",value,"0");
+        mccmnc = atoi(value);
+    }
+
+    ALOGD("%s: mnc_mcc :  %d", __FUNCTION__, mccmnc);
+    switch(mccmnc)
+    {
+    //TMUS MCC(310), MNC(490, 260, 026)
+    case 310490:
+    case 310260:
+    case 310026:
+        ret = true;
+        break;
+    default:
+        ret = false;
+        break;
+    }
+
+    return ret;
+}
 
 }
