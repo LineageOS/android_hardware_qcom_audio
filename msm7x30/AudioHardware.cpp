@@ -2407,7 +2407,10 @@ status_t AudioHardware::doRouting(AudioStreamInMSM7x30 *input)
     {
         /* FIXME force FM audio to HEADSET */
         ALOGI("Routing audio to SEMC FM Wired Headset");
-        sndDevice = SND_DEVICE_HEADSET;
+        if (outputDevices & AudioSystem::DEVICE_OUT_WIRED_HEADPHONE)
+            sndDevice = SND_DEVICE_NO_MIC_HEADSET;
+        else
+            sndDevice = SND_DEVICE_HEADSET;
 
         enableFM(sndDevice);
     }
