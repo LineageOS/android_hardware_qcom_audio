@@ -44,6 +44,7 @@ extern "C" {
 #define CAP_TX 0x2
 #define CAP_VOICE 0x4
 #define DEVICE_HANDSET_RX_ACDB_ID                       7 // HANDSET_SPKR
+#define DEVICE_HANDSET_RX_TMUS_ACDB_ID                  81// HANDSET_SPKR
 #define DEVICE_HANDSET_TX_ACDB_ID                       4 // HANDSET_MIC
 #define DEVICE_SPEAKER_MONO_RX_ACDB_ID                  14// SPKR_PHONE_SPKR_MONO
 #define DEVICE_SPEAKER_STEREO_RX_ACDB_ID                15// SPKR_PHONE_SPKR_STEREO
@@ -52,6 +53,7 @@ extern "C" {
 #define DEVICE_HEADSET_TX_ACDB_ID                       8 // HEADSET_MIC
 #define DEVICE_DUALMIC_HANDSET_TX_BROADSIDE_ACDB_ID     5 // HANDSET_MIC_BROADSIDE
 #define DEVICE_DUALMIC_HANDSET_TX_ENDFIRE_ACDB_ID       6 // HANDSET_MIC_ENDFIRE
+#define DEVICE_DUALMIC_HANDSET_TX_ENDFIRE_TMUS_ACDB_ID  91// HANDSET_MIC_ENDFIRE
 #define DEVICE_DUALMIC_SPEAKER_TX_BROADSIDE_ACDB_ID     12// SPKR_PHONE_MIC_BROADSIDE
 #define DEVICE_DUALMIC_SPEAKER_TX_ENDFIRE_ACDB_ID       13// SPKR_PHONE_MIC_ENDFIRE
 #define DEVICE_TTY_HEADSET_MONO_RX_ACDB_ID              17// TTY_HEADSET_SPKR
@@ -231,6 +233,7 @@ static card_mapping_t card_mapping_list[] = {
 #define SND_USE_CASE_DEV_TTY_HANDSET_ANALOG_TX  "TTY Handset Analog Tx"
 #define SND_USE_CASE_DEV_DUAL_MIC_BROADSIDE "DMIC Broadside"
 #define SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE "DMIC Endfire"
+#define SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE_TMUS "DMIC Endfire TMUS"
 #define SND_USE_CASE_DEV_SPEAKER_DUAL_MIC_BROADSIDE "Speaker DMIC Broadside"
 #define SND_USE_CASE_DEV_SPEAKER_DUAL_MIC_ENDFIRE "Speaker DMIC Endfire"
 #define SND_USE_CASE_DEV_HDMI_TX             "HDMI Tx"
@@ -256,6 +259,7 @@ static card_mapping_t card_mapping_list[] = {
 #define SND_USE_CASE_DEV_CAMCORDER_TX       "Camcorder Tx"
 #define SND_USE_CASE_DEV_VOICE_RECOGNITION  "Voice Recognition"
 #define SND_USE_CASE_DEV_VOC_EARPIECE       "Voice Earpiece"
+#define SND_USE_CASE_DEV_VOC_EARPIECE_TMUS  "Voice Earpiece TMUS"
 #define SND_USE_CASE_DEV_VOC_HEADPHONE      "Voice Headphones"
 #define SND_USE_CASE_DEV_VOC_HEADSET        "Voice Headset"
 #define SND_USE_CASE_DEV_VOC_ANC_HEADSET    "Voice ANC Headset"
