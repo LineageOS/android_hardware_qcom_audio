@@ -1676,6 +1676,8 @@ char *ALSADevice::getUCMDeviceFromAcdbId(int acdb_id)
 
 char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
 {
+    char value[PROPERTY_VALUE_MAX];
+
     if (!input) {
         ALOGV("getUCMDevice for output device: devices:%x is input device:%d",devices,input);
         if (!(mDevSettingsFlag & TTY_OFF) &&
@@ -1792,7 +1794,10 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
                 if (shouldUseHandsetAnc(mDevSettingsFlag, mInChannels)) {
                     return strdup(SND_USE_CASE_DEV_ANC_HANDSET); /* ANC Handset RX */
                 } else {
-                    return strdup(SND_USE_CASE_DEV_VOC_EARPIECE); /* Voice HANDSET RX */
+                    property_get("persist.audio.voc_ep.xgain", value, "");
+                    return strdup(strcmp(value, "1") == 0 ?
+                                SND_USE_CASE_DEV_VOC_EARPIECE_XGAIN :
+                                SND_USE_CASE_DEV_VOC_EARPIECE); /* Voice HANDSET RX */
                 }
             } else {
                 return strdup(SND_USE_CASE_DEV_EARPIECE); /* HANDSET RX */
