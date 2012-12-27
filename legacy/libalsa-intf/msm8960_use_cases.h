@@ -303,6 +303,7 @@ static card_mapping_t card_mapping_list[] = {
 #define SND_USE_CASE_DEV_VOICE_RECOGNITION  "Voice Recognition"
 #define SND_USE_CASE_DEV_VOICE_RECOGNITION_HEADSET  "Voice Recognition Headset"
 #define SND_USE_CASE_DEV_VOC_EARPIECE       "Voice Earpiece"
+#define SND_USE_CASE_DEV_VOC_EARPIECE_XGAIN "Voice Earpiece Extra Gain"
 #define SND_USE_CASE_DEV_VOC_HEADPHONE      "Voice Headphones"
 #define SND_USE_CASE_DEV_VOC_HEADSET        "Voice Headset"
 #define SND_USE_CASE_DEV_VOC_ANC_HEADSET    "Voice ANC Headset"
