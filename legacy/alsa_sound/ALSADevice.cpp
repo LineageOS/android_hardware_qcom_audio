@@ -1799,16 +1799,8 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
             } else {
                 if ((mDevSettingsFlag & DMIC_FLAG) && (mInChannels == 1)) {
 #ifdef USES_FLUENCE_INCALL
-                    if(mCallMode == AUDIO_MODE_IN_CALL) {
-                        if (mFluenceMode == FLUENCE_MODE_ENDFIRE) {
-                            return strdup(SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE); /* DUALMIC EF TX */
-                        } else if (mFluenceMode == FLUENCE_MODE_BROADSIDE) {
-                            return strdup(SND_USE_CASE_DEV_DUAL_MIC_BROADSIDE); /* DUALMIC BS TX */
-                        } else {
-                            return strdup(SND_USE_CASE_DEV_HANDSET); /* BUILTIN-MIC TX */
-                        }
-                    }
-#else
+                  if (mCallMode == AUDIO_MODE_IN_CALL) {
+#endif
                     if (((rxDevice != NULL) &&
                         !strncmp(rxDevice, SND_USE_CASE_DEV_SPEAKER,
                         (strlen(SND_USE_CASE_DEV_SPEAKER)+1))) ||
@@ -1844,6 +1836,8 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
                             return strdup(SND_USE_CASE_DEV_DUAL_MIC_BROADSIDE); /* DUALMIC BS TX */
                         }
                     }
+#ifdef USES_FLUENCE_INCALL
+                  }
 #endif
                 } else if ((mDevSettingsFlag & DMIC_FLAG) && (mInChannels > 1)) {
                     if (((rxDevice != NULL) &&
