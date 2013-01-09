@@ -137,7 +137,7 @@ void AudioPolicyManager::setPhoneState(int state) {
     // voice call has enough delay to make sure the ringtone audio completely
     // played out
     if (state == AudioSystem::MODE_IN_CALL && oldState == AudioSystem::MODE_RINGTONE) {
-        delayMs = 0;
+        delayMs = 40;
     }
 
     // change routing is necessary
