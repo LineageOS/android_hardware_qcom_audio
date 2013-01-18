@@ -1423,10 +1423,11 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
     } else {
         if (!(mDevSettingsFlag & TTY_OFF) &&
             (callMode == AudioSystem::MODE_IN_CALL) &&
-            ((devices & AudioSystem::DEVICE_IN_WIRED_HEADSET))) {
+            ((devices & AudioSystem::DEVICE_IN_WIRED_HEADSET)
 #ifdef QCOM_ANC_HEADSET_ENABLED
-            ||(devices & AudioSystem::DEVICE_IN_ANC_HEADSET))) {
+              || (devices & AudioSystem::DEVICE_IN_ANC_HEADSET)
 #endif
+            )) {
              if (mDevSettingsFlag & TTY_HCO) {
                  return strdup(SND_USE_CASE_DEV_TTY_HEADSET_TX);
              } else if (mDevSettingsFlag & TTY_FULL) {
@@ -1443,8 +1444,8 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                 return strdup(SND_USE_CASE_DEV_HANDSET); /* HANDSET TX */
             } else {
                 if (mDevSettingsFlag & DMIC_FLAG) {
-#ifdef USES_FLUENCE_INCALL
                     if(callMode == AudioSystem::MODE_IN_CALL) {
+#ifdef USES_FLUENCE_INCALL
                         if (fluence_mode == FLUENCE_MODE_ENDFIRE) {
                             if(is_tmus)
                                 return strdup(SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE_TMUS); /* DUALMIC EF TX */
@@ -1455,26 +1456,42 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                         } else {
                             return strdup(SND_USE_CASE_DEV_HANDSET); /* BUILTIN-MIC TX */
                         }
+#endif
                     }
-#else
                     if (((rxDevice != NULL) &&
                         !strncmp(rxDevice, SND_USE_CASE_DEV_SPEAKER,
                         (strlen(SND_USE_CASE_DEV_SPEAKER)+1))) ||
                         !strncmp(curRxUCMDevice, SND_USE_CASE_DEV_SPEAKER,
                         (strlen(SND_USE_CASE_DEV_SPEAKER)+1))) {
                         if (fluence_mode == FLUENCE_MODE_ENDFIRE) {
-                            return strdup(SND_USE_CASE_DEV_SPEAKER_DUAL_MIC_ENDFIRE); /* DUALMIC EF TX */
+                            if (input_source == AUDIO_SOURCE_VOICE_RECOGNITION) {
+// TODO: check if different ACDB settings are needed when speaker is enabled
+                                return strdup(SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE_VREC);
+                            } else {
+                                return strdup(SND_USE_CASE_DEV_SPEAKER_DUAL_MIC_ENDFIRE);
+                            }
                         } else if (fluence_mode == FLUENCE_MODE_BROADSIDE) {
-                            return strdup(SND_USE_CASE_DEV_SPEAKER_DUAL_MIC_BROADSIDE); /* DUALMIC BS TX */
+                            if (input_source == AUDIO_SOURCE_VOICE_RECOGNITION) {
+                                return strdup(SND_USE_CASE_DEV_DUAL_MIC_BROADSIDE_VREC);
+                            } else {
+                                return strdup(SND_USE_CASE_DEV_SPEAKER_DUAL_MIC_BROADSIDE);
+                            }
                         }
                     } else {
                         if (fluence_mode == FLUENCE_MODE_ENDFIRE) {
-                            return strdup(SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE); /* DUALMIC EF TX */
+                            if (input_source == AUDIO_SOURCE_VOICE_RECOGNITION) {
+                                return strdup(SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE_VREC);
+                            } else {
+                                return strdup(SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE);
+                            }
                         } else if (fluence_mode == FLUENCE_MODE_BROADSIDE) {
-                            return strdup(SND_USE_CASE_DEV_DUAL_MIC_BROADSIDE); /* DUALMIC BS TX */
+                            if (input_source == AUDIO_SOURCE_VOICE_RECOGNITION) {
+                                return strdup(SND_USE_CASE_DEV_DUAL_MIC_BROADSIDE_VREC);
+                            } else {
+                                return strdup(SND_USE_CASE_DEV_DUAL_MIC_BROADSIDE);
+                            }
                         }
                     }
-#endif
                 } else if (mDevSettingsFlag & QMIC_FLAG){
                     return strdup(SND_USE_CASE_DEV_QUAD_MIC);
                 }

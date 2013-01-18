@@ -779,6 +779,7 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
           else
               alsa_handle.format = *format;
           alsa_handle.channels = VOIP_DEFAULT_CHANNEL_MODE;
+          alsa_handle.channelMask = AUDIO_CHANNEL_IN_MONO;
           alsa_handle.sampleRate = *sampleRate;
           alsa_handle.latency = VOIP_PLAYBACK_LATENCY;
           alsa_handle.rxHandle = 0;
@@ -857,6 +858,8 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
         } else {
             alsa_handle.channels = AudioSystem::popCount(*channels);
         }
+        alsa_handle.channelMask = *channels;
+
         if (6 == alsa_handle.channels) {
             alsa_handle.bufferSize = DEFAULT_MULTI_CHANNEL_BUF_SIZE;
         } else {
@@ -916,6 +919,7 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
       alsa_handle.handle = 0;
       alsa_handle.format = SNDRV_PCM_FORMAT_S16_LE;
       alsa_handle.channels = DEFAULT_CHANNEL_MODE;
+      alsa_handle.channelMask = AUDIO_CHANNEL_OUT_STEREO;
       alsa_handle.sampleRate = DEFAULT_SAMPLING_RATE;
       alsa_handle.latency = PLAYBACK_LATENCY;
       alsa_handle.rxHandle = 0;
@@ -1014,6 +1018,7 @@ AudioHardwareALSA::openOutputSession(uint32_t devices,
     alsa_handle.handle = 0;
     alsa_handle.format = SNDRV_PCM_FORMAT_S16_LE;
     alsa_handle.channels = DEFAULT_CHANNEL_MODE;
+    alsa_handle.channelMask = AUDIO_CHANNEL_OUT_STEREO;
     alsa_handle.sampleRate = DEFAULT_SAMPLING_RATE;
     alsa_handle.latency = VOICE_LATENCY;
     alsa_handle.rxHandle = 0;
@@ -1142,6 +1147,7 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
           else
               alsa_handle.format = *format;
            alsa_handle.channels = VOIP_DEFAULT_CHANNEL_MODE;
+           alsa_handle.channelMask = AUDIO_CHANNEL_IN_MONO;
            alsa_handle.sampleRate = *sampleRate;
            alsa_handle.latency = VOIP_RECORD_LATENCY;
            alsa_handle.rxHandle = 0;
@@ -1209,6 +1215,7 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
         alsa_handle.handle = 0;
         alsa_handle.format = SNDRV_PCM_FORMAT_S16_LE;
         alsa_handle.channels = VOICE_CHANNEL_MODE;
+        alsa_handle.channelMask = AUDIO_CHANNEL_IN_MONO;
         alsa_handle.sampleRate = android::AudioRecord::DEFAULT_SAMPLE_RATE;
         alsa_handle.latency = RECORD_LATENCY;
         alsa_handle.rxHandle = 0;
@@ -1307,8 +1314,10 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
 #ifdef QCOM_SSR_ENABLED
                        | AudioSystem::CHANNEL_IN_5POINT1
 #endif
-                       ));
-            ALOGV("updated channel info: channels=%d", it->channels);
+                       | AUDIO_CHANNEL_IN_FRONT_BACK));
+            it->channelMask = *channels;
+            ALOGV("updated channel info: channels=%d channelMask %08x",
+                  it->channels, it->channelMask);
         }
         if (devices == AudioSystem::DEVICE_IN_VOICE_CALL){
            /* Add current devices info to devices to do route */
@@ -1336,7 +1345,6 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
                 mALSADevice->route(&(*it), devices, mode());
             }
         }
-
         if(!strcmp(it->useCase, SND_USE_CASE_VERB_HIFI_REC) ||
            !strcmp(it->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_REC) ||
 #ifdef QCOM_FM_ENABLED
@@ -1444,6 +1452,7 @@ int newMode = mode();
         alsa_handle.handle = 0;
         alsa_handle.format = SNDRV_PCM_FORMAT_S16_LE;
         alsa_handle.channels = DEFAULT_CHANNEL_MODE;
+        alsa_handle.channelMask = AUDIO_CHANNEL_OUT_STEREO;
         alsa_handle.sampleRate = DEFAULT_SAMPLING_RATE;
         alsa_handle.latency = VOICE_LATENCY;
         alsa_handle.rxHandle = 0;
@@ -1539,6 +1548,7 @@ char *use_case;
     alsa_handle.handle = 0;
     alsa_handle.format = SNDRV_PCM_FORMAT_S16_LE;
     alsa_handle.channels = VOICE_CHANNEL_MODE;
+    alsa_handle.channelMask = AUDIO_CHANNEL_IN_MONO;
     alsa_handle.sampleRate = VOICE_SAMPLING_RATE;
     alsa_handle.latency = VOICE_LATENCY;
     alsa_handle.rxHandle = 0;

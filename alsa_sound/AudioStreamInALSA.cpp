@@ -239,6 +239,9 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                     }
             }
         }
+        if (mHandle->channelMask == AUDIO_CHANNEL_IN_FRONT_BACK) {
+            mHandle->module->setFlags(mParent->mDevSettingsFlag | DMIC_FLAG);
+        }
         free(use_case);
         if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
             (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
@@ -595,6 +598,10 @@ status_t AudioStreamInALSA::standby()
     mParent->musbRecordingState &= ~USBRECBIT_REC;
     mParent->closeUsbRecordingIfNothingActive();
 #endif
+
+    if (mHandle->channelMask == AUDIO_CHANNEL_IN_FRONT_BACK) {
+        mHandle->module->setFlags(mParent->mDevSettingsFlag);
+    }
 
     return NO_ERROR;
 }
