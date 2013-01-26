@@ -17,7 +17,7 @@
 
 #include <math.h>
 
-//#define LOG_NDEBUG 0
+#define LOG_NDEBUG 0
 #define LOG_TAG "AudioHardwareMSM8660"
 #include <utils/Log.h>
 #include <utils/String8.h>
@@ -1040,9 +1040,14 @@ status_t AudioHardware::initCheck()
 AudioStreamOut* AudioHardware::openOutputStream(
         uint32_t devices, int *format, uint32_t *channels, uint32_t *sampleRate, status_t *status)
 {
+     ALOGD("AudioHardware::openOutputStream devices %x format %d channels %d samplerate %d",
+        devices, *format, *channels, *sampleRate);
+
+     audio_output_flags_t flags = static_cast<audio_output_flags_t> (*status);
+
     { // scope for the lock
         status_t lStatus;
-        audio_output_flags_t flags = static_cast<audio_output_flags_t> (*status);
+
         Mutex::Autolock lock(mLock);
 #ifdef QCOM_VOIP_ENABLED
         // only one output stream allowed
@@ -1054,7 +1059,6 @@ AudioStreamOut* AudioHardware::openOutputStream(
             ALOGE(" AudioHardware::openOutputStream Only one output stream allowed \n");
             return 0;
         }
-
         if ((flags & AUDIO_OUTPUT_FLAG_DIRECT) && (flags & AUDIO_OUTPUT_FLAG_VOIP_RX)) {
             // open direct output stream
             if(mDirectOutput == 0) {
@@ -3050,6 +3054,7 @@ status_t AudioHardware::AudioStreamOutMSM8x60::standby()
         return -1;
     }
     deleteFromTable(PCM_PLAY);
+    updateDeviceInfo(cur_rx, cur_tx);
     if(!getNodeByStreamType(VOICE_CALL)
 #ifdef QCOM_TUNNEL_LPA_ENABLED
        && !getNodeByStreamType(LPA_DECODE)
@@ -3065,10 +3070,12 @@ status_t AudioHardware::AudioStreamOutMSM8x60::standby()
     //in case if ANC don't disable cur device.
       if (anc_running == false){
 #endif
+#if 0
         if(enableDevice(cur_rx, 0)) {
             ALOGE("Disabling device failed for cur_rx %d", cur_rx);
             return 0;
         }
+#endif
 #ifdef QCOM_ANC_HEADSET_ENABLED
       }
 #endif

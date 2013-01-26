@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2009 The Android Open Source Project
- * Copyright (C) 2010-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2009, 2011-2013, The Linux Foundation. All rights reserved.
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +17,10 @@
  * limitations under the License.
  */
 
-
 #include <stdint.h>
 #include <sys/types.h>
+#include <cutils/config_utils.h>
+#include <cutils/misc.h>
 #include <utils/Timers.h>
 #include <utils/Errors.h>
 #include <utils/KeyedVector.h>
@@ -36,9 +39,19 @@ public:
         virtual ~AudioPolicyManager() {}
 
         // AudioPolicyInterface
-        virtual status_t setDeviceConnectionState(AudioSystem::audio_devices device,
+        virtual status_t setDeviceConnectionState(audio_devices_t device,
                                                           AudioSystem::device_connection_state state,
                                                           const char *device_address);
+        virtual AudioSystem::device_connection_state getDeviceConnectionState(audio_devices_t device,
+                                                                              const char *device_address);
+        virtual audio_io_handle_t getInput(int inputSource,
+                                            uint32_t samplingRate,
+                                            uint32_t format,
+                                            uint32_t channels,
+                                            AudioSystem::audio_in_acoustics acoustics);
+
+        // indicates to the audio policy manager that the input starts being used.
+        virtual status_t startInput(audio_io_handle_t input);
 
         // return appropriate device for streams handled by the specified strategy according to current
         // phone state, connected devices...
@@ -50,24 +63,51 @@ public:
         // "future" device selection (fromCache == false) when called from a context
         //  where conditions are changing (setDeviceConnectionState(), setPhoneState()...) AND
         //  before updateDeviceForStrategy() is called.
-        virtual audio_devices_t getDeviceForStrategy(routing_strategy strategy, bool fromCache = true);
         virtual status_t startOutput(audio_io_handle_t output, AudioSystem::stream_type stream, int session = 0);
         virtual status_t stopOutput(audio_io_handle_t output, AudioSystem::stream_type stream, int session = 0);
         virtual void setForceUse(AudioSystem::force_use usage, AudioSystem::forced_config config);
-                // indicates to the audio policy manager that the input starts being used.
-        virtual status_t startInput(audio_io_handle_t input);
 
 protected:
+
+ virtual audio_devices_t getDeviceForStrategy(routing_strategy strategy, bool fromCache = true);
         // change the route of the specified output
         uint32_t setOutputDevice(audio_io_handle_t output, audio_devices_t device, bool force = false, int delayMs = 0);
+
+        // when a device is connected, checks if an open output can be routed
+        // to this device. If none is open, tries to open one of the available outputs.
+        // Returns an output suitable to this device or 0.
+        // when a device is disconnected, checks if an output is not used any more and
+        // returns its handle if any.
+        // transfers the audio tracks and effects from one output thread to another accordingly.
+        status_t checkOutputsForDevice(audio_devices_t device,
+                                       AudioSystem::device_connection_state state,
+                                       SortedVector<audio_io_handle_t>& outputs);
+
+        virtual AudioPolicyManagerBase::IOProfile* getProfileForDirectOutput(
+                                                     audio_devices_t device,
+                                                     uint32_t samplingRate,
+                                                     uint32_t format,
+                                                     uint32_t channelMask,
+                                                     audio_output_flags_t flags);
+
+
+        bool    isCompatibleProfile(AudioPolicyManagerBase::IOProfile *profile,
+                                    audio_devices_t device,
+                                    uint32_t samplingRate,
+                                    uint32_t format,
+                                    uint32_t channelMask,
+                                    audio_output_flags_t flags);
+
         // check that volume change is permitted, compute and send new volume to audio hardware
         status_t checkAndSetVolume(int stream, int index, audio_io_handle_t output, audio_devices_t device, int delayMs = 0, bool force = false);
         // select input device corresponding to requested audio source
         virtual audio_devices_t getDeviceForInputSource(int inputSource);
-        // Mute or unmute the stream on the specified output
-        status_t stopInput(audio_io_handle_t input);
+
+
 
 private:
+        // updates device caching and output for streams that can influence the
+        //    routing of notifications
         void handleNotificationRoutingForStream(AudioSystem::stream_type stream);
 };
-};
+}; //namespace
