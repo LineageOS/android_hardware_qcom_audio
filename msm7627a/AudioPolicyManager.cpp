@@ -243,7 +243,7 @@ audio_devices_t AudioPolicyManager::getDeviceForStrategy(routing_strategy strate
           device = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_SPEAKER;
           break;
       }
-#ifdef QCOM_FM_ENABLED
+#if defined (QCOM_FM_ENABLED) || defined (STE_FM)
       if (mAvailableOutputDevices & AudioSystem::DEVICE_OUT_FM) {
          device |= AudioSystem::DEVICE_OUT_FM;
          if(FM_ANALOG == getFMMode()){
@@ -298,7 +298,7 @@ status_t AudioPolicyManager::setDeviceConnectionState(AudioSystem::audio_devices
         {
         // handle output device connection
         case AudioSystem::DEVICE_STATE_AVAILABLE:
-#ifdef QCOM_FM_ENABLED
+#if defined (QCOM_FM_ENABLED) || defined (STE_FM)
             if(device == AudioSystem::DEVICE_OUT_FM){
                 char value[PROPERTY_VALUE_MAX];
                 fm_modes fmMode = FM_DIGITAL;
@@ -408,7 +408,7 @@ status_t AudioPolicyManager::setDeviceConnectionState(AudioSystem::audio_devices
         }
 
         audio_devices_t NewDevice = AudioPolicyManagerBase::getNewDevice(mPrimaryOutput, false /*fromCache*/);
-#ifdef QCOM_FM_ENABLED
+#if defined (QCOM_FM_ENABLED)
         if (device == AudioSystem::DEVICE_OUT_FM) {
             if (state == AudioSystem::DEVICE_STATE_AVAILABLE) {
                 mOutputs.valueFor(mPrimaryOutput)->changeRefCount(AudioSystem::FM, 1);
@@ -614,7 +614,7 @@ audio_devices_t AudioPolicyManager::getDeviceForInputSource(int inputSource)
             device = AudioSystem::DEVICE_IN_VOICE_CALL;
         }
         break;
-#ifdef QCOM_FM_ENABLED
+#if defined (QCOM_FM_ENABLED) || defined (STE_FM)
     case AUDIO_SOURCE_FM_RX:
         device = AudioSystem::DEVICE_IN_FM_RX;
         break;
@@ -676,7 +676,7 @@ status_t AudioPolicyManager::startOutput(audio_io_handle_t output,
             }
         }
     uint32_t NewDevice = (uint32_t)AudioPolicyManagerBase::getNewDevice(output, true);
-#ifdef QCOM_FM_ENABLED
+#if defined (QCOM_FM_ENABLED) || defined (STE_FM)
     if((stream == AudioSystem::SYSTEM) && (FM_ANALOG == getFMMode())
     && (NewDevice == AudioSystem::DEVICE_OUT_FM))
     {
@@ -836,8 +836,8 @@ status_t AudioPolicyManager::checkAndSetVolume(int stream, int index, audio_io_h
     // - the float value returned by computeVolume() changed
     // - the force flag is set
     if (volume != mOutputs.valueFor(output)->mCurVolume[stream] 
-#ifdef QCOM_FM_ENABLED
-            || (stream == AudioSystem::FM) 
+#if defined (QCOM_FM_ENABLED)
+            || (stream == AudioSystem::FM)
 #endif
             || force) {
         mOutputs.valueFor(output)->mCurVolume[stream] = volume;

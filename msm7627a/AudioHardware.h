@@ -461,7 +461,7 @@ private:
             static const uint32_t inputSamplingRates[];
             bool        mInit;
             bool        mMicMute;
-#ifdef QCOM_FM_ENABLED
+#if defined (QCOM_FM_ENABLED) || defined (STE_FM)
             int         mFmFd;
             int         FmA2dpStatus;
 #endif

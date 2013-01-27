@@ -341,6 +341,9 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
 //          AUDIO_DEVICE_IN_FM_RX |
 //          AUDIO_DEVICE_IN_FM_RX_A2DP |
 #endif
+#ifdef STE_FM
+            AUDIO_DEVICE_IN_FM_RX |
+#endif
             AUDIO_DEVICE_IN_DEFAULT);
 }
 
