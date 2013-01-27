@@ -894,6 +894,14 @@ audio_devices_t AudioPolicyManager::getDeviceForInputSource(int inputSource)
             device = AudioSystem::DEVICE_IN_VOICE_CALL;
         }
         break;
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
+   case AUDIO_SOURCE_FM_RX:
+        device = AudioSystem::DEVICE_IN_FM_RX;
+        break;
+    case AUDIO_SOURCE_FM_RX_A2DP:
+        device = AudioSystem::DEVICE_IN_FM_RX_A2DP;
+        break;
+#endif
     default:
         ALOGW("getDeviceForInputSource() invalid input source %d", inputSource);
         break;
