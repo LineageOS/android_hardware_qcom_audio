@@ -67,6 +67,9 @@
 
 #ifdef QCOM_FM_ENABLED
 #define FM_DEVICE  "/dev/msm_fm"
+#endif
+
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
 #define FM_A2DP_REC 1
 #define FM_FILE_REC 2
 #endif
@@ -248,7 +251,7 @@ enum STREAM_TYPES {
 #ifdef QCOM_VOIP_ENABLED
     VOIP_CALL,
 #endif
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
     FM_RADIO,
     FM_REC,
     FM_A2DP,
@@ -264,7 +267,7 @@ typedef struct ComboDeviceType
 CurrentComboDeviceStruct CurrentComboDeviceData;
 Mutex   mComboDeviceLock;
 
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
 enum FM_STATE {
     FM_INVALID=1,
     FM_OFF,
@@ -534,7 +537,7 @@ static status_t updateDeviceInfo(int rx_device,int tx_device) {
 #ifdef QCOM_TUNNEL_LPA_ENABLED
             case LPA_DECODE:
 #endif
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
             case FM_RADIO:
             case FM_A2DP:
 #endif
@@ -1748,7 +1751,7 @@ static status_t do_route_audio_rpc(uint32_t device,
         new_tx_device = DEVICE_HANDSET_TX;
         ALOGV("In NO MIC HEADSET");
     }
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
     else if (device == SND_DEVICE_FM_HANDSET) {
         fm_device = DEVICE_FMRADIO_HANDSET_RX;
         ALOGV("In FM HANDSET");
@@ -1852,7 +1855,7 @@ static status_t do_route_audio_rpc(uint32_t device,
         ALOGI("In ANC HEADPhone");
     }
 #endif
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
     else if(device == SND_DEVICE_FM_TX){
         new_rx_device = DEVICE_FMRADIO_STEREO_RX;
         ALOGI("In DEVICE_FMRADIO_STEREO_RX and cur_tx");
@@ -2354,7 +2357,7 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input)
         // call
         // Recording will happen through currently active tx device
         if((inputDevice == AudioSystem::DEVICE_IN_VOICE_CALL)
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
            || (inputDevice == AudioSystem::DEVICE_IN_FM_RX)
            || (inputDevice == AudioSystem::DEVICE_IN_FM_RX_A2DP)
 #endif
@@ -2398,7 +2401,7 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input)
                     ALOGI("Routing audio to Speakerphone\n");
                     sndDevice = SND_DEVICE_NO_MIC_HEADSET;
                 }
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
                  else if (outputDevices & AudioSystem::DEVICE_OUT_FM_TX) {
                     ALOGE("Routing audio_rx to Speaker\n");
                     sndDevice = SND_DEVICE_SPEAKER_TX;
@@ -2463,7 +2466,7 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input)
             sndDevice = SND_DEVICE_HEADSET_AND_SPEAKER;
             audProcess = (ADRC_ENABLE | EQ_ENABLE | RX_IIR_ENABLE | MBADRC_ENABLE);
         } else 
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
           if ((outputDevices & AudioSystem::DEVICE_OUT_FM_TX) &&
                    (outputDevices & AudioSystem::DEVICE_OUT_SPEAKER)) {
             ALOGI("Routing audio to FM Tx and Speaker\n");
@@ -2507,7 +2510,7 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input)
             sndDevice = SND_DEVICE_SPEAKER;
             audProcess = (ADRC_ENABLE | EQ_ENABLE | RX_IIR_ENABLE | MBADRC_ENABLE);
         } else
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
          if (outputDevices & AudioSystem::DEVICE_OUT_FM_TX){
             ALOGI("Routing audio to FM Tx Device\n");
             sndDevice = SND_DEVICE_FM_TX;
@@ -2573,7 +2576,9 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input)
     if ((mFmFd != -1) && !(outputDevices & AudioSystem::DEVICE_OUT_FM)){
         disableFM();
     }
+#endif
 
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
     if ((CurrentComboDeviceData.DeviceId == INVALID_DEVICE) &&
         (sndDevice == SND_DEVICE_FM_TX_AND_SPEAKER )){
         /* speaker rx is already enabled change snd device to the fm tx
@@ -2627,7 +2632,7 @@ status_t AudioHardware::enableComboDevice(uint32_t sndDevice, bool enableOrDisab
          ALOGE("enableDevice failed for device %d", DEVICE_SPEAKER_RX);
          return -1;
     }
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
     if(SND_DEVICE_FM_TX_AND_SPEAKER == sndDevice){
 
         if(getNodeByStreamType(VOICE_CALL) || getNodeByStreamType(FM_RADIO) ||
@@ -2987,7 +2992,7 @@ ssize_t AudioHardware::AudioStreamOutMSM8x60::write(const void* buffer, size_t b
                 return 0;
             }
             Mutex::Autolock lock_1(mComboDeviceLock);
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
             if(CurrentComboDeviceData.DeviceId == SND_DEVICE_FM_TX_AND_SPEAKER){
 #ifdef QCOM_TUNNEL_LPA_ENABLED
                 Routing_table *LpaNode = getNodeByStreamType(LPA_DECODE);
@@ -3053,7 +3058,7 @@ status_t AudioHardware::AudioStreamOutMSM8x60::standby()
 #ifdef QCOM_TUNNEL_LPA_ENABLED
        && !getNodeByStreamType(LPA_DECODE)
 #endif
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
        && !getNodeByStreamType(FM_RADIO)
 #endif
 #ifdef QCOM_VOIP_ENABLED
@@ -4111,7 +4116,7 @@ status_t AudioHardware::AudioSessionOutLPA::start( )
     }
 
     Mutex::Autolock lock_1(mComboDeviceLock);
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
     if(CurrentComboDeviceData.DeviceId == SND_DEVICE_FM_TX_AND_SPEAKER){
         ALOGD("Routing LPA steam to speaker for combo device");
         ALOGD("combo:msm_route_stream(LPA_DECODE,session id:%d,dev id:%d,1)",sessionId,
@@ -4256,7 +4261,7 @@ void AudioHardware::AudioSessionOutLPA::reset()
     }
     deleteFromTable(LPA_DECODE);
     if (!getNodeByStreamType(VOICE_CALL) && !getNodeByStreamType(PCM_PLAY)
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
         && !getNodeByStreamType(FM_RADIO)
 #endif
 #ifdef QCOM_VOIP_ENABLED
@@ -4608,7 +4613,7 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
             hw->mLock.unlock();
             return -1;
         }
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
         if((mDevices == AudioSystem::DEVICE_IN_FM_RX) || (mDevices == AudioSystem::DEVICE_IN_FM_RX_A2DP) ){
             if(ioctl(mFdin, AUDIO_GET_SESSION_ID, &dec_id)) {
                 ALOGE("AUDIO_GET_SESSION_ID failed*********");
@@ -4677,7 +4682,7 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
     if (mState < AUDIO_INPUT_STARTED) {
         if (!(mChannels & AudioSystem::CHANNEL_IN_VOICE_DNLINK ||
             mChannels & AudioSystem::CHANNEL_IN_VOICE_UPLINK)) {
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
             // force routing to input device
             // for FM recording, no need to reconfigure afe loopback path
             if (mFmRec != FM_FILE_REC) {
@@ -4691,7 +4696,7 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
                     mHardware->do_aic3254_control(snd_dev);
                 }
 #endif
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
             }
 #endif
         }
@@ -4760,7 +4765,7 @@ status_t AudioHardware::AudioStreamInMSM8x60::standby()
         }
         mState = AUDIO_INPUT_CLOSED;
     }
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
        if (mFmRec == FM_A2DP_REC) {
         //A2DP Recording
         temp = getNodeByStreamType(FM_A2DP);
@@ -5186,7 +5191,7 @@ status_t AudioHardware::AudioStreamInVoip::standby()
               && !getNodeByStreamType(LPA_DECODE)
 #endif /*QCOM_TUNNEL_LPA_ENABLED*/
               && !getNodeByStreamType(PCM_PLAY)
-#ifdef QCOM_FM_ENABLED
+#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
               && !getNodeByStreamType(FM_RADIO)
 #endif /*QCOM_FM_ENABLED*/
             ) {
