@@ -1,6 +1,6 @@
 /*
 ** Copyright 2008, The Android Open-Source Project
-** Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+** Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
 ** you may not use this file except in compliance with the License.
@@ -4410,6 +4410,7 @@ void* AudioHardware::AudioSessionOutLPA::memBufferAlloc(int nSize, int32_t *ion_
     // 3. Store this information for internal mapping / maintanence
     BuffersAllocated buf(local_buf, ion_buf, nSize, fd_data.fd, alloc_data.handle);
     mEmptyQueue.push_back(buf);
+    mBufPool.push_back(buf);
 
     // 4. Send the mem fd information
     *ion_fd = fd_data.fd;
@@ -4474,7 +4475,11 @@ void AudioHardware::AudioSessionOutLPA::bufferDeAlloc()
         ALOGV("Removing from Filled Q");
         mFilledQueue.erase(it);
     }
-    mFilledQueueMutex.unlock();
+    while (!mBufPool.empty()) {
+        List<BuffersAllocated>::iterator it = mBufPool.begin();
+        ALOGE("Removing input buffer from Buffer Pool ");
+        mBufPool.erase(it);
+    }
     if (ionfd >= 0) {
         close(ionfd);
         ionfd = -1;
@@ -4744,15 +4749,16 @@ status_t AudioHardware::AudioSessionOutLPA::flush()
     ALOGV("LPA playback flush ");
     int err;
 
-    // 2.) Add all the available buffers to Empty Queue (Maintain order)
     mFilledQueueMutex.lock();
     mEmptyQueueMutex.lock();
-    while (!mFilledQueue.empty()) {
-        List<BuffersAllocated>::iterator it = mFilledQueue.begin();
-        BuffersAllocated buf = *it;
-        buf.bytesToWrite = 0;
-        mEmptyQueue.push_back(buf);
-        mFilledQueue.erase(it);
+    // 1.) Clear the Empty and Filled buffer queue
+    mEmptyQueue.clear();
+    mFilledQueue.clear();
+    // 2.) Add all the available buffers to Empty Queue (Maintain order)
+    List<BuffersAllocated>::iterator it = mBufPool.begin();
+    for (; it!=mBufPool.end(); ++it) {
+       memset(it->memBuf, 0x0, (*it).memBufsize);
+       mEmptyQueue.push_back(*it);
     }
     mEmptyQueueMutex.unlock();
     mFilledQueueMutex.unlock();
@@ -4869,7 +4875,7 @@ status_t AudioHardware::AudioSessionOutLPA::getBufferInfo(buf_info **buf) {
     tempbuf->bufsize = LPA_BUFFER_SIZE;
     tempbuf->nBufs = mInputBufferCount;
     tempbuf->buffers = (int **)((char*)tempbuf + sizeof(buf_info));
-    List<BuffersAllocated>::iterator it = mEmptyQueue.begin();
+    List<BuffersAllocated>::iterator it = mBufPool.begin();
     for (int i = 0; i < mInputBufferCount; i++) {
         tempbuf->buffers[i] = (int *)it->memBuf;
         it++;
