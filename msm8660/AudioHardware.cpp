@@ -4152,6 +4152,7 @@ ssize_t AudioHardware::AudioSessionOutLPA::write(const void* buffer, size_t byte
     //2.) Dequeue the buffer from empty buffer queue. Copy the data to be
     //    written into the buffer. Then Enqueue the buffer to the filled
     //    buffer queue
+    mEmptyQueueMutex.lock();
     List<BuffersAllocated>::iterator it = mEmptyQueue.begin();
     BuffersAllocated buf = *it;
     mEmptyQueue.erase(it);
@@ -4213,10 +4214,12 @@ ssize_t AudioHardware::AudioSessionOutLPA::write(const void* buffer, size_t byte
 
     if (bytes < LPA_BUFFER_SIZE) {
         ALOGV("Last buffer case");
+        mLock.unlock();
         mReachedEOS = true;
         if (fsync(afd) != 0) {
             ALOGE("fsync failed.");
         }
+        mLock.unlock();
     }
 
     return NO_ERROR; //TODO Do we need to send error
@@ -4480,6 +4483,7 @@ void AudioHardware::AudioSessionOutLPA::bufferDeAlloc()
         ALOGE("Removing input buffer from Buffer Pool ");
         mBufPool.erase(it);
     }
+    mFilledQueueMutex.unlock();
     if (ionfd >= 0) {
         close(ionfd);
         ionfd = -1;
@@ -4746,6 +4750,7 @@ status_t AudioHardware::AudioSessionOutLPA::drain()
 
 status_t AudioHardware::AudioSessionOutLPA::flush()
 {
+    Mutex::Autolock autoLock(mLock);
     ALOGV("LPA playback flush ");
     int err;
 
@@ -4896,16 +4901,18 @@ status_t AudioHardware::AudioSessionOutLPA::isBufferAvailable(int *isAvail) {
         ALOGV("Write: waiting on mWriteCv");
         mLock.unlock();
         mWriteCv.wait(mEmptyQueueMutex);
+        mEmptyQueueMutex.unlock();
         mLock.lock();
         if (mSkipWrite) {
             ALOGV("Write: Flushing the previous write buffer");
             mSkipWrite = false;
-            mEmptyQueueMutex.unlock();
             return NO_ERROR;
         }
         ALOGV("Write: received a signal to wake up");
+    } else {
+        ALOGV("Buffer available in empty queue");
+        mEmptyQueueMutex.unlock();
     }
-    mEmptyQueueMutex.unlock();
 
     *isAvail = true;
     return NO_ERROR;
