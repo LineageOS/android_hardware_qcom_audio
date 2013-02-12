@@ -23,6 +23,10 @@
 #define ACDB_DEV_TYPE_OUT 1
 #define ACDB_DEV_TYPE_IN 2
 
+#define DUALMIC_CONFIG_NONE 0      /* Target does not contain 2 mics */
+#define DUALMIC_CONFIG_ENDFIRE 1
+#define DUALMIC_CONFIG_BROADSIDE 2
+
 /* Sound devices specific to the platform
  * The DEVICE_OUT_* and DEVICE_IN_* should be mapped to these sound
  * devices to enable corresponding mixer paths
@@ -39,6 +43,7 @@ typedef enum {
     SND_DEVICE_OUT_HDMI ,
     SND_DEVICE_OUT_SPEAKER_AND_HDMI,
     SND_DEVICE_OUT_BT_SCO,
+    SND_DEVICE_OUT_VOICE_HANDSET_TMUS,
     SND_DEVICE_OUT_END,
 
     /* Note: IN_BEGIN should be same as OUT_END because total number of devices
@@ -53,7 +58,14 @@ typedef enum {
     SND_DEVICE_IN_HDMI_MIC,
     SND_DEVICE_IN_BT_SCO_MIC ,
     SND_DEVICE_IN_CAMCORDER_MIC,
+    SND_DEVICE_IN_VOICE_DMIC_EF,
+    SND_DEVICE_IN_VOICE_DMIC_BS,
+    SND_DEVICE_IN_VOICE_DMIC_EF_TMUS,
+    SND_DEVICE_IN_VOICE_SPEAKER_DMIC_EF,
+    SND_DEVICE_IN_VOICE_SPEAKER_DMIC_BS,
     SND_DEVICE_IN_VOICE_REC_MIC,
+    SND_DEVICE_IN_VOICE_REC_DMIC_EF,
+    SND_DEVICE_IN_VOICE_REC_DMIC_BS,
     SND_DEVICE_IN_END,
 
 } snd_device_t;
@@ -203,6 +215,12 @@ struct audio_device {
     struct audio_usecase usecase_list;
     struct audio_route *audio_route;
     int acdb_settings;
+
+    bool is_tmus;
+    bool mic_type_analog;
+    bool fluence_in_voice_call;
+    bool fluence_in_voice_rec;
+    int  dualmic_config;
 
     /* Audio calibration related functions */
     void *acdb_handle;
