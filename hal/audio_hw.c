@@ -467,7 +467,7 @@ static int select_devices(struct audio_device *adev)
 
     if (out_snd_device == adev->cur_out_snd_device && adev->out_snd_device_active &&
         in_snd_device == adev->cur_in_snd_device && adev->in_snd_device_active) {
-        ALOGV("%s: exit: snd_devices (%d and %d) is already active",
+        ALOGV("%s: exit: snd_devices (%d and %d) are already active",
               __func__, out_snd_device, in_snd_device);
         return 0;
     }
@@ -484,6 +484,20 @@ static int select_devices(struct audio_device *adev)
             adev->cur_out_snd_device != SND_DEVICE_INVALID &&
             adev->cur_in_snd_device != SND_DEVICE_INVALID) {
         in_call_device_switch = true;
+    }
+
+    if (in_call_device_switch) {
+        /* This must be called before disabling the mixer controls on APQ side */
+        if (adev->csd_disable_device == NULL) {
+            ALOGE("%s: dlsym error for csd_client_disable_device",
+                  __func__);
+        } else {
+            status = adev->csd_disable_device();
+            if (status < 0) {
+                ALOGE("%s: csd_client_disable_device, failed, error %d",
+                      __func__, status);
+            }
+        }
     }
 
     if ((out_snd_device != adev->cur_out_snd_device || in_call_device_switch)
@@ -518,19 +532,6 @@ static int select_devices(struct audio_device *adev)
         adev->in_snd_device_active = false;
     }
 
-    if (in_call_device_switch) {
-        if (adev->csd_disable_device == NULL) {
-            ALOGE("%s: dlsym error:%s for csd_client_disable_device",
-                  __func__, dlerror());
-        } else {
-            status = adev->csd_disable_device();
-            if (status < 0) {
-                ALOGE("%s: csd_client_disable_device, failed, error %d",
-                      __func__, status);
-            }
-        }
-    }
-
     if (out_snd_device != SND_DEVICE_INVALID && !adev->out_snd_device_active) {
         /* Enable new rx device */
         status = enable_snd_device(adev, out_snd_device);
@@ -556,23 +557,6 @@ static int select_devices(struct audio_device *adev)
     }
     audio_route_update_mixer(adev->audio_route);
 
-    if (in_call_device_switch) {
-        if (adev->csd_enable_device == NULL) {
-            ALOGE("%s: dlsym error: %s for csd_client_enable_device",
-                  __func__, dlerror());
-        } else {
-            acdb_rx_id = get_acdb_device_id(out_snd_device);
-            acdb_tx_id = get_acdb_device_id(in_snd_device);
-
-            /* ToDo: To make sure acdb_settings is updated properly based on TTY mode */
-            status = adev->csd_enable_device(acdb_rx_id, acdb_tx_id, adev->acdb_settings);
-            if (status < 0) {
-                ALOGE("%s: csd_client_enable_device, failed, error %d",
-                      __func__, status);
-            }
-        }
-    }
-
     usecase = &adev->usecase_list;
     while (usecase->next != NULL) {
         usecase = usecase->next;
@@ -586,6 +570,23 @@ static int select_devices(struct audio_device *adev)
         }
     }
     audio_route_update_mixer(adev->audio_route);
+
+    if (in_call_device_switch) {
+        if (adev->csd_enable_device == NULL) {
+            ALOGE("%s: dlsym error for csd_client_enable_device",
+                  __func__);
+        } else {
+            acdb_rx_id = get_acdb_device_id(out_snd_device);
+            acdb_tx_id = get_acdb_device_id(in_snd_device);
+
+            /* ToDo: To make sure acdb_settings is updated properly based on TTY mode */
+            status = adev->csd_enable_device(acdb_rx_id, acdb_tx_id, adev->acdb_settings);
+            if (status < 0) {
+                ALOGE("%s: csd_client_enable_device, failed, error %d",
+                      __func__, status);
+            }
+        }
+    }
 
     ALOGV("%s: exit: status(%d)", __func__, status);
     return status;
@@ -913,7 +914,7 @@ static int stop_voice_call(struct audio_device *adev)
     ALOGV("%s: enter: usecase(%d)", __func__, USECASE_VOICE_CALL);
     if (adev->csd_client) {
         if (adev->csd_stop_voice == NULL) {
-            ALOGE("dlsym:Error:%s Loading csd_client_disable_device", dlerror());
+            ALOGE("dlsym error for csd_client_disable_device");
         } else {
             ret = adev->csd_stop_voice();
             if (ret < 0) {
@@ -1024,7 +1025,7 @@ static int start_voice_call(struct audio_device *adev)
 
     if (adev->csd_client) {
         if (adev->csd_start_voice == NULL) {
-            ALOGE("dlsym:Error:%s Loading csd_client_start_voice", dlerror());
+            ALOGE("dlsym error for csd_client_start_voice");
         } else {
             ret = adev->csd_start_voice();
             if (ret < 0) {
@@ -1670,7 +1671,7 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
 
         if (adev->csd_client) {
             if (adev->csd_volume == NULL) {
-                ALOGE("%s:Error:%s Loading csd_client_volume", __func__, dlerror());
+                ALOGE("%s: dlsym error for csd_client_volume", __func__);
             } else {
                 err = adev->csd_volume(vol);
                 if (err < 0) {
@@ -1727,7 +1728,7 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
     if (adev->mode == AUDIO_MODE_IN_CALL) {
         if (adev->csd_client) {
             if (adev->csd_mic_mute == NULL) {
-                ALOGE("%s: Error:%s Loading csd_mic_mute", __func__, dlerror());
+                ALOGE("%s: dlsym error for csd_mic_mute", __func__);
             } else {
                 err = adev->csd_mic_mute(state);
                 if (err < 0) {
@@ -1853,16 +1854,16 @@ static void init_platform_data(struct audio_device *adev)
         ALOGE("%s: DLOPEN failed for %s", __func__, LIB_ACDB_LOADER);
     } else {
         ALOGV("%s: DLOPEN successful for %s", __func__, LIB_ACDB_LOADER);
-        adev->acdb_init = (acdb_init_t)dlsym(adev->acdb_handle,
-                                                    "acdb_loader_init_ACDB");
         adev->acdb_deallocate = (acdb_deallocate_t)dlsym(adev->acdb_handle,
                                                     "acdb_loader_deallocate_ACDB");
         adev->acdb_send_audio_cal = (acdb_send_audio_cal_t)dlsym(adev->acdb_handle,
                                                     "acdb_loader_send_audio_cal");
         adev->acdb_send_voice_cal = (acdb_send_voice_cal_t)dlsym(adev->acdb_handle,
                                                     "acdb_loader_send_voice_cal");
+        adev->acdb_init = (acdb_init_t)dlsym(adev->acdb_handle,
+                                                    "acdb_loader_init_ACDB");
         if (adev->acdb_init == NULL)
-            ALOGE("%s: Error:%s Loading acdb_loader_init_ACDB", __func__, dlerror());
+            ALOGE("%s: dlsym error %s for acdb_loader_init_ACDB", __func__, dlerror());
         else
             adev->acdb_init();
     }
@@ -1881,8 +1882,6 @@ static void init_platform_data(struct audio_device *adev)
 
     if (adev->csd_client) {
         ALOGV("%s: DLOPEN successful for %s", __func__, LIB_CSD_CLIENT);
-        adev->csd_client_init = (csd_client_init_t)dlsym(adev->csd_client,
-                                                    "csd_client_init");
         adev->csd_client_deinit = (csd_client_deinit_t)dlsym(adev->csd_client,
                                                     "csd_client_deinit");
         adev->csd_disable_device = (csd_disable_device_t)dlsym(adev->csd_client,
@@ -1897,9 +1896,11 @@ static void init_platform_data(struct audio_device *adev)
                                                     "csd_client_volume");
         adev->csd_mic_mute = (csd_mic_mute_t)dlsym(adev->csd_client,
                                                     "csd_client_mic_mute");
+        adev->csd_client_init = (csd_client_init_t)dlsym(adev->csd_client,
+                                                    "csd_client_init");
 
         if (adev->csd_client_init == NULL) {
-            ALOGE("dlsym: Error:%s Loading csd_client_init", dlerror());
+            ALOGE("%s: dlsym error %s for csd_client_init", __func__, dlerror());
         } else {
             adev->csd_client_init();
         }
