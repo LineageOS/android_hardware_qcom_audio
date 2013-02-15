@@ -40,11 +40,11 @@
 
 /* Flags used to initialize acdb_settings variable that goes to ACDB library */
 #define DMIC_FLAG       0x00000002
-#define TTY_OFF         0x00000010
-#define TTY_FULL        0x00000020
-#define TTY_VCO         0x00000040
-#define TTY_HCO         0x00000080
-#define TTY_CLEAR       0xFFFFFF0F
+#define TTY_MODE_OFF    0x00000010
+#define TTY_MODE_FULL   0x00000020
+#define TTY_MODE_VCO    0x00000040
+#define TTY_MODE_HCO    0x00000080
+#define TTY_MODE_CLEAR  0xFFFFFF0F
 
 struct string_to_enum {
     const char *name;
@@ -88,6 +88,9 @@ static const char * const device_table[SND_DEVICE_ALL] = {
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = "speaker-and-hdmi",
     [SND_DEVICE_OUT_BT_SCO] = "bt-sco-headset",
     [SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = "voice-handset-tmus",
+    [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = "voice-tty-full-headphones",
+    [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = "voice-tty-vco-headphones",
+    [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = "voice-tty-hco-handset",
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
@@ -103,6 +106,9 @@ static const char * const device_table[SND_DEVICE_ALL] = {
     [SND_DEVICE_IN_VOICE_DMIC_EF_TMUS] = "voice-dmic-ef-tmus",
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC_EF] = "voice-speaker-dmic-ef",
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC_BS] = "voice-speaker-dmic-bs",
+    [SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = "voice-tty-full-headset-mic",
+    [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = "voice-tty-vco-handset-mic",
+    [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = "voice-tty-hco-headset-mic",
     [SND_DEVICE_IN_VOICE_REC_MIC] = "voice-rec-mic",
     [SND_DEVICE_IN_VOICE_REC_DMIC_EF] = "voice-rec-dmic-ef",
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS] = "voice-rec-dmic-bs",
@@ -122,6 +128,9 @@ static const int acdb_device_table[SND_DEVICE_ALL] = {
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 14,
     [SND_DEVICE_OUT_BT_SCO] = 22,
     [SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = 81,
+    [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = 17,
+    [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = 17,
+    [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = 37,
 
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
     [SND_DEVICE_IN_SPEAKER_MIC] = 4,
@@ -136,46 +145,14 @@ static const int acdb_device_table[SND_DEVICE_ALL] = {
     [SND_DEVICE_IN_VOICE_DMIC_EF_TMUS] = 91,
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC_EF] = 13,
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC_BS] = 12,
+    [SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = 16,
+    [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = 36,
+    [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = 16,
     [SND_DEVICE_IN_VOICE_REC_MIC] = 62,
     [SND_DEVICE_IN_VOICE_REC_DMIC_EF] = 62,
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS] = 62,
     [SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE] = 62,
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE] = 62,
-};
-
-/* Array to store back-end paths */
-static const char * const backend_table[SND_DEVICE_ALL] = {
-    [SND_DEVICE_OUT_HANDSET] = "",
-    [SND_DEVICE_OUT_SPEAKER] = "",
-    [SND_DEVICE_OUT_HEADPHONES] = "",
-    [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = "",
-    [SND_DEVICE_OUT_VOICE_SPEAKER] = "",
-    [SND_DEVICE_OUT_VOICE_HEADPHONES] = "",
-
-    /* Note: Backend name should start with white space */
-    [SND_DEVICE_OUT_HDMI ] = " hdmi",
-    [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = " speaker-and-hdmi",
-    [SND_DEVICE_OUT_BT_SCO] = " bt-sco",
-    [SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = "",
-
-    [SND_DEVICE_IN_HANDSET_MIC ] = "",
-    [SND_DEVICE_IN_SPEAKER_MIC] = "",
-    [SND_DEVICE_IN_HEADSET_MIC] = "",
-    [SND_DEVICE_IN_VOICE_SPEAKER_MIC] = "",
-    [SND_DEVICE_IN_VOICE_HEADSET_MIC] = "",
-    [SND_DEVICE_IN_HDMI_MIC] = " hdmi",
-    [SND_DEVICE_IN_BT_SCO_MIC ] = " bt-sco",
-    [SND_DEVICE_IN_CAMCORDER_MIC] = "",
-    [SND_DEVICE_IN_VOICE_DMIC_EF] = "",
-    [SND_DEVICE_IN_VOICE_DMIC_BS] = "",
-    [SND_DEVICE_IN_VOICE_DMIC_EF_TMUS] = "",
-    [SND_DEVICE_IN_VOICE_SPEAKER_DMIC_EF] = "",
-    [SND_DEVICE_IN_VOICE_SPEAKER_DMIC_BS] = "",
-    [SND_DEVICE_IN_VOICE_REC_MIC] = "",
-    [SND_DEVICE_IN_VOICE_REC_DMIC_EF] = "",
-    [SND_DEVICE_IN_VOICE_REC_DMIC_BS] = "",
-    [SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE] = "",
-    [SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE] = "",
 };
 
 int edid_get_max_channels(void);
@@ -202,6 +179,19 @@ static int get_acdb_device_id(snd_device_t snd_device)
     return acdb_dev_id;
 }
 
+static void add_backend_name(char *mixer_path,
+                             snd_device_t snd_device)
+{
+    if (snd_device == SND_DEVICE_OUT_HDMI ||
+            snd_device == SND_DEVICE_IN_HDMI_MIC)
+        strcat(mixer_path, " hdmi");
+    else if(snd_device == SND_DEVICE_OUT_BT_SCO ||
+            snd_device == SND_DEVICE_IN_BT_SCO_MIC)
+        strcat(mixer_path, " bt-sco");
+    else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HDMI)
+        strcat(mixer_path, " speaker-and-hdmi");
+}
+
 static int enable_audio_route(struct audio_route *ar,
                               audio_usecase_t usecase,
                               snd_device_t    snd_device)
@@ -210,7 +200,7 @@ static int enable_audio_route(struct audio_route *ar,
           __func__, usecase, snd_device);
     char mixer_path[50];
     strcpy(mixer_path, use_case_table[usecase]);
-    strcat(mixer_path, backend_table[snd_device]);
+    add_backend_name(mixer_path, snd_device);
     audio_route_apply_path(ar, mixer_path);
     ALOGV("%s: exit", __func__);
     return 0;
@@ -224,7 +214,7 @@ static int disable_audio_route(struct audio_route *ar,
           __func__, usecase, snd_device);
     char mixer_path[50];
     strcpy(mixer_path, use_case_table[usecase]);
-    strcat(mixer_path, backend_table[snd_device]);
+    add_backend_name(mixer_path, snd_device);
     audio_route_reset_path(ar, mixer_path);
     ALOGV("%s: exit", __func__);
     return 0;
@@ -350,7 +340,14 @@ static snd_device_t get_output_snd_device(struct audio_device *adev)
     if (mode == AUDIO_MODE_IN_CALL) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
-            snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
+            if (adev->tty_mode == TTY_MODE_FULL)
+                snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES;
+            else if (adev->tty_mode == TTY_MODE_VCO)
+                snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES;
+            else if (adev->tty_mode == TTY_MODE_HCO)
+                snd_device = SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET;
+            else
+                snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
         } else if (devices & AUDIO_DEVICE_OUT_ALL_SCO) {
             snd_device = SND_DEVICE_OUT_BT_SCO;
         } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
@@ -380,6 +377,9 @@ static snd_device_t get_output_snd_device(struct audio_device *adev)
             ALOGE("%s: Invalid combo device(0x%x)", __func__, devices);
             goto exit;
         }
+        if (snd_device != SND_DEVICE_INVALID) {
+            goto exit;
+        }
     }
     if (popcount(devices) != 1) {
         ALOGE("%s: Invalid output devices(0x%x)", __func__, devices);
@@ -403,7 +403,7 @@ static snd_device_t get_output_snd_device(struct audio_device *adev)
 exit:
     ALOGV("%s: exit: snd_device(%s)", __func__,
           (snd_device == SND_DEVICE_INVALID) ?
-                "invalid" : device_table[snd_device]);
+                "none" : device_table[snd_device]);
     return snd_device;
 }
 
@@ -427,6 +427,25 @@ static snd_device_t get_input_snd_device(struct audio_device *adev)
         if (out_device == AUDIO_DEVICE_NONE) {
             ALOGE("%s: No output device set for voice call", __func__);
             goto exit;
+        }
+        if (adev->tty_mode != TTY_MODE_OFF) {
+            if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
+                out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
+                switch (adev->tty_mode) {
+                case TTY_MODE_FULL:
+                    snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC;
+                    break;
+                case TTY_MODE_VCO:
+                    snd_device = SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC;
+                    break;
+                case TTY_MODE_HCO:
+                    snd_device = SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC;
+                    break;
+                default:
+                    ALOGE("%s: Invalid TTY mode (0x%x)", __func__, adev->tty_mode);
+                }
+                goto exit;
+            }
         }
         if (out_device & AUDIO_DEVICE_OUT_EARPIECE ||
             out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) {
@@ -537,7 +556,7 @@ static snd_device_t get_input_snd_device(struct audio_device *adev)
 exit:
     ALOGV("%s: exit: in_snd_device(%s)", __func__,
           (snd_device == SND_DEVICE_INVALID) ?
-                "invalid" : device_table[snd_device]);
+                "none" : device_table[snd_device]);
     return snd_device;
 }
 
@@ -1687,7 +1706,9 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         pthread_mutex_lock(&adev->lock);
         if (tty_mode != adev->tty_mode) {
             adev->tty_mode = tty_mode;
-            /* ToDo: Device switch */
+            adev->acdb_settings = (adev->acdb_settings & TTY_MODE_CLEAR) | tty_mode;
+            if (adev->in_call)
+                select_devices(adev);
         }
         pthread_mutex_unlock(&adev->lock);
     }
@@ -2099,7 +2120,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->usecase_list.next = NULL;
     adev->usecase_list.id = USECASE_INVALID;
     adev->in_call = false;
-    adev->acdb_settings = TTY_OFF;
+    adev->acdb_settings = TTY_MODE_OFF;
     pthread_mutex_unlock(&adev->lock);
 
     /* Loads platform specific libraries dynamically */
