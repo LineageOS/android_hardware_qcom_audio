@@ -106,8 +106,11 @@ static const char * const device_table[SND_DEVICE_ALL] = {
     [SND_DEVICE_IN_VOICE_REC_MIC] = "voice-rec-mic",
     [SND_DEVICE_IN_VOICE_REC_DMIC_EF] = "voice-rec-dmic-ef",
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS] = "voice-rec-dmic-bs",
+    [SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE] = "voice-rec-dmic-ef-fluence",
+    [SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE] = "voice-rec-dmic-bs-fluence",
 };
 
+/* ACDB IDs (audio DSP path configuration IDs) for each sound device */
 static const int acdb_device_table[SND_DEVICE_ALL] = {
     [SND_DEVICE_OUT_HANDSET] = 7,
     [SND_DEVICE_OUT_SPEAKER] = 14,
@@ -136,6 +139,8 @@ static const int acdb_device_table[SND_DEVICE_ALL] = {
     [SND_DEVICE_IN_VOICE_REC_MIC] = 62,
     [SND_DEVICE_IN_VOICE_REC_DMIC_EF] = 62,
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS] = 62,
+    [SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE] = 62,
+    [SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE] = 62,
 };
 
 /* Array to store back-end paths */
@@ -169,6 +174,8 @@ static const char * const backend_table[SND_DEVICE_ALL] = {
     [SND_DEVICE_IN_VOICE_REC_MIC] = "",
     [SND_DEVICE_IN_VOICE_REC_DMIC_EF] = "",
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS] = "",
+    [SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE] = "",
+    [SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE] = "",
 };
 
 int edid_get_max_channels(void);
@@ -327,7 +334,8 @@ static void read_hdmi_channel_masks(struct stream_out *out)
 
 static snd_device_t get_output_snd_device(struct audio_device *adev)
 {
-    audio_source_t  source = adev->input_source;
+    audio_source_t  source = (adev->active_input == NULL) ?
+                                AUDIO_SOURCE_DEFAULT : adev->active_input->source;
     audio_mode_t    mode   = adev->mode;
     audio_devices_t devices = adev->out_device;
     snd_device_t    snd_device = SND_DEVICE_INVALID;
@@ -401,10 +409,16 @@ exit:
 
 static snd_device_t get_input_snd_device(struct audio_device *adev)
 {
-    audio_source_t  source = adev->input_source;
+    audio_source_t  source = (adev->active_input == NULL) ?
+                                AUDIO_SOURCE_DEFAULT : adev->active_input->source;
+
     audio_mode_t    mode   = adev->mode;
     audio_devices_t out_device = adev->out_device;
-    audio_devices_t in_device  = adev->in_device;
+    audio_devices_t in_device = ((adev->active_input == NULL) ?
+                                    AUDIO_DEVICE_NONE : adev->active_input->device)
+                                & ~AUDIO_DEVICE_BIT_IN;
+    audio_channel_mask_t channel_mask = (adev->active_input == NULL) ?
+                                AUDIO_CHANNEL_IN_MONO : adev->active_input->channel_mask;
     snd_device_t snd_device = SND_DEVICE_INVALID;
 
     ALOGV("%s: enter: out_device(0x%x) in_device(0x%x)",
@@ -451,13 +465,21 @@ static snd_device_t get_input_snd_device(struct audio_device *adev)
         }
     } else if (source == AUDIO_SOURCE_VOICE_RECOGNITION) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
-            if (adev->fluence_in_voice_rec &&
-                    adev->dualmic_config == DUALMIC_CONFIG_ENDFIRE)
-                snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_EF;
-            else if (adev->fluence_in_voice_rec &&
-                     adev->dualmic_config == DUALMIC_CONFIG_BROADSIDE)
-                snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_BS;
-            else
+            if (adev->dualmic_config == DUALMIC_CONFIG_ENDFIRE) {
+                if (channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK)
+                    snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_EF;
+                else if (adev->fluence_in_voice_rec)
+                    snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE;
+                else
+                    snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
+            } else if (adev->dualmic_config == DUALMIC_CONFIG_BROADSIDE) {
+                if (channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK)
+                    snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_BS;
+                else if (adev->fluence_in_voice_rec)
+                    snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE;
+                else
+                    snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
+            } else
                 snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
         }
     } else if (source == AUDIO_SOURCE_DEFAULT) {
@@ -753,10 +775,9 @@ static int stop_input_stream(struct stream_in *in)
     struct audio_usecase *uc_info;
     struct audio_device *adev = in->dev;
 
-    ALOGV("%s: enter: usecase(%d)", __func__, in->usecase);
-    adev->input_source = AUDIO_SOURCE_DEFAULT;
-    adev->in_device = AUDIO_DEVICE_NONE;
+    adev->active_input = NULL;
 
+    ALOGV("%s: enter: usecase(%d)", __func__, in->usecase);
     uc_info = get_usecase_from_list(adev, in->usecase);
     if (uc_info == NULL) {
         ALOGE("%s: Could not find the usecase (%d) in the list",
@@ -787,24 +808,18 @@ static int stop_input_stream(struct stream_in *in)
 int start_input_stream(struct stream_in *in)
 {
     /* 1. Enable output device and stream routing controls */
-    int status, ret = 0;
+    int ret = 0;
     snd_device_t in_snd_device;
     struct audio_usecase *uc_info;
     struct audio_device *adev = in->dev;
 
     ALOGV("%s: enter: usecase(%d)", __func__, in->usecase);
-    adev->input_source = in->source;
-    adev->in_device = in->device;
+    adev->active_input = in;
     in_snd_device = get_input_snd_device(adev);
     if (in_snd_device == SND_DEVICE_INVALID) {
         ALOGE("%s: Could not get valid input sound device", __func__);
-        /*
-         * TODO: use a single exit point to avoid duplicating code to
-         * reset input source and device
-         */
-        adev->input_source = AUDIO_SOURCE_DEFAULT;
-        adev->in_device = AUDIO_DEVICE_NONE;
-        return -EINVAL;
+        ret = -EINVAL;
+        goto error_config;
     }
 
     in->pcm_device_id = get_pcm_device_id(adev->audio_route,
@@ -813,9 +828,8 @@ int start_input_stream(struct stream_in *in)
     if (in->pcm_device_id < 0) {
         ALOGE("%s: Could not find PCM device id for the usecase(%d)",
               __func__, in->usecase);
-        adev->input_source = AUDIO_SOURCE_DEFAULT;
-        adev->in_device = AUDIO_DEVICE_NONE;
-        return -EINVAL;
+        ret = -EINVAL;
+        goto error_config;
     }
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
     uc_info->id = in->usecase;
@@ -826,11 +840,9 @@ int start_input_stream(struct stream_in *in)
     ret = select_devices(adev);
     if (ret) {
         ALOGE("%s: Failed to enable device(0x%x)",
-              __func__, adev->in_device);
-        adev->input_source = AUDIO_SOURCE_DEFAULT;
-        adev->in_device = AUDIO_DEVICE_NONE;
+              __func__, in->device);
         free(uc_info);
-        return ret;
+        goto error_config;
     }
     in_snd_device = adev->cur_in_snd_device;
 
@@ -842,23 +854,28 @@ int start_input_stream(struct stream_in *in)
     add_usecase_to_list(adev, uc_info);
 
     /* 2. Open the pcm device */
-    ALOGV("%s: Opening PCM device card_id(%d) device_id(%d)",
-          __func__, SOUND_CARD, in->pcm_device_id);
+    ALOGV("%s: Opening PCM device card_id(%d) device_id(%d), channels %d",
+          __func__, SOUND_CARD, in->pcm_device_id, in->config.channels);
     in->pcm = pcm_open(SOUND_CARD, in->pcm_device_id,
                            PCM_IN, &in->config);
     if (in->pcm && !pcm_is_ready(in->pcm)) {
         ALOGE("%s: %s", __func__, pcm_get_error(in->pcm));
         pcm_close(in->pcm);
         in->pcm = NULL;
-        status = -EIO;
-        goto error;
+        ret = -EIO;
+        goto error_open;
     }
     ALOGV("%s: exit", __func__);
-    return 0;
-error:
-    ALOGV("%s: exit: status(%d)", __func__, status);
+    return ret;
+
+error_open:
     stop_input_stream(in);
-    return status;
+
+error_config:
+    adev->active_input = NULL;
+    ALOGV("%s: exit: status(%d)", __func__, ret);
+
+    return ret;
 }
 
 static int stop_output_stream(struct stream_out *out)
@@ -1411,8 +1428,6 @@ static int in_standby(struct audio_stream *stream)
     pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&in->lock);
     if (!in->standby) {
-        adev->input_source = AUDIO_SOURCE_DEFAULT;
-        adev->in_device = AUDIO_DEVICE_NONE;
         in->standby = true;
         status = stop_input_stream(in);
     }
@@ -1458,8 +1473,6 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
             in->device = val;
             /* If recording is in progress, change the tx device to new device */
             if (!in->standby) {
-                adev->input_source = in->source;
-                adev->in_device = in->device;
                 ret = select_devices(adev);
             }
         }
@@ -1864,7 +1877,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->device = devices;
     in->source = AUDIO_SOURCE_DEFAULT;
     in->dev = adev;
-    adev->in_device = devices;
     in->standby = 1;
     in->channel_mask = config->channel_mask;
 
@@ -2073,9 +2085,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     /* Set the default route before the PCM stream is opened */
     pthread_mutex_lock(&adev->lock);
     adev->mode = AUDIO_MODE_NORMAL;
-    adev->input_source = AUDIO_SOURCE_DEFAULT;
+    adev->active_input = NULL;
     adev->out_device = AUDIO_DEVICE_NONE;
-    adev->in_device = AUDIO_DEVICE_NONE;
     adev->voice_call_rx = NULL;
     adev->voice_call_tx = NULL;
     adev->voice_volume = 1.0f;

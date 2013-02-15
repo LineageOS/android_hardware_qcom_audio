@@ -66,6 +66,8 @@ typedef enum {
     SND_DEVICE_IN_VOICE_REC_MIC,
     SND_DEVICE_IN_VOICE_REC_DMIC_EF,
     SND_DEVICE_IN_VOICE_REC_DMIC_BS,
+    SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE,
+    SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE,
     SND_DEVICE_IN_END,
 
 } snd_device_t;
@@ -198,8 +200,7 @@ struct audio_device {
     struct mixer *mixer;
     audio_mode_t mode;
     audio_devices_t out_device;
-    audio_devices_t in_device;
-    audio_source_t input_source;
+    struct stream_in *active_input;
     int in_call;
     float voice_volume;
     bool mic_mute;
