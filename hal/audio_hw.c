@@ -501,6 +501,9 @@ static snd_device_t get_input_snd_device(struct audio_device *adev)
             } else
                 snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
         }
+    } else if (source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
+        if (out_device & AUDIO_DEVICE_OUT_SPEAKER)
+            in_device = AUDIO_DEVICE_IN_BACK_MIC;
     } else if (source == AUDIO_SOURCE_DEFAULT) {
         goto exit;
     }
@@ -510,15 +513,11 @@ static snd_device_t get_input_snd_device(struct audio_device *adev)
     }
 
     if (in_device != AUDIO_DEVICE_NONE &&
-            in_device != AUDIO_DEVICE_IN_VOICE_CALL &&
-            in_device != AUDIO_DEVICE_IN_COMMUNICATION) {
+            !(in_device & AUDIO_DEVICE_IN_VOICE_CALL) &&
+            !(in_device & AUDIO_DEVICE_IN_COMMUNICATION)) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
             snd_device = SND_DEVICE_IN_HANDSET_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
-            /*
-             * PolicyManager selects BACK_MIC only for camcorder recording.
-             * Ideally this condition shouldn't be met.
-             */
             if (adev->mic_type_analog)
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
             else
@@ -1266,19 +1265,23 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         pthread_mutex_lock(&adev->lock);
         pthread_mutex_lock(&out->lock);
 
-        if (adev->mode == AUDIO_MODE_IN_CALL && !adev->in_call) {
+        if (adev->mode == AUDIO_MODE_IN_CALL && !adev->in_call && (val != 0)) {
             adev->out_device = get_active_out_devices(adev, out->usecase) | val;
+            out->devices = val;
             start_voice_call(adev);
         } else if (adev->mode != AUDIO_MODE_IN_CALL && adev->in_call) {
-            adev->out_device = get_active_out_devices(adev, out->usecase) | val;
+            if (val != 0) {
+                adev->out_device = get_active_out_devices(adev, out->usecase) | val;
+                out->devices = val;
+            }
             stop_voice_call(adev);
         } else if ((adev->out_device != (audio_devices_t)val) && (val != 0)) {
             if (!out->standby || adev->in_call) {
                 adev->out_device = get_active_out_devices(adev, out->usecase) | val;
                 ret = select_devices(adev);
+                out->devices = val;
             }
         }
-        out->devices = val;
 
         pthread_mutex_unlock(&out->lock);
         pthread_mutex_unlock(&adev->lock);
