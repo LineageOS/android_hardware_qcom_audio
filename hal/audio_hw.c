@@ -599,20 +599,11 @@ static int select_devices(struct audio_device *adev)
      * and enable both RX and TX devices though one of them is same as current
      * device.
      */
-    if (adev->mode == AUDIO_MODE_IN_CALL &&
-            adev->csd_client != NULL &&
-            out_snd_device != SND_DEVICE_INVALID &&
-            in_snd_device != SND_DEVICE_INVALID &&
-            adev->cur_out_snd_device != SND_DEVICE_INVALID &&
-            adev->cur_in_snd_device != SND_DEVICE_INVALID) {
+    if (adev->in_call && adev->csd_client != NULL) {
         in_call_device_switch = true;
-    }
-
-    if (in_call_device_switch) {
         /* This must be called before disabling the mixer controls on APQ side */
         if (adev->csd_disable_device == NULL) {
-            ALOGE("%s: dlsym error for csd_client_disable_device",
-                  __func__);
+            ALOGE("%s: dlsym error for csd_client_disable_device", __func__);
         } else {
             status = adev->csd_disable_device();
             if (status < 0) {
@@ -693,7 +684,7 @@ static int select_devices(struct audio_device *adev)
     }
     audio_route_update_mixer(adev->audio_route);
 
-    if (in_call_device_switch) {
+    if (adev->mode == AUDIO_MODE_IN_CALL && adev->csd_client) {
         if (adev->csd_enable_device == NULL) {
             ALOGE("%s: dlsym error for csd_client_enable_device",
                   __func__);
@@ -701,8 +692,8 @@ static int select_devices(struct audio_device *adev)
             acdb_rx_id = get_acdb_device_id(out_snd_device);
             acdb_tx_id = get_acdb_device_id(in_snd_device);
 
-            /* ToDo: To make sure acdb_settings is updated properly based on TTY mode */
-            status = adev->csd_enable_device(acdb_rx_id, acdb_tx_id, adev->acdb_settings);
+            status = adev->csd_enable_device(acdb_rx_id, acdb_tx_id,
+                                             adev->acdb_settings);
             if (status < 0) {
                 ALOGE("%s: csd_client_enable_device, failed, error %d",
                       __func__, status);
@@ -790,7 +781,7 @@ static audio_devices_t get_voice_call_out_device(struct audio_device *adev)
 {
     audio_devices_t devices = 0;
     struct audio_usecase *list_head = &adev->usecase_list;
-    /* Return the output devices of usecases other than given usecase */
+    /* Return the output devices of usecases other than VOICE_CALL usecase */
     while (list_head->next != NULL) {
         list_head = list_head->next;
         if (list_head->id == USECASE_VOICE_CALL) {
@@ -1028,7 +1019,8 @@ static int stop_voice_call(struct audio_device *adev)
     snd_device_t out_snd_device;
     struct audio_usecase *uc_info;
 
-    ALOGV("%s: enter: usecase(%d)", __func__, USECASE_VOICE_CALL);
+    ALOGV("%s: enter", __func__);
+    adev->in_call = false;
     if (adev->csd_client) {
         if (adev->csd_stop_voice == NULL) {
             ALOGE("dlsym error for csd_client_disable_device");
@@ -1067,7 +1059,6 @@ static int stop_voice_call(struct audio_device *adev)
 
     /* 3. Disable the rx and tx devices */
     ret = select_devices(adev);
-    adev->in_call = false;
 
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
@@ -1093,9 +1084,7 @@ static int start_voice_call(struct audio_device *adev)
         return ret;
     }
 
-    /* 2. Get and set stream specific mixer controls */
     out_snd_device = adev->cur_out_snd_device;
-    /* ToDo: Status check ?*/
     enable_audio_route(adev->audio_route, uc_info->id, out_snd_device);
     audio_route_update_mixer(adev->audio_route);
 
@@ -1106,36 +1095,33 @@ static int start_voice_call(struct audio_device *adev)
     pcm_dev_tx_id = get_pcm_device_id(adev->audio_route, uc_info->id,
                                       PCM_CAPTURE);
 
-    /* 2. Open the pcm device */
     if (pcm_dev_rx_id < 0 || pcm_dev_tx_id < 0) {
         ALOGE("%s: Invalid PCM devices (rx: %d tx: %d) for the usecase(%d)",
               __func__, pcm_dev_rx_id, pcm_dev_tx_id, uc_info->id);
-        stop_voice_call(adev);
-        goto error;
+        ret = -EIO;
+        goto error_start_voice;
     }
 
-    ALOGV("%s: Opening PCM device card_id(%d) device_id(%d)",
+    ALOGV("%s: Opening PCM playback device card_id(%d) device_id(%d)",
           __func__, SOUND_CARD, pcm_dev_rx_id);
     adev->voice_call_rx = pcm_open(SOUND_CARD,
                                   pcm_dev_rx_id,
                                   PCM_OUT, &pcm_config_voice_call);
     if (adev->voice_call_rx && !pcm_is_ready(adev->voice_call_rx)) {
         ALOGE("%s: %s", __func__, pcm_get_error(adev->voice_call_rx));
-        /* ToDo: Check return status ??*/
-        stop_voice_call(adev);
-        return -EIO;
+        ret = -EIO;
+        goto error_start_voice;
     }
 
-    ALOGV("%s: Opening PCM device card_id(%d) device_id(%d)",
+    ALOGV("%s: Opening PCM capture device card_id(%d) device_id(%d)",
           __func__, SOUND_CARD, pcm_dev_tx_id);
     adev->voice_call_tx = pcm_open(SOUND_CARD,
                                    pcm_dev_tx_id,
                                    PCM_IN, &pcm_config_voice_call);
     if (adev->voice_call_tx && !pcm_is_ready(adev->voice_call_tx)) {
         ALOGE("%s: %s", __func__, pcm_get_error(adev->voice_call_tx));
-        /* ToDo: Check return status ??*/
-        stop_voice_call(adev);
-        return -EIO;
+        ret = -EIO;
+        goto error_start_voice;
     }
     pcm_start(adev->voice_call_rx);
     pcm_start(adev->voice_call_tx);
@@ -1143,16 +1129,22 @@ static int start_voice_call(struct audio_device *adev)
     if (adev->csd_client) {
         if (adev->csd_start_voice == NULL) {
             ALOGE("dlsym error for csd_client_start_voice");
+            goto error_start_voice;
         } else {
             ret = adev->csd_start_voice();
             if (ret < 0) {
-                ALOGE("%s: csd_client error %d\n", __func__, ret);
+                ALOGE("%s: csd_start_voice error %d\n", __func__, ret);
+                goto error_start_voice;
             }
         }
     }
 
     adev->in_call = true;
-error:
+    return 0;
+
+error_start_voice:
+    stop_voice_call(adev);
+
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
@@ -1294,8 +1286,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             if (!out->standby || adev->in_call) {
                 adev->out_device = get_active_out_devices(adev, out->usecase) | val;
                 ret = select_devices(adev);
-                out->devices = val;
             }
+            out->devices = val;
         }
 
         pthread_mutex_unlock(&out->lock);
