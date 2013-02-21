@@ -16,6 +16,7 @@
 
 #define LOG_TAG "audio_hw_primary"
 /*#define LOG_NDEBUG 0*/
+#define LOG_NDDEBUG 0
 
 #include <errno.h>
 #include <pthread.h>
@@ -76,7 +77,8 @@ static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
 };
 
 /* Array to store sound devices */
-static const char * const device_table[SND_DEVICE_ALL] = {
+static const char * const device_table[SND_DEVICE_MAX] = {
+    [SND_DEVICE_NONE] = "none",
     /* Playback sound devices */
     [SND_DEVICE_OUT_HANDSET] = "handset",
     [SND_DEVICE_OUT_SPEAKER] = "speaker",
@@ -117,7 +119,7 @@ static const char * const device_table[SND_DEVICE_ALL] = {
 };
 
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
-static const int acdb_device_table[SND_DEVICE_ALL] = {
+static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_HANDSET] = 7,
     [SND_DEVICE_OUT_SPEAKER] = 14,
     [SND_DEVICE_OUT_HEADPHONES] = 10,
@@ -151,6 +153,7 @@ static const int acdb_device_table[SND_DEVICE_ALL] = {
     [SND_DEVICE_IN_VOICE_REC_MIC] = 62,
     [SND_DEVICE_IN_VOICE_REC_DMIC_EF] = 62,
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS] = 62,
+    /* TODO: Update with proper acdb ids */
     [SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE] = 62,
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE] = 62,
 };
@@ -225,7 +228,12 @@ static int enable_snd_device(struct audio_device *adev,
 {
     int acdb_dev_id, acdb_dev_type;
 
-    ALOGV("%s: enter: snd_device(%d)", __func__, snd_device);
+    ALOGD("%s: snd_device(%d: %s)", __func__,
+          snd_device, device_table[snd_device]);
+    if (snd_device < SND_DEVICE_MIN ||
+        snd_device >= SND_DEVICE_MAX) {
+        return -EINVAL;
+    }
     acdb_dev_id = get_acdb_device_id(snd_device);
     if (acdb_dev_id < 0) {
         ALOGE("%s: Could not find acdb id for device(%d)",
@@ -233,7 +241,7 @@ static int enable_snd_device(struct audio_device *adev,
         return -EINVAL;
     }
     if (snd_device >= SND_DEVICE_OUT_BEGIN &&
-        snd_device < SND_DEVICE_OUT_END) {
+            snd_device < SND_DEVICE_OUT_END) {
         acdb_dev_type = ACDB_DEV_TYPE_OUT;
     } else {
         acdb_dev_type = ACDB_DEV_TYPE_IN;
@@ -248,16 +256,19 @@ static int enable_snd_device(struct audio_device *adev,
     }
 
     audio_route_apply_path(adev->audio_route, device_table[snd_device]);
-    ALOGV("%s: exit", __func__);
     return 0;
 }
 
 static int disable_snd_device(struct audio_route *ar,
                               snd_device_t    snd_device)
 {
-    ALOGV("%s: enter: snd_device(%d)", __func__, snd_device);
+    ALOGD("%s: enter: snd_device(%d: %s)", __func__,
+          snd_device, device_table[snd_device]);
+    if (snd_device < SND_DEVICE_MIN ||
+        snd_device >= SND_DEVICE_MAX) {
+        return -EINVAL;
+    }
     audio_route_reset_path(ar, device_table[snd_device]);
-    ALOGV("%s: exit", __func__);
     return 0;
 }
 
@@ -298,7 +309,7 @@ static int set_hdmi_channels(struct mixer *mixer,
 static void read_hdmi_channel_masks(struct stream_out *out)
 {
     int channels = edid_get_max_channels();
-    ALOGE("%s: enter", __func__);
+    ALOGV("%s: enter", __func__);
 
     switch (channels) {
         /*
@@ -319,7 +330,7 @@ static void read_hdmi_channel_masks(struct stream_out *out)
         break;
     }
 
-    ALOGE("%s: exit", __func__);
+    ALOGV("%s: exit", __func__);
 }
 
 static snd_device_t get_output_snd_device(struct audio_device *adev)
@@ -328,12 +339,12 @@ static snd_device_t get_output_snd_device(struct audio_device *adev)
                                 AUDIO_SOURCE_DEFAULT : adev->active_input->source;
     audio_mode_t    mode   = adev->mode;
     audio_devices_t devices = adev->out_device;
-    snd_device_t    snd_device = SND_DEVICE_INVALID;
+    snd_device_t    snd_device = SND_DEVICE_NONE;
 
-    ALOGV("%s: enter: output devices(0x%x)", __func__, devices);
+    ALOGV("%s: enter: output devices(%#x)", __func__, devices);
     if (devices == AUDIO_DEVICE_NONE ||
         devices & AUDIO_DEVICE_BIT_IN) {
-        ALOGV("%s: Invalid output devices (0x%x)", __func__, devices);
+        ALOGV("%s: Invalid output devices (%#x)", __func__, devices);
         goto exit;
     }
 
@@ -358,7 +369,7 @@ static snd_device_t get_output_snd_device(struct audio_device *adev)
             else
                 snd_device = SND_DEVICE_OUT_HANDSET;
         }
-        if (snd_device != SND_DEVICE_INVALID) {
+        if (snd_device != SND_DEVICE_NONE) {
             goto exit;
         }
     }
@@ -374,15 +385,16 @@ static snd_device_t get_output_snd_device(struct audio_device *adev)
                                AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_HDMI;
         } else {
-            ALOGE("%s: Invalid combo device(0x%x)", __func__, devices);
+            ALOGE("%s: Invalid combo device(%#x)", __func__, devices);
             goto exit;
         }
-        if (snd_device != SND_DEVICE_INVALID) {
+        if (snd_device != SND_DEVICE_NONE) {
             goto exit;
         }
     }
+
     if (popcount(devices) != 1) {
-        ALOGE("%s: Invalid output devices(0x%x)", __func__, devices);
+        ALOGE("%s: Invalid output devices(%#x)", __func__, devices);
         goto exit;
     }
 
@@ -398,12 +410,10 @@ static snd_device_t get_output_snd_device(struct audio_device *adev)
     } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
         snd_device = SND_DEVICE_OUT_HANDSET;
     } else {
-        ALOGE("%s: Unknown device(s) 0x%x", __func__, devices);
+        ALOGE("%s: Unknown device(s) %#x", __func__, devices);
     }
 exit:
-    ALOGV("%s: exit: snd_device(%s)", __func__,
-          (snd_device == SND_DEVICE_INVALID) ?
-                "none" : device_table[snd_device]);
+    ALOGV("%s: exit: snd_device(%s)", __func__, device_table[snd_device]);
     return snd_device;
 }
 
@@ -419,9 +429,9 @@ static snd_device_t get_input_snd_device(struct audio_device *adev)
                                 & ~AUDIO_DEVICE_BIT_IN;
     audio_channel_mask_t channel_mask = (adev->active_input == NULL) ?
                                 AUDIO_CHANNEL_IN_MONO : adev->active_input->channel_mask;
-    snd_device_t snd_device = SND_DEVICE_INVALID;
+    snd_device_t snd_device = SND_DEVICE_NONE;
 
-    ALOGV("%s: enter: out_device(0x%x) in_device(0x%x)",
+    ALOGV("%s: enter: out_device(%#x) in_device(%#x)",
           __func__, out_device, in_device);
     if (mode == AUDIO_MODE_IN_CALL) {
         if (out_device == AUDIO_DEVICE_NONE) {
@@ -442,7 +452,7 @@ static snd_device_t get_input_snd_device(struct audio_device *adev)
                     snd_device = SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC;
                     break;
                 default:
-                    ALOGE("%s: Invalid TTY mode (0x%x)", __func__, adev->tty_mode);
+                    ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->tty_mode);
                 }
                 goto exit;
             }
@@ -508,7 +518,7 @@ static snd_device_t get_input_snd_device(struct audio_device *adev)
         goto exit;
     }
 
-    if (snd_device != SND_DEVICE_INVALID) {
+    if (snd_device != SND_DEVICE_NONE) {
         goto exit;
     }
 
@@ -529,7 +539,7 @@ static snd_device_t get_input_snd_device(struct audio_device *adev)
         } else if (in_device & AUDIO_DEVICE_IN_AUX_DIGITAL) {
             snd_device = SND_DEVICE_IN_HDMI_MIC;
         } else {
-            ALOGE("%s: Unknown input device(s) 0x%x", __func__, in_device);
+            ALOGE("%s: Unknown input device(s) %#x", __func__, in_device);
             ALOGW("%s: Using default handset-mic", __func__);
             snd_device = SND_DEVICE_IN_HANDSET_MIC;
         }
@@ -547,22 +557,20 @@ static snd_device_t get_input_snd_device(struct audio_device *adev)
         } else if (out_device & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             snd_device = SND_DEVICE_IN_HDMI_MIC;
         } else {
-            ALOGE("%s: Unknown output device(s) 0x%x", __func__, out_device);
+            ALOGE("%s: Unknown output device(s) %#x", __func__, out_device);
             ALOGW("%s: Using default handset-mic", __func__);
             snd_device = SND_DEVICE_IN_HANDSET_MIC;
         }
     }
 exit:
-    ALOGV("%s: exit: in_snd_device(%s)", __func__,
-          (snd_device == SND_DEVICE_INVALID) ?
-                "none" : device_table[snd_device]);
+    ALOGV("%s: exit: in_snd_device(%s)", __func__, device_table[snd_device]);
     return snd_device;
 }
 
 static int select_devices(struct audio_device *adev)
 {
-    snd_device_t out_snd_device = SND_DEVICE_INVALID;
-    snd_device_t in_snd_device = SND_DEVICE_INVALID;
+    snd_device_t out_snd_device = SND_DEVICE_NONE;
+    snd_device_t in_snd_device = SND_DEVICE_NONE;
     struct audio_usecase *usecase;
     int status = 0;
     int acdb_rx_id, acdb_tx_id;
@@ -578,6 +586,10 @@ static int select_devices(struct audio_device *adev)
               __func__, out_snd_device, in_snd_device);
         return 0;
     }
+
+    ALOGD("%s: out_snd_device(%d: %s) in_snd_device(%d: %s)", __func__,
+          out_snd_device, device_table[out_snd_device],
+          in_snd_device,  device_table[in_snd_device]);
 
     /*
      * Limitation: While in call, to do a device switch we need to disable
@@ -630,7 +642,7 @@ static int select_devices(struct audio_device *adev)
         adev->in_snd_device_active = false;
     }
 
-    if (out_snd_device != SND_DEVICE_INVALID && !adev->out_snd_device_active) {
+    if (out_snd_device != SND_DEVICE_NONE && !adev->out_snd_device_active) {
         /* Enable new rx device */
         status = enable_snd_device(adev, out_snd_device);
         if (status != 0) {
@@ -642,7 +654,7 @@ static int select_devices(struct audio_device *adev)
         adev->cur_out_snd_device = out_snd_device;
     }
 
-    if (in_snd_device != SND_DEVICE_INVALID && !adev->in_snd_device_active) {
+    if (in_snd_device != SND_DEVICE_NONE && !adev->in_snd_device_active) {
         /* Enable new tx device */
         status = enable_snd_device(adev, in_snd_device);
         if (status != 0) {
@@ -786,7 +798,7 @@ static int stop_input_stream(struct stream_in *in)
 
     adev->active_input = NULL;
 
-    ALOGV("%s: enter: usecase(%d)", __func__, in->usecase);
+    ALOGD("%s: enter: usecase(%d)", __func__, in->usecase);
     uc_info = get_usecase_from_list(adev, in->usecase);
     if (uc_info == NULL) {
         ALOGE("%s: Could not find the usecase (%d) in the list",
@@ -810,7 +822,7 @@ static int stop_input_stream(struct stream_in *in)
     /* 3. Disable the tx device */
     select_devices(adev);
 
-    ALOGV("%s: exit: status(%d)", __func__, ret);
+    ALOGD("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
 
@@ -822,10 +834,10 @@ int start_input_stream(struct stream_in *in)
     struct audio_usecase *uc_info;
     struct audio_device *adev = in->dev;
 
-    ALOGV("%s: enter: usecase(%d)", __func__, in->usecase);
+    ALOGD("%s: enter: usecase(%d)", __func__, in->usecase);
     adev->active_input = in;
     in_snd_device = get_input_snd_device(adev);
-    if (in_snd_device == SND_DEVICE_INVALID) {
+    if (in_snd_device == SND_DEVICE_NONE) {
         ALOGE("%s: Could not get valid input sound device", __func__);
         ret = -EINVAL;
         goto error_config;
@@ -848,7 +860,7 @@ int start_input_stream(struct stream_in *in)
     /* 1. Enable the TX device */
     ret = select_devices(adev);
     if (ret) {
-        ALOGE("%s: Failed to enable device(0x%x)",
+        ALOGE("%s: Failed to enable device(%#x)",
               __func__, in->device);
         free(uc_info);
         goto error_config;
@@ -874,7 +886,7 @@ int start_input_stream(struct stream_in *in)
         ret = -EIO;
         goto error_open;
     }
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
     return ret;
 
 error_open:
@@ -894,7 +906,7 @@ static int stop_output_stream(struct stream_out *out)
     struct audio_usecase *uc_info;
     struct audio_device *adev = out->dev;
 
-    ALOGV("%s: enter: usecase(%d)", __func__, out->usecase);
+    ALOGD("%s: enter: usecase(%d)", __func__, out->usecase);
     uc_info = get_usecase_from_list(adev, out->usecase);
     if (uc_info == NULL) {
         ALOGE("%s: Could not find the usecase (%d) in the list",
@@ -920,31 +932,27 @@ static int stop_output_stream(struct stream_out *out)
     adev->out_device |= get_voice_call_out_device(adev);
     ret = select_devices(adev);
 
-    ALOGV("%s: exit: status(%d)", __func__, ret);
+    ALOGD("%s: exit: status(%d) adev->out_device(%#x)",
+          __func__, ret, adev->out_device);
     return ret;
 }
 
 int start_output_stream(struct stream_out *out)
 {
-    int status;
     int ret = 0;
     snd_device_t out_snd_device;
     struct audio_usecase *uc_info;
     struct audio_device *adev = out->dev;
 
     /* 1. Enable output device and stream routing controls */
-    ALOGV("%s: enter: usecase(%d)", __func__, out->usecase);
+    ALOGD("%s: enter: usecase(%d) devices(%#x)",
+          __func__, out->usecase, out->devices);
     adev->out_device |= out->devices;
     out_snd_device = get_output_snd_device(adev);
-    if (out_snd_device == SND_DEVICE_INVALID) {
+    if (out_snd_device == SND_DEVICE_NONE) {
         ALOGE("%s: Could not get valid output sound device", __func__);
-        /*
-         * TODO: use a single exit point to avoid duplicating code to
-         * reset output device
-         */
-        adev->out_device = get_active_out_devices(adev, out->usecase);
-        adev->out_device |= get_voice_call_out_device(adev);
-        return -EINVAL;
+        ret = -EINVAL;
+        goto error_config;
     }
 
     out->pcm_device_id = get_pcm_device_id(adev->audio_route,
@@ -953,9 +961,8 @@ int start_output_stream(struct stream_out *out)
     if (out->pcm_device_id < 0) {
         ALOGE("%s: Invalid PCM device id(%d) for the usecase(%d)",
               __func__, out->pcm_device_id, out->usecase);
-        adev->out_device = get_active_out_devices(adev, out->usecase);
-        adev->out_device |= get_voice_call_out_device(adev);
-        return -EINVAL;
+        ret = -EINVAL;
+        goto error_config;
     }
 
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
@@ -965,12 +972,10 @@ int start_output_stream(struct stream_out *out)
 
     ret = select_devices(adev);
     if (ret) {
-        ALOGE("%s: Failed to enable device(0x%x)",
+        ALOGE("%s: Failed to enable device(%#x)",
               __func__, adev->out_device);
-        adev->out_device = get_active_out_devices(adev, out->usecase);
-        adev->out_device |= get_voice_call_out_device(adev);
         free(uc_info);
-        return ret;
+        goto error_config;
     }
 
     out_snd_device = adev->cur_out_snd_device;
@@ -987,15 +992,17 @@ int start_output_stream(struct stream_out *out)
         ALOGE("%s: %s", __func__, pcm_get_error(out->pcm));
         pcm_close(out->pcm);
         out->pcm = NULL;
-        status = -EIO;
+        ret = -EIO;
         goto error;
     }
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
     return 0;
 error:
     stop_output_stream(out);
-    ALOGE("%s: exit: status(%d)", __func__, status);
-    return status;
+error_config:
+    adev->out_device = get_active_out_devices(adev, out->usecase);
+    adev->out_device |= get_voice_call_out_device(adev);
+    return ret;
 }
 
 static int stop_voice_call(struct audio_device *adev)
@@ -1004,7 +1011,7 @@ static int stop_voice_call(struct audio_device *adev)
     snd_device_t out_snd_device;
     struct audio_usecase *uc_info;
 
-    ALOGV("%s: enter", __func__);
+    ALOGD("%s: enter", __func__);
     adev->in_call = false;
     if (adev->csd_client) {
         if (adev->csd_stop_voice == NULL) {
@@ -1036,7 +1043,6 @@ static int stop_voice_call(struct audio_device *adev)
     out_snd_device = adev->cur_out_snd_device;
 
     /* 2. Get and set stream specific mixer controls */
-    /* ToDo: Status check ?*/
     disable_audio_route(adev->audio_route, USECASE_VOICE_CALL, out_snd_device);
     audio_route_update_mixer(adev->audio_route);
 
@@ -1045,7 +1051,7 @@ static int stop_voice_call(struct audio_device *adev)
     /* 3. Disable the rx and tx devices */
     ret = select_devices(adev);
 
-    ALOGV("%s: exit: status(%d)", __func__, ret);
+    ALOGD("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
 
@@ -1056,7 +1062,7 @@ static int start_voice_call(struct audio_device *adev)
     struct audio_usecase *uc_info;
     int pcm_dev_rx_id, pcm_dev_tx_id;
 
-    ALOGV("%s: enter", __func__);
+    ALOGD("%s: enter", __func__);
 
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
     uc_info->id = USECASE_VOICE_CALL;
@@ -1130,7 +1136,7 @@ static int start_voice_call(struct audio_device *adev)
 error_start_voice:
     stop_voice_call(adev);
 
-    ALOGV("%s: exit: status(%d)", __func__, ret);
+    ALOGD("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
 
@@ -1221,7 +1227,7 @@ static int out_standby(struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
     struct audio_device *adev = out->dev;
-    ALOGV("%s: enter: usecase(%d)", __func__, out->usecase);
+    ALOGD("%s: enter: usecase(%d)", __func__, out->usecase);
     pthread_mutex_lock(&out->dev->lock);
     pthread_mutex_lock(&out->lock);
 
@@ -1231,7 +1237,7 @@ static int out_standby(struct audio_stream *stream)
     }
     pthread_mutex_unlock(&out->lock);
     pthread_mutex_unlock(&out->dev->lock);
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
     return 0;
 }
 
@@ -1248,7 +1254,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     char value[32];
     int ret, val = 0;
 
-    ALOGV("%s: enter: usecase(%d) kvpairs: %s",
+    ALOGD("%s: enter: usecase(%d) kvpairs: %s",
           __func__, out->usecase, kvpairs);
     parms = str_parms_create_str(kvpairs);
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
@@ -1279,7 +1285,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         pthread_mutex_unlock(&adev->lock);
     }
     str_parms_destroy(parms);
-    ALOGV("%s: exit: code(%d)", __func__, ret);
+    ALOGD("%s: exit: code(%d)", __func__, ret);
     return ret;
 }
 
@@ -1293,7 +1299,7 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
     size_t i, j;
     int ret;
     bool first = true;
-    ALOGV("%s: enter: keys - %s", __func__, keys);
+    ALOGD("%s: enter: keys - %s", __func__, keys);
     ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_CHANNELS, value, sizeof(value));
     if (ret >= 0) {
         value[0] = '\0';
@@ -1318,7 +1324,7 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
     }
     str_parms_destroy(query);
     str_parms_destroy(reply);
-    ALOGV("%s: exit: returns - %s", __func__, str);
+    ALOGD("%s: exit: returns - %s", __func__, str);
     return str;
 }
 
@@ -1438,7 +1444,7 @@ static int in_standby(struct audio_stream *stream)
     struct stream_in *in = (struct stream_in *)stream;
     struct audio_device *adev = in->dev;
     int status = 0;
-    ALOGV("%s: enter", __func__);
+    ALOGD("%s: enter", __func__);
     pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&in->lock);
     if (!in->standby) {
@@ -1447,7 +1453,7 @@ static int in_standby(struct audio_stream *stream)
     }
     pthread_mutex_unlock(&in->lock);
     pthread_mutex_unlock(&adev->lock);
-    ALOGV("%s: exit:  status(%d)", __func__, status);
+    ALOGD("%s: exit:  status(%d)", __func__, status);
     return status;
 }
 
@@ -1465,7 +1471,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     char value[32];
     int ret, val = 0;
 
-    ALOGV("%s: enter: kvpairs=%s", __func__, kvpairs);
+    ALOGD("%s: enter: kvpairs=%s", __func__, kvpairs);
     parms = str_parms_create_str(kvpairs);
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_INPUT_SOURCE, value, sizeof(value));
@@ -1496,7 +1502,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     pthread_mutex_unlock(&adev->lock);
 
     str_parms_destroy(parms);
-    ALOGV("%s: exit: status(%d)", __func__, ret);
+    ALOGD("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
 
@@ -1584,7 +1590,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     struct stream_out *out;
     int i, ret;
 
-    ALOGV("%s: enter: sample_rate(%d) channel_mask(0x%x) devices(0x%x) flags(0x%x)",
+    ALOGD("%s: enter: sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)",
           __func__, config->sample_rate, config->channel_mask, devices, flags);
     *stream_out = NULL;
     out = (struct stream_out *)calloc(1, sizeof(struct stream_out));
@@ -1659,17 +1665,17 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     config->sample_rate = out->stream.common.get_sample_rate(&out->stream.common);
 
     *stream_out = &out->stream;
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
     return 0;
 }
 
 static void adev_close_output_stream(struct audio_hw_device *dev,
                                      struct audio_stream_out *stream)
 {
-    ALOGV("%s: enter", __func__);
+    ALOGD("%s: enter", __func__);
     out_standby(&stream->common);
     free(stream);
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
 }
 
 static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
@@ -1680,7 +1686,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     char value[32];
     int ret;
 
-    ALOGV("%s: enter: %s", __func__, kvpairs);
+    ALOGD("%s: enter: %s", __func__, kvpairs);
 
     parms = str_parms_create_str(kvpairs);
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_TTY_MODE, value, sizeof(value));
@@ -1728,14 +1734,13 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     }
 
     str_parms_destroy(parms);
-    ALOGV("%s: exit with code(%d)", __func__, ret);
+    ALOGD("%s: exit with code(%d)", __func__, ret);
     return ret;
 }
 
 static char* adev_get_parameters(const struct audio_hw_device *dev,
                                  const char *keys)
 {
-    /* ToDo: Return requested params */
     return strdup("");
 }
 
@@ -1850,7 +1855,6 @@ static int adev_get_mic_mute(const struct audio_hw_device *dev, bool *state)
 static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev,
                                          const struct audio_config *config)
 {
-    size_t size;
     int channel_count = popcount(config->channel_mask);
 
     return get_input_buffer_size(config->sample_rate, config->format, channel_count);
@@ -1867,7 +1871,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     int ret, buffer_size, frame_size;
     int channel_count = popcount(config->channel_mask);
 
-    ALOGV("%s: enter", __func__);
+    ALOGD("%s: enter", __func__);
     *stream_in = NULL;
     if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0)
         return -EINVAL;
@@ -1909,7 +1913,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->config.period_size = buffer_size / frame_size;
 
     *stream_in = &in->stream;
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
     return 0;
 
 err_open:
@@ -1921,6 +1925,8 @@ err_open:
 static void adev_close_input_stream(struct audio_hw_device *dev,
                                     struct audio_stream_in *stream)
 {
+    ALOGD("%s", __func__);
+
     in_standby(&stream->common);
     free(stream);
 
@@ -1979,7 +1985,7 @@ static void init_platform_data(struct audio_device *adev)
 
     property_get("gsm.sim.operator.numeric",value,"0");
     mccmnc = atoi(value);
-    ALOGV("%s: tmus mccmnc %d", __func__, mccmnc);
+    ALOGD("%s: tmus mccmnc %d", __func__, mccmnc);
     switch(mccmnc) {
     /* TMUS MCC(310), MNC(490, 260, 026) */
     case 310490:
@@ -2056,7 +2062,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     struct audio_device *adev;
     int ret;
 
-    ALOGV("%s: enter", __func__);
+    ALOGD("%s: enter", __func__);
     if (strcmp(name, AUDIO_HARDWARE_INTERFACE) != 0) return -EINVAL;
 
     adev = calloc(1, sizeof(struct audio_device));
@@ -2123,7 +2129,7 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     *device = &adev->device.common;
 
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
     return 0;
 }
 

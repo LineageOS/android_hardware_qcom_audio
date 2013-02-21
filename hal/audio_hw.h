@@ -32,15 +32,18 @@
  * devices to enable corresponding mixer paths
  */
 typedef enum {
-    SND_DEVICE_INVALID = -1,
-    SND_DEVICE_OUT_BEGIN = 0,
+    SND_DEVICE_NONE = 0,
+
+    /* Playback devices */
+    SND_DEVICE_MIN,
+    SND_DEVICE_OUT_BEGIN = SND_DEVICE_MIN,
     SND_DEVICE_OUT_HANDSET = SND_DEVICE_OUT_BEGIN,
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_VOICE_SPEAKER,
     SND_DEVICE_OUT_VOICE_HEADPHONES,
-    SND_DEVICE_OUT_HDMI ,
+    SND_DEVICE_OUT_HDMI,
     SND_DEVICE_OUT_SPEAKER_AND_HDMI,
     SND_DEVICE_OUT_BT_SCO,
     SND_DEVICE_OUT_VOICE_HANDSET_TMUS,
@@ -49,9 +52,11 @@ typedef enum {
     SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET,
     SND_DEVICE_OUT_END,
 
-    /* Note: IN_BEGIN should be same as OUT_END because total number of devices
-     * SND_DEVICES_ALL should not exceed MAX_RX + MAX_TX devices.
+    /*
+     * Note: IN_BEGIN should be same as OUT_END because total number of devices
+     * SND_DEVICES_MAX should not exceed MAX_RX + MAX_TX devices.
      */
+    /* Capture devices */
     SND_DEVICE_IN_BEGIN = SND_DEVICE_OUT_END,
     SND_DEVICE_IN_HANDSET_MIC  = SND_DEVICE_IN_BEGIN,
     SND_DEVICE_IN_SPEAKER_MIC,
@@ -59,7 +64,7 @@ typedef enum {
     SND_DEVICE_IN_VOICE_SPEAKER_MIC,
     SND_DEVICE_IN_VOICE_HEADSET_MIC,
     SND_DEVICE_IN_HDMI_MIC,
-    SND_DEVICE_IN_BT_SCO_MIC ,
+    SND_DEVICE_IN_BT_SCO_MIC,
     SND_DEVICE_IN_CAMCORDER_MIC,
     SND_DEVICE_IN_VOICE_DMIC_EF,
     SND_DEVICE_IN_VOICE_DMIC_BS,
@@ -76,12 +81,10 @@ typedef enum {
     SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE,
     SND_DEVICE_IN_END,
 
+    SND_DEVICE_MAX = SND_DEVICE_IN_END,
+
 } snd_device_t;
 
-#define NUM_OUT_SND_DEVICES (SND_DEVICE_OUT_END - SND_DEVICE_OUT_BEGIN)
-#define NUM_IN_SND_DEVICES (SND_DEVICE_IN_END - SND_DEVICE_IN_BEGIN)
-#define SND_DEVICE_ALL     (NUM_OUT_SND_DEVICES + NUM_IN_SND_DEVICES)
-#define SND_DEVICE_MAX      MAX(NUM_IN_SND_DEVICES, NUM_IN_SND_DEVICES)
 
 /* These are the supported use cases by the hardware.
  * Each usecase is mapped to a specific PCM device.
@@ -181,8 +184,8 @@ struct audio_usecase {
 
 typedef void (*acdb_deallocate_t)();
 typedef int  (*acdb_init_t)();
-typedef void (*acdb_send_audio_cal_t)(int,int);
-typedef void (*acdb_send_voice_cal_t)(int,int);
+typedef void (*acdb_send_audio_cal_t)(int, int);
+typedef void (*acdb_send_voice_cal_t)(int, int);
 
 typedef int (*csd_client_init_t)();
 typedef int (*csd_client_deinit_t)();
