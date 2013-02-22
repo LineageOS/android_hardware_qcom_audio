@@ -370,9 +370,6 @@ static snd_device_t get_output_snd_device(struct audio_device *adev)
         } else if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADSET |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
-        } else if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADSET |
-                               AUDIO_DEVICE_OUT_WIRED_HEADPHONE)) {
-            snd_device = SND_DEVICE_OUT_HEADPHONES;
         } else if (devices == (AUDIO_DEVICE_OUT_AUX_DIGITAL |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_HDMI;
@@ -384,18 +381,6 @@ static snd_device_t get_output_snd_device(struct audio_device *adev)
             goto exit;
         }
     }
-
-    if (popcount(devices) == 3) {
-        if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADPHONE |
-                        AUDIO_DEVICE_OUT_WIRED_HEADSET |
-                        AUDIO_DEVICE_OUT_SPEAKER)) {
-            snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
-        } else {
-            ALOGE("%s: Invalid combo device(0x%x)", __func__, devices);
-        }
-        goto exit;
-    }
-
     if (popcount(devices) != 1) {
         ALOGE("%s: Invalid output devices(0x%x)", __func__, devices);
         goto exit;
