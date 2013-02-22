@@ -1273,7 +1273,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 out->devices = val;
             }
             stop_voice_call(adev);
-        } else if ((adev->out_device != (audio_devices_t)val) && (val != 0)) {
+        } else if ((out->devices != (audio_devices_t)val) && (val != 0)) {
             if (!out->standby || adev->in_call) {
                 adev->out_device = get_active_out_devices(adev, out->usecase) | val;
                 ret = select_devices(adev);
