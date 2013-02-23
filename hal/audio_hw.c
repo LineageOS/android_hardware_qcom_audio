@@ -160,6 +160,32 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
 
 int edid_get_max_channels(void);
 
+static pthread_once_t check_op_once_ctl = PTHREAD_ONCE_INIT;
+static bool is_tmus = false;
+
+static void check_operator()
+{
+    char value[PROPERTY_VALUE_MAX];
+    int mccmnc;
+    property_get("gsm.sim.operator.numeric",value,"0");
+    mccmnc = atoi(value);
+    ALOGD("%s: tmus mccmnc %d", __func__, mccmnc);
+    switch(mccmnc) {
+    /* TMUS MCC(310), MNC(490, 260, 026) */
+    case 310490:
+    case 310260:
+    case 310026:
+        is_tmus = true;
+        break;
+    }
+}
+
+static bool is_operator_tmus()
+{
+    pthread_once(&check_op_once_ctl, check_operator);
+    return is_tmus;
+}
+
 static int get_pcm_device_id(struct audio_route *ar,
                              audio_usecase_t usecase,
                              int device_type)
@@ -364,7 +390,7 @@ static snd_device_t get_output_snd_device(struct audio_device *adev)
         } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
             snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
         } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
-            if (adev->is_tmus)
+            if (is_operator_tmus())
                 snd_device = SND_DEVICE_OUT_VOICE_HANDSET_TMUS;
             else
                 snd_device = SND_DEVICE_OUT_HANDSET;
@@ -463,7 +489,7 @@ static snd_device_t get_input_snd_device(struct audio_device *adev)
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
             } else {
                 if (adev->dualmic_config == DUALMIC_CONFIG_ENDFIRE) {
-                    if (adev->is_tmus)
+                    if (is_operator_tmus())
                         snd_device = SND_DEVICE_IN_VOICE_DMIC_EF_TMUS;
                     else
                         snd_device = SND_DEVICE_IN_VOICE_DMIC_EF;
@@ -1951,7 +1977,6 @@ static void init_platform_data(struct audio_device *adev)
     char platform[PROPERTY_VALUE_MAX];
     char baseband[PROPERTY_VALUE_MAX];
     char value[PROPERTY_VALUE_MAX];
-    int mccmnc;
 
     adev->dualmic_config = DUALMIC_CONFIG_NONE;
     adev->fluence_in_voice_call = false;
@@ -1981,21 +2006,6 @@ static void init_platform_data(struct audio_device *adev)
         if (!strncmp("true", value, 4)) {
             adev->fluence_in_voice_rec = true;
         }
-    }
-
-    property_get("gsm.sim.operator.numeric",value,"0");
-    mccmnc = atoi(value);
-    ALOGD("%s: tmus mccmnc %d", __func__, mccmnc);
-    switch(mccmnc) {
-    /* TMUS MCC(310), MNC(490, 260, 026) */
-    case 310490:
-    case 310260:
-    case 310026:
-        adev->is_tmus = true;
-        break;
-    default:
-        adev->is_tmus = false;
-        break;
     }
 
     adev->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);

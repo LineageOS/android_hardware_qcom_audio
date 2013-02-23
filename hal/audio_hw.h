@@ -219,7 +219,6 @@ struct audio_device {
     struct audio_route *audio_route;
     int acdb_settings;
 
-    bool is_tmus;
     bool mic_type_analog;
     bool fluence_in_voice_call;
     bool fluence_in_voice_rec;
