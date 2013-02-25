@@ -4015,8 +4015,7 @@ void AudioHardware::AudioSessionOutLPA::bufferDeAlloc()
 
 uint32_t AudioHardware::AudioSessionOutLPA::latency() const
 {
-    // Android wants latency in milliseconds.
-    return 1000;//TODO to correct the value
+    return 54; // latency equal to regular hpcm session
 }
 
 void AudioHardware::AudioSessionOutLPA::requestAndWaitForEventThreadExit()
