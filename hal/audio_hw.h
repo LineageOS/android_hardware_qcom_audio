@@ -138,7 +138,7 @@ typedef enum {
 
 struct stream_out {
     struct audio_stream_out stream;
-    pthread_mutex_t lock;
+    pthread_mutex_t lock; /* see note below on mutex acquisition order */
     struct pcm_config config;
     struct pcm *pcm;
     int standby;
@@ -155,7 +155,7 @@ struct stream_out {
 
 struct stream_in {
     struct audio_stream_in stream;
-    pthread_mutex_t lock;
+    pthread_mutex_t lock; /* see note below on mutex acquisition order */
     struct pcm_config config;
     struct pcm *pcm;
     int standby;
@@ -198,7 +198,7 @@ typedef int (*csd_stop_voice_t)();
 
 struct audio_device {
     struct audio_hw_device device;
-    pthread_mutex_t lock;
+    pthread_mutex_t lock; /* see note below on mutex acquisition order */
     struct mixer *mixer;
     audio_mode_t mode;
     audio_devices_t out_device;
@@ -242,6 +242,11 @@ struct audio_device {
     csd_start_voice_t csd_start_voice;
     csd_stop_voice_t csd_stop_voice;
 };
+
+/*
+ * NOTE: when multiple mutexes have to be acquired, always take the
+ * stream_in or stream_out mutex first, followed by the audio_device mutex.
+ */
 
 struct pcm_config pcm_config_deep_buffer = {
     .channels = 2,

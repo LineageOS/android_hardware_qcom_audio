@@ -832,20 +832,14 @@ static int stop_input_stream(struct stream_in *in)
         return -EINVAL;
     }
 
-    /* 1. Close the PCM device first */
-    if (in->pcm) {
-        pcm_close(in->pcm);
-        in->pcm = NULL;
-    }
-
-    /* 2. Disable stream specific mixer controls */
+    /* 1. Disable stream specific mixer controls */
     in_snd_device = adev->cur_in_snd_device;
     disable_audio_route(adev->audio_route, in->usecase, in_snd_device);
     audio_route_update_mixer(adev->audio_route);
 
     remove_usecase_from_list(adev, in->usecase);
 
-    /* 3. Disable the tx device */
+    /* 2. Disable the tx device */
     select_devices(adev);
 
     ALOGD("%s: exit: status(%d)", __func__, ret);
@@ -940,20 +934,14 @@ static int stop_output_stream(struct stream_out *out)
         return -EINVAL;
     }
 
-    /* 1. Close the PCM device first */
-    if (out->pcm) {
-        pcm_close(out->pcm);
-        out->pcm = NULL;
-    }
-
-    /* 2. Get and set stream specific mixer controls */
+    /* 1. Get and set stream specific mixer controls */
     out_snd_device = adev->cur_out_snd_device;
     disable_audio_route(adev->audio_route, out->usecase, out_snd_device);
     audio_route_update_mixer(adev->audio_route);
 
     remove_usecase_from_list(adev, uc_info->id);
 
-    /* 3. Disable the rx device */
+    /* 2. Disable the rx device */
     adev->out_device = get_active_out_devices(adev, out->usecase);
     adev->out_device |= get_voice_call_out_device(adev);
     ret = select_devices(adev);
@@ -1254,15 +1242,19 @@ static int out_standby(struct audio_stream *stream)
     struct stream_out *out = (struct stream_out *)stream;
     struct audio_device *adev = out->dev;
     ALOGD("%s: enter: usecase(%d)", __func__, out->usecase);
-    pthread_mutex_lock(&out->dev->lock);
     pthread_mutex_lock(&out->lock);
 
     if (!out->standby) {
         out->standby = true;
+        if (out->pcm) {
+            pcm_close(out->pcm);
+            out->pcm = NULL;
+        }
+        pthread_mutex_lock(&adev->lock);
         stop_output_stream(out);
+        pthread_mutex_unlock(&adev->lock);
     }
     pthread_mutex_unlock(&out->lock);
-    pthread_mutex_unlock(&out->dev->lock);
     ALOGD("%s: exit", __func__);
     return 0;
 }
@@ -1286,8 +1278,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
     if (ret >= 0) {
         val = atoi(value);
-        pthread_mutex_lock(&adev->lock);
         pthread_mutex_lock(&out->lock);
+        pthread_mutex_lock(&adev->lock);
 
         if (adev->mode == AUDIO_MODE_IN_CALL && !adev->in_call && (val != 0)) {
             adev->out_device = get_active_out_devices(adev, out->usecase) | val;
@@ -1307,8 +1299,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             out->devices = val;
         }
 
-        pthread_mutex_unlock(&out->lock);
         pthread_mutex_unlock(&adev->lock);
+        pthread_mutex_unlock(&out->lock);
     }
     str_parms_destroy(parms);
     ALOGD("%s: exit: code(%d)", __func__, ret);
@@ -1374,21 +1366,16 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     struct audio_device *adev = out->dev;
     int i, ret = -1;
 
-    /* acquiring hw device mutex systematically is useful if a low priority thread is waiting
-     * on the output stream mutex - e.g. executing select_mode() while holding the hw device
-     * mutex
-     */
-    pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&out->lock);
     if (out->standby) {
+        pthread_mutex_lock(&adev->lock);
         ret = start_output_stream(out);
+        pthread_mutex_unlock(&adev->lock);
         if (ret != 0) {
-            pthread_mutex_unlock(&adev->lock);
             goto exit;
         }
         out->standby = false;
     }
-    pthread_mutex_unlock(&adev->lock);
 
     if (out->pcm) {
         //ALOGV("%s: writing buffer (%d bytes) to pcm device", __func__, bytes);
@@ -1471,14 +1458,18 @@ static int in_standby(struct audio_stream *stream)
     struct audio_device *adev = in->dev;
     int status = 0;
     ALOGD("%s: enter", __func__);
-    pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&in->lock);
     if (!in->standby) {
         in->standby = true;
+        if (in->pcm) {
+            pcm_close(in->pcm);
+            in->pcm = NULL;
+        }
+        pthread_mutex_lock(&adev->lock);
         status = stop_input_stream(in);
+        pthread_mutex_unlock(&adev->lock);
     }
     pthread_mutex_unlock(&in->lock);
-    pthread_mutex_unlock(&adev->lock);
     ALOGD("%s: exit:  status(%d)", __func__, status);
     return status;
 }
@@ -1502,8 +1493,8 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_INPUT_SOURCE, value, sizeof(value));
 
-    pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&in->lock);
+    pthread_mutex_lock(&adev->lock);
     if (ret >= 0) {
         val = atoi(value);
         /* no audio source uses val == 0 */
@@ -1524,8 +1515,8 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
         }
     }
 
-    pthread_mutex_unlock(&in->lock);
     pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&in->lock);
 
     str_parms_destroy(parms);
     ALOGD("%s: exit: status(%d)", __func__, ret);
@@ -1550,22 +1541,17 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     struct audio_device *adev = in->dev;
     int i, ret = -1;
 
-    /* acquiring hw device mutex systematically is useful if a low priority thread is waiting
-     * on the output stream mutex - e.g. executing select_mode() while holding the hw device
-     * mutex
-     */
     //ALOGV("%s: buffer(%p) bytes(%d)", __func__, buffer, bytes);
-    pthread_mutex_lock(&adev->lock);
     pthread_mutex_lock(&in->lock);
     if (in->standby) {
+      pthread_mutex_lock(&adev->lock);
         ret = start_input_stream(in);
+        pthread_mutex_unlock(&adev->lock);
         if (ret != 0) {
-            pthread_mutex_unlock(&adev->lock);
             goto exit;
         }
         in->standby = 0;
     }
-    pthread_mutex_unlock(&adev->lock);
 
     if (in->pcm) {
         ret = pcm_read(in->pcm, buffer, bytes);
