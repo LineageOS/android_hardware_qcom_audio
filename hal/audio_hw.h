@@ -176,6 +176,7 @@ typedef enum {
 
 // To store active use cases.
 struct audio_usecase {
+    struct listnode list;
     audio_usecase_t id;
     usecase_type_t  type;
     audio_devices_t devices;
@@ -215,7 +216,7 @@ struct audio_device {
     snd_device_t cur_in_snd_device;
     bool out_snd_device_active;
     bool in_snd_device_active;
-    struct audio_usecase usecase_list;
+    struct listnode usecase_list;
     struct audio_route *audio_route;
     int acdb_settings;
 
