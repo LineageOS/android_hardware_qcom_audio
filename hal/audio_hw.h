@@ -174,13 +174,17 @@ typedef enum {
     VOICE_CALL
 } usecase_type_t;
 
-// To store active use cases.
+union stream_ptr {
+    struct stream_in *in;
+    struct stream_out *out;
+};
+
 struct audio_usecase {
     struct listnode list;
     audio_usecase_t id;
     usecase_type_t  type;
     audio_devices_t devices;
-    struct audio_usecase *next;
+    union stream_ptr stream;
 };
 
 typedef void (*acdb_deallocate_t)();
@@ -204,6 +208,7 @@ struct audio_device {
     audio_mode_t mode;
     audio_devices_t out_device;
     struct stream_in *active_input;
+    struct stream_out *primary_output;
     int in_call;
     float voice_volume;
     bool mic_mute;
