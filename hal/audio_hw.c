@@ -530,10 +530,10 @@ static snd_device_t get_input_snd_device(struct audio_device *adev)
         } else if (out_device & AUDIO_DEVICE_OUT_ALL_SCO) {
             snd_device = SND_DEVICE_IN_BT_SCO_MIC ;
         } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER) {
-            if (adev->fluence_in_voice_call &&
+            if (adev->fluence_in_voice_call && adev->fluence_in_spkr_mode &&
                     adev->dualmic_config == DUALMIC_CONFIG_ENDFIRE) {
                 snd_device = SND_DEVICE_IN_VOICE_SPEAKER_DMIC_EF;
-            } else if (adev->fluence_in_voice_call &&
+            } else if (adev->fluence_in_voice_call && adev->fluence_in_spkr_mode &&
                        adev->dualmic_config == DUALMIC_CONFIG_BROADSIDE) {
                 snd_device = SND_DEVICE_IN_VOICE_SPEAKER_DMIC_BS;
             } else {
@@ -1959,6 +1959,7 @@ static void init_platform_data(struct audio_device *adev)
     char value[PROPERTY_VALUE_MAX];
 
     adev->dualmic_config = DUALMIC_CONFIG_NONE;
+    adev->fluence_in_spkr_mode = false;
     adev->fluence_in_voice_call = false;
     adev->fluence_in_voice_rec = false;
     adev->mic_type_analog = false;
@@ -1985,6 +1986,11 @@ static void init_platform_data(struct audio_device *adev)
         property_get("persist.audio.fluence.voicerec",value,"");
         if (!strncmp("true", value, 4)) {
             adev->fluence_in_voice_rec = true;
+        }
+
+        property_get("persist.audio.fluence.speaker",value,"");
+        if (!strncmp("true", value, 4)) {
+            adev->fluence_in_spkr_mode = true;
         }
     }
 
