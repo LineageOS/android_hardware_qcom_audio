@@ -226,6 +226,7 @@ struct audio_device {
     int acdb_settings;
 
     bool mic_type_analog;
+    bool fluence_in_spkr_mode;
     bool fluence_in_voice_call;
     bool fluence_in_voice_rec;
     int  dualmic_config;
