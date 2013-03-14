@@ -121,6 +121,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
 
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
 static const int acdb_device_table[SND_DEVICE_MAX] = {
+    [SND_DEVICE_NONE] = -1,
     [SND_DEVICE_OUT_HANDSET] = 7,
     [SND_DEVICE_OUT_SPEAKER] = 14,
     [SND_DEVICE_OUT_HEADPHONES] = 10,
@@ -191,48 +192,37 @@ static int get_pcm_device_id(struct audio_route *ar,
                              audio_usecase_t usecase,
                              int device_type)
 {
-    ALOGV("%s: enter: usecase(%d)", __func__, usecase);
     int device_id;
     if (device_type == PCM_PLAYBACK)
         device_id = pcm_device_table[usecase][0];
     else
         device_id = pcm_device_table[usecase][1];
-    ALOGV("%s: exit: device_id(%d)", __func__, device_id);
     return device_id;
 }
 
 static int get_acdb_device_id(snd_device_t snd_device)
 {
-    ALOGV("%s: enter: snd_devie(%d)", __func__, snd_device);
-    int acdb_dev_id = acdb_device_table[snd_device];
-    ALOGV("%s: exit: acdb_dev_id(%d)", __func__, acdb_dev_id);
-    return acdb_dev_id;
+    return acdb_device_table[snd_device];
 }
 
 static void add_backend_name(char *mixer_path,
-                             struct audio_usecase *usecase)
+                             snd_device_t snd_device)
 {
-    audio_devices_t in_device;
-    if (usecase->devices & AUDIO_DEVICE_BIT_IN) {
-        in_device = usecase->devices & ~AUDIO_DEVICE_BIT_IN;
-        if (in_device & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
-            strcat(mixer_path, " bt-sco");
-        }
-    } else {
-        if (usecase->devices & AUDIO_DEVICE_OUT_ALL_SCO) {
-            strcat(mixer_path, " bt-sco");
-        } else if ((usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
-                   (usecase->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
-            strcat(mixer_path, " speaker-and-hdmi");
-        } else if (usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-            strcat(mixer_path, " hdmi");
-        }
-    }
+    if (snd_device == SND_DEVICE_IN_BT_SCO_MIC)
+        strcat(mixer_path, " bt-sco");
+    else if(snd_device == SND_DEVICE_OUT_BT_SCO)
+        strcat(mixer_path, " bt-sco");
+    else if (snd_device == SND_DEVICE_OUT_HDMI)
+        strcat(mixer_path, " hdmi");
+    else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HDMI)
+        strcat(mixer_path, " speaker-and-hdmi");
 }
 
-static int enable_audio_route(struct audio_route *ar,
-                              struct audio_usecase *usecase)
+static int enable_audio_route(struct audio_device *adev,
+                              struct audio_usecase *usecase,
+                              bool update_mixer)
 {
+    snd_device_t snd_device;
     char mixer_path[50];
 
     if (usecase == NULL)
@@ -240,89 +230,188 @@ static int enable_audio_route(struct audio_route *ar,
 
     ALOGV("%s: enter: usecase(%d)", __func__, usecase->id);
 
-    /* Get the updated devices from associated stream */
     if (usecase->type == PCM_CAPTURE)
-        usecase->devices = usecase->stream.in->device;
+        snd_device = usecase->in_snd_device;
     else
-        usecase->devices = usecase->stream.out->devices;
+        snd_device = usecase->out_snd_device;
 
     strcpy(mixer_path, use_case_table[usecase->id]);
-    add_backend_name(mixer_path, usecase);
+    add_backend_name(mixer_path, snd_device);
     ALOGD("%s: apply mixer path: %s", __func__, mixer_path);
-    audio_route_apply_path(ar, mixer_path);
+    audio_route_apply_path(adev->audio_route, mixer_path);
+    if (update_mixer)
+        audio_route_update_mixer(adev->audio_route);
 
     ALOGV("%s: exit", __func__);
     return 0;
 }
 
-static int disable_audio_route(struct audio_route *ar,
-                               struct audio_usecase *usecase)
+static int disable_audio_route(struct audio_device *adev,
+                               struct audio_usecase *usecase,
+                               bool update_mixer)
 {
+    snd_device_t snd_device;
     char mixer_path[50];
 
     if (usecase == NULL)
         return -EINVAL;
 
     ALOGV("%s: enter: usecase(%d)", __func__, usecase->id);
-
+    if (usecase->type == PCM_CAPTURE)
+        snd_device = usecase->in_snd_device;
+    else
+        snd_device = usecase->out_snd_device;
     strcpy(mixer_path, use_case_table[usecase->id]);
-    add_backend_name(mixer_path, usecase);
+    add_backend_name(mixer_path, snd_device);
     ALOGD("%s: reset mixer path: %s", __func__, mixer_path);
-    audio_route_reset_path(ar, mixer_path);
+    audio_route_reset_path(adev->audio_route, mixer_path);
+    if (update_mixer)
+        audio_route_update_mixer(adev->audio_route);
 
     ALOGV("%s: exit", __func__);
     return 0;
 }
 
 static int enable_snd_device(struct audio_device *adev,
-                             snd_device_t snd_device)
+                             snd_device_t snd_device,
+                             bool update_mixer)
 {
     int acdb_dev_id, acdb_dev_type;
 
-    ALOGD("%s: snd_device(%d: %s)", __func__,
-          snd_device, device_table[snd_device]);
     if (snd_device < SND_DEVICE_MIN ||
         snd_device >= SND_DEVICE_MAX) {
         ALOGE("%s: Invalid sound device %d", __func__, snd_device);
         return -EINVAL;
     }
+
+    adev->snd_dev_ref_cnt[snd_device]++;
+    if (adev->snd_dev_ref_cnt[snd_device] > 1) {
+        ALOGD("%s: snd_device(%d: %s) is already active",
+              __func__, snd_device, device_table[snd_device]);
+        return 0;
+    }
+
     acdb_dev_id = get_acdb_device_id(snd_device);
     if (acdb_dev_id < 0) {
         ALOGE("%s: Could not find acdb id for device(%d)",
               __func__, snd_device);
+        adev->snd_dev_ref_cnt[snd_device]--;
         return -EINVAL;
-    }
-    if (snd_device >= SND_DEVICE_OUT_BEGIN &&
-            snd_device < SND_DEVICE_OUT_END) {
-        acdb_dev_type = ACDB_DEV_TYPE_OUT;
-    } else {
-        acdb_dev_type = ACDB_DEV_TYPE_IN;
     }
     if (adev->acdb_send_audio_cal) {
         ALOGV("%s: sending audio calibration for snd_device(%d) acdb_id(%d)",
               __func__, snd_device, acdb_dev_id);
+        if (snd_device >= SND_DEVICE_OUT_BEGIN &&
+                snd_device < SND_DEVICE_OUT_END)
+            acdb_dev_type = ACDB_DEV_TYPE_OUT;
+        else
+            acdb_dev_type = ACDB_DEV_TYPE_IN;
         adev->acdb_send_audio_cal(acdb_dev_id, acdb_dev_type);
     } else {
         ALOGW("%s: Could find the symbol acdb_send_audio_cal from %s",
               __func__, LIB_ACDB_LOADER);
     }
 
+    ALOGD("%s: snd_device(%d: %s)", __func__,
+          snd_device, device_table[snd_device]);
     audio_route_apply_path(adev->audio_route, device_table[snd_device]);
+    if (update_mixer)
+        audio_route_update_mixer(adev->audio_route);
+
     return 0;
 }
 
-static int disable_snd_device(struct audio_route *ar,
-                              snd_device_t    snd_device)
+static int disable_snd_device(struct audio_device *adev,
+                              snd_device_t snd_device,
+                              bool update_mixer)
 {
-    ALOGD("%s: snd_device(%d: %s)", __func__,
-          snd_device, device_table[snd_device]);
     if (snd_device < SND_DEVICE_MIN ||
         snd_device >= SND_DEVICE_MAX) {
         ALOGE("%s: Invalid sound device %d", __func__, snd_device);
         return -EINVAL;
     }
-    audio_route_reset_path(ar, device_table[snd_device]);
+    if (adev->snd_dev_ref_cnt[snd_device] <= 0) {
+        ALOGE("%s: device ref cnt is already 0", __func__);
+        return -EINVAL;
+    }
+    adev->snd_dev_ref_cnt[snd_device]--;
+    if (adev->snd_dev_ref_cnt[snd_device] == 0) {
+        ALOGD("%s: snd_device(%d: %s)", __func__,
+              snd_device, device_table[snd_device]);
+        audio_route_reset_path(adev->audio_route, device_table[snd_device]);
+        if (update_mixer)
+            audio_route_update_mixer(adev->audio_route);
+    }
     return 0;
+}
+
+static void check_usecases_codec_backend(struct audio_device *adev,
+                                          struct audio_usecase *uc_info,
+                                          snd_device_t snd_device)
+{
+    struct listnode *node;
+    struct audio_usecase *usecase;
+    bool switch_device[AUDIO_USECASE_MAX];
+    int i, num_uc_to_switch = 0;
+
+    /*
+     * This function is to make sure that all the usecases that are active on
+     * the hardware codec backend are always routed to any one device that is
+     * handled by the hardware codec.
+     * For example, if low-latency and deep-buffer usecases are currently active
+     * on speaker and out_set_parameters(headset) is received on low-latency
+     * output, then we have to make sure deep-buffer is also switched to headset,
+     * because of the limitation that both the devices cannot be enabled
+     * at the same time as they share the same backend.
+     */
+    /* Disable all the usecases on the shared backend other than the
+       specified usecase */
+    for (i = 0; i < AUDIO_USECASE_MAX; i++)
+        switch_device[i] = false;
+
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type != PCM_CAPTURE &&
+                usecase != uc_info &&
+                usecase->out_snd_device != snd_device &&
+                usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
+            ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
+                  __func__, use_case_table[usecase->id],
+                  device_table[usecase->out_snd_device]);
+            disable_audio_route(adev, usecase, false);
+            switch_device[usecase->id] = true;
+            num_uc_to_switch++;
+        }
+    }
+
+    if (num_uc_to_switch) {
+        /* Make sure all the streams are de-routed before disabling the device */
+        audio_route_update_mixer(adev->audio_route);
+
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (switch_device[usecase->id]) {
+                disable_snd_device(adev, usecase->out_snd_device, false);
+                enable_snd_device(adev, snd_device, false);
+            }
+        }
+
+        /* Make sure new snd device is enabled before re-routing the streams */
+        audio_route_update_mixer(adev->audio_route);
+
+        /* Re-route all the usecases on the shared backend other than the
+           specified usecase to new snd devices */
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            /* Update the out_snd_device only before enabling the audio route */
+            if (switch_device[usecase->id] ) {
+                usecase->out_snd_device = snd_device;
+                enable_audio_route(adev, usecase, false);
+            }
+        }
+
+        audio_route_update_mixer(adev->audio_route);
+    }
 }
 
 static int set_hdmi_channels(struct mixer *mixer,
@@ -386,13 +475,11 @@ static void read_hdmi_channel_masks(struct stream_out *out)
     ALOGV("%s: exit", __func__);
 }
 
-static snd_device_t get_output_snd_device(struct audio_device *adev)
+static snd_device_t get_output_snd_device(struct audio_device *adev,
+                                          audio_devices_t devices)
 {
-    audio_source_t  source = (adev->active_input == NULL) ?
-                                AUDIO_SOURCE_DEFAULT : adev->active_input->source;
-    audio_mode_t    mode   = adev->mode;
-    audio_devices_t devices = adev->out_device;
-    snd_device_t    snd_device = SND_DEVICE_NONE;
+    audio_mode_t mode = adev->mode;
+    snd_device_t snd_device = SND_DEVICE_NONE;
 
     ALOGV("%s: enter: output devices(%#x)", __func__, devices);
     if (devices == AUDIO_DEVICE_NONE ||
@@ -470,13 +557,13 @@ exit:
     return snd_device;
 }
 
-static snd_device_t get_input_snd_device(struct audio_device *adev)
+static snd_device_t get_input_snd_device(struct audio_device *adev,
+                                         audio_devices_t out_device)
 {
     audio_source_t  source = (adev->active_input == NULL) ?
                                 AUDIO_SOURCE_DEFAULT : adev->active_input->source;
 
     audio_mode_t    mode   = adev->mode;
-    audio_devices_t out_device = adev->out_device;
     audio_devices_t in_device = ((adev->active_input == NULL) ?
                                     AUDIO_DEVICE_NONE : adev->active_input->device)
                                 & ~AUDIO_DEVICE_BIT_IN;
@@ -620,24 +707,72 @@ exit:
     return snd_device;
 }
 
-static int select_devices(struct audio_device *adev)
+static struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
+                                                   audio_usecase_t uc_id)
+{
+    struct audio_usecase *usecase;
+    struct listnode *node;
+
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->id == uc_id)
+            return usecase;
+    }
+    return NULL;
+}
+
+static int select_devices(struct audio_device *adev,
+                          audio_usecase_t uc_id)
 {
     snd_device_t out_snd_device = SND_DEVICE_NONE;
     snd_device_t in_snd_device = SND_DEVICE_NONE;
-    struct audio_usecase *usecase;
+    struct audio_usecase *usecase = NULL;
+    struct audio_usecase *vc_usecase = NULL;
     struct listnode *node;
-    int status = 0;
     int acdb_rx_id, acdb_tx_id;
-    bool in_call_device_switch = false;
+    int status = 0;
 
-    ALOGV("%s: enter", __func__);
-    out_snd_device = get_output_snd_device(adev);
-    in_snd_device  = get_input_snd_device(adev);
+    usecase = get_usecase_from_list(adev, uc_id);
+    if (usecase == NULL) {
+        ALOGE("%s: Could not find the usecase(%d)", __func__, uc_id);
+        return -EINVAL;
+    }
 
-    if (out_snd_device == adev->cur_out_snd_device && adev->out_snd_device_active &&
-        in_snd_device == adev->cur_in_snd_device && adev->in_snd_device_active) {
-        ALOGV("%s: exit: snd_devices (%d and %d) are already active",
-              __func__, out_snd_device, in_snd_device);
+    if (usecase->type == VOICE_CALL) {
+        out_snd_device = get_output_snd_device(adev, usecase->stream.out->devices);
+        in_snd_device = get_input_snd_device(adev, usecase->stream.out->devices);
+        usecase->devices = usecase->stream.out->devices;
+    } else {
+        /*
+         * If the voice call is active, use the sound devices of voice call usecase
+         * so that it would not result any device switch. All the usecases will
+         * be switched to new device when select_devices() is called for voice call
+         * usecase. This is to avoid switching devices for voice call when
+         * check_usecases_codec_backend() is called below.
+         */
+        if (adev->in_call) {
+            vc_usecase = get_usecase_from_list(adev, USECASE_VOICE_CALL);
+            if (vc_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
+                in_snd_device = vc_usecase->in_snd_device;
+                out_snd_device = vc_usecase->out_snd_device;
+            }
+        }
+        if (usecase->type == PCM_PLAYBACK) {
+            usecase->devices = usecase->stream.out->devices;
+            in_snd_device = SND_DEVICE_NONE;
+            if (out_snd_device == SND_DEVICE_NONE)
+                out_snd_device = get_output_snd_device(adev,
+                                            usecase->stream.out->devices);
+        } else if (usecase->type == PCM_CAPTURE) {
+            usecase->devices = usecase->stream.in->device;
+            out_snd_device = SND_DEVICE_NONE;
+            if (in_snd_device == SND_DEVICE_NONE)
+                in_snd_device = get_input_snd_device(adev, SND_DEVICE_NONE);
+        }
+    }
+
+    if (out_snd_device == usecase->out_snd_device &&
+        in_snd_device == usecase->in_snd_device) {
         return 0;
     }
 
@@ -650,8 +785,9 @@ static int select_devices(struct audio_device *adev)
      * and enable both RX and TX devices though one of them is same as current
      * device.
      */
-    if (adev->in_call && adev->csd_client != NULL) {
-        in_call_device_switch = true;
+    if (usecase->type == VOICE_CALL && adev->csd_client != NULL &&
+            usecase->in_snd_device != SND_DEVICE_NONE &&
+            usecase->out_snd_device != SND_DEVICE_NONE) {
         /* This must be called before disabling the mixer controls on APQ side */
         if (adev->csd_disable_device == NULL) {
             ALOGE("%s: dlsym error for csd_client_disable_device", __func__);
@@ -664,66 +800,35 @@ static int select_devices(struct audio_device *adev)
         }
     }
 
-    if ((out_snd_device != adev->cur_out_snd_device || in_call_device_switch)
-            && adev->out_snd_device_active) {
-        list_for_each(node, &adev->usecase_list) {
-            usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase->type == PCM_PLAYBACK || usecase->type == VOICE_CALL)
-                disable_audio_route(adev->audio_route, usecase);
-        }
-        audio_route_update_mixer(adev->audio_route);
-        /* Disable current rx device */
-        disable_snd_device(adev->audio_route, adev->cur_out_snd_device);
-        adev->out_snd_device_active = false;
+    /* Disable current sound devices */
+    if (usecase->out_snd_device != SND_DEVICE_NONE) {
+        disable_audio_route(adev, usecase, true);
+        disable_snd_device(adev, usecase->out_snd_device, false);
     }
 
-    if ((in_snd_device != adev->cur_in_snd_device || in_call_device_switch)
-            && adev->in_snd_device_active) {
-        list_for_each(node, &adev->usecase_list) {
-            usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase->type == PCM_CAPTURE)
-                disable_audio_route(adev->audio_route, usecase);
-        }
-        audio_route_update_mixer(adev->audio_route);
-        /* Disable current tx device */
-        disable_snd_device(adev->audio_route, adev->cur_in_snd_device);
-        adev->in_snd_device_active = false;
+    if (usecase->in_snd_device != SND_DEVICE_NONE) {
+        disable_audio_route(adev, usecase, true);
+        disable_snd_device(adev, usecase->in_snd_device, false);
     }
 
-    if (out_snd_device != SND_DEVICE_NONE && !adev->out_snd_device_active) {
-        /* Enable new rx device */
-        status = enable_snd_device(adev, out_snd_device);
-        if (status != 0) {
-            ALOGE("%s: Failed to set mixer ctls for snd_device(%d)",
-                  __func__, out_snd_device);
-            return status;
-        }
-        adev->out_snd_device_active = true;
-        adev->cur_out_snd_device = out_snd_device;
+    /* Enable new sound devices */
+    if (out_snd_device != SND_DEVICE_NONE) {
+        if (usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND)
+            check_usecases_codec_backend(adev, usecase, out_snd_device);
+        enable_snd_device(adev, out_snd_device, false);
     }
 
-    if (in_snd_device != SND_DEVICE_NONE && !adev->in_snd_device_active) {
-        /* Enable new tx device */
-        status = enable_snd_device(adev, in_snd_device);
-        if (status != 0) {
-            ALOGE("%s: Failed to set mixer ctls for snd_device(%d)",
-                  __func__, out_snd_device);
-            return status;
-        }
-        adev->in_snd_device_active = true;
-        adev->cur_in_snd_device = in_snd_device;
-    }
+    if (in_snd_device != SND_DEVICE_NONE)
+        enable_snd_device(adev, in_snd_device, false);
+
     audio_route_update_mixer(adev->audio_route);
 
-    if (!list_empty(&adev->usecase_list)) {
-        list_for_each(node, &adev->usecase_list) {
-            usecase = node_to_item(node, struct audio_usecase, list);
-            enable_audio_route(adev->audio_route, usecase);
-        }
-        audio_route_update_mixer(adev->audio_route);
-    }
+    usecase->in_snd_device = in_snd_device;
+    usecase->out_snd_device = out_snd_device;
 
-    if (adev->mode == AUDIO_MODE_IN_CALL && adev->csd_client) {
+    enable_audio_route(adev, usecase, true);
+
+    if (usecase->type == VOICE_CALL && adev->csd_client) {
         if (adev->csd_enable_device == NULL) {
             ALOGE("%s: dlsym error for csd_client_enable_device",
                   __func__);
@@ -731,62 +836,21 @@ static int select_devices(struct audio_device *adev)
             acdb_rx_id = get_acdb_device_id(out_snd_device);
             acdb_tx_id = get_acdb_device_id(in_snd_device);
 
-            status = adev->csd_enable_device(acdb_rx_id, acdb_tx_id,
-                                             adev->acdb_settings);
-            if (status < 0) {
-                ALOGE("%s: csd_client_enable_device, failed, error %d",
-                      __func__, status);
+            if (acdb_rx_id > 0 || acdb_tx_id > 0) {
+                status = adev->csd_enable_device(acdb_rx_id, acdb_tx_id,
+                                                 adev->acdb_settings);
+                if (status < 0) {
+                    ALOGE("%s: csd_client_enable_device, failed, error %d",
+                          __func__, status);
+                }
+            } else {
+                ALOGE("%s: Incorrect ACDB IDs (rx: %d tx: %d)", __func__,
+                      acdb_rx_id, acdb_tx_id);
             }
         }
     }
 
-    ALOGV("%s: exit: status(%d)", __func__, status);
     return status;
-}
-
-static struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
-                                                   audio_usecase_t uc_id)
-{
-    struct audio_usecase *usecase = NULL;
-    struct listnode *node;
-
-    list_for_each(node, &adev->usecase_list) {
-        usecase = node_to_item(node, struct audio_usecase, list);
-        if (usecase->id == uc_id)
-            break;
-    }
-    return usecase;
-}
-
-static audio_devices_t get_active_out_devices(struct audio_device *adev,
-                                              audio_usecase_t uc_id)
-{
-    audio_devices_t devices = AUDIO_DEVICE_NONE;
-    struct audio_usecase *usecase;
-    struct listnode *node;
-
-    /* Return the output devices of usecases other than given usecase */
-    list_for_each(node, &adev->usecase_list) {
-        usecase = node_to_item(node, struct audio_usecase, list);
-        if (usecase->type == PCM_PLAYBACK && usecase->id != uc_id)
-            devices |= usecase->stream.out->devices;
-    }
-
-    return devices;
-}
-
-static audio_devices_t get_voice_call_out_device(struct audio_device *adev)
-{
-    struct audio_usecase *usecase;
-    struct listnode *node;
-
-    list_for_each(node, &adev->usecase_list) {
-        usecase = node_to_item(node, struct audio_usecase, list);
-        if (usecase->type == VOICE_CALL)
-            return usecase->stream.out->devices;
-    }
-
-    return AUDIO_DEVICE_NONE;
 }
 
 static int stop_input_stream(struct stream_in *in)
@@ -797,7 +861,8 @@ static int stop_input_stream(struct stream_in *in)
 
     adev->active_input = NULL;
 
-    ALOGD("%s: enter: usecase(%d)", __func__, in->usecase);
+    ALOGD("%s: enter: usecase(%d: %s)", __func__,
+          in->usecase, use_case_table[in->usecase]);
     uc_info = get_usecase_from_list(adev, in->usecase);
     if (uc_info == NULL) {
         ALOGE("%s: Could not find the usecase (%d) in the list",
@@ -806,14 +871,13 @@ static int stop_input_stream(struct stream_in *in)
     }
 
     /* 1. Disable stream specific mixer controls */
-    disable_audio_route(adev->audio_route, uc_info);
-    audio_route_update_mixer(adev->audio_route);
+    disable_audio_route(adev, uc_info, true);
+
+    /* 2. Disable the tx device */
+    disable_snd_device(adev, uc_info->in_snd_device, true);
 
     list_remove(&uc_info->list);
     free(uc_info);
-
-    /* 2. Disable the tx device */
-    ret = select_devices(adev);
 
     ALOGD("%s: exit: status(%d)", __func__, ret);
     return ret;
@@ -823,19 +887,10 @@ int start_input_stream(struct stream_in *in)
 {
     /* 1. Enable output device and stream routing controls */
     int ret = 0;
-    snd_device_t in_snd_device;
     struct audio_usecase *uc_info;
     struct audio_device *adev = in->dev;
 
     ALOGD("%s: enter: usecase(%d)", __func__, in->usecase);
-    adev->active_input = in;
-    in_snd_device = get_input_snd_device(adev);
-    if (in_snd_device == SND_DEVICE_NONE) {
-        ALOGE("%s: Could not get valid input sound device", __func__);
-        ret = -EINVAL;
-        goto error_config;
-    }
-
     in->pcm_device_id = get_pcm_device_id(adev->audio_route,
                                           in->usecase,
                                           PCM_CAPTURE);
@@ -845,29 +900,19 @@ int start_input_stream(struct stream_in *in)
         ret = -EINVAL;
         goto error_config;
     }
+
+    adev->active_input = in;
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
     uc_info->id = in->usecase;
     uc_info->type = PCM_CAPTURE;
-    uc_info->devices = in->device;
     uc_info->stream.in = in;
+    uc_info->devices = in->device;
+    uc_info->in_snd_device = SND_DEVICE_NONE;
+    uc_info->out_snd_device = SND_DEVICE_NONE;
 
-    /* 1. Enable the TX device */
-    ret = select_devices(adev);
-    if (ret) {
-        ALOGE("%s: Failed to enable device(%#x)",
-              __func__, in->device);
-        free(uc_info);
-        goto error_config;
-    }
-
-    /* 2. Enable the mixer controls for the audio route */
-    enable_audio_route(adev->audio_route, uc_info);
-    audio_route_update_mixer(adev->audio_route);
-
-    /* 3. Add the usecase info to usecase list */
     list_add_tail(&adev->usecase_list, &uc_info->list);
+    select_devices(adev, in->usecase);
 
-    /* 2. Open the pcm device */
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d), channels %d",
           __func__, SOUND_CARD, in->pcm_device_id, in->config.channels);
     in->pcm = pcm_open(SOUND_CARD, in->pcm_device_id,
@@ -887,7 +932,7 @@ error_open:
 
 error_config:
     adev->active_input = NULL;
-    ALOGV("%s: exit: status(%d)", __func__, ret);
+    ALOGD("%s: exit: status(%d)", __func__, ret);
 
     return ret;
 }
@@ -898,7 +943,8 @@ static int stop_output_stream(struct stream_out *out)
     struct audio_usecase *uc_info;
     struct audio_device *adev = out->dev;
 
-    ALOGD("%s: enter: usecase(%d)", __func__, out->usecase);
+    ALOGD("%s: enter: usecase(%d: %s)", __func__,
+          out->usecase, use_case_table[out->usecase]);
     uc_info = get_usecase_from_list(adev, out->usecase);
     if (uc_info == NULL) {
         ALOGE("%s: Could not find the usecase (%d) in the list",
@@ -907,40 +953,26 @@ static int stop_output_stream(struct stream_out *out)
     }
 
     /* 1. Get and set stream specific mixer controls */
-    disable_audio_route(adev->audio_route, uc_info);
-    audio_route_update_mixer(adev->audio_route);
+    disable_audio_route(adev, uc_info, true);
+
+    /* 2. Disable the rx device */
+    disable_snd_device(adev, uc_info->out_snd_device, true);
 
     list_remove(&uc_info->list);
     free(uc_info);
 
-    /* 2. Disable the rx device */
-    adev->out_device = get_active_out_devices(adev, out->usecase);
-    adev->out_device |= get_voice_call_out_device(adev);
-    ret = select_devices(adev);
-
-    ALOGD("%s: exit: status(%d) adev->out_device(%#x)",
-          __func__, ret, adev->out_device);
+    ALOGD("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
 
 int start_output_stream(struct stream_out *out)
 {
     int ret = 0;
-    snd_device_t out_snd_device;
     struct audio_usecase *uc_info;
     struct audio_device *adev = out->dev;
 
-    /* 1. Enable output device and stream routing controls */
-    ALOGD("%s: enter: usecase(%d) devices(%#x)",
-          __func__, out->usecase, out->devices);
-    adev->out_device |= out->devices;
-    out_snd_device = get_output_snd_device(adev);
-    if (out_snd_device == SND_DEVICE_NONE) {
-        ALOGE("%s: Could not get valid output sound device", __func__);
-        ret = -EINVAL;
-        goto error_config;
-    }
-
+    ALOGD("%s: enter: usecase(%d: %s) devices(%#x)",
+          __func__, out->usecase, use_case_table[out->usecase], out->devices);
     out->pcm_device_id = get_pcm_device_id(adev->audio_route,
                                            out->usecase,
                                            PCM_PLAYBACK);
@@ -954,21 +986,14 @@ int start_output_stream(struct stream_out *out)
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
     uc_info->id = out->usecase;
     uc_info->type = PCM_PLAYBACK;
-    uc_info->devices = out->devices;
     uc_info->stream.out = out;
-
-    ret = select_devices(adev);
-    if (ret) {
-        ALOGE("%s: Failed to enable device(%#x)",
-              __func__, adev->out_device);
-        free(uc_info);
-        goto error_config;
-    }
-
-    enable_audio_route(adev->audio_route, uc_info);
-    audio_route_update_mixer(adev->audio_route);
+    uc_info->devices = out->devices;
+    uc_info->in_snd_device = SND_DEVICE_NONE;
+    uc_info->out_snd_device = SND_DEVICE_NONE;
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
+
+    select_devices(adev, out->usecase);
 
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d)",
           __func__, 0, out->pcm_device_id);
@@ -979,15 +1004,13 @@ int start_output_stream(struct stream_out *out)
         pcm_close(out->pcm);
         out->pcm = NULL;
         ret = -EIO;
-        goto error;
+        goto error_pcm_open;
     }
     ALOGD("%s: exit", __func__);
     return 0;
-error:
+error_pcm_open:
     stop_output_stream(out);
 error_config:
-    adev->out_device = get_active_out_devices(adev, out->usecase);
-    adev->out_device |= get_voice_call_out_device(adev);
     return ret;
 }
 
@@ -1027,14 +1050,14 @@ static int stop_voice_call(struct audio_device *adev)
     }
 
     /* 2. Get and set stream specific mixer controls */
-    disable_audio_route(adev->audio_route, uc_info);
-    audio_route_update_mixer(adev->audio_route);
+    disable_audio_route(adev, uc_info, true);
+
+    /* 3. Disable the rx and tx devices */
+    disable_snd_device(adev, uc_info->out_snd_device, false);
+    disable_snd_device(adev, uc_info->in_snd_device, true);
 
     list_remove(&uc_info->list);
     free(uc_info);
-
-    /* 3. Disable the rx and tx devices */
-    ret = select_devices(adev);
 
     ALOGD("%s: exit: status(%d)", __func__, ret);
     return ret;
@@ -1051,19 +1074,14 @@ static int start_voice_call(struct audio_device *adev)
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
     uc_info->id = USECASE_VOICE_CALL;
     uc_info->type = VOICE_CALL;
-    uc_info->devices = adev->primary_output->devices;
     uc_info->stream.out = adev->primary_output;
-
-    ret = select_devices(adev);
-    if (ret) {
-        free(uc_info);
-        return ret;
-    }
-
-    enable_audio_route(adev->audio_route, uc_info);
-    audio_route_update_mixer(adev->audio_route);
+    uc_info->devices = adev->primary_output->devices;
+    uc_info->in_snd_device = SND_DEVICE_NONE;
+    uc_info->out_snd_device = SND_DEVICE_NONE;
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
+
+    select_devices(adev, USECASE_VOICE_CALL);
 
     pcm_dev_rx_id = get_pcm_device_id(adev->audio_route, uc_info->id,
                                       PCM_PLAYBACK);
@@ -1211,7 +1229,8 @@ static int out_standby(struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
     struct audio_device *adev = out->dev;
-    ALOGD("%s: enter: usecase(%d)", __func__, out->usecase);
+    ALOGD("%s: enter: usecase(%d: %s)", __func__,
+          out->usecase, use_case_table[out->usecase]);
     pthread_mutex_lock(&out->lock);
 
     if (!out->standby) {
@@ -1245,8 +1264,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     int ret, val = 0;
     bool select_new_device = false;
 
-    ALOGD("%s: enter: usecase(%d) kvpairs: %s",
-          __func__, out->usecase, kvpairs);
+    ALOGD("%s: enter: usecase(%d: %s) kvpairs: %s",
+          __func__, out->usecase, use_case_table[out->usecase], kvpairs);
     parms = str_parms_create_str(kvpairs);
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
     if (ret >= 0) {
@@ -1254,34 +1273,54 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         pthread_mutex_lock(&out->lock);
         pthread_mutex_lock(&adev->lock);
 
+        /*
+         * When HDMI cable is unplugged the music playback is paused and
+         * the policy manager sends routing=0. But the audioflinger
+         * continues to write data until standby time (3sec).
+         * As the HDMI core is turned off, the write gets blocked.
+         * Avoid this by routing audio to speaker until standby.
+         */
+        if (out->devices == AUDIO_DEVICE_OUT_AUX_DIGITAL &&
+                val == AUDIO_DEVICE_NONE) {
+            val = AUDIO_DEVICE_OUT_SPEAKER;
+        }
+
+        /*
+         * select_devices() call below switches all the usecases on the same
+         * backend to the new device. Refer to check_usecases_codec_backend() in
+         * the select_devices(). But how do we undo this?
+         *
+         * For example, music playback is active on headset (deep-buffer usecase)
+         * and if we go to ringtones and select a ringtone, low-latency usecase
+         * will be started on headset+speaker. As we can't enable headset+speaker
+         * and headset devices at the same time, select_devices() switches the music
+         * playback to headset+speaker while starting low-lateny usecase for ringtone.
+         * So when the ringtone playback is completed, how do we undo the same?
+         *
+         * We are relying on the out_set_parameters() call on deep-buffer output,
+         * once the ringtone playback is ended.
+         * NOTE: We should not check if the current devices are same as new devices.
+         *       Because select_devices() must be called to switch back the music
+         *       playback to headset.
+         */
         if (val != 0) {
-            /* ToDo: Fix device updation logic */
-            list_for_each(node, &adev->usecase_list) {
-                usecase = node_to_item(node, struct audio_usecase, list);
-                if ((usecase->type == PCM_PLAYBACK || usecase->type == VOICE_CALL)
-                        && usecase->stream.out != out)
-                    usecase->stream.out->devices = val;
+            out->devices = val;
+
+            if (!out->standby)
+                select_devices(adev, out->usecase);
+
+            if ((adev->mode == AUDIO_MODE_IN_CALL) && !adev->in_call &&
+                    (out == adev->primary_output)) {
+                start_voice_call(adev);
+            } else if ((adev->mode == AUDIO_MODE_IN_CALL) && adev->in_call &&
+                       (out == adev->primary_output)) {
+                select_devices(adev, USECASE_VOICE_CALL);
             }
         }
 
-        adev->out_device = get_active_out_devices(adev, out->usecase) | val;
-        if ((adev->mode == AUDIO_MODE_IN_CALL) && !adev->in_call &&
-            (out == adev->primary_output) && (val != 0)) {
-            out->devices = val;
-            start_voice_call(adev);
-        } else if ((adev->mode != AUDIO_MODE_IN_CALL) && adev->in_call &&
-                   (out == adev->primary_output)) {
-            if (val != 0) {
-                out->devices = val;
-            }
+        if ((adev->mode != AUDIO_MODE_IN_CALL) && adev->in_call &&
+                (out == adev->primary_output)) {
             stop_voice_call(adev);
-        } else if ((out->devices != (audio_devices_t)val) && (val != 0)) {
-            /* Update the devices so that select_devices() enables the new devies */
-            out->devices = val;
-            if ((adev->in_call && (out == adev->primary_output)) ||
-                    !out->standby) {
-                ret = select_devices(adev);
-            }
         }
 
         pthread_mutex_unlock(&adev->lock);
@@ -1494,9 +1533,8 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
         if ((in->device != val) && (val != 0)) {
             in->device = val;
             /* If recording is in progress, change the tx device to new device */
-            if (!in->standby) {
-                ret = select_devices(adev);
-            }
+            if (!in->standby)
+                ret = select_devices(adev, in->usecase);
         }
     }
 
@@ -1526,10 +1564,9 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     struct audio_device *adev = in->dev;
     int i, ret = -1;
 
-    //ALOGV("%s: buffer(%p) bytes(%d)", __func__, buffer, bytes);
     pthread_mutex_lock(&in->lock);
     if (in->standby) {
-      pthread_mutex_lock(&adev->lock);
+        pthread_mutex_lock(&adev->lock);
         ret = start_input_stream(in);
         pthread_mutex_unlock(&adev->lock);
         if (ret != 0) {
@@ -1715,7 +1752,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             adev->tty_mode = tty_mode;
             adev->acdb_settings = (adev->acdb_settings & TTY_MODE_CLEAR) | tty_mode;
             if (adev->in_call)
-                select_devices(adev);
+                select_devices(adev, USECASE_VOICE_CALL);
         }
         pthread_mutex_unlock(&adev->lock);
     }
@@ -1831,6 +1868,7 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
     struct audio_device *adev = (struct audio_device *)dev;
     int err = 0;
 
+    pthread_mutex_lock(&adev->lock);
     adev->mic_mute = state;
     if (adev->mode == AUDIO_MODE_IN_CALL) {
         if (adev->csd_client) {
@@ -1846,6 +1884,7 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
             ALOGE("%s: No CSD Client present", __func__);
         }
     }
+    pthread_mutex_unlock(&adev->lock);
     return err;
 }
 
@@ -1965,31 +2004,31 @@ static void init_platform_data(struct audio_device *adev)
     adev->mic_type_analog = false;
 
     property_get("persist.audio.handset.mic.type",value,"");
-    if (!strncmp("analog", value, 6))
+    if (!strcmp("analog", value))
         adev->mic_type_analog = true;
 
     property_get("persist.audio.dualmic.config",value,"");
-    if (!strncmp("broadside", value, 9)) {
+    if (!strcmp("broadside", value)) {
         adev->dualmic_config = DUALMIC_CONFIG_BROADSIDE;
         adev->acdb_settings |= DMIC_FLAG;
-    } else if (!strncmp("endfire", value, 7)) {
+    } else if (!strcmp("endfire", value)) {
         adev->dualmic_config = DUALMIC_CONFIG_ENDFIRE;
         adev->acdb_settings |= DMIC_FLAG;
     }
 
     if (adev->dualmic_config != DUALMIC_CONFIG_NONE) {
         property_get("persist.audio.fluence.voicecall",value,"");
-        if (!strncmp("true", value, 4)) {
+        if (!strcmp("true", value)) {
             adev->fluence_in_voice_call = true;
         }
 
         property_get("persist.audio.fluence.voicerec",value,"");
-        if (!strncmp("true", value, 4)) {
+        if (!strcmp("true", value)) {
             adev->fluence_in_voice_rec = true;
         }
 
         property_get("persist.audio.fluence.speaker",value,"");
-        if (!strncmp("true", value, 4)) {
+        if (!strcmp("true", value)) {
             adev->fluence_in_spkr_mode = true;
         }
     }
@@ -2056,7 +2095,7 @@ static int adev_open(const hw_module_t *module, const char *name,
                      hw_device_t **device)
 {
     struct audio_device *adev;
-    int ret;
+    int i, ret;
 
     ALOGD("%s: enter", __func__);
     if (strcmp(name, AUDIO_HARDWARE_INTERFACE) != 0) return -EINVAL;
@@ -2111,12 +2150,11 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->voice_volume = 1.0f;
     adev->tty_mode = TTY_MODE_OFF;
     adev->bluetooth_nrec = true;
-    adev->cur_out_snd_device = 0;
-    adev->cur_in_snd_device = 0;
-    adev->out_snd_device_active = false;
-    adev->in_snd_device_active = false;
     adev->in_call = false;
     adev->acdb_settings = TTY_MODE_OFF;
+    for (i = 0; i < SND_DEVICE_MAX; i++) {
+        adev->snd_dev_ref_cnt[i] = 0;
+    }
     list_init(&adev->usecase_list);
     pthread_mutex_unlock(&adev->lock);
 

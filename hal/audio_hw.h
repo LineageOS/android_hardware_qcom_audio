@@ -27,6 +27,15 @@
 #define DUALMIC_CONFIG_ENDFIRE 1
 #define DUALMIC_CONFIG_BROADSIDE 2
 
+/*
+ * Below are the devices for which is back end is same, SLIMBUS_0_RX.
+ * All these devices are handled by the internal HW codec. We can
+ * enable any one of these devices at any time
+ */
+#define AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND \
+    (AUDIO_DEVICE_OUT_EARPIECE | AUDIO_DEVICE_OUT_SPEAKER | \
+     AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE)
+
 /* Sound devices specific to the platform
  * The DEVICE_OUT_* and DEVICE_IN_* should be mapped to these sound
  * devices to enable corresponding mixer paths
@@ -184,6 +193,8 @@ struct audio_usecase {
     audio_usecase_t id;
     usecase_type_t  type;
     audio_devices_t devices;
+    snd_device_t out_snd_device;
+    snd_device_t in_snd_device;
     union stream_ptr stream;
 };
 
@@ -217,10 +228,7 @@ struct audio_device {
     bool screen_off;
     struct pcm *voice_call_rx;
     struct pcm *voice_call_tx;
-    snd_device_t cur_out_snd_device;
-    snd_device_t cur_in_snd_device;
-    bool out_snd_device_active;
-    bool in_snd_device_active;
+    int snd_dev_ref_cnt[SND_DEVICE_MAX];
     struct listnode usecase_list;
     struct audio_route *audio_route;
     int acdb_settings;
