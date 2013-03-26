@@ -270,6 +270,7 @@ struct pcm_config pcm_config_deep_buffer = {
     .period_count = DEEP_BUFFER_OUTPUT_PERIOD_COUNT,
     .format = PCM_FORMAT_S16_LE,
     .start_threshold = DEEP_BUFFER_OUTPUT_PERIOD_SIZE / 4,
+    .stop_threshold = INT_MAX,
     .avail_min = DEEP_BUFFER_OUTPUT_PERIOD_SIZE / 4,
 };
 
@@ -280,6 +281,7 @@ struct pcm_config pcm_config_low_latency = {
     .period_count = LOW_LATENCY_OUTPUT_PERIOD_COUNT,
     .format = PCM_FORMAT_S16_LE,
     .start_threshold = LOW_LATENCY_OUTPUT_PERIOD_SIZE / 4,
+    .stop_threshold = INT_MAX,
     .avail_min = LOW_LATENCY_OUTPUT_PERIOD_SIZE / 4,
 };
 
@@ -290,6 +292,7 @@ struct pcm_config pcm_config_hdmi_multi = {
     .period_count = HDMI_MULTI_PERIOD_COUNT,
     .format = PCM_FORMAT_S16_LE,
     .start_threshold = 0,
+    .stop_threshold = INT_MAX,
     .avail_min = 0,
 };
 
