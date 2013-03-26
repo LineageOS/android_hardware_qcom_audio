@@ -308,7 +308,7 @@ static int enable_snd_device(struct audio_device *adev,
             acdb_dev_type = ACDB_DEV_TYPE_IN;
         adev->acdb_send_audio_cal(acdb_dev_id, acdb_dev_type);
     } else {
-        ALOGW("%s: Could find the symbol acdb_send_audio_cal from %s",
+        ALOGW("%s: Could not find the symbol acdb_send_audio_cal from %s",
               __func__, LIB_ACDB_LOADER);
     }
 
@@ -448,10 +448,10 @@ static int set_hdmi_channels(struct mixer *mixer,
 }
 
 /* must be called with hw device mutex locked */
-static void read_hdmi_channel_masks(struct stream_out *out)
+static int read_hdmi_channel_masks(struct stream_out *out)
 {
+    int ret = 0;
     int channels = edid_get_max_channels();
-    ALOGV("%s: enter", __func__);
 
     switch (channels) {
         /*
@@ -468,11 +468,11 @@ static void read_hdmi_channel_masks(struct stream_out *out)
         out->supported_channel_masks[1] = AUDIO_CHANNEL_OUT_7POINT1;
         break;
     default:
-        ALOGE("Unsupported number of channels (%d)", channels);
+        ALOGE("HDMI does not support multi channel playback");
+        ret = -ENOSYS;
         break;
     }
-
-    ALOGV("%s: exit", __func__);
+    return ret;
 }
 
 static snd_device_t get_output_snd_device(struct audio_device *adev,
@@ -1410,6 +1410,8 @@ exit:
     pthread_mutex_unlock(&out->lock);
 
     if (ret != 0) {
+        if (out->pcm)
+            ALOGE("%s: error %d - %s", __func__, ret, pcm_get_error(out->pcm));
         out_standby(&out->stream.common);
         usleep(bytes * 1000000 / audio_stream_frame_size(&out->stream.common) /
                out_get_sample_rate(&out->stream.common));
@@ -1640,16 +1642,24 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     /* Init use case and pcm_config */
     if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT &&
         out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        pthread_mutex_lock(&adev->lock);
+        ret = read_hdmi_channel_masks(out);
+        pthread_mutex_unlock(&adev->lock);
+        if (ret != 0) {
+            /* If HDMI does not support multi channel playback, set the default */
+            out->config.channels = popcount(out->channel_mask);
+            set_hdmi_channels(adev->mixer, out->config.channels);
+            goto error_open;
+        }
+
+        if (config->sample_rate == 0)
+            config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        if (config->channel_mask == 0)
+            config->channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
+
+        out->channel_mask = config->channel_mask;
         out->usecase = USECASE_AUDIO_PLAYBACK_MULTI_CH;
         out->config = pcm_config_hdmi_multi;
-
-        pthread_mutex_lock(&adev->lock);
-        read_hdmi_channel_masks(out);
-        pthread_mutex_unlock(&adev->lock);
-
-        if (config->sample_rate == 0) config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        if (config->channel_mask == 0) config->channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
-        out->channel_mask = config->channel_mask;
         out->config.rate = config->sample_rate;
         out->config.channels = popcount(out->channel_mask);
         out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels * 2);
@@ -1667,7 +1677,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             adev->primary_output = out;
         else {
             ALOGE("%s: Primary output is already opened", __func__);
-            return -EEXIST;
+            ret = -EEXIST;
+            goto error_open;
         }
     }
 
@@ -1675,10 +1686,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     pthread_mutex_lock(&adev->lock);
     if (get_usecase_from_list(adev, out->usecase) != NULL) {
         ALOGE("%s: Usecase (%d) is already present", __func__, out->usecase);
-        free(out);
-        *stream_out = NULL;
         pthread_mutex_unlock(&adev->lock);
-        return -EEXIST;
+        ret = -EEXIST;
+        goto error_open;
     }
     pthread_mutex_unlock(&adev->lock);
 
@@ -1710,6 +1720,12 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     *stream_out = &out->stream;
     ALOGD("%s: exit", __func__);
     return 0;
+
+error_open:
+    free(out);
+    *stream_out = NULL;
+    ALOGD("%s: exit: ret %d", __func__, ret);
+    return ret;
 }
 
 static void adev_close_output_stream(struct audio_hw_device *dev,
