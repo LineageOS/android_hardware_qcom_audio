@@ -166,7 +166,7 @@ static audio_channel_mask_t out_get_channels(const struct audio_stream *stream)
 {
     const struct qcom_stream_out *out =
         reinterpret_cast<const struct qcom_stream_out *>(stream);
-    return out->qcom_out->channels();
+    return (audio_channel_mask_t) out->qcom_out->channels();
 }
 
 static audio_format_t out_get_format(const struct audio_stream *stream)
@@ -369,7 +369,7 @@ static audio_channel_mask_t in_get_channels(const struct audio_stream *stream)
 {
     const struct qcom_stream_in *in =
         reinterpret_cast<const struct qcom_stream_in *>(stream);
-    return in->qcom_in->channels();
+    return (audio_channel_mask_t) in->qcom_in->channels();
 }
 
 static audio_format_t in_get_format(const struct audio_stream *stream)
@@ -524,7 +524,7 @@ static int adev_set_fm_volume(struct audio_hw_device *dev, float volume)
 static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 {
     struct qcom_audio_device *qadev = to_ladev(dev);
-    return qadev->hwif->setMode(mode);
+    return qadev->hwif->setMode((int)mode);
 }
 
 static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
@@ -559,7 +559,8 @@ static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev,
                                          const struct audio_config *config)
 {
     const struct qcom_audio_device *qadev = to_cladev(dev);
-    return qadev->hwif->getInputBufferSize(config->sample_rate, config->format, popcount(config->channel_mask));
+    uint8_t channelCount = popcount(config->channel_mask);
+    return qadev->hwif->getInputBufferSize(config->sample_rate,config->format,channelCount);
 }
 
 
@@ -579,12 +580,10 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     if (!out)
         return -ENOMEM;
 
+    devices = convert_audio_device(devices, HAL_API_REV_2_0, HAL_API_REV_1_0);
     status = static_cast<audio_output_flags_t> (flags);
 
-    devices = convert_audio_device(devices, HAL_API_REV_2_0, HAL_API_REV_1_0);
-
-    out->qcom_out = qadev->hwif->openOutputStream(devices,
-                                                    (int *)&config->format,
+    out->qcom_out = qadev->hwif->openOutputStream(devices, (int *) &config->format,
                                                     &config->channel_mask,
                                                     &config->sample_rate,
                                                     &status);
@@ -641,8 +640,8 @@ static void adev_close_output_stream(struct audio_hw_device *dev,
 static int adev_open_input_stream(struct audio_hw_device *dev,
                                   audio_io_handle_t handle,
                                   audio_devices_t devices,
-                                  audio_config *config,
-                                  audio_stream_in **stream_in)
+                                  struct audio_config *config,
+                                  struct audio_stream_in **stream_in)
 {
     struct qcom_audio_device *qadev = to_ladev(dev);
     status_t status;
@@ -785,9 +784,7 @@ struct qcom_audio_module HAL_MODULE_INFO_SYM = {
     module: {
         common: {
             tag: HARDWARE_MODULE_TAG,
-            //version_major: 1,
-            //version_minor: 0,
-            module_api_version: AUDIO_MODULE_API_VERSION_0_1,
+            module_api_version:  AUDIO_DEVICE_API_VERSION_1_0,
             hal_api_version: HARDWARE_HAL_API_VERSION,
             id: AUDIO_HARDWARE_MODULE_ID,
             name: "QCOM Audio HW HAL",
