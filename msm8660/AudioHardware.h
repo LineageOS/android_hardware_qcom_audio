@@ -677,6 +677,7 @@ private:
                 uint32_t    devices() { return mDevices; }
                 int         state() const { return mState; }
         virtual int         isForVR() const { return 0; }
+                bool        mSetupDevice;
 
     private:
                 AudioHardware* mHardware;
