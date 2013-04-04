@@ -1380,6 +1380,12 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
 static int out_set_volume(struct audio_stream_out *stream, float left,
                           float right)
 {
+    struct stream_out *out = (struct stream_out *)stream;
+    if (out->usecase == USECASE_AUDIO_PLAYBACK_MULTI_CH) {
+        /* only take left channel into account: the API is for stereo anyway */
+        out->muted = (left == 0.0f);
+        return 0;
+    }
     return -ENOSYS;
 }
 
@@ -1402,6 +1408,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     }
 
     if (out->pcm) {
+        if (out->muted)
+            memset((void *)buffer, 0, bytes);
         //ALOGV("%s: writing buffer (%d bytes) to pcm device", __func__, bytes);
         ret = pcm_write(out->pcm, (void *)buffer, bytes);
     }
@@ -1712,6 +1720,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
     out->dev = adev;
     out->standby = 1;
+    /* out->muted = false; by calloc() */
 
     config->format = out->stream.common.get_format(&out->stream.common);
     config->channel_mask = out->stream.common.get_channels(&out->stream.common);
