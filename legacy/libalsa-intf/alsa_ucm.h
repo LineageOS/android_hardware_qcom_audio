@@ -124,6 +124,7 @@ extern "C" {
 #define SND_USE_CASE_DEV_EARPIECE	"Earpiece"
 #define SND_USE_CASE_DEV_SPDIF		"SPDIF"
 #define SND_USE_CASE_DEV_HDMI		"HDMI"
+#define SND_USE_CASE_DEV_DOCK		"Dock"
 /* add new devices to end of list */
 
 

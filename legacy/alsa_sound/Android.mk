@@ -81,6 +81,10 @@ endif
 #LOCAL_CFLAGS += -DSEPERATED_AUDIO_INPUT
 #endif
 
+ifeq ($(BOARD_HAVE_DOCK_USBAUDIO),true)
+  LOCAL_CFLAGS += -DDOCK_USBAUDIO_ENABLED
+endif
+
 LOCAL_SRC_FILES := \
   AudioHardwareALSA.cpp         \
   AudioStreamOutALSA.cpp        \

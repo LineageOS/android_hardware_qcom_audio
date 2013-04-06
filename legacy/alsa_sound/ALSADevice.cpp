@@ -493,7 +493,8 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
             devices = devices | (AudioSystem::DEVICE_OUT_WIRED_HEADPHONE |
                       AudioSystem::DEVICE_IN_BUILTIN_MIC);
         } else if ((devices & AudioSystem::DEVICE_OUT_EARPIECE) ||
-                   (devices & AudioSystem::DEVICE_IN_BUILTIN_MIC)) {
+                   (devices & AudioSystem::DEVICE_IN_BUILTIN_MIC) ||
+                  (devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)) {
             if ((mode == AudioSystem::MODE_IN_COMMUNICATION) &&
                  (devices & AudioSystem::DEVICE_IN_BUILTIN_MIC)) {
                  if (!strncmp(mCurRxUCMDevice, SND_USE_CASE_DEV_SPEAKER,
@@ -1582,10 +1583,28 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
         } else if ((devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET ||
                     devices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET) &&
                     devices & AudioSystem::DEVICE_OUT_SPEAKER) {
+             ALOGD("getUCMDevice for output device: devices:%x is input device:%d, reached debug #1",devices,input);
+#ifdef DOCK_USBAUDIO_ENABLED
+             if (mCallMode == AUDIO_MODE_RINGTONE) {
+                 return strdup(SND_USE_CASE_DEV_SPEAKER); /* Voice SPEAKER RX */
+             } else {
+                 return strdup(SND_USE_CASE_DEV_DOCK);
+             }
+#else
              return strdup(SND_USE_CASE_DEV_USB_PROXY_RX_SPEAKER); /* USB PROXY RX + SPEAKER */
+#endif
         } else if ((devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET) ||
                   (devices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)) {
+             ALOGD("getUCMDevice for output device: devices:%x is input device:%d, reached debug #2",devices,input);
+#ifdef DOCK_USBAUDIO_ENABLED
+             if (mCallMode == AUDIO_MODE_RINGTONE) {
+                 return strdup(SND_USE_CASE_DEV_USB_PROXY_RX); /* PROXY RX */
+             } else {
+                 return strdup(SND_USE_CASE_DEV_DOCK); /* Dock RX */
+             }
+#else
              return strdup(SND_USE_CASE_DEV_USB_PROXY_RX); /* PROXY RX */
+#endif
 #ifdef QCOM_PROXY_DEVICE_ENABLED
         } else if( (devices & AudioSystem::DEVICE_OUT_SPEAKER) &&
                    (devices & AudioSystem::DEVICE_OUT_PROXY) &&
