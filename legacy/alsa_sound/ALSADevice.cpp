@@ -1797,10 +1797,10 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
             } else {
                 if ((mDevSettingsFlag & DMIC_FLAG) && (mInChannels == 1)) {
 #ifdef USES_FLUENCE_INCALL
-                    if(callMode == AUDIO_MODE_IN_CALL) {
-                        if (fluence_mode == FLUENCE_MODE_ENDFIRE) {
+                    if(mCallMode == AUDIO_MODE_IN_CALL) {
+                        if (mFluenceMode == FLUENCE_MODE_ENDFIRE) {
                             return strdup(SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE); /* DUALMIC EF TX */
-                        } else if (fluence_mode == FLUENCE_MODE_BROADSIDE) {
+                        } else if (mFluenceMode == FLUENCE_MODE_BROADSIDE) {
                             return strdup(SND_USE_CASE_DEV_DUAL_MIC_BROADSIDE); /* DUALMIC BS TX */
                         } else {
                             return strdup(SND_USE_CASE_DEV_HANDSET); /* BUILTIN-MIC TX */
@@ -1893,7 +1893,7 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
                 }
 #endif
 #ifdef SEPERATED_AUDIO_INPUT
-                if(mInput_source == AUDIO_SOURCE_VOICE_RECOGNITION) {
+                if(mInputSource == AUDIO_SOURCE_VOICE_RECOGNITION) {
                     return strdup(SND_USE_CASE_DEV_VOICE_RECOGNITION ); /* VOICE RECOGNITION TX */
                 }
 #endif
@@ -1966,9 +1966,9 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
                 return strdup(SND_USE_CASE_DEV_HANDSET); /* HANDSET TX */
             } else {
 #ifdef SEPERATED_AUDIO_INPUT
-                if (callMode == AUDIO_MODE_IN_CALL) {
+                if (mCallMode == AUDIO_MODE_IN_CALL) {
                     return strdup(SND_USE_CASE_DEV_VOC_LINE); /* Voice BUILTIN-MIC TX */
-                } else if(mInput_source == AUDIO_SOURCE_CAMCORDER) {
+                } else if(mInputSource == AUDIO_SOURCE_CAMCORDER) {
                     return strdup(SND_USE_CASE_DEV_CAMCORDER_TX ); /* CAMCORDER TX */
                 } else
 #endif
@@ -2848,10 +2848,10 @@ status_t ALSADevice::getEDIDData(char *hdmiEDIDData)
 }
 
 #ifdef SEPERATED_AUDIO_INPUT
-void s_setInput(int input)
+void ALSADevice::setInput(int input) 
 {
-    mInput_source = input;
-    ALOGD("s_setInput() : input_source = %d",input_source);
+    mInputSource = input;
+    ALOGD("s_setInput() : input_source = %d",mInputSource);
 }
 #endif
 
