@@ -401,6 +401,14 @@ private:
     };
     struct proxy_params mProxyParams;
 
+#ifdef USE_A2220
+    int mA2220Fd;
+    int mA2220Mode;
+    Mutex mA2220Lock;
+
+    int setA2220Mode(int mode);
+#endif
+
 };
 
 // ----------------------------------------------------------------------------
