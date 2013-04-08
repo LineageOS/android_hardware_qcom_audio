@@ -3267,7 +3267,7 @@ ssize_t AudioHardware::AudioStreamInVoip::read( void* buffer, ssize_t bytes)
     size_t count = bytes;
     size_t totalBytesRead = 0;
 
-    if (mState < AUDIO_INPUT_OPENED) {
+    if (mState < AUDIO_INPUT_OPENED || (mHardware->mVoipFd == -1)) {
        ALOGE(" reopen the device \n");
         AudioHardware *hw = mHardware;
         hw->mLock.lock();
