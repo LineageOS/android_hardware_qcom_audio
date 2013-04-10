@@ -17,6 +17,10 @@ LOCAL_SHARED_LIBRARIES := \
 	libaudioroute \
 	libdl
 
+ifeq ($(TARGET_BOARD_PLATFORM), msm8974)
+LOCAL_CFLAGS += -DMSM8974
+endif
+
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
 	$(call include-path-for, audio-route)
