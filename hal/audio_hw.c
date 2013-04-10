@@ -70,7 +70,11 @@ static const char * const use_case_table[AUDIO_USECASE_MAX] = {
 
 static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {0, 0},
+#ifdef MSM8974
+    [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = {15, 15},
+#else
     [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = {14, 14},
+#endif
     [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {1, 1},
     [USECASE_AUDIO_RECORD] = {0, 0},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {14, 14},
