@@ -2342,6 +2342,25 @@ void AudioHardware::aic3254_powerdown() {
 }
 #endif
 
+status_t AudioHardware::setupDeviceforVoipCall(bool value)
+{
+
+    int mode = (value ? AudioSystem::MODE_IN_COMMUNICATION : AudioSystem::MODE_NORMAL);
+    if (setMode(mode) != NO_ERROR) {
+        ALOGV("setMode fails");
+        return UNKNOWN_ERROR;
+    }
+
+    if (setMicMute(!value) != NO_ERROR) {
+        ALOGV("MicMute fails");
+        return UNKNOWN_ERROR;
+    }
+
+    ALOGD("Device setup sucess for VOIP call");
+
+    return NO_ERROR;
+}
+
 status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input)
 {
     Mutex::Autolock lock(mLock);
@@ -4308,26 +4327,6 @@ status_t AudioHardware::AudioSessionOutLPA::getRenderPosition(uint32_t *dspFrame
     //TODO: enable when supported by driver
     return INVALID_OPERATION;
 }
-
-status_t AudioHardware::setupDeviceforVoipCall(bool value)
-{
-
-    int mode = (value ? AudioSystem::MODE_IN_COMMUNICATION : AudioSystem::MODE_NORMAL);
-    if (setMode(mode) != NO_ERROR) {
-        ALOGV("setMode fails");
-        return UNKNOWN_ERROR;
-    }
-
-    if (setMicMute(!value) != NO_ERROR) {
-        ALOGV("MicMute fails");
-        return UNKNOWN_ERROR;
-    }
-
-    ALOGD("Device setup sucess for VOIP call");
-
-    return NO_ERROR;
-}
-
 
 status_t AudioHardware::AudioSessionOutLPA::getBufferInfo(buf_info **buf) {
 
