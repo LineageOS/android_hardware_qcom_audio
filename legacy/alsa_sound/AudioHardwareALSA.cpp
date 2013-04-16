@@ -331,6 +331,9 @@ AudioHardwareALSA::AudioHardwareALSA() :
     } else {
         ALOGI("ucm instance opened: %u", (unsigned)mUcMgr);
         mUcMgr->isFusion3Platform = mFusion3Platform;
+        if (mAcdbHandle) {
+            mUcMgr->acdb_handle = static_cast<void*> (mAcdbHandle);
+        }
     }
 
     //set default AudioParameters
