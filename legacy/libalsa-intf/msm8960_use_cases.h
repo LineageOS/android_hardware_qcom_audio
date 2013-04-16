@@ -175,6 +175,7 @@ struct snd_use_case_mgr {
     card_ctxt_t *card_ctxt_ptr;
     pthread_t thr;
     bool isFusion3Platform;
+    void *acdb_handle;
 };
 
 #define MAX_NUM_CARDS (sizeof(card_list)/sizeof(char *))
