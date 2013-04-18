@@ -735,6 +735,7 @@ private:
             bool mVoipInActive;
             bool mVoipOutActive;
             Mutex mVoipLock;
+            int mDirectOutrefCnt;
 #endif
 #ifdef HTC_ACOUSTIC_AUDIO
             int mNoiseSuppressionState;

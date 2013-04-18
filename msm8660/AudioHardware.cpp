@@ -685,7 +685,8 @@ AudioHardware::AudioHardware() :
     mCurSndDevice(-1),
     mTtyMode(TTY_OFF), mFmFd(-1), mNumPcmRec(0)
 #ifdef QCOM_VOIP_ENABLED
-    ,mVoipFd(-1), mVoipInActive(false), mVoipOutActive(false), mDirectOutput(0), mVoipBitRate(0)
+    ,mVoipFd(-1), mVoipInActive(false), mVoipOutActive(false), mDirectOutput(0), mVoipBitRate(0),
+    mDirectOutrefCnt(0)
 #endif
 #ifdef HTC_ACOUSTIC_AUDIO
     , mRecordState(false), mEffectEnabled(false)
@@ -1078,6 +1079,7 @@ AudioStreamOut* AudioHardware::openOutputStream(
                }
                if (lStatus == NO_ERROR) {
                    mDirectOutput = out;
+                   mDirectOutrefCnt++;
                    mLock.unlock();
                    if (mVoipInActive)
                        setupDeviceforVoipCall(true);
@@ -1089,7 +1091,8 @@ AudioStreamOut* AudioHardware::openOutputStream(
                }
             }
             else {
-                   ALOGE(" \n AudioHardware::AudioStreamOutDirect is already open");
+                mDirectOutrefCnt++;
+                ALOGE(" \n AudioHardware::AudioStreamOutDirect is already open refcnt %d", mDirectOutrefCnt);
             }
             return mDirectOutput;
         } else
@@ -1186,9 +1189,12 @@ void AudioHardware::closeOutputStream(AudioStreamOut* out) {
     }
 #ifdef QCOM_VOIP_ENABLED
     else if (mDirectOutput == out) {
-        ALOGV(" deleting  mDirectOutput \n");
-        delete mDirectOutput;
-        mDirectOutput = 0;
+        mDirectOutrefCnt--;
+        if (mDirectOutrefCnt <= 0) {
+            ALOGV(" deleting  mDirectOutput \n");
+            delete mDirectOutput;
+            mDirectOutput = 0;
+        }
     }
 #endif
     else if (mOutputLPA == out) {
