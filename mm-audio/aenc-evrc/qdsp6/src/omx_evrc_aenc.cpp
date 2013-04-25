@@ -42,6 +42,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <errno.h>
 
 using namespace std;
+#define SLEEP_MS 100
 
 // omx_cmd_queue destructor
 omx_evrc_aenc::omx_cmd_queue::~omx_cmd_queue()
@@ -143,10 +144,21 @@ SIDE EFFECTS:
 =============================================================================*/
 void omx_evrc_aenc::wait_for_event()
 {
+    int               rc;
+    struct timespec   ts;
     pthread_mutex_lock(&m_event_lock);
     while (0 == m_is_event_done)
     {
-        pthread_cond_wait(&cond, &m_event_lock);
+       clock_gettime(CLOCK_REALTIME, &ts);
+       ts.tv_sec += (SLEEP_MS/1000);
+       ts.tv_nsec += ((SLEEP_MS%1000) * 1000000);
+       rc = pthread_cond_timedwait(&cond, &m_event_lock, &ts);
+       if (rc == ETIMEDOUT && !m_is_event_done) {
+            DEBUG_PRINT("Timed out waiting for flush");
+            if (ioctl( m_drv_fd, AUDIO_FLUSH, 0) == -1)
+                DEBUG_PRINT_ERROR("Flush:Input port, ioctl flush failed %d\n",
+                    errno);
+       }
     }
     m_is_event_done = 0;
     pthread_mutex_unlock(&m_event_lock);
