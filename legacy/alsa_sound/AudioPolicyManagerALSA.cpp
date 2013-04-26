@@ -2274,10 +2274,11 @@ float AudioPolicyManager::computeVolume(int stream,
 
 bool AudioPolicyManager::platform_is_Fusion3()
 {
-    char platform[128], baseband[128];
+    char platform[128], baseband[128], baseband_arch[128];
     property_get("ro.board.platform", platform, "");
     property_get("ro.baseband", baseband, "");
-    if (!strcmp("msm8960", platform) && !strcmp("mdm", baseband))
+    property_get("ro.baseband.arch", baseband_arch, "");
+    if (!strcmp("msm8960", platform) && (!strcmp("mdm", baseband) || !strcmp("mdm", baseband_arch)))
         return true;
     else
         return false;
