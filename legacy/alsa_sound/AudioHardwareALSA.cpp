@@ -104,7 +104,7 @@ AudioHardwareALSA::AudioHardwareALSA() :
 {
     FILE *fp;
     char soundCardInfo[200];
-    char platform[128], baseband[128], audio_init[128], platformVer[128];
+    char platform[128], baseband[128], baseband_arch[128], audio_init[128], platformVer[128];
     int codec_rev = 2, verNum = 0;
 
     mDeviceList.clear();
@@ -258,8 +258,10 @@ AudioHardwareALSA::AudioHardwareALSA() :
        default:
            property_get("ro.board.platform", platform, "");
            property_get("ro.baseband", baseband, "");
+           property_get("ro.baseband.arch", baseband_arch, "");
            if (!strcmp("msm8960", platform) &&
-               (!strcmp("mdm", baseband) || !strcmp("sglte2", baseband))) {
+               (!strcmp("mdm", baseband) || !strcmp("sglte2", baseband) ||
+                !strcmp("mdm", baseband_arch))) {
                ALOGV("Detected Fusion tabla 2.x");
                mFusion3Platform = true;
                if((fp = fopen("/sys/devices/system/soc/soc0/platform_version","r")) == NULL) {
