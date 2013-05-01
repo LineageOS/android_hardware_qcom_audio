@@ -2218,6 +2218,32 @@ bool AudioPolicyManager::isCompatibleProfile(AudioPolicyManagerBase::IOProfile *
     return true;
 }
 
+float AudioPolicyManager::computeVolume(int stream,
+                                            int index,
+                                            audio_io_handle_t output,
+                                            audio_devices_t device)
+{
+    float volume = 1.0;
+    AudioOutputDescriptor *outputDesc = mOutputs.valueFor(output);
+    StreamDescriptor &streamDesc = mStreams[stream];
+
+    if (device == AUDIO_DEVICE_NONE) {
+        device = outputDesc->device();
+    }
+
+    // if volume is not 0 (not muted), force media volume to max on digital output
+    if (stream == AudioSystem::MUSIC &&
+        index != mStreams[stream].mIndexMin &&
+        (device == AUDIO_DEVICE_OUT_AUX_DIGITAL ||
+         device == AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET ||
+         device == AUDIO_DEVICE_OUT_USB_ACCESSORY ||
+         device == AUDIO_DEVICE_OUT_USB_DEVICE ||
+         device == AUDIO_DEVICE_OUT_PROXY)) {
+        return 1.0;
+    }
+    return AudioPolicyManagerBase::computeVolume(stream, index, output, device);
+}
+
 bool AudioPolicyManager::platform_is_Fusion3()
 {
     char platform[128], baseband[128];
