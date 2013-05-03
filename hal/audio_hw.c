@@ -78,7 +78,11 @@ static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {1, 1},
     [USECASE_AUDIO_RECORD] = {0, 0},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {14, 14},
+#ifdef MSM8974
+    [USECASE_VOICE_CALL] = {2, 2},
+#else
     [USECASE_VOICE_CALL] = {12, 12},
+#endif
 };
 
 /* Array to store sound devices */
