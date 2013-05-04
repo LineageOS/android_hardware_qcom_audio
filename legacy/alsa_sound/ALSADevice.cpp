@@ -1715,6 +1715,12 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
                 return strdup(SND_USE_CASE_DEV_EARPIECE); /* HANDSET RX */
             }
         } else if (devices & AudioSystem::DEVICE_OUT_SPEAKER) {
+#ifdef SEPERATED_VOICE_SPEAKER
+            if (mCallMode == AUDIO_MODE_IN_CALL ||
+                mCallMode == AUDIO_MODE_IN_COMMUNICATION) {
+                return strdup(SND_USE_CASE_DEV_VOC_SPEAKER); /* Voice SPEAKER RX */
+            }
+#endif
             return strdup(SND_USE_CASE_DEV_SPEAKER); /* SPEAKER RX */
         } else if ((devices & AudioSystem::DEVICE_OUT_WIRED_HEADSET) ||
                    (devices & AudioSystem::DEVICE_OUT_WIRED_HEADPHONE)) {
@@ -1802,8 +1808,13 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
                   if (mCallMode == AUDIO_MODE_IN_CALL) {
 #endif
                     if (((rxDevice != NULL) &&
-                        !strncmp(rxDevice, SND_USE_CASE_DEV_SPEAKER,
-                        (strlen(SND_USE_CASE_DEV_SPEAKER)+1))) ||
+                        (!strncmp(rxDevice, SND_USE_CASE_DEV_SPEAKER,
+                        (strlen(SND_USE_CASE_DEV_SPEAKER)+1))
+#ifdef SEPERATED_VOICE_SPEAKER
+                        || !strncmp(rxDevice, SND_USE_CASE_DEV_VOC_SPEAKER,
+                        (strlen(SND_USE_CASE_DEV_VOC_SPEAKER)+1))
+#endif
+                        )) ||
                         ((rxDevice == NULL) &&
                         !strncmp(mCurRxUCMDevice, SND_USE_CASE_DEV_SPEAKER,
                         (strlen(SND_USE_CASE_DEV_SPEAKER)+1)))) {
