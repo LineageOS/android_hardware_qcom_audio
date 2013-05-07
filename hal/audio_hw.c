@@ -93,6 +93,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER] = "speaker",
     [SND_DEVICE_OUT_HEADPHONES] = "headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = "speaker-and-headphones",
+    [SND_DEVICE_OUT_VOICE_HANDSET] = "voice-handset",
     [SND_DEVICE_OUT_VOICE_SPEAKER] = "voice-speaker",
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = "voice-headphones",
     [SND_DEVICE_OUT_HDMI] = "hdmi",
@@ -131,13 +132,26 @@ static const char * const device_table[SND_DEVICE_MAX] = {
 static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_NONE] = -1,
     [SND_DEVICE_OUT_HANDSET] = 7,
+#ifdef MSM8974
+    [SND_DEVICE_OUT_SPEAKER] = 15,
+#else
     [SND_DEVICE_OUT_SPEAKER] = 14,
+#endif
     [SND_DEVICE_OUT_HEADPHONES] = 10,
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = 10,
+    [SND_DEVICE_OUT_VOICE_HANDSET] = 7,
+#ifdef MSM8974
+    [SND_DEVICE_OUT_VOICE_SPEAKER] = 15,
+#else
     [SND_DEVICE_OUT_VOICE_SPEAKER] = 14,
+#endif
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
     [SND_DEVICE_OUT_HDMI] = 18,
+#ifdef MSM8974
+    [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 15,
+#else
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 14,
+#endif
     [SND_DEVICE_OUT_BT_SCO] = 22,
     [SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = 81,
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = 17,
@@ -145,7 +159,7 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = 37,
 
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
-    [SND_DEVICE_IN_SPEAKER_MIC] = 4,
+    [SND_DEVICE_IN_SPEAKER_MIC] = 4, /* ToDo: Check if this needs to changed to 11 */
     [SND_DEVICE_IN_HEADSET_MIC] = 8,
     [SND_DEVICE_IN_VOICE_SPEAKER_MIC] = 11,
     [SND_DEVICE_IN_VOICE_HEADSET_MIC] = 8,
@@ -481,6 +495,38 @@ static int read_hdmi_channel_masks(struct stream_out *out)
         break;
     }
     return ret;
+}
+
+static int set_voice_volume(struct mixer *mixer,
+                             int volume)
+{
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "Voice Rx Volume";
+    ctl = mixer_get_ctl_by_name(mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+    ALOGV("Setting voice volume: %d", volume);
+    mixer_ctl_set_value(ctl, 0, volume);
+    return 0;
+}
+
+static int set_mic_mute(struct mixer *mixer,
+                        int mute)
+{
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "Voice Tx Mute";
+    ctl = mixer_get_ctl_by_name(mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+    ALOGV("Setting mic mute: %d", mute);
+    mixer_ctl_set_value(ctl, 0, mute);
+    return 0;
 }
 
 static snd_device_t get_output_snd_device(struct audio_device *adev,
@@ -1845,7 +1891,9 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
         // 0 -> 5, 20 -> 4, 40 ->3, 60 -> 2, 80 -> 1, 100 -> 0
         // So adjust the volume to get the correct volume index in driver
         vol = 100 - vol;
-
+#ifdef MSM8974
+        set_voice_volume(adev->mixer, vol);
+#else
         if (adev->csd_client) {
             if (adev->csd_volume == NULL) {
                 ALOGE("%s: dlsym error for csd_client_volume", __func__);
@@ -1858,6 +1906,7 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
         } else {
             ALOGE("%s: No CSD Client present", __func__);
         }
+#endif
     }
     pthread_mutex_unlock(&adev->lock);
     return err;
@@ -1904,6 +1953,9 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
     pthread_mutex_lock(&adev->lock);
     adev->mic_mute = state;
     if (adev->mode == AUDIO_MODE_IN_CALL) {
+#ifdef MSM8974
+        set_mic_mute(adev->mixer, state);
+#else
         if (adev->csd_client) {
             if (adev->csd_mic_mute == NULL) {
                 ALOGE("%s: dlsym error for csd_mic_mute", __func__);
@@ -1916,6 +1968,7 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
         } else {
             ALOGE("%s: No CSD Client present", __func__);
         }
+#endif
     }
     pthread_mutex_unlock(&adev->lock);
     return err;
