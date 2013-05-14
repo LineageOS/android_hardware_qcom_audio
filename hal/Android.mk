@@ -8,7 +8,7 @@ LOCAL_ARM_MODE := arm
 
 LOCAL_SRC_FILES := \
 	audio_hw.c \
-	edid.c
+	$(TARGET_BOARD_PLATFORM)/platform.c
 
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
@@ -17,14 +17,12 @@ LOCAL_SHARED_LIBRARIES := \
 	libaudioroute \
 	libdl
 
-ifeq ($(TARGET_BOARD_PLATFORM), msm8974)
-LOCAL_CFLAGS += -DMSM8974
-endif
 
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
 	$(call include-path-for, audio-route) \
-	$(call include-path-for, audio-effects)
+	$(call include-path-for, audio-effects) \
+	$(LOCAL_PATH)/$(TARGET_BOARD_PLATFORM)
 
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
