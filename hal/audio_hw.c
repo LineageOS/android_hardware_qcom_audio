@@ -764,14 +764,27 @@ static int select_devices(struct audio_device *adev,
         if (usecase->type == PCM_PLAYBACK) {
             usecase->devices = usecase->stream.out->devices;
             in_snd_device = SND_DEVICE_NONE;
-            if (out_snd_device == SND_DEVICE_NONE)
+            if (out_snd_device == SND_DEVICE_NONE) {
                 out_snd_device = get_output_snd_device(adev,
                                             usecase->stream.out->devices);
+                if (usecase->stream.out == adev->primary_output &&
+                        adev->active_input &&
+                        adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
+                    select_devices(adev, adev->active_input->usecase);
+                }
+            }
         } else if (usecase->type == PCM_CAPTURE) {
             usecase->devices = usecase->stream.in->device;
             out_snd_device = SND_DEVICE_NONE;
-            if (in_snd_device == SND_DEVICE_NONE)
-                in_snd_device = get_input_snd_device(adev, SND_DEVICE_NONE);
+            if (in_snd_device == SND_DEVICE_NONE) {
+                if (adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
+                        adev->primary_output && !adev->primary_output->standby) {
+                    in_snd_device = get_input_snd_device(adev,
+                                        adev->primary_output->devices);
+                } else {
+                    in_snd_device = get_input_snd_device(adev, AUDIO_DEVICE_NONE);
+                }
+            }
         }
     }
 
@@ -1402,13 +1415,14 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
     pthread_mutex_lock(&out->lock);
     if (out->standby) {
+        out->standby = false;
         pthread_mutex_lock(&adev->lock);
         ret = start_output_stream(out);
         pthread_mutex_unlock(&adev->lock);
         if (ret != 0) {
+            out->standby = true;
             goto exit;
         }
-        out->standby = false;
     }
 
     if (out->pcm) {
