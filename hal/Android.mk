@@ -23,7 +23,8 @@ endif
 
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
-	$(call include-path-for, audio-route)
+	$(call include-path-for, audio-route) \
+	$(call include-path-for, audio-effects)
 
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
