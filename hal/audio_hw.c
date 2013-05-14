@@ -108,6 +108,9 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
     [SND_DEVICE_IN_SPEAKER_MIC] = "speaker-mic",
     [SND_DEVICE_IN_HEADSET_MIC] = "headset-mic",
+    [SND_DEVICE_IN_HANDSET_MIC_AEC] = "handset-mic",
+    [SND_DEVICE_IN_SPEAKER_MIC_AEC] = "voice-speaker-mic",
+    [SND_DEVICE_IN_HEADSET_MIC_AEC] = "headset-mic",
     [SND_DEVICE_IN_VOICE_SPEAKER_MIC] = "voice-speaker-mic",
     [SND_DEVICE_IN_VOICE_HEADSET_MIC] = "voice-headset-mic",
     [SND_DEVICE_IN_HDMI_MIC] = "hdmi-mic",
@@ -161,6 +164,9 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
     [SND_DEVICE_IN_SPEAKER_MIC] = 4, /* ToDo: Check if this needs to changed to 11 */
     [SND_DEVICE_IN_HEADSET_MIC] = 8,
+    [SND_DEVICE_IN_HANDSET_MIC_AEC] = 40,
+    [SND_DEVICE_IN_SPEAKER_MIC_AEC] = 42,
+    [SND_DEVICE_IN_HEADSET_MIC_AEC] = 47,
     [SND_DEVICE_IN_VOICE_SPEAKER_MIC] = 11,
     [SND_DEVICE_IN_VOICE_HEADSET_MIC] = 8,
     [SND_DEVICE_IN_HDMI_MIC] = 4,
@@ -175,11 +181,11 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = 36,
     [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = 16,
     [SND_DEVICE_IN_VOICE_REC_MIC] = 62,
+    /* TODO: Update with proper acdb ids */
     [SND_DEVICE_IN_VOICE_REC_DMIC_EF] = 62,
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS] = 62,
-    /* TODO: Update with proper acdb ids */
-    [SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE] = 62,
-    [SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE] = 62,
+    [SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE] = 6,
+    [SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE] = 5,
 };
 
 int edid_get_max_channels(void);
@@ -321,7 +327,7 @@ static int enable_snd_device(struct audio_device *adev,
         return -EINVAL;
     }
     if (adev->acdb_send_audio_cal) {
-        ALOGV("%s: sending audio calibration for snd_device(%d) acdb_id(%d)",
+        ALOGD("%s: sending audio calibration for snd_device(%d) acdb_id(%d)",
               __func__, snd_device, acdb_dev_id);
         if (snd_device >= SND_DEVICE_OUT_BEGIN &&
                 snd_device < SND_DEVICE_OUT_END)
@@ -434,6 +440,22 @@ static void check_usecases_codec_backend(struct audio_device *adev,
 
         audio_route_update_mixer(adev->audio_route);
     }
+}
+
+static int set_echo_reference(struct mixer *mixer, const char* ec_ref)
+{
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "EC_REF_RX";
+
+    ctl = mixer_get_ctl_by_name(mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+    ALOGV("Setting EC Reference: %s", ec_ref);
+    mixer_ctl_set_enum_by_string(ctl, ec_ref);
+    return 0;
 }
 
 static int set_hdmi_channels(struct mixer *mixer,
@@ -693,24 +715,40 @@ static snd_device_t get_input_snd_device(struct audio_device *adev,
                     snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_EF;
                 else if (adev->fluence_in_voice_rec)
                     snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE;
-                else
-                    snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
             } else if (adev->dualmic_config == DUALMIC_CONFIG_BROADSIDE) {
                 if (channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK)
                     snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_BS;
                 else if (adev->fluence_in_voice_rec)
                     snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE;
-                else
-                    snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
-            } else
+            }
+
+            if (snd_device == SND_DEVICE_NONE) {
                 snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
+            }
         }
     } else if (source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
         if (out_device & AUDIO_DEVICE_OUT_SPEAKER)
             in_device = AUDIO_DEVICE_IN_BACK_MIC;
+        if (adev->active_input) {
+            if (adev->active_input->enable_aec) {
+                if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
+                    if (adev->mic_type_analog)
+                        snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC;
+                    else
+                        snd_device = SND_DEVICE_IN_SPEAKER_MIC_AEC;
+                } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+                    snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC;
+                } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+                    snd_device = SND_DEVICE_IN_HEADSET_MIC_AEC;
+                }
+                set_echo_reference(adev->mixer, "SLIM_RX");
+            } else
+                set_echo_reference(adev->mixer, "NONE");
+        }
     } else if (source == AUDIO_SOURCE_DEFAULT) {
         goto exit;
     }
+
 
     if (snd_device != SND_DEVICE_NONE) {
         goto exit;
@@ -1681,14 +1719,45 @@ static uint32_t in_get_input_frames_lost(struct audio_stream_in *stream)
     return 0;
 }
 
-static int in_add_audio_effect(const struct audio_stream *stream, effect_handle_t effect)
+static int add_remove_audio_effect(const struct audio_stream *stream,
+                                   effect_handle_t effect,
+                                   bool enable)
 {
+    struct stream_in *in = (struct stream_in *)stream;
+    int status = 0;
+    effect_descriptor_t desc;
+
+    status = (*effect)->get_descriptor(effect, &desc);
+    if (status != 0)
+        return status;
+
+    pthread_mutex_lock(&in->lock);
+    pthread_mutex_lock(&in->dev->lock);
+    if ((in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) &&
+            in->enable_aec != enable &&
+            (memcmp(&desc.type, FX_IID_AEC, sizeof(effect_uuid_t)) == 0)) {
+        in->enable_aec = enable;
+        if (!in->standby)
+            select_devices(in->dev, in->usecase);
+    }
+    pthread_mutex_unlock(&in->dev->lock);
+    pthread_mutex_unlock(&in->lock);
+
     return 0;
 }
 
-static int in_remove_audio_effect(const struct audio_stream *stream, effect_handle_t effect)
+static int in_add_audio_effect(const struct audio_stream *stream,
+                               effect_handle_t effect)
 {
-    return 0;
+    ALOGD("%s: effect %p", __func__, effect);
+    return add_remove_audio_effect(stream, effect, true);
+}
+
+static int in_remove_audio_effect(const struct audio_stream *stream,
+                                  effect_handle_t effect)
+{
+    ALOGD("%s: effect %p", __func__, effect);
+    return add_remove_audio_effect(stream, effect, false);
 }
 
 static int adev_open_output_stream(struct audio_hw_device *dev,

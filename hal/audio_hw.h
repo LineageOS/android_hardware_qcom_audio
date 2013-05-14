@@ -15,6 +15,9 @@
  */
 
 #include <hardware/audio.h>
+#include <hardware/audio_effect.h>
+#include <audio_effects/effect_aec.h>
+#include <audio_effects/effect_ns.h>
 
 #include <tinyalsa/asoundlib.h>
 
@@ -71,6 +74,9 @@ typedef enum {
     SND_DEVICE_IN_HANDSET_MIC  = SND_DEVICE_IN_BEGIN,
     SND_DEVICE_IN_SPEAKER_MIC,
     SND_DEVICE_IN_HEADSET_MIC,
+    SND_DEVICE_IN_HANDSET_MIC_AEC,
+    SND_DEVICE_IN_SPEAKER_MIC_AEC,
+    SND_DEVICE_IN_HEADSET_MIC_AEC,
     SND_DEVICE_IN_VOICE_SPEAKER_MIC,
     SND_DEVICE_IN_VOICE_HEADSET_MIC,
     SND_DEVICE_IN_HDMI_MIC,
@@ -188,6 +194,7 @@ struct stream_in {
     int device;
     audio_channel_mask_t channel_mask;
     audio_usecase_t usecase;
+    bool enable_aec;
 
     struct audio_device *dev;
 };
