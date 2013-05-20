@@ -524,6 +524,12 @@ static int set_voice_volume(struct mixer *mixer,
 {
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voice Rx Volume";
+
+    // Voice volume levels are mapped to adsp volume levels as follows.
+    // 100 -> 5, 80 -> 4, 60 -> 3, 40 -> 2, 20 -> 1  0 -> 0
+    // But this values don't changed in kernel. So, below change is need.
+    volume = volume / 20;
+
     ctl = mixer_get_ctl_by_name(mixer, mixer_ctl_name);
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
@@ -952,6 +958,19 @@ static int select_devices(struct audio_device *adev,
                 ALOGE("%s: Incorrect ACDB IDs (rx: %d tx: %d)", __func__,
                       acdb_rx_id, acdb_tx_id);
             }
+        }
+    } else if (usecase->type == VOICE_CALL) {
+        if (adev->acdb_send_voice_cal == NULL) {
+            ALOGE("%s: dlsym error for acdb_send_voice_call", __func__);
+        } else {
+            acdb_rx_id = get_acdb_device_id(out_snd_device);
+            acdb_tx_id = get_acdb_device_id(in_snd_device);
+
+            if (acdb_rx_id > 0 && acdb_tx_id > 0)
+                adev->acdb_send_voice_cal(acdb_rx_id, acdb_tx_id);
+            else
+                ALOGE("%s: Incorrect ACDB IDs (rx: %d tx: %d)", __func__,
+                      acdb_rx_id, acdb_tx_id);
         }
     }
 
