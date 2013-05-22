@@ -33,8 +33,8 @@
 
 #include "audio_hw.h"
 
-#define LIB_ACDB_LOADER "/system/lib/libacdbloader.so"
-#define LIB_CSD_CLIENT "/system/lib/libcsd-client.so"
+#define LIB_ACDB_LOADER "libacdbloader.so"
+#define LIB_CSD_CLIENT "libcsd-client.so"
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define MIXER_CARD 0
 
