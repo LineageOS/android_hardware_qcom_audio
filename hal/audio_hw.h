@@ -42,6 +42,7 @@
 #include <cutils/str_parms.h>
 #include <cutils/list.h>
 #include <cutils/hashmap.h>
+#include <hardware/audio_amplifier.h>
 #include <hardware/audio.h>
 #include <tinyalsa/asoundlib.h>
 #include <tinycompress/tinycompress.h>
@@ -792,6 +793,8 @@ struct audio_device {
     Hashmap *io_streams_map;
     bool a2dp_started;
     bool ha_proxy_enable;
+
+    amplifier_device_t *amp;
 };
 
 struct audio_patch_record {
