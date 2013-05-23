@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <cutils/str_parms.h>
 #include <cutils/list.h>
+#include <hardware/audio_amplifier.h>
 #include <hardware/audio.h>
 #include <tinyalsa/asoundlib.h>
 #include <tinycompress/tinycompress.h>
@@ -683,6 +684,8 @@ struct audio_device {
     bool adm_routing_changed;
     struct listnode audio_patch_record_list;
     unsigned int audio_patch_index;
+
+    amplifier_device_t *amp;
 };
 
 struct audio_patch_record {
