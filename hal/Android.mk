@@ -289,6 +289,7 @@ endif
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
+	libhardware \
 	libtinyalsa \
 	libtinycompress_vendor \
 	libaudioroute \
@@ -301,6 +302,7 @@ LOCAL_C_INCLUDES += \
 	external/tinycompress/include \
 	system/media/audio_utils/include \
 	external/expat/lib \
+	hardware/libhardware/include \
 	$(call include-path-for, audio-route) \
 	$(call include-path-for, audio-effects) \
 	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \
@@ -370,6 +372,11 @@ endif
 ifeq ($(strip $($AUDIO_FEATURE_IP_HDLR_ENABLED)),true)
     LOCAL_CFLAGS += -DAUDIO_EXTN_IP_HDLR_ENABLED
     LOCAL_SRC_FILES += audio_extn/ip_hdlr_intf.c
+endif
+
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_EXT_AMPLIFIER)),false)
+    LOCAL_CFLAGS += -DEXT_AMPLIFIER_ENABLED
+    LOCAL_SRC_FILES += audio_extn/audio_amplifier.c
 endif
 
 LOCAL_CFLAGS += -Wall -Werror
