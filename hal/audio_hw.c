@@ -73,6 +73,10 @@
 #include "sound/compress_params.h"
 #include "sound/asound.h"
 
+#ifdef USES_AUDIO_AMPLIFIER
+#include <audio_amplifier.h>
+#endif
+
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /*DIRECT PCM has same buffer sizes as DEEP Buffer*/
 #define DIRECT_PCM_NUM_FRAGMENTS 2
@@ -970,6 +974,13 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     }
 
     enable_audio_route(adev, usecase);
+
+#ifdef USES_AUDIO_AMPLIFIER
+    /* Rely on amplifier_set_devices to distinguish between in/out devices */
+    amplifier_set_devices(in_snd_device);
+    amplifier_set_devices(out_snd_device);
+#endif
+
 
     /* Applicable only on the targets that has external modem.
      * Enable device command should be sent to modem only after
@@ -3514,6 +3525,10 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
     pthread_mutex_lock(&adev->lock);
     if (adev->mode != mode) {
         ALOGD("%s: mode %d\n", __func__, mode);
+#ifdef USES_AUDIO_AMPLIFIER
+        if (amplifier_set_mode(mode) != 0)
+            ALOGE("Failed setting amplifier mode");
+#endif
         adev->mode = mode;
         if ((mode == AUDIO_MODE_NORMAL || mode == AUDIO_MODE_IN_COMMUNICATION) &&
                 voice_is_in_call(adev)) {
@@ -3755,6 +3770,10 @@ static int adev_close(hw_device_t *device)
     pthread_mutex_lock(&adev_init_lock);
 
     if ((--audio_device_ref_count) == 0) {
+#ifdef USES_AUDIO_AMPLIFIER
+        if (amplifier_close() != 0)
+            ALOGE("Amplifier close failed");
+#endif
         audio_extn_sound_trigger_deinit(adev);
         audio_extn_listen_deinit(adev);
         audio_extn_utils_release_streams_output_cfg_list(&adev->streams_output_cfg_list);
@@ -3936,6 +3955,11 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     audio_extn_utils_update_streams_output_cfg_list(adev->platform, adev->mixer,
                                                     &adev->streams_output_cfg_list);
+
+#ifdef USES_AUDIO_AMPLIFIER
+    if (amplifier_open() != 0)
+        ALOGE("Amplifier initialization failed");
+#endif
 
     audio_device_ref_count++;
 
