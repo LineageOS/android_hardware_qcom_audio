@@ -30,6 +30,10 @@
 #include <sound/a2220.h>
 #endif
 
+#ifdef USES_AUDIO_AMPLIFIER
+#include <audio_amplifier.h>
+#endif
+
 extern "C" {
 #ifdef QCOM_CSDCLIENT_ENABLED
 static int (*csd_disable_device)();
@@ -853,6 +857,10 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
     } else {
         setA2220Mode(A2220_PATH_INCALL_RECEIVER_NSOFF);
     }
+#endif
+
+#ifdef USES_AUDIO_AMPLIFIER
+    amplifier_set_devices(devices);
 #endif
 
     if (rxDevice != NULL) {
