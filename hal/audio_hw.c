@@ -87,6 +87,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     /* Playback sound devices */
     [SND_DEVICE_OUT_HANDSET] = "handset",
     [SND_DEVICE_OUT_SPEAKER] = "speaker",
+    [SND_DEVICE_OUT_SPEAKER_REVERSE] = "speaker-reverse",
     [SND_DEVICE_OUT_HEADPHONES] = "headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = "speaker-and-headphones",
     [SND_DEVICE_OUT_VOICE_SPEAKER] = "voice-speaker",
@@ -131,6 +132,7 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_NONE] = -1,
     [SND_DEVICE_OUT_HANDSET] = 7,
     [SND_DEVICE_OUT_SPEAKER] = 14,
+    [SND_DEVICE_OUT_SPEAKER_REVERSE] = 14,
     [SND_DEVICE_OUT_HEADPHONES] = 10,
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = 10,
     [SND_DEVICE_OUT_VOICE_SPEAKER] = 14,
@@ -568,7 +570,11 @@ static snd_device_t get_output_snd_device(struct audio_device *adev,
         devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
         snd_device = SND_DEVICE_OUT_HEADPHONES;
     } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
-        snd_device = SND_DEVICE_OUT_SPEAKER;
+        if (adev->speaker_lr_swap) {
+            snd_device = SND_DEVICE_OUT_SPEAKER_REVERSE;
+        } else {
+            snd_device = SND_DEVICE_OUT_SPEAKER;
+        }
     } else if (devices & AUDIO_DEVICE_OUT_ALL_SCO) {
         snd_device = SND_DEVICE_OUT_BT_SCO;
     } else if (devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
@@ -1839,6 +1845,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     struct str_parms *parms;
     char *str;
     char value[32];
+    int val;
     int ret;
 
     ALOGD("%s: enter: %s", __func__, kvpairs);
@@ -1886,6 +1893,40 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             adev->screen_off = false;
         else
             adev->screen_off = true;
+    }
+
+    ret = str_parms_get_int(parms, "rotation", &val);
+    if (ret >= 0) {
+        bool reverse_speakers = false;
+        switch(val) {
+        // FIXME: note that the code below assumes that the speakers are in the correct placement
+        //   relative to the user when the device is rotated 90deg from its default rotation. This
+        //   assumption is device-specific, not platform-specific like this code.
+        case 270:
+            reverse_speakers = true;
+            break;
+        case 0:
+        case 90:
+        case 180:
+            break;
+        default:
+            ALOGE("%s: unexpected rotation of %d", __func__, val);
+        }
+        pthread_mutex_lock(&adev->lock);
+        if (adev->speaker_lr_swap != reverse_speakers) {
+            adev->speaker_lr_swap = reverse_speakers;
+            // only update the selected device if there is active pcm playback
+            struct audio_usecase *usecase;
+            struct listnode *node;
+            list_for_each(node, &adev->usecase_list) {
+                usecase = node_to_item(node, struct audio_usecase, list);
+                if (usecase->type == PCM_PLAYBACK) {
+                    select_devices(adev, usecase->id);
+                    break;
+                }
+            }
+        }
+        pthread_mutex_unlock(&adev->lock);
     }
 
     str_parms_destroy(parms);
@@ -2264,6 +2305,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->bluetooth_nrec = true;
     adev->in_call = false;
     adev->acdb_settings = TTY_MODE_OFF;
+    adev->speaker_lr_swap = false;
     for (i = 0; i < SND_DEVICE_MAX; i++) {
         adev->snd_dev_ref_cnt[i] = 0;
     }
