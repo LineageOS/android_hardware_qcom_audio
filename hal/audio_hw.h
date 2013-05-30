@@ -51,6 +51,7 @@ typedef enum {
     SND_DEVICE_OUT_BEGIN = SND_DEVICE_MIN,
     SND_DEVICE_OUT_HANDSET = SND_DEVICE_OUT_BEGIN,
     SND_DEVICE_OUT_SPEAKER,
+    SND_DEVICE_OUT_SPEAKER_REVERSE,
     SND_DEVICE_OUT_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_VOICE_HANDSET,
@@ -254,6 +255,7 @@ struct audio_device {
     struct listnode usecase_list;
     struct audio_route *audio_route;
     int acdb_settings;
+    bool speaker_lr_swap;
 
     bool mic_type_analog;
     bool fluence_in_spkr_mode;
