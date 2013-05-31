@@ -140,6 +140,10 @@ ifeq ($(strip $(BOARD_HAVE_SAMSUNG_CSDCLIENT)),true)
     LOCAL_CFLAGS += -DSAMSUNG_CSDCLIENT
 endif
 
+ifeq ($(strip $(BOARD_HAVE_AUDIENCE_ES325_2MIC)),true)
+    LOCAL_CFLAGS += -DUSE_ES325_2MIC
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \

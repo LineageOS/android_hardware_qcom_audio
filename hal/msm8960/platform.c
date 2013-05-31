@@ -895,6 +895,9 @@ void *platform_init(struct audio_device *adev)
 #ifdef HWDEP_CAL_ENABLED
     audio_hwdep_send_cal(my_data);
 #endif
+#ifdef USE_ES325_2MIC
+    mixer_ctl_set_value("ES325 2Mic Enable", 0, 0);
+#endif
     return my_data;
 }
 
@@ -1135,15 +1138,25 @@ int platform_switch_voice_call_device_post(void *platform,
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_rx_id, acdb_tx_id;
+    int tmp_tx_id;
 
     if (my_data->acdb_send_voice_cal == NULL) {
         ALOGE("%s: dlsym error for acdb_send_voice_call", __func__);
     } else {
         acdb_rx_id = acdb_device_table[out_snd_device];
         acdb_tx_id = acdb_device_table[in_snd_device];
-
+        tmp_tx_id = acdb_tx_id;
+#ifdef USE_ES325_2MIC
+        if (acdb_tx_id == 4) {
+           tmp_tx_id = 34;
+           mixer_ctl_set_value("VEQ Enable", 1, 0);
+           mixer_ctl_set_value("ES325 2Mic Enable", 1, 0);
+        } else {
+           mixer_ctl_set_value("ES325 2Mic Enable", 0, 0);
+        }
+#endif
         if (acdb_rx_id > 0 && acdb_tx_id > 0)
-            my_data->acdb_send_voice_cal(acdb_rx_id, acdb_tx_id);
+            my_data->acdb_send_voice_cal(acdb_rx_id, tmp_tx_id);
         else
             ALOGE("%s: Incorrect ACDB IDs (rx: %d tx: %d)", __func__,
                   acdb_rx_id, acdb_tx_id);
