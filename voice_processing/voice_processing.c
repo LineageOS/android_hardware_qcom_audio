@@ -16,6 +16,7 @@
 
 #define LOG_TAG "voice_processing"
 /*#define LOG_NDEBUG 0*/
+#include <dlfcn.h>
 #include <cutils/log.h>
 #include <cutils/list.h>
 #include <hardware/audio_effect.h>
@@ -27,6 +28,8 @@
 //------------------------------------------------------------------------------
 // local definitions
 //------------------------------------------------------------------------------
+
+#define EFFECTS_DESCRIPTOR_LIBRARY_PATH "/system/lib/soundfx/libqcomvoiceprocessingdescriptors.so"
 
 // types of pre processing modules
 enum effect_id
@@ -74,14 +77,15 @@ struct session_s {
 
 
 //------------------------------------------------------------------------------
-// Effect descriptors
+// Default Effect descriptors. Device specific descriptors should be defined in
+// libqcomvoiceprocessing.<product_name>.so if needed.
 //------------------------------------------------------------------------------
 
 // UUIDs for effect types have been generated from http://www.itu.int/ITU-T/asn1/uuid.html
 // as the pre processing effects are not defined by OpenSL ES
 
 // Acoustic Echo Cancellation
-static const effect_descriptor_t aec_descriptor = {
+static const effect_descriptor_t qcom_default_aec_descriptor = {
         { 0x7b491460, 0x8d4d, 0x11e0, 0xbd61, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } }, // type
         { 0x0f8d0d2a, 0x59e5, 0x45fe, 0xb6e4, { 0x24, 0x8c, 0x8a, 0x79, 0x91, 0x09 } }, // uuid
         EFFECT_CONTROL_API_VERSION,
@@ -93,7 +97,7 @@ static const effect_descriptor_t aec_descriptor = {
 };
 
 // Noise suppression
-static const effect_descriptor_t ns_descriptor = {
+static const effect_descriptor_t qcom_default_ns_descriptor = {
         { 0x58b4b260, 0x8e06, 0x11e0, 0xaa8e, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } }, // type
         { 0x1d97bb0b, 0x9e2f, 0x4403, 0x9ae3, { 0x58, 0xc2, 0x55, 0x43, 0x06, 0xf8 } }, // uuid
         EFFECT_CONTROL_API_VERSION,
@@ -106,7 +110,7 @@ static const effect_descriptor_t ns_descriptor = {
 
 //ENABLE_AGC
 // Automatic Gain Control
-//static const effect_descriptor_t agc_descriptor = {
+//static const effect_descriptor_t qcom_default_agc_descriptor = {
 //        { 0x0a8abfe0, 0x654c, 0x11e0, 0xba26, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } }, // type
 //        { 0x0dd49521, 0x8c59, 0x40b1, 0xb403, { 0xe0, 0x8d, 0x5f, 0x01, 0x87, 0x5e } }, // uuid
 //        EFFECT_CONTROL_API_VERSION,
@@ -117,10 +121,10 @@ static const effect_descriptor_t ns_descriptor = {
 //        "Qualcomm Fluence"
 //};
 
-static const effect_descriptor_t *descriptors[NUM_ID] = {
-        &aec_descriptor,
-        &ns_descriptor,
-//ENABLE_AGC       &agc_descriptor,
+const effect_descriptor_t *descriptors[NUM_ID] = {
+        &qcom_default_aec_descriptor,
+        &qcom_default_ns_descriptor,
+//ENABLE_AGC       &qcom_default_agc_descriptor,
 };
 
 
@@ -415,14 +419,39 @@ static struct session_s *get_session(int32_t id, int32_t  sessionId, int32_t  io
 }
 
 static int init() {
-    size_t i;
-    int status = 0;
+    void *lib_handle;
+    const effect_descriptor_t *desc;
 
     if (init_status <= 0)
         return init_status;
 
+    if (access(EFFECTS_DESCRIPTOR_LIBRARY_PATH, R_OK) == 0) {
+        lib_handle = dlopen(EFFECTS_DESCRIPTOR_LIBRARY_PATH, RTLD_NOW);
+        if (lib_handle == NULL) {
+            ALOGE("%s: DLOPEN failed for %s", __func__, EFFECTS_DESCRIPTOR_LIBRARY_PATH);
+        } else {
+            ALOGV("%s: DLOPEN successful for %s", __func__, EFFECTS_DESCRIPTOR_LIBRARY_PATH);
+            desc = (const effect_descriptor_t *)dlsym(lib_handle,
+                                                        "qcom_product_aec_descriptor");
+            if (desc)
+                descriptors[AEC_ID] = desc;
+
+            desc = (const effect_descriptor_t *)dlsym(lib_handle,
+                                                        "qcom_product_ns_descriptor");
+            if (desc)
+                descriptors[NS_ID] = desc;
+
+//ENABLE_AGC
+//            desc = (const effect_descriptor_t *)dlsym(lib_handle,
+//                                                        "qcom_product_agc_descriptor");
+//            if (desc)
+//                descriptors[AGC_ID] = desc;
+        }
+    }
+
     uuid_to_id_table[AEC_ID] = FX_IID_AEC;
     uuid_to_id_table[NS_ID] = FX_IID_NS;
+//ENABLE_AGC uuid_to_id_table[AGC_ID] = FX_IID_AGC;
 
     list_init(&session_list);
 
@@ -699,6 +728,9 @@ static int lib_get_descriptor(const effect_uuid_t *uuid,
 
     if (pDescriptor == NULL || uuid == NULL)
         return -EINVAL;
+
+    if (init() != 0)
+        return init_status;
 
     desc = get_descriptor(uuid);
     if (desc == NULL) {
