@@ -101,6 +101,10 @@ ifeq ($(BOARD_HAVE_SAMSUNG_CSDCLIENT),true)
   LOCAL_CFLAGS += -DSAMSUNG_CSDCLIENT
 endif
 
+ifeq ($(BOARD_HAVE_HTC_CSDCLIENT),true)
+  LOCAL_CFLAGS += -DHTC_CSDCLIENT
+endif
+
 LOCAL_SRC_FILES := \
   AudioHardwareALSA.cpp         \
   AudioStreamOutALSA.cpp        \
