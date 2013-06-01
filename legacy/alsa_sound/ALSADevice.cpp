@@ -806,6 +806,7 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
             ALOGE("csd_client_enable_device is NULL");
         } else {
             int tmp_tx_id = tx_dev_id;
+            int tmp_rx_id = rx_dev_id;
 
 #ifdef USE_ES325_2MIC
             if (tx_dev_id == 4) {
@@ -816,10 +817,18 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
                 setMixerControl("ES325 2Mic Enable", 0, 0);
             }
 #endif
+#ifdef HTC_CSDCLIENT
+            if (tx_dev_id == DEVICE_BT_SCO_TX_ACDB_ID) {
+                tmp_tx_id = 1027;
+            }
+            if (rx_dev_id == DEVICE_BT_SCO_RX_ACDB_ID) {
+                tmp_rx_id = 1127;
+            }
+#endif
 
             int adjustedFlags = adjustFlagsForCsd(mDevSettingsFlag,
                     mCurRxUCMDevice);
-            err = csd_enable_device(rx_dev_id, tmp_tx_dev_id, adjustedFlags);
+            err = csd_enable_device(tmp_rx_id, tmp_tx_id, adjustedFlags);
             if (err < 0)
             {
                 ALOGE("csd_enable_device failed, error %d", err);
