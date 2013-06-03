@@ -806,7 +806,7 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
             err = csd_enable_device(rx_dev_id, tx_dev_id, adjustedFlags);
             if (err < 0)
             {
-                ALOGE("csd_client_disable_device failed, error %d", err);
+                ALOGE("csd_enable_device failed, error %d", err);
             }
         }
     }
