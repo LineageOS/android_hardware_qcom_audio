@@ -426,6 +426,72 @@ static void check_usecases_codec_backend(struct audio_device *adev,
     }
 }
 
+static void check_and_route_capture_usecases(struct audio_device *adev,
+                                             struct audio_usecase *uc_info,
+                                             snd_device_t snd_device)
+{
+    struct listnode *node;
+    struct audio_usecase *usecase;
+    bool switch_device[AUDIO_USECASE_MAX];
+    int i, num_uc_to_switch = 0;
+
+    /*
+     * This function is to make sure that all the active capture usecases
+     * are always routed to the same input sound device.
+     * For example, if audio-record and voice-call usecases are currently
+     * active on speaker(rx) and speaker-mic (tx) and out_set_parameters(earpiece)
+     * is received for voice call then we have to make sure that audio-record
+     * usecase is also switched to earpiece i.e. voice-dmic-ef,
+     * because of the limitation that two devices cannot be enabled
+     * at the same time if they share the same backend.
+     */
+    for (i = 0; i < AUDIO_USECASE_MAX; i++)
+        switch_device[i] = false;
+
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type != PCM_PLAYBACK &&
+                usecase != uc_info &&
+                usecase->in_snd_device != snd_device) {
+            ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
+                  __func__, use_case_table[usecase->id],
+                  device_table[usecase->in_snd_device]);
+            disable_audio_route(adev, usecase, false);
+            switch_device[usecase->id] = true;
+            num_uc_to_switch++;
+        }
+    }
+
+    if (num_uc_to_switch) {
+        /* Make sure all the streams are de-routed before disabling the device */
+        audio_route_update_mixer(adev->audio_route);
+
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (switch_device[usecase->id]) {
+                disable_snd_device(adev, usecase->in_snd_device, false);
+                enable_snd_device(adev, snd_device, false);
+            }
+        }
+
+        /* Make sure new snd device is enabled before re-routing the streams */
+        audio_route_update_mixer(adev->audio_route);
+
+        /* Re-route all the usecases on the shared backend other than the
+           specified usecase to new snd devices */
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            /* Update the in_snd_device only before enabling the audio route */
+            if (switch_device[usecase->id] ) {
+                usecase->in_snd_device = snd_device;
+                enable_audio_route(adev, usecase, false);
+            }
+        }
+
+        audio_route_update_mixer(adev->audio_route);
+    }
+}
+
 static int set_echo_reference(struct mixer *mixer, const char* ec_ref)
 {
     struct mixer_ctl *ctl;
@@ -879,8 +945,10 @@ static int select_devices(struct audio_device *adev,
         enable_snd_device(adev, out_snd_device, false);
     }
 
-    if (in_snd_device != SND_DEVICE_NONE)
+    if (in_snd_device != SND_DEVICE_NONE) {
+        check_and_route_capture_usecases(adev, usecase, in_snd_device);
         enable_snd_device(adev, in_snd_device, false);
+    }
 
     audio_route_update_mixer(adev->audio_route);
 
