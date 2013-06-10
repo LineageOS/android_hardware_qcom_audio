@@ -1014,13 +1014,6 @@ static int select_devices(struct audio_device *adev,
         enable_snd_device(adev, in_snd_device, false);
     }
 
-    audio_route_update_mixer(adev->audio_route);
-
-    usecase->in_snd_device = in_snd_device;
-    usecase->out_snd_device = out_snd_device;
-
-    enable_audio_route(adev, usecase, true);
-
     if (usecase->type == VOICE_CALL && adev->csd_client) {
         if (adev->csd_enable_device == NULL) {
             ALOGE("%s: dlsym error for csd_client_enable_device",
@@ -1055,6 +1048,13 @@ static int select_devices(struct audio_device *adev,
                       acdb_rx_id, acdb_tx_id);
         }
     }
+
+    audio_route_update_mixer(adev->audio_route);
+
+    usecase->in_snd_device = in_snd_device;
+    usecase->out_snd_device = out_snd_device;
+
+    enable_audio_route(adev, usecase, true);
 
     return status;
 }
