@@ -73,7 +73,6 @@ struct pcm_config pcm_config_hdmi_multi = {
 
 struct pcm_config pcm_config_audio_capture = {
     .channels = 2,
-    .period_size = AUDIO_CAPTURE_PERIOD_SIZE,
     .period_count = AUDIO_CAPTURE_PERIOD_COUNT,
     .format = PCM_FORMAT_S16_LE,
 };
@@ -817,19 +816,19 @@ static size_t get_input_buffer_size(uint32_t sample_rate,
 {
     size_t size = 0;
 
-    if (check_input_parameters(sample_rate, format, channel_count) != 0) return 0;
+    if (check_input_parameters(sample_rate, format, channel_count) != 0)
+        return 0;
 
-    if (sample_rate == 8000 || sample_rate == 16000 || sample_rate == 32000) {
-        size = (sample_rate * 20) / 1000;
-    } else if (sample_rate == 11025 || sample_rate == 12000) {
-        size = 256;
-    } else if (sample_rate == 22050 || sample_rate == 24000) {
-        size = 512;
-    } else if (sample_rate == 44100 || sample_rate == 48000) {
-        size = 1024;
-    }
+    size = (sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC) / 1000;
+    /* ToDo: should use frame_size computed based on the format and
+       channel_count here. */
+    size *= sizeof(short) * channel_count;
 
-    return size * sizeof(short) * channel_count;
+    /* make sure the size is multiple of 64 */
+    size += 0x3f;
+    size &= ~0x3f;
+
+    return size;
 }
 
 static uint32_t out_get_sample_rate(const struct audio_stream *stream)
