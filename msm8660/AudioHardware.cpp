@@ -36,7 +36,9 @@
 #ifdef QCOM_ACDB_ENABLED
 #include <linux/msm_audio_acdb.h>
 #endif
+#ifdef QCOM_VOIP_ENABLED
 #include <linux/msm_audio_mvs.h>
+#endif
 #include <sys/mman.h>
 #include "control.h"
 #include "acdb.h"
@@ -1869,7 +1871,7 @@ static status_t do_route_audio_rpc(uint32_t device,
         ALOGI("In SPEAKER_TX cur_rx = %d\n", cur_rx);
     }
 #ifdef SAMSUNG_AUDIO
-#if 0
+#ifdef USE_SAMSUNG_VOIP_DEVICE
     else if (device == SND_DEVICE_VOIP_HANDSET) {
         new_rx_device = DEVICE_HANDSET_VOIP_RX;
         new_tx_device = DEVICE_HANDSET_VOIP_TX;
@@ -2574,7 +2576,7 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input)
             ALOGD("Routing audio to Call Headset\n");
             sndDevice = SND_DEVICE_CALL_HEADSET;
         }
-#if 0
+#ifdef USE_SAMSUNG_VOIP_DEVICE
     } else if (mMode == AudioSystem::MODE_IN_COMMUNICATION) {
         if (sndDevice == SND_DEVICE_HANDSET) {
             ALOGD("Routing audio to VOIP handset\n");
