@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2012, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -10,7 +10,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of Code Aurora Forum, Inc. nor the names of its
+ *   * Neither the name of The Linux Foundation nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -35,6 +35,11 @@
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
+
+#ifndef ANDROID
+#include <stdint.h>
+#define strlcat g_strlcat
+#endif
 
 #include "alsa_ucm.h"
 #include "msm8960_use_cases.h"
@@ -208,7 +213,6 @@ static int process_cmd(char *cmdStr)
             fprintf(stderr, "%s: error failed to open sound card %s: %d\n", cmd->cmd_str, identifier, err);
             return err;
         }
-        snd_use_case_mgr_wait_for_parsing(uc_mgr);
         break;
 
     case UCM_LISTCARDS:

@@ -1,6 +1,6 @@
 /*
 ** Copyright 2010, The Android Open-Source Project
-** Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+** Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
 ** you may not use this file except in compliance with the License.
@@ -28,6 +28,10 @@
 #include <getopt.h>
 #include <limits.h>
 
+#include <sound/asound.h>
+#include <sound/compress_params.h>
+#include <sound/compress_offload.h>
+
 #include "alsa_audio.h"
 
 #define ID_RIFF 0x46464952
@@ -42,17 +46,20 @@
 #define strlcpy g_strlcpy
 #endif
 
+#define COMPR_META_DATA_SIZE	64
 static struct wav_header hdr;
 static int fd;
 static struct pcm *pcm;
-static int debug = 0;
-static int pcm_flag = 1;
-static int duration = 0;
+static debug = 0;
+static pcm_flag = 1;
+static duration = 0;
 static char *filename;
 static char *data;
 static int format = SNDRV_PCM_FORMAT_S16_LE;
 static int period = 0;
 static int piped = 0;
+static int compressed = 0;
+static char *compr_codec;
 
 static struct option long_options[] =
 {
@@ -65,6 +72,7 @@ static struct option long_options[] =
     {"duration", 1, 0, 'T'},
     {"format", 1, 0, 'F'},
     {"period", 1, 0, 'B'},
+    {"compressed", 1, 0, 'K'},
     {0, 0, 0, 0}
 };
 
@@ -177,7 +185,7 @@ static int set_params(struct pcm *pcm)
 
 int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsigned flags, const char *device)
 {
-    unsigned xfer, bufsize;
+    unsigned xfer, bufsize, framesize;
     int r, avail;
     int nfds = 1;
     static int start = 0;
@@ -187,7 +195,7 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
     int err;
     struct pollfd pfd[1];
     int rec_size = 0;
-
+    framesize = 0;
     flags |= PCM_IN;
 
     if (channels == 1)
@@ -203,6 +211,41 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
     if (!pcm_ready(pcm)) {
         pcm_close(pcm);
         goto fail;
+    }
+
+    if (compressed) {
+       struct snd_compr_caps compr_cap;
+       struct snd_compr_params compr_params;
+       printf("SNDRV_COMPRESS_GET_CAPS= 0x%X\n", SNDRV_COMPRESS_GET_CAPS);
+       if (ioctl(pcm->fd, SNDRV_COMPRESS_GET_CAPS, &compr_cap)) {
+          fprintf(stderr, "AREC: SNDRV_COMPRESS_GET_CAPS, failed Error no %d \n", errno);
+          pcm_close(pcm);
+          return -errno;
+       }
+       if (!period)
+           period = compr_cap.min_fragment_size;
+           switch (get_compressed_format(compr_codec)) {
+           case SND_AUDIOCODEC_MP3:
+               compr_params.codec.id = SND_AUDIOCODEC_MP3;
+               break;
+           case SND_AUDIOCODEC_AC3_PASS_THROUGH:
+               compr_params.codec.id = SND_AUDIOCODEC_AC3_PASS_THROUGH;
+               printf("codec -d = %x\n", compr_params.codec.id);
+               break;
+           case SND_AUDIOCODEC_AMRWB:
+               compr_params.codec.id = SND_AUDIOCODEC_AMRWB;
+               compr_params.codec.options.generic.reserved[0] = 8; /*band mode - 23.85 kbps*/
+               compr_params.codec.options.generic.reserved[1] = 0; /*dtx mode - disable*/
+               printf("codec -d = %x\n", compr_params.codec.id);
+               break;
+           default:
+               break;
+           }
+       if (ioctl(pcm->fd, SNDRV_COMPRESS_SET_PARAMS, &compr_params)) {
+          fprintf(stderr, "AREC: SNDRV_COMPRESS_SET_PARAMS,failed Error no %d \n", errno);
+          pcm_close(pcm);
+          return -errno;
+       }
     }
     pcm->channels = channels;
     pcm->rate = rate;
@@ -248,17 +291,18 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
         }
 
         bufsize = pcm->period_size;
+
         if (debug)
-	    fprintf(stderr, "Arec:bufsize = %d\n", bufsize);
+            fprintf(stderr, "Arec:bufsize = %d\n", bufsize);
         if (ioctl(pcm->fd, SNDRV_PCM_IOCTL_START)) {
-		if (errno == EPIPE) {
+            if (errno == EPIPE) {
 			fprintf(stderr, "Arec:Failed in SNDRV_PCM_IOCTL_START\n");
 			/* we failed to make our window -- try to restart */
 			pcm->running = 0;
-		} else {
-			fprintf(stderr, "Arec:Error no %d \n", errno);
-			return -errno;
-		}
+            } else {
+                fprintf(stderr, "Arec:Error no %d \n", errno);
+                return -errno;
+            }
         }
 
         pfd[0].fd = pcm->fd;
@@ -276,20 +320,20 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
         }
         x.frames = frames;
         for(;;) {
-		if (!pcm->running) {
-                    if (pcm_prepare(pcm))
-                        return --errno;
-                    start = 0;
-                }
-                /* Sync the current Application pointer from the kernel */
-		pcm->sync_ptr->flags = SNDRV_PCM_SYNC_PTR_APPL | SNDRV_PCM_SYNC_PTR_AVAIL_MIN;//SNDRV_PCM_SYNC_PTR_HWSYNC;
-                err = sync_ptr(pcm);
-                if (err == EPIPE) {
-                     fprintf(stderr, "Arec:Failed in sync_ptr \n");
-                     /* we failed to make our window -- try to restart */
-                     //pcm->overruns++;
-                     pcm->running = 0;
-                     continue;
+            if (!pcm->running) {
+                if (pcm_prepare(pcm))
+                    return --errno;
+                start = 0;
+            }
+            /* Sync the current Application pointer from the kernel */
+            pcm->sync_ptr->flags = SNDRV_PCM_SYNC_PTR_APPL | SNDRV_PCM_SYNC_PTR_AVAIL_MIN;/*SNDRV_PCM_SYNC_PTR_HWSYNC;*/
+            err = sync_ptr(pcm);
+            if (err == EPIPE) {
+                fprintf(stderr, "Arec:Failed in sync_ptr \n");
+                /* we failed to make our window -- try to restart */
+                //pcm->overruns++;
+                pcm->running = 0;
+                continue;
                 }
                /*
                 * Check for the available data in driver. If available data is
@@ -297,14 +341,16 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
                 */
                 avail = pcm_avail(pcm);
                 if (debug)
-                     fprintf(stderr, "Arec:avail 1 = %d frames = %ld\n",avail, frames);
+                     fprintf(stderr, "Arec:avail 1 = %d frames = %ld, avail_min = %d,"
+                             "x.frames = %d, bufsize = %d, dst_addr = %p\n",avail, frames,
+                             (int)pcm->sw_p->avail_min, (int)x.frames, bufsize, dst_addr);
                 if (avail < 0)
                         return avail;
                 if (avail < pcm->sw_p->avail_min) {
                         poll(pfd, nfds, TIMEOUT_INFINITE);
                         continue;
                 }
-	 	if (x.frames > avail)
+                if (x.frames > avail)
                         frames = avail;
                /*
                 * Now that we have data size greater than avail_min available to
@@ -312,18 +358,31 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
                 * start reading from.
                 */
                 dst_addr = dst_address(pcm);
+                if (compressed) {
+                    framesize =  (unsigned)(dst_addr[3] << 24) + (unsigned)(dst_addr[2] << 16) +
+                        (unsigned) (dst_addr[1] << 8) + (unsigned)dst_addr[0];
+                    if (debug)
+                        fprintf(stderr, "Arec:dst_addr[0] = %d, dst_addr[1] = %d,"
+                            "dst_addr[2] = %d, dst_addr[3] = %d, dst_addr[4] = %d,"
+                            "dst_addr[5] = %d, dst_addr = %p, bufsize = %d, framesize = %d\n",
+                            dst_addr[0], dst_addr[1], dst_addr[2], dst_addr[3], dst_addr[4],
+                            dst_addr[5],dst_addr,  bufsize, framesize);
+                    dst_addr += COMPR_META_DATA_SIZE;
+                } else {
+                    framesize = bufsize;
+                }
 
                /*
                 * Write to the file at the destination address from kernel mmaped buffer
                 * This reduces a extra copy of intermediate buffer.
                 */
-                if (write(fd, dst_addr, bufsize) != bufsize) {
-                    fprintf(stderr, "Arec:could not write %d bytes\n", bufsize);
+                if (write(fd, dst_addr, framesize) != framesize) {
+                    fprintf(stderr, "Arec:could not write %d bytes\n", framesize);
                     return -errno;
                 }
                 x.frames -= frames;
                 pcm->sync_ptr->c.control.appl_ptr += frames;
-		pcm->sync_ptr->flags = 0;
+                pcm->sync_ptr->flags = 0;
                 err = sync_ptr(pcm);
                 if (err == EPIPE) {
                      fprintf(stderr, "Arec:Failed in sync_ptr \n");
@@ -332,12 +391,14 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
                      continue;
                 }
                 rec_size += bufsize;
-                hdr.data_sz += bufsize;
-                hdr.riff_sz = hdr.data_sz + 44 - 8;
-                if (!piped) {
-                    lseek(fd, 0, SEEK_SET);
-                    write(fd, &hdr, sizeof(hdr));
-                    lseek(fd, 0, SEEK_END);
+                if (!compressed) {
+                    hdr.data_sz += bufsize;
+                    hdr.riff_sz = hdr.data_sz + 44 - 8;
+                    if (!piped) {
+                        lseek(fd, 0, SEEK_SET);
+                        write(fd, &hdr, sizeof(hdr));
+                        lseek(fd, 0, SEEK_END);
+                    }
                 }
                 if (rec_size >= count)
                       break;
@@ -391,7 +452,7 @@ int rec_raw(const char *fg, const char *device, int rate, int ch,
     uint32_t rec_max_sz = 2147483648LL;
     uint32_t count;
     int i = 0;
-
+    printf("rec_raw-> pcm_flag = %d\n", pcm_flag);
     if (!fn) {
         fd = fileno(stdout);
         piped = 1;
@@ -427,53 +488,60 @@ int rec_wav(const char *fg, const char *device, int rate, int ch, const char *fn
     uint32_t rec_max_sz = 2147483648LL;
     uint32_t count = 0;
     int i = 0;
-
+    printf("rec_wav-> pcm_flag = %d\n", pcm_flag);
     if (pcm_flag) {
-            if (!fn) {
-              fd = fileno(stdout);
-              piped = 1;
-            } else {
-	       fd = open(fn, O_WRONLY | O_CREAT | O_TRUNC, 0664);
-	       if (fd < 0) {
-	            fprintf(stderr, "Arec:arec: cannot open '%s'\n", fn);
-		    return -EBADFD;
-	       }
+        if (!fn) {
+            fd = fileno(stdout);
+            piped = 1;
+        } else {
+            fd = open(fn, O_WRONLY | O_CREAT | O_TRUNC, 0664);
+            if (fd < 0) {
+                fprintf(stderr, "Arec:arec: cannot open '%s'\n", fn);
+                return -EBADFD;
             }
-	    memset(&hdr, 0, sizeof(struct wav_header));
-	    hdr.riff_id = ID_RIFF;
-	    hdr.riff_fmt = ID_WAVE;
-	    hdr.fmt_id = ID_FMT;
-	    hdr.fmt_sz = 16;
-	    hdr.audio_format = FORMAT_PCM;
-	    hdr.num_channels = ch;
-	    hdr.sample_rate = rate;
-            hdr.bits_per_sample = 16;
-            hdr.byte_rate = (rate * ch * hdr.bits_per_sample) / 8;
-            hdr.block_align = ( hdr.bits_per_sample * ch ) / 8;
-	    hdr.data_id = ID_DATA;
-	    hdr.data_sz = 0;
+        }
+        if (compressed) {
 
-            if (duration == 0) {
-                count = rec_max_sz;
-            } else {
-                count = rate * ch * 2;
-                count *= (uint32_t)duration;
-            }
-            hdr.riff_sz = hdr.data_sz + 44 - 8;
-	    if (write(fd, &hdr, sizeof(hdr)) != sizeof(hdr)) {
-		if (debug)
-		    fprintf(stderr, "arec: cannot write header\n");
-		return -errno;
-	    }
-	    if (debug)
-		fprintf(stderr, "arec: %d ch, %d hz, %d bit, %s\n",
-		    hdr.num_channels, hdr.sample_rate, hdr.bits_per_sample,
-		    hdr.audio_format == FORMAT_PCM ? "PCM" : "unknown");
-    } else {
+            printf("rec_wav-> compressed = %d\n", compressed);
             hdr.sample_rate = rate;
             hdr.num_channels = ch;
+            goto ignore_header;
+        }
+        memset(&hdr, 0, sizeof(struct wav_header));
+        hdr.riff_id = ID_RIFF;
+        hdr.riff_fmt = ID_WAVE;
+        hdr.fmt_id = ID_FMT;
+        hdr.fmt_sz = 16;
+        hdr.audio_format = FORMAT_PCM;
+        hdr.num_channels = ch;
+        hdr.sample_rate = rate;
+        hdr.bits_per_sample = 16;
+        hdr.byte_rate = (rate * ch * hdr.bits_per_sample) / 8;
+        hdr.block_align = ( hdr.bits_per_sample * ch ) / 8;
+        hdr.data_id = ID_DATA;
+        hdr.data_sz = 0;
+        hdr.riff_sz = hdr.data_sz + 44 - 8;
+        if (write(fd, &hdr, sizeof(hdr)) != sizeof(hdr)) {
+            if (debug)
+                fprintf(stderr, "arec: cannot write header\n");
+            return -errno;
+        }
+        if (debug)
+            fprintf(stderr, "arec: %d ch, %d hz, %d bit, %s\n",
+                    hdr.num_channels, hdr.sample_rate, hdr.bits_per_sample,
+                    hdr.audio_format == FORMAT_PCM ? "PCM" : "unknown");
+    } else {
+        hdr.sample_rate = rate;
+        hdr.num_channels = ch;
     }
+ignore_header:
 
+   if (duration == 0) {
+        count = rec_max_sz;
+    } else {
+          count = rate * ch * 2;
+          count *= (uint32_t)duration;
+    }
     if (!strncmp(fg, "M", sizeof("M"))) {
         flag = PCM_MMAP;
     } else if (!strncmp(fg, "N", sizeof("N"))) {
@@ -521,25 +589,26 @@ int main(int argc, char **argv)
     int rc = 0;
 
     if (argc < 2) {
-          printf("\nUsage: arec [options] <file>\n"
-                "options:\n"
-                "-D <hw:C,D>	-- Alsa PCM by name\n"
-                "-M		-- Mmap stream\n"
-                "-P		-- Hostless steam[No PCM]\n"
-                "-V		-- verbose\n"
-                "-C		-- Channels\n"
-                "-R		-- Rate\n"
-                "-T		-- Time in seconds for recording\n"
-		"-F             -- Format\n"
-                "-B             -- Period\n"
-                "<file> \n");
+        printf("\nUsage: arec [options] <file>\n"
+              "options:\n"
+              "-D <hw:C,D>        -- Alsa PCM by name\n"
+              "-M     -- Mmap stream\n"
+              "-P     -- Hostless steam[No PCM]\n"
+              "-V     -- verbose\n"
+              "-C     -- Channels\n"
+              "-R     -- Rate\n"
+              "-T     -- Time in seconds for recording\n"
+              "-F     -- Format\n"
+              "-B     -- Period\n"
+              "-K <AC3,DTS,etc>   -- compressed\n"
+              "<file> \n");
            for (i = 0; i < SNDRV_PCM_FORMAT_LAST; ++i)
                if (get_format_name(i))
                    fprintf(stderr, "%s ", get_format_name(i));
            fprintf(stderr, "\nSome of these may not be available on selected hardware\n");
           return 0;
     }
-    while ((c = getopt_long(argc, argv, "PVMD:R:C:T:F:B:", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, argv, "PVMD:R:C:T:F:B:K:", long_options, &option_index)) != -1) {
        switch (c) {
        case 'P':
           pcm_flag = 0;
@@ -568,18 +637,24 @@ int main(int argc, char **argv)
        case 'B':
           period = (int)strtol(optarg, NULL, 0);
           break;
+       case 'K':
+          compressed = 1;
+          printf("compressed codec type requested = %s\n", optarg);
+          compr_codec = optarg;
+          break;
        default:
           printf("\nUsage: arec [options] <file>\n"
                 "options:\n"
-                "-D <hw:C,D>	-- Alsa PCM by name\n"
-                "-M		-- Mmap stream\n"
-                "-P		-- Hostless steam[No PCM]\n"
-                "-V		-- verbose\n"
-                "-C		-- Channels\n"
-                "-R		-- Rate\n"
-                "-T		-- Time in seconds for recording\n"
-		"-F             -- Format\n"
-                "-B             -- Period\n"
+                "-D <hw:C,D>        -- Alsa PCM by name\n"
+                "-M     -- Mmap stream\n"
+                "-P     -- Hostless steam[No PCM]\n"
+                "-V     -- verbose\n"
+                "-C     -- Channels\n"
+                "-R     -- Rate\n"
+                "-T     -- Time in seconds for recording\n"
+                "-F     -- Format\n"
+                "-B     -- Period\n"
+                "-K <AC3,DTS,etc>   -- compressed\n"
                 "<file> \n");
            for (i = 0; i < SNDRV_PCM_FORMAT_LAST; ++i)
                if (get_format_name(i))

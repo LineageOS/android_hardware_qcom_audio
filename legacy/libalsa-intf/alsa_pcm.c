@@ -1,6 +1,6 @@
 /*
 ** Copyright 2010, The Android Open-Source Project
-** Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+** Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
 ** you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@
 #include <sys/poll.h>
 #include <linux/ioctl.h>
 #include <linux/types.h>
-
+#include <sound/compress_params.h>
 #include "alsa_audio.h"
 
 #define __force
@@ -78,7 +78,7 @@ enum format_alias {
       IMA_ADPCM,
       MPEG,
       GSM,
-      SPECIAL = 31, 
+      SPECIAL = 31,
       S24_3LE,
       S24_3BE,
       U24_3LE,
@@ -118,7 +118,7 @@ const char *formats_list[][2] = {
         {"A_LAW", "A-Law"},
         {"IMA_ADPCM", "Ima-ADPCM"},
         {"MPEG", "MPEG"},
-        {"GSM", "GSM"}, 
+        {"GSM", "GSM"},
         [31] = {"SPECIAL", "Special"},
         {"S24_3LE", "Signed 24 bit Little Endian in 3bytes"},
         {"S24_3BE", "Signed 24 bit Big Endian in 3bytes"},
@@ -133,6 +133,18 @@ const char *formats_list[][2] = {
         {"U18_3LE", "Unsigned 18 bit Little Endian in 3bytes"},
         {"U18_3BE", "Unsigned 18 bit Big Endian in 3bytes"},
 };
+enum decoder_alias {
+    FORMAT_MP3              = SND_AUDIOCODEC_MP3,
+    FORMAT_AAC              = SND_AUDIOCODEC_AAC,
+    FORMAT_AC3_PASS_THROUGH = SND_AUDIOCODEC_AC3_PASS_THROUGH,
+    FORMAT_WMA              = SND_AUDIOCODEC_WMA,
+    FORMAT_WMA_PRO          = SND_AUDIOCODEC_WMA_PRO,
+    FORMAT_DTS              = SND_AUDIOCODEC_DTS,
+    FORMAT_DTS_LBR          = SND_AUDIOCODEC_DTS_LBR,
+    FORMAT_DTS_PASS_THROUGH = SND_AUDIOCODEC_DTS_PASS_THROUGH,
+    FORMAT_AMRWB            = SND_AUDIOCODEC_AMRWB,
+    FORMAT_AMRWB_PLUS       = SND_AUDIOCODEC_AMRWBPLUS
+};
 
 int get_compressed_format(const char *format)
 {
@@ -143,6 +155,30 @@ int get_compressed_format(const char *format)
         } else if (strcmp(ch, "AC3_PASS_THROUGH") == 0) {
                 printf("AC3 PASS THROUGH is selected\n");
                 return FORMAT_AC3_PASS_THROUGH;
+        } else if (strcmp(ch, "AAC") == 0) {
+                printf("AAC is selected\n");
+                return FORMAT_AAC;
+        } else if (strcmp(ch, "AC3_PASS_THROUGH") == 0) {
+                printf("AC3_PASS_THROUGH is selected\n");
+                return FORMAT_AC3_PASS_THROUGH;
+        } else if (strcmp(ch, "WMA") == 0) {
+                printf("WMA is selected\n");
+                return FORMAT_WMA;
+        }else if (strcmp(ch, "WMA_PRO") == 0) {
+                printf("WMA_PRO is selected\n");
+                return FORMAT_WMA_PRO;
+        }else if (strcmp(ch, "DTS") == 0) {
+                printf("DTS is selected\n");
+                return FORMAT_DTS;
+        } else if (strcmp(ch, "DTS_LBR") == 0) {
+                printf("DTS_LBR is selected\n");
+                return FORMAT_DTS_LBR;
+        } else if (strcmp(ch, "AMR_WB") == 0) {
+                printf("AMR_WB is selected\n");
+                return FORMAT_AMRWB;
+        }else if (strcmp(ch, "AMR_WB_PLUS") == 0) {
+                printf("FORMAT_AMRWB_PLUS is selected\n");
+                return FORMAT_AMRWB_PLUS;
         } else {
                 printf("invalid format\n");
                 return -1;
@@ -409,7 +445,20 @@ long pcm_avail(struct pcm *pcm)
                 avail += pcm->sw_p->boundary;
         return avail;
      } else {
-         long avail = sync_ptr->s.status.hw_ptr - sync_ptr->c.control.appl_ptr + ((pcm->flags & PCM_MONO) ? pcm->buffer_size/2 : pcm->buffer_size/4);
+         int buffer_size = 0;
+         long avail;
+         if(pcm->flags & PCM_MONO)
+             buffer_size = pcm->buffer_size/2;
+         else if(pcm->flags & PCM_QUAD)
+             buffer_size = pcm->buffer_size/8;
+         else if(pcm->flags & PCM_5POINT1)
+             buffer_size = pcm->buffer_size/12;
+         else if(pcm->flags & PCM_7POINT1)
+             buffer_size = pcm->buffer_size/16;
+         else
+             buffer_size = pcm->buffer_size/4;
+
+         avail = sync_ptr->s.status.hw_ptr - sync_ptr->c.control.appl_ptr + buffer_size;
          if (avail < 0)
               avail += pcm->sw_p->boundary;
          else if ((unsigned long) avail >= pcm->sw_p->boundary)
@@ -437,7 +486,18 @@ int mmap_buffer(struct pcm *pcm)
     char *ptr;
     unsigned size;
     struct snd_pcm_channel_info ch;
-    int channels = (pcm->flags & PCM_MONO) ? 1 : 2;
+    int channels;
+
+    if(pcm->flags & PCM_MONO)
+        channels = 1;
+    else if(pcm->flags & PCM_QUAD)
+        channels = 4;
+    else if(pcm->flags & PCM_5POINT1)
+        channels = 6;
+    else if(pcm->flags & PCM_7POINT1)
+        channels = 8;
+    else
+        channels = 2;
 
     size = pcm->buffer_size;
     if (pcm->flags & DEBUG_ON)
@@ -461,8 +521,19 @@ u_int8_t *dst_address(struct pcm *pcm)
     unsigned long pcm_offset = 0;
     struct snd_pcm_sync_ptr *sync_ptr = pcm->sync_ptr;
     unsigned int appl_ptr = 0;
+    int channels;
+    if(pcm->flags & PCM_MONO)
+        channels = 1;
+    else if(pcm->flags & PCM_QUAD)
+        channels = 4;
+    else if(pcm->flags & PCM_5POINT1)
+        channels = 6;
+    else if(pcm->flags & PCM_7POINT1)
+        channels = 8;
+    else
+        channels = 2;
 
-    appl_ptr = (pcm->flags & PCM_MONO) ? sync_ptr->c.control.appl_ptr*2 : sync_ptr->c.control.appl_ptr*4;
+    appl_ptr = sync_ptr->c.control.appl_ptr*2*channels;
     pcm_offset = (appl_ptr % (unsigned long)pcm->buffer_size);
     return pcm->addr + pcm_offset;
 
@@ -475,7 +546,17 @@ int mmap_transfer(struct pcm *pcm, void *data, unsigned offset,
     unsigned size;
     u_int8_t *dst_addr, *mmaped_addr;
     u_int8_t *src_addr = data;
-    int channels = (pcm->flags & PCM_MONO) ? 1 : 2;
+    int channels;
+    if(pcm->flags & PCM_MONO)
+        channels = 1;
+    else if(pcm->flags & PCM_QUAD)
+        channels = 4;
+    else if(pcm->flags & PCM_5POINT1)
+        channels = 6;
+    else if(pcm->flags & PCM_7POINT1)
+        channels = 8;
+    else
+        channels = 2;
 
     dst_addr = dst_address(pcm);
 
@@ -497,9 +578,20 @@ int mmap_transfer_capture(struct pcm *pcm, void *data, unsigned offset,
     unsigned size;
     u_int8_t *dst_addr, *mmaped_addr;
     u_int8_t *src_addr;
-    int channels = (pcm->flags & PCM_MONO) ? 1 : 2;
-    unsigned int tmp = (pcm->flags & PCM_MONO) ? sync_ptr->c.control.appl_ptr*2 : sync_ptr->c.control.appl_ptr*4;
+    int channels;
+    unsigned int tmp;
 
+    if(pcm->flags & PCM_MONO)
+        channels = 1;
+    else if(pcm->flags & PCM_QUAD)
+        channels = 4;
+    else if(pcm->flags & PCM_5POINT1)
+        channels = 6;
+    else if(pcm->flags & PCM_7POINT1)
+        channels = 8;
+    else
+        channels = 2;
+    tmp = sync_ptr->c.control.appl_ptr*2*channels;
     pcm_offset = (tmp % (unsigned long)pcm->buffer_size);
     dst_addr = data;
     src_addr = pcm->addr + pcm_offset;
@@ -528,8 +620,18 @@ static int pcm_write_mmap(struct pcm *pcm, void *data, unsigned count)
     long frames;
     int err;
     int bytes_written;
-
-    frames = (pcm->flags & PCM_MONO) ? (count / 2) : (count / 4);
+    int channels;
+    if(pcm->flags & PCM_MONO)
+        channels = 1;
+    else if(pcm->flags & PCM_QUAD)
+        channels = 4;
+    else if(pcm->flags & PCM_5POINT1)
+        channels = 6;
+    else if(pcm->flags & PCM_7POINT1)
+        channels = 8;
+    else
+        channels = 2;
+    frames = count / (2*channels);
 
     pcm->sync_ptr->flags = SNDRV_PCM_SYNC_PTR_APPL | SNDRV_PCM_SYNC_PTR_AVAIL_MIN;
     err = sync_ptr(pcm);
@@ -576,7 +678,17 @@ static int pcm_write_mmap(struct pcm *pcm, void *data, unsigned count)
 static int pcm_write_nmmap(struct pcm *pcm, void *data, unsigned count)
 {
     struct snd_xferi x;
-    int channels = (pcm->flags & PCM_MONO) ? 1 : ((pcm->flags & PCM_5POINT1)? 6 : 2 );
+    int channels;
+    if(pcm->flags & PCM_MONO)
+        channels = 1;
+    else if(pcm->flags & PCM_QUAD)
+        channels = 4;
+    else if(pcm->flags & PCM_5POINT1)
+        channels = 6;
+    else if(pcm->flags & PCM_7POINT1)
+        channels = 8;
+    else
+        channels = 2;
 
     if (pcm->flags & PCM_IN)
         return -EINVAL;
@@ -626,6 +738,8 @@ int pcm_read(struct pcm *pcm, void *data, unsigned count)
         x.frames = (count / 8);
     } else if (pcm->flags & PCM_5POINT1) {
         x.frames = (count / 12);
+    } else if (pcm->flags & PCM_7POINT1) {
+        x.frames = (count / 16);
     } else {
         x.frames = (count / 4);
     }
@@ -646,6 +760,20 @@ int pcm_read(struct pcm *pcm, void *data, unsigned count)
                 ALOGE("Arec:Overrun Error\n");
                 pcm->underruns++;
                 pcm->running = 0;
+                continue;
+            } else if (errno == ESTRPIPE) {
+                ALOGV("Resume from suspended\n");
+                for (;;) {
+                    if (ioctl(pcm->fd, SNDRV_PCM_IOCTL_RESUME)) {
+                        if (errno == EAGAIN ) {
+                            if (pcm_prepare(pcm))
+                                return -errno;
+                        }
+                        /* send resume command again */
+                        continue;
+                    } else
+                        break;
+                }
                 continue;
             }
             ALOGE("Arec: error%d\n", errno);
@@ -853,4 +981,49 @@ struct pcm *pcm_open(unsigned flags, char *device)
 int pcm_ready(struct pcm *pcm)
 {
     return pcm->fd >= 0;
+}
+
+int pcm_set_channel_map(struct pcm *pcm, struct mixer *mixer,
+                        int max_channels, char *chmap)
+{
+    struct mixer_ctl *ctl;
+    char control_name[44]; // max length of name is 44 as defined
+    char device_num[3]; // device number upto 2 digit
+    char **set_values;
+    int i;
+
+    ALOGV("pcm_set_channel_map");
+    set_values = (char**)malloc(max_channels*sizeof(char*));
+    if(set_values) {
+        for(i=0; i< max_channels; i++) {
+            set_values[i] = (char*)malloc(4*sizeof(char));
+            if(set_values[i]) {
+                sprintf(set_values[i],"%d",chmap[i]);
+            } else {
+                ALOGE("memory allocation for set channel map failed");
+                return -1;
+            }
+        }
+    } else {
+        ALOGE("memory allocation for set channel map failed");
+        return -1;
+    }
+    strlcpy(control_name, "Playback Channel Map", sizeof(control_name));
+    if(pcm != NULL) {
+        sprintf(device_num, "%d", pcm->device_no);
+        strcat(control_name, device_num);
+    }
+    ALOGV("pcm_set_channel_map: control name:%s", control_name);
+    ctl = mixer_get_control(mixer, control_name, 0);
+    if(ctl == NULL) {
+        ALOGE("Could not get the mixer control\n");
+        return -1;
+    }
+    mixer_ctl_set_value(ctl, max_channels, set_values);
+    for(i=0; i< max_channels; i++)
+        if(set_values[i])
+            free(set_values[i]);
+    if(set_values)
+        free(set_values);
+    return 0;
 }

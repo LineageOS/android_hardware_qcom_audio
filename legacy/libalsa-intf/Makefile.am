@@ -27,15 +27,26 @@ libalsa_intf_la_SOURCES = $(c_sources) $(h_sources)
 libalsa_intfdir = $(prefix)/snd_soc_msm
 dist_libalsa_intf_DATA    = snd_soc_msm/snd_soc_msm \
                             snd_soc_msm/snd_soc_msm_2x \
+                            snd_soc_msm/snd_soc_msm_2x_mpq \
                             snd_soc_msm/snd_soc_msm_2x_Fusion3 \
-                            snd_soc_msm/snd_soc_msm_Sitar
+                            snd_soc_msm/snd_soc_msm_Sitar \
+                            snd_soc_msm/snd_soc_msm_Sitar_Sglte \
+                            snd_soc_msm/snd_soc_msm_I2S \
+                            snd_soc_msm/snd_soc_msm_auxpcm \
+                            snd_soc_msm/snd_soc_msm_2x_auxpcm \
+                            snd_soc_msm/snd_soc_msm_2x_mpq_auxpcm \
+                            snd_soc_msm/snd_soc_msm_2x_Fusion3_auxpcm \
+                            snd_soc_msm/snd_soc_msm_Sitar_auxpcm \
+                            snd_soc_msm/snd_soc_msm_I2SFusion \
+                            snd_soc_msm/snd_soc_msm_Taiko \
+                            snd_soc_msm/snd_soc_msm_Taiko_liquid
 libalsa_intf_la_CFLAGS = $(AM_CFLAGS) -DUSE_GLIB @GLIB_CFLAGS@ -DCONFIG_DIR=\"/etc/snd_soc_msm/\"
 libalsa_intf_la_CPPFLAGS = $(AM_CPPFLAGS) -DUSE_GLIB @GLIB_CFLAGS@
 libalsa_intf_la_LDFLAGS = $(ACDBLOADER_LIBS) -lm -lpthread @GLIB_LIBS@ -shared -version-info 1:0:0
 
 requiredlibs = libalsa_intf.la
 
-bin_PROGRAMS = aplay amix arec
+bin_PROGRAMS = aplay amix arec alsaucm_test
 
 aplay_SOURCES = aplay.c
 aplay_LDADD = -lpthread $(requiredlibs)
@@ -45,3 +56,6 @@ amix_LDADD = -lpthread $(requiredlibs)
 
 arec_SOURCES = arec.c
 arec_LDADD = -lpthread $(requiredlibs)
+
+alsaucm_test_SOURCES = alsaucm_test.c
+alsaucm_test_LDADD = -lpthread $(requiredlibs)

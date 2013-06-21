@@ -1,5 +1,6 @@
 /* AudioUsbALSA.cpp
-Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+
+Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -10,7 +11,7 @@ met:
       copyright notice, this list of conditions and the following
       disclaimer in the documentation and/or other materials provided
       with the distribution.
-    * Neither the name of Code Aurora Forum, Inc. nor the names of its
+    * Neither the name of The Linux Foundation nor the names of its
       contributors may be used to endorse or promote products derived
       from this software without specific prior written permission.
 
@@ -49,11 +50,31 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "AudioUsbALSA.h"
 struct pollfd pfdProxyPlayback[2];
 struct pollfd pfdUsbPlayback[2];
-struct pollfd pfdProxyRecording[1];
-struct pollfd pfdUsbRecording[1];
+struct pollfd pfdProxyRecording[2];
+struct pollfd pfdUsbRecording[2];
 
 #define USB_PERIOD_SIZE 2048
 #define PROXY_PERIOD_SIZE 3072
+#define PROXY_SUPPORTED_RATE_8000 8000
+#define PROXY_SUPPORTED_RATE_16000 16000
+#define PROXY_SUPPORTED_RATE_48000 48000
+#define AFE_PROXY_PERIOD_COUNT 32
+//#define OUTPUT_PROXY_BUFFER_LOG
+//#define OUTPUT_RECORD_PROXY_BUFFER_LOG
+#ifdef OUTPUT_PROXY_BUFFER_LOG
+    FILE *outputBufferFile1;
+    char outputfilename [256] = "/data/usb_output_proxy";
+    char outputfilename1 [256] = "";
+    static int number = 0;
+#endif
+
+#ifdef OUTPUT_RECORD_PROXY_BUFFER_LOG
+    FILE *outputRecordBufferFile1;
+    char outputRecordfilename [256] = "/data/usb_record";
+    char outputRecordfilename1 [256] = "";
+
+    static int rNumber = 0;
+#endif
 
 namespace android_audio_legacy
 {
@@ -63,6 +84,11 @@ AudioUsbALSA::AudioUsbALSA()
     musbpfdPlayback = -1;
     mkillPlayBackThread = false;
     mkillRecordingThread = false;
+    musbRecordingHandle = NULL;
+    mproxyRecordingHandle = NULL;
+    musbPlaybackHandle  = NULL;
+    mproxyPlaybackHandle = NULL;
+    mProxySoundCard = 0;
 }
 
 AudioUsbALSA::~AudioUsbALSA()
@@ -117,7 +143,11 @@ status_t AudioUsbALSA::getCap(char * type, int &channels, int &sampleRate)
 
     fileSize = st.st_size;
 
-    read_buf = (char *)malloc(BUFFSIZE);
+    if ((read_buf = (char *)malloc(BUFFSIZE)) == NULL) {
+        ALOGE("ERROR: Unable to allocate memory to hold stream caps");
+        close(fd);
+        return NO_MEMORY;
+    }
     memset(read_buf, 0x0, BUFFSIZE);
     err = read(fd, read_buf, BUFFSIZE);
     str_start = strstr(read_buf, type);
@@ -175,8 +205,19 @@ status_t AudioUsbALSA::getCap(char * type, int &channels, int &sampleRate)
         return UNKNOWN_ERROR;
     }
     size = target - ratesStrStart;
-    ratesStr = (char *)malloc(size + 1) ;
-    ratesStrForVal = (char *)malloc(size + 1) ;
+    if ((ratesStr = (char *)malloc(size + 1)) == NULL) {
+        ALOGE("ERROR: Unable to allocate memory to hold sample rate strings");
+        close(fd);
+        free(read_buf);
+        return NO_MEMORY;
+    }
+    if ((ratesStrForVal = (char *)malloc(size + 1)) == NULL) {
+        ALOGE("ERROR: Unable to allocate memory to hold sample rate string");
+        close(fd);
+        free(ratesStr);
+        free(read_buf);
+        return NO_MEMORY;
+    }
     memcpy(ratesStr, ratesStrStart, size);
     memcpy(ratesStrForVal, ratesStrStart, size);
     ratesStr[size] = '\0';
@@ -205,16 +246,22 @@ status_t AudioUsbALSA::getCap(char * type, int &channels, int &sampleRate)
     }
 
     ratesSupported[0] = atoi(nextSRString);
+    ALOGV("ratesSupported[0] for playback: %d", ratesSupported[0]);
     for (i = 1; i<size; i++) {
         nextSRString = strtok_r(NULL, " ,.-", &temp_ptr);
         ratesSupported[i] = atoi(nextSRString);
-        ALOGV("ratesSupported[%d] for playback: %d",i, ratesSupported[i]);
+        ALOGD("ratesSupported[%d] for playback: %d",i, ratesSupported[i]);
     }
 
-    for (i = 0; i<=size; i++) {
-        if (ratesSupported[i] <= 48000) {
-            sampleRate = ratesSupported[i];
-            break;
+    for (i = 0; i<size; i++) {
+        if ((ratesSupported[i] > sampleRate) && (ratesSupported[i] <= 48000)) {
+            // Sample Rate should be one of the proxy supported rates only
+            // This is because proxy port is used to read from/write to DSP .
+            if ((ratesSupported[i] == PROXY_SUPPORTED_RATE_8000) ||
+                (ratesSupported[i] == PROXY_SUPPORTED_RATE_16000) ||
+                (ratesSupported[i] == PROXY_SUPPORTED_RATE_48000)) {
+                sampleRate = ratesSupported[i];
+            }
         }
     }
     ALOGD("sampleRate: %d", sampleRate);
@@ -231,43 +278,85 @@ status_t AudioUsbALSA::getCap(char * type, int &channels, int &sampleRate)
 
 void AudioUsbALSA::exitPlaybackThread(uint64_t writeVal)
 {
-    ALOGD("exitPlaybackThread, mproxypfdPlayback: %d", mproxypfdPlayback);
-    if (writeVal == SIGNAL_EVENT_KILLTHREAD) {
-        int err;
-
-        err = closeDevice(mproxyPlaybackHandle);
-        if (err) {
-            ALOGE("Info: Could not close proxy %p", mproxyPlaybackHandle);
-        }
-        err = closeDevice(musbPlaybackHandle);
-        if (err) {
-            ALOGE("Info: Could not close USB device %p", musbPlaybackHandle);
+#ifdef OUTPUT_PROXY_BUFFER_LOG
+    ALOGV("close file output");
+    if(outputBufferFile1)
+        fclose (outputBufferFile1);
+#endif
+    {
+        Mutex::Autolock autoLock(mLock);
+        ALOGD("exitPlaybackThread, mproxypfdPlayback: %d", mproxypfdPlayback);
+        mkillPlayBackThread = true;
+        if ((mproxypfdPlayback != -1) && (musbpfdPlayback != -1)) {
+            write(mproxypfdPlayback, &writeVal, sizeof(uint64_t));
+            write(musbpfdPlayback, &writeVal, sizeof(uint64_t));
         }
     }
-    if ((mproxypfdPlayback != -1) && (musbpfdPlayback != -1)) {
-        write(mproxypfdPlayback, &writeVal, sizeof(uint64_t));
-        write(musbpfdPlayback, &writeVal, sizeof(uint64_t));
-        mkillPlayBackThread = true;
-        pthread_join(mPlaybackUsb,NULL);
+    if(mPlaybackUsb) {
+        status_t ret = pthread_join(mPlaybackUsb,NULL);
+        ALOGE("return for pthreadjoin = %d", ret);
+        mPlaybackUsb = NULL;
+    }
+    if (writeVal == SIGNAL_EVENT_KILLTHREAD) {
+        int err;
+        {
+            Mutex::Autolock autoLock(mLock);
+            err = closeDevice(mproxyPlaybackHandle);
+            if (err) {
+                ALOGE("Info: Could not close proxy %p", mproxyPlaybackHandle);
+            }
+            err = closeDevice(musbPlaybackHandle);
+            if (err) {
+                ALOGE("Info: Could not close USB device %p", musbPlaybackHandle);
+            }
+        }
     }
 }
 
 void AudioUsbALSA::exitRecordingThread(uint64_t writeVal)
 {
+    //TODO: Need to use userspace fd to kill the thread.
+    // Not a valid assumption to blindly close the thread.
     ALOGD("exitRecordingThread");
-    if (writeVal == SIGNAL_EVENT_KILLTHREAD) {
-        int err;
+#ifdef OUTPUT_RECORD_PROXY_BUFFER_LOG
+    ALOGV("close file output");
+    if(outputRecordBufferFile1)
+        fclose (outputRecordBufferFile1);
+#endif
 
-        err = closeDevice(mproxyRecordingHandle);
-        if (err) {
-            ALOGE("Info: Could not close proxy for recording %p", mproxyRecordingHandle);
-        }
-        err = closeDevice(musbRecordingHandle);
-        if (err) {
-            ALOGE("Info: Could not close USB recording device %p", musbRecordingHandle);
+    mkillRecordingThread = true;
+    {
+        Mutex::Autolock autoRecordLock(mRecordLock);
+        if ((pfdProxyRecording[1].fd != -1) && (pfdUsbRecording[1].fd != -1)) {
+            ALOGD("write to fd");
+            write(pfdUsbRecording[1].fd, &writeVal, sizeof(uint64_t));
+            write(pfdProxyRecording[1].fd, &writeVal, sizeof(uint64_t));
         }
     }
-    mkillRecordingThread = true;
+
+    if(mRecordingUsb) {
+        int err = pthread_join(mRecordingUsb,NULL);
+        ALOGD("pthread join err = %d",err);
+        mRecordingUsb = NULL;
+    }
+    if (writeVal == SIGNAL_EVENT_KILLTHREAD ) {
+        int err;
+        {
+            Mutex::Autolock autoRecordLock(mRecordLock);
+            err = closeDevice(mproxyRecordingHandle);
+            if (err) {
+                ALOGE("Info: Could not close proxy for recording %p", mproxyRecordingHandle);
+            } else {
+                mproxyRecordingHandle = NULL;
+            }
+            err = closeDevice(musbRecordingHandle);
+            if (err) {
+                ALOGE("Info: Could not close USB recording device %p", musbRecordingHandle);
+            } else {
+                musbRecordingHandle = NULL;
+            }
+        }
+    }
 }
 
 void AudioUsbALSA::setkillUsbRecordingThread(bool val){
@@ -275,7 +364,8 @@ void AudioUsbALSA::setkillUsbRecordingThread(bool val){
     mkillRecordingThread = val;
 }
 
-status_t AudioUsbALSA::setHardwareParams(pcm *txHandle, uint32_t sampleRate, uint32_t channels, int periodBytes)
+status_t AudioUsbALSA::setHardwareParams(pcm *txHandle, uint32_t sampleRate,
+        uint32_t channels, int periodBytes, UsbAudioPCMModes usbAudioPCMModes)
 {
     ALOGD("setHardwareParams");
     struct snd_pcm_hw_params *params;
@@ -308,6 +398,7 @@ status_t AudioUsbALSA::setHardwareParams(pcm *txHandle, uint32_t sampleRate, uin
 
     if (param_set_hw_params(txHandle, params)) {
         ALOGE("ERROR: cannot set hw params");
+        free(params);
         return NO_INIT;
     }
 
@@ -320,11 +411,13 @@ status_t AudioUsbALSA::setHardwareParams(pcm *txHandle, uint32_t sampleRate, uin
     ALOGD("setHardwareParams: buffer_size %d, period_size %d, period_cnt %d",
          txHandle->buffer_size, txHandle->period_size,
          txHandle->period_cnt);
-
+ 
+    //Do not free params here, params is used after setting hw/sw params
+    //params will be free-ed in pcm_close
     return NO_ERROR;
 }
 
-status_t AudioUsbALSA::setSoftwareParams(pcm *pcm, bool playback)
+status_t AudioUsbALSA::setSoftwareParams(pcm *pcm, UsbAudioPCMModes usbAudioPCMModes)
 {
     ALOGD("setSoftwareParams");
     struct snd_pcm_sw_params* params;
@@ -340,24 +433,30 @@ status_t AudioUsbALSA::setSoftwareParams(pcm *pcm, bool playback)
 
     params->avail_min = (pcm->flags & PCM_MONO) ? pcm->period_size/2 : pcm->period_size/4;
 
-    if (playback) {
+    if (usbAudioPCMModes == USB_PLAYBACK) {
         params->start_threshold = (pcm->flags & PCM_MONO) ? pcm->period_size*8 : pcm->period_size*4;
         params->xfer_align = (pcm->flags & PCM_MONO) ? pcm->period_size*8 : pcm->period_size*4;
+    } else if(usbAudioPCMModes == PROXY_PLAYBACK) {
+        params->start_threshold = (pcm->flags & PCM_MONO) ? pcm->period_size*2 : pcm->period_size;
+        params->xfer_align = (pcm->flags & PCM_MONO) ? pcm->period_size*2 : pcm->period_size;
     } else {
         params->start_threshold = (pcm->flags & PCM_MONO) ? pcm->period_size/2 : pcm->period_size/4;
         params->xfer_align = (pcm->flags & PCM_MONO) ? pcm->period_size/2 : pcm->period_size/4;
     }
-    params->stop_threshold = pcm->buffer_size;
+    //Setting stop threshold to a huge value to avoid trigger stop being called internally
+    params->stop_threshold = 0x0FFFFFFF;
 
-    params->xfer_align = (pcm->flags & PCM_MONO) ? pcm->period_size/2 : pcm->period_size/4;
     params->silence_size = 0;
     params->silence_threshold = 0;
 
     if (param_set_sw_params(pcm, params)) {
         ALOGE("ERROR: cannot set sw params");
+        free(params);
         return NO_INIT;
     }
 
+    //Do not free params here, params is used after setting hw/sw params
+    //params will be free-ed in pcm_close
     return NO_ERROR;
 }
 
@@ -377,13 +476,12 @@ status_t AudioUsbALSA::closeDevice(pcm *handle)
 
 void AudioUsbALSA::RecordingThreadEntry() {
     ALOGD("Inside RecordingThreadEntry");
-    int nfds = 1;
+    int nfds = 2;
     mtimeOutRecording = TIMEOUT_INFINITE;
     int fd;
     long frames;
     static int start = 0;
     struct snd_xferi x;
-    int filed;
     unsigned avail, bufsize;
     int bytes_written;
     uint32_t sampleRate;
@@ -391,47 +489,74 @@ void AudioUsbALSA::RecordingThreadEntry() {
     u_int8_t *srcUsb_addr = NULL;
     u_int8_t *dstProxy_addr = NULL;
     int err;
-    const char *fn = "/data/RecordPcm.pcm";
-    filed = open(fn, O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, 0664);
+    pfdProxyRecording[0].fd = -1;
+    pfdProxyRecording[1].fd = -1;
+    pfdUsbRecording[0].fd = -1;
+    pfdUsbRecording[1].fd = -1;
+#ifdef OUTPUT_RECORD_PROXY_BUFFER_LOG
+    sprintf(outputRecordfilename1, "%s%d%s", outputRecordfilename, rNumber,".pcm");
+    outputRecordBufferFile1 = fopen (outputRecordfilename, "ab");
+    rNumber++;
+#endif
 
-    err = getCap((char *)"Capture:", mchannelsCapture, msampleRateCapture);
-    if (err) {
-        ALOGE("ERROR: Could not get capture capabilities from usb device");
-        return;
+    {
+        Mutex::Autolock autoRecordLock(mRecordLock);
+        err = getCap((char *)"Capture:", mchannelsCapture, msampleRateCapture);
+        if (err) {
+            ALOGE("ERROR: Could not get capture capabilities from usb device");
+            return;
+        }
+        int channelFlag = PCM_MONO;
+        if (mchannelsCapture >= 2) {
+            channelFlag = PCM_STEREO;
+        }
+
+        musbRecordingHandle = configureDevice(PCM_IN|channelFlag|PCM_MMAP, (char *)"hw:1,0",
+                                         msampleRateCapture, mchannelsCapture,2048,USB_RECORDING);
+        if (!musbRecordingHandle) {
+            ALOGE("ERROR: Could not configure USB device for recording");
+            return;
+        } else {
+            ALOGD("USB device Configured for recording");
+        }
+
+        if (!mkillRecordingThread) {
+            pfdUsbRecording[0].fd = musbRecordingHandle->fd;                           //DEBUG
+            pfdUsbRecording[0].events = POLLIN;
+            musbpfdRecording = eventfd(0,0);
+            pfdUsbRecording[1].fd = musbpfdRecording;
+            pfdUsbRecording[1].events = (POLLIN | POLLERR | POLLNVAL | POLLHUP);
+            pfdUsbRecording[1].revents = 0;
+        }
+
+        mproxyRecordingHandle = configureDevice(PCM_OUT|channelFlag|PCM_MMAP, (char *)"hw:0,7",
+                                            msampleRateCapture, mchannelsCapture,2048,PROXY_PLAYBACK);
+        if (!mproxyRecordingHandle) {
+            ALOGE("ERROR: Could not configure Proxy for recording");
+            err = closeDevice(musbRecordingHandle);
+            if(err == OK) {
+                musbRecordingHandle = NULL;
+            }
+            return;
+        } else {
+            ALOGD("Proxy Configured for recording");
+        }
+
+        bufsize = musbRecordingHandle->period_size;
+
+        if(!mkillRecordingThread) {
+            pfdProxyRecording[0].fd = mproxyRecordingHandle->fd;
+            pfdProxyRecording[0].events = POLLOUT;
+            mProxypfdRecording = eventfd(0,0);
+            pfdUsbRecording[1].fd = mProxypfdRecording;
+            pfdUsbRecording[1].events = (POLLIN | POLLERR | POLLNVAL | POLLHUP);
+            pfdUsbRecording[1].revents = 0;
+        }
+
+        frames = (musbRecordingHandle->flags & PCM_MONO) ? (bufsize / 2) : (bufsize / 4);
+        x.frames = (musbRecordingHandle->flags & PCM_MONO) ? (bufsize / 2) : (bufsize / 4);
+
     }
-    int channelFlag = PCM_MONO;
-    if (mchannelsCapture >= 2) {
-        channelFlag = PCM_STEREO;
-    }
-
-    musbRecordingHandle = configureDevice(PCM_IN|channelFlag|PCM_MMAP, (char *)"hw:1,0",
-                                         msampleRateCapture, mchannelsCapture,768,false);
-    if (!musbRecordingHandle) {
-        ALOGE("ERROR: Could not configure USB device for recording");
-        return;
-    } else {
-        ALOGD("USB device Configured for recording");
-    }
-
-    pfdUsbRecording[0].fd = musbRecordingHandle->fd;                           //DEBUG
-    pfdUsbRecording[0].events = POLLIN;
-
-    mproxyRecordingHandle = configureDevice(PCM_OUT|channelFlag|PCM_MMAP, (char *)"hw:0,7",
-                                            msampleRateCapture, mchannelsCapture,768,false);
-    if (!mproxyRecordingHandle) {
-        ALOGE("ERROR: Could not configure Proxy for recording");
-        closeDevice(musbRecordingHandle);
-        return;
-    } else {
-        ALOGD("Proxy Configured for recording");
-    }
-
-    bufsize = musbRecordingHandle->period_size;
-    pfdProxyRecording[0].fd = mproxyRecordingHandle->fd;
-    pfdProxyRecording[0].events = POLLOUT;
-    frames = (musbRecordingHandle->flags & PCM_MONO) ? (bufsize / 2) : (bufsize / 4);
-    x.frames = (musbRecordingHandle->flags & PCM_MONO) ? (bufsize / 2) : (bufsize / 4);
-
     /***********************keep reading from usb and writing to proxy******************************************/
     while (mkillRecordingThread != true) {
         if (!musbRecordingHandle->running) {
@@ -480,8 +605,29 @@ void AudioUsbALSA::RecordingThreadEntry() {
 
             avail = pcm_avail(musbRecordingHandle);
             if (avail < musbRecordingHandle->sw_p->avail_min) {
-                poll(pfdUsbRecording, nfds, TIMEOUT_INFINITE);
-                continue;
+                int err_poll = poll(pfdUsbRecording, nfds, TIMEOUT_INFINITE);
+                //ALOGD("pfdUsbRecording[0].revents = %d, pfdUsbRecording[1].revents =%d", pfdUsbRecording[0].revents,pfdUsbRecording[1].revents);
+                if (err_poll == 0 ) {
+                     ALOGD("POLL timedout");
+                     mkillRecordingThread = true;
+                     pfdUsbRecording[0].revents = 0;
+                     pfdUsbRecording[1].revents = 0;
+                }
+
+                if (pfdUsbRecording[1].revents & POLLIN && !mkillRecordingThread) {
+                    ALOGD("Info: Signalled from HAL about an event");
+                    uint64_t u;
+                    read(musbpfdRecording, &u, sizeof(uint64_t));
+                    pfdUsbRecording[0].revents = 0;
+                    pfdUsbRecording[1].revents = 0;
+                    if (u == SIGNAL_EVENT_KILLTHREAD) {
+                        ALOGD("kill thread");
+                        mkillRecordingThread = true;
+                    }
+                }
+                if(!mkillRecordingThread)
+                    continue;
+                break;
             } else {
                 break;
             }
@@ -516,8 +662,28 @@ void AudioUsbALSA::RecordingThreadEntry() {
             }
             avail = pcm_avail(mproxyRecordingHandle);
             if (avail < mproxyRecordingHandle->sw_p->avail_min) {
-                poll(pfdProxyRecording, nfds, TIMEOUT_INFINITE);
-                continue;
+                int err_poll = poll(pfdProxyRecording, nfds, TIMEOUT_INFINITE);
+                if (err_poll == 0 ) {
+                     ALOGD("POLL timedout");
+                     mkillRecordingThread = true;
+                     pfdProxyRecording[0].revents = 0;
+                     pfdProxyRecording[1].revents = 0;
+                }
+
+                if (pfdProxyRecording[1].revents & POLLIN && !mkillRecordingThread) {
+                    ALOGD("Info:Proxy Signalled from HAL about an event");
+                    uint64_t u;
+                    read(mProxypfdRecording, &u, sizeof(uint64_t));
+                    pfdProxyRecording[0].revents = 0;
+                    pfdProxyRecording[1].revents = 0;
+                    if (u == SIGNAL_EVENT_KILLTHREAD) {
+                        ALOGD("kill thread");
+                        mkillRecordingThread = true;
+                    }
+                }
+                if(!mkillRecordingThread)
+                    continue;
+                break;
             } else {
                 break;
             }
@@ -530,6 +696,12 @@ void AudioUsbALSA::RecordingThreadEntry() {
         memset(dstProxy_addr, 0x0, bufsize);
 
         /**************End Proxy syncing before write *************/
+#ifdef OUTPUT_RECORD_PROXY_BUFFER_LOG
+    if (outputRecordBufferFile1)
+    {
+        fwrite (srcUsb_addr,1,bufsize,outputRecordBufferFile1);
+    }
+#endif
 
         memcpy(dstProxy_addr, srcUsb_addr, bufsize );
 
@@ -558,7 +730,7 @@ void AudioUsbALSA::RecordingThreadEntry() {
 
         bytes_written = mproxyRecordingHandle->sync_ptr->c.control.appl_ptr - mproxyRecordingHandle->sync_ptr->s.status.hw_ptr;
         if ((bytes_written >= mproxyRecordingHandle->sw_p->start_threshold) && (!mproxyRecordingHandle->start)) {
-            if (!mkillPlayBackThread) {
+            if (!mkillRecordingThread) {
                 err = startDevice(mproxyRecordingHandle, &mkillRecordingThread);
                 if (err == EPIPE) {
                     continue;
@@ -570,10 +742,36 @@ void AudioUsbALSA::RecordingThreadEntry() {
         }
     }
     /***************  End sync up after write -- Proxy *********************/
-    if (mkillRecordingThread) {
-        closeDevice(mproxyRecordingHandle);
-        closeDevice(musbRecordingHandle);
+    ALOGD("Thread dying = %d", mkillRecordingThread);
+#ifdef OUTPUT_RECORD_PROXY_BUFFER_LOG
+    ALOGV("close file output");
+    if(outputRecordBufferFile1)
+        fclose (outputRecordBufferFile1);
+#endif
+
+    {
+        Mutex::Autolock autoRecordLock(mRecordLock);
+        if(musbpfdRecording != -1) {
+            close(musbpfdRecording);
+            musbpfdRecording = -1;
+        }
+        if(mProxypfdRecording != -1) {
+            close(mProxypfdRecording);
+            mProxypfdRecording = -1;
+        }
+
+        if (mkillRecordingThread) {
+            err = closeDevice(mproxyRecordingHandle);
+            if(err == OK) {
+                mproxyRecordingHandle = NULL;
+            }
+            err = closeDevice(musbRecordingHandle);
+            if(err == OK) {
+                musbRecordingHandle = NULL;
+            }
+        }
     }
+    mRecordingUsb = NULL;
     ALOGD("Exiting USB Recording thread");
 }
 
@@ -587,7 +785,9 @@ void *AudioUsbALSA::RecordingThreadWrapper(void *me) {
     return NULL;
 }
 
-struct pcm * AudioUsbALSA::configureDevice(unsigned flags, char* hw, int sampleRate, int channelCount, int periodSize, bool playback){
+struct pcm * AudioUsbALSA::configureDevice(unsigned flags, char* hw,
+            int sampleRate, int channelCount,
+            int periodSize, UsbAudioPCMModes usbAudioPCMModes){
     int err = NO_ERROR;
     struct pcm * handle = NULL;
     handle = pcm_open(flags, hw);
@@ -603,32 +803,40 @@ struct pcm * AudioUsbALSA::configureDevice(unsigned flags, char* hw, int sampleR
     }
 
     ALOGD("Setting hardware params: sampleRate:%d, channels: %d",sampleRate, channelCount);
-    err = setHardwareParams(handle, sampleRate, channelCount,periodSize);
+    err = setHardwareParams(handle, sampleRate, channelCount,periodSize, usbAudioPCMModes);
     if (err != NO_ERROR) {
         ALOGE("ERROR: setHardwareParams failed");
-        closeDevice(handle);
-        return NULL;
+        {
+             closeDevice(handle);
+             return NULL;
+        }
     }
 
-    err = setSoftwareParams(handle, playback);
+    err = setSoftwareParams(handle, usbAudioPCMModes);
     if (err != NO_ERROR) {
         ALOGE("ERROR: setSoftwareParams failed");
-        closeDevice(handle);
-        return NULL;
+        {
+            closeDevice(handle);
+            return NULL;
+        }
     }
 
     err = mmap_buffer(handle);
     if (err) {
         ALOGE("ERROR: mmap_buffer failed");
-        closeDevice(handle);
-        return NULL;
+        {
+            closeDevice(handle);
+            return NULL;
+        }
     }
 
     err = pcm_prepare(handle);
     if (err) {
         ALOGE("ERROR: pcm_prepare failed");
-        closeDevice(handle);
-        return NULL;
+        {
+            closeDevice(handle);
+            return NULL;
+        }
     }
 
     return handle;
@@ -756,7 +964,7 @@ void AudioUsbALSA::pollForUsbData(){
         return;
     }
 
-    if (pfdUsbPlayback[0].revents & POLLERR || pfdProxyPlayback[0].revents & POLLHUP ||
+    if (pfdUsbPlayback[0].revents & POLLERR || pfdUsbPlayback[0].revents & POLLHUP ||
         pfdUsbPlayback[0].revents & POLLNVAL) {
         ALOGE("Info: usb throwing error");
         mkillPlayBackThread = true;
@@ -780,72 +988,106 @@ void AudioUsbALSA::PlaybackThreadEntry() {
     unsigned int tmp;
     int numOfBytesWritten;
     int err;
-    int filed;
-    const char *fn = "/data/test.pcm";
+    char proxyDeviceName[10];
+
     mdstUsb_addr = NULL;
     msrcProxy_addr = NULL;
 
     int proxySizeRemaining = 0;
     int usbSizeFilled = 0;
+    int usbframes = 0;
+    u_int8_t *proxybuf = NULL;
+    u_int8_t *usbbuf = NULL;
 
     pid_t tid  = gettid();
     androidSetThreadPriority(tid, ANDROID_PRIORITY_URGENT_AUDIO);
+#ifdef OUTPUT_PROXY_BUFFER_LOG
+    sprintf(outputfilename1, "%s%d%s", outputfilename, number,".pcm");
+    outputBufferFile1 = fopen (outputfilename, "ab");
+    number++;
+#endif
 
-    err = getCap((char *)"Playback:", mchannelsPlayback, msampleRatePlayback);
-    if (err) {
-        ALOGE("ERROR: Could not get playback capabilities from usb device");
-        return;
+    {
+        Mutex::Autolock autoLock(mLock);
+
+        err = getCap((char *)"Playback:", mchannelsPlayback, msampleRatePlayback);
+        if (err) {
+            ALOGE("ERROR: Could not get playback capabilities from usb device");
+            return;
+        }
+        musbPlaybackHandle = configureDevice(PCM_OUT|PCM_STEREO|PCM_MMAP, (char *)"hw:1,0",
+                                         msampleRatePlayback, mchannelsPlayback,
+                                         USB_PERIOD_SIZE, USB_PLAYBACK);
+        if (!musbPlaybackHandle || mkillPlayBackThread) {
+            ALOGE("ERROR: configureUsbDevice failed, returning");
+            return;
+        } else {
+           ALOGD("USB Configured for playback");
+        }
+
+        if (!mkillPlayBackThread) {
+            pfdUsbPlayback[0].fd = musbPlaybackHandle->timer_fd;
+            pfdUsbPlayback[0].events = POLLIN;
+            musbpfdPlayback = eventfd(0,0);
+            pfdUsbPlayback[1].fd = musbpfdPlayback;
+            pfdUsbPlayback[1].events = (POLLIN | POLLOUT | POLLERR | POLLNVAL | POLLHUP);
+        }
+
+        snprintf(proxyDeviceName, sizeof(proxyDeviceName), "hw:%u,8", mProxySoundCard);
+        ALOGD("Configuring Proxy capture device %s", proxyDeviceName);
+        int ProxyOpenRetryCount=PROXY_OPEN_RETRY_COUNT;
+        while(ProxyOpenRetryCount){
+                mproxyPlaybackHandle = configureDevice(PCM_IN|PCM_STEREO|PCM_MMAP, proxyDeviceName,
+                               msampleRatePlayback, mchannelsPlayback, PROXY_PERIOD_SIZE, PROXY_RECORDING);
+                if(!mproxyPlaybackHandle){
+                     ProxyOpenRetryCount --;
+                     usleep(PROXY_OPEN_WAIT_TIME * 1000);
+                     ALOGD("openProxyDevice failed retrying = %d", ProxyOpenRetryCount);
+                }
+                else{
+                  break;
+                }
+        }
+        if (!mproxyPlaybackHandle || mkillPlayBackThread) {
+           ALOGE("ERROR: Could not configure Proxy, returning");
+           err = closeDevice(musbPlaybackHandle);
+           if(err == OK) {
+              musbPlaybackHandle = NULL;
+           }
+           return;
+        } else {
+            ALOGD("Proxy Configured for playback");
+        }
+
+        proxyPeriod = mproxyPlaybackHandle->period_size;
+        usbPeriod = musbPlaybackHandle->period_size;
+
+        if (!mkillPlayBackThread) {
+            pfdProxyPlayback[0].fd = mproxyPlaybackHandle->fd;
+            pfdProxyPlayback[0].events = (POLLIN);                                 // | POLLERR | POLLNVAL);
+            mproxypfdPlayback = eventfd(0,0);
+            pfdProxyPlayback[1].fd = mproxypfdPlayback;
+            pfdProxyPlayback[1].events = (POLLIN | POLLERR | POLLNVAL);
+        }
+
+        frames = (mproxyPlaybackHandle->flags & PCM_MONO) ? (proxyPeriod / 2) : (proxyPeriod / 4);
+        x.frames = (mproxyPlaybackHandle->flags & PCM_MONO) ? (proxyPeriod / 2) : (proxyPeriod / 4);
+        usbframes = (musbPlaybackHandle->flags & PCM_MONO) ? (usbPeriod / 2) : (usbPeriod / 4);
+
+        proxybuf = ( u_int8_t *) malloc(PROXY_PERIOD_SIZE);
+        usbbuf = ( u_int8_t *) malloc(USB_PERIOD_SIZE);
+
+        if (proxybuf == NULL || usbbuf == NULL) {
+            ALOGE("ERROR: Unable to allocate USB audio buffer(s): proxybuf=%p, usbbuf=%p",
+                  proxybuf, usbbuf);
+            /* Don't run the playback loop if we failed to allocate either of these buffers.
+            If either pointer is non-NULL they'll be freed after the end of the loop. */
+           mkillPlayBackThread = true;
+        } else {
+            memset(proxybuf, 0x0, PROXY_PERIOD_SIZE);
+            memset(usbbuf, 0x0, USB_PERIOD_SIZE);
+        }
     }
-
-    musbPlaybackHandle = configureDevice(PCM_OUT|PCM_STEREO|PCM_MMAP, (char *)"hw:1,0",
-                                         msampleRatePlayback, mchannelsPlayback, USB_PERIOD_SIZE, true);
-    if (!musbPlaybackHandle) {
-        ALOGE("ERROR: configureUsbDevice failed, returning");
-        closeDevice(musbPlaybackHandle);
-        return;
-    } else {
-        ALOGD("USB Configured for playback");
-    }
-
-    if (!mkillPlayBackThread) {
-        pfdUsbPlayback[0].fd = musbPlaybackHandle->timer_fd;
-        pfdUsbPlayback[0].events = POLLIN;
-        musbpfdPlayback = eventfd(0,0);
-        pfdUsbPlayback[1].fd = musbpfdPlayback;
-        pfdUsbPlayback[1].events = (POLLIN | POLLOUT | POLLERR | POLLNVAL | POLLHUP);
-    }
-
-    mproxyPlaybackHandle = configureDevice(PCM_IN|PCM_STEREO|PCM_MMAP, (char *)"hw:0,8",
-                               msampleRatePlayback, mchannelsPlayback, PROXY_PERIOD_SIZE, false);
-    if (!mproxyPlaybackHandle) {
-        ALOGE("ERROR: Could not configure Proxy, returning");
-        closeDevice(musbPlaybackHandle);
-        return;
-    } else {
-        ALOGD("Proxy Configured for playback");
-    }
-
-    proxyPeriod = mproxyPlaybackHandle->period_size;
-    usbPeriod = musbPlaybackHandle->period_size;
-
-    if (!mkillPlayBackThread) {
-        pfdProxyPlayback[0].fd = mproxyPlaybackHandle->fd;
-        pfdProxyPlayback[0].events = (POLLIN);                                 // | POLLERR | POLLNVAL);
-        mproxypfdPlayback = eventfd(0,0);
-        pfdProxyPlayback[1].fd = mproxypfdPlayback;
-        pfdProxyPlayback[1].events = (POLLIN | POLLOUT| POLLERR | POLLNVAL);
-    }
-
-    frames = (mproxyPlaybackHandle->flags & PCM_MONO) ? (proxyPeriod / 2) : (proxyPeriod / 4);
-    x.frames = (mproxyPlaybackHandle->flags & PCM_MONO) ? (proxyPeriod / 2) : (proxyPeriod / 4);
-    int usbframes = (musbPlaybackHandle->flags & PCM_MONO) ? (usbPeriod / 2) : (usbPeriod / 4);
-
-    u_int8_t *proxybuf = ( u_int8_t *) malloc(PROXY_PERIOD_SIZE);
-    u_int8_t *usbbuf = ( u_int8_t *) malloc(USB_PERIOD_SIZE);
-    memset(proxybuf, 0x0, PROXY_PERIOD_SIZE);
-    memset(usbbuf, 0x0, USB_PERIOD_SIZE);
-
-
     /***********************keep reading from proxy and writing to USB******************************************/
     while (mkillPlayBackThread != true) {
         if (!mproxyPlaybackHandle->running) {
@@ -918,6 +1160,12 @@ void AudioUsbALSA::PlaybackThreadEntry() {
                 msrcProxy_addr = dst_address(mproxyPlaybackHandle);
                 memcpy(proxybuf, msrcProxy_addr, proxyPeriod );
 
+#ifdef OUTPUT_PROXY_BUFFER_LOG
+    if (outputBufferFile1)
+    {
+        fwrite (proxybuf,1,proxyPeriod,outputBufferFile1);
+    }
+#endif
                 x.frames -= frames;
                 mproxyPlaybackHandle->sync_ptr->c.control.appl_ptr += frames;
                 mproxyPlaybackHandle->sync_ptr->flags = 0;
@@ -928,12 +1176,12 @@ void AudioUsbALSA::PlaybackThreadEntry() {
                 err = syncPtr(mproxyPlaybackHandle, &mkillPlayBackThread);
                 if (err == EPIPE) {
                     continue;
-                } else if (err != NO_ERROR) {
+                } else if (err != NO_ERROR && err != ENODEV) {
                     break;
                 }
             }
         }
-        //ALOGE("usbSizeFilled %d, proxySizeRemaining %d ",usbSizeFilled,proxySizeRemaining);
+        //ALOGV("usbSizeFilled %d, proxySizeRemaining %d ",usbSizeFilled,proxySizeRemaining);
         if (usbPeriod - usbSizeFilled <= proxySizeRemaining) {
             memcpy(usbbuf + usbSizeFilled, proxybuf + proxyPeriod - proxySizeRemaining, usbPeriod - usbSizeFilled);
             proxySizeRemaining -= (usbPeriod - usbSizeFilled);
@@ -1000,20 +1248,20 @@ void AudioUsbALSA::PlaybackThreadEntry() {
                 err = syncPtr(musbPlaybackHandle, &mkillPlayBackThread);
                 if (err == EPIPE) {
                     continue;
-                } else if (err != NO_ERROR) {
+                } else if (err != NO_ERROR && err != ENODEV ) {
                     break;
                 }
             }
 
             bytes_written = musbPlaybackHandle->sync_ptr->c.control.appl_ptr - musbPlaybackHandle->sync_ptr->s.status.hw_ptr;
-            ALOGE("Appl ptr %d , hw_ptr %d, difference %d",musbPlaybackHandle->sync_ptr->c.control.appl_ptr, musbPlaybackHandle->sync_ptr->s.status.hw_ptr, bytes_written);
+            ALOGV("Appl ptr %lu , hw_ptr %lu, difference %d",musbPlaybackHandle->sync_ptr->c.control.appl_ptr, musbPlaybackHandle->sync_ptr->s.status.hw_ptr, bytes_written);
 
             /*
                 Following is the check to prevent USB from going to bad state.
                 This happens in case of an underrun where there is not enough
                 data from the proxy
             */
-	    if (bytes_written <= usbPeriod && musbPlaybackHandle->start) {
+            if (bytes_written <= usbPeriod && musbPlaybackHandle->start) {
                 ioctl(musbPlaybackHandle->fd, SNDRV_PCM_IOCTL_PAUSE,1);
                 pcm_prepare(musbPlaybackHandle);
                 musbPlaybackHandle->start = false;
@@ -1033,16 +1281,41 @@ void AudioUsbALSA::PlaybackThreadEntry() {
             /***************  End sync up after write -- USB *********************/
         }
     }
-    if (mkillPlayBackThread) {
-        if (proxybuf)
-            free(proxybuf);
-        if (usbbuf)
-            free(usbbuf);
+#ifdef OUTPUT_PROXY_BUFFER_LOG
+    ALOGV("close file output");
+    if(outputBufferFile1)
+        fclose (outputBufferFile1);
+#endif
+    if (proxybuf)
+        free(proxybuf);
+    if (usbbuf)
+        free(usbbuf);
+    if(mproxypfdPlayback != -1) {
+        close(mproxypfdPlayback);
         mproxypfdPlayback = -1;
-        musbpfdPlayback = -1;
-        closeDevice(mproxyPlaybackHandle);
-        closeDevice(musbPlaybackHandle);
     }
+    if(musbpfdPlayback != -1) {
+        close(musbpfdPlayback);
+        musbpfdPlayback = -1;
+    }
+    if(mkillPlayBackThread) {
+        {
+            Mutex::Autolock autoLock(mLock);
+            err = closeDevice(mproxyPlaybackHandle);
+            if(err == OK) {
+                mproxyPlaybackHandle = NULL;
+            } else {
+                ALOGE("mproxyPlaybackHandle - err = %d", err);
+            }
+            err = closeDevice(musbPlaybackHandle);
+            if(err == OK) {
+                musbPlaybackHandle = NULL;
+            } else {
+                ALOGE("musbPlaybackHandle - err = %d", err);
+            }
+        }
+    }
+    mPlaybackUsb = NULL;
     ALOGD("Exiting USB Playback Thread");
 }
 

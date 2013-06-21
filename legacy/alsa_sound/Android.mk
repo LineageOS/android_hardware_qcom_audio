@@ -9,27 +9,82 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
+
 LOCAL_ARM_MODE := arm
 LOCAL_CFLAGS := -D_POSIX_SOURCE
-LOCAL_CFLAGS += -DQCOM_CSDCLIENT_ENABLED
-LOCAL_CFLAGS += -DQCOM_ACDB_ENABLED
-
-ifeq ($(strip $(BOARD_USES_FLUENCE_INCALL)),true)
-LOCAL_CFLAGS += -DUSES_FLUENCE_INCALL
+ifeq ($(strip $(QCOM_ACDB_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_ACDB_ENABLED
+endif
+ifeq ($(strip $(QCOM_ANC_HEADSET_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_ANC_HEADSET_ENABLED
+endif
+ifeq ($(strip $(QCOM_AUDIO_FORMAT_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_AUDIO_FORMAT_ENABLED
+endif
+ifeq ($(strip $(QCOM_CSDCLIENT_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_CSDCLIENT_ENABLED
+endif
+#LOCAL_CFLAGS += -DQCOM_FM_ENABLED
+ifeq ($(strip $(QCOM_PROXY_DEVICE_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_PROXY_DEVICE_ENABLED
+endif
+ifeq ($(strip $(QCOM_OUTPUT_FLAGS_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_OUTPUT_FLAGS_ENABLED
+endif
+ifeq ($(strip $(QCOM_SSR_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_SSR_ENABLED
+endif
+ifeq ($(strip $(QCOM_USBAUDIO_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_USBAUDIO_ENABLED
+endif
+ifeq ($(strip $(QCOM_ADSP_SSR_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_ADSP_SSR_ENABLED
+endif
+ifeq ($(strip $(QCOM_FLUENCE_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_FLUENCE_ENABLED
+endif
+ifeq ($(strip $(QCOM_TUNNEL_LPA_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_TUNNEL_LPA_ENABLED
 endif
 
-ifeq ($(strip $(BOARD_USES_SEPERATED_AUDIO_INPUT)),true)
-LOCAL_CFLAGS += -DSEPERATED_AUDIO_INPUT
+ifeq ($(call is-board-platform,msm8974),true)
+  LOCAL_CFLAGS += -DTARGET_8974
 endif
+
+ifneq ($(ALSA_DEFAULT_SAMPLE_RATE),)
+    LOCAL_CFLAGS += -DALSA_DEFAULT_SAMPLE_RATE=$(ALSA_DEFAULT_SAMPLE_RATE)
+endif
+
+#Do not use Dual MIC scenario in call feature
+#Dual MIC solution(Fluence) feature in Built-in MIC used scenarioes.
+# 1. Handset
+# 2. 3-Pole Headphones
+#ifeq ($(strip $(BOARD_USES_FLUENCE_INCALL)),true)
+#LOCAL_CFLAGS += -DUSES_FLUENCE_INCALL
+#endif
+
+#Do not use separate audio Input path feature
+#Separate audio input path can be set using input source of audio parameter
+# 1. Voice Recognition
+# 2. Camcording
+# 3. etc.
+#ifeq ($(strip $(BOARD_USES_SEPERATED_AUDIO_INPUT)),true)
+#LOCAL_CFLAGS += -DSEPERATED_AUDIO_INPUT
+#endif
 
 LOCAL_SRC_FILES := \
-  AudioHardwareALSA.cpp 	\
-  AudioStreamOutALSA.cpp 	\
-  AudioStreamInALSA.cpp 	\
-  ALSAStreamOps.cpp		\
-  audio_hw_hal.cpp \
-  AudioUsbALSA.cpp \
-  AudioUtil.cpp
+  AudioHardwareALSA.cpp         \
+  AudioStreamOutALSA.cpp        \
+  AudioStreamInALSA.cpp         \
+  ALSAStreamOps.cpp             \
+  audio_hw_hal.cpp              \
+  AudioUsbALSA.cpp              \
+  AudioUtil.cpp                 \
+  ALSADevice.cpp
+
+ifeq ($(strip $(QCOM_TUNNEL_LPA_ENABLED)),true)
+    LOCAL_SRC_FILES +=AudioSessionOut.cpp
+endif
 
 LOCAL_STATIC_LIBRARIES := \
     libmedia_helper \
@@ -43,7 +98,9 @@ LOCAL_SHARED_LIBRARIES := \
     libhardware \
     libc        \
     libpower    \
-    libalsa-intf
+    libalsa-intf \
+    libsurround_proc\
+    libaudioutils
 
 ifeq ($(TARGET_SIMULATOR),true)
  LOCAL_LDLIBS += -ldl
@@ -58,26 +115,71 @@ LOCAL_C_INCLUDES += hardware/libhardware/include
 LOCAL_C_INCLUDES += hardware/libhardware_legacy/include
 LOCAL_C_INCLUDES += frameworks/base/include
 LOCAL_C_INCLUDES += system/core/include
+LOCAL_C_INCLUDES += system/media/audio_utils/include
 
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
-LOCAL_MODULE := audio.primary.msm8960
+ifeq ($(call is-board-platform,msm8974),true)
+  LOCAL_MODULE := audio.primary.msm8974
+endif
+
+ifeq ($(call is-board-platform,msm8960),true)
+  LOCAL_MODULE := audio.primary.msm8960
+endif
+
+ifeq ($(call is-board-platform,msm8610),true)
+  LOCAL_MODULE := audio.primary.msm8610
+endif
+
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
 
-# This is the ALSA audio policy manager
-
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS := -D_POSIX_SOURCE
-LOCAL_CFLAGS += -DQCOM_ACDB_ENABLED
+ifeq ($(strip $(QCOM_ACDB_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_ACDB_ENABLED
+endif
+ifeq ($(strip $(QCOM_ANC_HEADSET_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_ANC_HEADSET_ENABLED
+endif
+ifeq ($(strip $(QCOM_AUDIO_FORMAT_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_AUDIO_FORMAT_ENABLED
+endif
+ifeq ($(strip $(QCOM_CSDCLIENT_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_CSDCLIENT_ENABLED
+endif
+#LOCAL_CFLAGS += -DQCOM_FM_ENABLED
+ifeq ($(strip $(QCOM_PROXY_DEVICE_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_PROXY_DEVICE_ENABLED
+endif
+ifeq ($(strip $(QCOM_SSR_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_SSR_ENABLED
+endif
+ifeq ($(strip $(QCOM_USBAUDIO_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_USBAUDIO_ENABLED
+endif
 
 LOCAL_SRC_FILES := \
     audio_policy_hal.cpp \
     AudioPolicyManagerALSA.cpp
 
-LOCAL_MODULE := audio_policy.msm8960
+
+ifeq ($(call is-board-platform,msm8974),true)
+  LOCAL_MODULE := audio_policy.msm8974
+endif
+
+ifeq ($(call is-board-platform,msm8960),true)
+  LOCAL_MODULE := audio_policy.msm8960
+endif
+
+ifeq ($(call is-board-platform,msm8610),true)
+  LOCAL_MODULE := audio_policy.msm8610
+endif
+
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 LOCAL_MODULE_TAGS := optional
 
@@ -87,55 +189,10 @@ LOCAL_STATIC_LIBRARIES := \
 
 LOCAL_SHARED_LIBRARIES := \
     libcutils \
-    libutils
+    libutils \
 
 LOCAL_C_INCLUDES += hardware/libhardware_legacy/audio
 
 include $(BUILD_SHARED_LIBRARY)
 
-# This is the ALSA module which behaves closely like the original
-
-include $(CLEAR_VARS)
-
-LOCAL_PRELINK_MODULE := false
-
-LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
-
-LOCAL_CFLAGS := -D_POSIX_SOURCE -Wno-multichar
-LOCAL_CFLAGS += -DQCOM_ACDB_ENABLED
-
-ifeq ($(strip $(BOARD_USES_FLUENCE_INCALL)),true)
-LOCAL_CFLAGS += -DUSES_FLUENCE_INCALL
-endif
-
-ifeq ($(strip $(BOARD_USES_SEPERATED_AUDIO_INPUT)),true)
-LOCAL_CFLAGS += -DSEPERATED_AUDIO_INPUT
-endif
-
-ifneq ($(ALSA_DEFAULT_SAMPLE_RATE),)
-    LOCAL_CFLAGS += -DALSA_DEFAULT_SAMPLE_RATE=$(ALSA_DEFAULT_SAMPLE_RATE)
-endif
-
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/libalsa-intf
-
-LOCAL_SRC_FILES:= \
-    alsa_default.cpp \
-    ALSAControl.cpp \
-    AudioUtil.cpp
-
-LOCAL_SHARED_LIBRARIES := \
-    libcutils \
-    liblog    \
-    libalsa-intf
-
-ifeq ($(TARGET_SIMULATOR),true)
- LOCAL_LDLIBS += -ldl
-else
- LOCAL_SHARED_LIBRARIES += libdl
-endif
-
-LOCAL_MODULE:= alsa.msm8960
-LOCAL_MODULE_TAGS := optional
-
-  include $(BUILD_SHARED_LIBRARY)
 endif

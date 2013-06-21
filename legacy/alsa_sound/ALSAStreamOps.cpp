@@ -1,7 +1,8 @@
 /* ALSAStreamOps.cpp
  **
  ** Copyright 2008-2009 Wind River Systems
- ** Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+ ** Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+ ** Not a Contribution.
  **
  ** Licensed under the Apache License, Version 2.0 (the "License");
  ** you may not use this file except in compliance with the License.
@@ -57,15 +58,12 @@ ALSAStreamOps::~ALSAStreamOps()
 
     if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
        (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
-        if((mParent->mVoipStreamCount)) {
-            mParent->mVoipStreamCount--;
-            if(mParent->mVoipStreamCount > 0) {
-                ALOGD("ALSAStreamOps::close() Ignore");
-                return ;
-            }
-       }
-       mParent->mVoipStreamCount = 0;
-       mParent->mVoipBitRate = 0;
+          if(mParent->mVoipInStreamCount^mParent->mVoipOutStreamCount) {
+              ALOGD("ALSAStreamOps::close() Ignore");
+              return ;
+          }
+          mParent->mVoipMicMute = 0;
+          mParent->mVoipBitRate = 0;
     }
     close();
 
@@ -101,32 +99,44 @@ status_t ALSAStreamOps::set(int      *format,
         if (mHandle->channels != popCount(*channels))
             return BAD_VALUE;
     } else if (channels) {
+        *channels = 0;
         if (mHandle->devices & AudioSystem::DEVICE_OUT_ALL) {
-            switch(*channels) {
-                case AUDIO_CHANNEL_OUT_5POINT1: // 5.0
-                case (AUDIO_CHANNEL_OUT_QUAD | AUDIO_CHANNEL_OUT_FRONT_CENTER): // 5.1
-                case AUDIO_CHANNEL_OUT_QUAD:
-                case AUDIO_CHANNEL_OUT_STEREO:
-                case AUDIO_CHANNEL_OUT_MONO:
+            switch(mHandle->channels) {
+                case 8:
+                case 7:
+                case 6:
+                case 5:
+                    *channels |= audio_channel_out_mask_from_count(mHandle->channels);
                     break;
+                    // Do not fall through
+                case 4:
+                    *channels |= AUDIO_CHANNEL_OUT_BACK_LEFT;
+                    *channels |= AUDIO_CHANNEL_OUT_BACK_RIGHT;
+                    // Fall through...
                 default:
-                    *channels = AUDIO_CHANNEL_OUT_STEREO;
-                    return BAD_VALUE;
+                case 2:
+                    *channels |= AUDIO_CHANNEL_OUT_FRONT_RIGHT;
+                    // Fall through...
+                case 1:
+                    *channels |= AUDIO_CHANNEL_OUT_FRONT_LEFT;
+                    break;
             }
         } else {
-            switch(*channels) {
+            switch(mHandle->channels) {
 #ifdef QCOM_SSR_ENABLED
                 // For 5.1 recording
-                case AudioSystem::CHANNEL_IN_5POINT1:
+                case 6 :
+                    *channels |= AUDIO_CHANNEL_IN_5POINT1;
+                    break;
 #endif
                     // Do not fall through...
-                case AUDIO_CHANNEL_IN_MONO:
-                case AUDIO_CHANNEL_IN_STEREO:
-                case AUDIO_CHANNEL_IN_FRONT_BACK:
-                    break;
                 default:
-                    *channels = AUDIO_CHANNEL_IN_MONO;
-                    return BAD_VALUE;
+                case 2:
+                    *channels |= AUDIO_CHANNEL_IN_RIGHT;
+                    // Fall through...
+                case 1:
+                    *channels |= AUDIO_CHANNEL_IN_LEFT;
+                    break;
             }
         }
     }
@@ -142,23 +152,23 @@ status_t ALSAStreamOps::set(int      *format,
 
     if (format) {
         switch(*format) {
-            case AudioSystem::FORMAT_DEFAULT:
+            case AUDIO_FORMAT_DEFAULT:
                 break;
 
-            case AudioSystem::PCM_16_BIT:
+            case AUDIO_FORMAT_PCM_16_BIT:
                 iformat = SNDRV_PCM_FORMAT_S16_LE;
                 break;
-            case AudioSystem::AMR_NB:
-            case AudioSystem::AMR_WB:
-#ifdef QCOM_QCHAT_ENABLED
-            case AudioSystem::EVRC:
-            case AudioSystem::EVRCB:
-            case AudioSystem::EVRCWB:
+            case AUDIO_FORMAT_AMR_NB:
+            case AUDIO_FORMAT_AMR_WB:
+#ifdef QCOM_AUDIO_FORMAT_ENABLED
+            case AUDIO_FORMAT_EVRC:
+            case AUDIO_FORMAT_EVRCB:
+            case AUDIO_FORMAT_EVRCWB:
 #endif
                 iformat = *format;
                 break;
 
-            case AudioSystem::PCM_8_BIT:
+            case AUDIO_FORMAT_PCM_8_BIT:
                 iformat = SNDRV_PCM_FORMAT_S8;
                 break;
 
@@ -172,10 +182,10 @@ status_t ALSAStreamOps::set(int      *format,
 
         switch(iformat) {
             case SNDRV_PCM_FORMAT_S16_LE:
-                *format = AudioSystem::PCM_16_BIT;
+                *format = AUDIO_FORMAT_PCM_16_BIT;
                 break;
             case SNDRV_PCM_FORMAT_S8:
-                *format = AudioSystem::PCM_8_BIT;
+                *format = AUDIO_FORMAT_PCM_8_BIT;
                 break;
             default:
                 break;
@@ -188,8 +198,10 @@ status_t ALSAStreamOps::set(int      *format,
 status_t ALSAStreamOps::setParameters(const String8& keyValuePairs)
 {
     AudioParameter param = AudioParameter(keyValuePairs);
-    String8 key = String8(AudioParameter::keyRouting);
-    int device;
+    String8 key = String8(AudioParameter::keyRouting),value;
+    int device, camcorder_enabled;
+    status_t err = NO_ERROR;
+    int mMode = mParent->mode();
 
 #ifdef SEPERATED_AUDIO_INPUT
     String8 key_input = String8(AudioParameter::keyInputSource);
@@ -205,17 +217,40 @@ status_t ALSAStreamOps::setParameters(const String8& keyValuePairs)
     if (param.getInt(key, device) == NO_ERROR) {
         // Ignore routing if device is 0.
         ALOGD("setParameters(): keyRouting with device 0x%x", device);
-        // reset to speaker when disconnecting HDMI to avoid timeout due to write errors
-        if ((device == 0) && (mDevices == AudioSystem::DEVICE_OUT_AUX_DIGITAL)) {
-            device = AudioSystem::DEVICE_OUT_SPEAKER;
-        }
-        if (device)
-            mDevices = device;
-        else
-            ALOGV("must not change mDevices to 0");
-
         if(device) {
-            mParent->doRouting(device);
+            //checking for camcorder_mode and in call more to select appropriate input device
+            key = String8("camcorder_mode");
+            if (param.getInt(key, camcorder_enabled) == NO_ERROR) {
+                if (camcorder_enabled == 1) {
+                    if ((mMode == AudioSystem::MODE_IN_CALL) || (mMode == AudioSystem::MODE_IN_COMMUNICATION)) {
+                        if (device & AudioSystem::DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
+                            device = AudioSystem::DEVICE_IN_BLUETOOTH_SCO_HEADSET;
+                        } else if (device & AudioSystem::DEVICE_IN_WIRED_HEADSET) {
+                            device = AudioSystem::DEVICE_IN_WIRED_HEADSET;
+                        } else if (device & AudioSystem::DEVICE_IN_AUX_DIGITAL) {
+                            device = AudioSystem::DEVICE_IN_AUX_DIGITAL;
+                        } else {
+                            device = AudioSystem::DEVICE_IN_BUILTIN_MIC;
+                        }
+                    } else {
+                        device = AudioSystem::DEVICE_IN_BUILTIN_MIC;
+                    }
+                }
+            }
+            ALOGD("setParameters(): keyRouting with device %#x", device);
+            if (mParent->isExtOutDevice(device)) {
+                mParent->mRouteAudioToExtOut = true;
+                ALOGD("setParameters(): device %#x", device);
+            }
+            err = mParent->doRouting(device);
+            if(err) {
+                ALOGE("doRouting failed = %d",err);
+            }
+            else {
+                mDevices = device;
+            }
+        } else {
+            ALOGE("must not change mDevices to 0");
         }
         param.remove(key);
     }
@@ -223,17 +258,19 @@ status_t ALSAStreamOps::setParameters(const String8& keyValuePairs)
     else {
         key = String8(AudioParameter::keyHandleFm);
         if (param.getInt(key, device) == NO_ERROR) {
-        ALOGD("setParameters(): handleFm with device %d", device);
-        mDevices = device;
+            ALOGD("setParameters(): handleFm with device %d", device);
             if(device) {
+                mDevices = device;
                 mParent->handleFm(device);
             }
             param.remove(key);
+        } else {
+            mParent->setParameters(keyValuePairs);
         }
     }
 #endif
 
-    return NO_ERROR;
+    return err;
 }
 
 String8 ALSAStreamOps::getParameters(const String8& keys)
@@ -246,8 +283,7 @@ String8 ALSAStreamOps::getParameters(const String8& keys)
         param.addInt(key, (int)mDevices);
     }
     else {
-#ifdef QCOM_VOIP_ENABLED
-        key = String8(AudioParameter::keyVoipCheck);
+        key = String8(VOIPCHECK_KEY);
         if (param.get(key, value) == NO_ERROR) {
             if((!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL, strlen(SND_USE_CASE_VERB_IP_VOICECALL))) ||
                (!strncmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP, strlen(SND_USE_CASE_MOD_PLAY_VOIP))))
@@ -255,13 +291,41 @@ String8 ALSAStreamOps::getParameters(const String8& keys)
             else
                 param.addInt(key, false);
         }
-#endif
     }
     key = String8(AUDIO_PARAMETER_STREAM_SUP_CHANNELS);
     if (param.get(key, value) == NO_ERROR) {
         EDID_AUDIO_INFO info = { 0 };
         bool first = true;
         value = String8();
+#ifdef TARGET_8974
+        char hdmiEDIDData[MAX_SHORT_AUDIO_DESC_CNT+1];
+        if(!mParent->mALSADevice->getEDIDData(hdmiEDIDData)) {
+            if (AudioUtil::getHDMIAudioSinkCaps(&info, hdmiEDIDData)) {
+                for (int i = 0; i < info.nAudioBlocks && i < MAX_EDID_BLOCKS; i++) {
+                    String8 append;
+                    switch (info.AudioBlocksArray[i].nChannels) {
+                    //Do not handle stereo output in Multi-channel cases
+                    //Stereo case is handled in normal playback path
+                    case 6:
+                        ENUM_TO_STRING(append, AUDIO_CHANNEL_OUT_5POINT1);
+                        break;
+                    case 8:
+                        ENUM_TO_STRING(append, AUDIO_CHANNEL_OUT_7POINT1);
+                        break;
+                    default:
+                        ALOGD("Unsupported number of channels %d", info.AudioBlocksArray[i].nChannels);
+                        break;
+                    }
+                    if (!append.isEmpty()) {
+                        value += (first ? append : String8("|") + append);
+                        first = false;
+                    }
+                }
+            } else {
+                ALOGE("Failed to get HDMI sink capabilities");
+            }
+        }
+#else
         if (AudioUtil::getHDMIAudioSinkCaps(&info)) {
             for (int i = 0; i < info.nAudioBlocks && i < MAX_EDID_BLOCKS; i++) {
                 String8 append;
@@ -286,6 +350,7 @@ String8 ALSAStreamOps::getParameters(const String8& keys)
         } else {
             ALOGE("Failed to get HDMI sink capabilities");
         }
+#endif
         param.add(key, value);
     }
     ALOGV("getParameters() %s", param.toString().string());
@@ -314,25 +379,25 @@ int ALSAStreamOps::format() const
 
     switch(ALSAFormat) {
         case SNDRV_PCM_FORMAT_S8:
-             audioSystemFormat = AudioSystem::PCM_8_BIT;
+             audioSystemFormat = AUDIO_FORMAT_PCM_8_BIT;
              break;
 
-        case AudioSystem::AMR_NB:
-        case AudioSystem::AMR_WB:
-#ifdef QCOM_QCHAT_ENABLED
-        case AudioSystem::EVRC:
-        case AudioSystem::EVRCB:
-        case AudioSystem::EVRCWB:
+        case AUDIO_FORMAT_AMR_NB:
+        case AUDIO_FORMAT_AMR_WB:
+#ifdef QCOM_AUDIO_FORMAT_ENABLED
+        case AUDIO_FORMAT_EVRC:
+        case AUDIO_FORMAT_EVRCB:
+        case AUDIO_FORMAT_EVRCWB:
 #endif
             audioSystemFormat = mHandle->format;
             break;
         case SNDRV_PCM_FORMAT_S16_LE:
-            audioSystemFormat = AudioSystem::PCM_16_BIT;
+            audioSystemFormat = AUDIO_FORMAT_PCM_16_BIT;
             break;
 
         default:
             LOG_FATAL("Unknown AudioSystem bit width %d!", audioSystemFormat);
-            audioSystemFormat = AudioSystem::PCM_16_BIT;
+            audioSystemFormat = AUDIO_FORMAT_PCM_16_BIT;
             break;
     }
 
@@ -342,16 +407,76 @@ int ALSAStreamOps::format() const
 
 uint32_t ALSAStreamOps::channels() const
 {
-    return mHandle->channelMask;
+    unsigned int count = mHandle->channels;
+    uint32_t channels = 0;
+
+    if (mDevices & AudioSystem::DEVICE_OUT_ALL)
+        switch(count) {
+            case 8:
+            case 7:
+            case 6:
+            case 5:
+                channels |=audio_channel_out_mask_from_count(count);
+                break;
+                // Do not fall through
+            case 4:
+                channels |= AUDIO_CHANNEL_OUT_BACK_LEFT;
+                channels |= AUDIO_CHANNEL_OUT_BACK_RIGHT;
+                // Fall through...
+            default:
+            case 2:
+                channels |= AUDIO_CHANNEL_OUT_FRONT_RIGHT;
+                // Fall through...
+            case 1:
+                channels |= AUDIO_CHANNEL_OUT_FRONT_LEFT;
+                break;
+        }
+    else
+        switch(count) {
+#ifdef QCOM_SSR_ENABLED
+            // For 5.1 recording
+            case 6 :
+                channels |= AUDIO_CHANNEL_IN_5POINT1;
+                break;
+                // Do not fall through...
+#endif
+            default:
+            case 2:
+                channels |= AUDIO_CHANNEL_IN_RIGHT;
+                // Fall through...
+            case 1:
+                channels |= AUDIO_CHANNEL_IN_LEFT;
+                break;
+        }
+
+    return channels;
 }
 
 void ALSAStreamOps::close()
 {
     ALOGD("close");
+
+    bool found = false;
+    for(ALSAHandleList::iterator it = mParent->mDeviceList.begin();
+            it != mParent->mDeviceList.end(); ++it) {
+        if (mHandle == &(*it)) {
+            found = true;
+            ALOGD("close() : Found mHandle %p, proceeding to close", mHandle);
+            break;
+        }
+    }
+
+    if(!found) {
+        ALOGW("close() : mHandle NOT found %p, exiting close", mHandle);
+        return;
+    }
+
     if((!strncmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL, strlen(SND_USE_CASE_VERB_IP_VOICECALL))) ||
        (!strncmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP, strlen(SND_USE_CASE_MOD_PLAY_VOIP)))) {
+       mParent->mVoipMicMute = false;
        mParent->mVoipBitRate = 0;
-       mParent->mVoipStreamCount = 0;
+       mParent->mVoipInStreamCount = 0;
+       mParent->mVoipOutStreamCount = 0;
     }
     mParent->mALSADevice->close(mHandle);
 }
