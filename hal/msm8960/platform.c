@@ -37,6 +37,7 @@
  * This is the sysfs path for the HDMI audio data block
  */
 #define AUDIO_DATA_BLOCK_PATH "/sys/class/graphics/fb1/audio_data_block"
+#define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 
 /*
  * This file will have a maximum of 38 bytes:
@@ -247,6 +248,19 @@ void *platform_init(struct audio_device *adev)
     char baseband[PROPERTY_VALUE_MAX];
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data;
+
+    adev->mixer = mixer_open(MIXER_CARD);
+
+    if (!adev->mixer) {
+        ALOGE("Unable to open the mixer, aborting.");
+        return NULL;
+    }
+
+    adev->audio_route = audio_route_init(MIXER_CARD, MIXER_XML_PATH);
+    if (!adev->audio_route) {
+        ALOGE("%s: Failed to init audio route controls, aborting.", __func__);
+        return NULL;
+    }
 
     my_data = calloc(1, sizeof(struct platform_data));
 

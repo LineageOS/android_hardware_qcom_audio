@@ -36,8 +36,6 @@
 #include "platform_api.h"
 #include <platform.h>
 
-#define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
-
 struct pcm_config pcm_config_deep_buffer = {
     .channels = 2,
     .rate = DEFAULT_OUTPUT_SAMPLING_RATE,
@@ -1714,20 +1712,6 @@ static int adev_open(const hw_module_t *module, const char *name,
     if (strcmp(name, AUDIO_HARDWARE_INTERFACE) != 0) return -EINVAL;
 
     adev = calloc(1, sizeof(struct audio_device));
-
-    adev->mixer = mixer_open(MIXER_CARD);
-    if (!adev->mixer) {
-        ALOGE("Unable to open the mixer, aborting.");
-        return -ENOSYS;
-    }
-
-    adev->audio_route = audio_route_init(MIXER_CARD, MIXER_XML_PATH);
-    if (!adev->audio_route) {
-        free(adev);
-        ALOGE("%s: Failed to init audio route controls, aborting.", __func__);
-        *device = NULL;
-        return -EINVAL;
-    }
 
     adev->device.common.tag = HARDWARE_DEVICE_TAG;
     adev->device.common.version = AUDIO_DEVICE_API_VERSION_2_0;

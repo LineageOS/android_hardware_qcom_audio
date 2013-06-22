@@ -36,6 +36,7 @@
  * This is the sysfs path for the HDMI audio data block
  */
 #define AUDIO_DATA_BLOCK_PATH "/sys/class/graphics/fb1/audio_data_block"
+#define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 
 /*
  * This file will have a maximum of 38 bytes:
@@ -49,6 +50,10 @@
 
 /* EDID format ID for LPCM audio */
 #define EDID_FORMAT_LPCM    1
+
+/* Retry for delay in FW loading*/
+#define RETRY_NUMBER 10
+#define RETRY_US 500000
 
 struct audio_block_header
 {
@@ -224,6 +229,26 @@ void *platform_init(struct audio_device *adev)
 {
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data;
+    int retry_num = 0;
+
+    adev->mixer = mixer_open(MIXER_CARD);
+
+    while (!adev->mixer && retry_num < RETRY_NUMBER) {
+        usleep(RETRY_US);
+        adev->mixer = mixer_open(MIXER_CARD);
+        retry_num++;
+    }
+
+    if (!adev->mixer) {
+        ALOGE("Unable to open the mixer, aborting.");
+        return NULL;
+    }
+
+    adev->audio_route = audio_route_init(MIXER_CARD, MIXER_XML_PATH);
+    if (!adev->audio_route) {
+        ALOGE("%s: Failed to init audio route controls, aborting.", __func__);
+        return NULL;
+    }
 
     my_data = calloc(1, sizeof(struct platform_data));
 
