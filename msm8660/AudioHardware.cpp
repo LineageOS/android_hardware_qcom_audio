@@ -2431,8 +2431,18 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input)
                 }
 #endif
                 else {
+#ifdef USE_SAMSUNG_VOIP_DEVICE
+                  if (mMode == AudioSystem::MODE_IN_COMMUNICATION) {
+                    ALOGD("Routing audio to VOIP speaker\n");
+                    sndDevice = SND_DEVICE_VOIP_SPEAKER;
+                  }
+                  else {
+#endif
                     ALOGI("Routing audio to Speaker\n");
                     sndDevice = SND_DEVICE_SPEAKER;
+#ifdef USE_SAMSUNG_VOIP_DEVICE
+                  }
+#endif
                 }
             } else {
                 ALOGI("Routing audio to Speaker (default)\n");
@@ -2529,9 +2539,25 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input)
         }
 #endif
           else if (outputDevices & AudioSystem::DEVICE_OUT_SPEAKER) {
+#ifdef SAMSUNG_AUDIO
+            if (mMode == AudioSystem::MODE_IN_CALL) {
+              ALOGD("Routing audio to Call Speaker\n");
+              sndDevice = SND_DEVICE_CALL_SPEAKER;
+            }
+#ifdef USE_SAMSUNG_VOIP_DEVICE
+            else if (mMode == AudioSystem::MODE_IN_COMMUNICATION) {
+              ALOGD("Routing audio to VOIP speaker\n");
+              sndDevice = SND_DEVICE_VOIP_SPEAKER;
+            }
+#endif
+            else {
+#endif
             ALOGI("Routing audio to Speakerphone\n");
             sndDevice = SND_DEVICE_SPEAKER;
             audProcess = (ADRC_ENABLE | EQ_ENABLE | RX_IIR_ENABLE | MBADRC_ENABLE);
+#ifdef SAMSUNG_AUDIO
+            }
+#endif
         } else
 #ifdef QCOM_FM_ENABLED
          if (outputDevices & AudioSystem::DEVICE_OUT_FM_TX){
@@ -2541,19 +2567,36 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input)
         } else
 #endif
           if(outputDevices & AudioSystem::DEVICE_OUT_EARPIECE){
+#ifdef SAMSUNG_AUDIO
+            if (mMode == AudioSystem::MODE_IN_CALL) {
+              if (dualmic_enabled) {
+                ALOGI("Routing audio to Handset with DualMike enabled\n");
+                sndDevice = SND_DEVICE_IN_S_SADC_OUT_HANDSET;
+              }
+              else {
+                ALOGD("Routing audio to Call Handset\n");
+                sndDevice = SND_DEVICE_CALL_HANDSET;
+              }
+            }
+#ifdef USE_SAMSUNG_VOIP_DEVICE
+            else if (mMode == AudioSystem::MODE_IN_COMMUNICATION) {
+              ALOGD("Routing audio to VOIP handset\n");
+              sndDevice = SND_DEVICE_VOIP_HANDSET;
+            }
+#endif
+            else {
+#endif
             ALOGI("Routing audio to Handset\n");
             sndDevice = SND_DEVICE_HANDSET;
             audProcess = (ADRC_ENABLE | EQ_ENABLE | RX_IIR_ENABLE | MBADRC_ENABLE);
+#ifdef SAMSUNG_AUDIO
+            }
+#endif
         }
     }
 
+#ifndef SAMSUNG_AUDIO
     if (dualmic_enabled) {
-#ifdef SAMSUNG_AUDIO
-        if (sndDevice == SND_DEVICE_HANDSET) {
-            ALOGI("Routing audio to Handset with DualMike enabled\n");
-            sndDevice = SND_DEVICE_IN_S_SADC_OUT_HANDSET;
-        }
-#else
         if (sndDevice == SND_DEVICE_HANDSET) {
             ALOGI("Routing audio to Handset with DualMike enabled\n");
             sndDevice = SND_DEVICE_IN_S_SADC_OUT_HANDSET;
@@ -2561,33 +2604,17 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input)
             ALOGI("Routing audio to Speakerphone with DualMike enabled\n");
             sndDevice = SND_DEVICE_IN_S_SADC_OUT_SPEAKER_PHONE;
         }
-#endif
     }
+#endif
 
 #ifdef SAMSUNG_AUDIO
-    if (mMode == AudioSystem::MODE_IN_CALL) {
-        if ((!dualmic_enabled) && (sndDevice == SND_DEVICE_HANDSET)) {
-            ALOGD("Routing audio to Call Handset\n");
-            sndDevice = SND_DEVICE_CALL_HANDSET;
-        } else if (sndDevice == SND_DEVICE_SPEAKER) {
-            ALOGD("Routing audio to Call Speaker\n");
-            sndDevice = SND_DEVICE_CALL_SPEAKER;
-        } else if (sndDevice == SND_DEVICE_HEADSET) {
+    if ((mMode == AudioSystem::MODE_IN_CALL) && (sndDevice == SND_DEVICE_HEADSET)) {
             ALOGD("Routing audio to Call Headset\n");
             sndDevice = SND_DEVICE_CALL_HEADSET;
-        }
 #ifdef USE_SAMSUNG_VOIP_DEVICE
-    } else if (mMode == AudioSystem::MODE_IN_COMMUNICATION) {
-        if (sndDevice == SND_DEVICE_HANDSET) {
-            ALOGD("Routing audio to VOIP handset\n");
-            sndDevice = SND_DEVICE_VOIP_HANDSET;
-        } else if (sndDevice == SND_DEVICE_SPEAKER) {
-            ALOGD("Routing audio to VOIP speaker\n");
-            sndDevice = SND_DEVICE_VOIP_SPEAKER;
-        } else if (sndDevice == SND_DEVICE_HEADSET) {
+    } else if ((mMode == AudioSystem::MODE_IN_COMMUNICATION) && (sndDevice == SND_DEVICE_HEADSET)) {
             ALOGD("Routing audio to VOIP headset\n");
             sndDevice = SND_DEVICE_VOIP_HEADSET;
-        }
 #endif
     }
 #endif
