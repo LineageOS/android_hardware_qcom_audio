@@ -464,32 +464,6 @@ status_t AudioHardwareALSA::setVoiceVolume(float v)
     return NO_ERROR;
 }
 
-#ifdef QCOM_FM_ENABLED
-status_t  AudioHardwareALSA::setFmVolume(float value)
-{
-    Mutex::Autolock autoLock(mLock);
-    status_t status = NO_ERROR;
-
-    int vol;
-
-    if (value < 0.0) {
-        ALOGW("setFmVolume(%f) under 0.0, assuming 0.0\n", value);
-        value = 0.0;
-    } else if (value > 1.0) {
-        ALOGW("setFmVolume(%f) over 1.0, assuming 1.0\n", value);
-        value = 1.0;
-    }
-    vol  = lrint((value * 0x2000) + 0.5);
-
-    ALOGV("setFmVolume(%f)\n", value);
-    ALOGV("Setting FM volume to %d (available range is 0 to 0x2000)\n", vol);
-
-    mALSADevice->setFmVolume(vol);
-
-    return status;
-}
-#endif
-
 status_t AudioHardwareALSA::setMasterVolume(float volume)
 {
     return NO_ERROR;
@@ -517,6 +491,7 @@ status_t AudioHardwareALSA::setParameters(const String8& keyValuePairs)
     AudioParameter param = AudioParameter(keyValuePairs);
     String8 key;
     String8 value;
+    float fm_volume;
     status_t status = NO_ERROR;
     int device;
     int btRate;
@@ -691,6 +666,25 @@ status_t AudioHardwareALSA::setParameters(const String8& keyValuePairs)
                  status_t err = suspendPlaybackOnExtOut_l(activeUsecase);
             }
         }
+        param.remove(key);
+    }
+
+    key = String8("fm_volume");
+
+    if (param.getFloat(key, fm_volume) == NO_ERROR) {
+        if (fm_volume < 0.0) {
+            ALOGW("set Fm Volume(%f) under 0.0, assuming 0.0\n", fm_volume);
+            fm_volume = 0.0;
+        } else if (fm_volume > 1.0) {
+            ALOGW("set Fm Volume(%f) over 1.0, assuming 1.0\n", fm_volume);
+            fm_volume = 1.0;
+        }
+        fm_volume = lrint((fm_volume * 0x2000) + 0.5);
+
+        ALOGV("set Fm Volume(%f)\n", fm_volume);
+        ALOGV("Setting FM volume to %d (available range is 0 to 0x2000)\n", fm_volume);
+
+        mALSADevice->setFmVolume(fm_volume);
         param.remove(key);
     }
 
