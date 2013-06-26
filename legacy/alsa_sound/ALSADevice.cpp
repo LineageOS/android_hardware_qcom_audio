@@ -1729,8 +1729,14 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
             return strdup(SND_USE_CASE_DEV_PROXY_RX_HANDSET); /* COMBO EARPIECE + PROXY RX */
 #endif
         } else if (devices & AudioSystem::DEVICE_OUT_EARPIECE) {
+#ifdef SEPERATED_VOIP
+            if (mCallMode == AUDIO_MODE_IN_COMMUNICATION) {
+                return strdup(SND_USE_CASE_DEV_VOIP_EARPIECE);
+            } else if (mCallMode == AUDIO_MODE_IN_CALL) {
+#else
             if (mCallMode == AUDIO_MODE_IN_CALL ||
                 mCallMode == AUDIO_MODE_IN_COMMUNICATION) {
+#endif
                 if (shouldUseHandsetAnc(mDevSettingsFlag, mInChannels)) {
                     return strdup(SND_USE_CASE_DEV_ANC_HANDSET); /* ANC Handset RX */
                 } else {
@@ -1741,8 +1747,14 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
             }
         } else if (devices & AudioSystem::DEVICE_OUT_SPEAKER) {
 #ifdef SEPERATED_VOICE_SPEAKER
+#ifdef SEPERATED_VOIP
+            if (mCallMode == AUDIO_MODE_IN_COMMUNICATION) {
+                return strdup(SND_USE_CASE_DEV_VOIP_SPEAKER);
+            } else if (mCallMode == AUDIO_MODE_IN_CALL) {
+#else
             if (mCallMode == AUDIO_MODE_IN_CALL ||
                 mCallMode == AUDIO_MODE_IN_COMMUNICATION) {
+#endif
                 return strdup(SND_USE_CASE_DEV_VOC_SPEAKER); /* Voice SPEAKER RX */
             }
 #endif
@@ -1757,8 +1769,14 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
                     return strdup(SND_USE_CASE_DEV_ANC_HEADSET); /* ANC HEADSET RX */
                 }
             } else {
+#ifdef SEPERATED_VOIP
+                if (mCallMode == AUDIO_MODE_IN_COMMUNICATION) {
+                    return strdup(SND_USE_CASE_DEV_VOIP_HEADPHONE);
+                } else if (mCallMode == AUDIO_MODE_IN_CALL) {
+#else
                 if (mCallMode == AUDIO_MODE_IN_CALL ||
                     mCallMode == AUDIO_MODE_IN_COMMUNICATION) {
+#endif
                     return strdup(SND_USE_CASE_DEV_VOC_HEADPHONE); /* Voice HEADSET RX */
                 } else {
                     return strdup(SND_USE_CASE_DEV_HEADPHONES); /* HEADSET RX */
@@ -1927,6 +1945,16 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
 #ifdef SEPERATED_AUDIO_INPUT
                 if(mInputSource == AUDIO_SOURCE_VOICE_RECOGNITION) {
                     return strdup(SND_USE_CASE_DEV_VOICE_RECOGNITION ); /* VOICE RECOGNITION TX */
+                }
+#endif
+#ifdef SEPERATED_VOIP
+                if (mCallMode == AUDIO_MODE_IN_COMMUNICATION) {
+                    if (!strncmp(rxDevice, SND_USE_CASE_DEV_VOIP_EARPIECE,
+                                (strlen(SND_USE_CASE_DEV_VOIP_EARPIECE)+1))) {
+                        return strdup(SND_USE_CASE_DEV_VOIP_HANDSET);
+                    } else {
+                        return strdup(SND_USE_CASE_DEV_VOIP_LINE);
+                    }
                 }
 #endif
                 else {
