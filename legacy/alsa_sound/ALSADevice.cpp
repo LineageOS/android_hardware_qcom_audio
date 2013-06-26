@@ -1983,6 +1983,9 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
             if (mCallMode == AUDIO_MODE_IN_CALL) {
                 return strdup(SND_USE_CASE_DEV_VOC_HEADSET);
             }
+            if (mInputSource == AUDIO_SOURCE_VOICE_RECOGNITION) {
+                return strdup(SND_USE_CASE_DEV_VOICE_RECOGNITION_HEADSET);
+            }
 #endif
             return strdup(SND_USE_CASE_DEV_HEADSET); /* HEADSET TX */
 #ifdef QCOM_ANC_HEADSET_ENABLED

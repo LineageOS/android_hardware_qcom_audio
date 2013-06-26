@@ -298,6 +298,7 @@ static card_mapping_t card_mapping_list[] = {
 #define SND_USE_CASE_DEV_PROXY_RX_SPEAKER_ANC_HEADSET "PROXY Rx Speaker ANC Headset"
 #define SND_USE_CASE_DEV_CAMCORDER_TX       "Camcorder Tx"
 #define SND_USE_CASE_DEV_VOICE_RECOGNITION  "Voice Recognition"
+#define SND_USE_CASE_DEV_VOICE_RECOGNITION_HEADSET  "Voice Recognition Headset"
 #define SND_USE_CASE_DEV_VOC_EARPIECE       "Voice Earpiece"
 #define SND_USE_CASE_DEV_VOC_HEADPHONE      "Voice Headphones"
 #define SND_USE_CASE_DEV_VOC_HEADSET        "Voice Headset"
