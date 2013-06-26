@@ -306,6 +306,12 @@ static card_mapping_t card_mapping_list[] = {
 #define SND_USE_CASE_DEV_VOC_LINE           "Voice Line"
 #define SND_USE_CASE_DEV_AANC_LINE          "AANC Line"
 #define SND_USE_CASE_DEV_AANC_DMIC_ENDFIRE  "AANC DMIC Endfire"
+#define SND_USE_CASE_DEV_VOIP_EARPIECE      "VOIP Earpiece"
+#define SND_USE_CASE_DEV_VOIP_HEADPHONE     "VOIP Headphones"
+#define SND_USE_CASE_DEV_VOIP_HEADSET       "VOIP Headset"
+#define SND_USE_CASE_DEV_VOIP_SPEAKER       "VOIP Speaker"
+#define SND_USE_CASE_DEV_VOIP_LINE          "VOIP Line"
+#define SND_USE_CASE_DEV_VOIP_HANDSET       "VOIP Handset"
 
 #define SND_USE_CASE_MOD_PLAY_FM         "Play FM"
 #define SND_USE_CASE_MOD_CAPTURE_FM      "Capture FM"
