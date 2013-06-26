@@ -810,12 +810,16 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
             int tmp_rx_id = rx_dev_id;
 
 #ifdef USE_ES325_2MIC
-            if (tx_dev_id == 4) {
-                tmp_tx_id = 34;
-                setMixerControl("VEQ Enable", 1, 0);
-                setMixerControl("ES325 2Mic Enable", 1, 0);
-            } else {
-                setMixerControl("ES325 2Mic Enable", 0, 0);
+            if (!strcmp(rxDevice, SND_USE_CASE_DEV_VOC_EARPIECE) ||
+                    !strcmp(rxDevice, SND_USE_CASE_DEV_VOC_EARPIECE_XGAIN) ||
+                    !strcmp(rxDevice, SND_USE_CASE_DEV_VOC_SPEAKER)) {
+                if (tx_dev_id == 4) {
+                    tmp_tx_id = 34;
+                    setMixerControl("VEQ Enable", 1, 0);
+                    setMixerControl("ES325 2Mic Enable", 1, 0);
+                } else {
+                    setMixerControl("ES325 2Mic Enable", 0, 0);
+                }
             }
 #endif
 #ifdef HTC_CSDCLIENT
@@ -1970,6 +1974,16 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
         } else if (devices & AudioSystem::DEVICE_IN_AUX_DIGITAL) {
             return strdup(SND_USE_CASE_DEV_HDMI_TX); /* HDMI TX */
         } else if ((devices & AudioSystem::DEVICE_IN_WIRED_HEADSET)) {
+#ifdef SEPERATED_HEADSET_MIC
+#ifdef SEPERATED_VOIP
+            if (mCallMode == AUDIO_MODE_IN_COMMUNICATION) {
+                return strdup(SND_USE_CASE_DEV_VOIP_HEADSET);
+            }
+#endif
+            if (mCallMode == AUDIO_MODE_IN_CALL) {
+                return strdup(SND_USE_CASE_DEV_VOC_HEADSET);
+            }
+#endif
             return strdup(SND_USE_CASE_DEV_HEADSET); /* HEADSET TX */
 #ifdef QCOM_ANC_HEADSET_ENABLED
         } else if (devices & AudioSystem::DEVICE_IN_ANC_HEADSET) {
