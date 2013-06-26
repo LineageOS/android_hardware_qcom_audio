@@ -24,7 +24,9 @@ endif
 ifeq ($(strip $(QCOM_CSDCLIENT_ENABLED)),true)
     LOCAL_CFLAGS += -DQCOM_CSDCLIENT_ENABLED
 endif
-#LOCAL_CFLAGS += -DQCOM_FM_ENABLED
+ifeq ($(strip $(QCOM_FM_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_FM_ENABLED
+endif
 ifeq ($(strip $(QCOM_PROXY_DEVICE_ENABLED)),true)
     LOCAL_CFLAGS += -DQCOM_PROXY_DEVICE_ENABLED
 endif
@@ -152,7 +154,9 @@ endif
 ifeq ($(strip $(QCOM_CSDCLIENT_ENABLED)),true)
     LOCAL_CFLAGS += -DQCOM_CSDCLIENT_ENABLED
 endif
-#LOCAL_CFLAGS += -DQCOM_FM_ENABLED
+ifeq ($(strip $(QCOM_FM_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_FM_ENABLED
+endif
 ifeq ($(strip $(QCOM_PROXY_DEVICE_ENABLED)),true)
     LOCAL_CFLAGS += -DQCOM_PROXY_DEVICE_ENABLED
 endif
