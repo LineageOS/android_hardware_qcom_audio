@@ -1525,22 +1525,24 @@ size_t AudioHardware::getInputBufferSize(uint32_t sampleRate, int format, int ch
         return 0;
     }
 
-    if (sampleRate == 8000) {
-       return 320*channelCount;
-    } else if (sampleRate == 16000){
-       return 640*channelCount;
-    } else {
-        /*
-            Return pcm record buffer size based on the sampling rate:
-            If sampling rate >= 44.1 Khz, use 512 samples/channel pcm recording and
-            If sampling rate < 44.1 Khz, use 256 samples/channel pcm recording
-        */
-       if(sampleRate >= 44100){
-           return 1024*channelCount;
-       } else {
-           return 512*channelCount;
-       }
+    size_t bufferSize = 0;
+
+    if (sampleRate == 8000 || sampleRate == 16000 || sampleRate == 32000) {
+       bufferSize = (sampleRate * channelCount * 20 * sizeof(int16_t)) / 1000;
     }
+    else if (sampleRate == 11025 || sampleRate == 12000) {
+       bufferSize = 256 * sizeof(int16_t) * channelCount;
+    }
+    else if (sampleRate == 22050 || sampleRate == 24000) {
+       bufferSize = 512 * sizeof(int16_t) * channelCount;
+    }
+    else if (sampleRate == 44100 || sampleRate == 48000) {
+       bufferSize = 1024 * sizeof(int16_t) * channelCount;
+    }
+
+    ALOGD("getInputBufferSize: sampleRate: %d channelCount: %d bufferSize: %d", sampleRate, channelCount, bufferSize);
+
+    return bufferSize;
 }
 
 static status_t set_volume_rpc(uint32_t device,
