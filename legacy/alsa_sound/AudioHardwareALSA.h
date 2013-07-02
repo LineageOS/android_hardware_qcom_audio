@@ -115,6 +115,7 @@ class AudioHardwareALSA;
 #define ST_KEY              "st_enable"
 #define INCALLMUSIC_KEY     "incall_music_enabled"
 #define AUDIO_PARAMETER_KEY_FM_VOLUME "fm_volume"
+#define ECHO_SUPRESSION     "ec_supported"
 
 #define ANC_FLAG        0x00000001
 #define DMIC_FLAG       0x00000002
@@ -879,7 +880,7 @@ protected:
 
     void                disableVoiceCall(char* verb, char* modifier, int mode, int device,
                                          uint32_t vsid = 0);
-    void                enableVoiceCall(char* verb, char* modifier, int mode, int device,
+    status_t            enableVoiceCall(char* verb, char* modifier, int mode, int device,
                                         uint32_t vsid = 0);
     bool                isAnyCallActive();
     bool                routeVoiceCall(int device, int newMode);
