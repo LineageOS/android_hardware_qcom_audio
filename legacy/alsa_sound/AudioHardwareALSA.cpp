@@ -669,7 +669,7 @@ status_t AudioHardwareALSA::setParameters(const String8& keyValuePairs)
         param.remove(key);
     }
 
-    key = String8("fm_volume");
+    key = String8(AUDIO_PARAMETER_KEY_FM_VOLUME);
 
     if (param.getFloat(key, fm_volume) == NO_ERROR) {
         if (fm_volume < 0.0) {

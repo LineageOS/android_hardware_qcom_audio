@@ -167,5 +167,6 @@ private:
 
         void handleNotificationRoutingForStream(AudioSystem::stream_type stream);
         bool platform_is_Fusion3();
+        bool mIsFmStream;
 };
 };
