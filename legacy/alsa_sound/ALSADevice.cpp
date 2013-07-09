@@ -26,6 +26,7 @@
 #include "AudioHardwareALSA.h"
 #include <media/AudioRecord.h>
 #include <dlfcn.h>
+#include <math.h>
 extern "C" {
 #ifdef QCOM_CSDCLIENT_ENABLED
 static int (*csd_disable_device)();
@@ -80,6 +81,8 @@ ALSADevice::ALSADevice() {
     mCallMode = AUDIO_MODE_NORMAL;
     mInChannels = 0;
     mIsFmEnabled = false;
+    //Initialize fm volume to value corresponding to unity volume	92
+    mFmVolume = lrint((0.0 * 0x2000) + 0.5);
     char value[128], platform[128], baseband[128];
 
     property_get("persist.audio.handset.mic",value,"0");
@@ -1254,12 +1257,13 @@ Error:
 status_t ALSADevice::setFmVolume(int value)
 {
     status_t err = NO_ERROR;
+
+    mFmVolume = value;
     if (!mIsFmEnabled) {
         return INVALID_OPERATION;
     }
 
     setMixerControl("Internal FM RX Volume",value,0);
-    mFmVolume = value;
 
     return err;
 }
