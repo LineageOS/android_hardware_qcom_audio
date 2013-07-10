@@ -384,12 +384,10 @@ status_t AudioPolicyManager::setDeviceConnectionState(audio_devices_t device,
                 ALOGV("setDeviceConnectionState() changeRefCount Inc");
                 mOutputs.valueFor(mPrimaryOutput)->changeRefCount(AudioSystem::MUSIC, 1);
                 newDevice = (audio_devices_t)(AudioPolicyManagerBase::getNewDevice(mPrimaryOutput, false) | AUDIO_DEVICE_OUT_FM);
-                mIsFmStream = true;
             }
             else {
                 ALOGV("setDeviceConnectionState() changeRefCount Dec");
                 mOutputs.valueFor(mPrimaryOutput)->changeRefCount(AudioSystem::MUSIC, -1);
-                mIsFmStream = false;
             }
 
             AudioParameter param = AudioParameter();
@@ -1961,7 +1959,7 @@ status_t AudioPolicyManager::checkAndSetVolume(int stream,
         if (stream == AudioSystem::BLUETOOTH_SCO) {
             mpClientInterface->setStreamVolume(AudioSystem::VOICE_CALL, volume, output, delayMs);
 #ifdef QCOM_FM_ENABLED
-        } else if ((stream == AudioSystem::MUSIC) && (mIsFmStream)) {
+        } else if (stream == AudioSystem::MUSIC) {
             float fmVolume = -1.0;
             fmVolume = computeVolume(stream, index, output, device);
             if (fmVolume >= 0) {
@@ -1976,7 +1974,8 @@ status_t AudioPolicyManager::checkAndSetVolume(int stream,
                     mpClientInterface->setStreamVolume((AudioSystem::stream_type)stream, volume, output, delayMs);
                 }
             }
-            return NO_ERROR;
+            //If you return here, only FM volume would be handled. To handle Music volume as well, this shouldn't return.
+            //return NO_ERROR;
 #endif
         }
         mpClientInterface->setStreamVolume((AudioSystem::stream_type)stream, volume, output, delayMs);
