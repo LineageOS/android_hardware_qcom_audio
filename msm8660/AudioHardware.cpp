@@ -2386,7 +2386,9 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input)
            || (inputDevice == AudioSystem::DEVICE_IN_FM_RX)
            || (inputDevice == AudioSystem::DEVICE_IN_FM_RX_A2DP)
 #endif
+           || (inputDevice == AudioSystem::DEVICE_IN_COMMUNICATION)
         )
+            ALOGV("Ignoring routing for FM/INCALL/VOIP recording");
             return NO_ERROR;
         if (inputDevice != 0) {
             if (inputDevice & AudioSystem::DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
