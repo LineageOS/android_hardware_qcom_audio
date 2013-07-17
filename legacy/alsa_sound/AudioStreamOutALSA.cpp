@@ -119,12 +119,12 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
         /* PCM handle might be closed and reopened immediately to flush
          * the buffers, recheck and break if PCM handle is valid */
         if (mHandle->handle == NULL && mHandle->rxHandle == NULL) {
-            ALOGV("mDevices =0x%x", mDevices);
-            if(mParent->isExtOutDevice(mDevices)) {
+            ALOGV("mDevices =0x%x", mParent->mCurRxDevice);
+            if(mParent->isExtOutDevice(mParent->mCurRxDevice)) {
                 ALOGV("StreamOut write - mRouteAudioToExtOut = %d ", mParent->mRouteAudioToExtOut);
                 mParent->mRouteAudioToExtOut = true;
                 if(mParent->mExtOutStream == NULL) {
-                    mParent->switchExtOut(mDevices);
+                    mParent->switchExtOut(mParent->mCurRxDevice);
                 }
             }
             ALOGV("write: mHandle->useCase: %s", mHandle->useCase);
@@ -162,23 +162,23 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
             if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
                (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
 #ifdef QCOM_USBAUDIO_ENABLED
-                if((mDevices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
-                      (mDevices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)||
-                      (mDevices & AudioSystem::DEVICE_OUT_PROXY)) {
-                    mHandle->module->route(mHandle, mDevices , mParent->mode());
+                if((mParent->mCurRxDevice & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
+                      (mParent->mCurRxDevice & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)||
+                      (mParent->mCurRxDevice & AudioSystem::DEVICE_OUT_PROXY)) {
+                    mHandle->module->route(mHandle, mParent->mCurRxDevice , mParent->mode());
                 }else
 #endif
                 {
-                  mHandle->module->route(mHandle, mDevices , AUDIO_MODE_IN_COMMUNICATION);
+                  mHandle->module->route(mHandle, mParent->mCurRxDevice , AUDIO_MODE_IN_COMMUNICATION);
                 }
 #ifdef QCOM_USBAUDIO_ENABLED
-            } else if((mDevices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
-                      (mDevices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)||
-                      (mDevices & AudioSystem::DEVICE_OUT_PROXY)) {
-                mHandle->module->route(mHandle, mDevices , mParent->mode());
+            } else if((mParent->mCurRxDevice & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
+                      (mParent->mCurRxDevice & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)||
+                      (mParent->mCurRxDevice & AudioSystem::DEVICE_OUT_PROXY)) {
+                mHandle->module->route(mHandle, mParent->mCurRxDevice , mParent->mode());
 #endif
             } else {
-                  mHandle->module->route(mHandle, mDevices , mParent->mode());
+                  mHandle->module->route(mHandle, mParent->mCurRxDevice , mParent->mode());
             }
             if (!strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI) ||
                 !strcmp(mHandle->useCase, SND_USE_CASE_VERB_HIFI2) ||
@@ -200,8 +200,8 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
                 return bytes;
             }
 #ifdef QCOM_USBAUDIO_ENABLED
-            if((mDevices == AudioSystem::DEVICE_IN_ANLG_DOCK_HEADSET)||
-                   (mDevices == AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)){
+            if((mParent->mCurRxDevice == AudioSystem::DEVICE_IN_ANLG_DOCK_HEADSET)||
+                   (mParent->mCurRxDevice == AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)){
                 if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
                    (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
                     ALOGV("Setting VOIPCALL bit here, musbPlaybackState %d", mParent->musbPlaybackState);
@@ -231,8 +231,8 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
     }
 
 #ifdef QCOM_USBAUDIO_ENABLED
-    if(((mDevices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET) ||
-        (mDevices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)) &&
+    if(((mParent->mCurRxDevice & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET) ||
+        (mParent->mCurRxDevice & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)) &&
         (!mParent->musbPlaybackState)) {
         mParent->mLock.lock();
         mParent->startUsbPlaybackIfNotStarted();
@@ -279,10 +279,10 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
                 {
                     if (mParent->mALSADevice->mSSRComplete) {
                         ALOGD("SSR Case: Call device switch to apply AMIX controls.");
-                        mHandle->module->route(mHandle, mDevices , mParent->mode());
+                        mHandle->module->route(mHandle, mParent->mCurRxDevice , mParent->mode());
                         mParent->mALSADevice->mSSRComplete = false;
 
-                        if(mParent->isExtOutDevice(mDevices)) {
+                        if(mParent->isExtOutDevice(mParent->mCurRxDevice)) {
                            ALOGV("StreamOut write - mRouteAudioToExtOut = %d ", mParent->mRouteAudioToExtOut);
                            mParent->mRouteAudioToExtOut = true;
                         }
