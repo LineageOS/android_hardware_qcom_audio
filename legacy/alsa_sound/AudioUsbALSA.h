@@ -1,6 +1,6 @@
 /* AudioUsbALSA.h
 
-  Copyright (c) 2012, The Linux Foundation. All rights reserved.
+  Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -119,6 +119,8 @@ private:
 
     void RecordingThreadEntry();
     static void *RecordingThreadWrapper(void *me);
+
+    void initPlaybackVolume();
 
     status_t setHardwareParams(pcm *local_handle, uint32_t sampleRate, uint32_t channels, int periodSize, UsbAudioPCMModes usbAudioPCMModes);
 
