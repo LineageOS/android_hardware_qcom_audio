@@ -21,6 +21,7 @@
 #include <hardware/audio.h>
 
 #include <tinyalsa/asoundlib.h>
+#include <tinycompress/tinycompress.h>
 
 #include <audio_route/audio_route.h>
 
@@ -49,13 +50,13 @@ typedef enum {
     USECASE_AUDIO_PLAYBACK_DEEP_BUFFER = 0,
     USECASE_AUDIO_PLAYBACK_LOW_LATENCY,
     USECASE_AUDIO_PLAYBACK_MULTI_CH,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD,
 
     /* Capture usecases */
     USECASE_AUDIO_RECORD,
     USECASE_AUDIO_RECORD_LOW_LATENCY,
 
     USECASE_VOICE_CALL,
-
     AUDIO_USECASE_MAX
 } audio_usecase_t;
 
@@ -70,20 +71,55 @@ typedef enum {
  * the buffer size of an input/output stream
  */
 
+enum {
+    OFFLOAD_CMD_EXIT,               /* exit compress offload thread loop*/
+    OFFLOAD_CMD_DRAIN,              /* send a full drain request to DSP */
+    OFFLOAD_CMD_PARTIAL_DRAIN,      /* send a partial drain request to DSP */
+    OFFLOAD_CMD_WAIT_FOR_BUFFER,    /* wait for buffer released by DSP */
+};
+
+enum {
+    OFFLOAD_STATE_IDLE,
+    OFFLOAD_STATE_PLAYING,
+    OFFLOAD_STATE_PAUSED,
+};
+
+struct offload_cmd {
+    struct listnode node;
+    int cmd;
+    int data[];
+};
+
 struct stream_out {
     struct audio_stream_out stream;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
+    pthread_cond_t  cond;
     struct pcm_config config;
+    struct compr_config compr_config;
     struct pcm *pcm;
+    struct compress *compr;
     int standby;
     int pcm_device_id;
+    unsigned int sample_rate;
     audio_channel_mask_t channel_mask;
+    audio_format_t format;
     audio_devices_t devices;
     audio_output_flags_t flags;
     audio_usecase_t usecase;
     /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
     bool muted;
+
+    int non_blocking;
+    int playback_started;
+    int offload_state;
+    pthread_cond_t offload_cond;
+    pthread_t offload_thread;
+    struct listnode offload_cmd_list;
+    bool offload_thread_blocked;
+
+    stream_callback_t offload_callback;
+    void *offload_cookie;
 
     struct audio_device *dev;
 };
