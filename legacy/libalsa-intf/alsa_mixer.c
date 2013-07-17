@@ -365,9 +365,10 @@ int mixer_ctl_read_tlv(struct mixer_ctl *ctl,
                 }
             break;
         }
+        case SNDRV_CTL_TLVT_DB_MINMAX:
         case SNDRV_CTL_TLVT_DB_LINEAR: {
                 int idx = 2;
-                ALOGV("dBLiner-");
+                ALOGV("dBLiner-/dbminmax");
                 if (size != 2 * sizeof(unsigned int)) {
                         while (size > 0) {
                                 ALOGV("0x%08x,", tlv[idx++]);
@@ -606,7 +607,8 @@ int mixer_ctl_set(struct mixer_ctl *ctl, unsigned percent)
         } else if (!mixer_ctl_read_tlv(ctl, tlv, &min, &max, &tlv_type)) {
             switch(tlv_type) {
             case SNDRV_CTL_TLVT_DB_LINEAR:
-                ALOGV("tlv db linear: b4 %d\n", percent);
+            case SNDRV_CTL_TLVT_DB_MINMAX:
+                ALOGV("tlv db linear/db minmax: b4 %d\n", percent);
 
 		if (min < 0) {
 			max = max - min;
