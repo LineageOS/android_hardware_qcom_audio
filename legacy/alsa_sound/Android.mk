@@ -166,6 +166,9 @@ endif
 ifeq ($(strip $(QCOM_USBAUDIO_ENABLED)),true)
     LOCAL_CFLAGS += -DQCOM_USBAUDIO_ENABLED
 endif
+ifeq ($(strip $(QCOM_OUTPUT_FLAGS_ENABLED)),true)
+    LOCAL_CFLAGS += -DQCOM_OUTPUT_FLAGS_ENABLED
+endif
 
 LOCAL_SRC_FILES := \
     audio_policy_hal.cpp \
