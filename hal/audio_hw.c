@@ -356,7 +356,7 @@ static void check_and_route_capture_usecases(struct audio_device *adev,
 static int read_hdmi_channel_masks(struct stream_out *out)
 {
     int ret = 0;
-    int channels = platform_edid_get_max_channels();
+    int channels = platform_edid_get_max_channels(out->dev->platform);
 
     switch (channels) {
         /*
@@ -1318,6 +1318,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
     out->flags = flags;
     out->devices = devices;
+    out->dev = adev;
 
     /* Init use case and pcm_config */
     if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT &&
@@ -1390,7 +1391,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->stream.get_render_position = out_get_render_position;
     out->stream.get_next_write_timestamp = out_get_next_write_timestamp;
 
-    out->dev = adev;
     out->standby = 1;
     /* out->muted = false; by calloc() */
 

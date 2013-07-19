@@ -26,17 +26,13 @@
 #include <platform_api.h>
 #include "platform.h"
 
+#define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
+#define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
 
 #define DUALMIC_CONFIG_NONE 0      /* Target does not contain 2 mics */
 #define DUALMIC_CONFIG_ENDFIRE 1
 #define DUALMIC_CONFIG_BROADSIDE 2
-
-/*
- * This is the sysfs path for the HDMI audio data block
- */
-#define AUDIO_DATA_BLOCK_PATH "/sys/class/graphics/fb1/audio_data_block"
-#define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 
 /*
  * This file will have a maximum of 38 bytes:
@@ -776,40 +772,49 @@ int platform_set_hdmi_channels(void *platform,  int channel_count)
     return 0;
 }
 
-int platform_edid_get_max_channels(void)
+int platform_edid_get_max_channels(void *platform)
 {
-    FILE *file;
-    struct audio_block_header header;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
     char block[MAX_SAD_BLOCKS * SAD_BLOCK_SIZE];
     char *sad = block;
     int num_audio_blocks;
     int channel_count;
     int max_channels = 0;
-    int i;
+    int i, ret, count;
 
-    file = fopen(AUDIO_DATA_BLOCK_PATH, "rb");
-    if (file == NULL) {
-        ALOGE("Unable to open '%s'", AUDIO_DATA_BLOCK_PATH);
+    struct mixer_ctl *ctl;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, AUDIO_DATA_BLOCK_MIXER_CTL);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, AUDIO_DATA_BLOCK_MIXER_CTL);
         return 0;
     }
 
-    /* Read audio block header */
-    fread(&header, 1, sizeof(header), file);
+    mixer_ctl_update(ctl);
+
+    count = mixer_ctl_get_num_values(ctl);
 
     /* Read SAD blocks, clamping the maximum size for safety */
-    if (header.length > (int)sizeof(block))
-        header.length = (int)sizeof(block);
-    fread(&block, header.length, 1, file);
+    if (count > (int)sizeof(block))
+        count = (int)sizeof(block);
 
-    fclose(file);
+    ret = mixer_ctl_get_array(ctl, block, count);
+    if (ret != 0) {
+        ALOGE("%s: mixer_ctl_get_array() failed to get EDID info", __func__);
+        return 0;
+    }
 
     /* Calculate the number of SAD blocks */
-    num_audio_blocks = header.length / SAD_BLOCK_SIZE;
+    num_audio_blocks = count / SAD_BLOCK_SIZE;
 
     for (i = 0; i < num_audio_blocks; i++) {
         /* Only consider LPCM blocks */
-        if ((sad[0] >> 3) != EDID_FORMAT_LPCM)
+        if ((sad[0] >> 3) != EDID_FORMAT_LPCM) {
+            sad += 3;
             continue;
+        }
 
         channel_count = (sad[0] & 0x7) + 1;
         if (channel_count > max_channels)
