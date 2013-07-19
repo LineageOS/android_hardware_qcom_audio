@@ -835,7 +835,7 @@ int platform_set_hdmi_channels(void *platform,  int channel_count)
     return 0;
 }
 
-int platform_edid_get_max_channels(void)
+int platform_edid_get_max_channels(void *platform)
 {
     FILE *file;
     struct audio_block_header header;
