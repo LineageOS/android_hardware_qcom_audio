@@ -1252,7 +1252,7 @@ status_t AudioPolicyManager::checkOutputsForDevice(audio_devices_t device,
             desc = new AudioOutputDescriptor(profile);
             desc->mDevice = device;
             audio_io_handle_t output = 0;
-#if QCOM_OUTPUT_FLAGS_ENABLED
+#ifdef QCOM_OUTPUT_FLAGS_ENABLED
             if (!(desc->mFlags & AUDIO_OUTPUT_FLAG_LPA || desc->mFlags & AUDIO_OUTPUT_FLAG_TUNNEL ||
                 desc->mFlags & AUDIO_OUTPUT_FLAG_VOIP_RX)) {
 #endif
