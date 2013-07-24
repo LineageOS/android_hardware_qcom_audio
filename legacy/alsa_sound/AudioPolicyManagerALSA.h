@@ -35,6 +35,8 @@ public:
                 AudioPolicyManager(AudioPolicyClientInterface *clientInterface)
                 : AudioPolicyManagerBase(clientInterface) {}
 
+        virtual void setPhoneState(int state);
+
         virtual ~AudioPolicyManager() {}
 
 };

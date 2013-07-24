@@ -101,42 +101,32 @@ status_t ALSAStreamOps::set(int      *format,
         if (mHandle->channels != popCount(*channels))
             return BAD_VALUE;
     } else if (channels) {
-        *channels = 0;
         if (mHandle->devices & AudioSystem::DEVICE_OUT_ALL) {
-            switch(mHandle->channels) {
-                case 6:
-                case 5:
-                    *channels |= audio_channel_out_mask_from_count(mHandle->channels);
+            switch(*channels) {
+                case AUDIO_CHANNEL_OUT_5POINT1: // 5.0
+                case (AUDIO_CHANNEL_OUT_QUAD | AUDIO_CHANNEL_OUT_FRONT_CENTER): // 5.1
+                case AUDIO_CHANNEL_OUT_QUAD:
+                case AUDIO_CHANNEL_OUT_STEREO:
+                case AUDIO_CHANNEL_OUT_MONO:
                     break;
-                    // Do not fall through
-                case 4:
-                    *channels |= AudioSystem::CHANNEL_OUT_BACK_LEFT;
-                    *channels |= AudioSystem::CHANNEL_OUT_BACK_RIGHT;
-                    // Fall through...
                 default:
-                case 2:
-                    *channels |= AudioSystem::CHANNEL_OUT_FRONT_RIGHT;
-                    // Fall through...
-                case 1:
-                    *channels |= AudioSystem::CHANNEL_OUT_FRONT_LEFT;
-                    break;
+                    *channels = AUDIO_CHANNEL_OUT_STEREO;
+                    return BAD_VALUE;
             }
         } else {
-            switch(mHandle->channels) {
+            switch(*channels) {
 #ifdef QCOM_SSR_ENABLED
                 // For 5.1 recording
-                case 6 :
-                    *channels |= AudioSystem::CHANNEL_IN_5POINT1;
-                    break;
+                case AudioSystem::CHANNEL_IN_5POINT1:
 #endif
                     // Do not fall through...
-                default:
-                case 2:
-                    *channels |= AudioSystem::CHANNEL_IN_RIGHT;
-                    // Fall through...
-                case 1:
-                    *channels |= AudioSystem::CHANNEL_IN_LEFT;
+                case AUDIO_CHANNEL_IN_MONO:
+                case AUDIO_CHANNEL_IN_STEREO:
+                case AUDIO_CHANNEL_IN_FRONT_BACK:
                     break;
+                default:
+                    *channels = AUDIO_CHANNEL_IN_MONO;
+                    return BAD_VALUE;
             }
         }
     }
@@ -352,47 +342,7 @@ int ALSAStreamOps::format() const
 
 uint32_t ALSAStreamOps::channels() const
 {
-    unsigned int count = mHandle->channels;
-    uint32_t channels = 0;
-
-    if (mDevices & AudioSystem::DEVICE_OUT_ALL)
-        switch(count) {
-            case 6:
-            case 5:
-                channels |=audio_channel_out_mask_from_count(count);
-                break;
-                // Do not fall through
-            case 4:
-                channels |= AudioSystem::CHANNEL_OUT_BACK_LEFT;
-                channels |= AudioSystem::CHANNEL_OUT_BACK_RIGHT;
-                // Fall through...
-            default:
-            case 2:
-                channels |= AudioSystem::CHANNEL_OUT_FRONT_RIGHT;
-                // Fall through...
-            case 1:
-                channels |= AudioSystem::CHANNEL_OUT_FRONT_LEFT;
-                break;
-        }
-    else
-        switch(count) {
-#ifdef QCOM_SSR_ENABLED
-            // For 5.1 recording
-            case 6 :
-                channels |= AudioSystem::CHANNEL_IN_5POINT1;
-                break;
-                // Do not fall through...
-#endif
-            default:
-            case 2:
-                channels |= AudioSystem::CHANNEL_IN_RIGHT;
-                // Fall through...
-            case 1:
-                channels |= AudioSystem::CHANNEL_IN_LEFT;
-                break;
-        }
-
-    return channels;
+    return mHandle->channelMask;
 }
 
 void ALSAStreamOps::close()

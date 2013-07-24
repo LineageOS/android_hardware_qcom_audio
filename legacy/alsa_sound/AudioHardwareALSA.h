@@ -177,6 +177,7 @@ struct alsa_handle_t {
     struct pcm *        handle;
     snd_pcm_format_t    format;
     uint32_t            channels;
+    audio_channel_mask_t channelMask;
     uint32_t            sampleRate;
     unsigned int        latency;         // Delay in usec
     unsigned int        bufferSize;      // Size of sample buffer
