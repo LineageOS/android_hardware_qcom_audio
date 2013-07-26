@@ -121,6 +121,8 @@ struct stream_out {
 
     stream_callback_t offload_callback;
     void *offload_cookie;
+    struct compr_gapless_mdata gapless_mdata;
+    int send_new_metadata;
 
     struct audio_device *dev;
 };

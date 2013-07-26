@@ -661,6 +661,7 @@ static void stop_compressed_output_l(struct stream_out *out)
 {
     out->offload_state = OFFLOAD_STATE_IDLE;
     out->playback_started = 0;
+    out->send_new_metadata = 1;
     if (out->compr != NULL) {
         compress_stop(out->compr);
         while (out->offload_thread_blocked) {
@@ -725,8 +726,8 @@ static void *offload_thread_loop(void *context)
             event = STREAM_CBK_EVENT_WRITE_READY;
             break;
         case OFFLOAD_CMD_PARTIAL_DRAIN:
-            compress_drain(out->compr);
-//FIXME            compress_partial_drain(out->compr);
+            compress_next_track(out->compr);
+            compress_partial_drain(out->compr);
             send_callback = true;
             event = STREAM_CBK_EVENT_DRAIN_READY;
             break;
@@ -743,8 +744,6 @@ static void *offload_thread_loop(void *context)
         out->offload_thread_blocked = false;
         pthread_cond_signal(&out->cond);
         if (send_callback) {
-            if (event == STREAM_CBK_EVENT_DRAIN_READY)
-                stop_compressed_output_l(out);
             out->offload_callback(event, NULL, out->offload_cookie);
         }
         free(cmd);
@@ -1094,6 +1093,8 @@ static int out_standby(struct audio_stream *stream)
             }
         } else {
             stop_compressed_output_l(out);
+            out->gapless_mdata.encoder_delay = 0;
+            out->gapless_mdata.encoder_padding = 0;
             if (out->compr != NULL) {
                 compress_close(out->compr);
                 out->compr = NULL;
@@ -1112,6 +1113,39 @@ static int out_dump(const struct audio_stream *stream, int fd)
 {
     return 0;
 }
+
+static int parse_compress_metadata(struct stream_out *out, struct str_parms *parms)
+{
+    int ret = 0;
+    char value[32];
+    struct compr_gapless_mdata tmp_mdata;
+
+    if (!out || !parms) {
+        return -EINVAL;
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
+    if (ret >= 0) {
+        tmp_mdata.encoder_delay = atoi(value); //whats a good limit check?
+    } else {
+        return -EINVAL;
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
+    if (ret >= 0) {
+        tmp_mdata.encoder_padding = atoi(value);
+    } else {
+        return -EINVAL;
+    }
+
+    out->gapless_mdata = tmp_mdata;
+    out->send_new_metadata = 1;
+    ALOGV("%s new encoder delay %u and padding %u", __func__,
+          out->gapless_mdata.encoder_delay, out->gapless_mdata.encoder_padding);
+
+    return 0;
+}
+
 
 static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 {
@@ -1186,6 +1220,11 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         pthread_mutex_unlock(&adev->lock);
         pthread_mutex_unlock(&out->lock);
     }
+
+    if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+        parse_compress_metadata(out, parms);
+    }
+
     str_parms_destroy(parms);
     ALOGV("%s: exit: code(%d)", __func__, ret);
     return ret;
@@ -1292,8 +1331,15 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     }
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+        ALOGVV("%s: writing buffer (%d bytes) to compress device", __func__, bytes);
+        if (out->send_new_metadata) {
+            ALOGVV("send new gapless metadata");
+            compress_set_gapless_metadata(out->compr, &out->gapless_mdata);
+            out->send_new_metadata = 0;
+        }
+
         ret = compress_write(out->compr, buffer, bytes);
-        ALOGVV("%s: writing buffer (%d bytes) to pcm device returned %d", __func__, bytes, ret);
+        ALOGVV("%s: writing buffer (%d bytes) to compress device returned %d", __func__, bytes, ret);
         if (ret >= 0 && ret < (ssize_t)bytes) {
             send_offload_cmd_l(out, OFFLOAD_CMD_WAIT_FOR_BUFFER);
         }
@@ -1771,6 +1817,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
+
+        out->send_new_metadata = 1;
         create_offload_callback_thread(out);
         ALOGV("%s: offloaded output offload_info version %04x bit rate %d",
                 __func__, config->offload_info.version,
