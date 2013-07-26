@@ -55,6 +55,11 @@
 #define RETRY_NUMBER 10
 #define RETRY_US 500000
 
+#define MAX_VOL_INDEX 5
+#define MIN_VOL_INDEX 0
+#define percent_to_index(val, min, max) \
+	        ((val) * ((max) - (min)) * 0.01 + (min) + .5)
+
 struct audio_block_header
 {
     int reserved;
@@ -207,6 +212,24 @@ bool is_operator_tmus()
 {
     pthread_once(&check_op_once_ctl, check_operator);
     return is_tmus;
+}
+
+static int set_volume_values(int type, int volume, int* values)
+{
+    values[0] = volume;
+    values[1] = ALL_SESSION_VSID;
+
+    switch(type) {
+    case VOLUME_SET:
+        values[2] = DEFAULT_VOLUME_RAMP_DURATION_MS;
+        break;
+    case MUTE_SET:
+        values[2] = DEFAULT_MUTE_RAMP_DURATION;
+        break;
+    default:
+        return -EINVAL;
+    }
+    return 0;
 }
 
 static int set_echo_reference(struct mixer *mixer, const char* ec_ref)
@@ -411,12 +434,14 @@ int platform_set_voice_volume(void *platform, int volume)
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     struct mixer_ctl *ctl;
-    const char *mixer_ctl_name = "Voice Rx Volume";
+    const char *mixer_ctl_name = "Voice Rx Gain";
+    int values[VOLUME_CTL_PARAM_NUM];
+    int ret = 0;
 
     // Voice volume levels are mapped to adsp volume levels as follows.
     // 100 -> 5, 80 -> 4, 60 -> 3, 40 -> 2, 20 -> 1  0 -> 0
     // But this values don't changed in kernel. So, below change is need.
-    volume = volume / 20;
+    volume = (int)percent_to_index(volume, MIN_VOL_INDEX, MAX_VOL_INDEX);
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
@@ -424,8 +449,16 @@ int platform_set_voice_volume(void *platform, int volume)
               __func__, mixer_ctl_name);
         return -EINVAL;
     }
-    ALOGV("Setting voice volume: %d", volume);
-    mixer_ctl_set_value(ctl, 0, volume);
+    ret = set_volume_values(VOLUME_SET, volume, values);
+    if (ret < 0) {
+        ALOGV("%s: failed setting volume by incorrect type", __func__);
+        return -EINVAL;
+    }
+    ret = mixer_ctl_set_array(ctl, values, sizeof(values)/sizeof(int));
+    if (ret < 0) {
+        ALOGV("%s: failed set mixer ctl by %d", __func__, ret);
+        return -EINVAL;
+    }
 
     return 0;
 }
@@ -436,6 +469,8 @@ int platform_set_mic_mute(void *platform, bool state)
     struct audio_device *adev = my_data->adev;
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voice Tx Mute";
+    int values[VOLUME_CTL_PARAM_NUM];
+    int ret = 0;
 
     if (adev->mode == AUDIO_MODE_IN_CALL) {
         ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
@@ -445,7 +480,16 @@ int platform_set_mic_mute(void *platform, bool state)
             return -EINVAL;
         }
         ALOGV("Setting mic mute: %d", state);
-        mixer_ctl_set_value(ctl, 0, state);
+        ret = set_volume_values(MUTE_SET, state, values);
+        if (ret < 0) {
+            ALOGV("%s: failed setting mute by incorrect type", __func__);
+            return -EINVAL;
+        }
+        ret = mixer_ctl_set_array(ctl, values, sizeof(values)/sizeof(int));
+        if (ret < 0) {
+            ALOGV("%s: failed set mixer ctl by %d", __func__, ret);
+            return -EINVAL;
+        }
     }
 
     return 0;

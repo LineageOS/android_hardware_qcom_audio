@@ -94,6 +94,13 @@ enum {
 
 #define DEFAULT_OUTPUT_SAMPLING_RATE 48000
 
+#define ALL_SESSION_VSID    0xFFFFFFFF
+#define DEFAULT_MUTE_RAMP_DURATION      500
+#define DEFAULT_VOLUME_RAMP_DURATION_MS 20
+#define VOLUME_SET 0
+#define MUTE_SET 1
+#define VOLUME_CTL_PARAM_NUM 3
+
 /*
  * tinyAlsa library interprets period size as number of frames
  * one frame = channel_count * sizeof (pcm sample)
