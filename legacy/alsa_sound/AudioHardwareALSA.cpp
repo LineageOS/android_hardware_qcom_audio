@@ -1771,7 +1771,22 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
                                     sizeof(alsa_handle.useCase));
                         }
                     }
+                } else if (*channels & AUDIO_CHANNEL_IN_VOICE_UPLINK) {
+                    if (mFusion3Platform) {
+                        mALSADevice->setVocRecMode(INCALL_REC_MONO);
+                        strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_CAPTURE_VOICE,
+                                sizeof(alsa_handle.useCase));
+                    } else {
+                        if (*format == AUDIO_FORMAT_AMR_WB) {
+                            strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC_COMPRESSED,
+                                    sizeof(alsa_handle.useCase));
+                        } else {
+                            strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC,
+                                    sizeof(alsa_handle.useCase));
+                        }
+                    }
                 }
+
 #ifdef QCOM_FM_ENABLED
             } else if((devices == AudioSystem::DEVICE_IN_FM_RX)) {
                 strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_CAPTURE_FM, sizeof(alsa_handle.useCase));
@@ -1871,36 +1886,14 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
             {
             route_devices = devices | mCurDevice;
             }
-            mALSADevice->route(&(*it), route_devices, mode());
         } else {
 #ifdef QCOM_USBAUDIO_ENABLED
             if(devices & AudioSystem::DEVICE_IN_ANLG_DOCK_HEADSET ||
                devices & AudioSystem::DEVICE_IN_PROXY) {
                 devices |= AudioSystem::DEVICE_IN_PROXY;
                 ALOGD("routing everything from proxy");
-            mALSADevice->route(&(*it), devices, mode());
-            } else
-#endif
-            {
-                mALSADevice->route(&(*it), devices, mode());
             }
-        }
-
-        if(!strcmp(it->useCase, SND_USE_CASE_VERB_HIFI_REC) ||
-           !strcmp(it->useCase, SND_USE_CASE_VERB_HIFI_LOWLATENCY_REC) ||
-           !strcmp(it->useCase, SND_USE_CASE_VERB_HIFI_REC_COMPRESSED) ||
-#ifdef QCOM_FM_ENABLED
-           !strcmp(it->useCase, SND_USE_CASE_VERB_FM_REC) ||
-           !strcmp(it->useCase, SND_USE_CASE_VERB_FM_A2DP_REC) ||
 #endif
-           !strcmp(it->useCase, SND_USE_CASE_VERB_DL_REC) ||
-           !strcmp(it->useCase, SND_USE_CASE_VERB_UL_DL_REC) ||
-           !strcmp(it->useCase, SND_USE_CASE_VERB_CAPTURE_COMPRESSED_VOICE_DL) ||
-           !strcmp(it->useCase, SND_USE_CASE_VERB_CAPTURE_COMPRESSED_VOICE_UL_DL) ||
-           !strcmp(it->useCase, SND_USE_CASE_VERB_INCALL_REC)) {
-            snd_use_case_set(mUcMgr, "_verb", it->useCase);
-        } else {
-            snd_use_case_set(mUcMgr, "_enamod", it->useCase);
         }
         if(sampleRate) {
             it->sampleRate = *sampleRate;
@@ -1927,18 +1920,12 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
             }
         }
 #endif
-        err = mALSADevice->open(&(*it));
         if (*format == AUDIO_FORMAT_AMR_WB) {
              ALOGV("### Setting bufsize to 61");
              it->bufferSize = 61;
         }
-        if (err) {
-           ALOGE("Error opening pcm input device");
-           mDeviceList.erase(it);
-        } else {
-           in = new AudioStreamInALSA(this, &(*it), acoustics);
-           err = in->set(format, channels, sampleRate, devices);
-        }
+        in = new AudioStreamInALSA(this, &(*it), acoustics);
+        err = in->set(format, channels, sampleRate, devices);
         if (status) *status = err;
         return in;
       }
