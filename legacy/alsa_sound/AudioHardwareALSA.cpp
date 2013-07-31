@@ -211,6 +211,8 @@ AudioHardwareALSA::AudioHardwareALSA() :
             } else if (strstr(soundCardInfo, "msm8974-taiko-liquid-snd-card")) {
                 codec_rev = 43;
                 break;
+            } else if (strstr(soundCardInfo, "msm8230-tapan-snd-card")) {
+                break;
             } else if(strstr(soundCardInfo, "no soundcards")) {
                 ALOGE("NO SOUND CARD DETECTED");
                 if(sleep_retry < SOUND_CARD_SLEEP_RETRY) {
