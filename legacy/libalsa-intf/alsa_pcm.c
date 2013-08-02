@@ -467,9 +467,26 @@ long pcm_avail(struct pcm *pcm)
      }
 }
 
+void appl_pt_forward(struct pcm *pcm)
+{
+	struct snd_pcm_sync_ptr *sync_ptr = pcm->sync_ptr;
+	snd_pcm_uframes_t appl_ptr = sync_ptr->c.control.appl_ptr;
+
+	if (appl_ptr >= pcm->sw_p->boundary) {
+		appl_ptr -= pcm->sw_p->boundary;
+		ALOGE("appl_ptr %ld set to ld",
+			sync_ptr->c.control.appl_ptr, appl_ptr);
+		sync_ptr->c.control.appl_ptr = appl_ptr;
+	}
+}
+
 int sync_ptr(struct pcm *pcm)
 {
     int err;
+
+    if (pcm->flags & PCM_MMAP)
+        appl_pt_forward(pcm);
+
     err = ioctl(pcm->fd, SNDRV_PCM_IOCTL_SYNC_PTR, pcm->sync_ptr);
     if (err < 0) {
         err = errno;
