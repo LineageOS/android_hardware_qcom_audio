@@ -344,6 +344,14 @@ static bool ap_is_stream_active(const struct audio_policy *pol,
     return qap->apm->isStreamActive((int) stream, in_past_ms);
 }
 
+static bool ap_is_stream_active_remotely(const struct audio_policy *pol,
+                                audio_stream_type_t stream,
+                                uint32_t in_past_ms)
+{
+    const struct qcom_audio_policy *qap = to_cqap(pol);
+    return qap->apm->isStreamActiveRemotely((int) stream, in_past_ms);
+}
+
 static bool ap_is_source_active(const struct audio_policy *pol, audio_source_t source)
 {
     const struct qcom_audio_policy *qap = to_cqap(pol);
@@ -404,6 +412,7 @@ static int create_qcom_ap(const struct audio_policy_device *device,
     qap->policy.unregister_effect = ap_unregister_effect;
     qap->policy.set_effect_enabled = ap_set_effect_enabled;
     qap->policy.is_stream_active = ap_is_stream_active;
+    qap->policy.is_stream_active_remotely = ap_is_stream_active_remotely;
     qap->policy.is_source_active = ap_is_source_active;
     qap->policy.dump = ap_dump;
 
