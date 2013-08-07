@@ -67,8 +67,8 @@ AudioStreamInALSA::AudioStreamInALSA(AudioHardwareALSA *parent,
         AudioSystem::audio_in_acoustics audio_acoustics) :
     ALSAStreamOps(parent, handle),
     mFramesLost(0),
-    mParent(parent),
-    mAcoustics(audio_acoustics)
+    mAcoustics(audio_acoustics),
+    mParent(parent)
 #ifdef QCOM_SSR_ENABLED
     , mFp_4ch(NULL),
     mFp_6ch(NULL),
