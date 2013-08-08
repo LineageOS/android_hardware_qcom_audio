@@ -463,7 +463,7 @@ static int select_devices(struct audio_device *adev,
         return 0;
     }
 
-    ALOGV("%s: out_snd_device(%d: %s) in_snd_device(%d: %s)", __func__,
+    ALOGD("%s: out_snd_device(%d: %s) in_snd_device(%d: %s)", __func__,
           out_snd_device, platform_get_snd_device_name(out_snd_device),
           in_snd_device,  platform_get_snd_device_name(in_snd_device));
 
@@ -904,7 +904,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     int ret, val = 0;
     bool select_new_device = false;
 
-    ALOGV("%s: enter: usecase(%d: %s) kvpairs: %s",
+    ALOGD("%s: enter: usecase(%d: %s) kvpairs: %s",
           __func__, out->usecase, use_case_table[out->usecase], kvpairs);
     parms = str_parms_create_str(kvpairs);
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
