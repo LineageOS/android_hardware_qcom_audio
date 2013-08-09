@@ -450,9 +450,12 @@ status_t AudioHardwareALSA::setVoiceVolume(float v)
     vol = 100 - vol;
 
     if (mALSADevice) {
-        if(newMode == AUDIO_MODE_IN_COMMUNICATION) {
-            mALSADevice->setVoipVolume(vol);
-        } else if (newMode == AUDIO_MODE_IN_CALL){
+        /* Check for MODE_IN_COMMUNICATION is removed as Direct Output is used
+         * for voicemail cases where stream is opened without any mode set or
+         * mode set to IN_CALL and user still expect volume to be updated for
+         * direct output stream */
+        mALSADevice->setVoipVolume(vol);
+        if (newMode == AUDIO_MODE_IN_CALL){
                if (mVoiceCallState == CALL_ACTIVE)
                    mALSADevice->setVoiceVolume(vol);
                else if (mVoice2CallState == CALL_ACTIVE)
@@ -1243,6 +1246,12 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
                    (!strcmp(it->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
                     ALOGD("openOutput:  it->rxHandle %d it->handle %d",it->rxHandle,it->handle);
                     voipstream_active = true;
+                    if(mVoipOutStreamCount >= 2)
+                    {
+                      ALOGE("Avoid creating multiple VoIP session ");
+                      if (status) *status = err;
+                      return NULL;
+                    }
                     break;
                 }
         }
@@ -1616,6 +1625,12 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
                    (!strcmp(it->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
                     ALOGD("openInput:  it->rxHandle %p it->handle %p",it->rxHandle,it->handle);
                     voipstream_active = true;
+                    if(mVoipInStreamCount >= 2)
+                    {
+                      ALOGE("Avoid creating multiple VoIP session ");
+                      if (status) *status = err;
+                      return NULL;
+                    }
                     break;
                 }
         }
@@ -2888,7 +2903,7 @@ void AudioHardwareALSA::extOutThreadFunc() {
     uint32_t bytesAvailInBuffer = 0;
     uint32_t proxyBufferTime = 0;
     void  *data;
-    int err = NO_ERROR;
+    status_t err = NO_ERROR;
     ssize_t size = 0;
     void * outbuffer= malloc(AFE_PROXY_PERIOD_SIZE);
 
@@ -2918,6 +2933,11 @@ void AudioHardwareALSA::extOutThreadFunc() {
             }
         }
         err = mALSADevice->readFromProxy(&data, &size);
+        if(err == (status_t) FAILED_TRANSACTION) {
+           ALOGE("readFromProxy returned an error, mostly a flush or an under run continuing");
+           err = NO_ERROR;
+           continue;
+        }
         if(err < 0) {
            ALOGE("ALSADevice readFromProxy returned err = %d,data = %p,\
                     size = %ld", err, data, size);

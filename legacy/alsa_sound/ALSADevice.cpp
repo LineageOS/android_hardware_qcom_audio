@@ -2428,32 +2428,69 @@ ssize_t  ALSADevice::readFromProxy(void **captureBuffer , ssize_t *bufferSize) {
         *bufferSize = 0;
         return err;
     }
-    if (mProxyParams.mX.frames > mProxyParams.mAvail)
-        mProxyParams.mFrames = mProxyParams.mAvail;
-    void *data  = dst_address(capture_handle);
-    //TODO: Return a pointer to AudioHardware
-    if(mProxyParams.mCaptureBuffer == NULL)
-        mProxyParams.mCaptureBuffer =  malloc(mProxyParams.mCaptureBufferSize);
-    memcpy(mProxyParams.mCaptureBuffer, (char *)data,
-             mProxyParams.mCaptureBufferSize);
-    mProxyParams.mX.frames -= mProxyParams.mFrames;
-    capture_handle->sync_ptr->c.control.appl_ptr += mProxyParams.mFrames;
-    capture_handle->sync_ptr->flags = 0;
-    ALOGV("Calling sync_ptr for proxy after sync");
-    err = sync_ptr(capture_handle);
-    if(err == EPIPE) {
-        ALOGV("Failed in sync_ptr \n");
-        capture_handle->running = 0;
+
+    //Copy only if we have data
+    if(mProxyParams.mAvail > 0) {
+        /* if we have reached high watermark, flush data */
+        if(mProxyParams.mAvail > AFE_PROXY_HIGH_WATER_MARK_FRAME_COUNT) {
+            /* throw out everything over here */
+            ALOGE("available buffers in proxy %d has reached high water mark %d, throw it out ", mProxyParams.mAvail, AFE_PROXY_HIGH_WATER_MARK_FRAME_COUNT);
+            capture_handle->sync_ptr->c.control.appl_ptr += mProxyParams.mAvail;
+            capture_handle->sync_ptr->flags = 0;
+            err = sync_ptr(capture_handle);
+            if(err == EPIPE) {
+                ALOGV("Failed in sync_ptr \n");
+                capture_handle->running = 0;
+                err = sync_ptr(capture_handle);
+            }
+            err = FAILED_TRANSACTION;
+            *captureBuffer = NULL;
+            *bufferSize = 0;
+            return err;
+        }
+        if(mProxyParams.mX.frames > mProxyParams.mAvail) {
+            mProxyParams.mFrames = mProxyParams.mAvail;
+            ALOGE("Error mProxyParams.mFrames = %d", mProxyParams.mFrames);
+            /* Always copy only the data thats available */
+            /* case when we wake up with lesser no of bytes than 1 period */
+        }
+        else {
+            mProxyParams.mFrames = mProxyParams.mX.frames;
+        }
+
+        void *data  = dst_address(capture_handle);
+
+        if(mProxyParams.mCaptureBuffer == NULL)
+            mProxyParams.mCaptureBuffer =  malloc(mProxyParams.mCaptureBufferSize);
+
+        memcpy(mProxyParams.mCaptureBuffer, (char *)data,
+                (mProxyParams.mFrames * 2 * 2));
+
+        capture_handle->sync_ptr->c.control.appl_ptr += mProxyParams.mFrames;
+        capture_handle->sync_ptr->flags = 0;
+        *bufferSize = (mProxyParams.mFrames * 2 * 2);
+        mProxyParams.mFrames -= mProxyParams.mFrames;
+        ALOGV("Calling sync_ptr for proxy after sync with mFrames is %d", mProxyParams.mFrames);
         err = sync_ptr(capture_handle);
-    }
-    if(err != NO_ERROR ) {
-        ALOGE("Error: Sync ptr end returned %d", err);
+        if(err == EPIPE) {
+            ALOGV("Failed in sync_ptr \n");
+            capture_handle->running = 0;
+            err = sync_ptr(capture_handle);
+        }
+        if(err != NO_ERROR ) {
+            ALOGE("Error: Sync ptr end returned %d", err);
+            *captureBuffer = NULL;
+            *bufferSize = 0;
+            return err;
+        }
+        *captureBuffer = mProxyParams.mCaptureBuffer;
+    } else {
+        /* If we dont have data to copy just return 0 */
         *captureBuffer = NULL;
         *bufferSize = 0;
-        return err;
+        err = FAILED_TRANSACTION;
+        ALOGE("Error Nothing copied from Proxy");
     }
-    *captureBuffer = mProxyParams.mCaptureBuffer;
-    *bufferSize = mProxyParams.mCaptureBufferSize;
     return err;
 }
 

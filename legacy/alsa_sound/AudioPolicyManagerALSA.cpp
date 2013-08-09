@@ -148,11 +148,29 @@ uint32_t AudioPolicyManager::checkDeviceMuteStrategies(AudioOutputDescriptor *ou
                 setStrategyMute((routing_strategy)i, mute, curOutput, mute ? 0 : delayMs);
                 if (desc->isStrategyActive((routing_strategy)i)) {
                     // do tempMute only for current output
-                    if (tempMute && (desc == outputDesc)) {
-                        setStrategyMute((routing_strategy)i, true, curOutput);
-                        setStrategyMute((routing_strategy)i, false, curOutput,
-                                            desc->latency() * ((desc->mFlags & AUDIO_OUTPUT_FLAG_LPA) ? 4 : 2),
-                                            device);
+                    if (tempMute) {
+                        if ((desc != outputDesc) && (desc->device() == device)) {
+                            ALOGD("avoid tempmute on curOutput %d as device is same", curOutput);
+                        } else {
+                            setStrategyMute((routing_strategy)i, true, curOutput);
+
+                            //Add IsFMEnabled to maitain FM status when FM device enabled
+                            AudioParameter param = AudioParameter(mpClientInterface->getParameters(0, String8("Fm-radio")));
+                            int IsFMEnabled;
+                            if (param.getInt(String8 ("isFMON"), IsFMEnabled) == NO_ERROR){
+                                ALOGD("getParameters(): Fm-radio with IsFMEnabled %d", IsFMEnabled);
+                            }
+                            //Change latency for tunnel/LPA player to make sure no noise on device switch
+                            //Routing to  BTA2DP,  USB device ,  Proxy(WFD) will take time, increasing latency time
+                            if((desc->mFlags & AUDIO_OUTPUT_FLAG_LPA) || (desc->mFlags & AUDIO_OUTPUT_FLAG_TUNNEL)
+                                || (device & AUDIO_DEVICE_OUT_USB_DEVICE) || (device & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP)
+                                || (device & AUDIO_DEVICE_OUT_PROXY) || IsFMEnabled)
+                            {
+                               setStrategyMute((routing_strategy)i, false, curOutput,desc->latency()*4 ,device);
+                            }
+                            else
+                               setStrategyMute((routing_strategy)i, false, curOutput,desc->latency()*2 ,device);
+                        }
                     }
                     if ((tempMute && (desc == outputDesc)) || mute) {
                         if (muteWaitMs < desc->latency()) {
@@ -1924,6 +1942,18 @@ AudioPolicyManager::device_category AudioPolicyManager::getDeviceCategory(audio_
             return DEVICE_CATEGORY_SPEAKER;
     }
 }
+
+bool AudioPolicyManager::isDirectOutput(audio_io_handle_t output) {
+    for (size_t i = 0; i < mOutputs.size(); i++) {
+        audio_io_handle_t curOutput = mOutputs.keyAt(i);
+        AudioOutputDescriptor *desc = mOutputs.valueAt(i);
+        if ((curOutput == output) && (desc->mFlags & AUDIO_OUTPUT_FLAG_DIRECT)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 status_t AudioPolicyManager::checkAndSetVolume(int stream,
                                                    int index,
                                                    audio_io_handle_t output,
@@ -2005,7 +2035,7 @@ status_t AudioPolicyManager::checkAndSetVolume(int stream,
             }
         }
 
-        if (voiceVolume != mLastVoiceVolume && output == mPrimaryOutput) {
+        if (voiceVolume != mLastVoiceVolume && (output == mPrimaryOutput || isDirectOutput(output))) {
             mpClientInterface->setVoiceVolume(voiceVolume, delayMs);
             mLastVoiceVolume = voiceVolume;
         }
