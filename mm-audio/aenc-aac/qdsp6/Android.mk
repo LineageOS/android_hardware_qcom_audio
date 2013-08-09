@@ -12,7 +12,6 @@ libOmxAacEnc-def += -DQC_MODIFIED
 libOmxAacEnc-def += -D_ANDROID_
 libOmxAacEnc-def += -D_ENABLE_QC_MSG_LOG_
 libOmxAacEnc-def += -DVERBOSE
-libOmxAacEnc-def += -D_DEBUG
 ifeq ($(strip $(TARGET_USES_QCOM_MM_AUDIO)),true)
 libOmxAacEnc-def += -DAUDIOV2
 endif
