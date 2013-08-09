@@ -314,7 +314,7 @@ static void check_and_route_capture_usecases(struct audio_device *adev,
                 usecase->in_snd_device != snd_device) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
-                  device_table[usecase->in_snd_device]);
+                  platform_get_snd_device_name(usecase->in_snd_device));
             disable_audio_route(adev, usecase, false);
             switch_device[usecase->id] = true;
             num_uc_to_switch++;
