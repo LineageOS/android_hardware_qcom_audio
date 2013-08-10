@@ -203,7 +203,7 @@ private:
     status_t    get_mRecordState();
     status_t    get_snd_dev();
 #endif
-    status_t    doRouting(AudioStreamInMSM8x60 *input, int outputDevice = 0);
+    status_t    doRouting(AudioStreamInMSM8x60 *input, uint32_t outputDevices = 0);
 #ifdef HTC_ACOUSTIC_AUDIO
     void        getACDB(uint32_t device);
     status_t    do_aic3254_control(uint32_t device);

@@ -1045,10 +1045,10 @@ status_t AudioHardware::initCheck()
 AudioStreamOut* AudioHardware::openOutputStream(
         uint32_t devices, int *format, uint32_t *channels, uint32_t *sampleRate, status_t *status)
 {
-     ALOGD("AudioHardware::openOutputStream devices %x format %d channels %d samplerate %d",
-        devices, *format, *channels, *sampleRate);
-
      audio_output_flags_t flags = static_cast<audio_output_flags_t> (*status);
+
+     ALOGD("AudioHardware::openOutputStream devices %x format %d channels %d samplerate %d flags %d",
+        devices, *format, *channels, *sampleRate, flags);
 
     { // scope for the lock
         status_t lStatus;
@@ -1097,69 +1097,48 @@ AudioStreamOut* AudioHardware::openOutputStream(
             return mDirectOutput;
         } else
 #endif
+#ifdef QCOM_TUNNEL_LPA_ENABLED
 	    if (flags & AUDIO_OUTPUT_FLAG_LPA) {
 			status_t err = BAD_VALUE;
-#if 0
-            if (mOutput) {
-                if (status) {
-                  *status = INVALID_OPERATION;
-                }
-                ALOGE(" AudioHardware::openOutputStream Only one output stream allowed \n");
-                return 0;
-            }
-#endif
             // create new output LPA stream
-            AudioSessionOutLPA* out = NULL;
-#ifdef QCOM_TUNNEL_LPA_ENABLED
-            out = new AudioSessionOutLPA(this, devices, *format, *channels,*sampleRate,0,&err);
+            AudioSessionOutLPA* out = new AudioSessionOutLPA(this, devices, *format, *channels,*sampleRate,0,&err);
             if(err != NO_ERROR) {
                 delete out;
                 out = NULL;
             }
-#endif
             if (status) *status = err;
             mOutputLPA = out;
             return mOutputLPA;
 
-        } else {
-#if 0
-            ALOGV(" AudioHardware::openOutputStream AudioStreamOutMSM8x60 output stream \n");
-            // only one output stream allowed
-            if (mOutput) {
-                if (status) {
-                  *status = INVALID_OPERATION;
-                }
-                ALOGE(" AudioHardware::openOutputStream Only one output stream allowed \n");
-                return 0;
-            }
+        } else
 #endif
 #ifdef TUNNEL_PLAYBACK
         if (flags & AUDIO_OUTPUT_FLAG_TUNNEL) {
-                status_t err = BAD_VALUE;
-                // create new Tunnel output stream
-                AudioSessionOutTunnel* out = new AudioSessionOutTunnel(this, devices, *format, *channels,*sampleRate,0,&err);
-                if(err != NO_ERROR) {
-                    delete out;
-                    out = NULL;
-                }
-                if (status) *status = err;
-                mOutputTunnel = out;
-                return mOutputTunnel;
+            status_t err = BAD_VALUE;
+            // create new Tunnel output stream
+            AudioSessionOutTunnel* out = new AudioSessionOutTunnel(this, devices, *format, *channels,*sampleRate,0,&err);
+            if(err != NO_ERROR) {
+                delete out;
+                out = NULL;
+            }
+            if (status) *status = err;
+            mOutputTunnel = out;
+            return mOutputTunnel;
         }
 #endif /*TUNNEL_PLAYBACK*/
-            // create new output stream
-            AudioStreamOutMSM8x60* out = new AudioStreamOutMSM8x60();
-            lStatus = out->set(this, devices, format, channels, sampleRate);
-            if (status) {
-                *status = lStatus;
-            }
-            if (lStatus == NO_ERROR) {
-                mOutput = out;
-            } else {
-                delete out;
-            }
-            return mOutput;
+
+        // create new output stream
+        AudioStreamOutMSM8x60* out = new AudioStreamOutMSM8x60();
+        lStatus = out->set(this, devices, format, channels, sampleRate);
+        if (status) {
+            *status = lStatus;
         }
+        if (lStatus == NO_ERROR) {
+            mOutput = out;
+        } else {
+            delete out;
+        }
+        return mOutput;
     }
     return NULL;
 }
@@ -1433,7 +1412,7 @@ status_t AudioHardware::setParameters(const String8& keyValuePairs)
                  "(%s not in acoustic database)", value.string());
         }
 #endif
-        doRouting(NULL);
+        doRouting(NULL, 0);
     }
 
     key = String8(DUALMIC_KEY);
@@ -1445,7 +1424,7 @@ status_t AudioHardware::setParameters(const String8& keyValuePairs)
             dualmic_enabled = false;
             ALOGI("DualMic feature Disabled");
         }
-        doRouting(NULL);
+        doRouting(NULL, 0);
     }
 #ifdef QCOM_ANC_HEADSET_ENABLED
     key = String8(ANC_KEY);
@@ -1460,7 +1439,7 @@ status_t AudioHardware::setParameters(const String8& keyValuePairs)
            enableANC(0,cur_rx);
            anc_running = false;
         }
-     doRouting(NULL);
+     doRouting(NULL, 0);
     }
 #endif
 
@@ -1482,7 +1461,7 @@ status_t AudioHardware::setParameters(const String8& keyValuePairs)
         if((mMode == AUDIO_MODE_IN_CALL) &&
            (cur_rx == DEVICE_HEADSET_RX) &&
            (cur_tx == DEVICE_HEADSET_TX))
-           doRouting(NULL);
+           doRouting(NULL, 0);
     }
 #ifdef HTC_ACOUSTIC_AUDIO
     key = String8(ACTIVE_AP);
@@ -2569,18 +2548,17 @@ void AudioHardware::aic3254_powerdown() {
 }
 #endif
 
-status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input, int outputDevice)
+status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input, uint32_t outputDevices)
 {
     Mutex::Autolock lock(mLock);
-    uint32_t outputDevices;
     status_t ret = NO_ERROR;
     int audProcess = (ADRC_DISABLE | EQ_DISABLE | RX_IIR_DISABLE);
     int sndDevice = -1;
 
-    if (outputDevice)
-        outputDevices = outputDevice;
-    else
+    if (!outputDevices)
         outputDevices = mOutput->devices();
+
+    ALOGD("outputDevices = %x", outputDevices);
 
     if (input != NULL) {
         uint32_t inputDevice = input->devices();
@@ -2644,7 +2622,7 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input, int outputDevice)
                     ALOGI("Routing audio to Handset\n");
                     sndDevice = SND_DEVICE_HANDSET;
                 } else if (outputDevices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) {
-                    ALOGI("Routing audio to Speakerphone\n");
+                    ALOGI("Routing audio to Speakerphone (LPA headphone case)\n");
                     sndDevice = SND_DEVICE_NO_MIC_HEADSET;
                 }
 #ifdef QCOM_FM_ENABLED
@@ -2654,7 +2632,7 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input, int outputDevice)
                 }
 #endif
                 else {
-                    ALOGI("Routing audio to Speaker\n");
+                    ALOGI("Routing audio to Speaker (LPA case)\n");
                     sndDevice = SND_DEVICE_SPEAKER;
                 }
             } else {
@@ -2765,7 +2743,7 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input, int outputDevice)
 #endif
             else {
 #endif
-            ALOGI("Routing audio to Speakerphone\n");
+            ALOGI("Routing audio to Speakerphone (out_speaker case)\n");
             sndDevice = SND_DEVICE_SPEAKER;
             audProcess = (ADRC_ENABLE | EQ_ENABLE | RX_IIR_ENABLE | MBADRC_ENABLE);
 #ifdef SAMSUNG_AUDIO
@@ -3415,7 +3393,7 @@ status_t AudioHardware::AudioStreamInVoip::setParameters(const String8& keyValue
             status = BAD_VALUE;
         } else {
             mDevices = device;
-            status = mHardware->doRouting(this);
+            status = mHardware->doRouting(this, device);
         }
         param.remove(key);
     }
@@ -3807,11 +3785,12 @@ status_t AudioHardware::AudioStreamOutDirect::set(
     ALOGD("AudioStreamOutDirect::set  lFormat = %x lChannels= %u lRate = %u\n",
         lFormat, lChannels, lRate );
 
+    mHardware = hw;
+
     if ((pFormat == 0) || BAD_INDEX == hw->getMvsMode(*pFormat, *pRate)) {
         ALOGE("Audio Format (%x) not supported \n",*pFormat);
         return BAD_VALUE;
     }
-
 
     if (*pFormat == AudioSystem::PCM_16_BIT){
         // fix up defaults
@@ -3842,7 +3821,6 @@ status_t AudioHardware::AudioStreamOutDirect::set(
         }
     }
 
-    mHardware = hw;
     
     // check values
     mFormat =  lFormat;
@@ -4128,11 +4106,14 @@ AudioHardware::AudioSessionOutLPA::AudioSessionOutLPA( AudioHardware *hw,
         ALOGE("Invalid number of channels %d", channels);
         return;
     }
+
+    mDevices = devices;
+
     *status = openAudioSessionDevice();
 
     //Creates the event thread to poll events from LPA Driver
     if (*status == NO_ERROR)
-    createEventThread();
+        createEventThread();
 }
 
 AudioHardware::AudioSessionOutLPA::~AudioSessionOutLPA()
@@ -4264,7 +4245,7 @@ status_t AudioHardware::AudioSessionOutLPA::setParameters(const String8& keyValu
     if (param.getInt(key, device) == NO_ERROR) {
         mDevices = device;
         ALOGE("set output routing %x", mDevices);
-        status = mHardware->doRouting(NULL);
+        status = mHardware->doRouting(NULL, device);
         param.remove(key);
     }
 
@@ -5094,7 +5075,7 @@ status_t AudioHardware::AudioSessionOutTunnel::setParameters(const String8& keyV
     if (param.getInt(key, device) == NO_ERROR) {
         mDevices = device;
         ALOGE("set output routing %x", mDevices);
-        status = mHardware->doRouting(NULL);
+        status = mHardware->doRouting(NULL, device);
         param.remove(key);
     }
 
@@ -6041,7 +6022,7 @@ ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
             if (mFmRec != FM_FILE_REC) {
 #endif
                 mHardware->clearCurDevice();
-                mHardware->doRouting(this);
+                mHardware->doRouting(this, 0);
 #ifdef HTC_ACOUSTIC_AUDIO
                 if (support_aic3254) {
                     int snd_dev = mHardware->get_snd_dev();
@@ -6174,7 +6155,7 @@ status_t AudioHardware::AudioStreamInMSM8x60::standby()
     } //isDriverClosed condition
     // restore output routing if necessary
     mHardware->clearCurDevice();
-    mHardware->doRouting(this);
+    mHardware->doRouting(this, 0);
     return NO_ERROR;
 }
 
@@ -6221,7 +6202,7 @@ status_t AudioHardware::AudioStreamInMSM8x60::setParameters(const String8& keyVa
             status = BAD_VALUE;
         } else if (device) {
             mDevices = device;
-            status = mHardware->doRouting(this);
+            status = mHardware->doRouting(this, 0);
         }
         param.remove(key);
     }
