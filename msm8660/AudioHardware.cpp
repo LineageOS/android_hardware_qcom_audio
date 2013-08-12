@@ -1124,21 +1124,22 @@ AudioStreamOut* AudioHardware::openOutputStream(
             if (status) *status = err;
             mOutputTunnel = out;
             return mOutputTunnel;
-        }
+        } else
 #endif /*TUNNEL_PLAYBACK*/
-
-        // create new output stream
-        AudioStreamOutMSM8x60* out = new AudioStreamOutMSM8x60();
-        lStatus = out->set(this, devices, format, channels, sampleRate);
-        if (status) {
-            *status = lStatus;
+        {
+            // create new output stream
+            AudioStreamOutMSM8x60* out = new AudioStreamOutMSM8x60();
+            lStatus = out->set(this, devices, format, channels, sampleRate);
+            if (status) {
+                *status = lStatus;
+            }
+            if (lStatus == NO_ERROR) {
+                mOutput = out;
+            } else {
+                delete out;
+            }
+            return mOutput;
         }
-        if (lStatus == NO_ERROR) {
-            mOutput = out;
-        } else {
-            delete out;
-        }
-        return mOutput;
     }
     return NULL;
 }
@@ -3211,6 +3212,50 @@ status_t AudioHardware::AudioStreamInVoip::set(
             ALOGE("Cannot start mvs driver");
             goto Error;
         }
+
+        ALOGV("Going to enable RX/TX device for voice stream");
+
+        Mutex::Autolock lock(mDeviceSwitchLock);
+        // Routing Voip
+        if ( (cur_rx != INVALID_DEVICE) && (cur_tx != INVALID_DEVICE))
+        {
+            ALOGV("Starting voip on Rx %d and Tx %d device", DEV_ID(cur_rx), DEV_ID(cur_tx));
+            msm_route_voice(DEV_ID(cur_rx),DEV_ID(cur_tx), 1);
+        }
+        else
+        {
+            return -1;
+        }
+
+        if(cur_rx != INVALID_DEVICE && (enableDevice(cur_rx,1) == -1))
+        {
+            ALOGE(" Enable device for cur_rx failed \n");
+            return -1;
+        }
+
+        if(cur_tx != INVALID_DEVICE&&(enableDevice(cur_tx,1) == -1))
+        {
+            ALOGE(" Enable device for cur_tx failed \n");
+            return -1;
+        }
+#ifdef QCOM_ACDB_ENABLED
+        // voice calibration
+        acdb_loader_send_voice_cal(ACDB_ID(cur_rx),ACDB_ID(cur_tx));
+#endif
+        // start Voice call
+#ifdef LEGACY_QCOM_VOICE
+        msm_start_voice();
+        msm_set_voice_tx_mute(0);
+#else
+        if(voip_session_id <= 0) {
+             voip_session_id = msm_get_voc_session(VOIP_SESSION_NAME);
+        }
+        ALOGD("Starting voip call and UnMuting the call");
+        msm_start_voice_ext(voip_session_id);
+        msm_set_voice_tx_mute_ext(voip_session_mute,voip_session_id);
+#endif
+        addToTable(0,cur_rx,cur_tx,VOIP_CALL,true);
+
     }
     mFormat =  *pFormat;
     mChannels = *pChannels;
@@ -3338,6 +3383,46 @@ status_t AudioHardware::AudioStreamInVoip::standby()
     mHardware->mVoipInActive = false;
     if (mState > AUDIO_INPUT_CLOSED && !mHardware->mVoipOutActive) {
          int ret = 0;
+#ifdef LEGACY_QCOM_VOICE
+        msm_end_voice();
+#else
+         ret = msm_end_voice_ext(voip_session_id);
+         if (ret < 0)
+                 ALOGE("Error %d ending voice\n", ret);
+#endif
+        temp = getNodeByStreamType(VOIP_CALL);
+        if(temp == NULL)
+        {
+            ALOGE("VOIPin: Going to disable RX/TX return 0");
+            return 0;
+        }
+
+        if((temp->dev_id != INVALID_DEVICE && temp->dev_id_tx != INVALID_DEVICE)) {
+           if(!getNodeByStreamType(VOICE_CALL)
+#ifdef QCOM_TUNNEL_LPA_ENABLED
+              && !getNodeByStreamType(LPA_DECODE)
+#endif /*QCOM_TUNNEL_LPA_ENABLED*/
+              && !getNodeByStreamType(PCM_PLAY)
+#ifdef QCOM_FM_ENABLED
+              && !getNodeByStreamType(FM_RADIO)
+#endif /*QCOM_FM_ENABLED*/
+            ) {
+#ifdef QCOM_ANC_HEADSET_ENABLED
+               if (anc_running == false) {
+#endif
+                   enableDevice(temp->dev_id, 0);
+                   ALOGV("Voipin: disable voip rx");
+#ifdef QCOM_ANC_HEADSET_ENABLED
+               }
+#endif
+            }
+            if(!getNodeByStreamType(VOICE_CALL) && !getNodeByStreamType(PCM_REC)) {
+                 enableDevice(temp->dev_id_tx,0);
+                 ALOGD("VOIPin: disable voip tx");
+            }
+        }
+        deleteFromTable(VOIP_CALL);
+
          if (mHardware->mVoipFd >= 0) {
             ret = ioctl(mHardware->mVoipFd, AUDIO_STOP, NULL);
             ALOGD("MVS stop returned %d %d %d\n", ret, __LINE__, mHardware->mVoipFd);
@@ -3828,6 +3913,12 @@ status_t AudioHardware::AudioStreamOutDirect::set(
     mSampleRate = lRate;
     
 
+#ifndef LEGACY_QCOM_VOICE
+    if((voip_session_id <= 0)) {
+        voip_session_id = msm_get_voc_session(VOIP_SESSION_NAME);
+    }
+#endif
+
     mDevices = devices;
     mHardware->mVoipOutActive = true;
     
@@ -3900,6 +3991,43 @@ ssize_t AudioHardware::AudioStreamOutDirect::write(const void* buffer, size_t by
                 mHardware->setupDeviceforVoipCall(true);
 
             mStandby = false;
+
+            Mutex::Autolock lock(mDeviceSwitchLock);
+            //Routing Voip
+            if ((cur_rx != INVALID_DEVICE) && (cur_tx != INVALID_DEVICE))
+            {
+                ALOGV("Starting voip call on Rx %d and Tx %d device", DEV_ID(cur_rx), DEV_ID(cur_tx));
+                msm_route_voice(DEV_ID(cur_rx),DEV_ID(cur_tx), 1);
+            }
+            else {
+               return -1;
+            }
+
+            //Enable RX device
+            if(cur_rx != INVALID_DEVICE && (enableDevice(cur_rx,1) == -1))
+            {
+               return -1;
+            }
+
+            //Enable TX device
+            if(cur_tx != INVALID_DEVICE&&(enableDevice(cur_tx,1) == -1))
+            {
+               return -1;
+            }
+#ifdef QCOM_ACDB_ENABLED
+            // voip calibration
+            acdb_loader_send_voice_cal(ACDB_ID(cur_rx),ACDB_ID(cur_tx));
+#endif
+            // start Voip call
+            ALOGD("Starting voip call and UnMuting the call");
+#ifdef LEGACY_QCOM_VOICE
+            msm_start_voice();
+            msm_set_voice_tx_mute(0);
+#else
+            msm_start_voice_ext(voip_session_id);
+            msm_set_voice_tx_mute_ext(voip_session_mute,voip_session_id);
+#endif
+            addToTable(0,cur_rx,cur_tx,VOIP_CALL,true);
         }
     }
     struct msm_audio_mvs_frame audio_mvs_frame;
@@ -3962,6 +4090,27 @@ status_t AudioHardware::AudioStreamOutDirect::standby()
     ALOGD("Voipin %d driver fd %d", mHardware->mVoipInActive, mHardware->mVoipFd);
     mHardware->mVoipOutActive = false;
     if (mHardware->mVoipFd >= 0 && !mHardware->mVoipInActive) {
+#ifdef LEGACY_QCOM_VOICE
+        msm_end_voice();
+#else
+        ret = msm_end_voice_ext(voip_session_id);
+        if (ret < 0)
+                ALOGE("Error %d ending voip\n", ret);
+#endif
+        temp = getNodeByStreamType(VOIP_CALL);
+        if(temp == NULL)
+        {
+            ALOGE("VOIP: Going to disable RX/TX return 0");
+            return 0;
+        }
+
+        if((temp->dev_id != INVALID_DEVICE && temp->dev_id_tx != INVALID_DEVICE)&& (!isStreamOn(VOICE_CALL))) {
+            ALOGE(" Streamout: disable VOIP rx tx ");
+           enableDevice(temp->dev_id,0);
+           enableDevice(temp->dev_id_tx,0);
+        }
+        deleteFromTable(VOIP_CALL);
+
        ret = ioctl(mHardware->mVoipFd, AUDIO_STOP, NULL);
        ALOGD("MVS stop returned %d %d %d \n", ret, __LINE__, mHardware->mVoipFd);
        ::close(mFd);
