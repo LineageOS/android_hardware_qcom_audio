@@ -2,6 +2,44 @@
 #ENABLE_AUDIO_DUMP := true
 
 LOCAL_PATH := $(call my-dir)
+
+ifeq ($(BOARD_HAVE_BLUETOOTH),true)
+  common_cflags += -DWITH_A2DP
+endif
+
+ifeq ($(BOARD_HAVE_QCOM_FM),true)
+  common_cflags += -DQCOM_FM_ENABLED
+endif
+
+ifneq ($(BOARD_QCOM_TUNNEL_LPA_ENABLED),false)
+  common_cflags += -DQCOM_TUNNEL_LPA_ENABLED
+endif
+
+ifeq ($(BOARD_QCOM_VOIP_ENABLED),true)
+  common_cflags += -DQCOM_VOIP_ENABLED
+endif
+
+ifeq ($(BOARD_QCOM_TUNNEL_PLAYBACK_ENABLED),true)
+  common_cflags += -DTUNNEL_PLAYBACK
+endif
+
+ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
+  common_cflags += -DQCOM_ACDB_ENABLED
+endif
+
+ifeq ($(BOARD_HAVE_SAMSUNG_AUDIO),true)
+  common_cflags += -DSAMSUNG_AUDIO
+endif
+
+ifeq ($(BOARD_HAVE_SONY_AUDIO),true)
+  common_cflags += -DSONY_AUDIO
+endif
+
+ifeq ($(BOARD_HAVE_BACK_MIC_CAMCORDER),true)
+  common_cflags += -DBACK_MIC_CAMCORDER
+endif
+
+
 include $(CLEAR_VARS)
 
 LOCAL_ARM_MODE := arm
@@ -10,18 +48,6 @@ LOCAL_CFLAGS := -D_POSIX_SOURCE
 LOCAL_SRC_FILES := \
     AudioHardware.cpp \
     audio_hw_hal.cpp
-
-ifeq ($(BOARD_HAVE_BLUETOOTH),true)
-  LOCAL_CFLAGS += -DWITH_A2DP
-endif
-
-ifeq ($(BOARD_HAVE_QCOM_FM),true)
-  LOCAL_CFLAGS += -DQCOM_FM_ENABLED
-endif
-
-LOCAL_CFLAGS += -DQCOM_TUNNEL_LPA_ENABLED
-LOCAL_CFLAGS += -DQCOM_VOIP_ENABLED
-LOCAL_CFLAGS += -DTUNNEL_PLAYBACK
 
 LOCAL_SHARED_LIBRARIES := \
     libcutils       \
@@ -65,21 +91,7 @@ LOCAL_C_INCLUDES += system/core/include
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
-ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
-LOCAL_CFLAGS += -DQCOM_ACDB_ENABLED
-endif
-
-ifeq ($(BOARD_HAVE_SAMSUNG_AUDIO),true)
-LOCAL_CFLAGS += -DSAMSUNG_AUDIO
-endif
-
-ifeq ($(BOARD_HAVE_SONY_AUDIO),true)
-LOCAL_CFLAGS += -DSONY_AUDIO
-endif
-
-ifeq ($(BOARD_HAVE_BACK_MIC_CAMCORDER),true)
-LOCAL_CFLAGS += -DBACK_MIC_CAMCORDER
-endif
+LOCAL_CFLAGS += $(common_cflags)
 
 include $(BUILD_SHARED_LIBRARY)
 
@@ -107,19 +119,9 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
-ifeq ($(BOARD_HAVE_BLUETOOTH),true)
-  LOCAL_CFLAGS += -DWITH_A2DP
-endif
-
 LOCAL_C_INCLUDES += hardware/libhardware_legacy/audio
 
-ifeq ($(BOARD_HAVE_SAMSUNG_AUDIO),true)
-LOCAL_CFLAGS += -DSAMSUNG_AUDIO
-endif
-
-ifeq ($(BOARD_HAVE_BACK_MIC_CAMCORDER),true)
-LOCAL_CFLAGS += -DBACK_MIC_CAMCORDER
-endif
+LOCAL_CFLAGS += $(common_cflags)
 
 include $(BUILD_SHARED_LIBRARY)
 
