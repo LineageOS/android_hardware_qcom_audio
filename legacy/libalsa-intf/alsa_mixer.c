@@ -128,6 +128,10 @@ void mixer_close(struct mixer *mixer)
 {
     unsigned n,m;
 
+    if (!mixer) {
+         ALOGE("mixer_close:Invalid Mixer Control");
+         return;
+    }
     if (mixer->fd >= 0)
         close(mixer->fd);
 
