@@ -2076,7 +2076,6 @@ static status_t do_route_audio_rpc(uint32_t device,
         ALOGI("In SPEAKER_TX cur_rx = %d\n", cur_rx);
     }
 #ifdef SAMSUNG_AUDIO
-#ifdef USE_SAMSUNG_VOIP_DEVICE
     else if (device == SND_DEVICE_VOIP_HANDSET) {
         new_rx_device = DEVICE_HANDSET_VOIP_RX;
         new_tx_device = DEVICE_HANDSET_VOIP_TX;
@@ -2092,7 +2091,6 @@ static status_t do_route_audio_rpc(uint32_t device,
         new_tx_device = DEVICE_HEADSET_VOIP_TX;
         ALOGD("In VOIP HEADSET");
     }
-#endif
     else if (device == SND_DEVICE_CALL_HANDSET) {
         new_rx_device = DEVICE_HANDSET_CALL_RX;
         new_tx_device = DEVICE_HANDSET_CALL_TX;
@@ -2602,7 +2600,7 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input, uint32_t outputDe
                     sndDevice = SND_DEVICE_ANC_HEADSET;
                 }
 #endif
-#ifdef USE_SAMSUNG_VOIP_DEVICE
+#if defined(SAMSUNG_AUDIO) && defined(QCOM_VOIP_ENABLED)
             else if (isStreamOnAndActive(VOIP_CALL)) {
                 if (outputDevices & AUDIO_DEVICE_OUT_EARPIECE) {
                         ALOGD("Routing audio to VOIP handset\n");
@@ -2736,7 +2734,7 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input, uint32_t outputDe
               ALOGD("Routing audio to Call Speaker\n");
               sndDevice = SND_DEVICE_CALL_SPEAKER;
             }
-#ifdef USE_SAMSUNG_VOIP_DEVICE
+#if defined(SAMSUNG_AUDIO) && defined(QCOM_VOIP_ENABLED)
             else if (mMode == AUDIO_MODE_IN_COMMUNICATION) {
               ALOGD("Routing audio to VOIP speaker\n");
               sndDevice = SND_DEVICE_VOIP_SPEAKER;
@@ -2770,7 +2768,7 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input, uint32_t outputDe
                 sndDevice = SND_DEVICE_CALL_HANDSET;
               }
             }
-#ifdef USE_SAMSUNG_VOIP_DEVICE
+#if defined(SAMSUNG_AUDIO) && defined(QCOM_VOIP_ENABLED)
             else if (mMode == AUDIO_MODE_IN_COMMUNICATION) {
               ALOGD("Routing audio to VOIP handset\n");
               sndDevice = SND_DEVICE_VOIP_HANDSET;
@@ -2803,7 +2801,7 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input, uint32_t outputDe
     if ((mMode == AUDIO_MODE_IN_CALL) && (sndDevice == SND_DEVICE_HEADSET)) {
             ALOGD("Routing audio to Call Headset\n");
             sndDevice = SND_DEVICE_CALL_HEADSET;
-#ifdef USE_SAMSUNG_VOIP_DEVICE
+#ifdef QCOM_VOIP_ENABLED
     } else if ((mMode == AUDIO_MODE_IN_COMMUNICATION) && (sndDevice == SND_DEVICE_HEADSET)) {
             ALOGD("Routing audio to VOIP headset\n");
             sndDevice = SND_DEVICE_VOIP_HEADSET;
