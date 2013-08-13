@@ -1758,15 +1758,13 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
                 return strdup(SND_USE_CASE_DEV_EARPIECE); /* HANDSET RX */
             }
         } else if (devices & AudioSystem::DEVICE_OUT_SPEAKER) {
-#ifdef SEPERATED_VOICE_SPEAKER
 #ifdef SEPERATED_VOIP
             if (mCallMode == AUDIO_MODE_IN_COMMUNICATION) {
                 return strdup(SND_USE_CASE_DEV_VOIP_SPEAKER);
-            } else if (mCallMode == AUDIO_MODE_IN_CALL) {
-#else
-            if (mCallMode == AUDIO_MODE_IN_CALL ||
-                mCallMode == AUDIO_MODE_IN_COMMUNICATION) {
+            }
 #endif
+#ifdef SEPERATED_VOICE_SPEAKER
+            if (mCallMode == AUDIO_MODE_IN_CALL) {
                 return strdup(SND_USE_CASE_DEV_VOC_SPEAKER); /* Voice SPEAKER RX */
             }
 #endif
