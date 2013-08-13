@@ -1858,7 +1858,11 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
             } else {
                 if ((mDevSettingsFlag & DMIC_FLAG) && (mInChannels == 1)) {
 #ifdef USES_FLUENCE_INCALL
-                  if (mCallMode == AUDIO_MODE_IN_CALL) {
+                  if (mCallMode == AUDIO_MODE_IN_CALL
+#ifdef USES_FLUENCE_FOR_VOIP
+                          || mCallMode == AUDIO_MODE_IN_COMMUNICATION
+#endif
+                     ) {
 #endif
                     if (((rxDevice != NULL) &&
                         (!strncmp(rxDevice, SND_USE_CASE_DEV_SPEAKER,
