@@ -72,6 +72,10 @@ endif
 #LOCAL_CFLAGS += -DUSES_FLUENCE_INCALL
 #endif
 
+ifeq ($(strip $(BOARD_USES_FLUENCE_FOR_VOIP)),true)
+LOCAL_CFLAGS += -DUSES_FLUENCE_FOR_VOIP
+endif
+
 #Do not use separate audio Input path feature
 #Separate audio input path can be set using input source of audio parameter
 # 1. Voice Recognition
