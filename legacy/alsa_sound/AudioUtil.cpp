@@ -21,6 +21,9 @@
 //#define LOG_NDEBUG 0
 #include <utils/Log.h>
 
+#include <fcntl.h>
+#include <stdlib.h>
+
 #include "AudioUtil.h"
 
 int AudioUtil::printFormatFromEDID(unsigned char format) {
@@ -737,3 +740,20 @@ void AudioUtil::updateChannelMapLPASS(EDID_AUDIO_INFO* pInfo)
         }
     }
 }
+
+#ifdef SAMSUNG_AUDIO
+bool AudioUtil::isSamsungDockConnected()
+{
+    FILE *dockNode = NULL;
+    char buf[32];
+    bool connected = false;
+
+    dockNode = fopen(SAMSUNG_DOCK_SWITCH, "r");
+    if (dockNode) {
+        fread(buf, sizeof(char), 32, dockNode);
+        connected = atoi(buf) > 0;
+        fclose(dockNode);
+    }
+    return connected;
+}
+#endif
