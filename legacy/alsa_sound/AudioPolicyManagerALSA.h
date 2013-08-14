@@ -133,6 +133,8 @@ protected:
         // returns the A2DP output handle if it is open or 0 otherwise
         audio_io_handle_t getA2dpOutput();
 
+        // returns true if give output is direct output
+        bool isDirectOutput(audio_io_handle_t output);
         virtual AudioPolicyManagerBase::IOProfile* getProfileForDirectOutput(
                                                      audio_devices_t device,
                                                      uint32_t samplingRate,
