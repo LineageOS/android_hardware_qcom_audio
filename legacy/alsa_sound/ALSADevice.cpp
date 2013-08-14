@@ -1672,6 +1672,7 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
             return strdup(SND_USE_CASE_DEV_PROXY_RX);
         } else if ((devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET ||
                     devices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET) &&
+                    mCallMode != AUDIO_MODE_IN_CALL &&
                     devices & AudioSystem::DEVICE_OUT_SPEAKER) {
 #ifdef SAMSUNG_AUDIO
             if (AudioUtil::isSamsungDockConnected()) {
@@ -1679,8 +1680,9 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
             }
 #endif
             return strdup(SND_USE_CASE_DEV_USB_PROXY_RX_SPEAKER); /* USB PROXY RX + SPEAKER */
-        } else if ((devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET) ||
-                  (devices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)) {
+        } else if (((devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET) ||
+                  (devices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)) &&
+                  mCallMode != AUDIO_MODE_IN_CALL) {
 #ifdef SAMSUNG_AUDIO
             if (AudioUtil::isSamsungDockConnected()) {
                 return strdup(SND_USE_CASE_DEV_DOCK); /* Dock RX */
