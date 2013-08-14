@@ -1904,6 +1904,15 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
             }
 #endif
         }
+#ifdef QCOM_USBAUDIO_ENABLED
+        if((devices == AudioSystem::DEVICE_IN_COMMUNICATION) &&
+           ((mCurDevice == AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET)||
+           (mCurDevice ==  AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET))){
+               ALOGD("Starting recording in openInputstream, musbRecordingState: %d", musbRecordingState);
+               startUsbRecordingIfNotStarted();
+               musbRecordingState |= USBRECBIT_VOIPCALL;
+        }
+#endif
         if(sampleRate) {
             it->sampleRate = *sampleRate;
         }
