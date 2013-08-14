@@ -1673,28 +1673,20 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
         } else if ((devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET ||
                     devices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET) &&
                     devices & AudioSystem::DEVICE_OUT_SPEAKER) {
-             ALOGD("getUCMDevice for output device: devices:%x is input device:%d, reached debug #1",devices,input);
-#ifdef DOCK_USBAUDIO_ENABLED
-             if (mCallMode == AUDIO_MODE_RINGTONE) {
-                 return strdup(SND_USE_CASE_DEV_SPEAKER); /* Voice SPEAKER RX */
-             } else {
-                 return strdup(SND_USE_CASE_DEV_DOCK);
-             }
-#else
-             return strdup(SND_USE_CASE_DEV_USB_PROXY_RX_SPEAKER); /* USB PROXY RX + SPEAKER */
+#ifdef SAMSUNG_AUDIO
+            if (AudioUtil::isSamsungDockConnected()) {
+                return strdup(SND_USE_CASE_DEV_DOCK);
+            }
 #endif
+            return strdup(SND_USE_CASE_DEV_USB_PROXY_RX_SPEAKER); /* USB PROXY RX + SPEAKER */
         } else if ((devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET) ||
                   (devices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)) {
-             ALOGD("getUCMDevice for output device: devices:%x is input device:%d, reached debug #2",devices,input);
-#ifdef DOCK_USBAUDIO_ENABLED
-             if (mCallMode == AUDIO_MODE_RINGTONE) {
-                 return strdup(SND_USE_CASE_DEV_USB_PROXY_RX); /* PROXY RX */
-             } else {
-                 return strdup(SND_USE_CASE_DEV_DOCK); /* Dock RX */
-             }
-#else
-             return strdup(SND_USE_CASE_DEV_USB_PROXY_RX); /* PROXY RX */
+#ifdef SAMSUNG_AUDIO
+            if (AudioUtil::isSamsungDockConnected()) {
+                return strdup(SND_USE_CASE_DEV_DOCK); /* Dock RX */
+            }
 #endif
+            return strdup(SND_USE_CASE_DEV_USB_PROXY_RX); /* PROXY RX */
 #ifdef QCOM_PROXY_DEVICE_ENABLED
         } else if( (devices & AudioSystem::DEVICE_OUT_SPEAKER) &&
                    (devices & AudioSystem::DEVICE_OUT_PROXY) &&

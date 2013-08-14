@@ -92,12 +92,18 @@ typedef struct EDID_AUDIO_INFO {
     int  channelAllocation;
 } EDID_AUDIO_INFO;
 
+#define SAMSUNG_DOCK_SWITCH "/sys/devices/virtual/switch/dock/state"
+
 class AudioUtil {
 public:
 
     //Parses EDID audio block when if HDMI is connected to determine audio sink capabilities.
     static bool getHDMIAudioSinkCaps(EDID_AUDIO_INFO*);
     static bool getHDMIAudioSinkCaps(EDID_AUDIO_INFO*, char *hdmiEDIDData);
+
+#ifdef SAMSUNG_AUDIO
+    static bool isSamsungDockConnected();
+#endif
 
 private:
     static int printFormatFromEDID(unsigned char format);
