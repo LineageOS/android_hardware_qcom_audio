@@ -497,7 +497,7 @@ int enableDevice(int device,short enable) {
         initACDB();
     }
 #endif
-    ALOGE("value of device and enable is %d %d ALSA dev id:%d",device,enable,DEV_ID(device));
+    ALOGV("value of device and enable is %d %d ALSA dev id:%d",device,enable,DEV_ID(device));
     if( msm_en_device(DEV_ID(device), enable)) {
         ALOGE("msm_en_device(%d,%d) failed errno = %d",DEV_ID(device),enable, errno);
         return -1;
@@ -659,7 +659,7 @@ static status_t updateDeviceInfo(int rx_device,int tx_device) {
         }
         temp_head = temp_head->next;
     }
-    ALOGD("updateDeviceInfo: X");
+    ALOGV("updateDeviceInfo: X");
     return NO_ERROR;
 }
 
@@ -3716,7 +3716,7 @@ Error:
 status_t AudioHardware::AudioStreamOutMSM8x60::standby()
 {
     Routing_table* temp = NULL;
-    ALOGD("AudioStreamOutMSM8x60::standby()");
+    //ALOGV("AudioStreamOutMSM8x60::standby()");
     status_t status = NO_ERROR;
 
     temp = getNodeByStreamType(PCM_PLAY);
@@ -3724,7 +3724,7 @@ status_t AudioHardware::AudioStreamOutMSM8x60::standby()
     if(temp == NULL)
         return NO_ERROR;
 
-    ALOGD("Deroute pcm stream");
+    ALOGV("Deroute pcm stream");
     if(msm_route_stream(PCM_PLAY, temp->dec_id,DEV_ID(temp->dev_id), 0)) {
         ALOGE("could not set stream routing\n");
         deleteFromTable(PCM_PLAY);
@@ -4073,7 +4073,7 @@ ALOGE("  write Error \n");
 status_t AudioHardware::AudioStreamOutDirect::standby()
 {
     Routing_table* temp = NULL;
-    ALOGD("AudioStreamOutDirect::standby()");
+    //ALOGV("AudioStreamOutDirect::standby()");
     Mutex::Autolock lock(mHardware->mVoipLock);
     status_t status = NO_ERROR;
     int ret = 0;
@@ -4357,7 +4357,7 @@ ssize_t AudioHardware::AudioSessionOutLPA::write(const void* buffer, size_t byte
 
 status_t AudioHardware::AudioSessionOutLPA::standby()
 {
-    ALOGD("AudioSessionOutLPA::standby()");
+    //ALOGV("AudioSessionOutLPA::standby()");
     status_t status = NO_ERROR;
     //TODO  Do we really need standby()
     return status;
@@ -4974,7 +4974,7 @@ void AudioHardware::AudioSessionOutLPA::reset()
         ALOGE("LPA node does not exist");
         return ;
     }
-    ALOGD("Deroute lpa playback stream");
+    ALOGV("Deroute lpa playback stream");
     if(msm_route_stream(PCM_PLAY, temp->dec_id,DEV_ID(temp->dev_id), 0)) {
         ALOGE("could not set stream routing\n");
         deleteFromTable(LPA_DECODE);
@@ -5192,7 +5192,7 @@ ssize_t AudioHardware::AudioSessionOutTunnel::write(const void* buffer, size_t b
 
 status_t AudioHardware::AudioSessionOutTunnel::standby()
 {
-    ALOGD("AudioSessionOutTunnel::standby()");
+    //ALOGV("AudioSessionOutTunnel::standby()");
     status_t status = NO_ERROR;
     //TODO  Do we really need standby()
     return status;
