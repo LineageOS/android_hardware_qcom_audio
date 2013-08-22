@@ -725,6 +725,7 @@ int use_case_index)
         strlen(SND_USE_CASE_VERB_IP_VOICECALL)))) {
         voice_acdb = 1;
     }
+//The ident_value should store latest/current modifier
     if (voice_acdb != 1) {
         list_size =
         snd_ucm_get_size_of_list(uc_mgr->card_ctxt_ptr->mod_list_head);
@@ -742,9 +743,6 @@ int use_case_index)
                     strlen(SND_USE_CASE_MOD_PLAY_VOIP)))) {
                     voice_acdb = 1;
                     strlcpy(current_mod, ident_value, MAX_STR_LEN);
-                    free(ident_value);
-                    ident_value = NULL;
-                    break;
                 }
                 free(ident_value);
                 ident_value = NULL;
@@ -805,9 +803,8 @@ int use_case_index)
                     && tx_id == DEVICE_HANDSET_TX_FV5_ACDB_ID) {
                     tx_id = DEVICE_SPEAKER_TX_FV5_ACDB_ID;
                 }
-
-                if ((rx_id != uc_mgr->current_rx_device) ||
-                    (tx_id != uc_mgr->current_tx_device)) {
+/* Despite no change in rx and tx devices, calibration data can be required to be sent.
+This happens when the modifier changes*/
                     uc_mgr->current_rx_device = rx_id;
                     uc_mgr->current_tx_device = tx_id;
                     ALOGD("Voice acdb: rx id %d tx id %d verb:%s modifier:%s",
@@ -822,12 +819,7 @@ int use_case_index)
                           (!uc_mgr->isFusion3Platform))
                            acdb_loader_send_voice_cal(uc_mgr->current_rx_device,
                                                     uc_mgr->current_tx_device);
-                } else {
-                    ALOGV("Voice acdb: Required acdb already pushed \
-                         rx id %d tx id %d", uc_mgr->current_rx_device,
-                         uc_mgr->current_tx_device);
-                }
-            }
+             }
             free(ident_value);
             ident_value = NULL;
         }
