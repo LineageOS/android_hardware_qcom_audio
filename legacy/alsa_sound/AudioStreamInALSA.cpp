@@ -198,6 +198,17 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                                     sizeof(mHandle->useCase));
                         }
                     }
+                } else if (mParent->mIncallMode & AUDIO_CHANNEL_IN_VOICE_UPLINK) {
+                    if (mParent->mFusion3Platform) {
+                        /* Use normal audio recording for Fusion3 target, this behavior
+                           will be changed in Fusion4
+                         */
+                        strlcpy(mHandle->useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC,
+                                sizeof(SND_USE_CASE_MOD_CAPTURE_MUSIC));
+                    } else {
+                        strlcpy(mHandle->useCase, SND_USE_CASE_MOD_CAPTURE_VOICE_UL,
+                                sizeof(SND_USE_CASE_MOD_CAPTURE_VOICE_UL));
+                    }
                 }
 #ifdef QCOM_FM_ENABLED
             } else if(mHandle->devices == AudioSystem::DEVICE_IN_FM_RX) {
@@ -271,6 +282,14 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                                     sizeof(mHandle->useCase));
                         }
                    }
+                } else if (mParent->mIncallMode & AUDIO_CHANNEL_IN_VOICE_UPLINK) {
+                    if (mParent->mFusion3Platform) {
+                        strlcpy(mHandle->useCase, SND_USE_CASE_VERB_HIFI_REC,
+                                sizeof(SND_USE_CASE_VERB_HIFI_REC));
+                    } else {
+                        strlcpy(mHandle->useCase, SND_USE_CASE_VERB_UL_REC,
+                                sizeof(SND_USE_CASE_VERB_UL_REC));
+                    }
                 }
 #ifdef QCOM_FM_ENABLED
             } else if(mHandle->devices == AudioSystem::DEVICE_IN_FM_RX) {
