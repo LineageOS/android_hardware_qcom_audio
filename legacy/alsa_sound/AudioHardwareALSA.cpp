@@ -1746,6 +1746,14 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
         alsa_handle.rxHandle = 0;
         alsa_handle.ucMgr = mUcMgr;
         snd_use_case_get(mUcMgr, "_verb", (const char **)&use_case);
+        for(it = mDeviceList.begin();
+            it != mDeviceList.end(); ++it) {
+                if((!strcmp(it->useCase, SND_USE_CASE_VERB_HIFI_REC)) ||
+                   (!strcmp(it->useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC))) {
+                    ALOGE("error:Input stream already opened for recording");
+                    return in;
+                }
+        }
         if ((use_case != NULL) && (strcmp(use_case, SND_USE_CASE_VERB_INACTIVE))) {
             if ((devices == AudioSystem::DEVICE_IN_VOICE_CALL) &&
                 (newMode == AUDIO_MODE_IN_CALL)) {
