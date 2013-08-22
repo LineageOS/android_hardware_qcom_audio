@@ -919,6 +919,9 @@ protected:
     uint32_t            mIncallMode;
 
     bool                mMicMute;
+    bool                mCSMicMute;
+    bool                mVoice2MicMute;
+    bool                mVoLTEMicMute;
     int mVoiceCallState;
     int mVolteCallState;
     int mVoice2CallState;
