@@ -175,7 +175,6 @@ static int USBRECBIT_FM = (1 << 3);
 #define AFE_PROXY_SAMPLE_RATE 48000
 #define AFE_PROXY_CHANNEL_COUNT 2
 #define AFE_PROXY_PERIOD_SIZE 3072
-#define AFE_PROXY_HIGH_WATER_MARK_FRAME_COUNT 40000
 
 #define MAX_SLEEP_RETRY 100  /*  Will check 100 times before continuing */
 #define AUDIO_INIT_SLEEP_WAIT 50 /* 50 ms */
