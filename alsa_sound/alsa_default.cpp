@@ -1442,7 +1442,13 @@ char *getUCMDevice(uint32_t devices, int input, char *rxDevice)
                 if (mDevSettingsFlag & DMIC_FLAG) {
 #ifdef USES_FLUENCE_INCALL
                     if(callMode == AudioSystem::MODE_IN_CALL) {
-                        if (fluence_mode == FLUENCE_MODE_ENDFIRE) {
+                        if (!strncmp(mic_type, "digital", 7) &&
+                            ((rxDevice != NULL) &&
+                            !strncmp(rxDevice, SND_USE_CASE_DEV_VOC_HEADPHONE,
+                            (strlen(SND_USE_CASE_DEV_VOC_HEADPHONE)+1))))
+                        {
+                            return strdup(SND_USE_CASE_DEV_HANDSET);
+                        } else if (fluence_mode == FLUENCE_MODE_ENDFIRE) {
                             return strdup(SND_USE_CASE_DEV_DUAL_MIC_ENDFIRE); /* DUALMIC EF TX */
                         } else if (fluence_mode == FLUENCE_MODE_BROADSIDE) {
                             return strdup(SND_USE_CASE_DEV_DUAL_MIC_BROADSIDE); /* DUALMIC BS TX */
