@@ -126,6 +126,10 @@ ALSADevice::ALSADevice() {
     mA2220Mode = A2220_PATH_INCALL_RECEIVER_NSOFF;
 #endif
 
+#ifdef SEPERATED_AUDIO_INPUT
+    mInputSource = AUDIO_SOURCE_DEFAULT;
+#endif
+
     ALOGD("ALSA module opened");
 }
 
