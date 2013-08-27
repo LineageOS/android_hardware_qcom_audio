@@ -389,9 +389,9 @@ AudioHardwareALSA::~AudioHardwareALSA()
         delete mALSADevice;
     }
     for(ALSAHandleList::iterator it = mDeviceList.begin();
-            it != mDeviceList.end(); ++it) {
+            it != mDeviceList.end();) {
         it->useCase[0] = 0;
-        mDeviceList.erase(it);
+        it = mDeviceList.erase(it);
     }
     if (mResampler) {
         release_resampler(mResampler);
