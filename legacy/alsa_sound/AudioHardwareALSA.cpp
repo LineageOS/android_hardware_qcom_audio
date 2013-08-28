@@ -1066,6 +1066,18 @@ status_t AudioHardwareALSA::doRouting(int device)
                                     startUsbPlaybackIfNotStarted();
                                     musbPlaybackState |= USBPLAYBACKBIT_FM;
                                     break;
+                        }else if((!strcmp(it->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
+                                 (!strcmp(it->useCase, SND_USE_CASE_MOD_PLAY_VOIP)) ||
+                                 (!strcmp(it->useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC) &&
+                                 (newMode == AudioSystem::MODE_IN_COMMUNICATION)) ||
+                                 (!strncmp(it->useCase, SND_USE_CASE_VERB_HIFI_REC,
+                                 strlen(SND_USE_CASE_VERB_HIFI_REC)) &&
+                                 (newMode == AudioSystem::MODE_IN_COMMUNICATION))) {
+                                    ALOGV("doRouting: VOIP device switch to proxy");
+                                    startUsbRecordingIfNotStarted();
+                                    startUsbPlaybackIfNotStarted();
+                                    musbRecordingState |= USBRECBIT_VOIPCALL;
+                                    musbPlaybackState |= USBPLAYBACKBIT_VOIPCALL;
                          }
                     }
         } else
