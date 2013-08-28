@@ -1990,13 +1990,13 @@ status_t AudioPolicyManager::checkAndSetVolume(int stream,
             fmVolume = computeVolume(stream, index, output, device);
             if (fmVolume >= 0) {
                 if(output == mPrimaryOutput) {
-                 //   mpClientInterface->setFmVolume(fmVolume, delayMs);
-                      AudioParameter param = AudioParameter();
-                      param.addFloat(String8(AudioParameter::keyFmVolume), fmVolume);
-                       ALOGV("checkAndSetVolume setParameters fm_volume");
-                       mpClientInterface->setParameters(mPrimaryOutput, param.toString());
-
-                } else if(mHasA2dp && output == getA2dpOutput()) {
+                    AudioParameter param = AudioParameter();
+                    param.addFloat(String8(AudioParameter::keyFmVolume), fmVolume);
+                    ALOGV("checkAndSetVolume setParameters fm_volume, volume=:%f delay=:%d",fmVolume,delayMs*2);
+                    //Double delayMs to avoid sound burst while device switch.
+                    mpClientInterface->setParameters(mPrimaryOutput, param.toString(), delayMs*2);
+                }
+                else if(mHasA2dp && output == getA2dpOutput()) {
                     mpClientInterface->setStreamVolume((AudioSystem::stream_type)stream, volume, output, delayMs);
                 }
             }
