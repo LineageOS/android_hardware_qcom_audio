@@ -710,7 +710,7 @@ int use_case_index)
     card_mctrl_t *ctrl_list;
     int list_size, index, verb_index, ret = 0, voice_acdb = 0, rx_id, tx_id;
     char *ident_value = NULL;
-    char current_mod[MAX_STR_LEN];
+    char current_mod[MAX_STR_LEN] = "";
 
     /* Check if voice call use case/modifier exists */
     if ((!strncmp(uc_mgr->card_ctxt_ptr->current_verb,
