@@ -741,14 +741,14 @@ void AudioUtil::updateChannelMapLPASS(EDID_AUDIO_INFO* pInfo)
     }
 }
 
-#ifdef SAMSUNG_AUDIO
-bool AudioUtil::isSamsungDockConnected()
+#if defined(SAMSUNG_AUDIO) || defined(MOTOROLA_EMU_AUDIO)
+bool AudioUtil::isDockConnected()
 {
     FILE *dockNode = NULL;
     char buf[32];
     bool connected = false;
 
-    dockNode = fopen(SAMSUNG_DOCK_SWITCH, "r");
+    dockNode = fopen(DOCK_SWITCH, "r");
     if (dockNode) {
         fread(buf, sizeof(char), 32, dockNode);
         connected = atoi(buf) > 0;

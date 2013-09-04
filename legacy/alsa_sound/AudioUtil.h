@@ -92,7 +92,11 @@ typedef struct EDID_AUDIO_INFO {
     int  channelAllocation;
 } EDID_AUDIO_INFO;
 
-#define SAMSUNG_DOCK_SWITCH "/sys/devices/virtual/switch/dock/state"
+#ifdef SAMSUNG_AUDIO
+#define DOCK_SWITCH "/sys/devices/virtual/switch/dock/state"
+#elif MOTOROLA_EMU_AUDIO
+#define DOCK_SWITCH "/sys/devices/virtual/switch/semu_audio/state"
+#endif
 
 class AudioUtil {
 public:
@@ -101,8 +105,8 @@ public:
     static bool getHDMIAudioSinkCaps(EDID_AUDIO_INFO*);
     static bool getHDMIAudioSinkCaps(EDID_AUDIO_INFO*, char *hdmiEDIDData);
 
-#ifdef SAMSUNG_AUDIO
-    static bool isSamsungDockConnected();
+#if defined(SAMSUNG_AUDIO) || defined(MOTOROLA_EMU_AUDIO)
+    static bool isDockConnected();
 #endif
 
 private:

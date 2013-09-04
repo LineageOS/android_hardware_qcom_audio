@@ -90,6 +90,9 @@ ALSADevice::ALSADevice() {
     mIsFmEnabled = false;
     //Initialize fm volume to value corresponding to unity volume	92
     mFmVolume = lrint((0.0 * 0x2000) + 0.5);
+#ifdef MOTOROLA_EMU_AUDIO
+    mIsEmuAntipopOn = false;
+#endif
     char value[128], platform[128], baseband[128];
 
     property_get("persist.audio.handset.mic",value,"0");
@@ -706,6 +709,11 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
     ALOGV("%s,rxDev:%s, txDev:%s, curRxDev:%s, curTxDev:%s\n", __FUNCTION__, rxDevice, txDevice, mCurRxUCMDevice, mCurTxUCMDevice);
 
     if (rxDevice != NULL) {
+#ifdef MOTOROLA_EMU_AUDIO
+        if (mIsEmuAntipopOn && !AudioUtil::isDockConnected()) {
+            setEmuAntipop(0);
+        }
+#endif
         snd_use_case_set(handle->ucMgr, "_enadev", rxDevice);
         strlcpy(mCurRxUCMDevice, rxDevice, sizeof(mCurRxUCMDevice));
     }
@@ -1678,17 +1686,29 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
                     devices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET) &&
                     mCallMode != AUDIO_MODE_IN_CALL &&
                     devices & AudioSystem::DEVICE_OUT_SPEAKER) {
-#ifdef SAMSUNG_AUDIO
-            if (AudioUtil::isSamsungDockConnected()) {
+#if defined(SAMSUNG_AUDIO) || defined(MOTOROLA_EMU_AUDIO)
+            if (AudioUtil::isDockConnected()) {
+#ifdef MOTOROLA_EMU_AUDIO
+                if (!mIsEmuAntipopOn) {
+                    setEmuAntipop(1);
+                }
+                return strdup(SND_USE_CASE_DEV_DOCK_SPEAKER);
+#else
                 return strdup(SND_USE_CASE_DEV_DOCK);
+#endif
             }
 #endif
             return strdup(SND_USE_CASE_DEV_USB_PROXY_RX_SPEAKER); /* USB PROXY RX + SPEAKER */
         } else if (((devices & AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET) ||
                   (devices & AudioSystem::DEVICE_OUT_DGTL_DOCK_HEADSET)) &&
                   mCallMode != AUDIO_MODE_IN_CALL) {
-#ifdef SAMSUNG_AUDIO
-            if (AudioUtil::isSamsungDockConnected()) {
+#if defined(SAMSUNG_AUDIO) || defined(MOTOROLA_EMU_AUDIO)
+            if (AudioUtil::isDockConnected()) {
+#ifdef MOTOROLA_EMU_AUDIO
+                if (!mIsEmuAntipopOn) {
+                    setEmuAntipop(1);
+                }
+#endif
                 return strdup(SND_USE_CASE_DEV_DOCK); /* Dock RX */
             }
 #endif
@@ -2401,6 +2421,16 @@ void ALSADevice::setChannelAlloc(int channelAlloc)
     free(setValues);
     return;
 }
+
+#ifdef MOTOROLA_EMU_AUDIO
+void ALSADevice::setEmuAntipop(int emuAntipop)
+{
+    ALOGD("Emu Antipop = %d", emuAntipop);
+    setMixerControl("EMU Antipop", emuAntipop, 0);
+    mIsEmuAntipopOn = emuAntipop == 1;
+    return;
+}
+#endif
 
 status_t ALSADevice::getMixerControl(const char *name, unsigned int &value, int index)
 {
