@@ -117,6 +117,10 @@ ifeq ($(BOARD_HAVE_HTC_CSDCLIENT),true)
   LOCAL_CFLAGS += -DHTC_CSDCLIENT
 endif
 
+ifeq ($(BOARD_USES_MOTOROLA_EMU_AUDIO),true)
+  LOCAL_CFLAGS += -DMOTOROLA_EMU_AUDIO
+endif
+
 LOCAL_SRC_FILES := \
   AudioHardwareALSA.cpp         \
   AudioStreamOutALSA.cpp        \
