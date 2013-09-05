@@ -740,8 +740,11 @@ static void *offload_thread_loop(void *context)
         pthread_mutex_lock(&out->lock);
         out->offload_thread_blocked = false;
         pthread_cond_signal(&out->cond);
-        if (send_callback)
+        if (send_callback) {
+            if (event == STREAM_CBK_EVENT_DRAIN_READY)
+                stop_compressed_output_l(out);
             out->offload_callback(event, NULL, out->offload_cookie);
+        }
         free(cmd);
     }
 
@@ -1268,7 +1271,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 {
     struct stream_out *out = (struct stream_out *)stream;
     struct audio_device *adev = out->dev;
-    size_t ret = 0;
+    ssize_t ret = 0;
 
     pthread_mutex_lock(&out->lock);
     if (out->standby) {
@@ -1285,7 +1288,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
         ret = compress_write(out->compr, buffer, bytes);
-        if (ret < bytes) {
+        ALOGVV("%s: writing buffer (%d bytes) to pcm device returned %d", __func__, bytes, ret);
+        if (ret >= 0 && ret < (ssize_t)bytes) {
             send_offload_cmd_l(out, OFFLOAD_CMD_WAIT_FOR_BUFFER);
         }
         if (!out->playback_started) {
