@@ -109,6 +109,7 @@ struct stream_out {
     /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
     bool muted;
+    uint64_t written; /* total frames written, not cleared when entering standby */
 
     int non_blocking;
     int playback_started;

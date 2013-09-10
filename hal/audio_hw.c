@@ -841,7 +841,7 @@ int start_output_stream(struct stream_out *out)
           __func__, 0, out->pcm_device_id);
     if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
         out->pcm = pcm_open(SOUND_CARD, out->pcm_device_id,
-                               PCM_OUT, &out->config);
+                               PCM_OUT | PCM_MONOTONIC, &out->config);
         if (out->pcm && !pcm_is_ready(out->pcm)) {
             ALOGE("%s: %s", __func__, pcm_get_error(out->pcm));
             pcm_close(out->pcm);
@@ -946,7 +946,7 @@ static int start_voice_call(struct audio_device *adev)
           __func__, SOUND_CARD, pcm_dev_rx_id);
     adev->voice_call_rx = pcm_open(SOUND_CARD,
                                   pcm_dev_rx_id,
-                                  PCM_OUT, &pcm_config_voice_call);
+                                  PCM_OUT | PCM_MONOTONIC, &pcm_config_voice_call);
     if (adev->voice_call_rx && !pcm_is_ready(adev->voice_call_rx)) {
         ALOGE("%s: %s", __func__, pcm_get_error(adev->voice_call_rx));
         ret = -EIO;
@@ -1305,6 +1305,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                 memset((void *)buffer, 0, bytes);
             ALOGVV("%s: writing buffer (%d bytes) to pcm device", __func__, bytes);
             ret = pcm_write(out->pcm, (void *)buffer, bytes);
+            if (ret == 0)
+                out->written += bytes / (out->config.channels * sizeof(short));
         }
     }
 
@@ -1354,6 +1356,33 @@ static int out_get_next_write_timestamp(const struct audio_stream_out *stream,
                                         int64_t *timestamp)
 {
     return -EINVAL;
+}
+
+static int out_get_presentation_position(const struct audio_stream_out *stream,
+                                   uint64_t *frames, struct timespec *timestamp)
+{
+    struct stream_out *out = (struct stream_out *)stream;
+    int ret = -1;
+
+    pthread_mutex_lock(&out->lock);
+
+    if (out->pcm) {
+        size_t avail;
+        if (pcm_get_htimestamp(out->pcm, &avail, timestamp) == 0) {
+            size_t kernel_buffer_size = out->config.period_size * out->config.period_count;
+            // FIXME This calculation is incorrect if there is buffering after app processor
+            int64_t signed_frames = out->written - kernel_buffer_size + avail;
+            // It would be unusual for this value to be negative, but check just in case ...
+            if (signed_frames >= 0) {
+                *frames = signed_frames;
+                ret = 0;
+            }
+        }
+    }
+
+    pthread_mutex_unlock(&out->lock);
+
+    return ret;
 }
 
 static int out_set_callback(struct audio_stream_out *stream,
@@ -1784,9 +1813,11 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->stream.write = out_write;
     out->stream.get_render_position = out_get_render_position;
     out->stream.get_next_write_timestamp = out_get_next_write_timestamp;
+    out->stream.get_presentation_position = out_get_presentation_position;
 
     out->standby = 1;
     /* out->muted = false; by calloc() */
+    /* out->written = 0; by calloc() */
 
     pthread_mutex_init(&out->lock, (const pthread_mutexattr_t *) NULL);
     pthread_cond_init(&out->cond, (const pthread_condattr_t *) NULL);
