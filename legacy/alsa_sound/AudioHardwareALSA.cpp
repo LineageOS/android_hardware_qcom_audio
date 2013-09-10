@@ -1091,9 +1091,7 @@ status_t AudioHardwareALSA::doRouting(int device)
             uint32_t activeUsecase = useCaseStringToEnum(it->useCase);
             if (!((device & AudioSystem::DEVICE_OUT_ALL_A2DP) &&
                   (mCurRxDevice & AUDIO_DEVICE_OUT_ALL_USB))) {
-                if ((activeUsecase == USECASE_HIFI_LOW_POWER) ||
-                    (activeUsecase == USECASE_HIFI_TUNNEL)) {
-                    if (device != mCurRxDevice) {
+                   if (device != mCurRxDevice) {
                         if((isExtOutDevice(mCurRxDevice)) &&
                            (isExtOutDevice(device))) {
                             activeUsecase = getExtOutActiveUseCases_l();
@@ -1103,24 +1101,6 @@ status_t AudioHardwareALSA::doRouting(int device)
                         mALSADevice->route(&(*it),(uint32_t)device, newMode);
                     }
                     err = startPlaybackOnExtOut_l(activeUsecase);
-                } else {
-                    //WHY NO check for prev device here?
-                    if (device != mCurRxDevice) {
-                        if((isExtOutDevice(mCurRxDevice)) &&
-                            (isExtOutDevice(device))) {
-                            activeUsecase = getExtOutActiveUseCases_l();
-                            stopPlaybackOnExtOut_l(activeUsecase);
-                            mALSADevice->route(&(*it),(uint32_t)device, newMode);
-                            mRouteAudioToExtOut = true;
-                            startPlaybackOnExtOut_l(activeUsecase);
-                        } else {
-                           mALSADevice->route(&(*it),(uint32_t)device, newMode);
-                        }
-                    }
-                    if (activeUsecase == USECASE_FM){
-                        err = startPlaybackOnExtOut_l(activeUsecase);
-                    }
-                }
                 if(err) {
                     ALOGW("startPlaybackOnExtOut_l for hardware output failed err = %d", err);
                     stopPlaybackOnExtOut_l(activeUsecase);
