@@ -125,6 +125,8 @@ static const struct string_to_enum out_channels_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_CHANNEL_OUT_7POINT1),
 };
 
+static int set_voice_volume_l(struct audio_device *adev, float volume);
+
 static bool is_supported_format(audio_format_t format)
 {
     if (format == AUDIO_FORMAT_MP3 /*||
@@ -963,6 +965,10 @@ static int start_voice_call(struct audio_device *adev)
         ret = -EIO;
         goto error_start_voice;
     }
+
+    /* set cached volume */
+    set_voice_volume_l(adev, adev->voice_volume);
+
     pcm_start(adev->voice_call_rx);
     pcm_start(adev->voice_call_tx);
 
@@ -971,7 +977,6 @@ static int start_voice_call(struct audio_device *adev)
         ALOGE("%s: platform_start_voice_call error %d\n", __func__, ret);
         goto error_start_voice;
     }
-
     adev->in_call = true;
     return 0;
 
@@ -1963,13 +1968,11 @@ static int adev_init_check(const struct audio_hw_device *dev)
     return 0;
 }
 
-static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
+/* always called with adev lock held */
+static int set_voice_volume_l(struct audio_device *adev, float volume)
 {
-    struct audio_device *adev = (struct audio_device *)dev;
     int vol, err = 0;
 
-    pthread_mutex_lock(&adev->lock);
-    adev->voice_volume = volume;
     if (adev->mode == AUDIO_MODE_IN_CALL) {
         if (volume < 0.0) {
             volume = 0.0;
@@ -1986,8 +1989,19 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
 
         err = platform_set_voice_volume(adev->platform, vol);
     }
-    pthread_mutex_unlock(&adev->lock);
     return err;
+}
+
+static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
+{
+    int ret;
+    struct audio_device *adev = (struct audio_device *)dev;
+    pthread_mutex_lock(&adev->lock);
+    /* cache volume */
+    adev->voice_volume = volume;
+    ret = set_voice_volume_l(adev, adev->voice_volume);
+    pthread_mutex_unlock(&adev->lock);
+    return ret;
 }
 
 static int adev_set_master_volume(struct audio_hw_device *dev, float volume)
