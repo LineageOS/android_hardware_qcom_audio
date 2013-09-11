@@ -257,6 +257,7 @@ struct audio_device {
     bool speaker_lr_swap;
 
     bool mic_type_analog;
+    bool mic_type_digital;
     bool fluence_in_spkr_mode;
     bool fluence_in_voice_call;
     bool fluence_in_voice_rec;
