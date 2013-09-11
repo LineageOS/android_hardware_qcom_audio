@@ -3039,19 +3039,19 @@ void AudioHardwareALSA::extOutThreadFunc() {
 void AudioHardwareALSA::setExtOutActiveUseCases_l(uint32_t activeUsecase)
 {
    mExtOutActiveUseCases |= activeUsecase;
-   ALOGD("mExtOutActiveUseCases = %u, activeUsecase = %u", mExtOutActiveUseCases, activeUsecase);
+   ALOGV("mExtOutActiveUseCases = %u, activeUsecase = %u", mExtOutActiveUseCases, activeUsecase);
 }
 
 uint32_t AudioHardwareALSA::getExtOutActiveUseCases_l()
 {
-   ALOGD("getExtOutActiveUseCases_l: mExtOutActiveUseCases = %u", mExtOutActiveUseCases);
+   ALOGV("getExtOutActiveUseCases_l: mExtOutActiveUseCases = %u", mExtOutActiveUseCases);
    return mExtOutActiveUseCases;
 }
 
 void AudioHardwareALSA::clearExtOutActiveUseCases_l(uint32_t activeUsecase) {
 
    mExtOutActiveUseCases &= ~activeUsecase;
-   ALOGD("clear - mExtOutActiveUseCases = %u, activeUsecase = %u", mExtOutActiveUseCases, activeUsecase);
+   ALOGV("clear - mExtOutActiveUseCases = %u, activeUsecase = %u", mExtOutActiveUseCases, activeUsecase);
 
 }
 
@@ -3059,6 +3059,10 @@ uint32_t AudioHardwareALSA::useCaseStringToEnum(const char *usecase)
 {
    ALOGV("useCaseStringToEnum usecase:%s",usecase);
    uint32_t activeUsecase = USECASE_NONE;
+   if (usecase == NULL) {
+       ALOGE("useCaseStringToEnum: invalid input usecase return USECASE_NONE");
+       return USECASE_NONE;
+   }
 
    if ((!strncmp(usecase, SND_USE_CASE_VERB_HIFI_LOW_POWER,
                     strlen(SND_USE_CASE_VERB_HIFI_LOW_POWER))) ||
