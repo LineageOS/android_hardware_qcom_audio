@@ -697,7 +697,10 @@ static snd_device_t get_input_snd_device(struct audio_device *adev,
         }
         if (out_device & AUDIO_DEVICE_OUT_EARPIECE ||
             out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) {
-            if (adev->mic_type_analog || adev->fluence_in_voice_call == false) {
+            if (adev->mic_type_digital &&
+                (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE)) {
+                snd_device = SND_DEVICE_IN_HANDSET_MIC;
+            } else if (adev->mic_type_analog || adev->fluence_in_voice_call == false) {
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
             } else {
                 if (adev->dualmic_config == DUALMIC_CONFIG_ENDFIRE) {
@@ -2223,10 +2226,13 @@ static void init_platform_data(struct audio_device *adev)
     adev->fluence_in_voice_call = false;
     adev->fluence_in_voice_rec = false;
     adev->mic_type_analog = false;
+    adev->mic_type_digital = false;
 
     property_get("persist.audio.handset.mic.type",value,"");
     if (!strcmp("analog", value))
         adev->mic_type_analog = true;
+    else if (!strcmp("digital", value))
+		adev->mic_type_digital = true;
 
     property_get("persist.audio.dualmic.config",value,"");
     if (!strcmp("broadside", value)) {
