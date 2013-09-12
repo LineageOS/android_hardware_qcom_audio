@@ -36,4 +36,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
 int platform_set_hdmi_channels(void *platform, int channel_count);
 int platform_edid_get_max_channels(void *platform);
 
+/* returns the latency for a usecase in Us */
+int64_t platform_render_latency(audio_usecase_t usecase);
+
 #endif // QCOM_AUDIO_PLATFORM_API_H

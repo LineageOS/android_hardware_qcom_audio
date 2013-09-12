@@ -200,6 +200,9 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE] = 5,
 };
 
+#define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
+#define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
+
 static pthread_once_t check_op_once_ctl = PTHREAD_ONCE_INIT;
 static bool is_tmus = false;
 
@@ -879,4 +882,17 @@ int platform_edid_get_max_channels(void *platform)
     }
 
     return max_channels;
+}
+
+/* Delay in Us */
+int64_t platform_render_latency(audio_usecase_t usecase)
+{
+    switch (usecase) {
+        case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
+            return DEEP_BUFFER_PLATFORM_DELAY;
+        case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
+            return LOW_LATENCY_PLATFORM_DELAY;
+        default:
+            return 0;
+    }
 }

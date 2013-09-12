@@ -1442,8 +1442,12 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
             size_t avail;
             if (pcm_get_htimestamp(out->pcm, &avail, timestamp) == 0) {
                 size_t kernel_buffer_size = out->config.period_size * out->config.period_count;
-                // FIXME This calculation is incorrect if there is buffering after app processor
                 int64_t signed_frames = out->written - kernel_buffer_size + avail;
+                // This adjustment accounts for buffering after app processor.
+                // It is based on estimated DSP latency per use case, rather than exact.
+                signed_frames -=
+                    (platform_render_latency(out->usecase) * out->sample_rate / 1000000LL);
+
                 // It would be unusual for this value to be negative, but check just in case ...
                 if (signed_frames >= 0) {
                     *frames = signed_frames;
