@@ -25,6 +25,8 @@
 
 #include <audio_route/audio_route.h>
 
+#define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
+
 /* Flags used to initialize acdb_settings variable that goes to ACDB library */
 #define DMIC_FLAG       0x00000002
 #define TTY_MODE_OFF    0x00000010
@@ -110,6 +112,7 @@ struct stream_out {
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
     bool muted;
     uint64_t written; /* total frames written, not cleared when entering standby */
+    audio_io_handle_t handle;
 
     int non_blocking;
     int playback_started;
@@ -187,6 +190,10 @@ struct audio_device {
     bool speaker_lr_swap;
 
     void *platform;
+
+    void *visualizer_lib;
+    int (*visualizer_start_output)(audio_io_handle_t);
+    int (*visualizer_stop_output)(audio_io_handle_t);
 };
 
 /*

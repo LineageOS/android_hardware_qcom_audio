@@ -29,6 +29,7 @@
 #include <sys/time.h>
 #include <stdlib.h>
 #include <math.h>
+#include <dlfcn.h>
 #include <sys/resource.h>
 #include <sys/prctl.h>
 
@@ -797,6 +798,10 @@ static int stop_output_stream(struct stream_out *out)
         return -EINVAL;
     }
 
+    if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD &&
+            adev->visualizer_stop_output != NULL)
+        adev->visualizer_stop_output(out->handle);
+
     /* 1. Get and set stream specific mixer controls */
     disable_audio_route(adev, uc_info, true);
 
@@ -863,6 +868,9 @@ int start_output_stream(struct stream_out *out)
         }
         if (out->offload_callback)
             compress_nonblock(out->compr, out->non_blocking);
+
+        if (adev->visualizer_start_output != NULL)
+            adev->visualizer_start_output(out->handle);
     }
     ALOGV("%s: exit", __func__);
     return 0;
@@ -1742,6 +1750,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->sample_rate = config->sample_rate;
     out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
     out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_STEREO;
+    out->handle = handle;
 
     /* Init use case and pcm_config */
     if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT &&
@@ -2263,6 +2272,22 @@ static int adev_open(const hw_module_t *module, const char *name,
         *device = NULL;
         return -EINVAL;
     }
+
+    if (access(VISUALIZER_LIBRARY_PATH, R_OK) == 0) {
+        adev->visualizer_lib = dlopen(VISUALIZER_LIBRARY_PATH, RTLD_NOW);
+        if (adev->visualizer_lib == NULL) {
+            ALOGE("%s: DLOPEN failed for %s", __func__, VISUALIZER_LIBRARY_PATH);
+        } else {
+            ALOGV("%s: DLOPEN successful for %s", __func__, VISUALIZER_LIBRARY_PATH);
+            adev->visualizer_start_output =
+                        (int (*)(audio_io_handle_t))dlsym(adev->visualizer_lib,
+                                                        "visualizer_hal_start_output");
+            adev->visualizer_stop_output =
+                        (int (*)(audio_io_handle_t))dlsym(adev->visualizer_lib,
+                                                        "visualizer_hal_stop_output");
+        }
+    }
+
     *device = &adev->device.common;
 
     ALOGV("%s: exit", __func__);
