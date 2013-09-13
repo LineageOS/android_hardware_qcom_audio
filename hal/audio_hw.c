@@ -129,8 +129,8 @@ static int set_voice_volume_l(struct audio_device *adev, float volume);
 
 static bool is_supported_format(audio_format_t format)
 {
-    if (format == AUDIO_FORMAT_MP3 /*||
-        format == AUDIO_FORMAT_AAC */)
+    if (format == AUDIO_FORMAT_MP3 ||
+            format == AUDIO_FORMAT_AAC)
         return true;
 
     return false;
