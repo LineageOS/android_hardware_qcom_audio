@@ -127,8 +127,8 @@ static const struct string_to_enum out_channels_name_to_enum_table[] = {
 
 static bool is_supported_format(audio_format_t format)
 {
-    if (format == AUDIO_FORMAT_MP3 /*||
-        format == AUDIO_FORMAT_AAC */)
+    if (format == AUDIO_FORMAT_MP3 ||
+            format == AUDIO_FORMAT_AAC)
         return true;
 
     return false;
