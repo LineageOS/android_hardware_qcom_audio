@@ -200,6 +200,19 @@ static void check_operator()
     case 310490:
     case 310260:
     case 310026:
+    /* Add new TMUS MNC(800, 660, 580, 310, 270, 250, 240, 230, 220, 210, 200, 160) */
+    case 310800:
+    case 310660:
+    case 310580:
+    case 310310:
+    case 310270:
+    case 310250:
+    case 310240:
+    case 310230:
+    case 310220:
+    case 310210:
+    case 310200:
+    case 310160:
         is_tmus = true;
         break;
     }
