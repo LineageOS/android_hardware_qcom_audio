@@ -896,12 +896,12 @@ String8 AudioHardwareALSA::getParameters(const String8& keys)
     if (param.getInt(key, device) == NO_ERROR) {
         param.addInt(key, mCurDevice);
     }
-
+#if 0
     key = String8(AudioParameter::keyCanOpenProxy);
     if(param.get(key, value) == NO_ERROR) {
         param.addInt(key, mCanOpenProxy);
     }
-
+#endif
     key = String8(ECHO_SUPRESSION);
     if (param.get(key, value) == NO_ERROR) {
         value = String8("yes");
@@ -1754,7 +1754,7 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
         else
             alsa_handle.format = *format;
         alsa_handle.channels = VOICE_CHANNEL_MODE;
-        alsa_handle.sampleRate = android::AudioRecord::DEFAULT_SAMPLE_RATE;
+        alsa_handle.sampleRate = 48000;//android::AudioRecord::DEFAULT_SAMPLE_RATE;
         alsa_handle.latency = RECORD_LATENCY;
         alsa_handle.rxHandle = 0;
         alsa_handle.ucMgr = mUcMgr;
@@ -2583,12 +2583,12 @@ status_t AudioHardwareALSA::startPlaybackOnExtOut_l(uint32_t activeUsecase) {
          if(err) {
             ALOGE("Proxy Property Set Failedd");
         }
-        int ProxyOpenRetryCount=PROXY_OPEN_RETRY_COUNT;
+        int ProxyOpenRetryCount = 10;//PROXY_OPEN_RETRY_COUNT;
         while(ProxyOpenRetryCount){
             err = mALSADevice->openProxyDevice();
             if(err) {
                  ProxyOpenRetryCount --;
-                 usleep(PROXY_OPEN_WAIT_TIME * 1000);
+                 //usleep(PROXY_OPEN_WAIT_TIME * 1000);
                  ALOGV("openProxyDevice failed retrying = %d", ProxyOpenRetryCount);
             }
             else
