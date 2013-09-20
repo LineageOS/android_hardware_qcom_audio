@@ -1422,19 +1422,33 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
 {
     struct stream_out *out = (struct stream_out *)stream;
     int ret = -1;
+    unsigned long dsp_frames;
 
     pthread_mutex_lock(&out->lock);
 
-    if (out->pcm) {
-        size_t avail;
-        if (pcm_get_htimestamp(out->pcm, &avail, timestamp) == 0) {
-            size_t kernel_buffer_size = out->config.period_size * out->config.period_count;
-            // FIXME This calculation is incorrect if there is buffering after app processor
-            int64_t signed_frames = out->written - kernel_buffer_size + avail;
-            // It would be unusual for this value to be negative, but check just in case ...
-            if (signed_frames >= 0) {
-                *frames = signed_frames;
-                ret = 0;
+    if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+        if (out->compr != NULL) {
+            compress_get_tstamp(out->compr, &dsp_frames,
+                    &out->sample_rate);
+            ALOGVV("%s rendered frames %ld sample_rate %d",
+                   __func__, dsp_frames, out->sample_rate);
+            *frames = dsp_frames;
+            ret = 0;
+            /* this is the best we can do */
+            clock_gettime(CLOCK_MONOTONIC, timestamp);
+        }
+    } else {
+        if (out->pcm) {
+            size_t avail;
+            if (pcm_get_htimestamp(out->pcm, &avail, timestamp) == 0) {
+                size_t kernel_buffer_size = out->config.period_size * out->config.period_count;
+                // FIXME This calculation is incorrect if there is buffering after app processor
+                int64_t signed_frames = out->written - kernel_buffer_size + avail;
+                // It would be unusual for this value to be negative, but check just in case ...
+                if (signed_frames >= 0) {
+                    *frames = signed_frames;
+                    ret = 0;
+                }
             }
         }
     }
