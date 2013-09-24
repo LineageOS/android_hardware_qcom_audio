@@ -17,6 +17,7 @@
 #define LOG_TAG "offload_visualizer"
 /*#define LOG_NDEBUG 0*/
 #include <assert.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -80,6 +81,16 @@ typedef struct output_context_s {
 
 #define CAPTURE_BUF_SIZE 65536 /* "64k should be enough for everyone" */
 
+#define DISCARD_MEASUREMENTS_TIME_MS 2000 /* discard measurements older than this number of ms */
+
+/* maximum number of buffers for which we keep track of the measurements */
+#define MEASUREMENT_WINDOW_MAX_SIZE_IN_BUFFERS 25 /* note: buffer index is stored in uint8_t */
+
+typedef struct buffer_stats_s {
+    bool is_valid;
+    uint16_t peak_u16; /* the positive peak of the absolute value of the samples in a buffer */
+    float rms_squared; /* the average square of the samples in a buffer */
+} buffer_stats_t;
 
 typedef struct visualizer_context_s {
     effect_context_t common;
@@ -91,6 +102,12 @@ typedef struct visualizer_context_s {
     uint32_t latency;
     struct timespec buffer_update_time;
     uint8_t capture_buf[CAPTURE_BUF_SIZE];
+    /* for measurements */
+    uint8_t channel_count; /* to avoid recomputing it every time a buffer is processed */
+    uint32_t meas_mode;
+    uint8_t meas_wndw_size_in_buffers;
+    uint8_t meas_buffer_idx;
+    buffer_stats_t past_meas[MEASUREMENT_WINDOW_MAX_SIZE_IN_BUFFERS];
 } visualizer_context_t;
 
 
@@ -507,6 +524,23 @@ void get_config(effect_context_t *context, effect_config_t *config)
  * Visualizer operations
  */
 
+uint32_t visualizer_get_delta_time_ms_from_updated_time(visualizer_context_t* visu_ctxt) {
+    uint32_t delta_ms = 0;
+    if (visu_ctxt->buffer_update_time.tv_sec != 0) {
+        struct timespec ts;
+        if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
+            time_t secs = ts.tv_sec - visu_ctxt->buffer_update_time.tv_sec;
+            long nsec = ts.tv_nsec - visu_ctxt->buffer_update_time.tv_nsec;
+            if (nsec < 0) {
+                --secs;
+                nsec += 1000000000;
+            }
+            delta_ms = secs * 1000 + nsec / 1000000;
+        }
+    }
+    return delta_ms;
+}
+
 int visualizer_reset(effect_context_t *context)
 {
     visualizer_context_t * visu_ctxt = (visualizer_context_t *)context;
@@ -521,6 +555,8 @@ int visualizer_reset(effect_context_t *context)
 
 int visualizer_init(effect_context_t *context)
 {
+    int32_t i;
+
     visualizer_context_t * visu_ctxt = (visualizer_context_t *)context;
 
     context->config.inputCfg.accessMode = EFFECT_BUFFER_ACCESS_READ;
@@ -542,6 +578,17 @@ int visualizer_init(effect_context_t *context)
 
     visu_ctxt->capture_size = VISUALIZER_CAPTURE_SIZE_MAX;
     visu_ctxt->scaling_mode = VISUALIZER_SCALING_MODE_NORMALIZED;
+
+    // measurement initialization
+    visu_ctxt->channel_count = popcount(context->config.inputCfg.channels);
+    visu_ctxt->meas_mode = MEASUREMENT_MODE_NONE;
+    visu_ctxt->meas_wndw_size_in_buffers = MEASUREMENT_WINDOW_MAX_SIZE_IN_BUFFERS;
+    visu_ctxt->meas_buffer_idx = 0;
+    for (i=0 ; i<visu_ctxt->meas_wndw_size_in_buffers ; i++) {
+        visu_ctxt->past_meas[i].is_valid = false;
+        visu_ctxt->past_meas[i].peak_u16 = 0;
+        visu_ctxt->past_meas[i].rms_squared = 0;
+    }
 
     set_config(context, &context->config);
 
@@ -568,6 +615,12 @@ int visualizer_get_parameter(effect_context_t *context, effect_param_t *p, uint3
     case VISUALIZER_PARAM_SCALING_MODE:
         ALOGV("%s get scaling_mode = %d", __func__, visu_ctxt->scaling_mode);
         *((uint32_t *)p->data + 1) = visu_ctxt->scaling_mode;
+        p->vsize = sizeof(uint32_t);
+        *size += sizeof(uint32_t);
+        break;
+    case VISUALIZER_PARAM_MEASUREMENT_MODE:
+        ALOGV("%s get meas_mode = %d", __func__, visu_ctxt->meas_mode);
+        *((uint32_t *)p->data + 1) = visu_ctxt->meas_mode;
         p->vsize = sizeof(uint32_t);
         *size += sizeof(uint32_t);
         break;
@@ -598,6 +651,10 @@ int visualizer_set_parameter(effect_context_t *context, effect_param_t *p, uint3
          * visu_ctxt->latency = *((uint32_t *)p->data + 1); */
         ALOGV("%s set latency = %d", __func__, visu_ctxt->latency);
         break;
+    case VISUALIZER_PARAM_MEASUREMENT_MODE:
+        visu_ctxt->meas_mode = *((uint32_t *)p->data + 1);
+        ALOGV("%s set meas_mode = %d", __func__, visu_ctxt->meas_mode);
+        break;
     default:
         return -EINVAL;
     }
@@ -619,6 +676,30 @@ int visualizer_process(effect_context_t *context,
         inBuffer->frameCount != outBuffer->frameCount ||
         inBuffer->frameCount == 0) {
         return -EINVAL;
+    }
+
+    // perform measurements if needed
+    if (visu_ctxt->meas_mode & MEASUREMENT_MODE_PEAK_RMS) {
+        // find the peak and RMS squared for the new buffer
+        uint32_t inIdx;
+        int16_t max_sample = 0;
+        float rms_squared_acc = 0;
+        for (inIdx = 0 ; inIdx < inBuffer->frameCount * visu_ctxt->channel_count ; inIdx++) {
+            if (inBuffer->s16[inIdx] > max_sample) {
+                max_sample = inBuffer->s16[inIdx];
+            } else if (-inBuffer->s16[inIdx] > max_sample) {
+                max_sample = -inBuffer->s16[inIdx];
+            }
+            rms_squared_acc += (inBuffer->s16[inIdx] * inBuffer->s16[inIdx]);
+        }
+        // store the measurement
+        visu_ctxt->past_meas[visu_ctxt->meas_buffer_idx].peak_u16 = (uint16_t)max_sample;
+        visu_ctxt->past_meas[visu_ctxt->meas_buffer_idx].rms_squared =
+                rms_squared_acc / (inBuffer->frameCount * visu_ctxt->channel_count);
+        visu_ctxt->past_meas[visu_ctxt->meas_buffer_idx].is_valid = true;
+        if (++visu_ctxt->meas_buffer_idx >= visu_ctxt->meas_wndw_size_in_buffers) {
+            visu_ctxt->meas_buffer_idx = 0;
+        }
     }
 
     /* all code below assumes stereo 16 bit PCM output and input */
@@ -700,23 +781,12 @@ int visualizer_command(effect_context_t * context, uint32_t cmdCode, uint32_t cm
 
         if (context->state == EFFECT_STATE_ACTIVE) {
             int32_t latency_ms = visu_ctxt->latency;
-            uint32_t delta_ms = 0;
-            if (visu_ctxt->buffer_update_time.tv_sec != 0) {
-                struct timespec ts;
-                if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
-                    time_t secs = ts.tv_sec - visu_ctxt->buffer_update_time.tv_sec;
-                    long nsec = ts.tv_nsec - visu_ctxt->buffer_update_time.tv_nsec;
-                    if (nsec < 0) {
-                        --secs;
-                        nsec += 1000000000;
-                    }
-                    delta_ms = secs * 1000 + nsec / 1000000;
-                    latency_ms -= delta_ms;
-                    if (latency_ms < 0)
-                        latency_ms = 0;
-                }
+            const uint32_t delta_ms = visualizer_get_delta_time_ms_from_updated_time(visu_ctxt);
+            latency_ms -= delta_ms;
+            if (latency_ms < 0) {
+                latency_ms = 0;
             }
-            uint32_t delta_smp = context->config.inputCfg.samplingRate * latency_ms / 1000;
+            const uint32_t delta_smp = context->config.inputCfg.samplingRate * latency_ms / 1000;
 
             int32_t capture_point = visu_ctxt->capture_idx - visu_ctxt->capture_size - delta_smp;
             int32_t capture_size = visu_ctxt->capture_size;
@@ -750,6 +820,56 @@ int visualizer_command(effect_context_t * context, uint32_t cmdCode, uint32_t cm
             visu_ctxt->last_capture_idx = visu_ctxt->capture_idx;
         } else {
             memset(pReplyData, 0x80, visu_ctxt->capture_size);
+        }
+        break;
+
+    case VISUALIZER_CMD_MEASURE: {
+        uint16_t peak_u16 = 0;
+        float sum_rms_squared = 0.0f;
+        uint8_t nb_valid_meas = 0;
+        /* reset measurements if last measurement was too long ago (which implies stored
+         * measurements aren't relevant anymore and shouldn't bias the new one) */
+        const int32_t delay_ms = visualizer_get_delta_time_ms_from_updated_time(visu_ctxt);
+        if (delay_ms > DISCARD_MEASUREMENTS_TIME_MS) {
+            uint32_t i;
+            ALOGV("Discarding measurements, last measurement is %dms old", delay_ms);
+            for (i=0 ; i<visu_ctxt->meas_wndw_size_in_buffers ; i++) {
+                visu_ctxt->past_meas[i].is_valid = false;
+                visu_ctxt->past_meas[i].peak_u16 = 0;
+                visu_ctxt->past_meas[i].rms_squared = 0;
+            }
+            visu_ctxt->meas_buffer_idx = 0;
+        } else {
+            /* only use actual measurements, otherwise the first RMS measure happening before
+             * MEASUREMENT_WINDOW_MAX_SIZE_IN_BUFFERS have been played will always be artificially
+             * low */
+            uint32_t i;
+            for (i=0 ; i < visu_ctxt->meas_wndw_size_in_buffers ; i++) {
+                if (visu_ctxt->past_meas[i].is_valid) {
+                    if (visu_ctxt->past_meas[i].peak_u16 > peak_u16) {
+                        peak_u16 = visu_ctxt->past_meas[i].peak_u16;
+                    }
+                    sum_rms_squared += visu_ctxt->past_meas[i].rms_squared;
+                    nb_valid_meas++;
+                }
+            }
+        }
+        float rms = nb_valid_meas == 0 ? 0.0f : sqrtf(sum_rms_squared / nb_valid_meas);
+        int32_t* p_int_reply_data = (int32_t*)pReplyData;
+        /* convert from I16 sample values to mB and write results */
+        if (rms < 0.000016f) {
+            p_int_reply_data[MEASUREMENT_IDX_RMS] = -9600; //-96dB
+        } else {
+            p_int_reply_data[MEASUREMENT_IDX_RMS] = (int32_t) (2000 * log10(rms / 32767.0f));
+        }
+        if (peak_u16 == 0) {
+            p_int_reply_data[MEASUREMENT_IDX_PEAK] = -9600; //-96dB
+        } else {
+            p_int_reply_data[MEASUREMENT_IDX_PEAK] = (int32_t) (2000 * log10(peak_u16 / 32767.0f));
+        }
+        ALOGV("VISUALIZER_CMD_MEASURE peak=%d (%dmB), rms=%.1f (%dmB)",
+                peak_u16, p_int_reply_data[MEASUREMENT_IDX_PEAK],
+                rms, p_int_reply_data[MEASUREMENT_IDX_RMS]);
         }
         break;
 
