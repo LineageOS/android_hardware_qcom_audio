@@ -242,7 +242,8 @@ status_t ALSAStreamOps::setParameters(const String8& keyValuePairs)
                 mParent->mRouteAudioToExtOut = true;
                 ALOGD("setParameters(): device %#x", device);
             }
-            err = mParent->doRouting(device);
+            char * usecase = (mHandle != NULL)? mHandle->useCase: NULL;
+            err = mParent->doRouting(device,usecase);
             if(err) {
                 ALOGE("doRouting failed = %d",err);
             }
