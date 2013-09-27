@@ -7,6 +7,7 @@ include $(MY_LOCAL_PATH)/legacy/Android.mk
 else
 include $(MY_LOCAL_PATH)/hal/Android.mk
 include $(MY_LOCAL_PATH)/voice_processing/Android.mk
+include $(MY_LOCAL_PATH)/mm-audio/Android.mk
 endif
 
 endif
