@@ -161,8 +161,8 @@ void audio_extn_set_afe_proxy_parameters(struct str_parms *parms)
     }
 }
 
-char* audio_extn_get_afe_proxy_parameters(struct str_parms *query,
-                                          struct str_parms *reply)
+int audio_extn_get_afe_proxy_parameters(struct str_parms *query,
+                                        struct str_parms *reply)
 {
     int ret, val;
     char value[32]={0};
@@ -174,10 +174,9 @@ char* audio_extn_get_afe_proxy_parameters(struct str_parms *query,
         /* Todo: check if proxy is free by maintaining a state flag*/
         val = 1;
         str_parms_add_int(reply, AUDIO_PARAMETER_CAN_OPEN_PROXY, val);
-        str = str_parms_to_str(reply);
     }
 
-    return str;
+    return 0;
 }
 #endif /* AFE_PROXY_ENABLED */
 
@@ -189,27 +188,10 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_fm_set_parameters(adev, parms);
 }
 
-char* audio_extn_get_parameters(const struct audio_hw_device *dev,
-                               const char *keys)
+void audio_extn_get_parameters(const struct audio_device *adev,
+                              struct str_parms *query,
+                              struct str_parms *reply)
 {
-    struct str_parms *query = str_parms_create_str(keys);
-    struct str_parms *reply = str_parms_create();
-    char *str = NULL;
-
-    ALOGD("%s: enter: keys - %s", __func__, keys);
-
-    if (NULL != (str = audio_extn_get_afe_proxy_parameters(query, reply)))
-    {
-        ALOGD("%s: handled %s", __func__, str);
-        goto exit;
-    } else {
-        str = strdup(keys);
-    }
-
-exit:
-    str_parms_destroy(query);
-    str_parms_destroy(reply);
-
-    ALOGD("%s: exit: returns %s", __func__, str);
-    return str;
+    audio_extn_get_afe_proxy_parameters(query, reply);
+    ALOGD("%s: exit: returns %s", __func__, str_parms_to_str(reply));
 }

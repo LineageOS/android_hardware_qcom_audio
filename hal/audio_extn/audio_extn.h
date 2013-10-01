@@ -25,8 +25,9 @@
 void audio_extn_set_parameters(struct audio_device *adev,
                                struct str_parms *parms);
 
-char* audio_extn_get_parameters(const struct audio_hw_device *dev,
-                               const char *keys);
+void audio_extn_get_parameters(const struct audio_device *adev,
+                               struct str_parms *query,
+                               struct str_parms *reply);
 
 #ifndef ANC_HEADSET_ENABLED
 #define audio_extn_get_anc_enabled()                     (0)

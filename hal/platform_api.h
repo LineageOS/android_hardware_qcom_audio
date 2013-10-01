@@ -1,4 +1,7 @@
 /*
+ * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Not a contribution.
+ *
  * Copyright (C) 2013 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,5 +38,9 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
 snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_device);
 int platform_set_hdmi_channels(void *platform, int channel_count);
 int platform_edid_get_max_channels(void *platform);
+void platform_get_parameters(void *platform, struct str_parms *query,
+                             struct str_parms *reply);
+int platform_set_parameters(void *platform, struct str_parms *parms);
+
 
 #endif // QCOM_AUDIO_PLATFORM_API_H
