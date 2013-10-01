@@ -1222,7 +1222,7 @@ AudioHardwareALSA::openOutputStream(uint32_t devices,
          devices, *channels, *sampleRate, flags);
 
     status_t err = BAD_VALUE;
-#ifdef QCOM_OUTPUT_LPA_ENABLED
+#ifdef QCOM_TUNNEL_LPA_ENABLED
     if (flags & (AUDIO_OUTPUT_FLAG_LPA | AUDIO_OUTPUT_FLAG_TUNNEL)) {
         int type = !(flags & AUDIO_OUTPUT_FLAG_LPA); //0 for LPA, 1 for tunnel
         AudioSessionOutALSA *out = new AudioSessionOutALSA(this, devices, *format, *channels,
