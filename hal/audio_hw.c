@@ -1772,6 +1772,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
     /* Init use case and pcm_config */
     if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT &&
+            !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
         out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
         pthread_mutex_lock(&adev->lock);
         ret = read_hdmi_channel_masks(out);
