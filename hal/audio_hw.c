@@ -962,7 +962,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             }
         }
 
-        if ((adev->mode != AUDIO_MODE_IN_CALL) && adev->in_call &&
+        if ((adev->mode == AUDIO_MODE_NORMAL) && adev->in_call &&
                 (out == adev->primary_output)) {
             stop_voice_call(adev);
         }
