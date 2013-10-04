@@ -16,6 +16,16 @@ LOCAL_SRC_FILES := \
 	audio_hw.c \
 	$(AUDIO_PLATFORM)/platform.c
 
+LOCAL_SRC_FILES += audio_extn/audio_extn.c
+
+ifneq ($(strip $(AUDIO_FEATURE_DISABLED_ANC_HEADSET)),true)
+    LOCAL_CFLAGS += -DANC_HEADSET_ENABLED
+endif
+
+ifneq ($(strip $(AUDIO_FEATURE_DISABLED_PROXY_DEVICE)),true)
+    LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
@@ -30,7 +40,8 @@ LOCAL_C_INCLUDES += \
 	external/tinycompress/include \
 	$(call include-path-for, audio-route) \
 	$(call include-path-for, audio-effects) \
-	$(LOCAL_PATH)/$(AUDIO_PLATFORM)
+	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \
+	$(LOCAL_PATH)/audio_extn
 
 LOCAL_MODULE := audio.primary.$(AUDIO_PLATFORM)
 
