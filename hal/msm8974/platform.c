@@ -1,4 +1,7 @@
 /*
+ * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Not a Contribution.
+ *
  * Copyright (C) 2013 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +28,7 @@
 #include <audio_hw.h>
 #include <platform_api.h>
 #include "platform.h"
+#include "audio_extn.h"
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
@@ -50,7 +54,7 @@
 #define MAX_VOL_INDEX 5
 #define MIN_VOL_INDEX 0
 #define percent_to_index(val, min, max) \
-	        ((val) * ((max) - (min)) * 0.01 + (min) + .5)
+                ((val) * ((max) - (min)) * 0.01 + (min) + .5)
 
 struct audio_block_header
 {
@@ -110,6 +114,12 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = "voice-tty-full-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = "voice-tty-vco-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = "voice-tty-hco-handset",
+    [SND_DEVICE_OUT_ANC_HEADSET] = "anc-headphones",
+    [SND_DEVICE_OUT_ANC_FB_HEADSET] = "anc-fb-headphones",
+    [SND_DEVICE_OUT_VOICE_ANC_HEADSET] = "voice-anc-headphones",
+    [SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET] = "voice-anc-fb-headphones",
+    [SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET] = "speaker-and-anc-headphones",
+    [SND_DEVICE_OUT_ANC_HANDSET] = "anc-handset",
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
@@ -132,6 +142,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_MIC] = "voice-rec-mic",
     [SND_DEVICE_IN_VOICE_REC_DMIC] = "voice-rec-dmic-ef",
     [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = "voice-rec-dmic-ef-fluence",
+    [SND_DEVICE_IN_AANC_HANDSET_MIC] = "aanc-handset-mic",
 };
 
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
@@ -152,6 +163,12 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = 37,
+    [SND_DEVICE_OUT_ANC_HEADSET] = 26,
+    [SND_DEVICE_OUT_ANC_FB_HEADSET] = 26,
+    [SND_DEVICE_OUT_VOICE_ANC_HEADSET] = 26,
+    [SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET] = 26,
+    [SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET] = 26,
+    [SND_DEVICE_OUT_ANC_HANDSET] = 103,
 
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
     [SND_DEVICE_IN_SPEAKER_MIC] = 4, /* ToDo: Check if this needs to changed to 11 */
@@ -171,6 +188,7 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = 36,
     [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = 16,
     [SND_DEVICE_IN_VOICE_REC_MIC] = 62,
+    [SND_DEVICE_IN_AANC_HANDSET_MIC] = 104,
     /* TODO: Update with proper acdb ids */
     [SND_DEVICE_IN_VOICE_REC_DMIC] = 62,
     [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = 6,
@@ -490,11 +508,20 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
     audio_mode_t mode = adev->mode;
     snd_device_t snd_device = SND_DEVICE_NONE;
 
+    audio_channel_mask_t channel_mask = (adev->active_input == NULL) ?
+                                AUDIO_CHANNEL_IN_MONO : adev->active_input->channel_mask;
+    int channel_count = popcount(channel_mask);
+
     ALOGV("%s: enter: output devices(%#x)", __func__, devices);
     if (devices == AUDIO_DEVICE_NONE ||
         devices & AUDIO_DEVICE_BIT_IN) {
         ALOGV("%s: Invalid output devices (%#x)", __func__, devices);
         goto exit;
+    }
+
+    if(devices & AUDIO_DEVICE_OUT_PROXY) {
+         ALOGD("%s: setting sink capability for Proxy", __func__);
+         audio_extn_set_afe_proxy_channel_mixer(adev);
     }
 
     if (mode == AUDIO_MODE_IN_CALL) {
@@ -506,6 +533,12 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES;
             else if (adev->tty_mode == TTY_MODE_HCO)
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET;
+            else if (audio_extn_get_anc_enabled()) {
+                if (audio_extn_should_use_fb_anc())
+                    snd_device = SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET;
+                else
+                    snd_device = SND_DEVICE_OUT_VOICE_ANC_HEADSET;
+           }
             else
                 snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
         } else if (devices & AUDIO_DEVICE_OUT_ALL_SCO) {
@@ -515,6 +548,8 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
             if (is_operator_tmus())
                 snd_device = SND_DEVICE_OUT_VOICE_HANDSET_TMUS;
+            else if (audio_extn_should_use_handset_anc(channel_count))
+                snd_device = SND_DEVICE_OUT_ANC_HANDSET;
             else
                 snd_device = SND_DEVICE_OUT_VOICE_HANDSET;
         }
@@ -529,7 +564,10 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
         } else if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADSET |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
-            snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
+            if (audio_extn_get_anc_enabled())
+                snd_device = SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET;
+            else
+                snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
         } else if (devices == (AUDIO_DEVICE_OUT_AUX_DIGITAL |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_HDMI;
@@ -549,7 +587,15 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
 
     if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
         devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
-        snd_device = SND_DEVICE_OUT_HEADPHONES;
+        if (devices & AUDIO_DEVICE_OUT_WIRED_HEADSET
+            && audio_extn_get_anc_enabled()) {
+            if (audio_extn_should_use_fb_anc())
+                snd_device = SND_DEVICE_OUT_ANC_FB_HEADSET;
+            else
+                snd_device = SND_DEVICE_OUT_ANC_HEADSET;
+        }
+        else
+            snd_device = SND_DEVICE_OUT_HEADPHONES;
     } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
         if (adev->speaker_lr_swap)
             snd_device = SND_DEVICE_OUT_SPEAKER_REVERSE;
@@ -583,6 +629,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
     audio_channel_mask_t channel_mask = (adev->active_input == NULL) ?
                                 AUDIO_CHANNEL_IN_MONO : adev->active_input->channel_mask;
     snd_device_t snd_device = SND_DEVICE_NONE;
+    int channel_count = popcount(channel_mask);
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x)",
           __func__, out_device, in_device);
@@ -612,7 +659,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         }
         if (out_device & AUDIO_DEVICE_OUT_EARPIECE ||
             out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) {
-            if (my_data->fluence_type == FLUENCE_NONE ||
+            if (out_device & AUDIO_DEVICE_OUT_EARPIECE &&
+                audio_extn_should_use_handset_anc(channel_count)) {
+                snd_device = SND_DEVICE_IN_AANC_HANDSET_MIC;
+            } else if (my_data->fluence_type == FLUENCE_NONE ||
                 my_data->fluence_in_voice_call == false) {
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
             } else {
