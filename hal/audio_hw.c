@@ -783,6 +783,83 @@ static int destroy_offload_callback_thread(struct stream_out *out)
     return 0;
 }
 
+static bool allow_hdmi_channel_config(struct audio_device *adev)
+{
+    struct listnode *node;
+    struct audio_usecase *usecase;
+    bool ret = true;
+
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            /*
+             * If voice call is already existing, do not proceed further to avoid
+             * disabling/enabling both RX and TX devices, CSD calls, etc.
+             * Once the voice call done, the HDMI channels can be configured to
+             * max channels of remaining use cases.
+             */
+            if (usecase->id == USECASE_VOICE_CALL) {
+                ALOGD("%s: voice call is active, no change in HDMI channels",
+                      __func__);
+                ret = false;
+                break;
+            } else if (usecase->id == USECASE_AUDIO_PLAYBACK_MULTI_CH) {
+                ALOGD("%s: multi channel playback is active, "
+                      "no change in HDMI channels", __func__);
+                ret = false;
+                break;
+            }
+        }
+    }
+    return ret;
+}
+
+static int check_and_set_hdmi_channels(struct audio_device *adev,
+                                       unsigned int channels)
+{
+    struct listnode *node;
+    struct audio_usecase *usecase;
+
+    /* Check if change in HDMI channel config is allowed */
+    if (!allow_hdmi_channel_config(adev))
+        return 0;
+
+    if (channels == adev->cur_hdmi_channels) {
+        ALOGD("%s: Requested channels are same as current", __func__);
+        return 0;
+    }
+
+    platform_set_hdmi_channels(adev->platform, channels);
+    adev->cur_hdmi_channels = channels;
+
+    /*
+     * Deroute all the playback streams routed to HDMI so that
+     * the back end is deactivated. Note that backend will not
+     * be deactivated if any one stream is connected to it.
+     */
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type == PCM_PLAYBACK &&
+                usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            disable_audio_route(adev, usecase, true);
+        }
+    }
+
+    /*
+     * Enable all the streams disabled above. Now the HDMI backend
+     * will be activated with new channel configuration
+     */
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type == PCM_PLAYBACK &&
+                usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            enable_audio_route(adev, usecase, true);
+        }
+    }
+
+    return 0;
+}
+
 static int stop_output_stream(struct stream_out *out)
 {
     int i, ret = 0;
@@ -811,6 +888,10 @@ static int stop_output_stream(struct stream_out *out)
     list_remove(&uc_info->list);
     free(uc_info);
 
+    /* Must be called after removing the usecase from list */
+    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
+        check_and_set_hdmi_channels(adev, DEFAULT_HDMI_OUT_CHANNELS);
+
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
@@ -838,6 +919,10 @@ int start_output_stream(struct stream_out *out)
     uc_info->devices = out->devices;
     uc_info->in_snd_device = SND_DEVICE_NONE;
     uc_info->out_snd_device = SND_DEVICE_NONE;
+
+    /* This must be called before adding this usecase to the list */
+    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
+        check_and_set_hdmi_channels(adev, out->config.channels);
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
@@ -1776,12 +1861,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         pthread_mutex_lock(&adev->lock);
         ret = read_hdmi_channel_masks(out);
         pthread_mutex_unlock(&adev->lock);
-        if (ret != 0) {
-            /* If HDMI does not support multi channel playback, set the default */
-            out->config.channels = popcount(out->channel_mask);
-            platform_set_hdmi_channels(adev->platform, out->config.channels);
+        if (ret != 0)
             goto error_open;
-        }
 
         if (config->sample_rate == 0)
             config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
@@ -1795,7 +1876,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->config.rate = config->sample_rate;
         out->config.channels = popcount(out->channel_mask);
         out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels * 2);
-        platform_set_hdmi_channels(adev->platform, out->config.channels);
     } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
         out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
         out->config = pcm_config_deep_buffer;
@@ -2277,6 +2357,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->bluetooth_nrec = true;
     adev->in_call = false;
     adev->acdb_settings = TTY_MODE_OFF;
+    /* adev->cur_hdmi_channels = 0;  by calloc() */
     adev->snd_dev_ref_cnt = calloc(SND_DEVICE_MAX, sizeof(int));
     list_init(&adev->usecase_list);
     pthread_mutex_unlock(&adev->lock);

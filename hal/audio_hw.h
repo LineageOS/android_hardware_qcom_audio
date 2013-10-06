@@ -39,6 +39,7 @@
 #define ACDB_DEV_TYPE_IN 2
 
 #define MAX_SUPPORTED_CHANNEL_MASKS 2
+#define DEFAULT_HDMI_OUT_CHANNELS   2
 
 typedef int snd_device_t;
 
@@ -188,6 +189,7 @@ struct audio_device {
     struct audio_route *audio_route;
     int acdb_settings;
     bool speaker_lr_swap;
+    unsigned int cur_hdmi_channels;
 
     void *platform;
 
