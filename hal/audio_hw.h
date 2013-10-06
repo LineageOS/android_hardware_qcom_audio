@@ -50,6 +50,8 @@ typedef enum {
     USECASE_AUDIO_PLAYBACK_DEEP_BUFFER = 0,
     USECASE_AUDIO_PLAYBACK_LOW_LATENCY,
     USECASE_AUDIO_PLAYBACK_MULTI_CH,
+    /* FM usecase */
+    USECASE_AUDIO_PLAYBACK_FM,
 
     /* Capture usecases */
     USECASE_AUDIO_RECORD,
@@ -151,6 +153,16 @@ struct audio_device {
     void *platform;
 };
 
+int select_devices(struct audio_device *adev,
+                          audio_usecase_t uc_id);
+int disable_audio_route(struct audio_device *adev,
+                               struct audio_usecase *usecase,
+                               bool update_mixer);
+int disable_snd_device(struct audio_device *adev,
+                              snd_device_t snd_device,
+                              bool update_mixer);
+struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
+                                                   audio_usecase_t uc_id);
 /*
  * NOTE: when multiple mutexes have to be acquired, always take the
  * stream_in or stream_out mutex first, followed by the audio_device mutex.
