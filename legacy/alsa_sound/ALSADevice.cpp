@@ -2936,7 +2936,7 @@ status_t ALSADevice::getEDIDData(char *hdmiEDIDData)
     unsigned **EDIDData;
     EDIDData = (unsigned **)malloc((MAX_SHORT_AUDIO_DESC_CNT + 1)*sizeof(unsigned*));
                               // additional 1 byte for length of the EDID
-    unsigned count;
+    unsigned count = 0;
     if(EDIDData) {
         for (int i=0; i<MAX_SHORT_AUDIO_DESC_CNT + 1; i++) {
             EDIDData[i] = (unsigned*)malloc(1 * sizeof(unsigned));
