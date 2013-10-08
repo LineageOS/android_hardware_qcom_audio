@@ -56,7 +56,7 @@ bool audio_extn_get_anc_enabled(void)
 
 bool audio_extn_should_use_handset_anc(int in_channels)
 {
-    char prop_aanc[128] = "false";
+    char prop_aanc[PROPERTY_VALUE_MAX] = "false";
 
     property_get("persist.aanc.enable", prop_aanc, "0");
     if (!strncmp("true", prop_aanc, 4)) {
@@ -70,7 +70,7 @@ bool audio_extn_should_use_handset_anc(int in_channels)
 
 bool audio_extn_should_use_fb_anc(void)
 {
-  char prop_anc[128] = "feedforward";
+  char prop_anc[PROPERTY_VALUE_MAX] = "feedforward";
 
   property_get("persist.headset.anc.type", prop_anc, "0");
   if (!strncmp("feedback", prop_anc, sizeof("feedback"))) {
@@ -165,8 +165,10 @@ char* audio_extn_get_afe_proxy_parameters(struct str_parms *query,
     ret = str_parms_get_str(query, AUDIO_PARAMETER_CAN_OPEN_PROXY, value,
                             sizeof(value));
     if (ret >= 0) {
-        /* Todo: check if proxy is free by maintaining a state flag*/
-        val = 1;
+        if (audio_extn_usb_is_proxy_inuse())
+            val = 0;
+        else
+            val = 1;
         str_parms_add_int(reply, AUDIO_PARAMETER_CAN_OPEN_PROXY, val);
         str = str_parms_to_str(reply);
     }

@@ -230,6 +230,15 @@ static int enable_snd_device(struct audio_device *adev,
         return 0;
     }
 
+    /* start usb playback thread */
+    if(SND_DEVICE_OUT_USB_HEADSET == snd_device ||
+       SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET == snd_device)
+        audio_extn_usb_start_playback(adev);
+
+    /* start usb capture thread */
+    if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
+       audio_extn_usb_start_capture(adev);
+
     if (platform_send_audio_calibration(adev->platform, snd_device) < 0) {
         adev->snd_dev_ref_cnt[snd_device]--;
         return -EINVAL;
@@ -258,6 +267,16 @@ static int disable_snd_device(struct audio_device *adev,
         return -EINVAL;
     }
     adev->snd_dev_ref_cnt[snd_device]--;
+
+    /* exit usb play back thread */
+    if(SND_DEVICE_OUT_USB_HEADSET == snd_device ||
+       SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET == snd_device)
+        audio_extn_usb_stop_playback();
+
+    /* exit usb capture thread */
+    if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
+        audio_extn_usb_stop_capture(adev);
+
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
         ALOGV("%s: snd_device(%d: %s)", __func__,
               snd_device, platform_get_snd_device_name(snd_device));

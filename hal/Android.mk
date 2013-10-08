@@ -26,6 +26,11 @@ ifneq ($(strip $(AUDIO_FEATURE_DISABLED_PROXY_DEVICE)),true)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
 endif
 
+ifneq ($(strip $(AUDIO_FEATURE_DISABLED_USBAUDIO)),true)
+    LOCAL_CFLAGS += -DUSB_HEADSET_ENABLED
+    LOCAL_SRC_FILES += audio_extn/usb.c
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
