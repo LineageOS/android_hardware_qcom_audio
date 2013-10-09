@@ -243,8 +243,6 @@ status_t ALSAStreamOps::setParameters(const String8& keyValuePairs)
                         } else {
                             device = AudioSystem::DEVICE_IN_BUILTIN_MIC;
                         }
-                    } else {
-                        device = AudioSystem::DEVICE_IN_BUILTIN_MIC;
                     }
                 }
             }
