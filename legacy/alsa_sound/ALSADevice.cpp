@@ -1893,6 +1893,9 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
                         ((rxDevice == NULL) &&
                         !strncmp(mCurRxUCMDevice, SND_USE_CASE_DEV_SPEAKER,
                         (strlen(SND_USE_CASE_DEV_SPEAKER)+1)))) {
+#ifdef SEPERATED_VOICE_SPEAKER_MIC
+                        return strdup(SND_USE_CASE_DEV_LINE); /* BUILTIN-MIC TX */
+#endif
                         if (mFluenceMode == FLUENCE_MODE_ENDFIRE) {
                             if (mIsSglte == false) {
                                 return strdup(SND_USE_CASE_DEV_SPEAKER_DUAL_MIC_ENDFIRE); /* DUALMIC EF TX */
