@@ -30,10 +30,6 @@
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
 
-#define DUALMIC_CONFIG_NONE 0      /* Target does not contain 2 mics */
-#define DUALMIC_CONFIG_ENDFIRE 1
-#define DUALMIC_CONFIG_BROADSIDE 2
-
 /*
  * This file will have a maximum of 38 bytes:
  *
@@ -73,7 +69,7 @@ struct platform_data {
     bool fluence_in_spkr_mode;
     bool fluence_in_voice_call;
     bool fluence_in_voice_rec;
-    int  dualmic_config;
+    int  fluence_type;
 
     void *acdb_handle;
     acdb_init_t acdb_init;
@@ -83,12 +79,16 @@ struct platform_data {
 };
 
 static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
-    [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {0, 0},
-    [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = {15, 15},
-    [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {1, 1},
-    [USECASE_AUDIO_RECORD] = {0, 0},
-    [USECASE_AUDIO_RECORD_LOW_LATENCY] = {15, 15},
-    [USECASE_VOICE_CALL] = {2, 2},
+    [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {DEEP_BUFFER_PCM_DEVICE,
+                                            DEEP_BUFFER_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
+                                            LOWLATENCY_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {MULTI_CHANNEL_PCM_DEVICE,
+                                         MULTI_CHANNEL_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD] = {DEEP_BUFFER_PCM_DEVICE, DEEP_BUFFER_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
+                                          LOWLATENCY_PCM_DEVICE},
+    [USECASE_VOICE_CALL] = {VOICE_CALL_PCM_DEVICE, VOICE_CALL_PCM_DEVICE},
 };
 
 /* Array to store sound devices */
@@ -123,19 +123,15 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_HDMI_MIC] = "hdmi-mic",
     [SND_DEVICE_IN_BT_SCO_MIC] = "bt-sco-mic",
     [SND_DEVICE_IN_CAMCORDER_MIC] = "camcorder-mic",
-    [SND_DEVICE_IN_VOICE_DMIC_EF] = "voice-dmic-ef",
-    [SND_DEVICE_IN_VOICE_DMIC_BS] = "voice-dmic-bs",
-    [SND_DEVICE_IN_VOICE_DMIC_EF_TMUS] = "voice-dmic-ef-tmus",
-    [SND_DEVICE_IN_VOICE_SPEAKER_DMIC_EF] = "voice-speaker-dmic-ef",
-    [SND_DEVICE_IN_VOICE_SPEAKER_DMIC_BS] = "voice-speaker-dmic-bs",
+    [SND_DEVICE_IN_VOICE_DMIC] = "voice-dmic-ef",
+    [SND_DEVICE_IN_VOICE_DMIC_TMUS] = "voice-dmic-ef-tmus",
+    [SND_DEVICE_IN_VOICE_SPEAKER_DMIC] = "voice-speaker-dmic-ef",
     [SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = "voice-tty-full-headset-mic",
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = "voice-tty-vco-handset-mic",
     [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = "voice-tty-hco-headset-mic",
     [SND_DEVICE_IN_VOICE_REC_MIC] = "voice-rec-mic",
-    [SND_DEVICE_IN_VOICE_REC_DMIC_EF] = "voice-rec-dmic-ef",
-    [SND_DEVICE_IN_VOICE_REC_DMIC_BS] = "voice-rec-dmic-bs",
-    [SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE] = "voice-rec-dmic-ef-fluence",
-    [SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE] = "voice-rec-dmic-bs-fluence",
+    [SND_DEVICE_IN_VOICE_REC_DMIC] = "voice-rec-dmic-ef",
+    [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = "voice-rec-dmic-ef-fluence",
 };
 
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
@@ -168,20 +164,16 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_HDMI_MIC] = 4,
     [SND_DEVICE_IN_BT_SCO_MIC] = 21,
     [SND_DEVICE_IN_CAMCORDER_MIC] = 61,
-    [SND_DEVICE_IN_VOICE_DMIC_EF] = 41,
-    [SND_DEVICE_IN_VOICE_DMIC_BS] = 5,
-    [SND_DEVICE_IN_VOICE_DMIC_EF_TMUS] = 89,
-    [SND_DEVICE_IN_VOICE_SPEAKER_DMIC_EF] = 43,
-    [SND_DEVICE_IN_VOICE_SPEAKER_DMIC_BS] = 12,
+    [SND_DEVICE_IN_VOICE_DMIC] = 41,
+    [SND_DEVICE_IN_VOICE_DMIC_TMUS] = 89,
+    [SND_DEVICE_IN_VOICE_SPEAKER_DMIC] = 43,
     [SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = 16,
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = 36,
     [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = 16,
     [SND_DEVICE_IN_VOICE_REC_MIC] = 62,
     /* TODO: Update with proper acdb ids */
-    [SND_DEVICE_IN_VOICE_REC_DMIC_EF] = 62,
-    [SND_DEVICE_IN_VOICE_REC_DMIC_BS] = 62,
-    [SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE] = 6,
-    [SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE] = 5,
+    [SND_DEVICE_IN_VOICE_REC_DMIC] = 62,
+    [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = 6,
 };
 
 static pthread_once_t check_op_once_ctl = PTHREAD_ONCE_INIT;
@@ -272,33 +264,33 @@ void *platform_init(struct audio_device *adev)
     my_data = calloc(1, sizeof(struct platform_data));
 
     my_data->adev = adev;
-    my_data->dualmic_config = DUALMIC_CONFIG_NONE;
     my_data->fluence_in_spkr_mode = false;
     my_data->fluence_in_voice_call = false;
     my_data->fluence_in_voice_rec = false;
+    my_data->fluence_type = FLUENCE_NONE;
 
-    property_get("persist.audio.dualmic.config",value,"");
-    if (!strcmp("broadside", value)) {
-        my_data->dualmic_config = DUALMIC_CONFIG_BROADSIDE;
-        adev->acdb_settings |= DMIC_FLAG;
-    } else if (!strcmp("endfire", value)) {
-        my_data->dualmic_config = DUALMIC_CONFIG_ENDFIRE;
-        adev->acdb_settings |= DMIC_FLAG;
+    property_get("ro.qc.sdk.audio.fluencetype", value, "");
+    if (!strncmp("fluencepro", value, sizeof("fluencepro"))) {
+        my_data->fluence_type = FLUENCE_QUAD_MIC;
+    } else if (!strncmp("fluence", value, sizeof("fluence"))) {
+        my_data->fluence_type = FLUENCE_DUAL_MIC;
+    } else {
+        my_data->fluence_type = FLUENCE_NONE;
     }
 
-    if (my_data->dualmic_config != DUALMIC_CONFIG_NONE) {
+    if (my_data->fluence_type != FLUENCE_NONE) {
         property_get("persist.audio.fluence.voicecall",value,"");
-        if (!strcmp("true", value)) {
+        if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_call = true;
         }
 
         property_get("persist.audio.fluence.voicerec",value,"");
-        if (!strcmp("true", value)) {
+        if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_rec = true;
         }
 
         property_get("persist.audio.fluence.speaker",value,"");
-        if (!strcmp("true", value)) {
+        if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_spkr_mode = true;
         }
     }
@@ -524,7 +516,7 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
             if (is_operator_tmus())
                 snd_device = SND_DEVICE_OUT_VOICE_HANDSET_TMUS;
             else
-                snd_device = SND_DEVICE_OUT_HANDSET;
+                snd_device = SND_DEVICE_OUT_VOICE_HANDSET;
         }
         if (snd_device != SND_DEVICE_NONE) {
             goto exit;
@@ -620,30 +612,31 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         }
         if (out_device & AUDIO_DEVICE_OUT_EARPIECE ||
             out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) {
-            if (my_data->fluence_in_voice_call == false) {
+            if (my_data->fluence_type == FLUENCE_NONE ||
+                my_data->fluence_in_voice_call == false) {
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
             } else {
-                if (my_data->dualmic_config == DUALMIC_CONFIG_ENDFIRE) {
-                    if (is_operator_tmus())
-                        snd_device = SND_DEVICE_IN_VOICE_DMIC_EF_TMUS;
-                    else
-                        snd_device = SND_DEVICE_IN_VOICE_DMIC_EF;
-                } else if(my_data->dualmic_config == DUALMIC_CONFIG_BROADSIDE)
-                    snd_device = SND_DEVICE_IN_VOICE_DMIC_BS;
+                if (is_operator_tmus())
+                    snd_device = SND_DEVICE_IN_VOICE_DMIC_TMUS;
                 else
-                    snd_device = SND_DEVICE_IN_HANDSET_MIC;
+                    snd_device = SND_DEVICE_IN_VOICE_DMIC;
+                adev->acdb_settings |= DMIC_FLAG;
             }
         } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_VOICE_HEADSET_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_ALL_SCO) {
             snd_device = SND_DEVICE_IN_BT_SCO_MIC ;
         } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER) {
-            if (my_data->fluence_in_voice_call && my_data->fluence_in_spkr_mode &&
-                    my_data->dualmic_config == DUALMIC_CONFIG_ENDFIRE) {
-                snd_device = SND_DEVICE_IN_VOICE_SPEAKER_DMIC_EF;
-            } else if (my_data->fluence_in_voice_call && my_data->fluence_in_spkr_mode &&
-                    my_data->dualmic_config == DUALMIC_CONFIG_BROADSIDE) {
-                snd_device = SND_DEVICE_IN_VOICE_SPEAKER_DMIC_BS;
+            if (my_data->fluence_type != FLUENCE_NONE &&
+                my_data->fluence_in_voice_call &&
+                my_data->fluence_in_spkr_mode) {
+                if(my_data->fluence_type == FLUENCE_DUAL_MIC) {
+                    adev->acdb_settings |= DMIC_FLAG;
+                    snd_device = SND_DEVICE_IN_VOICE_SPEAKER_DMIC;
+                } else {
+                    adev->acdb_settings |= QMIC_FLAG;
+                    snd_device = SND_DEVICE_IN_VOICE_SPEAKER_QMIC;
+                }
             } else {
                 snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
             }
@@ -655,21 +648,15 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         }
     } else if (source == AUDIO_SOURCE_VOICE_RECOGNITION) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
-            if (my_data->dualmic_config == DUALMIC_CONFIG_ENDFIRE) {
-                if (channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK)
-                    snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_EF;
-                else if (my_data->fluence_in_voice_rec)
-                    snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE;
-            } else if (my_data->dualmic_config == DUALMIC_CONFIG_BROADSIDE) {
-                if (channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK)
-                    snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_BS;
-                else if (my_data->fluence_in_voice_rec)
-                    snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE;
-            }
+            if (channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK)
+                snd_device = SND_DEVICE_IN_VOICE_REC_DMIC;
+            else if (my_data->fluence_in_voice_rec)
+                snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
 
-            if (snd_device == SND_DEVICE_NONE) {
+            if (snd_device == SND_DEVICE_NONE)
                 snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
-            }
+            else
+                adev->acdb_settings |= DMIC_FLAG;
         }
     } else if (source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
         if (out_device & AUDIO_DEVICE_OUT_SPEAKER)

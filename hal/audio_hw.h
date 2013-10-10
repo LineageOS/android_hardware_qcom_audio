@@ -26,6 +26,7 @@
 
 /* Flags used to initialize acdb_settings variable that goes to ACDB library */
 #define DMIC_FLAG       0x00000002
+#define QMIC_FLAG       0x00000004
 #define TTY_MODE_OFF    0x00000010
 #define TTY_MODE_FULL   0x00000020
 #define TTY_MODE_VCO    0x00000040
