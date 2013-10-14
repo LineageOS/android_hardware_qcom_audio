@@ -1,4 +1,7 @@
 /*
+ * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Not a Contribution.
+ *
  * Copyright (C) 2013 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +38,7 @@
 #include "audio_hw.h"
 #include "platform_api.h"
 #include <platform.h>
+#include "audio_extn.h"
 
 struct pcm_config pcm_config_deep_buffer = {
     .channels = 2,
@@ -1508,6 +1512,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         pthread_mutex_unlock(&adev->lock);
     }
 
+    audio_extn_set_parameters(adev, parms);
     str_parms_destroy(parms);
     ALOGV("%s: exit with code(%d)", __func__, ret);
     return ret;
@@ -1516,7 +1521,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 static char* adev_get_parameters(const struct audio_hw_device *dev,
                                  const char *keys)
 {
-    return strdup("");
+    return audio_extn_get_parameters(dev, keys);
 }
 
 static int adev_init_check(const struct audio_hw_device *dev)
