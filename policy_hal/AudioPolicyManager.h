@@ -39,7 +39,19 @@ public:
 
         virtual ~AudioPolicyManager() {}
 
+        virtual status_t setDeviceConnectionState(audio_devices_t device,
+                                                          AudioSystem::device_connection_state state,
+                                                          const char *device_address);
+        virtual void setForceUse(AudioSystem::force_use usage, AudioSystem::forced_config config);
+        virtual audio_io_handle_t getInput(int inputSource,
+                                            uint32_t samplingRate,
+                                            uint32_t format,
+                                            uint32_t channels,
+                                            AudioSystem::audio_in_acoustics acoustics);
 protected:
+        // return the strategy corresponding to a given stream type
+        static routing_strategy getStrategy(AudioSystem::stream_type stream);
+
         // return appropriate device for streams handled by the specified strategy according to current
         // phone state, connected devices...
         // if fromCache is true, the device is returned from mDeviceForStrategy[],
@@ -53,5 +65,18 @@ protected:
         //  before updateDevicesAndOutputs() is called.
         virtual audio_devices_t getDeviceForStrategy(routing_strategy strategy,
                                                      bool fromCache = true);
+        // select input device corresponding to requested audio source
+        virtual audio_devices_t getDeviceForInputSource(int inputSource);
+
+        // compute the actual volume for a given stream according to the requested index and a particular
+        // device
+        virtual float computeVolume(int stream, int index, audio_io_handle_t output, audio_devices_t device);
+
+        // check that volume change is permitted, compute and send new volume to audio hardware
+        status_t checkAndSetVolume(int stream, int index, audio_io_handle_t output, audio_devices_t device, int delayMs = 0, bool force = false);
+
+        // returns the category the device belongs to with regard to volume curve management
+        static device_category getDeviceCategory(audio_devices_t device);
+
 };
 };
