@@ -94,6 +94,7 @@ static const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_RECORD] = "audio-record",
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = "low-latency-record",
     [USECASE_VOICE_CALL] = "voice-call",
+    [USECASE_AUDIO_PLAYBACK_FM] = "play-fm",
 };
 
 
@@ -110,13 +111,16 @@ static const struct string_to_enum out_channels_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_CHANNEL_OUT_7POINT1),
 };
 
+static struct audio_device *adev = NULL;
+static pthread_mutex_t adev_init_lock;
+static bool is_adev_initialised = false;
 
 static int enable_audio_route(struct audio_device *adev,
                               struct audio_usecase *usecase,
                               bool update_mixer)
 {
     snd_device_t snd_device;
-    char mixer_path[50];
+    char mixer_path[MIXER_PATH_MAX_LENGTH];
 
     if (usecase == NULL)
         return -EINVAL;
@@ -139,12 +143,12 @@ static int enable_audio_route(struct audio_device *adev,
     return 0;
 }
 
-static int disable_audio_route(struct audio_device *adev,
+int disable_audio_route(struct audio_device *adev,
                                struct audio_usecase *usecase,
                                bool update_mixer)
 {
     snd_device_t snd_device;
-    char mixer_path[50];
+    char mixer_path[MIXER_PATH_MAX_LENGTH];
 
     if (usecase == NULL)
         return -EINVAL;
@@ -196,7 +200,7 @@ static int enable_snd_device(struct audio_device *adev,
     return 0;
 }
 
-static int disable_snd_device(struct audio_device *adev,
+int disable_snd_device(struct audio_device *adev,
                               snd_device_t snd_device,
                               bool update_mixer)
 {
@@ -384,7 +388,7 @@ static int read_hdmi_channel_masks(struct stream_out *out)
     return ret;
 }
 
-static struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
+struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
                                                    audio_usecase_t uc_id)
 {
     struct audio_usecase *usecase;
@@ -398,7 +402,7 @@ static struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
     return NULL;
 }
 
-static int select_devices(struct audio_device *adev,
+int select_devices(struct audio_device *adev,
                           audio_usecase_t uc_id)
 {
     snd_device_t out_snd_device = SND_DEVICE_NONE;
@@ -970,6 +974,13 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         pthread_mutex_unlock(&adev->lock);
         pthread_mutex_unlock(&out->lock);
     }
+
+    if (out == adev->primary_output) {
+        pthread_mutex_lock(&adev->lock);
+        audio_extn_set_parameters(adev, parms);
+        pthread_mutex_unlock(&adev->lock);
+    }
+
     str_parms_destroy(parms);
     ALOGV("%s: exit: code(%d)", __func__, ret);
     return ret;
@@ -1710,11 +1721,19 @@ static int adev_close(hw_device_t *device)
 static int adev_open(const hw_module_t *module, const char *name,
                      hw_device_t **device)
 {
-    struct audio_device *adev;
     int i, ret;
 
     ALOGD("%s: enter", __func__);
     if (strcmp(name, AUDIO_HARDWARE_INTERFACE) != 0) return -EINVAL;
+
+    pthread_mutex_lock(&adev_init_lock);
+    if (is_adev_initialised == true){
+            *device = &adev->device.common;
+            ALOGD("%s: returning existing instance of adev", __func__);
+            ALOGD("%s: exit", __func__);
+            pthread_mutex_unlock(&adev_init_lock);
+            return 0;
+    }
 
     adev = calloc(1, sizeof(struct audio_device));
 
@@ -1742,7 +1761,6 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->device.dump = adev_dump;
 
     /* Set the default route before the PCM stream is opened */
-    pthread_mutex_lock(&adev->lock);
     adev->mode = AUDIO_MODE_NORMAL;
     adev->active_input = NULL;
     adev->primary_output = NULL;
@@ -1756,7 +1774,6 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->acdb_settings = TTY_MODE_OFF;
     adev->snd_dev_ref_cnt = calloc(SND_DEVICE_MAX, sizeof(int));
     list_init(&adev->usecase_list);
-    pthread_mutex_unlock(&adev->lock);
 
     /* Loads platform specific libraries dynamically */
     adev->platform = platform_init(adev);
@@ -1768,6 +1785,10 @@ static int adev_open(const hw_module_t *module, const char *name,
         return -EINVAL;
     }
     *device = &adev->device.common;
+
+    /* update init flag*/
+    is_adev_initialised = true;
+    pthread_mutex_unlock(&adev_init_lock);
 
     ALOGV("%s: exit", __func__);
     return 0;
