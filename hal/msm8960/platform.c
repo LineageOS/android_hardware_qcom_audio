@@ -883,3 +883,9 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     LOGE("%s: Not implemented", __func__);
     return -ENOSYS;
 }
+
+int platform_set_incall_recoding_session_id(void *platform, uint32_t session_id)
+{
+    LOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}

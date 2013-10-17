@@ -37,6 +37,7 @@
 
 struct audio_device;
 struct str_parms;
+struct stream_in;
 
 struct call_state {
     int current;
@@ -65,4 +66,6 @@ bool voice_is_in_call(struct audio_device *adev);
 int voice_set_mic_mute(struct audio_device *dev, bool state);
 bool voice_get_mic_mute(struct audio_device *dev);
 int voice_set_volume(struct audio_device *adev, float volume);
+int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
+                                       struct stream_in *in);
 #endif //VOICE_H
