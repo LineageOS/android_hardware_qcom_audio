@@ -774,7 +774,7 @@ static int check_input_parameters(uint32_t sample_rate,
 {
     if (format != AUDIO_FORMAT_PCM_16_BIT) return -EINVAL;
 
-    if ((channel_count < 1) || (channel_count > 2)) return -EINVAL;
+    if ((channel_count < 1) || (channel_count > 6)) return -EINVAL;
 
     switch (sample_rate) {
     case 8000:
@@ -1223,7 +1223,10 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     }
 
     if (in->pcm) {
-        ret = pcm_read(in->pcm, buffer, bytes);
+        if (audio_extn_ssr_get_enabled() && popcount(in->channel_mask) == 6)
+            ret = audio_extn_ssr_read(stream, buffer, bytes);
+        else
+            ret = pcm_read(in->pcm, buffer, bytes);
     }
 
     /*
@@ -1610,14 +1613,19 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     /* Update config params with the requested sample rate and channels */
     in->usecase = USECASE_AUDIO_RECORD;
     in->config = pcm_config_audio_capture;
-    in->config.channels = channel_count;
     in->config.rate = config->sample_rate;
 
-    frame_size = audio_stream_frame_size((struct audio_stream *)in);
-    buffer_size = get_input_buffer_size(config->sample_rate,
-                                        config->format,
-                                        channel_count);
-    in->config.period_size = buffer_size / frame_size;
+    if (audio_extn_ssr_get_enabled()&& channel_count == 6) {
+        if(audio_extn_ssr_init(adev, in))
+            ALOGE("%s: audio_extn_ssr_init failed", __func__);
+    } else {
+        in->config.channels = channel_count;
+        frame_size = audio_stream_frame_size((struct audio_stream *)in);
+        buffer_size = get_input_buffer_size(config->sample_rate,
+                                            config->format,
+                                            channel_count);
+        in->config.period_size = buffer_size / frame_size;
+    }
 
     *stream_in = &in->stream;
     ALOGV("%s: exit", __func__);
@@ -1632,9 +1640,13 @@ err_open:
 static void adev_close_input_stream(struct audio_hw_device *dev,
                                     struct audio_stream_in *stream)
 {
+    struct stream_in *in = (struct stream_in *)stream;
     ALOGV("%s", __func__);
 
     in_standby(&stream->common);
+    if (audio_extn_ssr_get_enabled() && (popcount(in->channel_mask) == 6)) {
+        audio_extn_ssr_deinit();
+    }
     free(stream);
 
     return;
