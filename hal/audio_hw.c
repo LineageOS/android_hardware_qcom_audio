@@ -90,6 +90,9 @@ static const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_VOICE2_CALL] = "voice2-call",
     [USECASE_VOLTE_CALL] = "volte-call",
     [USECASE_QCHAT_CALL] = "qchat-call",
+    [USECASE_INCALL_REC_UPLINK] = "incall-rec-uplink",
+    [USECASE_INCALL_REC_DOWNLINK] = "incall-rec-downlink",
+    [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK] = "incall-rec-uplink-and-downlink",
 };
 
 
@@ -638,6 +641,14 @@ int start_input_stream(struct stream_in *in)
     struct audio_device *adev = in->dev;
 
     ALOGV("%s: enter: usecase(%d)", __func__, in->usecase);
+
+    /* Check if source matches incall recording usecase criteria */
+    ret = voice_check_and_set_incall_rec_usecase(adev, in);
+    if (ret)
+        goto error_config;
+    else
+        ALOGV("%s: usecase(%d)", __func__, in->usecase);
+
     in->pcm_device_id = platform_get_pcm_device_id(in->usecase, PCM_CAPTURE);
     if (in->pcm_device_id < 0) {
         ALOGE("%s: Could not find PCM device id for the usecase(%d)",

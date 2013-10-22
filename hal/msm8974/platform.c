@@ -99,7 +99,7 @@ static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                             LOWLATENCY_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {MULTI_CHANNEL_PCM_DEVICE,
                                          MULTI_CHANNEL_PCM_DEVICE},
-    [USECASE_AUDIO_RECORD] = {DEEP_BUFFER_PCM_DEVICE, DEEP_BUFFER_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
                                           LOWLATENCY_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_FM] = {FM_PLAYBACK_PCM_DEVICE, FM_CAPTURE_PCM_DEVICE},
@@ -107,6 +107,12 @@ static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_VOICE2_CALL] = {VOICE2_CALL_PCM_DEVICE, VOICE2_CALL_PCM_DEVICE},
     [USECASE_VOLTE_CALL] = {VOLTE_CALL_PCM_DEVICE, VOLTE_CALL_PCM_DEVICE},
     [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE, QCHAT_CALL_PCM_DEVICE},
+    [USECASE_INCALL_REC_UPLINK] = {AUDIO_RECORD_PCM_DEVICE,
+                                   AUDIO_RECORD_PCM_DEVICE},
+    [USECASE_INCALL_REC_DOWNLINK] = {AUDIO_RECORD_PCM_DEVICE,
+                                     AUDIO_RECORD_PCM_DEVICE},
+    [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK] = {AUDIO_RECORD_PCM_DEVICE,
+                                                AUDIO_RECORD_PCM_DEVICE},
 };
 
 /* Array to store sound devices */
@@ -980,6 +986,36 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     }
 
     ALOGV("%s: exit with code(%d)", __func__, ret);
+    return ret;
+}
+
+int platform_set_incall_recoding_session_id(void *platform,
+                                            uint32_t session_id)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "Voc VSID";
+    int num_ctl_values;
+    int i;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        ret = -EINVAL;
+    } else {
+        num_ctl_values = mixer_ctl_get_num_values(ctl);
+        for (i = 0; i < num_ctl_values; i++) {
+            if (mixer_ctl_set_value(ctl, i, session_id)) {
+                ALOGV("Error: invalid session_id: %x", session_id);
+                ret = -EINVAL;
+                break;
+            }
+        }
+    }
+
     return ret;
 }
 

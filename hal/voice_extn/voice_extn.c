@@ -103,6 +103,24 @@ static audio_usecase_t voice_extn_get_usecase_for_session_idx(const int index)
     return usecase_id;
 }
 
+int voice_extn_get_active_session_id(struct audio_device *adev,
+                                     uint32_t *session_id)
+{
+    struct voice_session *session = NULL;
+    int i = 0;
+    *session_id = 0;
+
+    for (i = 0; i < MAX_VOICE_SESSIONS; i++) {
+        session = &adev->voice.session[i];
+        if(session->state.current == CALL_ACTIVE){
+            *session_id = session->vsid;
+            break;
+        }
+    }
+
+    return 0;
+}
+
 int voice_extn_is_in_call(struct audio_device *adev, bool *in_call)
 {
     struct voice_session *session = NULL;

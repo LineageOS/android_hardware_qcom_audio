@@ -119,7 +119,7 @@ int start_call(struct audio_device *adev, audio_usecase_t usecase_id)
     struct audio_usecase *uc_info;
     int pcm_dev_rx_id, pcm_dev_tx_id;
     struct voice_session *session = NULL;
-
+    struct pcm_config voice_config = pcm_config_voice_call;
     ALOGD("%s: enter", __func__);
 
     session = (struct voice_session *)voice_get_session_from_use_case(adev, usecase_id);
@@ -150,7 +150,7 @@ int start_call(struct audio_device *adev, audio_usecase_t usecase_id)
           __func__, SOUND_CARD, pcm_dev_rx_id);
     session->pcm_rx = pcm_open(SOUND_CARD,
                                pcm_dev_rx_id,
-                               PCM_OUT, &pcm_config_voice_call);
+                               PCM_OUT, &voice_config);
     if (session->pcm_rx && !pcm_is_ready(session->pcm_rx)) {
         ALOGE("%s: %s", __func__, pcm_get_error(session->pcm_rx));
         ret = -EIO;
@@ -161,7 +161,7 @@ int start_call(struct audio_device *adev, audio_usecase_t usecase_id)
           __func__, SOUND_CARD, pcm_dev_tx_id);
     session->pcm_tx = pcm_open(SOUND_CARD,
                                pcm_dev_tx_id,
-                               PCM_IN, &pcm_config_voice_call);
+                               PCM_IN, &voice_config);
     if (session->pcm_tx && !pcm_is_ready(session->pcm_tx)) {
         ALOGE("%s: %s", __func__, pcm_get_error(session->pcm_tx));
         ret = -EIO;
@@ -197,6 +197,54 @@ bool voice_is_in_call(struct audio_device *adev)
     }
 
     return in_call;
+}
+
+uint32_t voice_get_active_session_id(struct audio_device *adev)
+{
+    int ret = 0;
+    uint32_t session_id;
+
+    ret = voice_extn_get_active_session_id(adev, &session_id);
+    if (ret == -ENOSYS) {
+        session_id = VOICE_VSID;
+    }
+    return session_id;
+}
+
+int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
+                                       struct stream_in *in)
+{
+    int ret = 0;
+    uint32_t session_id;
+    int usecase_id;
+
+    if (voice_is_in_call(adev)) {
+        switch (in->source) {
+        case AUDIO_SOURCE_VOICE_UPLINK:
+            in->usecase = USECASE_INCALL_REC_UPLINK;
+            break;
+        case AUDIO_SOURCE_VOICE_DOWNLINK:
+            in->usecase = USECASE_INCALL_REC_DOWNLINK;
+            break;
+        case AUDIO_SOURCE_VOICE_CALL:
+            in->usecase = USECASE_INCALL_REC_UPLINK_AND_DOWNLINK;
+            break;
+        default:
+            ALOGV("%s: Source type %d doesnt match incall recording criteria",
+                  __func__, in->source);
+            return ret;
+        }
+
+        in->config = pcm_config_voice_call;
+        session_id = voice_get_active_session_id(adev);
+        ret = platform_set_incall_recoding_session_id(adev->platform,
+                                                      session_id);
+        ALOGV("%s: Update usecase to %d",__func__, in->usecase);
+    } else {
+        ALOGV("%s: voice call not active", __func__);
+    }
+
+    return ret;
 }
 
 int voice_set_mic_mute(struct audio_device *adev, bool state)

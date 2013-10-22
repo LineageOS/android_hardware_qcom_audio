@@ -41,6 +41,6 @@ int platform_edid_get_max_channels(void *platform);
 void platform_get_parameters(void *platform, struct str_parms *query,
                              struct str_parms *reply);
 int platform_set_parameters(void *platform, struct str_parms *parms);
-
+int platform_set_incall_recoding_session_id(void *platform, uint32_t session_id);
 
 #endif // QCOM_AUDIO_PLATFORM_API_H
