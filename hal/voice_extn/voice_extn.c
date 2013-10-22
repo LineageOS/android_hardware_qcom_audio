@@ -17,8 +17,6 @@
  * limitations under the License.
  */
 
-#ifdef MULTI_VOICE_SESSION_ENABLED
-
 #define LOG_TAG "voice_extn"
 /*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
@@ -51,6 +49,17 @@
 /* Call States */
 #define CALL_HOLD           (BASE_CALL_STATE + 2)
 #define CALL_LOCAL_HOLD     (BASE_CALL_STATE + 3)
+
+struct pcm_config pcm_config_incall_music = {
+    .channels = 1,
+    .rate = DEFAULT_OUTPUT_SAMPLING_RATE,
+    .period_size = LOW_LATENCY_OUTPUT_PERIOD_SIZE,
+    .period_count = LOW_LATENCY_OUTPUT_PERIOD_COUNT,
+    .format = PCM_FORMAT_S16_LE,
+    .start_threshold = LOW_LATENCY_OUTPUT_PERIOD_SIZE / 4,
+    .stop_threshold = INT_MAX,
+    .avail_min = LOW_LATENCY_OUTPUT_PERIOD_SIZE / 4,
+};
 
 extern int start_call(struct audio_device *adev, audio_usecase_t usecase_id);
 extern int stop_call(struct audio_device *adev, audio_usecase_t usecase_id);
@@ -103,21 +112,28 @@ static audio_usecase_t voice_extn_get_usecase_for_session_idx(const int index)
     return usecase_id;
 }
 
-int voice_extn_get_active_session_id(struct audio_device *adev,
-                                     uint32_t *session_id)
+static uint32_t get_session_id_with_state(struct audio_device *adev,
+                                          int call_state)
 {
     struct voice_session *session = NULL;
     int i = 0;
-    *session_id = 0;
+    uint32_t session_id = 0;
 
     for (i = 0; i < MAX_VOICE_SESSIONS; i++) {
         session = &adev->voice.session[i];
-        if(session->state.current == CALL_ACTIVE){
-            *session_id = session->vsid;
+        if(session->state.current == call_state){
+            session_id = session->vsid;
             break;
         }
     }
 
+    return session_id;
+}
+
+int voice_extn_get_active_session_id(struct audio_device *adev,
+                                     uint32_t *session_id)
+{
+    *session_id = get_session_id_with_state(adev, CALL_ACTIVE);
     return 0;
 }
 
@@ -155,6 +171,7 @@ static int voice_extn_update_call_states(struct audio_device *adev,
     if (session) {
         session->state.new = call_state;
         voice_extn_is_in_call(adev, &is_in_call);
+        ALOGD("%s is_in_call:%d mode:%d\n", __func__, is_in_call, adev->mode);
         if (is_in_call || adev->mode == AUDIO_MODE_IN_CALL) {
             /* Device routing is not triggered for voice calls on the subsequent
              * subs, Hence update the call states if voice call is already
@@ -224,7 +241,7 @@ int voice_extn_update_calls(struct audio_device *adev)
     for (i = 0; i < MAX_VOICE_SESSIONS; i++) {
         usecase_id = voice_extn_get_usecase_for_session_idx(i);
         session = &adev->voice.session[i];
-        ALOGV("%s: cur_state=%d new_state=%d vsid=%x",
+        ALOGD("%s: cur_state=%d new_state=%d vsid=%x",
               __func__, session->state.current, session->state.new, session->vsid);
 
         switch(session->state.new)
@@ -233,7 +250,7 @@ int voice_extn_update_calls(struct audio_device *adev)
             switch(session->state.current)
             {
             case CALL_INACTIVE:
-                ALOGD("%s: INACTIVE ->ACTIVE vsid:%x", __func__, session->vsid);
+                ALOGD("%s: INACTIVE -> ACTIVE vsid:%x", __func__, session->vsid);
                 ret = start_call(adev, usecase_id);
                 if(ret < 0) {
                     ALOGE("%s: voice_start_call() failed for usecase: %d\n",
@@ -243,15 +260,15 @@ int voice_extn_update_calls(struct audio_device *adev)
                 break;
 
             case CALL_HOLD:
-                ALOGD("%s: HOLD ->ACTIVE vsid:%x", __func__, session->vsid);
+                ALOGD("%s: HOLD -> ACTIVE vsid:%x", __func__, session->vsid);
                 session->state.current = session->state.new;
                 break;
 
             case CALL_LOCAL_HOLD:
-                ALOGD("%s: LOCAL_HOLD ->ACTIVE vsid:%x", __func__, session->vsid);
+                ALOGD("%s: LOCAL_HOLD -> ACTIVE vsid:%x", __func__, session->vsid);
                 lch_mode = VOICE_LCH_STOP;
                 if (pcm_ioctl(session->pcm_tx, SNDRV_VOICE_IOCTL_LCH, &lch_mode) < 0) {
-                    ALOGE("LOCAL_HOLD ->ACTIVE failed");
+                    ALOGE("LOCAL_HOLD -> ACTIVE failed");
                 } else {
                     session->state.current = session->state.new;
                 }
@@ -270,7 +287,7 @@ int voice_extn_update_calls(struct audio_device *adev)
             case CALL_ACTIVE:
             case CALL_HOLD:
             case CALL_LOCAL_HOLD:
-                ALOGD("%s: ACTIVE/HOLD/LOCAL_HOLD ->INACTIVE vsid:%x", __func__, session->vsid);
+                ALOGD("%s: ACTIVE/HOLD/LOCAL_HOLD -> INACTIVE vsid:%x", __func__, session->vsid);
                 ret = stop_call(adev, usecase_id);
                 if(ret < 0) {
                     ALOGE("%s: voice_end_call() failed for usecase: %d\n",
@@ -290,15 +307,15 @@ int voice_extn_update_calls(struct audio_device *adev)
             switch(session->state.current)
             {
             case CALL_ACTIVE:
-                ALOGD("%s: CALL_ACTIVE ->HOLD vsid:%x", __func__, session->vsid);
+                ALOGD("%s: CALL_ACTIVE -> HOLD vsid:%x", __func__, session->vsid);
                 session->state.current = session->state.new;
                 break;
 
             case CALL_LOCAL_HOLD:
-                ALOGD("%s: CALL_LOCAL_HOLD ->HOLD vsid:%x", __func__, session->vsid);
+                ALOGD("%s: CALL_LOCAL_HOLD -> HOLD vsid:%x", __func__, session->vsid);
                 lch_mode = VOICE_LCH_STOP;
                 if (pcm_ioctl(session->pcm_tx, SNDRV_VOICE_IOCTL_LCH, &lch_mode) < 0) {
-                    ALOGE("LOCAL_HOLD ->HOLD failed");
+                    ALOGE("LOCAL_HOLD -> HOLD failed");
                 } else {
                     session->state.current = session->state.new;
                 }
@@ -316,10 +333,11 @@ int voice_extn_update_calls(struct audio_device *adev)
             {
             case CALL_ACTIVE:
             case CALL_HOLD:
-                ALOGD("%s: ACTIVE/CALL_HOLD ->LOCAL_HOLD vsid:%x", __func__, session->vsid);
+                ALOGD("%s: ACTIVE/CALL_HOLD -> LOCAL_HOLD vsid:%x", __func__,
+                      session->vsid);
                 lch_mode = VOICE_LCH_START;
                 if (pcm_ioctl(session->pcm_tx, SNDRV_VOICE_IOCTL_LCH, &lch_mode) < 0) {
-                    ALOGE("LOCAL_HOLD ->HOLD failed");
+                    ALOGE("LOCAL_HOLD -> HOLD failed");
                 } else {
                     session->state.current = session->state.new;
                 }
@@ -382,4 +400,25 @@ done:
     return ret;
 }
 
-#endif
+int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
+                                                  struct stream_out *out)
+{
+    uint32_t session_id = 0;
+
+    session_id = get_session_id_with_state(adev, CALL_LOCAL_HOLD);
+    if (session_id == VOICE_VSID) {
+        out->usecase = USECASE_INCALL_MUSIC_UPLINK;
+    } else if (session_id == VOICE2_VSID) {
+        out->usecase = USECASE_INCALL_MUSIC_UPLINK2;
+    } else {
+        ALOGE("%s: Invalid session id %x", __func__, session_id);
+        return -EINVAL;
+    }
+
+    out->config = pcm_config_incall_music;
+    out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_MONO;
+    out->channel_mask = AUDIO_CHANNEL_OUT_MONO;
+
+    return 0;
+}
+

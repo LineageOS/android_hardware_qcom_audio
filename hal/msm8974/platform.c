@@ -113,6 +113,10 @@ static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                      AUDIO_RECORD_PCM_DEVICE},
     [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK] = {AUDIO_RECORD_PCM_DEVICE,
                                                 AUDIO_RECORD_PCM_DEVICE},
+    [USECASE_INCALL_MUSIC_UPLINK] = {INCALL_MUSIC_UPLINK_PCM_DEVICE,
+                                     INCALL_MUSIC_UPLINK_PCM_DEVICE},
+    [USECASE_INCALL_MUSIC_UPLINK2] = {INCALL_MUSIC_UPLINK2_PCM_DEVICE,
+                                      INCALL_MUSIC_UPLINK2_PCM_DEVICE},
 };
 
 /* Array to store sound devices */

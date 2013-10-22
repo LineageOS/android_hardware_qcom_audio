@@ -249,6 +249,20 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
     return ret;
 }
 
+int voice_check_and_set_incall_music_usecase(struct audio_device *adev,
+                                             struct stream_out *out)
+{
+    int ret = 0;
+
+    ret = voice_extn_check_and_set_incall_music_usecase(adev, out);
+    if (ret == -ENOSYS) {
+        /* Incall music delivery is used only for LCH call state */
+        ret = -EINVAL;
+    }
+
+    return ret;
+}
+
 int voice_set_mic_mute(struct audio_device *adev, bool state)
 {
     int err = 0;

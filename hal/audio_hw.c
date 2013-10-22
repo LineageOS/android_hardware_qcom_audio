@@ -114,6 +114,8 @@ static const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_INCALL_REC_UPLINK] = "incall-rec-uplink",
     [USECASE_INCALL_REC_DOWNLINK] = "incall-rec-downlink",
     [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK] = "incall-rec-uplink-and-downlink",
+    [USECASE_INCALL_MUSIC_UPLINK] = "incall_music_uplink",
+    [USECASE_INCALL_MUSIC_UPLINK2] = "incall_music_uplink2",
 };
 
 
@@ -1925,6 +1927,13 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         ALOGV("%s: offloaded output offload_info version %04x bit rate %d",
                 __func__, config->offload_info.version,
                 config->offload_info.bit_rate);
+    } else if (out->flags & AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
+        ret = voice_check_and_set_incall_music_usecase(adev, out);
+        if (ret != 0) {
+            ALOGE("%s: Incall music delivery usecase cannot be set error:%d",
+                  __func__, ret);
+            goto error_open;
+        }
     } else {
         out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
         out->config = pcm_config_low_latency;
@@ -2146,6 +2155,7 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
     struct audio_device *adev = (struct audio_device *)dev;
     pthread_mutex_lock(&adev->lock);
     if (adev->mode != mode) {
+        ALOGD("%s mode %d\n", __func__, mode);
         adev->mode = mode;
     }
     pthread_mutex_unlock(&adev->lock);
