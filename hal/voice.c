@@ -1,0 +1,337 @@
+/*
+ * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Not a contribution.
+ *
+ * Copyright (C) 2013 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#define LOG_TAG "voice"
+/*#define LOG_NDEBUG 0*/
+#define LOG_NDDEBUG 0
+
+#include <errno.h>
+#include <math.h>
+#include <cutils/log.h>
+#include <cutils/str_parms.h>
+
+#include "audio_hw.h"
+#include "voice.h"
+#include "voice_extn/voice_extn.h"
+#include "platform.h"
+#include "platform_api.h"
+
+struct pcm_config pcm_config_voice_call = {
+    .channels = 1,
+    .rate = 8000,
+    .period_size = 160,
+    .period_count = 2,
+    .format = PCM_FORMAT_S16_LE,
+};
+
+extern struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
+                                                   audio_usecase_t uc_id);
+extern int disable_snd_device(struct audio_device *adev,
+                              snd_device_t snd_device,
+                              bool update_mixer);
+extern int disable_audio_route(struct audio_device *adev,
+                               struct audio_usecase *usecase,
+                               bool update_mixer);
+
+extern int disable_snd_device(struct audio_device *adev,
+                              snd_device_t snd_device,
+                              bool update_mixer);
+extern int select_devices(struct audio_device *adev,
+                          audio_usecase_t uc_id);
+
+static struct voice_session *voice_get_session_from_use_case(struct audio_device *adev,
+                              audio_usecase_t usecase_id)
+{
+    struct voice_session *session = NULL;
+    int ret = 0;
+
+    ret = voice_extn_get_session_from_use_case(adev, usecase_id, &session);
+    if (ret == -ENOSYS) {
+        session = &adev->voice.session[VOICE_SESS_IDX];
+    }
+
+    return session;
+}
+
+int stop_call(struct audio_device *adev, audio_usecase_t usecase_id)
+{
+    int i, ret = 0;
+    struct audio_usecase *uc_info;
+    struct voice_session *session = NULL;
+
+    ALOGD("%s: enter", __func__);
+
+    session = (struct voice_session *)voice_get_session_from_use_case(adev, usecase_id);
+    session->state.current = CALL_INACTIVE;
+
+    ret = platform_stop_voice_call(adev->platform);
+
+    /* 1. Close the PCM devices */
+    if (session->pcm_rx) {
+        pcm_close(session->pcm_rx);
+        session->pcm_rx = NULL;
+    }
+    if (session->pcm_tx) {
+        pcm_close(session->pcm_tx);
+        session->pcm_tx = NULL;
+    }
+
+    uc_info = get_usecase_from_list(adev, usecase_id);
+    if (uc_info == NULL) {
+        ALOGE("%s: Could not find the usecase (%d) in the list",
+              __func__, usecase_id);
+        return -EINVAL;
+    }
+
+    /* 2. Get and set stream specific mixer controls */
+    disable_audio_route(adev, uc_info, true);
+
+    /* 3. Disable the rx and tx devices */
+    disable_snd_device(adev, uc_info->out_snd_device, false);
+    disable_snd_device(adev, uc_info->in_snd_device, true);
+
+    list_remove(&uc_info->list);
+    free(uc_info);
+
+    ALOGD("%s: exit: status(%d)", __func__, ret);
+    return ret;
+}
+
+int start_call(struct audio_device *adev, audio_usecase_t usecase_id)
+{
+    int i, ret = 0;
+    struct audio_usecase *uc_info;
+    int pcm_dev_rx_id, pcm_dev_tx_id;
+    struct voice_session *session = NULL;
+
+    ALOGD("%s: enter", __func__);
+
+    session = (struct voice_session *)voice_get_session_from_use_case(adev, usecase_id);
+
+    uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
+    uc_info->id = usecase_id;
+    uc_info->type = VOICE_CALL;
+    uc_info->stream.out = adev->primary_output;
+    uc_info->devices = adev->primary_output->devices;
+    uc_info->in_snd_device = SND_DEVICE_NONE;
+    uc_info->out_snd_device = SND_DEVICE_NONE;
+
+    list_add_tail(&adev->usecase_list, &uc_info->list);
+
+    select_devices(adev, usecase_id);
+
+    pcm_dev_rx_id = platform_get_pcm_device_id(uc_info->id, PCM_PLAYBACK);
+    pcm_dev_tx_id = platform_get_pcm_device_id(uc_info->id, PCM_CAPTURE);
+
+    if (pcm_dev_rx_id < 0 || pcm_dev_tx_id < 0) {
+        ALOGE("%s: Invalid PCM devices (rx: %d tx: %d) for the usecase(%d)",
+              __func__, pcm_dev_rx_id, pcm_dev_tx_id, uc_info->id);
+        ret = -EIO;
+        goto error_start_voice;
+    }
+
+    ALOGV("%s: Opening PCM playback device card_id(%d) device_id(%d)",
+          __func__, SOUND_CARD, pcm_dev_rx_id);
+    session->pcm_rx = pcm_open(SOUND_CARD,
+                               pcm_dev_rx_id,
+                               PCM_OUT, &pcm_config_voice_call);
+    if (session->pcm_rx && !pcm_is_ready(session->pcm_rx)) {
+        ALOGE("%s: %s", __func__, pcm_get_error(session->pcm_rx));
+        ret = -EIO;
+        goto error_start_voice;
+    }
+
+    ALOGV("%s: Opening PCM capture device card_id(%d) device_id(%d)",
+          __func__, SOUND_CARD, pcm_dev_tx_id);
+    session->pcm_tx = pcm_open(SOUND_CARD,
+                               pcm_dev_tx_id,
+                               PCM_IN, &pcm_config_voice_call);
+    if (session->pcm_tx && !pcm_is_ready(session->pcm_tx)) {
+        ALOGE("%s: %s", __func__, pcm_get_error(session->pcm_tx));
+        ret = -EIO;
+        goto error_start_voice;
+    }
+    pcm_start(session->pcm_rx);
+    pcm_start(session->pcm_tx);
+
+    ret = platform_start_voice_call(adev->platform);
+    if (ret < 0) {
+        ALOGE("%s: platform_start_voice_call error %d\n", __func__, ret);
+        goto error_start_voice;
+    }
+
+    session->state.current = CALL_ACTIVE;
+    return 0;
+
+error_start_voice:
+    stop_call(adev, usecase_id);
+
+    ALOGD("%s: exit: status(%d)", __func__, ret);
+    return ret;
+}
+
+bool voice_is_in_call(struct audio_device *adev)
+{
+    bool in_call = false;
+    int ret = 0;
+
+    ret = voice_extn_is_in_call(adev, &in_call);
+    if (ret == -ENOSYS) {
+        in_call = (adev->voice.session[VOICE_SESS_IDX].state.current == CALL_ACTIVE) ? true : false;
+    }
+
+    return in_call;
+}
+
+int voice_set_mic_mute(struct audio_device *adev, bool state)
+{
+    int err = 0;
+
+    pthread_mutex_lock(&adev->lock);
+
+    err = platform_set_mic_mute(adev->platform, state);
+    if (!err) {
+        adev->voice.mic_mute = state;
+    }
+
+    pthread_mutex_unlock(&adev->lock);
+    return err;
+}
+
+bool voice_get_mic_mute(struct audio_device *adev)
+{
+    return adev->voice.mic_mute;
+}
+
+int voice_set_volume(struct audio_device *adev, float volume)
+{
+    int vol, err = 0;
+
+    pthread_mutex_lock(&adev->lock);
+    if (adev->mode == AUDIO_MODE_IN_CALL) {
+        if (volume < 0.0) {
+            volume = 0.0;
+        } else if (volume > 1.0) {
+            volume = 1.0;
+        }
+
+        vol = lrint(volume * 100.0);
+
+        // Voice volume levels from android are mapped to driver volume levels as follows.
+        // 0 -> 5, 20 -> 4, 40 ->3, 60 -> 2, 80 -> 1, 100 -> 0
+        // So adjust the volume to get the correct volume index in driver
+        vol = 100 - vol;
+
+        err = platform_set_voice_volume(adev->platform, vol);
+        if (!err) {
+            adev->voice.volume = volume;
+        }
+    }
+    pthread_mutex_unlock(&adev->lock);
+    return err;
+}
+
+int voice_start_call(struct audio_device *adev)
+{
+    int ret = 0;
+
+    ret = voice_extn_update_calls(adev);
+    if (ret == -ENOSYS) {
+        ret = start_call(adev, USECASE_VOICE_CALL);
+    }
+
+    return ret;
+}
+
+int voice_stop_call(struct audio_device *adev)
+{
+    int ret = 0;
+
+    ret = voice_extn_update_calls(adev);
+    if (ret == -ENOSYS) {
+        ret = stop_call(adev, USECASE_VOICE_CALL);
+    }
+
+    return ret;
+}
+
+int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
+{
+    char *str;
+    char value[32];
+    int val;
+    int ret = 0;
+
+    ALOGV("%s: enter: %s", __func__, str_parms_to_str(parms));
+
+    voice_extn_set_parameters(adev, parms);
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_TTY_MODE, value, sizeof(value));
+    if (ret >= 0) {
+        int tty_mode;
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_TTY_MODE);
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_TTY_OFF) == 0)
+            tty_mode = TTY_MODE_OFF;
+        else if (strcmp(value, AUDIO_PARAMETER_VALUE_TTY_VCO) == 0)
+            tty_mode = TTY_MODE_VCO;
+        else if (strcmp(value, AUDIO_PARAMETER_VALUE_TTY_HCO) == 0)
+            tty_mode = TTY_MODE_HCO;
+        else if (strcmp(value, AUDIO_PARAMETER_VALUE_TTY_FULL) == 0)
+            tty_mode = TTY_MODE_FULL;
+        else {
+            ret = -EINVAL;
+            goto done;
+        }
+
+        pthread_mutex_lock(&adev->lock);
+        if (tty_mode != adev->voice.tty_mode) {
+            adev->voice.tty_mode = tty_mode;
+            adev->acdb_settings = (adev->acdb_settings & TTY_MODE_CLEAR) | tty_mode;
+            if (voice_is_in_call(adev))
+                //todo: what about voice2, volte and qchat usecases?
+                select_devices(adev, USECASE_VOICE_CALL);
+        }
+        pthread_mutex_unlock(&adev->lock);
+    }
+
+done:
+    ALOGV("%s: exit with code(%d)", __func__, ret);
+    return ret;
+}
+
+void voice_init(struct audio_device *adev)
+{
+    int i = 0;
+
+    memset(&adev->voice, 0, sizeof(adev->voice));
+    adev->voice.tty_mode = TTY_MODE_OFF;
+    adev->voice.volume = 1.0f;
+    adev->voice.mic_mute = false;
+    for (i = 0; i < MAX_VOICE_SESSIONS; i++) {
+        adev->voice.session[i].pcm_rx = NULL;
+        adev->voice.session[i].pcm_tx = NULL;
+        adev->voice.session[i].state.current = CALL_INACTIVE;
+        adev->voice.session[i].state.new = CALL_INACTIVE;
+        adev->voice.session[i].vsid = 0;
+    }
+
+    voice_extn_init(adev);
+}
+
+

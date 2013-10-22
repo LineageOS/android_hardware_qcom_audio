@@ -6,6 +6,12 @@ include $(CLEAR_VARS)
 
 LOCAL_ARM_MODE := arm
 
+#MULTI_VOICE_SESSION_ENABLED := true
+
+ifdef MULTI_VOICE_SESSION_ENABLED
+LOCAL_CFLAGS += -DMULTI_VOICE_SESSION_ENABLED
+endif
+
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 ifneq ($(filter msm8974 msm8226 msm8610 apq8084,$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
@@ -13,11 +19,19 @@ ifneq ($(filter msm8974 msm8226 msm8610 apq8084,$(TARGET_BOARD_PLATFORM)),)
 ifneq ($(filter msm8610,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSM8610
 endif
+ifneq ($(filter msm8226,$(TARGET_BOARD_PLATFORM)),)
+  LOCAL_CFLAGS := -DPLATFORM_MSM8x26
+endif
 endif
 
 LOCAL_SRC_FILES := \
 	audio_hw.c \
+	voice.c \
 	$(AUDIO_PLATFORM)/platform.c
+
+ifdef MULTI_VOICE_SESSION_ENABLED
+LOCAL_SRC_FILES += voice_extn/voice_extn.c
+endif
 
 LOCAL_SRC_FILES += audio_extn/audio_extn.c
 
@@ -53,6 +67,10 @@ LOCAL_C_INCLUDES += \
 	$(call include-path-for, audio-effects) \
 	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \
 	$(LOCAL_PATH)/audio_extn
+
+ifdef MULTI_VOICE_SESSION_ENABLED
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+endif
 
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 

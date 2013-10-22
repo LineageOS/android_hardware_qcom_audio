@@ -25,6 +25,7 @@
 #include <dlfcn.h>
 #include <cutils/log.h>
 #include <cutils/properties.h>
+#include <cutils/str_parms.h>
 #include <audio_hw.h>
 #include <platform_api.h>
 #include "platform.h"
@@ -51,10 +52,17 @@
 #define RETRY_NUMBER 10
 #define RETRY_US 500000
 
+#define SAMPLE_RATE_8KHZ  8000
+#define SAMPLE_RATE_16KHZ 16000
+
 #define MAX_VOL_INDEX 5
 #define MIN_VOL_INDEX 0
 #define percent_to_index(val, min, max) \
-                ((val) * ((max) - (min)) * 0.01 + (min) + .5)
+            ((val) * ((max) - (min)) * 0.01 + (min) + .5)
+
+#define AUDIO_PARAMETER_KEY_FLUENCE_TYPE  "fluence"
+#define AUDIO_PARAMETER_KEY_BTSCO         "bt_samplerate"
+#define AUDIO_PARAMETER_KEY_SLOWTALK      "st_enable"
 
 struct audio_block_header
 {
@@ -74,6 +82,8 @@ struct platform_data {
     bool fluence_in_voice_call;
     bool fluence_in_voice_rec;
     int  fluence_type;
+    int  btsco_sample_rate;
+    bool slowtalk;
 
     void *acdb_handle;
     acdb_init_t acdb_init;
@@ -92,8 +102,11 @@ static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_RECORD] = {DEEP_BUFFER_PCM_DEVICE, DEEP_BUFFER_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
                                           LOWLATENCY_PCM_DEVICE},
-    [USECASE_VOICE_CALL] = {VOICE_CALL_PCM_DEVICE, VOICE_CALL_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_FM] = {FM_PLAYBACK_PCM_DEVICE, FM_CAPTURE_PCM_DEVICE},
+    [USECASE_VOICE_CALL] = {VOICE_CALL_PCM_DEVICE, VOICE_CALL_PCM_DEVICE},
+    [USECASE_VOICE2_CALL] = {VOICE2_CALL_PCM_DEVICE, VOICE2_CALL_PCM_DEVICE},
+    [USECASE_VOLTE_CALL] = {VOLTE_CALL_PCM_DEVICE, VOLTE_CALL_PCM_DEVICE},
+    [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE, QCHAT_CALL_PCM_DEVICE},
 };
 
 /* Array to store sound devices */
@@ -111,6 +124,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_HDMI] = "hdmi",
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = "speaker-and-hdmi",
     [SND_DEVICE_OUT_BT_SCO] = "bt-sco-headset",
+    [SND_DEVICE_OUT_BT_SCO_WB] = "bt-sco-headset-wb",
     [SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = "voice-handset-tmus",
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = "voice-tty-full-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = "voice-tty-vco-headphones",
@@ -137,6 +151,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_HEADSET_MIC] = "voice-headset-mic",
     [SND_DEVICE_IN_HDMI_MIC] = "hdmi-mic",
     [SND_DEVICE_IN_BT_SCO_MIC] = "bt-sco-mic",
+    [SND_DEVICE_IN_BT_SCO_MIC_WB] = "bt-sco-mic-wb",
     [SND_DEVICE_IN_CAMCORDER_MIC] = "camcorder-mic",
     [SND_DEVICE_IN_VOICE_DMIC] = "voice-dmic-ef",
     [SND_DEVICE_IN_VOICE_DMIC_TMUS] = "voice-dmic-ef-tmus",
@@ -166,6 +181,7 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_HDMI] = 18,
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 15,
     [SND_DEVICE_OUT_BT_SCO] = 22,
+    [SND_DEVICE_OUT_BT_SCO_WB] = 39,
     [SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = 88,
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = 17,
@@ -191,6 +207,7 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_HEADSET_MIC] = 8,
     [SND_DEVICE_IN_HDMI_MIC] = 4,
     [SND_DEVICE_IN_BT_SCO_MIC] = 21,
+    [SND_DEVICE_IN_BT_SCO_MIC_WB] = 38,
     [SND_DEVICE_IN_CAMCORDER_MIC] = 61,
     [SND_DEVICE_IN_VOICE_DMIC] = 41,
     [SND_DEVICE_IN_VOICE_DMIC_TMUS] = 89,
@@ -231,24 +248,6 @@ bool is_operator_tmus()
 {
     pthread_once(&check_op_once_ctl, check_operator);
     return is_tmus;
-}
-
-static int set_volume_values(int type, int volume, int* values)
-{
-    values[0] = volume;
-    values[1] = ALL_SESSION_VSID;
-
-    switch(type) {
-    case VOLUME_SET:
-        values[2] = DEFAULT_VOLUME_RAMP_DURATION_MS;
-        break;
-    case MUTE_SET:
-        values[2] = DEFAULT_MUTE_RAMP_DURATION;
-        break;
-    default:
-        return -EINVAL;
-    }
-    return 0;
 }
 
 static int set_echo_reference(struct mixer *mixer, const char* ec_ref)
@@ -295,6 +294,7 @@ void *platform_init(struct audio_device *adev)
     my_data = calloc(1, sizeof(struct platform_data));
 
     my_data->adev = adev;
+    my_data->btsco_sample_rate = SAMPLE_RATE_8KHZ;
     my_data->fluence_in_spkr_mode = false;
     my_data->fluence_in_voice_call = false;
     my_data->fluence_in_voice_rec = false;
@@ -372,11 +372,15 @@ const char *platform_get_snd_device_name(snd_device_t snd_device)
 void platform_add_backend_name(char *mixer_path, snd_device_t snd_device)
 {
     if (snd_device == SND_DEVICE_IN_BT_SCO_MIC)
-        strcat(mixer_path, " bt-sco");
+        strlcat(mixer_path, " bt-sco", MIXER_PATH_MAX_LENGTH);
+    else if (snd_device == SND_DEVICE_IN_BT_SCO_MIC_WB)
+        strlcat(mixer_path, " bt-sco-wb", MIXER_PATH_MAX_LENGTH);
     else if(snd_device == SND_DEVICE_OUT_BT_SCO)
-        strcat(mixer_path, " bt-sco");
+        strlcat(mixer_path, " bt-sco", MIXER_PATH_MAX_LENGTH);
+    else if(snd_device == SND_DEVICE_OUT_BT_SCO_WB)
+        strlcat(mixer_path, " bt-sco-wb", MIXER_PATH_MAX_LENGTH);
     else if (snd_device == SND_DEVICE_OUT_HDMI)
-        strcat(mixer_path, " hdmi");
+        strlcat(mixer_path, " hdmi", MIXER_PATH_MAX_LENGTH);
     else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HDMI)
         strcat(mixer_path, " speaker-and-hdmi");
     else if (snd_device == SND_DEVICE_OUT_AFE_PROXY)
@@ -472,13 +476,16 @@ int platform_set_voice_volume(void *platform, int volume)
     struct audio_device *adev = my_data->adev;
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voice Rx Gain";
-    int values[VOLUME_CTL_PARAM_NUM];
-    int ret = 0;
+    int vol_index = 0;
+    uint32_t set_values[ ] = {0,
+                              ALL_SESSION_VSID,
+                              DEFAULT_VOLUME_RAMP_DURATION_MS};
 
     // Voice volume levels are mapped to adsp volume levels as follows.
     // 100 -> 5, 80 -> 4, 60 -> 3, 40 -> 2, 20 -> 1  0 -> 0
     // But this values don't changed in kernel. So, below change is need.
-    volume = (int)percent_to_index(volume, MIN_VOL_INDEX, MAX_VOL_INDEX);
+    vol_index = (int)percent_to_index(volume, MIN_VOL_INDEX, MAX_VOL_INDEX);
+    set_values[0] = vol_index;
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
@@ -486,16 +493,8 @@ int platform_set_voice_volume(void *platform, int volume)
               __func__, mixer_ctl_name);
         return -EINVAL;
     }
-    ret = set_volume_values(VOLUME_SET, volume, values);
-    if (ret < 0) {
-        ALOGV("%s: failed setting volume by incorrect type", __func__);
-        return -EINVAL;
-    }
-    ret = mixer_ctl_set_array(ctl, values, sizeof(values)/sizeof(int));
-    if (ret < 0) {
-        ALOGV("%s: failed set mixer ctl by %d", __func__, ret);
-        return -EINVAL;
-    }
+    ALOGV("Setting voice volume index: %d", set_values[0]);
+    mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
 
     return 0;
 }
@@ -506,27 +505,20 @@ int platform_set_mic_mute(void *platform, bool state)
     struct audio_device *adev = my_data->adev;
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voice Tx Mute";
-    int values[VOLUME_CTL_PARAM_NUM];
-    int ret = 0;
+    uint32_t set_values[ ] = {0,
+                              ALL_SESSION_VSID,
+                              DEFAULT_VOLUME_RAMP_DURATION_MS};
 
     if (adev->mode == AUDIO_MODE_IN_CALL) {
+        set_values[0] = state;
         ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
         if (!ctl) {
             ALOGE("%s: Could not get ctl for mixer cmd - %s",
                   __func__, mixer_ctl_name);
             return -EINVAL;
         }
-        ALOGV("Setting mic mute: %d", state);
-        ret = set_volume_values(MUTE_SET, state, values);
-        if (ret < 0) {
-            ALOGV("%s: failed setting mute by incorrect type", __func__);
-            return -EINVAL;
-        }
-        ret = mixer_ctl_set_array(ctl, values, sizeof(values)/sizeof(int));
-        if (ret < 0) {
-            ALOGV("%s: failed set mixer ctl by %d", __func__, ret);
-            return -EINVAL;
-        }
+        ALOGV("Setting voice mute state: %d", state);
+        mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
     }
 
     return 0;
@@ -553,22 +545,25 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
     if (mode == AUDIO_MODE_IN_CALL) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
-            if (adev->tty_mode == TTY_MODE_FULL)
+            if (adev->voice.tty_mode == TTY_MODE_FULL) {
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES;
-            else if (adev->tty_mode == TTY_MODE_VCO)
+            } else if (adev->voice.tty_mode == TTY_MODE_VCO) {
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES;
-            else if (adev->tty_mode == TTY_MODE_HCO)
+            } else if (adev->voice.tty_mode == TTY_MODE_HCO) {
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET;
-            else if (audio_extn_get_anc_enabled()) {
+            } else if (audio_extn_get_anc_enabled()) {
                 if (audio_extn_should_use_fb_anc())
                     snd_device = SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET;
                 else
                     snd_device = SND_DEVICE_OUT_VOICE_ANC_HEADSET;
-           }
-            else
+            } else {
                 snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
+            }
         } else if (devices & AUDIO_DEVICE_OUT_ALL_SCO) {
-            snd_device = SND_DEVICE_OUT_BT_SCO;
+            if (my_data->btsco_sample_rate == SAMPLE_RATE_16KHZ)
+                snd_device = SND_DEVICE_OUT_BT_SCO_WB;
+            else
+                snd_device = SND_DEVICE_OUT_BT_SCO;
         } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
             snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
         } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
@@ -636,7 +631,10 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         else
             snd_device = SND_DEVICE_OUT_SPEAKER;
     } else if (devices & AUDIO_DEVICE_OUT_ALL_SCO) {
-        snd_device = SND_DEVICE_OUT_BT_SCO;
+        if (my_data->btsco_sample_rate == SAMPLE_RATE_16KHZ)
+            snd_device = SND_DEVICE_OUT_BT_SCO_WB;
+        else
+            snd_device = SND_DEVICE_OUT_BT_SCO;
     } else if (devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
         snd_device = SND_DEVICE_OUT_HDMI ;
     } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
@@ -681,10 +679,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             ALOGE("%s: No output device set for voice call", __func__);
             goto exit;
         }
-        if (adev->tty_mode != TTY_MODE_OFF) {
+        if (adev->voice.tty_mode != TTY_MODE_OFF) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                 out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
-                switch (adev->tty_mode) {
+                switch (adev->voice.tty_mode) {
                 case TTY_MODE_FULL:
                     snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC;
                     break;
@@ -695,7 +693,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                     snd_device = SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC;
                     break;
                 default:
-                    ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->tty_mode);
+                    ALOGE("%s: Invalid TTY mode (%#x)",
+                          __func__, adev->voice.tty_mode);
                 }
                 goto exit;
             }
@@ -718,7 +717,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_VOICE_HEADSET_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_ALL_SCO) {
-            snd_device = SND_DEVICE_IN_BT_SCO_MIC ;
+            if (my_data->btsco_sample_rate == SAMPLE_RATE_16KHZ)
+                snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB;
+            else
+                snd_device = SND_DEVICE_IN_BT_SCO_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER) {
             if (my_data->fluence_type != FLUENCE_NONE &&
                 my_data->fluence_in_voice_call &&
@@ -790,7 +792,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_HEADSET_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
-            snd_device = SND_DEVICE_IN_BT_SCO_MIC ;
+            if (my_data->btsco_sample_rate == SAMPLE_RATE_16KHZ)
+                snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB;
+            else
+                snd_device = SND_DEVICE_IN_BT_SCO_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_AUX_DIGITAL) {
             snd_device = SND_DEVICE_IN_HDMI_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET ||
@@ -813,7 +818,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) {
             snd_device = SND_DEVICE_IN_HANDSET_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET) {
-            snd_device = SND_DEVICE_IN_BT_SCO_MIC;
+            if (my_data->btsco_sample_rate == SAMPLE_RATE_16KHZ)
+                snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB;
+            else
+                snd_device = SND_DEVICE_IN_BT_SCO_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             snd_device = SND_DEVICE_IN_HDMI_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
@@ -918,3 +926,89 @@ int platform_edid_get_max_channels(void *platform)
 
     return max_channels;
 }
+
+static int platform_set_slowtalk(struct platform_data *my_data, bool state)
+{
+    int ret = 0;
+    struct audio_device *adev = my_data->adev;
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "Slowtalk Enable";
+    uint32_t set_values[ ] = {0,
+                              ALL_SESSION_VSID};
+
+    set_values[0] = state;
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        ret = -EINVAL;
+    } else {
+        ALOGV("Setting slowtalk state: %d", state);
+        ret = mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+        my_data->slowtalk = state;
+    }
+
+    return ret;
+}
+
+int platform_set_parameters(void *platform, struct str_parms *parms)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    char *str;
+    char value[32];
+    int val;
+    int ret = 0;
+
+    ALOGV("%s: enter: %s", __func__, str_parms_to_str(parms));
+
+    ret = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_BTSCO, &val);
+    if (ret >= 0) {
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_BTSCO);
+        pthread_mutex_lock(&my_data->adev->lock);
+        my_data->btsco_sample_rate = val;
+        pthread_mutex_unlock(&my_data->adev->lock);
+    }
+
+    ret = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_SLOWTALK, &val);
+    if (ret >= 0) {
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_SLOWTALK);
+        pthread_mutex_lock(&my_data->adev->lock);
+        ret = platform_set_slowtalk(my_data, val);
+        if (ret)
+            ALOGE("%s: Failed to set slow talk err: %d", __func__, ret);
+        pthread_mutex_unlock(&my_data->adev->lock);
+    }
+
+    ALOGV("%s: exit with code(%d)", __func__, ret);
+    return ret;
+}
+
+void platform_get_parameters(void *platform,
+                            struct str_parms *query,
+                            struct str_parms *reply)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    char *str = NULL;
+    char value[256] = {0};
+    int ret;
+    int fluence_type;
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_FLUENCE_TYPE,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        pthread_mutex_lock(&my_data->adev->lock);
+        if (my_data->fluence_type == FLUENCE_QUAD_MIC) {
+            strlcpy(value, "fluencepro", sizeof(value));
+        } else if (my_data->fluence_type == FLUENCE_DUAL_MIC) {
+            strlcpy(value, "fluence", sizeof(value));
+        } else {
+            strlcpy(value, "none", sizeof(value));
+        }
+        pthread_mutex_unlock(&my_data->adev->lock);
+
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_FLUENCE_TYPE, value);
+    }
+
+    ALOGV("%s: exit: returns - %s", __func__, str_parms_to_str(reply));
+}
+

@@ -1,4 +1,7 @@
 /*
+ * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Not a contribution.
+ *
  * Copyright (C) 2013 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,10 +22,10 @@
 
 #include <cutils/list.h>
 #include <hardware/audio.h>
-
 #include <tinyalsa/asoundlib.h>
 
 #include <audio_route/audio_route.h>
+#include "voice.h"
 
 /* Flags used to initialize acdb_settings variable that goes to ACDB library */
 #define DMIC_FLAG       0x00000002
@@ -57,7 +60,13 @@ typedef enum {
     USECASE_AUDIO_RECORD,
     USECASE_AUDIO_RECORD_LOW_LATENCY,
 
+    /* Voice usecase */
     USECASE_VOICE_CALL,
+
+    /* Voice extension usecases */
+    USECASE_VOICE2_CALL,
+    USECASE_VOLTE_CALL,
+    USECASE_QCHAT_CALL,
 
     AUDIO_USECASE_MAX
 } audio_usecase_t;
@@ -136,20 +145,14 @@ struct audio_device {
     audio_devices_t out_device;
     struct stream_in *active_input;
     struct stream_out *primary_output;
-    int in_call;
-    float voice_volume;
-    bool mic_mute;
-    int tty_mode;
     bool bluetooth_nrec;
     bool screen_off;
-    struct pcm *voice_call_rx;
-    struct pcm *voice_call_tx;
     int *snd_dev_ref_cnt;
     struct listnode usecase_list;
     struct audio_route *audio_route;
     int acdb_settings;
     bool speaker_lr_swap;
-
+    struct voice voice;
     void *platform;
 };
 

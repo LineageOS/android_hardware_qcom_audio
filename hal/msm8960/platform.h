@@ -1,4 +1,7 @@
 /*
+ * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Not a contribution.
+ *
  * Copyright (C) 2013 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -95,7 +98,7 @@ enum {
 #define SOUND_CARD 0
 
 #define DEFAULT_OUTPUT_SAMPLING_RATE 48000
-
+#define MIXER_PATH_MAX_LENGTH 100
 /*
  * tinyAlsa library interprets period size as number of frames
  * one frame = channel_count * sizeof (pcm sample)
