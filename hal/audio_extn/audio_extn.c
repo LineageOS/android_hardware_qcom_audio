@@ -51,6 +51,14 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
                                    struct str_parms *parms);
 #endif
 
+#ifndef SSR_ENABLED
+#define audio_extn_ssr_get_parameters(query, reply) (0)
+#else
+void audio_extn_ssr_get_parameters(struct str_parms *query,
+
+                                          struct str_parms *reply);
+#endif
+
 #ifndef ANC_HEADSET_ENABLED
 #define audio_extn_set_anc_parameters(parms)       (0)
 #else
@@ -195,5 +203,7 @@ void audio_extn_get_parameters(const struct audio_device *adev,
                               struct str_parms *reply)
 {
     audio_extn_get_afe_proxy_parameters(query, reply);
-    ALOGD("%s: exit: returns %s", __func__, str_parms_to_str(reply));
+    audio_extn_ssr_get_parameters(query, reply);
+
+    ALOGD("%s: returns %s", __func__, str_parms_to_str(reply));
 }

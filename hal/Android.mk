@@ -53,13 +53,18 @@ ifneq ($(strip $(AUDIO_FEATURE_DISABLED_USBAUDIO)),true)
     LOCAL_SRC_FILES += audio_extn/usb.c
 endif
 
+ifneq ($(strip $(AUDIO_FEATURE_DISABLED_SSR)),true)
+    LOCAL_CFLAGS += -DSSR_ENABLED
+    LOCAL_SRC_FILES += audio_extn/ssr.c
+    LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/surround_sound/
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
 	libtinyalsa \
 	libaudioroute \
 	libdl
-
 
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
