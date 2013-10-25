@@ -236,6 +236,9 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = 6,
 };
 
+#define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
+#define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
+
 static pthread_once_t check_op_once_ctl = PTHREAD_ONCE_INIT;
 static bool is_tmus = false;
 
@@ -251,6 +254,19 @@ static void check_operator()
     case 310490:
     case 310260:
     case 310026:
+    /* Add new TMUS MNC(800, 660, 580, 310, 270, 250, 240, 230, 220, 210, 200, 160) */
+    case 310800:
+    case 310660:
+    case 310580:
+    case 310310:
+    case 310270:
+    case 310250:
+    case 310240:
+    case 310230:
+    case 310220:
+    case 310210:
+    case 310200:
+    case 310160:
         is_tmus = true;
         break;
     }
@@ -1065,3 +1081,15 @@ void platform_get_parameters(void *platform,
     ALOGV("%s: exit: returns - %s", __func__, str_parms_to_str(reply));
 }
 
+/* Delay in Us */
+int64_t platform_render_latency(audio_usecase_t usecase)
+{
+    switch (usecase) {
+        case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
+            return DEEP_BUFFER_PLATFORM_DELAY;
+        case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
+            return LOW_LATENCY_PLATFORM_DELAY;
+        default:
+            return 0;
+    }
+}

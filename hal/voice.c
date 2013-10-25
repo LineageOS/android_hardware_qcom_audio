@@ -170,6 +170,8 @@ int start_call(struct audio_device *adev, audio_usecase_t usecase_id)
     pcm_start(session->pcm_rx);
     pcm_start(session->pcm_tx);
 
+    voice_set_volume(adev, adev->voice.volume);
+
     ret = platform_start_voice_call(adev->platform);
     if (ret < 0) {
         ALOGE("%s: platform_start_voice_call error %d\n", __func__, ret);
@@ -271,7 +273,7 @@ int voice_set_volume(struct audio_device *adev, float volume)
 {
     int vol, err = 0;
 
-    pthread_mutex_lock(&adev->lock);
+    adev->voice.volume = volume;
     if (adev->mode == AUDIO_MODE_IN_CALL) {
         if (volume < 0.0) {
             volume = 0.0;
@@ -287,11 +289,8 @@ int voice_set_volume(struct audio_device *adev, float volume)
         vol = 100 - vol;
 
         err = platform_set_voice_volume(adev->platform, vol);
-        if (!err) {
-            adev->voice.volume = volume;
-        }
     }
-    pthread_mutex_unlock(&adev->lock);
+
     return err;
 }
 
