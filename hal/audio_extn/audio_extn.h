@@ -137,4 +137,24 @@ void audio_extn_spkr_prot_stop_processing();
 bool audio_extn_spkr_prot_is_enabled();
 #endif
 
+#ifndef COMPRESS_CAPTURE_ENABLED
+#define audio_extn_compr_cap_init(adev,in)                (0)
+#define audio_extn_compr_cap_enabled()                    (0)
+#define audio_extn_compr_cap_format_supported(format)     (0)
+#define audio_extn_compr_cap_usecase_supported(usecase)   (0)
+#define audio_extn_compr_cap_get_buffer_size(format)      (0)
+#define audio_extn_compr_cap_read(in, buffer, bytes)      (0)
+#define audio_extn_compr_cap_deinit()                     (0)
+#else
+void audio_extn_compr_cap_init(struct audio_device *adev,
+                                    struct stream_in *in);
+bool audio_extn_compr_cap_enabled();
+bool audio_extn_compr_cap_format_supported(audio_format_t format);
+bool audio_extn_compr_cap_usecase_supported(audio_usecase_t usecase);
+size_t audio_extn_compr_cap_get_buffer_size(audio_format_t format);
+size_t audio_extn_compr_cap_read(struct stream_in *in,
+                                        void *buffer, size_t bytes);
+void audio_extn_compr_cap_deinit();
+#endif
+
 #endif /* AUDIO_EXTN_H */

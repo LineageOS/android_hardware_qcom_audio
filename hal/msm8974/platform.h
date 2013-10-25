@@ -182,6 +182,7 @@ enum {
 #else
 #define LOWLATENCY_PCM_DEVICE 15
 #endif
+#define COMPRESS_CAPTURE_DEVICE 19
 
 #ifdef PLATFORM_MSM8x26
 #define VOICE_CALL_PCM_DEVICE 2

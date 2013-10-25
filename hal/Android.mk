@@ -82,6 +82,11 @@ ifdef MULTIPLE_HW_VARIANTS_ENABLED
   LOCAL_SRC_FILES += $(AUDIO_PLATFORM)/hw_info.c
 endif
 
+ifneq ($(strip $(AUDIO_FEATURE_DISABLED_COMPRESS_CAPTURE)),true)
+    LOCAL_CFLAGS += -DCOMPRESS_CAPTURE_ENABLED
+    LOCAL_SRC_FILES += audio_extn/compress_capture.c
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
