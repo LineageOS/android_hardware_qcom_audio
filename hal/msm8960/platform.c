@@ -192,6 +192,9 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = 6,
 };
 
+#define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
+#define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
+
 static pthread_once_t check_op_once_ctl = PTHREAD_ONCE_INIT;
 static bool is_tmus = false;
 
@@ -888,4 +891,17 @@ int platform_set_incall_recoding_session_id(void *platform, uint32_t session_id)
 {
     LOGE("%s: Not implemented", __func__);
     return -ENOSYS;
+}
+
+/* Delay in Us */
+int64_t platform_render_latency(audio_usecase_t usecase)
+{
+    switch (usecase) {
+        case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
+            return DEEP_BUFFER_PLATFORM_DELAY;
+        case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
+            return LOW_LATENCY_PLATFORM_DELAY;
+        default:
+            return 0;
+    }
 }

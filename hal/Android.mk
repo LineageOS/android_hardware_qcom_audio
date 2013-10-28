@@ -63,11 +63,13 @@ LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
 	libtinyalsa \
+	libtinycompress \
 	libaudioroute \
 	libdl
 
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
+	external/tinycompress/include \
 	$(call include-path-for, audio-route) \
 	$(call include-path-for, audio-effects) \
 	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \
