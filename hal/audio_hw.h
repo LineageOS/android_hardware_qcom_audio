@@ -82,6 +82,8 @@ typedef enum {
     USECASE_INCALL_MUSIC_UPLINK,
     USECASE_INCALL_MUSIC_UPLINK2,
 
+    USECASE_AUDIO_SPKR_CALIB_RX,
+    USECASE_AUDIO_SPKR_CALIB_TX,
     AUDIO_USECASE_MAX
 } audio_usecase_t;
 
@@ -222,6 +224,12 @@ int disable_audio_route(struct audio_device *adev,
                                bool update_mixer);
 int disable_snd_device(struct audio_device *adev,
                               snd_device_t snd_device,
+                              bool update_mixer);
+int enable_snd_device(struct audio_device *adev,
+                             snd_device_t snd_device,
+                             bool update_mixer);
+int enable_audio_route(struct audio_device *adev,
+                              struct audio_usecase *usecase,
                               bool update_mixer);
 struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
                                                    audio_usecase_t uc_id);

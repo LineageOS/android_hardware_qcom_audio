@@ -117,6 +117,8 @@ static const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK] = "incall-rec-uplink-and-downlink",
     [USECASE_INCALL_MUSIC_UPLINK] = "incall_music_uplink",
     [USECASE_INCALL_MUSIC_UPLINK2] = "incall_music_uplink2",
+    [USECASE_AUDIO_SPKR_CALIB_RX] = "spkr-rx-calib",
+    [USECASE_AUDIO_SPKR_CALIB_TX] = "spkr-vi-record",
 };
 
 
@@ -166,7 +168,7 @@ static int get_snd_codec_id(audio_format_t format)
     return id;
 }
 
-static int enable_audio_route(struct audio_device *adev,
+int enable_audio_route(struct audio_device *adev,
                               struct audio_usecase *usecase,
                               bool update_mixer)
 {
@@ -220,7 +222,7 @@ int disable_audio_route(struct audio_device *adev,
     return 0;
 }
 
-static int enable_snd_device(struct audio_device *adev,
+int enable_snd_device(struct audio_device *adev,
                              snd_device_t snd_device,
                              bool update_mixer)
 {
@@ -253,14 +255,21 @@ static int enable_snd_device(struct audio_device *adev,
     if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
        audio_extn_usb_start_capture(adev);
 
-    if (platform_send_audio_calibration(adev->platform, snd_device) < 0) {
-        adev->snd_dev_ref_cnt[snd_device]--;
-        return -EINVAL;
+    if (snd_device == SND_DEVICE_OUT_SPEAKER &&
+        audio_extn_spkr_prot_is_enabled()) {
+       if (audio_extn_spkr_prot_start_processing(snd_device)) {
+          ALOGE("%s: spkr_start_processing failed", __func__);
+          return -EINVAL;
+      }
+    }  else {
+        ALOGV("%s: snd_device(%d: %s)", __func__,
+        snd_device, device_name);
+        if (platform_send_audio_calibration(adev->platform, snd_device) < 0) {
+            adev->snd_dev_ref_cnt[snd_device]--;
+            return -EINVAL;
+        }
+        audio_route_apply_path(adev->audio_route, device_name);
     }
-
-    ALOGV("%s: snd_device(%d: %s)", __func__,
-          snd_device, device_name);
-    audio_route_apply_path(adev->audio_route, device_name);
     if (update_mixer)
         audio_route_update_mixer(adev->audio_route);
 
@@ -302,7 +311,11 @@ int disable_snd_device(struct audio_device *adev,
         if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
             audio_extn_usb_stop_capture(adev);
 
-        audio_route_reset_path(adev->audio_route, device_name);
+        if (snd_device == SND_DEVICE_OUT_SPEAKER &&
+            audio_extn_spkr_prot_is_enabled()) {
+            audio_extn_spkr_prot_stop_processing();
+        } else
+            audio_route_reset_path(adev->audio_route, device_name);
 
         if (update_mixer)
             audio_route_update_mixer(adev->audio_route);

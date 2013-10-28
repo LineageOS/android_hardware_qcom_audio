@@ -84,7 +84,6 @@ struct platform_data {
     int  fluence_type;
     int  btsco_sample_rate;
     bool slowtalk;
-
     /* Audio calibration related functions */
     void *acdb_handle;
     acdb_init_t acdb_init;
@@ -124,6 +123,8 @@ static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                      INCALL_MUSIC_UPLINK_PCM_DEVICE},
     [USECASE_INCALL_MUSIC_UPLINK2] = {INCALL_MUSIC_UPLINK2_PCM_DEVICE,
                                       INCALL_MUSIC_UPLINK2_PCM_DEVICE},
+    [USECASE_AUDIO_SPKR_CALIB_RX] = {SPKR_PROT_CALIB_RX_PCM_DEVICE, -1},
+    [USECASE_AUDIO_SPKR_CALIB_TX] = {-1, SPKR_PROT_CALIB_TX_PCM_DEVICE},
 };
 
 /* Array to store sound devices */
@@ -156,6 +157,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET] = "voice-anc-fb-headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET] = "speaker-and-anc-headphones",
     [SND_DEVICE_OUT_ANC_HANDSET] = "anc-handset",
+    [SND_DEVICE_OUT_SPEAKER_PROTECTED] = "speaker-protected",
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
@@ -185,6 +187,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_QUAD_MIC] = "quad-mic",
     [SND_DEVICE_IN_HANDSET_STEREO_DMIC] = "handset-stereo-dmic-ef",
     [SND_DEVICE_IN_SPEAKER_STEREO_DMIC] = "speaker-stereo-dmic-ef",
+    [SND_DEVICE_IN_CAPTURE_VI_FEEDBACK] = "vi-feedback",
 };
 
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
@@ -216,6 +219,7 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET] = 27,
     [SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET] = 26,
     [SND_DEVICE_OUT_ANC_HANDSET] = 103,
+    [SND_DEVICE_OUT_SPEAKER_PROTECTED] = 101,
 
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
     [SND_DEVICE_IN_SPEAKER_MIC] = 4, /* ToDo: Check if this needs to changed to 11 */
@@ -245,6 +249,7 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     /* TODO: Update with proper acdb ids */
     [SND_DEVICE_IN_VOICE_REC_DMIC] = 62,
     [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = 6,
+    [SND_DEVICE_IN_CAPTURE_VI_FEEDBACK] = 102,
 };
 
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
@@ -402,7 +407,7 @@ void *platform_init(struct audio_device *adev)
 
     /* Read one time ssr property */
     audio_extn_ssr_update_enabled(adev);
-
+    audio_extn_spkr_prot_init(adev);
     return my_data;
 }
 
