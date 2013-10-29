@@ -43,6 +43,10 @@ ifneq ($(strip $(AUDIO_FEATURE_DISABLED_PROXY_DEVICE)),true)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
 endif
 
+ifneq ($(strip $(AUDIO_FEATURE_DISABLED_INCALL_MUSIC)),true)
+LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
+endif
+
 ifneq ($(strip $(AUDIO_FEATURE_DISABLED_FM)),true)
     LOCAL_CFLAGS += -DFM_ENABLED
     LOCAL_SRC_FILES += audio_extn/fm.c
