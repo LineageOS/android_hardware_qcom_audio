@@ -196,6 +196,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_set_anc_parameters(parms);
    audio_extn_set_afe_proxy_parameters(parms);
    audio_extn_fm_set_parameters(adev, parms);
+   audio_extn_listen_set_parameters(adev, parms);
 }
 
 void audio_extn_get_parameters(const struct audio_device *adev,
