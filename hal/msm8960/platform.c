@@ -73,7 +73,6 @@ typedef int (*csd_start_voice_t)();
 typedef int (*csd_stop_voice_t)();
 
 
-/* Audio calibration related functions */
 struct platform_data {
     struct audio_device *adev;
     bool fluence_in_spkr_mode;
@@ -82,6 +81,9 @@ struct platform_data {
     int  fluence_type;
     int  dualmic_config;
 
+    void *hw_info;
+
+    /* Audio calibration related functions */
     void *acdb_handle;
     acdb_init_t acdb_init;
     acdb_deallocate_t acdb_deallocate;
@@ -243,6 +245,7 @@ void *platform_init(struct audio_device *adev)
     char baseband[PROPERTY_VALUE_MAX];
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data;
+    const char *snd_card_name;
 
     adev->mixer = mixer_open(MIXER_CARD);
 
@@ -258,6 +261,12 @@ void *platform_init(struct audio_device *adev)
     }
 
     my_data = calloc(1, sizeof(struct platform_data));
+
+    snd_card_name = mixer_get_name(adev->mixer);
+    my_data->hw_info = hw_info_init(snd_card_name);
+    if (!my_data->hw_info) {
+        ALOGE("%s: Failed to init hardware info", __func__);
+    }
 
     my_data->adev = adev;
     my_data->fluence_in_spkr_mode = false;
@@ -356,6 +365,9 @@ void *platform_init(struct audio_device *adev)
 
 void platform_deinit(void *platform)
 {
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    hw_info_deinit(my_data->hw_info);
     free(platform);
 }
 
@@ -365,6 +377,22 @@ const char *platform_get_snd_device_name(snd_device_t snd_device)
         return device_table[snd_device];
     else
         return "";
+}
+
+int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
+                                      char *device_name)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (snd_device >= SND_DEVICE_MIN && snd_device < SND_DEVICE_MAX) {
+        strlcpy(device_name, device_table[snd_device], DEVICE_NAME_MAX_SIZE);
+        hw_info_append_hw_type(my_data->hw_info, snd_device, device_name);
+    } else {
+        strlcpy(device_name, "", DEVICE_NAME_MAX_SIZE);
+        return -EINVAL;
+    }
+
+    return 0;
 }
 
 void platform_add_backend_name(char *mixer_path, snd_device_t snd_device)
