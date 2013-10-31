@@ -67,7 +67,7 @@ static int voice_extn_get_active_session_id(struct audio_device *adev,
 }
 #endif
 
-#if defined INCALL_MUSIC_ENABLED && defined MULTI_VOICE_SESSION_ENABLED
+#ifdef INCALL_MUSIC_ENABLED
 int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
                                                   struct stream_out *out);
 #else

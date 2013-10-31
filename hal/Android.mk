@@ -6,12 +6,6 @@ include $(CLEAR_VARS)
 
 LOCAL_ARM_MODE := arm
 
-#MULTI_VOICE_SESSION_ENABLED := true
-
-ifdef MULTI_VOICE_SESSION_ENABLED
-LOCAL_CFLAGS += -DMULTI_VOICE_SESSION_ENABLED
-endif
-
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 ifneq ($(filter msm8974 msm8226 msm8610 apq8084,$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
@@ -29,10 +23,6 @@ LOCAL_SRC_FILES := \
 	voice.c \
 	$(AUDIO_PLATFORM)/platform.c
 
-ifdef MULTI_VOICE_SESSION_ENABLED
-LOCAL_SRC_FILES += voice_extn/voice_extn.c
-endif
-
 LOCAL_SRC_FILES += audio_extn/audio_extn.c
 
 ifneq ($(strip $(AUDIO_FEATURE_DISABLED_ANC_HEADSET)),true)
@@ -41,10 +31,6 @@ endif
 
 ifneq ($(strip $(AUDIO_FEATURE_DISABLED_PROXY_DEVICE)),true)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
-endif
-
-ifneq ($(strip $(AUDIO_FEATURE_DISABLED_INCALL_MUSIC)),true)
-LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
 endif
 
 ifneq ($(strip $(AUDIO_FEATURE_DISABLED_FM)),true)
@@ -63,6 +49,18 @@ ifneq ($(strip $(AUDIO_FEATURE_DISABLED_SSR)),true)
     LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/surround_sound/
 endif
 
+ifneq ($(strip $(AUDIO_FEATURE_DISABLED_MULTI_VOICE_SESSIONS)),true)
+    LOCAL_CFLAGS += -DMULTI_VOICE_SESSION_ENABLED
+    LOCAL_SRC_FILES += voice_extn/voice_extn.c
+    LOCAL_C_INCLUDES += $(LOCAL_PATH)/voice_extn
+    LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+
+ifneq ($(strip $(AUDIO_FEATURE_DISABLED_INCALL_MUSIC)),true)
+    LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
+endif
+
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
@@ -78,10 +76,6 @@ LOCAL_C_INCLUDES += \
 	$(call include-path-for, audio-effects) \
 	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \
 	$(LOCAL_PATH)/audio_extn
-
-ifdef MULTI_VOICE_SESSION_ENABLED
-LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-endif
 
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
