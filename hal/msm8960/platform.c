@@ -379,7 +379,8 @@ const char *platform_get_snd_device_name(snd_device_t snd_device)
         return "";
 }
 
-void platform_add_backend_name(char *mixer_path, snd_device_t snd_device)
+void platform_add_backend_name(void *platform __unused, char *mixer_path,
+                               snd_device_t snd_device)
 {
     if (snd_device == SND_DEVICE_IN_BT_SCO_MIC)
         strcat(mixer_path, " bt-sco");

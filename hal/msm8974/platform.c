@@ -91,6 +91,8 @@ struct platform_data {
     acdb_send_voice_cal_t acdb_send_voice_cal;
     acdb_reload_vocvoltable_t  acdb_reload_vocvoltable;
     struct csd_data *csd;
+    bool ext_speaker;
+    bool ext_earpiece;
 };
 
 static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -485,6 +487,20 @@ void *platform_init(struct audio_device *adev)
     my_data->fluence_in_voice_call = false;
     my_data->fluence_in_voice_rec = false;
 
+    /*
+     * The default assumption is that earpiece (handset), speaker and headphones
+     * devices are connected to internal HW codec and communicated through
+     * slimbus backend. If any platform communicates with speaker or earpiece
+     * or headphones through non-slimbus backend such as MI2S or AUXPCM etc.,
+     * the ext_xxxx flags must be set accordingly.
+     */
+    if (strstr(snd_card_name, "tfa9890_stereo")) {
+        my_data->ext_speaker = true;
+        my_data->ext_earpiece = true;
+    } else if (strstr(snd_card_name, "tfa9890")) {
+        my_data->ext_speaker = true;
+    }
+
     property_get("persist.audio.dualmic.config",value,"");
     if (!strcmp("broadside", value)) {
         my_data->dualmic_config = DUALMIC_CONFIG_BROADSIDE;
@@ -575,8 +591,11 @@ const char *platform_get_snd_device_name(snd_device_t snd_device)
         return "";
 }
 
-void platform_add_backend_name(char *mixer_path, snd_device_t snd_device)
+void platform_add_backend_name(void *platform, char *mixer_path,
+                               snd_device_t snd_device)
 {
+    struct platform_data *my_data = (struct platform_data *)platform;
+
     if (snd_device == SND_DEVICE_IN_BT_SCO_MIC)
         strcat(mixer_path, " bt-sco");
     else if(snd_device == SND_DEVICE_OUT_BT_SCO)
@@ -588,6 +607,20 @@ void platform_add_backend_name(char *mixer_path, snd_device_t snd_device)
     else if (snd_device == SND_DEVICE_OUT_BT_SCO_WB ||
              snd_device == SND_DEVICE_IN_BT_SCO_MIC_WB)
         strcat(mixer_path, " bt-sco-wb");
+    else if (my_data->ext_speaker) {
+        if (snd_device == SND_DEVICE_OUT_SPEAKER ||
+            snd_device == SND_DEVICE_OUT_VOICE_SPEAKER ||
+            snd_device == SND_DEVICE_OUT_SPEAKER_REVERSE)
+            strcat(mixer_path, " speaker");
+        else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES)
+            strcat(mixer_path, " speaker-and-headphones");
+    } else if (my_data->ext_earpiece &&
+                 (snd_device == SND_DEVICE_OUT_VOICE_HANDSET ||
+                  snd_device == SND_DEVICE_OUT_VOICE_HANDSET_TMUS ||
+                  snd_device == SND_DEVICE_OUT_HANDSET ||
+                  snd_device == SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET)) {
+        strcat(mixer_path, " handset");
+    }
 }
 
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)

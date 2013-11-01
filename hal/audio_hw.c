@@ -184,7 +184,7 @@ int enable_audio_route(struct audio_device *adev,
         snd_device = usecase->out_snd_device;
 
     strcpy(mixer_path, use_case_table[usecase->id]);
-    platform_add_backend_name(mixer_path, snd_device);
+    platform_add_backend_name(adev->platform, mixer_path, snd_device);
     ALOGV("%s: apply and update mixer path: %s", __func__, mixer_path);
     audio_route_apply_and_update_path(adev->audio_route, mixer_path);
 
@@ -207,7 +207,7 @@ int disable_audio_route(struct audio_device *adev,
     else
         snd_device = usecase->out_snd_device;
     strcpy(mixer_path, use_case_table[usecase->id]);
-    platform_add_backend_name(mixer_path, snd_device);
+    platform_add_backend_name(adev->platform, mixer_path, snd_device);
     ALOGV("%s: reset and update mixer path: %s", __func__, mixer_path);
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
 
