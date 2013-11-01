@@ -163,6 +163,8 @@ enum {
 #define QCHAT_CALL_PCM_DEVICE 20
 #endif
 
+#define PLAYBACK_OFFLOAD_DEVICE 9
+
 #ifdef PLATFORM_MSM8610
 #define LOWLATENCY_PCM_DEVICE 12
 #else

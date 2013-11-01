@@ -101,6 +101,8 @@ static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                             LOWLATENCY_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {MULTI_CHANNEL_PCM_DEVICE,
                                          MULTI_CHANNEL_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD] =
+                     {PLAYBACK_OFFLOAD_DEVICE, PLAYBACK_OFFLOAD_DEVICE},
     [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
                                           LOWLATENCY_PCM_DEVICE},
