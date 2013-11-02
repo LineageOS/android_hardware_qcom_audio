@@ -31,6 +31,10 @@ ifneq ($(strip $(AUDIO_FEATURE_DISABLED_USBAUDIO)),true)
     LOCAL_SRC_FILES += audio_extn/usb.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_DEEP_BUFFER_PRIMARY)),true)
+    LOCAL_CFLAGS += -DDEEP_BUFFER_PRIMARY
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \

@@ -59,6 +59,12 @@
 #define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 96
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
 
+#ifdef DEEP_BUFFER_PRIMARY
+#define USECASE_AUDIO_PLAYBACK_PRIMARY USECASE_AUDIO_PLAYBACK_DEEP_BUFFER
+#else
+#define USECASE_AUDIO_PLAYBACK_PRIMARY USECASE_AUDIO_PLAYBACK_LOW_LATENCY
+#endif
+
 struct pcm_config pcm_config_deep_buffer = {
     .channels = 2,
     .rate = DEFAULT_OUTPUT_SAMPLING_RATE,
@@ -1922,10 +1928,12 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->config.rate = config->sample_rate;
         out->config.channels = popcount(out->channel_mask);
         out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels * 2);
+#ifndef DEEP_BUFFER_PRIMARY
     } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
         out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
         out->config = pcm_config_deep_buffer;
         out->sample_rate = out->config.rate;
+#endif
     } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         if (config->offload_info.version != AUDIO_INFO_INITIALIZER.version ||
             config->offload_info.size != AUDIO_INFO_INITIALIZER.size) {
@@ -1979,13 +1987,26 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         ALOGV("%s: offloaded output offload_info version %04x bit rate %d",
                 __func__, config->offload_info.version,
                 config->offload_info.bit_rate);
-    } else {
+#ifdef DEEP_BUFFER_PRIMARY
+    } else if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
         out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
         out->config = pcm_config_low_latency;
         out->sample_rate = out->config.rate;
+#endif
+    } else {
+        /* primary path is the default path selected if no other outputs are available/suitable */
+        out->usecase = USECASE_AUDIO_PLAYBACK_PRIMARY;
+#ifdef DEEP_BUFFER_PRIMARY
+        out->config = pcm_config_deep_buffer;
+#else
+        out->config = pcm_config_low_latency;
+#endif
+        out->sample_rate = out->config.rate;
     }
 
-    if (flags & AUDIO_OUTPUT_FLAG_PRIMARY) {
+    if ((out->usecase == USECASE_AUDIO_PLAYBACK_PRIMARY) ||
+        (flags & AUDIO_OUTPUT_FLAG_PRIMARY)) {
+        /* Ensure the default output is not selected twice */
         if(adev->primary_output == NULL)
             adev->primary_output = out;
         else {
