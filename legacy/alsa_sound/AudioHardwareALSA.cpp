@@ -213,6 +213,8 @@ AudioHardwareALSA::AudioHardwareALSA() :
                 break;
             } else if (strstr(soundCardInfo, "msm8230-tapan-snd-card")) {
                 break;
+            } else if (strstr(soundCardInfo, "msm8960-snd-card-wcd")) {
+                break;
             } else if(strstr(soundCardInfo, "no soundcards")) {
                 ALOGE("NO SOUND CARD DETECTED");
                 if(sleep_retry < SOUND_CARD_SLEEP_RETRY) {
