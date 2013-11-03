@@ -66,6 +66,7 @@ static const snd_device_t taiko_CDP_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
+    SND_DEVICE_IN_QUAD_MIC,
 };
 
 static const snd_device_t taiko_liquid_variant_devices[] = {
@@ -74,6 +75,13 @@ static const snd_device_t taiko_liquid_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
     SND_DEVICE_IN_SPEAKER_MIC,
     SND_DEVICE_IN_HEADSET_MIC,
+    SND_DEVICE_IN_VOICE_DMIC,
+    SND_DEVICE_IN_VOICE_SPEAKER_DMIC,
+    SND_DEVICE_IN_VOICE_REC_DMIC_STEREO,
+    SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE,
+    SND_DEVICE_IN_QUAD_MIC,
+    SND_DEVICE_IN_HANDSET_STEREO_DMIC,
+    SND_DEVICE_IN_SPEAKER_STEREO_DMIC,
 };
 
 static const snd_device_t taiko_DB_variant_devices[] = {
@@ -81,28 +89,33 @@ static const snd_device_t taiko_DB_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
     SND_DEVICE_IN_SPEAKER_MIC,
+    SND_DEVICE_IN_HEADSET_MIC,
+    SND_DEVICE_IN_QUAD_MIC,
 };
 
 static const snd_device_t tapan_lite_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
+    SND_DEVICE_OUT_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
-    SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
+    SND_DEVICE_OUT_VOICE_HEADPHONES,
+    SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES,
+    SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES,
 };
 
 static const snd_device_t tapan_skuf_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
+    /*SND_DEVICE_OUT_SPEAKER_AND_ANC_FB_HEADSET,*/
 };
 
 static const snd_device_t tapan_lite_skuf_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
-    SND_DEVICE_OUT_ANC_HANDSET,
-    SND_DEVICE_OUT_ANC_HEADSET,
-    SND_DEVICE_OUT_ANC_FB_HEADSET,
+    SND_DEVICE_OUT_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
-    SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
-    SND_DEVICE_IN_AANC_HANDSET_MIC,
+    SND_DEVICE_OUT_VOICE_HEADPHONES,
+    SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES,
+    SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES,
 };
 
 static const snd_device_t helicon_skuab_variant_devices[] = {
@@ -149,7 +162,7 @@ static void  update_hardware_info_8974(struct hardware_info *hw_info, const char
         strlcpy(hw_info->name, "msm8974", sizeof(hw_info->name));
         hw_info->snd_devices = (snd_device_t *)taiko_CDP_variant_devices;
         hw_info->num_snd_devices = ARRAY_SIZE(taiko_CDP_variant_devices);
-        strlcpy(hw_info->dev_extn, "-fluid", sizeof(hw_info->dev_extn));
+        strlcpy(hw_info->dev_extn, "-cdp", sizeof(hw_info->dev_extn));
     } else if (!strcmp(snd_card_name, "msm8974-taiko-fluid-snd-card")) {
         strlcpy(hw_info->type, " fluid", sizeof(hw_info->type));
         strlcpy(hw_info->name, "msm8974", sizeof(hw_info->name));
