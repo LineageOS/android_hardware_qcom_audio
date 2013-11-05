@@ -1779,7 +1779,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
      * Instead of writing zeroes here, we could trust the hardware
      * to always provide zeroes when muted.
      */
-    if (ret == 0 && voice_get_mic_mute(adev))
+    if (ret == 0 && voice_get_mic_mute(adev) && !voice_is_in_call(adev))
         memset(buffer, 0, bytes);
 
 exit:
