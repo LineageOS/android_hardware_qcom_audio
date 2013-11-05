@@ -222,6 +222,8 @@ static int enable_snd_device(struct audio_device *adev,
                              snd_device_t snd_device,
                              bool update_mixer)
 {
+    char device_name[DEVICE_NAME_MAX_SIZE] = {0};
+
     if (snd_device < SND_DEVICE_MIN ||
         snd_device >= SND_DEVICE_MAX) {
         ALOGE("%s: Invalid sound device %d", __func__, snd_device);
@@ -229,9 +231,14 @@ static int enable_snd_device(struct audio_device *adev,
     }
 
     adev->snd_dev_ref_cnt[snd_device]++;
+
+    if(platform_get_snd_device_name_extn(adev->platform, snd_device, device_name) < 0 ) {
+        ALOGE("%s: Invalid sound device returned", __func__);
+        return -EINVAL;
+    }
     if (adev->snd_dev_ref_cnt[snd_device] > 1) {
         ALOGV("%s: snd_device(%d: %s) is already active",
-              __func__, snd_device, platform_get_snd_device_name(snd_device));
+              __func__, snd_device, device_name);
         return 0;
     }
 
@@ -250,8 +257,8 @@ static int enable_snd_device(struct audio_device *adev,
     }
 
     ALOGV("%s: snd_device(%d: %s)", __func__,
-          snd_device, platform_get_snd_device_name(snd_device));
-    audio_route_apply_path(adev->audio_route, platform_get_snd_device_name(snd_device));
+          snd_device, device_name);
+    audio_route_apply_path(adev->audio_route, device_name);
     if (update_mixer)
         audio_route_update_mixer(adev->audio_route);
 
@@ -262,6 +269,8 @@ int disable_snd_device(struct audio_device *adev,
                        snd_device_t snd_device,
                        bool update_mixer)
 {
+    char device_name[DEVICE_NAME_MAX_SIZE] = {0};
+
     if (snd_device < SND_DEVICE_MIN ||
         snd_device >= SND_DEVICE_MAX) {
         ALOGE("%s: Invalid sound device %d", __func__, snd_device);
@@ -271,6 +280,7 @@ int disable_snd_device(struct audio_device *adev,
         ALOGE("%s: device ref cnt is already 0", __func__);
         return -EINVAL;
     }
+
     adev->snd_dev_ref_cnt[snd_device]--;
 
     /* exit usb play back thread */
@@ -282,13 +292,19 @@ int disable_snd_device(struct audio_device *adev,
     if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
         audio_extn_usb_stop_capture(adev);
 
+    if(platform_get_snd_device_name_extn(adev->platform, snd_device, device_name) < 0) {
+        ALOGE("%s: Invalid sound device returned", __func__);
+        return -EINVAL;
+    }
+
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
         ALOGV("%s: snd_device(%d: %s)", __func__,
-              snd_device, platform_get_snd_device_name(snd_device));
-        audio_route_reset_path(adev->audio_route, platform_get_snd_device_name(snd_device));
+              snd_device, device_name);
+        audio_route_reset_path(adev->audio_route, device_name);
         if (update_mixer)
             audio_route_update_mixer(adev->audio_route);
     }
+
     return 0;
 }
 

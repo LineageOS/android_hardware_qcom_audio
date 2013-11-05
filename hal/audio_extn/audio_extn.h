@@ -81,4 +81,16 @@ int32_t audio_extn_ssr_read(struct audio_stream_in *stream,
                        void *buffer, size_t bytes);
 #endif
 
+#ifndef HW_VARIANTS_ENABLED
+#define hw_info_init(snd_card_name)                  (0)
+#define hw_info_deinit(hw_info)                      (0)
+#define hw_info_append_hw_type(hw_info,\
+        snd_device, device_name)                     (0)
+#else
+void *hw_info_init(const char *snd_card_name);
+void hw_info_deinit(void *hw_info);
+void hw_info_append_hw_type(void *hw_info, snd_device_t snd_device,
+                             char *device_name);
+#endif
+
 #endif /* AUDIO_EXTN_H */

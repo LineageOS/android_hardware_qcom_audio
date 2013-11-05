@@ -75,7 +75,6 @@ typedef int  (*acdb_init_t)();
 typedef void (*acdb_send_audio_cal_t)(int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 
-/* Audio calibration related functions */
 struct platform_data {
     struct audio_device *adev;
     bool fluence_in_spkr_mode;
@@ -85,11 +84,14 @@ struct platform_data {
     int  btsco_sample_rate;
     bool slowtalk;
 
+    /* Audio calibration related functions */
     void *acdb_handle;
     acdb_init_t acdb_init;
     acdb_deallocate_t acdb_deallocate;
     acdb_send_audio_cal_t acdb_send_audio_cal;
     acdb_send_voice_cal_t acdb_send_voice_cal;
+
+    void *hw_info;
 };
 
 static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -204,9 +206,9 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 14,
     [SND_DEVICE_OUT_TRANSMISSION_FM] = 0,
     [SND_DEVICE_OUT_ANC_HEADSET] = 26,
-    [SND_DEVICE_OUT_ANC_FB_HEADSET] = 26,
+    [SND_DEVICE_OUT_ANC_FB_HEADSET] = 27,
     [SND_DEVICE_OUT_VOICE_ANC_HEADSET] = 26,
-    [SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET] = 26,
+    [SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET] = 27,
     [SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET] = 26,
     [SND_DEVICE_OUT_ANC_HANDSET] = 103,
 
@@ -302,7 +304,8 @@ void *platform_init(struct audio_device *adev)
 {
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data;
-    int retry_num = 0, ret;
+    int retry_num = 0;
+    const char *snd_card_name;
 
     adev->mixer = mixer_open(MIXER_CARD);
 
@@ -324,6 +327,12 @@ void *platform_init(struct audio_device *adev)
     }
 
     my_data = calloc(1, sizeof(struct platform_data));
+
+    snd_card_name = mixer_get_name(adev->mixer);
+    my_data->hw_info = hw_info_init(snd_card_name);
+    if (!my_data->hw_info) {
+        ALOGE("%s: Failed to init hardware info", __func__);
+    }
 
     my_data->adev = adev;
     my_data->btsco_sample_rate = SAMPLE_RATE_8KHZ;
@@ -391,6 +400,9 @@ void *platform_init(struct audio_device *adev)
 
 void platform_deinit(void *platform)
 {
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    hw_info_deinit(my_data->hw_info);
     free(platform);
     /* deinit usb */
     audio_extn_usb_deinit();
@@ -402,6 +414,22 @@ const char *platform_get_snd_device_name(snd_device_t snd_device)
         return device_table[snd_device];
     else
         return "";
+}
+
+int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
+                                      char *device_name)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (snd_device >= SND_DEVICE_MIN && snd_device < SND_DEVICE_MAX) {
+        strlcpy(device_name, device_table[snd_device], DEVICE_NAME_MAX_SIZE);
+        hw_info_append_hw_type(my_data->hw_info, snd_device, device_name);
+    } else {
+        strlcpy(device_name, "", DEVICE_NAME_MAX_SIZE);
+        return -EINVAL;
+    }
+
+    return 0;
 }
 
 void platform_add_backend_name(char *mixer_path, snd_device_t snd_device)
