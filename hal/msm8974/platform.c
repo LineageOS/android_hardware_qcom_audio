@@ -108,6 +108,7 @@ static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                           LOWLATENCY_PCM_DEVICE},
     [USECASE_VOICE_CALL] = {VOICE_CALL_PCM_DEVICE,
                             VOICE_CALL_PCM_DEVICE},
+    [USECASE_AUDIO_HFP_SCO] = {HFP_PCM_RX, HFP_SCO_RX},
 };
 
 /* Array to store sound devices */
@@ -960,6 +961,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) {
             if (my_data->fluence_in_voice_call == false) {
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
+                set_echo_reference(adev->mixer, "SLIM_RX");
             } else {
                 if (my_data->dualmic_config == DUALMIC_CONFIG_ENDFIRE) {
                     if (is_operator_tmus())

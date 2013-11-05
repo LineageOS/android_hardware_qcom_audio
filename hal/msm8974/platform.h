@@ -143,6 +143,15 @@ enum {
 #define VOICE_CALL_PCM_DEVICE 2
 #endif
 
+#define HFP_PCM_RX 5
+#ifdef PLATFORM_MSM8x26
+#define HFP_SCO_RX 28
+#define HFP_ASM_RX_TX 29
+#else
+#define HFP_SCO_RX 23
+#define HFP_ASM_RX_TX 24
+#endif
+
 #define LIB_CSD_CLIENT "libcsd-client.so"
 #define LIB_MDM_DETECT "libmdmdetect.so"
 

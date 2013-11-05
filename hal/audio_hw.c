@@ -45,6 +45,7 @@
 #include <audio_effects/effect_aec.h>
 #include <audio_effects/effect_ns.h>
 #include "audio_hw.h"
+#include "audio_extn.h"
 #include "platform_api.h"
 #include <platform.h>
 
@@ -114,6 +115,8 @@ static const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_MULTI_CH] = "multi-channel-playback",
     [USECASE_AUDIO_RECORD] = "audio-record",
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = "low-latency-record",
+    [USECASE_AUDIO_HFP_SCO] = "hfp-sco",
+    [USECASE_AUDIO_HFP_SCO_WB] = "hfp-sco-wb",
     [USECASE_VOICE_CALL] = "voice-call",
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] = "compress-offload-playback",
 };
@@ -161,8 +164,8 @@ static int get_snd_codec_id(audio_format_t format)
     return id;
 }
 
-static int enable_audio_route(struct audio_device *adev,
-                              struct audio_usecase *usecase)
+int enable_audio_route(struct audio_device *adev,
+                       struct audio_usecase *usecase)
 {
     snd_device_t snd_device;
     char mixer_path[50];
@@ -186,8 +189,8 @@ static int enable_audio_route(struct audio_device *adev,
     return 0;
 }
 
-static int disable_audio_route(struct audio_device *adev,
-                               struct audio_usecase *usecase)
+int disable_audio_route(struct audio_device *adev,
+                        struct audio_usecase *usecase)
 {
     snd_device_t snd_device;
     char mixer_path[50];
@@ -209,7 +212,7 @@ static int disable_audio_route(struct audio_device *adev,
     return 0;
 }
 
-static int enable_snd_device(struct audio_device *adev,
+int enable_snd_device(struct audio_device *adev,
                              snd_device_t snd_device)
 {
     if (snd_device < SND_DEVICE_MIN ||
@@ -237,7 +240,7 @@ static int enable_snd_device(struct audio_device *adev,
     return 0;
 }
 
-static int disable_snd_device(struct audio_device *adev,
+int disable_snd_device(struct audio_device *adev,
                               snd_device_t snd_device)
 {
     if (snd_device < SND_DEVICE_MIN ||
@@ -413,8 +416,8 @@ static int read_hdmi_channel_masks(struct stream_out *out)
     return ret;
 }
 
-static struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
-                                                   audio_usecase_t uc_id)
+struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
+                                            audio_usecase_t uc_id)
 {
     struct audio_usecase *usecase;
     struct listnode *node;
@@ -427,13 +430,15 @@ static struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
     return NULL;
 }
 
-static int select_devices(struct audio_device *adev,
-                          audio_usecase_t uc_id)
+int select_devices(struct audio_device *adev,
+                   audio_usecase_t uc_id)
 {
     snd_device_t out_snd_device = SND_DEVICE_NONE;
     snd_device_t in_snd_device = SND_DEVICE_NONE;
     struct audio_usecase *usecase = NULL;
     struct audio_usecase *vc_usecase = NULL;
+    struct audio_usecase *hfp_usecase = NULL;
+    audio_usecase_t hfp_ucid;
     struct listnode *node;
     int status = 0;
 
@@ -443,7 +448,8 @@ static int select_devices(struct audio_device *adev,
         return -EINVAL;
     }
 
-    if (usecase->type == VOICE_CALL) {
+    if ((usecase->type == VOICE_CALL) ||
+        (usecase->type == PCM_HFP_CALL)) {
         out_snd_device = platform_get_output_snd_device(adev->platform,
                                                         usecase->stream.out->devices);
         in_snd_device = platform_get_input_snd_device(adev->platform, usecase->stream.out->devices);
@@ -461,6 +467,13 @@ static int select_devices(struct audio_device *adev,
             if (vc_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
                 in_snd_device = vc_usecase->in_snd_device;
                 out_snd_device = vc_usecase->out_snd_device;
+            }
+        } else if (audio_extn_hfp_is_active(adev)) {
+            hfp_ucid = audio_extn_hfp_get_usecase();
+            hfp_usecase = get_usecase_from_list(adev, hfp_ucid);
+            if (hfp_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
+                   in_snd_device = hfp_usecase->in_snd_device;
+                   out_snd_device = hfp_usecase->out_snd_device;
             }
         }
         if (usecase->type == PCM_PLAYBACK) {
@@ -2141,6 +2154,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         pthread_mutex_unlock(&adev->lock);
     }
 
+    audio_extn_hfp_set_parameters(adev, parms);
     str_parms_destroy(parms);
     ALOGV("%s: exit with code(%d)", __func__, status);
     return status;

@@ -17,6 +17,7 @@
 #ifndef QCOM_AUDIO_HW_H
 #define QCOM_AUDIO_HW_H
 
+#include <cutils/str_parms.h>
 #include <cutils/list.h>
 #include <hardware/audio.h>
 
@@ -54,6 +55,10 @@ typedef enum {
     USECASE_AUDIO_PLAYBACK_LOW_LATENCY,
     USECASE_AUDIO_PLAYBACK_MULTI_CH,
     USECASE_AUDIO_PLAYBACK_OFFLOAD,
+
+    /* HFP Use case*/
+    USECASE_AUDIO_HFP_SCO,
+    USECASE_AUDIO_HFP_SCO_WB,
 
     /* Capture usecases */
     USECASE_AUDIO_RECORD,
@@ -150,7 +155,8 @@ struct stream_in {
 typedef enum {
     PCM_PLAYBACK,
     PCM_CAPTURE,
-    VOICE_CALL
+    VOICE_CALL,
+    PCM_HFP_CALL
 } usecase_type_t;
 
 union stream_ptr {
@@ -205,6 +211,19 @@ struct audio_device {
      */
     struct pcm_params *use_case_table[AUDIO_USECASE_MAX];
 };
+
+int select_devices(struct audio_device *adev,
+                   audio_usecase_t uc_id);
+int disable_audio_route(struct audio_device *adev,
+                        struct audio_usecase *usecase);
+int disable_snd_device(struct audio_device *adev,
+                       snd_device_t snd_device);
+int enable_snd_device(struct audio_device *adev,
+                      snd_device_t snd_device);
+int enable_audio_route(struct audio_device *adev,
+                       struct audio_usecase *usecase);
+struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
+                                            audio_usecase_t uc_id);
 
 /*
  * NOTE: when multiple mutexes have to be acquired, always take the
