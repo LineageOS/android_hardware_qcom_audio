@@ -21,18 +21,24 @@
 #define VOICE_EXTN_H
 
 #ifdef MULTI_VOICE_SESSION_ENABLED
-int voice_extn_update_calls(struct audio_device *adev);
+int voice_extn_start_call(struct audio_device *adev);
+int voice_extn_stop_call(struct audio_device *adev);
 int voice_extn_get_session_from_use_case(struct audio_device *adev,
                                          const audio_usecase_t usecase_id,
                                          struct voice_session **session);
-int voice_extn_init(struct audio_device *adev);
+void voice_extn_init(struct audio_device *adev);
 int voice_extn_set_parameters(struct audio_device *adev,
                               struct str_parms *parms);
 int voice_extn_is_in_call(struct audio_device *adev, bool *in_call);
 int voice_extn_get_active_session_id(struct audio_device *adev,
                                      uint32_t *session_id);
 #else
-static int voice_extn_update_calls(struct audio_device *adev)
+static int voice_extn_start_call(struct audio_device *adev)
+{
+    return -ENOSYS;
+}
+
+static int voice_extn_stop_call(struct audio_device *adev)
 {
     return -ENOSYS;
 }
@@ -44,9 +50,8 @@ static int voice_extn_get_session_from_use_case(struct audio_device *adev,
     return -ENOSYS;
 }
 
-static int voice_extn_init(struct audio_device *adev)
+static void voice_extn_init(struct audio_device *adev)
 {
-    return -ENOSYS;
 }
 
 static int voice_extn_set_parameters(struct audio_device *adev,

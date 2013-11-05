@@ -1033,19 +1033,15 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     ret = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_BTSCO, &val);
     if (ret >= 0) {
         str_parms_del(parms, AUDIO_PARAMETER_KEY_BTSCO);
-        pthread_mutex_lock(&my_data->adev->lock);
         my_data->btsco_sample_rate = val;
-        pthread_mutex_unlock(&my_data->adev->lock);
     }
 
     ret = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_SLOWTALK, &val);
     if (ret >= 0) {
         str_parms_del(parms, AUDIO_PARAMETER_KEY_SLOWTALK);
-        pthread_mutex_lock(&my_data->adev->lock);
         ret = platform_set_slowtalk(my_data, val);
         if (ret)
             ALOGE("%s: Failed to set slow talk err: %d", __func__, ret);
-        pthread_mutex_unlock(&my_data->adev->lock);
     }
 
     ALOGV("%s: exit with code(%d)", __func__, ret);
@@ -1095,7 +1091,6 @@ void platform_get_parameters(void *platform,
     ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_FLUENCE_TYPE,
                             value, sizeof(value));
     if (ret >= 0) {
-        pthread_mutex_lock(&my_data->adev->lock);
         if (my_data->fluence_type & FLUENCE_QUAD_MIC) {
             strlcpy(value, "fluencepro", sizeof(value));
         } else if (my_data->fluence_type & FLUENCE_DUAL_MIC) {
@@ -1103,7 +1098,6 @@ void platform_get_parameters(void *platform,
         } else {
             strlcpy(value, "none", sizeof(value));
         }
-        pthread_mutex_unlock(&my_data->adev->lock);
 
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_FLUENCE_TYPE, value);
     }
