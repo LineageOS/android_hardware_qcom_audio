@@ -135,7 +135,8 @@ static const struct string_to_enum out_channels_name_to_enum_table[] = {
 
 static struct audio_device *adev = NULL;
 static pthread_mutex_t adev_init_lock;
-static bool is_adev_initialised = false;
+static unsigned int audio_device_ref_count;
+
 static int set_voice_volume_l(struct audio_device *adev, float volume);
 
 static bool is_supported_format(audio_format_t format)
@@ -694,6 +695,9 @@ static int stop_input_stream(struct stream_in *in)
     /* 2. Disable the tx device */
     disable_snd_device(adev, uc_info->in_snd_device, true);
 
+    audio_extn_listen_update_status(uc_info,
+            LISTEN_EVENT_AUDIO_CAPTURE_INACTIVE);
+
     list_remove(&uc_info->list);
     free(uc_info);
 
@@ -737,6 +741,9 @@ int start_input_stream(struct stream_in *in)
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
     select_devices(adev, in->usecase);
+
+    audio_extn_listen_update_status(uc_info,
+            LISTEN_EVENT_AUDIO_CAPTURE_ACTIVE);
 
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d), channels %d",
           __func__, SOUND_CARD, in->pcm_device_id, in->config.channels);
@@ -2289,10 +2296,21 @@ static int adev_dump(const audio_hw_device_t *device, int fd)
 static int adev_close(hw_device_t *device)
 {
     struct audio_device *adev = (struct audio_device *)device;
-    audio_route_free(adev->audio_route);
-    free(adev->snd_dev_ref_cnt);
-    platform_deinit(adev->platform);
-    free(device);
+
+    if (!adev)
+        return 0;
+
+    pthread_mutex_lock(&adev_init_lock);
+
+    if ((--audio_device_ref_count) == 0) {
+        audio_route_free(adev->audio_route);
+        free(adev->snd_dev_ref_cnt);
+        platform_deinit(adev->platform);
+        audio_extn_listen_deinit(adev);
+        free(device);
+        adev = NULL;
+    }
+    pthread_mutex_unlock(&adev_init_lock);
     return 0;
 }
 
@@ -2305,8 +2323,9 @@ static int adev_open(const hw_module_t *module, const char *name,
     if (strcmp(name, AUDIO_HARDWARE_INTERFACE) != 0) return -EINVAL;
 
     pthread_mutex_lock(&adev_init_lock);
-    if (is_adev_initialised == true){
+    if (audio_device_ref_count != 0){
             *device = &adev->device.common;
+            audio_device_ref_count++;
             ALOGD("%s: returning existing instance of adev", __func__);
             ALOGD("%s: exit", __func__);
             pthread_mutex_unlock(&adev_init_lock);
@@ -2374,11 +2393,11 @@ static int adev_open(const hw_module_t *module, const char *name,
                                                         "visualizer_hal_stop_output");
         }
     }
+    audio_extn_listen_init(adev);
 
     *device = &adev->device.common;
 
-    /* update init flag*/
-    is_adev_initialised = true;
+    audio_device_ref_count++;
     pthread_mutex_unlock(&adev_init_lock);
 
     ALOGV("%s: exit", __func__);

@@ -84,6 +84,12 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \
 	$(LOCAL_PATH)/audio_extn
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_LISTEN)),true)
+    LOCAL_CFLAGS += -DAUDIO_LISTEN_ENABLED
+    LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-listen
+    LOCAL_SRC_FILES += audio_extn/listen.c
+endif
+
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
