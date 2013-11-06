@@ -2498,6 +2498,8 @@ status_t ALSADevice::startProxy() {
                    capture_handle->underruns++;
                    capture_handle->running = 0;
                    capture_handle->start = 0;
+                   /* sleeping for 10 ms before retrying */
+                   usleep(10000);
                    continue;
                 } else {
                    ALOGE("IGNORE - IOCTL_START failed for proxy err: %d \n", errno);
