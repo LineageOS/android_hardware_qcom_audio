@@ -105,6 +105,7 @@ static const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] = "compress-offload-playback",
     [USECASE_AUDIO_RECORD] = "audio-record",
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = "low-latency-record",
+    [USECASE_AUDIO_RECORD_FM_VIRTUAL] = "fm-virtual-record",
     [USECASE_AUDIO_PLAYBACK_FM] = "play-fm",
     [USECASE_VOICE_CALL] = "voice-call",
     
@@ -707,6 +708,7 @@ int start_input_stream(struct stream_in *in)
     struct audio_usecase *uc_info;
     struct audio_device *adev = in->dev;
 
+    in->usecase = platform_get_usecase_from_source(in->source);
     ALOGV("%s: enter: usecase(%d)", __func__, in->usecase);
 
     /* Check if source matches incall recording usecase criteria */
