@@ -29,6 +29,9 @@
 #include "audio_hw.h"
 #include "audio_extn.h"
 
+#define MAX_SLEEP_RETRY 100
+#define WIFI_INIT_WAIT_SLEEP 50
+
 struct audio_extn_module {
     bool anc_enabled;
     bool aanc_enabled;
@@ -208,3 +211,31 @@ void audio_extn_get_parameters(const struct audio_device *adev,
 
     ALOGD("%s: returns %s", __func__, str_parms_to_str(reply));
 }
+
+#ifdef AUXPCM_BT_ENABLED
+int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,
+                            const char* mixer_xml_path,
+                            const char* mixer_xml_path_auxpcm)
+{
+    char bt_soc[128];
+    bool wifi_init_complete = false;
+    int sleep_retry = 0;
+
+    while (!wifi_init_complete && sleep_retry < MAX_SLEEP_RETRY) {
+        property_get("qcom.bluetooth.soc", bt_soc, NULL);
+        if (strncmp(bt_soc, "unknown", sizeof("unknown"))) {
+            wifi_init_complete = true;
+        } else {
+            usleep(WIFI_INIT_WAIT_SLEEP*1000);
+            sleep_retry++;
+        }
+    }
+
+    if (!strncmp(bt_soc, "ath3k", sizeof("ath3k")))
+        adev->audio_route = audio_route_init(mixer_card, mixer_xml_path_auxpcm);
+    else
+        adev->audio_route = audio_route_init(mixer_card, mixer_xml_path);
+
+    return 0;
+}
+#endif /* AUXPCM_BT_ENABLED */

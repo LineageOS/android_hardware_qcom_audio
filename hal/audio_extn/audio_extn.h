@@ -117,4 +117,12 @@ void audio_extn_listen_set_parameters(struct audio_device *adev,
 
 #endif /* AUDIO_LISTEN_ENABLED */
 
+#ifndef AUXPCM_BT_ENABLED
+#define audio_extn_read_xml(adev, MIXER_CARD, MIXER_XML_PATH, \
+                            MIXER_XML_PATH_AUXPCM)               (-ENOSYS)
+#else
+int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,
+                            const char* mixer_xml_path,
+                            const char* mixer_xml_path_auxpcm);
+#endif /* AUXPCM_BT_ENABLED */
 #endif /* AUDIO_EXTN_H */
