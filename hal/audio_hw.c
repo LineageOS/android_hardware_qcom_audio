@@ -1857,6 +1857,12 @@ static int add_remove_audio_effect(const struct audio_stream *stream,
         if (!in->standby)
             select_devices(in->dev, in->usecase);
     }
+    if (in->enable_ns != enable &&
+            (memcmp(&desc.type, FX_IID_NS, sizeof(effect_uuid_t)) == 0)) {
+        in->enable_ns = enable;
+        if (!in->standby)
+            select_devices(in->dev, in->usecase);
+    }
     pthread_mutex_unlock(&in->dev->lock);
     pthread_mutex_unlock(&in->lock);
 
