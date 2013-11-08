@@ -90,6 +90,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_LISTEN)),true)
     LOCAL_SRC_FILES += audio_extn/listen.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUXPCM_BT)),true)
+    LOCAL_CFLAGS += -DAUXPCM_BT_ENABLED
+endif
+
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw

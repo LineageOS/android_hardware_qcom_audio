@@ -32,6 +32,7 @@
 #include "audio_extn.h"
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
+#define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
 
@@ -324,7 +325,10 @@ void *platform_init(struct audio_device *adev)
         return NULL;
     }
 
-    adev->audio_route = audio_route_init(MIXER_CARD, MIXER_XML_PATH);
+    if (audio_extn_read_xml(adev, MIXER_CARD, MIXER_XML_PATH,
+                            MIXER_XML_PATH_AUXPCM) == -ENOSYS)
+        adev->audio_route = audio_route_init(MIXER_CARD, MIXER_XML_PATH);
+
     if (!adev->audio_route) {
         ALOGE("%s: Failed to init audio route controls, aborting.", __func__);
         return NULL;
