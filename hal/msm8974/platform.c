@@ -836,7 +836,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             } else
                 set_echo_reference(adev->mixer, "NONE");
         }
-    } else if (source == AUDIO_SOURCE_FM_RX || AUDIO_SOURCE_FM_RX_A2DP) {
+    } else if (source == AUDIO_SOURCE_FM_RX ||
+               source ==  AUDIO_SOURCE_FM_RX_A2DP) {
         snd_device = SND_DEVICE_IN_CAPTURE_FM;
     } else if (source == AUDIO_SOURCE_DEFAULT) {
         goto exit;
@@ -1130,8 +1131,8 @@ int64_t platform_render_latency(audio_usecase_t usecase)
 
 int platform_get_usecase_from_source(int source)
 {
-    ALOGV("%s: input source ", __func__, source);
-    if(AUDIO_SOURCE_FM_RX_A2DP)
+    ALOGV("%s: input source :%d", __func__, source);
+    if(source == AUDIO_SOURCE_FM_RX_A2DP)
         return USECASE_AUDIO_RECORD_FM_VIRTUAL;
     else
         return USECASE_AUDIO_RECORD;
