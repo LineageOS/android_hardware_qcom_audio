@@ -95,7 +95,7 @@ AudioHardwareInterface *AudioHardwareALSA::create() {
 
 AudioHardwareALSA::AudioHardwareALSA() :
     mALSADevice(0),mVoipInStreamCount(0),mVoipOutStreamCount(0),mVoipMicMute(false),
-    mVoipBitRate(0),mCallState(0),mAcdbHandle(NULL),mCsdHandle(NULL),mMicMute(0)
+    mVoipBitRate(0),mCallState(CALL_INACTIVE),mAcdbHandle(NULL),mCsdHandle(NULL),mMicMute(0)
 {
     FILE *fp;
     char soundCardInfo[200];
@@ -488,14 +488,18 @@ status_t AudioHardwareALSA::setMode(int mode)
 
     if (mode == AUDIO_MODE_IN_CALL) {
         if (mCallState == CALL_INACTIVE) {
+#ifndef QCOM_MULTI_VOICE_SESSION_ENABLED
             ALOGV("%s() defaulting vsid and call state",__func__);
             mCallState = CALL_ACTIVE;
             mVSID = VOICE_SESSION_VSID;
+#endif
         } else {
             ALOGV("%s no op",__func__);
         }
     } else if (mode == AUDIO_MODE_NORMAL) {
+#ifndef QCOM_MULTI_VOICE_SESSION_ENABLED
         mCallState = CALL_INACTIVE;
+#endif
     }
 
     return status;
@@ -796,16 +800,21 @@ status_t AudioHardwareALSA::setParameters(const String8& keyValuePairs)
 
     key = String8(VSID_KEY);
     if (param.getInt(key, (int &)vsid) == NO_ERROR) {
-        mVSID = vsid;
         param.remove(key);
         key = String8(CALL_STATE_KEY);
         if (param.getInt(key, (int &)call_state) == NO_ERROR) {
             param.remove(key);
-            mCallState = call_state;
-            ALOGV("%s() vsid:%x, callstate:%x", __func__, mVSID, call_state);
-
-            if(isAnyCallActive())
-                doRouting(0);
+            if (isAnyCallActive() || (call_state == CALL_ACTIVE)) {
+                mVSID = vsid;
+                mCallState = call_state;
+                ALOGD("%s() vsid:%x, callstate:%x", __func__, mVSID, call_state);
+            }
+            if(isAnyCallActive()
+#ifdef QCOM_MULTI_VOICE_SESSION_ENABLED
+               || mMode == AUDIO_MODE_IN_CALL
+#endif
+              )
+               doRouting(0);
         }
         param.remove(key);
     }
@@ -988,7 +997,8 @@ status_t AudioHardwareALSA::doRouting(int device)
           device, newMode, mVoiceCallState,
           mVolteCallState, mVoice2CallState, mIsFmActive);
 
-    isRouted = routeCall(device, newMode, mVSID);
+    if (mVSID)
+        isRouted = routeCall(device, newMode, mVSID);
 
     if ((isAnyCallActive())&&
        (mFusion3Platform == true) &&
