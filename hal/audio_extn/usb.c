@@ -127,7 +127,7 @@ static int usb_get_capability(char *type, int32_t *channels,
     char *read_buf, *str_start, *channel_start, *rates_str, *rates_str_for_val,
     *rates_str_start, *next_sr_str, *test, *next_sr_string, *temp_ptr;
     struct stat st;
-    int rates_supported[size];
+    int *rates_supported;
     char path[128];
 
     memset(&st, 0x0, sizeof(struct stat));
@@ -246,12 +246,14 @@ static int usb_get_capability(char *type, int32_t *channels,
         return -EINVAL;
     }
 
+    rates_supported = (int *)malloc(sizeof(int) * size);
     next_sr_string = strtok_r(rates_str_for_val, " ,", &temp_ptr);
     if (next_sr_string == NULL) {
         ALOGE("%s: error could not get first rate val", __func__);
         close(fd);
         free(rates_str_for_val);
         free(rates_str);
+        free(rates_supported);
         free(read_buf);
         return -EINVAL;
     }
@@ -282,6 +284,7 @@ static int usb_get_capability(char *type, int32_t *channels,
     close(fd);
     free(rates_str_for_val);
     free(rates_str);
+    free(rates_supported);
     free(read_buf);
     return 0;
 }

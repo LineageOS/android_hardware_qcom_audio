@@ -285,15 +285,6 @@ int disable_snd_device(struct audio_device *adev,
 
     adev->snd_dev_ref_cnt[snd_device]--;
 
-    /* exit usb play back thread */
-    if(SND_DEVICE_OUT_USB_HEADSET == snd_device ||
-       SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET == snd_device)
-        audio_extn_usb_stop_playback();
-
-    /* exit usb capture thread */
-    if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
-        audio_extn_usb_stop_capture(adev);
-
     if(platform_get_snd_device_name_extn(adev->platform, snd_device, device_name) < 0) {
         ALOGE("%s: Invalid sound device returned", __func__);
         return -EINVAL;
@@ -302,7 +293,17 @@ int disable_snd_device(struct audio_device *adev,
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
         ALOGV("%s: snd_device(%d: %s)", __func__,
               snd_device, device_name);
+        /* exit usb play back thread */
+        if(SND_DEVICE_OUT_USB_HEADSET == snd_device ||
+           SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET == snd_device)
+            audio_extn_usb_stop_playback();
+
+        /* exit usb capture thread */
+        if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
+            audio_extn_usb_stop_capture(adev);
+
         audio_route_reset_path(adev->audio_route, device_name);
+
         if (update_mixer)
             audio_route_update_mixer(adev->audio_route);
     }
@@ -1094,9 +1095,18 @@ static int check_input_parameters(uint32_t sample_rate,
                                   audio_format_t format,
                                   int channel_count)
 {
-    if (format != AUDIO_FORMAT_PCM_16_BIT) return -EINVAL;
+    int ret = 0;
 
-    if ((channel_count < 1) || (channel_count > 6)) return -EINVAL;
+    if (format != AUDIO_FORMAT_PCM_16_BIT) ret = -EINVAL;
+
+    switch (channel_count) {
+    case 1:
+    case 2:
+    case 6:
+        break;
+    default:
+        ret = -EINVAL;
+    }
 
     switch (sample_rate) {
     case 8000:
@@ -1110,10 +1120,10 @@ static int check_input_parameters(uint32_t sample_rate,
     case 48000:
         break;
     default:
-        return -EINVAL;
+        ret = -EINVAL;
     }
 
-    return 0;
+    return ret;
 }
 
 static size_t get_input_buffer_size(uint32_t sample_rate,
@@ -2214,7 +2224,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 {
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_in *in;
-    int ret, buffer_size, frame_size;
+    int ret = 0, buffer_size, frame_size;
     int channel_count = popcount(config->channel_mask);
 
     ALOGV("%s: enter", __func__);
@@ -2251,9 +2261,17 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->config = pcm_config_audio_capture;
     in->config.rate = config->sample_rate;
 
-    if (audio_extn_ssr_get_enabled()&& channel_count == 6) {
-        if(audio_extn_ssr_init(adev, in))
-            ALOGE("%s: audio_extn_ssr_init failed", __func__);
+    if (channel_count == 6) {
+        if(audio_extn_ssr_get_enabled()) {
+            if(audio_extn_ssr_init(adev, in)) {
+                ALOGE("%s: audio_extn_ssr_init failed", __func__);
+                ret = -EINVAL;
+                goto err_open;
+            }
+        } else {
+            ret = -EINVAL;
+            goto err_open;
+        }
     } else {
         in->config.channels = channel_count;
         frame_size = audio_stream_frame_size((struct audio_stream *)in);
@@ -2265,7 +2283,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
     *stream_in = &in->stream;
     ALOGV("%s: exit", __func__);
-    return 0;
+    return ret;
 
 err_open:
     free(in);
