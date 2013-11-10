@@ -37,8 +37,13 @@
 
 extern "C" {
 #ifdef QCOM_CSDCLIENT_ENABLED
+#ifdef NEW_CSDCLIENT
 static int (*csd_start_record)(uint32_t, int);
 static int (*csd_stop_record)(uint32_t);
+#else
+static int (*csd_start_record)(int);
+static int (*csd_stop_record)(void);
+#endif
 #endif
 #ifdef QCOM_SSR_ENABLED
 #include "surround_filters_interface.h"
@@ -113,10 +118,17 @@ AudioStreamInALSA::AudioStreamInALSA(AudioHardwareALSA *parent,
 #endif
 #ifdef QCOM_CSDCLIENT_ENABLED
     if (mParent->mCsdHandle != NULL) {
+#ifdef NEW_CSDCLIENT
         csd_start_record = (int (*)(uint32_t, int))::dlsym(mParent->mCsdHandle,
                                                       "csd_client_start_record");
         csd_stop_record = (int (*)(uint32_t))::dlsym(mParent->mCsdHandle,
                                                 "csd_client_stop_record");
+#else
+        csd_start_record = (int (*)(int))::dlsym(mParent->mCsdHandle,
+                                                      "csd_client_start_record");
+        csd_stop_record = (int (*)())::dlsym(mParent->mCsdHandle,
+                                                "csd_client_stop_record");
+#endif
     }
 #endif
 }
@@ -162,7 +174,11 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                         if (csd_start_record == NULL) {
                             ALOGE("csd_start_record is NULL");
                         } else {
+#ifdef NEW_CSDCLIENT
                             csd_start_record(ALL_SESSION_VSID, INCALL_REC_STEREO);
+#else
+                            csd_start_record(INCALL_REC_STEREO);
+#endif
                         }
                     } else
 #endif
@@ -184,7 +200,11 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                         if (csd_start_record == NULL) {
                             ALOGE("csd_start_record is NULL");
                         } else {
+#ifdef NEW_CSDCLIENT
                             csd_start_record(ALL_SESSION_VSID, INCALL_REC_MONO);
+#else
+                            csd_start_record(INCALL_REC_MONO);
+#endif
                         }
                     } else
 #endif
@@ -243,8 +263,12 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                        if (csd_start_record == NULL) {
                            ALOGE("csd_start_record is NULL");
                        } else {
+#ifdef NEW_CSDCLIENT
                            csd_start_record(ALL_SESSION_VSID,
                                             INCALL_REC_STEREO);
+#else
+                           csd_start_record(INCALL_REC_STEREO);
+#endif
                        }
                     } else
 #endif
@@ -267,7 +291,11 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                        if (csd_start_record == NULL) {
                            ALOGE("csd_start_record is NULL");
                        } else {
+#ifdef NEW_CSDCLIENT
                            csd_start_record(ALL_SESSION_VSID, INCALL_REC_MONO);
+#else
+                           csd_start_record(INCALL_REC_MONO);
+#endif
                        }
                    } else
 #endif
@@ -630,7 +658,11 @@ status_t AudioStreamInALSA::close()
            if (csd_stop_record == NULL) {
                ALOGE("csd_stop_record is NULL");
            } else {
+#ifdef NEW_CSDCLIENT
                csd_stop_record(ALL_SESSION_VSID);
+#else
+               csd_stop_record();
+#endif
            }
        }
     }
@@ -704,7 +736,11 @@ status_t AudioStreamInALSA::standby()
            if (csd_stop_record == NULL) {
                ALOGE("csd_stop_record is NULL");
            } else {
+#ifdef NEW_CSDCLIENT
                csd_stop_record(ALL_SESSION_VSID);
+#else
+               csd_stop_record();
+#endif
            }
        }
     }
