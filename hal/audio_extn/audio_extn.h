@@ -125,4 +125,16 @@ int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,
                             const char* mixer_xml_path,
                             const char* mixer_xml_path_auxpcm);
 #endif /* AUXPCM_BT_ENABLED */
+#ifndef SPKR_PROT_ENABLED
+#define audio_extn_spkr_prot_init(adev)       (0)
+#define audio_extn_spkr_prot_start_processing(snd_device)    (-EINVAL)
+#define audio_extn_spkr_prot_stop_processing()     (0)
+#define audio_extn_spkr_prot_is_enabled() (false)
+#else
+void audio_extn_spkr_prot_init(void *adev);
+int audio_extn_spkr_prot_start_processing(snd_device_t snd_device);
+void audio_extn_spkr_prot_stop_processing();
+bool audio_extn_spkr_prot_is_enabled();
+#endif
+
 #endif /* AUDIO_EXTN_H */
