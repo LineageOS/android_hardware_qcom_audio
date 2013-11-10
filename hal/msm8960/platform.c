@@ -125,7 +125,6 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_HDMI] = "hdmi",
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = "speaker-and-hdmi",
     [SND_DEVICE_OUT_BT_SCO] = "bt-sco-headset",
-    [SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = "voice-handset-tmus",
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = "voice-tty-full-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = "voice-tty-vco-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = "voice-tty-hco-handset",
@@ -143,7 +142,6 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_BT_SCO_MIC] = "bt-sco-mic",
     [SND_DEVICE_IN_CAMCORDER_MIC] = "camcorder-mic",
     [SND_DEVICE_IN_VOICE_DMIC] = "voice-dmic-ef",
-    [SND_DEVICE_IN_VOICE_DMIC_TMUS] = "voice-dmic-ef-tmus",
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC] = "voice-speaker-dmic-ef",
     [SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = "voice-tty-full-headset-mic",
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = "voice-tty-vco-handset-mic",
@@ -166,7 +164,6 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_HDMI] = 18,
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 14,
     [SND_DEVICE_OUT_BT_SCO] = 22,
-    [SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = 81,
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = 37,
@@ -183,7 +180,6 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_BT_SCO_MIC] = 21,
     [SND_DEVICE_IN_CAMCORDER_MIC] = 61,
     [SND_DEVICE_IN_VOICE_DMIC] = 6,
-    [SND_DEVICE_IN_VOICE_DMIC_TMUS] = 91,
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC] = 13,
     [SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = 16,
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = 36,
@@ -196,32 +192,6 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
 
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
-
-static pthread_once_t check_op_once_ctl = PTHREAD_ONCE_INIT;
-static bool is_tmus = false;
-
-static void check_operator()
-{
-    char value[PROPERTY_VALUE_MAX];
-    int mccmnc;
-    property_get("gsm.sim.operator.numeric",value,"0");
-    mccmnc = atoi(value);
-    ALOGD("%s: tmus mccmnc %d", __func__, mccmnc);
-    switch(mccmnc) {
-    /* TMUS MCC(310), MNC(490, 260, 026) */
-    case 310490:
-    case 310260:
-    case 310026:
-        is_tmus = true;
-        break;
-    }
-}
-
-bool is_operator_tmus()
-{
-    pthread_once(&check_op_once_ctl, check_operator);
-    return is_tmus;
-}
 
 static int set_echo_reference(struct mixer *mixer, const char* ec_ref)
 {
@@ -611,10 +581,7 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
             snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
         } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
-            if (is_operator_tmus())
-                snd_device = SND_DEVICE_OUT_VOICE_HANDSET_TMUS;
-            else
-                snd_device = SND_DEVICE_OUT_HANDSET;
+            snd_device = SND_DEVICE_OUT_HANDSET;
         }
         if (snd_device != SND_DEVICE_NONE) {
             goto exit;
@@ -714,10 +681,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 my_data->fluence_in_voice_call == false) {
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
             } else {
-                if (is_operator_tmus())
-                    snd_device = SND_DEVICE_IN_VOICE_DMIC_TMUS;
-                else
-                    snd_device = SND_DEVICE_IN_VOICE_DMIC;
+                snd_device = SND_DEVICE_IN_VOICE_DMIC;
                 adev->acdb_settings |= DMIC_FLAG;
             }
         } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
