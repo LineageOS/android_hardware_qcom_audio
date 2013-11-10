@@ -81,6 +81,7 @@ struct platform_data {
     bool fluence_in_spkr_mode;
     bool fluence_in_voice_call;
     bool fluence_in_voice_rec;
+    bool fluence_in_audio_rec;
     int  fluence_type;
     int  btsco_sample_rate;
     bool slowtalk;
@@ -160,10 +161,14 @@ static const char * const device_table[SND_DEVICE_MAX] = {
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
+    [SND_DEVICE_IN_HANDSET_DMIC] = "dmic-endfire",
     [SND_DEVICE_IN_SPEAKER_MIC] = "speaker-mic",
+    [SND_DEVICE_IN_SPEAKER_DMIC] = "speaker-dmic-endfire",
     [SND_DEVICE_IN_HEADSET_MIC] = "headset-mic",
     [SND_DEVICE_IN_HANDSET_MIC_AEC] = "handset-mic",
-    [SND_DEVICE_IN_SPEAKER_MIC_AEC] = "voice-speaker-mic",
+    [SND_DEVICE_IN_HANDSET_DMIC_AEC] = "dmic-endfire",
+    [SND_DEVICE_IN_SPEAKER_MIC_AEC] = "speaker-mic",
+    [SND_DEVICE_IN_SPEAKER_DMIC_AEC] = "speaker-dmic-endfire",
     [SND_DEVICE_IN_HEADSET_MIC_AEC] = "headset-mic",
     [SND_DEVICE_IN_VOICE_SPEAKER_MIC] = "voice-speaker-mic",
     [SND_DEVICE_IN_VOICE_HEADSET_MIC] = "voice-headset-mic",
@@ -177,7 +182,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = "voice-tty-vco-handset-mic",
     [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = "voice-tty-hco-headset-mic",
     [SND_DEVICE_IN_VOICE_REC_MIC] = "voice-rec-mic",
-    [SND_DEVICE_IN_VOICE_REC_DMIC] = "voice-rec-dmic-ef",
+    [SND_DEVICE_IN_VOICE_REC_DMIC_STEREO] = "voice-rec-dmic-ef",
     [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = "voice-rec-dmic-ef-fluence",
     [SND_DEVICE_IN_USB_HEADSET_MIC] = "usb-headset-mic",
     [SND_DEVICE_IN_CAPTURE_FM] = "capture-fm",
@@ -219,32 +224,35 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = 101,
 
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
-    [SND_DEVICE_IN_SPEAKER_MIC] = 4, /* ToDo: Check if this needs to changed to 11 */
+    [SND_DEVICE_IN_HANDSET_DMIC] = 41,
+    [SND_DEVICE_IN_SPEAKER_MIC] = 11,
+    [SND_DEVICE_IN_SPEAKER_DMIC] = 43,
     [SND_DEVICE_IN_HEADSET_MIC] = 8,
     [SND_DEVICE_IN_HANDSET_MIC_AEC] = 40,
+    [SND_DEVICE_IN_HANDSET_DMIC_AEC] = 41,
     [SND_DEVICE_IN_SPEAKER_MIC_AEC] = 42,
+    [SND_DEVICE_IN_SPEAKER_DMIC_AEC] = 43,
     [SND_DEVICE_IN_HEADSET_MIC_AEC] = 47,
     [SND_DEVICE_IN_VOICE_SPEAKER_MIC] = 11,
     [SND_DEVICE_IN_VOICE_HEADSET_MIC] = 8,
     [SND_DEVICE_IN_HDMI_MIC] = 4,
     [SND_DEVICE_IN_BT_SCO_MIC] = 21,
     [SND_DEVICE_IN_BT_SCO_MIC_WB] = 38,
-    [SND_DEVICE_IN_CAMCORDER_MIC] = 61,
+    [SND_DEVICE_IN_CAMCORDER_MIC] = 4,
     [SND_DEVICE_IN_VOICE_DMIC] = 41,
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC] = 43,
     [SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = 16,
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = 36,
     [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = 16,
-    [SND_DEVICE_IN_VOICE_REC_MIC] = 62,
+    [SND_DEVICE_IN_VOICE_REC_MIC] = 4,
+    [SND_DEVICE_IN_VOICE_REC_DMIC_STEREO] = 34,
+    [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = 41,
     [SND_DEVICE_IN_USB_HEADSET_MIC] = 44,
     [SND_DEVICE_IN_CAPTURE_FM] = 0,
     [SND_DEVICE_IN_AANC_HANDSET_MIC] = 104,
     [SND_DEVICE_IN_QUAD_MIC] = 46,
     [SND_DEVICE_IN_HANDSET_STEREO_DMIC] = 34,
     [SND_DEVICE_IN_SPEAKER_STEREO_DMIC] = 35,
-    /* TODO: Update with proper acdb ids */
-    [SND_DEVICE_IN_VOICE_REC_DMIC] = 62,
-    [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = 6,
     [SND_DEVICE_IN_CAPTURE_VI_FEEDBACK] = 102,
 };
 
@@ -309,11 +317,12 @@ void *platform_init(struct audio_device *adev)
     my_data->fluence_in_spkr_mode = false;
     my_data->fluence_in_voice_call = false;
     my_data->fluence_in_voice_rec = false;
+    my_data->fluence_in_audio_rec = false;
     my_data->fluence_type = FLUENCE_NONE;
 
     property_get("ro.qc.sdk.audio.fluencetype", value, "");
     if (!strncmp("fluencepro", value, sizeof("fluencepro"))) {
-        my_data->fluence_type = FLUENCE_QUAD_MIC;
+        my_data->fluence_type = FLUENCE_QUAD_MIC | FLUENCE_DUAL_MIC;
     } else if (!strncmp("fluence", value, sizeof("fluence"))) {
         my_data->fluence_type = FLUENCE_DUAL_MIC;
     } else {
@@ -329,6 +338,11 @@ void *platform_init(struct audio_device *adev)
         property_get("persist.audio.fluence.voicerec",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_rec = true;
+        }
+
+        property_get("persist.audio.fluence.audiorec",value,"");
+        if (!strncmp("true", value, sizeof("true"))) {
+            my_data->fluence_in_audio_rec = true;
         }
 
         property_get("persist.audio.fluence.speaker",value,"");
@@ -753,12 +767,12 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             if (my_data->fluence_type != FLUENCE_NONE &&
                 my_data->fluence_in_voice_call &&
                 my_data->fluence_in_spkr_mode) {
-                if(my_data->fluence_type == FLUENCE_DUAL_MIC) {
-                    adev->acdb_settings |= DMIC_FLAG;
-                    snd_device = SND_DEVICE_IN_VOICE_SPEAKER_DMIC;
-                } else {
+                if(my_data->fluence_type & FLUENCE_QUAD_MIC) {
                     adev->acdb_settings |= QMIC_FLAG;
                     snd_device = SND_DEVICE_IN_VOICE_SPEAKER_QMIC;
+                } else {
+                    adev->acdb_settings |= DMIC_FLAG;
+                    snd_device = SND_DEVICE_IN_VOICE_SPEAKER_DMIC;
                 }
             } else {
                 snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
@@ -772,7 +786,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
     } else if (source == AUDIO_SOURCE_VOICE_RECOGNITION) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
             if (channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK)
-                snd_device = SND_DEVICE_IN_VOICE_REC_DMIC;
+                snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_STEREO;
             else if (my_data->fluence_in_voice_rec)
                 snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
 
@@ -787,15 +801,35 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         if (adev->active_input) {
             if (adev->active_input->enable_aec) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
-                    snd_device = SND_DEVICE_IN_SPEAKER_MIC_AEC;
+                    if(my_data->fluence_type & FLUENCE_DUAL_MIC)
+                        snd_device = SND_DEVICE_IN_SPEAKER_DMIC_AEC;
+                    else
+                        snd_device = SND_DEVICE_IN_SPEAKER_MIC_AEC;
                 } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
-                    snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC;
+                    if(my_data->fluence_type & FLUENCE_DUAL_MIC)
+                        snd_device = SND_DEVICE_IN_HANDSET_DMIC_AEC;
+                    else
+                        snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC;
                 } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
                     snd_device = SND_DEVICE_IN_HEADSET_MIC_AEC;
                 }
                 set_echo_reference(adev->mixer, "SLIM_RX");
             } else
                 set_echo_reference(adev->mixer, "NONE");
+        }
+    } else if (source == AUDIO_SOURCE_MIC) {
+        if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
+            if(my_data->fluence_type & FLUENCE_DUAL_MIC &&
+                    my_data->fluence_in_audio_rec)
+                snd_device = SND_DEVICE_IN_SPEAKER_DMIC;
+            else
+                snd_device = SND_DEVICE_IN_SPEAKER_MIC;
+        } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+            if(my_data->fluence_type & FLUENCE_DUAL_MIC &&
+                    my_data->fluence_in_audio_rec)
+                snd_device = SND_DEVICE_IN_HANDSET_DMIC;
+            else
+                snd_device = SND_DEVICE_IN_HANDSET_MIC;
         }
     } else if (source == AUDIO_SOURCE_FM_RX ||
                source ==  AUDIO_SOURCE_FM_RX_A2DP) {
@@ -1062,9 +1096,9 @@ void platform_get_parameters(void *platform,
                             value, sizeof(value));
     if (ret >= 0) {
         pthread_mutex_lock(&my_data->adev->lock);
-        if (my_data->fluence_type == FLUENCE_QUAD_MIC) {
+        if (my_data->fluence_type & FLUENCE_QUAD_MIC) {
             strlcpy(value, "fluencepro", sizeof(value));
-        } else if (my_data->fluence_type == FLUENCE_DUAL_MIC) {
+        } else if (my_data->fluence_type & FLUENCE_DUAL_MIC) {
             strlcpy(value, "fluence", sizeof(value));
         } else {
             strlcpy(value, "none", sizeof(value));
