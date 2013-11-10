@@ -371,10 +371,15 @@ static void check_usecases_codec_backend(struct audio_device *adev,
             usecase = node_to_item(node, struct audio_usecase, list);
             if (switch_device[usecase->id]) {
                 disable_snd_device(adev, usecase->out_snd_device, false);
-                enable_snd_device(adev, snd_device, false);
             }
         }
 
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (switch_device[usecase->id]) {
+                enable_snd_device(adev, snd_device, false);
+            }
+        }
         /* Make sure new snd device is enabled before re-routing the streams */
         audio_route_update_mixer(adev->audio_route);
 
@@ -1211,6 +1216,7 @@ static int out_standby(struct audio_stream *stream)
           out->usecase, use_case_table[out->usecase]);
 
     pthread_mutex_lock(&out->lock);
+    pthread_mutex_lock(&adev->lock);
     if (!out->standby) {
         out->standby = true;
         if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
@@ -1227,10 +1233,9 @@ static int out_standby(struct audio_stream *stream)
                 out->compr = NULL;
             }
         }
-        pthread_mutex_lock(&adev->lock);
         stop_output_stream(out);
-        pthread_mutex_unlock(&adev->lock);
     }
+    pthread_mutex_unlock(&adev->lock);
     pthread_mutex_unlock(&out->lock);
     ALOGV("%s: exit", __func__);
     return 0;
