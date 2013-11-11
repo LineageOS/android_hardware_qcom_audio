@@ -36,6 +36,10 @@ ifeq ($(BOARD_USES_STEREO_HW_SPEAKER),true)
     LOCAL_CFLAGS += -DWITH_STEREO_HW_SPEAKER
 endif
 
+ifeq ($(BOARD_HAVE_BACK_MIC_CAMCORDER),true)
+    LOCAL_CFLAGS += -DBACK_MIC_CAMCORDER
+endif
+
 LOCAL_SHARED_LIBRARIES := \
     libcutils       \
     libutils        \
