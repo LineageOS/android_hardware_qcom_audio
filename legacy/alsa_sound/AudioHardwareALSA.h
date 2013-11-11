@@ -963,7 +963,7 @@ protected:
     void *mCsdHandle;
 
     //fluence key value: fluencepro, fluence, or none
-    char mFluenceKey[20];
+    char mFluenceKey[PROP_VALUE_MAX];
     //A2DP variables
     audio_stream_out   *mA2dpStream;
     audio_hw_device_t  *mA2dpDevice;
