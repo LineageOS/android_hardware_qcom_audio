@@ -161,15 +161,23 @@ static const char * const device_table[SND_DEVICE_MAX] = {
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
-    [SND_DEVICE_IN_HANDSET_DMIC] = "dmic-endfire",
-    [SND_DEVICE_IN_SPEAKER_MIC] = "speaker-mic",
-    [SND_DEVICE_IN_SPEAKER_DMIC] = "speaker-dmic-endfire",
-    [SND_DEVICE_IN_HEADSET_MIC] = "headset-mic",
     [SND_DEVICE_IN_HANDSET_MIC_AEC] = "handset-mic",
+    [SND_DEVICE_IN_HANDSET_MIC_NS] = "handset-mic",
+    [SND_DEVICE_IN_HANDSET_MIC_AEC_NS] = "handset-mic",
+    [SND_DEVICE_IN_HANDSET_DMIC] = "dmic-endfire",
     [SND_DEVICE_IN_HANDSET_DMIC_AEC] = "dmic-endfire",
+    [SND_DEVICE_IN_HANDSET_DMIC_NS] = "dmic-endfire",
+    [SND_DEVICE_IN_HANDSET_DMIC_AEC_NS] = "dmic-endfire",
+    [SND_DEVICE_IN_SPEAKER_MIC] = "speaker-mic",
     [SND_DEVICE_IN_SPEAKER_MIC_AEC] = "speaker-mic",
+    [SND_DEVICE_IN_SPEAKER_MIC_NS] = "speaker-mic",
+    [SND_DEVICE_IN_SPEAKER_MIC_AEC_NS] = "speaker-mic",
+    [SND_DEVICE_IN_SPEAKER_DMIC] = "speaker-dmic-endfire",
     [SND_DEVICE_IN_SPEAKER_DMIC_AEC] = "speaker-dmic-endfire",
-    [SND_DEVICE_IN_HEADSET_MIC_AEC] = "headset-mic",
+    [SND_DEVICE_IN_SPEAKER_DMIC_NS] = "speaker-dmic-endfire",
+    [SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS] = "speaker-dmic-endfire",
+    [SND_DEVICE_IN_HEADSET_MIC] = "headset-mic",
+    [SND_DEVICE_IN_HEADSET_MIC_FLUENCE] = "headset-mic",
     [SND_DEVICE_IN_VOICE_SPEAKER_MIC] = "voice-speaker-mic",
     [SND_DEVICE_IN_VOICE_HEADSET_MIC] = "voice-headset-mic",
     [SND_DEVICE_IN_HDMI_MIC] = "hdmi-mic",
@@ -182,6 +190,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = "voice-tty-vco-handset-mic",
     [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = "voice-tty-hco-headset-mic",
     [SND_DEVICE_IN_VOICE_REC_MIC] = "voice-rec-mic",
+    [SND_DEVICE_IN_VOICE_REC_MIC_NS] = "voice-rec-mic",
     [SND_DEVICE_IN_VOICE_REC_DMIC_STEREO] = "voice-rec-dmic-ef",
     [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = "voice-rec-dmic-ef-fluence",
     [SND_DEVICE_IN_USB_HEADSET_MIC] = "usb-headset-mic",
@@ -224,15 +233,23 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = 101,
 
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
+    [SND_DEVICE_IN_HANDSET_MIC_AEC] = 106,
+    [SND_DEVICE_IN_HANDSET_MIC_NS] = 107,
+    [SND_DEVICE_IN_HANDSET_MIC_AEC_NS] = 108,
     [SND_DEVICE_IN_HANDSET_DMIC] = 41,
+    [SND_DEVICE_IN_HANDSET_DMIC_AEC] = 109,
+    [SND_DEVICE_IN_HANDSET_DMIC_NS] = 110,
+    [SND_DEVICE_IN_HANDSET_DMIC_AEC_NS] = 111,
     [SND_DEVICE_IN_SPEAKER_MIC] = 11,
+    [SND_DEVICE_IN_SPEAKER_MIC_AEC] = 112,
+    [SND_DEVICE_IN_SPEAKER_MIC_NS] = 113,
+    [SND_DEVICE_IN_SPEAKER_MIC_AEC_NS] = 114,
     [SND_DEVICE_IN_SPEAKER_DMIC] = 43,
+    [SND_DEVICE_IN_SPEAKER_DMIC_AEC] = 115,
+    [SND_DEVICE_IN_SPEAKER_DMIC_NS] = 116,
+    [SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS] = 117,
     [SND_DEVICE_IN_HEADSET_MIC] = 8,
-    [SND_DEVICE_IN_HANDSET_MIC_AEC] = 40,
-    [SND_DEVICE_IN_HANDSET_DMIC_AEC] = 41,
-    [SND_DEVICE_IN_SPEAKER_MIC_AEC] = 42,
-    [SND_DEVICE_IN_SPEAKER_DMIC_AEC] = 43,
-    [SND_DEVICE_IN_HEADSET_MIC_AEC] = 47,
+    [SND_DEVICE_IN_HEADSET_MIC_FLUENCE] = 47,
     [SND_DEVICE_IN_VOICE_SPEAKER_MIC] = 11,
     [SND_DEVICE_IN_VOICE_HEADSET_MIC] = 8,
     [SND_DEVICE_IN_HDMI_MIC] = 4,
@@ -245,6 +262,7 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = 36,
     [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = 16,
     [SND_DEVICE_IN_VOICE_REC_MIC] = 4,
+    [SND_DEVICE_IN_VOICE_REC_MIC_NS] = 107,
     [SND_DEVICE_IN_VOICE_REC_DMIC_STEREO] = 34,
     [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = 41,
     [SND_DEVICE_IN_USB_HEADSET_MIC] = 44,
@@ -785,35 +803,76 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         }
     } else if (source == AUDIO_SOURCE_VOICE_RECOGNITION) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
-            if (channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK)
+            if (channel_count == 2) {
                 snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_STEREO;
-            else if (my_data->fluence_in_voice_rec)
-                snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
-
-            if (snd_device == SND_DEVICE_NONE)
-                snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
-            else
                 adev->acdb_settings |= DMIC_FLAG;
+            } else if (adev->active_input->enable_ns)
+                snd_device = SND_DEVICE_IN_VOICE_REC_MIC_NS;
+            else if (my_data->fluence_type != FLUENCE_NONE &&
+                     my_data->fluence_in_voice_rec) {
+                snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
+                adev->acdb_settings |= DMIC_FLAG;
+            } else {
+                snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
+            }
         }
     } else if (source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
         if (out_device & AUDIO_DEVICE_OUT_SPEAKER)
             in_device = AUDIO_DEVICE_IN_BACK_MIC;
         if (adev->active_input) {
-            if (adev->active_input->enable_aec) {
+            if (adev->active_input->enable_aec &&
+                    adev->active_input->enable_ns) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
-                    if(my_data->fluence_type & FLUENCE_DUAL_MIC)
-                        snd_device = SND_DEVICE_IN_SPEAKER_DMIC_AEC;
-                    else
-                        snd_device = SND_DEVICE_IN_SPEAKER_MIC_AEC;
+                    if (my_data->fluence_type & FLUENCE_DUAL_MIC &&
+                       my_data->fluence_in_spkr_mode) {
+                        snd_device = SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS;
+                        adev->acdb_settings |= DMIC_FLAG;
+                    } else
+                        snd_device = SND_DEVICE_IN_SPEAKER_MIC_AEC_NS;
                 } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
-                    if(my_data->fluence_type & FLUENCE_DUAL_MIC)
-                        snd_device = SND_DEVICE_IN_HANDSET_DMIC_AEC;
-                    else
-                        snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC;
+                    if (my_data->fluence_type & FLUENCE_DUAL_MIC) {
+                        snd_device = SND_DEVICE_IN_HANDSET_DMIC_AEC_NS;
+                        adev->acdb_settings |= DMIC_FLAG;
+                    } else
+                        snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC_NS;
                 } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
-                    snd_device = SND_DEVICE_IN_HEADSET_MIC_AEC;
+                    snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
                 }
                 set_echo_reference(adev->mixer, "SLIM_RX");
+            } else if (adev->active_input->enable_aec) {
+                if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
+                    if (my_data->fluence_type & FLUENCE_DUAL_MIC) {
+                        snd_device = SND_DEVICE_IN_SPEAKER_DMIC_AEC;
+                        adev->acdb_settings |= DMIC_FLAG;
+                    } else
+                        snd_device = SND_DEVICE_IN_SPEAKER_MIC_AEC;
+                } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+                    if (my_data->fluence_type & FLUENCE_DUAL_MIC) {
+                        snd_device = SND_DEVICE_IN_HANDSET_DMIC_AEC;
+                        adev->acdb_settings |= DMIC_FLAG;
+                    } else
+                        snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC;
+                } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+                    snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
+                }
+                set_echo_reference(adev->mixer, "SLIM_RX");
+            } else if (adev->active_input->enable_ns) {
+                if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
+                    if (my_data->fluence_type & FLUENCE_DUAL_MIC) {
+                        snd_device = SND_DEVICE_IN_SPEAKER_DMIC_NS;
+                        adev->acdb_settings |= DMIC_FLAG;
+                    } else
+                        snd_device = SND_DEVICE_IN_SPEAKER_MIC_NS;
+                } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+                    if (my_data->fluence_type & FLUENCE_DUAL_MIC) {
+                        snd_device = SND_DEVICE_IN_HANDSET_DMIC_NS;
+                        adev->acdb_settings |= DMIC_FLAG;
+                    } else
+                        snd_device = SND_DEVICE_IN_HANDSET_MIC_NS;
+                } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+                    snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
+                }
+                set_echo_reference(adev->mixer, "NONE");
             } else
                 set_echo_reference(adev->mixer, "NONE");
         }
@@ -832,7 +891,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
         }
     } else if (source == AUDIO_SOURCE_FM_RX ||
-               source ==  AUDIO_SOURCE_FM_RX_A2DP) {
+               source == AUDIO_SOURCE_FM_RX_A2DP) {
         snd_device = SND_DEVICE_IN_CAPTURE_FM;
     } else if (source == AUDIO_SOURCE_DEFAULT) {
         goto exit;
