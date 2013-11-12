@@ -1184,6 +1184,7 @@ static int out_standby(struct audio_stream *stream)
 
     pthread_mutex_lock(&out->lock);
     if (!out->standby) {
+        pthread_mutex_lock(&adev->lock);
         out->standby = true;
         if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
             if (out->pcm) {
@@ -1199,7 +1200,6 @@ static int out_standby(struct audio_stream *stream)
                 out->compr = NULL;
             }
         }
-        pthread_mutex_lock(&adev->lock);
         stop_output_stream(out);
         pthread_mutex_unlock(&adev->lock);
     }
@@ -1673,12 +1673,12 @@ static int in_standby(struct audio_stream *stream)
     ALOGV("%s: enter", __func__);
     pthread_mutex_lock(&in->lock);
     if (!in->standby) {
+        pthread_mutex_lock(&adev->lock);
         in->standby = true;
         if (in->pcm) {
             pcm_close(in->pcm);
             in->pcm = NULL;
         }
-        pthread_mutex_lock(&adev->lock);
         status = stop_input_stream(in);
         pthread_mutex_unlock(&adev->lock);
     }
