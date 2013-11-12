@@ -90,10 +90,10 @@ namespace android_audio_legacy
 {
 
 ALSADevice::ALSADevice() {
+    mSSRComplete = false;
 #ifdef USES_FLUENCE_INCALL
     mDevSettingsFlag = TTY_OFF | DMIC_FLAG;
 #else
-    mSSRComplete = false;
     mDevSettingsFlag = TTY_OFF;
 #endif
     mBtscoSamplerate = 8000;
