@@ -32,8 +32,8 @@ int platform_switch_voice_call_device_pre(void *platform);
 int platform_switch_voice_call_device_post(void *platform,
                                            snd_device_t out_snd_device,
                                            snd_device_t in_snd_device);
-int platform_start_voice_call(void *platform);
-int platform_stop_voice_call(void *platform);
+int platform_start_voice_call(void *platform, uint32_t vsid);
+int platform_stop_voice_call(void *platform, uint32_t vsid);
 int platform_set_voice_volume(void *platform, int volume);
 int platform_set_mic_mute(void *platform, bool state);
 snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devices);
