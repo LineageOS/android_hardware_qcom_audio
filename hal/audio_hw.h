@@ -26,6 +26,7 @@
 #include <audio_route/audio_route.h>
 
 #define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
+#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/system/lib/soundfx/libqcompostprocbundle.so"
 
 /* Flags used to initialize acdb_settings variable that goes to ACDB library */
 #define DMIC_FLAG       0x00000002
@@ -194,8 +195,11 @@ struct audio_device {
     void *platform;
 
     void *visualizer_lib;
-    int (*visualizer_start_output)(audio_io_handle_t);
-    int (*visualizer_stop_output)(audio_io_handle_t);
+    int (*visualizer_start_output)(audio_io_handle_t, int);
+    int (*visualizer_stop_output)(audio_io_handle_t, int);
+    void *offload_effects_lib;
+    int (*offload_effects_start_output)(audio_io_handle_t, int);
+    int (*offload_effects_stop_output)(audio_io_handle_t, int);
 };
 
 /*
