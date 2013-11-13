@@ -98,7 +98,7 @@ struct pcm_config pcm_config_audio_capture = {
     .format = PCM_FORMAT_S16_LE,
 };
 
-static const char * const use_case_table[AUDIO_USECASE_MAX] = {
+const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = "deep-buffer-playback",
     [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = "low-latency-playback",
     [USECASE_AUDIO_PLAYBACK_MULTI_CH] = "multi-channel-playback",
@@ -2089,7 +2089,9 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     int val;
     int ret;
 
-    ALOGV("%s: enter: %s", __func__, kvpairs);
+    ALOGD("%s: enter: %s", __func__, kvpairs);
+
+    pthread_mutex_lock(&adev->lock);
     parms = str_parms_create_str(kvpairs);
 
     voice_set_parameters(adev, parms);
@@ -2131,7 +2133,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         default:
             ALOGE("%s: unexpected rotation of %d", __func__, val);
         }
-        pthread_mutex_lock(&adev->lock);
         if (adev->speaker_lr_swap != reverse_speakers) {
             adev->speaker_lr_swap = reverse_speakers;
             // only update the selected device if there is active pcm playback
@@ -2145,11 +2146,12 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 }
             }
         }
-        pthread_mutex_unlock(&adev->lock);
     }
 
     audio_extn_set_parameters(adev, parms);
     str_parms_destroy(parms);
+
+    pthread_mutex_unlock(&adev->lock);
     ALOGV("%s: exit with code(%d)", __func__, ret);
     return ret;
 }
@@ -2162,12 +2164,15 @@ static char* adev_get_parameters(const struct audio_hw_device *dev,
     struct str_parms *query = str_parms_create_str(keys);
     char *str;
 
+    pthread_mutex_lock(&adev->lock);
+
     audio_extn_get_parameters(adev, query, reply);
     platform_get_parameters(adev->platform, query, reply);
     str = str_parms_to_str(reply);
     str_parms_destroy(query);
     str_parms_destroy(reply);
 
+    pthread_mutex_unlock(&adev->lock);
     ALOGV("%s: exit: returns - %s", __func__, str);
     return str;
 }
@@ -2223,7 +2228,13 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 
 static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
 {
-    return voice_set_mic_mute((struct audio_device *)dev, state);
+    int ret;
+
+    pthread_mutex_lock(&adev->lock);
+    ret = voice_set_mic_mute((struct audio_device *)dev, state);
+    pthread_mutex_unlock(&adev->lock);
+
+    return ret;
 }
 
 static int adev_get_mic_mute(const struct audio_hw_device *dev, bool *state)
