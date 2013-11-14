@@ -416,6 +416,13 @@ static struct csd_data *open_csd_client()
                   __func__, dlerror());
             goto error;
         }
+        csd->enable_device_config = (enable_device_config_t)dlsym(csd->csd_client,
+                                               "csd_client_enable_device_config");
+        if (csd->enable_device_config == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_enable_device_config",
+                  __func__, dlerror());
+            goto error;
+        }
         csd->enable_device = (enable_device_t)dlsym(csd->csd_client,
                                              "csd_client_enable_device");
         if (csd->enable_device == NULL) {
@@ -826,6 +833,32 @@ int platform_switch_voice_call_device_pre(void *platform)
         if (ret < 0) {
             ALOGE("%s: csd_client_disable_device, failed, error %d",
                   __func__, ret);
+        }
+    }
+    return ret;
+}
+
+int platform_switch_voice_call_enable_device_config(void *platform,
+                                                    snd_device_t out_snd_device,
+                                                    snd_device_t in_snd_device)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    int acdb_rx_id, acdb_tx_id;
+    int ret = 0;
+
+    acdb_rx_id = acdb_device_table[out_snd_device];
+    acdb_tx_id = acdb_device_table[in_snd_device];
+
+    if (my_data->csd != NULL) {
+        if (acdb_rx_id > 0 && acdb_tx_id > 0) {
+            ret = my_data->csd->enable_device_config(acdb_rx_id, acdb_tx_id);
+            if (ret < 0) {
+                ALOGE("%s: csd_enable_device_config, failed, error %d",
+                      __func__, ret);
+            }
+        } else {
+            ALOGE("%s: Incorrect ACDB IDs (rx: %d tx: %d)", __func__,
+                  acdb_rx_id, acdb_tx_id);
         }
     }
     return ret;
