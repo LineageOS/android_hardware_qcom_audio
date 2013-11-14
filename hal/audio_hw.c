@@ -165,7 +165,7 @@ static int get_snd_codec_id(audio_format_t format)
         id = SND_AUDIOCODEC_AAC;
         break;
     default:
-        ALOGE("%s: Unsupported audio format", __func__);
+        ALOGE("%s: Unsupported audio format :%x", __func__, format);
     }
 
     return id;
@@ -2022,7 +2022,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             ret = -EINVAL;
             goto error_open;
         }
-        if (!is_supported_format(config->offload_info.format)) {
+        if (!is_supported_format(config->offload_info.format) &&
+                !audio_extn_dolby_is_supported_format(config->offload_info.format)) {
             ALOGE("%s: Unsupported audio format", __func__);
             ret = -EINVAL;
             goto error_open;
@@ -2045,7 +2046,11 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->stream.drain = out_drain;
         out->stream.flush = out_flush;
 
-        out->compr_config.codec->id =
+        if (audio_extn_dolby_is_supported_format(config->offload_info.format))
+            out->compr_config.codec->id =
+                audio_extn_dolby_get_snd_codec_id(config->offload_info.format);
+        else
+            out->compr_config.codec->id =
                 get_snd_codec_id(config->offload_info.format);
         out->compr_config.fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
         out->compr_config.fragments = COMPRESS_OFFLOAD_NUM_FRAGMENTS;
@@ -2065,6 +2070,16 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         ALOGV("%s: offloaded output offload_info version %04x bit rate %d",
                 __func__, config->offload_info.version,
                 config->offload_info.bit_rate);
+
+        if (audio_extn_dolby_is_supported_format(out->format)) {
+            ret = audio_extn_dolby_set_DMID(adev);
+            if (ret != 0) {
+                ALOGE("%s: Dolby DMID cannot be set error:%d",
+                      __func__, ret);
+                goto error_open;
+            }
+        }
+
     } else if (out->flags & AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
         ret = voice_check_and_set_incall_music_usecase(adev, out);
         if (ret != 0) {

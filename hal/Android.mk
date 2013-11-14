@@ -87,6 +87,11 @@ ifneq ($(strip $(AUDIO_FEATURE_DISABLED_COMPRESS_CAPTURE)),true)
     LOCAL_SRC_FILES += audio_extn/compress_capture.c
 endif
 
+ifneq ($(strip $(AUDIO_FEATURE_DISABLED_DS1_DOLBY_DDP)),true)
+    LOCAL_CFLAGS += -DDS1_DOLBY_DDP_ENABLED
+    LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
