@@ -18,6 +18,9 @@ endif
 ifneq ($(filter msm8226,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSM8x26
 endif
+ifneq ($(filter apq8084,$(TARGET_BOARD_PLATFORM)),)
+  LOCAL_CFLAGS := -DPLATFORM_APQ8084
+endif
 endif
 
 LOCAL_SRC_FILES := \

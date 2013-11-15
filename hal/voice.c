@@ -68,7 +68,7 @@ int stop_call(struct audio_device *adev, audio_usecase_t usecase_id)
     session = (struct voice_session *)voice_get_session_from_use_case(adev, usecase_id);
     session->state.current = CALL_INACTIVE;
 
-    ret = platform_stop_voice_call(adev->platform);
+    ret = platform_stop_voice_call(adev->platform, session->vsid);
 
     /* 1. Close the PCM devices */
     if (session->pcm_rx) {
@@ -166,7 +166,7 @@ int start_call(struct audio_device *adev, audio_usecase_t usecase_id)
 
     voice_set_volume(adev, adev->voice.volume);
 
-    ret = platform_start_voice_call(adev->platform);
+    ret = platform_start_voice_call(adev->platform, session->vsid);
     if (ret < 0) {
         ALOGE("%s: platform_start_voice_call error %d\n", __func__, ret);
         goto error_start_voice;
