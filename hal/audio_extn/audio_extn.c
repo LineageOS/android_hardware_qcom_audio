@@ -63,7 +63,7 @@ void audio_extn_ssr_get_parameters(struct str_parms *query,
 #endif
 
 #ifndef ANC_HEADSET_ENABLED
-#define audio_extn_set_anc_parameters(parms)       (0)
+#define audio_extn_set_anc_parameters(adev, parms)       (0)
 #else
 bool audio_extn_get_anc_enabled(void)
 {
@@ -97,10 +97,13 @@ bool audio_extn_should_use_fb_anc(void)
   return false;
 }
 
-void audio_extn_set_anc_parameters(struct str_parms *parms)
+void audio_extn_set_anc_parameters(struct audio_device *adev,
+                                   struct str_parms *parms)
 {
     int ret;
     char value[32] ={0};
+    struct listnode *node;
+    struct audio_usecase *usecase;
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_ANC, value,
                             sizeof(value));
@@ -109,6 +112,20 @@ void audio_extn_set_anc_parameters(struct str_parms *parms)
             aextnmod.anc_enabled = true;
         else
             aextnmod.anc_enabled = false;
+    }
+
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type == PCM_PLAYBACK) {
+            if (usecase->stream.out->devices == \
+                AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
+                usecase->stream.out->devices ==  \
+                AUDIO_DEVICE_OUT_WIRED_HEADSET) {
+                select_devices(adev, usecase->id);
+                ALOGV("%s: switching device", __func__);
+                break;
+            }
+        }
     }
 
     ALOGD("%s: anc_enabled:%d", __func__, aextnmod.anc_enabled);
@@ -196,7 +213,7 @@ int audio_extn_get_afe_proxy_parameters(struct str_parms *query,
 void audio_extn_set_parameters(struct audio_device *adev,
                                struct str_parms *parms)
 {
-   audio_extn_set_anc_parameters(parms);
+   audio_extn_set_anc_parameters(adev, parms);
    audio_extn_set_afe_proxy_parameters(parms);
    audio_extn_fm_set_parameters(adev, parms);
    audio_extn_listen_set_parameters(adev, parms);
