@@ -937,7 +937,8 @@ status_t AudioSessionOutALSA::setParameters(const String8& keyValuePairs)
                 mParent->mRouteAudioToExtOut = true;
                 ALOGD("setParameters(): device %#x", device);
             }
-            mParent->doRouting(device);
+            char * usecase = (mAlsaHandle != NULL )? mAlsaHandle->useCase: NULL;
+            mParent->doRouting(device,usecase);
         }
         param.remove(key);
     }

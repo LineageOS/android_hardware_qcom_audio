@@ -874,7 +874,7 @@ private:
 protected:
     virtual status_t    dump(int fd, const Vector<String16>& args);
     virtual uint32_t    getVoipMode(int format);
-    status_t            doRouting(int device);
+    status_t            doRouting(int device, char* useCase);
 #ifdef QCOM_FM_ENABLED
     void                handleFm(int device);
 #endif
