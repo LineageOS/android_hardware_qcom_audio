@@ -32,6 +32,7 @@
 #include "voice.h"
 #include "platform.h"
 #include "platform_api.h"
+#include "voice_extn.h"
 
 #define AUDIO_PARAMETER_KEY_VSID        "vsid"
 #define AUDIO_PARAMETER_KEY_CALL_STATE  "call_state"
@@ -431,6 +432,20 @@ int voice_extn_set_parameters(struct audio_device *adev,
 done:
     ALOGV("%s: exit with code(%d)", __func__, ret);
     return ret;
+}
+
+void voice_extn_out_get_parameters(struct stream_out *out,
+                                   struct str_parms *query,
+                                   struct str_parms *reply)
+{
+    voice_extn_compress_voip_out_get_parameters(out, query, reply);
+}
+
+void voice_extn_in_get_parameters(struct stream_in *in,
+                                  struct str_parms *query,
+                                  struct str_parms *reply)
+{
+    voice_extn_compress_voip_in_get_parameters(in, query, reply);
 }
 
 int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,

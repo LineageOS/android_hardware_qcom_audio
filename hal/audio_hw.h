@@ -74,6 +74,7 @@ typedef enum {
     USECASE_VOICE2_CALL,
     USECASE_VOLTE_CALL,
     USECASE_QCHAT_CALL,
+    USECASE_COMPRESS_VOIP_CALL,
 
     USECASE_INCALL_REC_UPLINK,
     USECASE_INCALL_REC_DOWNLINK,
@@ -168,6 +169,7 @@ struct stream_in {
     audio_usecase_t usecase;
     bool enable_aec;
     bool enable_ns;
+    audio_format_t format;
 
     struct audio_device *dev;
 };
@@ -175,7 +177,8 @@ struct stream_in {
 typedef enum {
     PCM_PLAYBACK,
     PCM_CAPTURE,
-    VOICE_CALL
+    VOICE_CALL,
+    VOIP_CALL
 } usecase_type_t;
 
 union stream_ptr {

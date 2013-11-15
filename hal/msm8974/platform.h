@@ -136,6 +136,11 @@ enum {
 #define DEFAULT_VOLUME_RAMP_DURATION_MS 20
 #define MIXER_PATH_MAX_LENGTH 100
 
+#define MAX_VOL_INDEX 5
+#define MIN_VOL_INDEX 0
+#define percent_to_index(val, min, max) \
+            ((val) * ((max) - (min)) * 0.01 + (min) + .5)
+
 /*
  * tinyAlsa library interprets period size as number of frames
  * one frame = channel_count * sizeof (pcm sample)
@@ -170,6 +175,7 @@ enum {
 #define SPKR_PROT_CALIB_RX_PCM_DEVICE 5
 #define SPKR_PROT_CALIB_TX_PCM_DEVICE 22
 #define PLAYBACK_OFFLOAD_DEVICE 9
+#define COMPRESS_VOIP_CALL_PCM_DEVICE 3
 
 #ifdef PLATFORM_MSM8610
 #define LOWLATENCY_PCM_DEVICE 12
