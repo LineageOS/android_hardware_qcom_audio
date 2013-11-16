@@ -1073,18 +1073,11 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 set_echo_reference(adev->mixer, "NONE");
         }
     } else if (source == AUDIO_SOURCE_MIC) {
-        if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
-            if(my_data->fluence_type & FLUENCE_DUAL_MIC &&
-                    my_data->fluence_in_audio_rec)
-                snd_device = SND_DEVICE_IN_SPEAKER_DMIC;
-            else
-                snd_device = SND_DEVICE_IN_SPEAKER_MIC;
-        } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+        if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC &&
+                channel_count == 1 ) {
             if(my_data->fluence_type & FLUENCE_DUAL_MIC &&
                     my_data->fluence_in_audio_rec)
                 snd_device = SND_DEVICE_IN_HANDSET_DMIC;
-            else
-                snd_device = SND_DEVICE_IN_HANDSET_MIC;
         }
     } else if (source == AUDIO_SOURCE_FM_RX ||
                source == AUDIO_SOURCE_FM_RX_A2DP) {
