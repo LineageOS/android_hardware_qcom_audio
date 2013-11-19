@@ -261,10 +261,11 @@ int voice_set_mic_mute(struct audio_device *adev, bool state)
 {
     int err = 0;
 
-    err = platform_set_mic_mute(adev->platform, state);
-    if (!err) {
-        adev->voice.mic_mute = state;
-    }
+    adev->voice.mic_mute = state;
+    if (adev->mode == AUDIO_MODE_IN_CALL)
+        err = platform_set_mic_mute(adev->platform, state);
+    if (adev->mode == AUDIO_MODE_IN_COMMUNICATION)
+        err = voice_extn_compress_voip_set_mic_mute(adev, state);
 
     return err;
 }
@@ -295,6 +296,9 @@ int voice_set_volume(struct audio_device *adev, float volume)
 
         err = platform_set_voice_volume(adev->platform, vol);
     }
+    if (adev->mode == AUDIO_MODE_IN_COMMUNICATION)
+        err = voice_extn_compress_voip_set_volume(adev, volume);
+
 
     return err;
 }
@@ -333,6 +337,7 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
     ALOGV("%s: enter: %s", __func__, str_parms_to_str(parms));
 
     voice_extn_set_parameters(adev, parms);
+    voice_extn_compress_voip_set_parameters(adev, parms);
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_TTY_MODE, value, sizeof(value));
     if (ret >= 0) {

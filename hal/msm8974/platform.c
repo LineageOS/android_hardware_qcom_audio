@@ -30,6 +30,7 @@
 #include <platform_api.h>
 #include "platform.h"
 #include "audio_extn.h"
+#include "voice_extn.h"
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
@@ -55,11 +56,6 @@
 
 #define SAMPLE_RATE_8KHZ  8000
 #define SAMPLE_RATE_16KHZ 16000
-
-#define MAX_VOL_INDEX 5
-#define MIN_VOL_INDEX 0
-#define percent_to_index(val, min, max) \
-            ((val) * ((max) - (min)) * 0.01 + (min) + .5)
 
 #define AUDIO_PARAMETER_KEY_FLUENCE_TYPE  "fluence"
 #define AUDIO_PARAMETER_KEY_BTSCO         "bt_samplerate"
@@ -116,6 +112,7 @@ static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_VOICE2_CALL] = {VOICE2_CALL_PCM_DEVICE, VOICE2_CALL_PCM_DEVICE},
     [USECASE_VOLTE_CALL] = {VOLTE_CALL_PCM_DEVICE, VOLTE_CALL_PCM_DEVICE},
     [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE, QCHAT_CALL_PCM_DEVICE},
+    [USECASE_COMPRESS_VOIP_CALL] = {COMPRESS_VOIP_CALL_PCM_DEVICE, COMPRESS_VOIP_CALL_PCM_DEVICE},
     [USECASE_INCALL_REC_UPLINK] = {AUDIO_RECORD_PCM_DEVICE,
                                    AUDIO_RECORD_PCM_DEVICE},
     [USECASE_INCALL_REC_DOWNLINK] = {AUDIO_RECORD_PCM_DEVICE,
@@ -764,22 +761,20 @@ int platform_set_mic_mute(void *platform, bool state)
                               ALL_SESSION_VSID,
                               DEFAULT_VOLUME_RAMP_DURATION_MS};
 
-    if (adev->mode == AUDIO_MODE_IN_CALL) {
-        set_values[0] = state;
-        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
-        if (!ctl) {
-            ALOGE("%s: Could not get ctl for mixer cmd - %s",
-                  __func__, mixer_ctl_name);
-            return -EINVAL;
-        }
-        ALOGV("Setting voice mute state: %d", state);
-        mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+    set_values[0] = state;
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+    ALOGV("Setting voice mute state: %d", state);
+    mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
 
-        if (my_data->csd != NULL) {
-            ret = my_data->csd->mic_mute(ALL_SESSION_VSID, state);
-            if (ret < 0) {
-                ALOGE("%s: csd_mic_mute error %d", __func__, ret);
-            }
+    if (my_data->csd != NULL) {
+        ret = my_data->csd->mic_mute(ALL_SESSION_VSID, state);
+        if (ret < 0) {
+            ALOGE("%s: csd_mic_mute error %d", __func__, ret);
         }
     }
     return ret;
@@ -803,15 +798,26 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         goto exit;
     }
 
-    if (mode == AUDIO_MODE_IN_CALL) {
+    if ((mode == AUDIO_MODE_IN_CALL) ||
+        voice_extn_compress_voip_is_active(adev)) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
-            if (adev->voice.tty_mode == TTY_MODE_FULL) {
-                snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES;
-            } else if (adev->voice.tty_mode == TTY_MODE_VCO) {
-                snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES;
-            } else if (adev->voice.tty_mode == TTY_MODE_HCO) {
-                snd_device = SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET;
+            if ((adev->voice.tty_mode != TTY_MODE_OFF) &&
+                !voice_extn_compress_voip_is_active(adev)) {
+                switch (adev->voice.tty_mode) {
+                case TTY_MODE_FULL:
+                    snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES;
+                    break;
+                case TTY_MODE_VCO:
+                    snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES;
+                    break;
+                case TTY_MODE_HCO:
+                    snd_device = SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET;
+                    break;
+                default:
+                    ALOGE("%s: Invalid TTY mode (%#x)",
+                          __func__, adev->voice.tty_mode);
+                }
             } else if (audio_extn_get_anc_enabled()) {
                 if (audio_extn_should_use_fb_anc())
                     snd_device = SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET;
@@ -933,12 +939,14 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x)",
           __func__, out_device, in_device);
-    if (mode == AUDIO_MODE_IN_CALL) {
+    if ((mode == AUDIO_MODE_IN_CALL) ||
+        voice_extn_compress_voip_is_active(adev)) {
         if (out_device == AUDIO_DEVICE_NONE) {
             ALOGE("%s: No output device set for voice call", __func__);
             goto exit;
         }
-        if (adev->voice.tty_mode != TTY_MODE_OFF) {
+        if ((adev->voice.tty_mode != TTY_MODE_OFF) &&
+            !voice_extn_compress_voip_is_active(adev)) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                 out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
                 switch (adev->voice.tty_mode) {

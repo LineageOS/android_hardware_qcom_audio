@@ -50,6 +50,7 @@
 #include "platform_api.h"
 #include <platform.h>
 #include "audio_extn.h"
+#include "voice_extn.h"
 
 #include "sound/compress_params.h"
 
@@ -112,6 +113,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_VOICE2_CALL] = "voice2-call",
     [USECASE_VOLTE_CALL] = "volte-call",
     [USECASE_QCHAT_CALL] = "qchat-call",
+    [USECASE_COMPRESS_VOIP_CALL] = "compress-voip-call",
     [USECASE_INCALL_REC_UPLINK] = "incall-rec-uplink",
     [USECASE_INCALL_REC_DOWNLINK] = "incall-rec-downlink",
     [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK] = "incall-rec-uplink-and-downlink",
@@ -573,6 +575,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     snd_device_t in_snd_device = SND_DEVICE_NONE;
     struct audio_usecase *usecase = NULL;
     struct audio_usecase *vc_usecase = NULL;
+    struct audio_usecase *voip_usecase = NULL;
     struct listnode *node;
     int status = 0;
 
@@ -582,7 +585,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         return -EINVAL;
     }
 
-    if (usecase->type == VOICE_CALL) {
+    if ((usecase->type == VOICE_CALL) ||
+        (usecase->type == VOIP_CALL)) {
         out_snd_device = platform_get_output_snd_device(adev->platform,
                                                         usecase->stream.out->devices);
         in_snd_device = platform_get_input_snd_device(adev->platform, usecase->stream.out->devices);
@@ -601,6 +605,12 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             if (vc_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
                 in_snd_device = vc_usecase->in_snd_device;
                 out_snd_device = vc_usecase->out_snd_device;
+            }
+        } else if (voice_extn_compress_voip_is_active(adev)) {
+            voip_usecase = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
+            if (voip_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
+                    in_snd_device = voip_usecase->in_snd_device;
+                    out_snd_device = voip_usecase->out_snd_device;
             }
         }
         if (usecase->type == PCM_PLAYBACK) {
@@ -645,8 +655,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
      * and enable both RX and TX devices though one of them is same as current
      * device.
      */
-    if (usecase->type == VOICE_CALL) {
-        disable_all_usecases_of_type(adev, VOICE_CALL, true);
+    if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL) {
+        disable_all_usecases_of_type(adev, usecase->type, true);
         status = platform_switch_voice_call_device_pre(adev->platform);
     }
 
@@ -673,7 +683,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         enable_snd_device(adev, in_snd_device, false);
     }
 
-    if (usecase->type == VOICE_CALL)
+    if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL)
         status = platform_switch_voice_call_device_post(adev->platform,
                                                         out_snd_device,
                                                         in_snd_device);
@@ -683,8 +693,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     usecase->in_snd_device = in_snd_device;
     usecase->out_snd_device = out_snd_device;
 
-    if (usecase->type == VOICE_CALL)
-        enable_all_usecases_of_type(adev, VOICE_CALL, true);
+    if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL)
+        enable_all_usecases_of_type(adev, usecase->type, true);
     else
         enable_audio_route(adev, usecase, true);
 
@@ -1115,7 +1125,8 @@ static int check_input_parameters(uint32_t sample_rate,
 {
     int ret = 0;
 
-    if (format != AUDIO_FORMAT_PCM_16_BIT) ret = -EINVAL;
+    if ((format != AUDIO_FORMAT_PCM_16_BIT) &&
+        !voice_extn_compress_voip_is_format_supported(format)) ret = -EINVAL;
 
     switch (channel_count) {
     case 1:
@@ -1181,9 +1192,10 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
 
-    if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+    if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD)
         return out->compr_config.fragment_size;
-    }
+    else if(out->usecase == USECASE_COMPRESS_VOIP_CALL)
+        return voice_extn_compress_voip_out_get_buffer_size(out);
 
     return out->config.period_size * audio_stream_frame_size(stream);
 }
@@ -1214,6 +1226,13 @@ static int out_standby(struct audio_stream *stream)
 
     ALOGV("%s: enter: usecase(%d: %s)", __func__,
           out->usecase, use_case_table[out->usecase]);
+    if (out->usecase == USECASE_COMPRESS_VOIP_CALL) {
+        /* Ignore standby in case of voip call because the voip output
+         * stream is closed in adev_close_output_stream()
+         */
+        ALOGV("%s: Ignore Standby in VOIP call", __func__);
+        return 0;
+    }
 
     pthread_mutex_lock(&out->lock);
     pthread_mutex_lock(&adev->lock);
@@ -1401,7 +1420,11 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
         str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_CHANNELS, value);
         str = str_parms_to_str(reply);
     } else {
-        str = strdup(keys);
+        voice_extn_out_get_parameters(out, query, reply);
+        str = str_parms_to_str(reply);
+        if (!strncmp(str, "", sizeof(""))) {
+           str = strdup(keys);
+        }
     }
     str_parms_destroy(query);
     str_parms_destroy(reply);
@@ -1461,7 +1484,10 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     if (out->standby) {
         out->standby = false;
         pthread_mutex_lock(&adev->lock);
-        ret = start_output_stream(out);
+        if (out->usecase == USECASE_COMPRESS_VOIP_CALL)
+            ret = voice_extn_compress_voip_start_output_stream(out);
+        else
+            ret = start_output_stream(out);
         pthread_mutex_unlock(&adev->lock);
         /* ToDo: If use case is compress offload should return 0 */
         if (ret != 0) {
@@ -1686,6 +1712,9 @@ static size_t in_get_buffer_size(const struct audio_stream *stream)
 {
     struct stream_in *in = (struct stream_in *)stream;
 
+    if(in->usecase == USECASE_COMPRESS_VOIP_CALL)
+        return voice_extn_compress_voip_in_get_buffer_size(in);
+
     return in->config.period_size * audio_stream_frame_size(stream);
 }
 
@@ -1698,7 +1727,9 @@ static uint32_t in_get_channels(const struct audio_stream *stream)
 
 static audio_format_t in_get_format(const struct audio_stream *stream)
 {
-    return AUDIO_FORMAT_PCM_16_BIT;
+    struct stream_in *in = (struct stream_in *)stream;
+
+    return in->format;
 }
 
 static int in_set_format(struct audio_stream *stream, audio_format_t format)
@@ -1712,6 +1743,15 @@ static int in_standby(struct audio_stream *stream)
     struct audio_device *adev = in->dev;
     int status = 0;
     ALOGV("%s: enter", __func__);
+
+    if (in->usecase == USECASE_COMPRESS_VOIP_CALL) {
+        /* Ignore standby in case of voip call because the voip input
+         * stream is closed in adev_close_input_stream()
+         */
+        ALOGV("%s: Ignore Standby in VOIP call", __func__);
+        return status;
+    }
+
     pthread_mutex_lock(&in->lock);
     if (!in->standby) {
         in->standby = true;
@@ -1779,7 +1819,21 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
 static char* in_get_parameters(const struct audio_stream *stream,
                                const char *keys)
 {
-    return strdup("");
+    struct stream_in *in = (struct stream_in *)stream;
+    struct str_parms *query = str_parms_create_str(keys);
+    char *str;
+    char value[256];
+    struct str_parms *reply = str_parms_create();
+    ALOGV("%s: enter: keys - %s", __func__, keys);
+
+    voice_extn_in_get_parameters(in, query, reply);
+
+    str = str_parms_to_str(reply);
+    str_parms_destroy(query);
+    str_parms_destroy(reply);
+
+    ALOGV("%s: exit: returns - %s", __func__, str);
+    return str;
 }
 
 static int in_set_gain(struct audio_stream_in *stream, float gain)
@@ -1797,7 +1851,10 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     pthread_mutex_lock(&in->lock);
     if (in->standby) {
         pthread_mutex_lock(&adev->lock);
-        ret = start_input_stream(in);
+        if (in->usecase == USECASE_COMPRESS_VOIP_CALL)
+            ret = voice_extn_compress_voip_start_input_stream(in);
+        else
+            ret = start_input_stream(in);
         pthread_mutex_unlock(&adev->lock);
         if (ret != 0) {
             goto exit;
@@ -1932,6 +1989,17 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->config.rate = config->sample_rate;
         out->config.channels = popcount(out->channel_mask);
         out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels * 2);
+    } else if ((out->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
+               (out->flags == (AUDIO_OUTPUT_FLAG_DIRECT | AUDIO_OUTPUT_FLAG_VOIP_RX)) &&
+               (voice_extn_compress_voip_is_format_supported(out->format))) {
+        ret = voice_extn_compress_voip_open_output_stream(out);
+        if (ret != 0) {
+            ALOGE("%s: Compress voip output cannot be opened, error:%d",
+                  __func__, ret);
+            goto error_open;
+        }
+        out->config.rate = config->sample_rate;
+        out->sample_rate = config->sample_rate;
     } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         if (config->offload_info.version != AUDIO_INFO_INITIALIZER.version ||
             config->offload_info.size != AUDIO_INFO_INITIALIZER.size) {
@@ -2065,9 +2133,18 @@ static void adev_close_output_stream(struct audio_hw_device *dev,
 {
     struct stream_out *out = (struct stream_out *)stream;
     struct audio_device *adev = out->dev;
+    int ret = 0;
 
     ALOGV("%s: enter", __func__);
-    out_standby(&stream->common);
+    if (out->usecase == USECASE_COMPRESS_VOIP_CALL) {
+        ret = voice_extn_compress_voip_close_output_stream(&stream->common);
+        if(ret != 0)
+            ALOGE("%s: Compress voip output cannot be closed, error:%d",
+                  __func__, ret);
+    }
+    else
+        out_standby(&stream->common);
+
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
         destroy_offload_callback_thread(out);
 
@@ -2295,7 +2372,18 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->usecase = USECASE_AUDIO_RECORD;
     in->config = pcm_config_audio_capture;
     in->config.rate = config->sample_rate;
+    in->format = config->format;
 
+    if ((in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
+        (voice_extn_compress_voip_is_format_supported(in->format))) {
+        ret = voice_extn_compress_voip_open_input_stream(in);
+        if (ret != 0)
+        {
+            ALOGE("%s: Compress voip input cannot be opened, error:%d",
+                  __func__, ret);
+            goto err_open;
+        }
+    }
     if (channel_count == 6) {
         if(audio_extn_ssr_get_enabled()) {
             if(audio_extn_ssr_init(adev, in)) {
@@ -2329,10 +2417,18 @@ err_open:
 static void adev_close_input_stream(struct audio_hw_device *dev,
                                     struct audio_stream_in *stream)
 {
+    int ret;
     struct stream_in *in = (struct stream_in *)stream;
     ALOGV("%s", __func__);
 
-    in_standby(&stream->common);
+    if (in->usecase == USECASE_COMPRESS_VOIP_CALL) {
+        ret = voice_extn_compress_voip_close_input_stream(&stream->common);
+        if (ret != 0)
+            ALOGE("%s: Compress voip input cannot be closed, error:%d",
+                  __func__, ret);
+    } else
+        in_standby(&stream->common);
+
     if (audio_extn_ssr_get_enabled() && (popcount(in->channel_mask) == 6)) {
         audio_extn_ssr_deinit();
     }
