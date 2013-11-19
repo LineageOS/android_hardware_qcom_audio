@@ -897,3 +897,9 @@ int64_t platform_render_latency(audio_usecase_t usecase)
             return 0;
     }
 }
+
+int platform_update_usecase_from_source(int source, int usecase)
+{
+    ALOGV("%s: input source :%d", __func__, source);
+    return usecase;
+}

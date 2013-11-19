@@ -105,6 +105,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_MULTI_CH] = "multi-channel-playback",
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] = "compress-offload-playback",
     [USECASE_AUDIO_RECORD] = "audio-record",
+    [USECASE_AUDIO_RECORD_COMPRESS] = "audio-record-compress",
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = "low-latency-record",
     [USECASE_AUDIO_RECORD_FM_VIRTUAL] = "fm-virtual-record",
     [USECASE_AUDIO_PLAYBACK_FM] = "play-fm",
@@ -741,7 +742,7 @@ int start_input_stream(struct stream_in *in)
     struct audio_usecase *uc_info;
     struct audio_device *adev = in->dev;
 
-    in->usecase = platform_get_usecase_from_source(in->source);
+    in->usecase = platform_update_usecase_from_source(in->source,in->usecase);
     ALOGV("%s: enter: usecase(%d)", __func__, in->usecase);
 
     /* Check if source matches incall recording usecase criteria */
@@ -1126,7 +1127,8 @@ static int check_input_parameters(uint32_t sample_rate,
     int ret = 0;
 
     if ((format != AUDIO_FORMAT_PCM_16_BIT) &&
-        !voice_extn_compress_voip_is_format_supported(format)) ret = -EINVAL;
+        !voice_extn_compress_voip_is_format_supported(format) &&
+            !audio_extn_compr_cap_format_supported(format))  ret = -EINVAL;
 
     switch (channel_count) {
     case 1:
@@ -1714,6 +1716,8 @@ static size_t in_get_buffer_size(const struct audio_stream *stream)
 
     if(in->usecase == USECASE_COMPRESS_VOIP_CALL)
         return voice_extn_compress_voip_in_get_buffer_size(in);
+    else if(audio_extn_compr_cap_usecase_supported(in->usecase))
+        return audio_extn_compr_cap_get_buffer_size(in->config.format);
 
     return in->config.period_size * audio_stream_frame_size(stream);
 }
@@ -1865,6 +1869,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     if (in->pcm) {
         if (audio_extn_ssr_get_enabled() && popcount(in->channel_mask) == 6)
             ret = audio_extn_ssr_read(stream, buffer, bytes);
+        else if (audio_extn_compr_cap_usecase_supported(in->usecase))
+            ret = audio_extn_compr_cap_read(in, buffer, bytes);
         else
             ret = pcm_read(in->pcm, buffer, bytes);
     }
@@ -2383,8 +2389,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                   __func__, ret);
             goto err_open;
         }
-    }
-    if (channel_count == 6) {
+    } else if (channel_count == 6) {
         if(audio_extn_ssr_get_enabled()) {
             if(audio_extn_ssr_init(adev, in)) {
                 ALOGE("%s: audio_extn_ssr_init failed", __func__);
@@ -2395,6 +2400,9 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             ret = -EINVAL;
             goto err_open;
         }
+    } else if (audio_extn_compr_cap_enabled() &&
+            audio_extn_compr_cap_format_supported(config->format)) {
+        audio_extn_compr_cap_init(adev, in);
     } else {
         in->config.channels = channel_count;
         frame_size = audio_stream_frame_size((struct audio_stream *)in);
@@ -2434,6 +2442,9 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     }
     free(stream);
 
+    if(audio_extn_compr_cap_enabled() &&
+            audio_extn_compr_cap_format_supported(in->config.format))
+        audio_extn_compr_cap_deinit();
     return;
 }
 
