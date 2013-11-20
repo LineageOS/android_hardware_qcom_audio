@@ -640,7 +640,8 @@ int platform_switch_voice_call_device_pre(void *platform)
     struct platform_data *my_data = (struct platform_data *)platform;
     int ret = 0;
 
-    if (my_data->csd != NULL) {
+    if (my_data->csd != NULL &&
+        my_data->adev->mode == AUDIO_MODE_IN_CALL) {
         /* This must be called before disabling mixer controls on APQ side */
         ret = my_data->csd->disable_device();
         if (ret < 0) {
@@ -657,14 +658,13 @@ int platform_switch_voice_call_device_post(void *platform,
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_rx_id, acdb_tx_id;
-    int ret = 0;
-
-    acdb_rx_id = acdb_device_table[out_snd_device];
-    acdb_tx_id = acdb_device_table[in_snd_device];
 
     if (my_data->acdb_send_voice_cal == NULL) {
         ALOGE("%s: dlsym error for acdb_send_voice_call", __func__);
     } else {
+        acdb_rx_id = acdb_device_table[out_snd_device];
+        acdb_tx_id = acdb_device_table[in_snd_device];
+
         if (acdb_rx_id > 0 && acdb_tx_id > 0)
             my_data->acdb_send_voice_cal(acdb_rx_id, acdb_tx_id);
         else
@@ -672,8 +672,22 @@ int platform_switch_voice_call_device_post(void *platform,
                   acdb_rx_id, acdb_tx_id);
     }
 
+    return 0;
+}
+
+int platform_switch_voice_call_usecase_route_post(void *platform,
+                                                  snd_device_t out_snd_device,
+                                                  snd_device_t in_snd_device)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    int acdb_rx_id, acdb_tx_id;
+    int ret = 0;
+
+    acdb_rx_id = acdb_device_table[out_snd_device];
+    acdb_tx_id = acdb_device_table[in_snd_device];
+
     if (my_data->csd != NULL) {
-        if (acdb_rx_id > 0 || acdb_tx_id > 0) {
+        if (acdb_rx_id > 0 && acdb_tx_id > 0) {
             ret = my_data->csd->enable_device(acdb_rx_id, acdb_tx_id,
                                               my_data->adev->acdb_settings);
             if (ret < 0) {

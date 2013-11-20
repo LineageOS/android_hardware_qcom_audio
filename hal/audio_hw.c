@@ -657,8 +657,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
      * device.
      */
     if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL) {
-        disable_all_usecases_of_type(adev, usecase->type, true);
         status = platform_switch_voice_call_device_pre(adev->platform);
+        disable_all_usecases_of_type(adev, VOICE_CALL, true);
     }
 
     /* Disable current sound devices */
@@ -698,6 +698,15 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         enable_all_usecases_of_type(adev, usecase->type, true);
     else
         enable_audio_route(adev, usecase, true);
+
+    /* Applicable only on the targets that has external modem.
+     * Enable device command should be sent to modem only after
+     * enabling voice call mixer controls
+     */
+    if (usecase->type == VOICE_CALL)
+        status = platform_switch_voice_call_usecase_route_post(adev->platform,
+                                                               out_snd_device,
+                                                               in_snd_device);
 
     return status;
 }
