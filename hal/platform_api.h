@@ -46,8 +46,11 @@ int platform_edid_get_max_channels(void *platform);
 void platform_get_parameters(void *platform, struct str_parms *query,
                              struct str_parms *reply);
 int platform_set_parameters(void *platform, struct str_parms *parms);
-int platform_set_incall_recoding_session_id(void *platform, uint32_t session_id);
-
+int platform_set_incall_recording_session_id(void *platform, uint32_t session_id,
+                                             int rec_mode);
+int platform_stop_incall_recording_usecase(void *platform);
+int platform_start_incall_music_usecase(void *platform);
+int platform_stop_incall_music_usecase(void *platform);
 /* returns the latency for a usecase in Us */
 int64_t platform_render_latency(audio_usecase_t usecase);
 int platform_update_usecase_from_source(int source, audio_usecase_t usecase);

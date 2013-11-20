@@ -35,6 +35,9 @@
 
 #define VOICE_VSID  0x10C01000
 
+#define AUDIO_PARAMETER_KEY_INCALLMUSIC "incall_music_enabled"
+#define AUDIO_PARAMETER_VALUE_TRUE "true"
+
 struct audio_device;
 struct str_parms;
 struct stream_in;
@@ -59,6 +62,13 @@ struct voice {
     float volume;
 };
 
+enum {
+    INCALL_REC_NONE = -1,
+    INCALL_REC_UPLINK,
+    INCALL_REC_DOWNLINK,
+    INCALL_REC_UPLINK_AND_DOWNLINK,
+};
+
 int voice_start_call(struct audio_device *adev);
 int voice_stop_call(struct audio_device *adev);
 int voice_set_parameters(struct audio_device *adev, struct str_parms *parms);
@@ -71,4 +81,6 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
                                            struct stream_in *in);
 int voice_check_and_set_incall_music_usecase(struct audio_device *adev,
                                              struct stream_out *out);
+int voice_check_and_stop_incall_rec_usecase(struct audio_device *adev,
+                                            struct stream_in *in);
 #endif //VOICE_H

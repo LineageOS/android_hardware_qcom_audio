@@ -1326,8 +1326,8 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     return ret;
 }
 
-int platform_set_incall_recoding_session_id(void *platform,
-                                            uint32_t session_id)
+int platform_set_incall_recording_session_id(void *platform,
+                                             uint32_t session_id, int rec_mode)
 {
     int ret = 0;
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -1350,6 +1350,62 @@ int platform_set_incall_recoding_session_id(void *platform,
                 ret = -EINVAL;
                 break;
             }
+        }
+    }
+
+    if (my_data->csd != NULL) {
+        ret = my_data->csd->start_record(ALL_SESSION_VSID, rec_mode);
+        if (ret < 0) {
+            ALOGE("%s: csd_client_start_record failed, error %d",
+                  __func__, ret);
+        }
+    }
+
+    return ret;
+}
+
+int platform_stop_incall_recording_usecase(void *platform)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (my_data->csd != NULL) {
+        ret = my_data->csd->stop_record(ALL_SESSION_VSID);
+        if (ret < 0) {
+            ALOGE("%s: csd_client_stop_record failed, error %d",
+                  __func__, ret);
+        }
+    }
+
+    return ret;
+}
+
+int platform_start_incall_music_usecase(void *platform)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (my_data->csd != NULL) {
+        ret = my_data->csd->start_playback(ALL_SESSION_VSID);
+        if (ret < 0) {
+            ALOGE("%s: csd_client_start_playback failed, error %d",
+                  __func__, ret);
+        }
+    }
+
+    return ret;
+}
+
+int platform_stop_incall_music_usecase(void *platform)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (my_data->csd != NULL) {
+        ret = my_data->csd->stop_playback(ALL_SESSION_VSID);
+        if (ret < 0) {
+            ALOGE("%s: csd_client_stop_playback failed, error %d",
+                  __func__, ret);
         }
     }
 
