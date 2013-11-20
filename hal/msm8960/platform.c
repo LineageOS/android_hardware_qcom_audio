@@ -903,3 +903,8 @@ int platform_update_usecase_from_source(int source, int usecase)
     ALOGV("%s: input source :%d", __func__, source);
     return usecase;
 }
+
+bool platform_listen_update_status(snd_device_t snd_device)
+{
+     return false;
+}

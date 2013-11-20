@@ -1403,3 +1403,14 @@ int platform_update_usecase_from_source(int source, int usecase)
         usecase = USECASE_AUDIO_RECORD_FM_VIRTUAL;
     return usecase;
 }
+
+bool platform_listen_update_status(snd_device_t snd_device)
+{
+    if ((snd_device >= SND_DEVICE_IN_BEGIN) &&
+        (snd_device < SND_DEVICE_IN_END) &&
+        (snd_device != SND_DEVICE_IN_CAPTURE_FM) &&
+        (snd_device != SND_DEVICE_IN_CAPTURE_VI_FEEDBACK))
+        return true;
+    else
+        return false;
+}

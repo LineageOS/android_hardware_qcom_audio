@@ -95,7 +95,7 @@ void hw_info_append_hw_type(void *hw_info, snd_device_t snd_device,
 
 #ifndef AUDIO_LISTEN_ENABLED
 
-#define audio_extn_listen_init(adev)                            (0)
+#define audio_extn_listen_init(adev, snd_card)                  (0)
 #define audio_extn_listen_deinit(adev)                          (0)
 #define audio_extn_listen_update_status(uc_info, event)         (0)
 #define audio_extn_listen_set_parameters(adev, parms)           (0)
@@ -103,17 +103,17 @@ void hw_info_append_hw_type(void *hw_info, snd_device_t snd_device,
 #else
 
 enum listen_event_type {
-    LISTEN_EVENT_AUDIO_CAPTURE_INACTIVE,
-    LISTEN_EVENT_AUDIO_CAPTURE_ACTIVE,
+    LISTEN_EVENT_SND_DEVICE_FREE,
+    LISTEN_EVENT_SND_DEVICE_BUSY
 };
 typedef enum listen_event_type listen_event_type_t;
 
-int audio_extn_listen_init(struct audio_device *adev);
+int audio_extn_listen_init(struct audio_device *adev, unsigned int snd_card);
 void audio_extn_listen_deinit(struct audio_device *adev);
-void audio_extn_listen_update_status(struct audio_usecase *uc_info,
-        listen_event_type_t event);
+void audio_extn_listen_update_status(snd_device_t snd_device,
+                                     listen_event_type_t event);
 void audio_extn_listen_set_parameters(struct audio_device *adev,
-                                        struct str_parms *parms);
+                                      struct str_parms *parms);
 
 #endif /* AUDIO_LISTEN_ENABLED */
 

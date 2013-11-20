@@ -271,6 +271,9 @@ int enable_snd_device(struct audio_device *adev,
             adev->snd_dev_ref_cnt[snd_device]--;
             return -EINVAL;
         }
+        audio_extn_listen_update_status(snd_device,
+                LISTEN_EVENT_SND_DEVICE_BUSY);
+
         audio_route_apply_path(adev->audio_route, device_name);
     }
     if (update_mixer)
@@ -322,6 +325,9 @@ int disable_snd_device(struct audio_device *adev,
 
         if (update_mixer)
             audio_route_update_mixer(adev->audio_route);
+
+        audio_extn_listen_update_status(snd_device,
+                                        LISTEN_EVENT_SND_DEVICE_FREE);
     }
 
     return 0;
@@ -734,9 +740,6 @@ static int stop_input_stream(struct stream_in *in)
     /* 2. Disable the tx device */
     disable_snd_device(adev, uc_info->in_snd_device, true);
 
-    audio_extn_listen_update_status(uc_info,
-            LISTEN_EVENT_AUDIO_CAPTURE_INACTIVE);
-
     list_remove(&uc_info->list);
     free(uc_info);
 
@@ -780,9 +783,6 @@ int start_input_stream(struct stream_in *in)
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
     select_devices(adev, in->usecase);
-
-    audio_extn_listen_update_status(uc_info,
-            LISTEN_EVENT_AUDIO_CAPTURE_ACTIVE);
 
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d), channels %d",
           __func__, SOUND_CARD, in->pcm_device_id, in->config.channels);
@@ -2472,10 +2472,10 @@ static int adev_close(hw_device_t *device)
     pthread_mutex_lock(&adev_init_lock);
 
     if ((--audio_device_ref_count) == 0) {
+        audio_extn_listen_deinit(adev);
         audio_route_free(adev->audio_route);
         free(adev->snd_dev_ref_cnt);
         platform_deinit(adev->platform);
-        audio_extn_listen_deinit(adev);
         free(device);
         adev = NULL;
     }
@@ -2562,7 +2562,7 @@ static int adev_open(const hw_module_t *module, const char *name,
                                                         "visualizer_hal_stop_output");
         }
     }
-    audio_extn_listen_init(adev);
+    audio_extn_listen_init(adev, SOUND_CARD);
 
     *device = &adev->device.common;
 

@@ -27,7 +27,7 @@
  *
  */
 #define LOG_TAG "listen_hal_loader"
-#define LOG_NDEBUG 0
+/* #define LOG_NDEBUG 0 */
 /* #define LOG_NDDEBUG 0 */
 #include <stdbool.h>
 #include <stdlib.h>
@@ -59,7 +59,8 @@
 }
 
 
-typedef int (*create_listen_hw_t)();
+typedef int (*create_listen_hw_t)(unsigned int snd_card,
+                                  struct audio_route *audio_route);
 typedef void (*destroy_listen_hw_t)();
 
 typedef int (*open_listen_session_t)(struct audio_hw_device *,
@@ -93,15 +94,25 @@ struct listen_audio_device {
 
 static struct listen_audio_device *listen_dev;
 
-void audio_extn_listen_update_status(struct audio_usecase *uc_info,
+void audio_extn_listen_update_status(snd_device_t snd_device,
                                     listen_event_type_t event)
 {
+    if (!platform_listen_update_status(snd_device)) {
+        ALOGV("%s(): no need to notify listen. device = %s. Event = %u",
+                __func__, platform_get_snd_device_name(snd_device), event);
+        return;
+    }
+
     if (listen_dev) {
-        ALOGI("%s(): current active device =  %s. Event = %u", __func__,
-                platform_get_snd_device_name(uc_info->in_snd_device),
-                event);
-        if (uc_info->in_snd_device != SND_DEVICE_IN_CAPTURE_FM)
-            listen_dev->notify_event(event);
+        ALOGI("%s(): %s listen. current active device = %s. Event = %u",
+                __func__,
+                (event == LISTEN_EVENT_SND_DEVICE_BUSY) ? "stop" : "start",
+                platform_get_snd_device_name(snd_device), event);
+
+            if (event == LISTEN_EVENT_SND_DEVICE_FREE)
+                   listen_dev->notify_event(AUDIO_CAPTURE_INACTIVE);
+            else if (event == LISTEN_EVENT_SND_DEVICE_BUSY)
+                   listen_dev->notify_event(AUDIO_CAPTURE_ACTIVE);
     }
 }
 
@@ -111,7 +122,7 @@ void audio_extn_listen_set_parameters(struct audio_device *adev,
     return;
 }
 
-int audio_extn_listen_init(struct audio_device *adev)
+int audio_extn_listen_init(struct audio_device *adev, unsigned int snd_card)
 {
     int ret;
     void *lib_handle;
@@ -165,7 +176,7 @@ int audio_extn_listen_init(struct audio_device *adev)
         LISTEN_LOAD_SYMBOLS(listen_dev, notify_event,
                 listen_notify_event_t, listen_hw_notify_event);
 
-        listen_dev->create_listen_hw();
+        listen_dev->create_listen_hw(snd_card, adev->audio_route);
     }
     return 0;
 }
