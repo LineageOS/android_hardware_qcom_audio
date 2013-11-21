@@ -1510,7 +1510,7 @@ status_t AudioHardware::setParameters(const String8& keyValuePairs)
 uint32_t AudioHardware::getMvsMode(int format, int rate)
 {
     switch(format) {
-    case AudioSystem::PCM_16_BIT:
+    case AUDIO_FORMAT_PCM_16_BIT:
         if(rate == AUDIO_HW_VOIP_SAMPLERATE_8K) {
             return MVS_MODE_PCM;
         } else if(rate== AUDIO_HW_VOIP_SAMPLERATE_16K) {
@@ -1519,19 +1519,19 @@ uint32_t AudioHardware::getMvsMode(int format, int rate)
             return MVS_MODE_PCM;
         }
         break;
-    case AudioSystem::AMR_NB:
+    case AUDIO_FORMAT_AMR_NB:
         return MVS_MODE_AMR;
         break;
-    case AudioSystem::AMR_WB:
+    case AUDIO_FORMAT_AMR_WB:
         return MVS_MODE_AMR_WB;
         break;
-    case AudioSystem::EVRC:
+    case AUDIO_FORMAT_EVRC:
         return   MVS_MODE_IS127;
         break;
-    case AudioSystem::EVRCB:
+    case AUDIO_FORMAT_EVRCB:
         return MVS_MODE_4GV_NB;
         break;
-    case AudioSystem::EVRCWB:
+    case AUDIO_FORMAT_EVRCWB:
         return MVS_MODE_4GV_WB;
         break;
     default:
@@ -1704,14 +1704,14 @@ size_t AudioHardware::getInputBufferSize(uint32_t sampleRate, int format, int ch
 {
     ALOGD("AudioHardware::getInputBufferSize sampleRate %d format %d channelCount %d"
             ,sampleRate, format, channelCount);
-    if ( (format != AudioSystem::PCM_16_BIT) &&
-         (format != AudioSystem::AMR_NB)     &&
-         (format != AudioSystem::AMR_WB)     &&
-         (format != AudioSystem::EVRC)       &&
-         (format != AudioSystem::EVRCB)      &&
-         (format != AudioSystem::EVRCWB)     &&
-         (format != AudioSystem::QCELP)      &&
-         (format != AudioSystem::AAC)){
+    if ( (format != AUDIO_FORMAT_PCM_16_BIT) &&
+         (format != AUDIO_FORMAT_AMR_NB)     &&
+         (format != AUDIO_FORMAT_AMR_WB)     &&
+         (format != AUDIO_FORMAT_EVRC)       &&
+         (format != AUDIO_FORMAT_EVRCB)      &&
+         (format != AUDIO_FORMAT_EVRCWB)     &&
+         (format != AUDIO_FORMAT_QCELP)      &&
+         (format != AUDIO_FORMAT_AAC)) {
         ALOGW("getInputBufferSize bad format: 0x%x", format);
         return 0;
     }
@@ -1722,13 +1722,13 @@ size_t AudioHardware::getInputBufferSize(uint32_t sampleRate, int format, int ch
 
     size_t bufferSize = 0;
 
-    if (format == AudioSystem::AMR_NB) {
+    if (format == AUDIO_FORMAT_AMR_NB) {
        bufferSize = 320*channelCount;
-    } else if (format == AudioSystem::EVRC) {
+    } else if (format == AUDIO_FORMAT_EVRC) {
        bufferSize = 230*channelCount;
-    } else if (format == AudioSystem::QCELP) {
+    } else if (format == AUDIO_FORMAT_QCELP) {
        bufferSize = 350*channelCount;
-    } else if (format == AudioSystem::AAC) {
+    } else if (format == AUDIO_FORMAT_AAC) {
        bufferSize = 2048;
     } else if (sampleRate == 8000 || sampleRate == 16000 || sampleRate == 32000) {
        bufferSize = (sampleRate * channelCount * 20 * sizeof(int16_t)) / 1000;
@@ -3337,7 +3337,7 @@ ssize_t AudioHardware::AudioStreamInVoip::read( void* buffer, ssize_t bytes)
     }
     struct msm_audio_mvs_frame audio_mvs_frame;
     memset(&audio_mvs_frame, 0, sizeof(audio_mvs_frame));
-    if(mFormat == AudioSystem::PCM_16_BIT) {
+    if(mFormat == AUDIO_FORMAT_PCM_16_BIT) {
     audio_mvs_frame.frame_type = 0;
        while (count >= mBufferSize) {
            audio_mvs_frame.len = mBufferSize;
@@ -4023,7 +4023,7 @@ ssize_t AudioHardware::AudioStreamOutDirect::write(const void* buffer, size_t by
     }
     struct msm_audio_mvs_frame audio_mvs_frame;
     memset(&audio_mvs_frame, 0, sizeof(audio_mvs_frame));
-    if (mFormat == AudioSystem::PCM_16_BIT) {
+    if (mFormat == AUDIO_FORMAT_PCM_16_BIT) {
         audio_mvs_frame.frame_type = 0;
         while (count) {
             audio_mvs_frame.len = mBufferSize;
