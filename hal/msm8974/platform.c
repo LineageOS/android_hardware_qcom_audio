@@ -1380,6 +1380,14 @@ void platform_get_parameters(void *platform,
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_FLUENCE_TYPE, value);
     }
 
+    memset(value, 0, sizeof(value));
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_SLOWTALK,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_int(reply, AUDIO_PARAMETER_KEY_SLOWTALK,
+                          my_data->slowtalk);
+    }
+
     ALOGV("%s: exit: returns - %s", __func__, str_parms_to_str(reply));
 }
 
