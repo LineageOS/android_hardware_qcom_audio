@@ -50,7 +50,7 @@ struct fm_module {
     struct pcm *fm_pcm_rx;
     struct pcm *fm_pcm_tx;
     bool is_fm_running;
-    int fm_volume;
+    float fm_volume;
 };
 
 static struct fm_module fmmod = {
@@ -66,7 +66,7 @@ static int32_t fm_set_volume(struct audio_device *adev, float value)
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Internal FM RX Volume";
 
-    ALOGD("%s: entry", __func__);
+    ALOGV("%s: entry", __func__);
     ALOGD("%s: (%f)\n", __func__, value);
 
     if (value < 0.0) {
@@ -77,8 +77,7 @@ static int32_t fm_set_volume(struct audio_device *adev, float value)
         value = 1.0;
     }
     vol  = lrint((value * 0x2000) + 0.5);
-
-    fmmod.fm_volume = vol;
+    fmmod.fm_volume = value;
 
     if (!fmmod.is_fm_running) {
         ALOGV("%s: FM not active, ignoring set_fm_volume call", __func__);
@@ -92,9 +91,9 @@ static int32_t fm_set_volume(struct audio_device *adev, float value)
               __func__, mixer_ctl_name);
         return -EINVAL;
     }
-    mixer_ctl_set_value(ctl, 0, fmmod.fm_volume);
+    mixer_ctl_set_value(ctl, 0, vol);
 
-    ALOGD("%s: exit", __func__);
+    ALOGV("%s: exit", __func__);
     return ret;
 }
 
