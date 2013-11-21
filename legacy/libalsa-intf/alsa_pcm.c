@@ -866,8 +866,10 @@ static int disable_timer(struct pcm *pcm) {
 
 int pcm_close(struct pcm *pcm)
 {
-    if (pcm == &bad_pcm)
+    if ((pcm == &bad_pcm) || (pcm == NULL)) {
+        ALOGE("pcm_close invalid pcm handle:%p",pcm);
         return 0;
+    }
 
     if (pcm->flags & PCM_MMAP) {
         disable_timer(pcm);
@@ -933,7 +935,7 @@ struct pcm *pcm_open(unsigned flags, char *device)
         strlcat(dname, "D", (sizeof("D")+strlen(dname)));
         tmp = device+5;
         pcm->device_no = atoi(tmp);
-	/* should be safe to assume pcm dev ID never exceed 99 */
+        /* should be safe to assume pcm dev ID never exceed 99 */
         if (pcm->device_no > 9)
             strlcat(dname, tmp, (3+strlen(dname)));
         else
@@ -947,7 +949,7 @@ struct pcm *pcm_open(unsigned flags, char *device)
         strlcat(dname, "D", (sizeof("D")+strlen(dname)));
         tmp = device+5;
         pcm->device_no = atoi(tmp);
-	/* should be safe to assume pcm dev ID never exceed 99 */
+        /* should be safe to assume pcm dev ID never exceed 99 */
         if (pcm->device_no > 9)
             strlcat(dname, tmp, (3+strlen(dname)));
         else
