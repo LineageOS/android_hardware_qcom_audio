@@ -231,7 +231,6 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
             return ret;
         }
 
-        in->config = pcm_config_voice_call;
         session_id = voice_get_active_session_id(adev);
         ret = platform_set_incall_recoding_session_id(adev->platform,
                                                       session_id);
