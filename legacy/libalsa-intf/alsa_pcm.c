@@ -364,6 +364,8 @@ static void info_dump(struct snd_pcm_info *info) {}
 
 int param_set_hw_refine(struct pcm *pcm, struct snd_pcm_hw_params *params)
 {
+    if (pcm == NULL)
+        return -EINVAL;
     if (ioctl(pcm->fd, SNDRV_PCM_IOCTL_HW_REFINE, params)) {
         ALOGE("SNDRV_PCM_IOCTL_HW_REFINE failed");
         return -EPERM;
@@ -373,6 +375,8 @@ int param_set_hw_refine(struct pcm *pcm, struct snd_pcm_hw_params *params)
 
 int param_set_hw_params(struct pcm *pcm, struct snd_pcm_hw_params *params)
 {
+    if (pcm == NULL)
+        return -EINVAL;
     if (ioctl(pcm->fd, SNDRV_PCM_IOCTL_HW_PARAMS, params)) {
         return -EPERM;
     }
@@ -382,6 +386,8 @@ int param_set_hw_params(struct pcm *pcm, struct snd_pcm_hw_params *params)
 
 int param_set_sw_params(struct pcm *pcm, struct snd_pcm_sw_params *sparams)
 {
+    if (pcm == NULL)
+        return -EINVAL;
     if (ioctl(pcm->fd, SNDRV_PCM_IOCTL_SW_PARAMS, sparams)) {
         return -EPERM;
     }
@@ -624,6 +630,8 @@ int mmap_transfer_capture(struct pcm *pcm, void *data, unsigned offset,
 
 int pcm_prepare(struct pcm *pcm)
 {
+    if (pcm == NULL)
+        return -EINVAL;
     if (ioctl(pcm->fd, SNDRV_PCM_IOCTL_PREPARE)) {
            ALOGE("cannot prepare channel: errno =%d\n", -errno);
            return -errno;
@@ -735,6 +743,8 @@ static int pcm_write_nmmap(struct pcm *pcm, void *data, unsigned count)
 
 int pcm_write(struct pcm *pcm, void *data, unsigned count)
 {
+    if (pcm == NULL)
+        return -EINVAL;
      if (pcm->flags & PCM_MMAP)
          return pcm_write_mmap(pcm, data, count);
      else
@@ -744,6 +754,8 @@ int pcm_write(struct pcm *pcm, void *data, unsigned count)
 int pcm_read(struct pcm *pcm, void *data, unsigned count)
 {
     struct snd_xferi x;
+    if (pcm == NULL)
+        return -EINVAL;
 
     if (!(pcm->flags & PCM_IN))
         return -EINVAL;
