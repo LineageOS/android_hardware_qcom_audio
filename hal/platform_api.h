@@ -52,4 +52,6 @@ int platform_set_incall_recoding_session_id(void *platform, uint32_t session_id)
 int64_t platform_render_latency(audio_usecase_t usecase);
 int platform_update_usecase_from_source(int source, audio_usecase_t usecase);
 
+bool platform_listen_update_status(snd_device_t snd_device);
+
 #endif // QCOM_AUDIO_PLATFORM_API_H
