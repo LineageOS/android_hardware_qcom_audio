@@ -202,6 +202,11 @@ struct audio_device {
     int (*offload_effects_stop_output)(audio_io_handle_t, int);
 };
 
+#define LITERAL_TO_STRING(x) #x
+#define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\
+            __FILE__ ":" LITERAL_TO_STRING(__LINE__)\
+            " ASSERT_FATAL(" #condition ") failed.")
+
 /*
  * NOTE: when multiple mutexes have to be acquired, always take the
  * stream_in or stream_out mutex first, followed by the audio_device mutex.

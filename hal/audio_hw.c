@@ -52,7 +52,8 @@
 #include "audio_extn.h"
 
 #include "sound/compress_params.h"
-
+#define MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE (256 * 1024)
+#define MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE (8 * 1024)
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /* ToDo: Check and update a proper value in msec */
@@ -137,6 +138,7 @@ static const struct string_to_enum out_channels_name_to_enum_table[] = {
 };
 
 static int set_voice_volume_l(struct audio_device *adev, float volume);
+static uint32_t get_offload_buffer_size();
 static int set_gapless_mode(struct audio_device *adev);
 
 static bool is_supported_format(audio_format_t format)
@@ -1991,7 +1993,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
         out->compr_config.codec->id =
                 get_snd_codec_id(config->offload_info.format);
-        out->compr_config.fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+        out->compr_config.fragment_size = get_offload_buffer_size();
         out->compr_config.fragments = COMPRESS_OFFLOAD_NUM_FRAGMENTS;
         out->compr_config.codec->sample_rate =
                     compress_get_alsa_rate(config->offload_info.sample_rate);
@@ -2535,7 +2537,28 @@ static int set_gapless_mode(struct audio_device *adev) {
          return -EINVAL;
     }
     return 0;
+}
 
+/* Read  offload buffer size from a property.
+ * If value is not power of 2  round it to
+ * power of 2.
+ */
+static uint32_t get_offload_buffer_size()
+{
+    char value[PROPERTY_VALUE_MAX] = {0};
+    uint32_t fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+    if((property_get("audio.offload.buffer.size.kb", value, "")) &&
+            atoi(value)) {
+        fragment_size =  atoi(value) * 1024;
+        //ring buffer size needs to be 4k aligned.
+        CHECK(!(fragment_size * COMPRESS_OFFLOAD_NUM_FRAGMENTS % 4096));
+    }
+    if(fragment_size < MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE)
+        fragment_size = MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+    else if(fragment_size > MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE)
+        fragment_size = MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+    ALOGVV("%s: fragment_size %d", __func__, fragment_size);
+    return fragment_size;
 }
 
 static struct hw_module_methods_t hal_module_methods = {
