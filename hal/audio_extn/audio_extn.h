@@ -157,4 +157,14 @@ size_t audio_extn_compr_cap_read(struct stream_in *in,
 void audio_extn_compr_cap_deinit();
 #endif
 
+#ifndef DS1_DOLBY_DDP_ENABLED
+#define audio_extn_dolby_is_supported_format(format)    (0)
+#define audio_extn_dolby_get_snd_codec_id(format)       (0)
+#define audio_extn_dolby_set_DMID(adev)                 (0)
+#else
+bool audio_extn_dolby_is_supported_format(audio_format_t format);
+int audio_extn_dolby_get_snd_codec_id(audio_format_t format);
+int audio_extn_dolby_set_DMID(struct audio_device *adev);
+#endif
+
 #endif /* AUDIO_EXTN_H */
