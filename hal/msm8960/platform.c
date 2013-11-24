@@ -25,6 +25,7 @@
 #include <audio_hw.h>
 #include <platform_api.h>
 #include "platform.h"
+#include "audio_extn.h"
 
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define LIB_CSD_CLIENT "libcsd-client.so"
@@ -127,6 +128,9 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = "voice-tty-full-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = "voice-tty-vco-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = "voice-tty-hco-handset",
+    [SND_DEVICE_OUT_AFE_PROXY] = "afe-proxy",
+    [SND_DEVICE_OUT_USB_HEADSET] = "usb-headphones",
+    [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = "speaker-and-usb-headphones",
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
@@ -153,6 +157,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS] = "voice-rec-dmic-bs",
     [SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE] = "voice-rec-dmic-ef-fluence",
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE] = "voice-rec-dmic-bs-fluence",
+    [SND_DEVICE_IN_USB_HEADSET_MIC] = "usb-headset-mic",
 };
 
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
@@ -172,6 +177,9 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = 37,
+    [SND_DEVICE_OUT_AFE_PROXY] = 0,
+    [SND_DEVICE_OUT_USB_HEADSET] = 22,
+    [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 22,
 
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
     [SND_DEVICE_IN_SPEAKER_MIC] = 4,
@@ -198,6 +206,7 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS] = 62,
     [SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE] = 6,
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE] = 5,
+    [SND_DEVICE_IN_USB_HEADSET_MIC] = 21,
 };
 
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
@@ -359,12 +368,17 @@ void *platform_init(struct audio_device *adev)
         }
     }
 
+    /* init usb */
+    audio_extn_usb_init(adev);
+
     return my_data;
 }
 
 void platform_deinit(void *platform)
 {
     free(platform);
+    /* deinit usb */
+    audio_extn_usb_deinit();
 }
 
 const char *platform_get_snd_device_name(snd_device_t snd_device)
@@ -385,6 +399,15 @@ void platform_add_backend_name(char *mixer_path, snd_device_t snd_device)
         strcat(mixer_path, " hdmi");
     else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HDMI)
         strcat(mixer_path, " speaker-and-hdmi");
+        else if (snd_device == SND_DEVICE_OUT_AFE_PROXY)
+        strlcat(mixer_path, " afe-proxy", MIXER_PATH_MAX_LENGTH);
+    else if (snd_device == SND_DEVICE_OUT_USB_HEADSET)
+        strlcat(mixer_path, " usb-headphones", MIXER_PATH_MAX_LENGTH);
+    else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET)
+        strlcat(mixer_path, " speaker-and-usb-headphones",
+                MIXER_PATH_MAX_LENGTH);
+    else if (snd_device == SND_DEVICE_IN_USB_HEADSET_MIC)
+        strlcat(mixer_path, " usb-headset-mic", MIXER_PATH_MAX_LENGTH);
 }
 
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
@@ -571,6 +594,11 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         goto exit;
     }
 
+    if(devices & AUDIO_DEVICE_OUT_PROXY) {
+        ALOGD("%s: setting sink capability for Proxy", __func__);
+        audio_extn_set_afe_proxy_channel_mixer(adev);
+    }
+
     if (mode == AUDIO_MODE_IN_CALL) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
@@ -586,6 +614,9 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
             snd_device = SND_DEVICE_OUT_BT_SCO;
         } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
             snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
+        } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
+                    devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
+            snd_device = SND_DEVICE_OUT_USB_HEADSET;
         } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
             if (is_operator_tmus())
                 snd_device = SND_DEVICE_OUT_VOICE_HANDSET_TMUS;
@@ -607,6 +638,9 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         } else if (devices == (AUDIO_DEVICE_OUT_AUX_DIGITAL |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_HDMI;
+        } else if (devices == (AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET |
+                               AUDIO_DEVICE_OUT_SPEAKER)) {
+            snd_device = SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET;
         } else {
             ALOGE("%s: Invalid combo device(%#x)", __func__, devices);
             goto exit;
@@ -633,8 +667,15 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         snd_device = SND_DEVICE_OUT_BT_SCO;
     } else if (devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
         snd_device = SND_DEVICE_OUT_HDMI ;
+    } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
+               devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
+        snd_device = SND_DEVICE_OUT_USB_HEADSET;
     } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
         snd_device = SND_DEVICE_OUT_HANDSET;
+    } else if (devices & AUDIO_DEVICE_OUT_PROXY) {
+        ALOGD("%s: setting sink capability for Proxy", __func__);
+        audio_extn_set_afe_proxy_channel_mixer(adev);
+                snd_device = SND_DEVICE_OUT_AFE_PROXY;
     } else {
         ALOGE("%s: Unknown device(s) %#x", __func__, devices);
     }
@@ -775,6 +816,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             snd_device = SND_DEVICE_IN_BT_SCO_MIC ;
         } else if (in_device & AUDIO_DEVICE_IN_AUX_DIGITAL) {
             snd_device = SND_DEVICE_IN_HDMI_MIC;
+        } else if (in_device & AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET ||
+                in_device & AUDIO_DEVICE_IN_DGTL_DOCK_HEADSET) {
+            snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else {
             ALOGE("%s: Unknown input device(s) %#x", __func__, in_device);
             ALOGW("%s: Using default handset-mic", __func__);
@@ -793,6 +837,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             snd_device = SND_DEVICE_IN_BT_SCO_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             snd_device = SND_DEVICE_IN_HDMI_MIC;
+        } else if (out_device & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
+                out_device & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
+            snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else {
             ALOGE("%s: Unknown output device(s) %#x", __func__, out_device);
             ALOGW("%s: Using default handset-mic", __func__);
