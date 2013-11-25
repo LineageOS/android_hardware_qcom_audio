@@ -2123,21 +2123,11 @@ AudioPolicyManagerBase::IOProfile *AudioPolicyManager::getProfileForDirectOutput
         }
         for (size_t j = 0; j < mHwModules[i]->mOutputProfiles.size(); j++) {
            AudioPolicyManagerBase::IOProfile *profile = mHwModules[i]->mOutputProfiles[j];
-            if (flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
-                if (profile->isCompatibleProfile(device, samplingRate, format,
+            if (isCompatibleProfile(profile, device, samplingRate, format,
                                            channelMask,
-                                           AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
-                    if (mAvailableOutputDevices & profile->mSupportedDevices) {
-                        return mHwModules[i]->mOutputProfiles[j];
-                    }
-                }
-            } else if (flags & AUDIO_OUTPUT_FLAG_DIRECT) {
-                if (profile->isCompatibleProfile(device, samplingRate, format,
-                                           channelMask,
-                                           AUDIO_OUTPUT_FLAG_DIRECT)) {
-                    if (mAvailableOutputDevices & profile->mSupportedDevices) {
-                        return mHwModules[i]->mOutputProfiles[j];
-                    }
+                                           flags)) {
+                if (mAvailableOutputDevices & profile->mSupportedDevices) {
+                    return mHwModules[i]->mOutputProfiles[j];
                 }
             }
         }
