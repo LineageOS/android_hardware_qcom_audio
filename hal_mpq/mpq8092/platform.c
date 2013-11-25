@@ -91,20 +91,39 @@ struct platform_data {
     struct csd_data *csd;
 };
 
-static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
-    [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {DEEP_BUFFER_PCM_DEVICE,
-                                            DEEP_BUFFER_PCM_DEVICE},
-    [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
-                                           LOWLATENCY_PCM_DEVICE},
-    [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {MULTIMEDIA2_PCM_DEVICE,
-                                        MULTIMEDIA2_PCM_DEVICE},
+static int pcm_device_table[AUDIO_USECASE_MAX][4] = {
+    [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {USECASE_AUDIO_PLAYBACK_DEEP_BUFFER,
+                                            DEEP_BUFFER_PCM_DEVICE,
+                                            DEEP_BUFFER_PCM_DEVICE, 0},
+    [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = {USECASE_AUDIO_PLAYBACK_LOW_LATENCY,
+                                           LOWLATENCY_PCM_DEVICE,
+                                           LOWLATENCY_PCM_DEVICE, 0},
+    [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {USECASE_AUDIO_PLAYBACK_MULTI_CH,
+                                        MULTIMEDIA2_PCM_DEVICE,
+                                        MULTIMEDIA2_PCM_DEVICE, 0},
+    [USECASE_AUDIO_PLAYBACK_MULTI_CH] =    {USECASE_AUDIO_PLAYBACK_MULTI_CH,
+                                            MULTI_CHANNEL_PCM_DEVICE,
+                                            MULTI_CHANNEL_PCM_DEVICE, 0},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] =
-                     {PLAYBACK_OFFLOAD_DEVICE, PLAYBACK_OFFLOAD_DEVICE},
-    [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
-    [USECASE_AUDIO_RECORD_COMPRESS] = {COMPRESS_CAPTURE_DEVICE, COMPRESS_CAPTURE_DEVICE},
-    [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
-                                          LOWLATENCY_PCM_DEVICE},
-    [USECASE_AUDIO_RECORD_FM_VIRTUAL] = {MULTIMEDIA2_PCM_DEVICE,
+                     {USECASE_AUDIO_PLAYBACK_OFFLOAD, PLAYBACK_OFFLOAD_DEVICE1,
+                     PLAYBACK_OFFLOAD_DEVICE1, 0},
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD1] =    {USECASE_AUDIO_PLAYBACK_OFFLOAD,
+                                            PLAYBACK_OFFLOAD_DEVICE2,
+                                            PLAYBACK_OFFLOAD_DEVICE2, 0},
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD2] =    {USECASE_AUDIO_PLAYBACK_OFFLOAD,
+                                            PLAYBACK_OFFLOAD_DEVICE3,
+                                            PLAYBACK_OFFLOAD_DEVICE3, 0},
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD3] =    {USECASE_AUDIO_PLAYBACK_OFFLOAD,
+                                            PLAYBACK_OFFLOAD_DEVICE4,
+                                            PLAYBACK_OFFLOAD_DEVICE4, 0},
+    [USECASE_AUDIO_RECORD] = {USECASE_AUDIO_RECORD, AUDIO_RECORD_PCM_DEVICE,
+                             AUDIO_RECORD_PCM_DEVICE, 0},
+    [USECASE_AUDIO_RECORD_COMPRESS] = {USECASE_AUDIO_RECORD_COMPRESS, COMPRESS_CAPTURE_DEVICE,
+                                       COMPRESS_CAPTURE_DEVICE, 0},
+    [USECASE_AUDIO_RECORD_LOW_LATENCY] = {USECASE_AUDIO_RECORD_LOW_LATENCY,
+                                          LOWLATENCY_PCM_DEVICE,
+                                          LOWLATENCY_PCM_DEVICE, 0},
+   /* [USECASE_AUDIO_RECORD_FM_VIRTUAL] = {,
                                   MULTIMEDIA2_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_FM] = {FM_PLAYBACK_PCM_DEVICE, FM_CAPTURE_PCM_DEVICE},
     [USECASE_VOICE_CALL] = {VOICE_CALL_PCM_DEVICE, VOICE_CALL_PCM_DEVICE},
@@ -124,6 +143,7 @@ static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                       INCALL_MUSIC_UPLINK2_PCM_DEVICE},
     [USECASE_AUDIO_SPKR_CALIB_RX] = {SPKR_PROT_CALIB_RX_PCM_DEVICE, -1},
     [USECASE_AUDIO_SPKR_CALIB_TX] = {-1, SPKR_PROT_CALIB_TX_PCM_DEVICE},
+*/
 };
 
 /* Array to store sound devices */
@@ -593,10 +613,37 @@ int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
 {
     int device_id;
     if (device_type == PCM_PLAYBACK)
-        device_id = pcm_device_table[usecase][0];
-    else
         device_id = pcm_device_table[usecase][1];
+    else
+        device_id = pcm_device_table[usecase][2];
     return device_id;
+}
+
+audio_usecase_t platform_get_usecase(
+        audio_usecase_stream_type_t uc_type)
+{
+    int i = 0;
+    for(i =0;i<AUDIO_USECASE_MAX; i++)
+        if((pcm_device_table[i][0] == (int)uc_type) &&
+                (pcm_device_table[i][3] == 0)) {
+            pcm_device_table[i][3] = 1;
+            break;
+        }
+
+    if(i == AUDIO_USECASE_MAX)
+        return -EINVAL;
+    else
+        return (audio_usecase_t)i;
+}
+
+int platform_free_usecase(audio_usecase_t uc_id)
+{
+    if(uc_id >= AUDIO_USECASE_MAX) {
+        ALOGV("%s: enter: invalid usecase(%d)", __func__, uc_id);
+        return -EINVAL;
+    }
+    pcm_device_table[uc_id][3] = 0;
+    return 0;
 }
 
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
