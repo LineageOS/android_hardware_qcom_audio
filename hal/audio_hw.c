@@ -854,7 +854,7 @@ static int check_and_set_hdmi_channels(struct audio_device *adev,
         return 0;
 
     if (channels == adev->cur_hdmi_channels) {
-        ALOGD("%s: Requested channels are same as current", __func__);
+        ALOGD("%s: Requested channels are same as current channels(%d)", __func__, channels);
         return 0;
     }
 
@@ -950,8 +950,12 @@ int start_output_stream(struct stream_out *out)
     uc_info->out_snd_device = SND_DEVICE_NONE;
 
     /* This must be called before adding this usecase to the list */
-    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
-        check_and_set_hdmi_channels(adev, out->config.channels);
+    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD)
+            check_and_set_hdmi_channels(adev, out->compr_config.codec->ch_in);
+        else
+            check_and_set_hdmi_channels(adev, out->config.channels);
+    }
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
