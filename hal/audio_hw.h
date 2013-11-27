@@ -173,7 +173,6 @@ struct audio_device {
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
     struct mixer *mixer;
     audio_mode_t mode;
-    audio_devices_t out_device;
     struct stream_in *active_input;
     struct stream_out *primary_output;
     int in_call;

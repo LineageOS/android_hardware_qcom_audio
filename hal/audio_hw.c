@@ -2356,7 +2356,6 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->mode = AUDIO_MODE_NORMAL;
     adev->active_input = NULL;
     adev->primary_output = NULL;
-    adev->out_device = AUDIO_DEVICE_NONE;
     adev->voice_call_rx = NULL;
     adev->voice_call_tx = NULL;
     adev->voice_volume = 1.0f;
