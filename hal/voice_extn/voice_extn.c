@@ -26,7 +26,10 @@
 #include <cutils/log.h>
 #include <cutils/str_parms.h>
 #include <sys/ioctl.h>
+
+#ifndef PLATFORM_MSM8960
 #include <sound/voice_params.h>
+#endif
 
 #include "audio_hw.h"
 #include "voice.h"
@@ -148,7 +151,9 @@ static int update_calls(struct audio_device *adev)
 {
     int i = 0;
     audio_usecase_t usecase_id = 0;
+#ifndef PLATFORM_MSM8960
     enum voice_lch_mode lch_mode;
+#endif
     struct voice_session *session = NULL;
     int fd = 0;
     int ret = 0;
@@ -182,6 +187,7 @@ static int update_calls(struct audio_device *adev)
                 session->state.current = session->state.new;
                 break;
 
+#ifndef PLATFORM_MSM8960
             case CALL_LOCAL_HOLD:
                 ALOGD("%s: LOCAL_HOLD -> ACTIVE vsid:%x", __func__, session->vsid);
                 lch_mode = VOICE_LCH_STOP;
@@ -192,6 +198,7 @@ static int update_calls(struct audio_device *adev)
                     session->state.current = session->state.new;
                 }
                 break;
+#endif
 
             default:
                 ALOGV("%s: CALL_ACTIVE cannot be handled in state=%d vsid:%x",
@@ -231,6 +238,7 @@ static int update_calls(struct audio_device *adev)
                 session->state.current = session->state.new;
                 break;
 
+#ifndef PLATFORM_MSM8960
             case CALL_LOCAL_HOLD:
                 ALOGD("%s: CALL_LOCAL_HOLD -> HOLD vsid:%x", __func__, session->vsid);
                 lch_mode = VOICE_LCH_STOP;
@@ -241,6 +249,7 @@ static int update_calls(struct audio_device *adev)
                     session->state.current = session->state.new;
                 }
                 break;
+#endif
 
             default:
                 ALOGV("%s: CALL_HOLD cannot be handled in state=%d vsid:%x",
@@ -256,13 +265,15 @@ static int update_calls(struct audio_device *adev)
             case CALL_HOLD:
                 ALOGD("%s: ACTIVE/CALL_HOLD -> LOCAL_HOLD vsid:%x", __func__,
                       session->vsid);
+#ifndef PLATFORM_MSM8960
                 lch_mode = VOICE_LCH_START;
                 ret = platform_update_lch(adev->platform, session, lch_mode);
                 if (ret < 0) {
                     ALOGE("%s: lch mode update failed, ret = %d", __func__, ret);
-                } else {
+                } else
+#endif
                     session->state.current = session->state.new;
-                }
+
                 break;
 
             default:

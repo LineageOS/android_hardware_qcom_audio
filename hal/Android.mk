@@ -26,6 +26,13 @@ ifneq ($(filter msm8974,$(TARGET_BOARD_PLATFORM)),)
 endif
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),msm8960)
+  LOCAL_CFLAGS := -DPLATFORM_MSM8960
+  ifneq ($(BOARD_HAVE_NEW_QCOM_CSDCLIENT), true)
+    AUDIO_FEATURE_DISABLED_MULTI_VOICE_SESSIONS := true
+  endif
+endif
+
 LOCAL_SRC_FILES := \
 	audio_hw.c \
 	voice.c \

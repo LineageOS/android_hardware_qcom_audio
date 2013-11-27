@@ -20,7 +20,9 @@
 #ifndef AUDIO_PLATFORM_API_H
 #define AUDIO_PLATFORM_API_H
 
+#ifndef PLATFORM_MSM8960
 #include <sound/voice_params.h>
+#endif
 
 #define CODEC_BACKEND_DEFAULT_BIT_WIDTH 16
 #define CODEC_BACKEND_DEFAULT_SAMPLE_RATE 48000

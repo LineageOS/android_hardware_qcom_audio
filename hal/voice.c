@@ -218,6 +218,7 @@ bool voice_is_in_call_rec_stream(struct stream_in *in)
     return in_call_rec;
 }
 
+#ifdef MULTI_VOICE_SESSION_ENABLED
 uint32_t voice_get_active_session_id(struct audio_device *adev)
 {
     int ret = 0;
@@ -309,6 +310,7 @@ int voice_check_and_set_incall_music_usecase(struct audio_device *adev,
 
     return ret;
 }
+#endif
 
 int voice_set_mic_mute(struct audio_device *adev, bool state)
 {
@@ -403,9 +405,11 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
     if (ret != 0 && ret != -ENOSYS)
         goto done;
 
+#ifdef COMPRESS_VOIP_ENABLED
     ret = voice_extn_compress_voip_set_parameters(adev, parms);
     if (ret != 0 && ret != -ENOSYS)
         goto done;
+#endif
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_TTY_MODE, value, sizeof(value));
     if (err >= 0) {
@@ -432,6 +436,7 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
         }
     }
 
+#ifdef INCALL_MUSIC_ENABLED
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_INCALLMUSIC,
                             value, sizeof(value));
     if (err >= 0) {
@@ -441,6 +446,7 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
         else
             platform_stop_incall_music_usecase(adev->platform);
      }
+#endif
 
 done:
     ALOGV("%s: exit with code(%d)", __func__, ret);
