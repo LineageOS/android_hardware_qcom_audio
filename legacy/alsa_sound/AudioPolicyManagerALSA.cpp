@@ -148,7 +148,7 @@ uint32_t AudioPolicyManager::checkDeviceMuteStrategies(AudioOutputDescriptor *ou
                 setStrategyMute((routing_strategy)i, mute, curOutput, mute ? 0 : delayMs);
                 if (desc->isStrategyActive((routing_strategy)i)) {
                     // do tempMute only for current output
-                    if (tempMute) {
+                    if (tempMute && !mute) {
                         if ((desc != outputDesc) && (desc->device() == device)) {
                             ALOGD("avoid tempmute on curOutput %d as device is same", curOutput);
                         } else {
@@ -212,10 +212,6 @@ void AudioPolicyManager::setStreamMute(int stream,
           stream, on, output, outputDesc->mMuteCount[stream], device);
 
     if (on) {
-        if (outputDesc->mMuteCount[stream] > 0) {
-            ALOGV("setStreamMute() muting already muted stream!");
-            return;
-        }
         if (outputDesc->mMuteCount[stream] == 0) {
             if (streamDesc.mCanBeMuted &&
                     ((stream != AudioSystem::ENFORCED_AUDIBLE) ||
