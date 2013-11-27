@@ -520,7 +520,7 @@ status_t AudioHardwareALSA::setMode(int mode)
 #ifndef QCOM_MULTI_VOICE_SESSION_ENABLED
             mCallState = CALL_INACTIVE;
 #endif
-            doRouting(0);
+            doRouting(0,NULL);
         }
     }
 
