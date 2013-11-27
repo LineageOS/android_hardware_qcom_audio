@@ -219,7 +219,7 @@ typedef int (*stop_voice_t)(uint32_t);
 typedef int (*start_playback_t)(uint32_t);
 typedef int (*stop_playback_t)(uint32_t);
 typedef int (*start_record_t)(uint32_t, int);
-typedef int (*stop_record_t)(uint32_t, int);
+typedef int (*stop_record_t)(uint32_t);
 /* CSD Client structure */
 struct csd_data {
     void *csd_client;

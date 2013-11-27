@@ -202,22 +202,26 @@ uint32_t voice_get_active_session_id(struct audio_device *adev)
 }
 
 int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
-                                       struct stream_in *in)
+                                           struct stream_in *in)
 {
     int ret = 0;
     uint32_t session_id;
     int usecase_id;
+    int rec_mode = INCALL_REC_NONE;
 
     if (voice_is_in_call(adev)) {
         switch (in->source) {
         case AUDIO_SOURCE_VOICE_UPLINK:
             in->usecase = USECASE_INCALL_REC_UPLINK;
+            rec_mode = INCALL_REC_UPLINK;
             break;
         case AUDIO_SOURCE_VOICE_DOWNLINK:
             in->usecase = USECASE_INCALL_REC_DOWNLINK;
+            rec_mode = INCALL_REC_DOWNLINK;
             break;
         case AUDIO_SOURCE_VOICE_CALL:
             in->usecase = USECASE_INCALL_REC_UPLINK_AND_DOWNLINK;
+            rec_mode = INCALL_REC_UPLINK_AND_DOWNLINK;
             break;
         default:
             ALOGV("%s: Source type %d doesnt match incall recording criteria",
@@ -226,11 +230,26 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
         }
 
         session_id = voice_get_active_session_id(adev);
-        ret = platform_set_incall_recoding_session_id(adev->platform,
-                                                      session_id);
+        ret = platform_set_incall_recording_session_id(adev->platform,
+                                                       session_id, rec_mode);
         ALOGV("%s: Update usecase to %d",__func__, in->usecase);
     } else {
         ALOGV("%s: voice call not active", __func__);
+    }
+
+    return ret;
+}
+
+int voice_check_and_stop_incall_rec_usecase(struct audio_device *adev,
+                                            struct stream_in *in)
+{
+    int ret = 0;
+
+    if (in->source == AUDIO_SOURCE_VOICE_UPLINK ||
+        in->source == AUDIO_SOURCE_VOICE_DOWNLINK ||
+        in->source == AUDIO_SOURCE_VOICE_CALL) {
+        ret = platform_stop_incall_recording_usecase(adev->platform);
+        ALOGV("%s: Stop In-call recording", __func__);
     }
 
     return ret;
@@ -357,6 +376,16 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
                 select_devices(adev, USECASE_VOICE_CALL);
         }
     }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_INCALLMUSIC,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_INCALLMUSIC);
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_TRUE) == 0)
+            platform_start_incall_music_usecase(adev->platform);
+        else
+            platform_stop_incall_music_usecase(adev->platform);
+     }
 
 done:
     ALOGV("%s: exit with code(%d)", __func__, ret);

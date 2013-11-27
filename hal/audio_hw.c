@@ -734,6 +734,9 @@ static int stop_input_stream(struct stream_in *in)
         return -EINVAL;
     }
 
+    /* Close in-call recording streams */
+    voice_check_and_stop_incall_rec_usecase(adev, in);
+
     /* 1. Disable stream specific mixer controls */
     disable_audio_route(adev, uc_info, true);
 
@@ -2338,6 +2341,7 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
     int ret;
 
     pthread_mutex_lock(&adev->lock);
+    ALOGD("%s state %d\n", __func__, state);
     ret = voice_set_mic_mute((struct audio_device *)dev, state);
     pthread_mutex_unlock(&adev->lock);
 
