@@ -1306,7 +1306,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     char *str;
-    char value[32];
+    char value[256] = {0};
     int val;
     int ret = 0;
 
@@ -1323,10 +1323,15 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         }
     }
 
-    ret = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_SLOWTALK, &val);
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SLOWTALK, value, sizeof(value));
     if (ret >= 0) {
+        bool state = false;
+        if (!strncmp("true", value, sizeof("true"))) {
+            state = true;
+        }
+
         str_parms_del(parms, AUDIO_PARAMETER_KEY_SLOWTALK);
-        ret = platform_set_slowtalk(my_data, val);
+        ret = platform_set_slowtalk(my_data, state);
         if (ret)
             ALOGE("%s: Failed to set slow talk err: %d", __func__, ret);
     }
@@ -1449,8 +1454,8 @@ void platform_get_parameters(void *platform,
     ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_SLOWTALK,
                             value, sizeof(value));
     if (ret >= 0) {
-        str_parms_add_int(reply, AUDIO_PARAMETER_KEY_SLOWTALK,
-                          my_data->slowtalk);
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_SLOWTALK,
+                          my_data->slowtalk?"true":"false");
     }
 
     ALOGV("%s: exit: returns - %s", __func__, str_parms_to_str(reply));
