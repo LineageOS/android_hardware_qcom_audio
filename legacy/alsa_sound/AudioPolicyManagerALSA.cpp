@@ -417,22 +417,43 @@ status_t AudioPolicyManager::setDeviceConnectionState(audio_devices_t device,
             mpClientInterface->setParameters(mPrimaryOutput, param.toString());
         }
 #endif
-        for (int i = mOutputs.size() -1; i >= 0; i--) {
-            audio_devices_t newDevice = getNewDevice(mOutputs.keyAt(i), true /*fromCache*/);
+       if(isInCall() && isTunnelOutputEnabled()) {
+           //On each keyRouting call, HAL is routing new device to all open outputs
+           //Incall mode device switch is taking time than normal
+           //start with tunnel mode to avoid current device mismatch with APM to HAL(which effects temp mute)
+           for (int i = mOutputs.size() -1; i >= 0; i--) {
+               audio_devices_t newDevice = getNewDevice(mOutputs.keyAt(i), true /*fromCache*/);
 #ifdef QCOM_ANC_HEADSET_ENABLED
-            if(device == AUDIO_DEVICE_OUT_ANC_HEADPHONE ||
-               device == AUDIO_DEVICE_OUT_ANC_HEADSET) {
-                if(newDevice == 0){
-                    newDevice = getDeviceForStrategy(STRATEGY_MEDIA, false);
-                }
-            }
+               if(device == AUDIO_DEVICE_OUT_ANC_HEADPHONE ||
+                  device == AUDIO_DEVICE_OUT_ANC_HEADSET) {
+                  if(newDevice == 0){
+                      newDevice = getDeviceForStrategy(STRATEGY_MEDIA, false);
+                  }
+              }
 #endif
-            setOutputDevice(mOutputs.keyAt(i),
+              setOutputDevice(mOutputs.keyAt(i),
                             getNewDevice(mOutputs.keyAt(i), true /*fromCache*/),
                             true,
                             0);
-        }
-
+           }
+       }
+       else {
+           for (int i = 0; i < mOutputs.size(); i++) {
+               audio_devices_t newDevice = getNewDevice(mOutputs.keyAt(i), true /*fromCache*/);
+#ifdef QCOM_ANC_HEADSET_ENABLED
+               if(device == AUDIO_DEVICE_OUT_ANC_HEADPHONE ||
+                  device == AUDIO_DEVICE_OUT_ANC_HEADSET) {
+                  if(newDevice == 0){
+                      newDevice = getDeviceForStrategy(STRATEGY_MEDIA, false);
+                  }
+              }
+#endif
+              setOutputDevice(mOutputs.keyAt(i),
+                            getNewDevice(mOutputs.keyAt(i), true /*fromCache*/),
+                            true,
+                            0);
+           }
+       }
         if (device == AUDIO_DEVICE_OUT_WIRED_HEADSET) {
             device = AUDIO_DEVICE_IN_WIRED_HEADSET;
         } else if (device == AUDIO_DEVICE_OUT_BLUETOOTH_SCO ||
@@ -2253,6 +2274,15 @@ bool AudioPolicyManager::platform_is_Fusion3()
         return true;
     else
         return false;
+}
+
+bool AudioPolicyManager::isTunnelOutputEnabled()
+{
+    for (int i = mOutputs.size() -1; i >= 0; i--) {
+        if(mOutputs.valueAt(i)->mFlags &((audio_output_flags_t) AUDIO_OUTPUT_FLAG_TUNNEL))
+            return true;
+    }
+    return false;
 }
 
 extern "C" AudioPolicyInterface* createAudioPolicyManager(AudioPolicyClientInterface *clientInterface)
