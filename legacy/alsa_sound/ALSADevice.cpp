@@ -721,6 +721,7 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
                     setEcrxDevice(ec_rx_dev);
                     free(ec_rx_dev);
                 }
+                free(ec_dev);
             }
         } else {
             ALOGE("acdb_loader_get_ecrx_device is NULL");
