@@ -434,6 +434,23 @@ done:
     return ret;
 }
 
+void voice_extn_get_parameters(const struct audio_device *adev,
+                               struct str_parms *query,
+                               struct str_parms *reply)
+{
+    int ret;
+    char value[32]={0};
+    char *str = NULL;
+
+    ret = str_parms_get_str(query, "audio_mode", value,
+                            sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_int(reply, "audio_mode", adev->mode);
+    }
+
+    ALOGV("%s: returns %s", __func__, str_parms_to_str(reply));
+}
+
 void voice_extn_out_get_parameters(struct stream_out *out,
                                    struct str_parms *query,
                                    struct str_parms *reply)
