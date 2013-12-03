@@ -1043,6 +1043,7 @@ static int configure_compr(struct stream_out *out,
     handle->compr_config.codec->ch_in =
         popcount(out->channel_mask);
     handle->compr_config.codec->ch_out = handle->compr_config.codec->ch_in;
+    handle->compr_config.codec->format = out->compr_config.codec->format;
     memcpy(&handle->compr_config.codec->options,
                     &out->compr_config.codec->options,
                      sizeof(union snd_codec_options));
@@ -1328,9 +1329,18 @@ NOTE: For AAC, the output of MS11 is 48000 for the sample rates greater than
 
 static bool is_supported_format(audio_format_t format)
 {
-    if (format == AUDIO_FORMAT_MP3 ||
-            format == AUDIO_FORMAT_AAC)
+    switch (format) {
+    case AUDIO_FORMAT_PCM_16_BIT:
+    case AUDIO_FORMAT_MP3:
+    case AUDIO_FORMAT_AAC:
+    case AUDIO_FORMAT_WMA:
+    case AUDIO_FORMAT_WMA_PRO:
+    case AUDIO_FORMAT_MP2:
         return true;
+    default:
+        ALOGE("%s: Unsupported audio format: %x", __func__, format);
+        break;
+    }
 
     return false;
 }
@@ -1340,14 +1350,26 @@ static int get_snd_codec_id(audio_format_t format)
     int id = 0;
 
     switch (format) {
+    case AUDIO_FORMAT_PCM_16_BIT:
+        id = SND_AUDIOCODEC_PCM;
+        break;
     case AUDIO_FORMAT_MP3:
         id = SND_AUDIOCODEC_MP3;
         break;
     case AUDIO_FORMAT_AAC:
         id = SND_AUDIOCODEC_AAC;
         break;
+    case AUDIO_FORMAT_WMA:
+        id = SND_AUDIOCODEC_WMA;
+        break;
+    case AUDIO_FORMAT_WMA_PRO:
+        id = SND_AUDIOCODEC_WMA_PRO;
+        break;
+    case AUDIO_FORMAT_MP2:
+        id = SND_AUDIOCODEC_MP2;
+        break;
     default:
-        ALOGE("%s: Unsupported audio format", __func__);
+        ALOGE("%s: Unsupported audio format %x", __func__, format);
     }
 
     return id;
@@ -1829,6 +1851,7 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
     int ret = 0;
     char value[32];
     struct compr_gapless_mdata tmp_mdata;
+    bool gapless_meta_set = true;
 
     if (!out || !parms) {
         return -EINVAL;
@@ -1838,21 +1861,61 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
     if (ret >= 0) {
         tmp_mdata.encoder_delay = atoi(value); //whats a good limit check?
     } else {
-        return -EINVAL;
+        gapless_meta_set = false;
     }
 
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
     if (ret >= 0) {
         tmp_mdata.encoder_padding = atoi(value);
     } else {
-        return -EINVAL;
+        gapless_meta_set = false;
     }
 
-    out->gapless_mdata = tmp_mdata;
-    out->send_new_metadata = 1;
-    ALOGV("%s new encoder delay %u and padding %u", __func__,
-          out->gapless_mdata.encoder_delay, out->gapless_mdata.encoder_padding);
+    if (gapless_meta_set) {
+        out->gapless_mdata = tmp_mdata;
+        out->send_new_metadata = 1;
+        ALOGV("%s new encoder delay %u and padding %u", __func__,
+            out->gapless_mdata.encoder_delay, out->gapless_mdata.encoder_padding);
+    }
 
+    if(out->format == AUDIO_FORMAT_WMA || out->format == AUDIO_FORMAT_WMA_PRO) {
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_FORMAT_TAG, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->format = atoi(value);
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BLOCK_ALIGN, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.super_block_align = atoi(value);
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BIT_PER_SAMPLE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.bits_per_sample = atoi(value);
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_CHANNEL_MASK, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.channelmask = atoi(value);
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.encodeopt = atoi(value);
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION1, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.encodeopt1 = atoi(value);
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION2, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.encodeopt2 = atoi(value);
+        }
+        ALOGV("WMA params: fmt %x, balgn %x, sr %d, chmsk %x, encop %x, op1 %x, op2 %x",
+                                out->compr_config.codec->format,
+                                out->compr_config.codec->options.wma.super_block_align,
+                                out->compr_config.codec->options.wma.bits_per_sample,
+                                out->compr_config.codec->options.wma.channelmask,
+                                out->compr_config.codec->options.wma.encodeopt,
+                                out->compr_config.codec->options.wma.encodeopt1,
+                                out->compr_config.codec->options.wma.encodeopt2);
+    }
     return 0;
 }
 
@@ -1968,7 +2031,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     }
 
     if (out->uc_strm_type == OFFLOAD_PLAYBACK_STREAM) {
-        parse_compress_metadata(out, parms);
+        ret = parse_compress_metadata(out, parms);
     }
 
     str_parms_destroy(parms);
