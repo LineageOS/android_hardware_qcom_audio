@@ -1115,7 +1115,9 @@ status_t AudioHardwareALSA::doRouting(int device, char* useCase)
             ALOGV("Dorouting updated usecase:%s device:%x activeUsecase",it->useCase, it->devices, activeUsecase);
             if (!((device & AudioSystem::DEVICE_OUT_ALL_A2DP) &&
                   (mCurRxDevice & AUDIO_DEVICE_OUT_ALL_USB))) {
-                   if (device != mCurRxDevice) {
+                if ((activeUsecase == USECASE_HIFI_LOW_POWER) ||
+                    (activeUsecase == USECASE_HIFI_TUNNEL)) {
+                    if (device != mCurRxDevice) {
                         if((isExtOutDevice(mCurRxDevice)) &&
                            (isExtOutDevice(device))) {
                             activeUsecase = getExtOutActiveUseCases_l();
@@ -1125,6 +1127,24 @@ status_t AudioHardwareALSA::doRouting(int device, char* useCase)
                         mALSADevice->route(&(*it),(uint32_t)device, newMode);
                     }
                     err = startPlaybackOnExtOut_l(activeUsecase);
+                } else {
+                    //WHY NO check for prev device here?
+                    if (device != mCurRxDevice) {
+                        if((isExtOutDevice(mCurRxDevice)) &&
+                            (isExtOutDevice(device))) {
+                            activeUsecase = getExtOutActiveUseCases_l();
+                            stopPlaybackOnExtOut_l(activeUsecase);
+                            mALSADevice->route(&(*it),(uint32_t)device, newMode);
+                            mRouteAudioToExtOut = true;
+                            startPlaybackOnExtOut_l(activeUsecase);
+                        } else {
+                           mALSADevice->route(&(*it),(uint32_t)device, newMode);
+                        }
+                    }
+                    if (activeUsecase == USECASE_FM){
+                        err = startPlaybackOnExtOut_l(activeUsecase);
+                    }
+                }
                 if(err) {
                     ALOGW("startPlaybackOnExtOut_l for hardware output failed err = %d", err);
                     stopPlaybackOnExtOut_l(activeUsecase);
