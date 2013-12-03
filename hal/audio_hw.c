@@ -60,6 +60,8 @@
 #define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 96
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
 
+#define USECASE_AUDIO_PLAYBACK_PRIMARY USECASE_AUDIO_PLAYBACK_DEEP_BUFFER
+
 struct pcm_config pcm_config_deep_buffer = {
     .channels = 2,
     .rate = DEFAULT_OUTPUT_SAMPLING_RATE,
@@ -2123,12 +2125,15 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->config = pcm_config_low_latency;
         out->sample_rate = out->config.rate;
     } else {
-        out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
+        /* primary path is the default path selected if no other outputs are available/suitable */
+        out->usecase = USECASE_AUDIO_PLAYBACK_PRIMARY;
         out->config = pcm_config_deep_buffer;
         out->sample_rate = out->config.rate;
     }
 
-    if (flags & AUDIO_OUTPUT_FLAG_PRIMARY) {
+    if ((out->usecase == USECASE_AUDIO_PLAYBACK_PRIMARY) ||
+        (flags & AUDIO_OUTPUT_FLAG_PRIMARY)) {
+        /* Ensure the default output is not selected twice */
         if(adev->primary_output == NULL)
             adev->primary_output = out;
         else {
