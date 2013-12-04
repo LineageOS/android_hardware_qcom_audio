@@ -119,6 +119,10 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_INCALL_REC_UPLINK] = "incall-rec-uplink",
     [USECASE_INCALL_REC_DOWNLINK] = "incall-rec-downlink",
     [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK] = "incall-rec-uplink-and-downlink",
+    [USECASE_INCALL_REC_UPLINK_COMPRESS] = "incall-rec-uplink-compress",
+    [USECASE_INCALL_REC_DOWNLINK_COMPRESS] = "incall-rec-downlink-compress",
+    [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK_COMPRESS] = "incall-rec-uplink-and-downlink-compress",
+
     [USECASE_INCALL_MUSIC_UPLINK] = "incall_music_uplink",
     [USECASE_INCALL_MUSIC_UPLINK2] = "incall_music_uplink2",
     [USECASE_AUDIO_SPKR_CALIB_RX] = "spkr-rx-calib",

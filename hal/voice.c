@@ -212,15 +212,27 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
     if (voice_is_in_call(adev)) {
         switch (in->source) {
         case AUDIO_SOURCE_VOICE_UPLINK:
-            in->usecase = USECASE_INCALL_REC_UPLINK;
+            if (audio_extn_compr_cap_enabled() &&
+                audio_extn_compr_cap_format_supported(in->config.format)) {
+                in->usecase = USECASE_INCALL_REC_UPLINK_COMPRESS;
+            } else
+                in->usecase = USECASE_INCALL_REC_UPLINK;
             rec_mode = INCALL_REC_UPLINK;
             break;
         case AUDIO_SOURCE_VOICE_DOWNLINK:
-            in->usecase = USECASE_INCALL_REC_DOWNLINK;
+            if (audio_extn_compr_cap_enabled() &&
+                audio_extn_compr_cap_format_supported(in->config.format)) {
+                in->usecase = USECASE_INCALL_REC_DOWNLINK_COMPRESS;
+            } else
+                in->usecase = USECASE_INCALL_REC_DOWNLINK;
             rec_mode = INCALL_REC_DOWNLINK;
             break;
         case AUDIO_SOURCE_VOICE_CALL:
-            in->usecase = USECASE_INCALL_REC_UPLINK_AND_DOWNLINK;
+            if (audio_extn_compr_cap_enabled() &&
+                audio_extn_compr_cap_format_supported(in->config.format)) {
+                in->usecase = USECASE_INCALL_REC_UPLINK_AND_DOWNLINK_COMPRESS;
+            } else
+                in->usecase = USECASE_INCALL_REC_UPLINK_AND_DOWNLINK;
             rec_mode = INCALL_REC_UPLINK_AND_DOWNLINK;
             break;
         default:

@@ -93,7 +93,10 @@ bool audio_extn_compr_cap_format_supported(audio_format_t format)
 
 bool audio_extn_compr_cap_usecase_supported(audio_usecase_t usecase)
 {
-    if (usecase == USECASE_AUDIO_RECORD_COMPRESS)
+    if ((usecase == USECASE_AUDIO_RECORD_COMPRESS) ||
+        (usecase == USECASE_INCALL_REC_UPLINK_COMPRESS) ||
+        (usecase == USECASE_INCALL_REC_DOWNLINK_COMPRESS) ||
+        (usecase == USECASE_INCALL_REC_UPLINK_AND_DOWNLINK_COMPRESS))
         return true;
     else
         return false;
