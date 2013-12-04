@@ -53,6 +53,7 @@
 /* Retry for delay in FW loading*/
 #define RETRY_NUMBER 10
 #define RETRY_US 500000
+#define MAX_SND_CARD 8
 
 #define SAMPLE_RATE_8KHZ  8000
 #define SAMPLE_RATE_16KHZ 16000
@@ -428,38 +429,58 @@ void *platform_init(struct audio_device *adev)
     char platform[PROPERTY_VALUE_MAX];
     char baseband[PROPERTY_VALUE_MAX];
     char value[PROPERTY_VALUE_MAX];
-    struct platform_data *my_data;
-    int retry_num = 0;
+    struct platform_data *my_data = NULL;
+    int retry_num = 0, snd_card_num = 0;
     const char *snd_card_name;
-
-    adev->mixer = mixer_open(MIXER_CARD);
-
-    while (!adev->mixer && retry_num < RETRY_NUMBER) {
-        usleep(RETRY_US);
-        adev->mixer = mixer_open(MIXER_CARD);
-        retry_num++;
-    }
-
-    if (!adev->mixer) {
-        ALOGE("Unable to open the mixer, aborting.");
-        return NULL;
-    }
-
-    if (audio_extn_read_xml(adev, MIXER_CARD, MIXER_XML_PATH,
-                            MIXER_XML_PATH_AUXPCM) == -ENOSYS)
-        adev->audio_route = audio_route_init(MIXER_CARD, MIXER_XML_PATH);
-
-    if (!adev->audio_route) {
-        ALOGE("%s: Failed to init audio route controls, aborting.", __func__);
-        return NULL;
-    }
 
     my_data = calloc(1, sizeof(struct platform_data));
 
-    snd_card_name = mixer_get_name(adev->mixer);
-    my_data->hw_info = hw_info_init(snd_card_name);
-    if (!my_data->hw_info) {
-        ALOGE("%s: Failed to init hardware info", __func__);
+    while (snd_card_num < MAX_SND_CARD) {
+        adev->mixer = mixer_open(snd_card_num);
+
+        while (!adev->mixer && retry_num < RETRY_NUMBER) {
+            usleep(RETRY_US);
+            adev->mixer = mixer_open(snd_card_num);
+            retry_num++;
+        }
+
+        if (!adev->mixer) {
+            ALOGE("%s: Unable to open the mixer card: %d", __func__,
+                   snd_card_num);
+            retry_num = 0;
+            snd_card_num++;
+            continue;
+        }
+
+        snd_card_name = mixer_get_name(adev->mixer);
+        ALOGV("%s: snd_card_name: %s", __func__, snd_card_name);
+
+        my_data->hw_info = hw_info_init(snd_card_name);
+        if (!my_data->hw_info) {
+            ALOGE("%s: Failed to init hardware info", __func__);
+        } else {
+            if (audio_extn_read_xml(adev, snd_card_num, MIXER_XML_PATH,
+                                    MIXER_XML_PATH_AUXPCM) == -ENOSYS)
+                adev->audio_route = audio_route_init(snd_card_num,
+                                                 MIXER_XML_PATH);
+            if (!adev->audio_route) {
+                ALOGE("%s: Failed to init audio route controls, aborting.",
+                       __func__);
+                free(my_data);
+                return NULL;
+            }
+            adev->snd_card = snd_card_num;
+            ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
+            break;
+        }
+        retry_num = 0;
+        snd_card_num++;
+    }
+
+    if (snd_card_num >= MAX_SND_CARD) {
+        ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
+        free(my_data);
+        return NULL;
     }
 
     my_data->adev = adev;
@@ -536,6 +557,8 @@ void *platform_init(struct audio_device *adev)
 
     /* init usb */
     audio_extn_usb_init(adev);
+    /* update sound cards appropriately */
+    audio_extn_usb_set_proxy_sound_card(adev->snd_card);
 
     /* Read one time ssr property */
     audio_extn_ssr_update_enabled(adev);

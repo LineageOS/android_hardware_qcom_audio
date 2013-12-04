@@ -240,8 +240,9 @@ static int spkr_calibrate(int t0)
         goto exit;
     }
     handle.pcm_rx = handle.pcm_tx = NULL;
-    handle.pcm_rx = pcm_open(SOUND_CARD, pcm_dev_rx_id,
-                    PCM_OUT, &pcm_config_skr_prot);
+    handle.pcm_rx = pcm_open(adev->snd_card,
+                             pcm_dev_rx_id,
+                             PCM_OUT, &pcm_config_skr_prot);
     if (handle.pcm_rx && !pcm_is_ready(handle.pcm_rx)) {
         ALOGE("%s: %s", __func__, pcm_get_error(handle.pcm_rx));
         status.status = -EIO;
@@ -267,8 +268,9 @@ static int spkr_calibrate(int t0)
         status.status = -ENODEV;
         goto exit;
     }
-    handle.pcm_tx = pcm_open(SOUND_CARD, pcm_dev_tx_id,
-                    PCM_IN, &pcm_config_skr_prot);
+    handle.pcm_tx = pcm_open(adev->snd_card,
+                             pcm_dev_tx_id,
+                             PCM_IN, &pcm_config_skr_prot);
     if (handle.pcm_tx && !pcm_is_ready(handle.pcm_tx)) {
         ALOGE("%s: %s", __func__, pcm_get_error(handle.pcm_tx));
         status.status = -EIO;
@@ -618,8 +620,9 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
             ret = -ENODEV;
             goto exit;
         }
-        handle.pcm_tx = pcm_open(SOUND_CARD, pcm_dev_tx_id,
-                        PCM_IN, &pcm_config_skr_prot);
+        handle.pcm_tx = pcm_open(adev->snd_card,
+                                 pcm_dev_tx_id,
+                                 PCM_IN, &pcm_config_skr_prot);
         if (handle.pcm_tx && !pcm_is_ready(handle.pcm_tx)) {
             ALOGE("%s: %s", __func__, pcm_get_error(handle.pcm_tx));
             ret = -EIO;

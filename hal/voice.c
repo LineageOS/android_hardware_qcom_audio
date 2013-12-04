@@ -135,8 +135,8 @@ int start_call(struct audio_device *adev, audio_usecase_t usecase_id)
     }
 
     ALOGV("%s: Opening PCM playback device card_id(%d) device_id(%d)",
-          __func__, SOUND_CARD, pcm_dev_rx_id);
-    session->pcm_rx = pcm_open(SOUND_CARD,
+          __func__, adev->snd_card, pcm_dev_rx_id);
+    session->pcm_rx = pcm_open(adev->snd_card,
                                pcm_dev_rx_id,
                                PCM_OUT, &voice_config);
     if (session->pcm_rx && !pcm_is_ready(session->pcm_rx)) {
@@ -146,8 +146,8 @@ int start_call(struct audio_device *adev, audio_usecase_t usecase_id)
     }
 
     ALOGV("%s: Opening PCM capture device card_id(%d) device_id(%d)",
-          __func__, SOUND_CARD, pcm_dev_tx_id);
-    session->pcm_tx = pcm_open(SOUND_CARD,
+          __func__, adev->snd_card, pcm_dev_tx_id);
+    session->pcm_tx = pcm_open(adev->snd_card,
                                pcm_dev_tx_id,
                                PCM_IN, &voice_config);
     if (session->pcm_tx && !pcm_is_ready(session->pcm_tx)) {

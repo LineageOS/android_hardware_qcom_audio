@@ -223,6 +223,7 @@ struct audio_device {
     struct voice voice;
     unsigned int cur_hdmi_channels;
 
+    int snd_card;
     void *platform;
 
     void *visualizer_lib;

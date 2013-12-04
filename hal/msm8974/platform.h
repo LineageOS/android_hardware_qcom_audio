@@ -126,9 +126,6 @@ enum {
 
 };
 
-#define MIXER_CARD 0
-#define SOUND_CARD 0
-
 #define DEFAULT_OUTPUT_SAMPLING_RATE 48000
 
 #define ALL_SESSION_VSID                0xFFFFFFFF
