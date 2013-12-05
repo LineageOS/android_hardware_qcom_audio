@@ -177,11 +177,7 @@ enum {
 #define PLAYBACK_OFFLOAD_DEVICE 9
 #define COMPRESS_VOIP_CALL_PCM_DEVICE 3
 
-#ifdef PLATFORM_MSM8610
-#define LOWLATENCY_PCM_DEVICE 12
-#else
 #define LOWLATENCY_PCM_DEVICE 15
-#endif
 #define COMPRESS_CAPTURE_DEVICE 19
 
 #ifdef PLATFORM_MSM8x26
@@ -238,5 +234,39 @@ void *hw_info_init(const char *snd_card_name);
 void hw_info_deinit(void *hw_info);
 void hw_info_append_hw_type(void *hw_info, snd_device_t snd_device,
                              char *device_name);
+
+#define SAMPLES_PER_CHANNEL             1536*2
+#define MAX_INPUT_CHANNELS_SUPPORTED    8
+#define FACTOR_FOR_BUFFERING            2
+#define STEREO_CHANNELS                 2
+#define MAX_OUTPUT_CHANNELS_SUPPORTED   8
+
+#define PCM_2CH_OUT                 0
+#define PCM_MCH_OUT                 1
+#define SPDIF_OUT                   2
+#define COMPRESSED_OUT              2 // should be same as SPDIF_OUT
+#define TRANSCODE_OUT               3
+#define FACTOR_FOR_BUFFERING        2
+
+struct audio_bitstream_sm {
+    int                buffering_factor;
+    int                buffering_factor_cnt;
+    // Buffer pointers for input and output
+    char               *inp_buf;
+    char               *inp_buf_curr_ptr;
+    char               *inp_buf_write_ptr;
+
+    char               *enc_out_buf;
+    char               *enc_out_buf_write_ptr;
+
+    char               *pcm_2_out_buf;
+    char               *pcm_2_out_buf_write_ptr;
+
+    char               *pcm_mch_out_buf;
+    char               *pcm_mch_out_buf_write_ptr;
+
+    char               *passt_out_buf;
+    char               *passt_out_buf_write_ptr;
+};
 
 #endif // QCOM_AUDIO_PLATFORM_H
