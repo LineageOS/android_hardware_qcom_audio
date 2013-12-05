@@ -10,6 +10,7 @@ AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
 LOCAL_SRC_FILES := \
 	audio_hw.c \
+	audio_stream_out.c \
 	$(AUDIO_PLATFORM)/hw_info.c \
 	$(AUDIO_PLATFORM)/platform.c
 
