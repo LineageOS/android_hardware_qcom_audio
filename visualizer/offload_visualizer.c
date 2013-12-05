@@ -37,6 +37,7 @@ enum {
 };
 
 typedef struct effect_context_s effect_context_t;
+typedef struct output_context_s output_context_t;
 
 /* effect specific operations. Only the init() and process() operations must be defined.
  * Others are optional.
@@ -47,6 +48,8 @@ typedef struct effect_ops_s {
     int (*reset)(effect_context_t *context);
     int (*enable)(effect_context_t *context);
     int (*disable)(effect_context_t *context);
+    int (*start)(effect_context_t *context, output_context_t *output);
+    int (*stop)(effect_context_t *context, output_context_t *output);
     int (*process)(effect_context_t *context, audio_buffer_t *in, audio_buffer_t *out);
     int (*set_parameter)(effect_context_t *context, effect_param_t *param, uint32_t size);
     int (*get_parameter)(effect_context_t *context, effect_param_t *param, uint32_t *size);
@@ -247,6 +250,8 @@ void add_effect_to_output(output_context_t * output, effect_context_t *context) 
             return;
     }
     list_add_tail(&output->effects_list, &context->output_node);
+    if (context->ops.start)
+        context->ops.start(context, output);
 }
 
 void remove_effect_from_output(output_context_t * output, effect_context_t *context) {
@@ -257,6 +262,8 @@ void remove_effect_from_output(output_context_t * output, effect_context_t *cont
                                                      effect_context_t,
                                                      output_node);
         if (fx_ctxt == context) {
+            if (context->ops.stop)
+                context->ops.stop(context, output);
             list_remove(&context->output_node);
             return;
         }
@@ -276,7 +283,7 @@ bool effects_enabled() {
             effect_context_t *fx_ctxt = node_to_item(fx_node,
                                                          effect_context_t,
                                                          output_node);
-            if (fx_ctxt->state == EFFECT_STATE_ACTIVE)
+            if (fx_ctxt->state == EFFECT_STATE_ACTIVE && fx_ctxt->ops.process != NULL)
                 return true;
         }
     }
@@ -379,7 +386,8 @@ void *capture_thread_loop(void *arg)
                     effect_context_t *fx_ctxt = node_to_item(fx_node,
                                                                 effect_context_t,
                                                                 output_node);
-                    fx_ctxt->ops.process(fx_ctxt, &buf, &buf);
+                    if (fx_ctxt->ops.process != NULL)
+                        fx_ctxt->ops.process(fx_ctxt, &buf, &buf);
                 }
             }
         } else {
@@ -405,11 +413,11 @@ void *capture_thread_loop(void *arg)
  */
 
 __attribute__ ((visibility ("default")))
-int visualizer_hal_start_output(audio_io_handle_t output) {
+int visualizer_hal_start_output(audio_io_handle_t output, int pcm_id) {
     int ret;
     struct listnode *node;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s output %d pcm_id %d", __func__, output, pcm_id);
 
     if (lib_init() != 0)
         return init_status;
@@ -431,6 +439,8 @@ int visualizer_hal_start_output(audio_io_handle_t output) {
                                                      effect_context_t,
                                                      effects_list_node);
         if (fx_ctxt->out_handle == output) {
+            if (fx_ctxt->ops.start)
+                fx_ctxt->ops.start(fx_ctxt, out_ctxt);
             list_add_tail(&out_ctxt->effects_list, &fx_ctxt->output_node);
         }
     }
@@ -449,12 +459,13 @@ exit:
 }
 
 __attribute__ ((visibility ("default")))
-int visualizer_hal_stop_output(audio_io_handle_t output) {
+int visualizer_hal_stop_output(audio_io_handle_t output, int pcm_id) {
     int ret;
     struct listnode *node;
+    struct listnode *fx_node;
     output_context_t *out_ctxt;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s output %d pcm_id %d", __func__, output, pcm_id);
 
     if (lib_init() != 0)
         return init_status;
@@ -468,7 +479,13 @@ int visualizer_hal_stop_output(audio_io_handle_t output) {
         ret = -ENOSYS;
         goto exit;
     }
-
+    list_for_each(fx_node, &out_ctxt->effects_list) {
+        effect_context_t *fx_ctxt = node_to_item(fx_node,
+                                                 effect_context_t,
+                                                 output_node);
+        if (fx_ctxt->ops.stop)
+            fx_ctxt->ops.stop(fx_ctxt, out_ctxt);
+    }
     list_remove(&out_ctxt->outputs_list_node);
     pthread_cond_signal(&cond);
 
@@ -917,6 +934,7 @@ int effect_lib_create(const effect_uuid_t *uuid,
         context->ops.set_parameter = visualizer_set_parameter;
         context->ops.get_parameter = visualizer_get_parameter;
         context->ops.command = visualizer_command;
+        context->desc = &visualizer_descriptor;
     } else {
         return -EINVAL;
     }
@@ -924,7 +942,6 @@ int effect_lib_create(const effect_uuid_t *uuid,
     context->itfe = &effect_interface;
     context->state = EFFECT_STATE_UNINITIALIZED;
     context->out_handle = (audio_io_handle_t)ioId;
-    context->desc = &visualizer_descriptor;
 
     ret = context->ops.init(context);
     if (ret < 0) {
@@ -1177,11 +1194,11 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
         out_ctxt = get_output(context->out_handle);
         if (out_ctxt != NULL)
             remove_effect_from_output(out_ctxt, context);
+
+        context->out_handle = offload_param->ioHandle;
         out_ctxt = get_output(offload_param->ioHandle);
         if (out_ctxt != NULL)
             add_effect_to_output(out_ctxt, context);
-
-        context->out_handle = offload_param->ioHandle;
 
         } break;
 
