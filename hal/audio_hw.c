@@ -311,6 +311,12 @@ static void check_usecases_codec_backend(struct audio_device *adev,
             usecase = node_to_item(node, struct audio_usecase, list);
             if (switch_device[usecase->id]) {
                 disable_snd_device(adev, usecase->out_snd_device, false);
+            }
+        }
+
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (switch_device[usecase->id]) {
                 enable_snd_device(adev, snd_device, false);
             }
         }
@@ -1178,6 +1184,7 @@ static int out_standby(struct audio_stream *stream)
 
     pthread_mutex_lock(&out->lock);
     if (!out->standby) {
+        pthread_mutex_lock(&adev->lock);
         out->standby = true;
         if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
             if (out->pcm) {
@@ -1193,7 +1200,6 @@ static int out_standby(struct audio_stream *stream)
                 out->compr = NULL;
             }
         }
-        pthread_mutex_lock(&adev->lock);
         stop_output_stream(out);
         pthread_mutex_unlock(&adev->lock);
     }
@@ -1667,12 +1673,12 @@ static int in_standby(struct audio_stream *stream)
     ALOGV("%s: enter", __func__);
     pthread_mutex_lock(&in->lock);
     if (!in->standby) {
+        pthread_mutex_lock(&adev->lock);
         in->standby = true;
         if (in->pcm) {
             pcm_close(in->pcm);
             in->pcm = NULL;
         }
-        pthread_mutex_lock(&adev->lock);
         status = stop_input_stream(in);
         pthread_mutex_unlock(&adev->lock);
     }
@@ -1857,6 +1863,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
     /* Init use case and pcm_config */
     if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT &&
+            !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
         out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
         pthread_mutex_lock(&adev->lock);
         ret = read_hdmi_channel_masks(out);
