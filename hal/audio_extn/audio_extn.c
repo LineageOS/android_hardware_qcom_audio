@@ -55,7 +55,12 @@ static struct audio_extn_module aextnmod = {
 void audio_extn_fm_set_parameters(struct audio_device *adev,
                                    struct str_parms *parms);
 #endif
-
+#ifndef HFP_ENABLED
+void audio_extn_hfp_set_parameters(adev, parms) (0)
+#else
+void audio_extn_hfp_set_parameters(struct audio_device *adev,
+                                           struct str_parms *parms);
+#endif
 #ifndef SSR_ENABLED
 #define audio_extn_ssr_get_parameters(query, reply) (0)
 #else
@@ -219,6 +224,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_set_afe_proxy_parameters(parms);
    audio_extn_fm_set_parameters(adev, parms);
    audio_extn_listen_set_parameters(adev, parms);
+   audio_extn_hfp_set_parameters(adev, parms);
 }
 
 void audio_extn_get_parameters(const struct audio_device *adev,

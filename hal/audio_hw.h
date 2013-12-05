@@ -62,6 +62,9 @@ typedef enum {
     /* FM usecase */
     USECASE_AUDIO_PLAYBACK_FM,
 
+    /* HFP Use case*/
+    USECASE_AUDIO_HFP_SCO,
+
     /* Capture usecases */
     USECASE_AUDIO_RECORD,
     USECASE_AUDIO_RECORD_COMPRESS,
@@ -179,7 +182,8 @@ typedef enum {
     PCM_PLAYBACK,
     PCM_CAPTURE,
     VOICE_CALL,
-    VOIP_CALL
+    VOIP_CALL,
+    PCM_HFP_CALL
 } usecase_type_t;
 
 union stream_ptr {

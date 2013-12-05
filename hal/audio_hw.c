@@ -109,6 +109,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = "low-latency-record",
     [USECASE_AUDIO_RECORD_FM_VIRTUAL] = "fm-virtual-record",
     [USECASE_AUDIO_PLAYBACK_FM] = "play-fm",
+    [USECASE_AUDIO_HFP_SCO] = "hfp-sco",
     [USECASE_VOICE_CALL] = "voice-call",
     
     [USECASE_VOICE2_CALL] = "voice2-call",
@@ -593,7 +594,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     }
 
     if ((usecase->type == VOICE_CALL) ||
-        (usecase->type == VOIP_CALL)) {
+        (usecase->type == VOIP_CALL)  ||
+        (usecase->type == PCM_HFP_CALL)) {
         out_snd_device = platform_get_output_snd_device(adev->platform,
                                                         usecase->stream.out->devices);
         in_snd_device = platform_get_input_snd_device(adev->platform, usecase->stream.out->devices);
