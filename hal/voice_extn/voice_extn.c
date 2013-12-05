@@ -282,7 +282,13 @@ static int update_call_states(struct audio_device *adev,
         session->state.new = call_state;
         voice_extn_is_in_call(adev, &is_in_call);
         ALOGD("%s is_in_call:%d mode:%d\n", __func__, is_in_call, adev->mode);
-        if (is_in_call || adev->mode == AUDIO_MODE_IN_CALL) {
+        /* Dont start voice call before device routing for voice usescases has
+         * occured, otherwise voice calls will be started unintendedly on
+         * speaker.
+         */
+        if (is_in_call ||
+            (adev->mode == AUDIO_MODE_IN_CALL &&
+             adev->primary_output->devices != AUDIO_DEVICE_OUT_SPEAKER)) {
             /* Device routing is not triggered for voice calls on the subsequent
              * subs, Hence update the call states if voice call is already
              * active on other sub.
