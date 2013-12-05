@@ -2021,15 +2021,13 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels * 2);
     } else if ((out->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
                (out->flags == (AUDIO_OUTPUT_FLAG_DIRECT | AUDIO_OUTPUT_FLAG_VOIP_RX)) &&
-               (voice_extn_compress_voip_is_format_supported(out->format))) {
+               (voice_extn_compress_voip_is_config_supported(config))) {
         ret = voice_extn_compress_voip_open_output_stream(out);
         if (ret != 0) {
             ALOGE("%s: Compress voip output cannot be opened, error:%d",
                   __func__, ret);
             goto error_open;
         }
-        out->config.rate = config->sample_rate;
-        out->sample_rate = config->sample_rate;
     } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         if (config->offload_info.version != AUDIO_INFO_INITIALIZER.version ||
             config->offload_info.size != AUDIO_INFO_INITIALIZER.size) {
@@ -2289,6 +2287,7 @@ static char* adev_get_parameters(const struct audio_hw_device *dev,
     pthread_mutex_lock(&adev->lock);
 
     audio_extn_get_parameters(adev, query, reply);
+    voice_extn_get_parameters(adev, query, reply);
     platform_get_parameters(adev->platform, query, reply);
     str = str_parms_to_str(reply);
     str_parms_destroy(query);
@@ -2421,7 +2420,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->format = config->format;
 
     if ((in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
-        (voice_extn_compress_voip_is_format_supported(in->format))) {
+        (voice_extn_compress_voip_is_config_supported(config))) {
         ret = voice_extn_compress_voip_open_input_stream(in);
         if (ret != 0)
         {

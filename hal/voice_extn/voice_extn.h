@@ -29,6 +29,9 @@ int voice_extn_get_session_from_use_case(struct audio_device *adev,
 void voice_extn_init(struct audio_device *adev);
 int voice_extn_set_parameters(struct audio_device *adev,
                               struct str_parms *parms);
+void voice_extn_get_parameters(const struct audio_device *adev,
+                               struct str_parms *query,
+                               struct str_parms *reply);
 int voice_extn_is_in_call(struct audio_device *adev, bool *in_call);
 int voice_extn_get_active_session_id(struct audio_device *adev,
                                      uint32_t *session_id);
@@ -64,6 +67,12 @@ static int voice_extn_set_parameters(struct audio_device *adev,
                                      struct str_parms *parms)
 {
     return -ENOSYS;
+}
+
+static void voice_extn_get_parameters(const struct audio_device *adev,
+                                      struct str_parms *query,
+                                      struct str_parms *reply)
+{
 }
 
 static int voice_extn_is_in_call(struct audio_device *adev, bool *in_call)
@@ -131,6 +140,7 @@ void voice_extn_compress_voip_in_get_parameters(struct stream_in *in,
 bool voice_extn_compress_voip_pcm_prop_check();
 bool voice_extn_compress_voip_is_active(struct audio_device *adev);
 bool voice_extn_compress_voip_is_format_supported(audio_format_t format);
+bool voice_extn_compress_voip_is_config_supported(struct audio_config *config);
 #else
 static int voice_extn_compress_voip_close_output_stream(struct audio_stream *stream)
 {
@@ -231,7 +241,14 @@ static bool voice_extn_compress_voip_is_active(struct audio_device *adev)
     ALOGE("%s: COMPRESS_VOIP_ENABLED is not defined", __func__);
     return false;
 }
+
 static bool voice_extn_compress_voip_is_format_supported(audio_format_t format)
+{
+    ALOGE("%s: COMPRESS_VOIP_ENABLED is not defined", __func__);
+    return true;
+}
+
+static bool voice_extn_compress_voip_is_config_supported(struct audio_config *config)
 {
     ALOGE("%s: COMPRESS_VOIP_ENABLED is not defined", __func__);
     return true;
