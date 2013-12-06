@@ -390,6 +390,13 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                 enable_snd_device(adev, snd_device, false);
             }
         }
+
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (switch_device[usecase->id]) {
+                enable_snd_device(adev, snd_device, false);
+            }
+        }
         /* Make sure new snd device is enabled before re-routing the streams */
         audio_route_update_mixer(adev->audio_route);
 
@@ -1257,8 +1264,8 @@ static int out_standby(struct audio_stream *stream)
     }
 
     pthread_mutex_lock(&out->lock);
-    pthread_mutex_lock(&adev->lock);
     if (!out->standby) {
+        pthread_mutex_lock(&adev->lock);
         out->standby = true;
         if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
             if (out->pcm) {
@@ -1275,8 +1282,8 @@ static int out_standby(struct audio_stream *stream)
             }
         }
         stop_output_stream(out);
+        pthread_mutex_unlock(&adev->lock);
     }
-    pthread_mutex_unlock(&adev->lock);
     pthread_mutex_unlock(&out->lock);
     ALOGV("%s: exit", __func__);
     return 0;
@@ -1782,12 +1789,12 @@ static int in_standby(struct audio_stream *stream)
 
     pthread_mutex_lock(&in->lock);
     if (!in->standby) {
+        pthread_mutex_lock(&adev->lock);
         in->standby = true;
         if (in->pcm) {
             pcm_close(in->pcm);
             in->pcm = NULL;
         }
-        pthread_mutex_lock(&adev->lock);
         status = stop_input_stream(in);
         pthread_mutex_unlock(&adev->lock);
     }
