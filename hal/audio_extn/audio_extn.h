@@ -20,6 +20,7 @@
 #ifndef AUDIO_EXTN_H
 #define AUDIO_EXTN_H
 
+
 #include <cutils/str_parms.h>
 
 void audio_extn_set_parameters(struct audio_device *adev,
@@ -227,5 +228,4 @@ int audio_extn_ds2_enable(struct audio_device *adev);
 #define audio_extn_dolby_ds2_set_endpoint(adev)                       (0)
 #define audio_extn_ds2_enable(adev)				      (0)
 #endif
-
 #endif /* AUDIO_EXTN_H */

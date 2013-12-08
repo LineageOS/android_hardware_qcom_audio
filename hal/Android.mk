@@ -30,6 +30,9 @@ LOCAL_SRC_FILES := \
 	$(AUDIO_PLATFORM)/platform.c
 
 LOCAL_SRC_FILES += audio_extn/audio_extn.c
+ifneq ($(filter msm8960,$(AUDIO_PLATFORM)),true)
+    LOCAL_SRC_FILES += edid.c
+endif
 
 ifneq ($(strip $(AUDIO_FEATURE_DISABLED_ANC_HEADSET)),true)
     LOCAL_CFLAGS += -DANC_HEADSET_ENABLED
