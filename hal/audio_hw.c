@@ -2008,10 +2008,16 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->handle = handle;
 
     /* Init use case and pcm_config */
-    if (out->flags == AUDIO_OUTPUT_FLAG_DIRECT &&
-        out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+    if ((out->flags == AUDIO_OUTPUT_FLAG_DIRECT) &&
+        (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL ||
+        out->devices & AUDIO_DEVICE_OUT_PROXY)) {
+
         pthread_mutex_lock(&adev->lock);
-        ret = read_hdmi_channel_masks(out);
+        if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
+            ret = read_hdmi_channel_masks(out);
+
+        if (out->devices & AUDIO_DEVICE_OUT_PROXY)
+            ret = audio_extn_read_afe_proxy_channel_masks(out);
         pthread_mutex_unlock(&adev->lock);
         if (ret != 0)
             goto error_open;
