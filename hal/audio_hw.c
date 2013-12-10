@@ -18,7 +18,7 @@
  */
 
 #define LOG_TAG "audio_hw_primary"
-/*#define LOG_NDEBUG 0*/
+#define LOG_NDEBUG 0
 /*#define VERY_VERY_VERBOSE_LOGGING*/
 #ifdef VERY_VERY_VERBOSE_LOGGING
 #define ALOGVV ALOGV
@@ -267,10 +267,19 @@ static int disable_snd_device(struct audio_device *adev,
         return -EINVAL;
     }
     adev->snd_dev_ref_cnt[snd_device]--;
-
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
-        ALOGV("%s: snd_device(%d: %s)", __func__,
-              snd_device, platform_get_snd_device_name(snd_device));
+        ALOGV("%s: snd_device(%d: %s) refcnt=%d", __func__,
+              snd_device, platform_get_snd_device_name(snd_device), adev->snd_dev_ref_cnt[snd_device]);
+
+        /* exit usb play back thread */
+        if(SND_DEVICE_OUT_USB_HEADSET == snd_device ||
+           SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET == snd_device)
+            audio_extn_usb_stop_playback();
+
+        /* exit usb capture thread */
+        if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
+            audio_extn_usb_stop_capture(adev);
+
         audio_route_reset_path(adev->audio_route, platform_get_snd_device_name(snd_device));
         if (update_mixer)
             audio_route_update_mixer(adev->audio_route);
