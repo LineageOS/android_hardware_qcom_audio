@@ -183,8 +183,10 @@ enum {
 
 #ifdef PLATFORM_MSM8610
 #define LOWLATENCY_PCM_DEVICE 12
+#define EC_REF_RX "I2S_RX"
 #else
 #define LOWLATENCY_PCM_DEVICE 15
+#define EC_REF_RX "SLIM_RX"
 #endif
 #ifdef PLATFORM_MSM8x26
 #define COMPRESS_CAPTURE_DEVICE 20
