@@ -75,8 +75,10 @@ namespace android {
         sndcardFdPair.clear();
         memset(buffer, 0x0, sizeof(buffer));
         while ((fgets(buffer, sizeof(buffer), fp) != NULL)) {
-            if (line % 2)
+            if (line % 2) {
+                line++;
                 continue;
+            }
             ptr = strtok_r(buffer, " [", &saveptr);
             if (ptr) {
                 path = "/proc/asound/card";
