@@ -395,12 +395,6 @@ static void check_usecases_codec_backend(struct audio_device *adev,
             }
         }
 
-        list_for_each(node, &adev->usecase_list) {
-            usecase = node_to_item(node, struct audio_usecase, list);
-            if (switch_device[usecase->id]) {
-                enable_snd_device(adev, snd_device, false);
-            }
-        }
         /* Make sure new snd device is enabled before re-routing the streams */
         audio_route_update_mixer(adev->audio_route);
 
