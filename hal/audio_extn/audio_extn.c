@@ -119,18 +119,18 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
             aextnmod.anc_enabled = true;
         else
             aextnmod.anc_enabled = false;
-    }
 
-    list_for_each(node, &adev->usecase_list) {
-        usecase = node_to_item(node, struct audio_usecase, list);
-        if (usecase->type == PCM_PLAYBACK) {
-            if (usecase->stream.out->devices == \
-                AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-                usecase->stream.out->devices ==  \
-                AUDIO_DEVICE_OUT_WIRED_HEADSET) {
-                select_devices(adev, usecase->id);
-                ALOGV("%s: switching device", __func__);
-                break;
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (usecase->type == PCM_PLAYBACK) {
+                if (usecase->stream.out->devices == \
+                    AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
+                    usecase->stream.out->devices ==  \
+                    AUDIO_DEVICE_OUT_WIRED_HEADSET) {
+                        select_devices(adev, usecase->id);
+                        ALOGV("%s: switching device", __func__);
+                        break;
+                }
             }
         }
     }
