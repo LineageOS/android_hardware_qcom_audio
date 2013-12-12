@@ -72,6 +72,8 @@ enum {
 int voice_start_call(struct audio_device *adev);
 int voice_stop_call(struct audio_device *adev);
 int voice_set_parameters(struct audio_device *adev, struct str_parms *parms);
+void voice_get_parameters(struct audio_device *adev, struct str_parms *query,
+                          struct str_parms *reply);
 void voice_init(struct audio_device *adev);
 bool voice_is_in_call(struct audio_device *adev);
 int voice_set_mic_mute(struct audio_device *dev, bool state);

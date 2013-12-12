@@ -1992,7 +1992,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 {
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_out *out;
-    int i, ret;
+    int i, ret = 0;
 
     ALOGV("%s: enter: sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)",
           __func__, config->sample_rate, config->channel_mask, devices, flags);
@@ -2316,7 +2316,7 @@ static char* adev_get_parameters(const struct audio_hw_device *dev,
     pthread_mutex_lock(&adev->lock);
 
     audio_extn_get_parameters(adev, query, reply);
-    voice_extn_get_parameters(adev, query, reply);
+    voice_get_parameters(adev, query, reply);
     platform_get_parameters(adev->platform, query, reply);
     str = str_parms_to_str(reply);
     str_parms_destroy(query);

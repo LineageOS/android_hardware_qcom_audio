@@ -18,7 +18,7 @@
  */
 
 #define LOG_TAG "voice_extn"
-/*#define LOG_NDEBUG 0*/
+#define LOG_NDEBUG 0
 #define LOG_NDDEBUG 0
 
 #include <errno.h>
@@ -34,8 +34,12 @@
 #include "platform_api.h"
 #include "voice_extn.h"
 
-#define AUDIO_PARAMETER_KEY_VSID        "vsid"
-#define AUDIO_PARAMETER_KEY_CALL_STATE  "call_state"
+#define AUDIO_PARAMETER_KEY_VSID                "vsid"
+#define AUDIO_PARAMETER_KEY_CALL_STATE          "call_state"
+#define AUDIO_PARAMETER_KEY_AUDIO_MODE          "audio_mode"
+#define AUDIO_PARAMETER_KEY_ALL_CALL_STATES     "all_call_states"
+
+#define VOICE_EXTN_PARAMETER_VALUE_MAX_LEN 256
 
 #define VOICE2_VSID 0x10DC1000
 #define VOLTE_VSID  0x10C02000
@@ -432,11 +436,29 @@ int voice_extn_set_parameters(struct audio_device *adev,
             goto done;
         }
     } else {
-        ALOGD("%s: Not handled here", __func__);
+        ALOGV("%s: Not handled here", __func__);
     }
 
 done:
     ALOGV("%s: exit with code(%d)", __func__, ret);
+    return ret;
+}
+
+int get_all_call_states_str(const struct audio_device *adev,
+                            char *value)
+{
+    int ret = 0;
+    char *cur_ptr = value;
+    int i, len=0;
+
+    for (i = 0; i < MAX_VOICE_SESSIONS; i++) {
+        snprintf(cur_ptr, VOICE_EXTN_PARAMETER_VALUE_MAX_LEN - len,
+                 "%d:%d,",adev->voice.session[i].vsid,
+                 adev->voice.session[i].state.current);
+        len = strlen(cur_ptr);
+        cur_ptr = cur_ptr + len;
+    }
+    ALOGV("%s:value=%s", __func__, value);
     return ret;
 }
 
@@ -445,16 +467,28 @@ void voice_extn_get_parameters(const struct audio_device *adev,
                                struct str_parms *reply)
 {
     int ret;
-    char value[32]={0};
+    char value[VOICE_EXTN_PARAMETER_VALUE_MAX_LEN] = {0};
     char *str = NULL;
 
-    ret = str_parms_get_str(query, "audio_mode", value,
+    ALOGV("%s: enter %s", __func__, str_parms_to_str(query));
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_AUDIO_MODE, value,
                             sizeof(value));
     if (ret >= 0) {
-        str_parms_add_int(reply, "audio_mode", adev->mode);
+        str_parms_add_int(reply, AUDIO_PARAMETER_KEY_AUDIO_MODE, adev->mode);
     }
 
-    ALOGV("%s: returns %s", __func__, str_parms_to_str(reply));
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_ALL_CALL_STATES,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        ret = get_all_call_states_str(adev, value);
+        if (ret) {
+            ALOGE("%s: Error fetching call states, err:%d", __func__, ret);
+            return;
+        }
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_ALL_CALL_STATES, value);
+    }
+    ALOGV("%s: exit: returns \"%s\"", __func__, str_parms_to_str(reply));
 }
 
 void voice_extn_out_get_parameters(struct stream_out *out,

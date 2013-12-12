@@ -351,6 +351,13 @@ int voice_stop_call(struct audio_device *adev)
     return ret;
 }
 
+void voice_get_parameters(struct audio_device *adev,
+                          struct str_parms *query,
+                          struct str_parms *reply)
+{
+    voice_extn_get_parameters(adev, query, reply);
+}
+
 int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
 {
     char *str;
