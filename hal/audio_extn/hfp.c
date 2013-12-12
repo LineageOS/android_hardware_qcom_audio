@@ -43,10 +43,10 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #ifdef HFP_ENABLED
 #define AUDIO_PARAMETER_HFP_ENABLE      "hfp_enable"
 
-static int32_t audio_extn_start_hfp(struct audio_device *adev,
+static int32_t start_hfp(struct audio_device *adev,
                                struct str_parms *parms);
 
-static int32_t audio_extn_stop_hfp(struct audio_device *adev);
+static int32_t stop_hfp(struct audio_device *adev);
 
 struct hfp_module {
     struct pcm *hfp_sco_rx;
@@ -76,22 +76,7 @@ static struct pcm_config pcm_config_hfp = {
     .avail_min = 0,
 };
 
-void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *parms)
-{
-    int ret;
-    char value[32]={0};
-
-    ret = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_ENABLE, value,
-                            sizeof(value));
-    if (ret >= 0) {
-           if(!strncmp(value,"true",sizeof(value)))
-               ret = audio_extn_start_hfp(adev,parms);
-           else
-               audio_extn_stop_hfp(adev);
-    }
-}
-
-static int32_t audio_extn_start_hfp(struct audio_device *adev,
+static int32_t start_hfp(struct audio_device *adev,
                                struct str_parms *parms)
 {
     int32_t i, ret = 0;
@@ -177,12 +162,12 @@ static int32_t audio_extn_start_hfp(struct audio_device *adev,
     return 0;
 
 exit:
-    audio_extn_stop_hfp(adev);
+    stop_hfp(adev);
     ALOGE("%s: Problem in HFP start: status(%d)", __func__, ret);
     return ret;
 }
 
-static int32_t audio_extn_stop_hfp(struct audio_device *adev)
+static int32_t stop_hfp(struct audio_device *adev)
 {
     int32_t i, ret = 0;
     struct audio_usecase *uc_info;
@@ -227,5 +212,20 @@ static int32_t audio_extn_stop_hfp(struct audio_device *adev)
 
     ALOGD("%s: exit: status(%d)", __func__, ret);
     return ret;
+}
+
+void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *parms)
+{
+    int ret;
+    char value[32]={0};
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_ENABLE, value,
+                            sizeof(value));
+    if (ret >= 0) {
+           if(!strncmp(value,"true",sizeof(value)))
+               ret = start_hfp(adev,parms);
+           else
+               stop_hfp(adev);
+    }
 }
 #endif /*HFP_ENABLED*/
