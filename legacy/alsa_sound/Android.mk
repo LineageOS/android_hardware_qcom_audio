@@ -97,6 +97,10 @@ ifeq ($(strip $(BOARD_USES_SEPERATED_VOIP)),true)
     common_cflags += -DSEPERATED_VOIP
 endif
 
+ifeq ($(strip $(BOARD_USES_SEPERATED_FM)),true)
+    common_cflags += -DSEPERATED_FM
+endif
+
 ifeq ($(BOARD_HAVE_AUDIENCE_A2220),true)
     common_cflags += -DUSE_A2220
 endif
