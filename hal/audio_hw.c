@@ -199,6 +199,10 @@ int enable_audio_route(struct audio_device *adev,
     else
         snd_device = usecase->out_snd_device;
 
+#ifdef DS1_DOLBY_DAP_ENABLED
+    audio_extn_dolby_set_dmid(adev);
+    audio_extn_dolby_set_endpoint(adev);
+#endif
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(mixer_path, snd_device);
     ALOGV("%s: apply mixer path: %s", __func__, mixer_path);
@@ -1142,6 +1146,11 @@ int start_output_stream(struct stream_out *out)
         if (out->offload_callback)
             compress_nonblock(out->compr, out->non_blocking);
 
+#ifdef DS1_DOLBY_DDP_ENABLED
+        if (audio_extn_is_dolby_format(out->format))
+            audio_extn_dolby_send_ddp_endp_params(adev);
+#endif
+
         if (adev->visualizer_start_output != NULL)
             adev->visualizer_start_output(out->handle, out->pcm_device_id);
         if (adev->offload_effects_start_output != NULL)
@@ -2079,7 +2088,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             goto error_open;
         }
         if (!is_supported_format(config->offload_info.format) &&
-                !audio_extn_dolby_is_supported_format(config->offload_info.format)) {
+                !audio_extn_is_dolby_format(config->offload_info.format)) {
             ALOGE("%s: Unsupported audio format", __func__);
             ret = -EINVAL;
             goto error_open;
@@ -2102,9 +2111,10 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->stream.drain = out_drain;
         out->stream.flush = out_flush;
 
-        if (audio_extn_dolby_is_supported_format(config->offload_info.format))
+        if (audio_extn_is_dolby_format(config->offload_info.format))
             out->compr_config.codec->id =
-                audio_extn_dolby_get_snd_codec_id(config->offload_info.format);
+                audio_extn_dolby_get_snd_codec_id(adev, out,
+                                                  config->offload_info.format);
         else
             out->compr_config.codec->id =
                 get_snd_codec_id(config->offload_info.format);
@@ -2129,16 +2139,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         ALOGV("%s: offloaded output offload_info version %04x bit rate %d",
                 __func__, config->offload_info.version,
                 config->offload_info.bit_rate);
-
-        if (audio_extn_dolby_is_supported_format(out->format)) {
-            ret = audio_extn_dolby_set_DMID(adev);
-            if (ret != 0) {
-                ALOGE("%s: Dolby DMID cannot be set error:%d",
-                      __func__, ret);
-                goto error_open;
-            }
-        }
-
         //Decide if we need to use gapless mode by default
         set_gapless_mode(adev);
 
