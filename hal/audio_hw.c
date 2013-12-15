@@ -1257,26 +1257,39 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
 {
     int ret = 0;
     char value[32];
+    bool is_meta_data_params = false;
     struct compr_gapless_mdata tmp_mdata;
-
+    tmp_mdata.encoder_delay = 0;
+    tmp_mdata.encoder_padding = 0;
     if (!out || !parms) {
+        ALOGE("%s: return invalid ",__func__);
         return -EINVAL;
     }
 
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_SAMPLE_RATE, value, sizeof(value));
+    if(ret >= 0)
+        is_meta_data_params = true;
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_NUM_CHANNEL, value, sizeof(value));
+    if(ret >= 0 )
+        is_meta_data_params = true;
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_AVG_BIT_RATE, value, sizeof(value));
+    if(ret >= 0 )
+        is_meta_data_params = true;
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
     if (ret >= 0) {
+        is_meta_data_params = true;
         tmp_mdata.encoder_delay = atoi(value); //whats a good limit check?
-    } else {
-        return -EINVAL;
     }
-
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
     if (ret >= 0) {
+        is_meta_data_params = true;
         tmp_mdata.encoder_padding = atoi(value);
-    } else {
-        return -EINVAL;
     }
 
+    if(!is_meta_data_params) {
+        ALOGV("%s: Not gapless meta data params", __func__);
+        return 0;
+    }
     out->gapless_mdata = tmp_mdata;
     out->send_new_metadata = 1;
     ALOGV("%s new encoder delay %u and padding %u", __func__,
@@ -1361,7 +1374,9 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     }
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+        pthread_mutex_lock(&out->lock);
         parse_compress_metadata(out, parms);
+        pthread_mutex_unlock(&out->lock);
     }
 
     str_parms_destroy(parms);
