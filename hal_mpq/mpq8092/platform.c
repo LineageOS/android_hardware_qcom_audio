@@ -176,6 +176,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET] = "speaker-and-anc-headphones",
     [SND_DEVICE_OUT_ANC_HANDSET] = "anc-handset",
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = "speaker-protected",
+    [SND_DEVICE_OUT_SPDIF] = "spdif",
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
@@ -249,6 +250,7 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET] = 26,
     [SND_DEVICE_OUT_ANC_HANDSET] = 103,
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = 101,
+    [SND_DEVICE_OUT_SPDIF] = 18,
 
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
     [SND_DEVICE_IN_HANDSET_MIC_AEC] = 106,
@@ -607,6 +609,8 @@ void platform_add_backend_name(char *mixer_path, snd_device_t snd_device)
         strlcat(mixer_path, " capture-fm", MIXER_PATH_MAX_LENGTH);
     else if (snd_device == SND_DEVICE_OUT_TRANSMISSION_FM)
         strlcat(mixer_path, " transmission-fm", MIXER_PATH_MAX_LENGTH);
+    else if (snd_device == SND_DEVICE_OUT_SPDIF)
+        strlcat(mixer_path, " spdif", MIXER_PATH_MAX_LENGTH);
 }
 
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
@@ -897,6 +901,8 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
     } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
         snd_device = SND_DEVICE_OUT_HANDSET;
+    } else if (devices & AUDIO_DEVICE_OUT_SPDIF) {
+        snd_device = SND_DEVICE_OUT_SPDIF;
     } else {
         ALOGE("%s: Unknown device(s) %#x", __func__, devices);
     }
