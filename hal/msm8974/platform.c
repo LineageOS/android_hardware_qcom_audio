@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
- * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2013-2014 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1358,12 +1358,12 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     char *str;
     char value[256] = {0};
     int val;
-    int ret = 0;
+    int ret = 0, err;
 
     ALOGV("%s: enter: %s", __func__, str_parms_to_str(parms));
 
-    ret = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_BTSCO, &val);
-    if (ret >= 0) {
+    err = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_BTSCO, &val);
+    if (err >= 0) {
         str_parms_del(parms, AUDIO_PARAMETER_KEY_BTSCO);
         my_data->btsco_sample_rate = val;
         if (val == SAMPLE_RATE_16KHZ) {
@@ -1373,8 +1373,8 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         }
     }
 
-    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SLOWTALK, value, sizeof(value));
-    if (ret >= 0) {
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SLOWTALK, value, sizeof(value));
+    if (err >= 0) {
         bool state = false;
         if (!strncmp("true", value, sizeof("true"))) {
             state = true;
@@ -1386,9 +1386,9 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
             ALOGE("%s: Failed to set slow talk err: %d", __func__, ret);
     }
 
-    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOLUME_BOOST,
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOLUME_BOOST,
                             value, sizeof(value));
-    if (ret >= 0) {
+    if (err >= 0) {
         str_parms_del(parms, AUDIO_PARAMETER_KEY_VOLUME_BOOST);
 
         if (my_data->acdb_reload_vocvoltable == NULL) {

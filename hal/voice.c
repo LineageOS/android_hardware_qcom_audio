@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
- * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2013-2014 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -363,15 +363,20 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
     char *str;
     char value[32];
     int val;
-    int ret = 0;
+    int ret = 0, err;
 
     ALOGV("%s: enter: %s", __func__, str_parms_to_str(parms));
 
-    voice_extn_set_parameters(adev, parms);
-    voice_extn_compress_voip_set_parameters(adev, parms);
+    ret = voice_extn_set_parameters(adev, parms);
+    if (ret != 0)
+        goto done;
 
-    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_TTY_MODE, value, sizeof(value));
-    if (ret >= 0) {
+    ret = voice_extn_compress_voip_set_parameters(adev, parms);
+    if (ret != 0)
+        goto done;
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_TTY_MODE, value, sizeof(value));
+    if (err >= 0) {
         int tty_mode;
         str_parms_del(parms, AUDIO_PARAMETER_KEY_TTY_MODE);
         if (strcmp(value, AUDIO_PARAMETER_VALUE_TTY_OFF) == 0)
@@ -396,9 +401,9 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
         }
     }
 
-    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_INCALLMUSIC,
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_INCALLMUSIC,
                             value, sizeof(value));
-    if (ret >= 0) {
+    if (err >= 0) {
         str_parms_del(parms, AUDIO_PARAMETER_KEY_INCALLMUSIC);
         if (strcmp(value, AUDIO_PARAMETER_VALUE_TRUE) == 0)
             platform_start_incall_music_usecase(adev->platform);
