@@ -143,13 +143,83 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
 #define audio_extn_set_afe_proxy_parameters(parms)        (0)
 #define audio_extn_get_afe_proxy_parameters(query, reply) (0)
 #else
+/* Front left channel. */
+#define PCM_CHANNEL_FL    1
+
+/* Front right channel. */
+#define PCM_CHANNEL_FR    2
+
+/* Front center channel. */
+#define PCM_CHANNEL_FC    3
+
+/* Left surround channel.*/
+#define PCM_CHANNEL_LS   4
+
+/* Right surround channel.*/
+#define PCM_CHANNEL_RS   5
+
+/* Low frequency effect channel. */
+#define PCM_CHANNEL_LFE  6
+
+/* Left back channel; Rear left channel. */
+#define PCM_CHANNEL_LB   8
+
+/* Right back channel; Rear right channel. */
+#define PCM_CHANNEL_RB   9
+
+static int32_t afe_proxy_set_channel_mapping(struct audio_device *adev,
+                                                     int channel_count)
+{
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "Playback Channel Map";
+    int set_values[8] = {0};
+    int ret;
+    ALOGV("%s channel_count:%d",__func__, channel_count);
+
+    switch (channel_count) {
+    case 6:
+        set_values[0] = PCM_CHANNEL_FL;
+        set_values[1] = PCM_CHANNEL_FR;
+        set_values[2] = PCM_CHANNEL_FC;
+        set_values[3] = PCM_CHANNEL_LFE;
+        set_values[4] = PCM_CHANNEL_LS;
+        set_values[5] = PCM_CHANNEL_RS;
+        break;
+    case 8:
+        set_values[0] = PCM_CHANNEL_FL;
+        set_values[1] = PCM_CHANNEL_FR;
+        set_values[2] = PCM_CHANNEL_FC;
+        set_values[3] = PCM_CHANNEL_LFE;
+        set_values[4] = PCM_CHANNEL_LS;
+        set_values[5] = PCM_CHANNEL_RS;
+        set_values[6] = PCM_CHANNEL_LB;
+        set_values[7] = PCM_CHANNEL_RB;
+        break;
+    default:
+        ALOGE("unsupported channels(%d) for setting channel map",
+                                                    channel_count);
+        return -EINVAL;
+    }
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+    ALOGV("AFE: set mapping(%d %d %d %d %d %d %d %d) for channel:%d",
+        set_values[0], set_values[1], set_values[2], set_values[3], set_values[4],
+        set_values[5], set_values[6], set_values[7], channel_count);
+    ret = mixer_ctl_set_array(ctl, set_values, channel_count);
+    return ret;
+}
+
 int32_t audio_extn_set_afe_proxy_channel_mixer(struct audio_device *adev)
 {
     int32_t ret = 0;
     const char *channel_cnt_str = NULL;
     struct mixer_ctl *ctl = NULL;
     const char *mixer_ctl_name = "PROXY_RX Channels";
-
 
     ALOGD("%s: entry", __func__);
     /* use the existing channel count set by hardware params to
@@ -176,6 +246,11 @@ int32_t audio_extn_set_afe_proxy_channel_mixer(struct audio_device *adev)
        }
     }
     mixer_ctl_set_enum_by_string(ctl, channel_cnt_str);
+
+    if (aextnmod.proxy_channel_num == 6 ||
+          aextnmod.proxy_channel_num == 8)
+        ret = afe_proxy_set_channel_mapping(adev,
+                             aextnmod.proxy_channel_num);
 
     ALOGD("%s: exit", __func__);
     return ret;
@@ -214,6 +289,34 @@ int audio_extn_get_afe_proxy_parameters(struct str_parms *query,
     }
 
     return 0;
+}
+
+/* must be called with hw device mutex locked */
+int32_t audio_extn_read_afe_proxy_channel_masks(struct stream_out *out)
+{
+    int ret = 0;
+    int channels = aextnmod.proxy_channel_num;
+
+    switch (channels) {
+        /*
+         * Do not handle stereo output in Multi-channel cases
+         * Stereo case is handled in normal playback path
+         */
+    case 6:
+        ALOGV("%s: AFE PROXY supports 5.1", __func__);
+        out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_5POINT1;
+        break;
+    case 8:
+        ALOGV("%s: AFE PROXY supports 5.1 and 7.1 channels", __func__);
+        out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_5POINT1;
+        out->supported_channel_masks[1] = AUDIO_CHANNEL_OUT_7POINT1;
+        break;
+    default:
+        ALOGE("AFE PROXY does not support multi channel playback");
+        ret = -ENOSYS;
+        break;
+    }
+    return ret;
 }
 #endif /* AFE_PROXY_ENABLED */
 
