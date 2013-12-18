@@ -796,9 +796,10 @@ int start_input_stream(struct stream_in *in)
     select_devices(adev, in->usecase);
 
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d), channels %d",
-          __func__, SOUND_CARD, in->pcm_device_id, in->config.channels);
-    in->pcm = pcm_open(SOUND_CARD, in->pcm_device_id,
-                           PCM_IN, &in->config);
+          __func__, adev->snd_card,
+          in->pcm_device_id, in->config.channels);
+    in->pcm = pcm_open(adev->snd_card,
+                       in->pcm_device_id, PCM_IN, &in->config);
     if (in->pcm && !pcm_is_ready(in->pcm)) {
         ALOGE("%s: %s", __func__, pcm_get_error(in->pcm));
         pcm_close(in->pcm);
@@ -1113,8 +1114,9 @@ int start_output_stream(struct stream_out *out)
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d)",
           __func__, 0, out->pcm_device_id);
     if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
-        out->pcm = pcm_open(SOUND_CARD, out->pcm_device_id,
-                               PCM_OUT | PCM_MONOTONIC, &out->config);
+        out->pcm = pcm_open(adev->snd_card,
+                            out->pcm_device_id,
+                            PCM_OUT | PCM_MONOTONIC, &out->config);
         if (out->pcm && !pcm_is_ready(out->pcm)) {
             ALOGE("%s: %s", __func__, pcm_get_error(out->pcm));
             pcm_close(out->pcm);
@@ -1124,7 +1126,8 @@ int start_output_stream(struct stream_out *out)
         }
     } else {
         out->pcm = NULL;
-        out->compr = compress_open(SOUND_CARD, out->pcm_device_id,
+        out->compr = compress_open(adev->snd_card,
+                                   out->pcm_device_id,
                                    COMPRESS_IN, &out->compr_config);
         if (out->compr && !is_compress_ready(out->compr)) {
             ALOGE("%s: %s", __func__, compress_get_error(out->compr));
@@ -2607,7 +2610,7 @@ static int adev_open(const hw_module_t *module, const char *name,
                                                         "visualizer_hal_stop_output");
         }
     }
-    audio_extn_listen_init(adev, SOUND_CARD);
+    audio_extn_listen_init(adev, adev->snd_card);
 
     if (access(OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH, R_OK) == 0) {
         adev->offload_effects_lib = dlopen(OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH, RTLD_NOW);

@@ -348,7 +348,10 @@ static int32_t usb_playback_entry(void *adev)
         usbmod->proxy_pcm_playback_handle = pcm_open(usbmod->proxy_card,
                                             usbmod->proxy_device_id, PCM_IN |
                                      PCM_MMAP | PCM_NOIRQ, &pcm_config_usbmod);
-        if(!usbmod->proxy_pcm_playback_handle){
+        if(usbmod->proxy_pcm_playback_handle
+            && !pcm_is_ready(usbmod->proxy_pcm_playback_handle)){
+                     pcm_close(usbmod->proxy_pcm_playback_handle);
+                     usbmod->proxy_pcm_playback_handle = NULL;
                      proxy_open_retry_count--;
                      usleep(USB_PROXY_OPEN_WAIT_TIME * 1000);
                      ALOGE("%s: pcm_open for proxy failed retrying = %d",
@@ -463,7 +466,10 @@ static int32_t usb_record_entry(void *adev)
         usbmod->proxy_pcm_record_handle = pcm_open(usbmod->proxy_card,
                                             usbmod->proxy_device_id, PCM_OUT |
                                      PCM_MMAP | PCM_NOIRQ, &pcm_config_usbmod);
-        if(!usbmod->proxy_pcm_record_handle){
+        if(usbmod->proxy_pcm_record_handle
+            && !pcm_is_ready(usbmod->proxy_pcm_record_handle)){
+                     pcm_close(usbmod->proxy_pcm_record_handle);
+                     usbmod->proxy_pcm_record_handle = NULL;
                      proxy_open_retry_count--;
                      usleep(USB_PROXY_OPEN_WAIT_TIME * 1000);
                      ALOGE("%s: pcm_open for proxy(recording) failed retrying = %d",

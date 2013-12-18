@@ -170,10 +170,10 @@ static int32_t fm_start(struct audio_device *adev)
               __func__, pcm_dev_rx_id, pcm_dev_tx_id, uc_info->id);
 
     ALOGV("%s: Opening PCM playback device card_id(%d) device_id(%d)",
-          __func__, SOUND_CARD, pcm_dev_rx_id);
-    fmmod.fm_pcm_rx = pcm_open(SOUND_CARD,
-                                  pcm_dev_rx_id,
-                                  PCM_OUT, &pcm_config_fm);
+          __func__, adev->snd_card, pcm_dev_rx_id);
+    fmmod.fm_pcm_rx = pcm_open(adev->snd_card,
+                               pcm_dev_rx_id,
+                               PCM_OUT, &pcm_config_fm);
     if (fmmod.fm_pcm_rx && !pcm_is_ready(fmmod.fm_pcm_rx)) {
         ALOGE("%s: %s", __func__, pcm_get_error(fmmod.fm_pcm_rx));
         ret = -EIO;
@@ -181,10 +181,10 @@ static int32_t fm_start(struct audio_device *adev)
     }
 
     ALOGV("%s: Opening PCM capture device card_id(%d) device_id(%d)",
-          __func__, SOUND_CARD, pcm_dev_tx_id);
-    fmmod.fm_pcm_tx = pcm_open(SOUND_CARD,
-                                   pcm_dev_tx_id,
-                                   PCM_IN, &pcm_config_fm);
+          __func__, adev->snd_card, pcm_dev_tx_id);
+    fmmod.fm_pcm_tx = pcm_open(adev->snd_card,
+                               pcm_dev_tx_id,
+                               PCM_IN, &pcm_config_fm);
     if (fmmod.fm_pcm_tx && !pcm_is_ready(fmmod.fm_pcm_tx)) {
         ALOGE("%s: %s", __func__, pcm_get_error(fmmod.fm_pcm_tx));
         ret = -EIO;

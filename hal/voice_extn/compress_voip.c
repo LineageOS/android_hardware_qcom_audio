@@ -348,8 +348,8 @@ static int voip_start_call(struct audio_device *adev,
         }
 
         ALOGD("%s: Opening PCM playback device card_id(%d) device_id(%d)",
-              __func__, SOUND_CARD, pcm_dev_rx_id);
-        voip_data.pcm_rx = pcm_open(SOUND_CARD,
+              __func__, adev->snd_card, pcm_dev_rx_id);
+        voip_data.pcm_rx = pcm_open(adev->snd_card,
                                     pcm_dev_rx_id,
                                     PCM_OUT, voip_config);
         if (voip_data.pcm_rx && !pcm_is_ready(voip_data.pcm_rx)) {
@@ -361,8 +361,8 @@ static int voip_start_call(struct audio_device *adev,
         }
 
         ALOGD("%s: Opening PCM capture device card_id(%d) device_id(%d)",
-              __func__, SOUND_CARD, pcm_dev_tx_id);
-        voip_data.pcm_tx = pcm_open(SOUND_CARD,
+              __func__, adev->snd_card, pcm_dev_tx_id);
+        voip_data.pcm_tx = pcm_open(adev->snd_card,
                                     pcm_dev_tx_id,
                                     PCM_IN, voip_config);
         if (voip_data.pcm_tx && !pcm_is_ready(voip_data.pcm_tx)) {
