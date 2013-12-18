@@ -52,8 +52,10 @@
 #include "audio_extn.h"
 
 #include "sound/compress_params.h"
+
 #define MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE (256 * 1024)
-#define MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE (8 * 1024)
+#define MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE (2 * 1024)
+#define COMPRESS_OFFLOAD_FRAGMENT_SIZE_FOR_AV_STREAMING (2 * 1024)
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /* ToDo: Check and update a proper value in msec */
@@ -143,7 +145,7 @@ static int set_voice_volume_l(struct audio_device *adev, float volume);
  * If value is not power of 2  round it to
  * power of 2.
  */
-static uint32_t get_offload_buffer_size()
+static uint32_t get_offload_buffer_size(audio_offload_info_t* info)
 {
     char value[PROPERTY_VALUE_MAX] = {0};
     uint32_t fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
@@ -153,6 +155,13 @@ static uint32_t get_offload_buffer_size()
         //ring buffer size needs to be 4k aligned.
         CHECK(!(fragment_size * COMPRESS_OFFLOAD_NUM_FRAGMENTS % 4096));
     }
+
+    if (info != NULL && info->has_video && info->is_streaming) {
+        fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE_FOR_AV_STREAMING;
+        ALOGV("%s: offload fragment size reduced for AV streaming to %d",
+               __func__, out->compr_config.fragment_size);
+    }
+
     if(fragment_size < MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE)
         fragment_size = MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
     else if(fragment_size > MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE)
@@ -1326,9 +1335,19 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
     struct compr_gapless_mdata tmp_mdata;
     tmp_mdata.encoder_delay = 0;
     tmp_mdata.encoder_padding = 0;
+
     if (!out || !parms) {
         ALOGE("%s: return invalid ",__func__);
         return -EINVAL;
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FORMAT, value, sizeof(value));
+    if (ret >= 0) {
+        if (atoi(value) == SND_AUDIOSTREAMFORMAT_MP4ADTS) {
+            out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_MP4ADTS;
+            ALOGV("ADTS format is set in offload mode");
+        }
+        out->send_new_metadata = 1;
     }
 
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_SAMPLE_RATE, value, sizeof(value));
@@ -2057,7 +2076,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
         out->compr_config.codec->id =
                 get_snd_codec_id(config->offload_info.format);
-        out->compr_config.fragment_size = get_offload_buffer_size();
+        out->compr_config.fragment_size = get_offload_buffer_size(&config->offload_info);
         out->compr_config.fragments = COMPRESS_OFFLOAD_NUM_FRAGMENTS;
         out->compr_config.codec->sample_rate =
                     compress_get_alsa_rate(config->offload_info.sample_rate);
@@ -2066,6 +2085,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->compr_config.codec->ch_in =
                     popcount(config->channel_mask);
         out->compr_config.codec->ch_out = out->compr_config.codec->ch_in;
+        out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
