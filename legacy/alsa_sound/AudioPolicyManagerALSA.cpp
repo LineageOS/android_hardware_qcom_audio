@@ -1145,7 +1145,7 @@ status_t AudioPolicyManager::startInput(audio_io_handle_t input)
     }
     AudioInputDescriptor *inputDesc = mInputs.valueAt(index);
 
-/*
+
 #ifdef AUDIO_POLICY_TEST
     if (mTestInput == 0)
 #endif //AUDIO_POLICY_TEST
@@ -1165,7 +1165,7 @@ status_t AudioPolicyManager::startInput(audio_io_handle_t input)
             }
         }
     }
-*/
+
     audio_devices_t newDevice = getDeviceForInputSource(inputDesc->mInputSource);
     if ((newDevice != AUDIO_DEVICE_NONE) && (newDevice != inputDesc->mDevice)) {
         inputDesc->mDevice = newDevice;
