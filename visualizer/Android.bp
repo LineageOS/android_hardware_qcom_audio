@@ -15,7 +15,6 @@ cc_library_shared {
     cflags: [
         "-fvisibility=hidden",
         "-Werror",
-        "-Wno-gnu-designator",
     ],
 
     include_dirs: [
