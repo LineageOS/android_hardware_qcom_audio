@@ -1699,7 +1699,7 @@ audio_devices_t AudioPolicyManager::getDeviceForStrategy(routing_strategy strate
 
     case STRATEGY_MEDIA: {
         uint32_t device2 = AUDIO_DEVICE_NONE;
-        if (mForceUse[AudioSystem::FOR_MEDIA] != AudioSystem::FORCE_SPEAKER) {
+        if (mForceUse[AudioSystem::FOR_MEDIA] != AudioSystem::FORCE_SPEAKER || strategy == STRATEGY_SONIFICATION) {
             if (strategy != STRATEGY_SONIFICATION) {
                 // no sonification on remote submix (e.g. WFD)
                 device2 = mAvailableOutputDevices & AUDIO_DEVICE_OUT_REMOTE_SUBMIX;
