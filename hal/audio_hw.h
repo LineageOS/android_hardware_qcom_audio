@@ -65,6 +65,7 @@ typedef enum {
 
     /* HFP Use case*/
     USECASE_AUDIO_HFP_SCO,
+    USECASE_AUDIO_HFP_SCO_WB,
 
     /* Capture usecases */
     USECASE_AUDIO_RECORD,

@@ -42,6 +42,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #ifdef HFP_ENABLED
 #define AUDIO_PARAMETER_HFP_ENABLE      "hfp_enable"
+#define AUDIO_PARAMETER_HFP_SET_SAMPLING_RATE "hfp_set_sampling_rate"
 
 static int32_t start_hfp(struct audio_device *adev,
                                struct str_parms *parms);
@@ -55,6 +56,7 @@ struct hfp_module {
     struct pcm *hfp_pcm_tx;
     bool is_hfp_running;
     int hfp_volume;
+    audio_usecase_t ucid;
 };
 
 static struct hfp_module hfpmod = {
@@ -64,6 +66,7 @@ static struct hfp_module hfpmod = {
     .hfp_pcm_tx = NULL,
     .hfp_volume = 0,
     .is_hfp_running = 0,
+    .ucid = USECASE_AUDIO_HFP_SCO,
 };
 static struct pcm_config pcm_config_hfp = {
     .channels = 1,
@@ -86,7 +89,7 @@ static int32_t start_hfp(struct audio_device *adev,
     ALOGD("%s: enter", __func__);
 
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
-    uc_info->id = USECASE_AUDIO_HFP_SCO;
+    uc_info->id = hfpmod.ucid;
     uc_info->type = PCM_HFP_CALL;
     uc_info->stream.out = adev->primary_output;
     uc_info->devices = adev->primary_output->devices;
@@ -95,7 +98,7 @@ static int32_t start_hfp(struct audio_device *adev,
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
-    select_devices(adev, USECASE_AUDIO_HFP_SCO);
+    select_devices(adev, hfpmod.ucid);
 
     pcm_dev_rx_id = platform_get_pcm_device_id(uc_info->id, PCM_PLAYBACK);
     pcm_dev_tx_id = platform_get_pcm_device_id(uc_info->id, PCM_CAPTURE);
@@ -193,10 +196,10 @@ static int32_t stop_hfp(struct audio_device *adev)
         hfpmod.hfp_pcm_tx = NULL;
     }
 
-    uc_info = get_usecase_from_list(adev, USECASE_AUDIO_HFP_SCO);
+    uc_info = get_usecase_from_list(adev, hfpmod.ucid);
     if (uc_info == NULL) {
         ALOGE("%s: Could not find the usecase (%d) in the list",
-              __func__, USECASE_AUDIO_HFP_SCO);
+              __func__, hfpmod.ucid);
         return -EINVAL;
     }
 
@@ -217,6 +220,7 @@ static int32_t stop_hfp(struct audio_device *adev)
 void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *parms)
 {
     int ret;
+    int rate;
     char value[32]={0};
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_ENABLE, value,
@@ -226,6 +230,22 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *
                ret = start_hfp(adev,parms);
            else
                stop_hfp(adev);
+    }
+    memset(value, 0, sizeof(value));
+    ret = str_parms_get_str(parms,AUDIO_PARAMETER_HFP_SET_SAMPLING_RATE, value,
+                            sizeof(value));
+    if (ret >= 0) {
+           rate = atoi(value);
+           if (rate == 8000){
+               hfpmod.ucid = USECASE_AUDIO_HFP_SCO;
+               pcm_config_hfp.rate = rate;
+           }
+           else if (rate == 16000){
+               hfpmod.ucid = USECASE_AUDIO_HFP_SCO_WB;
+               pcm_config_hfp.rate = rate;
+           }
+           else
+               ALOGE("Unsupported rate..");
     }
 }
 #endif /*HFP_ENABLED*/
