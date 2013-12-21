@@ -68,8 +68,6 @@ protected:
         // select input device corresponding to requested audio source
         virtual audio_devices_t getDeviceForInputSource(int inputSource);
 
-        static bool isVirtualInputDevice(audio_devices_t device);
-
         // compute the actual volume for a given stream according to the requested index and a particular
         // device
         virtual float computeVolume(int stream, int index, audio_io_handle_t output, audio_devices_t device);

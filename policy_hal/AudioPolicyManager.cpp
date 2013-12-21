@@ -27,9 +27,6 @@
 #define ALOGVV(a...) do { } while(0)
 #endif
 
-// A device mask for all audio input devices that are considered "virtual" when evaluating
-// active inputs in getActiveInput()
-#define APM_AUDIO_IN_DEVICE_VIRTUAL_ALL  AUDIO_DEVICE_IN_REMOTE_SUBMIX | AUDIO_DEVICE_IN_FM_RX_A2DP
 // A device mask for all audio output devices that are considered "remote" when evaluating
 // active output devices in isStreamActiveRemotely()
 #define APM_AUDIO_OUT_DEVICE_REMOTE_ALL  AUDIO_DEVICE_OUT_REMOTE_SUBMIX
@@ -737,16 +734,6 @@ audio_devices_t AudioPolicyManager::getDeviceForInputSource(int inputSource)
     }
     ALOGV("getDeviceForInputSource()input source %d, device %08x", inputSource, device);
     return device;
-}
-
-bool AudioPolicyManager::isVirtualInputDevice(audio_devices_t device)
-{
-    if ((device & AUDIO_DEVICE_BIT_IN) != 0) {
-        device &= ~AUDIO_DEVICE_BIT_IN;
-        if ((popcount(device) == 1) && ((device & ~APM_AUDIO_IN_DEVICE_VIRTUAL_ALL) == 0))
-            return true;
-    }
-    return false;
 }
 
 AudioPolicyManager::device_category AudioPolicyManager::getDeviceCategory(audio_devices_t device)
