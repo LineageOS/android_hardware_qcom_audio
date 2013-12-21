@@ -370,7 +370,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if (usecase->type == PCM_PLAYBACK &&
+        if (usecase->type != PCM_CAPTURE &&
                 usecase != uc_info &&
                 usecase->out_snd_device != snd_device &&
                 usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
@@ -414,8 +414,6 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                 enable_audio_route(adev, usecase, false);
             }
         }
-
-        audio_route_update_mixer(adev->audio_route);
     }
 }
 
@@ -443,7 +441,7 @@ static void check_and_route_capture_usecases(struct audio_device *adev,
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if (usecase->type == PCM_CAPTURE &&
+        if (usecase->type != PCM_PLAYBACK &&
                 usecase != uc_info &&
                 usecase->in_snd_device != snd_device) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
@@ -463,6 +461,12 @@ static void check_and_route_capture_usecases(struct audio_device *adev,
             usecase = node_to_item(node, struct audio_usecase, list);
             if (switch_device[usecase->id]) {
                 disable_snd_device(adev, usecase->in_snd_device, false);
+            }
+        }
+
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (switch_device[usecase->id]) {
                 enable_snd_device(adev, snd_device, false);
             }
         }
@@ -480,55 +484,7 @@ static void check_and_route_capture_usecases(struct audio_device *adev,
                 enable_audio_route(adev, usecase, false);
             }
         }
-
-        audio_route_update_mixer(adev->audio_route);
     }
-}
-
-static int disable_all_usecases_of_type(struct audio_device *adev,
-                                        usecase_type_t usecase_type,
-                                        bool update_mixer)
-{
-    struct audio_usecase *usecase;
-    struct listnode *node;
-    int ret = 0;
-
-    list_for_each(node, &adev->usecase_list) {
-        usecase = node_to_item(node, struct audio_usecase, list);
-        if (usecase->type == usecase_type) {
-            ALOGV("%s: usecase id %d", __func__, usecase->id);
-            ret = disable_audio_route(adev, usecase, update_mixer);
-            if (ret) {
-                ALOGE("%s: Failed to disable usecase id %d",
-                      __func__, usecase->id);
-            }
-        }
-    }
-
-    return ret;
-}
-
-static int enable_all_usecases_of_type(struct audio_device *adev,
-                                       usecase_type_t usecase_type,
-                                       bool update_mixer)
-{
-    struct audio_usecase *usecase;
-    struct listnode *node;
-    int ret = 0;
-
-    list_for_each(node, &adev->usecase_list) {
-        usecase = node_to_item(node, struct audio_usecase, list);
-        if (usecase->type == usecase_type) {
-            ALOGV("%s: usecase id %d", __func__, usecase->id);
-            ret = enable_audio_route(adev, usecase, update_mixer);
-            if (ret) {
-                ALOGE("%s: Failed to enable usecase id %d",
-                      __func__, usecase->id);
-            }
-        }
-    }
-
-    return ret;
 }
 
 /* must be called with hw device mutex locked */
@@ -557,6 +513,21 @@ static int read_hdmi_channel_masks(struct stream_out *out)
         break;
     }
     return ret;
+}
+
+static void update_devices_for_all_voice_usecases(struct audio_device *adev)
+{
+    struct listnode *node;
+    struct audio_usecase *usecase;
+
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type == VOICE_CALL) {
+            ALOGV("%s: updating device for usecase:%s", __func__,
+                  use_case_table[usecase->id]);
+            select_devices(adev, usecase->id);
+        }
+    }
 }
 
 static audio_usecase_t get_voice_usecase_id_from_list(struct audio_device *adev)
@@ -678,7 +649,6 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
      */
     if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL) {
         status = platform_switch_voice_call_device_pre(adev->platform);
-        disable_all_usecases_of_type(adev, VOICE_CALL, true);
     }
 
     /* Disable current sound devices */
@@ -714,10 +684,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     usecase->in_snd_device = in_snd_device;
     usecase->out_snd_device = out_snd_device;
 
-    if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL)
-        enable_all_usecases_of_type(adev, usecase->type, true);
-    else
-        enable_audio_route(adev, usecase, true);
+    enable_audio_route(adev, usecase, true);
 
     /* Applicable only on the targets that has external modem.
      * Enable device command should be sent to modem only after
@@ -1411,7 +1378,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             } else if ((adev->mode == AUDIO_MODE_IN_CALL) &&
                             voice_is_in_call(adev) &&
                             (out == adev->primary_output)) {
-                ret = select_devices(adev, get_voice_usecase_id_from_list(adev));
+                update_devices_for_all_voice_usecases(adev);
             }
         }
 
