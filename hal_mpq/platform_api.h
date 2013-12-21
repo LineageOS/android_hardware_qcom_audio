@@ -51,5 +51,7 @@ int platform_set_incall_recoding_session_id(void *platform, uint32_t session_id)
 /* returns the latency for a usecase in Us */
 int64_t platform_render_latency(audio_usecase_t usecase);
 int platform_update_usecase_from_source(int source, audio_usecase_t usecase);
+audio_usecase_t platform_get_usecase(audio_usecase_stream_type_t uc_type);
+int platform_free_usecase(audio_usecase_t uc_id);
 
 #endif // QCOM_AUDIO_PLATFORM_API_H

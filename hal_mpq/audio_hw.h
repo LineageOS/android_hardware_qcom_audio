@@ -24,7 +24,7 @@
 #include <hardware/audio.h>
 #include <tinyalsa/asoundlib.h>
 #include <tinycompress/tinycompress.h>
-
+#include "sound/compress_params.h"
 #include <audio_route/audio_route.h>
 
 #define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
@@ -45,6 +45,7 @@
 #define DEFAULT_HDMI_OUT_CHANNELS   2
 
 typedef int snd_device_t;
+#include <platform.h>
 
 /* These are the supported use cases by the hardware.
  * Each usecase is mapped to a specific PCM device.
@@ -56,11 +57,11 @@ typedef enum {
     USECASE_AUDIO_PLAYBACK_DEEP_BUFFER = 0,
     USECASE_AUDIO_PLAYBACK_LOW_LATENCY,
     USECASE_AUDIO_PLAYBACK_MULTI_CH,
-    USECASE_AUDIO_PLAYBACK_OFFLOAD,
-
-    /* FM usecase */
     USECASE_AUDIO_PLAYBACK_FM,
-
+    USECASE_AUDIO_PLAYBACK_OFFLOAD,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD1,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD2,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD3,
     /* Capture usecases */
     USECASE_AUDIO_RECORD,
     USECASE_AUDIO_RECORD_COMPRESS,
@@ -87,6 +88,28 @@ typedef enum {
     USECASE_AUDIO_SPKR_CALIB_TX,
     AUDIO_USECASE_MAX
 } audio_usecase_t;
+
+typedef enum {
+    DEEP_BUFFER_PLAYBACK_STREAM = 0,
+    LOW_LATENCY_PLAYBACK_STREAM,
+    MCH_PCM_PLAYBACK_STREAM,
+    OFFLOAD_PLAYBACK_STREAM,
+    LOW_LATENCY_RECORD_STREAM,
+    RECORD_STREAM,
+    VOICE_CALL_STREAM
+} audio_usecase_stream_type_t;
+
+#define STRING_TO_ENUM(string) { #string, string }
+struct string_to_enum {
+    const char *name;
+    uint32_t value;
+};
+
+static const struct string_to_enum out_channels_name_to_enum_table[] = {
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_STEREO),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_5POINT1),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_7POINT1),
+};
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
@@ -118,14 +141,43 @@ struct offload_cmd {
     int data[];
 };
 
+struct alsa_handle {
+
+    struct listnode list;
+//Parameters of the stream
+    struct pcm *pcm;
+    struct pcm_config config;
+
+    struct compress *compr;
+    struct compr_config compr_config;
+
+    struct stream_out *out;
+
+    audio_usecase_t usecase;
+    int device_id;
+    unsigned int sample_rate;
+    audio_channel_mask_t channel_mask;
+    audio_format_t input_format;
+    audio_format_t output_format;
+    audio_devices_t devices;
+
+    route_format_t route_format;
+    int decoder_type;
+
+    bool cmd_pending ;
+};
+
 struct stream_out {
     struct audio_stream_out stream;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
     pthread_cond_t  cond;
+    /* TODO remove this */
+    /*
     struct pcm_config config;
     struct compr_config compr_config;
     struct pcm *pcm;
     struct compress *compr;
+    */
     int standby;
     int pcm_device_id;
     unsigned int sample_rate;
@@ -154,6 +206,54 @@ struct stream_out {
     int send_new_metadata;
 
     struct audio_device *dev;
+
+    /*devices configuration */
+    int left_volume;
+    int right_volume;
+    audio_usecase_stream_type_t uc_strm_type;
+    int hdmi_format;
+    int spdif_format;
+    int* device_formats;   //TODO:Needs to come from AudioRutingManager
+    struct audio_config *config;
+
+    /* list of the session handles */
+    struct listnode session_list;
+
+    /* /MS11 instance */
+    int use_ms11_decoder;
+    void  *ms11_decoder;
+    struct compr_config compr_config;
+
+    int channels;
+
+    /* Buffering utility */
+    struct audio_bitstream_sm    *bitstrm;
+
+    int                 buffer_size;
+    int                 decoder_type;
+    bool                dec_conf_set;
+    uint32_t            min_bytes_req_to_dec;
+    bool                is_m11_file_mode;
+    void                *dec_conf_buf;
+    int32_t             dec_conf_bufLength;
+    bool                first_bitstrm_buf;
+
+    bool                open_dec_route;
+    int                 dec_format_devices;
+    bool                open_dec_mch_route;
+    int                 dec_mch_format_devices;
+    bool                open_passt_route;
+    int                 passt_format_devices;
+    bool                sw_open_trans_route;
+    int                 sw_trans_format_devices;
+    bool                hw_open_trans_route;
+    int                 hw_trans_format_devices;
+    bool                channel_status_set;
+    unsigned char       channel_status[24];
+    int                 route_audio_to_a2dp;
+    int                 is_ms11_file_playback_mode;
+    char *              write_temp_buf;
+    struct output_metadata  output_meta_data;
 };
 
 struct stream_in {
@@ -194,6 +294,7 @@ struct audio_usecase {
     snd_device_t out_snd_device;
     snd_device_t in_snd_device;
     union stream_ptr stream;
+    struct alsa_handle *handle;
 };
 
 struct audio_device {
@@ -225,6 +326,9 @@ static const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = "low-latency-playback",
     [USECASE_AUDIO_PLAYBACK_MULTI_CH] = "multi-channel-playback",
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] = "compress-offload-playback",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD1] = "compress-offload-playback1",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD2] = "compress-offload-playback2",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD3] = "compress-offload-playback3",
     [USECASE_AUDIO_RECORD] = "audio-record",
     [USECASE_AUDIO_RECORD_COMPRESS] = "audio-record-compress",
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = "low-latency-record",
@@ -244,6 +348,7 @@ static const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_SPKR_CALIB_RX] = "spkr-rx-calib",
     [USECASE_AUDIO_SPKR_CALIB_TX] = "spkr-vi-record",
 };
+
 
 int adev_open_output_stream(struct audio_hw_device *dev,
                                    audio_io_handle_t handle,

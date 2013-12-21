@@ -26,7 +26,7 @@
 #include <math.h>
 
 #define LOG_TAG "AudioBitstreamStateMachine"
-//#define LOG_NDEBUG 0
+#define LOG_NDEBUG 0
 #define LOG_NDDEBUG 0
 #include <utils/Log.h>
 
@@ -36,7 +36,6 @@
 #include <platform.h>
 // ----------------------------------------------------------------------------
 
-
 /*
 Initialize all input and output pointers
 Allocate twice the max buffer size of input and output for sufficient buffering
@@ -45,52 +44,62 @@ int audio_bitstream_init(struct audio_bitstream_sm *bstream, int buffering_facto
 {
     bstream->buffering_factor = buffering_factor;
     bstream->buffering_factor_cnt = 0;
+    bstream->inp_buf_size = SAMPLES_PER_CHANNEL *
+                        MAX_INPUT_CHANNELS_SUPPORTED*
+                        (bstream->buffering_factor+1);
+    bstream->inp_buf = (char *)malloc( bstream->inp_buf_size);
 
-    bstream->inp_buf=(char *)malloc(SAMPLES_PER_CHANNEL*
-                MAX_INPUT_CHANNELS_SUPPORTED*
-                (bstream->buffering_factor+1));
                                 // multiplied by 2 to convert to bytes
     if(bstream->inp_buf != NULL) {
         bstream->inp_buf_curr_ptr = bstream->inp_buf;
         bstream->inp_buf_write_ptr = bstream->inp_buf;
     } else {
         ALOGE("MS11 input buffer not allocated");
+        bstream->inp_buf_size = 0;
         return 0;
     }
 
-    bstream->enc_out_buf =(char *)malloc(SAMPLES_PER_CHANNEL*
-                MAX_INPUT_CHANNELS_SUPPORTED*
-                FACTOR_FOR_BUFFERING);
+    bstream->enc_out_buf_size = SAMPLES_PER_CHANNEL * MAX_INPUT_CHANNELS_SUPPORTED*
+                        FACTOR_FOR_BUFFERING;
+    bstream->enc_out_buf =(char *)malloc(bstream->enc_out_buf_size);
+
     if(bstream->enc_out_buf) {
         bstream->enc_out_buf_write_ptr = bstream->enc_out_buf;
     } else {
         ALOGE("MS11 Enc output buffer not allocated");
+        bstream->enc_out_buf_size = 0;
         return 0;
     }
-    bstream->pcm_2_out_buf =(char *)malloc(SAMPLES_PER_CHANNEL*STEREO_CHANNELS *
-                    FACTOR_FOR_BUFFERING);
+    bstream->pcm_2_out_buf_size =  SAMPLES_PER_CHANNEL*STEREO_CHANNELS *
+                    FACTOR_FOR_BUFFERING;
+    bstream->pcm_2_out_buf =(char *)malloc(bstream->pcm_2_out_buf_size);
     if(bstream->pcm_2_out_buf) {
         bstream->pcm_2_out_buf_write_ptr = bstream->pcm_2_out_buf;
     } else {
         ALOGE("MS11 PCM2Ch output buffer not allocated");
+        bstream->pcm_2_out_buf_size = 0;
         return 0;
     }
-    bstream->pcm_mch_out_buf =(char *)malloc(SAMPLES_PER_CHANNEL *
-                     MAX_OUTPUT_CHANNELS_SUPPORTED *
-                     FACTOR_FOR_BUFFERING);
+    bstream->pcm_mch_out_buf_size = SAMPLES_PER_CHANNEL * MAX_OUTPUT_CHANNELS_SUPPORTED *
+                     FACTOR_FOR_BUFFERING;
+
+    bstream->pcm_mch_out_buf =(char *)malloc(bstream->pcm_mch_out_buf_size);
     if(bstream->pcm_mch_out_buf) {
         bstream->pcm_mch_out_buf_write_ptr = bstream->pcm_mch_out_buf;
     } else {
         ALOGE("MS11 PCMMCh output buffer not allocated");
+        bstream->pcm_mch_out_buf_size = 0;
         return 0;
     }
-    bstream->passt_out_buf =(char *)malloc(SAMPLES_PER_CHANNEL *
+    bstream->passt_out_buf_size =SAMPLES_PER_CHANNEL *
                        MAX_INPUT_CHANNELS_SUPPORTED *
-                       FACTOR_FOR_BUFFERING);
+                       FACTOR_FOR_BUFFERING;
+    bstream->passt_out_buf =(char *)malloc(bstream->passt_out_buf_size);
     if(bstream->passt_out_buf) {
         bstream->passt_out_buf_write_ptr = bstream->passt_out_buf;
     } else {
         ALOGE("MS11 Enc output buffer not allocated");
+        bstream->passt_out_buf_size  = 0;
         return 0;
     }
     return 1;
@@ -159,9 +168,8 @@ void audio_bitstream_copy_to_internal_buffer(
                     struct audio_bitstream_sm *bstream,
                     char *buf_ptr, size_t bytes)
 {
-    int32_t bufLen = SAMPLES_PER_CHANNEL*MAX_INPUT_CHANNELS_SUPPORTED*(bstream->buffering_factor+1);
     // flush the input buffer if input is not consumed
-    if( (bstream->inp_buf_write_ptr+bytes) > (bstream->inp_buf+bufLen) ) {
+    if( (bstream->inp_buf_write_ptr+bytes) > (bstream->inp_buf+bstream->inp_buf_size) ) {
         ALOGE("Input bitstream is not consumed");
         return;
     }
@@ -224,6 +232,38 @@ char* audio_bitstream_get_input_buffer_write_ptr(
                         struct audio_bitstream_sm *bstream)
 {
     return bstream->inp_buf_write_ptr;
+}
+
+int audio_bitstream_set_input_buffer_ptr(
+                        struct audio_bitstream_sm *bstream, int bytes)
+{
+    if(((bstream->inp_buf_curr_ptr + bytes) <=
+                        (bstream->inp_buf + bstream->inp_buf_size)) &&
+        ((bstream->inp_buf_curr_ptr + bytes) >= bstream->inp_buf))
+
+        bstream->inp_buf_curr_ptr += bytes;
+     else {
+        ALOGE("Invalid input buffer size %d bytes", bytes);
+        return -EINVAL;
+     }
+
+    return 0;
+}
+
+int audio_bitstream_set_input_buffer_write_ptr(
+                        struct audio_bitstream_sm *bstream, int bytes)
+{
+    if(((bstream->inp_buf_write_ptr + bytes) <=
+                        (bstream->inp_buf + bstream->inp_buf_size)) &&
+        ((bstream->inp_buf_write_ptr + bytes) >= bstream->inp_buf))
+
+        bstream->inp_buf_write_ptr += bytes;
+     else {
+        ALOGE("Invalid input buffer size %d bytes", bytes);
+        return -EINVAL;
+     }
+
+    return 0;
 }
 
 /*
