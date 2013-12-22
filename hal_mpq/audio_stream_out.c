@@ -1687,8 +1687,8 @@ int start_output_stream(struct stream_out *out, struct alsa_handle *handle)
     uc_info->out_snd_device = SND_DEVICE_NONE;
 
     /* This must be called before adding this usecase to the list */
-    //if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
-    //    check_and_set_hdmi_channels(adev, out->config.channels);
+    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
+        check_and_set_hdmi_channels(adev, handle->config.channels);
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
