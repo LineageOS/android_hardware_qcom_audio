@@ -51,11 +51,6 @@ struct hardware_info {
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
-#define LITERAL_TO_STRING(x) #x
-#define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\
-            __FILE__ ":" LITERAL_TO_STRING(__LINE__)\
-            " ASSERT_FATAL(" #condition ") failed.")
-
 static const snd_device_t taiko_fluid_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
