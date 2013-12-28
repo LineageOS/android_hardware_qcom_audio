@@ -70,14 +70,14 @@ bool audio_extn_usb_is_proxy_inuse();
 #ifndef SSR_ENABLED
 #define audio_extn_ssr_init(adev, in)                 (0)
 #define audio_extn_ssr_deinit()                       (0)
-#define audio_extn_ssr_update_enabled(adev)           (0)
+#define audio_extn_ssr_update_enabled()               (0)
 #define audio_extn_ssr_get_enabled()                  (0)
 #define audio_extn_ssr_read(stream, buffer, bytes)    (0)
 #else
 int32_t audio_extn_ssr_init(struct audio_device *adev,
                             struct stream_in *in);
 int32_t audio_extn_ssr_deinit();
-int32_t audio_extn_ssr_update_enabled(struct audio_device *adev);
+void audio_extn_ssr_update_enabled();
 bool audio_extn_ssr_get_enabled();
 int32_t audio_extn_ssr_read(struct audio_stream_in *stream,
                        void *buffer, size_t bytes);
