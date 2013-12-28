@@ -23,7 +23,7 @@
 #include <cutils/list.h>
 #include <cutils/log.h>
 #include <tinyalsa/asoundlib.h>
-#include <audio_effects.h>
+#include <sound/audio_effects.h>
 #include <audio_effects/effect_environmentalreverb.h>
 #include <audio_effects/effect_presetreverb.h>
 
