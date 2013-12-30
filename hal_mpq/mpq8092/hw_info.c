@@ -285,8 +285,7 @@ void *hw_info_init(const char *snd_card_name)
         ALOGV("8084 - variant soundcard");
         update_hardware_info_8084(hw_info, snd_card_name);
     } else {
-        ALOGE("%s: Unupported target %s:",__func__, snd_card_name);
-        CHECK(0);
+        ALOGE("%s: Unsupported target %s:",__func__, snd_card_name);
         free(hw_info);
         hw_info = NULL;
     }
