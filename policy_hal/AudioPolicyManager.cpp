@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2009 The Android Open Source Project
@@ -590,7 +590,7 @@ audio_devices_t AudioPolicyManager::getDeviceForStrategy(routing_strategy strate
     case STRATEGY_MEDIA: {
         uint32_t device2 = AUDIO_DEVICE_NONE;
 
-        if (isInCall()) {
+        if (isInCall() && (device == AUDIO_DEVICE_NONE)) {
             // when in call, get the device for Phone strategy
             device = getDeviceForStrategy(STRATEGY_PHONE, false /*fromCache*/);
             break;
