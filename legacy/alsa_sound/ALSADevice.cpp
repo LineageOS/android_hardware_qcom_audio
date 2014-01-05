@@ -1896,6 +1896,17 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
             if (!strncmp(mMicType, "analog", 6)) {
                 return strdup(SND_USE_CASE_DEV_HANDSET); /* HANDSET TX */
             } else {
+#ifdef SEPERATED_VOIP
+                if (mCallMode == AUDIO_MODE_IN_COMMUNICATION) {
+                    if (!strncmp(rxDevice, SND_USE_CASE_DEV_VOIP_EARPIECE,
+                                (strlen(SND_USE_CASE_DEV_VOIP_EARPIECE)+1))) {
+                        return strdup(SND_USE_CASE_DEV_VOIP_HANDSET);
+                    } else {
+                        return strdup(SND_USE_CASE_DEV_VOIP_LINE);
+                    }
+                } else
+#endif
+
                 if ((mDevSettingsFlag & DMIC_FLAG) && (mInChannels == 1)) {
 #ifdef USES_FLUENCE_INCALL
                   if (mCallMode == AUDIO_MODE_IN_CALL
@@ -2002,16 +2013,6 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
 #ifdef SEPERATED_AUDIO_INPUT
                 if(mInputSource == AUDIO_SOURCE_VOICE_RECOGNITION) {
                     return strdup(SND_USE_CASE_DEV_VOICE_RECOGNITION ); /* VOICE RECOGNITION TX */
-                }
-#endif
-#ifdef SEPERATED_VOIP
-                if (mCallMode == AUDIO_MODE_IN_COMMUNICATION) {
-                    if (!strncmp(rxDevice, SND_USE_CASE_DEV_VOIP_EARPIECE,
-                                (strlen(SND_USE_CASE_DEV_VOIP_EARPIECE)+1))) {
-                        return strdup(SND_USE_CASE_DEV_VOIP_HANDSET);
-                    } else {
-                        return strdup(SND_USE_CASE_DEV_VOIP_LINE);
-                    }
                 }
 #endif
                 else {
