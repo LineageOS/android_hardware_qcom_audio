@@ -166,7 +166,7 @@ static int voice_extn_compress_voip_open_input_stream(struct stream_in *in)
     return -ENOSYS;
 }
 
-static int voice_extn_compress_voip_out_get_buffer_size(struct audio_stream *stream)
+static int voice_extn_compress_voip_out_get_buffer_size(struct stream_out *stream)
 {
     ALOGE("%s: COMPRESS_VOIP_ENABLED is not defined", __func__);
     return -ENOSYS;
