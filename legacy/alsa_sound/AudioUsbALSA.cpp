@@ -52,7 +52,7 @@ struct pollfd pfdUsbPlayback[2];
 struct pollfd pfdProxyRecording[1];
 struct pollfd pfdUsbRecording[1];
 
-#define USB_PERIOD_SIZE 2048
+#define USB_PERIOD_SIZE 4096
 #define PROXY_PERIOD_SIZE 3072
 
 namespace android_audio_legacy

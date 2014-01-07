@@ -52,9 +52,8 @@
 #include "audio_extn.h"
 
 #include "sound/compress_params.h"
-#define MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE (256 * 1024)
-#define MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE (8 * 1024)
-#define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
+#include "sound/asound.h"
+
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /* ToDo: Check and update a proper value in msec */
 #define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 96
@@ -138,14 +137,44 @@ static const struct string_to_enum out_channels_name_to_enum_table[] = {
 };
 
 static int set_voice_volume_l(struct audio_device *adev, float volume);
-static uint32_t get_offload_buffer_size();
-static int set_gapless_mode(struct audio_device *adev);
+
+static int check_and_set_gapless_mode(struct audio_device *adev) {
+
+
+    char value[PROPERTY_VALUE_MAX] = {0};
+    bool gapless_enabled = false;
+    const char *mixer_ctl_name = "Compress Gapless Playback";
+    struct mixer_ctl *ctl;
+
+    ALOGV("%s:", __func__);
+    property_get("audio.offload.gapless.enabled", value, NULL);
+    gapless_enabled = atoi(value) || !strncmp("true", value, 4);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                               __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    if (mixer_ctl_set_value(ctl, 0, gapless_enabled) < 0) {
+        ALOGE("%s: Could not set gapless mode %d",
+                       __func__, gapless_enabled);
+         return -EINVAL;
+    }
+    return 0;
+}
 
 static bool is_supported_format(audio_format_t format)
 {
     if (format == AUDIO_FORMAT_MP3 ||
-            format == AUDIO_FORMAT_AAC)
-        return true;
+        format == AUDIO_FORMAT_AAC ||
+#ifdef FLAC_OFFLOAD_ENABLED
+        format == AUDIO_FORMAT_FLAC ||
+#endif
+        format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD ||
+        format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD)
+           return true;
 
     return false;
 }
@@ -161,6 +190,15 @@ static int get_snd_codec_id(audio_format_t format)
     case AUDIO_FORMAT_AAC:
         id = SND_AUDIOCODEC_AAC;
         break;
+    case AUDIO_FORMAT_PCM_16_BIT_OFFLOAD:
+    case AUDIO_FORMAT_PCM_24_BIT_OFFLOAD:
+        id = SND_AUDIOCODEC_PCM;
+        break;
+#ifdef FLAC_OFFLOAD_ENABLED
+    case AUDIO_FORMAT_FLAC:
+        id = SND_AUDIOCODEC_FLAC;
+        break;
+#endif
     default:
         ALOGE("%s: Unsupported audio format", __func__);
     }
@@ -319,6 +357,15 @@ static void check_usecases_codec_backend(struct audio_device *adev,
      * because of the limitation that both the devices cannot be enabled
      * at the same time as they share the same backend.
      */
+    /*
+     * This call is to check if we need to force routing for a particular stream
+     * If there is a backend configuration change for the device when a
+     * new stream starts, then ADM needs to be closed and re-opened with the new
+     * configuraion. This call check if we need to re-route all the streams
+     * associated with the backend. Touch tone + 24 bit playback.
+     */
+    bool force_routing = platform_check_and_set_codec_backend_cfg(adev, uc_info);
+
     /* Disable all the usecases on the shared backend other than the
        specified usecase */
     for (i = 0; i < AUDIO_USECASE_MAX; i++)
@@ -328,7 +375,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
         usecase = node_to_item(node, struct audio_usecase, list);
         if (usecase->type != PCM_CAPTURE &&
                 usecase != uc_info &&
-                usecase->out_snd_device != snd_device &&
+                (usecase->out_snd_device != snd_device || force_routing)  &&
                 usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
@@ -717,6 +764,7 @@ static void *offload_thread_loop(void *context)
 {
     struct stream_out *out = (struct stream_out *) context;
     struct listnode *item;
+    int ret = 0;
 
     setpriority(PRIO_PROCESS, 0, ANDROID_PRIORITY_AUDIO);
     set_sched_policy(0, SP_FOREGROUND);
@@ -766,8 +814,14 @@ static void *offload_thread_loop(void *context)
             event = STREAM_CBK_EVENT_WRITE_READY;
             break;
         case OFFLOAD_CMD_PARTIAL_DRAIN:
-            compress_next_track(out->compr);
-            compress_partial_drain(out->compr);
+            ret = compress_next_track(out->compr);
+            if(ret == 0)
+                compress_partial_drain(out->compr);
+            else if(ret == -ETIMEDOUT)
+                compress_drain(out->compr);
+            else
+                ALOGE("%s: Next track returned error %d",__func__, ret);
+
             send_callback = true;
             event = STREAM_CBK_EVENT_DRAIN_READY;
             break;
@@ -1272,10 +1326,45 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
     struct compr_gapless_mdata tmp_mdata;
     tmp_mdata.encoder_delay = 0;
     tmp_mdata.encoder_padding = 0;
+
     if (!out || !parms) {
         ALOGE("%s: return invalid ",__func__);
         return -EINVAL;
     }
+
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FORMAT, value, sizeof(value));
+    if (ret >= 0) {
+        if (atoi(value) == SND_AUDIOSTREAMFORMAT_MP4ADTS) {
+            out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_MP4ADTS;
+            ALOGV("ADTS format is set in offload mode");
+        }
+        out->send_new_metadata = 1;
+    }
+
+#ifdef FLAC_OFFLOAD_ENABLED
+    if (out->format == AUDIO_FORMAT_FLAC) {
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.min_blk_size = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.max_blk_size = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_FRAME_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.min_frame_size = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_FRAME_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.max_frame_size = atoi(value);
+            out->send_new_metadata = 1;
+        }
+    }
+#endif
 
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_SAMPLE_RATE, value, sizeof(value));
     if(ret >= 0)
@@ -1943,6 +2032,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
     out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_STEREO;
     out->handle = handle;
+    out->bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
 
     /* Init use case and pcm_config */
     if (out->flags == AUDIO_OUTPUT_FLAG_DIRECT &&
@@ -1990,8 +2080,10 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->usecase = USECASE_AUDIO_PLAYBACK_OFFLOAD;
         if (config->offload_info.channel_mask)
             out->channel_mask = config->offload_info.channel_mask;
-        else if (config->channel_mask)
+        else if (config->channel_mask) {
             out->channel_mask = config->channel_mask;
+            config->offload_info.channel_mask = config->channel_mask;
+        }
         out->format = config->offload_info.format;
         out->sample_rate = config->offload_info.sample_rate;
 
@@ -2000,10 +2092,18 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->stream.resume = out_resume;
         out->stream.drain = out_drain;
         out->stream.flush = out_flush;
+        out->bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
 
         out->compr_config.codec->id =
                 get_snd_codec_id(config->offload_info.format);
-        out->compr_config.fragment_size = get_offload_buffer_size();
+
+        if (audio_is_offload_pcm(config->offload_info.format)) {
+            out->compr_config.fragment_size =
+                       platform_get_pcm_offload_buffer_size(&config->offload_info);
+        } else {
+            out->compr_config.fragment_size =
+                       platform_get_compress_offload_buffer_size(&config->offload_info);
+        }
         out->compr_config.fragments = COMPRESS_OFFLOAD_NUM_FRAGMENTS;
         out->compr_config.codec->sample_rate =
                     compress_get_alsa_rate(config->offload_info.sample_rate);
@@ -2012,6 +2112,27 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->compr_config.codec->ch_in =
                     popcount(config->channel_mask);
         out->compr_config.codec->ch_out = out->compr_config.codec->ch_in;
+        out->bit_width = config->offload_info.bit_width;
+
+        if (config->offload_info.format == AUDIO_FORMAT_AAC)
+            out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
+        if (config->offload_info.format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD)
+            out->compr_config.codec->format = SNDRV_PCM_FORMAT_S16_LE;
+        if(config->offload_info.format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD)
+            out->compr_config.codec->format = SNDRV_PCM_FORMAT_S24_LE;
+
+        if (config->offload_info.bit_width == 24) {
+            out->compr_config.codec->format = SNDRV_PCM_FORMAT_S24_LE;
+        }
+
+        if (out->bit_width == 24 && !platform_check_24_bit_support()) {
+            ALOGW("24 bit support is not enabled, using 16 bit backend");
+            out->compr_config.codec->format = SNDRV_PCM_FORMAT_S16_LE;
+        }
+
+#ifdef FLAC_OFFLOAD_ENABLED
+        out->compr_config.codec->options.flac_dec.sample_size = config->offload_info.bit_width;
+#endif
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
@@ -2026,7 +2147,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                 config->offload_info.bit_rate);
 
         //Decide if we need to use gapless mode by default
-        set_gapless_mode(adev);
+        check_and_set_gapless_mode(adev);
 
 
 #ifdef DEEP_BUFFER_PRIMARY
@@ -2470,6 +2591,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->in_call = false;
     adev->acdb_settings = TTY_MODE_OFF;
     /* adev->cur_hdmi_channels = 0;  by calloc() */
+    adev->cur_codec_backend_samplerate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    adev->cur_codec_backend_bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     adev->snd_dev_ref_cnt = calloc(SND_DEVICE_MAX, sizeof(int));
     list_init(&adev->usecase_list);
     pthread_mutex_unlock(&adev->lock);
@@ -2520,55 +2643,6 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     ALOGV("%s: exit", __func__);
     return 0;
-}
-
-static int set_gapless_mode(struct audio_device *adev) {
-
-
-    char value[PROPERTY_VALUE_MAX] = {0};
-    bool gapless_enabled = false;
-    const char *mixer_ctl_name = "Compress Gapless Playback";
-    struct mixer_ctl *ctl;
-
-    ALOGV("%s:", __func__);
-    property_get("audio.offload.gapless.enabled", value, NULL);
-    gapless_enabled = atoi(value) || !strncmp("true", value, 4);
-
-    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
-    if (!ctl) {
-        ALOGE("%s: Could not get ctl for mixer cmd - %s",
-                               __func__, mixer_ctl_name);
-        return -EINVAL;
-    }
-
-    if (mixer_ctl_set_value(ctl, 0, gapless_enabled) < 0) {
-        ALOGE("%s: Could not set gapless mode %d",
-                       __func__, gapless_enabled);
-         return -EINVAL;
-    }
-    return 0;
-}
-
-/* Read  offload buffer size from a property.
- * If value is not power of 2  round it to
- * power of 2.
- */
-static uint32_t get_offload_buffer_size()
-{
-    char value[PROPERTY_VALUE_MAX] = {0};
-    uint32_t fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-    if((property_get("audio.offload.buffer.size.kb", value, "")) &&
-            atoi(value)) {
-        fragment_size =  atoi(value) * 1024;
-        //ring buffer size needs to be 4k aligned.
-        CHECK(!(fragment_size * COMPRESS_OFFLOAD_NUM_FRAGMENTS % 4096));
-    }
-    if(fragment_size < MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE)
-        fragment_size = MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-    else if(fragment_size > MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE)
-        fragment_size = MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-    ALOGVV("%s: fragment_size %d", __func__, fragment_size);
-    return fragment_size;
 }
 
 static struct hw_module_methods_t hal_module_methods = {
