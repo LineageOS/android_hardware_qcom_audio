@@ -165,4 +165,10 @@ int audio_extn_dolby_get_snd_codec_id(audio_format_t format);
 int audio_extn_dolby_set_DMID(struct audio_device *adev);
 #endif
 
+#ifndef HFP_ENABLED
+#define audio_extn_hfp_is_active(adev)                  (0)
+#else
+bool audio_extn_hfp_is_active(struct audio_device *adev);
+#endif
+
 #endif /* AUDIO_EXTN_H */
