@@ -152,8 +152,55 @@ static pthread_mutex_t adev_init_lock;
 static unsigned int audio_device_ref_count;
 
 static int set_voice_volume_l(struct audio_device *adev, float volume);
-static uint32_t get_offload_buffer_size();
-static int set_gapless_mode(struct audio_device *adev);
+
+/* Read  offload buffer size from a property.
+ * If value is not power of 2  round it to
+ * power of 2.
+ */
+static uint32_t get_offload_buffer_size()
+{
+    char value[PROPERTY_VALUE_MAX] = {0};
+    uint32_t fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+    if((property_get("audio.offload.buffer.size.kb", value, "")) &&
+            atoi(value)) {
+        fragment_size =  atoi(value) * 1024;
+        //ring buffer size needs to be 4k aligned.
+        CHECK(!(fragment_size * COMPRESS_OFFLOAD_NUM_FRAGMENTS % 4096));
+    }
+    if(fragment_size < MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE)
+        fragment_size = MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+    else if(fragment_size > MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE)
+        fragment_size = MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+    ALOGVV("%s: fragment_size %d", __func__, fragment_size);
+    return fragment_size;
+}
+
+static int check_and_set_gapless_mode(struct audio_device *adev) {
+
+
+    char value[PROPERTY_VALUE_MAX] = {0};
+    bool gapless_enabled = false;
+    const char *mixer_ctl_name = "Compress Gapless Playback";
+    struct mixer_ctl *ctl;
+
+    ALOGV("%s:", __func__);
+    property_get("audio.offload.gapless.enabled", value, NULL);
+    gapless_enabled = atoi(value) || !strncmp("true", value, 4);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                               __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    if (mixer_ctl_set_value(ctl, 0, gapless_enabled) < 0) {
+        ALOGE("%s: Could not set gapless mode %d",
+                       __func__, gapless_enabled);
+         return -EINVAL;
+    }
+    return 0;
+}
 
 static bool is_supported_format(audio_format_t format)
 {
@@ -2121,7 +2168,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         }
 
         //Decide if we need to use gapless mode by default
-        set_gapless_mode(adev);
+        check_and_set_gapless_mode(adev);
 
     } else if (out->flags & AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
         ret = voice_check_and_set_incall_music_usecase(adev, out);
@@ -2657,55 +2704,6 @@ static int adev_open(const hw_module_t *module, const char *name,
     return 0;
 }
 
-/* Read  offload buffer size from a property.
- * If value is not power of 2  round it to
- * power of 2.
- */
-static uint32_t get_offload_buffer_size()
-{
-    char value[PROPERTY_VALUE_MAX] = {0};
-    uint32_t fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-    if((property_get("audio.offload.buffer.size.kb", value, "")) &&
-            atoi(value)) {
-        fragment_size =  atoi(value) * 1024;
-        //ring buffer size needs to be 4k aligned.
-        CHECK(!(fragment_size * COMPRESS_OFFLOAD_NUM_FRAGMENTS % 4096));
-    }
-    if(fragment_size < MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE)
-        fragment_size = MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-    else if(fragment_size > MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE)
-        fragment_size = MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-    ALOGVV("%s: fragment_size %d", __func__, fragment_size);
-    return fragment_size;
-}
-
-static int set_gapless_mode(struct audio_device *adev) {
-
-
-    char value[PROPERTY_VALUE_MAX] = {0};
-    bool gapless_enabled = false;
-    const char *mixer_ctl_name = "Compress Gapless Playback";
-    struct mixer_ctl *ctl;
-
-    ALOGV("%s:", __func__);
-    property_get("audio.offload.gapless.enabled", value, NULL);
-    gapless_enabled = atoi(value) || !strncmp("true", value, 4);
-
-    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
-    if (!ctl) {
-        ALOGE("%s: Could not get ctl for mixer cmd - %s",
-                               __func__, mixer_ctl_name);
-        return -EINVAL;
-    }
-
-    if (mixer_ctl_set_value(ctl, 0, gapless_enabled) < 0) {
-        ALOGE("%s: Could not set gapless mode %d",
-                       __func__, gapless_enabled);
-         return -EINVAL;
-    }
-    return 0;
-
-}
 static struct hw_module_methods_t hal_module_methods = {
     .open = adev_open,
 };
