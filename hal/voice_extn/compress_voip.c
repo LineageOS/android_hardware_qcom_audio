@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
- * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2013-2014 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -400,53 +400,57 @@ error_start_voip:
     return ret;
 }
 
-void voice_extn_compress_voip_set_parameters(struct audio_device *adev,
+int voice_extn_compress_voip_set_parameters(struct audio_device *adev,
                                              struct str_parms *parms)
 {
     char *str;
     char value[32]={0};
-    int ret, rate;
+    int ret = 0, err, rate;
     int min_rate, max_rate;
     bool flag;
 
     ALOGV("%s: enter: %s", __func__, str_parms_to_str(parms));
 
-    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOIP_RATE,
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOIP_RATE,
                             value, sizeof(value));
-    if (ret >= 0) {
+    if (err >= 0) {
         rate = atoi(value);
         voip_set_rate(adev, rate);
         voip_set_evrc_min_max_rate(adev, rate, rate);
     }
 
     memset(value, 0, sizeof(value));
-    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOIP_EVRC_RATE_MIN,
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOIP_EVRC_RATE_MIN,
                             value, sizeof(value));
-    if (ret >= 0) {
+    if (err >= 0) {
         min_rate = atoi(value);
         str_parms_del(parms, AUDIO_PARAMETER_KEY_VOIP_EVRC_RATE_MIN);
         memset(value, 0, sizeof(value));
-        ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOIP_EVRC_RATE_MAX,
+        err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOIP_EVRC_RATE_MAX,
                                 value, sizeof(value));
-        if (ret >= 0) {
+        if (err >= 0) {
             max_rate = atoi(value);
             voip_set_evrc_min_max_rate(adev, min_rate, max_rate);
-        }
-        else
+        } else {
             ALOGE("%s: AUDIO_PARAMETER_KEY_VOIP_EVRC_RATE_MAX not found", __func__);
+            ret = -EINVAL;
+            goto done;
+        }
     }
 
     memset(value, 0, sizeof(value));
-    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOIP_DTX_MODE,
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOIP_DTX_MODE,
                             value, sizeof(value));
-    if (ret >= 0) {
+    if (err >= 0) {
         flag = false;
         if (strcmp(value, AUDIO_PARAMETER_VALUE_VOIP_TRUE) == 0)
             flag = true;
         voip_set_dtx(adev, flag);
     }
 
+done:
     ALOGV("%s: exit", __func__);
+    return ret;
 }
 
 void voice_extn_compress_voip_out_get_parameters(struct stream_out *out,

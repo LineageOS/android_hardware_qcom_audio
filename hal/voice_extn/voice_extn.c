@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
- * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2013-2014 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
  */
 
 #define LOG_TAG "voice_extn"
-#define LOG_NDEBUG 0
+/*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
 
 #include <errno.h>
@@ -409,17 +409,17 @@ int voice_extn_set_parameters(struct audio_device *adev,
 {
     char *str;
     int value;
-    int ret = 0;
+    int ret = 0, err;
 
     ALOGV("%s: enter: %s", __func__, str_parms_to_str(parms));
 
-    ret = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_VSID, &value);
-    if (ret >= 0) {
+    err = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_VSID, &value);
+    if (err >= 0) {
         str_parms_del(parms, AUDIO_PARAMETER_KEY_VSID);
-        int vsid = value;
+        uint32_t vsid = value;
         int call_state = -1;
-        ret = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_CALL_STATE, &value);
-        if (ret >= 0) {
+        err = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_CALL_STATE, &value);
+        if (err >= 0) {
             call_state = value;
         } else {
             ALOGE("%s: call_state key not found", __func__);
