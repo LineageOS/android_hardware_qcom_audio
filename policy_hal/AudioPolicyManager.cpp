@@ -881,6 +881,129 @@ float AudioPolicyManager::computeVolume(int stream,
 #endif
     return AudioPolicyManagerBase::computeVolume(stream, index, output, device);
 }
+
+// This function checks for the parameters which can be offloaded.
+// This can be enhanced depending on the capability of the DSP and policy
+// of the system.
+bool AudioPolicyManager::isOffloadSupported(const audio_offload_info_t& offloadInfo)
+{
+    ALOGV(" isOffloadSupported: SR=%u, CM=0x%x, Format=0x%x, StreamType=%d,"
+     " BitRate=%u, duration=%lld us, has_video=%d",
+     offloadInfo.sample_rate, offloadInfo.channel_mask,
+     offloadInfo.format,
+     offloadInfo.stream_type, offloadInfo.bit_rate, offloadInfo.duration_us,
+     offloadInfo.has_video);
+
+#ifdef VOICE_CONCURRENCY
+    if(isInCall())
+    {
+        ALOGD("\n  blocking  compress offload on call mode\n");
+        return false;
+    }
+#endif
+    // Check if stream type is music, then only allow offload as of now.
+    if (offloadInfo.stream_type != AUDIO_STREAM_MUSIC)
+    {
+        ALOGV("isOffloadSupported: stream_type != MUSIC, returning false");
+        return false;
+    }
+
+    char propValue[PROPERTY_VALUE_MAX];
+    bool pcmOffload = false;
+    if (audio_is_offload_pcm(offloadInfo.format)) {
+        if(property_get("audio.offload.pcm.enable", propValue, NULL)) {
+            bool prop_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
+            if (prop_enabled) {
+                ALOGW("PCM offload property is enabled");
+                pcmOffload = true;
+            }
+        }
+        if (!pcmOffload) {
+            ALOGV("PCM offload disabled by property audio.offload.pcm.enable");
+            return false;
+        }
+    }
+
+    if (!pcmOffload) {
+        // Check if offload has been disabled
+        if (property_get("audio.offload.disable", propValue, "0")) {
+            if (atoi(propValue) != 0) {
+                ALOGV("offload disabled by audio.offload.disable=%s", propValue );
+                return false;
+            }
+        }
+
+        //check if it's multi-channel AAC format
+        if (AudioSystem::popCount(offloadInfo.channel_mask) > 2
+              && offloadInfo.format == AUDIO_FORMAT_AAC) {
+            ALOGV("offload disabled for multi-channel AAC format");
+            return false;
+        }
+
+        if (offloadInfo.has_video)
+        {
+            if(property_get("av.offload.enable", propValue, NULL)) {
+                bool prop_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
+                if (!prop_enabled) {
+                    ALOGW("offload disabled by av.offload.enable = %s ", propValue );
+                    return false;
+                }
+            } else {
+                return false;
+            }
+
+            if(offloadInfo.is_streaming) {
+                if (property_get("av.streaming.offload.enable", propValue, NULL)) {
+                    bool prop_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
+                    if (!prop_enabled) {
+                       ALOGW("offload disabled by av.streaming.offload.enable = %s ", propValue );
+                       return false;
+                    }
+                } else {
+                    //Do not offload AV streamnig if the property is not defined
+                    return false;
+                }
+            }
+            ALOGV("isOffloadSupported: has_video == true, property\
+                    set to enable offload");
+        }
+    }
+
+    //If duration is less than minimum value defined in property, return false
+    if (property_get("audio.offload.min.duration.secs", propValue, NULL)) {
+        if (offloadInfo.duration_us < (atoi(propValue) * 1000000 )) {
+            ALOGV("Offload denied by duration < audio.offload.min.duration.secs(=%s)", propValue);
+            return false;
+        }
+    } else if (offloadInfo.duration_us < OFFLOAD_DEFAULT_MIN_DURATION_SECS * 1000000) {
+        ALOGV("Offload denied by duration < default min(=%u)", OFFLOAD_DEFAULT_MIN_DURATION_SECS);
+        //duration checks only valid for MP3/AAC formats,
+        //do not check duration for other audio formats, e.g. dolby AAC/AC3 and amrwb+ formats
+        if (offloadInfo.format == AUDIO_FORMAT_MP3 || offloadInfo.format == AUDIO_FORMAT_AAC || pcmOffload)
+            return false;
+    }
+
+    // Do not allow offloading if one non offloadable effect is enabled. This prevents from
+    // creating an offloaded track and tearing it down immediately after start when audioflinger
+    // detects there is an active non offloadable effect.
+    // FIXME: We should check the audio session here but we do not have it in this context.
+    // This may prevent offloading in rare situations where effects are left active by apps
+    // in the background.
+    if (isNonOffloadableEffectEnabled()) {
+        return false;
+    }
+
+    // See if there is a profile to support this.
+    // AUDIO_DEVICE_NONE
+    IOProfile *profile = getProfileForDirectOutput(AUDIO_DEVICE_NONE /*ignore device */,
+                                            offloadInfo.sample_rate,
+                                            offloadInfo.format,
+                                            offloadInfo.channel_mask,
+                                            AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD);
+    ALOGV("isOffloadSupported() profile %sfound", profile != NULL ? "" : "NOT ");
+    return (profile != NULL);
+}
+
 extern "C" AudioPolicyInterface* createAudioPolicyManager(AudioPolicyClientInterface *clientInterface)
 {
     return new AudioPolicyManager(clientInterface);
