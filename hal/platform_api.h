@@ -39,4 +39,8 @@ int platform_edid_get_max_channels(void *platform);
 /* returns the latency for a usecase in Us */
 int64_t platform_render_latency(audio_usecase_t usecase);
 
-#endif // QCOM_AUDIO_PLATFORM_API_H
+struct audio_offload_info_t;
+uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info);
+uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info);
+
+#endif // AUDIO_PLATFORM_API_H
