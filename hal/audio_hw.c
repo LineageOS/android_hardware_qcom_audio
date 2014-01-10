@@ -53,15 +53,13 @@
 #include "voice_extn.h"
 
 #include "sound/compress_params.h"
+#include "sound/asound.h"
 
-#define MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE (256 * 1024)
-#define MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE (2 * 1024)
-#define COMPRESS_OFFLOAD_FRAGMENT_SIZE_FOR_AV_STREAMING (2 * 1024)
-#define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /* ToDo: Check and update a proper value in msec */
 #define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 96
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
+
 
 #define USECASE_AUDIO_PLAYBACK_PRIMARY USECASE_AUDIO_PLAYBACK_DEEP_BUFFER
 
@@ -155,35 +153,6 @@ static unsigned int audio_device_ref_count;
 
 static int set_voice_volume_l(struct audio_device *adev, float volume);
 
-/* Read  offload buffer size from a property.
- * If value is not power of 2  round it to
- * power of 2.
- */
-static uint32_t get_offload_buffer_size(audio_offload_info_t* info)
-{
-    char value[PROPERTY_VALUE_MAX] = {0};
-    uint32_t fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-    if((property_get("audio.offload.buffer.size.kb", value, "")) &&
-            atoi(value)) {
-        fragment_size =  atoi(value) * 1024;
-        //ring buffer size needs to be 4k aligned.
-        CHECK(!(fragment_size * COMPRESS_OFFLOAD_NUM_FRAGMENTS % 4096));
-    }
-
-    if (info != NULL && info->has_video && info->is_streaming) {
-        fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE_FOR_AV_STREAMING;
-        ALOGV("%s: offload fragment size reduced for AV streaming to %d",
-               __func__, out->compr_config.fragment_size);
-    }
-
-    if(fragment_size < MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE)
-        fragment_size = MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-    else if(fragment_size > MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE)
-        fragment_size = MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-    ALOGVV("%s: fragment_size %d", __func__, fragment_size);
-    return fragment_size;
-}
-
 static int check_and_set_gapless_mode(struct audio_device *adev) {
 
 
@@ -214,8 +183,10 @@ static int check_and_set_gapless_mode(struct audio_device *adev) {
 static bool is_supported_format(audio_format_t format)
 {
     if (format == AUDIO_FORMAT_MP3 ||
-            format == AUDIO_FORMAT_AAC)
-        return true;
+        format == AUDIO_FORMAT_AAC ||
+        format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD ||
+        format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD)
+           return true;
 
     return false;
 }
@@ -230,6 +201,10 @@ static int get_snd_codec_id(audio_format_t format)
         break;
     case AUDIO_FORMAT_AAC:
         id = SND_AUDIOCODEC_AAC;
+        break;
+    case AUDIO_FORMAT_PCM_16_BIT_OFFLOAD:
+    case AUDIO_FORMAT_PCM_24_BIT_OFFLOAD:
+        id = SND_AUDIOCODEC_PCM;
         break;
     default:
         ALOGE("%s: Unsupported audio format :%x", __func__, format);
@@ -2161,8 +2136,10 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->usecase = USECASE_AUDIO_PLAYBACK_OFFLOAD;
         if (config->offload_info.channel_mask)
             out->channel_mask = config->offload_info.channel_mask;
-        else if (config->channel_mask)
+        else if (config->channel_mask) {
             out->channel_mask = config->channel_mask;
+            config->offload_info.channel_mask = config->channel_mask;
+        }
         out->format = config->offload_info.format;
         out->sample_rate = config->offload_info.sample_rate;
 
@@ -2179,7 +2156,13 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         else
             out->compr_config.codec->id =
                 get_snd_codec_id(config->offload_info.format);
-        out->compr_config.fragment_size = get_offload_buffer_size(&config->offload_info);
+        if (audio_is_offload_pcm(config->offload_info.format)) {
+            out->compr_config.fragment_size =
+                       platform_get_pcm_offload_buffer_size(&config->offload_info);
+        } else {
+            out->compr_config.fragment_size =
+                       platform_get_compress_offload_buffer_size(&config->offload_info);
+        }
         out->compr_config.fragments = COMPRESS_OFFLOAD_NUM_FRAGMENTS;
         out->compr_config.codec->sample_rate =
                     compress_get_alsa_rate(config->offload_info.sample_rate);
@@ -2189,6 +2172,11 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                     popcount(config->channel_mask);
         out->compr_config.codec->ch_out = out->compr_config.codec->ch_in;
         out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
+
+        if (config->offload_info.format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD)
+            out->compr_config.codec->format = SNDRV_PCM_FORMAT_S16_LE;
+        else if(config->offload_info.format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD)
+            out->compr_config.codec->format = SNDRV_PCM_FORMAT_S24_LE;
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
