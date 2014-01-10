@@ -513,7 +513,7 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_OUT_ANC_HEADSET |
             AUDIO_DEVICE_OUT_ANC_HEADPHONE |
 #endif
-#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
+#ifdef QCOM_FM_ENABLED
             AUDIO_DEVICE_OUT_FM |
             AUDIO_DEVICE_OUT_FM_TX |
 #endif
@@ -535,7 +535,7 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
 #ifdef QCOM_ANC_HEADSET_ENABLED
             AUDIO_DEVICE_IN_ANC_HEADSET |
 #endif
-#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
+#ifdef QCOM_FM_ENABLED
             AUDIO_DEVICE_IN_FM_RX |
             AUDIO_DEVICE_IN_FM_RX_A2DP |
 #endif
