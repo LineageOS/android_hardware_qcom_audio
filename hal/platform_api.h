@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -17,8 +17,8 @@
  * limitations under the License.
  */
 
-#ifndef QCOM_AUDIO_PLATFORM_API_H
-#define QCOM_AUDIO_PLATFORM_API_H
+#ifndef AUDIO_PLATFORM_API_H
+#define AUDIO_PLATFORM_API_H
 
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
@@ -27,6 +27,7 @@ int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
                                       char *device_name);
 void platform_add_backend_name(char *mixer_path, snd_device_t snd_device);
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type);
+int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id);
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device);
 int platform_switch_voice_call_device_pre(void *platform);
 int platform_switch_voice_call_device_post(void *platform,
@@ -57,4 +58,4 @@ int platform_update_usecase_from_source(int source, audio_usecase_t usecase);
 
 bool platform_listen_update_status(snd_device_t snd_device);
 
-#endif // QCOM_AUDIO_PLATFORM_API_H
+#endif // AUDIO_PLATFORM_API_H
