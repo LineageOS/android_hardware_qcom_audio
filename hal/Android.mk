@@ -90,7 +90,7 @@ endif
 endif
 
 ifneq ($(strip, $(AUDIO_FEATURE_DISABLED_SPKR_PROTECTION)),true)
-ifneq ($(filter msm8974,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8974 apq8084,$(TARGET_BOARD_PLATFORM)),)
     LOCAL_CFLAGS += -DSPKR_PROT_ENABLED
     LOCAL_SRC_FILES += audio_extn/spkr_protection.c
     LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
