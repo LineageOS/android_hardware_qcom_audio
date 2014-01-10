@@ -130,6 +130,9 @@ int voice_extn_compress_voip_select_devices(struct audio_device *adev,
                                             snd_device_t *in_snd_device);
 int voice_extn_compress_voip_set_parameters(struct audio_device *adev,
                                              struct str_parms *parms);
+void voice_extn_compress_voip_get_parameters(const struct audio_device *adev,
+                                             struct str_parms *query,
+                                             struct str_parms *reply);
 
 void voice_extn_compress_voip_out_get_parameters(struct stream_out *out,
                                                  struct str_parms *query,
@@ -215,6 +218,13 @@ static int voice_extn_compress_voip_set_parameters(struct audio_device *adev,
 {
     ALOGE("%s: COMPRESS_VOIP_ENABLED is not defined", __func__);
     return -ENOSYS;
+}
+
+static void voice_extn_compress_voip_get_parameters(const struct audio_device *adev,
+                                                    struct str_parms *query,
+                                                    struct str_parms *reply)
+{
+    ALOGE("%s: COMPRESS_VOIP_ENABLED is not defined", __func__);
 }
 
 static void voice_extn_compress_voip_out_get_parameters(struct stream_out *out,
