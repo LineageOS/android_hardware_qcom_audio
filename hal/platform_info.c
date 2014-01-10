@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define LOG_TAG "platform_parser"
+#define LOG_TAG "platform_info"
 #define LOG_NDDEBUG 0
 
 #include <errno.h>
@@ -35,41 +35,40 @@
 #include <expat.h>
 #include <cutils/log.h>
 #include <audio_hw.h>
-#include <platform_api.h>
-#include "platform.h"
-#include "platform_parser.h"
+#include "platform_api.h"
+#include <platform.h>
 
-#define PLATFORM_XML_PATH        "/system/etc/platform_info.xml"
+#define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
 #define BUF_SIZE                    1024
 
-static void process_device(void *userdata, const XML_Char **attr)
+static void process_device(const XML_Char **attr)
 {
-    unsigned int    *snd_device_index = userdata;
+    int index;
 
-    if (strcmp(attr[0], "name") != 0)
+    if (strcmp(attr[0], "name") != 0) {
+        ALOGE("%s: 'name' not found, no ACDB ID set!", __func__);
         goto done;
+    }
 
-    if (platform_get_snd_device_name(*snd_device_index) == NULL)
-        goto next;
-    if (strcmp(attr[1], platform_get_snd_device_name(*snd_device_index)) != 0) {
-        ALOGE("%s: %s in platform.h at index %d does not match %s, from %s no ACDB ID set!",
-            __func__, platform_get_snd_device_name(*snd_device_index),
-            *snd_device_index, attr[1], PLATFORM_XML_PATH);
+    index = platform_get_snd_device_index((char *)attr[1]);
+    if (index < 0) {
+        ALOGE("%s: Device %s in %s not found, no ACDB ID set!",
+              __func__, attr[1], PLATFORM_INFO_XML_PATH);
         goto done;
     }
 
     if (strcmp(attr[2], "acdb_id") != 0) {
-        ALOGE("%s: Device %s at index %d in %s has no acdb_id, no ACDB ID set!",
-              __func__, attr[1], *snd_device_index, PLATFORM_XML_PATH);
+        ALOGE("%s: Device %s in %s has no acdb_id, no ACDB ID set!",
+              __func__, attr[1], PLATFORM_INFO_XML_PATH);
         goto done;
     }
 
-    if(platform_set_snd_device_acdb_id(*snd_device_index,
-                                atoi((char *)attr[3])) != 0)
+    if(platform_set_snd_device_acdb_id(index, atoi((char *)attr[3])) < 0) {
+        ALOGE("%s: Device %s in %s, ACDB ID %d was not set!",
+              __func__, attr[1], PLATFORM_INFO_XML_PATH, atoi((char *)attr[3]));
         goto done;
+    }
 
-next:
-     (*snd_device_index)++;
 done:
     return;
 }
@@ -82,7 +81,7 @@ static void start_tag(void *userdata, const XML_Char *tag_name,
     unsigned int                i;
 
     if (strcmp(tag_name, "device") == 0)
-        process_device(userdata, attr);
+        process_device(attr);
 
     return;
 }
@@ -99,13 +98,12 @@ int platform_info_init(void)
     FILE            *file;
     int             ret = 0;
     int             bytes_read;
-    unsigned int    snd_device_index = SND_DEVICE_MIN;
     void            *buf;
 
-    file = fopen(PLATFORM_XML_PATH, "r");
+    file = fopen(PLATFORM_INFO_XML_PATH, "r");
     if (!file) {
         ALOGD("%s: Failed to open %s, using defaults.",
-            __func__, PLATFORM_XML_PATH);
+            __func__, PLATFORM_INFO_XML_PATH);
         ret = -ENODEV;
         goto done;
     }
@@ -117,7 +115,6 @@ int platform_info_init(void)
         goto err_close_file;
     }
 
-    XML_SetUserData(parser, &snd_device_index);
     XML_SetElementHandler(parser, start_tag, end_tag);
 
     while (1) {
@@ -138,19 +135,13 @@ int platform_info_init(void)
         if (XML_ParseBuffer(parser, bytes_read,
                             bytes_read == 0) == XML_STATUS_ERROR) {
             ALOGE("%s: XML_ParseBuffer failed, for %s",
-                __func__, PLATFORM_XML_PATH);
+                __func__, PLATFORM_INFO_XML_PATH);
             ret = -EINVAL;
             goto err_free_parser;
         }
 
         if (bytes_read == 0)
             break;
-    }
-
-    if (snd_device_index != SND_DEVICE_MAX) {
-        ALOGE("%s: Only %d/%d ACDB ID's set! Fix %s!",
-            __func__, snd_device_index, SND_DEVICE_MAX, PLATFORM_XML_PATH);
-        ret = -EINVAL;
     }
 
 err_free_parser:
