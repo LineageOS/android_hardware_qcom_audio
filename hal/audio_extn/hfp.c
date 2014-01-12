@@ -232,6 +232,7 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *
 {
     int ret;
     int rate;
+    int val;
     char value[32]={0};
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_ENABLE, value,
@@ -257,6 +258,17 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *
            }
            else
                ALOGE("Unsupported rate..");
+    }
+
+    if(hfpmod.is_hfp_running) {
+        memset(value, 0, sizeof(value));
+        ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING,
+                                value, sizeof(value));
+        if (ret >= 0) {
+            val = atoi(value);
+            if(val > 0)
+                select_devices(adev, hfpmod.ucid);
+        }
     }
 }
 #endif /*HFP_ENABLED*/
