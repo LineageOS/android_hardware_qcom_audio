@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -64,6 +64,7 @@ typedef int (*create_listen_hw_t)(unsigned int snd_card,
 typedef void (*destroy_listen_hw_t)();
 
 typedef int (*open_listen_session_t)(struct audio_hw_device *,
+                                    struct listen_open_params*,
                                     struct listen_session**);
 
 typedef int (*close_listen_session_t)(struct audio_hw_device *dev,
@@ -119,7 +120,6 @@ void audio_extn_listen_update_status(snd_device_t snd_device,
 void audio_extn_listen_set_parameters(struct audio_device *adev,
                                struct str_parms *parms)
 {
-
     ALOGV("%s: enter", __func__);
     if (listen_dev) {
          char *kv_pairs = str_parms_to_str(parms);
