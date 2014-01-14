@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -60,6 +60,7 @@ struct voice {
     int tty_mode;
     bool mic_mute;
     float volume;
+    bool voice_device_set;
 };
 
 enum {
