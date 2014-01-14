@@ -2139,6 +2139,7 @@ static int write_data(struct stream_out *out, struct alsa_handle *handle,
         /* TODO:disnable this if ms12 */
 
         if (ret >= 0 && ret < (ssize_t)bytes) {
+            handle->cmd_pending = true;
             send_offload_cmd_l(out, OFFLOAD_CMD_WAIT_FOR_BUFFER);
         }
         return ret;
