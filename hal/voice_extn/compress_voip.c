@@ -60,6 +60,7 @@ struct voip_data {
     struct pcm *pcm_tx;
     struct stream_out *out_stream;
     int ref_count;
+    int out_stream_count;
 };
 
 #define MODE_IS127              0x2
@@ -76,12 +77,14 @@ struct voip_data {
 #define AUDIO_PARAMETER_KEY_VOIP_DTX_MODE           "dtx_on"
 #define AUDIO_PARAMETER_VALUE_VOIP_TRUE             "true"
 #define AUDIO_PARAMETER_KEY_VOIP_CHECK              "voip_flag"
+#define AUDIO_PARAMETER_KEY_VOIP_OUT_STREAM_COUNT   "voip_out_stream_count"
 
 static struct voip_data voip_data = {
   .pcm_rx = NULL,
   .pcm_tx = NULL,
   .out_stream = NULL,
-  .ref_count = 0
+  .ref_count = 0,
+  .out_stream_count = 0
 };
 
 static int voip_set_volume(struct audio_device *adev, int volume);
@@ -453,6 +456,22 @@ done:
     return ret;
 }
 
+void voice_extn_compress_voip_get_parameters(const struct audio_device *adev,
+                                             struct str_parms *query,
+                                             struct str_parms *reply)
+{
+    int ret;
+    char value[32]={0};
+    char *str = NULL;
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_VOIP_OUT_STREAM_COUNT,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_int(reply, AUDIO_PARAMETER_KEY_VOIP_OUT_STREAM_COUNT,
+                          voip_data.out_stream_count);
+    }
+}
+
 void voice_extn_compress_voip_out_get_parameters(struct stream_out *out,
                                                  struct str_parms *query,
                                                  struct str_parms *reply)
@@ -554,6 +573,7 @@ int voice_extn_compress_voip_close_output_stream(struct audio_stream *stream)
 
     ret = voip_stop_call(adev);
     voip_data.out_stream = NULL;
+    voip_data.out_stream_count--;
 
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
@@ -574,6 +594,7 @@ int voice_extn_compress_voip_open_output_stream(struct stream_out *out)
         out->config = pcm_config_voip_nb;
 
     voip_data.out_stream = out;
+    voip_data.out_stream_count++;
 
     ret = voip_set_mode(out->dev, out->format);
 

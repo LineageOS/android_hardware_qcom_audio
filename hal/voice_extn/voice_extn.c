@@ -505,6 +505,8 @@ void voice_extn_get_parameters(const struct audio_device *adev,
         }
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_ALL_CALL_STATES, value);
     }
+    voice_extn_compress_voip_get_parameters(adev, query, reply);
+
     ALOGV("%s: exit: returns \"%s\"", __func__, str_parms_to_str(reply));
 }
 
