@@ -632,7 +632,8 @@ audio_devices_t AudioPolicyManager::getDeviceForStrategy(routing_strategy strate
         if (device2 == AUDIO_DEVICE_NONE) {
             device2 = mAvailableOutputDevices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET;
         }
-        if ((device2 == AUDIO_DEVICE_NONE) && (strategy != STRATEGY_SONIFICATION)) {
+        if ((strategy != STRATEGY_SONIFICATION) && (device == AUDIO_DEVICE_NONE)
+             && (device2 == AUDIO_DEVICE_NONE)) {
             // no sonification on aux digital (e.g. HDMI)
             device2 = mAvailableOutputDevices & AUDIO_DEVICE_OUT_AUX_DIGITAL;
         }
@@ -642,12 +643,14 @@ audio_devices_t AudioPolicyManager::getDeviceForStrategy(routing_strategy strate
             device2 = mAvailableOutputDevices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET;
         }
 #ifdef AUDIO_EXTN_FM_ENABLED
-            if ((strategy != STRATEGY_SONIFICATION) && (device2 == AUDIO_DEVICE_NONE)) {
+            if ((strategy != STRATEGY_SONIFICATION) && (device == AUDIO_DEVICE_NONE)
+                 && (device2 == AUDIO_DEVICE_NONE)) {
                 device2 = mAvailableOutputDevices & AUDIO_DEVICE_OUT_FM_TX;
             }
 #endif
 #ifdef AUDIO_EXTN_AFE_PROXY_ENABLED
-            if ((strategy != STRATEGY_SONIFICATION) && (device2 == AUDIO_DEVICE_NONE)) {
+            if ((strategy != STRATEGY_SONIFICATION) && (device == AUDIO_DEVICE_NONE)
+                 && (device2 == AUDIO_DEVICE_NONE)) {
                 // no sonification on WFD sink
                 device2 = mAvailableOutputDevices & AUDIO_DEVICE_OUT_PROXY;
             }
