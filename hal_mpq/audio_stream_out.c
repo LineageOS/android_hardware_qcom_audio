@@ -1051,23 +1051,19 @@ static int configure_compr(struct stream_out *out,
 }
 
 /*TODO: do we need to apply volume at the session open*/
-static int set_compress_volume(struct alsa_handle *handle, int left, int right)
+static int set_compress_volume(struct alsa_handle *handle, float left, float right)
 {
 
     struct audio_device *adev = handle->out->dev;
     struct mixer_ctl *ctl;
     int volume[2];
 
-    char mixer_ctl_name[44]; // max length of name is 44 as defined
-    char device_id[STRING_LENGTH_OF_INTEGER+1];
+    char mixer_ctl_name[MIXER_PATH_MAX_LENGTH];
+    ALOGV("%s:setting volume l %f r %f ", __func__, left, right);
 
     memset(mixer_ctl_name, 0, sizeof(mixer_ctl_name));
-    strlcpy(mixer_ctl_name, "Compress Playback Volume", sizeof(mixer_ctl_name));
-
-    memset(device_id, 0, sizeof(device_id));
-    snprintf(device_id, "%d", handle->device_id, sizeof(device_id));
-
-    strlcat(mixer_ctl_name, device_id, sizeof(mixer_ctl_name));
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+          "Compress Playback %d Volume", handle->device_id);
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
@@ -1075,8 +1071,8 @@ static int set_compress_volume(struct alsa_handle *handle, int left, int right)
                 __func__, mixer_ctl_name);
         return -EINVAL;
     }
-    volume[0] = (int)(left * COMPRESS_PLAYBACK_VOLUME_MAX);
-    volume[1] = (int)(right * COMPRESS_PLAYBACK_VOLUME_MAX);
+    volume[0] = (int)(left * (float) COMPRESS_PLAYBACK_VOLUME_MAX);
+    volume[1] = (int)(right * (float) COMPRESS_PLAYBACK_VOLUME_MAX);
     mixer_ctl_set_array(ctl, volume, sizeof(volume)/sizeof(volume[0]));
 
     return 0;
@@ -2105,7 +2101,7 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
     struct alsa_handle *handle;
     struct audio_device *adev = out->dev;
     int ret = -ENOSYS;
-    ALOGV("%s", __func__);
+    ALOGV("%s:setting volume l %f r %f ", __func__, left, right);
     pthread_mutex_lock(&out->lock);
     list_for_each(node, &out->session_list) {
         handle = node_to_item(node, struct alsa_handle, list);
@@ -2118,7 +2114,7 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
             out->left_volume = left;
             out->right_volume = right;
 
-            //ret = set_compress_volume(handle, left, right);
+            ret = set_compress_volume(handle, left, right);
         }
     }
     pthread_mutex_unlock(&out->lock);
