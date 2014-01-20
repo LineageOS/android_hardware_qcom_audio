@@ -31,7 +31,7 @@
 
 extern "C" {
 #include <linux/msm_audio.h>
-#include <linux/ion.h>
+#include <linux/msm_ion.h>
 #include <linux/msm_audio_aac.h>
 }
 namespace android_audio_legacy {
