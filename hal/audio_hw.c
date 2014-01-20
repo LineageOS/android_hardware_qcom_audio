@@ -239,6 +239,7 @@ static int enable_snd_device(struct audio_device *adev,
         return 0;
     }
 
+#ifdef USB_HEADSET_ENABLED
     /* start usb playback thread */
     if(SND_DEVICE_OUT_USB_HEADSET == snd_device ||
        SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET == snd_device)
@@ -247,6 +248,7 @@ static int enable_snd_device(struct audio_device *adev,
     /* start usb capture thread */
     if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
        audio_extn_usb_start_capture(adev);
+#endif
 
     if (platform_send_audio_calibration(adev->platform, snd_device) < 0) {
         adev->snd_dev_ref_cnt[snd_device]--;
@@ -280,6 +282,7 @@ static int disable_snd_device(struct audio_device *adev,
         ALOGV("%s: snd_device(%d: %s) refcnt=%d", __func__,
               snd_device, platform_get_snd_device_name(snd_device), adev->snd_dev_ref_cnt[snd_device]);
 
+#ifdef USB_HEADSET_ENABLED
         /* exit usb play back thread */
         if(SND_DEVICE_OUT_USB_HEADSET == snd_device ||
            SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET == snd_device)
@@ -288,6 +291,7 @@ static int disable_snd_device(struct audio_device *adev,
         /* exit usb capture thread */
         if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
             audio_extn_usb_stop_capture(adev);
+#endif
 
         audio_route_reset_path(adev->audio_route, platform_get_snd_device_name(snd_device));
         if (update_mixer)
