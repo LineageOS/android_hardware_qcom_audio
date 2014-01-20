@@ -35,6 +35,10 @@ ifeq ($(strip $(AUDIO_FEATURE_DEEP_BUFFER_PRIMARY)),true)
     LOCAL_CFLAGS += -DDEEP_BUFFER_PRIMARY
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_DYNAMIC_VOLUME_MIXER)),true)
+    LOCAL_CFLAGS += -DDYNAMIC_VOLUME_MIXER
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
