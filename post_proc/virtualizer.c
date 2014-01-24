@@ -237,6 +237,11 @@ int virtualizer_start(effect_context_t *context, output_context_t *output)
 
     ALOGV("%s", __func__);
     virt_ctxt->ctl = output->ctl;
+    if (offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt)))
+        if (virt_ctxt->ctl)
+            offload_virtualizer_send_params(virt_ctxt->ctl, virt_ctxt->offload_virt,
+                                          OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG |
+                                          OFFLOAD_SEND_VIRTUALIZER_STRENGTH);
     return 0;
 }
 
