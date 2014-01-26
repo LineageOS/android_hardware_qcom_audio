@@ -27,6 +27,7 @@ int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
                                       char *device_name);
 void platform_add_backend_name(char *mixer_path, snd_device_t snd_device);
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type);
+int platform_get_snd_device_index(char *snd_device_index_name);
 int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id);
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device);
 int platform_switch_voice_call_device_pre(void *platform);
@@ -57,5 +58,8 @@ int64_t platform_render_latency(audio_usecase_t usecase);
 int platform_update_usecase_from_source(int source, audio_usecase_t usecase);
 
 bool platform_listen_update_status(snd_device_t snd_device);
+
+/* From platform_info_parser.c */
+int platform_info_init(void);
 
 #endif // AUDIO_PLATFORM_API_H

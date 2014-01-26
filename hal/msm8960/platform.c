@@ -391,6 +391,11 @@ int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
     return device_id;
 }
 
+int platform_get_snd_device_index(char *snd_device_index_name)
+{
+    return -ENODEV;
+}
+
 int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id)
 {
     return -ENODEV;
