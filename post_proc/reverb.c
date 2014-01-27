@@ -236,9 +236,14 @@ void reverb_set_density(reverb_context_t *context, int16_t density)
 
 void reverb_set_preset(reverb_context_t *context, int16_t preset)
 {
+    bool enable;
     ALOGV("%s: preset: %d", __func__, preset);
     context->next_preset = preset;
     offload_reverb_set_preset(&(context->offload_reverb), preset);
+
+    enable = (preset == REVERB_PRESET_NONE) ? false: true;
+    offload_reverb_set_enable_flag(&(context->offload_reverb), enable);
+
     if (context->ctl)
         offload_reverb_send_params(context->ctl, context->offload_reverb,
                                    OFFLOAD_SEND_REVERB_ENABLE_FLAG |
