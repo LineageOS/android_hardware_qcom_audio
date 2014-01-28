@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -1438,10 +1438,12 @@ OMX_ERRORTYPE  omx_aac_aenc::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
                 }
                 drv_aac_enc_config.channels = m_aac_param.nChannels;
                 drv_aac_enc_config.sample_rate = m_aac_param.nSampleRate;
-                drv_aac_enc_config.bit_rate =  m_aac_param.nBitRate;
-                DEBUG_PRINT("aac config %lu,%lu,%lu %d\n",
+                drv_aac_enc_config.bit_rate =
+                get_updated_bit_rate(m_aac_param.nBitRate);
+                DEBUG_PRINT("aac config %lu,%lu,%lu %d updated bitrate %d\n",
                             m_aac_param.nChannels,m_aac_param.nSampleRate,
-			    m_aac_param.nBitRate,m_aac_param.eAACStreamFormat);
+			    m_aac_param.nBitRate,m_aac_param.eAACStreamFormat,
+                            drv_aac_enc_config.bit_rate);
                 switch(m_aac_param.eAACStreamFormat)
                 {
 
@@ -5014,3 +5016,44 @@ void  omx_aac_aenc::audaac_rec_install_mp4ff_header_variable (OMX_U16  byte_num,
 
 }
 
+int omx_aac_aenc::get_updated_bit_rate(int bitrate)
+{
+	int updated_rate, min_bitrate, max_bitrate;
+
+        max_bitrate = m_aac_param.nSampleRate *
+        MAX_BITRATE_MULFACTOR;
+	switch(m_aac_param.eAACProfile)
+	{
+		case OMX_AUDIO_AACObjectLC:
+		    min_bitrate = m_aac_param.nSampleRate;
+		    if (m_aac_param.nChannels == 1) {
+		       min_bitrate = min_bitrate/BITRATE_DIVFACTOR;
+                       max_bitrate = max_bitrate/BITRATE_DIVFACTOR;
+                    }
+                break;
+		case OMX_AUDIO_AACObjectHE:
+		    min_bitrate = MIN_BITRATE;
+		    if (m_aac_param.nChannels == 1)
+                       max_bitrate = max_bitrate/BITRATE_DIVFACTOR;
+		break;
+		case OMX_AUDIO_AACObjectHE_PS:
+		    min_bitrate = MIN_BITRATE;
+		break;
+                default:
+                    return bitrate;
+                break;
+	}
+        /* Update MIN and MAX values*/
+        if (min_bitrate > MIN_BITRATE)
+              min_bitrate = MIN_BITRATE;
+        if (max_bitrate > MAX_BITRATE)
+              max_bitrate = MAX_BITRATE;
+        /* Update the bitrate in the range  */
+        if (bitrate < min_bitrate)
+            updated_rate = min_bitrate;
+        else if(bitrate > max_bitrate)
+            updated_rate = max_bitrate;
+        else
+             updated_rate = bitrate;
+	return updated_rate;
+}
