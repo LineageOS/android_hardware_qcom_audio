@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -28,8 +28,6 @@
 
 #include "audio_hw.h"
 #include "audio_extn.h"
-
-#include "sound/compress_params.h"
 
 #define MAX_SLEEP_RETRY 100
 #define WIFI_INIT_WAIT_SLEEP 50
@@ -321,6 +319,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_fm_set_parameters(adev, parms);
    audio_extn_listen_set_parameters(adev, parms);
    audio_extn_hfp_set_parameters(adev, parms);
+   audio_extn_ddp_set_parameters(adev, parms);
 }
 
 void audio_extn_get_parameters(const struct audio_device *adev,
@@ -359,57 +358,3 @@ int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,
     return 0;
 }
 #endif /* AUXPCM_BT_ENABLED */
-
-
-#ifdef DS1_DOLBY_DDP_ENABLED
-
-bool audio_extn_dolby_is_supported_format(audio_format_t format)
-{
-    if (format == AUDIO_FORMAT_AC3 ||
-            format == AUDIO_FORMAT_EAC3)
-        return true;
-    else
-        return false;
-}
-
-int audio_extn_dolby_get_snd_codec_id(audio_format_t format)
-{
-    int id = 0;
-
-    switch (format) {
-    case AUDIO_FORMAT_AC3:
-        id = SND_AUDIOCODEC_AC3;
-        break;
-    case AUDIO_FORMAT_EAC3:
-        id = SND_AUDIOCODEC_EAC3;
-        break;
-    default:
-        ALOGE("%s: Unsupported audio format :%x", __func__, format);
-    }
-
-    return id;
-}
-
-int audio_extn_dolby_set_DMID(struct audio_device *adev)
-{
-    struct mixer_ctl *ctl;
-    const char *mixer_ctl_name = "DS1 Security";
-    char c_dmid[128] = {0};
-    int i_dmid, ret;
-
-    property_get("dmid",c_dmid,"0");
-    i_dmid = atoi(c_dmid);
-
-    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
-    if (!ctl) {
-        ALOGE("%s: Could not get ctl for mixer cmd - %s",
-              __func__, mixer_ctl_name);
-        return -EINVAL;
-    }
-    ALOGV("%s Dolby device manufacturer id is:%d",__func__,i_dmid);
-    ret = mixer_ctl_set_value(ctl, 0, i_dmid);
-
-    return ret;
-}
-#endif /* DS1_DOLBY_DDP_ENABLED */
-
