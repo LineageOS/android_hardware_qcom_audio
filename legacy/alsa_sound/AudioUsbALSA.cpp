@@ -53,7 +53,7 @@ struct pollfd pfdUsbPlayback[2];
 struct pollfd pfdProxyRecording[2];
 struct pollfd pfdUsbRecording[2];
 
-#define USB_PERIOD_SIZE 2048
+#define USB_PERIOD_SIZE 4096
 #define PROXY_PERIOD_SIZE 3072
 #define PROXY_SUPPORTED_RATE_8000 8000
 #define PROXY_SUPPORTED_RATE_16000 16000
