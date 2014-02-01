@@ -326,9 +326,12 @@ void audio_extn_get_parameters(const struct audio_device *adev,
                               struct str_parms *query,
                               struct str_parms *reply)
 {
+    char *kv_pairs = NULL;
     audio_extn_get_afe_proxy_parameters(query, reply);
 
-    ALOGD("%s: returns %s", __func__, str_parms_to_str(reply));
+    kv_pairs = str_parms_to_str(reply);
+    ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);
+    free(kv_pairs);
 }
 
 #ifdef AUXPCM_BT_ENABLED
