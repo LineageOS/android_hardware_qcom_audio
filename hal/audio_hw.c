@@ -1895,11 +1895,10 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 (voice_extn_compress_voip_is_format_supported(in->format)) &&
                 (in->config.rate == 8000 || in->config.rate == 16000) &&
                 (popcount(in->channel_mask) == 1)) {
-                ret = voice_extn_compress_voip_open_input_stream(in);
-                if (ret != 0) {
+                err = voice_extn_compress_voip_open_input_stream(in);
+                if (err != 0) {
                     ALOGE("%s: Compress voip input cannot be opened, error:%d",
-                          __func__, ret);
-                    goto done;
+                          __func__, err);
                 }
             }
         }

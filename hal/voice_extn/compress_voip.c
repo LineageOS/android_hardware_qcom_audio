@@ -59,8 +59,9 @@ struct voip_data {
     struct pcm *pcm_rx;
     struct pcm *pcm_tx;
     struct stream_out *out_stream;
-    int ref_count;
-    int out_stream_count;
+    uint32_t out_stream_count;
+    uint32_t in_stream_count;
+    uint32_t sample_rate;
 };
 
 #define MODE_IS127              0x2
@@ -78,13 +79,15 @@ struct voip_data {
 #define AUDIO_PARAMETER_VALUE_VOIP_TRUE             "true"
 #define AUDIO_PARAMETER_KEY_VOIP_CHECK              "voip_flag"
 #define AUDIO_PARAMETER_KEY_VOIP_OUT_STREAM_COUNT   "voip_out_stream_count"
+#define AUDIO_PARAMETER_KEY_VOIP_SAMPLE_RATE        "voip_sample_rate"
 
 static struct voip_data voip_data = {
   .pcm_rx = NULL,
   .pcm_tx = NULL,
   .out_stream = NULL,
-  .ref_count = 0,
-  .out_stream_count = 0
+  .out_stream_count = 0,
+  .in_stream_count = 0,
+  .sample_rate = 0
 };
 
 static int voip_set_volume(struct audio_device *adev, int volume);
@@ -280,10 +283,10 @@ static int voip_stop_call(struct audio_device *adev)
     int i, ret = 0;
     struct audio_usecase *uc_info;
 
-    ALOGD("%s: enter, ref_count=%d", __func__, voip_data.ref_count);
-    voip_data.ref_count--;
+    ALOGD("%s: enter, out_stream_count=%d, in_stream_count=%d",
+           __func__, voip_data.out_stream_count, voip_data.in_stream_count);
 
-    if (!voip_data.ref_count) {
+    if (!voip_data.out_stream_count && !voip_data.in_stream_count) {
         uc_info = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
         if (uc_info == NULL) {
             ALOGE("%s: Could not find the usecase (%d) in the list",
@@ -310,8 +313,10 @@ static int voip_stop_call(struct audio_device *adev)
 
         list_remove(&uc_info->list);
         free(uc_info);
+        voip_data.sample_rate = 0;
     } else
-        ALOGV("%s: NO-OP because ref_count=%d", __func__, voip_data.ref_count);
+        ALOGV("%s: NO-OP because out_stream_count=%d, in_stream_count=%d",
+               __func__, voip_data.out_stream_count, voip_data.in_stream_count);
 
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
@@ -327,12 +332,15 @@ static int voip_start_call(struct audio_device *adev,
     ALOGD("%s: enter", __func__);
 
     uc_info = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
-    if ((uc_info == NULL) && (voip_data.out_stream)) {
+    if (uc_info == NULL) {
         ALOGV("%s: voip usecase is added to the list", __func__);
         uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
         uc_info->id = USECASE_COMPRESS_VOIP_CALL;
         uc_info->type = VOIP_CALL;
-        uc_info->stream.out = voip_data.out_stream;
+        if (voip_data.out_stream)
+            uc_info->stream.out = voip_data.out_stream;
+        else
+            uc_info->stream.out = adev->primary_output;
         uc_info->in_snd_device = SND_DEVICE_NONE;
         uc_info->out_snd_device = SND_DEVICE_NONE;
 
@@ -388,12 +396,15 @@ static int voip_start_call(struct audio_device *adev,
             ALOGE("%s: error %d\n", __func__, ret);
             goto error_start_voip;
         }
-        voip_data.ref_count = 0;
-    }
-    else
+    } else {
         ALOGV("%s: voip usecase is already enabled", __func__);
+        if (voip_data.out_stream)
+            uc_info->stream.out = voip_data.out_stream;
+        else
+            uc_info->stream.out = adev->primary_output;
+        select_devices(adev, USECASE_COMPRESS_VOIP_CALL);
+    }
 
-    voip_data.ref_count++;
     return 0;
 
 error_start_voip:
@@ -469,6 +480,13 @@ void voice_extn_compress_voip_get_parameters(const struct audio_device *adev,
     if (ret >= 0) {
         str_parms_add_int(reply, AUDIO_PARAMETER_KEY_VOIP_OUT_STREAM_COUNT,
                           voip_data.out_stream_count);
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_VOIP_SAMPLE_RATE,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_int(reply, AUDIO_PARAMETER_KEY_VOIP_SAMPLE_RATE,
+                          voip_data.sample_rate);
     }
 }
 
@@ -571,9 +589,9 @@ int voice_extn_compress_voip_close_output_stream(struct audio_stream *stream)
 
     ALOGD("%s: enter", __func__);
 
+    voip_data.out_stream_count--;
     ret = voip_stop_call(adev);
     voip_data.out_stream = NULL;
-    voip_data.out_stream_count--;
 
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
@@ -595,7 +613,7 @@ int voice_extn_compress_voip_open_output_stream(struct stream_out *out)
 
     voip_data.out_stream = out;
     voip_data.out_stream_count++;
-
+    voip_data.sample_rate = out->sample_rate;
     ret = voip_set_mode(out->dev, out->format);
 
     ALOGV("%s: exit", __func__);
@@ -610,6 +628,7 @@ int voice_extn_compress_voip_close_input_stream(struct audio_stream *stream)
 
     ALOGD("%s: enter", __func__);
 
+    voip_data.in_stream_count--;
     status = voip_stop_call(adev);
 
     ALOGV("%s: exit: status(%d)", __func__, status);
@@ -625,15 +644,25 @@ int voice_extn_compress_voip_open_input_stream(struct stream_in *in)
 
     ALOGD("%s: enter", __func__);
 
+    if ((voip_data.sample_rate != 0) &&
+        (voip_data.sample_rate != in->config.rate)) {
+        ret = -ENOTSUP;
+        goto done;
+    } else {
+        voip_data.sample_rate = in->config.rate;
+    }
+
     in->usecase = USECASE_COMPRESS_VOIP_CALL;
     if (in->config.rate == 16000)
         in->config = pcm_config_voip_wb;
     else
         in->config = pcm_config_voip_nb;
 
+    voip_data.in_stream_count++;
     ret = voip_set_mode(in->dev, in->format);
 
-    ALOGV("%s: exit", __func__);
+done:
+    ALOGV("%s: exit, ret=%d", __func__, ret);
     return ret;
 }
 
@@ -729,7 +758,8 @@ bool voice_extn_compress_voip_is_config_supported(struct audio_config *config)
     if (ret) {
         if ((popcount(config->channel_mask) == 1) &&
             (config->sample_rate == 8000 || config->sample_rate == 16000))
-            ret = true;
+            ret = ((voip_data.sample_rate == 0) ? true:
+                    (voip_data.sample_rate == config->sample_rate));
         else
             ret = false;
     }
