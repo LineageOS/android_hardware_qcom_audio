@@ -2928,6 +2928,12 @@ void AudioHardwareALSA::switchExtOut(int device) {
             }
         }
     }
+    /*If previous device was USB and current device is A2DP, then resampler must be released */
+    else if((mExtOutStream == mA2dpStream) && mResampler != NULL)
+    {
+        release_resampler(mResampler);
+        mResampler = NULL;
+    }
 }
 
 status_t AudioHardwareALSA::isExtOutDevice(int device) {
