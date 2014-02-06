@@ -405,8 +405,7 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
             adev->voice.tty_mode = tty_mode;
             adev->acdb_settings = (adev->acdb_settings & TTY_MODE_CLEAR) | tty_mode;
             if (voice_is_in_call(adev))
-                //todo: what about voice2, volte and qchat usecases?
-                select_devices(adev, USECASE_VOICE_CALL);
+               voice_update_devices_for_all_voice_usecases(adev);
         }
     }
 
@@ -444,6 +443,21 @@ void voice_init(struct audio_device *adev)
     }
 
     voice_extn_init(adev);
+}
+
+void voice_update_devices_for_all_voice_usecases(struct audio_device *adev)
+{
+    struct listnode *node;
+    struct audio_usecase *usecase;
+
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type == VOICE_CALL) {
+            ALOGV("%s: updating device for usecase:%s", __func__,
+                  use_case_table[usecase->id]);
+            select_devices(adev, usecase->id);
+        }
+    }
 }
 
 
