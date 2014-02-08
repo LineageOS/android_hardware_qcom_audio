@@ -1,5 +1,5 @@
 /* hfp.c
-Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -43,6 +43,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #ifdef HFP_ENABLED
 #define AUDIO_PARAMETER_HFP_ENABLE      "hfp_enable"
 #define AUDIO_PARAMETER_HFP_SET_SAMPLING_RATE "hfp_set_sampling_rate"
+#define AUDIO_PARAMETER_KEY_HFP_VOLUME "hfp_volume"
 
 static int32_t start_hfp(struct audio_device *adev,
                                struct str_parms *parms);
@@ -55,7 +56,7 @@ struct hfp_module {
     struct pcm *hfp_pcm_rx;
     struct pcm *hfp_pcm_tx;
     bool is_hfp_running;
-    int hfp_volume;
+    float hfp_volume;
     audio_usecase_t ucid;
 };
 
@@ -78,6 +79,46 @@ static struct pcm_config pcm_config_hfp = {
     .stop_threshold = INT_MAX,
     .avail_min = 0,
 };
+
+static int32_t hfp_set_volume(struct audio_device *adev, float value)
+{
+    int32_t vol, ret = 0;
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "Internal HFP RX Volume";
+
+    ALOGV("%s: entry", __func__);
+    ALOGD("%s: (%f)\n", __func__, value);
+
+    if (value < 0.0) {
+        ALOGW("%s: (%f) Under 0.0, assuming 0.0\n", __func__, value);
+        value = 0.0;
+    } else {
+        value = ((value > 15.000000) ? 1.0 : (value / 15));
+        ALOGW("%s: Volume brought with in range (%f)\n", __func__, value);
+    }
+    vol  = lrint((value * 0x2000) + 0.5);
+    hfpmod.hfp_volume = value;
+
+    if (!hfpmod.is_hfp_running) {
+        ALOGV("%s: HFP not active, ignoring set_hfp_volume call", __func__);
+        return -EIO;
+    }
+
+    ALOGD("%s: Setting HFP volume to %d \n", __func__, vol);
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+    if(mixer_ctl_set_value(ctl, 0, vol) < 0) {
+        ALOGE("%s: Couldn't set HFP Volume: [%d]", __func__, vol);
+        return -EINVAL;
+    }
+
+    ALOGV("%s: exit", __func__);
+    return ret;
+}
 
 static int32_t start_hfp(struct audio_device *adev,
                                struct str_parms *parms)
@@ -158,8 +199,8 @@ static int32_t start_hfp(struct audio_device *adev,
     pcm_start(hfpmod.hfp_pcm_rx);
     pcm_start(hfpmod.hfp_pcm_tx);
 
-
     hfpmod.is_hfp_running = true;
+    hfp_set_volume(adev, hfpmod.hfp_volume);
 
     ALOGD("%s: exit: status(%d)", __func__, ret);
     return 0;
@@ -238,6 +279,7 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *
     int ret;
     int rate;
     int val;
+    float vol;
     char value[32]={0};
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_ENABLE, value,
@@ -275,5 +317,20 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *
                 select_devices(adev, hfpmod.ucid);
         }
     }
+
+    memset(value, 0, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HFP_VOLUME,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        if (sscanf(value, "%f", &vol) != 1){
+            ALOGE("%s: error in retrieving hfp volume", __func__);
+            ret = -EIO;
+            goto exit;
+        }
+        ALOGD("%s: set_hfp_volume usecase, Vol: [%f]", __func__, vol);
+        hfp_set_volume(adev, vol);
+    }
+exit:
+    ALOGV("%s Exit",__func__);
 }
 #endif /*HFP_ENABLED*/
