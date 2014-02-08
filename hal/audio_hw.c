@@ -1889,6 +1889,18 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
         /* no audio source uses val == 0 */
         if ((in->source != val) && (val != 0)) {
             in->source = val;
+            if ((in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) &&
+                (in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
+                (voice_extn_compress_voip_is_format_supported(in->format)) &&
+                (in->config.rate == 8000 || in->config.rate == 16000) &&
+                (popcount(in->channel_mask) == 1)) {
+                ret = voice_extn_compress_voip_open_input_stream(in);
+                if (ret != 0) {
+                    ALOGE("%s: Compress voip input cannot be opened, error:%d",
+                          __func__, ret);
+                    goto done;
+                }
+            }
         }
     }
 
@@ -1903,6 +1915,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
         }
     }
 
+done:
     pthread_mutex_unlock(&adev->lock);
     pthread_mutex_unlock(&in->lock);
 
@@ -2502,16 +2515,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->config.rate = config->sample_rate;
     in->format = config->format;
 
-    if ((in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
-        (voice_extn_compress_voip_is_config_supported(config))) {
-        ret = voice_extn_compress_voip_open_input_stream(in);
-        if (ret != 0)
-        {
-            ALOGE("%s: Compress voip input cannot be opened, error:%d",
-                  __func__, ret);
-            goto err_open;
-        }
-    } else if (channel_count == 6) {
+    if (channel_count == 6) {
         if(audio_extn_ssr_get_enabled()) {
             if(audio_extn_ssr_init(adev, in)) {
                 ALOGE("%s: audio_extn_ssr_init failed", __func__);
@@ -2523,7 +2527,8 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             goto err_open;
         }
     } else if (audio_extn_compr_cap_enabled() &&
-            audio_extn_compr_cap_format_supported(config->format)) {
+            audio_extn_compr_cap_format_supported(config->format) &&
+            (in->dev->mode != AUDIO_MODE_IN_COMMUNICATION)) {
         audio_extn_compr_cap_init(adev, in);
     } else {
         in->config.channels = channel_count;
