@@ -1512,7 +1512,8 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
         voice_extn_out_get_parameters(out, query, reply);
         str = str_parms_to_str(reply);
         if (!strncmp(str, "", sizeof(""))) {
-           str = strdup(keys);
+            free(str);
+            str = strdup(keys);
         }
     }
     str_parms_destroy(query);
