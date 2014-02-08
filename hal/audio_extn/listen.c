@@ -119,10 +119,13 @@ void audio_extn_listen_update_status(snd_device_t snd_device,
 void audio_extn_listen_set_parameters(struct audio_device *adev,
                                struct str_parms *parms)
 {
-    ALOGV("%s: enter: %s", __func__, str_parms_to_str(parms));
 
+    ALOGV("%s: enter", __func__);
     if (listen_dev) {
-        listen_dev->listen_set_parameters(&adev->device, str_parms_to_str(parms));
+         char *kv_pairs = str_parms_to_str(parms);
+         ALOGV_IF(kv_pairs != NULL, "%s: %s", __func__, kv_pairs);
+         listen_dev->listen_set_parameters(&adev->device, kv_pairs);
+         free(kv_pairs);
     }
 
     return;
