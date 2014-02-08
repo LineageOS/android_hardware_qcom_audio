@@ -364,8 +364,9 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
     char value[32];
     int val;
     int ret = 0, err;
+    char *kv_pairs = str_parms_to_str(parms);
 
-    ALOGV("%s: enter: %s", __func__, str_parms_to_str(parms));
+    ALOGV_IF(kv_pairs != NULL, "%s: enter: %s", __func__, kv_pairs);
 
     ret = voice_extn_set_parameters(adev, parms);
     if (ret != 0)
@@ -413,6 +414,7 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
 
 done:
     ALOGV("%s: exit with code(%d)", __func__, ret);
+    free(kv_pairs);
     return ret;
 }
 
