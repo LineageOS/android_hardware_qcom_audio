@@ -920,24 +920,30 @@ static void *offload_thread_loop(void *context)
         send_callback = false;
         switch(cmd->cmd) {
         case OFFLOAD_CMD_WAIT_FOR_BUFFER:
+            ALOGD("copl(%x):calling compress_wait", (unsigned int)out);
             compress_wait(out->compr, -1);
+            ALOGD("copl(%x):out of compress_wait", (unsigned int)out);
             send_callback = true;
             event = STREAM_CBK_EVENT_WRITE_READY;
             break;
         case OFFLOAD_CMD_PARTIAL_DRAIN:
             ret = compress_next_track(out->compr);
-            if(ret == 0)
+            if(ret == 0) {
+                ALOGD("copl(%x):calling compress_partial_drain", (unsigned int)out);
                 compress_partial_drain(out->compr);
+                ALOGD("copl(%x):out of compress_partial_drain", (unsigned int)out);
+            }
             else if(ret == -ETIMEDOUT)
                 compress_drain(out->compr);
             else
                 ALOGE("%s: Next track returned error %d",__func__, ret);
-
             send_callback = true;
             event = STREAM_CBK_EVENT_DRAIN_READY;
             break;
         case OFFLOAD_CMD_DRAIN:
+            ALOGD("copl(%x):calling compress_drain", (unsigned int)out);
             compress_drain(out->compr);
+            ALOGD("copl(%x):calling compress_drain", (unsigned int)out);
             send_callback = true;
             event = STREAM_CBK_EVENT_DRAIN_READY;
             break;
@@ -1109,7 +1115,7 @@ int start_output_stream(struct stream_out *out)
     struct audio_usecase *uc_info;
     struct audio_device *adev = out->dev;
 
-    ALOGV("%s: enter: usecase(%d: %s) devices(%#x)",
+    ALOGD("%s: enter: usecase(%d: %s) devices(%#x)",
           __func__, out->usecase, use_case_table[out->usecase], out->devices);
     out->pcm_device_id = platform_get_pcm_device_id(out->usecase, PCM_PLAYBACK);
     if (out->pcm_device_id < 0) {
@@ -1311,6 +1317,7 @@ static int out_standby(struct audio_stream *stream)
                 out->pcm = NULL;
             }
         } else {
+            ALOGD("copl(%x):standby", (unsigned int)out);
             stop_compressed_output_l(out);
             out->gapless_mdata.encoder_delay = 0;
             out->gapless_mdata.encoder_padding = 0;
@@ -1594,9 +1601,9 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     }
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
-        ALOGVV("%s: writing buffer (%d bytes) to compress device", __func__, bytes);
+        ALOGD("copl(%x): writing buffer (%d bytes) to compress device", (unsigned int)out, bytes);
         if (out->send_new_metadata) {
-            ALOGVV("send new gapless metadata");
+            ALOGD("copl(%x):send new gapless metadata", (unsigned int)out);
             compress_set_gapless_metadata(out->compr, &out->gapless_mdata);
             out->send_new_metadata = 0;
         }
@@ -1604,6 +1611,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         ret = compress_write(out->compr, buffer, bytes);
         ALOGVV("%s: writing buffer (%d bytes) to compress device returned %d", __func__, bytes, ret);
         if (ret >= 0 && ret < (ssize_t)bytes) {
+            ALOGD("No space available in compress driver, post msg to cb thread");
             send_offload_cmd_l(out, OFFLOAD_CMD_WAIT_FOR_BUFFER);
         }
         if (!out->playback_started) {
@@ -1736,6 +1744,7 @@ static int out_pause(struct audio_stream_out* stream)
     int status = -ENOSYS;
     ALOGV("%s", __func__);
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+        ALOGD("copl(%x):pause compress driver", (unsigned int)out);
         pthread_mutex_lock(&out->lock);
         if (out->compr != NULL && out->offload_state == OFFLOAD_STATE_PLAYING) {
             status = compress_pause(out->compr);
@@ -1752,6 +1761,7 @@ static int out_resume(struct audio_stream_out* stream)
     int status = -ENOSYS;
     ALOGV("%s", __func__);
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+        ALOGD("copl(%x):resume compress driver", (unsigned int)out);
         status = 0;
         pthread_mutex_lock(&out->lock);
         if (out->compr != NULL && out->offload_state == OFFLOAD_STATE_PAUSED) {
@@ -1784,9 +1794,11 @@ static int out_flush(struct audio_stream_out* stream)
     struct stream_out *out = (struct stream_out *)stream;
     ALOGV("%s", __func__);
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+        ALOGD("copl(%x):calling compress flush", (unsigned int)out);
         pthread_mutex_lock(&out->lock);
         stop_compressed_output_l(out);
         pthread_mutex_unlock(&out->lock);
+        ALOGD("copl(%x):out of compress flush", (unsigned int)out);
         return 0;
     }
     return -ENOSYS;
@@ -2125,6 +2137,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             goto error_open;
         }
     } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
+        ALOGD("%s: copl(%x): sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)",
+              __func__, (unsigned int)out, config->sample_rate, config->channel_mask, devices, flags);
+
         if (config->offload_info.version != AUDIO_INFO_INITIALIZER.version ||
             config->offload_info.size != AUDIO_INFO_INITIALIZER.size) {
             ALOGE("%s: Unsupported Offload information", __func__);
