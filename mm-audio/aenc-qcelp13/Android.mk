@@ -24,5 +24,8 @@ endif
 ifeq ($(call is-board-platform,mpq8092),true)
 include $(AENC_QCELP13_PATH)/qdsp6/Android.mk
 endif
+ifeq ($(call is-board-platform,msm8916),true)
+include $(AENC_QCELP13_PATH)/qdsp6/Android.mk
+endif
 
 endif
