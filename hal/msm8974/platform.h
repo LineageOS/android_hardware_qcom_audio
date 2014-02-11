@@ -168,8 +168,6 @@ enum {
 #define FM_PLAYBACK_PCM_DEVICE 5
 #define FM_CAPTURE_PCM_DEVICE  6
 #define HFP_PCM_RX 5
-#define HFP_SCO_RX 23
-#define HFP_ASM_RX_TX 24
 
 #define INCALL_MUSIC_UPLINK_PCM_DEVICE 1
 #define INCALL_MUSIC_UPLINK2_PCM_DEVICE 16
@@ -211,6 +209,14 @@ enum {
 #define VOICE2_CALL_PCM_DEVICE 22
 #define VOLTE_CALL_PCM_DEVICE 14
 #define QCHAT_CALL_PCM_DEVICE 20
+#endif
+
+#ifdef PLATFORM_MSM8x26
+#define HFP_SCO_RX 28
+#define HFP_ASM_RX_TX 29
+#else
+#define HFP_SCO_RX 23
+#define HFP_ASM_RX_TX 24
 #endif
 
 #define LIB_CSD_CLIENT "libcsd-client.so"
