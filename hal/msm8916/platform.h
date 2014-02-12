@@ -193,6 +193,7 @@ enum {
 typedef int (*init_t)();
 typedef int (*deinit_t)();
 typedef int (*disable_device_t)();
+typedef int (*enable_device_config_t)(int, int);
 typedef int (*enable_device_t)(int, int, uint32_t);
 typedef int (*volume_t)(uint32_t, int);
 typedef int (*mic_mute_t)(uint32_t, int);
@@ -209,6 +210,7 @@ struct csd_data {
     init_t init;
     deinit_t deinit;
     disable_device_t disable_device;
+    enable_device_config_t enable_device_config;
     enable_device_t enable_device;
     volume_t volume;
     mic_mute_t mic_mute;
