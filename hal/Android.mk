@@ -41,6 +41,7 @@ endif
 
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
+	libutils \
 	libcutils \
 	libtinyalsa \
 	libtinycompress \

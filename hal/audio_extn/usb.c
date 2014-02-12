@@ -27,11 +27,14 @@
 #include <cutils/log.h>
 #include <cutils/str_parms.h>
 #include <sys/ioctl.h>
+#include <sys/prctl.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 
 #include <system/audio.h>
 #include <tinyalsa/asoundlib.h>
+
+#include <utils/threads.h>
 
 #ifdef USB_HEADSET_ENABLED
 #define USB_LOW_LATENCY_OUTPUT_PERIOD_SIZE   512
@@ -371,6 +374,10 @@ static int32_t usb_playback_entry(void *adev)
     }
     ALOGD("%s: PROXY configured for playback", __func__);
     pthread_mutex_unlock(&usbmod->usb_playback_lock);
+
+    pid_t tid = gettid();
+    androidSetThreadPriority(tid, ANDROID_PRIORITY_URGENT_AUDIO);
+    prctl(PR_SET_NAME, (unsigned long)"usb_playback_thread", 0, 0, 0);
 
     /* main loop to read from proxy and write to usb */
     while (usbmod->is_playback_running) {
