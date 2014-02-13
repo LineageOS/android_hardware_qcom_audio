@@ -92,6 +92,11 @@ static const snd_device_t taiko_DB_variant_devices[] = {
     SND_DEVICE_IN_QUAD_MIC,
 };
 
+static const snd_device_t taiko_apq8084_sbc_variant_devices[] = {
+    SND_DEVICE_IN_HANDSET_MIC,
+    SND_DEVICE_IN_SPEAKER_MIC,
+};
+
 static const snd_device_t tapan_lite_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_HEADPHONES,
@@ -143,6 +148,12 @@ static void  update_hardware_info_8084(struct hardware_info *hw_info, const char
         hw_info->snd_devices = (snd_device_t *)taiko_liquid_variant_devices;
         hw_info->num_snd_devices = ARRAY_SIZE(taiko_liquid_variant_devices);
         strlcpy(hw_info->dev_extn, "-liquid", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "apq8084-taiko-sbc-snd-card")) {
+        strlcpy(hw_info->type, " sbc", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "apq8084", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)taiko_apq8084_sbc_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(taiko_apq8084_sbc_variant_devices);
+        strlcpy(hw_info->dev_extn, "-sbc", sizeof(hw_info->dev_extn));
     } else {
         ALOGW("%s: Not an 8084 device", __func__);
     }
