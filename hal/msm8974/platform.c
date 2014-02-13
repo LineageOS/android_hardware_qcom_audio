@@ -1666,7 +1666,7 @@ void platform_get_parameters(void *platform,
 
     kv_pairs = str_parms_to_str(reply);
     ALOGV_IF(kv_pairs != NULL, "%s: exit: returns - %s", __func__, kv_pairs);
-    free(reply);
+    free(kv_pairs);
 }
 
 /* Delay in Us */
