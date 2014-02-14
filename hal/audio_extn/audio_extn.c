@@ -35,18 +35,22 @@
 struct audio_extn_module {
     bool anc_enabled;
     bool aanc_enabled;
+    bool custom_stereo_enabled;
     uint32_t proxy_channel_num;
 };
 
 static struct audio_extn_module aextnmod = {
     .anc_enabled = 0,
     .aanc_enabled = 0,
+    .custom_stereo_enabled = 0,
     .proxy_channel_num = 2,
 };
 
 #define AUDIO_PARAMETER_KEY_ANC        "anc_enabled"
 #define AUDIO_PARAMETER_KEY_WFD        "wfd_channel_cap"
 #define AUDIO_PARAMETER_CAN_OPEN_PROXY "can_open_proxy"
+#define AUDIO_PARAMETER_CUSTOM_STEREO  "stereo_as_dual_mono"
+
 #ifndef FM_ENABLED
 #define audio_extn_fm_set_parameters(adev, parms) (0)
 #else
@@ -59,6 +63,45 @@ void audio_extn_hfp_set_parameters(adev, parms) (0)
 void audio_extn_hfp_set_parameters(struct audio_device *adev,
                                            struct str_parms *parms);
 #endif
+
+#ifndef CUSTOM_STEREO_ENABLED
+#define audio_extn_customstereo_set_parameters(adev, parms)         (0)
+#else
+void audio_extn_customstereo_set_parameters(struct audio_device *adev,
+                                           struct str_parms *parms)
+{
+    int ret = 0;
+    char value[32]={0};
+    bool custom_stereo_state = false;
+    const char *mixer_ctl_name = "Set Custom Stereo OnOff";
+    struct mixer_ctl *ctl;
+
+    ALOGV("%s", __func__);
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_CUSTOM_STEREO, value,
+                            sizeof(value));
+    if (ret >= 0) {
+        if (!strncmp("true", value, sizeof("true")) || atoi(value))
+            custom_stereo_state = true;
+
+        if (custom_stereo_state == aextnmod.custom_stereo_enabled)
+            return;
+
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                  __func__, mixer_ctl_name);
+            return;
+        }
+        if (mixer_ctl_set_value(ctl, 0, custom_stereo_state) < 0) {
+            ALOGE("%s: Could not set custom stereo state %d",
+                  __func__, custom_stereo_state);
+            return;
+        }
+        aextnmod.custom_stereo_enabled = custom_stereo_state;
+        ALOGV("%s: Setting custom stereo state success", __func__);
+    }
+}
+#endif /* CUSTOM_STEREO_ENABLED */
 
 #ifndef ANC_HEADSET_ENABLED
 #define audio_extn_set_anc_parameters(adev, parms)       (0)
@@ -320,6 +363,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_listen_set_parameters(adev, parms);
    audio_extn_hfp_set_parameters(adev, parms);
    audio_extn_ddp_set_parameters(adev, parms);
+   audio_extn_customstereo_set_parameters(adev, parms);
 }
 
 void audio_extn_get_parameters(const struct audio_device *adev,

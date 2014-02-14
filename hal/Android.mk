@@ -59,6 +59,10 @@ ifneq ($(strip $(AUDIO_FEATURE_DISABLED_HFP)),true)
     LOCAL_SRC_FILES += audio_extn/hfp.c
 endif
 
+ifneq ($(strip $(AUDIO_FEATURE_DISABLED_CUSTOMSTEREO)),true)
+    LOCAL_CFLAGS += -DCUSTOM_STEREO_ENABLED
+endif
+
 ifneq ($(strip $(AUDIO_FEATURE_DISABLED_SSR)),true)
     LOCAL_CFLAGS += -DSSR_ENABLED
     LOCAL_SRC_FILES += audio_extn/ssr.c
