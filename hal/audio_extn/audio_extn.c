@@ -131,7 +131,7 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
 #endif /* ANC_HEADSET_ENABLED */
 
 #ifndef AFE_PROXY_ENABLED
-#define audio_extn_set_afe_proxy_parameters(parms)        (0)
+#define audio_extn_set_afe_proxy_parameters(adev, parms)  (0)
 #define audio_extn_get_afe_proxy_parameters(query, reply) (0)
 #else
 /* Front left channel. */
@@ -247,7 +247,8 @@ int32_t audio_extn_set_afe_proxy_channel_mixer(struct audio_device *adev)
     return ret;
 }
 
-void audio_extn_set_afe_proxy_parameters(struct str_parms *parms)
+void audio_extn_set_afe_proxy_parameters(struct audio_device *adev,
+                                         struct str_parms *parms)
 {
     int ret, val;
     char value[32]={0};
@@ -257,6 +258,7 @@ void audio_extn_set_afe_proxy_parameters(struct str_parms *parms)
     if (ret >= 0) {
         val = atoi(value);
         aextnmod.proxy_channel_num = val;
+        adev->cur_wfd_channels = val;
         ALOGD("%s: channel capability set to: %d", __func__,
                aextnmod.proxy_channel_num);
     }
@@ -315,7 +317,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
                                struct str_parms *parms)
 {
    audio_extn_set_anc_parameters(adev, parms);
-   audio_extn_set_afe_proxy_parameters(parms);
+   audio_extn_set_afe_proxy_parameters(adev, parms);
    audio_extn_fm_set_parameters(adev, parms);
    audio_extn_listen_set_parameters(adev, parms);
    audio_extn_hfp_set_parameters(adev, parms);

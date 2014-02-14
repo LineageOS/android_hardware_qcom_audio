@@ -223,6 +223,7 @@ struct audio_device {
     bool speaker_lr_swap;
     struct voice voice;
     unsigned int cur_hdmi_channels;
+    unsigned int cur_wfd_channels;
 
     int snd_card;
     void *platform;

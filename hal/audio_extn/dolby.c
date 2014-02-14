@@ -64,7 +64,7 @@
 
 /* DS1-DDP Endp Params */
 #define DDP_ENDP_NUM_PARAMS 17
-#define DDP_ENDP_NUM_DEVICES 22
+#define DDP_ENDP_NUM_DEVICES 23
 static int ddp_endp_params_id[DDP_ENDP_NUM_PARAMS] = {
     PARAM_ID_MAX_OUTPUT_CHANNELS, PARAM_ID_CTL_RUNNING_MODE,
     PARAM_ID_CTL_ERROR_CONCEAL, PARAM_ID_CTL_ERROR_MAX_RPTS,
@@ -147,7 +147,10 @@ static struct ddp_endp_params {
               {8, 0, 0, 0, 0, 0, 0, 21, 1, 6, 0, 0, 0, 0, 0, 0, 0},
               {1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0} },
           {AUDIO_DEVICE_OUT_PROXY, 2,
-              {8, 0, 0, 0, 0, 0, 0, 21, 1, 6, 0, 0, 0, 0, 0, 0, 0},
+              {8, 0, 0, 0, 0, 0, 0, 21, 1, 2, 0, 0, 0, 0, 0, 0, 0},
+              {1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0} },
+          {AUDIO_DEVICE_OUT_PROXY, 6,
+              {8, 0, 0, 0, 0, 0, 0, 21, 1, 2, 0, 0, 0, 0, 0, 0, 0},
               {1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0} },
 };
 
@@ -264,9 +267,16 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev)
             (usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
             ((usecase->stream.out->format == AUDIO_FORMAT_AC3) ||
              (usecase->stream.out->format == AUDIO_FORMAT_EAC3))) {
+            /*
+             * Use wfd /hdmi sink channel cap for dolby params if device is wfd
+             * or hdmi. Otherwise use stereo configuration
+             */
+            int channel_cap = usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL ?
+                              adev->cur_hdmi_channels :
+                              usecase->devices & AUDIO_DEVICE_OUT_PROXY ?
+                              adev->cur_wfd_channels : 2;
             send_ddp_endp_params_stream(usecase->stream.out, usecase->devices,
-                           usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL ?
-                           adev->cur_hdmi_channels : 2, false /* set cache */);
+                                        channel_cap, false /* set cache */);
         }
     }
 }
@@ -334,7 +344,9 @@ void audio_extn_ddp_set_parameters(struct audio_device *adev,
         update_ddp_endp_table(ddp_dev, dev_ch_cap,
                               PARAM_ID_OUT_CTL_STEREO_MODE, val);
     }
-
+    /* TODO: Do we need device channel caps here?
+     * We dont have that information as this is from dolby modules
+     */
     send_ddp_endp_params(adev, ddp_dev, dev_ch_cap);
 }
 
@@ -343,13 +355,20 @@ int audio_extn_dolby_get_snd_codec_id(struct audio_device *adev,
                                       audio_format_t format)
 {
     int id = 0;
+    /*
+     * Use wfd /hdmi sink channel cap for dolby params if device is wfd
+     * or hdmi. Otherwise use stereo configuration
+     */
+    int channel_cap = out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL ?
+                      adev->cur_hdmi_channels :
+                      out->devices & AUDIO_DEVICE_OUT_PROXY ?
+                      adev->cur_wfd_channels : 2;
 
     switch (format) {
     case AUDIO_FORMAT_AC3:
         id = SND_AUDIOCODEC_AC3;
         send_ddp_endp_params_stream(out, out->devices,
-                            out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL ?
-                            adev->cur_hdmi_channels : 2, true /* set_cache */);
+                            channel_cap, true /* set_cache */);
 #ifndef DS1_DOLBY_DAP_ENABLED
         audio_extn_dolby_set_dmid(adev);
 #endif
@@ -357,8 +376,7 @@ int audio_extn_dolby_get_snd_codec_id(struct audio_device *adev,
     case AUDIO_FORMAT_EAC3:
         id = SND_AUDIOCODEC_EAC3;
         send_ddp_endp_params_stream(out, out->devices,
-                            out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL ?
-                            adev->cur_hdmi_channels : 2, true /* set_cache */);
+                            channel_cap, true /* set_cache */);
 #ifndef DS1_DOLBY_DAP_ENABLED
         audio_extn_dolby_set_dmid(adev);
 #endif
