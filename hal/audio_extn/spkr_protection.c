@@ -44,7 +44,7 @@
 #include <math.h>
 #include <cutils/properties.h>
 #include "audio_extn.h"
-#include <linux/msm_audio_acdb.h>
+#include <linux/msm_audio_calibration.h>
 
 #ifdef SPKR_PROT_ENABLED
 
@@ -187,11 +187,87 @@ static bool is_speaker_in_use(unsigned long *sec)
 }
 
 
+static int get_spkr_prot_cal(int cal_fd,
+				struct audio_cal_info_msm_spk_prot_status *status)
+{
+    int ret = 0;
+    struct audio_cal_fb_spk_prot_status    cal_data;
+
+    if (cal_fd < 0) {
+        ALOGE("%s: Error: cal_fd = %d", __func__, cal_fd);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    if (status == NULL) {
+        ALOGE("%s: Error: status NULL", __func__);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    cal_data.hdr.data_size = sizeof(cal_data);
+    cal_data.hdr.version = VERSION_0_0;
+    cal_data.hdr.cal_type = AFE_FB_SPKR_PROT_CAL_TYPE;
+    cal_data.hdr.cal_type_size = sizeof(cal_data.cal_type);
+    cal_data.cal_type.cal_hdr.version = VERSION_0_0;
+    cal_data.cal_type.cal_data.mem_handle = -1;
+
+    if (ioctl(cal_fd, AUDIO_GET_CALIBRATION, &cal_data)) {
+        ALOGE("%s: Error: AUDIO_GET_CALIBRATION failed!",
+            __func__);
+        ret = -ENODEV;
+        goto done;
+    }
+
+    status->r0 = cal_data.cal_type.cal_info.r0;
+    status->status = cal_data.cal_type.cal_info.status;
+done:
+    return ret;
+}
+
+static int set_spkr_prot_cal(int cal_fd,
+				struct audio_cal_info_spk_prot_cfg *protCfg)
+{
+    int ret = 0;
+    struct audio_cal_fb_spk_prot_cfg    cal_data;
+
+    if (cal_fd < 0) {
+        ALOGE("%s: Error: cal_fd = %d", __func__, cal_fd);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    if (protCfg == NULL) {
+        ALOGE("%s: Error: status NULL", __func__);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    cal_data.hdr.data_size = sizeof(cal_data);
+    cal_data.hdr.version = VERSION_0_0;
+    cal_data.hdr.cal_type = AFE_FB_SPKR_PROT_CAL_TYPE;
+    cal_data.hdr.cal_type_size = sizeof(cal_data.cal_type);
+    cal_data.cal_type.cal_hdr.version = VERSION_0_0;
+    cal_data.cal_type.cal_info.r0 = protCfg->r0;
+    cal_data.cal_type.cal_info.t0 = protCfg->t0;
+    cal_data.cal_type.cal_info.mode = protCfg->mode;
+    cal_data.cal_type.cal_data.mem_handle = -1;
+
+    if (ioctl(cal_fd, AUDIO_SET_CALIBRATION, &cal_data)) {
+        ALOGE("%s: Error: AUDIO_SET_CALIBRATION failed!",
+            __func__);
+        ret = -ENODEV;
+        goto done;
+    }
+done:
+    return ret;
+}
+
 static int spkr_calibrate(int t0)
 {
     struct audio_device *adev = handle.adev_handle;
-    struct msm_spk_prot_cfg protCfg;
-    struct msm_spk_prot_status status;
+    struct audio_cal_info_spk_prot_cfg protCfg;
+    struct audio_cal_info_msm_spk_prot_status status;
     bool cleanup = false, disable_rx = false, disable_tx = false;
     int acdb_fd = -1;
     struct audio_usecase *uc_info_rx = NULL, *uc_info_tx = NULL;
@@ -206,14 +282,14 @@ static int spkr_calibrate(int t0)
         ALOGD("%s: Usecase present retry speaker protection", __func__);
         return -EAGAIN;
     }
-    acdb_fd = open("/dev/msm_acdb",O_RDWR | O_NONBLOCK);
+    acdb_fd = open("/dev/msm_audio_cal",O_RDWR | O_NONBLOCK);
     if (acdb_fd < 0) {
         ALOGE("%s: spkr_prot_thread open msm_acdb failed", __func__);
         return -ENODEV;
     } else {
         protCfg.mode = MSM_SPKR_PROT_CALIBRATION_IN_PROGRESS;
         protCfg.t0 = t0;
-        if (ioctl(acdb_fd, AUDIO_SET_SPEAKER_PROT, &protCfg)) {
+        if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
             ALOGE("%s: spkr_prot_thread set failed AUDIO_SET_SPEAKER_PROT",
             __func__);
             status.status = -ENODEV;
@@ -301,7 +377,7 @@ static int spkr_calibrate(int t0)
     }
     if (acdb_fd > 0) {
         status.status = -EINVAL;
-        while (!ioctl(acdb_fd, AUDIO_GET_SPEAKER_PROT,&status)) {
+        while (!get_spkr_prot_cal(acdb_fd, &status)) {
             /*sleep for 200 ms to check for status check*/
             if (!status.status) {
                 ALOGD("%s: spkr_prot_thread calib Success R0 %d",
@@ -348,14 +424,14 @@ exit:
         if (!status.status) {
             protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
             protCfg.r0 = status.r0;
-            if (ioctl(acdb_fd, AUDIO_SET_SPEAKER_PROT, &protCfg))
+            if (set_spkr_prot_cal(acdb_fd, &protCfg))
                 ALOGE("%s: spkr_prot_thread disable calib mode", __func__);
             else
                 handle.spkr_prot_mode = MSM_SPKR_PROT_CALIBRATED;
         } else {
             protCfg.mode = MSM_SPKR_PROT_NOT_CALIBRATED;
             handle.spkr_prot_mode = MSM_SPKR_PROT_NOT_CALIBRATED;
-            if (ioctl(acdb_fd, AUDIO_SET_SPEAKER_PROT, &protCfg))
+            if (set_spkr_prot_cal(acdb_fd, &protCfg))
                 ALOGE("%s: spkr_prot_thread disable calib mode failed", __func__);
         }
         if (acdb_fd > 0)
@@ -377,18 +453,18 @@ static void* spkr_calibration_thread(void *context)
     unsigned long sec = 0;
     int t0;
     bool goahead = false;
-    struct msm_spk_prot_cfg protCfg;
+    struct audio_cal_info_spk_prot_cfg protCfg;
     FILE *fp;
     int acdb_fd;
     struct audio_device *adev = handle.adev_handle;
 
     handle.speaker_prot_threadid = pthread_self();
     ALOGD("spkr_prot_thread enable prot Entry");
-    acdb_fd = open("/dev/msm_acdb",O_RDWR | O_NONBLOCK);
+    acdb_fd = open("/dev/msm_audio_cal",O_RDWR | O_NONBLOCK);
     if (acdb_fd > 0) {
         /*Set processing mode with t0/r0*/
         protCfg.mode = MSM_SPKR_PROT_NOT_CALIBRATED;
-        if (ioctl(acdb_fd, AUDIO_SET_SPEAKER_PROT, &protCfg)) {
+        if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
             ALOGE("%s: spkr_prot_thread enable prot failed", __func__);
             handle.spkr_prot_mode = MSM_SPKR_PROT_DISABLED;
             close(acdb_fd);
@@ -419,7 +495,7 @@ static void* spkr_calibration_thread(void *context)
             && protCfg.r0 < MAX_RESISTANCE_SPKR_Q24) {
             ALOGD("%s: Spkr calibrated", __func__);
             protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
-            if (ioctl(acdb_fd, AUDIO_SET_SPEAKER_PROT, &protCfg)) {
+            if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
                 ALOGE("%s: enable prot failed", __func__);
                 handle.spkr_prot_mode = MSM_SPKR_PROT_DISABLED;
             } else
