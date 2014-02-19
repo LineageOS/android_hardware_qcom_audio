@@ -44,7 +44,9 @@ LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := libopencore_common
 LOCAL_SHARED_LIBRARIES  += libomx_sharedlibrary
 LOCAL_SHARED_LIBRARIES  += libomx_mp3dec_sharedlibrary
+ifeq ($(strip $(TARGET_USES_QCOM_MM_AUDIO)),true)
 LOCAL_SHARED_LIBRARIES  += libaudioalsa
+endif
 
 LOCAL_SRC_FILES         := test/omx_mp3_dec_test.c
 

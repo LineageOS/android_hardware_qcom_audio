@@ -45,7 +45,9 @@ LOCAL_SHARED_LIBRARIES  := libopencore_common
 LOCAL_SHARED_LIBRARIES  += libomx_sharedlibrary
 LOCAL_SHARED_LIBRARIES  += libomx_amrdec_sharedlibrary
 LOCAL_SHARED_LIBRARIES  += libaudioalsa
-LOCAL_SRC_FILES         := test/omx_amrwb_dec_test.c
+ifeq ($(strip $(TARGET_USES_QCOM_MM_AUDIO)),true)
+LOCAL_SHARED_LIBRARIES  += libaudioalsa
+endif
 
 include $(BUILD_EXECUTABLE)
 endif
