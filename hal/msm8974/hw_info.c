@@ -121,6 +121,7 @@ static const snd_device_t helicon_skuab_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
+    SND_DEVICE_OUT_VOICE_SPEAKER,
 };
 
 static void  update_hardware_info_8084(struct hardware_info *hw_info, const char *snd_card_name)
