@@ -212,8 +212,8 @@ enum {
 #endif
 
 #ifdef PLATFORM_MSM8x26
-#define HFP_SCO_RX 21
-#define HFP_ASM_RX_TX 22
+#define HFP_SCO_RX 28
+#define HFP_ASM_RX_TX 29
 #else
 #define HFP_SCO_RX 23
 #define HFP_ASM_RX_TX 24
