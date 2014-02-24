@@ -31,6 +31,7 @@
 #include "platform.h"
 #include "audio_extn.h"
 #include "voice_extn.h"
+#include "mdm_detect.h"
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
@@ -514,10 +515,28 @@ void close_csd_client(struct csd_data *csd)
     }
 }
 
+static void platform_csd_init(struct platform_data *plat_data)
+{
+    struct dev_info mdm_detect_info;
+    int ret = 0;
+
+    /* Call ESOC API to get the number of modems.
+     * If the number of modems is not zero, load CSD Client specific
+     * symbols. Voice call is handled by MDM and apps processor talks to
+     * MDM through CSD Client
+     */
+    ret = get_system_info(&mdm_detect_info);
+    if (ret > 0) {
+        ALOGE("%s: Failed to get system info, ret %d", __func__, ret);
+    }
+    ALOGD("%s: num_modems %d\n", __func__, mdm_detect_info.num_modems);
+
+    if (mdm_detect_info.num_modems > 0)
+        plat_data->csd = open_csd_client();
+}
+
 void *platform_init(struct audio_device *adev)
 {
-    char platform[PROPERTY_VALUE_MAX];
-    char baseband[PROPERTY_VALUE_MAX];
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data = NULL;
     int retry_num = 0, snd_card_num = 0;
@@ -653,16 +672,8 @@ void *platform_init(struct audio_device *adev)
     /* Initialize ACDB ID's */
     platform_info_init();
 
-    /* If platform is apq8084 and baseband is MDM, load CSD Client specific
-     * symbols. Voice call is handled by MDM and apps processor talks to
-     * MDM through CSD Client
-     */
-    property_get("ro.board.platform", platform, "");
-    property_get("ro.baseband", baseband, "");
-    if (!strncmp("apq8084", platform, sizeof("apq8084")) &&
-        !strncmp("mdm", baseband, sizeof("mdm"))) {
-         my_data->csd = open_csd_client();
-    }
+    /* load csd client */
+    platform_csd_init(my_data);
 
     /* init usb */
     audio_extn_usb_init(adev);
