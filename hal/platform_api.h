@@ -44,6 +44,7 @@ int platform_start_voice_call(void *platform, uint32_t vsid);
 int platform_stop_voice_call(void *platform, uint32_t vsid);
 int platform_set_voice_volume(void *platform, int volume);
 int platform_set_mic_mute(void *platform, bool state);
+int platform_get_sample_rate(void *platform, uint32_t *rate);
 snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devices);
 snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_device);
 int platform_set_hdmi_channels(void *platform, int channel_count);
@@ -63,6 +64,6 @@ int platform_update_usecase_from_source(int source, audio_usecase_t usecase);
 bool platform_listen_update_status(snd_device_t snd_device);
 
 /* From platform_info_parser.c */
-int platform_info_init(void);
+int platform_info_init(const char *filename);
 
 #endif // AUDIO_PLATFORM_API_H

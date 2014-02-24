@@ -221,7 +221,7 @@ enum {
 
 #define LIB_CSD_CLIENT "libcsd-client.so"
 /* CSD-CLIENT related functions */
-typedef int (*init_t)();
+typedef int (*init_t)(bool);
 typedef int (*deinit_t)();
 typedef int (*disable_device_t)();
 typedef int (*enable_device_config_t)(int, int);
@@ -235,6 +235,7 @@ typedef int (*start_playback_t)(uint32_t);
 typedef int (*stop_playback_t)(uint32_t);
 typedef int (*start_record_t)(uint32_t, int);
 typedef int (*stop_record_t)(uint32_t);
+typedef int (*get_sample_rate_t)(uint32_t *);
 /* CSD Client structure */
 struct csd_data {
     void *csd_client;
@@ -252,6 +253,7 @@ struct csd_data {
     stop_playback_t stop_playback;
     start_record_t start_record;
     stop_record_t stop_record;
+    get_sample_rate_t get_sample_rate;
 };
 
 #endif // QCOM_AUDIO_PLATFORM_H
