@@ -13,6 +13,7 @@ libOmxEvrcEnc-def += -D_ANDROID_
 libOmxEvrcEnc-def += -D_ENABLE_QC_MSG_LOG_
 libOmxEvrcEnc-def += -DVERBOSE
 libOmxEvrcEnc-def += -D_DEBUG
+libOmxEvrcEnc-def += -Wconversion
 libOmxEvrcEnc-def += -DAUDIOV2
 
 # ---------------------------------------------------------------------------------

@@ -13,6 +13,7 @@ libOmxAacEnc-def += -D_ANDROID_
 libOmxAacEnc-def += -D_ENABLE_QC_MSG_LOG_
 libOmxAacEnc-def += -DVERBOSE
 libOmxAacEnc-def += -D_DEBUG
+libOmxAacEnc-def += -Wconversion
 libOmxAacEnc-def += -DAUDIOV2
 
 # ---------------------------------------------------------------------------------
