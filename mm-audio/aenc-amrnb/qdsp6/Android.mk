@@ -13,6 +13,7 @@ libOmxAmrEnc-def += -D_ANDROID_
 libOmxAmrEnc-def += -D_ENABLE_QC_MSG_LOG_
 libOmxAmrEnc-def += -DVERBOSE
 libOmxAmrEnc-def += -D_DEBUG
+libOmxAmrEnc-def += -Wconversion
 libOmxAmrEnc-def += -DAUDIOV2
 
 # ---------------------------------------------------------------------------------
