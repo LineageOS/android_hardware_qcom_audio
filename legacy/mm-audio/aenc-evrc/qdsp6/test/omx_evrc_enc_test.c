@@ -1,6 +1,6 @@
 
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -85,9 +85,9 @@ uint32_t channels = 1;
 uint32_t min_bitrate = 0;
 uint32_t max_bitrate = 0;
 uint32_t cdmarate = 0;
-uint32_t rectime = -1;
-uint32_t recpath = -1;
-uint32_t pcmplayback = 0;
+uint32_t rectime = 0;
+uint32_t recpath = 0;
+int32_t pcmplayback = 0;
 uint32_t tunnel      = 0;
 uint32_t format = 1;
 #define DEBUG_PRINT printf
@@ -217,14 +217,14 @@ struct qcp_header {
          {'v','r','a','t'},0, 0, 0,{'d','a','t','a'},0
  };
 
-static unsigned totaldatalen = 0;
-static unsigned framecnt = 0;
+static int totaldatalen = 0;
+static int framecnt = 0;
 /************************************************************************/
 /*                GLOBAL INIT                    */
 /************************************************************************/
 
-int input_buf_cnt = 0;
-int output_buf_cnt = 0;
+unsigned int input_buf_cnt = 0;
+unsigned int output_buf_cnt = 0;
 int used_ip_buf_cnt = 0;
 volatile int event_is_done = 0;
 volatile int ebd_event_is_done = 0;
@@ -265,7 +265,7 @@ static int Read_Buffer(OMX_BUFFERHEADERTYPE  *pBufHdr );
 static OMX_ERRORTYPE Allocate_Buffer ( OMX_COMPONENTTYPE *evrc_enc_handle,
                                        OMX_BUFFERHEADERTYPE  ***pBufHdrs,
                                        OMX_U32 nPortIndex,
-                                       long bufCntMin, long bufSize);
+                                       unsigned int bufCntMin, unsigned int bufSize);
 
 
 static OMX_ERRORTYPE EventHandler(OMX_IN OMX_HANDLETYPE hComponent,
@@ -325,7 +325,7 @@ void etb_event_complete(void )
 
 static void create_qcp_header(int Datasize, int Frames)
 {
-        append_header.s_riff = Datasize + QCP_HEADER_SIZE - 8;
+        append_header.s_riff = (unsigned)(Datasize + (int)QCP_HEADER_SIZE - 8);
         /* exclude riff id and size field */
     append_header.data1 = 0xe689d48d;
     append_header.data2 = 0x9076;
@@ -349,8 +349,8 @@ static void create_qcp_header(int Datasize, int Frames)
     append_header.vr_bytes_per_pkt[3] = 0x0102;
     append_header.s_vrat = 0x00000008;
     append_header.v_rate = 0x00000001;
-        append_header.size_in_pkts = Frames;
-        append_header.s_data = Datasize;
+        append_header.size_in_pkts = (unsigned)Frames;
+        append_header.s_data = (unsigned)Datasize;
         return;
 }
 
@@ -368,7 +368,7 @@ OMX_ERRORTYPE EventHandler(OMX_IN OMX_HANDLETYPE hComponent,
     (void)pEventData;
     switch(eEvent) {
         case OMX_EventCmdComplete:
-        DEBUG_PRINT("\n OMX_EventCmdComplete event=%d data1=%lu data2=%lu\n",(OMX_EVENTTYPE)eEvent,
+        DEBUG_PRINT("\n OMX_EventCmdComplete event=%d data1=%u data2=%u\n",(OMX_EVENTTYPE)eEvent,
                                                                                nData1,nData2);
             event_complete();
         break;
@@ -395,8 +395,8 @@ OMX_ERRORTYPE FillBufferDone(OMX_IN OMX_HANDLETYPE hComponent,
                               OMX_IN OMX_BUFFERHEADERTYPE* pBuffer)
 {
     size_t bytes_writen = 0;
-    int total_bytes_writen = 0;
-    unsigned int len = 0;
+    size_t total_bytes_writen = 0;
+    size_t len = 0;
     struct enc_meta_out *meta = NULL;
     OMX_U8 *src = pBuffer->pBuffer;
     unsigned int num_of_frames = 1;
@@ -443,8 +443,8 @@ OMX_ERRORTYPE FillBufferDone(OMX_IN OMX_HANDLETYPE hComponent,
             num_of_frames--;
             total_bytes_writen += len;
         }
-        DEBUG_PRINT(" FillBufferDone size writen to file  %d count %d\n",total_bytes_writen, framecnt);
-        totaldatalen += total_bytes_writen ;
+        DEBUG_PRINT(" FillBufferDone size writen to file  %zu count %d\n",total_bytes_writen, framecnt);
+        totaldatalen = totaldatalen + (int)total_bytes_writen;
     framecnt++;
 
         DEBUG_PRINT(" FBD calling FTB\n");
@@ -497,7 +497,7 @@ OMX_ERRORTYPE EmptyBufferDone(OMX_IN OMX_HANDLETYPE hComponent,
     }
 
     if((readBytes = Read_Buffer(pBuffer)) > 0) {
-        pBuffer->nFilledLen = readBytes;
+        pBuffer->nFilledLen = (OMX_U32)readBytes;
         used_ip_buf_cnt++;
         OMX_EmptyThisBuffer(hComponent,pBuffer);
     }
@@ -534,7 +534,7 @@ void signal_handler(int sig_id) {
 
 int main(int argc, char **argv)
 {
-     int bufCnt=0;
+     unsigned int bufCnt=0;
      OMX_ERRORTYPE result;
 
     struct sigaction sa;
@@ -556,12 +556,12 @@ int main(int argc, char **argv)
     if (argc >= 9) {
         in_filename = argv[1];
           out_filename = argv[2];
-    tunnel =  atoi(argv[3]);
-        min_bitrate  = atoi(argv[4]);
-        max_bitrate  = atoi(argv[5]);
-        cdmarate     = atoi(argv[6]);
-        recpath      = atoi(argv[7]); // No configuration support yet..
-        rectime      = atoi(argv[8]);
+    tunnel =  (uint32_t)atoi(argv[3]);
+        min_bitrate  = (uint32_t)atoi(argv[4]);
+        max_bitrate  = (uint32_t)atoi(argv[5]);
+        cdmarate     = (uint32_t)atoi(argv[6]);
+        recpath      = (uint32_t)atoi(argv[7]); // No configuration support yet..
+        rectime      = (uint32_t)atoi(argv[8]);
 
     } else {
           DEBUG_PRINT(" invalid format: \n");
@@ -733,7 +733,7 @@ int Init_Encoder(OMX_STRING audio_component)
     /* Query for audio decoders*/
     DEBUG_PRINT("Evrc_test: Before entering OMX_GetComponentOfRole");
     OMX_GetComponentsOfRole(role, &total, 0);
-    DEBUG_PRINT ("\nTotal components of role=%s :%lu", role, total);
+    DEBUG_PRINT ("\nTotal components of role=%s :%u", role, total);
 
 
     omxresult = OMX_GetHandle((OMX_HANDLETYPE*)(&evrc_enc_handle),
@@ -758,8 +758,8 @@ int Init_Encoder(OMX_STRING audio_component)
     }
     else
     {
-        DEBUG_PRINT("\nportParam.nPorts:%lu\n", portParam.nPorts);
-    DEBUG_PRINT("\nportParam.nStartPortNumber:%lu\n",
+        DEBUG_PRINT("\nportParam.nPorts:%u\n", portParam.nPorts);
+    DEBUG_PRINT("\nportParam.nStartPortNumber:%u\n",
                                              portParam.nStartPortNumber);
     }
 
@@ -773,12 +773,16 @@ int Init_Encoder(OMX_STRING audio_component)
 
 int Play_Encoder()
 {
-    int i;
+    unsigned int i;
     int Size=0;
     DEBUG_PRINT("Inside %s \n", __FUNCTION__);
     OMX_ERRORTYPE ret;
     OMX_INDEXTYPE index;
+#ifdef __LP64__
+    DEBUG_PRINT("sizeof[%ld]\n", sizeof(OMX_BUFFERHEADERTYPE));
+#else
     DEBUG_PRINT("sizeof[%d]\n", sizeof(OMX_BUFFERHEADERTYPE));
+#endif
 
     /* open the i/p and o/p files based on the video file format passed */
     if(open_audio_file()) {
@@ -793,8 +797,8 @@ int Play_Encoder()
     inputportFmt.nPortIndex = portParam.nStartPortNumber;
 
     OMX_GetParameter(evrc_enc_handle,OMX_IndexParamPortDefinition,&inputportFmt);
-    DEBUG_PRINT ("\nEnc Input Buffer Count %lu\n", inputportFmt.nBufferCountMin);
-    DEBUG_PRINT ("\nEnc: Input Buffer Size %lu\n", inputportFmt.nBufferSize);
+    DEBUG_PRINT ("\nEnc Input Buffer Count %u\n", inputportFmt.nBufferCountMin);
+    DEBUG_PRINT ("\nEnc: Input Buffer Size %u\n", inputportFmt.nBufferSize);
 
     if(OMX_DirInput != inputportFmt.eDir) {
         DEBUG_PRINT ("\nEnc: Expect Input Port\n");
@@ -813,8 +817,8 @@ int Play_Encoder()
     outputportFmt.nPortIndex = portParam.nStartPortNumber + 1;
 
     OMX_GetParameter(evrc_enc_handle,OMX_IndexParamPortDefinition,&outputportFmt);
-    DEBUG_PRINT ("\nEnc: Output Buffer Count %lu\n", outputportFmt.nBufferCountMin);
-    DEBUG_PRINT ("\nEnc: Output Buffer Size %lu\n", outputportFmt.nBufferSize);
+    DEBUG_PRINT ("\nEnc: Output Buffer Count %u\n", outputportFmt.nBufferCountMin);
+    DEBUG_PRINT ("\nEnc: Output Buffer Size %u\n", outputportFmt.nBufferSize);
 
     if(OMX_DirOutput != outputportFmt.eDir) {
         DEBUG_PRINT ("\nEnc: Expect Output Port\n");
@@ -904,7 +908,7 @@ int Play_Encoder()
     for(i=0; i < output_buf_cnt; i++) {
         DEBUG_PRINT ("\nOMX_FillThisBuffer on output buf no.%d\n",i);
         pOutputBufHdrs[i]->nOutputPortIndex = 1;
-        pOutputBufHdrs[i]->nFlags &= ~OMX_BUFFERFLAG_EOS;
+        pOutputBufHdrs[i]->nFlags = pOutputBufHdrs[i]->nFlags & (unsigned)~OMX_BUFFERFLAG_EOS;
         ret = OMX_FillThisBuffer(evrc_enc_handle, pOutputBufHdrs[i]);
         if (OMX_ErrorNone != ret) {
             DEBUG_PRINT("OMX_FillThisBuffer failed with result %d\n", ret);
@@ -926,7 +930,7 @@ if(tunnel == 0)
           bInputEosReached = true;
           pInputBufHdrs[i]->nFlags= OMX_BUFFERFLAG_EOS;
         }
-        pInputBufHdrs[i]->nFilledLen = Size;
+        pInputBufHdrs[i]->nFilledLen = (OMX_U32)Size;
         pInputBufHdrs[i]->nInputPortIndex = 0;
         used_ip_buf_cnt++;
         ret = OMX_EmptyThisBuffer(evrc_enc_handle, pInputBufHdrs[i]);
@@ -964,11 +968,11 @@ if(tunnel == 0)
 static OMX_ERRORTYPE Allocate_Buffer ( OMX_COMPONENTTYPE *avc_enc_handle,
                                        OMX_BUFFERHEADERTYPE  ***pBufHdrs,
                                        OMX_U32 nPortIndex,
-                                       long bufCntMin, long bufSize)
+                                       unsigned int bufCntMin, unsigned int bufSize)
 {
     DEBUG_PRINT("Inside %s \n", __FUNCTION__);
     OMX_ERRORTYPE error=OMX_ErrorNone;
-    long bufCnt=0;
+    unsigned int bufCnt=0;
 
     /* To remove warning for unused variable to keep prototype same */
     (void)avc_enc_handle;
@@ -976,7 +980,7 @@ static OMX_ERRORTYPE Allocate_Buffer ( OMX_COMPONENTTYPE *avc_enc_handle,
                    malloc(sizeof(OMX_BUFFERHEADERTYPE*)*bufCntMin);
 
     for(bufCnt=0; bufCnt < bufCntMin; ++bufCnt) {
-        DEBUG_PRINT("\n OMX_AllocateBuffer No %ld \n", bufCnt);
+        DEBUG_PRINT("\n OMX_AllocateBuffer No %d \n", bufCnt);
         error = OMX_AllocateBuffer(evrc_enc_handle, &((*pBufHdrs)[bufCnt]),
                                    nPortIndex, NULL, bufSize);
     }
@@ -990,7 +994,7 @@ static OMX_ERRORTYPE Allocate_Buffer ( OMX_COMPONENTTYPE *avc_enc_handle,
 static int Read_Buffer (OMX_BUFFERHEADERTYPE  *pBufHdr )
 {
 
-    int bytes_read=0;
+    size_t bytes_read=0;
 
 
     pBufHdr->nFilledLen = 0;
@@ -998,11 +1002,11 @@ static int Read_Buffer (OMX_BUFFERHEADERTYPE  *pBufHdr )
 
      bytes_read = fread(pBufHdr->pBuffer, 1, pBufHdr->nAllocLen , inputBufferFile);
 
-      pBufHdr->nFilledLen = bytes_read;
+      pBufHdr->nFilledLen = (OMX_U32)bytes_read;
       // Time stamp logic
     ((OMX_BUFFERHEADERTYPE *)pBufHdr)->nTimeStamp = \
 
-    (unsigned long) ((total_pcm_bytes * 1000)/(samplerate * channels *2));
+    (OMX_TICKS) ((total_pcm_bytes * 1000)/(samplerate * channels *2));
 
        DEBUG_PRINT ("\n--time stamp -- %ld\n",  (unsigned long)((OMX_BUFFERHEADERTYPE *)pBufHdr)->nTimeStamp);
         if(bytes_read == 0)
@@ -1012,12 +1016,12 @@ static int Read_Buffer (OMX_BUFFERHEADERTYPE  *pBufHdr )
         }
         else
         {
-            pBufHdr->nFlags &= ~OMX_BUFFERFLAG_EOS;
+            pBufHdr->nFlags = pBufHdr->nFlags & (unsigned)~OMX_BUFFERFLAG_EOS;
 
-            total_pcm_bytes += bytes_read;
+            total_pcm_bytes = (unsigned)(total_pcm_bytes + bytes_read);
         }
 
-    return bytes_read;;
+    return (int)bytes_read;;
 }
 
 
