@@ -1009,6 +1009,12 @@ static bool allow_hdmi_channel_config(struct audio_device *adev)
                       "no change in HDMI channels", __func__);
                 ret = false;
                 break;
+            } else if (usecase->id == USECASE_AUDIO_PLAYBACK_OFFLOAD &&
+                       popcount(usecase->stream.out->channel_mask) > 2) {
+                ALOGD("%s: multi-channel(%x) compress offload playback is active, "
+                      "no change in HDMI channels", __func__, usecase->stream.out->channel_mask);
+                ret = false;
+                break;
             }
         }
     }
