@@ -20,6 +20,9 @@
 #ifndef AUDIO_PLATFORM_API_H
 #define AUDIO_PLATFORM_API_H
 
+#define CODEC_BACKEND_DEFAULT_BIT_WIDTH 16
+#define CODEC_BACKEND_DEFAULT_SAMPLE_RATE 48000
+
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
 const char *platform_get_snd_device_name(snd_device_t snd_device);
@@ -75,4 +78,6 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info);
 int platform_get_usecase_index(const char * usecase);
 int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
 
+bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct audio_usecase *usecase);
+bool platform_check_24_bit_support();
 #endif // AUDIO_PLATFORM_API_H
