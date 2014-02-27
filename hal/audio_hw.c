@@ -251,6 +251,7 @@ static bool is_supported_format(audio_format_t format)
         format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD ||
         format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD ||
 #endif
+        format == AUDIO_FORMAT_FLAC ||
         format == AUDIO_FORMAT_AAC_LC ||
         format == AUDIO_FORMAT_AAC_HE_V1 ||
         format == AUDIO_FORMAT_AAC_HE_V2 ){
@@ -275,6 +276,9 @@ static int get_snd_codec_id(audio_format_t format)
         id = SND_AUDIOCODEC_PCM;
         break;
 #endif
+    case AUDIO_FORMAT_FLAC:
+        id = SND_AUDIOCODEC_FLAC;
+        break;
     default:
         ALOGE("%s: Unsupported audio format :%x", __func__, format);
     }
@@ -496,6 +500,15 @@ static void check_usecases_codec_backend(struct audio_device *adev,
      * because of the limitation that both the devices cannot be enabled
      * at the same time as they share the same backend.
      */
+    /*
+     * This call is to check if we need to force routing for a particular stream
+     * If there is a backend configuration change for the device when a
+     * new stream starts, then ADM needs to be closed and re-opened with the new
+     * configuraion. This call check if we need to re-route all the streams
+     * associated with the backend. Touch tone + 24 bit playback.
+     */
+    bool force_routing = platform_check_and_set_codec_backend_cfg(adev, uc_info);
+
     /* Disable all the usecases on the shared backend other than the
        specified usecase */
     for (i = 0; i < AUDIO_USECASE_MAX; i++)
@@ -505,7 +518,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
         usecase = node_to_item(node, struct audio_usecase, list);
         if (usecase->type != PCM_CAPTURE &&
                 usecase != uc_info &&
-                usecase->out_snd_device != snd_device &&
+                (usecase->out_snd_device != snd_device || force_routing)  &&
                 usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
@@ -1551,6 +1564,29 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
     }
 #endif
 
+    if (out->format == AUDIO_FORMAT_FLAC) {
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.min_blk_size = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.max_blk_size = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_FRAME_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.min_frame_size = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_FRAME_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.max_frame_size = atoi(value);
+            out->send_new_metadata = 1;
+        }
+    }
+
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_SAMPLE_RATE, value, sizeof(value));
     if(ret >= 0)
         is_meta_data_params = true;
@@ -2396,6 +2432,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
     out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_STEREO;
     out->handle = handle;
+    out->bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
 
     /* Init use case and pcm_config */
     if ((out->flags == AUDIO_OUTPUT_FLAG_DIRECT) &&
@@ -2479,6 +2516,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->stream.resume = out_resume;
         out->stream.drain = out_drain;
         out->stream.flush = out_flush;
+        out->bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
 
         if (audio_extn_is_dolby_format(config->offload_info.format))
             out->compr_config.codec->id =
@@ -2505,14 +2543,25 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->compr_config.codec->ch_in =
                     audio_channel_count_from_out_mask(config->channel_mask);
         out->compr_config.codec->ch_out = out->compr_config.codec->ch_in;
-        out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
+        out->bit_width = config->offload_info.bit_width;
 
 #ifdef EXTN_OFFLOAD_ENABLED
         if (config->offload_info.format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD)
             out->compr_config.codec->format = SNDRV_PCM_FORMAT_S16_LE;
-        else if(config->offload_info.format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD)
+        if(config->offload_info.format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD)
             out->compr_config.codec->format = SNDRV_PCM_FORMAT_S24_LE;
 #endif
+
+        if (config->offload_info.bit_width == 24) {
+            out->compr_config.codec->format = SNDRV_PCM_FORMAT_S24_LE;
+        }
+
+        if (out->bit_width == 24 && !platform_check_24_bit_support()) {
+            ALOGW("24 bit support is not enabled, using 16 bit backend");
+            out->compr_config.codec->format = SNDRV_PCM_FORMAT_S16_LE;
+        }
+
+        out->compr_config.codec->options.flac_dec.sample_size = config->offload_info.bit_width;
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
@@ -3121,6 +3170,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->bluetooth_nrec = true;
     adev->acdb_settings = TTY_MODE_OFF;
     /* adev->cur_hdmi_channels = 0;  by calloc() */
+    adev->cur_codec_backend_samplerate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    adev->cur_codec_backend_bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     adev->snd_dev_ref_cnt = calloc(SND_DEVICE_MAX, sizeof(int));
     voice_init(adev);
     list_init(&adev->usecase_list);

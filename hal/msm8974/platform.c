@@ -1971,6 +1971,14 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
         fragment_size =  atoi(value) * 1024;
     }
 
+    // For FLAC use max size since it is loss less, and has sampling rates
+    // upto 192kHZ
+    if (info != NULL && !info->has_video &&
+        info->format == AUDIO_FORMAT_FLAC) {
+       fragment_size = MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+       ALOGV("FLAC fragment size %d", fragment_size);
+    }
+
     if (info != NULL && info->has_video && info->is_streaming) {
         fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE_FOR_AV_STREAMING;
         ALOGV("%s: offload fragment size reduced for AV streaming to %d",
@@ -2082,4 +2090,192 @@ int platform_set_snd_device_name(snd_device_t device, const char *name)
     device_table[device] = strdup(name);
 done:
     return ret;
+}
+
+bool platform_check_24_bit_support() {
+
+    char value[PROPERTY_VALUE_MAX] = {0};
+    property_get("audio.offload.24bit.enable", value, "0");
+    if (atoi(value)) {
+        ALOGW("Property audio.offload.24bit.enable is set");
+        return true;
+    }
+    return false;
+}
+
+int platform_set_codec_backend_cfg(struct audio_device* adev,
+                         unsigned int bit_width, unsigned int sample_rate)
+{
+    ALOGV("platform_set_codec_backend_cfg bw %d, sr %d", bit_width, sample_rate);
+
+    int ret = 0;
+    if (bit_width != adev->cur_codec_backend_bit_width) {
+        const char * mixer_ctl_name = "SLIM_0_RX Format";
+        struct  mixer_ctl *ctl;
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s: Could not get ctl for mixer command - %s",
+                    __func__, mixer_ctl_name);
+            return -EINVAL;
+        }
+
+        if (bit_width == 24) {
+                mixer_ctl_set_enum_by_string(ctl, "S24_LE");
+        } else {
+            mixer_ctl_set_enum_by_string(ctl, "S16_LE");
+            sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+        }
+        adev->cur_codec_backend_bit_width = bit_width;
+        ALOGE("Backend bit width is set to %d ", bit_width);
+    }
+
+    if ((adev->cur_codec_backend_bit_width == CODEC_BACKEND_DEFAULT_BIT_WIDTH &&
+             adev->cur_codec_backend_samplerate != CODEC_BACKEND_DEFAULT_SAMPLE_RATE) ||
+        (adev->cur_codec_backend_samplerate < sample_rate)) {
+
+            char *rate_str = NULL;
+            const char * mixer_ctl_name = "SLIM_0_RX SampleRate";
+            struct  mixer_ctl *ctl;
+
+            switch (sample_rate) {
+            case 8000:
+                rate_str = "KHZ_8";
+                break;
+            case 11025:
+                rate_str = "KHZ_11_025";
+                break;
+            case 16000:
+                rate_str = "KHZ_16";
+                break;
+            case 22050:
+                rate_str = "KHZ_22_05";
+                break;
+            case 32000:
+                rate_str = "KHZ_32";
+                break;
+            case 44100:
+                rate_str = "KHZ_44_1";
+                break;
+            case 48000:
+                rate_str = "KHZ_48";
+                break;
+            case 64000:
+                rate_str = "KHZ_64";
+                break;
+            case 88200:
+                rate_str = "KHZ_88_2";
+                break;
+            case 96000:
+                rate_str = "KHZ_96";
+                break;
+            case 176400:
+                rate_str = "KHZ_176_4";
+                break;
+            case 192000:
+                rate_str = "KHZ_192";
+                break;
+            default:
+                rate_str = "KHZ_48";
+                break;
+            }
+
+            ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+            if(!ctl) {
+                ALOGE("%s: Could not get ctl for mixer command - %s",
+                    __func__, mixer_ctl_name);
+                return -EINVAL;
+            }
+
+            ALOGV("Set sample rate as rate_str = %s", rate_str);
+            mixer_ctl_set_enum_by_string(ctl, rate_str);
+            adev->cur_codec_backend_samplerate = sample_rate;
+    }
+
+    return ret;
+}
+
+bool platform_check_codec_backend_cfg(struct audio_device* adev,
+                                   struct audio_usecase* usecase,
+                                   unsigned int* new_bit_width,
+                                   unsigned int* new_sample_rate)
+{
+    bool backend_change = false;
+    struct listnode *node;
+    struct stream_out *out = NULL;
+
+    // For voice calls use default configuration
+    // force routing is not required here, caller will do it anyway
+    if (adev->mode == AUDIO_MODE_IN_CALL ||
+        adev->mode == AUDIO_MODE_IN_COMMUNICATION) {
+        ALOGW("%s:Use default bw and sr for voice/voip calls ",__func__);
+        *new_bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+        *new_sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+        backend_change = true;
+    }
+
+
+    if (!backend_change) {
+        // go through all the offload usecases, and
+        // find the max bit width and samplerate
+        list_for_each(node, &adev->usecase_list) {
+            struct audio_usecase *curr_usecase;
+            curr_usecase = node_to_item(node, struct audio_usecase, list);
+            if (curr_usecase->id == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+                struct stream_out *out =
+                           (struct stream_out*) curr_usecase->stream.out;
+                if (out != NULL ) {
+                    ALOGV("Offload playback running bw %d sr %d",
+                              out->bit_width, out->sample_rate);
+                    if (*new_bit_width < out->bit_width) {
+                        *new_bit_width = out->bit_width;
+                    }
+                    if (*new_sample_rate < out->sample_rate) {
+                        *new_sample_rate = out->sample_rate;
+                    }
+                }
+            }
+        }
+    }
+
+    // Force routing if the expected bitwdith or samplerate
+    // is not same as current backend comfiguration
+    if ((*new_bit_width != adev->cur_codec_backend_bit_width) ||
+        (*new_sample_rate != adev->cur_codec_backend_samplerate)) {
+        backend_change = true;
+        ALOGW("Codec backend needs to be updated");
+    }
+
+    return backend_change;
+}
+
+bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct audio_usecase *usecase)
+{
+    // check if 24bit configuration is enabled first
+    if (!platform_check_24_bit_support()) {
+        ALOGW("24bit not enable, no need to check for backend change");
+        return false;
+    }
+
+    ALOGV("platform_check_and_set_codec_backend_cfg usecase = %d",usecase->id );
+
+    unsigned int new_bit_width, old_bit_width;
+    unsigned int new_sample_rate, old_sample_rate;
+
+    new_bit_width = old_bit_width = adev->cur_codec_backend_bit_width;
+    new_sample_rate = old_sample_rate = adev->cur_codec_backend_samplerate;
+
+    ALOGW("Codec backend bitwidth %d, samplerate %d", old_bit_width, old_sample_rate);
+    if (platform_check_codec_backend_cfg(adev, usecase,
+                                      &new_bit_width, &new_sample_rate)) {
+        platform_set_codec_backend_cfg(adev, new_bit_width, new_sample_rate);
+    }
+
+    if (old_bit_width != adev->cur_codec_backend_bit_width ||
+        old_sample_rate != adev->cur_codec_backend_samplerate) {
+        ALOGW("New codec backend bit width %d, sample rate %d",
+                    adev->cur_codec_backend_bit_width, adev->cur_codec_backend_samplerate);
+        return true;
+    }
+
+    return false;
 }
