@@ -430,8 +430,7 @@ void audio_extn_dolby_set_dmid(struct audio_device *adev)
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if ((usecase->type == PCM_PLAYBACK) &&
-            (usecase->id != USECASE_AUDIO_PLAYBACK_LOW_LATENCY))
+        if (usecase->type == PCM_PLAYBACK)
             send = true;
     }
     if (!send)
