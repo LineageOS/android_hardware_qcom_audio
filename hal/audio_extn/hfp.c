@@ -220,12 +220,17 @@ static int32_t stop_hfp(struct audio_device *adev)
 bool audio_extn_hfp_is_active(struct audio_device *adev)
 {
     struct audio_usecase *hfp_usecase = NULL;
-    hfp_usecase = get_usecase_from_list(adev, USECASE_AUDIO_HFP_SCO);
+    hfp_usecase = get_usecase_from_list(adev, hfpmod.ucid);
 
     if (hfp_usecase != NULL)
         return true;
     else
         return false;
+}
+
+audio_usecase_t audio_extn_hfp_get_usecase()
+{
+    return hfpmod.ucid;
 }
 
 void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *parms)
