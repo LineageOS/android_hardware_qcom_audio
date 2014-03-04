@@ -228,6 +228,9 @@ static char * device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET] = "speaker-and-anc-headphones",
     [SND_DEVICE_OUT_ANC_HANDSET] = "anc-handset",
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = "speaker-protected",
+    [SND_DEVICE_OUT_VOIP_HANDSET] = "voip-handset-comm",
+    [SND_DEVICE_OUT_VOIP_SPEAKER] = "voip-speaker-comm",
+    [SND_DEVICE_OUT_VOIP_HEADPHONES] = "voip-headset-comm",
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
@@ -278,6 +281,9 @@ static char * device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_DMIC_AEC_BROADSIDE] = "speaker-dmic-broadside",
     [SND_DEVICE_IN_SPEAKER_DMIC_NS_BROADSIDE] = "speaker-dmic-broadside",
     [SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_BROADSIDE] = "speaker-dmic-broadside",
+    [SND_DEVICE_IN_VOIP_HANDSET_MIC] = "voip-main-mic-comm",
+    [SND_DEVICE_IN_VOIP_SPEAKER_MIC] = "voip-sub-mic-comm",
+    [SND_DEVICE_IN_VOIP_HEADSET_MIC] = "voip-headset-mic-comm",
 };
 
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
@@ -1401,7 +1407,12 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
                 else
                     snd_device = SND_DEVICE_OUT_VOICE_ANC_HEADSET;
             } else {
-                snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
+                if (voice_extn_compress_voip_is_active(adev) &&
+                        voice_extn_dedicated_voip_device_prop_check()) {
+                    snd_device = SND_DEVICE_OUT_VOIP_HEADPHONES;
+                } else {
+                    snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
+                }
             }
         } else if (devices & AUDIO_DEVICE_OUT_ALL_SCO) {
             if (my_data->btsco_sample_rate == SAMPLE_RATE_16KHZ)
@@ -1409,7 +1420,12 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
             else
                 snd_device = SND_DEVICE_OUT_BT_SCO;
         } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
-            snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
+            if (voice_extn_compress_voip_is_active(adev) &&
+                    voice_extn_dedicated_voip_device_prop_check()) {
+                snd_device = SND_DEVICE_OUT_VOIP_SPEAKER;
+            } else {
+                snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
+            }
         } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
                    devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
             snd_device = SND_DEVICE_OUT_USB_HEADSET;
@@ -1418,6 +1434,9 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
             if (audio_extn_should_use_handset_anc(channel_count))
                 snd_device = SND_DEVICE_OUT_ANC_HANDSET;
+            else if (voice_extn_compress_voip_is_active(adev) &&
+                    voice_extn_dedicated_voip_device_prop_check())
+                snd_device = SND_DEVICE_OUT_VOIP_HANDSET;
             else
                 snd_device = SND_DEVICE_OUT_VOICE_HANDSET;
         } else if (devices & AUDIO_DEVICE_OUT_TELEPHONY_TX)
@@ -1571,7 +1590,15 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         if (out_device & AUDIO_DEVICE_OUT_SPEAKER)
             in_device = AUDIO_DEVICE_IN_BACK_MIC;
         if (adev->active_input) {
-            if (adev->active_input->enable_aec &&
+            if (voice_extn_dedicated_voip_device_prop_check()) {
+                if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
+                    snd_device = SND_DEVICE_IN_VOIP_SPEAKER_MIC;
+                } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+                    snd_device = SND_DEVICE_IN_VOIP_HANDSET_MIC;
+                } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+                    snd_device = SND_DEVICE_IN_VOIP_HEADSET_MIC;
+                }
+            } else if (adev->active_input->enable_aec &&
                     adev->active_input->enable_ns) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     if (my_data->fluence_type & FLUENCE_DUAL_MIC &&
