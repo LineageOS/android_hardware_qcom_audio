@@ -219,6 +219,7 @@ static bool is_tmus = false;
 
 static void check_operator()
 {
+#ifndef DISABLE_TMUS_AUDIO
     char value[PROPERTY_VALUE_MAX];
     int mccmnc;
     property_get("gsm.sim.operator.numeric",value,"0");
@@ -245,6 +246,7 @@ static void check_operator()
         is_tmus = true;
         break;
     }
+#endif
 }
 
 bool is_operator_tmus()
