@@ -39,6 +39,10 @@ ifeq ($(strip $(AUDIO_FEATURE_DYNAMIC_VOLUME_MIXER)),true)
     LOCAL_CFLAGS += -DDYNAMIC_VOLUME_MIXER
 endif
 
+ifneq ($(strip $(PRODUCT_BRAND)),google)
+    LOCAL_CFLAGS += -DDISABLE_TMUS_AUDIO
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
