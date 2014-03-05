@@ -152,7 +152,7 @@ static int usb_get_capability(char *type, int32_t *channels,
 
     file_size = st.st_size;
 
-    read_buf = (char *)calloc(1, USB_BUFF_SIZE);
+    read_buf = (char *)calloc(1, USB_BUFF_SIZE + 1);
     err = read(fd, read_buf, USB_BUFF_SIZE);
     str_start = strstr(read_buf, type);
     if (str_start == NULL) {
