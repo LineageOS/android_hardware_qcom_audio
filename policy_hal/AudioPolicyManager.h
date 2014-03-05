@@ -35,7 +35,9 @@ class AudioPolicyManager: public AudioPolicyManagerBase
 
 public:
                 AudioPolicyManager(AudioPolicyClientInterface *clientInterface)
-                : AudioPolicyManagerBase(clientInterface) {}
+                : AudioPolicyManagerBase(clientInterface) {
+                    mHdmiAudioDisabled = false;
+                    mHdmiAudioEvent = false; }
 
         virtual ~AudioPolicyManager() {}
 
@@ -88,6 +90,14 @@ protected:
 
         // returns the category the device belongs to with regard to volume curve management
         static device_category getDeviceCategory(audio_devices_t device);
+
+        static const char* HDMI_SPKR_STR;
+
+        //parameter indicates of HDMI speakers disabled from the Qualcomm settings
+        bool mHdmiAudioDisabled;
+
+        //parameter indicates if HDMI plug in/out detected
+        bool mHdmiAudioEvent;
 
 };
 };

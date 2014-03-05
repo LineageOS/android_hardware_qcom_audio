@@ -44,6 +44,7 @@ namespace android_audio_legacy {
 // ----------------------------------------------------------------------------
 // AudioPolicyInterface implementation
 // ----------------------------------------------------------------------------
+const char* AudioPolicyManager::HDMI_SPKR_STR = "hdmi_spkr";
 
 status_t AudioPolicyManager::setDeviceConnectionState(audio_devices_t device,
                                                       AudioSystem::device_connection_state state,
@@ -85,6 +86,15 @@ status_t AudioPolicyManager::setDeviceConnectionState(audio_devices_t device,
         // handle output device connection
         case AudioSystem::DEVICE_STATE_AVAILABLE:
             if (mAvailableOutputDevices & device) {
+#ifdef AUDIO_EXTN_HDMI_SPK_ENABLED
+                if ((popcount(device) == 1) && (device & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+                   if (!strncmp(device_address, HDMI_SPKR_STR, MAX_DEVICE_ADDRESS_LEN)) {
+                        mHdmiAudioDisabled = false;
+                    } else {
+                        mHdmiAudioEvent = true;
+                    }
+                }
+#endif
                 ALOGW("setDeviceConnectionState() device already connected: %x", device);
                 return INVALID_OPERATION;
             }
@@ -98,6 +108,18 @@ status_t AudioPolicyManager::setDeviceConnectionState(audio_devices_t device,
             // register new device as available
             mAvailableOutputDevices = (audio_devices_t)(mAvailableOutputDevices | device);
 
+#ifdef AUDIO_EXTN_HDMI_SPK_ENABLED
+            if ((popcount(device) == 1) && (device & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+                if (!strncmp(device_address, HDMI_SPKR_STR, MAX_DEVICE_ADDRESS_LEN)) {
+                    mHdmiAudioDisabled = false;
+                } else {
+                    mHdmiAudioEvent = true;
+                }
+                if (mHdmiAudioDisabled || !mHdmiAudioEvent) {
+                    mAvailableOutputDevices = (audio_devices_t)(mAvailableOutputDevices & ~device);
+                }
+            }
+#endif
             if (!outputs.isEmpty()) {
                 String8 paramStr;
                 if (mHasA2dp && audio_is_a2dp_device(device)) {
@@ -127,6 +149,15 @@ status_t AudioPolicyManager::setDeviceConnectionState(audio_devices_t device,
         // handle output device disconnection
         case AudioSystem::DEVICE_STATE_UNAVAILABLE: {
             if (!(mAvailableOutputDevices & device)) {
+#ifdef AUDIO_EXTN_HDMI_SPK_ENABLED
+                if ((popcount(device) == 1) && (device & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+                    if (!strncmp(device_address, HDMI_SPKR_STR, MAX_DEVICE_ADDRESS_LEN)) {
+                        mHdmiAudioDisabled = true;
+                    } else {
+                        mHdmiAudioEvent = false;
+                    }
+                }
+#endif
                 ALOGW("setDeviceConnectionState() device not connected: %x", device);
                 return INVALID_OPERATION;
             }
@@ -135,6 +166,15 @@ status_t AudioPolicyManager::setDeviceConnectionState(audio_devices_t device,
             // remove device from available output devices
             mAvailableOutputDevices = (audio_devices_t)(mAvailableOutputDevices & ~device);
 
+#ifdef AUDIO_EXTN_HDMI_SPK_ENABLED
+            if ((popcount(device) == 1) && (device & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+                if (!strncmp(device_address, HDMI_SPKR_STR, MAX_DEVICE_ADDRESS_LEN)) {
+                    mHdmiAudioDisabled = true;
+                } else {
+                    mHdmiAudioEvent = false;
+                }
+            }
+#endif
             checkOutputsForDevice(device, state, outputs);
             if (mHasA2dp && audio_is_a2dp_device(device)) {
                 // handle A2DP device disconnection
