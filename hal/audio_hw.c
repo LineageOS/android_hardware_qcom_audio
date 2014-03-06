@@ -2668,6 +2668,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->snd_dev_ref_cnt = calloc(SND_DEVICE_MAX, sizeof(int));
     voice_init(adev);
     list_init(&adev->usecase_list);
+    adev->cur_wfd_channels = 2;
 
     /* Loads platform specific libraries dynamically */
     adev->platform = platform_init(adev);
