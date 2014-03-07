@@ -1176,8 +1176,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC &&
                 channel_count == 1 ) {
             if(my_data->fluence_type & FLUENCE_DUAL_MIC &&
-                    my_data->fluence_in_audio_rec)
+                    my_data->fluence_in_audio_rec) {
                 snd_device = SND_DEVICE_IN_HANDSET_DMIC;
+                set_echo_reference(adev->mixer, EC_REF_RX);
+            }
         }
     } else if (source == AUDIO_SOURCE_FM_RX ||
                source == AUDIO_SOURCE_FM_RX_A2DP) {
