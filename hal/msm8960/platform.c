@@ -551,6 +551,12 @@ int platform_set_mic_mute(void *platform, bool state)
     return ret;
 }
 
+int platform_set_device_mute(void *platform, bool state, char *dir)
+{
+    LOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
 snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devices)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
