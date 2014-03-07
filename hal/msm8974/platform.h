@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -24,6 +24,11 @@ enum {
     FLUENCE_NONE,
     FLUENCE_DUAL_MIC = 0x1,
     FLUENCE_QUAD_MIC = 0x2,
+};
+
+enum {
+    FLUENCE_ENDFIRE = 0x1,
+    FLUENCE_BROADSIDE = 0x2,
 };
 
 /*
@@ -120,6 +125,11 @@ enum {
     SND_DEVICE_IN_HANDSET_STEREO_DMIC,
     SND_DEVICE_IN_SPEAKER_STEREO_DMIC,
     SND_DEVICE_IN_CAPTURE_VI_FEEDBACK,
+    SND_DEVICE_IN_VOICE_SPEAKER_DMIC_BROADSIDE,
+    SND_DEVICE_IN_SPEAKER_DMIC_BROADSIDE,
+    SND_DEVICE_IN_SPEAKER_DMIC_AEC_BROADSIDE,
+    SND_DEVICE_IN_SPEAKER_DMIC_NS_BROADSIDE,
+    SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_BROADSIDE,
     SND_DEVICE_IN_END,
 
     SND_DEVICE_MAX = SND_DEVICE_IN_END,
