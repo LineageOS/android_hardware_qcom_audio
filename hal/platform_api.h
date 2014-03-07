@@ -45,6 +45,7 @@ int platform_stop_voice_call(void *platform, uint32_t vsid);
 int platform_set_voice_volume(void *platform, int volume);
 int platform_set_mic_mute(void *platform, bool state);
 int platform_get_sample_rate(void *platform, uint32_t *rate);
+int platform_set_device_mute(void *platform, bool state, char *dir);
 snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devices);
 snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_device);
 int platform_set_hdmi_channels(void *platform, int channel_count);

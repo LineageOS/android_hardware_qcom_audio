@@ -38,6 +38,8 @@
 #define AUDIO_PARAMETER_KEY_CALL_STATE          "call_state"
 #define AUDIO_PARAMETER_KEY_AUDIO_MODE          "audio_mode"
 #define AUDIO_PARAMETER_KEY_ALL_CALL_STATES     "all_call_states"
+#define AUDIO_PARAMETER_KEY_DEVICE_MUTE         "device_mute"
+#define AUDIO_PARAMETER_KEY_DIRECTION           "direction"
 
 #define VOICE_EXTN_PARAMETER_VALUE_MAX_LEN 256
 
@@ -428,6 +430,7 @@ int voice_extn_set_parameters(struct audio_device *adev,
     int value;
     int ret = 0, err;
     char *kv_pairs = str_parms_to_str(parms);
+    char str_value[256] = {0};
 
     ALOGV_IF(kv_pairs != NULL, "%s: enter: %s", __func__, kv_pairs);
 
@@ -453,8 +456,34 @@ int voice_extn_set_parameters(struct audio_device *adev,
             ret = -EINVAL;
             goto done;
         }
-    } else {
-        ALOGV("%s: Not handled here", __func__);
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_DEVICE_MUTE, str_value,
+                            sizeof(str_value));
+    if (err >= 0) {
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_DEVICE_MUTE);
+        bool mute = false;
+
+        if (!strncmp("true", str_value, sizeof("true"))) {
+            mute = true;
+        }
+
+        err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_DIRECTION, str_value,
+                                sizeof(str_value));
+        if (err >= 0) {
+            str_parms_del(parms, AUDIO_PARAMETER_KEY_DIRECTION);
+        } else {
+            ALOGE("%s: direction key not found", __func__);
+            ret = -EINVAL;
+            goto done;
+        }
+
+        ret = platform_set_device_mute(adev->platform, mute, str_value);
+        if (ret != 0) {
+            ALOGE("%s: Failed to set mute err:%d", __func__, ret);
+            ret = -EINVAL;
+            goto done;
+        }
     }
 
 done:
