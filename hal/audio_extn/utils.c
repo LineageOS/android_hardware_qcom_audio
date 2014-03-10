@@ -174,7 +174,7 @@ static int parse_bit_width_names(char *name)
 
 static int parse_app_type_names(void *platform, char *name)
 {
-    int app_type = 0; /* TODO: default app type from acdb when exposed using "platform" */
+    int app_type = platform_get_default_app_type(platform);
     char *str = strtok(name, "|");
 
     if (str != NULL && strcmp(str, DYNAMIC_VALUE_TAG))
@@ -248,7 +248,7 @@ static void send_app_type_cfg(void *platform, struct mixer *mixer,
     }
     if (streams_output_cfg_list == NULL) {
         app_type_cfg[length++] = 1;
-        app_type_cfg[length++] = 0; /* TODO: default app type from acdb when exposed from "platform" */
+        app_type_cfg[length++] = platform_get_default_app_type(platform);
         app_type_cfg[length++] = 48000;
         app_type_cfg[length++] = 16;
         mixer_ctl_set_array(ctl, app_type_cfg, length);
@@ -383,7 +383,7 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
         }
     }
     ALOGW("%s: App type could not be selected. Falling back to default", __func__);
-    app_type_cfg->app_type = 0; /* TODO: default app type from acdb when exposed from "platform" */
+    app_type_cfg->app_type = platform_get_default_app_type(platform);
     app_type_cfg->sample_rate = 48000;
     app_type_cfg->bit_width = 16;
 }
@@ -444,3 +444,26 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
 exit_send_app_type_cfg:
     return rc;
 }
+
+void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
+                                             struct audio_usecase *usecase)
+{
+    int type = usecase->type;
+
+    if (type == PCM_PLAYBACK) {
+        struct stream_out *out = usecase->stream.out;
+        int snd_device = usecase->out_snd_device;
+        snd_device = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
+                     audio_extn_get_spkr_prot_snd_device(snd_device) : snd_device;
+        platform_send_audio_calibration(adev->platform, usecase->out_snd_device,
+                                        out->app_type_cfg.app_type,
+                                        out->app_type_cfg.sample_rate);
+    }
+    if ((type == PCM_HFP_CALL) || (type == PCM_CAPTURE)) {
+        /* when app type is default. the sample rate is not used to send cal */
+        platform_send_audio_calibration(adev->platform, usecase->in_snd_device,
+                                        platform_get_default_app_type(adev->platform),
+                                        48000);
+    }
+}
+

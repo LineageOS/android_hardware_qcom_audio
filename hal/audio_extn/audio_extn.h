@@ -265,4 +265,7 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
                                   audio_format_t format,
                                   struct stream_app_type_cfg *app_type_cfg);
 int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase);
+void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
+                                             struct audio_usecase *usecase);
+
 #endif /* AUDIO_EXTN_H */
