@@ -257,6 +257,7 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_dolby_set_dmid(adev);
     audio_extn_dolby_set_endpoint(adev);
 #endif
+    audio_extn_utils_send_app_type_cfg(usecase);
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(mixer_path, snd_device);
     ALOGV("%s: apply mixer and update path: %s", __func__, mixer_path);
@@ -2218,6 +2219,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_out *out;
     int i, ret = 0;
+    audio_format_t format;
 
     *stream_out = NULL;
     out = (struct stream_out *)calloc(1, sizeof(struct stream_out));
@@ -2240,7 +2242,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->flags = flags;
     out->devices = devices;
     out->dev = adev;
-    out->format = config->format;
+    format = out->format = config->format;
     out->sample_rate = config->sample_rate;
     out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
     out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_STEREO;
@@ -2306,7 +2308,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->channel_mask = config->channel_mask;
             config->offload_info.channel_mask = config->channel_mask;
         }
-        out->format = config->offload_info.format;
+        format = out->format = config->offload_info.format;
         out->sample_rate = config->offload_info.sample_rate;
 
         out->stream.set_callback = out_set_callback;
@@ -2366,16 +2368,21 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             goto error_open;
         }
     } else if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
+        format = AUDIO_FORMAT_PCM_16_BIT;
         out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
         out->config = pcm_config_low_latency;
         out->sample_rate = out->config.rate;
     } else {
         /* primary path is the default path selected if no other outputs are available/suitable */
+        format = AUDIO_FORMAT_PCM_16_BIT;
         out->usecase = USECASE_AUDIO_PLAYBACK_PRIMARY;
         out->config = pcm_config_deep_buffer;
         out->sample_rate = out->config.rate;
     }
 
+    audio_extn_utils_update_stream_app_type_cfg(adev->platform,
+                                                &adev->streams_output_cfg_list,
+                                                flags, format, &out->app_type_cfg);
     if ((out->usecase == USECASE_AUDIO_PLAYBACK_PRIMARY) ||
         (flags & AUDIO_OUTPUT_FLAG_PRIMARY)) {
         /* Ensure the default output is not selected twice */
@@ -2788,6 +2795,7 @@ static int adev_close(hw_device_t *device)
 
     if ((--audio_device_ref_count) == 0) {
         audio_extn_listen_deinit(adev);
+        audio_extn_utils_release_streams_output_cfg_list(&adev->streams_output_cfg_list);
         audio_route_free(adev->audio_route);
         free(adev->snd_dev_ref_cnt);
         platform_deinit(adev->platform);
@@ -2906,6 +2914,9 @@ static int adev_open(const hw_module_t *module, const char *name,
     }
 
     *device = &adev->device.common;
+
+    audio_extn_utils_update_streams_output_cfg_list(adev->platform, adev->mixer,
+                                                    &adev->streams_output_cfg_list);
 
     audio_device_ref_count++;
     pthread_mutex_unlock(&adev_init_lock);
