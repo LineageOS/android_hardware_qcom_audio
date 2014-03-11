@@ -106,6 +106,7 @@ int start_call(struct audio_device *adev, audio_usecase_t usecase_id)
     int i, ret = 0;
     struct audio_usecase *uc_info;
     int pcm_dev_rx_id, pcm_dev_tx_id;
+    uint32_t sample_rate = 8000;
     struct voice_session *session = NULL;
     struct pcm_config voice_config = pcm_config_voice_call;
 
@@ -133,6 +134,13 @@ int start_call(struct audio_device *adev, audio_usecase_t usecase_id)
         ret = -EIO;
         goto error_start_voice;
     }
+    ret = platform_get_sample_rate(adev->platform, &sample_rate);
+    if (ret < 0) {
+        ALOGE("platform_get_sample_rate error %d\n", ret);
+    } else {
+        voice_config.rate = sample_rate;
+    }
+    ALOGD("voice_config.rate %d\n", voice_config.rate);
 
     ALOGV("%s: Opening PCM playback device card_id(%d) device_id(%d)",
           __func__, adev->snd_card, pcm_dev_rx_id);
