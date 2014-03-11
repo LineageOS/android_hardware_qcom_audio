@@ -8,7 +8,7 @@ LOCAL_ARM_MODE := arm
 
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter msm8974 msm8226 msm8610 apq8084 msm8916,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8974 msm8226 msm8610 apq8084,$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM = msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -23,6 +23,11 @@ ifneq ($(filter apq8084,$(TARGET_BOARD_PLATFORM)),)
 endif
 endif
 
+ifneq ($(filter msm8916,$(TARGET_BOARD_PLATFORM)),)
+  AUDIO_PLATFORM = msm8916
+  MULTIPLE_HW_VARIANTS_ENABLED := true
+  LOCAL_CFLAGS := -DPLATFORM_MSM8916
+endif
 
 LOCAL_SRC_FILES := \
 	audio_hw.c \
