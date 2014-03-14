@@ -802,7 +802,7 @@ status_t AudioHardwareALSA::setParameters(const String8& keyValuePairs)
         key = String8(CALL_STATE_KEY);
         if (param.getInt(key, (int &)call_state) == NO_ERROR) {
             param.remove(key);
-            if (isAnyCallActive() || (call_state == CALL_ACTIVE)) {
+            if (isAnyCallActive() || (call_state == CALL_ACTIVE) ||((call_state == CALL_INACTIVE) && mVSID == vsid)) {
                 mVSID = vsid;
                 mCallState = call_state;
                 ALOGD("%s() vsid:%x, callstate:%x", __func__, mVSID, call_state);
@@ -2459,7 +2459,7 @@ bool AudioHardwareALSA::routeCall(int device, int newMode, uint32_t vsid)
         break;
 
     case CALL_ACTIVE:
-        if (*curCallState == CALL_INACTIVE) {
+        if (*curCallState == CALL_INACTIVE && newMode == AUDIO_MODE_IN_CALL) {
             ALOGV("%s(): Start call for vsid:%x ",__func__, vsid);
 
             status = enableVoiceCall(newMode, device, vsid);
