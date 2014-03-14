@@ -2737,7 +2737,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 #endif
             out->compr_config.codec->id =
                 get_snd_codec_id(config->offload_info.format);
-
+#ifndef PLATFORM_MSM8960
         if (audio_is_offload_pcm(config->offload_info.format)) {
             out->compr_config.fragment_size =
                        platform_get_pcm_offload_buffer_size(&config->offload_info);
@@ -2745,6 +2745,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->compr_config.fragment_size =
                        platform_get_compress_offload_buffer_size(&config->offload_info);
         }
+#else
+        out->compr_config.fragment_size = 0;
+#endif
         out->compr_config.fragments = COMPRESS_OFFLOAD_NUM_FRAGMENTS;
         out->compr_config.codec->sample_rate =
                     compress_get_alsa_rate(config->offload_info.sample_rate);
