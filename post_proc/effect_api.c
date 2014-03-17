@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -391,7 +391,7 @@ void offload_reverb_set_preset(struct reverb_params *reverb, int preset)
 {
     ALOGV("%s", __func__);
     if (preset && (preset <= NUM_OSL_REVERB_PRESETS_SUPPORTED))
-        reverb->preset = map_reverb_opensl_preset_2_offload_preset[preset][1];
+        reverb->preset = map_reverb_opensl_preset_2_offload_preset[preset-1][1];
 }
 
 void offload_reverb_set_wet_mix(struct reverb_params *reverb, int wet_mix)
