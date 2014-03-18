@@ -106,8 +106,12 @@ protected:
         //parameter indicates if HDMI plug in/out detected
         bool mHdmiAudioEvent;
 
+
 private:
         void handleNotificationRoutingForStream(AudioSystem::stream_type stream);
+
+        // Used for voip + voice concurrency usecase
+        int mPrevPhoneState;
 
 };
 };
