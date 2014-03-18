@@ -1986,27 +1986,17 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
 
 uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
 {
-    uint32_t fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
+    uint32_t fragment_size = 0;
     uint32_t bits_per_sample = 16;
+    char value[PROPERTY_VALUE_MAX] = {0};
+    char propValue[PROPERTY_VALUE_MAX] = {0};
+    bool track_offload = false;
+
+    property_get("audio.offload.track.enabled", value, "0");
+    track_offload = atoi(value) || !strncmp("true", propValue, sizeof("true"));
 
     if (info->format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD) {
         bits_per_sample = 32;
-    }
-
-    if (!info->has_video) {
-        fragment_size = MAX_PCM_OFFLOAD_FRAGMENT_SIZE;
-
-    } else if (info->has_video && info->is_streaming) {
-        fragment_size = (PCM_OFFLOAD_BUFFER_DURATION_FOR_AV_STREAMING
-                                     * info->sample_rate
-                                     * (bits_per_sample >> 3)
-                                     * popcount(info->channel_mask))/1000;
-
-    } else if (info->has_video) {
-        fragment_size = (PCM_OFFLOAD_BUFFER_DURATION_FOR_AV
-                                     * info->sample_rate
-                                     * (bits_per_sample >> 3)
-                                     * popcount(info->channel_mask))/1000;
     }
 
     char value[PROPERTY_VALUE_MAX] = {0};
@@ -2016,7 +2006,32 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
         ALOGV("Using buffer size from sys prop %d", fragment_size);
     }
 
-    fragment_size = ALIGN( fragment_size, 1024);
+    if(track_offload && info->use_small_bufs &&
+          (property_get("audio.offload.track.buffer.size", value, "")) &&
+           atoi(value)) {
+        ALOGV("Track offload Fragment size set by property to %dkb", atoi(value));
+        fragment_size =  atoi(value) * 1024;
+    } else {
+        fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
+    }
+
+    if(!info->use_small_bufs) {
+        if (info->has_video) {
+            fragment_size = MAX_PCM_OFFLOAD_FRAGMENT_SIZE;
+        } else if (info->has_video && info->is_streaming) {
+            fragment_size = (PCM_OFFLOAD_BUFFER_DURATION_FOR_AV_STREAMING
+                            * info->sample_rate
+                            * bits_per_sample
+                            * popcount(info->channel_mask))/1000;
+        } else if (info->has_video) {
+            fragment_size = (PCM_OFFLOAD_BUFFER_DURATION_FOR_AV
+                            * info->sample_rate
+                            * bits_per_sample
+                            * popcount(info->channel_mask))/1000;
+        }
+    }
+
+    fragment_size = ALIGN(fragment_size, 1024);
 
     if(fragment_size < MIN_PCM_OFFLOAD_FRAGMENT_SIZE)
         fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
