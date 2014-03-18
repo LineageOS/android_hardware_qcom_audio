@@ -1892,10 +1892,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->config.rate = config->sample_rate;
         out->config.channels = popcount(out->channel_mask);
         out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels * 2);
-    } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
-        out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
-        out->config = pcm_config_deep_buffer;
-        out->sample_rate = out->config.rate;
     } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         if (config->offload_info.version != AUDIO_INFO_INITIALIZER.version ||
             config->offload_info.size != AUDIO_INFO_INITIALIZER.size) {
@@ -1947,10 +1943,32 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                 __func__, config->offload_info.version,
                 config->offload_info.bit_rate);
     } else {
-        out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
-        out->config = pcm_config_low_latency;
+        if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
+            out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
+            out->config = pcm_config_deep_buffer;
+        } else {
+            out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
+            out->config = pcm_config_low_latency;
+        }
+        if (config->format != audio_format_from_pcm_format(out->config.format)) {
+            if (k_enable_extended_precision
+                    && pcm_params_format_test(adev->use_case_table[out->usecase],
+                            pcm_format_from_audio_format(config->format))) {
+                out->config.format = pcm_format_from_audio_format(config->format);
+                /* out->format already set to config->format */
+            } else {
+                /* deny the externally proposed config format
+                 * and use the one specified in audio_hw layer configuration.
+                 * Note: out->format is returned by out->stream.common.get_format()
+                 * and is used to set config->format in the code several lines below.
+                 */
+                out->format = audio_format_from_pcm_format(out->config.format);
+            }
+        }
         out->sample_rate = out->config.rate;
     }
+    ALOGV("%s: Usecase(%s) config->format %#x  out->config.format %#x\n",
+            __func__, use_case_table[out->usecase], config->format, out->config.format);
 
     if (flags & AUDIO_OUTPUT_FLAG_PRIMARY) {
         if(adev->primary_output == NULL)
