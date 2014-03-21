@@ -40,6 +40,7 @@
 #include <cutils/sched_policy.h>
 
 #include <hardware/audio_effect.h>
+#include <hardware/audio_alsaops.h>
 #include <system/thread_defs.h>
 #include <audio_effects/effect_aec.h>
 #include <audio_effects/effect_ns.h>
@@ -54,6 +55,11 @@
 /* ToDo: Check and update a proper value in msec */
 #define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 96
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
+
+/* This constant enables extended precision handling.
+ * TODO The flag is off until more testing is done.
+ */
+static const bool k_enable_extended_precision = false;
 
 struct pcm_config pcm_config_deep_buffer = {
     .channels = 2,
@@ -934,8 +940,8 @@ int start_output_stream(struct stream_out *out)
 
     select_devices(adev, out->usecase);
 
-    ALOGV("%s: Opening PCM device card_id(%d) device_id(%d)",
-          __func__, 0, out->pcm_device_id);
+    ALOGV("%s: Opening PCM device card_id(%d) device_id(%d) format(%#x)",
+          __func__, SOUND_CARD, out->pcm_device_id, out->config.format);
     if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
         out->pcm = pcm_open(SOUND_CARD, out->pcm_device_id,
                                PCM_OUT | PCM_MONOTONIC, &out->config);
@@ -2307,12 +2313,150 @@ static int adev_dump(const audio_hw_device_t *device, int fd)
     return 0;
 }
 
+/* verifies input and output devices and their capabilities.
+ *
+ * This verification is required when enabling extended bit-depth or
+ * sampling rates, as not all qcom products support it.
+ *
+ * Suitable for calling only on initialization such as adev_open().
+ * It fills the audio_device use_case_table[] array.
+ *
+ * Has a side-effect that it needs to configure audio routing / devices
+ * in order to power up the devices and read the device parameters.
+ * It does not acquire any hw device lock. Should restore the devices
+ * back to "normal state" upon completion.
+ */
+static int adev_verify_devices(struct audio_device *adev)
+{
+    /* enumeration is a bit difficult because one really wants to pull
+     * the use_case, device id, etc from the hidden pcm_device_table[].
+     * In this case there are the following use cases and device ids.
+     *
+     * [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {0, 0},
+     * [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = {15, 15},
+     * [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {1, 1},
+     * [USECASE_AUDIO_PLAYBACK_OFFLOAD] = {9, 9},
+     * [USECASE_AUDIO_RECORD] = {0, 0},
+     * [USECASE_AUDIO_RECORD_LOW_LATENCY] = {15, 15},
+     * [USECASE_VOICE_CALL] = {2, 2},
+     *
+     * USECASE_AUDIO_PLAYBACK_OFFLOAD, USECASE_AUDIO_PLAYBACK_MULTI_CH omitted.
+     * USECASE_VOICE_CALL omitted, but possible for either input or output.
+     */
+
+    /* should be the usecases enabled in adev_open_input_stream() */
+    static const int test_in_usecases[] = {
+             USECASE_AUDIO_RECORD,
+             USECASE_AUDIO_RECORD_LOW_LATENCY, /* does not appear to be used */
+    };
+    /* should be the usecases enabled in adev_open_output_stream()*/
+    static const int test_out_usecases[] = {
+            USECASE_AUDIO_PLAYBACK_DEEP_BUFFER,
+            USECASE_AUDIO_PLAYBACK_LOW_LATENCY,
+    };
+    static const usecase_type_t usecase_type_by_dir[] = {
+            PCM_PLAYBACK,
+            PCM_CAPTURE,
+    };
+    static const unsigned flags_by_dir[] = {
+            PCM_OUT,
+            PCM_IN,
+    };
+
+    size_t i;
+    unsigned dir;
+    const unsigned card_id = SOUND_CARD;
+    char info[512]; /* for possible debug info */
+
+    for (dir = 0; dir < 2; ++dir) {
+        const usecase_type_t usecase_type = usecase_type_by_dir[dir];
+        const unsigned flags_dir = flags_by_dir[dir];
+        const size_t testsize =
+                dir ? ARRAY_SIZE(test_in_usecases) : ARRAY_SIZE(test_out_usecases);
+        const int *testcases =
+                dir ? test_in_usecases : test_out_usecases;
+        const audio_devices_t audio_device =
+                dir ? AUDIO_DEVICE_IN_BUILTIN_MIC : AUDIO_DEVICE_OUT_SPEAKER;
+
+        for (i = 0; i < testsize; ++i) {
+            const audio_usecase_t audio_usecase = testcases[i];
+            int device_id;
+            snd_device_t snd_device;
+            struct pcm_params **pparams;
+            struct stream_out out;
+            struct stream_in in;
+            struct audio_usecase uc_info;
+            int retval;
+
+            pparams = &adev->use_case_table[audio_usecase];
+            pcm_params_free(*pparams); /* can accept null input */
+            *pparams = NULL;
+
+            /* find the device ID for the use case (signed, for error) */
+            device_id = platform_get_pcm_device_id(audio_usecase, usecase_type);
+            if (device_id < 0)
+                continue;
+
+            /* prepare structures for device probing */
+            memset(&uc_info, 0, sizeof(uc_info));
+            uc_info.id = audio_usecase;
+            uc_info.type = usecase_type;
+            if (dir) {
+                adev->active_input = &in;
+                memset(&in, 0, sizeof(in));
+                in.device = audio_device;
+                in.source = AUDIO_SOURCE_VOICE_COMMUNICATION;
+                uc_info.stream.in = &in;
+            }  else {
+                adev->active_input = NULL;
+            }
+            memset(&out, 0, sizeof(out));
+            out.devices = audio_device; /* only field needed in select_devices */
+            uc_info.stream.out = &out;
+            uc_info.devices = audio_device;
+            uc_info.in_snd_device = SND_DEVICE_NONE;
+            uc_info.out_snd_device = SND_DEVICE_NONE;
+            list_add_tail(&adev->usecase_list, &uc_info.list);
+
+            /* select device - similar to start_(in/out)put_stream() */
+            retval = select_devices(adev, audio_usecase);
+            if (retval >= 0) {
+                *pparams = pcm_params_get(card_id, device_id, flags_dir);
+#if LOG_NDEBUG == 0
+                if (*pparams) {
+                    ALOGV("%s: (%s) card %d  device %d", __func__,
+                            dir ? "input" : "output", card_id, device_id);
+                    pcm_params_to_string(*pparams, info, ARRAY_SIZE(info));
+                    ALOGV(info); /* print parameters */
+                } else {
+                    ALOGV("%s: cannot locate card %d  device %d", __func__, card_id, device_id);
+                }
+#endif
+            }
+
+            /* deselect device - similar to stop_(in/out)put_stream() */
+            /* 1. Get and set stream specific mixer controls */
+            retval = disable_audio_route(adev, &uc_info, true);
+            /* 2. Disable the rx device */
+            retval = disable_snd_device(adev,
+                    dir ? uc_info.in_snd_device : uc_info.out_snd_device, true);
+            list_remove(&uc_info.list);
+        }
+    }
+    adev->active_input = NULL; /* restore adev state */
+    return 0;
+}
+
 static int adev_close(hw_device_t *device)
 {
+    size_t i;
     struct audio_device *adev = (struct audio_device *)device;
     audio_route_free(adev->audio_route);
     free(adev->snd_dev_ref_cnt);
     platform_deinit(adev->platform);
+    for (i = 0; i < ARRAY_SIZE(adev->use_case_table); ++i) {
+        pcm_params_free(adev->use_case_table[i]);
+    }
     free(device);
     return 0;
 }
@@ -2394,6 +2538,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     }
 
     *device = &adev->device.common;
+    if (k_enable_extended_precision)
+        adev_verify_devices(adev);
 
     ALOGV("%s: exit", __func__);
     return 0;
