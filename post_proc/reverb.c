@@ -309,6 +309,7 @@ int reverb_get_parameter(effect_context_t *context, effect_param_t *p,
             return -EINVAL;
         *(uint16_t *)value = reverb_ctxt->next_preset;
         ALOGV("get REVERB_PARAM_PRESET, preset %d", reverb_ctxt->next_preset);
+        return 0;
     }
     switch (param) {
     case REVERB_PARAM_ROOM_LEVEL:
@@ -464,6 +465,7 @@ int reverb_set_parameter(effect_context_t *context, effect_param_t *p,
             return -EINVAL;
         }
         reverb_set_preset(reverb_ctxt, preset);
+        return 0;
     }
     switch (param) {
     case REVERB_PARAM_PROPERTIES:
@@ -603,6 +605,14 @@ int reverb_start(effect_context_t *context, output_context_t *output)
 
     ALOGV("%s", __func__);
     reverb_ctxt->ctl = output->ctl;
+    if (offload_reverb_get_enable_flag(&(reverb_ctxt->offload_reverb))) {
+        if (reverb_ctxt->ctl && reverb_ctxt->preset) {
+            offload_reverb_send_params(reverb_ctxt->ctl, reverb_ctxt->offload_reverb,
+                                       OFFLOAD_SEND_REVERB_ENABLE_FLAG |
+                                       OFFLOAD_SEND_REVERB_PRESET);
+        }
+    }
+
     return 0;
 }
 
