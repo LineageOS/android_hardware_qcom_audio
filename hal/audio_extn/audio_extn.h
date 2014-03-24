@@ -166,7 +166,7 @@ void audio_extn_dolby_set_dmid(struct audio_device *adev);
 #endif
 
 #ifndef DS1_DOLBY_DDP_ENABLED
-#define audio_extn_dolby_set_endpoint()                 (0)
+#define audio_extn_dolby_set_endpoint(adev)                 (0)
 #else
 void audio_extn_dolby_set_endpoint(struct audio_device *adev);
 #endif
@@ -174,7 +174,7 @@ void audio_extn_dolby_set_endpoint(struct audio_device *adev);
 #ifndef DS1_DOLBY_DDP_ENABLED
 #define audio_extn_ddp_set_parameters(adev, parms)      (0)
 #define audio_extn_is_dolby_format(format)              (0)
-#define audio_extn_dolby_get_snd_codec_id(format)       (0)
+#define audio_extn_dolby_get_snd_codec_id(adev, out, format)       (0)
 #define audio_extn_dolby_send_ddp_endp_params(adev)     (0)
 #else
 bool audio_extn_is_dolby_format(audio_format_t format);
