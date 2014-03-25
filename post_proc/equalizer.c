@@ -87,7 +87,7 @@ const uint16_t equalizer_band_presets_freq[NUM_EQ_BANDS] = {
 
 int equalizer_get_band_level(equalizer_context_t *context, int32_t band)
 {
-    ALOGV("%s: band: %d level: %d", __func__, band,
+    ALOGV("%s: ctxt %p, band: %d level: %d", __func__, context, band,
            context->band_levels[band] * 100);
     return context->band_levels[band] * 100;
 }
@@ -95,7 +95,7 @@ int equalizer_get_band_level(equalizer_context_t *context, int32_t band)
 int equalizer_set_band_level(equalizer_context_t *context, int32_t band,
                              int32_t level)
 {
-    ALOGV("%s: band: %d, level: %d", __func__, band, level);
+    ALOGV("%s: ctxt %p, band: %d, level: %d", __func__, context, band, level);
     if (level > 0) {
         level = (int)((level+50)/100);
     } else {
@@ -118,7 +118,7 @@ int equalizer_set_band_level(equalizer_context_t *context, int32_t band,
 
 int equalizer_get_center_frequency(equalizer_context_t *context, int32_t band)
 {
-    ALOGV("%s: band: %d", __func__, band);
+    ALOGV("%s: ctxt %p, band: %d", __func__, context, band);
     return (equalizer_band_freq_range[band][0] +
             equalizer_band_freq_range[band][1]) / 2;
 }
@@ -126,7 +126,7 @@ int equalizer_get_center_frequency(equalizer_context_t *context, int32_t band)
 int equalizer_get_band_freq_range(equalizer_context_t *context, int32_t band,
                                   uint32_t *low, uint32_t *high)
 {
-    ALOGV("%s: band: %d", __func__, band);
+    ALOGV("%s: ctxt %p, band: %d", __func__, context, band);
     *low = equalizer_band_freq_range[band][0];
     *high = equalizer_band_freq_range[band][1];
    return 0;
@@ -136,7 +136,7 @@ int equalizer_get_band(equalizer_context_t *context, uint32_t freq)
 {
     int i;
 
-    ALOGV("%s: freq: %d", __func__, freq);
+    ALOGV("%s: ctxt %p, freq: %d", __func__, context, freq);
     for(i = 0; i < NUM_EQ_BANDS; i++) {
         if (freq <= equalizer_band_freq_range[i][1]) {
             return i;
@@ -147,7 +147,7 @@ int equalizer_get_band(equalizer_context_t *context, uint32_t freq)
 
 int equalizer_get_preset(equalizer_context_t *context)
 {
-    ALOGV("%s: preset: %d", __func__, context->preset);
+    ALOGV("%s: ctxt %p, preset: %d", __func__, context, context->preset);
     return context->preset;
 }
 
@@ -155,7 +155,7 @@ int equalizer_set_preset(equalizer_context_t *context, int preset)
 {
     int i;
 
-    ALOGV("%s: preset: %d", __func__, preset);
+    ALOGV("%s: ctxt %p, preset: %d", __func__, context, preset);
     context->preset = preset;
     for (i=0; i<NUM_EQ_BANDS; i++)
         context->band_levels[i] =
@@ -176,7 +176,8 @@ int equalizer_set_preset(equalizer_context_t *context, int preset)
 const char * equalizer_get_preset_name(equalizer_context_t *context,
                                        int32_t preset)
 {
-    ALOGV("%s: preset: %s", __func__, equalizer_preset_names[preset]);
+    ALOGV("%s: ctxt %p, preset: %s", __func__, context,
+                        equalizer_preset_names[preset]);
     if (preset == PRESET_CUSTOM) {
         return "Custom";
     } else {
@@ -186,7 +187,7 @@ const char * equalizer_get_preset_name(equalizer_context_t *context,
 
 int equalizer_get_num_presets(equalizer_context_t *context)
 {
-    ALOGV("%s: presets_num: %d", __func__,
+    ALOGV("%s: ctxt %p, presets_num: %d", __func__, context,
            sizeof(equalizer_preset_names)/sizeof(char *));
     return sizeof(equalizer_preset_names)/sizeof(char *);
 }
@@ -203,7 +204,7 @@ int equalizer_get_parameter(effect_context_t *context, effect_param_t *p,
     void *value = p->data + voffset;
     int i;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p, param %d", __func__, eq_ctxt, param);
 
     p->status = 0;
 
@@ -255,18 +256,15 @@ int equalizer_get_parameter(effect_context_t *context, effect_param_t *p,
 
     switch (param) {
     case EQ_PARAM_NUM_BANDS:
-	ALOGV("%s: EQ_PARAM_NUM_BANDS", __func__);
         *(uint16_t *)value = (uint16_t)NUM_EQ_BANDS;
         break;
 
     case EQ_PARAM_LEVEL_RANGE:
-	ALOGV("%s: EQ_PARAM_LEVEL_RANGE", __func__);
         *(int16_t *)value = -1500;
         *((int16_t *)value + 1) = 1500;
         break;
 
     case EQ_PARAM_BAND_LEVEL:
-	ALOGV("%s: EQ_PARAM_BAND_LEVEL", __func__);
         param2 = *param_tmp;
         if (param2 >= NUM_EQ_BANDS) {
             p->status = -EINVAL;
@@ -276,7 +274,6 @@ int equalizer_get_parameter(effect_context_t *context, effect_param_t *p,
         break;
 
     case EQ_PARAM_CENTER_FREQ:
-	ALOGV("%s: EQ_PARAM_CENTER_FREQ", __func__);
         param2 = *param_tmp;
         if (param2 >= NUM_EQ_BANDS) {
            p->status = -EINVAL;
@@ -286,7 +283,6 @@ int equalizer_get_parameter(effect_context_t *context, effect_param_t *p,
         break;
 
     case EQ_PARAM_BAND_FREQ_RANGE:
-	ALOGV("%s: EQ_PARAM_BAND_FREQ_RANGE", __func__);
         param2 = *param_tmp;
         if (param2 >= NUM_EQ_BANDS) {
             p->status = -EINVAL;
@@ -297,25 +293,21 @@ int equalizer_get_parameter(effect_context_t *context, effect_param_t *p,
         break;
 
     case EQ_PARAM_GET_BAND:
-	ALOGV("%s: EQ_PARAM_GET_BAND", __func__);
         param2 = *param_tmp;
         *(uint16_t *)value = (uint16_t)equalizer_get_band(eq_ctxt, param2);
         break;
 
     case EQ_PARAM_CUR_PRESET:
-	ALOGV("%s: EQ_PARAM_CUR_PRESET", __func__);
         *(uint16_t *)value = (uint16_t)equalizer_get_preset(eq_ctxt);
         break;
 
     case EQ_PARAM_GET_NUM_OF_PRESETS:
-	ALOGV("%s: EQ_PARAM_GET_NUM_OF_PRESETS", __func__);
         *(uint16_t *)value = (uint16_t)equalizer_get_num_presets(eq_ctxt);
         break;
 
     case EQ_PARAM_GET_PRESET_NAME:
-	ALOGV("%s: EQ_PARAM_GET_PRESET_NAME", __func__);
         param2 = *param_tmp;
-	ALOGV("param2: %d", param2);
+        ALOGV("%s: EQ_PARAM_GET_PRESET_NAME: param2: %d", __func__, param2);
         if (param2 >= equalizer_get_num_presets(eq_ctxt)) {
             p->status = -EINVAL;
             break;
@@ -327,7 +319,6 @@ int equalizer_get_parameter(effect_context_t *context, effect_param_t *p,
         break;
 
     case EQ_PARAM_PROPERTIES: {
-	ALOGV("%s: EQ_PARAM_PROPERTIES", __func__);
         int16_t *prop = (int16_t *)value;
         prop[0] = (int16_t)equalizer_get_preset(eq_ctxt);
         prop[1] = (int16_t)NUM_EQ_BANDS;
@@ -357,13 +348,12 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
     int32_t level;
     int i;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p, param %d", __func__, eq_ctxt, param);
 
     p->status = 0;
 
     switch (param) {
     case EQ_PARAM_CUR_PRESET:
-	ALOGV("EQ_PARAM_CUR_PRESET");
         preset = (int32_t)(*(uint16_t *)value);
 
         if ((preset >= equalizer_get_num_presets(eq_ctxt)) || (preset < 0)) {
@@ -373,7 +363,6 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
         equalizer_set_preset(eq_ctxt, preset);
         break;
     case EQ_PARAM_BAND_LEVEL:
-	ALOGV("EQ_PARAM_BAND_LEVEL");
         band =  *param_tmp;
         level = (int32_t)(*(int16_t *)value);
         if (band >= NUM_EQ_BANDS) {
@@ -383,7 +372,6 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
         equalizer_set_band_level(eq_ctxt, band, level);
         break;
     case EQ_PARAM_PROPERTIES: {
-	ALOGV("EQ_PARAM_PROPERTIES");
         int16_t *prop = (int16_t *)value;
         if ((int)prop[0] >= equalizer_get_num_presets(eq_ctxt)) {
             p->status = -EINVAL;
@@ -411,7 +399,7 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
 
 int equalizer_set_device(effect_context_t *context,  uint32_t device)
 {
-    ALOGV("%s: device: %d", __func__, device);
+    ALOGV("%s: ctxt %p, device: 0x%x", __func__, context, device);
     equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
     eq_ctxt->device = device;
     offload_eq_set_device(&(eq_ctxt->offload_eq), device);
@@ -427,7 +415,7 @@ int equalizer_reset(effect_context_t *context)
 
 int equalizer_init(effect_context_t *context)
 {
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p", __func__, context);
     equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
 
     context->config.inputCfg.accessMode = EFFECT_BUFFER_ACCESS_READ;
@@ -459,7 +447,7 @@ int equalizer_enable(effect_context_t *context)
 {
     equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p", __func__, context);
 
     if (!offload_eq_get_enable_flag(&(eq_ctxt->offload_eq))) {
         offload_eq_set_enable_flag(&(eq_ctxt->offload_eq), true);
@@ -475,7 +463,7 @@ int equalizer_disable(effect_context_t *context)
 {
     equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s:ctxt %p", __func__, eq_ctxt);
     if (offload_eq_get_enable_flag(&(eq_ctxt->offload_eq))) {
         offload_eq_set_enable_flag(&(eq_ctxt->offload_eq), false);
         if (eq_ctxt->ctl)
@@ -489,7 +477,7 @@ int equalizer_start(effect_context_t *context, output_context_t *output)
 {
     equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
 
-    ALOGV("%s: %p", __func__, output->ctl);
+    ALOGV("%s: ctxt %p, ctl %p", __func__, eq_ctxt, output->ctl);
     eq_ctxt->ctl = output->ctl;
     if (offload_eq_get_enable_flag(&(eq_ctxt->offload_eq)))
         if (eq_ctxt->ctl)
@@ -503,7 +491,7 @@ int equalizer_stop(effect_context_t *context, output_context_t *output)
 {
     equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p", __func__, eq_ctxt);
     eq_ctxt->ctl = NULL;
     return 0;
 }
