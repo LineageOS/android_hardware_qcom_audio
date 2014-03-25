@@ -121,6 +121,7 @@ void add_effect_to_output(output_context_t * output, effect_context_t *context)
 {
     struct listnode *fx_node;
 
+    ALOGV("%s: e_ctxt %p, o_ctxt %p", __func__, context, output);
     list_for_each(fx_node, &output->effects_list) {
         effect_context_t *fx_ctxt = node_to_item(fx_node,
                                                  effect_context_t,
@@ -139,6 +140,7 @@ void remove_effect_from_output(output_context_t * output,
 {
     struct listnode *fx_node;
 
+    ALOGV("%s: e_ctxt %p, o_ctxt %p", __func__, context, output);
     list_for_each(fx_node, &output->effects_list) {
         effect_context_t *fx_ctxt = node_to_item(fx_node,
                                                  effect_context_t,
@@ -532,7 +534,7 @@ int effect_process(effect_handle_t self,
     effect_context_t * context = (effect_context_t *)self;
     int status = 0;
 
-    ALOGW("%s Called ?????", __func__);
+    ALOGW("%s: ctxt %p, Called ?????", __func__, context);
 
     pthread_mutex_lock(&lock);
     if (!effect_exists(context)) {
@@ -565,6 +567,7 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
         goto exit;
     }
 
+    ALOGV("%s: ctxt %p, cmd %d", __func__, context, cmdCode);
     if (context == NULL || context->state == EFFECT_STATE_UNINITIALIZED) {
         status = -ENOSYS;
         goto exit;
@@ -618,7 +621,6 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
         context->state = EFFECT_STATE_ACTIVE;
         if (context->ops.enable)
             context->ops.enable(context);
-        ALOGV("%s EFFECT_CMD_ENABLE", __func__);
         *(int *)pReplyData = 0;
         break;
     case EFFECT_CMD_DISABLE:
@@ -633,7 +635,6 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
         context->state = EFFECT_STATE_INITIALIZED;
         if (context->ops.disable)
             context->ops.disable(context);
-        ALOGV("%s EFFECT_CMD_DISABLE", __func__);
         *(int *)pReplyData = 0;
         break;
     case EFFECT_CMD_GET_PARAM: {
@@ -643,7 +644,7 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
             *replySize < (int)(sizeof(effect_param_t) + sizeof(uint32_t) +
                                sizeof(uint16_t))) {
             status = -EINVAL;
-            ALOGV("EFFECT_CMD_GET_PARAM invalid command cmdSize %d *replySize %d",
+            ALOGW("EFFECT_CMD_GET_PARAM invalid command cmdSize %d *replySize %d",
                   cmdSize, *replySize);
             goto exit;
         }
@@ -663,7 +664,7 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
                             sizeof(uint16_t)) ||
             pReplyData == NULL || *replySize != sizeof(int32_t)) {
             status = -EINVAL;
-            ALOGV("EFFECT_CMD_SET_PARAM invalid command cmdSize %d *replySize %d",
+            ALOGW("EFFECT_CMD_SET_PARAM invalid command cmdSize %d *replySize %d",
                   cmdSize, *replySize);
             goto exit;
         }
@@ -679,7 +680,7 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
         ALOGV("\t EFFECT_CMD_SET_DEVICE start");
         if (pCmdData == NULL || cmdSize < sizeof(uint32_t)) {
             status = -EINVAL;
-            ALOGV("EFFECT_CMD_SET_DEVICE invalid command cmdSize %d", cmdSize);
+            ALOGW("EFFECT_CMD_SET_DEVICE invalid command cmdSize %d", cmdSize);
             goto exit;
         }
         device = *(uint32_t *)pCmdData;
@@ -695,7 +696,7 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
 
         if (cmdSize != sizeof(effect_offload_param_t) || pCmdData == NULL
                 || pReplyData == NULL || *replySize != sizeof(int)) {
-            ALOGV("%s EFFECT_CMD_OFFLOAD bad format", __func__);
+            ALOGW("%s EFFECT_CMD_OFFLOAD bad format", __func__);
             status = -EINVAL;
             break;
         }

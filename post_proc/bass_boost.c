@@ -44,13 +44,14 @@ const effect_descriptor_t bassboost_descriptor = {
 
 int bassboost_get_strength(bassboost_context_t *context)
 {
-    ALOGV("%s: strength: %d", __func__, context->strength);
+    ALOGV("%s: ctxt %p, strength: %d", __func__,
+                      context,  context->strength);
     return context->strength;
 }
 
 int bassboost_set_strength(bassboost_context_t *context, uint32_t strength)
 {
-    ALOGV("%s: strength: %d", __func__, strength);
+    ALOGV("%s: ctxt %p, strength: %d", __func__, context, strength);
     context->strength = strength;
 
     offload_bassboost_set_strength(&(context->offload_bass), strength);
@@ -71,7 +72,7 @@ int bassboost_get_parameter(effect_context_t *context, effect_param_t *p,
     void *value = p->data + voffset;
     int i;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p, param %d", __func__, bass_ctxt, param);
 
     p->status = 0;
 
@@ -97,12 +98,10 @@ int bassboost_get_parameter(effect_context_t *context, effect_param_t *p,
 
     switch (param) {
     case BASSBOOST_PARAM_STRENGTH_SUPPORTED:
-        ALOGV("%s: BASSBOOST_PARAM_STRENGTH_SUPPORTED", __func__);
         *(uint32_t *)value = 1;
         break;
 
     case BASSBOOST_PARAM_STRENGTH:
-        ALOGV("%s: BASSBOOST_PARAM_STRENGTH", __func__);
         *(int16_t *)value = bassboost_get_strength(bass_ctxt);
         break;
 
@@ -124,13 +123,12 @@ int bassboost_set_parameter(effect_context_t *context, effect_param_t *p,
     int32_t param = *param_tmp++;
     uint32_t strength;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p, param %d", __func__, bass_ctxt, param);
 
     p->status = 0;
 
     switch (param) {
     case BASSBOOST_PARAM_STRENGTH:
-        ALOGV("%s BASSBOOST_PARAM_STRENGTH", __func__);
         strength = (uint32_t)(*(int16_t *)value);
         bassboost_set_strength(bass_ctxt, strength);
         break;
@@ -146,7 +144,7 @@ int bassboost_set_device(effect_context_t *context, uint32_t device)
 {
     bassboost_context_t *bass_ctxt = (bassboost_context_t *)context;
 
-    ALOGV("%s: device: %d", __func__, device);
+    ALOGV("%s: ctxt %p, device 0x%x", __func__, bass_ctxt, device);
     bass_ctxt->device = device;
     if ((device == AUDIO_DEVICE_OUT_SPEAKER) ||
        (device == AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT) ||
@@ -192,7 +190,7 @@ int bassboost_init(effect_context_t *context)
 {
     bassboost_context_t *bass_ctxt = (bassboost_context_t *)context;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p", __func__, bass_ctxt);
     context->config.inputCfg.accessMode = EFFECT_BUFFER_ACCESS_READ;
     context->config.inputCfg.channels = AUDIO_CHANNEL_OUT_STEREO;
     context->config.inputCfg.format = AUDIO_FORMAT_PCM_16_BIT;
@@ -222,7 +220,7 @@ int bassboost_enable(effect_context_t *context)
 {
     bassboost_context_t *bass_ctxt = (bassboost_context_t *)context;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p, strength %d", __func__, bass_ctxt, bass_ctxt->strength);
 
     if (!offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass)) &&
         !(bass_ctxt->temp_disabled)) {
@@ -240,7 +238,7 @@ int bassboost_disable(effect_context_t *context)
 {
     bassboost_context_t *bass_ctxt = (bassboost_context_t *)context;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p", __func__, bass_ctxt);
     if (offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass))) {
         offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), false);
         if (bass_ctxt->ctl)
@@ -255,9 +253,9 @@ int bassboost_start(effect_context_t *context, output_context_t *output)
 {
     bassboost_context_t *bass_ctxt = (bassboost_context_t *)context;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p, ctl %p, strength %d", __func__, bass_ctxt,
+                                   output->ctl, bass_ctxt->strength);
     bass_ctxt->ctl = output->ctl;
-    ALOGV("output->ctl: %p", output->ctl);
     if (offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass)))
         if (bass_ctxt->ctl)
             offload_bassboost_send_params(bass_ctxt->ctl, &bass_ctxt->offload_bass,
@@ -270,7 +268,7 @@ int bassboost_stop(effect_context_t *context, output_context_t *output __unused)
 {
     bassboost_context_t *bass_ctxt = (bassboost_context_t *)context;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p", __func__, bass_ctxt);
     bass_ctxt->ctl = NULL;
     return 0;
 }
