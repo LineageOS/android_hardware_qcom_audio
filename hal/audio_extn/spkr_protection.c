@@ -633,7 +633,11 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
             ret = -EINVAL;
         }
     }
+
 exit:
+   /* Clear VI feedback cal and replace with handset MIC  */
+   platform_send_audio_calibration(adev->platform,
+        SND_DEVICE_IN_HANDSET_MIC);
     if (ret) {
         if (handle.pcm_tx)
             pcm_close(handle.pcm_tx);
