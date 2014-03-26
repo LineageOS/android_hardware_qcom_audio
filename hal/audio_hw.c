@@ -1464,6 +1464,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     char value[32];
     int ret = 0, val = 0, err;
     bool select_new_device = false;
+    int status = 0;
 
     ALOGD("%s: enter: usecase(%d: %s) kvpairs: %s",
           __func__, out->usecase, use_case_table[out->usecase], kvpairs);
@@ -1535,8 +1536,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     }
 
     str_parms_destroy(parms);
-    ALOGV("%s: exit: code(%d)", __func__, ret);
-    return ret;
+    ALOGV("%s: exit: code(%d)", __func__, status);
+    return status;
 }
 
 static char* out_get_parameters(const struct audio_stream *stream, const char *keys)
@@ -1920,6 +1921,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     char *str;
     char value[32];
     int ret = 0, val = 0, err;
+    int status = 0;
 
     ALOGV("%s: enter: kvpairs=%s", __func__, kvpairs);
     parms = str_parms_create_str(kvpairs);
@@ -1943,7 +1945,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
             in->device = val;
             /* If recording is in progress, change the tx device to new device */
             if (!in->standby)
-                ret = select_devices(adev, in->usecase);
+                status = select_devices(adev, in->usecase);
         }
     }
 
@@ -1951,8 +1953,8 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     pthread_mutex_unlock(&in->lock);
 
     str_parms_destroy(parms);
-    ALOGV("%s: exit: status(%d)", __func__, ret);
-    return ret;
+    ALOGV("%s: exit: status(%d)", __func__, status);
+    return status;
 }
 
 static char* in_get_parameters(const struct audio_stream *stream,
@@ -2310,6 +2312,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     char value[32];
     int val;
     int ret = 0, err;
+    int status = 0;
 
     ALOGV("%s: enter: %s", __func__, kvpairs);
 
@@ -2374,30 +2377,33 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             break;
         default:
             ALOGE("%s: unexpected rotation of %d", __func__, val);
+            status = -EINVAL;
         }
-        pthread_mutex_lock(&adev->lock);
-        if (adev->speaker_lr_swap != reverse_speakers) {
-            adev->speaker_lr_swap = reverse_speakers;
-            // only update the selected device if there is active pcm playback
-            struct audio_usecase *usecase;
-            struct listnode *node;
-            list_for_each(node, &adev->usecase_list) {
-                usecase = node_to_item(node, struct audio_usecase, list);
-                if (usecase->type == PCM_PLAYBACK) {
-                    select_devices(adev, usecase->id);
-                    break;
+        if (status == 0) {
+            pthread_mutex_lock(&adev->lock);
+            if (adev->speaker_lr_swap != reverse_speakers) {
+                adev->speaker_lr_swap = reverse_speakers;
+                // only update the selected device if there is active pcm playback
+                struct audio_usecase *usecase;
+                struct listnode *node;
+                list_for_each(node, &adev->usecase_list) {
+                    usecase = node_to_item(node, struct audio_usecase, list);
+                    if (usecase->type == PCM_PLAYBACK) {
+                        select_devices(adev, usecase->id);
+                        break;
+                    }
                 }
             }
+            pthread_mutex_unlock(&adev->lock);
         }
-        pthread_mutex_unlock(&adev->lock);
     }
 
     audio_extn_set_parameters(adev, parms);
 
 done:
     str_parms_destroy(parms);
-    ALOGV("%s: exit with code(%d)", __func__, ret);
-    return ret;
+    ALOGV("%s: exit with code(%d)", __func__, status);
+    return status;
 }
 
 static char* adev_get_parameters(const struct audio_hw_device *dev,
