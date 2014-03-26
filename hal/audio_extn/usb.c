@@ -96,6 +96,42 @@ static void usb_alloc()
     usbmod = calloc(1, sizeof(struct usb_module));
 }
 
+// Some USB audio accessories have a really low default volume set. Look for a suitable
+// volume control and set the volume to default volume level.
+static void initPlaybackVolume() {
+    ALOGD("initPlaybackVolume");
+    struct mixer *usbMixer = mixer_open(1);
+
+    if (usbMixer) {
+         struct mixer_ctl *ctl = NULL;
+         unsigned int usbPlaybackVolume;
+         unsigned int i;
+         unsigned int num_ctls = mixer_get_num_ctls(usbMixer);
+
+         // Look for the first control named ".*Playback Volume" that isn't for a microphone
+         for (i = 0; i < num_ctls; i++) {
+             ctl = mixer_get_ctl(usbMixer, i);
+             if (strstr((const char *)mixer_ctl_get_name(ctl), "Playback Volume") &&
+                 !strstr((const char *)mixer_ctl_get_name(ctl), "Mic")) {
+                   break;
+             }
+         }
+         if (ctl != NULL) {
+            ALOGD("Found a volume control for USB: %s", mixer_ctl_get_name(ctl) );
+            usbPlaybackVolume = mixer_ctl_get_value(ctl, 0);
+            ALOGD("Value got from mixer_ctl_get is:%u", usbPlaybackVolume);
+            if (mixer_ctl_set_value(ctl,0,usbPlaybackVolume) < 0) {
+               ALOGE("Failed to set volume; default volume might be used");
+            }
+         } else {
+            ALOGE("No playback volume control found; default volume will be used");
+         }
+         mixer_close(usbMixer);
+    } else {
+         ALOGE("Failed to open mixer for card 1");
+    }
+}
+
 static int usb_get_numof_rates(char *rates_str)
 {
     int i, size = 0;
@@ -340,7 +376,7 @@ static int32_t usb_playback_entry(void *adev)
     pcm_config_usbmod.channels = usbmod->channels_playback;
     pcm_config_usbmod.period_count = AFE_PROXY_PERIOD_COUNT;
     usbmod->proxy_device_id = AFE_PROXY_PLAYBACK_DEVICE;
-    ALOGV("%s: proxy device %u:period %u:channels %u:sample", __func__,
+    ALOGD("%s: proxy device %u:period %u:channels %u:sample", __func__,
           pcm_config_usbmod.period_size, pcm_config_usbmod.channels,
           pcm_config_usbmod.rate);
 
@@ -375,6 +411,8 @@ static int32_t usb_playback_entry(void *adev)
     ALOGD("%s: PROXY configured for playback", __func__);
     pthread_mutex_unlock(&usbmod->usb_playback_lock);
 
+    ALOGD("Init USB volume");
+    initPlaybackVolume();
     /* main loop to read from proxy and write to usb */
     while (usbmod->is_playback_running) {
         /* read data from proxy */
