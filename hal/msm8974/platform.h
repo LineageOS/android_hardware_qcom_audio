@@ -139,7 +139,7 @@ enum {
 #define DEFAULT_OUTPUT_SAMPLING_RATE 48000
 
 #define ALL_SESSION_VSID                0xFFFFFFFF
-#define DEFAULT_MUTE_RAMP_DURATION      500
+#define DEFAULT_MUTE_RAMP_DURATION_MS   20
 #define DEFAULT_VOLUME_RAMP_DURATION_MS 20
 #define MIXER_PATH_MAX_LENGTH 100
 
@@ -250,8 +250,8 @@ typedef int (*deinit_t)();
 typedef int (*disable_device_t)();
 typedef int (*enable_device_config_t)(int, int);
 typedef int (*enable_device_t)(int, int, uint32_t);
-typedef int (*volume_t)(uint32_t, int);
-typedef int (*mic_mute_t)(uint32_t, int);
+typedef int (*volume_t)(uint32_t, int, uint16_t);
+typedef int (*mic_mute_t)(uint32_t, int, uint16_t);
 typedef int (*slow_talk_t)(uint32_t, uint8_t);
 typedef int (*start_voice_t)(uint32_t);
 typedef int (*stop_voice_t)(uint32_t);
