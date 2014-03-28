@@ -444,6 +444,11 @@ int visualizer_hal_start_output(audio_io_handle_t output, int pcm_id) {
     }
 
     output_context_t *out_ctxt = (output_context_t *)malloc(sizeof(output_context_t));
+    if (out_ctxt == NULL) {
+        ALOGE("%s fail to allocate memory", __func__);
+        ret = -ENOMEM;
+        goto exit;
+    }
     out_ctxt->handle = output;
     list_init(&out_ctxt->effects_list);
 
@@ -953,6 +958,10 @@ int effect_lib_create(const effect_uuid_t *uuid,
     if (memcmp(uuid, &visualizer_descriptor.uuid, sizeof(effect_uuid_t)) == 0) {
         visualizer_context_t *visu_ctxt = (visualizer_context_t *)calloc(1,
                                                                      sizeof(visualizer_context_t));
+        if (visu_ctxt == NULL) {
+            ALOGE("%s fail to allocate memory", __func__);
+            return -ENOMEM;
+        }
         context = (effect_context_t *)visu_ctxt;
         context->ops.init = visualizer_init;
         context->ops.reset = visualizer_reset;

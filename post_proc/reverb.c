@@ -246,13 +246,15 @@ void reverb_set_preset(reverb_context_t *context, int16_t preset)
     context->next_preset = preset;
     offload_reverb_set_preset(&(context->offload_reverb), preset);
 
-    enable = (preset == REVERB_PRESET_NONE) ? false: true;
-    offload_reverb_set_enable_flag(&(context->offload_reverb), enable);
+    if (context->enabled_by_client) {
+        enable = (preset == REVERB_PRESET_NONE) ? false: true;
+        offload_reverb_set_enable_flag(&(context->offload_reverb), enable);
 
-    if (context->ctl)
-        offload_reverb_send_params(context->ctl, &context->offload_reverb,
+        if (context->ctl)
+            offload_reverb_send_params(context->ctl, &context->offload_reverb,
                                    OFFLOAD_SEND_REVERB_ENABLE_FLAG |
                                    OFFLOAD_SEND_REVERB_PRESET);
+    }
 }
 
 void reverb_set_all_properties(reverb_context_t *context,
@@ -568,6 +570,7 @@ int reverb_init(effect_context_t *context)
 
     set_config(context, &context->config);
 
+    reverb_ctxt->enabled_by_client = false;
     memset(&(reverb_ctxt->reverb_settings), 0, sizeof(reverb_settings_t));
     memset(&(reverb_ctxt->offload_reverb), 0, sizeof(struct reverb_params));
 
@@ -583,6 +586,16 @@ int reverb_enable(effect_context_t *context)
     reverb_context_t *reverb_ctxt = (reverb_context_t *)context;
 
     ALOGV("%s", __func__);
+    reverb_ctxt->enabled_by_client = true;
+
+    /* REVERB_PRESET_NONE is equivalent to disabled state,
+     * But support for this state is not provided in DSP.
+     * Hence, do not set enable flag, if in peset mode with preset "NONE".
+     * Effect would be enabled when valid preset is set.
+     */
+    if ((reverb_ctxt->preset == true) &&
+        (reverb_ctxt->next_preset == REVERB_PRESET_NONE))
+        return 0;
 
     if (!offload_reverb_get_enable_flag(&(reverb_ctxt->offload_reverb)))
         offload_reverb_set_enable_flag(&(reverb_ctxt->offload_reverb), true);
@@ -594,6 +607,7 @@ int reverb_disable(effect_context_t *context)
     reverb_context_t *reverb_ctxt = (reverb_context_t *)context;
 
     ALOGV("%s", __func__);
+    reverb_ctxt->enabled_by_client = false;
     if (offload_reverb_get_enable_flag(&(reverb_ctxt->offload_reverb))) {
         offload_reverb_set_enable_flag(&(reverb_ctxt->offload_reverb), false);
         if (reverb_ctxt->ctl)
