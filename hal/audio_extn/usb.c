@@ -45,7 +45,7 @@
 #define USB_PROXY_RATE_8000                  8000
 #define USB_PROXY_RATE_16000                 16000
 #define USB_PROXY_RATE_48000                 48000
-#define USB_PERIOD_SIZE                      2048
+#define USB_PERIOD_SIZE                      4096
 #define USB_BUFF_SIZE                        2048
 #define AFE_PROXY_PERIOD_COUNT               32
 #define AFE_PROXY_PLAYBACK_DEVICE            8
@@ -152,7 +152,7 @@ static int usb_get_capability(char *type, int32_t *channels,
 
     file_size = st.st_size;
 
-    read_buf = (char *)calloc(1, USB_BUFF_SIZE);
+    read_buf = (char *)calloc(1, USB_BUFF_SIZE + 1);
     err = read(fd, read_buf, USB_BUFF_SIZE);
     str_start = strstr(read_buf, type);
     if (str_start == NULL) {
