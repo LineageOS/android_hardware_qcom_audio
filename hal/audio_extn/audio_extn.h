@@ -39,6 +39,16 @@ bool audio_extn_should_use_fb_anc(void);
 bool audio_extn_should_use_handset_anc(int in_channels);
 #endif
 
+#ifndef FLUENCE_ENABLED
+#define audio_extn_set_fluence_parameters(adev, parms) (0)
+#define audio_extn_get_fluence_parameters(adev, query, reply) (0)
+#else
+void audio_extn_set_fluence_parameters(struct audio_device *adev,
+                                           struct str_parms *parms);
+int audio_extn_get_fluence_parameters(struct audio_device *adev,
+                  struct str_parms *query, struct str_parms *reply);
+#endif
+
 #ifndef AFE_PROXY_ENABLED
 #define audio_extn_set_afe_proxy_channel_mixer(adev,channel_count)     (0)
 #define audio_extn_read_afe_proxy_channel_masks(out)                   (0)
