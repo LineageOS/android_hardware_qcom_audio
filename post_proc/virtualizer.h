@@ -1,5 +1,7 @@
 /*
  * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Not a Contribution.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +31,8 @@ typedef struct virtualizer_context_s {
     // Offload vars
     struct mixer_ctl *ctl;
     bool temp_disabled;
-    uint32_t device;
+    audio_devices_t forced_device;
+    audio_devices_t device;
     struct virtualizer_params offload_virt;
 } virtualizer_context_t;
 
