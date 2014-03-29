@@ -80,21 +80,25 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),true)
     LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
 endif
 endif
+
+ifneq ($(filter msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),true)
     LOCAL_CFLAGS += -DCOMPRESS_VOIP_ENABLED
     LOCAL_SRC_FILES += voice_extn/compress_voip.c
 endif
-
+endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FORMATS)),true)
 LOCAL_CFLAGS += -DFORMATS_ENABLED
 endif
 
+ifneq ($(filter msm8974,$(TARGET_BOARD_PLATFORM)),)
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SPKR_PROTECTION)),true)
     LOCAL_CFLAGS += -DSPKR_PROT_ENABLED
     LOCAL_SRC_FILES += audio_extn/spkr_protection.c
     LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
     LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+endif
 endif
 
 ifdef MULTIPLE_HW_VARIANTS_ENABLED
@@ -102,16 +106,20 @@ ifdef MULTIPLE_HW_VARIANTS_ENABLED
   LOCAL_SRC_FILES += $(AUDIO_PLATFORM)/hw_info.c
 endif
 
+ifneq ($(filter msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),true)
     LOCAL_CFLAGS += -DCOMPRESS_CAPTURE_ENABLED
     LOCAL_SRC_FILES += audio_extn/compress_capture.c
 endif
+endif
 
+ifneq ($(filter msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
 ifeq ($(strip $(DOLBY_DDP)),true)
     LOCAL_CFLAGS += -DDS1_DOLBY_DDP_ENABLED
     LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
     LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
     LOCAL_SRC_FILES += audio_extn/dolby.c
+endif
 endif
 
 ifeq ($(strip $(DOLBY_DAP)),true)
@@ -120,7 +128,6 @@ ifneq ($(strip $(DOLBY_DDP)),true)
     LOCAL_SRC_FILES += audio_extn/dolby.c
 endif
 endif
-
 
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
