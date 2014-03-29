@@ -195,6 +195,14 @@ struct audio_device {
     void *visualizer_lib;
     int (*visualizer_start_output)(audio_io_handle_t);
     int (*visualizer_stop_output)(audio_io_handle_t);
+
+    /* The pcm_params use_case_table is loaded by adev_verify_devices() upon
+     * calling adev_open().
+     *
+     * If an entry is not NULL, it can be used to determine if extended precision
+     * or other capabilities are present for the device corresponding to that usecase.
+     */
+    struct pcm_params *use_case_table[AUDIO_USECASE_MAX];
 };
 
 /*
