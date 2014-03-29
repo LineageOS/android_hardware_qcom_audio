@@ -329,13 +329,16 @@ int enable_snd_device(struct audio_device *adev,
     } else {
         ALOGV("%s: snd_device(%d: %s)", __func__,
         snd_device, device_name);
+        /* due to the possibility of calibration overwrite between listen
+            and audio, notify listen hal before audio calibration is sent */
+        audio_extn_listen_update_status(snd_device,
+                       LISTEN_EVENT_SND_DEVICE_BUSY);
         if (platform_send_audio_calibration(adev->platform, snd_device) < 0) {
             adev->snd_dev_ref_cnt[snd_device]--;
+            audio_extn_listen_update_status(snd_device,
+                           LISTEN_EVENT_SND_DEVICE_FREE);
             return -EINVAL;
         }
-        audio_extn_listen_update_status(snd_device,
-                LISTEN_EVENT_SND_DEVICE_BUSY);
-
         audio_route_apply_path(adev->audio_route, device_name);
     }
     if (update_mixer)
