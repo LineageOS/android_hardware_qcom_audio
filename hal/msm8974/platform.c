@@ -1767,11 +1767,6 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     if (err >= 0) {
         str_parms_del(parms, AUDIO_PARAMETER_KEY_BTSCO);
         my_data->btsco_sample_rate = val;
-        if (val == SAMPLE_RATE_16KHZ) {
-            audio_route_apply_path(my_data->adev->audio_route,
-                                   "bt-sco-wb-samplerate");
-            audio_route_update_mixer(my_data->adev->audio_route);
-        }
     }
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SLOWTALK, value, sizeof(value));
