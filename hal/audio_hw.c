@@ -2116,6 +2116,13 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         }
     }
 
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_SCO_WB, value, sizeof(value));
+    if (ret >= 0) {
+        pthread_mutex_lock(&adev->lock);
+        adev->bt_wb_speech_enabled = !strcmp(value, AUDIO_PARAMETER_VALUE_ON);
+        pthread_mutex_unlock(&adev->lock);
+    }
+
     str_parms_destroy(parms);
     ALOGV("%s: exit with code(%d)", __func__, status);
     return status;
@@ -2532,6 +2539,8 @@ static int adev_open(const hw_module_t *module, const char *name,
                                                         "visualizer_hal_stop_output");
         }
     }
+
+    adev->bt_wb_speech_enabled = false;
 
     *device = &adev->device.common;
     if (k_enable_extended_precision)

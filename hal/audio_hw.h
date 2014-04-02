@@ -189,6 +189,7 @@ struct audio_device {
     int acdb_settings;
     bool speaker_lr_swap;
     unsigned int cur_hdmi_channels;
+    bool bt_wb_speech_enabled;
 
     void *platform;
 
