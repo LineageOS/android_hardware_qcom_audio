@@ -49,6 +49,9 @@ static struct audio_extn_module aextnmod = {
 #define AUDIO_PARAMETER_KEY_ANC        "anc_enabled"
 #define AUDIO_PARAMETER_KEY_WFD        "wfd_channel_cap"
 #define AUDIO_PARAMETER_CAN_OPEN_PROXY "can_open_proxy"
+/* Query offload playback instances count */
+#define AUDIO_PARAMETER_OFFLOAD_NUM_ACTIVE "offload_num_active"
+
 #ifndef FM_ENABLED
 #define audio_extn_fm_set_parameters(adev, parms) (0)
 #else
@@ -381,6 +384,30 @@ int32_t audio_extn_get_afe_proxy_channel_count()
 
 #endif /* AFE_PROXY_ENABLED */
 
+static int get_active_offload_usecases(const struct audio_device *adev,
+                                       struct str_parms *query,
+                                       struct str_parms *reply)
+{
+    int ret, count = 0;
+    char value[32]={0};
+    struct listnode *node;
+    struct audio_usecase *usecase;
+
+    ALOGV("%s", __func__);
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_OFFLOAD_NUM_ACTIVE, value,
+                            sizeof(value));
+    if (ret >= 0) {
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (is_offload_usecase(usecase->id))
+                count++;
+        }
+        ALOGV("%s, number of active offload usecases: %d", __func__, count);
+        str_parms_add_int(reply, AUDIO_PARAMETER_OFFLOAD_NUM_ACTIVE, count);
+    }
+    return ret;
+}
+
 void audio_extn_set_parameters(struct audio_device *adev,
                                struct str_parms *parms)
 {
@@ -400,6 +427,7 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     char *kv_pairs = NULL;
     audio_extn_get_afe_proxy_parameters(query, reply);
     audio_extn_get_fluence_parameters(adev, query, reply);
+    get_active_offload_usecases(adev, query, reply);
 
     kv_pairs = str_parms_to_str(reply);
     ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);
