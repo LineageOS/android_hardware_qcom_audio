@@ -839,6 +839,13 @@ void platform_add_backend_name(char *mixer_path, snd_device_t snd_device)
         strlcat(mixer_path, " capture-fm", MIXER_PATH_MAX_LENGTH);
     else if (snd_device == SND_DEVICE_OUT_TRANSMISSION_FM)
         strlcat(mixer_path, " transmission-fm", MIXER_PATH_MAX_LENGTH);
+    else if (snd_device == SND_DEVICE_OUT_VOICE_SPEAKER &&
+             audio_extn_spkr_prot_is_enabled() ) {
+        char platform[PROPERTY_VALUE_MAX];
+        property_get("ro.board.platform", platform, "");
+        if (!strncmp("apq8084", platform, sizeof("apq8084")))
+            strlcat(mixer_path, " speaker-protected", MIXER_PATH_MAX_LENGTH);
+    }
 }
 
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
@@ -997,21 +1004,28 @@ int platform_switch_voice_call_enable_device_config(void *platform,
     int acdb_rx_id, acdb_tx_id;
     int ret = 0;
 
-    acdb_rx_id = acdb_device_table[out_snd_device];
+    if (my_data->csd == NULL)
+        return ret;
+
+    if (out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER &&
+        audio_extn_spkr_prot_is_enabled())
+        acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED];
+    else
+        acdb_rx_id = acdb_device_table[out_snd_device];
+
     acdb_tx_id = acdb_device_table[in_snd_device];
 
-    if (my_data->csd != NULL) {
-        if (acdb_rx_id > 0 && acdb_tx_id > 0) {
-            ret = my_data->csd->enable_device_config(acdb_rx_id, acdb_tx_id);
-            if (ret < 0) {
-                ALOGE("%s: csd_enable_device_config, failed, error %d",
-                      __func__, ret);
-            }
-        } else {
-            ALOGE("%s: Incorrect ACDB IDs (rx: %d tx: %d)", __func__,
-                  acdb_rx_id, acdb_tx_id);
+    if (acdb_rx_id > 0 && acdb_tx_id > 0) {
+        ret = my_data->csd->enable_device_config(acdb_rx_id, acdb_tx_id);
+        if (ret < 0) {
+            ALOGE("%s: csd_enable_device_config, failed, error %d",
+                  __func__, ret);
         }
+    } else {
+        ALOGE("%s: Incorrect ACDB IDs (rx: %d tx: %d)", __func__,
+              acdb_rx_id, acdb_tx_id);
     }
+
     return ret;
 }
 
@@ -1046,22 +1060,28 @@ int platform_switch_voice_call_usecase_route_post(void *platform,
     int acdb_rx_id, acdb_tx_id;
     int ret = 0;
 
-    acdb_rx_id = acdb_device_table[out_snd_device];
+    if (my_data->csd == NULL)
+        return ret;
+
+    if (out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER &&
+        audio_extn_spkr_prot_is_enabled())
+        acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED];
+    else
+        acdb_rx_id = acdb_device_table[out_snd_device];
+
     acdb_tx_id = acdb_device_table[in_snd_device];
 
-    if (my_data->csd != NULL) {
-        if (acdb_rx_id > 0 && acdb_tx_id > 0) {
-            ret = my_data->csd->enable_device(acdb_rx_id, acdb_tx_id,
-                                              my_data->adev->acdb_settings);
-            if (ret < 0) {
-                ALOGE("%s: csd_enable_device, failed, error %d",
-                      __func__, ret);
-            }
-        } else {
-            ALOGE("%s: Incorrect ACDB IDs (rx: %d tx: %d)", __func__,
-                  acdb_rx_id, acdb_tx_id);
+    if (acdb_rx_id > 0 && acdb_tx_id > 0) {
+        ret = my_data->csd->enable_device(acdb_rx_id, acdb_tx_id,
+                                          my_data->adev->acdb_settings);
+        if (ret < 0) {
+            ALOGE("%s: csd_enable_device, failed, error %d", __func__, ret);
         }
+    } else {
+        ALOGE("%s: Incorrect ACDB IDs (rx: %d tx: %d)", __func__,
+              acdb_rx_id, acdb_tx_id);
     }
+
     return ret;
 }
 
