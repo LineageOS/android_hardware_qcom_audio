@@ -126,6 +126,9 @@ ifeq ($(strip $(AUDIO_FEATURE_DISABLED_DS1_DOLBY_DDP)),true)
 endif
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTIPLE_TUNNEL)), true)
+    LOCAL_CFLAGS += -DMULTIPLE_OFFLOAD_ENABLED
+endif
 
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
