@@ -295,6 +295,18 @@ int enable_snd_device(struct audio_device *adev,
         return 0;
     }
 
+    /* Set BT sample rate before enabling the devices. Adding sample rate mixer
+     * control in use-case does not work because rate update takes place after
+     * AFE port open due to the limitation of mixer control order execution.
+     */
+    if (snd_device == SND_DEVICE_OUT_BT_SCO) {
+        audio_route_apply_path(adev->audio_route, BT_SCO_SAMPLE_RATE);
+        audio_route_update_mixer(adev->audio_route);
+    } else if (snd_device == SND_DEVICE_OUT_BT_SCO_WB) {
+        audio_route_apply_path(adev->audio_route, BT_SCO_WB_SAMPLE_RATE);
+        audio_route_update_mixer(adev->audio_route);
+    }
+
     /* start usb playback thread */
     if(SND_DEVICE_OUT_USB_HEADSET == snd_device ||
        SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET == snd_device)
