@@ -1095,7 +1095,8 @@ int platform_set_voice_volume(void *platform, int volume)
     mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
 
     if (my_data->csd != NULL) {
-        ret = my_data->csd->volume(ALL_SESSION_VSID, volume);
+        ret = my_data->csd->volume(ALL_SESSION_VSID, volume,
+                                   DEFAULT_VOLUME_RAMP_DURATION_MS);
         if (ret < 0) {
             ALOGE("%s: csd_volume error %d", __func__, ret);
         }
@@ -1112,7 +1113,7 @@ int platform_set_mic_mute(void *platform, bool state)
     int ret = 0;
     uint32_t set_values[ ] = {0,
                               ALL_SESSION_VSID,
-                              DEFAULT_VOLUME_RAMP_DURATION_MS};
+                              DEFAULT_MUTE_RAMP_DURATION_MS};
 
     set_values[0] = state;
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
@@ -1125,7 +1126,8 @@ int platform_set_mic_mute(void *platform, bool state)
     mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
 
     if (my_data->csd != NULL) {
-        ret = my_data->csd->mic_mute(ALL_SESSION_VSID, state);
+        ret = my_data->csd->mic_mute(ALL_SESSION_VSID, state,
+                                     DEFAULT_MUTE_RAMP_DURATION_MS);
         if (ret < 0) {
             ALOGE("%s: csd_mic_mute error %d", __func__, ret);
         }
