@@ -186,11 +186,13 @@ static int update_calls(struct audio_device *adev)
             case CALL_LOCAL_HOLD:
                 ALOGD("%s: LOCAL_HOLD -> ACTIVE vsid:%x", __func__, session->vsid);
                 lch_mode = VOICE_LCH_STOP;
+#ifdef PCM_IOCTL_ENABLED
                 if (pcm_ioctl(session->pcm_tx, SNDRV_VOICE_IOCTL_LCH, &lch_mode) < 0) {
                     ALOGE("LOCAL_HOLD -> ACTIVE failed");
                 } else {
                     session->state.current = session->state.new;
                 }
+#endif
                 break;
 
             default:
@@ -238,11 +240,13 @@ static int update_calls(struct audio_device *adev)
             case CALL_LOCAL_HOLD:
                 ALOGD("%s: CALL_LOCAL_HOLD -> HOLD vsid:%x", __func__, session->vsid);
                 lch_mode = VOICE_LCH_STOP;
+#ifdef PCM_IOCTL_ENABLED
                 if (pcm_ioctl(session->pcm_tx, SNDRV_VOICE_IOCTL_LCH, &lch_mode) < 0) {
                     ALOGE("LOCAL_HOLD -> HOLD failed");
                 } else {
                     session->state.current = session->state.new;
                 }
+#endif
                 break;
 
             default:
@@ -260,11 +264,13 @@ static int update_calls(struct audio_device *adev)
                 ALOGD("%s: ACTIVE/CALL_HOLD -> LOCAL_HOLD vsid:%x", __func__,
                       session->vsid);
                 lch_mode = VOICE_LCH_START;
+#ifdef PCM_IOCTL_ENABLED
                 if (pcm_ioctl(session->pcm_tx, SNDRV_VOICE_IOCTL_LCH, &lch_mode) < 0) {
                     ALOGE("LOCAL_HOLD -> HOLD failed");
                 } else {
                     session->state.current = session->state.new;
                 }
+#endif
                 break;
 
             default:
@@ -583,6 +589,7 @@ void voice_extn_in_get_parameters(struct stream_in *in,
     voice_extn_compress_voip_in_get_parameters(in, query, reply);
 }
 
+#ifdef INCALL_MUSIC_ENABLED
 int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
                                                   struct stream_out *out)
 {
@@ -604,4 +611,5 @@ int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
 
     return 0;
 }
+#endif
 

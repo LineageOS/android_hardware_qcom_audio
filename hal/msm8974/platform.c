@@ -687,6 +687,23 @@ int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
     return device_id;
 }
 
+int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id)
+{
+    int ret = 0;
+
+    if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
+        ALOGE("%s: Invalid snd_device = %d",
+            __func__, snd_device);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    acdb_device_table[snd_device] = acdb_id;
+done:
+    return ret;
+}
+
+#ifdef FLUENCE_ENABLED
 int platform_set_fluence_type(void *platform, char *value)
 {
     int ret = 0;
@@ -727,21 +744,6 @@ done:
     return ret;
 }
 
-int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id)
-{
-    int ret = 0;
-
-    if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
-        ALOGE("%s: Invalid snd_device = %d",
-            __func__, snd_device);
-        ret = -EINVAL;
-        goto done;
-    }
-
-    acdb_device_table[snd_device] = acdb_id;
-done:
-    return ret;
-}
 
 int platform_get_fluence_type(void *platform, char *value, uint32_t len)
 {
@@ -759,6 +761,7 @@ int platform_get_fluence_type(void *platform, char *value, uint32_t len)
 
     return ret;
 }
+#endif
 
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
 {
@@ -1068,8 +1071,10 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
                    devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
             snd_device = SND_DEVICE_OUT_USB_HEADSET;
+#ifdef FM_ENABLED
         } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
             snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
+#endif
         } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
             if (audio_extn_should_use_handset_anc(channel_count))
                 snd_device = SND_DEVICE_OUT_ANC_HANDSET;
@@ -1109,15 +1114,19 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         ALOGD("%s: setting USB hadset channel capability(2) for Proxy", __func__);
         audio_extn_set_afe_proxy_channel_mixer(adev, 2);
         snd_device = SND_DEVICE_OUT_USB_HEADSET;
+#ifdef FM_ENABLED
     } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
         snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
+#endif
     } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
         snd_device = SND_DEVICE_OUT_HANDSET;
+#ifdef AFE_PROXY_ENABLED
     } else if (devices & AUDIO_DEVICE_OUT_PROXY) {
         channel_count = audio_extn_get_afe_proxy_channel_count();
         ALOGD("%s: setting sink capability(%d) for Proxy", __func__, channel_count);
         audio_extn_set_afe_proxy_channel_mixer(adev, channel_count);
         snd_device = SND_DEVICE_OUT_AFE_PROXY;
+#endif
     } else {
         ALOGE("%s: Unknown device(s) %#x", __func__, devices);
     }
@@ -1293,9 +1302,11 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 set_echo_reference(adev, true);
             }
         }
+#ifdef FM_ENABLED
     } else if (source == AUDIO_SOURCE_FM_RX ||
                source == AUDIO_SOURCE_FM_RX_A2DP) {
         snd_device = SND_DEVICE_IN_CAPTURE_FM;
+#endif
     } else if (source == AUDIO_SOURCE_DEFAULT) {
         goto exit;
     }
@@ -1330,8 +1341,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (in_device & AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET ||
                    in_device & AUDIO_DEVICE_IN_DGTL_DOCK_HEADSET) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
+#ifdef FM_ENABLED
         } else if (in_device & AUDIO_DEVICE_IN_FM_RX) {
             snd_device = SND_DEVICE_IN_CAPTURE_FM;
+#endif
         } else {
             ALOGE("%s: Unknown input device(s) %#x", __func__, in_device);
             ALOGW("%s: Using default handset-mic", __func__);
@@ -1684,8 +1697,10 @@ int64_t platform_render_latency(audio_usecase_t usecase)
 int platform_update_usecase_from_source(int source, int usecase)
 {
     ALOGV("%s: input source :%d", __func__, source);
+#ifdef FM_ENABLED
     if(source == AUDIO_SOURCE_FM_RX_A2DP)
         usecase = USECASE_AUDIO_RECORD_FM_VIRTUAL;
+#endif
     return usecase;
 }
 
@@ -1693,7 +1708,9 @@ bool platform_listen_update_status(snd_device_t snd_device)
 {
     if ((snd_device >= SND_DEVICE_IN_BEGIN) &&
         (snd_device < SND_DEVICE_IN_END) &&
+#ifdef FM_ENABLED
         (snd_device != SND_DEVICE_IN_CAPTURE_FM) &&
+#endif
         (snd_device != SND_DEVICE_IN_CAPTURE_VI_FEEDBACK))
         return true;
     else
@@ -1734,9 +1751,11 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
     uint32_t fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
     uint32_t bits_per_sample = 16;
 
+#ifdef EXTN_OFFLOAD_ENABLED
     if (info->format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD) {
         bits_per_sample = 32;
     }
+#endif
 
     if (!info->has_video) {
         fragment_size = MAX_PCM_OFFLOAD_FRAGMENT_SIZE;

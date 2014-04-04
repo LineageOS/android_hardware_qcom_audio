@@ -1,4 +1,4 @@
-
+ifneq ($(strip $(AUDIO_FEATURE_DISABLED_EXTN_POST_PROC)),true)
 LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
@@ -29,3 +29,5 @@ LOCAL_C_INCLUDES := \
 	$(call include-path-for, audio-effects)
 
 include $(BUILD_SHARED_LIBRARY)
+
+endif

@@ -115,7 +115,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_HFP_SCO] = "hfp-sco",
     [USECASE_AUDIO_HFP_SCO_WB] = "hfp-sco-wb",
     [USECASE_VOICE_CALL] = "voice-call",
-    
+
     [USECASE_VOICE2_CALL] = "voice2-call",
     [USECASE_VOLTE_CALL] = "volte-call",
     [USECASE_QCHAT_CALL] = "qchat-call",
@@ -184,9 +184,11 @@ static int check_and_set_gapless_mode(struct audio_device *adev) {
 static bool is_supported_format(audio_format_t format)
 {
     if (format == AUDIO_FORMAT_MP3 ||
-        format == AUDIO_FORMAT_AAC ||
+#ifdef EXTN_OFFLOAD_ENABLED
         format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD ||
-        format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD)
+        format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD ||
+#endif
+        format == AUDIO_FORMAT_AAC)
            return true;
 
     return false;
@@ -203,10 +205,12 @@ static int get_snd_codec_id(audio_format_t format)
     case AUDIO_FORMAT_AAC:
         id = SND_AUDIOCODEC_AAC;
         break;
+#ifdef EXTN_OFFLOAD_ENABLED
     case AUDIO_FORMAT_PCM_16_BIT_OFFLOAD:
     case AUDIO_FORMAT_PCM_24_BIT_OFFLOAD:
         id = SND_AUDIOCODEC_PCM;
         break;
+#endif
     default:
         ALOGE("%s: Unsupported audio format :%x", __func__, format);
     }
@@ -1326,6 +1330,7 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
         return -EINVAL;
     }
 
+#ifdef EXTN_OFFLOAD_ENABLED
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FORMAT, value, sizeof(value));
     if (ret >= 0) {
         if (atoi(value) == SND_AUDIOSTREAMFORMAT_MP4ADTS) {
@@ -1334,6 +1339,7 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
         }
         out->send_new_metadata = 1;
     }
+#endif
 
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_SAMPLE_RATE, value, sizeof(value));
     if(ret >= 0)
@@ -2076,15 +2082,21 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
     /* Init use case and pcm_config */
     if ((out->flags == AUDIO_OUTPUT_FLAG_DIRECT) &&
-        (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL ||
-        out->devices & AUDIO_DEVICE_OUT_PROXY)) {
+        (
+#ifdef AFE_PROXY_ENABLED
+        out->devices & AUDIO_DEVICE_OUT_PROXY ||
+#endif
+        out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
 
         pthread_mutex_lock(&adev->lock);
         if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
             ret = read_hdmi_channel_masks(out);
 
+#ifdef AFE_PROXY_ENABLED
         if (out->devices & AUDIO_DEVICE_OUT_PROXY)
             ret = audio_extn_read_afe_proxy_channel_masks(out);
+#endif
+
         pthread_mutex_unlock(&adev->lock);
         if (ret != 0)
             goto error_open;
@@ -2101,6 +2113,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->config.rate = config->sample_rate;
         out->config.channels = popcount(out->channel_mask);
         out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels * 2);
+#ifdef COMPRESS_VOIP_ENABLED
     } else if ((out->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
                (out->flags == (AUDIO_OUTPUT_FLAG_DIRECT | AUDIO_OUTPUT_FLAG_VOIP_RX)) &&
                (voice_extn_compress_voip_is_config_supported(config))) {
@@ -2110,6 +2123,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                   __func__, ret);
             goto error_open;
         }
+#endif
     } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         if (config->offload_info.version != AUDIO_INFO_INITIALIZER.version ||
             config->offload_info.size != AUDIO_INFO_INITIALIZER.size) {
@@ -2150,11 +2164,13 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         else
             out->compr_config.codec->id =
                 get_snd_codec_id(config->offload_info.format);
-
+#ifdef EXTN_OFFLOAD_ENABLED
         if (audio_is_offload_pcm(config->offload_info.format)) {
             out->compr_config.fragment_size =
                        platform_get_pcm_offload_buffer_size(&config->offload_info);
-        } else {
+        } else
+#endif
+        {
             out->compr_config.fragment_size =
                        platform_get_compress_offload_buffer_size(&config->offload_info);
         }
@@ -2168,10 +2184,12 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->compr_config.codec->ch_out = out->compr_config.codec->ch_in;
         out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
 
+#ifdef EXTN_OFFLOAD_ENABLED
         if (config->offload_info.format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD)
             out->compr_config.codec->format = SNDRV_PCM_FORMAT_S16_LE;
         else if(config->offload_info.format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD)
             out->compr_config.codec->format = SNDRV_PCM_FORMAT_S24_LE;
+#endif
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
@@ -2187,6 +2205,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         //Decide if we need to use gapless mode by default
         check_and_set_gapless_mode(adev);
 
+#ifdef INCALL_MUSIC_ENABLED
     } else if (out->flags & AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
         ret = voice_check_and_set_incall_music_usecase(adev, out);
         if (ret != 0) {
@@ -2194,6 +2213,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                   __func__, ret);
             goto error_open;
         }
+#endif
     } else if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
         out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
         out->config = pcm_config_low_latency;

@@ -1,3 +1,4 @@
+ifneq ($(strip $(AUDIO_FEATURE_DISABLED_EXTN_APM)),true)
 ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)
 
 LOCAL_PATH := $(call my-dir)
@@ -33,3 +34,4 @@ endif
 include $(BUILD_SHARED_LIBRARY)
 
 endif
+endif#endif for AUDIO_FEATURE_DISABLED_EXTN_APM
