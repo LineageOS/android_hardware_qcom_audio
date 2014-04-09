@@ -276,4 +276,35 @@ struct csd_data {
     get_sample_rate_t get_sample_rate;
 };
 
+#ifdef PLATFORM_APQ8084
+#define NO_COLS 2
+static int msm_device_to_be_id [][NO_COLS] = {
+       {AUDIO_DEVICE_OUT_EARPIECE                       ,       2},
+       {AUDIO_DEVICE_OUT_SPEAKER                        ,       2},
+       {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       2},
+       {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       2},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO                  ,       11},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET          ,       11},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT           ,       11},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP                 ,       -1},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES      ,       -1},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER         ,       -1},
+       {AUDIO_DEVICE_OUT_AUX_DIGITAL                    ,       4},
+       {AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET              ,       9},
+       {AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET              ,       9},
+       {AUDIO_DEVICE_OUT_USB_ACCESSORY                  ,       -1},
+       {AUDIO_DEVICE_OUT_USB_DEVICE                     ,       -1},
+       {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
+       {AUDIO_DEVICE_OUT_ANC_HEADSET                    ,       2},
+       {AUDIO_DEVICE_OUT_ANC_HEADPHONE                  ,       2},
+       {AUDIO_DEVICE_OUT_PROXY                          ,       9},
+       {AUDIO_DEVICE_OUT_FM                             ,       7},
+       {AUDIO_DEVICE_OUT_FM_TX                          ,       8},
+       {AUDIO_DEVICE_OUT_ALL                            ,      -1},
+       {AUDIO_DEVICE_NONE                               ,      -1},
+       {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
+};
+static int arr_len = sizeof(msm_device_to_be_id)/ (sizeof(int) * NO_COLS);
+#endif
+
 #endif // QCOM_AUDIO_PLATFORM_H
