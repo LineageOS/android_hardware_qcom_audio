@@ -60,7 +60,7 @@ extern "C" {
 #endif
 
 #define DEBUG_PRINT_ERROR LOGE
-#define DEBUG_PRINT       LOGI
+#define DEBUG_PRINT       LOGV
 #define DEBUG_DETAIL      LOGV
 
 typedef void (*message_func)(void* client_data, unsigned char id);
