@@ -1422,6 +1422,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             if (out_device & AUDIO_DEVICE_OUT_EARPIECE &&
                 audio_extn_should_use_handset_anc(channel_count)) {
                 snd_device = SND_DEVICE_IN_AANC_HANDSET_MIC;
+                adev->acdb_settings |= ANC_FLAG;
             } else if (my_data->fluence_type == FLUENCE_NONE ||
                 my_data->fluence_in_voice_call == false) {
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
