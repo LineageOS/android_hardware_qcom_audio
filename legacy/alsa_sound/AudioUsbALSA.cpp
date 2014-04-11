@@ -269,6 +269,7 @@ status_t AudioUsbALSA::getCap(char * type, int &channels, int &sampleRate)
     ALOGD("sampleRate: %d", sampleRate);
     if (sampleRate == 0 ) {
         sampleRate = ratesSupported[0];
+        close(fd);
         ALOGE("Device sampleRate:%d doesn't match with PROXY supported rate\n", sampleRate);
         return BAD_VALUE;
     }
