@@ -178,6 +178,8 @@ enum {
 #define PLAYBACK_OFFLOAD_DEVICE 9
 #define COMPRESS_VOIP_CALL_PCM_DEVICE 3
 
+/* Define macro for Internal FM volume mixer */
+#define FM_RX_VOLUME "Internal FM RX Volume"
 
 #define LOWLATENCY_PCM_DEVICE 12
 #define EC_REF_RX "I2S_RX"

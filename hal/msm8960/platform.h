@@ -118,4 +118,7 @@ enum {
 #define AUDIO_CAPTURE_PERIOD_DURATION_MSEC 20
 #define AUDIO_CAPTURE_PERIOD_COUNT 2
 
+/* Define macro for Internal FM volume mixer */
+#define FM_RX_VOLUME "Internal FM RX Volume"
+
 #endif // QCOM_AUDIO_PLATFORM_H

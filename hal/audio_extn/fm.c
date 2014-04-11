@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -64,7 +64,7 @@ static int32_t fm_set_volume(struct audio_device *adev, float value)
 {
     int32_t vol, ret = 0;
     struct mixer_ctl *ctl;
-    const char *mixer_ctl_name = "Internal FM RX Volume";
+    const char *mixer_ctl_name = FM_RX_VOLUME;
 
     ALOGV("%s: entry", __func__);
     ALOGD("%s: (%f)\n", __func__, value);
@@ -92,7 +92,6 @@ static int32_t fm_set_volume(struct audio_device *adev, float value)
         return -EINVAL;
     }
     mixer_ctl_set_value(ctl, 0, vol);
-
     ALOGV("%s: exit", __func__);
     return ret;
 }
