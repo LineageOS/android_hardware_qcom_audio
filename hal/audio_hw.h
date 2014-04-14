@@ -35,13 +35,15 @@
 #define BT_SCO_WB_SAMPLE_RATE "bt-sco-wb-samplerate"
 
 /* Flags used to initialize acdb_settings variable that goes to ACDB library */
-#define DMIC_FLAG       0x00000002
-#define QMIC_FLAG       0x00000004
-#define TTY_MODE_OFF    0x00000010
-#define TTY_MODE_FULL   0x00000020
-#define TTY_MODE_VCO    0x00000040
-#define TTY_MODE_HCO    0x00000080
-#define TTY_MODE_CLEAR  0xFFFFFF0F
+#define NONE_FLAG            0x00000000
+#define DMIC_FLAG            0x00000002
+#define QMIC_FLAG            0x00000004
+#define TTY_MODE_OFF         0x00000010
+#define TTY_MODE_FULL        0x00000020
+#define TTY_MODE_VCO         0x00000040
+#define TTY_MODE_HCO         0x00000080
+#define TTY_MODE_CLEAR       0xFFFFFF0F
+#define FLUENCE_MODE_CLEAR   0xFFFFFFF0
 
 #define ACDB_DEV_TYPE_OUT 1
 #define ACDB_DEV_TYPE_IN 2

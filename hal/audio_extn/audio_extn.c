@@ -28,6 +28,8 @@
 
 #include "audio_hw.h"
 #include "audio_extn.h"
+#include "platform.h"
+#include "platform_api.h"
 
 #define MAX_SLEEP_RETRY 100
 #define WIFI_INIT_WAIT_SLEEP 50
@@ -172,6 +174,60 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
     ALOGD("%s: anc_enabled:%d", __func__, aextnmod.anc_enabled);
 }
 #endif /* ANC_HEADSET_ENABLED */
+
+#ifndef FLUENCE_ENABLED
+#define audio_extn_set_fluence_parameters(adev, parms) (0)
+#define audio_extn_get_fluence_parameters(adev, query, reply) (0)
+#else
+void audio_extn_set_fluence_parameters(struct audio_device *adev,
+                                            struct str_parms *parms)
+{
+    int ret = 0, err;
+    char value[32];
+    struct listnode *node;
+    struct audio_usecase *usecase;
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FLUENCE,
+                                 value, sizeof(value));
+    ALOGV_IF(err >= 0, "%s: Set Fluence Type to %s", __func__, value);
+    if (err >= 0) {
+        ret = platform_set_fluence_type(adev->platform, value);
+        if (ret != 0) {
+            ALOGE("platform_set_fluence_type returned error: %d", ret);
+        } else {
+            /*
+             *If the fluence is manually set/reset, devices
+             *need to get updated for all the usecases
+             *i.e. audio and voice.
+             */
+             list_for_each(node, &adev->usecase_list) {
+                 usecase = node_to_item(node, struct audio_usecase, list);
+                 select_devices(adev, usecase->id);
+             }
+        }
+    }
+}
+
+int audio_extn_get_fluence_parameters(struct audio_device *adev,
+                       struct str_parms *query, struct str_parms *reply)
+{
+    int ret = 0, err;
+    char value[256] = {0};
+
+    err = str_parms_get_str(query, AUDIO_PARAMETER_KEY_FLUENCE, value,
+                                                          sizeof(value));
+    if (err >= 0) {
+        ret = platform_get_fluence_type(adev->platform, value, sizeof(value));
+        if (ret >= 0) {
+            ALOGV("%s: Fluence Type is %s", __func__, value);
+            str_parms_add_str(reply, AUDIO_PARAMETER_KEY_FLUENCE, value);
+        } else
+            goto done;
+    }
+done:
+    return ret;
+}
+#endif /* FLUENCE_ENABLED */
 
 #ifndef AFE_PROXY_ENABLED
 #define audio_extn_set_afe_proxy_parameters(parms)        (0)
@@ -370,6 +426,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
                                struct str_parms *parms)
 {
    audio_extn_set_anc_parameters(adev, parms);
+   audio_extn_set_fluence_parameters(adev, parms);
    audio_extn_set_afe_proxy_parameters(parms);
    audio_extn_fm_set_parameters(adev, parms);
    audio_extn_listen_set_parameters(adev, parms);
@@ -384,6 +441,7 @@ void audio_extn_get_parameters(const struct audio_device *adev,
 {
     char *kv_pairs = NULL;
     audio_extn_get_afe_proxy_parameters(query, reply);
+    audio_extn_get_fluence_parameters(adev, query, reply);
 
     kv_pairs = str_parms_to_str(reply);
     ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);

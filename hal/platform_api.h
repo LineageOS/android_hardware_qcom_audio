@@ -28,6 +28,8 @@ int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
 void platform_add_backend_name(char *mixer_path, snd_device_t snd_device);
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type);
 int platform_get_snd_device_index(char *snd_device_index_name);
+int platform_set_fluence_type(void *platform, char *value);
+int platform_get_fluence_type(void *platform, char *value, uint32_t len);
 int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id);
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device);
 int platform_switch_voice_call_device_pre(void *platform);
