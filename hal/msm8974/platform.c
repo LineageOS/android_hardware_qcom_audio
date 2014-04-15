@@ -763,6 +763,9 @@ void *platform_init(struct audio_device *adev)
     /* update sound cards appropriately */
     audio_extn_usb_set_proxy_sound_card(adev->snd_card);
 
+    /* init dap hal */
+    audio_extn_dap_hal_init(adev->snd_card);
+
     /* Read one time ssr property */
     audio_extn_ssr_update_enabled();
     audio_extn_spkr_prot_init(adev);
@@ -779,6 +782,7 @@ void platform_deinit(void *platform)
     free(platform);
     /* deinit usb */
     audio_extn_usb_deinit();
+    audio_extn_dap_hal_deinit();
 }
 
 const char *platform_get_snd_device_name(snd_device_t snd_device)
