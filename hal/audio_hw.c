@@ -2255,7 +2255,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
     /* Check if this usecase is already existing */
     pthread_mutex_lock(&adev->lock);
-    if (get_usecase_from_list(adev, out->usecase) != NULL) {
+    if ((get_usecase_from_list(adev, out->usecase) != NULL) &&
+        (out->usecase != USECASE_COMPRESS_VOIP_CALL)) {
         ALOGE("%s: Usecase (%d) is already present", __func__, out->usecase);
         pthread_mutex_unlock(&adev->lock);
         ret = -EEXIST;
