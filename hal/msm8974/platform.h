@@ -233,6 +233,12 @@ enum {
 #define HFP_ASM_RX_TX 24
 #endif
 
+#ifdef PLATFORM_APQ8084
+#define FM_RX_VOLUME "Quat MI2S FM RX Volume"
+#else
+#define FM_RX_VOLUME "Internal FM RX Volume"
+#endif
+
 #define LIB_CSD_CLIENT "libcsd-client.so"
 /* CSD-CLIENT related functions */
 typedef int (*init_t)(bool);
