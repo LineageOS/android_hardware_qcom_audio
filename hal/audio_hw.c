@@ -299,10 +299,12 @@ int enable_snd_device(struct audio_device *adev,
      * control in use-case does not work because rate update takes place after
      * AFE port open due to the limitation of mixer control order execution.
      */
-    if (snd_device == SND_DEVICE_OUT_BT_SCO) {
+    if ((snd_device == SND_DEVICE_OUT_BT_SCO) ||
+        (snd_device == SND_DEVICE_IN_BT_SCO_MIC)) {
         audio_route_apply_path(adev->audio_route, BT_SCO_SAMPLE_RATE);
         audio_route_update_mixer(adev->audio_route);
-    } else if (snd_device == SND_DEVICE_OUT_BT_SCO_WB) {
+    } else if ((snd_device == SND_DEVICE_OUT_BT_SCO_WB) ||
+               (snd_device == SND_DEVICE_IN_BT_SCO_MIC_WB)) {
         audio_route_apply_path(adev->audio_route, BT_SCO_WB_SAMPLE_RATE);
         audio_route_update_mixer(adev->audio_route);
     }
