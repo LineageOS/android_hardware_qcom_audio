@@ -229,9 +229,10 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
         ALOGD("%s: FM usecase", __func__);
         if (val != 0) {
             if(val & AUDIO_DEVICE_OUT_FM
-               && fmmod.is_fm_running == false)
+               && fmmod.is_fm_running == false) {
+                adev->primary_output->devices = val & ~AUDIO_DEVICE_OUT_FM;
                 fm_start(adev);
-            else if (!(val & AUDIO_DEVICE_OUT_FM)
+            } else if (!(val & AUDIO_DEVICE_OUT_FM)
                      && fmmod.is_fm_running == true)
                 fm_stop(adev);
        }
