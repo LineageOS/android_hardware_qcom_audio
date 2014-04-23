@@ -1076,19 +1076,11 @@ status_t AudioPolicyManager::checkAndSetVolume(int stream,
     if (stream == AudioSystem::VOICE_CALL ||
         stream == AudioSystem::BLUETOOTH_SCO) {
         float voiceVolume;
-
-        voiceVolume = (float)index/(float)mStreams[stream].mIndexMax;
-
-        // Force voice volume to max when Vgs is set for bluetooth SCO as volume is managed by the headset
-        if (stream == AudioSystem::BLUETOOTH_SCO) {
-            String8 key ("bt_headset_vgs");
-            mpClientInterface->getParameters(output,key);
-            AudioParameter result(mpClientInterface->getParameters(0,key));
-            int value;
-            if (result.getInt(String8("isVGS"),value) == NO_ERROR) {
-                ALOGV("Use BT-SCO Voice Volume");
-                voiceVolume = 1.0;
-            }
+        // Force voice volume to max for bluetooth SCO as volume is managed by the headset
+        if (stream == AudioSystem::VOICE_CALL) {
+            voiceVolume = (float)index/(float)mStreams[stream].mIndexMax;
+        } else {
+            voiceVolume = 1.0;
         }
 
         if (voiceVolume != mLastVoiceVolume && output == mPrimaryOutput) {
