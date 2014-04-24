@@ -33,6 +33,7 @@
 #include "voice_extn.h"
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
+#define MIXER_XML_PATH_MTP "/system/etc/mixer_paths_mtp.xml"
 #define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
 #define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
@@ -394,6 +395,19 @@ struct snd_device_index snd_device_name_index[SND_DEVICE_MAX] = {
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 
+static void query_platform(const char *snd_card_name,
+                                      char *mixer_xml_path)
+{
+    if (!strncmp(snd_card_name, "msm8x16-snd-card-mtp",
+                 sizeof("msm8x16-snd-card-mtp"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_MTP,
+                sizeof(MIXER_XML_PATH_MTP));
+    } else {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH,
+                sizeof(MIXER_XML_PATH));
+    }
+}
+
 static int set_echo_reference(struct mixer *mixer, const char* ec_ref)
 {
     struct mixer_ctl *ctl;
@@ -548,6 +562,7 @@ void *platform_init(struct audio_device *adev)
     struct platform_data *my_data = NULL;
     int retry_num = 0, snd_card_num = 0;
     const char *snd_card_name;
+    char mixer_xml_path[100];
 
     my_data = calloc(1, sizeof(struct platform_data));
 
@@ -575,10 +590,14 @@ void *platform_init(struct audio_device *adev)
         if (!my_data->hw_info) {
             ALOGE("%s: Failed to init hardware info", __func__);
         } else {
-            if (audio_extn_read_xml(adev, snd_card_num, MIXER_XML_PATH,
-                                    MIXER_XML_PATH_AUXPCM) == -ENOSYS)
+            query_platform(snd_card_name, mixer_xml_path);
+            ALOGD("%s: mixer path file is %s", __func__,
+                                    mixer_xml_path);
+            if (audio_extn_read_xml(adev, snd_card_num, mixer_xml_path,
+                                    MIXER_XML_PATH_AUXPCM) == -ENOSYS) {
                 adev->audio_route = audio_route_init(snd_card_num,
-                                                 MIXER_XML_PATH);
+                                                 mixer_xml_path);
+            }
             if (!adev->audio_route) {
                 ALOGE("%s: Failed to init audio route controls, aborting.",
                        __func__);
