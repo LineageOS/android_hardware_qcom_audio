@@ -197,6 +197,19 @@ bool voice_is_in_call(struct audio_device *adev)
     return in_call;
 }
 
+bool voice_is_in_call_rec_stream(struct stream_in *in)
+{
+    bool in_call_rec = false;
+    int ret = 0;
+
+    ret = voice_extn_is_in_call_rec_stream(in, &in_call_rec);
+    if (ret == -ENOSYS) {
+        in_call_rec = false;
+    }
+
+    return in_call_rec;
+}
+
 uint32_t voice_get_active_session_id(struct audio_device *adev)
 {
     int ret = 0;
