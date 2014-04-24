@@ -1,4 +1,4 @@
-ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)
+ifneq ($(strip $(BOARD_USES_AOSP_AUDIO_POLICY_MANAGER)),true)
 
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)

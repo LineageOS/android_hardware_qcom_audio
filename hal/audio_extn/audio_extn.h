@@ -22,6 +22,45 @@
 
 #include <cutils/str_parms.h>
 
+#ifndef PCM_OFFLOAD_ENABLED
+#define AUDIO_FORMAT_PCM_OFFLOAD 0x17000000UL
+#define AUDIO_FORMAT_PCM_16_BIT_OFFLOAD (AUDIO_FORMAT_PCM_OFFLOAD | AUDIO_FORMAT_PCM_SUB_16_BIT)
+#define AUDIO_FORMAT_PCM_24_BIT_OFFLOAD (AUDIO_FORMAT_PCM_OFFLOAD | AUDIO_FORMAT_PCM_SUB_8_24_BIT)
+#define AUDIO_OFFLOAD_CODEC_FORMAT  "music_offload_codec_format"
+static inline bool audio_is_offload_pcm(audio_format_t format) {
+    return ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM_OFFLOAD);
+}
+#endif
+
+#ifndef AFE_PROXY_ENABLED
+#define AUDIO_DEVICE_OUT_PROXY 0x40000
+#endif
+
+#ifndef COMPRESS_VOIP_ENABLED
+#define AUDIO_OUTPUT_FLAG_VOIP_RX 0x4000
+#endif
+
+#ifndef INCALL_MUSIC_ENABLED
+#define AUDIO_OUTPUT_FLAG_INCALL_MUSIC 0x8000
+#endif
+
+#ifndef FLUENCE_ENABLED
+#define AUDIO_PARAMETER_KEY_FLUENCE "fluence"
+#define AUDIO_PARAMETER_VALUE_QUADMIC "quadmic"
+#define AUDIO_PARAMETER_VALUE_DUALMIC "dualmic"
+#define AUDIO_PARAMETER_KEY_NO_FLUENCE "none"
+#endif
+
+#ifndef FM_ENABLED
+#define AUDIO_DEVICE_OUT_FM 0x80000
+#define AUDIO_DEVICE_OUT_FM_TX 0x100000
+#define AUDIO_SOURCE_FM_RX 9
+#define AUDIO_SOURCE_FM_RX_A2DP 10
+#define AUDIO_DEVICE_IN_FM_RX (AUDIO_DEVICE_BIT_IN | 0x8000)
+#define AUDIO_DEVICE_IN_FM_RX_A2DP AUDIO_DEVICE_BIT_IN | 0x10000
+#endif
+
+
 void audio_extn_set_parameters(struct audio_device *adev,
                                struct str_parms *parms);
 

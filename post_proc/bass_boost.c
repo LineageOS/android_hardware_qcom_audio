@@ -100,12 +100,12 @@ int bassboost_get_parameter(effect_context_t *context, effect_param_t *p,
 
     switch (param) {
     case BASSBOOST_PARAM_STRENGTH_SUPPORTED:
-	ALOGV("%s: BASSBOOST_PARAM_STRENGTH_SUPPORTED", __func__);
+        ALOGV("%s: BASSBOOST_PARAM_STRENGTH_SUPPORTED", __func__);
         *(uint32_t *)value = 1;
         break;
 
     case BASSBOOST_PARAM_STRENGTH:
-	ALOGV("%s: BASSBOOST_PARAM_STRENGTH", __func__);
+        ALOGV("%s: BASSBOOST_PARAM_STRENGTH", __func__);
         *(int16_t *)value = bassboost_get_strength(bass_ctxt);
         break;
 
@@ -133,7 +133,7 @@ int bassboost_set_parameter(effect_context_t *context, effect_param_t *p,
 
     switch (param) {
     case BASSBOOST_PARAM_STRENGTH:
-	ALOGV("%s BASSBOOST_PARAM_STRENGTH", __func__);
+        ALOGV("%s BASSBOOST_PARAM_STRENGTH", __func__);
         strength = (uint32_t)(*(int16_t *)value);
         bassboost_set_strength(bass_ctxt, strength);
         break;
@@ -154,7 +154,9 @@ int bassboost_set_device(effect_context_t *context, uint32_t device)
     if((device == AUDIO_DEVICE_OUT_SPEAKER) ||
        (device == AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT) ||
        (device == AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER) ||
+#ifdef AFE_PROXY_ENABLED
        (device == AUDIO_DEVICE_OUT_PROXY) ||
+#endif
        (device == AUDIO_DEVICE_OUT_AUX_DIGITAL) ||
        (device == AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET)) {
         if (offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass))) {
