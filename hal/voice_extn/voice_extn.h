@@ -33,6 +33,7 @@ void voice_extn_get_parameters(const struct audio_device *adev,
                                struct str_parms *query,
                                struct str_parms *reply);
 int voice_extn_is_in_call(struct audio_device *adev, bool *in_call);
+int voice_extn_is_in_call_rec_stream(struct stream_in *in, bool *in_call_rec);
 int voice_extn_get_active_session_id(struct audio_device *adev,
                                      uint32_t *session_id);
 void voice_extn_in_get_parameters(struct stream_in *in,
@@ -76,6 +77,11 @@ static void voice_extn_get_parameters(const struct audio_device *adev,
 }
 
 static int voice_extn_is_in_call(struct audio_device *adev, bool *in_call)
+{
+    return -ENOSYS;
+}
+
+static int voice_extn_is_in_call_rec_stream(struct stream_in *in, bool *in_call_rec)
 {
     return -ENOSYS;
 }
