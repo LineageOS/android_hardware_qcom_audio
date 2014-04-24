@@ -2530,6 +2530,8 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
     in = (struct stream_in *)calloc(1, sizeof(struct stream_in));
 
+    pthread_mutex_init(&in->lock, (const pthread_mutexattr_t *) NULL);
+
     in->stream.common.get_sample_rate = in_get_sample_rate;
     in->stream.common.set_sample_rate = in_set_sample_rate;
     in->stream.common.get_buffer_size = in_get_buffer_size;
@@ -2663,6 +2665,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     }
 
     adev = calloc(1, sizeof(struct audio_device));
+
+    pthread_mutex_init(&adev->lock, (const pthread_mutexattr_t *) NULL);
 
     adev->device.common.tag = HARDWARE_DEVICE_TAG;
     adev->device.common.version = AUDIO_DEVICE_API_VERSION_2_0;
