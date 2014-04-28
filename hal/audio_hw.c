@@ -2461,10 +2461,10 @@ static int adev_verify_devices(struct audio_device *adev)
 
             /* deselect device - similar to stop_(in/out)put_stream() */
             /* 1. Get and set stream specific mixer controls */
-            retval = disable_audio_route(adev, &uc_info, true);
+            retval = disable_audio_route(adev, &uc_info);
             /* 2. Disable the rx device */
             retval = disable_snd_device(adev,
-                    dir ? uc_info.in_snd_device : uc_info.out_snd_device, true);
+                    dir ? uc_info.in_snd_device : uc_info.out_snd_device);
             list_remove(&uc_info.list);
         }
     }
