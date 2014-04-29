@@ -211,8 +211,10 @@ void audio_extn_compr_cap_deinit();
 
 #if defined(DS1_DOLBY_DDP_ENABLED) || defined(DS1_DOLBY_DAP_ENABLED)
 void audio_extn_dolby_set_dmid(struct audio_device *adev);
+void audio_extn_dolby_set_license(struct audio_device *adev);
 #else
 #define audio_extn_dolby_set_dmid(adev)                 (0)
+#define audio_extn_dolby_set_license(adev)              (0)
 #endif
 
 #ifndef DS1_DOLBY_DDP_ENABLED

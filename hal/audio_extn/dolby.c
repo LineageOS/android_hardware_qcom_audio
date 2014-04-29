@@ -287,6 +287,15 @@ void audio_extn_ddp_set_parameters(struct audio_device *adev,
     int ddp_dev, dev_ch_cap;
     int val, ret;
     char value[32]={0};
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SND_CARD_STATUS, value,
+                            sizeof(value));
+    if (ret >= 0) {
+        char *snd_card_status = value + 2;
+        if (strncmp(snd_card_status, "ONLINE", sizeof("ONLINE")) == 0)
+            audio_extn_dolby_set_license(adev);
+    }
+
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DDP_DEV, value,
                             sizeof(value));
     if (ret >= 0) {
@@ -467,6 +476,31 @@ void audio_extn_dolby_set_dmid(struct audio_device *adev)
     ret = mixer_ctl_set_value(ctl, 0, i_dmid);
     if (ret)
         ALOGE("%s: Dolby DMID cannot be set error:%d",__func__, ret);
+
+    return;
+}
+
+void audio_extn_dolby_set_license(struct audio_device *adev)
+{
+    int ret, key=0;
+    char value[128] = {0};
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "DS1 License";
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return;
+    }
+
+    property_get("audio.ds1.metainfo.key",value,"0");
+    key = atoi(value);
+
+    ALOGV("%s Setting DS1 License, key:0x%x",__func__, key);
+    ret = mixer_ctl_set_value(ctl, 0, key);
+    if (ret)
+        ALOGE("%s: cannot set license, error:%d",__func__, ret);
 
     return;
 }
