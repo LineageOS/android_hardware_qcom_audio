@@ -542,6 +542,11 @@ void audio_extn_usb_init(void *adev)
     usbmod->proxy_card = 0;
     usbmod->proxy_device_id = AFE_PROXY_PLAYBACK_DEVICE;
     usbmod->adev = (struct audio_device*)adev;
+
+     pthread_mutex_init(&usbmod->usb_playback_lock,
+                        (const pthread_mutexattr_t *) NULL);
+     pthread_mutex_init(&usbmod->usb_record_lock,
+                        (const pthread_mutexattr_t *) NULL);
 }
 
 void audio_extn_usb_deinit()
