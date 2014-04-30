@@ -242,17 +242,15 @@ struct audio_device {
 int select_devices(struct audio_device *adev,
                           audio_usecase_t uc_id);
 int disable_audio_route(struct audio_device *adev,
-                               struct audio_usecase *usecase,
-                               bool update_mixer);
+                        struct audio_usecase *usecase);
 int disable_snd_device(struct audio_device *adev,
-                              snd_device_t snd_device,
-                              bool update_mixer);
+                       snd_device_t snd_device);
 int enable_snd_device(struct audio_device *adev,
-                             snd_device_t snd_device,
-                             bool update_mixer);
+                      snd_device_t snd_device);
+
 int enable_audio_route(struct audio_device *adev,
-                              struct audio_usecase *usecase,
-                              bool update_mixer);
+                       struct audio_usecase *usecase);
+
 struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
                                                    audio_usecase_t uc_id);
 
