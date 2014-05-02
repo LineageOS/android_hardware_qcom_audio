@@ -48,7 +48,7 @@ namespace android {
 
     void AudioDaemon::onFirstRef() {
         ALOGV("Start audiod daemon");
-        run("AudioDaemon", PRIORITY_AUDIO);
+        run("AudioDaemon", PRIORITY_URGENT_AUDIO);
     }
 
     void AudioDaemon::binderDied(const wp<IBinder>& who)
