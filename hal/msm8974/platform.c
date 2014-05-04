@@ -436,20 +436,14 @@ struct snd_device_index snd_device_name_index[SND_DEVICE_MAX] = {
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 
-static int set_echo_reference(struct mixer *mixer, const char* ec_ref)
+static void set_echo_reference(struct audio_device *adev, bool enable)
 {
-    struct mixer_ctl *ctl;
-    const char *mixer_ctl_name = "EC_REF_RX";
+    if (enable)
+        audio_route_apply_and_update_path(adev->audio_route, "echo-reference");
+    else
+        audio_route_reset_and_update_path(adev->audio_route, "echo-reference");
 
-    ctl = mixer_get_ctl_by_name(mixer, mixer_ctl_name);
-    if (!ctl) {
-        ALOGE("%s: Could not get ctl for mixer cmd - %s",
-              __func__, mixer_ctl_name);
-        return -EINVAL;
-    }
-    ALOGV("Setting EC Reference: %s", ec_ref);
-    mixer_ctl_set_enum_by_string(ctl, ec_ref);
-    return 0;
+    ALOGV("Setting EC Reference: %d", enable);
 }
 
 static struct csd_data *open_csd_client(bool i2s_ext_modem)
@@ -1444,7 +1438,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             } else if (my_data->fluence_type == FLUENCE_NONE ||
                 my_data->fluence_in_voice_call == false) {
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
-                set_echo_reference(adev->mixer, EC_REF_RX);
+                set_echo_reference(adev, true);
             } else {
                 snd_device = SND_DEVICE_IN_VOICE_DMIC;
                 adev->acdb_settings |= DMIC_FLAG;
@@ -1521,7 +1515,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
                     snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
                 }
-                set_echo_reference(adev->mixer, EC_REF_RX);
+                set_echo_reference(adev, true);
             } else if (adev->active_input->enable_aec) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     if (my_data->fluence_type & FLUENCE_DUAL_MIC &&
@@ -1542,7 +1536,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
                     snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
                 }
-                set_echo_reference(adev->mixer, EC_REF_RX);
+                set_echo_reference(adev, true);
             } else if (adev->active_input->enable_ns) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     if (my_data->fluence_type & FLUENCE_DUAL_MIC &&
@@ -1563,9 +1557,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
                     snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
                 }
-                set_echo_reference(adev->mixer, "NONE");
+                set_echo_reference(adev, false);
             } else
-                set_echo_reference(adev->mixer, "NONE");
+                set_echo_reference(adev, false);
         }
     } else if (source == AUDIO_SOURCE_MIC) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC &&
@@ -1573,7 +1567,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             if(my_data->fluence_type & FLUENCE_DUAL_MIC &&
                     my_data->fluence_in_audio_rec) {
                 snd_device = SND_DEVICE_IN_HANDSET_DMIC;
-                set_echo_reference(adev->mixer, EC_REF_RX);
+                set_echo_reference(adev, true);
             }
         }
     } else if (source == AUDIO_SOURCE_FM_RX ||
