@@ -2709,6 +2709,7 @@ static int adev_open(const hw_module_t *module, const char *name,
         }
     }
 
+    audio_extn_ds2_enable(adev);
     *device = &adev->device.common;
 
     audio_device_ref_count++;
