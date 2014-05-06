@@ -1503,6 +1503,10 @@ void AudioPolicyManager::setPhoneState(int state)
         //suspend  PCM (deep-buffer) output & close  compress & direct tracks
         for (size_t i = 0; i < mOutputs.size(); i++) {
             AudioOutputDescriptor *outputDesc = mOutputs.valueAt(i);
+            if (!outputDesc || !outputDesc->mProfile) {
+               ALOGD("ouput desc / profile is NULL");
+               continue;
+            }
             if (((!outputDesc->isDuplicated() &&outputDesc->mProfile->mFlags & AUDIO_OUTPUT_FLAG_PRIMARY))
                         && prop_playback_enabled) {
                 ALOGD(" calling suspendOutput on call mdoe for primary output");
@@ -1527,6 +1531,10 @@ void AudioPolicyManager::setPhoneState(int state)
         //restore PCM (deep-buffer) output after call termination
         for (size_t i = 0; i < mOutputs.size(); i++) {
             AudioOutputDescriptor *outputDesc = mOutputs.valueAt(i);
+            if (!outputDesc || !outputDesc->mProfile) {
+               ALOGD("ouput desc / profile is NULL");
+               continue;
+            }
             if (!outputDesc->isDuplicated() &&outputDesc->mProfile->mFlags & AUDIO_OUTPUT_FLAG_PRIMARY) {
                 ALOGD("calling restoreOutput after call mode for primary output");
                 mpClientInterface->restoreOutput(mOutputs.keyAt(i));
