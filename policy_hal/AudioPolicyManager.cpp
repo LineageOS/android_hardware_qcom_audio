@@ -1239,7 +1239,7 @@ get_output__new_output_desc:
 // of the system.
 bool AudioPolicyManager::isOffloadSupported(const audio_offload_info_t& offloadInfo)
 {
-    ALOGV(" isOffloadSupported: SR=%u, CM=0x%x, Format=0x%x, StreamType=%d,"
+    ALOGD("copl: isOffloadSupported: SR=%u, CM=0x%x, Format=0x%x, StreamType=%d,"
      " BitRate=%u, duration=%lld us, has_video=%d",
      offloadInfo.sample_rate, offloadInfo.channel_mask,
      offloadInfo.format,
@@ -1253,7 +1253,7 @@ bool AudioPolicyManager::isOffloadSupported(const audio_offload_info_t& offloadI
          if (propenabled) {
             if(isInCall())
             {
-                ALOGD("\n  blocking  compress offload on call mode\n");
+                ALOGD("\n copl: blocking  compress offload on call mode\n");
                 return false;
             }
          }
@@ -1263,7 +1263,7 @@ bool AudioPolicyManager::isOffloadSupported(const audio_offload_info_t& offloadI
     // Check if stream type is music, then only allow offload as of now.
     if (offloadInfo.stream_type != AUDIO_STREAM_MUSIC)
     {
-        ALOGV("isOffloadSupported: stream_type != MUSIC, returning false");
+        ALOGD("copl: isOffloadSupported: stream_type != MUSIC, returning false");
         return false;
     }
 
@@ -1278,7 +1278,7 @@ bool AudioPolicyManager::isOffloadSupported(const audio_offload_info_t& offloadI
             }
         }
         if (!pcmOffload) {
-            ALOGV("PCM offload disabled by property audio.offload.pcm.enable");
+            ALOGD("copl: PCM offload disabled by property audio.offload.pcm.enable");
             return false;
         }
     }
@@ -1287,7 +1287,7 @@ bool AudioPolicyManager::isOffloadSupported(const audio_offload_info_t& offloadI
         // Check if offload has been disabled
         if (property_get("audio.offload.disable", propValue, "0")) {
             if (atoi(propValue) != 0) {
-                ALOGV("offload disabled by audio.offload.disable=%s", propValue );
+                ALOGD("copl: offload disabled by audio.offload.disable=%s", propValue );
                 return false;
             }
         }
@@ -1295,7 +1295,7 @@ bool AudioPolicyManager::isOffloadSupported(const audio_offload_info_t& offloadI
         //check if it's multi-channel AAC format
         if (AudioSystem::popCount(offloadInfo.channel_mask) > 2
               && offloadInfo.format == AUDIO_FORMAT_AAC) {
-            ALOGV("offload disabled for multi-channel AAC format");
+            ALOGD("copl: offload disabled for multi-channel AAC format");
             return false;
         }
 
@@ -1323,7 +1323,7 @@ bool AudioPolicyManager::isOffloadSupported(const audio_offload_info_t& offloadI
                     return false;
                 }
             }
-            ALOGV("isOffloadSupported: has_video == true, property\
+            ALOGD("copl: isOffloadSupported: has_video == true, property\
                     set to enable offload");
         }
     }
@@ -1331,11 +1331,11 @@ bool AudioPolicyManager::isOffloadSupported(const audio_offload_info_t& offloadI
     //If duration is less than minimum value defined in property, return false
     if (property_get("audio.offload.min.duration.secs", propValue, NULL)) {
         if (offloadInfo.duration_us < (atoi(propValue) * 1000000 )) {
-            ALOGV("Offload denied by duration < audio.offload.min.duration.secs(=%s)", propValue);
+            ALOGD("copl: Offload denied by duration < audio.offload.min.duration.secs(=%s)", propValue);
             return false;
         }
     } else if (offloadInfo.duration_us < OFFLOAD_DEFAULT_MIN_DURATION_SECS * 1000000) {
-        ALOGV("Offload denied by duration < default min(=%u)", OFFLOAD_DEFAULT_MIN_DURATION_SECS);
+        ALOGD("copl: Offload denied by duration < default min(=%u)", OFFLOAD_DEFAULT_MIN_DURATION_SECS);
         //duration checks only valid for MP3/AAC formats,
         //do not check duration for other audio formats, e.g. dolby AAC/AC3 and amrwb+ formats
         if (offloadInfo.format == AUDIO_FORMAT_MP3 || offloadInfo.format == AUDIO_FORMAT_AAC || pcmOffload)
@@ -1359,7 +1359,7 @@ bool AudioPolicyManager::isOffloadSupported(const audio_offload_info_t& offloadI
                                             offloadInfo.format,
                                             offloadInfo.channel_mask,
                                             AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD);
-    ALOGV("isOffloadSupported() profile %sfound", profile != NULL ? "" : "NOT ");
+    ALOGD("copl: isOffloadSupported() profile %sfound", profile != NULL ? "" : "NOT ");
     return (profile != NULL);
 }
 
