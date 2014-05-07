@@ -1081,6 +1081,8 @@ static int stop_output_stream(struct stream_out *out)
 int start_output_stream(struct stream_out *out)
 {
     int ret = 0;
+    int sink_channels = 0;
+    char prop_value[PROPERTY_VALUE_MAX] = {0};
     struct audio_usecase *uc_info;
     struct audio_device *adev = out->dev;
 
@@ -1104,10 +1106,17 @@ int start_output_stream(struct stream_out *out)
 
     /* This must be called before adding this usecase to the list */
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-        if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD)
-            check_and_set_hdmi_channels(adev, out->compr_config.codec->ch_in);
-        else
-            check_and_set_hdmi_channels(adev, out->config.channels);
+        property_get("audio.use.hdmi.sink.cap", prop_value, NULL);
+        if (!strncmp("true", prop_value, 4)) {
+            sink_channels = platform_edid_get_max_channels(out->dev->platform);
+            ALOGD("%s: set HDMI channel count[%d] based on sink capability", __func__, sink_channels);
+            check_and_set_hdmi_channels(adev, sink_channels);
+        } else {
+            if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD)
+                check_and_set_hdmi_channels(adev, out->compr_config.codec->ch_in);
+            else
+                check_and_set_hdmi_channels(adev, out->config.channels);
+        }
     }
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
