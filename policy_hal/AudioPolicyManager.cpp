@@ -233,8 +233,16 @@ status_t AudioPolicyManager::setDeviceConnectionState(audio_devices_t device,
             // do not force device change on duplicated output because if device is 0, it will
             // also force a device 0 for the two outputs it is duplicated to which may override
             // a valid device selection on those outputs.
+            audio_devices_t cachedDevice = getNewDevice(mOutputs.keyAt(i), true /*fromCache*/);
+            AudioOutputDescriptor *desc = mOutputs.valueFor(mOutputs.keyAt(i));
+            if (cachedDevice == AUDIO_DEVICE_OUT_SPEAKER &&
+                device == AUDIO_DEVICE_OUT_PROXY &&
+                (desc->mFlags & AUDIO_OUTPUT_FLAG_FAST)) {
+                    ALOGI("Avoid routing touch tone to spkr as proxy is being disconnected");
+                    break;
+            }
             setOutputDevice(mOutputs.keyAt(i),
-                            getNewDevice(mOutputs.keyAt(i), true /*fromCache*/),
+                            cachedDevice,
                             !mOutputs.valueAt(i)->isDuplicated(),
                             0);
         }
