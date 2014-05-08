@@ -356,6 +356,19 @@ int voice_extn_is_in_call(struct audio_device *adev, bool *in_call)
     return 0;
 }
 
+int voice_extn_is_in_call_rec_stream(struct stream_in *in, bool *in_call_rec)
+{
+    *in_call_rec = false;
+
+    if(in->source == AUDIO_SOURCE_VOICE_DOWNLINK ||
+       in->source == AUDIO_SOURCE_VOICE_UPLINK ||
+       in->source == AUDIO_SOURCE_VOICE_CALL) {
+       *in_call_rec = true;
+    }
+
+    return 0;
+}
+
 void voice_extn_init(struct audio_device *adev)
 {
     adev->voice.session[VOICE_SESS_IDX].vsid =  VOICE_VSID;

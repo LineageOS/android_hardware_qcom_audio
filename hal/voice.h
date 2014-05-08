@@ -77,6 +77,7 @@ void voice_get_parameters(struct audio_device *adev, struct str_parms *query,
                           struct str_parms *reply);
 void voice_init(struct audio_device *adev);
 bool voice_is_in_call(struct audio_device *adev);
+bool voice_is_in_call_rec_stream(struct stream_in *in);
 int voice_set_mic_mute(struct audio_device *dev, bool state);
 bool voice_get_mic_mute(struct audio_device *dev);
 int voice_set_volume(struct audio_device *adev, float volume);
