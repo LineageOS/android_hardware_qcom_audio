@@ -1,4 +1,4 @@
-ifeq ($(TARGET_ARCH),arm)
+ifneq ($(filter arm aarch64 arm64, $(TARGET_ARCH)),)
 
 
 AENC_AAC_PATH:= $(call my-dir)
@@ -25,6 +25,9 @@ ifeq ($(call is-board-platform,mpq8092),true)
 include $(AENC_AAC_PATH)/qdsp6/Android.mk
 endif
 ifeq ($(call is-board-platform,msm8916),true)
+include $(AENC_AAC_PATH)/qdsp6/Android.mk
+endif
+ifeq ($(call is-board-platform,msm8994),true)
 include $(AENC_AAC_PATH)/qdsp6/Android.mk
 endif
 

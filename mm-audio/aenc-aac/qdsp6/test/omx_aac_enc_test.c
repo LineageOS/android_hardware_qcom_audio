@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -110,7 +110,7 @@ uint32_t channels = 2;
 uint32_t bitrate = 128000;
 uint32_t pcmplayback = 0;
 uint32_t tunnel      = 0;
-uint32_t rectime     = -1;
+uint32_t rectime     = 0;
 uint32_t format = 1;
 uint32_t profile = OMX_AUDIO_AACObjectLC;
 #define DEBUG_PRINT printf
@@ -203,13 +203,13 @@ struct enc_meta_out{
         unsigned int nflags;
 } __attribute__ ((packed));
 
-static unsigned totaldatalen = 0;
+static int totaldatalen = 0;
 /************************************************************************/
 /*                GLOBAL INIT                    */
 /************************************************************************/
 
-int input_buf_cnt = 0;
-int output_buf_cnt = 0;
+unsigned int input_buf_cnt = 0;
+unsigned int output_buf_cnt = 0;
 int used_ip_buf_cnt = 0;
 volatile int event_is_done = 0;
 volatile int ebd_event_is_done = 0;
@@ -250,7 +250,7 @@ static int Read_Buffer(OMX_BUFFERHEADERTYPE  *pBufHdr );
 static OMX_ERRORTYPE Allocate_Buffer ( OMX_COMPONENTTYPE *aac_enc_handle,
                                        OMX_BUFFERHEADERTYPE  ***pBufHdrs,
                                        OMX_U32 nPortIndex,
-                                       long bufCntMin, long bufSize);
+                                       unsigned int bufCntMin, unsigned int bufSize);
 
 
 static OMX_ERRORTYPE EventHandler(OMX_IN OMX_HANDLETYPE hComponent,
@@ -323,7 +323,7 @@ OMX_ERRORTYPE EventHandler(OMX_IN OMX_HANDLETYPE hComponent,
 
     switch(eEvent) {
         case OMX_EventCmdComplete:
-        DEBUG_PRINT("\n OMX_EventCmdComplete event=%d data1=%lu data2=%lu\n",(OMX_EVENTTYPE)eEvent,
+        DEBUG_PRINT("\n OMX_EventCmdComplete event=%d data1=%u data2=%u\n",(OMX_EVENTTYPE)eEvent,
                                                                                nData1,nData2);
             event_complete();
         break;
@@ -350,8 +350,8 @@ OMX_ERRORTYPE FillBufferDone(OMX_IN OMX_HANDLETYPE hComponent,
                               OMX_IN OMX_BUFFERHEADERTYPE* pBuffer)
 {
     size_t bytes_writen = 0;
-    int total_bytes_writen = 0;
-    unsigned int len = 0;
+    size_t total_bytes_writen = 0;
+    size_t len = 0;
     struct enc_meta_out *meta = NULL;
     OMX_U8 *src = pBuffer->pBuffer;
     unsigned int num_of_frames = 1;
@@ -390,7 +390,7 @@ OMX_ERRORTYPE FillBufferDone(OMX_IN OMX_HANDLETYPE hComponent,
 
             if(format == 6)
             {
-                audaac_rec_install_adts_header_variable(len + AUDAAC_MAX_ADTS_HEADER_LENGTH);
+                audaac_rec_install_adts_header_variable((uint16_t)(len + AUDAAC_MAX_ADTS_HEADER_LENGTH));
                 bytes_writen = fwrite(audaac_header,1,AUDAAC_MAX_ADTS_HEADER_LENGTH,outputBufferFile);
                 if(bytes_writen < AUDAAC_MAX_ADTS_HEADER_LENGTH)
                 {
@@ -408,8 +408,8 @@ OMX_ERRORTYPE FillBufferDone(OMX_IN OMX_HANDLETYPE hComponent,
             num_of_frames--;
             total_bytes_writen += len;
         }
-        DEBUG_PRINT(" FillBufferDone size writen to file  %d\n",total_bytes_writen);
-        totaldatalen += total_bytes_writen ;
+        DEBUG_PRINT(" FillBufferDone size writen to file  %zu\n",total_bytes_writen);
+        totaldatalen = totaldatalen + (int)total_bytes_writen;
 
         DEBUG_PRINT(" FBD calling FTB\n");
         OMX_FillThisBuffer(hComponent,pBuffer);
@@ -461,7 +461,7 @@ OMX_ERRORTYPE EmptyBufferDone(OMX_IN OMX_HANDLETYPE hComponent,
     }
 
     if((readBytes = Read_Buffer(pBuffer)) > 0) {
-        pBuffer->nFilledLen = readBytes;
+        pBuffer->nFilledLen = (OMX_U32)readBytes;
         used_ip_buf_cnt++;
         OMX_EmptyThisBuffer(hComponent,pBuffer);
     }
@@ -498,7 +498,7 @@ void signal_handler(int sig_id) {
 
 int main(int argc, char **argv)
 {
-     int bufCnt=0;
+     unsigned int bufCnt=0;
      OMX_ERRORTYPE result;
 
     struct sigaction sa;
@@ -520,13 +520,13 @@ int main(int argc, char **argv)
     if (argc >= 9) {
       in_filename = argv[1];
       out_filename = argv[2];
-      samplerate = atoi(argv[3]);
-      channels = atoi(argv[4]);
-      tunnel  = atoi(argv[5]);
-      rectime = atoi(argv[6]);
-      bitrate = atoi(argv[7]);
-      format =  atoi(argv[8]);
-      profile = atoi(argv[9]);
+      samplerate = (uint32_t)atoi(argv[3]);
+      channels = (uint32_t)atoi(argv[4]);
+      tunnel  = (uint32_t)atoi(argv[5]);
+      rectime = (uint32_t)atoi(argv[6]);
+      bitrate = (uint32_t)atoi(argv[7]);
+      format =  (uint32_t)atoi(argv[8]);
+      profile = (uint32_t)atoi(argv[9]);
 
 	  DEBUG_PRINT("Input parameters: samplerate = %d, channels = %d, tunnel = %d,"
 				  " rectime = %d, bitrate = %d, format = %d, profile = %d\n",
@@ -724,7 +724,7 @@ int Init_Encoder(OMX_STRING audio_component)
     /* Query for audio decoders*/
     DEBUG_PRINT("Aac_test: Before entering OMX_GetComponentOfRole");
     OMX_GetComponentsOfRole(role, &total, 0);
-    DEBUG_PRINT ("\nTotal components of role=%s :%lu", role, total);
+    DEBUG_PRINT ("\nTotal components of role=%s :%u", role, total);
 
 
     omxresult = OMX_GetHandle((OMX_HANDLETYPE*)(&aac_enc_handle),
@@ -749,8 +749,8 @@ int Init_Encoder(OMX_STRING audio_component)
     }
     else
     {
-        DEBUG_PRINT("\nportParam.nPorts:%lu\n", portParam.nPorts);
-    DEBUG_PRINT("\nportParam.nStartPortNumber:%lu\n",
+        DEBUG_PRINT("\nportParam.nPorts:%u\n", portParam.nPorts);
+    DEBUG_PRINT("\nportParam.nStartPortNumber:%u\n",
                                              portParam.nStartPortNumber);
     }
     return 0;
@@ -758,12 +758,16 @@ int Init_Encoder(OMX_STRING audio_component)
 
 int Play_Encoder()
 {
-    int i;
+    unsigned int i;
     int Size=0;
     DEBUG_PRINT("Inside %s \n", __FUNCTION__);
     OMX_ERRORTYPE ret;
     OMX_INDEXTYPE index;
+#ifdef __LP64__
+    DEBUG_PRINT("sizeof[%ld]\n", sizeof(OMX_BUFFERHEADERTYPE));
+#else
     DEBUG_PRINT("sizeof[%d]\n", sizeof(OMX_BUFFERHEADERTYPE));
+#endif
 
     /* open the i/p and o/p files based on the video file format passed */
     if(open_audio_file()) {
@@ -778,8 +782,8 @@ int Play_Encoder()
     inputportFmt.nPortIndex = portParam.nStartPortNumber;
 
     OMX_GetParameter(aac_enc_handle,OMX_IndexParamPortDefinition,&inputportFmt);
-    DEBUG_PRINT ("\nEnc Input Buffer Count %lu\n", inputportFmt.nBufferCountMin);
-    DEBUG_PRINT ("\nEnc: Input Buffer Size %lu\n", inputportFmt.nBufferSize);
+    DEBUG_PRINT ("\nEnc Input Buffer Count %u\n", inputportFmt.nBufferCountMin);
+    DEBUG_PRINT ("\nEnc: Input Buffer Size %u\n", inputportFmt.nBufferSize);
 
     if(OMX_DirInput != inputportFmt.eDir) {
         DEBUG_PRINT ("\nEnc: Expect Input Port\n");
@@ -798,8 +802,8 @@ int Play_Encoder()
     outputportFmt.nPortIndex = portParam.nStartPortNumber + 1;
 
     OMX_GetParameter(aac_enc_handle,OMX_IndexParamPortDefinition,&outputportFmt);
-    DEBUG_PRINT ("\nEnc: Output Buffer Count %lu\n", outputportFmt.nBufferCountMin);
-    DEBUG_PRINT ("\nEnc: Output Buffer Size %lu\n", outputportFmt.nBufferSize);
+    DEBUG_PRINT ("\nEnc: Output Buffer Count %u\n", outputportFmt.nBufferCountMin);
+    DEBUG_PRINT ("\nEnc: Output Buffer Size %u\n", outputportFmt.nBufferSize);
 
     if(OMX_DirOutput != outputportFmt.eDir) {
         DEBUG_PRINT ("\nEnc: Expect Output Port\n");
@@ -894,7 +898,7 @@ int Play_Encoder()
     for(i=0; i < output_buf_cnt; i++) {
         DEBUG_PRINT ("\nOMX_FillThisBuffer on output buf no.%d\n",i);
         pOutputBufHdrs[i]->nOutputPortIndex = 1;
-        pOutputBufHdrs[i]->nFlags &= ~OMX_BUFFERFLAG_EOS;
+        pOutputBufHdrs[i]->nFlags = pOutputBufHdrs[i]->nFlags & (unsigned)~OMX_BUFFERFLAG_EOS;
         ret = OMX_FillThisBuffer(aac_enc_handle, pOutputBufHdrs[i]);
         if (OMX_ErrorNone != ret) {
             DEBUG_PRINT("OMX_FillThisBuffer failed with result %d\n", ret);
@@ -916,7 +920,7 @@ if(tunnel == 0)
           bInputEosReached = true;
           pInputBufHdrs[i]->nFlags= OMX_BUFFERFLAG_EOS;
         }
-        pInputBufHdrs[i]->nFilledLen = Size;
+        pInputBufHdrs[i]->nFilledLen = (OMX_U32)Size;
         pInputBufHdrs[i]->nInputPortIndex = 0;
         used_ip_buf_cnt++;
         ret = OMX_EmptyThisBuffer(aac_enc_handle, pInputBufHdrs[i]);
@@ -954,11 +958,11 @@ if(tunnel == 0)
 static OMX_ERRORTYPE Allocate_Buffer ( OMX_COMPONENTTYPE *avc_enc_handle,
                                        OMX_BUFFERHEADERTYPE  ***pBufHdrs,
                                        OMX_U32 nPortIndex,
-                                       long bufCntMin, long bufSize)
+                                       unsigned int bufCntMin, unsigned int bufSize)
 {
     DEBUG_PRINT("Inside %s \n", __FUNCTION__);
     OMX_ERRORTYPE error=OMX_ErrorNone;
-    long bufCnt=0;
+    unsigned int bufCnt=0;
     /* To remove warning for unused variable to keep prototype same */
     (void)avc_enc_handle;
 
@@ -966,7 +970,7 @@ static OMX_ERRORTYPE Allocate_Buffer ( OMX_COMPONENTTYPE *avc_enc_handle,
                    malloc(sizeof(OMX_BUFFERHEADERTYPE*)*bufCntMin);
 
     for(bufCnt=0; bufCnt < bufCntMin; ++bufCnt) {
-        DEBUG_PRINT("\n OMX_AllocateBuffer No %ld \n", bufCnt);
+        DEBUG_PRINT("\n OMX_AllocateBuffer No %d \n", bufCnt);
         error = OMX_AllocateBuffer(aac_enc_handle, &((*pBufHdrs)[bufCnt]),
                                    nPortIndex, NULL, bufSize);
     }
@@ -980,7 +984,7 @@ static OMX_ERRORTYPE Allocate_Buffer ( OMX_COMPONENTTYPE *avc_enc_handle,
 static int Read_Buffer (OMX_BUFFERHEADERTYPE  *pBufHdr )
 {
 
-    int bytes_read=0;
+    size_t bytes_read=0;
 
 
     pBufHdr->nFilledLen = 0;
@@ -988,7 +992,7 @@ static int Read_Buffer (OMX_BUFFERHEADERTYPE  *pBufHdr )
 
      bytes_read = fread(pBufHdr->pBuffer, 1, pBufHdr->nAllocLen , inputBufferFile);
 
-      pBufHdr->nFilledLen = bytes_read;
+      pBufHdr->nFilledLen = (OMX_U32)bytes_read;
         if(bytes_read == 0)
         {
 
@@ -997,10 +1001,10 @@ static int Read_Buffer (OMX_BUFFERHEADERTYPE  *pBufHdr )
         }
         else
         {
-            pBufHdr->nFlags &= ~OMX_BUFFERFLAG_EOS;
+            pBufHdr->nFlags = pBufHdr->nFlags & (unsigned)~OMX_BUFFERFLAG_EOS;
         }
 
-    return bytes_read;;
+    return (int)bytes_read;
 }
 
 
@@ -1062,11 +1066,11 @@ void audaac_rec_install_bits
     byte_index = (*hdr_bit_index) >> 3;
     bit_index  = (*hdr_bit_index) &  0x07;
 
-    bits_avail_in_byte = 8 - bit_index;
+    bits_avail_in_byte = (uint8)(8 - bit_index);
 
     num_to_copy = MIN(bits_avail_in_byte, num_remaining);
 
-    byte_to_copy = ((uint8)((value >> (num_remaining - num_to_copy)) & 0xFF) <<
+    byte_to_copy = (uint8)(((value >> (num_remaining - num_to_copy)) & 0xFF) <<
                     (bits_avail_in_byte - num_to_copy));
 
     input[byte_index] &= ((uint8)(bit_mask << bits_avail_in_byte));
@@ -1074,7 +1078,7 @@ void audaac_rec_install_bits
 
     *hdr_bit_index += num_to_copy;
 
-    num_remaining -= num_to_copy;
+    num_remaining = (uint8)(num_remaining - num_to_copy);
   } /* while (num_remaining) */
 } /* audaac_rec_install_bits */
 
@@ -1138,7 +1142,7 @@ void audaac_rec_install_adts_header_variable (uint16  byte_num)
   uint32  value;
 
   uint32   sample_index = samplerate;
-  uint8   channel_config = channels;
+  uint8   channel_config = (uint8)channels;
 
   /* Store Sync word first */
   audaac_header[0] = 0xFF;

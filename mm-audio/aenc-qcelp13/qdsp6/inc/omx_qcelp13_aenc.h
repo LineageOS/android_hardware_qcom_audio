@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010, The Linux Foundation. All rights reserved.
+Copyright (c) 2010, 2014 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -81,10 +81,10 @@ extern "C" {
 
 
 #define PrintFrameHdr(i,bufHdr) \
-                           DEBUG_PRINT("i=%d OMX bufHdr[%x]buf[%x]size[%d]TS[%lld]nFlags[0x%x]\n",\
+                           DEBUG_PRINT("i=%d OMX bufHdr[%p]buf[%p]size[%d]TS[%lld]nFlags[0x%x]\n",\
                            i,\
-                           (unsigned) bufHdr,                                     \
-                           (unsigned)((OMX_BUFFERHEADERTYPE *)bufHdr)->pBuffer,   \
+                           bufHdr,                                     \
+                           ((OMX_BUFFERHEADERTYPE *)bufHdr)->pBuffer,   \
                            (unsigned)((OMX_BUFFERHEADERTYPE *)bufHdr)->nFilledLen,\
                            ((OMX_BUFFERHEADERTYPE *)bufHdr)->nTimeStamp, \
                            (unsigned)((OMX_BUFFERHEADERTYPE *)bufHdr)->nFlags)
@@ -245,7 +245,7 @@ public:
                                 void *                  eglImage);
 
     bool post_command(unsigned int p1, unsigned int p2,
-        unsigned int id);
+        unsigned char id);
 
     // Deferred callback identifiers
     enum
@@ -304,9 +304,9 @@ private:
 
     struct omx_event
     {
-        unsigned param1;
-        unsigned param2;
-        unsigned id;
+        unsigned long param1;
+        unsigned long param2;
+        unsigned char id;
     };
 
     struct omx_cmd_queue
@@ -318,16 +318,16 @@ private:
 
         omx_cmd_queue();
         ~omx_cmd_queue();
-        bool insert_entry(unsigned p1, unsigned p2, unsigned id);
-        bool pop_entry(unsigned *p1,unsigned *p2, unsigned *id);
-        bool get_msg_id(unsigned *id);
+        bool insert_entry(unsigned long p1, unsigned long p2, unsigned char id);
+        bool pop_entry(unsigned long *p1,unsigned long *p2, unsigned char *id);
+        bool get_msg_id(unsigned char *id);
         bool get_msg_with_id(unsigned *p1,unsigned *p2, unsigned id);
     };
 
     typedef struct TIMESTAMP
     {
-        unsigned long LowPart;
-        unsigned long HighPart;
+        unsigned int LowPart;
+        unsigned int HighPart;
     }__attribute__((packed)) TIMESTAMP;
 
     typedef struct metadata_input
@@ -351,7 +351,7 @@ private:
     {
         OMX_U32 tot_in_buf_len;
         OMX_U32 tot_out_buf_len;
-        OMX_U32 tot_pb_time;
+        OMX_TICKS tot_pb_time;
         OMX_U32 fbd_cnt;
         OMX_U32 ftb_cnt;
         OMX_U32 etb_cnt;
@@ -376,7 +376,7 @@ private:
     bool                           is_in_th_sleep;
     bool                           is_out_th_sleep;
     unsigned int                   m_flags;      //encapsulate the waiting states.
-    unsigned int                   nTimestamp;
+    OMX_TICKS                      nTimestamp;
     unsigned int                   pcm_input; //tunnel or non-tunnel
     unsigned int                   m_inp_act_buf_count;    // Num of Input Buffers
     unsigned int                   m_out_act_buf_count;    // Numb of Output Buffers
@@ -508,11 +508,11 @@ private:
 
     bool search_output_bufhdr(OMX_BUFFERHEADERTYPE *buffer);
 
-    bool post_input(unsigned int p1, unsigned int p2,
-                    unsigned int id);
+    bool post_input(unsigned long p1, unsigned long p2,
+                    unsigned char id);
 
-    bool post_output(unsigned int p1, unsigned int p2,
-                     unsigned int id);
+    bool post_output(unsigned long p1, unsigned long p2,
+                     unsigned char id);
 
     void process_events(omx_qcelp13_aenc *client_data);
 

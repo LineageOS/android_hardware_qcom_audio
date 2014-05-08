@@ -13,6 +13,7 @@ libOmxQcelp13Enc-def += -D_ANDROID_
 libOmxQcelp13Enc-def += -D_ENABLE_QC_MSG_LOG_
 libOmxQcelp13Enc-def += -DVERBOSE
 libOmxQcelp13Enc-def += -D_DEBUG
+libOmxQcelp13Enc-def += -Wconversion
 ifeq ($(strip $(TARGET_USES_QCOM_MM_AUDIO)),true)
 libOmxQcelp13Enc-def += -DAUDIOV2
 endif

@@ -13,6 +13,7 @@ libOmxAmrEnc-def += -D_ANDROID_
 libOmxAmrEnc-def += -D_ENABLE_QC_MSG_LOG_
 libOmxAmrEnc-def += -DVERBOSE
 libOmxAmrEnc-def += -D_DEBUG
+libOmxAmrEnc-def += -Wconversion
 ifeq ($(strip $(TARGET_USES_QCOM_MM_AUDIO)),true)
 libOmxAmrEnc-def += -DAUDIOV2
 endif
