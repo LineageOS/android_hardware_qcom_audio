@@ -173,6 +173,11 @@ status_t AudioPolicyManager::setDeviceConnectionState(audio_devices_t device,
         }
 
         updateDevicesAndOutputs();
+#ifdef DOLBY_UDC
+        // Before closing the opened outputs, update endpoint property with device capabilities
+        audio_devices_t audioOutputDevice = getDeviceForStrategy(getStrategy(AudioSystem::MUSIC), true);
+        mDolbyAudioPolicy.setEndpointSystemProperty(audioOutputDevice, mHwModules);
+#endif // DOLBY_END
         audio_devices_t newDevice = getNewDevice(mPrimaryOutput, false /*fromCache*/);
 #ifdef AUDIO_EXTN_FM_ENABLED
         if(device == AUDIO_DEVICE_OUT_FM) {
@@ -1061,7 +1066,19 @@ audio_io_handle_t AudioPolicyManager::getOutput(AudioSystem::stream_type stream,
         addOutput(output, outputDesc);
         audio_io_handle_t dstOutput = getOutputForEffect();
         if (dstOutput == output) {
+#ifdef DOLBY_DAP_MOVE_EFFECT
+            status_t status = mpClientInterface->moveEffects(AUDIO_SESSION_OUTPUT_MIX, srcOutput, dstOutput);
+            if (status == NO_ERROR) {
+                for (size_t i = 0; i < mEffects.size(); i++) {
+                    EffectDescriptor *desc = mEffects.editValueAt(i);
+                    // update the mIo member variable of EffectDescriptor
+                    ALOGV("%s updating mIo", __FUNCTION__);
+                    desc->mIo = dstOutput;
+                }
+            }
+#else // DOLBY_END
             mpClientInterface->moveEffects(AUDIO_SESSION_OUTPUT_MIX, srcOutput, dstOutput);
+#endif // LINE_ADDED_BY_DOLBY
         }
         mPreviousOutputs = mOutputs;
         ALOGV("getOutput() returns new direct output %d", output);
