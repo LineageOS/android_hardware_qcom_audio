@@ -52,6 +52,8 @@
 #define MAX_SUPPORTED_CHANNEL_MASKS 2
 #define DEFAULT_HDMI_OUT_CHANNELS   2
 
+#define SND_CARD_STATE_OFFLINE 0
+#define SND_CARD_STATE_ONLINE 1
 typedef int snd_device_t;
 
 /* These are the supported use cases by the hardware.
@@ -138,6 +140,12 @@ enum {
     OFFLOAD_STATE_PAUSED,
 };
 
+enum {
+    PCM_ERROR_NONE,
+    PCM_ERROR_EIO,
+    PCM_ERROR_ENETRESET,  /* For SSR */
+};
+
 struct offload_cmd {
     struct listnode node;
     int cmd;
@@ -178,6 +186,7 @@ struct stream_out {
     void *offload_cookie;
     struct compr_gapless_mdata gapless_mdata;
     int send_new_metadata;
+    int pcm_error_type;
 
     struct audio_device *dev;
 };
@@ -196,6 +205,7 @@ struct stream_in {
     bool enable_aec;
     bool enable_ns;
     audio_format_t format;
+    int pcm_error_type;
 
     struct audio_device *dev;
 };
@@ -221,6 +231,11 @@ struct audio_usecase {
     snd_device_t out_snd_device;
     snd_device_t in_snd_device;
     union stream_ptr stream;
+};
+
+struct sound_card_status {
+    pthread_mutex_t lock;
+    int state;
 };
 
 struct audio_device {
@@ -251,6 +266,8 @@ struct audio_device {
     void *offload_effects_lib;
     int (*offload_effects_start_output)(audio_io_handle_t, int);
     int (*offload_effects_stop_output)(audio_io_handle_t, int);
+
+    struct sound_card_status snd_card_status;
 };
 
 int select_devices(struct audio_device *adev,
