@@ -651,6 +651,18 @@ status_t AudioHardwareALSA::setParameters(const String8& keyValuePairs)
 
     key = String8(AudioParameter::keyRouting);
     if (param.getInt(key, device) == NO_ERROR) {
+        /*
+         * When HDMI cable is unplugged/usb hs is disconnected the
+         * music playback is paused and the policy manager sends routing=0
+         * But the audioflingercontinues to write data until standby time
+         * (3sec). As the HDMI core is turned off, the write gets blocked.
+         * Avoid this by routing audio to speaker until standby.
+         */
+        if ((mALSADevice->mCurDevice == AUDIO_DEVICE_OUT_AUX_DIGITAL ||
+                mALSADevice->mCurDevice == AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET) &&
+                device == AUDIO_DEVICE_NONE) {
+            device = AUDIO_DEVICE_OUT_SPEAKER;
+        }
         // Ignore routing if device is 0.
         if(device) {
             doRouting(device,NULL);
