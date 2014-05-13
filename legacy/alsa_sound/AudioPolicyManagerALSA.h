@@ -34,7 +34,7 @@ class AudioPolicyManager: public AudioPolicyManagerBase
 
 public:
                 AudioPolicyManager(AudioPolicyClientInterface *clientInterface)
-                : AudioPolicyManagerBase(clientInterface) {}
+                : AudioPolicyManagerBase(clientInterface) {mForceDeviceChange=false;}
 
         virtual ~AudioPolicyManager() {}
 
@@ -170,9 +170,9 @@ protected:
         virtual bool a2dpUsedForSonification() const { return true; }
 
 private:
-
         void handleNotificationRoutingForStream(AudioSystem::stream_type stream);
         bool platform_is_Fusion3();
         bool isTunnelOutputEnabled();
+        bool mForceDeviceChange;
 };
 };
