@@ -141,6 +141,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FLAC_DECODER)),true)
     LOCAL_CFLAGS += -DQTI_FLAC_DECODER
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DEV_ARBI)),true)
+    LOCAL_CFLAGS += -DDEV_ARBI_ENABLED
+    LOCAL_SRC_FILES += audio_extn/dev_arbi.c
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \

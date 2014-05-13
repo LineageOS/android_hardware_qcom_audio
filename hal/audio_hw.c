@@ -379,6 +379,7 @@ int enable_snd_device(struct audio_device *adev,
                                         LISTEN_EVENT_SND_DEVICE_FREE);
             return -EINVAL;
         }
+        audio_extn_dev_arbi_acquire(snd_device);
         audio_route_apply_and_update_path(adev->audio_route, device_name);
     }
     return 0;
@@ -422,9 +423,10 @@ int disable_snd_device(struct audio_device *adev,
             snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
             audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing();
-        } else
+        } else {
             audio_route_reset_and_update_path(adev->audio_route, device_name);
-
+            audio_extn_dev_arbi_release(snd_device);
+        }
         audio_extn_listen_update_device_status(snd_device,
                                         LISTEN_EVENT_SND_DEVICE_FREE);
     }
