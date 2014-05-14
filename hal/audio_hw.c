@@ -56,6 +56,9 @@
 #define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 96
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
 
+static unsigned int configured_low_latency_capture_period_size =
+        LOW_LATENCY_CAPTURE_PERIOD_SIZE;
+
 /* This constant enables extended precision handling.
  * TODO The flag is off until more testing is done.
  */
@@ -1098,13 +1101,19 @@ static size_t get_input_buffer_size(uint32_t sample_rate,
         return 0;
 
     size = (sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC) / 1000;
+    if (sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE)
+        size = configured_low_latency_capture_period_size;
     /* ToDo: should use frame_size computed based on the format and
        channel_count here. */
     size *= sizeof(short) * channel_count;
 
-    /* make sure the size is multiple of 64 */
-    size += 0x3f;
-    size &= ~0x3f;
+    /* make sure the size is multiple of 32 bytes
+     * At 48 kHz mono 16-bit PCM:
+     *  5.000 ms = 240 frames = 15*16*1*2 = 480, a whole multiple of 32 (15)
+     *  3.333 ms = 160 frames = 10*16*1*2 = 320, a whole multiple of 32 (10)
+     */
+    size += 0x1f;
+    size &= ~0x1f;
 
     return size;
 }
@@ -2280,6 +2289,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
     /* Update config params with the requested sample rate and channels */
     in->usecase = USECASE_AUDIO_RECORD;
+#if LOW_LATENCY_CAPTURE_USE_CASE
+    if (config->sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE)
+        in->usecase = USECASE_AUDIO_RECORD_LOW_LATENCY;
+#endif
     in->config = pcm_config_audio_capture;
     in->config.channels = channel_count;
     in->config.rate = config->sample_rate;
@@ -2464,6 +2477,23 @@ static int adev_close(hw_device_t *device)
     return 0;
 }
 
+/* This returns 1 if the input parameter looks at all plausible as a low latency period size,
+ * or 0 otherwise.  A return value of 1 doesn't mean the value is guaranteed to work,
+ * just that it _might_ work.
+ */
+static int period_size_is_plausible_for_low_latency(int period_size)
+{
+    switch (period_size) {
+    case 160:
+    case 240:
+    case 320:
+    case 480:
+        return 1;
+    default:
+        return 0;
+    }
+}
+
 static int adev_open(const hw_module_t *module, const char *name,
                      hw_device_t **device)
 {
@@ -2545,6 +2575,24 @@ static int adev_open(const hw_module_t *module, const char *name,
     *device = &adev->device.common;
     if (k_enable_extended_precision)
         adev_verify_devices(adev);
+
+    char value[PROPERTY_VALUE_MAX];
+    int trial;
+    if (property_get("audio_hal.period_size", value, NULL) > 0) {
+        trial = atoi(value);
+        if (period_size_is_plausible_for_low_latency(trial)) {
+            pcm_config_low_latency.period_size = trial;
+            pcm_config_low_latency.start_threshold = trial / 4;
+            pcm_config_low_latency.avail_min = trial / 4;
+            configured_low_latency_capture_period_size = trial;
+        }
+    }
+    if (property_get("audio_hal.in_period_size", value, NULL) > 0) {
+        trial = atoi(value);
+        if (period_size_is_plausible_for_low_latency(trial)) {
+            configured_low_latency_capture_period_size = trial;
+        }
+    }
 
     ALOGV("%s: exit", __func__);
     return 0;
