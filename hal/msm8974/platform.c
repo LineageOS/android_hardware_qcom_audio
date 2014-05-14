@@ -785,6 +785,9 @@ void *platform_init(struct audio_device *adev)
     /* Read one time ssr property */
     audio_extn_ssr_update_enabled();
     audio_extn_spkr_prot_init(adev);
+
+    audio_extn_dolby_set_license(adev);
+
     return my_data;
 }
 
