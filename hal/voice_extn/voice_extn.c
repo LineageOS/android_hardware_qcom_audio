@@ -302,12 +302,6 @@ static int update_call_states(struct audio_device *adev,
             no_of_calls_active++;
     }
 
-    /* When there is only one call active, wait for audio policy manager to set
-     * the mode to AUDIO_MODE_NORMAL and trigger routing to end the last call.
-     */
-    if (no_of_calls_active == 1 && call_state == CALL_INACTIVE)
-        return 0;
-
     if (session) {
         session->state.new = call_state;
         voice_extn_is_in_call(adev, &is_in_call);
