@@ -318,7 +318,8 @@ int offload_eq_send_params(struct mixer_ctl *ctl, struct eq_params eq,
     uint32_t i;
 
     ALOGV("%s: flags 0x%x", __func__, param_send_flags);
-    if (eq.config.preset_id < -1 ) {
+    if ((eq.config.preset_id < -1) ||
+            ((param_send_flags & OFFLOAD_SEND_EQ_PRESET) && (eq.config.preset_id == -1))) {
         ALOGV("No Valid preset to set");
         return 0;
     }

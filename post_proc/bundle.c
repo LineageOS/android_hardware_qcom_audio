@@ -201,6 +201,11 @@ int offload_effects_bundle_hal_start_output(audio_io_handle_t output, int pcm_id
 
     output_context_t *out_ctxt = (output_context_t *)
                                  malloc(sizeof(output_context_t));
+    if (!out_ctxt) {
+        ALOGE("%s fail to allocate for output context", __func__);
+        ret = -ENOMEM;
+        goto exit;
+    }
     out_ctxt->handle = output;
     out_ctxt->pcm_device_id = pcm_id;
 
@@ -334,6 +339,9 @@ int effect_lib_create(const effect_uuid_t *uuid,
         sizeof(effect_uuid_t)) == 0) {
         equalizer_context_t *eq_ctxt = (equalizer_context_t *)
                                        calloc(1, sizeof(equalizer_context_t));
+        if (eq_ctxt == NULL) {
+            return -ENOMEM;
+        }
         context = (effect_context_t *)eq_ctxt;
         context->ops.init = equalizer_init;
         context->ops.reset = equalizer_reset;
@@ -351,6 +359,9 @@ int effect_lib_create(const effect_uuid_t *uuid,
                sizeof(effect_uuid_t)) == 0) {
         bassboost_context_t *bass_ctxt = (bassboost_context_t *)
                                          calloc(1, sizeof(bassboost_context_t));
+        if (bass_ctxt == NULL) {
+            return -ENOMEM;
+        }
         context = (effect_context_t *)bass_ctxt;
         context->ops.init = bassboost_init;
         context->ops.reset = bassboost_reset;
@@ -368,6 +379,9 @@ int effect_lib_create(const effect_uuid_t *uuid,
                sizeof(effect_uuid_t)) == 0) {
         virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)
                                            calloc(1, sizeof(virtualizer_context_t));
+        if (virt_ctxt == NULL) {
+            return -ENOMEM;
+        }
         context = (effect_context_t *)virt_ctxt;
         context->ops.init = virtualizer_init;
         context->ops.reset = virtualizer_reset;
@@ -391,6 +405,9 @@ int effect_lib_create(const effect_uuid_t *uuid,
                 sizeof(effect_uuid_t)) == 0)) {
         reverb_context_t *reverb_ctxt = (reverb_context_t *)
                                         calloc(1, sizeof(reverb_context_t));
+        if (reverb_ctxt == NULL) {
+            return -ENOMEM;
+        }
         context = (effect_context_t *)reverb_ctxt;
         context->ops.init = reverb_init;
         context->ops.reset = reverb_reset;
