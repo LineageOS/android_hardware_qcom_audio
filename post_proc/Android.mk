@@ -1,7 +1,11 @@
-ifneq ($(strip $(AUDIO_FEATURE_DISABLED_EXTN_POST_PROC)),true)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_POST_PROC)),true)
 LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
+    LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
+endif
 
 LOCAL_SRC_FILES:= \
 	bundle.c \
