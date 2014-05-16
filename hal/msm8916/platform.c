@@ -34,6 +34,8 @@
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define MIXER_XML_PATH_MTP "/system/etc/mixer_paths_mtp.xml"
+#define MIXER_XML_PATH_QRD_SKUH "/system/etc/mixer_paths_qrd_skuh.xml"
+#define MIXER_XML_PATH_QRD_SKUI "/system/etc/mixer_paths_qrd_skui.xml"
 #define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
 #define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
@@ -402,6 +404,14 @@ static void query_platform(const char *snd_card_name,
                  sizeof("msm8x16-snd-card-mtp"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_MTP,
                 sizeof(MIXER_XML_PATH_MTP));
+    } else if (!strncmp(snd_card_name, "msm8x16-skuh-snd-card",
+                 sizeof("msm8x16-skuh-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_QRD_SKUH,
+                sizeof(MIXER_XML_PATH_QRD_SKUH));
+    } else if (!strncmp(snd_card_name, "msm8x16-skui-snd-card",
+                 sizeof("msm8x16-skui-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_QRD_SKUI,
+                sizeof(MIXER_XML_PATH_QRD_SKUI));
     } else {
         strlcpy(mixer_xml_path, MIXER_XML_PATH,
                 sizeof(MIXER_XML_PATH));
