@@ -353,7 +353,7 @@ int disable_snd_device(struct audio_device *adev,
 
         /* exit usb capture thread */
         if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
-            audio_extn_usb_stop_capture(adev);
+            audio_extn_usb_stop_capture();
 
         if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
             snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
