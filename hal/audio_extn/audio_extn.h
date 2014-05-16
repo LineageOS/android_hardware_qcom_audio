@@ -27,9 +27,7 @@
 #define AUDIO_FORMAT_PCM_16_BIT_OFFLOAD (AUDIO_FORMAT_PCM_OFFLOAD | AUDIO_FORMAT_PCM_SUB_16_BIT)
 #define AUDIO_FORMAT_PCM_24_BIT_OFFLOAD (AUDIO_FORMAT_PCM_OFFLOAD | AUDIO_FORMAT_PCM_SUB_8_24_BIT)
 #define AUDIO_OFFLOAD_CODEC_FORMAT  "music_offload_codec_format"
-static inline bool audio_is_offload_pcm(audio_format_t format) {
-    return ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM_OFFLOAD);
-}
+#define audio_is_offload_pcm(format) (0)
 #endif
 
 #ifndef AFE_PROXY_ENABLED
@@ -57,7 +55,7 @@ static inline bool audio_is_offload_pcm(audio_format_t format) {
 #define AUDIO_SOURCE_FM_RX 9
 #define AUDIO_SOURCE_FM_RX_A2DP 10
 #define AUDIO_DEVICE_IN_FM_RX (AUDIO_DEVICE_BIT_IN | 0x8000)
-#define AUDIO_DEVICE_IN_FM_RX_A2DP AUDIO_DEVICE_BIT_IN | 0x10000
+#define AUDIO_DEVICE_IN_FM_RX_A2DP (AUDIO_DEVICE_BIT_IN | 0x10000)
 #endif
 
 
