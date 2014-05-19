@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -45,6 +45,10 @@
 #include "effect_api.h"
 
 #define ARRAY_SIZE(array) (sizeof array / sizeof array[0])
+
+typedef enum eff_mode {
+    OFFLOAD,
+} eff_mode_t;
 
 #define OFFLOAD_PRESET_START_OFFSET_FOR_OPENSL 19
 const int map_eq_opensl_preset_2_offload_preset[] = {
@@ -177,6 +181,72 @@ int offload_bassboost_send_params(struct mixer_ctl *ctl,
         mixer_ctl_set_array(ctl, param_values, ARRAY_SIZE(param_values));
 
     return 0;
+}
+
+void offload_pbe_set_device(struct pbe_params *pbe,
+                            uint32_t device)
+{
+    ALOGV("%s: device=%d", __func__, device);
+    pbe->device = device;
+}
+
+void offload_pbe_set_enable_flag(struct pbe_params *pbe,
+                                 bool enable)
+{
+    ALOGV("%s: enable=%d", __func__, enable);
+    pbe->enable_flag = enable;
+}
+
+int offload_pbe_get_enable_flag(struct pbe_params *pbe)
+{
+    ALOGV("%s: enabled=%d", __func__, pbe->enable_flag);
+    return pbe->enable_flag;
+}
+
+static int pbe_send_params(eff_mode_t mode, void *ctl,
+                            struct pbe_params *pbe,
+                            unsigned param_send_flags)
+{
+    int param_values[128] = {0};
+    int i, *p_param_values = param_values, *cfg = NULL;
+
+    ALOGV("%s: enabled=%d", __func__, pbe->enable_flag);
+    *p_param_values++ = PBE_MODULE;
+    *p_param_values++ = pbe->device;
+    *p_param_values++ = 0; /* num of commands*/
+    if (param_send_flags & OFFLOAD_SEND_PBE_ENABLE_FLAG) {
+        *p_param_values++ = PBE_ENABLE;
+        *p_param_values++ = CONFIG_SET;
+        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
+        *p_param_values++ = PBE_ENABLE_PARAM_LEN;
+        *p_param_values++ = pbe->enable_flag;
+        param_values[2] += 1;
+    }
+    if (param_send_flags & OFFLOAD_SEND_PBE_CONFIG) {
+        *p_param_values++ = PBE_CONFIG;
+        *p_param_values++ = CONFIG_SET;
+        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
+        *p_param_values++ = pbe->cfg_len;
+        cfg = (int *)&pbe->config;
+        for (i = 0; i < (int)pbe->cfg_len ; i+= sizeof(*p_param_values))
+            *p_param_values++ = *cfg++;
+        param_values[2] += 1;
+    }
+
+    if ((mode == OFFLOAD) && param_values[2] && ctl) {
+        mixer_ctl_set_array((struct mixer_ctl *)ctl, param_values,
+                            ARRAY_SIZE(param_values));
+    }
+
+    return 0;
+}
+
+int offload_pbe_send_params(struct mixer_ctl *ctl,
+                                  struct pbe_params *pbe,
+                                  unsigned param_send_flags)
+{
+    return pbe_send_params(OFFLOAD, (void *)ctl, pbe,
+                                 param_send_flags);
 }
 
 void offload_virtualizer_set_device(struct virtualizer_params *virtualizer,
