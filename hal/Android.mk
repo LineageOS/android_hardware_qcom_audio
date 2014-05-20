@@ -35,7 +35,8 @@ LOCAL_SRC_FILES := \
 	platform_info.c \
 	$(AUDIO_PLATFORM)/platform.c
 
-LOCAL_SRC_FILES += audio_extn/audio_extn.c
+LOCAL_SRC_FILES += audio_extn/audio_extn.c \
+                   audio_extn/utils.c
 
 ifneq ($(strip $(AUDIO_FEATURE_DISABLED_PCM_OFFLOAD)),true)
     LOCAL_CFLAGS += -DPCM_OFFLOAD_ENABLED
@@ -91,6 +92,11 @@ ifneq ($(strip $(AUDIO_FEATURE_DISABLED_COMPRESS_VOIP)),true)
     LOCAL_CFLAGS += -DCOMPRESS_VOIP_ENABLED
     LOCAL_SRC_FILES += voice_extn/compress_voip.c
 endif
+
+endif
+
+ifneq ($(strip $(AUDIO_FEATURE_DISABLED_FORMATS)),true)
+LOCAL_CFLAGS += -DFORMATS_ENABLED
 endif
 
 ifneq ($(strip, $(AUDIO_FEATURE_DISABLED_SPKR_PROTECTION)),true)

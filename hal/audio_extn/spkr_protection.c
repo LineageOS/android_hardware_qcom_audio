@@ -577,6 +577,25 @@ void audio_extn_spkr_prot_init(void *adev)
     }
 }
 
+int audio_extn_spkr_prot_get_acdb_id(snd_device_t snd_device)
+{
+    int acdb_id;
+
+    acdb_id = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
+              platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED) :
+              -EINVAL;
+
+    return acdb_id;
+}
+
+int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device)
+{
+    if ((snd_device == SND_DEVICE_OUT_SPEAKER) && handle.spkr_prot_enable)
+        return SND_DEVICE_OUT_SPEAKER_PROTECTED;
+    else
+        return snd_device;
+}
+
 int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
 {
     struct audio_usecase uc_info_tx;

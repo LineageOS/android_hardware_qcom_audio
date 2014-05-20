@@ -61,6 +61,8 @@ static inline bool audio_is_offload_pcm(audio_format_t format) {
 #endif
 
 
+#define MAX_LENGTH_MIXER_CONTROL_IN_INT                  (128)
+
 void audio_extn_set_parameters(struct audio_device *adev,
                                struct str_parms *parms);
 
@@ -182,11 +184,15 @@ int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,
 #define audio_extn_spkr_prot_start_processing(snd_device)    (-EINVAL)
 #define audio_extn_spkr_prot_stop_processing()     (0)
 #define audio_extn_spkr_prot_is_enabled() (false)
+#define audio_extn_spkr_prot_get_acdb_id(snd_device)         (-EINVAL)
+#define audio_extn_get_spkr_prot_snd_device(snd_device) (SND_DEVICE_OUT_SPEAKER)
 #else
 void audio_extn_spkr_prot_init(void *adev);
 int audio_extn_spkr_prot_start_processing(snd_device_t snd_device);
 void audio_extn_spkr_prot_stop_processing();
 bool audio_extn_spkr_prot_is_enabled();
+int audio_extn_spkr_prot_get_acdb_id(snd_device_t snd_device);
+int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device);
 #endif
 
 #ifndef COMPRESS_CAPTURE_ENABLED
@@ -246,4 +252,17 @@ bool audio_extn_hfp_is_active(struct audio_device *adev);
 audio_usecase_t audio_extn_hfp_get_usecase();
 #endif
 
+void audio_extn_utils_update_streams_output_cfg_list(void *platform,
+                                  struct mixer *mixer,
+                                  struct listnode *streams_output_cfg_list);
+void audio_extn_utils_dump_streams_output_cfg_list(
+                                  struct listnode *streams_output_cfg_list);
+void audio_extn_utils_release_streams_output_cfg_list(
+                                  struct listnode *streams_output_cfg_list);
+void audio_extn_utils_update_stream_app_type_cfg(void *platform,
+                                  struct listnode *streams_output_cfg_list,
+                                  audio_output_flags_t flags,
+                                  audio_format_t format,
+                                  struct stream_app_type_cfg *app_type_cfg);
+int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase);
 #endif /* AUDIO_EXTN_H */

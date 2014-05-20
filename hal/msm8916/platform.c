@@ -894,6 +894,15 @@ done:
     return ret;
 }
 
+int platform_get_snd_device_acdb_id(snd_device_t snd_device)
+{
+    if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
+        ALOGE("%s: Invalid snd_device = %d", __func__, snd_device);
+        return -EINVAL;
+    }
+    return acdb_device_table[snd_device];
+}
+
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
 {
     struct platform_data *my_data = (struct platform_data *)platform;

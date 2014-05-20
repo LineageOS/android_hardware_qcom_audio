@@ -152,6 +152,12 @@ struct offload_cmd {
     int data[];
 };
 
+struct stream_app_type_cfg {
+    int sample_rate;
+    int bit_width;
+    int app_type;
+};
+
 struct stream_out {
     struct audio_stream_out stream;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
@@ -173,6 +179,7 @@ struct stream_out {
     bool muted;
     uint64_t written; /* total frames written, not cleared when entering standby */
     audio_io_handle_t handle;
+    struct stream_app_type_cfg app_type_cfg;
 
     int non_blocking;
     int playback_started;
@@ -238,6 +245,18 @@ struct sound_card_status {
     int state;
 };
 
+struct stream_format {
+    struct listnode list;
+    audio_format_t format;
+};
+
+struct streams_output_cfg {
+    struct listnode list;
+    audio_output_flags_t flags;
+    struct listnode format_list;
+    struct stream_app_type_cfg app_type_cfg;
+};
+
 struct audio_device {
     struct audio_hw_device device;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
@@ -250,6 +269,7 @@ struct audio_device {
     bool screen_off;
     int *snd_dev_ref_cnt;
     struct listnode usecase_list;
+    struct listnode streams_output_cfg_list;
     struct audio_route *audio_route;
     int acdb_settings;
     bool speaker_lr_swap;
