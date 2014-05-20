@@ -97,12 +97,19 @@ enum {
 #define DEFAULT_OUTPUT_SAMPLING_RATE 48000
 
 #define ALL_SESSION_VSID    0xFFFFFFFF
-#define DEFAULT_MUTE_RAMP_DURATION      500
+#define DEFAULT_MUTE_RAMP_DURATION      20
 #define DEFAULT_VOLUME_RAMP_DURATION_MS 20
 #define VOLUME_SET 0
 #define MUTE_SET 1
 #define VOLUME_CTL_PARAM_NUM 3
 
+#ifdef MSM8084
+#define ACDB_ID_VOICE_HANDSET_TMUS 88
+#define ACDB_ID_VOICE_DMIC_EF_TMUS 89
+#else
+#define ACDB_ID_VOICE_HANDSET_TMUS 7
+#define ACDB_ID_VOICE_DMIC_EF_TMUS 41
+#endif
 /*
  * tinyAlsa library interprets period size as number of frames
  * one frame = channel_count * sizeof (pcm sample)
@@ -123,5 +130,56 @@ enum {
 
 #define AUDIO_CAPTURE_PERIOD_DURATION_MSEC 20
 #define AUDIO_CAPTURE_PERIOD_COUNT 2
+
+#define DEEP_BUFFER_PCM_DEVICE 0
+#define AUDIO_RECORD_PCM_DEVICE 0
+#define MULTIMEDIA2_PCM_DEVICE 1
+#define PLAYBACK_OFFLOAD_DEVICE 9
+#define LOWLATENCY_PCM_DEVICE 15
+#define VOICE_VSID  0x10C01000
+#ifdef PLATFORM_MSM8084
+#define VOICE_CALL_PCM_DEVICE 20
+#else
+#define VOICE_CALL_PCM_DEVICE 2
+#endif
+
+#define LIB_CSD_CLIENT "libcsd-client.so"
+#define LIB_MDM_DETECT "libmdmdetect.so"
+
+/* CSD-CLIENT related functions */
+typedef int (*init_t)(bool);
+typedef int (*deinit_t)();
+typedef int (*disable_device_t)();
+typedef int (*enable_device_config_t)(int, int);
+typedef int (*enable_device_t)(int, int, uint32_t);
+typedef int (*volume_t)(uint32_t, int, uint16_t);
+typedef int (*mic_mute_t)(uint32_t, int, uint16_t);
+typedef int (*slow_talk_t)(uint32_t, uint8_t);
+typedef int (*start_voice_t)(uint32_t);
+typedef int (*stop_voice_t)(uint32_t);
+typedef int (*start_playback_t)(uint32_t);
+typedef int (*stop_playback_t)(uint32_t);
+typedef int (*start_record_t)(uint32_t, int);
+typedef int (*stop_record_t)(uint32_t);
+typedef int (*get_sample_rate_t)(uint32_t *);
+/* CSD Client structure */
+struct csd_data {
+    void *csd_client;
+    init_t init;
+    deinit_t deinit;
+    disable_device_t disable_device;
+    enable_device_config_t enable_device_config;
+    enable_device_t enable_device;
+    volume_t volume;
+    mic_mute_t mic_mute;
+    slow_talk_t slow_talk;
+    start_voice_t start_voice;
+    stop_voice_t stop_voice;
+    start_playback_t start_playback;
+    stop_playback_t stop_playback;
+    start_record_t start_record;
+    stop_record_t stop_record;
+    get_sample_rate_t get_sample_rate;
+};
 
 #endif // QCOM_AUDIO_PLATFORM_H

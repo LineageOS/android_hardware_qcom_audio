@@ -26,6 +26,9 @@
 #include <audio_hw.h>
 #include <platform_api.h>
 #include "platform.h"
+#ifdef PLATFORM_MSM8084
+#include "mdm_detect.h"
+#endif
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
@@ -63,10 +66,16 @@ struct audio_block_header
     int length;
 };
 
+/* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
+#ifdef PLATFORM_MSM8084
+typedef int  (*acdb_init_t)(char *);
+#else
 typedef int  (*acdb_init_t)();
+#endif
 typedef void (*acdb_send_audio_cal_t)(int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
+typedef int (*acdb_reload_vocvoltable_t)(int);
 
 /* Audio calibration related functions */
 struct platform_data {
@@ -80,16 +89,25 @@ struct platform_data {
     acdb_deallocate_t acdb_deallocate;
     acdb_send_audio_cal_t acdb_send_audio_cal;
     acdb_send_voice_cal_t acdb_send_voice_cal;
+    acdb_reload_vocvoltable_t  acdb_reload_vocvoltable;
+    struct csd_data *csd;
 };
 
 static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
-    [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {0, 0},
-    [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = {15, 15},
-    [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {1, 1},
-    [USECASE_AUDIO_PLAYBACK_OFFLOAD] = {9, 9},
-    [USECASE_AUDIO_RECORD] = {0, 0},
-    [USECASE_AUDIO_RECORD_LOW_LATENCY] = {15, 15},
-    [USECASE_VOICE_CALL] = {2, 2},
+    [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {DEEP_BUFFER_PCM_DEVICE,
+                                            DEEP_BUFFER_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
+                                            LOWLATENCY_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {MULTIMEDIA2_PCM_DEVICE,
+                                         MULTIMEDIA2_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD] = {PLAYBACK_OFFLOAD_DEVICE,
+                                        PLAYBACK_OFFLOAD_DEVICE},
+    [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE,
+                              AUDIO_RECORD_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
+                                          LOWLATENCY_PCM_DEVICE},
+    [USECASE_VOICE_CALL] = {VOICE_CALL_PCM_DEVICE,
+                            VOICE_CALL_PCM_DEVICE},
 };
 
 /* Array to store sound devices */
@@ -156,7 +174,7 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 15,
     [SND_DEVICE_OUT_BT_SCO] = 22,
     [SND_DEVICE_OUT_BT_SCO_WB] = 39,
-    [SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = 88,
+    [SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = ACDB_ID_VOICE_HANDSET_TMUS,
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = 37,
@@ -175,7 +193,7 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_CAMCORDER_MIC] = 61,
     [SND_DEVICE_IN_VOICE_DMIC_EF] = 41,
     [SND_DEVICE_IN_VOICE_DMIC_BS] = 5,
-    [SND_DEVICE_IN_VOICE_DMIC_EF_TMUS] = 89,
+    [SND_DEVICE_IN_VOICE_DMIC_EF_TMUS] = ACDB_ID_VOICE_DMIC_EF_TMUS,
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC_EF] = 43,
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC_BS] = 12,
     [SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = 16,
@@ -265,11 +283,176 @@ static int set_echo_reference(struct mixer *mixer, const char* ec_ref)
     return 0;
 }
 
+static struct csd_data *open_csd_client(bool i2s_ext_modem)
+{
+    struct csd_data *csd = calloc(1, sizeof(struct csd_data));
+
+    csd->csd_client = dlopen(LIB_CSD_CLIENT, RTLD_NOW);
+    if (csd->csd_client == NULL) {
+        ALOGE("%s: DLOPEN failed for %s", __func__, LIB_CSD_CLIENT);
+        goto error;
+    } else {
+        ALOGV("%s: DLOPEN successful for %s", __func__, LIB_CSD_CLIENT);
+
+        csd->deinit = (deinit_t)dlsym(csd->csd_client,
+                                             "csd_client_deinit");
+        if (csd->deinit == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_deinit", __func__,
+                  dlerror());
+            goto error;
+        }
+        csd->disable_device = (disable_device_t)dlsym(csd->csd_client,
+                                             "csd_client_disable_device");
+        if (csd->disable_device == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_disable_device",
+                  __func__, dlerror());
+            goto error;
+        }
+        csd->enable_device_config = (enable_device_config_t)dlsym(csd->csd_client,
+                                               "csd_client_enable_device_config");
+        if (csd->enable_device_config == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_enable_device_config",
+                  __func__, dlerror());
+            goto error;
+        }
+        csd->enable_device = (enable_device_t)dlsym(csd->csd_client,
+                                             "csd_client_enable_device");
+        if (csd->enable_device == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_enable_device",
+                  __func__, dlerror());
+            goto error;
+        }
+        csd->start_voice = (start_voice_t)dlsym(csd->csd_client,
+                                             "csd_client_start_voice");
+        if (csd->start_voice == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_start_voice",
+                  __func__, dlerror());
+            goto error;
+        }
+        csd->stop_voice = (stop_voice_t)dlsym(csd->csd_client,
+                                             "csd_client_stop_voice");
+        if (csd->stop_voice == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_stop_voice",
+                  __func__, dlerror());
+            goto error;
+        }
+        csd->volume = (volume_t)dlsym(csd->csd_client,
+                                             "csd_client_volume");
+        if (csd->volume == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_volume",
+                  __func__, dlerror());
+            goto error;
+        }
+        csd->mic_mute = (mic_mute_t)dlsym(csd->csd_client,
+                                             "csd_client_mic_mute");
+        if (csd->mic_mute == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_mic_mute",
+                  __func__, dlerror());
+            goto error;
+        }
+        csd->slow_talk = (slow_talk_t)dlsym(csd->csd_client,
+                                             "csd_client_slow_talk");
+        if (csd->slow_talk == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_slow_talk",
+                  __func__, dlerror());
+            goto error;
+        }
+        csd->start_playback = (start_playback_t)dlsym(csd->csd_client,
+                                             "csd_client_start_playback");
+        if (csd->start_playback == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_start_playback",
+                  __func__, dlerror());
+            goto error;
+        }
+        csd->stop_playback = (stop_playback_t)dlsym(csd->csd_client,
+                                             "csd_client_stop_playback");
+        if (csd->stop_playback == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_stop_playback",
+                  __func__, dlerror());
+            goto error;
+        }
+        csd->start_record = (start_record_t)dlsym(csd->csd_client,
+                                             "csd_client_start_record");
+        if (csd->start_record == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_start_record",
+                  __func__, dlerror());
+            goto error;
+        }
+        csd->stop_record = (stop_record_t)dlsym(csd->csd_client,
+                                             "csd_client_stop_record");
+        if (csd->stop_record == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_stop_record",
+                  __func__, dlerror());
+            goto error;
+        }
+
+        csd->get_sample_rate = (get_sample_rate_t)dlsym(csd->csd_client,
+                                             "csd_client_get_sample_rate");
+        if (csd->get_sample_rate == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_get_sample_rate",
+                  __func__, dlerror());
+
+            goto error;
+        }
+
+        csd->init = (init_t)dlsym(csd->csd_client, "csd_client_init");
+
+        if (csd->init == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_init",
+                  __func__, dlerror());
+            goto error;
+        } else {
+            csd->init(i2s_ext_modem);
+        }
+    }
+    return csd;
+
+error:
+    free(csd);
+    csd = NULL;
+    return csd;
+}
+
+void close_csd_client(struct csd_data *csd)
+{
+    if (csd != NULL) {
+        csd->deinit();
+        dlclose(csd->csd_client);
+        free(csd);
+        csd = NULL;
+    }
+}
+
+static void platform_csd_init(struct platform_data *my_data)
+{
+#ifdef PLATFORM_MSM8084
+    struct dev_info mdm_detect_info;
+    int ret = 0;
+
+    /* Call ESOC API to get the number of modems.
+     * If the number of modems is not zero, load CSD Client specific
+     * symbols. Voice call is handled by MDM and apps processor talks to
+     * MDM through CSD Client
+     */
+    ret = get_system_info(&mdm_detect_info);
+    if (ret > 0) {
+        ALOGE("%s: Failed to get system info, ret %d", __func__, ret);
+    }
+    ALOGD("%s: num_modems %d\n", __func__, mdm_detect_info.num_modems);
+
+    if (mdm_detect_info.num_modems > 0)
+        my_data->csd = open_csd_client(false /*is_i2s_ext_modem*/);
+#else
+     my_data->csd = NULL;
+#endif
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data;
     int retry_num = 0;
+    const char *snd_card_name;
 
     adev->mixer = mixer_open(MIXER_CARD);
 
@@ -283,6 +466,9 @@ void *platform_init(struct audio_device *adev)
         ALOGE("Unable to open the mixer, aborting.");
         return NULL;
     }
+
+    snd_card_name = mixer_get_name(adev->mixer);
+    ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
 
     adev->audio_route = audio_route_init(MIXER_CARD, MIXER_XML_PATH);
     if (!adev->audio_route) {
@@ -331,20 +517,46 @@ void *platform_init(struct audio_device *adev)
         ALOGV("%s: DLOPEN successful for %s", __func__, LIB_ACDB_LOADER);
         my_data->acdb_deallocate = (acdb_deallocate_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_deallocate_ACDB");
+        if (!my_data->acdb_deallocate)
+            ALOGE("%s: Could not find the symbol acdb_loader_deallocate_ACDB from %s",
+                  __func__, LIB_ACDB_LOADER);
+
         my_data->acdb_send_audio_cal = (acdb_send_audio_cal_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_send_audio_cal");
         if (!my_data->acdb_send_audio_cal)
-            ALOGW("%s: Could not find the symbol acdb_send_audio_cal from %s",
+            ALOGE("%s: Could not find the symbol acdb_send_audio_cal from %s",
                   __func__, LIB_ACDB_LOADER);
+
         my_data->acdb_send_voice_cal = (acdb_send_voice_cal_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_send_voice_cal");
+        if (!my_data->acdb_send_voice_cal)
+            ALOGE("%s: Could not find the symbol acdb_loader_send_voice_cal from %s",
+                  __func__, LIB_ACDB_LOADER);
+
+        my_data->acdb_reload_vocvoltable = (acdb_reload_vocvoltable_t)dlsym(my_data->acdb_handle,
+                                                    "acdb_loader_reload_vocvoltable");
+        if (!my_data->acdb_reload_vocvoltable)
+            ALOGE("%s: Could not find the symbol acdb_loader_reload_vocvoltable from %s",
+                  __func__, LIB_ACDB_LOADER);
+#ifdef PLATFORM_MSM8084
+        my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
+                                                    "acdb_loader_init_v2");
+        if (my_data->acdb_init == NULL)
+            ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__, dlerror());
+        else
+            my_data->acdb_init(snd_card_name);
+#else
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_init_ACDB");
         if (my_data->acdb_init == NULL)
             ALOGE("%s: dlsym error %s for acdb_loader_init_ACDB", __func__, dlerror());
         else
             my_data->acdb_init();
+#endif
     }
+
+    /* load csd client */
+    platform_csd_init(my_data);
 
     return my_data;
 }
@@ -413,7 +625,48 @@ int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
 
 int platform_switch_voice_call_device_pre(void *platform)
 {
-    return 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    int ret = 0;
+
+    if (my_data->csd != NULL &&
+        my_data->adev->mode == AUDIO_MODE_IN_CALL) {
+        /* This must be called before disabling mixer controls on APQ side */
+        ret = my_data->csd->disable_device();
+        if (ret < 0) {
+            ALOGE("%s: csd_client_disable_device, failed, error %d",
+                  __func__, ret);
+        }
+    }
+    return ret;
+}
+
+int platform_switch_voice_call_enable_device_config(void *platform,
+                                                    snd_device_t out_snd_device,
+                                                    snd_device_t in_snd_device)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    int acdb_rx_id, acdb_tx_id;
+    int ret = 0;
+
+    if (my_data->csd == NULL)
+        return ret;
+
+    acdb_rx_id = acdb_device_table[out_snd_device];
+
+    acdb_tx_id = acdb_device_table[in_snd_device];
+
+    if (acdb_rx_id > 0 && acdb_tx_id > 0) {
+        ret = my_data->csd->enable_device_config(acdb_rx_id, acdb_tx_id);
+        if (ret < 0) {
+            ALOGE("%s: csd_enable_device_config, failed, error %d",
+                  __func__, ret);
+        }
+    } else {
+        ALOGE("%s: Incorrect ACDB IDs (rx: %d tx: %d)", __func__,
+              acdb_rx_id, acdb_tx_id);
+    }
+
+    return ret;
 }
 
 int platform_switch_voice_call_device_post(void *platform,
@@ -439,14 +692,61 @@ int platform_switch_voice_call_device_post(void *platform,
     return 0;
 }
 
+int platform_switch_voice_call_usecase_route_post(void *platform,
+                                                  snd_device_t out_snd_device,
+                                                  snd_device_t in_snd_device)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    int acdb_rx_id, acdb_tx_id;
+    int ret = 0;
+
+    if (my_data->csd == NULL)
+        return ret;
+
+    acdb_rx_id = acdb_device_table[out_snd_device];
+
+    acdb_tx_id = acdb_device_table[in_snd_device];
+
+    if (acdb_rx_id > 0 && acdb_tx_id > 0) {
+        ret = my_data->csd->enable_device(acdb_rx_id, acdb_tx_id,
+                                          my_data->adev->acdb_settings);
+        if (ret < 0) {
+            ALOGE("%s: csd_enable_device, failed, error %d", __func__, ret);
+        }
+    } else {
+        ALOGE("%s: Incorrect ACDB IDs (rx: %d tx: %d)", __func__,
+              acdb_rx_id, acdb_tx_id);
+    }
+
+    return ret;
+}
+
 int platform_start_voice_call(void *platform)
 {
-    return 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    int ret = 0;
+
+    if (my_data->csd != NULL) {
+        ret = my_data->csd->start_voice(VOICE_VSID);
+        if (ret < 0) {
+            ALOGE("%s: csd_start_voice error %d\n", __func__, ret);
+        }
+    }
+    return ret;
 }
 
 int platform_stop_voice_call(void *platform)
 {
-    return 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    int ret = 0;
+
+    if (my_data->csd != NULL) {
+        ret = my_data->csd->stop_voice(VOICE_VSID);
+        if (ret < 0) {
+            ALOGE("%s: csd_stop_voice error %d\n", __func__, ret);
+        }
+    }
+    return ret;
 }
 
 int platform_set_voice_volume(void *platform, int volume)
@@ -479,8 +779,14 @@ int platform_set_voice_volume(void *platform, int volume)
         ALOGV("%s: failed set mixer ctl by %d", __func__, ret);
         return -EINVAL;
     }
-
-    return 0;
+    if (my_data->csd != NULL) {
+        ret = my_data->csd->volume(ALL_SESSION_VSID, volume,
+                                   DEFAULT_VOLUME_RAMP_DURATION_MS);
+        if (ret < 0) {
+            ALOGE("%s: csd_volume error %d", __func__, ret);
+        }
+    }
+    return ret;
 }
 
 int platform_set_mic_mute(void *platform, bool state)

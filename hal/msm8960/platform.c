@@ -923,3 +923,17 @@ int64_t platform_render_latency(audio_usecase_t usecase)
             return 0;
     }
 }
+
+int platform_switch_voice_call_enable_device_config(void *platform,
+                                                    snd_device_t out_snd_device,
+                                                    snd_device_t in_snd_device)
+{
+    return 0;
+}
+
+int platform_switch_voice_call_usecase_route_post(void *platform,
+                                                  snd_device_t out_snd_device,
+                                                  snd_device_t in_snd_device)
+{
+    return 0;
+}

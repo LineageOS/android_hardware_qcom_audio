@@ -520,6 +520,15 @@ static int select_devices(struct audio_device *adev,
         disable_snd_device(adev, usecase->in_snd_device);
     }
 
+    /* Applicable only on the targets that has external modem.
+     * New device information should be sent to modem before enabling
+     * the devices to reduce in-call device switch time.
+     */
+    if (usecase->type == VOICE_CALL)
+        status = platform_switch_voice_call_enable_device_config(adev->platform,
+                                                                 out_snd_device,
+                                                                 in_snd_device);
+
     /* Enable new sound devices */
     if (out_snd_device != SND_DEVICE_NONE) {
         if (usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND)
@@ -541,6 +550,15 @@ static int select_devices(struct audio_device *adev,
     usecase->out_snd_device = out_snd_device;
 
     enable_audio_route(adev, usecase);
+
+    /* Applicable only on the targets that has external modem.
+     * Enable device command should be sent to modem only after
+     * enabling voice call mixer controls
+     */
+    if (usecase->type == VOICE_CALL)
+        status = platform_switch_voice_call_usecase_route_post(adev->platform,
+                                                               out_snd_device,
+                                                               in_snd_device);
 
     return status;
 }
