@@ -295,11 +295,17 @@ static int msm_device_to_be_id [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_USB_ACCESSORY                  ,       -1},
        {AUDIO_DEVICE_OUT_USB_DEVICE                     ,       -1},
        {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
+#ifdef ANC_HEADSET_ENABLED
        {AUDIO_DEVICE_OUT_ANC_HEADSET                    ,       2},
        {AUDIO_DEVICE_OUT_ANC_HEADPHONE                  ,       2},
+#endif
+#ifdef AFE_PROXY_ENABLED
        {AUDIO_DEVICE_OUT_PROXY                          ,       9},
+#endif
+#ifdef FM_ENABLED
        {AUDIO_DEVICE_OUT_FM                             ,       7},
        {AUDIO_DEVICE_OUT_FM_TX                          ,       8},
+#endif
        {AUDIO_DEVICE_OUT_ALL                            ,      -1},
        {AUDIO_DEVICE_NONE                               ,      -1},
        {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},

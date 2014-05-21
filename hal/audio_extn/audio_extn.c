@@ -60,7 +60,7 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
                                    struct str_parms *parms);
 #endif
 #ifndef HFP_ENABLED
-void audio_extn_hfp_set_parameters(adev, parms) (0)
+#define audio_extn_hfp_set_parameters(adev, parms) (0)
 #else
 void audio_extn_hfp_set_parameters(struct audio_device *adev,
                                            struct str_parms *parms);

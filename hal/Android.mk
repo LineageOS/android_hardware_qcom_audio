@@ -31,6 +31,10 @@ LOCAL_SRC_FILES := \
 
 LOCAL_SRC_FILES += audio_extn/audio_extn.c
 
+ifneq ($(strip $(AUDIO_FEATURE_DISABLED_PCM_OFFLOAD)),true)
+    LOCAL_CFLAGS += -DPCM_OFFLOAD_ENABLED
+endif
+
 ifneq ($(strip $(AUDIO_FEATURE_DISABLED_ANC_HEADSET)),true)
     LOCAL_CFLAGS += -DANC_HEADSET_ENABLED
 endif
