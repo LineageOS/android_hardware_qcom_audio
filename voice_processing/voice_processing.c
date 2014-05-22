@@ -408,6 +408,10 @@ static struct session_s *get_session(int32_t id, int32_t  sessionId, int32_t  io
     }
 
     session = (struct session_s *)calloc(1, sizeof(struct session_s));
+    if (session == NULL) {
+        ALOGE("get_session() fail to allocate memory");
+        return NULL;
+    }
     session_init(session);
     session->id = sessionId;
     session->io = ioId;
@@ -682,6 +686,10 @@ static int lib_create(const effect_uuid_t *uuid,
         return -EINVAL;
     }
     id = uuid_to_id(&desc->type);
+    if (id >= NUM_ID) {
+        ALOGW("lib_create: fx not found type: %08x", desc->type.timeLow);
+        return -EINVAL;
+    }
 
     session = get_session(id, sessionId, ioId);
 
