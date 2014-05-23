@@ -206,19 +206,19 @@ static void  update_hardware_info_8994(struct hardware_info *hw_info, const char
         hw_info->snd_devices = NULL;
         hw_info->num_snd_devices = 0;
         strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
-    } else if (!strcmp(snd_card_name, "msm8994-tomtom-cdp-snd-card ")) {
+    } else if (!strcmp(snd_card_name, "msm8994-tomtom-cdp-snd-card")) {
         strlcpy(hw_info->type, " cdp", sizeof(hw_info->type));
         strlcpy(hw_info->name, "msm8994", sizeof(hw_info->name));
         hw_info->snd_devices = (snd_device_t *)tomtom_msm8994_CDP_variant_devices;
         hw_info->num_snd_devices = ARRAY_SIZE(tomtom_msm8994_CDP_variant_devices);
         strlcpy(hw_info->dev_extn, "-cdp", sizeof(hw_info->dev_extn));
-    } else if (!strcmp(snd_card_name, "msm8994-tomtom-stp-snd-card ")) {
+    } else if (!strcmp(snd_card_name, "msm8994-tomtom-stp-snd-card")) {
         strlcpy(hw_info->type, " stp", sizeof(hw_info->type));
         strlcpy(hw_info->name, "msm8994", sizeof(hw_info->name));
         hw_info->snd_devices = (snd_device_t *)tomtom_stp_variant_devices;
         hw_info->num_snd_devices = ARRAY_SIZE(tomtom_stp_variant_devices);
         strlcpy(hw_info->dev_extn, "-stp", sizeof(hw_info->dev_extn));
-    } else if (!strcmp(snd_card_name, "msm8994-tomtom-liquid-snd-card ")) {
+    } else if (!strcmp(snd_card_name, "msm8994-tomtom-liquid-snd-card")) {
         strlcpy(hw_info->type, " liquid", sizeof(hw_info->type));
         strlcpy(hw_info->name, "msm8994", sizeof(hw_info->name));
         hw_info->snd_devices = (snd_device_t *)tomtom_liquid_variant_devices;
