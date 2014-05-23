@@ -545,4 +545,33 @@ void audio_extn_dolby_ds2_set_endpoint(struct audio_device *adev) {
 
     return;
 }
+
+int audio_extn_ds2_enable(struct audio_device *adev) {
+
+    char value[PROPERTY_VALUE_MAX] = {0};
+    bool ds2_enabled = false;
+    const char *mixer_ctl_name = "DS2 OnOff";
+    struct mixer_ctl *ctl;
+
+    property_get("audio.dolby.ds2.enabled", value, NULL);
+    ds2_enabled = atoi(value) || !strncmp("true", value, 4);
+
+    ALOGV("%s:", __func__);
+    if(ds2_enabled) {
+        ALOGD("%s:ds2_enabled %d", __func__, ds2_enabled);
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                                   __func__, mixer_ctl_name);
+            return -EINVAL;
+        }
+
+        if (mixer_ctl_set_value(ctl, 0, ds2_enabled) < 0) {
+            ALOGE("%s: Could not set ds2 enable %d",
+                            __func__, ds2_enabled);
+            return -EINVAL;
+        }
+    }
+    return 0;
+}
 #endif

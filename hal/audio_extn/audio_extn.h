@@ -220,10 +220,12 @@ typedef struct {
 int audio_extn_dap_hal_init(int snd_card);
 int audio_extn_dap_hal_deinit();
 void audio_extn_dolby_ds2_set_endpoint(struct audio_device *adev);
+int audio_extn_ds2_enable(struct audio_device *adev);
 #else
 #define audio_extn_dap_hal_init(snd_card)                             (0)
 #define audio_extn_dap_hal_deinit()                                   (0)
 #define audio_extn_dolby_ds2_set_endpoint(adev)                       (0)
+#define audio_extn_ds2_enable(adev)				      (0)
 #endif
 
 #endif /* AUDIO_EXTN_H */
