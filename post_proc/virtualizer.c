@@ -47,13 +47,13 @@ const effect_descriptor_t virtualizer_descriptor = {
 
 int virtualizer_get_strength(virtualizer_context_t *context)
 {
-    ALOGV("%s: strength: %d", __func__, context->strength);
+    ALOGV("%s: ctxt %p, strength: %d", __func__, context, context->strength);
     return context->strength;
 }
 
 int virtualizer_set_strength(virtualizer_context_t *context, uint32_t strength)
 {
-    ALOGV("%s: strength: %d", __func__, strength);
+    ALOGV("%s: ctxt %p, strength: %d", __func__, context, strength);
     context->strength = strength;
 
     offload_virtualizer_set_strength(&(context->offload_virt), strength);
@@ -74,7 +74,7 @@ int virtualizer_get_parameter(effect_context_t *context, effect_param_t *p,
     void *value = p->data + voffset;
     int i;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p, param %d", __func__, virt_ctxt, param);
 
     p->status = 0;
 
@@ -100,12 +100,10 @@ int virtualizer_get_parameter(effect_context_t *context, effect_param_t *p,
 
     switch (param) {
     case VIRTUALIZER_PARAM_STRENGTH_SUPPORTED:
-	ALOGV("%s: VIRTUALIZER_PARAM_STRENGTH_SUPPORTED", __func__);
         *(uint32_t *)value = 1;
         break;
 
     case VIRTUALIZER_PARAM_STRENGTH:
-	ALOGV("%s: VIRTUALIZER_PARAM_STRENGTH", __func__);
         *(int16_t *)value = virtualizer_get_strength(virt_ctxt);
         break;
 
@@ -127,13 +125,12 @@ int virtualizer_set_parameter(effect_context_t *context, effect_param_t *p,
     int32_t param = *param_tmp++;
     uint32_t strength;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p, param %d", __func__, virt_ctxt, param);
 
     p->status = 0;
 
     switch (param) {
     case VIRTUALIZER_PARAM_STRENGTH:
-	ALOGV("%s VIRTUALIZER_PARAM_STRENGTH", __func__);
         strength = (uint32_t)(*(int16_t *)value);
         virtualizer_set_strength(virt_ctxt, strength);
         break;
@@ -149,7 +146,7 @@ int virtualizer_set_device(effect_context_t *context, uint32_t device)
 {
     virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)context;
 
-    ALOGV("%s: device: %d", __func__, device);
+    ALOGV("%s: ctxt %p, device: 0x%x", __func__, virt_ctxt, device);
     virt_ctxt->device = device;
     if((device == AUDIO_DEVICE_OUT_SPEAKER) ||
        (device == AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT) ||
@@ -165,6 +162,7 @@ int virtualizer_set_device(effect_context_t *context, uint32_t device)
                 offload_virtualizer_send_params(virt_ctxt->ctl,
                                               virt_ctxt->offload_virt,
                                               OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
+            ALOGI("%s: ctxt %p, disabled based on device", __func__, virt_ctxt);
         }
     } else {
         if (!offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt)) &&
@@ -190,7 +188,7 @@ int virtualizer_reset(effect_context_t *context)
 
 int virtualizer_init(effect_context_t *context)
 {
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p", __func__, context);
     virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)context;
 
     context->config.inputCfg.accessMode = EFFECT_BUFFER_ACCESS_READ;
@@ -221,7 +219,7 @@ int virtualizer_enable(effect_context_t *context)
 {
     virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)context;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p, strength %d", __func__, virt_ctxt, virt_ctxt->strength);
 
     if (!offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt)) &&
         !(virt_ctxt->temp_disabled)) {
@@ -239,7 +237,7 @@ int virtualizer_disable(effect_context_t *context)
 {
     virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)context;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p", __func__, virt_ctxt);
     if (offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt))) {
         offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), false);
         if (virt_ctxt->ctl)
@@ -254,7 +252,7 @@ int virtualizer_start(effect_context_t *context, output_context_t *output)
 {
     virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)context;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p, ctl %p", __func__, virt_ctxt, output->ctl);
     virt_ctxt->ctl = output->ctl;
     if (offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt)))
         if (virt_ctxt->ctl)
@@ -268,7 +266,7 @@ int virtualizer_stop(effect_context_t *context, output_context_t *output)
 {
     virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)context;
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: ctxt %p", __func__, virt_ctxt);
     virt_ctxt->ctl = NULL;
     return 0;
 }
