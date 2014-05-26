@@ -1102,7 +1102,7 @@ status_t AudioHardwareALSA::doRouting(int device, char* useCase)
             //For FM we don't open an output stream. Hence required usecase shouldn't be considered.
             if ( (useCase != NULL) && (activeUsecase != USECASE_FM) ) {
                 for(ALSAHandleList::iterator it2 = mDeviceList.begin(); it2 != mDeviceList.end(); it2++) {
-                    if (!strncmp(useCase, it2->useCase,sizeof(useCase))) {
+                    if (!strcmp(useCase, it2->useCase)) {
                             it = it2;
                             ALOGV("found matching required usecase:%s device:%x",it->useCase,it->devices);
                             activeUsecase = useCaseStringToEnum(it->useCase);
@@ -1137,6 +1137,12 @@ status_t AudioHardwareALSA::doRouting(int device, char* useCase)
                             startPlaybackOnExtOut_l(activeUsecase);
                         } else {
                            mALSADevice->route(&(*it),(uint32_t)device, newMode);
+                           for(ALSAHandleList::iterator it2 = mDeviceList.begin(); it2 != mDeviceList.end(); it2++) {
+                                if ((it2->handle || it2->rxHandle) && !(getExtOutActiveUseCases_l() && it2->useCase)) {
+                                    startPlaybackOnExtOut_l(useCaseStringToEnum(it2->useCase));
+                                    break;
+                                }
+                           }
                         }
                     }
                     if (activeUsecase == USECASE_FM){
