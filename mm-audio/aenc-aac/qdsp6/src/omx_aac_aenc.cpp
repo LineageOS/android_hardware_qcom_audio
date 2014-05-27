@@ -457,7 +457,7 @@ void omx_aac_aenc::buffer_done_cb(OMX_BUFFERHEADERTYPE *bufHdr)
         pthread_mutex_lock(&in_buf_count_lock);
         m_aac_pb_stats.ebd_cnt++;
         nNumInputBuf--;
-        DEBUG_DETAIL("EBD CB:: in_buf_len=%d nNumInputBuf=%d\n",\
+        DEBUG_DETAIL("EBD CB:: in_buf_len=%d nNumInputBuf=%d ebd_cnd %d\n",\
                      m_aac_pb_stats.tot_in_buf_len,
                      nNumInputBuf, m_aac_pb_stats.ebd_cnt);
         pthread_mutex_unlock(&in_buf_count_lock);
@@ -713,7 +713,7 @@ loopback_out:
                 pThis->execute_output_omx_flush();
             } else
             {
-                DEBUG_DETAIL("Invalid command[%d]\n",p1);
+                DEBUG_DETAIL("Invalid command[%lu]\n",p1);
             }
         } else
         {
@@ -1029,7 +1029,7 @@ loopback_in:
                 pThis->execute_input_omx_flush();
             } else
             {
-                DEBUG_DETAIL("Invalid command[%d]\n",p1);
+                DEBUG_DETAIL("Invalid command[%lu]\n",p1);
             }
         }
         else
@@ -2219,7 +2219,7 @@ bool omx_aac_aenc::execute_input_omx_flush()
                 (ident == OMX_COMPONENT_GENERATE_BUFFER_DONE))
             {
                 omx_buf = (OMX_BUFFERHEADERTYPE *) p2;
-                DEBUG_DETAIL("Flush:Input dataq=0x%x \n", omx_buf);
+                DEBUG_DETAIL("Flush:Input dataq=%p \n", omx_buf);
                 omx_buf->nFilledLen = 0;
                 buffer_done_cb((OMX_BUFFERHEADERTYPE *)omx_buf);
             }
@@ -2230,7 +2230,7 @@ bool omx_aac_aenc::execute_input_omx_flush()
             {
                 omx_buf = (OMX_BUFFERHEADERTYPE *) p2;
                 omx_buf->nFilledLen = 0;
-                DEBUG_DETAIL("Flush:ctrl dataq=0x%x \n", omx_buf);
+                DEBUG_DETAIL("Flush:ctrl dataq=%p \n", omx_buf);
                 buffer_done_cb((OMX_BUFFERHEADERTYPE *)omx_buf);
             }
         } else
@@ -2298,7 +2298,7 @@ bool omx_aac_aenc::execute_output_omx_flush()
                  (OMX_COMPONENT_GENERATE_FRAME_DONE == ident))
             {
                 omx_buf = (OMX_BUFFERHEADERTYPE *) p2;
-                DEBUG_DETAIL("Ouput Buf_Addr=%x TS[0x%x] \n",\
+                DEBUG_DETAIL("Ouput Buf_Addr=%p TS[0x%x] \n",\
                              omx_buf,nTimestamp);
                 omx_buf->nTimeStamp = nTimestamp;
                 omx_buf->nFilledLen = 0;
@@ -2311,7 +2311,7 @@ bool omx_aac_aenc::execute_output_omx_flush()
             if (OMX_COMPONENT_GENERATE_FRAME_DONE == ident)
             {
                 omx_buf = (OMX_BUFFERHEADERTYPE *) p2;
-                DEBUG_DETAIL("Ouput Buf_Addr=%x TS[0x%x] \n", \
+                DEBUG_DETAIL("Ouput Buf_Addr=%p TS[0x%x] \n", \
                              omx_buf,nTimestamp);
                 omx_buf->nTimeStamp = nTimestamp;
                 omx_buf->nFilledLen = 0;
@@ -3805,7 +3805,7 @@ bool omx_aac_aenc::search_input_bufhdr(OMX_BUFFERHEADERTYPE *buffer)
     temp = m_input_buf_hdrs.find_ele(buffer);
     if (buffer && temp)
     {
-        DEBUG_DETAIL("search_input_bufhdr %x \n", buffer);
+        DEBUG_DETAIL("search_input_bufhdr %p \n", buffer);
         eRet = true;
     }
     return eRet;
@@ -3827,7 +3827,7 @@ bool omx_aac_aenc::search_output_bufhdr(OMX_BUFFERHEADERTYPE *buffer)
     temp = m_output_buf_hdrs.find_ele(buffer);
     if (buffer && temp)
     {
-        DEBUG_DETAIL("search_output_bufhdr %x \n", buffer);
+        DEBUG_DETAIL("search_output_bufhdr %p \n", buffer);
         eRet = true;
     }
     return eRet;
@@ -4143,7 +4143,7 @@ OMX_ERRORTYPE  omx_aac_aenc::fill_this_buffer_proxy
 
             DEBUG_PRINT("\nBefore Read..m_drv_fd = %d,\n",m_drv_fd);
             nReadbytes = read(m_drv_fd,m_tmp_out_meta_buf,output_buffer_size );
-            DEBUG_DETAIL("FTBP->Al_len[%d]buf[%p]size[%d]numOutBuf[%d]\n",\
+            DEBUG_DETAIL("FTBP->Al_len[%lu]buf[%p]size[%d]numOutBuf[%d]\n",\
                          buffer->nAllocLen,m_tmp_out_meta_buf,
                          nReadbytes,nNumOutputBuf);
             if(*m_tmp_out_meta_buf <= 0)
