@@ -47,7 +47,7 @@ void *omx_evrc_msg(void *info)
 {
     struct evrc_ipc_info *evrc_info = (struct evrc_ipc_info*)info;
     unsigned char id;
-    int n;
+    ssize_t n;
 
     DEBUG_DETAIL("\n%s: message thread start\n", __FUNCTION__);
     while (!evrc_info->dead)
