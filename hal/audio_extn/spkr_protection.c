@@ -686,11 +686,6 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
     }
     spkr_prot_calib_cancel(adev);
     spkr_prot_set_spkrstatus(true);
-    if (platform_send_audio_calibration(adev->platform,
-        SND_DEVICE_OUT_SPEAKER_PROTECTED) < 0) {
-        adev->snd_dev_ref_cnt[snd_device]--;
-        return -EINVAL;
-    }
     ALOGV("%s: snd_device(%d: %s)", __func__, snd_device,
          platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER_PROTECTED));
     audio_route_apply_and_update_path(adev->audio_route,
@@ -732,7 +727,8 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
 exit:
    /* Clear VI feedback cal and replace with handset MIC  */
    platform_send_audio_calibration(adev->platform,
-        SND_DEVICE_IN_HANDSET_MIC);
+        SND_DEVICE_IN_HANDSET_MIC,
+        platform_get_default_app_type(adev->platform), 8000);
     if (ret) {
         if (handle.pcm_tx)
             pcm_close(handle.pcm_tx);

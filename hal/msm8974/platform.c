@@ -74,6 +74,9 @@
 /* EDID format ID for LPCM audio */
 #define EDID_FORMAT_LPCM    1
 
+/* fallback app type if the default app type from acdb loader fails */
+#define DEFAULT_APP_TYPE  0x11130
+
 /* Retry for delay in FW loading*/
 #define RETRY_NUMBER 10
 #define RETRY_US 500000
@@ -101,9 +104,10 @@ struct audio_block_header
 /* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
 typedef int  (*acdb_init_t)(char *);
-typedef void (*acdb_send_audio_cal_t)(int, int);
+typedef void (*acdb_send_audio_cal_t)(int, int, int , int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
+typedef int  (*acdb_get_default_app_type_t)(void);
 
 struct platform_data {
     struct audio_device *adev;
@@ -125,6 +129,7 @@ struct platform_data {
     acdb_send_audio_cal_t      acdb_send_audio_cal;
     acdb_send_voice_cal_t      acdb_send_voice_cal;
     acdb_reload_vocvoltable_t  acdb_reload_vocvoltable;
+    acdb_get_default_app_type_t acdb_get_default_app_type;
 
     void *hw_info;
     struct csd_data *csd;
@@ -743,7 +748,7 @@ void *platform_init(struct audio_device *adev)
                   __func__, LIB_ACDB_LOADER);
 
         my_data->acdb_send_audio_cal = (acdb_send_audio_cal_t)dlsym(my_data->acdb_handle,
-                                                    "acdb_loader_send_audio_cal");
+                                                    "acdb_loader_send_audio_cal_v2");
         if (!my_data->acdb_send_audio_cal)
             ALOGE("%s: Could not find the symbol acdb_send_audio_cal from %s",
                   __func__, LIB_ACDB_LOADER);
@@ -758,6 +763,13 @@ void *platform_init(struct audio_device *adev)
                                                     "acdb_loader_reload_vocvoltable");
         if (!my_data->acdb_reload_vocvoltable)
             ALOGE("%s: Could not find the symbol acdb_loader_reload_vocvoltable from %s",
+                  __func__, LIB_ACDB_LOADER);
+
+        my_data->acdb_get_default_app_type = (acdb_get_default_app_type_t)dlsym(
+                                                    my_data->acdb_handle,
+                                                    "acdb_loader_get_default_app_type");
+        if (!my_data->acdb_get_default_app_type)
+            ALOGE("%s: Could not find the symbol acdb_get_default_app_type from %s",
                   __func__, LIB_ACDB_LOADER);
 
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
@@ -970,6 +982,16 @@ done:
     return ret;
 }
 
+int platform_get_default_app_type(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (my_data->acdb_get_default_app_type)
+        return my_data->acdb_get_default_app_type();
+    else
+        return DEFAULT_APP_TYPE;
+}
+
 int platform_get_snd_device_acdb_id(snd_device_t snd_device)
 {
     if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
@@ -979,7 +1001,8 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device)
     return acdb_device_table[snd_device];
 }
 
-int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
+int platform_send_audio_calibration(void *platform, snd_device_t snd_device,
+                                    int app_type, int sample_rate)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_dev_id, acdb_dev_type;
@@ -991,14 +1014,15 @@ int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
         return -EINVAL;
     }
     if (my_data->acdb_send_audio_cal) {
-        ("%s: sending audio calibration for snd_device(%d) acdb_id(%d)",
+        ALOGV("%s: sending audio calibration for snd_device(%d) acdb_id(%d)",
               __func__, snd_device, acdb_dev_id);
         if (snd_device >= SND_DEVICE_OUT_BEGIN &&
                 snd_device < SND_DEVICE_OUT_END)
             acdb_dev_type = ACDB_DEV_TYPE_OUT;
         else
             acdb_dev_type = ACDB_DEV_TYPE_IN;
-        my_data->acdb_send_audio_cal(acdb_dev_id, acdb_dev_type);
+        my_data->acdb_send_audio_cal(acdb_dev_id, acdb_dev_type, app_type,
+                                     sample_rate);
     }
     return 0;
 }
