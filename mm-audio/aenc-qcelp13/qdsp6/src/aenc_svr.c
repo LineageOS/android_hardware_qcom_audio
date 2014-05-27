@@ -47,7 +47,7 @@ void *omx_qcelp13_msg(void *info)
 {
     struct qcelp13_ipc_info *qcelp13_info = (struct qcelp13_ipc_info*)info;
     unsigned char id;
-    int n;
+    ssize_t n;
 
     DEBUG_DETAIL("\n%s: message thread start\n", __FUNCTION__);
     while (!qcelp13_info->dead)

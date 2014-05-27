@@ -47,7 +47,7 @@ void *omx_aac_msg(void *info)
 {
     struct aac_ipc_info *aac_info = (struct aac_ipc_info*)info;
     unsigned char id;
-    int n;
+    ssize_t n;
 
     DEBUG_DETAIL("\n%s: message thread start\n", __FUNCTION__);
     while (!aac_info->dead)
