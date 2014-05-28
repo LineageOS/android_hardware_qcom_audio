@@ -544,8 +544,11 @@ static void* spkr_calibration_thread(void *context)
             }
             goahead = true;
         }
-        if (!list_empty(&adev->usecase_list))
+        if (!list_empty(&adev->usecase_list)) {
+            ALOGD("%s: Usecase active re-try calibration", __func__);
             goahead = false;
+            pthread_mutex_unlock(&handle.mutex_spkr_prot);
+        }
         if (goahead) {
                 int status;
                 status = spkr_calibrate(t0);
