@@ -105,6 +105,7 @@ protected:
 private:
         // Used for voip + voice concurrency usecase
         int mPrevPhoneState;
+        static int mvoice_call_state;
 
 };
 };
