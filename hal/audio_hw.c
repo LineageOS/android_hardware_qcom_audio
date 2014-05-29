@@ -402,6 +402,7 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_dolby_set_dmid(adev);
     audio_extn_dolby_set_endpoint(adev);
 #endif
+    audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_BUSY);
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(mixer_path, snd_device);
     ALOGV("%s: apply mixer and update path: %s", __func__, mixer_path);
@@ -428,6 +429,7 @@ int disable_audio_route(struct audio_device *adev,
     platform_add_backend_name(mixer_path, snd_device);
     ALOGV("%s: reset and update mixer path: %s", __func__, mixer_path);
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
+    audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_FREE);
     ALOGV("%s: exit", __func__);
     return 0;
 }
@@ -472,13 +474,17 @@ int enable_snd_device(struct audio_device *adev,
       }
     }  else {
         ALOGV("%s: snd_device(%d: %s)", __func__,
-        snd_device, device_name);
+            snd_device, device_name);
+        /* due to the possibility of calibration overwrite between listen
+            and audio, notify listen hal before audio calibration is sent */
+        audio_extn_listen_update_device_status(snd_device,
+                                        LISTEN_EVENT_SND_DEVICE_BUSY);
         if (platform_send_audio_calibration(adev->platform, snd_device) < 0) {
             adev->snd_dev_ref_cnt[snd_device]--;
+            audio_extn_listen_update_device_status(snd_device,
+                                        LISTEN_EVENT_SND_DEVICE_FREE);
             return -EINVAL;
         }
-        audio_extn_listen_update_status(snd_device,
-                LISTEN_EVENT_SND_DEVICE_BUSY);
 
         audio_route_apply_and_update_path(adev->audio_route, device_name);
     }
@@ -524,7 +530,7 @@ int disable_snd_device(struct audio_device *adev,
         } else
             audio_route_reset_and_update_path(adev->audio_route, device_name);
 
-        audio_extn_listen_update_status(snd_device,
+        audio_extn_listen_update_device_status(snd_device,
                                         LISTEN_EVENT_SND_DEVICE_FREE);
     }
 

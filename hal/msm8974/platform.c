@@ -1959,17 +1959,24 @@ int platform_update_usecase_from_source(int source, int usecase)
     }
 }
 
-bool platform_listen_update_status(snd_device_t snd_device)
+bool platform_listen_device_needs_event(snd_device_t snd_device)
 {
+    bool needs_event = false;
+
     if ((snd_device >= SND_DEVICE_IN_BEGIN) &&
         (snd_device < SND_DEVICE_IN_END) &&
 #ifdef FM_ENABLED
         (snd_device != SND_DEVICE_IN_CAPTURE_FM) &&
 #endif
         (snd_device != SND_DEVICE_IN_CAPTURE_VI_FEEDBACK))
-        return true;
-    else
-        return false;
+        needs_event = true;
+
+    return needs_event;
+}
+
+bool platform_listen_usecase_needs_event(audio_usecase_t uc_id __unused)
+{
+    return false;
 }
 
 /* Read  offload buffer size from a property.
