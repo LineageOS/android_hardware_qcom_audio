@@ -95,25 +95,75 @@ struct listen_audio_device {
 
 static struct listen_audio_device *listen_dev;
 
-void audio_extn_listen_update_status(snd_device_t snd_device,
-                                    listen_event_type_t event)
+void audio_extn_listen_update_device_status(snd_device_t snd_device,
+                                     listen_event_type_t event)
 {
-    if (!platform_listen_update_status(snd_device)) {
-        ALOGV("%s(): no need to notify listen. device = %s. Event = %u",
-                __func__, platform_get_snd_device_name(snd_device), event);
+    bool raise_event = false;
+    int device_type = -1;
+
+    if (snd_device >= SND_DEVICE_OUT_BEGIN &&
+        snd_device < SND_DEVICE_OUT_END)
+        device_type = PCM_PLAYBACK;
+    else if (snd_device >= SND_DEVICE_IN_BEGIN &&
+        snd_device < SND_DEVICE_IN_END)
+        device_type = PCM_CAPTURE;
+    else {
+        ALOGE("%s: invalid device 0x%x, for event %d",
+                           __func__, snd_device, event);
         return;
     }
 
     if (listen_dev) {
-        ALOGI("%s(): %s listen. current active device = %s. Event = %u",
-                __func__,
-                (event == LISTEN_EVENT_SND_DEVICE_BUSY) ? "stop" : "start",
-                platform_get_snd_device_name(snd_device), event);
+        raise_event = platform_listen_device_needs_event(snd_device);
+        ALOGI("%s(): device 0x%x of type %d for Event %d, with Raise=%d",
+            __func__, snd_device, device_type, event, raise_event);
+        if (raise_event && (device_type == PCM_CAPTURE)) {
+            switch(event) {
+            case LISTEN_EVENT_SND_DEVICE_FREE:
+                listen_dev->notify_event(AUDIO_DEVICE_IN_INACTIVE);
+                break;
+            case LISTEN_EVENT_SND_DEVICE_BUSY:
+                listen_dev->notify_event(AUDIO_DEVICE_IN_ACTIVE);
+                break;
+            default:
+                ALOGW("%s:invalid event %d for device 0x%x",
+                                      __func__, event, snd_device);
+            }
+        }/*Events for output device, if required can be placed here in else*/
+    }
+}
 
-            if (event == LISTEN_EVENT_SND_DEVICE_FREE)
-                   listen_dev->notify_event(AUDIO_CAPTURE_INACTIVE);
-            else if (event == LISTEN_EVENT_SND_DEVICE_BUSY)
-                   listen_dev->notify_event(AUDIO_CAPTURE_ACTIVE);
+void audio_extn_listen_update_stream_status(struct audio_usecase *uc_info,
+                                     listen_event_type_t event)
+{
+    bool raise_event = false;
+    audio_usecase_t uc_id;
+    int usecase_type = -1;
+
+    if (uc_info == NULL) {
+        ALOGE("%s: usecase is NULL!!!", __func__);
+        return;
+    }
+    uc_id = uc_info->id;
+    usecase_type = uc_info->type;
+
+    if (listen_dev) {
+        raise_event = platform_listen_usecase_needs_event(uc_id);
+        ALOGI("%s(): uc_id %d of type %d for Event %d, with Raise=%d",
+            __func__, uc_id, usecase_type, event, raise_event);
+        if (raise_event && (usecase_type == PCM_PLAYBACK)) {
+            switch(event) {
+            case LISTEN_EVENT_STREAM_FREE:
+                listen_dev->notify_event(AUDIO_STREAM_OUT_INACTIVE);
+                break;
+            case LISTEN_EVENT_STREAM_BUSY:
+                listen_dev->notify_event(AUDIO_STREAM_OUT_ACTIVE);
+                break;
+            default:
+                ALOGW("%s:invalid event %d, for usecase %d",
+                                      __func__, event, uc_id);
+            }
+        }/*Events for capture usecase, if required can be placed here in else*/
     }
 }
 
