@@ -140,12 +140,6 @@ enum {
     OFFLOAD_STATE_PAUSED,
 };
 
-enum {
-    PCM_ERROR_NONE,
-    PCM_ERROR_EIO,
-    PCM_ERROR_ENETRESET,  /* For SSR */
-};
-
 struct offload_cmd {
     struct listnode node;
     int cmd;
@@ -193,7 +187,6 @@ struct stream_out {
     void *offload_cookie;
     struct compr_gapless_mdata gapless_mdata;
     int send_new_metadata;
-    int pcm_error_type;
 
     struct audio_device *dev;
 };
@@ -212,7 +205,6 @@ struct stream_in {
     bool enable_aec;
     bool enable_ns;
     audio_format_t format;
-    int pcm_error_type;
 
     struct audio_device *dev;
 };
