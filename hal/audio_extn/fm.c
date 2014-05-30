@@ -51,6 +51,8 @@ struct fm_module {
     struct pcm *fm_pcm_tx;
     bool is_fm_running;
     float fm_volume;
+    bool restart_fm;
+    int scard_state;
 };
 
 static struct fm_module fmmod = {
@@ -58,6 +60,8 @@ static struct fm_module fmmod = {
   .fm_pcm_tx = NULL,
   .fm_volume = 0,
   .is_fm_running = 0,
+  .restart_fm = 0,
+  .scard_state = SND_CARD_STATE_ONLINE,
 };
 
 static int32_t fm_set_volume(struct audio_device *adev, float value)
@@ -213,7 +217,23 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
     float vol =0.0;
 
     ALOGV("%s: enter", __func__);
+    ret = str_parms_get_str(parms, "SND_CARD_STATUS", value, sizeof(value));
+    if (ret >= 0) {
+        char *snd_card_status = value+2;
+        if (strstr(snd_card_status, "OFFLINE")) {
+            fmmod.scard_state = SND_CARD_STATE_OFFLINE;
+        }
+        else if (strstr(snd_card_status, "ONLINE")) {
+            fmmod.scard_state = SND_CARD_STATE_ONLINE;
+        }
+    }
     if(fmmod.is_fm_running) {
+        if (fmmod.scard_state == SND_CARD_STATE_OFFLINE) {
+            ALOGD("sound card is OFFLINE, stop FM");
+            fm_stop(adev);
+            fmmod.restart_fm = 1;
+        }
+
         ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING,
                                 value, sizeof(value));
         if (ret >= 0) {
@@ -221,6 +241,11 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
             if(val > 0)
                 select_devices(adev, USECASE_AUDIO_PLAYBACK_FM);
         }
+    }
+    if (fmmod.restart_fm && (fmmod.scard_state == SND_CARD_STATE_ONLINE)) {
+        ALOGD("sound card is ONLINE, restart FM");
+        fmmod.restart_fm = 0;
+        fm_start(adev);
     }
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HANDLE_FM,
