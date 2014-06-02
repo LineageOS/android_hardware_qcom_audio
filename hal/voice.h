@@ -61,6 +61,7 @@ struct voice {
     bool mic_mute;
     float volume;
     bool voice_device_set;
+    bool is_in_call;
 };
 
 enum {
