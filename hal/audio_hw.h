@@ -161,6 +161,7 @@ struct stream_in {
     audio_channel_mask_t channel_mask;
     audio_usecase_t usecase;
     bool enable_aec;
+    bool enable_ns;
 
     struct audio_device *dev;
 };
