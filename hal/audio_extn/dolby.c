@@ -64,7 +64,7 @@
 
 /* DS1-DDP Endp Params */
 #define DDP_ENDP_NUM_PARAMS 17
-#define DDP_ENDP_NUM_DEVICES 22
+#define DDP_ENDP_NUM_DEVICES 20
 static int ddp_endp_params_id[DDP_ENDP_NUM_PARAMS] = {
     PARAM_ID_MAX_OUTPUT_CHANNELS, PARAM_ID_CTL_RUNNING_MODE,
     PARAM_ID_CTL_ERROR_CONCEAL, PARAM_ID_CTL_ERROR_MAX_RPTS,
@@ -138,12 +138,6 @@ static struct ddp_endp_params {
               {8, 0, 0, 0, 0, 0, 0, 21, 1, 6, 0, 0, 0, 0, 0, 0, 0},
               {1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0} },
           {AUDIO_DEVICE_OUT_FM_TX, 2,
-              {8, 0, 0, 0, 0, 0, 0, 21, 1, 6, 0, 0, 0, 0, 0, 0, 0},
-              {1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0} },
-          {AUDIO_DEVICE_OUT_ANC_HEADSET, 2,
-              {8, 0, 0, 0, 0, 0, 0, 21, 1, 6, 0, 0, 0, 0, 0, 0, 0},
-              {1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0} },
-          {AUDIO_DEVICE_OUT_ANC_HEADPHONE, 2,
               {8, 0, 0, 0, 0, 0, 0, 21, 1, 6, 0, 0, 0, 0, 0, 0, 0},
               {1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0} },
           {AUDIO_DEVICE_OUT_PROXY, 2,
