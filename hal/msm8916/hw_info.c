@@ -161,14 +161,8 @@ static void update_hardware_info_8x16(struct hardware_info *hw_info, const char 
         hw_info->snd_devices = NULL;
         hw_info->num_snd_devices = 0;
         strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
-    } else if (!strcmp(snd_card_name, "msm8939-skuh-snd-card")) {
-        strlcpy(hw_info->type, "skuh", sizeof(hw_info->type));
-        strlcpy(hw_info->name, "msm8939", sizeof(hw_info->name));
-        hw_info->snd_devices = NULL;
-        hw_info->num_snd_devices = 0;
-        strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
-    } else if (!strcmp(snd_card_name, "msm8939-skui-snd-card")) {
-        strlcpy(hw_info->type, "skui", sizeof(hw_info->type));
+    } else if (!strcmp(snd_card_name, "msm8939-snd-card-skuk")) {
+        strlcpy(hw_info->type, "skuk", sizeof(hw_info->type));
         strlcpy(hw_info->name, "msm8939", sizeof(hw_info->name));
         hw_info->snd_devices = NULL;
         hw_info->num_snd_devices = 0;
