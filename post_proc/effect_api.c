@@ -46,7 +46,7 @@
  */
 
 #define LOG_TAG "offload_effect_api"
-#define LOG_NDEBUG 0
+//#define LOG_NDEBUG 0
 //#define VERY_VERY_VERBOSE_LOGGING
 #ifdef VERY_VERY_VERBOSE_LOGGING
 #define ALOGVV ALOGV
@@ -59,6 +59,8 @@
 #include <tinyalsa/asoundlib.h>
 #include <sound/audio_effects.h>
 #include <sound/devdep_params.h>
+#include <linux/msm_audio.h>
+
 #include "effect_api.h"
 
 #ifdef DTS_EAGLE
@@ -66,6 +68,10 @@
 #endif
 
 #define ARRAY_SIZE(array) (sizeof array / sizeof array[0])
+typedef enum eff_mode {
+    OFFLOAD,
+    HW_ACCELERATOR
+} eff_mode_t;
 
 #define OFFLOAD_PRESET_START_OFFSET_FOR_OPENSL 19
 const int map_eq_opensl_preset_2_offload_preset[] = {
@@ -93,35 +99,35 @@ const int map_reverb_opensl_preset_2_offload_preset
 };
 
 int offload_update_mixer_and_effects_ctl(int card, int device_id,
-                                         struct mixer *mixer,
-                                         struct mixer_ctl *ctl)
+                                         struct mixer **mixer,
+                                         struct mixer_ctl **ctl)
 {
     char mixer_string[128];
 
     snprintf(mixer_string, sizeof(mixer_string),
              "%s %d", "Audio Effects Config", device_id);
     ALOGV("%s: mixer_string: %s", __func__, mixer_string);
-    mixer = mixer_open(card);
-    if (!mixer) {
+    *mixer = mixer_open(card);
+    if (!(*mixer)) {
         ALOGE("Failed to open mixer");
         ctl = NULL;
         return -EINVAL;
     } else {
-        ctl = mixer_get_ctl_by_name(mixer, mixer_string);
+        *ctl = mixer_get_ctl_by_name(*mixer, mixer_string);
         if (!ctl) {
             ALOGE("mixer_get_ctl_by_name failed");
-            mixer_close(mixer);
-            mixer = NULL;
+            mixer_close(*mixer);
+            *mixer = NULL;
             return -EINVAL;
         }
     }
-    ALOGV("mixer: %p, ctl: %p", mixer, ctl);
+    ALOGV("mixer: %p, ctl: %p", *mixer, *ctl);
     return 0;
 }
 
-void offload_close_mixer(struct mixer *mixer)
+void offload_close_mixer(struct mixer **mixer)
 {
-    mixer_close(mixer);
+    mixer_close(*mixer);
 }
 
 void offload_bassboost_set_device(struct bass_boost_params *bassboost,
@@ -166,23 +172,23 @@ void offload_bassboost_set_mode(struct bass_boost_params *bassboost,
     bassboost->mode = mode;
 }
 
-int offload_bassboost_send_params(struct mixer_ctl *ctl,
-                                  struct bass_boost_params bassboost,
-                                  unsigned param_send_flags)
+static int bassboost_send_params(eff_mode_t mode, void *ctl,
+                                  struct bass_boost_params *bassboost,
+                                 unsigned param_send_flags)
 {
     int param_values[128] = {0};
     int *p_param_values = param_values;
 
     ALOGV("%s: flags 0x%x", __func__, param_send_flags);
     *p_param_values++ = BASS_BOOST_MODULE;
-    *p_param_values++ = bassboost.device;
+    *p_param_values++ = bassboost->device;
     *p_param_values++ = 0; /* num of commands*/
     if (param_send_flags & OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG) {
         *p_param_values++ = BASS_BOOST_ENABLE;
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = BASS_BOOST_ENABLE_PARAM_LEN;
-        *p_param_values++ = bassboost.enable_flag;
+        *p_param_values++ = bassboost->enable_flag;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_BASSBOOST_STRENGTH) {
@@ -190,7 +196,7 @@ int offload_bassboost_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = BASS_BOOST_STRENGTH_PARAM_LEN;
-        *p_param_values++ = bassboost.strength;
+        *p_param_values++ = bassboost->strength;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_BASSBOOST_MODE) {
@@ -198,14 +204,35 @@ int offload_bassboost_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = BASS_BOOST_MODE_PARAM_LEN;
-        *p_param_values++ = bassboost.mode;
+        *p_param_values++ = bassboost->mode;
         param_values[2] += 1;
     }
 
-    if (param_values[2] && ctl)
-        mixer_ctl_set_array(ctl, param_values, ARRAY_SIZE(param_values));
+    if ((mode == OFFLOAD) && param_values[2] && ctl) {
+        mixer_ctl_set_array((struct mixer_ctl *)ctl, param_values,
+                            ARRAY_SIZE(param_values));
+    } else if ((mode == HW_ACCELERATOR) && param_values[2] &&
+               ctl && *(int *)ctl) {
+        if (ioctl(*(int *)ctl, AUDIO_EFFECTS_SET_PP_PARAMS, param_values) < 0)
+            ALOGE("%s: sending h/w acc effects params fail[%d]", __func__, errno);
+    }
 
     return 0;
+}
+
+int offload_bassboost_send_params(struct mixer_ctl *ctl,
+                                  struct bass_boost_params *bassboost,
+                                  unsigned param_send_flags)
+{
+    return bassboost_send_params(OFFLOAD, (void *)ctl, bassboost,
+                                 param_send_flags);
+}
+
+int hw_acc_bassboost_send_params(int fd, struct bass_boost_params *bassboost,
+                                 unsigned param_send_flags)
+{
+    return bassboost_send_params(HW_ACCELERATOR, (void *)&fd,
+                                 bassboost, param_send_flags);
 }
 
 void offload_virtualizer_set_device(struct virtualizer_params *virtualizer,
@@ -257,23 +284,23 @@ void offload_virtualizer_set_gain_adjust(struct virtualizer_params *virtualizer,
     virtualizer->gain_adjust = gain_adjust;
 }
 
-int offload_virtualizer_send_params(struct mixer_ctl *ctl,
-                                    struct virtualizer_params virtualizer,
-                                    unsigned param_send_flags)
+static int virtualizer_send_params(eff_mode_t mode, void *ctl,
+                                    struct virtualizer_params *virtualizer,
+                                   unsigned param_send_flags)
 {
     int param_values[128] = {0};
     int *p_param_values = param_values;
 
     ALOGV("%s: flags 0x%x", __func__, param_send_flags);
     *p_param_values++ = VIRTUALIZER_MODULE;
-    *p_param_values++ = virtualizer.device;
+    *p_param_values++ = virtualizer->device;
     *p_param_values++ = 0; /* num of commands*/
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG) {
         *p_param_values++ = VIRTUALIZER_ENABLE;
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = VIRTUALIZER_ENABLE_PARAM_LEN;
-        *p_param_values++ = virtualizer.enable_flag;
+        *p_param_values++ = virtualizer->enable_flag;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_STRENGTH) {
@@ -281,7 +308,7 @@ int offload_virtualizer_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = VIRTUALIZER_STRENGTH_PARAM_LEN;
-        *p_param_values++ = virtualizer.strength;
+        *p_param_values++ = virtualizer->strength;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_OUT_TYPE) {
@@ -289,7 +316,7 @@ int offload_virtualizer_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = VIRTUALIZER_OUT_TYPE_PARAM_LEN;
-        *p_param_values++ = virtualizer.out_type;
+        *p_param_values++ = virtualizer->out_type;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_GAIN_ADJUST) {
@@ -297,14 +324,36 @@ int offload_virtualizer_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = VIRTUALIZER_GAIN_ADJUST_PARAM_LEN;
-        *p_param_values++ = virtualizer.gain_adjust;
+        *p_param_values++ = virtualizer->gain_adjust;
         param_values[2] += 1;
     }
 
-    if (param_values[2] && ctl)
-        mixer_ctl_set_array(ctl, param_values, ARRAY_SIZE(param_values));
+    if ((mode == OFFLOAD) && param_values[2] && ctl) {
+        mixer_ctl_set_array((struct mixer_ctl *)ctl, param_values,
+                            ARRAY_SIZE(param_values));
+    } else if ((mode == HW_ACCELERATOR) && param_values[2] &&
+               ctl && *(int *)ctl) {
+        if (ioctl(*(int *)ctl, AUDIO_EFFECTS_SET_PP_PARAMS, param_values) < 0)
+            ALOGE("%s: sending h/w acc effects params fail[%d]", __func__, errno);
+    }
 
     return 0;
+}
+
+int offload_virtualizer_send_params(struct mixer_ctl *ctl,
+                                    struct virtualizer_params *virtualizer,
+                                    unsigned param_send_flags)
+{
+    return virtualizer_send_params(OFFLOAD, (void *)ctl, virtualizer,
+                                   param_send_flags);
+}
+
+int hw_acc_virtualizer_send_params(int fd,
+                                   struct virtualizer_params *virtualizer,
+                                   unsigned param_send_flags)
+{
+    return virtualizer_send_params(HW_ACCELERATOR, (void *)&fd,
+                                   virtualizer, param_send_flags);
 }
 
 void offload_eq_set_device(struct eq_params *eq, uint32_t device)
@@ -356,28 +405,28 @@ void offload_eq_set_bands_level(struct eq_params *eq, int num_bands,
 #endif
 }
 
-int offload_eq_send_params(struct mixer_ctl *ctl, struct eq_params eq,
-                           unsigned param_send_flags)
+static int eq_send_params(eff_mode_t mode, void *ctl, struct eq_params *eq,
+                          unsigned param_send_flags)
 {
     int param_values[128] = {0};
     int *p_param_values = param_values;
     uint32_t i;
 
     ALOGV("%s: flags 0x%x", __func__, param_send_flags);
-    if ((eq.config.preset_id < -1) ||
-            ((param_send_flags & OFFLOAD_SEND_EQ_PRESET) && (eq.config.preset_id == -1))) {
+    if ((eq->config.preset_id < -1) ||
+            ((param_send_flags & OFFLOAD_SEND_EQ_PRESET) && (eq->config.preset_id == -1))) {
         ALOGV("No Valid preset to set");
         return 0;
     }
     *p_param_values++ = EQ_MODULE;
-    *p_param_values++ = eq.device;
+    *p_param_values++ = eq->device;
     *p_param_values++ = 0; /* num of commands*/
     if (param_send_flags & OFFLOAD_SEND_EQ_ENABLE_FLAG) {
         *p_param_values++ = EQ_ENABLE;
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = EQ_ENABLE_PARAM_LEN;
-        *p_param_values++ = eq.enable_flag;
+        *p_param_values++ = eq->enable_flag;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_EQ_PRESET) {
@@ -385,9 +434,9 @@ int offload_eq_send_params(struct mixer_ctl *ctl, struct eq_params eq,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = EQ_CONFIG_PARAM_LEN;
-        *p_param_values++ = eq.config.eq_pregain;
+        *p_param_values++ = eq->config.eq_pregain;
         *p_param_values++ =
-                     map_eq_opensl_preset_2_offload_preset[eq.config.preset_id];
+                     map_eq_opensl_preset_2_offload_preset[eq->config.preset_id];
         *p_param_values++ = 0;
         param_values[2] += 1;
     }
@@ -396,24 +445,43 @@ int offload_eq_send_params(struct mixer_ctl *ctl, struct eq_params eq,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = EQ_CONFIG_PARAM_LEN +
-                            eq.config.num_bands * EQ_CONFIG_PER_BAND_PARAM_LEN;
-        *p_param_values++ = eq.config.eq_pregain;
+                            eq->config.num_bands * EQ_CONFIG_PER_BAND_PARAM_LEN;
+        *p_param_values++ = eq->config.eq_pregain;
         *p_param_values++ = CUSTOM_OPENSL_PRESET;
-        *p_param_values++ = eq.config.num_bands;
-        for (i=0; i<eq.config.num_bands; i++) {
-            *p_param_values++ = eq.per_band_cfg[i].band_idx;
-            *p_param_values++ = eq.per_band_cfg[i].filter_type;
-	    *p_param_values++ = eq.per_band_cfg[i].freq_millihertz;
-            *p_param_values++ = eq.per_band_cfg[i].gain_millibels;
-            *p_param_values++ = eq.per_band_cfg[i].quality_factor;
+        *p_param_values++ = eq->config.num_bands;
+        for (i=0; i<eq->config.num_bands; i++) {
+            *p_param_values++ = eq->per_band_cfg[i].band_idx;
+            *p_param_values++ = eq->per_band_cfg[i].filter_type;
+	    *p_param_values++ = eq->per_band_cfg[i].freq_millihertz;
+            *p_param_values++ = eq->per_band_cfg[i].gain_millibels;
+            *p_param_values++ = eq->per_band_cfg[i].quality_factor;
         }
         param_values[2] += 1;
     }
 
-    if (param_values[2] && ctl)
-        mixer_ctl_set_array(ctl, param_values, ARRAY_SIZE(param_values));
+    if ((mode == OFFLOAD) && param_values[2] && ctl) {
+        mixer_ctl_set_array((struct mixer_ctl *)ctl, param_values,
+                            ARRAY_SIZE(param_values));
+    } else if ((mode == HW_ACCELERATOR) && param_values[2] &&
+               ctl && *(int *)ctl) {
+        if (ioctl(*(int *)ctl, AUDIO_EFFECTS_SET_PP_PARAMS, param_values) < 0)
+            ALOGE("%s: sending h/w acc effects params fail[%d]", __func__, errno);
+    }
 
     return 0;
+}
+
+int offload_eq_send_params(struct mixer_ctl *ctl, struct eq_params *eq,
+                           unsigned param_send_flags)
+{
+    return eq_send_params(OFFLOAD, (void *)ctl, eq, param_send_flags);
+}
+
+int hw_acc_eq_send_params(int fd, struct eq_params *eq,
+                          unsigned param_send_flags)
+{
+    return eq_send_params(HW_ACCELERATOR, (void *)&fd, eq,
+                          param_send_flags);
 }
 
 void offload_reverb_set_device(struct reverb_params *reverb, uint32_t device)
@@ -525,16 +593,16 @@ void offload_reverb_set_density(struct reverb_params *reverb, int density)
     reverb->density = density;
 }
 
-int offload_reverb_send_params(struct mixer_ctl *ctl,
-                               struct reverb_params reverb,
-                               unsigned param_send_flags)
+static int reverb_send_params(eff_mode_t mode, void *ctl,
+                               struct reverb_params *reverb,
+                              unsigned param_send_flags)
 {
     int param_values[128] = {0};
     int *p_param_values = param_values;
 
     ALOGV("%s: flags 0x%x", __func__, param_send_flags);
     *p_param_values++ = REVERB_MODULE;
-    *p_param_values++ = reverb.device;
+    *p_param_values++ = reverb->device;
     *p_param_values++ = 0; /* num of commands*/
 
     if (param_send_flags & OFFLOAD_SEND_REVERB_ENABLE_FLAG) {
@@ -542,7 +610,7 @@ int offload_reverb_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = REVERB_ENABLE_PARAM_LEN;
-        *p_param_values++ = reverb.enable_flag;
+        *p_param_values++ = reverb->enable_flag;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_MODE) {
@@ -550,7 +618,7 @@ int offload_reverb_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = REVERB_MODE_PARAM_LEN;
-        *p_param_values++ = reverb.mode;
+        *p_param_values++ = reverb->mode;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_PRESET) {
@@ -558,7 +626,7 @@ int offload_reverb_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = REVERB_PRESET_PARAM_LEN;
-        *p_param_values++ = reverb.preset;
+        *p_param_values++ = reverb->preset;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_WET_MIX) {
@@ -566,7 +634,7 @@ int offload_reverb_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = REVERB_WET_MIX_PARAM_LEN;
-        *p_param_values++ = reverb.wet_mix;
+        *p_param_values++ = reverb->wet_mix;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_GAIN_ADJUST) {
@@ -574,7 +642,7 @@ int offload_reverb_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = REVERB_GAIN_ADJUST_PARAM_LEN;
-        *p_param_values++ = reverb.gain_adjust;
+        *p_param_values++ = reverb->gain_adjust;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_ROOM_LEVEL) {
@@ -582,7 +650,7 @@ int offload_reverb_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = REVERB_ROOM_LEVEL_PARAM_LEN;
-        *p_param_values++ = reverb.room_level;
+        *p_param_values++ = reverb->room_level;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_ROOM_HF_LEVEL) {
@@ -590,7 +658,7 @@ int offload_reverb_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = REVERB_ROOM_HF_LEVEL_PARAM_LEN;
-        *p_param_values++ = reverb.room_hf_level;
+        *p_param_values++ = reverb->room_hf_level;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DECAY_TIME) {
@@ -598,7 +666,7 @@ int offload_reverb_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = REVERB_DECAY_TIME_PARAM_LEN;
-        *p_param_values++ = reverb.decay_time;
+        *p_param_values++ = reverb->decay_time;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DECAY_HF_RATIO) {
@@ -606,7 +674,7 @@ int offload_reverb_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = REVERB_DECAY_HF_RATIO_PARAM_LEN;
-        *p_param_values++ = reverb.decay_hf_ratio;
+        *p_param_values++ = reverb->decay_hf_ratio;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_REFLECTIONS_LEVEL) {
@@ -614,7 +682,7 @@ int offload_reverb_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = REVERB_REFLECTIONS_LEVEL_PARAM_LEN;
-        *p_param_values++ = reverb.reflections_level;
+        *p_param_values++ = reverb->reflections_level;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_REFLECTIONS_DELAY) {
@@ -622,7 +690,7 @@ int offload_reverb_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = REVERB_REFLECTIONS_DELAY_PARAM_LEN;
-        *p_param_values++ = reverb.reflections_delay;
+        *p_param_values++ = reverb->reflections_delay;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_LEVEL) {
@@ -630,7 +698,7 @@ int offload_reverb_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = REVERB_LEVEL_PARAM_LEN;
-        *p_param_values++ = reverb.level;
+        *p_param_values++ = reverb->level;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DELAY) {
@@ -638,7 +706,7 @@ int offload_reverb_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = REVERB_DELAY_PARAM_LEN;
-        *p_param_values++ = reverb.delay;
+        *p_param_values++ = reverb->delay;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DIFFUSION) {
@@ -646,7 +714,7 @@ int offload_reverb_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = REVERB_DIFFUSION_PARAM_LEN;
-        *p_param_values++ = reverb.diffusion;
+        *p_param_values++ = reverb->diffusion;
         param_values[2] += 1;
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DENSITY) {
@@ -654,7 +722,158 @@ int offload_reverb_send_params(struct mixer_ctl *ctl,
         *p_param_values++ = CONFIG_SET;
         *p_param_values++ = 0; /* start offset if param size if greater than 128  */
         *p_param_values++ = REVERB_DENSITY_PARAM_LEN;
-        *p_param_values++ = reverb.density;
+        *p_param_values++ = reverb->density;
+        param_values[2] += 1;
+    }
+
+    if ((mode == OFFLOAD) && param_values[2] && ctl) {
+        mixer_ctl_set_array((struct mixer_ctl *)ctl, param_values,
+                            ARRAY_SIZE(param_values));
+    } else if ((mode == HW_ACCELERATOR) && param_values[2] &&
+               ctl && *(int *)ctl) {
+        if (ioctl(*(int *)ctl, AUDIO_EFFECTS_SET_PP_PARAMS, param_values) < 0)
+            ALOGE("%s: sending h/w acc effects params fail[%d]", __func__, errno);
+    }
+
+    return 0;
+}
+
+int offload_reverb_send_params(struct mixer_ctl *ctl,
+                               struct reverb_params *reverb,
+                               unsigned param_send_flags)
+{
+    return reverb_send_params(OFFLOAD, (void *)ctl, reverb,
+                              param_send_flags);
+}
+
+int hw_acc_reverb_send_params(int fd, struct reverb_params *reverb,
+                              unsigned param_send_flags)
+{
+    return reverb_send_params(HW_ACCELERATOR, (void *)&fd,
+                              reverb, param_send_flags);
+}
+
+void offload_soft_volume_set_enable(struct soft_volume_params *vol, bool enable)
+{
+    ALOGV("%s", __func__);
+    vol->enable_flag = enable;
+}
+
+void offload_soft_volume_set_gain_master(struct soft_volume_params *vol, int gain)
+{
+    ALOGV("%s", __func__);
+    vol->master_gain = gain;
+}
+
+void offload_soft_volume_set_gain_2ch(struct soft_volume_params *vol,
+                                      int l_gain, int r_gain)
+{
+    ALOGV("%s", __func__);
+    vol->left_gain = l_gain;
+    vol->right_gain = r_gain;
+}
+
+int offload_soft_volume_send_params(struct mixer_ctl *ctl,
+                                    struct soft_volume_params vol,
+                                    unsigned param_send_flags)
+{
+    int param_values[128] = {0};
+    int *p_param_values = param_values;
+    uint32_t i;
+
+    ALOGV("%s", __func__);
+    *p_param_values++ = SOFT_VOLUME_MODULE;
+    *p_param_values++ = 0;
+    *p_param_values++ = 0; /* num of commands*/
+    if (param_send_flags & OFFLOAD_SEND_SOFT_VOLUME_ENABLE_FLAG) {
+        *p_param_values++ = SOFT_VOLUME_ENABLE;
+        *p_param_values++ = CONFIG_SET;
+        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
+        *p_param_values++ = SOFT_VOLUME_ENABLE_PARAM_LEN;
+        *p_param_values++ = vol.enable_flag;
+        param_values[2] += 1;
+    }
+    if (param_send_flags & OFFLOAD_SEND_SOFT_VOLUME_GAIN_MASTER) {
+        *p_param_values++ = SOFT_VOLUME_GAIN_MASTER;
+        *p_param_values++ = CONFIG_SET;
+        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
+        *p_param_values++ = SOFT_VOLUME_GAIN_MASTER_PARAM_LEN;
+        *p_param_values++ = vol.master_gain;
+        param_values[2] += 1;
+    }
+    if (param_send_flags & OFFLOAD_SEND_SOFT_VOLUME_GAIN_2CH) {
+        *p_param_values++ = SOFT_VOLUME_GAIN_2CH;
+        *p_param_values++ = CONFIG_SET;
+        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
+        *p_param_values++ = SOFT_VOLUME_GAIN_2CH_PARAM_LEN;
+        *p_param_values++ = vol.left_gain;
+        *p_param_values++ = vol.right_gain;
+        param_values[2] += 1;
+    }
+
+    if (param_values[2] && ctl)
+        mixer_ctl_set_array(ctl, param_values, ARRAY_SIZE(param_values));
+
+    return 0;
+}
+
+void offload_transition_soft_volume_set_enable(struct soft_volume_params *vol,
+                                               bool enable)
+{
+    ALOGV("%s", __func__);
+    vol->enable_flag = enable;
+}
+
+void offload_transition_soft_volume_set_gain_master(struct soft_volume_params *vol,
+                                                    int gain)
+{
+    ALOGV("%s", __func__);
+    vol->master_gain = gain;
+}
+
+void offload_transition_soft_volume_set_gain_2ch(struct soft_volume_params *vol,
+                                                 int l_gain, int r_gain)
+{
+    ALOGV("%s", __func__);
+    vol->left_gain = l_gain;
+    vol->right_gain = r_gain;
+}
+
+int offload_transition_soft_volume_send_params(struct mixer_ctl *ctl,
+                                               struct soft_volume_params vol,
+                                               unsigned param_send_flags)
+{
+    int param_values[128] = {0};
+    int *p_param_values = param_values;
+    uint32_t i;
+
+    ALOGV("%s", __func__);
+    *p_param_values++ = SOFT_VOLUME2_MODULE;
+    *p_param_values++ = 0;
+    *p_param_values++ = 0; /* num of commands*/
+    if (param_send_flags & OFFLOAD_SEND_TRANSITION_SOFT_VOLUME_ENABLE_FLAG) {
+        *p_param_values++ = SOFT_VOLUME2_ENABLE;
+        *p_param_values++ = CONFIG_SET;
+        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
+        *p_param_values++ = SOFT_VOLUME2_ENABLE_PARAM_LEN;
+        *p_param_values++ = vol.enable_flag;
+        param_values[2] += 1;
+    }
+    if (param_send_flags & OFFLOAD_SEND_TRANSITION_SOFT_VOLUME_GAIN_MASTER) {
+        *p_param_values++ = SOFT_VOLUME2_GAIN_MASTER;
+        *p_param_values++ = CONFIG_SET;
+        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
+        *p_param_values++ = SOFT_VOLUME2_GAIN_MASTER_PARAM_LEN;
+        *p_param_values++ = vol.master_gain;
+        param_values[2] += 1;
+    }
+    if (param_send_flags & OFFLOAD_SEND_TRANSITION_SOFT_VOLUME_GAIN_2CH) {
+        *p_param_values++ = SOFT_VOLUME2_GAIN_2CH;
+        *p_param_values++ = CONFIG_SET;
+        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
+        *p_param_values++ = SOFT_VOLUME2_GAIN_2CH_PARAM_LEN;
+        *p_param_values++ = vol.left_gain;
+        *p_param_values++ = vol.right_gain;
         param_values[2] += 1;
     }
 

@@ -14,7 +14,8 @@ LOCAL_SRC_FILES:= \
 	virtualizer.c \
 	reverb.c \
 	effect_api.c \
-	effect_util.c
+	effect_util.c \
+        hw_accelerator.c
 
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 
@@ -32,9 +33,33 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_RELATIVE_PATH := soundfx
 LOCAL_MODULE:= libqcompostprocbundle
 
+LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+
 LOCAL_C_INCLUDES := \
 	external/tinyalsa/include \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
 	$(call include-path-for, audio-effects)
 
 include $(BUILD_SHARED_LIBRARY)
+
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS)),true)
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := EffectsHwAcc.cpp
+
+LOCAL_C_INCLUDES := \
+    $(call include-path-for, audio-effects)
+
+LOCAL_SHARED_LIBRARIES := \
+    liblog \
+    libeffects
+
+LOCAL_MODULE_TAGS := optional
+
+LOCAL_CFLAGS += -O2 -fvisibility=hidden
+
+LOCAL_MODULE:= libhwacceffectswrapper
+
+include $(BUILD_STATIC_LIBRARY)
+endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -31,6 +31,7 @@ typedef struct bassboost_context_s {
 
     // Offload vars
     struct mixer_ctl *ctl;
+    int hw_acc_fd;
     bool temp_disabled;
     uint32_t device;
     struct bass_boost_params offload_bass;
@@ -43,6 +44,8 @@ int bassboost_set_parameter(effect_context_t *context, effect_param_t *p,
                             uint32_t size);
 
 int bassboost_set_device(effect_context_t *context,  uint32_t device);
+
+int bassboost_set_mode(effect_context_t *context,  int32_t hw_acc_fd);
 
 int bassboost_reset(effect_context_t *context);
 
