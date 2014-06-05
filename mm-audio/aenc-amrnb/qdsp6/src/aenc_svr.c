@@ -47,7 +47,7 @@ void *omx_amr_msg(void *info)
 {
     struct amr_ipc_info *amr_info = (struct amr_ipc_info*)info;
     unsigned char id;
-    int n;
+    ssize_t n;
 
     DEBUG_DETAIL("\n%s: message thread start\n", __FUNCTION__);
     while (!amr_info->dead)
