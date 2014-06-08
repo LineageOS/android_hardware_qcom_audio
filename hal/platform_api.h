@@ -67,7 +67,8 @@ int platform_stop_incall_music_usecase(void *platform);
 int64_t platform_render_latency(audio_usecase_t usecase);
 int platform_update_usecase_from_source(int source, audio_usecase_t usecase);
 
-bool platform_listen_update_status(snd_device_t snd_device);
+bool platform_listen_device_needs_event(snd_device_t snd_device);
+bool platform_listen_usecase_needs_event(audio_usecase_t uc_id);
 
 /* From platform_info_parser.c */
 int platform_info_init(const char *filename);
