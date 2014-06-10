@@ -108,7 +108,7 @@ static int32_t hfp_set_volume(struct audio_device *adev, float value)
 }
 
 static int32_t start_hfp(struct audio_device *adev,
-                               struct str_parms *parms)
+                         struct str_parms *parms __unused)
 {
     int32_t i, ret = 0;
     struct audio_usecase *uc_info;
