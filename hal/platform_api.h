@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2013-2014 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,10 +33,12 @@ int platform_switch_voice_call_device_post(void *platform,
 int platform_switch_voice_call_usecase_route_post(void *platform,
                                                   snd_device_t out_snd_device,
                                                   snd_device_t in_snd_device);
-int platform_start_voice_call(void *platform);
-int platform_stop_voice_call(void *platform);
+int platform_start_voice_call(void *platform, uint32_t vsid);
+int platform_stop_voice_call(void *platform, uint32_t vsid);
 int platform_set_voice_volume(void *platform, int volume);
 int platform_set_mic_mute(void *platform, bool state);
+int platform_get_sample_rate(void *platform, uint32_t *rate);
+int platform_set_device_mute(void *platform, bool state, char *dir);
 snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devices);
 snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_device);
 int platform_set_hdmi_channels(void *platform, int channel_count);
@@ -44,5 +46,11 @@ int platform_edid_get_max_channels(void *platform);
 
 /* returns the latency for a usecase in Us */
 int64_t platform_render_latency(audio_usecase_t usecase);
+
+int platform_set_incall_recording_session_id(void *platform,
+                                             uint32_t session_id, int rec_mode);
+int platform_stop_incall_recording_usecase(void *platform);
+int platform_start_incall_music_usecase(void *platform);
+int platform_stop_incall_music_usecase(void *platform);
 
 #endif // QCOM_AUDIO_PLATFORM_API_H
