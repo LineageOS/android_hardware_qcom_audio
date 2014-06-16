@@ -20,6 +20,12 @@
 #define LOG_TAG "msm8974_platform"
 /*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
+/*#define VERY_VERY_VERBOSE_LOGGING*/
+#ifdef VERY_VERY_VERBOSE_LOGGING
+#define ALOGVV ALOGV
+#else
+#define ALOGVV(a...) do { } while(0)
+#endif
 
 #include <stdlib.h>
 #include <dlfcn.h>
@@ -60,6 +66,12 @@
  */
 #define MAX_PCM_OFFLOAD_FRAGMENT_SIZE (240 * 1024)
 #define MIN_PCM_OFFLOAD_FRAGMENT_SIZE (4 * 1024)
+
+/*
+ * Offload buffer size for compress passthrough
+ */
+#define MIN_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE (2 * 1024)
+#define MAX_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE (8 * 1024)
 
 #define ALIGN( num, to ) (((num) + (to-1)) & (~(to-1)))
 /*
@@ -129,6 +141,7 @@ struct platform_data {
 
     void *hw_info;
     struct csd_data *csd;
+    void *edid_info;
 };
 
 static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -140,6 +153,8 @@ static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                         MULTIMEDIA2_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] =
                      {PLAYBACK_OFFLOAD_DEVICE, PLAYBACK_OFFLOAD_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD2] =
+                     {PLAYBACK_OFFLOAD_DEVICE2, PLAYBACK_OFFLOAD_DEVICE2},
     [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_COMPRESS] = {COMPRESS_CAPTURE_DEVICE, COMPRESS_CAPTURE_DEVICE},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
@@ -770,12 +785,18 @@ void *platform_init(struct audio_device *adev)
     /* Read one time ssr property */
     audio_extn_ssr_update_enabled();
     audio_extn_spkr_prot_init(adev);
+    my_data->edid_info = NULL;
     return my_data;
 }
 
 void platform_deinit(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (my_data->edid_info) {
+        free(my_data->edid_info);
+        my_data->edid_info = NULL;
+    }
 
     hw_info_deinit(my_data->hw_info);
     close_csd_client(my_data->csd);
@@ -2070,7 +2091,7 @@ int platform_set_default_channel_map(void *platform, int channels, int snd_id)
     return ret;
 }
 
-int platform_get_edid_info(void *platform, int channels)
+int platform_get_edid_info(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
@@ -2082,73 +2103,57 @@ int platform_get_edid_info(void *platform, int channels)
     int i, ret, count;
     char default_channelMap[MAX_CHANNELS_SUPPORTED] = {0};
 
-    edid_audio_info info = {0};
-    char hdmiEDIDData[MAX_SAD_BLOCKS * SAD_BLOCK_SIZE + 1] = {0};
+    ALOGV("%s:", __func__) ;
+    if (my_data->edid_info == NULL) {
+        edid_audio_info *info = (struct edid_audio_info *)calloc(1, sizeof(struct edid_audio_info));
+        my_data->edid_info = info;
+        char hdmiEDIDData[MAX_SAD_BLOCKS * SAD_BLOCK_SIZE + 1] = {0};
 
-    struct mixer_ctl *ctl;
+        struct mixer_ctl *ctl;
 
-    ctl = mixer_get_ctl_by_name(adev->mixer, AUDIO_DATA_BLOCK_MIXER_CTL);
-    if (!ctl) {
-        ALOGE("%s: Could not get ctl for mixer cmd - %s",
-              __func__, AUDIO_DATA_BLOCK_MIXER_CTL);
-        return 0;
-    }
-
-    mixer_ctl_update(ctl);
-
-    count = mixer_ctl_get_num_values(ctl);
-
-    /* Read SAD blocks, clamping the maximum size for safety */
-    if (count > (int)sizeof(block))
-        count = (int)sizeof(block);
-
-    ret = mixer_ctl_get_array(ctl, block, count);
-    if (ret != 0) {
-        ALOGE("%s: mixer_ctl_get_array() failed to get EDID info", __func__);
-        return 0;
-    }
-    hdmiEDIDData[0] = count;
-    for(i=0; i<count; i++) {
-        hdmiEDIDData[i+1] = block[i];
-    }
-
-
-    ALOGE("-----------------");
-    for (i=0;i<count;i++)
-        ALOGV("%s: %x", __func__, block[i]);
-
-    ALOGE("-----------------");
-    for (i=0;i<count+1;i++)
-        ALOGV("%s: %x", __func__, hdmiEDIDData[i]);
-
-    ALOGE("-----------------");
-
-
-    if (!edid_get_sink_caps(&info, hdmiEDIDData)) {
-        ALOGE("%s:openOutputStream: Failed to get HDMI sink capabilities",
-               __func__);
-    } else if (channels > 2){
-        ALOGV("%s:able to get HDMI sink capabilities multi channel playback",
-               __func__);
-        for (i = 0; i < info.audio_blocks && i < MAX_EDID_BLOCKS; i++) {
-            if (info.audio_blocks_array[i].format_id == LPCM &&
-                  info.audio_blocks_array[i].channels > channel_count &&
-                  info.audio_blocks_array[i].channels <= MAX_HDMI_CHANNEL_CNT) {
-                channel_count = info.audio_blocks_array[i].channels;
-            }
+        ctl = mixer_get_ctl_by_name(adev->mixer, AUDIO_DATA_BLOCK_MIXER_CTL);
+        if (!ctl) {
+            ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                  __func__, AUDIO_DATA_BLOCK_MIXER_CTL);
+            goto fail;
         }
-        ALOGV("%s:channel_count:%d", __func__, channel_count);
-        platform_set_channel_map(platform,channel_count,info.channel_map, -1);
-        platform_set_channel_allocation(platform,info.channel_allocation);
 
-    } else {
-        default_channelMap[0] = 1;
-        default_channelMap[1] = 2;
-        platform_set_channel_map(platform,2,default_channelMap,-1);
-        platform_set_channel_allocation(platform,0);
+        count = mixer_ctl_get_num_values(ctl);
+        ALOGV("Count: %d",count);
+
+        /* Read SAD blocks, clamping the maximum size for safety */
+        if (count > (int)sizeof(block))
+            count = (int)sizeof(block);
+
+        ret = mixer_ctl_get_array(ctl, block, count);
+        if (ret != 0) {
+            ALOGE("%s: mixer_ctl_get_array() failed to get EDID info", __func__);
+            goto fail;
+        }
+        hdmiEDIDData[0] = count;
+        for(i=0; i<count; i++) {
+            hdmiEDIDData[i+1] = block[i];
+        }
+
+        for (i=0;i<count;i++)
+            ALOGV("%x",block[i]);
+
+        for (i=0;i<count+1;i++)
+            ALOGV("%x",hdmiEDIDData[i]);
+
+        if (!edid_get_sink_caps(info, hdmiEDIDData)) {
+            ALOGE("%s: Failed to get HDMI sink capabilities", __func__);
+            goto fail;
+        }
     }
-
-    return max_channels;
+    return 0;
+fail:
+    if (my_data->edid_info) {
+        free(my_data->edid_info);
+        my_data->edid_info = NULL;
+    }
+    ALOGE("%s: return -EINVAL", __func__);
+    return -EINVAL;
 }
 
 
@@ -2218,4 +2223,208 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
               __func__, ret, ch_count);
     }
     return ret;
+}
+
+uint32_t platform_get_compress_passthrough_buffer_size(
+                                          audio_offload_info_t* info)
+{
+    uint32_t fragment_size = MIN_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE;
+    if (!info->has_video)
+        fragment_size = MIN_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE;
+
+    return fragment_size;
+}
+
+void platform_reset_edid_info(void *platform) {
+
+    ALOGV("%s:", __func__);
+    struct platform_data *my_data = (struct platform_data *)platform;
+    if (my_data->edid_info) {
+        ALOGV("%s :free edid", __func__);
+        free(my_data->edid_info);
+        my_data->edid_info = NULL;
+    }
+}
+
+unsigned char platform_map_to_edid_format(int audio_format) {
+
+    unsigned char format;
+    switch(audio_format) {
+    case AUDIO_FORMAT_AC3:
+        ALOGV("%s: AC3", __func__);
+        format = AC3;
+        break;
+    case AUDIO_FORMAT_AAC:
+        ALOGV("%s:AAC", __func__);
+        format = AAC;
+        break;
+    case AUDIO_FORMAT_EAC3:
+        ALOGV("%s:EAC3", __func__);
+        format = DOLBY_DIGITAL_PLUS;
+        break;
+    case AUDIO_FORMAT_PCM_16_BIT:
+    case AUDIO_FORMAT_PCM_16_BIT_OFFLOAD:
+    case AUDIO_FORMAT_PCM_24_BIT_OFFLOAD:
+    default:
+        ALOGV("%s:PCM", __func__);
+        format =  LPCM;
+        break;
+    }
+    return format;
+}
+
+bool platform_is_edid_supported_format(void *platform, int format) {
+
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    edid_audio_info *info = NULL;
+    int num_audio_blocks;
+    int i, ret, count;
+
+    ret = platform_get_edid_info(platform);
+    info = (edid_audio_info *)my_data->edid_info;
+    if(ret == 0 && info != NULL) {
+        for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
+            if(info->audio_blocks_array[i].format_id ==
+                platform_map_to_edid_format(format))
+                ALOGV("%s:platform_is_edid_supported_format true %x",
+                       __func__, format);
+                return true;
+        }
+    }
+    ALOGV("%s:platform_is_edid_supported_format false %x",
+           __func__, format);
+    return false;
+}
+
+int platform_get_channels_from_edid_info(void *platform, int channels) {
+
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    edid_audio_info *info = NULL;
+    int num_audio_blocks;
+    int channel_count = 2;
+    int max_channels = 0;
+    int i, ret, count;
+    char default_channelMap[MAX_CHANNELS_SUPPORTED] = {0};
+
+    ret = platform_get_edid_info(platform);
+    info = (edid_audio_info *)my_data->edid_info;
+    if(ret == 0 && info != NULL) {
+        if (channels > 2){
+
+            ALOGV("%s:able to get HDMI sink capabilities multi channel playback",
+                   __func__);
+            for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
+                if (info->audio_blocks_array[i].format_id == LPCM &&
+                      info->audio_blocks_array[i].channels > channel_count &&
+                      info->audio_blocks_array[i].channels <= MAX_HDMI_CHANNEL_CNT) {
+                    channel_count = info->audio_blocks_array[i].channels;
+                }
+            }
+            ALOGVV("%s:channel_count:%d", __func__, channel_count);
+            platform_set_channel_map(platform,channel_count,info->channel_map, -1);
+            platform_set_channel_allocation(platform,info->channel_allocation);
+        } else {
+            default_channelMap[0] = 1;
+            default_channelMap[1] = 2;
+            platform_set_channel_map(platform,2,default_channelMap,-1);
+            platform_set_channel_allocation(platform,0);
+        }
+    }
+
+    return max_channels;
+}
+
+int platform_set_mixer_control(struct stream_out *out, const char * mixer_ctl_name,
+                      const char *mixer_val)
+{
+    struct audio_device *adev = out->dev;
+    struct mixer_ctl *ctl = NULL;
+    ALOGD("setting mixer ctl %s with value %s", mixer_ctl_name, mixer_val);
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    return mixer_ctl_set_enum_by_string(ctl, mixer_val);
+}
+
+int platform_set_hdmi_format_and_samplerate(struct stream_out *out)
+{
+    struct listnode *node;
+    struct audio_usecase *usecase;
+    struct audio_device *adev = out->dev;
+    const char *hdmi_format_ctrl = "HDMI RX Format";
+    const char *hdmi_rate_ctrl = "HDMI_RX SampleRate";
+
+    if((is_offload_usecase(out->usecase)) &&
+        (out->compr_config.codec->compr_passthr == PASSTHROUGH ||
+        out->compr_config.codec->compr_passthr == PASSTHROUGH_CONVERT)) {
+        ALOGD("%s:HDMI compress format and samplerate %d", __func__,
+               out->sample_rate);
+        platform_set_mixer_control(out, hdmi_format_ctrl, "Compr");
+        switch (out->sample_rate) {
+            case 32000:
+                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_32");
+                break;
+            case 44100:
+                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_44_1");
+                break;
+            case 12800:
+                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_128");
+                break;
+            case 96000:
+                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_96");
+                break;
+            case 176400:
+                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_176_4");
+                break;
+            case 192000:
+                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_192");
+                break;
+            default:
+            case 48000:
+                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_48");
+                break;
+        }
+    } else {
+        ALOGD("%s: HDMI pcm and samplerate %d", __func__,
+               out->sample_rate);
+        platform_set_mixer_control(out, hdmi_format_ctrl, "LPCM");
+        platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_48");
+    }
+
+  /*
+     * Deroute all the playback streams routed to HDMI so that
+     * the back end is deactivated. Note that backend will not
+     * be deactivated if any one stream is connected to it.
+     */
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        ALOGV("%s:disable: usecase type %d, devices 0x%x", __func__,
+               usecase->type, usecase->devices);
+        if (usecase->type == PCM_PLAYBACK &&
+                usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            disable_audio_route(adev, usecase);
+        }
+    }
+
+    /*
+     * Enable all the streams disabled above. Now the HDMI backend
+     * will be activated with new channel configuration
+     */
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        ALOGV("%s:enable: usecase type %d, devices 0x%x", __func__,
+               usecase->type, usecase->devices);
+        if (usecase->type == PCM_PLAYBACK &&
+                usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            enable_audio_route(adev, usecase);
+        }
+    }
+
+    return 0;
 }

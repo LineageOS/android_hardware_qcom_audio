@@ -72,10 +72,16 @@ int platform_info_init(const char *filename);
 struct audio_offload_info_t;
 uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info);
 uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info);
+uint32_t platform_get_compress_passthrough_buffer_size(audio_offload_info_t* info);
 
 int platform_set_channel_allocation(void *platform, int channelAlloc);
-int platform_get_edid_info(void *platform, int channels);
+int platform_get_edid_info(void *platform);
 int platform_set_channel_map(void *platform, int ch_count, char *ch_map,
                              int snd_id);
 int platform_set_default_channel_map(void *platform, int channels, int snd_id);
+int platform_get_channels_from_edid_info(void *platform, int channels);
+void platform_reset_edid_info(void *platform);
+unsigned char platform_map_to_edid_format(int format);
+bool platform_is_edid_supported_format(void *platform, int format);
+int platform_set_hdmi_format_and_samplerate(struct stream_out *out);
 #endif // AUDIO_PLATFORM_API_H

@@ -979,7 +979,7 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info __unuse
     return 0;
 }
 
-int platform_get_edid_info(void *platform __unused, int channels __unused)
+int platform_get_edid_info(void *platform __unused)
 {
    return 0;
 }
@@ -993,6 +993,32 @@ int platform_set_channel_map(void *platform __unused, int ch_count __unused,
 int platform_set_default_channel_map(void *platform __unused,
                                      int channels __unused,
                                      int snd_id __unused)
+{
+    return 0;
+}
+
+int platform_get_channels_from_edid_info(void *platform __unused,
+                                         int channels __unused)
+{
+    return 0;
+}
+
+void platform_reset_edid_info(void *platform __unused)
+{
+    return;
+}
+
+unsigned char platform_map_to_edid_format(int format __unused)
+{
+    return 0;
+}
+bool platform_is_edid_supported_format(void *platform __unused,
+                                       int format __unused)
+{
+    return  false;
+}
+
+int platform_set_hdmi_format_and_samplerate(struct stream_out *out __unused)
 {
     return 0;
 }
