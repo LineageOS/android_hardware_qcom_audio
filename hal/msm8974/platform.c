@@ -169,7 +169,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
 };
 
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
-static const int acdb_device_table[SND_DEVICE_MAX] = {
+static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_NONE] = -1,
     [SND_DEVICE_OUT_HANDSET] = 7,
     [SND_DEVICE_OUT_SPEAKER] = 15,
@@ -219,6 +219,47 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS] = 62,
     [SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE] = 6,
     [SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE] = 5,
+};
+
+struct snd_device_index {
+    char name[100];
+    unsigned int index;
+};
+
+#define TO_NAME_INDEX(X)   #X, X
+
+/* Used to get index from parsed sting */
+struct snd_device_index snd_device_name_index[SND_DEVICE_MAX] = {
+    {TO_NAME_INDEX(SND_DEVICE_OUT_HANDSET)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_REVERSE)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HANDSET)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_HDMI)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HDMI)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_BT_SCO)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_BT_SCO_WB)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_AEC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_SPEAKER_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_SPEAKER_MIC_AEC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HEADSET_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_SPEAKER_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_HEADSET_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HDMI_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_BT_SCO_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_BT_SCO_MIC_WB)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_MIC)},
 };
 
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
@@ -576,6 +617,10 @@ void *platform_init(struct audio_device *adev)
         else
             my_data->acdb_init();
 #endif
+
+        /* Initialize ACDB ID's */
+        /* Comment - does it make sense to init if acdb handle is NULL */
+        platform_info_init();
     }
 
     /* load csd client */
@@ -640,6 +685,46 @@ int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
     else
         device_id = pcm_device_table[usecase][1];
     return device_id;
+}
+
+int platform_get_snd_device_index(char *snd_device_index_name)
+{
+    int ret = 0;
+    int i;
+
+    if (snd_device_index_name == NULL) {
+        ALOGE("%s: snd_device_index_name is NULL", __func__);
+        ret = -ENODEV;
+        goto done;
+    }
+
+    for (i=0; i < SND_DEVICE_MAX; i++) {
+        if(strcmp(snd_device_name_index[i].name, snd_device_index_name) == 0) {
+            ret = snd_device_name_index[i].index;
+            goto done;
+        }
+    }
+    ALOGE("%s: Could not find index for snd_device_index_name = %s",
+            __func__, snd_device_index_name);
+    ret = -ENODEV;
+done:
+    return ret;
+}
+
+int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id)
+{
+    int ret = 0;
+
+    if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
+        ALOGE("%s: Invalid snd_device = %d",
+            __func__, snd_device);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    acdb_device_table[snd_device] = acdb_id;
+done:
+    return ret;
 }
 
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device)

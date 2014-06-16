@@ -21,6 +21,7 @@ endif
 LOCAL_SRC_FILES := \
 	audio_hw.c \
 	voice.c \
+	platform_info.c \
 	$(AUDIO_PLATFORM)/platform.c
 
 LOCAL_SHARED_LIBRARIES := \
@@ -29,7 +30,8 @@ LOCAL_SHARED_LIBRARIES := \
 	libtinyalsa \
 	libtinycompress \
 	libaudioroute \
-	libdl
+	libdl \
+	libexpat
 
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
@@ -38,7 +40,8 @@ LOCAL_C_INCLUDES += \
 	$(call include-path-for, audio-effects) \
 	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \
 	$(LOCAL_PATH)/audio_extn \
-	$(LOCAL_PATH)/voice_extn
+	$(LOCAL_PATH)/voice_extn \
+	external/expat/lib
 
 ifneq ($(filter msm8084,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_SHARED_LIBRARIES += libmdmdetect
