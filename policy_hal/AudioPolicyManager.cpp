@@ -1243,6 +1243,81 @@ get_output__new_output_desc:
     return output;
 }
 
+status_t AudioPolicyManager::stopOutput(audio_io_handle_t output,
+                                            AudioSystem::stream_type stream,
+                                            int session)
+{
+    ALOGV("stopOutput() output %d, stream %d, session %d", output, stream, session);
+    ssize_t index = mOutputs.indexOfKey(output);
+    if (index < 0) {
+        ALOGW("stopOutput() unknow output %d", output);
+        return BAD_VALUE;
+    }
+
+    AudioOutputDescriptor *outputDesc = mOutputs.valueAt(index);
+
+    // handle special case for sonification while in call
+    if ((isInCall()) && (outputDesc->mRefCount[stream] == 1)) {
+        handleIncallSonification(stream, false, false);
+    }
+
+    if (outputDesc->mRefCount[stream] > 0) {
+        // decrement usage count of this stream on the output
+        outputDesc->changeRefCount(stream, -1);
+        // store time at which the stream was stopped - see isStreamActive()
+        if (outputDesc->mRefCount[stream] == 0) {
+            outputDesc->mStopTime[stream] = systemTime();
+            audio_devices_t newDevice = getNewDevice(output, false /*fromCache*/);
+            // delay the device switch by twice the latency because stopOutput() is executed when
+            // the track stop() command is received and at that time the audio track buffer can
+            // still contain data that needs to be drained. The latency only covers the audio HAL
+            // and kernel buffers. Also the latency does not always include additional delay in the
+            // audio path (audio DSP, CODEC ...)
+#ifdef VOICE_CONCURRENCY
+            //if newDevice is invalid for voice stream, cancel the unexecuted device routing
+            //command(if existed)which could be handled later in command queue for current output
+            if (newDevice == AUDIO_DEVICE_NONE && stream == AudioSystem::VOICE_CALL)
+                setOutputDevice(output, newDevice, true);
+            else
+#endif
+                setOutputDevice(output, newDevice, false, outputDesc->mLatency*2);
+
+            // force restoring the device selection on other active outputs if it differs from the
+            // one being selected for this output
+            for (size_t i = 0; i < mOutputs.size(); i++) {
+                audio_io_handle_t curOutput = mOutputs.keyAt(i);
+                AudioOutputDescriptor *desc = mOutputs.valueAt(i);
+                if (curOutput != output &&
+                        desc->isActive() &&
+                        outputDesc->sharesHwModuleWith(desc) &&
+                        (newDevice != desc->device())) {
+                    setOutputDevice(curOutput,
+                                    getNewDevice(curOutput, false /*fromCache*/),
+                                    true,
+                                    outputDesc->mLatency*2);
+                }
+            }
+            // update the outputs if stopping one with a stream that can affect notification routing
+            handleNotificationRoutingForStream(stream);
+        }
+        return NO_ERROR;
+    } else {
+        ALOGW("stopOutput() refcount is already 0 for output %d", output);
+        return INVALID_OPERATION;
+    }
+}
+
+//private function, no changes from AudioPolicyManagerBase
+void AudioPolicyManager::handleNotificationRoutingForStream(AudioSystem::stream_type stream) {
+    switch(stream) {
+    case AudioSystem::MUSIC:
+        checkOutputForStrategy(STRATEGY_SONIFICATION_RESPECTFUL);
+        updateDevicesAndOutputs();
+        break;
+    default:
+        break;
+    }
+}
 
 // This function checks for the parameters which can be offloaded.
 // This can be enhanced depending on the capability of the DSP and policy
