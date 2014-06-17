@@ -448,3 +448,124 @@ void audio_extn_dolby_set_dmid(struct audio_device *adev)
     return;
 }
 #endif /* DS1_DOLBY_DDP_ENABLED || DS1_DOLBY_DAP_ENABLED */
+
+#ifdef DS2_DOLBY_DAP_ENABLED
+struct ds2_extn_module  {
+   void *ds2_handle;
+   dap_hal_set_hw_info_t dap_hal_set_hw_info;
+};
+
+static struct ds2_extn_module ds2extnmod = {
+    .ds2_handle = NULL,
+    .dap_hal_set_hw_info = NULL,
+};
+
+int audio_extn_dap_hal_init(int snd_card) {
+    char c_dmid[128] = {0};
+    void *handle = NULL;
+    int i_dmid, ret = -EINVAL;
+    dap_hal_device_be_id_map_t device_be_id_map;
+
+    ALOGV("%s: opening DAP HAL lib\n", __func__);
+    ds2extnmod.ds2_handle = dlopen(LIB_DS2_DAP_HAL, RTLD_NOW);
+    if (ds2extnmod.ds2_handle == NULL) {
+        ALOGE("%s: DLOPEN failed for %s error %s", __func__, LIB_DS2_DAP_HAL,
+              dlerror());
+        goto ret;
+    }
+    ds2extnmod.dap_hal_set_hw_info = (dap_hal_set_hw_info_t)dlsym(ds2extnmod.ds2_handle, SET_HW_INFO_FUNC);
+    if (ds2extnmod.dap_hal_set_hw_info == NULL) {
+           ALOGE("%s: dlsym error %s for %s", __func__, SET_HW_INFO_FUNC,
+                 dlerror());
+           goto close;
+    }
+    ds2extnmod.dap_hal_set_hw_info(SND_CARD, (void*)(&snd_card));
+    ALOGV("%s Sound card number is:%d",__func__,snd_card);
+
+    property_get("dmid",c_dmid,"0");
+    i_dmid = atoi(c_dmid);
+    ds2extnmod.dap_hal_set_hw_info(DMID, (void*)(&i_dmid));
+    ALOGV("%s Dolby device manufacturer id is:%d",__func__,i_dmid);
+
+    device_be_id_map.device_id_to_be_id = msm_device_to_be_id;
+    device_be_id_map.len = arr_len;
+    ds2extnmod.dap_hal_set_hw_info(DEVICE_BE_ID_MAP, (void*)(&device_be_id_map));
+    ALOGV("%s Set be id map len:%d",__func__,arr_len);
+    ret = 0;
+    goto ret;
+
+close:
+    dlclose(ds2extnmod.ds2_handle);
+    ds2extnmod.ds2_handle = NULL;
+    ds2extnmod.dap_hal_set_hw_info = NULL;
+ret:
+    return ret;
+}
+
+int audio_extn_dap_hal_deinit() {
+    if (ds2extnmod.ds2_handle != NULL) {
+       dlclose(ds2extnmod.ds2_handle);
+       ds2extnmod.ds2_handle = NULL;
+    }
+    ds2extnmod.dap_hal_set_hw_info = NULL;
+    return 0;
+}
+
+void audio_extn_dolby_ds2_set_endpoint(struct audio_device *adev) {
+    struct listnode *node;
+    struct audio_usecase *usecase;
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "DS1 DAP Endpoint";
+    int endpoint = 0, ret;
+    bool send = false;
+
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if ((usecase->type == PCM_PLAYBACK) &&
+            (usecase->id != USECASE_AUDIO_PLAYBACK_LOW_LATENCY)) {
+            endpoint |= usecase->devices & AUDIO_DEVICE_OUT_ALL;
+            send = true;
+        }
+    }
+    if (!send)
+        return;
+
+    if (ds2extnmod.dap_hal_set_hw_info) {
+        ds2extnmod.dap_hal_set_hw_info(HW_ENDPOINT, (void*)(&endpoint));
+        ALOGE("%s: Dolby set endpint :0x%x",__func__, endpoint);
+    } else {
+        ALOGE("%s: dap_hal_set_hw_info is NULL",__func__);
+    }
+
+    return;
+}
+
+int audio_extn_ds2_enable(struct audio_device *adev) {
+
+    char value[PROPERTY_VALUE_MAX] = {0};
+    bool ds2_enabled = false;
+    const char *mixer_ctl_name = "DS2 OnOff";
+    struct mixer_ctl *ctl;
+
+    property_get("audio.dolby.ds2.enabled", value, NULL);
+    ds2_enabled = atoi(value) || !strncmp("true", value, 4);
+
+    ALOGV("%s:", __func__);
+    if(ds2_enabled) {
+        ALOGD("%s:ds2_enabled %d", __func__, ds2_enabled);
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                                   __func__, mixer_ctl_name);
+            return -EINVAL;
+        }
+
+        if (mixer_ctl_set_value(ctl, 0, ds2_enabled) < 0) {
+            ALOGE("%s: Could not set ds2 enable %d",
+                            __func__, ds2_enabled);
+            return -EINVAL;
+        }
+    }
+    return 0;
+}
+#endif
