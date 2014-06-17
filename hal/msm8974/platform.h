@@ -305,6 +305,12 @@ static int msm_device_to_be_id [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
 };
 static int arr_len = sizeof(msm_device_to_be_id)/ (sizeof(int) * NO_COLS);
+#else
+#define NO_COLS 2
+static int msm_device_to_be_id [][NO_COLS] = {
+    {AUDIO_DEVICE_NONE, -1},
+};
+static int arr_len = sizeof(msm_device_to_be_id)/ (sizeof(int) * NO_COLS);
 #endif
 
 #endif // QCOM_AUDIO_PLATFORM_H
