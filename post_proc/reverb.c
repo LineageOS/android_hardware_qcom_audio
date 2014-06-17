@@ -445,7 +445,7 @@ int reverb_get_parameter(effect_context_t *context, effect_param_t *p,
 }
 
 int reverb_set_parameter(effect_context_t *context, effect_param_t *p,
-                         uint32_t size)
+                         uint32_t size __unused)
 {
     reverb_context_t *reverb_ctxt = (reverb_context_t *)context;
     int voffset = ((p->psize - 1) / sizeof(int32_t) + 1) * sizeof(int32_t);
@@ -621,7 +621,7 @@ int reverb_start(effect_context_t *context, output_context_t *output)
     return 0;
 }
 
-int reverb_stop(effect_context_t *context, output_context_t *output)
+int reverb_stop(effect_context_t *context, output_context_t *output __unused)
 {
     reverb_context_t *reverb_ctxt = (reverb_context_t *)context;
 

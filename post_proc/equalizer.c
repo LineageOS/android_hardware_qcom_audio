@@ -113,14 +113,14 @@ int equalizer_set_band_level(equalizer_context_t *context, int32_t band,
     return 0;
 }
 
-int equalizer_get_center_frequency(equalizer_context_t *context, int32_t band)
+int equalizer_get_center_frequency(equalizer_context_t *context __unused, int32_t band)
 {
     ALOGV("%s: band: %d", __func__, band);
     return (equalizer_band_freq_range[band][0] +
             equalizer_band_freq_range[band][1]) / 2;
 }
 
-int equalizer_get_band_freq_range(equalizer_context_t *context, int32_t band,
+int equalizer_get_band_freq_range(equalizer_context_t *context __unused, int32_t band,
                                   uint32_t *low, uint32_t *high)
 {
     ALOGV("%s: band: %d", __func__, band);
@@ -129,7 +129,7 @@ int equalizer_get_band_freq_range(equalizer_context_t *context, int32_t band,
    return 0;
 }
 
-int equalizer_get_band(equalizer_context_t *context, uint32_t freq)
+int equalizer_get_band(equalizer_context_t *context __unused, uint32_t freq)
 {
     int i;
 
@@ -170,7 +170,7 @@ int equalizer_set_preset(equalizer_context_t *context, int preset)
     return 0;
 }
 
-const char * equalizer_get_preset_name(equalizer_context_t *context,
+const char * equalizer_get_preset_name(equalizer_context_t *context __unused,
                                        int32_t preset)
 {
     ALOGV("%s: preset: %s", __func__, equalizer_preset_names[preset]);
@@ -181,7 +181,7 @@ const char * equalizer_get_preset_name(equalizer_context_t *context,
     }
 }
 
-int equalizer_get_num_presets(equalizer_context_t *context)
+int equalizer_get_num_presets(equalizer_context_t *context __unused)
 {
     ALOGV("%s: presets_num: %d", __func__,
            sizeof(equalizer_preset_names)/sizeof(char *));
@@ -342,7 +342,7 @@ int equalizer_get_parameter(effect_context_t *context, effect_param_t *p,
 }
 
 int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
-                            uint32_t size)
+                            uint32_t size __unused)
 {
     equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
     int voffset = ((p->psize - 1) / sizeof(int32_t) + 1) * sizeof(int32_t);
@@ -496,7 +496,7 @@ int equalizer_start(effect_context_t *context, output_context_t *output)
     return 0;
 }
 
-int equalizer_stop(effect_context_t *context, output_context_t *output)
+int equalizer_stop(effect_context_t *context, output_context_t *output __unused)
 {
     equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
 

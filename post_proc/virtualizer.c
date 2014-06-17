@@ -115,7 +115,7 @@ int virtualizer_get_parameter(effect_context_t *context, effect_param_t *p,
 }
 
 int virtualizer_set_parameter(effect_context_t *context, effect_param_t *p,
-                              uint32_t size)
+                              uint32_t size __unused)
 {
     virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)context;
     int voffset = ((p->psize - 1) / sizeof(int32_t) + 1) * sizeof(int32_t);
@@ -151,7 +151,6 @@ int virtualizer_set_device(effect_context_t *context, uint32_t device)
     if ((device == AUDIO_DEVICE_OUT_SPEAKER) ||
        (device == AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT) ||
        (device == AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER) ||
-       (device == AUDIO_DEVICE_OUT_PROXY) ||
        (device == AUDIO_DEVICE_OUT_AUX_DIGITAL) ||
        (device == AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET)) {
         if (!virt_ctxt->temp_disabled) {
@@ -264,7 +263,7 @@ int virtualizer_start(effect_context_t *context, output_context_t *output)
     return 0;
 }
 
-int virtualizer_stop(effect_context_t *context, output_context_t *output)
+int virtualizer_stop(effect_context_t *context, output_context_t *output __unused)
 {
     virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)context;
 
