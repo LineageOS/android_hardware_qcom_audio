@@ -28,6 +28,7 @@
 #include "voice.h"
 
 #define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
+#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/system/lib/soundfx/libqcompostprocbundle.so"
 
 /* Flags used to initialize acdb_settings variable that goes to ACDB library */
 #define DMIC_FLAG       0x00000002
@@ -206,8 +207,8 @@ struct audio_device {
     void *platform;
 
     void *visualizer_lib;
-    int (*visualizer_start_output)(audio_io_handle_t);
-    int (*visualizer_stop_output)(audio_io_handle_t);
+    int (*visualizer_start_output)(audio_io_handle_t, int);
+    int (*visualizer_stop_output)(audio_io_handle_t, int);
 
     /* The pcm_params use_case_table is loaded by adev_verify_devices() upon
      * calling adev_open().
@@ -216,6 +217,9 @@ struct audio_device {
      * or other capabilities are present for the device corresponding to that usecase.
      */
     struct pcm_params *use_case_table[AUDIO_USECASE_MAX];
+    void *offload_effects_lib;
+    int (*offload_effects_start_output)(audio_io_handle_t, int);
+    int (*offload_effects_stop_output)(audio_io_handle_t, int);
 };
 
 int pcm_ioctl(void *pcm, int request, ...);
