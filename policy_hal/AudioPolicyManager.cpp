@@ -458,7 +458,7 @@ void AudioPolicyManager::setForceUse(AudioSystem::force_use usage, AudioSystem::
     checkA2dpSuspend();
     checkOutputForAllStrategies();
     updateDevicesAndOutputs();
-    for (int i = mOutputs.size() -1; i >= 0; i--) {
+    for (int i = 0; i < mOutputs.size(); i++) {
         audio_io_handle_t output = mOutputs.keyAt(i);
         audio_devices_t newDevice = getNewDevice(output, true /*fromCache*/);
         setOutputDevice(output, newDevice, (newDevice != AUDIO_DEVICE_NONE));
