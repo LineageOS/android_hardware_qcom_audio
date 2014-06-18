@@ -567,7 +567,7 @@ int platform_set_mic_mute(void *platform, bool state)
 
 int platform_set_device_mute(void *platform __unused, bool state __unused, char *dir __unused)
 {
-    LOGE("%s: Not implemented", __func__);
+    ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
 }
 
@@ -588,11 +588,11 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
     if (mode == AUDIO_MODE_IN_CALL) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
-            if (adev->tty_mode == TTY_MODE_FULL)
+            if (adev->voice.tty_mode == TTY_MODE_FULL)
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES;
-            else if (adev->tty_mode == TTY_MODE_VCO)
+            else if (adev->voice.tty_mode == TTY_MODE_VCO)
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES;
-            else if (adev->tty_mode == TTY_MODE_HCO)
+            else if (adev->voice.tty_mode == TTY_MODE_HCO)
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET;
             else
                 snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
@@ -872,7 +872,7 @@ int platform_set_hdmi_channels(void *platform,  int channel_count)
     return 0;
 }
 
-int platform_edid_get_max_channels(void *platform)
+int platform_edid_get_max_channels(void *platform __unused)
 {
     FILE *file;
     struct audio_block_header header;
@@ -921,25 +921,25 @@ int platform_edid_get_max_channels(void *platform)
 int platform_set_incall_recording_session_id(void *platform __unused,
                                              uint32_t session_id __unused, int rec_mode __unused)
 {
-    LOGE("%s: Not implemented", __func__);
+    ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
 }
 
 int platform_stop_incall_recording_usecase(void *platform __unused)
 {
-    LOGE("%s: Not implemented", __func__);
+    ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
 }
 
 int platform_start_incall_music_usecase(void *platform __unused)
 {
-    LOGE("%s: Not implemented", __func__);
+    ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
 }
 
 int platform_stop_incall_music_usecase(void *platform __unused)
 {
-    LOGE("%s: Not implemented", __func__);
+    ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
 }
 
@@ -956,16 +956,21 @@ int64_t platform_render_latency(audio_usecase_t usecase)
     }
 }
 
-int platform_switch_voice_call_enable_device_config(void *platform,
-                                                    snd_device_t out_snd_device,
-                                                    snd_device_t in_snd_device)
+int platform_switch_voice_call_enable_device_config(void *platform __unused,
+                                                    snd_device_t out_snd_device __unused,
+                                                    snd_device_t in_snd_device __unused)
 {
     return 0;
 }
 
-int platform_switch_voice_call_usecase_route_post(void *platform,
-                                                  snd_device_t out_snd_device,
-                                                  snd_device_t in_snd_device)
+int platform_switch_voice_call_usecase_route_post(void *platform __unused,
+                                                  snd_device_t out_snd_device __unused,
+                                                  snd_device_t in_snd_device __unused)
 {
     return 0;
+}
+
+int platform_get_sample_rate(void *platform __unused, uint32_t *rate __unused)
+{
+    return -ENOSYS;
 }
