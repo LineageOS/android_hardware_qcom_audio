@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 The Android Open Source Project
+ * Copyright (C) 2013 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -91,11 +91,17 @@ enum {
 
 };
 
+#define MIXER_CARD 0
+#define SOUND_CARD 0
+
 #define DEFAULT_OUTPUT_SAMPLING_RATE 48000
 
-#define ALL_SESSION_VSID                0xFFFFFFFF
-#define DEFAULT_MUTE_RAMP_DURATION_MS   20
+#define ALL_SESSION_VSID    0xFFFFFFFF
+#define DEFAULT_MUTE_RAMP_DURATION      20
 #define DEFAULT_VOLUME_RAMP_DURATION_MS 20
+#define VOLUME_SET 0
+#define MUTE_SET 1
+#define VOLUME_CTL_PARAM_NUM 3
 
 #ifdef MSM8084
 #define ACDB_ID_VOICE_HANDSET_TMUS 88
@@ -104,12 +110,6 @@ enum {
 #define ACDB_ID_VOICE_HANDSET_TMUS 7
 #define ACDB_ID_VOICE_DMIC_EF_TMUS 41
 #endif
-
-#define MAX_VOL_INDEX 5
-#define MIN_VOL_INDEX 0
-#define percent_to_index(val, min, max) \
-            ((val) * ((max) - (min)) * 0.01 + (min) + .5)
-
 /*
  * tinyAlsa library interprets period size as number of frames
  * one frame = channel_count * sizeof (pcm sample)
@@ -143,16 +143,8 @@ enum {
 #define VOICE_VSID  0x10C01000
 #ifdef PLATFORM_MSM8084
 #define VOICE_CALL_PCM_DEVICE 20
-#define VOICE2_CALL_PCM_DEVICE 25
-#define VOLTE_CALL_PCM_DEVICE 21
-#define QCHAT_CALL_PCM_DEVICE 33
-#define VOWLAN_CALL_PCM_DEVICE -1
 #else
 #define VOICE_CALL_PCM_DEVICE 2
-#define VOICE2_CALL_PCM_DEVICE 22
-#define VOLTE_CALL_PCM_DEVICE 14
-#define QCHAT_CALL_PCM_DEVICE 20
-#define VOWLAN_CALL_PCM_DEVICE 36
 #endif
 
 #define HFP_PCM_RX 5
