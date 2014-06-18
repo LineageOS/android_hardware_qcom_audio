@@ -239,4 +239,30 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev);
 bool audio_extn_hfp_is_active(struct audio_device *adev);
 #endif
 
+#ifdef DS2_DOLBY_DAP_ENABLED
+#define LIB_DS2_DAP_HAL "vendor/lib/libhwdaphal.so"
+#define SET_HW_INFO_FUNC "dap_hal_set_hw_info"
+typedef enum {
+    SND_CARD            = 0,
+    HW_ENDPOINT         = 1,
+    DMID                = 2,
+    DEVICE_BE_ID_MAP    = 3,
+} dap_hal_hw_info_t;
+typedef int (*dap_hal_set_hw_info_t)(int32_t hw_info, void* data);
+typedef struct {
+     int (*device_id_to_be_id)[2];
+     int len;
+} dap_hal_device_be_id_map_t;
+
+int audio_extn_dap_hal_init(int snd_card);
+int audio_extn_dap_hal_deinit();
+void audio_extn_dolby_ds2_set_endpoint(struct audio_device *adev);
+int audio_extn_ds2_enable(struct audio_device *adev);
+#else
+#define audio_extn_dap_hal_init(snd_card)                             (0)
+#define audio_extn_dap_hal_deinit()                                   (0)
+#define audio_extn_dolby_ds2_set_endpoint(adev)                       (0)
+#define audio_extn_ds2_enable(adev)				      (0)
+#endif
+
 #endif /* AUDIO_EXTN_H */

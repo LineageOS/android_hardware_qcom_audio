@@ -233,6 +233,9 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_dolby_set_dmid(adev);
     audio_extn_dolby_set_endpoint(adev);
 #endif
+#ifdef DS2_DOLBY_DAP_ENABLED
+    audio_extn_dolby_ds2_set_endpoint(adev);
+#endif
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(mixer_path, snd_device);
     ALOGV("%s: apply mixer and update path: %s", __func__, mixer_path);
@@ -2706,6 +2709,7 @@ static int adev_open(const hw_module_t *module, const char *name,
         }
     }
 
+    audio_extn_ds2_enable(adev);
     *device = &adev->device.common;
 
     audio_device_ref_count++;
