@@ -140,7 +140,7 @@ static int usb_get_numof_rates(char *rates_str)
 
     if (next_sr_string == NULL) {
         ALOGE("%s: get_numof_rates: could not find rates string", __func__);
-        return (int)NULL;
+        return 0;
     }
 
     for (i = 1; next_sr_string != NULL; i++) {
