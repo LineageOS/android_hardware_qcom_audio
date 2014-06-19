@@ -20,6 +20,7 @@ endif
 
 LOCAL_SRC_FILES := \
 	audio_hw.c \
+	voice.c \
 	$(AUDIO_PLATFORM)/platform.c
 
 LOCAL_SHARED_LIBRARIES := \
@@ -36,11 +37,17 @@ LOCAL_C_INCLUDES += \
 	$(call include-path-for, audio-route) \
 	$(call include-path-for, audio-effects) \
 	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \
-	$(LOCAL_PATH)/audio_extn
+	$(LOCAL_PATH)/audio_extn \
+	$(LOCAL_PATH)/voice_extn
 
 ifneq ($(filter msm8084,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_SHARED_LIBRARIES += libmdmdetect
   LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/libmdmdetect/inc
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS)),true)
+    LOCAL_CFLAGS += -DMULTI_VOICE_SESSION_ENABLED
+    LOCAL_SRC_FILES += voice_extn/voice_extn.c
 endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HFP)),true)

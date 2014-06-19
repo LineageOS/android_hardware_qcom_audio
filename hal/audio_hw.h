@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2013-2014 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@
 #include <tinycompress/tinycompress.h>
 
 #include <audio_route/audio_route.h>
+#include "voice.h"
 
 #define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
 
@@ -65,6 +66,15 @@ typedef enum {
     USECASE_AUDIO_RECORD_LOW_LATENCY,
 
     USECASE_VOICE_CALL,
+
+    /* Voice extension usecases */
+    USECASE_VOICE2_CALL,
+    USECASE_VOLTE_CALL,
+    USECASE_QCHAT_CALL,
+    USECASE_VOWLAN_CALL,
+    USECASE_INCALL_REC_UPLINK,
+    USECASE_INCALL_REC_DOWNLINK,
+    USECASE_INCALL_REC_UPLINK_AND_DOWNLINK,
     AUDIO_USECASE_MAX
 } audio_usecase_t;
 
@@ -181,22 +191,18 @@ struct audio_device {
     audio_mode_t mode;
     struct stream_in *active_input;
     struct stream_out *primary_output;
-    int in_call;
-    float voice_volume;
-    bool mic_mute;
-    int tty_mode;
     bool bluetooth_nrec;
     bool screen_off;
-    struct pcm *voice_call_rx;
-    struct pcm *voice_call_tx;
     int *snd_dev_ref_cnt;
     struct listnode usecase_list;
     struct audio_route *audio_route;
     int acdb_settings;
     bool speaker_lr_swap;
+    struct voice voice;
     unsigned int cur_hdmi_channels;
     bool bt_wb_speech_enabled;
 
+    int snd_card;
     void *platform;
 
     void *visualizer_lib;
@@ -212,18 +218,30 @@ struct audio_device {
     struct pcm_params *use_case_table[AUDIO_USECASE_MAX];
 };
 
+int pcm_ioctl(void *pcm, int request, ...);
+
 int select_devices(struct audio_device *adev,
                    audio_usecase_t uc_id);
+
 int disable_audio_route(struct audio_device *adev,
                         struct audio_usecase *usecase);
+
 int disable_snd_device(struct audio_device *adev,
                        snd_device_t snd_device);
+
 int enable_snd_device(struct audio_device *adev,
                       snd_device_t snd_device);
+
 int enable_audio_route(struct audio_device *adev,
                        struct audio_usecase *usecase);
+
 struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
                                             audio_usecase_t uc_id);
+
+#define LITERAL_TO_STRING(x) #x
+#define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\
+            __FILE__ ":" LITERAL_TO_STRING(__LINE__)\
+            " ASSERT_FATAL(" #condition ") failed.")
 
 /*
  * NOTE: when multiple mutexes have to be acquired, always take the

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2013-2014 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,11 +54,7 @@
 /* Retry for delay in FW loading*/
 #define RETRY_NUMBER 10
 #define RETRY_US 500000
-
-#define MAX_VOL_INDEX 5
-#define MIN_VOL_INDEX 0
-#define percent_to_index(val, min, max) \
-	        ((val) * ((max) - (min)) * 0.01 + (min) + .5)
+#define MAX_SND_CARD 8
 
 struct audio_block_header
 {
@@ -110,6 +106,16 @@ static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                           LOWLATENCY_PCM_DEVICE},
     [USECASE_VOICE_CALL] = {VOICE_CALL_PCM_DEVICE,
                             VOICE_CALL_PCM_DEVICE},
+    [USECASE_VOICE2_CALL] = {VOICE2_CALL_PCM_DEVICE, VOICE2_CALL_PCM_DEVICE},
+    [USECASE_VOLTE_CALL] = {VOLTE_CALL_PCM_DEVICE, VOLTE_CALL_PCM_DEVICE},
+    [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE, QCHAT_CALL_PCM_DEVICE},
+    [USECASE_VOWLAN_CALL] = {VOWLAN_CALL_PCM_DEVICE, VOWLAN_CALL_PCM_DEVICE},
+    [USECASE_INCALL_REC_UPLINK] = {AUDIO_RECORD_PCM_DEVICE,
+                                   AUDIO_RECORD_PCM_DEVICE},
+    [USECASE_INCALL_REC_DOWNLINK] = {AUDIO_RECORD_PCM_DEVICE,
+                                     AUDIO_RECORD_PCM_DEVICE},
+    [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK] = {AUDIO_RECORD_PCM_DEVICE,
+                                                AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_HFP_SCO] = {HFP_PCM_RX, HFP_SCO_RX},
 };
 
@@ -250,24 +256,6 @@ bool is_operator_tmus()
 {
     pthread_once(&check_op_once_ctl, check_operator);
     return is_tmus;
-}
-
-static int set_volume_values(int type, int volume, int* values)
-{
-    values[0] = volume;
-    values[1] = ALL_SESSION_VSID;
-
-    switch(type) {
-    case VOLUME_SET:
-        values[2] = DEFAULT_VOLUME_RAMP_DURATION_MS;
-        break;
-    case MUTE_SET:
-        values[2] = DEFAULT_MUTE_RAMP_DURATION;
-        break;
-    default:
-        return -EINVAL;
-    }
-    return 0;
 }
 
 static int set_echo_reference(struct mixer *mixer, const char* ec_ref)
@@ -454,28 +442,41 @@ void *platform_init(struct audio_device *adev)
 {
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data;
-    int retry_num = 0;
+    int retry_num = 0, snd_card_num = 0;
     const char *snd_card_name;
 
-    adev->mixer = mixer_open(MIXER_CARD);
+    while (snd_card_num < MAX_SND_CARD) {
+        adev->mixer = mixer_open(snd_card_num);
 
-    while (!adev->mixer && retry_num < RETRY_NUMBER) {
-        usleep(RETRY_US);
-        adev->mixer = mixer_open(MIXER_CARD);
-        retry_num++;
+        while (!adev->mixer && retry_num < RETRY_NUMBER) {
+            usleep(RETRY_US);
+            adev->mixer = mixer_open(snd_card_num);
+            retry_num++;
+        }
+
+        if (!adev->mixer) {
+            ALOGE("%s: Unable to open the mixer card: %d", __func__,
+                   snd_card_num);
+            retry_num = 0;
+            snd_card_num++;
+            continue;
+        }
+
+        snd_card_name = mixer_get_name(adev->mixer);
+        ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
+
+        adev->audio_route = audio_route_init(snd_card_num, MIXER_XML_PATH);
+        if (!adev->audio_route) {
+            ALOGE("%s: Failed to init audio route controls, aborting.", __func__);
+            return NULL;
+        }
+        adev->snd_card = snd_card_num;
+        ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
+        break;
     }
 
-    if (!adev->mixer) {
-        ALOGE("Unable to open the mixer, aborting.");
-        return NULL;
-    }
-
-    snd_card_name = mixer_get_name(adev->mixer);
-    ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
-
-    adev->audio_route = audio_route_init(MIXER_CARD, MIXER_XML_PATH);
-    if (!adev->audio_route) {
-        ALOGE("%s: Failed to init audio route controls, aborting.", __func__);
+    if (snd_card_num >= MAX_SND_CARD) {
+        ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
         return NULL;
     }
 
@@ -580,6 +581,8 @@ void *platform_init(struct audio_device *adev)
 
 void platform_deinit(void *platform)
 {
+    struct platform_data *my_data = (struct platform_data *)platform;
+    close_csd_client(my_data->csd);
     free(platform);
 }
 
@@ -755,13 +758,13 @@ int platform_switch_voice_call_usecase_route_post(void *platform,
     return ret;
 }
 
-int platform_start_voice_call(void *platform)
+int platform_start_voice_call(void *platform, uint32_t vsid)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int ret = 0;
 
     if (my_data->csd != NULL) {
-        ret = my_data->csd->start_voice(VOICE_VSID);
+        ret = my_data->csd->start_voice(vsid);
         if (ret < 0) {
             ALOGE("%s: csd_start_voice error %d\n", __func__, ret);
         }
@@ -769,15 +772,29 @@ int platform_start_voice_call(void *platform)
     return ret;
 }
 
-int platform_stop_voice_call(void *platform)
+int platform_stop_voice_call(void *platform, uint32_t vsid)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int ret = 0;
 
     if (my_data->csd != NULL) {
-        ret = my_data->csd->stop_voice(VOICE_VSID);
+        ret = my_data->csd->stop_voice(vsid);
         if (ret < 0) {
             ALOGE("%s: csd_stop_voice error %d\n", __func__, ret);
+        }
+    }
+    return ret;
+}
+
+int platform_get_sample_rate(void *platform, uint32_t *rate)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    int ret = 0;
+
+    if (my_data->csd != NULL) {
+        ret = my_data->csd->get_sample_rate(rate);
+        if (ret < 0) {
+            ALOGE("%s: csd_get_sample_rate error %d\n", __func__, ret);
         }
     }
     return ret;
@@ -789,13 +806,16 @@ int platform_set_voice_volume(void *platform, int volume)
     struct audio_device *adev = my_data->adev;
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voice Rx Gain";
-    int values[VOLUME_CTL_PARAM_NUM];
-    int ret = 0;
+    int vol_index = 0, ret = 0;
+    uint32_t set_values[ ] = {0,
+                              ALL_SESSION_VSID,
+                              DEFAULT_VOLUME_RAMP_DURATION_MS};
 
     // Voice volume levels are mapped to adsp volume levels as follows.
     // 100 -> 5, 80 -> 4, 60 -> 3, 40 -> 2, 20 -> 1  0 -> 0
     // But this values don't changed in kernel. So, below change is need.
-    volume = (int)percent_to_index(volume, MIN_VOL_INDEX, MAX_VOL_INDEX);
+    vol_index = (int)percent_to_index(volume, MIN_VOL_INDEX, MAX_VOL_INDEX);
+    set_values[0] = vol_index;
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
@@ -803,16 +823,9 @@ int platform_set_voice_volume(void *platform, int volume)
               __func__, mixer_ctl_name);
         return -EINVAL;
     }
-    ret = set_volume_values(VOLUME_SET, volume, values);
-    if (ret < 0) {
-        ALOGV("%s: failed setting volume by incorrect type", __func__);
-        return -EINVAL;
-    }
-    ret = mixer_ctl_set_array(ctl, values, sizeof(values)/sizeof(int));
-    if (ret < 0) {
-        ALOGV("%s: failed set mixer ctl by %d", __func__, ret);
-        return -EINVAL;
-    }
+    ALOGV("Setting voice volume index: %d", set_values[0]);
+    mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+
     if (my_data->csd != NULL) {
         ret = my_data->csd->volume(ALL_SESSION_VSID, volume,
                                    DEFAULT_VOLUME_RAMP_DURATION_MS);
@@ -829,30 +842,70 @@ int platform_set_mic_mute(void *platform, bool state)
     struct audio_device *adev = my_data->adev;
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voice Tx Mute";
-    int values[VOLUME_CTL_PARAM_NUM];
     int ret = 0;
+    uint32_t set_values[ ] = {0,
+                              ALL_SESSION_VSID,
+                              DEFAULT_MUTE_RAMP_DURATION_MS};
 
-    if (adev->mode == AUDIO_MODE_IN_CALL) {
-        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
-        if (!ctl) {
-            ALOGE("%s: Could not get ctl for mixer cmd - %s",
-                  __func__, mixer_ctl_name);
-            return -EINVAL;
-        }
-        ALOGV("Setting mic mute: %d", state);
-        ret = set_volume_values(MUTE_SET, state, values);
+    if (adev->mode != AUDIO_MODE_IN_CALL)
+        return 0;
+
+    set_values[0] = state;
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+    ALOGV("Setting voice mute state: %d", state);
+    mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+
+    if (my_data->csd != NULL) {
+        ret = my_data->csd->mic_mute(ALL_SESSION_VSID, state,
+                                     DEFAULT_MUTE_RAMP_DURATION_MS);
         if (ret < 0) {
-            ALOGV("%s: failed setting mute by incorrect type", __func__);
-            return -EINVAL;
-        }
-        ret = mixer_ctl_set_array(ctl, values, sizeof(values)/sizeof(int));
-        if (ret < 0) {
-            ALOGV("%s: failed set mixer ctl by %d", __func__, ret);
-            return -EINVAL;
+            ALOGE("%s: csd_mic_mute error %d", __func__, ret);
         }
     }
+    return ret;
+}
 
-    return 0;
+int platform_set_device_mute(void *platform, bool state, char *dir)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    struct mixer_ctl *ctl;
+    char *mixer_ctl_name = NULL;
+    int ret = 0;
+    uint32_t set_values[ ] = {0,
+                              ALL_SESSION_VSID,
+                              0};
+    if(dir == NULL) {
+        ALOGE("%s: Invalid direction:%s", __func__, dir);
+        return -EINVAL;
+    }
+
+    if (!strncmp("rx", dir, sizeof("rx"))) {
+        mixer_ctl_name = "Voice Rx Device Mute";
+    } else if (!strncmp("tx", dir, sizeof("tx"))) {
+        mixer_ctl_name = "Voice Tx Device Mute";
+    } else {
+        return -EINVAL;
+    }
+
+    set_values[0] = state;
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    ALOGV("%s: Setting device mute state: %d, mixer ctrl:%s",
+          __func__,state, mixer_ctl_name);
+    mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+
+    return ret;
 }
 
 snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devices)
@@ -872,11 +925,11 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
     if (mode == AUDIO_MODE_IN_CALL) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
-            if (adev->tty_mode == TTY_MODE_FULL)
+            if (adev->voice.tty_mode == TTY_MODE_FULL)
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES;
-            else if (adev->tty_mode == TTY_MODE_VCO)
+            else if (adev->voice.tty_mode == TTY_MODE_VCO)
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES;
-            else if (adev->tty_mode == TTY_MODE_HCO)
+            else if (adev->voice.tty_mode == TTY_MODE_HCO)
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET;
             else
                 snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
@@ -971,10 +1024,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             ALOGE("%s: No output device set for voice call", __func__);
             goto exit;
         }
-        if (adev->tty_mode != TTY_MODE_OFF) {
+        if (adev->voice.tty_mode != TTY_MODE_OFF) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                 out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
-                switch (adev->tty_mode) {
+                switch (adev->voice.tty_mode) {
                 case TTY_MODE_FULL:
                     snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC;
                     break;
@@ -985,7 +1038,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                     snd_device = SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC;
                     break;
                 default:
-                    ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->tty_mode);
+                    ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->voice.tty_mode);
                 }
                 goto exit;
             }
@@ -1210,6 +1263,92 @@ int platform_edid_get_max_channels(void *platform)
     }
 
     return max_channels;
+}
+
+int platform_set_incall_recording_session_id(void *platform,
+                                             uint32_t session_id, int rec_mode)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "Voc VSID";
+    int num_ctl_values;
+    int i;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        ret = -EINVAL;
+    } else {
+        num_ctl_values = mixer_ctl_get_num_values(ctl);
+        for (i = 0; i < num_ctl_values; i++) {
+            if (mixer_ctl_set_value(ctl, i, session_id)) {
+                ALOGV("Error: invalid session_id: %x", session_id);
+                ret = -EINVAL;
+                break;
+            }
+        }
+    }
+
+    if (my_data->csd != NULL) {
+        ret = my_data->csd->start_record(ALL_SESSION_VSID, rec_mode);
+        if (ret < 0) {
+            ALOGE("%s: csd_client_start_record failed, error %d",
+                  __func__, ret);
+        }
+    }
+
+    return ret;
+}
+
+int platform_stop_incall_recording_usecase(void *platform)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (my_data->csd != NULL) {
+        ret = my_data->csd->stop_record(ALL_SESSION_VSID);
+        if (ret < 0) {
+            ALOGE("%s: csd_client_stop_record failed, error %d",
+                  __func__, ret);
+        }
+    }
+
+    return ret;
+}
+
+int platform_start_incall_music_usecase(void *platform)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (my_data->csd != NULL) {
+        ret = my_data->csd->start_playback(ALL_SESSION_VSID);
+        if (ret < 0) {
+            ALOGE("%s: csd_client_start_playback failed, error %d",
+                  __func__, ret);
+        }
+    }
+
+    return ret;
+}
+
+int platform_stop_incall_music_usecase(void *platform)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (my_data->csd != NULL) {
+        ret = my_data->csd->stop_playback(ALL_SESSION_VSID);
+        if (ret < 0) {
+            ALOGE("%s: csd_client_stop_playback failed, error %d",
+                  __func__, ret);
+        }
+    }
+
+    return ret;
 }
 
 /* Delay in Us */

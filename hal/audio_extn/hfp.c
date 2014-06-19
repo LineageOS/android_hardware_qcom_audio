@@ -144,8 +144,8 @@ static int32_t start_hfp(struct audio_device *adev,
               __func__, pcm_dev_rx_id, pcm_dev_tx_id, uc_info->id);
 
     ALOGV("%s: Opening PCM playback device card_id(%d) device_id(%d)",
-          __func__, SOUND_CARD, pcm_dev_rx_id);
-    hfpmod.hfp_sco_rx = pcm_open(SOUND_CARD,
+          __func__, adev->snd_card, pcm_dev_rx_id);
+    hfpmod.hfp_sco_rx = pcm_open(adev->snd_card,
                                   pcm_dev_asm_rx_id,
                                   PCM_OUT, &pcm_config_hfp);
     if (hfpmod.hfp_sco_rx && !pcm_is_ready(hfpmod.hfp_sco_rx)) {
@@ -154,8 +154,8 @@ static int32_t start_hfp(struct audio_device *adev,
         goto exit;
     }
     ALOGD("%s: Opening PCM capture device card_id(%d) device_id(%d)",
-          __func__, SOUND_CARD, pcm_dev_tx_id);
-    hfpmod.hfp_pcm_rx = pcm_open(SOUND_CARD,
+          __func__, adev->snd_card, pcm_dev_tx_id);
+    hfpmod.hfp_pcm_rx = pcm_open(adev->snd_card,
                                    pcm_dev_rx_id,
                                    PCM_OUT, &pcm_config_hfp);
     if (hfpmod.hfp_pcm_rx && !pcm_is_ready(hfpmod.hfp_pcm_rx)) {
@@ -163,7 +163,7 @@ static int32_t start_hfp(struct audio_device *adev,
         ret = -EIO;
         goto exit;
     }
-    hfpmod.hfp_sco_tx = pcm_open(SOUND_CARD,
+    hfpmod.hfp_sco_tx = pcm_open(adev->snd_card,
                                   pcm_dev_asm_tx_id,
                                   PCM_IN, &pcm_config_hfp);
     if (hfpmod.hfp_sco_tx && !pcm_is_ready(hfpmod.hfp_sco_tx)) {
@@ -172,8 +172,8 @@ static int32_t start_hfp(struct audio_device *adev,
         goto exit;
     }
     ALOGV("%s: Opening PCM capture device card_id(%d) device_id(%d)",
-          __func__, SOUND_CARD, pcm_dev_tx_id);
-    hfpmod.hfp_pcm_tx = pcm_open(SOUND_CARD,
+          __func__, adev->snd_card, pcm_dev_tx_id);
+    hfpmod.hfp_pcm_tx = pcm_open(adev->snd_card,
                                    pcm_dev_tx_id,
                                    PCM_IN, &pcm_config_hfp);
     if (hfpmod.hfp_pcm_tx && !pcm_is_ready(hfpmod.hfp_pcm_tx)) {

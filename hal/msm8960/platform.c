@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2013-2014 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -482,7 +482,7 @@ int platform_switch_voice_call_device_post(void *platform,
     return ret;
 }
 
-int platform_start_voice_call(void *platform)
+int platform_start_voice_call(void *platform, uint32_t vsid __unused)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int ret = 0;
@@ -502,7 +502,7 @@ int platform_start_voice_call(void *platform)
     return ret;
 }
 
-int platform_stop_voice_call(void *platform)
+int platform_stop_voice_call(void *platform, uint32_t vsid __unused)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int ret = 0;
@@ -563,6 +563,12 @@ int platform_set_mic_mute(void *platform, bool state)
     }
 
     return ret;
+}
+
+int platform_set_device_mute(void *platform __unused, bool state __unused, char *dir __unused)
+{
+    LOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
 }
 
 snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devices)
@@ -681,10 +687,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             ALOGE("%s: No output device set for voice call", __func__);
             goto exit;
         }
-        if (adev->tty_mode != TTY_MODE_OFF) {
+        if (adev->voice.tty_mode != TTY_MODE_OFF) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                 out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
-                switch (adev->tty_mode) {
+                switch (adev->voice.tty_mode) {
                 case TTY_MODE_FULL:
                     snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC;
                     break;
@@ -695,7 +701,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                     snd_device = SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC;
                     break;
                 default:
-                    ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->tty_mode);
+                    ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->voice.tty_mode);
                 }
                 goto exit;
             }
@@ -910,6 +916,31 @@ int platform_edid_get_max_channels(void *platform)
     }
 
     return max_channels;
+}
+
+int platform_set_incall_recording_session_id(void *platform __unused,
+                                             uint32_t session_id __unused, int rec_mode __unused)
+{
+    LOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
+int platform_stop_incall_recording_usecase(void *platform __unused)
+{
+    LOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
+int platform_start_incall_music_usecase(void *platform __unused)
+{
+    LOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
+int platform_stop_incall_music_usecase(void *platform __unused)
+{
+    LOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
 }
 
 /* Delay in Us */
