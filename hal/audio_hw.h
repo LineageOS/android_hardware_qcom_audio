@@ -52,6 +52,7 @@
 #define MAX_SUPPORTED_CHANNEL_MASKS 2
 #define DEFAULT_HDMI_OUT_CHANNELS   2
 
+#define MIN_PCM_OFFLOAD_FRAGMENT_SIZE (4 * 1024)
 typedef int snd_device_t;
 
 /* These are the supported use cases by the hardware.
