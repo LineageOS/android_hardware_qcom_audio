@@ -170,8 +170,13 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = 15,
     [SND_DEVICE_OUT_HEADPHONES] = 10,
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = 10,
+#ifdef PLATFORM_MSM8084
+    [SND_DEVICE_OUT_VOICE_HANDSET] = 67,
+    [SND_DEVICE_OUT_VOICE_SPEAKER] = 66,
+#else
     [SND_DEVICE_OUT_VOICE_HANDSET] = 7,
     [SND_DEVICE_OUT_VOICE_SPEAKER] = 15,
+#endif
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
     [SND_DEVICE_OUT_HDMI] = 18,
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 15,
@@ -614,11 +619,12 @@ void platform_add_backend_name(void *platform, char *mixer_path,
             strcat(mixer_path, " speaker");
         else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES)
             strcat(mixer_path, " speaker-and-headphones");
-    } else if (my_data->ext_earpiece &&
-                 (snd_device == SND_DEVICE_OUT_VOICE_HANDSET ||
-                  snd_device == SND_DEVICE_OUT_VOICE_HANDSET_TMUS ||
-                  snd_device == SND_DEVICE_OUT_HANDSET ||
-                  snd_device == SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET)) {
+    }
+    if (my_data->ext_earpiece &&
+        (snd_device == SND_DEVICE_OUT_VOICE_HANDSET ||
+         snd_device == SND_DEVICE_OUT_VOICE_HANDSET_TMUS ||
+         snd_device == SND_DEVICE_OUT_HANDSET ||
+         snd_device == SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET)) {
         strcat(mixer_path, " handset");
     }
 }
