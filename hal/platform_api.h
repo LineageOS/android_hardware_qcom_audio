@@ -69,6 +69,8 @@ int platform_update_usecase_from_source(int source, audio_usecase_t usecase);
 
 bool platform_listen_update_status(snd_device_t snd_device);
 
+int platform_set_snd_device_backend(snd_device_t snd_device, const char * backend);
+
 /* From platform_info_parser.c */
 int platform_info_init(const char *filename);
 
@@ -88,4 +90,7 @@ unsigned char platform_map_to_edid_format(int format);
 bool platform_is_edid_supported_format(void *platform, int format);
 int platform_set_hdmi_format_and_samplerate(struct stream_out *out);
 int platform_set_device_params(struct stream_out *out, int param, int value);
+int platform_get_usecase_index(const char * usecase);
+int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
+
 #endif // AUDIO_PLATFORM_API_H
