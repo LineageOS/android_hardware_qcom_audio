@@ -56,7 +56,12 @@ int platform_stop_incall_recording_usecase(void *platform);
 int platform_start_incall_music_usecase(void *platform);
 int platform_stop_incall_music_usecase(void *platform);
 
+int platform_set_snd_device_backend(snd_device_t snd_device, const char * backend);
+
 /* From platform_info_parser.c */
 int platform_info_init(void);
+
+int platform_get_usecase_index(const char * usecase);
+int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
 
 #endif // AUDIO_PLATFORM_API_H
