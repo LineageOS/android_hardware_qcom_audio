@@ -115,7 +115,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_HFP_SCO] = "hfp-sco",
     [USECASE_AUDIO_HFP_SCO_WB] = "hfp-sco-wb",
     [USECASE_VOICE_CALL] = "voice-call",
-    
+
     [USECASE_VOICE2_CALL] = "voice2-call",
     [USECASE_VOLTE_CALL] = "volte-call",
     [USECASE_QCHAT_CALL] = "qchat-call",
@@ -1001,6 +1001,7 @@ static int check_and_set_hdmi_channels(struct audio_device *adev,
 {
     struct listnode *node;
     struct audio_usecase *usecase;
+    int ret;
 
     /* Check if change in HDMI channel config is allowed */
     if (!allow_hdmi_channel_config(adev))
@@ -1112,7 +1113,8 @@ int start_output_stream(struct stream_out *out)
         property_get("audio.use.hdmi.sink.cap", prop_value, NULL);
         if (!strncmp("true", prop_value, 4)) {
             sink_channels = platform_edid_get_max_channels(out->dev->platform);
-            ALOGD("%s: set HDMI channel count[%d] based on sink capability", __func__, sink_channels);
+            ALOGD("%s: set HDMI channel count[%d] based on sink capability",
+                   __func__, sink_channels);
             check_and_set_hdmi_channels(adev, sink_channels);
         } else {
             if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD)
@@ -1139,6 +1141,8 @@ int start_output_stream(struct stream_out *out)
             ret = -EIO;
             goto error_open;
         }
+        platform_set_default_channel_map(adev->platform, out->config.channels,
+                                         out->pcm_device_id);
     } else {
         out->pcm = NULL;
         out->compr = compress_open(adev->snd_card,

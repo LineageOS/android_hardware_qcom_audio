@@ -73,4 +73,9 @@ struct audio_offload_info_t;
 uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info);
 uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info);
 
+int platform_set_channel_allocation(void *platform, int channelAlloc);
+int platform_get_edid_info(void *platform, int channels);
+int platform_set_channel_map(void *platform, int ch_count, char *ch_map,
+                             int snd_id);
+int platform_set_default_channel_map(void *platform, int channels, int snd_id);
 #endif // AUDIO_PLATFORM_API_H
