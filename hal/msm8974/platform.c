@@ -130,6 +130,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_HANDSET] = "handset",
     [SND_DEVICE_OUT_SPEAKER] = "speaker",
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = "speaker-reverse",
+    [SND_DEVICE_OUT_SPEAKER_SAFE] = "speaker-safe",
     [SND_DEVICE_OUT_HEADPHONES] = "headphones",
     [SND_DEVICE_OUT_LINE] = "line",
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = "speaker-and-headphones",
@@ -200,6 +201,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_HANDSET] = 7,
     [SND_DEVICE_OUT_SPEAKER] = 15,
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = 15,
+    [SND_DEVICE_OUT_SPEAKER_SAFE] = 15,
     [SND_DEVICE_OUT_HEADPHONES] = 10,
     [SND_DEVICE_OUT_LINE] = 10,
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = 10,
@@ -276,6 +278,7 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_REVERSE)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_SAFE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_LINE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES)},
@@ -612,6 +615,7 @@ static void set_platform_defaults(struct platform_data * my_data)
 
     if (my_data->ext_speaker) {
         backend_table[SND_DEVICE_OUT_SPEAKER] = strdup("speaker");
+        backend_table[SND_DEVICE_OUT_SPEAKER_SAFE] = strdup("speaker");
         backend_table[SND_DEVICE_OUT_VOICE_SPEAKER] = strdup("speaker");
         backend_table[SND_DEVICE_OUT_SPEAKER_REVERSE] = strdup("speaker");
         backend_table[SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] =
@@ -1186,7 +1190,7 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
             } else {
                 snd_device = SND_DEVICE_OUT_BT_SCO;
             }
-        } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
+        } else if (devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
             snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
         } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
             if(adev->voice.hac)
@@ -1232,6 +1236,8 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         snd_device = SND_DEVICE_OUT_HEADPHONES;
     } else if (devices & AUDIO_DEVICE_OUT_LINE) {
         snd_device = SND_DEVICE_OUT_LINE;
+    } else if (devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) {
+        snd_device = SND_DEVICE_OUT_SPEAKER_SAFE;
     } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
         if (adev->speaker_lr_swap)
             snd_device = SND_DEVICE_OUT_SPEAKER_REVERSE;
@@ -1321,6 +1327,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_BT_SCO_MIC;
             }
         } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER ||
+            out_device & AUDIO_DEVICE_OUT_SPEAKER_SAFE ||
             out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             out_device & AUDIO_DEVICE_OUT_LINE) {
             if (my_data->fluence_in_voice_call && my_data->fluence_in_spkr_mode &&
@@ -1355,7 +1362,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             }
         }
     } else if (source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
-        if (out_device & AUDIO_DEVICE_OUT_SPEAKER)
+        if (out_device & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE))
             in_device = AUDIO_DEVICE_IN_BACK_MIC;
         if (adev->active_input) {
             if (adev->active_input->enable_aec &&
@@ -1455,6 +1462,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_HEADSET_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER ||
+                   out_device & AUDIO_DEVICE_OUT_SPEAKER_SAFE ||
                    out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                    out_device & AUDIO_DEVICE_OUT_LINE) {
             if (channel_count == 2)
