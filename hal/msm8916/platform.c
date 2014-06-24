@@ -426,8 +426,8 @@ static void query_platform(const char *snd_card_name,
                 sizeof(MIXER_XML_PATH_QRD_SKUHF));
     } else if (!strncmp(snd_card_name, "msm8939-snd-card-mtp",
                  sizeof("msm8939-snd-card-mtp"))) {
-        strlcpy(mixer_xml_path, MIXER_XML_PATH,
-                sizeof(MIXER_XML_PATH));
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_MTP,
+                sizeof(MIXER_XML_PATH_MTP));
     } else if (!strncmp(snd_card_name, "msm8939-snd-card-skuk",
                  sizeof("msm8939-snd-card-skuk"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_SKUK,
