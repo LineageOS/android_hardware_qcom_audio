@@ -1430,7 +1430,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             in_device & AUDIO_DEVICE_IN_BACK_MIC) {
             if (my_data->fluence_type & FLUENCE_DUAL_MIC &&
                 channel_count == 2)
-                snd_device = SND_DEVICE_IN_SPEAKER_DMIC;
+                snd_device = SND_DEVICE_IN_HANDSET_STEREO_DMIC;
             else
                 snd_device = SND_DEVICE_IN_CAMCORDER_MIC;
         }
