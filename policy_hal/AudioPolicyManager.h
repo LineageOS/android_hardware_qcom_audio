@@ -35,7 +35,8 @@ class AudioPolicyManager: public AudioPolicyManagerBase
 
 public:
                 AudioPolicyManager(AudioPolicyClientInterface *clientInterface)
-                : AudioPolicyManagerBase(clientInterface) {}
+                : AudioPolicyManagerBase(clientInterface) {
+                            mPrimarySuspended = 0; mFastSuspended = 0;}
 
         virtual ~AudioPolicyManager() {}
 
@@ -55,7 +56,13 @@ public:
                                             AudioSystem::output_flags flags =
                                                     AudioSystem::OUTPUT_FLAG_INDIRECT,
                                             const audio_offload_info_t *offloadInfo = NULL);
-
+        virtual status_t startOutput(audio_io_handle_t output,
+                                             AudioSystem::stream_type stream,
+                                             int session = 0);
+        virtual status_t stopOutput(audio_io_handle_t output,
+                                            AudioSystem::stream_type stream,
+                                            int session = 0 );
+        virtual void releaseOutput(audio_io_handle_t output);
         virtual bool isOffloadSupported(const audio_offload_info_t& offloadInfo);
 
         virtual void setPhoneState(int state);
@@ -86,8 +93,33 @@ protected:
         // check that volume change is permitted, compute and send new volume to audio hardware
         status_t checkAndSetVolume(int stream, int index, audio_io_handle_t output, audio_devices_t device, int delayMs = 0, bool force = false);
 
+        // close an output and its companion duplicating output.
+        void closeOutput(audio_io_handle_t output);
+
         // returns the category the device belongs to with regard to volume curve management
         static device_category getDeviceCategory(audio_devices_t device);
+    private :
+        void handleNotificationRoutingForStream(AudioSystem::stream_type stream);
+#ifdef HDMI_PASSTHROUGH_ENABLED
+        void checkAndSuspendOutputs();
+        void checkAndRestoreOutputs();
+        audio_devices_t handleHDMIPassthrough(audio_devices_t device,
+                         audio_io_handle_t output,
+                         int stream = -1,
+                         int strategy = -1);
+        audio_io_handle_t getPassthroughOutput(
+                                    AudioSystem::stream_type stream,
+                                    uint32_t samplingRate,
+                                    uint32_t format,
+                                    uint32_t channelMask,
+                                    AudioSystem::output_flags flags,
+                                    const audio_offload_info_t *offloadInfo,
+                                    audio_devices_t device);
+        bool isEffectEnabled();
+        void updateAndCloseOutputs();
+#endif
+        uint32_t mPrimarySuspended;
+        uint32_t mFastSuspended;
 
 };
 };

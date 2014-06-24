@@ -381,6 +381,121 @@ bool audio_extn_is_dolby_format(audio_format_t format)
 
 #endif /* DS1_DOLBY_DDP_ENABLED */
 
+#ifdef HDMI_PASSTHROUGH_ENABLED
+int audio_extn_dolby_update_passt_formats(struct audio_device *adev,
+                                          struct stream_out *out) {
+    int32_t i = 0, ret = -ENOSYS;
+
+    /*
+     * We can iterate through the list and return all formats if passthrough
+     * needs to be supported on all the HDMI formats.
+     */
+    if(platform_is_edid_supported_format(adev->platform, AUDIO_FORMAT_AC3)) {
+            out->supported_formats[i++] = AUDIO_FORMAT_AC3;
+            ret = 0;
+    }
+    if(platform_is_edid_supported_format(adev->platform, AUDIO_FORMAT_EAC3)) {
+            out->supported_formats[i++] = AUDIO_FORMAT_EAC3;
+            ret = 0;
+    }
+    ALOGV("%s: ret = %d", __func__, ret);
+    return ret;
+}
+
+bool audio_extn_dolby_is_passt_convert_supported(struct audio_device *adev,
+                                                 struct stream_out *out) {
+
+    uint32_t i = 0;
+
+    if(out->format == AUDIO_FORMAT_EAC3) {
+        for(i = 0; i < MAX_SUPPORTED_FORMATS; i++) {
+            if(out->supported_formats[i] == AUDIO_FORMAT_AC3) {
+                ALOGV("%s:PASSTHROUGH_CONVERT supported", __func__);
+                return true;
+            }
+        }
+    }
+    ALOGV("%s:PASSTHROUGH_CONVERT inot supported", __func__);
+    return false;
+
+}
+
+bool audio_extn_dolby_is_passt_supported(struct audio_device *adev,
+                                         struct stream_out *out) {
+     uint32_t i = 0;
+
+    for(i = 0; i < MAX_SUPPORTED_FORMATS; i++) {
+        if(out->supported_formats[i] == out->format) {
+            ALOGV("%s:PASSTHROUGH supported", __func__);
+            return true;
+        }
+    }
+    ALOGV("%s:Passthrough not supported", __func__);
+    return false;
+}
+
+void audio_extn_dolby_update_passt_stream_configuration(
+        struct audio_device *adev, struct stream_out *out) {
+    if (audio_extn_dolby_is_passt_supported(adev, out)) {
+        ALOGV("%s:PASSTHROUGH", __func__);
+        out->compr_config.codec->compr_passthr = PASSTHROUGH;
+    } else if (audio_extn_dolby_is_passt_convert_supported(adev, out)){
+        ALOGV("%s:PASSTHROUGH CONVERT", __func__);
+        out->compr_config.codec->compr_passthr = PASSTHROUGH_CONVERT;
+    } else {
+        ALOGV("%s:NO PASSTHROUGH", __func__);
+        out->compr_config.codec->compr_passthr = LEGACY_PCM;
+        return;
+    }
+
+    /* Logic to test convert */
+#ifdef TEST_PASSTHROUGH_CONVERT
+    if (out->format == AUDIO_FORMAT_EAC3) {
+        ALOGV("%s:PASSTHROUGH_CONVERT", __func__);
+        out->compr_config.codec->compr_passthr = PASSTHROUGH_CONVERT;
+    }
+#endif
+    /*
+     * For EC3 passthrough input sample rate should be 4 times the original
+     * sample rate. For AC3 no change is required. The channel count should
+     * be stereo irrespective of input channel count.
+     */
+    switch (out->format) {
+        case AUDIO_FORMAT_EAC3:
+            if(out->compr_config.codec->compr_passthr == PASSTHROUGH) {
+                ALOGV("update samplerate %d-->%d",
+                      out->sample_rate, (out->sample_rate *4));
+                out->sample_rate =  out->sample_rate *4;
+                out->compr_config.codec->sample_rate =
+                        compress_get_alsa_rate(out->sample_rate);
+            }
+        break;
+        case AUDIO_FORMAT_AC3:
+        default:
+            ALOGV("No update of sample rate required");
+        break;
+    }
+    out->compr_config.codec->ch_out = out->compr_config.codec->ch_in = 2;
+    out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+}
+
+bool audio_extn_dolby_is_passthrough_stream(int flags) {
+
+    if (flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)
+        return true;
+    return false;
+}
+
+int audio_extn_dolby_set_hdmi_format_and_samplerate(struct audio_device *adev,
+                                                    struct stream_out *out) {
+    return platform_set_hdmi_format_and_samplerate(out);
+}
+
+int audio_extn_dolby_get_passt_buffer_size(audio_offload_info_t* info) {
+    return platform_get_compress_passthrough_buffer_size(info);
+}
+#endif /* HDMI_PASSTHROUGH_ENABLED */
+
 #ifdef DS1_DOLBY_DAP_ENABLED
 void audio_extn_dolby_set_endpoint(struct audio_device *adev)
 {
@@ -571,6 +686,18 @@ int audio_extn_ds2_enable(struct audio_device *adev) {
                             __func__, ds2_enabled);
             return -EINVAL;
         }
+    }
+    return 0;
+}
+
+int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, bool state) {
+
+    ALOGV("%s:", __func__);
+    if (ds2extnmod.dap_hal_set_hw_info) {
+        ds2extnmod.dap_hal_set_hw_info(DAP_BYPASS, (void*)(&state));
+        ALOGV("%s: Dolby set bypas :0x%x", __func__, state);
+    } else {
+        ALOGV("%s: dap_hal_set_hw_info is NULL", __func__);
     }
     return 0;
 }

@@ -188,6 +188,9 @@ enum {
 #define SPKR_PROT_CALIB_TX_PCM_DEVICE 25
 #endif
 #define PLAYBACK_OFFLOAD_DEVICE 9
+
+#define PLAYBACK_OFFLOAD_DEVICE2 17
+
 #define COMPRESS_VOIP_CALL_PCM_DEVICE 3
 
 #ifdef PLATFORM_MSM8610
@@ -312,5 +315,11 @@ static int msm_device_to_be_id [][NO_COLS] = {
 };
 static int arr_len = sizeof(msm_device_to_be_id)/ (sizeof(int) * NO_COLS);
 #endif
+
+enum {
+    LEGACY_PCM = 0,
+    PASSTHROUGH,
+    PASSTHROUGH_CONVERT
+};
 
 #endif // QCOM_AUDIO_PLATFORM_H

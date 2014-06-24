@@ -50,6 +50,7 @@
 #define ACDB_DEV_TYPE_IN 2
 
 #define MAX_SUPPORTED_CHANNEL_MASKS 2
+#define MAX_SUPPORTED_FORMATS 2
 #define DEFAULT_HDMI_OUT_CHANNELS   2
 
 typedef int snd_device_t;
@@ -65,7 +66,8 @@ typedef enum {
     USECASE_AUDIO_PLAYBACK_LOW_LATENCY,
     USECASE_AUDIO_PLAYBACK_MULTI_CH,
     USECASE_AUDIO_PLAYBACK_OFFLOAD,
-    
+    USECASE_AUDIO_PLAYBACK_OFFLOAD2,
+
     /* FM usecase */
     USECASE_AUDIO_PLAYBACK_FM,
 
@@ -151,6 +153,7 @@ struct stream_out {
     audio_usecase_t usecase;
     /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
+    audio_format_t supported_formats[MAX_SUPPORTED_FORMATS+1];
     bool muted;
     uint64_t written; /* total frames written, not cleared when entering standby */
     audio_io_handle_t handle;
@@ -232,7 +235,7 @@ struct audio_device {
 
     int snd_card;
     void *platform;
-
+    unsigned int offload_usecases_state;
     void *visualizer_lib;
     int (*visualizer_start_output)(audio_io_handle_t, int);
     int (*visualizer_stop_output)(audio_io_handle_t, int);
@@ -255,6 +258,8 @@ int enable_audio_route(struct audio_device *adev,
 
 struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
                                                    audio_usecase_t uc_id);
+
+bool is_offload_usecase(audio_usecase_t uc_id);
 
 #define LITERAL_TO_STRING(x) #x
 #define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\
