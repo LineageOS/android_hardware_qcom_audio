@@ -1072,6 +1072,7 @@ OMX_ERRORTYPE omx_aac_aenc::component_init(OMX_STRING role)
 
     nTimestamp = 0;
     ts = 0;
+    m_frame_count = 0;
     frameduration = 0;
     nNumInputBuf = 0;
     nNumOutputBuf = 0;
@@ -4097,6 +4098,11 @@ OMX_ERRORTYPE  omx_aac_aenc::empty_this_buffer_proxy
         DEBUG_PRINT("meta_in.nFlags = %d\n",meta_in.nFlags);
     }
 
+    if (ts == 0) {
+        DEBUG_PRINT("Anchor time %lld", buffer->nTimeStamp);
+        ts = buffer->nTimeStamp;
+    }
+
     memcpy(&data[sizeof(META_IN)],buffer->pBuffer,buffer->nFilledLen);
     write(m_drv_fd, data, buffer->nFilledLen+sizeof(META_IN));
     pthread_mutex_lock(&m_state_lock);
@@ -4207,11 +4213,8 @@ OMX_ERRORTYPE  omx_aac_aenc::fill_this_buffer_proxy
         }
 
          meta_out = (ENC_META_OUT *)(buffer->pBuffer + sizeof(unsigned char));
-         buffer->nTimeStamp = (((OMX_TICKS)meta_out->msw_ts << 32)+
-				meta_out->lsw_ts);
-
-         ts += frameduration;
-         buffer->nTimeStamp = ts;
+         buffer->nTimeStamp = ts + (frameduration * m_frame_count);
+         ++m_frame_count;
          nTimestamp = buffer->nTimeStamp;
          buffer->nFlags |= meta_out->nflags;
          buffer->nOffset =  meta_out->offset_to_frame + 1;
