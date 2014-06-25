@@ -1322,9 +1322,17 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
 
         ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
         if (!ctl) {
-            ALOGE("%s: Could not get ctl for mixer cmd - %s",
-                  __func__, mixer_ctl_name);
-            return -EINVAL;
+            /* try with the control based on device id */
+            int pcm_device_id = platform_get_pcm_device_id(out->usecase,
+                                                       PCM_PLAYBACK);
+            char ctl_name[128] = {0};
+            snprintf(ctl_name, sizeof(ctl_name),
+                     "Compress Playback %d Volume", pcm_device_id);
+            ctl = mixer_get_ctl_by_name(adev->mixer, ctl_name);
+            if (!ctl) {
+                ALOGE("%s: Could not get volume ctl mixer cmd", __func__);
+                return -EINVAL;
+            }
         }
         volume[0] = (int)(left * COMPRESS_PLAYBACK_VOLUME_MAX);
         volume[1] = (int)(right * COMPRESS_PLAYBACK_VOLUME_MAX);
