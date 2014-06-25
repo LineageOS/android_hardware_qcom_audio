@@ -951,7 +951,7 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
             if (is_operator_tmus())
                 snd_device = SND_DEVICE_OUT_VOICE_HANDSET_TMUS;
             else
-                snd_device = SND_DEVICE_OUT_HANDSET;
+                snd_device = SND_DEVICE_OUT_VOICE_HANDSET;
         }
         if (snd_device != SND_DEVICE_NONE) {
             goto exit;
