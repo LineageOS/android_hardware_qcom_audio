@@ -19,6 +19,7 @@
 
 #ifndef AUDIO_PLATFORM_API_H
 #define AUDIO_PLATFORM_API_H
+#include <sound/voice_params.h>
 
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
@@ -60,6 +61,8 @@ int platform_set_incall_recording_session_id(void *platform, uint32_t session_id
 int platform_stop_incall_recording_usecase(void *platform);
 int platform_start_incall_music_usecase(void *platform);
 int platform_stop_incall_music_usecase(void *platform);
+int platform_update_lch(void *platform, struct voice_session *session,
+                        enum voice_lch_mode lch_mode);
 /* returns the latency for a usecase in Us */
 int64_t platform_render_latency(audio_usecase_t usecase);
 int platform_update_usecase_from_source(int source, audio_usecase_t usecase);
