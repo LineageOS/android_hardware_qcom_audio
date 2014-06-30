@@ -474,6 +474,11 @@ static struct csd_data *open_csd_client()
 {
     struct csd_data *csd = calloc(1, sizeof(struct csd_data));
 
+    if (!csd) {
+        ALOGE("failed to allocate csd_data mem");
+        return NULL;
+    }
+
     csd->csd_client = dlopen(LIB_CSD_CLIENT, RTLD_NOW);
     if (csd->csd_client == NULL) {
         ALOGE("%s: DLOPEN failed for %s", __func__, LIB_CSD_CLIENT);
@@ -629,6 +634,11 @@ void *platform_init(struct audio_device *adev)
     const char *snd_card_name;
 
     my_data = calloc(1, sizeof(struct platform_data));
+
+    if (!my_data) {
+        ALOGE("failed to allocate platform data");
+        return NULL;
+    }
 
     while (snd_card_num < MAX_SND_CARD) {
         adev->mixer = mixer_open(snd_card_num);

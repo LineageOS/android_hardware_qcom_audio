@@ -294,8 +294,8 @@ static int32_t ssr_init_surround_sound_lib(unsigned long buffersize)
     if ( ret > 0 ) {
         ALOGV("%s: Allocating surroundObj size is %d", __func__, ret);
         ssrmod.surround_obj = (void *)malloc(ret);
-        memset(ssrmod.surround_obj,0,ret);
         if (NULL != ssrmod.surround_obj) {
+            memset(ssrmod.surround_obj,0,ret);
             /* initialize after allocating the memory for surround_obj */
             ret = ssrmod.surround_filters_init(ssrmod.surround_obj,
                         6,

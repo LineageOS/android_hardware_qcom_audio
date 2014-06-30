@@ -250,6 +250,16 @@ void *hw_info_init(const char *snd_card_name)
     struct hardware_info *hw_info;
 
     hw_info = malloc(sizeof(struct hardware_info));
+    if (!hw_info) {
+        ALOGE("failed to allocate mem for hardware info");
+        return NULL;
+    }
+
+    hw_info->snd_devices = NULL;
+    hw_info->num_snd_devices = 0;
+    strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
+    strlcpy(hw_info->type, "", sizeof(hw_info->type));
+    strlcpy(hw_info->name, "", sizeof(hw_info->name));
 
     if(strstr(snd_card_name, "msm8974") ||
               strstr(snd_card_name, "apq8074")) {
