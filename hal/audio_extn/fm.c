@@ -149,6 +149,10 @@ static int32_t fm_start(struct audio_device *adev)
     ALOGD("%s: enter", __func__);
 
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
+
+    if (!uc_info)
+        return -ENOMEM;
+
     uc_info->id = USECASE_AUDIO_PLAYBACK_FM;
     uc_info->type = PCM_PLAYBACK;
     uc_info->stream.out = adev->primary_output;
