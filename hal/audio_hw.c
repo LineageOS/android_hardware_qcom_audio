@@ -1147,7 +1147,8 @@ static int stop_output_stream(struct stream_out *out)
     free(uc_info);
 
     if (is_offload_usecase(out->usecase) &&
-        (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+        (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+        (audio_extn_dolby_is_passthrough_stream(out->flags))) {
         ALOGV("Disable passthrough , reset mixer to pcm");
         /* NO_PASSTHROUGH */
         out->compr_config.codec->compr_passthr = 0;
