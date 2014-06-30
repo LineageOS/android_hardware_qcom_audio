@@ -66,6 +66,11 @@ int stop_call(struct audio_device *adev, audio_usecase_t usecase_id)
     ALOGD("%s: enter usecase:%s", __func__, use_case_table[usecase_id]);
 
     session = (struct voice_session *)voice_get_session_from_use_case(adev, usecase_id);
+    if (!session) {
+        ALOGE("stop_call: couldn't find voice session");
+        return -EINVAL;
+    }
+
     session->state.current = CALL_INACTIVE;
 
     ret = platform_stop_voice_call(adev->platform, session->vsid);
@@ -112,7 +117,17 @@ int start_call(struct audio_device *adev, audio_usecase_t usecase_id)
     ALOGD("%s: enter usecase:%s", __func__, use_case_table[usecase_id]);
 
     session = (struct voice_session *)voice_get_session_from_use_case(adev, usecase_id);
+    if (!session) {
+        ALOGE("start_call: couldn't find voice session");
+        return -EINVAL;
+    }
+
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
+    if (!uc_info) {
+        ALOGE("start_call: couldn't allocate mem for audio_usecase");
+        return -ENOMEM;
+    }
+
     uc_info->id = usecase_id;
     uc_info->type = VOICE_CALL;
     uc_info->stream.out = adev->current_call_output;
