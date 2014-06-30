@@ -150,6 +150,11 @@ int audio_extn_listen_init(struct audio_device *adev, unsigned int snd_card)
         listen_dev = (struct listen_audio_device*)
             calloc(1, sizeof(struct listen_audio_device));
 
+        if (!listen_dev) {
+            ALOGE("failed to allocate listen_dev mem");
+            return -ENOMEM;
+        }
+
         listen_dev->lib_handle = lib_handle;
         listen_dev->adev = adev;
 

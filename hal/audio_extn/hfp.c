@@ -130,6 +130,10 @@ static int32_t start_hfp(struct audio_device *adev,
     ALOGD("%s: enter", __func__);
 
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
+
+    if (!uc_info)
+        return -ENOMEM;
+
     uc_info->id = hfpmod.ucid;
     uc_info->type = PCM_HFP_CALL;
     uc_info->stream.out = adev->primary_output;
