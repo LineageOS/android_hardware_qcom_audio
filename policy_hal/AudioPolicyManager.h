@@ -90,6 +90,21 @@ protected:
         // device
         virtual float computeVolume(int stream, int index, audio_io_handle_t output, audio_devices_t device);
 
+        // mute/unmute strategies using an incompatible device combination
+        // if muting, wait for the audio in pcm buffer to be drained before proceeding
+        // if unmuting, unmute only after the specified delay
+        // Returns the number of ms waited
+        uint32_t  checkDeviceMuteStrategies(AudioOutputDescriptor *outputDesc,
+                                            audio_devices_t prevDevice,
+                                            uint32_t delayMs);
+
+        // change the route of the specified output. Returns the number of ms we have slept to
+        // allow new routing to take effect in certain cases.
+        uint32_t setOutputDevice(audio_io_handle_t output,
+                                 audio_devices_t device,
+                                 bool force = false,
+                                 int delayMs = 0);
+
         // check that volume change is permitted, compute and send new volume to audio hardware
         status_t checkAndSetVolume(int stream, int index, audio_io_handle_t output, audio_devices_t device, int delayMs = 0, bool force = false);
 
@@ -120,6 +135,9 @@ protected:
 #endif
         uint32_t mPrimarySuspended;
         uint32_t mFastSuspended;
+
+        int mOldPhoneState;
+        bool isExternalModem();
 
 };
 };
