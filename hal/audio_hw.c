@@ -1637,24 +1637,33 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
         out->muted = (left == 0.0f);
         return 0;
     } else if (is_offload_usecase(out->usecase)) {
-        char mixer_ctl_name[128];
-        struct audio_device *adev = out->dev;
-        struct mixer_ctl *ctl;
-        int pcm_device_id = platform_get_pcm_device_id(out->usecase,
+        if (audio_extn_dolby_is_passthrough_stream(out->flags)) {
+            /*
+             * Set mute or umute on HDMI passthrough stream.
+             * Only take left channel into account.
+             * Mute is 0 and unmute 1
+             */
+            audio_extn_dolby_set_passt_volume(out, (left == 0.0f));
+        } else {
+            char mixer_ctl_name[128];
+            struct audio_device *adev = out->dev;
+            struct mixer_ctl *ctl;
+            int pcm_device_id = platform_get_pcm_device_id(out->usecase,
                                                        PCM_PLAYBACK);
 
-        snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
-                 "Compress Playback %d Volume", pcm_device_id);
-        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
-        if (!ctl) {
-            ALOGE("%s: Could not get ctl for mixer cmd - %s",
-                  __func__, mixer_ctl_name);
-            return -EINVAL;
+            snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+                     "Compress Playback %d Volume", pcm_device_id);
+            ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+            if (!ctl) {
+                ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                      __func__, mixer_ctl_name);
+                return -EINVAL;
+            }
+            volume[0] = (int)(left * COMPRESS_PLAYBACK_VOLUME_MAX);
+            volume[1] = (int)(right * COMPRESS_PLAYBACK_VOLUME_MAX);
+            mixer_ctl_set_array(ctl, volume, sizeof(volume)/sizeof(volume[0]));
+            return 0;
         }
-        volume[0] = (int)(left * COMPRESS_PLAYBACK_VOLUME_MAX);
-        volume[1] = (int)(right * COMPRESS_PLAYBACK_VOLUME_MAX);
-        mixer_ctl_set_array(ctl, volume, sizeof(volume)/sizeof(volume[0]));
-        return 0;
     }
 
     return -ENOSYS;

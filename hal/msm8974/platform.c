@@ -2465,3 +2465,30 @@ int platform_set_hdmi_format_and_samplerate(struct stream_out *out)
 
     return 0;
 }
+
+int platform_set_device_params(struct stream_out *out, int param, int value)
+{
+    struct audio_device *adev = out->dev;
+    struct mixer_ctl *ctl;
+    char *mixer_ctl_name = "Device PP Params";
+    int ret = 0;
+    uint32_t set_values[] = {0,0};
+
+    set_values[0] = param;
+    set_values[1] = value;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        ret = -EINVAL;
+        goto end;
+    }
+
+    ALOGV("%s: Setting device pp params param: %d, value %d mixer ctrl:%s",
+          __func__,param, value, mixer_ctl_name);
+    mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+
+end:
+    return ret;
+}
