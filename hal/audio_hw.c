@@ -1819,7 +1819,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->usecase = USECASE_AUDIO_PLAYBACK_MULTI_CH;
         out->config = pcm_config_hdmi_multi;
         out->config.rate = config->sample_rate;
-        out->config.channels = popcount(out->channel_mask);
+        out->config.channels = audio_channel_count_from_out_mask(out->channel_mask);
         out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels * 2);
     } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         if (config->offload_info.version != AUDIO_INFO_INITIALIZER.version ||
@@ -1860,7 +1860,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->compr_config.codec->bit_rate =
                     config->offload_info.bit_rate;
         out->compr_config.codec->ch_in =
-                    popcount(config->channel_mask);
+                audio_channel_count_from_out_mask(config->channel_mask);
         out->compr_config.codec->ch_out = out->compr_config.codec->ch_in;
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
@@ -2160,7 +2160,7 @@ static int adev_get_mic_mute(const struct audio_hw_device *dev, bool *state)
 static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev __unused,
                                          const struct audio_config *config)
 {
-    int channel_count = popcount(config->channel_mask);
+    int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
 
     return get_input_buffer_size(config->sample_rate, config->format, channel_count);
 }
@@ -2174,7 +2174,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_in *in;
     int ret = 0, buffer_size, frame_size;
-    int channel_count = popcount(config->channel_mask);
+    int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
 
     ALOGV("%s: enter", __func__);
     *stream_in = NULL;

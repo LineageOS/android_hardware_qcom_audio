@@ -580,7 +580,7 @@ int visualizer_init(effect_context_t *context)
     visu_ctxt->scaling_mode = VISUALIZER_SCALING_MODE_NORMALIZED;
 
     // measurement initialization
-    visu_ctxt->channel_count = popcount(context->config.inputCfg.channels);
+    visu_ctxt->channel_count = audio_channel_count_from_out_mask(context->config.inputCfg.channels);
     visu_ctxt->meas_mode = MEASUREMENT_MODE_NONE;
     visu_ctxt->meas_wndw_size_in_buffers = MEASUREMENT_WINDOW_MAX_SIZE_IN_BUFFERS;
     visu_ctxt->meas_buffer_idx = 0;
