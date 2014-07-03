@@ -1074,7 +1074,8 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
         return out->compr_config.fragment_size;
     }
 
-    return out->config.period_size * audio_stream_frame_size(stream);
+    return out->config.period_size *
+                audio_stream_out_frame_size((const struct audio_stream_out *)stream);
 }
 
 static uint32_t out_get_channels(const struct audio_stream *stream)
@@ -1401,7 +1402,7 @@ exit:
         if (out->pcm)
             ALOGE("%s: error %d - %s", __func__, ret, pcm_get_error(out->pcm));
         out_standby(&out->stream.common);
-        usleep(bytes * 1000000 / audio_stream_frame_size(&out->stream.common) /
+        usleep(bytes * 1000000 / audio_stream_out_frame_size(stream) /
                out_get_sample_rate(&out->stream.common));
     }
     return bytes;
@@ -1581,7 +1582,8 @@ static size_t in_get_buffer_size(const struct audio_stream *stream)
 {
     struct stream_in *in = (struct stream_in *)stream;
 
-    return in->config.period_size * audio_stream_frame_size(stream);
+    return in->config.period_size *
+                audio_stream_in_frame_size((const struct audio_stream_in *)stream);
 }
 
 static uint32_t in_get_channels(const struct audio_stream *stream)
@@ -1719,7 +1721,7 @@ exit:
     if (ret != 0) {
         in_standby(&in->stream.common);
         ALOGV("%s: read failed - sleeping for buffer duration", __func__);
-        usleep(bytes * 1000000 / audio_stream_frame_size(&in->stream.common) /
+        usleep(bytes * 1000000 / audio_stream_in_frame_size(stream) /
                in_get_sample_rate(&in->stream.common));
     }
     return bytes;
@@ -2217,7 +2219,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->config.channels = channel_count;
     in->config.rate = config->sample_rate;
 
-    frame_size = audio_stream_frame_size((struct audio_stream *)in);
+    frame_size = audio_stream_in_frame_size(&in->stream);
     buffer_size = get_input_buffer_size(config->sample_rate,
                                         config->format,
                                         channel_count);
