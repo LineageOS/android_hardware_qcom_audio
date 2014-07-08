@@ -185,6 +185,7 @@ void audio_extn_dolby_set_endpoint(struct audio_device *adev);
 #ifndef DS1_DOLBY_DDP_ENABLED
 #define AUDIO_FORMAT_AC3        0x0a000000UL
 #define AUDIO_FORMAT_EAC3       0x12000000UL
+#define AUDIO_FORMAT_E_AC3_JOC  0x19000000UL
 #define audio_extn_ddp_set_parameters(adev, parms)       (0)
 #define audio_extn_is_dolby_format(format)               (0)
 #define audio_extn_dolby_get_snd_codec_id(format)        (0)

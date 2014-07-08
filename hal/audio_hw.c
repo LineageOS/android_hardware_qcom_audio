@@ -155,6 +155,7 @@ static const struct string_to_enum out_channels_name_to_enum_table[] = {
 static const struct string_to_enum out_formats_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_AC3),
     STRING_TO_ENUM(AUDIO_FORMAT_EAC3),
+    STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
 };
 
 static struct audio_device *adev = NULL;
@@ -1074,7 +1075,6 @@ static int check_and_set_hdmi_channels(struct audio_device *adev,
     }
 
     /*TODO: CHECK for passthrough don't set channel map for passthrough*/
-
     platform_set_hdmi_channels(adev->platform, channels);
     adev->cur_hdmi_channels = channels;
 
@@ -1183,6 +1183,10 @@ int start_output_stream(struct stream_out *out)
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
         if (is_offload_usecase(out->usecase)) {
             if (audio_extn_dolby_is_passthrough_stream(out->flags)) {
+                ret = audio_extn_dolby_set_dap_bypass(adev, true);
+                if(ret != 0) {
+                    goto error_open;
+                }
                 audio_extn_dolby_update_passt_stream_configuration(adev, out);
             }
         }
@@ -1193,9 +1197,13 @@ int start_output_stream(struct stream_out *out)
                    __func__, sink_channels);
             check_and_set_hdmi_channels(adev, sink_channels);
         } else {
-            if (is_offload_usecase(out->usecase))
-                check_and_set_hdmi_channels(adev, out->compr_config.codec->ch_in);
-            else
+            if (is_offload_usecase(out->usecase)) {
+                unsigned int ch_count =  out->compr_config.codec->ch_in;
+                if (audio_extn_dolby_is_passthrough_stream(out->flags))
+                    /* backend channel config for passthrough stream is stereo */
+                    ch_count = 2;
+                check_and_set_hdmi_channels(adev, ch_count);
+            } else
                 check_and_set_hdmi_channels(adev, out->config.channels);
         }
         audio_extn_dolby_set_hdmi_format_and_samplerate(adev, out);
@@ -2237,10 +2245,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         if ((out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
             ((audio_extn_dolby_is_passthrough_stream(out->flags)))) {
             ALOGV("read and update_pass through formats");
-            ret = audio_extn_dolby_set_dap_bypass(adev, true);
-            if(ret != 0) {
-                goto error_open;
-            }
             ret = audio_extn_dolby_update_passt_formats(adev, out);
             if(ret != 0) {
                 goto error_open;
@@ -2300,6 +2304,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->compr_config.codec->ch_in =
                     popcount(config->channel_mask);
         out->compr_config.codec->ch_out = out->compr_config.codec->ch_in;
+        /*TODO: Do we need to change it for passthrough */
         out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
 
         if (config->offload_info.format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD)

@@ -2322,11 +2322,18 @@ bool platform_is_edid_supported_format(void *platform, int format) {
     info = (edid_audio_info *)my_data->edid_info;
     if(ret == 0 && info != NULL) {
         for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
+                ALOGV("%s:platform_is_edid_supported_format true %x, %x",
+                       __func__, format, info->audio_blocks_array[i].format_id);
+#ifdef CONFIG_HDMI_PASSTHROUGH_CONVERT
+            if (info->audio_blocks_array[i].format_id == DOLBY_DIGITAL_PLUS)
+                continue;
+#endif
             if(info->audio_blocks_array[i].format_id ==
-                platform_map_to_edid_format(format))
+                platform_map_to_edid_format(format)) {
                 ALOGV("%s:platform_is_edid_supported_format true %x",
                        __func__, format);
                 return true;
+            }
         }
     }
     ALOGV("%s:platform_is_edid_supported_format false %x",
@@ -2348,7 +2355,7 @@ int platform_get_channels_from_edid_info(void *platform, int channels) {
     ret = platform_get_edid_info(platform);
     info = (edid_audio_info *)my_data->edid_info;
     if(ret == 0 && info != NULL) {
-        if (channels > 2){
+        if (channels > 2) {
 
             ALOGV("%s:able to get HDMI sink capabilities multi channel playback",
                    __func__);
@@ -2360,8 +2367,8 @@ int platform_get_channels_from_edid_info(void *platform, int channels) {
                 }
             }
             ALOGVV("%s:channel_count:%d", __func__, channel_count);
-            platform_set_channel_map(platform,channel_count,info->channel_map, -1);
-            platform_set_channel_allocation(platform,info->channel_allocation);
+            platform_set_channel_map(platform, channel_count, info->channel_map, -1);
+            platform_set_channel_allocation(platform, info->channel_allocation);
         } else {
             default_channelMap[0] = 1;
             default_channelMap[1] = 2;
@@ -2396,14 +2403,20 @@ int platform_set_hdmi_format_and_samplerate(struct stream_out *out)
     struct audio_device *adev = out->dev;
     const char *hdmi_format_ctrl = "HDMI RX Format";
     const char *hdmi_rate_ctrl = "HDMI_RX SampleRate";
-
+    int sample_rate = out->sample_rate;
+    /*TODO: Add rules and check if this needs to be done.*/
     if((is_offload_usecase(out->usecase)) &&
         (out->compr_config.codec->compr_passthr == PASSTHROUGH ||
         out->compr_config.codec->compr_passthr == PASSTHROUGH_CONVERT)) {
-        ALOGD("%s:HDMI compress format and samplerate %d", __func__,
-               out->sample_rate);
+        /* TODO: can we add mixer control for channels here avoid setting */
+        if ((out->format == AUDIO_FORMAT_EAC3 ||
+            out->format == AUDIO_FORMAT_E_AC3_JOC) &&
+            (out->compr_config.codec->compr_passthr == PASSTHROUGH))
+            sample_rate = out->sample_rate * 4;
+        ALOGD("%s:HDMI compress format and samplerate %d, sample_rate %d",
+               __func__, out->sample_rate, sample_rate);
         platform_set_mixer_control(out, hdmi_format_ctrl, "Compr");
-        switch (out->sample_rate) {
+        switch (sample_rate) {
             case 32000:
                 platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_32");
                 break;
@@ -2434,7 +2447,7 @@ int platform_set_hdmi_format_and_samplerate(struct stream_out *out)
         platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_48");
     }
 
-  /*
+    /*
      * Deroute all the playback streams routed to HDMI so that
      * the back end is deactivated. Note that backend will not
      * be deactivated if any one stream is connected to it.
