@@ -275,7 +275,7 @@ static int enable_audio_route_for_voice_usecases(struct audio_device *adev,
     return 0;
 }
 
-static int get_snd_card_state(struct audio_device *adev)
+int get_snd_card_state(struct audio_device *adev)
 {
     int snd_scard_state;
 
