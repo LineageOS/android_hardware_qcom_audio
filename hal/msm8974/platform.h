@@ -277,6 +277,8 @@ enum {
 
 #ifdef PLATFORM_APQ8084
 #define FM_RX_VOLUME "Quat MI2S FM RX Volume"
+#elif PLATFORM_MSM8994
+#define FM_RX_VOLUME "PRI MI2S LOOPBACK Volume"
 #else
 #define FM_RX_VOLUME "Internal FM RX Volume"
 #endif
