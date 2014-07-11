@@ -1087,3 +1087,11 @@ bool platform_check_backends_match(snd_device_t snd_device1 __unused,
 {
     return true;
 }
+
+bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct audio_usecase *usecase) {
+    return false;
+}
+
+uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info) {
+    return 0;
+}
