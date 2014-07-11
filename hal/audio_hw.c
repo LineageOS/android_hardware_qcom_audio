@@ -1065,17 +1065,25 @@ static int check_and_set_hdmi_channels(struct audio_device *adev,
     struct audio_usecase *usecase;
     int ret;
 
+    unsigned int supported_channels = platform_edid_get_max_channels(
+                                          adev->platform);
+    ALOGV("supported_channels %d, channels %d", supported_channels, channels);
     /* Check if change in HDMI channel config is allowed */
     if (!allow_hdmi_channel_config(adev))
         return 0;
 
+    if (channels > supported_channels)
+        channels = supported_channels;
+
     if (channels == adev->cur_hdmi_channels) {
-        ALOGD("%s: Requested channels are same as current channels(%d)", __func__, channels);
+        ALOGD("%s: Requested channels are same as current channels(%d)",
+               __func__, channels);
         return 0;
     }
 
     /*TODO: CHECK for passthrough don't set channel map for passthrough*/
     platform_set_hdmi_channels(adev->platform, channels);
+    platform_set_edid_channels_configuration(adev->platform, channels);
     adev->cur_hdmi_channels = channels;
 
     /*
