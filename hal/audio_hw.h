@@ -25,6 +25,7 @@
 #include <tinycompress/tinycompress.h>
 
 #include <audio_route/audio_route.h>
+#include "audio_defs.h"
 #include "voice.h"
 
 #define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
@@ -146,6 +147,7 @@ struct stream_out {
     audio_io_handle_t handle;
 
     int non_blocking;
+    bool use_small_bufs;
     int playback_started;
     int offload_state;
     pthread_cond_t offload_cond;
@@ -157,6 +159,9 @@ struct stream_out {
     void *offload_cookie;
     struct compr_gapless_mdata gapless_mdata;
     int send_new_metadata;
+    bool send_next_track_params;
+    bool is_compr_metadata_avail;
+    unsigned int bit_width;
 
     struct audio_device *dev;
 };
@@ -236,6 +241,8 @@ struct audio_device {
     bool enable_voicerx;
 
     int snd_card;
+    unsigned int cur_codec_backend_samplerate;
+    unsigned int cur_codec_backend_bit_width;
     void *platform;
     void *extspk;
 

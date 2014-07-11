@@ -25,6 +25,28 @@ void audio_extn_extspk_update(void* extn);
 void audio_extn_extspk_set_mode(void* extn, audio_mode_t mode);
 void audio_extn_extspk_set_voice_vol(void* extn, float vol);
 
+#ifndef PCM_OFFLOAD_ENABLED
+#define AUDIO_FORMAT_PCM_OFFLOAD 0x1A000000UL
+#define AUDIO_FORMAT_PCM_16_BIT_OFFLOAD (AUDIO_FORMAT_PCM_OFFLOAD | AUDIO_FORMAT_PCM_SUB_16_BIT)
+#define AUDIO_FORMAT_PCM_24_BIT_OFFLOAD (AUDIO_FORMAT_PCM_OFFLOAD | AUDIO_FORMAT_PCM_SUB_8_24_BIT)
+#define AUDIO_OFFLOAD_CODEC_FORMAT  "music_offload_codec_format"
+#define audio_is_offload_pcm(format) (0)
+#endif
+
+#ifndef FLAC_OFFLOAD_ENABLED
+#define AUDIO_FORMAT_FLAC 0x1B000000UL
+#endif
+
+#ifndef COMPRESS_METADATA_NEEDED
+#define audio_extn_parse_compress_metadata(out, parms) (0)
+#else
+int audio_extn_parse_compress_metadata(struct stream_out *out,
+                                       struct str_parms *parms);
+#endif
+
+#define AUDIO_OUTPUT_BIT_WIDTH ((config->offload_info.bit_width == 32) ? 24\
+                                   :config->offload_info.bit_width)
+
 #ifndef SPKR_PROT_ENABLED
 #define audio_extn_spkr_prot_init(adev)       (0)
 #define audio_extn_spkr_prot_start_processing(snd_device)    (-EINVAL)

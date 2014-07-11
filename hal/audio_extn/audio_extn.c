@@ -29,7 +29,50 @@
 #include "platform.h"
 #include "platform_api.h"
 
+#include "sound/compress_params.h"
 
+#ifndef COMPRESS_METADATA_NEEDED
+#define audio_extn_parse_compress_metadata(out, parms) (0)
+#else
+int audio_extn_parse_compress_metadata(struct stream_out *out,
+                                       struct str_parms *parms)
+{
+    int ret = 0;
+    char value[32];
+
+#ifdef FLAC_OFFLOAD_ENABLED
+    if (out->format == AUDIO_FORMAT_FLAC) {
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.min_blk_size = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.max_blk_size = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_FRAME_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.min_frame_size = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_FRAME_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.max_frame_size = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ALOGV("FLAC metadata: min_blk_size %d, max_blk_size %d min_frame_size %d max_frame_size %d",
+              out->compr_config.codec->options.flac_dec.min_blk_size,
+              out->compr_config.codec->options.flac_dec.max_blk_size,
+              out->compr_config.codec->options.flac_dec.min_frame_size,
+              out->compr_config.codec->options.flac_dec.max_frame_size);
+    }
+#endif
+
+    return ret;
+}
+#endif
 
 #ifdef KPI_OPTIMIZE_ENABLED
 typedef int (*perf_lock_acquire_t)(int, int, int*, int);
