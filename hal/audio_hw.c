@@ -1232,7 +1232,7 @@ int start_output_stream(struct stream_out *out)
             goto error_open;
         }
         if (out->offload_callback)
-            compress_nonblock(out->compr, out->non_blocking);
+                compress_nonblock(out->compr, out->non_blocking);
 
 #ifdef DS1_DOLBY_DDP_ENABLED
         if (audio_extn_is_dolby_format(out->format))
@@ -2300,6 +2300,12 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
+
+        if (config->offload_info.use_small_bufs) {
+            out->non_blocking = 0;
+            ALOGI("Keep write blocking for small buff: non_blockling %d",
+                  out->non_blocking);
+        }
 
         out->send_new_metadata = 1;
         out->offload_state = OFFLOAD_STATE_IDLE;

@@ -2044,7 +2044,6 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
         bits_per_sample = 32;
     }
 
-    char value[PROPERTY_VALUE_MAX] = {0};
     if((property_get("audio.offload.pcm.buffer.size", value, "")) &&
             atoi(value)) {
         fragment_size =  atoi(value) * 1024;
