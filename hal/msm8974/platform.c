@@ -89,6 +89,12 @@
 #define AUDIO_PARAMETER_KEY_BTSCO         "bt_samplerate"
 #define AUDIO_PARAMETER_KEY_SLOWTALK      "st_enable"
 #define AUDIO_PARAMETER_KEY_VOLUME_BOOST  "volume_boost"
+/* Query external audio device connection status */
+#define AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE "ext_audio_device"
+
+#define EVENT_EXTERNAL_SPK_1 "qc_ext_spk_1"
+#define EVENT_EXTERNAL_SPK_2 "qc_ext_spk_2"
+#define EVENT_EXTERNAL_MIC   "qc_ext_mic"
 
 enum {
 	VOICE_FEATURE_SET_DEFAULT,
@@ -115,6 +121,9 @@ struct platform_data {
     bool fluence_in_voice_call;
     bool fluence_in_voice_rec;
     bool fluence_in_audio_rec;
+    bool external_spk_1;
+    bool external_spk_2;
+    bool external_mic;
     int  fluence_type;
     int  fluence_mode;
     char fluence_cap[PROPERTY_VALUE_MAX];
@@ -203,9 +212,13 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     /* Playback sound devices */
     [SND_DEVICE_OUT_HANDSET] = "handset",
     [SND_DEVICE_OUT_SPEAKER] = "speaker",
+    [SND_DEVICE_OUT_SPEAKER_EXTERNAL_1] = "speaker-ext-1",
+    [SND_DEVICE_OUT_SPEAKER_EXTERNAL_2] = "speaker-ext-2",
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = "speaker-reverse",
     [SND_DEVICE_OUT_HEADPHONES] = "headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = "speaker-and-headphones",
+    [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1] = "speaker-and-headphones-ext-1",
+    [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2] = "speaker-and-headphones-ext-2",
     [SND_DEVICE_OUT_VOICE_HANDSET] = "voice-handset",
     [SND_DEVICE_OUT_VOICE_SPEAKER] = "voice-speaker",
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = "voice-headphones",
@@ -230,6 +243,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
+    [SND_DEVICE_IN_HANDSET_MIC_EXTERNAL] = "handset-mic-ext",
     [SND_DEVICE_IN_HANDSET_MIC_AEC] = "handset-mic",
     [SND_DEVICE_IN_HANDSET_MIC_NS] = "handset-mic",
     [SND_DEVICE_IN_HANDSET_MIC_AEC_NS] = "handset-mic",
@@ -282,9 +296,13 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_NONE] = -1,
     [SND_DEVICE_OUT_HANDSET] = 7,
     [SND_DEVICE_OUT_SPEAKER] = 14,
+    [SND_DEVICE_OUT_SPEAKER_EXTERNAL_1] = 14,
+    [SND_DEVICE_OUT_SPEAKER_EXTERNAL_2] = 14,
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = 14,
     [SND_DEVICE_OUT_HEADPHONES] = 10,
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = 10,
+    [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1] = 10,
+    [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2] = 10,
     [SND_DEVICE_OUT_VOICE_HANDSET] = 7,
     [SND_DEVICE_OUT_VOICE_SPEAKER] = 14,
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
@@ -308,6 +326,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = 101,
 
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
+    [SND_DEVICE_IN_HANDSET_MIC_EXTERNAL] = 4,
     [SND_DEVICE_IN_HANDSET_MIC_AEC] = 106,
     [SND_DEVICE_IN_HANDSET_MIC_NS] = 107,
     [SND_DEVICE_IN_HANDSET_MIC_AEC_NS] = 108,
@@ -366,9 +385,13 @@ struct snd_device_index {
 struct snd_device_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_EXTERNAL_1)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_EXTERNAL_2)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_REVERSE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEADPHONES)},
@@ -391,6 +414,7 @@ struct snd_device_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_ANC_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_EXTERNAL)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_AEC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_NS)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_AEC_NS)},
@@ -696,6 +720,9 @@ void *platform_init(struct audio_device *adev)
     my_data->fluence_in_voice_call = false;
     my_data->fluence_in_voice_rec = false;
     my_data->fluence_in_audio_rec = false;
+    my_data->external_spk_1 = false;
+    my_data->external_spk_2 = false;
+    my_data->external_mic = false;
     my_data->fluence_type = FLUENCE_NONE;
     my_data->fluence_mode = FLUENCE_ENDFIRE;
 
@@ -1301,11 +1328,20 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
     if (popcount(devices) == 2) {
         if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADPHONE |
                         AUDIO_DEVICE_OUT_SPEAKER)) {
-            snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
+            if (my_data->external_spk_1)
+                snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1;
+            else if (my_data->external_spk_2)
+                snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2;
+            else
+                snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
         } else if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADSET |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
             if (audio_extn_get_anc_enabled())
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET;
+            else if (my_data->external_spk_1)
+                snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1;
+            else if (my_data->external_spk_2)
+                snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2;
             else
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
         } else if (devices == (AUDIO_DEVICE_OUT_AUX_DIGITAL |
@@ -1391,7 +1427,11 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         else
             snd_device = SND_DEVICE_OUT_HEADPHONES;
     } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
-        if (adev->speaker_lr_swap)
+        if (my_data->external_spk_1)
+            snd_device = SND_DEVICE_OUT_SPEAKER_EXTERNAL_1;
+        else if (my_data->external_spk_2)
+            snd_device = SND_DEVICE_OUT_SPEAKER_EXTERNAL_2;
+        else if (adev->speaker_lr_swap)
             snd_device = SND_DEVICE_OUT_SPEAKER_REVERSE;
         else
             snd_device = SND_DEVICE_OUT_SPEAKER;
@@ -1442,6 +1482,22 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x)",
           __func__, out_device, in_device);
+    if (my_data->external_mic) {
+        if (((out_device != AUDIO_DEVICE_NONE) && (mode == AUDIO_MODE_IN_CALL)) ||
+            voice_extn_compress_voip_is_active(adev) || audio_extn_hfp_is_active(adev)) {
+            if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
+               out_device & AUDIO_DEVICE_OUT_EARPIECE ||
+               out_device & AUDIO_DEVICE_OUT_SPEAKER )
+                snd_device = SND_DEVICE_IN_HANDSET_MIC_EXTERNAL;
+        } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
+                   in_device & AUDIO_DEVICE_IN_BACK_MIC) {
+            snd_device = SND_DEVICE_IN_HANDSET_MIC_EXTERNAL;
+        }
+    }
+
+    if(snd_device != AUDIO_DEVICE_NONE)
+        goto exit;
+
     if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) ||
         voice_extn_compress_voip_is_active(adev) || audio_extn_hfp_is_active(adev))) {
         if ((adev->voice.tty_mode != TTY_MODE_OFF) &&
@@ -1803,6 +1859,35 @@ static int platform_set_slowtalk(struct platform_data *my_data, bool state)
     return ret;
 }
 
+
+static int update_external_device_status(struct platform_data *my_data,
+                                 char* event_name, bool status)
+{
+    int ret = 0;
+    struct audio_usecase *usecase;
+    struct listnode *node;
+
+    ALOGD("Recieved  external event switch %s", event_name);
+
+    if (!strcmp(event_name, EVENT_EXTERNAL_SPK_1))
+        my_data->external_spk_1 = status;
+    else if (!strcmp(event_name, EVENT_EXTERNAL_SPK_2))
+        my_data->external_spk_2 = status;
+    else if (!strcmp(event_name, EVENT_EXTERNAL_MIC))
+        my_data->external_mic = status;
+    else {
+        ALOGE("The audio event type is not found");
+        return -EINVAL;
+    }
+
+    list_for_each(node, &my_data->adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        select_devices(my_data->adev, usecase->id);
+    }
+
+    return ret;
+}
+
 int platform_set_parameters(void *platform, struct str_parms *parms)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -1849,6 +1934,23 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
                 my_data->voice_feature_set = 0;
             }
         }
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE,
+                            value, sizeof(value));
+    if (err >= 0) {
+        char *event_name, *status_str;
+        bool status = false;
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE);
+        event_name = strtok_r(value, ",", &status_str);
+        ALOGV("%s: recieved update of external audio device %s %s",
+                         __func__,
+                         event_name, status_str);
+        if (!strncmp(status_str, "ON", sizeof(status_str)))
+            status = true;
+        else if (!strncmp(status_str, "OFF", sizeof(status_str)))
+            status = false;
+        update_external_device_status(my_data, event_name, status);
     }
 
     ALOGV("%s: exit with code(%d)", __func__, ret);
