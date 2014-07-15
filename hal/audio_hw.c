@@ -1029,7 +1029,8 @@ static int check_input_parameters(uint32_t sample_rate,
 
 static size_t get_input_buffer_size(uint32_t sample_rate,
                                     audio_format_t format,
-                                    int channel_count)
+                                    int channel_count,
+                                    bool is_low_latency)
 {
     size_t size = 0;
 
@@ -1037,7 +1038,7 @@ static size_t get_input_buffer_size(uint32_t sample_rate,
         return 0;
 
     size = (sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC) / 1000;
-    if (sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE)
+    if (is_low_latency)
         size = configured_low_latency_capture_period_size;
     /* ToDo: should use frame_size computed based on the format and
        channel_count here. */
@@ -2164,14 +2165,16 @@ static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev __unu
 {
     int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
 
-    return get_input_buffer_size(config->sample_rate, config->format, channel_count);
+    return get_input_buffer_size(config->sample_rate, config->format, channel_count,
+            false /* is_low_latency: since we don't know, be conservative */);
 }
 
 static int adev_open_input_stream(struct audio_hw_device *dev,
                                   audio_io_handle_t handle __unused,
                                   audio_devices_t devices,
                                   struct audio_config *config,
-                                  struct audio_stream_in **stream_in)
+                                  struct audio_stream_in **stream_in,
+                                  audio_input_flags_t flags)
 {
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_in *in;
@@ -2211,10 +2214,14 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
     /* Update config params with the requested sample rate and channels */
     in->usecase = USECASE_AUDIO_RECORD;
+    bool is_low_latency = false;
+    if (config->sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE &&
+            (flags & AUDIO_INPUT_FLAG_FAST) != 0) {
+        is_low_latency = true;
 #if LOW_LATENCY_CAPTURE_USE_CASE
-    if (config->sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE)
         in->usecase = USECASE_AUDIO_RECORD_LOW_LATENCY;
 #endif
+    }
     in->config = pcm_config_audio_capture;
     in->config.channels = channel_count;
     in->config.rate = config->sample_rate;
@@ -2222,7 +2229,8 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     frame_size = audio_stream_in_frame_size(&in->stream);
     buffer_size = get_input_buffer_size(config->sample_rate,
                                         config->format,
-                                        channel_count);
+                                        channel_count,
+                                        is_low_latency);
     in->config.period_size = buffer_size / frame_size;
 
     *stream_in = &in->stream;
