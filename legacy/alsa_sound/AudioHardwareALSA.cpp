@@ -915,12 +915,12 @@ String8 AudioHardwareALSA::getParameters(const String8& keys)
     if (param.getInt(key, device) == NO_ERROR) {
         param.addInt(key, mCurDevice);
     }
-
+#ifdef QCOM_PROXY_DEVICE_ENABLED
     key = String8(AudioParameter::keyCanOpenProxy);
     if(param.get(key, value) == NO_ERROR) {
         param.addInt(key, mCanOpenProxy);
     }
-
+#endif
     key = String8(ECHO_SUPRESSION);
     if (param.get(key, value) == NO_ERROR) {
         value = String8("yes");
@@ -2616,6 +2616,7 @@ status_t AudioHardwareALSA::startPlaybackOnExtOut_l(uint32_t activeUsecase) {
          if(err) {
             ALOGE("Proxy Property Set Failedd");
         }
+#ifdef QCOM_USBAUDIO_ENABLED
         int ProxyOpenRetryCount=PROXY_OPEN_RETRY_COUNT;
         while(ProxyOpenRetryCount){
             err = mALSADevice->openProxyDevice();
@@ -2630,6 +2631,7 @@ status_t AudioHardwareALSA::startPlaybackOnExtOut_l(uint32_t activeUsecase) {
         if(err) {
             ALOGE("openProxyDevice failed = %d", err);
         }
+#endif
 
         mKillExtOutThread = false;
         err = pthread_create(&mExtOutThread, (const pthread_attr_t *) NULL,
