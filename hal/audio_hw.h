@@ -26,6 +26,7 @@
 #include <tinycompress/tinycompress.h>
 
 #include <audio_route/audio_route.h>
+#include "audio_defs.h"
 #include "voice.h"
 
 #define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
