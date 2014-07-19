@@ -691,9 +691,9 @@ int audio_extn_ds2_enable(struct audio_device *adev) {
     return 0;
 }
 
-int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, bool state) {
+int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, int state) {
 
-    ALOGV("%s:", __func__);
+    ALOGV("%s: state %d", __func__, state);
     if (ds2extnmod.dap_hal_set_hw_info) {
         ds2extnmod.dap_hal_set_hw_info(DAP_BYPASS, (void*)(&state));
         ALOGV("%s: Dolby set bypas :0x%x", __func__, state);
