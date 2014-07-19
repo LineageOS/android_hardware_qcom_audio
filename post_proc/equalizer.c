@@ -52,7 +52,7 @@ static const char *equalizer_preset_names[] = {
                                         "Jazz",
                                         "Pop",
                                         "Rock"
-					};
+};
 
 static const uint32_t equalizer_band_freq_range[NUM_EQ_BANDS][2] = {
                                        {30000, 120000},
@@ -61,7 +61,7 @@ static const uint32_t equalizer_band_freq_range[NUM_EQ_BANDS][2] = {
                                        {1800001, 7000000},
                                        {7000001, 20000000}};
 
-static const uint16_t equalizer_band_presets_level[] = {
+static const int16_t equalizer_band_presets_level[] = {
                                         3, 0, 0, 0, 3,      /* Normal Preset */
                                         5, 3, -2, 4, 4,     /* Classical Preset */
                                         6, 0, 2, 4, 1,      /* Dance Preset */
