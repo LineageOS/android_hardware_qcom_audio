@@ -392,8 +392,8 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
 {
     char mixer_ctl_name[MAX_LENGTH_MIXER_CONTROL_IN_INT];
     int app_type_cfg[MAX_LENGTH_MIXER_CONTROL_IN_INT], len = 0, rc;
-    struct stream_out *out = usecase->stream.out;
-    struct audio_device *adev = out->dev;
+    struct stream_out *out;
+    struct audio_device *adev;
     struct mixer_ctl *ctl;
     int pcm_device_id, acdb_dev_id, snd_device = usecase->out_snd_device;
 
@@ -412,6 +412,8 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
         rc = 0;
         goto exit_send_app_type_cfg;
     }
+    out = usecase->stream.out;
+    adev = out->dev;
 
     snd_device = usecase->out_snd_device;
 
