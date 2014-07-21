@@ -160,6 +160,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DEV_ARBI)),true)
     LOCAL_SRC_FILES += audio_extn/dev_arbi.c
 endif
 
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_FLAC_OFFLOAD)),false)
+    LOCAL_CFLAGS += -DFLAC_OFFLOAD_ENABLED
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
