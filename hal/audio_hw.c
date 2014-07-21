@@ -255,7 +255,9 @@ static bool is_supported_format(audio_format_t format)
         format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD ||
         format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD ||
 #endif
+#ifdef FLAC_OFFLOAD_ENABLED
         format == AUDIO_FORMAT_FLAC ||
+#endif
         format == AUDIO_FORMAT_AAC_LC ||
         format == AUDIO_FORMAT_AAC_HE_V1 ||
         format == AUDIO_FORMAT_AAC_HE_V2 ){
@@ -280,9 +282,11 @@ static int get_snd_codec_id(audio_format_t format)
         id = SND_AUDIOCODEC_PCM;
         break;
 #endif
+#ifdef FLAC_OFFLOAD_ENABLED
     case AUDIO_FORMAT_FLAC:
         id = SND_AUDIOCODEC_FLAC;
         break;
+#endif
     default:
         ALOGE("%s: Unsupported audio format :%x", __func__, format);
     }
@@ -1568,6 +1572,7 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
     }
 #endif
 
+#ifdef FLAC_OFFLOAD_ENABLED
     if (out->format == AUDIO_FORMAT_FLAC) {
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE, value, sizeof(value));
         if (ret >= 0) {
@@ -1590,6 +1595,7 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
             out->send_new_metadata = 1;
         }
     }
+#endif
 
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_SAMPLE_RATE, value, sizeof(value));
     if(ret >= 0)
@@ -2565,7 +2571,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->compr_config.codec->format = SNDRV_PCM_FORMAT_S16_LE;
         }
 
+#ifdef FLAC_OFFLOAD_ENABLED
         out->compr_config.codec->options.flac_dec.sample_size = config->offload_info.bit_width;
+#endif
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
