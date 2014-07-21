@@ -606,6 +606,7 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
     char value[32];
 
     if (out->format == AUDIO_FORMAT_FLAC) {
+#ifdef FLAC_OFFLOAD_ENABLED
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE, value, sizeof(value));
         if (ret >= 0) {
             out->compr_config.codec->options.flac_dec.min_blk_size = atoi(value);
@@ -631,6 +632,7 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
               out->compr_config.codec->options.flac_dec.max_blk_size,
               out->compr_config.codec->options.flac_dec.min_frame_size,
               out->compr_config.codec->options.flac_dec.max_frame_size);
+#endif
     }
 
     else if (out->format == AUDIO_FORMAT_ALAC) {
