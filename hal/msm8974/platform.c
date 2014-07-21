@@ -2137,7 +2137,7 @@ int platform_set_codec_backend_cfg(struct audio_device* adev,
 
     if ((adev->cur_codec_backend_bit_width == CODEC_BACKEND_DEFAULT_BIT_WIDTH &&
              adev->cur_codec_backend_samplerate != CODEC_BACKEND_DEFAULT_SAMPLE_RATE) ||
-        (adev->cur_codec_backend_samplerate < sample_rate)) {
+        (adev->cur_codec_backend_samplerate != sample_rate)) {
 
             char *rate_str = NULL;
             const char * mixer_ctl_name = "SLIM_0_RX SampleRate";
@@ -2232,10 +2232,10 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
                 if (out != NULL ) {
                     ALOGV("Offload playback running bw %d sr %d",
                               out->bit_width, out->sample_rate);
-                    if (*new_bit_width < out->bit_width) {
+                    if (*new_bit_width != out->bit_width) {
                         *new_bit_width = out->bit_width;
                     }
-                    if (*new_sample_rate < out->sample_rate) {
+                    if (*new_sample_rate != out->sample_rate) {
                         *new_sample_rate = out->sample_rate;
                     }
                 }

@@ -1948,7 +1948,10 @@ static int out_get_render_position(const struct audio_stream_out *stream,
             set_snd_card_state(adev,SND_CARD_STATE_OFFLINE);
             return -EINVAL;
         } else if(ret < 0) {
-            ALOGE(" ERROR: Unable to get time stamp from compress driver");
+            if (out->compr == NULL) {
+                return 0;
+            }
+            ALOGE(" ERROR: Unable to get time stamp from compress driver ret=%d", ret);
             return -EINVAL;
         } else {
             return 0;
