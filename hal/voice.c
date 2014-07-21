@@ -385,12 +385,20 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
     ALOGV_IF(kv_pairs != NULL, "%s: enter: %s", __func__, kv_pairs);
 
     ret = voice_extn_set_parameters(adev, parms);
-    if (ret != 0)
-        goto done;
+    if (ret != 0) {
+        if (ret == -ENOSYS)
+            ret = 0;
+        else
+            goto done;
+    }
 
     ret = voice_extn_compress_voip_set_parameters(adev, parms);
-    if (ret != 0)
-        goto done;
+    if (ret != 0) {
+        if (ret == -ENOSYS)
+            ret = 0;
+        else
+            goto done;
+    }
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_TTY_MODE, value, sizeof(value));
     if (err >= 0) {
@@ -425,7 +433,7 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
             platform_start_incall_music_usecase(adev->platform);
         else
             platform_stop_incall_music_usecase(adev->platform);
-     }
+    }
 
 done:
     ALOGV("%s: exit with code(%d)", __func__, ret);
