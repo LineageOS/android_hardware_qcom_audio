@@ -179,6 +179,11 @@ ifneq ($(strip $(DOLBY_DDP)),true)
         LOCAL_SRC_FILES += audio_extn/dolby.c
     endif
 endif
+
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_FLAC_OFFLOAD)),false)
+    LOCAL_CFLAGS += -DFLAC_OFFLOAD_ENABLED
+endif
+
 endif
 
 LOCAL_SHARED_LIBRARIES := \
