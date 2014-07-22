@@ -1030,3 +1030,8 @@ int platform_set_hdmi_format_and_samplerate(struct stream_out *out __unused)
 {
     return 0;
 }
+int platform_set_device_params(struct stream_out *out __unused,
+                                  int param __unused, int value __unused)
+{
+    return 0;
+}

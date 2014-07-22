@@ -87,4 +87,5 @@ void platform_reset_edid_info(void *platform);
 unsigned char platform_map_to_edid_format(int format);
 bool platform_is_edid_supported_format(void *platform, int format);
 int platform_set_hdmi_format_and_samplerate(struct stream_out *out);
+int platform_set_device_params(struct stream_out *out, int param, int value);
 #endif // AUDIO_PLATFORM_API_H

@@ -494,6 +494,14 @@ int audio_extn_dolby_set_hdmi_format_and_samplerate(struct audio_device *adev,
 int audio_extn_dolby_get_passt_buffer_size(audio_offload_info_t* info) {
     return platform_get_compress_passthrough_buffer_size(info);
 }
+
+int audio_extn_dolby_set_passt_volume(struct stream_out *out,  int mute) {
+    return platform_set_device_params(out, DEVICE_PARAM_MUTE_ID, mute);
+}
+
+int audio_extn_dolby_set_passt_latency(struct stream_out *out, int latency) {
+    return platform_set_device_params(out, DEVICE_PARAM_LATENCY_ID, latency);
+}
 #endif /* HDMI_PASSTHROUGH_ENABLED */
 
 #ifdef DS1_DOLBY_DAP_ENABLED
