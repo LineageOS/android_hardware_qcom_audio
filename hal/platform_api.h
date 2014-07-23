@@ -19,6 +19,7 @@
 
 #ifndef AUDIO_PLATFORM_API_H
 #define AUDIO_PLATFORM_API_H
+#include <sound/voice_params.h>
 
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
@@ -60,6 +61,8 @@ int platform_set_incall_recording_session_id(void *platform, uint32_t session_id
 int platform_stop_incall_recording_usecase(void *platform);
 int platform_start_incall_music_usecase(void *platform);
 int platform_stop_incall_music_usecase(void *platform);
+int platform_update_lch(void *platform, struct voice_session *session,
+                        enum voice_lch_mode lch_mode);
 /* returns the latency for a usecase in Us */
 int64_t platform_render_latency(audio_usecase_t usecase);
 int platform_update_usecase_from_source(int source, audio_usecase_t usecase);
@@ -72,5 +75,16 @@ int platform_info_init(const char *filename);
 struct audio_offload_info_t;
 uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info);
 uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info);
+uint32_t platform_get_compress_passthrough_buffer_size(audio_offload_info_t* info);
 
+int platform_set_channel_allocation(void *platform, int channelAlloc);
+int platform_get_edid_info(void *platform);
+int platform_set_channel_map(void *platform, int ch_count, char *ch_map,
+                             int snd_id);
+int platform_set_default_channel_map(void *platform, int channels, int snd_id);
+int platform_get_channels_from_edid_info(void *platform, int channels);
+void platform_reset_edid_info(void *platform);
+unsigned char platform_map_to_edid_format(int format);
+bool platform_is_edid_supported_format(void *platform, int format);
+int platform_set_hdmi_format_and_samplerate(struct stream_out *out);
 #endif // AUDIO_PLATFORM_API_H

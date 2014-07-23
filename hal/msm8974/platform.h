@@ -19,6 +19,7 @@
 
 #ifndef QCOM_AUDIO_PLATFORM_H
 #define QCOM_AUDIO_PLATFORM_H
+#include <sound/voice_params.h>
 
 enum {
     FLUENCE_NONE,
@@ -180,14 +181,18 @@ enum {
 #define HFP_PCM_RX 5
 
 #define INCALL_MUSIC_UPLINK_PCM_DEVICE 1
-#define INCALL_MUSIC_UPLINK2_PCM_DEVICE 16
 #define SPKR_PROT_CALIB_RX_PCM_DEVICE 5
 #ifdef PLATFORM_APQ8084
-#define SPKR_PROT_CALIB_TX_PCM_DEVICE 33
+#define INCALL_MUSIC_UPLINK2_PCM_DEVICE 34
+#define SPKR_PROT_CALIB_TX_PCM_DEVICE 35
 #else
 #define SPKR_PROT_CALIB_TX_PCM_DEVICE 25
+#define INCALL_MUSIC_UPLINK2_PCM_DEVICE 16
 #endif
 #define PLAYBACK_OFFLOAD_DEVICE 9
+
+#define PLAYBACK_OFFLOAD_DEVICE2 17
+
 #define COMPRESS_VOIP_CALL_PCM_DEVICE 3
 
 #ifdef PLATFORM_MSM8610
@@ -253,6 +258,7 @@ typedef int (*start_voice_t)(uint32_t);
 typedef int (*stop_voice_t)(uint32_t);
 typedef int (*start_playback_t)(uint32_t);
 typedef int (*stop_playback_t)(uint32_t);
+typedef int (*set_lch_t)(uint32_t, enum voice_lch_mode);
 typedef int (*start_record_t)(uint32_t, int);
 typedef int (*stop_record_t)(uint32_t);
 typedef int (*get_sample_rate_t)(uint32_t *);
@@ -271,6 +277,7 @@ struct csd_data {
     stop_voice_t stop_voice;
     start_playback_t start_playback;
     stop_playback_t stop_playback;
+    set_lch_t set_lch;
     start_record_t start_record;
     stop_record_t stop_record;
     get_sample_rate_t get_sample_rate;
@@ -307,6 +314,18 @@ static int msm_device_to_be_id [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
 };
 static int arr_len = sizeof(msm_device_to_be_id)/ (sizeof(int) * NO_COLS);
+#else
+#define NO_COLS 2
+static int msm_device_to_be_id [][NO_COLS] = {
+    {AUDIO_DEVICE_NONE, -1},
+};
+static int arr_len = sizeof(msm_device_to_be_id)/ (sizeof(int) * NO_COLS);
 #endif
+
+enum {
+    LEGACY_PCM = 0,
+    PASSTHROUGH,
+    PASSTHROUGH_CONVERT
+};
 
 #endif // QCOM_AUDIO_PLATFORM_H

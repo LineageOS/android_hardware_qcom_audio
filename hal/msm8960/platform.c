@@ -28,6 +28,7 @@
 #include <audio_hw.h>
 #include <platform_api.h>
 #include "platform.h"
+#include "audio_extn.h"
 
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define LIB_CSD_CLIENT "libcsd-client.so"
@@ -472,7 +473,7 @@ int platform_switch_voice_call_device_post(void *platform,
     return ret;
 }
 
-int platform_start_voice_call(void *platform)
+int platform_start_voice_call(void *platform, uint32_t vsid)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int ret = 0;
@@ -492,7 +493,7 @@ int platform_start_voice_call(void *platform)
     return ret;
 }
 
-int platform_stop_voice_call(void *platform)
+int platform_stop_voice_call(void *platform, uint32_t vsid)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int ret = 0;
@@ -557,7 +558,7 @@ int platform_set_mic_mute(void *platform, bool state)
 
 int platform_set_device_mute(void *platform, bool state, char *dir)
 {
-    LOGE("%s: Not implemented", __func__);
+    ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
 }
 
@@ -578,11 +579,11 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
     if (mode == AUDIO_MODE_IN_CALL) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
-            if (adev->tty_mode == TTY_MODE_FULL)
+            if (adev->voice.tty_mode == TTY_MODE_FULL)
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES;
-            else if (adev->tty_mode == TTY_MODE_VCO)
+            else if (adev->voice.tty_mode == TTY_MODE_VCO)
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES;
-            else if (adev->tty_mode == TTY_MODE_HCO)
+            else if (adev->voice.tty_mode == TTY_MODE_HCO)
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET;
             else
                 snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
@@ -666,10 +667,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             ALOGE("%s: No output device set for voice call", __func__);
             goto exit;
         }
-        if (adev->tty_mode != TTY_MODE_OFF) {
+        if (adev->voice.tty_mode != TTY_MODE_OFF) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                 out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
-                switch (adev->tty_mode) {
+                switch (adev->voice.tty_mode) {
                 case TTY_MODE_FULL:
                     snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC;
                     break;
@@ -680,7 +681,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                     snd_device = SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC;
                     break;
                 default:
-                    ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->tty_mode);
+                    ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->voice.tty_mode);
                 }
                 goto exit;
             }
@@ -880,16 +881,24 @@ int platform_edid_get_max_channels(void *platform)
 void platform_get_parameters(void *platform, struct str_parms *query,
                              struct str_parms *reply)
 {
-    LOGE("%s: Not implemented", __func__);
+    ALOGE("%s: Not implemented", __func__);
 }
 
 int platform_set_parameters(void *platform, struct str_parms *parms)
 {
-    LOGE("%s: Not implemented", __func__);
+    ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
 }
 
 int platform_set_incall_recoding_session_id(void *platform, uint32_t session_id)
+{
+    ALOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
+int platform_update_lch(void *platform __unused,
+                        struct voice_session *session __unused,
+                        enum voice_lch_mode lch_mode __unused)
 {
     LOGE("%s: Not implemented", __func__);
     return -ENOSYS;
@@ -914,7 +923,110 @@ int platform_update_usecase_from_source(int source, int usecase)
     return usecase;
 }
 
-bool platform_listen_update_status(snd_device_t snd_device)
+bool platform_listen_update_status(snd_device_t snd_device __unused)
 {
      return false;
+}
+
+int platform_switch_voice_call_enable_device_config(void *platform __unused,
+                                        snd_device_t out_snd_device __unused,
+                                        snd_device_t in_snd_device __unused)
+{
+    return 0;
+}
+int platform_set_channel_allocation(void *platform __unused,
+                                    int channelAlloc __unused)
+{
+    return 0;
+}
+
+int platform_set_fluence_type(void *platform __unused,
+                              char *value __unused)
+{
+    return 0;
+}
+
+int platform_get_fluence_type(void *platform __unused,
+                              char *value __unused,
+                              uint32_t len __unused)
+{
+    return 0;
+}
+
+int platform_switch_voice_call_usecase_route_post(void *platform __unused,
+                                          snd_device_t out_snd_device __unused,
+                                          snd_device_t in_snd_device __unused)
+{
+    return 0;
+}
+
+int platform_set_incall_recording_session_id(void *platform __unused,
+                                             uint32_t session_id __unused,
+                                             int rec_mode __unused)
+{
+    return 0;
+}
+int platform_stop_incall_recording_usecase(void *platform __unused)
+{
+    return 0;
+}
+
+uint32_t platform_get_compress_offload_buffer_size(
+        audio_offload_info_t* info __unused)
+{
+    return 0;
+}
+
+int platform_get_sample_rate(void *platform __unused, uint32_t *rate __unused)
+{
+    return 0;
+}
+
+uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info __unused)
+{
+    return 0;
+}
+
+int platform_get_edid_info(void *platform __unused)
+{
+   return 0;
+}
+
+int platform_set_channel_map(void *platform __unused, int ch_count __unused,
+                             char *ch_map __unused, int snd_id __unused)
+{
+    return 0;
+}
+
+int platform_set_default_channel_map(void *platform __unused,
+                                     int channels __unused,
+                                     int snd_id __unused)
+{
+    return 0;
+}
+
+int platform_get_channels_from_edid_info(void *platform __unused,
+                                         int channels __unused)
+{
+    return 0;
+}
+
+void platform_reset_edid_info(void *platform __unused)
+{
+    return;
+}
+
+unsigned char platform_map_to_edid_format(int format __unused)
+{
+    return 0;
+}
+bool platform_is_edid_supported_format(void *platform __unused,
+                                       int format __unused)
+{
+    return  false;
+}
+
+int platform_set_hdmi_format_and_samplerate(struct stream_out *out __unused)
+{
+    return 0;
 }
