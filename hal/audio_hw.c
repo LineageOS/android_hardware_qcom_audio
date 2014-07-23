@@ -142,10 +142,15 @@ static int set_voice_volume_l(struct audio_device *adev, float volume);
 
 static bool is_supported_format(audio_format_t format)
 {
-    if (format == AUDIO_FORMAT_MP3 ||
-            format == AUDIO_FORMAT_AAC)
-        return true;
-
+    switch (format) {
+        case AUDIO_FORMAT_MP3:
+        case AUDIO_FORMAT_AAC_LC:
+        case AUDIO_FORMAT_AAC_HE_V1:
+        case AUDIO_FORMAT_AAC_HE_V2:
+            return true;
+        default:
+            break;
+    }
     return false;
 }
 
@@ -153,7 +158,7 @@ static int get_snd_codec_id(audio_format_t format)
 {
     int id = 0;
 
-    switch (format) {
+    switch (format & AUDIO_FORMAT_MAIN_MASK) {
     case AUDIO_FORMAT_MP3:
         id = SND_AUDIOCODEC_MP3;
         break;
