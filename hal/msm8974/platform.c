@@ -18,7 +18,7 @@
  */
 
 #define LOG_TAG "msm8974_platform"
-/*#define LOG_NDEBUG 0*/
+#define LOG_NDEBUG 0
 #define LOG_NDDEBUG 0
 /*#define VERY_VERY_VERBOSE_LOGGING*/
 #ifdef VERY_VERY_VERBOSE_LOGGING
@@ -3096,17 +3096,15 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
         list_for_each(node, &adev->usecase_list) {
             struct audio_usecase *curr_usecase;
             curr_usecase = node_to_item(node, struct audio_usecase, list);
-            if (curr_usecase->type == PCM_PLAYBACK) {
-                struct stream_out *out =
-                           (struct stream_out*) curr_usecase->stream.out;
-                if (out != NULL ) {
-                    ALOGV("Offload playback running bw %d sr %d",
-                              out->bit_width, out->sample_rate);
-                        if (bit_width < out->bit_width)
-                            bit_width = out->bit_width;
-                        if (sample_rate < out->sample_rate)
-                            sample_rate = out->sample_rate;
-                }
+            struct stream_out *out =
+                       (struct stream_out*) curr_usecase->stream.out;
+            if (out != NULL ) {
+                ALOGV("Offload playback running bw %d sr %d",
+                          out->bit_width, out->sample_rate);
+                    if (bit_width < out->bit_width)
+                        bit_width = out->bit_width;
+                    if (sample_rate < out->sample_rate)
+                        sample_rate = out->sample_rate;
             }
         }
     }
