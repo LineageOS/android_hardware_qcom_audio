@@ -18,7 +18,7 @@
  */
 
 #define LOG_TAG "msm8974_platform"
-/*#define LOG_NDEBUG 0*/
+#define LOG_NDEBUG 0
 #define LOG_NDDEBUG 0
 
 #include <stdlib.h>
@@ -2224,18 +2224,16 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
         list_for_each(node, &adev->usecase_list) {
             struct audio_usecase *curr_usecase;
             curr_usecase = node_to_item(node, struct audio_usecase, list);
-            if (curr_usecase->id == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
-                struct stream_out *out =
-                           (struct stream_out*) curr_usecase->stream.out;
-                if (out != NULL ) {
-                    ALOGV("Offload playback running bw %d sr %d",
-                              out->bit_width, out->sample_rate);
-                    if (*new_bit_width != out->bit_width) {
-                        *new_bit_width = out->bit_width;
-                    }
-                    if (*new_sample_rate != out->sample_rate) {
-                        *new_sample_rate = out->sample_rate;
-                    }
+            struct stream_out *out =
+                       (struct stream_out*) curr_usecase->stream.out;
+            if (out != NULL ) {
+                ALOGV("Offload playback running bw %d sr %d",
+                          out->bit_width, out->sample_rate);
+                if (*new_bit_width < out->bit_width) {
+                    *new_bit_width = out->bit_width;
+                }
+                if (*new_sample_rate < out->sample_rate) {
+                    *new_sample_rate = out->sample_rate;
                 }
             }
         }
