@@ -36,7 +36,8 @@ class AudioPolicyManager: public AudioPolicyManagerBase
 public:
                 AudioPolicyManager(AudioPolicyClientInterface *clientInterface)
                 : AudioPolicyManagerBase(clientInterface) {
-                            mPrimarySuspended = 0; mFastSuspended = 0;}
+                            mPrimarySuspended = 0; mFastSuspended = 0;
+                            mMultiChannelSuspended = 0;}
 
         virtual ~AudioPolicyManager() {}
 
@@ -131,10 +132,13 @@ protected:
                                     const audio_offload_info_t *offloadInfo,
                                     audio_devices_t device);
         bool isEffectEnabled();
+        void closeOffloadOutputs();
         void updateAndCloseOutputs();
+        bool isHDMIPassthroughEnabled();
 #endif
         uint32_t mPrimarySuspended;
         uint32_t mFastSuspended;
+        uint32_t mMultiChannelSuspended;
 
         int mOldPhoneState;
         bool isExternalModem();
