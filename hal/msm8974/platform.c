@@ -1697,56 +1697,28 @@ int platform_set_hdmi_channels(void *platform,  int channel_count)
 
 int platform_edid_get_max_channels(void *platform)
 {
+    int channel_count;
+    int max_channels = 2;
+    int i = 0, ret = 0;
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
-    char block[MAX_SAD_BLOCKS * SAD_BLOCK_SIZE];
-    char *sad = block;
-    int num_audio_blocks;
-    int channel_count;
-    int max_channels = 0;
-    int i, ret, count;
+    edid_audio_info *info = NULL;
+    ret = platform_get_edid_info(platform);
+    info = (edid_audio_info *)my_data->edid_info;
 
-    struct mixer_ctl *ctl;
-
-    ctl = mixer_get_ctl_by_name(adev->mixer, AUDIO_DATA_BLOCK_MIXER_CTL);
-    if (!ctl) {
-        ALOGE("%s: Could not get ctl for mixer cmd - %s",
-              __func__, AUDIO_DATA_BLOCK_MIXER_CTL);
-        return 0;
-    }
-
-    mixer_ctl_update(ctl);
-
-    count = mixer_ctl_get_num_values(ctl);
-
-    /* Read SAD blocks, clamping the maximum size for safety */
-    if (count > (int)sizeof(block))
-        count = (int)sizeof(block);
-
-    ret = mixer_ctl_get_array(ctl, block, count);
-    if (ret != 0) {
-        ALOGE("%s: mixer_ctl_get_array() failed to get EDID info", __func__);
-        return 0;
-    }
-
-    /* Calculate the number of SAD blocks */
-    num_audio_blocks = count / SAD_BLOCK_SIZE;
-
-    for (i = 0; i < num_audio_blocks; i++) {
-        /* Only consider LPCM blocks */
-        if ((sad[0] >> 3) != EDID_FORMAT_LPCM) {
-            sad += 3;
-            continue;
+    if(ret == 0 && info != NULL) {
+        for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
+            ALOGV("%s:format %d channel %d", __func__,
+                   info->audio_blocks_array[i].format_id,
+                   info->audio_blocks_array[i].channels);
+            if (info->audio_blocks_array[i].format_id == LPCM) {
+                channel_count = info->audio_blocks_array[i].channels;
+                if (channel_count > max_channels) {
+                   max_channels = channel_count;
+                }
+            }
         }
-
-        channel_count = (sad[0] & 0x7) + 1;
-        if (channel_count > max_channels)
-            max_channels = channel_count;
-
-        /* Advance to next block */
-        sad += 3;
     }
-
     return max_channels;
 }
 
@@ -2155,6 +2127,8 @@ int platform_get_edid_info(void *platform)
             goto fail;
         }
 
+        mixer_ctl_update(ctl);
+
         count = mixer_ctl_get_num_values(ctl);
         ALOGV("Count: %d",count);
 
@@ -2208,7 +2182,8 @@ int platform_set_channel_allocation(void *platform, int channelAlloc)
               __func__, mixer_ctl_name);
         ret = EINVAL;
     }
-    ALOGD(":%s channel allocation = 0x%x", __func__, channelAlloc);
+
+    ALOGV(":%s channel allocation = 0x%x", __func__, channelAlloc);
     ret = mixer_ctl_set_value(ctl, 0, channelAlloc);
 
     if (ret < 0) {
@@ -2238,7 +2213,7 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
         strncat(mixer_ctl_name, device_num, 13);
     }
 
-    ALOGD("%s mixer_ctl_name:%s", __func__, mixer_ctl_name);
+    ALOGV("%s mixer_ctl_name:%s", __func__, mixer_ctl_name);
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
@@ -2246,11 +2221,12 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
               __func__, mixer_ctl_name);
         return -EINVAL;
     }
+
     for (i = 0; i< 8; i++) {
         set_values[i] = ch_map[i];
     }
 
-    ALOGD("%s: set mapping(%d %d %d %d %d %d %d %d) for channel:%d", __func__,
+    ALOGV("%s: set mapping(%d %d %d %d %d %d %d %d) for channel:%d", __func__,
         set_values[0], set_values[1], set_values[2], set_values[3], set_values[4],
         set_values[5], set_values[6], set_values[7], ch_count);
 
@@ -2341,14 +2317,13 @@ bool platform_is_edid_supported_format(void *platform, int format) {
     return false;
 }
 
-int platform_get_channels_from_edid_info(void *platform, int channels) {
+int platform_set_edid_channels_configuration(void *platform, int channels) {
 
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     edid_audio_info *info = NULL;
     int num_audio_blocks;
     int channel_count = 2;
-    int max_channels = 0;
     int i, ret, count;
     char default_channelMap[MAX_CHANNELS_SUPPORTED] = {0};
 
@@ -2367,6 +2342,11 @@ int platform_get_channels_from_edid_info(void *platform, int channels) {
                 }
             }
             ALOGVV("%s:channel_count:%d", __func__, channel_count);
+            /*
+             * Channel map is set for supported hdmi max channel count even
+             * though the input channel count set on adm is less than or equal to
+             * max supported channel count
+             */
             platform_set_channel_map(platform, channel_count, info->channel_map, -1);
             platform_set_channel_allocation(platform, info->channel_allocation);
         } else {
@@ -2377,7 +2357,7 @@ int platform_get_channels_from_edid_info(void *platform, int channels) {
         }
     }
 
-    return max_channels;
+    return 0;
 }
 
 int platform_set_mixer_control(struct stream_out *out, const char * mixer_ctl_name,
@@ -2385,7 +2365,7 @@ int platform_set_mixer_control(struct stream_out *out, const char * mixer_ctl_na
 {
     struct audio_device *adev = out->dev;
     struct mixer_ctl *ctl = NULL;
-    ALOGD("setting mixer ctl %s with value %s", mixer_ctl_name, mixer_val);
+    ALOGV("setting mixer ctl %s with value %s", mixer_ctl_name, mixer_val);
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
         ALOGE("%s: could not get ctl for mixer cmd - %s",

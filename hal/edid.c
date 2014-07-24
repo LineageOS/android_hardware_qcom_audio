@@ -18,8 +18,8 @@
  */
 
 #define LOG_TAG "audio_hw_edid"
-//#define LOG_NDEBUG 0
-//#define LOG_NDDEBUG 0
+/*#define LOG_NDEBUG 0*/
+/*#define LOG_NDDEBUG 0*/
 
 #include <errno.h>
 #include <cutils/properties.h>
@@ -259,7 +259,7 @@ static void update_channel_map(edid_audio_info* pInfo)
             pInfo->channel_map[7] = 0; // PCM_CHANNEL_FRH; but not defined by LPASS
         }
     }
-    ALOGD("%s channel map updated to [%d %d %d %d %d %d %d %d ]  [%x %x %x]", __func__
+    ALOGV("%s channel map updated to [%d %d %d %d %d %d %d %d ]  [%x %x %x]", __func__
         , pInfo->channel_map[0], pInfo->channel_map[1], pInfo->channel_map[2]
         , pInfo->channel_map[3], pInfo->channel_map[4], pInfo->channel_map[5]
         , pInfo->channel_map[6], pInfo->channel_map[7]
@@ -358,7 +358,7 @@ static void update_channel_allocation(edid_audio_info* pInfo)
         case (BIT(0)|BIT(1)|BIT(2)|BIT(3)|BIT(7)):               ca = 0x31; break;
         default:                                                 ca = 0x0;  break;
         }
-        ALOGD("%s channel Allocation: %x", __func__, ca);
+        ALOGV("%s channel Allocation: %x", __func__, ca);
         pInfo->channel_allocation = ca;
     }
 }
@@ -609,7 +609,7 @@ static void update_channel_map_lpass(edid_audio_info* pInfo)
             break;
         }
 
-    ALOGD("%s channel map updated to [%d %d %d %d %d %d %d %d ]", __func__
+    ALOGV("%s channel map updated to [%d %d %d %d %d %d %d %d ]", __func__
         , pInfo->channel_map[0], pInfo->channel_map[1], pInfo->channel_map[2]
         , pInfo->channel_map[3], pInfo->channel_map[4], pInfo->channel_map[5]
         , pInfo->channel_map[6], pInfo->channel_map[7]);
@@ -674,7 +674,7 @@ static void dump_edid_data(edid_audio_info *info) {
         ALOGV("%s:FormatId:%d rate:%d bps:%d channels:%d", __func__,
               info->audio_blocks_array[i].format_id,
               info->audio_blocks_array[i].sampling_freq,
-              info->audio_blocksArray[i].bits_per_sample,
+              info->audio_blocks_array[i].bits_per_sample,
               info->audio_blocks_array[i].channels);
     }
     ALOGV("%s:nAudioBlocks:%d", __func__, info->audio_blocks);
@@ -688,7 +688,7 @@ static void dump_edid_data(edid_audio_info *info) {
            info->channel_map[6], info->channel_map[7]);
     ALOGV("%s:channelAllocation:%d", __func__, info->channel_allocation);
     ALOGV("%s:[%d %d %d %d %d %d %d %d ]", __func__,
-           info->channel_map[0], info.channel_map[1],
+           info->channel_map[0], info->channel_map[1],
            info->channel_map[2], info->channel_map[3],
            info->channel_map[4], info->channel_map[5],
            info->channel_map[6], info->channel_map[7]);
