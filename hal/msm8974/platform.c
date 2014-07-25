@@ -2032,7 +2032,7 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
     }
 
     if(!info->use_small_bufs) {
-        if (info->has_video) {
+        if (!info->has_video) {
             fragment_size = MAX_PCM_OFFLOAD_FRAGMENT_SIZE;
         } else if (info->has_video && info->is_streaming) {
             fragment_size = (PCM_OFFLOAD_BUFFER_DURATION_FOR_AV_STREAMING
