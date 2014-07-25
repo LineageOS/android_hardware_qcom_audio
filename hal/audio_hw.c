@@ -293,15 +293,19 @@ static int get_snd_codec_id(audio_format_t format)
         id = SND_AUDIOCODEC_FLAC;
         break;
 #endif
+#ifdef WMA_OFFLOAD_ENABLED
     case AUDIO_FORMAT_WMA:
         id = SND_AUDIOCODEC_WMA;
         break;
     case AUDIO_FORMAT_WMA_PRO:
         id = SND_AUDIOCODEC_WMA_PRO;
         break;
+#endif
+#ifdef MP2_OFFLOAD_ENABLED
     case AUDIO_FORMAT_MP2:
         id = SND_AUDIOCODEC_MP2;
         break;
+#endif
     default:
         ALOGE("%s: Unsupported audio format :%x", __func__, format);
     }
