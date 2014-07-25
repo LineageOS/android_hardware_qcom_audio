@@ -402,6 +402,21 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
         }
     }
 
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HAC,
+                            value, sizeof(value));
+    if (err >= 0) {
+        bool hac = false;
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_HAC);
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_HAC_ON) == 0)
+            hac = true;
+
+        if (hac != adev->voice.hac) {
+            adev->voice.hac = hac;
+            if (voice_is_in_call(adev))
+                voice_update_devices_for_all_voice_usecases(adev);
+        }
+     }
+
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_INCALLMUSIC,
                             value, sizeof(value));
     if (err >= 0) {
@@ -424,6 +439,7 @@ void voice_init(struct audio_device *adev)
 
     memset(&adev->voice, 0, sizeof(adev->voice));
     adev->voice.tty_mode = TTY_MODE_OFF;
+    adev->voice.hac = false;
     adev->voice.volume = 1.0f;
     adev->voice.mic_mute = false;
     adev->voice.voice_device_set = false;

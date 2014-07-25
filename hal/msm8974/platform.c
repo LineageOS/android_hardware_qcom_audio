@@ -129,6 +129,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_HEADPHONES] = "headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = "speaker-and-headphones",
     [SND_DEVICE_OUT_VOICE_HANDSET] = "voice-handset",
+    [SND_DEVICE_OUT_VOICE_HAC_HANDSET] = "voice-hac-handset",
     [SND_DEVICE_OUT_VOICE_SPEAKER] = "voice-speaker",
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = "voice-headphones",
     [SND_DEVICE_OUT_HDMI] = "hdmi",
@@ -183,6 +184,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_HANDSET] = 7,
     [SND_DEVICE_OUT_VOICE_SPEAKER] = 15,
 #endif
+    [SND_DEVICE_OUT_VOICE_HAC_HANDSET] = 53,
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
     [SND_DEVICE_OUT_HDMI] = 18,
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 15,
@@ -244,6 +246,7 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_BT_SCO)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_BT_SCO_WB)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HANDSET_TMUS)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HAC_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET)},
@@ -544,6 +547,7 @@ static void set_platform_defaults(struct platform_data * my_data)
 
     if (my_data->ext_earpiece) {
         backend_table[SND_DEVICE_OUT_VOICE_HANDSET] = strdup("handset");
+        backend_table[SND_DEVICE_OUT_VOICE_HAC_HANDSET] = strdup("handset");
         backend_table[SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = strdup("handset");
         backend_table[SND_DEVICE_OUT_HANDSET] = strdup("handset");
         backend_table[SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = strdup("handset");
@@ -1103,7 +1107,9 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
             snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
         } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
-            if (is_operator_tmus())
+            if(adev->voice.hac)
+                snd_device = SND_DEVICE_OUT_VOICE_HAC_HANDSET;
+            else if (is_operator_tmus())
                 snd_device = SND_DEVICE_OUT_VOICE_HANDSET_TMUS;
             else
                 snd_device = SND_DEVICE_OUT_VOICE_HANDSET;
@@ -1154,7 +1160,11 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
     } else if (devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
         snd_device = SND_DEVICE_OUT_HDMI ;
     } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
-        snd_device = SND_DEVICE_OUT_HANDSET;
+        /*HAC support for voice-ish audio (eg visual voicemail)*/
+        if(adev->voice.hac)
+            snd_device = SND_DEVICE_OUT_VOICE_HAC_HANDSET;
+        else
+            snd_device = SND_DEVICE_OUT_HANDSET;
     } else {
         ALOGE("%s: Unknown device(s) %#x", __func__, devices);
     }
