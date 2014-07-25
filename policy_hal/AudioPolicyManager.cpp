@@ -1727,7 +1727,11 @@ status_t AudioPolicyManager::stopOutput(audio_io_handle_t output,
             // and kernel buffers. Also the latency does not always include additional delay in the
             // audio path (audio DSP, CODEC ...)
 #ifdef HDMI_PASSTHROUGH_ENABLED
-            newDevice = handleHDMIPassthrough(newDevice, output, stream);
+            // Use the stream ref count to check if ringtone/ notification
+            // needs to be on speaker. Input stream type should be used only
+            // when a particular stream is started. On stop if stream type is
+            // used, the device is changed to speaker even when ringtone ends.
+            newDevice = handleHDMIPassthrough(newDevice, output);
 #endif
 
             setOutputDevice(output, newDevice, false, outputDesc->mLatency*2);
