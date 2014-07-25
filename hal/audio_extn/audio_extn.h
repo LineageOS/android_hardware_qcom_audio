@@ -254,7 +254,7 @@ int audio_extn_dap_hal_init(int snd_card);
 int audio_extn_dap_hal_deinit();
 void audio_extn_dolby_ds2_set_endpoint(struct audio_device *adev);
 int audio_extn_ds2_enable(struct audio_device *adev);
-int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, bool state);
+int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, int state);
 #else
 #define audio_extn_dap_hal_init(snd_card)                             (0)
 #define audio_extn_dap_hal_deinit()                                   (0)
@@ -262,4 +262,8 @@ int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, bool state);
 #define audio_extn_ds2_enable(adev)                                   (0)
 #define audio_extn_dolby_set_dap_bypass(adev, state)                  (0)
 #endif
+typedef enum {
+    DAP_STATE_ON = 0,
+    DAP_STATE_BYPASS,
+};
 #endif /* AUDIO_EXTN_H */
