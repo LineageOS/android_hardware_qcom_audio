@@ -178,6 +178,7 @@ int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,
 #ifndef SPKR_PROT_ENABLED
 #define audio_extn_spkr_prot_init(adev)       (0)
 #define audio_extn_spkr_prot_start_processing(snd_device)    (-EINVAL)
+#define audio_extn_spkr_prot_calib_cancel(adev) (0)
 #define audio_extn_spkr_prot_stop_processing()     (0)
 #define audio_extn_spkr_prot_is_enabled() (false)
 #define audio_extn_spkr_prot_get_acdb_id(snd_device)         (-EINVAL)
@@ -189,6 +190,7 @@ void audio_extn_spkr_prot_stop_processing();
 bool audio_extn_spkr_prot_is_enabled();
 int audio_extn_spkr_prot_get_acdb_id(snd_device_t snd_device);
 int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device);
+void audio_extn_spkr_prot_calib_cancel(void *adev);
 #endif
 
 #ifndef COMPRESS_CAPTURE_ENABLED

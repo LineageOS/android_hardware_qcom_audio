@@ -340,6 +340,8 @@ int enable_snd_device(struct audio_device *adev,
         return 0;
     }
 
+    if (audio_extn_spkr_prot_is_enabled())
+         audio_extn_spkr_prot_calib_cancel(adev);
     /* start usb playback thread */
     if(SND_DEVICE_OUT_USB_HEADSET == snd_device ||
        SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET == snd_device)
