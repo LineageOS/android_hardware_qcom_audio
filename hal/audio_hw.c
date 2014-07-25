@@ -1636,8 +1636,20 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
 
-    if (is_offload_usecase(out->usecase))
-        return COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
+    if (is_offload_usecase(out->usecase)) {
+        if ((out->format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD) &&
+            (!out->non_blocking) &&
+            (out->sample_rate) &&
+            (out->compr_config.codec->ch_in) &&
+            (audio_bytes_per_sample(AUDIO_FORMAT_PCM_16_BIT_OFFLOAD)))
+            /* ToDo: Add check for 24 bit offload */
+            return (out->compr_config.fragments *
+                   out->compr_config.fragment_size * 1000) /
+                   (out->sample_rate * out->compr_config.codec->ch_in *
+                   audio_bytes_per_sample(AUDIO_FORMAT_PCM_16_BIT_OFFLOAD));
+        else
+            return COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
+    }
 
     return (out->config.period_count * out->config.period_size * 1000) /
            (out->config.rate);
