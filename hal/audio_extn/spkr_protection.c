@@ -300,6 +300,7 @@ static int spkr_calibrate(int t0)
     uc_info_rx->id = USECASE_AUDIO_SPKR_CALIB_RX;
     uc_info_rx->type = PCM_PLAYBACK;
     uc_info_rx->in_snd_device = SND_DEVICE_NONE;
+    uc_info_rx->stream.out = adev->primary_output;
     uc_info_rx->out_snd_device = SND_DEVICE_OUT_SPEAKER_PROTECTED;
     disable_rx = true;
     list_add_tail(&adev->usecase_list, &uc_info_rx->list);
@@ -327,7 +328,7 @@ static int spkr_calibrate(int t0)
     calloc(1, sizeof(struct audio_usecase));
     uc_info_tx->id = USECASE_AUDIO_SPKR_CALIB_TX;
     uc_info_tx->type = PCM_CAPTURE;
-    uc_info_tx->in_snd_device = SND_DEVICE_NONE;
+    uc_info_tx->in_snd_device = SND_DEVICE_IN_CAPTURE_VI_FEEDBACK;
     uc_info_tx->out_snd_device = SND_DEVICE_NONE;
 
     disable_tx = true;
@@ -711,7 +712,7 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
     if (handle.spkr_processing_state == SPKR_PROCESSING_IN_IDLE) {
         uc_info_tx->id = USECASE_AUDIO_SPKR_CALIB_TX;
         uc_info_tx->type = PCM_CAPTURE;
-        uc_info_tx->in_snd_device = SND_DEVICE_NONE;
+        uc_info_tx->in_snd_device = SND_DEVICE_IN_CAPTURE_VI_FEEDBACK;
         uc_info_tx->out_snd_device = SND_DEVICE_NONE;
         handle.pcm_tx = NULL;
         list_add_tail(&adev->usecase_list, &uc_info_tx->list);
