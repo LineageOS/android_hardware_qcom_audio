@@ -45,6 +45,12 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #define AUDIO_PARAMETER_HFP_SET_SAMPLING_RATE "hfp_set_sampling_rate"
 #define AUDIO_PARAMETER_KEY_HFP_VOLUME "hfp_volume"
 
+#ifdef PLATFORM_MSM8994
+#define HFP_RX_VOLUME     "SEC AUXPCM LOOPBACK Volume"
+#else
+#define HFP_RX_VOLUME     "Internal HFP RX Volume"
+#endif
+
 static int32_t start_hfp(struct audio_device *adev,
                                struct str_parms *parms);
 
@@ -84,7 +90,7 @@ static int32_t hfp_set_volume(struct audio_device *adev, float value)
 {
     int32_t vol, ret = 0;
     struct mixer_ctl *ctl;
-    const char *mixer_ctl_name = "Internal HFP RX Volume";
+    const char *mixer_ctl_name = HFP_RX_VOLUME;
 
     ALOGV("%s: entry", __func__);
     ALOGD("%s: (%f)\n", __func__, value);
