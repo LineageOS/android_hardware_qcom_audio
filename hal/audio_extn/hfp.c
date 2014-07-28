@@ -200,10 +200,26 @@ static int32_t start_hfp(struct audio_device *adev,
         ret = -EIO;
         goto exit;
     }
-    pcm_start(hfpmod.hfp_sco_rx);
-    pcm_start(hfpmod.hfp_sco_tx);
-    pcm_start(hfpmod.hfp_pcm_rx);
-    pcm_start(hfpmod.hfp_pcm_tx);
+    if (pcm_start(hfpmod.hfp_sco_rx) < 0) {
+        ALOGE("%s: pcm start for hfp sco rx failed", __func__);
+        ret = -EINVAL;
+        goto exit;
+    }
+    if (pcm_start(hfpmod.hfp_sco_tx) < 0) {
+        ALOGE("%s: pcm start for hfp sco tx failed", __func__);
+        ret = -EINVAL;
+        goto exit;
+    }
+    if (pcm_start(hfpmod.hfp_pcm_rx) < 0) {
+        ALOGE("%s: pcm start for hfp pcm rx failed", __func__);
+        ret = -EINVAL;
+        goto exit;
+    }
+    if (pcm_start(hfpmod.hfp_pcm_tx) < 0) {
+        ALOGE("%s: pcm start for hfp pcm tx failed", __func__);
+        ret = -EINVAL;
+        goto exit;
+    }
 
     hfpmod.is_hfp_running = true;
     hfp_set_volume(adev, hfpmod.hfp_volume);
