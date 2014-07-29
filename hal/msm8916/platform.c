@@ -458,15 +458,15 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_WSA] = 135,
     [SND_DEVICE_OUT_SPEAKER_VBAT] = 135,
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = 14,
-    [SND_DEVICE_OUT_LINE] = 10,
+    [SND_DEVICE_OUT_LINE] = 77,
     [SND_DEVICE_OUT_HEADPHONES] = 10,
     [SND_DEVICE_OUT_HEADPHONES_44_1] = 10,
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = 10,
-    [SND_DEVICE_OUT_SPEAKER_AND_LINE] = 10,
+    [SND_DEVICE_OUT_SPEAKER_AND_LINE] = 77,
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1] = 10,
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2] = 10,
     [SND_DEVICE_OUT_VOICE_HANDSET] = 7,
-    [SND_DEVICE_OUT_VOICE_LINE] = 10,
+    [SND_DEVICE_OUT_VOICE_LINE] = 77,
     [SND_DEVICE_OUT_VOICE_SPEAKER] = 14,
     [SND_DEVICE_OUT_VOICE_SPEAKER_2] = 14,
     [SND_DEVICE_OUT_VOICE_SPEAKER_WSA] = 135,
@@ -745,6 +745,7 @@ static int msm_device_to_be_id_internal_codec [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_SPEAKER                        ,       34},
        {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       34},
        {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       34},
+       {AUDIO_DEVICE_OUT_LINE                           ,       34},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO                  ,       11},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET          ,       11},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT           ,       11},
@@ -770,6 +771,7 @@ static int msm_device_to_be_id_external_codec [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_SPEAKER                        ,       2},
        {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       2},
        {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       2},
+       {AUDIO_DEVICE_OUT_LINE                           ,       2},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO                  ,       11},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET          ,       11},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT           ,       11},
@@ -1154,6 +1156,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_table[SND_DEVICE_OUT_HEADPHONES_44_1] = strdup("headphones-44.1");
     backend_table[SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = strdup("vbat-voice-speaker");
     backend_table[SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT] = strdup("vbat-voice-speaker-2");
+    backend_table[SND_DEVICE_OUT_SPEAKER_AND_LINE] =
+        strdup("speaker-and-line");
 
     if (is_external_codec) {
         my_data->max_mic_count = PLATFORM_DEFAULT_EXTERNAL_CODEC_MIC_COUNT;
