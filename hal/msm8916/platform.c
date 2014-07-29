@@ -248,11 +248,13 @@ static char * device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_WSA] = "wsa-speaker",
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = "speaker-reverse",
     [SND_DEVICE_OUT_HEADPHONES] = "headphones",
+    [SND_DEVICE_OUT_LINE] = "line",
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = "speaker-and-headphones",
     [SND_DEVICE_OUT_VOICE_HANDSET] = "voice-handset",
     [SND_DEVICE_OUT_VOICE_SPEAKER] = "voice-speaker",
     [SND_DEVICE_OUT_VOICE_SPEAKER_WSA] = "wsa-voice-speaker",
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = "voice-headphones",
+    [SND_DEVICE_OUT_VOICE_LINE] = "voice-line",
     [SND_DEVICE_OUT_HDMI] = "hdmi",
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = "speaker-and-hdmi",
     [SND_DEVICE_OUT_BT_SCO] = "bt-sco-headset",
@@ -346,11 +348,13 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_WSA] = 135,
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = 14,
     [SND_DEVICE_OUT_HEADPHONES] = 10,
+    [SND_DEVICE_OUT_LINE] = 10,
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = 10,
     [SND_DEVICE_OUT_VOICE_HANDSET] = 7,
     [SND_DEVICE_OUT_VOICE_SPEAKER] = 14,
     [SND_DEVICE_OUT_VOICE_SPEAKER_WSA] = 135,
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
+    [SND_DEVICE_OUT_VOICE_LINE] = 10,
     [SND_DEVICE_OUT_HDMI] = 18,
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 14,
     [SND_DEVICE_OUT_BT_SCO] = 22,
@@ -446,11 +450,13 @@ struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_WSA)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_REVERSE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_LINE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_WSA)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_LINE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HDMI)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HDMI)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_BT_SCO)},
@@ -538,6 +544,7 @@ static int msm_device_to_be_id_internal_codec [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_SPEAKER                        ,       34},
        {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       34},
        {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       34},
+       {AUDIO_DEVICE_OUT_LINE                           ,       34},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO                  ,       11},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET          ,       11},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT           ,       11},
@@ -565,6 +572,7 @@ static int msm_device_to_be_id_external_codec [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_SPEAKER                        ,       2},
        {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       2},
        {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       2},
+       {AUDIO_DEVICE_OUT_LINE                           ,       2},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO                  ,       11},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET          ,       11},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT           ,       11},
@@ -1993,7 +2001,8 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
     if ((mode == AUDIO_MODE_IN_CALL) ||
         voice_extn_compress_voip_is_active(adev)) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-            devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
+            devices & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
+            devices & AUDIO_DEVICE_OUT_LINE) {
             if ((adev->voice.tty_mode != TTY_MODE_OFF) &&
                 !voice_extn_compress_voip_is_active(adev)) {
                 switch (adev->voice.tty_mode) {
@@ -2070,6 +2079,8 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
 #endif
                 snd_device = SND_DEVICE_OUT_HEADPHONES;
         }
+    } else if (devices & AUDIO_DEVICE_OUT_LINE) {
+        snd_device = SND_DEVICE_OUT_LINE;
     } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
 #ifdef RECORD_PLAY_CONCURRENCY
         if (use_voip_out_devices) {
@@ -2148,7 +2159,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         if ((adev->voice.tty_mode != TTY_MODE_OFF) &&
             !voice_extn_compress_voip_is_active(adev)) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-                out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
+                out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
+                out_device & AUDIO_DEVICE_OUT_LINE) {
                 switch (adev->voice.tty_mode) {
                 case TTY_MODE_FULL:
                     snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC;
@@ -2401,8 +2413,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_SPEAKER_STEREO_DMIC;
             else
                 snd_device = SND_DEVICE_IN_SPEAKER_MIC;
-        } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) {
-            snd_device = SND_DEVICE_IN_HANDSET_MIC;
+        } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
+                   out_device & AUDIO_DEVICE_OUT_LINE) {
+            snd_device = SND_DEVICE_IN_SPEAKER_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET) {
             if (adev->bt_wb_speech_enabled) {
                 if (adev->bluetooth_nrec)
