@@ -127,11 +127,13 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER] = "speaker",
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = "speaker-reverse",
     [SND_DEVICE_OUT_HEADPHONES] = "headphones",
+    [SND_DEVICE_OUT_LINE] = "line",
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = "speaker-and-headphones",
     [SND_DEVICE_OUT_VOICE_HANDSET] = "voice-handset",
     [SND_DEVICE_OUT_VOICE_HAC_HANDSET] = "voice-hac-handset",
     [SND_DEVICE_OUT_VOICE_SPEAKER] = "voice-speaker",
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = "voice-headphones",
+    [SND_DEVICE_OUT_VOICE_LINE] = "voice-line",
     [SND_DEVICE_OUT_HDMI] = "hdmi",
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = "speaker-and-hdmi",
     [SND_DEVICE_OUT_BT_SCO] = "bt-sco-headset",
@@ -176,6 +178,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER] = 15,
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = 15,
     [SND_DEVICE_OUT_HEADPHONES] = 10,
+    [SND_DEVICE_OUT_LINE] = 10,
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = 10,
 #ifdef PLATFORM_MSM8084
     [SND_DEVICE_OUT_VOICE_HANDSET] = 67,
@@ -186,6 +189,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
 #endif
     [SND_DEVICE_OUT_VOICE_HAC_HANDSET] = 53,
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
+    [SND_DEVICE_OUT_VOICE_LINE] = 10,
     [SND_DEVICE_OUT_HDMI] = 18,
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 15,
     [SND_DEVICE_OUT_BT_SCO] = 22,
@@ -237,10 +241,12 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_REVERSE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_LINE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_LINE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HDMI)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HDMI)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_BT_SCO)},
@@ -1089,15 +1095,20 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
 
     if (mode == AUDIO_MODE_IN_CALL) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-            devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
+            devices & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
+            devices & AUDIO_DEVICE_OUT_LINE) {
             if (adev->voice.tty_mode == TTY_MODE_FULL)
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES;
             else if (adev->voice.tty_mode == TTY_MODE_VCO)
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES;
             else if (adev->voice.tty_mode == TTY_MODE_HCO)
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET;
-            else
-                snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
+            else {
+                if (devices & AUDIO_DEVICE_OUT_LINE)
+                    snd_device = SND_DEVICE_OUT_VOICE_LINE;
+                else
+                    snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
+                }
         } else if (devices & AUDIO_DEVICE_OUT_ALL_SCO) {
             if (adev->bt_wb_speech_enabled) {
                 snd_device = SND_DEVICE_OUT_BT_SCO_WB;
@@ -1146,6 +1157,8 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
     if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
         devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
         snd_device = SND_DEVICE_OUT_HEADPHONES;
+    } else if (devices & AUDIO_DEVICE_OUT_LINE) {
+        snd_device = SND_DEVICE_OUT_LINE;
     } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
         if (adev->speaker_lr_swap)
             snd_device = SND_DEVICE_OUT_SPEAKER_REVERSE;
@@ -1197,7 +1210,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         }
         if (adev->voice.tty_mode != TTY_MODE_OFF) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-                out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
+                out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
+                out_device & AUDIO_DEVICE_OUT_LINE) {
                 switch (adev->voice.tty_mode) {
                 case TTY_MODE_FULL:
                     snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC;
@@ -1326,8 +1340,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             snd_device = SND_DEVICE_IN_HEADSET_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER) {
             snd_device = SND_DEVICE_IN_SPEAKER_MIC;
-        } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) {
-            snd_device = SND_DEVICE_IN_HANDSET_MIC;
+        } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
+                   out_device & AUDIO_DEVICE_OUT_LINE) {
+            snd_device = SND_DEVICE_IN_SPEAKER_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET) {
             if (adev->bt_wb_speech_enabled) {
                 snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB;
