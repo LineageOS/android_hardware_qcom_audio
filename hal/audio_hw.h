@@ -269,6 +269,7 @@ struct audio_device {
     struct voice voice;
     unsigned int cur_hdmi_channels;
     unsigned int cur_wfd_channels;
+    bool bt_wb_speech_enabled;
 
     int snd_card;
     void *platform;

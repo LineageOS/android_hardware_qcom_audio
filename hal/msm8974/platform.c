@@ -86,7 +86,6 @@
 #define SAMPLE_RATE_16KHZ 16000
 
 #define AUDIO_PARAMETER_KEY_FLUENCE_TYPE  "fluence"
-#define AUDIO_PARAMETER_KEY_BTSCO         "bt_samplerate"
 #define AUDIO_PARAMETER_KEY_SLOWTALK      "st_enable"
 #define AUDIO_PARAMETER_KEY_VOLUME_BOOST  "volume_boost"
 /* Query external audio device connection status */
@@ -127,7 +126,6 @@ struct platform_data {
     int  fluence_type;
     int  fluence_mode;
     char fluence_cap[PROPERTY_VALUE_MAX];
-    int  btsco_sample_rate;
     bool slowtalk;
     bool is_i2s_ext_modem;
     /* Audio calibration related functions */
@@ -715,7 +713,6 @@ void *platform_init(struct audio_device *adev)
     }
 
     my_data->adev = adev;
-    my_data->btsco_sample_rate = SAMPLE_RATE_8KHZ;
     my_data->fluence_in_spkr_mode = false;
     my_data->fluence_in_voice_call = false;
     my_data->fluence_in_voice_rec = false;
@@ -1393,7 +1390,7 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
                 snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
             }
         } else if (devices & AUDIO_DEVICE_OUT_ALL_SCO) {
-            if (my_data->btsco_sample_rate == SAMPLE_RATE_16KHZ)
+            if (adev->bt_wb_speech_enabled)
                 snd_device = SND_DEVICE_OUT_BT_SCO_WB;
             else
                 snd_device = SND_DEVICE_OUT_BT_SCO;
@@ -1436,7 +1433,7 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         else
             snd_device = SND_DEVICE_OUT_SPEAKER;
     } else if (devices & AUDIO_DEVICE_OUT_ALL_SCO) {
-        if (my_data->btsco_sample_rate == SAMPLE_RATE_16KHZ)
+        if (adev->bt_wb_speech_enabled)
             snd_device = SND_DEVICE_OUT_BT_SCO_WB;
         else
             snd_device = SND_DEVICE_OUT_BT_SCO;
@@ -1539,7 +1536,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             snd_device = SND_DEVICE_IN_VOICE_HEADSET_MIC;
             set_echo_reference(adev, true);
         } else if (out_device & AUDIO_DEVICE_OUT_ALL_SCO) {
-            if (my_data->btsco_sample_rate == SAMPLE_RATE_16KHZ)
+            if (adev->bt_wb_speech_enabled)
                 snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB;
             else
                 snd_device = SND_DEVICE_IN_BT_SCO_MIC;
@@ -1690,7 +1687,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_HEADSET_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
-            if (my_data->btsco_sample_rate == SAMPLE_RATE_16KHZ)
+            if (adev->bt_wb_speech_enabled)
                 snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB;
             else
                 snd_device = SND_DEVICE_IN_BT_SCO_MIC;
@@ -1719,7 +1716,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) {
             snd_device = SND_DEVICE_IN_HANDSET_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET) {
-            if (my_data->btsco_sample_rate == SAMPLE_RATE_16KHZ)
+            if (adev->bt_wb_speech_enabled)
                 snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB;
             else
                 snd_device = SND_DEVICE_IN_BT_SCO_MIC;
@@ -1898,12 +1895,6 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     char *kv_pairs = str_parms_to_str(parms);
 
     ALOGV_IF(kv_pairs != NULL, "%s: enter: %s", __func__, kv_pairs);
-
-    err = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_BTSCO, &val);
-    if (err >= 0) {
-        str_parms_del(parms, AUDIO_PARAMETER_KEY_BTSCO);
-        my_data->btsco_sample_rate = val;
-    }
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SLOWTALK, value, sizeof(value));
     if (err >= 0) {
