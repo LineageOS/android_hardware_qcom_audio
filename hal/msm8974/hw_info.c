@@ -89,6 +89,8 @@ static const snd_device_t tomtom_msm8994_CDP_variant_devices[] = {
 
 static const snd_device_t tomtom_liquid_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
+    SND_DEVICE_OUT_SPEAKER_EXTERNAL_1,
+    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
     SND_DEVICE_IN_SPEAKER_MIC,
