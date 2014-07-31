@@ -52,6 +52,10 @@ enum notify_status_type {
     CPE_STATE
 };
 
+enum audio_event_status {audio_event_on, audio_event_off};
+
+#define AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE "ext_audio_device"
+
 class AudioDaemon:public Thread, public IBinder :: DeathRecipient
 {
     /*Overrides*/
@@ -64,9 +68,13 @@ class AudioDaemon:public Thread, public IBinder :: DeathRecipient
     void notifyAudioSystem(int snd_card,
                            notify_status status,
                            notify_status_type type);
+    void notifyAudioSystemEventStatus(const char* event, audio_event_status status);
     int mUeventSock;
     bool getStateFDs(std::vector<std::pair<int,int> > &sndcardFdPair);
     void putStateFDs(std::vector<std::pair<int,int> > &sndcardFdPair);
+    bool getDeviceEventFDs();
+    void putDeviceEventFDs();
+    void checkEventState(int fd, int index);
 
 public:
     AudioDaemon();
@@ -74,6 +82,11 @@ public:
 
 private:
     std::vector<std::pair<int,int> > mSndCardFd;
+
+    //file descriptors for audio device events and their statuses
+    std::vector<std::pair<String8, int> > mAudioEvents;
+    std::vector<std::pair<String8, int> > mAudioEventsStatus;
+
 };
 
 }
