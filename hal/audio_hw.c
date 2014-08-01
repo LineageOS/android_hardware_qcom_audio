@@ -2489,7 +2489,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->compr_config.codec->format = SNDRV_PCM_FORMAT_S16_LE;
         }
 
-        out->compr_config.codec->options.flac_dec.sample_size = out->bit_width;
+        if (config->offload_info.format == AUDIO_FORMAT_FLAC)
+            out->compr_config.codec->options.flac_dec.sample_size = config->offload_info.bit_width;
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
@@ -2527,7 +2528,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
     audio_extn_utils_update_stream_app_type_cfg(adev->platform,
                                                 &adev->streams_output_cfg_list,
-                                                flags, format, &out->app_type_cfg);
+                                                flags, format, out->sample_rate,
+                                                out->bit_width, &out->app_type_cfg);
     if ((out->usecase == USECASE_AUDIO_PLAYBACK_PRIMARY) ||
         (flags & AUDIO_OUTPUT_FLAG_PRIMARY)) {
         /* Ensure the default output is not selected twice */
