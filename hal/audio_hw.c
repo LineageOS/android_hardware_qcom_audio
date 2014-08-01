@@ -237,7 +237,7 @@ static int get_snd_codec_id(audio_format_t format)
     return id;
 }
 
-static int get_snd_card_state(struct audio_device *adev)
+int get_snd_card_state(struct audio_device *adev)
 {
     int snd_scard_state;
 

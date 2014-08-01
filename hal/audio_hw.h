@@ -303,6 +303,8 @@ bool is_offload_usecase(audio_usecase_t uc_id);
 
 int pcm_ioctl(struct pcm *pcm, int request, ...);
 
+int get_snd_card_state(struct audio_device *adev);
+
 #define LITERAL_TO_STRING(x) #x
 #define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\
             __FILE__ ":" LITERAL_TO_STRING(__LINE__)\
