@@ -2235,7 +2235,7 @@ bool platform_check_24_bit_support() {
 int platform_set_codec_backend_cfg(struct audio_device* adev,
                          unsigned int bit_width, unsigned int sample_rate)
 {
-    ALOGV("platform_set_codec_backend_cfg bw %d, sr %d", bit_width, sample_rate);
+    ALOGV("%s bit width: %d, sample rate: %d", __func__, bit_width, sample_rate);
 
     int ret = 0;
     if (bit_width != adev->cur_codec_backend_bit_width) {
@@ -2258,48 +2258,36 @@ int platform_set_codec_backend_cfg(struct audio_device* adev,
         ALOGE("Backend bit width is set to %d ", bit_width);
     }
 
-    if ((adev->cur_codec_backend_bit_width == CODEC_BACKEND_DEFAULT_BIT_WIDTH &&
-             adev->cur_codec_backend_samplerate != CODEC_BACKEND_DEFAULT_SAMPLE_RATE) ||
-        (adev->cur_codec_backend_samplerate < sample_rate)) {
-
+    /*
+     * Backend sample rate configuration follows:
+     * 16 bit playback - 48khz for streams at any valid sample rate
+     * 24 bit playback - 48khz for stream sample rate less than 48khz
+     * 24 bit playback - 96khz for sample rate range of 48khz to 96khz
+     * 24 bit playback - 192khz for sample rate range of 96khz to 192 khz
+     * Upper limit is inclusive in the sample rate range.
+     */
+    // TODO: This has to be more dynamic based on policy file
+    if (sample_rate != adev->cur_codec_backend_samplerate) {
             char *rate_str = NULL;
             const char * mixer_ctl_name = "SLIM_0_RX SampleRate";
             struct  mixer_ctl *ctl;
 
             switch (sample_rate) {
             case 8000:
-                rate_str = "KHZ_8";
-                break;
             case 11025:
-                rate_str = "KHZ_11_025";
-                break;
             case 16000:
-                rate_str = "KHZ_16";
-                break;
             case 22050:
-                rate_str = "KHZ_22_05";
-                break;
             case 32000:
-                rate_str = "KHZ_32";
-                break;
             case 44100:
-                rate_str = "KHZ_44_1";
-                break;
             case 48000:
                 rate_str = "KHZ_48";
                 break;
             case 64000:
-                rate_str = "KHZ_64";
-                break;
             case 88200:
-                rate_str = "KHZ_88_2";
-                break;
             case 96000:
                 rate_str = "KHZ_96";
                 break;
             case 176400:
-                rate_str = "KHZ_176_4";
-                break;
             case 192000:
                 rate_str = "KHZ_192";
                 break;
@@ -2344,23 +2332,21 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
 
 
     if (!backend_change) {
-        // go through all the offload usecases, and
-        // find the max bit width and samplerate
+        // Go through all the playback usecases
+        // Find the max bit width and samplerate
         list_for_each(node, &adev->usecase_list) {
             struct audio_usecase *curr_usecase;
             curr_usecase = node_to_item(node, struct audio_usecase, list);
-            if (curr_usecase->id == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+            if (curr_usecase->type == PCM_PLAYBACK) {
                 struct stream_out *out =
                            (struct stream_out*) curr_usecase->stream.out;
                 if (out != NULL ) {
                     ALOGV("Offload playback running bw %d sr %d",
                               out->bit_width, out->sample_rate);
-                    if (*new_bit_width < out->bit_width) {
-                        *new_bit_width = out->bit_width;
-                    }
-                    if (*new_sample_rate < out->sample_rate) {
-                        *new_sample_rate = out->sample_rate;
-                    }
+                        if (*new_bit_width < out->bit_width)
+                            *new_bit_width = out->bit_width;
+                        if (*new_sample_rate < out->sample_rate)
+                            *new_sample_rate = out->sample_rate;
                 }
             }
         }
