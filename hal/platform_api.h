@@ -21,6 +21,9 @@
 #define AUDIO_PLATFORM_API_H
 #include <sound/voice_params.h>
 
+#define CODEC_BACKEND_DEFAULT_BIT_WIDTH 16
+#define CODEC_BACKEND_DEFAULT_SAMPLE_RATE 48000
+
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
 const char *platform_get_snd_device_name(snd_device_t snd_device);
@@ -80,4 +83,6 @@ struct audio_offload_info_t;
 uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info);
 uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info);
 
+bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct audio_usecase *usecase);
+bool platform_check_24_bit_support();
 #endif // AUDIO_PLATFORM_API_H
