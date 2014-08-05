@@ -914,6 +914,14 @@ int platform_set_incall_recoding_session_id(void *platform, uint32_t session_id)
     return -ENOSYS;
 }
 
+int platform_update_lch(void *platform __unused,
+                        struct voice_session *session __unused,
+                        enum voice_lch_mode lch_mode __unused)
+{
+    LOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
 /* Delay in Us */
 int64_t platform_render_latency(audio_usecase_t usecase)
 {

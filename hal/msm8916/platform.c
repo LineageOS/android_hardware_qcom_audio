@@ -23,6 +23,7 @@
 
 #include <stdlib.h>
 #include <dlfcn.h>
+#include <sys/ioctl.h>
 #include <cutils/log.h>
 #include <cutils/properties.h>
 #include <cutils/str_parms.h>
@@ -548,6 +549,14 @@ static struct csd_data *open_csd_client()
             ALOGE("%s: dlsym error %s for csd_client_stop_playback",
                   __func__, dlerror());
             goto error;
+        }
+        csd->set_lch = (set_lch_t)dlsym(csd->csd_client, "csd_client_set_lch");
+        if (csd->set_lch == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_set_lch",
+                  __func__, dlerror());
+            /* Ignore the error as this is not mandatory function for
+             * basic voice call to work.
+             */
         }
         csd->start_record = (start_record_t)dlsym(csd->csd_client,
                                              "csd_client_start_record");
@@ -1836,6 +1845,20 @@ int platform_stop_incall_music_usecase(void *platform)
                   __func__, ret);
         }
     }
+
+    return ret;
+}
+
+int platform_update_lch(void *platform, struct voice_session *session,
+                        enum voice_lch_mode lch_mode)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if ((my_data->csd != NULL) && (my_data->csd->set_lch != NULL))
+        ret = my_data->csd->set_lch(session->vsid, lch_mode);
+    else
+        ret = pcm_ioctl(session->pcm_tx, SNDRV_VOICE_IOCTL_LCH, &lch_mode);
 
     return ret;
 }
