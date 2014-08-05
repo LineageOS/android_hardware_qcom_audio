@@ -335,6 +335,12 @@ static int voip_start_call(struct audio_device *adev,
     if (uc_info == NULL) {
         ALOGV("%s: voip usecase is added to the list", __func__);
         uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
+
+        if (!uc_info) {
+            ALOGE("failed to allocate voip usecase mem");
+            return -ENOMEM;
+        }
+
         uc_info->id = USECASE_COMPRESS_VOIP_CALL;
         uc_info->type = VOIP_CALL;
         if (voip_data.out_stream)

@@ -141,6 +141,9 @@ static void parse_format_names(char *name, struct streams_output_cfg *so_info)
         ALOGV("%s: format - %d", __func__, format);
         if (format != 0) {
             sf_info = (struct stream_format *)calloc(1, sizeof(struct stream_format));
+            if (sf_info == NULL)
+                break; /* return whatever was parsed */
+
             sf_info->format = format;
             list_add_tail(&so_info->format_list, &sf_info->list);
         }
@@ -192,6 +195,12 @@ static void update_streams_output_cfg_list(cnode *root, void *platform,
 
     ALOGV("%s", __func__);
     so_info = (struct streams_output_cfg *)calloc(1, sizeof(struct streams_output_cfg));
+
+    if (!so_info) {
+        ALOGE("failed to allocate mem for so_info list element");
+        return;
+    }
+
     while (node) {
         if (strcmp(node->name, FLAGS_TAG) == 0) {
             so_info->flags = parse_flag_names((char *)node->value);
@@ -298,6 +307,11 @@ void audio_extn_utils_update_streams_output_cfg_list(void *platform,
     }
 
     root = config_node("", "");
+    if (root == NULL) {
+        ALOGE("cfg_list, NULL config root");
+        return;
+    }
+
     config_load(root, data);
     load_output(root, platform, streams_output_cfg_list);
 
