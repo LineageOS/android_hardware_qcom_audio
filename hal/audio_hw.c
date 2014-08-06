@@ -651,7 +651,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
          * usecase. This is to avoid switching devices for voice call when
          * check_usecases_codec_backend() is called below.
          */
-        if (voice_is_in_call(adev)) {
+        if (adev->voice.in_call && adev->mode == AUDIO_MODE_IN_CALL) {
             vc_usecase = get_usecase_from_list(adev,
                                                get_voice_usecase_id_from_list(adev));
             if ((vc_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
@@ -1507,13 +1507,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             val = AUDIO_DEVICE_OUT_SPEAKER;
         }
 
-        if ((adev->mode == AUDIO_MODE_NORMAL) &&
-                 voice_is_in_call(adev) &&
-                 output_drives_call(adev, out)) {
-            ret = voice_stop_call(adev);
-            adev->current_call_output = NULL;
-        }
-
         /*
          * select_devices() call below switches all the usecases on the same
          * backend to the new device. Refer to check_usecases_codec_backend() in
@@ -1541,12 +1534,18 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             if ((adev->mode == AUDIO_MODE_IN_CALL) &&
                     output_drives_call(adev, out)) {
                 adev->current_call_output = out;
-                if (!voice_is_in_call(adev))
+                if (!adev->voice.in_call)
                     ret = voice_start_call(adev);
                 else
                     voice_update_devices_for_all_voice_usecases(adev);
-            }
+             }
+        }
 
+        if ((adev->mode == AUDIO_MODE_NORMAL) &&
+                adev->voice.in_call &&
+                output_drives_call(adev, out)) {
+            ret = voice_stop_call(adev);
+            adev->current_call_output = NULL;
         }
 
         pthread_mutex_unlock(&adev->lock);
