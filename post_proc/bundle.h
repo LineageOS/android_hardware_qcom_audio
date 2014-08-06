@@ -87,4 +87,6 @@ struct effect_context_s {
 
 int set_config(effect_context_t *context, effect_config_t *config);
 
+bool effect_is_active(effect_context_t *context);
+
 #endif /* OFFLOAD_EFFECT_BUNDLE_H */
