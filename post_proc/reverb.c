@@ -229,7 +229,7 @@ int16_t reverb_get_density(reverb_context_t *context)
 
 void reverb_set_density(reverb_context_t *context, int16_t density)
 {
-    ALOGV("%s: ctxt %p, density: %d", __func__, density, density);
+    ALOGV("%s: ctxt %p, density: %d", __func__, context, density);
     context->reverb_settings.density = density;
     offload_reverb_set_density(&(context->offload_reverb), density);
     if (context->ctl)
