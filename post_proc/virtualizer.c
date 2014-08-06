@@ -155,24 +155,27 @@ int virtualizer_set_device(effect_context_t *context, uint32_t device)
        (device == AUDIO_DEVICE_OUT_AUX_DIGITAL) ||
        (device == AUDIO_DEVICE_OUT_USB_ACCESSORY) ||
        (device == AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET)) {
-        if (offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt))) {
-            offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), false);
+        if (!virt_ctxt->temp_disabled) {
+            if (effect_is_active(&virt_ctxt->common)) {
+                offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), false);
+                if (virt_ctxt->ctl)
+                    offload_virtualizer_send_params(virt_ctxt->ctl,
+                                                    virt_ctxt->offload_virt,
+                                                    OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
+            }
             virt_ctxt->temp_disabled = true;
-            if (virt_ctxt->ctl)
-                offload_virtualizer_send_params(virt_ctxt->ctl,
-                                              virt_ctxt->offload_virt,
-                                              OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
             ALOGI("%s: ctxt %p, disabled based on device", __func__, virt_ctxt);
         }
     } else {
-        if (!offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt)) &&
-            virt_ctxt->temp_disabled) {
-            offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), true);
+        if (virt_ctxt->temp_disabled) {
+            if (effect_is_active(&virt_ctxt->common)) {
+                offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), true);
+                if (virt_ctxt->ctl)
+                    offload_virtualizer_send_params(virt_ctxt->ctl,
+                                                    virt_ctxt->offload_virt,
+                                                    OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
+            }
             virt_ctxt->temp_disabled = false;
-            if (virt_ctxt->ctl)
-                offload_virtualizer_send_params(virt_ctxt->ctl,
-                                              virt_ctxt->offload_virt,
-                                              OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
         }
     }
     offload_virtualizer_set_device(&(virt_ctxt->offload_virt), device);
@@ -210,6 +213,7 @@ int virtualizer_init(effect_context_t *context)
 
     set_config(context, &context->config);
 
+    virt_ctxt->temp_disabled = false;
     memset(&(virt_ctxt->offload_virt), 0, sizeof(struct virtualizer_params));
 
     return 0;

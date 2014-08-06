@@ -156,24 +156,27 @@ int bassboost_set_device(effect_context_t *context, uint32_t device)
        (device == AUDIO_DEVICE_OUT_AUX_DIGITAL) ||
        (device == AUDIO_DEVICE_OUT_USB_ACCESSORY) ||
        (device == AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET)) {
-        if (offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass))) {
-            offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), false);
+        if (!bass_ctxt->temp_disabled) {
+            if (effect_is_active(&bass_ctxt->common)) {
+                offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), false);
+                if (bass_ctxt->ctl)
+                    offload_bassboost_send_params(bass_ctxt->ctl,
+                                                  bass_ctxt->offload_bass,
+                                                  OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
+            }
             bass_ctxt->temp_disabled = true;
-            if (bass_ctxt->ctl)
-                offload_bassboost_send_params(bass_ctxt->ctl,
-                                              bass_ctxt->offload_bass,
-                                              OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
-            ALOGI("%s: ctxt %p, disabled based on device", __func__, bass_ctxt);
         }
+        ALOGI("%s: ctxt %p, disabled based on device", __func__, bass_ctxt);
     } else {
-        if (!offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass)) &&
-            bass_ctxt->temp_disabled) {
-            offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), true);
+        if (bass_ctxt->temp_disabled) {
+            if (effect_is_active(&bass_ctxt->common)) {
+                offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), true);
+                if (bass_ctxt->ctl)
+                    offload_bassboost_send_params(bass_ctxt->ctl,
+                                                  bass_ctxt->offload_bass,
+                                                  OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
+            }
             bass_ctxt->temp_disabled = false;
-            if (bass_ctxt->ctl)
-                offload_bassboost_send_params(bass_ctxt->ctl,
-                                              bass_ctxt->offload_bass,
-                                              OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
         }
     }
     offload_bassboost_set_device(&(bass_ctxt->offload_bass), device);

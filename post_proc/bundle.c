@@ -186,6 +186,7 @@ int offload_effects_bundle_hal_start_output(audio_io_handle_t output, int pcm_id
     int ret = 0;
     struct listnode *node;
     char mixer_string[128];
+    output_context_t * out_ctxt = NULL;
 
     ALOGV("%s output %d pcm_id %d", __func__, output, pcm_id);
 
@@ -199,7 +200,7 @@ int offload_effects_bundle_hal_start_output(audio_io_handle_t output, int pcm_id
         goto exit;
     }
 
-    output_context_t *out_ctxt = (output_context_t *)
+    out_ctxt = (output_context_t *)
                                  malloc(sizeof(output_context_t));
     if (!out_ctxt) {
         ALOGE("%s fail to allocate for output context", __func__);
@@ -217,6 +218,7 @@ int offload_effects_bundle_hal_start_output(audio_io_handle_t output, int pcm_id
         ALOGE("Failed to open mixer");
         out_ctxt->ctl = NULL;
         ret = -EINVAL;
+        free(out_ctxt);
         goto exit;
     } else {
         out_ctxt->ctl = mixer_get_ctl_by_name(out_ctxt->mixer, mixer_string);
@@ -225,6 +227,7 @@ int offload_effects_bundle_hal_start_output(audio_io_handle_t output, int pcm_id
             mixer_close(out_ctxt->mixer);
             out_ctxt->mixer = NULL;
             ret = -EINVAL;
+            free(out_ctxt);
             goto exit;
         }
     }
@@ -535,12 +538,12 @@ int effect_process(effect_handle_t self,
 
     pthread_mutex_lock(&lock);
     if (!effect_exists(context)) {
-        status = -EINVAL;
+        status = -ENOSYS;
         goto exit;
     }
 
     if (context->state != EFFECT_STATE_ACTIVE) {
-        status = -EINVAL;
+        status = -ENODATA;
         goto exit;
     }
 
@@ -560,13 +563,13 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
     pthread_mutex_lock(&lock);
 
     if (!effect_exists(context)) {
-        status = -EINVAL;
+        status = -ENOSYS;
         goto exit;
     }
 
     ALOGV("%s: ctxt %p, cmd %d", __func__, context, cmdCode);
     if (context == NULL || context->state == EFFECT_STATE_UNINITIALIZED) {
-        status = -EINVAL;
+        status = -ENOSYS;
         goto exit;
     }
 
@@ -752,6 +755,9 @@ int effect_get_descriptor(effect_handle_t   self,
     return 0;
 }
 
+bool effect_is_active(effect_context_t * ctxt) {
+    return ctxt->state == EFFECT_STATE_ACTIVE;
+}
 
 /* effect_handle_t interface implementation for offload effects */
 const struct effect_interface_s effect_interface = {
