@@ -175,26 +175,27 @@ int start_call(struct audio_device *adev, audio_usecase_t usecase_id)
     }
 
     session->state.current = CALL_ACTIVE;
-    return 0;
+    goto done;
 
 error_start_voice:
     stop_call(adev, usecase_id);
 
+done:
     ALOGD("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
 
-bool voice_is_in_call(struct audio_device *adev)
+bool voice_is_call_state_active(struct audio_device *adev)
 {
-    bool in_call = false;
+    bool call_state = false;
     int ret = 0;
 
-    ret = voice_extn_is_in_call(adev, &in_call);
+    ret = voice_extn_is_call_state_active(adev, &call_state);
     if (ret == -ENOSYS) {
-        in_call = (adev->voice.session[VOICE_SESS_IDX].state.current == CALL_ACTIVE) ? true : false;
+        call_state = (adev->voice.session[VOICE_SESS_IDX].state.current == CALL_ACTIVE) ? true : false;
     }
 
-    return in_call;
+    return call_state;
 }
 
 uint32_t voice_get_active_session_id(struct audio_device *adev)
@@ -217,7 +218,7 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
     int usecase_id;
     int rec_mode = INCALL_REC_NONE;
 
-    if (voice_is_in_call(adev)) {
+    if (voice_is_call_state_active(adev)) {
         switch (in->source) {
         case AUDIO_SOURCE_VOICE_UPLINK:
             if (audio_extn_compr_cap_enabled() &&
@@ -343,6 +344,7 @@ int voice_start_call(struct audio_device *adev)
     if (ret == -ENOSYS) {
         ret = start_call(adev, USECASE_VOICE_CALL);
     }
+    adev->voice.in_call = true;
 
     return ret;
 }
@@ -351,6 +353,7 @@ int voice_stop_call(struct audio_device *adev)
 {
     int ret = 0;
 
+    adev->voice.in_call = false;
     ret = voice_extn_stop_call(adev);
     if (ret == -ENOSYS) {
         ret = stop_call(adev, USECASE_VOICE_CALL);
@@ -404,7 +407,7 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
         if (tty_mode != adev->voice.tty_mode) {
             adev->voice.tty_mode = tty_mode;
             adev->acdb_settings = (adev->acdb_settings & TTY_MODE_CLEAR) | tty_mode;
-            if (voice_is_in_call(adev))
+            if (voice_is_call_state_active(adev))
                voice_update_devices_for_all_voice_usecases(adev);
         }
     }
@@ -433,7 +436,7 @@ void voice_init(struct audio_device *adev)
     adev->voice.tty_mode = TTY_MODE_OFF;
     adev->voice.volume = 1.0f;
     adev->voice.mic_mute = false;
-    adev->voice.voice_device_set = false;
+    adev->voice.in_call = false;
     for (i = 0; i < MAX_VOICE_SESSIONS; i++) {
         adev->voice.session[i].pcm_rx = NULL;
         adev->voice.session[i].pcm_tx = NULL;
