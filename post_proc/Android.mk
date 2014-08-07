@@ -1,3 +1,4 @@
+ifneq ($(filter msm8974 msm8226 msm8084,$(TARGET_BOARD_PLATFORM)),)
 
 LOCAL_PATH:= $(call my-dir)
 
@@ -28,3 +29,5 @@ LOCAL_C_INCLUDES := \
 	$(call include-path-for, audio-effects)
 
 include $(BUILD_SHARED_LIBRARY)
+
+endif
