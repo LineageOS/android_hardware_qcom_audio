@@ -76,6 +76,10 @@ typedef enum {
     USECASE_INCALL_REC_UPLINK,
     USECASE_INCALL_REC_DOWNLINK,
     USECASE_INCALL_REC_UPLINK_AND_DOWNLINK,
+
+    USECASE_AUDIO_PLAYBACK_AFE_PROXY,
+    USECASE_AUDIO_RECORD_AFE_PROXY,
+
     AUDIO_USECASE_MAX
 } audio_usecase_t;
 
@@ -155,7 +159,7 @@ struct stream_in {
     int standby;
     int source;
     int pcm_device_id;
-    int device;
+    audio_devices_t device;
     audio_channel_mask_t channel_mask;
     audio_usecase_t usecase;
     bool enable_aec;
@@ -192,6 +196,8 @@ struct audio_device {
     audio_mode_t mode;
     struct stream_in *active_input;
     struct stream_out *primary_output;
+    struct stream_out *voice_tx_output;
+    struct stream_out *current_call_output;
     bool bluetooth_nrec;
     bool screen_off;
     int *snd_dev_ref_cnt;
