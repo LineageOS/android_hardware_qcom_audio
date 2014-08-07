@@ -188,6 +188,7 @@ struct stream_out {
     void *offload_cookie;
     struct compr_gapless_mdata gapless_mdata;
     int send_new_metadata;
+    unsigned int bit_width;
 
     struct audio_device *dev;
 };
@@ -272,6 +273,8 @@ struct audio_device {
     bool bt_wb_speech_enabled;
 
     int snd_card;
+    unsigned int cur_codec_backend_samplerate;
+    unsigned int cur_codec_backend_bit_width;
     void *platform;
     unsigned int offload_usecases_state;
     void *visualizer_lib;
