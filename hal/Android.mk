@@ -148,8 +148,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libtinycompress \
 	libaudioroute \
 	libdl \
-	libexpat \
-        libmdmdetect
+	libexpat
 
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
@@ -159,8 +158,7 @@ LOCAL_C_INCLUDES += \
 	$(call include-path-for, audio-effects) \
 	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \
 	$(LOCAL_PATH)/audio_extn \
-	$(LOCAL_PATH)/voice_extn \
-        $(TARGET_OUT_HEADERS)/libmdmdetect/inc
+	$(LOCAL_PATH)/voice_extn
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_LISTEN)),true)
     LOCAL_CFLAGS += -DAUDIO_LISTEN_ENABLED
