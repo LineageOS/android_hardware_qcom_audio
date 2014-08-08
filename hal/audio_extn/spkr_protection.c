@@ -746,7 +746,8 @@ void audio_extn_spkr_prot_init(void *adev)
         (const pthread_attr_t *) NULL, spkr_calibration_thread, &handle);
     } else {
         ALOGE("%s: thermal_client_request failed", __func__);
-        if (handle.thermal_client_handle)
+        if (handle.thermal_client_handle &&
+            handle.thermal_client_unregister_callback)
             handle.thermal_client_unregister_callback(handle.thermal_client_handle);
         if (handle.thermal_handle)
             dlclose(handle.thermal_handle);
