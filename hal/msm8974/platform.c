@@ -39,7 +39,6 @@
 #include "audio_extn.h"
 #include "voice_extn.h"
 #include "edid.h"
-#include "mdm_detect.h"
 #include "sound/compress_params.h"
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
@@ -628,38 +627,41 @@ void close_csd_client(struct csd_data *csd)
 
 static void platform_csd_init(struct platform_data *plat_data)
 {
-    struct dev_info mdm_detect_info;
-    int ret = 0;
+    int32_t modems, (*count_modems)(void);
+    const char *name = "libdetectmodem.so";
+    const char *func = "count_modems";
+    const char *error;
 
-    /* Call ESOC API to get the number of modems.
-     * If the number of modems is not zero, load CSD Client specific
-     * symbols. Voice call is handled by MDM and apps processor talks to
-     * MDM through CSD Client
-     */
-    ret = get_system_info(&mdm_detect_info);
-    if (ret > 0) {
-        ALOGE("%s: Failed to get system info, ret %d", __func__, ret);
+    plat_data->csd = NULL;
+
+    void *lib = dlopen(name, RTLD_NOW);
+    error = dlerror();
+    if (!lib) {
+        ALOGE("%s: could not find %s: %s", __func__, name, error);
+        return;
     }
-    ALOGD("%s: num_modems %d\n", __func__, mdm_detect_info.num_modems);
 
-    if (mdm_detect_info.num_modems > 0)
-        plat_data->csd = open_csd_client(plat_data->is_i2s_ext_modem);
-}
-
-static bool platform_is_i2s_ext_modem(const char *snd_card_name,
-                                      struct platform_data *plat_data)
-{
-    plat_data->is_i2s_ext_modem = false;
-
-    if (!strncmp(snd_card_name, "apq8084-taiko-i2s-mtp-snd-card",
-                 sizeof("apq8084-taiko-i2s-mtp-snd-card")) ||
-        !strncmp(snd_card_name, "apq8084-taiko-i2s-cdp-snd-card",
-                 sizeof("apq8084-taiko-i2s-cdp-snd-card"))) {
-        plat_data->is_i2s_ext_modem = true;
+    count_modems = NULL;
+    *(void **)(&count_modems) = dlsym(lib, func);
+    error = dlerror();
+    if (!count_modems) {
+        ALOGE("%s: could not find symbol %s in %s: %s",
+              __func__, func, name, error);
+        goto done;
     }
-    ALOGV("%s, is_i2s_ext_modem:%d",__func__, plat_data->is_i2s_ext_modem);
 
-    return plat_data->is_i2s_ext_modem;
+    modems = count_modems();
+    if (modems < 0) {
+        ALOGE("%s: count_modems failed\n", __func__);
+        goto done;
+    }
+
+    ALOGD("%s: num_modems %d\n", __func__, modems);
+    if (modems > 0)
+        plat_data->csd = open_csd_client(false /*is_i2s_ext_modem*/);
+
+done:
+    dlclose(lib);
 }
 
 static void set_platform_defaults()
@@ -721,12 +723,7 @@ void *platform_init(struct audio_device *adev)
         if (!my_data->hw_info) {
             ALOGE("%s: Failed to init hardware info", __func__);
         } else {
-            if (platform_is_i2s_ext_modem(snd_card_name, my_data)) {
-                ALOGD("%s: Call MIXER_XML_PATH_I2S", __func__);
-
-                adev->audio_route = audio_route_init(snd_card_num,
-                                                     MIXER_XML_PATH_I2S);
-            } else if (audio_extn_read_xml(adev, snd_card_num, MIXER_XML_PATH,
+            if (audio_extn_read_xml(adev, snd_card_num, MIXER_XML_PATH,
                                     MIXER_XML_PATH_AUXPCM) == -ENOSYS) {
                 adev->audio_route = audio_route_init(snd_card_num,
                                                  MIXER_XML_PATH);
