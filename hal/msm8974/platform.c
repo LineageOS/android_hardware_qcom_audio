@@ -26,9 +26,6 @@
 #include <audio_hw.h>
 #include <platform_api.h>
 #include "platform.h"
-#ifdef PLATFORM_MSM8084
-#include "mdm_detect.h"
-#endif
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
@@ -516,22 +513,41 @@ void close_csd_client(struct csd_data *csd)
 static void platform_csd_init(struct platform_data *my_data)
 {
 #ifdef PLATFORM_MSM8084
-    struct dev_info mdm_detect_info;
-    int ret = 0;
+    int32_t modems, (*count_modems)(void);
+    const char *name = "libdetectmodem.so";
+    const char *func = "count_modems";
+    const char *error;
 
-    /* Call ESOC API to get the number of modems.
-     * If the number of modems is not zero, load CSD Client specific
-     * symbols. Voice call is handled by MDM and apps processor talks to
-     * MDM through CSD Client
-     */
-    ret = get_system_info(&mdm_detect_info);
-    if (ret > 0) {
-        ALOGE("%s: Failed to get system info, ret %d", __func__, ret);
+    my_data->csd = NULL;
+
+    void *lib = dlopen(name, RTLD_NOW);
+    error = dlerror();
+    if (!lib) {
+        ALOGE("%s: could not find %s: %s", __func__, name, error);
+        return;
     }
-    ALOGD("%s: num_modems %d\n", __func__, mdm_detect_info.num_modems);
 
-    if (mdm_detect_info.num_modems > 0)
+    count_modems = NULL;
+    *(void **)(&count_modems) = dlsym(lib, func);
+    error = dlerror();
+    if (!count_modems) {
+        ALOGE("%s: could not find symbol %s in %s: %s",
+              __func__, func, name, error);
+        goto done;
+    }
+
+    modems = count_modems();
+    if (modems < 0) {
+        ALOGE("%s: count_modems failed\n", __func__);
+        goto done;
+    }
+
+    ALOGD("%s: num_modems %d\n", __func__, modems);
+    if (modems > 0)
         my_data->csd = open_csd_client(false /*is_i2s_ext_modem*/);
+
+done:
+    dlclose(lib);
 #else
      my_data->csd = NULL;
 #endif

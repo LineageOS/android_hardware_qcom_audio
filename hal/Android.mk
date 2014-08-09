@@ -43,11 +43,6 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/voice_extn \
 	external/expat/lib
 
-ifneq ($(filter msm8084,$(TARGET_BOARD_PLATFORM)),)
-  LOCAL_SHARED_LIBRARIES += libmdmdetect
-  LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/libmdmdetect/inc
-endif
-
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS)),true)
     LOCAL_CFLAGS += -DMULTI_VOICE_SESSION_ENABLED
     LOCAL_SRC_FILES += voice_extn/voice_extn.c
