@@ -1050,7 +1050,7 @@ int platform_send_audio_calibration(void *platform, snd_device_t snd_device,
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_dev_id, acdb_dev_type;
 
-    acdb_dev_id = acdb_device_table[snd_device];
+    acdb_dev_id = acdb_device_table[audio_extn_get_spkr_prot_snd_device(snd_device)];
     if (acdb_dev_id < 0) {
         ALOGE("%s: Could not find acdb id for device(%d)",
               __func__, snd_device);
