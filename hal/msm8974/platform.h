@@ -327,5 +327,10 @@ enum {
     PASSTHROUGH,
     PASSTHROUGH_CONVERT
 };
-
+/*
+ * ID for setting mute and lateny on the device side
+ * through Device PP Params mixer control.
+ */
+#define DEVICE_PARAM_MUTE_ID    0
+#define DEVICE_PARAM_LATENCY_ID 1
 #endif // QCOM_AUDIO_PLATFORM_H

@@ -1005,7 +1005,7 @@ int platform_set_default_channel_map(void *platform __unused,
     return 0;
 }
 
-int platform_get_channels_from_edid_info(void *platform __unused,
+int platform_set_edid_channels_configuration(void *platform __unused,
                                          int channels __unused)
 {
     return 0;
@@ -1027,6 +1027,11 @@ bool platform_is_edid_supported_format(void *platform __unused,
 }
 
 int platform_set_hdmi_format_and_samplerate(struct stream_out *out __unused)
+{
+    return 0;
+}
+int platform_set_device_params(struct stream_out *out __unused,
+                                  int param __unused, int value __unused)
 {
     return 0;
 }
