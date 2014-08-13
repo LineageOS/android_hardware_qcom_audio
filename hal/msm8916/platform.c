@@ -231,7 +231,9 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_HEADSET_MIC] = "voice-headset-mic",
     [SND_DEVICE_IN_HDMI_MIC] = "hdmi-mic",
     [SND_DEVICE_IN_BT_SCO_MIC] = "bt-sco-mic",
+    [SND_DEVICE_IN_BT_SCO_MIC_NREC] = "bt-sco-mic",
     [SND_DEVICE_IN_BT_SCO_MIC_WB] = "bt-sco-mic-wb",
+    [SND_DEVICE_IN_BT_SCO_MIC_WB_NREC] = "bt-sco-mic-wb",
     [SND_DEVICE_IN_CAMCORDER_MIC] = "camcorder-mic",
     [SND_DEVICE_IN_VOICE_DMIC] = "voice-dmic-ef",
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC] = "voice-speaker-dmic-ef",
@@ -309,7 +311,9 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_HEADSET_MIC] = 8,
     [SND_DEVICE_IN_HDMI_MIC] = 4,
     [SND_DEVICE_IN_BT_SCO_MIC] = 21,
+    [SND_DEVICE_IN_BT_SCO_MIC_NREC] = 122,
     [SND_DEVICE_IN_BT_SCO_MIC_WB] = 38,
+    [SND_DEVICE_IN_BT_SCO_MIC_WB_NREC] = 123,
     [SND_DEVICE_IN_CAMCORDER_MIC] = 4,
     [SND_DEVICE_IN_VOICE_DMIC] = 41,
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC] = 43,
@@ -392,7 +396,9 @@ struct snd_device_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_HEADSET_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HDMI_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_BT_SCO_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_BT_SCO_MIC_NREC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_BT_SCO_MIC_WB)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_BT_SCO_MIC_WB_NREC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_DMIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_SPEAKER_DMIC)},
@@ -819,9 +825,11 @@ int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
 
 void platform_add_backend_name(char *mixer_path, snd_device_t snd_device)
 {
-    if (snd_device == SND_DEVICE_IN_BT_SCO_MIC)
+    if ((snd_device == SND_DEVICE_IN_BT_SCO_MIC) ||
+         (snd_device == SND_DEVICE_IN_BT_SCO_MIC_NREC))
         strlcat(mixer_path, " bt-sco", MIXER_PATH_MAX_LENGTH);
-    else if (snd_device == SND_DEVICE_IN_BT_SCO_MIC_WB)
+    else if ((snd_device == SND_DEVICE_IN_BT_SCO_MIC_WB) ||
+              (snd_device == SND_DEVICE_IN_BT_SCO_MIC_WB_NREC))
         strlcat(mixer_path, " bt-sco-wb", MIXER_PATH_MAX_LENGTH);
     else if(snd_device == SND_DEVICE_OUT_BT_SCO)
         strlcat(mixer_path, " bt-sco", MIXER_PATH_MAX_LENGTH);
@@ -1428,10 +1436,17 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             snd_device = SND_DEVICE_IN_VOICE_HEADSET_MIC;
             set_echo_reference(adev->mixer, EC_REF_RX);
         } else if (out_device & AUDIO_DEVICE_OUT_ALL_SCO) {
-            if (adev->bt_wb_speech_enabled)
-                snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB;
-            else
-                snd_device = SND_DEVICE_IN_BT_SCO_MIC;
+            if (adev->bt_wb_speech_enabled) {
+                if (adev->bluetooth_nrec)
+                    snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB_NREC;
+                else
+                    snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB;
+            } else {
+                if (adev->bluetooth_nrec)
+                    snd_device = SND_DEVICE_IN_BT_SCO_MIC_NREC;
+                else
+                    snd_device = SND_DEVICE_IN_BT_SCO_MIC;
+            }
         } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER) {
             if (my_data->fluence_type != FLUENCE_NONE &&
                 my_data->fluence_in_voice_call &&
@@ -1580,10 +1595,17 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_HEADSET_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
-            if (adev->bt_wb_speech_enabled)
-                snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB;
-            else
-                snd_device = SND_DEVICE_IN_BT_SCO_MIC;
+            if (adev->bt_wb_speech_enabled) {
+                if (adev->bluetooth_nrec)
+                    snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB_NREC;
+                else
+                    snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB;
+            } else {
+                if (adev->bluetooth_nrec)
+                    snd_device = SND_DEVICE_IN_BT_SCO_MIC_NREC;
+                else
+                    snd_device = SND_DEVICE_IN_BT_SCO_MIC;
+            }
         } else if (in_device & AUDIO_DEVICE_IN_AUX_DIGITAL) {
             snd_device = SND_DEVICE_IN_HDMI_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET ||
@@ -1609,10 +1631,17 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) {
             snd_device = SND_DEVICE_IN_HANDSET_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET) {
-            if (adev->bt_wb_speech_enabled)
-                snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB;
-            else
-                snd_device = SND_DEVICE_IN_BT_SCO_MIC;
+            if (adev->bt_wb_speech_enabled) {
+                if (adev->bluetooth_nrec)
+                    snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB_NREC;
+                else
+                    snd_device = SND_DEVICE_IN_BT_SCO_MIC_WB;
+            } else {
+                if (adev->bluetooth_nrec)
+                    snd_device = SND_DEVICE_IN_BT_SCO_MIC_NREC;
+                else
+                    snd_device = SND_DEVICE_IN_BT_SCO_MIC;
+            }
         } else if (out_device & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             snd_device = SND_DEVICE_IN_HDMI_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
