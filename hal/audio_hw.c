@@ -1808,6 +1808,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         }
 
         ret = compress_write(out->compr, buffer, bytes);
+        if (ret < 0)
+            ret = -errno;
         ALOGVV("%s: writing buffer (%d bytes) to compress device returned %d", __func__, bytes, ret);
         if (ret >= 0 && ret < (ssize_t)bytes) {
             ALOGD("No space available in compress driver, post msg to cb thread");
@@ -1832,7 +1834,9 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                 memset((void *)buffer, 0, bytes);
             ALOGVV("%s: writing buffer (%d bytes) to pcm device", __func__, bytes);
             ret = pcm_write(out->pcm, (void *)buffer, bytes);
-            if (ret == 0)
+            if (ret < 0)
+                ret = -errno;
+            else if (ret == 0)
                 out->written += bytes / (out->config.channels * sizeof(short));
         }
     }
@@ -1874,6 +1878,8 @@ static int out_get_render_position(const struct audio_stream_out *stream,
         if (out->compr != NULL) {
             ret = compress_get_tstamp(out->compr, (unsigned long *)dsp_frames,
                     &out->sample_rate);
+            if (ret < 0)
+                ret = -errno;
             ALOGVV("%s rendered frames %d sample_rate %d",
                    __func__, *dsp_frames, out->sample_rate);
         }
@@ -2248,6 +2254,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             ret = audio_extn_compr_cap_read(in, buffer, bytes);
         else
             ret = pcm_read(in->pcm, buffer, bytes);
+        if (ret < 0)
+            ret = -errno;
     }
 
     /*
