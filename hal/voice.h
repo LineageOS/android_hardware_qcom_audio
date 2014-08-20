@@ -39,6 +39,7 @@ struct audio_device;
 struct str_parms;
 struct stream_in;
 struct stream_out;
+typedef int audio_usecase_t;
 
 struct call_state {
     int current;
@@ -67,6 +68,9 @@ enum {
     INCALL_REC_DOWNLINK,
     INCALL_REC_UPLINK_AND_DOWNLINK,
 };
+
+int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id);
+int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id);
 
 int voice_start_call(struct audio_device *adev);
 int voice_stop_call(struct audio_device *adev);

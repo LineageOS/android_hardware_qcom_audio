@@ -50,7 +50,7 @@ typedef int snd_device_t;
  * Each usecase is mapped to a specific PCM device.
  * Refer to pcm_device_table[].
  */
-typedef enum {
+enum {
     USECASE_INVALID = -1,
     /* Playback usecases */
     USECASE_AUDIO_PLAYBACK_DEEP_BUFFER = 0,
@@ -77,7 +77,9 @@ typedef enum {
     USECASE_INCALL_REC_DOWNLINK,
     USECASE_INCALL_REC_UPLINK_AND_DOWNLINK,
     AUDIO_USECASE_MAX
-} audio_usecase_t;
+};
+
+const char * const use_case_table[AUDIO_USECASE_MAX];
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 

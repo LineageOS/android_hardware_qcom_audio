@@ -67,8 +67,6 @@ struct pcm_config pcm_config_incall_music = {
     .avail_min = LOW_LATENCY_OUTPUT_PERIOD_SIZE / 4,
 };
 
-extern int start_call(struct audio_device *adev, audio_usecase_t usecase_id);
-extern int stop_call(struct audio_device *adev, audio_usecase_t usecase_id);
 int voice_extn_is_call_state_active(struct audio_device *adev, bool *is_call_active);
 
 static bool is_valid_call_state(int call_state)
@@ -165,9 +163,9 @@ static int update_calls(struct audio_device *adev)
             {
             case CALL_INACTIVE:
                 ALOGD("%s: INACTIVE -> ACTIVE vsid:%x", __func__, session->vsid);
-                ret = start_call(adev, usecase_id);
+                ret = voice_start_usecase(adev, usecase_id);
                 if(ret < 0) {
-                    ALOGE("%s: voice_start_call() failed for usecase: %d\n",
+                    ALOGE("%s: voice_start_usecase() failed for usecase: %d\n",
                           __func__, usecase_id);
                 } else {
                     session->state.current = session->state.new;
@@ -203,9 +201,9 @@ static int update_calls(struct audio_device *adev)
             case CALL_HOLD:
             case CALL_LOCAL_HOLD:
                 ALOGD("%s: ACTIVE/HOLD/LOCAL_HOLD -> INACTIVE vsid:%x", __func__, session->vsid);
-                ret = stop_call(adev, usecase_id);
+                ret = voice_stop_usecase(adev, usecase_id);
                 if(ret < 0) {
-                    ALOGE("%s: voice_end_call() failed for usecase: %d\n",
+                    ALOGE("%s: voice_stop_usecase() failed for usecase: %d\n",
                           __func__, usecase_id);
                 } else {
                     session->state.current = session->state.new;
