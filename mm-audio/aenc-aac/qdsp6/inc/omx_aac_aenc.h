@@ -457,7 +457,7 @@ private:
     unsigned int                   m_flags;      //encapsulate the waiting states.
     OMX_U64                        nTimestamp;
     OMX_U64                        ts;
-    uint32_t                       m_frame_count;
+    uint64_t                       m_frame_count;
     unsigned int                   frameduration;
     unsigned int                   pcm_input; //tunnel or non-tunnel
     unsigned int                   m_inp_act_buf_count;    // Num of Input Buffers
