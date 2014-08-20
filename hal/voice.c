@@ -41,8 +41,6 @@ struct pcm_config pcm_config_voice_call = {
     .format = PCM_FORMAT_S16_LE,
 };
 
-extern const char * const use_case_table[AUDIO_USECASE_MAX];
-
 static struct voice_session *voice_get_session_from_use_case(struct audio_device *adev,
                               audio_usecase_t usecase_id)
 {
@@ -57,7 +55,7 @@ static struct voice_session *voice_get_session_from_use_case(struct audio_device
     return session;
 }
 
-int stop_call(struct audio_device *adev, audio_usecase_t usecase_id)
+int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 {
     int i, ret = 0;
     struct audio_usecase *uc_info;
@@ -108,7 +106,7 @@ int stop_call(struct audio_device *adev, audio_usecase_t usecase_id)
     return ret;
 }
 
-int start_call(struct audio_device *adev, audio_usecase_t usecase_id)
+int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 {
     int i, ret = 0;
     struct audio_usecase *uc_info;
@@ -195,7 +193,7 @@ int start_call(struct audio_device *adev, audio_usecase_t usecase_id)
     goto done;
 
 error_start_voice:
-    stop_call(adev, usecase_id);
+    voice_stop_usecase(adev, usecase_id);
 
 done:
     ALOGD("%s: exit: status(%d)", __func__, ret);
@@ -372,7 +370,7 @@ int voice_start_call(struct audio_device *adev)
 
     ret = voice_extn_start_call(adev);
     if (ret == -ENOSYS) {
-        ret = start_call(adev, USECASE_VOICE_CALL);
+        ret = voice_start_usecase(adev, USECASE_VOICE_CALL);
     }
     adev->voice.in_call = true;
 
@@ -386,7 +384,7 @@ int voice_stop_call(struct audio_device *adev)
     adev->voice.in_call = false;
     ret = voice_extn_stop_call(adev);
     if (ret == -ENOSYS) {
-        ret = stop_call(adev, USECASE_VOICE_CALL);
+        ret = voice_stop_usecase(adev, USECASE_VOICE_CALL);
     }
 
     return ret;
