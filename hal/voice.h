@@ -69,10 +69,11 @@ enum {
     INCALL_REC_UPLINK_AND_DOWNLINK,
 };
 
-int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id);
+int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id,
+                        struct stream_out *out);
 int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id);
 
-int voice_start_call(struct audio_device *adev);
+int voice_start_call(struct audio_device *adev, struct stream_out *out);
 int voice_stop_call(struct audio_device *adev);
 int voice_set_parameters(struct audio_device *adev, struct str_parms *parms);
 void voice_get_parameters(struct audio_device *adev, struct str_parms *query,
