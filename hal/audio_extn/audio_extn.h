@@ -215,6 +215,7 @@ void audio_extn_dolby_set_endpoint(struct audio_device *adev);
 #ifndef DS1_DOLBY_DDP_ENABLED
 #define AUDIO_FORMAT_AC3        0x0a000000UL
 #define AUDIO_FORMAT_EAC3       0x12000000UL
+#define AUDIO_FORMAT_E_AC3_JOC  0x19000000UL
 #define audio_extn_ddp_set_parameters(adev, parms)       (0)
 #define audio_extn_is_dolby_format(format)               (0)
 #define audio_extn_dolby_get_snd_codec_id(format)        (0)
@@ -238,6 +239,8 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev);
 #define audio_extn_dolby_is_passthrough_stream(flags)                      (0)
 #define audio_extn_dolby_set_hdmi_format_and_samplerate(adev, out)         (0)
 #define audio_extn_dolby_get_passt_buffer_size(info)                       (0)
+#define audio_extn_dolby_set_passt_volume(out, mute)                       (0)
+#define audio_extn_dolby_set_passt_latency(out, latency)                   (0)
 #else
 int audio_extn_dolby_update_passt_formats(struct audio_device *adev,
                                           struct stream_out *out);
@@ -251,6 +254,8 @@ bool audio_extn_dolby_is_passthrough_stream(int flags);
 int audio_extn_dolby_set_hdmi_format_and_samplerate(struct audio_device *adev,
                                                     struct stream_out *out);
 int audio_extn_dolby_get_passt_buffer_size(audio_offload_info_t* info);
+int audio_extn_dolby_set_passt_volume(struct stream_out *out, int mute);
+int audio_extn_dolby_set_passt_latency(struct stream_out *out, int latency);
 #endif
 
 #ifndef HFP_ENABLED
@@ -279,7 +284,7 @@ int audio_extn_dap_hal_init(int snd_card);
 int audio_extn_dap_hal_deinit();
 void audio_extn_dolby_ds2_set_endpoint(struct audio_device *adev);
 int audio_extn_ds2_enable(struct audio_device *adev);
-int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, bool state);
+int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, int state);
 #else
 #define audio_extn_dap_hal_init(snd_card)                             (0)
 #define audio_extn_dap_hal_deinit()                                   (0)
@@ -287,4 +292,8 @@ int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, bool state);
 #define audio_extn_ds2_enable(adev)                                   (0)
 #define audio_extn_dolby_set_dap_bypass(adev, state)                  (0)
 #endif
+typedef enum {
+    DAP_STATE_ON = 0,
+    DAP_STATE_BYPASS,
+};
 #endif /* AUDIO_EXTN_H */

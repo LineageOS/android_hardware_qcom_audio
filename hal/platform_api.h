@@ -82,9 +82,10 @@ int platform_get_edid_info(void *platform);
 int platform_set_channel_map(void *platform, int ch_count, char *ch_map,
                              int snd_id);
 int platform_set_default_channel_map(void *platform, int channels, int snd_id);
-int platform_get_channels_from_edid_info(void *platform, int channels);
+int platform_set_edid_channels_configuration(void *platform, int channels);
 void platform_reset_edid_info(void *platform);
 unsigned char platform_map_to_edid_format(int format);
 bool platform_is_edid_supported_format(void *platform, int format);
 int platform_set_hdmi_format_and_samplerate(struct stream_out *out);
+int platform_set_device_params(struct stream_out *out, int param, int value);
 #endif // AUDIO_PLATFORM_API_H

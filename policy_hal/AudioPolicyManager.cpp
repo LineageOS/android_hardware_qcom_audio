@@ -1252,11 +1252,6 @@ audio_io_handle_t AudioPolicyManager::getOutput(AudioSystem::stream_type stream,
             // Change device to speaker in case of system tone & message tone
             device = AUDIO_DEVICE_OUT_SPEAKER;
     }
-
-    if (device & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-        ALOGV("check and invalidate");
-        //updateAndCloseOutputs();
-    }
 #endif
 
 #ifdef AUDIO_POLICY_TEST
@@ -1308,6 +1303,20 @@ audio_io_handle_t AudioPolicyManager::getOutput(AudioSystem::stream_type stream,
         return output;
     } else {
         ALOGV("getPassthroughOutput:No passthrough o/p returned,try other o/p");
+    }
+
+    if (device & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        // Invalidate and close the passthrough output if there is an incoming
+        // non passthrough music streams.
+        // Condition is ignores for for system  streams and message tone as they
+        // will be played out on speaker.
+        if ((stream == AudioSystem::SYSTEM) ||
+            (strategy == STRATEGY_SONIFICATION_RESPECTFUL)) {
+            ALOGV("Do not update and close output system tones/sonification");
+        } else {
+            ALOGV("check and invalidate");
+            updateAndCloseOutputs();
+        }
     }
 #endif
 
@@ -1974,7 +1983,11 @@ status_t AudioPolicyManager::stopOutput(audio_io_handle_t output,
             // and kernel buffers. Also the latency does not always include additional delay in the
             // audio path (audio DSP, CODEC ...)
 #ifdef HDMI_PASSTHROUGH_ENABLED
-            newDevice = handleHDMIPassthrough(newDevice, output, stream);
+            // Use the stream ref count to check if ringtone/ notification
+            // needs to be on speaker. Input stream type should be used only
+            // when a particular stream is started. On stop if stream type is
+            // used, the device is changed to speaker even when ringtone ends.
+            newDevice = handleHDMIPassthrough(newDevice, output);
 #endif
 
             setOutputDevice(output, newDevice, false, outputDesc->mLatency*2);
@@ -2131,19 +2144,20 @@ void AudioPolicyManager::closeOutput(audio_io_handle_t output)
 void AudioPolicyManager::checkAndSuspendOutputs() {
 
     AudioOutputDescriptor *desc;
-    char value[PROPERTY_VALUE_MAX] = {0};
-    property_get("audio.offload.passthrough", value, NULL);
-    if (!(atoi(value) || !strncmp("true", value, 4))) {
+
+    if (!isHDMIPassthroughEnabled()) {
         ALOGV("checkAndSuspendOutputs: passthrough not enabled");
         return;
     }
+
     for (size_t i = 0; i < mOutputs.size(); i++) {
         desc = mOutputs.valueAt(i);
         ALOGV("checkAndSuspendOutputs:device 0x%x, flag %x, music refcount %d",
              desc->mDevice, desc->mFlags, desc->mRefCount[AudioSystem::MUSIC]);
         if (desc->mDevice & AUDIO_DEVICE_OUT_AUX_DIGITAL ||
             desc->mDevice == AUDIO_DEVICE_NONE) {
-            // check if already suspended before suspending the output
+            // check if  fast/deep buffer/multichannel outputs are already
+            // suspended before suspending the output
             if (((desc->mFlags &
                         (AudioSystem::output_flags)AUDIO_OUTPUT_FLAG_FAST) &&
                         !mFastSuspended) ||
@@ -2152,11 +2166,17 @@ void AudioPolicyManager::checkAndSuspendOutputs() {
                         !mPrimarySuspended) ||
                 ((desc->mFlags &
                         (AudioSystem::output_flags)AUDIO_OUTPUT_FLAG_PRIMARY) &&
-                        !mPrimarySuspended)) {
+                        !mPrimarySuspended) ||
+                ((desc->mFlags &   (AudioSystem::output_flags)
+                        AUDIO_OUTPUT_FLAG_DIRECT) &&
+                        !(desc->mFlags &  (AudioSystem::output_flags)
+                        AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
+                        !mMultiChannelSuspended)) {
                 /*TODO : is other streams needed here. */
                 ALOGD("suspend Ouput");
                 mpClientInterface->suspendOutput(mOutputs.keyAt(i));
-                // Update the reference count after suspend
+                // Update the reference count of fast/deep buffer/multichannel
+                // after suspend.
                 if (desc->mFlags &
                     (AudioSystem::output_flags)AUDIO_OUTPUT_FLAG_DEEP_BUFFER ||
                     desc->mFlags &
@@ -2165,6 +2185,11 @@ void AudioPolicyManager::checkAndSuspendOutputs() {
                 } else if (desc->mFlags &
                     (AudioSystem::output_flags)AUDIO_OUTPUT_FLAG_FAST) {
                     mFastSuspended++;
+                } else if ((desc->mFlags & (AudioSystem::output_flags)
+                    AUDIO_OUTPUT_FLAG_DIRECT) &&
+                    !(desc->mFlags &  (AudioSystem::output_flags)
+                    AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
+                    mMultiChannelSuspended++;
                 }
             } else {
                 continue;
@@ -2172,26 +2197,27 @@ void AudioPolicyManager::checkAndSuspendOutputs() {
             }
         }
     }
-    ALOGV("Suspend : mPrimarySuspended %d, mFastSuspended %d",
-           mPrimarySuspended, mFastSuspended);
+    ALOGV("Suspend count: primary %d, fast %d, multichannel %d",
+           mPrimarySuspended, mFastSuspended, mMultiChannelSuspended);
 }
 
 void AudioPolicyManager::checkAndRestoreOutputs() {
 
     AudioOutputDescriptor *desc;
-    char value[PROPERTY_VALUE_MAX] = {0};
-    property_get("audio.offload.passthrough", value, NULL);
-    if (!(atoi(value) || !strncmp("true", value, 4))) {
+
+    if (!isHDMIPassthroughEnabled()) {
         ALOGV("checkAndRestoreOutputs: passthrough not enabled");
         return;
     }
+
     for (size_t i = 0; i < mOutputs.size(); i++) {
         desc = mOutputs.valueAt(i);
         ALOGV("checkAndRestoreOutputs: device 0x%x, flag %x, music refcount %d",
              desc->mDevice, desc->mFlags, desc->mRefCount[AudioSystem::MUSIC]);
         if (desc->mDevice & AUDIO_DEVICE_OUT_AUX_DIGITAL ||
             desc->mDevice == AUDIO_DEVICE_NONE) {
-            // check if the outputs were suspended before restore
+            // check if the deep buffer/fast/multichannel outputs were
+            // suspended before restore.
             if (((desc->mFlags &
                     (AudioSystem::output_flags)AUDIO_OUTPUT_FLAG_FAST) &&
                     mFastSuspended) ||
@@ -2200,11 +2226,17 @@ void AudioPolicyManager::checkAndRestoreOutputs() {
                     mPrimarySuspended) ||
                 ((desc->mFlags &
                     (AudioSystem::output_flags)AUDIO_OUTPUT_FLAG_PRIMARY) &&
-                    mPrimarySuspended)) {
+                    mPrimarySuspended) ||
+                ((desc->mFlags &  (AudioSystem::output_flags)
+                    AUDIO_OUTPUT_FLAG_DIRECT) &&
+                    !(desc->mFlags & (AudioSystem::output_flags)
+                    AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
+                    mMultiChannelSuspended)) {
 
                 ALOGD("restore Output");
                 mpClientInterface->restoreOutput(mOutputs.keyAt(i));
-                // update the reference count after restore
+                // update the reference count for fast/deep buffer/multichannel
+                // after restore.
                 if (desc->mFlags &
                     (AudioSystem::output_flags)AUDIO_OUTPUT_FLAG_DEEP_BUFFER ||
                     desc->mFlags &
@@ -2213,6 +2245,11 @@ void AudioPolicyManager::checkAndRestoreOutputs() {
                 } else if (desc->mFlags &
                     (AudioSystem::output_flags)AUDIO_OUTPUT_FLAG_FAST) {
                     mFastSuspended--;
+                } else if ((desc->mFlags & (AudioSystem::output_flags)
+                    AUDIO_OUTPUT_FLAG_DIRECT) &&
+                    !(desc->mFlags &  (AudioSystem::output_flags)
+                    AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
+                    mMultiChannelSuspended--;
                 }
             } else {
                 continue;
@@ -2220,8 +2257,8 @@ void AudioPolicyManager::checkAndRestoreOutputs() {
             }
         }
     }
-    ALOGV("Restore: mPrimarySuspended %d, mFastSuspended %d",
-          mPrimarySuspended, mFastSuspended);
+    ALOGV("Restore count: primary %d, fast %d, multichannel %d",
+          mPrimarySuspended, mFastSuspended, mMultiChannelSuspended);
 }
 
 audio_devices_t AudioPolicyManager::handleHDMIPassthrough(audio_devices_t device,
@@ -2231,9 +2268,7 @@ audio_devices_t AudioPolicyManager::handleHDMIPassthrough(audio_devices_t device
     routing_strategy strategy = (routing_strategy)audio_strategy;
     AudioSystem::stream_type stream =  (AudioSystem::stream_type)audio_stream;
 
-    char value[PROPERTY_VALUE_MAX] = {0};
-    property_get("audio.offload.passthrough", value, NULL);
-    if (!(atoi(value) || !strncmp("true", value, 4))) {
+    if (!isHDMIPassthroughEnabled()) {
         ALOGV("handleHDMIPassthrough: passthrough not enabled");
         return device;
     }
@@ -2314,10 +2349,8 @@ audio_io_handle_t AudioPolicyManager::getPassthroughOutput(
     // The function should return error if it cannot find valid passthrough
     // output. This is required if client sets passthrough flag directly.
     bool shouldReturnError = false;
-    char value[PROPERTY_VALUE_MAX] = {0};
 
-    property_get("audio.offload.passthrough", value, NULL);
-    if (!(atoi(value) || !strncmp("true", value, 4))) {
+    if (!isHDMIPassthroughEnabled()) {
         ALOGV("getPassthroughOutput: passthrough not enabled");
         goto noPassthrough;
     }
@@ -2326,8 +2359,9 @@ audio_io_handle_t AudioPolicyManager::getPassthroughOutput(
         shouldReturnError = true;
 
     // Passthrough used for dolby formats and if device is HDMI
-    if ((format == AUDIO_FORMAT_EAC3 || format == AUDIO_FORMAT_AC3) &&
-            (device & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+    if ((format == AUDIO_FORMAT_EAC3 || format == AUDIO_FORMAT_AC3 ||
+         format == AUDIO_FORMAT_E_AC3_JOC) &&
+         (device & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
 
         //stream based effects enabled, ignore passthrough
         if (isEffectEnabled()) {
@@ -2347,16 +2381,20 @@ audio_io_handle_t AudioPolicyManager::getPassthroughOutput(
                                     AUDIO_OUTPUT_FLAG_DEEP_BUFFER)) &&
                     (desc->mRefCount[AudioSystem::MUSIC] > 0))
                             goto no_passthrough;
-                else*/ if ((desc->mFlags & AUDIO_OUTPUT_FLAG_DIRECT ||
-                          desc->mFlags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
-                           desc->mDirectOpenCount > 0) {
-                            ALOGD("Ignore passthrough,offload session active");
-                            goto noPassthrough;
+                else*/
+                // Check is compress offload stream is active before allowing
+                // passthrough stream
+                if ((desc->mFlags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
+                       (!desc->mFlags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)
+                       && desc->mDirectOpenCount > 0) {
+                    ALOGD("Ignore passthrough,offload session active");
+                    goto noPassthrough;
                 }
             }
         }
 
         checkAndSuspendOutputs();
+        closeOffloadOutputs();
         flags = (AudioSystem::output_flags)(flags|AUDIO_OUTPUT_FLAG_DIRECT|
                  AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH);
 
@@ -2470,10 +2508,8 @@ void AudioPolicyManager::updateAndCloseOutputs() {
 
     bool passthroughActive = false;
     AudioOutputDescriptor *desc;
-    char value[PROPERTY_VALUE_MAX] = {0};
 
-    property_get("audio.offload.passthrough", value, NULL);
-    if (!(atoi(value) || !strncmp("true", value, 4))) {
+    if (!isHDMIPassthroughEnabled()) {
         ALOGV("updateAndCloseOutputs: passthrough not enabled");
         return;
     }
@@ -2495,13 +2531,49 @@ void AudioPolicyManager::updateAndCloseOutputs() {
     if (passthroughActive) {
         // Move tracks associated to this strategy from previous
         // output to new output
-        for (int i = AudioSystem::SYSTEM;
-             i < (int)AudioSystem::NUM_STREAM_TYPES; i++) {
-            ALOGV("\n Invalidate on call mode for stream :: %d  \n", i);
-            mpClientInterface->setStreamOutput((AudioSystem::stream_type)i,
-                                                  0 /* ignored */);
+        ALOGV("\n Invalidate stream\n");
+        mpClientInterface->setStreamOutput(AudioSystem::MUSIC, 0/* ignored */);
+    }
+}
+
+void AudioPolicyManager::closeOffloadOutputs() {
+
+    bool passthroughActive = false;
+    AudioOutputDescriptor *desc;
+
+    if (!isHDMIPassthroughEnabled())
+        return;
+    ALOGV("closeOffloadOutputs");
+    // Invalidate and close offload output before starting a pasthrough output.
+    // This allows compressed stream to be restarted from correct position.
+    // If compressed output is not closed, passthrough session is stopped on
+    // de-routing offload session when offload session runs into standy after
+    // 1 minute standby time.
+    for (size_t i = 0; i < mOutputs.size(); i++) {
+        desc = mOutputs.valueAt(i);
+        ALOGV("closeOffloadOutputs:desc->mFlags %x, refCount %d",
+               desc->mFlags, desc->mRefCount[AudioSystem::MUSIC]);
+        if (((desc->mFlags &
+            (AudioSystem::output_flags)AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
+            (!(desc->mFlags &
+            (AudioSystem::output_flags)AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
+            ) && desc->mRefCount[AudioSystem::MUSIC] == 0) {
+            mpClientInterface->setStreamOutput(AudioSystem::MUSIC, 0);
+            closeOutput(desc->mId);
         }
     }
+}
+bool AudioPolicyManager::isHDMIPassthroughEnabled() {
+
+    char value[PROPERTY_VALUE_MAX] = {0};
+
+    property_get("audio.offload.passthrough", value, NULL);
+    if (atoi(value) || !strncmp("true", value, 4)) {
+        ALOGD("HDMI Passthrough is enabled");
+        return true;
+    }
+    ALOGV("HDMI Passthrough is not enabled");
+    return false;
 }
 #endif
 
