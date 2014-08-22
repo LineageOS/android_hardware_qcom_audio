@@ -1,5 +1,5 @@
 /* AudioDaemon.cpp
-Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -35,7 +35,15 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #include "AudioDaemon.h"
 
+#define CPE_MAGIC_NUM 0x2000
+#define MAX_CPE_SLEEP_RETRY 2
+#define CPE_SLEEP_WAIT 100
+
+#define MAX_SLEEP_RETRY 100
+#define AUDIO_INIT_SLEEP_WAIT 100 /* 100 ms */
+
 int bootup_complete = 0;
+bool cpe_bootup_complete = false;
 
 namespace android {
 
@@ -115,19 +123,22 @@ namespace android {
         return NO_ERROR;
     }
 
-#define MAX_SLEEP_RETRY 100
-#define AUDIO_INIT_SLEEP_WAIT 100 /* 100 ms */
-
     bool AudioDaemon::threadLoop()
     {
         int max = -1;
         unsigned int i;
         bool ret = true;
-        snd_card_status cur_state = snd_card_offline;
+        notify_status cur_state = snd_card_offline;
         struct pollfd *pfd = NULL;
         char rd_buf[9];
         unsigned int sleepRetry = 0;
         bool audioInitDone = false;
+        int fd = 0;
+        char path[50];
+        notify_status cur_cpe_state = cpe_offline;
+        notify_status prev_cpe_state = cpe_offline;
+        unsigned int cpe_cnt = CPE_MAGIC_NUM;
+        unsigned int num_snd_cards = 0;
 
         ALOGV("Start threadLoop()");
         while (audioInitDone == false && sleepRetry < MAX_SLEEP_RETRY) {
@@ -140,8 +151,31 @@ namespace android {
             }
         }
 
-        if (audioInitDone == false)
+        if (audioInitDone == false) {
             ALOGE("Sound Card is empty!!!");
+            goto thread_exit;
+        }
+
+        /* soundcards are opened, now get the cpe state nodes */
+        num_snd_cards = mSndCardFd.size();
+        for (i = 0; i < num_snd_cards; i++) {
+            snprintf(path, sizeof(path), "/proc/asound/card%d/cpe0_state", mSndCardFd[i].first);
+            ALOGD("Opening cpe0_state : %s", path);
+            sleepRetry = 0;
+            do {
+                fd = open(path, O_RDONLY);
+                if (fd == -1)  {
+                    sleepRetry++;
+                    ALOGE("CPE state open %s failed %s, Retrying %d",
+                          path, strerror(errno), sleepRetry);
+                    usleep(CPE_SLEEP_WAIT*1000);
+                } else {
+                    ALOGD("cpe state opened: %s", path);
+                    mSndCardFd.push_back(std::make_pair(cpe_cnt++, fd));
+                }
+            }while ((fd == -1) &&  sleepRetry < MAX_CPE_SLEEP_RETRY);
+        }
+        ALOGD("number of sndcards %d CPEs %d", i, cpe_cnt - CPE_MAGIC_NUM);
 
         pfd = new pollfd[mSndCardFd.size()];
         bzero(pfd, sizeof(*pfd) * mSndCardFd.size());
@@ -150,34 +184,54 @@ namespace android {
             pfd[i].events = POLLPRI;
         }
 
-       ALOGD("read for sound card state change before while");
-       for (i = 0; i < mSndCardFd.size(); i++) {
-           if (!read(pfd[i].fd, (void *)rd_buf, 8)) {
+        ALOGD("read for sound card state change before while");
+        for (i = 0; i < mSndCardFd.size(); i++) {
+            if (!read(pfd[i].fd, (void *)rd_buf, 8)) {
                ALOGE("Error receiving sound card state event (%s)", strerror(errno));
                ret = false;
-           } else {
+            } else {
                rd_buf[8] = '\0';
-               ALOGD("sound card state file content: %s before while",rd_buf);
                lseek(pfd[i].fd, 0, SEEK_SET);
 
-               if (strstr(rd_buf, "OFFLINE")) {
-                   ALOGE("put cur_state to offline");
-                   cur_state = snd_card_offline;
-               } else if (strstr(rd_buf, "ONLINE")){
-                   ALOGE("put cur_state to online");
-                   cur_state = snd_card_online;
-               } else {
-                   ALOGE("ERROR rd_buf %s", rd_buf);
+               if(mSndCardFd[i].first >= CPE_MAGIC_NUM) {
+                   ALOGD("CPE %d state file content: %s before while",
+                         mSndCardFd[i].first - CPE_MAGIC_NUM, rd_buf);
+                   if (strstr(rd_buf, "OFFLINE")) {
+                       ALOGD("CPE state offline");
+                       cur_cpe_state = cpe_offline;
+                   } else if (strstr(rd_buf, "ONLINE")){
+                       ALOGD("CPE state online");
+                       cur_cpe_state = cpe_online;
+                   } else {
+                       ALOGE("ERROR CPE rd_buf %s", rd_buf);
+                   }
+                   if (cur_cpe_state == cpe_online && !cpe_bootup_complete) {
+                       cpe_bootup_complete = true;
+                       ALOGD("CPE boot up completed before polling");
+                   }
+                   prev_cpe_state = cur_cpe_state;
                }
+               else {
+                   ALOGD("sound card state file content: %s before while",rd_buf);
+                   if (strstr(rd_buf, "OFFLINE")) {
+                       ALOGE("put cur_state to offline");
+                       cur_state = snd_card_offline;
+                   } else if (strstr(rd_buf, "ONLINE")){
+                       ALOGE("put cur_state to online");
+                       cur_state = snd_card_online;
+                   } else {
+                       ALOGE("ERROR rd_buf %s", rd_buf);
+                   }
 
-               ALOGD("cur_state=%d, bootup_complete=%d", cur_state, cur_state );
-               if (cur_state == snd_card_online && !bootup_complete) {
-                   bootup_complete = 1;
-                   ALOGE("sound card up is deteced before while");
-                   ALOGE("bootup_complete set to 1");
+                   ALOGD("cur_state=%d, bootup_complete=%d", cur_state, cur_state );
+                   if (cur_state == snd_card_online && !bootup_complete) {
+                       bootup_complete = 1;
+                       ALOGE("sound card up is deteced before while");
+                       ALOGE("bootup_complete set to 1");
+                   }
                }
-           }
-       }
+            }
+        }
 
         while (1) {
            ALOGD("poll() for sound card state change ");
@@ -191,26 +245,47 @@ namespace android {
            for (i = 0; i < mSndCardFd.size(); i++) {
                if (pfd[i].revents & POLLPRI) {
                    if (!read(pfd[i].fd, (void *)rd_buf, 8)) {
-                       ALOGE("Error receiving sound card state event (%s)", strerror(errno));
+                       ALOGE("Error receiving sound card %d state event (%s)",
+                             mSndCardFd[i].first, strerror(errno));
                        ret = false;
                    } else {
                        rd_buf[8] = '\0';
-                       ALOGV("sound card state file content: %s, bootup_complete=%d",rd_buf, bootup_complete);
                        lseek(pfd[i].fd, 0, SEEK_SET);
 
-                       if (strstr(rd_buf, "OFFLINE")) {
-                           cur_state = snd_card_offline;
-                       } else if (strstr(rd_buf, "ONLINE")){
-                           cur_state = snd_card_online;
-                       }
+                       if(mSndCardFd[i].first >= CPE_MAGIC_NUM) {
+                           if (strstr(rd_buf, "OFFLINE"))
+                               cur_cpe_state = cpe_offline;
+                           else if (strstr(rd_buf, "ONLINE"))
+                               cur_cpe_state = cpe_online;
+                           else
+                               ALOGE("ERROR CPE rd_buf %s", rd_buf);
 
-                       if (bootup_complete) {
-                           ALOGV("bootup_complete, so NofityAudioSystem");
-                           notifyAudioSystem(mSndCardFd[i].first, cur_state);
+                           if (cpe_bootup_complete && (prev_cpe_state != cur_cpe_state)) {
+                               ALOGD("CPE state is %d, nofity AudioSystem", cur_cpe_state);
+                               notifyAudioSystem(mSndCardFd[i].first, cur_cpe_state, CPE_STATE);
+                           }
+                           if (!cpe_bootup_complete && (cur_cpe_state == cpe_online)) {
+                               cpe_bootup_complete = true;
+                               ALOGD("CPE boot up completed");
+                           }
+                           prev_cpe_state = cur_cpe_state;
                        }
+                       else {
+                           ALOGV("sound card state file content: %s, bootup_complete=%d",rd_buf, bootup_complete);
+                           if (strstr(rd_buf, "OFFLINE")) {
+                               cur_state = snd_card_offline;
+                           } else if (strstr(rd_buf, "ONLINE")){
+                               cur_state = snd_card_online;
+                           }
 
-                       if (cur_state == snd_card_online && !bootup_complete) {
-                           bootup_complete = 1;
+                           if (bootup_complete) {
+                               ALOGV("bootup_complete, so NofityAudioSystem");
+                               notifyAudioSystem(mSndCardFd[i].first, cur_state, SND_CARD_STATE);
+                           }
+
+                           if (cur_state == snd_card_online && !bootup_complete) {
+                               bootup_complete = 1;
+                           }
                        }
                    }
                }
@@ -220,22 +295,37 @@ namespace android {
        putStateFDs(mSndCardFd);
        delete [] pfd;
 
+    thread_exit:
        ALOGV("Exiting Poll ThreadLoop");
        return ret;
     }
 
-    void AudioDaemon::notifyAudioSystem(int snd_card, snd_card_status status) {
+    void AudioDaemon::notifyAudioSystem(int snd_card,
+                                        notify_status status,
+                                        notify_status_type type)
+    {
 
         String8 str;
         char buf[4] = {0,};
 
-        str = "SND_CARD_STATUS=";
-        snprintf(buf, sizeof(buf), "%d", snd_card);
-        str += buf;
-        if (status == snd_card_online)
-            str += ",ONLINE";
-        else
-            str += ",OFFLINE";
+        if (type == CPE_STATE) {
+            str = "CPE_STATUS=";
+            snprintf(buf, sizeof(buf), "%d", snd_card - CPE_MAGIC_NUM);
+            str += buf;
+            if (status == cpe_online)
+                str += ",ONLINE";
+            else
+                str += ",OFFLINE";
+        }
+        else {
+            str = "SND_CARD_STATUS=";
+            snprintf(buf, sizeof(buf), "%d", snd_card);
+            str += buf;
+            if (status == snd_card_online)
+                str += ",ONLINE";
+            else
+                str += ",OFFLINE";
+        }
         ALOGV("%s: notifyAudioSystem : %s", __func__, str.string());
         AudioSystem::setParameters(0, str);
     }
