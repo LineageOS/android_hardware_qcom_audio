@@ -880,6 +880,9 @@ void *platform_init(struct audio_device *adev)
 
     audio_extn_dolby_set_license(adev);
 
+    /* init audio device arbitration */
+    audio_extn_dev_arbi_init();
+
     return my_data;
 }
 
@@ -897,6 +900,9 @@ void platform_deinit(void *platform)
             backend_table[dev]= NULL;
         }
     }
+
+    /* deinit audio device arbitration */
+    audio_extn_dev_arbi_deinit();
 
     free(platform);
     /* deinit usb */
