@@ -43,6 +43,7 @@
 
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
+#define CVD_VERSION_MIXER_CTL "CVD Version"
 
 #define MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE (256 * 1024)
 #define MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE (2 * 1024)
@@ -70,6 +71,8 @@
  */
 #define MAX_SAD_BLOCKS      10
 #define SAD_BLOCK_SIZE      3
+
+#define MAX_CVD_VERSION_STRING_SIZE    100
 
 /* EDID format ID for LPCM audio */
 #define EDID_FORMAT_LPCM    1
@@ -108,7 +111,7 @@ struct audio_block_header
 
 /* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
-typedef int  (*acdb_init_t)(char *);
+typedef int  (*acdb_init_t)(char *, char *);
 typedef void (*acdb_send_audio_cal_t)(int, int, int , int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
@@ -686,6 +689,33 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_table[SND_DEVICE_OUT_TRANSMISSION_FM] = strdup("transmission-fm");
 }
 
+void get_cvd_version(char *cvd_version, struct audio_device *adev)
+{
+    struct mixer_ctl *ctl;
+    int count;
+    int ret = 0;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, CVD_VERSION_MIXER_CTL);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",  __func__, CVD_VERSION_MIXER_CTL);
+        goto done;
+    }
+    mixer_ctl_update(ctl);
+
+    count = mixer_ctl_get_num_values(ctl);
+    if (count > MAX_CVD_VERSION_STRING_SIZE)
+        count = MAX_CVD_VERSION_STRING_SIZE;
+
+    ret = mixer_ctl_get_array(ctl, cvd_version, count);
+    if (ret != 0) {
+        ALOGE("%s: ERROR! mixer_ctl_get_array() failed to get CVD Version", __func__);
+        goto done;
+    }
+
+done:
+    return;
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char platform[PROPERTY_VALUE_MAX];
@@ -694,6 +724,7 @@ void *platform_init(struct audio_device *adev)
     struct platform_data *my_data = NULL;
     int retry_num = 0, snd_card_num = 0;
     const char *snd_card_name;
+    char *cvd_version = NULL;
 
     my_data = calloc(1, sizeof(struct platform_data));
 
@@ -842,11 +873,23 @@ void *platform_init(struct audio_device *adev)
 
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_init_v2");
-        if (my_data->acdb_init == NULL)
+        if (my_data->acdb_init == NULL) {
             ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__, dlerror());
+            goto acdb_init_fail;
+        }
+
+        cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
+        if (!cvd_version)
+            ALOGE("failed to allocate cvd_version");
         else
-            my_data->acdb_init(snd_card_name);
+            get_cvd_version(cvd_version, adev);
+
+        my_data->acdb_init(snd_card_name, cvd_version);
+        if (cvd_version)
+            free(cvd_version);
     }
+
+acdb_init_fail:
 
     set_platform_defaults(my_data);
 
