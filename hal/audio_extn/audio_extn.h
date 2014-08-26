@@ -227,6 +227,18 @@ void audio_extn_ddp_set_parameters(struct audio_device *adev,
 void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev);
 #endif
 
+#ifndef EXTERNAL_SPEAKER_ENABLED
+#define audio_extn_extspk_init(adev) NULL
+#define audio_extn_extspk_deinit(extn) 0
+#define audio_extn_extspk_update(extn) 0
+#define audio_extn_extspk_set_mode(extn, mode) 0
+#else
+void *audio_extn_extspk_init(struct audio_device *adev);
+void audio_extn_extspk_deinit(void *extn);
+void audio_extn_extspk_update(void* extn);
+void audio_extn_extspk_set_mode(void* extn, audio_mode_t mode);
+#endif
+
 #ifndef HFP_ENABLED
 #define audio_extn_hfp_is_active(adev)                  (0)
 #define audio_extn_hfp_get_usecase()                    (-1)
