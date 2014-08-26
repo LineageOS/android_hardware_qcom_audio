@@ -22,6 +22,7 @@ LOCAL_SRC_FILES := \
 	audio_hw.c \
 	voice.c \
 	platform_info.c \
+	audio_extn/ext_speaker.c \
 	$(AUDIO_PLATFORM)/platform.c
 
 LOCAL_SHARED_LIBRARIES := \

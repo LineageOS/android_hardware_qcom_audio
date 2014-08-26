@@ -1005,6 +1005,8 @@ static int stop_output_stream(struct stream_out *out)
     list_remove(&uc_info->list);
     free(uc_info);
 
+    audio_extn_extspk_update(adev->extspk);
+
     /* Must be called after removing the usecase from list */
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
         check_and_set_hdmi_channels(adev, DEFAULT_HDMI_OUT_CHANNELS);
@@ -1044,6 +1046,8 @@ int start_output_stream(struct stream_out *out)
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
     select_devices(adev, out->usecase);
+
+    audio_extn_extspk_update(adev->extspk);
 
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d) format(%#x)",
           __func__, adev->snd_card, out->pcm_device_id, out->config.format);
@@ -1353,6 +1357,9 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
         pthread_mutex_unlock(&adev->lock);
         pthread_mutex_unlock(&out->lock);
+
+        /*handles device and call state changes*/
+        audio_extn_extspk_update(adev->extspk);
     }
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
@@ -2280,6 +2287,9 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
         adev->mode = mode;
     }
     pthread_mutex_unlock(&adev->lock);
+
+    audio_extn_extspk_set_mode(adev->extspk, mode);
+
     return 0;
 }
 
@@ -2566,6 +2576,7 @@ static int adev_close(hw_device_t *device)
     audio_route_free(adev->audio_route);
     free(adev->snd_dev_ref_cnt);
     platform_deinit(adev->platform);
+    audio_extn_extspk_deinit(adev->extspk);
     for (i = 0; i < ARRAY_SIZE(adev->use_case_table); ++i) {
         pcm_params_free(adev->use_case_table[i]);
     }
@@ -2648,6 +2659,8 @@ static int adev_open(const hw_module_t *module, const char *name,
         *device = NULL;
         return -EINVAL;
     }
+
+    adev->extspk = audio_extn_extspk_init(adev);
 
     if (access(VISUALIZER_LIBRARY_PATH, R_OK) == 0) {
         adev->visualizer_lib = dlopen(VISUALIZER_LIBRARY_PATH, RTLD_NOW);

@@ -214,6 +214,7 @@ struct audio_device {
 
     int snd_card;
     void *platform;
+    void *extspk;
 
     void *visualizer_lib;
     int (*visualizer_start_output)(audio_io_handle_t, int);

@@ -19,6 +19,11 @@
 
 #include <cutils/str_parms.h>
 
+void *audio_extn_extspk_init(struct audio_device *adev);
+void audio_extn_extspk_deinit(void *extn);
+void audio_extn_extspk_update(void* extn);
+void audio_extn_extspk_set_mode(void* extn, audio_mode_t mode);
+
 #ifndef HFP_ENABLED
 #define audio_extn_hfp_is_active(adev)                  (0)
 #define audio_extn_hfp_get_usecase()                    (-1)
