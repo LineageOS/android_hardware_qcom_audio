@@ -564,8 +564,13 @@ int voice_extn_compress_voip_start_output_stream(struct stream_out *out)
     ret = voip_start_call(adev, &out->config);
     out->pcm = voip_data.pcm_rx;
     uc_info = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
-    uc_info->stream.out = out;
-    uc_info->devices = out->devices;
+    if (uc_info) {
+        uc_info->stream.out = out;
+        uc_info->devices = out->devices;
+    } else {
+        ret = -EINVAL;
+        ALOGE("%s: exit(%d): failed to get use case info", __func__, ret);
+    }
 
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
