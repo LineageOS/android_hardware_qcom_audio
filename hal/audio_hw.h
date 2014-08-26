@@ -262,6 +262,8 @@ struct audio_device {
     unsigned int cur_codec_backend_bit_width;
     void *platform;
     unsigned int offload_usecases_state;
+    void *extspk;
+
     void *visualizer_lib;
     int (*visualizer_start_output)(audio_io_handle_t, int);
     int (*visualizer_stop_output)(audio_io_handle_t, int);
