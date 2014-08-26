@@ -2680,9 +2680,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_NREC, value, sizeof(value));
     if (err >= 0) {
-        /* When set to false, HAL should disable EC and NS
-         * But it is currently not supported.
-         */
+        /* When set to false, HAL should disable EC and NS */
         if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
             adev->bluetooth_nrec = true;
         else
