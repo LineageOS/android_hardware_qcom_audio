@@ -42,6 +42,7 @@
 #define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_WCD9306 "/system/etc/mixer_paths_wcd9306.xml"
+#define MIXER_XML_PATH_WCD9330 "/system/etc/mixer_paths_wcd9330.xml"
 #define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
@@ -457,6 +458,10 @@ static void query_platform(const char *snd_card_name,
                  sizeof("msm8939-tapan9302-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9306,
                 sizeof(MIXER_XML_PATH_WCD9306));
+    } else if (!strncmp(snd_card_name, "msm8939-tomtom9330-snd-card",
+                 sizeof("msm8939-tomtom9330-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9330,
+                sizeof(MIXER_XML_PATH_WCD9330));
     } else {
         strlcpy(mixer_xml_path, MIXER_XML_PATH,
                 sizeof(MIXER_XML_PATH));
