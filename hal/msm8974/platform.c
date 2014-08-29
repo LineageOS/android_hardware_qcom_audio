@@ -1286,8 +1286,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 goto exit;
             }
         }
-        if (out_device & AUDIO_DEVICE_OUT_EARPIECE ||
-            out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) {
+        if (out_device & AUDIO_DEVICE_OUT_EARPIECE) {
             if (my_data->fluence_in_voice_call == false) {
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
                 set_echo_reference(adev, true);
@@ -1305,7 +1304,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             } else {
                 snd_device = SND_DEVICE_IN_BT_SCO_MIC;
             }
-        } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER) {
+        } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER ||
+            out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
+            out_device & AUDIO_DEVICE_OUT_LINE) {
             if (my_data->fluence_in_voice_call && my_data->fluence_in_spkr_mode &&
                     my_data->dualmic_config != DUALMIC_CONFIG_NONE) {
                 snd_device = SND_DEVICE_IN_VOICE_SPEAKER_DMIC;
