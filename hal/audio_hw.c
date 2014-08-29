@@ -1337,8 +1337,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                     voice_stop_call(adev);
                 }
                 if (!voice_is_in_call(adev)) {
-                    ret = voice_start_call(adev, out);
                     adev->current_call_output = out;
+                    ret = voice_start_call(adev);
                 } else
                     voice_update_devices_for_all_voice_usecases(adev);
             }

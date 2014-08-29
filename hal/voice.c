@@ -95,7 +95,7 @@ int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     return ret;
 }
 
-int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id, struct stream_out *out)
+int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 {
     int i, ret = 0;
     struct audio_usecase *uc_info;
@@ -109,8 +109,8 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id, s
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
     uc_info->id = usecase_id;
     uc_info->type = VOICE_CALL;
-    uc_info->stream.out = out;
-    uc_info->devices = out->devices;
+    uc_info->stream.out = adev->current_call_output ;
+    uc_info->devices = adev->current_call_output ->devices;
     uc_info->in_snd_device = SND_DEVICE_NONE;
     uc_info->out_snd_device = SND_DEVICE_NONE;
 
@@ -323,13 +323,13 @@ int voice_set_volume(struct audio_device *adev, float volume)
     return err;
 }
 
-int voice_start_call(struct audio_device *adev, struct stream_out *out)
+int voice_start_call(struct audio_device *adev)
 {
     int ret = 0;
 
     ret = voice_extn_start_call(adev);
     if (ret == -ENOSYS) {
-        ret = voice_start_usecase(adev, USECASE_VOICE_CALL, out);
+        ret = voice_start_usecase(adev, USECASE_VOICE_CALL);
     }
     adev->voice.in_call = true;
 
