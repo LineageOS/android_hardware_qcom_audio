@@ -611,23 +611,23 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
          * usecase. This is to avoid switching devices for voice call when
          * check_usecases_codec_backend() is called below.
          */
-        if (voice_is_in_call(adev)) {
+        if (adev->voice.in_call && adev->mode == AUDIO_MODE_IN_CALL) {
             vc_usecase = get_usecase_from_list(adev,
                                                get_voice_usecase_id_from_list(adev));
-            if ((vc_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
-                (usecase->devices == AUDIO_DEVICE_IN_VOICE_CALL)) {
+            if ((vc_usecase) && ((vc_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
+                (usecase->devices == AUDIO_DEVICE_IN_VOICE_CALL))) {
                 in_snd_device = vc_usecase->in_snd_device;
                 out_snd_device = vc_usecase->out_snd_device;
             }
         } else if (voice_extn_compress_voip_is_active(adev)) {
             voip_usecase = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
-            if (voip_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
+            if ((voip_usecase) && (voip_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND)) {
                     in_snd_device = voip_usecase->in_snd_device;
                     out_snd_device = voip_usecase->out_snd_device;
             }
         } else if (audio_extn_hfp_is_active(adev)) {
             hfp_usecase = get_usecase_from_list(adev, USECASE_AUDIO_HFP_SCO);
-            if (hfp_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
+            if ((hfp_usecase) && (hfp_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND)) {
                    in_snd_device = hfp_usecase->in_snd_device;
                    out_snd_device = hfp_usecase->out_snd_device;
             }
@@ -1531,18 +1531,18 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 select_devices(adev, out->usecase);
 
             if ((adev->mode == AUDIO_MODE_IN_CALL) &&
-                    !voice_is_in_call(adev) &&
+                    !adev->voice.in_call &&
                     (out == adev->primary_output)) {
                 ret = voice_start_call(adev);
             } else if ((adev->mode == AUDIO_MODE_IN_CALL) &&
-                            voice_is_in_call(adev) &&
+                            adev->voice.in_call &&
                             (out == adev->primary_output)) {
                 voice_update_devices_for_all_voice_usecases(adev);
             }
         }
 
         if ((adev->mode == AUDIO_MODE_NORMAL) &&
-                voice_is_in_call(adev) &&
+                adev->voice.in_call &&
                 (out == adev->primary_output)) {
             ret = voice_stop_call(adev);
         }
@@ -1577,6 +1577,12 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
     size_t i, j;
     int ret;
     bool first = true;
+
+    if (!query || !reply) {
+        ALOGE("out_get_parameters: failed to allocate mem for query or reply");
+        return NULL;
+    }
+
     ALOGV("%s: enter: keys - %s", __func__, keys);
     ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_CHANNELS, value, sizeof(value));
     if (ret >= 0) {
@@ -2066,6 +2072,12 @@ static char* in_get_parameters(const struct audio_stream *stream,
     char *str;
     char value[256];
     struct str_parms *reply = str_parms_create();
+
+    if (!query || !reply) {
+        ALOGE("in_get_parameters: failed to create query or reply");
+        return NULL;
+    }
+
     ALOGV("%s: enter: keys - %s", __func__, keys);
 
     voice_extn_in_get_parameters(in, query, reply);
@@ -2117,7 +2129,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
      * Instead of writing zeroes here, we could trust the hardware
      * to always provide zeroes when muted.
      */
-    if (ret == 0 && voice_get_mic_mute(adev) && !voice_is_in_call(adev))
+    if (ret == 0 && voice_get_mic_mute(adev) && !adev->voice.in_call)
         memset(buffer, 0, bytes);
 
 exit:
