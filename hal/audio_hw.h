@@ -22,6 +22,7 @@
 #include <tinyalsa/asoundlib.h>
 
 #include <audio_route/audio_route.h>
+#include "audio_defs.h"
 
 #define ACDB_DEV_TYPE_OUT 1
 #define ACDB_DEV_TYPE_IN 2
