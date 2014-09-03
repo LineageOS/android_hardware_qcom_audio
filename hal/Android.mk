@@ -26,6 +26,9 @@ LOCAL_C_INCLUDES += \
 	$(call include-path-for, audio-route) \
 	$(call include-path-for, audio-effects)
 
+LOCAL_COPY_HEADERS_TO   := mm-audio
+LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
+
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
