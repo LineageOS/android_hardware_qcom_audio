@@ -1324,6 +1324,13 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
          *       Because select_devices() must be called to switch back the music
          *       playback to headset.
          */
+        if ((adev->mode == AUDIO_MODE_NORMAL) &&
+                voice_is_in_call(adev) &&
+                output_drives_call(adev, out)) {
+            ret = voice_stop_call(adev);
+            adev->current_call_output = NULL;
+        }
+
         if (val != 0) {
             out->devices = val;
 
@@ -1342,13 +1349,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 } else
                     voice_update_devices_for_all_voice_usecases(adev);
             }
-        }
-
-        if ((adev->mode == AUDIO_MODE_NORMAL) &&
-                voice_is_in_call(adev) &&
-                output_drives_call(adev, out)) {
-            ret = voice_stop_call(adev);
-            adev->current_call_output = NULL;
         }
 
         pthread_mutex_unlock(&adev->lock);
