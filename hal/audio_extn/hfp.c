@@ -270,10 +270,13 @@ static int32_t stop_hfp(struct audio_device *adev)
         return -EINVAL;
     }
 
-    /* 2. Get and set stream specific mixer controls */
+    /* 2. Disable echo reference while stopping hfp */
+    platform_set_echo_reference(adev->platform, false);
+
+    /* 3. Get and set stream specific mixer controls */
     disable_audio_route(adev, uc_info);
 
-    /* 3. Disable the rx and tx devices */
+    /* 4. Disable the rx and tx devices */
     disable_snd_device(adev, uc_info->out_snd_device);
     disable_snd_device(adev, uc_info->in_snd_device);
 
