@@ -1544,7 +1544,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
          * Avoid this by routing audio to speaker until standby.
          */
         if ((out->devices == AUDIO_DEVICE_OUT_AUX_DIGITAL ||
-                out->devices == AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET) &&
+                out->devices == AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
+                out->devices == AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) &&
                 val == AUDIO_DEVICE_NONE) {
             val = AUDIO_DEVICE_OUT_SPEAKER;
         }
