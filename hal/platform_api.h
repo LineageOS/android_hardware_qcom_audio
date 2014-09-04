@@ -63,5 +63,6 @@ int platform_info_init(void);
 
 int platform_get_usecase_index(const char * usecase);
 int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
+void platform_set_echo_reference(struct audio_device *adev, bool enable, audio_devices_t out_device);
 
 #endif // AUDIO_PLATFORM_API_H
