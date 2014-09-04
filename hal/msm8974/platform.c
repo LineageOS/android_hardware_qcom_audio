@@ -172,6 +172,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_DMIC_STEREO] = "speaker-dmic-endfire",
 
     [SND_DEVICE_IN_HEADSET_MIC] = "headset-mic",
+    [SND_DEVICE_IN_HEADSET_MIC_AEC] = "headset-mic",
 
     [SND_DEVICE_IN_HDMI_MIC] = "hdmi-mic",
     [SND_DEVICE_IN_BT_SCO_MIC] = "bt-sco-mic",
@@ -243,6 +244,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_DMIC_STEREO] = 35,
 
     [SND_DEVICE_IN_HEADSET_MIC] = 8,
+    [SND_DEVICE_IN_HEADSET_MIC_AEC] = ACDB_ID_HEADSET_MIC_AEC,
 
     [SND_DEVICE_IN_HDMI_MIC] = 4,
     [SND_DEVICE_IN_BT_SCO_MIC] = 21,
@@ -405,14 +407,25 @@ bool is_operator_tmus()
     return is_tmus;
 }
 
-static void set_echo_reference(struct audio_device *adev, bool enable)
+void platform_set_echo_reference(struct audio_device *adev, bool enable, audio_devices_t out_device)
 {
-    if (enable)
-        audio_route_apply_and_update_path(adev->audio_route, "echo-reference");
-    else
-        audio_route_reset_and_update_path(adev->audio_route, "echo-reference");
+    char mixer_path[50] = { 0 } ;
+    snd_device_t snd_device = SND_DEVICE_NONE;
+    struct listnode *node;
+    struct audio_usecase *usecase;
 
-    ALOGV("Setting EC Reference: %d", enable);
+    strcpy(mixer_path, "echo-reference");
+    if (out_device != AUDIO_DEVICE_NONE) {
+        snd_device = platform_get_output_snd_device(adev->platform, out_device);
+        platform_add_backend_name(adev->platform, mixer_path, snd_device);
+    }
+
+    if (enable)
+        audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+    else
+        audio_route_reset_and_update_path(adev->audio_route, mixer_path);
+
+    ALOGV("Setting EC Reference: %d for %s", enable, mixer_path);
 }
 
 static struct csd_data *open_csd_client(bool i2s_ext_modem)
@@ -1173,15 +1186,19 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         goto exit;
     }
 
-    if (mode == AUDIO_MODE_IN_CALL) {
+    if ((mode == AUDIO_MODE_IN_CALL) ||
+        (adev->enable_voicerx)) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             devices & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
             devices & AUDIO_DEVICE_OUT_LINE) {
-            if (adev->voice.tty_mode == TTY_MODE_FULL)
+            if ((mode == AUDIO_MODE_IN_CALL) &&
+                (adev->voice.tty_mode == TTY_MODE_FULL))
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES;
-            else if (adev->voice.tty_mode == TTY_MODE_VCO)
+            else if ((mode == AUDIO_MODE_IN_CALL) &&
+                (adev->voice.tty_mode == TTY_MODE_VCO))
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES;
-            else if (adev->voice.tty_mode == TTY_MODE_HCO)
+            else if ((mode == AUDIO_MODE_IN_CALL) &&
+                (adev->voice.tty_mode == TTY_MODE_HCO))
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET;
             else {
                 if (devices & AUDIO_DEVICE_OUT_LINE)
@@ -1319,7 +1336,6 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         if (out_device & AUDIO_DEVICE_OUT_EARPIECE) {
             if (my_data->fluence_in_voice_call == false) {
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
-                set_echo_reference(adev, true);
             } else {
                 if (is_operator_tmus())
                     snd_device = SND_DEVICE_IN_VOICE_DMIC_TMUS;
@@ -1343,7 +1359,6 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_VOICE_SPEAKER_DMIC;
             } else {
                 snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
-                set_echo_reference(adev, true);
             }
         } else if (out_device & AUDIO_DEVICE_OUT_TELEPHONY_TX)
             snd_device = SND_DEVICE_IN_VOICE_RX;
@@ -1388,8 +1403,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                         snd_device = SND_DEVICE_IN_HANDSET_DMIC_AEC_NS;
                     } else
                         snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC_NS;
+                } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+                    snd_device = SND_DEVICE_IN_HEADSET_MIC_AEC;
                 }
-                set_echo_reference(adev, true);
+                platform_set_echo_reference(adev, true, out_device);
             } else if (adev->active_input->enable_aec) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     if (my_data->fluence_in_spkr_mode &&
@@ -1404,8 +1421,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                         snd_device = SND_DEVICE_IN_HANDSET_DMIC_AEC;
                     } else
                         snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC;
-                }
-                set_echo_reference(adev, true);
+               } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+                   snd_device = SND_DEVICE_IN_HEADSET_MIC_AEC;
+               }
+                platform_set_echo_reference(adev, true, out_device);
             } else if (adev->active_input->enable_ns) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     if (my_data->fluence_in_spkr_mode &&
@@ -1421,9 +1440,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                     } else
                         snd_device = SND_DEVICE_IN_HANDSET_MIC_NS;
                 }
-                set_echo_reference(adev, false);
-            } else
-                set_echo_reference(adev, false);
+            }
         }
     } else if (source == AUDIO_SOURCE_DEFAULT) {
         goto exit;
