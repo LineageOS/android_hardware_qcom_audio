@@ -254,6 +254,7 @@ const char * platform_get_snd_device_backend_interface(snd_device_t device);
 void platform_add_app_type(const char *uc_type,
                            const char *mode,
                            int bw, int app_type, int max_sr);
+int platform_set_snd_device_name(snd_device_t snd_device, const char * name);
 
 /* From platform_info.c */
 int platform_info_init(const char *filename, void *, caller_t);
