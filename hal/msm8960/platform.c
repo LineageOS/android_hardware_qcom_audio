@@ -1098,3 +1098,9 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info __unuse
 {
     return 0;
 }
+
+int platform_set_snd_device_name(snd_device_t snd_device __unused,
+                                 const char * name __unused)
+{
+    return -ENOSYS;
+}
