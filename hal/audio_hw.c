@@ -1153,7 +1153,6 @@ static int stop_output_stream(struct stream_out *out)
         /* NO_PASSTHROUGH */
         out->compr_config.codec->compr_passthr = 0;
         audio_extn_dolby_set_hdmi_format_and_samplerate(adev, out);
-        audio_extn_dolby_set_dap_bypass(adev, DAP_STATE_ON);
     }
     /* Must be called after removing the usecase from list */
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
@@ -1192,10 +1191,6 @@ int start_output_stream(struct stream_out *out)
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
         if (is_offload_usecase(out->usecase)) {
             if (audio_extn_dolby_is_passthrough_stream(out->flags)) {
-                ret = audio_extn_dolby_set_dap_bypass(adev, DAP_STATE_BYPASS);
-                if(ret != 0) {
-                    goto error_open;
-                }
                 audio_extn_dolby_update_passt_stream_configuration(adev, out);
             }
         }
