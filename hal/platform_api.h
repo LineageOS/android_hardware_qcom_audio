@@ -63,6 +63,7 @@ int platform_update_usecase_from_source(int source, audio_usecase_t usecase);
 bool platform_listen_update_status(snd_device_t snd_device);
 
 int platform_set_snd_device_backend(snd_device_t snd_device, const char * backend);
+int platform_set_snd_device_name(snd_device_t snd_device, const char * name);
 
 /* From platform_info_parser.c */
 int platform_info_init(void);
