@@ -220,6 +220,12 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                       INCALL_MUSIC_UPLINK2_PCM_DEVICE},
     [USECASE_AUDIO_SPKR_CALIB_RX] = {SPKR_PROT_CALIB_RX_PCM_DEVICE, -1},
     [USECASE_AUDIO_SPKR_CALIB_TX] = {-1, SPKR_PROT_CALIB_TX_PCM_DEVICE},
+
+    [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = {AFE_PROXY_PLAYBACK_PCM_DEVICE,
+                                          AFE_PROXY_RECORD_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD_AFE_PROXY] = {AFE_PROXY_PLAYBACK_PCM_DEVICE,
+                                        AFE_PROXY_RECORD_PCM_DEVICE},
+
 };
 
 /* Array to store sound devices */
@@ -245,6 +251,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = "voice-tty-full-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = "voice-tty-vco-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = "voice-tty-hco-handset",
+    [SND_DEVICE_OUT_VOICE_TX] = "voice-tx",
     [SND_DEVICE_OUT_AFE_PROXY] = "afe-proxy",
     [SND_DEVICE_OUT_USB_HEADSET] = "usb-headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = "speaker-and-usb-headphones",
@@ -292,6 +299,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = "voice-tty-full-headset-mic",
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = "voice-tty-vco-handset-mic",
     [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = "voice-tty-hco-headset-mic",
+    [SND_DEVICE_IN_VOICE_RX] = "voice-rx",
+
     [SND_DEVICE_IN_VOICE_REC_MIC] = "voice-rec-mic",
     [SND_DEVICE_IN_VOICE_REC_MIC_NS] = "voice-rec-mic",
     [SND_DEVICE_IN_VOICE_REC_DMIC_STEREO] = "voice-rec-dmic-ef",
@@ -332,6 +341,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = 37,
+    [SND_DEVICE_OUT_VOICE_TX] = 45,
     [SND_DEVICE_OUT_AFE_PROXY] = 0,
     [SND_DEVICE_OUT_USB_HEADSET] = 45,
     [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 14,
@@ -378,6 +388,8 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = 16,
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = 36,
     [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = 16,
+    [SND_DEVICE_IN_VOICE_RX] = 44,
+
     [SND_DEVICE_IN_VOICE_REC_MIC] = 4,
     [SND_DEVICE_IN_VOICE_REC_MIC_NS] = 107,
     [SND_DEVICE_IN_VOICE_REC_DMIC_STEREO] = 34,
@@ -716,6 +728,9 @@ static void set_platform_defaults()
     backend_table[SND_DEVICE_OUT_BT_SCO_WB] = strdup("bt-sco-wb");
     backend_table[SND_DEVICE_OUT_HDMI] = strdup("hdmi");
     backend_table[SND_DEVICE_OUT_SPEAKER_AND_HDMI] = strdup("speaker-and-hdmi");
+    backend_table[SND_DEVICE_OUT_VOICE_TX] = strdup("afe-proxy");
+    backend_table[SND_DEVICE_IN_VOICE_RX] = strdup("afe-proxy");
+
     backend_table[SND_DEVICE_OUT_AFE_PROXY] = strdup("afe-proxy");
     backend_table[SND_DEVICE_OUT_USB_HEADSET] = strdup("usb-headphones");
     backend_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] =
@@ -1648,7 +1663,9 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
                 snd_device = SND_DEVICE_OUT_ANC_HANDSET;
             else
                 snd_device = SND_DEVICE_OUT_VOICE_HANDSET;
-        }
+        } else if (devices & AUDIO_DEVICE_OUT_TELEPHONY_TX)
+            snd_device = SND_DEVICE_OUT_VOICE_TX;
+
         if (snd_device != SND_DEVICE_NONE) {
             goto exit;
         }
@@ -1805,7 +1822,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 if (audio_extn_hfp_is_active(adev))
                     platform_set_echo_reference(adev->platform, true);
             }
-        }
+        } else if (out_device & AUDIO_DEVICE_OUT_TELEPHONY_TX)
+            snd_device = SND_DEVICE_IN_VOICE_RX;
     } else if (source == AUDIO_SOURCE_CAMCORDER) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
             in_device & AUDIO_DEVICE_IN_BACK_MIC) {
