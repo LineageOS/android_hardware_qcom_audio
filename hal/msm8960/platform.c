@@ -1151,3 +1151,9 @@ int platform_set_device_params(struct stream_out *out __unused,
 {
     return 0;
 }
+
+int platform_set_snd_device_name(snd_device_t snd_device __unused,
+                                 const char * name __unused)
+{
+    return -ENOSYS;
+}
