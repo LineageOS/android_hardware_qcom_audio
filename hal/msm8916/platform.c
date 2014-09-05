@@ -1168,7 +1168,8 @@ int platform_stop_voice_call(void *platform, uint32_t vsid)
     }
     return ret;
 }
-int platform_get_sample_rate(void *platform, uint32_t *rate)
+
+int platform_get_sample_rate(void *platform __unused, uint32_t *rate __unused)
 {
     return 0;
 }
@@ -2208,7 +2209,9 @@ bool platform_check_24_bit_support() {
     return false;
 }
 
-bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct audio_usecase *usecase) {
+bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev __unused,
+                                              struct audio_usecase *usecase __unused)
+{
     return false;
 }
 

@@ -127,7 +127,7 @@ static int32_t hfp_set_volume(struct audio_device *adev, float value)
 }
 
 static int32_t start_hfp(struct audio_device *adev,
-                               struct str_parms *parms)
+                         struct str_parms *parms __unused)
 {
     int32_t i, ret = 0;
     struct audio_usecase *uc_info;
@@ -311,7 +311,7 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_ENABLE, value,
                             sizeof(value));
     if (ret >= 0) {
-           if(!strncmp(value,"true",sizeof(value)))
+           if (!strncmp(value,"true",sizeof(value)))
                ret = start_hfp(adev,parms);
            else
                stop_hfp(adev);
@@ -324,22 +324,20 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *
            if (rate == 8000){
                hfpmod.ucid = USECASE_AUDIO_HFP_SCO;
                pcm_config_hfp.rate = rate;
-           }
-           else if (rate == 16000){
+           } else if (rate == 16000){
                hfpmod.ucid = USECASE_AUDIO_HFP_SCO_WB;
                pcm_config_hfp.rate = rate;
-           }
-           else
+           } else
                ALOGE("Unsupported rate..");
     }
 
-    if(hfpmod.is_hfp_running) {
+    if (hfpmod.is_hfp_running) {
         memset(value, 0, sizeof(value));
         ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING,
                                 value, sizeof(value));
         if (ret >= 0) {
             val = atoi(value);
-            if(val > 0)
+            if (val > 0)
                 select_devices(adev, hfpmod.ucid);
         }
     }
