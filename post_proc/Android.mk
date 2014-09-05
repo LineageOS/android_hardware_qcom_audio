@@ -28,9 +28,9 @@ LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/soundfx
 LOCAL_MODULE:= libqcompostprocbundle
 
 LOCAL_C_INCLUDES := \
-	external/tinyalsa/include \
-        $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
-	$(call include-path-for, audio-effects)
+    external/tinyalsa/include \
+    $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
+    $(call include-path-for, audio-effects)
 
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
