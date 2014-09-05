@@ -1190,3 +1190,9 @@ int platform_get_wsa_mode(void *adev)
 {
     return 0;
 }
+
+int platform_set_snd_device_name(snd_device_t snd_device __unused,
+                                 const char * name __unused)
+{
+    return -ENOSYS;
+}
