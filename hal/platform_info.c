@@ -49,6 +49,7 @@ typedef enum {
     BACKEND_NAME,
     INTERFACE_NAME,
     CONFIG_PARAMS,
+    DEVICE_NAME,
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
@@ -60,6 +61,7 @@ static void process_backend_name(const XML_Char **attr);
 static void process_interface_name(const XML_Char **attr);
 static void process_config_params(const XML_Char **attr);
 static void process_root(const XML_Char **attr);
+static void process_device_name(const XML_Char **attr);
 
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
@@ -69,6 +71,7 @@ static section_process_fn section_table[] = {
     [BACKEND_NAME] = process_backend_name,
     [INTERFACE_NAME] = process_interface_name,
     [CONFIG_PARAMS] = process_config_params,
+    [DEVICE_NAME] = process_device_name,
 };
 
 static section_t section;
@@ -107,6 +110,11 @@ static struct platform_info my_data;
  *      ...
  *      ...
  * </config_params>
+ * <device_names>
+ * <device name="???" alias="???"/>
+ * ...
+ * ...
+ * </device_names>
  * </audio_platform_info>
  */
 
@@ -322,6 +330,38 @@ done:
     return;
 }
 
+static void process_device_name(const XML_Char **attr)
+{
+    int index;
+
+    if (strcmp(attr[0], "name") != 0) {
+        ALOGE("%s: 'name' not found, no alias set!", __func__);
+        goto done;
+    }
+
+    index = platform_get_snd_device_index((char *)attr[1]);
+    if (index < 0) {
+        ALOGE("%s: Device %s in platform info xml not found, no alias set!",
+              __func__, attr[1]);
+        goto done;
+    }
+
+    if (strcmp(attr[2], "alias") != 0) {
+        ALOGE("%s: Device %s in platform info xml has no alias, no alias set!",
+              __func__, attr[1]);
+        goto done;
+    }
+
+    if (platform_set_snd_device_name(index, attr[3]) < 0) {
+        ALOGE("%s: Device %s, alias %s was not set!",
+              __func__, attr[1], attr[3]);
+        goto done;
+    }
+
+done:
+    return;
+}
+
 static void start_tag(void *userdata __unused, const XML_Char *tag_name,
                       const XML_Char **attr)
 {
@@ -337,10 +377,12 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
         section = CONFIG_PARAMS;
     } else if (strcmp(tag_name, "interface_names") == 0) {
         section = INTERFACE_NAME;
+    } else if (strcmp(tag_name, "device_names") == 0) {
+        section = DEVICE_NAME;
     } else if (strcmp(tag_name, "device") == 0) {
         if ((section != ACDB) && (section != BACKEND_NAME) && (section != BITWIDTH) &&
-            (section != INTERFACE_NAME)) {
-            ALOGE("device tag only supported for acdb/backend names/bitwitdh/interface names");
+            (section != INTERFACE_NAME) && (section != DEVICE_NAME)) {
+            ALOGE("device tag only supported for acdb/backend names/bitwidth/interface/device names");
             return;
         }
 
@@ -382,6 +424,8 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
         section = ROOT;
         platform_set_parameters(my_data.platform, my_data.kvpairs);
     } else if (strcmp(tag_name, "interface_names") == 0) {
+        section = ROOT;
+    } else if (strcmp(tag_name, "device_names") == 0) {
         section = ROOT;
     }
 }
