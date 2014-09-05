@@ -1190,3 +1190,9 @@ void platform_set_gsm_mode(void *platform __unused, bool enable __unused)
 {
     ALOGE("%s: Not implemented", __func__);
 }
+
+int platform_set_snd_device_name(snd_device_t snd_device __unused,
+                                 const char * name __unused)
+{
+    return -ENOSYS;
+}
