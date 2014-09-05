@@ -75,6 +75,7 @@ typedef enum {
     EXTERNAL_DEVICE_SPECIFIC,
     CUSTOM_MTMX_IN_PARAMS,
     CUSTOM_MTMX_PARAM_IN_CH_INFO,
+    DEVICE_NAME,
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
@@ -101,6 +102,7 @@ static void process_custom_mtmx_param_coeffs(const XML_Char **attr);
 static void process_external_dev(const XML_Char **attr);
 static void process_custom_mtmx_in_params(const XML_Char **attr);
 static void process_custom_mtmx_param_in_ch_info(const XML_Char **attr);
+static void process_device_name(const XML_Char **attr);
 
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
@@ -124,6 +126,7 @@ static section_process_fn section_table[] = {
     [EXTERNAL_DEVICE_SPECIFIC] = process_external_dev,
     [CUSTOM_MTMX_IN_PARAMS] = process_custom_mtmx_in_params,
     [CUSTOM_MTMX_PARAM_IN_CH_INFO] = process_custom_mtmx_param_in_ch_info,
+    [DEVICE_NAME] = process_device_name,
 };
 
 static section_t section;
@@ -273,6 +276,11 @@ static struct audio_custom_mtmx_in_params_info mtmx_in_params_info;
  *      ...
  * </operator_specific>
  *
+ * <device_names>
+ * <device name="???" alias="???"/>
+ * ...
+ * ...
+ * </device_names>
  * </audio_platform_info>
  */
 
@@ -1190,7 +1198,38 @@ static void process_custom_mtmx_params(const XML_Char **attr)
     }
 
     platform_add_custom_mtmx_params((void *)my_data.platform, &mtmx_params_info);
+}
 
+static void process_device_name(const XML_Char **attr)
+{
+    int index;
+
+    if (strcmp(attr[0], "name") != 0) {
+        ALOGE("%s: 'name' not found, no alias set!", __func__);
+        goto done;
+    }
+
+    index = platform_get_snd_device_index((char *)attr[1]);
+    if (index < 0) {
+        ALOGE("%s: Device %s in platform info xml not found, no alias set!",
+              __func__, attr[1]);
+        goto done;
+    }
+
+    if (strcmp(attr[2], "alias") != 0) {
+        ALOGE("%s: Device %s in platform info xml has no alias, no alias set!",
+              __func__, attr[1]);
+        goto done;
+    }
+
+    if (platform_set_snd_device_name(index, attr[3]) < 0) {
+        ALOGE("%s: Device %s, alias %s was not set!",
+              __func__, attr[1], attr[3]);
+        goto done;
+    }
+
+done:
+    return;
 }
 
 static void start_tag(void *userdata __unused, const XML_Char *tag_name,
@@ -1235,11 +1274,14 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
             section = MICROPHONE_CHARACTERISTIC;
         } else if (strcmp(tag_name, "snd_devices") == 0) {
             section = SND_DEVICES;
+        } else if (strcmp(tag_name, "device_names") == 0) {
+            section = DEVICE_NAME;
         } else if (strcmp(tag_name, "device") == 0) {
             if ((section != ACDB) && (section != AEC) && (section != NS) &&
                 (section != BACKEND_NAME) && (section != BITWIDTH) &&
-                (section != INTERFACE_NAME) && (section != OPERATOR_SPECIFIC)) {
-                ALOGE("device tag only supported for acdb/backend names/bitwitdh/interface names");
+                (section != INTERFACE_NAME) && (section != OPERATOR_SPECIFIC) &&
+                (section != DEVICE_NAME)) {
+                ALOGE("device tag only supported for acdb/backend names/bitwitdh/interface/device names");
                 return;
             }
 
@@ -1435,6 +1477,8 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
         section = ROOT;
     } else if (strcmp(tag_name, "custom_mtmx_param_in_chs") == 0) {
         section = CUSTOM_MTMX_IN_PARAMS;
+    } else if (strcmp(tag_name, "device_names") == 0) {
+        section = ROOT;
     }
 }
 
