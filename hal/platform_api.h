@@ -304,6 +304,7 @@ int platform_set_hdmi_config(void *platform, uint32_t channel_count,
 int platform_set_device_params(struct stream_out *out, int param, int value);
 int platform_set_audio_device_interface(const char * device_name, const char *intf_name,
                                         const char * codec_type);
+int platform_set_snd_device_name(snd_device_t snd_device, const char * name);
 void platform_set_gsm_mode(void *platform, bool enable);
 bool platform_can_enable_spkr_prot_on_device(snd_device_t snd_device);
 int platform_get_spkr_prot_acdb_id(snd_device_t snd_device);
