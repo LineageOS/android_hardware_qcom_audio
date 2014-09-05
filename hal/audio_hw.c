@@ -1916,7 +1916,7 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
         }
     } else {
         if (out->pcm) {
-            size_t avail;
+            unsigned int avail;
             if (pcm_get_htimestamp(out->pcm, &avail, timestamp) == 0) {
                 size_t kernel_buffer_size = out->config.period_size * out->config.period_count;
                 int64_t signed_frames = out->written - kernel_buffer_size + avail;
@@ -3002,7 +3002,7 @@ static void adev_close_input_stream(struct audio_hw_device *dev __unused,
 {
     int ret;
     struct stream_in *in = (struct stream_in *)stream;
-    struct audio_device *adev = in->dev;
+    struct audio_device *adev = (struct audio_device *)dev;
 
     ALOGD("%s: enter:stream_handle(%p)",__func__, in);
 

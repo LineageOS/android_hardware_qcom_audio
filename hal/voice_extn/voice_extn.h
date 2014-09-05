@@ -77,8 +77,8 @@ static void voice_extn_get_parameters(const struct audio_device *adev __unused,
 {
 }
 
-static int voice_extn_is_call_state_active(struct audio_device *adev,
-                                           bool *is_call_active)
+static int voice_extn_is_call_state_active(struct audio_device *adev __unused,
+                                           bool *is_call_active __unused)
 {
     return -ENOSYS;
 }
@@ -138,8 +138,7 @@ int voice_extn_compress_voip_select_devices(struct audio_device *adev,
                                             snd_device_t *in_snd_device);
 int voice_extn_compress_voip_set_parameters(struct audio_device *adev,
                                              struct str_parms *parms);
-void voice_extn_compress_voip_get_parameters(const struct audio_device *adev,
-                                             struct str_parms *query,
+void voice_extn_compress_voip_get_parameters(struct str_parms *query,
                                              struct str_parms *reply);
 
 void voice_extn_compress_voip_out_get_parameters(struct stream_out *out,
