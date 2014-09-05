@@ -63,10 +63,10 @@ typedef void (*surround_filters_intl_process_t)(void *, Word16 *, Word16 *);
 struct ssr_module {
     FILE                *fp_4ch;
     FILE                *fp_6ch;
-    int16_t             **real_coeffs;
-    int16_t             **imag_coeffs;
+    Word16             **real_coeffs;
+    Word16             **imag_coeffs;
     void                *surround_obj;
-    int16_t             *surround_raw_buffer;
+    Word16             *surround_raw_buffer;
     bool                is_ssr_enabled;
 
     void *surround_filters_handle;

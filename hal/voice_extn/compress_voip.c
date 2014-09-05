@@ -476,8 +476,7 @@ done:
     return ret;
 }
 
-void voice_extn_compress_voip_get_parameters(const struct audio_device *adev __unused,
-                                             struct str_parms *query,
+void voice_extn_compress_voip_get_parameters(struct str_parms *query,
                                              struct str_parms *reply)
 {
     int ret;
