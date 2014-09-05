@@ -116,8 +116,8 @@ int start_call(struct audio_device *adev, audio_usecase_t usecase_id)
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
     uc_info->id = usecase_id;
     uc_info->type = VOICE_CALL;
-    uc_info->stream.out = adev->primary_output;
-    uc_info->devices = adev->primary_output->devices;
+    uc_info->stream.out = adev->current_call_output ;
+    uc_info->devices = adev->current_call_output ->devices;
     uc_info->in_snd_device = SND_DEVICE_NONE;
     uc_info->out_snd_device = SND_DEVICE_NONE;
 
@@ -196,6 +196,11 @@ bool voice_is_call_state_active(struct audio_device *adev)
     }
 
     return call_state;
+}
+
+bool voice_is_in_call(struct audio_device *adev)
+{
+    return adev->voice.in_call;
 }
 
 uint32_t voice_get_active_session_id(struct audio_device *adev)
@@ -458,6 +463,7 @@ void voice_update_devices_for_all_voice_usecases(struct audio_device *adev)
         if (usecase->type == VOICE_CALL) {
             ALOGV("%s: updating device for usecase:%s", __func__,
                   use_case_table[usecase->id]);
+            usecase->stream.out = adev->current_call_output;
             select_devices(adev, usecase->id);
         }
     }

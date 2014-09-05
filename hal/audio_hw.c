@@ -60,6 +60,8 @@
 #define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 96
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
 
+#define PROXY_OPEN_RETRY_COUNT           100
+#define PROXY_OPEN_WAIT_TIME             20
 
 #define USECASE_AUDIO_PLAYBACK_PRIMARY USECASE_AUDIO_PLAYBACK_DEEP_BUFFER
 
@@ -102,6 +104,37 @@ struct pcm_config pcm_config_audio_capture = {
     .format = PCM_FORMAT_S16_LE,
 };
 
+#define AFE_PROXY_CHANNEL_COUNT 2
+#define AFE_PROXY_SAMPLING_RATE 48000
+
+#define AFE_PROXY_PLAYBACK_PERIOD_SIZE  768
+#define AFE_PROXY_PLAYBACK_PERIOD_COUNT 4
+
+struct pcm_config pcm_config_afe_proxy_playback = {
+    .channels = AFE_PROXY_CHANNEL_COUNT,
+    .rate = AFE_PROXY_SAMPLING_RATE,
+    .period_size = AFE_PROXY_PLAYBACK_PERIOD_SIZE,
+    .period_count = AFE_PROXY_PLAYBACK_PERIOD_COUNT,
+    .format = PCM_FORMAT_S16_LE,
+    .start_threshold = AFE_PROXY_PLAYBACK_PERIOD_SIZE,
+    .stop_threshold = INT_MAX,
+    .avail_min = AFE_PROXY_PLAYBACK_PERIOD_SIZE,
+};
+
+#define AFE_PROXY_RECORD_PERIOD_SIZE  768
+#define AFE_PROXY_RECORD_PERIOD_COUNT 4
+
+struct pcm_config pcm_config_afe_proxy_record = {
+    .channels = AFE_PROXY_CHANNEL_COUNT,
+    .rate = AFE_PROXY_SAMPLING_RATE,
+    .period_size = AFE_PROXY_RECORD_PERIOD_SIZE,
+    .period_count = AFE_PROXY_RECORD_PERIOD_COUNT,
+    .format = PCM_FORMAT_S16_LE,
+    .start_threshold = AFE_PROXY_RECORD_PERIOD_SIZE,
+    .stop_threshold = INT_MAX,
+    .avail_min = AFE_PROXY_RECORD_PERIOD_SIZE,
+};
+
 const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = "deep-buffer-playback",
     [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = "low-latency-playback",
@@ -133,6 +166,9 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_INCALL_MUSIC_UPLINK2] = "incall_music_uplink2",
     [USECASE_AUDIO_SPKR_CALIB_RX] = "spkr-rx-calib",
     [USECASE_AUDIO_SPKR_CALIB_TX] = "spkr-vi-record",
+
+    [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = "afe-proxy-playback",
+    [USECASE_AUDIO_RECORD_AFE_PROXY] = "afe-proxy-record",
 };
 
 static const audio_usecase_t offload_usecases[] = {
@@ -612,7 +648,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
          * usecase. This is to avoid switching devices for voice call when
          * check_usecases_codec_backend() is called below.
          */
-        if (adev->voice.in_call && adev->mode == AUDIO_MODE_IN_CALL) {
+        if (voice_is_in_call(adev)) {
             vc_usecase = get_usecase_from_list(adev,
                                                get_voice_usecase_id_from_list(adev));
             if ((vc_usecase) && ((vc_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
@@ -649,14 +685,14 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             usecase->devices = usecase->stream.in->device;
             out_snd_device = SND_DEVICE_NONE;
             if (in_snd_device == SND_DEVICE_NONE) {
+                audio_devices_t out_device = AUDIO_DEVICE_NONE;
                 if (adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
                         adev->primary_output && !adev->primary_output->standby) {
-                    in_snd_device = platform_get_input_snd_device(adev->platform,
-                                        adev->primary_output->devices);
-                } else {
-                    in_snd_device = platform_get_input_snd_device(adev->platform,
-                                                                  AUDIO_DEVICE_NONE);
+                    out_device = adev->primary_output->devices;
+                } else if (usecase->id == USECASE_AUDIO_RECORD_AFE_PROXY) {
+                    out_device = AUDIO_DEVICE_OUT_TELEPHONY_TX;
                 }
+                in_snd_device = platform_get_input_snd_device(adev->platform, out_device);
             }
         }
     }
@@ -808,16 +844,33 @@ int start_input_stream(struct stream_in *in)
     select_devices(adev, in->usecase);
 
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d), channels %d",
-          __func__, adev->snd_card,
-          in->pcm_device_id, in->config.channels);
-    in->pcm = pcm_open(adev->snd_card,
-                       in->pcm_device_id, PCM_IN, &in->config);
-    if (in->pcm && !pcm_is_ready(in->pcm)) {
-        ALOGE("%s: %s", __func__, pcm_get_error(in->pcm));
-        pcm_close(in->pcm);
-        in->pcm = NULL;
-        ret = -EIO;
-        goto error_open;
+          __func__, adev->snd_card, in->pcm_device_id, in->config.channels);
+
+    unsigned int flags = PCM_IN;
+    unsigned int pcm_open_retry_count = 0;
+
+    if (in->usecase == USECASE_AUDIO_RECORD_AFE_PROXY) {
+        flags |= PCM_MMAP | PCM_NOIRQ;
+        pcm_open_retry_count = PROXY_OPEN_RETRY_COUNT;
+    }
+
+    while (1) {
+        in->pcm = pcm_open(adev->snd_card, in->pcm_device_id,
+                           flags, &in->config);
+        if (in->pcm == NULL || !pcm_is_ready(in->pcm)) {
+            ALOGE("%s: %s", __func__, pcm_get_error(in->pcm));
+            if (in->pcm != NULL) {
+                pcm_close(in->pcm);
+                in->pcm = NULL;
+            }
+            if (pcm_open_retry_count-- == 0) {
+                ret = -EIO;
+                goto error_open;
+            }
+            usleep(PROXY_OPEN_WAIT_TIME * 1000);
+            continue;
+        }
+        break;
     }
     ALOGV("%s: exit", __func__);
     return ret;
@@ -1217,18 +1270,34 @@ int start_output_stream(struct stream_out *out)
 
     select_devices(adev, out->usecase);
 
-    ALOGV("%s: Opening PCM device card_id(%d) device_id(%d)",
-          __func__, 0, out->pcm_device_id);
+    ALOGV("%s: Opening PCM device card_id(%d) device_id(%d) format(%#x)",
+          __func__, adev->snd_card, out->pcm_device_id, out->config.format);
     if (!is_offload_usecase(out->usecase)) {
-        out->pcm = pcm_open(adev->snd_card,
-                            out->pcm_device_id,
-                            PCM_OUT | PCM_MONOTONIC, &out->config);
-        if (out->pcm && !pcm_is_ready(out->pcm)) {
-            ALOGE("%s: %s", __func__, pcm_get_error(out->pcm));
-            pcm_close(out->pcm);
-            out->pcm = NULL;
-            ret = -EIO;
-            goto error_open;
+        unsigned int flags = PCM_OUT;
+        unsigned int pcm_open_retry_count = 0;
+        if (out->usecase == USECASE_AUDIO_PLAYBACK_AFE_PROXY) {
+            flags |= PCM_MMAP | PCM_NOIRQ;
+            pcm_open_retry_count = PROXY_OPEN_RETRY_COUNT;
+        } else
+            flags |= PCM_MONOTONIC;
+
+        while (1) {
+            out->pcm = pcm_open(adev->snd_card, out->pcm_device_id,
+                               flags, &out->config);
+            if (out->pcm == NULL || !pcm_is_ready(out->pcm)) {
+                ALOGE("%s: %s", __func__, pcm_get_error(out->pcm));
+                if (out->pcm != NULL) {
+                    pcm_close(out->pcm);
+                    out->pcm = NULL;
+                }
+                if (pcm_open_retry_count-- == 0) {
+                    ret = -EIO;
+                    goto error_open;
+                }
+                usleep(PROXY_OPEN_WAIT_TIME * 1000);
+                continue;
+            }
+            break;
         }
         platform_set_default_channel_map(adev->platform, out->config.channels,
                                          out->pcm_device_id);
@@ -1472,6 +1541,10 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
     return 0;
 }
 
+static bool output_drives_call(struct audio_device *adev, struct stream_out *out)
+{
+    return out == adev->primary_output || out == adev->voice_tx_output;
+}
 
 static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 {
@@ -1531,20 +1604,13 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 select_devices(adev, out->usecase);
 
             if ((adev->mode == AUDIO_MODE_IN_CALL) &&
-                    !adev->voice.in_call &&
-                    (out == adev->primary_output)) {
-                ret = voice_start_call(adev);
-            } else if ((adev->mode == AUDIO_MODE_IN_CALL) &&
-                            adev->voice.in_call &&
-                            (out == adev->primary_output)) {
-                voice_update_devices_for_all_voice_usecases(adev);
+                    output_drives_call(adev, out)) {
+                adev->current_call_output = out;
+                if (!voice_is_in_call(adev))
+                    ret = voice_start_call(adev);
+                else
+                    voice_update_devices_for_all_voice_usecases(adev);
             }
-        }
-
-        if ((adev->mode == AUDIO_MODE_NORMAL) &&
-                adev->voice.in_call &&
-                (out == adev->primary_output)) {
-            ret = voice_stop_call(adev);
         }
 
         pthread_mutex_unlock(&adev->lock);
@@ -1752,8 +1818,13 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             if (out->muted)
                 memset((void *)buffer, 0, bytes);
             ALOGVV("%s: writing buffer (%d bytes) to pcm device", __func__, bytes);
-            ret = pcm_write(out->pcm, (void *)buffer, bytes);
-            if (ret == 0)
+            if (out->usecase == USECASE_AUDIO_PLAYBACK_AFE_PROXY)
+                ret = pcm_mmap_write(out->pcm, (void *)buffer, bytes);
+            else
+                ret = pcm_write(out->pcm, (void *)buffer, bytes);
+            if (ret < 0)
+                ret = -errno;
+            else if (ret == 0)
                 out->written += bytes / (out->config.channels * sizeof(short));
         }
     }
@@ -2053,7 +2124,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
     if (err >= 0) {
         val = atoi(value);
-        if ((in->device != val) && (val != 0)) {
+        if (((int)in->device != val) && (val != 0)) {
             in->device = val;
             /* If recording is in progress, change the tx device to new device */
             if (!in->standby)
@@ -2129,6 +2200,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             ret = audio_extn_ssr_read(stream, buffer, bytes);
         else if (audio_extn_compr_cap_usecase_supported(in->usecase))
             ret = audio_extn_compr_cap_read(in, buffer, bytes);
+        else if (in->usecase == USECASE_AUDIO_RECORD_AFE_PROXY)
+            ret = pcm_mmap_read(in->pcm, buffer, bytes);
         else
             ret = pcm_read(in->pcm, buffer, bytes);
     }
@@ -2378,6 +2451,28 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                   __func__, ret);
             goto error_open;
         }
+    } else  if (out->devices == AUDIO_DEVICE_OUT_TELEPHONY_TX) {
+        if (config->sample_rate == 0)
+            config->sample_rate = AFE_PROXY_SAMPLING_RATE;
+        if (config->sample_rate != 48000 && config->sample_rate != 16000 &&
+                config->sample_rate != 8000) {
+            config->sample_rate = AFE_PROXY_SAMPLING_RATE;
+            ret = -EINVAL;
+            goto error_open;
+        }
+        out->sample_rate = config->sample_rate;
+        out->config.rate = config->sample_rate;
+        if (config->format == AUDIO_FORMAT_DEFAULT)
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
+        if (config->format != AUDIO_FORMAT_PCM_16_BIT) {
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
+            ret = -EINVAL;
+            goto error_open;
+        }
+        out->format = config->format;
+        out->usecase = USECASE_AUDIO_PLAYBACK_AFE_PROXY;
+        out->config = pcm_config_afe_proxy_playback;
+        adev->voice_tx_output = out;
     } else if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
         out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
         out->config = pcm_config_low_latency;
@@ -2475,6 +2570,10 @@ static void adev_close_output_stream(struct audio_hw_device *dev __unused,
         if (out->compr_config.codec != NULL)
             free(out->compr_config.codec);
     }
+
+    if (adev->voice_tx_output == out)
+        adev->voice_tx_output = NULL;
+
     pthread_cond_destroy(&out->cond);
     pthread_mutex_destroy(&out->lock);
     free(stream);
@@ -2640,10 +2739,16 @@ static int adev_get_master_mute(struct audio_hw_device *dev __unused,
 static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 {
     struct audio_device *adev = (struct audio_device *)dev;
+
     pthread_mutex_lock(&adev->lock);
     if (adev->mode != mode) {
         ALOGD("%s mode %d\n", __func__, mode);
         adev->mode = mode;
+        if ((mode == AUDIO_MODE_NORMAL || mode == AUDIO_MODE_IN_COMMUNICATION) &&
+                voice_is_in_call(adev)) {
+             voice_stop_call(adev);
+             adev->current_call_output = NULL;
+        }
     }
     pthread_mutex_unlock(&adev->lock);
     return 0;
@@ -2726,7 +2831,28 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->config.rate = config->sample_rate;
     in->format = config->format;
 
-    if (channel_count == 6) {
+    if (in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) {
+        if (config->sample_rate == 0)
+            config->sample_rate = AFE_PROXY_SAMPLING_RATE;
+        if (config->sample_rate != 48000 && config->sample_rate != 16000 &&
+                config->sample_rate != 8000) {
+            config->sample_rate = AFE_PROXY_SAMPLING_RATE;
+            ret = -EINVAL;
+            goto err_open;
+        }
+        if (config->format == AUDIO_FORMAT_DEFAULT)
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
+        if (config->format != AUDIO_FORMAT_PCM_16_BIT) {
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
+            ret = -EINVAL;
+            goto err_open;
+        }
+
+        in->usecase = USECASE_AUDIO_RECORD_AFE_PROXY;
+        in->config = pcm_config_afe_proxy_record;
+        in->config.channels = channel_count;
+        in->config.rate = config->sample_rate;
+    } else if (channel_count == 6) {
         if(audio_extn_ssr_get_enabled()) {
             if(audio_extn_ssr_init(in)) {
                 ALOGE("%s: audio_extn_ssr_init failed", __func__);
