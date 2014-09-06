@@ -2094,13 +2094,13 @@ audio_io_handle_t AudioPolicyManager::getPassthroughOutput(
     // output. This is required if client sets passthrough flag directly.
     bool shouldReturnError = false;
 
+    if (flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)
+        shouldReturnError = true;
+
     if (!isHDMIPassthroughEnabled()) {
         ALOGV("getPassthroughOutput: passthrough not enabled");
         goto noPassthrough;
     }
-
-    if (flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)
-        shouldReturnError = true;
 
     // Passthrough used for dolby formats and if device is HDMI
     if ((format == AUDIO_FORMAT_EAC3 || format == AUDIO_FORMAT_AC3 ||
