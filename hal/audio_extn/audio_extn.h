@@ -283,6 +283,8 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
                                   struct listnode *streams_output_cfg_list,
                                   audio_output_flags_t flags,
                                   audio_format_t format,
+                                  uint32_t sample_rate,
+                                  uint32_t bit_width,
                                   struct stream_app_type_cfg *app_type_cfg);
 int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase);
 void audio_extn_utils_send_audio_calibration(struct audio_device *adev,

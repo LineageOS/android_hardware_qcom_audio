@@ -246,10 +246,16 @@ struct stream_format {
     audio_format_t format;
 };
 
+struct stream_sample_rate {
+    struct listnode list;
+    uint32_t sample_rate;
+};
+
 struct streams_output_cfg {
     struct listnode list;
     audio_output_flags_t flags;
     struct listnode format_list;
+    struct listnode sample_rate_list;
     struct stream_app_type_cfg app_type_cfg;
 };
 
