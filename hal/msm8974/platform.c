@@ -2442,6 +2442,8 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
     bool backend_change = false;
     struct listnode *node;
     struct stream_out *out = NULL;
+    unsigned int bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    unsigned int sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
 
     // For voice calls use default configuration
     // force routing is not required here, caller will do it anyway
@@ -2453,10 +2455,16 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
         backend_change = true;
     }
 
-
+    /*
+     * The backend should be configured at highest bit width and/or
+     * sample rate amongst all playback usecases.
+     * If the selected sample rate and/or bit width differ with
+     * current backend sample rate and/or bit width, then, we set the
+     * backend re-configuration flag.
+     *
+     * Exception: 16 bit playbacks is allowed through 16 bit/48 khz backend only
+     */
     if (!backend_change) {
-        // Go through all the playback usecases
-        // Find the max bit width and samplerate
         list_for_each(node, &adev->usecase_list) {
             struct audio_usecase *curr_usecase;
             curr_usecase = node_to_item(node, struct audio_usecase, list);
@@ -2466,21 +2474,27 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
                 if (out != NULL ) {
                     ALOGV("Offload playback running bw %d sr %d",
                               out->bit_width, out->sample_rate);
-                        if (*new_bit_width < out->bit_width)
-                            *new_bit_width = out->bit_width;
-                        if (*new_sample_rate < out->sample_rate)
-                            *new_sample_rate = out->sample_rate;
+                        if (bit_width < out->bit_width)
+                            bit_width = out->bit_width;
+                        if (sample_rate < out->sample_rate)
+                            sample_rate = out->sample_rate;
                 }
             }
         }
     }
 
+    // 16 bit playbacks is allowed through 16 bit/48 khz backend only
+    if (16 == bit_width)
+        sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
     // Force routing if the expected bitwdith or samplerate
     // is not same as current backend comfiguration
-    if ((*new_bit_width != adev->cur_codec_backend_bit_width) ||
-        (*new_sample_rate != adev->cur_codec_backend_samplerate)) {
+    if ((bit_width != adev->cur_codec_backend_bit_width) ||
+        (sample_rate != adev->cur_codec_backend_samplerate)) {
+        *new_bit_width = bit_width;
+        *new_sample_rate = sample_rate;
         backend_change = true;
-        ALOGW("Codec backend needs to be updated");
+        ALOGI("%s Codec backend needs to be updated. new bit width: %d new sample rate: %d",
+               __func__, *new_bit_width, *new_sample_rate);
     }
 
     return backend_change;
@@ -2506,12 +2520,6 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct 
     if (platform_check_codec_backend_cfg(adev, usecase,
                                       &new_bit_width, &new_sample_rate)) {
         platform_set_codec_backend_cfg(adev, new_bit_width, new_sample_rate);
-    }
-
-    if (old_bit_width != adev->cur_codec_backend_bit_width ||
-        old_sample_rate != adev->cur_codec_backend_samplerate) {
-        ALOGW("New codec backend bit width %d, sample rate %d",
-                    adev->cur_codec_backend_bit_width, adev->cur_codec_backend_samplerate);
         return true;
     }
 
