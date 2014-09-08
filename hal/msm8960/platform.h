@@ -138,4 +138,8 @@ enum {
 /* Define macro for Internal FM volume mixer */
 #define FM_RX_VOLUME "Internal FM RX Volume"
 
+#define LOW_LATENCY_CAPTURE_SAMPLE_RATE 48000
+#define LOW_LATENCY_CAPTURE_PERIOD_SIZE 240
+#define LOW_LATENCY_CAPTURE_USE_CASE 0
+
 #endif // QCOM_AUDIO_PLATFORM_H

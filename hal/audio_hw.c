@@ -63,6 +63,9 @@
 
 #define USECASE_AUDIO_PLAYBACK_PRIMARY USECASE_AUDIO_PLAYBACK_DEEP_BUFFER
 
+static unsigned int configured_low_latency_capture_period_size =
+        LOW_LATENCY_CAPTURE_PERIOD_SIZE;
+
 struct pcm_config pcm_config_deep_buffer = {
     .channels = 2,
     .rate = DEFAULT_OUTPUT_SAMPLING_RATE,
@@ -286,6 +289,19 @@ static int enable_audio_route_for_voice_usecases(struct audio_device *adev,
             enable_audio_route(adev, usecase);
     }
     return 0;
+}
+
+int pcm_ioctl(struct pcm *pcm, int request, ...)
+{
+    va_list ap;
+    void * arg;
+    int pcm_fd = *(int*)pcm;
+
+    va_start(ap, request);
+    arg = va_arg(ap, void *);
+    va_end(ap);
+
+    return ioctl(pcm_fd, request, arg);
 }
 
 int enable_audio_route(struct audio_device *adev,
@@ -1439,7 +1455,8 @@ static int check_input_parameters(uint32_t sample_rate,
 
 static size_t get_input_buffer_size(uint32_t sample_rate,
                                     audio_format_t format,
-                                    int channel_count)
+                                    int channel_count,
+                                    bool is_low_latency)
 {
     size_t size = 0;
 
@@ -1447,13 +1464,19 @@ static size_t get_input_buffer_size(uint32_t sample_rate,
         return 0;
 
     size = (sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC) / 1000;
+    if (is_low_latency)
+        size = configured_low_latency_capture_period_size;
     /* ToDo: should use frame_size computed based on the format and
        channel_count here. */
     size *= sizeof(short) * channel_count;
 
-    /* make sure the size is multiple of 64 */
-    size += 0x3f;
-    size &= ~0x3f;
+    /* make sure the size is multiple of 32 bytes
+     * At 48 kHz mono 16-bit PCM:
+     *  5.000 ms = 240 frames = 15*16*1*2 = 480, a whole multiple of 32 (15)
+     *  3.333 ms = 160 frames = 10*16*1*2 = 320, a whole multiple of 32 (10)
+     */
+    size += 0x1f;
+    size &= ~0x1f;
 
     return size;
 }
@@ -2970,7 +2993,8 @@ static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev __unu
 {
     int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
 
-    return get_input_buffer_size(config->sample_rate, config->format, channel_count);
+    return get_input_buffer_size(config->sample_rate, config->format, channel_count,
+            false /* is_low_latency: since we don't know, be conservative */);
 }
 
 static int adev_open_input_stream(struct audio_hw_device *dev,
@@ -2986,7 +3010,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     struct stream_in *in;
     int ret = 0, buffer_size, frame_size;
     int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
-
+    bool is_low_latency = false;
 
     *stream_in = NULL;
     if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0)
@@ -3030,6 +3054,13 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
     /* Update config params with the requested sample rate and channels */
     in->usecase = USECASE_AUDIO_RECORD;
+    if (config->sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE &&
+            (flags & AUDIO_INPUT_FLAG_FAST) != 0) {
+        is_low_latency = true;
+#if LOW_LATENCY_CAPTURE_USE_CASE
+        in->usecase = USECASE_AUDIO_RECORD_LOW_LATENCY;
+#endif
+    }
     in->config = pcm_config_audio_capture;
     in->config.rate = config->sample_rate;
     in->format = config->format;
@@ -3053,7 +3084,8 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         frame_size = audio_stream_in_frame_size(&in->stream);
         buffer_size = get_input_buffer_size(config->sample_rate,
                                             config->format,
-                                            channel_count);
+                                            channel_count,
+                                            is_low_latency);
         in->config.period_size = buffer_size / frame_size;
     }
 
@@ -3133,6 +3165,23 @@ static int adev_close(hw_device_t *device)
     }
     pthread_mutex_unlock(&adev_init_lock);
     return 0;
+}
+
+/* This returns 1 if the input parameter looks at all plausible as a low latency period size,
+ * or 0 otherwise.  A return value of 1 doesn't mean the value is guaranteed to work,
+ * just that it _might_ work.
+ */
+static int period_size_is_plausible_for_low_latency(int period_size)
+{
+    switch (period_size) {
+    case 160:
+    case 240:
+    case 320:
+    case 480:
+        return 1;
+    default:
+        return 0;
+    }
 }
 
 static int adev_open(const hw_module_t *module, const char *name,
@@ -3258,23 +3307,29 @@ static int adev_open(const hw_module_t *module, const char *name,
                                                     &adev->streams_output_cfg_list);
 
     audio_device_ref_count++;
+
+    char value[PROPERTY_VALUE_MAX];
+    int trial;
+    if (property_get("audio_hal.period_size", value, NULL) > 0) {
+        trial = atoi(value);
+        if (period_size_is_plausible_for_low_latency(trial)) {
+            pcm_config_low_latency.period_size = trial;
+            pcm_config_low_latency.start_threshold = trial / 4;
+            pcm_config_low_latency.avail_min = trial / 4;
+            configured_low_latency_capture_period_size = trial;
+        }
+    }
+    if (property_get("audio_hal.in_period_size", value, NULL) > 0) {
+        trial = atoi(value);
+        if (period_size_is_plausible_for_low_latency(trial)) {
+            configured_low_latency_capture_period_size = trial;
+        }
+    }
+
     pthread_mutex_unlock(&adev_init_lock);
 
     ALOGV("%s: exit", __func__);
     return 0;
-}
-
-int pcm_ioctl(struct pcm *pcm, int request, ...)
-{
-    va_list ap;
-    void * arg;
-    int pcm_fd = *(int*)pcm;
-
-    va_start(ap, request);
-    arg = va_arg(ap, void *);
-    va_end(ap);
-
-    return ioctl(pcm_fd, request, arg);
 }
 
 static struct hw_module_methods_t hal_module_methods = {
