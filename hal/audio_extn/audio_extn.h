@@ -49,6 +49,13 @@
 #endif
 
 
+#ifdef AUDIO_EXTN_FORMATS_ENABLED
+#define AUDIO_OUTPUT_BIT_WIDTH ((config->offload_info.bit_width == 32) ? 24\
+                                   :config->offload_info.bit_width)
+#else
+#define AUDIO_OUTPUT_BIT_WIDTH (CODEC_BACKEND_DEFAULT_BIT_WIDTH)
+#endif
+
 #define MAX_LENGTH_MIXER_CONTROL_IN_INT                  (128)
 
 void audio_extn_set_parameters(struct audio_device *adev,
