@@ -1838,7 +1838,7 @@ exit:
             out->standby = true;
         }
         out_standby(&out->stream.common);
-        usleep(bytes * 1000000 / audio_stream_frame_size(&out->stream.common) /
+        usleep(bytes * 1000000 / audio_stream_out_frame_size(stream) /
                         out_get_sample_rate(&out->stream.common));
 
     }
@@ -2135,7 +2135,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 (in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
                 (voice_extn_compress_voip_is_format_supported(in->format)) &&
                 (in->config.rate == 8000 || in->config.rate == 16000) &&
-                (popcount(in->channel_mask) == 1)) {
+                (audio_channel_count_from_in_mask(in->channel_mask) == 1)) {
                 err = voice_extn_compress_voip_open_input_stream(in);
                 if (err != 0) {
                     ALOGE("%s: Compress voip input cannot be opened, error:%d",
@@ -2268,7 +2268,7 @@ exit:
         }
         in_standby(&in->stream.common);
         ALOGV("%s: read failed - sleeping for buffer duration", __func__);
-        usleep(bytes * 1000000 / audio_stream_frame_size(&in->stream.common) /
+        usleep(bytes * 1000000 / audio_stream_in_frame_size(stream) /
                                    in_get_sample_rate(&in->stream.common));
     }
     return bytes;
@@ -2624,8 +2624,7 @@ static void adev_close_output_stream(struct audio_hw_device *dev __unused,
         if(ret != 0)
             ALOGE("%s: Compress voip output cannot be closed, error:%d",
                   __func__, ret);
-    }
-    else
+    } else
         out_standby(&stream->common);
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
@@ -2881,7 +2880,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                   struct audio_stream_in **stream_in,
                                   audio_input_flags_t flags __unused,
                                   const char *address __unused,
-                                  audio_source_t source)
+                                  audio_source_t source __unused)
 {
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_in *in;
