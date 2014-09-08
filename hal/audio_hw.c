@@ -65,8 +65,10 @@
 
 #ifdef LOW_LATENCY_PRIMARY
 #define USECASE_AUDIO_PLAYBACK_PRIMARY USECASE_AUDIO_PLAYBACK_LOW_LATENCY
+#define PCM_CONFIG_AUDIO_PLAYBACK_PRIMARY pcm_config_low_latency
 #else
 #define USECASE_AUDIO_PLAYBACK_PRIMARY USECASE_AUDIO_PLAYBACK_DEEP_BUFFER
+#define PCM_CONFIG_AUDIO_PLAYBACK_PRIMARY pcm_config_deep_buffer
 #endif
 
 static unsigned int configured_low_latency_capture_period_size =
@@ -2185,9 +2187,13 @@ static int out_get_render_position(const struct audio_stream_out *stream,
                                    uint32_t *dsp_frames)
 {
     struct stream_out *out = (struct stream_out *)stream;
-    if (is_offload_usecase(out->usecase) && (dsp_frames != NULL)) {
-        ssize_t ret =  0;
-        *dsp_frames = 0;
+
+    if (dsp_frames == NULL)
+        return -EINVAL;
+
+    *dsp_frames = 0;
+    if (is_offload_usecase(out->usecase)) {
+        ssize_t ret = 0;
         lock_output_stream(out);
         if (out->compr != NULL) {
             ret = compress_get_tstamp(out->compr, (unsigned long *)dsp_frames,
@@ -2203,14 +2209,14 @@ static int out_get_render_position(const struct audio_stream_out *stream,
             set_snd_card_state(adev,SND_CARD_STATE_OFFLINE);
             return -EINVAL;
         } else if(ret < 0) {
-            if (out->compr == NULL) {
-                return 0;
-            }
             ALOGE(" ERROR: Unable to get time stamp from compress driver ret=%d", ret);
             return -EINVAL;
         } else {
             return 0;
         }
+    } else if (audio_is_linear_pcm(out->format)) {
+        *dsp_frames = out->written;
+        return 0;
     } else
         return -EINVAL;
 }
@@ -2689,7 +2695,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_out *out;
     int i, ret = 0;
-    int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
 
     *stream_out = NULL;
 
@@ -2801,6 +2806,12 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         } else {
             ALOGV("%s:: inserting OFFLOAD_USECASE", __func__);
             out->usecase = get_offload_usecase(adev);
+
+            out->stream.set_callback = out_set_callback;
+            out->stream.pause = out_pause;
+            out->stream.resume = out_resume;
+            out->stream.drain = out_drain;
+            out->stream.flush = out_flush;
         }
         if (config->offload_info.channel_mask)
             out->channel_mask = config->offload_info.channel_mask;
@@ -2811,11 +2822,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->format = config->offload_info.format;
         out->sample_rate = config->offload_info.sample_rate;
 
-        out->stream.set_callback = out_set_callback;
-        out->stream.pause = out_pause;
-        out->stream.resume = out_resume;
-        out->stream.drain = out_drain;
-        out->stream.flush = out_flush;
         out->bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
 
         if (audio_extn_is_dolby_format(config->offload_info.format))
@@ -2846,7 +2852,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->compr_config.codec->ch_in =
                     audio_channel_count_from_out_mask(config->channel_mask);
         out->compr_config.codec->ch_out = out->compr_config.codec->ch_in;
-        out->bit_width = config->offload_info.bit_width;
+        out->bit_width = AUDIO_OUTPUT_BIT_WIDTH;
+        /*TODO: Do we need to change it for passthrough */
+        out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
 
         if ((config->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC)
             out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
@@ -2862,7 +2870,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
 #ifdef FLAC_OFFLOAD_ENABLED
         if (config->offload_info.format == AUDIO_FORMAT_FLAC)
-            out->compr_config.codec->options.flac_dec.sample_size = config->offload_info.bit_width;
+            out->compr_config.codec->options.flac_dec.sample_size = AUDIO_OUTPUT_BIT_WIDTH;
 #endif
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
@@ -2922,28 +2930,21 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->config = pcm_config_afe_proxy_playback;
         adev->voice_tx_output = out;
     } else {
-#ifndef LOW_LATENCY_PRIMARY
-        if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
-            out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
-            out->config = pcm_config_low_latency;
-#endif
-#ifdef LOW_LATENCY_PRIMARY
-        if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
-            out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
-            out->config = pcm_config_deep_buffer;
-#endif
-        } else if (out->flags & AUDIO_OUTPUT_FLAG_RAW) {
+        if (out->flags & AUDIO_OUTPUT_FLAG_RAW) {
             out->usecase = USECASE_AUDIO_PLAYBACK_ULL;
             out->config = pcm_config_low_latency;
+        } else if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
+            out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
+            out->config = pcm_config_low_latency;
+        } if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
+            out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
+            out->config = pcm_config_deep_buffer;
         } else {
             /* primary path is the default path selected if no other outputs are available/suitable */
             out->usecase = USECASE_AUDIO_PLAYBACK_PRIMARY;
-#ifdef LOW_LATENCY_PRIMARY
-            out->config = pcm_config_low_latency;
-#else
-            out->config = pcm_config_deep_buffer;
-#endif
+            out->config = PCM_CONFIG_AUDIO_PLAYBACK_PRIMARY;
         }
+
         if (config->format != audio_format_from_pcm_format(out->config.format)) {
             if (k_enable_extended_precision
                     && pcm_params_format_test(adev->use_case_table[out->usecase],
@@ -2964,8 +2965,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->sample_rate = out->config.rate;
     }
 
-    ALOGV("%s flags %x, format %x, sample_rate %d, out->bit_width %d",
-           __func__, flags, out->format, out->sample_rate, out->bit_width);
+    ALOGV("%s devices %d,flags %x, format %x, out->sample_rate %d, out->bit_width %d",
+           __func__, devices, flags, out->format, out->sample_rate, out->bit_width);
 
     if ((out->usecase == USECASE_AUDIO_PLAYBACK_PRIMARY) ||
             flags & AUDIO_OUTPUT_FLAG_PRIMARY) {
