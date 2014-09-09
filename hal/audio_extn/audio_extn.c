@@ -30,6 +30,7 @@
 #include "audio_extn.h"
 #include "platform.h"
 #include "platform_api.h"
+#include "edid.h"
 
 #define MAX_SLEEP_RETRY 100
 #define WIFI_INIT_WAIT_SLEEP 50
@@ -235,30 +236,6 @@ done:
 #define audio_extn_set_afe_proxy_parameters(adev, parms)  (0)
 #define audio_extn_get_afe_proxy_parameters(query, reply) (0)
 #else
-/* Front left channel. */
-#define PCM_CHANNEL_FL    1
-
-/* Front right channel. */
-#define PCM_CHANNEL_FR    2
-
-/* Front center channel. */
-#define PCM_CHANNEL_FC    3
-
-/* Left surround channel.*/
-#define PCM_CHANNEL_LS   4
-
-/* Right surround channel.*/
-#define PCM_CHANNEL_RS   5
-
-/* Low frequency effect channel. */
-#define PCM_CHANNEL_LFE  6
-
-/* Left back channel; Rear left channel. */
-#define PCM_CHANNEL_LB   8
-
-/* Right back channel; Rear right channel. */
-#define PCM_CHANNEL_RB   9
-
 static int32_t afe_proxy_set_channel_mapping(struct audio_device *adev,
                                                      int channel_count)
 {

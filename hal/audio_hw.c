@@ -206,7 +206,11 @@ struct string_to_enum {
 
 static const struct string_to_enum out_channels_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_CHANNEL_OUT_STEREO),
-    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_5POINT1),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_QUAD),/* QUAD_BACK is same as QUAD */
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_QUAD_SIDE),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_PENTA),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_5POINT1), /* 5POINT1_BACK is same as 5POINT1 */
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_5POINT1_SIDE),
     STRING_TO_ENUM(AUDIO_CHANNEL_OUT_7POINT1),
 };
 
@@ -677,7 +681,7 @@ static void check_and_route_capture_usecases(struct audio_device *adev,
 /* must be called with hw device mutex locked */
 static int read_hdmi_channel_masks(struct stream_out *out)
 {
-    int ret = 0;
+    int ret = 0, i = 0;
     int channels = platform_edid_get_max_channels(out->dev->platform);
 
     switch (channels) {
@@ -686,13 +690,21 @@ static int read_hdmi_channel_masks(struct stream_out *out)
          * Stereo case is handled in normal playback path
          */
     case 6:
-        ALOGV("%s: HDMI supports 5.1", __func__);
-        out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_5POINT1;
+        ALOGV("%s: HDMI supports Quad and 5.1", __func__);
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_QUAD;
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_QUAD_SIDE;
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_PENTA;
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_5POINT1;
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_5POINT1_SIDE;
         break;
     case 8:
-        ALOGV("%s: HDMI supports 5.1 and 7.1 channels", __func__);
-        out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_5POINT1;
-        out->supported_channel_masks[1] = AUDIO_CHANNEL_OUT_7POINT1;
+        ALOGV("%s: HDMI supports Quad, 5.1 and 7.1 channels", __func__);
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_QUAD;
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_QUAD_SIDE;
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_PENTA;
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_5POINT1;
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_5POINT1_SIDE;
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_7POINT1;
         break;
     default:
         ALOGE("HDMI does not support multi channel playback");
@@ -1278,16 +1290,24 @@ static int check_and_set_hdmi_channels(struct audio_device *adev,
     struct listnode *node;
     struct audio_usecase *usecase;
 
+    unsigned int supported_channels = platform_edid_get_max_channels(
+                                          adev->platform);
+    ALOGV("supported_channels %d, channels %d", supported_channels, channels);
     /* Check if change in HDMI channel config is allowed */
     if (!allow_hdmi_channel_config(adev))
         return 0;
 
+    if (channels > supported_channels)
+        channels = supported_channels;
+
     if (channels == adev->cur_hdmi_channels) {
-        ALOGD("%s: Requested channels are same as current channels(%d)", __func__, channels);
+        ALOGD("%s: Requested channels are same as current channels(%d)",
+               __func__, channels);
         return 0;
     }
 
     platform_set_hdmi_channels(adev->platform, channels);
+    platform_set_edid_channels_configuration(adev->platform, channels);
     adev->cur_hdmi_channels = channels;
 
     /*
@@ -1408,7 +1428,8 @@ int start_output_stream(struct stream_out *out)
         property_get("audio.use.hdmi.sink.cap", prop_value, NULL);
         if (!strncmp("true", prop_value, 4)) {
             sink_channels = platform_edid_get_max_channels(out->dev->platform);
-            ALOGD("%s: set HDMI channel count[%d] based on sink capability", __func__, sink_channels);
+            ALOGD("%s: set HDMI channel count[%d] based on sink capability",
+                   __func__, sink_channels);
             check_and_set_hdmi_channels(adev, sink_channels);
         } else {
             if (is_offload_usecase(out->usecase))
@@ -1451,7 +1472,11 @@ int start_output_stream(struct stream_out *out)
             }
             break;
         }
+        platform_set_stream_channel_map(adev->platform, out->channel_mask,
+                                    out->pcm_device_id);
     } else {
+        platform_set_stream_channel_map(adev->platform, out->channel_mask,
+                                    out->pcm_device_id);
         out->pcm = NULL;
         out->compr = compress_open(adev->snd_card,
                                    out->pcm_device_id,
@@ -2948,6 +2973,24 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             adev->bt_wb_speech_enabled = true;
         else
             adev->bt_wb_speech_enabled = false;
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value, sizeof(value));
+    if (ret >= 0) {
+        val = atoi(value);
+        if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            ALOGV("cache new edid");
+            platform_cache_edid(adev->platform);
+        }
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value, sizeof(value));
+    if (ret >= 0) {
+        val = atoi(value);
+        if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            ALOGV("invalidate cached edid");
+            platform_invalidate_edid(adev->platform);
+        }
     }
 
     audio_extn_set_parameters(adev, parms);
