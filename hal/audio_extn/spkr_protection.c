@@ -209,6 +209,7 @@ static int get_spkr_prot_cal(int cal_fd,
     cal_data.hdr.cal_type = AFE_FB_SPKR_PROT_CAL_TYPE;
     cal_data.hdr.cal_type_size = sizeof(cal_data.cal_type);
     cal_data.cal_type.cal_hdr.version = VERSION_0_0;
+    cal_data.cal_type.cal_hdr.buffer_number = 0;
     cal_data.cal_type.cal_data.mem_handle = -1;
 
     if (ioctl(cal_fd, AUDIO_GET_CALIBRATION, &cal_data)) {
@@ -247,6 +248,7 @@ static int set_spkr_prot_cal(int cal_fd,
     cal_data.hdr.cal_type = AFE_FB_SPKR_PROT_CAL_TYPE;
     cal_data.hdr.cal_type_size = sizeof(cal_data.cal_type);
     cal_data.cal_type.cal_hdr.version = VERSION_0_0;
+    cal_data.cal_type.cal_hdr.buffer_number = 0;
     cal_data.cal_type.cal_info.r0 = protCfg->r0;
     cal_data.cal_type.cal_info.t0 = protCfg->t0;
     cal_data.cal_type.cal_info.mode = protCfg->mode;
