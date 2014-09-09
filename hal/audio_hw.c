@@ -429,7 +429,7 @@ int disable_snd_device(struct audio_device *adev,
         if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
             snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
             audio_extn_spkr_prot_is_enabled()) {
-            audio_extn_spkr_prot_stop_processing();
+            audio_extn_spkr_prot_stop_processing(snd_device);
         } else {
             audio_route_reset_and_update_path(adev->audio_route, device_name);
             audio_extn_dev_arbi_release(snd_device);
