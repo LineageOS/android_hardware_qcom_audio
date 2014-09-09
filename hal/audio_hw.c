@@ -288,6 +288,7 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_dolby_set_dmid(adev);
     audio_extn_dolby_set_endpoint(adev);
 #endif
+    audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_BUSY);
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_BUSY);
     audio_extn_utils_send_audio_calibration(adev, usecase);
     audio_extn_utils_send_app_type_cfg(usecase);
@@ -317,6 +318,7 @@ int disable_audio_route(struct audio_device *adev,
     platform_add_backend_name(mixer_path, snd_device);
     ALOGV("%s: reset and update mixer path: %s", __func__, mixer_path);
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
+    audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_FREE);
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_FREE);
     ALOGV("%s: exit", __func__);
     return 0;
@@ -372,10 +374,14 @@ int enable_snd_device(struct audio_device *adev,
         snd_device, device_name);
         /* due to the possibility of calibration overwrite between listen
             and audio, notify listen hal before audio calibration is sent */
+        audio_extn_sound_trigger_update_device_status(snd_device,
+                                        ST_EVENT_SND_DEVICE_BUSY);
         audio_extn_listen_update_device_status(snd_device,
                                         LISTEN_EVENT_SND_DEVICE_BUSY);
         if (platform_get_snd_device_acdb_id(snd_device) < 0) {
             adev->snd_dev_ref_cnt[snd_device]--;
+            audio_extn_sound_trigger_update_device_status(snd_device,
+                                            ST_EVENT_SND_DEVICE_FREE);
             audio_extn_listen_update_device_status(snd_device,
                                         LISTEN_EVENT_SND_DEVICE_FREE);
             return -EINVAL;
@@ -428,6 +434,9 @@ int disable_snd_device(struct audio_device *adev,
             audio_route_reset_and_update_path(adev->audio_route, device_name);
             audio_extn_dev_arbi_release(snd_device);
         }
+
+        audio_extn_sound_trigger_update_device_status(snd_device,
+                                        ST_EVENT_SND_DEVICE_FREE);
         audio_extn_listen_update_device_status(snd_device,
                                         LISTEN_EVENT_SND_DEVICE_FREE);
     }
@@ -2101,7 +2110,6 @@ static int in_standby(struct audio_stream *stream)
     ALOGD("%s: enter: stream (%p) usecase(%d: %s)", __func__,
           stream, in->usecase, use_case_table[in->usecase]);
 
-
     if (in->usecase == USECASE_COMPRESS_VOIP_CALL) {
         /* Ignore standby in case of voip call because the voip input
          * stream is closed in adev_close_input_stream()
@@ -2111,6 +2119,12 @@ static int in_standby(struct audio_stream *stream)
     }
 
     pthread_mutex_lock(&in->lock);
+    if (!in->standby && in->is_st_session) {
+        ALOGD("%s: sound trigger pcm stop lab", __func__);
+        audio_extn_sound_trigger_stop_lab(in);
+        in->standby = 1;
+    }
+
     if (!in->standby) {
         pthread_mutex_lock(&adev->lock);
         in->standby = true;
@@ -2172,7 +2186,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
         if ((in->device != val) && (val != 0)) {
             in->device = val;
             /* If recording is in progress, change the tx device to new device */
-            if (!in->standby)
+            if (!in->standby && !in->is_st_session)
                 ret = select_devices(adev, in->usecase);
         }
     }
@@ -2236,14 +2250,16 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     }
 
     if (in->standby) {
-        pthread_mutex_lock(&adev->lock);
-        if (in->usecase == USECASE_COMPRESS_VOIP_CALL)
-            ret = voice_extn_compress_voip_start_input_stream(in);
-        else
-            ret = start_input_stream(in);
-        pthread_mutex_unlock(&adev->lock);
-        if (ret != 0) {
-            goto exit;
+        if (!in->is_st_session) {
+            pthread_mutex_lock(&adev->lock);
+            if (in->usecase == USECASE_COMPRESS_VOIP_CALL)
+                ret = voice_extn_compress_voip_start_input_stream(in);
+            else
+                ret = start_input_stream(in);
+            pthread_mutex_unlock(&adev->lock);
+            if (ret != 0) {
+                goto exit;
+            }
         }
         in->standby = 0;
     }
@@ -2283,7 +2299,7 @@ exit:
         }
         memset(buffer, 0, bytes);
         in_standby(&in->stream.common);
-        ALOGV("%s: read failed - sleeping for buffer duration", __func__);
+        ALOGV("%s: read failed status %d- sleeping for buffer duration", __func__, ret);
         usleep(bytes * 1000000 / audio_stream_frame_size(&in->stream.common) /
                                    in_get_sample_rate(&in->stream.common));
     }
@@ -2896,8 +2912,8 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     }
 
     ALOGD("%s: enter: sample_rate(%d) channel_mask(%#x) devices(%#x)\
-        stream_handle(%p)",__func__, config->sample_rate, config->channel_mask,
-        devices, &in->stream);
+        stream_handle(%p) io_handle(%d)",__func__, config->sample_rate, config->channel_mask,
+        devices, &in->stream, handle);
 
     pthread_mutex_init(&in->lock, (const pthread_mutexattr_t *) NULL);
 
@@ -2922,6 +2938,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->dev = adev;
     in->standby = 1;
     in->channel_mask = config->channel_mask;
+    in->capture_handle = handle;
 
     /* Update config params with the requested sample rate and channels */
     in->usecase = USECASE_AUDIO_RECORD;
@@ -2952,6 +2969,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                             channel_count);
         in->config.period_size = buffer_size / frame_size;
     }
+
+    /* This stream could be for sound trigger lab,
+       get sound trigger pcm if present */
+    audio_extn_sound_trigger_check_and_get_session(in);
 
     *stream_in = &in->stream;
     ALOGV("%s: exit", __func__);
@@ -2985,11 +3006,12 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     if (audio_extn_ssr_get_enabled() && (popcount(in->channel_mask) == 6)) {
         audio_extn_ssr_deinit();
     }
-    free(stream);
 
     if(audio_extn_compr_cap_enabled() &&
             audio_extn_compr_cap_format_supported(in->config.format))
         audio_extn_compr_cap_deinit();
+
+    free(stream);
     return;
 }
 
@@ -3008,6 +3030,7 @@ static int adev_close(hw_device_t *device)
     pthread_mutex_lock(&adev_init_lock);
 
     if ((--audio_device_ref_count) == 0) {
+        audio_extn_sound_trigger_deinit(adev);
         audio_extn_listen_deinit(adev);
         audio_extn_utils_release_streams_output_cfg_list(&adev->streams_output_cfg_list);
         audio_route_free(adev->audio_route);
@@ -3116,6 +3139,7 @@ static int adev_open(const hw_module_t *module, const char *name,
         }
     }
     audio_extn_listen_init(adev, adev->snd_card);
+    audio_extn_sound_trigger_init(adev);
 
     if (access(OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH, R_OK) == 0) {
         adev->offload_effects_lib = dlopen(OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH, RTLD_NOW);

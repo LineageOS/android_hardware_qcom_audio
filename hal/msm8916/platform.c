@@ -2037,6 +2037,67 @@ bool platform_listen_usecase_needs_event(audio_usecase_t uc_id)
     return needs_event;
 }
 
+bool platform_sound_trigger_device_needs_event(snd_device_t snd_device)
+{
+    bool needs_event = false;
+
+    if ((snd_device >= SND_DEVICE_IN_BEGIN) &&
+        (snd_device < SND_DEVICE_IN_END) &&
+        (snd_device != SND_DEVICE_IN_CAPTURE_FM) &&
+        (snd_device != SND_DEVICE_IN_CAPTURE_VI_FEEDBACK))
+        needs_event = true;
+
+    return needs_event;
+}
+
+bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id)
+{
+    bool needs_event = false;
+
+    switch(uc_id){
+    /* concurrent playback usecases needs event */
+    case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
+    case USECASE_AUDIO_PLAYBACK_MULTI_CH:
+    case USECASE_AUDIO_PLAYBACK_OFFLOAD:
+        needs_event = true;
+        break;
+    /* concurrent playback in low latency allowed */
+    case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
+        break;
+    /* concurrent playback FM needs event */
+    case USECASE_AUDIO_PLAYBACK_FM:
+        needs_event = true;
+        break;
+
+    /* concurrent capture usecases, no event, capture handled by device
+    *  USECASE_AUDIO_RECORD:
+    *  USECASE_AUDIO_RECORD_COMPRESS:
+    *  USECASE_AUDIO_RECORD_LOW_LATENCY:
+
+    *  USECASE_VOICE_CALL:
+    *  USECASE_VOICE2_CALL:
+    *  USECASE_VOLTE_CALL:
+    *  USECASE_QCHAT_CALL:
+    *  USECASE_VOWLAN_CALL:
+    *  USECASE_COMPRESS_VOIP_CALL:
+    *  USECASE_AUDIO_RECORD_FM_VIRTUAL:
+    *  USECASE_INCALL_REC_UPLINK:
+    *  USECASE_INCALL_REC_DOWNLINK:
+    *  USECASE_INCALL_REC_UPLINK_AND_DOWNLINK:
+    *  USECASE_INCALL_REC_UPLINK_COMPRESS:
+    *  USECASE_INCALL_REC_DOWNLINK_COMPRESS:
+    *  USECASE_INCALL_REC_UPLINK_AND_DOWNLINK_COMPRESS:
+    *  USECASE_INCALL_MUSIC_UPLINK:
+    *  USECASE_INCALL_MUSIC_UPLINK2:
+    *  USECASE_AUDIO_SPKR_CALIB_RX:
+    *  USECASE_AUDIO_SPKR_CALIB_TX:
+    */
+    default:
+        ALOGV("%s:usecase_id[%d] no need to raise event.", __func__, uc_id);
+    }
+    return needs_event;
+}
+
 /* Read  offload buffer size from a property.
  * If value is not power of 2  round it to
  * power of 2.
