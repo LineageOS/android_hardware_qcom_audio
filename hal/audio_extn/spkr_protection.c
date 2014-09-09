@@ -51,6 +51,7 @@
 /*Range of spkr temparatures -30C to 80C*/
 #define MIN_SPKR_TEMP_Q6 (-30 * (1 << 6))
 #define MAX_SPKR_TEMP_Q6 (80 * (1 << 6))
+#define VI_FEED_CHANNEL "VI_FEED_TX Channels"
 
 /*Set safe temp value to 40C*/
 #define SAFE_SPKR_TEMP 40
@@ -120,7 +121,7 @@ struct speaker_prot_session {
 };
 
 static struct pcm_config pcm_config_skr_prot = {
-    .channels = 2,
+    .channels = 4,
     .rate = 48000,
     .period_size = 256,
     .period_count = 4,
@@ -131,6 +132,7 @@ static struct pcm_config pcm_config_skr_prot = {
 };
 
 static struct speaker_prot_session handle;
+static int vi_feed_no_channels;
 
 static void spkr_prot_set_spkrstatus(bool enable)
 {
@@ -219,7 +221,8 @@ static int get_spkr_prot_cal(int cal_fd,
         goto done;
     }
 
-    status->r0 = cal_data.cal_type.cal_info.r0;
+    status->r0[SP_V2_SPKR_1] = cal_data.cal_type.cal_info.r0[SP_V2_SPKR_1];
+    status->r0[SP_V2_SPKR_2] = cal_data.cal_type.cal_info.r0[SP_V2_SPKR_2];
     status->status = cal_data.cal_type.cal_info.status;
 done:
     return ret;
@@ -230,6 +233,7 @@ static int set_spkr_prot_cal(int cal_fd,
 {
     int ret = 0;
     struct audio_cal_fb_spk_prot_cfg    cal_data;
+    char value[PROPERTY_VALUE_MAX];
 
     if (cal_fd < 0) {
         ALOGE("%s: Error: cal_fd = %d", __func__, cal_fd);
@@ -243,15 +247,27 @@ static int set_spkr_prot_cal(int cal_fd,
         goto done;
     }
 
+    memset(&cal_data, 0, sizeof(cal_data));
     cal_data.hdr.data_size = sizeof(cal_data);
     cal_data.hdr.version = VERSION_0_0;
     cal_data.hdr.cal_type = AFE_FB_SPKR_PROT_CAL_TYPE;
     cal_data.hdr.cal_type_size = sizeof(cal_data.cal_type);
     cal_data.cal_type.cal_hdr.version = VERSION_0_0;
     cal_data.cal_type.cal_hdr.buffer_number = 0;
-    cal_data.cal_type.cal_info.r0 = protCfg->r0;
-    cal_data.cal_type.cal_info.t0 = protCfg->t0;
+    cal_data.cal_type.cal_info.r0[SP_V2_SPKR_1] = protCfg->r0[SP_V2_SPKR_1];
+    cal_data.cal_type.cal_info.r0[SP_V2_SPKR_2] = protCfg->r0[SP_V2_SPKR_2];
+    cal_data.cal_type.cal_info.t0[SP_V2_SPKR_1] = protCfg->t0[SP_V2_SPKR_1];
+    cal_data.cal_type.cal_info.t0[SP_V2_SPKR_2] = protCfg->t0[SP_V2_SPKR_2];
     cal_data.cal_type.cal_info.mode = protCfg->mode;
+    property_get("persist.spkr.cal.duration", value, "0");
+    if (atoi(value) > 0) {
+        ALOGD("%s: quick calibration enabled", __func__);
+        cal_data.cal_type.cal_info.quick_calib_flag = 1;
+    } else {
+        ALOGD("%s: quick calibration disabled", __func__);
+        cal_data.cal_type.cal_info.quick_calib_flag = 0;
+    }
+
     cal_data.cal_type.cal_data.mem_handle = -1;
 
     if (ioctl(cal_fd, AUDIO_SET_CALIBRATION, &cal_data)) {
@@ -262,6 +278,28 @@ static int set_spkr_prot_cal(int cal_fd,
     }
 done:
     return ret;
+}
+
+static int vi_feed_get_channels(struct audio_device *adev)
+{
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = VI_FEED_CHANNEL;
+    int value;
+
+    ALOGV("%s: entry", __func__);
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        goto error;
+    }
+    value = mixer_ctl_get_value(ctl, 0);
+    if (value < 0)
+        goto error;
+    else
+        return value+1;
+error:
+     return -EINVAL;
 }
 
 static int spkr_calibrate(int t0)
@@ -290,7 +328,9 @@ static int spkr_calibrate(int t0)
         return -ENODEV;
     } else {
         protCfg.mode = MSM_SPKR_PROT_CALIBRATION_IN_PROGRESS;
-        protCfg.t0 = t0;
+        /* HAL for speaker protection gets only one Temperature */
+        protCfg.t0[SP_V2_SPKR_1] = t0;
+        protCfg.t0[SP_V2_SPKR_2] = t0;
         if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
             ALOGE("%s: spkr_prot_thread set failed AUDIO_SET_SPEAKER_PROT",
             __func__);
@@ -384,17 +424,30 @@ static int spkr_calibrate(int t0)
         while (!get_spkr_prot_cal(acdb_fd, &status)) {
             /*sleep for 200 ms to check for status check*/
             if (!status.status) {
-                ALOGD("%s: spkr_prot_thread calib Success R0 %d",
-                 __func__, status.r0);
+                ALOGD("%s: spkr_prot_thread calib Success R0 %d %d",
+                 __func__, status.r0[SP_V2_SPKR_1], status.r0[SP_V2_SPKR_2]);
                 FILE *fp;
+
+                vi_feed_no_channels = vi_feed_get_channels(adev);
+                ALOGD("%s: vi_feed_no_channels %d", __func__, vi_feed_no_channels);
+                if (vi_feed_no_channels < 0) {
+                    ALOGE("%s: no of channels negative !!", __func__);
+                    /* limit the number of channels to 2*/
+                    vi_feed_no_channels = 2;
+                }
+
                 fp = fopen(CALIB_FILE,"wb");
                 if (!fp) {
                     ALOGE("%s: spkr_prot_thread File open failed %s",
                     __func__, strerror(errno));
                     status.status = -ENODEV;
                 } else {
-                    fwrite(&status.r0, sizeof(status.r0),1,fp);
-                    fwrite(&protCfg.t0, sizeof(protCfg.t0),1,fp);
+                    int i;
+                    /* HAL for speaker protection is always calibrating for stereo usecase*/
+                    for (i = 0; i < vi_feed_no_channels; i++) {
+                        fwrite(&status.r0[i], sizeof(status.r0[i]), 1, fp);
+                        fwrite(&protCfg.t0[i], sizeof(protCfg.t0[i]), 1, fp);
+                    }
                     fclose(fp);
                 }
                 break;
@@ -420,7 +473,8 @@ exit:
         platform_get_default_app_type(adev->platform), 8000);
         if (!status.status) {
             protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
-            protCfg.r0 = status.r0;
+            protCfg.r0[SP_V2_SPKR_1] = status.r0[SP_V2_SPKR_1];
+            protCfg.r0[SP_V2_SPKR_2] = status.r0[SP_V2_SPKR_2];
             if (set_spkr_prot_cal(acdb_fd, &protCfg))
                 ALOGE("%s: spkr_prot_thread disable calib mode", __func__);
             else
@@ -474,7 +528,17 @@ static void* spkr_calibration_thread(void *context)
     FILE *fp;
     int acdb_fd;
     struct audio_device *adev = handle.adev_handle;
+    unsigned long min_idle_time = MIN_SPKR_IDLE_SEC;
+    char value[PROPERTY_VALUE_MAX];
 
+    /* If the value of this persist.spkr.cal.duration is 0
+     * then it means it will take 30min to calibrate
+     * and if the value is greater than zero then it would take
+     * that much amount of time to calibrate.
+     */
+    property_get("persist.spkr.cal.duration", value, "0");
+    if (atoi(value) > 0)
+        min_idle_time = atoi(value);
     handle.speaker_prot_threadid = pthread_self();
     ALOGD("spkr_prot_thread enable prot Entry");
     acdb_fd = open("/dev/msm_audio_cal",O_RDWR | O_NONBLOCK);
@@ -499,17 +563,36 @@ static void* spkr_calibration_thread(void *context)
 
     fp = fopen(CALIB_FILE,"rb");
     if (fp) {
-        fread(&protCfg.r0,sizeof(protCfg.r0),1,fp);
-        ALOGD("%s: spkr_prot_thread r0 value %d", __func__, protCfg.r0);
-        fread(&protCfg.t0, sizeof(protCfg.t0), 1, fp);
-        ALOGD("%s: spkr_prot_thread t0 value %d", __func__, protCfg.t0);
+        int i;
+        bool spkr_calibrated = true;
+        /* HAL for speaker protection is always calibrating for stereo usecase*/
+        vi_feed_no_channels = vi_feed_get_channels(adev);
+        ALOGD("%s: vi_feed_no_channels %d", __func__, vi_feed_no_channels);
+        if (vi_feed_no_channels < 0) {
+            ALOGE("%s: no of channels negative !!", __func__);
+            /* limit the number of channels to 2*/
+            vi_feed_no_channels = 2;
+        }
+        for (i = 0; i < vi_feed_no_channels; i++) {
+            fread(&protCfg.r0[i], sizeof(protCfg.r0[i]), 1, fp);
+            fread(&protCfg.t0[i], sizeof(protCfg.t0[i]), 1, fp);
+        }
+        ALOGD("%s: spkr_prot_thread r0 value %d %d",
+               __func__, protCfg.r0[SP_V2_SPKR_1], protCfg.r0[SP_V2_SPKR_2]);
+        ALOGD("%s: spkr_prot_thread t0 value %d %d",
+               __func__, protCfg.t0[SP_V2_SPKR_1], protCfg.t0[SP_V2_SPKR_2]);
         fclose(fp);
         /*Valid tempature range: -30C to 80C(in q6 format)
           Valid Resistance range: 2 ohms to 40 ohms(in q24 format)*/
-        if (protCfg.t0 > MIN_SPKR_TEMP_Q6 &&
-            protCfg.t0 < MAX_SPKR_TEMP_Q6 &&
-            protCfg.r0 >= MIN_RESISTANCE_SPKR_Q24
-            && protCfg.r0 < MAX_RESISTANCE_SPKR_Q24) {
+        for (i = 0; i < vi_feed_no_channels; i++) {
+            if (!((protCfg.t0[i] > MIN_SPKR_TEMP_Q6) && (protCfg.t0[i] < MAX_SPKR_TEMP_Q6)
+                && (protCfg.r0[i] >= MIN_RESISTANCE_SPKR_Q24)
+                && (protCfg.r0[i] < MAX_RESISTANCE_SPKR_Q24))) {
+                spkr_calibrated = false;
+                break;
+            }
+        }
+        if (spkr_calibrated) {
             ALOGD("%s: Spkr calibrated", __func__);
             protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
             if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
@@ -553,8 +636,8 @@ static void* spkr_calibration_thread(void *context)
             pthread_mutex_unlock(&adev->lock);
             continue;
         } else {
-            ALOGD("%s: speaker idle %ld", __func__, sec);
-            if (sec < MIN_SPKR_IDLE_SEC) {
+            ALOGD("%s: speaker idle %ld min time %ld", __func__, sec, min_idle_time);
+            if (sec < min_idle_time) {
                 ALOGD("%s: speaker idle is less retry", __func__);
                 pthread_mutex_unlock(&adev->lock);
                 continue;
