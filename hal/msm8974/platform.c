@@ -67,6 +67,7 @@
  */
 #define MAX_PCM_OFFLOAD_FRAGMENT_SIZE (240 * 1024)
 #define MIN_PCM_OFFLOAD_FRAGMENT_SIZE (4 * 1024)
+#define PCM_OFFLOAD_SMALL_BUFFER_DURATION 20 /* 20 msec */
 
 /*
  * Offload buffer size for compress passthrough
@@ -2027,6 +2028,17 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
            atoi(value)) {
         ALOGV("Track offload Fragment size set by property to %dkb", atoi(value));
         fragment_size =  atoi(value) * 1024;
+    } else if (info->use_small_bufs) {
+        fragment_size = (PCM_OFFLOAD_SMALL_BUFFER_DURATION
+                            * info->sample_rate
+                            * audio_bytes_per_sample(info->format)
+                            * popcount(info->channel_mask))/1000;
+        ALOGV("%s: fragment size for small buffer mode = %d"
+              "sample_rate=%d bytes_per_sample=%d channel_count=%d\n",
+              __func__, fragment_size,
+              info->sample_rate,
+              audio_bytes_per_sample(info->format),
+              popcount(info->channel_mask));
     } else {
         fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
     }
