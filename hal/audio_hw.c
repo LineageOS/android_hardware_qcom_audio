@@ -3101,6 +3101,9 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
 {
     int ret;
     struct audio_device *adev = (struct audio_device *)dev;
+
+    audio_extn_extspk_set_voice_vol(adev->extspk, volume);
+
     pthread_mutex_lock(&adev->lock);
     /* cache volume */
     ret = voice_set_volume(adev, volume);
