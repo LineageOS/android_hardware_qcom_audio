@@ -23,6 +23,7 @@ void *audio_extn_extspk_init(struct audio_device *adev);
 void audio_extn_extspk_deinit(void *extn);
 void audio_extn_extspk_update(void* extn);
 void audio_extn_extspk_set_mode(void* extn, audio_mode_t mode);
+void audio_extn_extspk_set_voice_vol(void* extn, float vol);
 
 #ifndef HFP_ENABLED
 #define audio_extn_hfp_is_active(adev)                  (0)
