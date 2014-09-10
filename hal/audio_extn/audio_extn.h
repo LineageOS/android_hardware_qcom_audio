@@ -232,11 +232,13 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev);
 #define audio_extn_extspk_deinit(extn) 0
 #define audio_extn_extspk_update(extn) 0
 #define audio_extn_extspk_set_mode(extn, mode) 0
+#define audio_extn_extspk_set_voice_vol(extn, vol) 0
 #else
 void *audio_extn_extspk_init(struct audio_device *adev);
 void audio_extn_extspk_deinit(void *extn);
 void audio_extn_extspk_update(void* extn);
 void audio_extn_extspk_set_mode(void* extn, audio_mode_t mode);
+void audio_extn_extspk_set_voice_vol(void* extn, float vol);
 #endif
 
 #ifndef HFP_ENABLED

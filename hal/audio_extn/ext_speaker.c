@@ -30,7 +30,7 @@
 typedef void (*set_mode_t)(int);
 typedef void (*set_speaker_on_t)(bool);
 typedef void (*set_earpiece_on_t)(bool);
-typedef void (*set_voice_vol_t)(int);
+typedef void (*set_voice_vol_t)(float);
 
 struct speaker_data {
     struct audio_device *adev;
@@ -146,4 +146,12 @@ void audio_extn_extspk_set_mode(void* extn, audio_mode_t mode)
 
     if (data)
         data->set_mode(mode);
+}
+
+void audio_extn_extspk_set_voice_vol(void* extn, float vol)
+{
+    struct speaker_data *data = (struct speaker_data*)extn;
+
+    if (data)
+        data->set_voice_vol(vol);
 }
