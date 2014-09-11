@@ -518,7 +518,8 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
     app_type_cfg[len++] = out->app_type_cfg.sample_rate;
 
     mixer_ctl_set_array(ctl, app_type_cfg, len);
-
+    ALOGI("%s app_type %d, acdb_dev_id %d, sample_rate %d",
+           __func__, out->app_type_cfg.app_type, acdb_dev_id, out->app_type_cfg.sample_rate);
     rc = 0;
 exit_send_app_type_cfg:
     return rc;

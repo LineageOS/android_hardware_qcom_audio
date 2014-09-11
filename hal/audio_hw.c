@@ -2541,6 +2541,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->sample_rate = out->config.rate;
     }
 
+    ALOGV("%s flags %x, format %x, out->sample_rate %d, out->bit_width %d",
+           __func__, flags, format, out->sample_rate, out->bit_width);
     audio_extn_utils_update_stream_app_type_cfg(adev->platform,
                                                 &adev->streams_output_cfg_list,
                                                 flags, format, out->sample_rate,
