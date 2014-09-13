@@ -188,9 +188,11 @@ static bool is_supported_format(audio_format_t format)
         format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD ||
         format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD ||
 #endif
-        format == AUDIO_FORMAT_AAC)
-           return true;
-
+        format == AUDIO_FORMAT_AAC_LC ||
+        format == AUDIO_FORMAT_AAC_HE_V1 ||
+        format == AUDIO_FORMAT_AAC_HE_V2 ){
+        return true;
+    }
     return false;
 }
 
@@ -198,7 +200,7 @@ static int get_snd_codec_id(audio_format_t format)
 {
     int id = 0;
 
-    switch (format) {
+    switch (format & AUDIO_FORMAT_MAIN_MASK) {
     case AUDIO_FORMAT_MP3:
         id = SND_AUDIOCODEC_MP3;
         break;
@@ -206,8 +208,7 @@ static int get_snd_codec_id(audio_format_t format)
         id = SND_AUDIOCODEC_AAC;
         break;
 #ifdef EXTN_OFFLOAD_ENABLED
-    case AUDIO_FORMAT_PCM_16_BIT_OFFLOAD:
-    case AUDIO_FORMAT_PCM_24_BIT_OFFLOAD:
+    case AUDIO_FORMAT_PCM_OFFLOAD:
         id = SND_AUDIOCODEC_PCM;
         break;
 #endif
