@@ -1832,8 +1832,9 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     /*
      * Instead of writing zeroes here, we could trust the hardware
      * to always provide zeroes when muted.
+     * No need to acquire adev->lock to read mic_muted here as we don't change its state.
      */
-    if (ret == 0 && voice_get_mic_mute(adev) && !voice_is_in_call(adev))
+    if (ret == 0 && adev->mic_muted && in->usecase != USECASE_AUDIO_RECORD_AFE_PROXY)
         memset(buffer, 0, bytes);
 
 exit:
@@ -2303,6 +2304,7 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
     ALOGD("%s: state %d\n", __func__, state);
     pthread_mutex_lock(&adev->lock);
     ret = voice_set_mic_mute(adev, state);
+    adev->mic_muted = state;
     pthread_mutex_unlock(&adev->lock);
 
     return ret;
