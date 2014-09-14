@@ -171,6 +171,13 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_LISTEN)),true)
     LOCAL_SRC_FILES += audio_extn/listen.c
 endif
 
+ifeq ($(strip $(BOARD_SUPPORTS_SOUND_TRIGGER)),true)
+    LOCAL_CFLAGS += -DSOUND_TRIGGER_ENABLED
+    LOCAL_CFLAGS += -DSOUND_TRIGGER_PLATFORM_NAME=$(TARGET_BOARD_PLATFORM)
+    LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/sound_trigger
+    LOCAL_SRC_FILES += audio_extn/soundtrigger.c
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUXPCM_BT)),true)
     LOCAL_CFLAGS += -DAUXPCM_BT_ENABLED
 endif
