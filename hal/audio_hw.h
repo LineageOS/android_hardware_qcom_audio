@@ -211,6 +211,7 @@ struct audio_device {
     struct voice voice;
     unsigned int cur_hdmi_channels;
     bool bt_wb_speech_enabled;
+    bool mic_muted;
 
     int snd_card;
     void *platform;
