@@ -376,7 +376,7 @@ const char *platform_get_snd_device_name(snd_device_t snd_device)
     if (snd_device >= SND_DEVICE_MIN && snd_device < SND_DEVICE_MAX)
         return device_table[snd_device];
     else
-        return "";
+        return "none";
 }
 
 void platform_add_backend_name(void *platform __unused, char *mixer_path,
