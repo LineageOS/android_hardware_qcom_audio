@@ -287,6 +287,7 @@ static int voip_stop_call(struct audio_device *adev)
            __func__, voip_data.out_stream_count, voip_data.in_stream_count);
 
     if (!voip_data.out_stream_count && !voip_data.in_stream_count) {
+        voip_data.sample_rate = 0;
         uc_info = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
         if (uc_info == NULL) {
             ALOGE("%s: Could not find the usecase (%d) in the list",
@@ -313,7 +314,6 @@ static int voip_stop_call(struct audio_device *adev)
 
         list_remove(&uc_info->list);
         free(uc_info);
-        voip_data.sample_rate = 0;
     } else
         ALOGV("%s: NO-OP because out_stream_count=%d, in_stream_count=%d",
                __func__, voip_data.out_stream_count, voip_data.in_stream_count);
