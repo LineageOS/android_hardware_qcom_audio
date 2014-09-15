@@ -89,6 +89,7 @@
 
 #define AUDIO_PARAMETER_KEY_FLUENCE_TYPE  "fluence"
 #define AUDIO_PARAMETER_KEY_SLOWTALK      "st_enable"
+#define AUDIO_PARAMETER_KEY_HD_VOICE      "hd_voice"
 #define AUDIO_PARAMETER_KEY_VOLUME_BOOST  "volume_boost"
 
 enum {
@@ -120,6 +121,7 @@ struct platform_data {
     char fluence_cap[PROPERTY_VALUE_MAX];
     int  fluence_mode;
     bool slowtalk;
+    bool hd_voice;
     /* Audio calibration related functions */
     void                       *acdb_handle;
     int                        voice_feature_set;
@@ -689,6 +691,8 @@ void *platform_init(struct audio_device *adev)
     my_data->fluence_in_audio_rec = false;
     my_data->fluence_type = FLUENCE_NONE;
     my_data->fluence_mode = FLUENCE_ENDFIRE;
+    my_data->slowtalk = false;
+    my_data->hd_voice = false;
 
     property_get("ro.qc.sdk.audio.fluencetype", my_data->fluence_cap, "");
     if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro"))) {
@@ -1779,6 +1783,30 @@ static int platform_set_slowtalk(struct platform_data *my_data, bool state)
     return ret;
 }
 
+static int set_hd_voice(struct platform_data *my_data, bool state)
+{
+    struct audio_device *adev = my_data->adev;
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "HD Voice Enable";
+    int ret = 0;
+    uint32_t set_values[ ] = {0,
+                              ALL_SESSION_VSID};
+
+    set_values[0] = state;
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        ret = -EINVAL;
+    } else {
+        ALOGV("Setting HD Voice state: %d", state);
+        ret = mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+        my_data->hd_voice = state;
+    }
+
+    return ret;
+}
+
 int platform_set_parameters(void *platform, struct str_parms *parms)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -1800,6 +1828,23 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         ret = platform_set_slowtalk(my_data, state);
         if (ret)
             ALOGE("%s: Failed to set slow talk err: %d", __func__, ret);
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HD_VOICE, value, sizeof(value));
+    if (err >= 0) {
+        bool state = false;
+        if (!strncmp("true", value, sizeof("true"))) {
+            state = true;
+        }
+
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_HD_VOICE);
+        if (my_data->hd_voice != state) {
+            ret = set_hd_voice(my_data, state);
+            if (ret)
+                ALOGE("%s: Failed to set HD voice err: %d", __func__, ret);
+        } else {
+            ALOGV("%s: HD Voice already set to %d", __func__, state);
+        }
     }
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOLUME_BOOST,
@@ -1938,6 +1983,13 @@ void platform_get_parameters(void *platform,
     if (ret >= 0) {
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_SLOWTALK,
                           my_data->slowtalk?"true":"false");
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_HD_VOICE,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_HD_VOICE,
+                          my_data->hd_voice?"true":"false");
     }
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_VOLUME_BOOST,
