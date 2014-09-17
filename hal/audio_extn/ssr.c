@@ -378,8 +378,7 @@ bool audio_extn_ssr_get_enabled()
     return (ssrmod.is_ssr_enabled ? true: false);
 }
 
-int32_t audio_extn_ssr_init(struct audio_device *adev,
-                            struct stream_in *in)
+int32_t audio_extn_ssr_init(struct stream_in *in)
 {
     uint32_t ret;
     char c_multi_ch_dump[128] = {0};

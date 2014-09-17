@@ -165,7 +165,7 @@ void audio_extn_set_fluence_parameters(struct audio_device *adev,
     }
 }
 
-int audio_extn_get_fluence_parameters(struct audio_device *adev,
+int audio_extn_get_fluence_parameters(const struct audio_device *adev,
                        struct str_parms *query, struct str_parms *reply)
 {
     int ret = 0, err;

@@ -87,7 +87,8 @@ static void start_tag(void *userdata, const XML_Char *tag_name,
     return;
 }
 
-static void end_tag(void *userdata, const XML_Char *tag_name)
+static void end_tag(void *userdata __unused,
+                    const XML_Char *tag_name __unused)
 {
 
 }
