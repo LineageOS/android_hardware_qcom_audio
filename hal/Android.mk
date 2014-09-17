@@ -26,11 +26,11 @@ ifneq ($(filter msm8994,$(TARGET_BOARD_PLATFORM)),)
 endif
 endif
 
-ifneq ($(filter msm8916 ferrum,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8916 msm8909,$(TARGET_BOARD_PLATFORM)),)
   AUDIO_PLATFORM = msm8916
   MULTIPLE_HW_VARIANTS_ENABLED := true
   LOCAL_CFLAGS := -DPLATFORM_MSM8916
-ifneq ($(filter ferrum,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8909,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSM8909
 endif
 endif
