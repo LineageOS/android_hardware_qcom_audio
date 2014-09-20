@@ -1855,8 +1855,11 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     char value[256] = {0};
     int val;
     int ret = 0, err;
+    char *kv_pairs = NULL;
 
-    ALOGV("%s: enter: %s", __func__, str_parms_to_str(parms));
+    kv_pairs = str_parms_to_str(parms);
+    ALOGV("%s: enter: - %s", __func__, kv_pairs);
+    free(kv_pairs);
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SLOWTALK, value, sizeof(value));
     if (err >= 0) {
@@ -2018,6 +2021,7 @@ void platform_get_parameters(void *platform,
     char *str = NULL;
     char value[256] = {0};
     int ret;
+    char *kv_pairs = NULL;
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_SLOWTALK,
                             value, sizeof(value));
@@ -2045,7 +2049,9 @@ void platform_get_parameters(void *platform,
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_VOLUME_BOOST, value);
     }
 
-    ALOGV("%s: exit: returns - %s", __func__, str_parms_to_str(reply));
+    kv_pairs = str_parms_to_str(reply);
+    ALOGV("%s: exit: returns - %s", __func__, kv_pairs);
+    free(kv_pairs);
 }
 
 /* Delay in Us */
