@@ -151,7 +151,7 @@ struct offload_cmd {
 
 struct stream_app_type_cfg {
     int sample_rate;
-    int bit_width;
+    uint32_t bit_width;
     int app_type;
 };
 

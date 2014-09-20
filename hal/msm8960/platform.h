@@ -55,9 +55,12 @@ enum {
     SND_DEVICE_OUT_HDMI,
     SND_DEVICE_OUT_SPEAKER_AND_HDMI,
     SND_DEVICE_OUT_BT_SCO,
+    SND_DEVICE_OUT_BT_SCO_WB,
     SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES,
     SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES,
     SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET,
+    SND_DEVICE_OUT_USB_HEADSET,
+    SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET,
     SND_DEVICE_OUT_END,
 
     /*
@@ -76,6 +79,7 @@ enum {
     SND_DEVICE_IN_VOICE_HEADSET_MIC,
     SND_DEVICE_IN_HDMI_MIC,
     SND_DEVICE_IN_BT_SCO_MIC,
+    SND_DEVICE_IN_BT_SCO_MIC_WB,
     SND_DEVICE_IN_CAMCORDER_MIC,
     SND_DEVICE_IN_VOICE_DMIC,
     SND_DEVICE_IN_VOICE_SPEAKER_DMIC,
@@ -86,6 +90,7 @@ enum {
     SND_DEVICE_IN_VOICE_REC_MIC,
     SND_DEVICE_IN_VOICE_REC_DMIC,
     SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE,
+    SND_DEVICE_IN_USB_HEADSET_MIC,
     SND_DEVICE_IN_END,
 
     SND_DEVICE_MAX = SND_DEVICE_IN_END,
@@ -96,7 +101,17 @@ enum {
 #define SOUND_CARD 0
 
 #define DEFAULT_OUTPUT_SAMPLING_RATE 48000
+
+#define ALL_SESSION_VSID                0xFFFFFFFF
+#define DEFAULT_MUTE_RAMP_DURATION_MS   20
+#define DEFAULT_VOLUME_RAMP_DURATION_MS 20
 #define MIXER_PATH_MAX_LENGTH 100
+
+#define MAX_VOL_INDEX 5
+#define MIN_VOL_INDEX 0
+#define percent_to_index(val, min, max) \
+            ((val) * ((max) - (min)) * 0.01 + (min) + .5)
+
 /*
  * tinyAlsa library interprets period size as number of frames
  * one frame = channel_count * sizeof (pcm sample)
@@ -106,7 +121,7 @@ enum {
  * the buffer size of an input/output stream
  */
 #define DEEP_BUFFER_OUTPUT_PERIOD_SIZE 960
-#define DEEP_BUFFER_OUTPUT_PERIOD_COUNT 8
+#define DEEP_BUFFER_OUTPUT_PERIOD_COUNT 4
 #define LOW_LATENCY_OUTPUT_PERIOD_SIZE 240
 #define LOW_LATENCY_OUTPUT_PERIOD_COUNT 2
 
@@ -117,6 +132,8 @@ enum {
 
 #define AUDIO_CAPTURE_PERIOD_DURATION_MSEC 20
 #define AUDIO_CAPTURE_PERIOD_COUNT 2
+
+#define DEVICE_NAME_MAX_SIZE 128
 
 /* Define macro for Internal FM volume mixer */
 #define FM_RX_VOLUME "Internal FM RX Volume"
