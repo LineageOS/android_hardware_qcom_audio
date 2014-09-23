@@ -1327,7 +1327,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
          *       Because select_devices() must be called to switch back the music
          *       playback to headset.
          */
-        if ((adev->mode == AUDIO_MODE_NORMAL) &&
+        if (((adev->mode == AUDIO_MODE_NORMAL) || (adev->mode == AUDIO_MODE_IN_COMMUNICATION)) &&
                 voice_is_in_call(adev) &&
                 output_drives_call(adev, out)) {
             ret = voice_stop_call(adev);
