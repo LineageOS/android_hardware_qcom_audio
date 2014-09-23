@@ -2557,8 +2557,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                 goto err_open;
             }
         } else {
-            ret = -EINVAL;
-            goto err_open;
+             ALOGW("%s: surround sound recording is not supported", __func__);
         }
     } else if (audio_extn_compr_cap_enabled() &&
             audio_extn_compr_cap_format_supported(config->format) &&
