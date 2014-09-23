@@ -221,6 +221,9 @@ static int spkr_calibrate(int t0)
         }
     }
     uc_info_rx = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
+    if (!uc_info_rx) {
+        return -ENOMEM;
+    }
     uc_info_rx->id = USECASE_AUDIO_SPKR_CALIB_RX;
     uc_info_rx->type = PCM_PLAYBACK;
     uc_info_rx->in_snd_device = SND_DEVICE_NONE;
@@ -250,6 +253,10 @@ static int spkr_calibrate(int t0)
     }
     uc_info_tx = (struct audio_usecase *)
     calloc(1, sizeof(struct audio_usecase));
+    if (!uc_info_tx) {
+        status.status = -ENOMEM;
+        goto exit;
+    }
     uc_info_tx->id = USECASE_AUDIO_SPKR_CALIB_TX;
     uc_info_tx->type = PCM_CAPTURE;
     uc_info_tx->in_snd_device = SND_DEVICE_NONE;
@@ -676,7 +683,9 @@ void audio_extn_spkr_prot_stop_processing()
     handle.spkr_processing_state = SPKR_PROCESSING_IN_IDLE;
     pthread_mutex_unlock(&handle.mutex_spkr_prot);
     audio_route_reset_and_update_path(adev->audio_route,
-      platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER_PROTECTED));
+    if (adev)
+        audio_route_reset_and_update_path(adev->audio_route,
+            platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER_PROTECTED));
     ALOGV("%s: Exit", __func__);
 }
 
