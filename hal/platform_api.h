@@ -71,6 +71,9 @@ bool platform_listen_update_status(snd_device_t snd_device);
 
 int platform_set_snd_device_backend(snd_device_t snd_device, const char * backend);
 
+bool platform_sound_trigger_device_needs_event(snd_device_t snd_device);
+bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id);
+
 /* From platform_info_parser.c */
 int platform_info_init(const char *filename);
 
