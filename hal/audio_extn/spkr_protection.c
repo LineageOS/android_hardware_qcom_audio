@@ -768,19 +768,33 @@ int audio_extn_spkr_prot_get_acdb_id(snd_device_t snd_device)
 {
     int acdb_id;
 
-    acdb_id = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
-              platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED) :
-              -EINVAL;
-
+    switch(snd_device) {
+    case SND_DEVICE_OUT_SPEAKER:
+        acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED);
+        break;
+    case SND_DEVICE_OUT_VOICE_SPEAKER:
+        acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED);
+        break;
+    default:
+        acdb_id = -EINVAL;
+        break;
+    }
     return acdb_id;
 }
 
 int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device)
 {
-    if ((snd_device == SND_DEVICE_OUT_SPEAKER) && handle.spkr_prot_enable)
-        return SND_DEVICE_OUT_SPEAKER_PROTECTED;
-    else
+    if (!handle.spkr_prot_enable)
         return snd_device;
+
+    switch(snd_device) {
+    case SND_DEVICE_OUT_SPEAKER:
+        return SND_DEVICE_OUT_SPEAKER_PROTECTED;
+    case SND_DEVICE_OUT_VOICE_SPEAKER:
+        return SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED;
+    default:
+        return snd_device;
+    }
 }
 
 int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
@@ -795,12 +809,13 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
        ALOGE("%s: Invalid params", __func__);
        return -EINVAL;
     }
+    snd_device = audio_extn_get_spkr_prot_snd_device(snd_device);
     spkr_prot_set_spkrstatus(true);
     uc_info_tx = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
     ALOGV("%s: snd_device(%d: %s)", __func__, snd_device,
-         platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER_PROTECTED));
+           platform_get_snd_device_name(snd_device));
     audio_route_apply_and_update_path(adev->audio_route,
-        platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER_PROTECTED));
+           platform_get_snd_device_name(snd_device));
 
     pthread_mutex_lock(&handle.mutex_spkr_prot);
     if (handle.spkr_processing_state == SPKR_PROCESSING_IN_IDLE) {
@@ -854,11 +869,13 @@ exit:
     return ret;
 }
 
-void audio_extn_spkr_prot_stop_processing()
+void audio_extn_spkr_prot_stop_processing(snd_device_t snd_device)
 {
     struct audio_usecase *uc_info_tx;
     struct audio_device *adev = handle.adev_handle;
+
     ALOGV("%s: Entry", __func__);
+    snd_device = audio_extn_get_spkr_prot_snd_device(snd_device);
     spkr_prot_set_spkrstatus(false);
     pthread_mutex_lock(&handle.mutex_spkr_prot);
     if (adev && handle.spkr_processing_state == SPKR_PROCESSING_IN_PROGRESS) {
@@ -876,7 +893,7 @@ void audio_extn_spkr_prot_stop_processing()
     handle.spkr_processing_state = SPKR_PROCESSING_IN_IDLE;
     pthread_mutex_unlock(&handle.mutex_spkr_prot);
     audio_route_reset_and_update_path(adev->audio_route,
-      platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER_PROTECTED));
+                                      platform_get_snd_device_name(snd_device));
     ALOGV("%s: Exit", __func__);
 }
 
