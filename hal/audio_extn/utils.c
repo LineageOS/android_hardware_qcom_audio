@@ -472,6 +472,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
     struct audio_device *adev;
     struct mixer_ctl *ctl;
     int pcm_device_id, acdb_dev_id, snd_device = usecase->out_snd_device;
+    int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
 
     ALOGV("%s", __func__);
 
@@ -513,13 +514,21 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
         rc = -EINVAL;
         goto exit_send_app_type_cfg;
     }
+
+    if ((24 == usecase->stream.out->bit_width) &&
+            (AUDIO_DEVICE_OUT_SPEAKER == snd_device)) {
+        sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+    } else {
+        sample_rate = out->app_type_cfg.sample_rate;
+    }
+
     app_type_cfg[len++] = out->app_type_cfg.app_type;
     app_type_cfg[len++] = acdb_dev_id;
-    app_type_cfg[len++] = out->app_type_cfg.sample_rate;
+    app_type_cfg[len++] = sample_rate;
 
     mixer_ctl_set_array(ctl, app_type_cfg, len);
     ALOGI("%s app_type %d, acdb_dev_id %d, sample_rate %d",
-           __func__, out->app_type_cfg.app_type, acdb_dev_id, out->app_type_cfg.sample_rate);
+           __func__, out->app_type_cfg.app_type, acdb_dev_id, sample_rate);
     rc = 0;
 exit_send_app_type_cfg:
     return rc;

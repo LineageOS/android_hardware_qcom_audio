@@ -797,6 +797,27 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     usecase->in_snd_device = in_snd_device;
     usecase->out_snd_device = out_snd_device;
 
+    if (usecase->type == PCM_PLAYBACK) {
+        if ((24 == usecase->stream.out->bit_width) &&
+            (AUDIO_DEVICE_OUT_SPEAKER == usecase->stream.out->devices)) {
+            audio_extn_utils_update_stream_app_type_cfg(adev->platform,
+                                                &adev->streams_output_cfg_list,
+                                                usecase->stream.out->flags,
+                                                usecase->stream.out->format,
+                                                DEFAULT_OUTPUT_SAMPLING_RATE,
+                                                usecase->stream.out->bit_width,
+                                                &usecase->stream.out->app_type_cfg);
+        } else {
+            audio_extn_utils_update_stream_app_type_cfg(adev->platform,
+                                                &adev->streams_output_cfg_list,
+                                                usecase->stream.out->flags,
+                                                usecase->stream.out->format,
+                                                usecase->stream.out->sample_rate,
+                                                usecase->stream.out->bit_width,
+                                                &usecase->stream.out->app_type_cfg);
+        }
+    ALOGI("%s Selected apptype: %d", __func__, usecase->stream.out->app_type_cfg.app_type);
+    }
     enable_audio_route(adev, usecase);
 
     /* Applicable only on the targets that has external modem.
@@ -2382,6 +2403,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     struct stream_out *out;
     int i, ret = 0;
     audio_format_t format;
+    int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
 
     *stream_out = NULL;
 
@@ -2567,11 +2589,20 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->sample_rate = out->config.rate;
     }
 
-    ALOGV("%s flags %x, format %x, out->sample_rate %d, out->bit_width %d",
-           __func__, flags, format, out->sample_rate, out->bit_width);
+    if ((24 == out->bit_width) &&
+        (devices == AUDIO_DEVICE_OUT_SPEAKER)) {
+        sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        ALOGI("%s 24-bit playback on Speaker is allowed ONLY at 48khz. Hence changing sample rate to: %d",
+               __func__, sample_rate);
+    } else {
+        sample_rate = out->sample_rate;
+    }
+
+    ALOGV("%s flags %x, format %x, sample_rate %d, out->bit_width %d",
+           __func__, flags, format, sample_rate, out->bit_width);
     audio_extn_utils_update_stream_app_type_cfg(adev->platform,
                                                 &adev->streams_output_cfg_list,
-                                                flags, format, out->sample_rate,
+                                                flags, format, sample_rate,
                                                 out->bit_width, &out->app_type_cfg);
     if ((out->usecase == USECASE_AUDIO_PLAYBACK_PRIMARY) ||
         (flags & AUDIO_OUTPUT_FLAG_PRIMARY)) {

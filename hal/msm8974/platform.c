@@ -2546,8 +2546,10 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
     }
 
     // 16 bit playbacks is allowed through 16 bit/48 khz backend only
-    if (16 == bit_width)
+    if ((16 == bit_width) ||
+        ((24 == bit_width) && (SND_DEVICE_OUT_SPEAKER == usecase->devices))) {
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    }
     // Force routing if the expected bitwdith or samplerate
     // is not same as current backend comfiguration
     if ((bit_width != adev->cur_codec_backend_bit_width) ||
