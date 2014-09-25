@@ -120,6 +120,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_VOICE2_CALL] = "voice2-call",
     [USECASE_VOLTE_CALL] = "volte-call",
     [USECASE_QCHAT_CALL] = "qchat-call",
+    [USECASE_VOWLAN_CALL] = "vowlan-call",
     [USECASE_COMPRESS_VOIP_CALL] = "compress-voip-call",
     [USECASE_INCALL_REC_UPLINK] = "incall-rec-uplink",
     [USECASE_INCALL_REC_DOWNLINK] = "incall-rec-downlink",
