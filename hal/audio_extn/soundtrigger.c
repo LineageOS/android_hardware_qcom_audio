@@ -252,7 +252,7 @@ void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
 {
     audio_event_info_t event;
     char value[32];
-    int ret;
+    int ret, val;
 
     if(!st_dev || !params) {
         ALOGE("%s: str_params NULL", __func__);
@@ -286,6 +286,12 @@ void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
         }
         else
             ALOGE("%s: unknown CPE status", __func__);
+    }
+
+    ret = str_parms_get_int(params, "SVA_NUM_SESSIONS", &val);
+    if (ret >= 0) {
+        event.u.value = val;
+        st_dev->st_callback(AUDIO_EVENT_NUM_ST_SESSIONS, &event);
     }
 }
 
