@@ -184,7 +184,7 @@ int update_ddp_endp_table(int device, int dev_ch_cap, int param_id,
 
 void send_ddp_endp_params_stream(struct stream_out *out,
                                  int device, int dev_ch_cap,
-                                 bool set_cache)
+                                 bool set_cache __unused)
 {
     int idx, i;
     int ddp_endp_params_data[2*DDP_ENDP_NUM_PARAMS + 1];

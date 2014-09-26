@@ -111,7 +111,7 @@ struct speaker_prot_session {
     struct pcm *pcm_rx;
     struct pcm *pcm_tx;
     int (*client_register_callback)
-    (char *client_name, int (*callback)(int, void *, void *), void *data);
+    (char *client_name, int (*callback)(int), void *data);
     void (*thermal_client_unregister_callback)(int handle);
     int (*thermal_client_request)(char *client_name, int req_data);
     bool spkr_prot_enable;
@@ -372,7 +372,7 @@ exit:
     return status.status;
 }
 
-static void* spkr_calibration_thread(void *context)
+static void* spkr_calibration_thread()
 {
     unsigned long sec = 0;
     int t0;
@@ -496,7 +496,7 @@ static void* spkr_calibration_thread(void *context)
     return NULL;
 }
 
-static int thermal_client_callback(int temp, void *user_data, void *reserved)
+static int thermal_client_callback(int temp)
 {
     pthread_mutex_lock(&handle.spkr_prot_thermalsync_mutex);
     ALOGD("%s: spkr_prot set t0 %d and signal", __func__, temp);
@@ -541,7 +541,7 @@ void audio_extn_spkr_prot_init(void *adev)
     } else {
         /*Query callback function symbol*/
         handle.client_register_callback =
-       (int (*)(char *, int (*)(int, void *, void *),void *))
+       (int (*)(char *, int (*)(int),void *))
         dlsym(handle.thermal_handle, "thermal_client_register_callback");
         handle.thermal_client_unregister_callback =
         (void (*)(int) )

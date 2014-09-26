@@ -126,4 +126,11 @@ enum {
 #define DEVICE_NAME_MAX_SIZE 128
 
 #define FM_RX_VOLUME "Internal FM RX Volume"
+
+#define DEFAULT_VOLUME_RAMP_DURATION_MS 20
+#define MAX_VOL_INDEX 5
+#define MIN_VOL_INDEX 0
+#define percent_to_index(val, min, max) \
+            ((val) * ((max) - (min)) * 0.01 + (min) + .5)
+
 #endif // QCOM_AUDIO_PLATFORM_H

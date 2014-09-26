@@ -51,8 +51,7 @@ static struct compress_in_module c_in_mod = {
 };
 
 
-void audio_extn_compr_cap_init(struct audio_device *adev,
-                            struct stream_in *in)
+void audio_extn_compr_cap_init(struct stream_in *in)
 {
     in->usecase = USECASE_AUDIO_RECORD_COMPRESS;
     in->config.channels = COMPRESS_IN_CONFIG_CHANNELS;
@@ -137,7 +136,7 @@ size_t audio_extn_compr_cap_read(struct stream_in * in,
                     header->frame_size =
                         bytes - sizeof(*header) - header->reserved[0];
                 }
-                ALOGV("c_in_buf: %p, data offset: %p, header size: %u,"
+                ALOGV("c_in_buf: %p, data offset: %p, header size: %zu,"
                     "reserved[0]: %u frame_size: %d", c_in_mod.in_buf,
                         c_in_mod.in_buf + c_in_header,
                         sizeof(*header), header->reserved[0],

@@ -63,10 +63,10 @@ typedef void (*surround_filters_intl_process_t)(void *, Word16 *, Word16 *);
 struct ssr_module {
     FILE                *fp_4ch;
     FILE                *fp_6ch;
-    int16_t             **real_coeffs;
-    int16_t             **imag_coeffs;
+    Word16             **real_coeffs;
+    Word16             **imag_coeffs;
     void                *surround_obj;
-    int16_t             *surround_raw_buffer;
+    Word16             *surround_raw_buffer;
     bool                is_ssr_enabled;
 
     void *surround_filters_handle;
@@ -378,8 +378,7 @@ bool audio_extn_ssr_get_enabled()
     return (ssrmod.is_ssr_enabled ? true: false);
 }
 
-int32_t audio_extn_ssr_init(struct audio_device *adev,
-                            struct stream_in *in)
+int32_t audio_extn_ssr_init(struct stream_in *in)
 {
     uint32_t ret;
     char c_multi_ch_dump[128] = {0};

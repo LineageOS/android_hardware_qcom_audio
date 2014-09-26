@@ -76,7 +76,7 @@ bool audio_extn_should_use_handset_anc(int in_channels);
 #else
 void audio_extn_set_fluence_parameters(struct audio_device *adev,
                                            struct str_parms *parms);
-int audio_extn_get_fluence_parameters(struct audio_device *adev,
+int audio_extn_get_fluence_parameters(const struct audio_device *adev,
                   struct str_parms *query, struct str_parms *reply);
 #endif
 
@@ -113,14 +113,13 @@ bool audio_extn_usb_is_proxy_inuse();
 #endif
 
 #ifndef SSR_ENABLED
-#define audio_extn_ssr_init(adev, in)                 (0)
+#define audio_extn_ssr_init(in)                       (0)
 #define audio_extn_ssr_deinit()                       (0)
 #define audio_extn_ssr_update_enabled()               (0)
 #define audio_extn_ssr_get_enabled()                  (0)
 #define audio_extn_ssr_read(stream, buffer, bytes)    (0)
 #else
-int32_t audio_extn_ssr_init(struct audio_device *adev,
-                            struct stream_in *in);
+int32_t audio_extn_ssr_init(struct stream_in *in);
 int32_t audio_extn_ssr_deinit();
 void audio_extn_ssr_update_enabled();
 bool audio_extn_ssr_get_enabled();
@@ -181,7 +180,7 @@ bool audio_extn_spkr_prot_is_enabled();
 #endif
 
 #ifndef COMPRESS_CAPTURE_ENABLED
-#define audio_extn_compr_cap_init(adev,in)                (0)
+#define audio_extn_compr_cap_init(in)                     (0)
 #define audio_extn_compr_cap_enabled()                    (0)
 #define audio_extn_compr_cap_format_supported(format)     (0)
 #define audio_extn_compr_cap_usecase_supported(usecase)   (0)
@@ -189,8 +188,7 @@ bool audio_extn_spkr_prot_is_enabled();
 #define audio_extn_compr_cap_read(in, buffer, bytes)      (0)
 #define audio_extn_compr_cap_deinit()                     (0)
 #else
-void audio_extn_compr_cap_init(struct audio_device *adev,
-                                    struct stream_in *in);
+void audio_extn_compr_cap_init(struct stream_in *in);
 bool audio_extn_compr_cap_enabled();
 bool audio_extn_compr_cap_format_supported(audio_format_t format);
 bool audio_extn_compr_cap_usecase_supported(audio_usecase_t usecase);
@@ -292,8 +290,4 @@ int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, int state);
 #define audio_extn_ds2_enable(adev)                                   (0)
 #define audio_extn_dolby_set_dap_bypass(adev, state)                  (0)
 #endif
-typedef enum {
-    DAP_STATE_ON = 0,
-    DAP_STATE_BYPASS,
-};
 #endif /* AUDIO_EXTN_H */
