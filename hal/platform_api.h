@@ -92,5 +92,6 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct 
 bool platform_check_24_bit_support();
 int platform_get_usecase_index(const char * usecase);
 int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
+void platform_set_echo_reference(void *platform, bool enable);
 
 #endif // AUDIO_PLATFORM_API_H

@@ -3016,6 +3016,9 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
 
     ALOGD("%s: enter:stream_handle(%p)",__func__, in);
 
+    /* Disable echo reference while closing input stream */
+    platform_set_echo_reference(adev->platform, false);
+
     if (in->usecase == USECASE_COMPRESS_VOIP_CALL) {
         pthread_mutex_lock(&adev->lock);
         ret = voice_extn_compress_voip_close_input_stream(&stream->common);

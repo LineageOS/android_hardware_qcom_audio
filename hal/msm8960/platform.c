@@ -80,6 +80,7 @@ struct platform_data {
     bool fluence_in_voice_rec;
     int  fluence_type;
     int  dualmic_config;
+    bool ec_ref_enabled;
 
     /* Audio calibration related functions */
     void *acdb_handle;
@@ -201,12 +202,22 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 
-static void set_echo_reference(struct audio_device *adev, bool enable)
+void platform_set_echo_reference(void *platform, bool enable)
 {
-    if (enable)
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+
+    if (enable) {
+        my_data->ec_ref_enabled = enable;
         audio_route_apply_and_update_path(adev->audio_route, "echo-reference");
-    else
-        audio_route_reset_and_update_path(adev->audio_route, "echo-reference");
+    } else {
+        if (my_data->ec_ref_enabled) {
+            audio_route_reset_and_update_path(adev->audio_route, "echo-reference");
+            my_data->ec_ref_enabled = enable;
+        } else {
+            ALOGV("EC Reference is already disabled: %d", my_data->ec_ref_enabled);
+        }
+    }
 
     ALOGV("Setting EC Reference: %d", enable);
 }
@@ -809,9 +820,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
                     snd_device = SND_DEVICE_IN_HEADSET_MIC_AEC;
                 }
-                set_echo_reference(adev, true);
+                platform_set_echo_reference(adev->platform, true);
             } else
-                set_echo_reference(adev, false);
+                platform_set_echo_reference(adev->platform, false);
         }
     } else if (source == AUDIO_SOURCE_DEFAULT) {
         goto exit;
