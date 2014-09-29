@@ -598,7 +598,9 @@ int select_devices(struct audio_device *adev,
      * and enable both RX and TX devices though one of them is same as current
      * device.
      */
-    if (usecase->type == VOICE_CALL) {
+    if ((usecase->type == VOICE_CALL) &&
+        (usecase->in_snd_device != SND_DEVICE_NONE) &&
+        (usecase->out_snd_device != SND_DEVICE_NONE)) {
         status = platform_switch_voice_call_device_pre(adev->platform);
     }
 
@@ -617,10 +619,13 @@ int select_devices(struct audio_device *adev,
      * New device information should be sent to modem before enabling
      * the devices to reduce in-call device switch time.
      */
-    if (usecase->type == VOICE_CALL)
+    if ((usecase->type == VOICE_CALL) &&
+        (usecase->in_snd_device != SND_DEVICE_NONE) &&
+        (usecase->out_snd_device != SND_DEVICE_NONE)) {
         status = platform_switch_voice_call_enable_device_config(adev->platform,
                                                                  out_snd_device,
                                                                  in_snd_device);
+    }
 
     /* Enable new sound devices */
     if (out_snd_device != SND_DEVICE_NONE) {
@@ -1327,13 +1332,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
          *       Because select_devices() must be called to switch back the music
          *       playback to headset.
          */
-        if (((adev->mode == AUDIO_MODE_NORMAL) || (adev->mode == AUDIO_MODE_IN_COMMUNICATION)) &&
-                voice_is_in_call(adev) &&
-                output_drives_call(adev, out)) {
-            ret = voice_stop_call(adev);
-            adev->current_call_output = NULL;
-        }
-
         if (val != 0) {
             out->devices = val;
 
@@ -1343,7 +1341,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             if ((adev->mode == AUDIO_MODE_IN_CALL) &&
                     output_drives_call(adev, out)) {
 
-                if (adev->current_call_output != out) {
+                if (adev->current_call_output != NULL &&
+                        adev->current_call_output != out) {
                     voice_stop_call(adev);
                 }
                 if (!voice_is_in_call(adev)) {
@@ -2287,6 +2286,11 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
     if (adev->mode != mode) {
         ALOGD("%s: mode %d\n", __func__, mode);
         adev->mode = mode;
+        if ((mode == AUDIO_MODE_NORMAL || mode == AUDIO_MODE_IN_COMMUNICATION) &&
+                voice_is_in_call(adev)) {
+            voice_stop_call(adev);
+            adev->current_call_output = NULL;
+        }
     }
     pthread_mutex_unlock(&adev->lock);
 
