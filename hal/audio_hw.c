@@ -268,6 +268,26 @@ static int set_snd_card_state(struct audio_device *adev, int snd_scard_state)
     return 0;
 }
 
+static int enable_audio_route_for_voice_usecases(struct audio_device *adev,
+                                                 struct audio_usecase *uc_info)
+{
+    struct listnode *node;
+    struct audio_usecase *usecase;
+
+    if (uc_info == NULL)
+        return -EINVAL;
+
+    /* Re-route all voice usecases on the shared backend other than the
+       specified usecase to new snd devices */
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if ((usecase->type == VOICE_CALL || usecase->type == VOIP_CALL) &&
+             (usecase != uc_info))
+            enable_audio_route(adev, usecase);
+    }
+    return 0;
+}
+
 int enable_audio_route(struct audio_device *adev,
                        struct audio_usecase *usecase)
 {
@@ -518,7 +538,8 @@ static void check_usecases_codec_backend(struct audio_device *adev,
             /* Update the out_snd_device only before enabling the audio route */
             if (switch_device[usecase->id] ) {
                 usecase->out_snd_device = snd_device;
-                enable_audio_route(adev, usecase);
+                if (usecase->type != VOICE_CALL && usecase->type != VOIP_CALL)
+                    enable_audio_route(adev, usecase);
             }
         }
     }
@@ -586,7 +607,8 @@ static void check_and_route_capture_usecases(struct audio_device *adev,
             /* Update the in_snd_device only before enabling the audio route */
             if (switch_device[usecase->id] ) {
                 usecase->in_snd_device = snd_device;
-                enable_audio_route(adev, usecase);
+                if (usecase->type != VOICE_CALL && usecase->type != VOIP_CALL)
+                    enable_audio_route(adev, usecase);
             }
         }
     }
@@ -789,10 +811,12 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         enable_snd_device(adev, in_snd_device);
     }
 
-    if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL)
+    if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL) {
         status = platform_switch_voice_call_device_post(adev->platform,
                                                         out_snd_device,
                                                         in_snd_device);
+        enable_audio_route_for_voice_usecases(adev, usecase);
+    }
 
     usecase->in_snd_device = in_snd_device;
     usecase->out_snd_device = out_snd_device;
