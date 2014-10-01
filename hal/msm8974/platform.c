@@ -134,6 +134,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_HEADPHONES] = "headphones",
     [SND_DEVICE_OUT_LINE] = "line",
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = "speaker-and-headphones",
+    [SND_DEVICE_OUT_SPEAKER_AND_LINE] = "speaker-and-line",
     [SND_DEVICE_OUT_VOICE_HANDSET] = "voice-handset",
     [SND_DEVICE_OUT_VOICE_HAC_HANDSET] = "voice-hac-handset",
     [SND_DEVICE_OUT_VOICE_SPEAKER] = "voice-speaker",
@@ -203,13 +204,14 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = 15,
     [SND_DEVICE_OUT_SPEAKER_SAFE] = 15,
     [SND_DEVICE_OUT_HEADPHONES] = 10,
-    [SND_DEVICE_OUT_LINE] = 10,
+    [SND_DEVICE_OUT_LINE] = 77,
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = 10,
+    [SND_DEVICE_OUT_SPEAKER_AND_LINE] = 77,
     [SND_DEVICE_OUT_VOICE_HANDSET] = ACDB_ID_VOICE_HANDSET,
     [SND_DEVICE_OUT_VOICE_SPEAKER] = ACDB_ID_VOICE_SPEAKER,
     [SND_DEVICE_OUT_VOICE_HAC_HANDSET] = 53,
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
-    [SND_DEVICE_OUT_VOICE_LINE] = 10,
+    [SND_DEVICE_OUT_VOICE_LINE] = 77,
     [SND_DEVICE_OUT_HDMI] = 18,
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 15,
     [SND_DEVICE_OUT_BT_SCO] = 22,
@@ -282,6 +284,7 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_LINE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_LINE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEADPHONES)},
@@ -620,6 +623,8 @@ static void set_platform_defaults(struct platform_data * my_data)
         backend_table[SND_DEVICE_OUT_SPEAKER_REVERSE] = strdup("speaker");
         backend_table[SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] =
             strdup("speaker-and-headphones");
+        backend_table[SND_DEVICE_OUT_SPEAKER_AND_LINE] =
+            strdup("speaker-and-line");
     }
 
     if (my_data->ext_earpiece) {
@@ -1214,6 +1219,9 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         } else if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADSET |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
+        } else if (devices == (AUDIO_DEVICE_OUT_LINE |
+                               AUDIO_DEVICE_OUT_SPEAKER)) {
+            snd_device = SND_DEVICE_OUT_SPEAKER_AND_LINE;
         } else if (devices == (AUDIO_DEVICE_OUT_AUX_DIGITAL |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_HDMI;
