@@ -945,3 +945,19 @@ int64_t platform_render_latency(audio_usecase_t usecase)
             return 0;
     }
 }
+
+bool platform_check_24_bit_support() {
+    return false;
+}
+
+uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info) {
+    return 0;
+}
+
+uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info) {
+    return 0;
+}
+
+bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct audio_usecase *usecase) {
+    return false;
+}

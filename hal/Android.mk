@@ -43,6 +43,10 @@ ifneq ($(strip $(PRODUCT_BRAND)),google)
     LOCAL_CFLAGS += -DDISABLE_TMUS_AUDIO
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FLAC_OFFLOAD)),true)
+    LOCAL_CFLAGS += -DFLAC_OFFLOAD_ENABLED
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
