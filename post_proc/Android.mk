@@ -60,7 +60,7 @@ LOCAL_MODULE_OWNER := qcom
 LOCAL_PROPRIETARY_MODULE := true
 
 LOCAL_C_INCLUDES := \
-        hardware/qcom/audio/hal \
+	$(call project-path-for,qcom-audio)/hal \
 	$(call include-path-for, audio-effects)
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
