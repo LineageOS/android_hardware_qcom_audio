@@ -1,3 +1,5 @@
+ifeq ($(call my-dir),$(call project-path-for,qcom-audio))
+
 # TODO:  Find a better way to separate build configs for ADP vs non-ADP devices
 ifneq ($(TARGET_BOARD_AUTO),true)
   ifneq ($(filter msm8960 msm8226 msm8x26 msm8974 msm8x74 msm8x84 msm8084 msm8992 msm8994 msm8996,$(TARGET_BOARD_PLATFORM)),)
@@ -19,4 +21,6 @@ ifneq ($(TARGET_BOARD_AUTO),true)
     endif
 
   endif
+endif
+
 endif
