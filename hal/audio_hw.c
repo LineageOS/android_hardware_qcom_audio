@@ -326,7 +326,7 @@ int disable_audio_route(struct audio_device *adev,
     snd_device_t snd_device;
     char mixer_path[MIXER_PATH_MAX_LENGTH];
 
-    if (usecase == NULL)
+    if (usecase == NULL || usecase->id == USECASE_INVALID)
         return -EINVAL;
 
     ALOGV("%s: enter: usecase(%d)", __func__, usecase->id);
@@ -1645,6 +1645,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     ALOGD("%s: enter: usecase(%d: %s) kvpairs: %s",
           __func__, out->usecase, use_case_table[out->usecase], kvpairs);
     parms = str_parms_create_str(kvpairs);
+    if (!parms)
+        goto error;
     err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
     if (err >= 0) {
         val = atoi(value);
@@ -1721,6 +1723,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     }
 
     str_parms_destroy(parms);
+error:
     ALOGV("%s: exit: code(%d)", __func__, ret);
     return ret;
 }
@@ -2212,6 +2215,8 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     ALOGD("%s: enter: kvpairs=%s", __func__, kvpairs);
     parms = str_parms_create_str(kvpairs);
 
+    if (!parms)
+        goto error;
     pthread_mutex_lock(&in->lock);
     pthread_mutex_lock(&adev->lock);
 
@@ -2251,6 +2256,7 @@ done:
     pthread_mutex_unlock(&in->lock);
 
     str_parms_destroy(parms);
+error:
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
@@ -2738,6 +2744,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     ALOGD("%s: enter: %s", __func__, kvpairs);
     parms = str_parms_create_str(kvpairs);
 
+    if (!parms)
+        goto error;
     ret = str_parms_get_str(parms, "SND_CARD_STATUS", value, sizeof(value));
     if (ret >= 0) {
         char *snd_card_status = value+2;
@@ -2840,6 +2848,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 done:
     str_parms_destroy(parms);
     pthread_mutex_unlock(&adev->lock);
+error:
     ALOGV("%s: exit with code(%d)", __func__, status);
     return status;
 }
