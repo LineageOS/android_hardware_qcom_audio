@@ -495,7 +495,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
     if ((usecase->id != USECASE_AUDIO_PLAYBACK_DEEP_BUFFER) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_LOW_LATENCY) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_MULTI_CH) &&
-        (usecase->id != USECASE_AUDIO_PLAYBACK_OFFLOAD)) {
+        (!is_offload_usecase(usecase->id))) {
         ALOGV("%s: a playback path where app type cfg is not required", __func__);
         rc = 0;
         goto exit_send_app_type_cfg;
