@@ -1979,7 +1979,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ALOGD(" %s: sound card is not active/SSR state", __func__);
             ret= -ENETRESET;
             goto exit;
-        } else if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+        } else if (is_offload_usecase(out->usecase)) {
             //during SSR for compress usecase we should return error to flinger
             ALOGD(" copl %s: sound card is not active/SSR state", __func__);
             pthread_mutex_unlock(&out->lock);
@@ -2923,6 +2923,28 @@ static void adev_close_output_stream(struct audio_hw_device *dev __unused,
     ALOGV("%s: exit", __func__);
 }
 
+static void close_compress_sessions(struct audio_device *adev)
+{
+    struct stream_out *out = NULL;
+    struct listnode *node = NULL;
+    struct listnode *tmp = NULL;
+    struct audio_usecase *usecase = NULL;
+    pthread_mutex_lock(&adev->lock);
+    list_for_each_safe(node, tmp, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (is_offload_usecase(usecase->id)) {
+            if (usecase && usecase->stream.out) {
+                ALOGI(" %s closing compress session %d on OFFLINE state", __func__, usecase->id);
+                out = usecase->stream.out;
+                pthread_mutex_unlock(&adev->lock);
+                out_standby(&out->stream.common);
+                pthread_mutex_lock(&adev->lock);
+            }
+        }
+    }
+    pthread_mutex_unlock(&adev->lock);
+}
+
 static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 {
     struct audio_device *adev = (struct audio_device *)dev;
@@ -2946,18 +2968,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             ALOGD("Received sound card OFFLINE status");
             set_snd_card_state(adev,SND_CARD_STATE_OFFLINE);
 
-            pthread_mutex_lock(&adev->lock);
-            //close compress session on OFFLINE status
-            usecase = get_usecase_from_list(adev,USECASE_AUDIO_PLAYBACK_OFFLOAD);
-            if (usecase && usecase->stream.out) {
-                ALOGD(" %s closing compress session on OFFLINE state", __func__);
-
-                struct stream_out *out = usecase->stream.out;
-
-                pthread_mutex_unlock(&adev->lock);
-                out_standby(&out->stream.common);
-            } else
-                pthread_mutex_unlock(&adev->lock);
+            //close compress sessions on OFFLINE status
+            close_compress_sessions(adev);
         } else if (strstr(snd_card_status, "ONLINE")) {
             ALOGD("Received sound card ONLINE status");
             set_snd_card_state(adev,SND_CARD_STATE_ONLINE);
