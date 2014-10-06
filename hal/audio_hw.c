@@ -1046,7 +1046,7 @@ static bool allow_hdmi_channel_config(struct audio_device *adev)
                 ret = false;
                 break;
             } else if (is_offload_usecase(usecase->id) &&
-                       popcount(usecase->stream.out->channel_mask) > 2) {
+                       audio_channel_count_from_out_mask(usecase->stream.out->channel_mask) > 2) {
                 ALOGD("%s:multi-channel(%x) compress offload playback is active"
                       ", no change in HDMI channels", __func__,
                       usecase->stream.out->channel_mask);
@@ -1344,7 +1344,8 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
     else if(out->usecase == USECASE_COMPRESS_VOIP_CALL)
         return voice_extn_compress_voip_out_get_buffer_size(out);
 
-    return out->config.period_size * audio_stream_frame_size(stream);
+    return out->config.period_size *
+                audio_stream_out_frame_size((const struct audio_stream_out *)stream);
 }
 
 static uint32_t out_get_channels(const struct audio_stream *stream)
@@ -1760,7 +1761,7 @@ exit:
         if (out->pcm)
             ALOGE("%s: error %d - %s", __func__, ret, pcm_get_error(out->pcm));
         out_standby(&out->stream.common);
-        usleep(bytes * 1000000 / audio_stream_frame_size(&out->stream.common) /
+        usleep(bytes * 1000000 / audio_stream_out_frame_size(stream) /
                out_get_sample_rate(&out->stream.common));
     }
     return bytes;
@@ -1946,7 +1947,8 @@ static size_t in_get_buffer_size(const struct audio_stream *stream)
     else if(audio_extn_compr_cap_usecase_supported(in->usecase))
         return audio_extn_compr_cap_get_buffer_size(in->config.format);
 
-    return in->config.period_size * audio_stream_frame_size(stream);
+    return in->config.period_size *
+               audio_stream_in_frame_size((const struct audio_stream_in *)stream);
 }
 
 static uint32_t in_get_channels(const struct audio_stream *stream)
@@ -2029,7 +2031,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 (in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
                 (voice_extn_compress_voip_is_format_supported(in->format)) &&
                 (in->config.rate == 8000 || in->config.rate == 16000) &&
-                (popcount(in->channel_mask) == 1)) {
+                (audio_channel_count_from_in_mask(in->channel_mask) == 1)) {
                 err = voice_extn_compress_voip_open_input_stream(in);
                 if (err != 0) {
                     ALOGE("%s: Compress voip input cannot be opened, error:%d",
@@ -2112,7 +2114,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     }
 
     if (in->pcm) {
-        if (audio_extn_ssr_get_enabled() && popcount(in->channel_mask) == 6)
+        if (audio_extn_ssr_get_enabled() &&
+            audio_channel_count_from_in_mask(in->channel_mask) == 6)
             ret = audio_extn_ssr_read(stream, buffer, bytes);
         else if (audio_extn_compr_cap_usecase_supported(in->usecase))
             ret = audio_extn_compr_cap_read(in, buffer, bytes);
@@ -2133,7 +2136,7 @@ exit:
     if (ret != 0) {
         in_standby(&in->stream.common);
         ALOGV("%s: read failed - sleeping for buffer duration", __func__);
-        usleep(bytes * 1000000 / audio_stream_frame_size(&in->stream.common) /
+        usleep(bytes * 1000000 / audio_stream_in_frame_size(stream) /
                in_get_sample_rate(&in->stream.common));
     }
     return bytes;
@@ -2196,7 +2199,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                                    audio_devices_t devices,
                                    audio_output_flags_t flags,
                                    struct audio_config *config,
-                                   struct audio_stream_out **stream_out)
+                                   struct audio_stream_out **stream_out,
+                                   const char *address __unused)
 {
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_out *out;
@@ -2210,9 +2214,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     if (!out) {
         return -ENOMEM;
     }
-
-    pthread_mutex_init(&out->lock, (const pthread_mutexattr_t *) NULL);
-    pthread_cond_init(&out->cond, (const pthread_condattr_t *) NULL);
 
     if (devices == AUDIO_DEVICE_NONE)
         devices = AUDIO_DEVICE_OUT_SPEAKER;
@@ -2251,7 +2252,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->usecase = USECASE_AUDIO_PLAYBACK_MULTI_CH;
         out->config = pcm_config_hdmi_multi;
         out->config.rate = config->sample_rate;
-        out->config.channels = popcount(out->channel_mask);
+        out->config.channels = audio_channel_count_from_out_mask(out->channel_mask);
         out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels * 2);
     } else if ((out->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
                (out->flags == (AUDIO_OUTPUT_FLAG_DIRECT | AUDIO_OUTPUT_FLAG_VOIP_RX)) &&
@@ -2330,7 +2331,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->compr_config.codec->bit_rate =
                     config->offload_info.bit_rate;
         out->compr_config.codec->ch_in =
-                    popcount(config->channel_mask);
+                    audio_channel_count_from_out_mask(config->channel_mask);
         out->compr_config.codec->ch_out = out->compr_config.codec->ch_in;
         /*TODO: Do we need to change it for passthrough */
         out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
@@ -2423,6 +2424,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     /* out->muted = false; by calloc() */
     /* out->written = 0; by calloc() */
 
+    pthread_mutex_init(&out->lock, (const pthread_mutexattr_t *) NULL);
+    pthread_cond_init(&out->cond, (const pthread_condattr_t *) NULL);
+
     config->format = out->stream.common.get_format(&out->stream.common);
     config->channel_mask = out->stream.common.get_channels(&out->stream.common);
     config->sample_rate = out->stream.common.get_sample_rate(&out->stream.common);
@@ -2474,23 +2478,24 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     char *str;
     char value[32];
     int val;
-    int ret = 0, err;
+    int ret;
+    int status = 0;
 
     ALOGD("%s: enter: %s", __func__, kvpairs);
 
     pthread_mutex_lock(&adev->lock);
     parms = str_parms_create_str(kvpairs);
 
-    ret = voice_set_parameters(adev, parms);
-    if (ret != 0)
+    status = voice_set_parameters(adev, parms);
+    if (status != 0)
         goto done;
 
-    ret = platform_set_parameters(adev->platform, parms);
-    if (ret != 0)
+    status = platform_set_parameters(adev->platform, parms);
+    if (status != 0)
         goto done;
 
-    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_NREC, value, sizeof(value));
-    if (err >= 0) {
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_NREC, value, sizeof(value));
+    if (ret >= 0) {
         /* When set to false, HAL should disable EC and NS
          * But it is currently not supported.
          */
@@ -2500,16 +2505,16 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             adev->bluetooth_nrec = false;
     }
 
-    err = str_parms_get_str(parms, "screen_state", value, sizeof(value));
-    if (err >= 0) {
+    ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));
+    if (ret >= 0) {
         if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
             adev->screen_off = false;
         else
             adev->screen_off = true;
     }
 
-    err = str_parms_get_int(parms, "rotation", &val);
-    if (err >= 0) {
+    ret = str_parms_get_int(parms, "rotation", &val);
+    if (ret >= 0) {
         bool reverse_speakers = false;
         switch(val) {
         // FIXME: note that the code below assumes that the speakers are in the correct placement
@@ -2524,24 +2529,27 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             break;
         default:
             ALOGE("%s: unexpected rotation of %d", __func__, val);
+            status = -EINVAL;
         }
-        if (adev->speaker_lr_swap != reverse_speakers) {
-            adev->speaker_lr_swap = reverse_speakers;
-            // only update the selected device if there is active pcm playback
-            struct audio_usecase *usecase;
-            struct listnode *node;
-            list_for_each(node, &adev->usecase_list) {
-                usecase = node_to_item(node, struct audio_usecase, list);
-                if (usecase->type == PCM_PLAYBACK) {
-                    select_devices(adev, usecase->id);
-                    break;
+        if (status == 0) {
+            if (adev->speaker_lr_swap != reverse_speakers) {
+                adev->speaker_lr_swap = reverse_speakers;
+                // only update the selected device if there is active pcm playback
+                struct audio_usecase *usecase;
+                struct listnode *node;
+                list_for_each(node, &adev->usecase_list) {
+                    usecase = node_to_item(node, struct audio_usecase, list);
+                    if (usecase->type == PCM_PLAYBACK) {
+                        select_devices(adev, usecase->id);
+                        break;
+                    }
                 }
             }
         }
     }
 
-    err = str_parms_get_str(parms, "hdmi_connected", value, sizeof(value));
-    if (err >= 0) {
+    ret = str_parms_get_str(parms, "hdmi_connected", value, sizeof(value));
+    if (ret >= 0) {
         if (strcmp(value, "true") == 0)
             platform_get_edid_info(adev->platform);
         else
@@ -2553,8 +2561,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 done:
     str_parms_destroy(parms);
     pthread_mutex_unlock(&adev->lock);
-    ALOGV("%s: exit with code(%d)", __func__, ret);
-    return ret;
+    ALOGV("%s: exit with code(%d)", __func__, status);
+    return status;
 }
 
 static char* adev_get_parameters(const struct audio_hw_device *dev,
@@ -2649,7 +2657,7 @@ static int adev_get_mic_mute(const struct audio_hw_device *dev, bool *state)
 static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev,
                                          const struct audio_config *config)
 {
-    int channel_count = popcount(config->channel_mask);
+    int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
 
     return get_input_buffer_size(config->sample_rate, config->format, channel_count);
 }
@@ -2658,12 +2666,15 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                   audio_io_handle_t handle,
                                   audio_devices_t devices,
                                   struct audio_config *config,
-                                  struct audio_stream_in **stream_in)
+                                  struct audio_stream_in **stream_in,
+                                  audio_input_flags_t flags __unused,
+                                  const char *address __unused,
+                                  audio_source_t source __unused)
 {
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_in *in;
     int ret = 0, buffer_size, frame_size;
-    int channel_count = popcount(config->channel_mask);
+    int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
 
     ALOGV("%s: enter", __func__);
     *stream_in = NULL;
@@ -2718,7 +2729,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         audio_extn_compr_cap_init(adev, in);
     } else {
         in->config.channels = channel_count;
-        frame_size = audio_stream_frame_size((struct audio_stream *)in);
+        frame_size = audio_stream_in_frame_size(&in->stream);
         buffer_size = get_input_buffer_size(config->sample_rate,
                                             config->format,
                                             channel_count);
@@ -2750,7 +2761,8 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     } else
         in_standby(&stream->common);
 
-    if (audio_extn_ssr_get_enabled() && (popcount(in->channel_mask) == 6)) {
+    if (audio_extn_ssr_get_enabled() &&
+            (audio_channel_count_from_in_mask(in->channel_mask) == 6)) {
         audio_extn_ssr_deinit();
     }
     free(stream);
