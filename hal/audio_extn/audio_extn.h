@@ -51,16 +51,7 @@
 #define AUDIO_DEVICE_IN_FM_RX_A2DP (AUDIO_DEVICE_BIT_IN | 0x10000)
 #endif
 
-#ifndef QTI_FLAC_DECODER
-#define AUDIO_FORMAT_FLAC 0x19000000UL
-#define AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE "music_offload_flac_min_blk_size"
-#define AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE "music_offload_flac_max_blk_size"
-#define AUDIO_OFFLOAD_CODEC_FLAC_MIN_FRAME_SIZE "music_offload_flac_min_frame_size"
-#define AUDIO_OFFLOAD_CODEC_FLAC_MAX_FRAME_SIZE "music_offload_flac_max_frame_size"
-#define PCM_OUTPUT_BIT_WIDTH (CODEC_BACKEND_DEFAULT_BIT_WIDTH)
-#else
 #define PCM_OUTPUT_BIT_WIDTH (config->offload_info.bit_width)
-#endif
 
 #define MAX_LENGTH_MIXER_CONTROL_IN_INT                  (128)
 
