@@ -251,6 +251,7 @@ static int check_and_set_gapless_mode(struct audio_device *adev) {
 
 static bool is_supported_format(audio_format_t format)
 {
+    ALOGV("%s: format=%x", __func__, format);
     if (format == AUDIO_FORMAT_MP3 ||
         format == AUDIO_FORMAT_AAC_LC ||
         format == AUDIO_FORMAT_AAC_HE_V1 ||
@@ -1887,7 +1888,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
            (out->config.rate);
     }
 
-    ALOGV("%s: Latency %d", latency);
+    ALOGV("%s: Latency %d", __func__, latency);
     return latency;
 }
 
@@ -2621,7 +2622,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         }
         if (!is_supported_format(config->offload_info.format) &&
                 !audio_extn_is_dolby_format(config->offload_info.format)) {
-            ALOGE("%s: Unsupported audio format", __func__);
+            ALOGE("%s: Unsupported audio format: %x", __func__, config->offload_info.format);
             ret = -EINVAL;
             goto error_open;
         }
