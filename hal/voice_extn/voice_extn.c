@@ -475,8 +475,8 @@ done:
     return ret;
 }
 
-int get_all_call_states_str(const struct audio_device *adev,
-                            char *value)
+static int get_all_call_states_str(const struct audio_device *adev,
+                                   char *value)
 {
     int ret = 0;
     char *cur_ptr = value;
@@ -520,7 +520,7 @@ void voice_extn_get_parameters(const struct audio_device *adev,
         }
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_ALL_CALL_STATES, value);
     }
-    voice_extn_compress_voip_get_parameters(adev, query, reply);
+    voice_extn_compress_voip_get_parameters(query, reply);
 
     str = str_parms_to_str(reply);
     ALOGV_IF(str != NULL, "%s: exit: returns \"%s\"", __func__, str);
