@@ -64,7 +64,11 @@
 #define PROXY_OPEN_RETRY_COUNT           100
 #define PROXY_OPEN_WAIT_TIME             20
 
+#ifdef LOW_LATENCY_PRIMARY
+#define USECASE_AUDIO_PLAYBACK_PRIMARY USECASE_AUDIO_PLAYBACK_LOW_LATENCY
+#else
 #define USECASE_AUDIO_PLAYBACK_PRIMARY USECASE_AUDIO_PLAYBACK_DEEP_BUFFER
+#endif
 
 static unsigned int configured_low_latency_capture_period_size =
         LOW_LATENCY_CAPTURE_PERIOD_SIZE;
@@ -257,6 +261,7 @@ static int check_and_set_gapless_mode(struct audio_device *adev) {
 
 static bool is_supported_format(audio_format_t format)
 {
+    ALOGV("%s: format=%x", __func__, format);
     if (format == AUDIO_FORMAT_MP3 ||
         format == AUDIO_FORMAT_AAC_LC ||
         format == AUDIO_FORMAT_AAC_HE_V1 ||
@@ -1913,7 +1918,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
            (out->config.rate);
     }
 
-    ALOGV("%s: Latency %d", latency);
+    ALOGV("%s: Latency %d", __func__, latency);
     return latency;
 }
 
@@ -2675,7 +2680,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         }
         if (!is_supported_format(config->offload_info.format) &&
                 !audio_extn_is_dolby_format(config->offload_info.format)) {
-            ALOGE("%s: Unsupported audio format", __func__);
+            ALOGE("%s: Unsupported audio format: %x", __func__, config->offload_info.format);
             ret = -EINVAL;
             goto error_open;
         }
@@ -2796,13 +2801,24 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->config = pcm_config_afe_proxy_playback;
         adev->voice_tx_output = out;
     } else {
+#ifndef LOW_LATENCY_PRIMARY
         if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
             out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
             out->config = pcm_config_low_latency;
+#endif
+#ifdef LOW_LATENCY_PRIMARY
+        if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
+            out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
+            out->config = pcm_config_deep_buffer;
+#endif
         } else {
             /* primary path is the default path selected if no other outputs are available/suitable */
             out->usecase = USECASE_AUDIO_PLAYBACK_PRIMARY;
+#ifdef LOW_LATENCY_PRIMARY
+            out->config = pcm_config_low_latency;
+#else
             out->config = pcm_config_deep_buffer;
+#endif
         }
         if (config->format != audio_format_from_pcm_format(out->config.format)) {
             if (k_enable_extended_precision
