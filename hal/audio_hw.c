@@ -2583,7 +2583,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         }
 
         if (config->offload_info.format == AUDIO_FORMAT_FLAC)
-            out->compr_config.codec->options.flac_dec.sample_size = config->offload_info.bit_width;
+            out->compr_config.codec->options.flac_dec.sample_size = PCM_OUTPUT_BIT_WIDTH;
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
