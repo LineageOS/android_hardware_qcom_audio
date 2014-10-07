@@ -631,8 +631,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                 out_snd_device = platform_get_output_snd_device(adev->platform,
                                             usecase->stream.out->devices);
                 if (usecase->stream.out == adev->primary_output &&
-                        adev->active_input &&
-                        adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
+                        adev->active_input ) {
                     select_devices(adev, adev->active_input->usecase);
                 }
             }
@@ -640,7 +639,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             usecase->devices = usecase->stream.in->device;
             out_snd_device = SND_DEVICE_NONE;
             if (in_snd_device == SND_DEVICE_NONE) {
-                if (adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
+                if ((adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION || (adev->mode == AUDIO_MODE_IN_COMMUNICATION && adev->active_input->source == AUDIO_SOURCE_MIC)) &&
                         adev->primary_output && !adev->primary_output->standby) {
                     in_snd_device = platform_get_input_snd_device(adev->platform,
                                         adev->primary_output->devices);
