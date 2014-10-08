@@ -2627,7 +2627,6 @@ status_t AudioHardwareALSA::startPlaybackOnExtOut_l(uint32_t activeUsecase) {
          if(err) {
             ALOGE("Proxy Property Set Failedd");
         }
-#ifdef QCOM_USBAUDIO_ENABLED
         int ProxyOpenRetryCount=PROXY_OPEN_RETRY_COUNT;
         while(ProxyOpenRetryCount){
             err = mALSADevice->openProxyDevice();
@@ -2642,7 +2641,6 @@ status_t AudioHardwareALSA::startPlaybackOnExtOut_l(uint32_t activeUsecase) {
         if(err) {
             ALOGE("openProxyDevice failed = %d", err);
         }
-#endif
 
         mKillExtOutThread = false;
         err = pthread_create(&mExtOutThread, (const pthread_attr_t *) NULL,
