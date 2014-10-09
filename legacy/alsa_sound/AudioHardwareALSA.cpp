@@ -537,6 +537,7 @@ status_t AudioHardwareALSA::setParameters(const String8& keyValuePairs)
     enum call_state  call_state = CALL_INVALID;
     uint32_t vsid = 0;
 
+    int input = 0;
     ALOGV("%s() ,%s", __func__, keyValuePairs.string());
 
 #ifdef QCOM_ADSP_SSR_ENABLED
@@ -559,6 +560,26 @@ status_t AudioHardwareALSA::setParameters(const String8& keyValuePairs)
        }
     }
 #endif
+    key = String8(AUDIO_PARAMETER_STREAM_INPUT_SOURCE);
+    if (param.getInt(key, input) == NO_ERROR) {
+        ALOGV("InputSource %d", input);
+        switch (input) {
+        case AUDIO_SOURCE_VOICE_UPLINK:
+            mIncallMode = AUDIO_CHANNEL_IN_VOICE_UPLINK;
+            break;
+        case AUDIO_SOURCE_VOICE_DOWNLINK:
+             mIncallMode = AUDIO_CHANNEL_IN_VOICE_DNLINK;
+            break;
+        case AUDIO_SOURCE_VOICE_CALL:
+            mIncallMode = AUDIO_CHANNEL_IN_VOICE_UPLINK|AUDIO_CHANNEL_IN_VOICE_DNLINK;
+            break;
+        default:
+            ALOGV("%s: Source type %d doesnt match with any incall source type",
+                  __func__, input);
+        }
+        param.remove(key);
+
+    }
 
     key = String8(TTY_MODE_KEY);
     if (param.get(key, value) == NO_ERROR) {
