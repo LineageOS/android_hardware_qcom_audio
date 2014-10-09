@@ -1340,15 +1340,10 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
             if ((adev->mode == AUDIO_MODE_IN_CALL) &&
                     output_drives_call(adev, out)) {
-
-                if (adev->current_call_output != NULL &&
-                        adev->current_call_output != out) {
-                    voice_stop_call(adev);
-                }
-                if (!voice_is_in_call(adev)) {
-                    adev->current_call_output = out;
+                adev->current_call_output = out;
+                if (!voice_is_in_call(adev))
                     ret = voice_start_call(adev);
-                } else
+                else
                     voice_update_devices_for_all_voice_usecases(adev);
             }
         }
@@ -2125,6 +2120,10 @@ static void adev_close_output_stream(struct audio_hw_device *dev __unused,
         if (out->compr_config.codec != NULL)
             free(out->compr_config.codec);
     }
+
+    if (adev->voice_tx_output == out)
+        adev->voice_tx_output = NULL;
+
     pthread_cond_destroy(&out->cond);
     pthread_mutex_destroy(&out->lock);
     free(stream);

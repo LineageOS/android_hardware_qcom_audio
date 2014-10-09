@@ -462,6 +462,7 @@ void voice_update_devices_for_all_voice_usecases(struct audio_device *adev)
         if (usecase->type == VOICE_CALL) {
             ALOGV("%s: updating device for usecase:%s", __func__,
                   use_case_table[usecase->id]);
+            usecase->stream.out = adev->current_call_output;
             select_devices(adev, usecase->id);
         }
     }
