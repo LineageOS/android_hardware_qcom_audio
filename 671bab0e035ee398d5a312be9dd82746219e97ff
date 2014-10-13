@@ -34,6 +34,24 @@
       "revId": "671bab0e035ee398d5a312be9dd82746219e97ff",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a1b2928_f3eef989",
+        "filename": "mm-audio/adec-amrwb/sw/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 49,
+      "author": {
+        "id": 6315
+      },
+      "writtenOn": "2014-10-13T03:07:59Z",
+      "side": 1,
+      "message": "This be gone in a later patch d96a0b28 anyways.",
+      "parentUuid": "7a1b2928_73dca9e4",
+      "revId": "671bab0e035ee398d5a312be9dd82746219e97ff",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
