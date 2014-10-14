@@ -195,6 +195,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SPLIT_A2DP)),true)
 endif
 
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SOURCE_TRACKING)),true)
+    LOCAL_CFLAGS += -DSOURCE_TRACKING_ENABLED
+    LOCAL_SRC_FILES += audio_extn/source_track.c
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
