@@ -421,6 +421,18 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device __unused)
     return -ENOSYS;
 }
 
+int platform_set_snd_device_bit_width(snd_device_t snd_device, unsigned int bit_width)
+{
+    ALOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
+int platform_get_snd_device_bit_width(snd_device_t snd_device)
+{
+    ALOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
 int platform_switch_voice_call_enable_device_config(void *platform __unused,
                                                     snd_device_t out_snd_device __unused,
                                                     snd_device_t in_snd_device __unused)

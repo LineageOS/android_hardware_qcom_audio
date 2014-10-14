@@ -443,6 +443,9 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
 
     if ((24 == bit_width) &&
         (devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+        int32_t bw = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
+        if (-ENOSYS != bw)
+            bit_width = (uint32_t)bw;
         sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         ALOGI("%s Allowing 24-bit playback on speaker ONLY at default sampling rate", __func__);
     }

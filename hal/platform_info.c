@@ -43,6 +43,7 @@
 typedef enum {
     ROOT,
     ACDB,
+    BITWIDTH,
     PCM_ID,
     BACKEND_NAME,
 } section_t;
@@ -50,6 +51,7 @@ typedef enum {
 typedef void (* section_process_fn)(const XML_Char **attr);
 
 static void process_acdb_id(const XML_Char **attr);
+static void process_bit_width(const XML_Char **attr);
 static void process_pcm_id(const XML_Char **attr);
 static void process_backend_name(const XML_Char **attr);
 static void process_root(const XML_Char **attr);
@@ -57,6 +59,7 @@ static void process_root(const XML_Char **attr);
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
     [ACDB] = process_acdb_id,
+    [BITWIDTH] = process_bit_width,
     [PCM_ID] = process_pcm_id,
     [BACKEND_NAME] = process_backend_name,
 };
@@ -202,6 +205,38 @@ done:
     return;
 }
 
+static void process_bit_width(const XML_Char **attr)
+{
+    int index;
+
+    if (strcmp(attr[0], "name") != 0) {
+        ALOGE("%s: 'name' not found, no ACDB ID set!", __func__);
+        goto done;
+    }
+
+    index = platform_get_snd_device_index((char *)attr[1]);
+    if (index < 0) {
+        ALOGE("%s: Device %s in platform info xml not found, no ACDB ID set!",
+              __func__, attr[1]);
+        goto done;
+    }
+
+    if (strcmp(attr[2], "bit_width") != 0) {
+        ALOGE("%s: Device %s in platform info xml has no bit_width, no ACDB ID set!",
+              __func__, attr[1]);
+        goto done;
+    }
+
+    if (platform_set_snd_device_bit_width(index, atoi((char *)attr[3])) < 0) {
+        ALOGE("%s: Device %s, ACDB ID %d was not set!",
+              __func__, attr[1], atoi((char *)attr[3]));
+        goto done;
+    }
+
+done:
+    return;
+}
+
 static void start_tag(void *userdata __unused, const XML_Char *tag_name,
                       const XML_Char **attr)
 {
@@ -209,14 +244,16 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
     const XML_Char              *attr_value = NULL;
     unsigned int                i;
 
-    if (strcmp(tag_name, "acdb_ids") == 0) {
+    if (strcmp(tag_name, "bit_width_configs") == 0) {
+        section = BITWIDTH;
+    } else if (strcmp(tag_name, "acdb_ids") == 0) {
         section = ACDB;
     } else if (strcmp(tag_name, "pcm_ids") == 0) {
         section = PCM_ID;
     } else if (strcmp(tag_name, "backend_names") == 0) {
         section = BACKEND_NAME;
     } else if (strcmp(tag_name, "device") == 0) {
-        if ((section != ACDB) && (section != BACKEND_NAME)) {
+        if ((section != ACDB) && (section != BACKEND_NAME) && (section != BITWIDTH)) {
             ALOGE("device tag only supported for acdb/backend names");
             return;
         }
@@ -239,7 +276,9 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
 
 static void end_tag(void *userdata __unused, const XML_Char *tag_name)
 {
-    if (strcmp(tag_name, "acdb_ids") == 0) {
+    if (strcmp(tag_name, "bit_width_configs") == 0) {
+        section = ROOT;
+    } else if (strcmp(tag_name, "acdb_ids") == 0) {
         section = ROOT;
     } else if (strcmp(tag_name, "pcm_ids") == 0) {
         section = ROOT;

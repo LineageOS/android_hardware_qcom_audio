@@ -320,6 +320,9 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_BROADSIDE] = "speaker-dmic-broadside",
 };
 
+// Platform specific backend bit width table
+static int backend_bit_width_table[SND_DEVICE_MAX] = {0};
+
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
 static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_NONE] = -1,
@@ -777,6 +780,9 @@ static void set_platform_defaults()
     int32_t dev;
     for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
         backend_table[dev] = NULL;
+    }
+    for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
+        backend_bit_width_table[dev] = 16;
     }
 
     // TBD - do these go to the platform-info.xml file.
@@ -1371,6 +1377,31 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device)
         return -EINVAL;
     }
     return acdb_device_table[snd_device];
+}
+
+int platform_set_snd_device_bit_width(snd_device_t snd_device, unsigned int bit_width)
+{
+    int ret = 0;
+
+    if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
+        ALOGE("%s: Invalid snd_device = %d",
+            __func__, snd_device);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    backend_bit_width_table[snd_device] = bit_width;
+done:
+    return ret;
+}
+
+int platform_get_snd_device_bit_width(snd_device_t snd_device)
+{
+    if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
+        ALOGE("%s: Invalid snd_device = %d", __func__, snd_device);
+        return DEFAULT_OUTPUT_SAMPLING_RATE;
+    }
+    return backend_bit_width_table[snd_device];
 }
 
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
@@ -2768,11 +2799,15 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
         }
     }
 
-    // 24 bit playback on speakers and all 16 bit playbacks is allowed through
-    // 16 bit/48 khz backend only
-    if ((16 == bit_width) ||
-        ((24 == bit_width) &&
-         (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER))) {
+    // 16 bit playback on speakers is allowed through 48 khz backend only
+    if (16 == bit_width) {
+        sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    }
+    // 24 bit playback on speakers is allowed through 48 khz backend only
+    // bit width re-configured based on platform info
+    if ((24 == bit_width) &&
+        (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+        bit_width = (uint32_t)platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
     }
     // Force routing if the expected bitwdith or samplerate
