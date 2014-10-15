@@ -269,15 +269,15 @@ static const char * const device_table[SND_DEVICE_MAX] = {
 static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_NONE] = -1,
     [SND_DEVICE_OUT_HANDSET] = 7,
-    [SND_DEVICE_OUT_SPEAKER] = 131,
-    [SND_DEVICE_OUT_SPEAKER_REVERSE] = 131,
+    [SND_DEVICE_OUT_SPEAKER] = 14,
+    [SND_DEVICE_OUT_SPEAKER_REVERSE] = 14,
     [SND_DEVICE_OUT_HEADPHONES] = 10,
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = 10,
     [SND_DEVICE_OUT_VOICE_HANDSET] = 7,
     [SND_DEVICE_OUT_VOICE_SPEAKER] = 14,
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
     [SND_DEVICE_OUT_HDMI] = 18,
-    [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 131,
+    [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 14,
     [SND_DEVICE_OUT_BT_SCO] = 22,
     [SND_DEVICE_OUT_BT_SCO_WB] = 39,
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = 17,
@@ -285,7 +285,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = 37,
     [SND_DEVICE_OUT_AFE_PROXY] = 0,
     [SND_DEVICE_OUT_USB_HEADSET] = 45,
-    [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 131,
+    [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 14,
     [SND_DEVICE_OUT_TRANSMISSION_FM] = 0,
     [SND_DEVICE_OUT_ANC_HEADSET] = 26,
     [SND_DEVICE_OUT_ANC_FB_HEADSET] = 27,
@@ -666,7 +666,7 @@ void *platform_init(struct audio_device *adev)
     struct platform_data *my_data = NULL;
     int retry_num = 0, snd_card_num = 0;
     const char *snd_card_name;
-    char mixer_xml_path[100];
+    char mixer_xml_path[100],ffspEnable[PROPERTY_VALUE_MAX];
     char *cvd_version = NULL;
 
     my_data = calloc(1, sizeof(struct platform_data));
@@ -768,7 +768,13 @@ void *platform_init(struct audio_device *adev)
             my_data->fluence_mode = FLUENCE_BROADSIDE;
         }
     }
-
+    property_get("persist.audio.FFSP.enable", ffspEnable, "");
+    if (!strncmp("true", ffspEnable, sizeof("true"))) {
+        acdb_device_table[SND_DEVICE_OUT_SPEAKER] = 131;
+        acdb_device_table[SND_DEVICE_OUT_SPEAKER_REVERSE] = 131;
+        acdb_device_table[SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 131;
+        acdb_device_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 131;
+    }
     my_data->voice_feature_set = VOICE_FEATURE_SET_DEFAULT;
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
     if (my_data->acdb_handle == NULL) {
