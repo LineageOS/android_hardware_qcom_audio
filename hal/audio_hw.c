@@ -195,7 +195,9 @@ static int check_and_set_gapless_mode(struct audio_device *adev) {
 static bool is_supported_format(audio_format_t format)
 {
     if (format == AUDIO_FORMAT_MP3 ||
-        format == AUDIO_FORMAT_AAC ||
+        format == AUDIO_FORMAT_AAC_LC ||
+        format == AUDIO_FORMAT_AAC_HE_V1 ||
+        format == AUDIO_FORMAT_AAC_HE_V2 ||
         format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD ||
         format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD)
         return true;
@@ -207,15 +209,14 @@ static int get_snd_codec_id(audio_format_t format)
 {
     int id = 0;
 
-    switch (format) {
+    switch (format & AUDIO_FORMAT_MAIN_MASK) {
     case AUDIO_FORMAT_MP3:
         id = SND_AUDIOCODEC_MP3;
         break;
     case AUDIO_FORMAT_AAC:
         id = SND_AUDIOCODEC_AAC;
         break;
-    case AUDIO_FORMAT_PCM_16_BIT_OFFLOAD:
-    case AUDIO_FORMAT_PCM_24_BIT_OFFLOAD:
+    case AUDIO_FORMAT_PCM_OFFLOAD:
         id = SND_AUDIOCODEC_PCM;
         break;
     default:
