@@ -1002,3 +1002,8 @@ int platform_set_snd_device_backend(snd_device_t device __unused,
 {
     return -ENOSYS;
 }
+
+void platform_set_echo_reference(struct audio_device *adev, bool enable, audio_devices_t out_device)
+{
+    return;
+}

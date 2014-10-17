@@ -1731,6 +1731,8 @@ static int in_standby(struct audio_stream *stream)
             pcm_close(in->pcm);
             in->pcm = NULL;
         }
+        adev->enable_voicerx = false;
+        platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE );
         status = stop_input_stream(in);
         pthread_mutex_unlock(&adev->lock);
     }
@@ -1855,6 +1857,7 @@ static int add_remove_audio_effect(const struct audio_stream *stream,
                                    bool enable)
 {
     struct stream_in *in = (struct stream_in *)stream;
+    struct audio_device *adev = in->dev;
     int status = 0;
     effect_descriptor_t desc;
 
@@ -1868,6 +1871,18 @@ static int add_remove_audio_effect(const struct audio_stream *stream,
             in->enable_aec != enable &&
             (memcmp(&desc.type, FX_IID_AEC, sizeof(effect_uuid_t)) == 0)) {
         in->enable_aec = enable;
+        if (!enable)
+            platform_set_echo_reference(in->dev, enable, AUDIO_DEVICE_NONE);
+        adev->enable_voicerx = enable;
+        struct audio_usecase *usecase;
+        struct listnode *node;
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (usecase->type == PCM_PLAYBACK) {
+                select_devices(adev, usecase->id);
+            break;
+            }
+        }
         if (!in->standby)
             select_devices(in->dev, in->usecase);
     }
@@ -2337,7 +2352,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                   struct audio_stream_in **stream_in,
                                   audio_input_flags_t flags,
                                   const char *address __unused,
-                                  audio_source_t source __unused)
+                                  audio_source_t source )
 {
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_in *in;
@@ -2371,7 +2386,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->stream.get_input_frames_lost = in_get_input_frames_lost;
 
     in->device = devices;
-    in->source = AUDIO_SOURCE_DEFAULT;
+    in->source = source;
     in->dev = adev;
     in->standby = 1;
     in->channel_mask = config->channel_mask;
@@ -2704,6 +2719,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     }
 
     adev->bt_wb_speech_enabled = false;
+    adev->enable_voicerx = false;
 
     *device = &adev->device.common;
     if (k_enable_extended_precision)
