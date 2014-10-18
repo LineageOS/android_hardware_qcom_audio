@@ -406,6 +406,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_set_fluence_parameters(adev, parms);
    audio_extn_set_afe_proxy_parameters(parms);
    audio_extn_fm_set_parameters(adev, parms);
+   audio_extn_sound_trigger_set_parameters(adev, parms);
    audio_extn_listen_set_parameters(adev, parms);
    audio_extn_hfp_set_parameters(adev, parms);
    audio_extn_ddp_set_parameters(adev, parms);

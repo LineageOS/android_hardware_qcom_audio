@@ -159,6 +159,36 @@ void audio_extn_listen_set_parameters(struct audio_device *adev,
                                       struct str_parms *parms);
 #endif /* AUDIO_LISTEN_ENABLED */
 
+#ifndef SOUND_TRIGGER_ENABLED
+#define audio_extn_sound_trigger_init(adev)                            (0)
+#define audio_extn_sound_trigger_deinit(adev)                          (0)
+#define audio_extn_sound_trigger_update_device_status(snd_dev, event)  (0)
+#define audio_extn_sound_trigger_update_stream_status(uc_info, event)  (0)
+#define audio_extn_sound_trigger_set_parameters(adev, parms)           (0)
+#define audio_extn_sound_trigger_check_and_get_session(in)             (0)
+#define audio_extn_sound_trigger_stop_lab(in)                          (0)
+#else
+
+enum st_event_type {
+    ST_EVENT_SND_DEVICE_FREE,
+    ST_EVENT_SND_DEVICE_BUSY,
+    ST_EVENT_STREAM_FREE,
+    ST_EVENT_STREAM_BUSY
+};
+typedef enum st_event_type st_event_type_t;
+
+int audio_extn_sound_trigger_init(struct audio_device *adev);
+void audio_extn_sound_trigger_deinit(struct audio_device *adev);
+void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
+                                     st_event_type_t event);
+void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info,
+                                     st_event_type_t event);
+void audio_extn_sound_trigger_set_parameters(struct audio_device *adev,
+                                             struct str_parms *parms);
+void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in);
+void audio_extn_sound_trigger_stop_lab(struct stream_in *in);
+#endif
+
 #ifndef AUXPCM_BT_ENABLED
 #define audio_extn_read_xml(adev, mixer_card, MIXER_XML_PATH, \
                             MIXER_XML_PATH_AUXPCM)               (-ENOSYS)

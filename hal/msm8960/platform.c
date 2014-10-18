@@ -1088,3 +1088,14 @@ int platform_set_snd_device_backend(snd_device_t snd_device __unused,
 {
     return -ENOSYS;
 }
+
+bool platform_sound_trigger_device_needs_event(snd_device_t snd_device __unused)
+{
+    return false;
+}
+
+bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id  __unused)
+{
+    return false;
+}
+

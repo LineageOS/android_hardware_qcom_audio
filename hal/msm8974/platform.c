@@ -2032,6 +2032,24 @@ bool platform_listen_update_status(snd_device_t snd_device)
         return false;
 }
 
+bool platform_sound_trigger_device_needs_event(snd_device_t snd_device)
+{
+    bool needs_event = false;
+
+    if ((snd_device >= SND_DEVICE_IN_BEGIN) &&
+        (snd_device < SND_DEVICE_IN_END) &&
+        (snd_device != SND_DEVICE_IN_CAPTURE_FM) &&
+        (snd_device != SND_DEVICE_IN_CAPTURE_VI_FEEDBACK))
+        needs_event = true;
+
+    return needs_event;
+}
+
+bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id __unused)
+{
+    return false;
+}
+
 /* Read  offload buffer size from a property.
  * If value is not power of 2  round it to
  * power of 2.
