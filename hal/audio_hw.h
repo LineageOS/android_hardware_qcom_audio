@@ -48,6 +48,7 @@
 #define ACDB_DEV_TYPE_IN 2
 
 #define MAX_SUPPORTED_CHANNEL_MASKS 8
+#define MAX_SUPPORTED_FORMATS 3
 #define DEFAULT_HDMI_OUT_CHANNELS   2
 
 #define SND_CARD_STATE_OFFLINE 0
@@ -173,6 +174,7 @@ struct stream_out {
     audio_usecase_t usecase;
     /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
+    audio_format_t supported_formats[MAX_SUPPORTED_FORMATS+1];
     bool muted;
     uint64_t written; /* total frames written, not cleared when entering standby */
     audio_io_handle_t handle;

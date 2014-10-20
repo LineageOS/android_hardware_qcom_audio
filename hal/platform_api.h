@@ -89,6 +89,7 @@ int platform_info_init(const char *filename);
 struct audio_offload_info_t;
 uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info);
 uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info);
+uint32_t platform_get_compress_passthrough_buffer_size(audio_offload_info_t* info);
 
 bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct audio_usecase *usecase);
 int platform_get_usecase_index(const char * usecase);
@@ -106,5 +107,6 @@ unsigned char platform_map_to_edid_format(int format);
 bool platform_is_edid_supported_format(void *platform, int format);
 void platform_cache_edid(void * platform);
 void platform_invalidate_edid(void * platform);
-
+int platform_set_hdmi_config(struct stream_out *out);
+int platform_set_device_params(struct stream_out *out, int param, int value);
 #endif // AUDIO_PLATFORM_API_H

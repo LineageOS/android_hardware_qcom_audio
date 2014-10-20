@@ -64,12 +64,14 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_DEEP_BUFFER),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_NON_BLOCKING),
+    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_HW_AV_SYNC),
 #ifdef INCALL_MUSIC_ENABLED
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_INCALL_MUSIC),
 #endif
 #ifdef COMPRESS_VOIP_ENABLED
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_VOIP_RX),
 #endif
+    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH),
 };
 
 const struct string_to_enum s_format_name_to_enum_table[] = {
@@ -98,6 +100,7 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_PCM_16_BIT_OFFLOAD),
     STRING_TO_ENUM(AUDIO_FORMAT_PCM_24_BIT_OFFLOAD),
     STRING_TO_ENUM(AUDIO_FORMAT_FLAC),
+    STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
 #endif
 };
 
@@ -404,6 +407,7 @@ static bool set_output_cfg(struct streams_output_cfg *so_info,
         ss_info = node_to_item(node_i, struct stream_sample_rate, list);
         if ((sample_rate <= ss_info->sample_rate) &&
             (bit_width == so_info->app_type_cfg.bit_width)) {
+
             app_type_cfg->app_type = so_info->app_type_cfg.app_type;
             app_type_cfg->sample_rate = ss_info->sample_rate;
             app_type_cfg->bit_width = so_info->app_type_cfg.bit_width;
@@ -509,7 +513,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
         (usecase->id != USECASE_AUDIO_PLAYBACK_LOW_LATENCY) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_MULTI_CH) &&
         (!is_offload_usecase(usecase->id))) {
-        ALOGV("%s: a playback path where app type cfg is not required", __func__);
+        ALOGV("%s: a playback path where app type cfg is not required %d", __func__, usecase->id);
         rc = 0;
         goto exit_send_app_type_cfg;
     }
@@ -548,8 +552,12 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
 
     app_type_cfg[len++] = out->app_type_cfg.app_type;
     app_type_cfg[len++] = acdb_dev_id;
-    app_type_cfg[len++] = sample_rate;
-
+    if (((out->format == AUDIO_FORMAT_E_AC3) ||
+        (out->format == AUDIO_FORMAT_E_AC3_JOC)) &&
+        (out->flags  & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
+        app_type_cfg[len++] = sample_rate * 4;
+    else
+        app_type_cfg[len++] = sample_rate;
     mixer_ctl_set_array(ctl, app_type_cfg, len);
     ALOGI("%s app_type %d, acdb_dev_id %d, sample_rate %d",
            __func__, out->app_type_cfg.app_type, acdb_dev_id, sample_rate);

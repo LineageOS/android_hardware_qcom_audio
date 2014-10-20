@@ -346,4 +346,16 @@ struct csd_data {
     get_sample_rate_t get_sample_rate;
 };
 
+/* HDMI Passthrough defines */
+enum {
+    LEGACY_PCM = 0,
+    PASSTHROUGH,
+    PASSTHROUGH_CONVERT
+};
+/*
+ * ID for setting mute and lateny on the device side
+ * through Device PP Params mixer control.
+ */
+#define DEVICE_PARAM_MUTE_ID    0
+#define DEVICE_PARAM_LATENCY_ID 1
 #endif // QCOM_AUDIO_PLATFORM_H
