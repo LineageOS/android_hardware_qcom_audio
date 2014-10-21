@@ -930,7 +930,7 @@ int platform_switch_voice_call_device_pre(void *platform)
     int ret = 0;
 
     if (my_data->csd != NULL &&
-        my_data->adev->mode == AUDIO_MODE_IN_CALL) {
+        voice_is_in_call(my_data->adev)) {
         /* This must be called before disabling mixer controls on APQ side */
         ret = my_data->csd->disable_device();
         if (ret < 0) {
@@ -1186,18 +1186,17 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         goto exit;
     }
 
-    if ((mode == AUDIO_MODE_IN_CALL) ||
-        (adev->enable_voicerx)) {
+    if (voice_is_in_call(adev) || adev->enable_voicerx) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             devices & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
             devices & AUDIO_DEVICE_OUT_LINE) {
-            if ((mode == AUDIO_MODE_IN_CALL) &&
+            if (voice_is_in_call(adev) &&
                 (adev->voice.tty_mode == TTY_MODE_FULL))
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES;
-            else if ((mode == AUDIO_MODE_IN_CALL) &&
+            else if (voice_is_in_call(adev) &&
                 (adev->voice.tty_mode == TTY_MODE_VCO))
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES;
-            else if ((mode == AUDIO_MODE_IN_CALL) &&
+            else if (voice_is_in_call(adev) &&
                 (adev->voice.tty_mode == TTY_MODE_HCO))
                 snd_device = SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET;
             else {
@@ -1308,11 +1307,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x)",
           __func__, out_device, in_device);
-    if (mode == AUDIO_MODE_IN_CALL) {
-        if (out_device == AUDIO_DEVICE_NONE) {
-            ALOGE("%s: No output device set for voice call", __func__);
-            goto exit;
-        }
+    if ((out_device != AUDIO_DEVICE_NONE) && voice_is_in_call(adev)) {
         if (adev->voice.tty_mode != TTY_MODE_OFF) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                 out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
