@@ -139,12 +139,12 @@ void audio_extn_sound_trigger_stop_lab(struct stream_in *in)
 
     pthread_mutex_lock(&st_dev->lock);
     st_ses_info = get_sound_trigger_info(in->capture_handle);
+    pthread_mutex_unlock(&st_dev->lock);
     if (st_ses_info) {
         event.u.ses_info = st_ses_info->st_ses;
         ALOGV("%s: AUDIO_EVENT_STOP_LAB pcm %p", __func__, st_ses_info->st_ses.pcm);
         st_dev->st_callback(AUDIO_EVENT_STOP_LAB, &event);
     }
-    pthread_mutex_unlock(&st_dev->lock);
 }
 void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in)
 {
