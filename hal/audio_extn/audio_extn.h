@@ -300,6 +300,16 @@ int audio_extn_dev_arbi_acquire(snd_device_t snd_device);
 int audio_extn_dev_arbi_release(snd_device_t snd_device);
 #endif
 
+#ifndef PM_SUPPORT_ENABLED
+#define audio_extn_pm_set_parameters(params) (0)
+#define audio_extn_pm_vote(void) (0)
+#define audio_extn_pm_unvote(void) (0)
+#else
+void audio_extn_pm_set_parameters(struct str_parms *parms);
+int audio_extn_pm_vote (void);
+void audio_extn_pm_unvote(void);
+#endif
+
 void audio_extn_utils_update_streams_output_cfg_list(void *platform,
                                   struct mixer *mixer,
                                   struct listnode *streams_output_cfg_list);
