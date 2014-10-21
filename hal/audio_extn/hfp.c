@@ -89,6 +89,7 @@ static int32_t hfp_set_volume(struct audio_device *adev, float value)
     ALOGV("%s: entry", __func__);
     ALOGD("%s: (%f)\n", __func__, value);
 
+    hfpmod.hfp_volume = value;
     if (value < 0.0) {
         ALOGW("%s: (%f) Under 0.0, assuming 0.0\n", __func__, value);
         value = 0.0;
@@ -97,7 +98,6 @@ static int32_t hfp_set_volume(struct audio_device *adev, float value)
         ALOGW("%s: Volume brought with in range (%f)\n", __func__, value);
     }
     vol  = lrint((value * 0x2000) + 0.5);
-    hfpmod.hfp_volume = value;
 
     if (!hfpmod.is_hfp_running) {
         ALOGV("%s: HFP not active, ignoring set_hfp_volume call", __func__);
