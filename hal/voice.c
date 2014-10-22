@@ -327,11 +327,11 @@ int voice_start_call(struct audio_device *adev)
 {
     int ret = 0;
 
+    adev->voice.in_call = true;
     ret = voice_extn_start_call(adev);
     if (ret == -ENOSYS) {
         ret = voice_start_usecase(adev, USECASE_VOICE_CALL);
     }
-    adev->voice.in_call = true;
 
     return ret;
 }
