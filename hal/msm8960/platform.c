@@ -385,7 +385,8 @@ int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
     return device_id;
 }
 
-int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id)
+int platform_set_snd_device_acdb_id(snd_device_t snd_device __unused,
+                                    unsigned int acdb_id __unused)
 {
     return -ENODEV;
 }
@@ -550,7 +551,8 @@ int platform_set_mic_mute(void *platform, bool state)
     return ret;
 }
 
-int platform_set_device_mute(void *platform, bool state, char *dir)
+int platform_set_device_mute(void *platform __unused, bool state __unused,
+                             char *dir __unused)
 {
     LOGE("%s: Not implemented", __func__);
     return -ENOSYS;
@@ -826,7 +828,7 @@ int platform_set_hdmi_channels(void *platform,  int channel_count)
     return 0;
 }
 
-int platform_edid_get_max_channels(void *platform)
+int platform_edid_get_max_channels(void *platform __unused)
 {
     FILE *file;
     struct audio_block_header header;
@@ -872,19 +874,22 @@ int platform_edid_get_max_channels(void *platform)
     return max_channels;
 }
 
-void platform_get_parameters(void *platform, struct str_parms *query,
-                             struct str_parms *reply)
+void platform_get_parameters(void *platform __unused,
+                             struct str_parms *query __unused,
+                             struct str_parms *reply __unused)
 {
     LOGE("%s: Not implemented", __func__);
 }
 
-int platform_set_parameters(void *platform, struct str_parms *parms)
+int platform_set_parameters(void *platform __unused,
+                            struct str_parms *parms __unused)
 {
     LOGE("%s: Not implemented", __func__);
     return -ENOSYS;
 }
 
-int platform_set_incall_recoding_session_id(void *platform, uint32_t session_id)
+int platform_set_incall_recoding_session_id(void *platform __unused,
+                                            uint32_t session_id __unused)
 {
     LOGE("%s: Not implemented", __func__);
     return -ENOSYS;
@@ -903,13 +908,14 @@ int64_t platform_render_latency(audio_usecase_t usecase)
     }
 }
 
-int platform_update_usecase_from_source(int source, int usecase)
+int platform_update_usecase_from_source(int source __unused,
+                                        int usecase __unused)
 {
     ALOGV("%s: input source :%d", __func__, source);
     return usecase;
 }
 
-bool platform_listen_update_status(snd_device_t snd_device)
+bool platform_listen_update_status(snd_device_t snd_device __unused)
 {
      return false;
 }
