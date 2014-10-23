@@ -23,7 +23,9 @@
 
 #include <stdlib.h>
 #include <dlfcn.h>
+#include <fcntl.h>
 #include <cutils/log.h>
+#include <sys/ioctl.h>
 #include <cutils/properties.h>
 #include <cutils/str_parms.h>
 #include <audio_hw.h>
@@ -32,6 +34,9 @@
 #include "audio_extn.h"
 #include "voice_extn.h"
 #include "sound/compress_params.h"
+#include "sound/msmcal-hwdep.h"
+
+#define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
@@ -82,6 +87,13 @@
 #define AUDIO_PARAMETER_KEY_BTSCO         "bt_samplerate"
 #define AUDIO_PARAMETER_KEY_SLOWTALK      "st_enable"
 #define AUDIO_PARAMETER_KEY_VOLUME_BOOST  "volume_boost"
+#define MAX_CAL_NAME 20
+
+char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
+        [WCD9XXX_ANC_CAL] = "anc_cal",
+        [WCD9XXX_MBHC_CAL] = "mbhc_cal",
+        [WCD9XXX_MAD_CAL] = "mad_cal",
+};
 
 enum {
 	VOICE_FEATURE_SET_DEFAULT,
@@ -100,6 +112,8 @@ typedef int  (*acdb_init_t)();
 typedef void (*acdb_send_audio_cal_t)(int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
+typedef int (*acdb_loader_get_calibration_t)(char *attr, int size, void *data);
+acdb_loader_get_calibration_t acdb_loader_get_calibration;
 
 struct platform_data {
     struct audio_device *adev;
@@ -476,6 +490,95 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 
+#ifdef WCD9XXX_CODEC_HWDEP_NODE
+static int hw_util_open(int card_no)
+{
+    int fd = -1;
+    char dev_name[256];
+
+    snprintf(dev_name, sizeof(dev_name), "/dev/snd/hwC%uD%u",
+                               card_no, WCD9XXX_CODEC_HWDEP_NODE);
+    ALOGE("%s Opening device %s\n", __func__, dev_name);
+    fd = open(dev_name, O_WRONLY);
+    if (fd < 0) {
+        ALOGE("%s: cannot open device '%s'\n", __func__, dev_name);
+        return fd;
+    }
+    ALOGE("%s success", __func__);
+    return fd;
+}
+
+struct param_data {
+    int    use_case;
+    int    acdb_id;
+    int    get_size;
+    int    buff_size;
+    int    data_size;
+    void   *buff;
+};
+
+static int send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibration, int fd)
+{
+    int ret = 0, type;
+
+    for (type = WCD9XXX_ANC_CAL; type < WCD9XXX_MAX_CAL; type++) {
+        struct wcdcal_ioctl_buffer codec_buffer;
+        struct param_data calib;
+        memset(&calib, 0, sizeof(struct param_data));
+
+        if (!strcmp(cal_name_info[type], "mad_cal"))
+            calib.acdb_id = SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID;
+        calib.get_size = 1;
+        ret = acdb_loader_get_calibration(cal_name_info[type], sizeof(struct param_data),
+                                                                 &calib);
+        if (ret < 0) {
+            ALOGE("%s get_calibration failed\n", __func__);
+            return ret;
+        }
+        calib.get_size = 0;
+        calib.buff = malloc(calib.buff_size);
+        ret = acdb_loader_get_calibration(cal_name_info[type],
+                              sizeof(struct param_data), &calib);
+        if (ret < 0) {
+            ALOGE("%s get_calibration failed\n", __func__);
+            free(calib.buff);
+            return ret;
+        }
+        codec_buffer.buffer = calib.buff;
+        codec_buffer.size = calib.data_size;
+        codec_buffer.cal_type = type;
+        if (ioctl(fd, SNDRV_CTL_IOCTL_HWDEP_CAL_TYPE, &codec_buffer) < 0)
+            ALOGE("Failed to call ioctl  for %s err=%d",
+                                  cal_name_info[type], errno);
+        ALOGE(" %s cal sent for %s", __func__, cal_name_info[type]);
+        free(calib.buff);
+    }
+    return ret;
+}
+
+static void audio_hwdep_send_cal(struct platform_data *plat_data)
+{
+    int fd;
+
+    fd = hw_util_open(plat_data->adev->snd_card);
+    if (fd == -1) {
+        ALOGE("%s error open\n", __func__);
+        return;
+    }
+    acdb_loader_get_calibration = (acdb_loader_get_calibration_t)
+          dlsym(plat_data->acdb_handle, "acdb_loader_get_calibration");
+
+    if (acdb_loader_get_calibration == NULL) {
+        ALOGE("%s: ERROR. dlsym Error:%s acdb_loader_get_calibration", __func__,
+           dlerror());
+        return;
+    }
+    if (send_codec_cal(acdb_loader_get_calibration, fd) < 0)
+        ALOGE("%s: Could not send anc cal", __FUNCTION__);
+}
+#endif
+
+
 static void set_echo_reference(struct audio_device *adev, bool enable)
 {
     if (enable)
@@ -805,6 +908,9 @@ void *platform_init(struct audio_device *adev)
     /* Read one time ssr property */
     audio_extn_ssr_update_enabled();
     audio_extn_spkr_prot_init(adev);
+#ifdef WCD9XXX_CODEC_HWDEP_NODE
+    audio_hwdep_send_cal(my_data);
+#endif
     return my_data;
 }
 
