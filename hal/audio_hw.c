@@ -1997,8 +1997,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                 get_snd_codec_id(config->offload_info.format);
         out->compr_config.fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
         out->compr_config.fragments = COMPRESS_OFFLOAD_NUM_FRAGMENTS;
-        out->compr_config.codec->sample_rate =
-                    compress_get_alsa_rate(config->offload_info.sample_rate);
+        out->compr_config.codec->sample_rate = config->offload_info.sample_rate;
         out->compr_config.codec->bit_rate =
                     config->offload_info.bit_rate;
         out->compr_config.codec->ch_in =
