@@ -42,6 +42,8 @@
 #define MIXER_XML_PATH_QRD_SKUI "/system/etc/mixer_paths_qrd_skui.xml"
 #define MIXER_XML_PATH_QRD_SKUHF "/system/etc/mixer_paths_qrd_skuhf.xml"
 #define MIXER_XML_PATH_SKUK "/system/etc/mixer_paths_skuk.xml"
+#define MIXER_XML_PATH_SKUA "/system/etc/mixer_paths_skua.xml"
+#define MIXER_XML_PATH_SKUC "/system/etc/mixer_paths_skuc.xml"
 #define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_WCD9306 "/system/etc/mixer_paths_wcd9306.xml"
@@ -602,6 +604,22 @@ static void query_platform(const char *snd_card_name,
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
 
+    } else if (!strncmp(snd_card_name, "msm8909-skua-snd-card",
+                 sizeof("msm8909-skua-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_SKUA,
+                sizeof(MIXER_XML_PATH_SKUA));
+
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+    } else if (!strncmp(snd_card_name, "msm8909-skuc-snd-card",
+                 sizeof("msm8909-skuc-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_SKUC,
+                sizeof(MIXER_XML_PATH_SKUC));
+
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
     } else {
         strlcpy(mixer_xml_path, MIXER_XML_PATH,
                 sizeof(MIXER_XML_PATH));
