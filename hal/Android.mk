@@ -148,6 +148,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),true)
     LOCAL_SRC_FILES += audio_extn/compress_capture.c
 endif
 
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_NEW_SAMPLE_RATE)),false)
+    LOCAL_CFLAGS += -DNEW_SAMPLE_RATE_ENABLED
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DTS_EAGLE)),true)
     LOCAL_CFLAGS += -DDTS_EAGLE
     LOCAL_SRC_FILES += audio_extn/dts_eagle.c
