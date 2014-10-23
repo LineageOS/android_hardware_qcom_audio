@@ -117,6 +117,10 @@ ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),false)
 endif
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_NEW_SAMPLE_RATE)),true)
+    LOCAL_CFLAGS += -DNEW_SAMPLE_RATE_ENABLED
+endif
+
 ifneq ($(filter apq8084 msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
 ifeq ($(strip $(DOLBY_DDP)),true)
     LOCAL_CFLAGS += -DDS1_DOLBY_DDP_ENABLED
