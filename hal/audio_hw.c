@@ -2726,8 +2726,12 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                        platform_get_compress_offload_buffer_size(&config->offload_info);
         }
         out->compr_config.fragments = COMPRESS_OFFLOAD_NUM_FRAGMENTS;
+#ifdef NEW_SAMPLE_RATE_ENABLED
+        out->compr_config.codec->sample_rate = config->offload_info.sample_rate;
+#else
         out->compr_config.codec->sample_rate =
                     compress_get_alsa_rate(config->offload_info.sample_rate);
+#endif
         out->compr_config.codec->bit_rate =
                     config->offload_info.bit_rate;
         out->compr_config.codec->ch_in =
