@@ -2641,24 +2641,20 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
 
     // For voice calls use default configuration
     // force routing is not required here, caller will do it anyway
-    if (adev->mode == AUDIO_MODE_IN_CALL ||
-        adev->mode == AUDIO_MODE_IN_COMMUNICATION) {
+    if (voice_is_in_call(adev) || adev->mode == AUDIO_MODE_IN_COMMUNICATION) {
         ALOGW("%s:Use default bw and sr for voice/voip calls ",__func__);
-        *new_bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-        *new_sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-        backend_change = true;
-    }
-
-    /*
-     * The backend should be configured at highest bit width and/or
-     * sample rate amongst all playback usecases.
-     * If the selected sample rate and/or bit width differ with
-     * current backend sample rate and/or bit width, then, we set the
-     * backend re-configuration flag.
-     *
-     * Exception: 16 bit playbacks is allowed through 16 bit/48 khz backend only
-     */
-    if (!backend_change) {
+        bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+        sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    } else {
+        /*
+         * The backend should be configured at highest bit width and/or
+         * sample rate amongst all playback usecases.
+         * If the selected sample rate and/or bit width differ with
+         * current backend sample rate and/or bit width, then, we set the
+         * backend re-configuration flag.
+         *
+         * Exception: 16 bit playbacks is allowed through 16 bit/48 khz backend only
+         */
         list_for_each(node, &adev->usecase_list) {
             struct audio_usecase *curr_usecase;
             curr_usecase = node_to_item(node, struct audio_usecase, list);
