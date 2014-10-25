@@ -2671,11 +2671,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->compr_config.codec->format = SNDRV_PCM_FORMAT_S24_LE;
         }
 
-        if (out->bit_width == 24 && !platform_check_24_bit_support()) {
-            ALOGW("24 bit support is not enabled, using 16 bit backend");
-            out->compr_config.codec->format = SNDRV_PCM_FORMAT_S16_LE;
-        }
-
         if (config->offload_info.format == AUDIO_FORMAT_FLAC)
             out->compr_config.codec->options.flac_dec.sample_size = PCM_OUTPUT_BIT_WIDTH;
 

@@ -1030,10 +1030,6 @@ bool platform_listen_usecase_needs_event(audio_usecase_t uc_id __unused)
     return false;
 }
 
-bool platform_check_24_bit_support() {
-    return false;
-}
-
 bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev __unused,
                                               struct audio_usecase *usecase __unused)
 {
