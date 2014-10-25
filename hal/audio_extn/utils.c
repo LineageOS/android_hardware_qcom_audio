@@ -422,6 +422,7 @@ static bool set_output_cfg(struct streams_output_cfg *so_info,
 
 void audio_extn_utils_update_stream_app_type_cfg(void *platform,
                                   struct listnode *streams_output_cfg_list,
+                                  audio_devices_t devices,
                                   audio_output_flags_t flags,
                                   audio_format_t format,
                                   uint32_t sample_rate,
@@ -433,7 +434,14 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
     struct stream_format *sf_info;
     struct stream_sample_rate *ss_info;
 
-    ALOGV("%s: flags: %x, format: %x", __func__, flags, format);
+    if ((24 == bit_width) &&
+        (devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+        sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        ALOGI("%s Allowing 24-bit playback on speaker ONLY at default sampling rate", __func__);
+    }
+
+    ALOGV("%s: flags: %x, format: %x sample_rate %d",
+           __func__, flags, format, sample_rate);
     list_for_each(node_i, streams_output_cfg_list) {
         so_info = node_to_item(node_i, struct streams_output_cfg, list);
         if (so_info->flags == flags) {
@@ -516,7 +524,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
     }
 
     if ((24 == usecase->stream.out->bit_width) &&
-            (AUDIO_DEVICE_OUT_SPEAKER == snd_device)) {
+        (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
         sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
     } else {
         sample_rate = out->app_type_cfg.sample_rate;

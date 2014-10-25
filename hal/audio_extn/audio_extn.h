@@ -309,6 +309,7 @@ void audio_extn_utils_release_streams_output_cfg_list(
                                   struct listnode *streams_output_cfg_list);
 void audio_extn_utils_update_stream_app_type_cfg(void *platform,
                                   struct listnode *streams_output_cfg_list,
+                                  audio_devices_t devices,
                                   audio_output_flags_t flags,
                                   audio_format_t format,
                                   uint32_t sample_rate,
