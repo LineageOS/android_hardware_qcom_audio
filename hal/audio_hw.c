@@ -209,19 +209,6 @@ static int get_snd_codec_id(audio_format_t format)
     return id;
 }
 
-int pcm_ioctl(void *pcm, int request, ...)
-{
-    va_list ap;
-    void * arg;
-    int pcm_fd = *(int*)pcm;
-
-    va_start(ap, request);
-    arg = va_arg(ap, void *);
-    va_end(ap);
-
-    return ioctl(pcm_fd, request, arg);
-}
-
 int enable_audio_route(struct audio_device *adev,
                        struct audio_usecase *usecase)
 {

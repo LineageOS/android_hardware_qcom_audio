@@ -234,8 +234,6 @@ struct audio_device {
     int (*offload_effects_stop_output)(audio_io_handle_t, int);
 };
 
-int pcm_ioctl(void *pcm, int request, ...);
-
 int select_devices(struct audio_device *adev,
                    audio_usecase_t uc_id);
 
