@@ -1310,7 +1310,7 @@ int platform_switch_voice_call_device_pre(void *platform)
     int ret = 0;
 
     if (my_data->csd != NULL &&
-        my_data->adev->mode == AUDIO_MODE_IN_CALL) {
+        voice_is_in_call(my_data->adev)) {
         /* This must be called before disabling mixer controls on APQ side */
         ret = my_data->csd->disable_device();
         if (ret < 0) {
@@ -1618,7 +1618,7 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         goto exit;
     }
 
-    if ((mode == AUDIO_MODE_IN_CALL) ||
+    if (voice_is_in_call(adev) ||
         voice_extn_compress_voip_is_active(adev)) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
@@ -1738,7 +1738,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
     ALOGV("%s: enter: out_device(%#x) in_device(%#x)",
           __func__, out_device, in_device);
     if (my_data->external_mic) {
-        if (((out_device != AUDIO_DEVICE_NONE) && (mode == AUDIO_MODE_IN_CALL)) ||
+        if ((out_device != AUDIO_DEVICE_NONE && voice_is_in_call(adev)) ||
             voice_extn_compress_voip_is_active(adev) || audio_extn_hfp_is_active(adev)) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                out_device & AUDIO_DEVICE_OUT_EARPIECE ||
@@ -1753,7 +1753,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
     if (snd_device != AUDIO_DEVICE_NONE)
         goto exit;
 
-    if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) ||
+    if ((out_device != AUDIO_DEVICE_NONE) && ((voice_is_in_call(adev)) ||
         voice_extn_compress_voip_is_active(adev) || audio_extn_hfp_is_active(adev))) {
         if ((adev->voice.tty_mode != TTY_MODE_OFF) &&
             !voice_extn_compress_voip_is_active(adev)) {

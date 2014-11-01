@@ -1777,13 +1777,16 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             if (!out->standby)
                 select_devices(adev, out->usecase);
 
-            if ((adev->mode == AUDIO_MODE_IN_CALL) &&
-                    output_drives_call(adev, out)) {
-                adev->current_call_output = out;
-                if (!voice_is_in_call(adev))
-                    ret = voice_start_call(adev);
-                else
+            if (output_drives_call(adev, out)) {
+                if(!voice_is_in_call(adev)) {
+                    if (adev->mode == AUDIO_MODE_IN_CALL) {
+                        adev->current_call_output = out;
+                        ret = voice_start_call(adev);
+                    }
+                } else {
+                    adev->current_call_output = out;
                     voice_update_devices_for_all_voice_usecases(adev);
+                }
             }
         }
 
