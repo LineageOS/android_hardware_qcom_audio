@@ -2687,13 +2687,29 @@ static char* adev_get_parameters(const struct audio_hw_device *dev,
     struct str_parms *reply = str_parms_create();
     struct str_parms *query = str_parms_create_str(keys);
     char *str;
+    char value[256] = {0};
+    int ret = 0;
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_SND_CARD_STATUS, value,
+                            sizeof(value));
+    if (ret >=0) {
+        int val = 1;
+        pthread_mutex_lock(&adev->snd_card_status.lock);
+        if (SND_CARD_STATE_OFFLINE == adev->snd_card_status.state)
+            val = 0;
+        pthread_mutex_unlock(&adev->snd_card_status.lock);
+        str_parms_add_int(reply, AUDIO_PARAMETER_KEY_SND_CARD_STATUS, val);
+        goto exit;
+    }
 
     pthread_mutex_lock(&adev->lock);
+
     audio_extn_get_parameters(adev, query, reply);
     voice_get_parameters(adev, query, reply);
     platform_get_parameters(adev->platform, query, reply);
     pthread_mutex_unlock(&adev->lock);
 
+exit:
     str = str_parms_to_str(reply);
     str_parms_destroy(query);
     str_parms_destroy(reply);
