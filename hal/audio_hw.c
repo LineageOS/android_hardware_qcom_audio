@@ -884,7 +884,6 @@ int start_input_stream(struct stream_in *in)
         }
         break;
     }
-    in->pcm_error_type = PCM_ERROR_NONE;
 
     ALOGV("%s: exit", __func__);
     return ret;
@@ -1249,7 +1248,6 @@ int start_output_stream(struct stream_out *out)
             }
             break;
         }
-        out->pcm_error_type = PCM_ERROR_NONE;
     } else {
         out->pcm = NULL;
         out->compr = compress_open(adev->snd_card,
@@ -1697,12 +1695,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ALOGD(" %s: sound card is not active/SSR state", __func__);
             ret= -ENETRESET;
             goto exit;
-        } else if (PCM_ERROR_ENETRESET ==  out->pcm_error_type) {
-            ALOGD(" %s restarting pcm session on post SSR", __func__);
-            out->standby = false;
-            pthread_mutex_unlock(&out->lock);
-            out_standby(&out->stream.common);
-            pthread_mutex_lock(&out->lock);
         }
     }
 
@@ -1756,12 +1748,11 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     }
 
 exit:
-
+    /* ToDo: There may be a corner case when SSR happens back to back during
+       start/stop. Need to post different error to handle that. */
     if (-ENETRESET == ret) {
         pthread_mutex_lock(&adev->snd_card_status.lock);
         adev->snd_card_status.state = SND_CARD_STATE_OFFLINE;
-        out->pcm_error_type = PCM_ERROR_ENETRESET;
-        out->standby = true; /*standby will be called on post SSR */
         pthread_mutex_unlock(&adev->snd_card_status.lock);
     }
 
@@ -2120,12 +2111,6 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             ALOGD(" %s: sound card is not active/SSR state", __func__);
             ret= -ENETRESET;
             goto exit;
-        } else if (PCM_ERROR_ENETRESET ==  in->pcm_error_type) {
-            ALOGD(" %s restarting pcm session on post SSR", __func__);
-            in->standby = false;
-            pthread_mutex_unlock(&in->lock);
-            in_standby(&in->stream.common);
-            pthread_mutex_lock(&in->lock);
         }
     }
 
@@ -2162,13 +2147,12 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         memset(buffer, 0, bytes);
 
 exit:
-
+    /* ToDo: There may be a corner case when SSR happens back to back during
+       start/stop. Need to post different error to handle that. */
     if (-ENETRESET == ret) {
         pthread_mutex_lock(&adev->snd_card_status.lock);
         adev->snd_card_status.state = SND_CARD_STATE_OFFLINE;
-        in->pcm_error_type = PCM_ERROR_ENETRESET;
         memset(buffer, 0, bytes);
-        in->standby = true; /*standby will be called on post SSR */
         pthread_mutex_unlock(&adev->snd_card_status.lock);
     }
     pthread_mutex_unlock(&in->lock);
