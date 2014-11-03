@@ -1789,6 +1789,10 @@ exit:
     if (ret != 0) {
         if (out->pcm)
             ALOGE("%s: error %d - %s", __func__, ret, pcm_get_error(out->pcm));
+        if (out->usecase == USECASE_COMPRESS_VOIP_CALL) {
+            voice_extn_compress_voip_close_output_stream(&out->stream.common);
+            out->standby = true;
+        }
         out_standby(&out->stream.common);
         usleep(bytes * 1000000 / audio_stream_frame_size(&out->stream.common) /
                         out_get_sample_rate(&out->stream.common));
@@ -2201,6 +2205,10 @@ exit:
     pthread_mutex_unlock(&in->lock);
 
     if (ret != 0) {
+        if (in->usecase == USECASE_COMPRESS_VOIP_CALL) {
+            voice_extn_compress_voip_close_input_stream(&in->stream.common);
+            in->standby = true;
+        }
         in_standby(&in->stream.common);
         ALOGV("%s: read failed - sleeping for buffer duration", __func__);
         usleep(bytes * 1000000 / audio_stream_frame_size(&in->stream.common) /
