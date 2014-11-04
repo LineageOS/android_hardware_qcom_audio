@@ -501,7 +501,7 @@ int voice_extn_set_parameters(struct audio_device *adev,
         }
 
         ret = platform_set_device_mute(adev->platform, mute, str_value);
-        if (ret != 0) {
+        if (ret != 0 && ret != -ENOSYS) {
             ALOGE("%s: Failed to set mute err:%d", __func__, ret);
             ret = -EINVAL;
             goto done;
