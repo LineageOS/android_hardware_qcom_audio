@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2009 The Android Open Source Project
@@ -18,59 +18,61 @@
  */
 
 
-#include <stdint.h>
-#include <sys/types.h>
-#include <utils/Timers.h>
-#include <utils/Errors.h>
-#include <utils/KeyedVector.h>
-#include <hardware_legacy/AudioPolicyManagerBase.h>
+#include <audiopolicy/AudioPolicyManager.h>
+#include <audiopolicy/audio_policy_conf.h>
 
 
-namespace android_audio_legacy {
+
+namespace android {
 
 // ----------------------------------------------------------------------------
 
-class AudioPolicyManager: public AudioPolicyManagerBase
+class AudioPolicyManagerCustom: public AudioPolicyManager
 {
 
 public:
-                AudioPolicyManager(AudioPolicyClientInterface *clientInterface)
-                : AudioPolicyManagerBase(clientInterface) {
+                AudioPolicyManagerCustom(AudioPolicyClientInterface *clientInterface)
+                : AudioPolicyManager(clientInterface) {
                     mHdmiAudioDisabled = false;
                     mHdmiAudioEvent = false; }
 
-        virtual ~AudioPolicyManager() {}
+        virtual ~AudioPolicyManagerCustom() {}
 
         virtual status_t setDeviceConnectionState(audio_devices_t device,
-                                                          AudioSystem::device_connection_state state,
+                                                          audio_policy_dev_state_t state,
                                                           const char *device_address);
-        virtual void setForceUse(AudioSystem::force_use usage, AudioSystem::forced_config config);
-        virtual audio_io_handle_t getInput(int inputSource,
-                                            uint32_t samplingRate,
-                                            uint32_t format,
-                                            uint32_t channels,
-                                            AudioSystem::audio_in_acoustics acoustics);
-        virtual audio_io_handle_t getOutput(AudioSystem::stream_type stream,
-                                            uint32_t samplingRate = 0,
-                                            uint32_t format = AudioSystem::FORMAT_DEFAULT,
-                                            uint32_t channels = 0,
-                                            AudioSystem::output_flags flags =
-                                                    AudioSystem::OUTPUT_FLAG_INDIRECT,
-                                            const audio_offload_info_t *offloadInfo = NULL);
-
+        virtual audio_policy_dev_state_t getDeviceConnectionState(audio_devices_t device,
+                                                                              const char *device_address);
+        virtual void setPhoneState(audio_mode_t state);
+        virtual void setForceUse(audio_policy_force_use_t usage,
+                                 audio_policy_forced_cfg_t config);
         virtual status_t stopOutput(audio_io_handle_t output,
-                                    AudioSystem::stream_type stream,
+                                    audio_stream_type_t stream,
                                     int session = 0);
+        virtual audio_io_handle_t getInput(audio_source_t inputSource,
+                                            uint32_t samplingRate,
+                                            audio_format_t format,
+                                            audio_channel_mask_t channelMask,
+                                            audio_session_t session,
+                                            audio_input_flags_t flags);
 
+        // indicates to the audio policy manager that the input starts being used.
+        virtual status_t startInput(audio_io_handle_t input,
+                                    audio_session_t session);
+
+        // indicates to the audio policy manager that the input stops being used.
+        virtual status_t stopInput(audio_io_handle_t input,
+                                   audio_session_t session);
+        virtual status_t setStreamVolumeIndex(audio_stream_type_t stream,
+                                              int index,
+                                              audio_devices_t device);
         virtual bool isOffloadSupported(const audio_offload_info_t& offloadInfo);
-
-        virtual void setPhoneState(int state);
 
         // true if given state represents a device in a telephony or VoIP call
         virtual bool isStateInCall(int state);
 protected:
         // return the strategy corresponding to a given stream type
-        static routing_strategy getStrategy(AudioSystem::stream_type stream);
+        static routing_strategy getStrategy(audio_stream_type_t stream);
 
         // return appropriate device for streams handled by the specified strategy according to current
         // phone state, connected devices...
@@ -84,34 +86,54 @@ protected:
         //  where conditions are changing (setDeviceConnectionState(), setPhoneState()...) AND
         //  before updateDevicesAndOutputs() is called.
         virtual audio_devices_t getDeviceForStrategy(routing_strategy strategy,
-                                                     bool fromCache = true);
+                                                     bool fromCache);
         // select input device corresponding to requested audio source
-        virtual audio_devices_t getDeviceForInputSource(int inputSource);
+        virtual audio_devices_t getDeviceForInputSource(audio_source_t inputSource);
 
         // compute the actual volume for a given stream according to the requested index and a particular
         // device
-        virtual float computeVolume(int stream, int index, audio_io_handle_t output, audio_devices_t device);
+        virtual float computeVolume(audio_stream_type_t stream, int index,
+                                    audio_io_handle_t output, audio_devices_t device);
 
         // check that volume change is permitted, compute and send new volume to audio hardware
-        status_t checkAndSetVolume(int stream, int index, audio_io_handle_t output, audio_devices_t device, int delayMs = 0, bool force = false);
+        status_t checkAndSetVolume(audio_stream_type_t stream, int index, audio_io_handle_t output,
+                                   audio_devices_t device, int delayMs = 0, bool force = false);
 
         // returns the category the device belongs to with regard to volume curve management
         static device_category getDeviceCategory(audio_devices_t device);
 
-        static const char* HDMI_SPKR_STR;
 
-        //parameter indicates of HDMI speakers disabled from the Qualcomm settings
+        //parameter indicates of HDMI speakers disabled
         bool mHdmiAudioDisabled;
-
         //parameter indicates if HDMI plug in/out detected
         bool mHdmiAudioEvent;
-
 private:
-        void handleNotificationRoutingForStream(AudioSystem::stream_type stream);
+        static float volIndexToAmpl(audio_devices_t device, const StreamDescriptor& streamDesc,
+                int indexInUi);
+        // updates device caching and output for streams that can influence the
+        //    routing of notifications
+        void handleNotificationRoutingForStream(audio_stream_type_t stream);
+        static bool isVirtualInputDevice(audio_devices_t device);
+        static bool deviceDistinguishesOnAddress(audio_devices_t device);
+        uint32_t nextUniqueId();
+        // internal method to return the output handle for the given device and format
+        audio_io_handle_t getOutputForDevice(
+                audio_devices_t device,
+                audio_stream_type_t stream,
+                uint32_t samplingRate,
+                audio_format_t format,
+                audio_channel_mask_t channelMask,
+                audio_output_flags_t flags,
+                const audio_offload_info_t *offloadInfo);
 
         // Used for voip + voice concurrency usecase
         int mPrevPhoneState;
-        static int mvoice_call_state;
+        int mvoice_call_state;
+#ifdef RECORD_PLAY_CONCURRENCY
+        // Used for record + playback concurrency
+        bool mIsInputRequestOnProgress;
+#endif
 
 };
+
 };
