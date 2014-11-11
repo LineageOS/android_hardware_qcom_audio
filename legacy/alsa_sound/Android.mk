@@ -108,7 +108,6 @@ LOCAL_SHARED_LIBRARIES := \
     libc        \
     libpower    \
     libalsa-intf \
-    libsurround_proc\
     libaudioutils
 
 ifeq ($(TARGET_SIMULATOR),true)
