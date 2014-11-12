@@ -1,3 +1,4 @@
+# invisiblek rulez 2!!!
 ifeq ($(call my-dir),$(call project-path-for,qcom-audio)/default)
 
 ifneq ($(filter mpq8092 msm8960 msm8226 msm8x26 msm8610 msm8974 msm8x74 apq8084,$(TARGET_BOARD_PLATFORM)),)
