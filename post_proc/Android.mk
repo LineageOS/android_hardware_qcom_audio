@@ -108,12 +108,12 @@ LOCAL_MODULE:= libvolumelistener
 LOCAL_VENDOR_MODULE := true
 
 LOCAL_C_INCLUDES := \
-        hardware/qcom/audio/hal \
+        $(call project-path-for,qcom-audio)/hal \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
         external/tinyalsa/include \
         $(call include-path-for, audio-effects) \
         $(call include-path-for, audio-route) \
-        hardware/qcom/audio/hal/audio_extn \
+        $(call project-path-for,qcom-audio)/hal/audio_extn \
         external/tinycompress/include
 
 LOCAL_C_INCLUDES	+= $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
