@@ -1119,4 +1119,19 @@ status_t AudioSessionOutALSA::setMetaDataMode() {
     }
     return err;
 }
+
+status_t AudioSessionOutALSA::getPresentationPosition(uint64_t *frames, struct timespec *timestamp)
+{
+    size_t avail = 0;
+    struct snd_compr_tstamp ktstamp;
+    if (mAlsaHandle->handle){
+        if (ioctl(mAlsaHandle->handle->fd, SNDRV_COMPRESS_TSTAMP, &ktstamp)){
+            ALOGE("Failed SNDRV_COMPRESS_TSTAMP\n");
+        } else {
+            *frames = (ktstamp.timestamp/1000000*mSampleRate);
+        }
+        clock_gettime(CLOCK_MONOTONIC, timestamp);
+    }
+    return NO_ERROR;
+}
 }       // namespace android_audio_legacy
