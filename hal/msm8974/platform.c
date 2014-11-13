@@ -87,6 +87,7 @@ struct platform_data {
     struct csd_data *csd;
     bool ext_speaker;
     bool ext_earpiece;
+    char ec_ref_mixer_path[64];
 };
 
 static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -409,23 +410,24 @@ bool is_operator_tmus()
 
 void platform_set_echo_reference(struct audio_device *adev, bool enable, audio_devices_t out_device)
 {
-    char mixer_path[50] = { 0 } ;
+    struct platform_data *my_data = (struct platform_data *)adev->platform;
     snd_device_t snd_device = SND_DEVICE_NONE;
-    struct listnode *node;
-    struct audio_usecase *usecase;
 
-    strcpy(mixer_path, "echo-reference");
-    if (out_device != AUDIO_DEVICE_NONE) {
-        snd_device = platform_get_output_snd_device(adev->platform, out_device);
-        platform_add_backend_name(adev->platform, mixer_path, snd_device);
+    if (strcmp(my_data->ec_ref_mixer_path, "")) {
+        ALOGV("%s: diabling %s", __func__, my_data->ec_ref_mixer_path);
+        audio_route_reset_and_update_path(adev->audio_route, my_data->ec_ref_mixer_path);
     }
 
-    if (enable)
-        audio_route_apply_and_update_path(adev->audio_route, mixer_path);
-    else
-        audio_route_reset_and_update_path(adev->audio_route, mixer_path);
+    if (enable) {
+        strcpy(my_data->ec_ref_mixer_path, "echo-reference");
+        if (out_device != AUDIO_DEVICE_NONE) {
+            snd_device = platform_get_output_snd_device(adev->platform, out_device);
+            platform_add_backend_name(adev->platform, my_data->ec_ref_mixer_path, snd_device);
+        }
 
-    ALOGV("Setting EC Reference: %d for %s", enable, mixer_path);
+        ALOGD("%s: enabling %s", __func__, my_data->ec_ref_mixer_path);
+        audio_route_apply_and_update_path(adev->audio_route, my_data->ec_ref_mixer_path);
+    }
 }
 
 static struct csd_data *open_csd_client(bool i2s_ext_modem)
@@ -1419,7 +1421,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
                    snd_device = SND_DEVICE_IN_HEADSET_MIC_AEC;
                }
-                platform_set_echo_reference(adev, true, out_device);
+               platform_set_echo_reference(adev, true, out_device);
             } else if (adev->active_input->enable_ns) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     if (my_data->fluence_in_spkr_mode &&
