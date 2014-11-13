@@ -63,7 +63,11 @@
 #define PROXY_OPEN_RETRY_COUNT           100
 #define PROXY_OPEN_WAIT_TIME             20
 
+#ifdef LOW_LATENCY_PRIMARY
+#define USECASE_AUDIO_PLAYBACK_PRIMARY USECASE_AUDIO_PLAYBACK_LOW_LATENCY
+#else
 #define USECASE_AUDIO_PLAYBACK_PRIMARY USECASE_AUDIO_PLAYBACK_DEEP_BUFFER
+#endif
 
 struct pcm_config pcm_config_deep_buffer = {
     .channels = 2,
@@ -2369,6 +2373,12 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             goto error_open;
         }
 #endif
+#ifdef LOW_LATENCY_PRIMARY
+    } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
+        out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
+        out->config = pcm_config_deep_buffer;
+        out->sample_rate = out->config.rate;
+#endif
     } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         if (config->offload_info.version != AUDIO_INFO_INITIALIZER.version ||
             config->offload_info.size != AUDIO_INFO_INITIALIZER.size) {
@@ -2481,14 +2491,20 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->usecase = USECASE_AUDIO_PLAYBACK_AFE_PROXY;
         out->config = pcm_config_afe_proxy_playback;
         adev->voice_tx_output = out;
+#ifndef LOW_LATENCY_PRIMARY
     } else if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
         out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
         out->config = pcm_config_low_latency;
         out->sample_rate = out->config.rate;
+#endif
     } else {
         /* primary path is the default path selected if no other outputs are available/suitable */
         out->usecase = USECASE_AUDIO_PLAYBACK_PRIMARY;
+#ifdef LOW_LATENCY_PRIMARY
+        out->config = pcm_config_low_latency;
+#else
         out->config = pcm_config_deep_buffer;
+#endif
         out->sample_rate = out->config.rate;
     }
 
