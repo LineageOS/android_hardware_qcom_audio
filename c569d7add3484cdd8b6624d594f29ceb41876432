@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1a122d0e_b9f145d0",
+        "filename": "Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2014-11-16T15:16:53Z",
+      "side": 1,
+      "message": "This should be $(call project-path-for,qcom-audio)/$(TARGET_BOARD_PLATFORM)",
+      "revId": "c569d7add3484cdd8b6624d594f29ceb41876432",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
