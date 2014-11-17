@@ -234,6 +234,14 @@ typedef int (*csd_mic_mute_t)(int);
 typedef int (*csd_start_voice_t)();
 typedef int (*csd_stop_voice_t)();
 
+/* New CSD compatibility */
+#define VOICE_SESSION_VSID  0x10C01000
+#define ALL_SESSION_VSID    0xFFFFFFFF
+typedef int (*csd_volume_new_t)(uint32_t, int);
+typedef int (*csd_mic_mute_new_t)(uint32_t, int);
+typedef int (*csd_start_voice_new_t)(uint32_t);
+typedef int (*csd_stop_voice_new_t)(uint32_t);
+
 struct audio_device {
     struct audio_hw_device device;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
@@ -274,10 +282,10 @@ struct audio_device {
     csd_client_deinit_t csd_client_deinit;
     csd_disable_device_t csd_disable_device;
     csd_enable_device_t csd_enable_device;
-    csd_volume_t csd_volume;
-    csd_mic_mute_t csd_mic_mute;
-    csd_start_voice_t csd_start_voice;
-    csd_stop_voice_t csd_stop_voice;
+    csd_volume_new_t csd_volume;
+    csd_mic_mute_new_t csd_mic_mute;
+    csd_start_voice_new_t csd_start_voice;
+    csd_stop_voice_new_t csd_stop_voice;
 };
 
 /*
