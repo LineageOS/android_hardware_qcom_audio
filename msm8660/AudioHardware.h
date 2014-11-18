@@ -169,6 +169,13 @@ public:
                                 uint32_t *channels=0,
                                 uint32_t *sampleRate=0,
                                 status_t *status=0);
+    virtual AudioStreamOut* openOutputStreamWithFlags(
+                                uint32_t devices,
+                                audio_output_flags_t flags=(audio_output_flags_t)0,
+                                int *format=0,
+                                uint32_t *channels=0,
+                                uint32_t *sampleRate=0,
+                                status_t *status=0);
     virtual AudioStreamIn* openInputStream(
                                 uint32_t devices,
                                 int *format,
