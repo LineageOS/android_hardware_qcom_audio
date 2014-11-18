@@ -1,4 +1,4 @@
-ifeq ($(call my-dir),$(call project-path-for,qcom-audio)/default)
+ifeq ($(call my-dir),$(call project-path-for,qcom-audio))
 
 ifneq ($(filter msm8960 msm8226 msm8x26 msm8974 msm8x74 msm8x84 msm8084 msm8992 msm8994,$(TARGET_BOARD_PLATFORM)),)
 
