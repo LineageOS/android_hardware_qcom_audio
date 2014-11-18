@@ -1,4 +1,4 @@
-ifeq ($(call my-dir),$(call project-path-for,qcom-audio)/default)
+ifeq ($(call my-dir),$(call project-path-for,qcom-audio))
 
 # TODO:  Find a better way to separate build configs for ADP vs non-ADP devices
 ifneq ($(TARGET_BOARD_AUTO),true)
