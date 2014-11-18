@@ -1041,6 +1041,16 @@ status_t AudioHardware::initCheck()
 {
     return mInit ? NO_ERROR : NO_INIT;
 }
+// default implementation calls its "without flags" counterpart
+AudioStreamOut* AudioHardware::openOutputStreamWithFlags(uint32_t devices,
+                                          audio_output_flags_t flags,
+                                          int *format,
+                                          uint32_t *channels,
+                                          uint32_t *sampleRate,
+                                          status_t *status)
+{
+    return openOutputStream(devices, format, channels, sampleRate, status);
+}
 
 // default implementation calls its "without flags" counterpart
 AudioStreamOut* AudioHardware::openOutputStreamWithFlags(uint32_t devices,
