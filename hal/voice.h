@@ -43,6 +43,7 @@ struct str_parms;
 struct stream_in;
 struct stream_out;
 typedef int audio_usecase_t;
+typedef int snd_device_t;
 
 struct call_state {
     int current;
@@ -93,4 +94,5 @@ int voice_check_and_set_incall_music_usecase(struct audio_device *adev,
 int voice_check_and_stop_incall_rec_usecase(struct audio_device *adev,
                                             struct stream_in *in);
 void voice_update_devices_for_all_voice_usecases(struct audio_device *adev);
+snd_device_t voice_get_incall_rec_snd_device(snd_device_t in_snd_device);
 #endif //VOICE_H

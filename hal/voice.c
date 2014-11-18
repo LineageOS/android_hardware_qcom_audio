@@ -309,6 +309,35 @@ int voice_check_and_stop_incall_rec_usecase(struct audio_device *adev,
     return ret;
 }
 
+snd_device_t voice_get_incall_rec_snd_device(snd_device_t in_snd_device)
+{
+    snd_device_t incall_record_device = in_snd_device;
+
+    /*
+     * For incall recording stream, AUDIO_COPP topology will be picked up
+     * from the calibration data of the input sound device which is nothing
+     * but the voice call's input device. But there are requirements to use
+     * AUDIO_COPP_MONO topology even if the voice call's input device is
+     * different. Hence override the input device with the one which uses
+     * the AUDIO_COPP_MONO topology.
+     */
+    switch(in_snd_device) {
+    case SND_DEVICE_IN_HANDSET_MIC:
+    case SND_DEVICE_IN_VOICE_DMIC:
+    case SND_DEVICE_IN_AANC_HANDSET_MIC:
+        incall_record_device = SND_DEVICE_IN_HANDSET_MIC;
+    case SND_DEVICE_IN_VOICE_SPEAKER_MIC:
+    case SND_DEVICE_IN_VOICE_SPEAKER_DMIC:
+    case SND_DEVICE_IN_VOICE_SPEAKER_DMIC_BROADSIDE:
+    case SND_DEVICE_IN_VOICE_SPEAKER_QMIC:
+        incall_record_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
+    default:
+        incall_record_device = in_snd_device;
+    }
+
+    return incall_record_device;
+}
+
 int voice_check_and_set_incall_music_usecase(struct audio_device *adev,
                                              struct stream_out *out)
 {

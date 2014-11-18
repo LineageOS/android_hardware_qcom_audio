@@ -965,7 +965,8 @@ int start_input_stream(struct stream_in *in)
     if (ret)
         goto error_config;
     else
-        ALOGV("%s: usecase(%d)", __func__, in->usecase);
+        ALOGD("%s: Updated usecase(%d: %s)",
+              __func__, in->usecase, use_case_table[in->usecase]);
 
     in->pcm_device_id = platform_get_pcm_device_id(in->usecase, PCM_CAPTURE);
     if (in->pcm_device_id < 0) {
