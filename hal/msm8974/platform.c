@@ -1311,12 +1311,20 @@ int platform_get_snd_device_bit_width(snd_device_t snd_device)
     return backend_bit_width_table[snd_device];
 }
 
-int platform_send_audio_calibration(void *platform, snd_device_t snd_device,
+int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
                                     int app_type, int sample_rate)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_dev_id, acdb_dev_type;
+    struct audio_device *adev = my_data->adev;
+    int snd_device = SND_DEVICE_OUT_SPEAKER;
 
+    if (usecase->type == PCM_PLAYBACK)
+        snd_device = platform_get_output_snd_device(adev->platform,
+                                            usecase->stream.out->devices);
+    else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE))
+        snd_device = platform_get_input_snd_device(adev->platform,
+                                            adev->primary_output->devices);
     acdb_dev_id = acdb_device_table[audio_extn_get_spkr_prot_snd_device(snd_device)];
     if (acdb_dev_id < 0) {
         ALOGE("%s: Could not find acdb id for device(%d)",
