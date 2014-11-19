@@ -39,7 +39,6 @@ ifeq ($(BOARD_HAVE_BACK_MIC_CAMCORDER),true)
   common_cflags += -DBACK_MIC_CAMCORDER
 endif
 
-
 include $(CLEAR_VARS)
 
 LOCAL_ARM_MODE := arm
@@ -91,7 +90,7 @@ LOCAL_C_INCLUDES += system/core/include
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
-LOCAL_CFLAGS += $(common_cflags)
+LOCAL_CFLAGS += $(common_cflags) -Wno-error
 
 include $(BUILD_SHARED_LIBRARY)
 
@@ -121,7 +120,7 @@ LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_C_INCLUDES += hardware/libhardware_legacy/audio
 
-LOCAL_CFLAGS += $(common_cflags)
+LOCAL_CFLAGS += $(common_cflags) -Wno-error
 
 include $(BUILD_SHARED_LIBRARY)
 
