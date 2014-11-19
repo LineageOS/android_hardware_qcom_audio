@@ -882,3 +882,38 @@ int offload_transition_soft_volume_send_params(struct mixer_ctl *ctl,
 
     return 0;
 }
+
+static int hpx_send_params(eff_mode_t mode, void *ctl,
+                           unsigned param_send_flags)
+{
+    int param_values[128] = {0};
+    int *p_param_values = param_values;
+    uint32_t i;
+
+    ALOGV("%s", __func__);
+    if (param_send_flags & OFFLOAD_SEND_HPX_STATE_OFF) {
+        *p_param_values++ = DTS_EAGLE_MODULE_ENABLE;
+        *p_param_values++ = 0; /* hpx off*/
+    } else if (param_send_flags & OFFLOAD_SEND_HPX_STATE_ON) {
+        *p_param_values++ = DTS_EAGLE_MODULE_ENABLE;
+        *p_param_values++ = 1; /* hpx on*/
+    }
+
+    if ((mode == OFFLOAD) && ctl)
+        mixer_ctl_set_array(ctl, param_values, ARRAY_SIZE(param_values));
+    else {
+        if (ioctl(*(int *)ctl, AUDIO_EFFECTS_SET_PP_PARAMS, param_values) < 0)
+            ALOGE("%s: sending h/w acc hpx state params fail[%d]", __func__, errno);
+    }
+    return 0;
+}
+
+int offload_hpx_send_params(struct mixer_ctl *ctl, unsigned param_send_flags)
+{
+    return hpx_send_params(OFFLOAD, (void *)ctl, param_send_flags);
+}
+
+int hw_acc_hpx_send_params(int fd, unsigned param_send_flags)
+{
+    return hpx_send_params(HW_ACCELERATOR, (void *)&fd, param_send_flags);
+}
