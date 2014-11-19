@@ -253,9 +253,14 @@ void audio_extn_compr_cap_deinit();
 
 #if defined(DS1_DOLBY_DDP_ENABLED) || defined(DS1_DOLBY_DAP_ENABLED)
 void audio_extn_dolby_set_dmid(struct audio_device *adev);
-void audio_extn_dolby_set_license(struct audio_device *adev);
 #else
 #define audio_extn_dolby_set_dmid(adev)                 (0)
+#endif
+
+
+#if defined(DS1_DOLBY_DDP_ENABLED) || defined(DS1_DOLBY_DAP_ENABLED) || defined(DS2_DOLBY_DAP_ENABLED)
+void audio_extn_dolby_set_license(struct audio_device *adev);
+#else
 #define audio_extn_dolby_set_license(adev)              (0)
 #endif
 
@@ -344,12 +349,16 @@ int audio_extn_dap_hal_deinit();
 void audio_extn_dolby_ds2_set_endpoint(struct audio_device *adev);
 int audio_extn_ds2_enable(struct audio_device *adev);
 int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, int state);
+void audio_extn_ds2_set_parameters(struct audio_device *adev,
+                                   struct str_parms *parms);
+
 #else
 #define audio_extn_dap_hal_init(snd_card)                             (0)
 #define audio_extn_dap_hal_deinit()                                   (0)
 #define audio_extn_dolby_ds2_set_endpoint(adev)                       (0)
 #define audio_extn_ds2_enable(adev)                                   (0)
 #define audio_extn_dolby_set_dap_bypass(adev, state)                  (0)
+#define audio_extn_ds2_set_parameters(adev, parms);                   (0)
 #endif
 typedef enum {
     DAP_STATE_ON = 0,
