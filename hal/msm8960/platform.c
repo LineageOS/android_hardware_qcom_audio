@@ -89,6 +89,7 @@ struct platform_data {
     int  fluence_type;
     char fluence_cap[PROPERTY_VALUE_MAX];
     int  dualmic_config;
+    bool voice_output_in_communication;
 
     void *hw_info;
 
@@ -314,6 +315,7 @@ void *platform_init(struct audio_device *adev)
     my_data->fluence_in_voice_call = false;
     my_data->fluence_in_voice_rec = false;
     my_data->fluence_type = FLUENCE_NONE;
+    my_data->voice_output_in_communication = false;
 
     property_get("ro.qc.sdk.audio.fluencetype", my_data->fluence_cap, "");
     if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro"))) {
@@ -339,6 +341,11 @@ void *platform_init(struct audio_device *adev)
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_spkr_mode = true;
         }
+    }
+
+    property_get("persist.audio.voice_out_in_comm",value,"");
+    if (!strncmp("true", value, sizeof("true"))) {
+        my_data->voice_output_in_communication = true;
     }
 
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
@@ -804,7 +811,8 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         audio_extn_set_afe_proxy_channel_mixer(adev, channel_count);
     }
 
-    if (mode == AUDIO_MODE_IN_CALL) {
+    if (mode == AUDIO_MODE_IN_CALL ||
+        (my_data->voice_output_in_communication && mode == AUDIO_MODE_IN_COMMUNICATION)) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
             if (adev->voice.tty_mode == TTY_MODE_FULL)
@@ -908,7 +916,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x)",
           __func__, out_device, in_device);
-    if (mode == AUDIO_MODE_IN_CALL) {
+    if (mode == AUDIO_MODE_IN_CALL ||
+        (my_data->voice_output_in_communication && mode == AUDIO_MODE_IN_COMMUNICATION)) {
         if (out_device == AUDIO_DEVICE_NONE) {
             ALOGE("%s: No output device set for voice call", __func__);
             goto exit;
@@ -935,7 +944,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         if (out_device & AUDIO_DEVICE_OUT_EARPIECE ||
             out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) {
             if (my_data->fluence_type == FLUENCE_NONE ||
-                my_data->fluence_in_voice_call == false) {
+                my_data->fluence_in_voice_call == false || mode == AUDIO_MODE_IN_COMMUNICATION) {
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
             } else {
                 snd_device = SND_DEVICE_IN_VOICE_DMIC;
@@ -946,7 +955,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (out_device & AUDIO_DEVICE_OUT_ALL_SCO) {
             snd_device = SND_DEVICE_IN_BT_SCO_MIC ;
         } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER) {
-            if (my_data->fluence_type != FLUENCE_NONE &&
+            if (mode == AUDIO_MODE_IN_COMMUNICATION)
+                snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
+            else if (my_data->fluence_type != FLUENCE_NONE &&
                 my_data->fluence_in_voice_call &&
                 my_data->fluence_in_spkr_mode) {
                 if(my_data->fluence_type == FLUENCE_DUAL_MIC) {
