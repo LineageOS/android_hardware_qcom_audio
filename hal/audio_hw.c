@@ -2054,7 +2054,7 @@ static int out_get_render_position(const struct audio_stream_out *stream,
 {
     struct stream_out *out = (struct stream_out *)stream;
     if (is_offload_usecase(out->usecase) && (dsp_frames != NULL)) {
-        ssize_t ret =  -EINVAL;
+        ssize_t ret = 0;
         *dsp_frames = 0;
         pthread_mutex_lock(&out->lock);
         if (out->compr != NULL) {
