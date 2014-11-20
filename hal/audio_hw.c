@@ -1813,7 +1813,7 @@ static int out_get_render_position(const struct audio_stream_out *stream,
     struct stream_out *out = (struct stream_out *)stream;
     *dsp_frames = 0;
     if ((out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) && (dsp_frames != NULL)) {
-        ssize_t ret =  -EINVAL;
+        ssize_t ret = 0;
         pthread_mutex_lock(&out->lock);
         if (out->compr != NULL) {
             ret = compress_get_tstamp(out->compr, (unsigned long *)dsp_frames,
