@@ -807,7 +807,7 @@ status_t AudioHardwareALSA::setParameters(const String8& keyValuePairs)
     }
 
 #ifdef QCOM_FM_ENABLED
-    key = String8(AudioParameter::keyHandleFm);
+    key = String8(AUDIO_PARAMETER_KEY_HANDLE_FM);
     if (param.getInt(key, device) == NO_ERROR) {
         // Ignore if device is 0
         if(device) {
@@ -886,7 +886,7 @@ String8 AudioHardwareALSA::getParameters(const String8& keys)
 
 #ifdef QCOM_FM_ENABLED
 
-    key = String8(AudioParameter::keyHandleA2dpDevice);
+    key = String8(AUDIO_PARAMETER_KEY_HANDLE_A2DP_DEVICE);
     if ( param.get(key,value) == NO_ERROR ) {
         param.add(key, String8("true"));
     }
@@ -937,7 +937,7 @@ String8 AudioHardwareALSA::getParameters(const String8& keys)
         param.addInt(key, mCurDevice);
     }
 #ifdef QCOM_PROXY_DEVICE_ENABLED
-    key = String8(AudioParameter::keyCanOpenProxy);
+    key = String8(AUDIO_CAN_OPEN_PROXY);;
     if(param.get(key, value) == NO_ERROR) {
         param.addInt(key, mCanOpenProxy);
     }
