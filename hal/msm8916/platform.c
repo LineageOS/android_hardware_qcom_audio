@@ -1051,7 +1051,7 @@ void *platform_init(struct audio_device *adev)
         else
             get_cvd_version(cvd_version, adev);
 
-        my_data->acdb_init(snd_card_name, cvd_version);
+        my_data->acdb_init((char *)snd_card_name, cvd_version);
         if (cvd_version)
             free(cvd_version);
     }
@@ -1268,13 +1268,14 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device)
     return acdb_device_table[snd_device];
 }
 
-int platform_set_snd_device_bit_width(snd_device_t snd_device, unsigned int bit_width)
+int platform_set_snd_device_bit_width(snd_device_t snd_device __unused,
+                                      unsigned int bit_width __unused)
 {
     ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
 }
 
-int platform_get_snd_device_bit_width(snd_device_t snd_device)
+int platform_get_snd_device_bit_width(snd_device_t snd_device __unused)
 {
     ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
@@ -2608,3 +2609,34 @@ int platform_set_snd_device_backend(snd_device_t snd_device __unused,
     return -ENOSYS;
 }
 
+int platform_get_edid_info(void *platform __unused)
+{
+   return -ENOSYS;
+}
+
+int platform_set_channel_map(void *platform __unused, int ch_count __unused,
+                             char *ch_map __unused, int snd_id __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_set_stream_channel_map(void *platform __unused,
+                                    audio_channel_mask_t channel_mask __unused,
+                                    int snd_id __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_set_edid_channels_configuration(void *platform __unused,
+                                         int channels __unused)
+{
+    return 0;
+}
+
+void platform_cache_edid(void * platform __unused)
+{
+}
+
+void platform_invalidate_edid(void * platform __unused)
+{
+}
