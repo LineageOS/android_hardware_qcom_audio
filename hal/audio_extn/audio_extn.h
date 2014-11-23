@@ -358,4 +358,7 @@ typedef enum {
 #ifndef AUDIO_FORMAT_E_AC3_JOC
 #define AUDIO_FORMAT_E_AC3_JOC  0x19000000UL
 #endif
+
+int b64decode(char *inp, int ilen, uint8_t* outp);
+int b64encode(uint8_t *inp, int ilen, char* outp);
 #endif /* AUDIO_EXTN_H */
