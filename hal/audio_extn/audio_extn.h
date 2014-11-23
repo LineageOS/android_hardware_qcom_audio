@@ -15,6 +15,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * This file was modified by DTS, Inc. The portions of the
+ * code modified by DTS, Inc are copyrighted and
+ * licensed separately, as follows:
+ *
+ * (C) 2014 DTS, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #ifndef AUDIO_EXTN_H
@@ -249,6 +267,28 @@ size_t audio_extn_compr_cap_get_buffer_size(audio_format_t format);
 size_t audio_extn_compr_cap_read(struct stream_in *in,
                                         void *buffer, size_t bytes);
 void audio_extn_compr_cap_deinit();
+#endif
+
+#ifndef DTS_EAGLE
+#define audio_extn_dts_eagle_set_parameters(adev, parms)     (0)
+#define audio_extn_dts_eagle_get_parameters(adev, query, reply) (0)
+#define audio_extn_dts_eagle_fade(adev, fade_in) (0)
+#define audio_extn_dts_create_state_notifier_node(stream_out) (0)
+#define audio_extn_dts_notify_playback_state(stream_out, has_video, sample_rate, \
+                                    channels, is_playing) (0)
+#define audio_extn_dts_remove_state_notifier_node(stream_out) (0)
+#define audio_extn_check_and_set_dts_hpx_state(adev)       (0)
+#else
+void audio_extn_dts_eagle_set_parameters(struct audio_device *adev,
+                                         struct str_parms *parms);
+int audio_extn_dts_eagle_get_parameters(const struct audio_device *adev,
+                  struct str_parms *query, struct str_parms *reply);
+int audio_extn_dts_eagle_fade(const struct audio_device *adev, bool fade_in);
+void audio_extn_dts_create_state_notifier_node(int stream_out);
+void audio_extn_dts_notify_playback_state(int stream_out, int has_video, int sample_rate,
+                                  int channels, int is_playing);
+void audio_extn_dts_remove_state_notifier_node(int stream_out);
+void audio_extn_check_and_set_dts_hpx_state(const struct audio_device *adev);
 #endif
 
 #if defined(DS1_DOLBY_DDP_ENABLED) || defined(DS1_DOLBY_DAP_ENABLED)
