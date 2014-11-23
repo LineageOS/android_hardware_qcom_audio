@@ -33,6 +33,7 @@
 #include "platform.h"
 #include "platform_api.h"
 #include "audio_extn.h"
+#include "voice.h"
 
 #define AUDIO_OUTPUT_POLICY_VENDOR_CONFIG_FILE "/vendor/etc/audio_output_policy.conf"
 
@@ -560,10 +561,18 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
                                         out->app_type_cfg.sample_rate);
     }
     if ((type == PCM_HFP_CALL) || (type == PCM_CAPTURE)) {
-        /* when app type is default. the sample rate is not used to send cal */
-        platform_send_audio_calibration(adev->platform, usecase->in_snd_device,
-                                        platform_get_default_app_type(adev->platform),
-                                        48000);
+        if ((type == PCM_CAPTURE) & voice_is_in_call_rec_stream(usecase->stream.in)) {
+            snd_device_t incall_record_snd_device =
+                        voice_get_incall_rec_snd_device(usecase->in_snd_device);
+            platform_send_audio_calibration(adev->platform, incall_record_snd_device,
+                                            platform_get_default_app_type(adev->platform),
+                                            48000);
+        } else {
+            /* when app type is default. the sample rate is not used to send cal */
+            platform_send_audio_calibration(adev->platform, usecase->in_snd_device,
+                                            platform_get_default_app_type(adev->platform),
+                                            48000);
+        }
     }
 }
 
