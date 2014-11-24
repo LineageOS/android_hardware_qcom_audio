@@ -251,7 +251,7 @@ static int check_and_set_gapless_mode(struct audio_device *adev) {
 static bool is_supported_format(audio_format_t format)
 {
     if (format == AUDIO_FORMAT_MP3 ||
-#ifdef EXTN_OFFLOAD_ENABLED
+#ifdef PCM_OFFLOAD_ENABLED
         format == AUDIO_FORMAT_PCM_OFFLOAD ||
         format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD ||
         format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD ||
@@ -281,10 +281,8 @@ static int get_snd_codec_id(audio_format_t format)
     case AUDIO_FORMAT_AAC:
         id = SND_AUDIOCODEC_AAC;
         break;
-#ifdef EXTN_OFFLOAD_ENABLED
+#ifdef PCM_OFFLOAD_ENABLED
     case AUDIO_FORMAT_PCM_OFFLOAD:
-    case AUDIO_FORMAT_PCM_16_BIT_OFFLOAD:
-    case AUDIO_FORMAT_PCM_24_BIT_OFFLOAD:
         id = SND_AUDIOCODEC_PCM;
         break;
 #endif
@@ -1602,7 +1600,6 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
         return -EINVAL;
     }
 
-#ifdef EXTN_OFFLOAD_ENABLED
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FORMAT, value, sizeof(value));
     if (ret >= 0) {
         if (atoi(value) == SND_AUDIOSTREAMFORMAT_MP4ADTS) {
@@ -1611,7 +1608,6 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
         }
         out->send_new_metadata = 1;
     }
-#endif
 
 #ifdef FLAC_OFFLOAD_ENABLED
     if (out->format == AUDIO_FORMAT_FLAC) {
@@ -2583,12 +2579,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             goto error_open;
         }
 #endif
-#ifdef LOW_LATENCY_PRIMARY
-    } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
-        out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
-        out->config = pcm_config_deep_buffer;
-        out->sample_rate = out->config.rate;
-#endif
     } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         if (config->offload_info.version != AUDIO_INFO_INITIALIZER.version ||
             config->offload_info.size != AUDIO_INFO_INITIALIZER.size) {
@@ -2635,7 +2625,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         else
             out->compr_config.codec->id =
                 get_snd_codec_id(config->offload_info.format);
-#ifdef EXTN_OFFLOAD_ENABLED
+#ifdef PCM_OFFLOAD_ENABLED
         if (audio_is_offload_pcm(config->offload_info.format)) {
             out->compr_config.fragment_size =
                        platform_get_pcm_offload_buffer_size(&config->offload_info);
@@ -2655,7 +2645,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->compr_config.codec->ch_out = out->compr_config.codec->ch_in;
         out->bit_width = config->offload_info.bit_width;
 
-#ifdef EXTN_OFFLOAD_ENABLED
+#ifdef PCM_OFFLOAD_ENABLED
+        if (config->offload_info.format == AUDIO_FORMAT_AAC)
+            out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
         if (config->offload_info.format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD)
             out->compr_config.codec->format = SNDRV_PCM_FORMAT_S16_LE;
         if(config->offload_info.format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD)
@@ -2672,7 +2664,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         }
 
 #ifdef FLAC_OFFLOAD_ENABLED
-        out->compr_config.codec->options.flac_dec.sample_size = config->offload_info.bit_width;
+        if (config->offload_info.format == AUDIO_FORMAT_FLAC)
+            out->compr_config.codec->options.flac_dec.sample_size = config->offload_info.bit_width;
 #endif
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
@@ -2724,6 +2717,12 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     } else if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
         out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
         out->config = pcm_config_low_latency;
+        out->sample_rate = out->config.rate;
+#endif
+#ifdef LOW_LATENCY_PRIMARY
+    } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
+        out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
+        out->config = pcm_config_deep_buffer;
         out->sample_rate = out->config.rate;
 #endif
     } else {
