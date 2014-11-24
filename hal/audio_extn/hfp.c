@@ -38,6 +38,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "platform_api.h"
 #include <stdlib.h>
 #include <cutils/str_parms.h>
+#include "audio_extn.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
@@ -163,6 +164,12 @@ static int32_t start_hfp(struct audio_device *adev,
 
     select_devices(adev, hfpmod.ucid);
 
+    if ((uc_info->out_snd_device != SND_DEVICE_NONE) ||
+        (uc_info->in_snd_device != SND_DEVICE_NONE)) {
+        if (audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to start ext hw plugin", __func__);
+    }
+
     pcm_dev_rx_id = platform_get_pcm_device_id(uc_info->id, PCM_PLAYBACK);
     pcm_dev_tx_id = platform_get_pcm_device_id(uc_info->id, PCM_CAPTURE);
     pcm_dev_asm_rx_id = hfpmod.hfp_pcm_dev_id;
@@ -278,6 +285,12 @@ static int32_t stop_hfp(struct audio_device *adev)
         ALOGE("%s: Could not find the usecase (%d) in the list",
               __func__, hfpmod.ucid);
         return -EINVAL;
+    }
+
+    if ((uc_info->out_snd_device != SND_DEVICE_NONE) ||
+        (uc_info->in_snd_device != SND_DEVICE_NONE)) {
+        if (audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to stop ext hw plugin", __func__);
     }
 
     /* 2. Disable echo reference while stopping hfp */
