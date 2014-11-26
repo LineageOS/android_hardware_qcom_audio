@@ -956,6 +956,7 @@ void *platform_init(struct audio_device *adev)
         if (cvd_version)
             free(cvd_version);
     }
+    audio_extn_pm_vote();
 
 acdb_init_fail:
     /* Initialize ACDB ID's */
@@ -2483,3 +2484,8 @@ int platform_set_snd_device_backend(snd_device_t snd_device __unused,
     return -ENOSYS;
 }
 
+int platform_get_subsys_image_name(char *buf)
+{
+    strlcpy(buf, PLATFORM_IMAGE_NAME, sizeof(PLATFORM_IMAGE_NAME));
+    return 0;
+}
