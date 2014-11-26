@@ -99,6 +99,8 @@
 #define AUDIO_PARAMETER_KEY_HD_VOICE      "hd_voice"
 #define AUDIO_PARAMETER_KEY_VOLUME_BOOST  "volume_boost"
 #define MAX_CAL_NAME 20
+#define APP_TYPE_SYSTEM_SOUNDS 0x00011131
+#define APP_TYPE_GENERAL_RECORDING 0x00011132
 
 char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
         [WCD9XXX_ANC_CAL] = "anc_cal",
@@ -1172,13 +1174,35 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device)
     return acdb_device_table[snd_device];
 }
 
-int platform_send_audio_calibration(void *platform, snd_device_t snd_device,
+int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
                                     int app_type, int sample_rate)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_dev_id, acdb_dev_type;
+    struct audio_device *adev = my_data->adev;
+    int snd_device = SND_DEVICE_OUT_SPEAKER;
 
+    if (usecase->type == PCM_PLAYBACK)
+        snd_device = platform_get_output_snd_device(adev->platform,
+                                            usecase->stream.out->devices);
+    else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE))
+        snd_device = platform_get_input_snd_device(adev->platform,
+                                            adev->primary_output->devices);
     acdb_dev_id = acdb_device_table[snd_device];
+
+
+    switch (usecase->id) {
+        case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
+            app_type = APP_TYPE_SYSTEM_SOUNDS;
+            break;
+        case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
+            app_type = APP_TYPE_SYSTEM_SOUNDS;
+            break;
+        case USECASE_AUDIO_RECORD:
+            app_type = APP_TYPE_GENERAL_RECORDING;
+            break;
+    }
+
     if (acdb_dev_id < 0) {
         ALOGE("%s: Could not find acdb id for device(%d)",
               __func__, snd_device);
