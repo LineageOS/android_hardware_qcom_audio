@@ -259,22 +259,27 @@ void audio_extn_dolby_set_license(struct audio_device *adev);
 #define audio_extn_dolby_set_license(adev)              (0)
 #endif
 
-#ifndef DS1_DOLBY_DDP_ENABLED
+#ifndef DS1_DOLBY_DAP_ENABLED
 #define audio_extn_dolby_set_endpoint(adev)                 (0)
 #else
 void audio_extn_dolby_set_endpoint(struct audio_device *adev);
 #endif
 
-#ifndef DS1_DOLBY_DDP_ENABLED
-#define audio_extn_ddp_set_parameters(adev, parms)      (0)
-#define audio_extn_is_dolby_format(format)              (0)
-#define audio_extn_dolby_get_snd_codec_id(adev, out, format)       (0)
-#define audio_extn_dolby_send_ddp_endp_params(adev)     (0)
-#else
+
+#if defined(DS1_DOLBY_DDP_ENABLED) || defined(DS2_DOLBY_DAP_ENABLED)
 bool audio_extn_is_dolby_format(audio_format_t format);
 int audio_extn_dolby_get_snd_codec_id(struct audio_device *adev,
                                       struct stream_out *out,
                                       audio_format_t format);
+#else
+#define audio_extn_is_dolby_format(format)              (0)
+#define audio_extn_dolby_get_snd_codec_id(adev, out, format)       (0)
+#endif
+
+#ifndef DS1_DOLBY_DDP_ENABLED
+#define audio_extn_ddp_set_parameters(adev, parms)      (0)
+#define audio_extn_dolby_send_ddp_endp_params(adev)     (0)
+#else
 void audio_extn_ddp_set_parameters(struct audio_device *adev,
                                    struct str_parms *parms);
 void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev);
@@ -328,5 +333,39 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
 int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase);
 void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
                                              struct audio_usecase *usecase);
+#ifdef DS2_DOLBY_DAP_ENABLED
+#define LIB_DS2_DAP_HAL "vendor/lib/libhwdaphal.so"
+#define SET_HW_INFO_FUNC "dap_hal_set_hw_info"
+typedef enum {
+    SND_CARD            = 0,
+    HW_ENDPOINT         = 1,
+    DMID                = 2,
+    DEVICE_BE_ID_MAP    = 3,
+    DAP_BYPASS          = 4,
+} dap_hal_hw_info_t;
+typedef int (*dap_hal_set_hw_info_t)(int32_t hw_info, void* data);
+typedef struct {
+     int (*device_id_to_be_id)[2];
+     int len;
+} dap_hal_device_be_id_map_t;
 
+int audio_extn_dap_hal_init(int snd_card);
+int audio_extn_dap_hal_deinit();
+void audio_extn_dolby_ds2_set_endpoint(struct audio_device *adev);
+int audio_extn_ds2_enable(struct audio_device *adev);
+int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, int state);
+#else
+#define audio_extn_dap_hal_init(snd_card)                             (0)
+#define audio_extn_dap_hal_deinit()                                   (0)
+#define audio_extn_dolby_ds2_set_endpoint(adev)                       (0)
+#define audio_extn_ds2_enable(adev)                                   (0)
+#define audio_extn_dolby_set_dap_bypass(adev, state)                  (0)
+#endif
+typedef enum {
+    DAP_STATE_ON = 0,
+    DAP_STATE_BYPASS,
+};
+#ifndef AUDIO_FORMAT_E_AC3_JOC
+#define AUDIO_FORMAT_E_AC3_JOC  0x19000000UL
+#endif
 #endif /* AUDIO_EXTN_H */
