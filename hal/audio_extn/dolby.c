@@ -243,7 +243,7 @@ void send_ddp_endp_params(struct audio_device *adev,
             (usecase->devices & ddp_dev) &&
             (usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
             ((usecase->stream.out->format == AUDIO_FORMAT_AC3) ||
-             (usecase->stream.out->format == AUDIO_FORMAT_EAC3))) {
+             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3))) {
             send_ddp_endp_params_stream(usecase->stream.out, ddp_dev,
                                         dev_ch_cap, false /* set cache */);
         }
@@ -260,7 +260,7 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev)
             (usecase->devices & AUDIO_DEVICE_OUT_ALL) &&
             (usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
             ((usecase->stream.out->format == AUDIO_FORMAT_AC3) ||
-             (usecase->stream.out->format == AUDIO_FORMAT_EAC3))) {
+             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3))) {
             /*
              * Use wfd /hdmi sink channel cap for dolby params if device is wfd
              * or hdmi. Otherwise use stereo configuration
@@ -367,7 +367,7 @@ int audio_extn_dolby_get_snd_codec_id(struct audio_device *adev,
         audio_extn_dolby_set_dmid(adev);
 #endif
         break;
-    case AUDIO_FORMAT_EAC3:
+    case AUDIO_FORMAT_E_AC3:
         id = SND_AUDIOCODEC_EAC3;
         send_ddp_endp_params_stream(out, out->devices,
                             channel_cap, true /* set_cache */);
@@ -385,7 +385,7 @@ int audio_extn_dolby_get_snd_codec_id(struct audio_device *adev,
 bool audio_extn_is_dolby_format(audio_format_t format)
 {
     if (format == AUDIO_FORMAT_AC3 ||
-            format == AUDIO_FORMAT_EAC3)
+            format == AUDIO_FORMAT_E_AC3)
         return true;
     else
         return false;
