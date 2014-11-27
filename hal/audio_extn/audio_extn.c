@@ -462,6 +462,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_hfp_set_parameters(adev, parms);
    audio_extn_ddp_set_parameters(adev, parms);
    audio_extn_customstereo_set_parameters(adev, parms);
+   audio_extn_pm_set_parameters(parms);
 }
 
 void audio_extn_get_parameters(const struct audio_device *adev,
