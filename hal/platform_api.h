@@ -36,7 +36,7 @@ int platform_set_fluence_type(void *platform, char *value);
 int platform_get_fluence_type(void *platform, char *value, uint32_t len);
 int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id);
 int platform_get_snd_device_acdb_id(snd_device_t snd_device);
-int platform_send_audio_calibration(void *platform, snd_device_t snd_device,
+int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
                                     int app_type, int sample_rate);
 int platform_get_default_app_type(void *platform);
 int platform_switch_voice_call_device_pre(void *platform);
