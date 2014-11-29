@@ -34,10 +34,6 @@ LOCAL_SRC_FILES := \
 
 LOCAL_SRC_FILES += audio_extn/audio_extn.c
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PCM_OFFLOAD)),true)
-    LOCAL_CFLAGS += -DPCM_OFFLOAD_ENABLED
-endif
-
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_ANC_HEADSET)),true)
     LOCAL_CFLAGS += -DANC_HEADSET_ENABLED
 endif
