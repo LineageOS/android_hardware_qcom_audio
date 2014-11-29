@@ -200,7 +200,7 @@ static int voice_extn_compress_voip_start_output_stream(struct stream_out *out _
     return -ENOSYS;
 }
 
-static int voice_extn_compress_voip_set_mic_mute(struct audio_device *adev, bool state __unused)
+static int voice_extn_compress_voip_set_mic_mute(struct audio_device *adev __unused, bool state __unused)
 {
     ALOGE("%s: COMPRESS_VOIP_ENABLED is not defined", __func__);
     return 0;
