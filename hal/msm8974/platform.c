@@ -2917,7 +2917,6 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct 
         platform_set_codec_backend_cfg(adev, new_bit_width, new_sample_rate);
         return true;
     }
-
     return false;
 }
 
