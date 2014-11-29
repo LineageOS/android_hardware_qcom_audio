@@ -1072,6 +1072,9 @@ acdb_init_fail:
     audio_extn_ssr_update_enabled();
     audio_extn_spkr_prot_init(adev);
 
+    /* init dap hal */
+    audio_extn_dap_hal_init(adev->snd_card);
+
     audio_extn_dolby_set_license(adev);
     audio_hwdep_send_cal(my_data);
 
@@ -1088,6 +1091,7 @@ void platform_deinit(void *platform)
     free(platform);
     /* deinit usb */
     audio_extn_usb_deinit();
+    audio_extn_dap_hal_deinit();
 }
 
 const char *platform_get_snd_device_name(snd_device_t snd_device)
