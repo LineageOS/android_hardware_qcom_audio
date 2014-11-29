@@ -1109,7 +1109,7 @@ int platform_set_stream_channel_map(void *platform __unused,
 }
 
 int platform_set_edid_channels_configuration(void *platform __unused,
-                                         int channels __unused)
+                                             int channels __unused)
 {
     return 0;
 }
@@ -1118,6 +1118,7 @@ unsigned char platform_map_to_edid_format(int format __unused)
 {
     return 0;
 }
+
 bool platform_is_edid_supported_format(void *platform __unused,
                                        int format __unused)
 {
@@ -1132,4 +1133,15 @@ void platform_cache_edid(void * platform __unused)
 void platform_invalidate_edid(void * platform __unused)
 {
 
+}
+
+int platform_set_hdmi_config(struct stream_out *out __unused)
+{
+    return 0;
+}
+
+int platform_set_device_params(struct stream_out *out __unused,
+                                  int param __unused, int value __unused)
+{
+    return 0;
 }

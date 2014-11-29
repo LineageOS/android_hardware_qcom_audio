@@ -71,6 +71,12 @@
 #define MAX_PCM_OFFLOAD_FRAGMENT_SIZE (240 * 1024)
 #define MIN_PCM_OFFLOAD_FRAGMENT_SIZE (4 * 1024)
 
+/*
+ * Offload buffer size for compress passthrough
+ */
+#define MIN_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE (2 * 1024)
+#define MAX_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE (8 * 1024)
+
 #define ALIGN( num, to ) (((num) + (to-1)) & (~(to-1)))
 /*
  * This file will have a maximum of 38 bytes:
@@ -1204,12 +1210,18 @@ acdb_init_fail:
     /* init audio device arbitration */
     audio_extn_dev_arbi_init();
 
+    my_data->edid_info = NULL;
     return my_data;
 }
 
 void platform_deinit(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (my_data->edid_info) {
+        free(my_data->edid_info);
+        my_data->edid_info = NULL;
+    }
 
     hw_info_deinit(my_data->hw_info);
     close_csd_client(my_data->csd);
@@ -3366,7 +3378,6 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
 
 unsigned char platform_map_to_edid_format(int audio_format)
 {
-
     unsigned char format;
     switch (audio_format & AUDIO_FORMAT_MAIN_MASK) {
     case AUDIO_FORMAT_AC3:
@@ -3382,12 +3393,35 @@ unsigned char platform_map_to_edid_format(int audio_format)
         format = DOLBY_DIGITAL_PLUS;
         break;
     case AUDIO_FORMAT_PCM_16_BIT:
+    case AUDIO_FORMAT_PCM_16_BIT_OFFLOAD:
+    case AUDIO_FORMAT_PCM_24_BIT_OFFLOAD:
     default:
         ALOGV("%s:PCM", __func__);
         format =  LPCM;
         break;
     }
     return format;
+}
+
+uint32_t platform_get_compress_passthrough_buffer_size(
+                                          audio_offload_info_t* info)
+{
+    uint32_t fragment_size = MIN_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE;
+    if (!info->has_video)
+        fragment_size = MIN_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE;
+
+    return fragment_size;
+}
+
+void platform_reset_edid_info(void *platform) {
+
+    ALOGV("%s:", __func__);
+    struct platform_data *my_data = (struct platform_data *)platform;
+    if (my_data->edid_info) {
+        ALOGV("%s :free edid", __func__);
+        free(my_data->edid_info);
+        my_data->edid_info = NULL;
+    }
 }
 
 bool platform_is_edid_supported_format(void *platform, int format)
@@ -3403,10 +3437,16 @@ bool platform_is_edid_supported_format(void *platform, int format)
     info = (edid_audio_info *)my_data->edid_info;
     if (ret == 0 && info != NULL) {
         for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
-            if (info->audio_blocks_array[i].format_id == format_id)
+             /*
+              * To check
+              *  is there any special for CONFIG_HDMI_PASSTHROUGH_CONVERT
+              *  & DOLBY_DIGITAL_PLUS
+              */
+            if (info->audio_blocks_array[i].format_id == format_id) {
                 ALOGV("%s:platform_is_edid_supported_format true %x",
-                       __func__, format);
+                      __func__, format);
                 return true;
+            }
         }
     }
     ALOGV("%s:platform_is_edid_supported_format false %x",
@@ -3469,4 +3509,133 @@ void platform_invalidate_edid(void * platform)
     if (my_data->edid_info) {
         memset(my_data->edid_info, 0, sizeof(struct edid_audio_info));
     }
+}
+
+int platform_set_mixer_control(struct stream_out *out, const char * mixer_ctl_name,
+                      const char *mixer_val)
+{
+    struct audio_device *adev = out->dev;
+    struct mixer_ctl *ctl = NULL;
+    ALOGD("setting mixer ctl %s with value %s", mixer_ctl_name, mixer_val);
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    return mixer_ctl_set_enum_by_string(ctl, mixer_val);
+}
+
+int platform_set_hdmi_config(struct stream_out *out)
+{
+    struct listnode *node;
+    struct audio_usecase *usecase;
+    struct audio_device *adev = out->dev;
+    const char *hdmi_format_ctrl = "HDMI RX Format";
+    const char *hdmi_rate_ctrl = "HDMI_RX SampleRate";
+    int sample_rate = out->sample_rate;
+    /*TODO: Add rules and check if this needs to be done.*/
+    if((is_offload_usecase(out->usecase)) &&
+        (out->compr_config.codec->compr_passthr == PASSTHROUGH ||
+        out->compr_config.codec->compr_passthr == PASSTHROUGH_CONVERT)) {
+        /* TODO: can we add mixer control for channels here avoid setting */
+        if ((out->format == AUDIO_FORMAT_E_AC3 ||
+            out->format == AUDIO_FORMAT_E_AC3_JOC) &&
+            (out->compr_config.codec->compr_passthr == PASSTHROUGH))
+            sample_rate = out->sample_rate * 4;
+        ALOGD("%s:HDMI compress format and samplerate %d, sample_rate %d",
+               __func__, out->sample_rate, sample_rate);
+        platform_set_mixer_control(out, hdmi_format_ctrl, "Compr");
+        switch (sample_rate) {
+            case 32000:
+                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_32");
+                break;
+            case 44100:
+                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_44_1");
+                break;
+            case 96000:
+                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_96");
+                break;
+            case 176400:
+                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_176_4");
+                break;
+            case 192000:
+                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_192");
+                break;
+            case 128000:
+                if (out->format != AUDIO_FORMAT_E_AC3) {
+                    platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_128");
+                    break;
+                } else
+                   ALOGW("Unsupported sample rate for E_AC3 32K");
+            default:
+            case 48000:
+                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_48");
+                break;
+        }
+    } else {
+        ALOGD("%s: HDMI pcm and samplerate %d", __func__,
+               out->sample_rate);
+        platform_set_mixer_control(out, hdmi_format_ctrl, "LPCM");
+        platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_48");
+    }
+
+    /*
+     * Deroute all the playback streams routed to HDMI so that
+     * the back end is deactivated. Note that backend will not
+     * be deactivated if any one stream is connected to it.
+     */
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        ALOGV("%s:disable: usecase type %d, devices 0x%x", __func__,
+               usecase->type, usecase->devices);
+        if (usecase->type == PCM_PLAYBACK &&
+                usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            disable_audio_route(adev, usecase);
+        }
+    }
+
+    /*
+     * Enable all the streams disabled above. Now the HDMI backend
+     * will be activated with new channel configuration
+     */
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        ALOGV("%s:enable: usecase type %d, devices 0x%x", __func__,
+               usecase->type, usecase->devices);
+        if (usecase->type == PCM_PLAYBACK &&
+                usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            enable_audio_route(adev, usecase);
+        }
+    }
+
+    return 0;
+}
+
+int platform_set_device_params(struct stream_out *out, int param, int value)
+{
+    struct audio_device *adev = out->dev;
+    struct mixer_ctl *ctl;
+    char *mixer_ctl_name = "Device PP Params";
+    int ret = 0;
+    uint32_t set_values[] = {0,0};
+
+    set_values[0] = param;
+    set_values[1] = value;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        ret = -EINVAL;
+        goto end;
+    }
+
+    ALOGV("%s: Setting device pp params param: %d, value %d mixer ctrl:%s",
+          __func__,param, value, mixer_ctl_name);
+    mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+
+end:
+    return ret;
 }
