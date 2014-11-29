@@ -79,5 +79,4 @@ int platform_get_usecase_index(const char * usecase);
 int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
 
 bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct audio_usecase *usecase);
-bool platform_check_24_bit_support();
 #endif // AUDIO_PLATFORM_API_H

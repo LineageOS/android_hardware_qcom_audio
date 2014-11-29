@@ -269,6 +269,14 @@ struct audio_device {
     int (*offload_effects_stop_output)(audio_io_handle_t, int);
 
     struct sound_card_status snd_card_status;
+
+    /* The pcm_params use_case_table is loaded by adev_verify_devices() upon
+     * calling adev_open().
+     *
+     * If an entry is not NULL, it can be used to determine if extended precision
+     * or other capabilities are present for the device corresponding to that usecase.
+     */
+    struct pcm_params *use_case_table[AUDIO_USECASE_MAX];
 };
 
 int select_devices(struct audio_device *adev,

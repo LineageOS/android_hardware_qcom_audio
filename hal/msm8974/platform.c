@@ -598,7 +598,7 @@ void close_csd_client(struct csd_data *csd)
     }
 }
 
-static void set_platform_defaults(struct platform_data * my_data)
+static void set_platform_defaults(struct platform_data * my_data __unused)
 {
     int32_t dev;
     for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
@@ -880,7 +880,7 @@ static int find_index(struct name_to_index * table, int32_t len, const char * na
 
     for (i=0; i < len; i++) {
         const char* tn = table[i].name;
-        int32_t len = strlen(tn);
+        uint32_t len = strlen(tn);
         if (strncmp(tn, name, len) == 0) {
             if (strlen(name) != len) {
                 continue; // substring
@@ -2014,11 +2014,9 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
     uint32_t fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
     uint32_t bits_per_sample = 16;
 
-#ifdef PCM_OFFLOAD_ENABLED
     if (info->format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD) {
         bits_per_sample = 32;
     }
-#endif
 
     if (!info->has_video) {
         fragment_size = MAX_PCM_OFFLOAD_FRAGMENT_SIZE;
@@ -2104,17 +2102,6 @@ int platform_set_snd_device_name(snd_device_t device, const char *name)
     device_table[device] = strdup(name);
 done:
     return ret;
-}
-
-bool platform_check_24_bit_support() {
-
-    char value[PROPERTY_VALUE_MAX] = {0};
-    property_get("audio.offload.24bit.enable", value, "0");
-    if (atoi(value)) {
-        ALOGW("Property audio.offload.24bit.enable is set");
-        return true;
-    }
-    return false;
 }
 
 static unsigned int get_best_backend_sample_rate(unsigned int sample_rate) {
@@ -2228,7 +2215,7 @@ int platform_set_codec_backend_cfg(struct audio_device* adev,
 }
 
 bool platform_check_codec_backend_cfg(struct audio_device* adev,
-                                   struct audio_usecase* usecase,
+                                   struct audio_usecase* usecase __unused,
                                    unsigned int* new_bit_width,
                                    unsigned int* new_sample_rate)
 {
@@ -2289,11 +2276,6 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
 
 bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct audio_usecase *usecase)
 {
-    // check if 24bit configuration is enabled first
-    if (!platform_check_24_bit_support()) {
-        ALOGW("24bit not enable, no need to check for backend change");
-        return false;
-    }
 
     ALOGV("platform_check_and_set_codec_backend_cfg usecase = %d",usecase->id );
 
@@ -2315,6 +2297,5 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct 
                     adev->cur_codec_backend_bit_width, adev->cur_codec_backend_samplerate);
         return true;
     }
-
     return false;
 }
