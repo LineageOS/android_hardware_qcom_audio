@@ -451,8 +451,8 @@ static int get_active_offload_usecases(const struct audio_device *adev,
     return ret;
 }
 
-void audio_extn_set_parameters(struct audio_device *adev,
-                               struct str_parms *parms)
+void audio_extn_set_parameters(struct audio_device *adev __unused,
+                               struct str_parms *parms __unused)
 {
    audio_extn_set_anc_parameters(adev, parms);
    audio_extn_set_fluence_parameters(adev, parms);
