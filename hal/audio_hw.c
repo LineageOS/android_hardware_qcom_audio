@@ -2798,8 +2798,7 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
 
     pthread_mutex_lock(&adev->lock);
     ALOGD("%s state %d\n", __func__, state);
-    if(!adev->voice_tx_output)
-       ret = voice_set_mic_mute((struct audio_device *)dev, state);
+    ret = voice_set_mic_mute((struct audio_device *)dev, state);
     pthread_mutex_unlock(&adev->lock);
 
     return ret;
