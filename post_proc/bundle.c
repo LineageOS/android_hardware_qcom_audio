@@ -15,6 +15,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * This file was modified by DTS, Inc. The portions of the
+ * code modified by DTS, Inc are copyrighted and
+ * licensed separately, as follows:
+ *
+ * (C) 2014 DTS, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #define LOG_TAG "offload_effect_bundle"
@@ -31,6 +49,10 @@
 #include "bass_boost.h"
 #include "virtualizer.h"
 #include "reverb.h"
+
+#ifdef DTS_EAGLE
+#include "effect_util.h"
+#endif
 
 enum {
     EFFECT_STATE_UNINITIALIZED,
@@ -190,6 +212,10 @@ int offload_effects_bundle_hal_start_output(audio_io_handle_t output, int pcm_id
 
     ALOGV("%s output %d pcm_id %d", __func__, output, pcm_id);
 
+#ifdef DTS_EAGLE
+    create_effect_state_node(pcm_id);
+#endif
+
     if (lib_init() != 0)
         return init_status;
 
@@ -284,6 +310,10 @@ int offload_effects_bundle_hal_stop_output(audio_io_handle_t output, int pcm_id)
     }
 
     list_remove(&out_ctxt->outputs_list_node);
+
+#ifdef DTS_EAGLE
+    remove_effect_state_node(pcm_id);
+#endif
 
     free(out_ctxt);
 

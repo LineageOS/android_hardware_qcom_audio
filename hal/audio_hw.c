@@ -15,6 +15,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * This file was modified by DTS, Inc. The portions of the
+ * code modified by DTS, Inc are copyrighted and
+ * licensed separately, as follows:
+ *
+ * (C) 2014 DTS, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #define LOG_TAG "audio_hw_primary"
@@ -1362,6 +1380,9 @@ static int stop_output_stream(struct stream_out *out)
         !(audio_extn_dolby_is_passthrough_stream(out->flags))) {
         if (adev->visualizer_stop_output != NULL)
             adev->visualizer_stop_output(out->handle, out->pcm_device_id);
+
+        audio_extn_dts_remove_state_notifier_node(out->usecase);
+
         if (adev->offload_effects_stop_output != NULL)
             adev->offload_effects_stop_output(out->handle, out->pcm_device_id);
     }
@@ -1514,6 +1535,11 @@ int start_output_stream(struct stream_out *out)
         if (out->offload_callback)
             compress_nonblock(out->compr, out->non_blocking);
 
+        audio_extn_dts_create_state_notifier_node(out->usecase);
+        audio_extn_dts_notify_playback_state(out->usecase, 0, out->sample_rate,
+                                             popcount(out->channel_mask),
+                                             out->playback_started);
+
 #ifdef DS1_DOLBY_DDP_ENABLED
         if (audio_extn_is_dolby_format(out->format))
             audio_extn_dolby_send_ddp_endp_params(adev);
@@ -1523,6 +1549,7 @@ int start_output_stream(struct stream_out *out)
                 adev->visualizer_start_output(out->handle, out->pcm_device_id);
             if (adev->offload_effects_start_output != NULL)
                 adev->offload_effects_start_output(out->handle, out->pcm_device_id);
+            audio_extn_check_and_set_dts_hpx_state(adev);
         }
     }
     ALOGV("%s: exit", __func__);
@@ -1860,6 +1887,12 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     if (is_offload_usecase(out->usecase)) {
         pthread_mutex_lock(&out->lock);
         parse_compress_metadata(out, parms);
+
+        audio_extn_dts_create_state_notifier_node(out->usecase);
+        audio_extn_dts_notify_playback_state(out->usecase, 0, out->sample_rate,
+                                                 popcount(out->channel_mask),
+                                                 out->playback_started);
+
         pthread_mutex_unlock(&out->lock);
     }
 
@@ -2059,6 +2092,10 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             compress_start(out->compr);
             out->playback_started = 1;
             out->offload_state = OFFLOAD_STATE_PLAYING;
+
+            audio_extn_dts_notify_playback_state(out->usecase, 0, out->sample_rate,
+                                                     popcount(out->channel_mask),
+                                                     out->playback_started);
         }
         pthread_mutex_unlock(&out->lock);
         return ret;
@@ -2227,6 +2264,11 @@ static int out_pause(struct audio_stream_out* stream)
                 status = compress_pause(out->compr);
 
             out->offload_state = OFFLOAD_STATE_PAUSED;
+
+            audio_extn_dts_eagle_fade(adev, false);
+            audio_extn_dts_notify_playback_state(out->usecase, 0,
+                                                 out->sample_rate, popcount(out->channel_mask),
+                                                 0);
         }
         pthread_mutex_unlock(&out->lock);
     }
@@ -2250,6 +2292,10 @@ static int out_resume(struct audio_stream_out* stream)
                 status = compress_resume(out->compr);
 
             out->offload_state = OFFLOAD_STATE_PLAYING;
+
+            audio_extn_dts_eagle_fade(adev, true);
+            audio_extn_dts_notify_playback_state(out->usecase, 0, out->sample_rate,
+                                                     popcount(out->channel_mask), 1);
         }
         pthread_mutex_unlock(&out->lock);
     }
@@ -2780,13 +2826,14 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->offload_state = OFFLOAD_STATE_IDLE;
         out->playback_started = 0;
 
+        audio_extn_dts_create_state_notifier_node(out->usecase);
+
         create_offload_callback_thread(out);
         ALOGV("%s: offloaded output offload_info version %04x bit rate %d",
                 __func__, config->offload_info.version,
                 config->offload_info.bit_rate);
         //Decide if we need to use gapless mode by default
         check_and_set_gapless_mode(adev);
-
     } else if (out->flags & AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
         ret = voice_check_and_set_incall_music_usecase(adev, out);
         if (ret != 0) {
@@ -2894,6 +2941,11 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     *stream_out = &out->stream;
     ALOGD("%s: Stream (%p) picks up usecase (%s)", __func__, &out->stream,
         use_case_table[out->usecase]);
+
+    if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)
+        audio_extn_dts_notify_playback_state(out->usecase, 0, out->sample_rate,
+                                             popcount(out->channel_mask), out->playback_started);
+
     ALOGV("%s: exit", __func__);
     return 0;
 
@@ -2924,6 +2976,7 @@ static void adev_close_output_stream(struct audio_hw_device *dev __unused,
         out_standby(&stream->common);
 
     if (is_offload_usecase(out->usecase)) {
+        audio_extn_dts_remove_state_notifier_node(out->usecase);
         destroy_offload_callback_thread(out);
         free_offload_usecase(adev, out->usecase);
         if (out->compr_config.codec != NULL)
@@ -3536,6 +3589,9 @@ static int adev_open(const hw_module_t *module, const char *name,
             adev->offload_effects_stop_output =
                         (int (*)(audio_io_handle_t, int))dlsym(adev->offload_effects_lib,
                                          "offload_effects_bundle_hal_stop_output");
+            adev->offload_effects_set_hpx_state =
+                        (int (*)(bool))dlsym(adev->offload_effects_lib,
+                                         "offload_effects_bundle_set_hpx_state");
         }
     }
 

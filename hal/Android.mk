@@ -125,6 +125,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),true)
     LOCAL_SRC_FILES += audio_extn/compress_capture.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DTS_EAGLE)),true)
+    LOCAL_CFLAGS += -DDTS_EAGLE
+    LOCAL_SRC_FILES += audio_extn/dts_eagle.c
+endif
+
 ifeq ($(strip $(DOLBY_DDP)),true)
     LOCAL_CFLAGS += -DDS1_DOLBY_DDP_ENABLED
     LOCAL_SRC_FILES += audio_extn/dolby.c
