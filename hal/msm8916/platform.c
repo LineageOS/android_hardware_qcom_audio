@@ -1303,27 +1303,18 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
     struct audio_device *adev = my_data->adev;
     int snd_device = SND_DEVICE_OUT_SPEAKER;
 
-    if (usecase->type == PCM_PLAYBACK)
+    if (usecase->type == PCM_PLAYBACK) {
         snd_device = platform_get_output_snd_device(adev->platform,
                                             usecase->stream.out->devices);
-    else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE))
+        if(usecase->id != USECASE_AUDIO_PLAYBACK_OFFLOAD)
+            app_type = APP_TYPE_SYSTEM_SOUNDS;
+    } else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE)) {
         snd_device = platform_get_input_snd_device(adev->platform,
                                             adev->primary_output->devices);
-    acdb_dev_id = acdb_device_table[snd_device];
-
-
-    switch (usecase->id) {
-        case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
-            app_type = APP_TYPE_SYSTEM_SOUNDS;
-            break;
-        case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
-            app_type = APP_TYPE_SYSTEM_SOUNDS;
-            break;
-        case USECASE_AUDIO_RECORD:
-            app_type = APP_TYPE_GENERAL_RECORDING;
-            break;
+        app_type = APP_TYPE_GENERAL_RECORDING;
     }
 
+    acdb_dev_id = acdb_device_table[snd_device];
     if (acdb_dev_id < 0) {
         ALOGE("%s: Could not find acdb id for device(%d)",
               __func__, snd_device);
