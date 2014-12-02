@@ -359,7 +359,7 @@ AudioHardwareALSA::AudioHardwareALSA() :
     String8 value;
 #ifdef QCOM_FLUENCE_ENABLED
     //Set default AudioParameter for fluencetype
-    key  = String8(AudioParameter::keyFluenceType);
+    key  = String8(AUDIO_PARAMETER_KEY_FLUENCE_TYPE);
     property_get("ro.qc.sdk.audio.fluencetype",mFluenceKey,"0");
     if (0 == strncmp("fluencepro", mFluenceKey, sizeof("fluencepro"))) {
         mDevSettingsFlag |= QMIC_FLAG;
@@ -626,7 +626,7 @@ status_t AudioHardwareALSA::setParameters(const String8& keyValuePairs)
         param.remove(key);
     }
 #ifdef QCOM_FLUENCE_ENABLED
-    key = String8(AudioParameter::keyFluenceType);
+    key = String8(AUDIO_PARAMETER_KEY_FLUENCE_TYPE);
     if (param.get(key, value) == NO_ERROR) {
         if (value == "quadmic") {
             //Allow changing fluence type to "quadmic" only when fluence type is fluencepro
@@ -901,7 +901,7 @@ String8 AudioHardwareALSA::getParameters(const String8& keys)
         param.add(key, value);
     }
 
-    key = String8(AudioParameter::keyFluenceType);
+    key = String8(AUDIO_PARAMETER_KEY_FLUENCE_TYPE);
     if (param.get(key, value) == NO_ERROR) {
     if ((mDevSettingsFlag & QMIC_FLAG) &&
                                (mDevSettingsFlag & ~DMIC_FLAG))
