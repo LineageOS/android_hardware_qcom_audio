@@ -3164,10 +3164,12 @@ int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel
         case 1:
             /* AUDIO_CHANNEL_OUT_MONO */
             channel_map[0] = PCM_CHANNEL_FC;
+            break;
         case 2:
             /* AUDIO_CHANNEL_OUT_STEREO */
             channel_map[0] = PCM_CHANNEL_FL;
             channel_map[1] = PCM_CHANNEL_FR;
+            break;
         case 3:
             /* AUDIO_CHANNEL_OUT_2POINT1 */
             channel_map[0] = PCM_CHANNEL_FL;
@@ -3222,6 +3224,7 @@ int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel
             channel_map[4] = PCM_CHANNEL_LB;
             channel_map[5] = PCM_CHANNEL_RB;
             channel_map[6] = PCM_CHANNEL_CS;
+            break;
         case 8:
             /* AUDIO_CHANNEL_OUT_7POINT1 */
             channel_map[0] = PCM_CHANNEL_FL;
