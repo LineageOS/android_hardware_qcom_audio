@@ -18,7 +18,7 @@
  */
 
 #define LOG_TAG "audio_hw_primary"
-#define LOG_NDEBUG 0
+//#define LOG_NDEBUG 0
 /*#define VERY_VERY_VERBOSE_LOGGING*/
 #ifdef VERY_VERY_VERBOSE_LOGGING
 #define ALOGVV ALOGV
@@ -78,7 +78,6 @@ static unsigned int configured_low_latency_capture_period_size =
         LOW_LATENCY_CAPTURE_PERIOD_SIZE;
 
 /* This constant enables extended precision handling.
- * TODO The flag is off until more testing is done.
  */
 static const bool k_enable_extended_precision = true;
 
@@ -2545,6 +2544,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_out *out;
     int i, ret = 0;
+    int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
 
     *stream_out = NULL;
 
@@ -2779,12 +2779,23 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                  * Note: out->format is returned by out->stream.common.get_format()
                  * and is used to set config->format in the code several lines below.
                  */
+                ALOGW("Audio format %x is not available on this output", out->format);
                 out->format = audio_format_from_pcm_format(out->config.format);
             }
         }
 
         out->sample_rate = out->config.rate;
     }
+
+    if ((24 == out->bit_width) &&
+        (devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+        out->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        ALOGI("%s 24-bit playback on speaker restricted to : %d Hz",
+               __func__, sample_rate);
+    }
+
+    ALOGV("%s flags %x, format %x, sample_rate %d, out->bit_width %d",
+           __func__, flags, out->format, out->sample_rate, out->bit_width);
 
     if ((out->usecase == USECASE_AUDIO_PLAYBACK_PRIMARY) ||
             flags & AUDIO_OUTPUT_FLAG_PRIMARY) {
