@@ -437,4 +437,14 @@ typedef enum {
 
 int b64decode(char *inp, int ilen, uint8_t* outp);
 int b64encode(uint8_t *inp, int ilen, char* outp);
+
+#ifndef KPI_OPTIMIZE_ENABLED
+#define audio_extn_perf_lock_init() (0)
+#define audio_extn_perf_lock_acquire() (0)
+#define audio_extn_perf_lock_release() (0)
+#else
+int audio_extn_perf_lock_init(void);
+void audio_extn_perf_lock_acquire(void);
+void audio_extn_perf_lock_release(void);
+#endif /* KPI_OPTIMIZE_ENABLED */
 #endif /* AUDIO_EXTN_H */
