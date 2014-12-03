@@ -46,6 +46,8 @@
 /* Used in calculating fragment size for pcm offload */
 #define PCM_OFFLOAD_BUFFER_DURATION_FOR_AV 1000 /* 1 sec */
 #define PCM_OFFLOAD_BUFFER_DURATION_FOR_AV_STREAMING 80 /* 80 millisecs */
+#define PCM_OFFLOAD_BUFFER_DURATION_FOR_SMALL_BUFFERS 20 /* 20 millisecs */
+#define PCM_OFFLOAD_BUFFER_DURATION_MAX 1200  /* 1200 millisecs */
 
 /* MAX PCM fragment size cannot be increased  further due
  * to flinger's cblk size of 1mb,and it has to be a multiple of
@@ -2018,44 +2020,42 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
 
 uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
 {
-    uint32_t fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
+    uint32_t fragment_size = 0;
     uint32_t bits_per_sample = 16;
+    uint32_t pcm_offload_time = PCM_OFFLOAD_BUFFER_DURATION_FOR_SMALL_BUFFERS;
 
     if (info->format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD) {
         bits_per_sample = 32;
     }
 
-    if (!info->has_video) {
-        fragment_size = MAX_PCM_OFFLOAD_FRAGMENT_SIZE;
-
-    } else if (info->has_video && info->is_streaming) {
-        fragment_size = (PCM_OFFLOAD_BUFFER_DURATION_FOR_AV_STREAMING
-                                     * info->sample_rate
-                                     * (bits_per_sample >> 3)
-                                     * popcount(info->channel_mask))/1000;
-
-    } else if (info->has_video) {
-        fragment_size = (PCM_OFFLOAD_BUFFER_DURATION_FOR_AV
-                                     * info->sample_rate
-                                     * (bits_per_sample >> 3)
-                                     * popcount(info->channel_mask))/1000;
+    if (info->use_small_bufs) {
+        pcm_offload_time = PCM_OFFLOAD_BUFFER_DURATION_FOR_SMALL_BUFFERS;
+    } else {
+        if (!info->has_video) {
+            pcm_offload_time = PCM_OFFLOAD_BUFFER_DURATION_MAX;
+        } else if (info->has_video && info->is_streaming) {
+            pcm_offload_time = PCM_OFFLOAD_BUFFER_DURATION_FOR_AV_STREAMING;
+        } else if (info->has_video) {
+            pcm_offload_time = PCM_OFFLOAD_BUFFER_DURATION_FOR_AV;
+        }
     }
 
-    char value[PROPERTY_VALUE_MAX] = {0};
-    if((property_get("audio.offload.pcm.buffer.size", value, "")) &&
-            atoi(value)) {
-        fragment_size =  atoi(value) * 1024;
-        ALOGV("Using buffer size from sys prop %d", fragment_size);
-    }
+    //duration is set to 20 ms worth of stereo data at 48Khz
+    //with 16 bit per sample, modify this when the channel
+    //configuration is different
+    fragment_size = (pcm_offload_time
+                     * info->sample_rate
+                     * (bits_per_sample >> 3)
+                     * popcount(info->channel_mask))/1000;
 
-    fragment_size = ALIGN( fragment_size, 1024);
+    fragment_size = ALIGN (fragment_size, 1024);
 
     if(fragment_size < MIN_PCM_OFFLOAD_FRAGMENT_SIZE)
         fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
     else if(fragment_size > MAX_PCM_OFFLOAD_FRAGMENT_SIZE)
         fragment_size = MAX_PCM_OFFLOAD_FRAGMENT_SIZE;
 
-    ALOGV("%s: fragment_size %d", __func__, fragment_size);
+    ALOGI("PCM offload Fragment size to %d bytes", fragment_size);
     return fragment_size;
 }
 
