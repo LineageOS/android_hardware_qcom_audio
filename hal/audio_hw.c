@@ -2545,6 +2545,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_out *out;
     int i, ret = 0;
+    audio_format_t format;
+    int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
 
     *stream_out = NULL;
 
@@ -2571,7 +2573,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->flags = flags;
     out->devices = devices;
     out->dev = adev;
-    out->format = config->format;
+    format = out->format = config->format;
     out->sample_rate = config->sample_rate;
     out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
     out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_STEREO;
@@ -2651,7 +2653,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->channel_mask = config->channel_mask;
             config->offload_info.channel_mask = config->channel_mask;
         }
-        out->format = config->offload_info.format;
+        format = out->format = config->offload_info.format;
         out->sample_rate = config->offload_info.sample_rate;
 
         out->stream.set_callback = out_set_callback;
@@ -2750,16 +2752,19 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     } else {
 #ifndef LOW_LATENCY_PRIMARY
         if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
+            format = AUDIO_FORMAT_PCM_16_BIT;
             out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
             out->config = pcm_config_low_latency;
 #endif
 #ifdef LOW_LATENCY_PRIMARY
         if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
+            format = AUDIO_FORMAT_PCM_16_BIT;
             out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
             out->config = pcm_config_deep_buffer;
 #endif
         } else {
             /* primary path is the default path selected if no other outputs are available/suitable */
+            format = AUDIO_FORMAT_PCM_16_BIT;
             out->usecase = USECASE_AUDIO_PLAYBACK_PRIMARY;
 #ifdef LOW_LATENCY_PRIMARY
             out->config = pcm_config_low_latency;
@@ -2785,6 +2790,18 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
         out->sample_rate = out->config.rate;
     }
+
+    if ((24 == out->bit_width) &&
+        (devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+        sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        ALOGI("%s 24-bit playback on Speaker is allowed ONLY at 48khz. Hence changing sample rate to: %d",
+               __func__, sample_rate);
+    } else {
+        sample_rate = out->sample_rate;
+    }
+
+    ALOGV("%s flags %x, format %x, sample_rate %d, out->bit_width %d",
+           __func__, flags, format, sample_rate, out->bit_width);
 
     if ((out->usecase == USECASE_AUDIO_PLAYBACK_PRIMARY) ||
             flags & AUDIO_OUTPUT_FLAG_PRIMARY) {
