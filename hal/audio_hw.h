@@ -180,6 +180,7 @@ struct stream_out {
     struct stream_app_type_cfg app_type_cfg;
 
     int non_blocking;
+    bool use_small_bufs;
     int playback_started;
     int offload_state;
     pthread_cond_t offload_cond;
