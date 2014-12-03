@@ -172,6 +172,7 @@ struct stream_out {
     audio_io_handle_t handle;
 
     int non_blocking;
+    bool use_small_bufs;
     int playback_started;
     int offload_state;
     pthread_cond_t offload_cond;
