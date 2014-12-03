@@ -1179,6 +1179,8 @@ static void *offload_thread_loop(void *context)
                 ALOGE("%s: Next track returned error %d",__func__, ret);
             send_callback = true;
             event = STREAM_CBK_EVENT_DRAIN_READY;
+            /* Resend the metadata for next iteration */
+            out->send_new_metadata = 1;
             break;
         case OFFLOAD_CMD_DRAIN:
             ALOGD("copl(%p):calling compress_drain", out);
@@ -1195,6 +1197,7 @@ static void *offload_thread_loop(void *context)
         out->offload_thread_blocked = false;
         pthread_cond_signal(&out->cond);
         if (send_callback) {
+            ALOGVV("%s: sending offload_callback event %d", __func__, event);
             out->offload_callback(event, NULL, out->offload_cookie);
         }
         free(cmd);
