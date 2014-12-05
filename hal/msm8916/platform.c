@@ -1304,13 +1304,12 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
     struct audio_device *adev = my_data->adev;
     int snd_device = SND_DEVICE_OUT_SPEAKER;
 
-    if (usecase->type == PCM_PLAYBACK){
+    if (usecase->type == PCM_PLAYBACK) {
         snd_device = platform_get_output_snd_device(adev->platform,
                                             usecase->stream.out->devices);
         if(usecase->id != USECASE_AUDIO_PLAYBACK_OFFLOAD)
             app_type = APP_TYPE_SYSTEM_SOUNDS;
-    }
-    else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE)){
+    } else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE)) {
         snd_device = platform_get_input_snd_device(adev->platform,
                                             adev->primary_output->devices);
         app_type = APP_TYPE_GENERAL_RECORDING;
