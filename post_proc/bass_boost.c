@@ -117,7 +117,7 @@ int bassboost_get_parameter(effect_context_t *context, effect_param_t *p,
 }
 
 int bassboost_set_parameter(effect_context_t *context, effect_param_t *p,
-                            uint32_t size)
+                            uint32_t size __unused)
 {
     bassboost_context_t *bass_ctxt = (bassboost_context_t *)context;
     int voffset = ((p->psize - 1) / sizeof(int32_t) + 1) * sizeof(int32_t);
@@ -268,7 +268,7 @@ int bassboost_start(effect_context_t *context, output_context_t *output)
     return 0;
 }
 
-int bassboost_stop(effect_context_t *context, output_context_t *output)
+int bassboost_stop(effect_context_t *context, output_context_t *output __unused)
 {
     bassboost_context_t *bass_ctxt = (bassboost_context_t *)context;
 

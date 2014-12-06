@@ -528,8 +528,8 @@ int effect_lib_get_descriptor(const effect_uuid_t *uuid,
 
 /* Stub function for effect interface: never called for offloaded effects */
 int effect_process(effect_handle_t self,
-                       audio_buffer_t *inBuffer,
-                       audio_buffer_t *outBuffer)
+                       audio_buffer_t *inBuffer __unused,
+                       audio_buffer_t *outBuffer __unused)
 {
     effect_context_t * context = (effect_context_t *)self;
     int status = 0;
