@@ -336,7 +336,7 @@ int equalizer_get_parameter(effect_context_t *context, effect_param_t *p,
 }
 
 int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
-                            uint32_t size)
+                            uint32_t size __unused)
 {
     equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
     int voffset = ((p->psize - 1) / sizeof(int32_t) + 1) * sizeof(int32_t);
@@ -487,7 +487,7 @@ int equalizer_start(effect_context_t *context, output_context_t *output)
     return 0;
 }
 
-int equalizer_stop(effect_context_t *context, output_context_t *output)
+int equalizer_stop(effect_context_t *context, output_context_t *output __unused)
 {
     equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
 
