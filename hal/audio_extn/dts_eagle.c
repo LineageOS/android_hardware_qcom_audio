@@ -56,11 +56,12 @@ static const char* DTS_EAGLE_STR = DTS_EAGLE_KEY;
 
 static int do_DTS_Eagle_params_stream(struct stream_out *out, struct dts_eagle_param_desc_alsa *t, bool get) {
     char mixer_string[128];
+    char mixer_str_query[128];
     struct mixer_ctl *ctl;
+    struct mixer_ctl *query_ctl;
     int pcm_device_id = platform_get_pcm_device_id(out->usecase, PCM_PLAYBACK);
 
     ALOGV("DTS_EAGLE_HAL (%s): enter", __func__);
-
     snprintf(mixer_string, sizeof(mixer_string), "%s %d", "Audio Effects Config", pcm_device_id);
     ctl = mixer_get_ctl_by_name(out->dev->mixer, mixer_string);
     if (!ctl) {
@@ -70,7 +71,13 @@ static int do_DTS_Eagle_params_stream(struct stream_out *out, struct dts_eagle_p
         ALOGD("DTS_EAGLE_HAL (%s): opened mixer %s", __func__, mixer_string);
         if (get) {
             ALOGD("DTS_EAGLE_HAL (%s): get request", __func__);
-            mixer_ctl_set_array(ctl, t, size);
+            snprintf(mixer_str_query, sizeof(mixer_str_query), "%s %d", "Query Audio Effect Param", pcm_device_id);
+            query_ctl = mixer_get_ctl_by_name(out->dev->mixer, mixer_str_query);
+            if (!query_ctl) {
+                ALOGE("DTS_EAGLE_HAL (%s): failed to open mixer %s", __func__, mixer_str_query);
+                return -EINVAL;
+            }
+            mixer_ctl_set_array(query_ctl, t, size);
             return mixer_ctl_get_array(ctl, t, size);
         }
         ALOGD("DTS_EAGLE_HAL (%s): set request", __func__);
@@ -353,7 +360,7 @@ int audio_extn_dts_eagle_get_parameters(const struct audio_device *adev,
                 t->d.id = id;
                 t->d.size = size;
                 t->d.offset = offset;
-                t->d.device = dev | DTS_EAGLE_FLAG_ALSA_GET;
+                t->d.device = dev;
                 ALOGV("DTS_EAGLE_HAL (%s): id (get): 0x%X, size: %d, offset: %d, device: %d", __func__,
                        t->d.id, t->d.size, t->d.offset, t->d.device & 0x7FFFFFFF);
                 if ((sizeof(struct dts_eagle_param_desc_alsa) + size) > PARAM_GET_MAX_SIZE) {
