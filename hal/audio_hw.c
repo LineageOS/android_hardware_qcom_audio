@@ -1926,7 +1926,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
            (out->config.rate);
     }
 
-    ALOGV("%s: Latency %d", latency);
+    ALOGV("%s: Latency %d", __func__, latency);
     return latency;
 }
 
