@@ -2237,7 +2237,6 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
             ALOGD("setting record playback concurrency to false");
             my_data->rec_play_conc_set = false;
         }
-        str_parms_del(parms, AUDIO_PARAMETER_KEY_REC_PLAY_CONC);
     }
 #endif
     ALOGV("%s: exit with code(%d)", __func__, ret);
