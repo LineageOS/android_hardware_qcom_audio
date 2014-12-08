@@ -124,7 +124,7 @@ struct audio_block_header
 
 /* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
-typedef int  (*acdb_init_t)(char *, char *);
+typedef int  (*acdb_init_t)(char *, char *, int);
 typedef void (*acdb_send_audio_cal_t)(int, int, int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
@@ -464,6 +464,64 @@ struct snd_device_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_FLUENCE_DMIC_AANC)},
 };
 
+#define NO_COLS 2
+static int msm_be_id_array_len;
+static int (*msm_device_to_be_id)[];
+
+/* Below table lists output device to BE_ID mapping*/
+/* Update the table based on the board configuration*/
+
+static int msm_device_to_be_id_internal_codec [][NO_COLS] = {
+       {AUDIO_DEVICE_OUT_EARPIECE                       ,       34},
+       {AUDIO_DEVICE_OUT_SPEAKER                        ,       34},
+       {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       34},
+       {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       34},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO                  ,       11},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET          ,       11},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT           ,       11},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP                 ,       -1},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES      ,       -1},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER         ,       -1},
+       {AUDIO_DEVICE_OUT_AUX_DIGITAL                    ,       4},
+       {AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET              ,       9},
+       {AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET              ,       9},
+       {AUDIO_DEVICE_OUT_USB_ACCESSORY                  ,       -1},
+       {AUDIO_DEVICE_OUT_USB_DEVICE                     ,       -1},
+       {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
+       {AUDIO_DEVICE_OUT_PROXY                          ,       9},
+       {AUDIO_DEVICE_OUT_FM                             ,       7},
+       {AUDIO_DEVICE_OUT_FM_TX                          ,       8},
+       {AUDIO_DEVICE_OUT_ALL                            ,      -1},
+       {AUDIO_DEVICE_NONE                               ,      -1},
+       {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
+};
+
+static int msm_device_to_be_id_external_codec [][NO_COLS] = {
+       {AUDIO_DEVICE_OUT_EARPIECE                       ,       2},
+       {AUDIO_DEVICE_OUT_SPEAKER                        ,       2},
+       {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       2},
+       {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       2},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO                  ,       11},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET          ,       11},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT           ,       11},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP                 ,       -1},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES      ,       -1},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER         ,       -1},
+       {AUDIO_DEVICE_OUT_AUX_DIGITAL                    ,       4},
+       {AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET              ,       9},
+       {AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET              ,       9},
+       {AUDIO_DEVICE_OUT_USB_ACCESSORY                  ,       -1},
+       {AUDIO_DEVICE_OUT_USB_DEVICE                     ,       -1},
+       {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
+       {AUDIO_DEVICE_OUT_PROXY                          ,       9},
+       {AUDIO_DEVICE_OUT_FM                             ,       7},
+       {AUDIO_DEVICE_OUT_FM_TX                          ,       8},
+       {AUDIO_DEVICE_OUT_ALL                            ,      -1},
+       {AUDIO_DEVICE_NONE                               ,      -1},
+       {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
+};
+
+
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 
@@ -474,53 +532,113 @@ static void query_platform(const char *snd_card_name,
                  sizeof("msm8x16-snd-card-mtp"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_MTP,
                 sizeof(MIXER_XML_PATH_MTP));
+
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
     } else if (!strncmp(snd_card_name, "msm8x16-skuh-snd-card",
                  sizeof("msm8x16-skuh-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_QRD_SKUH,
                 sizeof(MIXER_XML_PATH_QRD_SKUH));
+
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
     } else if (!strncmp(snd_card_name, "msm8x16-skui-snd-card",
                  sizeof("msm8x16-skui-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_QRD_SKUI,
                 sizeof(MIXER_XML_PATH_QRD_SKUI));
+
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
     } else if (!strncmp(snd_card_name, "msm8x16-skuhf-snd-card",
                  sizeof("msm8x16-skuhf-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_QRD_SKUHF,
                 sizeof(MIXER_XML_PATH_QRD_SKUHF));
+
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
     } else if (!strncmp(snd_card_name, "msm8939-snd-card-mtp",
                  sizeof("msm8939-snd-card-mtp"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_MTP,
                 sizeof(MIXER_XML_PATH_MTP));
+
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
     } else if (!strncmp(snd_card_name, "msm8939-snd-card-skuk",
                  sizeof("msm8939-snd-card-skuk"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_SKUK,
                 sizeof(MIXER_XML_PATH_SKUK));
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
     } else if (!strncmp(snd_card_name, "msm8939-tapan-snd-card",
                  sizeof("msm8939-tapan-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9306,
                 sizeof(MIXER_XML_PATH_WCD9306));
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+
     } else if (!strncmp(snd_card_name, "msm8939-tapan9302-snd-card",
                  sizeof("msm8939-tapan9302-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9306,
                 sizeof(MIXER_XML_PATH_WCD9306));
+
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+
     } else if (!strncmp(snd_card_name, "msm8939-tomtom9330-snd-card",
                  sizeof("msm8939-tomtom9330-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9330,
                 sizeof(MIXER_XML_PATH_WCD9330));
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+
     } else if (!strncmp(snd_card_name, "msm8909-skua-snd-card",
                  sizeof("msm8909-skua-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_SKUA,
                 sizeof(MIXER_XML_PATH_SKUA));
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
     } else if (!strncmp(snd_card_name, "msm8909-skuc-snd-card",
                  sizeof("msm8909-skuc-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_SKUC,
                 sizeof(MIXER_XML_PATH_SKUC));
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
     } else if (!strncmp(snd_card_name, "msm8909-pm8916-snd-card",
                  sizeof("msm8909-pm8916-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_MSM8909_PM8916,
                 sizeof(MIXER_XML_PATH_MSM8909_PM8916));
+
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
     } else {
         strlcpy(mixer_xml_path, MIXER_XML_PATH,
                 sizeof(MIXER_XML_PATH));
+
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
     }
 }
 
@@ -801,7 +919,7 @@ void *platform_init(struct audio_device *adev)
     char baseband[PROPERTY_VALUE_MAX];
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data = NULL;
-    int retry_num = 0, snd_card_num = 0;
+    int retry_num = 0, snd_card_num = 0, key = 0;
     const char *snd_card_name;
     char mixer_xml_path[100],ffspEnable[PROPERTY_VALUE_MAX];
     char *cvd_version = NULL;
@@ -912,6 +1030,9 @@ void *platform_init(struct audio_device *adev)
         acdb_device_table[SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 131;
         acdb_device_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 131;
     }
+    property_get("audio.ds1.metainfo.key",value,"0");
+    key = atoi(value);
+
     my_data->voice_feature_set = VOICE_FEATURE_SET_DEFAULT;
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
     if (my_data->acdb_handle == NULL) {
@@ -962,7 +1083,7 @@ void *platform_init(struct audio_device *adev)
         else
             get_cvd_version(cvd_version, adev);
 
-        my_data->acdb_init(snd_card_name, cvd_version);
+        my_data->acdb_init(snd_card_name, cvd_version, key);
         if (cvd_version)
             free(cvd_version);
     }
@@ -981,6 +1102,9 @@ acdb_init_fail:
     audio_extn_ssr_update_enabled();
     audio_extn_spkr_prot_init(adev);
 
+    /* init dap hal */
+    audio_extn_dap_hal_init(adev->snd_card);
+
     audio_extn_dolby_set_license(adev);
     audio_hwdep_send_cal(my_data);
 
@@ -997,6 +1121,7 @@ void platform_deinit(void *platform)
     free(platform);
     /* deinit usb */
     audio_extn_usb_deinit();
+    audio_extn_dap_hal_deinit();
 }
 
 const char *platform_get_snd_device_name(snd_device_t snd_device)
@@ -2488,6 +2613,16 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
 
     ALOGV("%s: fragment_size %d", __func__, fragment_size);
     return fragment_size;
+}
+
+void platform_get_device_to_be_id_map(int **device_to_be_id, int *length)
+{
+     *device_to_be_id = msm_device_to_be_id;
+     *length = msm_be_id_array_len;
+}
+
+bool platform_check_24_bit_support() {
+    return false;
 }
 
 bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev __unused,
