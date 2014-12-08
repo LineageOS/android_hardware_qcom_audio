@@ -3,7 +3,7 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),false)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
 endif
 
@@ -28,7 +28,7 @@ endif
 
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 
-ifneq ($(strip $(AUDIO_FEATURE_DISABLED_DTS_EAGLE)),true)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DTS_EAGLE)),true)
     LOCAL_CFLAGS += -DDTS_EAGLE
 endif
 
