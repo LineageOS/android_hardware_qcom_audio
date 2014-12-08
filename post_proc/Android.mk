@@ -1,9 +1,8 @@
-
 LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),false)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
 endif
 
