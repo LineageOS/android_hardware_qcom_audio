@@ -21,7 +21,10 @@ endif
 ifneq ($(filter apq8084,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_APQ8084
 endif
-ifneq ($(filter msm8994 msm8992,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8994,$(TARGET_BOARD_PLATFORM)),)
+  LOCAL_CFLAGS := -DPLATFORM_MSM8994
+endif
+ifneq ($(filter msm8992,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSM8994
 endif
 endif
