@@ -18,7 +18,7 @@
  */
 
 #define LOG_TAG "audio_hw_dolby"
-/*#define LOG_NDEBUG 0*/
+#define LOG_NDEBUG 0
 #define LOG_NDDEBUG 0
 
 #include <errno.h>
@@ -33,6 +33,7 @@
 #include "platform_api.h"
 #include "audio_extn.h"
 #include "sound/compress_params.h"
+#include "sound/devdep_params.h"
 
 #ifdef DS1_DOLBY_DDP_ENABLED
 
@@ -243,7 +244,8 @@ void send_ddp_endp_params(struct audio_device *adev,
             (usecase->devices & ddp_dev) &&
             (usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
             ((usecase->stream.out->format == AUDIO_FORMAT_AC3) ||
-             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3))) {
+             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
+             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC))) {
             send_ddp_endp_params_stream(usecase->stream.out, ddp_dev,
                                         dev_ch_cap, false /* set cache */);
         }
@@ -260,7 +262,8 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev)
             (usecase->devices & AUDIO_DEVICE_OUT_ALL) &&
             (usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
             ((usecase->stream.out->format == AUDIO_FORMAT_AC3) ||
-             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3))) {
+             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
+             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC))) {
             /*
              * Use wfd /hdmi sink channel cap for dolby params if device is wfd
              * or hdmi. Otherwise use stereo configuration
@@ -352,7 +355,9 @@ void audio_extn_ddp_set_parameters(struct audio_device *adev,
      */
     send_ddp_endp_params(adev, ddp_dev, dev_ch_cap);
 }
+#endif /* DS1_DOLBY_DDP_ENABLED */
 
+#if defined(DS1_DOLBY_DDP_ENABLED) || defined(DS2_DOLBY_DAP_ENABLED)
 int audio_extn_dolby_get_snd_codec_id(struct audio_device *adev,
                                       struct stream_out *out,
                                       audio_format_t format)
@@ -370,19 +375,20 @@ int audio_extn_dolby_get_snd_codec_id(struct audio_device *adev,
     switch (format) {
     case AUDIO_FORMAT_AC3:
         id = SND_AUDIOCODEC_AC3;
+#ifdef DS1_DOLBY_DDP_ENABLED
         send_ddp_endp_params_stream(out, out->devices,
                             channel_cap, true /* set_cache */);
-#ifndef DS1_DOLBY_DAP_ENABLED
-        audio_extn_dolby_set_dmid(adev);
 #endif
+        audio_extn_dolby_set_dmid(adev);
         break;
     case AUDIO_FORMAT_E_AC3:
+    case AUDIO_FORMAT_E_AC3_JOC:
         id = SND_AUDIOCODEC_EAC3;
+#ifdef DS1_DOLBY_DDP_ENABLED
         send_ddp_endp_params_stream(out, out->devices,
                             channel_cap, true /* set_cache */);
-#ifndef DS1_DOLBY_DAP_ENABLED
-        audio_extn_dolby_set_dmid(adev);
 #endif
+        audio_extn_dolby_set_dmid(adev);
         break;
     default:
         ALOGE("%s: Unsupported audio format :%x", __func__, format);
@@ -394,13 +400,13 @@ int audio_extn_dolby_get_snd_codec_id(struct audio_device *adev,
 bool audio_extn_is_dolby_format(audio_format_t format)
 {
     if (format == AUDIO_FORMAT_AC3 ||
-            format == AUDIO_FORMAT_E_AC3)
+            format == AUDIO_FORMAT_E_AC3 ||
+            format == AUDIO_FORMAT_E_AC3_JOC)
         return true;
     else
         return false;
 }
-
-#endif /* DS1_DOLBY_DDP_ENABLED */
+#endif /* DS1_DOLBY_DDP_ENABLED || DS2_DOLBY_DAP_ENABLED */
 
 #ifdef DS1_DOLBY_DAP_ENABLED
 void audio_extn_dolby_set_endpoint(struct audio_device *adev)
@@ -474,6 +480,7 @@ void audio_extn_dolby_set_dmid(struct audio_device *adev)
     return;
 }
 
+#ifndef DS2_DOLBY_DAP_ENABLED
 void audio_extn_dolby_set_license(struct audio_device *adev)
 {
     int ret, key=0;
@@ -489,8 +496,11 @@ void audio_extn_dolby_set_license(struct audio_device *adev)
     }
 
     property_get("audio.ds1.metainfo.key",value,"0");
+#ifdef DOLBY_ACDB_LICENSE
     key = atoi(value);
-
+#else
+    key = 0;
+#endif
     ALOGV("%s Setting DS1 License, key:0x%x",__func__, key);
     ret = mixer_ctl_set_value(ctl, 0, key);
     if (ret)
@@ -498,4 +508,178 @@ void audio_extn_dolby_set_license(struct audio_device *adev)
 
     return;
 }
+#endif
 #endif /* DS1_DOLBY_DDP_ENABLED || DS1_DOLBY_DAP_ENABLED */
+
+#ifdef DS2_DOLBY_DAP_ENABLED
+struct ds2_extn_module  {
+   void *ds2_handle;
+   dap_hal_set_hw_info_t dap_hal_set_hw_info;
+};
+
+static struct ds2_extn_module ds2extnmod = {
+    .ds2_handle = NULL,
+    .dap_hal_set_hw_info = NULL,
+};
+
+int audio_extn_dap_hal_init(int snd_card) {
+    char c_dmid[128] = {0};
+    void *handle = NULL;
+    int i_dmid, ret = -EINVAL;
+    dap_hal_device_be_id_map_t device_be_id_map;
+
+    ALOGV("%s: opening DAP HAL lib\n", __func__);
+    ds2extnmod.ds2_handle = dlopen(LIB_DS2_DAP_HAL, RTLD_NOW);
+    if (ds2extnmod.ds2_handle == NULL) {
+        ALOGE("%s: DLOPEN failed for %s error %s", __func__, LIB_DS2_DAP_HAL,
+              dlerror());
+        goto ret;
+    }
+    ds2extnmod.dap_hal_set_hw_info = (dap_hal_set_hw_info_t)dlsym(ds2extnmod.ds2_handle, SET_HW_INFO_FUNC);
+    if (ds2extnmod.dap_hal_set_hw_info == NULL) {
+           ALOGE("%s: dlsym error %s for %s", __func__, SET_HW_INFO_FUNC,
+                 dlerror());
+           goto close;
+    }
+    ds2extnmod.dap_hal_set_hw_info(SND_CARD, (void*)(&snd_card));
+    ALOGV("%s Sound card number is:%d",__func__,snd_card);
+
+    platform_get_device_to_be_id_map(&device_be_id_map.device_id_to_be_id, &device_be_id_map.len);
+    ds2extnmod.dap_hal_set_hw_info(DEVICE_BE_ID_MAP, (void*)(&device_be_id_map));
+    ALOGV("%s Set be id map len:%d",__func__,device_be_id_map.len);
+    ret = 0;
+    goto ret;
+
+close:
+    dlclose(ds2extnmod.ds2_handle);
+    ds2extnmod.ds2_handle = NULL;
+    ds2extnmod.dap_hal_set_hw_info = NULL;
+ret:
+    return ret;
+}
+
+int audio_extn_dap_hal_deinit() {
+    if (ds2extnmod.ds2_handle != NULL) {
+       dlclose(ds2extnmod.ds2_handle);
+       ds2extnmod.ds2_handle = NULL;
+    }
+    ds2extnmod.dap_hal_set_hw_info = NULL;
+    return 0;
+}
+
+void audio_extn_dolby_ds2_set_endpoint(struct audio_device *adev) {
+    struct listnode *node;
+    struct audio_usecase *usecase;
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "DS1 DAP Endpoint";
+    int endpoint = 0, ret;
+    bool send = false;
+
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if ((usecase->type == PCM_PLAYBACK) &&
+            (usecase->id != USECASE_AUDIO_PLAYBACK_LOW_LATENCY)) {
+            endpoint |= usecase->devices & AUDIO_DEVICE_OUT_ALL;
+            send = true;
+        }
+    }
+    if (!send)
+        return;
+
+    if (ds2extnmod.dap_hal_set_hw_info) {
+        ds2extnmod.dap_hal_set_hw_info(HW_ENDPOINT, (void*)(&endpoint));
+        ALOGE("%s: Dolby set endpint :0x%x",__func__, endpoint);
+    } else {
+        ALOGE("%s: dap_hal_set_hw_info is NULL",__func__);
+    }
+
+    return;
+}
+
+int audio_extn_ds2_enable(struct audio_device *adev) {
+
+    char value[PROPERTY_VALUE_MAX] = {0};
+    bool ds2_enabled = false;
+    const char *mixer_ctl_name = "DS2 OnOff";
+    struct mixer_ctl *ctl;
+
+    property_get("audio.dolby.ds2.enabled", value, NULL);
+    ds2_enabled = atoi(value) || !strncmp("true", value, 4);
+
+    ALOGV("%s:", __func__);
+    if(ds2_enabled) {
+        ALOGD("%s:ds2_enabled %d", __func__, ds2_enabled);
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                                   __func__, mixer_ctl_name);
+            return -EINVAL;
+        }
+
+        if (mixer_ctl_set_value(ctl, 0, ds2_enabled) < 0) {
+            ALOGE("%s: Could not set ds2 enable %d",
+                            __func__, ds2_enabled);
+            return -EINVAL;
+        }
+    }
+    return 0;
+}
+
+int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, int state) {
+
+    ALOGV("%s: state %d", __func__, state);
+    if (ds2extnmod.dap_hal_set_hw_info) {
+        ds2extnmod.dap_hal_set_hw_info(DAP_BYPASS, (void*)(&state));
+        ALOGV("%s: Dolby set bypas :0x%x", __func__, state);
+    } else {
+        ALOGV("%s: dap_hal_set_hw_info is NULL", __func__);
+    }
+    return 0;
+}
+
+void audio_extn_dolby_set_license(struct audio_device *adev)
+{
+    int i_key=0;
+    char c_key[128] = {0};
+    char c_dmid[128] = {0};
+    int i_dmid, ret = -EINVAL;
+    struct dolby_param_license dolby_license;
+
+#ifdef DOLBY_ACDB_LICENSE
+    property_get("audio.ds1.metainfo.key",c_key,"0");
+    i_key = atoi(c_key);
+#else
+    /* As ACDB based license mechanism is disabled, force set the license key to 0*/
+    i_key = 0;
+#endif
+    property_get("dmid",c_dmid,"0");
+    i_dmid = atoi(c_dmid);
+    ALOGV("%s Setting DS1 License, key:0x%x dmid %d",__func__, i_key,i_dmid);
+    dolby_license.dmid = i_dmid;
+    dolby_license.license_key = i_key;
+    if (ds2extnmod.dap_hal_set_hw_info) {
+        ds2extnmod.dap_hal_set_hw_info(DMID, (void*)(&dolby_license.dmid));
+    } else {
+        ALOGV("%s: dap_hal_set_hw_info is NULL", __func__);
+        return ret;
+    }
+    return 0;
+}
+
+
+void audio_extn_ds2_set_parameters(struct audio_device *adev,
+                                   struct str_parms *parms)
+{
+    int val, ret;
+    char value[32]={0};
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SND_CARD_STATUS, value,
+                            sizeof(value));
+    if (ret >= 0) {
+        char *snd_card_status = value + 2;
+        if (strncmp(snd_card_status, "ONLINE", sizeof("ONLINE")) == 0){
+            audio_extn_dolby_set_license(adev);
+        }
+    }
+}
+#endif

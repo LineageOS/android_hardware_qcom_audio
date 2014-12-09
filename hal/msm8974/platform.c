@@ -122,7 +122,7 @@ struct audio_block_header
 
 /* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
-typedef int  (*acdb_init_t)(const char *, char *);
+typedef int  (*acdb_init_t)(const char *, char *, int);
 typedef void (*acdb_send_audio_cal_t)(int, int, int , int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
@@ -519,6 +519,67 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_HFP_SCO)},
 };
 
+#define NO_COLS 2
+#ifdef PLATFORM_APQ8084
+static int msm_device_to_be_id [][NO_COLS] = {
+       {AUDIO_DEVICE_OUT_EARPIECE                       ,       2},
+       {AUDIO_DEVICE_OUT_SPEAKER                        ,       2},
+       {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       2},
+       {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       2},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO                  ,       11},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET          ,       11},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT           ,       11},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP                 ,       -1},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES      ,       -1},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER         ,       -1},
+       {AUDIO_DEVICE_OUT_AUX_DIGITAL                    ,       4},
+       {AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET              ,       9},
+       {AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET              ,       9},
+       {AUDIO_DEVICE_OUT_USB_ACCESSORY                  ,       -1},
+       {AUDIO_DEVICE_OUT_USB_DEVICE                     ,       -1},
+       {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
+       {AUDIO_DEVICE_OUT_PROXY                          ,       9},
+       {AUDIO_DEVICE_OUT_FM                             ,       7},
+       {AUDIO_DEVICE_OUT_FM_TX                          ,       8},
+       {AUDIO_DEVICE_OUT_ALL                            ,      -1},
+       {AUDIO_DEVICE_NONE                               ,      -1},
+       {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
+};
+#elif PLATFORM_MSM8994
+static int msm_device_to_be_id [][NO_COLS] = {
+       {AUDIO_DEVICE_OUT_EARPIECE                       ,       2},
+       {AUDIO_DEVICE_OUT_SPEAKER                        ,       2},
+       {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       2},
+       {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       2},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO                  ,       38},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET          ,       38},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT           ,       38},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP                 ,       -1},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES      ,       -1},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER         ,       -1},
+       {AUDIO_DEVICE_OUT_AUX_DIGITAL                    ,       4},
+       {AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET              ,       9},
+       {AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET              ,       9},
+       {AUDIO_DEVICE_OUT_USB_ACCESSORY                  ,       -1},
+       {AUDIO_DEVICE_OUT_USB_DEVICE                     ,       -1},
+       {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
+       {AUDIO_DEVICE_OUT_PROXY                          ,       9},
+/* Add the correct be ids */
+       {AUDIO_DEVICE_OUT_FM                             ,       7},
+       {AUDIO_DEVICE_OUT_FM_TX                          ,       8},
+       {AUDIO_DEVICE_OUT_ALL                            ,      -1},
+       {AUDIO_DEVICE_NONE                               ,      -1},
+       {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
+};
+#else
+static int msm_device_to_be_id [][NO_COLS] = {
+    {AUDIO_DEVICE_NONE, -1},
+};
+#endif
+static int msm_be_id_array_len  =
+    sizeof(msm_device_to_be_id) / sizeof(msm_device_to_be_id[0]);
+
+
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 
@@ -859,7 +920,7 @@ void *platform_init(struct audio_device *adev)
     char baseband[PROPERTY_VALUE_MAX];
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data = NULL;
-    int retry_num = 0, snd_card_num = 0;
+    int retry_num = 0, snd_card_num = 0, key = 0;
     const char *snd_card_name;
     char *cvd_version = NULL;
 
@@ -972,6 +1033,8 @@ void *platform_init(struct audio_device *adev)
             my_data->fluence_mode = FLUENCE_BROADSIDE;
         }
     }
+    property_get("audio.ds1.metainfo.key",value,"0");
+    key = atoi(value);
 
     my_data->voice_feature_set = VOICE_FEATURE_SET_DEFAULT;
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
@@ -1023,7 +1086,7 @@ void *platform_init(struct audio_device *adev)
         else
             get_cvd_version(cvd_version, adev);
 
-        my_data->acdb_init(snd_card_name, cvd_version);
+        my_data->acdb_init(snd_card_name, cvd_version, key);
         if (cvd_version)
             free(cvd_version);
     }
@@ -1055,6 +1118,9 @@ acdb_init_fail:
     audio_extn_usb_init(adev);
     /* update sound cards appropriately */
     audio_extn_usb_set_proxy_sound_card(adev->snd_card);
+
+    /* init dap hal */
+    audio_extn_dap_hal_init(adev->snd_card);
 
     /* Read one time ssr property */
     audio_extn_ssr_update_enabled();
@@ -1090,6 +1156,7 @@ void platform_deinit(void *platform)
     free(platform);
     /* deinit usb */
     audio_extn_usb_deinit();
+    audio_extn_dap_hal_deinit();
 }
 
 const char *platform_get_snd_device_name(snd_device_t snd_device)
@@ -2750,4 +2817,10 @@ int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t p
     pcm_device_table[usecase][type] = pcm_id;
 done:
     return ret;
+}
+
+void platform_get_device_to_be_id_map(int **device_to_be_id, int *length)
+{
+     *device_to_be_id = msm_device_to_be_id;
+     *length = msm_be_id_array_len;
 }
