@@ -222,6 +222,11 @@ bool voice_is_in_call_rec_stream(struct stream_in *in)
 {
     bool in_call_rec = false;
 
+    if (!in) {
+       ALOGE("%s: input stream is NULL", __func__);
+       return in_call_rec;
+    }
+
     if(in->source == AUDIO_SOURCE_VOICE_DOWNLINK ||
        in->source == AUDIO_SOURCE_VOICE_UPLINK ||
        in->source == AUDIO_SOURCE_VOICE_CALL) {
