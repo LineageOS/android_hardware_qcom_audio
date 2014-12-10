@@ -2793,13 +2793,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->sample_rate = out->config.rate;
     }
 
-    if ((24 == out->bit_width) &&
-        (devices & AUDIO_DEVICE_OUT_SPEAKER)) {
-        out->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        ALOGI("%s 24-bit playback on speaker restricted to : %d Hz",
-               __func__, sample_rate);
-    }
-
     ALOGV("%s flags %x, format %x, sample_rate %d, out->bit_width %d",
            __func__, flags, out->format, out->sample_rate, out->bit_width);
 

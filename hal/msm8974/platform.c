@@ -2267,12 +2267,6 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
     *new_bit_width = best_bw;
     *new_sample_rate = best_sr;
 
-    // 24 bit playback on speakers is only allowed at 48KHz
-    if ((24 == *new_bit_width) &&
-         (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
-        *new_sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-    }
-
     // Force routing if the expected bitwdith or samplerate
     // is not same as current backend comfiguration
     if ((*new_bit_width != adev->cur_codec_backend_bit_width) ||
