@@ -131,6 +131,7 @@ void audio_extn_customstereo_set_parameters(struct audio_device *adev,
 
 #ifndef DTS_EAGLE
 #define audio_extn_hpx_set_parameters(adev, parms)         (0)
+#define audio_extn_hpx_get_parameters(query, reply)  (0)
 #define audio_extn_check_and_set_dts_hpx_state(adev)       (0)
 #else
 void audio_extn_hpx_set_parameters(struct audio_device *adev,
@@ -167,6 +168,24 @@ void audio_extn_hpx_set_parameters(struct audio_device *adev,
         if (ctl)
             mixer_ctl_set_value(ctl, 0, aextnmod.hpx_enabled);
     }
+}
+
+static int audio_extn_hpx_get_parameters(struct str_parms *query,
+                                       struct str_parms *reply)
+{
+    int ret;
+    char value[32]={0};
+
+    ALOGV("%s: hpx %d", __func__, aextnmod.hpx_enabled);
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_HPX, value,
+                            sizeof(value));
+    if (ret >= 0) {
+        if (aextnmod.hpx_enabled)
+            str_parms_add_str(reply, AUDIO_PARAMETER_HPX, "ON");
+        else
+            str_parms_add_str(reply, AUDIO_PARAMETER_HPX, "OFF");
+    }
+    return ret;
 }
 
 void audio_extn_check_and_set_dts_hpx_state(const struct audio_device *adev)
@@ -525,6 +544,7 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     audio_extn_get_fluence_parameters(adev, query, reply);
     get_active_offload_usecases(adev, query, reply);
     audio_extn_dts_eagle_get_parameters(adev, query, reply);
+    audio_extn_hpx_get_parameters(query, reply);
 
     kv_pairs = str_parms_to_str(reply);
     ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);
