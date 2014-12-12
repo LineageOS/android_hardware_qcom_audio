@@ -326,6 +326,132 @@ exit:
     return ret;
 }
 
+__attribute__ ((visibility ("default")))
+int offload_effects_bundle_set_hpx_state(bool hpx_state)
+{
+    int ret = 0;
+    struct listnode *node;
+
+    ALOGV("%s hpx state: %d", __func__, hpx_state);
+
+    if (lib_init() != 0)
+        return init_status;
+
+    pthread_mutex_lock(&lock);
+
+    if (hpx_state) {
+        /* set ramp down */
+        list_for_each(node, &active_outputs_list) {
+            output_context_t *out_ctxt = node_to_item(node,
+                                                      output_context_t,
+                                                      outputs_list_node);
+            struct soft_volume_params vol;
+            vol.master_gain = 0x0;
+            offload_transition_soft_volume_send_params(out_ctxt->ref_ctl, vol,
+                              OFFLOAD_SEND_TRANSITION_SOFT_VOLUME_GAIN_MASTER);
+        }
+        /* wait for ramp down duration - 30msec */
+        usleep(30000);
+        /* disable effects modules */
+        list_for_each(node, &active_outputs_list) {
+            struct listnode *fx_node;
+            output_context_t *out_ctxt = node_to_item(node,
+                                                      output_context_t,
+                                                      outputs_list_node);
+            list_for_each(fx_node, &out_ctxt->effects_list) {
+                effect_context_t *fx_ctxt = node_to_item(fx_node,
+                                                         effect_context_t,
+                                                         output_node);
+                if ((fx_ctxt->state == EFFECT_STATE_ACTIVE) &&
+                    (fx_ctxt->ops.stop != NULL))
+                    fx_ctxt->ops.stop(fx_ctxt, out_ctxt);
+            }
+            out_ctxt->ctl = NULL;
+        }
+        /* set the channel mixer */
+        list_for_each(node, &active_outputs_list) {
+            /* send command to set channel mixer */
+        }
+        /* enable hpx modules */
+        list_for_each(node, &active_outputs_list) {
+            output_context_t *out_ctxt = node_to_item(node,
+                                                      output_context_t,
+                                                      outputs_list_node);
+            offload_hpx_send_params(out_ctxt->ref_ctl,
+                                    OFFLOAD_SEND_HPX_STATE_ON);
+        }
+        /* wait for transition state - 50msec */
+        usleep(50000);
+        /* set ramp up */
+        list_for_each(node, &active_outputs_list) {
+            output_context_t *out_ctxt = node_to_item(node,
+                                                      output_context_t,
+                                                      outputs_list_node);
+            struct soft_volume_params vol;
+            vol.master_gain = 0x2000;
+            offload_transition_soft_volume_send_params(out_ctxt->ref_ctl, vol,
+                              OFFLOAD_SEND_TRANSITION_SOFT_VOLUME_GAIN_MASTER);
+        }
+    } else {
+        /* set ramp down */
+        list_for_each(node, &active_outputs_list) {
+            output_context_t *out_ctxt = node_to_item(node,
+                                                      output_context_t,
+                                                      outputs_list_node);
+            struct soft_volume_params vol;
+            vol.master_gain = 0x0;
+            offload_transition_soft_volume_send_params(out_ctxt->ref_ctl, vol,
+                              OFFLOAD_SEND_TRANSITION_SOFT_VOLUME_GAIN_MASTER);
+        }
+        /* wait for ramp down duration - 30msec */
+        usleep(30000);
+        /* disable effects modules */
+        list_for_each(node, &active_outputs_list) {
+            output_context_t *out_ctxt = node_to_item(node,
+                                                      output_context_t,
+                                                      outputs_list_node);
+            offload_hpx_send_params(out_ctxt->ref_ctl,
+                                    OFFLOAD_SEND_HPX_STATE_OFF);
+        }
+        /* set the channel mixer */
+        list_for_each(node, &active_outputs_list) {
+            /* send command to set channel mixer */
+        }
+        /* enable effects modules */
+        list_for_each(node, &active_outputs_list) {
+            struct listnode *fx_node;
+            output_context_t *out_ctxt = node_to_item(node,
+                                                      output_context_t,
+                                                      outputs_list_node);
+            out_ctxt->ctl = out_ctxt->ref_ctl;
+            list_for_each(fx_node, &out_ctxt->effects_list) {
+                effect_context_t *fx_ctxt = node_to_item(fx_node,
+                                                         effect_context_t,
+                                                         output_node);
+                if ((fx_ctxt->state == EFFECT_STATE_ACTIVE) &&
+                    (fx_ctxt->ops.start != NULL))
+                    fx_ctxt->ops.start(fx_ctxt, out_ctxt);
+            }
+        }
+        /* wait for transition state - 50msec */
+        usleep(50000);
+        /* set ramp up */
+        list_for_each(node, &active_outputs_list) {
+            output_context_t *out_ctxt = node_to_item(node,
+                                                      output_context_t,
+                                                      outputs_list_node);
+            struct soft_volume_params vol;
+            vol.master_gain = 0x2000;
+            offload_transition_soft_volume_send_params(out_ctxt->ref_ctl, vol,
+                              OFFLOAD_SEND_TRANSITION_SOFT_VOLUME_GAIN_MASTER);
+        }
+    }
+
+exit:
+    pthread_mutex_unlock(&lock);
+    return ret;
+}
+
 /*
  * Effect operations
  */

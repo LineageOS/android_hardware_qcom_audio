@@ -111,7 +111,14 @@ int hw_accelerator_set_parameter(effect_context_t *context, effect_param_t *p,
     p->status = 0;
 
     switch (param) {
-    /* Placeholder for effects to use set param */
+    case HW_ACCELERATOR_HPX_STATE: {
+        int hpxState = (uint32_t)(*(int32_t *)value);
+        if (hpxState)
+            hw_acc_hpx_send_params(hw_acc_ctxt->fd, OFFLOAD_SEND_HPX_STATE_ON);
+        else
+            hw_acc_hpx_send_params(hw_acc_ctxt->fd, OFFLOAD_SEND_HPX_STATE_OFF);
+        break;
+    }
     default:
         p->status = -EINVAL;
         break;

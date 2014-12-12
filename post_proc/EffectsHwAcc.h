@@ -48,6 +48,10 @@ public:
                             int frameCount);
     virtual void setBufferProvider(AudioBufferProvider **bufferProvider,
                            AudioBufferProvider **trackBufferProvider);
+#ifdef HW_ACC_HPX
+    virtual void updateHPXState(uint32_t state);
+#endif
+
     /* AudioBufferProvider that wraps a track AudioBufferProvider by a call to
        h/w accelerated effect */
     class EffectsBufferProvider : public AudioBufferProvider {

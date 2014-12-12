@@ -192,6 +192,12 @@ void offload_transition_soft_volume_set_gain_2ch(struct soft_volume_params *vol,
 int offload_transition_soft_volume_send_params(struct mixer_ctl *ctl,
                                                struct soft_volume_params vol,
                                                unsigned param_send_flags);
+
+#define OFFLOAD_SEND_HPX_STATE_ON       (1 << 0)
+#define OFFLOAD_SEND_HPX_STATE_OFF      (OFFLOAD_SEND_HPX_STATE_ON << 1)
+int offload_hpx_send_params(struct mixer_ctl *ctl, unsigned param_send_flags);
+int hw_acc_hpx_send_params(int fd, unsigned param_send_flags);
+
 #if __cplusplus
 } //extern "C"
 #endif

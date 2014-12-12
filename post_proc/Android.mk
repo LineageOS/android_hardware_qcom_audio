@@ -59,6 +59,10 @@ LOCAL_MODULE_TAGS := optional
 
 LOCAL_CFLAGS += -O2 -fvisibility=hidden
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DTS_EAGLE)), true)
+LOCAL_CFLAGS += -DHW_ACC_HPX
+endif
+
 LOCAL_MODULE:= libhwacceffectswrapper
 
 include $(BUILD_STATIC_LIBRARY)

@@ -343,5 +343,33 @@ void EffectsHwAcc::setBufferProvider(AudioBufferProvider **bufferProvider,
     }
 }
 
+#ifdef HW_ACC_HPX
+void EffectsHwAcc::updateHPXState(uint32_t state)
+{
+    EffectsBufferProvider *pHwAccbp = mBufferProvider;
+    if (pHwAccbp) {
+        ALOGV("updateHPXState: %d", state);
+        int cmdStatus, status;
+        uint32_t replySize = sizeof(int);
+        uint32_t data = state;
+        uint32_t size = (sizeof(effect_param_t) + 2 * sizeof(int32_t));
+        uint32_t buf32[size];
+        effect_param_t *param = (effect_param_t *)buf32;
+
+        param->psize = sizeof(int32_t);
+        *(int32_t *)param->data = HW_ACCELERATOR_HPX_STATE;
+        param->vsize = sizeof(int32_t);
+        memcpy((param->data + param->psize), &data, param->vsize);
+        status = (*pHwAccbp->mEffectsHandle)->command(pHwAccbp->mEffectsHandle,
+                                          EFFECT_CMD_SET_PARAM,
+                                          sizeof(effect_param_t) + param->psize +
+                                          param->vsize,
+                                          param, &replySize, &cmdStatus);
+
+        if ((status != 0) || (cmdStatus != 0))
+            ALOGE("error %d while updating HW ACC HPX BYPASS state", status);
+    }
+}
+#endif
 // ----------------------------------------------------------------------------
 }; // namespace android
