@@ -254,11 +254,11 @@ status_t ALSADevice::setHardwareParams(alsa_handle_t *handle)
             err = -errno;
             return err;
         }
-        if( handle->format == AUDIO_FORMAT_AAC ) {
+        if( (handle->format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC ) {
           codec_id = get_compressed_format("AAC");
           ALOGV("### AAC CODEC codec_id %d",codec_id);
         }
-        else if (handle->format == AUDIO_FORMAT_AMR_WB) {
+        else if ((handle->format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AMR_WB) {
           codec_id = get_compressed_format("AMR_WB");
           if ((!strcmp(handle->useCase, SND_USE_CASE_VERB_HIFI_REC_COMPRESSED)) ||
               (!strcmp(handle->useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC_COMPRESSED)) ||
@@ -272,12 +272,12 @@ status_t ALSADevice::setHardwareParams(alsa_handle_t *handle)
           ALOGV("### AMR WB CODEC codec_id %d",codec_id);
         }
 #ifdef QCOM_AUDIO_FORMAT_ENABLED
-        else if (handle->format == AUDIO_FORMAT_AMR_WB_PLUS) {
+        else if ((handle->format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AMR_WB_PLUS) {
           codec_id = get_compressed_format("AMR_WB_PLUS");
           ALOGV("### AMR WB+ CODEC codec_id %d",codec_id);
         }
 #endif
-        else if (handle->format == AUDIO_FORMAT_MP3) {
+        else if ((handle->format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_MP3) {
           codec_id = get_compressed_format("MP3");
           ALOGV("### MP3 CODEC codec_id %d",codec_id);
         }

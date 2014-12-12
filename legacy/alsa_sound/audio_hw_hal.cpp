@@ -677,7 +677,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->stream.write = out_write;
     out->stream.get_render_position = out_get_render_position;
     out->stream.get_next_write_timestamp = out_get_next_write_timestamp;
-#ifdef QCOM_TUNNEL_LPA_ENABLED	
+#ifdef QCOM_TUNNEL_LPA_ENABLED
     out->stream.start = out_start;
     out->stream.pause = out_pause;
     out->stream.flush = out_flush;
