@@ -18,7 +18,7 @@
  */
 
 #define LOG_TAG "offload_effect_virtualizer"
-#define LOG_NDEBUG 0
+//#define LOG_NDEBUG 0
 
 #include <cutils/list.h>
 #include <cutils/log.h>
@@ -58,9 +58,14 @@ int virtualizer_set_strength(virtualizer_context_t *context, uint32_t strength)
 
     offload_virtualizer_set_strength(&(context->offload_virt), strength);
     if (context->ctl)
-        offload_virtualizer_send_params(context->ctl, context->offload_virt,
+        offload_virtualizer_send_params(context->ctl, &context->offload_virt,
                                         OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG |
                                         OFFLOAD_SEND_VIRTUALIZER_STRENGTH);
+    if (context->hw_acc_fd > 0)
+        hw_acc_virtualizer_send_params(context->hw_acc_fd,
+                                       &context->offload_virt,
+                                       OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG |
+                                       OFFLOAD_SEND_VIRTUALIZER_STRENGTH);
     return 0;
 }
 
@@ -162,8 +167,12 @@ int virtualizer_set_device(effect_context_t *context, uint32_t device)
                 offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), false);
                 if (virt_ctxt->ctl)
                     offload_virtualizer_send_params(virt_ctxt->ctl,
-                                                    virt_ctxt->offload_virt,
+                                                    &virt_ctxt->offload_virt,
                                                     OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
+                if (virt_ctxt->hw_acc_fd > 0)
+                    hw_acc_virtualizer_send_params(virt_ctxt->hw_acc_fd,
+                                                   &virt_ctxt->offload_virt,
+                                                   OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
             }
             virt_ctxt->temp_disabled = true;
             ALOGI("%s: ctxt %p, disabled based on device", __func__, virt_ctxt);
@@ -174,8 +183,12 @@ int virtualizer_set_device(effect_context_t *context, uint32_t device)
                 offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), true);
                 if (virt_ctxt->ctl)
                     offload_virtualizer_send_params(virt_ctxt->ctl,
-                                                    virt_ctxt->offload_virt,
+                                                    &virt_ctxt->offload_virt,
                                                     OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
+                if (virt_ctxt->hw_acc_fd > 0)
+                    hw_acc_virtualizer_send_params(virt_ctxt->hw_acc_fd,
+                                                   &virt_ctxt->offload_virt,
+                                                   OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
             }
             virt_ctxt->temp_disabled = false;
         }
@@ -216,6 +229,7 @@ int virtualizer_init(effect_context_t *context)
     set_config(context, &context->config);
 
     virt_ctxt->temp_disabled = false;
+    virt_ctxt->hw_acc_fd = -1;
     memset(&(virt_ctxt->offload_virt), 0, sizeof(struct virtualizer_params));
 
     return 0;
@@ -232,9 +246,14 @@ int virtualizer_enable(effect_context_t *context)
         offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), true);
         if (virt_ctxt->ctl && virt_ctxt->strength)
             offload_virtualizer_send_params(virt_ctxt->ctl,
-                                          virt_ctxt->offload_virt,
+                                          &virt_ctxt->offload_virt,
                                           OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG |
-                                          OFFLOAD_SEND_BASSBOOST_STRENGTH);
+                                          OFFLOAD_SEND_VIRTUALIZER_STRENGTH);
+        if ((virt_ctxt->hw_acc_fd > 0) && virt_ctxt->strength)
+            hw_acc_virtualizer_send_params(virt_ctxt->hw_acc_fd,
+                                           &virt_ctxt->offload_virt,
+                                           OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG |
+                                           OFFLOAD_SEND_VIRTUALIZER_STRENGTH);
     }
     return 0;
 }
@@ -248,8 +267,12 @@ int virtualizer_disable(effect_context_t *context)
         offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), false);
         if (virt_ctxt->ctl)
             offload_virtualizer_send_params(virt_ctxt->ctl,
-                                          virt_ctxt->offload_virt,
+                                          &virt_ctxt->offload_virt,
                                           OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
+        if (virt_ctxt->hw_acc_fd > 0)
+            hw_acc_virtualizer_send_params(virt_ctxt->hw_acc_fd,
+                                           &virt_ctxt->offload_virt,
+                                           OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
     }
     return 0;
 }
@@ -260,19 +283,47 @@ int virtualizer_start(effect_context_t *context, output_context_t *output)
 
     ALOGV("%s: ctxt %p, ctl %p", __func__, virt_ctxt, output->ctl);
     virt_ctxt->ctl = output->ctl;
-    if (offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt)))
+    if (offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt))) {
         if (virt_ctxt->ctl)
-            offload_virtualizer_send_params(virt_ctxt->ctl, virt_ctxt->offload_virt,
+            offload_virtualizer_send_params(virt_ctxt->ctl, &virt_ctxt->offload_virt,
                                           OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG |
                                           OFFLOAD_SEND_VIRTUALIZER_STRENGTH);
+        if (virt_ctxt->hw_acc_fd > 0)
+            hw_acc_virtualizer_send_params(virt_ctxt->hw_acc_fd,
+                                           &virt_ctxt->offload_virt,
+                                           OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG |
+                                           OFFLOAD_SEND_VIRTUALIZER_STRENGTH);
+    }
     return 0;
 }
 
-int virtualizer_stop(effect_context_t *context, output_context_t *output)
+int virtualizer_stop(effect_context_t *context, output_context_t *output __unused)
 {
     virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)context;
 
     ALOGV("%s: ctxt %p", __func__, virt_ctxt);
+    if (offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt)) &&
+        virt_ctxt->ctl) {
+        struct virtualizer_params virt;
+        virt.enable_flag = false;
+        offload_virtualizer_send_params(virt_ctxt->ctl, &virt,
+                                        OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
+    }
     virt_ctxt->ctl = NULL;
+    return 0;
+}
+
+int virtualizer_set_mode(effect_context_t *context, int32_t hw_acc_fd)
+{
+    virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)context;
+
+    ALOGV("%s: ctxt %p", __func__, virt_ctxt);
+    virt_ctxt->hw_acc_fd = hw_acc_fd;
+    if ((virt_ctxt->hw_acc_fd > 0) &&
+        (offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt))))
+        hw_acc_virtualizer_send_params(virt_ctxt->hw_acc_fd,
+                                       &virt_ctxt->offload_virt,
+                                       OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG |
+                                       OFFLOAD_SEND_VIRTUALIZER_STRENGTH);
     return 0;
 }

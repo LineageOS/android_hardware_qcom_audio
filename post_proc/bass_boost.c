@@ -18,7 +18,7 @@
  */
 
 #define LOG_TAG "offload_effect_bass_boost"
-#define LOG_NDEBUG 0
+//#define LOG_NDEBUG 0
 
 #include <cutils/list.h>
 #include <cutils/log.h>
@@ -59,9 +59,14 @@ int bassboost_set_strength(bassboost_context_t *context, uint32_t strength)
 
     offload_bassboost_set_strength(&(context->offload_bass), strength);
     if (context->ctl)
-        offload_bassboost_send_params(context->ctl, context->offload_bass,
+        offload_bassboost_send_params(context->ctl, &context->offload_bass,
                                       OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
                                       OFFLOAD_SEND_BASSBOOST_STRENGTH);
+    if (context->hw_acc_fd > 0)
+        hw_acc_bassboost_send_params(context->hw_acc_fd,
+                                     &context->offload_bass,
+                                     OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
+                                     OFFLOAD_SEND_BASSBOOST_STRENGTH);
     return 0;
 }
 
@@ -117,7 +122,7 @@ int bassboost_get_parameter(effect_context_t *context, effect_param_t *p,
 }
 
 int bassboost_set_parameter(effect_context_t *context, effect_param_t *p,
-                            uint32_t size)
+                            uint32_t size __unused)
 {
     bassboost_context_t *bass_ctxt = (bassboost_context_t *)context;
     int voffset = ((p->psize - 1) / sizeof(int32_t) + 1) * sizeof(int32_t);
@@ -163,8 +168,12 @@ int bassboost_set_device(effect_context_t *context, uint32_t device)
                 offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), false);
                 if (bass_ctxt->ctl)
                     offload_bassboost_send_params(bass_ctxt->ctl,
-                                                  bass_ctxt->offload_bass,
+                                                  &bass_ctxt->offload_bass,
                                                   OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
+                if (bass_ctxt->hw_acc_fd > 0)
+                    hw_acc_bassboost_send_params(bass_ctxt->hw_acc_fd,
+                                                 &bass_ctxt->offload_bass,
+                                                 OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
             }
             bass_ctxt->temp_disabled = true;
         }
@@ -175,8 +184,12 @@ int bassboost_set_device(effect_context_t *context, uint32_t device)
                 offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), true);
                 if (bass_ctxt->ctl)
                     offload_bassboost_send_params(bass_ctxt->ctl,
-                                                  bass_ctxt->offload_bass,
+                                                  &bass_ctxt->offload_bass,
                                                   OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
+                if (bass_ctxt->hw_acc_fd > 0)
+                    hw_acc_bassboost_send_params(bass_ctxt->hw_acc_fd,
+                                                 &bass_ctxt->offload_bass,
+                                                 OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
             }
             bass_ctxt->temp_disabled = false;
         }
@@ -216,6 +229,7 @@ int bassboost_init(effect_context_t *context)
 
     set_config(context, &context->config);
 
+    bass_ctxt->hw_acc_fd = -1;
     bass_ctxt->temp_disabled = false;
     memset(&(bass_ctxt->offload_bass), 0, sizeof(struct bass_boost_params));
 
@@ -233,9 +247,14 @@ int bassboost_enable(effect_context_t *context)
         offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), true);
         if (bass_ctxt->ctl && bass_ctxt->strength)
             offload_bassboost_send_params(bass_ctxt->ctl,
-                                          bass_ctxt->offload_bass,
+                                          &bass_ctxt->offload_bass,
                                           OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
                                           OFFLOAD_SEND_BASSBOOST_STRENGTH);
+        if ((bass_ctxt->hw_acc_fd > 0) && (bass_ctxt->strength))
+            hw_acc_bassboost_send_params(bass_ctxt->hw_acc_fd,
+                                         &bass_ctxt->offload_bass,
+                                         OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
+                                         OFFLOAD_SEND_BASSBOOST_STRENGTH);
     }
     return 0;
 }
@@ -249,8 +268,12 @@ int bassboost_disable(effect_context_t *context)
         offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), false);
         if (bass_ctxt->ctl)
             offload_bassboost_send_params(bass_ctxt->ctl,
-                                          bass_ctxt->offload_bass,
+                                          &bass_ctxt->offload_bass,
                                           OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
+        if (bass_ctxt->hw_acc_fd > 0)
+            hw_acc_bassboost_send_params(bass_ctxt->hw_acc_fd,
+                                         &bass_ctxt->offload_bass,
+                                         OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
     }
     return 0;
 }
@@ -262,19 +285,47 @@ int bassboost_start(effect_context_t *context, output_context_t *output)
     ALOGV("%s: ctxt %p, ctl %p, strength %d", __func__, bass_ctxt,
                                    output->ctl, bass_ctxt->strength);
     bass_ctxt->ctl = output->ctl;
-    if (offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass)))
+    if (offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass))) {
         if (bass_ctxt->ctl)
-            offload_bassboost_send_params(bass_ctxt->ctl, bass_ctxt->offload_bass,
+            offload_bassboost_send_params(bass_ctxt->ctl, &bass_ctxt->offload_bass,
                                           OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
                                           OFFLOAD_SEND_BASSBOOST_STRENGTH);
+        if (bass_ctxt->hw_acc_fd > 0)
+            hw_acc_bassboost_send_params(bass_ctxt->hw_acc_fd,
+                                         &bass_ctxt->offload_bass,
+                                         OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
+                                         OFFLOAD_SEND_BASSBOOST_STRENGTH);
+    }
     return 0;
 }
 
-int bassboost_stop(effect_context_t *context, output_context_t *output)
+int bassboost_stop(effect_context_t *context, output_context_t *output __unused)
 {
     bassboost_context_t *bass_ctxt = (bassboost_context_t *)context;
 
     ALOGV("%s: ctxt %p", __func__, bass_ctxt);
+    if (offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass)) &&
+        bass_ctxt->ctl) {
+        struct bass_boost_params bassboost;
+        bassboost.enable_flag = false;
+        offload_bassboost_send_params(bass_ctxt->ctl, &bassboost,
+                                      OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
+    }
     bass_ctxt->ctl = NULL;
+    return 0;
+}
+
+int bassboost_set_mode(effect_context_t *context, int32_t hw_acc_fd)
+{
+    bassboost_context_t *bass_ctxt = (bassboost_context_t *)context;
+
+    ALOGV("%s: ctxt %p", __func__, bass_ctxt);
+    bass_ctxt->hw_acc_fd = hw_acc_fd;
+    if ((bass_ctxt->hw_acc_fd > 0) &&
+        (offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass))))
+        hw_acc_bassboost_send_params(bass_ctxt->hw_acc_fd,
+                                     &bass_ctxt->offload_bass,
+                                     OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
+                                     OFFLOAD_SEND_BASSBOOST_STRENGTH);
     return 0;
 }
