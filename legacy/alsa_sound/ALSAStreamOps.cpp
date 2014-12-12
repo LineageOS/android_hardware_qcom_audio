@@ -268,7 +268,7 @@ status_t ALSAStreamOps::setParameters(const String8& keyValuePairs)
     }
 #ifdef QCOM_FM_ENABLED
     else {
-        key = String8(AudioParameter::keyHandleFm);
+        key = String8(AUDIO_PARAMETER_KEY_HANDLE_FM);
         if (param.getInt(key, device) == NO_ERROR) {
             ALOGD("setParameters(): handleFm with device %d", device);
             if(device) {
