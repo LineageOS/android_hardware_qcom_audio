@@ -3248,9 +3248,9 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->format = config->format;
 
     if (in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) {
-        if (!adev->voice.in_call) {
-           ret = -EINVAL;
-           goto err_open;
+        if (adev->mode != AUDIO_MODE_IN_CALL) {
+            ret = -EINVAL;
+            goto err_open;
         }
         if (config->sample_rate == 0)
             config->sample_rate = AFE_PROXY_SAMPLING_RATE;
