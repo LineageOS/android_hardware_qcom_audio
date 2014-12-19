@@ -87,6 +87,9 @@ static const snd_device_t tomtom_msm8994_CDP_variant_devices[] = {
     SND_DEVICE_IN_HANDSET_MIC,
 };
 
+static const snd_device_t tomtom_thulium_CDP_variant_devices[] = {
+};
+
 static const snd_device_t tomtom_liquid_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_SPEAKER_EXTERNAL_1,
@@ -249,6 +252,37 @@ static void  update_hardware_info_8994(struct hardware_info *hw_info, const char
     }
 }
 
+static void  update_hardware_info_thulium(struct hardware_info *hw_info, const char *snd_card_name)
+{
+    if (!strcmp(snd_card_name, "thulium-tomtom-mtp-snd-card")) {
+        strlcpy(hw_info->type, " mtp", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "thulium", sizeof(hw_info->name));
+        hw_info->snd_devices = NULL;
+        hw_info->num_snd_devices = 0;
+        strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "thulium-tomtom-cdp-snd-card")) {
+        strlcpy(hw_info->type, " cdp", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "thulium", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)tomtom_thulium_CDP_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tomtom_thulium_CDP_variant_devices);
+        strlcpy(hw_info->dev_extn, "-cdp", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "thulium-tomtom-stp-snd-card")) {
+        strlcpy(hw_info->type, " stp", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "thulium", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)tomtom_stp_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tomtom_stp_variant_devices);
+        strlcpy(hw_info->dev_extn, "-stp", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "thulium-tomtom-liquid-snd-card")) {
+        strlcpy(hw_info->type, " liquid", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "thulium", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)tomtom_liquid_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tomtom_liquid_variant_devices);
+        strlcpy(hw_info->dev_extn, "-liquid", sizeof(hw_info->dev_extn));
+    } else {
+        ALOGW("%s: Not a thulium device", __func__);
+    }
+}
+
 static void  update_hardware_info_8974(struct hardware_info *hw_info, const char *snd_card_name)
 {
     if (!strcmp(snd_card_name, "msm8974-taiko-mtp-snd-card")) {
@@ -374,6 +408,9 @@ void *hw_info_init(const char *snd_card_name)
     } else if(strstr(snd_card_name, "msm8994")) {
         ALOGV("8994 - variant soundcard");
         update_hardware_info_8994(hw_info, snd_card_name);
+    } else if(strstr(snd_card_name, "thulium")) {
+        ALOGV("thulium - variant soundcard");
+        update_hardware_info_thulium(hw_info, snd_card_name);
     } else {
         ALOGE("%s: Unsupported target %s:",__func__, snd_card_name);
         free(hw_info);
