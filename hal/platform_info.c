@@ -102,7 +102,7 @@ static void process_pcm_id(const XML_Char **attr)
     int index;
 
     if (strcmp(attr[0], "name") != 0) {
-        ALOGE("%s: 'name' not found, no ACDB ID set!", __func__);
+        ALOGE("%s: 'name' not found, no PCM ID set!", __func__);
         goto done;
     }
 
@@ -152,13 +152,13 @@ static void process_backend_name(const XML_Char **attr)
     int index;
 
     if (strcmp(attr[0], "name") != 0) {
-        ALOGE("%s: 'name' not found, no ACDB ID set!", __func__);
+        ALOGE("%s: 'name' not found, no backend name set!", __func__);
         goto done;
     }
 
     index = platform_get_snd_device_index((char *)attr[1]);
     if (index < 0) {
-        ALOGE("%s: Device %s not found, no ACDB ID set!",
+        ALOGE("%s: Device %s not found, no backend name set!",
               __func__, attr[1]);
         goto done;
     }
@@ -184,7 +184,7 @@ static void process_acdb_id(const XML_Char **attr)
     int index;
 
     if (strcmp(attr[0], "name") != 0) {
-        ALOGE("%s: 'name' not found, no ACDB ID set!", __func__);
+        ALOGE("%s: 'name' not found, no backend name set!", __func__);
         goto done;
     }
 
