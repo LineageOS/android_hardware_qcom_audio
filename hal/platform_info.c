@@ -184,7 +184,7 @@ static void process_acdb_id(const XML_Char **attr)
     int index;
 
     if (strcmp(attr[0], "name") != 0) {
-        ALOGE("%s: 'name' not found, no backend name set!", __func__);
+        ALOGE("%s: 'name' not found, no ACDB ID set!", __func__);
         goto done;
     }
 
