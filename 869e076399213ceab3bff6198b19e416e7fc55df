@@ -16,6 +16,24 @@
       "revId": "869e076399213ceab3bff6198b19e416e7fc55df",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7aa08908_b9a76a4e",
+        "filename": "hal/platform_info.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 187,
+      "author": {
+        "id": 6351
+      },
+      "writtenOn": "2014-12-21T12:29:37Z",
+      "side": 1,
+      "message": "Damn, you\u0027r right.  I will fix.",
+      "parentUuid": "7aa08908_99b0ae8d",
+      "revId": "869e076399213ceab3bff6198b19e416e7fc55df",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
