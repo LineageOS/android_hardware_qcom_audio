@@ -1165,23 +1165,31 @@ static void *offload_thread_loop(void *context)
         case OFFLOAD_CMD_PARTIAL_DRAIN:
             ret = compress_next_track(out->compr);
             if(ret == 0) {
-                ALOGD("copl(%x):calling compress_partial_drain", (unsigned int)out);
-                compress_partial_drain(out->compr);
-                ALOGD("copl(%x):out of compress_partial_drain", (unsigned int)out);
+                ALOGD("copl(%p):calling compress_partial_drain", out);
+                ret = compress_partial_drain(out->compr);
+                ALOGD("copl(%p):out of compress_partial_drain", out);
+                if (ret < 0)
+                    ret = -errno;
             }
-            else if(ret == -ETIMEDOUT)
+            else if (ret == -ETIMEDOUT)
                 compress_drain(out->compr);
             else
                 ALOGE("%s: Next track returned error %d",__func__, ret);
-            send_callback = true;
-            event = STREAM_CBK_EVENT_DRAIN_READY;
-            /* Resend the metadata for next iteration */
-            out->send_new_metadata = 1;
+
+            if (ret != -ENETRESET) {
+                send_callback = true;
+                event = STREAM_CBK_EVENT_DRAIN_READY;
+
+                /* Resend the metadata for next iteration */
+                out->send_new_metadata = 1;
+                ALOGV("copl(%p):send drain callback, ret %d", out, ret);
+            } else
+                ALOGE("%s: Block drain ready event during SSR", __func__);
             break;
         case OFFLOAD_CMD_DRAIN:
             ALOGD("copl(%x):calling compress_drain", (unsigned int)out);
             compress_drain(out->compr);
-            ALOGD("copl(%x):calling compress_drain", (unsigned int)out);
+            ALOGD("copl(%x):out of compress_drain", (unsigned int)out);
             send_callback = true;
             event = STREAM_CBK_EVENT_DRAIN_READY;
             break;
