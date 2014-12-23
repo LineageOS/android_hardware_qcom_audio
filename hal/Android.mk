@@ -171,6 +171,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUXPCM_BT)),true)
     LOCAL_CFLAGS += -DAUXPCM_BT_ENABLED
 endif
 
+ifeq ($(BOARD_USES_ES705),true)
+	LOCAL_CFLAGS += -DUSE_ES705
+endif
+
 LOCAL_COPY_HEADERS_TO   := mm-audio
 LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
 
