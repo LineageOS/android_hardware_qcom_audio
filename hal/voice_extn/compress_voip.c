@@ -722,13 +722,13 @@ int voice_extn_compress_voip_set_volume(struct audio_device *adev, float volume)
     }
 
     vol = lrint(volume * 100.0);
-
+#ifndef USE_ES705
     /* Voice volume levels from android are mapped to driver volume levels as follows.
      * 0 -> 5, 20 -> 4, 40 ->3, 60 -> 2, 80 -> 1, 100 -> 0
      * So adjust the volume to get the correct volume index in driver
      */
     vol = 100 - vol;
-
+#endif
     err = voip_set_volume(adev, vol);
 
     ALOGV("%s: exit: status(%d)", __func__, err);
