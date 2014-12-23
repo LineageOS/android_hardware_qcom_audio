@@ -208,6 +208,9 @@ endif
 
 ifeq ($(strip $(AUDIO_FEATURE_PCM_IOCTL_ENABLED)),true)
     LOCAL_CFLAGS += -DPCM_IOCTL_ENABLED
+
+ifeq ($(BOARD_USES_ES705),true)
+	LOCAL_CFLAGS += -DUSE_ES705
 endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HWDEP_CAL)),true)
