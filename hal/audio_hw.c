@@ -3564,8 +3564,6 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->bt_wb_speech_enabled = false;
 
     *device = &adev->device.common;
-    if (k_enable_extended_precision)
-        adev_verify_devices(adev);
 
     audio_extn_utils_update_streams_output_cfg_list(adev->platform, adev->mixer,
                                                     &adev->streams_output_cfg_list);
@@ -3589,6 +3587,9 @@ static int adev_open(const hw_module_t *module, const char *name,
             configured_low_latency_capture_period_size = trial;
         }
     }
+
+    if (k_enable_extended_precision)
+        adev_verify_devices(adev);
 
     pthread_mutex_unlock(&adev_init_lock);
 
