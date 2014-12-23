@@ -1599,7 +1599,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
     } else if (source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
                (mode == AUDIO_MODE_IN_COMMUNICATION)) {
         if (out_device & AUDIO_DEVICE_OUT_SPEAKER)
-            in_device = AUDIO_DEVICE_IN_BACK_MIC;
+            in_device = (AUDIO_DEVICE_IN_BACK_MIC & ~AUDIO_DEVICE_BIT_IN);
         if (adev->active_input) {
             if (voice_extn_dedicated_voip_device_prop_check()) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
