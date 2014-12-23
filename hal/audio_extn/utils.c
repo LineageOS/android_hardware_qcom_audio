@@ -454,7 +454,7 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
            __func__, flags, format, sample_rate);
     list_for_each(node_i, streams_output_cfg_list) {
         so_info = node_to_item(node_i, struct streams_output_cfg, list);
-        if (so_info->flags == flags) {
+        if (so_info != NULL && so_info->flags == flags) {
             list_for_each(node_j, &so_info->format_list) {
                 sf_info = node_to_item(node_j, struct stream_format, list);
                 if (sf_info->format == format) {
@@ -466,7 +466,7 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
     }
     list_for_each(node_i, streams_output_cfg_list) {
         so_info = node_to_item(node_i, struct streams_output_cfg, list);
-        if (so_info->flags == AUDIO_OUTPUT_FLAG_PRIMARY) {
+        if (so_info != NULL && so_info->flags == AUDIO_OUTPUT_FLAG_PRIMARY) {
             ALOGV("Compatible output profile not found.");
             app_type_cfg->app_type = so_info->app_type_cfg.app_type;
             app_type_cfg->sample_rate = so_info->app_type_cfg.sample_rate;
@@ -510,9 +510,17 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
     out = usecase->stream.out;
     adev = out->dev;
 
+    if (adev == NULL) {
+        ALOGE("Device not ready, skip app type update");
+        rc = 0;
+        goto exit_send_app_type_cfg;
+    }
+
     snd_device = usecase->out_snd_device;
 
     pcm_device_id = platform_get_pcm_device_id(out->usecase, PCM_PLAYBACK);
+
+    ALOGV("%s: usecase=%d pcm_device_id=%d", __func__, usecase->id, pcm_device_id);
 
     snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
              "Audio Stream %d App Type Cfg", pcm_device_id);
