@@ -194,6 +194,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUXPCM_BT)),true)
     LOCAL_CFLAGS += -DAUXPCM_BT_ENABLED
 endif
 
+ifeq ($(BOARD_USES_ES705),true)
+    LOCAL_CFLAGS += -DUSE_ES705
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HWDEP_CAL)),true)
     LOCAL_CFLAGS += -DHWDEP_CAL_ENABLED
 endif
