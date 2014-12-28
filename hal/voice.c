@@ -400,11 +400,11 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
     ALOGV_IF(kv_pairs != NULL, "%s: enter: %s", __func__, kv_pairs);
 
     ret = voice_extn_set_parameters(adev, parms);
-    if (ret != 0)
+    if (ret != 0 && ret != -ENOSYS)
         goto done;
 
     ret = voice_extn_compress_voip_set_parameters(adev, parms);
-    if (ret != 0)
+    if (ret != 0 && ret != -ENOSYS)
         goto done;
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_TTY_MODE, value, sizeof(value));
