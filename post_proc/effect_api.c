@@ -17,6 +17,7 @@
 #define LOG_TAG "offload_effect_api"
 //#define LOG_NDEBUG 0
 
+#include <errno.h>
 #include <stdbool.h>
 #include <cutils/log.h>
 #include <tinyalsa/asoundlib.h>
