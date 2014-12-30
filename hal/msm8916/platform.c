@@ -773,10 +773,16 @@ static int send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibrat
         }
         calib.get_size = 0;
         calib.buff = malloc(calib.buff_size);
+        if(calib.buff == NULL) {
+            ALOGE("%s mem allocation for %d bytes for %s failed\n"
+                , __func__, calib.buff_size, cal_name_info[type]);
+            return -1;
+        }
         ret = acdb_loader_get_calibration(cal_name_info[type],
                               sizeof(struct param_data), &calib);
         if (ret < 0) {
-            ALOGE("%s get_calibration failed\n", __func__);
+            ALOGE("%s get_calibration failed type=%s calib.size=%d codec_buffer.buffer=%x\n"
+                , __func__, cal_name_info[type], codec_buffer.size, (unsigned int)codec_buffer.buffer);
             free(calib.buff);
             return ret;
         }
@@ -784,9 +790,10 @@ static int send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibrat
         codec_buffer.size = calib.data_size;
         codec_buffer.cal_type = type;
         if (ioctl(fd, SNDRV_CTL_IOCTL_HWDEP_CAL_TYPE, &codec_buffer) < 0)
-            ALOGE("Failed to call ioctl  for %s err=%d",
-                                  cal_name_info[type], errno);
-        ALOGD("%s cal sent for %s", __func__, cal_name_info[type]);
+            ALOGE("Failed to call ioctl  for %s err=%d calib.size=%d codec_buffer.buffer=%x",
+                cal_name_info[type], errno, codec_buffer.size, (unsigned int)codec_buffer.buffer);
+        ALOGD("%s cal sent for %s calib.size=%d codec_buffer.buffer=%x"
+            , __func__, cal_name_info[type], codec_buffer.size, (unsigned int)codec_buffer.buffer);
         free(calib.buff);
     }
     return ret;
