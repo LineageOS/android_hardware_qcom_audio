@@ -33,7 +33,9 @@
 #include "platform.h"
 #include "audio_extn.h"
 #include "voice_extn.h"
+#ifdef HWDEP_CAL_ENABLED
 #include "sound/msmcal-hwdep.h"
+#endif
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
@@ -107,11 +109,13 @@
 #define APP_TYPE_SYSTEM_SOUNDS 0x00011131
 #define APP_TYPE_GENERAL_RECORDING 0x00011132
 
+#ifdef HWDEP_CAL_ENABLED
 char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
         [WCD9XXX_ANC_CAL] = "anc_cal",
         [WCD9XXX_MBHC_CAL] = "mbhc_cal",
         [WCD9XXX_MAD_CAL] = "mad_cal",
 };
+#endif
 
 #define AUDIO_PARAMETER_KEY_REC_PLAY_CONC "rec_play_conc_on"
 
@@ -901,6 +905,7 @@ done:
     return;
 }
 
+#ifdef HWDEP_CAL_ENABLED
 static int hw_util_open(int card_no)
 {
     int fd = -1;
@@ -993,6 +998,7 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
     if (send_codec_cal(acdb_loader_get_calibration, fd) < 0)
         ALOGE("%s: Could not send anc cal", __FUNCTION__);
 }
+#endif
 
 void *platform_init(struct audio_device *adev)
 {
@@ -1193,7 +1199,9 @@ acdb_init_fail:
     audio_extn_dap_hal_init(adev->snd_card);
 
     audio_extn_dolby_set_license(adev);
+#ifdef HWDEP_CAL_ENABLED
     audio_hwdep_send_cal(my_data);
+#endif
 
     return my_data;
 }
