@@ -25,7 +25,6 @@
 #else
 #define ALOGVV(a...) do { } while(0)
 #endif
-
 #include <errno.h>
 #include <pthread.h>
 #include <stdint.h>
