@@ -34,7 +34,9 @@
 #include "audio_extn.h"
 #include "voice_extn.h"
 #include "sound/compress_params.h"
+#ifdef HWDEP_CAL_ENABLED
 #include "sound/msmcal-hwdep.h"
+#endif
 
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
 
@@ -89,11 +91,13 @@
 #define AUDIO_PARAMETER_KEY_VOLUME_BOOST  "volume_boost"
 #define MAX_CAL_NAME 20
 
+#ifdef HWDEP_CAL_ENABLED
 char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
         [WCD9XXX_ANC_CAL] = "anc_cal",
         [WCD9XXX_MBHC_CAL] = "mbhc_cal",
         [WCD9XXX_MAD_CAL] = "mad_cal",
 };
+#endif
 
 enum {
 	VOICE_FEATURE_SET_DEFAULT,
@@ -490,7 +494,7 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 
-#ifdef WCD9XXX_CODEC_HWDEP_NODE
+#ifdef HWDEP_CAL_ENABLED
 static int hw_util_open(int card_no)
 {
     int fd = -1;
@@ -908,7 +912,7 @@ void *platform_init(struct audio_device *adev)
     /* Read one time ssr property */
     audio_extn_ssr_update_enabled();
     audio_extn_spkr_prot_init(adev);
-#ifdef WCD9XXX_CODEC_HWDEP_NODE
+#ifdef HWDEP_CAL_ENABLED
     audio_hwdep_send_cal(my_data);
 #endif
     return my_data;
