@@ -81,7 +81,7 @@ ifneq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),false)
 endif
 endif
 
-ifneq ($(filter msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter apq8084 msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
 ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),false)
     LOCAL_CFLAGS += -DCOMPRESS_VOIP_ENABLED
     LOCAL_SRC_FILES += voice_extn/compress_voip.c
@@ -92,7 +92,7 @@ ifneq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FORMATS)),false)
 LOCAL_CFLAGS += -DFORMATS_ENABLED
 endif
 
-ifneq ($(filter msm8974,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter apq8084 msm8974,$(TARGET_BOARD_PLATFORM)),)
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SPKR_PROTECTION)),true)
     LOCAL_CFLAGS += -DSPKR_PROT_ENABLED
     LOCAL_SRC_FILES += audio_extn/spkr_protection.c
@@ -111,14 +111,14 @@ ifdef MULTIPLE_HW_VARIANTS_ENABLED
   LOCAL_SRC_FILES += $(AUDIO_PLATFORM)/hw_info.c
 endif
 
-ifneq ($(filter msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter apq8084 msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
 ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),false)
     LOCAL_CFLAGS += -DCOMPRESS_CAPTURE_ENABLED
     LOCAL_SRC_FILES += audio_extn/compress_capture.c
 endif
 endif
 
-ifneq ($(filter msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter apq8084 msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
 ifeq ($(strip $(DOLBY_DDP)),true)
     LOCAL_CFLAGS += -DDS1_DOLBY_DDP_ENABLED
     LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
@@ -138,7 +138,7 @@ ifeq ($(AUDIO_FEATURE_LOW_LATENCY_PRIMARY),true)
     LOCAL_CFLAGS += -DLOW_LATENCY_PRIMARY
 endif
 
-ifneq ($(filter msm8974 msm8226,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter apq8084 msm8974 msm8226,$(TARGET_BOARD_PLATFORM)),)
 ifneq ($(strip $(AUDIO_FEATURE_DISABLED_WMA_OFFLOAD_DISABLED)),true)
     LOCAL_CFLAGS += -DWMA_OFFLOAD_ENABLED
     LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
@@ -146,7 +146,7 @@ ifneq ($(strip $(AUDIO_FEATURE_DISABLED_WMA_OFFLOAD_DISABLED)),true)
 endif
 endif
 
-ifneq ($(filter msm8974 msm8226,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter apq8084 msm8974 msm8226,$(TARGET_BOARD_PLATFORM)),)
 ifneq ($(strip $(AUDIO_FEATURE_DISABLED_MP2_OFFLOAD)),true)
     LOCAL_CFLAGS += -DMP2_OFFLOAD_ENABLED
     LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
