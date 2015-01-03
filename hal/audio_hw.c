@@ -466,7 +466,8 @@ int enable_snd_device(struct audio_device *adev,
     if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
        audio_extn_usb_start_capture(adev);
 
-    if (snd_device == SND_DEVICE_OUT_SPEAKER &&
+    if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
         audio_extn_spkr_prot_is_enabled()) {
        if (audio_extn_spkr_prot_start_processing(snd_device)) {
           ALOGE("%s: spkr_start_processing failed", __func__);
@@ -520,7 +521,9 @@ int disable_snd_device(struct audio_device *adev,
         /* exit usb capture thread */
         if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
             audio_extn_usb_stop_capture();
-        if (snd_device == SND_DEVICE_OUT_SPEAKER &&
+
+        if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
+            snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
             audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing();
         } else
@@ -840,10 +843,17 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
      * and enable both RX and TX devices though one of them is same as current
      * device.
      */
+#ifdef PLATFORM_APQ8084
+    if ((usecase->type == VOICE_CALL) &&
+        (usecase->in_snd_device != SND_DEVICE_NONE) &&
+        (usecase->out_snd_device != SND_DEVICE_NONE)) {
+        status = platform_switch_voice_call_device_pre(adev->platform);
+    }
+#else
     if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL) {
         status = platform_switch_voice_call_device_pre(adev->platform);
     }
-
+#endif
     /* Disable current sound devices */
     if (usecase->out_snd_device != SND_DEVICE_NONE) {
         disable_audio_route(adev, usecase);
@@ -854,6 +864,20 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         disable_audio_route(adev, usecase);
         disable_snd_device(adev, usecase->in_snd_device);
     }
+
+#ifdef PLATFORM_APQ8084
+    /* Applicable only on the targets that has external modem.
+     * New device information should be sent to modem before enabling
+     * the devices to reduce in-call device switch time.
+     */
+    if ((usecase->type == VOICE_CALL) &&
+        (usecase->in_snd_device != SND_DEVICE_NONE) &&
+        (usecase->out_snd_device != SND_DEVICE_NONE)) {
+        status = platform_switch_voice_call_enable_device_config(adev->platform,
+                                                                 out_snd_device,
+                                                                 in_snd_device);
+    }
+#endif
 
     /* Enable new sound devices */
     if (out_snd_device != SND_DEVICE_NONE) {
