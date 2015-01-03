@@ -19,6 +19,9 @@
 
 #ifndef QCOM_AUDIO_PLATFORM_H
 #define QCOM_AUDIO_PLATFORM_H
+#ifdef PLATFORM_APQ8084
+#include <sound/voice_params.h>
+#endif
 
 enum {
     FLUENCE_NONE,
@@ -186,12 +189,18 @@ enum {
 #define INCALL_MUSIC_UPLINK2_PCM_DEVICE 15
 #elif PLATFORM_MSM8x26
 #define INCALL_MUSIC_UPLINK2_PCM_DEVICE 16
+#elif PLATFORM_APQ8084
+#define INCALL_MUSIC_UPLINK2_PCM_DEVICE 34
 #else
 #define INCALL_MUSIC_UPLINK2_PCM_DEVICE 35
 #endif
 
 #define SPKR_PROT_CALIB_RX_PCM_DEVICE 5
+#ifdef PLATFORM_APQ8084
+#define SPKR_PROT_CALIB_TX_PCM_DEVICE 36
+#else
 #define SPKR_PROT_CALIB_TX_PCM_DEVICE 32
+#endif
 #define PLAYBACK_OFFLOAD_DEVICE 9
 
 #ifdef MULTIPLE_OFFLOAD_ENABLED
@@ -263,9 +272,16 @@ enum {
 
 #define LIB_CSD_CLIENT "libcsd-client.so"
 /* CSD-CLIENT related functions */
+#ifdef PLATFORM_APQ8084
+typedef int (*init_t)(bool);
+#else
 typedef int (*init_t)();
+#endif
 typedef int (*deinit_t)();
 typedef int (*disable_device_t)();
+#ifdef PLATFORM_APQ8084
+typedef int (*enable_device_config_t)(int, int);
+#endif
 typedef int (*enable_device_t)(int, int, uint32_t);
 typedef int (*volume_t)(uint32_t, int);
 typedef int (*mic_mute_t)(uint32_t, int);
@@ -274,14 +290,23 @@ typedef int (*start_voice_t)(uint32_t);
 typedef int (*stop_voice_t)(uint32_t);
 typedef int (*start_playback_t)(uint32_t);
 typedef int (*stop_playback_t)(uint32_t);
+#ifdef PLATFORM_APQ8084
+typedef int (*set_lch_t)(uint32_t, enum voice_lch_mode);
+#endif
 typedef int (*start_record_t)(uint32_t, int);
 typedef int (*stop_record_t)(uint32_t);
+#ifdef PLATFORM_APQ8084
+typedef int (*get_sample_rate_t)(uint32_t *);
+#endif
 /* CSD Client structure */
 struct csd_data {
     void *csd_client;
     init_t init;
     deinit_t deinit;
     disable_device_t disable_device;
+#ifdef PLATFORM_APQ8084
+    enable_device_config_t enable_device_config;
+#endif
     enable_device_t enable_device;
     volume_t volume;
     mic_mute_t mic_mute;
@@ -290,8 +315,14 @@ struct csd_data {
     stop_voice_t stop_voice;
     start_playback_t start_playback;
     stop_playback_t stop_playback;
+#ifdef PLATFORM_APQ8084
+    set_lch_t set_lch;
+#endif
     start_record_t start_record;
     stop_record_t stop_record;
+#ifdef PLATFORM_APQ8084
+    get_sample_rate_t get_sample_rate;
+#endif
 };
 
 #endif // QCOM_AUDIO_PLATFORM_H
