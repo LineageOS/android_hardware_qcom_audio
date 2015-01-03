@@ -462,7 +462,11 @@ void voice_init(struct audio_device *adev)
         adev->voice.session[i].pcm_tx = NULL;
         adev->voice.session[i].state.current = CALL_INACTIVE;
         adev->voice.session[i].state.new = CALL_INACTIVE;
+#ifdef PLATFORM_APQ8084
+        adev->voice.session[i].vsid = VOICE_VSID;
+#else
         adev->voice.session[i].vsid = 0;
+#endif
     }
 
     voice_extn_init(adev);
