@@ -129,18 +129,31 @@ static const snd_device_t helicon_skuab_variant_devices[] = {
 
 static void  update_hardware_info_8084(struct hardware_info *hw_info, const char *snd_card_name)
 {
-    if (!strcmp(snd_card_name, "apq8084-taiko-mtp-snd-card")) {
+    if (!strcmp(snd_card_name, "apq8084-taiko-mtp-snd-card") ||
+        !strncmp(snd_card_name, "apq8084-taiko-i2s-mtp-snd-card",
+                 sizeof("apq8084-taiko-i2s-mtp-snd-card")) ||
+        !strncmp(snd_card_name, "apq8084-tomtom-mtp-snd-card",
+                 sizeof("apq8084-tomtom-mtp-snd-card"))) {
         strlcpy(hw_info->type, "mtp", sizeof(hw_info->type));
         strlcpy(hw_info->name, "apq8084", sizeof(hw_info->name));
         hw_info->snd_devices = NULL;
         hw_info->num_snd_devices = 0;
         strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
-    } else if (!strcmp(snd_card_name, "apq8084-taiko-cdp-snd-card")) {
+    } else if ((!strcmp(snd_card_name, "apq8084-taiko-cdp-snd-card")) ||
+        !strncmp(snd_card_name, "apq8084-tomtom-cdp-snd-card",
+                 sizeof("apq8084-tomtom-cdp-snd-card"))) {
         strlcpy(hw_info->type, " cdp", sizeof(hw_info->type));
         strlcpy(hw_info->name, "apq8084", sizeof(hw_info->name));
         hw_info->snd_devices = (snd_device_t *)taiko_apq8084_CDP_variant_devices;
         hw_info->num_snd_devices = ARRAY_SIZE(taiko_apq8084_CDP_variant_devices);
         strlcpy(hw_info->dev_extn, "-cdp", sizeof(hw_info->dev_extn));
+    } else if (!strncmp(snd_card_name, "apq8084-taiko-i2s-cdp-snd-card",
+                        sizeof("apq8084-taiko-i2s-cdp-snd-card"))) {
+        strlcpy(hw_info->type, " cdp", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "apq8084", sizeof(hw_info->name));
+        hw_info->snd_devices = NULL;
+        hw_info->num_snd_devices = 0;
+        strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
     } else if (!strcmp(snd_card_name, "apq8084-taiko-liquid-snd-card")) {
         strlcpy(hw_info->type , " liquid", sizeof(hw_info->type));
         strlcpy(hw_info->name, "apq8084", sizeof(hw_info->type));

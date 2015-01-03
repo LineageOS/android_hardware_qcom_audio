@@ -20,6 +20,8 @@
 #ifndef QCOM_AUDIO_PLATFORM_H
 #define QCOM_AUDIO_PLATFORM_H
 
+#include <sound/voice_params.h>
+
 enum {
     FLUENCE_NONE,
     FLUENCE_DUAL_MIC = 0x1,
@@ -186,12 +188,18 @@ enum {
 #define INCALL_MUSIC_UPLINK2_PCM_DEVICE 15
 #elif PLATFORM_MSM8x26
 #define INCALL_MUSIC_UPLINK2_PCM_DEVICE 16
+#elif PLATFORM_APQ8084
+#define INCALL_MUSIC_UPLINK2_PCM_DEVICE 34
 #else
 #define INCALL_MUSIC_UPLINK2_PCM_DEVICE 35
 #endif
 
 #define SPKR_PROT_CALIB_RX_PCM_DEVICE 5
+#ifdef PLATFORM_APQ8084
+#define SPKR_PROT_CALIB_TX_PCM_DEVICE 36
+#else
 #define SPKR_PROT_CALIB_TX_PCM_DEVICE 32
+#endif
 #define PLAYBACK_OFFLOAD_DEVICE 9
 
 #ifdef MULTIPLE_OFFLOAD_ENABLED
@@ -263,9 +271,14 @@ enum {
 
 #define LIB_CSD_CLIENT "libcsd-client.so"
 /* CSD-CLIENT related functions */
+#ifdef PLATFORM_APQ8084
+typedef int (*init_t)(bool);
+#else
 typedef int (*init_t)();
+#endif
 typedef int (*deinit_t)();
 typedef int (*disable_device_t)();
+typedef int (*enable_device_config_t)(int, int);
 typedef int (*enable_device_t)(int, int, uint32_t);
 typedef int (*volume_t)(uint32_t, int);
 typedef int (*mic_mute_t)(uint32_t, int);
@@ -274,14 +287,17 @@ typedef int (*start_voice_t)(uint32_t);
 typedef int (*stop_voice_t)(uint32_t);
 typedef int (*start_playback_t)(uint32_t);
 typedef int (*stop_playback_t)(uint32_t);
+typedef int (*set_lch_t)(uint32_t, enum voice_lch_mode);
 typedef int (*start_record_t)(uint32_t, int);
 typedef int (*stop_record_t)(uint32_t);
+typedef int (*get_sample_rate_t)(uint32_t *);
 /* CSD Client structure */
 struct csd_data {
     void *csd_client;
     init_t init;
     deinit_t deinit;
     disable_device_t disable_device;
+    enable_device_config_t enable_device_config;
     enable_device_t enable_device;
     volume_t volume;
     mic_mute_t mic_mute;
@@ -290,8 +306,10 @@ struct csd_data {
     stop_voice_t stop_voice;
     start_playback_t start_playback;
     stop_playback_t stop_playback;
+    set_lch_t set_lch;
     start_record_t start_record;
     stop_record_t stop_record;
+    get_sample_rate_t get_sample_rate;
 };
 
 #endif // QCOM_AUDIO_PLATFORM_H
