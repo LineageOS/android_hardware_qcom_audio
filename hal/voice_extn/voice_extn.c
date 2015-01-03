@@ -185,13 +185,12 @@ static int update_calls(struct audio_device *adev)
             case CALL_LOCAL_HOLD:
                 ALOGD("%s: LOCAL_HOLD -> ACTIVE vsid:%x", __func__, session->vsid);
                 lch_mode = VOICE_LCH_STOP;
-#ifdef PCM_IOCTL_ENABLED
-                if (pcm_ioctl(session->pcm_tx, SNDRV_VOICE_IOCTL_LCH, &lch_mode) < 0) {
-                    ALOGE("LOCAL_HOLD -> ACTIVE failed");
+                ret = platform_update_lch(adev->platform, session, lch_mode);
+                if (ret < 0) {
+                    ALOGE("%s: lch mode update failed, ret = %d", __func__, ret);
                 } else {
                     session->state.current = session->state.new;
                 }
-#endif
                 break;
 
             default:
@@ -235,13 +234,12 @@ static int update_calls(struct audio_device *adev)
             case CALL_LOCAL_HOLD:
                 ALOGD("%s: CALL_LOCAL_HOLD -> HOLD vsid:%x", __func__, session->vsid);
                 lch_mode = VOICE_LCH_STOP;
-#ifdef PCM_IOCTL_ENABLED
-                if (pcm_ioctl(session->pcm_tx, SNDRV_VOICE_IOCTL_LCH, &lch_mode) < 0) {
-                    ALOGE("LOCAL_HOLD -> HOLD failed");
+                ret = platform_update_lch(adev->platform, session, lch_mode);
+                if (ret < 0) {
+                    ALOGE("%s: lch mode update failed, ret = %d", __func__, ret);
                 } else {
                     session->state.current = session->state.new;
                 }
-#endif
                 break;
 
             default:
@@ -259,13 +257,12 @@ static int update_calls(struct audio_device *adev)
                 ALOGD("%s: ACTIVE/CALL_HOLD -> LOCAL_HOLD vsid:%x", __func__,
                       session->vsid);
                 lch_mode = VOICE_LCH_START;
-#ifdef PCM_IOCTL_ENABLED
-                if (pcm_ioctl(session->pcm_tx, SNDRV_VOICE_IOCTL_LCH, &lch_mode) < 0) {
-                    ALOGE("LOCAL_HOLD -> HOLD failed");
+                ret = platform_update_lch(adev->platform, session, lch_mode);
+                if (ret < 0) {
+                    ALOGE("%s: lch mode update failed, ret = %d", __func__, ret);
                 } else {
                     session->state.current = session->state.new;
                 }
-#endif
                 break;
 
             default:

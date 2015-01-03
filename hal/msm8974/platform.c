@@ -129,6 +129,9 @@ struct platform_data {
     char fluence_cap[PROPERTY_VALUE_MAX];
     int  btsco_sample_rate;
     bool slowtalk;
+#ifdef PLATFORM_APQ8084
+    bool is_i2s_ext_modem;
+#endif
     /* Audio calibration related functions */
     void                       *acdb_handle;
     int                        voice_feature_set;
@@ -592,8 +595,11 @@ static void set_echo_reference(struct audio_device *adev, bool enable)
 
     ALOGV("Setting EC Reference: %d", enable);
 }
-
+#ifdef PLATFORM_APQ8084
+static struct csd_data *open_csd_client(bool i2s_ext_modem)
+#else
 static struct csd_data *open_csd_client()
+#endif
 {
     struct csd_data *csd = calloc(1, sizeof(struct csd_data));
 
@@ -622,6 +628,13 @@ static struct csd_data *open_csd_client()
             ALOGE("%s: dlsym error %s for csd_client_disable_device",
                   __func__, dlerror());
             goto error;
+        }
+        csd->enable_device_config = (enable_device_config_t)dlsym(csd->csd_client,
+                                               "csd_client_enable_device_config");
+        if (csd->enable_device_config == NULL) {
+            ALOGV("%s: dlsym error %s for csd_client_enable_device_config",
+                  __func__, dlerror());
+            // not mandatory
         }
         csd->enable_device = (enable_device_t)dlsym(csd->csd_client,
                                              "csd_client_enable_device");
@@ -679,6 +692,14 @@ static struct csd_data *open_csd_client()
                   __func__, dlerror());
             goto error;
         }
+        csd->set_lch = (set_lch_t)dlsym(csd->csd_client, "csd_client_set_lch");
+        if (csd->set_lch == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_set_lch",
+                  __func__, dlerror());
+            /* Ignore the error as this is not mandatory function for
+             * basic voice call to work.
+             */
+        }
         csd->start_record = (start_record_t)dlsym(csd->csd_client,
                                              "csd_client_start_record");
         if (csd->start_record == NULL) {
@@ -693,6 +714,14 @@ static struct csd_data *open_csd_client()
                   __func__, dlerror());
             goto error;
         }
+        csd->get_sample_rate = (get_sample_rate_t)dlsym(csd->csd_client,
+                                             "csd_client_get_sample_rate");
+        if (csd->get_sample_rate == NULL) {
+            ALOGE("%s: dlsym error %s for csd_client_get_sample_rate",
+                  __func__, dlerror());
+
+            // not mandatory
+        }
         csd->init = (init_t)dlsym(csd->csd_client, "csd_client_init");
 
         if (csd->init == NULL) {
@@ -700,7 +729,11 @@ static struct csd_data *open_csd_client()
                   __func__, dlerror());
             goto error;
         } else {
+#ifdef PLATFORM_APQ8084
+            csd->init(i2s_ext_modem);
+#else
             csd->init();
+#endif
         }
     }
     return csd;
@@ -720,6 +753,47 @@ void close_csd_client(struct csd_data *csd)
         csd = NULL;
     }
 }
+
+#ifdef PLATFORM_APQ8084
+static void platform_csd_init(struct platform_data *plat_data)
+{
+    int32_t modems, (*count_modems)(void);
+    const char *name = "libdetectmodem.so";
+    const char *func = "count_modems";
+    const char *error;
+
+    plat_data->csd = NULL;
+
+    void *lib = dlopen(name, RTLD_NOW);
+    error = dlerror();
+    if (!lib) {
+        ALOGE("%s: could not find %s: %s", __func__, name, error);
+        return;
+    }
+
+    count_modems = NULL;
+    *(void **)(&count_modems) = dlsym(lib, func);
+    error = dlerror();
+    if (!count_modems) {
+        ALOGE("%s: could not find symbol %s in %s: %s",
+              __func__, func, name, error);
+        goto done;
+    }
+
+    modems = count_modems();
+    if (modems < 0) {
+        ALOGE("%s: count_modems failed\n", __func__);
+        goto done;
+    }
+
+    ALOGD("%s: num_modems %d\n", __func__, modems);
+    if (modems > 0)
+        plat_data->csd = open_csd_client(false /*is_i2s_ext_modem*/);
+
+done:
+    dlclose(lib);
+}
+#endif
 
 static void set_platform_defaults(struct platform_data * my_data __unused)
 {
@@ -892,7 +966,7 @@ void *platform_init(struct audio_device *adev)
 
     /* Initialize ACDB ID's */
     platform_info_init();
-
+#ifdef PLATFORM_APQ8084
     /* If platform is apq8084 and baseband is MDM, load CSD Client specific
      * symbols. Voice call is handled by MDM and apps processor talks to
      * MDM through CSD Client
@@ -901,9 +975,9 @@ void *platform_init(struct audio_device *adev)
     property_get("ro.baseband", baseband, "");
     if (!strncmp("apq8084", platform, sizeof("apq8084")) &&
         !strncmp("mdm", baseband, sizeof("mdm"))) {
-         my_data->csd = open_csd_client();
+         platform_csd_init(my_data);
     }
-
+#endif
     /* init usb */
     audio_extn_usb_init(adev);
     /* update sound cards appropriately */
@@ -1156,14 +1230,27 @@ int platform_switch_voice_call_device_post(void *platform,
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_rx_id, acdb_tx_id;
 
-    if (my_data->acdb_send_voice_cal == NULL) {
+#ifdef PLATFORM_APQ8084
+    if (my_data->csd == NULL)
+        return 0;
+#else
+    if (my_data->acdb_send_voice_cal == NULL)
         ALOGE("%s: dlsym error for acdb_send_voice_call", __func__);
+#endif
+
+    if (out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER &&
+        audio_extn_spkr_prot_is_enabled()) {
+        acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED];
     } else {
         acdb_rx_id = acdb_device_table[out_snd_device];
         acdb_tx_id = acdb_device_table[in_snd_device];
 
         if (acdb_rx_id > 0 && acdb_tx_id > 0)
+#ifdef PLATFORM_APQ8084
+            my_data->csd->enable_device_config(acdb_rx_id, acdb_tx_id);
+#else
             my_data->acdb_send_voice_cal(acdb_rx_id, acdb_tx_id);
+#endif
         else
             ALOGE("%s: Incorrect ACDB IDs (rx: %d tx: %d)", __func__,
                   acdb_rx_id, acdb_tx_id);
@@ -2015,6 +2102,20 @@ int platform_stop_incall_music_usecase(void *platform)
                   __func__, ret);
         }
     }
+
+    return ret;
+}
+
+int platform_update_lch(void *platform, struct voice_session *session,
+                        enum voice_lch_mode lch_mode)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if ((my_data->csd != NULL) && (my_data->csd->set_lch != NULL))
+        ret = my_data->csd->set_lch(session->vsid, lch_mode);
+    else
+        ret = pcm_ioctl(session->pcm_tx, SNDRV_VOICE_IOCTL_LCH, &lch_mode);
 
     return ret;
 }
