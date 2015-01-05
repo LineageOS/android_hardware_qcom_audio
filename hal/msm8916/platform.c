@@ -45,6 +45,7 @@
 #define MIXER_XML_PATH_SKUK "/system/etc/mixer_paths_skuk.xml"
 #define MIXER_XML_PATH_SKUA "/system/etc/mixer_paths_skua.xml"
 #define MIXER_XML_PATH_SKUC "/system/etc/mixer_paths_skuc.xml"
+#define MIXER_XML_PATH_SKUE "/system/etc/mixer_paths_skue.xml"
 #define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_WCD9306 "/system/etc/mixer_paths_wcd9306.xml"
@@ -627,6 +628,14 @@ static void query_platform(const char *snd_card_name,
         strlcpy(mixer_xml_path, MIXER_XML_PATH_MSM8909_PM8916,
                 sizeof(MIXER_XML_PATH_MSM8909_PM8916));
 
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
+    } else if (!strncmp(snd_card_name, "msm8909-skue-snd-card",
+                 sizeof("msm8909-skue-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_SKUE,
+                sizeof(MIXER_XML_PATH_SKUE));
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
