@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7aa08908_6acce235",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 987,
+      "author": {
+        "id": 6351
+      },
+      "writtenOn": "2015-01-06T03:13:58Z",
+      "side": 1,
+      "message": "This doesn\u0027t compile on a !8084 platform.\n\nPersonally I would #ifdef from outside the /* If platform... to the end of this conditional but you could also just ifdef this line.",
+      "revId": "4e84e7626833f871ef984b6fe6c42befde83d0f9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
