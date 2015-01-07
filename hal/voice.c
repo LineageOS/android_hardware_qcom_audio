@@ -221,11 +221,11 @@ bool voice_is_in_call(struct audio_device *adev)
 bool voice_is_in_call_rec_stream(struct stream_in *in)
 {
     bool in_call_rec = false;
-    int ret = 0;
 
-    ret = voice_extn_is_in_call_rec_stream(in, &in_call_rec);
-    if (ret == -ENOSYS) {
-        in_call_rec = false;
+    if(in->source == AUDIO_SOURCE_VOICE_DOWNLINK ||
+       in->source == AUDIO_SOURCE_VOICE_UPLINK ||
+       in->source == AUDIO_SOURCE_VOICE_CALL) {
+       in_call_rec = true;
     }
 
     return in_call_rec;
