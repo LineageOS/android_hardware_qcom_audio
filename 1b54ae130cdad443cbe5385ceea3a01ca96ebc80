@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7aa08908_1013c1b9",
+        "filename": "hal/Android.mk",
+        "patchSetId": 3
+      },
+      "lineNbr": 213,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-01-10T12:38:52Z",
+      "side": 1,
+      "message": "Use spaces, not tabs.",
+      "revId": "1b54ae130cdad443cbe5385ceea3a01ca96ebc80",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
