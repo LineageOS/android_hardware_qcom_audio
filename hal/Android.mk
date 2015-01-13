@@ -9,9 +9,9 @@ LOCAL_ARM_MODE := arm
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
 ifneq ($(filter msm8960 apq8064,$(TARGET_BOARD_PLATFORM)),)
-  # A-family platform uses msm8960 code base
-  AUDIO_PLATFORM = msm8960
-  MULTIPLE_HW_VARIANTS_ENABLED := true
+    # A-family platform uses msm8960 code base
+    AUDIO_PLATFORM = msm8960
+    MULTIPLE_HW_VARIANTS_ENABLED := true
 endif
 
 LOCAL_SRC_FILES := \
@@ -37,11 +37,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_ANC_HEADSET)),true)
     LOCAL_CFLAGS += -DANC_HEADSET_ENABLED
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FLUENCE)),true)
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_FLUENCE)),false)
     LOCAL_CFLAGS += -DFLUENCE_ENABLED
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),false)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
 endif
 
@@ -75,23 +75,24 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS)),true)
     LOCAL_CFLAGS += -DMULTI_VOICE_SESSION_ENABLED
     LOCAL_SRC_FILES += voice_extn/voice_extn.c
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),true)
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),false)
     LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
 endif
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),true)
+
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),false)
     LOCAL_CFLAGS += -DCOMPRESS_VOIP_ENABLED
     LOCAL_SRC_FILES += voice_extn/compress_voip.c
 endif
 
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FORMATS)),true)
-LOCAL_CFLAGS += -DFORMATS_ENABLED
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FORMATS)),false)
+    LOCAL_CFLAGS += -DFORMATS_ENABLED
 endif
 
 ifdef MULTIPLE_HW_VARIANTS_ENABLED
-  LOCAL_CFLAGS += -DHW_VARIANTS_ENABLED
-  LOCAL_SRC_FILES += $(AUDIO_PLATFORM)/hw_info.c
+    LOCAL_CFLAGS += -DHW_VARIANTS_ENABLED
+    LOCAL_SRC_FILES += $(AUDIO_PLATFORM)/hw_info.c
 endif
 
 #ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),true)
@@ -158,7 +159,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libaudioroute \
 	libdl \
 	libexpat
-       #libmdmdetect
+	#libmdmdetect
 
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
