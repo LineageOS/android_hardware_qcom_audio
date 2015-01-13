@@ -1,4 +1,7 @@
 /*
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Not a contribution.
+ *
  * Copyright (C) 2013 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,121 +15,130 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * This file was modified by DTS, Inc. The portions of the
+ * code modified by DTS, Inc are copyrighted and
+ * licensed separately, as follows:
+ *
+ * (C) 2014 DTS, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-#include <hardware/audio.h>
-#include <hardware/audio_effect.h>
-#include <audio_effects/effect_aec.h>
-#include <audio_effects/effect_ns.h>
+#ifndef QCOM_AUDIO_HW_H
+#define QCOM_AUDIO_HW_H
 
+#include <cutils/list.h>
+#include <hardware/audio.h>
 #include <tinyalsa/asoundlib.h>
+#include <tinycompress/tinycompress.h>
 
 #include <audio_route/audio_route.h>
 #include "audio_defs.h"
+#include "voice.h"
+
+#define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
+#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/system/lib/soundfx/libqcompostprocbundle.so"
+
+/* Flags used to initialize acdb_settings variable that goes to ACDB library */
+#define NONE_FLAG            0x00000000
+#define ANC_FLAG	     0x00000001
+#define DMIC_FLAG            0x00000002
+#define QMIC_FLAG            0x00000004
+#define TTY_MODE_OFF         0x00000010
+#define TTY_MODE_FULL        0x00000020
+#define TTY_MODE_VCO         0x00000040
+#define TTY_MODE_HCO         0x00000080
+#define TTY_MODE_CLEAR       0xFFFFFF0F
+#define FLUENCE_MODE_CLEAR   0xFFFFFFF0
 
 #define ACDB_DEV_TYPE_OUT 1
 #define ACDB_DEV_TYPE_IN 2
 
-#define DUALMIC_CONFIG_NONE 0      /* Target does not contain 2 mics */
-#define DUALMIC_CONFIG_ENDFIRE 1
-#define DUALMIC_CONFIG_BROADSIDE 2
+#define MAX_SUPPORTED_CHANNEL_MASKS 8
+#define MAX_SUPPORTED_FORMATS 3
+#define DEFAULT_HDMI_OUT_CHANNELS   2
 
-/*
- * Below are the devices for which is back end is same, SLIMBUS_0_RX.
- * All these devices are handled by the internal HW codec. We can
- * enable any one of these devices at any time
- */
-#define AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND \
-    (AUDIO_DEVICE_OUT_EARPIECE | AUDIO_DEVICE_OUT_SPEAKER | \
-     AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE)
-
-/* Sound devices specific to the platform
- * The DEVICE_OUT_* and DEVICE_IN_* should be mapped to these sound
- * devices to enable corresponding mixer paths
- */
-typedef enum {
-    SND_DEVICE_NONE = 0,
-
-    /* Playback devices */
-    SND_DEVICE_MIN,
-    SND_DEVICE_OUT_BEGIN = SND_DEVICE_MIN,
-    SND_DEVICE_OUT_HANDSET = SND_DEVICE_OUT_BEGIN,
-    SND_DEVICE_OUT_SPEAKER,
-    SND_DEVICE_OUT_HEADPHONES,
-    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
-    SND_DEVICE_OUT_VOICE_SPEAKER,
-    SND_DEVICE_OUT_VOICE_HEADPHONES,
-    SND_DEVICE_OUT_HDMI,
-    SND_DEVICE_OUT_SPEAKER_AND_HDMI,
-    SND_DEVICE_OUT_BT_SCO,
-    SND_DEVICE_OUT_VOICE_HANDSET_TMUS,
-    SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES,
-    SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES,
-    SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET,
-    SND_DEVICE_OUT_END,
-
-    /*
-     * Note: IN_BEGIN should be same as OUT_END because total number of devices
-     * SND_DEVICES_MAX should not exceed MAX_RX + MAX_TX devices.
-     */
-    /* Capture devices */
-    SND_DEVICE_IN_BEGIN = SND_DEVICE_OUT_END,
-    SND_DEVICE_IN_HANDSET_MIC  = SND_DEVICE_IN_BEGIN,
-    SND_DEVICE_IN_SPEAKER_MIC,
-    SND_DEVICE_IN_HEADSET_MIC,
-    SND_DEVICE_IN_HANDSET_MIC_AEC,
-    SND_DEVICE_IN_SPEAKER_MIC_AEC,
-    SND_DEVICE_IN_HEADSET_MIC_AEC,
-    SND_DEVICE_IN_VOICE_SPEAKER_MIC,
-    SND_DEVICE_IN_VOICE_HEADSET_MIC,
-    SND_DEVICE_IN_HDMI_MIC,
-    SND_DEVICE_IN_BT_SCO_MIC,
-    SND_DEVICE_IN_CAMCORDER_MIC,
-    SND_DEVICE_IN_VOICE_DMIC_EF,
-    SND_DEVICE_IN_VOICE_DMIC_BS,
-    SND_DEVICE_IN_VOICE_DMIC_EF_TMUS,
-    SND_DEVICE_IN_VOICE_SPEAKER_DMIC_EF,
-    SND_DEVICE_IN_VOICE_SPEAKER_DMIC_BS,
-    SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC,
-    SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC,
-    SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC,
-    SND_DEVICE_IN_VOICE_REC_MIC,
-    SND_DEVICE_IN_VOICE_REC_DMIC_EF,
-    SND_DEVICE_IN_VOICE_REC_DMIC_BS,
-    SND_DEVICE_IN_VOICE_REC_DMIC_EF_FLUENCE,
-    SND_DEVICE_IN_VOICE_REC_DMIC_BS_FLUENCE,
-    SND_DEVICE_IN_END,
-
-    SND_DEVICE_MAX = SND_DEVICE_IN_END,
-
-} snd_device_t;
-
+#define SND_CARD_STATE_OFFLINE 0
+#define SND_CARD_STATE_ONLINE 1
 
 /* These are the supported use cases by the hardware.
  * Each usecase is mapped to a specific PCM device.
  * Refer to pcm_device_table[].
  */
-typedef enum {
+enum {
     USECASE_INVALID = -1,
     /* Playback usecases */
     USECASE_AUDIO_PLAYBACK_DEEP_BUFFER = 0,
     USECASE_AUDIO_PLAYBACK_LOW_LATENCY,
     USECASE_AUDIO_PLAYBACK_MULTI_CH,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD,
+#ifdef MULTIPLE_OFFLOAD_ENABLED
+    USECASE_AUDIO_PLAYBACK_OFFLOAD2,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD3,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD4,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD5,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD6,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD7,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD8,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD9,
+#endif
+
+    /* FM usecase */
+    USECASE_AUDIO_PLAYBACK_FM,
+
+    /* HFP Use case*/
+    USECASE_AUDIO_HFP_SCO,
+    USECASE_AUDIO_HFP_SCO_WB,
 
     /* Capture usecases */
     USECASE_AUDIO_RECORD,
+    USECASE_AUDIO_RECORD_COMPRESS,
     USECASE_AUDIO_RECORD_LOW_LATENCY,
+    USECASE_AUDIO_RECORD_FM_VIRTUAL,
 
+    /* Voice usecase */
     USECASE_VOICE_CALL,
 
+    /* Voice extension usecases */
+    USECASE_VOICE2_CALL,
+    USECASE_VOLTE_CALL,
+    USECASE_QCHAT_CALL,
+    USECASE_VOWLAN_CALL,
+    USECASE_COMPRESS_VOIP_CALL,
+
+    USECASE_INCALL_REC_UPLINK,
+    USECASE_INCALL_REC_DOWNLINK,
+    USECASE_INCALL_REC_UPLINK_AND_DOWNLINK,
+    USECASE_INCALL_REC_UPLINK_COMPRESS,
+    USECASE_INCALL_REC_DOWNLINK_COMPRESS,
+    USECASE_INCALL_REC_UPLINK_AND_DOWNLINK_COMPRESS,
+
+    USECASE_INCALL_MUSIC_UPLINK,
+    USECASE_INCALL_MUSIC_UPLINK2,
+
+    USECASE_AUDIO_SPKR_CALIB_RX,
+    USECASE_AUDIO_SPKR_CALIB_TX,
+
+    USECASE_AUDIO_PLAYBACK_AFE_PROXY,
+    USECASE_AUDIO_RECORD_AFE_PROXY,
+
     AUDIO_USECASE_MAX
-} audio_usecase_t;
+};
+
+const char * const use_case_table[AUDIO_USECASE_MAX];
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
-
-#define SOUND_CARD 0
-
-#define DEFAULT_OUTPUT_SAMPLING_RATE 48000
 
 /*
  * tinyAlsa library interprets period size as number of frames
@@ -136,49 +148,69 @@ typedef enum {
  * We should take care of returning proper size when AudioFlinger queries for
  * the buffer size of an input/output stream
  */
-#ifdef MSM8974
-#define DEEP_BUFFER_OUTPUT_PERIOD_SIZE 1024
-#else
-#define DEEP_BUFFER_OUTPUT_PERIOD_SIZE 960
-#endif
-#define DEEP_BUFFER_OUTPUT_PERIOD_COUNT 8
 
-#ifdef MSM8974
-#define LOW_LATENCY_OUTPUT_PERIOD_SIZE 256
-#else
-#define LOW_LATENCY_OUTPUT_PERIOD_SIZE 240
-#endif
-#define LOW_LATENCY_OUTPUT_PERIOD_COUNT 2
+enum {
+    OFFLOAD_CMD_EXIT,               /* exit compress offload thread loop*/
+    OFFLOAD_CMD_DRAIN,              /* send a full drain request to DSP */
+    OFFLOAD_CMD_PARTIAL_DRAIN,      /* send a partial drain request to DSP */
+    OFFLOAD_CMD_WAIT_FOR_BUFFER,    /* wait for buffer released by DSP */
+};
 
-#define HDMI_MULTI_PERIOD_SIZE  336
-#define HDMI_MULTI_PERIOD_COUNT 8
-#define HDMI_MULTI_DEFAULT_CHANNEL_COUNT 6
-#define HDMI_MULTI_PERIOD_BYTES (HDMI_MULTI_PERIOD_SIZE * HDMI_MULTI_DEFAULT_CHANNEL_COUNT * 2)
+enum {
+    OFFLOAD_STATE_IDLE,
+    OFFLOAD_STATE_PLAYING,
+    OFFLOAD_STATE_PAUSED,
+};
 
-#ifdef MSM8974
-#define AUDIO_CAPTURE_PERIOD_SIZE 512
-#define AUDIO_CAPTURE_PERIOD_COUNT 16
-#else
-#define AUDIO_CAPTURE_PERIOD_SIZE 320
-#define AUDIO_CAPTURE_PERIOD_COUNT 2
-#endif
+struct offload_cmd {
+    struct listnode node;
+    int cmd;
+    int data[];
+};
 
-#define MAX_SUPPORTED_CHANNEL_MASKS 2
+struct stream_app_type_cfg {
+    int sample_rate;
+    uint32_t bit_width;
+    int app_type;
+};
 
 struct stream_out {
     struct audio_stream_out stream;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
+    pthread_cond_t  cond;
     struct pcm_config config;
+    struct compr_config compr_config;
     struct pcm *pcm;
+    struct compress *compr;
     int standby;
     int pcm_device_id;
+    unsigned int sample_rate;
     audio_channel_mask_t channel_mask;
+    audio_format_t format;
     audio_devices_t devices;
     audio_output_flags_t flags;
     audio_usecase_t usecase;
     /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
+    audio_format_t supported_formats[MAX_SUPPORTED_FORMATS+1];
     bool muted;
+    uint64_t written; /* total frames written, not cleared when entering standby */
+    audio_io_handle_t handle;
+    struct stream_app_type_cfg app_type_cfg;
+
+    int non_blocking;
+    int playback_started;
+    int offload_state;
+    pthread_cond_t offload_cond;
+    pthread_t offload_thread;
+    struct listnode offload_cmd_list;
+    bool offload_thread_blocked;
+
+    stream_callback_t offload_callback;
+    void *offload_cookie;
+    struct compr_gapless_mdata gapless_mdata;
+    int send_new_metadata;
+    unsigned int bit_width;
 
     struct audio_device *dev;
 };
@@ -191,10 +223,14 @@ struct stream_in {
     int standby;
     int source;
     int pcm_device_id;
-    int device;
+    audio_devices_t device;
     audio_channel_mask_t channel_mask;
     audio_usecase_t usecase;
     bool enable_aec;
+    bool enable_ns;
+    audio_format_t format;
+    audio_io_handle_t capture_handle;
+    bool is_st_session;
 
     struct audio_device *dev;
 };
@@ -202,7 +238,9 @@ struct stream_in {
 typedef enum {
     PCM_PLAYBACK,
     PCM_CAPTURE,
-    VOICE_CALL
+    VOICE_CALL,
+    VOIP_CALL,
+    PCM_HFP_CALL
 } usecase_type_t;
 
 union stream_ptr {
@@ -220,19 +258,28 @@ struct audio_usecase {
     union stream_ptr stream;
 };
 
-typedef void (*acdb_deallocate_t)();
-typedef int  (*acdb_init_t)();
-typedef void (*acdb_send_audio_cal_t)(int, int);
-typedef void (*acdb_send_voice_cal_t)(int, int);
+struct sound_card_status {
+    pthread_mutex_t lock;
+    int state;
+};
 
-typedef int (*csd_client_init_t)();
-typedef int (*csd_client_deinit_t)();
-typedef int (*csd_disable_device_t)();
-typedef int (*csd_enable_device_t)(int, int, uint32_t);
-typedef int (*csd_volume_t)(int);
-typedef int (*csd_mic_mute_t)(int);
-typedef int (*csd_start_voice_t)();
-typedef int (*csd_stop_voice_t)();
+struct stream_format {
+    struct listnode list;
+    audio_format_t format;
+};
+
+struct stream_sample_rate {
+    struct listnode list;
+    uint32_t sample_rate;
+};
+
+struct streams_output_cfg {
+    struct listnode list;
+    audio_output_flags_t flags;
+    struct listnode format_list;
+    struct listnode sample_rate_list;
+    struct stream_app_type_cfg app_type_cfg;
+};
 
 struct audio_device {
     struct audio_hw_device device;
@@ -242,94 +289,66 @@ struct audio_device {
     audio_devices_t out_device;
     struct stream_in *active_input;
     struct stream_out *primary_output;
-    int in_call;
-    float voice_volume;
-    bool mic_mute;
-    int tty_mode;
+    struct stream_out *voice_tx_output;
+    struct stream_out *current_call_output;
     bool bluetooth_nrec;
     bool screen_off;
-    struct pcm *voice_call_rx;
-    struct pcm *voice_call_tx;
-    int snd_dev_ref_cnt[SND_DEVICE_MAX];
+    int *snd_dev_ref_cnt;
     struct listnode usecase_list;
+    struct listnode streams_output_cfg_list;
     struct audio_route *audio_route;
     int acdb_settings;
+    bool speaker_lr_swap;
+    struct voice voice;
+    unsigned int cur_hdmi_channels;
+    unsigned int cur_wfd_channels;
+    bool bt_wb_speech_enabled;
 
-    bool mic_type_analog;
-    bool fluence_in_spkr_mode;
-    bool fluence_in_voice_call;
-    bool fluence_in_voice_rec;
-    int  dualmic_config;
+    int snd_card;
+    unsigned int cur_codec_backend_samplerate;
+    unsigned int cur_codec_backend_bit_width;
+    void *platform;
+    unsigned int offload_usecases_state;
+    void *visualizer_lib;
+    int (*visualizer_start_output)(audio_io_handle_t, int);
+    int (*visualizer_stop_output)(audio_io_handle_t, int);
+    void *offload_effects_lib;
+    int (*offload_effects_start_output)(audio_io_handle_t, int);
+    int (*offload_effects_stop_output)(audio_io_handle_t, int);
 
-    /* Audio calibration related functions */
-    void *acdb_handle;
-    acdb_init_t acdb_init;
-    acdb_deallocate_t acdb_deallocate;
-    acdb_send_audio_cal_t acdb_send_audio_cal;
-    acdb_send_voice_cal_t acdb_send_voice_cal;
-
-    /* CSD Client related functions for voice call */
-    void *csd_client;
-    csd_client_init_t csd_client_init;
-    csd_client_deinit_t csd_client_deinit;
-    csd_disable_device_t csd_disable_device;
-    csd_enable_device_t csd_enable_device;
-    csd_volume_t csd_volume;
-    csd_mic_mute_t csd_mic_mute;
-    csd_start_voice_t csd_start_voice;
-    csd_stop_voice_t csd_stop_voice;
+    struct sound_card_status snd_card_status;
+    int (*offload_effects_set_hpx_state)(bool);
 };
+
+int select_devices(struct audio_device *adev,
+                          audio_usecase_t uc_id);
+int disable_audio_route(struct audio_device *adev,
+                        struct audio_usecase *usecase);
+int disable_snd_device(struct audio_device *adev,
+                       snd_device_t snd_device);
+int enable_snd_device(struct audio_device *adev,
+                      snd_device_t snd_device);
+
+int enable_audio_route(struct audio_device *adev,
+                       struct audio_usecase *usecase);
+
+struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
+                                                   audio_usecase_t uc_id);
+
+bool is_offload_usecase(audio_usecase_t uc_id);
+
+int pcm_ioctl(struct pcm *pcm, int request, ...);
+
+int get_snd_card_state(struct audio_device *adev);
+
+#define LITERAL_TO_STRING(x) #x
+#define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\
+            __FILE__ ":" LITERAL_TO_STRING(__LINE__)\
+            " ASSERT_FATAL(" #condition ") failed.")
 
 /*
  * NOTE: when multiple mutexes have to be acquired, always take the
  * stream_in or stream_out mutex first, followed by the audio_device mutex.
  */
 
-struct pcm_config pcm_config_deep_buffer = {
-    .channels = 2,
-    .rate = DEFAULT_OUTPUT_SAMPLING_RATE,
-    .period_size = DEEP_BUFFER_OUTPUT_PERIOD_SIZE,
-    .period_count = DEEP_BUFFER_OUTPUT_PERIOD_COUNT,
-    .format = PCM_FORMAT_S16_LE,
-    .start_threshold = DEEP_BUFFER_OUTPUT_PERIOD_SIZE / 4,
-    .stop_threshold = INT_MAX,
-    .avail_min = DEEP_BUFFER_OUTPUT_PERIOD_SIZE / 4,
-};
-
-struct pcm_config pcm_config_low_latency = {
-    .channels = 2,
-    .rate = DEFAULT_OUTPUT_SAMPLING_RATE,
-    .period_size = LOW_LATENCY_OUTPUT_PERIOD_SIZE,
-    .period_count = LOW_LATENCY_OUTPUT_PERIOD_COUNT,
-    .format = PCM_FORMAT_S16_LE,
-    .start_threshold = LOW_LATENCY_OUTPUT_PERIOD_SIZE / 4,
-    .stop_threshold = INT_MAX,
-    .avail_min = LOW_LATENCY_OUTPUT_PERIOD_SIZE / 4,
-};
-
-struct pcm_config pcm_config_hdmi_multi = {
-    .channels = HDMI_MULTI_DEFAULT_CHANNEL_COUNT, /* changed when the stream is opened */
-    .rate = DEFAULT_OUTPUT_SAMPLING_RATE, /* changed when the stream is opened */
-    .period_size = HDMI_MULTI_PERIOD_SIZE,
-    .period_count = HDMI_MULTI_PERIOD_COUNT,
-    .format = PCM_FORMAT_S16_LE,
-    .start_threshold = 0,
-    .stop_threshold = INT_MAX,
-    .avail_min = 0,
-};
-
-struct pcm_config pcm_config_audio_capture = {
-    .channels = 2,
-    .period_size = AUDIO_CAPTURE_PERIOD_SIZE,
-    .period_count = AUDIO_CAPTURE_PERIOD_COUNT,
-    .format = PCM_FORMAT_S16_LE,
-};
-
-struct pcm_config pcm_config_voice_call = {
-    .channels = 1,
-    .rate = 8000,
-    .period_size = 160,
-    .period_count = 2,
-    .format = PCM_FORMAT_S16_LE,
-};
-
+#endif // QCOM_AUDIO_HW_H
