@@ -44,7 +44,7 @@ static const char *paramList[10] = {
                               "bassboost_param_strength"
 };
 
-#define EFFECT_FILE "/data/data/dts/effect"
+#define EFFECT_FILE "/data/misc/dts/effect"
 #define MAX_LENGTH_OF_INTEGER_IN_STRING 13
 
 #ifdef DTS_EAGLE
