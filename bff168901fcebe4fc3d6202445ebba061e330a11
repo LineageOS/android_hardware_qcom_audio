@@ -1,0 +1,140 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5a9d85d2_53e2bca0",
+        "filename": "hal/Android.mk",
+        "patchSetId": 3
+      },
+      "lineNbr": 37,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-01-14T14:56:06Z",
+      "side": 1,
+      "message": "Is it a specific feature you need the kernel headers for? If so you should ifdef by feature rather than platform as is done for VOICE_SESSION, SPKR_PROTECTION, etc. Comments mention that LCH failure is non-critical.",
+      "revId": "bff168901fcebe4fc3d6202445ebba061e330a11",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a9d85d2_f39e4806",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 868,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-01-14T14:56:06Z",
+      "side": 1,
+      "message": "This may end up being unnecessary.",
+      "revId": "bff168901fcebe4fc3d6202445ebba061e330a11",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a9d85d2_3389f0cb",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 136,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-01-14T14:56:06Z",
+      "side": 1,
+      "message": "tabs, also unnecessary ifdef?",
+      "revId": "bff168901fcebe4fc3d6202445ebba061e330a11",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a9d85d2_3302903f",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 742,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-01-14T14:56:06Z",
+      "side": 1,
+      "message": "tabs",
+      "revId": "bff168901fcebe4fc3d6202445ebba061e330a11",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a9d85d2_13ff9435",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 978,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-01-14T14:56:06Z",
+      "side": 1,
+      "message": "Isn\u0027t this ifdef unnecessary?",
+      "revId": "bff168901fcebe4fc3d6202445ebba061e330a11",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a9d85d2_739378fb",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1283,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-01-14T14:56:06Z",
+      "side": 1,
+      "message": "Looks like replacing this call with csd-\u003eenable_device_config allows you to get rid of the enable_device_config function.",
+      "revId": "bff168901fcebe4fc3d6202445ebba061e330a11",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a9d85d2_b394c0e8",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2140,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-01-14T14:56:06Z",
+      "side": 1,
+      "message": "This looks like the special feature that requires kernel headers. You probably don\u0027t want to ifdef this for 8084, but have it selectable by something like HAS_LCH_MODE.",
+      "revId": "bff168901fcebe4fc3d6202445ebba061e330a11",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a9d85d2_9399c422",
+        "filename": "hal/voice.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 466,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-01-14T14:56:06Z",
+      "side": 1,
+      "message": "tabs?",
+      "revId": "bff168901fcebe4fc3d6202445ebba061e330a11",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
