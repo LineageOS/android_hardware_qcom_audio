@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5a9d85d2_96d41248",
+        "filename": "hal/Android.mk",
+        "patchSetId": 4
+      },
+      "lineNbr": 37,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-01-14T16:45:35Z",
+      "side": 1,
+      "message": "AUDIO_FEATURE_ENABLED_EXTERNAL_LCH to match the other flags?",
+      "revId": "339bf695c65efee224df51c4b10d07b3c03d8bec",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
