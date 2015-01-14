@@ -36,6 +36,24 @@
     },
     {
       "key": {
+        "uuid": "5a9d85d2_169302a5",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 868,
+      "author": {
+        "id": 167
+      },
+      "writtenOn": "2015-01-14T16:29:16Z",
+      "side": 1,
+      "message": "This was the way the 8084 hal was setup for calls.  I integrated it the same, just added the ifdefs.",
+      "parentUuid": "5a9d85d2_f39e4806",
+      "revId": "bff168901fcebe4fc3d6202445ebba061e330a11",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5a9d85d2_3389f0cb",
         "filename": "hal/msm8974/platform.c",
         "patchSetId": 3
@@ -47,6 +65,24 @@
       "writtenOn": "2015-01-14T14:56:06Z",
       "side": 1,
       "message": "tabs, also unnecessary ifdef?",
+      "revId": "bff168901fcebe4fc3d6202445ebba061e330a11",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a9d85d2_761d2666",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 136,
+      "author": {
+        "id": 167
+      },
+      "writtenOn": "2015-01-14T16:29:16Z",
+      "side": 1,
+      "message": "I ifdef\u0027d this to prevent unused warnings for msm8974 targets.",
+      "parentUuid": "5a9d85d2_3389f0cb",
       "revId": "bff168901fcebe4fc3d6202445ebba061e330a11",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
@@ -87,6 +123,24 @@
     },
     {
       "key": {
+        "uuid": "5a9d85d2_561aaa6f",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 978,
+      "author": {
+        "id": 167
+      },
+      "writtenOn": "2015-01-14T16:29:16Z",
+      "side": 1,
+      "message": "If I don\u0027t ifdef this, it breaks the build for non apq8084 targets.",
+      "parentUuid": "5a9d85d2_13ff9435",
+      "revId": "bff168901fcebe4fc3d6202445ebba061e330a11",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5a9d85d2_739378fb",
         "filename": "hal/msm8974/platform.c",
         "patchSetId": 3
@@ -98,6 +152,24 @@
       "writtenOn": "2015-01-14T14:56:06Z",
       "side": 1,
       "message": "Looks like replacing this call with csd-\u003eenable_device_config allows you to get rid of the enable_device_config function.",
+      "revId": "bff168901fcebe4fc3d6202445ebba061e330a11",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a9d85d2_76908696",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1283,
+      "author": {
+        "id": 167
+      },
+      "writtenOn": "2015-01-14T16:29:16Z",
+      "side": 1,
+      "message": "This was the way it was implemented in the 8084 HAL, I just added the ifdefs.",
+      "parentUuid": "5a9d85d2_739378fb",
       "revId": "bff168901fcebe4fc3d6202445ebba061e330a11",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
