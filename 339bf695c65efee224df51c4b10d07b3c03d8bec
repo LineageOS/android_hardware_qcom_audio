@@ -16,6 +16,40 @@
       "revId": "339bf695c65efee224df51c4b10d07b3c03d8bec",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a9d85d2_56bbca0e",
+        "filename": "hal/msm8974/platform.h",
+        "patchSetId": 4
+      },
+      "lineNbr": 318,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-01-14T16:49:08Z",
+      "side": 1,
+      "message": "This also probably needs the LCH flag, rather than the 8084 flag.",
+      "revId": "339bf695c65efee224df51c4b10d07b3c03d8bec",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a9d85d2_16c14281",
+        "filename": "hal/voice_extn/voice_extn.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 188,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-01-14T16:49:08Z",
+      "side": 1,
+      "message": "This probably needs the LCH flag, rather than the 8084 flag.",
+      "revId": "339bf695c65efee224df51c4b10d07b3c03d8bec",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
