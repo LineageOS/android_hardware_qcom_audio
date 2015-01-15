@@ -2,6 +2,23 @@
   "comments": [
     {
       "key": {
+        "uuid": "5a9d85d2_c711c2b1",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-01-15T23:13:59Z",
+      "side": 1,
+      "message": "Unnecessary, look 2 lines down :)",
+      "revId": "1ad3229389bad8ca7a74c2618e1acd17799cc6a0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5a9d85d2_473f9225",
         "filename": "hal/msm8974/platform.c",
         "patchSetId": 5
