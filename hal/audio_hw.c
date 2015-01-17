@@ -1172,15 +1172,22 @@ static void *offload_thread_loop(void *context)
             ret = compress_next_track(out->compr);
             if(ret == 0) {
                 ALOGD("copl(%p):calling compress_partial_drain", out);
-                compress_partial_drain(out->compr);
+                ret = compress_partial_drain(out->compr);
                 ALOGD("copl(%p):out of compress_partial_drain", out);
+                if (ret < 0)
+                    ret = -errno;
             }
-            else if(ret == -ETIMEDOUT)
+            else if (ret == -ETIMEDOUT)
                 compress_drain(out->compr);
             else
                 ALOGE("%s: Next track returned error %d",__func__, ret);
-            send_callback = true;
-            event = STREAM_CBK_EVENT_DRAIN_READY;
+
+            if (ret != -ENETRESET) {
+                send_callback = true;
+                event = STREAM_CBK_EVENT_DRAIN_READY;
+                ALOGV("copl(%p):send drain callback, ret %d", out, ret);
+            } else
+                ALOGE("%s: Block drain ready event during SSR", __func__);
             break;
         case OFFLOAD_CMD_DRAIN:
             ALOGD("copl(%p):calling compress_drain", out);
