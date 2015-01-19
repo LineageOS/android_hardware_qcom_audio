@@ -2260,9 +2260,8 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
                      * info->sample_rate
                      * (bits_per_sample >> 3)
                      * popcount(info->channel_mask))/1000;
-
-    fragment_size = ALIGN (fragment_size, 1024);
-
+    // align with LCM of 2, 4, 6, 8
+    fragment_size = ALIGN( fragment_size, 24 );
     if(fragment_size < MIN_PCM_OFFLOAD_FRAGMENT_SIZE)
         fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
     else if(fragment_size > MAX_PCM_OFFLOAD_FRAGMENT_SIZE)
