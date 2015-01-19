@@ -2332,11 +2332,11 @@ done:
 static unsigned int get_best_backend_sample_rate(unsigned int sample_rate) {
 
     // codec backend can take 48K, 96K, and 192K
-    if (sample_rate <= 48000)
+    if (sample_rate < 96000)
         return 48000;
-    if (sample_rate <= 96000)
+    if (sample_rate < 192000)
         return 96000;
-    if (sample_rate <= 192000)
+    if (sample_rate >= 192000)
         return 192000;
     return CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
 }
@@ -2398,14 +2398,14 @@ int platform_set_codec_backend_cfg(struct audio_device* adev,
             case 32000:
             case 44100:
             case 48000:
-                rate_str = "KHZ_48";
-                break;
             case 64000:
             case 88200:
+                rate_str = "KHZ_48";
+                break;
             case 96000:
+            case 176400:
                 rate_str = "KHZ_96";
                 break;
-            case 176400:
             case 192000:
                 rate_str = "KHZ_192";
                 break;
