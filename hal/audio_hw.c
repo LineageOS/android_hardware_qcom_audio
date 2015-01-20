@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -991,6 +991,7 @@ int start_input_stream(struct stream_in *in)
     uc_info->out_snd_device = SND_DEVICE_NONE;
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
+    audio_extn_perf_lock_acquire();
     select_devices(adev, in->usecase);
 
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d), channels %d",
@@ -1022,12 +1023,14 @@ int start_input_stream(struct stream_in *in)
         }
         break;
     }
+    audio_extn_perf_lock_release();
 
     ALOGV("%s: exit", __func__);
     return ret;
 
 error_open:
     stop_input_stream(in);
+    audio_extn_perf_lock_release();
 
 error_config:
     adev->active_input = NULL;
@@ -3223,6 +3226,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     /* This stream could be for sound trigger lab,
        get sound trigger pcm if present */
     audio_extn_sound_trigger_check_and_get_session(in);
+    audio_extn_perf_lock_init();
 
     *stream_in = &in->stream;
     ALOGV("%s: exit", __func__);
