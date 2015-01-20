@@ -967,16 +967,11 @@ void *platform_init(struct audio_device *adev)
     /* Initialize ACDB ID's */
     platform_info_init();
 #ifdef PLATFORM_APQ8084
-    /* If platform is apq8084 and baseband is MDM, load CSD Client specific
-     * symbols. Voice call is handled by MDM and apps processor talks to
+    /* If platform is apq8084, load CSD Client specific symbols.
+     * Voice call is handled by MDM and apps processor talks to
      * MDM through CSD Client
      */
-    property_get("ro.board.platform", platform, "");
-    property_get("ro.baseband", baseband, "");
-    if (!strncmp("apq8084", platform, sizeof("apq8084")) &&
-        !strncmp("mdm", baseband, sizeof("mdm"))) {
-         platform_csd_init(my_data);
-    }
+    platform_csd_init(my_data);
 #endif
     /* init usb */
     audio_extn_usb_init(adev);
