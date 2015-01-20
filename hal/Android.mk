@@ -62,6 +62,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_KPI_OPTIMIZE)),true)
+    LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FM)),true)
     LOCAL_CFLAGS += -DFM_ENABLED
     LOCAL_SRC_FILES += audio_extn/fm.c
