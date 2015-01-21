@@ -136,7 +136,11 @@ static int audio_format_to_voip_mode(int format)
 static int voip_set_volume(struct audio_device *adev, int volume)
 {
     struct mixer_ctl *ctl;
+#ifdef PLATFORM_MSM8960
+    const char *mixer_ctl_name = "Voip Rx Volume";
+#else
     const char *mixer_ctl_name = "Voip Rx Gain";
+#endif
     int vol_index = 0;
     uint32_t set_values[ ] = {0,
                               DEFAULT_VOLUME_RAMP_DURATION_MS};
