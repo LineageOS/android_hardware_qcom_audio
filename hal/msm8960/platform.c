@@ -894,17 +894,19 @@ void *platform_init(struct audio_device *adev)
 acdb_init_fail:
 
     set_platform_defaults(my_data);
-#ifdef CSD_NEEDED
+
     /* Initialize ACDB ID's */
     if (my_data->is_i2s_ext_modem)
         platform_info_init(PLATFORM_INFO_XML_PATH_I2S);
     else
         platform_info_init(PLATFORM_INFO_XML_PATH);
+
     /* load csd client */
     platform_csd_init(my_data);
-#endif
+
     /* init usb */
     audio_extn_usb_init(adev);
+
     /* update sound cards appropriately */
     audio_extn_usb_set_proxy_sound_card(adev->snd_card);
 
