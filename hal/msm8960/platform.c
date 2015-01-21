@@ -1200,7 +1200,7 @@ int platform_set_voice_volume(void *platform, int volume)
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     struct mixer_ctl *ctl;
-    const char *mixer_ctl_name = "Voice Rx Gain";
+    const char *mixer_ctl_name = "Voice Rx Volume";
     int vol_index = 0, ret = 0;
     uint32_t set_values[ ] = {0,
                               ALL_SESSION_VSID,
