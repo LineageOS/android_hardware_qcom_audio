@@ -34,6 +34,7 @@
 #ifdef FM_ENABLED
 #define AUDIO_PARAMETER_KEY_HANDLE_FM "handle_fm"
 #define AUDIO_PARAMETER_KEY_FM_VOLUME "fm_volume"
+#define AUDIO_PARAMETER_KEY_REC_PLAY_CONC "rec_play_conc_on"
 
 static struct pcm_config pcm_config_fm = {
     .channels = 2,
@@ -280,6 +281,21 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
         fm_set_volume(adev, vol);
     }
 
+#ifdef RECORD_PLAY_CONCURRENCY
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_REC_PLAY_CONC,
+                               value, sizeof(value));
+    if ((ret >= 0)
+          && (fmmod.is_fm_running == true)) {
+
+        if (!strncmp("true", value, sizeof("true")))
+            ALOGD("Record play concurrency ON Forcing FM device reroute");
+        else
+            ALOGD("Record play concurrency OFF Forcing FM device reroute");
+
+        select_devices(adev, USECASE_AUDIO_PLAYBACK_FM);
+        fm_set_volume(adev,fmmod.fm_volume);
+    }
+#endif
 exit:
     ALOGV("%s: exit", __func__);
 }
