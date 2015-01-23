@@ -15,6 +15,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * This file was modified by DTS, Inc. The portions of the
+ * code modified by DTS, Inc are copyrighted and
+ * licensed separately, as follows:
+ *
+ * (C) 2014 DTS, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #define LOG_TAG "audio_hw_extn"
@@ -23,6 +41,7 @@
 
 #include <stdlib.h>
 #include <errno.h>
+#include <dlfcn.h>
 #include <cutils/properties.h>
 #include <cutils/log.h>
 
@@ -30,6 +49,7 @@
 #include "audio_extn.h"
 #include "platform.h"
 #include "platform_api.h"
+#include "edid.h"
 
 #define MAX_SLEEP_RETRY 100
 #define WIFI_INIT_WAIT_SLEEP 50
@@ -39,6 +59,7 @@ struct audio_extn_module {
     bool aanc_enabled;
     bool custom_stereo_enabled;
     uint32_t proxy_channel_num;
+    bool hpx_enabled;
 };
 
 static struct audio_extn_module aextnmod = {
@@ -46,6 +67,7 @@ static struct audio_extn_module aextnmod = {
     .aanc_enabled = 0,
     .custom_stereo_enabled = 0,
     .proxy_channel_num = 2,
+    .hpx_enabled = 0,
 };
 
 #define AUDIO_PARAMETER_KEY_ANC        "anc_enabled"
@@ -54,6 +76,7 @@ static struct audio_extn_module aextnmod = {
 #define AUDIO_PARAMETER_CUSTOM_STEREO  "stereo_as_dual_mono"
 /* Query offload playback instances count */
 #define AUDIO_PARAMETER_OFFLOAD_NUM_ACTIVE "offload_num_active"
+#define AUDIO_PARAMETER_HPX            "HPX"
 
 #ifndef FM_ENABLED
 #define audio_extn_fm_set_parameters(adev, parms) (0)
@@ -106,6 +129,76 @@ void audio_extn_customstereo_set_parameters(struct audio_device *adev,
     }
 }
 #endif /* CUSTOM_STEREO_ENABLED */
+
+#ifndef DTS_EAGLE
+#define audio_extn_hpx_set_parameters(adev, parms)         (0)
+#define audio_extn_hpx_get_parameters(query, reply)  (0)
+#define audio_extn_check_and_set_dts_hpx_state(adev)       (0)
+#else
+void audio_extn_hpx_set_parameters(struct audio_device *adev,
+                                   struct str_parms *parms)
+{
+    int ret = 0;
+    char value[32]={0};
+    char prop[PROPERTY_VALUE_MAX] = "false";
+    bool hpx_state = false;
+    const char *mixer_ctl_name = "Set HPX OnOff";
+    struct mixer_ctl *ctl = NULL;
+    ALOGV("%s", __func__);
+
+    property_get("use.dts_eagle", prop, "0");
+    if (strncmp("true", prop, sizeof("true")))
+        return;
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_HPX, value,
+                            sizeof(value));
+    if (ret >= 0) {
+        if (!strncmp("ON", value, sizeof("ON")))
+            hpx_state = true;
+
+        if (hpx_state == aextnmod.hpx_enabled)
+            return;
+
+        aextnmod.hpx_enabled = hpx_state;
+        /* set HPX state on stream pp */
+        if (adev->offload_effects_set_hpx_state != NULL)
+            adev->offload_effects_set_hpx_state(hpx_state);
+
+        /* set HPX state on device pp */
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (ctl)
+            mixer_ctl_set_value(ctl, 0, aextnmod.hpx_enabled);
+    }
+}
+
+static int audio_extn_hpx_get_parameters(struct str_parms *query,
+                                       struct str_parms *reply)
+{
+    int ret;
+    char value[32]={0};
+
+    ALOGV("%s: hpx %d", __func__, aextnmod.hpx_enabled);
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_HPX, value,
+                            sizeof(value));
+    if (ret >= 0) {
+        if (aextnmod.hpx_enabled)
+            str_parms_add_str(reply, AUDIO_PARAMETER_HPX, "ON");
+        else
+            str_parms_add_str(reply, AUDIO_PARAMETER_HPX, "OFF");
+    }
+    return ret;
+}
+
+void audio_extn_check_and_set_dts_hpx_state(const struct audio_device *adev)
+{
+    char prop[PROPERTY_VALUE_MAX];
+    property_get("use.dts_eagle", prop, "0");
+    if (strncmp("true", prop, sizeof("true")))
+        return;
+    if (adev->offload_effects_set_hpx_state)
+        adev->offload_effects_set_hpx_state(aextnmod.hpx_enabled);
+}
+#endif
 
 #ifndef ANC_HEADSET_ENABLED
 #define audio_extn_set_anc_parameters(adev, parms)       (0)
@@ -235,30 +328,6 @@ done:
 #define audio_extn_set_afe_proxy_parameters(adev, parms)  (0)
 #define audio_extn_get_afe_proxy_parameters(query, reply) (0)
 #else
-/* Front left channel. */
-#define PCM_CHANNEL_FL    1
-
-/* Front right channel. */
-#define PCM_CHANNEL_FR    2
-
-/* Front center channel. */
-#define PCM_CHANNEL_FC    3
-
-/* Left surround channel.*/
-#define PCM_CHANNEL_LS   4
-
-/* Right surround channel.*/
-#define PCM_CHANNEL_RS   5
-
-/* Low frequency effect channel. */
-#define PCM_CHANNEL_LFE  6
-
-/* Left back channel; Rear left channel. */
-#define PCM_CHANNEL_LB   8
-
-/* Right back channel; Rear right channel. */
-#define PCM_CHANNEL_RB   9
-
 static int32_t afe_proxy_set_channel_mapping(struct audio_device *adev,
                                                      int channel_count)
 {
@@ -460,8 +529,11 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_sound_trigger_set_parameters(adev, parms);
    audio_extn_listen_set_parameters(adev, parms);
    audio_extn_hfp_set_parameters(adev, parms);
+   audio_extn_dts_eagle_set_parameters(adev, parms);
    audio_extn_ddp_set_parameters(adev, parms);
+   audio_extn_ds2_set_parameters(adev, parms);
    audio_extn_customstereo_set_parameters(adev, parms);
+   audio_extn_hpx_set_parameters(adev, parms);
 }
 
 void audio_extn_get_parameters(const struct audio_device *adev,
@@ -472,6 +544,8 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     audio_extn_get_afe_proxy_parameters(query, reply);
     audio_extn_get_fluence_parameters(adev, query, reply);
     get_active_offload_usecases(adev, query, reply);
+    audio_extn_dts_eagle_get_parameters(adev, query, reply);
+    audio_extn_hpx_get_parameters(query, reply);
 
     kv_pairs = str_parms_to_str(reply);
     ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);
@@ -505,3 +579,68 @@ int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,
     return 0;
 }
 #endif /* AUXPCM_BT_ENABLED */
+
+#ifdef KPI_OPTIMIZE_ENABLED
+typedef int (*perf_lock_acquire_t)(int, int, int*, int);
+typedef int (*perf_lock_release_t)(int);
+
+static void *qcopt_handle;
+static perf_lock_acquire_t perf_lock_acq;
+static perf_lock_release_t perf_lock_rel;
+
+static int perf_lock_handle;
+char opt_lib_path[512] = {0};
+int perf_lock_opts[1] = {0x20E};
+
+int audio_extn_perf_lock_init(void)
+{
+    int ret = 0;
+    if (qcopt_handle == NULL) {
+        if (property_get("ro.vendor.extension_library",
+                         opt_lib_path, NULL) <= 0) {
+            ALOGE("%s: Failed getting perf property \n", __func__);
+            ret = -EINVAL;
+            goto err;
+        }
+        if ((qcopt_handle = dlopen(opt_lib_path, RTLD_NOW)) == NULL) {
+            ALOGE("%s: Failed to open perf handle \n", __func__);
+            ret = -EINVAL;
+            goto err;
+        } else {
+            perf_lock_acq = (perf_lock_acquire_t)dlsym(qcopt_handle,
+                                                       "perf_lock_acq");
+            if (perf_lock_acq == NULL) {
+                ALOGE("%s: Perf lock Acquire NULL \n", __func__);
+                ret = -EINVAL;
+                goto err;
+            }
+            perf_lock_rel = (perf_lock_release_t)dlsym(qcopt_handle,
+                                                       "perf_lock_rel");
+            if (perf_lock_rel == NULL) {
+                ALOGE("%s: Perf lock Release NULL \n", __func__);
+                ret = -EINVAL;
+                goto err;
+            }
+            ALOGE("%s: Perf lock handles Success \n", __func__);
+        }
+    }
+err:
+    return ret;
+}
+
+void audio_extn_perf_lock_acquire(void)
+{
+    if (perf_lock_acq)
+        perf_lock_handle = perf_lock_acq(perf_lock_handle, 0, perf_lock_opts, 1);
+    else
+        ALOGE("%s: Perf lock acquire error \n", __func__);
+}
+
+void audio_extn_perf_lock_release(void)
+{
+    if (perf_lock_rel && perf_lock_handle)
+        perf_lock_rel(perf_lock_handle);
+    else
+        ALOGE("%s: Perf lock release error \n", __func__);
+}
+#endif /* KPI_OPTIMIZE_ENABLED */

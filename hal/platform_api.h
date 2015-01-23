@@ -89,6 +89,7 @@ int platform_info_init(const char *filename);
 struct audio_offload_info_t;
 uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info);
 uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info);
+uint32_t platform_get_compress_passthrough_buffer_size(audio_offload_info_t* info);
 
 bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct audio_usecase *usecase);
 int platform_get_usecase_index(const char * usecase);
@@ -96,4 +97,16 @@ int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t p
 void platform_set_echo_reference(void *platform, bool enable);
 void platform_get_device_to_be_id_map(int **be_id_map, int *length);
 
+int platform_set_channel_allocation(void *platform, int channel_alloc);
+int platform_get_edid_info(void *platform);
+int platform_set_channel_map(void *platform, int ch_count, char *ch_map,
+                             int snd_id);
+int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask, int snd_id);
+int platform_set_edid_channels_configuration(void *platform, int channels);
+unsigned char platform_map_to_edid_format(int format);
+bool platform_is_edid_supported_format(void *platform, int format);
+void platform_cache_edid(void * platform);
+void platform_invalidate_edid(void * platform);
+int platform_set_hdmi_config(struct stream_out *out);
+int platform_set_device_params(struct stream_out *out, int param, int value);
 #endif // AUDIO_PLATFORM_API_H

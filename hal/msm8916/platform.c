@@ -121,7 +121,7 @@ struct audio_block_header
 
 /* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
-typedef int  (*acdb_init_t)(char *, char *);
+typedef int  (*acdb_init_t)(char *, char *, int);
 typedef void (*acdb_send_audio_cal_t)(int, int, int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
@@ -915,7 +915,7 @@ void *platform_init(struct audio_device *adev)
     char baseband[PROPERTY_VALUE_MAX];
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data = NULL;
-    int retry_num = 0, snd_card_num = 0;
+    int retry_num = 0, snd_card_num = 0, key = 0;
     const char *snd_card_name;
     char mixer_xml_path[100],ffspEnable[PROPERTY_VALUE_MAX];
     char *cvd_version = NULL;
@@ -1026,6 +1026,9 @@ void *platform_init(struct audio_device *adev)
         acdb_device_table[SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 131;
         acdb_device_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 131;
     }
+    property_get("audio.ds1.metainfo.key",value,"0");
+    key = atoi(value);
+
     my_data->voice_feature_set = VOICE_FEATURE_SET_DEFAULT;
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
     if (my_data->acdb_handle == NULL) {
@@ -1076,7 +1079,7 @@ void *platform_init(struct audio_device *adev)
         else
             get_cvd_version(cvd_version, adev);
 
-        my_data->acdb_init(snd_card_name, cvd_version);
+        my_data->acdb_init((char *)snd_card_name, cvd_version);
         if (cvd_version)
             free(cvd_version);
     }
@@ -1094,6 +1097,9 @@ acdb_init_fail:
     audio_extn_ssr_update_enabled();
     audio_extn_spkr_prot_init(adev);
 
+    /* init dap hal */
+    audio_extn_dap_hal_init(adev->snd_card);
+
     audio_extn_dolby_set_license(adev);
     audio_hwdep_send_cal(my_data);
 
@@ -1110,6 +1116,7 @@ void platform_deinit(void *platform)
     free(platform);
     /* deinit usb */
     audio_extn_usb_deinit();
+    audio_extn_dap_hal_deinit();
 }
 
 const char *platform_get_snd_device_name(snd_device_t snd_device)
@@ -1293,13 +1300,14 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device)
     return acdb_device_table[snd_device];
 }
 
-int platform_set_snd_device_bit_width(snd_device_t snd_device, unsigned int bit_width)
+int platform_set_snd_device_bit_width(snd_device_t snd_device __unused,
+                                      unsigned int bit_width __unused)
 {
     ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
 }
 
-int platform_get_snd_device_bit_width(snd_device_t snd_device)
+int platform_get_snd_device_bit_width(snd_device_t snd_device __unused)
 {
     ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
@@ -2633,3 +2641,34 @@ int platform_set_snd_device_backend(snd_device_t snd_device __unused,
     return -ENOSYS;
 }
 
+int platform_get_edid_info(void *platform __unused)
+{
+   return -ENOSYS;
+}
+
+int platform_set_channel_map(void *platform __unused, int ch_count __unused,
+                             char *ch_map __unused, int snd_id __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_set_stream_channel_map(void *platform __unused,
+                                    audio_channel_mask_t channel_mask __unused,
+                                    int snd_id __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_set_edid_channels_configuration(void *platform __unused,
+                                         int channels __unused)
+{
+    return 0;
+}
+
+void platform_cache_edid(void * platform __unused)
+{
+}
+
+void platform_invalidate_edid(void * platform __unused)
+{
+}
