@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2015, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -141,7 +141,7 @@ static void spkr_prot_set_spkrstatus(bool enable)
        handle.spkr_in_use = true;
     else {
        handle.spkr_in_use = false;
-       clock_gettime(CLOCK_MONOTONIC, &handle.spkr_last_time_used);
+       clock_gettime(CLOCK_BOOTTIME, &handle.spkr_last_time_used);
    }
 }
 
@@ -181,7 +181,7 @@ static bool is_speaker_in_use(unsigned long *sec)
         *sec = 0;
          return true;
      } else {
-         clock_gettime(CLOCK_MONOTONIC, &temp);
+         clock_gettime(CLOCK_BOOTTIME, &temp);
          *sec = temp.tv_sec - handle.spkr_last_time_used.tv_sec;
          return false;
      }
