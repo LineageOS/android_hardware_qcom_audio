@@ -597,7 +597,7 @@ static status_t updateDeviceInfo(int rx_device,int tx_device) {
                 tx_dev_prev = cur_tx;
                 cur_tx = tx_device ;
                 cur_rx = rx_device ;
-                if((vMicMute == true) && (tx_dev_prev != cur_tx)) {
+                if((vMicMute == true) && (tx_dev_prev != tx_device)) {
                     ALOGD("REC:device switch with mute enabled :tx_dev_prev %d cur_tx: %d",tx_dev_prev, cur_tx);
                     msm_device_mute(DEV_ID(cur_tx), true);
                 }
@@ -677,16 +677,19 @@ free(device_list);
 // ----------------------------------------------------------------------------
 
 AudioHardware::AudioHardware() :
-    mInit(false), mMicMute(true), mBluetoothNrec(true), mBluetoothId(0),
+    mInit(false), mMicMute(true), mFmFd(-1), mBluetoothNrec(true), mBluetoothVGS(false), mBluetoothId(0),
 #ifdef HTC_ACOUSTIC_AUDIO
     mHACSetting(false), mBluetoothIdTx(0), mBluetoothIdRx(0),
 #endif
-    mOutput(0),mBluetoothVGS(false),
-    mCurSndDevice(-1),
-    mTtyMode(TTY_OFF), mFmFd(-1), mNumPcmRec(0)
+    mOutput(0),
 #ifdef QCOM_VOIP_ENABLED
-    ,mVoipFd(-1), mVoipInActive(false), mVoipOutActive(false), mDirectOutput(0), mVoipBitRate(0),
-    mDirectOutrefCnt(0)
+    mDirectOutput(0),
+#endif
+    mVoipBitRate(0),
+    mCurSndDevice(-1),
+    mTtyMode(TTY_OFF), mNumPcmRec(0)
+#ifdef QCOM_VOIP_ENABLED
+    ,mVoipFd(-1), mVoipInActive(false), mVoipOutActive(false), mDirectOutrefCnt(0)
 #endif
 #ifdef HTC_ACOUSTIC_AUDIO
     , mRecordState(false), mEffectEnabled(false)
@@ -1108,8 +1111,8 @@ AudioStreamOut* AudioHardware::openOutputStream(
         } else
 #endif
 #ifdef QCOM_TUNNEL_LPA_ENABLED
-	    if (flags & AUDIO_OUTPUT_FLAG_LPA) {
-			status_t err = BAD_VALUE;
+        if (flags & AUDIO_OUTPUT_FLAG_LPA) {
+            status_t err = BAD_VALUE;
             // create new output LPA stream
             AudioSessionOutLPA* out = new AudioSessionOutLPA(this, devices, *format, *channels,*sampleRate,0,&err);
             if(err != NO_ERROR) {
@@ -1188,10 +1191,10 @@ void AudioHardware::closeOutputStream(AudioStreamOut* out) {
     }
 #endif
     else if (mOutputLPA == out) {
-	    ALOGV(" deleting  mOutputLPA \n");
+        ALOGV(" deleting  mOutputLPA \n");
         delete mOutputLPA;
         mOutputLPA = 0;
-	}
+    }
 #ifdef TUNNEL_PLAYBACK
     else if (mOutputTunnel == out) {
         ALOGD("Closing Tunnel Output");
@@ -1441,14 +1444,11 @@ status_t AudioHardware::setParameters(const String8& keyValuePairs)
     key = String8(ANC_KEY);
     if (param.get(key, value) == NO_ERROR) {
         if (value == "true") {
-          ALOGE("Enabling ANC setting in the setparameter\n");
-          anc_setting= true;
+            ALOGE("Enabling ANC setting in the setparameter\n");
+            anc_setting = true;
         } else {
-           ALOGE("Disabling ANC setting in the setparameter\n");
-           anc_setting= false;
-           //disabling ANC feature.
-           enableANC(0,cur_rx);
-           anc_running = false;
+            ALOGE("Disabling ANC setting in the setparameter\n");
+            anc_setting = false;
         }
      doRouting(NULL, 0);
     }
@@ -1545,7 +1545,8 @@ uint32_t AudioHardware::getMvsMode(int format, int rate)
         return MVS_MODE_4GV_WB;
         break;
     default:
-        return BAD_INDEX;
+        return UNKNOWN_ERROR;
+        break;
     }
 }
 
@@ -1928,11 +1929,13 @@ status_t do_tpa2051_control(int mode)
 
     if (tpa_mode != cur_tpa_mode) {
         cur_tpa_mode = tpa_mode;
-        rc = ioctl(fd, TPA2051_SET_MODE, &tpa_mode);
-        if (rc < 0)
-            ALOGE("ioctl TPA2051_SET_MODE failed: %s", strerror(errno));
-        else
-            ALOGD("update TPA2051_SET_MODE to mode %d success", tpa_mode);
+        if (tpa_mode > 0) {
+            rc = ioctl(fd, TPA2051_SET_MODE, &tpa_mode);
+            if (rc < 0)
+                ALOGE("ioctl TPA2051_SET_MODE to mode %d failed: %s", tpa_mode, strerror(errno));
+            else
+                ALOGD("update TPA2051_SET_MODE to mode %d success", tpa_mode);
+        }
     }
 
     close(fd);
@@ -1943,7 +1946,7 @@ status_t do_tpa2051_control(int mode)
 static status_t do_route_audio_rpc(uint32_t device,
                                    int mode, bool mic_mute)
 {
-    if(device == -1)
+    if(device == INVALID_DEVICE)
         return 0;
 
     int new_rx_device = INVALID_DEVICE,new_tx_device = INVALID_DEVICE,fm_device = INVALID_DEVICE;
@@ -2584,7 +2587,7 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input, uint32_t outputDe
         ) {
             ALOGV("Ignoring routing for FM/INCALL/VOIP recording");
             return NO_ERROR;
-	}
+        }
         if (inputDevice != 0) {
             if (inputDevice & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
                 ALOGI("Routing audio to Bluetooth PCM\n");
@@ -2857,11 +2860,12 @@ status_t AudioHardware::doRouting(AudioStreamInMSM8x60 *input, uint32_t outputDe
     //check if ANC setting is ON
     if (anc_setting == true
                 && (sndDevice == SND_DEVICE_ANC_HEADSET
-                || sndDevice ==SND_DEVICE_NO_MIC_ANC_HEADSET)) {
-        enableANC(1,sndDevice);
+                || sndDevice == SND_DEVICE_NO_MIC_ANC_HEADSET)) {
+        enableANC(1, sndDevice);
         anc_running = true;
-    } else {
+    } else if (anc_running == true) {
         //disconnection case
+        enableANC(0, cur_rx);
         anc_running = false;
     }
 #endif
@@ -3126,10 +3130,10 @@ status_t AudioHardware::setupDeviceforVoipCall(bool value)
 //.----------------------------------------------------------------------------
 #ifdef QCOM_VOIP_ENABLED
 AudioHardware::AudioStreamInVoip::AudioStreamInVoip() :
-    mHardware(0), mFd(-1), mState(AUDIO_INPUT_CLOSED), mRetryCount(0),
+    mSetupDevice(false), mHardware(0), mFd(-1), mState(AUDIO_INPUT_CLOSED), mRetryCount(0),
     mFormat(AUDIO_HW_IN_FORMAT), mChannels(AUDIO_HW_IN_CHANNELS),
     mSampleRate(AUDIO_HW_VOIP_SAMPLERATE_8K), mBufferSize(AUDIO_HW_VOIP_BUFFERSIZE_8K),
-    mAcoustics((AudioSystem::audio_in_acoustics)0), mDevices(0), mSetupDevice(false)
+    mAcoustics((AudioSystem::audio_in_acoustics)0), mDevices(0)
 {
 }
 
@@ -3142,7 +3146,7 @@ status_t AudioHardware::AudioStreamInVoip::set(
 
     mHardware = hw;
 
-    if ((pFormat == 0) || BAD_INDEX == hw->getMvsMode(*pFormat, *pRate)) {
+    if ((pFormat == 0) || (UNKNOWN_ERROR == hw->getMvsMode(*pFormat, *pRate))) {
         ALOGE("Audio Format (%x) not supported \n",*pFormat);
         return BAD_VALUE;
     }
@@ -3231,7 +3235,7 @@ status_t AudioHardware::AudioStreamInVoip::set(
             goto Error;
         }
         mFd = status;
-        ALOGV("VOPIstreamin : Save the fd %d \n",mFd);
+        ALOGV("VOIPstreamin : Save the fd %d \n",mFd);
         mHardware->mVoipFd = mFd;
         // Increment voip stream count
 
@@ -3287,10 +3291,7 @@ status_t AudioHardware::AudioStreamInVoip::set(
 
     mHardware->mVoipInActive = true;
 
-    if (!acoustic)
-        return NO_ERROR;
-
-     return NO_ERROR;
+    return NO_ERROR;
 
 Error:
     if (mFd >= 0) {
@@ -3355,7 +3356,7 @@ ssize_t AudioHardware::AudioStreamInVoip::read( void* buffer, ssize_t bytes)
            int bytesRead = ::read(mFd, &audio_mvs_frame, sizeof(audio_mvs_frame));
            ALOGV("PCM read_bytes = %d mvs\n", bytesRead);
            if (bytesRead > 0) {
-                   memcpy(buffer+totalBytesRead, &audio_mvs_frame.voc_pkt, mBufferSize);
+                   memcpy(((char *)buffer)+totalBytesRead, &audio_mvs_frame.voc_pkt, mBufferSize);
                    count -= mBufferSize;
                    totalBytesRead += mBufferSize;
                    if(!mFirstread) {
@@ -3420,7 +3421,7 @@ status_t AudioHardware::AudioStreamInVoip::standby()
                if (anc_running == false) {
 #endif
                    enableDevice(temp->dev_id, 0);
-                   ALOGV("Voipin: disable voip rx");
+                   ALOGV("VOIPin: disable voip rx");
 #ifdef QCOM_ANC_HEADSET_ENABLED
                }
 #endif
@@ -3487,7 +3488,7 @@ status_t AudioHardware::AudioStreamInVoip::setParameters(const String8& keyValue
             status = BAD_VALUE;
         } else {
             mDevices = device;
-            status = mHardware->doRouting(this, device);
+            status = mHardware->doRouting(this, 0);
         }
         param.remove(key);
     }
@@ -4057,8 +4058,6 @@ ssize_t AudioHardware::AudioStreamOutDirect::write(const void* buffer, size_t by
         audio_mvs_frame.frame_type = mvsFramePtr->frame_type;
         audio_mvs_frame.len = mvsFramePtr->len;
         ALOGV("Write Frametype %d, Frame len %d", audio_mvs_frame.frame_type, audio_mvs_frame.len);
-        if(audio_mvs_frame.len < 0)
-            goto Error;
         memcpy(&audio_mvs_frame.voc_pkt, &mvsFramePtr->voc_pkt, audio_mvs_frame.len);
         size_t written =::write(mFd, &audio_mvs_frame, sizeof(audio_mvs_frame));
         ALOGV(" mvs bytes written : %d bytes %d \n", written,bytes);
@@ -4220,7 +4219,7 @@ status_t AudioHardware::AudioStreamOutDirect::getRenderPosition(uint32_t *dspFra
 
 AudioHardware::AudioSessionOutLPA::AudioSessionOutLPA( AudioHardware *hw,
                                          uint32_t   devices,
-                                         int        format,
+                                         int 	    format,
                                          uint32_t   channels,
                                          uint32_t   samplingRate,
                                          int        type,
@@ -4228,7 +4227,7 @@ AudioHardware::AudioSessionOutLPA::AudioSessionOutLPA( AudioHardware *hw,
 {
     Mutex::Autolock autoLock(mLock);
     // Default initilization
-	mHardware = hw;
+    mHardware = hw;
     ALOGE("AudioSessionOutLPA constructor");
     mFormat             = format;
     mSampleRate         = samplingRate;
@@ -4249,7 +4248,7 @@ AudioHardware::AudioSessionOutLPA::AudioSessionOutLPA( AudioHardware *hw,
     efd = -1;
     mEosEventReceived   =false;
 
-    mEventThread        = NULL;
+    mEventThread        = 0;
     mEventThreadAlive   = false;
     mKillEventThread    = false;
     mObserver           = NULL;
@@ -4270,7 +4269,7 @@ AudioHardware::AudioSessionOutLPA::AudioSessionOutLPA( AudioHardware *hw,
 AudioHardware::AudioSessionOutLPA::~AudioSessionOutLPA()
 {
     ALOGV("AudioSessionOutLPA destructor");
-	mSkipWrite = true;
+    mSkipWrite = true;
     mWriteCv.signal();
 
     //TODO: This might need to be Locked using Parent lock
@@ -4787,8 +4786,8 @@ status_t AudioHardware::AudioSessionOutLPA::start( )
         }
 
     } else {
-	 //get config, set config and AUDIO_START LPA driver
-	 int sessionId = 0;
+        //get config, set config and AUDIO_START LPA driver
+        int sessionId = 0;
         mPaused = false;
         if ( afd >= 0 ) {
            struct msm_audio_config config;
@@ -4863,7 +4862,7 @@ status_t AudioHardware::AudioSessionOutLPA::start( )
         CurrentComboDeviceData.StreamType = LPA_DECODE;
     }
 #endif
-	//Start the Driver
+    //Start the Driver
     if (ioctl(afd, AUDIO_START,0) < 0) {
         ALOGE("Driver start failed!");
         return BAD_VALUE;
@@ -4872,8 +4871,8 @@ status_t AudioHardware::AudioSessionOutLPA::start( )
     ALOGE("LPA Playback started");
     if (timeStarted == 0)
         timeStarted = nanoseconds_to_microseconds(systemTime(SYSTEM_TIME_MONOTONIC));// Needed
-	}
-	return NO_ERROR;
+    }
+    return NO_ERROR;
 }
 
 status_t AudioHardware::AudioSessionOutLPA::pause()
@@ -4883,7 +4882,7 @@ status_t AudioHardware::AudioSessionOutLPA::pause()
     ALOGE("Audio Pause failed");
     }
     mPaused = true;
-	timePlayed += (nanoseconds_to_microseconds(systemTime(SYSTEM_TIME_MONOTONIC)) - timeStarted);//needed
+    timePlayed += (nanoseconds_to_microseconds(systemTime(SYSTEM_TIME_MONOTONIC)) - timeStarted);//needed
     return NO_ERROR;
 }
 
@@ -4971,11 +4970,11 @@ status_t  AudioHardware::AudioSessionOutLPA::getNextWriteTimestamp(int64_t *time
 
 void AudioHardware::AudioSessionOutLPA::reset()
 {
-	Routing_table* temp = NULL;
+    Routing_table* temp = NULL;
     ALOGD("AudioSessionOutLPA::reset()");
     ioctl(afd,AUDIO_STOP,0);
     mIsDriverStarted = false;
-	requestAndWaitForEventThreadExit();
+    requestAndWaitForEventThreadExit();
     status_t status = NO_ERROR;
     bufferDeAlloc();
     ::close(afd);
@@ -5066,7 +5065,7 @@ status_t AudioHardware::AudioSessionOutLPA::isBufferAvailable(int *isAvail) {
 #ifdef TUNNEL_PLAYBACK
 AudioHardware::AudioSessionOutTunnel::AudioSessionOutTunnel( AudioHardware *hw,
                                          uint32_t   devices,
-                                         int        format,
+                                         int	    format,
                                          uint32_t   channels,
                                          uint32_t   samplingRate,
                                          int        type,
@@ -5089,7 +5088,7 @@ AudioHardware::AudioSessionOutTunnel::AudioSessionOutTunnel( AudioHardware *hw,
     efd = -1;
     mEosEventReceived   =false;
 
-    mEventThread        = NULL;
+    mEventThread        = 0;
     mEventThreadAlive   = false;
     mKillEventThread    = false;
     mObserver           = NULL;
@@ -6080,7 +6079,7 @@ AudioHardware::AudioStreamInMSM8x60::~AudioStreamInMSM8x60()
 ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
 {
     unsigned short dec_id = INVALID_DEVICE;
-    ALOGV("AudioStreamInMSM8x60::read(%p, %ld)", buffer, bytes);
+    ALOGV("AudioStreamInMSM8x60::read(%p, %d)", buffer, bytes);
     if (!mHardware) return -1;
 
     size_t count = bytes;
