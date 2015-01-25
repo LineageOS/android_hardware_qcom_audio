@@ -19,7 +19,6 @@
 
 __BEGIN_DECLS
 
-int acdb_loader_send_anc_cal(int id);
 void acdb_loader_send_audio_cal(int id, int capability);
 void acdb_loader_send_voice_cal(int tx_id, int rx_id);
 void acdb_mapper_get_acdb_id_from_dev_name(char *name, int *id);
