@@ -21,6 +21,10 @@ ifeq ($(TARGET_BOARD_PLATFORM), msm8974)
 LOCAL_CFLAGS += -DMSM8974
 endif
 
+ifeq ($(BOARD_HAVE_NEW_QCOM_CSDCLIENT),true)
+LOCAL_CFLAGS += -DNEW_CSDCLIENT
+endif
+
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
 	$(call include-path-for, audio-route) \
