@@ -1,3 +1,3 @@
-ifeq ($(strip $(TARGET_USES_QCOM_MM_AUDIO)),true)
+ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)
 include $(call all-subdir-makefiles)
 endif
