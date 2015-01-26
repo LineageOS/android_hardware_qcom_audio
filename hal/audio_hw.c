@@ -33,6 +33,18 @@
 
 #include "audio_hw.h"
 
+#ifdef NEW_CSDCLIENT
+#define CSD_VOLUME(adev, vsid, vol) ((adev)->csd_volume((vsid), (vol)))
+#define CSD_MIC_MUTE(adev, vsid, state) ((adev)->csd_mic_mute((vsid), (state)))
+#define CSD_START_VOICE(adev, vsid) ((adev)->csd_start_voice((vsid)))
+#define CSD_STOP_VOICE(adev, vsid) ((adev)->csd_stop_voice((vsid)))
+#else
+#define CSD_VOLUME(adev, vsid, vol) ((adev)->csd_stop_voice((vol)))
+#define CSD_MIC_MUTE(adev, vsid, state) ((adev)->csd_mic_mute((state)))
+#define CSD_START_VOICE(adev, vsid) ((adev)->csd_start_voice())
+#define CSD_STOP_VOICE(adev, vsid) ((adev)->csd_stop_voice())
+#endif
+
 #define LIB_ACDB_LOADER "/system/lib/libacdbloader.so"
 #define LIB_CSD_CLIENT "/system/lib/libcsd-client.so"
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
@@ -1080,7 +1092,7 @@ static int stop_voice_call(struct audio_device *adev)
         if (adev->csd_stop_voice == NULL) {
             ALOGE("dlsym error for csd_client_disable_device");
         } else {
-            ret = adev->csd_stop_voice();
+            ret = CSD_STOP_VOICE(adev, VOICE_SESSION_VSID);
             if (ret < 0) {
                 ALOGE("%s: csd_client error %d\n", __func__, ret);
             }
@@ -1179,7 +1191,7 @@ static int start_voice_call(struct audio_device *adev)
             ALOGE("dlsym error for csd_client_start_voice");
             goto error_start_voice;
         } else {
-            ret = adev->csd_start_voice();
+            ret = CSD_START_VOICE(adev, VOICE_SESSION_VSID);
             if (ret < 0) {
                 ALOGE("%s: csd_start_voice error %d\n", __func__, ret);
                 goto error_start_voice;
@@ -1929,7 +1941,7 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
             if (adev->csd_volume == NULL) {
                 ALOGE("%s: dlsym error for csd_client_volume", __func__);
             } else {
-                err = adev->csd_volume(vol);
+                err = CSD_VOLUME(adev, ALL_SESSION_VSID, vol);
                 if (err < 0) {
                     ALOGE("%s: csd_client error %d", __func__, err);
                 }
@@ -1987,7 +1999,7 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
             if (adev->csd_mic_mute == NULL) {
                 ALOGE("%s: dlsym error for csd_mic_mute", __func__);
             } else {
-                err = adev->csd_mic_mute(state);
+                err = CSD_MIC_MUTE(adev, ALL_SESSION_VSID, state);
                 if (err < 0) {
                     ALOGE("%s: csd_client error %d", __func__, err);
                 }
