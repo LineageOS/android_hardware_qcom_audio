@@ -1080,7 +1080,7 @@ static int stop_voice_call(struct audio_device *adev)
         if (adev->csd_stop_voice == NULL) {
             ALOGE("dlsym error for csd_client_disable_device");
         } else {
-            ret = adev->csd_stop_voice();
+            ret = adev->csd_stop_voice(VOICE_SESSION_VSID);
             if (ret < 0) {
                 ALOGE("%s: csd_client error %d\n", __func__, ret);
             }
@@ -1179,7 +1179,7 @@ static int start_voice_call(struct audio_device *adev)
             ALOGE("dlsym error for csd_client_start_voice");
             goto error_start_voice;
         } else {
-            ret = adev->csd_start_voice();
+            ret = adev->csd_start_voice(VOICE_SESSION_VSID);
             if (ret < 0) {
                 ALOGE("%s: csd_start_voice error %d\n", __func__, ret);
                 goto error_start_voice;
@@ -1929,7 +1929,7 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
             if (adev->csd_volume == NULL) {
                 ALOGE("%s: dlsym error for csd_client_volume", __func__);
             } else {
-                err = adev->csd_volume(vol);
+                err = adev->csd_volume(ALL_SESSION_VSID, vol);
                 if (err < 0) {
                     ALOGE("%s: csd_client error %d", __func__, err);
                 }
@@ -1987,7 +1987,7 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
             if (adev->csd_mic_mute == NULL) {
                 ALOGE("%s: dlsym error for csd_mic_mute", __func__);
             } else {
-                err = adev->csd_mic_mute(state);
+                err = adev->csd_mic_mute(ALL_SESSION_VSID, state);
                 if (err < 0) {
                     ALOGE("%s: csd_client error %d", __func__, err);
                 }
@@ -2103,6 +2103,47 @@ static int adev_close(hw_device_t *device)
     return 0;
 }
 
+
+static void (*csd_volume_ptr)();
+static int csd_volume_new(uint32_t vsid, int x)
+{
+    #ifdef NEW_CSDCLIENT
+    return ((csd_volume_new_t)csd_volume_ptr)(vsid, x);
+    #else
+    return ((csd_volume_t)csd_volume_ptr)(x);
+    #endif
+}
+
+static void (*csd_mic_mute_ptr)();
+static int csd_mic_mute_new(uint32_t vsid, int x)
+{
+    #ifdef NEW_CSDCLIENT
+    return ((csd_mic_mute_new_t)csd_mic_mute_ptr)(vsid, x);
+    #else
+    return ((csd_mic_mute_t)csd_mic_mute_ptr)(x);
+    #endif
+}
+
+static void (*csd_start_voice_ptr)();
+static int csd_start_voice_new(uint32_t vsid)
+{
+    #ifdef NEW_CSDCLIENT
+    return ((csd_start_voice_new_t)csd_start_voice_ptr)(vsid);
+    #else
+    return ((csd_start_voice_t)csd_start_voice_ptr)();
+    #endif
+}
+
+static void (*csd_stop_voice_ptr)();
+static int csd_stop_voice_new(uint32_t vsid)
+{
+    #ifdef NEW_CSDCLIENT
+    return ((csd_stop_voice_new_t)csd_stop_voice_ptr)(vsid);
+    #else
+    return ((csd_stop_voice_t)csd_stop_voice_ptr)();
+    #endif
+}
+
 static void init_platform_data(struct audio_device *adev)
 {
     char platform[PROPERTY_VALUE_MAX];
@@ -2184,14 +2225,14 @@ static void init_platform_data(struct audio_device *adev)
                                                     "csd_client_disable_device");
         adev->csd_enable_device = (csd_enable_device_t)dlsym(adev->csd_client,
                                                     "csd_client_enable_device");
-        adev->csd_start_voice = (csd_start_voice_t)dlsym(adev->csd_client,
-                                                    "csd_client_start_voice");
-        adev->csd_stop_voice = (csd_stop_voice_t)dlsym(adev->csd_client,
-                                                    "csd_client_stop_voice");
-        adev->csd_volume = (csd_volume_t)dlsym(adev->csd_client,
-                                                    "csd_client_volume");
-        adev->csd_mic_mute = (csd_mic_mute_t)dlsym(adev->csd_client,
-                                                    "csd_client_mic_mute");
+        adev->csd_start_voice = csd_start_voice_new;
+        csd_start_voice_ptr = dlsym(adev->csd_client, "csd_client_start_voice");
+        adev->csd_stop_voice = csd_stop_voice_new;
+        csd_stop_voice_ptr = dlsym(adev->csd_client, "csd_client_stop_voice");
+        adev->csd_volume = csd_volume_new;
+        csd_volume_ptr = dlsym(adev->csd_client, "csd_client_volume");
+        adev->csd_mic_mute = csd_mic_mute_new;
+        csd_mic_mute_ptr = dlsym(adev->csd_client, "csd_client_mic_mute");
         adev->csd_client_init = (csd_client_init_t)dlsym(adev->csd_client,
                                                     "csd_client_init");
 
