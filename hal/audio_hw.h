@@ -229,10 +229,19 @@ typedef int (*csd_client_init_t)();
 typedef int (*csd_client_deinit_t)();
 typedef int (*csd_disable_device_t)();
 typedef int (*csd_enable_device_t)(int, int, uint32_t);
+#ifdef NEW_CSDCLIENT
+#define VOICE_SESSION_VSID  0x10C01000
+#define ALL_SESSION_VSID    0xFFFFFFFF
+typedef int (*csd_volume_t)(uint32_t, int);
+typedef int (*csd_mic_mute_t)(uint32_t, int);
+typedef int (*csd_start_voice_t)(uint32_t);
+typedef int (*csd_stop_voice_t)(uint32_t);
+#else
 typedef int (*csd_volume_t)(int);
 typedef int (*csd_mic_mute_t)(int);
 typedef int (*csd_start_voice_t)();
 typedef int (*csd_stop_voice_t)();
+#endif
 
 struct audio_device {
     struct audio_hw_device device;
