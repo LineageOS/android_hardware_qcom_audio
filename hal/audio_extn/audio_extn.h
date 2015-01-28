@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -377,4 +377,14 @@ typedef enum {
 #ifndef AUDIO_FORMAT_E_AC3_JOC
 #define AUDIO_FORMAT_E_AC3_JOC  0x19000000UL
 #endif
+
+#ifndef KPI_OPTIMIZE_ENABLED
+#define audio_extn_perf_lock_init() (0)
+#define audio_extn_perf_lock_acquire() (0)
+#define audio_extn_perf_lock_release() (0)
+#else
+int audio_extn_perf_lock_init(void);
+void audio_extn_perf_lock_acquire(void);
+void audio_extn_perf_lock_release(void);
+#endif /* KPI_OPTIMIZE_ENABLED */
 #endif /* AUDIO_EXTN_H */
