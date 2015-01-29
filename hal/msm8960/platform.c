@@ -28,6 +28,7 @@
 #include <audio_hw.h>
 #include <platform_api.h>
 #include "platform.h"
+#include "audio_extn.h"
 
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define LIB_CSD_CLIENT "libcsd-client.so"
@@ -421,13 +422,14 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device __unused)
     return -ENOSYS;
 }
 
-int platform_set_snd_device_bit_width(snd_device_t snd_device, unsigned int bit_width)
+int platform_set_snd_device_bit_width(snd_device_t snd_device __unused,
+                                      unsigned int bit_width __unused)
 {
     ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
 }
 
-int platform_get_snd_device_bit_width(snd_device_t snd_device)
+int platform_get_snd_device_bit_width(snd_device_t snd_device __unused)
 {
     ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
@@ -1084,6 +1086,62 @@ int platform_get_fluence_type(void *platform __unused, char *value __unused,
 }
 
 uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info __unused)
+{
+    return 0;
+}
+
+int platform_get_edid_info(void *platform __unused)
+{
+   return -ENOSYS;
+}
+
+int platform_set_channel_map(void *platform __unused, int ch_count __unused,
+                             char *ch_map __unused, int snd_id __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_set_stream_channel_map(void *platform __unused,
+                                    audio_channel_mask_t channel_mask __unused,
+                                    int snd_id __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_set_edid_channels_configuration(void *platform __unused,
+                                             int channels __unused)
+{
+    return 0;
+}
+
+unsigned char platform_map_to_edid_format(int format __unused)
+{
+    return 0;
+}
+
+bool platform_is_edid_supported_format(void *platform __unused,
+                                       int format __unused)
+{
+    return  false;
+}
+
+void platform_cache_edid(void * platform __unused)
+{
+
+}
+
+void platform_invalidate_edid(void * platform __unused)
+{
+
+}
+
+int platform_set_hdmi_config(struct stream_out *out __unused)
+{
+    return 0;
+}
+
+int platform_set_device_params(struct stream_out *out __unused,
+                                  int param __unused, int value __unused)
 {
     return 0;
 }

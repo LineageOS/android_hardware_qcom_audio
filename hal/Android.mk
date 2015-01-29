@@ -8,7 +8,7 @@ LOCAL_ARM_MODE := arm
 
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter msm8974 msm8226 msm8610 apq8084 msm8994 thulium,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8974 msm8226 msm8610 apq8084 msm8994 msm8992 thulium,$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM = msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -22,6 +22,9 @@ ifneq ($(filter apq8084,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_APQ8084
 endif
 ifneq ($(filter msm8994,$(TARGET_BOARD_PLATFORM)),)
+  LOCAL_CFLAGS := -DPLATFORM_MSM8994
+endif
+ifneq ($(filter msm8992,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSM8994
 endif
 ifneq ($(filter thulium,$(TARGET_BOARD_PLATFORM)),)
@@ -49,6 +52,10 @@ LOCAL_SRC_FILES += audio_extn/audio_extn.c \
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
+ifneq ($(filter msm8994 msm8992,$(TARGET_BOARD_PLATFORM)),)
+    LOCAL_SRC_FILES += edid.c
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PCM_OFFLOAD)),true)
     LOCAL_CFLAGS += -DPCM_OFFLOAD_ENABLED
 endif
@@ -63,6 +70,10 @@ endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_KPI_OPTIMIZE)),true)
+    LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
 endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FM)),true)
@@ -124,6 +135,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),true)
     LOCAL_SRC_FILES += audio_extn/compress_capture.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DTS_EAGLE)),true)
+    LOCAL_CFLAGS += -DDTS_EAGLE
+    LOCAL_SRC_FILES += audio_extn/dts_eagle.c
+endif
+
 ifeq ($(strip $(DOLBY_DDP)),true)
     LOCAL_CFLAGS += -DDS1_DOLBY_DDP_ENABLED
     LOCAL_SRC_FILES += audio_extn/dolby.c
@@ -153,6 +169,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_RECORD_PLAY_CONCURRENCY)),true)
     LOCAL_CFLAGS += -DRECORD_PLAY_CONCURRENCY
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_ACDB_LICENSE)), true)
+    LOCAL_CFLAGS += -DDOLBY_ACDB_LICENSE
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP)),true)
     LOCAL_CFLAGS += -DDS2_DOLBY_DAP_ENABLED
 ifneq ($(strip $(DOLBY_DDP)),true)
@@ -160,6 +180,10 @@ ifneq ($(strip $(DOLBY_DDP)),true)
         LOCAL_SRC_FILES += audio_extn/dolby.c
     endif
 endif
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HDMI_PASSTHROUGH)),true)
+    LOCAL_CFLAGS += -DHDMI_PASSTHROUGH_ENABLED
 endif
 
 LOCAL_SHARED_LIBRARIES := \
