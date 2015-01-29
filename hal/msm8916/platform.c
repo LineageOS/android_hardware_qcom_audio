@@ -1370,26 +1370,7 @@ done:
 
 int platform_get_snd_device_index(char *snd_device_index_name)
 {
-    int ret = 0;
-    int i;
-
-    if (snd_device_index_name == NULL) {
-        ALOGE("%s: snd_device_index_name is NULL", __func__);
-        ret = -ENODEV;
-        goto done;
-    }
-
-    for (i=0; i < SND_DEVICE_MAX; i++) {
-        if(strcmp(snd_device_name_index[i].name, snd_device_index_name) == 0) {
-            ret = snd_device_name_index[i].index;
-            goto done;
-        }
-    }
-    ALOGE("%s: Could not find index for snd_device_index_name = %s",
-            __func__, snd_device_index_name);
-    ret = -ENODEV;
-done:
-    return ret;
+    return find_index(snd_device_name_index, SND_DEVICE_MAX, snd_device_index_name);
 }
 
 int platform_set_fluence_type(void *platform, char *value)
@@ -2838,21 +2819,48 @@ bool platform_check_24_bit_support() {
     return true;
 }
 
-int platform_get_usecase_index(const char * usecase __unused)
+int platform_get_usecase_index(const char * usecase)
 {
-    return -ENOSYS;
+    return find_index(usecase_name_index, AUDIO_USECASE_MAX, usecase);
 }
 
-int platform_set_usecase_pcm_id(audio_usecase_t usecase __unused, int32_t type __unused,
-                                int32_t pcm_id __unused)
+int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type,
+                                int32_t pcm_id)
 {
-    return -ENOSYS;
+    int ret = 0;
+    if ((usecase <= USECASE_INVALID) || (usecase >= AUDIO_USECASE_MAX)) {
+        ALOGE("%s: invalid usecase case idx %d", __func__, usecase);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    if ((type != 0) && (type != 1)) {
+        ALOGE("%s: invalid usecase type", __func__);
+        ret = -EINVAL;
+    }
+    pcm_device_table[usecase][type] = pcm_id;
+done:
+    return ret;
 }
 
-int platform_set_snd_device_backend(snd_device_t snd_device __unused,
-                                    const char * backend __unused)
+int platform_set_snd_device_backend(snd_device_t device,
+                                    const char * backend)
 {
-    return -ENOSYS;
+    int ret = 0;
+
+    if ((device < SND_DEVICE_MIN) || (device >= SND_DEVICE_MAX)) {
+        ALOGE("%s: Invalid snd_device = %d",
+            __func__, device);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    if (backend_table[device]) {
+        free(backend_table[device]);
+    }
+    backend_table[device] = strdup(backend);
+done:
+    return ret;
 }
 
 int platform_get_subsys_image_name(char *buf)
