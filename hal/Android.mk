@@ -11,7 +11,7 @@ AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 ifneq ($(filter msm8960 apq8064,$(TARGET_BOARD_PLATFORM)),)
     # A-family platform uses msm8960 code base
     AUDIO_PLATFORM = msm8960
-    MULTIPLE_HW_VARIANTS_ENABLED := true
+    MULTIPLE_HW_VARIANTS_ENABLED := false
 endif
 
 LOCAL_SRC_FILES := \
