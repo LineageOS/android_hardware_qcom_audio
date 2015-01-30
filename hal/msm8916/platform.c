@@ -659,6 +659,35 @@ void close_csd_client(struct csd_data *csd)
     }
 }
 
+static void set_platform_defaults()
+{
+    int32_t dev;
+    for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
+        backend_table[dev] = NULL;
+    }
+    for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
+        backend_bit_width_table[dev] = 16;
+    }
+
+    // TBD - do these go to the platform-info.xml file.
+    // will help in avoiding strdups here
+    backend_table[SND_DEVICE_IN_BT_SCO_MIC] = strdup("bt-sco");
+    backend_table[SND_DEVICE_IN_BT_SCO_MIC_WB] = strdup("bt-sco-wb");
+    backend_table[SND_DEVICE_IN_BT_SCO_MIC_NREC] = strdup("bt-sco");
+    backend_table[SND_DEVICE_IN_BT_SCO_MIC_WB_NREC] = strdup("bt-sco-wb");
+    backend_table[SND_DEVICE_OUT_BT_SCO] = strdup("bt-sco");
+    backend_table[SND_DEVICE_OUT_BT_SCO_WB] = strdup("bt-sco-wb");
+    backend_table[SND_DEVICE_OUT_HDMI] = strdup("hdmi");
+    backend_table[SND_DEVICE_OUT_SPEAKER_AND_HDMI] = strdup("speaker-and-hdmi");
+    backend_table[SND_DEVICE_OUT_AFE_PROXY] = strdup("afe-proxy");
+    backend_table[SND_DEVICE_OUT_USB_HEADSET] = strdup("usb-headphones");
+    backend_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] =
+        strdup("speaker-and-usb-headphones");
+    backend_table[SND_DEVICE_IN_USB_HEADSET_MIC] = strdup("usb-headset-mic");
+    backend_table[SND_DEVICE_IN_CAPTURE_FM] = strdup("capture-fm");
+    backend_table[SND_DEVICE_OUT_TRANSMISSION_FM] = strdup("transmission-fm");
+}
+
 void get_cvd_version(char *cvd_version, struct audio_device *adev)
 {
     struct mixer_ctl *ctl;
@@ -858,6 +887,8 @@ void *platform_init(struct audio_device *adev)
             free(cvd_version);
     }
 
+    set_platform_defaults(my_data);
+
 acdb_init_fail:
     /* Initialize ACDB ID's */
     platform_info_init(PLATFORM_INFO_XML_PATH);
@@ -882,6 +913,14 @@ void platform_deinit(void *platform)
 
     hw_info_deinit(my_data->hw_info);
     close_csd_client(my_data->csd);
+
+    int32_t dev;
+    for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
+        if (backend_table[dev]) {
+            free(backend_table[dev]);
+            backend_table[dev]= NULL;
+        }
+    }
 
     free(platform);
     /* deinit usb */
@@ -914,33 +953,17 @@ int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
 
 void platform_add_backend_name(char *mixer_path, snd_device_t snd_device)
 {
-    if ((snd_device == SND_DEVICE_IN_BT_SCO_MIC) ||
-         (snd_device == SND_DEVICE_IN_BT_SCO_MIC_NREC))
-        strlcat(mixer_path, " bt-sco", MIXER_PATH_MAX_LENGTH);
-    else if ((snd_device == SND_DEVICE_IN_BT_SCO_MIC_WB) ||
-              (snd_device == SND_DEVICE_IN_BT_SCO_MIC_WB_NREC))
-        strlcat(mixer_path, " bt-sco-wb", MIXER_PATH_MAX_LENGTH);
-    else if(snd_device == SND_DEVICE_OUT_BT_SCO)
-        strlcat(mixer_path, " bt-sco", MIXER_PATH_MAX_LENGTH);
-    else if(snd_device == SND_DEVICE_OUT_BT_SCO_WB)
-        strlcat(mixer_path, " bt-sco-wb", MIXER_PATH_MAX_LENGTH);
-    else if (snd_device == SND_DEVICE_OUT_HDMI)
-        strlcat(mixer_path, " hdmi", MIXER_PATH_MAX_LENGTH);
-    else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HDMI)
-        strlcat(mixer_path, " speaker-and-hdmi", MIXER_PATH_MAX_LENGTH);
-    else if (snd_device == SND_DEVICE_OUT_AFE_PROXY)
-        strlcat(mixer_path, " afe-proxy", MIXER_PATH_MAX_LENGTH);
-    else if (snd_device == SND_DEVICE_OUT_USB_HEADSET)
-        strlcat(mixer_path, " usb-headphones", MIXER_PATH_MAX_LENGTH);
-    else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET)
-        strlcat(mixer_path, " speaker-and-usb-headphones",
-                MIXER_PATH_MAX_LENGTH);
-    else if (snd_device == SND_DEVICE_IN_USB_HEADSET_MIC)
-        strlcat(mixer_path, " usb-headset-mic", MIXER_PATH_MAX_LENGTH);
-    else if (snd_device == SND_DEVICE_IN_CAPTURE_FM)
-        strlcat(mixer_path, " capture-fm", MIXER_PATH_MAX_LENGTH);
-    else if (snd_device == SND_DEVICE_OUT_TRANSMISSION_FM)
-        strlcat(mixer_path, " transmission-fm", MIXER_PATH_MAX_LENGTH);
+    if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
+        ALOGE("%s: Invalid snd_device = %d", __func__, snd_device);
+        return;
+    }
+
+    const char * suffix = backend_table[snd_device];
+
+    if (suffix != NULL) {
+        strlcat(mixer_path, " ", MIXER_PATH_MAX_LENGTH);
+        strlcat(mixer_path, suffix, MIXER_PATH_MAX_LENGTH);
+    }
 }
 
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
@@ -1061,7 +1084,9 @@ int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_i
         goto done;
     }
 
+    ALOGI("resetting acdb_device_table[%d] = %d", snd_device, acdb_device_table[snd_device]);
     acdb_device_table[snd_device] = acdb_id;
+    ALOGI("set acdb_device_table[%d] = %d", snd_device, acdb_device_table[snd_device]);
 done:
     return ret;
 }
@@ -2400,7 +2425,9 @@ int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type,
         ALOGE("%s: invalid usecase type", __func__);
         ret = -EINVAL;
     }
+    ALOGI("resetting pcm_device_table[%d][%d] = %d", usecase, type, pcm_device_table[usecase][type]);
     pcm_device_table[usecase][type] = pcm_id;
+    ALOGI("setting pcm_device_table[%d][%d] = %d", usecase, type, pcm_device_table[usecase][type]);
 done:
     return ret;
 }
@@ -2420,7 +2447,9 @@ int platform_set_snd_device_backend(snd_device_t device,
     if (backend_table[device]) {
         free(backend_table[device]);
     }
+    ALOGI("resetting backend_table[%d] = %s", device, backend_table[device]);
     backend_table[device] = strdup(backend);
+    ALOGI("setting backend_table[%d] = %s", device, backend_table[device]);
 done:
     return ret;
 }
