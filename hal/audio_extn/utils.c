@@ -167,6 +167,9 @@ static void parse_sample_rate_names(char *name, struct streams_output_cfg *so_in
         ALOGV("%s: sample_rate - %d", __func__, sample_rate);
         if (0 != sample_rate) {
             ss_info = (struct stream_sample_rate *)calloc(1, sizeof(struct stream_sample_rate));
+            if (ss_info == NULL)
+                break; /* return whatever was parsed */
+
             ss_info->sample_rate = sample_rate;
             list_add_tail(&so_info->sample_rate_list, &ss_info->list);
         }
