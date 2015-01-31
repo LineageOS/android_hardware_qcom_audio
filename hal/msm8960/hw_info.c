@@ -51,111 +51,6 @@ struct hardware_info {
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
-static const snd_device_t taiko_fluid_variant_devices[] = {
-    SND_DEVICE_OUT_SPEAKER,
-    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
-    SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
-};
-
-static const snd_device_t taiko_CDP_variant_devices[] = {
-    SND_DEVICE_OUT_SPEAKER,
-    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
-    SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
-    SND_DEVICE_IN_QUAD_MIC,
-};
-
-static const snd_device_t taiko_apq8084_CDP_variant_devices[] = {
-    SND_DEVICE_IN_HANDSET_MIC,
-};
-
-static const snd_device_t taiko_liquid_variant_devices[] = {
-    SND_DEVICE_OUT_SPEAKER,
-    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
-    SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
-    SND_DEVICE_IN_SPEAKER_MIC,
-    SND_DEVICE_IN_HEADSET_MIC,
-    SND_DEVICE_IN_VOICE_DMIC,
-    SND_DEVICE_IN_VOICE_SPEAKER_DMIC,
-    SND_DEVICE_IN_VOICE_REC_DMIC_STEREO,
-    SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE,
-    SND_DEVICE_IN_QUAD_MIC,
-    SND_DEVICE_IN_HANDSET_STEREO_DMIC,
-    SND_DEVICE_IN_SPEAKER_STEREO_DMIC,
-};
-
-static const snd_device_t tomtom_msm8994_CDP_variant_devices[] = {
-    SND_DEVICE_IN_HANDSET_MIC,
-};
-
-static const snd_device_t tomtom_liquid_variant_devices[] = {
-    SND_DEVICE_OUT_SPEAKER,
-    SND_DEVICE_OUT_SPEAKER_EXTERNAL_1,
-    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1,
-    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
-    SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
-    SND_DEVICE_IN_SPEAKER_MIC,
-    SND_DEVICE_IN_HEADSET_MIC,
-    SND_DEVICE_IN_VOICE_DMIC,
-    SND_DEVICE_IN_VOICE_SPEAKER_DMIC,
-    SND_DEVICE_IN_VOICE_REC_DMIC_STEREO,
-    SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE,
-    SND_DEVICE_IN_QUAD_MIC,
-    SND_DEVICE_IN_HANDSET_STEREO_DMIC,
-    SND_DEVICE_IN_SPEAKER_STEREO_DMIC,
-};
-
-static const snd_device_t tomtom_stp_variant_devices[] = {
-    SND_DEVICE_OUT_SPEAKER,
-    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
-    SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
-};
-
-static const snd_device_t taiko_DB_variant_devices[] = {
-    SND_DEVICE_OUT_SPEAKER,
-    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
-    SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
-    SND_DEVICE_IN_SPEAKER_MIC,
-    SND_DEVICE_IN_HEADSET_MIC,
-    SND_DEVICE_IN_QUAD_MIC,
-};
-
-static const snd_device_t taiko_apq8084_sbc_variant_devices[] = {
-    SND_DEVICE_IN_HANDSET_MIC,
-    SND_DEVICE_IN_SPEAKER_MIC,
-};
-
-static const snd_device_t tapan_lite_variant_devices[] = {
-    SND_DEVICE_OUT_SPEAKER,
-    SND_DEVICE_OUT_HEADPHONES,
-    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
-    SND_DEVICE_OUT_VOICE_HEADPHONES,
-    SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES,
-    SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES,
-};
-
-static const snd_device_t tapan_skuf_variant_devices[] = {
-    SND_DEVICE_OUT_SPEAKER,
-    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
-    SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
-    /*SND_DEVICE_OUT_SPEAKER_AND_ANC_FB_HEADSET,*/
-};
-
-static const snd_device_t tapan_lite_skuf_variant_devices[] = {
-    SND_DEVICE_OUT_SPEAKER,
-    SND_DEVICE_OUT_HEADPHONES,
-    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
-    SND_DEVICE_OUT_VOICE_HEADPHONES,
-    SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES,
-    SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES,
-};
-
-static const snd_device_t helicon_skuab_variant_devices[] = {
-    SND_DEVICE_OUT_SPEAKER,
-    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
-    SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
-    SND_DEVICE_OUT_VOICE_SPEAKER,
-};
-
 void *hw_info_init(const char *snd_card_name)
 {
     struct hardware_info *hw_info;
@@ -172,19 +67,7 @@ void *hw_info_init(const char *snd_card_name)
     strlcpy(hw_info->type, "", sizeof(hw_info->type));
     strlcpy(hw_info->name, "", sizeof(hw_info->name));
 
-    if (!strcmp(snd_card_name, "apq8064-auto-snd-card")) {
-        strlcpy(hw_info->type, " adp", sizeof(hw_info->type));
-        strlcpy(hw_info->name, "apq8064", sizeof(hw_info->name));
-        hw_info->snd_devices = NULL;
-        hw_info->num_snd_devices = 0;
-        strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
-    } else if (!strcmp(snd_card_name, "apq8064-mplatform-snd-card")) {
-        strlcpy(hw_info->type, " mplatform", sizeof(hw_info->type));
-        strlcpy(hw_info->name, "apq8064", sizeof(hw_info->name));
-        hw_info->snd_devices = NULL;
-        hw_info->num_snd_devices = 0;
-        strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
-    } else if (!strcmp(snd_card_name, "msm8230-tapan-snd-card")) {
+    if (!strcmp(snd_card_name, "msm8230-tapan-snd-card")) {
         strlcpy(hw_info->type, " ", sizeof(hw_info->type));
         strlcpy(hw_info->name, "msm8230", sizeof(hw_info->name));
         hw_info->snd_devices = NULL;
