@@ -2502,6 +2502,12 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct 
     old_bit_width = adev->cur_codec_backend_bit_width;
     old_sample_rate = adev->cur_codec_backend_samplerate;
 
+    if (adev->mode == AUDIO_MODE_IN_CALL ||
+           adev->mode == AUDIO_MODE_IN_COMMUNICATION) {
+        ALOGW("%s:Do not change default bw and sr during voice/voip calls ",__func__);
+        return false;
+    }
+
     ALOGW("Codec backend bitwidth %d, samplerate %d", old_bit_width, old_sample_rate);
     if (platform_check_codec_backend_cfg(adev, usecase,
                                       &new_bit_width, &new_sample_rate)) {
