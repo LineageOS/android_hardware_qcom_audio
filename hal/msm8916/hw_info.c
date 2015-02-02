@@ -220,6 +220,10 @@ void *hw_info_init(const char *snd_card_name)
     struct hardware_info *hw_info;
 
     hw_info = malloc(sizeof(struct hardware_info));
+    if (!hw_info) {
+        ALOGE("failed to allocate mem for hardware info");
+        return NULL;
+    }
 
     if (strstr(snd_card_name, "msm8x16") || strstr(snd_card_name, "msm8939") ||
         strstr(snd_card_name, "msm8909")) {
