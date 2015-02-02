@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -1210,17 +1210,21 @@ static void *offload_thread_loop(void *context)
             ret = compress_next_track(out->compr);
             if(ret == 0) {
                 ALOGD("copl(%p):calling compress_partial_drain", out);
-                compress_partial_drain(out->compr);
+                ret = compress_partial_drain(out->compr);
                 ALOGD("copl(%p):out of compress_partial_drain", out);
+                if (ret < 0)
+                    ret = -errno;
             }
-            else if(ret == -ETIMEDOUT)
+            else if (ret == -ETIMEDOUT)
                 compress_drain(out->compr);
             else
                 ALOGE("%s: Next track returned error %d",__func__, ret);
-            send_callback = true;
-            event = STREAM_CBK_EVENT_DRAIN_READY;
-            /* Resend the metadata for next iteration */
-            out->send_new_metadata = 1;
+            if (ret != -ENETRESET) {
+                send_callback = true;
+                event = STREAM_CBK_EVENT_DRAIN_READY;
+                ALOGV("copl(%p):send drain callback, ret %d", out, ret);
+            } else
+                ALOGE("%s: Block drain ready event during SSR", __func__);
             break;
         case OFFLOAD_CMD_DRAIN:
             ALOGD("copl(%p):calling compress_drain", out);
@@ -2164,6 +2168,7 @@ static int out_get_render_position(const struct audio_stream_out *stream,
                                    uint32_t *dsp_frames)
 {
     struct stream_out *out = (struct stream_out *)stream;
+    struct audio_device *adev = out->dev;
     if (is_offload_usecase(out->usecase) && (dsp_frames != NULL)) {
         ssize_t ret = 0;
         *dsp_frames = 0;
@@ -2183,6 +2188,13 @@ static int out_get_render_position(const struct audio_stream_out *stream,
             return -EINVAL;
         } else if(ret < 0) {
             ALOGE(" ERROR: Unable to get time stamp from compress driver");
+            return -EINVAL;
+        } else if (get_snd_card_state(adev) == SND_CARD_STATE_OFFLINE){
+            /*
+             * Handle corner case where compress session is closed during SSR
+             * and timestamp is queried
+             */
+            ALOGE(" ERROR: sound card not active, return error");
             return -EINVAL;
         } else {
             return 0;
@@ -2220,12 +2232,20 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
 
     if (is_offload_usecase(out->usecase)) {
         if (out->compr != NULL) {
-            compress_get_tstamp(out->compr, &dsp_frames,
+            ret = compress_get_tstamp(out->compr, &dsp_frames,
                     &out->sample_rate);
             ALOGVV("%s rendered frames %ld sample_rate %d",
                    __func__, dsp_frames, out->sample_rate);
             *frames = dsp_frames;
-            ret = 0;
+            if (ret < 0)
+                ret = -errno;
+            if (-ENETRESET == ret) {
+                ALOGE(" ERROR: sound card not active Unable to get time stamp from compress driver");
+                set_snd_card_state(adev,SND_CARD_STATE_OFFLINE);
+                ret = -EINVAL;
+            } else
+                ret = 0;
+
             /* this is the best we can do */
             clock_gettime(CLOCK_MONOTONIC, timestamp);
         }
