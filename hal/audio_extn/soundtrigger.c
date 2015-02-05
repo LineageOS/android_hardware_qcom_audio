@@ -165,6 +165,7 @@ void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in)
             in->config = st_ses_info->st_ses.config;
             in->channel_mask = audio_channel_in_mask_from_count(in->config.channels);
             in->is_st_session = true;
+            in->is_st_session_active = true;
             ALOGD("%s: capture_handle %d is sound trigger", __func__, in->capture_handle);
             break;
         }
