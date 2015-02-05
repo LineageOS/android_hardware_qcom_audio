@@ -23,6 +23,12 @@ ifneq ($(filter apq8084,$(TARGET_BOARD_PLATFORM)),)
 endif
 endif
 
+ifneq ($(filter msm8960,$(TARGET_BOARD_PLATFORM)),)
+  # A-family platform uses msm8960 code base
+  AUDIO_PLATFORM = msm8960
+  MULTIPLE_HW_VARIANTS_ENABLED := true
+endif
+
 LOCAL_SRC_FILES := \
 	audio_hw.c \
 	voice.c \
