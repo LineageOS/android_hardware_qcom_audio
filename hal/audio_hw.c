@@ -348,8 +348,7 @@ static int enable_audio_route_for_voice_usecases(struct audio_device *adev,
        specified usecase to new snd devices */
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if ((usecase->type == VOICE_CALL || usecase->type == VOIP_CALL) &&
-             (usecase != uc_info))
+        if ((usecase->type == VOICE_CALL) && (usecase != uc_info))
             enable_audio_route(adev, usecase);
     }
     return 0;
@@ -619,7 +618,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
             /* Update the out_snd_device only before enabling the audio route */
             if (switch_device[usecase->id] ) {
                 usecase->out_snd_device = snd_device;
-                if (usecase->type != VOICE_CALL && usecase->type != VOIP_CALL)
+                if (usecase->type != VOICE_CALL)
                     enable_audio_route(adev, usecase);
             }
         }
@@ -689,7 +688,7 @@ static void check_and_route_capture_usecases(struct audio_device *adev,
             /* Update the in_snd_device only before enabling the audio route */
             if (switch_device[usecase->id] ) {
                 usecase->in_snd_device = snd_device;
-                if (usecase->type != VOICE_CALL && usecase->type != VOIP_CALL)
+                if (usecase->type != VOICE_CALL)
                     enable_audio_route(adev, usecase);
             }
         }
