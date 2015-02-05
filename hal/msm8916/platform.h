@@ -32,6 +32,8 @@ enum {
     FLUENCE_BROADSIDE = 0x2,
 };
 
+#define PLATFORM_IMAGE_NAME "modem"
+
 /*
  * Below are the devices for which is back end is same, SLIMBUS_0_RX.
  * All these devices are handled by the internal HW codec. We can
@@ -250,5 +252,7 @@ struct csd_data {
     start_record_t start_record;
     stop_record_t stop_record;
 };
+
+int platform_get_subsys_image_name (char *buf);
 
 #endif // QCOM_AUDIO_PLATFORM_H

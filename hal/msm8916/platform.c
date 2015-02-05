@@ -38,12 +38,14 @@
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define MIXER_XML_PATH_MTP "/system/etc/mixer_paths_mtp.xml"
+#define MIXER_XML_PATH_MSM8909_PM8916 "/system/etc/mixer_paths_msm8909_pm8916.xml"
 #define MIXER_XML_PATH_QRD_SKUH "/system/etc/mixer_paths_qrd_skuh.xml"
 #define MIXER_XML_PATH_QRD_SKUI "/system/etc/mixer_paths_qrd_skui.xml"
 #define MIXER_XML_PATH_QRD_SKUHF "/system/etc/mixer_paths_qrd_skuhf.xml"
 #define MIXER_XML_PATH_SKUK "/system/etc/mixer_paths_skuk.xml"
 #define MIXER_XML_PATH_SKUA "/system/etc/mixer_paths_skua.xml"
 #define MIXER_XML_PATH_SKUC "/system/etc/mixer_paths_skuc.xml"
+#define MIXER_XML_PATH_SKUE "/system/etc/mixer_paths_skue.xml"
 #define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_WCD9306 "/system/etc/mixer_paths_wcd9306.xml"
@@ -99,6 +101,8 @@
 #define AUDIO_PARAMETER_KEY_HD_VOICE      "hd_voice"
 #define AUDIO_PARAMETER_KEY_VOLUME_BOOST  "volume_boost"
 #define MAX_CAL_NAME 20
+#define APP_TYPE_SYSTEM_SOUNDS 0x00011131
+#define APP_TYPE_GENERAL_RECORDING 0x00011132
 
 char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
         [WCD9XXX_ANC_CAL] = "anc_cal",
@@ -599,7 +603,6 @@ static void query_platform(const char *snd_card_name,
                  sizeof("msm8939-tomtom9330-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9330,
                 sizeof(MIXER_XML_PATH_WCD9330));
-
         msm_device_to_be_id = msm_device_to_be_id_external_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
@@ -608,18 +611,35 @@ static void query_platform(const char *snd_card_name,
                  sizeof("msm8909-skua-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_SKUA,
                 sizeof(MIXER_XML_PATH_SKUA));
-
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
     } else if (!strncmp(snd_card_name, "msm8909-skuc-snd-card",
                  sizeof("msm8909-skuc-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_SKUC,
                 sizeof(MIXER_XML_PATH_SKUC));
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
+    } else if (!strncmp(snd_card_name, "msm8909-pm8916-snd-card",
+                 sizeof("msm8909-pm8916-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_MSM8909_PM8916,
+                sizeof(MIXER_XML_PATH_MSM8909_PM8916));
 
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
+    } else if (!strncmp(snd_card_name, "msm8909-skue-snd-card",
+                 sizeof("msm8909-skue-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_SKUE,
+                sizeof(MIXER_XML_PATH_SKUE));
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
     } else {
         strlcpy(mixer_xml_path, MIXER_XML_PATH,
                 sizeof(MIXER_XML_PATH));
@@ -1078,11 +1098,11 @@ void *platform_init(struct audio_device *adev)
             ALOGE("Failed to allocate cvd version");
         else
             get_cvd_version(cvd_version, adev);
-
-        my_data->acdb_init((char *)snd_card_name, cvd_version);
+        my_data->acdb_init(snd_card_name, cvd_version, key);
         if (cvd_version)
             free(cvd_version);
     }
+    audio_extn_pm_vote();
 
 acdb_init_fail:
     /* Initialize ACDB ID's */
@@ -1299,7 +1319,6 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device)
     }
     return acdb_device_table[snd_device];
 }
-
 int platform_set_snd_device_bit_width(snd_device_t snd_device __unused,
                                       unsigned int bit_width __unused)
 {
@@ -1313,11 +1332,24 @@ int platform_get_snd_device_bit_width(snd_device_t snd_device __unused)
     return -ENOSYS;
 }
 
-int platform_send_audio_calibration(void *platform, snd_device_t snd_device,
+int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
                                     int app_type, int sample_rate)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_dev_id, acdb_dev_type;
+    struct audio_device *adev = my_data->adev;
+    int snd_device = SND_DEVICE_OUT_SPEAKER;
+
+    if (usecase->type == PCM_PLAYBACK) {
+        snd_device = platform_get_output_snd_device(adev->platform,
+                                            usecase->stream.out->devices);
+        if(usecase->id != USECASE_AUDIO_PLAYBACK_OFFLOAD)
+            app_type = APP_TYPE_SYSTEM_SOUNDS;
+    } else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE)) {
+        snd_device = platform_get_input_snd_device(adev->platform,
+                                            adev->primary_output->devices);
+        app_type = APP_TYPE_GENERAL_RECORDING;
+    }
 
     acdb_dev_id = acdb_device_table[snd_device];
     if (acdb_dev_id < 0) {
@@ -2640,7 +2672,6 @@ int platform_set_snd_device_backend(snd_device_t snd_device __unused,
 {
     return -ENOSYS;
 }
-
 int platform_get_edid_info(void *platform __unused)
 {
    return -ENOSYS;
@@ -2671,4 +2702,9 @@ void platform_cache_edid(void * platform __unused)
 
 void platform_invalidate_edid(void * platform __unused)
 {
+}
+int platform_get_subsys_image_name(char *buf)
+{
+    strlcpy(buf, PLATFORM_IMAGE_NAME, sizeof(PLATFORM_IMAGE_NAME));
+    return 0;
 }

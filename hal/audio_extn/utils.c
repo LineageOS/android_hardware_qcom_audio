@@ -579,23 +579,15 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
         int snd_device = usecase->out_snd_device;
         snd_device = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
                      audio_extn_get_spkr_prot_snd_device(snd_device) : snd_device;
-        platform_send_audio_calibration(adev->platform, usecase->out_snd_device,
+        platform_send_audio_calibration(adev->platform, usecase,
                                         out->app_type_cfg.app_type,
                                         out->app_type_cfg.sample_rate);
     }
     if ((type == PCM_HFP_CALL) || (type == PCM_CAPTURE)) {
-        if ((type == PCM_CAPTURE) & voice_is_in_call_rec_stream(usecase->stream.in)) {
-            snd_device_t incall_record_snd_device =
-                        voice_get_incall_rec_snd_device(usecase->in_snd_device);
-            platform_send_audio_calibration(adev->platform, incall_record_snd_device,
-                                            platform_get_default_app_type(adev->platform),
-                                            48000);
-        } else {
-            /* when app type is default. the sample rate is not used to send cal */
-            platform_send_audio_calibration(adev->platform, usecase->in_snd_device,
-                                            platform_get_default_app_type(adev->platform),
-                                            48000);
-        }
+        /* when app type is default. the sample rate is not used to send cal */
+        platform_send_audio_calibration(adev->platform, usecase,
+                                        platform_get_default_app_type(adev->platform),
+                                        48000);
     }
 }
 

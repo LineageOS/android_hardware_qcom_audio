@@ -20,7 +20,6 @@
 #define LOG_TAG "audio_hw_dolby"
 //#define LOG_NDEBUG 0
 //#define LOG_NDDEBUG 0
-
 #include <errno.h>
 #include <cutils/properties.h>
 #include <stdlib.h>
@@ -749,7 +748,7 @@ int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, int state) {
 
 void audio_extn_dolby_set_license(struct audio_device *adev)
 {
-    int i_key;
+    int i_key=0;
     char c_key[128] = {0};
     char c_dmid[128] = {0};
     int i_dmid, ret = -EINVAL;

@@ -222,6 +222,13 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUXPCM_BT)),true)
     LOCAL_CFLAGS += -DAUXPCM_BT_ENABLED
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PM_SUPPORT)),true)
+    LOCAL_CFLAGS += -DPM_SUPPORT_ENABLED
+    LOCAL_SRC_FILES += audio_extn/pm.c
+    LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/libperipheralclient/inc
+    LOCAL_SHARED_LIBRARIES += libperipheral_client
+endif
+
 LOCAL_COPY_HEADERS_TO   := mm-audio
 LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
 

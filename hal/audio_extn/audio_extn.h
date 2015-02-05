@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -310,6 +310,7 @@ void audio_extn_dolby_set_license(struct audio_device *adev);
 void audio_extn_dolby_set_endpoint(struct audio_device *adev);
 #endif
 
+
 #if defined(DS1_DOLBY_DDP_ENABLED) || defined(DS2_DOLBY_DAP_ENABLED)
 bool audio_extn_is_dolby_format(audio_format_t format);
 int audio_extn_dolby_get_snd_codec_id(struct audio_device *adev,
@@ -375,6 +376,16 @@ int audio_extn_dev_arbi_init();
 int audio_extn_dev_arbi_deinit();
 int audio_extn_dev_arbi_acquire(snd_device_t snd_device);
 int audio_extn_dev_arbi_release(snd_device_t snd_device);
+#endif
+
+#ifndef PM_SUPPORT_ENABLED
+#define audio_extn_pm_set_parameters(params) (0)
+#define audio_extn_pm_vote(void) (0)
+#define audio_extn_pm_unvote(void) (0)
+#else
+void audio_extn_pm_set_parameters(struct str_parms *parms);
+int audio_extn_pm_vote (void);
+void audio_extn_pm_unvote(void);
 #endif
 
 void audio_extn_utils_update_streams_output_cfg_list(void *platform,
