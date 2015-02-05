@@ -735,9 +735,11 @@ void *platform_init(struct audio_device *adev)
         ALOGV("%s: snd_card_name: %s", __func__, snd_card_name);
 
         my_data->hw_info = hw_info_init(snd_card_name);
+#ifdef HW_VARIANTS_ENABLED
         if (!my_data->hw_info) {
             ALOGE("%s: Failed to init hardware info", __func__);
         } else {
+#endif
             if (audio_extn_read_xml(adev, snd_card_num, MIXER_XML_PATH,
                                     MIXER_XML_PATH_AUXPCM) == -ENOSYS)
                 adev->audio_route = audio_route_init(snd_card_num,
@@ -751,7 +753,9 @@ void *platform_init(struct audio_device *adev)
             adev->snd_card = snd_card_num;
             ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
             break;
+#ifdef HW_VARIANTS_ENABLED
         }
+#endif
         retry_num = 0;
         snd_card_num++;
     }
