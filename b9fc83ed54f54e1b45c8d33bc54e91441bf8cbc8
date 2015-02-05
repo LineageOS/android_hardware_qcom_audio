@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "bacf61ea_657e01b0",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2502,
+      "author": {
+        "id": 883
+      },
+      "writtenOn": "2015-02-05T20:38:31Z",
+      "side": 1,
+      "message": "Shouldn\u0027t you not mess with global variable there, you should avoid changing this. so put if statement change before this..",
+      "revId": "b9fc83ed54f54e1b45c8d33bc54e91441bf8cbc8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
