@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "bacf61ea_c3ba45c0",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2108,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-02-06T14:23:09Z",
+      "side": 1,
+      "message": "I feel like you could probably do this better with a macro",
+      "revId": "c185d15cfcf2995a283e99fe51886b3a930da9af",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bacf61ea_a3ad918a",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2110,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-02-06T14:23:09Z",
+      "side": 1,
+      "message": "use spaces, not tabs",
+      "revId": "c185d15cfcf2995a283e99fe51886b3a930da9af",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bacf61ea_83aa0d6f",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2228,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-02-06T14:23:09Z",
+      "side": 1,
+      "message": "extra newline",
+      "revId": "c185d15cfcf2995a283e99fe51886b3a930da9af",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
