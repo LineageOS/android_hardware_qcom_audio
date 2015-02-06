@@ -88,22 +88,31 @@ static int do_DTS_Eagle_params_stream(struct stream_out *out, struct dts_eagle_p
     return -EINVAL;
 }
 
-static int do_DTS_Eagle_params(const struct audio_device *adev, struct dts_eagle_param_desc_alsa *t, bool get) {
+static int do_DTS_Eagle_params(const struct audio_device *adev, struct dts_eagle_param_desc_alsa *t, bool get, const struct stream_out *out) {
     struct listnode *node;
     struct audio_usecase *usecase;
-    int ret = 0, sent = 0;
+    int ret = 0, sent = 0, tret = 0;
 
     ALOGV("DTS_EAGLE_HAL (%s): enter", __func__);
 
-    list_for_each(node, &adev->usecase_list) {
-        usecase = node_to_item(node, struct audio_usecase, list);
-        /* set/get eagle params for offload usecases only */
-        if ((usecase->type == PCM_PLAYBACK) && is_offload_usecase(usecase->id)) {
-            int tret = do_DTS_Eagle_params_stream(usecase->stream.out, t, get);
-            if (tret < 0)
-                ret = tret;
-            else
-                sent = 1;
+    if (out) {
+        /* if valid out stream is given, then send params to this stream only */
+        tret = do_DTS_Eagle_params_stream(out, t, get);
+        if (tret < 0)
+            ret = tret;
+        else
+            sent = 1;
+    } else {
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            /* set/get eagle params for offload usecases only */
+            if ((usecase->type == PCM_PLAYBACK) && is_offload_usecase(usecase->id)) {
+                tret = do_DTS_Eagle_params_stream(usecase->stream.out, t, get);
+                if (tret < 0)
+                    ret = tret;
+                else
+                    sent = 1;
+            }
         }
     }
 
@@ -151,7 +160,7 @@ static void fade_node(bool need_data) {
         ALOGE("DTS_EAGLE_HAL (%s): error writing to fade notifier node", __func__);
 }
 
-int audio_extn_dts_eagle_fade(const struct audio_device *adev, bool fade_in) {
+int audio_extn_dts_eagle_fade(const struct audio_device *adev, bool fade_in, const struct stream_out *out) {
     char prop[PROPERTY_VALUE_MAX];
 
     ALOGV("DTS_EAGLE_HAL (%s): enter with fade %s requested", __func__, fade_in ? "in" : "out");
@@ -165,10 +174,10 @@ int audio_extn_dts_eagle_fade(const struct audio_device *adev, bool fade_in) {
 
     if (fade_in) {
         if (fade_in_data)
-            return do_DTS_Eagle_params(adev, fade_in_data, false);
+            return do_DTS_Eagle_params(adev, fade_in_data, false, out);
     } else {
         if (fade_out_data)
-            return do_DTS_Eagle_params(adev, fade_out_data, false);
+            return do_DTS_Eagle_params(adev, fade_out_data, false, out);
     }
     return 0;
 }
@@ -285,7 +294,7 @@ void audio_extn_dts_eagle_set_parameters(struct audio_device *adev, struct str_p
                 ALOGD("DTS_EAGLE_HAL (%s): id: 0x%X, size: %d, offset: %d, device: %d", __func__,
                        (*t)->d.id, (*t)->d.size, (*t)->d.offset, (*t)->d.device);
                 if (!fade_in) {
-                    ret = do_DTS_Eagle_params(adev, *t, false);
+                    ret = do_DTS_Eagle_params(adev, *t, false, NULL);
                     if (ret < 0)
                         ALOGE("DTS_EAGLE_HAL (%s): failed setting params in kernel with error %i", __func__, ret);
                 }
@@ -367,7 +376,7 @@ int audio_extn_dts_eagle_get_parameters(const struct audio_device *adev,
                     ALOGE("%s: requested data too large", __func__);
                     return -1;
                 }
-                ret = do_DTS_Eagle_params(adev, t, true);
+                ret = do_DTS_Eagle_params(adev, t, true, NULL);
                 if (ret >= 0) {
                     data = (int*)(params + sizeof(struct dts_eagle_param_desc_alsa));
                     for (i = 0; i < count; i++)
