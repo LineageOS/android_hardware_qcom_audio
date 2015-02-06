@@ -13,9 +13,7 @@ libOmxAacEnc-def += -D_ANDROID_
 libOmxAacEnc-def += -D_ENABLE_QC_MSG_LOG_
 libOmxAacEnc-def += -DVERBOSE
 libOmxAacEnc-def += -D_DEBUG
-ifeq ($(strip $(TARGET_USES_QCOM_MM_AUDIO)),true)
 libOmxAacEnc-def += -DAUDIOV2
-endif
 
 # ---------------------------------------------------------------------------------
 #             Make the Shared library (libOmxAacEnc)
@@ -49,9 +47,7 @@ include $(CLEAR_VARS)
 
 mm-aac-enc-test-inc    := $(LOCAL_PATH)/inc
 mm-aac-enc-test-inc    += $(LOCAL_PATH)/test
-ifeq ($(strip $(TARGET_USES_QCOM_MM_AUDIO)),true)
 mm-aac-enc-test-inc    += $(TARGET_OUT_HEADERS)/mm-audio/audio-alsa 
-endif
 mm-aac-enc-test-inc    += $(TARGET_OUT_HEADERS)/mm-core/omxcore
 
 LOCAL_MODULE            := mm-aenc-omxaac-test
@@ -61,9 +57,7 @@ LOCAL_C_INCLUDES        := $(mm-aac-enc-test-inc)
 LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := libmm-omxcore
 LOCAL_SHARED_LIBRARIES  += libOmxAacEnc
-ifeq ($(strip $(TARGET_USES_QCOM_MM_AUDIO)),true)
 LOCAL_SHARED_LIBRARIES  += libaudioalsa
-endif
 LOCAL_SRC_FILES         := test/omx_aac_enc_test.c
 
 include $(BUILD_EXECUTABLE)
