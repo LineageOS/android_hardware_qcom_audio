@@ -756,6 +756,20 @@ bool voice_extn_compress_voip_pcm_prop_check()
         return false;
 }
 
+bool voice_extn_dedicated_voip_device_prop_check()
+{
+    char prop_value[PROPERTY_VALUE_MAX] = {0};
+
+    property_get("use.dedicated.device.for.voip", prop_value, "0");
+    if (!strncmp("true", prop_value, sizeof("true")))
+    {
+        ALOGD("%s: Using dedicated path for VoIP", __func__);
+        return true;
+    }
+    else
+        return false;
+}
+
 bool voice_extn_compress_voip_is_active(struct audio_device *adev)
 {
     struct audio_usecase *voip_usecase = NULL;

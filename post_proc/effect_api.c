@@ -39,7 +39,7 @@
 #include <stdbool.h>
 #include <cutils/log.h>
 #include <tinyalsa/asoundlib.h>
-#include <audio_effects.h>
+#include <sound/audio_effects.h>
 
 #include "effect_api.h"
 

@@ -578,6 +578,15 @@ void audio_extn_spkr_prot_init(void *adev)
         handle.thermal_handle = NULL;
         handle.spkr_prot_enable = false;
     }
+
+    if (handle.spkr_prot_enable) {
+        char platform[PROPERTY_VALUE_MAX];
+        property_get("ro.board.platform", platform, "");
+        if (!strncmp("apq8084", platform, sizeof("apq8084"))) {
+            platform_set_snd_device_backend(SND_DEVICE_OUT_VOICE_SPEAKER,
+                                            "speaker-protected");
+        }
+    }
 }
 
 int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
