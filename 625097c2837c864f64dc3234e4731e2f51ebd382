@@ -16,6 +16,24 @@
       "revId": "625097c2837c864f64dc3234e4731e2f51ebd382",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bacf61ea_54c44991",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2502,
+      "author": {
+        "id": 167
+      },
+      "writtenOn": "2015-02-07T15:06:59Z",
+      "side": 1,
+      "message": "How about:\nBOARD_HAS_DIRTY_BACKEND_RATES?\n-DDIRTY_BACKEND",
+      "parentUuid": "bacf61ea_147c9171",
+      "revId": "625097c2837c864f64dc3234e4731e2f51ebd382",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
