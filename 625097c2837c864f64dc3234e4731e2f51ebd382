@@ -34,6 +34,24 @@
       "revId": "625097c2837c864f64dc3234e4731e2f51ebd382",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bacf61ea_94bec1fd",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2502,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-02-07T15:15:57Z",
+      "side": 1,
+      "message": "Well, there is already an ifdef elsewhere for ES chips, so you could use that as well.",
+      "parentUuid": "bacf61ea_54c44991",
+      "revId": "625097c2837c864f64dc3234e4731e2f51ebd382",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
