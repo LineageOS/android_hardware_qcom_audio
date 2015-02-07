@@ -2368,7 +2368,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 (in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
                 (voice_extn_compress_voip_is_format_supported(in->format)) &&
                 (in->config.rate == 8000 || in->config.rate == 16000) &&
-                (popcount(in->channel_mask) == 1)) {
+                (audio_channel_count_from_in_mask(in->channel_mask) == 1)) {
                 err = voice_extn_compress_voip_open_input_stream(in);
                 if (err != 0) {
                     ALOGE("%s: Compress voip input cannot be opened, error:%d",
