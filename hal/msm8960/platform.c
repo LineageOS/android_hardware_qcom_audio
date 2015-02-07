@@ -385,6 +385,11 @@ int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
     return device_id;
 }
 
+int platform_get_snd_device_index(char *snd_device_index_name __unused)
+{
+    return -ENODEV;
+}
+
 int platform_set_snd_device_acdb_id(snd_device_t snd_device __unused,
                                     unsigned int acdb_id __unused)
 {
@@ -918,4 +923,27 @@ int platform_update_usecase_from_source(int source __unused,
 bool platform_listen_update_status(snd_device_t snd_device __unused)
 {
      return false;
+}
+
+int platform_get_usecase_index(const char * usecase __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_set_usecase_pcm_id(audio_usecase_t usecase __unused, int32_t type __unused,
+                                int32_t pcm_id __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_set_snd_device_backend(snd_device_t snd_device __unused,
+                                    const char * backend __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_set_snd_device_name(snd_device_t snd_device __unused,
+                                 const char * name __unused)
+{
+    return -ENOSYS;
 }

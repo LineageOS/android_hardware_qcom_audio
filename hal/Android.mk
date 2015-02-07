@@ -26,6 +26,7 @@ endif
 LOCAL_SRC_FILES := \
 	audio_hw.c \
 	voice.c \
+	platform_info.c \
 	$(AUDIO_PLATFORM)/platform.c
 
 LOCAL_SRC_FILES += audio_extn/audio_extn.c
@@ -38,11 +39,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_ANC_HEADSET)),true)
     LOCAL_CFLAGS += -DANC_HEADSET_ENABLED
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FLUENCE)),true)
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_FLUENCE)),false)
     LOCAL_CFLAGS += -DFLUENCE_ENABLED
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),false)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
 endif
 
@@ -56,7 +57,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_USBAUDIO)),true)
     LOCAL_SRC_FILES += audio_extn/usb.c
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HFP)),true)
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_HFP)),false)
     LOCAL_CFLAGS += -DHFP_ENABLED
     LOCAL_SRC_FILES += audio_extn/hfp.c
 endif
@@ -76,17 +77,18 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS)),true)
     LOCAL_SRC_FILES += voice_extn/voice_extn.c
     LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
     LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),true)
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),false)
     LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
 endif
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),true)
+endif
+
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),false)
     LOCAL_CFLAGS += -DCOMPRESS_VOIP_ENABLED
     LOCAL_SRC_FILES += voice_extn/compress_voip.c
 endif
-endif
 
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FORMATS)),true)
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FORMATS)),false)
 LOCAL_CFLAGS += -DFORMATS_ENABLED
 endif
 
@@ -102,7 +104,7 @@ ifdef MULTIPLE_HW_VARIANTS_ENABLED
   LOCAL_SRC_FILES += $(AUDIO_PLATFORM)/hw_info.c
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),true)
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),false)
     LOCAL_CFLAGS += -DCOMPRESS_CAPTURE_ENABLED
     LOCAL_SRC_FILES += audio_extn/compress_capture.c
 endif
@@ -121,6 +123,13 @@ ifneq ($(strip $(DOLBY_DDP)),true)
 endif
 endif
 
+ifeq ($(AUDIO_FEATURE_LOW_LATENCY_PRIMARY),true)
+    LOCAL_CFLAGS += -DLOW_LATENCY_PRIMARY
+endif
+
+ifeq ($(string $(AUDIO_FEATURE_ENABLED_LOW_LATENCY_CAPTURE)),true)
+    LOCAL_CFLAGS += -DLOW_LATENCY_CAPTURE_USE_CASE=1
+endif
 
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
@@ -128,22 +137,18 @@ LOCAL_SHARED_LIBRARIES := \
 	libtinyalsa \
 	libtinycompress \
 	libaudioroute \
-	libdl
+	libdl \
+	libexpat
 
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
 	external/tinycompress/include \
+	external/expat/lib \
 	$(call include-path-for, audio-route) \
 	$(call include-path-for, audio-effects) \
 	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \
 	$(LOCAL_PATH)/audio_extn \
 	$(LOCAL_PATH)/voice_extn
-
-ifneq ($(filter msm8974,$(AUDIO_PLATFORM)),)
-    LOCAL_C_INCLUDES += external/expat/lib
-    LOCAL_SHARED_LIBRARIES += libexpat
-    LOCAL_SRC_FILES += $(AUDIO_PLATFORM)/platform_parser.c
-endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_LISTEN)),true)
     LOCAL_CFLAGS += -DAUDIO_LISTEN_ENABLED
@@ -157,6 +162,10 @@ endif
 
 ifeq ($(strip $(AUDIO_FEATURE_PCM_IOCTL_ENABLED)),true)
     LOCAL_CFLAGS += -DPCM_IOCTL_ENABLED
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HWDEP_CAL)),true)
+    LOCAL_CFLAGS += -DHWDEP_CAL_ENABLED
 endif
 
 LOCAL_COPY_HEADERS_TO   := mm-audio
