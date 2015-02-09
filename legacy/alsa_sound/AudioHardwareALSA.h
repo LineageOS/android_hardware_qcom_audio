@@ -861,7 +861,7 @@ public:
 
     void pauseIfUseCaseTunnelOrLPA();
     void resumeIfUseCaseTunnelOrLPA();
-
+    void initCodecCalib(void);
 private:
     status_t     openExtOutput(int device);
     status_t     closeExtOutput(int device);
