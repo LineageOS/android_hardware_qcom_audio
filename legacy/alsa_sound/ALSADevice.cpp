@@ -1430,13 +1430,13 @@ status_t ALSADevice::close(alsa_handle_t *handle, uint32_t vsid)
     ALOGD("close: handle %p h %p", handle, h);
     if (h) {
 #ifdef QCOM_CSDCLIENT_ENABLED
-        if ((!strcmp(handle->useCase, SND_USE_CASE_VERB_VOICECALL) ||
-             !strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_VOICE)) ||
-            (!strcmp(handle->useCase, SND_USE_CASE_VERB_VOLTE) ||
-             !strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_VOLTE)) ||
-            (!strcmp(handle->useCase, SND_USE_CASE_VERB_VOICE2) ||
-             !strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_VOICE2)) &&
-            isPlatformFusion3()) {
+        if (((!strcmp(handle->useCase, SND_USE_CASE_VERB_VOICECALL) ||
+              !strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_VOICE)) ||
+             (!strcmp(handle->useCase, SND_USE_CASE_VERB_VOLTE) ||
+              !strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_VOLTE)) ||
+             (!strcmp(handle->useCase, SND_USE_CASE_VERB_VOICE2) ||
+              !strcmp(handle->useCase, SND_USE_CASE_MOD_PLAY_VOICE2))) &&
+             isPlatformFusion3()) {
             if (csd_stop_voice == NULL) {
                 ALOGE("csd_client_disable_device is NULL");
             } else {
