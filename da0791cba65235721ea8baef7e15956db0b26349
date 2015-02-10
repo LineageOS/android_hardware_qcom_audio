@@ -34,6 +34,24 @@
       "revId": "da0791cba65235721ea8baef7e15956db0b26349",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bacf61ea_4083e4cc",
+        "filename": "hal/msm8960/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 295,
+      "author": {
+        "id": 4280
+      },
+      "writtenOn": "2015-02-10T04:45:47Z",
+      "side": 1,
+      "message": "we have the ro.board.platform\u003dmsm8960 but don\u0027t have ro.baseband\u003dmdm",
+      "parentUuid": "bacf61ea_c02074fa",
+      "revId": "da0791cba65235721ea8baef7e15956db0b26349",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
