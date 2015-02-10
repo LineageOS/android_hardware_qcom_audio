@@ -330,6 +330,14 @@ static int out_get_next_write_timestamp(const struct audio_stream_out *stream,
     return out->qcom_out->getNextWriteTimestamp(timestamp);
 }
 
+static int out_get_presentation_position(const struct audio_stream_out *stream,
+    uint64_t *frames, struct timespec *timestamp)
+{
+    const struct qcom_stream_out *out =
+        reinterpret_cast<const struct qcom_stream_out *>(stream);
+    return out->qcom_out->getPresentationPosition(frames, timestamp);
+}
+
 /** audio_stream_in implementation **/
 static uint32_t in_get_sample_rate(const struct audio_stream *stream)
 {
