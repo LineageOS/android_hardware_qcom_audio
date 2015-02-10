@@ -275,6 +275,9 @@ private:
                 uint32_t    devices() { return mDevices; }
         virtual status_t    getRenderPosition(uint32_t *dspFrames);
 
+
+        virtual status_t getPresentationPosition(uint64_t *frames, struct timespec *timestamp);
+
     private:
                 AudioHardware* mHardware;
                 int         mFd;
@@ -308,6 +311,8 @@ private:
         virtual String8     getParameters(const String8& keys);
                 uint32_t    devices() { return mDevices; }
         virtual status_t    getRenderPosition(uint32_t *dspFrames);
+
+        virtual status_t getPresentationPosition(uint64_t *frames, struct timespec *timestamp);
 
     private:
                 AudioHardware* mHardware;
@@ -378,6 +383,8 @@ public:
     // return the number of audio frames written by the audio dsp to DAC since
     // the output has exited standby
     virtual status_t    getRenderPosition(uint32_t *dspFrames);
+
+    virtual status_t getPresentationPosition(uint64_t *frames, struct timespec *timestamp);
 
     virtual status_t    getNextWriteTimestamp(int64_t *timestamp);
     virtual status_t    setObserver(void *observer);
