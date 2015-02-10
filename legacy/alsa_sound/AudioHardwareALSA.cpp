@@ -1932,6 +1932,10 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
                ALOGE("Error opening pcm input device");
                return NULL;
            }
+           err = setMicMute(mVoipMicMute);
+           if(err) {
+              ALOGE("Error calling setMicMute");
+           }
         }
         if(mVoipInStreamCount>=1){
             ALOGE("Trying to Open Multiple inpust Stream: Not supported %d",mVoipInStreamCount);
@@ -2189,13 +2193,11 @@ status_t AudioHardwareALSA::setMicMute(bool state)
     int newMode = mode();
     ALOGD("setMicMute  newMode %d state:%d",newMode,state);
     if(newMode == AUDIO_MODE_IN_COMMUNICATION) {
-        if (mVoipMicMute != state) {
-             mVoipMicMute = state;
-            ALOGD("setMicMute: mVoipMicMute %d", mVoipMicMute);
-            if(mALSADevice) {
-                mALSADevice->setVoipMicMute(state);
-            }
-        }
+       mVoipMicMute = state;
+       ALOGD("setMicMute: mVoipMicMute %d", mVoipMicMute);
+       if(mALSADevice) {
+          mALSADevice->setVoipMicMute(state);
+       }
     } else {
         if (mALSADevice) {
               mMicMute = state;
