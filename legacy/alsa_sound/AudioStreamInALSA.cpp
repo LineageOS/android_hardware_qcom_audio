@@ -378,6 +378,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
        if((!strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) ||
            (!strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
             err = mHandle->module->startVoipCall(mHandle);
+            mHandle->module->setMicMute(mParent->mVoipMicMute);
         }
         else
             mHandle->module->open(mHandle);
@@ -644,7 +645,11 @@ status_t AudioStreamInALSA::close()
                    mParent->mVoipInStreamCount,mParent->mVoipOutStreamCount);
             return NO_ERROR;
         }
-        mParent->mVoipMicMute = 0;
+
+        if(mParent->mMode == AUDIO_MODE_NORMAL) {
+           mParent->mVoipMicMute = false;
+        }
+
 #ifdef QCOM_USBAUDIO_ENABLED
     } else {
         ALOGD("Deregistering REC bit, musbRecordingState:%d", mParent->musbRecordingState);
