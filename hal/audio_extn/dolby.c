@@ -449,7 +449,7 @@ void audio_extn_dolby_set_dmid(struct audio_device *adev)
         return;
 
     property_get("dmid",c_dmid,"0");
-    i_dmid = atoi(c_dmid);
+    i_dmid = atoll(c_dmid);
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
