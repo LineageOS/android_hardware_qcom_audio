@@ -2475,10 +2475,9 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
                 }
             }
         }
+        *new_bit_width = best_bw;
+        *new_sample_rate = best_sr;
     }
-
-    *new_bit_width = best_bw;
-    *new_sample_rate = best_sr;
 
     // Force routing if the expected bitwdith or samplerate
     // is not same as current backend comfiguration
