@@ -85,10 +85,6 @@ static uint32_t audio_device_conv_table[][HAL_API_REV_NUM] =
     { AudioSystem::DEVICE_OUT_USB_ACCESSORY, AUDIO_DEVICE_OUT_USB_ACCESSORY },
     { AudioSystem::DEVICE_OUT_ANLG_DOCK_HEADSET, AUDIO_DEVICE_OUT_USB_DEVICE },
 #endif
-#ifdef QCOM_ANC_HEADSET_ENABLED
-    { AudioSystem::DEVICE_OUT_ANC_HEADSET, AUDIO_DEVICE_OUT_ANC_HEADSET },
-    { AudioSystem::DEVICE_OUT_ANC_HEADPHONE, AUDIO_DEVICE_OUT_ANC_HEADPHONE },
-#endif
 #ifdef QCOM_PROXY_DEVICE_ENABLED
     { AudioSystem::DEVICE_OUT_PROXY, AUDIO_DEVICE_OUT_PROXY },
 #endif
@@ -108,9 +104,6 @@ static uint32_t audio_device_conv_table[][HAL_API_REV_NUM] =
     { AudioSystem::DEVICE_IN_BACK_MIC, AUDIO_DEVICE_IN_BACK_MIC },
 #ifdef QCOM_USBAUDIO_ENABLED
     { AudioSystem::DEVICE_IN_ANLG_DOCK_HEADSET, AUDIO_DEVICE_IN_USB_DEVICE },
-#endif
-#ifdef QCOM_ANC_HEADSET_ENABLED
-    { AudioSystem::DEVICE_IN_ANC_HEADSET, AUDIO_DEVICE_IN_ANC_HEADSET },
 #endif
 #ifdef QCOM_PROXY_DEVICE_ENABLED
     { AudioSystem::DEVICE_IN_PROXY, AUDIO_DEVICE_IN_PROXY },
@@ -537,10 +530,6 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_OUT_USB_ACCESSORY |
             AUDIO_DEVICE_OUT_USB_DEVICE |
             AUDIO_DEVICE_OUT_REMOTE_SUBMIX |
-#ifdef QCOM_ANC_HEADSET_ENABLED
-            AUDIO_DEVICE_OUT_ANC_HEADSET |
-            AUDIO_DEVICE_OUT_ANC_HEADPHONE |
-#endif
 #ifdef QCOM_PROXY_DEVICE_ENABLED
             AUDIO_DEVICE_OUT_PROXY |
 #endif
@@ -563,9 +552,6 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
             AUDIO_DEVICE_IN_DGTL_DOCK_HEADSET |
             AUDIO_DEVICE_IN_USB_ACCESSORY |
             AUDIO_DEVICE_IN_USB_DEVICE |
-#ifdef QCOM_ANC_HEADSET_ENABLED
-            AUDIO_DEVICE_IN_ANC_HEADSET |
-#endif
 #ifdef QCOM_PROXY_DEVICE_ENABLED
             AUDIO_DEVICE_IN_PROXY |
 #endif
