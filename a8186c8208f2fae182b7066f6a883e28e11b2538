@@ -19,6 +19,23 @@
     },
     {
       "key": {
+        "uuid": "bacf61ea_c19073ef",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2479,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-02-12T13:47:25Z",
+      "side": 1,
+      "message": "Actually, this is interesting here, because best_bw and best_sr are both going to be 0 here for the IN_CALL/IN_COMMUNICATION case.",
+      "revId": "a8186c8208f2fae182b7066f6a883e28e11b2538",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "bacf61ea_a189ffcc",
         "filename": "hal/msm8974/platform.c",
         "patchSetId": 4
