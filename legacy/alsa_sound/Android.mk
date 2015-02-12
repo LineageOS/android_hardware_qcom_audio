@@ -137,6 +137,10 @@ ifeq ($(BOARD_USES_MOTOROLA_EMU_AUDIO),true)
     common_cflags += -DMOTOROLA_EMU_AUDIO
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HWDEP_CAL)),true)
+    LOCAL_CFLAGS += -DHWDEP_CAL_ENABLED
+endif
+
 include $(CLEAR_VARS)
 
 LOCAL_ARM_MODE := arm

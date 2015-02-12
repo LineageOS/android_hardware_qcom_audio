@@ -875,7 +875,9 @@ public:
 
     void pauseIfUseCaseTunnelOrLPA();
     void resumeIfUseCaseTunnelOrLPA();
+#ifdef HWDEP_CAL_ENABLED
     void initCodecCalib(void);
+#endif
 private:
     status_t     openExtOutput(int device);
     status_t     closeExtOutput(int device);
