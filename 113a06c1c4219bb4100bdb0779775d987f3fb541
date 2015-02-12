@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "bacf61ea_e4e7853e",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2444,
+      "author": {
+        "id": 6351
+      },
+      "writtenOn": "2015-02-12T15:14:00Z",
+      "side": 1,
+      "message": "Maybe change this to an if/else each of which has their own return?\n\nI find the logic hard to follow here with if (! backend_change)...",
+      "revId": "113a06c1c4219bb4100bdb0779775d987f3fb541",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
