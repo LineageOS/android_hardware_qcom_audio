@@ -39,7 +39,9 @@
 #include <hardware_legacy/power.h>
 #include <audio_utils/resampler.h>
 #include <pthread.h>
+#ifdef HWDEP_CAL_ENABLED
 #include "sound/msmcal-hwdep.h"
+#endif
 
 #include "AudioHardwareALSA.h"
 #ifdef QCOM_USBAUDIO_ENABLED
@@ -55,9 +57,10 @@
 #endif
 
 #define MAX_FILE_NAME 50
+#ifdef HWDEP_CAL_ENABLED
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
 #define MAX_CAL_NAME 20
-
+#endif
 
 extern "C"
 {
@@ -93,6 +96,7 @@ extern "C"
 namespace android_audio_legacy
 {
 
+#ifdef HWDEP_CAL_ENABLED
 char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
          "anc_cal",
          "mbhc_cal",
@@ -100,6 +104,7 @@ char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
 
 typedef int (*acdb_loader_get_calibration_t)(char *attr, int size, void *data);
 acdb_loader_get_calibration_t acdb_loader_get_calibration;
+#endif
 // ----------------------------------------------------------------------------
 
 AudioHardwareInterface *AudioHardwareALSA::create() {
@@ -113,6 +118,7 @@ AudioHardwareInterface *AudioHardwareALSA::create() {
     return hardwareInterface;
 }
 
+#ifdef HWDEP_CAL_ENABLED
 int hwUtilOpen(int cardNum)
 {
     int fd = -1;
@@ -176,6 +182,7 @@ int sendCodecCal(acdb_loader_get_calibration_t acdb_loader_get_calibration, int 
     }
     return ret;
 }
+#endif
 
 AudioHardwareALSA::AudioHardwareALSA() :
     mALSADevice(0),mVoipInStreamCount(0),mVoipOutStreamCount(0),mVoipMicMute(false),
@@ -317,7 +324,9 @@ AudioHardwareALSA::AudioHardwareALSA() :
                 return;
             }
         }
+#ifdef HWDEP_CAL_ENABLED
         initCodecCalib();
+#endif
         fclose(fp);
    }
    memset(ucm_name_str, 0, MAX_FILE_NAME);
@@ -472,6 +481,7 @@ AudioHardwareALSA::AudioHardwareALSA() :
     mStatus = OK;
 }
 
+#ifdef HWDEP_CAL_ENABLED
 void AudioHardwareALSA::initCodecCalib()
 {
     int fd;
@@ -492,6 +502,7 @@ void AudioHardwareALSA::initCodecCalib()
     if (sendCodecCal(acdb_loader_get_calibration, fd) < 0)
         ALOGE("%s: Could not send anc cal", __FUNCTION__);
 }
+#endif
 
 AudioHardwareALSA::~AudioHardwareALSA()
 {
