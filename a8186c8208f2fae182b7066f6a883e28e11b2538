@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "bacf61ea_81867bb7",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2438,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-02-12T13:45:30Z",
+      "side": 1,
+      "message": "Check is duplicated here.",
+      "revId": "a8186c8208f2fae182b7066f6a883e28e11b2538",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bacf61ea_a189ffcc",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2514,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-02-12T13:45:30Z",
+      "side": 1,
+      "message": "platform_check_codec_backend_cfg already does the check above with the same logic. It seems like the above check is in the wrong place to me.",
+      "revId": "a8186c8208f2fae182b7066f6a883e28e11b2538",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
