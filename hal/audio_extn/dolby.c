@@ -464,7 +464,7 @@ void audio_extn_dolby_set_dmid(struct audio_device *adev)
         return;
 
     property_get("dmid",c_dmid,"0");
-    i_dmid = atoi(c_dmid);
+    i_dmid = atoll(c_dmid);
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
@@ -653,7 +653,7 @@ void audio_extn_dolby_set_license(struct audio_device *adev)
     i_key = 0;
 #endif
     property_get("dmid",c_dmid,"0");
-    i_dmid = atoi(c_dmid);
+    i_dmid = atoll(c_dmid);
     ALOGV("%s Setting DS1 License, key:0x%x dmid %d",__func__, i_key,i_dmid);
     dolby_license.dmid = i_dmid;
     dolby_license.license_key = i_key;
