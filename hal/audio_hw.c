@@ -2545,6 +2545,12 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             ALOGD(" %s: sound card is not active/SSR state", __func__);
             ret= -EIO;;
             goto exit;
+        } else {
+            if (in->is_st_session &&  !in->is_st_session_active) {
+                ALOGD(" %s: Sound trigger is not active/SSR", __func__);
+                ret= -EIO;;
+                goto exit;
+            }
         }
     }
 
@@ -2589,7 +2595,15 @@ exit:
     /* ToDo: There may be a corner case when SSR happens back to back during
        start/stop. Need to post different error to handle that. */
     if (-ENETRESET == ret) {
-        set_snd_card_state(adev,SND_CARD_STATE_OFFLINE);
+        /* CPE SSR results in kernel returning ENETRESET for sound trigger
+          session reading on LAB data. In this case do not set sound card state
+          offline, instead mark this sound trigger session inactive to avoid
+          further reading of LAB data from CPE driver. Marking the session
+          inactive handles both CPE and ADSP SSR for sound trigger session */
+        if (!in->is_st_session)
+            set_snd_card_state(adev,SND_CARD_STATE_OFFLINE);
+        else
+            in->is_st_session_active = false;
     }
     pthread_mutex_unlock(&in->lock);
 
