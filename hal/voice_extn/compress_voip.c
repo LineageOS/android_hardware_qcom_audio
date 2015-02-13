@@ -328,6 +328,7 @@ static int voip_start_call(struct audio_device *adev,
     int i, ret = 0;
     struct audio_usecase *uc_info;
     int pcm_dev_rx_id, pcm_dev_tx_id;
+    unsigned int flags = PCM_OUT | PCM_MONOTONIC;
 
     ALOGD("%s: enter", __func__);
 
@@ -362,7 +363,7 @@ static int voip_start_call(struct audio_device *adev,
               __func__, adev->snd_card, pcm_dev_rx_id);
         voip_data.pcm_rx = pcm_open(adev->snd_card,
                                     pcm_dev_rx_id,
-                                    PCM_OUT, voip_config);
+                                    flags, voip_config);
         if (voip_data.pcm_rx && !pcm_is_ready(voip_data.pcm_rx)) {
             ALOGE("%s: %s", __func__, pcm_get_error(voip_data.pcm_rx));
             pcm_close(voip_data.pcm_rx);
