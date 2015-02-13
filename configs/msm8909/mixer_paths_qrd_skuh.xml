@@ -395,6 +395,54 @@
         <ctl name="VoWLAN_Tx Mixer AFE_PCM_TX_VoWLAN" value="1" />
     </path>
 
+    <path name="voicemmode1-call">
+        <ctl name="PRI_MI2S_RX_Voice Mixer VoiceMMode1" value="1" />
+        <ctl name="VoiceMMode1_Tx Mixer TERT_MI2S_TX_MMode1" value="1" />
+    </path>
+
+    <path name="voicemmode1-call bt-sco">
+        <ctl name="INTERNAL_BT_SCO_RX_Voice Mixer VoiceMMode1" value="1" />
+        <ctl name="VoiceMMode1_Tx Mixer INT_BT_SCO_TX_MMode1" value="1" />
+    </path>
+
+    <path name="voicemmode1-call bt-sco-wb">
+        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <path name="voicemmode1-call bt-sco" />
+    </path>
+
+    <path name="voicemmode1-call usb-headphones">
+        <ctl name="AFE_PCM_RX_Voice Mixer VoiceMMode1" value="1" />
+        <ctl name="VoiceMMode1_Tx Mixer AFE_PCM_TX_MMode1" value="1" />
+    </path>
+
+    <path name="voicemmode1-call afe-proxy">
+       <path name="voicemmode1-call usb-headphones" />
+    </path>
+
+    <path name="voicemmode2-call">
+        <ctl name="PRI_MI2S_RX_Voice Mixer VoiceMMode2" value="1" />
+        <ctl name="VoiceMMode2_Tx Mixer TERT_MI2S_TX_MMode2" value="1" />
+    </path>
+
+    <path name="voicemmode2-call bt-sco">
+        <ctl name="INTERNAL_BT_SCO_RX_Voice Mixer VoiceMMode2" value="1" />
+        <ctl name="VoiceMMode2_Tx Mixer INT_BT_SCO_TX_MMode2" value="1" />
+    </path>
+
+    <path name="voicemmode2-call bt-sco-wb">
+        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <path name="voicemmode2-call bt-sco" />
+    </path>
+
+    <path name="voicemmode2-call usb-headphones">
+        <ctl name="AFE_PCM_RX_Voice Mixer VoiceMMode2" value="1" />
+        <ctl name="VoiceMMode2_Tx Mixer AFE_PCM_TX_MMode2" value="1" />
+    </path>
+
+    <path name="voicemmode2-call afe-proxy">
+       <path name="voicemmode2-call usb-headphones" />
+    </path>
+
     <path name="hfp-sco">
         <ctl name="PRI_MI2S_RX Port Mixer INTERNAL_BT_SCO_TX" value="1" />
         <ctl name="INTERNAL_BT_SCO_RX Audio Mixer MultiMedia6" value="1" />

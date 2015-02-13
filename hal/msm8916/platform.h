@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -229,6 +229,8 @@ enum {
 #define QCHAT_CALL_PCM_DEVICE 26
 #define QCHAT_CALL_PCM_DEVICE_OF_EXT_CODEC 28
 #define VOWLAN_CALL_PCM_DEVICE 16
+#define VOICEMMODE1_CALL_PCM_DEVICE 27
+#define VOICEMMODE2_CALL_PCM_DEVICE 28
 
 #define LIB_CSD_CLIENT "libcsd-client.so"
 /* CSD-CLIENT related functions */
