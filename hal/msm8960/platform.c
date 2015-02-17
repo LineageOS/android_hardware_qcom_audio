@@ -87,6 +87,7 @@ struct platform_data {
     bool fluence_in_voice_call;
     bool fluence_in_voice_rec;
     int  fluence_type;
+    char fluence_cap[PROPERTY_VALUE_MAX];
     int  dualmic_config;
 
     void *hw_info;
@@ -259,10 +260,10 @@ void *platform_init(struct audio_device *adev)
     my_data->fluence_in_voice_rec = false;
     my_data->fluence_type = FLUENCE_NONE;
 
-    property_get("ro.qc.sdk.audio.fluencetype", value, "");
-    if (!strncmp("fluencepro", value, sizeof("fluencepro"))) {
+    property_get("ro.qc.sdk.audio.fluencetype", my_data->fluence_cap, "");
+    if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro"))) {
         my_data->fluence_type = FLUENCE_QUAD_MIC;
-    } else if (!strncmp("fluence", value, sizeof("fluence"))) {
+    } else if (!strncmp("fluence", my_data->fluence_cap, sizeof("fluence"))) {
         my_data->fluence_type = FLUENCE_DUAL_MIC;
     } else {
         my_data->fluence_type = FLUENCE_NONE;
@@ -432,6 +433,66 @@ int platform_set_snd_device_acdb_id(snd_device_t snd_device __unused,
 {
     return -ENODEV;
 }
+
+#ifdef FLUENCE_ENABLED
+int platform_set_fluence_type(void *platform, char *value)
+{
+    int ret = 0;
+    int fluence_type = FLUENCE_NONE;
+    int fluence_flag = NONE_FLAG;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+
+    ALOGV("%s: fluence type:%d", __func__, my_data->fluence_type);
+
+    /* only dual mic turn on and off is supported as of now through setparameters */
+    if (!strncmp(AUDIO_PARAMETER_VALUE_DUALMIC,value, sizeof(AUDIO_PARAMETER_VALUE_DUALMIC))) {
+        if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro")) ||
+            !strncmp("fluence", my_data->fluence_cap, sizeof("fluence"))) {
+            ALOGV("fluence dualmic feature enabled \n");
+            fluence_type = FLUENCE_DUAL_MIC;
+            fluence_flag = DMIC_FLAG;
+        } else {
+            ALOGE("%s: Failed to set DUALMIC", __func__);
+            ret = -1;
+            goto done;
+        }
+    } else if (!strncmp(AUDIO_PARAMETER_KEY_NO_FLUENCE, value, sizeof(AUDIO_PARAMETER_KEY_NO_FLUENCE))) {
+        ALOGV("fluence disabled");
+        fluence_type = FLUENCE_NONE;
+    } else {
+        ALOGE("Invalid fluence value : %s",value);
+        ret = -1;
+        goto done;
+    }
+
+    if (fluence_type != my_data->fluence_type) {
+        ALOGV("%s: Updating fluence_type to :%d", __func__, fluence_type);
+        my_data->fluence_type = fluence_type;
+        adev->acdb_settings = (adev->acdb_settings & FLUENCE_MODE_CLEAR) | fluence_flag;
+    }
+done:
+    return ret;
+}
+
+
+int platform_get_fluence_type(void *platform, char *value, uint32_t len)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (my_data->fluence_type == FLUENCE_QUAD_MIC) {
+        strlcpy(value, "quadmic", len);
+    } else if (my_data->fluence_type == FLUENCE_DUAL_MIC) {
+        strlcpy(value, "dualmic", len);
+    } else if (my_data->fluence_type == FLUENCE_NONE) {
+        strlcpy(value, "none", len);
+    } else
+        ret = -1;
+
+    return ret;
+}
+#endif
 
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
 {
