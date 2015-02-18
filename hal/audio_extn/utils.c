@@ -430,6 +430,7 @@ static bool set_output_cfg(struct streams_output_cfg *so_info,
      * than all sample rates in list for the input bit width.
      */
     sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+
     list_for_each(node_i, &so_info->sample_rate_list) {
         ss_info = node_to_item(node_i, struct stream_sample_rate, list);
         if ((sample_rate <= ss_info->sample_rate) &&
@@ -437,7 +438,7 @@ static bool set_output_cfg(struct streams_output_cfg *so_info,
             app_type_cfg->app_type = so_info->app_type_cfg.app_type;
             app_type_cfg->sample_rate = sample_rate;
             app_type_cfg->bit_width = so_info->app_type_cfg.bit_width;
-            ALOGV("%s Assuming default sample rate. app_type_cfg->app_type %d, app_type_cfg->sample_rate %d, app_type_cfg->bit_width %d",
+            ALOGV("%s Assuming sample rate. app_type_cfg->app_type %d, app_type_cfg->sample_rate %d, app_type_cfg->bit_width %d",
                    __func__, app_type_cfg->app_type, app_type_cfg->sample_rate, app_type_cfg->bit_width);
             return true;
         }

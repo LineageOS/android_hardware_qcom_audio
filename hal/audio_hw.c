@@ -603,7 +603,12 @@ static void check_usecases_codec_backend(struct audio_device *adev,
     bool force_routing = platform_check_and_set_codec_backend_cfg(adev, uc_info);
 
     /* Disable all the usecases on the shared backend other than the
-       specified usecase */
+     * specified usecase.
+     * For native(44.1k) usecases, we don't need this as it uses a different
+     * backend, but we need to make sure that we reconfigure the backend
+     * if there is bit_width change, this should not affect shared backend
+     * usecases.
+     */
     for (i = 0; i < AUDIO_USECASE_MAX; i++)
         switch_device[i] = false;
 
@@ -612,13 +617,20 @@ static void check_usecases_codec_backend(struct audio_device *adev,
         if (usecase->type != PCM_CAPTURE &&
                 usecase != uc_info &&
                 (usecase->out_snd_device != snd_device || force_routing)  &&
-                usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
+                usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND
+                && usecase->stream.out->sample_rate != OUTPUT_SAMPLING_RATE_44100) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
                   platform_get_snd_device_name(usecase->out_snd_device));
             disable_audio_route(adev, usecase);
             switch_device[usecase->id] = true;
             num_uc_to_switch++;
+        } else if (usecase->type == PCM_PLAYBACK &&
+                  usecase->stream.out->sample_rate ==
+                  OUTPUT_SAMPLING_RATE_44100 && force_routing){
+           disable_audio_route(adev, usecase);
+           switch_device[usecase->id] = true;
+           num_uc_to_switch++;
         }
     }
 
@@ -814,7 +826,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         (usecase->type == VOIP_CALL)  ||
         (usecase->type == PCM_HFP_CALL)) {
         out_snd_device = platform_get_output_snd_device(adev->platform,
-                                                        usecase->stream.out->devices);
+                                                        usecase->stream.out);
         in_snd_device = platform_get_input_snd_device(adev->platform, usecase->stream.out->devices);
         usecase->devices = usecase->stream.out->devices;
     } else {
@@ -854,7 +866,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             in_snd_device = SND_DEVICE_NONE;
             if (out_snd_device == SND_DEVICE_NONE) {
                 out_snd_device = platform_get_output_snd_device(adev->platform,
-                                            usecase->stream.out->devices);
+                                            usecase->stream.out);
                 if (usecase->stream.out == adev->primary_output &&
                         adev->active_input &&
                         adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
@@ -3637,8 +3649,6 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->bluetooth_nrec = true;
     adev->acdb_settings = TTY_MODE_OFF;
     /* adev->cur_hdmi_channels = 0;  by calloc() */
-    adev->cur_codec_backend_samplerate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-    adev->cur_codec_backend_bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     adev->snd_dev_ref_cnt = calloc(SND_DEVICE_MAX, sizeof(int));
     voice_init(adev);
     list_init(&adev->usecase_list);
