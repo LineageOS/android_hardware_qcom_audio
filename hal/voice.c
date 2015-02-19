@@ -331,14 +331,20 @@ snd_device_t voice_get_incall_rec_snd_device(snd_device_t in_snd_device)
     case SND_DEVICE_IN_VOICE_DMIC:
     case SND_DEVICE_IN_AANC_HANDSET_MIC:
         incall_record_device = SND_DEVICE_IN_HANDSET_MIC;
+        break;
     case SND_DEVICE_IN_VOICE_SPEAKER_MIC:
     case SND_DEVICE_IN_VOICE_SPEAKER_DMIC:
     case SND_DEVICE_IN_VOICE_SPEAKER_DMIC_BROADSIDE:
     case SND_DEVICE_IN_VOICE_SPEAKER_QMIC:
         incall_record_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
+        break;
     default:
         incall_record_device = in_snd_device;
     }
+
+    ALOGD("%s: in_snd_device(%d: %s) incall_record_device(%d: %s)", __func__,
+          in_snd_device, platform_get_snd_device_name(in_snd_device),
+          incall_record_device,  platform_get_snd_device_name(incall_record_device));
 
     return incall_record_device;
 }
