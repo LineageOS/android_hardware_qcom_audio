@@ -1683,6 +1683,16 @@ int platform_get_snd_device_bit_width(snd_device_t snd_device)
     return backend_bit_width_table[snd_device];
 }
 
+int platform_set_native_support(bool codec_support __unused)
+{
+    return 0;
+}
+
+int platform_get_backend_index(snd_device_t snd_device __unused)
+{
+    return 0;
+}
+
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
                                     int app_type, int sample_rate)
 {
@@ -1969,12 +1979,13 @@ int platform_set_device_mute(void *platform, bool state, char *dir)
     return ret;
 }
 
-snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devices)
+snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *out)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     audio_mode_t mode = adev->mode;
     snd_device_t snd_device = SND_DEVICE_NONE;
+    audio_devices_t devices = out->devices;
 #ifdef RECORD_PLAY_CONCURRENCY
     bool use_voip_out_devices = false;
     bool prop_rec_play_enabled = false;
@@ -3453,7 +3464,9 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
     return backend_change;
 }
 
-bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct audio_usecase *usecase)
+bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
+                                              struct audio_usecase *usecase,
+                                              snd_device_t snd_device __unused)
 {
     ALOGV("platform_check_and_set_codec_backend_cfg usecase = %d",usecase->id );
 
