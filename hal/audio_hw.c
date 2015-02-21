@@ -1732,6 +1732,8 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
     struct compr_gapless_mdata tmp_mdata;
     tmp_mdata.encoder_delay = 0;
     tmp_mdata.encoder_padding = 0;
+    tmp_mdata.min_blk_size = 0;
+    tmp_mdata.max_blk_size = 0;
 
     if (!out || !parms) {
         ALOGE("%s: return invalid ",__func__);
@@ -1750,11 +1752,13 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
     if (out->format == AUDIO_FORMAT_FLAC) {
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE, value, sizeof(value));
         if (ret >= 0) {
+            tmp_mdata.min_blk_size =
             out->compr_config.codec->options.flac_dec.min_blk_size = atoi(value);
             out->send_new_metadata = 1;
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE, value, sizeof(value));
         if (ret >= 0) {
+            tmp_mdata.max_blk_size =
             out->compr_config.codec->options.flac_dec.max_blk_size = atoi(value);
             out->send_new_metadata = 1;
         }
