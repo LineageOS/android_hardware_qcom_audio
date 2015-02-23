@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "msm8974_platform"
+#define LOG_TAG "msm8960_platform"
 /*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
 
@@ -861,13 +861,13 @@ void *platform_init(struct audio_device *adev)
     /* Initialize ACDB ID's */
     platform_info_init();
 
-    /* If platform is apq8084 and baseband is MDM, load CSD Client specific
+    /* If platform is msm8960 and baseband is MDM, load CSD Client specific
      * symbols. Voice call is handled by MDM and apps processor talks to
      * MDM through CSD Client
      */
     property_get("ro.board.platform", platform, "");
     property_get("ro.baseband", baseband, "");
-    if (!strncmp("apq8084", platform, sizeof("apq8084")) &&
+    if (!strncmp("msm8960", platform, sizeof("msm8960")) &&
         !strncmp("mdm", baseband, sizeof("mdm"))) {
          my_data->csd = open_csd_client();
     }
