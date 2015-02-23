@@ -1898,27 +1898,6 @@ int platform_set_incall_recording_session_id(void *platform,
 {
     int ret = 0;
     struct platform_data *my_data = (struct platform_data *)platform;
-    struct audio_device *adev = my_data->adev;
-    struct mixer_ctl *ctl;
-    const char *mixer_ctl_name = "Voc VSID";
-    int num_ctl_values;
-    int i;
-
-    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
-    if (!ctl) {
-        ALOGE("%s: Could not get ctl for mixer cmd - %s",
-              __func__, mixer_ctl_name);
-        ret = -EINVAL;
-    } else {
-        num_ctl_values = mixer_ctl_get_num_values(ctl);
-        for (i = 0; i < num_ctl_values; i++) {
-            if (mixer_ctl_set_value(ctl, i, session_id)) {
-                ALOGV("Error: invalid session_id: %x", session_id);
-                ret = -EINVAL;
-                break;
-            }
-        }
-    }
 
     if (my_data->csd != NULL) {
         ret = my_data->csd->start_record(ALL_SESSION_VSID, rec_mode);
