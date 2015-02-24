@@ -3197,7 +3197,7 @@ AudioHardware::AudioStreamInVoip::~AudioStreamInVoip()
 
 ssize_t AudioHardware::AudioStreamInVoip::read( void* buffer, ssize_t bytes)
 {
-//    ALOGV("AudioStreamInVoip::read(%p, %ld)", buffer, bytes);
+    ALOGV("AudioStreamInVoip::read(%p, %zu)", buffer, bytes);
     if (!mHardware) return -1;
 
     size_t count = bytes;
@@ -3811,7 +3811,7 @@ AudioHardware::AudioStreamOutDirect::~AudioStreamOutDirect()
 
 ssize_t AudioHardware::AudioStreamOutDirect::write(const void* buffer, size_t bytes)
 {
-//    ALOGE("AudioStreamOutDirect::write(%p, %u)", buffer, bytes);
+    ALOGE("AudioStreamOutDirect::write(%p, %zu)", buffer, bytes);
     status_t status = NO_INIT;
     size_t count = bytes;
     const uint8_t* p = static_cast<const uint8_t*>(buffer);
@@ -5961,7 +5961,7 @@ AudioHardware::AudioStreamInMSM8x60::~AudioStreamInMSM8x60()
 ssize_t AudioHardware::AudioStreamInMSM8x60::read( void* buffer, ssize_t bytes)
 {
     unsigned short dec_id = INVALID_DEVICE;
-    ALOGV("AudioStreamInMSM8x60::read(%p, %d)", buffer, bytes);
+    ALOGV("AudioStreamInMSM8x60::read(%p, %zu)", buffer, bytes);
     if (!mHardware) return -1;
 
     size_t count = bytes;
