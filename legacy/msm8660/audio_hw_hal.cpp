@@ -156,7 +156,7 @@ static audio_channel_mask_t out_get_channels(const struct audio_stream *stream)
 {
     const struct qcom_stream_out *out =
         reinterpret_cast<const struct qcom_stream_out *>(stream);
-    return (audio_channel_mask_t) out->qcom_out->channels();
+    return out->qcom_out->channels();
 }
 
 static audio_format_t out_get_format(const struct audio_stream *stream)
@@ -367,7 +367,7 @@ static audio_channel_mask_t in_get_channels(const struct audio_stream *stream)
 {
     const struct qcom_stream_in *in =
         reinterpret_cast<const struct qcom_stream_in *>(stream);
-    return (audio_channel_mask_t) in->qcom_in->channels();
+    return in->qcom_in->channels();
 }
 
 static audio_format_t in_get_format(const struct audio_stream *stream)
@@ -572,7 +572,7 @@ static int adev_set_fm_volume(struct audio_hw_device *dev, float volume)
 static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 {
     struct qcom_audio_device *qadev = to_ladev(dev);
-    return qadev->hwif->setMode((int)mode);
+    return qadev->hwif->setMode(mode);
 }
 
 static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
