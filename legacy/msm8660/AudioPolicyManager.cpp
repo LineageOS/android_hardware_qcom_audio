@@ -1475,6 +1475,7 @@ AudioPolicyManager::routing_strategy AudioPolicyManager::getStrategy(
         // while key clicks are played produces a poor result
     case AudioSystem::TTS:
     case AudioSystem::MUSIC:
+    case AudioSystem::INCALL_MUSIC:
 #ifdef QCOM_FM_ENABLED
     case AudioSystem::FM:
 #endif
