@@ -59,11 +59,11 @@ public:
         virtual void setPhoneState(int state);
         virtual void setForceUse(AudioSystem::force_use usage, AudioSystem::forced_config config);
         virtual audio_io_handle_t getOutput(AudioSystem::stream_type stream,
-                                            uint32_t samplingRate = 0,
-                                            uint32_t format = AudioSystem::FORMAT_DEFAULT,
-                                            uint32_t channels = 0,
-                                            AudioSystem::output_flags flags =
-                                                    AudioSystem::OUTPUT_FLAG_INDIRECT, const audio_offload_info_t *offloadInfo = NULL);
+                                            uint32_t samplingRate,
+                                            audio_format_t format,
+					    audio_channel_mask_t channelMask,
+                                            AudioSystem::output_flags flags,
+                                                     const audio_offload_info_t *offloadInfo = NULL);
         virtual status_t startOutput(audio_io_handle_t output,
                                      AudioSystem::stream_type stream,
                                      int session = 0);
@@ -74,7 +74,7 @@ public:
         virtual audio_io_handle_t getInput(int inputSource,
                                             uint32_t samplingRate,
                                             audio_format_t format,
-                                            audio_channel_mask_t channels,
+                                            audio_channel_mask_t channelMask,
                                             AudioSystem::audio_in_acoustics acoustics);
         // indicates to the audio policy manager that the input starts being used.
         virtual status_t startInput(audio_io_handle_t input);
@@ -137,14 +137,14 @@ protected:
         virtual AudioPolicyManagerBase::IOProfile* getProfileForDirectOutput(
                                                      audio_devices_t device,
                                                      uint32_t samplingRate,
-                                                     uint32_t format,
-                                                     uint32_t channelMask,
+                                                     audio_format_t format,
+                                                     audio_channel_mask_t channelMask,
                                                      audio_output_flags_t flags);
         bool    isCompatibleProfile(AudioPolicyManagerBase::IOProfile *profile,
                                     audio_devices_t device,
                                     uint32_t samplingRate,
-                                    uint32_t format,
-                                    uint32_t channelMask,
+                                    audio_format_t format,
+                                    audio_channel_mask_t channelMask,
                                     audio_output_flags_t flags);
         // selects the most appropriate device on output for current state
         // must be called every time a condition that affects the device choice for a given output is
