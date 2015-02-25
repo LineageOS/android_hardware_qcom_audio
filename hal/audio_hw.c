@@ -3216,7 +3216,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                   struct audio_stream_in **stream_in,
                                   audio_input_flags_t flags __unused,
                                   const char *address __unused,
-                                  audio_source_t source __unused)
+                                  audio_source_t source)
 {
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_in *in;
@@ -3258,7 +3258,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->stream.get_input_frames_lost = in_get_input_frames_lost;
 
     in->device = devices;
-    in->source = AUDIO_SOURCE_DEFAULT;
+    in->source = source;
     in->dev = adev;
     in->standby = 1;
     in->channel_mask = config->channel_mask;
