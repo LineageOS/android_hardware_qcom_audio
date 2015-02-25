@@ -75,9 +75,12 @@
 #define AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE "music_offload_flac_max_blk_size"
 #define AUDIO_OFFLOAD_CODEC_FLAC_MIN_FRAME_SIZE "music_offload_flac_min_frame_size"
 #define AUDIO_OFFLOAD_CODEC_FLAC_MAX_FRAME_SIZE "music_offload_flac_max_frame_size"
-#define PCM_OUTPUT_BIT_WIDTH (CODEC_BACKEND_DEFAULT_BIT_WIDTH)
-#else
+#endif
+
+#ifdef PCM_OFFLOAD_ENABLED_24
 #define PCM_OUTPUT_BIT_WIDTH (config->offload_info.bit_width)
+#else
+#define PCM_OUTPUT_BIT_WIDTH (CODEC_BACKEND_DEFAULT_BIT_WIDTH)
 #endif
 
 #define MAX_LENGTH_MIXER_CONTROL_IN_INT                  (128)
