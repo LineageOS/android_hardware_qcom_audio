@@ -1156,18 +1156,18 @@ static void *offload_thread_loop(void *context)
         send_callback = false;
         switch(cmd->cmd) {
         case OFFLOAD_CMD_WAIT_FOR_BUFFER:
-            ALOGD("copl(%x):calling compress_wait", (unsigned int)out);
+            ALOGV("copl(%x):calling compress_wait", (unsigned int)out);
             compress_wait(out->compr, -1);
-            ALOGD("copl(%x):out of compress_wait", (unsigned int)out);
+            ALOGV("copl(%x):out of compress_wait", (unsigned int)out);
             send_callback = true;
             event = STREAM_CBK_EVENT_WRITE_READY;
             break;
         case OFFLOAD_CMD_PARTIAL_DRAIN:
             ret = compress_next_track(out->compr);
             if(ret == 0) {
-                ALOGD("copl(%p):calling compress_partial_drain", out);
+                ALOGV("copl(%p):calling compress_partial_drain", out);
                 ret = compress_partial_drain(out->compr);
-                ALOGD("copl(%p):out of compress_partial_drain", out);
+                ALOGV("copl(%p):out of compress_partial_drain", out);
                 if (ret < 0)
                     ret = -errno;
             }
@@ -1187,9 +1187,9 @@ static void *offload_thread_loop(void *context)
                 ALOGE("%s: Block drain ready event during SSR", __func__);
             break;
         case OFFLOAD_CMD_DRAIN:
-            ALOGD("copl(%x):calling compress_drain", (unsigned int)out);
+            ALOGV("copl(%x):calling compress_drain", (unsigned int)out);
             compress_drain(out->compr);
-            ALOGD("copl(%x):out of compress_drain", (unsigned int)out);
+            ALOGV("copl(%x):out of compress_drain", (unsigned int)out);
             send_callback = true;
             event = STREAM_CBK_EVENT_DRAIN_READY;
             break;
@@ -2023,7 +2023,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     }
 
     if (is_offload_usecase(out->usecase)) {
-        ALOGD("copl(%x): writing buffer (%d bytes) to compress device", (unsigned int)out, bytes);
+        ALOGV("copl(%x): writing buffer (%d bytes) to compress device", (unsigned int)out, bytes);
         if (out->send_new_metadata) {
             ALOGD("copl(%x):send new gapless metadata", (unsigned int)out);
             compress_set_gapless_metadata(out->compr, &out->gapless_mdata);
