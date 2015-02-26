@@ -2363,6 +2363,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         return -ENOMEM;
     }
 
+    pthread_mutex_init(&out->lock, (const pthread_mutexattr_t *) NULL);
+    pthread_cond_init(&out->cond, (const pthread_condattr_t *) NULL);
+
     if (devices == AUDIO_DEVICE_NONE)
         devices = AUDIO_DEVICE_OUT_SPEAKER;
 
@@ -2593,9 +2596,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->standby = 1;
     /* out->muted = false; by calloc() */
     /* out->written = 0; by calloc() */
-
-    pthread_mutex_init(&out->lock, (const pthread_mutexattr_t *) NULL);
-    pthread_cond_init(&out->cond, (const pthread_condattr_t *) NULL);
 
     config->format = out->stream.common.get_format(&out->stream.common);
     config->channel_mask = out->stream.common.get_channels(&out->stream.common);
