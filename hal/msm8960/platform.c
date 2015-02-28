@@ -90,6 +90,7 @@ struct platform_data {
     char fluence_cap[PROPERTY_VALUE_MAX];
     int  dualmic_config;
     bool voice_output_in_communication;
+    bool ignore_acdb_mic;
 
     void *hw_info;
 
@@ -316,6 +317,7 @@ void *platform_init(struct audio_device *adev)
     my_data->fluence_in_voice_rec = false;
     my_data->fluence_type = FLUENCE_NONE;
     my_data->voice_output_in_communication = false;
+    my_data->ignore_acdb_mic = false;
 
     property_get("ro.qc.sdk.audio.fluencetype", my_data->fluence_cap, "");
     if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro"))) {
@@ -346,6 +348,11 @@ void *platform_init(struct audio_device *adev)
     property_get("persist.audio.voice_out_in_comm",value,"");
     if (!strncmp("true", value, sizeof("true"))) {
         my_data->voice_output_in_communication = true;
+    }
+
+    property_get("persist.audio.ignore_acdb_mic",value,"");
+    if (!strncmp("true", value, sizeof("true"))) {
+        my_data->ignore_acdb_mic = true;
     }
 
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
@@ -665,8 +672,15 @@ int platform_switch_voice_call_device_post(void *platform,
             acdb_tx_id = acdb_device_table[in_snd_device];
 
             if (acdb_rx_id > 0 || acdb_tx_id > 0) {
+                int local_acdb_settings = my_data->adev->acdb_settings;
+
+                if (my_data->ignore_acdb_mic) {
+                    local_acdb_settings &= ~DMIC_FLAG;
+                    local_acdb_settings &= ~QMIC_FLAG;
+                }
+
                 ret = my_data->csd_enable_device(acdb_rx_id, acdb_tx_id,
-                                                    my_data->adev->acdb_settings);
+                                                    local_acdb_settings);
                 if (ret < 0) {
                     ALOGE("%s: csd_enable_device, failed, error %d",
                           __func__, ret);
