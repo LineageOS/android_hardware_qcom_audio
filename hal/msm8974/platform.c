@@ -2545,6 +2545,11 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         bool status = false;
         str_parms_del(parms, AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE);
         event_name = strtok_r(value, ",", &status_str);
+        if (!event_name) {
+            ret = -EINVAL;
+            ALOGE("%s: event_name is NULL", __func__);
+            goto done;
+        }
         ALOGV("%s: recieved update of external audio device %s %s",
                          __func__,
                          event_name, status_str);
@@ -3336,7 +3341,7 @@ int platform_set_channel_allocation(void *platform, int channel_alloc)
 int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd_id)
 {
     struct mixer_ctl *ctl;
-    char mixer_ctl_name[44]; // max length of name is 44 as defined
+    char mixer_ctl_name[44] = {0}; // max length of name is 44 as defined
     int ret;
     unsigned int i;
     int set_values[8] = {0};
@@ -3351,7 +3356,7 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
     strlcpy(mixer_ctl_name, "Playback Channel Map", sizeof(mixer_ctl_name));
     if (snd_id >= 0) {
         snprintf(device_num, sizeof(device_num), "%d", snd_id);
-        strncat(mixer_ctl_name, device_num, 13);
+        strlcat(mixer_ctl_name, device_num, 13);
     }
 
     ALOGD("%s mixer_ctl_name:%s", __func__, mixer_ctl_name);
