@@ -61,7 +61,7 @@
 
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /* ToDo: Check and update a proper value in msec */
-#define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 96
+#define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 50
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
 
 #define PROXY_OPEN_RETRY_COUNT           100
@@ -1934,13 +1934,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
     uint32_t latency = 0;
 
     if (is_offload_usecase(out->usecase)) {
-        if (out->use_small_bufs == true)
-            latency = ((out->compr_config.fragments *
-                   out->compr_config.fragment_size * 1000) /
-                   (out->sample_rate * out->compr_config.codec->ch_in *
-                   audio_bytes_per_sample(out->format)));
-        else
-            latency = COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
+        latency = COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
     } else {
         latency = (out->config.period_count * out->config.period_size * 1000) /
            (out->config.rate);
@@ -2023,7 +2017,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     }
 
     if (is_offload_usecase(out->usecase)) {
-        ALOGV("copl(%x): writing buffer (%d bytes) to compress device", (unsigned int)out, bytes);
+        ALOGVV("copl(%p): writing buffer (%zu bytes) to compress device", out, bytes);
         if (out->send_new_metadata) {
             ALOGD("copl(%x):send new gapless metadata", (unsigned int)out);
             compress_set_gapless_metadata(out->compr, &out->gapless_mdata);
