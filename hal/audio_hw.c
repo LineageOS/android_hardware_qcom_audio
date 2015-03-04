@@ -1956,7 +1956,7 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
     } else {
         voice_extn_out_get_parameters(out, query, reply);
         str = str_parms_to_str(reply);
-        if (!strncmp(str, "", sizeof(""))) {
+        if (str && !strncmp(str, "", sizeof(""))) {
             free(str);
             str = strdup(keys);
         }
@@ -3062,14 +3062,13 @@ static void adev_close_output_stream(struct audio_hw_device *dev __unused,
 
 static void close_compress_sessions(struct audio_device *adev)
 {
-    struct stream_out *out = NULL;
-    struct listnode *node = NULL;
-    struct listnode *tmp = NULL;
-    struct audio_usecase *usecase = NULL;
+    struct stream_out *out;
+    struct listnode *node;
+    struct audio_usecase *usecase;
     pthread_mutex_lock(&adev->lock);
-    list_for_each_safe(node, tmp, &adev->usecase_list) {
+    list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if (is_offload_usecase(usecase->id)) {
+        if (usecase && is_offload_usecase(usecase->id)) {
             if (usecase && usecase->stream.out) {
                 ALOGI(" %s closing compress session %d on OFFLINE state", __func__, usecase->id);
                 out = usecase->stream.out;
@@ -3491,7 +3490,7 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     } else
         in_standby(&stream->common);
 
-    if (audio_extn_ssr_get_enabled() && 
+    if (audio_extn_ssr_get_enabled() &&
             (audio_channel_count_from_in_mask(in->channel_mask) == 6)) {
         audio_extn_ssr_deinit();
     }
