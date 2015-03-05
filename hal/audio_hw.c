@@ -1478,6 +1478,14 @@ int start_output_stream(struct stream_out *out)
         if (out->offload_callback)
             compress_nonblock(out->compr, out->non_blocking);
 
+        /* Since small bufs uses blocking writes, a write will be blocked
+           for the default max poll time (20s) in the event of an SSR.
+           Reduce the poll time to observe and deal with SSR faster.
+        */
+        if (out->use_small_bufs) {
+            compress_set_max_poll_wait(out->compr, 1000);
+        }
+
 #ifdef DS1_DOLBY_DDP_ENABLED
         if (audio_extn_is_dolby_format(out->format))
             audio_extn_dolby_send_ddp_endp_params(adev);
