@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -46,6 +46,7 @@ typedef enum {
     BITWIDTH,
     PCM_ID,
     BACKEND_NAME,
+    INTERFACE_NAME,
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
@@ -54,6 +55,7 @@ static void process_acdb_id(const XML_Char **attr);
 static void process_bit_width(const XML_Char **attr);
 static void process_pcm_id(const XML_Char **attr);
 static void process_backend_name(const XML_Char **attr);
+static void process_interface_name(const XML_Char **attr);
 static void process_root(const XML_Char **attr);
 
 static section_process_fn section_table[] = {
@@ -62,6 +64,7 @@ static section_process_fn section_table[] = {
     [BITWIDTH] = process_bit_width,
     [PCM_ID] = process_pcm_id,
     [BACKEND_NAME] = process_backend_name,
+    [INTERFACE_NAME] = process_interface_name,
 };
 
 static section_t section;
@@ -83,6 +86,11 @@ static section_t section;
  * ...
  * ...
  * </pcm_ids>
+ * <interface_names>
+ * <device name="Use audio device name here, not sound device name" interface="PRIMARY_I2S"/>
+ * ...
+ * ...
+ * </interface_names>
  * </audio_platform_info>
  */
 
@@ -237,6 +245,34 @@ done:
     return;
 }
 
+static void process_interface_name(const XML_Char **attr)
+{
+    int ret;
+
+    if (strcmp(attr[0], "name") != 0) {
+        ALOGE("%s: 'name' not found, no Audio Interface set!", __func__);
+
+        goto done;
+    }
+
+    if (strcmp(attr[2], "interface") != 0) {
+        ALOGE("%s: Device %s has no Audio Interface set!",
+              __func__, attr[1]);
+
+        goto done;
+    }
+
+    ret = platform_set_audio_device_interface((char *)attr[1], (char *)attr[3]);
+    if (ret < 0) {
+        ALOGE("%s: Audio Interface not set!", __func__);
+
+        goto done;
+    }
+
+done:
+    return;
+}
+
 static void start_tag(void *userdata __unused, const XML_Char *tag_name,
                       const XML_Char **attr)
 {
@@ -252,9 +288,12 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
         section = PCM_ID;
     } else if (strcmp(tag_name, "backend_names") == 0) {
         section = BACKEND_NAME;
+    } else if (strcmp(tag_name, "interface_names") == 0) {
+        section = INTERFACE_NAME;
     } else if (strcmp(tag_name, "device") == 0) {
-        if ((section != ACDB) && (section != BACKEND_NAME) && (section != BITWIDTH)) {
-            ALOGE("device tag only supported for acdb/backend names");
+        if ((section != ACDB) && (section != BACKEND_NAME) && (section != BITWIDTH) &&
+            (section != INTERFACE_NAME)) {
+            ALOGE("device tag only supported for acdb/backend names/bitwitdh/interface names");
             return;
         }
 
@@ -283,6 +322,8 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
     } else if (strcmp(tag_name, "pcm_ids") == 0) {
         section = ROOT;
     } else if (strcmp(tag_name, "backend_names") == 0) {
+        section = ROOT;
+    } else if (strcmp(tag_name, "interface_names") == 0) {
         section = ROOT;
     }
 }

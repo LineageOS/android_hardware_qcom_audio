@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -1152,4 +1152,10 @@ int platform_set_device_params(struct stream_out *out __unused,
                                   int param __unused, int value __unused)
 {
     return 0;
+}
+
+int platform_set_audio_device_interface(const char * device_name __unused,
+                                        const char *intf_name __unused)
+{
+    return -ENOSYS;
 }
