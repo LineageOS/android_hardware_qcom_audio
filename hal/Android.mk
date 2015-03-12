@@ -7,7 +7,7 @@ include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
 
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
-ifneq ($(filter msm8974 msm8226 msm8084,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8974 msm8226 msm8084 msm8994 msm8992,$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM = msm8974
 ifneq ($(filter msm8226,$(TARGET_BOARD_PLATFORM)),)
@@ -15,6 +15,12 @@ ifneq ($(filter msm8226,$(TARGET_BOARD_PLATFORM)),)
 endif
 ifneq ($(filter msm8084,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSM8084
+endif
+ifneq ($(filter msm8992,$(TARGET_BOARD_PLATFORM)),)
+  LOCAL_CFLAGS := -DPLATFORM_MSM8994
+endif
+ifneq ($(filter msm8994,$(TARGET_BOARD_PLATFORM)),)
+  LOCAL_CFLAGS := -DPLATFORM_MSM8994
 endif
 endif
 
