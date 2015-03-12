@@ -457,6 +457,10 @@ int enable_snd_device(struct audio_device *adev,
     if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
        audio_extn_usb_start_capture(adev);
 
+    if (SND_DEVICE_OUT_BT_A2DP == snd_device ||
+       (SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP) == snd_device)
+        audio_extn_a2dp_start_playback();
+
     if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
         snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
         audio_extn_spkr_prot_is_enabled()) {
@@ -524,6 +528,10 @@ int disable_snd_device(struct audio_device *adev,
         /* exit usb capture thread */
         if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
             audio_extn_usb_stop_capture();
+
+        if (SND_DEVICE_OUT_BT_A2DP == snd_device ||
+           (SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP) == snd_device)
+            audio_extn_a2dp_stop_playback();
 
         if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
             snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&

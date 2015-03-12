@@ -143,6 +143,18 @@ void audio_extn_usb_set_proxy_sound_card(uint32_t sndcard_idx);
 bool audio_extn_usb_is_proxy_inuse();
 #endif
 
+#ifndef SPLIT_A2DP_ENABLED
+#define audio_extn_a2dp_init()                       (0)
+#define audio_extn_a2dp_start_playback()             (0)
+#define audio_extn_a2dp_stop_playback()              (0)
+#define audio_extn_a2dp_set_parameters(parms)      (0)
+#else
+void audio_extn_a2dp_init();
+void audio_extn_a2dp_start_playback();
+void audio_extn_a2dp_stop_playback();
+void audio_extn_a2dp_set_parameters(struct str_parms *parms);
+#endif
+
 #ifndef SSR_ENABLED
 #define audio_extn_ssr_init(in)                       (0)
 #define audio_extn_ssr_deinit()                       (0)

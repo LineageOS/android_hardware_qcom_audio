@@ -189,6 +189,12 @@ ifneq ($(strip $(DOLBY_DDP)),true)
 endif
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SPLIT_A2DP)),true)
+    LOCAL_CFLAGS += -DSPLIT_A2DP_ENABLED
+    LOCAL_SRC_FILES += audio_extn/a2dp.c
+endif
+
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
@@ -196,6 +202,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libtinycompress \
 	libaudioroute \
 	libdl \
+	libhardware \
 	libexpat
 
 LOCAL_C_INCLUDES += \
