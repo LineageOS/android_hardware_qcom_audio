@@ -755,6 +755,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_ssr_set_parameters(adev, parms);
    audio_extn_hfp_set_parameters(adev, parms);
    audio_extn_dts_eagle_set_parameters(adev, parms);
+   audio_extn_a2dp_set_parameters(parms);
    audio_extn_ddp_set_parameters(adev, parms);
    audio_extn_ds2_set_parameters(adev, parms);
    audio_extn_customstereo_set_parameters(adev, parms);

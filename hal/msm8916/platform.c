@@ -346,6 +346,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = "speaker-and-hdmi",
     [SND_DEVICE_OUT_BT_SCO] = "bt-sco-headset",
     [SND_DEVICE_OUT_BT_SCO_WB] = "bt-sco-headset-wb",
+    [SND_DEVICE_OUT_BT_A2DP] = "bt-a2dp",
+    [SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP] = "speaker-and-bt-a2dp",
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = "voice-tty-full-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = "voice-tty-vco-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = "voice-tty-hco-handset",
@@ -465,6 +467,8 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 14,
     [SND_DEVICE_OUT_BT_SCO] = 22,
     [SND_DEVICE_OUT_BT_SCO_WB] = 39,
+    [SND_DEVICE_OUT_BT_A2DP] = 20,
+    [SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP] = 14,
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = 37,
@@ -586,6 +590,8 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HDMI)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_BT_SCO)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_BT_SCO_WB)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_BT_A2DP)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET)},
@@ -1206,6 +1212,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_OUT_TRANSMISSION_FM] = strdup("transmission-fm");
     backend_tag_table[SND_DEVICE_OUT_HEADPHONES_44_1] = strdup("headphones-44.1");
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = strdup("vbat-voice-speaker");
+    backend_tag_table[SND_DEVICE_OUT_BT_A2DP] = strdup("bt-a2dp");
+    backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP] = strdup("speaker-and-bt-a2dp");
 
     hw_interface_table[SND_DEVICE_OUT_HDMI] = strdup("HDMI_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_HDMI] = strdup("SLIMBUS_0_RX-and-HDMI_RX");
@@ -1847,6 +1855,9 @@ acdb_init_fail:
 
     /* init usb */
     audio_extn_usb_init(adev);
+
+    /*init a2dp*/
+    audio_extn_a2dp_init(adev);
 
     /* Read one time ssr property */
     audio_extn_ssr_update_enabled();
@@ -2887,6 +2898,9 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         } else if (devices == (AUDIO_DEVICE_OUT_USB_DEVICE |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET;
+        } else if ((devices & AUDIO_DEVICE_OUT_SPEAKER) &&
+                   (devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
+            snd_device = SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP;
         } else {
             ALOGE("%s: Invalid combo device(%#x)", __func__, devices);
             goto exit;
@@ -2937,6 +2951,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_BT_SCO_WB;
             else
                 snd_device = SND_DEVICE_OUT_BT_SCO;
+        } else if (devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
+                snd_device = SND_DEVICE_OUT_BT_A2DP;
         } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
                 if (my_data->is_vbat_speaker)
                     snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_VBAT;
@@ -3020,6 +3036,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
             snd_device = SND_DEVICE_OUT_BT_SCO;
     } else if (devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
         snd_device = SND_DEVICE_OUT_HDMI ;
+    } else if (devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
+        snd_device = SND_DEVICE_OUT_BT_A2DP;
     } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
                devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
         ALOGD("%s: setting USB hadset channel capability(2) for Proxy", __func__);

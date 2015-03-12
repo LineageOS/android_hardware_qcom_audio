@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013, 2016 The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -64,6 +64,8 @@ enum {
     SND_DEVICE_OUT_HDMI,
     SND_DEVICE_OUT_SPEAKER_AND_HDMI,
     SND_DEVICE_OUT_BT_SCO,
+    SND_DEVICE_OUT_BT_A2DP,
+    SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP,
     SND_DEVICE_OUT_BT_SCO_WB,
     SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES,
     SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES,
