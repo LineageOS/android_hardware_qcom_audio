@@ -110,11 +110,11 @@ int offload_update_mixer_and_effects_ctl(int card, int device_id,
     *mixer = mixer_open(card);
     if (!(*mixer)) {
         ALOGE("Failed to open mixer");
-        ctl = NULL;
+        *ctl = NULL;
         return -EINVAL;
     } else {
         *ctl = mixer_get_ctl_by_name(*mixer, mixer_string);
-        if (!ctl) {
+        if (!*ctl) {
             ALOGE("mixer_get_ctl_by_name failed");
             mixer_close(*mixer);
             *mixer = NULL;
@@ -899,11 +899,13 @@ static int hpx_send_params(eff_mode_t mode, void *ctl,
         *p_param_values++ = 1; /* hpx on*/
     }
 
-    if ((mode == OFFLOAD) && ctl)
-        mixer_ctl_set_array(ctl, param_values, ARRAY_SIZE(param_values));
-    else {
-        if (ioctl(*(int *)ctl, AUDIO_EFFECTS_SET_PP_PARAMS, param_values) < 0)
-            ALOGE("%s: sending h/w acc hpx state params fail[%d]", __func__, errno);
+    if (ctl) {
+        if (mode == OFFLOAD)
+            mixer_ctl_set_array(ctl, param_values, ARRAY_SIZE(param_values));
+        else {
+            if (ioctl(*(int *)ctl, AUDIO_EFFECTS_SET_PP_PARAMS, param_values) < 0)
+                ALOGE("%s: sending h/w acc hpx state params fail[%d]", __func__, errno);
+        }
     }
     return 0;
 }

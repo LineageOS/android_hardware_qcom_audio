@@ -75,7 +75,7 @@
 
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /* ToDo: Check and update a proper value in msec */
-#define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 96
+#define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 50
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
 
 #define PROXY_OPEN_RETRY_COUNT           100
@@ -392,7 +392,7 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_BUSY);
     audio_extn_utils_send_audio_calibration(adev, usecase);
     audio_extn_utils_send_app_type_cfg(usecase);
-    strcpy(mixer_path, use_case_table[usecase->id]);
+    strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
     platform_add_backend_name(mixer_path, snd_device);
     ALOGV("%s: apply mixer and update path: %s", __func__, mixer_path);
     audio_route_apply_and_update_path(adev->audio_route, mixer_path);
@@ -414,7 +414,7 @@ int disable_audio_route(struct audio_device *adev,
         snd_device = usecase->in_snd_device;
     else
         snd_device = usecase->out_snd_device;
-    strcpy(mixer_path, use_case_table[usecase->id]);
+    strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
     platform_add_backend_name(mixer_path, snd_device);
     ALOGV("%s: reset and update mixer path: %s", __func__, mixer_path);
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
@@ -1540,6 +1540,14 @@ int start_output_stream(struct stream_out *out)
         if (out->offload_callback)
             compress_nonblock(out->compr, out->non_blocking);
 
+        /* Since small bufs uses blocking writes, a write will be blocked
+           for the default max poll time (20s) in the event of an SSR.
+           Reduce the poll time to observe and deal with SSR faster.
+        */
+        if (out->use_small_bufs) {
+            compress_set_max_poll_wait(out->compr, 1000);
+        }
+
         audio_extn_dts_create_state_notifier_node(out->usecase);
         audio_extn_dts_notify_playback_state(out->usecase, 0, out->sample_rate,
                                              popcount(out->channel_mask),
@@ -1936,9 +1944,9 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
             for (j = 0; j < ARRAY_SIZE(out_channels_name_to_enum_table); j++) {
                 if (out_channels_name_to_enum_table[j].value == out->supported_channel_masks[i]) {
                     if (!first) {
-                        strcat(value, "|");
+                        strlcat(value, "|", sizeof(value));
                     }
-                    strcat(value, out_channels_name_to_enum_table[j].name);
+                    strlcat(value, out_channels_name_to_enum_table[j].name, sizeof(value));
                     first = false;
                     break;
                 }
@@ -1965,7 +1973,7 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
             for (j = 0; j < ARRAY_SIZE(out_formats_name_to_enum_table); j++) {
                 if (out_formats_name_to_enum_table[j].value == out->supported_formats[i]) {
                     if (!first) {
-                        strcat(value, "|");
+                        strlcat(value, "|", sizeof(value));
                     }
                     strlcat(value, out_formats_name_to_enum_table[j].name, sizeof(value));
                     first = false;
@@ -1989,13 +1997,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
     uint32_t latency = 0;
 
     if (is_offload_usecase(out->usecase)) {
-        if (out->use_small_bufs == true)
-            latency = ((out->compr_config.fragments *
-                   out->compr_config.fragment_size * 1000) /
-                   (out->sample_rate * out->compr_config.codec->ch_in *
-                   audio_bytes_per_sample(out->format)));
-        else
-            latency = COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
+        latency = COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
     } else {
         latency = (out->config.period_count * out->config.period_size * 1000) /
            (out->config.rate);
@@ -2087,7 +2089,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     }
 
     if (is_offload_usecase(out->usecase)) {
-        ALOGD("copl(%p): writing buffer (%zu bytes) to compress device", out, bytes);
+        ALOGVV("copl(%p): writing buffer (%zu bytes) to compress device", out, bytes);
         if (out->send_new_metadata) {
             ALOGD("copl(%p):send new gapless metadata", out);
             compress_set_gapless_metadata(out->compr, &out->gapless_mdata);
@@ -3047,7 +3049,7 @@ static void close_compress_sessions(struct audio_device *adev)
     pthread_mutex_lock(&adev->lock);
     list_for_each_safe(node, tmp, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if (is_offload_usecase(usecase->id)) {
+        if (usecase && is_offload_usecase(usecase->id)) {
             if (usecase && usecase->stream.out) {
                 ALOGI(" %s closing compress session %d on OFFLINE state", __func__, usecase->id);
                 out = usecase->stream.out;
