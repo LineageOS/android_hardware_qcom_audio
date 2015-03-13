@@ -2490,6 +2490,12 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     int ret = 0, err;
     char *kv_pairs = str_parms_to_str(parms);
 
+    if(kv_pairs == NULL) {
+        ret = -ENOMEM;
+        ALOGE("[%s] key-value pair is NULL",__func__);
+        goto done;
+    }
+
     ALOGV_IF(kv_pairs != NULL, "%s: enter: %s", __func__, kv_pairs);
 
     len = strlen(kv_pairs);
@@ -2569,7 +2575,8 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
 
 done:
     ALOGV("%s: exit with code(%d)", __func__, ret);
-    free(kv_pairs);
+    if(kv_pairs != NULL)
+        free(kv_pairs);
     if(value != NULL)
         free(value);
     return ret;
