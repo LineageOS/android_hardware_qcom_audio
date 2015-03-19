@@ -1932,6 +1932,11 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     pthread_mutex_lock(&out->lock);
 
     if (SND_CARD_STATE_OFFLINE == snd_scard_state) {
+        // increase written size during SSR to avoid mismatch
+        // with the written frames count in AF
+        if (!is_offload_usecase(out->usecase))
+            out->written += bytes / (out->config.channels * sizeof(short));
+
         if (out->pcm) {
             ALOGD(" %s: sound card is not active/SSR state", __func__);
             ret= -EIO;
