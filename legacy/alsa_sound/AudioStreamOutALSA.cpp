@@ -208,7 +208,11 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
                 } else {
                     mParent->startUsbPlaybackIfNotStarted();
                     ALOGV("enabling music, musbPlaybackState: %d ", mParent->musbPlaybackState);
-                    mParent->musbPlaybackState |= USBPLAYBACKBIT_MUSIC;
+                       if (mHandle->isFastOutput == true){
+                           mParent->musbPlaybackState |= USBPLAYBACKBIT_FAST;
+                       } else {
+                           mParent->musbPlaybackState |= USBPLAYBACKBIT_MUSIC;
+                       }
                 }
             }
 #endif
@@ -242,7 +246,11 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
             mParent->musbPlaybackState |= USBPLAYBACKBIT_VOIPCALL;
         }else{
             ALOGV("enabling music, musbPlaybackState: %d ", mParent->musbPlaybackState);
-            mParent->musbPlaybackState |= USBPLAYBACKBIT_MUSIC;
+            if (mHandle->isFastOutput == true){
+                  mParent->musbPlaybackState |= USBPLAYBACKBIT_FAST;
+            } else {
+	          mParent->musbPlaybackState |= USBPLAYBACKBIT_MUSIC;
+            }
         }
         mParent->mLock.unlock();
     }
@@ -355,7 +363,12 @@ status_t AudioStreamOutALSA::close()
     }
 #ifdef QCOM_USBAUDIO_ENABLED
       else {
-        mParent->musbPlaybackState &= ~USBPLAYBACKBIT_MUSIC;
+
+        if (mHandle->isFastOutput == true){
+                mParent->musbPlaybackState &= ~USBPLAYBACKBIT_FAST;
+        } else {
+                mParent->musbPlaybackState &= ~USBPLAYBACKBIT_MUSIC;
+        }
     }
 
     mParent->closeUsbPlaybackIfNothingActive();
@@ -387,8 +400,12 @@ status_t AudioStreamOutALSA::standby()
 
 #ifdef QCOM_USBAUDIO_ENABLED
      if (mParent->musbPlaybackState) {
-        ALOGD("Deregistering MUSIC bit, musbPlaybackState: %d", mParent->musbPlaybackState);
-        mParent->musbPlaybackState &= ~USBPLAYBACKBIT_MUSIC;
+        ALOGD("Deregistering MUSIC bit, musbPlaybackState: %x", mParent->musbPlaybackState);
+        if (mHandle->isFastOutput == true) {
+                mParent->musbPlaybackState &= ~USBPLAYBACKBIT_FAST;
+        } else {
+               mParent->musbPlaybackState &= ~USBPLAYBACKBIT_MUSIC;
+        }
     }
 #endif
 
