@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -660,6 +660,8 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
         } break;
     case EFFECT_CMD_SET_PARAM: {
         if (pCmdData == NULL ||
+            cmdSize > (int)(sizeof(effect_param_t) + sizeof(uint32_t) +
+                            sizeof(uint32_t)) ||
             cmdSize < (int)(sizeof(effect_param_t) + sizeof(uint32_t) +
                             sizeof(uint16_t)) ||
             pReplyData == NULL || *replySize != sizeof(int32_t)) {
