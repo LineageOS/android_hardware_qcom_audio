@@ -36,8 +36,8 @@
 #ifdef DTS_EAGLE
 
 #define AUDIO_PARAMETER_KEY_DTS_EAGLE   "DTS_EAGLE"
-#define STATE_NOTIFY_FILE               "/data/data/dts/stream"
-#define FADE_NOTIFY_FILE                "/data/data/dts/fade"
+#define STATE_NOTIFY_FILE               "/data/misc/dts/stream"
+#define FADE_NOTIFY_FILE                "/data/misc/dts/fade"
 #define DTS_EAGLE_KEY                   "DTS_EAGLE"
 #define DEVICE_NODE                     "/dev/snd/hwC0D3"
 #define MAX_LENGTH_OF_INTEGER_IN_STRING 13
