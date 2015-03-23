@@ -18,6 +18,7 @@
 /*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
 
+#include <stdlib.h>
 #include <errno.h>
 #include <math.h>
 #include <cutils/log.h>

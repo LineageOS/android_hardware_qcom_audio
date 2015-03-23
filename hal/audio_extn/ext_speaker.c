@@ -18,6 +18,7 @@
 /*#define LOG_NDEBUG 0*/
 #include <cutils/log.h>
 
+#include <stdlib.h>
 #include <audio_hw.h>
 #include <dlfcn.h>
 
