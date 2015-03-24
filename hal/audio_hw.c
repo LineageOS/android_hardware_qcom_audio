@@ -2322,7 +2322,7 @@ static int out_pause(struct audio_stream_out* stream)
 
             out->offload_state = OFFLOAD_STATE_PAUSED;
 
-            audio_extn_dts_eagle_fade(adev, false);
+            audio_extn_dts_eagle_fade(adev, false, out);
             audio_extn_dts_notify_playback_state(out->usecase, 0,
                                                  out->sample_rate, popcount(out->channel_mask),
                                                  0);
@@ -2350,7 +2350,7 @@ static int out_resume(struct audio_stream_out* stream)
 
             out->offload_state = OFFLOAD_STATE_PLAYING;
 
-            audio_extn_dts_eagle_fade(adev, true);
+            audio_extn_dts_eagle_fade(adev, true, out);
             audio_extn_dts_notify_playback_state(out->usecase, 0, out->sample_rate,
                                                      popcount(out->channel_mask), 1);
         }
