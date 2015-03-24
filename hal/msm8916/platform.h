@@ -55,9 +55,13 @@ enum {
     SND_DEVICE_OUT_BEGIN = SND_DEVICE_MIN,
     SND_DEVICE_OUT_HANDSET = SND_DEVICE_OUT_BEGIN,
     SND_DEVICE_OUT_SPEAKER,
+    SND_DEVICE_OUT_SPEAKER_EXTERNAL_1,
+    SND_DEVICE_OUT_SPEAKER_EXTERNAL_2,
     SND_DEVICE_OUT_SPEAKER_REVERSE,
     SND_DEVICE_OUT_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
+    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1,
+    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2,
     SND_DEVICE_OUT_VOICE_HANDSET,
     SND_DEVICE_OUT_VOICE_SPEAKER,
     SND_DEVICE_OUT_VOICE_HEADPHONES,
@@ -80,6 +84,7 @@ enum {
     SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
     SND_DEVICE_OUT_ANC_HANDSET,
     SND_DEVICE_OUT_SPEAKER_PROTECTED,
+    SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED,
 #ifdef RECORD_PLAY_CONCURRENCY
     SND_DEVICE_OUT_VOIP_HANDSET,
     SND_DEVICE_OUT_VOIP_SPEAKER,
@@ -94,6 +99,7 @@ enum {
     /* Capture devices */
     SND_DEVICE_IN_BEGIN = SND_DEVICE_OUT_END,
     SND_DEVICE_IN_HANDSET_MIC  = SND_DEVICE_IN_BEGIN,
+    SND_DEVICE_IN_HANDSET_MIC_EXTERNAL,
     SND_DEVICE_IN_HANDSET_MIC_AEC,
     SND_DEVICE_IN_HANDSET_MIC_NS,
     SND_DEVICE_IN_HANDSET_MIC_AEC_NS,
@@ -156,7 +162,7 @@ enum {
 #define DEFAULT_OUTPUT_SAMPLING_RATE 48000
 
 #define ALL_SESSION_VSID                0xFFFFFFFF
-#define DEFAULT_MUTE_RAMP_DURATION      500
+#define DEFAULT_MUTE_RAMP_DURATION_MS   20
 #define DEFAULT_VOLUME_RAMP_DURATION_MS 20
 #define MIXER_PATH_MAX_LENGTH 100
 
@@ -174,7 +180,7 @@ enum {
  * the buffer size of an input/output stream
  */
 #define DEEP_BUFFER_OUTPUT_PERIOD_SIZE 960
-#define DEEP_BUFFER_OUTPUT_PERIOD_COUNT 4
+#define DEEP_BUFFER_OUTPUT_PERIOD_COUNT 5
 #define LOW_LATENCY_OUTPUT_PERIOD_SIZE 240
 #define LOW_LATENCY_OUTPUT_PERIOD_COUNT 2
 
@@ -189,6 +195,10 @@ enum {
 
 #define AUDIO_CAPTURE_PERIOD_DURATION_MSEC 20
 #define AUDIO_CAPTURE_PERIOD_COUNT 2
+
+#define LOW_LATENCY_CAPTURE_SAMPLE_RATE 48000
+#define LOW_LATENCY_CAPTURE_PERIOD_SIZE 240
+#define LOW_LATENCY_CAPTURE_USE_CASE 1
 
 #define DEVICE_NAME_MAX_SIZE 128
 #define HW_INFO_ARRAY_MAX_SIZE 32
@@ -207,6 +217,30 @@ enum {
 #define SPKR_PROT_CALIB_RX_PCM_DEVICE 5
 #define SPKR_PROT_CALIB_TX_PCM_DEVICE 22
 #define PLAYBACK_OFFLOAD_DEVICE 9
+
+#ifdef MULTIPLE_OFFLOAD_ENABLED
+#ifdef PLATFORM_APQ8084
+#define PLAYBACK_OFFLOAD_DEVICE2 17
+#define PLAYBACK_OFFLOAD_DEVICE3 18
+#define PLAYBACK_OFFLOAD_DEVICE4 34
+#define PLAYBACK_OFFLOAD_DEVICE5 35
+#define PLAYBACK_OFFLOAD_DEVICE6 36
+#define PLAYBACK_OFFLOAD_DEVICE7 37
+#define PLAYBACK_OFFLOAD_DEVICE8 38
+#define PLAYBACK_OFFLOAD_DEVICE9 39
+#endif
+#if defined (PLATFORM_MSM8994) || defined (PLATFORM_THULIUM)
+#define PLAYBACK_OFFLOAD_DEVICE2 17
+#define PLAYBACK_OFFLOAD_DEVICE3 18
+#define PLAYBACK_OFFLOAD_DEVICE4 37
+#define PLAYBACK_OFFLOAD_DEVICE5 38
+#define PLAYBACK_OFFLOAD_DEVICE6 39
+#define PLAYBACK_OFFLOAD_DEVICE7 40
+#define PLAYBACK_OFFLOAD_DEVICE8 41
+#define PLAYBACK_OFFLOAD_DEVICE9 42
+#endif
+#endif
+
 #define COMPRESS_VOIP_CALL_PCM_DEVICE 3
 
 /* Define macro for Internal FM volume mixer */
@@ -232,8 +266,8 @@ typedef int (*deinit_t)();
 typedef int (*disable_device_t)();
 typedef int (*enable_device_config_t)(int, int);
 typedef int (*enable_device_t)(int, int, uint32_t);
-typedef int (*volume_t)(uint32_t, int);
-typedef int (*mic_mute_t)(uint32_t, int);
+typedef int (*volume_t)(uint32_t, int, uint16_t);
+typedef int (*mic_mute_t)(uint32_t, int, uint16_t);
 typedef int (*slow_talk_t)(uint32_t, uint8_t);
 typedef int (*start_voice_t)(uint32_t);
 typedef int (*stop_voice_t)(uint32_t);
@@ -264,4 +298,16 @@ struct csd_data {
 
 int platform_get_subsys_image_name (char *buf);
 
+/* HDMI Passthrough defines */
+enum {
+    LEGACY_PCM = 0,
+    PASSTHROUGH,
+    PASSTHROUGH_CONVERT
+};
+/*
+ * ID for setting mute and lateny on the device side
+ * through Device PP Params mixer control.
+ */
+#define DEVICE_PARAM_MUTE_ID    0
+#define DEVICE_PARAM_LATENCY_ID 1
 #endif // QCOM_AUDIO_PLATFORM_H
