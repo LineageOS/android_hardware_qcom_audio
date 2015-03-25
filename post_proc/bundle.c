@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -528,8 +528,8 @@ int effect_lib_get_descriptor(const effect_uuid_t *uuid,
 
 /* Stub function for effect interface: never called for offloaded effects */
 int effect_process(effect_handle_t self,
-                       audio_buffer_t *inBuffer,
-                       audio_buffer_t *outBuffer)
+                       audio_buffer_t *inBuffer __unused,
+                       audio_buffer_t *outBuffer __unused)
 {
     effect_context_t * context = (effect_context_t *)self;
     int status = 0;
@@ -660,6 +660,8 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
         } break;
     case EFFECT_CMD_SET_PARAM: {
         if (pCmdData == NULL ||
+            cmdSize > (int)(sizeof(effect_param_t) + sizeof(uint32_t) +
+                            sizeof(uint32_t)) ||
             cmdSize < (int)(sizeof(effect_param_t) + sizeof(uint32_t) +
                             sizeof(uint16_t)) ||
             pReplyData == NULL || *replySize != sizeof(int32_t)) {
