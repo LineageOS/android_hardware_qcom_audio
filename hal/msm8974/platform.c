@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -3366,10 +3366,15 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
         ALOGE("%s: Invalid channel mapping used", __func__);
         return -EINVAL;
     }
-    strlcpy(mixer_ctl_name, "Playback Channel Map", sizeof(mixer_ctl_name));
+
+    /*
+     * If snd_id is greater than 0, stream channel mapping
+     * If snd_id is below 0, typically -1, device channel mapping
+     */
     if (snd_id >= 0) {
-        snprintf(device_num, sizeof(device_num), "%d", snd_id);
-        strncat(mixer_ctl_name, device_num, 13);
+        snprintf(mixer_ctl_name, sizeof(mixer_ctl_name), "Playback Channel Map%d", snd_id);
+    } else {
+        strlcpy(mixer_ctl_name, "Playback Device Channel Map", sizeof(mixer_ctl_name));
     }
 
     ALOGD("%s mixer_ctl_name:%s", __func__, mixer_ctl_name);
