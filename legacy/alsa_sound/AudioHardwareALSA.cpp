@@ -3337,6 +3337,31 @@ bool  AudioHardwareALSA::suspendPlaybackOnExtOut_l(uint32_t activeUsecase) {
     return NO_ERROR;
 }
 
+int AudioHardwareALSA::setMasterMute(bool muted) {
+    return INVALID_OPERATION;
+}
+
+int AudioHardwareALSA::createAudioPatch(unsigned int num_sources,
+        const struct audio_port_config *sources,
+        unsigned int num_sinks,
+        const struct audio_port_config *sinks,
+        audio_patch_handle_t *handle) {
+    return 0;
+}
+
+int AudioHardwareALSA::releaseAudioPatch(audio_patch_handle_t handle) {
+    return 0;
+}
+
+int AudioHardwareALSA::getAudioPort(struct audio_port *port) {
+    return 0;
+}
+
+int AudioHardwareALSA::setAudioPortConfig(
+        const struct audio_port_config *config) {
+    return 0;
+}
+
 }       // namespace android_audio_legacy
 
 #ifdef AUXPCM_BT_ENABLED
