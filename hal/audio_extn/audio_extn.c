@@ -332,7 +332,7 @@ static int32_t afe_proxy_set_channel_mapping(struct audio_device *adev,
                                                      int channel_count)
 {
     struct mixer_ctl *ctl;
-    const char *mixer_ctl_name = "Playback Channel Map";
+    const char *mixer_ctl_name = "Playback Device Channel Map";
     int set_values[8] = {0};
     int ret;
     ALOGV("%s channel_count:%d",__func__, channel_count);
