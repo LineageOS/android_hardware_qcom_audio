@@ -364,7 +364,7 @@ int enable_audio_route(struct audio_device *adev,
     if (usecase == NULL)
         return -EINVAL;
 
-    ALOGV("%s: enter: usecase(%d)", __func__, usecase->id);
+    ALOGD("%s: enter: usecase(%d)", __func__, usecase->id);
 
     if (usecase->type == PCM_CAPTURE)
         snd_device = usecase->in_snd_device;
@@ -381,9 +381,9 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_utils_send_app_type_cfg(usecase);
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(mixer_path, snd_device);
-    ALOGV("%s: apply mixer and update path: %s", __func__, mixer_path);
+    ALOGD("%s: apply mixer and update path: %s", __func__, mixer_path);
     audio_route_apply_and_update_path(adev->audio_route, mixer_path);
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
     return 0;
 }
 
@@ -396,18 +396,18 @@ int disable_audio_route(struct audio_device *adev,
     if (usecase == NULL || usecase->id == USECASE_INVALID)
         return -EINVAL;
 
-    ALOGV("%s: enter: usecase(%d)", __func__, usecase->id);
+    ALOGD("%s: enter: usecase(%d)", __func__, usecase->id);
     if (usecase->type == PCM_CAPTURE)
         snd_device = usecase->in_snd_device;
     else
         snd_device = usecase->out_snd_device;
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(mixer_path, snd_device);
-    ALOGV("%s: reset and update mixer path: %s", __func__, mixer_path);
+    ALOGD("%s: reset and update mixer path: %s", __func__, mixer_path);
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_FREE);
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_FREE);
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
     return 0;
 }
 
@@ -429,7 +429,7 @@ int enable_snd_device(struct audio_device *adev,
         return -EINVAL;
     }
     if (adev->snd_dev_ref_cnt[snd_device] > 1) {
-        ALOGV("%s: snd_device(%d: %s) is already active",
+        ALOGD("%s: snd_device(%d: %s) is already active",
               __func__, snd_device, device_name);
         return 0;
     }
@@ -457,7 +457,7 @@ int enable_snd_device(struct audio_device *adev,
             return -EINVAL;
         }
     } else {
-        ALOGV("%s: snd_device(%d: %s)", __func__,
+        ALOGD("%s: snd_device(%d: %s)", __func__,
         snd_device, device_name);
         /* due to the possibility of calibration overwrite between listen
             and audio, notify listen hal before audio calibration is sent */
@@ -570,7 +570,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                 usecase != uc_info &&
                 (usecase->out_snd_device != snd_device || force_routing)  &&
                 usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
-            ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
+            ALOGD("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
                   platform_get_snd_device_name(usecase->out_snd_device));
             disable_audio_route(adev, usecase);
@@ -972,7 +972,7 @@ int start_input_stream(struct stream_in *in)
     if (ret)
         goto error_config;
     else
-        ALOGV("%s: usecase(%d)", __func__, in->usecase);
+        ALOGD("%s: usecase(%d)", __func__, in->usecase);
 
     in->pcm_device_id = platform_get_pcm_device_id(in->usecase, PCM_CAPTURE);
     if (in->pcm_device_id < 0) {
@@ -1000,7 +1000,7 @@ int start_input_stream(struct stream_in *in)
     list_add_tail(&adev->usecase_list, &uc_info->list);
     select_devices(adev, in->usecase);
 
-    ALOGV("%s: Opening PCM device card_id(%d) device_id(%d), channels %d",
+    ALOGD("%s: Opening PCM device card_id(%d) device_id(%d), channels %d",
           __func__, adev->snd_card, in->pcm_device_id, in->config.channels);
 
     unsigned int flags = PCM_IN;
@@ -1030,7 +1030,7 @@ int start_input_stream(struct stream_in *in)
         break;
     }
 
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
     return ret;
 
 error_open:
@@ -1439,7 +1439,7 @@ int start_output_stream(struct stream_out *out)
 
     select_devices(adev, out->usecase);
 
-    ALOGV("%s: Opening PCM device card_id(%d) device_id(%d) format(%#x)",
+    ALOGD("%s: Opening PCM device card_id(%d) device_id(%d) format(%#x)",
           __func__, adev->snd_card, out->pcm_device_id, out->config.format);
 
     if (!is_offload_usecase(out->usecase)) {
@@ -1494,7 +1494,7 @@ int start_output_stream(struct stream_out *out)
         if (adev->offload_effects_start_output != NULL)
             adev->offload_effects_start_output(out->handle, out->pcm_device_id);
     }
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
     return 0;
 error_open:
     stop_output_stream(out);
