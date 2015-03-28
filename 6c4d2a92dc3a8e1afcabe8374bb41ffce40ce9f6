@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5ac665da_28ca0da2",
+        "filename": "legacy/alsa_sound/AudioHardwareALSA.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 3340,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2015-03-28T04:20:13Z",
+      "side": 1,
+      "message": "shouldn\u0027t this be status_t instead of int?",
+      "revId": "6c4d2a92dc3a8e1afcabe8374bb41ffce40ce9f6",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
