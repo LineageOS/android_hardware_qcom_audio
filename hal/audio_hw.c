@@ -2114,6 +2114,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         }
         if (!out->playback_started && ret >= 0) {
             compress_start(out->compr);
+            audio_extn_dts_eagle_fade(adev, true, out);
             out->playback_started = 1;
             out->offload_state = OFFLOAD_STATE_PLAYING;
 
