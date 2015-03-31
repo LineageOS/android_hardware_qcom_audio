@@ -27,7 +27,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libdl \
 	libtinyalsa
 
-LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/soundfx
+LOCAL_MODULE_RELATIVE_PATH := soundfx
 LOCAL_MODULE:= libqcomvisualizer
 
 LOCAL_C_INCLUDES := \
