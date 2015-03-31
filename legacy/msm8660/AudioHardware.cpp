@@ -1249,6 +1249,36 @@ status_t AudioHardware::setMode(int mode)
     return status;
 }
 
+status_t AudioHardware::setMasterMute(bool muted) {
+    //TODO: enable when supported by driver
+    return INVALID_OPERATION;
+}
+
+int AudioHardware::createAudioPatch(unsigned int num_sources,
+        const struct audio_port_config *sources,
+        unsigned int num_sinks,
+        const struct audio_port_config *sinks,
+        audio_patch_handle_t *handle) {
+    //TODO: enable when supported by driver
+    return INVALID_OPERATION;
+}
+
+int AudioHardware::releaseAudioPatch(audio_patch_handle_t handle) {
+    //TODO: enable when supported by driver
+    return INVALID_OPERATION;
+}
+
+int AudioHardware::getAudioPort(struct audio_port *port) {
+    //TODO: enable when supported by driver
+    return INVALID_OPERATION;
+}
+
+int AudioHardware::setAudioPortConfig(
+        const struct audio_port_config *config) {
+    //TODO: enable when supported by driver
+    return INVALID_OPERATION;
+}
+
 bool AudioHardware::checkOutputStandby()
 {
     if (mOutput)
