@@ -36,6 +36,7 @@
 #include "edid.h"
 #include "sound/compress_params.h"
 #include "sound/msmcal-hwdep.h"
+#include <dirent.h>
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
@@ -187,6 +188,7 @@ struct platform_data {
     bool slowtalk;
     bool hd_voice;
     bool ec_ref_enabled;
+    bool is_wsa_speaker;
     /* Audio calibration related functions */
     void                       *acdb_handle;
     int                        voice_feature_set;
@@ -281,6 +283,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER] = "speaker",
     [SND_DEVICE_OUT_SPEAKER_EXTERNAL_1] = "speaker-ext-1",
     [SND_DEVICE_OUT_SPEAKER_EXTERNAL_2] = "speaker-ext-2",
+    [SND_DEVICE_OUT_SPEAKER_WSA] = "wsa-speaker",
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = "speaker-reverse",
     [SND_DEVICE_OUT_HEADPHONES] = "headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = "speaker-and-headphones",
@@ -288,6 +291,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2] = "speaker-and-headphones-ext-2",
     [SND_DEVICE_OUT_VOICE_HANDSET] = "voice-handset",
     [SND_DEVICE_OUT_VOICE_SPEAKER] = "voice-speaker",
+    [SND_DEVICE_OUT_VOICE_SPEAKER_WSA] = "wsa-voice-speaker",
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = "voice-headphones",
     [SND_DEVICE_OUT_HDMI] = "hdmi",
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = "speaker-and-hdmi",
@@ -383,6 +387,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER] = 14,
     [SND_DEVICE_OUT_SPEAKER_EXTERNAL_1] = 14,
     [SND_DEVICE_OUT_SPEAKER_EXTERNAL_2] = 14,
+    [SND_DEVICE_OUT_SPEAKER_WSA] = 135,
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = 14,
     [SND_DEVICE_OUT_HEADPHONES] = 10,
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = 10,
@@ -390,6 +395,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2] = 10,
     [SND_DEVICE_OUT_VOICE_HANDSET] = 7,
     [SND_DEVICE_OUT_VOICE_SPEAKER] = 14,
+    [SND_DEVICE_OUT_VOICE_SPEAKER_WSA] = 135,
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
     [SND_DEVICE_OUT_HDMI] = 18,
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 14,
@@ -487,6 +493,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_EXTERNAL_1)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_EXTERNAL_2)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_WSA)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_REVERSE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES)},
@@ -494,6 +501,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_WSA)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HDMI)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HDMI)},
@@ -1211,6 +1219,7 @@ void *platform_init(struct audio_device *adev)
     my_data->slowtalk = false;
     my_data->hd_voice = false;
     my_data->edid_info = NULL;
+    my_data->is_wsa_speaker = false;
 
     property_get("ro.qc.sdk.audio.fluencetype", my_data->fluence_cap, "");
     if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro"))) {
@@ -1250,6 +1259,7 @@ void *platform_init(struct audio_device *adev)
     property_get("persist.audio.FFSP.enable", ffspEnable, "");
     if (!strncmp("true", ffspEnable, sizeof("true"))) {
         acdb_device_table[SND_DEVICE_OUT_SPEAKER] = 131;
+        acdb_device_table[SND_DEVICE_OUT_SPEAKER_WSA] = 131;
         acdb_device_table[SND_DEVICE_OUT_SPEAKER_REVERSE] = 131;
         acdb_device_table[SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 131;
         acdb_device_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 131;
@@ -1323,6 +1333,25 @@ void *platform_init(struct audio_device *adev)
             free(cvd_version);
     }
     audio_extn_pm_vote();
+
+    // Check if WSA speaker is supported in codec
+    char CodecPeek[1024] = "/sys/kernel/debug/asoc/";
+    DIR *dir;
+    struct dirent *dirent;
+    char file_name[10] = "wsa";
+    strcat(CodecPeek, snd_card_name);
+
+    dir = opendir(CodecPeek);
+    if (dir != NULL) {
+        while (NULL != (dirent = readdir(dir))) {
+            if (strstr (dirent->d_name,file_name))
+            {
+                my_data->is_wsa_speaker = true;
+                break;
+            }
+        }
+        closedir(dir);
+    }
 
 acdb_init_fail:
 
@@ -1981,7 +2010,10 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
             else
                 snd_device = SND_DEVICE_OUT_BT_SCO;
         } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
-            snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
+                if (my_data->is_wsa_speaker)
+                    snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_WSA;
+                else
+                    snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
         } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
                    devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
             snd_device = SND_DEVICE_OUT_USB_HEADSET;
@@ -2034,7 +2066,12 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
             if (adev->speaker_lr_swap)
                 snd_device = SND_DEVICE_OUT_SPEAKER_REVERSE;
             else
-                snd_device = SND_DEVICE_OUT_SPEAKER;
+            {
+                if (my_data->is_wsa_speaker)
+                    snd_device = SND_DEVICE_OUT_SPEAKER_WSA;
+                else
+                    snd_device = SND_DEVICE_OUT_SPEAKER;
+            }
         }
     } else if (devices & AUDIO_DEVICE_OUT_ALL_SCO) {
         if (adev->bt_wb_speech_enabled)
