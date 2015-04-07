@@ -847,8 +847,6 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
         } break;
     case EFFECT_CMD_SET_PARAM: {
         if (pCmdData == NULL ||
-            cmdSize > (int)(sizeof(effect_param_t) + sizeof(uint32_t) +
-                            sizeof(uint32_t)) ||
             cmdSize < (int)(sizeof(effect_param_t) + sizeof(uint32_t) +
                             sizeof(uint16_t)) ||
             pReplyData == NULL || *replySize != sizeof(int32_t)) {
