@@ -260,6 +260,18 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
                                                        session_id, rec_mode);
         ALOGV("%s: Update usecase to %d",__func__, in->usecase);
     } else {
+        /*
+         * Reject the recording instances, where the recording is started
+         * with In-call voice recording source types but voice call is not
+         * active by the time input is started
+         */
+        if ((in->source == AUDIO_SOURCE_VOICE_UPLINK) ||
+            (in->source == AUDIO_SOURCE_VOICE_DOWNLINK) ||
+            (in->source == AUDIO_SOURCE_VOICE_CALL)) {
+            ret = -EINVAL;
+            ALOGE("%s: As voice call is not active, Incall rec usecase can't be \
+                   selected for requested source:%d",__func__, in->source);
+        }
         ALOGV("%s: voice call not active", __func__);
     }
 
