@@ -52,8 +52,8 @@
 
 #include "sound/compress_params.h"
 
-#define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
-#define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
+#define COMPRESS_OFFLOAD_FRAGMENT_SIZE (256 * 1024)
+#define COMPRESS_OFFLOAD_NUM_FRAGMENTS 2
 /* ToDo: Check and update a proper value in msec */
 #define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 96
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
