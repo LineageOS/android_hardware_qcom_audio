@@ -17,6 +17,7 @@
 #define LOG_TAG "offload_effect_bundle"
 //#define LOG_NDEBUG 0
 
+#include <stdlib.h>
 #include <cutils/list.h>
 #include <cutils/log.h>
 #include <system/thread_defs.h>

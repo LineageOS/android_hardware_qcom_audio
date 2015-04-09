@@ -20,6 +20,7 @@
 
 #include <errno.h>
 #include <math.h>
+#include <stdlib.h>
 #include <cutils/log.h>
 #include <cutils/str_parms.h>
 #include <sys/ioctl.h>
