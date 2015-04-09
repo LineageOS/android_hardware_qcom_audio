@@ -3662,7 +3662,11 @@ static int adev_close(hw_device_t *device)
 static int period_size_is_plausible_for_low_latency(int period_size)
 {
     switch (period_size) {
+    case 48:
+    case 96:
+    case 144:
     case 160:
+    case 192:
     case 240:
     case 320:
     case 480:
