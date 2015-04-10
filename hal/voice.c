@@ -157,6 +157,8 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     }
     ALOGD("voice_config.rate %d\n", voice_config.rate);
 
+    voice_set_mic_mute(adev, adev->voice.mic_mute);
+
     ALOGV("%s: Opening PCM playback device card_id(%d) device_id(%d)",
           __func__, adev->snd_card, pcm_dev_rx_id);
     session->pcm_rx = pcm_open(adev->snd_card,
