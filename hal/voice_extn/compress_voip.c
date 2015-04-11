@@ -697,6 +697,10 @@ int voice_extn_compress_voip_open_input_stream(struct stream_in *in)
         voip_data.sample_rate = in->config.rate;
     }
 
+    ret = voip_set_mode(in->dev, in->format);
+    if (ret < 0)
+        goto done;
+
     in->usecase = USECASE_COMPRESS_VOIP_CALL;
     if (in->config.rate == 16000)
         in->config = pcm_config_voip_wb;
@@ -704,7 +708,6 @@ int voice_extn_compress_voip_open_input_stream(struct stream_in *in)
         in->config = pcm_config_voip_nb;
 
     voip_data.in_stream_count++;
-    ret = voip_set_mode(in->dev, in->format);
 
 done:
     ALOGV("%s: exit, ret=%d", __func__, ret);
