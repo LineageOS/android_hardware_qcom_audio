@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -233,6 +233,83 @@ int hw_acc_bassboost_send_params(int fd, struct bass_boost_params *bassboost,
 {
     return bassboost_send_params(HW_ACCELERATOR, (void *)&fd,
                                  bassboost, param_send_flags);
+}
+
+void offload_pbe_set_device(struct pbe_params *pbe,
+                            uint32_t device)
+{
+    ALOGV("%s: device=%d", __func__, device);
+    pbe->device = device;
+}
+
+void offload_pbe_set_enable_flag(struct pbe_params *pbe,
+                                 bool enable)
+{
+    ALOGV("%s: enable=%d", __func__, enable);
+    pbe->enable_flag = enable;
+}
+
+int offload_pbe_get_enable_flag(struct pbe_params *pbe)
+{
+    ALOGV("%s: enabled=%d", __func__, pbe->enable_flag);
+    return pbe->enable_flag;
+}
+
+static int pbe_send_params(eff_mode_t mode, void *ctl,
+                            struct pbe_params *pbe,
+                            unsigned param_send_flags)
+{
+    int param_values[128] = {0};
+    int i, *p_param_values = param_values, *cfg = NULL;
+
+    ALOGV("%s: enabled=%d", __func__, pbe->enable_flag);
+    *p_param_values++ = PBE_MODULE;
+    *p_param_values++ = pbe->device;
+    *p_param_values++ = 0; /* num of commands*/
+    if (param_send_flags & OFFLOAD_SEND_PBE_ENABLE_FLAG) {
+        *p_param_values++ = PBE_ENABLE;
+        *p_param_values++ = CONFIG_SET;
+        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
+        *p_param_values++ = PBE_ENABLE_PARAM_LEN;
+        *p_param_values++ = pbe->enable_flag;
+        param_values[2] += 1;
+    }
+    if (param_send_flags & OFFLOAD_SEND_PBE_CONFIG) {
+        *p_param_values++ = PBE_CONFIG;
+        *p_param_values++ = CONFIG_SET;
+        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
+        *p_param_values++ = pbe->cfg_len;
+        cfg = (int *)&pbe->config;
+        for (i = 0; i < (int)pbe->cfg_len ; i+= sizeof(*p_param_values))
+            *p_param_values++ = *cfg++;
+        param_values[2] += 1;
+    }
+
+    if ((mode == OFFLOAD) && param_values[2] && ctl) {
+        mixer_ctl_set_array((struct mixer_ctl *)ctl, param_values,
+                            ARRAY_SIZE(param_values));
+    } else if ((mode == HW_ACCELERATOR) && param_values[2] &&
+               ctl && *(int *)ctl) {
+        if (ioctl(*(int *)ctl, AUDIO_EFFECTS_SET_PP_PARAMS, param_values) < 0)
+            ALOGE("%s: sending h/w acc effects params fail[%d]", __func__, errno);
+    }
+
+    return 0;
+}
+
+int offload_pbe_send_params(struct mixer_ctl *ctl,
+                                  struct pbe_params *pbe,
+                                  unsigned param_send_flags)
+{
+    return pbe_send_params(OFFLOAD, (void *)ctl, pbe,
+                                 param_send_flags);
+}
+
+int hw_acc_pbe_send_params(int fd, struct pbe_params *pbe,
+                                 unsigned param_send_flags)
+{
+    return pbe_send_params(HW_ACCELERATOR, (void *)&fd,
+                                 pbe, param_send_flags);
 }
 
 void offload_virtualizer_set_device(struct virtualizer_params *virtualizer,

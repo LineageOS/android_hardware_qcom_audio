@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -39,6 +39,21 @@ int offload_update_mixer_and_effects_ctl(int card, int device_id,
                                          struct mixer_ctl **ctl);
 void offload_close_mixer(struct mixer **mixer);
 
+
+#define OFFLOAD_SEND_PBE_ENABLE_FLAG      (1 << 0)
+#define OFFLOAD_SEND_PBE_CONFIG           (OFFLOAD_SEND_PBE_ENABLE_FLAG << 1)
+void offload_pbe_set_device(struct pbe_params *pbe,
+                            uint32_t device);
+void offload_pbe_set_enable_flag(struct pbe_params *pbe,
+                                 bool enable);
+int offload_pbe_get_enable_flag(struct pbe_params *pbe);
+
+int offload_pbe_send_params(struct mixer_ctl *ctl,
+                            struct pbe_params *pbe,
+                            unsigned param_send_flags);
+int hw_acc_pbe_send_params(int fd,
+                           struct pbe_params *pbe,
+                           unsigned param_send_flags);
 #define OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG      (1 << 0)
 #define OFFLOAD_SEND_BASSBOOST_STRENGTH         \
                                           (OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG << 1)

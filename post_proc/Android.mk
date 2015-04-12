@@ -26,7 +26,8 @@ endif
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
 	liblog \
-	libtinyalsa
+	libtinyalsa \
+	libdl
 
 LOCAL_MODULE_TAGS := optional
 
