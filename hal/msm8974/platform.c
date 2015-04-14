@@ -588,19 +588,18 @@ void platform_set_echo_reference(void *platform, bool enable)
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
 
-    if (enable) {
-         my_data->ec_ref_enabled = enable;
-         audio_route_apply_and_update_path(adev->audio_route, "echo-reference");
-    } else {
-         if (my_data->ec_ref_enabled) {
-             audio_route_reset_and_update_path(adev->audio_route, "echo-reference");
-             my_data->ec_ref_enabled = enable;
-         } else {
-             ALOGV("EC Reference is already disabled: %d", my_data->ec_ref_enabled);
-         }
+    if (my_data->ec_ref_enabled) {
+        my_data->ec_ref_enabled = false;
+        ALOGV("%s: disabling echo-reference", __func__);
+        audio_route_reset_and_update_path(adev->audio_route, "echo-reference");
     }
 
-    ALOGV("Setting EC Reference: %d", enable);
+    if (enable) {
+         my_data->ec_ref_enabled = true;
+         ALOGD("%s: enabling echo-reference", __func__);
+         audio_route_apply_and_update_path(adev->audio_route, "echo-reference");
+    }
+
 }
 
 static struct csd_data *open_csd_client(bool i2s_ext_modem)
