@@ -1446,6 +1446,23 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
     return -ENOSYS;
 }
 
+#ifdef NO_AUDIO_OUT
+static ssize_t out_write_for_no_output(struct audio_stream_out *stream,
+                                       const void *buffer, size_t bytes)
+{
+    struct stream_out *out = (struct stream_out *)stream;
+
+    /* No Output device supported other than BT for playback.
+     * Sleep for the amount of buffer duration
+     */
+    pthread_mutex_lock(&out->lock);
+    usleep(bytes * 1000000 / audio_stream_frame_size(&out->stream.common) /
+            out_get_sample_rate(&out->stream.common));
+    pthread_mutex_unlock(&out->lock);
+    return bytes;
+}
+#endif
+
 static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                          size_t bytes)
 {
@@ -2088,7 +2105,11 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->stream.common.remove_audio_effect = out_remove_audio_effect;
     out->stream.get_latency = out_get_latency;
     out->stream.set_volume = out_set_volume;
+#ifdef NO_AUDIO_OUT
+    out->stream.write = out_write_for_no_output;
+#else
     out->stream.write = out_write;
+#endif
     out->stream.get_render_position = out_get_render_position;
     out->stream.get_next_write_timestamp = out_get_next_write_timestamp;
     out->stream.get_presentation_position = out_get_presentation_position;
