@@ -54,6 +54,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HFP)),true)
     LOCAL_SRC_FILES += audio_extn/hfp.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_NO_AUDIO_OUT)),true)
+    LOCAL_CFLAGS += -DNO_AUDIO_OUT
+endif
+
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
