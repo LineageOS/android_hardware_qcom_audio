@@ -91,6 +91,17 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev,
                                            struct str_parms *parms);
 #endif
 
+#ifndef SOURCE_TRACKING_ENABLED
+#define audio_extn_source_track_set_parameters(adev, parms) (0)
+#define audio_extn_source_track_get_parameters(adev, query, reply) (0)
+#else
+void audio_extn_source_track_set_parameters(struct audio_device *adev,
+                                            struct str_parms *parms);
+void audio_extn_source_track_get_parameters(struct audio_device *adev,
+                                            struct str_parms *query,
+                                            struct str_parms *reply);
+#endif
+
 #ifndef CUSTOM_STEREO_ENABLED
 #define audio_extn_customstereo_set_parameters(adev, parms)         (0)
 #else
@@ -535,6 +546,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_customstereo_set_parameters(adev, parms);
    audio_extn_hpx_set_parameters(adev, parms);
    audio_extn_pm_set_parameters(parms);
+   audio_extn_source_track_set_parameters(adev, parms);
 }
 
 void audio_extn_get_parameters(const struct audio_device *adev,
@@ -547,6 +559,7 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     get_active_offload_usecases(adev, query, reply);
     audio_extn_dts_eagle_get_parameters(adev, query, reply);
     audio_extn_hpx_get_parameters(query, reply);
+    audio_extn_source_track_get_parameters(adev, query, reply);
 
     kv_pairs = str_parms_to_str(reply);
     ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);

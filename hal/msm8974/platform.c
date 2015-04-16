@@ -3664,3 +3664,54 @@ int platform_set_device_params(struct stream_out *out, int param, int value)
 end:
     return ret;
 }
+
+/*
+ * This is a lookup table to map android audio input device to audio h/w interface (backend).
+ * The table can be extended for other input devices by adding appropriate entries.
+ * Also the audio interface for a particular input device can be overriden by adding
+ * corresponding entry in audio_platform_info.xml file.
+ */
+struct audio_device_to_audio_interface audio_device_to_interface_table[] = {
+    {AUDIO_DEVICE_IN_BUILTIN_MIC, ENUM_TO_STRING(AUDIO_DEVICE_IN_BUILTIN_MIC), "SLIMBUS_0"},
+    {AUDIO_DEVICE_IN_BACK_MIC, ENUM_TO_STRING(AUDIO_DEVICE_IN_BACK_MIC), "SLIMBUS_0"},
+};
+
+int audio_device_to_interface_table_len  =
+    sizeof(audio_device_to_interface_table) / sizeof(audio_device_to_interface_table[0]);
+
+int platform_set_audio_device_interface(const char *device_name, const char *intf_name)
+{
+    int ret = 0;
+    int i;
+
+    if (device_name == NULL || intf_name == NULL) {
+        ALOGE("%s: Invalid input", __func__);
+
+        ret = -EINVAL;
+        goto done;
+    }
+
+    ALOGD("%s: Enter, device name:%s, intf name:%s", __func__, device_name, intf_name);
+
+    size_t device_name_len = strlen(device_name);
+    for (i = 0; i < audio_device_to_interface_table_len; i++) {
+        char* name = audio_device_to_interface_table[i].device_name;
+        size_t name_len = strlen(name);
+        if ((name_len == device_name_len) &&
+            (strncmp(device_name, name, name_len) == 0)) {
+            ALOGD("%s: Matched device name:%s, overwrite intf name with %s",
+                  __func__, device_name, intf_name);
+
+            strlcpy(audio_device_to_interface_table[i].interface_name, intf_name,
+                    sizeof(audio_device_to_interface_table[i].interface_name));
+            goto done;
+        }
+    }
+    ALOGE("%s: Could not find matching device name %s",
+            __func__, device_name);
+
+    ret = -EINVAL;
+
+done:
+    return ret;
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -3942,4 +3942,10 @@ int platform_get_subsys_image_name(char *buf)
 {
     strlcpy(buf, PLATFORM_IMAGE_NAME, sizeof(PLATFORM_IMAGE_NAME));
     return 0;
+}
+
+int platform_set_audio_device_interface(const char * device_name __unused,
+                                        const char *intf_name __unused)
+{
+    return -ENOSYS;
 }

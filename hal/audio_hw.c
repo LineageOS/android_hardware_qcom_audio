@@ -748,14 +748,15 @@ static int read_hdmi_channel_masks(struct stream_out *out)
     return ret;
 }
 
-static audio_usecase_t get_voice_usecase_id_from_list(struct audio_device *adev)
+audio_usecase_t get_usecase_id_from_usecase_type(struct audio_device *adev,
+                                                 usecase_type_t type)
 {
     struct audio_usecase *usecase;
     struct listnode *node;
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if (usecase->type == VOICE_CALL) {
+        if (usecase->type == type) {
             ALOGV("%s: usecase id %d", __func__, usecase->id);
             return usecase->id;
         }
@@ -812,7 +813,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
          */
         if (voice_is_in_call(adev) && adev->mode == AUDIO_MODE_IN_CALL) {
             vc_usecase = get_usecase_from_list(adev,
-                                               get_voice_usecase_id_from_list(adev));
+                                               get_usecase_id_from_usecase_type(adev, VOICE_CALL));
             if ((vc_usecase) && ((vc_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
                 (usecase->devices == AUDIO_DEVICE_IN_VOICE_CALL))) {
                 in_snd_device = vc_usecase->in_snd_device;

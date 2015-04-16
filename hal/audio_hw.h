@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -342,6 +342,8 @@ bool is_offload_usecase(audio_usecase_t uc_id);
 int pcm_ioctl(struct pcm *pcm, int request, ...);
 
 int get_snd_card_state(struct audio_device *adev);
+audio_usecase_t get_usecase_id_from_usecase_type(struct audio_device *adev,
+                                                 usecase_type_t type);
 
 #define LITERAL_TO_STRING(x) #x
 #define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\
