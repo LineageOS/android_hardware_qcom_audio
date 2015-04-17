@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -24,7 +24,7 @@
 #define VOICE_SESS_IDX     (BASE_SESS_IDX)
 
 #ifdef MULTI_VOICE_SESSION_ENABLED
-#define MAX_VOICE_SESSIONS 5
+#define MAX_VOICE_SESSIONS 7
 #else
 #define MAX_VOICE_SESSIONS 1
 #endif
