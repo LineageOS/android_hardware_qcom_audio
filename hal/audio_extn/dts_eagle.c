@@ -190,6 +190,28 @@ int audio_extn_dts_eagle_fade(const struct audio_device *adev, bool fade_in, con
     return 0;
 }
 
+void audio_extn_dts_eagle_send_lic() {
+    char prop[PROPERTY_VALUE_MAX] = {0};
+    bool enabled;
+    property_get("use.dts_eagle", prop, "0");
+    enabled = !strncmp("true", prop, sizeof("true")) || atoi(prop);
+    if (!enabled)
+        return;
+    int fd = open(DEVICE_NODE, O_RDWR);
+    int index = 1;
+    if (fd >= 0) {
+        if (ioctl(fd, DTS_EAGLE_IOCTL_SEND_LICENSE, &index) < 0) {
+            ALOGE("DTS_EAGLE_HAL: error sending license after adsp ssr");
+        } else {
+            ALOGD("DTS_EAGLE_HAL: sent license after adsp ssr");
+        }
+        close(fd);
+    } else {
+        ALOGE("DTS_EAGLE_HAL: error opening eagle");
+    }
+    return;
+}
+
 void audio_extn_dts_eagle_set_parameters(struct audio_device *adev, struct str_parms *parms) {
     int ret, val;
     char value[32] = { 0 }, prop[PROPERTY_VALUE_MAX];

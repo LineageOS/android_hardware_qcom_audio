@@ -3132,6 +3132,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         } else if (strstr(snd_card_status, "ONLINE")) {
             ALOGD("Received sound card ONLINE status");
             set_snd_card_state(adev,SND_CARD_STATE_ONLINE);
+            //send dts hpx license if enabled
+            audio_extn_dts_eagle_send_lic();
         }
     }
 

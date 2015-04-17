@@ -292,6 +292,7 @@ void audio_extn_compr_cap_deinit();
 #define audio_extn_dts_eagle_set_parameters(adev, parms)     (0)
 #define audio_extn_dts_eagle_get_parameters(adev, query, reply) (0)
 #define audio_extn_dts_eagle_fade(adev, fade_in, out) (0)
+#define audio_extn_dts_eagle_send_lic()               (0)
 #define audio_extn_dts_create_state_notifier_node(stream_out) (0)
 #define audio_extn_dts_notify_playback_state(stream_out, has_video, sample_rate, \
                                     channels, is_playing) (0)
@@ -303,6 +304,7 @@ void audio_extn_dts_eagle_set_parameters(struct audio_device *adev,
 int audio_extn_dts_eagle_get_parameters(const struct audio_device *adev,
                   struct str_parms *query, struct str_parms *reply);
 int audio_extn_dts_eagle_fade(const struct audio_device *adev, bool fade_in, const struct stream_out *out);
+void audio_extn_dts_eagle_send_lic();
 void audio_extn_dts_create_state_notifier_node(int stream_out);
 void audio_extn_dts_notify_playback_state(int stream_out, int has_video, int sample_rate,
                                   int channels, int is_playing);
