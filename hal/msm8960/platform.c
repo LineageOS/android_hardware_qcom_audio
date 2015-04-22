@@ -417,6 +417,12 @@ int platform_set_snd_device_acdb_id(snd_device_t snd_device __unused,
     return -ENODEV;
 }
 
+int platform_get_snd_device_acdb_id(snd_device_t snd_device __unused)
+{
+    ALOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
 {
     struct platform_data *my_data = (struct platform_data *)platform;

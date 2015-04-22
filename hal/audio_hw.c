@@ -158,6 +158,9 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_QCHAT_CALL] = "qchat-call",
     [USECASE_VOWLAN_CALL] = "vowlan-call",
 
+    [USECASE_AUDIO_SPKR_CALIB_RX] = "spkr-rx-calib",
+    [USECASE_AUDIO_SPKR_CALIB_TX] = "spkr-vi-record",
+
     [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = "afe-proxy-playback",
     [USECASE_AUDIO_RECORD_AFE_PROXY] = "afe-proxy-record",
 };
@@ -279,6 +282,9 @@ int enable_snd_device(struct audio_device *adev,
     audio_extn_sound_trigger_update_device_status(snd_device,
                                     ST_EVENT_SND_DEVICE_BUSY);
 
+    if (audio_extn_spkr_prot_is_enabled())
+         audio_extn_spkr_prot_calib_cancel(adev);
+
     if (platform_send_audio_calibration(adev->platform, snd_device) < 0) {
         adev->snd_dev_ref_cnt[snd_device]--;
         audio_extn_sound_trigger_update_device_status(snd_device,
@@ -286,9 +292,22 @@ int enable_snd_device(struct audio_device *adev,
         return -EINVAL;
     }
 
-    const char * dev_path = platform_get_snd_device_name(snd_device);
-    ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, dev_path);
-    audio_route_apply_and_update_path(adev->audio_route, dev_path);
+    if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
+        audio_extn_spkr_prot_is_enabled()) {
+        if (audio_extn_spkr_prot_get_acdb_id(snd_device) < 0) {
+            adev->snd_dev_ref_cnt[snd_device]--;
+            return -EINVAL;
+        }
+        if (audio_extn_spkr_prot_start_processing(snd_device)) {
+            ALOGE("%s: spkr_start_processing failed", __func__);
+            return -EINVAL;
+        }
+    } else {
+        const char * dev_path = platform_get_snd_device_name(snd_device);
+        ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, dev_path);
+        audio_route_apply_and_update_path(adev->audio_route, dev_path);
+    }
 
     return 0;
 }
@@ -309,10 +328,15 @@ int disable_snd_device(struct audio_device *adev,
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
         const char * dev_path = platform_get_snd_device_name(snd_device);
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, dev_path);
-        audio_route_reset_and_update_path(adev->audio_route, dev_path);
+        if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
+            snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
+            audio_extn_spkr_prot_is_enabled()) {
+            audio_extn_spkr_prot_stop_processing(snd_device);
+        } else {
+            audio_route_reset_and_update_path(adev->audio_route, dev_path);
+        }
         audio_extn_sound_trigger_update_device_status(snd_device,
                                         ST_EVENT_SND_DEVICE_FREE);
-
     }
     return 0;
 }

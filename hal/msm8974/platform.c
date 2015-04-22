@@ -26,6 +26,7 @@
 #include <audio_hw.h>
 #include <platform_api.h>
 #include "platform.h"
+#include "audio_extn.h"
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
@@ -119,6 +120,9 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                                 AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_HFP_SCO] = {HFP_PCM_RX, HFP_SCO_RX},
 
+    [USECASE_AUDIO_SPKR_CALIB_RX] = {SPKR_PROT_CALIB_RX_PCM_DEVICE, -1},
+    [USECASE_AUDIO_SPKR_CALIB_TX] = {-1, SPKR_PROT_CALIB_TX_PCM_DEVICE},
+
     [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = {AFE_PROXY_PLAYBACK_PCM_DEVICE,
                                           AFE_PROXY_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_AFE_PROXY] = {AFE_PROXY_PLAYBACK_PCM_DEVICE,
@@ -152,6 +156,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = "voice-tty-vco-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = "voice-tty-hco-handset",
     [SND_DEVICE_OUT_VOICE_TX] = "voice-tx",
+    [SND_DEVICE_OUT_SPEAKER_PROTECTED] = "speaker-protected",
+    [SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED] = "voice-speaker-protected",
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
@@ -198,6 +204,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = "voice-rec-dmic-ef-fluence",
 
     [SND_DEVICE_IN_VOICE_RX] = "voice-rx",
+
+    [SND_DEVICE_IN_CAPTURE_VI_FEEDBACK] = "vi-feedback",
 };
 
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
@@ -225,6 +233,8 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = 37,
     [SND_DEVICE_OUT_VOICE_TX] = 45,
+    [SND_DEVICE_OUT_SPEAKER_PROTECTED] = 124,
+    [SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED] = 101,
 
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
     [SND_DEVICE_IN_HANDSET_MIC_AEC] = 106,
@@ -270,6 +280,8 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = 43,
 
     [SND_DEVICE_IN_VOICE_RX] = 44,
+
+    [SND_DEVICE_IN_CAPTURE_VI_FEEDBACK] = 102,
 };
 
 struct name_to_index {
@@ -305,6 +317,8 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET)},
 
     /* in */
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_AEC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_NS)},
@@ -346,6 +360,8 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_MIC_NS)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_DMIC_STEREO)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE)},
+
+    {TO_NAME_INDEX(SND_DEVICE_IN_CAPTURE_VI_FEEDBACK)},
 };
 
 static char * backend_table[SND_DEVICE_MAX] = {0};
@@ -796,7 +812,7 @@ void *platform_init(struct audio_device *adev)
     set_platform_defaults(my_data);
 
     /* Initialize platform specific ids and/or backends*/
-    platform_info_init();
+    audio_extn_spkr_prot_init(adev);
 
     /* load csd client */
     platform_csd_init(my_data);
@@ -904,6 +920,15 @@ done:
     return ret;
 }
 
+int platform_get_snd_device_acdb_id(snd_device_t snd_device)
+{
+    if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
+        ALOGE("%s: Invalid snd_device = %d", __func__, snd_device);
+        return -EINVAL;
+    }
+    return acdb_device_table[snd_device];
+}
+
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -956,7 +981,11 @@ int platform_switch_voice_call_enable_device_config(void *platform,
     if (my_data->csd == NULL)
         return ret;
 
-    acdb_rx_id = acdb_device_table[out_snd_device];
+    if (out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER &&
+        audio_extn_spkr_prot_is_enabled())
+        acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED];
+    else
+    	acdb_rx_id = acdb_device_table[out_snd_device];
 
     acdb_tx_id = acdb_device_table[in_snd_device];
 
@@ -984,6 +1013,10 @@ int platform_switch_voice_call_device_post(void *platform,
     if (my_data->acdb_send_voice_cal == NULL) {
         ALOGE("%s: dlsym error for acdb_send_voice_call", __func__);
     } else {
+        if (out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER &&
+            audio_extn_spkr_prot_is_enabled())
+            out_snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED;
+
         acdb_rx_id = acdb_device_table[out_snd_device];
         acdb_tx_id = acdb_device_table[in_snd_device];
 
@@ -1008,7 +1041,11 @@ int platform_switch_voice_call_usecase_route_post(void *platform,
     if (my_data->csd == NULL)
         return ret;
 
-    acdb_rx_id = acdb_device_table[out_snd_device];
+    if (out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER &&
+        audio_extn_spkr_prot_is_enabled())
+        acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED];
+    else
+        acdb_rx_id = acdb_device_table[out_snd_device];
 
     acdb_tx_id = acdb_device_table[in_snd_device];
 

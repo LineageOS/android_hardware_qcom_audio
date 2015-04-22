@@ -25,6 +25,7 @@ void platform_add_backend_name(void *platform, char *mixer_path,
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type);
 int platform_get_snd_device_index(char *snd_device_index_name);
 int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id);
+int platform_get_snd_device_acdb_id(snd_device_t snd_device);
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device);
 int platform_switch_voice_call_device_pre(void *platform);
 int platform_switch_voice_call_enable_device_config(void *platform,

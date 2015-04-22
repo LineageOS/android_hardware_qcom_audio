@@ -25,6 +25,24 @@ void audio_extn_extspk_update(void* extn);
 void audio_extn_extspk_set_mode(void* extn, audio_mode_t mode);
 void audio_extn_extspk_set_voice_vol(void* extn, float vol);
 
+#ifndef SPKR_PROT_ENABLED
+#define audio_extn_spkr_prot_init(adev)       (0)
+#define audio_extn_spkr_prot_start_processing(snd_device)    (-EINVAL)
+#define audio_extn_spkr_prot_calib_cancel(adev) (0)
+#define audio_extn_spkr_prot_stop_processing(snd_device)     (0)
+#define audio_extn_spkr_prot_is_enabled() (false)
+#define audio_extn_spkr_prot_get_acdb_id(snd_device)         (-EINVAL)
+#define audio_extn_get_spkr_prot_snd_device(snd_device) (snd_device)
+#else
+void audio_extn_spkr_prot_init(void *adev);
+int audio_extn_spkr_prot_start_processing(snd_device_t snd_device);
+void audio_extn_spkr_prot_stop_processing(snd_device_t snd_device);
+bool audio_extn_spkr_prot_is_enabled();
+int audio_extn_spkr_prot_get_acdb_id(snd_device_t snd_device);
+int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device);
+void audio_extn_spkr_prot_calib_cancel(void *adev);
+#endif
+
 #ifndef HFP_ENABLED
 #define audio_extn_hfp_is_active(adev)                  (0)
 #define audio_extn_hfp_get_usecase()                    (-1)

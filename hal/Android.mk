@@ -31,6 +31,7 @@ LOCAL_SRC_FILES := \
 	audio_extn/ext_speaker.c \
 	$(AUDIO_PLATFORM)/platform.c
 
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
@@ -69,6 +70,11 @@ ifeq ($(strip $(BOARD_SUPPORTS_SOUND_TRIGGER)),true)
     LOCAL_CFLAGS += -DSOUND_TRIGGER_PLATFORM_NAME=$(TARGET_BOARD_PLATFORM)
     LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/sound_trigger
     LOCAL_SRC_FILES += audio_extn/soundtrigger.c
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SPKR_PROTECTION)),true)
+    LOCAL_CFLAGS += -DSPKR_PROT_ENABLED
+    LOCAL_SRC_FILES += audio_extn/spkr_protection.c
 endif
 
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
