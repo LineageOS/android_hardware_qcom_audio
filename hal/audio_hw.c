@@ -546,7 +546,8 @@ static void check_and_route_capture_usecases(struct audio_device *adev,
         usecase = node_to_item(node, struct audio_usecase, list);
         if (usecase->type != PCM_PLAYBACK &&
                 usecase != uc_info &&
-                usecase->in_snd_device != snd_device) {
+                usecase->in_snd_device != snd_device &&
+                (usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND)) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
                   platform_get_snd_device_name(usecase->in_snd_device));
