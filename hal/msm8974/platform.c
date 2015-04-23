@@ -816,7 +816,10 @@ void *platform_init(struct audio_device *adev)
 
     /* Initialize platform specific ids and/or backends*/
     platform_info_init();
+
     audio_extn_spkr_prot_init(adev);
+
+    audio_extn_hwdep_cal_send(adev->snd_card, my_data->acdb_handle);
 
     /* load csd client */
     platform_csd_init(my_data);

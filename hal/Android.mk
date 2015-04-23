@@ -31,7 +31,6 @@ LOCAL_SRC_FILES := \
 	audio_extn/ext_speaker.c \
 	$(AUDIO_PLATFORM)/platform.c
 
-
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
@@ -80,6 +79,13 @@ endif
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DSM_FEEDBACK)),true)
     LOCAL_CFLAGS += -DDSM_FEEDBACK_ENABLED
     LOCAL_SRC_FILES += audio_extn/dsm_feedback.c
+endif
+
+ifneq ($(filter msm8992 msm8994,$(TARGET_BOARD_PLATFORM)),)
+  # push codec/mad calibration to HW dep node
+  # applicable to msm8992/8994 or newer platforms
+  LOCAL_CFLAGS += -DHWDEP_CAL_ENABLED
+  LOCAL_SRC_FILES += audio_extn/hwdep_cal.c
 endif
 
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)

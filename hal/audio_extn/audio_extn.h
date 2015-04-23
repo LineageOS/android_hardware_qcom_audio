@@ -95,4 +95,10 @@ void audio_extn_dsm_feedback_enable(struct audio_device *adev,
                          bool benable);
 #endif
 
+#ifndef HWDEP_CAL_ENABLED
+#define  audio_extn_hwdep_cal_send(snd_card, acdb_handle) (0)
+#else
+void audio_extn_hwdep_cal_send(int snd_card, void *acdb_handle);
+#endif
+
 #endif /* AUDIO_EXTN_H */
