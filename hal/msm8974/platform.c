@@ -44,9 +44,13 @@
 #include "sound/msmcal-hwdep.h"
 
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
-#define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
+#define MIXER_XML_DEFAULT_PATH "/system/etc/mixer_paths.xml"
 #define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_I2S "/system/etc/mixer_paths_i2s.xml"
+#define MIXER_XML_BASE_STRING "/system/etc/mixer_paths"
+#define MIXER_FILE_DELIMITER "_"
+#define MIXER_FILE_EXT ".xml"
+
 
 #define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
 #define PLATFORM_INFO_XML_PATH_I2S  "/system/etc/audio_platform_info_i2s.xml"
@@ -1018,9 +1022,12 @@ void *platform_init(struct audio_device *adev)
     char baseband[PROPERTY_VALUE_MAX];
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data = NULL;
-    int retry_num = 0, snd_card_num = 0, key = 0;
+    int retry_num = 0, snd_card_num = 0, key = 0, ret = 0;
     const char *snd_card_name;
     char *cvd_version = NULL;
+    char *snd_internal_name = NULL;
+    char *tmp = NULL;
+    char mixer_xml_file[MIXER_PATH_MAX_LENGTH]= {0};
 
     my_data = calloc(1, sizeof(struct platform_data));
 
@@ -1058,10 +1065,51 @@ void *platform_init(struct audio_device *adev)
 
                 adev->audio_route = audio_route_init(snd_card_num,
                                                      MIXER_XML_PATH_I2S);
-            } else if (audio_extn_read_xml(adev, snd_card_num, MIXER_XML_PATH,
-                                    MIXER_XML_PATH_AUXPCM) == -ENOSYS) {
-                adev->audio_route = audio_route_init(snd_card_num,
-                                                 MIXER_XML_PATH);
+            } else {
+                /* Get the codec internal name from the sound card name
+                 * and form the mixer paths file name dynamically. This
+                 * is generic way of picking any codec name based mixer
+                 * files in future with no code change. This code
+                 * assumes mixer files are formed with format as
+                 * mixer_paths_internalcodecname.xml
+
+                 * If this dynamically read mixer files fails to open then it
+                 * falls back to default mixer file i.e mixer_paths.xml. This is
+                 * done to preserve backward compatibility but not mandatory as
+                 * long as the mixer files are named as per above assumption.
+                */
+
+                snd_internal_name = strtok_r(snd_card_name, "-", &tmp);
+                if (snd_internal_name != NULL)
+                    snd_internal_name = strtok_r(NULL, "-", &tmp);
+
+                if (snd_internal_name != NULL) {
+                    strlcpy(mixer_xml_file, MIXER_XML_BASE_STRING,
+                        MIXER_PATH_MAX_LENGTH);
+                    strlcat(mixer_xml_file, MIXER_FILE_DELIMITER,
+                        MIXER_PATH_MAX_LENGTH);
+                    strlcat(mixer_xml_file, snd_internal_name,
+                        MIXER_PATH_MAX_LENGTH);
+                    strlcat(mixer_xml_file, MIXER_FILE_EXT,
+                        MIXER_PATH_MAX_LENGTH);
+                } else {
+                    strlcpy(mixer_xml_file, MIXER_XML_DEFAULT_PATH,
+                        MIXER_PATH_MAX_LENGTH);
+                }
+
+                if (F_OK == access(mixer_xml_file, 0)) {
+                    ALOGD("%s: Loading mixer file: %s", __func__, mixer_xml_file);
+                    if (audio_extn_read_xml(adev, snd_card_num, mixer_xml_file,
+                                    MIXER_XML_PATH_AUXPCM) == -ENOSYS)
+                        adev->audio_route = audio_route_init(snd_card_num,
+                                                       mixer_xml_file);
+                } else {
+                    ALOGD("%s: Loading default mixer file", __func__);
+                    if(audio_extn_read_xml(adev, snd_card_num, MIXER_XML_DEFAULT_PATH,
+                                    MIXER_XML_PATH_AUXPCM) == -ENOSYS)
+                        adev->audio_route = audio_route_init(snd_card_num,
+                                                       MIXER_XML_DEFAULT_PATH);
+                }
             }
             if (!adev->audio_route) {
                 ALOGE("%s: Failed to init audio route controls, aborting.",
