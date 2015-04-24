@@ -51,6 +51,8 @@
 #include "platform_api.h"
 #include "edid.h"
 
+#include "sound/compress_params.h"
+
 #define MAX_SLEEP_RETRY 100
 #define WIFI_INIT_WAIT_SLEEP 50
 
@@ -666,6 +668,240 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);
     free(kv_pairs);
 }
+
+#ifndef COMPRESS_METADATA_NEEDED
+#define audio_extn_parse_compress_metadata(out, parms) (0)
+#else
+int audio_extn_parse_compress_metadata(struct stream_out *out,
+                                       struct str_parms *parms)
+{
+    int ret = 0;
+    char value[32];
+
+    if (out->format == AUDIO_FORMAT_FLAC) {
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->gapless_mdata.min_blk_size =
+            out->compr_config.codec->options.flac_dec.min_blk_size = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->gapless_mdata.max_blk_size =
+            out->compr_config.codec->options.flac_dec.max_blk_size = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_FRAME_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.min_frame_size = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_FRAME_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.max_frame_size = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ALOGV("FLAC metadata: min_blk_size %d, max_blk_size %d min_frame_size %d max_frame_size %d",
+              out->compr_config.codec->options.flac_dec.min_blk_size,
+              out->compr_config.codec->options.flac_dec.max_blk_size,
+              out->compr_config.codec->options.flac_dec.min_frame_size,
+              out->compr_config.codec->options.flac_dec.max_frame_size);
+    }
+
+    else if (out->format == AUDIO_FORMAT_ALAC) {
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_FRAME_LENGTH, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.alac.frame_length = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_COMPATIBLE_VERSION, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.alac.compatible_version = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_BIT_DEPTH, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.alac.bit_depth = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_PB, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.alac.pb = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_MB, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.alac.mb = atoi(value);
+            out->send_new_metadata = 1;
+        }
+
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_KB, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.alac.kb = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_NUM_CHANNELS, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.alac.num_channels = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_MAX_RUN, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.alac.max_run = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_MAX_FRAME_BYTES, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.alac.max_frame_bytes = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_AVG_BIT_RATE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.alac.avg_bit_rate = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_SAMPLING_RATE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.alac.sample_rate = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_CHANNEL_LAYOUT_TAG, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.alac.channel_layout_tag = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ALOGV("ALAC CSD values: frameLength %d bitDepth %d numChannels %d"
+                " maxFrameBytes %d, avgBitRate %d, sampleRate %d",
+                out->compr_config.codec->options.alac.frame_length,
+                out->compr_config.codec->options.alac.bit_depth,
+                out->compr_config.codec->options.alac.num_channels,
+                out->compr_config.codec->options.alac.max_frame_bytes,
+                out->compr_config.codec->options.alac.avg_bit_rate,
+                out->compr_config.codec->options.alac.sample_rate);
+    }
+
+    else if (out->format == AUDIO_FORMAT_APE) {
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_COMPATIBLE_VERSION, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.ape.compatible_version = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_COMPRESSION_LEVEL, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.ape.compression_level = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_FORMAT_FLAGS, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.ape.format_flags = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_BLOCKS_PER_FRAME, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.ape.blocks_per_frame = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_FINAL_FRAME_BLOCKS, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.ape.final_frame_blocks = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_TOTAL_FRAMES, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.ape.total_frames = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_BITS_PER_SAMPLE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.ape.bits_per_sample = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_NUM_CHANNELS, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.ape.num_channels = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_SAMPLE_RATE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.ape.sample_rate = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_SEEK_TABLE_PRESENT, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.ape.seek_table_present = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ALOGV("APE CSD values: compatibleVersion %d compressionLevel %d"
+                " formatFlags %d blocksPerFrame %d finalFrameBlocks %d"
+                " totalFrames %d bitsPerSample %d numChannels %d"
+                " sampleRate %d seekTablePresent %d",
+                out->compr_config.codec->options.ape.compatible_version,
+                out->compr_config.codec->options.ape.compression_level,
+                out->compr_config.codec->options.ape.format_flags,
+                out->compr_config.codec->options.ape.blocks_per_frame,
+                out->compr_config.codec->options.ape.final_frame_blocks,
+                out->compr_config.codec->options.ape.total_frames,
+                out->compr_config.codec->options.ape.bits_per_sample,
+                out->compr_config.codec->options.ape.num_channels,
+                out->compr_config.codec->options.ape.sample_rate,
+                out->compr_config.codec->options.ape.seek_table_present);
+    }
+
+    else if (out->format == AUDIO_FORMAT_VORBIS) {
+        // transcoded bitstream mode
+        out->compr_config.codec->options.vorbis_dec.bit_stream_fmt = 1;
+        out->send_new_metadata = 1;
+    }
+
+    else if (out->format == AUDIO_FORMAT_WMA || out->format == AUDIO_FORMAT_WMA_PRO) {
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_FORMAT_TAG, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->format = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BLOCK_ALIGN, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.super_block_align = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BIT_PER_SAMPLE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.bits_per_sample = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_CHANNEL_MASK, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.channelmask = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.encodeopt = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION1, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.encodeopt1 = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION2, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.encodeopt2 = atoi(value);
+            out->send_new_metadata = 1;
+        }
+        ALOGV("WMA params: fmt %x, balgn %x, sr %d, chmsk %x, encop %x, op1 %x, op2 %x",
+                out->compr_config.codec->format,
+                out->compr_config.codec->options.wma.super_block_align,
+                out->compr_config.codec->options.wma.bits_per_sample,
+                out->compr_config.codec->options.wma.channelmask,
+                out->compr_config.codec->options.wma.encodeopt,
+                out->compr_config.codec->options.wma.encodeopt1,
+                out->compr_config.codec->options.wma.encodeopt2);
+    }
+
+    return ret;
+}
+#endif
 
 #ifdef AUXPCM_BT_ENABLED
 int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,
