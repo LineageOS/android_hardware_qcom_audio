@@ -102,6 +102,8 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                          MULTIMEDIA2_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] = {PLAYBACK_OFFLOAD_DEVICE,
                                         PLAYBACK_OFFLOAD_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_TTS] = {MULTIMEDIA3_PCM_DEVICE,
+                                        MULTIMEDIA3_PCM_DEVICE},
     [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE,
                               AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
