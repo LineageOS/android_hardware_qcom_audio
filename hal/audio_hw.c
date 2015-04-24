@@ -2244,19 +2244,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             status = -EINVAL;
         }
         if (status == 0) {
-            if (adev->speaker_lr_swap != reverse_speakers) {
-                adev->speaker_lr_swap = reverse_speakers;
-                // only update the selected device if there is active pcm playback
-                struct audio_usecase *usecase;
-                struct listnode *node;
-                list_for_each(node, &adev->usecase_list) {
-                    usecase = node_to_item(node, struct audio_usecase, list);
-                    if (usecase->type == PCM_PLAYBACK) {
-                        select_devices(adev, usecase->id);
-                        break;
-                    }
-                }
-            }
+            platform_swap_lr_channels(adev, reverse_speakers);
         }
     }
 
