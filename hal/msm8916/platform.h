@@ -301,4 +301,12 @@ enum {
  */
 #define DEVICE_PARAM_MUTE_ID    0
 #define DEVICE_PARAM_LATENCY_ID 1
+
+#define ENUM_TO_STRING(X) #X
+
+struct audio_device_to_audio_interface {
+    audio_devices_t device;
+    char device_name[100];
+    char interface_name[100];
+};
 #endif // QCOM_AUDIO_PLATFORM_H
