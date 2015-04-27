@@ -2603,31 +2603,29 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
 
     pthread_mutex_lock(&in->lock);
 
-    if (in->pcm) {
-        if(SND_CARD_STATE_OFFLINE == snd_scard_state) {
-            ALOGD(" %s: sound card is not active/SSR state", __func__);
-            ret= -EIO;;
-            goto exit;
-        } else {
-            if (in->is_st_session &&  !in->is_st_session_active) {
-                ALOGD(" %s: Sound trigger is not active/SSR", __func__);
-                ret= -EIO;;
-                goto exit;
-            }
-        }
+    if (in->is_st_session) {
+        ALOGVV(" %s: reading on st session bytes=%zu", __func__, bytes);
+        /* Read from sound trigger HAL */
+        audio_extn_sound_trigger_read(in, buffer, bytes);
+        pthread_mutex_unlock(&in->lock);
+        return bytes;
+    }
+
+    if (in->pcm && (SND_CARD_STATE_OFFLINE == snd_scard_state)) {
+        ALOGD(" %s: sound card is not active/SSR state", __func__);
+        ret= -EIO;;
+        goto exit;
     }
 
     if (in->standby) {
-        if (!in->is_st_session) {
-            pthread_mutex_lock(&adev->lock);
-            if (in->usecase == USECASE_COMPRESS_VOIP_CALL)
-                ret = voice_extn_compress_voip_start_input_stream(in);
-            else
-                ret = start_input_stream(in);
-            pthread_mutex_unlock(&adev->lock);
-            if (ret != 0) {
-                goto exit;
-            }
+        pthread_mutex_lock(&adev->lock);
+        if (in->usecase == USECASE_COMPRESS_VOIP_CALL)
+            ret = voice_extn_compress_voip_start_input_stream(in);
+        else
+            ret = start_input_stream(in);
+        pthread_mutex_unlock(&adev->lock);
+        if (ret != 0) {
+            goto exit;
         }
         in->standby = 0;
     }
@@ -2657,17 +2655,9 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
 exit:
     /* ToDo: There may be a corner case when SSR happens back to back during
        start/stop. Need to post different error to handle that. */
-    if (-ENETRESET == ret) {
-        /* CPE SSR results in kernel returning ENETRESET for sound trigger
-          session reading on LAB data. In this case do not set sound card state
-          offline, instead mark this sound trigger session inactive to avoid
-          further reading of LAB data from CPE driver. Marking the session
-          inactive handles both CPE and ADSP SSR for sound trigger session */
-        if (!in->is_st_session)
-            set_snd_card_state(adev,SND_CARD_STATE_OFFLINE);
-        else
-            in->is_st_session_active = false;
-    }
+    if (-ENETRESET == ret)
+        set_snd_card_state(adev,SND_CARD_STATE_OFFLINE);
+
     pthread_mutex_unlock(&in->lock);
 
     if (ret != 0) {
@@ -3386,7 +3376,7 @@ static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev __unu
 }
 
 static int adev_open_input_stream(struct audio_hw_device *dev,
-                                  audio_io_handle_t handle __unused,
+                                  audio_io_handle_t handle,
                                   audio_devices_t devices,
                                   struct audio_config *config,
                                   struct audio_stream_in **stream_in,

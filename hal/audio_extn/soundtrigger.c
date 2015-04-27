@@ -30,6 +30,7 @@
 /* #define LOG_NDEBUG 0 */
 #define LOG_NDDEBUG 0
 
+#include <errno.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <dlfcn.h>
@@ -64,7 +65,7 @@ get_sound_trigger_info(int capture_handle)
 {
     struct sound_trigger_info  *st_ses_info = NULL;
     struct listnode *node;
-    ALOGD("%s: list %d capture_handle %d", __func__,
+    ALOGV("%s: list empty %d capture_handle %d", __func__,
            list_empty(&st_dev->st_ses_list), capture_handle);
     list_for_each(node, &st_dev->st_ses_list) {
         st_ses_info = node_to_item(node, struct sound_trigger_info , list);
@@ -126,6 +127,45 @@ int audio_hw_call_back(sound_trigger_event_type_t event,
     }
     pthread_mutex_unlock(&st_dev->lock);
     return status;
+}
+
+int audio_extn_sound_trigger_read(struct stream_in *in, void *buffer,
+                       size_t bytes)
+{
+    int ret = -1;
+    struct sound_trigger_info  *st_info = NULL;
+    audio_event_info_t event;
+
+    if (!st_dev)
+       return ret;
+
+    if (!in->is_st_session_active) {
+        ALOGE(" %s: Sound trigger is not active", __func__);
+        goto exit;
+    }
+    if(in->standby)
+        in->standby = false;
+
+    pthread_mutex_lock(&st_dev->lock);
+    st_info = get_sound_trigger_info(in->capture_handle);
+    pthread_mutex_unlock(&st_dev->lock);
+    if (st_info) {
+        event.u.aud_info.ses_info = &st_info->st_ses;
+        event.u.aud_info.buf = buffer;
+        event.u.aud_info.num_bytes = bytes;
+        ret = st_dev->st_callback(AUDIO_EVENT_READ_SAMPLES, &event);
+    }
+
+exit:
+    if (ret) {
+        if (-ENETRESET == ret)
+            in->is_st_session_active = false;
+        memset(buffer, 0, bytes);
+        ALOGV("%s: read failed status %d - sleep", __func__, ret);
+        usleep((bytes * 1000000) / (audio_stream_in_frame_size((struct audio_stream_in *)in) *
+                                   in->config.rate));
+    }
+    return ret;
 }
 
 void audio_extn_sound_trigger_stop_lab(struct stream_in *in)
