@@ -124,7 +124,7 @@ enum tty_modes {
 
 #define AUDIO_HW_IN_SAMPLERATE 8000                 // Default audio input sample rate
 #define AUDIO_HW_IN_CHANNELS (AUDIO_CHANNEL_IN_MONO) // Default audio input channel mask
-#define AUDIO_HW_IN_BUFFERSIZE 480 * 4                 // Default audio input buffer size
+#define AUDIO_HW_IN_BUFFERSIZE 2048                 // Default audio input buffer size
 #define AUDIO_HW_IN_FORMAT (AUDIO_FORMAT_PCM_16_BIT)  // Default audio input sample format
 #ifdef QCOM_VOIP_ENABLED
 #define AUDIO_HW_VOIP_BUFFERSIZE_8K 320
@@ -252,28 +252,9 @@ private:
                                 int *pFormat,
                                 uint32_t *pChannels,
                                 uint32_t *pRate);
-        virtual uint32_t sampleRate() const {
-            char af_quality[PROP_VALUE_MAX];
-            property_get("af.resampler.quality",af_quality,"0");
-            if(strcmp("255",af_quality) == 0) {
-                ALOGV("SampleRate 48k");
-                return 48000;
-            } else {
-                ALOGV("SampleRate 44.1k");
-                return 44100;
-            }
-        }
-        virtual size_t bufferSize() const {
-            char af_quality[PROP_VALUE_MAX];
-            property_get("af.resampler.quality",af_quality,"0");
-            if(strcmp("255",af_quality) == 0) {
-                ALOGV("Bufsize 5248");
-                return 5248;
-            } else {
-                ALOGV("Bufsize 4800");
-                return 4800;
-            }
-        }
+        virtual uint32_t    sampleRate() const { return 48000; }
+        virtual size_t      bufferSize() const { return 5248; }
+
         virtual uint32_t    channels() const { return AUDIO_CHANNEL_OUT_STEREO; }
         virtual int         format() const { return AUDIO_FORMAT_PCM_16_BIT; }
 
