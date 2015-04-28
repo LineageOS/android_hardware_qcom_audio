@@ -65,12 +65,14 @@ public:
                                             AudioSystem::output_flags flags,
                                                      const audio_offload_info_t *offloadInfo = NULL);
         virtual status_t startOutput(audio_io_handle_t output,
-                                     AudioSystem::stream_type stream,
-                                     int session = 0);
+                                     audio_stream_type stream,
+                                     audio_session_t session);
         virtual status_t stopOutput(audio_io_handle_t output,
-                                    AudioSystem::stream_type stream,
-                                    int session = 0);
-        virtual void releaseOutput(audio_io_handle_t output);
+                                    audio_stream_type stream,
+                                    audio_session_t session);
+        virtual void releaseOutput(audio_io_handle_t output,
+                                  audio_stream_type_t stream,
+                                  audio_session_t session);
         virtual audio_io_handle_t getInput(int inputSource,
                                             uint32_t samplingRate,
                                             audio_format_t format,
