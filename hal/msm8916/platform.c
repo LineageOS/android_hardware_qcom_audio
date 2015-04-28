@@ -3290,8 +3290,15 @@ int platform_set_codec_backend_cfg(struct audio_device* adev,
     ALOGV("%s bit width: %d, sample rate: %d", __func__, bit_width, sample_rate);
 
     int ret = 0;
+    const char *snd_card_name = mixer_get_name(adev->mixer);
     if (bit_width != adev->cur_codec_backend_bit_width) {
-        const char * mixer_ctl_name = "SLIM_0_RX Format";
+        const char * mixer_ctl_name;
+        if (!strncmp(snd_card_name, "msm8952-tomtom-snd-card",
+                 sizeof("msm8952-tomtom-snd-card"))) {
+            mixer_ctl_name = "SLIM_0_RX Format";
+        }
+        else
+            mixer_ctl_name = "MI2S_RX Format";
         struct  mixer_ctl *ctl;
         ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
         if (!ctl) {
