@@ -66,7 +66,9 @@ void AudioPolicyManager::setStrategyMute(routing_strategy strategy,
     }
 }
 
-void AudioPolicyManager::releaseOutput(audio_io_handle_t output)
+void AudioPolicyManager::releaseOutput(audio_io_handle_t output,
+                                      audio_stream_type_t stream,
+                                      audio_session_t session)
 {
     ALOGV("releaseOutput() %d", output);
     ssize_t index = mOutputs.indexOfKey(output);
@@ -869,8 +871,8 @@ audio_io_handle_t AudioPolicyManager::getOutput(AudioSystem::stream_type stream,
     return output;
 }
 status_t AudioPolicyManager::startOutput(audio_io_handle_t output,
-                                             AudioSystem::stream_type stream,
-                                             int session)
+                                             audio_stream_type stream,
+                                             audio_session_t session)
 {
     ALOGV("startOutput() output %d, stream %d, session %d", output, stream, session);
     ssize_t index = mOutputs.indexOfKey(output);
@@ -951,8 +953,8 @@ status_t AudioPolicyManager::startOutput(audio_io_handle_t output,
 
 
 status_t AudioPolicyManager::stopOutput(audio_io_handle_t output,
-                                            AudioSystem::stream_type stream,
-                                            int session)
+                                            audio_stream_type stream,
+                                            audio_session_t session)
 {
     ALOGV("stopOutput() output %d, stream %d, session %d", output, stream, session);
     ssize_t index = mOutputs.indexOfKey(output);
