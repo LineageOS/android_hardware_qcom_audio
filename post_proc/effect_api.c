@@ -38,6 +38,7 @@
 
 #include <stdbool.h>
 #include <cutils/log.h>
+#include <errno.h>
 #include <tinyalsa/asoundlib.h>
 #include <audio_effects.h>
 
