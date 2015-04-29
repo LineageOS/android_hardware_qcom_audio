@@ -25,6 +25,7 @@
 #include <math.h>
 #include <cutils/log.h>
 #include <cutils/str_parms.h>
+#include <stdlib.h>
 
 #include "audio_hw.h"
 #include "voice.h"

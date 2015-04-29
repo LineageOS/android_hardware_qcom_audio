@@ -22,6 +22,7 @@
 
 #include <cutils/list.h>
 #include <cutils/log.h>
+#include <stdlib.h>
 #include <system/thread_defs.h>
 #include <tinyalsa/asoundlib.h>
 #include <hardware/audio_effect.h>
