@@ -32,6 +32,7 @@
 //#define LOG_NDEBUG 0
 
 #include <utils/Log.h>
+#include <stdlib.h>
 #include <media/EffectsFactoryApi.h>
 #include <audio_effects/effect_hwaccelerator.h>
 #include "EffectsHwAcc.h"

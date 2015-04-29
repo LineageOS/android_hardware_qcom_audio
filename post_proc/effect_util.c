@@ -15,6 +15,7 @@
  */
 
 #include <utils/Log.h>
+#include <string.h>
 #include <stdlib.h>
 #include "effect_util.h"
 
