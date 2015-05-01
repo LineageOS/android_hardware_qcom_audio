@@ -167,6 +167,10 @@ struct stream_in {
     bool enable_aec;
     bool enable_ns;
 
+    audio_io_handle_t capture_handle;
+    bool is_st_session;
+    bool is_st_session_active;
+
     struct audio_device *dev;
 };
 

@@ -38,4 +38,35 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev,
                                     struct str_parms *parms);
 #endif
 
+#ifndef SOUND_TRIGGER_ENABLED
+#define audio_extn_sound_trigger_init(adev)                            (0)
+#define audio_extn_sound_trigger_deinit(adev)                          (0)
+#define audio_extn_sound_trigger_update_device_status(snd_dev, event)  (0)
+#define audio_extn_sound_trigger_set_parameters(adev, parms)           (0)
+#define audio_extn_sound_trigger_check_and_get_session(in)             (0)
+#define audio_extn_sound_trigger_stop_lab(in)                          (0)
+#define audio_extn_sound_trigger_read(in, buffer, bytes)               (0)
+
+#else
+
+enum st_event_type {
+    ST_EVENT_SND_DEVICE_FREE,
+    ST_EVENT_SND_DEVICE_BUSY,
+    ST_EVENT_STREAM_FREE,
+    ST_EVENT_STREAM_BUSY
+};
+typedef enum st_event_type st_event_type_t;
+
+int audio_extn_sound_trigger_init(struct audio_device *adev);
+void audio_extn_sound_trigger_deinit(struct audio_device *adev);
+void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
+                                     st_event_type_t event);
+void audio_extn_sound_trigger_set_parameters(struct audio_device *adev,
+                                             struct str_parms *parms);
+void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in);
+void audio_extn_sound_trigger_stop_lab(struct stream_in *in);
+int audio_extn_sound_trigger_read(struct stream_in *in, void *buffer,
+                                  size_t bytes);
+#endif
+
 #endif /* AUDIO_EXTN_H */
