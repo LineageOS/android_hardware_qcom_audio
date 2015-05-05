@@ -544,7 +544,7 @@ static status_t updateDeviceInfo(int rx_device,int tx_device) {
                 tx_dev_prev = cur_tx;
                 cur_tx = tx_device ;
                 cur_rx = rx_device ;
-                if((vMicMute == true) && (tx_dev_prev != tx_device)) {
+                if((vMicMute == true) && (tx_dev_prev != cur_tx)) {
                     ALOGD("REC:device switch with mute enabled :tx_dev_prev %d cur_tx: %d",tx_dev_prev, cur_tx);
                     msm_device_mute(DEV_ID(cur_tx), true);
                 }
@@ -1505,8 +1505,7 @@ uint32_t AudioHardware::getMvsMode(int format, int rate)
         return MVS_MODE_4GV_WB;
         break;
     default:
-        return UNKNOWN_ERROR;
-        break;
+        return BAD_INDEX;
     }
 }
 
@@ -3058,7 +3057,7 @@ status_t AudioHardware::AudioStreamInVoip::set(
 
     mHardware = hw;
 
-    if ((pFormat == 0) || (UNKNOWN_ERROR == hw->getMvsMode(*pFormat, *pRate))) {
+    if ((pFormat == 0) || BAD_INDEX == hw->getMvsMode(*pFormat, *pRate)) {
         ALOGE("Audio Format (%x) not supported \n",*pFormat);
         return BAD_VALUE;
     }
@@ -3394,7 +3393,7 @@ status_t AudioHardware::AudioStreamInVoip::setParameters(const String8& keyValue
             status = BAD_VALUE;
         } else {
             mDevices = device;
-            status = mHardware->doRouting(this, 0);
+            status = mHardware->doRouting(this, device);
         }
         param.remove(key);
     }

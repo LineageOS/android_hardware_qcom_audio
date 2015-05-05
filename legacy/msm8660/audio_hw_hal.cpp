@@ -322,8 +322,8 @@ static int out_remove_audio_effect(const struct audio_stream *stream __unused, e
     return 0;
 }
 
-static int out_get_next_write_timestamp(const struct audio_stream_out *stream,
-                                        int64_t *timestamp)
+static int out_get_next_write_timestamp(const struct audio_stream_out *stream __unused,
+                                        int64_t *timestamp __unused)
 {
     const struct qcom_stream_out *out =
         reinterpret_cast<const struct qcom_stream_out *>(stream);
