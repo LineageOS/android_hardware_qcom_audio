@@ -475,9 +475,15 @@ exit:
             pcm_close(handle.pcm_tx);
         handle.pcm_tx = NULL;
         /* Clear TX calibration to handset mic */
-        platform_send_audio_calibration(adev->platform,
-        SND_DEVICE_IN_HANDSET_MIC,
-        platform_get_default_app_type(adev->platform), 8000);
+        if (disable_tx) {
+            uc_info_tx->id = USECASE_AUDIO_RECORD;
+            uc_info_tx->type = PCM_CAPTURE;
+            uc_info_tx->in_snd_device = SND_DEVICE_IN_HANDSET_MIC;
+            uc_info_tx->out_snd_device = SND_DEVICE_NONE;
+            platform_send_audio_calibration(adev->platform,
+              uc_info_tx,
+              platform_get_default_app_type(adev->platform), 8000);
+        }
         if (!status.status) {
             protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
             protCfg.r0[SP_V2_SPKR_1] = status.r0[SP_V2_SPKR_1];
@@ -810,6 +816,7 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
     struct audio_usecase *uc_info_tx;
     struct audio_device *adev = handle.adev_handle;
     int32_t pcm_dev_tx_id = -1, ret = 0;
+    bool disable_tx = false;
 
     ALOGV("%s: Entry", __func__);
     /* cancel speaker calibration */
@@ -836,6 +843,7 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
         uc_info_tx->out_snd_device = SND_DEVICE_NONE;
         handle.pcm_tx = NULL;
         list_add_tail(&adev->usecase_list, &uc_info_tx->list);
+        disable_tx = true;
         enable_snd_device(adev, SND_DEVICE_IN_CAPTURE_VI_FEEDBACK);
         enable_audio_route(adev, uc_info_tx);
 
@@ -862,14 +870,24 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
 
 exit:
    /* Clear VI feedback cal and replace with handset MIC  */
-   platform_send_audio_calibration(adev->platform,
-        SND_DEVICE_IN_HANDSET_MIC,
-        platform_get_default_app_type(adev->platform), 8000);
-    if (ret) {
+    if (disable_tx) {
+        uc_info_tx->id = USECASE_AUDIO_RECORD;
+        uc_info_tx->type = PCM_CAPTURE;
+        uc_info_tx->in_snd_device = SND_DEVICE_IN_HANDSET_MIC;
+        uc_info_tx->out_snd_device = SND_DEVICE_NONE;
+        platform_send_audio_calibration(adev->platform,
+          uc_info_tx,
+          platform_get_default_app_type(adev->platform), 8000);
+     }
+     if (ret) {
         if (handle.pcm_tx)
             pcm_close(handle.pcm_tx);
         handle.pcm_tx = NULL;
         list_remove(&uc_info_tx->list);
+        uc_info_tx->id = USECASE_AUDIO_SPKR_CALIB_TX;
+        uc_info_tx->type = PCM_CAPTURE;
+        uc_info_tx->in_snd_device = SND_DEVICE_IN_CAPTURE_VI_FEEDBACK;
+        uc_info_tx->out_snd_device = SND_DEVICE_NONE;
         disable_snd_device(adev, SND_DEVICE_IN_CAPTURE_VI_FEEDBACK);
         disable_audio_route(adev, uc_info_tx);
         free(uc_info_tx);
