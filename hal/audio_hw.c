@@ -2827,7 +2827,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                   struct audio_stream_in **stream_in,
                                   audio_input_flags_t flags __unused,
                                   const char *address __unused,
-                                  audio_source_t source __unused)
+                                  audio_source_t source)
 {
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_in *in;
@@ -2841,8 +2841,8 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
     in = (struct stream_in *)calloc(1, sizeof(struct stream_in));
     ALOGD("%s: enter: sample_rate(%d) channel_mask(%#x) devices(%#x)\
-        stream_handle(%p)",__func__, config->sample_rate, config->channel_mask,
-        devices, &in->stream);
+        stream_handle(%p) io_handle(%d) source(%d)",__func__, config->sample_rate, config->channel_mask,
+        devices, &in->stream, handle, source);
 
     pthread_mutex_init(&in->lock, (const pthread_mutexattr_t *) NULL);
 
@@ -2863,7 +2863,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->stream.get_input_frames_lost = in_get_input_frames_lost;
 
     in->device = devices;
-    in->source = AUDIO_SOURCE_DEFAULT;
+    in->source = source;
     in->dev = adev;
     in->standby = 1;
     in->channel_mask = config->channel_mask;
@@ -2919,6 +2919,13 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                             config->format,
                                             channel_count);
         in->config.period_size = buffer_size / frame_size;
+        if ((in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) &&
+               (in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
+               (voice_extn_compress_voip_is_format_supported(in->format)) &&
+               (in->config.rate == 8000 || in->config.rate == 16000) &&
+               (audio_channel_count_from_in_mask(in->channel_mask) == 1)) {
+            voice_extn_compress_voip_open_input_stream(in);
+        }
     }
 
     *stream_in = &in->stream;
