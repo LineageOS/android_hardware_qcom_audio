@@ -109,5 +109,6 @@ void platform_cache_edid(void * platform);
 void platform_invalidate_edid(void * platform);
 int platform_set_hdmi_config(struct stream_out *out);
 int platform_set_device_params(struct stream_out *out, int param, int value);
-int platform_set_audio_device_interface(const char * device_name, const char *intf_name);
+int platform_set_audio_device_interface(const char * device_name, const char *intf_name,
+                                        const char * codec_type);
 #endif // AUDIO_PLATFORM_API_H
