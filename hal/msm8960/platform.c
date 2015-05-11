@@ -1155,7 +1155,8 @@ int platform_set_device_params(struct stream_out *out __unused,
 }
 
 int platform_set_audio_device_interface(const char * device_name __unused,
-                                        const char *intf_name __unused)
+                                        const char *intf_name __unused,
+                                        const char *codec_type __unused)
 {
     return -ENOSYS;
 }

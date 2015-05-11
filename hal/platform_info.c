@@ -87,7 +87,7 @@ static section_t section;
  * ...
  * </pcm_ids>
  * <interface_names>
- * <device name="Use audio device name here, not sound device name" interface="PRIMARY_I2S"/>
+ * <device name="Use audio device name here, not sound device name" interface="PRIMARY_I2S" codec_type="external/internal"/>
  * ...
  * ...
  * </interface_names>
@@ -262,7 +262,15 @@ static void process_interface_name(const XML_Char **attr)
         goto done;
     }
 
-    ret = platform_set_audio_device_interface((char *)attr[1], (char *)attr[3]);
+    if (strcmp(attr[4], "codec_type") != 0) {
+        ALOGE("%s: Device %s has no codec type set!",
+              __func__, attr[1]);
+
+        goto done;
+    }
+
+    ret = platform_set_audio_device_interface((char *)attr[1], (char *)attr[3],
+                                              (char *)attr[5]);
     if (ret < 0) {
         ALOGE("%s: Audio Interface not set!", __func__);
 

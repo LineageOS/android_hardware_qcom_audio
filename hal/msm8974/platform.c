@@ -3757,7 +3757,8 @@ struct audio_device_to_audio_interface audio_device_to_interface_table[] = {
 int audio_device_to_interface_table_len  =
     sizeof(audio_device_to_interface_table) / sizeof(audio_device_to_interface_table[0]);
 
-int platform_set_audio_device_interface(const char *device_name, const char *intf_name)
+int platform_set_audio_device_interface(const char *device_name, const char *intf_name,
+                                        const char *codec_type __unused)
 {
     int ret = 0;
     int i;
