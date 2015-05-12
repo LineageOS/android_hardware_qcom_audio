@@ -104,6 +104,8 @@
 
 /* fallback app type if the default app type from acdb loader fails */
 #define DEFAULT_APP_TYPE  0x11130
+#define DEFAULT_APP_TYPE_RX_PATH  0x11130
+#define DEFAULT_APP_TYPE_TX_PATH 0x11132
 
 /* Retry for delay in FW loading*/
 #define RETRY_NUMBER 20
@@ -1693,6 +1695,11 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
         snd_device = usecase->in_snd_device;
     acdb_dev_id = acdb_device_table[audio_extn_get_spkr_prot_snd_device(snd_device)];
 
+    // Do not use Rx path default app type for TX path
+    if ((usecase->type == PCM_CAPTURE) && (app_type == DEFAULT_APP_TYPE_RX_PATH)) {
+        ALOGD("Resetting app type for Tx path to default");
+        app_type  = DEFAULT_APP_TYPE_TX_PATH;
+    }
     if (acdb_dev_id < 0) {
         ALOGE("%s: Could not find acdb id for device(%d)",
               __func__, snd_device);
