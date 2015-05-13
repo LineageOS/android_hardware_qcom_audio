@@ -288,6 +288,9 @@ static bool is_supported_format(audio_format_t format)
         format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD ||
         format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD ||
         format == AUDIO_FORMAT_FLAC ||
+        format == AUDIO_FORMAT_ALAC ||
+        format == AUDIO_FORMAT_APE ||
+        format == AUDIO_FORMAT_VORBIS ||
         format == AUDIO_FORMAT_WMA ||
         format == AUDIO_FORMAT_WMA_PRO)
            return true;
@@ -311,6 +314,15 @@ static int get_snd_codec_id(audio_format_t format)
         break;
     case AUDIO_FORMAT_FLAC:
         id = SND_AUDIOCODEC_FLAC;
+        break;
+    case AUDIO_FORMAT_ALAC:
+        id = SND_AUDIOCODEC_ALAC;
+        break;
+    case AUDIO_FORMAT_APE:
+        id = SND_AUDIOCODEC_APE;
+        break;
+    case AUDIO_FORMAT_VORBIS:
+        id = SND_AUDIOCODEC_VORBIS;
         break;
     case AUDIO_FORMAT_WMA:
         id = SND_AUDIOCODEC_WMA;
@@ -1763,11 +1775,6 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
     int ret = 0;
     char value[32];
     bool is_meta_data_params = false;
-    struct compr_gapless_mdata tmp_mdata;
-    tmp_mdata.encoder_delay = 0;
-    tmp_mdata.encoder_padding = 0;
-    tmp_mdata.min_blk_size = 0;
-    tmp_mdata.max_blk_size = 0;
 
     if (!out || !parms) {
         ALOGE("%s: return invalid ",__func__);
@@ -1783,102 +1790,32 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
         out->send_new_metadata = 1;
     }
 
-    if (out->format == AUDIO_FORMAT_FLAC) {
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE, value, sizeof(value));
-        if (ret >= 0) {
-            tmp_mdata.min_blk_size =
-            out->compr_config.codec->options.flac_dec.min_blk_size = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE, value, sizeof(value));
-        if (ret >= 0) {
-            tmp_mdata.max_blk_size =
-            out->compr_config.codec->options.flac_dec.max_blk_size = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_FRAME_SIZE, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.flac_dec.min_frame_size = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_FRAME_SIZE, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.flac_dec.max_frame_size = atoi(value);
-            out->send_new_metadata = 1;
-        }
-    }
-
-    if (out->format == AUDIO_FORMAT_WMA || out->format == AUDIO_FORMAT_WMA_PRO) {
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_FORMAT_TAG, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->format = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BLOCK_ALIGN, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.super_block_align = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BIT_PER_SAMPLE, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.bits_per_sample = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_CHANNEL_MASK, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.channelmask = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.encodeopt = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION1, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.encodeopt1 = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION2, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.encodeopt2 = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ALOGV("WMA params: fmt %x, balgn %x, sr %d, chmsk %x, encop %x, op1 %x, op2 %x",
-              out->compr_config.codec->format,
-              out->compr_config.codec->options.wma.super_block_align,
-              out->compr_config.codec->options.wma.bits_per_sample,
-              out->compr_config.codec->options.wma.channelmask,
-              out->compr_config.codec->options.wma.encodeopt,
-              out->compr_config.codec->options.wma.encodeopt1,
-              out->compr_config.codec->options.wma.encodeopt2);
-    }
+    ret = audio_extn_parse_compress_metadata(out, parms);
 
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_SAMPLE_RATE, value, sizeof(value));
     if(ret >= 0)
         is_meta_data_params = true;
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_NUM_CHANNEL, value, sizeof(value));
-    if(ret >= 0 )
+    if(ret >= 0)
         is_meta_data_params = true;
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_AVG_BIT_RATE, value, sizeof(value));
-    if(ret >= 0 )
+    if(ret >= 0)
         is_meta_data_params = true;
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
     if (ret >= 0) {
         is_meta_data_params = true;
-        tmp_mdata.encoder_delay = atoi(value); //whats a good limit check?
+        out->gapless_mdata.encoder_delay = atoi(value); //whats a good limit check?
     }
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
     if (ret >= 0) {
         is_meta_data_params = true;
-        tmp_mdata.encoder_padding = atoi(value);
+        out->gapless_mdata.encoder_padding = atoi(value);
     }
 
     if(!is_meta_data_params) {
         ALOGV("%s: Not gapless meta data params", __func__);
         return 0;
     }
-    out->gapless_mdata = tmp_mdata;
     out->send_new_metadata = 1;
     ALOGV("%s new encoder delay %u and padding %u", __func__,
           out->gapless_mdata.encoder_delay, out->gapless_mdata.encoder_padding);

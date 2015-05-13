@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -47,6 +47,30 @@
 #define AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE "music_offload_flac_max_blk_size"
 #define AUDIO_OFFLOAD_CODEC_FLAC_MIN_FRAME_SIZE "music_offload_flac_min_frame_size"
 #define AUDIO_OFFLOAD_CODEC_FLAC_MAX_FRAME_SIZE "music_offload_flac_max_frame_size"
+
+#define AUDIO_OFFLOAD_CODEC_ALAC_FRAME_LENGTH "music_offload_alac_frame_length"
+#define AUDIO_OFFLOAD_CODEC_ALAC_COMPATIBLE_VERSION "music_offload_alac_compatible_version"
+#define AUDIO_OFFLOAD_CODEC_ALAC_BIT_DEPTH "music_offload_alac_bit_depth"
+#define AUDIO_OFFLOAD_CODEC_ALAC_PB "music_offload_alac_pb"
+#define AUDIO_OFFLOAD_CODEC_ALAC_MB "music_offload_alac_mb"
+#define AUDIO_OFFLOAD_CODEC_ALAC_KB "music_offload_alac_kb"
+#define AUDIO_OFFLOAD_CODEC_ALAC_NUM_CHANNELS "music_offload_alac_num_channels"
+#define AUDIO_OFFLOAD_CODEC_ALAC_MAX_RUN "music_offload_alac_max_run"
+#define AUDIO_OFFLOAD_CODEC_ALAC_MAX_FRAME_BYTES "music_offload_alac_max_frame_bytes"
+#define AUDIO_OFFLOAD_CODEC_ALAC_AVG_BIT_RATE "music_offload_alac_avg_bit_rate"
+#define AUDIO_OFFLOAD_CODEC_ALAC_SAMPLING_RATE "music_offload_alac_sampling_rate"
+#define AUDIO_OFFLOAD_CODEC_ALAC_CHANNEL_LAYOUT_TAG "music_offload_alac_channel_layout_tag"
+
+#define AUDIO_OFFLOAD_CODEC_APE_COMPATIBLE_VERSION "music_offload_ape_compatible_version"
+#define AUDIO_OFFLOAD_CODEC_APE_COMPRESSION_LEVEL "music_offload_ape_compression_level"
+#define AUDIO_OFFLOAD_CODEC_APE_FORMAT_FLAGS "music_offload_ape_format_flags"
+#define AUDIO_OFFLOAD_CODEC_APE_BLOCKS_PER_FRAME "music_offload_ape_blocks_per_frame"
+#define AUDIO_OFFLOAD_CODEC_APE_FINAL_FRAME_BLOCKS "music_offload_ape_final_frame_blocks"
+#define AUDIO_OFFLOAD_CODEC_APE_TOTAL_FRAMES "music_offload_ape_total_frames"
+#define AUDIO_OFFLOAD_CODEC_APE_BITS_PER_SAMPLE "music_offload_ape_bits_per_sample"
+#define AUDIO_OFFLOAD_CODEC_APE_NUM_CHANNELS "music_offload_ape_num_channels"
+#define AUDIO_OFFLOAD_CODEC_APE_SAMPLE_RATE "music_offload_ape_sample_rate"
+#define AUDIO_OFFLOAD_CODEC_APE_SEEK_TABLE_PRESENT "music_offload_seek_table_present"
 
 /* Query handle fm parameter*/
 #define AUDIO_PARAMETER_KEY_HANDLE_FM "handle_fm"

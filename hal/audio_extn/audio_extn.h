@@ -69,12 +69,28 @@
 #define AUDIO_DEVICE_IN_FM_RX_A2DP (AUDIO_DEVICE_BIT_IN | 0x10000)
 #endif
 
-#ifndef QTI_FLAC_DECODER
-#define AUDIO_FORMAT_FLAC 0x19000000UL
-#define AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE "music_offload_flac_min_blk_size"
-#define AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE "music_offload_flac_max_blk_size"
-#define AUDIO_OFFLOAD_CODEC_FLAC_MIN_FRAME_SIZE "music_offload_flac_min_frame_size"
-#define AUDIO_OFFLOAD_CODEC_FLAC_MAX_FRAME_SIZE "music_offload_flac_max_frame_size"
+#ifndef FLAC_OFFLOAD_ENABLED
+#define AUDIO_FORMAT_FLAC 0x1D000000UL
+#endif
+
+#ifndef WMA_OFFLOAD_ENABLED
+#define AUDIO_FORMAT_WMA 0x13000000UL
+#define AUDIO_FORMAT_WMAPRO 0x14000000UL
+#endif
+
+#ifndef ALAC_OFFLOAD_ENABLED
+#define AUDIO_FORMAT_ALAC 0x1F000000UL
+#endif
+
+#ifndef APE_OFFLOAD_ENABLED
+#define AUDIO_FORMAT_APE 0x20000000UL
+#endif
+
+#ifndef COMPRESS_METADATA_NEEDED
+#define audio_extn_parse_compress_metadata(out, parms) (0)
+#else
+int audio_extn_parse_compress_metadata(struct stream_out *out,
+                                       struct str_parms *parms);
 #endif
 
 #ifdef PCM_OFFLOAD_ENABLED_24

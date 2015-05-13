@@ -1560,10 +1560,11 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
             }
         }
 
-        //check if it's multi-channel AAC (includes sub formats) and FLAC format
+        //check if it's multi-channel AAC (includes sub formats), FLAC and VORBIS format
         if ((popcount(offloadInfo.channel_mask) > 2) &&
             (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC) ||
-            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_FLAC))) {
+            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_FLAC) ||
+            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_VORBIS))) {
             ALOGD("offload disabled for multi-channel AAC and FLAC format");
             return false;
         }
@@ -1605,13 +1606,16 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
         }
     } else if (offloadInfo.duration_us < OFFLOAD_DEFAULT_MIN_DURATION_SECS * 1000000) {
         ALOGD("copl: Offload denied by duration < default min(=%u)", OFFLOAD_DEFAULT_MIN_DURATION_SECS);
-        //duration checks only valid for MP3/AAC/WMA formats,
+        //duration checks only valid for MP3/AAC/VORBIS/WMA/ALAC/APE formats,
         //do not check duration for other audio formats, e.g. dolby AAC/AC3 and amrwb+ formats
         if ((offloadInfo.format == AUDIO_FORMAT_MP3) ||
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC) ||
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_FLAC) ||
+            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_VORBIS) ||
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA) ||
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA_PRO) ||
+            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_ALAC) ||
+            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_APE) ||
             pcmOffload)
             return false;
     }
