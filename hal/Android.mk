@@ -54,6 +54,7 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HDMI_EDID)),true)
     LOCAL_SRC_FILES += edid.c
+    LOCAL_CFLAGS := -DHDMI_EDID_ENABLED
 endif
 
 ifeq ($(strip $(AUDIO_USE_LL_AS_PRIMARY_OUTPUT)),true)
@@ -249,6 +250,12 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_LISTEN)),true)
     LOCAL_CFLAGS += -DAUDIO_LISTEN_ENABLED
     LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-listen
     LOCAL_SRC_FILES += audio_extn/listen.c
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXT_HDMI)),true)
+    LOCAL_CFLAGS += -DAUDIO_EXTERNAL_HDMI_ENABLED
+    LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-parsers
+    LOCAL_SHARED_LIBRARIES += libaudioparsers
 endif
 
 ifeq ($(strip $(BOARD_SUPPORTS_SOUND_TRIGGER)),true)
