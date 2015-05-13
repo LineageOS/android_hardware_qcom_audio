@@ -35,6 +35,10 @@
 #include "audio_extn.h"
 #include "voice.h"
 
+#ifdef AUDIO_EXTERNAL_HDMI_ENABLED
+#include "audio_parsers.h"
+#endif
+
 #define AUDIO_OUTPUT_POLICY_VENDOR_CONFIG_FILE "/vendor/etc/audio_output_policy.conf"
 
 #define OUTPUTS_TAG "outputs"
@@ -52,6 +56,21 @@
 #define BASE_TABLE_SIZE 64
 #define MAX_BASEINDEX_LEN 256
 
+#ifdef AUDIO_EXTERNAL_HDMI_ENABLED
+#define PROFESSIONAL        (1<<0)	/* 0 = consumer, 1 = professional */
+#define NON_LPCM	    (1<<1)	/* 0 = audio, 1 = non-audio */
+#define SR_44100	    (0<<0)	/* 44.1kHz */
+#define SR_NOTID	    (1<<0)	/* non indicated */
+#define SR_48000	    (2<<0)	/* 48kHz */
+#define SR_32000	    (3<<0)	/* 32kHz */
+#define SR_22050	    (4<<0)	/* 22.05kHz */
+#define SR_24000	    (6<<0)	/* 24kHz */
+#define SR_88200	    (8<<0)	/* 88.2kHz */
+#define SR_96000	    (10<<0)	/* 96kHz */
+#define SR_176400	    (12<<0)	/* 176.4kHz */
+#define SR_192000	    (14<<0)	/* 192kHz */
+
+#endif
 struct string_to_enum {
     const char *name;
     uint32_t value;
@@ -750,3 +769,130 @@ done:
     outp[k] = '\0';
     return k;
 }
+
+#ifdef AUDIO_EXTERNAL_HDMI_ENABLED
+
+void get_default_compressed_channel_status(
+                                  unsigned char *channel_status)
+{
+     int32_t status = 0;
+     unsigned char bit_index;
+     memset(channel_status,0,24);
+
+     /* block start bit in preamble bit 3 */
+     channel_status[0] |= PROFESSIONAL;
+     //compre out
+     channel_status[0] |= NON_LPCM;
+     // sample rate; fixed 48K for default/transcode
+     channel_status[3] |= SR_48000;
+}
+
+int32_t get_compressed_channel_status(void *audio_stream_data,
+                                                   uint32_t audio_frame_size,
+                                                   unsigned char *channel_status,
+                                                   enum audio_parser_code_type codec_type)
+                                                   // codec_type - AUDIO_PARSER_CODEC_AC3
+                                                   //            - AUDIO_PARSER_CODEC_DTS
+{
+     unsigned char *streamPtr;
+     int ret = 0;
+     streamPtr = (unsigned char *)audio_stream_data;
+
+     if (audio_stream_data == NULL || audio_frame_size == 0) {
+         ALOGW("no buffer to get channel status, return default for compress");
+         get_default_compressed_channel_status(channel_status);
+         return ret;
+     }
+
+     memset(channel_status,0,24);
+     if(init_audio_parser(streamPtr, audio_frame_size, codec_type) == -1)
+     {
+         ALOGE("init audio parser failed");
+         return -1;
+     }
+     ret = get_channel_status(channel_status, codec_type);
+     return ret;
+
+}
+
+void get_linearpcm_channel_status(uint32_t sampleRate,
+                                                  unsigned char *channel_status)
+{
+     int32_t status = 0;
+     unsigned char bit_index;
+     memset(channel_status,0,24);
+     /* block start bit in preamble bit 3 */
+     channel_status[0] |= PROFESSIONAL;
+     //LPCM OUT
+     channel_status[0] &= ~NON_LPCM;
+
+     switch (sampleRate) {
+         case 8000:
+         case 11025:
+         case 12000:
+         case 16000:
+         case 22050:
+             channel_status[3] |= SR_NOTID;
+         case 24000:
+             channel_status[3] |= SR_24000;
+             break;
+         case 32000:
+             channel_status[3] |= SR_32000;
+             break;
+         case 44100:
+             channel_status[3] |= SR_44100;
+             break;
+         case 48000:
+             channel_status[3] |= SR_48000;
+             break;
+         case 88200:
+             channel_status[3] |= SR_88200;
+             break;
+         case 96000:
+             channel_status[3] |= SR_96000;
+             break;
+         case 176400:
+             channel_status[3] |= SR_176400;
+             break;
+         case 192000:
+            channel_status[3] |= SR_192000;
+             break;
+         default:
+             ALOGV("Invalid sample_rate %u\n", sampleRate);
+             status = -1;
+             break;
+     }
+}
+
+void setChannelStatus(struct stream_out *out, char * buffer, size_t bytes)
+{
+    unsigned char channel_status[24]={0};
+    struct snd_aes_iec958 iec958;
+    const char *mixer_ctl_name = "IEC958 Playback PCM Stream";
+    struct mixer_ctl *ctl;
+    int i=0;
+    if (audio_extn_is_dolby_format(out->format) &&
+        /*TODO:Extend code to support DTS passthrough*/
+        /*set compressed channel status bits*/
+        audio_extn_dolby_is_passthrough_stream(out->flags)){
+        get_compressed_channel_status(buffer, bytes, channel_status, AUDIO_PARSER_CODEC_AC3);
+    } else {
+        /*set channel status bit for LPCM*/
+        get_linearpcm_channel_status(out->sample_rate, channel_status);
+    }
+
+    memcpy(iec958.status, channel_status,sizeof(iec958.status));
+    ctl = mixer_get_ctl_by_name(out->dev->mixer, mixer_ctl_name);
+    if (!ctl) {
+            ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                  __func__, mixer_ctl_name);
+            return;
+    }
+    if (mixer_ctl_set_array(ctl, &iec958, sizeof(iec958)) < 0) {
+        ALOGE("%s: Could not set channel status for ext HDMI ",
+              __func__);
+        return;
+    }
+
+}
+#endif
