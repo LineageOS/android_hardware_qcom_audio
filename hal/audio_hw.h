@@ -325,6 +325,7 @@ struct audio_device {
     int snd_card;
     unsigned int cur_codec_backend_samplerate;
     unsigned int cur_codec_backend_bit_width;
+    bool is_channel_status_set;
     void *platform;
     unsigned int offload_usecases_state;
     void *visualizer_lib;

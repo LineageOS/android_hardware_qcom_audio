@@ -603,6 +603,9 @@ int disable_snd_device(struct audio_device *adev,
             audio_route_reset_and_update_path(adev->audio_route, device_name);
         }
 
+        if (snd_device == SND_DEVICE_OUT_HDMI)
+            adev->is_channel_status_set = false;
+
         audio_extn_dev_arbi_release(snd_device);
         audio_extn_sound_trigger_update_device_status(snd_device,
                                         ST_EVENT_SND_DEVICE_FREE);
@@ -2178,6 +2181,11 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         }
         if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD && adev->adm_register_output_stream)
             adev->adm_register_output_stream(adev->adm_data, out->handle, out->flags);
+    }
+
+    if (adev->is_channel_status_set == false && (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)){
+        audio_utils_set_hdmi_channel_status(out, buffer, bytes);
+        adev->is_channel_status_set = true;
     }
 
     if (is_offload_usecase(out->usecase)) {
@@ -3758,6 +3766,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     list_init(&adev->usecase_list);
     adev->cur_wfd_channels = 2;
     adev->offload_usecases_state = 0;
+    adev->is_channel_status_set = false;
 
     pthread_mutex_init(&adev->snd_card_status.lock, (const pthread_mutexattr_t *) NULL);
     adev->snd_card_status.state = SND_CARD_STATE_OFFLINE;
