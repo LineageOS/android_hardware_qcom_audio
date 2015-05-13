@@ -1028,6 +1028,8 @@ void *platform_init(struct audio_device *adev)
     char *snd_internal_name = NULL;
     char *tmp = NULL;
     char mixer_xml_file[MIXER_PATH_MAX_LENGTH]= {0};
+    const char *mixer_ctl_name = "Set HPX ActiveBe";
+    struct mixer_ctl *ctl = NULL;
 
     my_data = calloc(1, sizeof(struct platform_data));
 
@@ -1248,6 +1250,13 @@ void *platform_init(struct audio_device *adev)
         my_data->acdb_init(snd_card_name, cvd_version, key);
         if (cvd_version)
             free(cvd_version);
+    }
+
+    /* Configure active back end for HPX*/
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (ctl) {
+        ALOGI(" sending HPX Active BE information ");
+        mixer_ctl_set_value(ctl, 0, true);
     }
 
 acdb_init_fail:
