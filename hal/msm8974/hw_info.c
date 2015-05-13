@@ -87,6 +87,9 @@ static const snd_device_t tomtom_msm8994_CDP_variant_devices[] = {
     SND_DEVICE_IN_HANDSET_MIC,
 };
 
+static const snd_device_t tomtom_8996_CDP_variant_devices[] = {
+};
+
 static const snd_device_t tomtom_liquid_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_SPEAKER_EXTERNAL_1,
@@ -117,6 +120,18 @@ static const snd_device_t taiko_DB_variant_devices[] = {
     SND_DEVICE_IN_SPEAKER_MIC,
     SND_DEVICE_IN_HEADSET_MIC,
     SND_DEVICE_IN_QUAD_MIC,
+};
+
+static const snd_device_t tomtom_DB_variant_devices[] = {
+    SND_DEVICE_OUT_SPEAKER,
+    SND_DEVICE_OUT_SPEAKER_EXTERNAL_1,
+    SND_DEVICE_OUT_SPEAKER_EXTERNAL_2,
+    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1,
+    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2,
+    SND_DEVICE_OUT_VOICE_SPEAKER,
+    SND_DEVICE_IN_VOICE_SPEAKER_MIC,
+    SND_DEVICE_IN_HANDSET_MIC,
+    SND_DEVICE_IN_HANDSET_MIC_EXTERNAL
 };
 
 static const snd_device_t taiko_apq8084_sbc_variant_devices[] = {
@@ -226,8 +241,45 @@ static void  update_hardware_info_8994(struct hardware_info *hw_info, const char
         hw_info->snd_devices = (snd_device_t *)tomtom_liquid_variant_devices;
         hw_info->num_snd_devices = ARRAY_SIZE(tomtom_liquid_variant_devices);
         strlcpy(hw_info->dev_extn, "-liquid", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "msm8994-tomtom-db-snd-card")) {
+        strlcpy(hw_info->type, " dragon-board", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msm8994", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)tomtom_DB_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tomtom_DB_variant_devices);
+        strlcpy(hw_info->dev_extn, "-db", sizeof(hw_info->dev_extn));
     } else {
         ALOGW("%s: Not an 8994 device", __func__);
+    }
+}
+
+static void  update_hardware_info_8996(struct hardware_info *hw_info, const char *snd_card_name)
+{
+    if (!strcmp(snd_card_name, "msm8996-tomtom-mtp-snd-card")) {
+        strlcpy(hw_info->type, " mtp", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msm8996", sizeof(hw_info->name));
+        hw_info->snd_devices = NULL;
+        hw_info->num_snd_devices = 0;
+        strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "msm8996-tomtom-cdp-snd-card")) {
+        strlcpy(hw_info->type, " cdp", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msm8996", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)tomtom_8996_CDP_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tomtom_8996_CDP_variant_devices);
+        strlcpy(hw_info->dev_extn, "-cdp", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "msm8996-tomtom-stp-snd-card")) {
+        strlcpy(hw_info->type, " stp", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msm8996", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)tomtom_stp_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tomtom_stp_variant_devices);
+        strlcpy(hw_info->dev_extn, "-stp", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "msm8996-tomtom-liquid-snd-card")) {
+        strlcpy(hw_info->type, " liquid", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msm8996", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)tomtom_liquid_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tomtom_liquid_variant_devices);
+        strlcpy(hw_info->dev_extn, "-liquid", sizeof(hw_info->dev_extn));
+    } else {
+        ALOGW("%s: Not a 8996 device", __func__);
     }
 }
 
@@ -356,6 +408,9 @@ void *hw_info_init(const char *snd_card_name)
     } else if(strstr(snd_card_name, "msm8994")) {
         ALOGV("8994 - variant soundcard");
         update_hardware_info_8994(hw_info, snd_card_name);
+    } else if(strstr(snd_card_name, "msm8996")) {
+        ALOGV("8996 - variant soundcard");
+        update_hardware_info_8996(hw_info, snd_card_name);
     } else {
         ALOGE("%s: Unsupported target %s:",__func__, snd_card_name);
         free(hw_info);

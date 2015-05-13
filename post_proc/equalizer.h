@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -36,6 +36,7 @@ typedef struct equalizer_context_s {
 
     // Offload vars
     struct mixer_ctl *ctl;
+    int hw_acc_fd;
     uint32_t device;
     struct eq_params offload_eq;
 } equalizer_context_t;
@@ -47,6 +48,8 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
                             uint32_t size);
 
 int equalizer_set_device(effect_context_t *context,  uint32_t device);
+
+int equalizer_set_mode(effect_context_t *context,  int32_t hw_acc_fd);
 
 int equalizer_reset(effect_context_t *context);
 

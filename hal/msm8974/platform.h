@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -141,6 +141,10 @@ enum {
     SND_DEVICE_IN_SPEAKER_DMIC_AEC_BROADSIDE,
     SND_DEVICE_IN_SPEAKER_DMIC_NS_BROADSIDE,
     SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_BROADSIDE,
+    SND_DEVICE_IN_HANDSET_QMIC,
+    SND_DEVICE_IN_SPEAKER_QMIC_AEC,
+    SND_DEVICE_IN_SPEAKER_QMIC_NS,
+    SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS,
     SND_DEVICE_IN_END,
 
     SND_DEVICE_MAX = SND_DEVICE_IN_END,
@@ -168,7 +172,7 @@ enum {
  * the buffer size of an input/output stream
  */
 #define DEEP_BUFFER_OUTPUT_PERIOD_SIZE 960
-#define DEEP_BUFFER_OUTPUT_PERIOD_COUNT 4
+#define DEEP_BUFFER_OUTPUT_PERIOD_COUNT 5
 #define LOW_LATENCY_OUTPUT_PERIOD_SIZE 240
 #define LOW_LATENCY_OUTPUT_PERIOD_COUNT 2
 
@@ -225,7 +229,7 @@ enum {
 #define PLAYBACK_OFFLOAD_DEVICE8 38
 #define PLAYBACK_OFFLOAD_DEVICE9 39
 #endif
-#ifdef PLATFORM_MSM8994
+#if defined (PLATFORM_MSM8994) || defined (PLATFORM_MSM8996)
 #define PLAYBACK_OFFLOAD_DEVICE2 17
 #define PLAYBACK_OFFLOAD_DEVICE3 18
 #define PLAYBACK_OFFLOAD_DEVICE4 37
@@ -276,12 +280,26 @@ enum {
 #define VOLTE_CALL_PCM_DEVICE 14
 #define QCHAT_CALL_PCM_DEVICE 20
 #define VOWLAN_CALL_PCM_DEVICE 36
+#elif PLATFORM_MSM8996
+#define VOICE_CALL_PCM_DEVICE 40
+#define VOICE2_CALL_PCM_DEVICE 41
+#define VOLTE_CALL_PCM_DEVICE 14
+#define QCHAT_CALL_PCM_DEVICE 20
+#define VOWLAN_CALL_PCM_DEVICE 33
 #else
 #define VOICE_CALL_PCM_DEVICE 2
 #define VOICE2_CALL_PCM_DEVICE 22
 #define VOLTE_CALL_PCM_DEVICE 14
 #define QCHAT_CALL_PCM_DEVICE 20
 #define VOWLAN_CALL_PCM_DEVICE 36
+#endif
+
+#ifdef PLATFORM_MSM8996
+#define VOICEMMODE1_CALL_PCM_DEVICE 2
+#define VOICEMMODE2_CALL_PCM_DEVICE 22
+#else
+#define VOICEMMODE1_CALL_PCM_DEVICE 44
+#define VOICEMMODE2_CALL_PCM_DEVICE 45
 #endif
 
 #define AFE_PROXY_PLAYBACK_PCM_DEVICE 7
@@ -299,6 +317,8 @@ enum {
 #define FM_RX_VOLUME "Quat MI2S FM RX Volume"
 #elif PLATFORM_MSM8994
 #define FM_RX_VOLUME "PRI MI2S LOOPBACK Volume"
+#elif PLATFORM_MSM8996
+#define FM_RX_VOLUME "Tert MI2S LOOPBACK Volume"
 #else
 #define FM_RX_VOLUME "Internal FM RX Volume"
 #endif
@@ -342,4 +362,24 @@ struct csd_data {
     get_sample_rate_t get_sample_rate;
 };
 
+/* HDMI Passthrough defines */
+enum {
+    LEGACY_PCM = 0,
+    PASSTHROUGH,
+    PASSTHROUGH_CONVERT
+};
+/*
+ * ID for setting mute and lateny on the device side
+ * through Device PP Params mixer control.
+ */
+#define DEVICE_PARAM_MUTE_ID    0
+#define DEVICE_PARAM_LATENCY_ID 1
+
+#define ENUM_TO_STRING(X) #X
+
+struct audio_device_to_audio_interface {
+    audio_devices_t device;
+    char device_name[100];
+    char interface_name[100];
+};
 #endif // QCOM_AUDIO_PLATFORM_H

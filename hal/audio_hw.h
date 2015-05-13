@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -9,6 +9,24 @@
  * You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * This file was modified by DTS, Inc. The portions of the
+ * code modified by DTS, Inc are copyrighted and
+ * licensed separately, as follows:
+ *
+ * (C) 2014 DTS, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -47,12 +65,12 @@
 #define ACDB_DEV_TYPE_OUT 1
 #define ACDB_DEV_TYPE_IN 2
 
-#define MAX_SUPPORTED_CHANNEL_MASKS 2
+#define MAX_SUPPORTED_CHANNEL_MASKS 8
+#define MAX_SUPPORTED_FORMATS 3
 #define DEFAULT_HDMI_OUT_CHANNELS   2
 
 #define SND_CARD_STATE_OFFLINE 0
 #define SND_CARD_STATE_ONLINE 1
-typedef int snd_device_t;
 
 /* These are the supported use cases by the hardware.
  * Each usecase is mapped to a specific PCM device.
@@ -97,6 +115,8 @@ enum {
     USECASE_VOLTE_CALL,
     USECASE_QCHAT_CALL,
     USECASE_VOWLAN_CALL,
+    USECASE_VOICEMMODE1_CALL,
+    USECASE_VOICEMMODE2_CALL,
     USECASE_COMPRESS_VOIP_CALL,
 
     USECASE_INCALL_REC_UPLINK,
@@ -174,12 +194,14 @@ struct stream_out {
     audio_usecase_t usecase;
     /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
+    audio_format_t supported_formats[MAX_SUPPORTED_FORMATS+1];
     bool muted;
     uint64_t written; /* total frames written, not cleared when entering standby */
     audio_io_handle_t handle;
     struct stream_app_type_cfg app_type_cfg;
 
     int non_blocking;
+    bool use_small_bufs;
     int playback_started;
     int offload_state;
     pthread_cond_t offload_cond;
@@ -212,6 +234,7 @@ struct stream_in {
     audio_format_t format;
     audio_io_handle_t capture_handle;
     bool is_st_session;
+    bool is_st_session_active;
 
     struct audio_device *dev;
 };
@@ -298,6 +321,7 @@ struct audio_device {
     int (*offload_effects_stop_output)(audio_io_handle_t, int);
 
     struct sound_card_status snd_card_status;
+    int (*offload_effects_set_hpx_state)(bool);
 };
 
 int select_devices(struct audio_device *adev,
@@ -320,6 +344,8 @@ bool is_offload_usecase(audio_usecase_t uc_id);
 int pcm_ioctl(struct pcm *pcm, int request, ...);
 
 int get_snd_card_state(struct audio_device *adev);
+audio_usecase_t get_usecase_id_from_usecase_type(struct audio_device *adev,
+                                                 usecase_type_t type);
 
 #define LITERAL_TO_STRING(x) #x
 #define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\

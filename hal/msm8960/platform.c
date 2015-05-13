@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -28,6 +28,7 @@
 #include <audio_hw.h>
 #include <platform_api.h>
 #include "platform.h"
+#include "audio_extn.h"
 
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define LIB_CSD_CLIENT "libcsd-client.so"
@@ -421,6 +422,19 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device __unused)
     return -ENOSYS;
 }
 
+int platform_set_snd_device_bit_width(snd_device_t snd_device __unused,
+                                      unsigned int bit_width __unused)
+{
+    ALOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
+int platform_get_snd_device_bit_width(snd_device_t snd_device __unused)
+{
+    ALOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
 int platform_switch_voice_call_enable_device_config(void *platform __unused,
                                                     snd_device_t out_snd_device __unused,
                                                     snd_device_t in_snd_device __unused)
@@ -501,7 +515,8 @@ int platform_switch_voice_call_device_pre(void *platform)
     struct platform_data *my_data = (struct platform_data *)platform;
     int ret = 0;
 
-    if (my_data->csd_client != NULL) {
+    if (my_data->csd_client != NULL &&
+        voice_is_in_call(my_data->adev)) {
         /* This must be called before disabling the mixer controls on APQ side */
         if (my_data->csd_disable_device == NULL) {
             ALOGE("%s: dlsym error for csd_disable_device", __func__);
@@ -652,7 +667,7 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         goto exit;
     }
 
-    if (mode == AUDIO_MODE_IN_CALL) {
+    if (voice_is_in_call(adev)) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
             if (adev->voice.tty_mode == TTY_MODE_FULL)
@@ -744,11 +759,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x)",
           __func__, out_device, in_device);
-    if (mode == AUDIO_MODE_IN_CALL) {
-        if (out_device == AUDIO_DEVICE_NONE) {
-            ALOGE("%s: No output device set for voice call", __func__);
-            goto exit;
-        }
+    if ((out_device != AUDIO_DEVICE_NONE) && voice_is_in_call(adev)) {
         if (adev->voice.tty_mode != TTY_MODE_OFF) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                 out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
@@ -1085,4 +1096,66 @@ int platform_get_fluence_type(void *platform __unused, char *value __unused,
 uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info __unused)
 {
     return 0;
+}
+
+int platform_get_edid_info(void *platform __unused)
+{
+   return -ENOSYS;
+}
+
+int platform_set_channel_map(void *platform __unused, int ch_count __unused,
+                             char *ch_map __unused, int snd_id __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_set_stream_channel_map(void *platform __unused,
+                                    audio_channel_mask_t channel_mask __unused,
+                                    int snd_id __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_set_edid_channels_configuration(void *platform __unused,
+                                             int channels __unused)
+{
+    return 0;
+}
+
+unsigned char platform_map_to_edid_format(int format __unused)
+{
+    return 0;
+}
+
+bool platform_is_edid_supported_format(void *platform __unused,
+                                       int format __unused)
+{
+    return  false;
+}
+
+void platform_cache_edid(void * platform __unused)
+{
+
+}
+
+void platform_invalidate_edid(void * platform __unused)
+{
+
+}
+
+int platform_set_hdmi_config(struct stream_out *out __unused)
+{
+    return 0;
+}
+
+int platform_set_device_params(struct stream_out *out __unused,
+                                  int param __unused, int value __unused)
+{
+    return 0;
+}
+
+int platform_set_audio_device_interface(const char * device_name __unused,
+                                        const char *intf_name __unused)
+{
+    return -ENOSYS;
 }

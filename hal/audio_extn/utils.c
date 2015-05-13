@@ -33,6 +33,7 @@
 #include "platform.h"
 #include "platform_api.h"
 #include "audio_extn.h"
+#include "voice.h"
 
 #define AUDIO_OUTPUT_POLICY_VENDOR_CONFIG_FILE "/vendor/etc/audio_output_policy.conf"
 
@@ -48,6 +49,9 @@
 #define STRING_TO_ENUM(string) { #string, string }
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
+#define BASE_TABLE_SIZE 64
+#define MAX_BASEINDEX_LEN 256
+
 struct string_to_enum {
     const char *name;
     uint32_t value;
@@ -60,12 +64,14 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_DEEP_BUFFER),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_NON_BLOCKING),
+    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_HW_AV_SYNC),
 #ifdef INCALL_MUSIC_ENABLED
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_INCALL_MUSIC),
 #endif
 #ifdef COMPRESS_VOIP_ENABLED
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_VOIP_RX),
 #endif
+    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH),
 };
 
 const struct string_to_enum s_format_name_to_enum_table[] = {
@@ -94,7 +100,22 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_PCM_16_BIT_OFFLOAD),
     STRING_TO_ENUM(AUDIO_FORMAT_PCM_24_BIT_OFFLOAD),
     STRING_TO_ENUM(AUDIO_FORMAT_FLAC),
+    STRING_TO_ENUM(AUDIO_FORMAT_ALAC),
+    STRING_TO_ENUM(AUDIO_FORMAT_APE),
+    STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_LC),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_HE_V1),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_HE_V2),
 #endif
+};
+
+static char bTable[BASE_TABLE_SIZE] = {
+            'A','B','C','D','E','F','G','H','I','J','K','L',
+            'M','N','O','P','Q','R','S','T','U','V','W','X',
+            'Y','Z','a','b','c','d','e','f','g','h','i','j',
+            'k','l','m','n','o','p','q','r','s','t','u','v',
+            'w','x','y','z','0','1','2','3','4','5','6','7',
+            '8','9','+','/'
 };
 
 static uint32_t string_to_enum(const struct string_to_enum *table, size_t size,
@@ -394,6 +415,7 @@ static bool set_output_cfg(struct streams_output_cfg *so_info,
         ss_info = node_to_item(node_i, struct stream_sample_rate, list);
         if ((sample_rate <= ss_info->sample_rate) &&
             (bit_width == so_info->app_type_cfg.bit_width)) {
+
             app_type_cfg->app_type = so_info->app_type_cfg.app_type;
             app_type_cfg->sample_rate = ss_info->sample_rate;
             app_type_cfg->bit_width = so_info->app_type_cfg.bit_width;
@@ -439,6 +461,9 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
 
     if ((24 == bit_width) &&
         (devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+        int32_t bw = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
+        if (-ENOSYS != bw)
+            bit_width = (uint32_t)bw;
         sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         ALOGI("%s Allowing 24-bit playback on speaker ONLY at default sampling rate", __func__);
     }
@@ -495,8 +520,8 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
     if ((usecase->id != USECASE_AUDIO_PLAYBACK_DEEP_BUFFER) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_LOW_LATENCY) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_MULTI_CH) &&
-        (usecase->id != USECASE_AUDIO_PLAYBACK_OFFLOAD)) {
-        ALOGV("%s: a playback path where app type cfg is not required", __func__);
+        (!is_offload_usecase(usecase->id))) {
+        ALOGV("%s: a playback path where app type cfg is not required %d", __func__, usecase->id);
         rc = 0;
         goto exit_send_app_type_cfg;
     }
@@ -535,8 +560,12 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
 
     app_type_cfg[len++] = out->app_type_cfg.app_type;
     app_type_cfg[len++] = acdb_dev_id;
-    app_type_cfg[len++] = sample_rate;
-
+    if (((out->format == AUDIO_FORMAT_E_AC3) ||
+        (out->format == AUDIO_FORMAT_E_AC3_JOC)) &&
+        (out->flags  & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
+        app_type_cfg[len++] = sample_rate * 4;
+    else
+        app_type_cfg[len++] = sample_rate;
     mixer_ctl_set_array(ctl, app_type_cfg, len);
     ALOGI("%s app_type %d, acdb_dev_id %d, sample_rate %d",
            __func__, out->app_type_cfg.app_type, acdb_dev_id, sample_rate);
@@ -567,3 +596,145 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
     }
 }
 
+// Base64 Encode and Decode
+// Not all features supported. This must be used only with following conditions.
+// Decode Modes: Support with and without padding
+//         CRLF not handling. So no CRLF in string to decode.
+// Encode Modes: Supports only padding
+int b64decode(char *inp, int ilen, uint8_t* outp)
+{
+    int i, j, k, ii, num;
+    int rem, pcnt;
+    uint32_t res=0;
+    uint8_t getIndex[MAX_BASEINDEX_LEN];
+    uint8_t tmp, cflag;
+
+    if(inp == NULL || outp == NULL || ilen <= 0) {
+        ALOGE("[%s] received NULL pointer or zero length",__func__);
+        return -1;
+    }
+
+    memset(getIndex, MAX_BASEINDEX_LEN-1, sizeof(getIndex));
+    for(i=0;i<BASE_TABLE_SIZE;i++) {
+        getIndex[(uint8_t)bTable[i]] = (uint8_t)i;
+    }
+    getIndex[(uint8_t)'=']=0;
+
+    j=0;k=0;
+    num = ilen/4;
+    rem = ilen%4;
+    if(rem==0)
+        num = num-1;
+    cflag=0;
+    for(i=0; i<num; i++) {
+        res=0;
+        for(ii=0;ii<4;ii++) {
+            res = res << 6;
+            tmp = getIndex[(uint8_t)inp[j++]];
+            res = res | tmp;
+            cflag = cflag | tmp;
+        }
+        outp[k++] = (res >> 16)&0xFF;
+        outp[k++] = (res >> 8)&0xFF;
+        outp[k++] = res & 0xFF;
+    }
+
+    // Handle last bytes special
+    pcnt=0;
+    if(rem == 0) {
+        //With padding or full data
+        res = 0;
+        for(ii=0;ii<4;ii++) {
+            if(inp[j] == '=')
+                pcnt++;
+            res = res << 6;
+            tmp = getIndex[(uint8_t)inp[j++]];
+            res = res | tmp;
+            cflag = cflag | tmp;
+        }
+        outp[k++] = res >> 16;
+        if(pcnt == 2)
+            goto done;
+        outp[k++] = (res>>8)&0xFF;
+        if(pcnt == 1)
+            goto done;
+        outp[k++] = res&0xFF;
+    } else {
+        //without padding
+        res = 0;
+        for(i=0;i<rem;i++) {
+            res = res << 6;
+            tmp = getIndex[(uint8_t)inp[j++]];
+            res = res | tmp;
+            cflag = cflag | tmp;
+        }
+        for(i=rem;i<4;i++) {
+            res = res << 6;
+            pcnt++;
+        }
+        outp[k++] = res >> 16;
+        if(pcnt == 2)
+            goto done;
+        outp[k++] = (res>>8)&0xFF;
+        if(pcnt == 1)
+            goto done;
+        outp[k++] = res&0xFF;
+    }
+done:
+    if(cflag == 0xFF) {
+        ALOGE("[%s] base64 decode failed. Invalid character found %s",
+            __func__, inp);
+        return 0;
+    }
+    return k;
+}
+
+int b64encode(uint8_t *inp, int ilen, char* outp)
+{
+    int i,j,k, num;
+    int rem=0;
+    uint32_t res=0;
+
+    if(inp == NULL || outp == NULL || ilen<=0) {
+        ALOGE("[%s] received NULL pointer or zero input length",__func__);
+        return -1;
+    }
+
+    num = ilen/3;
+    rem = ilen%3;
+    j=0;k=0;
+    for(i=0; i<num; i++) {
+        //prepare index
+        res = inp[j++]<<16;
+        res = res | inp[j++]<<8;
+        res = res | inp[j++];
+        //get output map from index
+        outp[k++] = (char) bTable[(res>>18)&0x3F];
+        outp[k++] = (char) bTable[(res>>12)&0x3F];
+        outp[k++] = (char) bTable[(res>>6)&0x3F];
+        outp[k++] = (char) bTable[res&0x3F];
+    }
+
+    switch(rem) {
+        case 1:
+            res = inp[j++]<<16;
+            outp[k++] = (char) bTable[res>>18];
+            outp[k++] = (char) bTable[(res>>12)&0x3F];
+            //outp[k++] = '=';
+            //outp[k++] = '=';
+            break;
+        case 2:
+            res = inp[j++]<<16;
+            res = res | inp[j++]<<8;
+            outp[k++] = (char) bTable[res>>18];
+            outp[k++] = (char) bTable[(res>>12)&0x3F];
+            outp[k++] = (char) bTable[(res>>6)&0x3F];
+            //outp[k++] = '=';
+            break;
+        default:
+            break;
+    }
+done:
+    outp[k] = '\0';
+    return k;
+}

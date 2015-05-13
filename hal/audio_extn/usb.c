@@ -111,8 +111,8 @@ static void initPlaybackVolume() {
          // Look for the first control named ".*Playback Volume" that isn't for a microphone
          for (i = 0; i < num_ctls; i++) {
              ctl = mixer_get_ctl(usbMixer, i);
-             if (strstr((const char *)mixer_ctl_get_name(ctl), "Playback Volume") &&
-                 !strstr((const char *)mixer_ctl_get_name(ctl), "Mic")) {
+             if ((ctl) && (strstr((const char *)mixer_ctl_get_name(ctl), "Playback Volume") &&
+                 !strstr((const char *)mixer_ctl_get_name(ctl), "Mic"))) {
                    break;
              }
          }
