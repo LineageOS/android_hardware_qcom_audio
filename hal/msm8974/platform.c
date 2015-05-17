@@ -894,6 +894,7 @@ void *platform_init(struct audio_device *adev)
     my_data->fluence_in_voice_rec = false;
     my_data->fluence_in_audio_rec = false;
     my_data->fluence_type = FLUENCE_NONE;
+    void (*acdb_set_param_path)(char *) = NULL;
 
     property_get("ro.qc.sdk.audio.fluencetype", my_data->fluence_cap, "");
     if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro"))) {
@@ -955,6 +956,13 @@ void *platform_init(struct audio_device *adev)
         if (!my_data->acdb_reload_vocvoltable)
             ALOGE("%s: Could not find the symbol acdb_loader_reload_vocvoltable from %s",
                   __func__, LIB_ACDB_LOADER);
+
+        acdb_set_param_path = (void*)dlsym(my_data->acdb_handle, "acdb_loader_set_param_path");
+        if (!acdb_set_param_path)
+            ALOGE("%s: Could not find the symbol acdb_loader_set_param_path from %s",
+                  __func__, LIB_ACDB_LOADER);
+        else
+            acdb_set_param_path("/system/etc/sound_param/h891l");
 
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_init_ACDB");
