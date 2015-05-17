@@ -831,6 +831,9 @@ void *platform_init(struct audio_device *adev)
     struct platform_data *my_data = NULL;
     int retry_num = 0, snd_card_num = 0;
     const char *snd_card_name;
+#ifdef HUAWEI_SOUND_PARAM_PATH
+    void (*acdb_set_param_path)(char *) = NULL;
+#endif
 
     my_data = calloc(1, sizeof(struct platform_data));
 
@@ -955,7 +958,14 @@ void *platform_init(struct audio_device *adev)
         if (!my_data->acdb_reload_vocvoltable)
             ALOGE("%s: Could not find the symbol acdb_loader_reload_vocvoltable from %s",
                   __func__, LIB_ACDB_LOADER);
-
+#ifdef HUAWEI_SOUND_PARAM_PATH
+        acdb_set_param_path = (void*)dlsym(my_data->acdb_handle, "acdb_loader_set_param_path");
+        if (!acdb_set_param_path)
+            ALOGE("%s: Could not find the symbol acdb_loader_set_param_path from %s",
+                  __func__, LIB_ACDB_LOADER);
+        else
+            acdb_set_param_path(HUAWEI_SOUND_PARAM_PATH);
+#endif
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_init_ACDB");
         if (my_data->acdb_init == NULL)
