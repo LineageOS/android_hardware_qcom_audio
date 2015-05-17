@@ -116,6 +116,9 @@ struct audio_block_header
 /* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
 typedef int  (*acdb_init_t)();
+#ifdef HUAWEI_SOUND_PARAM_PATH
+typedef void (*acdb_set_param_path_t)(char *path);
+#endif
 typedef void (*acdb_send_audio_cal_t)(int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
@@ -139,6 +142,9 @@ struct platform_data {
     void                       *acdb_handle;
     int                        voice_feature_set;
     acdb_init_t                acdb_init;
+#ifdef HUAWEI_SOUND_PARAM_PATH
+    acdb_set_param_path_t      acdb_set_param_path;
+#endif
     acdb_deallocate_t          acdb_deallocate;
     acdb_send_audio_cal_t      acdb_send_audio_cal;
     acdb_send_voice_cal_t      acdb_send_voice_cal;
@@ -961,7 +967,15 @@ void *platform_init(struct audio_device *adev)
         if (!my_data->acdb_reload_vocvoltable)
             ALOGE("%s: Could not find the symbol acdb_loader_reload_vocvoltable from %s",
                   __func__, LIB_ACDB_LOADER);
-
+#ifdef HUAWEI_SOUND_PARAM_PATH
+        my_data->acdb_set_param_path = (acdb_set_param_path_t)dlsym(my_data->acdb_handle,
+                                                    "acdb_loader_set_param_path");
+        if (!my_data->acdb_set_param_path)
+            ALOGE("%s: Could not find the symbol acdb_loader_set_param_path from %s",
+                  __func__, LIB_ACDB_LOADER);
+        else
+            my_data->acdb_set_param_path(HUAWEI_SOUND_PARAM_PATH);
+#endif
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_init_ACDB");
         if (my_data->acdb_init == NULL)
