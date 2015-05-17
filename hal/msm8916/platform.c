@@ -1485,6 +1485,47 @@ static void get_source_mic_type(struct platform_data * my_data)
      }
 }
 
+#ifdef HUAWEI_SOUND_PARAM_PATH
+#define HUAWEI_DEFAULT_PRODUCT "default"
+#define HUAWEI_PRODUCT_IDENTIFIER_PATH \
+        "/sys/bus/platform/drivers/hw_audio_info/hw_audio_info/product_identifier"
+
+typedef void (*acdb_set_param_path_t)(char *path);
+
+static void initialize_huawei_sound_param_path(void *acdb_handle)
+{
+    acdb_set_param_path_t set_param_path;
+
+    set_param_path = (acdb_set_param_path_t)dlsym(acdb_handle, "acdb_loader_set_param_path");
+    if (!set_param_path) {
+        ALOGE("%s: Could not find the symbol acdb_loader_set_param_path from %s",
+              __func__, LIB_ACDB_LOADER);
+    } else {
+        char product[MAX_PATH] = {0};
+        char path[MAX_PATH] = {0};
+        FILE *f;
+
+        if ((f = fopen(HUAWEI_PRODUCT_IDENTIFIER_PATH, "r")) == NULL) {
+            ALOGW("%s: Could not load product-identifier from %s errno %d", __func__,
+                    HUAWEI_PRODUCT_IDENTIFIER_PATH, errno);
+            strcpy(product, HUAWEI_DEFAULT_PRODUCT);
+        } else {
+            if (fread(product, 1, sizeof(product)-1, f) <= 0) {
+                ALOGW("%s: Error reading the product-identifier from %s errno %d", __func__,
+                        HUAWEI_PRODUCT_IDENTIFIER_PATH, errno);
+                strcpy(product, HUAWEI_DEFAULT_PRODUCT);
+            }
+            fclose(f);
+        }
+
+        snprintf(path, sizeof(path), "/system/etc/sound_param/%s/", product);
+        ALOGI("%s: Using param_path %s", __func__, path);
+
+        set_param_path(path);
+    }
+}
+#endif
+
 void *platform_init(struct audio_device *adev)
 {
     char value[PROPERTY_VALUE_MAX];
@@ -1687,6 +1728,9 @@ void *platform_init(struct audio_device *adev)
             ALOGE("%s: Could not find the symbol acdb_get_default_app_type from %s",
                   __func__, LIB_ACDB_LOADER);
 
+#ifdef HUAWEI_SOUND_PARAM_PATH
+        initialize_huawei_sound_param_path(my_data->acdb_handle);
+#endif
 
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_init_v2");

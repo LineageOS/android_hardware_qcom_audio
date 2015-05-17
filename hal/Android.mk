@@ -115,6 +115,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SSR)),true)
     LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/common/inc/
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_HUAWEI_SOUND_PARAM_PATH)),true)
+    LOCAL_CFLAGS += -DHUAWEI_SOUND_PARAM_PATH
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS)),true)
     LOCAL_CFLAGS += -DMULTI_VOICE_SESSION_ENABLED
     LOCAL_SRC_FILES += voice_extn/voice_extn.c
