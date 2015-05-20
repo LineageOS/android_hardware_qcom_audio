@@ -143,7 +143,7 @@ status_t AudioPolicyManager::setDeviceConnectionState(audio_devices_t device,
                 mScoDeviceAddress = "";
             } else if (mHasUsb && audio_is_usb_device(device)) {
                 // handle USB device disconnection
-                mUsbCardAndDevice = "";
+                mUsbOutCardAndDevice = "";
             }
             // not currently handling multiple simultaneous submixes: ignoring remote submix
             //   case and address
@@ -456,7 +456,7 @@ void AudioPolicyManager::setForceUse(AudioSystem::force_use usage, AudioSystem::
     checkA2dpSuspend();
     checkOutputForAllStrategies();
     updateDevicesAndOutputs();
-    for (int i = 0; i < mOutputs.size(); i++) {
+    for (size_t i = 0; i < mOutputs.size(); i++) {
         audio_io_handle_t output = mOutputs.keyAt(i);
         audio_devices_t newDevice = getNewDevice(output, true /*fromCache*/);
         setOutputDevice(output, newDevice, (newDevice != AUDIO_DEVICE_NONE));
@@ -483,8 +483,8 @@ void AudioPolicyManager::setForceUse(AudioSystem::force_use usage, AudioSystem::
 
 audio_io_handle_t AudioPolicyManager::getInput(int inputSource,
                                     uint32_t samplingRate,
-                                    uint32_t format,
-                                    uint32_t channelMask,
+                                    audio_format_t format,
+                                    audio_channel_mask_t channelMask,
                                     AudioSystem::audio_in_acoustics acoustics)
 {
     audio_io_handle_t input = 0;
@@ -520,8 +520,8 @@ audio_io_handle_t AudioPolicyManager::getInput(int inputSource,
     inputDesc->mInputSource = inputSource;
     inputDesc->mDevice = device;
     inputDesc->mSamplingRate = samplingRate;
-    inputDesc->mFormat = (audio_format_t)format;
-    inputDesc->mChannelMask = (audio_channel_mask_t)channelMask;
+    inputDesc->mFormat = format;
+    inputDesc->mChannelMask = channelMask;
     inputDesc->mRefCount = 0;
     input = mpClientInterface->openInput(profile->mModule->mHandle,
                                     &inputDesc->mDevice,

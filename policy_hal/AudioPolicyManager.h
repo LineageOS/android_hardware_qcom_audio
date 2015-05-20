@@ -45,8 +45,8 @@ public:
         virtual void setForceUse(AudioSystem::force_use usage, AudioSystem::forced_config config);
         virtual audio_io_handle_t getInput(int inputSource,
                                             uint32_t samplingRate,
-                                            uint32_t format,
-                                            uint32_t channels,
+                                            audio_format_t format,
+                                            audio_channel_mask_t channels,
                                             AudioSystem::audio_in_acoustics acoustics);
         virtual bool isOffloadSupported(const audio_offload_info_t& offloadInfo);
         virtual void setPhoneState(int state);
