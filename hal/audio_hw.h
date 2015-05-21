@@ -211,7 +211,6 @@ struct audio_device {
     struct listnode usecase_list;
     struct audio_route *audio_route;
     int acdb_settings;
-    bool speaker_lr_swap;
     struct voice voice;
     unsigned int cur_hdmi_channels;
     bool bt_wb_speech_enabled;

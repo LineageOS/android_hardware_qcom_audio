@@ -78,6 +78,8 @@ struct platform_data {
     bool fluence_in_voice_comm;
     bool fluence_in_voice_rec;
     int  dualmic_config;
+    bool speaker_lr_swap;
+
     void *acdb_handle;
     acdb_init_t                acdb_init;
     acdb_deallocate_t          acdb_deallocate;
@@ -1265,7 +1267,7 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
     } else if (devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) {
         snd_device = SND_DEVICE_OUT_SPEAKER_SAFE;
     } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
-        if (adev->speaker_lr_swap)
+        if (my_data->speaker_lr_swap)
             snd_device = SND_DEVICE_OUT_SPEAKER_REVERSE;
         else
             snd_device = SND_DEVICE_OUT_SPEAKER;
@@ -1733,4 +1735,33 @@ int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t p
     pcm_device_table[usecase][type] = pcm_id;
 done:
     return ret;
+}
+
+int platform_swap_lr_channels(struct audio_device *adev, bool swap_channels)
+{
+    // only update if there is active pcm playback on speaker
+    struct audio_usecase *usecase;
+    struct listnode *node;
+    struct platform_data *my_data = (struct platform_data *)adev->platform;
+
+    if (my_data->speaker_lr_swap != swap_channels) {
+        my_data->speaker_lr_swap = swap_channels;
+
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (usecase->type == PCM_PLAYBACK &&
+                usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
+                const char *mixer_path;
+                if (swap_channels) {
+                    mixer_path = platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER_REVERSE);
+                    audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+                } else {
+                    mixer_path = platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER);
+                    audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+                }
+                break;
+            }
+        }
+    }
+    return 0;
 }
