@@ -50,7 +50,7 @@ ifneq ($(filter msm8994 msm8992,$(TARGET_BOARD_PLATFORM)),)
     LOCAL_SRC_FILES += edid.c
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PCM_OFFLOAD)),true)
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_PCM_OFFLOAD)),false)
     LOCAL_CFLAGS += -DPCM_OFFLOAD_ENABLED
 endif
 
@@ -154,7 +154,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FLAC_DECODER)),true)
     LOCAL_CFLAGS += -DQTI_FLAC_DECODER
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PCM_OFFLOAD_24)),true)
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_PCM_OFFLOAD_24)),false)
        LOCAL_CFLAGS += -DPCM_OFFLOAD_ENABLED_24
 endif
 
