@@ -2334,8 +2334,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         if (out_device & AUDIO_DEVICE_OUT_SPEAKER)
             in_device = AUDIO_DEVICE_IN_BACK_MIC;
         if (adev->active_input) {
-            if (adev->active_input->enable_aec &&
-                    adev->active_input->enable_ns) {
+            if (my_data->fluence_type != FLUENCE_NONE &&
+                adev->active_input->enable_aec &&
+                adev->active_input->enable_ns) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     if (my_data->fluence_in_spkr_mode) {
                         if (my_data->fluence_type & FLUENCE_QUAD_MIC) {
@@ -2359,7 +2360,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                     snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
                 }
                 platform_set_echo_reference(adev->platform, true);
-            } else if (adev->active_input->enable_aec) {
+            } else if (my_data->fluence_type != FLUENCE_NONE &&
+                       adev->active_input->enable_aec) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     if (my_data->fluence_in_spkr_mode) {
                         if (my_data->fluence_type & FLUENCE_QUAD_MIC) {
@@ -2383,7 +2385,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                     snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
                 }
                 platform_set_echo_reference(adev->platform, true);
-            } else if (adev->active_input->enable_ns) {
+            } else if (my_data->fluence_type != FLUENCE_NONE &&
+                       adev->active_input->enable_ns) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     if (my_data->fluence_in_spkr_mode) {
                         if (my_data->fluence_type & FLUENCE_QUAD_MIC) {
