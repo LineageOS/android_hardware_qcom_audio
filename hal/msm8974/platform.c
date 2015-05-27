@@ -2353,15 +2353,14 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
                      * info->sample_rate
                      * (bits_per_sample >> 3)
                      * popcount(info->channel_mask))/1000;
-    // To have same PCM samples for all channels, the buffer size requires to
-    // be multiple of (number of channels * bytes per sample)
-    // For writes to succeed, the buffer must be written at address which is multiple of 32
-    // Alignment of 96 satsfies both of the above requirements
-    fragment_size = ALIGN(fragment_size, 96);
     if(fragment_size < MIN_PCM_OFFLOAD_FRAGMENT_SIZE)
         fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
     else if(fragment_size > MAX_PCM_OFFLOAD_FRAGMENT_SIZE)
         fragment_size = MAX_PCM_OFFLOAD_FRAGMENT_SIZE;
+    // To have same PCM samples for all channels, the buffer size requires to
+    // be multiple of (number of channels * bytes per sample)
+    // For writes to succeed, the buffer must be written at address which is multiple of 32
+    fragment_size = ALIGN(fragment_size, ((bits_per_sample >> 3)* popcount(info->channel_mask) * 32));
 
     ALOGI("PCM offload Fragment size to %d bytes", fragment_size);
     return fragment_size;
