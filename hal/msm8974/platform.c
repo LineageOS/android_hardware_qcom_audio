@@ -814,6 +814,7 @@ void *platform_init(struct audio_device *adev)
     set_platform_defaults(my_data);
 
     /* Initialize platform specific ids and/or backends*/
+    platform_info_init();
     audio_extn_spkr_prot_init(adev);
 
     /* load csd client */
