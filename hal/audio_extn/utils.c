@@ -452,12 +452,14 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
                                   audio_format_t format,
                                   uint32_t sample_rate,
                                   uint32_t bit_width,
+                                  audio_channel_mask_t channel_mask,
                                   struct stream_app_type_cfg *app_type_cfg)
 {
     struct listnode *node_i, *node_j, *node_k;
     struct streams_output_cfg *so_info;
     struct stream_format *sf_info;
     struct stream_sample_rate *ss_info;
+    char value[PROPERTY_VALUE_MAX] = {0};
 
     if ((24 == bit_width) &&
         (devices & AUDIO_DEVICE_OUT_SPEAKER)) {
@@ -468,6 +470,16 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
         ALOGI("%s Allowing 24-bit playback on speaker ONLY at default sampling rate", __func__);
     }
 
+    property_get("audio.playback.mch.downsample",value,"");
+    if (!strncmp("true", value, sizeof("true"))) {
+        if ((popcount(channel_mask) > 2) &&
+                (sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
+                !(flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))  {
+                    sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+                    ALOGD("%s: MCH session defaulting sample rate to %d",
+                               __func__, sample_rate);
+        }
+    }
     ALOGV("%s: flags: %x, format: %x sample_rate %d",
            __func__, flags, format, sample_rate);
     list_for_each(node_i, streams_output_cfg_list) {
@@ -509,6 +521,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
     struct mixer_ctl *ctl;
     int pcm_device_id, acdb_dev_id, snd_device = usecase->out_snd_device;
     int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+    char value[PROPERTY_VALUE_MAX] = {0};
 
     ALOGV("%s", __func__);
 
@@ -556,6 +569,14 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
         sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
     } else {
         sample_rate = out->app_type_cfg.sample_rate;
+    }
+
+    property_get("audio.playback.mch.downsample",value,"");
+    if (!strncmp("true", value, sizeof("true"))) {
+        if ((popcount(out->channel_mask) > 2) &&
+               (out->sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
+               !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
+           sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
     }
 
     app_type_cfg[len++] = out->app_type_cfg.app_type;
