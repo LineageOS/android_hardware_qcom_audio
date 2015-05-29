@@ -111,4 +111,8 @@ int platform_set_hdmi_config(struct stream_out *out);
 int platform_set_device_params(struct stream_out *out, int param, int value);
 int platform_set_audio_device_interface(const char * device_name, const char *intf_name,
                                         const char * codec_type);
+int platform_set_spkr_device_tz_names(snd_device_t index,
+                                       const char *spkr_1_tz_name, const char *spkr_2_tz_name);
+const char *platform_get_spkr_1_tz_name(snd_device_t snd_device);
+const char *platform_get_spkr_2_tz_name(snd_device_t snd_device);
 #endif // AUDIO_PLATFORM_API_H
