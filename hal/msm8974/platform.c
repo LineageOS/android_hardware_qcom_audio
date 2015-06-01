@@ -3132,6 +3132,7 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
     struct stream_out *out = NULL;
     unsigned int bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     unsigned int sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    char value[PROPERTY_VALUE_MAX] = {0};
 
     // For voice calls use default configuration
     // force routing is not required here, caller will do it anyway
@@ -3171,6 +3172,21 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
     if (16 == bit_width) {
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
     }
+
+    //check if mulitchannel clip needs to be down sampled  to 48k
+    property_get("audio.playback.mch.downsample",value,"");
+    if (!strncmp("true", value, sizeof("true"))) {
+        out = usecase->stream.out;
+        if ((popcount(out->channel_mask) > 2) &&
+                      (out->sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
+                      !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)) {
+            /* update out sample rate to reflect current backend sample rate  */
+            sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+            ALOGD("%s: MCH session defaulting sample rate to %d",
+                 __func__, sample_rate);
+        }
+    }
+
     // 24 bit playback on speakers is allowed through 48 khz backend only
     // bit width re-configured based on platform info
     if ((24 == bit_width) &&

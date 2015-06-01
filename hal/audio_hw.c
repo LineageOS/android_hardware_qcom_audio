@@ -954,6 +954,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                                 usecase->stream.out->format,
                                                 usecase->stream.out->sample_rate,
                                                 usecase->stream.out->bit_width,
+                                                usecase->stream.out->channel_mask,
                                                 &usecase->stream.out->app_type_cfg);
         ALOGI("%s Selected apptype: %d", __func__, usecase->stream.out->app_type_cfg.app_type);
     }
@@ -2978,7 +2979,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     audio_extn_utils_update_stream_app_type_cfg(adev->platform,
                                                 &adev->streams_output_cfg_list,
                                                 devices, flags, format, out->sample_rate,
-                                                out->bit_width, &out->app_type_cfg);
+                                                out->bit_width, out->channel_mask,
+                                                &out->app_type_cfg);
     if ((out->usecase == USECASE_AUDIO_PLAYBACK_PRIMARY) ||
         (flags & AUDIO_OUTPUT_FLAG_PRIMARY)) {
         /* Ensure the default output is not selected twice */
