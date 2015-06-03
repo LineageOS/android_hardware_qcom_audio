@@ -179,6 +179,7 @@ void audio_extn_hpx_set_parameters(struct audio_device *adev,
         if (adev->offload_effects_set_hpx_state != NULL)
             adev->offload_effects_set_hpx_state(hpx_state);
 
+        audio_extn_dts_eagle_fade(adev, aextnmod.hpx_enabled, NULL);
         /* set HPX state on device pp */
         ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
         if (ctl)
