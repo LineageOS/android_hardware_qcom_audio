@@ -1,5 +1,5 @@
 /* AudioDaemon.cpp
-Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -125,6 +125,7 @@ namespace android {
         struct dirent* in_file;
         int fd;
         String8 path;
+        String8 d_name;
 
         if ((dp = opendir(events_dir)) == NULL) {
             ALOGE("Cannot open switch directory to get list of audio events %s", events_dir);
@@ -148,8 +149,9 @@ namespace android {
             if (fd == -1) {
                 ALOGE("Open %s failed : %s", path.string(), strerror(errno));
             } else {
-                mAudioEvents.push_back(std::make_pair(in_file->d_name, fd));
-                mAudioEventsStatus.push_back(std::make_pair(in_file->d_name, 0));
+                d_name = in_file->d_name;
+                mAudioEvents.push_back(std::make_pair(d_name, fd));
+                mAudioEventsStatus.push_back(std::make_pair(d_name, 0));
                 ALOGD("event status mAudioEventsStatus= %s",
                           mAudioEventsStatus[0].first.string());
             }
