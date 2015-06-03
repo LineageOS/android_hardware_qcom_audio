@@ -1421,7 +1421,7 @@ void *platform_init(struct audio_device *adev)
     DIR *dir;
     struct dirent *dirent;
     char file_name[10] = "wsa";
-    strcat(CodecPeek, snd_card_name);
+    strlcat(CodecPeek, snd_card_name, sizeof(CodecPeek));
 
     dir = opendir(CodecPeek);
     if (dir != NULL) {
@@ -3810,7 +3810,7 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
     strlcpy(mixer_ctl_name, "Playback Channel Map", sizeof(mixer_ctl_name));
     if (snd_id >= 0) {
         snprintf(device_num, sizeof(device_num), "%d", snd_id);
-        strncat(mixer_ctl_name, device_num, 13);
+        strlcat(mixer_ctl_name, device_num, sizeof(device_num));
     }
 
     ALOGD("%s mixer_ctl_name:%s", __func__, mixer_ctl_name);
