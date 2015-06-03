@@ -18,21 +18,15 @@
 #define QCOM_AUDIO_PLATFORM_H
 
 /*
- * Below are the devices that share the same back end.
- * It is not possible route different streams to different
- * devices that share the same backend.
+ * Below are the devices for which is back end is same, SLIMBUS_0_RX.
+ * All these devices are handled by the internal HW codec. We can
+ * enable any one of these devices at any time
  */
-#ifdef PLATFORM_MSM8084
-#define AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND \
-    (AUDIO_DEVICE_OUT_EARPIECE | AUDIO_DEVICE_OUT_SPEAKER | \
-     AUDIO_DEVICE_OUT_SPEAKER_SAFE)
-#else
 #define AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND \
     (AUDIO_DEVICE_OUT_EARPIECE | AUDIO_DEVICE_OUT_SPEAKER | \
      AUDIO_DEVICE_OUT_SPEAKER_SAFE | \
      AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE | \
      AUDIO_DEVICE_OUT_LINE)
-#endif
 
 /* Sound devices specific to the platform
  * The DEVICE_OUT_* and DEVICE_IN_* should be mapped to these sound
