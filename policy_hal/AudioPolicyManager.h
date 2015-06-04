@@ -50,10 +50,7 @@ class AudioPolicyManagerCustom: public AudioPolicyManager
 {
 
 public:
-                AudioPolicyManagerCustom(AudioPolicyClientInterface *clientInterface)
-                : AudioPolicyManager(clientInterface) {
-                    mHdmiAudioDisabled = false;
-                    mHdmiAudioEvent = false;}
+        AudioPolicyManagerCustom(AudioPolicyClientInterface *clientInterface);
 
         virtual ~AudioPolicyManagerCustom() {}
 
@@ -66,7 +63,22 @@ public:
 
         virtual bool isOffloadSupported(const audio_offload_info_t& offloadInfo);
 
-        // true if given state represents a device in a telephony or VoIP call
+        virtual status_t getInputForAttr(const audio_attributes_t *attr,
+                                         audio_io_handle_t *input,
+                                         audio_session_t session,
+                                         uid_t uid,
+                                         uint32_t samplingRate,
+                                         audio_format_t format,
+                                         audio_channel_mask_t channelMask,
+                                         audio_input_flags_t flags,
+                                         audio_port_handle_t selectedDeviceId,
+                                         input_type_t *inputType);
+        // indicates to the audio policy manager that the input starts being used.
+        virtual status_t startInput(audio_io_handle_t input,
+                                    audio_session_t session);
+        // indicates to the audio policy manager that the input stops being used.
+        virtual status_t stopInput(audio_io_handle_t input,
+                                   audio_session_t session);
 protected:
 
          status_t checkAndSetVolume(audio_stream_type_t stream,
@@ -98,6 +110,10 @@ protected:
         //   the mute/unmute happened 315
         uint32_t handleEventForBeacon(int){return 0;}
         uint32_t setBeaconMute(bool){return 0;}
+#ifdef VOICE_CONCURRENCY
+        static audio_output_flags_t getFallBackPath();
+        int mFallBackflag;
+#endif /*VOICE_CONCURRENCY*/
 
         // handle special cases for sonification strategy while in call: mute streams or replace by
         // a special tone in the device used for communication
@@ -128,6 +144,11 @@ private:
         // Used for voip + voice concurrency usecase
         int mPrevPhoneState;
         int mvoice_call_state;
+#ifdef RECORD_PLAY_CONCURRENCY
+        // Used for record + playback concurrency
+        bool mIsInputRequestOnProgress;
+#endif
+
 
 };
 
