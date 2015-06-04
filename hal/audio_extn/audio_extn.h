@@ -87,4 +87,12 @@ int audio_extn_sound_trigger_read(struct stream_in *in, void *buffer,
                                   size_t bytes);
 #endif
 
+#ifndef DSM_FEEDBACK_ENABLED
+#define audio_extn_dsm_feedback_enable(adev, snd_device, benable)                (0)
+#else
+void audio_extn_dsm_feedback_enable(struct audio_device *adev,
+                         snd_device_t snd_device,
+                         bool benable);
+#endif
+
 #endif /* AUDIO_EXTN_H */
