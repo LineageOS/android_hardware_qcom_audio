@@ -3136,6 +3136,10 @@ void platform_get_parameters(void *platform,
                     }
                 }
             }
+        } else if (SND_CARD_STATE_OFFLINE == get_snd_card_state(my_data->adev)) {
+            //Do not allow DSP session during SSR
+            ALOGI("Rejecting request for DSP only session from HAL due to SSR");
+            isallowed = 0;
         }
         str_parms_add_int(reply, AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED, isallowed);
     }
