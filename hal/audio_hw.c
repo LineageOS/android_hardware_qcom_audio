@@ -1715,7 +1715,13 @@ static int out_standby(struct audio_stream *stream)
     pthread_mutex_lock(&out->lock);
     if (!out->standby) {
         pthread_mutex_lock(&adev->lock);
+
+#ifdef USES_AUDIO_AMPLIFIER
+        amplifier_standby(stream);
+#endif
+
         out->standby = true;
+
         if (!is_offload_usecase(out->usecase)) {
             if (out->pcm) {
                 pcm_close(out->pcm);
@@ -2093,6 +2099,12 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ret = voice_extn_compress_voip_start_output_stream(out);
         else
             ret = start_output_stream(out);
+
+#ifdef USES_AUDIO_AMPLIFIER
+        if (!ret)
+            amplifier_start(stream, is_offload_usecase(out->usecase));
+#endif
+
         pthread_mutex_unlock(&adev->lock);
         /* ToDo: If use case is compress offload should return 0 */
         if (ret != 0) {
