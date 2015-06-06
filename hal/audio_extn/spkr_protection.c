@@ -35,6 +35,7 @@
 #include <math.h>
 #include <cutils/log.h>
 #include <fcntl.h>
+#include <dirent.h>
 #include "audio_hw.h"
 #include "platform.h"
 #include "platform_api.h"
@@ -61,6 +62,9 @@
 #define MIN_RESISTANCE_SPKR_Q24 (2 * (1 << 24))
 #define MAX_RESISTANCE_SPKR_Q24 (40 * (1 << 24))
 
+/*Number of Attempts for WSA equilibrium t0 reads*/
+#define NUM_ATTEMPTS 5
+
 /*Path where the calibration file will be stored*/
 #define CALIB_FILE "/data/misc/audio/audio.cal"
 
@@ -86,6 +90,10 @@
 #define SPKR_PROCESSING_IN_PROGRESS 1
 #define SPKR_PROCESSING_IN_IDLE 0
 
+#define MAX_PATH             (256)
+#define THERMAL_SYSFS "/sys/class/thermal"
+#define TZ_TYPE "/sys/class/thermal/thermal_zone%d/type"
+#define TZ_WSA "/sys/class/thermal/thermal_zone%d/temp"
 /*Modes of Speaker Protection*/
 enum speaker_protection_mode {
     SPKR_PROTECTION_DISABLED = -1,
@@ -117,7 +125,12 @@ struct speaker_prot_session {
     int (*thermal_client_request)(char *client_name, int req_data);
     bool spkr_prot_enable;
     bool spkr_in_use;
-   struct timespec spkr_last_time_used;
+    struct timespec spkr_last_time_used;
+    bool wsa_found;
+    char *spkr_1_tz_name;
+    char *spkr_2_tz_name;
+    int spkr_1_tzn;
+    int spkr_2_tzn;
 };
 
 static struct pcm_config pcm_config_skr_prot = {
@@ -133,6 +146,93 @@ static struct pcm_config pcm_config_skr_prot = {
 
 static struct speaker_prot_session handle;
 static int vi_feed_no_channels;
+
+int read_line_from_file(const char *path, char *buf, size_t count)
+{
+    char * fgets_ret;
+    FILE * fd;
+    int rv;
+
+    fd = fopen(path, "r");
+    if (fd == NULL)
+        return -1;
+
+    fgets_ret = fgets(buf, (int)count, fd);
+    if (NULL != fgets_ret) {
+        rv = (int)strlen(buf);
+    } else {
+        rv = ferror(fd);
+    }
+    fclose(fd);
+
+   return rv;
+}
+
+/*===========================================================================
+FUNCTION get_tzn
+
+Utility function to match a sensor name with thermal zone id.
+
+ARGUMENTS
+	sensor_name - name of sensor to match
+
+RETURN VALUE
+	Thermal zone id on success,
+	-1 on failure.
+===========================================================================*/
+int get_tzn(const char *sensor_name)
+{
+    DIR *tdir = NULL;
+    struct dirent *tdirent = NULL;
+    int found = -1;
+    int tzn = 0;
+    char name[MAX_PATH] = {0};
+    char cwd[MAX_PATH] = {0};
+
+    if (!getcwd(cwd, sizeof(cwd)))
+        return found;
+
+    chdir(THERMAL_SYSFS); /* Change dir to read the entries. Doesnt work
+                             otherwise */
+    tdir = opendir(THERMAL_SYSFS);
+    if (!tdir) {
+        ALOGE("Unable to open %s\n", THERMAL_SYSFS);
+        return found;
+    }
+
+    while ((tdirent = readdir(tdir))) {
+        char buf[50];
+        struct dirent *tzdirent;
+        DIR *tzdir = NULL;
+
+        tzdir = opendir(tdirent->d_name);
+        if (!tzdir)
+            continue;
+        while ((tzdirent = readdir(tzdir))) {
+            if (strcmp(tzdirent->d_name, "type"))
+                continue;
+            snprintf(name, MAX_PATH, TZ_TYPE, tzn);
+            ALOGD("Opening %s\n", name);
+            read_line_from_file(name, buf, sizeof(buf));
+            buf[strlen(sensor_name)] = '\0';
+            if (!strcmp(buf, sensor_name)) {
+                found = 1;
+                break;
+            }
+            tzn++;
+        }
+        closedir(tzdir);
+        if (found == 1)
+            break;
+    }
+    closedir(tdir);
+    chdir(cwd); /* Restore current working dir */
+    if (found == 1) {
+        found = tzn;
+        ALOGE("Sensor %s found at tz: %d\n", sensor_name, tzn);
+    }
+    return found;
+}
 
 static void spkr_prot_set_spkrstatus(bool enable)
 {
@@ -302,7 +402,7 @@ error:
      return -EINVAL;
 }
 
-static int spkr_calibrate(int t0)
+static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
 {
     struct audio_device *adev = handle.adev_handle;
     struct audio_cal_info_spk_prot_cfg protCfg;
@@ -328,9 +428,8 @@ static int spkr_calibrate(int t0)
         return -ENODEV;
     } else {
         protCfg.mode = MSM_SPKR_PROT_CALIBRATION_IN_PROGRESS;
-        /* HAL for speaker protection gets only one Temperature */
-        protCfg.t0[SP_V2_SPKR_1] = t0;
-        protCfg.t0[SP_V2_SPKR_2] = t0;
+        protCfg.t0[SP_V2_SPKR_1] = t0_spk_1;
+        protCfg.t0[SP_V2_SPKR_2] = t0_spk_2;
         if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
             ALOGE("%s: spkr_prot_thread set failed AUDIO_SET_SPEAKER_PROT",
             __func__);
@@ -536,13 +635,20 @@ static void* spkr_calibration_thread()
 {
     unsigned long sec = 0;
     int t0;
+    int i = 0;
+    int t0_spk_1 = 0;
+    int t0_spk_2 = 0;
+    int t0_spk_prior = 0;
     bool goahead = false;
     struct audio_cal_info_spk_prot_cfg protCfg;
     FILE *fp;
-    int acdb_fd;
+    int acdb_fd, thermal_fd;
     struct audio_device *adev = handle.adev_handle;
     unsigned long min_idle_time = MIN_SPKR_IDLE_SEC;
     char value[PROPERTY_VALUE_MAX];
+    char wsa_path[MAX_PATH] = {0};
+    int spk_1_tzn, spk_2_tzn;
+    char buf[32] = {0};
 
     /* If the value of this persist.spkr.cal.duration is 0
      * then it means it will take 30min to calibrate
@@ -622,7 +728,95 @@ static void* spkr_calibration_thread()
 
     while (1) {
         ALOGV("%s: start calibration", __func__);
-        if (!handle.thermal_client_request("spkr",1)) {
+        if (handle.wsa_found) {
+            spk_1_tzn = handle.spkr_1_tzn;
+            spk_2_tzn = handle.spkr_2_tzn;
+            goahead = false;
+            pthread_mutex_lock(&adev->lock);
+            if (is_speaker_in_use(&sec)) {
+                ALOGD("%s: WSA Speaker in use retry calibration", __func__);
+                pthread_mutex_unlock(&adev->lock);
+                continue;
+            } else {
+                ALOGD("%s: wsa speaker idle %ld min time %ld", __func__, sec, min_idle_time);
+                if (sec < min_idle_time) {
+                    ALOGD("%s: speaker idle is less retry", __func__);
+                    pthread_mutex_unlock(&adev->lock);
+                    continue;
+               }
+               goahead = true;
+           }
+           if (!list_empty(&adev->usecase_list)) {
+                ALOGD("%s: Usecase active re-try calibration", __func__);
+                goahead = false;
+           }
+           if (goahead) {
+               if (spk_1_tzn > 0) {
+                   snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_1_tzn);
+                   ALOGD("%s: wsa_path: %s\n", __func__, wsa_path);
+                   thermal_fd = -1;
+                   thermal_fd = open(wsa_path, O_RDONLY);
+                   if (thermal_fd > 0) {
+                       for (i = 0; i < NUM_ATTEMPTS; i++) {
+                            if (read(thermal_fd, buf, sizeof(buf))) {
+                                t0_spk_1 = atoi(buf);
+                                if (i > 0 && (t0_spk_1 != t0_spk_prior))
+                                    break;
+                                t0_spk_prior = t0_spk_1;
+                            } else {
+                               ALOGE("%s: read fail for %s\n", __func__, wsa_path);
+                               break;
+                            }
+                        }
+                        close(thermal_fd);
+                   } else {
+                       ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
+                   }
+                   if (i == NUM_ATTEMPTS) {
+                       /*Convert temp into q6 format*/
+                       t0_spk_1 = (t0_spk_1 * (1 << 6));
+                       ALOGE("%s: temp T0 for spkr1 %d\n", __func__, t0_spk_1);
+                   } else {
+                       ALOGE("%s: thermal equilibrium failed for spkr1 in %d readings\n",
+                                                __func__, NUM_ATTEMPTS);
+                       t0_spk_1 = SAFE_SPKR_TEMP_Q6;
+                   }
+                   fclose(fp);
+               }
+               if (spk_2_tzn > 0) {
+                   snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_2_tzn);
+                   ALOGE("%s: wsa_path: %s\n", __func__, wsa_path);
+                   thermal_fd = open(wsa_path, O_RDONLY);
+                   if (thermal_fd > 0) {
+                       for (i = 0; i < NUM_ATTEMPTS; i++) {
+                            if (read(thermal_fd, buf, sizeof(buf))) {
+                                t0_spk_2 = atoi(buf);
+                                if (i > 0 && (t0_spk_2 != t0_spk_prior))
+                                    break;
+                                t0_spk_prior = t0_spk_2;
+                            } else {
+                               ALOGE("%s: read fail for %s\n", __func__, wsa_path);
+                               break;
+                            }
+                        }
+                        close(thermal_fd);
+                   } else {
+                       ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
+                   }
+                   if (i == NUM_ATTEMPTS) {
+                       /*Convert temp into q6 format*/
+                       t0_spk_2 = (t0_spk_2 * (1 << 6));
+                       ALOGE("%s: temp T0 for spkr2 %d\n", __func__, t0_spk_2);
+                   } else {
+                       ALOGE("%s: thermal equilibrium failed for spkr2 in %d readings\n",
+                                                __func__, NUM_ATTEMPTS);
+                       t0_spk_2 = SAFE_SPKR_TEMP_Q6;
+                   }
+                   fclose(fp);
+               }
+           }
+           pthread_mutex_unlock(&adev->lock);
+        } else if (!handle.thermal_client_request("spkr",1)) {
             ALOGD("%s: wait for callback from thermal daemon", __func__);
             pthread_mutex_lock(&handle.spkr_prot_thermalsync_mutex);
             pthread_cond_wait(&handle.spkr_prot_thermalsync,
@@ -635,12 +829,15 @@ static void* spkr_calibration_thread()
                       handle.spkr_prot_t0);
                 continue;
             }
+            t0_spk_1 = t0;
+            t0_spk_2 = t0;
             ALOGD("%s: Request t0 success value %d", __func__,
             handle.spkr_prot_t0);
         } else {
             ALOGE("%s: Request t0 failed", __func__);
             /*Assume safe value for temparature*/
-            t0 = SAFE_SPKR_TEMP_Q6;
+            t0_spk_1 = SAFE_SPKR_TEMP_Q6;
+            t0_spk_2 = SAFE_SPKR_TEMP_Q6;
         }
         goahead = false;
         pthread_mutex_lock(&adev->lock);
@@ -664,7 +861,7 @@ static void* spkr_calibration_thread()
         }
         if (goahead) {
                 int status;
-                status = spkr_calibrate(t0);
+                status = spkr_calibrate(t0_spk_1, t0_spk_2);
                 pthread_mutex_unlock(&adev->lock);
                 if (status == -EAGAIN) {
                     ALOGE("%s: failed to calibrate try again %s",
@@ -698,6 +895,17 @@ static int thermal_client_callback(int temp)
     return 0;
 }
 
+static bool is_wsa_present(void)
+{
+   handle.spkr_1_tz_name = platform_get_spkr_1_tz_name(SND_DEVICE_OUT_SPEAKER);
+   handle.spkr_2_tz_name = platform_get_spkr_2_tz_name(SND_DEVICE_OUT_SPEAKER);
+   handle.spkr_1_tzn = get_tzn(handle.spkr_1_tz_name);
+   handle.spkr_2_tzn = get_tzn(handle.spkr_2_tz_name);
+   if ((handle.spkr_1_tzn >= 0) || (handle.spkr_2_tzn >= 0))
+        handle.wsa_found = true;
+   return handle.wsa_found;
+}
+
 void audio_extn_spkr_prot_init(void *adev)
 {
     char value[PROPERTY_VALUE_MAX];
@@ -719,6 +927,17 @@ void audio_extn_spkr_prot_init(void *adev)
     handle.spkr_prot_mode = MSM_SPKR_PROT_DISABLED;
     handle.spkr_processing_state = SPKR_PROCESSING_IN_IDLE;
     handle.spkr_prot_t0 = -1;
+
+    if (is_wsa_present()) {
+        pthread_cond_init(&handle.spkr_calib_cancel, NULL);
+        pthread_cond_init(&handle.spkr_calibcancel_ack, NULL);
+        pthread_mutex_init(&handle.mutex_spkr_prot, NULL);
+        pthread_mutex_init(&handle.spkr_calib_cancelack_mutex, NULL);
+        ALOGD("%s:WSA Create calibration thread", __func__);
+        (void)pthread_create(&handle.spkr_calibration_thread,
+        (const pthread_attr_t *) NULL, spkr_calibration_thread, &handle);
+        return;
+    }
     pthread_cond_init(&handle.spkr_prot_thermalsync, NULL);
     pthread_cond_init(&handle.spkr_calib_cancel, NULL);
     pthread_cond_init(&handle.spkr_calibcancel_ack, NULL);

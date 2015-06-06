@@ -382,4 +382,10 @@ struct audio_device_to_audio_interface {
     char device_name[100];
     char interface_name[100];
 };
+
+struct speaker_device_to_tz_names {
+    snd_device_t snd_device;
+    char spkr_1_tz_name[100];
+    char spkr_2_tz_name[100];
+};
 #endif // QCOM_AUDIO_PLATFORM_H
