@@ -30,9 +30,7 @@
 #include <sound/a2220.h>
 #endif
 
-#ifdef USES_AUDIO_AMPLIFIER
-#include <audio_amplifier.h>
-#endif
+#include <hardware/audio_amplifier.h>
 
 extern "C" {
 #ifdef QCOM_CSDCLIENT_ENABLED
@@ -201,6 +199,30 @@ int ALSADevice::setA2220Mode(int mode)
     return rc;
 }
 #endif
+
+static void amplifier_set_devices(int devices)
+{
+    int rc;
+    amplifier_module_t *module = NULL;
+    amplifier_device_t *amp_dev = NULL;
+
+    rc = hw_get_module(AMPLIFIER_HARDWARE_MODULE_ID,
+            (const hw_module_t **) &module);
+    if (rc) {
+        ALOGD("%s: Failed to obtain reference to amplifier module: %s\n",
+                __func__, strerror(-rc));
+    }
+
+    rc = amplifier_device_open((const hw_module_t *) module, &amp_dev);
+    if (rc) {
+        ALOGD("%s: Failed to open amplifier device: %s\n",
+                __func__, strerror(-rc));
+    }
+
+    if (amp_dev && amp_dev->set_devices) {
+        amp_dev->set_devices(amp_dev, devices);
+    }
+}
 
 static bool shouldUseHandsetAnc(int flags, int inChannels)
 {
@@ -885,9 +907,7 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
     }
 #endif
 
-#ifdef USES_AUDIO_AMPLIFIER
     amplifier_set_devices(devices);
-#endif
 
     if (rxDevice != NULL) {
         free(rxDevice);
