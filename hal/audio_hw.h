@@ -40,6 +40,7 @@
 
 #include <stdlib.h>
 #include <cutils/list.h>
+#include <hardware/audio_amplifier.h>
 #include <hardware/audio.h>
 #include <tinyalsa/asoundlib.h>
 #include <tinycompress/tinycompress.h>
@@ -346,6 +347,8 @@ struct audio_device {
     adm_request_focus_t adm_request_focus;
     adm_abandon_focus_t adm_abandon_focus;
     bool multi_offload_enable;
+
+    amplifier_device_t *amp;
 };
 
 int select_devices(struct audio_device *adev,
