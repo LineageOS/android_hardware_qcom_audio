@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7a8ec9b2_d59070ef",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1724,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-06-07T10:19:01Z",
+      "side": 1,
+      "message": "Extra whitespace",
+      "revId": "5f3b8b4dc1177466cb0300e086951ac877c1fd8f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
