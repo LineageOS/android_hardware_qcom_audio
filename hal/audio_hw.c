@@ -55,9 +55,7 @@
 #include "sound/compress_params.h"
 #include "sound/asound.h"
 
-#ifdef USES_AUDIO_AMPLIFIER
-#include <audio_amplifier.h>
-#endif
+#include <hardware/audio_amplifier.h>
 
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /* ToDo: Check and update a proper value in msec */
@@ -882,12 +880,9 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 
     enable_audio_route(adev, usecase);
 
-#ifdef USES_AUDIO_AMPLIFIER
     /* Rely on amplifier_set_devices to distinguish between in/out devices */
     amplifier_set_devices(in_snd_device);
     amplifier_set_devices(out_snd_device);
-#endif
-
 
     /* Applicable only on the targets that has external modem.
      * Enable device command should be sent to modem only after
@@ -1633,6 +1628,7 @@ static int out_standby(struct audio_stream *stream)
     pthread_mutex_lock(&out->lock);
     if (!out->standby) {
         pthread_mutex_lock(&adev->lock);
+        amplifier_stream_standby((struct audio_stream_out *)stream);
         out->standby = true;
         if (!is_offload_usecase(out->usecase)) {
             if (out->pcm) {
@@ -2016,6 +2012,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ret = voice_extn_compress_voip_start_output_stream(out);
         else
             ret = start_output_stream(out);
+        if (ret != 0)
+            amplifier_stream_start(stream, is_offload_usecase(out->usecase));
         pthread_mutex_unlock(&adev->lock);
         /* ToDo: If use case is compress offload should return 0 */
         if (ret != 0) {
@@ -3170,10 +3168,8 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
     pthread_mutex_lock(&adev->lock);
     if (adev->mode != mode) {
         ALOGD("%s mode %d\n", __func__, mode);
-#ifdef USES_AUDIO_AMPLIFIER
         if (amplifier_set_mode(mode) != 0)
             ALOGE("Failed setting amplifier mode");
-#endif
         adev->mode = mode;
     }
     pthread_mutex_unlock(&adev->lock);
@@ -3517,10 +3513,8 @@ static int adev_close(hw_device_t *device)
     pthread_mutex_lock(&adev_init_lock);
 
     if ((--audio_device_ref_count) == 0) {
-#ifdef USES_AUDIO_AMPLIFIER
         if (amplifier_close() != 0)
             ALOGE("Amplifier close failed");
-#endif
         audio_extn_listen_deinit(adev);
         audio_route_free(adev->audio_route);
         free(adev->snd_dev_ref_cnt);
@@ -3673,10 +3667,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     if (k_enable_extended_precision)
         adev_verify_devices(adev);
 
-#ifdef USES_AUDIO_AMPLIFIER
     if (amplifier_open() != 0)
         ALOGE("Amplifier initialization failed");
-#endif
 
     audio_device_ref_count++;
 
