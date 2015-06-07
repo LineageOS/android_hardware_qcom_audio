@@ -162,22 +162,18 @@ endif
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
+	libhardware \
 	libtinyalsa \
 	libtinycompress \
 	libaudioroute \
 	libdl \
 	libexpat
 
-ifneq ($(BOARD_AUDIO_AMPLIFIER),)
-    LOCAL_CFLAGS += -DUSES_AUDIO_AMPLIFIER
-    LOCAL_SHARED_LIBRARIES += libaudioamp
-    LOCAL_C_INCLUDES += $(BOARD_AUDIO_AMPLIFIER)
-endif
-
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
 	external/tinycompress/include \
 	external/expat/lib \
+	hardware/libhardware/include \
 	$(call include-path-for, audio-route) \
 	$(call include-path-for, audio-effects) \
 	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \
