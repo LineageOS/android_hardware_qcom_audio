@@ -30,9 +30,7 @@
 #include <sound/a2220.h>
 #endif
 
-#ifdef USES_AUDIO_AMPLIFIER
-#include <audio_amplifier.h>
-#endif
+#include <hardware/audio_amplifier.h>
 
 extern "C" {
 #ifdef QCOM_CSDCLIENT_ENABLED
@@ -885,9 +883,7 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
     }
 #endif
 
-#ifdef USES_AUDIO_AMPLIFIER
     amplifier_set_devices(devices);
-#endif
 
     if (rxDevice != NULL) {
         free(rxDevice);
