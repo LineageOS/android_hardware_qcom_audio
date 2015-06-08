@@ -95,9 +95,11 @@ void audio_extn_dsm_feedback_enable(struct audio_device *adev,
 
     if( snd_device == SND_DEVICE_OUT_SPEAKER ||
         snd_device == SND_DEVICE_OUT_SPEAKER_REVERSE ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER ||
         snd_device == SND_DEVICE_OUT_SPEAKER_SAFE ||
         snd_device == SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES ||
-        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_AND_LINE )
+        snd_device == SND_DEVICE_OUT_SPEAKER_AND_LINE ||
+        snd_device == SND_DEVICE_OUT_SPEAKER_SAFE_AND_HEADPHONES ||
+        snd_device == SND_DEVICE_OUT_SPEAKER_SAFE_AND_LINE )
         start_dsm_feedback_processing(adev, benable);
 }
