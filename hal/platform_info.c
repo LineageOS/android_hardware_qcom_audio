@@ -152,6 +152,7 @@ done:
 static void process_backend_name(const XML_Char **attr)
 {
     int index;
+    char *hw_interface = NULL;
 
     if (strcmp(attr[0], "name") != 0) {
         ALOGE("%s: 'name' not found, no ACDB ID set!", __func__);
@@ -171,7 +172,15 @@ static void process_backend_name(const XML_Char **attr)
         goto done;
     }
 
-    if (platform_set_snd_device_backend(index, attr[3]) < 0) {
+    if (attr[4] != NULL) {
+        if (strcmp(attr[4], "interface") != 0) {
+            hw_interface = NULL;
+        } else {
+            hw_interface = (char *)attr[5];
+        }
+    }
+
+    if (platform_set_snd_device_backend(index, attr[3], hw_interface) < 0) {
         ALOGE("%s: Device %s backend %s was not set!",
               __func__, attr[1], attr[3]);
         goto done;
