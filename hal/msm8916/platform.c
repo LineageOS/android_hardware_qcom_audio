@@ -2626,7 +2626,8 @@ int platform_set_usecase_pcm_id(audio_usecase_t usecase __unused, int32_t type _
 }
 
 int platform_set_snd_device_backend(snd_device_t snd_device __unused,
-                                    const char * backend __unused)
+                                    const char * backend __unused,
+                                    const char * hw_interface __unused)
 {
     return -ENOSYS;
 }

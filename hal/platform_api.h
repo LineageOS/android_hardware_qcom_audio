@@ -81,7 +81,8 @@ bool platform_listen_usecase_needs_event(audio_usecase_t uc_id);
 bool platform_sound_trigger_device_needs_event(snd_device_t snd_device);
 bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id);
 
-int platform_set_snd_device_backend(snd_device_t snd_device, const char * backend);
+int platform_set_snd_device_backend(snd_device_t snd_device, const char * backend,
+        const char * hw_interface);
 int platform_set_snd_device_name(snd_device_t snd_device, const char * name);
 
 /* From platform_info_parser.c */
@@ -110,4 +111,11 @@ void platform_cache_edid(void * platform);
 void platform_invalidate_edid(void * platform);
 int platform_set_hdmi_config(struct stream_out *out);
 int platform_set_device_params(struct stream_out *out, int param, int value);
+
+bool platform_can_split_snd_device(snd_device_t in_snd_device,
+                                   int *num_devices,
+                                   snd_device_t *out_snd_devices);
+
+bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_device2);
+
 #endif // AUDIO_PLATFORM_API_H

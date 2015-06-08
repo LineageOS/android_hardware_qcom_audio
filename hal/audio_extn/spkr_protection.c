@@ -765,7 +765,8 @@ void audio_extn_spkr_prot_init(void *adev)
         property_get("ro.board.platform", platform, "");
         if (!strncmp("apq8084", platform, sizeof("apq8084"))) {
             platform_set_snd_device_backend(SND_DEVICE_OUT_VOICE_SPEAKER,
-                                            "speaker-protected");
+                                            "speaker-protected",
+                                            "SLIMBUS_0_RX");
         }
     }
 }
