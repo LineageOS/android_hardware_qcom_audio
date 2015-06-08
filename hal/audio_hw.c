@@ -587,6 +587,8 @@ int enable_snd_device(struct audio_device *adev,
                       snd_device_t snd_device)
 {
     char device_name[DEVICE_NAME_MAX_SIZE] = {0};
+    int i, num_devices = 0;
+    snd_device_t new_snd_devices[2];
 
     if (snd_device < SND_DEVICE_MIN ||
         snd_device >= SND_DEVICE_MAX) {
@@ -630,6 +632,10 @@ int enable_snd_device(struct audio_device *adev,
             audio_extn_dev_arbi_release(snd_device);
             return -EINVAL;
         }
+    } else if (platform_can_split_snd_device(snd_device, &num_devices, new_snd_devices)) {
+        for (i = 0; i < num_devices; i++) {
+            enable_snd_device(adev, new_snd_devices[i]);
+        }
     } else {
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
         /* due to the possibility of calibration overwrite between listen
@@ -657,6 +663,8 @@ int disable_snd_device(struct audio_device *adev,
                        snd_device_t snd_device)
 {
     char device_name[DEVICE_NAME_MAX_SIZE] = {0};
+    int i, num_devices = 0;
+    snd_device_t new_snd_devices[2];
 
     if (snd_device < SND_DEVICE_MIN ||
         snd_device >= SND_DEVICE_MAX) {
@@ -690,6 +698,10 @@ int disable_snd_device(struct audio_device *adev,
             snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
             audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing(snd_device);
+        } else if (platform_can_split_snd_device(snd_device, &num_devices, new_snd_devices)) {
+            for (i = 0; i < num_devices; i++) {
+                disable_snd_device(adev, new_snd_devices[i]);
+            }
         } else {
             audio_route_reset_and_update_path(adev->audio_route, device_name);
             amplifier_enable_devices(snd_device, false);
@@ -705,9 +717,9 @@ int disable_snd_device(struct audio_device *adev,
     return 0;
 }
 
-static void check_usecases_codec_backend(struct audio_device *adev,
-                                          struct audio_usecase *uc_info,
-                                          snd_device_t snd_device)
+static void check_and_route_playback_usecases(struct audio_device *adev,
+                                              struct audio_usecase *uc_info,
+                                              snd_device_t snd_device)
 {
     struct listnode *node;
     struct audio_usecase *usecase;
@@ -743,7 +755,8 @@ static void check_usecases_codec_backend(struct audio_device *adev,
         if (usecase->type != PCM_CAPTURE &&
                 usecase != uc_info &&
                 (usecase->out_snd_device != snd_device || force_routing)  &&
-                usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
+                usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND &&
+                platform_check_backends_match(snd_device, usecase->out_snd_device)) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
                   platform_get_snd_device_name(usecase->out_snd_device));
@@ -953,7 +966,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
          * so that it would not result any device switch. All the usecases will
          * be switched to new device when select_devices() is called for voice call
          * usecase. This is to avoid switching devices for voice call when
-         * check_usecases_codec_backend() is called below.
+         * check_and_route_playback_usecases() is called below.
          */
         if (voice_is_in_call(adev) && adev->mode == AUDIO_MODE_IN_CALL) {
             vc_usecase = get_usecase_from_list(adev,
@@ -1065,7 +1078,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     /* Enable new sound devices */
     if (out_snd_device != SND_DEVICE_NONE) {
         if (usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND)
-            check_usecases_codec_backend(adev, usecase, out_snd_device);
+            check_and_route_playback_usecases(adev, usecase, out_snd_device);
         enable_snd_device(adev, out_snd_device);
     }
 
@@ -2058,7 +2071,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
         /*
          * select_devices() call below switches all the usecases on the same
-         * backend to the new device. Refer to check_usecases_codec_backend() in
+         * backend to the new device. Refer to check_and_route_playback_usecases() in
          * the select_devices(). But how do we undo this?
          *
          * For example, music playback is active on headset (deep-buffer usecase)
