@@ -57,7 +57,8 @@ int platform_stop_incall_recording_usecase(void *platform);
 int platform_start_incall_music_usecase(void *platform);
 int platform_stop_incall_music_usecase(void *platform);
 
-int platform_set_snd_device_backend(snd_device_t snd_device, const char * backend);
+int platform_set_snd_device_backend(snd_device_t snd_device, const char * backend,
+                                    const char * hw_interface);
 
 /* From platform_info_parser.c */
 int platform_info_init(void);
@@ -66,4 +67,11 @@ int platform_get_usecase_index(const char * usecase);
 int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
 void platform_set_echo_reference(struct audio_device *adev, bool enable, audio_devices_t out_device);
 int platform_swap_lr_channels(struct audio_device *adev, bool swap_channels);
+
+bool platform_can_split_snd_device(snd_device_t in_snd_device,
+                                   int *num_devices,
+                                   snd_device_t *out_snd_devices);
+
+bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_device2);
+
 #endif // AUDIO_PLATFORM_API_H
