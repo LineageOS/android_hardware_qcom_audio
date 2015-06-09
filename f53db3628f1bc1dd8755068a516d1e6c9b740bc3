@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "da4df55a_f1ce68b3",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 249,
+      "author": {
+        "id": 10094
+      },
+      "writtenOn": "2015-06-09T09:36:17Z",
+      "side": 1,
+      "message": "put the amplifier_device_t in the audio_device struct.",
+      "revId": "f53db3628f1bc1dd8755068a516d1e6c9b740bc3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da4df55a_11c4cc90",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 255,
+      "author": {
+        "id": 10094
+      },
+      "writtenOn": "2015-06-09T09:36:17Z",
+      "side": 1,
+      "message": "The name is wrong.",
+      "revId": "f53db3628f1bc1dd8755068a516d1e6c9b740bc3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
