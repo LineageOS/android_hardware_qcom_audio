@@ -575,8 +575,6 @@ exit:
         handle.pcm_tx = NULL;
         /* Clear TX calibration to handset mic */
         if (disable_tx) {
-            uc_info_tx->id = USECASE_AUDIO_RECORD;
-            uc_info_tx->type = PCM_CAPTURE;
             uc_info_tx->in_snd_device = SND_DEVICE_IN_HANDSET_MIC;
             uc_info_tx->out_snd_device = SND_DEVICE_NONE;
             platform_send_audio_calibration(adev->platform,
@@ -1090,8 +1088,6 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
 exit:
    /* Clear VI feedback cal and replace with handset MIC  */
     if (disable_tx) {
-        uc_info_tx->id = USECASE_AUDIO_RECORD;
-        uc_info_tx->type = PCM_CAPTURE;
         uc_info_tx->in_snd_device = SND_DEVICE_IN_HANDSET_MIC;
         uc_info_tx->out_snd_device = SND_DEVICE_NONE;
         platform_send_audio_calibration(adev->platform,
