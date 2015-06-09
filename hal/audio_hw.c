@@ -3154,6 +3154,12 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             set_snd_card_state(adev,SND_CARD_STATE_ONLINE);
             //send dts hpx license if enabled
             audio_extn_dts_eagle_send_lic();
+            if (!platform_is_acdb_initialized(adev->platform)) {
+                ret = platform_acdb_init(adev->platform);
+                if(ret)
+                   ALOGE("acdb initialization is failed");
+
+            }
         }
     }
 
