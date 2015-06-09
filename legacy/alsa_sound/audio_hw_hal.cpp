@@ -65,6 +65,8 @@ enum {
     HAL_API_REV_NUM
 } hal_api_rev;
 
+static struct qcom_audio_device *qadev = NULL;
+
 static uint32_t audio_device_conv_table[][HAL_API_REV_NUM] =
 {
         /* output devices */
@@ -809,7 +811,6 @@ static int qcom_adev_close(hw_device_t* device)
 static int qcom_adev_open(const hw_module_t* module, const char* name,
                             hw_device_t** device)
 {
-    struct qcom_audio_device *qadev;
     int ret;
 
     if (strcmp(name, AUDIO_HARDWARE_INTERFACE) != 0)
