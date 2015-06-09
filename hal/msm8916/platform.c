@@ -3124,7 +3124,8 @@ void platform_get_parameters(void *platform,
     if (ret >= 0) {
         int isallowed = 1; /*true*/
 
-        if(voice_is_in_call(my_data->adev)) {
+        if(voice_is_in_call(my_data->adev) ||
+             (SND_CARD_STATE_OFFLINE == get_snd_card_state(my_data->adev))) {
             char *decoder_mime_type = value;
 
             //check if unsupported mime type or not
@@ -3133,16 +3134,12 @@ void platform_get_parameters(void *platform,
                 for (i = 0; i < sizeof(dsp_only_decoders_mime)/sizeof(dsp_only_decoders_mime[0]); i++) {
                     if (!strncmp(decoder_mime_type, dsp_only_decoders_mime[i],
                     strlen(dsp_only_decoders_mime[i]))) {
-                       ALOGE("Rejecting request for DSP only session from HAL during voice call");
+                       ALOGE("Rejecting request for DSP only session from HAL during voice call/SSR state");
                        isallowed = 0;
                        break;
                     }
                 }
             }
-        } else if (SND_CARD_STATE_OFFLINE == get_snd_card_state(my_data->adev)) {
-            //Do not allow DSP session during SSR
-            ALOGI("Rejecting request for DSP only session from HAL due to SSR");
-            isallowed = 0;
         }
         str_parms_add_int(reply, AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED, isallowed);
     }
