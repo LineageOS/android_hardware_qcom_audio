@@ -220,6 +220,7 @@ struct platform_data {
     bool hd_voice;
     bool ec_ref_enabled;
     bool is_wsa_speaker;
+    bool is_acdb_initialized;
     /* Audio calibration related functions */
     void                       *acdb_handle;
     int                        voice_feature_set;
@@ -1246,6 +1247,37 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
         ALOGE("%s: Could not send anc cal", __FUNCTION__);
 }
 
+int platform_acdb_init(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    char *cvd_version = NULL;
+    int key = 0;
+    const char *snd_card_name;
+    int result;
+    char value[PROPERTY_VALUE_MAX];
+    cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
+    if (!cvd_version)
+        ALOGE("Failed to allocate cvd version");
+    else
+        get_cvd_version(cvd_version, my_data->adev);
+
+    property_get("audio.ds1.metainfo.key",value,"0");
+    key = atoi(value);
+    snd_card_name = mixer_get_name(my_data->adev->mixer);
+    result = my_data->acdb_init(snd_card_name, cvd_version, key);
+    if (cvd_version)
+        free(cvd_version);
+    if (!result) {
+        my_data->is_acdb_initialized = true;
+        ALOGD("ACDB initialized");
+        audio_hwdep_send_cal(my_data);
+    } else {
+        my_data->is_acdb_initialized = false;
+        ALOGD("ACDB initialization failed");
+    }
+    return result;
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char platform[PROPERTY_VALUE_MAX];
@@ -1377,8 +1409,6 @@ void *platform_init(struct audio_device *adev)
         acdb_device_table[SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 131;
         acdb_device_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 131;
     }
-    property_get("audio.ds1.metainfo.key",value,"0");
-    key = atoi(value);
 
     my_data->voice_feature_set = VOICE_FEATURE_SET_DEFAULT;
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
@@ -1435,15 +1465,7 @@ void *platform_init(struct audio_device *adev)
             ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__, dlerror());
             goto acdb_init_fail;
         }
-
-        cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
-        if (!cvd_version)
-            ALOGE("Failed to allocate cvd version");
-        else
-            get_cvd_version(cvd_version, adev);
-        my_data->acdb_init(snd_card_name, cvd_version, key);
-        if (cvd_version)
-            free(cvd_version);
+        platform_acdb_init(my_data);
     }
     audio_extn_pm_vote();
 
@@ -1557,6 +1579,13 @@ void platform_deinit(void *platform)
     /* deinit usb */
     audio_extn_usb_deinit();
     audio_extn_dap_hal_deinit();
+}
+
+int platform_is_acdb_initialized(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    ALOGD("%s: acdb initialized %d\n", __func__, my_data->is_acdb_initialized);
+    return my_data->is_acdb_initialized;
 }
 
 const char *platform_get_snd_device_name(snd_device_t snd_device)
