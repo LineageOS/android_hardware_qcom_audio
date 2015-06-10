@@ -2914,7 +2914,7 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
         bits_per_sample = 32;
     }
 
-    if (info->use_small_bufs) {
+    if (platform_use_small_buffer(info)) {
         pcm_offload_time = PCM_OFFLOAD_BUFFER_DURATION_FOR_SMALL_BUFFERS;
     } else {
         if (!info->has_video) {
@@ -2945,6 +2945,11 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
 
     ALOGI("PCM offload Fragment size to %d bytes", fragment_size);
     return fragment_size;
+}
+
+bool platform_use_small_buffer(audio_offload_info_t* info)
+{
+    return OFFLOAD_USE_SMALL_BUFFER;
 }
 
 int platform_set_codec_backend_cfg(struct audio_device* adev,

@@ -1742,8 +1742,10 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
     struct compr_gapless_mdata tmp_mdata;
     tmp_mdata.encoder_delay = 0;
     tmp_mdata.encoder_padding = 0;
+#ifdef QTI_FLAC_DECODER
     tmp_mdata.min_blk_size = 0;
     tmp_mdata.max_blk_size = 0;
+#endif
 
     if (!out || !parms) {
         ALOGE("%s: return invalid ",__func__);
@@ -1762,13 +1764,17 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
     if (out->format == AUDIO_FORMAT_FLAC) {
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE, value, sizeof(value));
         if (ret >= 0) {
+#ifdef QTI_FLAC_DECODER
             tmp_mdata.min_blk_size =
+#endif
             out->compr_config.codec->options.flac_dec.min_blk_size = atoi(value);
             out->send_new_metadata = 1;
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE, value, sizeof(value));
         if (ret >= 0) {
+#ifdef QTI_FLAC_DECODER
             tmp_mdata.max_blk_size =
+#endif
             out->compr_config.codec->options.flac_dec.max_blk_size = atoi(value);
             out->send_new_metadata = 1;
         }
@@ -2867,7 +2873,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
 
-        if (config->offload_info.use_small_bufs) {
+        if (platform_use_small_buffer(&config->offload_info)) {
             //this flag is set from framework only if its for PCM formats
             //no need to check for PCM format again
             out->non_blocking = 0;
@@ -3481,7 +3487,7 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     } else
         in_standby(&stream->common);
 
-    if (audio_extn_ssr_get_enabled() && 
+    if (audio_extn_ssr_get_enabled() &&
             (audio_channel_count_from_in_mask(in->channel_mask) == 6)) {
         audio_extn_ssr_deinit();
     }

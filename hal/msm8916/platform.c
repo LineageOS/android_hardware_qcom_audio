@@ -2583,6 +2583,11 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
     return fragment_size;
 }
 
+bool platform_use_small_buffer(audio_offload_info_t* info)
+{
+    return OFFLOAD_USE_SMALL_BUFFER;
+}
+
 void platform_get_device_to_be_id_map(int **device_to_be_id, int *length)
 {
      *device_to_be_id = msm_device_to_be_id;

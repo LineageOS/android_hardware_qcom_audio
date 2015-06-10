@@ -46,6 +46,9 @@
 #define AUDIO_FORMAT_PCM_24_BIT_OFFLOAD (AUDIO_FORMAT_PCM_OFFLOAD | AUDIO_FORMAT_PCM_SUB_8_24_BIT)
 #define AUDIO_OFFLOAD_CODEC_FORMAT  "music_offload_codec_format"
 #define audio_is_offload_pcm(format) (0)
+#define OFFLOAD_USE_SMALL_BUFFER false
+#else
+#define OFFLOAD_USE_SMALL_BUFFER (info->use_small_bufs)
 #endif
 
 #ifndef AFE_PROXY_ENABLED
@@ -298,6 +301,9 @@ void audio_extn_check_and_set_dts_hpx_state(const struct audio_device *adev);
 void audio_extn_dolby_set_dmid(struct audio_device *adev);
 #else
 #define audio_extn_dolby_set_dmid(adev)                 (0)
+#define AUDIO_CHANNEL_OUT_PENTA (AUDIO_CHANNEL_OUT_QUAD | AUDIO_CHANNEL_OUT_FRONT_CENTER)
+#define AUDIO_CHANNEL_OUT_SURROUND (AUDIO_CHANNEL_OUT_FRONT_LEFT | AUDIO_CHANNEL_OUT_FRONT_RIGHT | \
+                                    AUDIO_CHANNEL_OUT_FRONT_CENTER | AUDIO_CHANNEL_OUT_BACK_CENTER)
 #endif
 
 
