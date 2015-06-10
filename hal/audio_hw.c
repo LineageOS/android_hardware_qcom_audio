@@ -2906,7 +2906,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
 
-        if (config->offload_info.use_small_bufs) {
+        if (platform_use_small_buffer(&config->offload_info)) {
             //this flag is set from framework only if its for PCM formats
             //no need to check for PCM format again
             out->non_blocking = 0;
