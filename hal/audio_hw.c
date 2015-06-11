@@ -582,6 +582,8 @@ static void check_usecases_codec_backend(struct audio_device *adev,
     struct audio_usecase *usecase;
     bool switch_device[AUDIO_USECASE_MAX];
     int i, num_uc_to_switch = 0;
+    int backend_idx = DEFAULT_CODEC_BACKEND;
+    int usecase_backend_idx = DEFAULT_CODEC_BACKEND;
 
     /*
      * This function is to make sure that all the usecases that are active on
@@ -598,39 +600,38 @@ static void check_usecases_codec_backend(struct audio_device *adev,
      * If there is a backend configuration change for the device when a
      * new stream starts, then ADM needs to be closed and re-opened with the new
      * configuraion. This call check if we need to re-route all the streams
-     * associated with the backend. Touch tone + 24 bit playback.
+     * associated with the backend. Touch tone + 24 bit + native playback.
      */
-    bool force_routing = platform_check_and_set_codec_backend_cfg(adev, uc_info);
-
+    bool force_routing = platform_check_and_set_codec_backend_cfg(adev, uc_info,
+                         snd_device);
+    backend_idx = platform_get_backend_index(snd_device);
     /* Disable all the usecases on the shared backend other than the
      * specified usecase.
-     * For native(44.1k) usecases, we don't need this as it uses a different
-     * backend, but we need to make sure that we reconfigure the backend
-     * if there is bit_width change, this should not affect shared backend
-     * usecases.
      */
     for (i = 0; i < AUDIO_USECASE_MAX; i++)
         switch_device[i] = false;
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
+
+        if (usecase == uc_info)
+            continue;
+        usecase_backend_idx = platform_get_backend_index(usecase->out_snd_device);
+        ALOGV("%s: backend_idx: %d,"
+              "usecase_backend_idx: %d, curr device: %s, usecase device:"
+              "%s", __func__, backend_idx, usecase_backend_idx, platform_get_snd_device_name(snd_device),
+            platform_get_snd_device_name(usecase->out_snd_device));
+
         if (usecase->type != PCM_CAPTURE &&
-                usecase != uc_info &&
                 (usecase->out_snd_device != snd_device || force_routing)  &&
-                usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND
-                && usecase->stream.out->sample_rate != OUTPUT_SAMPLING_RATE_44100) {
-            ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
-                  __func__, use_case_table[usecase->id],
+                usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND &&
+                usecase_backend_idx == backend_idx) {
+            ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..", __func__,
+                  use_case_table[usecase->id],
                   platform_get_snd_device_name(usecase->out_snd_device));
             disable_audio_route(adev, usecase);
             switch_device[usecase->id] = true;
             num_uc_to_switch++;
-        } else if (usecase->type == PCM_PLAYBACK &&
-                  usecase->stream.out->sample_rate ==
-                  OUTPUT_SAMPLING_RATE_44100 && force_routing){
-           disable_audio_route(adev, usecase);
-           switch_device[usecase->id] = true;
-           num_uc_to_switch++;
         }
     }
 
