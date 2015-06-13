@@ -3099,20 +3099,21 @@ static void adev_close_output_stream(struct audio_hw_device *dev __unused,
 static void close_compress_sessions(struct audio_device *adev)
 {
     struct stream_out *out;
-    struct listnode *node;
+    struct listnode *node, *tempnode;
     struct audio_usecase *usecase;
     pthread_mutex_lock(&adev->lock);
-    list_for_each(node, &adev->usecase_list) {
+
+    list_for_each_safe(node, tempnode, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if (usecase && is_offload_usecase(usecase->id)) {
-            if (usecase && usecase->stream.out) {
+        if (is_offload_usecase(usecase->id)) {
+            if (usecase->stream.out) {
                 ALOGI(" %s closing compress session %d on OFFLINE state", __func__, usecase->id);
                 out = usecase->stream.out;
                 pthread_mutex_unlock(&adev->lock);
                 out_standby(&out->stream.common);
                 pthread_mutex_lock(&adev->lock);
             }
-        }
+       }
     }
     pthread_mutex_unlock(&adev->lock);
 }
