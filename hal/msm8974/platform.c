@@ -99,8 +99,6 @@ struct platform_data {
     acdb_reload_vocvoltable_t  acdb_reload_vocvoltable;
     acdb_send_gain_dep_cal_t   acdb_send_gain_dep_cal;
     struct csd_data *csd;
-    bool ext_speaker;
-    bool ext_earpiece;
     char ec_ref_mixer_path[64];
 };
 
@@ -716,25 +714,6 @@ static void set_platform_defaults(struct platform_data * my_data __unused)
     backend_tag_table[SND_DEVICE_OUT_VOICE_TX] = strdup("afe-proxy");
     backend_tag_table[SND_DEVICE_IN_VOICE_RX] = strdup("afe-proxy");
 
-    if (my_data->ext_speaker) {
-        backend_tag_table[SND_DEVICE_OUT_SPEAKER] = strdup("speaker");
-        backend_tag_table[SND_DEVICE_OUT_SPEAKER_SAFE] = strdup("speaker");
-        backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER] = strdup("speaker");
-        backend_tag_table[SND_DEVICE_OUT_SPEAKER_REVERSE] = strdup("speaker");
-        backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] =
-            strdup("speaker-and-headphones");
-        backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_LINE] =
-            strdup("speaker-and-line");
-    }
-
-    if (my_data->ext_earpiece) {
-        backend_tag_table[SND_DEVICE_OUT_VOICE_HANDSET] = strdup("handset");
-        backend_tag_table[SND_DEVICE_OUT_VOICE_HAC_HANDSET] = strdup("handset");
-        backend_tag_table[SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = strdup("handset");
-        backend_tag_table[SND_DEVICE_OUT_HANDSET] = strdup("handset");
-        backend_tag_table[SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = strdup("handset");
-    }
-
     hw_interface_table[SND_DEVICE_OUT_HANDSET] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_REVERSE] = strdup("SLIMBUS_0_RX");
@@ -811,20 +790,6 @@ void *platform_init(struct audio_device *adev)
     my_data->fluence_in_voice_call = false;
     my_data->fluence_in_voice_comm = false;
     my_data->fluence_in_voice_rec = false;
-
-    /*
-     * The default assumption is that earpiece (handset), speaker and headphones
-     * devices are connected to internal HW codec and communicated through
-     * slimbus backend. If any platform communicates with speaker or earpiece
-     * or headphones through non-slimbus backend such as MI2S or AUXPCM etc.,
-     * the ext_xxxx flags must be set accordingly.
-     */
-    if (strstr(snd_card_name, "tfa9890_stereo")) {
-        my_data->ext_speaker = true;
-        my_data->ext_earpiece = true;
-    } else if (strstr(snd_card_name, "tfa9890")) {
-        my_data->ext_speaker = true;
-    }
 
     property_get("persist.audio.dualmic.config",value,"");
     if (!strcmp("broadside", value)) {
