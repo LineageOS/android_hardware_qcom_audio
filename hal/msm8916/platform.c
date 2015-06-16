@@ -138,6 +138,7 @@
 char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
         [WCD9XXX_ANC_CAL] = "anc_cal",
         [WCD9XXX_MBHC_CAL] = "mbhc_cal",
+        [WCD9XXX_VBAT_CAL] = "vbat_cal",
 };
 
 #define AUDIO_PARAMETER_KEY_REC_PLAY_CONC "rec_play_conc_on"
@@ -190,6 +191,7 @@ typedef int (*acdb_loader_get_calibration_t)(char *attr, int size, void *data);
 acdb_loader_get_calibration_t acdb_loader_get_calibration;
 typedef int (*acdb_set_audio_cal_t) (void *, void *, uint32_t);
 typedef int (*acdb_get_audio_cal_t) (void *, void *, uint32_t*);
+typedef int (*acdb_set_codec_data_t) (void *, char *);
 
 typedef struct codec_backend_cfg {
     uint32_t sample_rate;
@@ -222,6 +224,9 @@ struct platform_data {
     bool ec_ref_enabled;
     bool is_wsa_speaker;
     bool is_acdb_initialized;
+    /* Vbat monitor related flags */
+    bool is_vbat_speaker;
+    bool gsm_mode_enabled;
     /* Audio calibration related functions */
     void                       *acdb_handle;
     int                        voice_feature_set;
@@ -233,6 +238,7 @@ struct platform_data {
     acdb_send_voice_cal_t      acdb_send_voice_cal;
     acdb_reload_vocvoltable_t  acdb_reload_vocvoltable;
     acdb_get_default_app_type_t acdb_get_default_app_type;
+    acdb_set_codec_data_t      acdb_set_codec_data;
 #ifdef RECORD_PLAY_CONCURRENCY
     bool rec_play_conc_set;
 #endif
@@ -324,6 +330,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_EXTERNAL_1] = "speaker-ext-1",
     [SND_DEVICE_OUT_SPEAKER_EXTERNAL_2] = "speaker-ext-2",
     [SND_DEVICE_OUT_SPEAKER_WSA] = "wsa-speaker",
+    [SND_DEVICE_OUT_SPEAKER_VBAT] = "vbat-speaker",
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = "speaker-reverse",
     [SND_DEVICE_OUT_HEADPHONES] = "headphones",
     [SND_DEVICE_OUT_HEADPHONES_44_1] = "headphones-44.1",
@@ -333,6 +340,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_HANDSET] = "voice-handset",
     [SND_DEVICE_OUT_VOICE_SPEAKER] = "voice-speaker",
     [SND_DEVICE_OUT_VOICE_SPEAKER_WSA] = "wsa-voice-speaker",
+    [SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = "vbat-voice-speaker",
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = "voice-headphones",
     [SND_DEVICE_OUT_HDMI] = "hdmi",
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = "speaker-and-hdmi",
@@ -354,6 +362,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_ANC_HANDSET] = "anc-handset",
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = "speaker-protected",
     [SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED] = "voice-speaker-protected",
+    [SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT] = "speaker-protected-vbat",
+    [SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT] = "voice-speaker-protected-vbat",
 #ifdef RECORD_PLAY_CONCURRENCY
     [SND_DEVICE_OUT_VOIP_HANDSET] = "voip-handset",
     [SND_DEVICE_OUT_VOIP_SPEAKER] = "voip-speaker",
@@ -429,6 +439,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_EXTERNAL_1] = 14,
     [SND_DEVICE_OUT_SPEAKER_EXTERNAL_2] = 14,
     [SND_DEVICE_OUT_SPEAKER_WSA] = 135,
+    [SND_DEVICE_OUT_SPEAKER_VBAT] = 135,
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = 14,
     [SND_DEVICE_OUT_HEADPHONES] = 10,
     [SND_DEVICE_OUT_HEADPHONES_44_1] = 10,
@@ -438,6 +449,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_HANDSET] = 7,
     [SND_DEVICE_OUT_VOICE_SPEAKER] = 14,
     [SND_DEVICE_OUT_VOICE_SPEAKER_WSA] = 135,
+    [SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = 135,
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
     [SND_DEVICE_OUT_HDMI] = 18,
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 14,
@@ -459,6 +471,8 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_ANC_HANDSET] = 103,
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = 124,
     [SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED] = 101,
+    [SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT] = 124,
+    [SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT] = 101,
 #ifdef RECORD_PLAY_CONCURRENCY
     [SND_DEVICE_OUT_VOIP_HANDSET] = 133,
     [SND_DEVICE_OUT_VOIP_SPEAKER] = 132,
@@ -536,6 +550,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_EXTERNAL_1)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_EXTERNAL_2)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_WSA)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_VBAT)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_REVERSE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES_44_1)},
@@ -545,6 +560,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_WSA)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_VBAT)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HDMI)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HDMI)},
@@ -566,6 +582,8 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_ANC_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT)},
 #ifdef RECORD_PLAY_CONCURRENCY
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOIP_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOIP_SPEAKER)},
@@ -949,21 +967,43 @@ static void query_platform(const char *snd_card_name,
     }
 }
 
-void platform_set_echo_reference(void *platform, bool enable)
+void platform_set_gsm_mode(void *platform, bool enable)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
 
+    if (my_data->gsm_mode_enabled) {
+        my_data->gsm_mode_enabled = false;
+        ALOGV("%s: disabling gsm mode", __func__);
+        audio_route_reset_and_update_path(adev->audio_route, "gsm-mode");
+    }
+
+    if (enable) {
+         my_data->gsm_mode_enabled = true;
+         ALOGD("%s: enabling gsm mode", __func__);
+         audio_route_apply_and_update_path(adev->audio_route, "gsm-mode");
+    }
+}
+
+void platform_set_echo_reference(void *platform, bool enable)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    char *mixer_path_name = "echo-reference";
+
+    if(my_data->is_vbat_speaker)
+       mixer_path_name = "vbat-speaker echo-reference";
+
     if (my_data->ec_ref_enabled) {
         my_data->ec_ref_enabled = false;
         ALOGV("%s: disabling echo-reference", __func__);
-        audio_route_reset_and_update_path(adev->audio_route, "echo-reference");
+        audio_route_reset_and_update_path(adev->audio_route, mixer_path_name);
     }
 
     if (enable) {
          my_data->ec_ref_enabled = true;
          ALOGD("%s: enabling echo-reference", __func__);
-         audio_route_apply_and_update_path(adev->audio_route, "echo-reference");
+         audio_route_apply_and_update_path(adev->audio_route, mixer_path_name);
     }
 }
 
@@ -1142,6 +1182,7 @@ static void set_platform_defaults()
     backend_table[SND_DEVICE_IN_CAPTURE_FM] = strdup("capture-fm");
     backend_table[SND_DEVICE_OUT_TRANSMISSION_FM] = strdup("transmission-fm");
     backend_table[SND_DEVICE_OUT_HEADPHONES_44_1] = strdup("headphones-44.1");
+    backend_table[SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = strdup("vbat-voice-speaker");
 }
 
 void get_cvd_version(char *cvd_version, struct audio_device *adev)
@@ -1197,13 +1238,49 @@ struct param_data {
     void   *buff;
 };
 
-static int send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibration, int fd)
+static int send_vbat_adc_data_to_acdb(struct platform_data *plat_data, char *cal_type)
+{
+    int ret = 0;
+    struct mixer_ctl *ctl;
+    uint16_t vbat_adc_data[2];
+    struct platform_data *my_data = plat_data;
+    struct audio_device *adev = my_data->adev;
+
+    const char *mixer_ctl_name = "Vbat ADC data";
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer ctl name - %s",
+               __func__, mixer_ctl_name);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    vbat_adc_data[0] = mixer_ctl_get_value(ctl, 0);
+    vbat_adc_data[1] = mixer_ctl_get_value(ctl, 1);
+
+    ALOGD("%s: Vbat ADC output values: Dcp1: %d , Dcp2: %d",
+           __func__, vbat_adc_data[0], vbat_adc_data[1]);
+
+    ret = my_data->acdb_set_codec_data(&vbat_adc_data[0], cal_type);
+
+done:
+    return ret;
+}
+
+static int send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibration, struct platform_data *plat_data, int fd)
 {
     int ret = 0, type;
 
     for (type = WCD9XXX_ANC_CAL; type < WCD9XXX_MAX_CAL; type++) {
         struct wcdcal_ioctl_buffer codec_buffer;
         struct param_data calib;
+
+        if((plat_data->is_vbat_speaker) && (WCD9XXX_VBAT_CAL == type)) {
+           ret = send_vbat_adc_data_to_acdb(plat_data, cal_name_info[type]);
+           if (ret < 0)
+               ALOGE("%s error in sending vbat adc data to acdb", __func__);
+	}
 
         calib.get_size = 1;
         ret = acdb_loader_get_calibration(cal_name_info[type], sizeof(struct param_data),
@@ -1258,7 +1335,7 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
            dlerror());
         return;
     }
-    if (send_codec_cal(acdb_loader_get_calibration, fd) < 0)
+    if (send_codec_cal(acdb_loader_get_calibration, plat_data, fd) < 0)
         ALOGE("%s: Could not send anc cal", __FUNCTION__);
 }
 
@@ -1480,6 +1557,12 @@ void *platform_init(struct audio_device *adev)
         acdb_device_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 131;
     }
 
+    /* Check if Vbat speaker enabled property is set, this should be done before acdb init */
+    bool ret = false;
+    ret = audio_extn_can_use_vbat();
+    if (ret)
+        my_data->is_vbat_speaker = true;
+
     my_data->voice_feature_set = VOICE_FEATURE_SET_DEFAULT;
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
     if (my_data->acdb_handle == NULL) {
@@ -1529,6 +1612,14 @@ void *platform_init(struct audio_device *adev)
             ALOGE("%s: Could not find the symbol acdb_get_default_app_type from %s",
                   __func__, LIB_ACDB_LOADER);
 
+        my_data->acdb_set_codec_data = (acdb_set_codec_data_t)dlsym(
+                                                    my_data->acdb_handle,
+                                                    "acdb_loader_set_codec_data");
+        if (!my_data->acdb_set_codec_data)
+            ALOGE("%s: Could not find the symbol acdb_get_default_app_type from %s",
+                  __func__, LIB_ACDB_LOADER);
+
+
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_init_v2");
         if (my_data->acdb_init == NULL) {
@@ -1572,7 +1663,6 @@ acdb_init_fail:
     audio_extn_dap_hal_init(adev->snd_card);
 
     audio_extn_dolby_set_license(adev);
-    audio_hwdep_send_cal(my_data);
 
     /* init audio device arbitration */
     audio_extn_dev_arbi_init();
@@ -1666,10 +1756,17 @@ int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
     return 0;
 }
 
-void platform_add_backend_name(char *mixer_path, snd_device_t snd_device)
+void platform_add_backend_name(char *mixer_path, snd_device_t snd_device,
+                               struct audio_usecase *usecase)
 {
     if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
         ALOGE("%s: Invalid snd_device = %d", __func__, snd_device);
+        return;
+    }
+
+    if((snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT) &&
+        !(usecase->type == VOICE_CALL || usecase->type == VOIP_CALL)) {
+        ALOGI("%s: Not adding vbat speaker device to non voice use cases", __func__);
         return;
     }
 
@@ -2037,9 +2134,12 @@ int platform_switch_voice_call_enable_device_config(void *platform,
         return ret;
 
     if (out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER &&
-        audio_extn_spkr_prot_is_enabled())
-        acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED];
-    else
+        audio_extn_spkr_prot_is_enabled()) {
+        if (my_data->is_vbat_speaker)
+            acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT];
+        else
+            acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED];
+    } else
         acdb_rx_id = acdb_device_table[out_snd_device];
 
     acdb_tx_id = acdb_device_table[in_snd_device];
@@ -2097,9 +2197,12 @@ int platform_switch_voice_call_usecase_route_post(void *platform,
         return ret;
 
     if (out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER &&
-        audio_extn_spkr_prot_is_enabled())
-        acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED];
-    else
+        audio_extn_spkr_prot_is_enabled()) {
+        if (my_data->is_vbat_speaker)
+            acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT];
+         else
+            acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED];
+    } else
         acdb_rx_id = acdb_device_table[out_snd_device];
 
     acdb_tx_id = acdb_device_table[in_snd_device];
@@ -2361,7 +2464,9 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
             else
                 snd_device = SND_DEVICE_OUT_BT_SCO;
         } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
-                if (my_data->is_wsa_speaker)
+                if (my_data->is_vbat_speaker)
+                    snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_VBAT;
+                else if (my_data->is_wsa_speaker)
                     snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_WSA;
                 else
                     snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
@@ -2421,7 +2526,9 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_SPEAKER_REVERSE;
             else
             {
-                if (my_data->is_wsa_speaker)
+                if (my_data->is_vbat_speaker)
+                    snd_device = SND_DEVICE_OUT_SPEAKER_VBAT;
+                else if (my_data->is_wsa_speaker)
                     snd_device = SND_DEVICE_OUT_SPEAKER_WSA;
                 else
                     snd_device = SND_DEVICE_OUT_SPEAKER;

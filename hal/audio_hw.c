@@ -421,7 +421,7 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_utils_send_audio_calibration(adev, usecase);
     audio_extn_utils_send_app_type_cfg(usecase);
     strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
-    platform_add_backend_name(mixer_path, snd_device);
+    platform_add_backend_name(mixer_path, snd_device, usecase);
     ALOGV("%s: apply mixer and update path: %s", __func__, mixer_path);
     audio_route_apply_and_update_path(adev->audio_route, mixer_path);
     ALOGV("%s: exit", __func__);
@@ -443,7 +443,7 @@ int disable_audio_route(struct audio_device *adev,
     else
         snd_device = usecase->out_snd_device;
     strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
-    platform_add_backend_name(mixer_path, snd_device);
+    platform_add_backend_name(mixer_path, snd_device, usecase);
     ALOGV("%s: reset and update mixer path: %s", __func__, mixer_path);
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_FREE);
@@ -487,6 +487,7 @@ int enable_snd_device(struct audio_device *adev,
        audio_extn_usb_start_capture(adev);
 
     if ((snd_device == SND_DEVICE_OUT_SPEAKER || snd_device == SND_DEVICE_OUT_SPEAKER_WSA ||
+        snd_device == SND_DEVICE_OUT_SPEAKER_VBAT || snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
         snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
         audio_extn_spkr_prot_is_enabled()) {
        if (audio_extn_spkr_prot_get_acdb_id(snd_device) < 0) {
@@ -557,6 +558,7 @@ int disable_snd_device(struct audio_device *adev,
             audio_extn_usb_stop_capture();
 
         if ((snd_device == SND_DEVICE_OUT_SPEAKER || snd_device == SND_DEVICE_OUT_SPEAKER_WSA ||
+            snd_device == SND_DEVICE_OUT_SPEAKER_VBAT || snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
             snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
             audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing(snd_device);
@@ -3347,6 +3349,7 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
         if ((mode == AUDIO_MODE_NORMAL || mode == AUDIO_MODE_IN_COMMUNICATION) &&
                 voice_is_in_call(adev)) {
             voice_stop_call(adev);
+            platform_set_gsm_mode(adev->platform, false);
             adev->current_call_output = NULL;
         }
     }

@@ -31,7 +31,7 @@ int platform_acdb_init(void *platform);
 const char *platform_get_snd_device_name(snd_device_t snd_device);
 int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
                                       char *device_name);
-void platform_add_backend_name(char *mixer_path, snd_device_t snd_device);
+void platform_add_backend_name(char *mixer_path, snd_device_t snd_device, struct audio_usecase *usecase);
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type);
 int platform_get_snd_device_index(char *snd_device_index_name);
 int platform_set_fluence_type(void *platform, char *value);
@@ -122,4 +122,5 @@ int platform_set_spkr_device_tz_names(snd_device_t index,
 const char *platform_get_spkr_1_tz_name(snd_device_t snd_device);
 const char *platform_get_spkr_2_tz_name(snd_device_t snd_device);
 int platform_get_wsa_mode(void *adev);
+void platform_set_gsm_mode(void *platform, bool enable);
 #endif // AUDIO_PLATFORM_API_H

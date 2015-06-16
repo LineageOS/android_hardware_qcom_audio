@@ -118,6 +118,14 @@ bool audio_extn_should_use_fb_anc(void);
 bool audio_extn_should_use_handset_anc(int in_channels);
 #endif
 
+#ifndef VBAT_MONITOR_ENABLED
+#define audio_extn_is_vbat_enabled()                     (0)
+#define audio_extn_can_use_vbat()                        (0)
+#else
+bool audio_extn_is_vbat_enabled(void);
+bool audio_extn_can_use_vbat(void);
+#endif
+
 #ifndef FLUENCE_ENABLED
 #define audio_extn_set_fluence_parameters(adev, parms) (0)
 #define audio_extn_get_fluence_parameters(adev, query, reply) (0)

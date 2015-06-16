@@ -41,6 +41,7 @@
 #define AUDIO_PARAMETER_KEY_DEVICE_MUTE         "device_mute"
 #define AUDIO_PARAMETER_KEY_DIRECTION           "direction"
 #define AUDIO_PARAMETER_KEY_IN_CALL             "in_call"
+#define AUDIO_PARAMETER_KEY_CALL_TYPE           "call_type"
 
 #define VOICE_EXTN_PARAMETER_VALUE_MAX_LEN 256
 
@@ -512,6 +513,20 @@ int voice_extn_set_parameters(struct audio_device *adev,
            if (!strncmp("true", str_value, sizeof("true"))) {
            adev->voice.is_in_call = true;
         }
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_CALL_TYPE, str_value,
+                            sizeof(str_value));
+    if (err >= 0) {
+          str_parms_del(parms, AUDIO_PARAMETER_KEY_CALL_TYPE);
+          ALOGD("%s: call type is %s",__func__,str_value);
+
+           /* Expected call types are CDMA/GSM/WCDMA/LTE/TDSDMA/WLAN/UNKNOWN */
+           if (!strncmp("GSM", str_value, sizeof("GSM"))) {
+               platform_set_gsm_mode(adev->platform, true);
+           } else {
+               platform_set_gsm_mode(adev->platform, false);
+           }
     }
 
 done:

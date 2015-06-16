@@ -434,10 +434,16 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
     uc_info_rx->type = PCM_PLAYBACK;
     uc_info_rx->in_snd_device = SND_DEVICE_NONE;
     uc_info_rx->stream.out = adev->primary_output;
-    uc_info_rx->out_snd_device = SND_DEVICE_OUT_SPEAKER_PROTECTED;
+    if (audio_extn_is_vbat_enabled())
+        uc_info_rx->out_snd_device = SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT;
+    else
+        uc_info_rx->out_snd_device = SND_DEVICE_OUT_SPEAKER_PROTECTED;
     disable_rx = true;
     list_add_tail(&adev->usecase_list, &uc_info_rx->list);
-    enable_snd_device(adev, SND_DEVICE_OUT_SPEAKER_PROTECTED);
+    if (audio_extn_is_vbat_enabled())
+         enable_snd_device(adev, SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT);
+    else
+         enable_snd_device(adev, SND_DEVICE_OUT_SPEAKER_PROTECTED);
     enable_audio_route(adev, uc_info_rx);
 
     pcm_dev_rx_id = platform_get_pcm_device_id(uc_info_rx->id, PCM_PLAYBACK);
@@ -596,7 +602,10 @@ exit:
         }
         if (disable_rx) {
             list_remove(&uc_info_rx->list);
-            disable_snd_device(adev, SND_DEVICE_OUT_SPEAKER_PROTECTED);
+            if (audio_extn_is_vbat_enabled())
+                disable_snd_device(adev, SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT);
+            else
+                disable_snd_device(adev, SND_DEVICE_OUT_SPEAKER_PROTECTED);
             disable_audio_route(adev, uc_info_rx);
         }
         if (disable_tx) {
@@ -943,7 +952,11 @@ void audio_extn_spkr_prot_init(void *adev)
                                             ACDB_DEVICE_SPKR_PROT_WSA_ANALOG);
             platform_set_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED,
                                             ACDB_DEVICE_SPKR_PROT_WSA_ANALOG);
-            platform_set_snd_device_acdb_id(SND_DEVICE_IN_CAPTURE_VI_FEEDBACK,
+            platform_set_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT,
+                                            ACDB_DEVICE_SPKR_PROT_WSA_ANALOG);
+            platform_set_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT,
+                                            ACDB_DEVICE_SPKR_PROT_WSA_ANALOG);
+	    platform_set_snd_device_acdb_id(SND_DEVICE_IN_CAPTURE_VI_FEEDBACK,
                                             ACDB_DEVICE_VI_FEEDBACK_WSA_ANALOG);
             pcm_config_skr_prot.channels = 2;
         }
@@ -1027,6 +1040,12 @@ int audio_extn_spkr_prot_get_acdb_id(snd_device_t snd_device)
 #endif
         acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED);
         break;
+    case SND_DEVICE_OUT_SPEAKER_VBAT:
+        acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT);
+        break;
+    case SND_DEVICE_OUT_VOICE_SPEAKER_VBAT:
+        acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT);
+        break;
     case SND_DEVICE_OUT_VOICE_SPEAKER:
 #ifdef PLATFORM_MSM8916
     case SND_DEVICE_OUT_VOICE_SPEAKER_WSA:
@@ -1051,6 +1070,10 @@ int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device)
     case SND_DEVICE_OUT_SPEAKER_WSA:
 #endif
         return SND_DEVICE_OUT_SPEAKER_PROTECTED;
+    case SND_DEVICE_OUT_SPEAKER_VBAT:
+        return SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT;
+    case SND_DEVICE_OUT_VOICE_SPEAKER_VBAT:
+        return SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT;
     case SND_DEVICE_OUT_VOICE_SPEAKER:
 #ifdef PLATFORM_MSM8916
     case SND_DEVICE_OUT_VOICE_SPEAKER_WSA:
