@@ -2176,9 +2176,13 @@ static int out_get_render_position(const struct audio_stream_out *stream,
                                    uint32_t *dsp_frames)
 {
     struct stream_out *out = (struct stream_out *)stream;
-    if (is_offload_usecase(out->usecase) && (dsp_frames != NULL)) {
+
+    if (dsp_frames == NULL)
+        return -EINVAL;
+
+    *dsp_frames = 0;
+    if (is_offload_usecase(out->usecase)) {
         ssize_t ret = 0;
-        *dsp_frames = 0;
         pthread_mutex_lock(&out->lock);
         if (out->compr != NULL) {
             ret = compress_get_tstamp(out->compr, (unsigned long *)dsp_frames,
@@ -2199,6 +2203,9 @@ static int out_get_render_position(const struct audio_stream_out *stream,
         } else {
             return 0;
         }
+    } else if (audio_is_linear_pcm(out->format)) {
+        *dsp_frames = out->written;
+        return 0;
     } else
         return -EINVAL;
 }
