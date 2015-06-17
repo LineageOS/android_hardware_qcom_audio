@@ -3333,7 +3333,6 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
 
     ALOGI("%s Codec selected backend: %d current bit width: %d and sample rate: %d",
                __func__, backend_idx, bit_width, sample_rate);
-
     // For voice calls use default configuration
     // force routing is not required here, caller will do it anyway
     if (voice_is_in_call(adev) || adev->mode == AUDIO_MODE_IN_COMMUNICATION) {
