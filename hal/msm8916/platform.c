@@ -4449,3 +4449,16 @@ int platform_set_spkr_device_tz_names(snd_device_t index,
 done:
     return ret;
 }
+
+int platform_get_wsa_mode(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    char *snd_card_name;
+
+    snd_card_name = mixer_get_name(my_data->adev->mixer);
+    if ((!strcmp(snd_card_name, "msm8952-skum-snd-card")) ||
+        (!strcmp(snd_card_name, "msm8952-snd-card-mtp")))
+        return 1;
+    else
+        return 0;
+}
