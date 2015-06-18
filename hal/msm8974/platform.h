@@ -165,8 +165,8 @@ enum {
  * We should take care of returning proper size when AudioFlinger queries for
  * the buffer size of an input/output stream
  */
-#define DEEP_BUFFER_OUTPUT_PERIOD_SIZE 960
-#define DEEP_BUFFER_OUTPUT_PERIOD_COUNT 5
+#define DEEP_BUFFER_OUTPUT_PERIOD_SIZE 1920
+#define DEEP_BUFFER_OUTPUT_PERIOD_COUNT 2
 #define LOW_LATENCY_OUTPUT_PERIOD_SIZE 240
 #define LOW_LATENCY_OUTPUT_PERIOD_COUNT 2
 
