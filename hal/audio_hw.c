@@ -620,7 +620,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
         ALOGV("%s: backend_idx: %d,"
               "usecase_backend_idx: %d, curr device: %s, usecase device:"
               "%s", __func__, backend_idx, usecase_backend_idx, platform_get_snd_device_name(snd_device),
-            platform_get_snd_device_name(usecase->out_snd_device));
+        platform_get_snd_device_name(usecase->out_snd_device));
 
         if (usecase->type != PCM_CAPTURE &&
                 (usecase->out_snd_device != snd_device || force_routing)  &&
