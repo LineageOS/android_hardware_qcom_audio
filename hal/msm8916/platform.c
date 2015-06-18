@@ -3345,7 +3345,7 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
         bits_per_sample = 32;
     }
 
-    if (info->use_small_bufs) {
+    if (platform_use_small_buffer(info)) {
         pcm_offload_time = PCM_OFFLOAD_BUFFER_DURATION_FOR_SMALL_BUFFERS;
     } else {
         if (!info->has_video) {
@@ -3608,6 +3608,10 @@ int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t p
     pcm_device_table[usecase][type] = pcm_id;
 done:
     return ret;
+}
+bool platform_use_small_buffer(audio_offload_info_t* info)
+{
+    return OFFLOAD_USE_SMALL_BUFFER;
 }
 
 void platform_get_device_to_be_id_map(int **device_to_be_id, int *length)
