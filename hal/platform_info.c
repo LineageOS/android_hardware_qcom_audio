@@ -44,6 +44,7 @@ typedef enum {
     ROOT,
     ACDB,
     BITWIDTH,
+    NATIVESUPPORT,
     PCM_ID,
     BACKEND_NAME,
     INTERFACE_NAME,
@@ -54,6 +55,7 @@ typedef void (* section_process_fn)(const XML_Char **attr);
 
 static void process_acdb_id(const XML_Char **attr);
 static void process_bit_width(const XML_Char **attr);
+static void process_native_support(const XML_Char **attr);
 static void process_pcm_id(const XML_Char **attr);
 static void process_backend_name(const XML_Char **attr);
 static void process_interface_name(const XML_Char **attr);
@@ -64,6 +66,7 @@ static section_process_fn section_table[] = {
     [ROOT] = process_root,
     [ACDB] = process_acdb_id,
     [BITWIDTH] = process_bit_width,
+    [NATIVESUPPORT] = process_native_support,
     [PCM_ID] = process_pcm_id,
     [BACKEND_NAME] = process_backend_name,
     [INTERFACE_NAME] = process_interface_name,
@@ -281,7 +284,30 @@ static void process_interface_name(const XML_Char **attr)
                                               (char *)attr[5]);
     if (ret < 0) {
         ALOGE("%s: Audio Interface not set!", __func__);
+        goto done;
+    }
 
+done:
+    return;
+}
+
+static void process_native_support(const XML_Char **attr)
+{
+    int index;
+
+    if (strcmp(attr[0], "name") != 0) {
+        ALOGE("%s: 'name' not found, no NATIVE_AUDIO_44.1 set!", __func__);
+        goto done;
+    }
+
+    if (strcmp(attr[2], "codec_support") != 0) {
+        ALOGE("%s: NATIVE_AUDIO_44.1 in platform info xml has no codec_support set!",
+              __func__);
+        goto done;
+    }
+
+    if (platform_set_native_support(atoi((char *)attr[3])) < 0) {
+        ALOGE("%s: NATIVE_AUDIO_44 was not set!", __func__);
         goto done;
     }
 
@@ -344,6 +370,8 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
         section = INTERFACE_NAME;
     } else if (strcmp(tag_name, "tz_names") == 0) {
         section = TZ_NAME;
+    } else if (strcmp(tag_name, "native_configs") == 0) {
+        section = NATIVESUPPORT;
     } else if (strcmp(tag_name, "device") == 0) {
         if ((section != ACDB) && (section != BACKEND_NAME) && (section != BITWIDTH) &&
             (section != INTERFACE_NAME) && (section != TZ_NAME)) {
@@ -362,6 +390,14 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
 
         section_process_fn fn = section_table[PCM_ID];
         fn(attr);
+    } else if (strcmp(tag_name, "feature") == 0) {
+        if (section != NATIVESUPPORT) {
+            ALOGE("usecase tag only supported with NATIVESUPPORT section");
+            return;
+        }
+
+        section_process_fn fn = section_table[NATIVESUPPORT];
+        fn(attr);
     }
 
     return;
@@ -378,6 +414,8 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
     } else if (strcmp(tag_name, "backend_names") == 0) {
         section = ROOT;
     } else if (strcmp(tag_name, "interface_names") == 0) {
+        section = ROOT;
+    } else if (strcmp(tag_name, "native_configs") == 0) {
         section = ROOT;
     }
 }
