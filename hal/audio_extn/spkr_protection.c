@@ -779,7 +779,6 @@ static void* spkr_calibration_thread()
                                                 __func__, NUM_ATTEMPTS);
                        t0_spk_1 = SAFE_SPKR_TEMP_Q6;
                    }
-                   fclose(fp);
                }
                if (spk_2_tzn > 0) {
                    snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_2_tzn);
@@ -810,7 +809,6 @@ static void* spkr_calibration_thread()
                                                 __func__, NUM_ATTEMPTS);
                        t0_spk_2 = SAFE_SPKR_TEMP_Q6;
                    }
-                   fclose(fp);
                }
            }
            pthread_mutex_unlock(&adev->lock);
