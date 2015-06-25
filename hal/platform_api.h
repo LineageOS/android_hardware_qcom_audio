@@ -22,6 +22,7 @@ void platform_deinit(void *platform);
 const char *platform_get_snd_device_name(snd_device_t snd_device);
 void platform_add_backend_name(void *platform, char *mixer_path,
                                                     snd_device_t snd_device);
+bool platform_send_gain_dep_cal(void *platform, int level);
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type);
 int platform_get_snd_device_index(char *snd_device_index_name);
 int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id);

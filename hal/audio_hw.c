@@ -181,6 +181,30 @@ static const struct string_to_enum out_channels_name_to_enum_table[] = {
 };
 
 static int set_voice_volume_l(struct audio_device *adev, float volume);
+static struct audio_device *adev = NULL;
+static pthread_mutex_t adev_init_lock;
+static unsigned int audio_device_ref_count;
+
+__attribute__ ((visibility ("default")))
+bool audio_hw_send_gain_dep_calibration(int level) {
+    bool ret_val = false;
+    ALOGV("%s: enter ... ", __func__);
+
+    pthread_mutex_lock(&adev_init_lock);
+
+    if (adev != NULL && adev->platform != NULL) {
+        pthread_mutex_lock(&adev->lock);
+        ret_val = platform_send_gain_dep_cal(adev->platform, level);
+        pthread_mutex_unlock(&adev->lock);
+    } else {
+        ALOGE("%s: %s is NULL", __func__, adev == NULL ? "adev" : "adev->platform");
+    }
+
+    pthread_mutex_unlock(&adev_init_lock);
+
+    ALOGV("%s: exit with ret_val %d ", __func__, ret_val);
+    return ret_val;
+}
 
 static bool is_supported_format(audio_format_t format)
 {
@@ -1593,7 +1617,7 @@ exit:
 
     if (ret != 0) {
         if (out->pcm)
-            ALOGE("%s: error %d - %s", __func__, ret, pcm_get_error(out->pcm));
+            ALOGE("%s: error %zu - %s", __func__, ret, pcm_get_error(out->pcm));
         out_standby(&out->stream.common);
         usleep(bytes * 1000000 / audio_stream_out_frame_size(stream) /
                out_get_sample_rate(&out->stream.common));
@@ -1660,7 +1684,7 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
         }
     } else {
         if (out->pcm) {
-            size_t avail;
+            unsigned int avail;
             if (pcm_get_htimestamp(out->pcm, &avail, timestamp) == 0) {
                 size_t kernel_buffer_size = out->config.period_size * out->config.period_count;
                 int64_t signed_frames = out->written - kernel_buffer_size + avail;
@@ -2694,15 +2718,25 @@ static int adev_close(hw_device_t *device)
 {
     size_t i;
     struct audio_device *adev = (struct audio_device *)device;
-    audio_route_free(adev->audio_route);
-    free(adev->snd_dev_ref_cnt);
-    platform_deinit(adev->platform);
-    audio_extn_extspk_deinit(adev->extspk);
-    audio_extn_sound_trigger_deinit(adev);
-    for (i = 0; i < ARRAY_SIZE(adev->use_case_table); ++i) {
-        pcm_params_free(adev->use_case_table[i]);
+
+    if (!adev)
+        return 0;
+
+    pthread_mutex_lock(&adev_init_lock);
+
+    if ((--audio_device_ref_count) == 0) {
+        audio_route_free(adev->audio_route);
+        free(adev->snd_dev_ref_cnt);
+        platform_deinit(adev->platform);
+        audio_extn_extspk_deinit(adev->extspk);
+        audio_extn_sound_trigger_deinit(adev);
+        for (i = 0; i < ARRAY_SIZE(adev->use_case_table); ++i) {
+            pcm_params_free(adev->use_case_table[i]);
+        }
+        free(device);
     }
-    free(device);
+
+    pthread_mutex_unlock(&adev_init_lock);
     return 0;
 }
 
@@ -2730,12 +2764,19 @@ static int period_size_is_plausible_for_low_latency(int period_size)
 static int adev_open(const hw_module_t *module, const char *name,
                      hw_device_t **device)
 {
-    struct audio_device *adev;
     int i, ret;
 
     ALOGD("%s: enter", __func__);
     if (strcmp(name, AUDIO_HARDWARE_INTERFACE) != 0) return -EINVAL;
-
+    pthread_mutex_lock(&adev_init_lock);
+    if (audio_device_ref_count != 0) {
+        *device = &adev->device.common;
+        audio_device_ref_count++;
+        ALOGV("%s: returning existing instance of adev", __func__);
+        ALOGV("%s: exit", __func__);
+        pthread_mutex_unlock(&adev_init_lock);
+        return 0;
+    }
     adev = calloc(1, sizeof(struct audio_device));
 
     pthread_mutex_init(&adev->lock, (const pthread_mutexattr_t *) NULL);
@@ -2783,6 +2824,7 @@ static int adev_open(const hw_module_t *module, const char *name,
         free(adev);
         ALOGE("%s: Failed to init platform data, aborting.", __func__);
         *device = NULL;
+        pthread_mutex_unlock(&adev_init_lock);
         return -EINVAL;
     }
 
@@ -2825,6 +2867,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->enable_voicerx = false;
 
     *device = &adev->device.common;
+
     if (k_enable_extended_precision)
         adev_verify_devices(adev);
 
@@ -2845,6 +2888,9 @@ static int adev_open(const hw_module_t *module, const char *name,
             configured_low_latency_capture_period_size = trial;
         }
     }
+
+    audio_device_ref_count++;
+    pthread_mutex_unlock(&adev_init_lock);
 
     ALOGV("%s: exit", __func__);
     return 0;
