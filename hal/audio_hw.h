@@ -83,6 +83,7 @@ typedef enum {
 
     /* FM usecase */
     USECASE_AUDIO_PLAYBACK_FM,
+    USECASE_AUDIO_PLAYBACK_ULL,
 
     /* HFP Use case*/
     USECASE_AUDIO_HFP_SCO,
