@@ -177,6 +177,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_OFFLOAD8] = "compress-offload-playback8",
     [USECASE_AUDIO_PLAYBACK_OFFLOAD9] = "compress-offload-playback9",
 #endif
+    [USECASE_AUDIO_PLAYBACK_ULL] = "audio-ull-playback",
     [USECASE_AUDIO_RECORD] = "audio-record",
     [USECASE_AUDIO_RECORD_COMPRESS] = "audio-record-compress",
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = "low-latency-record",
@@ -2988,6 +2989,10 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->usecase = USECASE_AUDIO_PLAYBACK_AFE_PROXY;
         out->config = pcm_config_afe_proxy_playback;
         adev->voice_tx_output = out;
+    } else if (out->flags & AUDIO_OUTPUT_FLAG_RAW) {
+        out->usecase = USECASE_AUDIO_PLAYBACK_ULL;
+        out->config = pcm_config_low_latency;
+        out->sample_rate = out->config.rate;
     } else if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
         format = AUDIO_FORMAT_PCM_16_BIT;
         out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
@@ -3614,6 +3619,7 @@ static int period_size_is_plausible_for_low_latency(int period_size)
 {
     switch (period_size) {
     case 160:
+    case 192:
     case 240:
     case 320:
     case 480:
