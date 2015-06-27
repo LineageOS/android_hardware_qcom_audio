@@ -55,6 +55,8 @@
 #define RETRY_US 500000
 #define MAX_SND_CARD 8
 
+#define MAX_SND_CARD_NAME_LEN 31
+
 #define DEFAULT_APP_TYPE_RX_PATH  0x11130
 
 struct audio_block_header
@@ -100,6 +102,8 @@ struct platform_data {
     acdb_send_gain_dep_cal_t   acdb_send_gain_dep_cal;
     struct csd_data *csd;
     char ec_ref_mixer_path[64];
+
+    char *snd_card_name;
 };
 
 static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -747,6 +751,15 @@ void *platform_init(struct audio_device *adev)
     int retry_num = 0, snd_card_num = 0;
     const char *snd_card_name;
 
+    my_data = calloc(1, sizeof(struct platform_data));
+
+    my_data->adev = adev;
+
+    set_platform_defaults(my_data);
+
+    /* Initialize platform specific ids and/or backends*/
+    platform_info_init(my_data);
+
     while (snd_card_num < MAX_SND_CARD) {
         adev->mixer = mixer_open(snd_card_num);
 
@@ -765,12 +778,23 @@ void *platform_init(struct audio_device *adev)
         }
 
         snd_card_name = mixer_get_name(adev->mixer);
+
+        /* validate the sound card name */
+        if (my_data->snd_card_name != NULL &&
+                strncmp(snd_card_name, my_data->snd_card_name, MAX_SND_CARD_NAME_LEN) != 0) {
+            ALOGI("%s: found valid sound card %s, but not primary sound card %s",
+                   __func__, snd_card_name, my_data->snd_card_name);
+            retry_num = 0;
+            snd_card_num++;
+            continue;
+        }
+
         ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
 
         adev->audio_route = audio_route_init(snd_card_num, MIXER_XML_PATH);
         if (!adev->audio_route) {
             ALOGE("%s: Failed to init audio route controls, aborting.", __func__);
-            return NULL;
+            goto init_failed;
         }
         adev->snd_card = snd_card_num;
         ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
@@ -779,12 +803,9 @@ void *platform_init(struct audio_device *adev)
 
     if (snd_card_num >= MAX_SND_CARD) {
         ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
-        return NULL;
+        goto init_failed;
     }
 
-    my_data = calloc(1, sizeof(struct platform_data));
-
-    my_data->adev = adev;
     my_data->dualmic_config = DUALMIC_CONFIG_NONE;
     my_data->fluence_in_spkr_mode = false;
     my_data->fluence_in_voice_call = false;
@@ -873,11 +894,6 @@ void *platform_init(struct audio_device *adev)
 
     }
 
-    set_platform_defaults(my_data);
-
-    /* Initialize platform specific ids and/or backends*/
-    platform_info_init();
-
     audio_extn_spkr_prot_init(adev);
 
     audio_extn_hwdep_cal_send(adev->snd_card, my_data->acdb_handle);
@@ -886,12 +902,30 @@ void *platform_init(struct audio_device *adev)
     platform_csd_init(my_data);
 
     return my_data;
+
+init_failed:
+    if (my_data)
+        free(my_data);
+    return NULL;
 }
 
 void platform_deinit(void *platform)
 {
+    int32_t dev;
+
     struct platform_data *my_data = (struct platform_data *)platform;
     close_csd_client(my_data->csd);
+
+    for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
+        if (backend_tag_table[dev])
+            free(backend_tag_table[dev]);
+        if (hw_interface_table[dev])
+            free(hw_interface_table[dev]);
+    }
+
+    if (my_data->snd_card_name)
+        free(my_data->snd_card_name);
+
     free(platform);
 }
 
@@ -1851,6 +1885,37 @@ int platform_stop_incall_music_usecase(void *platform)
                   __func__, ret);
         }
     }
+
+    return ret;
+}
+
+int platform_set_parameters(void *platform, struct str_parms *parms)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    char value[64];
+    char *kv_pairs = str_parms_to_str(parms);
+    int ret = 0, err;
+
+    if (kv_pairs == NULL) {
+        ret = -EINVAL;
+        ALOGE("%s: key-value pair is NULL",__func__);
+        goto done;
+    }
+
+    ALOGV("%s: enter: %s", __func__, kv_pairs);
+
+    err = str_parms_get_str(parms, PLATFORM_CONFIG_KEY_SOUNDCARD_NAME,
+                            value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, PLATFORM_CONFIG_KEY_SOUNDCARD_NAME);
+        my_data->snd_card_name = strdup(value);
+        ALOGV("%s: sound card name %s", __func__, my_data->snd_card_name);
+    }
+
+done:
+    ALOGV("%s: exit with code(%d)", __func__, ret);
+    if (kv_pairs != NULL)
+        free(kv_pairs);
 
     return ret;
 }

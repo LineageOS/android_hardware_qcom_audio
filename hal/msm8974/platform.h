@@ -203,6 +203,8 @@ enum {
 #define LIB_CSD_CLIENT "libcsd-client.so"
 #define LIB_MDM_DETECT "libmdmdetect.so"
 
+#define PLATFORM_CONFIG_KEY_SOUNDCARD_NAME "snd_card_name"
+
 /* CSD-CLIENT related functions */
 typedef int (*init_t)(bool);
 typedef int (*deinit_t)();
