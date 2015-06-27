@@ -27,6 +27,7 @@
 #include <platform_api.h>
 #include "platform.h"
 #include "audio_extn.h"
+#include <linux/msm_audio.h>
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
@@ -54,10 +55,18 @@
 #define RETRY_US 500000
 #define MAX_SND_CARD 8
 
+#define DEFAULT_APP_TYPE_RX_PATH  0x11130
+
 struct audio_block_header
 {
     int reserved;
     int length;
+};
+
+enum {
+    CAL_MODE_SEND           = 0x1,
+    CAL_MODE_PERSIST        = 0x2,
+    CAL_MODE_RTAC           = 0x4
 };
 
 /* Audio calibration related functions */
@@ -70,6 +79,7 @@ typedef int  (*acdb_init_t)();
 typedef void (*acdb_send_audio_cal_t)(int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
+typedef int (*acdb_send_gain_dep_cal_t)(int, int, int, int, int);
 
 /* Audio calibration related functions */
 struct platform_data {
@@ -87,6 +97,7 @@ struct platform_data {
     acdb_send_audio_cal_t      acdb_send_audio_cal;
     acdb_send_voice_cal_t      acdb_send_voice_cal;
     acdb_reload_vocvoltable_t  acdb_reload_vocvoltable;
+    acdb_send_gain_dep_cal_t   acdb_send_gain_dep_cal;
     struct csd_data *csd;
     bool ext_speaker;
     bool ext_earpiece;
@@ -429,6 +440,57 @@ bool is_operator_tmus()
 {
     pthread_once(&check_op_once_ctl, check_operator);
     return is_tmus;
+}
+
+bool platform_send_gain_dep_cal(void *platform, int level)
+{
+    bool ret_val = false;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    int acdb_dev_id, app_type;
+    int acdb_dev_type = MSM_SNDDEV_CAP_RX;
+    int mode = CAL_MODE_RTAC;
+    struct listnode *node;
+    struct audio_usecase *usecase;
+	snd_device_t snd_device;
+
+    if (my_data->acdb_send_gain_dep_cal == NULL) {
+        ALOGE("%s: dlsym error for acdb_send_gain_dep_cal", __func__);
+        return ret_val;
+    }
+
+    if (!voice_is_in_call(adev)) {
+        ALOGV("%s: Not Voice call usecase, apply new cal for level %d",
+               __func__, level);
+        app_type = DEFAULT_APP_TYPE_RX_PATH;
+
+        // find the current active sound device
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+
+            if (usecase != NULL &&
+                usecase->type == PCM_PLAYBACK &&
+                (usecase->stream.out->devices == AUDIO_DEVICE_OUT_SPEAKER)) {
+
+                ALOGV("%s: out device is %d", __func__,  usecase->out_snd_device);
+                snd_device = audio_extn_spkr_prot_get_acdb_id(usecase->out_snd_device);
+                acdb_dev_id = acdb_device_table[snd_device];
+                if (!my_data->acdb_send_gain_dep_cal(acdb_dev_id, app_type,
+                                                     acdb_dev_type, mode, level)) {
+                    // set ret_val true if at least one calibration is set successfully
+                    ret_val = true;
+                } else {
+                    ALOGE("%s: my_data->acdb_send_gain_dep_cal failed ", __func__);
+                }
+            } else {
+                ALOGW("%s: Usecase list is empty", __func__);
+            }
+        }
+    } else {
+        ALOGW("%s: Voice call in progress .. ignore setting new cal",
+              __func__);
+    }
+    return ret_val;
 }
 
 void platform_set_echo_reference(struct audio_device *adev, bool enable, audio_devices_t out_device)
@@ -821,6 +883,13 @@ void *platform_init(struct audio_device *adev)
         if (!my_data->acdb_reload_vocvoltable)
             ALOGE("%s: Could not find the symbol acdb_loader_reload_vocvoltable from %s",
                   __func__, LIB_ACDB_LOADER);
+
+        my_data->acdb_send_gain_dep_cal = (acdb_send_gain_dep_cal_t)dlsym(my_data->acdb_handle,
+                                                    "acdb_loader_send_gain_dep_cal");
+        if (!my_data->acdb_send_gain_dep_cal)
+            ALOGV("%s: Could not find the symbol acdb_loader_send_gain_dep_cal from %s",
+                  __func__, LIB_ACDB_LOADER);
+
 #ifdef PLATFORM_MSM8084
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_init_v2");
