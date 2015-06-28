@@ -302,9 +302,6 @@ int offload_effects_bundle_hal_stop_output(audio_io_handle_t output, int pcm_id)
         goto exit;
     }
 
-    if (out_ctxt->mixer)
-        mixer_close(out_ctxt->mixer);
-
     list_for_each(fx_node, &out_ctxt->effects_list) {
         effect_context_t *fx_ctxt = node_to_item(fx_node,
                                                  effect_context_t,
@@ -312,6 +309,9 @@ int offload_effects_bundle_hal_stop_output(audio_io_handle_t output, int pcm_id)
         if (fx_ctxt->ops.stop)
             fx_ctxt->ops.stop(fx_ctxt, out_ctxt);
     }
+
+    if (out_ctxt->mixer)
+        mixer_close(out_ctxt->mixer);
 
     list_remove(&out_ctxt->outputs_list_node);
 
