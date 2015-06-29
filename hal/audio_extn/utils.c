@@ -618,8 +618,10 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
          app_type_cfg[len++] = platform_get_default_app_type(adev->platform);
          app_type_cfg[len++] = acdb_dev_id;
          app_type_cfg[len++] = sample_rate;
-         ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
-               __func__, platform_get_default_app_type(adev->platform), acdb_dev_id, sample_rate);
+         ALOGI("%s:%d PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
+               __func__, __LINE__,
+               platform_get_default_app_type(adev->platform),
+               acdb_dev_id, sample_rate);
     } else if (usecase->type == PCM_PLAYBACK) {
 
          if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
@@ -629,9 +631,6 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
                       (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
                     usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
          }
-
-         if (!audio_extn_is_hifi_audio_enabled())
-             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
 
          sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
 
@@ -652,8 +651,10 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
          else
              app_type_cfg[len++] = sample_rate;
 
-         ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
-             __func__, usecase->stream.out->app_type_cfg.app_type, acdb_dev_id, sample_rate);
+         ALOGI("%s:%d PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
+               __func__, __LINE__,
+               platform_get_default_app_type(adev->platform),
+               acdb_dev_id, sample_rate);
 
     } else if (usecase->type == PCM_CAPTURE) {
          app_type_cfg[len++] = platform_get_default_app_type_v2(adev->platform, usecase->type);
