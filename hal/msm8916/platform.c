@@ -1434,8 +1434,7 @@ void *platform_init(struct audio_device *adev)
     dir = opendir(CodecPeek);
     if (dir != NULL) {
         while (NULL != (dirent = readdir(dir))) {
-            if (strstr (dirent->d_name,file_name))
-            {
+            if (strstr (dirent->d_name,file_name)) {
                 my_data->is_wsa_speaker = true;
                 break;
             }
@@ -1449,9 +1448,9 @@ acdb_init_fail:
 
     /* Initialize ACDB and PCM ID's */
     if (is_external_codec)
-        platform_info_init(PLATFORM_INFO_XML_PATH_EXTCODEC);
+        platform_info_init(PLATFORM_INFO_XML_PATH_EXTCODEC, my_data);
     else
-        platform_info_init(PLATFORM_INFO_XML_PATH);
+        platform_info_init(PLATFORM_INFO_XML_PATH, my_data);
 
     /* init usb */
     audio_extn_usb_init(adev);
