@@ -42,7 +42,6 @@ int platform_set_snd_device_bit_width(snd_device_t snd_device, unsigned int bit_
 int platform_get_snd_device_bit_width(snd_device_t snd_device);
 int platform_set_native_support(bool codec_support);
 int platform_get_native_support();
-int platform_get_backend_index(snd_device_t snd_device);
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
                                     int app_type, int sample_rate);
 int platform_get_default_app_type(void *platform);
@@ -87,7 +86,8 @@ bool platform_listen_usecase_needs_event(audio_usecase_t uc_id);
 bool platform_sound_trigger_device_needs_event(snd_device_t snd_device);
 bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id);
 
-int platform_set_snd_device_backend(snd_device_t snd_device, const char * backend);
+int platform_set_snd_device_backend(snd_device_t snd_device, const char * backend,
+                                    const char * hw_interface);
 
 /* From platform_info.c */
 int platform_info_init(const char *filename, void *);
@@ -122,4 +122,9 @@ int platform_set_device_params(struct stream_out *out, int param, int value);
 int platform_set_audio_device_interface(const char * device_name, const char *intf_name,
                                         const char * codec_type);
 void platform_set_gsm_mode(void *platform, bool enable);
+bool platform_can_split_snd_device(snd_device_t in_snd_device,
+                                   int *num_devices,
+                                   snd_device_t *out_snd_devices);
+
+bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_device2);
 #endif // AUDIO_PLATFORM_API_H

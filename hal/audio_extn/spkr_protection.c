@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2016, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -1059,7 +1059,8 @@ void audio_extn_spkr_prot_init(void *adev)
         property_get("ro.board.platform", platform, "");
         if (!strncmp("apq8084", platform, sizeof("apq8084"))) {
             platform_set_snd_device_backend(SND_DEVICE_OUT_VOICE_SPEAKER,
-                                            "speaker-protected");
+                                            "speaker-protected",
+                                            "SLIMBUS_0_RX");
         }
     }
 }

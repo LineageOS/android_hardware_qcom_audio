@@ -485,6 +485,8 @@ int disable_audio_route(struct audio_device *adev,
 int enable_snd_device(struct audio_device *adev,
                       snd_device_t snd_device)
 {
+    int i, num_devices = 0;
+    snd_device_t new_snd_devices[SND_DEVICE_OUT_END];
     char device_name[DEVICE_NAME_MAX_SIZE] = {0};
 
     if (snd_device < SND_DEVICE_MIN ||
@@ -530,6 +532,10 @@ int enable_snd_device(struct audio_device *adev,
             audio_extn_dev_arbi_release(snd_device);
             return -EINVAL;
         }
+    } else if (platform_can_split_snd_device(snd_device, &num_devices, new_snd_devices)) {
+        for (i = 0; i < num_devices; i++) {
+            enable_snd_device(adev, new_snd_devices[i]);
+        }
     } else {
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
         /* due to the possibility of calibration overwrite between listen
@@ -555,6 +561,8 @@ int enable_snd_device(struct audio_device *adev,
 int disable_snd_device(struct audio_device *adev,
                        snd_device_t snd_device)
 {
+    int i, num_devices = 0;
+    snd_device_t new_snd_devices[SND_DEVICE_OUT_END];
     char device_name[DEVICE_NAME_MAX_SIZE] = {0};
 
     if (snd_device < SND_DEVICE_MIN ||
@@ -589,6 +597,10 @@ int disable_snd_device(struct audio_device *adev,
             snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
             audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing(snd_device);
+        } else if (platform_can_split_snd_device(snd_device, &num_devices, new_snd_devices)) {
+            for (i = 0; i < num_devices; i++) {
+                disable_snd_device(adev, new_snd_devices[i]);
+            }
         } else {
             audio_route_reset_and_update_path(adev->audio_route, device_name);
         }
@@ -607,15 +619,13 @@ int disable_snd_device(struct audio_device *adev,
 }
 
 static void check_usecases_codec_backend(struct audio_device *adev,
-                                          struct audio_usecase *uc_info,
-                                          snd_device_t snd_device)
+                                              struct audio_usecase *uc_info,
+                                              snd_device_t snd_device)
 {
     struct listnode *node;
     struct audio_usecase *usecase;
     bool switch_device[AUDIO_USECASE_MAX];
     int i, num_uc_to_switch = 0;
-    int backend_idx = DEFAULT_CODEC_BACKEND;
-    int usecase_backend_idx = DEFAULT_CODEC_BACKEND;
 
     /*
      * This function is to make sure that all the usecases that are active on
@@ -636,7 +646,6 @@ static void check_usecases_codec_backend(struct audio_device *adev,
      */
     bool force_routing = platform_check_and_set_codec_backend_cfg(adev, uc_info,
                          snd_device);
-    backend_idx = platform_get_backend_index(snd_device);
     /* Disable all the usecases on the shared backend other than the
      * specified usecase.
      */
@@ -645,25 +654,20 @@ static void check_usecases_codec_backend(struct audio_device *adev,
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-
-        if (usecase == uc_info)
-            continue;
-        usecase_backend_idx = platform_get_backend_index(usecase->out_snd_device);
-        ALOGV("%s: backend_idx: %d,"
-              "usecase_backend_idx: %d, curr device: %s, usecase device:"
-              "%s", __func__, backend_idx, usecase_backend_idx, platform_get_snd_device_name(snd_device),
-        platform_get_snd_device_name(usecase->out_snd_device));
-
+        ALOGV("%s: curr device: %s, usecase device: %s", __func__,
+              platform_get_snd_device_name(snd_device),
+              platform_get_snd_device_name(usecase->out_snd_device));
         if (usecase->type != PCM_CAPTURE &&
-                (usecase->out_snd_device != snd_device || force_routing)  &&
-                usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND &&
-                usecase_backend_idx == backend_idx) {
-            ALOGD("%s: Usecase (%s) is active on (%s) - disabling ..", __func__,
-                  use_case_table[usecase->id],
-                  platform_get_snd_device_name(usecase->out_snd_device));
-            disable_audio_route(adev, usecase);
-            switch_device[usecase->id] = true;
-            num_uc_to_switch++;
+            usecase != uc_info &&
+            (usecase->out_snd_device != snd_device || force_routing) &&
+            usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND &&
+            platform_check_backends_match(snd_device, usecase->out_snd_device)) {
+                ALOGD("%s: Usecase (%s) is active on (%s) - disabling ..", __func__,
+                      use_case_table[usecase->id],
+                      platform_get_snd_device_name(usecase->out_snd_device));
+                disable_audio_route(adev, usecase);
+                switch_device[usecase->id] = true;
+                num_uc_to_switch++;
         }
     }
 
