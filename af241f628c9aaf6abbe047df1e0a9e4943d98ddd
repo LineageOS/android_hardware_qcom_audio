@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9ff52f3f_6e933f51",
+        "filename": "hal/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 232,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-06-30T09:38:54Z",
+      "side": 1,
+      "message": "I would prefer you made this opt-out, rather than opt-in. All the CM 8916s support this so far.",
+      "revId": "af241f628c9aaf6abbe047df1e0a9e4943d98ddd",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
