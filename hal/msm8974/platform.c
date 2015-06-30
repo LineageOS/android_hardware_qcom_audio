@@ -2017,11 +2017,16 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
             if (channel_count == 2) {
                 snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_STEREO;
-            } else if (adev->active_input->enable_ns)
-                snd_device = SND_DEVICE_IN_VOICE_REC_MIC_NS;
-            else if (my_data->fluence_type != FLUENCE_NONE &&
+            } else if (my_data->fluence_type != FLUENCE_NONE &&
                      my_data->fluence_in_voice_rec) {
-                snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
+                if (my_data->fluence_type & FLUENCE_QUAD_MIC) {
+                    snd_device = SND_DEVICE_IN_HANDSET_QMIC;
+                } else {
+                    snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
+                }
+                platform_set_echo_reference(adev->platform, true);
+            } else if (adev->active_input->enable_ns) {
+                snd_device = SND_DEVICE_IN_VOICE_REC_MIC_NS;
             } else {
                 snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
             }
