@@ -32,6 +32,7 @@
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
+#define CVD_VERSION_MIXER_CTL "CVD Version"
 
 #define DUALMIC_CONFIG_NONE 0      /* Target does not contain 2 mics */
 #define DUALMIC_CONFIG_ENDFIRE 1
@@ -46,6 +47,8 @@
  */
 #define MAX_SAD_BLOCKS      10
 #define SAD_BLOCK_SIZE      3
+
+#define MAX_CVD_VERSION_STRING_SIZE    100
 
 /* EDID format ID for LPCM audio */
 #define EDID_FORMAT_LPCM    1
@@ -73,11 +76,9 @@ enum {
 
 /* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
-#ifdef PLATFORM_MSM8084
-typedef int  (*acdb_init_t)(char *);
-#else
+typedef int  (*acdb_init_v2_cvd_t)(char *, char *);
+typedef int  (*acdb_init_v2_t)(char *);
 typedef int  (*acdb_init_t)();
-#endif
 typedef void (*acdb_send_audio_cal_t)(int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
@@ -94,7 +95,6 @@ struct platform_data {
     bool speaker_lr_swap;
 
     void *acdb_handle;
-    acdb_init_t                acdb_init;
     acdb_deallocate_t          acdb_deallocate;
     acdb_send_audio_cal_t      acdb_send_audio_cal;
     acdb_send_voice_cal_t      acdb_send_voice_cal;
@@ -454,7 +454,7 @@ bool platform_send_gain_dep_cal(void *platform, int level)
     int mode = CAL_MODE_RTAC;
     struct listnode *node;
     struct audio_usecase *usecase;
-	snd_device_t snd_device;
+    snd_device_t snd_device;
 
     if (my_data->acdb_send_gain_dep_cal == NULL) {
         ALOGE("%s: dlsym error for acdb_send_gain_dep_cal", __func__);
@@ -744,12 +744,40 @@ static void set_platform_defaults(struct platform_data * my_data __unused)
     hw_interface_table[SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED] = strdup("SLIMBUS_0_RX");
 }
 
+void get_cvd_version(char *cvd_version, struct audio_device *adev)
+{
+    struct mixer_ctl *ctl;
+    int count;
+    int ret = 0;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, CVD_VERSION_MIXER_CTL);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",  __func__, CVD_VERSION_MIXER_CTL);
+        goto done;
+    }
+    mixer_ctl_update(ctl);
+
+    count = mixer_ctl_get_num_values(ctl);
+    if (count > MAX_CVD_VERSION_STRING_SIZE)
+        count = MAX_CVD_VERSION_STRING_SIZE - 1;
+
+    ret = mixer_ctl_get_array(ctl, cvd_version, count);
+    if (ret != 0) {
+        ALOGE("%s: ERROR! mixer_ctl_get_array() failed to get CVD Version", __func__);
+        goto done;
+    }
+
+done:
+    return;
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data;
     int retry_num = 0, snd_card_num = 0;
     const char *snd_card_name;
+    char *cvd_version = NULL;
 
     my_data = calloc(1, sizeof(struct platform_data));
 
@@ -876,23 +904,43 @@ void *platform_init(struct audio_device *adev)
             ALOGV("%s: Could not find the symbol acdb_loader_send_gain_dep_cal from %s",
                   __func__, LIB_ACDB_LOADER);
 
-#ifdef PLATFORM_MSM8084
-        my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
-                                                    "acdb_loader_init_v2");
-        if (my_data->acdb_init == NULL)
+#if defined (PLATFORM_MSM8994)
+        acdb_init_v2_cvd_t acdb_init;
+        acdb_init = (acdb_init_v2_cvd_t)dlsym(my_data->acdb_handle,
+                                              "acdb_loader_init_v2");
+        if (acdb_init == NULL) {
             ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__, dlerror());
+            goto acdb_init_fail;
+        }
+
+        cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
+        get_cvd_version(cvd_version, adev);
+        if (!cvd_version)
+            ALOGE("failed to allocate cvd_version");
         else
-            my_data->acdb_init((char *)snd_card_name);
+            acdb_init((char *)snd_card_name, cvd_version);
+        free(cvd_version);
+#elif defined (PLATFORM_MSM8084)
+        acdb_init_v2_t acdb_init;
+        acdb_init = (acdb_init_v2_t)dlsym(my_data->acdb_handle,
+                                          "acdb_loader_init_v2");
+        if (acdb_init == NULL) {
+            ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__, dlerror());
+            goto acdb_init_fail;
+        }
+        acdb_init((char *)snd_card_name);
 #else
-        my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
+        acdb_init_t acdb_init;
+        acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_init_ACDB");
-        if (my_data->acdb_init == NULL)
+        if (acdb_init == NULL)
             ALOGE("%s: dlsym error %s for acdb_loader_init_ACDB", __func__, dlerror());
         else
-            my_data->acdb_init();
+            acdb_init();
 #endif
-
     }
+
+acdb_init_fail:
 
     audio_extn_spkr_prot_init(adev);
 
