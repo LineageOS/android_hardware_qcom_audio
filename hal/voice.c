@@ -22,6 +22,7 @@
 #define LOG_NDDEBUG 0
 
 #include <errno.h>
+#include <stdlib.h>
 #include <math.h>
 #include <cutils/log.h>
 #include <cutils/str_parms.h>

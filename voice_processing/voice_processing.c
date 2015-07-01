@@ -23,7 +23,7 @@
 #include <audio_effects/effect_aec.h>
 #include <audio_effects/effect_agc.h>
 #include <audio_effects/effect_ns.h>
-
+#include <stdlib.h>
 
 //------------------------------------------------------------------------------
 // local definitions
