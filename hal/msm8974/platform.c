@@ -59,7 +59,7 @@
  * 24 - lcm of channels supported by DSP
  */
 #define MAX_PCM_OFFLOAD_FRAGMENT_SIZE (240 * 1024)
-#define MIN_PCM_OFFLOAD_FRAGMENT_SIZE (4 * 1024)
+#define MIN_PCM_OFFLOAD_FRAGMENT_SIZE 512
 
 #define DIV_ROUND_UP(x, y) (((x) + (y) - 1)/(y))
 #define ALIGN(x, y) ((y) * DIV_ROUND_UP((x), (y)))
