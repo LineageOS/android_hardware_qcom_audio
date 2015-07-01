@@ -3197,6 +3197,11 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
     return fragment_size;
 }
 
+bool platform_use_small_buffer(audio_offload_info_t* info)
+{
+    return OFFLOAD_USE_SMALL_BUFFER;
+}
+
 int platform_set_codec_backend_cfg(struct audio_device* adev,
                          snd_device_t snd_device,
                          unsigned int bit_width, unsigned int sample_rate)

@@ -38,6 +38,7 @@
 #ifndef QCOM_AUDIO_HW_H
 #define QCOM_AUDIO_HW_H
 
+#include <stdlib.h>
 #include <cutils/list.h>
 #include <hardware/audio.h>
 #include <tinyalsa/asoundlib.h>

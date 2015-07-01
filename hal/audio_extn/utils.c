@@ -71,7 +71,9 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
 #ifdef COMPRESS_VOIP_ENABLED
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_VOIP_RX),
 #endif
+#ifdef HDMI_PASSTHROUGH_ENABLED
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH),
+#endif
 };
 
 const struct string_to_enum s_format_name_to_enum_table[] = {
@@ -566,8 +568,11 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
     app_type_cfg[len++] = out->app_type_cfg.app_type;
     app_type_cfg[len++] = acdb_dev_id;
     if (((out->format == AUDIO_FORMAT_E_AC3) ||
-        (out->format == AUDIO_FORMAT_E_AC3_JOC)) &&
-        (out->flags  & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
+        (out->format == AUDIO_FORMAT_E_AC3_JOC))
+#ifdef HDMI_PASSTHROUGH_ENABLED
+        && (out->flags  & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)
+#endif
+        )
         app_type_cfg[len++] = sample_rate * 4;
     else
         app_type_cfg[len++] = sample_rate;
