@@ -400,6 +400,7 @@ static char * device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC] = "quad-mic",
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = "quad-mic",
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = "quad-mic",
+    [SND_DEVICE_IN_THREE_MIC] = "three-mic",
 };
 
 // Platform specific backend bit width table
@@ -497,6 +498,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC] = 126,
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = 127,
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = 129,
+    [SND_DEVICE_IN_THREE_MIC] = 46,
 };
 
 struct name_to_index {
@@ -2452,6 +2454,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         goto exit;
     }
 
+    if (adev->active_input && (audio_extn_ssr_get_stream() == adev->active_input))
+        snd_device = SND_DEVICE_IN_THREE_MIC;
 
     if (snd_device != SND_DEVICE_NONE) {
         goto exit;
@@ -2461,7 +2465,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             !(in_device & AUDIO_DEVICE_IN_VOICE_CALL) &&
             !(in_device & AUDIO_DEVICE_IN_COMMUNICATION)) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
-            if (audio_extn_ssr_get_enabled() && channel_count == 6)
+            if (adev->active_input && (audio_extn_ssr_get_stream() == adev->active_input))
                 snd_device = SND_DEVICE_IN_QUAD_MIC;
             else if (my_data->fluence_type & (FLUENCE_DUAL_MIC | FLUENCE_QUAD_MIC) &&
                     channel_count == 2)
