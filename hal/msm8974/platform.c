@@ -2138,6 +2138,13 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         snd_device = SND_DEVICE_IN_SSR_3MIC;
     }
 
+    if((audio_extn_ssr_get_enabled()) && (channel_count == 2) &&
+             ((AUDIO_SOURCE_MIC == source) || (AUDIO_SOURCE_CAMCORDER == source))) {
+        //TODO:: check whether SSR mode is on or not
+        //Force input from 3 mic
+        snd_device = SND_DEVICE_IN_SSR_3MIC;
+    }
+
     if (snd_device != SND_DEVICE_NONE) {
         goto exit;
     }
