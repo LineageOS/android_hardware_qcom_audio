@@ -80,7 +80,7 @@
  * 24 - lcm of channels supported by DSP
  */
 #define MAX_PCM_OFFLOAD_FRAGMENT_SIZE (240 * 1024)
-#define MIN_PCM_OFFLOAD_FRAGMENT_SIZE (4 * 1024)
+#define MIN_PCM_OFFLOAD_FRAGMENT_SIZE  512
 
 /*
  * Offload buffer size for compress passthrough
