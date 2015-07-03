@@ -43,7 +43,7 @@
 #include <system/thread_defs.h>
 #include <tinyalsa/asoundlib.h>
 #include <hardware/audio_effect.h>
-
+#include <stdlib.h>
 #include "bundle.h"
 #include "hw_accelerator.h"
 #include "equalizer.h"
@@ -69,7 +69,9 @@ const effect_descriptor_t *descriptors[] = {
         &ins_env_reverb_descriptor,
         &aux_preset_reverb_descriptor,
         &ins_preset_reverb_descriptor,
+#ifdef HW_ACCELERATED_EFFECTS
         &hw_accelerator_descriptor,
+#endif
         NULL,
 };
 
@@ -604,6 +606,7 @@ int effect_lib_create(const effect_uuid_t *uuid,
             reverb_preset_init(reverb_ctxt);
         }
         reverb_ctxt->ctl = NULL;
+#ifdef HW_ACCELERATED_EFFECTS
     } else if (memcmp(uuid, &hw_accelerator_descriptor.uuid,
                sizeof(effect_uuid_t)) == 0) {
         hw_accelerator_context_t *hw_acc_ctxt = (hw_accelerator_context_t *)
@@ -625,6 +628,7 @@ int effect_lib_create(const effect_uuid_t *uuid,
         context->ops.process = hw_accelerator_process;
 
         context->desc = &hw_accelerator_descriptor;
+#endif
     } else {
         return -EINVAL;
     }
@@ -910,7 +914,7 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
             add_effect_to_output(out_ctxt, context);
 
         } break;
-
+#ifdef HW_ACCELERATED_EFFECTS
     case EFFECT_CMD_HW_ACC: {
         ALOGV("EFFECT_CMD_HW_ACC cmdSize %d pCmdData %p, *replySize %d, pReplyData %p",
               cmdSize, pCmdData, *replySize, pReplyData);
@@ -925,6 +929,7 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
         context->hw_acc_enabled = (value > 0) ? true : false;
         break;
     }
+#endif
     default:
         if (cmdCode >= EFFECT_CMD_FIRST_PROPRIETARY && context->ops.command)
             status = context->ops.command(context, cmdCode, cmdSize,

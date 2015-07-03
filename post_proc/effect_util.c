@@ -17,6 +17,7 @@
 #include <utils/Log.h>
 #include <stdlib.h>
 #include "effect_util.h"
+#include <string.h>
 
 #ifdef LOG_TAG
 #undef LOG_TAG
