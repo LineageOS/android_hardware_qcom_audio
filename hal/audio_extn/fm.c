@@ -243,7 +243,20 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
         if (ret >= 0) {
             val = atoi(value);
             if(val > 0)
-                select_devices(adev, USECASE_AUDIO_PLAYBACK_FM);
+                /*
+                 * Only when wsa does present and is in analog mode,
+                 * fm will stop/start here.
+                 * To-do: when the kernel codec type query change
+                 * is ready, enum of wsa mode should be checked here.
+                 * Currently, platform_get_wsa_mode will directly return
+                 * 1 when wsa is in analog mode.
+                 */
+                if (platform_get_wsa_mode(adev->platform) == 1) {
+                    fm_stop(adev);
+                    fm_start(adev);
+                } else {
+                    select_devices(adev, USECASE_AUDIO_PLAYBACK_FM);
+                }
         }
     }
     if (fmmod.restart_fm && (fmmod.scard_state == SND_CARD_STATE_ONLINE)) {

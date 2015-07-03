@@ -1175,3 +1175,8 @@ int platform_set_spkr_device_tz_names(snd_device_t index,
 {
     return -ENOSYS;
 }
+
+int platform_get_wsa_mode(void *platform)
+{
+    return 0;
+}
