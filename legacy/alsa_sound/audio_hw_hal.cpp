@@ -202,6 +202,23 @@ int amplifier_set_devices(uint32_t devices)
     return 0;
 }
 
+/* Must expose for ALSADevice.cpp */
+int amplifier_enable_devices(uint32_t devices, bool enable)
+{
+    amplifier_device_t *amp = get_amplifier_device();
+    bool is_output = devices & AudioSystem::DEVICE_OUT_ALL;
+
+    if (amp && amp->enable_output_devices && is_output) {
+        amp->enable_output_devices(amp, devices, enable);
+    }
+
+    if (amp && amp->enable_input_devices && !is_output) {
+        amp->enable_input_devices(amp, devices, enable);
+    }
+
+    return 0;
+}
+
 static int amplifier_set_mode(audio_mode_t mode)
 {
     amplifier_device_t *amp = get_amplifier_device();
