@@ -186,21 +186,17 @@ static int amplifier_open(void)
 }
 
 /* Must expose for ALSADevice.cpp */
-int amplifier_set_input_devices(uint32_t devices)
+int amplifier_set_devices(uint32_t devices)
 {
     amplifier_device_t *amp = get_amplifier_device();
-    if (amp && amp->set_input_devices) {
-        amp->set_input_devices(amp, devices);
+    bool is_output = devices & AudioSystem::DEVICE_OUT_ALL;
+
+    if (amp && amp->set_output_devices && is_output) {
+        amp->set_output_devices(amp, devices);
     }
 
-    return 0;
-}
-
-int amplifier_set_output_devices(uint32_t devices)
-{
-    amplifier_device_t *amp = get_amplifier_device();
-    if (amp && amp->set_output_devices) {
-        amp->set_output_devices(amp, devices);
+    if (amp && amp->set_input_devices && !is_output) {
+        amp->set_input_devices(amp, devices);
     }
 
     return 0;
