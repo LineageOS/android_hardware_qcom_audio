@@ -533,8 +533,7 @@ status_t ALSADevice::setSoftwareParams(alsa_handle_t *handle)
 }
 
 extern "C" {
-extern int amplifier_set_input_devices(uint32_t devices);
-extern int amplifier_set_output_devices(uint32_t devices);
+extern int amplifier_set_devices(uint32_t devices);
 };
 
 void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
@@ -631,6 +630,8 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
         }
     }
 #endif
+
+    amplifier_set_devices(devices);
 
     rxDevice = getUCMDevice(devices & AudioSystem::DEVICE_OUT_ALL, 0, NULL);
     ALOGV("%s: rxDevice %s devices:0x%x", __FUNCTION__, rxDevice,devices);
@@ -885,9 +886,6 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
         setA2220Mode(A2220_PATH_INCALL_RECEIVER_NSOFF);
     }
 #endif
-
-    amplifier_set_input_devices(devices & AudioSystem::DEVICE_IN_ALL);
-    amplifier_set_output_devices(devices & AudioSystem::DEVICE_OUT_ALL);
 
     if (rxDevice != NULL) {
         free(rxDevice);
