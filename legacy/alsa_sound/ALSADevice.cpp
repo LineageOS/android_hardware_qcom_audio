@@ -534,7 +534,13 @@ status_t ALSADevice::setSoftwareParams(alsa_handle_t *handle)
 
 extern "C" {
 extern int amplifier_set_devices(uint32_t devices);
+extern int amplifier_enable_devices(uint32_t devices, bool enable);
 };
+
+/* HACK: decoding the mCurTxUCMDevice/mCurRxUCMDevice back to uint32_t isn't
+   possible, just store the previous state instead. */
+static uint32_t current_rx_devices = 0;
+static uint32_t current_tx_devices = 0;
 
 void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t mode)
 {
@@ -632,6 +638,12 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
 #endif
 
     amplifier_set_devices(devices);
+    if (current_tx_devices == 0) {
+        current_tx_devices = devices & AudioSystem::DEVICE_IN_ALL;
+    }
+    if (current_rx_devices == 0) {
+        current_rx_devices = devices & AudioSystem::DEVICE_OUT_ALL;
+    }
 
     rxDevice = getUCMDevice(devices & AudioSystem::DEVICE_OUT_ALL, 0, NULL);
     ALOGV("%s: rxDevice %s devices:0x%x", __FUNCTION__, rxDevice,devices);
@@ -690,6 +702,7 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
                 }
             }
             snd_use_case_set(handle->ucMgr, "_disdev", mCurRxUCMDevice);
+            amplifier_enable_devices(current_rx_devices, false);
         }
     }
     if (txDevice != NULL) {
@@ -717,6 +730,7 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
                 }
             }
             snd_use_case_set(handle->ucMgr, "_disdev", mCurTxUCMDevice);
+            amplifier_enable_devices(current_tx_devices, false);
        }
     }
 
@@ -728,12 +742,16 @@ void ALSADevice::switchDevice(alsa_handle_t *handle, uint32_t devices, uint32_t 
             setEmuAntipop(0);
         }
 #endif
+        amplifier_enable_devices(devices, true);
         snd_use_case_set(handle->ucMgr, "_enadev", rxDevice);
         strlcpy(mCurRxUCMDevice, rxDevice, sizeof(mCurRxUCMDevice));
+        current_rx_devices = devices & AudioSystem::DEVICE_OUT_ALL;
     }
     if (txDevice != NULL) {
+       amplifier_enable_devices(devices, true);
        snd_use_case_set(handle->ucMgr, "_enadev", txDevice);
        strlcpy(mCurTxUCMDevice, txDevice, sizeof(mCurTxUCMDevice));
+       current_tx_devices = devices & AudioSystem::DEVICE_IN_ALL;
     }
 #ifdef QCOM_CSDCLIENT_ENABLED
     if (isPlatformFusion3() && (inCallDevSwitch == true)) {
@@ -1643,10 +1661,14 @@ void ALSADevice::disableDevice(alsa_handle_t *handle)
             }
         }
         ALOGV("usecase_type is %d\n", usecase_type);
-        if (!(usecase_type & USECASE_TYPE_TX) && (strncmp(mCurTxUCMDevice, "None", 4)))
+        if (!(usecase_type & USECASE_TYPE_TX) && (strncmp(mCurTxUCMDevice, "None", 4))) {
             snd_use_case_set(handle->ucMgr, "_disdev", mCurTxUCMDevice);
-        if (!(usecase_type & USECASE_TYPE_RX) && (strncmp(mCurRxUCMDevice, "None", 4)))
+            amplifier_enable_devices(current_tx_devices, false);
+        }
+        if (!(usecase_type & USECASE_TYPE_RX) && (strncmp(mCurRxUCMDevice, "None", 4))) {
             snd_use_case_set(handle->ucMgr, "_disdev", mCurRxUCMDevice);
+            amplifier_enable_devices(current_rx_devices, false);
+        }
     } else {
         ALOGE("Invalid state, no valid use case found to disable");
     }
