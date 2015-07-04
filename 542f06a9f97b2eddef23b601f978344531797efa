@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7ffa3b31_52dca445",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 606,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-04T10:48:02Z",
+      "side": 1,
+      "message": "It appears these are the only two places that you can enable/disable devices like this.",
+      "revId": "542f06a9f97b2eddef23b601f978344531797efa",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
