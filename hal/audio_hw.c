@@ -283,6 +283,20 @@ static int amplifier_set_output_devices(uint32_t devices)
     return 0;
 }
 
+static int amplifier_enable_devices(uint32_t devices, bool enable)
+{
+    amplifier_device_t *amp = get_amplifier_device();
+    bool is_output = devices < SND_DEVICE_OUT_END;
+
+    if (amp && amp->enable_output_devices && is_output)
+        return amp->enable_output_devices(amp, devices, enable);
+
+    if (amp && amp->enable_input_devices && !is_output)
+        return amp->enable_input_devices(amp, devices, enable);
+
+    return 0;
+}
+
 static int amplifier_set_mode(audio_mode_t mode)
 {
     amplifier_device_t *amp = get_amplifier_device();
@@ -590,6 +604,7 @@ int enable_snd_device(struct audio_device *adev,
                 LISTEN_EVENT_SND_DEVICE_BUSY);
 
         audio_route_apply_and_update_path(adev->audio_route, device_name);
+        amplifier_enable_devices(snd_device, true);
     }
     return 0;
 }
@@ -632,8 +647,10 @@ int disable_snd_device(struct audio_device *adev,
             snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
             audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing();
-        } else
+        } else {
             audio_route_reset_and_update_path(adev->audio_route, device_name);
+            amplifier_enable_devices(snd_device, false);
+        }
 
         audio_extn_listen_update_status(snd_device,
                                         LISTEN_EVENT_SND_DEVICE_FREE);
