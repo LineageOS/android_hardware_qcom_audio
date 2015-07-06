@@ -1,0 +1,44 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7ffa3b31_d8be95fe",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 289,
+      "author": {
+        "id": 68
+      },
+      "writtenOn": "2015-07-06T16:41:39Z",
+      "side": 1,
+      "message": "\u003e SND_DEVICE_OUT_BEGIN \u0026\u0026 \u003c SND_DEVICE_OUT_END\n\nJust to make it future-proof for future cherry-picks if the enum ever changes.",
+      "range": {
+        "startLine": 289,
+        "startChar": 31,
+        "endLine": 289,
+        "endChar": 49
+      },
+      "revId": "9d26cbcb315c1f7962dbc030b77c5218e2976eaa",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7ffa3b31_b8bbc90c",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 652,
+      "author": {
+        "id": 68
+      },
+      "writtenOn": "2015-07-06T16:41:39Z",
+      "side": 1,
+      "message": "Shouldn\u0027t this be outside the else block? It seems like speakers will never be disabled in this case.",
+      "revId": "9d26cbcb315c1f7962dbc030b77c5218e2976eaa",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
