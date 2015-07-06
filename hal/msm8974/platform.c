@@ -1634,7 +1634,7 @@ int platform_set_native_support(bool codec_support)
 {
     na_props.platform_na_prop_enabled = na_props.ui_na_prop_enabled
         = codec_support;
-    ALOGV("%s: na_props.platform_na_prop_enabled: %d", __func__,
+    ALOGD("%s: na_props.platform_na_prop_enabled: %d", __func__,
            na_props.platform_na_prop_enabled);
     return 0;
 }
@@ -1685,10 +1685,15 @@ int native_audio_set_params(struct platform_data *platform,
                              value, len);
     if (ret >= 0) {
         if (na_props.platform_na_prop_enabled) {
-            if (!strncmp("true", value, sizeof("true")))
+            if (!strncmp("true", value, sizeof("true"))) {
                 na_props.ui_na_prop_enabled = true;
-            else
+                ALOGD("%s: native audio feature enabled from UI",__func__);
+            }
+            else {
                 na_props.ui_na_prop_enabled = false;
+                ALOGD("%s: native audio feature disabled from UI",__func__);
+
+            }
 
             str_parms_del(parms, AUDIO_PARAMETER_KEY_NATIVE_AUDIO);
 
@@ -1703,14 +1708,15 @@ int native_audio_set_params(struct platform_data *platform,
                     (usecase->stream.out->devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                     usecase->stream.out->devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) &&
                     OUTPUT_SAMPLING_RATE_44100 == usecase->stream.out->sample_rate) {
-                         select_devices(platform->adev, usecase->id);
-                         ALOGV("%s: triggering dynamic device switch for usecase: "
-                               "%d, device: %d", __func__, usecase->id,
+                         ALOGD("%s: triggering dynamic device switch for usecase(%d: %s)"
+                               " stream(%p), device(%d)", __func__, usecase->id,
+                               use_case_table[usecase->id], usecase->stream,
                                usecase->stream.out->devices);
+                         select_devices(platform->adev, usecase->id);
                  }
             }
         } else {
-              ALOGV("%s: native audio not supported: %d", __func__,
+              ALOGD("%s: native audio not supported: %d", __func__,
                      na_props.platform_na_prop_enabled);
         }
     }
