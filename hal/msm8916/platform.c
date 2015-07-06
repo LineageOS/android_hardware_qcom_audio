@@ -58,6 +58,7 @@
 #define MIXER_XML_PATH_WCD9306 "/system/etc/mixer_paths_wcd9306.xml"
 #define MIXER_XML_PATH_WCD9330 "/system/etc/mixer_paths_wcd9330.xml"
 #define MIXER_XML_PATH_WCD9335 "/system/etc/mixer_paths_wcd9335.xml"
+#define MIXER_XML_PATH_SKUN "/system/etc/mixer_paths_qrd_skun.xml"
 #define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
 #define PLATFORM_INFO_XML_PATH_EXTCODEC  "/system/etc/audio_platform_info_extcodec.xml"
 
@@ -746,7 +747,9 @@ static void update_codec_type(const char *snd_card_name) {
          !strncmp(snd_card_name, "msm8952-tomtom-snd-card",
                   sizeof("msm8952-tomtom-snd-card")) ||
          !strncmp(snd_card_name, "msm8976-tasha-snd-card",
-                  sizeof("msm8976-tasha-snd-card")))
+                  sizeof("msm8976-tasha-snd-card")) ||
+         !strncmp(snd_card_name, "msm8976-tasha-skun-snd-card",
+                  sizeof("msm8976-tasha-skun-snd-card")))
      {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          is_external_codec = true;
@@ -846,6 +849,14 @@ static void query_platform(const char *snd_card_name,
                  sizeof("msm8976-tasha-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9335,
                 sizeof(MIXER_XML_PATH_WCD9335));
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+
+    } else if (!strncmp(snd_card_name, "msm8976-tasha-skun-snd-card",
+                sizeof("msm8976-tasha-skun-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_SKUN,
+                sizeof(MIXER_XML_PATH_SKUN));
         msm_device_to_be_id = msm_device_to_be_id_external_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
@@ -3538,7 +3549,9 @@ int platform_is_external_codec (char *snd_card_name)
     if (!strncmp(snd_card_name, "msm8952-tomtom-snd-card",
         sizeof("msm8952-tomtom-snd-card")) ||
         !strncmp(snd_card_name, "msm8976-tasha-snd-card",
-        sizeof("msm8976-tasha-snd-card")))
+        sizeof("msm8976-tasha-snd-card")) ||
+        !strncmp(snd_card_name, "msm8976-tasha-skun-snd-card",
+        sizeof("msm8976-tasha-skun-snd-card")))
     {
         /* external codec, for rest/old of the external codecs
            we dont support this funtionality(chaning AFE params)
