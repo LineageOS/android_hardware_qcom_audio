@@ -100,7 +100,7 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
                    struct audio_usecase *usecase, snd_device_t snd_device);
 int platform_get_usecase_index(const char * usecase);
 int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
-void platform_set_echo_reference(void *platform, bool enable);
+void platform_set_echo_reference(struct audio_device *adev, bool enable, audio_devices_t out_device);
 void platform_get_device_to_be_id_map(int **be_id_map, int *length);
 
 int platform_set_channel_allocation(void *platform, int channel_alloc);

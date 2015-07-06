@@ -247,6 +247,7 @@ struct platform_data {
     void *edid_info;
     bool edid_valid;
     codec_backend_cfg_t current_backend_cfg[MAX_CODEC_BACKENDS];
+    char ec_ref_mixer_path[64];
 };
 
 static bool is_external_codec = false;
@@ -968,6 +969,41 @@ static void query_platform(const char *snd_card_name,
     }
 }
 
+void platform_set_echo_reference(struct audio_device *adev, bool enable,
+    audio_devices_t out_device)
+{
+    struct platform_data *my_data = (struct platform_data *)adev->platform;
+    snd_device_t snd_device = SND_DEVICE_NONE;
+    struct stream_out out;
+
+    out.devices = out_device;
+
+    if (strcmp(my_data->ec_ref_mixer_path, "")) {
+        ALOGV("%s: disabling %s", __func__, my_data->ec_ref_mixer_path);
+        audio_route_reset_and_update_path(adev->audio_route,
+            my_data->ec_ref_mixer_path);
+    }
+
+    if (enable) {
+        snd_device = platform_get_output_snd_device(adev->platform, &out);
+
+        if (adev->snd_dev_ref_cnt[SND_DEVICE_OUT_HEADPHONES_44_1] > 0)
+            strlcpy(my_data->ec_ref_mixer_path, "echo-reference headphones-44.1",
+                sizeof(my_data->ec_ref_mixer_path));
+        else if ((snd_device == SND_DEVICE_OUT_SPEAKER_VBAT) ||
+                 (snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT))
+            strlcpy(my_data->ec_ref_mixer_path, "vbat-speaker echo-reference",
+                sizeof(my_data->ec_ref_mixer_path));
+        else
+            strlcpy(my_data->ec_ref_mixer_path, "echo-reference",
+                sizeof(my_data->ec_ref_mixer_path));
+
+
+        ALOGD("%s: enabling %s", __func__, my_data->ec_ref_mixer_path);
+        audio_route_apply_and_update_path(adev->audio_route,
+            my_data->ec_ref_mixer_path);
+    }
+}
 void platform_set_gsm_mode(void *platform, bool enable)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -986,27 +1022,7 @@ void platform_set_gsm_mode(void *platform, bool enable)
     }
 }
 
-void platform_set_echo_reference(void *platform, bool enable)
-{
-    struct platform_data *my_data = (struct platform_data *)platform;
-    struct audio_device *adev = my_data->adev;
-    char *mixer_path_name = "echo-reference";
 
-    if(my_data->is_vbat_speaker)
-       mixer_path_name = "vbat-speaker echo-reference";
-
-    if (my_data->ec_ref_enabled) {
-        my_data->ec_ref_enabled = false;
-        ALOGV("%s: disabling echo-reference", __func__);
-        audio_route_reset_and_update_path(adev->audio_route, mixer_path_name);
-    }
-
-    if (enable) {
-         my_data->ec_ref_enabled = true;
-         ALOGD("%s: enabling echo-reference", __func__);
-         audio_route_apply_and_update_path(adev->audio_route, mixer_path_name);
-    }
-}
 
 static struct csd_data *open_csd_client()
 {
@@ -2683,7 +2699,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 my_data->fluence_in_voice_call == false) {
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
                 if (audio_extn_hfp_is_active(adev))
-                    platform_set_echo_reference(adev->platform, true);
+                    platform_set_echo_reference(adev, true, out_device);
             } else {
                 snd_device = SND_DEVICE_IN_VOICE_DMIC;
                 adev->acdb_settings |= DMIC_FLAG;
@@ -2691,7 +2707,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_VOICE_HEADSET_MIC;
             if (audio_extn_hfp_is_active(adev))
-                platform_set_echo_reference(adev->platform, true);
+                platform_set_echo_reference(adev, true, out_device);
         } else if (out_device & AUDIO_DEVICE_OUT_ALL_SCO) {
             if (adev->bt_wb_speech_enabled) {
                 if (adev->bluetooth_nrec)
@@ -2721,7 +2737,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             } else {
                 snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
                 if (audio_extn_hfp_is_active(adev))
-                    platform_set_echo_reference(adev->platform, true);
+                    platform_set_echo_reference(adev, true, out_device);
             }
         } else if (out_device & AUDIO_DEVICE_OUT_TELEPHONY_TX)
             snd_device = SND_DEVICE_IN_VOICE_RX;
@@ -2779,7 +2795,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
                     snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
                 }
-                platform_set_echo_reference(adev->platform, true);
+                platform_set_echo_reference(adev, true, out_device);
             } else if (my_data->fluence_type != FLUENCE_NONE &&
                        adev->active_input->enable_aec) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
@@ -2804,7 +2820,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
                     snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
                 }
-                platform_set_echo_reference(adev->platform, true);
+                platform_set_echo_reference(adev, true, out_device);
             } else if (my_data->fluence_type != FLUENCE_NONE &&
                        adev->active_input->enable_ns) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
@@ -2829,9 +2845,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
                     snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
                 }
-                platform_set_echo_reference(adev->platform,false);
+                platform_set_echo_reference(adev, false, out_device);
             } else
-                platform_set_echo_reference(adev->platform, false);
+                platform_set_echo_reference(adev, false, out_device);
         }
     } else if (source == AUDIO_SOURCE_MIC) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC &&
@@ -2839,10 +2855,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             if(my_data->fluence_in_audio_rec) {
                 if(my_data->fluence_type & FLUENCE_QUAD_MIC) {
                     snd_device = SND_DEVICE_IN_HANDSET_QMIC;
-                    platform_set_echo_reference(adev->platform, true);
+                    platform_set_echo_reference(adev, true, out_device);
                 } else if (my_data->fluence_type & FLUENCE_DUAL_MIC) {
                     snd_device = SND_DEVICE_IN_HANDSET_DMIC;
-                    platform_set_echo_reference(adev->platform, true);
+                    platform_set_echo_reference(adev, true, out_device);
                 }
             }
         }
@@ -3922,9 +3938,11 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
     ALOGI("%s Codec selected backend: %d current bit width: %d and sample rate: %d",
                __func__, backend_idx, bit_width, sample_rate);
 
-    // For voice calls use default configuration
+    // For voice calls use default configuration i.e. 16b/48K, only applicable to
+    // default backend
     // force routing is not required here, caller will do it anyway
-    if (voice_is_in_call(adev) || adev->mode == AUDIO_MODE_IN_COMMUNICATION) {
+    if ((voice_is_in_call(adev) || adev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
+        backend_idx == DEFAULT_CODEC_BACKEND) {
         ALOGW("%s:Use default bw and sr for voice/voip calls ",__func__);
         bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;

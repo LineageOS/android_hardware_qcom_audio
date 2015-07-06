@@ -891,7 +891,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                      adev->active_input->source == AUDIO_SOURCE_MIC)) &&
                      adev->primary_output && !adev->primary_output->standby) {
                     out_device = adev->primary_output->devices;
-                    platform_set_echo_reference(adev->platform, false);
+                    platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
                 } else if (usecase->id == USECASE_AUDIO_RECORD_AFE_PROXY) {
                     out_device = AUDIO_DEVICE_OUT_TELEPHONY_TX;
                 }
@@ -3542,7 +3542,7 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     ALOGD("%s: enter:stream_handle(%p)",__func__, in);
 
     /* Disable echo reference while closing input stream */
-    platform_set_echo_reference(adev->platform, false);
+    platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
 
     if (in->usecase == USECASE_COMPRESS_VOIP_CALL) {
         pthread_mutex_lock(&adev->lock);
