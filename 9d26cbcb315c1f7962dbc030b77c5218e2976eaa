@@ -25,6 +25,24 @@
     },
     {
       "key": {
+        "uuid": "7ffa3b31_d8f2159b",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 289,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-06T20:54:04Z",
+      "side": 1,
+      "message": "Will do.",
+      "parentUuid": "7ffa3b31_d8be95fe",
+      "revId": "9d26cbcb315c1f7962dbc030b77c5218e2976eaa",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "7ffa3b31_b8bbc90c",
         "filename": "hal/audio_hw.c",
         "patchSetId": 2
@@ -36,6 +54,24 @@
       "writtenOn": "2015-07-06T16:41:39Z",
       "side": 1,
       "message": "Shouldn\u0027t this be outside the else block? It seems like speakers will never be disabled in this case.",
+      "revId": "9d26cbcb315c1f7962dbc030b77c5218e2976eaa",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7ffa3b31_b8ef49af",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 652,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-06T20:54:04Z",
+      "side": 1,
+      "message": "Hm, I\u0027m not sure. The intent of this was to only disable if the audio route disabled. I\u0027m not sure that will happen regardless if speaker protection is enabled.",
+      "parentUuid": "7ffa3b31_b8bbc90c",
       "revId": "9d26cbcb315c1f7962dbc030b77c5218e2976eaa",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
