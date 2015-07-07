@@ -30,6 +30,7 @@
 #include <linux/msm_audio.h>
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
+#define MIXER_XML_PATH_WCD9330 "/system/etc/mixer_paths_wcd9330.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
 #define CVD_VERSION_MIXER_CTL "CVD Version"
@@ -824,7 +825,15 @@ void *platform_init(struct audio_device *adev)
 
         ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
 
-        adev->audio_route = audio_route_init(snd_card_num, MIXER_XML_PATH);
+        if (!strncmp(snd_card_name, "msm8226-tomtom-snd-card",
+                     sizeof("msm8226-tomtom-snd-card"))) {
+            ALOGD("%s: Call MIXER_XML_PATH_WCD9330", __func__);
+            adev->audio_route = audio_route_init(snd_card_num,
+                                                 MIXER_XML_PATH_WCD9330);
+        } else {
+            adev->audio_route = audio_route_init(snd_card_num, MIXER_XML_PATH);
+        }
+
         if (!adev->audio_route) {
             ALOGE("%s: Failed to init audio route controls, aborting.", __func__);
             goto init_failed;
