@@ -68,3 +68,32 @@ LOCAL_MODULE:= libhwacceffectswrapper
 
 include $(BUILD_STATIC_LIBRARY)
 endif
+
+
+################################################################################
+
+ifneq ($(filter msm8992 msm8994 msm8996 msm8952,$(TARGET_BOARD_PLATFORM)),)
+
+include $(CLEAR_VARS)
+
+LOCAL_CFLAGS := -DLIB_AUDIO_HAL="/system/lib/hw/audio.primary."$(TARGET_BOARD_PLATFORM)".so"
+
+LOCAL_SRC_FILES:= \
+        volume_listener.c
+
+LOCAL_CFLAGS+= -O2 -fvisibility=hidden
+
+LOCAL_SHARED_LIBRARIES := \
+        libcutils \
+        liblog \
+        libdl
+
+LOCAL_MODULE_RELATIVE_PATH := soundfx
+LOCAL_MODULE:= libvolumelistener
+
+LOCAL_C_INCLUDES := \
+        $(call include-path-for, audio-effects)
+
+include $(BUILD_SHARED_LIBRARY)
+
+endif
