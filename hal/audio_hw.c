@@ -113,6 +113,8 @@ struct pcm_config pcm_config_audio_capture = {
     .channels = 2,
     .period_count = AUDIO_CAPTURE_PERIOD_COUNT,
     .format = PCM_FORMAT_S16_LE,
+    .stop_threshold = INT_MAX,
+    .avail_min = 0,
 };
 
 #define AFE_PROXY_CHANNEL_COUNT 2
