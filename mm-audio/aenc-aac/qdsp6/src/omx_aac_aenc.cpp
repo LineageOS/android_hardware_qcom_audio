@@ -4208,6 +4208,16 @@ OMX_ERRORTYPE  omx_aac_aenc::fill_this_buffer_proxy
                buffer->nOffset = 0;
                buffer->nTimeStamp = nTimestamp;
                frame_done_cb((OMX_BUFFERHEADERTYPE *)buffer);
+
+               if (errno == ENETRESET)
+               {
+                   ALOGE("In SSR, return error to close the session");
+                   m_cb.EventHandler(&m_cmp,
+                       m_app_data,
+                      OMX_EventError,
+                      OMX_ErrorHardware,
+                      0, NULL );
+               }
                return OMX_ErrorNone;
            }
         }
