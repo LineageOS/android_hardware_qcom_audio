@@ -167,6 +167,7 @@ typedef int (*acdb_loader_get_calibration_t)(char *attr, int size, void *data);
 acdb_loader_get_calibration_t acdb_loader_get_calibration;
 typedef int (*acdb_set_audio_cal_t) (void *, void *, uint32_t);
 typedef int (*acdb_get_audio_cal_t) (void *, void *, uint32_t*);
+typedef int (*acdb_send_common_top_t) (void);
 
 typedef struct codec_backend_cfg {
     uint32_t sample_rate;
@@ -209,6 +210,7 @@ struct platform_data {
     acdb_send_voice_cal_t      acdb_send_voice_cal;
     acdb_reload_vocvoltable_t  acdb_reload_vocvoltable;
     acdb_get_default_app_type_t acdb_get_default_app_type;
+    acdb_send_common_top_t     acdb_send_common_top;
 
     void *hw_info;
     struct csd_data *csd;
@@ -1041,7 +1043,7 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
         ALOGE("%s: Could not send anc cal", __FUNCTION__);
 }
 
-int platform_acdb_init(void *platform)
+static int platform_acdb_init(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     char *cvd_version = NULL;
@@ -1287,6 +1289,13 @@ void *platform_init(struct audio_device *adev)
             ALOGE("%s: Could not find the symbol acdb_get_default_app_type from %s",
                   __func__, LIB_ACDB_LOADER);
 
+        my_data->acdb_send_common_top = (acdb_send_common_top_t)dlsym(
+                                                    my_data->acdb_handle,
+                                                    "acdb_loader_send_common_custom_topology");
+        if (!my_data->acdb_send_common_top)
+            ALOGE("%s: Could not find the symbol acdb_get_default_app_type from %s",
+                  __func__, LIB_ACDB_LOADER);
+
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_init_v2");
         if (my_data->acdb_init == NULL) {
@@ -1394,11 +1403,25 @@ void platform_deinit(void *platform)
     audio_extn_dap_hal_deinit();
 }
 
-int platform_is_acdb_initialized(void *platform)
+static int platform_is_acdb_initialized(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     ALOGD("%s: acdb initialized %d\n", __func__, my_data->is_acdb_initialized);
     return my_data->is_acdb_initialized;
+}
+
+void platform_snd_card_update(void *platform, int snd_scard_state)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (snd_scard_state == SND_CARD_STATE_ONLINE) {
+        if (!platform_is_acdb_initialized(my_data)) {
+            if(platform_acdb_init(my_data))
+                ALOGE("%s: acdb initialization is failed", __func__);
+        } else if (my_data->acdb_send_common_top() < 0) {
+                ALOGD("%s: acdb did not set common topology", __func__);
+        }
+    }
 }
 
 const char *platform_get_snd_device_name(snd_device_t snd_device)

@@ -26,8 +26,6 @@
 
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
-int platform_is_acdb_initialized(void *platform);
-int platform_acdb_init(void *platform);
 const char *platform_get_snd_device_name(snd_device_t snd_device);
 int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
                                       char *device_name);
@@ -90,6 +88,8 @@ int platform_set_snd_device_backend(snd_device_t snd_device, const char * backen
 
 /* From platform_info_parser.c */
 int platform_info_init(const char *filename);
+
+void platform_snd_card_update(void *platform, int snd_scard_state);
 
 struct audio_offload_info_t;
 uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info);
