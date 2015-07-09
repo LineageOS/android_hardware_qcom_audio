@@ -134,6 +134,10 @@ static const snd_device_t tomtom_DB_variant_devices[] = {
     SND_DEVICE_IN_HANDSET_MIC_EXTERNAL
 };
 
+static const snd_device_t tasha_DB_variant_devices[] = {
+    SND_DEVICE_OUT_SPEAKER
+};
+
 static const snd_device_t taiko_apq8084_sbc_variant_devices[] = {
     SND_DEVICE_IN_HANDSET_MIC,
     SND_DEVICE_IN_SPEAKER_MIC,
@@ -278,6 +282,12 @@ static void  update_hardware_info_8996(struct hardware_info *hw_info, const char
         hw_info->snd_devices = (snd_device_t *)tomtom_liquid_variant_devices;
         hw_info->num_snd_devices = ARRAY_SIZE(tomtom_liquid_variant_devices);
         strlcpy(hw_info->dev_extn, "-liquid", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "msm8996-tasha-db-snd-card")) {
+        strlcpy(hw_info->type, " dragon-board", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msm8996", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)tasha_DB_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tasha_DB_variant_devices);
+        strlcpy(hw_info->dev_extn, "-db", sizeof(hw_info->dev_extn));
     } else {
         ALOGW("%s: Not a 8996 device", __func__);
     }
