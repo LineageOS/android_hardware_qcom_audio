@@ -14,8 +14,12 @@ LOCAL_SRC_FILES:= \
 	virtualizer.c \
 	reverb.c \
 	effect_api.c \
-	effect_util.c \
-        hw_accelerator.c
+	effect_util.c
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS)),true)
+    LOCAL_CFLAGS += -DHW_ACCELERATED_EFFECTS
+    LOCAL_SRC_FILES += hw_accelerator.c
+endif
 
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 
