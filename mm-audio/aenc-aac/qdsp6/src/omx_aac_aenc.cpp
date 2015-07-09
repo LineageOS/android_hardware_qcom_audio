@@ -4070,6 +4070,8 @@ OMX_ERRORTYPE  omx_aac_aenc::empty_this_buffer_proxy
     //The total length of the data to be transcoded
     srcStart = buffer->pBuffer;
     OMX_U8 *data = NULL;
+    ssize_t bytes = 0;
+
     PrintFrameHdr(OMX_COMPONENT_GENERATE_ETB,buffer);
     memset(&meta_in,0,sizeof(meta_in));
     if ( search_input_bufhdr(buffer) == false )
@@ -4104,7 +4106,22 @@ OMX_ERRORTYPE  omx_aac_aenc::empty_this_buffer_proxy
     }
 
     memcpy(&data[sizeof(META_IN)],buffer->pBuffer,buffer->nFilledLen);
-    write(m_drv_fd, data, buffer->nFilledLen+sizeof(META_IN));
+    bytes = write(m_drv_fd, data, buffer->nFilledLen+sizeof(META_IN));
+    if (bytes <= 0) {
+        frame_done_cb((OMX_BUFFERHEADERTYPE *)buffer);
+
+        if (errno == ENETRESET)
+        {
+            ALOGE("In SSR, return error to close the session");
+            m_cb.EventHandler(&m_cmp,
+                  m_app_data,
+                  OMX_EventError,
+                  OMX_ErrorHardware,
+                  0, NULL );
+        }
+        return OMX_ErrorNone;
+    }
+
     pthread_mutex_lock(&m_state_lock);
     get_state(&m_cmp, &state);
     pthread_mutex_unlock(&m_state_lock);
