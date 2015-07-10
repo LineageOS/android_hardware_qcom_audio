@@ -137,7 +137,8 @@ LOCAL_C_INCLUDES += \
 	$(call include-path-for, audio-effects) \
 	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \
 	$(LOCAL_PATH)/audio_extn \
-	$(LOCAL_PATH)/voice_extn
+	$(LOCAL_PATH)/voice_extn \
+        $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
 ifneq ($(filter msm8974,$(AUDIO_PLATFORM)),)
     LOCAL_C_INCLUDES += external/expat/lib
