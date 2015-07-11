@@ -252,6 +252,26 @@ static unsigned int audio_device_ref_count;
 
 static int set_voice_volume_l(struct audio_device *adev, float volume);
 
+__attribute__ ((visibility ("default")))
+bool audio_hw_send_gain_dep_calibration(int level) {
+    bool ret_val = false;
+    ALOGV("%s: called ... ", __func__);
+
+    pthread_mutex_lock(&adev_init_lock);
+
+    if (adev != NULL && adev->platform != NULL) {
+        pthread_mutex_lock(&adev->lock);
+        ret_val = platform_send_gain_dep_cal(adev->platform, level);
+        pthread_mutex_unlock(&adev->lock);
+    } else {
+        ALOGE("%s: %s is NULL", __func__, adev == NULL ? "adev" : "adev->platform");
+    }
+
+    pthread_mutex_unlock(&adev_init_lock);
+
+    return ret_val;
+}
+
 static int check_and_set_gapless_mode(struct audio_device *adev) {
 
 
@@ -2182,7 +2202,7 @@ exit:
 
     if (ret != 0) {
         if (out->pcm)
-            ALOGE("%s: error %ld - %s", __func__, ret, pcm_get_error(out->pcm));
+            ALOGE("%s: error %zu - %s", __func__, ret, pcm_get_error(out->pcm));
         if (out->usecase == USECASE_COMPRESS_VOIP_CALL) {
             pthread_mutex_lock(&adev->lock);
             voice_extn_compress_voip_close_output_stream(&out->stream.common);
