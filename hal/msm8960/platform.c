@@ -100,6 +100,9 @@ enum {
 	VOICE_FEATURE_SET_VOLUME_BOOST
 };
 
+#define TOSTRING_(x) #x
+#define TOSTRING(x) TOSTRING_(x)
+
 struct audio_block_header
 {
     int reserved;
@@ -136,6 +139,8 @@ struct platform_data {
 
     void *hw_info;
     struct csd_data *csd;
+
+    int max_vol_index;
 };
 
 static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -797,6 +802,10 @@ void *platform_init(struct audio_device *adev)
         return NULL;
     }
 
+    //set max volume step for voice call
+    property_get("ro.config.vc_call_vol_steps", value, TOSTRING(MAX_VOL_INDEX));
+    my_data->max_vol_index = atoi(value);
+
     my_data->adev = adev;
     my_data->btsco_sample_rate = SAMPLE_RATE_8KHZ;
     my_data->fluence_in_spkr_mode = false;
@@ -1244,7 +1253,7 @@ int platform_set_voice_volume(void *platform, int volume)
     // Voice volume levels are mapped to adsp volume levels as follows.
     // 100 -> 5, 80 -> 4, 60 -> 3, 40 -> 2, 20 -> 1  0 -> 0
     // But this values don't changed in kernel. So, below change is need.
-    vol_index = (int)percent_to_index(volume, MIN_VOL_INDEX, MAX_VOL_INDEX);
+    vol_index = (int)percent_to_index(volume, MIN_VOL_INDEX, my_data->max_vol_index);
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
