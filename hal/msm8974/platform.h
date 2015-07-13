@@ -35,7 +35,11 @@ enum {
 /*
  * Below are the devices for which is back end is same, SLIMBUS_0_RX.
  * All these devices are handled by the internal HW codec. We can
- * enable any one of these devices at any time
+ * enable any one of these devices at any time. An exception here is
+ * 44.1k headphone which uses different backend. This is filtered
+ * as different hal internal device in the code but remains same
+ * as standard android device AUDIO_DEVICE_OUT_WIRED_HEADPHONE
+ * for other layers.
  */
 #define AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND \
     (AUDIO_DEVICE_OUT_EARPIECE | AUDIO_DEVICE_OUT_SPEAKER | \
@@ -57,6 +61,7 @@ enum {
     SND_DEVICE_OUT_SPEAKER_EXTERNAL_2,
     SND_DEVICE_OUT_SPEAKER_REVERSE,
     SND_DEVICE_OUT_HEADPHONES,
+    SND_DEVICE_OUT_HEADPHONES_44_1,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2,
@@ -151,7 +156,16 @@ enum {
 
 };
 
-#define DEFAULT_OUTPUT_SAMPLING_RATE 48000
+#define DEFAULT_OUTPUT_SAMPLING_RATE    48000
+#define OUTPUT_SAMPLING_RATE_44100      44100
+
+enum {
+    DEFAULT_CODEC_BACKEND,
+    HEADPHONE_44_1_BACKEND,
+    MAX_CODEC_BACKENDS
+};
+
+#define AUDIO_PARAMETER_KEY_NATIVE_AUDIO "audio.nat.codec.enabled"
 
 #define ALL_SESSION_VSID                0xFFFFFFFF
 #define DEFAULT_MUTE_RAMP_DURATION_MS   20

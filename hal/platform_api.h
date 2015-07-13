@@ -26,6 +26,8 @@
 
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
+int platform_is_acdb_initialized(void *platform);
+int platform_acdb_init(void *platform);
 const char *platform_get_snd_device_name(snd_device_t snd_device);
 int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
                                       char *device_name);
@@ -38,6 +40,9 @@ int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_i
 int platform_get_snd_device_acdb_id(snd_device_t snd_device);
 int platform_set_snd_device_bit_width(snd_device_t snd_device, unsigned int bit_width);
 int platform_get_snd_device_bit_width(snd_device_t snd_device);
+int platform_set_native_support(bool codec_support);
+int platform_get_native_support();
+int platform_get_backend_index(snd_device_t snd_device);
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
                                     int app_type, int sample_rate);
 int platform_get_default_app_type(void *platform);
@@ -57,7 +62,7 @@ int platform_set_voice_volume(void *platform, int volume);
 int platform_set_mic_mute(void *platform, bool state);
 int platform_get_sample_rate(void *platform, uint32_t *rate);
 int platform_set_device_mute(void *platform, bool state, char *dir);
-snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devices);
+snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *out);
 snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_device);
 int platform_set_hdmi_channels(void *platform, int channel_count);
 int platform_edid_get_max_channels(void *platform);
@@ -92,7 +97,8 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info);
 bool platform_use_small_buffer(audio_offload_info_t* info);
 uint32_t platform_get_compress_passthrough_buffer_size(audio_offload_info_t* info);
 
-bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct audio_usecase *usecase);
+bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
+                   struct audio_usecase *usecase, snd_device_t snd_device);
 int platform_get_usecase_index(const char * usecase);
 int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
 void platform_set_echo_reference(void *platform, bool enable);
@@ -116,4 +122,5 @@ int platform_set_spkr_device_tz_names(snd_device_t index,
                                        const char *spkr_1_tz_name, const char *spkr_2_tz_name);
 const char *platform_get_spkr_1_tz_name(snd_device_t snd_device);
 const char *platform_get_spkr_2_tz_name(snd_device_t snd_device);
+int platform_get_wsa_mode(void *platform);
 #endif // AUDIO_PLATFORM_API_H

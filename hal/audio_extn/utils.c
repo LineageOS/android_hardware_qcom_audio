@@ -436,6 +436,7 @@ static bool set_output_cfg(struct streams_output_cfg *so_info,
      * than all sample rates in list for the input bit width.
      */
     sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+
     list_for_each(node_i, &so_info->sample_rate_list) {
         ss_info = node_to_item(node_i, struct stream_sample_rate, list);
         if ((sample_rate <= ss_info->sample_rate) &&
@@ -443,7 +444,7 @@ static bool set_output_cfg(struct streams_output_cfg *so_info,
             app_type_cfg->app_type = so_info->app_type_cfg.app_type;
             app_type_cfg->sample_rate = sample_rate;
             app_type_cfg->bit_width = so_info->app_type_cfg.bit_width;
-            ALOGV("%s Assuming default sample rate. app_type_cfg->app_type %d, app_type_cfg->sample_rate %d, app_type_cfg->bit_width %d",
+            ALOGV("%s Assuming sample rate. app_type_cfg->app_type %d, app_type_cfg->sample_rate %d, app_type_cfg->bit_width %d",
                    __func__, app_type_cfg->app_type, app_type_cfg->sample_rate, app_type_cfg->bit_width);
             return true;
         }
@@ -458,14 +459,12 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
                                   audio_format_t format,
                                   uint32_t sample_rate,
                                   uint32_t bit_width,
-                                  audio_channel_mask_t channel_mask,
                                   struct stream_app_type_cfg *app_type_cfg)
 {
     struct listnode *node_i, *node_j, *node_k;
     struct streams_output_cfg *so_info;
     struct stream_format *sf_info;
     struct stream_sample_rate *ss_info;
-    char value[PROPERTY_VALUE_MAX] = {0};
 
     if ((24 == bit_width) &&
         (devices & AUDIO_DEVICE_OUT_SPEAKER)) {
@@ -476,16 +475,6 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
         ALOGI("%s Allowing 24-bit playback on speaker ONLY at default sampling rate", __func__);
     }
 
-    property_get("audio.playback.mch.downsample",value,"");
-    if (!strncmp("true", value, sizeof("true"))) {
-        if ((popcount(channel_mask) > 2) &&
-                (sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
-                !(flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))  {
-                    sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-                    ALOGD("%s: MCH session defaulting sample rate to %d",
-                               __func__, sample_rate);
-        }
-    }
     ALOGV("%s: flags: %x, format: %x sample_rate %d",
            __func__, flags, format, sample_rate);
     list_for_each(node_i, streams_output_cfg_list) {
@@ -527,7 +516,6 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
     struct mixer_ctl *ctl;
     int pcm_device_id, acdb_dev_id, snd_device = usecase->out_snd_device;
     int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-    char value[PROPERTY_VALUE_MAX] = {0};
 
     ALOGV("%s", __func__);
 
@@ -573,16 +561,12 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
     if ((24 == usecase->stream.out->bit_width) &&
         (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
         sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+    } else if ((snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
+        usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
+        (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
+        sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
     } else {
         sample_rate = out->app_type_cfg.sample_rate;
-    }
-
-    property_get("audio.playback.mch.downsample",value,"");
-    if (!strncmp("true", value, sizeof("true"))) {
-        if ((popcount(out->channel_mask) > 2) &&
-               (out->sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
-               !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
-           sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
     }
 
     app_type_cfg[len++] = out->app_type_cfg.app_type;
@@ -593,6 +577,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
         app_type_cfg[len++] = sample_rate * 4;
     else
         app_type_cfg[len++] = sample_rate;
+
     mixer_ctl_set_array(ctl, app_type_cfg, len);
     ALOGI("%s app_type %d, acdb_dev_id %d, sample_rate %d",
            __func__, out->app_type_cfg.app_type, acdb_dev_id, sample_rate);

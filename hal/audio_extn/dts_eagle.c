@@ -39,7 +39,6 @@
 #define STATE_NOTIFY_FILE               "/data/misc/dts/stream"
 #define FADE_NOTIFY_FILE                "/data/misc/dts/fade"
 #define DTS_EAGLE_KEY                   "DTS_EAGLE"
-#define DEVICE_NODE                     "/dev/snd/hwC0D3"
 #define MAX_LENGTH_OF_INTEGER_IN_STRING 13
 #define PARAM_GET_MAX_SIZE              512
 
@@ -117,7 +116,7 @@ static int do_DTS_Eagle_params(const struct audio_device *adev, struct dts_eagle
     }
 
     if (!sent) {
-        int fd = open(DEVICE_NODE, O_RDWR);
+        int fd = open(GENERIC_AUDIO_DEVICE_NODE, O_RDWR);
 
         if (get) {
             ALOGD("DTS_EAGLE_HAL (%s): no stream opened, attempting to retrieve directly from cache", __func__);
@@ -137,7 +136,7 @@ static int do_DTS_Eagle_params(const struct audio_device *adev, struct dts_eagle
             }
             close(fd);
         } else {
-            ALOGE("DTS_EAGLE_HAL (%s): couldn't open device %s\n", __func__, DEVICE_NODE);
+            ALOGE("DTS_EAGLE_HAL (%s): couldn't open device %s\n", __func__, GENERIC_AUDIO_DEVICE_NODE);
             ret = -EINVAL;
         }
     }
