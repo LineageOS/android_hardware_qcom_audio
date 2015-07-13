@@ -4135,3 +4135,9 @@ int platform_set_spkr_device_tz_names(snd_device_t index,
 done:
     return ret;
 }
+
+bool platform_send_gain_dep_cal(void *platform __unused,
+                                int level __unused)
+{
+    return 0;
+}
