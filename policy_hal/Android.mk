@@ -47,6 +47,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
 LOCAL_CFLAGS += -DAUDIO_EXTN_AFE_PROXY_ENABLED
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),true)
+    LOCAL_CFLAGS += -DCOMPRESS_VOIP_ENABLED
+endif
+
 LOCAL_CFLAGS += -Wno-error -fpermissive
 LOCAL_MODULE := libaudiopolicymanager
 
