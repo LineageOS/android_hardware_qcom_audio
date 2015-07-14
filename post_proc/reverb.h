@@ -48,6 +48,7 @@ typedef struct reverb_context_s {
     // Offload vars
     struct mixer_ctl *ctl;
     int hw_acc_fd;
+    bool enabled_by_client;
     bool auxiliary;
     bool preset;
     uint16_t cur_preset;
