@@ -3996,12 +3996,14 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     ret = str_parms_get_int(parms, "rotation", &val);
     if (ret >= 0) {
         bool reverse_speakers = false;
+        bool reverse_camcorder_mics = false;
         switch(val) {
         // FIXME: note that the code below assumes that the speakers are in the correct placement
         //   relative to the user when the device is rotated 90deg from its default rotation. This
         //   assumption is device-specific, not platform-specific like this code.
         case 270:
             reverse_speakers = true;
+            reverse_camcorder_mics = true;
             break;
         case 0:
         case 90:
@@ -4020,6 +4022,19 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 list_for_each(node, &adev->usecase_list) {
                     usecase = node_to_item(node, struct audio_usecase, list);
                     if (usecase->type == PCM_PLAYBACK) {
+                        select_devices(adev, usecase->id);
+                        break;
+                    }
+                }
+            }
+            if (adev->camcorder_mics_lr_swap != reverse_camcorder_mics) {
+                adev->camcorder_mics_lr_swap = reverse_camcorder_mics;
+                // only update the selected device if there is active pcm recording
+                struct audio_usecase *usecase;
+                struct listnode *node;
+                list_for_each(node, &adev->usecase_list) {
+                    usecase = node_to_item(node, struct audio_usecase, list);
+                    if (usecase->type == PCM_CAPTURE) {
                         select_devices(adev, usecase->id);
                         break;
                     }
