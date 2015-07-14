@@ -400,6 +400,7 @@ static const char * device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_BT_SCO_MIC_WB_NREC] = "bt-sco-mic-wb",
     [SND_DEVICE_IN_CAMCORDER_MIC] = "camcorder-mic",
     [SND_DEVICE_IN_CAMCORDER_STEREO_DMIC] = "camcorder-stereo-dmic",
+    [SND_DEVICE_IN_CAMCORDER_STEREO_DMIC_REVERSE] = "camcorder-stereo-dmic-reverse",
     [SND_DEVICE_IN_VOICE_DMIC] = "voice-dmic-ef",
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC] = "voice-speaker-dmic-ef",
     [SND_DEVICE_IN_VOICE_SPEAKER_QMIC] = "voice-speaker-qmic",
@@ -516,6 +517,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_BT_SCO_MIC_WB_NREC] = 123,
     [SND_DEVICE_IN_CAMCORDER_MIC] = 4,
     [SND_DEVICE_IN_CAMCORDER_STEREO_DMIC] = 131,
+    [SND_DEVICE_IN_CAMCORDER_STEREO_DMIC_REVERSE] = 131,
     [SND_DEVICE_IN_VOICE_DMIC] = 41,
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC] = 43,
     [SND_DEVICE_IN_VOICE_SPEAKER_QMIC] = 19,
@@ -633,6 +635,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_BT_SCO_MIC_WB_NREC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_STEREO_DMIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_STEREO_DMIC_REVERSE)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_DMIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_SPEAKER_DMIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_SPEAKER_QMIC)},
@@ -2940,7 +2943,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
             in_device & AUDIO_DEVICE_IN_BACK_MIC) {
             if (my_data->camcorder_stereo)
-                snd_device = SND_DEVICE_IN_CAMCORDER_STEREO_DMIC;
+                if (adev->camcorder_mics_lr_swap)
+                    snd_device = SND_DEVICE_IN_CAMCORDER_STEREO_DMIC_REVERSE;
+                else
+                    snd_device = SND_DEVICE_IN_CAMCORDER_STEREO_DMIC;
             else
                 snd_device = SND_DEVICE_IN_CAMCORDER_MIC;
         }
