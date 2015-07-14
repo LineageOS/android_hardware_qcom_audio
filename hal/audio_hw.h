@@ -302,6 +302,7 @@ struct audio_device {
     struct audio_route *audio_route;
     int acdb_settings;
     bool speaker_lr_swap;
+    bool camcorder_mics_lr_swap;
     struct voice voice;
     unsigned int cur_hdmi_channels;
     unsigned int cur_wfd_channels;
