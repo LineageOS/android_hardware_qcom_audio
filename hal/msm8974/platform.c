@@ -464,7 +464,6 @@ bool platform_send_gain_dep_cal(void *platform, int level)
     int mode = CAL_MODE_RTAC;
     struct listnode *node;
     struct audio_usecase *usecase;
-    snd_device_t snd_device;
 
     if (my_data->acdb_send_gain_dep_cal == NULL) {
         ALOGE("%s: dlsym error for acdb_send_gain_dep_cal", __func__);
@@ -485,8 +484,12 @@ bool platform_send_gain_dep_cal(void *platform, int level)
                 (usecase->stream.out->devices == AUDIO_DEVICE_OUT_SPEAKER)) {
 
                 ALOGV("%s: out device is %d", __func__,  usecase->out_snd_device);
-                snd_device = audio_extn_spkr_prot_get_acdb_id(usecase->out_snd_device);
-                acdb_dev_id = acdb_device_table[snd_device];
+                if (audio_extn_spkr_prot_is_enabled()) {
+                    acdb_dev_id = audio_extn_spkr_prot_get_acdb_id(usecase->out_snd_device);
+                } else {
+                    acdb_dev_id = acdb_device_table[usecase->out_snd_device];
+                }
+
                 if (!my_data->acdb_send_gain_dep_cal(acdb_dev_id, app_type,
                                                      acdb_dev_type, mode, level)) {
                     // set ret_val true if at least one calibration is set successfully
