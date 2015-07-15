@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "ff0f0b1f_0194898a",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 3313,
+      "author": {
+        "id": 3962
+      },
+      "writtenOn": "2015-07-15T11:53:45Z",
+      "side": 1,
+      "message": "Derp, I\u0027ve definitely had too much mountain dew tonight.",
+      "parentUuid": "ff0f0b1f_617d856d",
+      "range": {
+        "startLine": 3313,
+        "startChar": 12,
+        "endLine": 3313,
+        "endChar": 17
+      },
+      "revId": "339f49ea5f120dd2137cd4626d9146be92e6645c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "ff0f0b1f_a1839d56",
         "filename": "hal/audio_hw.c",
         "patchSetId": 2
@@ -60,6 +84,30 @@
       "side": 1,
       "message": "Yeah, I\u0027ll take a look at the behavior a bit closer tomorrow.",
       "parentUuid": "ff0f0b1f_a1839d56",
+      "range": {
+        "startLine": 3339,
+        "startChar": 16,
+        "endLine": 3348,
+        "endChar": 17
+      },
+      "revId": "339f49ea5f120dd2137cd4626d9146be92e6645c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff0f0b1f_e1907598",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 3348,
+      "author": {
+        "id": 3962
+      },
+      "writtenOn": "2015-07-15T11:53:45Z",
+      "side": 1,
+      "message": "Thanks",
+      "parentUuid": "ff0f0b1f_41828151",
       "range": {
         "startLine": 3339,
         "startChar": 16,
