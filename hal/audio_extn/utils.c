@@ -68,9 +68,6 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
 #ifdef INCALL_MUSIC_ENABLED
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_INCALL_MUSIC),
 #endif
-#ifdef COMPRESS_VOIP_ENABLED
-    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_VOIP_RX),
-#endif
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH),
 };
 
