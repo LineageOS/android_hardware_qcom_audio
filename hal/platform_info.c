@@ -33,6 +33,7 @@ typedef enum {
     PCM_ID,
     BACKEND_NAME,
     CONFIG_PARAMS,
+    OPERATOR_SPECIFIC,
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
@@ -42,6 +43,7 @@ static void process_pcm_id(const XML_Char **attr);
 static void process_backend_name(const XML_Char **attr);
 static void process_config_params(const XML_Char **attr);
 static void process_root(const XML_Char **attr);
+static void process_operator_specific(const XML_Char **attr);
 
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
@@ -49,6 +51,7 @@ static section_process_fn section_table[] = {
     [PCM_ID] = process_pcm_id,
     [BACKEND_NAME] = process_backend_name,
     [CONFIG_PARAMS] = process_config_params,
+    [OPERATOR_SPECIFIC] = process_operator_specific,
 };
 
 static section_t section;
@@ -79,9 +82,17 @@ static struct platform_info my_data;
  * </pcm_ids>
  * <config_params>
  *      <param key="snd_card_name" value="msm8994-tomtom-mtp-snd-card"/>
+ *      <param key="operator_info" value="tmus;aa;bb;cc"/>
+ *      <param key="operator_info" value="sprint;xx;yy;zz"/>
  *      ...
  *      ...
  * </config_params>
+ *
+ * <operator_specific>
+ *      <device name="???" operator="???" mixer_path="???" acdb_id="???"/>
+ *      ...
+ *      ...
+ * </operator_specific>
  *
  * </audio_platform_info>
  */
@@ -214,6 +225,44 @@ done:
     return;
 }
 
+
+static void process_operator_specific(const XML_Char **attr)
+{
+    snd_device_t snd_device = SND_DEVICE_NONE;
+
+    if (strcmp(attr[0], "name") != 0) {
+        ALOGE("%s: 'name' not found", __func__);
+        goto done;
+    }
+
+    snd_device = platform_get_snd_device_index((char *)attr[1]);
+    if (snd_device < 0) {
+        ALOGE("%s: Device %s in %s not found, no ACDB ID set!",
+              __func__, (char *)attr[3], PLATFORM_INFO_XML_PATH);
+        goto done;
+    }
+
+    if (strcmp(attr[2], "operator") != 0) {
+        ALOGE("%s: 'operator' not found", __func__);
+        goto done;
+    }
+
+    if (strcmp(attr[4], "mixer_path") != 0) {
+        ALOGE("%s: 'mixer_path' not found", __func__);
+        goto done;
+    }
+
+    if (strcmp(attr[6], "acdb_id") != 0) {
+        ALOGE("%s: 'acdb_id' not found", __func__);
+        goto done;
+    }
+
+    platform_add_operator_specific_device(snd_device, (char *)attr[3], (char *)attr[5], atoi((char *)attr[7]));
+
+done:
+    return;
+}
+
 /* platform specific configuration key-value pairs */
 static void process_config_params(const XML_Char **attr)
 {
@@ -228,6 +277,7 @@ static void process_config_params(const XML_Char **attr)
     }
 
     str_parms_add_str(my_data.kvpairs, (char*)attr[1], (char*)attr[3]);
+    platform_set_parameters(my_data.platform, my_data.kvpairs);
 done:
     return;
 }
@@ -247,8 +297,10 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
         section = BACKEND_NAME;
     } else if (strcmp(tag_name, "config_params") == 0) {
         section = CONFIG_PARAMS;
+    } else if (strcmp(tag_name, "operator_specific") == 0) {
+        section = OPERATOR_SPECIFIC;
     } else if (strcmp(tag_name, "device") == 0) {
-        if ((section != ACDB) && (section != BACKEND_NAME)) {
+        if ((section != ACDB) && (section != BACKEND_NAME) && (section != OPERATOR_SPECIFIC)) {
             ALOGE("device tag only supported for acdb/backend names");
             return;
         }
@@ -287,7 +339,8 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
         section = ROOT;
     } else if (strcmp(tag_name, "config_params") == 0) {
         section = ROOT;
-        platform_set_parameters(my_data.platform, my_data.kvpairs);
+    } else if (strcmp(tag_name, "operator_specific") == 0) {
+        section = ROOT;
     }
 }
 
