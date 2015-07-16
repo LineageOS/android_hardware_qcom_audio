@@ -522,7 +522,9 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_utils_send_audio_calibration(adev, usecase);
     audio_extn_utils_send_app_type_cfg(usecase);
     strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
-    platform_add_backend_name(mixer_path, snd_device);
+    if (!(adev->use_default_route_fm && audio_extn_fm_is_running())) {
+        platform_add_backend_name(mixer_path, snd_device);
+    }
     ALOGV("%s: apply mixer and update path: %s", __func__, mixer_path);
     audio_route_apply_and_update_path(adev->audio_route, mixer_path);
     ALOGV("%s: exit", __func__);
@@ -544,7 +546,9 @@ int disable_audio_route(struct audio_device *adev,
     else
         snd_device = usecase->out_snd_device;
     strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
-    platform_add_backend_name(mixer_path, snd_device);
+    if (!(adev->use_default_route_fm && audio_extn_fm_is_running())) {
+        platform_add_backend_name(mixer_path, snd_device);
+    }
     ALOGV("%s: reset and update mixer path: %s", __func__, mixer_path);
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_FREE);
@@ -3869,6 +3873,11 @@ static int adev_open(const hw_module_t *module, const char *name,
         if (period_size_is_plausible_for_low_latency(trial)) {
             configured_low_latency_capture_period_size = trial;
         }
+    }
+
+    property_get("persist.audio.fm.default_route",value,"");
+    if (!strncmp("true", value, sizeof("true"))) {
+        adev->use_default_route_fm = true;
     }
 
     pthread_mutex_unlock(&adev_init_lock);

@@ -67,6 +67,7 @@
 #define AUDIO_SOURCE_FM_RX_A2DP 10
 #define AUDIO_DEVICE_IN_FM_RX (AUDIO_DEVICE_BIT_IN | 0x8000)
 #define AUDIO_DEVICE_IN_FM_RX_A2DP (AUDIO_DEVICE_BIT_IN | 0x10000)
+bool audio_extn_fm_is_running();
 #endif
 
 #ifdef PCM_OFFLOAD_ENABLED_24
