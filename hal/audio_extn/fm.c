@@ -283,4 +283,9 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
 exit:
     ALOGV("%s: exit", __func__);
 }
+
+bool audio_extn_fm_is_running() {
+    return fmmod.is_fm_running;
+}
+
 #endif /* FM_ENABLED end */
