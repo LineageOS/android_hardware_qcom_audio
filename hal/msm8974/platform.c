@@ -77,6 +77,24 @@ enum {
     CAL_MODE_RTAC           = 0x4
 };
 
+#define PLATFORM_CONFIG_KEY_OPERATOR_INFO "operator_info"
+
+struct operator_info {
+    struct listnode list;
+    char *name;
+    char *mccmnc;
+};
+
+struct operator_specific_device {
+    struct listnode list;
+    char *operator;
+    char *mixer_path;
+    int acdb_id;
+};
+
+static struct listnode operator_info_list;
+static struct listnode *operator_specific_device_table[SND_DEVICE_MAX];
+
 /* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
 typedef int  (*acdb_init_v2_cvd_t)(char *, char *);
@@ -457,6 +475,71 @@ bool is_operator_tmus()
     return is_tmus;
 }
 
+static char *get_current_operator()
+{
+    struct listnode *node;
+    struct operator_info *info_item;
+    char mccmnc[PROPERTY_VALUE_MAX];
+    char *ret = NULL;
+
+    property_get("gsm.sim.operator.numeric",mccmnc,"0");
+
+    list_for_each(node, &operator_info_list) {
+        info_item = node_to_item(node, struct operator_info, list);
+        if (strstr(info_item->mccmnc, mccmnc) != NULL) {
+            ret = info_item->name;
+        }
+    }
+
+    return ret;
+}
+
+static struct operator_specific_device *get_operator_specific_device(snd_device_t snd_device)
+{
+    struct listnode *node;
+    struct operator_specific_device *ret = NULL;
+    struct operator_specific_device *device_item;
+    char *operator_name;
+
+    operator_name = get_current_operator();
+    if (operator_name == NULL)
+        return ret;
+
+    list_for_each(node, operator_specific_device_table[snd_device]) {
+        device_item = node_to_item(node, struct operator_specific_device, list);
+        if (strcmp(operator_name, device_item->operator) == 0) {
+            ret = device_item;
+        }
+    }
+
+    return ret;
+}
+
+
+static int get_operator_specific_device_acdb_id(snd_device_t snd_device)
+{
+    struct operator_specific_device *device;
+    int ret = acdb_device_table[snd_device];
+
+    device = get_operator_specific_device(snd_device);
+    if (device != NULL)
+        ret = device->acdb_id;
+
+    return ret;
+}
+
+static const char *get_operator_specific_device_mixer_path(snd_device_t snd_device)
+{
+    struct operator_specific_device *device;
+    const char *ret = device_table[snd_device];
+
+    device = get_operator_specific_device(snd_device);
+    if (device != NULL)
+        ret = device->mixer_path;
+
+    return ret;
+}
+
 bool platform_send_gain_dep_cal(void *platform, int level)
 {
     bool ret_val = false;
@@ -722,6 +805,7 @@ static void set_platform_defaults(struct platform_data * my_data __unused)
     for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
         backend_tag_table[dev] = NULL;
         hw_interface_table[dev] = NULL;
+        operator_specific_device_table[dev] = NULL;
     }
 
     // To overwrite these go to the audio_platform_info.xml file.
@@ -802,6 +886,8 @@ void *platform_init(struct audio_device *adev)
     my_data = calloc(1, sizeof(struct platform_data));
 
     my_data->adev = adev;
+
+    list_init(&operator_info_list);
 
     set_platform_defaults(my_data);
 
@@ -984,6 +1070,9 @@ init_failed:
 void platform_deinit(void *platform)
 {
     int32_t dev;
+    struct operator_info *info_item;
+    struct operator_specific_device *device_item;
+    struct listnode *node;
 
     struct platform_data *my_data = (struct platform_data *)platform;
     close_csd_client(my_data->csd);
@@ -993,19 +1082,42 @@ void platform_deinit(void *platform)
             free(backend_tag_table[dev]);
         if (hw_interface_table[dev])
             free(hw_interface_table[dev]);
+        if (operator_specific_device_table[dev]) {
+            while (!list_empty(operator_specific_device_table[dev])) {
+                node = list_head(operator_specific_device_table[dev]);
+                list_remove(node);
+                device_item = node_to_item(node, struct operator_specific_device, list);
+                free(device_item->operator);
+                free(device_item->mixer_path);
+                free(device_item);
+            }
+            free(operator_specific_device_table[dev]);
+        }
     }
 
     if (my_data->snd_card_name)
         free(my_data->snd_card_name);
+
+    while (!list_empty(&operator_info_list)) {
+        node = list_head(&operator_info_list);
+        list_remove(node);
+        info_item = node_to_item(node, struct operator_info, list);
+        free(info_item->name);
+        free(info_item->mccmnc);
+        free(info_item);
+    }
 
     free(platform);
 }
 
 const char *platform_get_snd_device_name(snd_device_t snd_device)
 {
-    if (snd_device >= SND_DEVICE_MIN && snd_device < SND_DEVICE_MAX)
+    if (snd_device >= SND_DEVICE_MIN && snd_device < SND_DEVICE_MAX) {
+        if (operator_specific_device_table[snd_device] != NULL) {
+            return get_operator_specific_device_mixer_path(snd_device);
+        }
         return device_table[snd_device];
-    else
+    } else
         return "none";
 }
 
@@ -1108,6 +1220,32 @@ int platform_get_usecase_index(const char *usecase_name)
     return find_index(usecase_name_index, AUDIO_USECASE_MAX, usecase_name);
 }
 
+void platform_add_operator_specific_device(snd_device_t snd_device,
+                                           const char *operator,
+                                           const char *mixer_path,
+                                           unsigned int acdb_id)
+{
+    struct operator_specific_device *device;
+
+    if (operator_specific_device_table[snd_device] == NULL) {
+        operator_specific_device_table[snd_device] =
+            (struct listnode *)calloc(1, sizeof(struct listnode));
+        list_init(operator_specific_device_table[snd_device]);
+    }
+
+    device = (struct operator_specific_device *)calloc(1, sizeof(struct operator_specific_device));
+
+    device->operator = strdup(operator);
+    device->mixer_path = strdup(mixer_path);
+    device->acdb_id = acdb_id;
+
+    list_add_tail(operator_specific_device_table[snd_device], &device->list);
+
+    ALOGD("%s : deivce[%s] -> operator[%s] mixer_path[%s] acdb_id [%d]", __func__,
+            platform_get_snd_device_name(snd_device), operator, mixer_path, acdb_id);
+
+}
+
 int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id)
 {
     int ret = 0;
@@ -1132,7 +1270,11 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device)
         ALOGE("%s: Invalid snd_device = %d", __func__, snd_device);
         return -EINVAL;
     }
-    return acdb_device_table[snd_device];
+
+    if (operator_specific_device_table[snd_device] != NULL)
+        return get_operator_specific_device_acdb_id(snd_device);
+    else
+        return acdb_device_table[snd_device];
 }
 
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
@@ -1189,11 +1331,11 @@ int platform_switch_voice_call_enable_device_config(void *platform,
 
     if (out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER &&
         audio_extn_spkr_prot_is_enabled())
-        acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED];
+        acdb_rx_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED);
     else
-    	acdb_rx_id = acdb_device_table[out_snd_device];
+        acdb_rx_id = platform_get_snd_device_acdb_id(out_snd_device);
 
-    acdb_tx_id = acdb_device_table[in_snd_device];
+    acdb_tx_id = platform_get_snd_device_acdb_id(in_snd_device);
 
     if (acdb_rx_id > 0 && acdb_tx_id > 0) {
         ret = my_data->csd->enable_device_config(acdb_rx_id, acdb_tx_id);
@@ -1223,8 +1365,8 @@ int platform_switch_voice_call_device_post(void *platform,
             audio_extn_spkr_prot_is_enabled())
             out_snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED;
 
-        acdb_rx_id = acdb_device_table[out_snd_device];
-        acdb_tx_id = acdb_device_table[in_snd_device];
+        acdb_rx_id = platform_get_snd_device_acdb_id(out_snd_device);
+        acdb_tx_id = platform_get_snd_device_acdb_id(in_snd_device);
 
         if (acdb_rx_id > 0 && acdb_tx_id > 0)
             my_data->acdb_send_voice_cal(acdb_rx_id, acdb_tx_id);
@@ -1249,11 +1391,11 @@ int platform_switch_voice_call_usecase_route_post(void *platform,
 
     if (out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER &&
         audio_extn_spkr_prot_is_enabled())
-        acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED];
+        acdb_rx_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED);
     else
-        acdb_rx_id = acdb_device_table[out_snd_device];
+        acdb_rx_id = platform_get_snd_device_acdb_id(out_snd_device);
 
-    acdb_tx_id = acdb_device_table[in_snd_device];
+    acdb_tx_id = platform_get_snd_device_acdb_id(in_snd_device);
 
     if (acdb_rx_id > 0 && acdb_tx_id > 0) {
         ret = my_data->csd->enable_device(acdb_rx_id, acdb_tx_id,
@@ -2001,7 +2143,7 @@ int platform_stop_incall_music_usecase(void *platform)
 int platform_set_parameters(void *platform, struct str_parms *parms)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
-    char value[64];
+    char value[128];
     char *kv_pairs = str_parms_to_str(parms);
     int ret = 0, err;
 
@@ -2021,6 +2163,22 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         ALOGV("%s: sound card name %s", __func__, my_data->snd_card_name);
     }
 
+    err = str_parms_get_str(parms, PLATFORM_CONFIG_KEY_OPERATOR_INFO,
+                            value, sizeof(value));
+    if (err >= 0) {
+        struct operator_info *info;
+        char *str = value;
+        char *name;
+
+        str_parms_del(parms, PLATFORM_CONFIG_KEY_OPERATOR_INFO);
+        info = (struct operator_info *)calloc(1, sizeof(struct operator_info));
+        name = strtok(str, ";");
+        info->name = strdup(name);
+        info->mccmnc = strdup(str + strlen(name) + 1);
+
+        list_add_tail(&operator_info_list, &info->list);
+        ALOGD("%s: add operator[%s] mccmnc[%s]", __func__, info->name, info->mccmnc);
+    }
 done:
     ALOGV("%s: exit with code(%d)", __func__, ret);
     if (kv_pairs != NULL)
