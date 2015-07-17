@@ -377,7 +377,10 @@ static int set_snd_card_state(struct audio_device *adev, int snd_scard_state)
         return -ENOSYS;
 
     pthread_mutex_lock(&adev->snd_card_status.lock);
-    adev->snd_card_status.state = snd_scard_state;
+    if (adev->snd_card_status.state != snd_scard_state) {
+        adev->snd_card_status.state = snd_scard_state;
+        platform_snd_card_update(adev->platform, snd_scard_state);
+    }
     pthread_mutex_unlock(&adev->snd_card_status.lock);
 
     return 0;
@@ -3164,12 +3167,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             set_snd_card_state(adev,SND_CARD_STATE_ONLINE);
             //send dts hpx license if enabled
             audio_extn_dts_eagle_send_lic();
-            if (!platform_is_acdb_initialized(adev->platform)) {
-                ret = platform_acdb_init(adev->platform);
-                if(ret)
-                   ALOGE("acdb initialization is failed");
-
-            }
         }
     }
 
