@@ -214,7 +214,7 @@ int get_tzn(const char *sensor_name)
             snprintf(name, MAX_PATH, TZ_TYPE, tzn);
             ALOGD("Opening %s\n", name);
             read_line_from_file(name, buf, sizeof(buf));
-            buf[strlen(sensor_name)] = '\0';
+            buf[strlen(buf)] = '\0';
             if (!strcmp(buf, sensor_name)) {
                 found = 1;
                 break;
