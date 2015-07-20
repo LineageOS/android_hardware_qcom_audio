@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-15, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -72,7 +72,7 @@ status_t EffectsHwAcc::EffectsBufferProvider::getNextBuffer(
     size_t reqOutputFrameCount = pBuffer->frameCount;
     int ret = 0;
 
-    if (mTrackBufferProvider != NULL) {
+    if (mTrackInputBufferProvider != NULL) {
         while (1) {
             reqInputFrameCount = ((reqOutputFrameCount *
                                    mEffectsConfig.inputCfg.samplingRate)/
@@ -89,7 +89,7 @@ status_t EffectsHwAcc::EffectsBufferProvider::getNextBuffer(
                      popcount(mEffectsConfig.inputCfg.channels);
             while (frameCount) {
                 pBuffer->frameCount = frameCount;
-                ret = mTrackBufferProvider->getNextBuffer(pBuffer, pts);
+                ret = mTrackInputBufferProvider->getNextBuffer(pBuffer, pts);
                 if (ret == OK) {
                     int bytesInBuffer = pBuffer->frameCount *
                                         FRAME_SIZE(mEffectsConfig.inputCfg.format) *
@@ -98,7 +98,7 @@ status_t EffectsHwAcc::EffectsBufferProvider::getNextBuffer(
                     frameCount -= pBuffer->frameCount;
                     mInputBufferFrameCountOffset += pBuffer->frameCount;
                     offset += bytesInBuffer;
-                    mTrackBufferProvider->releaseBuffer(pBuffer);
+                    mTrackInputBufferProvider->releaseBuffer(pBuffer);
                 } else
                     break;
             }
@@ -133,7 +133,7 @@ void EffectsHwAcc::EffectsBufferProvider::releaseBuffer(
                                           AudioBufferProvider::Buffer *pBuffer)
 {
     ALOGV("EffBufferProvider::releaseBuffer()");
-    if (this->mTrackBufferProvider != NULL) {
+    if (this->mTrackInputBufferProvider != NULL) {
         pBuffer->frameCount = 0;
         pBuffer->raw = NULL;
     } else {
@@ -189,7 +189,8 @@ void EffectsHwAcc::unprepareEffects(AudioBufferProvider **bufferProvider)
     mEnabled = false;
 }
 
-status_t EffectsHwAcc::prepareEffects(AudioBufferProvider **bufferProvider,
+status_t EffectsHwAcc::prepareEffects(AudioBufferProvider **inputBufferProvider,
+                                      AudioBufferProvider **bufferProvider,
                                       int sessionId,
                                       audio_channel_mask_t channelMask,
                                       int frameCount)
@@ -316,10 +317,11 @@ status_t EffectsHwAcc::prepareEffects(AudioBufferProvider **bufferProvider,
         goto noEffectsForActiveTrack;
     }
     // initialization successful:
-    // - keep track of the real buffer provider in case it was set before
+    // - keep backup of track's buffer provider
     pHwAccbp->mTrackBufferProvider = *bufferProvider;
-    // - we'll use the hw acc effect integrated inside this
-    //    track's buffer provider, and we'll use it as the track's buffer provider
+    pHwAccbp->mTrackInputBufferProvider = *inputBufferProvider;
+    // - we'll use the hw acc effect integrated inside this track's buffer provider,
+    //   and we'll use it as the track's buffer provider
     mBufferProvider = pHwAccbp;
     *bufferProvider = pHwAccbp;
 
@@ -332,14 +334,14 @@ noEffectsForActiveTrack:
     return NO_INIT;
 }
 
-void EffectsHwAcc::setBufferProvider(AudioBufferProvider **bufferProvider,
+void EffectsHwAcc::setBufferProvider(AudioBufferProvider **trackInputBufferProvider,
                                      AudioBufferProvider **trackBufferProvider)
 {
     ALOGV("setBufferProvider");
     if (mBufferProvider &&
-        (mBufferProvider->mTrackBufferProvider != *bufferProvider)) {
+        (mBufferProvider->mTrackInputBufferProvider != *trackInputBufferProvider)) {
         *trackBufferProvider = mBufferProvider;
-        mBufferProvider->mTrackBufferProvider = *bufferProvider;
+        mBufferProvider->mTrackInputBufferProvider = *trackInputBufferProvider;
     }
 }
 
