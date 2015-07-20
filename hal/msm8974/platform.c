@@ -2967,6 +2967,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     /* handle audio calibration parameters */
     set_audiocal(platform, parms, value, len);
     native_audio_set_params(platform, parms, value, len);
+    audio_extn_spkr_prot_set_parameters(parms, value, len);
 done:
     ALOGV("%s: exit with code(%d)", __func__, ret);
     if(kv_pairs != NULL)
