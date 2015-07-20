@@ -129,7 +129,6 @@
 char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
         [WCD9XXX_ANC_CAL] = "anc_cal",
         [WCD9XXX_MBHC_CAL] = "mbhc_cal",
-        [WCD9XXX_MAD_CAL] = "mad_cal",
 };
 
 enum {
@@ -982,8 +981,6 @@ static int send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibrat
         struct wcdcal_ioctl_buffer codec_buffer;
         struct param_data calib;
 
-        if (!strcmp(cal_name_info[type], "mad_cal"))
-            calib.acdb_id = SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID;
         calib.get_size = 1;
         ret = acdb_loader_get_calibration(cal_name_info[type], sizeof(struct param_data),
                                                                  &calib);
