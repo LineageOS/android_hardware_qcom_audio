@@ -626,7 +626,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                 (usecase->out_snd_device != snd_device || force_routing)  &&
                 usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND &&
                 usecase_backend_idx == backend_idx) {
-            ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..", __func__,
+            ALOGD("%s: Usecase (%s) is active on (%s) - disabling ..", __func__,
                   use_case_table[usecase->id],
                   platform_get_snd_device_name(usecase->out_snd_device));
             disable_audio_route(adev, usecase);
