@@ -1,0 +1,84 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "df140735_3c569d08",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-21T06:16:53Z",
+      "side": 1,
+      "message": "hal: Support Samsung dual SIM implementation",
+      "revId": "2e948f29c6342fc1789af0ef2953e774c32c2685",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "df140735_5c51510e",
+        "filename": "hal/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 52,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-21T06:16:53Z",
+      "side": 1,
+      "message": "Make this opt-in, rather than opt-out.",
+      "revId": "2e948f29c6342fc1789af0ef2953e774c32c2685",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "df140735_7c4c1576",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 3162,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-21T06:16:53Z",
+      "side": 1,
+      "message": "Consider defining as a constant?",
+      "range": {
+        "startLine": 3162,
+        "startChar": 36,
+        "endLine": 3162,
+        "endChar": 46
+      },
+      "revId": "2e948f29c6342fc1789af0ef2953e774c32c2685",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "df140735_bc34eddf",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 3165,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-21T06:16:53Z",
+      "side": 1,
+      "message": "Is this going to be like a real VSID, or an integer like 0, 1, 2?",
+      "range": {
+        "startLine": 3165,
+        "startChar": 39,
+        "endLine": 3165,
+        "endChar": 42
+      },
+      "revId": "2e948f29c6342fc1789af0ef2953e774c32c2685",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
