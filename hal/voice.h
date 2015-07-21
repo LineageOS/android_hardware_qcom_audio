@@ -22,11 +22,18 @@
 
 #define BASE_SESS_IDX       0
 #define VOICE_SESS_IDX     (BASE_SESS_IDX)
+#ifndef MULTI_VOICE_SESSION_ENABLED
+#define VOICE2_SESS_IDX    (VOICE_SESS_IDX + 1)
+#endif
 
 #ifdef MULTI_VOICE_SESSION_ENABLED
 #define MAX_VOICE_SESSIONS 5
 #else
+#ifdef SAMSUNG_DUAL_SIM
+#define MAX_VOICE_SESSIONS 2
+#else
 #define MAX_VOICE_SESSIONS 1
+#endif //SAMSUNG_DUAL_SIM
 #endif
 
 #define BASE_CALL_STATE     1
@@ -34,6 +41,9 @@
 #define CALL_ACTIVE         (BASE_CALL_STATE + 1)
 
 #define VOICE_VSID  0x10C01000
+#ifndef MULTI_VOICE_SESSION_ENABLED
+#define VOICE2_VSID 0x10DC1000
+#endif
 
 #define AUDIO_PARAMETER_KEY_INCALLMUSIC "incall_music_enabled"
 #define AUDIO_PARAMETER_VALUE_TRUE "true"
