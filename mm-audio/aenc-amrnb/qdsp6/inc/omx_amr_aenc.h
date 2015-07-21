@@ -341,8 +341,8 @@ private:
         unsigned int offset_to_frame;
         unsigned int frame_size;
         unsigned int encoded_pcm_samples;
-        unsigned int msw_ts;
         unsigned int lsw_ts;
+        unsigned int msw_ts;
         unsigned int nflags;
     } __attribute__ ((packed))ENC_META_OUT;
 
