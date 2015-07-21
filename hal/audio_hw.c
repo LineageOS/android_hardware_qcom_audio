@@ -1382,6 +1382,11 @@ static bool allow_hdmi_channel_config(struct audio_device *adev)
                       __func__);
                 ret = false;
                 break;
+            } else if (usecase->id == USECASE_VOICE2_CALL) {
+                ALOGD("%s: voice2 call is active, no change in HDMI channels",
+                      __func__);
+                ret = false;
+                break;
             } else if (usecase->id == USECASE_AUDIO_PLAYBACK_MULTI_CH) {
                 ALOGD("%s: multi channel playback is active, "
                       "no change in HDMI channels", __func__);
@@ -3121,6 +3126,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     int val;
     int ret;
     int status = 0;
+    int vsid = 0;
 
     ALOGD("%s: enter: %s", __func__, kvpairs);
     parms = str_parms_create_str(kvpairs);
@@ -3151,6 +3157,18 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     status = platform_set_parameters(adev->platform, parms);
     if (status != 0)
         goto done;
+
+#ifdef SAMSUNG_DUAL_SIM
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_PHONETYPE, value, sizeof(value));
+    if (ret >= 0) {
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_CP2) == 0)
+            vsid = property_get_int32("gsm.current.vsid2", 0);
+        else
+            vsid = property_get_int32("gsm.current.vsid", 0);
+        adev->phone_type = vsid + 1;
+    }
+    ALOGV("%s: phone_type: %d", __func__, adev->phone_type);
+#endif
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_NREC, value, sizeof(value));
     if (ret >= 0) {
@@ -3775,6 +3793,9 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     adev->snd_card_status.state = SND_CARD_STATE_ONLINE;
     adev->extspk = audio_extn_extspk_init(adev);
+#ifdef SAMSUNG_DUAL_SIM
+    adev->phone_type = 1;
+#endif
 
     if (access(VISUALIZER_LIBRARY_PATH, R_OK) == 0) {
         adev->visualizer_lib = dlopen(VISUALIZER_LIBRARY_PATH, RTLD_NOW);
