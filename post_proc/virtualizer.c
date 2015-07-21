@@ -56,6 +56,15 @@ int virtualizer_set_strength(virtualizer_context_t *context, uint32_t strength)
     ALOGV("%s: ctxt %p, strength: %d", __func__, context, strength);
     context->strength = strength;
 
+    /*
+     *  Zero strength is not equivalent to disable state as down mix
+     *  is still happening for multichannel inputs.
+     *  For better user experience, explicitly disable virtualizer module
+     *  when strength is 0.
+     */
+    offload_virtualizer_set_enable_flag(&(context->offload_virt),
+                                        ((strength > 0) && !(context->temp_disabled)) ?
+                                        true : false);
     offload_virtualizer_set_strength(&(context->offload_virt), strength);
     if (context->ctl)
         offload_virtualizer_send_params(context->ctl, &context->offload_virt,
