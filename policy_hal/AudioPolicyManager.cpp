@@ -381,36 +381,74 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
      offloadInfo.stream_type, offloadInfo.bit_rate, offloadInfo.duration_us,
      offloadInfo.has_video);
 
-    // Check if offload has been disabled
-    char propValue[PROPERTY_VALUE_MAX];
-    if (property_get("audio.offload.disable", propValue, "0")) {
-        if (atoi(propValue) != 0) {
-            ALOGV("offload disabled by audio.offload.disable=%s", propValue );
-            return false;
-        }
-    }
-
     // Check if stream type is music, then only allow offload as of now.
     if (offloadInfo.stream_type != AUDIO_STREAM_MUSIC)
     {
         ALOGV("isOffloadSupported: stream_type != MUSIC, returning false");
         return false;
     }
-    //check if it's multi-channel AAC (includes sub formats) and FLAC format
-    if ((popcount(offloadInfo.channel_mask) > 2) &&
-       (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC) ||
-        ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_FLAC)||
-        ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_VORBIS))) {
-           ALOGD("offload disabled for multi-channel AAC,FLAC and VORBIS format");
-           return false;
-    }
 
-    //TODO: enable audio offloading with video when ready
-    const bool allowOffloadWithVideo =
-            property_get_bool("audio.offload.video", false /* default_value */);
-    if (offloadInfo.has_video && !allowOffloadWithVideo) {
-        ALOGV("isOffloadSupported: has_video == true, returning false");
-        return false;
+    char propValue[PROPERTY_VALUE_MAX];
+    bool pcmOffload = false;
+#ifdef PCM_OFFLOAD_ENABLED
+    if ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM_OFFLOAD) {
+        bool prop_enabled = false;
+        if ((AUDIO_FORMAT_PCM_16_BIT_OFFLOAD == offloadInfo.format) &&
+               property_get("audio.offload.pcm.16bit.enable", propValue, NULL)) {
+            prop_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
+        }
+
+#ifdef PCM_OFFLOAD_ENABLED_24
+        if ((AUDIO_FORMAT_PCM_24_BIT_OFFLOAD == offloadInfo.format) &&
+               property_get("audio.offload.pcm.24bit.enable", propValue, NULL)) {
+            prop_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
+        }
+#endif
+
+        if (prop_enabled) {
+            ALOGI("PCM offload property is enabled");
+            pcmOffload = true;
+        }
+
+        if (!pcmOffload) {
+            ALOGD("system property not enabled for PCM offload format[%x]",offloadInfo.format);
+            return false;
+        }
+    }
+#endif
+    if (!pcmOffload) {
+        // Check if offload has been disabled
+        if (property_get("audio.offload.disable", propValue, "0")) {
+            if (atoi(propValue) != 0) {
+                ALOGV("offload disabled by audio.offload.disable=%s", propValue );
+                return false;
+            }
+        }
+        //check if it's multi-channel AAC (includes sub formats) and FLAC format
+        if ((popcount(offloadInfo.channel_mask) > 2) &&
+           (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC) ||
+            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_VORBIS))) {
+               ALOGD("offload disabled for multi-channel AAC,FLAC and VORBIS format");
+               return false;
+            }
+#ifdef AUDIO_EXTN_FORMATS_ENABLED
+            //check if it's multi-channel FLAC/ALAC/WMA format with sample rate > 48k
+        if ((popcount(offloadInfo.channel_mask) > 2) &&
+            (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_FLAC) ||
+            (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_ALAC) && offloadInfo.sample_rate > 48000) ||
+            (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA) && offloadInfo.sample_rate > 48000) ||
+            (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA_PRO) && offloadInfo.sample_rate > 48000))) {
+                ALOGD("offload disabled for multi-channel FLAC/ALAC/WMA clips with sample rate > 48kHz");
+            return false;
+        }
+#endif
+        //TODO: enable audio offloading with video when ready
+        const bool allowOffloadWithVideo =
+                property_get_bool("audio.offload.video", false /* default_value */);
+        if (offloadInfo.has_video && !allowOffloadWithVideo) {
+            ALOGV("isOffloadSupported: has_video == true, returning false");
+            return false;
+        }
     }
 
     //If duration is less than minimum value defined in property, return false
