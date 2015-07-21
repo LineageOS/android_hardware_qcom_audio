@@ -1775,11 +1775,10 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
     int snd_device = SND_DEVICE_OUT_SPEAKER;
 
     if (usecase->type == PCM_PLAYBACK)
-        snd_device = platform_get_output_snd_device(adev->platform,
-                                            usecase->stream.out);
+        snd_device =  usecase->out_snd_device;
     else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE))
-        snd_device = platform_get_input_snd_device(adev->platform,
-                                            adev->primary_output->devices);
+        snd_device = usecase->in_snd_device;
+
     acdb_dev_id = acdb_device_table[audio_extn_get_spkr_prot_snd_device(snd_device)];
     if (acdb_dev_id < 0) {
         ALOGE("%s: Could not find acdb id for device(%d)",
