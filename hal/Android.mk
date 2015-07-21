@@ -49,6 +49,10 @@ ifneq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),false)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_SAMSUNG_DUAL_SIM)),true)
+    LOCAL_CFLAGS += -DSAMSUNG_DUAL_SIM
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FM)),true)
     LOCAL_CFLAGS += -DFM_ENABLED
     LOCAL_SRC_FILES += audio_extn/fm.c

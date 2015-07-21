@@ -264,6 +264,9 @@ struct audio_device {
     void *platform;
     unsigned int offload_usecases_state;
     void *extspk;
+#ifdef SAMSUNG_DUAL_SIM
+    int phone_type;
+#endif
 
     void *visualizer_lib;
     int (*visualizer_start_output)(audio_io_handle_t, int);

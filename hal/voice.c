@@ -51,7 +51,14 @@ static struct voice_session *voice_get_session_from_use_case(struct audio_device
 
     ret = voice_extn_get_session_from_use_case(adev, usecase_id, &session);
     if (ret == -ENOSYS) {
+#ifndef SAMSUNG_DUAL_SIM
         session = &adev->voice.session[VOICE_SESS_IDX];
+#else
+        if (adev->phone_type == 1)
+            session = &adev->voice.session[VOICE_SESS_IDX];
+        else
+            session = &adev->voice.session[VOICE2_SESS_IDX];
+#endif
     }
 
     return session;
@@ -199,7 +206,14 @@ bool voice_is_call_state_active(struct audio_device *adev)
 
     ret = voice_extn_is_call_state_active(adev, &call_state);
     if (ret == -ENOSYS) {
+#ifndef SAMSUNG_DUAL_SIM
         call_state = (adev->voice.session[VOICE_SESS_IDX].state.current == CALL_ACTIVE) ? true : false;
+#else
+        if (adev->phone_type == 1)
+            call_state = (adev->voice.session[VOICE_SESS_IDX].state.current == CALL_ACTIVE) ? true : false;
+        else
+            call_state = (adev->voice.session[VOICE2_SESS_IDX].state.current == CALL_ACTIVE) ? true : false;
+#endif
     }
 
     return call_state;
@@ -225,7 +239,14 @@ uint32_t voice_get_active_session_id(struct audio_device *adev)
 
     ret = voice_extn_get_active_session_id(adev, &session_id);
     if (ret == -ENOSYS) {
+#ifndef SAMSUNG_DUAL_SIM
         session_id = VOICE_VSID;
+#else
+        if (adev->phone_type == 1)
+            session_id = VOICE_VSID;
+        else
+            session_id = VOICE2_VSID;
+#endif
     }
     return session_id;
 }
@@ -374,7 +395,14 @@ int voice_start_call(struct audio_device *adev)
 
     ret = voice_extn_start_call(adev);
     if (ret == -ENOSYS) {
+#ifndef SAMSUNG_DUAL_SIM
         ret = start_call(adev, USECASE_VOICE_CALL);
+#else
+        if (adev->phone_type == 1)
+            ret = start_call(adev, USECASE_VOICE_CALL);
+        else
+            ret = start_call(adev, USECASE_VOICE2_CALL);
+#endif
     }
     adev->voice.in_call = true;
 
@@ -388,7 +416,14 @@ int voice_stop_call(struct audio_device *adev)
     adev->voice.in_call = false;
     ret = voice_extn_stop_call(adev);
     if (ret == -ENOSYS) {
+#ifndef SAMSUNG_DUAL_SIM
         ret = stop_call(adev, USECASE_VOICE_CALL);
+#else
+        if (adev->phone_type == 1)
+            ret = stop_call(adev, USECASE_VOICE_CALL);
+        else
+            ret = stop_call(adev, USECASE_VOICE2_CALL);
+#endif
     }
 
     return ret;
