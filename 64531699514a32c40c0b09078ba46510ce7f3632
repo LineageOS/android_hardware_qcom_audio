@@ -2,6 +2,29 @@
   "comments": [
     {
       "key": {
+        "uuid": "df140735_22eb14b1",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 525,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-22T10:23:51Z",
+      "side": 1,
+      "message": "Needs an ifdef for FM, otherwise this is undefined.\n\nI wonder if it\u0027d be possible to do this with passing parameters around, so there\u0027s no direct dependency on FM.",
+      "range": {
+        "startLine": 525,
+        "startChar": 40,
+        "endLine": 525,
+        "endChar": 64
+      },
+      "revId": "64531699514a32c40c0b09078ba46510ce7f3632",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "df140735_82dc2019",
         "filename": "hal/audio_hw.c",
         "patchSetId": 2
