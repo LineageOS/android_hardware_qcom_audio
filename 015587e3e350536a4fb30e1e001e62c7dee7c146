@@ -22,6 +22,30 @@
       "revId": "015587e3e350536a4fb30e1e001e62c7dee7c146",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "df140735_68e1ebd0",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 3348,
+      "author": {
+        "id": 3962
+      },
+      "writtenOn": "2015-07-23T03:56:57Z",
+      "side": 1,
+      "message": "I thought they would do that as well, but I wasn\u0027t sure. We can just trash it if its not needed.",
+      "parentUuid": "df140735_a8c14331",
+      "range": {
+        "startLine": 3339,
+        "startChar": 16,
+        "endLine": 3348,
+        "endChar": 17
+      },
+      "revId": "015587e3e350536a4fb30e1e001e62c7dee7c146",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
