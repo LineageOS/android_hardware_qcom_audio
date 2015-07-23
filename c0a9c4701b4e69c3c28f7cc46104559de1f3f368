@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "df140735_13f9847f",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1380,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-23T21:06:54Z",
+      "side": 1,
+      "message": "usecase-\u003eid \u003d\u003d USECASE_VOICE_CALL || usecase-\u003eid \u003d\u003d USECASE_VOICE2_CALL",
+      "revId": "c0a9c4701b4e69c3c28f7cc46104559de1f3f368",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "df140735_f3f5f084",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 3129,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-23T21:06:54Z",
+      "side": 1,
+      "message": "This is going to give an unused variable warning if !SAMSUNG_DUAL_SIM.",
+      "revId": "c0a9c4701b4e69c3c28f7cc46104559de1f3f368",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "df140735_b3ef78af",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 3165,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-23T21:06:54Z",
+      "side": 1,
+      "message": "What is vsid going to look like here? I asked this in the previous patchset as well. Is it 0? 1? 0x11c0?",
+      "revId": "c0a9c4701b4e69c3c28f7cc46104559de1f3f368",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "df140735_f3ccd062",
+        "filename": "hal/voice.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 403,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-23T21:06:54Z",
+      "side": 1,
+      "message": "trailing whitespace.",
+      "revId": "c0a9c4701b4e69c3c28f7cc46104559de1f3f368",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
