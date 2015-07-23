@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "df140735_a8c14331",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 3348,
+      "author": {
+        "id": 10094
+      },
+      "writtenOn": "2015-07-23T03:55:36Z",
+      "side": 1,
+      "message": "The camera applications I use seem to lock in the rotation when they\u0027re recording anyway.  I don\u0027t see an issue with this.",
+      "range": {
+        "startLine": 3339,
+        "startChar": 16,
+        "endLine": 3348,
+        "endChar": 17
+      },
+      "revId": "015587e3e350536a4fb30e1e001e62c7dee7c146",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
