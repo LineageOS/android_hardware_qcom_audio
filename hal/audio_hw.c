@@ -870,7 +870,6 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                             usecase->stream.out);
                 if (usecase->stream.out == adev->primary_output &&
                         adev->active_input &&
-                        adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
                         out_snd_device != usecase->out_snd_device) {
                     select_devices(adev, adev->active_input->usecase);
                 }
