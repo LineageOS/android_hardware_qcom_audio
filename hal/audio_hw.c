@@ -1270,6 +1270,10 @@ static void *offload_thread_loop(void *context)
                 ALOGE("%s: Next track returned error %d",__func__, ret);
             if (ret != -ENETRESET) {
                 send_callback = true;
+                pthread_mutex_lock(&out->lock);
+                out->send_new_metadata = 1;
+                out->send_next_track_params = true;
+                pthread_mutex_unlock(&out->lock);
                 event = STREAM_CBK_EVENT_DRAIN_READY;
                 ALOGV("copl(%p):send drain callback, ret %d", out, ret);
             } else
@@ -1593,6 +1597,9 @@ int start_output_stream(struct stream_out *out)
             ret = -EIO;
             goto error_open;
         }
+        /* compress_open sends params of the track, so reset the flag here */
+        out->is_compr_metadata_avail = false;
+
         if (out->offload_callback)
             compress_nonblock(out->compr, out->non_blocking);
 
@@ -1767,6 +1774,8 @@ static int out_standby(struct audio_stream *stream)
         } else {
             ALOGD("copl(%p):standby", out);
             stop_compressed_output_l(out);
+            out->send_next_track_params = false;
+            out->is_compr_metadata_avail = false;
             out->gapless_mdata.encoder_delay = 0;
             out->gapless_mdata.encoder_padding = 0;
             if (out->compr != NULL) {
@@ -1792,7 +1801,6 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
 {
     int ret = 0;
     char value[32];
-    bool is_meta_data_params = false;
 
     if (!out || !parms) {
         ALOGE("%s: return invalid ",__func__);
@@ -1805,36 +1813,19 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
             out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_MP4ADTS;
             ALOGV("ADTS format is set in offload mode");
         }
-        out->send_new_metadata = 1;
     }
 
     ret = audio_extn_parse_compress_metadata(out, parms);
 
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_SAMPLE_RATE, value, sizeof(value));
-    if(ret >= 0)
-        is_meta_data_params = true;
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_NUM_CHANNEL, value, sizeof(value));
-    if(ret >= 0)
-        is_meta_data_params = true;
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_AVG_BIT_RATE, value, sizeof(value));
-    if(ret >= 0)
-        is_meta_data_params = true;
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
     if (ret >= 0) {
-        is_meta_data_params = true;
         out->gapless_mdata.encoder_delay = atoi(value); //whats a good limit check?
     }
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
     if (ret >= 0) {
-        is_meta_data_params = true;
         out->gapless_mdata.encoder_padding = atoi(value);
     }
 
-    if(!is_meta_data_params) {
-        ALOGV("%s: Not gapless meta data params", __func__);
-        return 0;
-    }
-    out->send_new_metadata = 1;
     ALOGV("%s new encoder delay %u and padding %u", __func__,
           out->gapless_mdata.encoder_delay, out->gapless_mdata.encoder_padding);
 
@@ -2126,6 +2117,12 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ALOGD("copl(%p):send new gapless metadata", out);
             compress_set_gapless_metadata(out->compr, &out->gapless_mdata);
             out->send_new_metadata = 0;
+            if (out->send_next_track_params && out->is_compr_metadata_avail) {
+                ALOGD("copl(%p):send next track params in gapless", out);
+                compress_set_next_track_param(out->compr, &(out->compr_config.codec->options));
+                out->send_next_track_params = false;
+                out->is_compr_metadata_avail = false;
+            }
         }
 
         ret = compress_write(out->compr, buffer, bytes);
@@ -2921,6 +2918,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         }
 
         out->send_new_metadata = 1;
+        out->send_next_track_params = false;
+        out->is_compr_metadata_avail = false;
         out->offload_state = OFFLOAD_STATE_IDLE;
         out->playback_started = 0;
 
