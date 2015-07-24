@@ -1237,6 +1237,10 @@ void *platform_init(struct audio_device *adev)
     const char *snd_card_name;
     char mixer_xml_path[100],ffspEnable[PROPERTY_VALUE_MAX];
     char *cvd_version = NULL;
+    int idx;
+
+    my_data = calloc(1, sizeof(struct platform_data));
+
     if (!my_data) {
         ALOGE("failed to allocate platform data");
         return NULL;
