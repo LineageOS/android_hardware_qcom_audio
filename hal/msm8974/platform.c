@@ -1040,40 +1040,55 @@ struct param_data {
     void   *buff;
 };
 
-static int send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibration, int fd)
+static void send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibration, int fd)
 {
-    int ret = 0, type;
+    int type;
 
     for (type = WCD9XXX_ANC_CAL; type < WCD9XXX_MAX_CAL; type++) {
         struct wcdcal_ioctl_buffer codec_buffer;
         struct param_data calib;
+        int ret;
 
+        ret = 0;
         calib.get_size = 1;
-        ret = acdb_loader_get_calibration(cal_name_info[type], sizeof(struct param_data),
-                                                                 &calib);
+        ret = acdb_loader_get_calibration(cal_name_info[type],
+                                          sizeof(struct param_data),
+                                          &calib);
         if (ret < 0) {
-            ALOGE("%s get_calibration failed\n", __func__);
-            return ret;
+            ALOGE("%s: %s get_calibration size failed, err = %d\n",
+                  __func__, cal_name_info[type], ret);
+            continue;
         }
+
         calib.get_size = 0;
         calib.buff = malloc(calib.buff_size);
+        if (!calib.buff) {
+            ALOGE("%s: %s: No Memory for size = %d\n",
+                  __func__, cal_name_info[type], calib.buff_size);
+            continue;
+        }
+
         ret = acdb_loader_get_calibration(cal_name_info[type],
                               sizeof(struct param_data), &calib);
         if (ret < 0) {
-            ALOGE("%s get_calibration failed\n", __func__);
+            ALOGE("%s: %s get_calibration failed, err = %d\n",
+                  __func__, cal_name_info[type], ret);
             free(calib.buff);
-            return ret;
+            continue;
         }
+
         codec_buffer.buffer = calib.buff;
         codec_buffer.size = calib.data_size;
         codec_buffer.cal_type = type;
         if (ioctl(fd, SNDRV_CTL_IOCTL_HWDEP_CAL_TYPE, &codec_buffer) < 0)
-            ALOGE("Failed to call ioctl  for %s err=%d",
-                                  cal_name_info[type], errno);
-        ALOGD("%s cal sent for %s", __func__, cal_name_info[type]);
+            ALOGE("%s: %s Failed to call ioctl, err=%d",
+                  __func__, cal_name_info[type], errno);
+        else
+            ALOGD("%s: %s cal sent successfully\n",
+              __func__, cal_name_info[type]);
+
         free(calib.buff);
     }
-    return ret;
 }
 
 static void audio_hwdep_send_cal(struct platform_data *plat_data)
@@ -1094,8 +1109,8 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
            dlerror());
         return;
     }
-    if (send_codec_cal(acdb_loader_get_calibration, fd) < 0)
-        ALOGE("%s: Could not send anc cal", __FUNCTION__);
+
+    send_codec_cal(acdb_loader_get_calibration, fd);
 }
 
 static int platform_acdb_init(void *platform)
