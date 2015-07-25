@@ -80,6 +80,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS)),true)
 ifneq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),false)
     LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
 endif
+ifeq ($(strip $(AUDIO_FEATURE_SAMSUNG_DUAL_SIM)),true)
+    LOCAL_CFLAGS += -DSAMSUNG_DUAL_SIM
+    LOCAL_SRC_FILES += voice_extn/sec_voice_extn.c
+endif
 endif
 
 ifneq ($(filter apq8084 msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
