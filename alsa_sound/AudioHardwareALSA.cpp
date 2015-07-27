@@ -581,7 +581,7 @@ status_t AudioHardwareALSA::doRouting(int device)
     bool isRouted = false;
 
     if ((device == AudioSystem::DEVICE_IN_VOICE_CALL)
-#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
+#ifdef QCOM_FM_ENABLED
         || (device == AudioSystem::DEVICE_IN_FM_RX)
         || (device == AudioSystem::DEVICE_OUT_DIRECTOUTPUT)
         || (device == AudioSystem::DEVICE_IN_FM_RX_A2DP)
@@ -1231,12 +1231,12 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
             if((0 == strncmp(itDev->useCase, SND_USE_CASE_VERB_HIFI_REC, MAX_UC_LEN))
               ||(0 == strncmp(itDev->useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC, MAX_UC_LEN))
               ||(0 == strncmp(itDev->useCase, SND_USE_CASE_MOD_CAPTURE_FM, MAX_UC_LEN))
-#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
+#ifdef QCOM_FM_ENABLED
               ||(0 == strncmp(itDev->useCase, SND_USE_CASE_VERB_FM_REC, MAX_UC_LEN))
 #endif
               )
             {
-#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
+#ifdef QCOM_FM_ENABLED
                 if(!(devices == AudioSystem::DEVICE_IN_FM_RX_A2DP)){
                     ALOGD("Input stream already exists, new stream not permitted: useCase:%s, devices:0x%x, module:%p",
                         itDev->useCase, itDev->devices, itDev->module);
@@ -1244,7 +1244,7 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
                 }
 #endif
             }
-#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
+#ifdef QCOM_FM_ENABLED
         else if ((0 == strncmp(itDev->useCase, SND_USE_CASE_VERB_FM_A2DP_REC, MAX_UC_LEN))
                 ||(0 == strncmp(itDev->useCase, SND_USE_CASE_MOD_CAPTURE_A2DP_FM, MAX_UC_LEN)))
              {
@@ -1296,7 +1296,7 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
                                 sizeof(alsa_handle.useCase));
                     }
                 }
-#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
+#ifdef QCOM_FM_ENABLED
             } else if((devices == AudioSystem::DEVICE_IN_FM_RX)) {
                 strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_CAPTURE_FM, sizeof(alsa_handle.useCase));
             } else if(devices == AudioSystem::DEVICE_IN_FM_RX_A2DP) {
@@ -1330,7 +1330,7 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
                                sizeof(alsa_handle.useCase));
                     }
                 }
-#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
+#ifdef QCOM_FM_ENABLED
             } else if(devices == AudioSystem::DEVICE_IN_FM_RX) {
                 strlcpy(alsa_handle.useCase, SND_USE_CASE_VERB_FM_REC, sizeof(alsa_handle.useCase));
             } else if (devices == AudioSystem::DEVICE_IN_FM_RX_A2DP) {
@@ -1384,7 +1384,7 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
         }
 
         if(!strcmp(it->useCase, SND_USE_CASE_VERB_HIFI_REC) ||
-#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
+#ifdef QCOM_FM_ENABLED
            !strcmp(it->useCase, SND_USE_CASE_VERB_FM_REC) ||
            !strcmp(it->useCase, SND_USE_CASE_VERB_FM_A2DP_REC) ||
 #endif
@@ -1493,7 +1493,6 @@ size_t AudioHardwareALSA::getInputBufferSize(uint32_t sampleRate, int format, in
     return bufferSize;
 }
 
-//#if defined(QCOM_FM_ENABLED) || defined(STE_FM)
 #ifdef QCOM_FM_ENABLED
 void AudioHardwareALSA::handleFm(int device)
 {
