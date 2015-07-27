@@ -417,7 +417,7 @@ status_t AudioPolicyManager::setDeviceConnectionState(AudioSystem::audio_devices
             }
         }
 
-        updateDeviceForStrategy();
+        //updateDeviceForStrategy();
         for (size_t i = 0; i < mOutputs.size(); i++) {
             setOutputDevice(mOutputs.keyAt(i), getNewDevice(mOutputs.keyAt(i), true /*fromCache*/));
         }
@@ -822,7 +822,7 @@ void AudioPolicyManager::setForceUse(AudioSystem::force_use usage, AudioSystem::
     // check for device and output changes triggered by new force usage
     checkA2dpSuspend();
     checkOutputForAllStrategies();
-    updateDeviceForStrategy();
+    //updateDeviceForStrategy();
     for (size_t i = 0; i < mOutputs.size(); i++) {
         audio_io_handle_t output = mOutputs.keyAt(i);
         audio_devices_t newDevice = getNewDevice(output, true /*fromCache*/);
@@ -925,4 +925,15 @@ status_t AudioPolicyManager::startInput(audio_io_handle_t input)
     return NO_ERROR;
 }
 
+//private function, no changes from AudioPolicyManagerBase
+void AudioPolicyManager::handleNotificationRoutingForStream(AudioSystem::stream_type stream) {
+    switch(stream) {
+    case AudioSystem::MUSIC:
+        checkOutputForStrategy(STRATEGY_SONIFICATION_RESPECTFUL);
+        updateDevicesAndOutputs();
+        break; 
+    default:
+        break;
+    }
+}  
 }; // namespace android_audio_legacy

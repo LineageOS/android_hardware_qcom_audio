@@ -497,8 +497,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     if (!out)
         return -ENOMEM;
 
+    status = static_cast<audio_output_flags_t> (flags);
+
     out->qcom_out = qadev->hwif->openOutputStream(devices,
-                                                    flags,
                                                     (int *)&config->format,
                                                     &config->channel_mask,
                                                     &config->sample_rate,

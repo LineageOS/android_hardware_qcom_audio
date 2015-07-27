@@ -66,5 +66,8 @@ protected:
         virtual audio_devices_t getDeviceForInputSource(int inputSource);
         // Mute or unmute the stream on the specified output
         status_t stopInput(audio_io_handle_t input);
+
+private:
+        void handleNotificationRoutingForStream(AudioSystem::stream_type stream);
 };
 };
