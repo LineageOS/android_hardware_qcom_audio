@@ -233,7 +233,7 @@ private:
                                 uint32_t *pChannels,
                                 uint32_t *pRate);
         virtual uint32_t sampleRate() const {
-            char af_quality[32];
+            char af_quality[PROP_VALUE_MAX];
             property_get("af.resampler.quality",af_quality,"0");
             if(strcmp("255",af_quality) == 0) {
                 ALOGD("SampleRate 48k");
@@ -244,7 +244,7 @@ private:
             }
         }
         virtual size_t bufferSize() const {
-            char af_quality[32];
+            char af_quality[PROP_VALUE_MAX];
             property_get("af.resampler.quality",af_quality,"0");
             if(strcmp("255",af_quality) == 0) {
                 ALOGD("Bufsize 5248");
