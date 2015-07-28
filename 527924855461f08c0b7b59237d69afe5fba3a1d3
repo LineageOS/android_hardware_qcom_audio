@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "bf091321_a15044d6",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 965,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-28T03:30:15Z",
+      "side": 1,
+      "message": "It is weird to hardcode this parameter though. Maybe a constant here instead?",
+      "revId": "527924855461f08c0b7b59237d69afe5fba3a1d3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
