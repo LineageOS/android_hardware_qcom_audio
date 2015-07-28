@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "bf091321_c12d78a9",
+        "filename": "msm8660/AudioHardware.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 3814,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-28T10:24:53Z",
+      "side": 1,
+      "message": "You don\u0027t want this to be an ALOGE",
+      "revId": "3789f6f300e1c666f9501b7d3661b1297433e123",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
