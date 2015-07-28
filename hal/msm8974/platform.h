@@ -210,7 +210,11 @@ enum {
 
 #define HFP_PCM_RX 5
 #ifdef PLATFORM_MSM8x26
-#define HFP_SCO_RX 28
+#ifdef EXTERNAL_BT_SUPPORTED
+#define HFP_SCO_RX 10 // AUXPCM Hostless
+#else
+#define HFP_SCO_RX 28 // INT_HFP_BT Hostless
+#endif
 #define HFP_ASM_RX_TX 29
 #else
 #define HFP_SCO_RX 23
