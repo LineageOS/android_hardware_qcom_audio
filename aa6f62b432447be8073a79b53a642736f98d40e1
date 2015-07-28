@@ -16,6 +16,24 @@
       "revId": "aa6f62b432447be8073a79b53a642736f98d40e1",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bf091321_0c94c743",
+        "filename": "msm8660/AudioHardware.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 255,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2015-07-28T19:00:43Z",
+      "side": 1,
+      "message": "Because af.resampler.quality is deprecated, so we switch to the highest supported samplerate\n\nhttps://github.com/msm7x30/android_hardware_qcom_audio/commit/97cf7428be7440888538e2db00971c83194b69cc",
+      "parentUuid": "bf091321_8119c089",
+      "revId": "aa6f62b432447be8073a79b53a642736f98d40e1",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
