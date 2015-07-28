@@ -38,7 +38,7 @@
 #include "sound/msmcal-hwdep.h"
 #include <dirent.h>
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
-
+#define MAX_MIXER_XML_PATH  100
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define MIXER_XML_PATH_MTP "/system/etc/mixer_paths_mtp.xml"
 #define MIXER_XML_PATH_SBC "/system/etc/mixer_paths_sbc.xml"
@@ -58,6 +58,7 @@
 #define MIXER_XML_PATH_WCD9306 "/system/etc/mixer_paths_wcd9306.xml"
 #define MIXER_XML_PATH_WCD9330 "/system/etc/mixer_paths_wcd9330.xml"
 #define MIXER_XML_PATH_WCD9335 "/system/etc/mixer_paths_wcd9335.xml"
+#define MIXER_XML_PATH_WCD9326 "/system/etc/mixer_paths_wcd9326.xml"
 #define MIXER_XML_PATH_SKUN "/system/etc/mixer_paths_qrd_skun.xml"
 #define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
 #define PLATFORM_INFO_XML_PATH_EXTCODEC  "/system/etc/audio_platform_info_extcodec.xml"
@@ -745,6 +746,8 @@ static void update_codec_type(const char *snd_card_name) {
                   sizeof("msm8952-tomtom-snd-card")) ||
          !strncmp(snd_card_name, "msm8976-tasha-snd-card",
                   sizeof("msm8976-tasha-snd-card")) ||
+         !strncmp(snd_card_name, "msm8976-tashalite-snd-card",
+                  sizeof("msm8976-tashalite-snd-card")) ||
          !strncmp(snd_card_name, "msm8976-tasha-skun-snd-card",
                   sizeof("msm8976-tasha-skun-snd-card")))
      {
@@ -846,6 +849,14 @@ static void query_platform(const char *snd_card_name,
                  sizeof("msm8976-tasha-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9335,
                 sizeof(MIXER_XML_PATH_WCD9335));
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+
+    } else if (!strncmp(snd_card_name, "msm8976-tashalite-snd-card",
+                 sizeof("msm8976-tashalite-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9326,
+               MAX_MIXER_XML_PATH);
         msm_device_to_be_id = msm_device_to_be_id_external_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
@@ -1283,7 +1294,7 @@ void *platform_init(struct audio_device *adev)
     struct platform_data *my_data = NULL;
     int retry_num = 0, snd_card_num = 0, key = 0;
     const char *snd_card_name;
-    char mixer_xml_path[100],ffspEnable[PROPERTY_VALUE_MAX];
+    char mixer_xml_path[MAX_MIXER_XML_PATH],ffspEnable[PROPERTY_VALUE_MAX];
     char *cvd_version = NULL;
     const char *mixer_ctl_name = "Set HPX ActiveBe";
     struct mixer_ctl *ctl = NULL;
@@ -3567,6 +3578,8 @@ int platform_is_external_codec (char *snd_card_name)
         sizeof("msm8952-tomtom-snd-card")) ||
         !strncmp(snd_card_name, "msm8976-tasha-snd-card",
         sizeof("msm8976-tasha-snd-card")) ||
+        !strncmp(snd_card_name, "msm8976-tashalite-snd-card",
+        sizeof("msm8976-tashalite-snd-card")) ||
         !strncmp(snd_card_name, "msm8976-tasha-skun-snd-card",
         sizeof("msm8976-tasha-skun-snd-card")))
     {
