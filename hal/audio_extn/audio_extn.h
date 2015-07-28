@@ -48,7 +48,7 @@
 #define audio_is_offload_pcm(format) (0)
 #define OFFLOAD_USE_SMALL_BUFFER false
 #else
-#define OFFLOAD_USE_SMALL_BUFFER (info->use_small_bufs)
+#define OFFLOAD_USE_SMALL_BUFFER ((info->format & AUDIO_FORMAT_PCM_OFFLOAD) == AUDIO_FORMAT_PCM_OFFLOAD)
 #endif
 
 #ifndef AFE_PROXY_ENABLED
@@ -97,7 +97,8 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
 #endif
 
 #ifdef PCM_OFFLOAD_ENABLED_24
-#define PCM_OUTPUT_BIT_WIDTH (config->offload_info.bit_width)
+#define PCM_OUTPUT_BIT_WIDTH (((config->offload_info.format & AUDIO_FORMAT_PCM_24_BIT_OFFLOAD) ==  \
+                             (AUDIO_FORMAT_PCM_24_BIT_OFFLOAD)) ? 24 : CODEC_BACKEND_DEFAULT_BIT_WIDTH)
 #else
 #define PCM_OUTPUT_BIT_WIDTH (CODEC_BACKEND_DEFAULT_BIT_WIDTH)
 #endif
