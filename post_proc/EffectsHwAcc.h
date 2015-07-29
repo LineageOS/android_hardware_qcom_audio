@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-15, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -43,10 +43,11 @@ public:
 
     virtual void setSampleRate(uint32_t inpSR, uint32_t outSR);
     virtual void unprepareEffects(AudioBufferProvider **trackBufferProvider);
-    virtual status_t prepareEffects(AudioBufferProvider **trackBufferProvider,
+    virtual status_t prepareEffects(AudioBufferProvider **trackInputBufferProvider,
+                            AudioBufferProvider **trackBufferProvider,
                             int sessionId, audio_channel_mask_t channelMask,
                             int frameCount);
-    virtual void setBufferProvider(AudioBufferProvider **bufferProvider,
+    virtual void setBufferProvider(AudioBufferProvider **trackInputbufferProvider,
                            AudioBufferProvider **trackBufferProvider);
 #ifdef HW_ACC_HPX
     virtual void updateHPXState(uint32_t state);
@@ -62,6 +63,7 @@ public:
         virtual status_t getNextBuffer(Buffer* buffer, int64_t pts);
         virtual void releaseBuffer(Buffer* buffer);
 
+        AudioBufferProvider* mTrackInputBufferProvider;
         AudioBufferProvider* mTrackBufferProvider;
         effect_handle_t    mEffectsHandle;
         effect_config_t    mEffectsConfig;
