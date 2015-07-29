@@ -175,6 +175,34 @@ static const snd_device_t helicon_skuab_variant_devices[] = {
     SND_DEVICE_OUT_VOICE_SPEAKER,
 };
 
+static const snd_device_t tasha_fluid_variant_devices[] = {
+    SND_DEVICE_OUT_SPEAKER,
+    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
+    SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
+    SND_DEVICE_OUT_VOICE_SPEAKER,
+    SND_DEVICE_OUT_SPEAKER_AND_HDMI,
+    SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET,
+    SND_DEVICE_OUT_SPEAKER_PROTECTED,
+    SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED,
+};
+
+static const snd_device_t tasha_liquid_variant_devices[] = {
+    SND_DEVICE_OUT_SPEAKER,
+    SND_DEVICE_OUT_SPEAKER_EXTERNAL_1,
+    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1,
+    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
+    SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
+    SND_DEVICE_IN_SPEAKER_MIC,
+    SND_DEVICE_IN_HEADSET_MIC,
+    SND_DEVICE_IN_VOICE_DMIC,
+    SND_DEVICE_IN_VOICE_SPEAKER_DMIC,
+    SND_DEVICE_IN_VOICE_REC_DMIC_STEREO,
+    SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE,
+    SND_DEVICE_IN_QUAD_MIC,
+    SND_DEVICE_IN_HANDSET_STEREO_DMIC,
+    SND_DEVICE_IN_SPEAKER_STEREO_DMIC,
+};
+
 static void  update_hardware_info_8084(struct hardware_info *hw_info, const char *snd_card_name)
 {
     if (!strcmp(snd_card_name, "apq8084-taiko-mtp-snd-card") ||
@@ -270,17 +298,23 @@ static void  update_hardware_info_8996(struct hardware_info *hw_info, const char
         hw_info->snd_devices = (snd_device_t *)tomtom_8996_CDP_variant_devices;
         hw_info->num_snd_devices = ARRAY_SIZE(tomtom_8996_CDP_variant_devices);
         strlcpy(hw_info->dev_extn, "-cdp", sizeof(hw_info->dev_extn));
-    } else if (!strcmp(snd_card_name, "msm8996-tomtom-stp-snd-card")) {
-        strlcpy(hw_info->type, " stp", sizeof(hw_info->type));
-        strlcpy(hw_info->name, "msm8996", sizeof(hw_info->name));
-        hw_info->snd_devices = (snd_device_t *)tomtom_stp_variant_devices;
-        hw_info->num_snd_devices = ARRAY_SIZE(tomtom_stp_variant_devices);
-        strlcpy(hw_info->dev_extn, "-stp", sizeof(hw_info->dev_extn));
     } else if (!strcmp(snd_card_name, "msm8996-tomtom-liquid-snd-card")) {
         strlcpy(hw_info->type, " liquid", sizeof(hw_info->type));
         strlcpy(hw_info->name, "msm8996", sizeof(hw_info->name));
         hw_info->snd_devices = (snd_device_t *)tomtom_liquid_variant_devices;
         hw_info->num_snd_devices = ARRAY_SIZE(tomtom_liquid_variant_devices);
+        strlcpy(hw_info->dev_extn, "-liquid", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "msm8996-tasha-fluid-snd-card")) {
+        strlcpy(hw_info->type, " fluid", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msm8996", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)tasha_fluid_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tasha_fluid_variant_devices);
+        strlcpy(hw_info->dev_extn, "-fluid", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "msm8996-tasha-liquid-snd-card")) {
+        strlcpy(hw_info->type, " liquid", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msm8996", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)tasha_liquid_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tasha_liquid_variant_devices);
         strlcpy(hw_info->dev_extn, "-liquid", sizeof(hw_info->dev_extn));
     } else if (!strcmp(snd_card_name, "msm8996-tasha-db-snd-card")) {
         strlcpy(hw_info->type, " dragon-board", sizeof(hw_info->type));
