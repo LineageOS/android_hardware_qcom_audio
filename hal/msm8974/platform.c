@@ -1428,11 +1428,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 set_echo_reference(adev, true);
             }
         }
-#ifdef FM_ENABLED
-    } else if (source == AUDIO_SOURCE_FM_RX ||
-               source == AUDIO_SOURCE_FM_RX_A2DP) {
+    } else if (source == AUDIO_SOURCE_FM_TUNER) {
         snd_device = SND_DEVICE_IN_CAPTURE_FM;
-#endif
     } else if (source == AUDIO_SOURCE_DEFAULT) {
         goto exit;
     }
@@ -1467,10 +1464,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (in_device & AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET ||
                    in_device & AUDIO_DEVICE_IN_DGTL_DOCK_HEADSET) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
-#ifdef FM_ENABLED
-        } else if (in_device & AUDIO_DEVICE_IN_FM_RX) {
+        } else if (in_device & AUDIO_DEVICE_IN_FM_TUNER) {
             snd_device = SND_DEVICE_IN_CAPTURE_FM;
-#endif
         } else {
             ALOGE("%s: Unknown input device(s) %#x", __func__, in_device);
             ALOGW("%s: Using default handset-mic", __func__);
@@ -1823,10 +1818,8 @@ int64_t platform_render_latency(audio_usecase_t usecase)
 int platform_update_usecase_from_source(int source, int usecase)
 {
     ALOGV("%s: input source :%d", __func__, source);
-#ifdef FM_ENABLED
-    if(source == AUDIO_SOURCE_FM_RX_A2DP)
+    if(source == AUDIO_SOURCE_FM_TUNER)
         usecase = USECASE_AUDIO_RECORD_FM_VIRTUAL;
-#endif
     return usecase;
 }
 
