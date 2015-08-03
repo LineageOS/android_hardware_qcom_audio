@@ -221,6 +221,7 @@ void audio_extn_listen_set_parameters(struct audio_device *adev,
 #define audio_extn_sound_trigger_set_parameters(adev, parms)           (0)
 #define audio_extn_sound_trigger_check_and_get_session(in)             (0)
 #define audio_extn_sound_trigger_stop_lab(in)                          (0)
+#define audio_extn_sound_trigger_read(in, buffer, bytes)               (0)
 #else
 
 enum st_event_type {
@@ -241,6 +242,8 @@ void audio_extn_sound_trigger_set_parameters(struct audio_device *adev,
                                              struct str_parms *parms);
 void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in);
 void audio_extn_sound_trigger_stop_lab(struct stream_in *in);
+int audio_extn_sound_trigger_read(struct stream_in *in, void *buffer,
+                                  size_t bytes);
 #endif
 
 #ifndef AUXPCM_BT_ENABLED
