@@ -516,11 +516,9 @@ int enable_snd_device(struct audio_device *adev,
     if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
        audio_extn_usb_start_capture(adev);
 
-	   if ((snd_device == SND_DEVICE_OUT_SPEAKER || snd_device == SND_DEVICE_OUT_SPEAKER_WSA ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_VBAT || snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
-        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
-        audio_extn_spkr_prot_is_enabled()) {
-       if (audio_extn_spkr_prot_get_acdb_id(snd_device) < 0) {
+    if (platform_can_enable_spkr_prot_on_device(snd_device) &&
+         audio_extn_spkr_prot_is_enabled()) {
+       if (platform_get_spkr_prot_acdb_id(snd_device) < 0) {
            adev->snd_dev_ref_cnt[snd_device]--;
            return -EINVAL;
        }
@@ -584,10 +582,9 @@ int disable_snd_device(struct audio_device *adev,
         /* exit usb capture thread */
         if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
             audio_extn_usb_stop_capture();
-        if ((snd_device == SND_DEVICE_OUT_SPEAKER || snd_device == SND_DEVICE_OUT_SPEAKER_WSA ||
-            snd_device == SND_DEVICE_OUT_SPEAKER_VBAT || snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
-            snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
-            audio_extn_spkr_prot_is_enabled()) {
+
+        if (platform_can_enable_spkr_prot_on_device(snd_device) &&
+             audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing(snd_device);
         } else {
             audio_route_reset_and_update_path(adev->audio_route, device_name);

@@ -2240,7 +2240,7 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
         snd_device = voice_get_incall_rec_snd_device(usecase->in_snd_device);
     else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE))
         snd_device = usecase->in_snd_device;
-    acdb_dev_id = acdb_device_table[audio_extn_get_spkr_prot_snd_device(snd_device)];
+    acdb_dev_id = acdb_device_table[platform_get_spkr_prot_snd_device(snd_device)];
 
     // Do not use Rx path default app type for TX path
     if ((usecase->type == PCM_CAPTURE) && (app_type == DEFAULT_APP_TYPE_RX_PATH)) {
@@ -4897,4 +4897,67 @@ bool platform_send_gain_dep_cal(void *platform __unused,
                                 int level __unused)
 {
     return 0;
+}
+
+bool platform_can_enable_spkr_prot_on_device(snd_device_t snd_device)
+{
+    bool ret = false;
+
+    if (snd_device == SND_DEVICE_OUT_SPEAKER ||
+        snd_device == SND_DEVICE_OUT_SPEAKER_WSA ||
+        snd_device == SND_DEVICE_OUT_SPEAKER_VBAT ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_WSA) {
+        ret = true;
+    }
+
+    return ret;
+}
+
+int platform_get_spkr_prot_acdb_id(snd_device_t snd_device)
+{
+    int acdb_id;
+
+    switch(snd_device) {
+        case SND_DEVICE_OUT_SPEAKER:
+        case SND_DEVICE_OUT_SPEAKER_WSA:
+             acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED);
+             break;
+        case SND_DEVICE_OUT_VOICE_SPEAKER:
+        case SND_DEVICE_OUT_VOICE_SPEAKER_WSA:
+             acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED);
+             break;
+        case SND_DEVICE_OUT_SPEAKER_VBAT:
+             acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT);
+             break;
+        case SND_DEVICE_OUT_VOICE_SPEAKER_VBAT:
+             acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT);
+             break;
+        default:
+             acdb_id = -EINVAL;
+             break;
+    }
+    return acdb_id;
+}
+
+int platform_get_spkr_prot_snd_device(snd_device_t snd_device)
+{
+    if (!audio_extn_spkr_prot_is_enabled())
+        return snd_device;
+
+    switch(snd_device) {
+        case SND_DEVICE_OUT_SPEAKER:
+        case SND_DEVICE_OUT_SPEAKER_WSA:
+             return SND_DEVICE_OUT_SPEAKER_PROTECTED;
+        case SND_DEVICE_OUT_VOICE_SPEAKER:
+        case SND_DEVICE_OUT_VOICE_SPEAKER_WSA:
+             return SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED;
+        case SND_DEVICE_OUT_SPEAKER_VBAT:
+             return SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT;
+        case SND_DEVICE_OUT_VOICE_SPEAKER_VBAT:
+             return SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT;
+        default:
+             return snd_device;
+    }
 }
