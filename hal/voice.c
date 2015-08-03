@@ -29,7 +29,7 @@
 #include "audio_hw.h"
 #include "voice.h"
 #include "voice_extn/voice_extn.h"
-#include "voice_extn/sec_voice_extn.h"
+#include "voice_extn/msim_voice_extn.h"
 #include "platform.h"
 #include "platform_api.h"
 #include "audio_extn.h"
@@ -50,7 +50,7 @@ static struct voice_session *voice_get_session_from_use_case(struct audio_device
     struct voice_session *session = NULL;
     int ret = 0;
 
-    ret = sec_voice_extn_get_session_from_use_case(adev, usecase_id, &session);
+    ret = msim_voice_extn_get_session_from_use_case(adev, usecase_id, &session);
     if (ret == 0) {
         return session;
     }
@@ -203,7 +203,7 @@ bool voice_is_call_state_active(struct audio_device *adev)
     bool call_state = false;
     int ret = 0;
 
-    ret = sec_voice_extn_is_call_state_active(adev, &call_state);
+    ret = msim_voice_extn_is_call_state_active(adev, &call_state);
     if (ret == 0) {
         return call_state;
     }
@@ -234,7 +234,7 @@ uint32_t voice_get_active_session_id(struct audio_device *adev)
     int ret = 0;
     uint32_t session_id;
 
-    ret = sec_voice_extn_get_active_session_id(adev, &session_id);
+    ret = msim_voice_extn_get_active_session_id(adev, &session_id);
     if (ret == 0) {
         return session_id;
     }
@@ -388,7 +388,7 @@ int voice_start_call(struct audio_device *adev)
 {
     int ret = 0;
 
-    ret = sec_voice_extn_start_call(adev);
+    ret = msim_voice_extn_start_call(adev);
     if (ret != -ENOSYS) {
         adev->voice.in_call = true;
         return ret;
@@ -407,7 +407,7 @@ int voice_stop_call(struct audio_device *adev)
     int ret = 0;
 
     adev->voice.in_call = false;
-    ret = sec_voice_extn_stop_call(adev);
+    ret = msim_voice_extn_stop_call(adev);
     if (ret != -ENOSYS) {
         return 0;
     }
@@ -436,7 +436,7 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
 
     ALOGV_IF(kv_pairs != NULL, "%s: enter: %s", __func__, kv_pairs);
 
-    ret = sec_voice_extn_set_parameters(adev, parms);
+    ret = msim_voice_extn_set_parameters(adev, parms);
     if (ret != 0 && ret != -ENOSYS)
         goto done;
 

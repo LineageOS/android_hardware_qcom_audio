@@ -80,9 +80,13 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS)),true)
 ifneq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),false)
     LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
 endif
+ifeq ($(strip $(AUDIO_FEATURE_HTC_DUAL_SIM)),true)
+    LOCAL_CFLAGS += -DHTC_DUAL_SIM
+    LOCAL_SRC_FILES += voice_extn/msim_voice_extn.c
+endif
 ifeq ($(strip $(AUDIO_FEATURE_SAMSUNG_DUAL_SIM)),true)
     LOCAL_CFLAGS += -DSAMSUNG_DUAL_SIM
-    LOCAL_SRC_FILES += voice_extn/sec_voice_extn.c
+    LOCAL_SRC_FILES += voice_extn/msim_voice_extn.c
 endif
 endif
 
