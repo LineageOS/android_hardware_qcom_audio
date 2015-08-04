@@ -658,10 +658,9 @@ static void check_usecases_codec_backend(struct audio_device *adev,
            specified usecase to new snd devices */
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            /* Update the out_snd_device only before enabling the audio route */
-            if (switch_device[usecase->id] ) {
-                usecase->out_snd_device = snd_device;
-                if (usecase->type != VOICE_CALL)
+            /* Update the out_snd_device only for the usecases that are enabled here */
+            if (switch_device[usecase->id] && (usecase->type != VOICE_CALL)) {
+                    usecase->out_snd_device = snd_device;
                     enable_audio_route(adev, usecase);
             }
         }
