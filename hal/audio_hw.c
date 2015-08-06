@@ -62,6 +62,13 @@
 #define PROXY_OPEN_RETRY_COUNT           100
 #define PROXY_OPEN_WAIT_TIME             20
 
+#define MIN_CHANNEL_COUNT                1
+#define DEFAULT_CHANNEL_COUNT            2
+
+#define MAX_CHANNEL_COUNT atoi(XSTR(MAX_TARGET_SPECIFIC_CHANNEL_CNT))
+#define XSTR(x) STR(x)
+#define STR(x) #x
+
 static unsigned int configured_low_latency_capture_period_size =
         LOW_LATENCY_CAPTURE_PERIOD_SIZE;
 
@@ -71,7 +78,7 @@ static unsigned int configured_low_latency_capture_period_size =
 static const bool k_enable_extended_precision = false;
 
 struct pcm_config pcm_config_deep_buffer = {
-    .channels = 2,
+    .channels = DEFAULT_CHANNEL_COUNT,
     .rate = DEFAULT_OUTPUT_SAMPLING_RATE,
     .period_size = DEEP_BUFFER_OUTPUT_PERIOD_SIZE,
     .period_count = DEEP_BUFFER_OUTPUT_PERIOD_COUNT,
@@ -82,7 +89,7 @@ struct pcm_config pcm_config_deep_buffer = {
 };
 
 struct pcm_config pcm_config_low_latency = {
-    .channels = 2,
+    .channels = DEFAULT_CHANNEL_COUNT,
     .rate = DEFAULT_OUTPUT_SAMPLING_RATE,
     .period_size = LOW_LATENCY_OUTPUT_PERIOD_SIZE,
     .period_count = LOW_LATENCY_OUTPUT_PERIOD_COUNT,
@@ -104,7 +111,7 @@ struct pcm_config pcm_config_hdmi_multi = {
 };
 
 struct pcm_config pcm_config_audio_capture = {
-    .channels = 2,
+    .channels = DEFAULT_CHANNEL_COUNT,
     .period_count = AUDIO_CAPTURE_PERIOD_COUNT,
     .format = PCM_FORMAT_S16_LE,
     .stop_threshold = INT_MAX,
@@ -1187,9 +1194,16 @@ static int check_input_parameters(uint32_t sample_rate,
                                   audio_format_t format,
                                   int channel_count)
 {
-    if (format != AUDIO_FORMAT_PCM_16_BIT) return -EINVAL;
+    if (format != AUDIO_FORMAT_PCM_16_BIT) {
+        ALOGE("%s: unsupported AUDIO FORMAT (%d) ", __func__, format);
+        return -EINVAL;
+    }
 
-    if ((channel_count < 1) || (channel_count > 2)) return -EINVAL;
+    if ((channel_count < MIN_CHANNEL_COUNT) || (channel_count > MAX_CHANNEL_COUNT)) {
+        ALOGE("%s: unsupported channel count (%d) passed  Min / Max (%d\%d)", __func__,
+               channel_count, MIN_CHANNEL_COUNT, MAX_CHANNEL_COUNT);
+        return -EINVAL;
+    }
 
     switch (sample_rate) {
     case 8000:
@@ -1203,6 +1217,7 @@ static int check_input_parameters(uint32_t sample_rate,
     case 48000:
         break;
     default:
+        ALOGE("%s: unsupported (%d) samplerate passed ", __func__, sample_rate);
         return -EINVAL;
     }
 
