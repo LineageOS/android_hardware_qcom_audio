@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "9f0e0f27_e0d99322",
+        "filename": "hal/msm8974/platform.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 255,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2015-08-07T03:41:28Z",
+      "side": 1,
+      "message": "Well, I actually tried the following remap but did see any effect at all:\n\u003cusecase name\u003d\"USECASE_VOICE2_CALL\" type\u003d\"out\" id\u003d\"13\"/\u003e\n\nAlso tried as \"in\" type and always had the same problem:\nE/voice   (  322): start_call: cannot open device \u0027/dev/snd/pcmC0D22p\u0027: No such file or directory",
+      "parentUuid": "9f0e0f27_20cb0b54",
+      "revId": "549824e098a79c1c9d5f5a92b0432d2fa5e18c7d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "9f0e0f27_00c80753",
         "filename": "hal/voice_extn/alt_voice_extn.c",
         "patchSetId": 2
@@ -30,6 +48,24 @@
       "writtenOn": "2015-08-07T03:31:52Z",
       "side": 1,
       "message": "Is this parameter used by HTC\u0027s implementation?",
+      "revId": "549824e098a79c1c9d5f5a92b0432d2fa5e18c7d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9f0e0f27_80e1b7d3",
+        "filename": "hal/voice_extn/alt_voice_extn.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 94,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2015-08-07T03:41:28Z",
+      "side": 1,
+      "message": "No, this will be needed as well: http://review.cyanogenmod.org/#/c/105338/",
+      "parentUuid": "9f0e0f27_00c80753",
       "revId": "549824e098a79c1c9d5f5a92b0432d2fa5e18c7d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
