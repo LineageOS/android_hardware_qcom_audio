@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9f0e0f27_20cb0b54",
+        "filename": "hal/msm8974/platform.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 255,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-07T03:31:52Z",
+      "side": 1,
+      "message": "This should be the default, HTC is making this 13? I think you should be able to remap this using audio_platform_info.xml",
+      "revId": "549824e098a79c1c9d5f5a92b0432d2fa5e18c7d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9f0e0f27_00c80753",
+        "filename": "hal/voice_extn/alt_voice_extn.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 94,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-07T03:31:52Z",
+      "side": 1,
+      "message": "Is this parameter used by HTC\u0027s implementation?",
+      "revId": "549824e098a79c1c9d5f5a92b0432d2fa5e18c7d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
