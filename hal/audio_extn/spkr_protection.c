@@ -485,6 +485,7 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
     enable_audio_route(adev, uc_info_tx);
 
     pcm_dev_tx_id = platform_get_pcm_device_id(uc_info_tx->id, PCM_CAPTURE);
+    ALOGV("%s: pcm device id %d", __func__, pcm_dev_tx_id);
     if (pcm_dev_tx_id < 0) {
         ALOGE("%s: Invalid pcm device for usecase (%d)",
               __func__, uc_info_tx->id);
@@ -647,6 +648,7 @@ static void* spkr_calibration_thread()
     char wsa_path[MAX_PATH] = {0};
     int spk_1_tzn, spk_2_tzn;
     char buf[32] = {0};
+    int ret;
 
     /* If the value of this persist.spkr.cal.duration is 0
      * then it means it will take 30min to calibrate
@@ -756,13 +758,17 @@ static void* spkr_calibration_thread()
                    thermal_fd = open(wsa_path, O_RDONLY);
                    if (thermal_fd > 0) {
                        for (i = 0; i < NUM_ATTEMPTS; i++) {
-                            if (read(thermal_fd, buf, sizeof(buf))) {
+                            if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0) {
                                 t0_spk_1 = atoi(buf);
-                                if (i > 0 && (t0_spk_1 != t0_spk_prior))
+                                if (i > 0 && (t0_spk_1 != t0_spk_prior)) {
+                                    ALOGE("%s: spkr1 curr temp: %d, prev temp: %d\n",
+                                          __func__, t0_spk_1, t0_spk_prior);
                                     break;
+                                }
                                 t0_spk_prior = t0_spk_1;
+                                sleep(1);
                             } else {
-                               ALOGE("%s: read fail for %s\n", __func__, wsa_path);
+                               ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
                                break;
                             }
                         }
@@ -773,26 +779,30 @@ static void* spkr_calibration_thread()
                    if (i == NUM_ATTEMPTS) {
                        /*Convert temp into q6 format*/
                        t0_spk_1 = (t0_spk_1 * (1 << 6));
-                       ALOGE("%s: temp T0 for spkr1 %d\n", __func__, t0_spk_1);
+                       ALOGD("%s: temp T0 for spkr1 %d\n", __func__, t0_spk_1);
                    } else {
-                       ALOGE("%s: thermal equilibrium failed for spkr1 in %d readings\n",
-                                                __func__, NUM_ATTEMPTS);
+                       ALOGD("%s: thermal equilibrium failed for spkr1 in %d/%d readings\n",
+                                                __func__, i, NUM_ATTEMPTS);
                        t0_spk_1 = SAFE_SPKR_TEMP_Q6;
                    }
                }
                if (spk_2_tzn > 0) {
                    snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_2_tzn);
-                   ALOGE("%s: wsa_path: %s\n", __func__, wsa_path);
+                   ALOGD("%s: wsa_path: %s\n", __func__, wsa_path);
                    thermal_fd = open(wsa_path, O_RDONLY);
                    if (thermal_fd > 0) {
                        for (i = 0; i < NUM_ATTEMPTS; i++) {
-                            if (read(thermal_fd, buf, sizeof(buf))) {
+                            if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0) {
                                 t0_spk_2 = atoi(buf);
-                                if (i > 0 && (t0_spk_2 != t0_spk_prior))
+                                if (i > 0 && (t0_spk_2 != t0_spk_prior)) {
+                                    ALOGE("%s: spkr2 curr temp: %d, prev temp: %d\n",
+                                          __func__, t0_spk_2, t0_spk_prior);
                                     break;
+                                }
                                 t0_spk_prior = t0_spk_2;
+                                sleep(1);
                             } else {
-                               ALOGE("%s: read fail for %s\n", __func__, wsa_path);
+                               ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
                                break;
                             }
                         }
@@ -803,10 +813,10 @@ static void* spkr_calibration_thread()
                    if (i == NUM_ATTEMPTS) {
                        /*Convert temp into q6 format*/
                        t0_spk_2 = (t0_spk_2 * (1 << 6));
-                       ALOGE("%s: temp T0 for spkr2 %d\n", __func__, t0_spk_2);
+                       ALOGD("%s: temp T0 for spkr2 %d\n", __func__, t0_spk_2);
                    } else {
-                       ALOGE("%s: thermal equilibrium failed for spkr2 in %d readings\n",
-                                                __func__, NUM_ATTEMPTS);
+                       ALOGE("%s: thermal equilibrium failed for spkr2 in %d/%d readings\n",
+                                                __func__, i, NUM_ATTEMPTS);
                        t0_spk_2 = SAFE_SPKR_TEMP_Q6;
                    }
                }
