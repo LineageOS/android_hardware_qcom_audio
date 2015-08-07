@@ -4506,13 +4506,14 @@ done:
     return ret;
 }
 
-int platform_get_wsa_mode(void *platform)
+int platform_get_wsa_mode(void *adev)
 {
-    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev_h = adev;
     char *snd_card_name;
 
-    snd_card_name = mixer_get_name(my_data->adev->mixer);
+    snd_card_name = mixer_get_name(adev_h->mixer);
     if ((!strcmp(snd_card_name, "msm8952-skum-snd-card")) ||
+        (!strcmp(snd_card_name, "msm8952-snd-card")) ||
         (!strcmp(snd_card_name, "msm8952-snd-card-mtp")))
         return 1;
     else

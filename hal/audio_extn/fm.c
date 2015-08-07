@@ -251,7 +251,7 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
                  * Currently, platform_get_wsa_mode will directly return
                  * 1 when wsa is in analog mode.
                  */
-                if (platform_get_wsa_mode(adev->platform) == 1) {
+                if (platform_get_wsa_mode(adev) == 1) {
                     fm_stop(adev);
                     fm_start(adev);
                 } else {

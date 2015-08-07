@@ -121,5 +121,5 @@ int platform_set_spkr_device_tz_names(snd_device_t index,
                                        const char *spkr_1_tz_name, const char *spkr_2_tz_name);
 const char *platform_get_spkr_1_tz_name(snd_device_t snd_device);
 const char *platform_get_spkr_2_tz_name(snd_device_t snd_device);
-int platform_get_wsa_mode(void *platform);
+int platform_get_wsa_mode(void *adev);
 #endif // AUDIO_PLATFORM_API_H

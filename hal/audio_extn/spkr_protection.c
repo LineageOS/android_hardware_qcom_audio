@@ -925,6 +925,12 @@ void audio_extn_spkr_prot_init(void *adev)
     handle.spkr_prot_t0 = -1;
 
     if (is_wsa_present()) {
+        if (platform_get_wsa_mode(adev) == 1) {
+            ALOGD("%s: WSA analog mode", __func__);
+            platform_set_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED, 136);
+            platform_set_snd_device_acdb_id(SND_DEVICE_IN_CAPTURE_VI_FEEDBACK, 137);
+            pcm_config_skr_prot.channels = 2;
+        }
         pthread_cond_init(&handle.spkr_calib_cancel, NULL);
         pthread_cond_init(&handle.spkr_calibcancel_ack, NULL);
         pthread_mutex_init(&handle.mutex_spkr_prot, NULL);
