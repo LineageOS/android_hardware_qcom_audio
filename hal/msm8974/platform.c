@@ -1491,6 +1491,43 @@ int platform_get_sample_rate(void *platform, uint32_t *rate)
     return ret;
 }
 
+void platform_set_speaker_gain_in_combo(struct audio_device *adev,
+                                        snd_device_t snd_device,
+                                        bool enable)
+{
+    const char* name;
+    switch (snd_device) {
+        case SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES:
+            if (enable)
+                name = "spkr-gain-in-headphone-combo";
+            else
+                name = "speaker-gain-default";
+            break;
+        case SND_DEVICE_OUT_SPEAKER_AND_LINE:
+            if (enable)
+                name = "spkr-gain-in-line-combo";
+            else
+                name = "speaker-gain-default";
+            break;
+        case SND_DEVICE_OUT_SPEAKER_SAFE_AND_HEADPHONES:
+            if (enable)
+                name = "spkr-safe-gain-in-headphone-combo";
+            else
+                name = "speaker-safe-gain-default";
+            break;
+        case SND_DEVICE_OUT_SPEAKER_SAFE_AND_LINE:
+            if (enable)
+                name = "spkr-safe-gain-in-line-combo";
+            else
+                name = "speaker-safe-gain-default";
+            break;
+        default:
+            return;
+    }
+
+    audio_route_apply_and_update_path(adev->audio_route, name);
+}
+
 int platform_set_voice_volume(void *platform, int volume)
 {
     struct platform_data *my_data = (struct platform_data *)platform;

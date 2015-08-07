@@ -547,6 +547,11 @@ int platform_stop_voice_call(void *platform, uint32_t vsid __unused)
     return ret;
 }
 
+void platform_set_speaker_gain_in_combo(struct audio_device *adev __unused,
+                                        snd_device_t snd_device,
+                                        bool enable __unused) {
+}
+
 int platform_set_voice_volume(void *platform, int volume)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
