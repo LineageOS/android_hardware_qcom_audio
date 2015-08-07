@@ -55,6 +55,24 @@
     },
     {
       "key": {
+        "uuid": "9f0e0f27_83a541b8",
+        "filename": "hal/msm8974/platform.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 255,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2015-08-07T12:19:21Z",
+      "side": 1,
+      "message": "Well, adding entries for both types actually worked. Uploaded new patch set.",
+      "parentUuid": "9f0e0f27_a32725b7",
+      "revId": "549824e098a79c1c9d5f5a92b0432d2fa5e18c7d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "9f0e0f27_00c80753",
         "filename": "hal/voice_extn/alt_voice_extn.c",
         "patchSetId": 2
