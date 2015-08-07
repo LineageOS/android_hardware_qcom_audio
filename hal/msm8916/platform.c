@@ -924,7 +924,9 @@ static void query_platform(const char *snd_card_name,
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
     } else if (!strncmp(snd_card_name, "msm8952-skum-snd-card",
-                 sizeof("msm8952-skum-snd-card"))) {
+                 sizeof("msm8952-skum-snd-card")) ||
+               !strncmp(snd_card_name, "msm8976-skun-snd-card",
+                 sizeof("msm8976-skun-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_SKUM,
                 sizeof(MIXER_XML_PATH_SKUM));
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
