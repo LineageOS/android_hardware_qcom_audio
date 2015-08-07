@@ -58,6 +58,10 @@
 #define SAFE_SPKR_TEMP 40
 #define SAFE_SPKR_TEMP_Q6 (SAFE_SPKR_TEMP * (1 << 6))
 
+/*Bongo Spkr temp range*/
+#define TZ_TEMP_MIN_THRESHOLD    (5)
+#define TZ_TEMP_MAX_THRESHOLD    (45)
+
 /*Range of resistance values 2ohms to 40 ohms*/
 #define MIN_RESISTANCE_SPKR_Q24 (2 * (1 << 24))
 #define MAX_RESISTANCE_SPKR_Q24 (40 * (1 << 24))
@@ -726,24 +730,23 @@ static void* spkr_calibration_thread()
         close(acdb_fd);
     }
 
+    ALOGV("%s: start calibration", __func__);
     while (1) {
-        ALOGV("%s: start calibration", __func__);
         if (handle.wsa_found) {
             spk_1_tzn = handle.spkr_1_tzn;
             spk_2_tzn = handle.spkr_2_tzn;
             goahead = false;
             pthread_mutex_lock(&adev->lock);
             if (is_speaker_in_use(&sec)) {
-                ALOGD("%s: WSA Speaker in use retry calibration", __func__);
+                ALOGV("%s: WSA Speaker in use retry calibration", __func__);
                 pthread_mutex_unlock(&adev->lock);
                 continue;
             } else {
-                ALOGD("%s: wsa speaker idle %ld min time %ld", __func__, sec, min_idle_time);
                 if (sec < min_idle_time) {
-                    ALOGD("%s: speaker idle is less retry", __func__);
                     pthread_mutex_unlock(&adev->lock);
                     continue;
                }
+               ALOGV("%s: wsa speaker idle %ld min time %ld", __func__, sec, min_idle_time);
                goahead = true;
            }
            if (!list_empty(&adev->usecase_list)) {
@@ -753,7 +756,7 @@ static void* spkr_calibration_thread()
            if (goahead) {
                if (spk_1_tzn > 0) {
                    snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_1_tzn);
-                   ALOGD("%s: wsa_path: %s\n", __func__, wsa_path);
+                   ALOGV("%s: wsa_path: %s\n", __func__, wsa_path);
                    thermal_fd = -1;
                    thermal_fd = open(wsa_path, O_RDONLY);
                    if (thermal_fd > 0) {
@@ -777,18 +780,24 @@ static void* spkr_calibration_thread()
                        ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
                    }
                    if (i == NUM_ATTEMPTS) {
+                       if (t0_spk_1 < TZ_TEMP_MIN_THRESHOLD ||
+                           t0_spk_1 > TZ_TEMP_MAX_THRESHOLD) {
+                           pthread_mutex_unlock(&adev->lock);
+                           continue;
+                       }
                        /*Convert temp into q6 format*/
                        t0_spk_1 = (t0_spk_1 * (1 << 6));
                        ALOGD("%s: temp T0 for spkr1 %d\n", __func__, t0_spk_1);
                    } else {
-                       ALOGD("%s: thermal equilibrium failed for spkr1 in %d/%d readings\n",
+                       ALOGV("%s: thermal equilibrium failed for spkr1 in %d/%d readings\n",
                                                 __func__, i, NUM_ATTEMPTS);
-                       t0_spk_1 = SAFE_SPKR_TEMP_Q6;
+                       pthread_mutex_unlock(&adev->lock);
+                       continue;
                    }
                }
                if (spk_2_tzn > 0) {
                    snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_2_tzn);
-                   ALOGD("%s: wsa_path: %s\n", __func__, wsa_path);
+                   ALOGV("%s: wsa_path: %s\n", __func__, wsa_path);
                    thermal_fd = open(wsa_path, O_RDONLY);
                    if (thermal_fd > 0) {
                        for (i = 0; i < NUM_ATTEMPTS; i++) {
@@ -811,13 +820,19 @@ static void* spkr_calibration_thread()
                        ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
                    }
                    if (i == NUM_ATTEMPTS) {
+                       if (t0_spk_2 < TZ_TEMP_MIN_THRESHOLD ||
+                           t0_spk_2 > TZ_TEMP_MAX_THRESHOLD) {
+                           pthread_mutex_unlock(&adev->lock);
+                           continue;
+                       }
                        /*Convert temp into q6 format*/
                        t0_spk_2 = (t0_spk_2 * (1 << 6));
                        ALOGD("%s: temp T0 for spkr2 %d\n", __func__, t0_spk_2);
                    } else {
-                       ALOGE("%s: thermal equilibrium failed for spkr2 in %d/%d readings\n",
+                       ALOGV("%s: thermal equilibrium failed for spkr2 in %d/%d readings\n",
                                                 __func__, i, NUM_ATTEMPTS);
-                       t0_spk_2 = SAFE_SPKR_TEMP_Q6;
+                       pthread_mutex_unlock(&adev->lock);
+                       continue;
                    }
                }
            }
@@ -848,16 +863,15 @@ static void* spkr_calibration_thread()
         goahead = false;
         pthread_mutex_lock(&adev->lock);
         if (is_speaker_in_use(&sec)) {
-            ALOGD("%s: Speaker in use retry calibration", __func__);
+            ALOGV("%s: Speaker in use retry calibration", __func__);
             pthread_mutex_unlock(&adev->lock);
             continue;
         } else {
-            ALOGD("%s: speaker idle %ld min time %ld", __func__, sec, min_idle_time);
             if (sec < min_idle_time) {
-                ALOGD("%s: speaker idle is less retry", __func__);
                 pthread_mutex_unlock(&adev->lock);
                 continue;
             }
+            ALOGD("%s: speaker idle %ld min time %ld", __func__, sec, min_idle_time);
             goahead = true;
         }
         if (!list_empty(&adev->usecase_list)) {
