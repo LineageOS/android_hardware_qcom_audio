@@ -683,6 +683,9 @@ int select_devices(struct audio_device *adev,
         (usecase->in_snd_device != SND_DEVICE_NONE) &&
         (usecase->out_snd_device != SND_DEVICE_NONE)) {
         status = platform_switch_voice_call_device_pre(adev->platform);
+        /* Disable sidetone only if voice call already exists */
+        if (voice_is_call_state_active(adev))
+            voice_set_sidetone(adev, usecase->out_snd_device, false);
     }
 
     /* Disable current sound devices */
@@ -734,10 +737,14 @@ int select_devices(struct audio_device *adev,
      * Enable device command should be sent to modem only after
      * enabling voice call mixer controls
      */
-    if (usecase->type == VOICE_CALL)
+    if (usecase->type == VOICE_CALL) {
         status = platform_switch_voice_call_usecase_route_post(adev->platform,
                                                                out_snd_device,
                                                                in_snd_device);
+         /* Enable sidetone only if voice call already exists */
+        if (voice_is_call_state_active(adev))
+            voice_set_sidetone(adev, out_snd_device, true);
+    }
 
     return status;
 }

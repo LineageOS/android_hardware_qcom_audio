@@ -52,6 +52,58 @@ static struct voice_session *voice_get_session_from_use_case(struct audio_device
     return session;
 }
 
+static bool voice_is_sidetone_device(snd_device_t out_device,
+            char *mixer_path)
+{
+    bool is_sidetone_dev = true;
+
+    switch (out_device) {
+    case SND_DEVICE_OUT_VOICE_HAC_HANDSET:
+        strlcpy(mixer_path, "sidetone-hac-handset", MIXER_PATH_MAX_LENGTH);
+        break;
+    case SND_DEVICE_OUT_VOICE_HANDSET:
+        strlcpy(mixer_path, "sidetone-handset", MIXER_PATH_MAX_LENGTH);
+        break;
+    case SND_DEVICE_OUT_VOICE_HEADPHONES:
+        strlcpy(mixer_path, "sidetone-headphones", MIXER_PATH_MAX_LENGTH);
+        break;
+    default:
+        is_sidetone_dev = false;
+        break;
+    }
+
+    return is_sidetone_dev;
+}
+
+void voice_set_sidetone(struct audio_device *adev,
+        snd_device_t out_snd_device, bool enable)
+{
+    char mixer_path[MIXER_PATH_MAX_LENGTH];
+    bool is_sidetone_dev;
+
+    ALOGD("%s: %s, out_snd_device: %d\n",
+          __func__, (enable ? "enable" : "disable"),
+          out_snd_device);
+
+    is_sidetone_dev = voice_is_sidetone_device(out_snd_device, mixer_path);
+
+    if (!is_sidetone_dev) {
+        ALOGD("%s: device %d does not support sidetone\n",
+              __func__, out_snd_device);
+        return;
+    }
+
+    ALOGD("%s: sidetone out device = %s\n",
+          __func__, mixer_path);
+
+    if (enable)
+        audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+    else
+        audio_route_reset_and_update_path(adev->audio_route, mixer_path);
+
+    return;
+}
+
 int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 {
     int i, ret = 0;
@@ -61,7 +113,19 @@ int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     ALOGD("%s: enter usecase:%s", __func__, use_case_table[usecase_id]);
 
     session = (struct voice_session *)voice_get_session_from_use_case(adev, usecase_id);
+
+    uc_info = get_usecase_from_list(adev, usecase_id);
+    if (uc_info == NULL) {
+        ALOGE("%s: Could not find the usecase (%d) in the list",
+              __func__, usecase_id);
+        return -EINVAL;
+    }
+
     session->state.current = CALL_INACTIVE;
+
+    /* Disable sidetone only when no calls are active */
+    if (!voice_is_call_state_active(adev))
+        voice_set_sidetone(adev, uc_info->out_snd_device, false);
 
     ret = platform_stop_voice_call(adev->platform, session->vsid);
 
@@ -73,13 +137,6 @@ int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     if (session->pcm_tx) {
         pcm_close(session->pcm_tx);
         session->pcm_tx = NULL;
-    }
-
-    uc_info = get_usecase_from_list(adev, usecase_id);
-    if (uc_info == NULL) {
-        ALOGE("%s: Could not find the usecase (%d) in the list",
-              __func__, usecase_id);
-        return -EINVAL;
     }
 
     /* 2. Get and set stream specific mixer controls */
@@ -129,6 +186,17 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
         goto error_start_voice;
     }
 
+    ALOGV("%s: Opening PCM capture device card_id(%d) device_id(%d)",
+          __func__, adev->snd_card, pcm_dev_tx_id);
+    session->pcm_tx = pcm_open(adev->snd_card,
+                               pcm_dev_tx_id,
+                               PCM_IN, &voice_config);
+    if (session->pcm_tx && !pcm_is_ready(session->pcm_tx)) {
+        ALOGE("%s: %s", __func__, pcm_get_error(session->pcm_tx));
+        ret = -EIO;
+        goto error_start_voice;
+    }
+
     ALOGV("%s: Opening PCM playback device card_id(%d) device_id(%d)",
           __func__, adev->snd_card, pcm_dev_rx_id);
     session->pcm_rx = pcm_open(adev->snd_card,
@@ -140,18 +208,12 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
         goto error_start_voice;
     }
 
-    ALOGV("%s: Opening PCM capture device card_id(%d) device_id(%d)",
-          __func__, adev->snd_card, pcm_dev_tx_id);
-    session->pcm_tx = pcm_open(adev->snd_card,
-                               pcm_dev_tx_id,
-                               PCM_IN, &voice_config);
-    if (session->pcm_tx && !pcm_is_ready(session->pcm_tx)) {
-        ALOGE("%s: %s", __func__, pcm_get_error(session->pcm_tx));
-        ret = -EIO;
-        goto error_start_voice;
-    }
-    pcm_start(session->pcm_rx);
     pcm_start(session->pcm_tx);
+    pcm_start(session->pcm_rx);
+
+    /* Enable sidetone only when no calls are already active */
+    if (!voice_is_call_state_active(adev))
+        voice_set_sidetone(adev, uc_info->out_snd_device, true);
 
     voice_set_volume(adev, adev->voice.volume);
 
