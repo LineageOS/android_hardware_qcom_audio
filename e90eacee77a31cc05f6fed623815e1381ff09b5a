@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7f231b9d_1613bc0f",
+        "filename": "hal/voice_extn/msim_voice_extn.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 91,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-08T05:34:58Z",
+      "side": 1,
+      "message": "is RADIO_PREFER_NETWORK_SLOT0 always going to be 0 or 1?",
+      "revId": "e90eacee77a31cc05f6fed623815e1381ff09b5a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f231b9d_f6f720d4",
+        "filename": "hal/voice_extn/msim_voice_extn.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 92,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-08T05:34:58Z",
+      "side": 1,
+      "message": "This logic is a little screwy to me.",
+      "revId": "e90eacee77a31cc05f6fed623815e1381ff09b5a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
