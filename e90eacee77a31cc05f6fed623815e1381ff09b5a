@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "7f231b9d_16af3c95",
+        "filename": "hal/voice_extn/msim_voice_extn.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 91,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2015-08-08T14:03:58Z",
+      "side": 1,
+      "message": "No, the logic is: if slot0 nw_mode isn\u0027t set to 2G (is set to LTE/3G) then voice_slot is slot0. We know that if slot0 is 2G, most likely slot1 is LTE/3G and then voice_slot is slot1.",
+      "parentUuid": "7f231b9d_1613bc0f",
+      "revId": "e90eacee77a31cc05f6fed623815e1381ff09b5a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "7f231b9d_f6f720d4",
         "filename": "hal/voice_extn/msim_voice_extn.c",
         "patchSetId": 7
@@ -30,6 +48,24 @@
       "writtenOn": "2015-08-08T05:34:58Z",
       "side": 1,
       "message": "This logic is a little screwy to me.",
+      "revId": "e90eacee77a31cc05f6fed623815e1381ff09b5a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f231b9d_36aa3885",
+        "filename": "hal/voice_extn/msim_voice_extn.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 92,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2015-08-08T14:03:58Z",
+      "side": 1,
+      "message": "This logic allows to overcome an undefined status. I have found that after reboot, if phone connects immediately to wifi, not using mobile data connection, persist.radio.prefer.network and persist.radio.prefer.nw.sub properties were both 9.\n\nIs also needed when user sets network mode to 2G on both slots.",
+      "parentUuid": "7f231b9d_f6f720d4",
       "revId": "e90eacee77a31cc05f6fed623815e1381ff09b5a",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
