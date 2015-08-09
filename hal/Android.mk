@@ -96,6 +96,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SSR)),true)
     LOCAL_CFLAGS += -DSSR_ENABLED
     LOCAL_SRC_FILES += audio_extn/ssr.c
     LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/surround_sound/
+    LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/surround_sound_3mic/
     LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/common/inc/
 endif
 

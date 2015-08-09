@@ -146,18 +146,28 @@ bool audio_extn_usb_is_proxy_inuse();
 #endif
 
 #ifndef SSR_ENABLED
-#define audio_extn_ssr_init(in)                       (0)
+#define audio_extn_ssr_init(in, num_out_chan)         (0)
 #define audio_extn_ssr_deinit()                       (0)
 #define audio_extn_ssr_update_enabled()               (0)
 #define audio_extn_ssr_get_enabled()                  (0)
 #define audio_extn_ssr_read(stream, buffer, bytes)    (0)
+#define audio_extn_ssr_set_parameters(adev, parms)    (0)
+#define audio_extn_ssr_get_parameters(adev, parms, reply) (0)
+#define audio_extn_ssr_get_stream()                   (0)
 #else
-int32_t audio_extn_ssr_init(struct stream_in *in);
+int32_t audio_extn_ssr_init(struct stream_in *in,
+                            int num_out_chan);
 int32_t audio_extn_ssr_deinit();
 void audio_extn_ssr_update_enabled();
 bool audio_extn_ssr_get_enabled();
 int32_t audio_extn_ssr_read(struct audio_stream_in *stream,
                        void *buffer, size_t bytes);
+void audio_extn_ssr_set_parameters(struct audio_device *adev,
+                                   struct str_parms *parms);
+void audio_extn_ssr_get_parameters(const struct audio_device *adev,
+                                   struct str_parms *query,
+                                   struct str_parms *reply);
+struct stream_in *audio_extn_ssr_get_stream();
 #endif
 
 #ifndef HW_VARIANTS_ENABLED
