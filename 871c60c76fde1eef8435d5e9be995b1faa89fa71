@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7f231b9d_3ca45908",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1002,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-10T20:48:37Z",
+      "side": 1,
+      "message": "I think you run into trouble here, you are opening the module multiple times.",
+      "revId": "871c60c76fde1eef8435d5e9be995b1faa89fa71",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
