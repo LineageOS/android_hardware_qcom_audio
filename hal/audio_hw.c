@@ -254,17 +254,6 @@ static amplifier_device_t * get_amplifier_device(void)
     return adev->amp;
 }
 
-static int amplifier_open(void)
-{
-    amplifier_device_t *amp = get_amplifier_device();
-
-    if (!amp) {
-        return -ENODEV;
-    }
-
-    return 0;
-}
-
 static int amplifier_set_input_devices(uint32_t devices)
 {
     amplifier_device_t *amp = get_amplifier_device();
@@ -3818,9 +3807,6 @@ static int adev_open(const hw_module_t *module, const char *name,
     *device = &adev->device.common;
     if (k_enable_extended_precision)
         adev_verify_devices(adev);
-
-    if (amplifier_open() != 0)
-        ALOGE("Amplifier initialization failed");
 
     audio_device_ref_count++;
 
