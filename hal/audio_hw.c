@@ -604,7 +604,8 @@ int enable_snd_device(struct audio_device *adev,
         audio_extn_listen_update_status(snd_device,
                 LISTEN_EVENT_SND_DEVICE_BUSY);
 
-        amplifier_enable_devices(snd_device, true);
+        if (adev->amp)
+            amplifier_enable_devices(snd_device, true);
         audio_route_apply_and_update_path(adev->audio_route, device_name);
     }
     return 0;
@@ -650,7 +651,8 @@ int disable_snd_device(struct audio_device *adev,
             audio_extn_spkr_prot_stop_processing();
         } else {
             audio_route_reset_and_update_path(adev->audio_route, device_name);
-            amplifier_enable_devices(snd_device, false);
+            if (adev->amp)
+                amplifier_enable_devices(snd_device, false);
         }
 
         audio_extn_listen_update_status(snd_device,
