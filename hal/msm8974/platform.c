@@ -2228,6 +2228,14 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
         fragment_size =  atoi(value) * 1024;
     }
 
+    /* Use incoming offload buffer size if default buffer size is less */
+    if ((info != NULL) && (fragment_size < info->offload_buffer_size)) {
+        ALOGI("%s:: Overwriting offload buffer size default:%d new:%d", __func__,
+              fragment_size,
+              info->offload_buffer_size);
+        fragment_size = info->offload_buffer_size;
+    }
+
     // For FLAC use max size since it is loss less, and has sampling rates
     // upto 192kHZ
     if (info != NULL && !info->has_video &&
