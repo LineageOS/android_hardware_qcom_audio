@@ -228,13 +228,10 @@ static unsigned int audio_device_ref_count;
 
 static int set_voice_volume_l(struct audio_device *adev, float volume);
 
-static amplifier_device_t * get_amplifier_device(void)
+static amplifier_device_t * amplifier_open_device(void)
 {
     int rc;
     amplifier_module_t *module;
-
-    if (adev->amp)
-        return adev->amp;
 
     rc = hw_get_module(AMPLIFIER_HARDWARE_MODULE_ID,
             (const hw_module_t **) &module);
@@ -256,7 +253,7 @@ static amplifier_device_t * get_amplifier_device(void)
 
 static int amplifier_open(void)
 {
-    amplifier_device_t *amp = get_amplifier_device();
+    amplifier_device_t *amp = amplifier_open_device();
 
     if (!amp) {
         return -ENODEV;
@@ -267,7 +264,7 @@ static int amplifier_open(void)
 
 static int amplifier_set_input_devices(uint32_t devices)
 {
-    amplifier_device_t *amp = get_amplifier_device();
+    amplifier_device_t *amp = adev->amp;
     if (amp && amp->set_input_devices)
         return amp->set_input_devices(amp, devices);
 
@@ -276,7 +273,7 @@ static int amplifier_set_input_devices(uint32_t devices)
 
 static int amplifier_set_output_devices(uint32_t devices)
 {
-    amplifier_device_t *amp = get_amplifier_device();
+    amplifier_device_t *amp = adev->amp;
     if (amp && amp->set_output_devices)
         return amp->set_output_devices(amp, devices);
 
@@ -285,7 +282,7 @@ static int amplifier_set_output_devices(uint32_t devices)
 
 static int amplifier_enable_devices(uint32_t devices, bool enable)
 {
-    amplifier_device_t *amp = get_amplifier_device();
+    amplifier_device_t *amp = adev->amp;
     bool is_output = devices > SND_DEVICE_OUT_BEGIN &&
         devices < SND_DEVICE_OUT_END;
 
@@ -300,7 +297,7 @@ static int amplifier_enable_devices(uint32_t devices, bool enable)
 
 static int amplifier_set_mode(audio_mode_t mode)
 {
-    amplifier_device_t *amp = get_amplifier_device();
+    amplifier_device_t *amp = adev->amp;
     if (amp && amp->set_mode)
         return amp->set_mode(amp, mode);
 
@@ -310,7 +307,7 @@ static int amplifier_set_mode(audio_mode_t mode)
 static int amplifier_output_stream_start(struct audio_stream_out *stream,
         bool offload)
 {
-    amplifier_device_t *amp = get_amplifier_device();
+    amplifier_device_t *amp = adev->amp;
     if (amp && amp->output_stream_start)
         return amp->output_stream_start(amp, stream, offload);
 
@@ -319,7 +316,7 @@ static int amplifier_output_stream_start(struct audio_stream_out *stream,
 
 static int amplifier_input_stream_start(struct audio_stream_in *stream)
 {
-    amplifier_device_t *amp = get_amplifier_device();
+    amplifier_device_t *amp = adev->amp;
     if (amp && amp->input_stream_start)
         return amp->input_stream_start(amp, stream);
 
@@ -328,7 +325,7 @@ static int amplifier_input_stream_start(struct audio_stream_in *stream)
 
 static int amplifier_output_stream_standby(struct audio_stream_out *stream)
 {
-    amplifier_device_t *amp = get_amplifier_device();
+    amplifier_device_t *amp = adev->amp;
     if (amp && amp->output_stream_standby)
         return amp->output_stream_standby(amp, stream);
 
@@ -337,7 +334,7 @@ static int amplifier_output_stream_standby(struct audio_stream_out *stream)
 
 static int amplifier_input_stream_standby(struct audio_stream_in *stream)
 {
-    amplifier_device_t *amp = get_amplifier_device();
+    amplifier_device_t *amp = adev->amp;
     if (amp && amp->input_stream_standby)
         return amp->input_stream_standby(amp, stream);
 
@@ -346,7 +343,7 @@ static int amplifier_input_stream_standby(struct audio_stream_in *stream)
 
 static int amplifier_close(void)
 {
-    amplifier_device_t *amp = get_amplifier_device();
+    amplifier_device_t *amp = adev->amp;
     if (amp)
         amplifier_device_close(amp);
 
@@ -1007,9 +1004,11 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 
     enable_audio_route(adev, usecase);
 
-    /* Rely on amplifier_set_devices to distinguish between in/out devices */
-    amplifier_set_input_devices(in_snd_device);
-    amplifier_set_output_devices(out_snd_device);
+    if (!amplifier_open()) {
+        /* Rely on amplifier_set_devices to distinguish between in/out devices */
+        amplifier_set_input_devices(in_snd_device);
+        amplifier_set_output_devices(out_snd_device);
+    }
 
     /* Applicable only on the targets that has external modem.
      * Enable device command should be sent to modem only after
@@ -3816,9 +3815,6 @@ static int adev_open(const hw_module_t *module, const char *name,
     *device = &adev->device.common;
     if (k_enable_extended_precision)
         adev_verify_devices(adev);
-
-    if (amplifier_open() != 0)
-        ALOGE("Amplifier initialization failed");
 
     audio_device_ref_count++;
 
