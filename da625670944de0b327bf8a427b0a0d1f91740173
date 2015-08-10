@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7f231b9d_99693f8d",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 231,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-10T10:10:28Z",
+      "side": 1,
+      "message": "I\u0027m not really a fan of the confusingly named functions. You might want to make them more descriptively named.",
+      "revId": "da625670944de0b327bf8a427b0a0d1f91740173",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f231b9d_790423c7",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 251,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-10T10:10:28Z",
+      "side": 1,
+      "message": "Returning this is weird too now.",
+      "revId": "da625670944de0b327bf8a427b0a0d1f91740173",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f231b9d_d9f457d2",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 254,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-10T10:10:28Z",
+      "side": 1,
+      "message": "I think you could achieve the same sort of effect by tracking whether the amp has been opened yet.",
+      "revId": "da625670944de0b327bf8a427b0a0d1f91740173",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f231b9d_f9f713d4",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 267,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-10T10:10:28Z",
+      "side": 1,
+      "message": "I was trying to avoid accessing adev directly in these functions. Notice that most other functions do not as well.",
+      "revId": "da625670944de0b327bf8a427b0a0d1f91740173",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
