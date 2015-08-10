@@ -285,7 +285,7 @@ static int amplifier_set_output_devices(uint32_t devices)
 
 static int amplifier_enable_devices(uint32_t devices, bool enable)
 {
-    amplifier_device_t *amp = get_amplifier_device();
+    amplifier_device_t *amp = adev->amp;
     bool is_output = devices > SND_DEVICE_OUT_BEGIN &&
         devices < SND_DEVICE_OUT_END;
 
