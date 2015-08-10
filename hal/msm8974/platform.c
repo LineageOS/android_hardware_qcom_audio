@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #define LOG_TAG "msm8974_platform"
 /*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
@@ -34,6 +35,9 @@
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
 #define CVD_VERSION_MIXER_CTL "CVD Version"
 
+#define DUALMIC_CONFIG_NONE 0      /* Target does not contain 2 mics */
+#define DUALMIC_CONFIG_ENDFIRE 1
+#define DUALMIC_CONFIG_BROADSIDE 2
 
 /*
  * This file will have a maximum of 38 bytes:
@@ -109,9 +113,7 @@ struct platform_data {
     bool fluence_in_voice_call;
     bool fluence_in_voice_comm;
     bool fluence_in_voice_rec;
-    /* 0 = no fluence, 1 = fluence, 2 = fluence pro */
-    int  fluence_type;
-    int  source_mic_type;
+    int  dualmic_config;
     bool speaker_lr_swap;
 
     void *acdb_handle;
@@ -125,7 +127,6 @@ struct platform_data {
 
     char *snd_card_name;
     int max_vol_index;
-    int max_mic_count;
 };
 
 static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -246,11 +247,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
 
     [SND_DEVICE_IN_VOICE_RX] = "voice-rx",
 
-    [SND_DEVICE_IN_THREE_MIC] = "three-mic",
-    [SND_DEVICE_IN_QUAD_MIC] = "quad-mic",
     [SND_DEVICE_IN_CAPTURE_VI_FEEDBACK] = "vi-feedback",
-    [SND_DEVICE_IN_HANDSET_TMIC] = "three-mic",
-    [SND_DEVICE_IN_HANDSET_QMIC] = "quad-mic",
 };
 
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
@@ -329,11 +326,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
 
     [SND_DEVICE_IN_VOICE_RX] = 44,
 
-    [SND_DEVICE_IN_THREE_MIC] = 46,
-    [SND_DEVICE_IN_QUAD_MIC] = 46,
     [SND_DEVICE_IN_CAPTURE_VI_FEEDBACK] = 102,
-    [SND_DEVICE_IN_HANDSET_TMIC] = 125,
-    [SND_DEVICE_IN_HANDSET_QMIC] = 125,
 };
 
 struct name_to_index {
@@ -417,11 +410,7 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_DMIC_STEREO)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE)},
 
-    {TO_NAME_INDEX(SND_DEVICE_IN_THREE_MIC)},
-    {TO_NAME_INDEX(SND_DEVICE_IN_QUAD_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_CAPTURE_VI_FEEDBACK)},
-    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_TMIC)},
-    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_QMIC)},
 };
 
 static char * backend_tag_table[SND_DEVICE_MAX] = {0};
@@ -964,23 +953,20 @@ void *platform_init(struct audio_device *adev)
     property_get("ro.config.vc_call_vol_steps", value, TOSTRING(MAX_VOL_INDEX));
     my_data->max_vol_index = atoi(value);
 
-    my_data->source_mic_type = SOURCE_DUAL_MIC;
-
+    my_data->dualmic_config = DUALMIC_CONFIG_NONE;
     my_data->fluence_in_spkr_mode = false;
     my_data->fluence_in_voice_call = false;
     my_data->fluence_in_voice_comm = false;
     my_data->fluence_in_voice_rec = false;
 
-    property_get("ro.qc.sdk.audio.fluencetype", value, "");
-    if (!strcmp("fluencepro", value)) {
-        my_data->fluence_type = FLUENCE_PRO_ENABLE;
-    } else if (!strcmp("fluence", value)) {
-        my_data->fluence_type = FLUENCE_ENABLE;
-    } else if (!strcmp("none", value)) {
-        my_data->fluence_type = FLUENCE_DISABLE;
+    property_get("persist.audio.dualmic.config",value,"");
+    if (!strcmp("broadside", value)) {
+        ALOGE("%s: Unsupported dualmic configuration", __func__);
+    } else if (!strcmp("endfire", value)) {
+        my_data->dualmic_config = DUALMIC_CONFIG_ENDFIRE;
     }
 
-    if (my_data->fluence_type != FLUENCE_DISABLE) {
+    if (my_data->dualmic_config != DUALMIC_CONFIG_NONE) {
         property_get("persist.audio.fluence.voicecall",value,"");
         if (!strcmp("true", value)) {
             my_data->fluence_in_voice_call = true;
@@ -1001,30 +987,6 @@ void *platform_init(struct audio_device *adev)
             my_data->fluence_in_spkr_mode = true;
         }
     }
-
-    // support max to mono, example if max count is 3, usecase supports Three, dual and mono mic
-    switch (my_data->max_mic_count) {
-        case 4:
-            my_data->source_mic_type |= SOURCE_QUAD_MIC;
-        case 3:
-            my_data->source_mic_type |= SOURCE_THREE_MIC;
-        case 2:
-            my_data->source_mic_type |= SOURCE_DUAL_MIC;
-        case 1:
-            my_data->source_mic_type |= SOURCE_MONO_MIC;
-            break;
-        default:
-            ALOGE("%s: max_mic_count (%d), is not supported, setting to default",
-                   __func__, my_data->max_mic_count);
-            my_data->source_mic_type = SOURCE_MONO_MIC|SOURCE_DUAL_MIC;
-            break;
-        }
-
-    ALOGV("%s: Fluence_Type(%d) max_mic_count(%d) mic_type(0x%x) fluence_in_voice_call(%d)"
-          " fluence_in_voice_comm(%d) fluence_in_voice_rec(%d) fluence_in_spkr_mode(%d) ",
-          __func__, my_data->fluence_type, my_data->max_mic_count, my_data->source_mic_type,
-          my_data->fluence_in_voice_call, my_data->fluence_in_voice_comm,
-          my_data->fluence_in_voice_rec, my_data->fluence_in_spkr_mode);
 
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
     if (my_data->acdb_handle == NULL) {
@@ -1791,8 +1753,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
     snd_device_t snd_device = SND_DEVICE_NONE;
     int channel_count = popcount(channel_mask);
 
-    ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
-          __func__, out_device, in_device, channel_count, channel_mask);
+    ALOGV("%s: enter: out_device(%#x) in_device(%#x)",
+          __func__, out_device, in_device);
     if ((out_device != AUDIO_DEVICE_NONE) && voice_is_in_call(adev)) {
         if (adev->voice.tty_mode != TTY_MODE_OFF) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
@@ -1838,19 +1800,17 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                     snd_device = SND_DEVICE_IN_BT_SCO_MIC;
             }
         } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER ||
-                   out_device & AUDIO_DEVICE_OUT_SPEAKER_SAFE ||
-                   out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-                   out_device & AUDIO_DEVICE_OUT_LINE) {
-            if (my_data->fluence_in_voice_call && my_data->fluence_in_spkr_mode) {
-                if (my_data->source_mic_type & SOURCE_DUAL_MIC) {
-                    snd_device = SND_DEVICE_IN_VOICE_SPEAKER_DMIC;
-                } else {
-                    snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
-                }
+            out_device & AUDIO_DEVICE_OUT_SPEAKER_SAFE ||
+            out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
+            out_device & AUDIO_DEVICE_OUT_LINE) {
+            if (my_data->fluence_in_voice_call && my_data->fluence_in_spkr_mode &&
+                    my_data->dualmic_config != DUALMIC_CONFIG_NONE) {
+                snd_device = SND_DEVICE_IN_VOICE_SPEAKER_DMIC;
+            } else {
+                snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
             }
-        } else if (out_device & AUDIO_DEVICE_OUT_TELEPHONY_TX) {
+        } else if (out_device & AUDIO_DEVICE_OUT_TELEPHONY_TX)
             snd_device = SND_DEVICE_IN_VOICE_RX;
-        }
     } else if (source == AUDIO_SOURCE_CAMCORDER) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
             in_device & AUDIO_DEVICE_IN_BACK_MIC) {
@@ -1858,29 +1818,14 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         }
     } else if (source == AUDIO_SOURCE_VOICE_RECOGNITION) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
-            if (my_data->fluence_in_voice_rec && channel_count == 1) {
-                if ((my_data->fluence_type == FLUENCE_PRO_ENABLE) &&
-                    (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
-                    snd_device = SND_DEVICE_IN_HANDSET_QMIC;
-                } else if ((my_data->fluence_type == FLUENCE_PRO_ENABLE) &&
-                    (my_data->source_mic_type & SOURCE_THREE_MIC)) {
-                    snd_device = SND_DEVICE_IN_HANDSET_TMIC;
-                } else if (((my_data->fluence_type == FLUENCE_PRO_ENABLE) ||
-                    (my_data->fluence_type == FLUENCE_ENABLE)) &&
-                    (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
+            if (my_data->dualmic_config != DUALMIC_CONFIG_NONE) {
+                if (channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK)
+                    snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_STEREO;
+                else if (my_data->fluence_in_voice_rec &&
+                         adev->active_input->enable_ns)
                     snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
-                }
-                platform_set_echo_reference(adev, true, out_device);
-            } else if ((channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK) &&
-                       (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
-                snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_STEREO;
-            } else if (((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) &&
-                       (my_data->source_mic_type & SOURCE_THREE_MIC)) {
-                snd_device = SND_DEVICE_IN_THREE_MIC;
-            } else if (((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) &&
-                       (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
-                snd_device = SND_DEVICE_IN_QUAD_MIC;
             }
+
             if (snd_device == SND_DEVICE_NONE) {
                 if (adev->active_input->enable_ns)
                     snd_device = SND_DEVICE_IN_VOICE_REC_MIC_NS;
@@ -1897,18 +1842,16 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     if (my_data->fluence_in_spkr_mode &&
                             my_data->fluence_in_voice_comm &&
-                            (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
+                            my_data->dualmic_config != DUALMIC_CONFIG_NONE) {
                         snd_device = SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS;
-                    } else {
+                    } else
                         snd_device = SND_DEVICE_IN_SPEAKER_MIC_AEC_NS;
-                    }
                 } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
                     if (my_data->fluence_in_voice_comm &&
-                            (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
+                            my_data->dualmic_config != DUALMIC_CONFIG_NONE) {
                         snd_device = SND_DEVICE_IN_HANDSET_DMIC_AEC_NS;
-                    } else {
+                    } else
                         snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC_NS;
-                    }
                 } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
                     snd_device = SND_DEVICE_IN_HEADSET_MIC_AEC;
                 }
@@ -1917,18 +1860,16 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     if (my_data->fluence_in_spkr_mode &&
                             my_data->fluence_in_voice_comm &&
-                            (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
+                            my_data->dualmic_config != DUALMIC_CONFIG_NONE) {
                         snd_device = SND_DEVICE_IN_SPEAKER_DMIC_AEC;
-                    } else {
+                    } else
                         snd_device = SND_DEVICE_IN_SPEAKER_MIC_AEC;
-                    }
                 } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
                     if (my_data->fluence_in_voice_comm &&
-                            (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
+                            my_data->dualmic_config != DUALMIC_CONFIG_NONE) {
                         snd_device = SND_DEVICE_IN_HANDSET_DMIC_AEC;
-                    } else {
+                    } else
                         snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC;
-                    }
                } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
                    snd_device = SND_DEVICE_IN_HEADSET_MIC_AEC;
                }
@@ -1937,18 +1878,16 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     if (my_data->fluence_in_spkr_mode &&
                             my_data->fluence_in_voice_comm &&
-                            (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
+                            my_data->dualmic_config != DUALMIC_CONFIG_NONE) {
                         snd_device = SND_DEVICE_IN_SPEAKER_DMIC_NS;
-                    } else {
+                    } else
                         snd_device = SND_DEVICE_IN_SPEAKER_MIC_NS;
-                    }
                 } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
                     if (my_data->fluence_in_voice_comm &&
-                            (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
+                            my_data->dualmic_config != DUALMIC_CONFIG_NONE) {
                         snd_device = SND_DEVICE_IN_HANDSET_DMIC_NS;
-                    } else {
+                    } else
                         snd_device = SND_DEVICE_IN_HANDSET_MIC_NS;
-                    }
                 }
             }
         }
@@ -1965,37 +1904,17 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             !(in_device & AUDIO_DEVICE_IN_VOICE_CALL) &&
             !(in_device & AUDIO_DEVICE_IN_COMMUNICATION)) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
-            if ((my_data->source_mic_type & SOURCE_QUAD_MIC) &&
-                (int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) {
-                snd_device = SND_DEVICE_IN_QUAD_MIC;
-            } else if ((my_data->source_mic_type & SOURCE_THREE_MIC) &&
-                       (int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) {
-                snd_device = SND_DEVICE_IN_THREE_MIC;
-            } else if ((my_data->source_mic_type & SOURCE_DUAL_MIC) &&
-                       channel_count == 2) {
+            if (my_data->dualmic_config != DUALMIC_CONFIG_NONE &&
+                    channel_count == 2)
                 snd_device = SND_DEVICE_IN_HANDSET_DMIC_STEREO;
-            } else if ((my_data->source_mic_type & SOURCE_MONO_MIC) &&
-                       channel_count == 1) {
+            else
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
-            } else {
-                ALOGE("%s: something wrong (1): source type (%d) channel_count (%d) .."
-                      " channel mask (0x%x) no combination found .. setting to mono", __func__,
-                       my_data->source_mic_type, channel_count, channel_mask);
-                snd_device = SND_DEVICE_IN_HANDSET_MIC;
-            }
         } else if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
-            if ((my_data->source_mic_type & SOURCE_DUAL_MIC) &&
-                    channel_count == 2) {
+            if (my_data->dualmic_config != DUALMIC_CONFIG_NONE &&
+                    channel_count == 2)
                 snd_device = SND_DEVICE_IN_SPEAKER_DMIC_STEREO;
-            } else if ((my_data->source_mic_type & SOURCE_MONO_MIC) &&
-                    channel_count == 1) {
+            else
                 snd_device = SND_DEVICE_IN_SPEAKER_MIC;
-            } else {
-                ALOGE("%s: something wrong (2): source type (%d) channel_count (%d) .."
-                      " no combination found .. setting to mono", __func__,
-                       my_data->source_mic_type, channel_count);
-                snd_device = SND_DEVICE_IN_SPEAKER_MIC;
-            }
         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_HEADSET_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
@@ -2026,18 +1945,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                    out_device & AUDIO_DEVICE_OUT_SPEAKER_SAFE ||
                    out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                    out_device & AUDIO_DEVICE_OUT_LINE) {
-            if ((my_data->source_mic_type & SOURCE_DUAL_MIC) &&
-                    channel_count == 2) {
+            if (channel_count == 2)
                 snd_device = SND_DEVICE_IN_SPEAKER_DMIC_STEREO;
-            } else if ((my_data->source_mic_type & SOURCE_MONO_MIC) &&
-                          channel_count == 1) {
+            else
                 snd_device = SND_DEVICE_IN_SPEAKER_MIC;
-            } else {
-                ALOGE("%s: something wrong (3): source type (%d) channel_count (%d) .."
-                      " no combination found .. setting to mono", __func__,
-                       my_data->source_mic_type, channel_count);
-                snd_device = SND_DEVICE_IN_SPEAKER_MIC;
-            }
         } else if (out_device & AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET) {
             if (adev->bt_wb_speech_enabled) {
                 if (adev->bluetooth_nrec)
@@ -2277,19 +2188,6 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         list_add_tail(&operator_info_list, &info->list);
         ALOGD("%s: add operator[%s] mccmnc[%s]", __func__, info->name, info->mccmnc);
     }
-
-    memset(value, 0, sizeof(value));
-    err = str_parms_get_str(parms, PLATFORM_MAX_MIC_COUNT,
-                            value, sizeof(value));
-    if (err >= 0) {
-        str_parms_del(parms, PLATFORM_MAX_MIC_COUNT);
-        my_data->max_mic_count = atoi(value);
-        ALOGV("%s: max_mic_count %s/%d", __func__, value, my_data->max_mic_count);
-    } else {
-        ALOGE("%s: max_mic_count key value pair not found, reset to default", __func__);
-        my_data->max_mic_count = 2;
-    }
-
 done:
     ALOGV("%s: exit with code(%d)", __func__, ret);
     if (kv_pairs != NULL)
