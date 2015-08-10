@@ -230,35 +230,27 @@ static int set_voice_volume_l(struct audio_device *adev, float volume);
 
 static amplifier_device_t * get_amplifier_device(void)
 {
+    return adev->amp;
+}
+
+
+static int amplifier_open(void)
+{
     int rc;
     amplifier_module_t *module;
-
-    if (adev->amp)
-        return adev->amp;
 
     rc = hw_get_module(AMPLIFIER_HARDWARE_MODULE_ID,
             (const hw_module_t **) &module);
     if (rc) {
         ALOGV("%s: Failed to obtain reference to amplifier module: %s\n",
                 __func__, strerror(-rc));
-        return NULL;
+        return -ENODEV;
     }
 
     rc = amplifier_device_open((const hw_module_t *) module, &adev->amp);
     if (rc) {
         ALOGV("%s: Failed to open amplifier hardware device: %s\n",
                 __func__, strerror(-rc));
-        return NULL;
-    }
-
-    return adev->amp;
-}
-
-static int amplifier_open(void)
-{
-    amplifier_device_t *amp = get_amplifier_device();
-
-    if (!amp) {
         return -ENODEV;
     }
 
@@ -1007,9 +999,13 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 
     enable_audio_route(adev, usecase);
 
-    /* Rely on amplifier_set_devices to distinguish between in/out devices */
-    amplifier_set_input_devices(in_snd_device);
-    amplifier_set_output_devices(out_snd_device);
+    if (!amplifier_open()) {
+        /* Rely on amplifier_set_devices to distinguish between in/out devices */
+        amplifier_set_input_devices(in_snd_device);
+        amplifier_set_output_devices(out_snd_device);
+    } else {
+        ALOGE("Amplifier initialization failed");
+    }
 
     /* Applicable only on the targets that has external modem.
      * Enable device command should be sent to modem only after
@@ -3816,9 +3812,6 @@ static int adev_open(const hw_module_t *module, const char *name,
     *device = &adev->device.common;
     if (k_enable_extended_precision)
         adev_verify_devices(adev);
-
-    if (amplifier_open() != 0)
-        ALOGE("Amplifier initialization failed");
 
     audio_device_ref_count++;
 
