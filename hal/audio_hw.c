@@ -3404,10 +3404,10 @@ static int adev_open(const hw_module_t *module, const char *name,
         }
     }
 
-    *device = &adev->device.common;
-
     if (amplifier_open() != 0)
         ALOGE("Amplifier initialization failed");
+
+    *device = &adev->device.common;
 
     audio_device_ref_count++;
 
