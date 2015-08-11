@@ -605,6 +605,27 @@ exit_send_app_type_cfg:
     return rc;
 }
 
+int read_line_from_file(const char *path, char *buf, size_t count)
+{
+    char * fgets_ret;
+    FILE * fd;
+    int rv;
+
+    fd = fopen(path, "r");
+    if (fd == NULL)
+        return -1;
+
+    fgets_ret = fgets(buf, (int)count, fd);
+    if (NULL != fgets_ret) {
+        rv = (int)strlen(buf);
+    } else {
+        rv = ferror(fd);
+    }
+    fclose(fd);
+
+   return rv;
+}
+
 void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
                                              struct audio_usecase *usecase)
 {

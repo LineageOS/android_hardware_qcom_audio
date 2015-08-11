@@ -94,6 +94,11 @@
 #define SPKR_PROCESSING_IN_PROGRESS 1
 #define SPKR_PROCESSING_IN_IDLE 0
 
+#ifdef PLATFORM_MSM8916
+#define ACDB_DEVICE_SPKR_PROT_WSA_ANALOG 136
+#define ACDB_DEVICE_VI_FEEDBACK_WSA_ANALOG 137
+#endif
+
 #define MAX_PATH             (256)
 #define THERMAL_SYSFS "/sys/class/thermal"
 #define TZ_TYPE "/sys/class/thermal/thermal_zone%d/type"
@@ -150,27 +155,6 @@ static struct pcm_config pcm_config_skr_prot = {
 
 static struct speaker_prot_session handle;
 static int vi_feed_no_channels;
-
-int read_line_from_file(const char *path, char *buf, size_t count)
-{
-    char * fgets_ret;
-    FILE * fd;
-    int rv;
-
-    fd = fopen(path, "r");
-    if (fd == NULL)
-        return -1;
-
-    fgets_ret = fgets(buf, (int)count, fd);
-    if (NULL != fgets_ret) {
-        rv = (int)strlen(buf);
-    } else {
-        rv = ferror(fd);
-    }
-    fclose(fd);
-
-   return rv;
-}
 
 /*===========================================================================
 FUNCTION get_tzn
@@ -950,12 +934,20 @@ void audio_extn_spkr_prot_init(void *adev)
     handle.spkr_prot_t0 = -1;
 
     if (is_wsa_present()) {
+#ifdef PLATFORM_MSM8916
         if (platform_get_wsa_mode(adev) == 1) {
             ALOGD("%s: WSA analog mode", __func__);
-            platform_set_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED, 136);
-            platform_set_snd_device_acdb_id(SND_DEVICE_IN_CAPTURE_VI_FEEDBACK, 137);
+            platform_set_snd_device_backend(SND_DEVICE_OUT_VOICE_SPEAKER_WSA,
+                                            "speaker-protected");
+            platform_set_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED,
+                                            ACDB_DEVICE_SPKR_PROT_WSA_ANALOG);
+            platform_set_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED,
+                                            ACDB_DEVICE_SPKR_PROT_WSA_ANALOG);
+            platform_set_snd_device_acdb_id(SND_DEVICE_IN_CAPTURE_VI_FEEDBACK,
+                                            ACDB_DEVICE_VI_FEEDBACK_WSA_ANALOG);
             pcm_config_skr_prot.channels = 2;
         }
+#endif
         pthread_cond_init(&handle.spkr_calib_cancel, NULL);
         pthread_cond_init(&handle.spkr_calibcancel_ack, NULL);
         pthread_mutex_init(&handle.mutex_spkr_prot, NULL);
@@ -1030,9 +1022,15 @@ int audio_extn_spkr_prot_get_acdb_id(snd_device_t snd_device)
 
     switch(snd_device) {
     case SND_DEVICE_OUT_SPEAKER:
+#ifdef PLATFORM_MSM8916
+    case SND_DEVICE_OUT_SPEAKER_WSA:
+#endif
         acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED);
         break;
     case SND_DEVICE_OUT_VOICE_SPEAKER:
+#ifdef PLATFORM_MSM8916
+    case SND_DEVICE_OUT_VOICE_SPEAKER_WSA:
+#endif
         acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED);
         break;
     default:
@@ -1049,8 +1047,14 @@ int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device)
 
     switch(snd_device) {
     case SND_DEVICE_OUT_SPEAKER:
+#ifdef PLATFORM_MSM8916
+    case SND_DEVICE_OUT_SPEAKER_WSA:
+#endif
         return SND_DEVICE_OUT_SPEAKER_PROTECTED;
     case SND_DEVICE_OUT_VOICE_SPEAKER:
+#ifdef PLATFORM_MSM8916
+    case SND_DEVICE_OUT_VOICE_SPEAKER_WSA:
+#endif
         return SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED;
     default:
         return snd_device;

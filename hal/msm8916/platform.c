@@ -1293,6 +1293,61 @@ int platform_acdb_init(void *platform)
     return result;
 }
 
+#define MAX_PATH             (256)
+#define THERMAL_SYSFS "/sys/class/thermal"
+#define TZ_TYPE "/sys/class/thermal/thermal_zone%d/type"
+#define TZ_WSA "/sys/class/thermal/thermal_zone%d/temp"
+
+bool is_wsa_found(void)
+{
+    DIR *tdir = NULL;
+    struct dirent *tdirent = NULL;
+    int tzn = 0;
+    char name[MAX_PATH] = {0};
+    char cwd[MAX_PATH] = {0};
+    char file[10] = "wsa";
+    bool found = false;
+
+    if (!getcwd(cwd, sizeof(cwd)))
+        return false;
+
+    chdir(THERMAL_SYSFS); /* Change dir to read the entries. Doesnt work
+                             otherwise */
+    tdir = opendir(THERMAL_SYSFS);
+    if (!tdir) {
+        ALOGE("Unable to open %s\n", THERMAL_SYSFS);
+        return false;
+    }
+
+    while ((tdirent = readdir(tdir))) {
+        char buf[50];
+        struct dirent *tzdirent;
+        DIR *tzdir = NULL;
+
+        tzdir = opendir(tdirent->d_name);
+        if (!tzdir)
+            continue;
+        while ((tzdirent = readdir(tzdir))) {
+            if (strcmp(tzdirent->d_name, "type"))
+                continue;
+            snprintf(name, MAX_PATH, TZ_TYPE, tzn);
+            ALOGD("Opening %s\n", name);
+            read_line_from_file(name, buf, sizeof(buf));
+            if (strstr(buf, file)) {
+                found = true;
+                break;
+            }
+            tzn++;
+        }
+        closedir(tzdir);
+        if (found == true)
+            break;
+    }
+    closedir(tdir);
+    chdir(cwd); /* Restore current working dir */
+    return found;
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char platform[PROPERTY_VALUE_MAX];
@@ -1484,24 +1539,8 @@ void *platform_init(struct audio_device *adev)
     }
     audio_extn_pm_vote();
 
-    // Check if WSA speaker is supported in codec
-    char CodecPeek[1024] = "/sys/kernel/debug/asoc/";
-    DIR *dir;
-    struct dirent *dirent;
-    char file_name[10] = "wsa";
-    strlcat(CodecPeek, snd_card_name, sizeof(CodecPeek));
-
-    dir = opendir(CodecPeek);
-    if (dir != NULL) {
-        while (NULL != (dirent = readdir(dir))) {
-            if (strstr (dirent->d_name,file_name))
-            {
-                my_data->is_wsa_speaker = true;
-                break;
-            }
-        }
-        closedir(dir);
-    }
+    if (is_wsa_found())
+        my_data->is_wsa_speaker = true;
 
     /* Configure active back end for HPX*/
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);

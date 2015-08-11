@@ -470,6 +470,7 @@ typedef enum {
 
 int b64decode(char *inp, int ilen, uint8_t* outp);
 int b64encode(uint8_t *inp, int ilen, char* outp);
+int read_line_from_file(const char *path, char *buf, size_t count);
 
 #ifndef KPI_OPTIMIZE_ENABLED
 #define audio_extn_perf_lock_init() (0)
