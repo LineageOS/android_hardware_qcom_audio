@@ -3827,12 +3827,12 @@ static int adev_open(const hw_module_t *module, const char *name,
         }
     }
 
+    if (amplifier_open() != 0)
+        ALOGE("Amplifier initialization failed");
+
     *device = &adev->device.common;
     if (k_enable_extended_precision)
         adev_verify_devices(adev);
-
-    if (amplifier_open() != 0)
-        ALOGE("Amplifier initialization failed");
 
     audio_device_ref_count++;
 
