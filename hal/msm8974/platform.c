@@ -1839,6 +1839,11 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                     snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
                 }
             }
+
+            //select default
+            if (snd_device == SND_DEVICE_NONE) {
+                snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
+            }
         } else if (out_device & AUDIO_DEVICE_OUT_TELEPHONY_TX) {
             snd_device = SND_DEVICE_IN_VOICE_RX;
         }
