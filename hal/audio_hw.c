@@ -4084,13 +4084,14 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->bt_wb_speech_enabled = false;
 
     audio_extn_ds2_enable(adev);
+
+    if (amplifier_open() != 0)
+        ALOGE("Amplifier initialization failed");
+
     *device = &adev->device.common;
 
     audio_extn_utils_update_streams_output_cfg_list(adev->platform, adev->mixer,
                                                     &adev->streams_output_cfg_list);
-
-    if (amplifier_open() != 0)
-        ALOGE("Amplifier initialization failed");
 
     audio_device_ref_count++;
 
