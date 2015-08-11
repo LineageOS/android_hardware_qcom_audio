@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7f231b9d_df3c37c1",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 236,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-11T05:47:04Z",
+      "side": 1,
+      "message": "Let\u0027s allow this to be null and move the hw_get_module stuff to amplifier_open instead.",
+      "revId": "d21131dd1cac33db713f1a429e6e6afcafb6a79f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
