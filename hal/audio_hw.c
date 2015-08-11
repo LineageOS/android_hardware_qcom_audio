@@ -230,35 +230,29 @@ static int set_voice_volume_l(struct audio_device *adev, float volume);
 
 static amplifier_device_t * get_amplifier_device(void)
 {
+    if (adev)
+        return adev->amp;
+
+    return NULL;
+}
+
+static int amplifier_open(void)
+{
     int rc;
     amplifier_module_t *module;
-
-    if (adev->amp)
-        return adev->amp;
 
     rc = hw_get_module(AMPLIFIER_HARDWARE_MODULE_ID,
             (const hw_module_t **) &module);
     if (rc) {
         ALOGV("%s: Failed to obtain reference to amplifier module: %s\n",
                 __func__, strerror(-rc));
-        return NULL;
+        return -ENODEV;
     }
 
     rc = amplifier_device_open((const hw_module_t *) module, &adev->amp);
     if (rc) {
         ALOGV("%s: Failed to open amplifier hardware device: %s\n",
                 __func__, strerror(-rc));
-        return NULL;
-    }
-
-    return adev->amp;
-}
-
-static int amplifier_open(void)
-{
-    amplifier_device_t *amp = get_amplifier_device();
-
-    if (!amp) {
         return -ENODEV;
     }
 
