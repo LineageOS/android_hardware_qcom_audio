@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7f231b9d_5f882770",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 232,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-11T06:01:40Z",
+      "side": 1,
+      "message": "if (adev)\nreturn adev-\u003eamp\nreturn NULL;",
+      "revId": "428f2f312883d31c3b4970fdccc349c43d28ec2f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f231b9d_9fb47f37",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 245,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-11T06:01:40Z",
+      "side": 1,
+      "message": "-ENODEV, maybe.",
+      "revId": "428f2f312883d31c3b4970fdccc349c43d28ec2f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f231b9d_7f83e357",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 252,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-11T06:01:40Z",
+      "side": 1,
+      "message": "-ENODEV, maybe.",
+      "revId": "428f2f312883d31c3b4970fdccc349c43d28ec2f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
