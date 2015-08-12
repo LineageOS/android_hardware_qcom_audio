@@ -41,7 +41,7 @@
 #include <cutils/str_parms.h>
 
 #ifndef PCM_OFFLOAD_ENABLED
-#define AUDIO_FORMAT_PCM_OFFLOAD 0x17000000UL
+#define AUDIO_FORMAT_PCM_OFFLOAD 0x1A000000UL
 #define AUDIO_FORMAT_PCM_16_BIT_OFFLOAD (AUDIO_FORMAT_PCM_OFFLOAD | AUDIO_FORMAT_PCM_SUB_16_BIT)
 #define AUDIO_FORMAT_PCM_24_BIT_OFFLOAD (AUDIO_FORMAT_PCM_OFFLOAD | AUDIO_FORMAT_PCM_SUB_8_24_BIT)
 #define AUDIO_OFFLOAD_CODEC_FORMAT  "music_offload_codec_format"
@@ -73,20 +73,20 @@
 #endif
 
 #ifndef FLAC_OFFLOAD_ENABLED
-#define AUDIO_FORMAT_FLAC 0x1D000000UL
+#define AUDIO_FORMAT_FLAC 0x1B000000UL
 #endif
 
 #ifndef WMA_OFFLOAD_ENABLED
-#define AUDIO_FORMAT_WMA 0x13000000UL
-#define AUDIO_FORMAT_WMA_PRO 0x14000000UL
+#define AUDIO_FORMAT_WMA 0x12000000UL
+#define AUDIO_FORMAT_WMA_PRO 0x13000000UL
 #endif
 
 #ifndef ALAC_OFFLOAD_ENABLED
-#define AUDIO_FORMAT_ALAC 0x1F000000UL
+#define AUDIO_FORMAT_ALAC 0x1C000000UL
 #endif
 
 #ifndef APE_OFFLOAD_ENABLED
-#define AUDIO_FORMAT_APE 0x20000000UL
+#define AUDIO_FORMAT_APE 0x1D000000UL
 #endif
 
 #ifndef COMPRESS_METADATA_NEEDED
@@ -96,11 +96,10 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
                                        struct str_parms *parms);
 #endif
 
-#ifdef PCM_OFFLOAD_ENABLED_24
-#define PCM_OUTPUT_BIT_WIDTH (((config->offload_info.format & AUDIO_FORMAT_PCM_24_BIT_OFFLOAD) ==  \
-                             (AUDIO_FORMAT_PCM_24_BIT_OFFLOAD)) ? 24 : CODEC_BACKEND_DEFAULT_BIT_WIDTH)
+#ifdef AUDIO_EXTN_FORMATS_ENABLED
+#define AUDIO_OUTPUT_BIT_WIDTH (config->offload_info.bit_width)
 #else
-#define PCM_OUTPUT_BIT_WIDTH (CODEC_BACKEND_DEFAULT_BIT_WIDTH)
+#define AUDIO_OUTPUT_BIT_WIDTH (CODEC_BACKEND_DEFAULT_BIT_WIDTH)
 #endif
 
 #define MAX_LENGTH_MIXER_CONTROL_IN_INT                  (128)
@@ -475,6 +474,9 @@ typedef enum {
 } dap_state;
 #ifndef AUDIO_FORMAT_E_AC3_JOC
 #define AUDIO_FORMAT_E_AC3_JOC  0x19000000UL
+#endif
+#ifndef AUDIO_FORMAT_DTS_LBR
+#define AUDIO_FORMAT_DTS_LBR 0x1E000000UL
 #endif
 
 int b64decode(char *inp, int ilen, uint8_t* outp);
