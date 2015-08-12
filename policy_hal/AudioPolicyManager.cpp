@@ -26,7 +26,6 @@
 #else
 #define ALOGVV(a...) do { } while(0)
 #endif
-
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 // A device mask for all audio output devices that are considered "remote" when evaluating
@@ -407,7 +406,8 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_VORBIS))) {
                ALOGD("offload disabled for multi-channel AAC,FLAC and VORBIS format");
                return false;
-            }
+        }
+
 #ifdef AUDIO_EXTN_FORMATS_ENABLED
             //check if it's multi-channel FLAC/ALAC/WMA format with sample rate > 48k
         if ((popcount(offloadInfo.channel_mask) > 2) &&
@@ -448,12 +448,15 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
         //do not check duration for other audio formats, e.g. dolby AAC/AC3 and amrwb+ formats
         if ((offloadInfo.format == AUDIO_FORMAT_MP3) ||
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC) ||
-            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_FLAC) ||
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_VORBIS) ||
+#ifdef AUDIO_EXTN_FORMATS_ENABLED
+            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_FLAC) ||
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA) ||
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA_PRO) ||
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_ALAC) ||
-            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_APE))
+            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_APE) ||
+#endif
+            pcmOffload)
             return false;
 
     }
