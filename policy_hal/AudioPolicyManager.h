@@ -42,7 +42,7 @@ namespace android {
 #endif
 
 #ifndef AFE_PROXY_ENABLED
-#define AUDIO_DEVICE_OUT_PROXY 0x40000
+#define AUDIO_DEVICE_OUT_PROXY 0x1000000
 #endif
 // ----------------------------------------------------------------------------
 
