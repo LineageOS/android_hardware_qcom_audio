@@ -234,6 +234,8 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                           LOWLATENCY_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_FM_VIRTUAL] = {MULTIMEDIA2_PCM_DEVICE,
                                   MULTIMEDIA2_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD_3MIC_SSR] = {AUDIO_RECORD_3MIC_PCM_DEVICE,
+                                  AUDIO_RECORD_3MIC_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_FM] = {FM_PLAYBACK_PCM_DEVICE, FM_CAPTURE_PCM_DEVICE},
     [USECASE_AUDIO_HFP_SCO] = {HFP_PCM_RX, HFP_SCO_RX},
     [USECASE_AUDIO_HFP_SCO_WB] = {HFP_PCM_RX, HFP_SCO_RX},
@@ -362,6 +364,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC] = "quad-mic",
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = "quad-mic",
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = "quad-mic",
+    [SND_DEVICE_IN_SSR_3MIC] = "three-mic",
 };
 
 // Platform specific backend bit width table
@@ -458,6 +461,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC] = 126,
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = 127,
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = 129,
+    [SND_DEVICE_IN_SSR_3MIC] = 46,
 };
 
 struct name_to_index {
@@ -1763,7 +1767,7 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         goto exit;
     }
 
-    if (popcount(devices) == 2) {
+    if (popcount(devices) == 2 && !voice_is_in_call(adev)) {
         if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADPHONE |
                         AUDIO_DEVICE_OUT_SPEAKER)) {
             if (my_data->external_spk_1)
@@ -2017,11 +2021,16 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
             if (channel_count == 2) {
                 snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_STEREO;
-            } else if (adev->active_input->enable_ns)
-                snd_device = SND_DEVICE_IN_VOICE_REC_MIC_NS;
-            else if (my_data->fluence_type != FLUENCE_NONE &&
+            } else if (my_data->fluence_type != FLUENCE_NONE &&
                      my_data->fluence_in_voice_rec) {
-                snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
+                if (my_data->fluence_type & FLUENCE_QUAD_MIC) {
+                    snd_device = SND_DEVICE_IN_HANDSET_QMIC;
+                } else {
+                    snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
+                }
+                platform_set_echo_reference(adev->platform, true);
+            } else if (adev->active_input->enable_ns) {
+                snd_device = SND_DEVICE_IN_VOICE_REC_MIC_NS;
             } else {
                 snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
             }
@@ -2121,6 +2130,13 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         goto exit;
     }
 
+
+    if((audio_extn_ssr_get_enabled()) && (channel_count == 2) &&
+             ((AUDIO_SOURCE_MIC == source) || (AUDIO_SOURCE_CAMCORDER == source))) {
+        //TODO:: check whether SSR mode is on or not
+        //Force input from 3 mic
+        snd_device = SND_DEVICE_IN_SSR_3MIC;
+    }
 
     if (snd_device != SND_DEVICE_NONE) {
         goto exit;

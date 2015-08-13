@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -40,6 +40,15 @@ enum {
 #define AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND \
     (AUDIO_DEVICE_OUT_EARPIECE | AUDIO_DEVICE_OUT_SPEAKER | \
      AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE)
+
+/*
+ * Below are the input devices for which back end is same, SLIMBUS_0_TX.
+ * All these devices are handled by the internal HW codec. We can
+ * enable any one of these devices at any time
+ */
+#define AUDIO_DEVICE_IN_ALL_CODEC_BACKEND \
+    (AUDIO_DEVICE_IN_BUILTIN_MIC | AUDIO_DEVICE_IN_BACK_MIC | \
+     AUDIO_DEVICE_IN_WIRED_HEADSET | AUDIO_DEVICE_IN_VOICE_CALL) & ~AUDIO_DEVICE_BIT_IN
 
 /* Sound devices specific to the platform
  * The DEVICE_OUT_* and DEVICE_IN_* should be mapped to these sound
@@ -139,6 +148,7 @@ enum {
     SND_DEVICE_IN_SPEAKER_DMIC_NS_BROADSIDE,
     SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_BROADSIDE,
     SND_DEVICE_IN_VOICE_FLUENCE_DMIC_AANC,
+    SND_DEVICE_IN_SSR_3MIC,
     SND_DEVICE_IN_END,
 
     SND_DEVICE_MAX = SND_DEVICE_IN_END,
@@ -187,6 +197,8 @@ enum {
 
 #define DEEP_BUFFER_PCM_DEVICE 0
 #define AUDIO_RECORD_PCM_DEVICE 0
+#define AUDIO_RECORD_3MIC_PCM_DEVICE 0
+
 #define MULTIMEDIA2_PCM_DEVICE 1
 #define FM_PLAYBACK_PCM_DEVICE 5
 #define FM_CAPTURE_PCM_DEVICE  6
