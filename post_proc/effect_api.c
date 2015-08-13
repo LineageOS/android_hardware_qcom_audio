@@ -42,6 +42,7 @@
 #include <audio_effects.h>
 
 #include "effect_api.h"
+#include <errno.h>
 
 #define ARRAY_SIZE(array) (sizeof array / sizeof array[0])
 
