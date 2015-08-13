@@ -4023,14 +4023,15 @@ int platform_get_edid_info(void *platform)
     edid_data[0] = count;
     memcpy(&edid_data[1], block, count);
 
-#ifdef AUDIO_FEATURE_ENABLED_HDMI_EDID
+#ifdef HDMI_EDID_ENABLED
     if (!edid_get_sink_caps(info, edid_data)) {
         ALOGE("%s: Failed to get HDMI sink capabilities", __func__);
         goto fail;
     }
+#endif
+
     my_data->edid_valid = true;
     return 0;
-#endif
 fail:
     if (my_data->edid_info) {
         free(my_data->edid_info);

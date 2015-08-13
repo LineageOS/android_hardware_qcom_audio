@@ -564,6 +564,9 @@ int disable_snd_device(struct audio_device *adev,
             audio_route_reset_and_update_path(adev->audio_route, device_name);
         }
 
+        if (snd_device == SND_DEVICE_OUT_HDMI)
+            adev->mChannelStatusSet = false;
+
         audio_extn_dev_arbi_release(snd_device);
         audio_extn_sound_trigger_update_device_status(snd_device,
                                         ST_EVENT_SND_DEVICE_FREE);
@@ -2111,6 +2114,11 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         }
     }
 
+    if (adev->mChannelStatusSet == false && (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)){
+        setChannelStatus(out, buffer, bytes);
+        adev->mChannelStatusSet = true;
+    }
+
     if (is_offload_usecase(out->usecase)) {
         ALOGVV("copl(%p): writing buffer (%zu bytes) to compress device", out, bytes);
         if (out->send_new_metadata) {
@@ -2773,7 +2781,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     out->non_blocking = 0;
     out->use_small_bufs = false;
-
     /* Init use case and pcm_config */
     if ((out->flags & AUDIO_OUTPUT_FLAG_DIRECT) &&
         !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
@@ -3657,6 +3664,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     list_init(&adev->usecase_list);
     adev->cur_wfd_channels = 2;
     adev->offload_usecases_state = 0;
+    adev->mChannelStatusSet = false;
 
     pthread_mutex_init(&adev->snd_card_status.lock, (const pthread_mutexattr_t *) NULL);
     adev->snd_card_status.state = SND_CARD_STATE_OFFLINE;
