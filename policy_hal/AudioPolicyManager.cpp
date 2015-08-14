@@ -1076,4 +1076,31 @@ non_direct_output:
 
     return output;
 }
+
+audio_devices_t AudioPolicyManagerCustom::getDeviceForStrategy(routing_strategy strategy, bool fromCache)
+{
+    audio_devices_t availableOutputDeviceTypes = mAvailableOutputDevices.types();
+    audio_devices_t device = AUDIO_DEVICE_NONE;
+    switch (strategy) {
+        case STRATEGY_SONIFICATION:
+        case STRATEGY_ENFORCED_AUDIBLE:
+        case STRATEGY_ACCESSIBILITY:
+        case STRATEGY_REROUTING:
+        case STRATEGY_MEDIA:
+            if (strategy != STRATEGY_SONIFICATION){
+                // no sonification on WFD sink
+                device |= availableOutputDeviceTypes & AUDIO_DEVICE_OUT_PROXY;
+                if (device != AUDIO_DEVICE_NONE) {
+                    ALOGV("Found proxy for strategy %d", strategy);
+                    return device;
+                }
+            }
+            break;
+        default:
+            ALOGV("getDeviceForStrategy() unknown strategy: %d", strategy);
+            break;
+    }
+    device = AudioPolicyManager::getDeviceForStrategy(strategy, fromCache);
+    return device;
+}
 }
