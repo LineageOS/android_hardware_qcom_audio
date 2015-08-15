@@ -145,6 +145,7 @@ bool voice_extn_compress_voip_pcm_prop_check();
 bool voice_extn_compress_voip_is_active(struct audio_device *adev);
 bool voice_extn_compress_voip_is_format_supported(audio_format_t format);
 bool voice_extn_compress_voip_is_config_supported(struct audio_config *config);
+bool voice_extn_compress_voip_is_started(struct audio_device *adev);
 #else
 static int voice_extn_compress_voip_close_output_stream(struct audio_stream *stream __unused)
 {
@@ -263,6 +264,12 @@ static bool voice_extn_compress_voip_is_config_supported(struct audio_config *co
 {
     ALOGE("%s: COMPRESS_VOIP_ENABLED is not defined", __func__);
     return true;
+}
+
+static bool voice_extn_compress_voip_is_started(struct audio_device *adev __unused)
+{
+    ALOGE("%s: COMPRESS_VOIP_ENABLED is not defined", __func__);
+    return false;
 }
 #endif
 
