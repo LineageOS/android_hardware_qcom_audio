@@ -43,6 +43,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PCM_OFFLOAD_24)),true)
        LOCAL_CFLAGS += -DPCM_OFFLOAD_ENABLED_24
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FORMATS)),true)
+    LOCAL_CFLAGS += -DAUDIO_EXTN_FORMATS_ENABLED
+endif
+
 LOCAL_MODULE := libaudiopolicymanager
 
 include $(BUILD_SHARED_LIBRARY)
