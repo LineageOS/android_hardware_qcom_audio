@@ -1166,12 +1166,6 @@ int platform_set_audio_device_interface(const char * device_name __unused,
     return -ENOSYS;
 }
 
-int platform_set_spkr_device_tz_names(snd_device_t index,
-                                      const char *spkr_1_tz_name, const char *spkr_2_tz_name)
-{
-    return -ENOSYS;
-}
-
 bool platform_send_gain_dep_cal(void *platform __unused,
                                 int level __unused)
 {
