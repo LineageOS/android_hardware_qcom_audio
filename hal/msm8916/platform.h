@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -47,6 +47,15 @@ enum {
     (AUDIO_DEVICE_OUT_EARPIECE | AUDIO_DEVICE_OUT_SPEAKER | \
      AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE)
 
+/*
+ * Below are the input devices for which back end is same, SLIMBUS_0_TX.
+ * All these devices are handled by the internal HW codec. We can
+ * enable any one of these devices at any time
+ */
+#define AUDIO_DEVICE_IN_ALL_CODEC_BACKEND \
+    (AUDIO_DEVICE_IN_BUILTIN_MIC | AUDIO_DEVICE_IN_BACK_MIC | \
+     AUDIO_DEVICE_IN_WIRED_HEADSET | AUDIO_DEVICE_IN_VOICE_CALL) & ~AUDIO_DEVICE_BIT_IN
+
 /* Sound devices specific to the platform
  * The DEVICE_OUT_* and DEVICE_IN_* should be mapped to these sound
  * devices to enable corresponding mixer paths
@@ -63,6 +72,7 @@ enum {
     SND_DEVICE_OUT_SPEAKER_EXTERNAL_2,
     SND_DEVICE_OUT_SPEAKER_REVERSE,
     SND_DEVICE_OUT_SPEAKER_WSA,
+    SND_DEVICE_OUT_SPEAKER_VBAT,
     SND_DEVICE_OUT_HEADPHONES,
     SND_DEVICE_OUT_HEADPHONES_44_1,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
@@ -71,6 +81,7 @@ enum {
     SND_DEVICE_OUT_VOICE_HANDSET,
     SND_DEVICE_OUT_VOICE_SPEAKER,
     SND_DEVICE_OUT_VOICE_SPEAKER_WSA,
+    SND_DEVICE_OUT_VOICE_SPEAKER_VBAT,
     SND_DEVICE_OUT_VOICE_HEADPHONES,
     SND_DEVICE_OUT_HDMI,
     SND_DEVICE_OUT_SPEAKER_AND_HDMI,
@@ -92,6 +103,8 @@ enum {
     SND_DEVICE_OUT_ANC_HANDSET,
     SND_DEVICE_OUT_SPEAKER_PROTECTED,
     SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED,
+    SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT,
+    SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT,
 #ifdef RECORD_PLAY_CONCURRENCY
     SND_DEVICE_OUT_VOIP_HANDSET,
     SND_DEVICE_OUT_VOIP_SPEAKER,

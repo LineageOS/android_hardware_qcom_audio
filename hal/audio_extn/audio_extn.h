@@ -117,6 +117,14 @@ bool audio_extn_should_use_fb_anc(void);
 bool audio_extn_should_use_handset_anc(int in_channels);
 #endif
 
+#ifndef VBAT_MONITOR_ENABLED
+#define audio_extn_is_vbat_enabled()                     (0)
+#define audio_extn_can_use_vbat()                        (0)
+#else
+bool audio_extn_is_vbat_enabled(void);
+bool audio_extn_can_use_vbat(void);
+#endif
+
 #ifndef FLUENCE_ENABLED
 #define audio_extn_set_fluence_parameters(adev, parms) (0)
 #define audio_extn_get_fluence_parameters(adev, query, reply) (0)
@@ -476,6 +484,7 @@ typedef enum {
 
 int b64decode(char *inp, int ilen, uint8_t* outp);
 int b64encode(uint8_t *inp, int ilen, char* outp);
+int read_line_from_file(const char *path, char *buf, size_t count);
 
 #ifndef KPI_OPTIMIZE_ENABLED
 #define audio_extn_perf_lock_init() (0)
@@ -486,4 +495,10 @@ int audio_extn_perf_lock_init(void);
 void audio_extn_perf_lock_acquire(void);
 void audio_extn_perf_lock_release(void);
 #endif /* KPI_OPTIMIZE_ENABLED */
+
+#ifndef AUDIO_EXTERNAL_HDMI_ENABLED
+#define setChannelStatus(out, buffer, bytes) (0)
+#else
+void setChannelStatus(struct stream_out *out, char * buffer, size_t bytes);
+#endif
 #endif /* AUDIO_EXTN_H */
