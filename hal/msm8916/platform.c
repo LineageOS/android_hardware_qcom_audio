@@ -42,6 +42,7 @@
 #define MIXER_XML_PATH_QRD_SKUH "/system/etc/mixer_paths_qrd_skuh.xml"
 #define MIXER_XML_PATH_QRD_SKUI "/system/etc/mixer_paths_qrd_skui.xml"
 #define MIXER_XML_PATH_QRD_SKUHF "/system/etc/mixer_paths_qrd_skuhf.xml"
+#define MIXER_XML_PATH_QRD_SKUT "/system/etc/mixer_paths_qrd_skut.xml"
 #define MIXER_XML_PATH_SKUK "/system/etc/mixer_paths_skuk.xml"
 #define MIXER_XML_PATH_SKUA "/system/etc/mixer_paths_skua.xml"
 #define MIXER_XML_PATH_SKUC "/system/etc/mixer_paths_skuc.xml"
@@ -146,6 +147,7 @@ struct platform_data {
     bool slowtalk;
     bool hd_voice;
     bool ec_ref_enabled;
+    bool is_acdb_initialized;
     /* Audio calibration related functions */
     void                       *acdb_handle;
     int                        voice_feature_set;
@@ -658,6 +660,14 @@ static void query_platform(const char *snd_card_name,
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
 
+    } else if (!strncmp(snd_card_name, "msm8909-skut-snd-card",
+                 sizeof("msm8909-skut-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_QRD_SKUT,
+                sizeof(MIXER_XML_PATH_QRD_SKUT));
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
     } else if (!strncmp(snd_card_name, "msm8909-pm8916-snd-card",
                  sizeof("msm8909-pm8916-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_MSM8909_PM8916,
@@ -973,6 +983,37 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
         ALOGE("%s: Could not send anc cal", __FUNCTION__);
 }
 
+int platform_acdb_init(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    char *cvd_version = NULL;
+    int key = 0;
+    const char *snd_card_name;
+    int result;
+    char value[PROPERTY_VALUE_MAX];
+    cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
+    if (!cvd_version)
+        ALOGE("Failed to allocate cvd version");
+    else
+        get_cvd_version(cvd_version, my_data->adev);
+
+    property_get("audio.ds1.metainfo.key",value,"0");
+    key = atoi(value);
+    snd_card_name = mixer_get_name(my_data->adev->mixer);
+    result = my_data->acdb_init(snd_card_name, cvd_version, key);
+    if (cvd_version)
+        free(cvd_version);
+    if (!result) {
+        my_data->is_acdb_initialized = true;
+        ALOGD("ACDB initialized");
+        audio_hwdep_send_cal(my_data);
+    } else {
+        my_data->is_acdb_initialized = false;
+        ALOGD("ACDB initialization failed");
+    }
+    return result;
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char platform[PROPERTY_VALUE_MAX];
@@ -1095,8 +1136,6 @@ void *platform_init(struct audio_device *adev)
         acdb_device_table[SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 131;
         acdb_device_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 131;
     }
-    property_get("audio.ds1.metainfo.key",value,"0");
-    key = atoi(value);
 
     my_data->voice_feature_set = VOICE_FEATURE_SET_DEFAULT;
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
@@ -1141,16 +1180,7 @@ void *platform_init(struct audio_device *adev)
             ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__, dlerror());
             goto acdb_init_fail;
         }
-
-        cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
-        if (!cvd_version)
-            ALOGE("Failed to allocate cvd version");
-        else
-            get_cvd_version(cvd_version, adev);
-
-        my_data->acdb_init(snd_card_name, cvd_version, key);
-        if (cvd_version)
-            free(cvd_version);
+        platform_acdb_init(my_data);
     }
     audio_extn_pm_vote();
 
@@ -1187,6 +1217,13 @@ void platform_deinit(void *platform)
     /* deinit usb */
     audio_extn_usb_deinit();
     audio_extn_dap_hal_deinit();
+}
+
+int platform_is_acdb_initialized(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    ALOGD("%s: acdb initialized %d\n", __func__, my_data->is_acdb_initialized);
+    return my_data->is_acdb_initialized;
 }
 
 const char *platform_get_snd_device_name(snd_device_t snd_device)
@@ -1674,7 +1711,7 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         goto exit;
     }
 
-    if (popcount(devices) == 2) {
+    if (popcount(devices) == 2 && !voice_is_in_call(adev)) {
         if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADPHONE |
                         AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
