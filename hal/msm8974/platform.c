@@ -892,6 +892,7 @@ void *platform_init(struct audio_device *adev)
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data;
     int retry_num = 0, snd_card_num = 0;
+    bool dual_mic_config = false;
     const char *snd_card_name;
     char *cvd_version = NULL;
 
@@ -964,6 +965,11 @@ void *platform_init(struct audio_device *adev)
     property_get("ro.config.vc_call_vol_steps", value, TOSTRING(MAX_VOL_INDEX));
     my_data->max_vol_index = atoi(value);
 
+    property_get("persist.audio.dualmic.config",value,"");
+    if (!strcmp("endfire", value)) {
+        dual_mic_config = true;
+    }
+
     my_data->source_mic_type = SOURCE_DUAL_MIC;
 
     my_data->fluence_in_spkr_mode = false;
@@ -971,10 +977,10 @@ void *platform_init(struct audio_device *adev)
     my_data->fluence_in_voice_comm = false;
     my_data->fluence_in_voice_rec = false;
 
-    property_get("ro.qc.sdk.audio.fluencetype", value, "");
+    property_get("ro.qc.sdk.audio.fluencetype", value, "none");
     if (!strcmp("fluencepro", value)) {
         my_data->fluence_type = FLUENCE_PRO_ENABLE;
-    } else if (!strcmp("fluence", value)) {
+    } else if (!strcmp("fluence", value) || (dual_mic_config)) {
         my_data->fluence_type = FLUENCE_ENABLE;
     } else if (!strcmp("none", value)) {
         my_data->fluence_type = FLUENCE_DISABLE;
