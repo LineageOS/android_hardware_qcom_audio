@@ -346,6 +346,7 @@ int enable_snd_device(struct audio_device *adev,
         for (i = 0; i < num_devices; i++) {
             enable_snd_device(adev, new_snd_devices[i]);
         }
+        platform_set_speaker_gain_in_combo(adev, snd_device, true);
     } else {
         const char * dev_path = platform_get_snd_device_name(snd_device);
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, dev_path);
@@ -384,12 +385,14 @@ int disable_snd_device(struct audio_device *adev,
             for (i = 0; i < num_devices; i++) {
                 disable_snd_device(adev, new_snd_devices[i]);
             }
+            platform_set_speaker_gain_in_combo(adev, snd_device, false);
         } else {
             audio_route_reset_and_update_path(adev->audio_route, dev_path);
         }
         audio_extn_sound_trigger_update_device_status(snd_device,
                                         ST_EVENT_SND_DEVICE_FREE);
     }
+
     return 0;
 }
 
