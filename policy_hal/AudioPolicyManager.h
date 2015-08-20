@@ -42,7 +42,7 @@ namespace android {
 #endif
 
 #ifndef AFE_PROXY_ENABLED
-#define AUDIO_DEVICE_OUT_PROXY 0x40000
+#define AUDIO_DEVICE_OUT_PROXY 0x1000000
 #endif
 // ----------------------------------------------------------------------------
 
@@ -67,6 +67,8 @@ public:
         virtual bool isOffloadSupported(const audio_offload_info_t& offloadInfo);
 
         // true if given state represents a device in a telephony or VoIP call
+
+        virtual audio_devices_t getDeviceForStrategy(routing_strategy strategy, bool fromCache);
 protected:
 
          status_t checkAndSetVolume(audio_stream_type_t stream,
