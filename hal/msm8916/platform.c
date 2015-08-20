@@ -2528,7 +2528,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
         devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
         if (OUTPUT_SAMPLING_RATE_44100 == sample_rate &&
-            platform_get_native_support()) {
+            platform_get_native_support() &&
+            !audio_extn_get_anc_enabled()) {
             snd_device = SND_DEVICE_OUT_HEADPHONES_44_1;
         }else if (devices & AUDIO_DEVICE_OUT_WIRED_HEADSET
             && audio_extn_get_anc_enabled()) {
