@@ -71,7 +71,11 @@ static int32_t hfp_set_volume(struct audio_device *adev, float value)
 {
     int32_t vol, ret = 0;
     struct mixer_ctl *ctl;
+#ifdef EXTERNAL_BT_SUPPORTED
+    const char *mixer_ctl_name = "PRI AUXPCM LOOPBACK Volume";
+#else
     const char *mixer_ctl_name = "Internal HFP RX Volume";
+#endif
 
     ALOGV("%s: entry", __func__);
     ALOGD("%s: (%f)\n", __func__, value);
