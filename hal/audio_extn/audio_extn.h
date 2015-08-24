@@ -85,6 +85,16 @@
 #define AUDIO_FORMAT_APE 0x1D000000UL
 #endif
 
+#ifndef AAC_ADTS_OFFLOAD_ENABLED
+#define AUDIO_FORMAT_AAC_ADTS 0x1E000000UL
+#define AUDIO_FORMAT_AAC_ADTS_LC   (AUDIO_FORMAT_AAC_ADTS |\
+                                      AUDIO_FORMAT_AAC_SUB_LC)
+#define AUDIO_FORMAT_AAC_ADTS_HE_V1 (AUDIO_FORMAT_AAC_ADTS |\
+                                      AUDIO_FORMAT_AAC_SUB_HE_V1)
+#define AUDIO_FORMAT_AAC_ADTS_HE_V2  (AUDIO_FORMAT_AAC_ADTS |\
+                                      AUDIO_FORMAT_AAC_SUB_HE_V2)
+#endif
+
 #ifndef COMPRESS_METADATA_NEEDED
 #define audio_extn_parse_compress_metadata(out, parms) (0)
 #else
