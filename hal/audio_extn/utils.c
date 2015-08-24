@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2014 The Android Open Source Project
@@ -122,6 +122,10 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_LC),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_HE_V1),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_HE_V2),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_ADTS),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_SUB_LC),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_SUB_HE_V1),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_SUB_HE_V2),
 #endif
 };
 
