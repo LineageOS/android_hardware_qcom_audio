@@ -1397,7 +1397,7 @@ int platform_acdb_init(void *platform)
 #define TZ_TYPE "/sys/class/thermal/thermal_zone%d/type"
 #define TZ_WSA "/sys/class/thermal/thermal_zone%d/temp"
 
-bool is_wsa_found(void)
+static bool is_wsa_found(int *wsaCount)
 {
     DIR *tdir = NULL;
     struct dirent *tdirent = NULL;
@@ -1406,6 +1406,7 @@ bool is_wsa_found(void)
     char cwd[MAX_PATH] = {0};
     char file[10] = "wsa";
     bool found = false;
+    int wsa_count = 0;
 
     if (!getcwd(cwd, sizeof(cwd)))
         return false;
@@ -1433,14 +1434,19 @@ bool is_wsa_found(void)
             ALOGD("Opening %s\n", name);
             read_line_from_file(name, buf, sizeof(buf));
             if (strstr(buf, file)) {
-                found = true;
-                break;
+                wsa_count++;
+                /*We support max only two WSA speakers*/
+                if (wsa_count == 2)
+                    break;
             }
             tzn++;
         }
         closedir(tzdir);
-        if (found == true)
-            break;
+    }
+    if (wsa_count > 0){
+         ALOGD("Found %d WSA present on the platform", wsa_count);
+         found = true;
+         *wsaCount = wsa_count;
     }
     closedir(tdir);
     chdir(cwd); /* Restore current working dir */
@@ -1460,6 +1466,7 @@ void *platform_init(struct audio_device *adev)
     const char *mixer_ctl_name = "Set HPX ActiveBe";
     struct mixer_ctl *ctl = NULL;
     int idx;
+    int wsaCount =0;
 
     my_data = calloc(1, sizeof(struct platform_data));
     if (!my_data) {
@@ -1570,6 +1577,17 @@ void *platform_init(struct audio_device *adev)
             my_data->fluence_mode = FLUENCE_BROADSIDE;
         }
     }
+
+    if (is_wsa_found(&wsaCount)) {
+        /*Set ACDB ID of Stereo speaker if two WSAs are present*/
+        /*Default ACDB ID for wsa speaker is that for mono*/
+        if (wsaCount == 2) {
+            platform_set_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_WSA, 15);
+            platform_set_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_VBAT, 15);
+        }
+        my_data->is_wsa_speaker = true;
+    }
+
     property_get("persist.audio.FFSP.enable", ffspEnable, "");
     if (!strncmp("true", ffspEnable, sizeof("true"))) {
         acdb_device_table[SND_DEVICE_OUT_SPEAKER] = 131;
@@ -1651,9 +1669,6 @@ void *platform_init(struct audio_device *adev)
         platform_acdb_init(my_data);
     }
     audio_extn_pm_vote();
-
-    if (is_wsa_found())
-        my_data->is_wsa_speaker = true;
 
     /* Configure active back end for HPX*/
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
