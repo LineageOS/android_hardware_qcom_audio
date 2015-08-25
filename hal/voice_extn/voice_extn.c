@@ -27,6 +27,7 @@
 #include <cutils/str_parms.h>
 #include <sys/ioctl.h>
 #include <sound/voice_params.h>
+#include <stdlib.h>
 
 #include "audio_hw.h"
 #include "voice.h"
