@@ -133,6 +133,18 @@ private:
                 audio_channel_mask_t channelMask,
                 audio_output_flags_t flags,
                 const audio_offload_info_t *offloadInfo);
+        // internal method to fill offload info in case of Direct PCM
+        status_t getOutputForAttr(const audio_attributes_t *attr,
+                audio_io_handle_t *output,
+                audio_session_t session,
+                audio_stream_type_t *stream,
+                uid_t uid,
+                uint32_t samplingRate,
+                audio_format_t format,
+                audio_channel_mask_t channelMask,
+                audio_output_flags_t flags,
+                audio_port_handle_t selectedDeviceId,
+                const audio_offload_info_t *offloadInfo);
         // Used for voip + voice concurrency usecase
         int mPrevPhoneState;
         int mvoice_call_state;
