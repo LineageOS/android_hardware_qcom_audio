@@ -79,6 +79,8 @@ typedef enum {
     USECASE_AUDIO_PLAYBACK_OFFLOAD9,
 #endif
 
+    USECASE_AUDIO_DIRECT_PCM_OFFLOAD,
+
     /* FM usecase */
     USECASE_AUDIO_PLAYBACK_FM,
 
