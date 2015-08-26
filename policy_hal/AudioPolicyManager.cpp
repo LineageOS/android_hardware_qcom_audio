@@ -1049,6 +1049,45 @@ bool AudioPolicyManagerCustom::isDirectOutput(audio_io_handle_t output) {
     }
     return false;
 }
+
+status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *attr,
+                                              audio_io_handle_t *output,
+                                              audio_session_t session,
+                                              audio_stream_type_t *stream,
+                                              uid_t uid,
+                                              uint32_t samplingRate,
+                                              audio_format_t format,
+                                              audio_channel_mask_t channelMask,
+                                              audio_output_flags_t flags,
+                                              audio_port_handle_t selectedDeviceId,
+                                              const audio_offload_info_t *offloadInfo)
+{
+    audio_offload_info_t tOffloadInfo = AUDIO_INFO_INITIALIZER;
+
+    bool pcmOffloadEnabled = property_get_bool("audio.offload.track.enable", false);
+
+    if (offloadInfo == NULL && pcmOffloadEnabled) {
+        tOffloadInfo.sample_rate  = samplingRate;
+        tOffloadInfo.channel_mask = channelMask;
+        tOffloadInfo.format = format;
+        tOffloadInfo.stream_type = *stream;
+        tOffloadInfo.bit_width = 16;    //hard coded for PCM_16
+        if (attr != NULL) {
+            ALOGV("found attribute .. setting usage %d ", attr->usage);
+            tOffloadInfo.usage = attr->usage;
+        } else {
+            ALOGD("%s:: attribute is NULL .. no usage set", __func__);
+        }
+        offloadInfo = &tOffloadInfo;
+    }
+
+    return AudioPolicyManager::getOutputForAttr(attr, output, session, stream,
+                                                (uid_t)uid, (uint32_t)samplingRate,
+                                                format, (audio_channel_mask_t)channelMask,
+                                                flags, (audio_port_handle_t)selectedDeviceId,
+                                                offloadInfo);
+}
+
 audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         audio_devices_t device,
         audio_session_t session __unused,
@@ -1178,7 +1217,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     }
 #endif
     // open a direct output if required by specified parameters
-    //force direct flag if offload flag is set: offloading implies a direct output stream
+    // force direct flag if offload flag is set: offloading implies a direct output stream
     // and all common behaviors are driven by checking only the direct flag
     // this should normally be set appropriately in the policy configuration file
     if ((flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) != 0) {
@@ -1187,6 +1226,18 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     if ((flags & AUDIO_OUTPUT_FLAG_HW_AV_SYNC) != 0) {
         flags = (audio_output_flags_t)(flags | AUDIO_OUTPUT_FLAG_DIRECT);
     }
+
+    // Do offload magic here
+    if ((flags == AUDIO_OUTPUT_FLAG_NONE) && (stream == AUDIO_STREAM_MUSIC) &&
+        (offloadInfo != NULL) &&
+        ((offloadInfo->usage == AUDIO_USAGE_MEDIA ||
+        (offloadInfo->usage == AUDIO_USAGE_GAME)))) {
+        if ((flags & AUDIO_OUTPUT_FLAG_DIRECT) == 0) {
+            ALOGD("AudioCustomHAL --> Force Direct Flag ..");
+            flags = (audio_output_flags_t)(flags | AUDIO_OUTPUT_FLAG_DIRECT);
+        }
+    }
+
     // only allow deep buffering for music stream type
     if (stream != AUDIO_STREAM_MUSIC) {
         flags = (audio_output_flags_t)(flags &~AUDIO_OUTPUT_FLAG_DEEP_BUFFER);
@@ -1354,7 +1405,7 @@ non_direct_output:
     ALOGW_IF((output == 0), "getOutput() could not find output for stream %d, samplingRate %d,"
             "format %d, channels %x, flags %x", stream, samplingRate, format, channelMask, flags);
 
-    ALOGV("  getOutputForDevice() returns output %d", output);
+    ALOGV("getOutputForDevice() returns output %d", output);
 
     return output;
 }

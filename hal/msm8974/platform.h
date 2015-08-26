@@ -227,6 +227,9 @@ enum {
 #endif
 #endif
 
+// for DIRECT_PCM
+#define PLAYBACK_OFFLOAD_DEVICE2 17
+
 #define COMPRESS_VOIP_CALL_PCM_DEVICE 3
 
 #ifdef PLATFORM_MSM8610
