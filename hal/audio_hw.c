@@ -569,6 +569,9 @@ int disable_snd_device(struct audio_device *adev,
         if (snd_device == SND_DEVICE_OUT_HDMI)
             adev->mChannelStatusSet = false;
 
+        if (snd_device == SND_DEVICE_OUT_HDMI)
+            adev->mChannelStatusSet = false;
+
         audio_extn_dev_arbi_release(snd_device);
         audio_extn_sound_trigger_update_device_status(snd_device,
                                         ST_EVENT_SND_DEVICE_FREE);
