@@ -92,5 +92,10 @@ typedef struct edid_audio_info {
     int  channel_allocation;
 } edid_audio_info;
 
+
+#ifndef HDMI_EDID
+#define edid_get_sink_caps(info, edid_data) (0)
+#else
 bool edid_get_sink_caps(edid_audio_info* info, char *edid_data);
+#endif
 #endif /* EDID_H */
