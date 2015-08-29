@@ -918,8 +918,14 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         (usecase->in_snd_device != SND_DEVICE_NONE) &&
         (usecase->out_snd_device != SND_DEVICE_NONE)) {
         status = platform_switch_voice_call_device_pre(adev->platform);
-        /* Disable sidetone only if voice call already exists */
-        if (voice_is_call_state_active(adev))
+    }
+
+    if (((usecase->type == VOICE_CALL) ||
+         (usecase->type == VOIP_CALL)) &&
+        (usecase->out_snd_device != SND_DEVICE_NONE)) {
+        /* Disable sidetone only if voice/voip call already exists */
+        if (voice_is_call_state_active(adev) ||
+            voice_extn_compress_voip_is_started(adev))
             voice_set_sidetone(adev, usecase->out_snd_device, false);
     }
 
@@ -963,8 +969,9 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                                         out_snd_device,
                                                         in_snd_device);
         enable_audio_route_for_voice_usecases(adev, usecase);
-        /* Enable sidetone only if voice call already exists */
-        if (voice_is_call_state_active(adev))
+        /* Enable sidetone only if voice/voip call already exists */
+        if (voice_is_call_state_active(adev) ||
+            voice_extn_compress_voip_is_started(adev))
             voice_set_sidetone(adev, out_snd_device, true);
     }
 

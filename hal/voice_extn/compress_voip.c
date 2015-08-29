@@ -294,6 +294,7 @@ static int voip_stop_call(struct audio_device *adev)
                   __func__, USECASE_COMPRESS_VOIP_CALL);
             return -EINVAL;
         }
+        voice_set_sidetone(adev, uc_info->out_snd_device, false);
 
         /* 1. Close the PCM devices */
         if (voip_data.pcm_rx) {
@@ -365,6 +366,19 @@ static int voip_start_call(struct audio_device *adev,
             goto error_start_voip;
         }
 
+        ALOGD("%s: Opening PCM capture device card_id(%d) device_id(%d)",
+              __func__, adev->snd_card, pcm_dev_tx_id);
+        voip_data.pcm_tx = pcm_open(adev->snd_card,
+                                    pcm_dev_tx_id,
+                                    PCM_IN, voip_config);
+        if (voip_data.pcm_tx && !pcm_is_ready(voip_data.pcm_tx)) {
+            ALOGE("%s: %s", __func__, pcm_get_error(voip_data.pcm_tx));
+            pcm_close(voip_data.pcm_tx);
+            voip_data.pcm_tx = NULL;
+            ret = -EIO;
+            goto error_start_voip;
+        }
+
         ALOGD("%s: Opening PCM playback device card_id(%d) device_id(%d)",
               __func__, adev->snd_card, pcm_dev_rx_id);
         voip_data.pcm_rx = pcm_open(adev->snd_card,
@@ -374,35 +388,19 @@ static int voip_start_call(struct audio_device *adev,
             ALOGE("%s: %s", __func__, pcm_get_error(voip_data.pcm_rx));
             pcm_close(voip_data.pcm_rx);
             voip_data.pcm_rx = NULL;
-            ret = -EIO;
-            goto error_start_voip;
-        }
-
-        ALOGD("%s: Opening PCM capture device card_id(%d) device_id(%d)",
-              __func__, adev->snd_card, pcm_dev_tx_id);
-        voip_data.pcm_tx = pcm_open(adev->snd_card,
-                                    pcm_dev_tx_id,
-                                    PCM_IN, voip_config);
-        if (voip_data.pcm_tx && !pcm_is_ready(voip_data.pcm_tx)) {
-            ALOGE("%s: %s", __func__, pcm_get_error(voip_data.pcm_tx));
-            pcm_close(voip_data.pcm_rx);
-            voip_data.pcm_tx = NULL;
-            if (voip_data.pcm_rx) {
-                pcm_close(voip_data.pcm_rx);
-                voip_data.pcm_rx = NULL;
+            if (voip_data.pcm_tx) {
+                pcm_close(voip_data.pcm_tx);
+                voip_data.pcm_tx = NULL;
             }
             ret = -EIO;
             goto error_start_voip;
         }
-        pcm_start(voip_data.pcm_rx);
+
         pcm_start(voip_data.pcm_tx);
+        pcm_start(voip_data.pcm_rx);
 
+        voice_set_sidetone(adev, uc_info->out_snd_device, true);
         voice_extn_compress_voip_set_volume(adev, adev->voice.volume);
-
-        if (ret < 0) {
-            ALOGE("%s: error %d\n", __func__, ret);
-            goto error_start_voip;
-        }
     } else {
         ALOGV("%s: voip usecase is already enabled", __func__);
         if (voip_data.out_stream)
@@ -811,5 +809,15 @@ bool voice_extn_compress_voip_is_config_supported(struct audio_config *config)
         else
             ret = false;
     }
+    return ret;
+}
+
+bool voice_extn_compress_voip_is_started(struct audio_device *adev)
+{
+    bool ret = false;
+    if (voice_extn_compress_voip_is_active(adev) &&
+        voip_data.pcm_tx && voip_data.pcm_rx)
+        ret = true;
+
     return ret;
 }
