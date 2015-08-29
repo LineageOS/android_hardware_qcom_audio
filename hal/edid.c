@@ -662,12 +662,12 @@ bool edid_get_sink_caps(edid_audio_info* info, char *edid_data)
         ALOGV("AUDIO DESC BLOCK # %d\n",i);
 
         info->audio_blocks_array[i].channels = channels[i];
-        ALOGV("info->audio_blocks_array[i].channels %d\n",
+        ALOGD("info->audio_blocks_array[i].channels %d\n",
               info->audio_blocks_array[i].channels);
 
         ALOGV("Format Byte %d\n", formats[i]);
         info->audio_blocks_array[i].format_id = (edid_audio_format_id)formats[i];
-        ALOGV("info->audio_blocks_array[i].format_id %s",
+        ALOGD("info->audio_blocks_array[i].format_id %s",
               edid_format_to_str(formats[i]));
 
         ALOGV("Frequency Byte %d\n", frequency[i]);
