@@ -2428,7 +2428,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         goto exit;
     }
 
-    if (popcount(devices) == 2 && !voice_is_in_call(adev)) {
+    if (popcount(devices) == 2) {
         if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADPHONE |
                         AUDIO_DEVICE_OUT_SPEAKER)) {
             if (my_data->external_spk_1)
@@ -4214,12 +4214,10 @@ int platform_get_edid_info(void *platform)
     edid_data[0] = count;
     memcpy(&edid_data[1], block, count);
 
-#ifdef HDMI_EDID_ENABLED
     if (!edid_get_sink_caps(info, edid_data)) {
         ALOGE("%s: Failed to get HDMI sink capabilities", __func__);
         goto fail;
     }
-#endif
 
     my_data->edid_valid = true;
     return 0;

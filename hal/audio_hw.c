@@ -666,9 +666,10 @@ static void check_usecases_codec_backend(struct audio_device *adev,
            specified usecase to new snd devices */
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            /* Update the out_snd_device only for the usecases that are enabled here */
-            if (switch_device[usecase->id] && (usecase->type != VOICE_CALL)) {
-                    usecase->out_snd_device = snd_device;
+            /* Update the out_snd_device only before enabling the audio route */
+            if (switch_device[usecase->id] ) {
+                usecase->out_snd_device = snd_device;
+                if (usecase->type != VOICE_CALL)
                     enable_audio_route(adev, usecase);
             }
         }
@@ -703,7 +704,8 @@ static void check_and_route_capture_usecases(struct audio_device *adev,
                 usecase != uc_info &&
                 usecase->in_snd_device != snd_device &&
                 ((uc_info->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) &&
-                ((usecase->devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_CODEC_BACKEND)) &&
+                 (((usecase->devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_CODEC_BACKEND) ||
+                  (usecase->type == VOICE_CALL))) &&
                 (usecase->id != USECASE_AUDIO_SPKR_CALIB_TX)) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
