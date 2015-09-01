@@ -308,6 +308,8 @@ int enable_snd_device(struct audio_device *adev,
         return -EINVAL;
     }
 
+    platform_send_audio_calibration(adev->platform, snd_device);
+
     adev->snd_dev_ref_cnt[snd_device]++;
     if (adev->snd_dev_ref_cnt[snd_device] > 1) {
         ALOGV("%s: snd_device(%d: %s) is already active",
@@ -322,13 +324,6 @@ int enable_snd_device(struct audio_device *adev,
 
     if (audio_extn_spkr_prot_is_enabled())
          audio_extn_spkr_prot_calib_cancel(adev);
-
-    if (platform_send_audio_calibration(adev->platform, snd_device) < 0) {
-        adev->snd_dev_ref_cnt[snd_device]--;
-        audio_extn_sound_trigger_update_device_status(snd_device,
-                                    ST_EVENT_SND_DEVICE_FREE);
-        return -EINVAL;
-    }
 
     audio_extn_dsm_feedback_enable(adev, snd_device, true);
 
