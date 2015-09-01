@@ -981,6 +981,10 @@ static int send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibrat
         struct wcdcal_ioctl_buffer codec_buffer;
         struct param_data calib;
 
+        /* MAD calibration is handled by sound trigger HAL, skip here */
+        if (type == WCD9XXX_MAD_CAL)
+            continue;
+
         calib.get_size = 1;
         ret = acdb_loader_get_calibration(cal_name_info[type], sizeof(struct param_data),
                                                                  &calib);
