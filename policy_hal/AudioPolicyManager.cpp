@@ -1794,6 +1794,37 @@ audio_devices_t AudioPolicyManagerCustom::getDeviceForStrategy(routing_strategy 
 AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *clientInterface)
     : AudioPolicyManager(clientInterface)
 {
+
+    for (size_t i = 0; i < mHwModules.size(); i++) {
+        ALOGV("Hw module %d", i);
+        for (size_t j = 0; j < mHwModules[i]->mInputProfiles.size(); j++) {
+            const sp<IOProfile> inProfile = mHwModules[i]->mInputProfiles[j];
+            ALOGV("\t Input profile ", j);
+            for (size_t k = 0; k  < inProfile->mChannelMasks.size(); k++) {
+                audio_channel_mask_t channelMask =
+                    inProfile->mChannelMasks.itemAt(k);
+                ALOGV("\t\tChannel Mask %x size %d", channelMask,
+                    inProfile->mChannelMasks.size());
+                if (AUDIO_CHANNEL_IN_5POINT1 == channelMask) {
+                    char ssr_enabled[PROPERTY_VALUE_MAX]={0};
+                    if ((property_get("ro.qc.sdk.audio.ssr",
+                                   ssr_enabled, NULL) > 0) &&
+                        (!strncmp("true", ssr_enabled, 4))) {
+                            ALOGV("\t\t SSR supported, retain 5.1 channel"
+                                " in input profile");
+                    } else {
+                            ALOGE("\t\t removing AUDIO_CHANNEL_IN_5POINT1 from"
+                                " input profile as SSR(surround sound record)"
+                                " is not supported on this chipset variant");
+                            inProfile->mChannelMasks.removeItemsAt(k, 1);
+                            ALOGV("\t\t Channel Mask size now %d",
+                                inProfile->mChannelMasks.size());
+                    }
+                }
+            }
+        }
+    }
+
 #ifdef RECORD_PLAY_CONCURRENCY
     mIsInputRequestOnProgress = false;
 #endif
