@@ -1062,7 +1062,9 @@ int start_input_stream(struct stream_in *in)
     struct audio_device *adev = in->dev;
     int snd_card_status = get_snd_card_state(adev);
 
-    in->usecase = platform_update_usecase_from_source(in->source,in->usecase);
+    int usecase = platform_update_usecase_from_source(in->source,in->usecase);
+    if (get_usecase_from_list(adev, usecase) == NULL)
+        in->usecase = usecase;
     ALOGD("%s: enter: stream(%p)usecase(%d: %s)",
           __func__, &in->stream, in->usecase, use_case_table[in->usecase]);
 
@@ -1078,8 +1080,13 @@ int start_input_stream(struct stream_in *in)
     if (ret)
         goto error_config;
     else
-        ALOGD("%s: Updated usecase(%d: %s)",
-              __func__, in->usecase, use_case_table[in->usecase]);
+        ALOGV("%s: usecase(%d)", __func__, in->usecase);
+
+    if (get_usecase_from_list(adev, in->usecase) != NULL) {
+        ALOGE("%s: use case assigned already in use, stream(%p)usecase(%d: %s)",
+            __func__, &in->stream, in->usecase, use_case_table[in->usecase]);
+        goto error_config;
+    }
 
     in->pcm_device_id = platform_get_pcm_device_id(in->usecase, PCM_CAPTURE);
     if (in->pcm_device_id < 0) {
