@@ -4160,7 +4160,7 @@ int platform_set_spkr_device_tz_names(snd_device_t index,
         goto done;
     }
     if (index != speaker_device_tz_names.snd_device) {
-        ALOGE("%s: not matching speaker device\n");
+        ALOGE("%s: not matching speaker device\n", __func__);
         ret = -EINVAL;
         goto done;
     }
