@@ -579,14 +579,13 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
 
     if ((24 == usecase->stream.out->bit_width) &&
         (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
-        sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
     } else if ((snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
         usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
         (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
-        sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-    } else {
-        sample_rate = out->app_type_cfg.sample_rate;
+        out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
     }
+    sample_rate = out->app_type_cfg.sample_rate;
 
     app_type_cfg[len++] = out->app_type_cfg.app_type;
     app_type_cfg[len++] = acdb_dev_id;
