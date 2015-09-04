@@ -227,10 +227,6 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SOURCE_TRACKING)),true)
     LOCAL_SRC_FILES += audio_extn/source_track.c
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUDIOSPHERE)),true)
-    LOCAL_CFLAGS += -DAUDIOSPHERE_ENABLED
-endif
-
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \

@@ -3738,6 +3738,13 @@ static int adev_open(const hw_module_t *module, const char *name,
             adev->offload_effects_set_hpx_state =
                         (int (*)(bool))dlsym(adev->offload_effects_lib,
                                          "offload_effects_bundle_set_hpx_state");
+            adev->offload_effects_get_parameters =
+                        (void (*)(struct str_parms *, struct str_parms *))
+                                         dlsym(adev->offload_effects_lib,
+                                         "offload_effects_bundle_get_parameters");
+            adev->offload_effects_set_parameters =
+                        (void (*)(struct str_parms *))dlsym(adev->offload_effects_lib,
+                                         "offload_effects_bundle_set_parameters");
         }
     }
 
