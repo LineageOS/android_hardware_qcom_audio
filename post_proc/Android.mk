@@ -21,6 +21,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS)),true)
     LOCAL_SRC_FILES += hw_accelerator.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUDIOSPHERE)),true)
+    LOCAL_CFLAGS += -DAUDIOSPHERE_ENABLED
+    LOCAL_SRC_FILES += asphere.c
+endif
+
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 
 ifneq ($(strip $(AUDIO_FEATURE_DISABLED_DTS_EAGLE)),true)
