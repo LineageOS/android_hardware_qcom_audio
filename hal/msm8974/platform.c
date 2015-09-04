@@ -1393,9 +1393,9 @@ acdb_init_fail:
 
     /* Initialize ACDB ID's */
     if (my_data->is_i2s_ext_modem)
-        platform_info_init(PLATFORM_INFO_XML_PATH_I2S);
+        platform_info_init(PLATFORM_INFO_XML_PATH_I2S, my_data);
     else
-        platform_info_init(PLATFORM_INFO_XML_PATH);
+        platform_info_init(PLATFORM_INFO_XML_PATH, my_data);
 
     /* If platform is apq8084 and baseband is MDM, load CSD Client specific
      * symbols. Voice call is handled by MDM and apps processor talks to

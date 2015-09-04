@@ -87,8 +87,8 @@ bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id);
 
 int platform_set_snd_device_backend(snd_device_t snd_device, const char * backend);
 
-/* From platform_info_parser.c */
-int platform_info_init(const char *filename);
+/* From platform_info.c */
+int platform_info_init(const char *filename, void *);
 
 void platform_snd_card_update(void *platform, int snd_scard_state);
 
