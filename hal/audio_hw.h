@@ -346,6 +346,10 @@ struct audio_device {
     adm_deregister_stream_t adm_deregister_stream;
     adm_request_focus_t adm_request_focus;
     adm_abandon_focus_t adm_abandon_focus;
+
+    void (*offload_effects_get_parameters)(struct str_parms *,
+                                           struct str_parms *);
+    void (*offload_effects_set_parameters)(struct str_parms *);
 };
 
 int select_devices(struct audio_device *adev,
