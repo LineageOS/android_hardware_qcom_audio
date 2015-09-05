@@ -1054,6 +1054,10 @@ static void send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibra
         struct param_data calib;
         int ret;
 
+        /* MAD calibration is handled by sound trigger HAL, skip here */
+        if (type == WCD9XXX_MAD_CAL)
+            continue;
+
         ret = 0;
         calib.get_size = 1;
         ret = acdb_loader_get_calibration(cal_name_info[type],
