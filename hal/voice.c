@@ -350,7 +350,8 @@ int voice_set_mic_mute(struct audio_device *adev, bool state)
     int err = 0;
 
     adev->voice.mic_mute = state;
-    if (adev->mode == AUDIO_MODE_IN_CALL)
+    if (adev->mode == AUDIO_MODE_IN_CALL ||
+        adev->mode == AUDIO_MODE_IN_COMMUNICATION)
         err = platform_set_mic_mute(adev->platform, state);
 
     return err;
