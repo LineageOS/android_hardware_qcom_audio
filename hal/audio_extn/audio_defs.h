@@ -75,4 +75,6 @@
 /* Query if Proxy can be Opend */
 #define AUDIO_PARAMETER_KEY_CAN_OPEN_PROXY "can_open_proxy"
 
+#define AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED  "is_hw_dec_session_allowed"
+
 #endif /* AUDIO_DEFS_H */
