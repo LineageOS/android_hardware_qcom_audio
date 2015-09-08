@@ -109,6 +109,18 @@ char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
         [WCD9XXX_MAD_CAL] = "mad_cal",
 };
 
+#define  AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED  "is_hw_dec_session_allowed"
+
+char * dsp_only_decoders_mime[] = {
+    "audio/x-ms-wma" /* wma*/ ,
+    "audio/x-ms-wma-lossless" /* wma lossless */ ,
+    "audio/x-ms-wma-pro" /* wma prop */ ,
+    "audio/amr-wb-plus" /* amr wb plus */ ,
+    "audio/alac"  /*alac */ ,
+    "audio/x-ape" /*ape */,
+};
+
+
 enum {
 	VOICE_FEATURE_SET_DEFAULT,
 	VOICE_FEATURE_SET_VOLUME_BOOST
@@ -2471,6 +2483,8 @@ void platform_get_parameters(void *platform,
     char value[256] = {0};
     int ret;
     char *kv_pairs = NULL;
+    char propValue[PROPERTY_VALUE_MAX]={0};
+    bool prop_playback_enabled = false;
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_SLOWTALK,
                             value, sizeof(value));
@@ -2498,6 +2512,41 @@ void platform_get_parameters(void *platform,
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_VOLUME_BOOST, value);
     }
 
+    /* Handle audio calibration keys */
+    get_audiocal(platform, query, reply);
+    native_audio_get_params(query, reply, value, sizeof(value));
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED,
+                                    value, sizeof(value));
+    if (ret >= 0) {
+        int isallowed = 1; /*true*/
+
+        if (property_get("voice.playback.conc.disabled", propValue, NULL)) {
+            prop_playback_enabled = atoi(propValue) ||
+                !strncmp("true", propValue, 4);
+        }
+
+        if (prop_playback_enabled && (voice_is_in_call(my_data->adev) ||
+             (SND_CARD_STATE_OFFLINE == get_snd_card_state(my_data->adev)))) {
+            char *decoder_mime_type = value;
+
+            //check if unsupported mime type or not
+            if(decoder_mime_type) {
+                int i = 0;
+                for (i = 0; i < sizeof(dsp_only_decoders_mime)/sizeof(dsp_only_decoders_mime[0]); i++) {
+                    if (!strncmp(decoder_mime_type, dsp_only_decoders_mime[i],
+                    strlen(dsp_only_decoders_mime[i]))) {
+                       ALOGD("Rejecting request for DSP only session from HAL during voice call/SSR state");
+                       isallowed = 0;
+                       break;
+                    }
+                }
+            }
+        }
+        str_parms_add_int(reply, AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED, isallowed);
+    }
+
+done:
     kv_pairs = str_parms_to_str(reply);
     ALOGV_IF(kv_pairs != NULL, "%s: exit: returns - %s", __func__, kv_pairs);
     free(kv_pairs);
