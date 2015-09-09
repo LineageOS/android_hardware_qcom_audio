@@ -664,7 +664,7 @@ static int vol_prc_lib_create(const effect_uuid_t *uuid,
 
 static int vol_prc_lib_release(effect_handle_t handle)
 {
-    struct listnode *node = NULL;
+    struct listnode *node, *temp_node_next;
     vol_listener_context_t *context = NULL;
     vol_listener_context_t *recv_contex = (vol_listener_context_t *)handle;
     int status = -1;
@@ -674,7 +674,7 @@ static int vol_prc_lib_release(effect_handle_t handle)
     pthread_mutex_lock(&vol_listner_init_lock);
 
     // check if the handle/context provided is valid
-    list_for_each(node, &vol_effect_list) {
+    list_for_each_safe(node, temp_node_next, &vol_effect_list) {
         context = node_to_item(node, struct vol_listener_context_s, effect_list_node);
         if ((memcmp(&(context->desc->uuid), &(recv_contex->desc->uuid), sizeof(effect_uuid_t)) == 0)
             && (context->session_id == recv_contex->session_id)
