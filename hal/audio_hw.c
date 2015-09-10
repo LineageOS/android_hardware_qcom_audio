@@ -1329,15 +1329,13 @@ static void *offload_thread_loop(void *context)
             else
                 ALOGE("%s: Next track returned error %d",__func__, ret);
 
-            if (ret != -ENETRESET) {
-                send_callback = true;
-                event = STREAM_CBK_EVENT_DRAIN_READY;
-
-                /* Resend the metadata for next iteration */
-                out->send_new_metadata = 1;
-                ALOGV("copl(%p):send drain callback, ret %d", out, ret);
-            } else
-                ALOGE("%s: Block drain ready event during SSR", __func__);
+            send_callback = true;
+            event = STREAM_CBK_EVENT_DRAIN_READY;
+            pthread_mutex_lock(&out->lock);
+            /* Resend the metadata for next iteration */
+            out->send_new_metadata = 1;
+            out->send_next_track_params = true;
+            pthread_mutex_unlock(&out->lock);
             break;
         case OFFLOAD_CMD_DRAIN:
             ALOGV("copl(%x):calling compress_drain", (unsigned int)out);
@@ -1630,6 +1628,9 @@ int start_output_stream(struct stream_out *out)
             ret = -EIO;
             goto error_open;
         }
+        /* compress_open sends params of the track, so reset the flag here */
+        out->is_compr_metadata_avail = false;
+
         if (out->offload_callback)
             compress_nonblock(out->compr, out->non_blocking);
 
@@ -1802,6 +1803,8 @@ static int out_standby(struct audio_stream *stream)
         } else {
             ALOGD("copl(%x):standby", (unsigned int)out);
             stop_compressed_output_l(out);
+            out->send_next_track_params = false;
+            out->is_compr_metadata_avail = false;
             out->gapless_mdata.encoder_delay = 0;
             out->gapless_mdata.encoder_padding = 0;
             if (out->compr != NULL) {
@@ -1827,10 +1830,6 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
 {
     int ret = 0;
     char value[32];
-    bool is_meta_data_params = false;
-    struct compr_gapless_mdata tmp_mdata;
-    tmp_mdata.encoder_delay = 0;
-    tmp_mdata.encoder_padding = 0;
 
     if (!out || !parms) {
         ALOGE("%s: return invalid ",__func__);
@@ -1843,101 +1842,18 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
             out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_MP4ADTS;
             ALOGV("ADTS format is set in offload mode");
         }
-        out->send_new_metadata = 1;
     }
-
-#ifdef FLAC_OFFLOAD_ENABLED
-    if (out->format == AUDIO_FORMAT_FLAC) {
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.flac_dec.min_blk_size = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.flac_dec.max_blk_size = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_FRAME_SIZE, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.flac_dec.min_frame_size = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_FRAME_SIZE, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.flac_dec.max_frame_size = atoi(value);
-            out->send_new_metadata = 1;
-        }
-    }
-#endif
-
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_SAMPLE_RATE, value, sizeof(value));
-    if(ret >= 0)
-        is_meta_data_params = true;
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_NUM_CHANNEL, value, sizeof(value));
-    if(ret >= 0 )
-        is_meta_data_params = true;
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_AVG_BIT_RATE, value, sizeof(value));
-    if(ret >= 0 )
-        is_meta_data_params = true;
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
     if (ret >= 0) {
-        is_meta_data_params = true;
-        tmp_mdata.encoder_delay = atoi(value); //whats a good limit check?
+        out->gapless_mdata.encoder_delay = atoi(value); //whats a good limit check?
     }
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
     if (ret >= 0) {
-        is_meta_data_params = true;
-        tmp_mdata.encoder_padding = atoi(value);
+        out->gapless_mdata.encoder_padding = atoi(value);
     }
 
-    if(!is_meta_data_params) {
-        ALOGV("%s: Not gapless meta data params", __func__);
-        return 0;
-    }
-    out->gapless_mdata = tmp_mdata;
-    out->send_new_metadata = 1;
     ALOGV("%s new encoder delay %u and padding %u", __func__,
           out->gapless_mdata.encoder_delay, out->gapless_mdata.encoder_padding);
-
-    if(out->format == AUDIO_FORMAT_WMA || out->format == AUDIO_FORMAT_WMA_PRO) {
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_FORMAT_TAG, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->format = atoi(value);
-        }
-       ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BLOCK_ALIGN, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.super_block_align = atoi(value);
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BIT_PER_SAMPLE, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.bits_per_sample = atoi(value);
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_CHANNEL_MASK, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.channelmask = atoi(value);
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.encodeopt = atoi(value);
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION1, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.encodeopt1 = atoi(value);
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION2, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.encodeopt2 = atoi(value);
-        }
-        ALOGV("WMA params: fmt %x, balgn %x, sr %d, chmsk %x, encop %x, op1 %x, op2 %x",
-                                out->compr_config.codec->format,
-                                out->compr_config.codec->options.wma.super_block_align,
-                                out->compr_config.codec->options.wma.bits_per_sample,
-                                out->compr_config.codec->options.wma.channelmask,
-                                out->compr_config.codec->options.wma.encodeopt,
-                                out->compr_config.codec->options.wma.encodeopt1,
-                                out->compr_config.codec->options.wma.encodeopt2);
-    }
 
     return 0;
 }
@@ -2195,6 +2111,12 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ALOGD("copl(%x):send new gapless metadata", (unsigned int)out);
             compress_set_gapless_metadata(out->compr, &out->gapless_mdata);
             out->send_new_metadata = 0;
+            if (out->send_next_track_params && out->is_compr_metadata_avail) {
+                ALOGD("copl(%p):send next track params in gapless", out);
+                compress_set_next_track_param(out->compr, &(out->compr_config.codec->options));
+                out->send_next_track_params = false;
+                out->is_compr_metadata_avail = false;
+            }
         }
 
         ret = compress_write(out->compr, buffer, bytes);
@@ -2956,6 +2878,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         }
 
         out->send_new_metadata = 1;
+        out->send_next_track_params = false;
+        out->is_compr_metadata_avail = false;
         out->offload_state = OFFLOAD_STATE_IDLE;
         out->playback_started = 0;
 
