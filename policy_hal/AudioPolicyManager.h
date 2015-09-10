@@ -93,6 +93,9 @@ protected:
                                            bool fromCache);
         // returns true if given output is direct output
         bool isDirectOutput(audio_io_handle_t output);
+        status_t stopOutput(audio_io_handle_t output,
+                                    audio_stream_type_t stream,
+                                    audio_session_t session);
 
         // if argument "device" is different from AUDIO_DEVICE_NONE,  startSource() will force
         // the re-evaluation of the output device.

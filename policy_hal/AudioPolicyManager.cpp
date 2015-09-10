@@ -954,6 +954,46 @@ void AudioPolicyManagerCustom::setForceUse(audio_policy_force_use_t usage,
 
 }
 
+status_t AudioPolicyManagerCustom::stopOutput(audio_io_handle_t output,
+                                            audio_stream_type_t stream,
+                                            audio_session_t session)
+{
+    ALOGV("stopOutput() output %d, stream %d, session %d", output, stream, session);
+    ssize_t index = mOutputs.indexOfKey(output);
+    if (index < 0) {
+        ALOGW("stopOutput() unknown output %d", output);
+        return BAD_VALUE;
+    }
+
+    sp<SwAudioOutputDescriptor> outputDesc = mOutputs.valueAt(index);
+
+    if (outputDesc->mRefCount[stream] == 1) {
+        // Automatically disable the remote submix input when output is stopped on a
+        // re routing mix of type MIX_TYPE_RECORDERS
+        if (audio_is_remote_submix_device(outputDesc->mDevice) &&
+                outputDesc->mPolicyMix != NULL &&
+                outputDesc->mPolicyMix->mMixType == MIX_TYPE_RECORDERS) {
+            setDeviceConnectionStateInt(AUDIO_DEVICE_IN_REMOTE_SUBMIX,
+                    AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE,
+                    outputDesc->mPolicyMix->mRegistrationId,
+                    "remote-submix");
+        }
+    }
+
+    // Routing?
+    bool forceDeviceUpdate = false;
+    if (outputDesc->mRefCount[stream] > 0) {
+        int activityCount = mOutputRoutes.decRouteActivity(session);
+        forceDeviceUpdate = (mOutputRoutes.hasRoute(session) && (activityCount == 0));
+
+        if (forceDeviceUpdate) {
+            checkStrategyRoute(getStrategy(stream), AUDIO_IO_HANDLE_NONE);
+        }
+    }
+
+    return stopSource(outputDesc, stream, forceDeviceUpdate);
+}
+
 status_t AudioPolicyManagerCustom::stopSource(sp<SwAudioOutputDescriptor> outputDesc,
                                             audio_stream_type_t stream,
                                             bool forceDeviceUpdate)
