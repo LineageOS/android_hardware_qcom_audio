@@ -705,14 +705,6 @@ static int msm_device_to_be_id [][NO_COLS] = {
 static int msm_be_id_array_len  =
     sizeof(msm_device_to_be_id) / sizeof(msm_device_to_be_id[0]);
 
-/*
- * This is a lookup table to map names of speaker device with respective left and right TZ names.
- * Also the tz names for a particular left or right speaker can be overriden by adding
- * corresponding entry in audio_platform_info.xml file.
- */
-struct speaker_device_to_tz_names speaker_device_tz_names = {
-    {SND_DEVICE_OUT_SPEAKER, "", ""},
-};
 
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
@@ -1525,22 +1517,6 @@ const char *platform_get_snd_device_name(snd_device_t snd_device)
 {
     if (snd_device >= SND_DEVICE_MIN && snd_device < SND_DEVICE_MAX)
         return device_table[snd_device];
-    else
-        return "";
-}
-
-const char *platform_get_spkr_1_tz_name(snd_device_t snd_device)
-{
-    if (snd_device >= SND_DEVICE_MIN && snd_device < SND_DEVICE_MAX)
-        return speaker_device_tz_names.spkr_1_tz_name;
-    else
-        return "";
-}
-
-const char *platform_get_spkr_2_tz_name(snd_device_t snd_device)
-{
-    if (snd_device >= SND_DEVICE_MIN && snd_device < SND_DEVICE_MAX)
-        return speaker_device_tz_names.spkr_2_tz_name;
     else
         return "";
 }
@@ -4164,35 +4140,6 @@ int platform_set_audio_device_interface(const char *device_name, const char *int
 
     ret = -EINVAL;
 
-done:
-    return ret;
-}
-
-int platform_set_spkr_device_tz_names(snd_device_t index,
-                                      const char *spkr_1_tz_name, const char *spkr_2_tz_name)
-{
-    int ret = 0;
-
-    if (spkr_1_tz_name == NULL && spkr_2_tz_name == NULL) {
-        ALOGE("%s: Invalid input", __func__);
-        ret = -EINVAL;
-        goto done;
-    }
-    if (index != speaker_device_tz_names.snd_device) {
-        ALOGE("%s: not matching speaker device\n", __func__);
-        ret = -EINVAL;
-        goto done;
-    }
-    ALOGD("%s: Enter, spkr_1_tz_name :%s, spkr_2_tz_name:%s",
-           __func__, spkr_1_tz_name, spkr_2_tz_name);
-
-    if (spkr_1_tz_name != NULL)
-        strlcpy(speaker_device_tz_names.spkr_1_tz_name, spkr_1_tz_name,
-                sizeof(speaker_device_tz_names.spkr_1_tz_name));
-
-    if (spkr_2_tz_name != NULL)
-        strlcpy(speaker_device_tz_names.spkr_2_tz_name, spkr_2_tz_name,
-                sizeof(speaker_device_tz_names.spkr_2_tz_name));
 done:
     return ret;
 }

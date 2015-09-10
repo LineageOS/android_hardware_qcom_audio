@@ -49,7 +49,6 @@ typedef enum {
     PCM_ID,
     BACKEND_NAME,
     INTERFACE_NAME,
-    TZ_NAME,
     CONFIG_PARAMS,
 } section_t;
 
@@ -61,7 +60,6 @@ static void process_native_support(const XML_Char **attr);
 static void process_pcm_id(const XML_Char **attr);
 static void process_backend_name(const XML_Char **attr);
 static void process_interface_name(const XML_Char **attr);
-static void process_tz_name(const XML_Char **attr);
 static void process_config_params(const XML_Char **attr);
 static void process_root(const XML_Char **attr);
 
@@ -73,7 +71,6 @@ static section_process_fn section_table[] = {
     [PCM_ID] = process_pcm_id,
     [BACKEND_NAME] = process_backend_name,
     [INTERFACE_NAME] = process_interface_name,
-    [TZ_NAME] = process_tz_name,
     [CONFIG_PARAMS] = process_config_params,
 };
 
@@ -108,11 +105,6 @@ static struct platform_info my_data;
  * ...
  * ...
  * </interface_names>
- * <tz_names>
- * <device name="???" spkr_1_tz_name="???" spkr_2_tz_name="???"/>
- * ...
- * ...
- * </tz_names>
  * <config_params>
  *      <param key="snd_card_name" value="msm8994-tomtom-mtp-snd-card"/>
  *      ...
@@ -333,42 +325,6 @@ done:
     return;
 }
 
-static void process_tz_name(const XML_Char **attr)
-{
-    int ret, index;
-
-    if (strcmp(attr[0], "name") != 0) {
-        ALOGE("%s: 'name' not found, no Audio Interface set!", __func__);
-        goto done;
-    }
-
-    index = platform_get_snd_device_index((char *)attr[1]);
-    if (index < 0) {
-        ALOGE("%s: Device %s not found, no snd device set!",
-              __func__, attr[1]);
-        goto done;
-    }
-
-    if (strcmp(attr[2], "spkr_1_tz_name") != 0) {
-        ALOGE("%s: Device %s has no spkr_1_tz_name set!",
-              __func__, attr[1]);
-    }
-
-    if (strcmp(attr[4], "spkr_2_tz_name") != 0) {
-        ALOGE("%s: Device %s has no spkr_2_tz_name set!",
-              __func__, attr[1]);
-    }
-
-    ret = platform_set_spkr_device_tz_names(index, (char *)attr[3], (char *)attr[5]);
-    if (ret < 0) {
-        ALOGE("%s: Audio Interface not set!", __func__);
-        goto done;
-    }
-
-done:
-    return;
-}
-
 static void process_config_params(const XML_Char **attr)
 {
     if (strcmp(attr[0], "key") != 0) {
@@ -385,7 +341,6 @@ static void process_config_params(const XML_Char **attr)
 done:
     return;
 }
-
 
 static void start_tag(void *userdata __unused, const XML_Char *tag_name,
                       const XML_Char **attr)
@@ -408,12 +363,10 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
         section = INTERFACE_NAME;
     } else if (strcmp(tag_name, "native_configs") == 0) {
         section = NATIVESUPPORT;
-    } else if (strcmp(tag_name, "tz_names") == 0) {
-        section = TZ_NAME;
     } else if (strcmp(tag_name, "device") == 0) {
         if ((section != ACDB) && (section != BACKEND_NAME) && (section != BITWIDTH) &&
-            (section != INTERFACE_NAME) && (section != TZ_NAME)) {
-            ALOGE("device tag only supported for acdb/backend names/bitwitdh/interface/tz names");
+            (section != INTERFACE_NAME)) {
+            ALOGE("device tag only supported for acdb/backend names/bitwitdh/interface names");
             return;
         }
 
