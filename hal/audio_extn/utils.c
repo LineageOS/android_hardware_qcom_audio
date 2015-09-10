@@ -499,14 +499,11 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
     app_type_cfg->bit_width = 16;
 }
 
-#define GENERAL_RECORDING_APP_TYPE  0x11132
-int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
+int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
+                                       struct audio_usecase *usecase)
 {
     char mixer_ctl_name[MAX_LENGTH_MIXER_CONTROL_IN_INT];
     int app_type_cfg[MAX_LENGTH_MIXER_CONTROL_IN_INT], len = 0, rc;
-    struct stream_out *out;
-    struct stream_in *in;
-    struct audio_device *adev;
     struct mixer_ctl *ctl;
     int pcm_device_id, acdb_dev_id, snd_device = usecase->out_snd_device;
     int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
@@ -523,21 +520,16 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
         (usecase->id != USECASE_AUDIO_PLAYBACK_MULTI_CH) &&
         (!is_offload_usecase(usecase->id)) &&
         (usecase->type != PCM_CAPTURE)) {
-        ALOGV("%s: a playback path where app type cfg is not required %d", __func__, usecase->id);
+        ALOGV("%s: a rx/tx path where app type cfg is not required %d", __func__, usecase->id);
         rc = 0;
         goto exit_send_app_type_cfg;
     }
     if (usecase->type == PCM_PLAYBACK) {
-        out = usecase->stream.out;
-        adev = out->dev;
         snd_device = usecase->out_snd_device;
-        pcm_device_id = platform_get_pcm_device_id(out->usecase, PCM_PLAYBACK);
-    }
-    if (usecase->type == PCM_CAPTURE) {
-        in = usecase->stream.in;
-        adev = in->dev;
+        pcm_device_id = platform_get_pcm_device_id(usecase->id, PCM_PLAYBACK);
+    } else if (usecase->type == PCM_CAPTURE) {
         snd_device = usecase->in_snd_device;
-        pcm_device_id = platform_get_pcm_device_id(in->usecase, PCM_CAPTURE);
+        pcm_device_id = platform_get_pcm_device_id(usecase->id, PCM_CAPTURE);
     }
 
     snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
@@ -559,7 +551,14 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
         goto exit_send_app_type_cfg;
     }
 
-    if (usecase->type == PCM_PLAYBACK) {
+    if ((usecase->type == PCM_PLAYBACK) && (usecase->stream.out == NULL)) {
+        sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        app_type_cfg[len++] = platform_get_default_app_type(adev->platform);
+        app_type_cfg[len++] = acdb_dev_id;
+        app_type_cfg[len++] = sample_rate;
+        ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
+              __func__, platform_get_default_app_type(adev->platform), acdb_dev_id, sample_rate);
+    } else if (usecase->type == PCM_PLAYBACK) {
         if ((24 == usecase->stream.out->bit_width) &&
             (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
             sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
@@ -568,13 +567,13 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
             (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
             sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         } else {
-            sample_rate = out->app_type_cfg.sample_rate;
+            sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
         }
 
-        app_type_cfg[len++] = out->app_type_cfg.app_type;
+        app_type_cfg[len++] = usecase->stream.out->app_type_cfg.app_type;
         app_type_cfg[len++] = acdb_dev_id;
-        if (((out->format == AUDIO_FORMAT_E_AC3) ||
-            (out->format == AUDIO_FORMAT_E_AC3_JOC))
+        if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
+            (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC))
 #ifdef HDMI_PASSTHROUGH_ENABLED
             && (out->flags  & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)
 #endif
@@ -583,10 +582,9 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
         else
             app_type_cfg[len++] = sample_rate;
         ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
-              __func__, out->app_type_cfg.app_type, acdb_dev_id, sample_rate);
-    }
-    else if (usecase->type == PCM_CAPTURE) {
-        app_type_cfg[len++] = GENERAL_RECORDING_APP_TYPE;
+              __func__, usecase->stream.out->app_type_cfg.app_type, acdb_dev_id, sample_rate);
+    } else if (usecase->type == PCM_CAPTURE) {
+        app_type_cfg[len++] = platform_get_default_app_type(adev->platform);
         app_type_cfg[len++] = acdb_dev_id;
         app_type_cfg[len++] = sample_rate;
         ALOGI("%s CAPTURE app_type %d, acdb_dev_id %d, sample_rate %d",
