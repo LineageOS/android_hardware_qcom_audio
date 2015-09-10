@@ -32,6 +32,8 @@
 #include "platform.h"
 #include "platform_api.h"
 
+#include "sound/compress_params.h"
+
 #define MAX_SLEEP_RETRY 100
 #define WIFI_INIT_WAIT_SLEEP 50
 
@@ -434,6 +436,102 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);
     free(kv_pairs);
 }
+
+#ifndef COMPRESS_METADATA_NEEDED
+#define audio_extn_parse_compress_metadata(out, parms) (0)
+#else
+int audio_extn_parse_compress_metadata(struct stream_out *out,
+                                       struct str_parms *parms)
+{
+    int ret = 0;
+    char value[32];
+
+#ifdef FLAC_OFFLOAD_ENABLED
+    if (out->format == AUDIO_FORMAT_FLAC) {
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.min_blk_size = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.max_blk_size = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_FRAME_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.min_frame_size = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_FRAME_SIZE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.flac_dec.max_frame_size = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ALOGV("FLAC metadata: min_blk_size %d, max_blk_size %d min_frame_size %d max_frame_size %d",
+              out->compr_config.codec->options.flac_dec.min_blk_size,
+              out->compr_config.codec->options.flac_dec.max_blk_size,
+              out->compr_config.codec->options.flac_dec.min_frame_size,
+              out->compr_config.codec->options.flac_dec.max_frame_size);
+    }
+#endif
+#ifdef WMA_OFFLOAD_ENABLED
+    if (out->format == AUDIO_FORMAT_WMA || out->format == AUDIO_FORMAT_WMA_PRO) {
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_FORMAT_TAG, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->format = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_AVG_BIT_RATE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.avg_bit_rate = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BLOCK_ALIGN, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.super_block_align = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BIT_PER_SAMPLE, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.bits_per_sample = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_CHANNEL_MASK, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.channelmask = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.encodeopt = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION1, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.encodeopt1 = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION2, value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->options.wma.encodeopt2 = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+        ALOGV("WMA params: fmt %x, bit rate %x, balgn %x, sr %d, chmsk %x"
+                " encop %x, op1 %x, op2 %x",
+                out->compr_config.codec->format,
+                out->compr_config.codec->options.wma.avg_bit_rate,
+                out->compr_config.codec->options.wma.super_block_align,
+                out->compr_config.codec->options.wma.bits_per_sample,
+                out->compr_config.codec->options.wma.channelmask,
+                out->compr_config.codec->options.wma.encodeopt,
+                out->compr_config.codec->options.wma.encodeopt1,
+                out->compr_config.codec->options.wma.encodeopt2);
+    }
+#endif
+    return ret;
+}
+#endif
 
 #ifdef AUXPCM_BT_ENABLED
 int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,
