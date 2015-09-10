@@ -305,6 +305,9 @@ static bool is_supported_format(audio_format_t format)
         format == AUDIO_FORMAT_AAC_LC ||
         format == AUDIO_FORMAT_AAC_HE_V1 ||
         format == AUDIO_FORMAT_AAC_HE_V2 ||
+        format == AUDIO_FORMAT_AAC_ADTS_LC ||
+        format == AUDIO_FORMAT_AAC_ADTS_HE_V1 ||
+        format == AUDIO_FORMAT_AAC_ADTS_HE_V2 ||
         format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD ||
         format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD ||
         format == AUDIO_FORMAT_FLAC ||
@@ -327,6 +330,9 @@ static int get_snd_codec_id(audio_format_t format)
         id = SND_AUDIOCODEC_MP3;
         break;
     case AUDIO_FORMAT_AAC:
+        id = SND_AUDIOCODEC_AAC;
+        break;
+    case AUDIO_FORMAT_AAC_ADTS:
         id = SND_AUDIOCODEC_AAC;
         break;
     case AUDIO_FORMAT_PCM_OFFLOAD:
@@ -1836,15 +1842,6 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
         return -EINVAL;
     }
 
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FORMAT, value, sizeof(value));
-    if (ret >= 0) {
-        if (atoi(value) == SND_AUDIOSTREAMFORMAT_MP4ADTS) {
-            out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_MP4ADTS;
-            ALOGV("ADTS format is set in offload mode");
-        }
-        out->send_new_metadata = 1;
-    }
-
     ret = audio_extn_parse_compress_metadata(out, parms);
 
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_SAMPLE_RATE, value, sizeof(value));
@@ -2931,8 +2928,10 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         /*TODO: Do we need to change it for passthrough */
         out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
 
-        if (config->offload_info.format == AUDIO_FORMAT_AAC)
-            out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
+        if ((config->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC)
+             out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
+        if ((config->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC_ADTS)
+            out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_MP4ADTS;
         if (config->offload_info.format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD)
             out->compr_config.codec->format = SNDRV_PCM_FORMAT_S16_LE;
         if(config->offload_info.format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD)

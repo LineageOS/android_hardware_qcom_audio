@@ -4093,6 +4093,10 @@ unsigned char platform_map_to_edid_format(int audio_format)
         ALOGV("%s:AAC", __func__);
         format = AAC;
         break;
+    case AUDIO_FORMAT_AAC_ADTS:
+        ALOGV("%s:AAC_ADTS", __func__);
+        format = AAC;
+        break;
     case AUDIO_FORMAT_E_AC3:
         ALOGV("%s:E_AC3", __func__);
         format = DOLBY_DIGITAL_PLUS;

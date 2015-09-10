@@ -32,6 +32,10 @@ namespace android {
 #define AUDIO_FORMAT_APE 0x1D000000UL
 #endif
 
+#ifndef AAC_ADTS_OFFLOAD_ENABLED
+#define AUDIO_FORMAT_AAC_ADTS 0x1E000000UL
+#endif
+
 #ifndef AFE_PROXY_ENABLED
 #define AUDIO_DEVICE_OUT_PROXY 0x1000000
 #endif
