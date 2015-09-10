@@ -407,18 +407,23 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_VORBIS))) {
                ALOGD("offload disabled for multi-channel AAC,FLAC and VORBIS format");
                return false;
-            }
-#ifdef AUDIO_EXTN_FORMATS_ENABLED
-            //check if it's multi-channel FLAC/ALAC/WMA format with sample rate > 48k
-        if ((popcount(offloadInfo.channel_mask) > 2) &&
-            (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_FLAC) ||
-            (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_ALAC) && offloadInfo.sample_rate > 48000) ||
-            (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA) && offloadInfo.sample_rate > 48000) ||
-            (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA_PRO) && offloadInfo.sample_rate > 48000))) {
-                ALOGD("offload disabled for multi-channel FLAC/ALAC/WMA clips with sample rate > 48kHz");
-            return false;
         }
+
+        //check if it's multi-channel FLAC/ALAC/WMA format with sample rate > 48k
+        if (popcount(offloadInfo.channel_mask) > 2) {
+#ifdef FLAC_OFFLOAD_ENABLED
+            if (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_FLAC) && offloadInfo.sample_rate > 48000) {
+                return false;
+            }
 #endif
+#ifdef WMA_OFFLOAD_ENABLED
+            if ((((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA) && offloadInfo.sample_rate > 48000) ||
+                (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA_PRO) && offloadInfo.sample_rate > 48000)) {
+                return false;
+            }
+#endif
+        }
+
         //TODO: enable audio offloading with video when ready
         const bool allowOffloadWithVideo =
                 property_get_bool("audio.offload.video", false /* default_value */);
@@ -448,12 +453,14 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
         //do not check duration for other audio formats, e.g. dolby AAC/AC3 and amrwb+ formats
         if ((offloadInfo.format == AUDIO_FORMAT_MP3) ||
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC) ||
+#ifdef FLAC_OFFLOAD_ENABLED
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_FLAC) ||
-            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_VORBIS) ||
+#endif
+#ifdef WMA_OFFLOAD_ENABLED
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA) ||
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA_PRO) ||
-            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_ALAC) ||
-            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_APE))
+#endif
+            pcmOffload)
             return false;
 
     }
