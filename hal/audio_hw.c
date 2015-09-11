@@ -363,6 +363,15 @@ static int amplifier_input_stream_standby(struct audio_stream_in *stream)
     return 0;
 }
 
+static int amplifier_set_parameters(struct str_parms *parms)
+{
+    amplifier_device_t *amp = get_amplifier_device();
+    if (amp && amp->set_parameters)
+        return amp->set_parameters(amp, parms);
+
+    return 0;
+}
+
 static int amplifier_close(void)
 {
     amplifier_device_t *amp = get_amplifier_device();
@@ -3552,6 +3561,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     }
 
     audio_extn_set_parameters(adev, parms);
+    amplifier_set_parameters(parms);
 
 done:
     str_parms_destroy(parms);
