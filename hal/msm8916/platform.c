@@ -164,6 +164,8 @@ static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                         MULTIMEDIA2_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] =
                      {PLAYBACK_OFFLOAD_DEVICE, PLAYBACK_OFFLOAD_DEVICE},
+    [USECASE_AUDIO_DIRECT_PCM_OFFLOAD] =
+                     {PLAYBACK_OFFLOAD_DEVICE, PLAYBACK_OFFLOAD_DEVICE},
     [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_COMPRESS] = {COMPRESS_CAPTURE_DEVICE, COMPRESS_CAPTURE_DEVICE},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
@@ -2438,6 +2440,7 @@ bool platform_listen_usecase_needs_event(audio_usecase_t uc_id)
     case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
     case USECASE_AUDIO_PLAYBACK_MULTI_CH:
     case USECASE_AUDIO_PLAYBACK_OFFLOAD:
+    case USECASE_AUDIO_DIRECT_PCM_OFFLOAD:
         needs_event = true;
         break;
     /* concurrent playback in low latency allowed */
@@ -2499,6 +2502,7 @@ bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id)
     case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
     case USECASE_AUDIO_PLAYBACK_MULTI_CH:
     case USECASE_AUDIO_PLAYBACK_OFFLOAD:
+    case USECASE_AUDIO_DIRECT_PCM_OFFLOAD:
         needs_event = true;
         break;
     /* concurrent playback in low latency allowed */
