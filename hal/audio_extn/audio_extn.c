@@ -62,6 +62,7 @@ struct audio_extn_module {
     bool custom_stereo_enabled;
     uint32_t proxy_channel_num;
     bool hpx_enabled;
+    bool vbat_enabled;
 };
 
 static struct audio_extn_module aextnmod = {
@@ -70,6 +71,7 @@ static struct audio_extn_module aextnmod = {
     .custom_stereo_enabled = 0,
     .proxy_channel_num = 2,
     .hpx_enabled = 0,
+    .vbat_enabled = 0,
 };
 
 #define AUDIO_PARAMETER_KEY_ANC        "anc_enabled"
@@ -213,6 +215,27 @@ void audio_extn_check_and_set_dts_hpx_state(const struct audio_device *adev)
         return;
     if (adev->offload_effects_set_hpx_state)
         adev->offload_effects_set_hpx_state(aextnmod.hpx_enabled);
+}
+#endif
+
+#ifdef VBAT_MONITOR_ENABLED
+bool audio_extn_is_vbat_enabled(void)
+{
+    ALOGD("%s: status: %d", __func__, aextnmod.vbat_enabled);
+    return (aextnmod.vbat_enabled ? true: false);
+}
+
+bool audio_extn_can_use_vbat(void)
+{
+    char prop_vbat_enabled[PROPERTY_VALUE_MAX] = "false";
+
+    property_get("persist.audio.vbat.enabled", prop_vbat_enabled, "0");
+    if (!strncmp("true", prop_vbat_enabled, 4)) {
+        aextnmod.vbat_enabled = 1;
+    }
+
+    ALOGD("%s: vbat.enabled property is set to %s", __func__, prop_vbat_enabled);
+    return (aextnmod.vbat_enabled ? true: false);
 }
 #endif
 
