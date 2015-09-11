@@ -53,6 +53,10 @@ ifneq ($(filter msm8994 msm8992,$(TARGET_BOARD_PLATFORM)),)
     LOCAL_SRC_FILES += edid.c
 endif
 
+ifeq ($(strip $(AUDIO_USE_LL_AS_PRIMARY_OUTPUT)),true)
+    LOCAL_CFLAGS += -DUSE_LL_AS_PRIMARY_OUTPUT
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PCM_OFFLOAD)),true)
     LOCAL_CFLAGS += -DPCM_OFFLOAD_ENABLED
 endif
