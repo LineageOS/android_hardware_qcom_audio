@@ -40,8 +40,7 @@ namespace android {
 #ifndef APE_OFFLOAD_ENABLED
 #define AUDIO_FORMAT_APE 0x20000000UL
 #endif
-
-#ifndef AFE_PROXY_ENABLED
+#ifndef AUDIO_EXTN_AFE_PROXY_ENABLED
 #define AUDIO_DEVICE_OUT_PROXY 0x1000000
 #endif
 // ----------------------------------------------------------------------------
@@ -63,12 +62,10 @@ public:
                                           const char *device_name);
         virtual void setPhoneState(audio_mode_t state);
 
-
         virtual bool isOffloadSupported(const audio_offload_info_t& offloadInfo);
 
         // true if given state represents a device in a telephony or VoIP call
 
-        virtual audio_devices_t getDeviceForStrategy(routing_strategy strategy, bool fromCache);
 protected:
 
          status_t checkAndSetVolume(audio_stream_type_t stream,
