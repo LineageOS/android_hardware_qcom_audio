@@ -243,7 +243,8 @@ enum {
 #define LIB_MDM_DETECT "libmdmdetect.so"
 
 #define PLATFORM_CONFIG_KEY_SOUNDCARD_NAME "snd_card_name"
-#define PLATFORM_MAX_MIC_COUNT "input_mic_max_count"
+#define PLATFORM_CONFIG_KEY_MAX_MIC_COUNT "input_mic_max_count"
+#define PLATFORM_DEFAULT_MIC_COUNT 2
 
 /* CSD-CLIENT related functions */
 typedef int (*init_t)(bool);

@@ -817,7 +817,7 @@ done:
 #endif
 }
 
-static void set_platform_defaults(struct platform_data * my_data __unused)
+static void set_platform_defaults(struct platform_data * my_data)
 {
     int32_t dev;
     for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
@@ -864,6 +864,8 @@ static void set_platform_defaults(struct platform_data * my_data __unused)
     hw_interface_table[SND_DEVICE_OUT_VOICE_TX] = strdup("AFE_PCM_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_PROTECTED] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED] = strdup("SLIMBUS_0_RX");
+
+    my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
 }
 
 void get_cvd_version(char *cvd_version, struct audio_device *adev)
@@ -2333,15 +2335,12 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     }
 
     memset(value, 0, sizeof(value));
-    err = str_parms_get_str(parms, PLATFORM_MAX_MIC_COUNT,
+    err = str_parms_get_str(parms, PLATFORM_CONFIG_KEY_MAX_MIC_COUNT,
                             value, sizeof(value));
     if (err >= 0) {
-        str_parms_del(parms, PLATFORM_MAX_MIC_COUNT);
+        str_parms_del(parms, PLATFORM_CONFIG_KEY_MAX_MIC_COUNT);
         my_data->max_mic_count = atoi(value);
         ALOGV("%s: max_mic_count %s/%d", __func__, value, my_data->max_mic_count);
-    } else {
-        ALOGE("%s: max_mic_count key value pair not found, reset to default", __func__);
-        my_data->max_mic_count = 2;
     }
 
 done:
