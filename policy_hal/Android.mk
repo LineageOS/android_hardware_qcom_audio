@@ -35,6 +35,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_RECORD_PLAY_CONCURRENCY)),true)
 LOCAL_CFLAGS += -DRECORD_PLAY_CONCURRENCY
 endif
 
+LOCAL_CFLAGS += -Wno-error -fpermissive
 LOCAL_MODULE := libaudiopolicymanager
 
 include $(BUILD_SHARED_LIBRARY)
