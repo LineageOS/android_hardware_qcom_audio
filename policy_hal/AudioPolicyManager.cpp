@@ -618,11 +618,12 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
         mLimitRingtoneVolume = false;
     }
 }
-status_t AudioPolicyManagerCustom::stopSource(sp<SwAudioOutputDescriptor> outputDesc,
+status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDesc1,
                                             audio_stream_type_t stream,
                                             bool forceDeviceUpdate)
 {
     // always handle stream stop, check which stream type is stopping
+    sp<SwAudioOutputDescriptor> outputDesc = (sp<SwAudioOutputDescriptor>) outputDesc1;
     handleEventForBeacon(stream == AUDIO_STREAM_TTS ? STOPPING_BEACON : STOPPING_OUTPUT);
 
     // handle special case for sonification while in call
@@ -675,13 +676,14 @@ status_t AudioPolicyManagerCustom::stopSource(sp<SwAudioOutputDescriptor> output
         return INVALID_OPERATION;
     }
 }
-status_t AudioPolicyManagerCustom::startSource(sp<SwAudioOutputDescriptor> outputDesc,
+status_t AudioPolicyManagerCustom::startSource(sp<AudioOutputDescriptor> outputDesc1,
                                              audio_stream_type_t stream,
                                              audio_devices_t device,
                                              uint32_t *delayMs)
 {
     // cannot start playback of STREAM_TTS if any other output is being used
     uint32_t beaconMuteLatency = 0;
+    sp<SwAudioOutputDescriptor> outputDesc = (sp<SwAudioOutputDescriptor>) outputDesc1;
 
     *delayMs = 0;
     if (stream == AUDIO_STREAM_TTS) {

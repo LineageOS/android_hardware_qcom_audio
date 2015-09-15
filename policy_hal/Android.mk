@@ -39,6 +39,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
 LOCAL_CFLAGS += -DAUDIO_EXTN_AFE_PROXY_ENABLED
 endif
 
+LOCAL_CFLAGS += -Wno-error -fpermissive
 LOCAL_MODULE := libaudiopolicymanager
 
 include $(BUILD_SHARED_LIBRARY)
