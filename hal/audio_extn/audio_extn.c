@@ -874,9 +874,7 @@ static void *qcopt_handle;
 static perf_lock_acquire_t perf_lock_acq;
 static perf_lock_release_t perf_lock_rel;
 
-static int perf_lock_handle;
 char opt_lib_path[512] = {0};
-int perf_lock_opts[1] = {0x20E};
 
 int audio_extn_perf_lock_init(void)
 {
@@ -914,19 +912,30 @@ err:
     return ret;
 }
 
-void audio_extn_perf_lock_acquire(void)
+void audio_extn_perf_lock_acquire(int *handle, int duration,
+                                 int *perf_lock_opts, int size)
 {
-    if (perf_lock_acq)
-        perf_lock_handle = perf_lock_acq(perf_lock_handle, 0, perf_lock_opts, 1);
-    else
-        ALOGE("%s: Perf lock acquire error \n", __func__);
+
+    if (!perf_lock_opts || !size || !perf_lock_acq || !handle)
+        return -EINVAL;
+    /*
+     * Acquire performance lock for 1 sec during device path bringup.
+     * Lock will be released either after 1 sec or when perf_lock_release
+     * function is executed.
+     */
+    *handle = perf_lock_acq(*handle, duration, perf_lock_opts, size);
+    if (*handle <= 0)
+        ALOGE("%s: Failed to acquire perf lock, err: %d\n",
+              __func__, *handle);
 }
 
-void audio_extn_perf_lock_release(void)
+void audio_extn_perf_lock_release(int *handle)
 {
-    if (perf_lock_rel && perf_lock_handle)
-        perf_lock_rel(perf_lock_handle);
-    else
+    if (perf_lock_rel && handle && (*handle > 0)) {
+        perf_lock_rel(*handle);
+        *handle = 0;
+    } else {
         ALOGE("%s: Perf lock release error \n", __func__);
+    }
 }
 #endif /* KPI_OPTIMIZE_ENABLED */

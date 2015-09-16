@@ -503,12 +503,14 @@ int b64encode(uint8_t *inp, int ilen, char* outp);
 
 #ifndef KPI_OPTIMIZE_ENABLED
 #define audio_extn_perf_lock_init() (0)
-#define audio_extn_perf_lock_acquire() (0)
-#define audio_extn_perf_lock_release() (0)
+#define audio_extn_perf_lock_acquire(handle, duration, opts, size) (0)
+#define audio_extn_perf_lock_release(handle) (0)
 #else
 int audio_extn_perf_lock_init(void);
-void audio_extn_perf_lock_acquire(void);
-void audio_extn_perf_lock_release(void);
+void audio_extn_perf_lock_acquire(int *handle, int duration,
+                                 int *opts, int size);
+void audio_extn_perf_lock_release(int *handle);
+
 #endif /* KPI_OPTIMIZE_ENABLED */
 
 #ifndef AUDIO_EXTERNAL_HDMI_ENABLED
