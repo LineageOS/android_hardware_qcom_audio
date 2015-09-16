@@ -58,6 +58,8 @@ public:
                                           const char *device_address,
                                           const char *device_name);
         virtual void setPhoneState(audio_mode_t state);
+        virtual void setForceUse(audio_policy_force_use_t usage,
+                                 audio_policy_forced_cfg_t config);
 
         virtual bool isOffloadSupported(const audio_offload_info_t& offloadInfo);
 
