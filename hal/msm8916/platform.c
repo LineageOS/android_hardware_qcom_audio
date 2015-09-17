@@ -4724,7 +4724,8 @@ int platform_get_wsa_mode(void *adev)
     snd_card_name = mixer_get_name(adev_h->mixer);
     if ((!strcmp(snd_card_name, "msm8952-skum-snd-card")) ||
         (!strcmp(snd_card_name, "msm8952-snd-card")) ||
-        (!strcmp(snd_card_name, "msm8952-snd-card-mtp")))
+        (!strcmp(snd_card_name, "msm8952-snd-card-mtp")) ||
+        (!strcmp(snd_card_name, "msm8976-skun-snd-card")))
         return 1;
     else
         return 0;
