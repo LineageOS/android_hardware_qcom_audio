@@ -119,6 +119,7 @@ static int32_t start_hfp(struct audio_device *adev,
     int32_t pcm_dev_rx_id, pcm_dev_tx_id, pcm_dev_asm_rx_id, pcm_dev_asm_tx_id;
 
     ALOGD("%s: enter", __func__);
+    adev->enable_hfp = true;
 
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
     uc_info->id = hfpmod.ucid;
@@ -208,6 +209,7 @@ static int32_t stop_hfp(struct audio_device *adev)
     struct audio_usecase *uc_info;
 
     ALOGD("%s: enter", __func__);
+    adev->enable_hfp = false;
     hfpmod.is_hfp_running = false;
 
     /* 1. Close the PCM devices */
