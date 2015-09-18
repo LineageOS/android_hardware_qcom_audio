@@ -51,6 +51,7 @@
 #include "bass_boost.h"
 #include "virtualizer.h"
 #include "reverb.h"
+#include "asphere.h"
 
 #ifdef DTS_EAGLE
 #include "effect_util.h"
@@ -456,6 +457,24 @@ exit:
 }
 
 /*
+ * Effect Bundle Set and get param operations.
+ * currently only handles audio sphere scenario,
+ * but the interface itself can be utilized for any effect.
+ */
+__attribute__ ((visibility ("default")))
+void offload_effects_bundle_get_parameters(struct str_parms *query,
+                                           struct str_parms *reply)
+{
+    asphere_get_parameters(query, reply);
+}
+
+__attribute__ ((visibility ("default")))
+void offload_effects_bundle_set_parameters(struct str_parms *parms)
+{
+    asphere_set_parameters(parms);
+}
+
+/*
  * Effect operations
  */
 int set_config(effect_context_t *context, effect_config_t *config)
@@ -811,6 +830,7 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
             status = -ENOSYS;
             goto exit;
         }
+        handle_asphere_on_effect_enabled(true, context, &created_effects_list);
         context->state = EFFECT_STATE_ACTIVE;
         if (context->ops.enable)
             context->ops.enable(context);
@@ -825,6 +845,7 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
             status = -ENOSYS;
             goto exit;
         }
+        handle_asphere_on_effect_enabled(false, context, &created_effects_list);
         context->state = EFFECT_STATE_INITIALIZED;
         if (context->ops.disable)
             context->ops.disable(context);
