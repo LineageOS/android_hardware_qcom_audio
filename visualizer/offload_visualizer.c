@@ -300,20 +300,40 @@ bool effects_enabled() {
     return false;
 }
 
-int configure_proxy_capture(struct mixer *mixer, int value) {
-    const char *proxy_ctl_name = "AFE_PCM_RX Audio Mixer MultiMedia4";
+int set_control(const char* name, struct mixer *mixer, int value) {
     struct mixer_ctl *ctl;
+
+    ctl = mixer_get_ctl_by_name(mixer, name);
+    if (ctl == NULL) {
+        ALOGW("%s: could not get %s ctl", __func__, name);
+        return -EINVAL;
+    }
+    if (mixer_ctl_set_value(ctl, 0, value) != 0) {
+        ALOGW("%s: error setting value %d on %s ", __func__, value, name);
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+int configure_proxy_capture(struct mixer *mixer, int value) {
+    int retval = 0;
 
     if (value && acdb_send_audio_cal)
         acdb_send_audio_cal(AFE_PROXY_ACDB_ID, ACDB_DEV_TYPE_OUT);
 
-    ctl = mixer_get_ctl_by_name(mixer, proxy_ctl_name);
-    if (ctl == NULL) {
-        ALOGW("%s: could not get %s ctl", __func__, proxy_ctl_name);
-        return -EINVAL;
-    }
-    if (mixer_ctl_set_value(ctl, 0, value) != 0)
-        ALOGW("%s: error setting value %d on %s ", __func__, value, proxy_ctl_name);
+    retval = set_control("AFE_PCM_RX Audio Mixer MultiMedia4", mixer, value);
+
+    if (retval != 0)
+        return retval;
+
+    // Extending visualizer to capture for compress2 path as well.
+    // for extending it to multiple offload either this needs to be extended
+    // or need to find better solution to enable only active offload sessions
+
+    retval = set_control("AFE_PCM_RX Audio Mixer MultiMedia7", mixer, value);
+    if (retval != 0)
+        return retval;
 
     return 0;
 }
