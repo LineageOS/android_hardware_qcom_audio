@@ -1086,6 +1086,7 @@ status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDe
         // store time at which the stream was stopped - see isStreamActive()
         if (outputDesc->mRefCount[stream] == 0 || forceDeviceUpdate) {
             outputDesc->mStopTime[stream] = systemTime();
+            audio_devices_t prevDevice = outputDesc->device();
             audio_devices_t newDevice = getNewOutputDevice(outputDesc, false /*fromCache*/);
             // delay the device switch by twice the latency because stopOutput() is executed when
             // the track stop() command is received and at that time the audio track buffer can
@@ -1104,10 +1105,16 @@ status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDe
                         outputDesc->sharesHwModuleWith(desc) &&
                         (newDevice != desc->device())) {
                     audio_devices_t dev = getNewOutputDevice(mOutputs.valueFor(curOutput), false /*fromCache*/);
+                    uint32_t delayMs;
+                    if (dev == prevDevice) {
+                        delayMs = 0;
+                    } else {
+                        delayMs = outputDesc->mLatency*2;
+                    }
                     setOutputDevice(desc,
                                     dev,
                                     true,
-                                    outputDesc->latency()*2);
+                                    delayMs);
                 }
             }
             // update the outputs if stopping one with a stream that can affect notification routing
