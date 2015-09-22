@@ -125,6 +125,7 @@ struct offload_cmd {
 struct stream_out {
     struct audio_stream_out stream;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
+    pthread_mutex_t pre_lock; /* acquire before lock to avoid DOS by playback thread */
     pthread_cond_t  cond;
     struct pcm_config config;
     struct compr_config compr_config;
@@ -163,6 +164,7 @@ struct stream_out {
 struct stream_in {
     struct audio_stream_in stream;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
+    pthread_mutex_t pre_lock; /* acquire before lock to avoid DOS by capture thread */
     struct pcm_config config;
     struct pcm *pcm;
     int standby;
