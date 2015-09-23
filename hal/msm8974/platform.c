@@ -2404,6 +2404,67 @@ done:
     return ret;
 }
 
+#define DEFAULT_NOMINAL_SPEAKER_GAIN 20
+int ramp_speaker_gain(struct audio_device *adev, bool ramp_up, int target_ramp_up_gain) {
+    // backup_gain: gain to try to set in case of an error during ramp
+    int start_gain, end_gain, step, backup_gain, i;
+    bool error = false;
+    const struct mixer_ctl *ctl;
+    const char *mixer_ctl_name_gain_left = "Left Speaker Gain";
+    const char *mixer_ctl_name_gain_right = "Right Speaker Gain";
+    struct mixer_ctl *ctl_left = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name_gain_left);
+    struct mixer_ctl *ctl_right = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name_gain_right);
+    if (!ctl_left || !ctl_right) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s or %s, not applying speaker gain ramp",
+                      __func__, mixer_ctl_name_gain_left, mixer_ctl_name_gain_right);
+        return -EINVAL;
+    } else if ((mixer_ctl_get_num_values(ctl_left) != 1)
+            || (mixer_ctl_get_num_values(ctl_right) != 1)) {
+        ALOGE("%s: Unexpected num values for mixer cmd - %s or %s, not applying speaker gain ramp",
+                              __func__, mixer_ctl_name_gain_left, mixer_ctl_name_gain_right);
+        return -EINVAL;
+    }
+    if (ramp_up) {
+        start_gain = 0;
+        end_gain = target_ramp_up_gain > 0 ? target_ramp_up_gain : DEFAULT_NOMINAL_SPEAKER_GAIN;
+        step = +1;
+        backup_gain = end_gain;
+    } else {
+        // using same gain on left and right
+        const int left_gain = mixer_ctl_get_value(ctl_left, 0);
+        start_gain = left_gain > 0 ? left_gain : DEFAULT_NOMINAL_SPEAKER_GAIN;
+        end_gain = 0;
+        step = -1;
+        backup_gain = start_gain;
+    }
+    for (i = start_gain ; i != (end_gain + step) ; i += step) {
+        //ALOGV("setting speaker gain to %d", i);
+        if (mixer_ctl_set_value(ctl_left, 0, i)) {
+            ALOGE("%s: error setting %s to %d during gain ramp",
+                    __func__, mixer_ctl_name_gain_left, i);
+            error = true;
+            break;
+        }
+        if (mixer_ctl_set_value(ctl_right, 0, i)) {
+            ALOGE("%s: error setting %s to %d during gain ramp",
+                    __func__, mixer_ctl_name_gain_right, i);
+            error = true;
+            break;
+        }
+        usleep(1000);
+    }
+    if (error) {
+        // an error occured during the ramp, let's still try to go back to a safe volume
+        if (mixer_ctl_set_value(ctl_left, 0, backup_gain)) {
+            ALOGE("%s: error restoring left gain to %d", __func__, backup_gain);
+        }
+        if (mixer_ctl_set_value(ctl_right, 0, backup_gain)) {
+            ALOGE("%s: error restoring right gain to %d", __func__, backup_gain);
+        }
+    }
+    return start_gain;
+}
+
 int platform_swap_lr_channels(struct audio_device *adev, bool swap_channels)
 {
     // only update if there is active pcm playback on speaker
@@ -2425,7 +2486,11 @@ int platform_swap_lr_channels(struct audio_device *adev, bool swap_channels)
                  */
                 if (acdb_device_table[SND_DEVICE_OUT_SPEAKER] !=
                     acdb_device_table[SND_DEVICE_OUT_SPEAKER_REVERSE]) {
+                    const int initial_skpr_gain = ramp_speaker_gain(adev, false /*ramp_up*/, -1);
                     select_devices(adev, usecase->id);
+                    if (initial_skpr_gain != -EINVAL) {
+                        ramp_speaker_gain(adev, true /*ramp_up*/, initial_skpr_gain);
+                    }
                 } else {
                     const char *mixer_path;
                     if (swap_channels) {
