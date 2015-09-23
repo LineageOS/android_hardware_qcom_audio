@@ -1109,6 +1109,9 @@ int start_input_stream(struct stream_in *in)
     uc_info->out_snd_device = SND_DEVICE_NONE;
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
+
+    audio_extn_perf_lock_acquire();
+
     select_devices(adev, in->usecase);
 
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d), channels %d",
@@ -1141,11 +1144,14 @@ int start_input_stream(struct stream_in *in)
         break;
     }
 
+    audio_extn_perf_lock_release();
+
     ALOGV("%s: exit", __func__);
     return ret;
 
 error_open:
     stop_input_stream(in);
+    audio_extn_perf_lock_release();
 
 error_config:
     adev->active_input = NULL;
@@ -1553,6 +1559,8 @@ int start_output_stream(struct stream_out *out)
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
+    audio_extn_perf_lock_acquire();
+
     select_devices(adev, out->usecase);
 
     audio_extn_extspk_update(adev->extspk);
@@ -1620,9 +1628,11 @@ int start_output_stream(struct stream_out *out)
         if (adev->offload_effects_start_output != NULL)
             adev->offload_effects_start_output(out->handle, out->pcm_device_id);
     }
+    audio_extn_perf_lock_release();
     ALOGV("%s: exit", __func__);
     return 0;
 error_open:
+    audio_extn_perf_lock_release();
     stop_output_stream(out);
 error_config:
     return ret;
@@ -3848,6 +3858,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     }
 
     pthread_mutex_unlock(&adev_init_lock);
+
+    audio_extn_perf_lock_init();
 
     ALOGV("%s: exit", __func__);
     return 0;

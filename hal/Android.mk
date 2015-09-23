@@ -23,6 +23,7 @@ ifneq ($(filter apq8084,$(TARGET_BOARD_PLATFORM)),)
 endif
 ifneq ($(filter msm8974,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSM8974
+  LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
 endif
 endif
 
