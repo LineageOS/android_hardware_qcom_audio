@@ -21,10 +21,12 @@ endif
 ifneq ($(filter msm8992,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSM8994
   LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="4"
+  LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
 endif
 ifneq ($(filter msm8994,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSM8994
   LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="4"
+  LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
 endif
 endif
 
@@ -33,6 +35,7 @@ LOCAL_SRC_FILES := \
 	voice.c \
 	platform_info.c \
 	audio_extn/ext_speaker.c \
+	audio_extn/audio_extn.c \
 	$(AUDIO_PLATFORM)/platform.c
 
 LOCAL_SHARED_LIBRARIES := \
