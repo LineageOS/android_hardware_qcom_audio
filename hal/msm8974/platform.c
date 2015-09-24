@@ -2441,14 +2441,24 @@ int platform_swap_lr_channels(struct audio_device *adev, bool swap_channels)
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
             if (usecase->type == PCM_PLAYBACK &&
-                usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
-                const char *mixer_path;
-                if (swap_channels) {
-                    mixer_path = platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER_REVERSE);
-                    audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+                    usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
+                /*
+                 * If acdb tuning is different for SPEAKER_REVERSE, it is must
+                 * to perform device switch to disable the current backend to
+                 * enable it with new acdb data.
+                 */
+                if (acdb_device_table[SND_DEVICE_OUT_SPEAKER] !=
+                    acdb_device_table[SND_DEVICE_OUT_SPEAKER_REVERSE]) {
+                    select_devices(adev, usecase->id);
                 } else {
-                    mixer_path = platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER);
-                    audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+                    const char *mixer_path;
+                    if (swap_channels) {
+                        mixer_path = platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER_REVERSE);
+                        audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+                    } else {
+                        mixer_path = platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER);
+                        audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+                    }
                 }
                 break;
             }
