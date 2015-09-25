@@ -649,12 +649,13 @@ int select_devices(struct audio_device *adev,
             out_snd_device = SND_DEVICE_NONE;
             if (in_snd_device == SND_DEVICE_NONE) {
                 audio_devices_t out_device = AUDIO_DEVICE_NONE;
-                if (adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
-                        adev->primary_output && !adev->primary_output->standby) {
-                    out_device = adev->primary_output->devices;
+                if (adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
                     platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
-                } else if (usecase->id == USECASE_AUDIO_RECORD_AFE_PROXY) {
-                    out_device = AUDIO_DEVICE_OUT_TELEPHONY_TX;
+                    if (usecase->id == USECASE_AUDIO_RECORD_AFE_PROXY) {
+                        out_device = AUDIO_DEVICE_OUT_TELEPHONY_TX;
+                    } else if (adev->primary_output) {
+                        out_device = adev->primary_output->devices;
+                    }
                 }
                 in_snd_device = platform_get_input_snd_device(adev->platform, out_device);
             }
