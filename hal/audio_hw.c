@@ -1327,7 +1327,7 @@ static void *offload_thread_loop(void *context)
         pthread_mutex_lock(&out->lock);
         out->offload_thread_blocked = false;
         pthread_cond_signal(&out->cond);
-        if (send_callback) {
+        if (send_callback && out->offload_callback) {
             ALOGVV("%s: sending offload_callback event %d", __func__, event);
             out->offload_callback(event, NULL, out->offload_cookie);
         }
