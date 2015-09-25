@@ -236,11 +236,17 @@ struct platform_data {
 
 static bool is_external_codec = false;
 static const int pcm_device_table_of_ext_codec[AUDIO_USECASE_MAX][2] = {
-   [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE_OF_EXT_CODEC, QCHAT_CALL_PCM_DEVICE_OF_EXT_CODEC}
+   [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE_OF_EXT_CODEC, QCHAT_CALL_PCM_DEVICE_OF_EXT_CODEC},
+   [USECASE_VOICEMMODE1_CALL] = {VOICEMMODE1_CALL_PCM_DEVICE_OF_EXT_CODEC,
+                                 VOICEMMODE1_CALL_PCM_DEVICE_OF_EXT_CODEC},
+   [USECASE_VOICEMMODE2_CALL] = {VOICEMMODE2_CALL_PCM_DEVICE_OF_EXT_CODEC,
+                                 VOICEMMODE2_CALL_PCM_DEVICE_OF_EXT_CODEC},
 };
 
 /* List of use cases that has different PCM device ID's for internal and external codecs */
-static const int misc_usecase[AUDIO_USECASE_MAX] = { USECASE_QCHAT_CALL };
+static const int misc_usecase[AUDIO_USECASE_MAX] = {USECASE_QCHAT_CALL,
+                                                    USECASE_VOICEMMODE1_CALL,
+                                                    USECASE_VOICEMMODE2_CALL};
 
 int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {DEEP_BUFFER_PCM_DEVICE,
@@ -281,6 +287,10 @@ int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_VOLTE_CALL] = {VOLTE_CALL_PCM_DEVICE, VOLTE_CALL_PCM_DEVICE},
     [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE, QCHAT_CALL_PCM_DEVICE},
     [USECASE_VOWLAN_CALL] = {VOWLAN_CALL_PCM_DEVICE, VOWLAN_CALL_PCM_DEVICE},
+    [USECASE_VOICEMMODE1_CALL] = {VOICEMMODE1_CALL_PCM_DEVICE,
+                                  VOICEMMODE1_CALL_PCM_DEVICE},
+    [USECASE_VOICEMMODE2_CALL] = {VOICEMMODE2_CALL_PCM_DEVICE,
+                                  VOICEMMODE2_CALL_PCM_DEVICE},
     [USECASE_COMPRESS_VOIP_CALL] = {COMPRESS_VOIP_CALL_PCM_DEVICE, COMPRESS_VOIP_CALL_PCM_DEVICE},
     [USECASE_INCALL_REC_UPLINK] = {AUDIO_RECORD_PCM_DEVICE,
                                    AUDIO_RECORD_PCM_DEVICE},
@@ -656,6 +666,8 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_VOLTE_CALL)},
     {TO_NAME_INDEX(USECASE_QCHAT_CALL)},
     {TO_NAME_INDEX(USECASE_VOWLAN_CALL)},
+    {TO_NAME_INDEX(USECASE_VOICEMMODE1_CALL)},
+    {TO_NAME_INDEX(USECASE_VOICEMMODE2_CALL)},
     {TO_NAME_INDEX(USECASE_INCALL_REC_UPLINK)},
     {TO_NAME_INDEX(USECASE_INCALL_REC_DOWNLINK)},
     {TO_NAME_INDEX(USECASE_INCALL_REC_UPLINK_AND_DOWNLINK)},
@@ -742,7 +754,7 @@ static void update_codec_type(const char *snd_card_name) {
      if (!strncmp(snd_card_name, "msm8939-tapan-snd-card",
                   sizeof("msm8939-tapan-snd-card")) ||
          !strncmp(snd_card_name, "msm8939-tapan9302-snd-card",
-                  sizeof("msm8939-tapan9302-snd-card"))||
+                  sizeof("msm8939-tapan9302-snd-card")) ||
          !strncmp(snd_card_name, "msm8939-tomtom9330-snd-card",
                   sizeof("msm8939-tomtom9330-snd-card")) ||
          !strncmp(snd_card_name, "msm8952-tomtom-snd-card",
@@ -873,7 +885,7 @@ static void query_platform(const char *snd_card_name,
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
     } else if (!strncmp(snd_card_name, "msm8952-snd-card-mtp",
-                 sizeof("msm8952-snd-card-mtpmsm8952-snd-card-mtp"))) {
+                 sizeof("msm8952-snd-card-mtp"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_MTP,
                 sizeof(MIXER_XML_PATH_MTP));
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
@@ -3502,6 +3514,8 @@ bool platform_listen_usecase_needs_event(audio_usecase_t uc_id)
     *  USECASE_VOLTE_CALL:
     *  USECASE_QCHAT_CALL:
     *  USECASE_VOWLAN_CALL:
+    *  USECASE_VOICEMMODE1_CALL:
+    *  USECASE_VOICEMMODE2_CALL:
     *  USECASE_COMPRESS_VOIP_CALL:
     *  USECASE_AUDIO_RECORD_FM_VIRTUAL:
     *  USECASE_INCALL_REC_UPLINK:
@@ -3564,6 +3578,8 @@ bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id)
     *  USECASE_VOLTE_CALL:
     *  USECASE_QCHAT_CALL:
     *  USECASE_VOWLAN_CALL:
+    *  USECASE_VOICEMMODE1_CALL:
+    *  USECASE_VOICEMMODE2_CALL:
     *  USECASE_COMPRESS_VOIP_CALL:
     *  USECASE_AUDIO_RECORD_FM_VIRTUAL:
     *  USECASE_INCALL_REC_UPLINK:
