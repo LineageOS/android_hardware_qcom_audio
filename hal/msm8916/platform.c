@@ -148,12 +148,12 @@ char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
 #define MAX_DSP_ONLY_DECODERS 6
 
 char * dsp_only_decoders_mime[] = {
-	"audio/x-ms-wma" /* wma*/ ,
-	"audio/x-ms-wma-lossless" /* wma lossless */ ,
-	"audio/x-ms-wma-pro" /* wma prop */ ,
-	"audio/amr-wb-plus" /* amr wb plus */ ,
-	"audio/alac"  /*alac */ ,
-	"audio/x-ape" /*ape */,
+    "audio/x-ms-wma" /* wma*/ ,
+    "audio/x-ms-wma-lossless" /* wma lossless */ ,
+    "audio/x-ms-wma-pro" /* wma prop */ ,
+    "audio/amr-wb-plus" /* amr wb plus */ ,
+    "audio/alac"  /*alac */ ,
+    "audio/x-ape" /*ape */,
 };
 
 enum {
@@ -3508,6 +3508,8 @@ void platform_get_parameters(void *platform,
     char value[512] = {0};
     int ret;
     char *kv_pairs = NULL;
+    char propValue[PROPERTY_VALUE_MAX]={0};
+    bool prop_playback_enabled = false;
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_SLOWTALK,
                             value, sizeof(value));
@@ -3538,12 +3540,16 @@ void platform_get_parameters(void *platform,
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED,
                                     value, sizeof(value));
-
     if (ret >= 0) {
         int isallowed = 1; /*true*/
 
-        if(voice_is_in_call(my_data->adev) ||
-             (SND_CARD_STATE_OFFLINE == get_snd_card_state(my_data->adev))) {
+        if (property_get("voice.playback.conc.disabled", propValue, NULL)) {
+            prop_playback_enabled = atoi(propValue) ||
+                !strncmp("true", propValue, 4);
+        }
+
+        if (prop_playback_enabled && (voice_is_in_call(my_data->adev) ||
+             (SND_CARD_STATE_OFFLINE == get_snd_card_state(my_data->adev)))) {
             char *decoder_mime_type = value;
 
             //check if unsupported mime type or not
@@ -3552,7 +3558,7 @@ void platform_get_parameters(void *platform,
                 for (i = 0; i < sizeof(dsp_only_decoders_mime)/sizeof(dsp_only_decoders_mime[0]); i++) {
                     if (!strncmp(decoder_mime_type, dsp_only_decoders_mime[i],
                     strlen(dsp_only_decoders_mime[i]))) {
-                       ALOGE("Rejecting request for DSP only session from HAL during voice call/SSR state");
+                       ALOGD("Rejecting request for DSP only session from HAL during voice call/SSR state");
                        isallowed = 0;
                        break;
                     }
