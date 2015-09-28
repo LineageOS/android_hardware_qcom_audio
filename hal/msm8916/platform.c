@@ -1746,6 +1746,26 @@ acdb_init_fail:
     my_data->current_backend_cfg[HEADPHONE_44_1_BACKEND].samplerate_mixer_ctl =
         strdup("SLIM_5_RX SampleRate");
 
+
+    if (platform_get_native_support()) {
+
+        if (!strncmp(snd_card_name, "msm8976-tasha-snd-card",
+            sizeof("msm8976-tasha-snd-card")) ||
+            !strncmp(snd_card_name, "msm8976-tashalite-snd-card",
+            sizeof("msm8976-tashalite-snd-card"))) {
+            /* do nothing */
+        }
+        else {
+            platform_set_native_support(false);
+        }
+    }
+
+    ALOGD("native: native audio: %s for sound card %s",
+        (platform_get_native_support() ? "enabled" : "disabled"),
+        snd_card_name);
+
+
+
     my_data->edid_info = NULL;
     return my_data;
 }
@@ -2021,7 +2041,7 @@ int platform_set_native_support(bool codec_support)
 {
     na_props.platform_na_prop_enabled = na_props.ui_na_prop_enabled
         = codec_support;
-    ALOGD("%s: na_props.platform_na_prop_enabled: %d", __func__,
+    ALOGV("%s: na_props.platform_na_prop_enabled: %d", __func__,
            na_props.platform_na_prop_enabled);
     return 0;
 }
