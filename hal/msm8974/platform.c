@@ -1286,7 +1286,12 @@ void *platform_init(struct audio_device *adev)
             continue;
         }
 
-        snd_card_name = mixer_get_name(adev->mixer);
+        snd_card_name = strdup(mixer_get_name(adev->mixer));
+        if (!snd_card_name) {
+            ALOGE("failed to allocate memory for snd_card_name\n");
+            free(my_data);
+            return NULL;
+        }
         ALOGV("%s: snd_card_name: %s", __func__, snd_card_name);
 
         my_data->hw_info = hw_info_init(snd_card_name);
@@ -1348,6 +1353,7 @@ void *platform_init(struct audio_device *adev)
                 ALOGE("%s: Failed to init audio route controls, aborting.",
                        __func__);
                 free(my_data);
+                free(snd_card_name);
                 return NULL;
             }
             adev->snd_card = snd_card_num;
@@ -1361,6 +1367,7 @@ void *platform_init(struct audio_device *adev)
     if (snd_card_num >= MAX_SND_CARD) {
         ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
         free(my_data);
+        free(snd_card_name);
         return NULL;
     }
 
@@ -1559,6 +1566,7 @@ acdb_init_fail:
         strdup("SLIM_5_RX SampleRate");
 
     my_data->edid_info = NULL;
+    free(snd_card_name);
     return my_data;
 }
 
