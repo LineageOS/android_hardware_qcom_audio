@@ -35,6 +35,7 @@
 #define AUDIO_PARAMETER_KEY_HANDLE_FM "handle_fm"
 #define AUDIO_PARAMETER_KEY_FM_VOLUME "fm_volume"
 #define AUDIO_PARAMETER_KEY_REC_PLAY_CONC "rec_play_conc_on"
+#define FM_LOOPBACK_DRAIN_TIME_MS 2
 
 static struct pcm_config pcm_config_fm = {
     .channels = 2,
@@ -65,7 +66,7 @@ static struct fm_module fmmod = {
   .scard_state = SND_CARD_STATE_ONLINE,
 };
 
-static int32_t fm_set_volume(struct audio_device *adev, float value)
+static int32_t fm_set_volume(struct audio_device *adev, float value, bool persist)
 {
     int32_t vol, ret = 0;
     struct mixer_ctl *ctl;
@@ -82,7 +83,8 @@ static int32_t fm_set_volume(struct audio_device *adev, float value)
         value = 1.0;
     }
     vol  = lrint((value * 0x2000) + 0.5);
-    fmmod.fm_volume = value;
+    if (persist)
+        fmmod.fm_volume = value;
 
     if (!fmmod.is_fm_running) {
         ALOGV("%s: FM not active, ignoring set_fm_volume call", __func__);
@@ -202,7 +204,7 @@ static int32_t fm_start(struct audio_device *adev)
     pcm_start(fmmod.fm_pcm_tx);
 
     fmmod.is_fm_running = true;
-    fm_set_volume(adev, fmmod.fm_volume);
+    fm_set_volume(adev, fmmod.fm_volume, false);
 
     ALOGD("%s: exit: status(%d)", __func__, ret);
     return 0;
@@ -263,8 +265,11 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
                 adev->primary_output->devices = val & ~AUDIO_DEVICE_OUT_FM;
                 fm_start(adev);
             } else if (!(val & AUDIO_DEVICE_OUT_FM)
-                     && fmmod.is_fm_running == true)
+                     && fmmod.is_fm_running == true) {
+                fm_set_volume(adev, 0, false);
+                usleep(FM_LOOPBACK_DRAIN_TIME_MS*1000);
                 fm_stop(adev);
+            }
        }
     }
 
@@ -278,7 +283,7 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
             goto exit;
         }
         ALOGD("%s: set_fm_volume usecase", __func__);
-        fm_set_volume(adev, vol);
+        fm_set_volume(adev, vol, true);
     }
 
 #ifdef RECORD_PLAY_CONCURRENCY
@@ -293,7 +298,7 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
             ALOGD("Record play concurrency OFF Forcing FM device reroute");
 
         select_devices(adev, USECASE_AUDIO_PLAYBACK_FM);
-        fm_set_volume(adev,fmmod.fm_volume);
+        fm_set_volume(adev, fmmod.fm_volume, false);
     }
 #endif
 exit:
