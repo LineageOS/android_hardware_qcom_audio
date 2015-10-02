@@ -347,7 +347,7 @@ static int vol_effect_process(effect_handle_t self,
         }
 
     } else {
-        ALOGW("%s: something wrong, didn't handle in_buffer and out_buffer same address case",
+        ALOGV("%s: something wrong, didn't handle in_buffer and out_buffer same address case",
               __func__);
     }
 
