@@ -837,8 +837,14 @@ int start_input_stream(struct stream_in *in)
         break;
     }
 
-    ALOGV("%s: pcm_prepare start", __func__);
-    pcm_prepare(in->pcm);
+    ALOGV("%s: pcm_prepare", __func__);
+    ret = pcm_prepare(in->pcm);
+    if (ret < 0) {
+        ALOGE("%s: pcm_prepare returned %d", __func__, ret);
+        pcm_close(in->pcm);
+        in->pcm = NULL;
+        goto error_open;
+    }
 
     audio_extn_perf_lock_release();
 
@@ -1196,10 +1202,16 @@ int start_output_stream(struct stream_out *out)
             }
             break;
         }
-        ALOGV("%s: pcm_prepare start", __func__);
-        if (pcm_is_ready(out->pcm))
-            pcm_prepare(out->pcm);
-
+        ALOGV("%s: pcm_prepare", __func__);
+        if (pcm_is_ready(out->pcm)) {
+            ret = pcm_prepare(out->pcm);
+            if (ret < 0) {
+                ALOGE("%s: pcm_prepare returned %d", __func__, ret);
+                pcm_close(out->pcm);
+                out->pcm = NULL;
+                goto error_open;
+            }
+        }
     } else {
         out->pcm = NULL;
         out->compr = compress_open(adev->snd_card, out->pcm_device_id,
