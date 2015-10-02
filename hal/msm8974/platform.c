@@ -1996,6 +1996,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
                 if (audio_extn_hfp_is_active(adev))
                     platform_set_echo_reference(adev->platform, true);
+            } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) {
+                snd_device = SND_DEVICE_IN_HANDSET_MIC;
             } else {
                 snd_device = SND_DEVICE_IN_VOICE_DMIC;
             }
