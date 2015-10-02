@@ -209,12 +209,14 @@ void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
        return;
 
     if (snd_device >= SND_DEVICE_OUT_BEGIN &&
-        snd_device < SND_DEVICE_OUT_END)
+        snd_device < SND_DEVICE_OUT_END) {
         device_type = PCM_PLAYBACK;
-    else if (snd_device >= SND_DEVICE_IN_BEGIN &&
-        snd_device < SND_DEVICE_IN_END)
+    } else if (snd_device >= SND_DEVICE_IN_BEGIN &&
+        snd_device < SND_DEVICE_IN_END) {
+        if (snd_device == SND_DEVICE_IN_CAPTURE_VI_FEEDBACK)
+            return;
         device_type = PCM_CAPTURE;
-    else {
+    } else {
         ALOGE("%s: invalid device 0x%x, for event %d",
                            __func__, snd_device, event);
         return;
