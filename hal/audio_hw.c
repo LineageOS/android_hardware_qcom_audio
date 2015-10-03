@@ -457,7 +457,7 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_utils_send_app_type_cfg(adev, usecase);
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(mixer_path, snd_device, usecase);
-    ALOGV("%s: apply mixer and update path: %s", __func__, mixer_path);
+    ALOGD("%s: apply mixer and update path: %s", __func__, mixer_path);
     audio_route_apply_and_update_path(adev->audio_route, mixer_path);
     ALOGV("%s: exit", __func__);
     return 0;
@@ -479,7 +479,7 @@ int disable_audio_route(struct audio_device *adev,
         snd_device = usecase->out_snd_device;
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(mixer_path, snd_device, usecase);
-    ALOGV("%s: reset and update mixer path: %s", __func__, mixer_path);
+    ALOGD("%s: reset and update mixer path: %s", __func__, mixer_path);
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_FREE);
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_FREE);
@@ -537,8 +537,7 @@ int enable_snd_device(struct audio_device *adev,
             return -EINVAL;
         }
     } else {
-        ALOGV("%s: snd_device(%d: %s)", __func__,
-        snd_device, device_name);
+        ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
         /* due to the possibility of calibration overwrite between listen
             and audio, notify listen hal before audio calibration is sent */
         audio_extn_sound_trigger_update_device_status(snd_device,
@@ -582,8 +581,7 @@ int disable_snd_device(struct audio_device *adev,
     }
 
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
-        ALOGV("%s: snd_device(%d: %s)", __func__,
-              snd_device, device_name);
+        ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
         /* exit usb play back thread */
         if(SND_DEVICE_OUT_USB_HEADSET == snd_device ||
            SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET == snd_device)
@@ -1160,11 +1158,19 @@ int start_input_stream(struct stream_in *in)
         }
         break;
     }
+
+    ALOGV("%s: pcm_prepare", __func__);
+    ret = pcm_prepare(in->pcm);
+    if (ret < 0) {
+        ALOGE("%s: pcm_prepare returned %d", __func__, ret);
+        pcm_close(in->pcm);
+        in->pcm = NULL;
+        goto error_open;
+    }
+
     audio_extn_perf_lock_release();
 
-    ALOGV("%s: pcm_prepare start", __func__);
-    pcm_prepare(in->pcm);
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
 
     return ret;
 
@@ -1646,10 +1652,16 @@ int start_output_stream(struct stream_out *out)
         platform_set_stream_channel_map(adev->platform, out->channel_mask,
                                     out->pcm_device_id);
 
-        ALOGV("%s: pcm_prepare start", __func__);
-        if (pcm_is_ready(out->pcm))
-            pcm_prepare(out->pcm);
-
+        ALOGV("%s: pcm_prepare", __func__);
+        if (pcm_is_ready(out->pcm)) {
+            ret = pcm_prepare(out->pcm);
+            if (ret < 0) {
+                ALOGE("%s: pcm_prepare returned %d", __func__, ret);
+                pcm_close(out->pcm);
+                out->pcm = NULL;
+                goto error_open;
+            }
+        }
     } else {
         platform_set_stream_channel_map(adev->platform, out->channel_mask,
                                     out->pcm_device_id);
@@ -1696,7 +1708,7 @@ int start_output_stream(struct stream_out *out)
         }
     }
 
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
 
     return 0;
 error_open:
