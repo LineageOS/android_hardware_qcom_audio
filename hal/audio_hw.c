@@ -2944,6 +2944,12 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         } else {
             ALOGV("%s:: inserting OFFLOAD_USECASE", __func__);
             out->usecase = get_offload_usecase(adev);
+
+            out->stream.set_callback = out_set_callback;
+            out->stream.pause = out_pause;
+            out->stream.resume = out_resume;
+            out->stream.drain = out_drain;
+            out->stream.flush = out_flush;
         }
         if (config->offload_info.channel_mask)
             out->channel_mask = config->offload_info.channel_mask;
@@ -2954,11 +2960,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         format = out->format = config->offload_info.format;
         out->sample_rate = config->offload_info.sample_rate;
 
-        out->stream.set_callback = out_set_callback;
-        out->stream.pause = out_pause;
-        out->stream.resume = out_resume;
-        out->stream.drain = out_drain;
-        out->stream.flush = out_flush;
         out->bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
 
         if (audio_extn_is_dolby_format(config->offload_info.format))
