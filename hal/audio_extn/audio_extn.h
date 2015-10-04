@@ -95,7 +95,8 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
 #endif
 
 #ifdef AUDIO_EXTN_FORMATS_ENABLED
-#define AUDIO_OUTPUT_BIT_WIDTH (config->offload_info.bit_width)
+#define AUDIO_OUTPUT_BIT_WIDTH ((config->offload_info.bit_width == 32) ? 24\
+                                   :config->offload_info.bit_width)
 #else
 #define AUDIO_OUTPUT_BIT_WIDTH (CODEC_BACKEND_DEFAULT_BIT_WIDTH)
 #endif
