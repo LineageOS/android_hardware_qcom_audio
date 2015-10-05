@@ -1131,4 +1131,51 @@ non_direct_output:
     return output;
 }
 
+AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *clientInterface)
+    : AudioPolicyManager(clientInterface),
+      mHdmiAudioDisabled(false),
+      mHdmiAudioEvent(false),
+      mPrevPhoneState(0)
+{
+    char ssr_enabled[PROPERTY_VALUE_MAX] = {0};
+    bool prop_ssr_enabled = false;
+
+    if (property_get("ro.qc.sdk.audio.ssr", ssr_enabled, NULL)) {
+        prop_ssr_enabled = atoi(ssr_enabled) || !strncmp("true", ssr_enabled, 4);
+    }
+
+    for (size_t i = 0; i < mHwModules.size(); i++) {
+        ALOGV("Hw module %d", i);
+        for (size_t j = 0; j < mHwModules[i]->mInputProfiles.size(); j++) {
+            const sp<IOProfile> inProfile = mHwModules[i]->mInputProfiles[j];
+            ALOGV("Input profile ", j);
+            for (size_t k = 0; k  < inProfile->mChannelMasks.size(); k++) {
+                audio_channel_mask_t channelMask =
+                    inProfile->mChannelMasks.itemAt(k);
+                ALOGV("Channel Mask %x size %d", channelMask,
+                    inProfile->mChannelMasks.size());
+                if (AUDIO_CHANNEL_IN_5POINT1 == channelMask) {
+                    if (!prop_ssr_enabled) {
+                        ALOGI("removing AUDIO_CHANNEL_IN_5POINT1 from"
+                            " input profile as SSR(surround sound record)"
+                            " is not supported on this chipset variant");
+                        inProfile->mChannelMasks.removeItemsAt(k, 1);
+                        ALOGV("Channel Mask size now %d",
+                            inProfile->mChannelMasks.size());
+                    }
+                }
+            }
+        }
+    }
+
+#ifdef RECORD_PLAY_CONCURRENCY
+    mIsInputRequestOnProgress = false;
+#endif
+
+
+#ifdef VOICE_CONCURRENCY
+    mFallBackflag = getFallBackPath();
+#endif
+}
+
 }

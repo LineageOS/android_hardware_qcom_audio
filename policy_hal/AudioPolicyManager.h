@@ -49,10 +49,7 @@ class AudioPolicyManagerCustom: public AudioPolicyManager
 {
 
 public:
-                AudioPolicyManagerCustom(AudioPolicyClientInterface *clientInterface)
-                : AudioPolicyManager(clientInterface) {
-                    mHdmiAudioDisabled = false;
-                    mHdmiAudioEvent = false;}
+        AudioPolicyManagerCustom(AudioPolicyClientInterface *clientInterface);
 
         virtual ~AudioPolicyManagerCustom() {}
 
