@@ -1540,10 +1540,8 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         (offloadInfo != NULL) &&
         ((offloadInfo->usage == AUDIO_USAGE_MEDIA ||
         (offloadInfo->usage == AUDIO_USAGE_GAME)))) {
-        if ((flags & AUDIO_OUTPUT_FLAG_DIRECT) == 0) {
-            ALOGD("AudioCustomHAL --> Force Direct Flag ..");
-            flags = (audio_output_flags_t)(flags | AUDIO_OUTPUT_FLAG_DIRECT);
-        }
+         ALOGD("AudioCustomHAL --> Force Direct Flag ..");
+         flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_DIRECT_PCM | AUDIO_OUTPUT_FLAG_DIRECT);
     }
 
     // only allow deep buffering for music stream type
