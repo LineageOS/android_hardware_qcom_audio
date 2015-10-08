@@ -1607,8 +1607,12 @@ int platform_set_mic_mute(void *platform, bool state)
                               ALL_SESSION_VSID,
                               DEFAULT_MUTE_RAMP_DURATION_MS};
 
-    if (adev->mode != AUDIO_MODE_IN_CALL)
+    if (adev->mode != AUDIO_MODE_IN_CALL &&
+        adev->mode != AUDIO_MODE_IN_COMMUNICATION)
         return 0;
+
+    if (adev->enable_hfp)
+        mixer_ctl_name = "HFP Tx Mute";
 
     set_values[0] = state;
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
