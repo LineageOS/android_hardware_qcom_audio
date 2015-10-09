@@ -1928,6 +1928,14 @@ int platform_get_default_app_type(void *platform)
         return DEFAULT_APP_TYPE;
 }
 
+int platform_get_default_app_type_v2(void *platform, usecase_type_t  type)
+{
+    if(type == PCM_CAPTURE)
+        return DEFAULT_APP_TYPE_TX_PATH;
+    else
+        return DEFAULT_APP_TYPE_RX_PATH;
+}
+
 int platform_get_snd_device_acdb_id(snd_device_t snd_device)
 {
     if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {

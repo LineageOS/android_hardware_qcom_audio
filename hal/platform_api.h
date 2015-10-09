@@ -46,6 +46,7 @@ int platform_get_backend_index(snd_device_t snd_device);
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
                                     int app_type, int sample_rate);
 int platform_get_default_app_type(void *platform);
+int platform_get_default_app_type_v2(void *platform, usecase_type_t  type);
 int platform_switch_voice_call_device_pre(void *platform);
 int platform_switch_voice_call_enable_device_config(void *platform,
                                                     snd_device_t out_snd_device,

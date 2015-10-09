@@ -579,11 +579,12 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
 
     if ((usecase->type == PCM_PLAYBACK) && (usecase->stream.out == NULL)) {
         sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        app_type_cfg[len++] = platform_get_default_app_type(adev->platform);
+        app_type_cfg[len++] = platform_get_default_app_type_v2(adev->platform, usecase->type);
         app_type_cfg[len++] = acdb_dev_id;
         app_type_cfg[len++] = sample_rate;
         ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
-              __func__, platform_get_default_app_type(adev->platform), acdb_dev_id, sample_rate);
+              __func__, platform_get_default_app_type_v2(adev->platform, usecase->type),
+              acdb_dev_id, sample_rate);
     } else if (usecase->type == PCM_PLAYBACK) {
         if ((24 == usecase->stream.out->bit_width) &&
             (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
@@ -609,11 +610,12 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
         ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
               __func__, usecase->stream.out->app_type_cfg.app_type, acdb_dev_id, sample_rate);
     } else if (usecase->type == PCM_CAPTURE) {
-        app_type_cfg[len++] = platform_get_default_app_type(adev->platform);
+        app_type_cfg[len++] = platform_get_default_app_type_v2(adev->platform, usecase->type);
         app_type_cfg[len++] = acdb_dev_id;
         app_type_cfg[len++] = sample_rate;
         ALOGI("%s CAPTURE app_type %d, acdb_dev_id %d, sample_rate %d",
-           __func__, platform_get_default_app_type(adev->platform), acdb_dev_id, sample_rate);
+           __func__, platform_get_default_app_type_v2(adev->platform, usecase->type),
+           acdb_dev_id, sample_rate);
     }
     mixer_ctl_set_array(ctl, app_type_cfg, len);
     rc = 0;
@@ -638,8 +640,8 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
     if ((type == PCM_HFP_CALL) || (type == PCM_CAPTURE)) {
         /* when app type is default. the sample rate is not used to send cal */
         platform_send_audio_calibration(adev->platform, usecase,
-                                        platform_get_default_app_type(adev->platform),
-                                        48000);
+                 platform_get_default_app_type_v2(adev->platform, usecase->type),
+                 48000);
     }
 }
 
