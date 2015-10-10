@@ -510,4 +510,10 @@ int audio_extn_perf_lock_init(void);
 void audio_extn_perf_lock_acquire(void);
 void audio_extn_perf_lock_release(void);
 #endif /* KPI_OPTIMIZE_ENABLED */
+
+#ifndef AUDIO_EXTERNAL_HDMI_ENABLED
+#define audio_utils_set_hdmi_channel_status(out, buffer, bytes) (0)
+#else
+void audio_utils_set_hdmi_channel_status(struct stream_out *out, char * buffer, size_t bytes);
+#endif
 #endif /* AUDIO_EXTN_H */
