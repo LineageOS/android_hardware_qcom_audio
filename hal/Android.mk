@@ -88,6 +88,10 @@ ifeq ($(strip $(AUDIO_FEATURE_SAMSUNG_DUAL_SIM)),true)
     LOCAL_CFLAGS += -DSAMSUNG_DUAL_SIM
     LOCAL_SRC_FILES += voice_extn/msim_voice_extn.c
 endif
+ifeq ($(strip $(AUDIO_FEATURE_SAMSUNG_DUAL_SIM_KK)),true)
+    LOCAL_CFLAGS += -DSAMSUNG_DUAL_SIM_KK
+    LOCAL_SRC_FILES += voice_extn/msim_voice_extn.c
+endif
 endif
 
 ifneq ($(filter apq8084 msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)

@@ -17,7 +17,7 @@
 #ifndef MSIM_VOICE_EXTN_H
 #define MSIM_VOICE_EXTN_H
 
-#if defined(HTC_DUAL_SIM) || defined(SAMSUNG_DUAL_SIM)
+#if defined(HTC_DUAL_SIM) || defined(SAMSUNG_DUAL_SIM) || defined(SAMSUNG_DUAL_SIM_KK)
 int msim_voice_extn_start_call(struct audio_device *adev);
 int msim_voice_extn_stop_call(struct audio_device *adev);
 int msim_voice_extn_get_session_from_use_case(struct audio_device *adev,
