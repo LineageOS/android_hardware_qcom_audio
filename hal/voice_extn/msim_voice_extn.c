@@ -37,8 +37,13 @@
 #define RADIO_PREFER_NETWORK_SLOT0 "persist.radio.prefer.network"
 #define RADIO_PREFER_NETWORK_SLOT1 "persist.radio.prefer.nw.sub"
 #elif SAMSUNG_DUAL_SIM
+#ifdef USES_OLD_RIL_BLOBS
+#define RADIO_NETWORK_SLOT0 "ril.ICC_TYPE"
+#define RADIO_NETWORK_SLOT1 "ril.ICC_TYPE2"
+#else
 #define AUDIO_PROPERTY_SEC_VSID1 "gsm.current.vsid"
 #define AUDIO_PROPERTY_SEC_VSID2 "gsm.current.vsid2"
+#endif
 #endif
 
 #define VOICE2_VSID 0x10DC1000
@@ -84,6 +89,11 @@ int msim_voice_extn_set_parameters(struct audio_device *adev __unused,
     int voice_slot = 0;
     char value[32] = {0};
 
+#ifdef USES_OLD_RIL_BLOBS
+    int sim_counts = 1;
+    sim_counts = property_get_int32(RADIO_NETWORK_SLOT0) + property_get_int32(RADIO_NETWORK_SLOT1);
+#endif
+
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_PHONETYPE, value,
                             sizeof(value));
     if (ret >= 0) {
@@ -99,9 +109,15 @@ int msim_voice_extn_set_parameters(struct audio_device *adev __unused,
             msim_phone_type = voice_slot == 0 ? 0 : 1;
         }
 #elif SAMSUNG_DUAL_SIM
+#ifdef USES_OLD_RIL_BLOBS
+        if (sim_counts == 2) {
+            msim_phone_type = strcmp(value, AUDIO_PARAMETER_VALUE_CP2) ? 1 : 0;
+        }
+#else
         msim_phone_type = property_get_int32(
                 strcmp(value, AUDIO_PARAMETER_VALUE_CP2) ?
                 AUDIO_PROPERTY_SEC_VSID1 : AUDIO_PROPERTY_SEC_VSID2) + 1;
+#endif
 #endif
         ALOGV("%s: phone_type: %d", __func__, msim_phone_type);
     }

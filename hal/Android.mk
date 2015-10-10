@@ -86,6 +86,9 @@ ifeq ($(strip $(AUDIO_FEATURE_HTC_DUAL_SIM)),true)
 endif
 ifeq ($(strip $(AUDIO_FEATURE_SAMSUNG_DUAL_SIM)),true)
     LOCAL_CFLAGS += -DSAMSUNG_DUAL_SIM
+ifeq ($(strip $(BOARD_USES_OLD_RIL_BLOBS)),true)
+    LOCAL_CFLAGS += -DUSES_OLD_RIL_BLOBS
+endif
     LOCAL_SRC_FILES += voice_extn/msim_voice_extn.c
 endif
 endif
