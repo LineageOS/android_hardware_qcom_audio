@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7f287b81_5cb6ffdb",
+        "filename": "hal/voice_extn/msim_voice_extn.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 114,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2015-10-11T15:13:23Z",
+      "side": 1,
+      "message": "Is this the way you fix lost voice on single SIM? Why is AUDIO_FEATURE_SAMSUNG_DUAL_SIM_KK being set for the single SIM device in the first place?",
+      "range": {
+        "startLine": 114,
+        "startChar": 1,
+        "endLine": 114,
+        "endChar": 23
+      },
+      "revId": "2c31afd99c1a9270ad4d5407f7d697949139c1d4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
