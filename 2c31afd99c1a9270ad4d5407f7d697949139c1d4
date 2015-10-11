@@ -22,6 +22,30 @@
       "revId": "2c31afd99c1a9270ad4d5407f7d697949139c1d4",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f287b81_5ceb9faf",
+        "filename": "hal/voice_extn/msim_voice_extn.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 114,
+      "author": {
+        "id": 14032
+      },
+      "writtenOn": "2015-10-11T16:12:01Z",
+      "side": 1,
+      "message": "the lost voice will be fixed in the device tree\n\nthe lost voice is due to the ro.multisim.set_audio_params\u003dtrue\n\nand \n when ro.multisiril.ICC_TYPE2m.set_audio_params\u003dfalse \nSingle SIM user get the voice\n\nand \n\nril.ICC_TYPE2 , ril.ICC_TYPE is the prop for the sim tray\n\nso if any of the tray get populated the value will be 1\nand inital there are 0 by the lib\nand when both sim are populated the value becomes 1 + 1 \u003d2\nand when only one of the sim poplutated it becomes 0 + 1 or 1 + 0 \u003d 1\n\n\nand the management of this prop ro.multisim.set_audio_params will be done in the device tree or by the customRIL.java",
+      "parentUuid": "7f287b81_5cb6ffdb",
+      "range": {
+        "startLine": 114,
+        "startChar": 1,
+        "endLine": 114,
+        "endChar": 23
+      },
+      "revId": "2c31afd99c1a9270ad4d5407f7d697949139c1d4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
