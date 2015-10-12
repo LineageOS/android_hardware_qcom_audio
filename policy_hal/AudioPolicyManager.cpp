@@ -618,6 +618,53 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
         mLimitRingtoneVolume = false;
     }
 }
+
+void AudioPolicyManagerCustom::setForceUse(audio_policy_force_use_t usage,
+                                         audio_policy_forced_cfg_t config)
+{
+    ALOGV("setForceUse() usage %d, config %d, mPhoneState %d", usage, config, mEngine->getPhoneState());
+
+    if (mEngine->setForceUse(usage, config) != NO_ERROR) {
+        ALOGW("setForceUse() could not set force cfg %d for usage %d", config, usage);
+        return;
+    }
+    bool forceVolumeReeval = (usage == AUDIO_POLICY_FORCE_FOR_COMMUNICATION) ||
+            (usage == AUDIO_POLICY_FORCE_FOR_DOCK) ||
+            (usage == AUDIO_POLICY_FORCE_FOR_SYSTEM);
+
+    // check for device and output changes triggered by new force usage
+    checkA2dpSuspend();
+    checkOutputForAllStrategies();
+    updateDevicesAndOutputs();
+    if (mEngine->getPhoneState() == AUDIO_MODE_IN_CALL && hasPrimaryOutput()) {
+        audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, true /*fromCache*/);
+        updateCallRouting(newDevice);
+    }
+    // Use reverse loop to make sure any low latency usecases (generally tones)
+    // are not routed before non LL usecases (generally music).
+    // We can safely assume that LL output would always have lower index,
+    // and use this work-around to avoid routing of output with music stream
+    // from the context of short lived LL output.
+    // Note: in case output's share backend(HAL sharing is implicit) all outputs
+    //       gets routing update while processing first output itself.
+    for (size_t i = mOutputs.size(); i > 0; i--) {
+        sp<SwAudioOutputDescriptor> outputDesc = mOutputs.valueAt(i-1);
+        audio_devices_t newDevice = getNewOutputDevice(outputDesc, true /*fromCache*/);
+        if ((mEngine->getPhoneState() != AUDIO_MODE_IN_CALL) || outputDesc != mPrimaryOutput) {
+            setOutputDevice(outputDesc, newDevice, (newDevice != AUDIO_DEVICE_NONE));
+        }
+        if (forceVolumeReeval && (newDevice != AUDIO_DEVICE_NONE)) {
+            applyStreamVolumes(outputDesc, newDevice, 0, true);
+        }
+    }
+
+    audio_io_handle_t activeInput = mInputs.getActiveInput();
+    if (activeInput != 0) {
+        setInputDevice(activeInput, getNewInputDevice(activeInput));
+    }
+
+}
+
 status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDesc1,
                                             audio_stream_type_t stream,
                                             bool forceDeviceUpdate)
