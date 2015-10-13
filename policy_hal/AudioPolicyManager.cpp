@@ -501,7 +501,7 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
     /// Opens: can these line be executed after the switch of volume curves???
     // if leaving call state, handle special case of active streams
     // pertaining to sonification strategy see handleIncallSonification()
-    if (isInCall()) {
+    if (isStateInCall(oldState)) {
         ALOGV("setPhoneState() in call state management: new state is %d", state);
         for (size_t j = 0; j < mOutputs.size(); j++) {
             audio_io_handle_t curOutput = mOutputs.keyAt(j);
