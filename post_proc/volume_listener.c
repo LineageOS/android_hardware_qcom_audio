@@ -681,6 +681,11 @@ static int vol_prc_lib_release(effect_handle_t handle)
     bool recompute_flag = false;
     int active_stream_count = 0;
     ALOGV("%s context %p", __func__, handle);
+    if (recv_contex == NULL || recv_contex->desc == NULL) {
+        ALOGE("%s: Got invalid handle while release, DO NOTHING ", __func__);
+        return status;
+    }
+
     pthread_mutex_lock(&vol_listner_init_lock);
 
     // check if the handle/context provided is valid
@@ -690,13 +695,14 @@ static int vol_prc_lib_release(effect_handle_t handle)
             && (context->session_id == recv_contex->session_id)
             && (context->stream_type == recv_contex->stream_type)) {
             ALOGV("--- Found something to remove ---");
-            list_remove(&context->effect_list_node);
             PRINT_STREAM_TYPE(context->stream_type);
             if (context->dev_id && AUDIO_DEVICE_OUT_SPEAKER) {
                 recompute_flag = true;
             }
+            list_remove(&context->effect_list_node);
             free(context);
             status = 0;
+            break;
         } else {
             ++active_stream_count;
         }
