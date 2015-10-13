@@ -7,6 +7,9 @@ include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
 
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
+ifneq ($(filter msm8960,$(TARGET_BOARD_PLATFORM)),)
+  LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="2"
+endif
 ifneq ($(filter msm8974 msm8226 msm8084 msm8992 msm8994,$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM = msm8974
