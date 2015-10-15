@@ -794,7 +794,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
             }
         }
-    } else if (source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
+    } else if (source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
+            mode == AUDIO_MODE_IN_COMMUNICATION) {
         if (out_device & AUDIO_DEVICE_OUT_SPEAKER)
             in_device = AUDIO_DEVICE_IN_BACK_MIC;
         if (adev->active_input) {
