@@ -44,7 +44,7 @@ endif
 ifneq ($(strip $(QCOM_FLUENCE_ENABLED)),false)
     common_cflags += -DQCOM_FLUENCE_ENABLED
 endif
-ifneq ($(strip $(QCOM_TUNNEL_LPA_ENABLED)),false)
+ifeq ($(strip $(QCOM_TUNNEL_LPA_ENABLED)),true)
     common_cflags += -DQCOM_TUNNEL_LPA_ENABLED
 endif
 
