@@ -175,6 +175,7 @@ bool audio_extn_usb_is_proxy_inuse();
 #endif
 
 #ifndef SSR_ENABLED
+#define audio_extn_ssr_check_and_set_usecase(in)      (0)
 #define audio_extn_ssr_init(in, num_out_chan)         (0)
 #define audio_extn_ssr_deinit()                       (0)
 #define audio_extn_ssr_update_enabled()               (0)
@@ -184,6 +185,7 @@ bool audio_extn_usb_is_proxy_inuse();
 #define audio_extn_ssr_get_parameters(adev, parms, reply) (0)
 #define audio_extn_ssr_get_stream()                   (0)
 #else
+int audio_extn_ssr_check_and_set_usecase(struct stream_in *in);
 int32_t audio_extn_ssr_init(struct stream_in *in,
                             int num_out_chan);
 int32_t audio_extn_ssr_deinit();

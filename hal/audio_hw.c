@@ -1180,10 +1180,6 @@ static int stop_input_stream(struct stream_in *in)
     /* 2. Disable the tx device */
     disable_snd_device(adev, uc_info->in_snd_device);
 
-    if (audio_extn_ssr_get_stream() == in) {
-        audio_extn_ssr_deinit();
-    }
-
     list_remove(&uc_info->list);
     free(uc_info);
 
@@ -3804,28 +3800,8 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->config = pcm_config_afe_proxy_record;
         in->config.channels = channel_count;
         in->config.rate = config->sample_rate;
-    } else if (audio_extn_ssr_get_enabled() &&
-               ((channel_count == 2) || (channel_count == 6)) &&
-               ((AUDIO_SOURCE_MIC == source) || (AUDIO_SOURCE_CAMCORDER == source))) {
-        ALOGD("%s: Found SSR use case starting SSR lib with channel_count :%d",
-               __func__, channel_count);
-        if (audio_extn_ssr_init(in, channel_count)) {
-            ALOGE("%s: audio_extn_ssr_init failed", __func__);
-            if (channel_count == 2) {
-                ALOGD("%s: falling back to default record usecase", __func__);
-                in->config.channels = channel_count;
-                frame_size = audio_stream_in_frame_size(&in->stream);
-                buffer_size = get_input_buffer_size(config->sample_rate,
-                                        config->format,
-                                        channel_count,
-                                        is_low_latency);
-                in->config.period_size = buffer_size / frame_size;
-            } else {
-                ALOGD("%s: unable to start SSR record session for 6 channel input", __func__);
-                ret = -EINVAL;
-                goto err_open;
-            }
-        }
+    } else if (!audio_extn_ssr_check_and_set_usecase(in)) {
+        ALOGD("%s: created surround sound session succesfully",__func__);
     } else if (audio_extn_compr_cap_enabled() &&
             audio_extn_compr_cap_format_supported(config->format) &&
             (in->dev->mode != AUDIO_MODE_IN_COMMUNICATION)) {
