@@ -1160,7 +1160,7 @@ static void send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibra
 
         ret = 0;
 
-        if((plat_data->is_vbat_speaker) && (WCD9XXX_VBAT_CAL == type)) {
+        if ((plat_data->is_vbat_speaker) && (WCD9XXX_VBAT_CAL == type)) {
            ret = send_vbat_adc_data_to_acdb(plat_data, cal_name_info[type]);
            if (ret < 0)
                ALOGE("%s error in sending vbat adc data to acdb", __func__);
@@ -1669,7 +1669,7 @@ void platform_add_backend_name(char *mixer_path, snd_device_t snd_device,
         return;
     }
 
-    if((snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT) &&
+    if ((snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT) &&
         !(usecase->type == VOICE_CALL || usecase->type == VOIP_CALL)) {
         ALOGI("%s: Not adding vbat speaker device to non voice use cases", __func__);
         return;

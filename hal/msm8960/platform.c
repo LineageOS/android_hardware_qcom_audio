@@ -374,7 +374,7 @@ int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
 }
 
 void platform_add_backend_name(char *mixer_path, snd_device_t snd_device,
-                               struct audio_usecase *usecase)
+                               struct audio_usecase *usecase __unused)
 {
     if (snd_device == SND_DEVICE_IN_BT_SCO_MIC)
         strlcat(mixer_path, " bt-sco", MIXER_PATH_MAX_LENGTH);
@@ -1171,4 +1171,9 @@ bool platform_send_gain_dep_cal(void *platform __unused,
                                 int level __unused)
 {
     return 0;
+}
+
+void platform_set_gsm_mode(void *platform __unused, bool enable __unused)
+{
+    ALOGE("%s: Not implemented", __func__);
 }
