@@ -920,9 +920,14 @@ int platform_update_usecase_from_source(int source __unused,
     return usecase;
 }
 
-bool platform_listen_update_status(snd_device_t snd_device __unused)
+bool platform_listen_device_needs_event(snd_device_t snd_device __unused)
 {
-     return false;
+    return false;
+}
+
+bool platform_listen_usecase_needs_event(audio_usecase_t uc_id)
+{
+    return false;
 }
 
 int platform_get_usecase_index(const char * usecase __unused)
