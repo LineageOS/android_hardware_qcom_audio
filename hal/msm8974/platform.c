@@ -1267,7 +1267,7 @@ void *platform_init(struct audio_device *adev)
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data = NULL;
     int retry_num = 0, snd_card_num = 0, key = 0;
-    const char *snd_card_name;
+    const char *snd_card_name = NULL;
     char *cvd_version = NULL;
     char *snd_internal_name = NULL;
     char *tmp = NULL;
@@ -1379,7 +1379,8 @@ void *platform_init(struct audio_device *adev)
     if (snd_card_num >= MAX_SND_CARD) {
         ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
         free(my_data);
-        free(snd_card_name);
+        if (snd_card_name)
+            free(snd_card_name);
         return NULL;
     }
 
