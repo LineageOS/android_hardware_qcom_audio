@@ -108,7 +108,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS)),true)
     LOCAL_CFLAGS += -DMULTI_VOICE_SESSION_ENABLED
     LOCAL_SRC_FILES += voice_extn/voice_extn.c
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),true)
     LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
 endif
 ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),false)
@@ -132,10 +132,10 @@ ifdef MULTIPLE_HW_VARIANTS_ENABLED
   LOCAL_SRC_FILES += $(AUDIO_PLATFORM)/hw_info.c
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),false)
-    LOCAL_CFLAGS += -DCOMPRESS_CAPTURE_ENABLED
-    LOCAL_SRC_FILES += audio_extn/compress_capture.c
-endif
+#ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),true)
+#    LOCAL_CFLAGS += -DCOMPRESS_CAPTURE_ENABLED
+#    LOCAL_SRC_FILES += audio_extn/compress_capture.c
+#endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DTS_EAGLE)),true)
     LOCAL_CFLAGS += -DDTS_EAGLE
