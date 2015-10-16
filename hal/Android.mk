@@ -77,7 +77,7 @@ endif
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS)),true)
     LOCAL_CFLAGS += -DMULTI_VOICE_SESSION_ENABLED
     LOCAL_SRC_FILES += voice_extn/voice_extn.c
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),true)
     LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
 endif
 ifeq ($(strip $(AUDIO_FEATURE_HTC_DUAL_SIM)),true)
@@ -118,12 +118,12 @@ ifdef MULTIPLE_HW_VARIANTS_ENABLED
   LOCAL_SRC_FILES += $(AUDIO_PLATFORM)/hw_info.c
 endif
 
-ifneq ($(filter apq8084 msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),false)
-    LOCAL_CFLAGS += -DCOMPRESS_CAPTURE_ENABLED
-    LOCAL_SRC_FILES += audio_extn/compress_capture.c
-endif
-endif
+#ifneq ($(filter apq8084 msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
+#ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),true)
+#    LOCAL_CFLAGS += -DCOMPRESS_CAPTURE_ENABLED
+#    LOCAL_SRC_FILES += audio_extn/compress_capture.c
+#endif
+#endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_NEW_SAMPLE_RATE)),true)
     LOCAL_CFLAGS += -DNEW_SAMPLE_RATE_ENABLED
