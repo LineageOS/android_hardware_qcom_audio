@@ -119,7 +119,7 @@ ifdef MULTIPLE_HW_VARIANTS_ENABLED
 endif
 
 ifneq ($(filter apq8084 msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),true)
     LOCAL_CFLAGS += -DCOMPRESS_CAPTURE_ENABLED
     LOCAL_SRC_FILES += audio_extn/compress_capture.c
 endif
