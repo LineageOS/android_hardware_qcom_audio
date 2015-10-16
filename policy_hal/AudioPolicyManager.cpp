@@ -388,6 +388,13 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
         return false;
     }
 
+    // Check if offload has been disabled
+    bool offloadDisabled = property_get_bool("audio.offload.disable", false);
+    if (offloadDisabled) {
+        ALOGI("offload disabled by audio.offload.disable=%d", offloadDisabled);
+        return false;
+    }
+
     char propValue[PROPERTY_VALUE_MAX];
     bool pcmOffload = false;
 #ifdef PCM_OFFLOAD_ENABLED
@@ -417,13 +424,13 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
     }
 #endif
     if (!pcmOffload) {
-        // Check if offload has been disabled
-        if (property_get("audio.offload.disable", propValue, "0")) {
-            if (atoi(propValue) != 0) {
-                ALOGV("offload disabled by audio.offload.disable=%s", propValue );
-                return false;
-            }
+
+        bool compressedOffloadDisabled = property_get_bool("audio.offload.compress.disable", false);
+        if (compressedOffloadDisabled) {
+            ALOGI("compressed offload disabled by audio.offload.compress.disable=%d", compressedOffloadDisabled);
+            return false;
         }
+
         //check if it's multi-channel AAC (includes sub formats) and FLAC format
         if ((popcount(offloadInfo.channel_mask) > 2) &&
            (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC) ||
@@ -1064,7 +1071,17 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
 {
     audio_offload_info_t tOffloadInfo = AUDIO_INFO_INITIALIZER;
 
-    bool pcmOffloadEnabled = property_get_bool("audio.offload.track.enable", false);
+    bool offloadDisabled = property_get_bool("audio.offload.disable", false);
+    bool pcmOffloadEnabled = false;
+
+    if (offloadDisabled) {
+        ALOGI("offload disabled by audio.offload.disable=%d", offloadDisabled);
+    }
+
+    //read track offload property only if the global offload switch is off.
+    if (!offloadDisabled) {
+         pcmOffloadEnabled = property_get_bool("audio.offload.track.enable", false);
+    }
 
     if (offloadInfo == NULL && pcmOffloadEnabled) {
         tOffloadInfo.sample_rate  = samplingRate;
@@ -1076,7 +1093,7 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
             ALOGV("found attribute .. setting usage %d ", attr->usage);
             tOffloadInfo.usage = attr->usage;
         } else {
-            ALOGD("%s:: attribute is NULL .. no usage set", __func__);
+            ALOGI("%s:: attribute is NULL .. no usage set", __func__);
         }
         offloadInfo = &tOffloadInfo;
     }
