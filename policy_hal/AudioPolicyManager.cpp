@@ -1516,46 +1516,27 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         flags = (audio_output_flags_t)(flags | AUDIO_OUTPUT_FLAG_DIRECT);
     }
 
-    // Do offload magic here
-    if ((flags == AUDIO_OUTPUT_FLAG_NONE) && (stream == AUDIO_STREAM_MUSIC) &&
-        (offloadInfo != NULL) &&
-        ((offloadInfo->usage == AUDIO_USAGE_MEDIA ||
-        (offloadInfo->usage == AUDIO_USAGE_GAME)))) {
-        if ((flags & AUDIO_OUTPUT_FLAG_DIRECT) == 0) {
-            ALOGD("AudioCustomHAL --> Force Direct Flag ..");
-            flags = (audio_output_flags_t)(flags | AUDIO_OUTPUT_FLAG_DIRECT);
-        }
-    }
-
+    bool forced_deep = false;
     // only allow deep buffering for music stream type
     if (stream != AUDIO_STREAM_MUSIC) {
         flags = (audio_output_flags_t)(flags &~AUDIO_OUTPUT_FLAG_DEEP_BUFFER);
     } else if (/* stream == AUDIO_STREAM_MUSIC && */
             flags == AUDIO_OUTPUT_FLAG_NONE &&
             property_get_bool("audio.deep_buffer.media", false /* default_value */)) {
-        flags = (audio_output_flags_t)AUDIO_OUTPUT_FLAG_DEEP_BUFFER;
+        flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_DEEP_BUFFER);
+        forced_deep = true;
     }
 
     if (stream == AUDIO_STREAM_TTS) {
         flags = AUDIO_OUTPUT_FLAG_TTS;
     }
 
-    // open a direct output if required by specified parameters
-    //force direct flag if offload flag is set: offloading implies a direct output stream
-    // and all common behaviors are driven by checking only the direct flag
-    // this should normally be set appropriately in the policy configuration file
-    if ((flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) != 0) {
+    // Do offload magic here
+    if (((flags == AUDIO_OUTPUT_FLAG_NONE) || forced_deep) &&
+        (stream == AUDIO_STREAM_MUSIC) && (offloadInfo != NULL) &&
+        ((offloadInfo->usage == AUDIO_USAGE_MEDIA) || (offloadInfo->usage == AUDIO_USAGE_GAME))) {
         flags = (audio_output_flags_t)(flags | AUDIO_OUTPUT_FLAG_DIRECT);
-    }
-    if ((flags & AUDIO_OUTPUT_FLAG_HW_AV_SYNC) != 0) {
-        flags = (audio_output_flags_t)(flags | AUDIO_OUTPUT_FLAG_DIRECT);
-    }
-    // only allow deep buffering for music stream type
-    if (stream != AUDIO_STREAM_MUSIC) {
-        flags = (audio_output_flags_t)(flags &~AUDIO_OUTPUT_FLAG_DEEP_BUFFER);
-    }
-    if (stream == AUDIO_STREAM_TTS) {
-        flags = AUDIO_OUTPUT_FLAG_TTS;
+        ALOGD("AudioCustomHAL --> Force Direct Flag .. flag (0x%x)", flags);
     }
 
     sp<IOProfile> profile;
