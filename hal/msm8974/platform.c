@@ -2193,10 +2193,6 @@ int platform_update_usecase_from_source(int source, int usecase)
             return USECASE_INCALL_REC_DOWNLINK;
         case AUDIO_SOURCE_VOICE_CALL:
             return USECASE_INCALL_REC_UPLINK_AND_DOWNLINK;
-#ifdef FM_ENABLED
-        case AUDIO_SOURCE_FM_RX_A2DP:
-            return USECASE_AUDIO_RECORD_FM_VIRTUAL;
-#endif
         default:
             return usecase;
     }
