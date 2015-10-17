@@ -30,7 +30,6 @@ LOCAL_MODULE            := libOmxQcelp13Enc
 LOCAL_MODULE_TAGS       := optional
 LOCAL_CFLAGS            := $(libOmxQcelp13Enc-def)
 LOCAL_C_INCLUDES        := $(libOmxQcelp13Enc-inc)
-LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := libutils liblog
 
 LOCAL_SRC_FILES         := src/aenc_svr.c
@@ -60,7 +59,6 @@ LOCAL_MODULE            := mm-aenc-omxqcelp13-test
 LOCAL_MODULE_TAGS       := optional
 LOCAL_CFLAGS            := $(libOmxQcelp13Enc-def)
 LOCAL_C_INCLUDES        := $(mm-qcelp13-enc-test-inc)
-LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := libmm-omxcore
 LOCAL_SHARED_LIBRARIES  += libOmxQcelp13Enc
 ifeq ($(strip $(TARGET_USES_QCOM_MM_AUDIO)),true)

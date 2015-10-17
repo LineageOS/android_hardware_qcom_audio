@@ -30,7 +30,6 @@ LOCAL_MODULE            := libOmxEvrcEnc
 LOCAL_MODULE_TAGS       := optional
 LOCAL_CFLAGS            := $(libOmxEvrcEnc-def)
 LOCAL_C_INCLUDES        := $(libOmxEvrcEnc-inc)
-LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := libutils liblog
 
 LOCAL_SRC_FILES         := src/aenc_svr.c
@@ -57,7 +56,6 @@ LOCAL_MODULE            := mm-aenc-omxevrc-test
 LOCAL_MODULE_TAGS       := optional
 LOCAL_CFLAGS            := $(libOmxEvrcEnc-def)
 LOCAL_C_INCLUDES        := $(mm-evrc-enc-test-inc)
-LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := libmm-omxcore
 LOCAL_SHARED_LIBRARIES  += libOmxEvrcEnc
 ifeq ($(strip $(TARGET_USES_QCOM_MM_AUDIO)),true)

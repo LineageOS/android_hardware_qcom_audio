@@ -62,6 +62,5 @@ ifeq ($(TARGET_SIMULATOR),true)
 else
  LOCAL_SHARED_LIBRARIES += libdl
 endif
-LOCAL_PRELINK_MODULE := false
 include $(BUILD_SHARED_LIBRARY)
 endif
