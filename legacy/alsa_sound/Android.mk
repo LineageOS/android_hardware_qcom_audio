@@ -172,11 +172,7 @@ LOCAL_SHARED_LIBRARIES := \
     libalsa-intf \
     libaudioutils
 
-ifeq ($(TARGET_SIMULATOR),true)
- LOCAL_LDLIBS += -ldl
-else
- LOCAL_SHARED_LIBRARIES += libdl
-endif
+LOCAL_SHARED_LIBRARIES += libdl
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-alsa
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/libalsa-intf
