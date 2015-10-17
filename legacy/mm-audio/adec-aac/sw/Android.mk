@@ -39,7 +39,6 @@ LOCAL_MODULE            := sw-adec-omxaac-test
 LOCAL_MODULE_TAGS       := optional
 LOCAL_CFLAGS            := $(libOmxAacDec-def)
 LOCAL_C_INCLUDES        := $(mm-aac-dec-test-inc)
-LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := libopencore_common
 LOCAL_SHARED_LIBRARIES  += libomx_sharedlibrary
 LOCAL_SHARED_LIBRARIES  += libomx_aacdec_sharedlibrary
