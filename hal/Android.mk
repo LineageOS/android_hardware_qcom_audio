@@ -91,7 +91,7 @@ endif
 ifneq ($(strip $(AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS)),false)
     LOCAL_CFLAGS += -DMULTI_VOICE_SESSION_ENABLED
     LOCAL_SRC_FILES += voice_extn/voice_extn.c
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),true)
     LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
 endif
 ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),false)
@@ -100,7 +100,7 @@ ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),false)
 endif
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FORMATS)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FORMATS)),true)
 LOCAL_CFLAGS += -DFORMATS_ENABLED
 endif
 
