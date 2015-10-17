@@ -369,6 +369,10 @@ typedef enum {
 #define AUDIO_FORMAT_E_AC3_JOC  0x19000000UL
 #endif
 
+#ifndef AUDIO_FORMAT_DTS_LBR
+#define AUDIO_FORMAT_DTS_LBR 0x1E000000UL
+#endif
+
 #ifndef KPI_OPTIMIZE_ENABLED
 #define audio_extn_perf_lock_init() (0)
 #define audio_extn_perf_lock_acquire() (0)
