@@ -540,6 +540,7 @@ static int send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibrat
     for (type = WCD9XXX_ANC_CAL; type < WCD9XXX_MAX_CAL; type++) {
         struct wcdcal_ioctl_buffer codec_buffer;
         struct param_data calib;
+        memset(&calib, 0, sizeof(struct param_data));
 
         if (!strcmp(cal_name_info[type], "mad_cal"))
             calib.acdb_id = SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID;
