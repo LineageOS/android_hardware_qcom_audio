@@ -22,6 +22,23 @@
       "revId": "274e7fccf1cb8ccd22915c64f6c5d8c6657592e6",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f287b81_9282f54e",
+        "filename": "hal/msm8916/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 522,
+      "author": {
+        "id": 13881
+      },
+      "writtenOn": "2015-10-18T08:36:53Z",
+      "side": 1,
+      "message": "And/or this table?",
+      "revId": "274e7fccf1cb8ccd22915c64f6c5d8c6657592e6",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
