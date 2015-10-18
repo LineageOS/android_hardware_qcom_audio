@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7f287b81_72ae69e8",
+        "filename": "hal/msm8916/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 500,
+      "author": {
+        "id": 13881
+      },
+      "writtenOn": "2015-10-18T08:31:16Z",
+      "side": 1,
+      "message": "Does anything need to be added here for AUDIO_DEVICE_OUT_LINE? This table was not present in the version that the original Google commit was in.",
+      "range": {
+        "startLine": 500,
+        "startChar": 66,
+        "endLine": 500,
+        "endChar": 68
+      },
+      "revId": "7d535346714e666c8c7517f3559445c2db77fbec",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
