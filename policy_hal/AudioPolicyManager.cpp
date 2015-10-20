@@ -122,6 +122,15 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
         // handle output device connection
         case AUDIO_POLICY_DEVICE_STATE_AVAILABLE: {
             if (index >= 0) {
+#ifdef AUDIO_EXTN_HDMI_SPK_ENABLED
+                if ((popcount(device) == 1) && (device & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+                   if (!strncmp(device_address, "hdmi_spkr", 9)) {
+                        mHdmiAudioDisabled = false;
+                    } else {
+                        mHdmiAudioEvent = true;
+                    }
+                }
+#endif
                 ALOGW("setDeviceConnectionState() device already connected: %x", device);
                 return INVALID_OPERATION;
             }
@@ -129,6 +138,20 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
 
             // register new device as available
             index = mAvailableOutputDevices.add(devDesc);
+#ifdef AUDIO_EXTN_HDMI_SPK_ENABLED
+            if ((popcount(device) == 1) && (device & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+                if (!strncmp(device_address, "hdmi_spkr", 9)) {
+                    mHdmiAudioDisabled = false;
+                } else {
+                    mHdmiAudioEvent = true;
+                }
+                if (mHdmiAudioDisabled || !mHdmiAudioEvent) {
+                    mAvailableOutputDevices.remove(devDesc);
+                    ALOGW("HDMI sink not connected, do not route audio to HDMI out");
+                    return INVALID_OPERATION;
+                }
+            }
+#endif
             if (index >= 0) {
                 sp<HwModule> module = mHwModules.getModuleForDevice(device);
                 if (module == 0) {
@@ -164,6 +187,15 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
         // handle output device disconnection
         case AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE: {
             if (index < 0) {
+#ifdef AUDIO_EXTN_HDMI_SPK_ENABLED
+                if ((popcount(device) == 1) && (device & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+                    if (!strncmp(device_address, "hdmi_spkr", 9)) {
+                        mHdmiAudioDisabled = true;
+                    } else {
+                        mHdmiAudioEvent = false;
+                    }
+                }
+#endif
                 ALOGW("setDeviceConnectionState() device not connected: %x", device);
                 return INVALID_OPERATION;
             }
@@ -177,7 +209,15 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
 
             // remove device from available output devices
             mAvailableOutputDevices.remove(devDesc);
-
+#ifdef AUDIO_EXTN_HDMI_SPK_ENABLED
+            if ((popcount(device) == 1) && (device & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+                if (!strncmp(device_address, "hdmi_spkr", 9)) {
+                    mHdmiAudioDisabled = true;
+                } else {
+                    mHdmiAudioEvent = false;
+                }
+            }
+#endif
             checkOutputsForDevice(devDesc, state, outputs, devDesc->mAddress);
 
             // Propagate device availability to Engine
@@ -522,9 +562,8 @@ audio_devices_t AudioPolicyManagerCustom::getNewOutputDevice(const sp<AudioOutpu
                 (isStrategyActive(mPrimaryOutput,STRATEGY_SONIFICATION)
                 && (!isStrategyActive(mPrimaryOutput,STRATEGY_MEDIA)))) {
         device = getDeviceForStrategy(STRATEGY_SONIFICATION, fromCache);
-    } else if (isStrategyActive(outputDesc, STRATEGY_SONIFICATION_RESPECTFUL)||
-                (isStrategyActive(mPrimaryOutput,STRATEGY_SONIFICATION_RESPECTFUL)
-                && (!isStrategyActive(mPrimaryOutput, STRATEGY_MEDIA)))) {
+    } else if (isStrategyActive(outputDesc, STRATEGY_SONIFICATION_RESPECTFUL) ||
+                isStrategyActive(mPrimaryOutput,STRATEGY_SONIFICATION_RESPECTFUL)) {
         device = getDeviceForStrategy(STRATEGY_SONIFICATION_RESPECTFUL, fromCache);
     } else if (isStrategyActive(outputDesc, STRATEGY_ACCESSIBILITY)) {
         device = getDeviceForStrategy(STRATEGY_ACCESSIBILITY, fromCache);
@@ -545,6 +584,7 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
 {
     ALOGV("setPhoneState() state %d", state);
     // store previous phone state for management of sonification strategy below
+    audio_devices_t newDevice = AUDIO_DEVICE_NONE;
     int oldState = mEngine->getPhoneState();
 
     if (mEngine->setPhoneState(state) != NO_ERROR) {
@@ -562,8 +602,7 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
                 if (stream == AUDIO_STREAM_PATCH) {
                     continue;
                 }
-
-            handleIncallSonification((audio_stream_type_t)stream, false, true, curOutput);
+                handleIncallSonification((audio_stream_type_t)stream, false, true, curOutput);
             }
         }
 
@@ -835,7 +874,14 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
             setOutputDevice(mPrimaryOutput, rxDevice, force, 0);
         }
     }
-
+    //update device for all non-primary outputs
+    for (size_t i = 0; i < mOutputs.size(); i++) {
+        audio_io_handle_t output = mOutputs.keyAt(i);
+        if (output != mPrimaryOutput->mIoHandle) {
+            newDevice = getNewOutputDevice(mOutputs.valueFor(output), false /*fromCache*/);
+            setOutputDevice(mOutputs.valueFor(output), newDevice, (newDevice != AUDIO_DEVICE_NONE));
+        }
+    }
     // if entering in call state, handle special case of active streams
     // pertaining to sonification strategy see handleIncallSonification()
     if (isStateInCall(state)) {
@@ -846,7 +892,7 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
                if (stream == AUDIO_STREAM_PATCH) {
                     continue;
                 }
-            handleIncallSonification((audio_stream_type_t)stream, true, true, curOutput);
+                handleIncallSonification((audio_stream_type_t)stream, true, true, curOutput);
            }
         }
     }
@@ -867,10 +913,10 @@ status_t AudioPolicyManagerCustom::stopSource(sp<SwAudioOutputDescriptor> output
     handleEventForBeacon(stream == AUDIO_STREAM_TTS ? STOPPING_BEACON : STOPPING_OUTPUT);
 
     // handle special case for sonification while in call
-    if (isInCall()) {
+    if (isInCall() && (outputDesc->mRefCount[stream] == 1)) {
         if (outputDesc->isDuplicated()) {
-            handleIncallSonification(stream, false, false, outputDesc->mIoHandle);
-            handleIncallSonification(stream, false, false, outputDesc->mIoHandle);
+            handleIncallSonification(stream, false, false, outputDesc->mOutput1->mIoHandle);
+            handleIncallSonification(stream, false, false, outputDesc->mOutput2->mIoHandle);
         }
         handleIncallSonification(stream, false, false, outputDesc->mIoHandle);
     }
@@ -899,8 +945,9 @@ status_t AudioPolicyManagerCustom::stopSource(sp<SwAudioOutputDescriptor> output
                         desc->isActive() &&
                         outputDesc->sharesHwModuleWith(desc) &&
                         (newDevice != desc->device())) {
-                    setOutputDevice(desc,
-                                    getNewOutputDevice(desc, false /*fromCache*/),
+                        audio_devices_t dev = getNewOutputDevice(mOutputs.valueFor(curOutput), false /*fromCache*/);
+                        setOutputDevice(desc,
+                                    dev,
                                     true,
                                     outputDesc->latency()*2);
                 }
@@ -1359,6 +1406,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     }
 #endif
 
+#ifdef AUDIO_EXTN_AFE_PROXY_ENABLED
     /*
     * WFD audio routes back to target speaker when starting a ringtone playback.
     * This is because primary output is reused for ringtone, so output device is
@@ -1378,6 +1426,8 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         else //route every thing else to ULL path
             flags = AUDIO_OUTPUT_FLAG_FAST;
     }
+#endif
+
     // open a direct output if required by specified parameters
     // force direct flag if offload flag is set: offloading implies a direct output stream
     // and all common behaviors are driven by checking only the direct flag
@@ -1718,7 +1768,7 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
         // Move tracks associated to this strategy from previous output to new output
         for (int i = AUDIO_STREAM_SYSTEM; i < (int)AUDIO_STREAM_CNT; i++) {
             // Do not call invalidate for ENFORCED_AUDIBLE (otherwise pops are seen for camcorder)
-            if ((i != AUDIO_STREAM_ENFORCED_AUDIBLE && (i != AUDIO_STREAM_PATCH)) {
+            if ((i != AUDIO_STREAM_ENFORCED_AUDIBLE && (i != AUDIO_STREAM_PATCH))) {
                ALOGD("Invalidate on releaseInput for stream :: %d ", i);
                //FIXME see fixme on name change
                mpClientInterface->invalidateStream((audio_stream_type_t)i);
@@ -1815,34 +1865,11 @@ status_t AudioPolicyManagerCustom::stopInput(audio_io_handle_t input,
     return status;
 }
 
-audio_devices_t AudioPolicyManagerCustom::getDeviceForStrategy(routing_strategy strategy, bool fromCache)
-{
-    audio_devices_t availableOutputDeviceTypes = mAvailableOutputDevices.types();
-    audio_devices_t device = AUDIO_DEVICE_NONE;
-    switch (strategy) {
-        case STRATEGY_SONIFICATION:
-        case STRATEGY_ENFORCED_AUDIBLE:
-        case STRATEGY_ACCESSIBILITY:
-        case STRATEGY_REROUTING:
-        case STRATEGY_MEDIA:
-            if (strategy != STRATEGY_SONIFICATION){
-                // no sonification on WFD sink
-                device |= availableOutputDeviceTypes & AUDIO_DEVICE_OUT_PROXY;
-                if (device != AUDIO_DEVICE_NONE) {
-                    ALOGV("Found proxy for strategy %d", strategy);
-                    return device;
-                }
-            }
-            break;
-        default:
-            ALOGV("getDeviceForStrategy() unknown strategy: %d", strategy);
-            break;
-    }
-    device = AudioPolicyManager::getDeviceForStrategy(strategy, fromCache);
-    return device;
-}
 AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *clientInterface)
-    : AudioPolicyManager(clientInterface)
+    : AudioPolicyManager(clientInterface),
+      mHdmiAudioDisabled(false),
+      mHdmiAudioEvent(false),
+      mPrevPhoneState(0)
 {
     char ssr_enabled[PROPERTY_VALUE_MAX] = {0};
     bool prop_ssr_enabled = false;
