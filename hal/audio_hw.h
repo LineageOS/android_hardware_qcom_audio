@@ -85,8 +85,8 @@ enum {
     USECASE_AUDIO_PLAYBACK_LOW_LATENCY,
     USECASE_AUDIO_PLAYBACK_MULTI_CH,
     USECASE_AUDIO_PLAYBACK_OFFLOAD,
-#ifdef MULTIPLE_OFFLOAD_ENABLED
     USECASE_AUDIO_PLAYBACK_OFFLOAD2,
+#ifdef MULTIPLE_OFFLOAD_ENABLED
     USECASE_AUDIO_PLAYBACK_OFFLOAD3,
     USECASE_AUDIO_PLAYBACK_OFFLOAD4,
     USECASE_AUDIO_PLAYBACK_OFFLOAD5,
@@ -96,8 +96,6 @@ enum {
     USECASE_AUDIO_PLAYBACK_OFFLOAD9,
 #endif
     USECASE_AUDIO_PLAYBACK_ULL,
-
-    USECASE_AUDIO_DIRECT_PCM_OFFLOAD,
 
     /* FM usecase */
     USECASE_AUDIO_PLAYBACK_FM,
@@ -355,6 +353,8 @@ struct audio_device {
     void (*offload_effects_get_parameters)(struct str_parms *,
                                            struct str_parms *);
     void (*offload_effects_set_parameters)(struct str_parms *);
+
+    bool multi_offload_enable;
 };
 
 int select_devices(struct audio_device *adev,
