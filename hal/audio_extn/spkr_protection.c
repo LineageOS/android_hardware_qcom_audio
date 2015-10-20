@@ -77,6 +77,7 @@
 #define WAIT_TIME_SPKR_CALIB (60 * 1000 * 1000)
 
 #define MIN_SPKR_IDLE_SEC (60 * 30)
+#define WAKEUP_MIN_IDLE_CHECK 30
 
 /*Once calibration is started sleep for 1 sec to allow
   the calibration to kick off*/
@@ -554,7 +555,7 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
                 }
                 break;
             } else if (status.status == -EAGAIN) {
-                  ALOGD("%s: spkr_prot_thread try again", __func__);
+                  ALOGV("%s: spkr_prot_thread try again", __func__);
                   usleep(WAIT_FOR_GET_CALIB_STATUS);
             } else {
                 ALOGE("%s: spkr_prot_thread get failed status %d",
@@ -734,18 +735,22 @@ static void* spkr_calibration_thread()
             if (is_speaker_in_use(&sec)) {
                 ALOGV("%s: WSA Speaker in use retry calibration", __func__);
                 pthread_mutex_unlock(&adev->lock);
+                sleep(WAKEUP_MIN_IDLE_CHECK);
                 continue;
             } else {
+                ALOGD("%s: wsa speaker idle %ld,minimum time %ld", __func__, sec, min_idle_time);
                 if (sec < min_idle_time) {
                     pthread_mutex_unlock(&adev->lock);
+                    sleep(WAKEUP_MIN_IDLE_CHECK);
                     continue;
                }
-               ALOGV("%s: wsa speaker idle %ld min time %ld", __func__, sec, min_idle_time);
                goahead = true;
            }
            if (!list_empty(&adev->usecase_list)) {
                 ALOGD("%s: Usecase active re-try calibration", __func__);
-                goahead = false;
+                pthread_mutex_unlock(&adev->lock);
+                sleep(WAKEUP_MIN_IDLE_CHECK);
+                continue;
            }
            if (goahead) {
                if (spk_1_tzn > 0) {
@@ -777,15 +782,17 @@ static void* spkr_calibration_thread()
                        if (t0_spk_1 < TZ_TEMP_MIN_THRESHOLD ||
                            t0_spk_1 > TZ_TEMP_MAX_THRESHOLD) {
                            pthread_mutex_unlock(&adev->lock);
+                           sleep(WAKEUP_MIN_IDLE_CHECK);
                            continue;
                        }
+                       ALOGD("%s: temp T0 for spkr1 %d\n", __func__, t0_spk_1);
                        /*Convert temp into q6 format*/
                        t0_spk_1 = (t0_spk_1 * (1 << 6));
-                       ALOGD("%s: temp T0 for spkr1 %d\n", __func__, t0_spk_1);
                    } else {
                        ALOGV("%s: thermal equilibrium failed for spkr1 in %d/%d readings\n",
                                                 __func__, i, NUM_ATTEMPTS);
                        pthread_mutex_unlock(&adev->lock);
+                       sleep(WAKEUP_MIN_IDLE_CHECK);
                        continue;
                    }
                }
@@ -817,15 +824,17 @@ static void* spkr_calibration_thread()
                        if (t0_spk_2 < TZ_TEMP_MIN_THRESHOLD ||
                            t0_spk_2 > TZ_TEMP_MAX_THRESHOLD) {
                            pthread_mutex_unlock(&adev->lock);
+                           sleep(WAKEUP_MIN_IDLE_CHECK);
                            continue;
                        }
+                       ALOGD("%s: temp T0 for spkr2 %d\n", __func__, t0_spk_2);
                        /*Convert temp into q6 format*/
                        t0_spk_2 = (t0_spk_2 * (1 << 6));
-                       ALOGD("%s: temp T0 for spkr2 %d\n", __func__, t0_spk_2);
                    } else {
                        ALOGV("%s: thermal equilibrium failed for spkr2 in %d/%d readings\n",
                                                 __func__, i, NUM_ATTEMPTS);
                        pthread_mutex_unlock(&adev->lock);
+                       sleep(WAKEUP_MIN_IDLE_CHECK);
                        continue;
                    }
                }
@@ -859,19 +868,22 @@ static void* spkr_calibration_thread()
         if (is_speaker_in_use(&sec)) {
             ALOGV("%s: Speaker in use retry calibration", __func__);
             pthread_mutex_unlock(&adev->lock);
+            sleep(WAKEUP_MIN_IDLE_CHECK);
             continue;
         } else {
             if (sec < min_idle_time) {
                 pthread_mutex_unlock(&adev->lock);
+                sleep(WAKEUP_MIN_IDLE_CHECK);
                 continue;
             }
-            ALOGD("%s: speaker idle %ld min time %ld", __func__, sec, min_idle_time);
             goahead = true;
         }
         if (!list_empty(&adev->usecase_list)) {
             ALOGD("%s: Usecase active re-try calibration", __func__);
             goahead = false;
             pthread_mutex_unlock(&adev->lock);
+            sleep(WAKEUP_MIN_IDLE_CHECK);
+            continue;
         }
         if (goahead) {
                 int status;
