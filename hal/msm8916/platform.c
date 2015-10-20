@@ -143,7 +143,7 @@ char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
 
 #define AUDIO_PARAMETER_KEY_REC_PLAY_CONC "rec_play_conc_on"
 
-#define  AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED  "is_hw_dec_session_allowed"
+#define  AUDIO_PARAMETER_IS_HW_DECODER_SESSION_AVAILABLE  "is_hw_dec_session_available"
 
 #define MAX_DSP_ONLY_DECODERS 6
 
@@ -3558,7 +3558,7 @@ void platform_get_parameters(void *platform,
     }
     native_audio_get_params(query, reply, value, sizeof(value));
 
-    ret = str_parms_get_str(query, AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED,
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_IS_HW_DECODER_SESSION_AVAILABLE,
                                     value, sizeof(value));
     if (ret >= 0) {
         int isallowed = 1; /*true*/
@@ -3585,7 +3585,7 @@ void platform_get_parameters(void *platform,
                 }
             }
         }
-        str_parms_add_int(reply, AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED, isallowed);
+        str_parms_add_int(reply, AUDIO_PARAMETER_IS_HW_DECODER_SESSION_AVAILABLE, isallowed);
     }
 
 
