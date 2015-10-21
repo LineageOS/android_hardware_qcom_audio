@@ -170,7 +170,6 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] = "compress-offload-playback",
     //Enabled for Direct_PCM
     [USECASE_AUDIO_PLAYBACK_OFFLOAD2] = "compress-offload-playback2",
-#ifdef MULTIPLE_OFFLOAD_ENABLED
     [USECASE_AUDIO_PLAYBACK_OFFLOAD3] = "compress-offload-playback3",
     [USECASE_AUDIO_PLAYBACK_OFFLOAD4] = "compress-offload-playback4",
     [USECASE_AUDIO_PLAYBACK_OFFLOAD5] = "compress-offload-playback5",
@@ -178,7 +177,6 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_OFFLOAD7] = "compress-offload-playback7",
     [USECASE_AUDIO_PLAYBACK_OFFLOAD8] = "compress-offload-playback8",
     [USECASE_AUDIO_PLAYBACK_OFFLOAD9] = "compress-offload-playback9",
-#endif
 
     [USECASE_AUDIO_RECORD] = "audio-record",
     [USECASE_AUDIO_RECORD_COMPRESS] = "audio-record-compress",
@@ -215,7 +213,6 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
 static const audio_usecase_t offload_usecases[] = {
     USECASE_AUDIO_PLAYBACK_OFFLOAD,
     USECASE_AUDIO_PLAYBACK_OFFLOAD2,
-#ifdef MULTIPLE_OFFLOAD_ENABLED
     USECASE_AUDIO_PLAYBACK_OFFLOAD3,
     USECASE_AUDIO_PLAYBACK_OFFLOAD4,
     USECASE_AUDIO_PLAYBACK_OFFLOAD5,
@@ -223,7 +220,6 @@ static const audio_usecase_t offload_usecases[] = {
     USECASE_AUDIO_PLAYBACK_OFFLOAD7,
     USECASE_AUDIO_PLAYBACK_OFFLOAD8,
     USECASE_AUDIO_PLAYBACK_OFFLOAD9,
-#endif
 };
 
 #define STRING_TO_ENUM(string) { #string, string }
