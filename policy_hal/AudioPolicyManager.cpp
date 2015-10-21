@@ -254,6 +254,23 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, false /*fromCache*/);
             updateCallRouting(newDevice);
         }
+
+#ifdef FM_POWER_OPT
+        // handle FM device connection state to trigger FM AFE loopback
+        if(device == AUDIO_DEVICE_OUT_FM && hasPrimaryOutput()) {
+           audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, false /*fromCache*/);
+           if (state == AUDIO_POLICY_DEVICE_STATE_AVAILABLE) {
+               mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, 1);
+               newDevice = newDevice | AUDIO_DEVICE_OUT_FM;
+           } else {
+               mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, -1);
+           }
+           AudioParameter param = AudioParameter();
+           param.addInt(String8("handle_fm"), (int)newDevice);
+           mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString());
+        }
+#endif /* FM_POWER_OPT end */
+
         for (size_t i = 0; i < mOutputs.size(); i++) {
             sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
             if ((mEngine->getPhoneState() != AUDIO_MODE_IN_CALL) || (desc != mPrimaryOutput)) {
@@ -1235,6 +1252,13 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
             mpClientInterface->setVoiceVolume(voiceVolume, delayMs);
             mLastVoiceVolume = voiceVolume;
         }
+#ifdef FM_POWER_OPT
+    } else if (stream == AUDIO_STREAM_MUSIC && hasPrimaryOutput() &&
+               outputDesc == mPrimaryOutput) {
+        AudioParameter param = AudioParameter();
+        param.addFloat(String8("fm_volume"), Volume::DbToAmpl(volumeDb));
+        mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString(), delayMs);
+#endif /* FM_POWER_OPT end */
     }
 
     return NO_ERROR;
