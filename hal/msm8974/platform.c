@@ -118,6 +118,7 @@
 #define AUDIO_PARAMETER_KEY_AUD_CALDATA   "cal_data"
 #define AUDIO_PARAMETER_KEY_AUD_CALRESULT "cal_result"
 
+#define AUDIO_PARAMETER_KEY_PERF_LOCK_OPTS "perf_lock_opts"
 
 /* Query external audio device connection status */
 #define AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE "ext_audio_device"
@@ -3004,6 +3005,44 @@ done_key_audcal:
         free(dptr);
 }
 
+static void perf_lock_set_params(struct platform_data *platform,
+                          struct str_parms *parms,
+                          char *value, int len)
+{
+    int err = 0, i = 0, num_opts = 0;
+    char *test_r = NULL;
+    char *opts = NULL;
+    char *opts_size = NULL;
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_PERF_LOCK_OPTS,
+                            value, len);
+    if (err >= 0) {
+        opts_size = strtok_r(value, ", ", &test_r);
+        if (opts_size == NULL) {
+            ALOGE("%s: incorrect perf lock opts\n", __func__);
+            return;
+        }
+        num_opts = atoi(opts_size);
+        if (num_opts > 0) {
+            if (num_opts > MAX_PERF_LOCK_OPTS) {
+                ALOGD("%s: num_opts %d exceeds max %d, setting to max\n",
+                      __func__, num_opts, MAX_PERF_LOCK_OPTS);
+                num_opts = MAX_PERF_LOCK_OPTS;
+            }
+            for (i = 0; i < num_opts; i++) {
+                opts = strtok_r(NULL, ", ", &test_r);
+                if (opts == NULL) {
+                    ALOGE("%s: incorrect perf lock opts\n", __func__);
+                    break;
+                }
+                platform->adev->perf_lock_opts[i] = strtoul(opts, NULL, 16);
+            }
+            platform->adev->perf_lock_opts_size = i;
+        }
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_PERF_LOCK_OPTS);
+    }
+}
+
 int platform_set_parameters(void *platform, struct str_parms *parms)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -3097,6 +3136,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     set_audiocal(platform, parms, value, len);
     native_audio_set_params(platform, parms, value, len);
     audio_extn_spkr_prot_set_parameters(parms, value, len);
+    perf_lock_set_params(platform, parms, value, len);
 done:
     ALOGV("%s: exit with code(%d)", __func__, ret);
     if(kv_pairs != NULL)
