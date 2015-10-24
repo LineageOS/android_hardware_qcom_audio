@@ -12,11 +12,11 @@ LOCAL_SHARED_LIBRARIES := \
     libutils \
     liblog \
     libsoundtrigger \
-    libaudiopolicymanagerdefault
+    libaudiopolicymanagerdefault \
+    libserviceutility
 
 LOCAL_STATIC_LIBRARIES := \
-    libmedia_helper \
-    libserviceutility
+    libmedia_helper
 
 LOCAL_MODULE := libaudiopolicymanager
 
