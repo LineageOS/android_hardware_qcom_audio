@@ -1574,23 +1574,29 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     if (profile != 0) {
         sp<SwAudioOutputDescriptor> outputDesc = NULL;
 
-        for (size_t i = 0; i < mOutputs.size(); i++) {
-            sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
-            if (!desc->isDuplicated() && (profile == desc->mProfile)) {
-                outputDesc = desc;
-                // reuse direct output if currently open and configured with same parameters
-                if ((samplingRate == outputDesc->mSamplingRate) &&
-                        (format == outputDesc->mFormat) &&
-                        (channelMask == outputDesc->mChannelMask)) {
-                    outputDesc->mDirectOpenCount++;
-                    ALOGV("getOutput() reusing direct output %d", mOutputs.keyAt(i));
-                    return mOutputs.keyAt(i);
+        // if multiple concurrent offload decode is supported
+        // do no check for reuse and also don't close previous output if its offload
+        // previous output will be closed during track destruction
+        if (!(property_get_bool("audio.offload.multiple.enabled", false) &&
+                ((flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) != 0))) {
+            for (size_t i = 0; i < mOutputs.size(); i++) {
+                sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
+                if (!desc->isDuplicated() && (profile == desc->mProfile)) {
+                    outputDesc = desc;
+                    // reuse direct output if currently open and configured with same parameters
+                    if ((samplingRate == outputDesc->mSamplingRate) &&
+                            (format == outputDesc->mFormat) &&
+                            (channelMask == outputDesc->mChannelMask)) {
+                        outputDesc->mDirectOpenCount++;
+                        ALOGV("getOutput() reusing direct output %d", mOutputs.keyAt(i));
+                        return mOutputs.keyAt(i);
+                    }
                 }
             }
-        }
-        // close direct output if currently open and configured with different parameters
-        if (outputDesc != NULL) {
-            closeOutput(outputDesc->mIoHandle);
+            // close direct output if currently open and configured with different parameters
+            if (outputDesc != NULL) {
+                closeOutput(outputDesc->mIoHandle);
+            }
         }
 
         // if the selected profile is offloaded and no offload info was specified,
