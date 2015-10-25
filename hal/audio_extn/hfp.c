@@ -47,6 +47,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #ifdef PLATFORM_MSM8994
 #define HFP_RX_VOLUME     "SEC AUXPCM LOOPBACK Volume"
+#elif defined PLATFORM_MSM8996
+#define HFP_RX_VOLUME     "PRI AUXPCM LOOPBACK Volume"
 #else
 #define HFP_RX_VOLUME     "Internal HFP RX Volume"
 #endif
