@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -56,15 +56,14 @@
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE_FOR_AV_STREAMING (2 * 1024)
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
 /* Used in calculating fragment size for pcm offload */
-#define PCM_OFFLOAD_BUFFER_DURATION_FOR_AV 2000 /* 2 secs */
-#define PCM_OFFLOAD_BUFFER_DURATION_FOR_AV_STREAMING 100 /* 100 millisecs */
+#define PCM_OFFLOAD_BUFFER_DURATION 40 /* 40 millisecs */
 
 /* MAX PCM fragment size cannot be increased  further due
  * to flinger's cblk size of 1mb,and it has to be a multiple of
  * 24 - lcm of channels supported by DSP
  */
 #define MAX_PCM_OFFLOAD_FRAGMENT_SIZE (240 * 1024)
-#define MIN_PCM_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
+#define MIN_PCM_OFFLOAD_FRAGMENT_SIZE (4 * 1024)
 
 #define ALIGN( num, to ) (((num) + (to-1)) & (~(to-1)))
 /*
@@ -2575,27 +2574,19 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
 {
     uint32_t fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
     uint32_t bits_per_sample = 16;
+    uint32_t pcm_offload_time = PCM_OFFLOAD_BUFFER_DURATION;
 
     if (info->format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD) {
         bits_per_sample = 32;
     }
 
-    if (!info->has_video) {
-        fragment_size = MAX_PCM_OFFLOAD_FRAGMENT_SIZE;
-
-    } else if (info->has_video && info->is_streaming) {
-        fragment_size = (PCM_OFFLOAD_BUFFER_DURATION_FOR_AV_STREAMING
-                                     * info->sample_rate
-                                     * bits_per_sample
-                                     * popcount(info->channel_mask))/1000;
-
-    } else if (info->has_video) {
-        fragment_size = (PCM_OFFLOAD_BUFFER_DURATION_FOR_AV
-                                     * info->sample_rate
-                                     * bits_per_sample
-                                     * popcount(info->channel_mask))/1000;
-    }
-
+    //duration is set to 40 ms worth of stereo data at 48Khz
+    //with 16 bit per sample, modify this when the channel
+    //configuration is different
+    fragment_size = (pcm_offload_time
+                     * info->sample_rate
+                     * (bits_per_sample >> 3)
+                     * popcount(info->channel_mask))/1000;
     fragment_size = ALIGN( fragment_size, 1024);
 
     if(fragment_size < MIN_PCM_OFFLOAD_FRAGMENT_SIZE)
