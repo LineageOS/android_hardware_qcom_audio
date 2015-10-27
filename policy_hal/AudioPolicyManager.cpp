@@ -955,58 +955,22 @@ void AudioPolicyManagerCustom::setForceUse(audio_policy_force_use_t usage,
 
 }
 
-status_t AudioPolicyManagerCustom::stopOutput(audio_io_handle_t output,
-                                            audio_stream_type_t stream,
-                                            audio_session_t session)
-{
-    ALOGV("stopOutput() output %d, stream %d, session %d", output, stream, session);
-    ssize_t index = mOutputs.indexOfKey(output);
-    if (index < 0) {
-        ALOGW("stopOutput() unknown output %d", output);
-        return BAD_VALUE;
-    }
-
-    sp<SwAudioOutputDescriptor> outputDesc = mOutputs.valueAt(index);
-
-    if (outputDesc->mRefCount[stream] == 1) {
-        // Automatically disable the remote submix input when output is stopped on a
-        // re routing mix of type MIX_TYPE_RECORDERS
-        if (audio_is_remote_submix_device(outputDesc->mDevice) &&
-                outputDesc->mPolicyMix != NULL &&
-                outputDesc->mPolicyMix->mMixType == MIX_TYPE_RECORDERS) {
-            setDeviceConnectionStateInt(AUDIO_DEVICE_IN_REMOTE_SUBMIX,
-                    AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE,
-                    outputDesc->mPolicyMix->mRegistrationId,
-                    "remote-submix");
-        }
-    }
-
-    // Routing?
-    bool forceDeviceUpdate = false;
-    if (outputDesc->mRefCount[stream] > 0) {
-        int activityCount = mOutputRoutes.decRouteActivity(session);
-        forceDeviceUpdate = (mOutputRoutes.hasRoute(session) && (activityCount == 0));
-
-        if (forceDeviceUpdate) {
-            checkStrategyRoute(getStrategy(stream), AUDIO_IO_HANDLE_NONE);
-        }
-    }
-
-    return stopSource(outputDesc, stream, forceDeviceUpdate);
-}
-
-status_t AudioPolicyManagerCustom::stopSource(sp<SwAudioOutputDescriptor> outputDesc,
+status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDesc,
                                             audio_stream_type_t stream,
                                             bool forceDeviceUpdate)
 {
+    if (stream < 0 || stream >= AUDIO_STREAM_CNT) {
+        ALOGW("stopSource() invalid stream %d", stream);
+        return INVALID_OPERATION;
+    }
     // always handle stream stop, check which stream type is stopping
     handleEventForBeacon(stream == AUDIO_STREAM_TTS ? STOPPING_BEACON : STOPPING_OUTPUT);
 
     // handle special case for sonification while in call
     if (isInCall() && (outputDesc->mRefCount[stream] == 1)) {
         if (outputDesc->isDuplicated()) {
-            handleIncallSonification(stream, false, false, outputDesc->mOutput1->mIoHandle);
-            handleIncallSonification(stream, false, false, outputDesc->mOutput2->mIoHandle);
+            handleIncallSonification(stream, false, false, outputDesc->subOutput1()->mIoHandle);
+            handleIncallSonification(stream, false, false, outputDesc->subOutput2()->mIoHandle);
         }
         handleIncallSonification(stream, false, false, outputDesc->mIoHandle);
     }
@@ -1041,7 +1005,7 @@ status_t AudioPolicyManagerCustom::stopSource(sp<SwAudioOutputDescriptor> output
                         if (dev == prevDevice) {
                             delayMs = 0;
                         } else {
-                            delayMs = outputDesc->mLatency*2;
+                            delayMs = outputDesc->latency()*2;
                         }
                         setOutputDevice(desc,
                                     dev,
@@ -1058,13 +1022,18 @@ status_t AudioPolicyManagerCustom::stopSource(sp<SwAudioOutputDescriptor> output
         return INVALID_OPERATION;
     }
 }
-status_t AudioPolicyManagerCustom::startSource(sp<SwAudioOutputDescriptor> outputDesc,
+status_t AudioPolicyManagerCustom::startSource(sp<AudioOutputDescriptor> outputDesc,
                                              audio_stream_type_t stream,
                                              audio_devices_t device,
                                              uint32_t *delayMs)
 {
     // cannot start playback of STREAM_TTS if any other output is being used
     uint32_t beaconMuteLatency = 0;
+
+    if (stream < 0 || stream >= AUDIO_STREAM_CNT) {
+        ALOGW("startSource() invalid stream %d", stream);
+        return INVALID_OPERATION;
+    }
 
     *delayMs = 0;
     if (stream == AUDIO_STREAM_TTS) {
@@ -1209,10 +1178,14 @@ void AudioPolicyManagerCustom::handleNotificationRoutingForStream(audio_stream_t
 }
 status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
                                                    int index,
-                                                   const sp<SwAudioOutputDescriptor>& outputDesc,
+                                                   const sp<AudioOutputDescriptor>& outputDesc,
                                                    audio_devices_t device,
                                                    int delayMs, bool force)
 {
+    if (stream < 0 || stream >= AUDIO_STREAM_CNT) {
+        ALOGW("checkAndSetVolume() invalid stream %d", stream);
+        return INVALID_OPERATION;
+    }
     // do not change actual stream volume if the stream is muted
     if (outputDesc->mMuteCount[stream] != 0) {
         ALOGVV("checkAndSetVolume() stream %d muted count %d",

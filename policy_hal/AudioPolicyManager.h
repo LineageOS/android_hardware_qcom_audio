@@ -81,7 +81,7 @@ protected:
 
          status_t checkAndSetVolume(audio_stream_type_t stream,
                                                    int index,
-                                                   const sp<SwAudioOutputDescriptor>& outputDesc,
+                                                   const sp<AudioOutputDescriptor>& outputDesc,
                                                    audio_devices_t device,
                                                    int delayMs = 0, bool force = false);
 
@@ -93,17 +93,14 @@ protected:
                                            bool fromCache);
         // returns true if given output is direct output
         bool isDirectOutput(audio_io_handle_t output);
-        status_t stopOutput(audio_io_handle_t output,
-                                    audio_stream_type_t stream,
-                                    audio_session_t session);
 
         // if argument "device" is different from AUDIO_DEVICE_NONE,  startSource() will force
         // the re-evaluation of the output device.
-        status_t startSource(sp<SwAudioOutputDescriptor> outputDesc,
+        status_t startSource(sp<AudioOutputDescriptor> outputDesc,
                              audio_stream_type_t stream,
                              audio_devices_t device,
                              uint32_t *delayMs);
-         status_t stopSource(sp<SwAudioOutputDescriptor> outputDesc,
+         status_t stopSource(sp<AudioOutputDescriptor> outputDesc,
                             audio_stream_type_t stream,
                             bool forceDeviceUpdate);
         // event is one of STARTING_OUTPUT, STARTING_BEACON, STOPPING_OUTPUT, STOPPING_BEACON
