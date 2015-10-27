@@ -121,6 +121,17 @@ class AudioHardwareALSA;
 #define VSID_KEY            "vsid"
 #define CALL_STATE_KEY      "call_state"
 
+/* Query Fluence type */
+#define AUDIO_PARAMETER_KEY_FLUENCE_TYPE "fluence"
+
+/* Query if a2dp  is supported */
+#define AUDIO_PARAMETER_KEY_HANDLE_A2DP_DEVICE "isA2dpDeviceSupported"
+
+/* Query if Proxy can be Opend */
+#define AUDIO_CAN_OPEN_PROXY "can_open_proxy"
+
+/* Query handle fm parameter*/
+#define AUDIO_PARAMETER_KEY_HANDLE_FM "handle_fm"
 
 #define ANC_FLAG        0x00000001
 #define DMIC_FLAG       0x00000002
