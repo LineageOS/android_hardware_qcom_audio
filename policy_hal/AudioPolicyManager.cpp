@@ -501,7 +501,7 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
     /// Opens: can these line be executed after the switch of volume curves???
     // if leaving call state, handle special case of active streams
     // pertaining to sonification strategy see handleIncallSonification()
-    if (isInCall()) {
+    if (isStateInCall(oldState)) {
         ALOGV("setPhoneState() in call state management: new state is %d", state);
         for (size_t j = 0; j < mOutputs.size(); j++) {
             audio_io_handle_t curOutput = mOutputs.keyAt(j);
@@ -618,6 +618,53 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
         mLimitRingtoneVolume = false;
     }
 }
+
+void AudioPolicyManagerCustom::setForceUse(audio_policy_force_use_t usage,
+                                         audio_policy_forced_cfg_t config)
+{
+    ALOGV("setForceUse() usage %d, config %d, mPhoneState %d", usage, config, mEngine->getPhoneState());
+
+    if (mEngine->setForceUse(usage, config) != NO_ERROR) {
+        ALOGW("setForceUse() could not set force cfg %d for usage %d", config, usage);
+        return;
+    }
+    bool forceVolumeReeval = (usage == AUDIO_POLICY_FORCE_FOR_COMMUNICATION) ||
+            (usage == AUDIO_POLICY_FORCE_FOR_DOCK) ||
+            (usage == AUDIO_POLICY_FORCE_FOR_SYSTEM);
+
+    // check for device and output changes triggered by new force usage
+    checkA2dpSuspend();
+    checkOutputForAllStrategies();
+    updateDevicesAndOutputs();
+    if (mEngine->getPhoneState() == AUDIO_MODE_IN_CALL && hasPrimaryOutput()) {
+        audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, true /*fromCache*/);
+        updateCallRouting(newDevice);
+    }
+    // Use reverse loop to make sure any low latency usecases (generally tones)
+    // are not routed before non LL usecases (generally music).
+    // We can safely assume that LL output would always have lower index,
+    // and use this work-around to avoid routing of output with music stream
+    // from the context of short lived LL output.
+    // Note: in case output's share backend(HAL sharing is implicit) all outputs
+    //       gets routing update while processing first output itself.
+    for (size_t i = mOutputs.size(); i > 0; i--) {
+        sp<SwAudioOutputDescriptor> outputDesc = mOutputs.valueAt(i-1);
+        audio_devices_t newDevice = getNewOutputDevice(outputDesc, true /*fromCache*/);
+        if ((mEngine->getPhoneState() != AUDIO_MODE_IN_CALL) || outputDesc != mPrimaryOutput) {
+            setOutputDevice(outputDesc, newDevice, (newDevice != AUDIO_DEVICE_NONE));
+        }
+        if (forceVolumeReeval && (newDevice != AUDIO_DEVICE_NONE)) {
+            applyStreamVolumes(outputDesc, newDevice, 0, true);
+        }
+    }
+
+    audio_io_handle_t activeInput = mInputs.getActiveInput();
+    if (activeInput != 0) {
+        setInputDevice(activeInput, getNewInputDevice(activeInput));
+    }
+
+}
+
 status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDesc1,
                                             audio_stream_type_t stream,
                                             bool forceDeviceUpdate)
@@ -948,7 +995,53 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         // compress should not be used for non-music streams
         ALOGE("Offloading only allowed with music stream");
         return 0;
+       }
+
+    if ((stream == AUDIO_STREAM_VOICE_CALL) &&
+        (channelMask == 1) &&
+        (samplingRate == 8000 || samplingRate == 16000)) {
+        // Allow Voip direct output only if:
+        // audio mode is MODE_IN_COMMUNCATION; AND
+        // voip output is not opened already; AND
+        // requested sample rate matches with that of voip input stream (if opened already)
+        int value = 0;
+        uint32_t mode = 0, voipOutCount = 1, voipSampleRate = 1;
+        String8 valueStr = mpClientInterface->getParameters((audio_io_handle_t)0,
+                                                           String8("audio_mode"));
+        AudioParameter result = AudioParameter(valueStr);
+        if (result.getInt(String8("audio_mode"), value) == NO_ERROR) {
+            mode = value;
+        }
+
+        valueStr =  mpClientInterface->getParameters((audio_io_handle_t)0,
+                                              String8("voip_out_stream_count"));
+        result = AudioParameter(valueStr);
+        if (result.getInt(String8("voip_out_stream_count"), value) == NO_ERROR) {
+            voipOutCount = value;
+        }
+
+        valueStr = mpClientInterface->getParameters((audio_io_handle_t)0,
+                                              String8("voip_sample_rate"));
+        result = AudioParameter(valueStr);
+        if (result.getInt(String8("voip_sample_rate"), value) == NO_ERROR) {
+            voipSampleRate = value;
+        }
+
+        if ((mode == AUDIO_MODE_IN_COMMUNICATION) && (voipOutCount == 0) &&
+            ((voipSampleRate == 0) || (voipSampleRate == samplingRate))) {
+            if (audio_is_linear_pcm(format)) {
+                char propValue[PROPERTY_VALUE_MAX] = {0};
+                property_get("use.voice.path.for.pcm.voip", propValue, "0");
+                bool voipPcmSysPropEnabled = !strncmp("true", propValue, sizeof("true"));
+                if (voipPcmSysPropEnabled && (format == AUDIO_FORMAT_PCM_16_BIT)) {
+                    flags = (audio_output_flags_t)((flags &~AUDIO_OUTPUT_FLAG_FAST) |
+                                AUDIO_OUTPUT_FLAG_VOIP_RX | AUDIO_OUTPUT_FLAG_DIRECT);
+                    ALOGD("Set VoIP and Direct output flags for PCM format");
+                }
+            }
+        }
     }
+
 #ifdef AUDIO_EXTN_AFE_PROXY_ENABLED
     /*
     * WFD audio routes back to target speaker when starting a ringtone playback.
@@ -1129,6 +1222,53 @@ non_direct_output:
     ALOGV("  getOutputForDevice() returns output %d", output);
 
     return output;
+}
+
+AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *clientInterface)
+    : AudioPolicyManager(clientInterface),
+      mHdmiAudioDisabled(false),
+      mHdmiAudioEvent(false),
+      mPrevPhoneState(0)
+{
+    char ssr_enabled[PROPERTY_VALUE_MAX] = {0};
+    bool prop_ssr_enabled = false;
+
+    if (property_get("ro.qc.sdk.audio.ssr", ssr_enabled, NULL)) {
+        prop_ssr_enabled = atoi(ssr_enabled) || !strncmp("true", ssr_enabled, 4);
+    }
+
+    for (size_t i = 0; i < mHwModules.size(); i++) {
+        ALOGV("Hw module %d", i);
+        for (size_t j = 0; j < mHwModules[i]->mInputProfiles.size(); j++) {
+            const sp<IOProfile> inProfile = mHwModules[i]->mInputProfiles[j];
+            ALOGV("Input profile ", j);
+            for (size_t k = 0; k  < inProfile->mChannelMasks.size(); k++) {
+                audio_channel_mask_t channelMask =
+                    inProfile->mChannelMasks.itemAt(k);
+                ALOGV("Channel Mask %x size %d", channelMask,
+                    inProfile->mChannelMasks.size());
+                if (AUDIO_CHANNEL_IN_5POINT1 == channelMask) {
+                    if (!prop_ssr_enabled) {
+                        ALOGI("removing AUDIO_CHANNEL_IN_5POINT1 from"
+                            " input profile as SSR(surround sound record)"
+                            " is not supported on this chipset variant");
+                        inProfile->mChannelMasks.removeItemsAt(k, 1);
+                        ALOGV("Channel Mask size now %d",
+                            inProfile->mChannelMasks.size());
+                    }
+                }
+            }
+        }
+    }
+
+#ifdef RECORD_PLAY_CONCURRENCY
+    mIsInputRequestOnProgress = false;
+#endif
+
+
+#ifdef VOICE_CONCURRENCY
+    mFallBackflag = getFallBackPath();
+#endif
 }
 
 }
