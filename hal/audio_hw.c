@@ -915,6 +915,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 
     if (out_snd_device == usecase->out_snd_device &&
         in_snd_device == usecase->in_snd_device) {
+        audio_extn_dolby_set_endpoint(adev);
+        audio_extn_dolby_ds2_set_endpoint(adev);
         return 0;
     }
 
