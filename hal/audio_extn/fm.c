@@ -31,7 +31,7 @@
 #include <stdlib.h>
 #include <cutils/str_parms.h>
 
-#ifdef FM_ENABLED
+#ifdef FM_POWER_OPT
 #define AUDIO_PARAMETER_KEY_HANDLE_FM "handle_fm"
 #define AUDIO_PARAMETER_KEY_FM_VOLUME "fm_volume"
 #define AUDIO_PARAMETER_KEY_REC_PLAY_CONC "rec_play_conc_on"
@@ -304,4 +304,4 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
 exit:
     ALOGV("%s: exit", __func__);
 }
-#endif /* FM_ENABLED end */
+#endif /* FM_POWER_OPT end */
