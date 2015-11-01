@@ -670,7 +670,7 @@ status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDe
                                             bool forceDeviceUpdate)
 {
     // always handle stream stop, check which stream type is stopping
-    sp<SwAudioOutputDescriptor> outputDesc = (sp<SwAudioOutputDescriptor>) outputDesc1;
+    const sp<SwAudioOutputDescriptor> outputDesc = (SwAudioOutputDescriptor *) outputDesc1.get();
     handleEventForBeacon(stream == AUDIO_STREAM_TTS ? STOPPING_BEACON : STOPPING_OUTPUT);
 
     // handle special case for sonification while in call
@@ -730,7 +730,7 @@ status_t AudioPolicyManagerCustom::startSource(sp<AudioOutputDescriptor> outputD
 {
     // cannot start playback of STREAM_TTS if any other output is being used
     uint32_t beaconMuteLatency = 0;
-    sp<SwAudioOutputDescriptor> outputDesc = (sp<SwAudioOutputDescriptor>) outputDesc1;
+    const sp<SwAudioOutputDescriptor> outputDesc = (SwAudioOutputDescriptor *) outputDesc1.get();
 
     *delayMs = 0;
     if (stream == AUDIO_STREAM_TTS) {
@@ -875,10 +875,12 @@ void AudioPolicyManagerCustom::handleNotificationRoutingForStream(audio_stream_t
 }
 status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
                                                    int index,
-                                                   const sp<SwAudioOutputDescriptor>& outputDesc,
+                                                   const sp<AudioOutputDescriptor>& outputDesc1,
                                                    audio_devices_t device,
                                                    int delayMs, bool force)
 {
+    const sp<SwAudioOutputDescriptor> outputDesc = (SwAudioOutputDescriptor *) outputDesc1.get();
+
     // do not change actual stream volume if the stream is muted
     if (outputDesc->mMuteCount[stream] != 0) {
         ALOGVV("checkAndSetVolume() stream %d muted count %d",
