@@ -91,7 +91,7 @@ protected:
 #else
          status_t checkAndSetVolume(audio_stream_type_t stream,
                                                    int index,
-                                                   const sp<SwAudioOutputDescriptor>& outputDesc,
+                                                   const sp<AudioOutputDescriptor>& outputDesc,
                                                    audio_devices_t device,
                                                    int delayMs = 0, bool force = false);
 #endif
