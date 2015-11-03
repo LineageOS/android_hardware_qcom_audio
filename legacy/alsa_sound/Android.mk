@@ -35,7 +35,7 @@ endif
 ifeq ($(strip $(QCOM_SSR_ENABLED)),true)
     common_cflags += -DQCOM_SSR_ENABLED
 endif
-ifneq ($(strip $(QCOM_USBAUDIO_ENABLED)),false)
+ifeq ($(strip $(QCOM_USBAUDIO_ENABLED)),true)
     common_cflags += -DQCOM_USBAUDIO_ENABLED
 endif
 ifeq ($(strip $(QCOM_ADSP_SSR_ENABLED)),true)
