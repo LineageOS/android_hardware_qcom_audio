@@ -4046,6 +4046,22 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
     if (!is_external_codec)
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
 
+    //check if mulitchannel clip needs to be down sampled to 48k
+    property_get("audio.playback.mch.downsample",value,"");
+    if (!strncmp("true", value, sizeof("true"))) {
+        out = usecase->stream.out;
+        if ((popcount(out->channel_mask) > 2) &&
+                      (out->sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
+                      !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)) {
+           sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+          /* update out sample rate to reflect current backend sample rate  */
+           out->sample_rate = sample_rate;
+           ALOGD("%s: MCH session defaulting sample rate to %d",
+                        __func__, sample_rate);
+         }
+    }
+
+
 
     ALOGI("%s Codec selected backend: %d updated bit width: %d and sample rate: %d",
                __func__, backend_idx, bit_width, sample_rate);
