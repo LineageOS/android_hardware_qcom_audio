@@ -32,7 +32,7 @@ namespace android {
 #define AUDIO_FORMAT_APE 0x1D000000UL
 #endif
 
-#ifndef AFE_PROXY_ENABLED
+#ifndef AUDIO_EXTN_AFE_PROXY_ENABLED
 #define AUDIO_DEVICE_OUT_PROXY 0x1000000
 #endif
 // ----------------------------------------------------------------------------
@@ -50,7 +50,6 @@ public:
                                           const char *device_address,
                                           const char *device_name);
         virtual void setPhoneState(audio_mode_t state);
-
 
         virtual bool isOffloadSupported(const audio_offload_info_t& offloadInfo);
 
@@ -70,12 +69,11 @@ public:
         // indicates to the audio policy manager that the input stops being used.
         virtual status_t stopInput(audio_io_handle_t input,
                                    audio_session_t session);
-        virtual audio_devices_t getDeviceForStrategy(routing_strategy strategy, bool fromCache);
 protected:
 
          status_t checkAndSetVolume(audio_stream_type_t stream,
                                                    int index,
-                                                   const sp<SwAudioOutputDescriptor>& outputDesc,
+                                                   const sp<AudioOutputDescriptor>& outputDesc,
                                                    audio_devices_t device,
                                                    int delayMs = 0, bool force = false);
 
@@ -90,16 +88,16 @@ protected:
 
         // if argument "device" is different from AUDIO_DEVICE_NONE,  startSource() will force
         // the re-evaluation of the output device.
-        status_t startSource(sp<SwAudioOutputDescriptor> outputDesc,
+        status_t startSource(sp<AudioOutputDescriptor> outputDesc,
                              audio_stream_type_t stream,
                              audio_devices_t device,
                              uint32_t *delayMs);
-         status_t stopSource(sp<SwAudioOutputDescriptor> outputDesc,
+         status_t stopSource(sp<AudioOutputDescriptor> outputDesc,
                             audio_stream_type_t stream,
                             bool forceDeviceUpdate);
-        // event is one of STARTING_OUTPUT, STARTING_BEACON, STOPPING_OUTPUT, STOPPING_BEACON   313
-        // returns 0 if no mute/unmute event happened, the largest latency of the device where   314
-        //   the mute/unmute happened 315
+        // event is one of STARTING_OUTPUT, STARTING_BEACON, STOPPING_OUTPUT, STOPPING_BEACON
+        // returns 0 if no mute/unmute event happened, the largest latency of the device where
+        //   the mute/unmute happened
         uint32_t handleEventForBeacon(int){return 0;}
         uint32_t setBeaconMute(bool){return 0;}
 #ifdef VOICE_CONCURRENCY
@@ -115,14 +113,9 @@ protected:
         //parameter indicates if HDMI plug in/out detected
         bool mHdmiAudioEvent;
 private:
-        static float volIndexToAmpl(audio_devices_t device, const StreamDescriptor& streamDesc,
-                int indexInUi);
         // updates device caching and output for streams that can influence the
         //    routing of notifications
         void handleNotificationRoutingForStream(audio_stream_type_t stream);
-        static bool isVirtualInputDevice(audio_devices_t device);
-        static bool deviceDistinguishesOnAddress(audio_devices_t device);
-        uint32_t nextUniqueId();
         // internal method to return the output handle for the given device and format
         audio_io_handle_t getOutputForDevice(
                 audio_devices_t device,
@@ -152,8 +145,6 @@ private:
         // Used for record + playback concurrency
         bool mIsInputRequestOnProgress;
 #endif
-
-
 };
 
 };

@@ -51,6 +51,7 @@
 
 #define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
 #define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/system/lib/soundfx/libqcompostprocbundle.so"
+#define ADM_LIBRARY_PATH "/system/vendor/lib/libadm.so"
 
 /* Flags used to initialize acdb_settings variable that goes to ACDB library */
 #define NONE_FLAG            0x00000000
@@ -95,6 +96,7 @@ enum {
     USECASE_AUDIO_PLAYBACK_OFFLOAD8,
     USECASE_AUDIO_PLAYBACK_OFFLOAD9,
 #endif
+    USECASE_AUDIO_PLAYBACK_ULL,
 
     USECASE_AUDIO_DIRECT_PCM_OFFLOAD,
 
@@ -240,6 +242,7 @@ struct stream_in {
     bool enable_ns;
     audio_format_t format;
     audio_io_handle_t capture_handle;
+    audio_input_flags_t flags;
     bool is_st_session;
     bool is_st_session_active;
 
@@ -292,6 +295,14 @@ struct streams_output_cfg {
     struct stream_app_type_cfg app_type_cfg;
 };
 
+typedef void* (*adm_init_t)();
+typedef void (*adm_deinit_t)(void *);
+typedef void (*adm_register_output_stream_t)(void *, audio_io_handle_t, audio_output_flags_t);
+typedef void (*adm_register_input_stream_t)(void *, audio_io_handle_t, audio_input_flags_t);
+typedef void (*adm_deregister_stream_t)(void *, audio_io_handle_t);
+typedef void (*adm_request_focus_t)(void *, audio_io_handle_t);
+typedef void (*adm_abandon_focus_t)(void *, audio_io_handle_t);
+
 struct audio_device {
     struct audio_hw_device device;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
@@ -329,7 +340,18 @@ struct audio_device {
 
     struct sound_card_status snd_card_status;
     int (*offload_effects_set_hpx_state)(bool);
+
     amplifier_device_t *amp;
+
+    void *adm_data;
+    void *adm_lib;
+    adm_init_t adm_init;
+    adm_deinit_t adm_deinit;
+    adm_register_input_stream_t adm_register_input_stream;
+    adm_register_output_stream_t adm_register_output_stream;
+    adm_deregister_stream_t adm_deregister_stream;
+    adm_request_focus_t adm_request_focus;
+    adm_abandon_focus_t adm_abandon_focus;
 };
 
 int select_devices(struct audio_device *adev,
