@@ -1779,9 +1779,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         if (val != 0) {
             out->devices = val;
 
-            if (!out->standby)
-                select_devices(adev, out->usecase);
-
             if ((adev->mode == AUDIO_MODE_IN_CALL) &&
                     output_drives_call(adev, out)) {
                 adev->current_call_output = out;
@@ -1790,6 +1787,9 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 else
                     voice_update_devices_for_all_voice_usecases(adev);
              }
+
+            if (!out->standby)
+                select_devices(adev, out->usecase);
         }
 
         if ((adev->mode == AUDIO_MODE_NORMAL) &&
