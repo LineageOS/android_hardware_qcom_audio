@@ -1912,9 +1912,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         if (val != 0) {
             out->devices = val;
 
-            if (!out->standby)
-                select_devices(adev, out->usecase);
-
             if (output_drives_call(adev, out)) {
                 if(!voice_is_in_call(adev)) {
                     if (adev->mode == AUDIO_MODE_IN_CALL) {
@@ -1926,6 +1923,9 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                     voice_update_devices_for_all_voice_usecases(adev);
                 }
             }
+
+            if (!out->standby)
+                select_devices(adev, out->usecase);
         }
 
         pthread_mutex_unlock(&adev->lock);
