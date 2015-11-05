@@ -505,6 +505,7 @@ int enable_snd_device(struct audio_device *adev,
         return 0;
     }
 
+
     if (audio_extn_spkr_prot_is_enabled())
          audio_extn_spkr_prot_calib_cancel(adev);
     /* start usb playback thread */
@@ -546,6 +547,16 @@ int enable_snd_device(struct audio_device *adev,
         }
         audio_extn_dev_arbi_acquire(snd_device);
         audio_route_apply_and_update_path(adev->audio_route, device_name);
+
+        if (SND_DEVICE_OUT_HEADPHONES == snd_device &&
+            !adev->native_playback_enabled &&
+            audio_is_true_native_stream_active(adev)) {
+            ALOGD("%s: %d: napb: enabling native mode in hardware",
+                  __func__, __LINE__);
+            audio_route_apply_and_update_path(adev->audio_route,
+                                              "true-native-mode");
+            adev->native_playback_enabled = true;
+        }
     }
     return 0;
 }
@@ -592,6 +603,14 @@ int disable_snd_device(struct audio_device *adev,
 
         if (snd_device == SND_DEVICE_OUT_HDMI)
             adev->is_channel_status_set = false;
+        else if (SND_DEVICE_OUT_HEADPHONES == snd_device &&
+                 adev->native_playback_enabled) {
+            ALOGD("%s: %d: napb: disabling native mode in hardware",
+                  __func__, __LINE__);
+            audio_route_reset_and_update_path(adev->audio_route,
+                                              "true-native-mode");
+            adev->native_playback_enabled = false;
+        }
 
         audio_extn_dev_arbi_release(snd_device);
         audio_extn_sound_trigger_update_device_status(snd_device,
@@ -633,6 +652,9 @@ static void check_usecases_codec_backend(struct audio_device *adev,
      */
     bool force_routing = platform_check_and_set_codec_backend_cfg(adev, uc_info,
                          snd_device);
+
+    ALOGD("%s:becf: force routing %d", __func__, force_routing);
+
     backend_idx = platform_get_backend_index(snd_device);
     /* Disable all the usecases on the shared backend other than the
      * specified usecase.
@@ -646,23 +668,28 @@ static void check_usecases_codec_backend(struct audio_device *adev,
         if (usecase == uc_info)
             continue;
         usecase_backend_idx = platform_get_backend_index(usecase->out_snd_device);
-        ALOGV("%s: backend_idx: %d,"
-              "usecase_backend_idx: %d, curr device: %s, usecase device:"
-              "%s", __func__, backend_idx, usecase_backend_idx, platform_get_snd_device_name(snd_device),
-        platform_get_snd_device_name(usecase->out_snd_device));
+
+        ALOGD("%s:becf: (%d) check_usecases backend_idx: %d,"
+              "usecase_backend_idx: %d, curr device: %s, usecase device:%s",
+              __func__, i, backend_idx, usecase_backend_idx,
+              platform_get_snd_device_name(snd_device),
+              platform_get_snd_device_name(usecase->out_snd_device));
 
         if (usecase->type != PCM_CAPTURE &&
                 (usecase->out_snd_device != snd_device || force_routing)  &&
                 usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND &&
                 usecase_backend_idx == backend_idx) {
-            ALOGD("%s: Usecase (%s) is active on (%s) - disabling ..", __func__,
-                  use_case_table[usecase->id],
+            ALOGD("%s:becf: check_usecases (%s) is active on (%s) - disabling ..",
+                __func__, use_case_table[usecase->id],
                   platform_get_snd_device_name(usecase->out_snd_device));
             disable_audio_route(adev, usecase);
             switch_device[usecase->id] = true;
             num_uc_to_switch++;
         }
     }
+
+    ALOGD("%s:becf: check_usecases num.of Usecases to switch %d", __func__,
+        num_uc_to_switch);
 
     if (num_uc_to_switch) {
         /* All streams have been de-routed. Disable the device */
@@ -690,6 +717,9 @@ static void check_usecases_codec_backend(struct audio_device *adev,
             /* Update the out_snd_device only for the usecases that are enabled here */
             if (switch_device[usecase->id] && (usecase->type != VOICE_CALL)) {
                     usecase->out_snd_device = snd_device;
+                    ALOGD("%s:becf: enabling usecase (%s) on (%s)", __func__,
+                      use_case_table[usecase->id],
+                      platform_get_snd_device_name(usecase->out_snd_device));
                     enable_audio_route(adev, usecase);
             }
         }
@@ -834,6 +864,66 @@ struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
     return NULL;
 }
 
+/*
+ * is a true native playback active
+ */
+bool audio_is_true_native_stream_active(struct audio_device *adev)
+{
+    bool active = false;
+    int i = 0;
+    struct listnode *node;
+
+    if (NATIVE_AUDIO_MODE_TRUE_44_1 != platform_get_native_support()) {
+        ALOGV("%s:napb: not in true mode or non hdphones device",
+               __func__);
+        active = false;
+        goto exit;
+    }
+
+    list_for_each(node, &adev->usecase_list) {
+        struct audio_usecase *uc;
+        uc = node_to_item(node, struct audio_usecase, list);
+        struct stream_out *curr_out =
+            (struct stream_out*) uc->stream.out;
+
+        if (curr_out && PCM_PLAYBACK == uc->type) {
+            ALOGD("%s:napb: (%d) (%s)id (%d) sr %d bw "
+                  "(%d) device %s", __func__, i++, use_case_table[uc->id],
+                  uc->id, curr_out->sample_rate,
+                  curr_out->bit_width,
+                  platform_get_snd_device_name(uc->out_snd_device));
+
+            if (is_offload_usecase(uc->id) &&
+                (curr_out->sample_rate == OUTPUT_SAMPLING_RATE_44100)) {
+                active = true;
+                ALOGD("%s:napb:native stream detected", __func__);
+            }
+        }
+    }
+exit:
+    return active;
+}
+
+
+static bool force_device_switch(struct audio_usecase *usecase)
+{
+    bool ret = false;
+    bool is_it_true_mode = false;
+
+    if (is_offload_usecase(usecase->id) &&
+        (usecase->stream.out) &&
+        (usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100)) {
+        is_it_true_mode = (NATIVE_AUDIO_MODE_TRUE_44_1 == platform_get_native_support()? true : false);
+         if ((is_it_true_mode && !adev->native_playback_enabled) ||
+             (!is_it_true_mode && adev->native_playback_enabled)){
+            ret = true;
+            ALOGD("napb: time to toggle native mode");
+        }
+    }
+
+    return ret;
+}
+
 int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 {
     snd_device_t out_snd_device = SND_DEVICE_NONE;
@@ -845,6 +935,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     audio_usecase_t hfp_ucid;
     struct listnode *node;
     int status = 0;
+
+    ALOGD("%s for use case (%s)", __func__, use_case_table[uc_id]);
 
     usecase = get_usecase_from_list(adev, uc_id);
     if (usecase == NULL) {
@@ -924,7 +1016,9 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 
     if (out_snd_device == usecase->out_snd_device &&
         in_snd_device == usecase->in_snd_device) {
-        return 0;
+
+        if (!force_device_switch(usecase))
+            return 0;
     }
 
     ALOGD("%s: out_snd_device(%d: %s) in_snd_device(%d: %s)", __func__,

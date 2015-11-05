@@ -24,6 +24,18 @@
 #define CODEC_BACKEND_DEFAULT_BIT_WIDTH 16
 #define CODEC_BACKEND_DEFAULT_SAMPLE_RATE 48000
 
+enum {
+    NATIVE_AUDIO_MODE_SRC = 1,
+    NATIVE_AUDIO_MODE_TRUE_44_1,
+    NATIVE_AUDIO_MODE_INVALID
+};
+
+typedef struct {
+    bool platform_na_prop_enabled;
+    bool ui_na_prop_enabled;
+    int na_mode;
+} native_audio_prop;
+
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
 const char *platform_get_snd_device_name(snd_device_t snd_device);
@@ -40,7 +52,7 @@ int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_i
 int platform_get_snd_device_acdb_id(snd_device_t snd_device);
 int platform_set_snd_device_bit_width(snd_device_t snd_device, unsigned int bit_width);
 int platform_get_snd_device_bit_width(snd_device_t snd_device);
-int platform_set_native_support(bool codec_support);
+int platform_set_native_support(int na_mode);
 int platform_get_native_support();
 int platform_get_backend_index(snd_device_t snd_device);
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,

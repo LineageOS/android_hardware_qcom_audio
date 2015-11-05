@@ -358,6 +358,7 @@ struct audio_device {
     int perf_lock_handle;
     int perf_lock_opts[MAX_PERF_LOCK_OPTS];
     int perf_lock_opts_size;
+    bool native_playback_enabled;
 };
 
 int select_devices(struct audio_device *adev,
@@ -376,6 +377,8 @@ struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
                                                    audio_usecase_t uc_id);
 
 bool is_offload_usecase(audio_usecase_t uc_id);
+
+bool audio_is_true_native_stream_active(struct audio_device *adev);
 
 int pcm_ioctl(struct pcm *pcm, int request, ...);
 
