@@ -17,6 +17,19 @@
 #ifndef QCOM_AUDIO_PLATFORM_H
 #define QCOM_AUDIO_PLATFORM_H
 
+enum {
+    FLUENCE_DISABLE,                  /* Target dosent support fluence */
+    FLUENCE_ENABLE      = 0x1,        /* Target supports fluence */
+    FLUENCE_PRO_ENABLE  = 0x2,        /* Target supports fluence pro */
+};
+
+enum {
+    SOURCE_MONO_MIC  = 0x1,            /* Target contains 1 mic */
+    SOURCE_DUAL_MIC  = 0x2,            /* Target contains 2 mics */
+    SOURCE_THREE_MIC = 0x4,            /* Target contains 3 mics */
+    SOURCE_QUAD_MIC  = 0x8,            /* Target contains 4 mics */
+};
+
 /*
  * Below are the devices for which is back end is same, SLIMBUS_0_RX.
  * All these devices are handled by the internal HW codec. We can
@@ -115,11 +128,16 @@ enum {
     SND_DEVICE_IN_VOICE_REC_MIC_NS,
     SND_DEVICE_IN_VOICE_REC_DMIC_STEREO,
     SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE,
+    SND_DEVICE_IN_VOICE_REC_HEADSET_MIC,
 
     SND_DEVICE_IN_VOICE_RX,
 
+    SND_DEVICE_IN_THREE_MIC,
+    SND_DEVICE_IN_QUAD_MIC,
     SND_DEVICE_IN_CAPTURE_VI_FEEDBACK,
 
+    SND_DEVICE_IN_HANDSET_TMIC,
+    SND_DEVICE_IN_HANDSET_QMIC,
     SND_DEVICE_IN_END,
 
     SND_DEVICE_MAX = SND_DEVICE_IN_END,
@@ -131,6 +149,7 @@ enum {
 #define ALL_SESSION_VSID                0xFFFFFFFF
 #define DEFAULT_MUTE_RAMP_DURATION_MS   20
 #define DEFAULT_VOLUME_RAMP_DURATION_MS 20
+#define MIXER_PATH_MAX_LENGTH 100
 
 #define ACDB_ID_VOICE_SPEAKER 15
 #define ACDB_ID_VOICE_HANDSET 7
@@ -207,6 +226,8 @@ enum {
 #define LIB_MDM_DETECT "libmdmdetect.so"
 
 #define PLATFORM_CONFIG_KEY_SOUNDCARD_NAME "snd_card_name"
+#define PLATFORM_CONFIG_KEY_MAX_MIC_COUNT "input_mic_max_count"
+#define PLATFORM_DEFAULT_MIC_COUNT 2
 
 /* CSD-CLIENT related functions */
 typedef int (*init_t)(bool);

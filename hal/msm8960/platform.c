@@ -126,6 +126,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_BT_SCO] = "bt-sco-headset",
     [SND_DEVICE_OUT_BT_SCO_WB] = "bt-sco-headset-wb",
     [SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = "voice-handset-tmus",
+    [SND_DEVICE_OUT_VOICE_HANDSET] = "voice-handset-tmus",
+    [SND_DEVICE_OUT_VOICE_HAC_HANDSET] = "voice-handset-tmus",
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = "voice-tty-full-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = "voice-tty-vco-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = "voice-tty-hco-handset",
@@ -173,6 +175,8 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_BT_SCO] = 22,
     [SND_DEVICE_OUT_BT_SCO_WB] = 39,
     [SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = 81,
+    [SND_DEVICE_OUT_VOICE_HANDSET] = 81,
+    [SND_DEVICE_OUT_VOICE_HAC_HANDSET] = 81,
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = 37,
@@ -423,6 +427,13 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device __unused)
     return -ENOSYS;
 }
 
+void platform_add_operator_specific_device(snd_device_t snd_device __unused,
+                                           const char *operator __unused,
+                                           const char *mixer_path __unused,
+                                           unsigned int acdb_id __unused)
+{
+}
+
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -538,6 +549,11 @@ int platform_stop_voice_call(void *platform, uint32_t vsid __unused)
     }
 
     return ret;
+}
+
+void platform_set_speaker_gain_in_combo(struct audio_device *adev __unused,
+                                        snd_device_t snd_device  __unused,
+                                        bool enable __unused) {
 }
 
 int platform_set_voice_volume(void *platform, int volume)

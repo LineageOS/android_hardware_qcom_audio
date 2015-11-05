@@ -29,6 +29,7 @@
 
 #define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
 #define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/system/lib/soundfx/libqcompostprocbundle.so"
+#define ADM_LIBRARY_PATH "/system/vendor/lib/libadm.so"
 
 /* Flags used to initialize acdb_settings variable that goes to ACDB library */
 #define DMIC_FLAG       0x00000002
@@ -58,6 +59,7 @@ enum {
     USECASE_AUDIO_PLAYBACK_MULTI_CH,
     USECASE_AUDIO_PLAYBACK_OFFLOAD,
     USECASE_AUDIO_PLAYBACK_TTS,
+    USECASE_AUDIO_PLAYBACK_ULL,
 
     /* HFP Use case*/
     USECASE_AUDIO_HFP_SCO,
@@ -123,6 +125,7 @@ struct offload_cmd {
 struct stream_out {
     struct audio_stream_out stream;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
+    pthread_mutex_t pre_lock; /* acquire before lock to avoid DOS by playback thread */
     pthread_cond_t  cond;
     struct pcm_config config;
     struct compr_config compr_config;
@@ -161,6 +164,7 @@ struct stream_out {
 struct stream_in {
     struct audio_stream_in stream;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
+    pthread_mutex_t pre_lock; /* acquire before lock to avoid DOS by capture thread */
     struct pcm_config config;
     struct pcm *pcm;
     int standby;
@@ -173,6 +177,7 @@ struct stream_in {
     bool enable_ns;
 
     audio_io_handle_t capture_handle;
+    audio_input_flags_t flags;
     bool is_st_session;
     bool is_st_session_active;
 
@@ -200,6 +205,14 @@ struct audio_usecase {
     snd_device_t in_snd_device;
     union stream_ptr stream;
 };
+
+typedef void* (*adm_init_t)();
+typedef void (*adm_deinit_t)(void *);
+typedef void (*adm_register_output_stream_t)(void *, audio_io_handle_t, audio_output_flags_t);
+typedef void (*adm_register_input_stream_t)(void *, audio_io_handle_t, audio_input_flags_t);
+typedef void (*adm_deregister_stream_t)(void *, audio_io_handle_t);
+typedef void (*adm_request_focus_t)(void *, audio_io_handle_t);
+typedef void (*adm_abandon_focus_t)(void *, audio_io_handle_t);
 
 struct audio_device {
     struct audio_hw_device device;
@@ -240,6 +253,16 @@ struct audio_device {
     void *offload_effects_lib;
     int (*offload_effects_start_output)(audio_io_handle_t, int);
     int (*offload_effects_stop_output)(audio_io_handle_t, int);
+
+    void *adm_data;
+    void *adm_lib;
+    adm_init_t adm_init;
+    adm_deinit_t adm_deinit;
+    adm_register_input_stream_t adm_register_input_stream;
+    adm_register_output_stream_t adm_register_output_stream;
+    adm_deregister_stream_t adm_deregister_stream;
+    adm_request_focus_t adm_request_focus;
+    adm_abandon_focus_t adm_abandon_focus;
 };
 
 int select_devices(struct audio_device *adev,
