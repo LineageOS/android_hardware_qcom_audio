@@ -81,7 +81,7 @@ endif
 
 ################################################################################
 
-ifneq ($(filter msm8992 msm8994 msm8996 msm8952,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8992 msm8994 msm8996 msm8952 msm8937 thorium,$(TARGET_BOARD_PLATFORM)),)
 
 include $(CLEAR_VARS)
 
