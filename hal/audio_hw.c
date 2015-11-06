@@ -2006,8 +2006,13 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         if (val != 0) {
             out->devices = val;
 
-            if (!out->standby)
+            if (!out->standby) {
+                audio_extn_perf_lock_acquire(&adev->perf_lock_handle, 0,
+                                             adev->perf_lock_opts,
+                                             adev->perf_lock_opts_size);
                 select_devices(adev, out->usecase);
+                audio_extn_perf_lock_release(&adev->perf_lock_handle);
+            }
 
             if (output_drives_call(adev, out)) {
                 if(!voice_is_in_call(adev)) {
