@@ -534,7 +534,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
                             buffer, ((uint8_t*)buffer) + sizeof(*header) + header->reserved[0],
                             sizeof(*header), header->reserved[0]);
                     memmove(buffer, ((uint8_t*)buffer) + sizeof(*header) + header->reserved[0], header->frame_size);
-                    buffer += header->frame_size;
+                    buffer = static_cast<char*>(buffer) + header->frame_size;
                 } else {
                     ALOGW("pcm_read() with zero frame size");
                 }
@@ -590,7 +590,7 @@ ssize_t AudioStreamInALSA::read(void *buffer, ssize_t bytes)
             else {
                 read += static_cast<ssize_t>((period_size));
                 read_pending -= period_size;
-                buffer += period_size;
+                buffer = static_cast<char*>(buffer) + period_size;
             }
 
         } while (mHandle->handle && read < bytes);

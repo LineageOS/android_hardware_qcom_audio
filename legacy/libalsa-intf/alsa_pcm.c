@@ -822,7 +822,7 @@ static int enable_timer(struct pcm *pcm) {
     if (pcm->timer_fd < 0) {
        close(pcm->fd);
        ALOGE("cannot open timer device 'timer'");
-       return &bad_pcm;
+       return (int)&bad_pcm;
     }
     int arg = 1;
     struct snd_timer_params timer_param;
@@ -851,7 +851,7 @@ static int enable_timer(struct pcm *pcm) {
           ALOGE("SNDRV_TIMER_IOCTL_SELECT failed.\n");
           close(pcm->timer_fd);
           close(pcm->fd);
-          return &bad_pcm;
+          return (int)&bad_pcm;
     }
     memset(&timer_param, 0, sizeof(struct snd_timer_params));
     timer_param.flags |= SNDRV_TIMER_PSFLG_AUTO;
@@ -936,7 +936,7 @@ struct pcm *pcm_open(unsigned flags, char *device)
     if ((strncmp(device, "hw:",3) != 0) || (strncmp(tmp, ",",1) != 0)){
         ALOGE("Wrong device fromat\n");
         free(pcm);
-        return -EINVAL;
+        return (struct pcm*)-EINVAL;
     }
 
     if (flags & PCM_IN) {

@@ -2844,7 +2844,7 @@ status_t ALSADevice::openProxyDevice()
     int flags = (DEBUG_ON | PCM_MMAP| PCM_STEREO | PCM_IN);
 
     ALOGV("openProxyDevice");
-    mProxyParams.mProxyPcmHandle = pcm_open(flags, PROXY_CAPTURE_DEVICE_NAME);
+    mProxyParams.mProxyPcmHandle = pcm_open(flags, (char*)PROXY_CAPTURE_DEVICE_NAME);
     if (!pcm_ready(mProxyParams.mProxyPcmHandle)) {
         ALOGE("Opening proxy device failed");
         goto bail;
