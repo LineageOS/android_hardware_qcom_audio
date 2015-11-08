@@ -293,11 +293,7 @@ int snd_use_case_get(snd_use_case_mgr_t *uc_mgr,
     }
 
     if (!strncmp(identifier, "_verb", 5)) {
-        if (uc_mgr->card_ctxt_ptr->current_verb != NULL) {
-            *value = strdup(uc_mgr->card_ctxt_ptr->current_verb);
-        } else {
-            *value = NULL;
-        }
+        *value = strdup(uc_mgr->card_ctxt_ptr->current_verb);
         pthread_mutex_unlock(&uc_mgr->card_ctxt_ptr->card_lock);
         return 0;
     }

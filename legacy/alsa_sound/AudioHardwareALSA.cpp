@@ -1309,7 +1309,7 @@ status_t AudioHardwareALSA::doRouting(int device, char* useCase)
                         } else {
                            mALSADevice->route(&(*it),(uint32_t)device, newMode);
                            for(ALSAHandleList::iterator it2 = mDeviceList.begin(); it2 != mDeviceList.end(); it2++) {
-                                if ((it2->handle || it2->rxHandle) && !(getExtOutActiveUseCases_l() && it2->useCase)) {
+                                if ((it2->handle || it2->rxHandle) && !(getExtOutActiveUseCases_l())) {
                                     startPlaybackOnExtOut_l(useCaseStringToEnum(it2->useCase));
                                     break;
                                 }
