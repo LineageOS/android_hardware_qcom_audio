@@ -186,6 +186,11 @@ LOCAL_C_INCLUDES += system/media/audio_utils/include
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
+# AudioHardwareALSA.cpp:1313:109: address of array 'it2->useCase' will always evaluate to 'true'
+LOCAL_CLANG_CFLAGS += -Wno-pointer-bool-conversion
+
+LOCAL_CLANG := false
+
 ifeq ($(TARGET_BOARD_PLATFORM),msm8974)
   LOCAL_MODULE := audio.primary.msm8974
 endif

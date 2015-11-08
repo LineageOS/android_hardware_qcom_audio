@@ -56,6 +56,8 @@ LOCAL_C_INCLUDES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_CFLAGS := -DQC_PROP -DCONFIG_DIR=\"/system/etc/snd_soc_msm/\"
 LOCAL_CFLAGS += -DCONFIG_DIR=\"/system/etc/snd_soc_msm/\"
 LOCAL_CFLAGS += $(common_cflags)
+# alsa_ucm.c:296:36: comparison of array 'uc_mgr->card_ctxt_ptr->current_verb' not equal to a null pointer is always true
+LOCAL_CLANG_CFLAGS += -Wno-tautological-pointer-compare
 LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_SHARED_LIBRARIES += libdl
 include $(BUILD_SHARED_LIBRARY)
