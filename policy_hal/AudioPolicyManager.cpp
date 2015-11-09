@@ -365,9 +365,17 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
     //TODO: enable audio offloading with video when ready
     const bool allowOffloadWithVideo =
             property_get_bool("audio.offload.video", false /* default_value */);
-    if (offloadInfo.has_video && !allowOffloadWithVideo) {
-        ALOGV("isOffloadSupported: has_video == true, returning false");
-        return false;
+    const bool allowOffloadWithStreamingVideo =
+            property_get_bool("audio.offload.streaming.video", false /* default_value */);
+    if (offloadInfo.has_video) {
+        if (!allowOffloadWithVideo) {
+            ALOGV("isOffloadSupported: has_video == true, returning false");
+            return false;
+        }
+        if (offloadInfo.is_streaming && !allowOffloadWithStreamingVideo) {
+            ALOGV("isOffloadSupported: has_video and is_streaming == true, returning false");
+            return false;
+        }
     }
 
     //If duration is less than minimum value defined in property, return false
