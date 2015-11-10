@@ -202,6 +202,60 @@ void reverb_set_reverb_level(reverb_context_t *context, int16_t reverb_level)
                                    OFFLOAD_SEND_REVERB_LEVEL);
 }
 
+uint32_t reverb_get_reverb_delay(reverb_context_t *context)
+{
+    ALOGV("%s: ctxt %p, reverb delay: %d", __func__, context,
+                          context->reverb_settings.reverbDelay);
+    return context->reverb_settings.reverbDelay;
+}
+
+void reverb_set_reverb_delay(reverb_context_t *context, uint32_t delay)
+{
+    ALOGV("%s: ctxt %p, reverb delay: %d", __func__, context, delay);
+    context->reverb_settings.reverbDelay = delay;
+    offload_reverb_set_delay(&(context->offload_reverb), delay);
+    if (context->ctl)
+        offload_reverb_send_params(context->ctl, context->offload_reverb,
+                                   OFFLOAD_SEND_REVERB_ENABLE_FLAG |
+                                   OFFLOAD_SEND_REVERB_DELAY);
+}
+
+int16_t reverb_get_reflections_level(reverb_context_t *context)
+{
+    ALOGV("%s: ctxt %p, reflection level: %d", __func__, context,
+                          context->reverb_settings.reflectionsLevel);
+    return context->reverb_settings.reflectionsLevel;
+}
+
+void reverb_set_reflections_level(reverb_context_t *context, int16_t level)
+{
+    ALOGV("%s: ctxt %p, reflection level: %d", __func__, context, level);
+    context->reverb_settings.reflectionsLevel = level;
+    offload_reverb_set_reflections_level(&(context->offload_reverb), level);
+    if (context->ctl)
+        offload_reverb_send_params(context->ctl, context->offload_reverb,
+                                   OFFLOAD_SEND_REVERB_ENABLE_FLAG |
+                                   OFFLOAD_SEND_REVERB_REFLECTIONS_LEVEL);
+}
+
+uint32_t reverb_get_reflections_delay(reverb_context_t *context)
+{
+    ALOGV("%s: ctxt %p, reflection delay: %d", __func__, context,
+                          context->reverb_settings.reflectionsDelay);
+    return context->reverb_settings.reflectionsDelay;
+}
+
+void reverb_set_reflections_delay(reverb_context_t *context, uint32_t delay)
+{
+    ALOGV("%s: ctxt %p, reflection delay: %d", __func__, context, delay);
+    context->reverb_settings.reflectionsDelay = delay;
+    offload_reverb_set_reflections_delay(&(context->offload_reverb), delay);
+    if (context->ctl)
+        offload_reverb_send_params(context->ctl, context->offload_reverb,
+                                   OFFLOAD_SEND_REVERB_ENABLE_FLAG |
+                                   OFFLOAD_SEND_REVERB_REFLECTIONS_DELAY);
+}
+
 int16_t reverb_get_diffusion(reverb_context_t *context)
 {
     ALOGV("%s: ctxt %p, diffusion: %d", __func__, context,
@@ -263,8 +317,33 @@ void reverb_set_all_properties(reverb_context_t *context,
     context->reverb_settings.decayTime = reverb_settings->decayTime;
     context->reverb_settings.decayHFRatio = reverb_settings->decayHFRatio;
     context->reverb_settings.reverbLevel = reverb_settings->reverbLevel;
+    context->reverb_settings.reverbDelay = reverb_settings->reverbDelay;
+    context->reverb_settings.reflectionsLevel = reverb_settings->reflectionsLevel;
+    context->reverb_settings.reflectionsDelay = reverb_settings->reflectionsDelay;
     context->reverb_settings.diffusion = reverb_settings->diffusion;
     context->reverb_settings.density = reverb_settings->density;
+
+    offload_reverb_set_room_level(&(context->offload_reverb),
+                               reverb_settings->roomLevel);
+    offload_reverb_set_room_hf_level(&(context->offload_reverb),
+                               reverb_settings->roomHFLevel);
+    offload_reverb_set_decay_time(&(context->offload_reverb),
+                               reverb_settings->decayTime);
+    offload_reverb_set_decay_hf_ratio(&(context->offload_reverb),
+                               reverb_settings->decayHFRatio);
+    offload_reverb_set_reverb_level(&(context->offload_reverb),
+                               reverb_settings->reverbLevel);
+    offload_reverb_set_delay(&(context->offload_reverb),
+                               reverb_settings->reverbDelay);
+    offload_reverb_set_reflections_level(&(context->offload_reverb),
+                               reverb_settings->reflectionsLevel);
+    offload_reverb_set_reflections_delay(&(context->offload_reverb),
+                               reverb_settings->reflectionsDelay);
+    offload_reverb_set_diffusion(&(context->offload_reverb),
+                               reverb_settings->diffusion);
+    offload_reverb_set_density(&(context->offload_reverb),
+                               reverb_settings->density);
+
     if (context->ctl)
         offload_reverb_send_params(context->ctl, context->offload_reverb,
                                    OFFLOAD_SEND_REVERB_ENABLE_FLAG |
@@ -273,6 +352,9 @@ void reverb_set_all_properties(reverb_context_t *context,
                                    OFFLOAD_SEND_REVERB_DECAY_TIME |
                                    OFFLOAD_SEND_REVERB_DECAY_HF_RATIO |
                                    OFFLOAD_SEND_REVERB_LEVEL |
+                                   OFFLOAD_SEND_REVERB_DELAY |
+                                   OFFLOAD_SEND_REVERB_REFLECTIONS_LEVEL |
+                                   OFFLOAD_SEND_REVERB_REFLECTIONS_DELAY |
                                    OFFLOAD_SEND_REVERB_DIFFUSION |
                                    OFFLOAD_SEND_REVERB_DENSITY);
 }
@@ -336,22 +418,22 @@ int reverb_get_parameter(effect_context_t *context, effect_param_t *p,
            p->status = -EINVAL;
         p->vsize = sizeof(uint16_t);
         break;
-    case REVERB_PARAM_REFLECTIONS_LEVEL:
-        if (p->vsize < sizeof(uint16_t))
-           p->status = -EINVAL;
-        p->vsize = sizeof(uint16_t);
-        break;
-    case REVERB_PARAM_REFLECTIONS_DELAY:
-        if (p->vsize < sizeof(uint32_t))
-           p->status = -EINVAL;
-        p->vsize = sizeof(uint32_t);
-        break;
     case REVERB_PARAM_REVERB_LEVEL:
         if (p->vsize < sizeof(uint16_t))
            p->status = -EINVAL;
         p->vsize = sizeof(uint16_t);
         break;
     case REVERB_PARAM_REVERB_DELAY:
+        if (p->vsize < sizeof(uint32_t))
+           p->status = -EINVAL;
+        p->vsize = sizeof(uint32_t);
+        break;
+    case REVERB_PARAM_REFLECTIONS_LEVEL:
+        if (p->vsize < sizeof(uint16_t))
+           p->status = -EINVAL;
+        p->vsize = sizeof(uint16_t);
+        break;
+    case REVERB_PARAM_REFLECTIONS_DELAY:
         if (p->vsize < sizeof(uint32_t))
            p->status = -EINVAL;
         p->vsize = sizeof(uint32_t);
@@ -381,19 +463,6 @@ int reverb_get_parameter(effect_context_t *context, effect_param_t *p,
         return 0;
 
     switch (param) {
-    case REVERB_PARAM_PROPERTIES:
-        reverb_settings = (reverb_settings_t *)value;
-        reverb_settings->roomLevel = reverb_get_room_level(reverb_ctxt);
-        reverb_settings->roomHFLevel = reverb_get_room_hf_level(reverb_ctxt);
-        reverb_settings->decayTime = reverb_get_decay_time(reverb_ctxt);
-        reverb_settings->decayHFRatio = reverb_get_decay_hf_ratio(reverb_ctxt);
-        reverb_settings->reflectionsLevel = 0;
-        reverb_settings->reflectionsDelay = 0;
-        reverb_settings->reverbDelay = 0;
-        reverb_settings->reverbLevel = reverb_get_reverb_level(reverb_ctxt);
-        reverb_settings->diffusion = reverb_get_diffusion(reverb_ctxt);
-        reverb_settings->density = reverb_get_density(reverb_ctxt);
-        break;
     case REVERB_PARAM_ROOM_LEVEL:
         *(int16_t *)value = reverb_get_room_level(reverb_ctxt);
         break;
@@ -409,20 +478,33 @@ int reverb_get_parameter(effect_context_t *context, effect_param_t *p,
     case REVERB_PARAM_REVERB_LEVEL:
         *(int16_t *)value = reverb_get_reverb_level(reverb_ctxt);
         break;
+    case REVERB_PARAM_REVERB_DELAY:
+        *(uint32_t *)value = reverb_get_reverb_delay(reverb_ctxt);
+        break;
+    case REVERB_PARAM_REFLECTIONS_LEVEL:
+        *(int16_t *)value = reverb_get_reflections_level(reverb_ctxt);
+        break;
+    case REVERB_PARAM_REFLECTIONS_DELAY:
+        *(uint32_t *)value = reverb_get_reflections_delay(reverb_ctxt);
+        break;
     case REVERB_PARAM_DIFFUSION:
         *(int16_t *)value = reverb_get_diffusion(reverb_ctxt);
         break;
     case REVERB_PARAM_DENSITY:
         *(int16_t *)value = reverb_get_density(reverb_ctxt);
         break;
-    case REVERB_PARAM_REFLECTIONS_LEVEL:
-        *(uint16_t *)value = 0;
-        break;
-    case REVERB_PARAM_REFLECTIONS_DELAY:
-        *(uint32_t *)value = 0;
-        break;
-    case REVERB_PARAM_REVERB_DELAY:
-        *(uint32_t *)value = 0;
+    case REVERB_PARAM_PROPERTIES:
+        reverb_settings = (reverb_settings_t *)value;
+        reverb_settings->roomLevel = reverb_get_room_level(reverb_ctxt);
+        reverb_settings->roomHFLevel = reverb_get_room_hf_level(reverb_ctxt);
+        reverb_settings->decayTime = reverb_get_decay_time(reverb_ctxt);
+        reverb_settings->decayHFRatio = reverb_get_decay_hf_ratio(reverb_ctxt);
+        reverb_settings->reverbLevel = reverb_get_reverb_level(reverb_ctxt);
+        reverb_settings->reverbDelay = reverb_get_reverb_delay(reverb_ctxt);
+        reverb_settings->reflectionsLevel = reverb_get_reflections_level(reverb_ctxt);
+        reverb_settings->reflectionsDelay = reverb_get_reflections_delay(reverb_ctxt);
+        reverb_settings->diffusion = reverb_get_diffusion(reverb_ctxt);
+        reverb_settings->density = reverb_get_density(reverb_ctxt);
         break;
     default:
         p->status = -EINVAL;
@@ -444,6 +526,7 @@ int reverb_set_parameter(effect_context_t *context, effect_param_t *p,
     int16_t level;
     int16_t ratio;
     uint32_t time;
+    uint32_t delay;
 
     ALOGV("%s: ctxt %p, param %d", __func__, reverb_ctxt, param);
 
@@ -463,6 +546,7 @@ int reverb_set_parameter(effect_context_t *context, effect_param_t *p,
     switch (param) {
     case REVERB_PARAM_PROPERTIES:
         reverb_settings = (reverb_settings_t *)value;
+        reverb_set_all_properties(reverb_ctxt, reverb_settings);
         break;
     case REVERB_PARAM_ROOM_LEVEL:
         level = *(int16_t *)value;
@@ -484,6 +568,18 @@ int reverb_set_parameter(effect_context_t *context, effect_param_t *p,
         level = *(int16_t *)value;
         reverb_set_reverb_level(reverb_ctxt, level);
         break;
+    case REVERB_PARAM_REVERB_DELAY:
+        delay = *(uint32_t *)value;
+        reverb_set_reverb_delay(reverb_ctxt, delay);
+        break;
+    case REVERB_PARAM_REFLECTIONS_LEVEL:
+        level = *(int16_t *)value;
+        reverb_set_reflections_level(reverb_ctxt, level);
+        break;
+    case REVERB_PARAM_REFLECTIONS_DELAY:
+        delay = *(uint32_t *)value;
+        reverb_set_reflections_delay(reverb_ctxt, delay);
+        break;
     case REVERB_PARAM_DIFFUSION:
         ratio = *(int16_t *)value;
         reverb_set_diffusion(reverb_ctxt, ratio);
@@ -491,10 +587,6 @@ int reverb_set_parameter(effect_context_t *context, effect_param_t *p,
     case REVERB_PARAM_DENSITY:
         ratio = *(int16_t *)value;
         reverb_set_density(reverb_ctxt, ratio);
-        break;
-    case REVERB_PARAM_REFLECTIONS_LEVEL:
-    case REVERB_PARAM_REFLECTIONS_DELAY:
-    case REVERB_PARAM_REVERB_DELAY:
         break;
     default:
         p->status = -EINVAL;
