@@ -1602,7 +1602,7 @@ static ssize_t out_write_for_no_output(struct audio_stream_out *stream,
      * Sleep for the amount of buffer duration
      */
     lock_output_stream(out);
-    usleep(bytes * 1000000 / audio_stream_frame_size(&out->stream.common) /
+    usleep(bytes * 1000000 / audio_stream_out_frame_size(&out->stream.common) /
             out_get_sample_rate(&out->stream.common));
     pthread_mutex_unlock(&out->lock);
     return bytes;
