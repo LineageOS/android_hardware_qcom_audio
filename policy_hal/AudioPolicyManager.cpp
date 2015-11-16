@@ -26,7 +26,6 @@
 #else
 #define ALOGVV(a...) do { } while(0)
 #endif
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 // A device mask for all audio output devices that are considered "remote" when evaluating
 // active output devices in isStreamActiveRemotely()
@@ -35,9 +34,6 @@
 // type alone is not enough: the address must match too
 #define APM_AUDIO_DEVICE_MATCH_ADDRESS_ALL (AUDIO_DEVICE_IN_REMOTE_SUBMIX | \
                                             AUDIO_DEVICE_OUT_REMOTE_SUBMIX)
-// Following delay should be used if the calculated routing delay from all active
-// input streams is higher than this value
-#define MAX_VOICE_CALL_START_DELAY_MS 100
 
 #include <inttypes.h>
 #include <math.h>
@@ -254,6 +250,23 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, false /*fromCache*/);
             updateCallRouting(newDevice);
         }
+
+#ifdef FM_POWER_OPT
+        // handle FM device connection state to trigger FM AFE loopback
+        if(device == AUDIO_DEVICE_OUT_FM && hasPrimaryOutput()) {
+           audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, false /*fromCache*/);
+           if (state == AUDIO_POLICY_DEVICE_STATE_AVAILABLE) {
+               mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, 1);
+               newDevice = newDevice | AUDIO_DEVICE_OUT_FM;
+           } else {
+               mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, -1);
+           }
+           AudioParameter param = AudioParameter();
+           param.addInt(String8("handle_fm"), (int)newDevice);
+           mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString());
+        }
+#endif /* FM_POWER_OPT end */
+
         for (size_t i = 0; i < mOutputs.size(); i++) {
             sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
             if ((mEngine->getPhoneState() != AUDIO_MODE_IN_CALL) || (desc != mPrimaryOutput)) {
@@ -459,6 +472,14 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
             ALOGV("isOffloadSupported: has_video == true, returning false");
             return false;
         }
+
+        const bool allowOffloadStreamingWithVideo = property_get_bool("av.streaming.offload.enable",
+                                                                   false /*default value*/);
+        if(offloadInfo.has_video && offloadInfo.is_streaming && !allowOffloadStreamingWithVideo) {
+            ALOGW("offload disabled by av.streaming.offload.enable = %s ", propValue );
+            return false;
+        }
+
     }
 
     //If duration is less than minimum value defined in property, return false
@@ -843,9 +864,6 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
             setStrategyMute(STRATEGY_SONIFICATION, false, desc, MUTE_TIME_MS,
                 getDeviceForStrategy(STRATEGY_SONIFICATION, true /*fromCache*/));
         }
-        ALOGV("Setting the delay from %dms to %dms", delayMs,
-                MIN(delayMs, MAX_VOICE_CALL_START_DELAY_MS));
-         delayMs = MIN(delayMs, MAX_VOICE_CALL_START_DELAY_MS);
     }
 
     if (hasPrimaryOutput()) {
@@ -1179,6 +1197,13 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
             mpClientInterface->setVoiceVolume(voiceVolume, delayMs);
             mLastVoiceVolume = voiceVolume;
         }
+#ifdef FM_POWER_OPT
+    } else if (stream == AUDIO_STREAM_MUSIC && hasPrimaryOutput() &&
+               outputDesc == mPrimaryOutput) {
+        AudioParameter param = AudioParameter();
+        param.addFloat(String8("fm_volume"), Volume::DbToAmpl(volumeDb));
+        mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString(), delayMs);
+#endif /* FM_POWER_OPT end */
     }
 
     return NO_ERROR;
