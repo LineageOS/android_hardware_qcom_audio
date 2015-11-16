@@ -2099,6 +2099,21 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
         }
     }
 
+
+    ret = str_parms_get_str(query, "is_direct_pcm_track", value, sizeof(value));
+    if (ret >= 0) {
+        value[0] = '\0';
+        if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) {
+            ALOGV("in direct_pcm");
+            strlcat(value, "true", strlen("true"));
+        } else {
+            ALOGV("not in direct_pcm");
+            strlcat(value, "false", strlen("false"));
+        }
+        str_parms_add_str(reply, "is_direct_pcm_track", value);
+        str = str_parms_to_str(reply);
+    }
+
     ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_FORMATS, value, sizeof(value));
     if (ret >= 0) {
         value[0] = '\0';
