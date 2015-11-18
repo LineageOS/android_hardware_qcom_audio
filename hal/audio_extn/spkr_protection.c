@@ -166,27 +166,6 @@ static struct speaker_prot_session handle;
 static int vi_feed_no_channels;
 static struct spkr_tz_names tz_names;
 
-int read_line_from_file(const char *path, char *buf, size_t count)
-{
-    char * fgets_ret;
-    FILE * fd;
-    int rv;
-
-    fd = fopen(path, "r");
-    if (fd == NULL)
-        return -1;
-
-    fgets_ret = fgets(buf, (int)count, fd);
-    if (NULL != fgets_ret) {
-        rv = (int)strlen(buf);
-    } else {
-        rv = ferror(fd);
-    }
-    fclose(fd);
-
-   return rv;
-}
-
 /*===========================================================================
 FUNCTION get_tzn
 
