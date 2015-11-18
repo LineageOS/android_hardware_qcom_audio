@@ -49,7 +49,7 @@ static struct audio_extn_module aextnmod = {
 #define AUDIO_PARAMETER_KEY_ANC        "anc_enabled"
 #define AUDIO_PARAMETER_KEY_WFD        "wfd_channel_cap"
 #define AUDIO_PARAMETER_CAN_OPEN_PROXY "can_open_proxy"
-#ifndef FM_ENABLED
+#ifndef FM_POWER_OPT
 #define audio_extn_fm_set_parameters(adev, parms) (0)
 #else
 void audio_extn_fm_set_parameters(struct audio_device *adev,
