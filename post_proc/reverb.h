@@ -40,7 +40,7 @@ typedef struct reverb_settings_s {
     uint32_t    reverbDelay;
     int16_t     diffusion;
     int16_t     density;
-} reverb_settings_t;
+}  __attribute__((packed)) reverb_settings_t;
 
 typedef struct reverb_context_s {
     effect_context_t common;
