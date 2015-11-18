@@ -57,6 +57,10 @@ else
     LOCAL_CFLAGS += -Wno-error -fpermissive
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FM_POWER_OPT)),true)
+LOCAL_CFLAGS += -DFM_POWER_OPT
+endif
+
 LOCAL_MODULE := libaudiopolicymanager
 
 include $(BUILD_SHARED_LIBRARY)
