@@ -48,7 +48,7 @@
 #define audio_is_offload_pcm(format) (0)
 #define OFFLOAD_USE_SMALL_BUFFER false
 #else
-#define OFFLOAD_USE_SMALL_BUFFER ((info->format & AUDIO_FORMAT_PCM_OFFLOAD) == AUDIO_FORMAT_PCM_OFFLOAD)
+#define OFFLOAD_USE_SMALL_BUFFER ((info->format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM_OFFLOAD)
 #endif
 
 #ifndef AFE_PROXY_ENABLED
