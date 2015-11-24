@@ -2168,6 +2168,9 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
 
     if (usecase->type == PCM_PLAYBACK)
         snd_device = usecase->out_snd_device;
+    else if ((usecase->type == PCM_CAPTURE) &&
+                   voice_is_in_call_rec_stream(usecase->stream.in))
+        snd_device = voice_get_incall_rec_snd_device(usecase->in_snd_device);
     else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE))
         snd_device = usecase->in_snd_device;
     acdb_dev_id = acdb_device_table[audio_extn_get_spkr_prot_snd_device(snd_device)];
