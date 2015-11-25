@@ -497,6 +497,9 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
     if (usecase->type == PCM_PLAYBACK)
         snd_device = platform_get_output_snd_device(adev->platform,
                                             usecase->stream.out->devices);
+    else if ((usecase->type == PCM_CAPTURE) &&
+                   voice_is_in_call_rec_stream(usecase->stream.in))
+        snd_device = voice_get_incall_rec_snd_device(usecase->in_snd_device);
     else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE))
         snd_device = platform_get_input_snd_device(adev->platform,
                                             adev->primary_output->devices);
