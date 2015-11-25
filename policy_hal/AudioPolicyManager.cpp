@@ -1573,8 +1573,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     } else if (/* stream == AUDIO_STREAM_MUSIC && */
             flags == AUDIO_OUTPUT_FLAG_NONE &&
             property_get_bool("audio.deep_buffer.media", false /* default_value */)) {
-        flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_DEEP_BUFFER);
-        forced_deep = true;
+            forced_deep = true;
     }
 
     if (stream == AUDIO_STREAM_TTS) {
@@ -1582,10 +1581,11 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     }
 
     // Do offload magic here
-    if (((flags == AUDIO_OUTPUT_FLAG_NONE) || forced_deep) &&
-        (stream == AUDIO_STREAM_MUSIC) && (offloadInfo != NULL) &&
+    if ((flags == AUDIO_OUTPUT_FLAG_NONE) &&
+        (stream == AUDIO_STREAM_MUSIC) &&
+        (offloadInfo != NULL) &&
         ((offloadInfo->usage == AUDIO_USAGE_MEDIA) || (offloadInfo->usage == AUDIO_USAGE_GAME))) {
-        flags = (audio_output_flags_t)(flags | AUDIO_OUTPUT_FLAG_DIRECT);
+        flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_DIRECT_PCM);
         ALOGD("AudioCustomHAL --> Force Direct Flag .. flag (0x%x)", flags);
     }
 
@@ -1593,7 +1593,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
 
     // skip direct output selection if the request can obviously be attached to a mixed output
     // and not explicitly requested
-    if (((flags & AUDIO_OUTPUT_FLAG_DIRECT) == 0) &&
+    if (((flags & (AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_DIRECT_PCM)) == 0) &&
             audio_is_linear_pcm(format) && samplingRate <= MAX_MIXER_SAMPLING_RATE &&
             audio_channel_count_from_out_mask(channelMask) <= 2) {
         goto non_direct_output;
@@ -1616,6 +1616,14 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     }
 
     if (profile != 0) {
+
+        if (!(flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) &&
+             (profile->mFlags & AUDIO_OUTPUT_FLAG_DIRECT_PCM)) {
+            ALOGI("got Direct_PCM without requesting ... reject ");
+            profile = NULL;
+            goto non_direct_output;
+        }
+
         sp<SwAudioOutputDescriptor> outputDesc = NULL;
 
         // if multiple concurrent offload decode is supported
@@ -1738,6 +1746,10 @@ non_direct_output:
 
     // for non direct outputs, only PCM is supported
     if (audio_is_linear_pcm(format)) {
+        if (forced_deep) {
+            flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_DEEP_BUFFER);
+            ALOGI("setting force DEEP buffer now ");
+        }
         // get which output is suitable for the specified stream. The actual
         // routing change will happen when startOutput() will be called
         SortedVector<audio_io_handle_t> outputs = getOutputsForDevice(device, mOutputs);
