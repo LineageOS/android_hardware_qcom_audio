@@ -39,6 +39,7 @@
 #include <dirent.h>
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
 
+#define MAX_MIXER_XML_PATH  100
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define MIXER_XML_PATH_MTP "/system/etc/mixer_paths_mtp.xml"
 #define MIXER_XML_PATH_MSM8909_PM8916 "/system/etc/mixer_paths_msm8909_pm8916.xml"
@@ -58,6 +59,8 @@
 #define MIXER_XML_PATH_I2S "/system/etc/mixer_paths_i2s.xml"
 #define MIXER_XML_PATH_WCD9306 "/system/etc/mixer_paths_wcd9306.xml"
 #define MIXER_XML_PATH_WCD9330 "/system/etc/mixer_paths_wcd9330.xml"
+#define MIXER_XML_PATH_WCD9335 "/system/etc/mixer_paths_wcd9335.xml"
+#define MIXER_XML_PATH_WCD9326 "/system/etc/mixer_paths_wcd9326.xml"
 #define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
 #define PLATFORM_INFO_XML_PATH_EXTCODEC  "/system/etc/audio_platform_info_extcodec.xml"
 
@@ -333,8 +336,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER] = "speaker",
     [SND_DEVICE_OUT_SPEAKER_EXTERNAL_1] = "speaker-ext-1",
     [SND_DEVICE_OUT_SPEAKER_EXTERNAL_2] = "speaker-ext-2",
-    [SND_DEVICE_OUT_SPEAKER_WSA] = "wsa-speaker",
-    [SND_DEVICE_OUT_SPEAKER_VBAT] = "vbat-speaker",
+    [SND_DEVICE_OUT_SPEAKER_WSA] = "speaker-wsa",
+    [SND_DEVICE_OUT_SPEAKER_VBAT] = "speaker-vbat",
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = "speaker-reverse",
     [SND_DEVICE_OUT_HEADPHONES] = "headphones",
     [SND_DEVICE_OUT_HEADPHONES_44_1] = "headphones-44.1",
@@ -343,8 +346,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2] = "speaker-and-headphones-ext-2",
     [SND_DEVICE_OUT_VOICE_HANDSET] = "voice-handset",
     [SND_DEVICE_OUT_VOICE_SPEAKER] = "voice-speaker",
-    [SND_DEVICE_OUT_VOICE_SPEAKER_WSA] = "wsa-voice-speaker",
-    [SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = "vbat-voice-speaker",
+    [SND_DEVICE_OUT_VOICE_SPEAKER_WSA] = "voice-speaker-wsa",
+    [SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = "voice-speaker-vbat",
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = "voice-headphones",
     [SND_DEVICE_OUT_HDMI] = "hdmi",
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = "speaker-and-hdmi",
@@ -764,7 +767,14 @@ static void update_codec_type(const char *snd_card_name) {
          !strncmp(snd_card_name, "msm8939-tomtom9330-snd-card",
                   sizeof("msm8939-tomtom9330-snd-card")) ||
          !strncmp(snd_card_name, "msm8952-tomtom-snd-card",
-                  sizeof("msm8952-tomtom-snd-card"))) {
+                  sizeof("msm8952-tomtom-snd-card")) ||
+         !strncmp(snd_card_name, "msm8952-tasha-snd-card",
+                  sizeof("msm8952-tasha-snd-card")) ||
+         !strncmp(snd_card_name, "msm8952-tashalite-snd-card",
+                  sizeof("msm8952-tashalite-snd-card")) ||
+         !strncmp(snd_card_name, "msm8952-tasha-skun-snd-card",
+                  sizeof("msm8952-tasha-skun-snd-card")))
+     {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          is_external_codec = true;
      }
@@ -925,7 +935,21 @@ static void query_platform(const char *snd_card_name,
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+    } else if (!strncmp(snd_card_name, "msm8952-tasha-snd-card",
+                 sizeof("msm8952-tasha-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9335,
+                sizeof(MIXER_XML_PATH_WCD9335));
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
 
+    } else if (!strncmp(snd_card_name, "msm8952-tashalite-snd-card",
+                 sizeof("msm8952-tashalite-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9326,
+               MAX_MIXER_XML_PATH);
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
     } else {
         strlcpy(mixer_xml_path, MIXER_XML_PATH,
                 sizeof(MIXER_XML_PATH));
@@ -1167,7 +1191,7 @@ static void set_platform_defaults()
     backend_table[SND_DEVICE_IN_CAPTURE_FM] = strdup("capture-fm");
     backend_table[SND_DEVICE_OUT_TRANSMISSION_FM] = strdup("transmission-fm");
     backend_table[SND_DEVICE_OUT_HEADPHONES_44_1] = strdup("headphones-44.1");
-    backend_table[SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = strdup("vbat-voice-speaker");
+    backend_table[SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = strdup("voice-speaker-vbat");
 }
 
 void get_cvd_version(char *cvd_version, struct audio_device *adev)
@@ -1381,6 +1405,67 @@ int platform_acdb_init(void *platform)
     return result;
 }
 
+#define MAX_PATH             (256)
+#define THERMAL_SYSFS "/sys/class/thermal"
+#define TZ_TYPE "/sys/class/thermal/thermal_zone%d/type"
+#define TZ_WSA "/sys/class/thermal/thermal_zone%d/temp"
+
+static bool is_wsa_found(int *wsaCount)
+{
+    DIR *tdir = NULL;
+    struct dirent *tdirent = NULL;
+    int tzn = 0;
+    char name[MAX_PATH] = {0};
+    char cwd[MAX_PATH] = {0};
+    char file[10] = "wsa";
+    bool found = false;
+    int wsa_count = 0;
+
+    if (!getcwd(cwd, sizeof(cwd)))
+        return false;
+
+    chdir(THERMAL_SYSFS); /* Change dir to read the entries. Doesnt work
+                             otherwise */
+    tdir = opendir(THERMAL_SYSFS);
+    if (!tdir) {
+        ALOGE("Unable to open %s\n", THERMAL_SYSFS);
+        return false;
+    }
+
+    while ((tdirent = readdir(tdir))) {
+        char buf[50];
+        struct dirent *tzdirent;
+        DIR *tzdir = NULL;
+
+        tzdir = opendir(tdirent->d_name);
+        if (!tzdir)
+            continue;
+        while ((tzdirent = readdir(tzdir))) {
+            if (strcmp(tzdirent->d_name, "type"))
+                continue;
+            snprintf(name, MAX_PATH, TZ_TYPE, tzn);
+            ALOGD("Opening %s\n", name);
+            read_line_from_file(name, buf, sizeof(buf));
+            if (strstr(buf, file)) {
+                wsa_count++;
+                /*We support max only two WSA speakers*/
+                if (wsa_count == 2)
+                    break;
+            }
+            tzn++;
+        }
+        closedir(tzdir);
+    }
+    if (wsa_count > 0){
+         ALOGD("Found %d WSA present on the platform", wsa_count);
+         found = true;
+         *wsaCount = wsa_count;
+    }
+    closedir(tdir);
+    chdir(cwd); /* Restore current working dir */
+    return found;
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char platform[PROPERTY_VALUE_MAX];
@@ -1392,6 +1477,7 @@ void *platform_init(struct audio_device *adev)
     char mixer_xml_path[100],ffspEnable[PROPERTY_VALUE_MAX];
     char *cvd_version = NULL;
     int idx;
+    int wsaCount =0;
 
     my_data = calloc(1, sizeof(struct platform_data));
 
@@ -1503,6 +1589,17 @@ void *platform_init(struct audio_device *adev)
             my_data->fluence_mode = FLUENCE_BROADSIDE;
         }
     }
+
+    if (is_wsa_found(&wsaCount)) {
+        /*Set ACDB ID of Stereo speaker if two WSAs are present*/
+        /*Default ACDB ID for wsa speaker is that for mono*/
+        if (wsaCount == 2) {
+            platform_set_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_WSA, 15);
+            platform_set_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_VBAT, 15);
+        }
+        my_data->is_wsa_speaker = true;
+    }
+
     property_get("persist.audio.FFSP.enable", ffspEnable, "");
     if (!strncmp("true", ffspEnable, sizeof("true"))) {
         acdb_device_table[SND_DEVICE_OUT_SPEAKER] = 131;
@@ -3759,8 +3856,10 @@ int platform_is_external_codec (char *snd_card_name)
 
     if (!strncmp(snd_card_name, "msm8952-tomtom-snd-card",
         sizeof("msm8952-tomtom-snd-card")) ||
-        !strncmp(snd_card_name, "msm8976-tasha-snd-card",
-        sizeof("msm8976-tasha-snd-card")))
+        !strncmp(snd_card_name, "msm8952-tasha-snd-card",
+        sizeof("msm8952-tasha-snd-card")) ||
+        !strncmp(snd_card_name, "msm8952-tashalite-snd-card",
+        sizeof("msm8952-tashalite-snd-card")))
     {
         /* external codec, for rest/old of the external codecs
            we dont support this funtionality(chaning AFE params)
@@ -4630,4 +4729,19 @@ bool platform_send_gain_dep_cal(void *platform __unused,
                                 int level __unused)
 {
     return 0;
+}
+
+int platform_get_wsa_mode(void *adev)
+{
+    struct audio_device *adev_h = adev;
+    char *snd_card_name;
+
+    snd_card_name = mixer_get_name(adev_h->mixer);
+    if ((!strcmp(snd_card_name, "msm8952-skum-snd-card")) ||
+        (!strcmp(snd_card_name, "msm8952-snd-card")) ||
+        (!strcmp(snd_card_name, "msm8952-snd-card-mtp")) ||
+        (!strcmp(snd_card_name, "msm8976-skun-snd-card")))
+        return 1;
+    else
+        return 0;
 }
