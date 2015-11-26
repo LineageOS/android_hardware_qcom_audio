@@ -3280,11 +3280,12 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     struct platform_data *my_data = (struct platform_data *)platform;
     char *str;
     char value[256] = {0};
-    int val;
+    int val,len;
     int ret = 0, err;
     char *kv_pairs = NULL;
 
     kv_pairs = str_parms_to_str(parms);
+    len = strlen(kv_pairs);
     ALOGV("%s: enter: - %s", __func__, kv_pairs);
     free(kv_pairs);
 
@@ -3349,6 +3350,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     }
 #endif
     native_audio_set_params(platform, parms, value, sizeof(value));
+    audio_extn_spkr_prot_set_parameters(parms, value, len);
     ALOGV("%s: exit with code(%d)", __func__, ret);
     return ret;
 }
