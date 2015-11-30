@@ -51,7 +51,12 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),true)
     LOCAL_CFLAGS += -DCOMPRESS_VOIP_ENABLED
 endif
 
-LOCAL_CFLAGS += -Wno-error -fpermissive
+ifeq ($(strip $(AUDIO_FEATURE_NON_WEARABLE_TARGET)),true)
+    LOCAL_CFLAGS += -DNON_WEARABLE_TARGET
+else
+    LOCAL_CFLAGS += -Wno-error -fpermissive
+endif
+
 LOCAL_MODULE := libaudiopolicymanager
 
 include $(BUILD_SHARED_LIBRARY)

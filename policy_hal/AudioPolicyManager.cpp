@@ -957,15 +957,29 @@ status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDe
                                             audio_stream_type_t stream,
                                             bool forceDeviceUpdate)
 {
+    if (stream < 0 || stream >= AUDIO_STREAM_CNT) {
+        ALOGW("stopSource() invalid stream %d", stream);
+        return INVALID_OPERATION;
+    }
+
     // always handle stream stop, check which stream type is stopping
+#ifdef NON_WEARABLE_TARGET
+    sp<AudioOutputDescriptor> outputDesc = outputDesc1;
+#else
     sp<SwAudioOutputDescriptor> outputDesc = (sp<SwAudioOutputDescriptor>) outputDesc1;
+#endif
     handleEventForBeacon(stream == AUDIO_STREAM_TTS ? STOPPING_BEACON : STOPPING_OUTPUT);
 
     // handle special case for sonification while in call
     if (isInCall() && (outputDesc->mRefCount[stream] == 1)) {
         if (outputDesc->isDuplicated()) {
+#ifdef NON_WEARABLE_TARGET
+            handleIncallSonification(stream, false, false, outputDesc->subOutput1()->mIoHandle);
+            handleIncallSonification(stream, false, false, outputDesc->subOutput2()->mIoHandle);
+#else
             handleIncallSonification(stream, false, false, outputDesc->mOutput1->mIoHandle);
             handleIncallSonification(stream, false, false, outputDesc->mOutput2->mIoHandle);
+#endif
         }
         handleIncallSonification(stream, false, false, outputDesc->mIoHandle);
     }
@@ -1017,7 +1031,16 @@ status_t AudioPolicyManagerCustom::startSource(sp<AudioOutputDescriptor> outputD
 {
     // cannot start playback of STREAM_TTS if any other output is being used
     uint32_t beaconMuteLatency = 0;
+    if (stream < 0 || stream >= AUDIO_STREAM_CNT) {
+        ALOGW("startSource() invalid stream %d", stream);
+        return INVALID_OPERATION;
+    }
+
+#ifdef NON_WEARABLE_TARGET
+    sp<AudioOutputDescriptor> outputDesc = outputDesc1;
+#else
     sp<SwAudioOutputDescriptor> outputDesc = (sp<SwAudioOutputDescriptor>) outputDesc1;
+#endif
 
     *delayMs = 0;
     if (stream == AUDIO_STREAM_TTS) {
@@ -1160,12 +1183,26 @@ void AudioPolicyManagerCustom::handleNotificationRoutingForStream(audio_stream_t
         break;
     }
 }
+#ifdef NON_WEARABLE_TARGET
 status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
                                                    int index,
-                                                   const sp<SwAudioOutputDescriptor>& outputDesc,
+                                                   const sp<AudioOutputDescriptor>& outputDesc,
                                                    audio_devices_t device,
                                                    int delayMs, bool force)
+#else
+status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
+                                                    int index,
+                                                    const sp<SwAudioOutputDescriptor>& outputDesc,
+                                                    audio_devices_t device,
+                                                    int delayMs, bool force)
+
+#endif
 {
+    if (stream < 0 || stream >= AUDIO_STREAM_CNT) {
+        ALOGW("checkAndSetVolume() invalid stream %d", stream);
+        return INVALID_OPERATION;
+    }
+
     // do not change actual stream volume if the stream is muted
     if (outputDesc->mMuteCount[stream] != 0) {
         ALOGVV("checkAndSetVolume() stream %d muted count %d",
