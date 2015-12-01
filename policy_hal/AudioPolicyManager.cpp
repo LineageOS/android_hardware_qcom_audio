@@ -694,7 +694,6 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
 
     sp<SwAudioOutputDescriptor> hwOutputDesc = mPrimaryOutput;
 #ifdef VOICE_CONCURRENCY
-    int voice_call_state = 0;
     char propValue[PROPERTY_VALUE_MAX];
     bool prop_playback_enabled = false, prop_rec_enabled=false, prop_voip_enabled = false;
 
@@ -710,19 +709,10 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
         prop_voip_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
     }
 
-    bool mode_in_call = (AUDIO_MODE_IN_CALL != oldState) && (AUDIO_MODE_IN_CALL == state);
-    //query if it is a actual voice call initiated by telephony
-    if (mode_in_call) {
-        String8 valueStr = mpClientInterface->getParameters((audio_io_handle_t)0, String8("in_call"));
-        AudioParameter result = AudioParameter(valueStr);
-        if (result.getInt(String8("in_call"), voice_call_state) == NO_ERROR)
-            ALOGD("voice_conc:SetPhoneState: Voice call state = %d", voice_call_state);
-    }
-
-    if (mode_in_call && voice_call_state && !mvoice_call_state) {
+    if ((AUDIO_MODE_IN_CALL != oldState) && (AUDIO_MODE_IN_CALL == state)) {
         ALOGD("voice_conc:Entering to call mode oldState :: %d state::%d ",
             oldState, state);
-        mvoice_call_state = voice_call_state;
+        mvoice_call_state = state;
         if (prop_rec_enabled) {
             //Close all active inputs
             audio_io_handle_t activeInput = mInputs.getActiveInput();
