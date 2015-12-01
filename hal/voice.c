@@ -131,8 +131,6 @@ int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     }
 
     session->state.current = CALL_INACTIVE;
-    if (adev->mode == AUDIO_MODE_NORMAL)
-        adev->voice.is_in_call = false;
 
     /* Disable sidetone only when no calls are active */
     if (!voice_is_call_state_active(adev))
