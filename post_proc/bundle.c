@@ -936,7 +936,6 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
             add_effect_to_output(out_ctxt, context);
 
         } break;
-
 #ifdef HW_ACCELERATED_EFFECTS
     case EFFECT_CMD_HW_ACC: {
         ALOGV("EFFECT_CMD_HW_ACC cmdSize %d pCmdData %p, *replySize %d, pReplyData %p",
