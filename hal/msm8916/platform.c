@@ -1810,10 +1810,8 @@ acdb_init_fail:
 
     if (platform_get_native_support()) {
 
-        if (!strncmp(snd_card_name, "msm8976-tasha-snd-card",
-            sizeof("msm8976-tasha-snd-card")) ||
-            !strncmp(snd_card_name, "msm8976-tashalite-snd-card",
-            sizeof("msm8976-tashalite-snd-card"))) {
+        if (strstr(snd_card_name, "tasha-snd-card") ||
+            strstr(snd_card_name, "tashalite-snd-card")) {
             /* do nothing */
         }
         else {
