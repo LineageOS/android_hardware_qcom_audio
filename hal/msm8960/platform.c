@@ -243,6 +243,7 @@ void *platform_init(struct audio_device *adev)
     adev->audio_route = audio_route_init(MIXER_CARD, MIXER_XML_PATH);
     if (!adev->audio_route) {
         ALOGE("%s: Failed to init audio route controls, aborting.", __func__);
+        mixer_close(adev->mixer);
         return NULL;
     }
 
