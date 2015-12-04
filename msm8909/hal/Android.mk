@@ -170,8 +170,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DEV_ARBI)),true)
     LOCAL_SRC_FILES += audio_extn/dev_arbi.c
 endif
 
+ifneq ($(TARGET_SUPPORTS_WEARABLES),true)
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_RECORD_PLAY_CONCURRENCY)),true)
     LOCAL_CFLAGS += -DRECORD_PLAY_CONCURRENCY
+endif
 endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_ACDB_LICENSE)), true)
