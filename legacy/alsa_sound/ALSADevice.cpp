@@ -1581,16 +1581,12 @@ int ALSADevice::getUseCaseType(const char *useCase)
             MAX_LEN(useCase, SND_USE_CASE_VERB_HIFI_REC_COMPRESSED)) ||
         !strncmp(useCase, SND_USE_CASE_VERB_FM_REC,
             MAX_LEN(useCase,SND_USE_CASE_VERB_FM_REC)) ||
-        !strncmp(useCase, SND_USE_CASE_VERB_FM_A2DP_REC,
-            MAX_LEN(useCase,SND_USE_CASE_VERB_FM_A2DP_REC)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC,
             MAX_LEN(useCase,SND_USE_CASE_MOD_CAPTURE_MUSIC)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_LOWLATENCY_MUSIC,
             MAX_LEN(useCase,SND_USE_CASE_MOD_CAPTURE_LOWLATENCY_MUSIC)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_FM,
             MAX_LEN(useCase,SND_USE_CASE_MOD_CAPTURE_FM)) ||
-        !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_A2DP_FM,
-            MAX_LEN(useCase, SND_USE_CASE_MOD_CAPTURE_A2DP_FM)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC_COMPRESSED,
             MAX_LEN(useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC_COMPRESSED))) {
         return USECASE_TYPE_TX;
@@ -2115,8 +2111,7 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
                 return strdup(mCurTxUCMDevice);
             }
 #ifdef QCOM_FM_ENABLED
-        } else if ((devices & AudioSystem::DEVICE_IN_FM_RX) ||
-                   (devices & AudioSystem::DEVICE_IN_FM_RX_A2DP)) {
+        } else if (devices & AudioSystem::DEVICE_IN_FM_TUNER) {
             /* Nothing to be done, use current tx device or set dummy device */
             if (strncmp(mCurTxUCMDevice, "None", 4)) {
                 return strdup(mCurTxUCMDevice);

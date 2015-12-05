@@ -1150,8 +1150,7 @@ status_t AudioHardwareALSA::doRouting(int device, char* useCase)
         mALSADevice->mCurDevice = device;
     if ((device == AudioSystem::DEVICE_IN_VOICE_CALL)
 #ifdef QCOM_FM_ENABLED
-        || (device == AudioSystem::DEVICE_IN_FM_RX)
-        || (device == AudioSystem::DEVICE_IN_FM_RX_A2DP)
+        || (device == AudioSystem::DEVICE_IN_FM_TUNER)
 #endif
         || (device == AudioSystem::DEVICE_IN_COMMUNICATION)
         ) {
@@ -2022,10 +2021,8 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
                    }
                }
 #ifdef QCOM_FM_ENABLED
-            } else if((devices == AudioSystem::DEVICE_IN_FM_RX)) {
+            } else if((devices == AudioSystem::DEVICE_IN_FM_TUNER)) {
                 strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_CAPTURE_FM, sizeof(alsa_handle.useCase));
-            } else if(devices == AudioSystem::DEVICE_IN_FM_RX_A2DP) {
-                strlcpy(alsa_handle.useCase, SND_USE_CASE_MOD_CAPTURE_A2DP_FM, sizeof(alsa_handle.useCase));
 #endif
             } else {
                 char value[128];
@@ -2083,10 +2080,8 @@ AudioHardwareALSA::openInputStream(uint32_t devices,
                    }
                 }
 #ifdef QCOM_FM_ENABLED
-            } else if(devices == AudioSystem::DEVICE_IN_FM_RX) {
+            } else if(devices == AudioSystem::DEVICE_IN_FM_TUNER) {
                 strlcpy(alsa_handle.useCase, SND_USE_CASE_VERB_FM_REC, sizeof(alsa_handle.useCase));
-            } else if (devices == AudioSystem::DEVICE_IN_FM_RX_A2DP) {
-                strlcpy(alsa_handle.useCase, SND_USE_CASE_VERB_FM_A2DP_REC, sizeof(alsa_handle.useCase));
 #endif
             } else {
                 char value[128];
