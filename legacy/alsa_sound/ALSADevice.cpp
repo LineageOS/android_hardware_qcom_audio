@@ -2115,8 +2115,7 @@ char* ALSADevice::getUCMDevice(uint32_t devices, int input, char *rxDevice)
                 return strdup(mCurTxUCMDevice);
             }
 #ifdef QCOM_FM_ENABLED
-        } else if ((devices & AudioSystem::DEVICE_IN_FM_RX) ||
-                   (devices & AudioSystem::DEVICE_IN_FM_RX_A2DP)) {
+        } else if (devices & AudioSystem::DEVICE_IN_FM_TUNER) {
             /* Nothing to be done, use current tx device or set dummy device */
             if (strncmp(mCurTxUCMDevice, "None", 4)) {
                 return strdup(mCurTxUCMDevice);
