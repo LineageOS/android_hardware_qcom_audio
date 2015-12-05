@@ -1065,8 +1065,6 @@ int getUseCaseType(const char *useCase)
             MAX_LEN(useCase,SND_USE_CASE_VERB_HIFI_REC_COMPRESSED)) ||
         !strncmp(useCase, SND_USE_CASE_VERB_FM_REC,
             MAX_LEN(useCase,SND_USE_CASE_VERB_FM_REC)) ||
-        !strncmp(useCase, SND_USE_CASE_VERB_FM_A2DP_REC,
-            MAX_LEN(useCase,SND_USE_CASE_VERB_FM_A2DP_REC)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC,
             MAX_LEN(useCase,SND_USE_CASE_MOD_CAPTURE_MUSIC)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC2,
@@ -1078,9 +1076,7 @@ int getUseCaseType(const char *useCase)
         !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_MUSIC_COMPRESSED,
             MAX_LEN(useCase,SND_USE_CASE_MOD_CAPTURE_MUSIC_COMPRESSED)) ||
         !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_FM,
-            MAX_LEN(useCase,SND_USE_CASE_MOD_CAPTURE_FM)) ||
-        !strncmp(useCase, SND_USE_CASE_MOD_CAPTURE_A2DP_FM,
-            MAX_LEN(useCase,SND_USE_CASE_MOD_CAPTURE_A2DP_FM))) {
+            MAX_LEN(useCase,SND_USE_CASE_MOD_CAPTURE_FM))) {
         return CAP_TX;
     } else if (!strncmp(useCase, SND_USE_CASE_VERB_VOICECALL,
             MAX_LEN(useCase,SND_USE_CASE_VERB_VOICECALL)) ||

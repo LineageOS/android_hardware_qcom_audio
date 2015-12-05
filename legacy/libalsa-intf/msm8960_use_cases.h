@@ -223,7 +223,6 @@ static card_mapping_t card_mapping_list[] = {
  * which are not part of existing macros
  */
 #define SND_USE_CASE_VERB_FM_REC         "FM REC"
-#define SND_USE_CASE_VERB_FM_A2DP_REC   "FM A2DP REC"
 #define SND_USE_CASE_VERB_HIFI_REC       "HiFi Rec"
 #define SND_USE_CASE_VERB_HIFI_LOWLATENCY_REC       "HiFi Lowlatency Rec"
 #define SND_USE_CASE_VERB_UL_REC         "UL REC"
@@ -321,7 +320,6 @@ static card_mapping_t card_mapping_list[] = {
 #define SND_USE_CASE_MOD_PLAY_FM         "Play FM"
 #define SND_USE_CASE_MOD_CAPTURE_FM      "Capture FM"
 #define SND_USE_CASE_MOD_CAPTURE_LOWLATENCY_MUSIC     "Capture Lowlatency Music"
-#define SND_USE_CASE_MOD_CAPTURE_A2DP_FM "Capture A2DP FM"
 #define SND_USE_CASE_MOD_PLAY_LPA        "Play LPA"
 #define SND_USE_CASE_MOD_PLAY_VOIP       "Play VOIP"
 #define SND_USE_CASE_MOD_CAPTURE_VOIP    "Capture VOIP"
