@@ -1325,7 +1325,7 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
         ALOGV("Hw module %d", i);
         for (size_t j = 0; j < mHwModules[i]->mInputProfiles.size(); j++) {
             const sp<IOProfile> inProfile = mHwModules[i]->mInputProfiles[j];
-            ALOGV("Input profile ", j);
+            ALOGV("Input profile %d", j);
             for (size_t k = 0; k  < inProfile->mChannelMasks.size(); k++) {
                 audio_channel_mask_t channelMask =
                     inProfile->mChannelMasks.itemAt(k);

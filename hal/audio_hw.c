@@ -3639,7 +3639,7 @@ static int adev_verify_devices(struct audio_device *adev)
                     ALOGV("%s: (%s) card %d  device %d", __func__,
                             dir ? "input" : "output", card_id, device_id);
                     pcm_params_to_string(*pparams, info, ARRAY_SIZE(info));
-                    ALOGV(info); /* print parameters */
+                    ALOGV("parms: %s", info); /* print parameters */
                 } else {
                     ALOGV("%s: cannot locate card %d  device %d", __func__, card_id, device_id);
                 }
