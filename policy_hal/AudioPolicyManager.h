@@ -82,11 +82,19 @@ public:
 
 protected:
 
+#ifdef NON_WEARABLE_TARGET
+         status_t checkAndSetVolume(audio_stream_type_t stream,
+                                                    int index,
+                                                    const sp<AudioOutputDescriptor>& outputDesc,
+                                                    audio_devices_t device,
+                                                    int delayMs = 0, bool force = false);
+#else
          status_t checkAndSetVolume(audio_stream_type_t stream,
                                                    int index,
                                                    const sp<SwAudioOutputDescriptor>& outputDesc,
                                                    audio_devices_t device,
                                                    int delayMs = 0, bool force = false);
+#endif
 
         // selects the most appropriate device on output for current state
         // must be called every time a condition that affects the device choice for a given output is
