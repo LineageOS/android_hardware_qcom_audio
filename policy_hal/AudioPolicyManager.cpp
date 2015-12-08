@@ -228,6 +228,23 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, false /*fromCache*/);
             updateCallRouting(newDevice);
         }
+
+#ifdef FM_POWER_OPT
+        // handle FM device connection state to trigger FM AFE loopback
+        if(device == AUDIO_DEVICE_OUT_FM && hasPrimaryOutput()) {
+           audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, false /*fromCache*/);
+           if (state == AUDIO_POLICY_DEVICE_STATE_AVAILABLE) {
+               mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, 1);
+               newDevice = (audio_devices_t)getNewOutputDevice(mPrimaryOutput, false /*fromCache*/) | AUDIO_DEVICE_OUT_FM;
+           } else {
+               mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, -1);
+           }
+           AudioParameter param = AudioParameter();
+           param.addInt(String8("handle_fm"), (int)newDevice);
+           mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString());
+        }
+#endif /* FM_POWER_OPT end */
+
         for (size_t i = 0; i < mOutputs.size(); i++) {
             sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
             if ((mEngine->getPhoneState() != AUDIO_MODE_IN_CALL) || (desc != mPrimaryOutput)) {
@@ -718,19 +735,22 @@ void AudioPolicyManagerCustom::setForceUse(audio_policy_force_use_t usage,
 
 }
 
-status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDesc1,
+status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDesc,
                                             audio_stream_type_t stream,
                                             bool forceDeviceUpdate)
 {
+    if (stream < 0 || stream >= AUDIO_STREAM_CNT) {
+        ALOGW("stopSource() invalid stream %d", stream);
+        return INVALID_OPERATION;
+    }
     // always handle stream stop, check which stream type is stopping
-    const sp<SwAudioOutputDescriptor> outputDesc = (SwAudioOutputDescriptor *) outputDesc1.get();
     handleEventForBeacon(stream == AUDIO_STREAM_TTS ? STOPPING_BEACON : STOPPING_OUTPUT);
 
     // handle special case for sonification while in call
     if (isInCall() && (outputDesc->mRefCount[stream] == 1)) {
         if (outputDesc->isDuplicated()) {
-            handleIncallSonification(stream, false, false, outputDesc->mOutput1->mIoHandle);
-            handleIncallSonification(stream, false, false, outputDesc->mOutput2->mIoHandle);
+            handleIncallSonification(stream, false, false, outputDesc->subOutput1()->mIoHandle);
+            handleIncallSonification(stream, false, false, outputDesc->subOutput2()->mIoHandle);
         }
         handleIncallSonification(stream, false, false, outputDesc->mIoHandle);
     }
@@ -742,6 +762,7 @@ status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDe
         // store time at which the stream was stopped - see isStreamActive()
         if (outputDesc->mRefCount[stream] == 0 || forceDeviceUpdate) {
             outputDesc->mStopTime[stream] = systemTime();
+            audio_devices_t prevDevice = outputDesc->device();
             audio_devices_t newDevice = getNewOutputDevice(outputDesc, false /*fromCache*/);
             // delay the device switch by twice the latency because stopOutput() is executed when
             // the track stop() command is received and at that time the audio track buffer can
@@ -761,10 +782,16 @@ status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDe
                         (newDevice != desc->device())) {
                         audio_devices_t dev = getNewOutputDevice(mOutputs.valueFor(curOutput), false
  /*fromCache*/);
+                        uint32_t delayMs;
+                        if (dev == prevDevice) {
+                            delayMs = 0;
+                        } else {
+                            delayMs = outputDesc->latency()*2;
+                        }
                         setOutputDevice(desc,
                                     dev,
                                     true,
-                                    outputDesc->latency()*2);
+                                    delayMs);
                 }
             }
             // update the outputs if stopping one with a stream that can affect notification routing
@@ -776,14 +803,18 @@ status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDe
         return INVALID_OPERATION;
     }
 }
-status_t AudioPolicyManagerCustom::startSource(sp<AudioOutputDescriptor> outputDesc1,
+status_t AudioPolicyManagerCustom::startSource(sp<AudioOutputDescriptor> outputDesc,
                                              audio_stream_type_t stream,
                                              audio_devices_t device,
                                              uint32_t *delayMs)
 {
     // cannot start playback of STREAM_TTS if any other output is being used
     uint32_t beaconMuteLatency = 0;
-    const sp<SwAudioOutputDescriptor> outputDesc = (SwAudioOutputDescriptor *) outputDesc1.get();
+
+    if (stream < 0 || stream >= AUDIO_STREAM_CNT) {
+        ALOGW("startSource() invalid stream %d", stream);
+        return INVALID_OPERATION;
+    }
 
     *delayMs = 0;
     if (stream == AUDIO_STREAM_TTS) {
@@ -928,12 +959,14 @@ void AudioPolicyManagerCustom::handleNotificationRoutingForStream(audio_stream_t
 }
 status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
                                                    int index,
-                                                   const sp<AudioOutputDescriptor>& outputDesc1,
+                                                   const sp<AudioOutputDescriptor>& outputDesc,
                                                    audio_devices_t device,
                                                    int delayMs, bool force)
 {
-    const sp<SwAudioOutputDescriptor> outputDesc = (SwAudioOutputDescriptor *) outputDesc1.get();
-
+    if (stream < 0 || stream >= AUDIO_STREAM_CNT) {
+        ALOGW("checkAndSetVolume() invalid stream %d", stream);
+        return INVALID_OPERATION;
+    }
     // do not change actual stream volume if the stream is muted
     if (outputDesc->mMuteCount[stream] != 0) {
         ALOGVV("checkAndSetVolume() stream %d muted count %d",
@@ -976,6 +1009,13 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
             mpClientInterface->setVoiceVolume(voiceVolume, delayMs);
             mLastVoiceVolume = voiceVolume;
         }
+#ifdef FM_POWER_OPT
+    } else if (stream == AUDIO_STREAM_MUSIC && hasPrimaryOutput() &&
+               outputDesc == mPrimaryOutput) {
+        AudioParameter param = AudioParameter();
+        param.addFloat(String8("fm_volume"), Volume::DbToAmpl(volumeDb));
+        mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString(), delayMs);
+#endif /* FM_POWER_OPT end */
     }
 
     return NO_ERROR;

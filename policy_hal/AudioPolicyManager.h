@@ -88,7 +88,7 @@ protected:
                              audio_stream_type_t stream,
                              audio_devices_t device,
                              uint32_t *delayMs);
-        status_t stopSource(sp<AudioOutputDescriptor> outputDesc,
+         status_t stopSource(sp<AudioOutputDescriptor> outputDesc,
                             audio_stream_type_t stream,
                             bool forceDeviceUpdate);
 

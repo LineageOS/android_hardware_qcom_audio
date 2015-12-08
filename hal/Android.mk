@@ -50,8 +50,8 @@ ifneq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),false)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FM)),true)
-    LOCAL_CFLAGS += -DFM_ENABLED
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FM_POWER_OPT)),true)
+    LOCAL_CFLAGS += -DFM_POWER_OPT
     LOCAL_SRC_FILES += audio_extn/fm.c
 endif
 
