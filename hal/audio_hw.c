@@ -65,9 +65,13 @@
 #define MIN_CHANNEL_COUNT                1
 #define DEFAULT_CHANNEL_COUNT            2
 
+#ifndef MAX_TARGET_SPECIFIC_CHANNEL_CNT
+#define MAX_CHANNEL_COUNT 1
+#else
 #define MAX_CHANNEL_COUNT atoi(XSTR(MAX_TARGET_SPECIFIC_CHANNEL_CNT))
 #define XSTR(x) STR(x)
 #define STR(x) #x
+#endif
 
 static unsigned int configured_low_latency_capture_period_size =
         LOW_LATENCY_CAPTURE_PERIOD_SIZE;
@@ -639,7 +643,8 @@ int select_devices(struct audio_device *adev,
                                             usecase->stream.out->devices);
                 if (usecase->stream.out == adev->primary_output &&
                         adev->active_input &&
-                        adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
+                        (adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
+                            adev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
                         out_snd_device != usecase->out_snd_device) {
                     select_devices(adev, adev->active_input->usecase);
                 }
@@ -649,7 +654,9 @@ int select_devices(struct audio_device *adev,
             out_snd_device = SND_DEVICE_NONE;
             if (in_snd_device == SND_DEVICE_NONE) {
                 audio_devices_t out_device = AUDIO_DEVICE_NONE;
-                if (adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
+                if (adev->active_input &&
+                        (adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
+                            adev->mode == AUDIO_MODE_IN_COMMUNICATION)) {
                     platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
                     if (usecase->id == USECASE_AUDIO_RECORD_AFE_PROXY) {
                         out_device = AUDIO_DEVICE_OUT_TELEPHONY_TX;
@@ -1239,7 +1246,7 @@ static int check_input_parameters(uint32_t sample_rate,
     }
 
     if ((channel_count < MIN_CHANNEL_COUNT) || (channel_count > MAX_CHANNEL_COUNT)) {
-        ALOGE("%s: unsupported channel count (%d) passed  Min / Max (%d\%d)", __func__,
+        ALOGE("%s: unsupported channel count (%d) passed  Min / Max (%d / %d)", __func__,
                channel_count, MIN_CHANNEL_COUNT, MAX_CHANNEL_COUNT);
         return -EINVAL;
     }
@@ -2054,7 +2061,8 @@ static int add_remove_audio_effect(const struct audio_stream *stream,
 
     lock_input_stream(in);
     pthread_mutex_lock(&in->dev->lock);
-    if ((in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) &&
+    if ((in->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
+            adev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
             in->enable_aec != enable &&
             (memcmp(&desc.type, FX_IID_AEC, sizeof(effect_uuid_t)) == 0)) {
         in->enable_aec = enable;

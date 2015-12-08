@@ -94,6 +94,7 @@ void audio_extn_perf_lock_release(void)
 {
     if (perf_lock_rel && perf_lock_handle) {
         perf_lock_rel(perf_lock_handle);
+        perf_lock_handle = 0;
         ALOGV("%s: Perf lock released", __func__);
     } else {
         ALOGE("%s: Perf lock release error", __func__);
