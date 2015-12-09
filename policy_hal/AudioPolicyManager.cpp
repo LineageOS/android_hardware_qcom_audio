@@ -397,7 +397,6 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
 
     char propValue[PROPERTY_VALUE_MAX];
     bool pcmOffload = false;
-#ifdef PCM_OFFLOAD_ENABLED
     if ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM_OFFLOAD) {
         bool prop_enabled = false;
         if ((AUDIO_FORMAT_PCM_16_BIT_OFFLOAD == offloadInfo.format) &&
@@ -405,12 +404,10 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
             prop_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
         }
 
-#ifdef PCM_OFFLOAD_ENABLED_24
         if ((AUDIO_FORMAT_PCM_24_BIT_OFFLOAD == offloadInfo.format) &&
                property_get("audio.offload.pcm.24bit.enable", propValue, NULL)) {
             prop_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
         }
-#endif
 
         if (prop_enabled) {
             ALOGI("PCM offload property is enabled");
@@ -422,7 +419,6 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
             return false;
         }
     }
-#endif
     if (!pcmOffload) {
 
         bool compressedOffloadDisabled = property_get_bool("audio.offload.compress.disable", false);
