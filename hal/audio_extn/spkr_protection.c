@@ -780,7 +780,11 @@ static void* spkr_calibration_thread()
                                     break;
                                 }
                                 t0_spk_prior = t0_spk_1;
+                                pthread_mutex_unlock(&adev->lock);
                                 sleep(1);
+                                pthread_mutex_lock(&adev->lock);
+                                if (is_speaker_in_use(&sec))
+                                    break;
                             } else {
                                ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
                                break;
@@ -822,7 +826,11 @@ static void* spkr_calibration_thread()
                                     break;
                                 }
                                 t0_spk_prior = t0_spk_2;
+                                pthread_mutex_unlock(&adev->lock);
                                 sleep(1);
+                                pthread_mutex_lock(&adev->lock);
+                                if (is_speaker_in_use(&sec))
+                                    break;
                             } else {
                                ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
                                break;
