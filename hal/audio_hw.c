@@ -2105,10 +2105,10 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
         value[0] = '\0';
         if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) {
             ALOGV("in direct_pcm");
-            strlcat(value, "true", strlen("true"));
+            strlcat(value, "true", sizeof(value ));
         } else {
             ALOGV("not in direct_pcm");
-            strlcat(value, "false", strlen("false"));
+            strlcat(value, "false", sizeof(value));
         }
         str_parms_add_str(reply, "is_direct_pcm_track", value);
         str = str_parms_to_str(reply);
