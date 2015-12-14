@@ -1345,9 +1345,14 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
 #ifdef FM_POWER_OPT
     } else if (stream == AUDIO_STREAM_MUSIC && hasPrimaryOutput() &&
                outputDesc == mPrimaryOutput && mFMIsActive) {
-        AudioParameter param = AudioParameter();
-        param.addFloat(String8("fm_volume"), Volume::DbToAmpl(volumeDb));
-        mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString(), delayMs);
+        /* Avoid unnecessary set_parameter calls as it puts the primary
+           outputs FastMixer in HOT_IDLE leading to breaks in audio */
+        if (volumeDb != mPrevFMVolumeDb) {
+            mPrevFMVolumeDb = volumeDb;
+            AudioParameter param = AudioParameter();
+            param.addFloat(String8("fm_volume"), Volume::DbToAmpl(volumeDb));
+            mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString(), delayMs);
+        }
 #endif /* FM_POWER_OPT end */
     }
 
