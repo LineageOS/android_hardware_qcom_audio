@@ -137,6 +137,7 @@ private:
 #ifdef VOICE_CONCURRENCY
         int mvoice_call_state;
 #endif
+        float mPrevFMVolumeDb;
 };
 
 };
