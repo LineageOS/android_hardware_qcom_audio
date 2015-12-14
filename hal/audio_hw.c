@@ -450,7 +450,7 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_BUSY);
     audio_extn_utils_send_app_type_cfg(adev, usecase);
     audio_extn_utils_send_audio_calibration(adev, usecase);
-    strcpy(mixer_path, use_case_table[usecase->id]);
+    strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
     platform_add_backend_name(mixer_path, snd_device, usecase);
     ALOGD("%s: apply mixer and update path: %s", __func__, mixer_path);
     audio_route_apply_and_update_path(adev->audio_route, mixer_path);
@@ -472,7 +472,7 @@ int disable_audio_route(struct audio_device *adev,
         snd_device = usecase->in_snd_device;
     else
         snd_device = usecase->out_snd_device;
-    strcpy(mixer_path, use_case_table[usecase->id]);
+    strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
     platform_add_backend_name(mixer_path, snd_device, usecase);
     ALOGD("%s: reset and update mixer path: %s", __func__, mixer_path);
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
@@ -516,11 +516,10 @@ int enable_snd_device(struct audio_device *adev,
     if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
        audio_extn_usb_start_capture(adev);
 
-    if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
-         snd_device == SND_DEVICE_OUT_SPEAKER_VBAT ||
-         snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
-         snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
-         audio_extn_spkr_prot_is_enabled()) {
+	   if ((snd_device == SND_DEVICE_OUT_SPEAKER || snd_device == SND_DEVICE_OUT_SPEAKER_WSA ||
+        snd_device == SND_DEVICE_OUT_SPEAKER_VBAT || snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
+        audio_extn_spkr_prot_is_enabled()) {
        if (audio_extn_spkr_prot_get_acdb_id(snd_device) < 0) {
            adev->snd_dev_ref_cnt[snd_device]--;
            return -EINVAL;
@@ -585,12 +584,10 @@ int disable_snd_device(struct audio_device *adev,
         /* exit usb capture thread */
         if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
             audio_extn_usb_stop_capture();
-
-        if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
-             snd_device == SND_DEVICE_OUT_SPEAKER_VBAT ||
-             snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
-             snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
-             audio_extn_spkr_prot_is_enabled()) {
+        if ((snd_device == SND_DEVICE_OUT_SPEAKER || snd_device == SND_DEVICE_OUT_SPEAKER_WSA ||
+            snd_device == SND_DEVICE_OUT_SPEAKER_VBAT || snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
+            snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
+            audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing(snd_device);
         } else {
             audio_route_reset_and_update_path(adev->audio_route, device_name);
@@ -1014,6 +1011,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                                 usecase->stream.out->format,
                                                 usecase->stream.out->sample_rate,
                                                 usecase->stream.out->bit_width,
+                                                usecase->stream.out->channel_mask,
                                                 &usecase->stream.out->app_type_cfg);
         ALOGI("%s Selected apptype: %d", __func__, usecase->stream.out->app_type_cfg.app_type);
     }
@@ -2079,9 +2077,9 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
             for (j = 0; j < ARRAY_SIZE(out_channels_name_to_enum_table); j++) {
                 if (out_channels_name_to_enum_table[j].value == out->supported_channel_masks[i]) {
                     if (!first) {
-                        strcat(value, "|");
+                        strlcat(value, "|", sizeof(value));
                     }
-                    strcat(value, out_channels_name_to_enum_table[j].name);
+                    strlcat(value, out_channels_name_to_enum_table[j].name, sizeof(value));
                     first = false;
                     break;
                 }
@@ -2123,7 +2121,7 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
             for (j = 0; j < ARRAY_SIZE(out_formats_name_to_enum_table); j++) {
                 if (out_formats_name_to_enum_table[j].value == out->supported_formats[i]) {
                     if (!first) {
-                        strcat(value, "|");
+                        strlcat(value, "|", sizeof(value));
                     }
                     strlcat(value, out_formats_name_to_enum_table[j].name, sizeof(value));
                     first = false;
@@ -3171,7 +3169,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     audio_extn_utils_update_stream_app_type_cfg(adev->platform,
                                                 &adev->streams_output_cfg_list,
                                                 devices, flags, format, out->sample_rate,
-                                                out->bit_width, &out->app_type_cfg);
+                                                out->bit_width, out->channel_mask,
+                                                &out->app_type_cfg);
     if ((out->usecase == USECASE_AUDIO_PLAYBACK_PRIMARY) ||
         (flags & AUDIO_OUTPUT_FLAG_PRIMARY)) {
         /* Ensure the default output is not selected twice */

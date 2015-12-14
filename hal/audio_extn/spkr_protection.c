@@ -197,8 +197,6 @@ int get_tzn(const char *sensor_name)
         ALOGE("Unable to open %s\n", THERMAL_SYSFS);
         return found;
     }
-    if (!sensor_name)
-        return found;
 
     while ((tdirent = readdir(tdir))) {
         char buf[50];
@@ -212,12 +210,11 @@ int get_tzn(const char *sensor_name)
             if (strcmp(tzdirent->d_name, "type"))
                 continue;
             snprintf(name, MAX_PATH, TZ_TYPE, tzn);
-            ALOGV("Opening %s\n", name);
+            ALOGD("Opening %s\n", name);
             read_line_from_file(name, buf, sizeof(buf));
             if (strlen(buf) > 0)
                 buf[strlen(buf) - 1] = '\0';
             if (!strcmp(buf, sensor_name)) {
-                ALOGD(" spkr tz name found, %s\n", name);
                 found = 1;
                 break;
             }
@@ -1070,16 +1067,20 @@ int audio_extn_spkr_prot_get_acdb_id(snd_device_t snd_device)
 
     switch(snd_device) {
     case SND_DEVICE_OUT_SPEAKER:
+    case SND_DEVICE_OUT_SPEAKER_WSA:
         acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED);
-        break;
-    case SND_DEVICE_OUT_VOICE_SPEAKER:
-        acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED);
         break;
     case SND_DEVICE_OUT_SPEAKER_VBAT:
         acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT);
         break;
     case SND_DEVICE_OUT_VOICE_SPEAKER_VBAT:
         acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT);
+        break;
+    case SND_DEVICE_OUT_VOICE_SPEAKER:
+
+    case SND_DEVICE_OUT_VOICE_SPEAKER_WSA:
+
+        acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED);
         break;
     default:
         acdb_id = -EINVAL;
@@ -1095,13 +1096,15 @@ int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device)
 
     switch(snd_device) {
     case SND_DEVICE_OUT_SPEAKER:
+    case SND_DEVICE_OUT_SPEAKER_WSA:
         return SND_DEVICE_OUT_SPEAKER_PROTECTED;
-    case SND_DEVICE_OUT_VOICE_SPEAKER:
-        return SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED;
     case SND_DEVICE_OUT_SPEAKER_VBAT:
         return SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT;
     case SND_DEVICE_OUT_VOICE_SPEAKER_VBAT:
         return SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT;
+    case SND_DEVICE_OUT_VOICE_SPEAKER:
+    case SND_DEVICE_OUT_VOICE_SPEAKER_WSA:
+        return SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED;
     default:
         return snd_device;
     }
