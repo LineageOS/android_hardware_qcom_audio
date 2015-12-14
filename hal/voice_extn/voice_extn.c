@@ -430,15 +430,12 @@ int voice_extn_stop_call(struct audio_device *adev)
      * set routing with device BT A2DP profile. Hence end all voice calls when
      * set_mode(AUDIO_MODE_NORMAL) before BT A2DP profile is selected.
      */
-    if (adev->mode == AUDIO_MODE_NORMAL) {
-        ALOGD("%s: end all calls", __func__);
-        for (i = 0; i < MAX_VOICE_SESSIONS; i++) {
-            adev->voice.session[i].state.new = CALL_INACTIVE;
-        }
-
-        ret = update_calls(adev);
+    ALOGD("%s: end all calls", __func__);
+    for (i = 0; i < MAX_VOICE_SESSIONS; i++) {
+        adev->voice.session[i].state.new = CALL_INACTIVE;
     }
 
+    ret = update_calls(adev);
     return ret;
 }
 
