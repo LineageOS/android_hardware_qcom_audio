@@ -127,9 +127,9 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_HE_V1),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_HE_V2),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_ADTS),
-    STRING_TO_ENUM(AUDIO_FORMAT_AAC_SUB_LC),
-    STRING_TO_ENUM(AUDIO_FORMAT_AAC_SUB_HE_V1),
-    STRING_TO_ENUM(AUDIO_FORMAT_AAC_SUB_HE_V2),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_ADTS_LC),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_ADTS_HE_V1),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_ADTS_HE_V2),
 #endif
 };
 
@@ -158,14 +158,15 @@ static uint32_t string_to_enum(const struct string_to_enum *table, size_t size,
 static audio_output_flags_t parse_flag_names(char *name)
 {
     uint32_t flag = 0;
-    char *flag_name = strtok(name, "|");
+    char *last_r;
+    char *flag_name = strtok_r(name, "|", &last_r);
     while (flag_name != NULL) {
         if (strlen(flag_name) != 0) {
             flag |= string_to_enum(s_flag_name_to_enum_table,
                                ARRAY_SIZE(s_flag_name_to_enum_table),
                                flag_name);
         }
-        flag_name = strtok(NULL, "|");
+        flag_name = strtok_r(NULL, "|", &last_r);
     }
 
     ALOGV("parse_flag_names: flag - %d", flag);
@@ -175,7 +176,8 @@ static audio_output_flags_t parse_flag_names(char *name)
 static void parse_format_names(char *name, struct streams_output_cfg *so_info)
 {
     struct stream_format *sf_info = NULL;
-    char *str = strtok(name, "|");
+    char *last_r;
+    char *str = strtok_r(name, "|", &last_r);
 
     if (str != NULL && strcmp(str, DYNAMIC_VALUE_TAG) == 0)
         return;
@@ -193,7 +195,7 @@ static void parse_format_names(char *name, struct streams_output_cfg *so_info)
             sf_info->format = format;
             list_add_tail(&so_info->format_list, &sf_info->list);
         }
-        str = strtok(NULL, "|");
+        str = strtok_r(NULL, "|", &last_r);
     }
 }
 
@@ -201,7 +203,8 @@ static void parse_sample_rate_names(char *name, struct streams_output_cfg *so_in
 {
     struct stream_sample_rate *ss_info = NULL;
     uint32_t sample_rate = 48000;
-    char *str = strtok(name, "|");
+    char *last_r;
+    char *str = strtok_r(name, "|", &last_r);
 
     if (str != NULL && 0 == strcmp(str, DYNAMIC_VALUE_TAG))
         return;
@@ -212,20 +215,22 @@ static void parse_sample_rate_names(char *name, struct streams_output_cfg *so_in
         ALOGV("%s: sample_rate - %d", __func__, sample_rate);
         if (0 != sample_rate) {
             ss_info = (struct stream_sample_rate *)calloc(1, sizeof(struct stream_sample_rate));
-            if (ss_info == NULL)
-                break; /* return whatever was parsed */
-
+            if (!ss_info) {
+                ALOGE("%s: memory allocation failure", __func__);
+                return;
+            }
             ss_info->sample_rate = sample_rate;
             list_add_tail(&so_info->sample_rate_list, &ss_info->list);
         }
-        str = strtok(NULL, "|");
+        str = strtok_r(NULL, "|", &last_r);
     }
 }
 
 static int parse_bit_width_names(char *name)
 {
     int bit_width = 16;
-    char *str = strtok(name, "|");
+    char *last_r;
+    char *str = strtok_r(name, "|", &last_r);
 
     if (str != NULL && strcmp(str, DYNAMIC_VALUE_TAG))
         bit_width = (int)strtol(str, (char **)NULL, 10);
@@ -237,7 +242,8 @@ static int parse_bit_width_names(char *name)
 static int parse_app_type_names(void *platform, char *name)
 {
     int app_type = platform_get_default_app_type(platform);
-    char *str = strtok(name, "|");
+    char *last_r;
+    char *str = strtok_r(name, "|", &last_r);
 
     if (str != NULL && strcmp(str, DYNAMIC_VALUE_TAG))
         app_type = (int)strtol(str, (char **)NULL, 10);
@@ -477,12 +483,14 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
                                   audio_format_t format,
                                   uint32_t sample_rate,
                                   uint32_t bit_width,
+                                  audio_channel_mask_t channel_mask,
                                   struct stream_app_type_cfg *app_type_cfg)
 {
     struct listnode *node_i, *node_j, *node_k;
     struct streams_output_cfg *so_info;
     struct stream_format *sf_info;
     struct stream_sample_rate *ss_info;
+    char value[PROPERTY_VALUE_MAX] = {0};
 
     if ((24 == bit_width) &&
         (devices & AUDIO_DEVICE_OUT_SPEAKER)) {
@@ -493,6 +501,16 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
         ALOGI("%s Allowing 24-bit playback on speaker ONLY at default sampling rate", __func__);
     }
 
+    property_get("audio.playback.mch.downsample",value,"");
+    if (!strncmp("true", value, sizeof("true"))) {
+        if ((popcount(channel_mask) > 2) &&
+                (sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
+                !(flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))  {
+                    sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+                    ALOGD("%s: MCH session defaulting sample rate to %d",
+                               __func__, sample_rate);
+        }
+    }
     ALOGV("%s: flags: %x, format: %x sample_rate %d",
            __func__, flags, format, sample_rate);
     list_for_each(node_i, streams_output_cfg_list) {
@@ -533,6 +551,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
     struct mixer_ctl *ctl;
     int pcm_device_id, acdb_dev_id, snd_device = usecase->out_snd_device;
     int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+    char value[PROPERTY_VALUE_MAX] = {0};
 
     ALOGV("%s", __func__);
 
@@ -576,47 +595,32 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
         rc = -EINVAL;
         goto exit_send_app_type_cfg;
     }
-
-    if ((usecase->type == PCM_PLAYBACK) && (usecase->stream.out == NULL)) {
-        sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        app_type_cfg[len++] = platform_get_default_app_type_v2(adev->platform, usecase->type);
-        app_type_cfg[len++] = acdb_dev_id;
-        app_type_cfg[len++] = sample_rate;
-        ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
-              __func__, platform_get_default_app_type_v2(adev->platform, usecase->type),
-              acdb_dev_id, sample_rate);
-    } else if (usecase->type == PCM_PLAYBACK) {
-        if ((24 == usecase->stream.out->bit_width) &&
-            (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
-            usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        } else if ((snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
-            usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
-            (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
-            usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        }
-        sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
-
-        app_type_cfg[len++] = usecase->stream.out->app_type_cfg.app_type;
-        app_type_cfg[len++] = acdb_dev_id;
-        if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
-            (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC))
-#ifdef HDMI_PASSTHROUGH_ENABLED
-            && (out->flags  & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)
-#endif
-            )
-            app_type_cfg[len++] = sample_rate * 4;
-        else
-            app_type_cfg[len++] = sample_rate;
-        ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
-              __func__, usecase->stream.out->app_type_cfg.app_type, acdb_dev_id, sample_rate);
-    } else if (usecase->type == PCM_CAPTURE) {
-        app_type_cfg[len++] = platform_get_default_app_type_v2(adev->platform, usecase->type);
-        app_type_cfg[len++] = acdb_dev_id;
-        app_type_cfg[len++] = sample_rate;
-        ALOGI("%s CAPTURE app_type %d, acdb_dev_id %d, sample_rate %d",
-           __func__, platform_get_default_app_type_v2(adev->platform, usecase->type),
-           acdb_dev_id, sample_rate);
+    if ((24 == usecase->stream.out->bit_width) &&
+        (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+        usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+    } else if ((snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
+        usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
+        (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
+        usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
     }
+    sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
+
+    property_get("audio.playback.mch.downsample",value,"");
+    if (!strncmp("true", value, sizeof("true"))) {
+        if ((popcount(usecase->stream.out->channel_mask) > 2) &&
+               (usecase->stream.out->app_type_cfg.sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
+               !(usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
+           sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    }
+
+    app_type_cfg[len++] = usecase->stream.out->app_type_cfg.app_type;
+    app_type_cfg[len++] = acdb_dev_id;
+    if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
+        (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC)) &&
+        (usecase->stream.out->flags  & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
+        app_type_cfg[len++] = sample_rate * 4;
+    else
+        app_type_cfg[len++] = sample_rate;
     mixer_ctl_set_array(ctl, app_type_cfg, len);
     rc = 0;
 exit_send_app_type_cfg:
@@ -656,7 +660,7 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
                      audio_extn_get_spkr_prot_snd_device(snd_device) : snd_device;
         platform_send_audio_calibration(adev->platform, usecase,
                                         out->app_type_cfg.app_type,
-                                        out->app_type_cfg.sample_rate);
+                                        usecase->stream.out->app_type_cfg.sample_rate);
     }
     if ((type == PCM_HFP_CALL) || (type == PCM_CAPTURE)) {
         /* when app type is default. the sample rate is not used to send cal */
@@ -875,6 +879,7 @@ void get_lpcm_channel_status(uint32_t sampleRate,
          case 16000:
          case 22050:
              channel_status[3] |= SR_NOTID;
+             break;
          case 24000:
              channel_status[3] |= SR_24000;
              break;

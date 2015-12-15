@@ -703,10 +703,10 @@ bool voice_extn_compress_voip_is_active(struct audio_device *adev)
 bool voice_extn_compress_voip_is_format_supported(audio_format_t format)
 {
     if (format == AUDIO_FORMAT_PCM_16_BIT &&
-	voice_extn_compress_voip_pcm_prop_check())
-	return true;
+       voice_extn_compress_voip_pcm_prop_check())
+       return true;
     else
-	return false;
+       return false;
 }
 
 bool voice_extn_compress_voip_is_config_supported(struct audio_config *config)

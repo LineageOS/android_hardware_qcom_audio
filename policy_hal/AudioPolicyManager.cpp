@@ -680,7 +680,6 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
 
     sp<SwAudioOutputDescriptor> hwOutputDesc = mPrimaryOutput;
 #ifdef VOICE_CONCURRENCY
-    int voice_call_state = 0;
     char propValue[PROPERTY_VALUE_MAX];
     bool prop_playback_enabled = false, prop_rec_enabled=false, prop_voip_enabled = false;
 
@@ -696,19 +695,10 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
         prop_voip_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
     }
 
-    bool mode_in_call = (AUDIO_MODE_IN_CALL != oldState) && (AUDIO_MODE_IN_CALL == state);
-    //query if it is a actual voice call initiated by telephony
-    if (mode_in_call) {
-        String8 valueStr = mpClientInterface->getParameters((audio_io_handle_t)0, String8("in_call"));
-        AudioParameter result = AudioParameter(valueStr);
-        if (result.getInt(String8("in_call"), voice_call_state) == NO_ERROR)
-            ALOGD("voice_conc:SetPhoneState: Voice call state = %d", voice_call_state);
-    }
-
-    if (mode_in_call && voice_call_state && !mvoice_call_state) {
+    if ((AUDIO_MODE_IN_CALL != oldState) && (AUDIO_MODE_IN_CALL == state)) {
         ALOGD("voice_conc:Entering to call mode oldState :: %d state::%d ",
             oldState, state);
-        mvoice_call_state = voice_call_state;
+        mvoice_call_state = state;
         if (prop_rec_enabled) {
             //Close all active inputs
             audio_io_handle_t activeInput = mInputs.getActiveInput();
@@ -2003,6 +1993,32 @@ status_t AudioPolicyManagerCustom::stopInput(audio_io_handle_t input,
     }
 #endif
     return status;
+}
+
+void AudioPolicyManagerCustom::closeAllInputs() {
+    bool patchRemoved = false;
+
+    for(size_t input_index = mInputs.size(); input_index > 0; input_index--) {
+        sp<AudioInputDescriptor> inputDesc = mInputs.valueAt(input_index-1);
+        ssize_t patch_index = mAudioPatches.indexOfKey(inputDesc->mPatchHandle);
+        if (patch_index >= 0) {
+            sp<AudioPatch> patchDesc = mAudioPatches.valueAt(patch_index);
+            status_t status = mpClientInterface->releaseAudioPatch(patchDesc->mAfPatchHandle, 0);
+            mAudioPatches.removeItemsAt(patch_index);
+            patchRemoved = true;
+        }
+        if ((inputDesc->mIsSoundTrigger) && (mInputs.size() == 1)) {
+            ALOGD("Do not close sound trigger input handle");
+        } else {
+            mpClientInterface->closeInput(mInputs.keyAt(input_index-1));
+            mInputs.removeItem(mInputs.keyAt(input_index-1));
+        }
+    }
+    nextAudioPortGeneration();
+
+    if (patchRemoved) {
+        mpClientInterface->onAudioPatchListUpdate();
+    }
 }
 
 AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *clientInterface)

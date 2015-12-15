@@ -423,6 +423,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC] = "quad-mic",
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = "quad-mic",
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = "quad-mic",
+    [SND_DEVICE_IN_THREE_MIC] = "three-mic",
 };
 
 // Platform specific backend bit width table
@@ -527,6 +528,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC] = 126,
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = 127,
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = 129,
+    [SND_DEVICE_IN_THREE_MIC] = 46,
 };
 
 struct name_to_index {
@@ -2675,6 +2677,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         goto exit;
     }
 
+    if (adev->active_input && (audio_extn_ssr_get_stream() == adev->active_input))
+        snd_device = SND_DEVICE_IN_THREE_MIC;
 
     if (snd_device != SND_DEVICE_NONE) {
         goto exit;
@@ -2684,7 +2688,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             !(in_device & AUDIO_DEVICE_IN_VOICE_CALL) &&
             !(in_device & AUDIO_DEVICE_IN_COMMUNICATION)) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
-            if (audio_extn_ssr_get_enabled() && channel_count == 6)
+            if (adev->active_input && (audio_extn_ssr_get_stream() == adev->active_input))
                 snd_device = SND_DEVICE_IN_QUAD_MIC;
             else if (my_data->fluence_type & (FLUENCE_DUAL_MIC | FLUENCE_QUAD_MIC) &&
                     channel_count == 2)
@@ -3148,6 +3152,11 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         bool status = false;
         str_parms_del(parms, AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE);
         event_name = strtok_r(value, ",", &status_str);
+        if (!event_name) {
+            ret = -EINVAL;
+            ALOGE("%s: event_name is NULL", __func__);
+            goto done;
+        }
         ALOGV("%s: recieved update of external audio device %s %s",
                          __func__,
                          event_name, status_str);
@@ -4027,7 +4036,7 @@ int platform_set_channel_allocation(void *platform, int channel_alloc)
 int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd_id)
 {
     struct mixer_ctl *ctl;
-    char mixer_ctl_name[44]; // max length of name is 44 as defined
+    char mixer_ctl_name[44] = {0}; // max length of name is 44 as defined
     int ret;
     unsigned int i;
     int set_values[8] = {0};
@@ -4393,3 +4402,5 @@ int platform_set_audio_device_interface(const char *device_name, const char *int
 done:
     return ret;
 }
+
+

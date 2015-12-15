@@ -230,6 +230,8 @@ void *platform_init(struct audio_device *adev)
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data;
     const char *snd_card_name;
+    const char *mixer_ctl_name = "Set HPX ActiveBe";
+    struct mixer_ctl *ctl = NULL;
 
     adev->mixer = mixer_open(MIXER_CARD);
 
@@ -338,6 +340,13 @@ void *platform_init(struct audio_device *adev)
         } else {
             my_data->csd_client_init();
         }
+    }
+
+    /* Configure active back end for HPX*/
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (ctl) {
+        ALOGI(" sending HPX Active BE information ");
+        mixer_ctl_set_value(ctl, 0, false);
     }
 
     return my_data;
