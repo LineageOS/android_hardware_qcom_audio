@@ -62,7 +62,8 @@ int virtualizer_set_strength(virtualizer_context_t *context, uint32_t strength)
      *  For better user experience, explicitly disable virtualizer module
      *  when strength is 0.
      */
-    offload_virtualizer_set_enable_flag(&(context->offload_virt),
+    if (context->enabled_by_client)
+        offload_virtualizer_set_enable_flag(&(context->offload_virt),
                                         ((strength > 0) && !(context->temp_disabled)) ?
                                         true : false);
     offload_virtualizer_set_strength(&(context->offload_virt), strength);
@@ -134,8 +135,7 @@ int virtualizer_force_virtualization_mode(virtualizer_context_t *context,
     virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)context;
     int status = 0;
     bool use_virt = false;
-    int is_virt_enabled =
-        offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt));
+    int is_virt_enabled = virt_ctxt->enabled_by_client;
 
     ALOGV("%s: ctxt %p, forcedDev=0x%x enabled=%d tmpDisabled=%d", __func__, virt_ctxt,
             forced_device, is_virt_enabled, virt_ctxt->temp_disabled);
@@ -387,7 +387,7 @@ int virtualizer_set_device(effect_context_t *context, uint32_t device)
         // default case unless configuration is forced
         if (virtualizer_is_device_supported(device) == false) {
             if (!virt_ctxt->temp_disabled) {
-                if (effect_is_active(&virt_ctxt->common)) {
+                if (effect_is_active(&virt_ctxt->common) && virt_ctxt->enabled_by_client) {
                     offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), false);
                     if (virt_ctxt->ctl)
                         offload_virtualizer_send_params(virt_ctxt->ctl,
@@ -399,7 +399,7 @@ int virtualizer_set_device(effect_context_t *context, uint32_t device)
             }
         } else {
             if (virt_ctxt->temp_disabled) {
-                if (effect_is_active(&virt_ctxt->common)) {
+                if (effect_is_active(&virt_ctxt->common) && virt_ctxt->enabled_by_client) {
                     offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), true);
                     if (virt_ctxt->ctl)
                         offload_virtualizer_send_params(virt_ctxt->ctl,
@@ -447,6 +447,7 @@ int virtualizer_init(effect_context_t *context)
 
     set_config(context, &context->config);
 
+    virt_ctxt->enabled_by_client = false;
     virt_ctxt->temp_disabled = false;
     virt_ctxt->forced_device = AUDIO_DEVICE_NONE;
     virt_ctxt->device = AUDIO_DEVICE_NONE;
@@ -461,6 +462,7 @@ int virtualizer_enable(effect_context_t *context)
 
     ALOGV("%s: ctxt %p, strength %d", __func__, virt_ctxt, virt_ctxt->strength);
 
+    virt_ctxt->enabled_by_client = true;
     if (!offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt)) &&
         !(virt_ctxt->temp_disabled)) {
         offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), true);
@@ -478,6 +480,8 @@ int virtualizer_disable(effect_context_t *context)
     virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)context;
 
     ALOGV("%s: ctxt %p", __func__, virt_ctxt);
+
+    virt_ctxt->enabled_by_client = false;
     if (offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt))) {
         offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), false);
         if (virt_ctxt->ctl)

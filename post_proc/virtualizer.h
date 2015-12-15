@@ -31,6 +31,7 @@ typedef struct virtualizer_context_s {
 
     // Offload vars
     struct mixer_ctl *ctl;
+    bool enabled_by_client;
     bool temp_disabled;
     audio_devices_t forced_device;
     audio_devices_t device;
