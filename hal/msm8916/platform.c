@@ -795,7 +795,15 @@ static void update_codec_type(const char *snd_card_name) {
          !strncmp(snd_card_name, "msm8976-tashalite-snd-card",
                   sizeof("msm8976-tashalite-snd-card")) ||
          !strncmp(snd_card_name, "msm8976-tasha-skun-snd-card",
-                  sizeof("msm8976-tasha-skun-snd-card")))
+                  sizeof("msm8976-tasha-skun-snd-card"))  ||
+         !strncmp(snd_card_name, "msm8937-tasha-snd-card",
+                  sizeof("msm8937-tasha-snd-card")) ||
+         !strncmp(snd_card_name, "msm8937-tashalite-snd-card",
+                  sizeof("msm8937-tashalite-snd-card"))  ||
+         !strncmp(snd_card_name, "msm8953-tasha-snd-card",
+                  sizeof("msm8953-tasha-snd-card")) ||
+         !strncmp(snd_card_name, "msm8953-tashalite-snd-card",
+                  sizeof("msm8953-tashalite-snd-card")))
      {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          is_external_codec = true;
@@ -1012,6 +1020,49 @@ static void query_platform(const char *snd_card_name,
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
+    } else if (!strncmp(snd_card_name, "msm8937-snd-card-mtp",
+                 sizeof("msm8937-snd-card-mtp"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_MTP,
+                sizeof(MIXER_XML_PATH_MTP));
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+    } else if (!strncmp(snd_card_name, "msm8937-tasha-snd-card",
+                 sizeof("msm8937-tasha-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9335,
+                sizeof(MIXER_XML_PATH_WCD9335));
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+    } else if (!strncmp(snd_card_name, "msm8937-tashalite-snd-card",
+                 sizeof("msm8937-tashalite-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9326,
+               MAX_MIXER_XML_PATH);
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+    } else if (!strncmp(snd_card_name, "msm8953-snd-card-mtp",
+                 sizeof("msm8953-snd-card-mtp"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_MTP,
+                sizeof(MIXER_XML_PATH_MTP));
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+    } else if (!strncmp(snd_card_name, "msm8953-tasha-snd-card",
+                 sizeof("msm8953-tasha-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9335,
+                sizeof(MIXER_XML_PATH_WCD9335));
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+    } else if (!strncmp(snd_card_name, "msm8953-tashalite-snd-card",
+                 sizeof("msm8937-tashalite-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9326,
+               MAX_MIXER_XML_PATH);
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
     } else {
         strlcpy(mixer_xml_path, MIXER_XML_PATH,
                 sizeof(MIXER_XML_PATH));
@@ -1425,11 +1476,29 @@ const char * get_snd_card_name_for_acdb_loader(const char *snd_card_name) {
     // ACDB module loads tasha ACDB files for tasha lite
     if(!strncmp(snd_card_name, "msm8976-tashalite-snd-card",
              sizeof("msm8976-tashalite-snd-card"))) {
-       ALOGD("using tasha ACDB files for tasha-lite");
-       return "msm8976-tasha-snd-card";
-   } else {
-       return snd_card_name;
-   }
+        ALOGD("using tasha ACDB files for tasha-lite");
+        return "msm8976-tasha-snd-card";
+    }
+
+    if(!strncmp(snd_card_name, "msm8952-tashalite-snd-card",
+             sizeof("msm8952-tashalite-snd-card"))) {
+        ALOGD("using tasha ACDB files for tasha-lite");
+        return "msm8952-tasha-snd-card";
+    }
+
+    if(!strncmp(snd_card_name, "msm8937-tashalite-snd-card",
+             sizeof("msm8937-tashalite-snd-card"))) {
+        ALOGD("using tasha ACDB files for tasha-lite");
+        return "msm8937-tasha-snd-card";
+    }
+
+    if(!strncmp(snd_card_name, "msm8953-tashalite-snd-card",
+             sizeof("msm8953-tashalite-snd-card"))) {
+        ALOGD("using tasha ACDB files for tasha-lite");
+        return "msm8953-tasha-snd-card";
+    }
+
+   return snd_card_name;
 }
 
 
@@ -3925,19 +3994,27 @@ int platform_is_external_codec (char *snd_card_name)
 {
 
     if (!strncmp(snd_card_name, "msm8952-tomtom-snd-card",
-        sizeof("msm8952-tomtom-snd-card")) ||
+                  sizeof("msm8952-tomtom-snd-card")) ||
         !strncmp(snd_card_name, "msm8952-tasha-snd-card",
-        sizeof("msm8952-tasha-snd-card")) ||
+                  sizeof("msm8952-tasha-snd-card")) ||
         !strncmp(snd_card_name, "msm8952-tashalite-snd-card",
-        sizeof("msm8952-tashalite-snd-card")) ||
+                  sizeof("msm8952-tashalite-snd-card")) ||
         !strncmp(snd_card_name, "msm8952-tasha-skun-snd-card",
-        sizeof("msm8952-tasha-skun-snd-card")) ||
+                  sizeof("msm8952-tasha-skun-snd-card")) ||
         !strncmp(snd_card_name, "msm8976-tasha-snd-card",
-        sizeof("msm8976-tasha-snd-card")) ||
+                  sizeof("msm8976-tasha-snd-card")) ||
         !strncmp(snd_card_name, "msm8976-tashalite-snd-card",
-        sizeof("msm8976-tashalite-snd-card")) ||
+                  sizeof("msm8976-tashalite-snd-card")) ||
         !strncmp(snd_card_name, "msm8976-tasha-skun-snd-card",
-        sizeof("msm8976-tasha-skun-snd-card")))
+                  sizeof("msm8976-tasha-skun-snd-card")) ||
+        !strncmp(snd_card_name, "msm8937-tasha-snd-card",
+                  sizeof("msm8937-tasha-snd-card")) ||
+         !strncmp(snd_card_name, "msm8937-tashalite-snd-card",
+                  sizeof("msm8937-tashalite-snd-card"))  ||
+         !strncmp(snd_card_name, "msm8953-tasha-snd-card",
+                  sizeof("msm8953-tasha-snd-card")) ||
+         !strncmp(snd_card_name, "msm8953-tashalite-snd-card",
+                  sizeof("msm8953-tashalite-snd-card")))
     {
         /* external codec, for rest/old of the external codecs
            we dont support this funtionality(chaning AFE params)
