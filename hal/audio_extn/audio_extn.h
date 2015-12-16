@@ -396,6 +396,7 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev);
 #define audio_extn_dolby_get_passt_buffer_size(info)                       (0)
 #define audio_extn_dolby_set_passt_volume(out, mute)                       (0)
 #define audio_extn_dolby_set_passt_latency(out, latency)                   (0)
+#define AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH  0x4000
 #else
 int audio_extn_dolby_update_passt_formats(struct audio_device *adev,
                                           struct stream_out *out);
@@ -457,6 +458,7 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
                                   audio_format_t format,
                                   uint32_t sample_rate,
                                   uint32_t bit_width,
+                                  audio_channel_mask_t channel_mask,
                                   struct stream_app_type_cfg *app_type_cfg);
 int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
                                        struct audio_usecase *usecase);

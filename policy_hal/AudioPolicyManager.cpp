@@ -2017,6 +2017,32 @@ status_t AudioPolicyManagerCustom::stopInput(audio_io_handle_t input,
     return status;
 }
 
+void AudioPolicyManagerCustom::closeAllInputs() {
+    bool patchRemoved = false;
+
+    for(size_t input_index = mInputs.size(); input_index > 0; input_index--) {
+        sp<AudioInputDescriptor> inputDesc = mInputs.valueAt(input_index-1);
+        ssize_t patch_index = mAudioPatches.indexOfKey(inputDesc->mPatchHandle);
+        if (patch_index >= 0) {
+            sp<AudioPatch> patchDesc = mAudioPatches.valueAt(patch_index);
+            status_t status = mpClientInterface->releaseAudioPatch(patchDesc->mAfPatchHandle, 0);
+            mAudioPatches.removeItemsAt(patch_index);
+            patchRemoved = true;
+        }
+        if ((inputDesc->mIsSoundTrigger) && (mInputs.size() == 1)) {
+            ALOGD("Do not close sound trigger input handle");
+        } else {
+            mpClientInterface->closeInput(mInputs.keyAt(input_index-1));
+            mInputs.removeItem(mInputs.keyAt(input_index-1));
+        }
+    }
+    nextAudioPortGeneration();
+
+    if (patchRemoved) {
+        mpClientInterface->onAudioPatchListUpdate();
+    }
+}
+
 AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *clientInterface)
     : AudioPolicyManager(clientInterface),
       mHdmiAudioDisabled(false),

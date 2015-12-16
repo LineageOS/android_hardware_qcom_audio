@@ -61,7 +61,7 @@
 #include <sound/audio_effects.h>
 #include <sound/devdep_params.h>
 #include <linux/msm_audio.h>
-
+#include <errno.h>
 #include "effect_api.h"
 
 #ifdef DTS_EAGLE
@@ -111,11 +111,11 @@ int offload_update_mixer_and_effects_ctl(int card, int device_id,
     *mixer = mixer_open(card);
     if (!(*mixer)) {
         ALOGE("Failed to open mixer");
-        ctl = NULL;
+        *ctl = NULL;
         return -EINVAL;
     } else {
         *ctl = mixer_get_ctl_by_name(*mixer, mixer_string);
-        if (!(*ctl)) {
+        if (!*ctl) {
             ALOGE("mixer_get_ctl_by_name failed");
             mixer_close(*mixer);
             *mixer = NULL;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2010 The Android Open Source Project
@@ -609,6 +609,8 @@ void audio_extn_dolby_set_license(struct audio_device *adev)
     property_get("audio.ds1.metainfo.key",value,"0");
 #ifdef DOLBY_ACDB_LICENSE
     key = atoi(value);
+#else
+    key = 0;
 #endif
     ALOGV("%s Setting DS1 License, key:0x%x",__func__, key);
     ret = mixer_ctl_set_value(ctl, 0, key);
