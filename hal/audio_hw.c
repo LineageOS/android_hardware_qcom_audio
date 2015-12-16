@@ -3410,8 +3410,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             struct audio_usecase *usecase;
             ALOGD("Received sound card OFFLINE status");
             set_snd_card_state(adev,SND_CARD_STATE_OFFLINE);
-            //close compress sessions on OFFLINE status
-            close_compress_sessions(adev);
         } else if (strstr(snd_card_status, "ONLINE")) {
             ALOGD("Received sound card ONLINE status");
             set_snd_card_state(adev,SND_CARD_STATE_ONLINE);
