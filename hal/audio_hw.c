@@ -2936,7 +2936,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         } else if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
             out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
             out->config = pcm_config_low_latency;
-        } if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
+        } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
             out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
             out->config = pcm_config_deep_buffer;
         } else {
