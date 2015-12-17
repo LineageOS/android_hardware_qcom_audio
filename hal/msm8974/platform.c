@@ -1072,6 +1072,8 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
     }
     if (send_codec_cal(acdb_loader_get_calibration, fd) < 0)
         ALOGE("%s: Could not send anc cal", __FUNCTION__);
+
+    close(fd);
 }
 
 int platform_acdb_init(void *platform)
