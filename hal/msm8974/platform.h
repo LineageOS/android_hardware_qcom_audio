@@ -237,6 +237,7 @@ enum {
 #endif
 
 #define LIB_CSD_CLIENT "libcsd-client.so"
+#define MIXER_CARD 0
 /* CSD-CLIENT related functions */
 typedef int (*init_t)();
 typedef int (*deinit_t)();
