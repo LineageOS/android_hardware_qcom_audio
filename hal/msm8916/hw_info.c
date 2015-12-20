@@ -266,22 +266,4 @@ void hw_info_deinit(void *hw_info)
 void hw_info_append_hw_type(void *hw_info, snd_device_t snd_device,
                             char *device_name)
 {
-    struct hardware_info *my_data = (struct hardware_info*) hw_info;
-    uint32_t i = 0;
-
-    snd_device_t *snd_devices =
-            (snd_device_t *) my_data->snd_devices;
-
-    if(snd_devices != NULL) {
-        for (i = 0; i <  my_data->num_snd_devices; i++) {
-            if (snd_device == (snd_device_t)snd_devices[i]) {
-                ALOGV("extract dev_extn device %d, extn = %s",
-                        (snd_device_t)snd_devices[i],  my_data->dev_extn);
-                CHECK(strlcat(device_name,  my_data->dev_extn,
-                        DEVICE_NAME_MAX_SIZE) < DEVICE_NAME_MAX_SIZE);
-                break;
-            }
-        }
-    }
-    ALOGD("%s : device_name = %s", __func__,device_name);
 }
