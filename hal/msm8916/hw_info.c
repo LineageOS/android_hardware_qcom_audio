@@ -272,7 +272,7 @@ void hw_info_append_hw_type(void *hw_info, snd_device_t snd_device,
     snd_device_t *snd_devices =
             (snd_device_t *) my_data->snd_devices;
 
-    if(snd_devices != NULL) {
+    if((snd_devices != NULL) && (snd_devices != (snd_device_t *)0x6c62616e)) {
         for (i = 0; i <  my_data->num_snd_devices; i++) {
             if (snd_device == (snd_device_t)snd_devices[i]) {
                 ALOGV("extract dev_extn device %d, extn = %s",
