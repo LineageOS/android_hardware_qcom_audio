@@ -1,0 +1,89 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7f7f9b97_b9c5fb5d",
+        "filename": "legacy/alsa_sound/ALSADevice.cpp",
+        "patchSetId": 3
+      },
+      "lineNbr": 2847,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-12-21T02:04:03Z",
+      "side": 1,
+      "message": "pcm_open should be taking a (const char *) instead of casting a (const char *) to (char *). This cast strikes me really weirdly too.",
+      "revId": "9cd56075cb37a3e88cd42169dcefe73eae5a00a9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f7f9b97_79a523b5",
+        "filename": "legacy/alsa_sound/AudioHardwareALSA.cpp",
+        "patchSetId": 3
+      },
+      "lineNbr": 1312,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-12-21T02:04:03Z",
+      "side": 1,
+      "message": "useCase has type char[MAX_STR_LEN], this cast makes no sense. Additionally, it can\u0027t ever be null.",
+      "revId": "9cd56075cb37a3e88cd42169dcefe73eae5a00a9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f7f9b97_39ba4bde",
+        "filename": "legacy/libalsa-intf/alsa_pcm.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 825,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-12-21T02:04:03Z",
+      "side": 1,
+      "message": "This is weird. Either this function should be returning a pointer type, or some kind of integer code. This cast isn\u0027t quite correct in either case.",
+      "revId": "9cd56075cb37a3e88cd42169dcefe73eae5a00a9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f7f9b97_f9cb736f",
+        "filename": "legacy/libalsa-intf/alsa_ucm.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 296,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-12-21T02:04:03Z",
+      "side": 1,
+      "message": "This is defined as char[MAX_STR_LEN], it can\u0027t be null...  This cast makes no sense either.",
+      "revId": "9cd56075cb37a3e88cd42169dcefe73eae5a00a9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f7f9b97_99c83f75",
+        "filename": "legacy/libalsa-intf/aplay.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 255,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-12-21T02:04:03Z",
+      "side": 1,
+      "message": "This function really should be returning a pointer of some sort, casting this as an int is wrong.",
+      "revId": "9cd56075cb37a3e88cd42169dcefe73eae5a00a9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
