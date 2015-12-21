@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7f7f9b97_9fb7bf3b",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 4
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-12-21T23:58:49Z",
+      "side": 1,
+      "message": "It\u0027s never \"audio-caf-8960\", that\u0027s obvious from the repo. Check the history of the files you\u0027ve changed for what past commits have used as the topic.",
+      "revId": "c5bf29892cf10fa120d4bad618718a64e9555410",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f7f9b97_dfad37eb",
+        "filename": "legacy/libalsa-intf/aplay.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 254,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-12-21T23:58:49Z",
+      "side": 1,
+      "message": "This check makes no sense, you need to check against bad_pcm here.",
+      "revId": "c5bf29892cf10fa120d4bad618718a64e9555410",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
