@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "7f7f9b97_b9d65bf1",
+        "filename": "legacy/alsa_sound/ALSADevice.cpp",
+        "patchSetId": 3
+      },
+      "lineNbr": 2847,
+      "author": {
+        "id": 13589
+      },
+      "writtenOn": "2015-12-21T03:00:49Z",
+      "side": 1,
+      "message": "As you can see here, this is done over the rest of the code.\nhttps://github.com/CyanogenMod/android_hardware_qcom_audio/blob/cm-13.0-caf-8960/legacy/alsa_sound/ALSADevice.cpp#L1062\n\nI\u0027m 200% ok to convert into const char* but need to try it and see if everything goes properly",
+      "parentUuid": "7f7f9b97_b9c5fb5d",
+      "revId": "9cd56075cb37a3e88cd42169dcefe73eae5a00a9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "7f7f9b97_79a523b5",
         "filename": "legacy/alsa_sound/AudioHardwareALSA.cpp",
         "patchSetId": 3
@@ -30,6 +48,24 @@
       "writtenOn": "2015-12-21T02:04:03Z",
       "side": 1,
       "message": "useCase has type char[MAX_STR_LEN], this cast makes no sense. Additionally, it can\u0027t ever be null.",
+      "revId": "9cd56075cb37a3e88cd42169dcefe73eae5a00a9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f7f9b97_5905c779",
+        "filename": "legacy/alsa_sound/AudioHardwareALSA.cpp",
+        "patchSetId": 3
+      },
+      "lineNbr": 1312,
+      "author": {
+        "id": 13589
+      },
+      "writtenOn": "2015-12-21T03:00:49Z",
+      "side": 1,
+      "message": "Yes it can\u0027t, it originally broken on always true.\nSo I can probably delete the check.",
+      "parentUuid": "7f7f9b97_79a523b5",
       "revId": "9cd56075cb37a3e88cd42169dcefe73eae5a00a9",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
@@ -64,6 +100,24 @@
       "writtenOn": "2015-12-21T02:04:03Z",
       "side": 1,
       "message": "This is defined as char[MAX_STR_LEN], it can\u0027t be null...  This cast makes no sense either.",
+      "revId": "9cd56075cb37a3e88cd42169dcefe73eae5a00a9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f7f9b97_790a038b",
+        "filename": "legacy/libalsa-intf/alsa_ucm.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 296,
+      "author": {
+        "id": 13589
+      },
+      "writtenOn": "2015-12-21T03:00:49Z",
+      "side": 1,
+      "message": "Yes it\u0027s always true, so will delete the check.",
+      "parentUuid": "7f7f9b97_f9cb736f",
       "revId": "9cd56075cb37a3e88cd42169dcefe73eae5a00a9",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
