@@ -154,6 +154,7 @@ private:
         bool mIsInputRequestOnProgress;
 #endif
         float mPrevFMVolumeDb;
+        bool mFMIsActive;
 };
 
 };
