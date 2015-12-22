@@ -279,6 +279,9 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
     char value[32] ={0};
     struct listnode *node;
     struct audio_usecase *usecase;
+    struct str_parms *query_44_1;
+    struct str_parms *reply_44_1;
+    struct str_parms *parms_disable_44_1;
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_ANC, value,
                             sizeof(value));
@@ -288,6 +291,24 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
         else
             aextnmod.anc_enabled = false;
 
+        /* Store current 44.1 configuration and disable it temporarily before
+         * changing ANC state.
+         * Since 44.1 playback is not allowed with anc on.
+         * If ANC switch is done when 44.1 is active three devices would need
+         * sequencing 1. "headphones-44.1", 2. "headphones-anc" and
+         * 3. "headphones".
+         * Note: Enable/diable of anc would affect other two device's state.
+         */
+        query_44_1 = str_parms_create_str(AUDIO_PARAMETER_KEY_NATIVE_AUDIO);
+        reply_44_1 = str_parms_create();
+        platform_get_parameters(adev->platform, query_44_1, reply_44_1);
+
+        parms_disable_44_1 = str_parms_create();
+        str_parms_add_str(parms_disable_44_1, AUDIO_PARAMETER_KEY_NATIVE_AUDIO, "false");
+        platform_set_parameters(adev->platform, parms_disable_44_1);
+        str_parms_destroy(parms_disable_44_1);
+
+        // Refresh device selection for anc playback
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
             if (usecase->type == PCM_PLAYBACK) {
@@ -296,11 +317,16 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
                     usecase->stream.out->devices ==  \
                     AUDIO_DEVICE_OUT_WIRED_HEADSET) {
                         select_devices(adev, usecase->id);
-                        ALOGV("%s: switching device", __func__);
+                        ALOGV("%s: switching device completed", __func__);
                         break;
                 }
             }
         }
+
+        // Restore 44.1 configuration on top of updated anc state
+        platform_set_parameters(adev->platform, reply_44_1);
+        str_parms_destroy(query_44_1);
+        str_parms_destroy(reply_44_1);
     }
 
     ALOGD("%s: anc_enabled:%d", __func__, aextnmod.anc_enabled);
