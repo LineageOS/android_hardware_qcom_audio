@@ -290,11 +290,16 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
            if (state == AUDIO_POLICY_DEVICE_STATE_AVAILABLE) {
                mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, 1);
                newDevice = (audio_devices_t)(getNewOutputDevice(mPrimaryOutput, false)|AUDIO_DEVICE_OUT_FM);
+               mFMIsActive = true;
            } else {
                newDevice = (audio_devices_t)(getNewOutputDevice(mPrimaryOutput, false));
                mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, -1);
+               mFMIsActive = false;
            }
            AudioParameter param = AudioParameter();
+           float volumeDb = mPrimaryOutput->mCurVolume[AUDIO_STREAM_MUSIC];
+           mPrevFMVolumeDb = volumeDb;
+           param.addFloat(String8("fm_volume"), Volume::DbToAmpl(volumeDb));
            param.addInt(String8("handle_fm"), (int)newDevice);
            mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString());
         }
@@ -1277,10 +1282,15 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
         }
 #ifdef FM_POWER_OPT
     } else if (stream == AUDIO_STREAM_MUSIC && hasPrimaryOutput() &&
-               outputDesc == mPrimaryOutput) {
-        AudioParameter param = AudioParameter();
-        param.addFloat(String8("fm_volume"), Volume::DbToAmpl(volumeDb));
-        mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString(), delayMs);
+               outputDesc == mPrimaryOutput && mFMIsActive) {
+        /* Avoid unnecessary set_parameter calls as it puts the primary
+           outputs FastMixer in HOT_IDLE leading to breaks in audio */
+        if (volumeDb != mPrevFMVolumeDb) {
+            mPrevFMVolumeDb = volumeDb;
+            AudioParameter param = AudioParameter();
+            param.addFloat(String8("fm_volume"), Volume::DbToAmpl(volumeDb));
+            mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString(), delayMs);
+        }
 #endif /* FM_POWER_OPT end */
     }
 
@@ -1953,7 +1963,9 @@ status_t AudioPolicyManagerCustom::stopInput(audio_io_handle_t input,
 }
 
 AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *clientInterface)
-    : AudioPolicyManager(clientInterface)
+    : AudioPolicyManager(clientInterface),
+      mPrevFMVolumeDb(0.0f),
+      mFMIsActive(false)
 {
 #ifdef RECORD_PLAY_CONCURRENCY
     mIsInputRequestOnProgress = false;
