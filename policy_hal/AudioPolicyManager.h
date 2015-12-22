@@ -140,6 +140,7 @@ private:
         int mPrevPhoneState;
         int mvoice_call_state;
         float mPrevFMVolumeDb;
+        bool mFMIsActive;
 };
 
 };
