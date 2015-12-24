@@ -154,6 +154,7 @@ private:
         // Used for record + playback concurrency
         bool mIsInputRequestOnProgress;
 #endif
+        float mPrevFMVolumeDb;
 };
 
 };
