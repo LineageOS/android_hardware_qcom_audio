@@ -588,7 +588,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
         goto exit_send_app_type_cfg;
     }
     snd_device = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
-                 audio_extn_get_spkr_prot_snd_device(snd_device) : snd_device;
+                 platform_get_spkr_prot_snd_device(snd_device) : snd_device;
     acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
     if (acdb_dev_id < 0) {
         ALOGE("%s: Couldn't get the acdb dev id", __func__);
@@ -657,7 +657,7 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
         struct stream_out *out = usecase->stream.out;
         int snd_device = usecase->out_snd_device;
         snd_device = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
-                     audio_extn_get_spkr_prot_snd_device(snd_device) : snd_device;
+                     platform_get_spkr_prot_snd_device(snd_device) : snd_device;
         platform_send_audio_calibration(adev->platform, usecase,
                                         out->app_type_cfg.app_type,
                                         usecase->stream.out->app_type_cfg.sample_rate);

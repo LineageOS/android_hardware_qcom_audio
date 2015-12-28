@@ -784,7 +784,7 @@ bool platform_send_gain_dep_cal(void *platform, int level) {
                 app_type = usecase->stream.out->app_type_cfg.app_type;
 
                 if (audio_extn_spkr_prot_is_enabled()) {
-                    acdb_dev_id = audio_extn_spkr_prot_get_acdb_id(usecase->out_snd_device);
+                    acdb_dev_id = platform_get_spkr_prot_acdb_id(usecase->out_snd_device);
                 } else {
                     acdb_dev_id = acdb_device_table[usecase->out_snd_device];
                 }
@@ -1998,7 +1998,7 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
     else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE))
         snd_device = usecase->in_snd_device;
 
-    acdb_dev_id = acdb_device_table[audio_extn_get_spkr_prot_snd_device(snd_device)];
+    acdb_dev_id = acdb_device_table[platform_get_spkr_prot_snd_device(snd_device)];
     if (acdb_dev_id < 0) {
         ALOGE("%s: Could not find acdb id for device(%d)",
               __func__, snd_device);
@@ -4349,6 +4349,63 @@ int platform_set_device_params(struct stream_out *out, int param, int value)
 
 end:
     return ret;
+}
+
+bool platform_can_enable_spkr_prot_on_device(snd_device_t snd_device)
+{
+    bool ret = false;
+
+    if (snd_device == SND_DEVICE_OUT_SPEAKER ||
+        snd_device == SND_DEVICE_OUT_SPEAKER_VBAT ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) {
+        ret = true;
+    }
+
+    return ret;
+}
+
+int platform_get_spkr_prot_acdb_id(snd_device_t snd_device)
+{
+    int acdb_id;
+
+    switch(snd_device) {
+        case SND_DEVICE_OUT_SPEAKER:
+             acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED);
+             break;
+        case SND_DEVICE_OUT_VOICE_SPEAKER:
+             acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED);
+             break;
+        case SND_DEVICE_OUT_SPEAKER_VBAT:
+             acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT);
+             break;
+        case SND_DEVICE_OUT_VOICE_SPEAKER_VBAT:
+             acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT);
+             break;
+        default:
+             acdb_id = -EINVAL;
+             break;
+    }
+    return acdb_id;
+}
+
+int platform_get_spkr_prot_snd_device(snd_device_t snd_device)
+{
+    if (!audio_extn_spkr_prot_is_enabled())
+        return snd_device;
+
+    switch(snd_device) {
+        case SND_DEVICE_OUT_SPEAKER:
+             return SND_DEVICE_OUT_SPEAKER_PROTECTED;
+        case SND_DEVICE_OUT_VOICE_SPEAKER:
+             return SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED;
+        case SND_DEVICE_OUT_SPEAKER_VBAT:
+             return SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT;
+        case SND_DEVICE_OUT_VOICE_SPEAKER_VBAT:
+             return SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT;
+        default:
+             return snd_device;
+    }
 }
 
 /*

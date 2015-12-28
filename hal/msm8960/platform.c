@@ -1189,3 +1189,19 @@ void platform_set_gsm_mode(void *platform __unused, bool enable __unused)
 {
     ALOGE("%s: Not implemented", __func__);
 }
+
+bool platform_can_enable_spkr_prot_on_device(snd_device_t snd_device __unused)
+{
+    /* speaker protection not implemented for this platform*/
+    return false;
+}
+
+int platform_get_spkr_prot_acdb_id(snd_device_t snd_device __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_get_spkr_prot_snd_device(snd_device_t snd_device __unused)
+{
+    return -ENOSYS;
+}
