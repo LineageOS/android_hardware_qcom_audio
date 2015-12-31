@@ -543,6 +543,20 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
     app_type_cfg->bit_width = 16;
 }
 
+static bool audio_is_this_native_usecase(struct audio_usecase *uc)
+{
+    bool native_usecase = false;
+    struct stream_out *out = (struct stream_out*) uc->stream.out;
+
+    if (PCM_PLAYBACK == uc->type && out != NULL &&
+        NATIVE_AUDIO_MODE_INVALID != platform_get_native_support() &&
+        is_offload_usecase(uc->id) &&
+        (out->sample_rate == OUTPUT_SAMPLING_RATE_44100))
+        native_usecase = true;
+
+    return native_usecase;
+}
+
 int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
                                        struct audio_usecase *usecase)
 {
@@ -598,8 +612,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
     if ((24 == usecase->stream.out->bit_width) &&
         (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
         usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-    } else if ((snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
-        usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
+    } else if (!audio_is_this_native_usecase(usecase) ||
         (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
         usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
     }
@@ -621,8 +634,13 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
         app_type_cfg[len++] = sample_rate * 4;
     else
         app_type_cfg[len++] = sample_rate;
+
     mixer_ctl_set_array(ctl, app_type_cfg, len);
     rc = 0;
+    ALOGI("%s:becf: adm: app_type %d, acdb_dev_id %d, sample_rate %d",
+          __func__,
+          platform_get_default_app_type_v2(adev->platform, usecase->type),
+          acdb_dev_id, sample_rate);
 exit_send_app_type_cfg:
     return rc;
 }
@@ -812,6 +830,31 @@ done:
     outp[k] = '\0';
     return k;
 }
+
+
+int audio_extn_utils_get_codec_version(const char *snd_card_name,
+                            int card_num,
+                            char *codec_version)
+{
+    char procfs_path[50];
+    FILE *fp;
+
+    if (strstr(snd_card_name, "tasha")) {
+        snprintf(procfs_path, sizeof(procfs_path),
+                 "/proc/asound/card%d/codecs/tasha/version", card_num);
+        if ((fp = fopen(procfs_path, "r")) != NULL) {
+            fgets(codec_version, CODEC_VERSION_MAX_LENGTH, fp);
+            fclose(fp);
+        } else {
+            ALOGE("%s: ERROR. cannot open %s", __func__, procfs_path);
+            return -ENOENT;
+        }
+        ALOGD("%s: codec version %s", __func__, codec_version);
+    }
+
+    return 0;
+}
+
 
 #ifdef AUDIO_EXTERNAL_HDMI_ENABLED
 

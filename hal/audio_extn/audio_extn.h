@@ -506,7 +506,7 @@ typedef enum {
 int b64decode(char *inp, int ilen, uint8_t* outp);
 int b64encode(uint8_t *inp, int ilen, char* outp);
 int read_line_from_file(const char *path, char *buf, size_t count);
-
+int audio_extn_utils_get_codec_version(const char *snd_card_name, int card_num, char *codec_version);
 #ifndef KPI_OPTIMIZE_ENABLED
 #define audio_extn_perf_lock_init() (0)
 #define audio_extn_perf_lock_acquire(handle, duration, opts, size) (0)
