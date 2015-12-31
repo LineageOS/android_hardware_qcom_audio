@@ -816,7 +816,7 @@ static struct pcm bad_pcm = {
     .fd = -1,
 };
 
-static int enable_timer(struct pcm *pcm) {
+static struct pcm *enable_timer(struct pcm *pcm) {
 
     pcm->timer_fd = open("/dev/snd/timer", O_RDWR | O_NONBLOCK);
     if (pcm->timer_fd < 0) {
@@ -865,7 +865,7 @@ static int enable_timer(struct pcm *pcm) {
            close(pcm->timer_fd);
            ALOGE("SNDRV_TIMER_IOCTL_START failed\n");
     }
-    return 0;
+    return pcm;
 }
 
 static int disable_timer(struct pcm *pcm) {
@@ -912,7 +912,7 @@ int pcm_close(struct pcm *pcm)
     return 0;
 }
 
-struct pcm *pcm_open(unsigned flags, char *device)
+struct pcm *pcm_open(unsigned flags, const char *device)
 {
     char dname[19];
     struct pcm *pcm;
@@ -936,7 +936,7 @@ struct pcm *pcm_open(unsigned flags, char *device)
     if ((strncmp(device, "hw:",3) != 0) || (strncmp(tmp, ",",1) != 0)){
         ALOGE("Wrong device fromat\n");
         free(pcm);
-        return -EINVAL;
+        return &bad_pcm;
     }
 
     if (flags & PCM_IN) {

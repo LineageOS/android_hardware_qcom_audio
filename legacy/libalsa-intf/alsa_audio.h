@@ -129,7 +129,7 @@ struct mixer {
 int get_format(const char* name);
 const char *get_format_name(int format);
 const char *get_format_desc(int format);
-struct pcm *pcm_open(unsigned flags, char *device);
+struct pcm *pcm_open(unsigned flags, const char *device);
 int pcm_close(struct pcm *pcm);
 int pcm_ready(struct pcm *pcm);
 int mmap_buffer(struct pcm *pcm);
