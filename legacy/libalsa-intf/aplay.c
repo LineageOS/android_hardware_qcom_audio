@@ -251,9 +251,6 @@ static int play_file(unsigned rate, unsigned channels, int fd,
         flags |= DEBUG_OFF;
 
     pcm = pcm_open(flags, device);
-    if (pcm < 0)
-        return pcm;
-
     if (!pcm_ready(pcm)) {
         pcm_close(pcm);
         return -EBADFD;
