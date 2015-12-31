@@ -996,7 +996,7 @@ status_t ALSADevice::open(alsa_handle_t *handle)
     }
     if (devName != NULL) {
         ALOGV("flags %x, devName %s",flags,devName);
-        handle->handle = pcm_open(flags, (char*)devName);
+        handle->handle = pcm_open(flags, devName);
     } else {
         ALOGE("Failed to get pcm device node");
         return NO_INIT;
@@ -1059,7 +1059,7 @@ status_t ALSADevice::startVoipCall(alsa_handle_t *handle)
     }
 
     if (devName != NULL) {
-        handle->handle = pcm_open(flags, (char*)devName);
+        handle->handle = pcm_open(flags, devName);
     } else {
          ALOGE("Failed to get pcm device node");
          return NO_INIT;
@@ -1108,7 +1108,7 @@ status_t ALSADevice::startVoipCall(alsa_handle_t *handle)
         return NO_INIT;
      }
     if (devName != NULL) {
-        handle->handle = pcm_open(flags, (char*)devName);
+        handle->handle = pcm_open(flags, devName);
     } else {
          ALOGE("Failed to get pcm device node");
          return NO_INIT;
@@ -1167,7 +1167,7 @@ status_t ALSADevice::startVoiceCall(alsa_handle_t *handle, uint32_t vsid)
         return NO_INIT;
     }
     if (devName != NULL) {
-        handle->handle = pcm_open(flags, (char*)devName);
+        handle->handle = pcm_open(flags, devName);
     } else {
          ALOGE("Failed to get pcm device node");
          return NO_INIT;
@@ -1216,7 +1216,7 @@ status_t ALSADevice::startVoiceCall(alsa_handle_t *handle, uint32_t vsid)
         goto Error;
     }
     if (devName != NULL) {
-        handle->handle = pcm_open(flags, (char*)devName);
+        handle->handle = pcm_open(flags, devName);
     } else {
          ALOGE("Failed to get pcm device node");
          return NO_INIT;
@@ -1301,7 +1301,7 @@ status_t ALSADevice::startFm(alsa_handle_t *handle)
         goto Error;
     }
     if (devName != NULL) {
-        handle->handle = pcm_open(flags, (char*)devName);
+        handle->handle = pcm_open(flags, devName);
     } else {
          ALOGE("Failed to get pcm device node");
          return NO_INIT;
@@ -1349,7 +1349,7 @@ status_t ALSADevice::startFm(alsa_handle_t *handle)
         goto Error;
     }
     if (devName != NULL) {
-        handle->handle = pcm_open(flags, (char*)devName);
+        handle->handle = pcm_open(flags, devName);
     } else {
          ALOGE("Failed to get pcm device node");
          return NO_INIT;
