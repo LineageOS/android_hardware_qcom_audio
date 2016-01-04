@@ -187,6 +187,9 @@ int get_tzn(const char *sensor_name)
     char name[MAX_PATH] = {0};
     char cwd[MAX_PATH] = {0};
 
+    if (!sensor_name)
+        return found;
+
     if (!getcwd(cwd, sizeof(cwd)))
         return found;
 
@@ -210,11 +213,12 @@ int get_tzn(const char *sensor_name)
             if (strcmp(tzdirent->d_name, "type"))
                 continue;
             snprintf(name, MAX_PATH, TZ_TYPE, tzn);
-            ALOGD("Opening %s\n", name);
+            ALOGV("Opening %s\n", name);
             read_line_from_file(name, buf, sizeof(buf));
             if (strlen(buf) > 0)
                 buf[strlen(buf) - 1] = '\0';
             if (!strcmp(buf, sensor_name)) {
+                ALOGD(" spkr tz name found, %s\n", name);
                 found = 1;
                 break;
             }
