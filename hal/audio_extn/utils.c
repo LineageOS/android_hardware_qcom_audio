@@ -609,31 +609,52 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
         rc = -EINVAL;
         goto exit_send_app_type_cfg;
     }
-    if ((24 == usecase->stream.out->bit_width) &&
-        (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
-        usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-    } else if (!audio_is_this_native_usecase(usecase) ||
-        (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
-        usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-    }
-    sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
+    if ((usecase->type == PCM_PLAYBACK) && (usecase->stream.out == NULL)) {
+         sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+         app_type_cfg[len++] = platform_get_default_app_type(adev->platform);
+         app_type_cfg[len++] = acdb_dev_id;
+         app_type_cfg[len++] = sample_rate;
+         ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
+               __func__, platform_get_default_app_type(adev->platform), acdb_dev_id, sample_rate);
+    } else if (usecase->type == PCM_PLAYBACK) {
 
-    property_get("audio.playback.mch.downsample",value,"");
-    if (!strncmp("true", value, sizeof("true"))) {
-        if ((popcount(usecase->stream.out->channel_mask) > 2) &&
-               (usecase->stream.out->app_type_cfg.sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
-               !(usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
-           sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-    }
+         if ((24 == usecase->stream.out->bit_width) &&
+             (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+         } else if (!audio_is_this_native_usecase(usecase) ||
+             (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
+             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+         }
+         sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
 
-    app_type_cfg[len++] = usecase->stream.out->app_type_cfg.app_type;
-    app_type_cfg[len++] = acdb_dev_id;
-    if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
-        (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC)) &&
-        (usecase->stream.out->flags  & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
-        app_type_cfg[len++] = sample_rate * 4;
-    else
-        app_type_cfg[len++] = sample_rate;
+         property_get("audio.playback.mch.downsample",value,"");
+         if (!strncmp("true", value, sizeof("true"))) {
+             if ((popcount(usecase->stream.out->channel_mask) > 2) &&
+                    (usecase->stream.out->app_type_cfg.sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
+                    !(usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
+                sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+         }
+
+         app_type_cfg[len++] = usecase->stream.out->app_type_cfg.app_type;
+         app_type_cfg[len++] = acdb_dev_id;
+         if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
+             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC)) &&
+             (usecase->stream.out->flags  & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
+             app_type_cfg[len++] = sample_rate * 4;
+         else
+             app_type_cfg[len++] = sample_rate;
+
+         ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
+             __func__, usecase->stream.out->app_type_cfg.app_type, acdb_dev_id, sample_rate);
+
+    } else if (usecase->type == PCM_CAPTURE) {
+         app_type_cfg[len++] = platform_get_default_app_type_v2(adev->platform, usecase->type);
+         app_type_cfg[len++] = acdb_dev_id;
+         app_type_cfg[len++] = sample_rate;
+         ALOGI("%s CAPTURE app_type %d, acdb_dev_id %d, sample_rate %d",
+           __func__, platform_get_default_app_type_v2(adev->platform, usecase->type),
+           acdb_dev_id, sample_rate);
+    }
 
     mixer_ctl_set_array(ctl, app_type_cfg, len);
     rc = 0;
