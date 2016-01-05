@@ -254,17 +254,11 @@ struct platform_data {
 
 static bool is_external_codec = false;
 static const int pcm_device_table_of_ext_codec[AUDIO_USECASE_MAX][2] = {
-   [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE_OF_EXT_CODEC, QCHAT_CALL_PCM_DEVICE_OF_EXT_CODEC},
-   [USECASE_VOICEMMODE1_CALL] = {VOICEMMODE1_CALL_PCM_DEVICE_OF_EXT_CODEC,
-                                 VOICEMMODE1_CALL_PCM_DEVICE_OF_EXT_CODEC},
-   [USECASE_VOICEMMODE2_CALL] = {VOICEMMODE2_CALL_PCM_DEVICE_OF_EXT_CODEC,
-                                 VOICEMMODE2_CALL_PCM_DEVICE_OF_EXT_CODEC},
+   [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE_OF_EXT_CODEC, QCHAT_CALL_PCM_DEVICE_OF_EXT_CODEC}
 };
 
 /* List of use cases that has different PCM device ID's for internal and external codecs */
-static const int misc_usecase[AUDIO_USECASE_MAX] = {USECASE_QCHAT_CALL,
-                                                    USECASE_VOICEMMODE1_CALL,
-                                                    USECASE_VOICEMMODE2_CALL};
+static const int misc_usecase[AUDIO_USECASE_MAX] = { USECASE_QCHAT_CALL };
 
 int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {DEEP_BUFFER_PCM_DEVICE,
@@ -302,10 +296,8 @@ int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_VOLTE_CALL] = {VOLTE_CALL_PCM_DEVICE, VOLTE_CALL_PCM_DEVICE},
     [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE, QCHAT_CALL_PCM_DEVICE},
     [USECASE_VOWLAN_CALL] = {VOWLAN_CALL_PCM_DEVICE, VOWLAN_CALL_PCM_DEVICE},
-    [USECASE_VOICEMMODE1_CALL] = {VOICEMMODE1_CALL_PCM_DEVICE,
-                                  VOICEMMODE1_CALL_PCM_DEVICE},
-    [USECASE_VOICEMMODE2_CALL] = {VOICEMMODE2_CALL_PCM_DEVICE,
-                                  VOICEMMODE2_CALL_PCM_DEVICE},
+    [USECASE_VOICEMMODE1_CALL] = {-1, -1}, /* pcm ids updated from platform info file */
+    [USECASE_VOICEMMODE2_CALL] = {-1, -1}, /* pcm ids updated from platform info file */
     [USECASE_COMPRESS_VOIP_CALL] = {COMPRESS_VOIP_CALL_PCM_DEVICE, COMPRESS_VOIP_CALL_PCM_DEVICE},
     [USECASE_INCALL_REC_UPLINK] = {AUDIO_RECORD_PCM_DEVICE,
                                    AUDIO_RECORD_PCM_DEVICE},
