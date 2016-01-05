@@ -338,6 +338,7 @@ static int spkr_calibrate(int t0)
     uc_info_rx->out_snd_device = SND_DEVICE_OUT_SPEAKER_PROTECTED;
     disable_rx = true;
     list_add_tail(&adev->usecase_list, &uc_info_rx->list);
+    platform_check_and_set_codec_backend_cfg(adev, uc_info_rx);
     enable_snd_device(adev, SND_DEVICE_OUT_SPEAKER_PROTECTED);
     enable_audio_route(adev, uc_info_rx);
 
