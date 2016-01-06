@@ -123,8 +123,9 @@ static const snd_device_t helicon_skuab_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
 };
 
-static void update_hardware_info_8x16(struct hardware_info *hw_info, const char *snd_card_name)
+static bool update_hardware_info_8x16(struct hardware_info *hw_info, const char *snd_card_name)
 {
+    bool ret = true;
     if (!strcmp(snd_card_name, "msm8x16-snd-card")) {
         strlcpy(hw_info->type, "", sizeof(hw_info->type));
         strlcpy(hw_info->name, "msm8x16", sizeof(hw_info->name));
@@ -228,8 +229,10 @@ static void update_hardware_info_8x16(struct hardware_info *hw_info, const char 
         hw_info->num_snd_devices = 0;
         strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
     } else {
-        ALOGW("%s: Not an  8x16/8939/8909 device", __func__);
+        ALOGW("%s: Not an  8x16/8939/8909 device: %s", __func__, snd_card_name);
+        ret = false;
     }
+    return ret;
 }
 
 void *hw_info_init(const char *snd_card_name)
@@ -245,7 +248,11 @@ void *hw_info_init(const char *snd_card_name)
     if (strstr(snd_card_name, "msm8x16") || strstr(snd_card_name, "msm8939") ||
         strstr(snd_card_name, "msm8909")) {
         ALOGV("8x16 - variant soundcard");
-        update_hardware_info_8x16(hw_info, snd_card_name);
+        bool ret = update_hardware_info_8x16(hw_info, snd_card_name);
+        if (!ret){
+            free(hw_info);
+            hw_info = NULL;
+        }
     } else {
         ALOGE("%s: Unsupported target %s:",__func__, snd_card_name);
         free(hw_info);
