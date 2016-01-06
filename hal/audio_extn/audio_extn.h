@@ -48,7 +48,7 @@
 #define audio_is_offload_pcm(format) (0)
 #define OFFLOAD_USE_SMALL_BUFFER false
 #else
-#define OFFLOAD_USE_SMALL_BUFFER ((info->format & AUDIO_FORMAT_PCM_OFFLOAD) == AUDIO_FORMAT_PCM_OFFLOAD)
+#define OFFLOAD_USE_SMALL_BUFFER ((info->format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM_OFFLOAD)
 #endif
 
 #ifndef AFE_PROXY_ENABLED
@@ -175,18 +175,30 @@ bool audio_extn_usb_is_proxy_inuse();
 #endif
 
 #ifndef SSR_ENABLED
-#define audio_extn_ssr_init(in)                       (0)
+#define audio_extn_ssr_check_and_set_usecase(in)      (0)
+#define audio_extn_ssr_init(in, num_out_chan)         (0)
 #define audio_extn_ssr_deinit()                       (0)
 #define audio_extn_ssr_update_enabled()               (0)
 #define audio_extn_ssr_get_enabled()                  (0)
 #define audio_extn_ssr_read(stream, buffer, bytes)    (0)
+#define audio_extn_ssr_set_parameters(adev, parms)    (0)
+#define audio_extn_ssr_get_parameters(adev, parms, reply) (0)
+#define audio_extn_ssr_get_stream()                   (0)
 #else
-int32_t audio_extn_ssr_init(struct stream_in *in);
+int audio_extn_ssr_check_and_set_usecase(struct stream_in *in);
+int32_t audio_extn_ssr_init(struct stream_in *in,
+                            int num_out_chan);
 int32_t audio_extn_ssr_deinit();
 void audio_extn_ssr_update_enabled();
 bool audio_extn_ssr_get_enabled();
 int32_t audio_extn_ssr_read(struct audio_stream_in *stream,
                        void *buffer, size_t bytes);
+void audio_extn_ssr_set_parameters(struct audio_device *adev,
+                                   struct str_parms *parms);
+void audio_extn_ssr_get_parameters(const struct audio_device *adev,
+                                   struct str_parms *query,
+                                   struct str_parms *reply);
+struct stream_in *audio_extn_ssr_get_stream();
 #endif
 
 #ifndef HW_VARIANTS_ENABLED
@@ -384,6 +396,7 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev);
 #define audio_extn_dolby_get_passt_buffer_size(info)                       (0)
 #define audio_extn_dolby_set_passt_volume(out, mute)                       (0)
 #define audio_extn_dolby_set_passt_latency(out, latency)                   (0)
+#define AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH  0x4000
 #else
 int audio_extn_dolby_update_passt_formats(struct audio_device *adev,
                                           struct stream_out *out);
@@ -445,6 +458,7 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
                                   audio_format_t format,
                                   uint32_t sample_rate,
                                   uint32_t bit_width,
+                                  audio_channel_mask_t channel_mask,
                                   struct stream_app_type_cfg *app_type_cfg);
 int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
                                        struct audio_usecase *usecase);
@@ -495,6 +509,7 @@ typedef enum {
 
 int b64decode(char *inp, int ilen, uint8_t* outp);
 int b64encode(uint8_t *inp, int ilen, char* outp);
+int read_line_from_file(const char *path, char *buf, size_t count);
 
 #ifndef KPI_OPTIMIZE_ENABLED
 #define audio_extn_perf_lock_init() (0)

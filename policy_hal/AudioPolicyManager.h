@@ -75,6 +75,9 @@ public:
         // indicates to the audio policy manager that the input stops being used.
         virtual status_t stopInput(audio_io_handle_t input,
                                    audio_session_t session);
+
+        virtual void closeAllInputs();
+
 protected:
 
          status_t checkAndSetVolume(audio_stream_type_t stream,

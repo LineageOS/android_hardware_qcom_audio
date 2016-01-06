@@ -103,12 +103,6 @@
 #define AUDIO_PARAMETER_KEY_SPKR_TZ_1     "spkr_1_tz_name"
 #define AUDIO_PARAMETER_KEY_SPKR_TZ_2     "spkr_2_tz_name"
 
-#define SPKR_TZ_1    "wsatz.12"
-#define SPKR_TZ_2    "wsatz.11"
-#define SPKR_TZ_3    "wsatz.14"
-#define SPKR_TZ_4    "wsatz.13"
-
-
 /*Modes of Speaker Protection*/
 enum speaker_protection_mode {
     SPKR_PROTECTION_DISABLED = -1,
@@ -165,27 +159,6 @@ struct spkr_tz_names {
 static struct speaker_prot_session handle;
 static int vi_feed_no_channels;
 static struct spkr_tz_names tz_names;
-
-int read_line_from_file(const char *path, char *buf, size_t count)
-{
-    char * fgets_ret;
-    FILE * fd;
-    int rv;
-
-    fd = fopen(path, "r");
-    if (fd == NULL)
-        return -1;
-
-    fgets_ret = fgets(buf, (int)count, fd);
-    if (NULL != fgets_ret) {
-        rv = (int)strlen(buf);
-    } else {
-        rv = ferror(fd);
-    }
-    fclose(fd);
-
-   return rv;
-}
 
 /*===========================================================================
 FUNCTION get_tzn
@@ -801,7 +774,11 @@ static void* spkr_calibration_thread()
                                     break;
                                 }
                                 t0_spk_prior = t0_spk_1;
+                                pthread_mutex_unlock(&adev->lock);
                                 sleep(1);
+                                pthread_mutex_lock(&adev->lock);
+                                if (is_speaker_in_use(&sec))
+                                    break;
                             } else {
                                ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
                                break;
@@ -843,7 +820,11 @@ static void* spkr_calibration_thread()
                                     break;
                                 }
                                 t0_spk_prior = t0_spk_2;
+                                pthread_mutex_unlock(&adev->lock);
                                 sleep(1);
+                                pthread_mutex_lock(&adev->lock);
+                                if (is_speaker_in_use(&sec))
+                                    break;
                             } else {
                                ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
                                break;
@@ -973,18 +954,14 @@ void audio_extn_spkr_prot_set_parameters(struct str_parms *parms,
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SPKR_TZ_1,
                             value, len);
     if (err >= 0) {
-        if ((!strncmp(SPKR_TZ_1, value, sizeof(SPKR_TZ_1)) ||
-            (!strncmp(SPKR_TZ_3, value, sizeof(SPKR_TZ_3)))))
-            tz_names.spkr_1_name = strdup(value);
+        tz_names.spkr_1_name = strdup(value);
         str_parms_del(parms, AUDIO_PARAMETER_KEY_SPKR_TZ_1);
     }
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SPKR_TZ_2,
                             value, len);
     if (err >= 0) {
-        if ((!strncmp(SPKR_TZ_2, value, sizeof(SPKR_TZ_2)) ||
-            (!strncmp(SPKR_TZ_4, value, sizeof(SPKR_TZ_4)))))
-            tz_names.spkr_2_name = strdup(value);
+        tz_names.spkr_2_name = strdup(value);
         str_parms_del(parms, AUDIO_PARAMETER_KEY_SPKR_TZ_2);
     }
 
@@ -1091,16 +1068,20 @@ int audio_extn_spkr_prot_get_acdb_id(snd_device_t snd_device)
 
     switch(snd_device) {
     case SND_DEVICE_OUT_SPEAKER:
+    case SND_DEVICE_OUT_SPEAKER_WSA:
         acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED);
-        break;
-    case SND_DEVICE_OUT_VOICE_SPEAKER:
-        acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED);
         break;
     case SND_DEVICE_OUT_SPEAKER_VBAT:
         acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT);
         break;
     case SND_DEVICE_OUT_VOICE_SPEAKER_VBAT:
         acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT);
+        break;
+    case SND_DEVICE_OUT_VOICE_SPEAKER:
+
+    case SND_DEVICE_OUT_VOICE_SPEAKER_WSA:
+
+        acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED);
         break;
     default:
         acdb_id = -EINVAL;
@@ -1116,13 +1097,15 @@ int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device)
 
     switch(snd_device) {
     case SND_DEVICE_OUT_SPEAKER:
+    case SND_DEVICE_OUT_SPEAKER_WSA:
         return SND_DEVICE_OUT_SPEAKER_PROTECTED;
-    case SND_DEVICE_OUT_VOICE_SPEAKER:
-        return SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED;
     case SND_DEVICE_OUT_SPEAKER_VBAT:
         return SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT;
     case SND_DEVICE_OUT_VOICE_SPEAKER_VBAT:
         return SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT;
+    case SND_DEVICE_OUT_VOICE_SPEAKER:
+    case SND_DEVICE_OUT_VOICE_SPEAKER_WSA:
+        return SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED;
     default:
         return snd_device;
     }

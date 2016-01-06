@@ -99,7 +99,8 @@
 #define EDID_FORMAT_LPCM    1
 
 /* fallback app type if the default app type from acdb loader fails */
-#define DEFAULT_APP_TYPE  0x11130
+#define DEFAULT_APP_TYPE_RX_PATH  0x11130
+#define DEFAULT_APP_TYPE_TX_PATH  0x11132
 
 /* Retry for delay in FW loading*/
 #define RETRY_NUMBER 10
@@ -422,6 +423,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC] = "quad-mic",
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = "quad-mic",
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = "quad-mic",
+    [SND_DEVICE_IN_THREE_MIC] = "three-mic",
 };
 
 // Platform specific backend bit width table
@@ -526,6 +528,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC] = 126,
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = 127,
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = 129,
+    [SND_DEVICE_IN_THREE_MIC] = 46,
 };
 
 struct name_to_index {
@@ -1226,6 +1229,7 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
     if (acdb_loader_get_calibration == NULL) {
         ALOGE("%s: ERROR. dlsym Error:%s acdb_loader_get_calibration", __func__,
            dlerror());
+        close(fd);
         return;
     }
 
@@ -1305,6 +1309,7 @@ void *platform_init(struct audio_device *adev)
         if (!snd_card_name) {
             ALOGE("failed to allocate memory for snd_card_name\n");
             free(my_data);
+            mixer_close(adev->mixer);
             return NULL;
         }
         ALOGV("%s: snd_card_name: %s", __func__, snd_card_name);
@@ -1369,6 +1374,7 @@ void *platform_init(struct audio_device *adev)
                        __func__);
                 free(my_data);
                 free(snd_card_name);
+                mixer_close(adev->mixer);
                 return NULL;
             }
             adev->snd_card = snd_card_num;
@@ -1377,6 +1383,7 @@ void *platform_init(struct audio_device *adev)
         }
         retry_num = 0;
         snd_card_num++;
+        mixer_close(adev->mixer);
     }
 
     if (snd_card_num >= MAX_SND_CARD) {
@@ -1822,7 +1829,15 @@ int platform_get_default_app_type(void *platform)
     if (my_data->acdb_get_default_app_type)
         return my_data->acdb_get_default_app_type();
     else
-        return DEFAULT_APP_TYPE;
+        return DEFAULT_APP_TYPE_RX_PATH;
+}
+
+int platform_get_default_app_type_v2(void *platform, usecase_type_t  type)
+{
+    if(type == PCM_CAPTURE)
+        return DEFAULT_APP_TYPE_TX_PATH;
+    else
+        return DEFAULT_APP_TYPE_RX_PATH;
 }
 
 int platform_get_snd_device_acdb_id(snd_device_t snd_device)
@@ -1981,6 +1996,9 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
 
     if (usecase->type == PCM_PLAYBACK)
         snd_device =  usecase->out_snd_device;
+    else if ((usecase->type == PCM_CAPTURE) &&
+                   voice_is_in_call_rec_stream(usecase->stream.in))
+        snd_device = voice_get_incall_rec_snd_device(usecase->in_snd_device);
     else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE))
         snd_device = usecase->in_snd_device;
 
@@ -2663,6 +2681,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         goto exit;
     }
 
+    if (adev->active_input && (audio_extn_ssr_get_stream() == adev->active_input))
+        snd_device = SND_DEVICE_IN_THREE_MIC;
 
     if (snd_device != SND_DEVICE_NONE) {
         goto exit;
@@ -2672,7 +2692,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             !(in_device & AUDIO_DEVICE_IN_VOICE_CALL) &&
             !(in_device & AUDIO_DEVICE_IN_COMMUNICATION)) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
-            if (audio_extn_ssr_get_enabled() && channel_count == 6)
+            if (adev->active_input && (audio_extn_ssr_get_stream() == adev->active_input))
                 snd_device = SND_DEVICE_IN_QUAD_MIC;
             else if (my_data->fluence_type & (FLUENCE_DUAL_MIC | FLUENCE_QUAD_MIC) &&
                     channel_count == 2)
@@ -3136,6 +3156,11 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         bool status = false;
         str_parms_del(parms, AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE);
         event_name = strtok_r(value, ",", &status_str);
+        if (!event_name) {
+            ret = -EINVAL;
+            ALOGE("%s: event_name is NULL", __func__);
+            goto done;
+        }
         ALOGV("%s: recieved update of external audio device %s %s",
                          __func__,
                          event_name, status_str);
@@ -4015,7 +4040,7 @@ int platform_set_channel_allocation(void *platform, int channel_alloc)
 int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd_id)
 {
     struct mixer_ctl *ctl;
-    char mixer_ctl_name[44]; // max length of name is 44 as defined
+    char mixer_ctl_name[44] = {0}; // max length of name is 44 as defined
     int ret;
     unsigned int i;
     int set_values[8] = {0};
@@ -4381,3 +4406,5 @@ int platform_set_audio_device_interface(const char *device_name, const char *int
 done:
     return ret;
 }
+
+
