@@ -228,7 +228,17 @@ static void update_hardware_info_8x16(struct hardware_info *hw_info, const char 
         hw_info->num_snd_devices = 0;
         strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
     } else {
-        ALOGW("%s: Not an  8x16/8939/8909 device", __func__);
+        ALOGW("%s: Not an  8x16/8939/8909 device: %s", __func__, snd_card_name);
+	/*
+	 * We still need to initialize properly all the fields
+	 * snd_devices will be used later and check if not NULL
+	 * in hw_info_append_hw_type. If it's not set to NULL,
+	 * it will be accessing some random memory.
+	 * */
+	strlcpy(hw_info->type, "", sizeof(hw_info->type));
+	strlcpy(hw_info->name, "???", sizeof(hw_info->name));
+	hw_info->snd_devices = NULL;
+	hw_info->num_snd_devices = 0;
     }
 }
 
