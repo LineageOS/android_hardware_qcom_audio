@@ -285,12 +285,13 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
 
 #ifdef FM_POWER_OPT
         // handle FM device connection state to trigger FM AFE loopback
-        if(device == AUDIO_DEVICE_OUT_FM && hasPrimaryOutput()) {
-           audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, false /*fromCache*/);
+        if (device == AUDIO_DEVICE_OUT_FM && hasPrimaryOutput()) {
+           audio_devices_t newDevice = AUDIO_DEVICE_NONE;
            if (state == AUDIO_POLICY_DEVICE_STATE_AVAILABLE) {
                mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, 1);
-               newDevice = newDevice | AUDIO_DEVICE_OUT_FM;
+               newDevice = (audio_devices_t)(getNewOutputDevice(mPrimaryOutput, false)|AUDIO_DEVICE_OUT_FM);
            } else {
+               newDevice = (audio_devices_t)(getNewOutputDevice(mPrimaryOutput, false));
                mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, -1);
            }
            AudioParameter param = AudioParameter();
