@@ -1077,10 +1077,6 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
     audio_devices_t out_device)
 {
     struct platform_data *my_data = (struct platform_data *)adev->platform;
-    snd_device_t snd_device = SND_DEVICE_NONE;
-    struct stream_out out;
-
-    out.devices = out_device;
 
     if (strcmp(my_data->ec_ref_mixer_path, "")) {
         ALOGV("%s: disabling %s", __func__, my_data->ec_ref_mixer_path);
@@ -1089,13 +1085,10 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
     }
 
     if (enable) {
-        snd_device = platform_get_output_snd_device(adev->platform, &out);
-
         if (adev->snd_dev_ref_cnt[SND_DEVICE_OUT_HEADPHONES_44_1] > 0)
             strlcpy(my_data->ec_ref_mixer_path, "echo-reference headphones-44.1",
                 sizeof(my_data->ec_ref_mixer_path));
-        else if ((snd_device == SND_DEVICE_OUT_SPEAKER_VBAT) ||
-                 (snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT))
+        else if (adev->snd_dev_ref_cnt[SND_DEVICE_OUT_SPEAKER_VBAT] > 0)
             strlcpy(my_data->ec_ref_mixer_path, "vbat-speaker echo-reference",
                 sizeof(my_data->ec_ref_mixer_path));
         else
@@ -3463,6 +3456,7 @@ static void set_audiocal(void *platform, struct str_parms *parms, char *value, i
               cal.snd_dev_id = platform_get_input_snd_device(platform, cal.dev_id);
           } else {
               out.devices = cal.dev_id;
+              out.sample_rate = cal.sampling_rate;
               cal.snd_dev_id = platform_get_output_snd_device(platform, &out);
           }
         }
@@ -3697,6 +3691,7 @@ static void get_audiocal(void *platform, void *keys, void *pReply) {
         cal.snd_dev_id = platform_get_input_snd_device(platform, cal.dev_id);
     } else if(cal.dev_id) {
         out.devices = cal.dev_id;
+        out.sample_rate = cal.sampling_rate;
         cal.snd_dev_id = platform_get_output_snd_device(platform, &out);
     }
     cal.acdb_dev_id =  platform_get_snd_device_acdb_id(cal.snd_dev_id);
