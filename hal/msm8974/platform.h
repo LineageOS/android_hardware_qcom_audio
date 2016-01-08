@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -165,6 +165,7 @@ enum {
     SND_DEVICE_IN_SPEAKER_DMIC_AEC_BROADSIDE,
     SND_DEVICE_IN_SPEAKER_DMIC_NS_BROADSIDE,
     SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_BROADSIDE,
+    SND_DEVICE_IN_VOICE_FLUENCE_DMIC_AANC,
     SND_DEVICE_IN_HANDSET_QMIC,
     SND_DEVICE_IN_SPEAKER_QMIC_AEC,
     SND_DEVICE_IN_SPEAKER_QMIC_NS,
