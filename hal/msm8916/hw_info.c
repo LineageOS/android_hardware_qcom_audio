@@ -167,7 +167,7 @@ static int update_hardware_info_8x16(struct hardware_info *hw_info, const char *
         hw_info->snd_devices = NULL;
         hw_info->num_snd_devices = 0;
         strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
-     } else if (!strcmp(snd_card_name, "msm8976-tasha-snd-card")) {
+    } else if (!strcmp(snd_card_name, "msm8976-tasha-snd-card")) {
         strlcpy(hw_info->type, "", sizeof(hw_info->type));
         strlcpy(hw_info->name, "msm8976", sizeof(hw_info->name));
         hw_info->snd_devices = NULL;
@@ -194,6 +194,12 @@ static int update_hardware_info_8x16(struct hardware_info *hw_info, const char *
     }  else if (!strcmp(snd_card_name, "msm8976-skup-snd-card")) {
         strlcpy(hw_info->type, "", sizeof(hw_info->type));
         strlcpy(hw_info->name, "msm8976", sizeof(hw_info->name));
+        hw_info->snd_devices = NULL;
+        hw_info->num_snd_devices = 0;
+        strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "msm8939-florida-snd-card")) {
+        strlcpy(hw_info->type, "florida", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msm8939", sizeof(hw_info->name));
         hw_info->snd_devices = NULL;
         hw_info->num_snd_devices = 0;
         strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
