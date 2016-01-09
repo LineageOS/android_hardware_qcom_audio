@@ -1989,6 +1989,20 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
 
     ALOGV_IF(kv_pairs != NULL, "%s: enter: %s", __func__, kv_pairs);
 
+#ifdef PLATFORM_APQ8084
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_SCO_WB, value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_BT_SCO_WB);
+        if (!strcmp(value, AUDIO_PARAMETER_VALUE_ON)) {
+            my_data->btsco_sample_rate = SAMPLE_RATE_16KHZ;
+            audio_route_apply_path(my_data->adev->audio_route,
+                                   "bt-sco-wb-samplerate");
+            audio_route_update_mixer(my_data->adev->audio_route);
+        } else {
+            my_data->btsco_sample_rate = SAMPLE_RATE_8KHZ;
+        }
+    }
+#else
     err = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_BTSCO, &val);
     if (err >= 0) {
         str_parms_del(parms, AUDIO_PARAMETER_KEY_BTSCO);
@@ -1999,6 +2013,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
             audio_route_update_mixer(my_data->adev->audio_route);
         }
     }
+#endif
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SLOWTALK, value, sizeof(value));
     if (err >= 0) {
