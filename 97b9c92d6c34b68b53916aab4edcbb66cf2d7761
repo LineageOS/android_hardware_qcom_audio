@@ -1,0 +1,106 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3fce034c_f9010eb1",
+        "filename": "hal/msm8916/hw_info.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 126,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-01-09T05:14:23Z",
+      "side": 1,
+      "message": "static int update_hardware_info_8x16(...)",
+      "revId": "97b9c92d6c34b68b53916aab4edcbb66cf2d7761",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3fce034c_b92dc647",
+        "filename": "hal/msm8916/hw_info.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 128,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-01-09T05:14:23Z",
+      "side": 1,
+      "message": "Unnecessary.",
+      "revId": "97b9c92d6c34b68b53916aab4edcbb66cf2d7761",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3fce034c_d93212a8",
+        "filename": "hal/msm8916/hw_info.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 233,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-01-09T05:14:23Z",
+      "side": 1,
+      "message": "return -ENODEV;",
+      "revId": "97b9c92d6c34b68b53916aab4edcbb66cf2d7761",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3fce034c_19ff3aab",
+        "filename": "hal/msm8916/hw_info.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 235,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-01-09T05:14:23Z",
+      "side": 1,
+      "message": "return 0;",
+      "revId": "97b9c92d6c34b68b53916aab4edcbb66cf2d7761",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3fce034c_79275e66",
+        "filename": "hal/msm8916/hw_info.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 241,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-01-09T05:14:23Z",
+      "side": 1,
+      "message": "Delete this.",
+      "revId": "97b9c92d6c34b68b53916aab4edcbb66cf2d7761",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3fce034c_591e220d",
+        "filename": "hal/msm8916/hw_info.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 249,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-01-09T05:14:23Z",
+      "side": 1,
+      "message": "May as well just swap the if check for the following:\n\n\nif (update_hardware_info_8x16(hw_info, snd_card_name) \u003c 0) {\n\n    ALOGE(\"%s: Unsupported target %s:\",__func__, snd_card_name);\n\n    free(hw_info);\n\n    hw_info \u003d NULL;\n}",
+      "revId": "97b9c92d6c34b68b53916aab4edcbb66cf2d7761",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
