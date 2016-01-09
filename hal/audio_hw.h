@@ -121,7 +121,9 @@ typedef enum {
 
     USECASE_AUDIO_PLAYBACK_AFE_PROXY,
     USECASE_AUDIO_RECORD_AFE_PROXY,
-
+#ifdef HAVE_LG_SWIRRC
+    USECASE_AUDIO_IRRC,
+#endif
     AUDIO_USECASE_MAX
 } audio_usecase_t;
 

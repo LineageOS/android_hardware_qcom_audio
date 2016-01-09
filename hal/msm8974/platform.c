@@ -224,6 +224,10 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                           AFE_PROXY_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_AFE_PROXY] = {AFE_PROXY_PLAYBACK_PCM_DEVICE,
                                           AFE_PROXY_RECORD_PCM_DEVICE},
+#ifdef HAVE_LG_SWIRRC
+    [USECASE_AUDIO_IRRC] = {MULTIMEDIA2_PCM_DEVICE,
+                                        MULTIMEDIA2_PCM_DEVICE},
+#endif
 };
 
 /* Array to store sound devices */
@@ -260,7 +264,9 @@ static char * device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOIP_HANDSET] = "voip-handset-comm",
     [SND_DEVICE_OUT_VOIP_SPEAKER] = "voip-speaker-comm",
     [SND_DEVICE_OUT_VOIP_HEADPHONES] = "voip-headset-comm",
-
+#ifdef HAVE_LG_SWIRRC
+    [SND_DEVICE_OUT_IRRC] = "lg-irrc-lineout",
+#endif
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
     [SND_DEVICE_IN_HANDSET_MIC_AEC] = "handset-mic",
@@ -339,7 +345,9 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET] = 26,
     [SND_DEVICE_OUT_ANC_HANDSET] = 103,
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = 101,
-
+#ifdef HAVE_LG_SWIRRC
+    [SND_DEVICE_OUT_IRRC] = 15,
+#endif
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
     [SND_DEVICE_IN_HANDSET_MIC_AEC] = 106,
     [SND_DEVICE_IN_HANDSET_MIC_NS] = 107,
@@ -504,6 +512,9 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_INCALL_REC_DOWNLINK)},
     {TO_NAME_INDEX(USECASE_INCALL_REC_UPLINK_AND_DOWNLINK)},
     {TO_NAME_INDEX(USECASE_AUDIO_HFP_SCO)},
+#ifdef HAVE_LG_SWIRRC
+    {TO_NAME_INDEX(USECASE_AUDIO_IRRC)},
+#endif
 };
 
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
@@ -1590,6 +1601,10 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
 #endif
     } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
         snd_device = SND_DEVICE_OUT_HANDSET;
+#ifdef HAVE_LG_SWIRRC
+    } else if (devices == AUDIO_DEVICE_OUT_IRRC) {
+        snd_device = SND_DEVICE_OUT_IRRC;
+#endif
 #ifdef AFE_PROXY_ENABLED
     } else if (devices & AUDIO_DEVICE_OUT_PROXY) {
         channel_count = audio_extn_get_afe_proxy_channel_count();

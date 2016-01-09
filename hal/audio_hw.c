@@ -195,6 +195,9 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
 
     [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = "afe-proxy-playback",
     [USECASE_AUDIO_RECORD_AFE_PROXY] = "afe-proxy-record",
+#ifdef HAVE_LG_SWIRRC
+    [USECASE_AUDIO_IRRC] = "lg-irrc-playback",
+#endif
 };
 
 static const audio_usecase_t offload_usecases[] = {
@@ -2939,6 +2942,11 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         } else if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
             out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
             out->config = pcm_config_low_latency;
+#ifdef HAVE_LG_SWIRRC
+        } else if (out->flags & AUDIO_OUTPUT_FLAG_IRRC) {
+            out->usecase = USECASE_AUDIO_IRRC;
+            out->config = pcm_config_low_latency;
+#endif
         } else {
             /* primary path is the default path selected if no other outputs are available/suitable */
             out->usecase = USECASE_AUDIO_PLAYBACK_PRIMARY;
