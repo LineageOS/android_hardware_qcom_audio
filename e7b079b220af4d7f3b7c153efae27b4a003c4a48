@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3fce034c_7e9e6408",
+        "filename": "hal/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 164,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-01-09T03:46:49Z",
+      "side": 1,
+      "message": "Isn\u0027t this supposed to be AUDIO_FEATURE_ENABLED_FLAC_OFFLOAD?",
+      "revId": "e7b079b220af4d7f3b7c153efae27b4a003c4a48",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
