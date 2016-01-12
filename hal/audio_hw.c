@@ -896,9 +896,9 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             out_snd_device = SND_DEVICE_NONE;
             if (in_snd_device == SND_DEVICE_NONE) {
                 audio_devices_t out_device = AUDIO_DEVICE_NONE;
-                if ((adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
+                if (((adev->active_input && adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION) ||
                     (adev->mode == AUDIO_MODE_IN_COMMUNICATION &&
-                     adev->active_input->source == AUDIO_SOURCE_MIC)) &&
+                     (adev->active_input && adev->active_input->source == AUDIO_SOURCE_MIC))) &&
                      adev->primary_output && !adev->primary_output->standby) {
                     out_device = adev->primary_output->devices;
                     platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
