@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -746,7 +746,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             out_snd_device = SND_DEVICE_NONE;
             if (in_snd_device == SND_DEVICE_NONE) {
                 audio_devices_t out_device = AUDIO_DEVICE_NONE;
-                if ((adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION || (adev->mode == AUDIO_MODE_IN_COMMUNICATION && adev->active_input->source == AUDIO_SOURCE_MIC)) &&
+                if ((adev->active_input &&
+                        (adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION || (adev->mode == AUDIO_MODE_IN_COMMUNICATION && adev->active_input->source == AUDIO_SOURCE_MIC))) &&
                         adev->primary_output && !adev->primary_output->standby) {
                     out_device = adev->primary_output->devices;
                 } else if(usecase->id == USECASE_AUDIO_RECORD_AFE_PROXY) {
