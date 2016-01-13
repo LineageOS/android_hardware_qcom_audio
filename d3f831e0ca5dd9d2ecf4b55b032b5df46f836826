@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1fcbff3d_da969995",
+        "filename": "hal/audio_hw.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 124,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-01-13T01:12:51Z",
+      "side": 1,
+      "message": "Consider not using a global define for this, and having a flag in Android.mk instead.",
+      "revId": "d3f831e0ca5dd9d2ecf4b55b032b5df46f836826",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
