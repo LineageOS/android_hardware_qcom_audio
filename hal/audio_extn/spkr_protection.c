@@ -103,12 +103,6 @@
 #define AUDIO_PARAMETER_KEY_SPKR_TZ_1     "spkr_1_tz_name"
 #define AUDIO_PARAMETER_KEY_SPKR_TZ_2     "spkr_2_tz_name"
 
-#define SPKR_TZ_1    "wsatz.12"
-#define SPKR_TZ_2    "wsatz.11"
-#define SPKR_TZ_3    "wsatz.14"
-#define SPKR_TZ_4    "wsatz.13"
-
-
 /*Modes of Speaker Protection*/
 enum speaker_protection_mode {
     SPKR_PROTECTION_DISABLED = -1,
@@ -781,7 +775,11 @@ static void* spkr_calibration_thread()
                                     break;
                                 }
                                 t0_spk_prior = t0_spk_1;
+                                pthread_mutex_unlock(&adev->lock);
                                 sleep(1);
+                                pthread_mutex_lock(&adev->lock);
+                                if (is_speaker_in_use(&sec))
+                                    break;
                             } else {
                                ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
                                break;
@@ -823,7 +821,11 @@ static void* spkr_calibration_thread()
                                     break;
                                 }
                                 t0_spk_prior = t0_spk_2;
+                                pthread_mutex_unlock(&adev->lock);
                                 sleep(1);
+                                pthread_mutex_lock(&adev->lock);
+                                if (is_speaker_in_use(&sec))
+                                    break;
                             } else {
                                ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
                                break;
@@ -953,18 +955,14 @@ void audio_extn_spkr_prot_set_parameters(struct str_parms *parms,
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SPKR_TZ_1,
                             value, len);
     if (err >= 0) {
-        if ((!strncmp(SPKR_TZ_1, value, sizeof(SPKR_TZ_1)) ||
-            (!strncmp(SPKR_TZ_3, value, sizeof(SPKR_TZ_3)))))
-            tz_names.spkr_1_name = strdup(value);
+        tz_names.spkr_1_name = strdup(value);
         str_parms_del(parms, AUDIO_PARAMETER_KEY_SPKR_TZ_1);
     }
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SPKR_TZ_2,
                             value, len);
     if (err >= 0) {
-        if ((!strncmp(SPKR_TZ_2, value, sizeof(SPKR_TZ_2)) ||
-            (!strncmp(SPKR_TZ_4, value, sizeof(SPKR_TZ_4)))))
-            tz_names.spkr_2_name = strdup(value);
+        tz_names.spkr_2_name = strdup(value);
         str_parms_del(parms, AUDIO_PARAMETER_KEY_SPKR_TZ_2);
     }
 

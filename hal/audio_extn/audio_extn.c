@@ -42,6 +42,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <dlfcn.h>
+#include <fcntl.h>
 #include <cutils/properties.h>
 #include <cutils/log.h>
 
@@ -81,6 +82,124 @@ static struct audio_extn_module aextnmod = {
 /* Query offload playback instances count */
 #define AUDIO_PARAMETER_OFFLOAD_NUM_ACTIVE "offload_num_active"
 #define AUDIO_PARAMETER_HPX            "HPX"
+
+/*
+* update sysfs node hdmi_audio_cb to enable notification acknowledge feature
+* bit(5) set to 1 to enable this feature
+* bit(4) set to 1 to enable acknowledgement
+* this is done only once at the first connect event
+*
+* bit(0) set to 1 when HDMI cable is connected
+* bit(0) set to 0 when HDMI cable is disconnected
+* this is done when device switch happens by setting audioparamter
+*/
+
+#define HDMI_PLUG_STATUS_NOTIFY_ENABLE 0x30
+
+static ssize_t update_sysfs_node(const char *path, const char *data, size_t len)
+{
+    ssize_t err = 0;
+    int fd = -1;
+
+    err = access(path, W_OK);
+    if (!err) {
+        fd = open(path, O_WRONLY);
+        errno = 0;
+        err = write(fd, data, len);
+        if (err < 0) {
+            err = -errno;
+        }
+        close(fd);
+    } else {
+        ALOGE("%s: Failed to access path: %s error: %s",
+                __FUNCTION__, path, strerror(errno));
+        err = -errno;
+    }
+
+    return err;
+}
+
+static int get_hdmi_sysfs_node_index()
+{
+    static int node_index = -1;
+    char fbvalue[80] = {0};
+    char fbpath[80] = {0};
+    int i = 0;
+    FILE *hdmi_fp = NULL;
+
+    if(node_index >= 0) {
+        //hdmi sysfs node will not change so we just need to get the index once.
+        ALOGV("HDMI sysfs node is at fb%d", node_index);
+        return node_index;
+    }
+
+    for(i = 0; i < 3; i++) {
+        snprintf(fbpath, sizeof(fbpath),
+                  "/sys/class/graphics/fb%d/msm_fb_type", i);
+        hdmi_fp = fopen(fbpath, "r");
+        if(hdmi_fp) {
+            fread(fbvalue, sizeof(char), 80, hdmi_fp);
+            if(strncmp(fbvalue, "dtv panel", strlen("dtv panel")) == 0) {
+                node_index = i;
+                ALOGV("HDMI is at fb%d",i);
+                fclose(hdmi_fp);
+                return node_index;
+            }
+            fclose(hdmi_fp);
+        } else {
+            ALOGE("Failed to open fb node %d",i);
+        }
+    }
+
+    return -1;
+}
+
+static int update_hdmi_sysfs_node(int node_value)
+{
+    char hdmi_ack_path[80] = {0};
+    char hdmi_ack_value[3] = {0};
+    int index, ret = -1;
+
+    index = get_hdmi_sysfs_node_index();
+
+    if (index >= 0) {
+        snprintf(hdmi_ack_value, sizeof(hdmi_ack_value), "%d", node_value);
+        snprintf(hdmi_ack_path, sizeof(hdmi_ack_path),
+                  "/sys/class/graphics/fb%d/hdmi_audio_cb", index);
+
+        ret = update_sysfs_node(hdmi_ack_path, hdmi_ack_value,
+                sizeof(hdmi_ack_value));
+
+        ALOGI("update hdmi_audio_cb at fb[%d] to:[%d] %s",
+            index, node_value, (ret >= 0) ? "success":"fail");
+    }
+
+    return ret;
+}
+
+static void check_and_set_hdmi_connection_status(struct str_parms *parms)
+{
+    char value[32] = {0};
+    static bool is_hdmi_sysfs_node_init = false;
+
+    if (str_parms_get_str(parms, "connect", value, sizeof(value)) >= 0
+            && (atoi(value) & AUDIO_DEVICE_OUT_HDMI)) {
+        //params = "connect=1024" for HDMI connection.
+        if (is_hdmi_sysfs_node_init == false) {
+            is_hdmi_sysfs_node_init = true;
+            update_hdmi_sysfs_node(HDMI_PLUG_STATUS_NOTIFY_ENABLE);
+        }
+        update_hdmi_sysfs_node(1);
+    } else if(str_parms_get_str(parms, "disconnect", value, sizeof(value)) >= 0
+            && (atoi(value) & AUDIO_DEVICE_OUT_HDMI)){
+        //params = "disconnect=1024" for HDMI disconnection.
+        update_hdmi_sysfs_node(0);
+    } else {
+        // handle hdmi devices only
+        return;
+    }
+}
+
 
 #ifndef FM_POWER_OPT
 #define audio_extn_fm_set_parameters(adev, parms) (0)
@@ -279,6 +398,9 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
     char value[32] ={0};
     struct listnode *node;
     struct audio_usecase *usecase;
+    struct str_parms *query_44_1;
+    struct str_parms *reply_44_1;
+    struct str_parms *parms_disable_44_1;
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_ANC, value,
                             sizeof(value));
@@ -288,6 +410,24 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
         else
             aextnmod.anc_enabled = false;
 
+        /* Store current 44.1 configuration and disable it temporarily before
+         * changing ANC state.
+         * Since 44.1 playback is not allowed with anc on.
+         * If ANC switch is done when 44.1 is active three devices would need
+         * sequencing 1. "headphones-44.1", 2. "headphones-anc" and
+         * 3. "headphones".
+         * Note: Enable/diable of anc would affect other two device's state.
+         */
+        query_44_1 = str_parms_create_str(AUDIO_PARAMETER_KEY_NATIVE_AUDIO);
+        reply_44_1 = str_parms_create();
+        platform_get_parameters(adev->platform, query_44_1, reply_44_1);
+
+        parms_disable_44_1 = str_parms_create();
+        str_parms_add_str(parms_disable_44_1, AUDIO_PARAMETER_KEY_NATIVE_AUDIO, "false");
+        platform_set_parameters(adev->platform, parms_disable_44_1);
+        str_parms_destroy(parms_disable_44_1);
+
+        // Refresh device selection for anc playback
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
             if (usecase->type == PCM_PLAYBACK) {
@@ -296,11 +436,16 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
                     usecase->stream.out->devices ==  \
                     AUDIO_DEVICE_OUT_WIRED_HEADSET) {
                         select_devices(adev, usecase->id);
-                        ALOGV("%s: switching device", __func__);
+                        ALOGV("%s: switching device completed", __func__);
                         break;
                 }
             }
         }
+
+        // Restore 44.1 configuration on top of updated anc state
+        platform_set_parameters(adev->platform, reply_44_1);
+        str_parms_destroy(query_44_1);
+        str_parms_destroy(reply_44_1);
     }
 
     ALOGD("%s: anc_enabled:%d", __func__, aextnmod.anc_enabled);
@@ -574,6 +719,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_hpx_set_parameters(adev, parms);
    audio_extn_pm_set_parameters(parms);
    audio_extn_source_track_set_parameters(adev, parms);
+   check_and_set_hdmi_connection_status(parms);
    if (adev->offload_effects_set_parameters != NULL)
        adev->offload_effects_set_parameters(parms);
 }
