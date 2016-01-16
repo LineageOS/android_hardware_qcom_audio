@@ -191,6 +191,7 @@ struct stream_in {
     audio_usecase_t usecase;
     bool enable_aec;
     bool enable_ns;
+    int64_t frames_read; /* total frames read, not cleared when entering standby */
 
     audio_io_handle_t capture_handle;
     audio_input_flags_t flags;
