@@ -215,6 +215,7 @@ struct stream_in {
     bool enable_aec;
     bool enable_ns;
     audio_format_t format;
+    int64_t frames_read; /* total frames read, not cleared when entering standby */
 
     struct audio_device *dev;
 };
