@@ -1888,8 +1888,8 @@ int platform_get_snd_device_bit_width(snd_device_t snd_device)
 
 int platform_set_native_support(bool codec_support)
 {
-    int ret = 0;
-    na_props.platform_na_prop_enabled = na_props.ui_na_prop_enabled
+    int ret = -1;
+    ret = na_props.platform_na_prop_enabled = na_props.ui_na_prop_enabled
         = codec_support;
     ALOGD("%s: na_props.platform_na_prop_enabled: %d", __func__,
            na_props.platform_na_prop_enabled);
@@ -3649,6 +3649,8 @@ int platform_set_codec_backend_cfg(struct audio_device* adev,
      * 24 bit playback - 48khz for stream sample rate less than 48khz
      * 24 bit playback - 96khz for sample rate range of 48khz to 96khz
      * 24 bit playback - 192khz for sample rate range of 96khz to 192 khz
+     * native support is present: 16/24 bit 44.1Khz clip uses backend at 44.1Khz
+     * native support is not present: 44.1Khz clips uses backend at 48Khz
      * Upper limit is inclusive in the sample rate range.
      */
     if (sample_rate !=
@@ -3778,6 +3780,10 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
         if ((24 == bit_width) &&
             (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
             bit_width = (uint32_t)platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
+            sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+        }
+        // 24 bit native clips must be played at 48Khz for non native backend
+        if ((24 == bit_width) && (OUTPUT_SAMPLING_RATE_44100 == sample_rate)) {
             sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         }
     }
