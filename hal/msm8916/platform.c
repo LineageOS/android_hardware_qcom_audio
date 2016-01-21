@@ -1902,6 +1902,11 @@ acdb_init_fail:
     my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].samplerate_mixer_ctl =
         strdup("USB_AUDIO_RX SampleRate");
 
+    my_data->current_backend_cfg[HDMI_RX_BACKEND].bitwidth_mixer_ctl =
+        strdup("HDMI_RX Bit Format");
+    my_data->current_backend_cfg[HDMI_RX_BACKEND].samplerate_mixer_ctl =
+        strdup("HDMI_RX SampleRate");
+
     ret = audio_extn_utils_get_codec_version(snd_card_name,
                                              my_data->adev->snd_card,
                                              my_data->codec_version);
@@ -4135,6 +4140,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     int backend_idx = DEFAULT_CODEC_BACKEND;
     struct platform_data *my_data = (struct platform_data *)adev->platform;
     int na_mode = platform_get_native_support();
+    edid_audio_info *edid_info = (edid_audio_info *)my_data->edid_info;
 
     backend_idx = platform_get_backend_index(snd_device);
 
@@ -4210,8 +4216,6 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         }
     }
 
-
-
     /*
      * hifi playback not supported on spkr devices, limit the Sample Rate
      * to 48 khz.
@@ -4241,6 +4245,19 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                ALOGD("%s:becf: afe: only 48KHZ sample rate is supported "
                       "Configure afe to default Sample Rate(48k)", __func__);
                sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    }
+
+    if (backend_idx == HDMI_RX_BACKEND) {
+        //Check EDID info for supported samplerate
+        if (!edid_is_supported_sr(edid_info,sample_rate)) {
+            //reset to current sample rate
+            sample_rate = my_data->current_backend_cfg[backend_idx].sample_rate;
+        }
+        //Check EDID info for supported bit widhth
+        if (!edid_is_supported_bps(edid_info,bit_width)) {
+            //reset to current sample rate
+            bit_width = my_data->current_backend_cfg[backend_idx].bit_width;
+        }
     }
 
     //check if mulitchannel clip needs to be down sampled to 48k
@@ -4974,13 +4991,17 @@ void platform_cache_edid(void * platform)
     platform_get_edid_info(platform);
 }
 
-void platform_invalidate_edid(void * platform)
+void platform_invalidate_hdmi_config(void * platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     my_data->edid_valid = false;
     if (my_data->edid_info) {
         memset(my_data->edid_info, 0, sizeof(struct edid_audio_info));
     }
+
+    //reset HDMI_RX_BACKEND to default values
+    my_data->current_backend_cfg[HDMI_RX_BACKEND].sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    my_data->current_backend_cfg[HDMI_RX_BACKEND].bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
 }
 
 int platform_set_mixer_control(struct stream_out *out, const char * mixer_ctl_name,

@@ -1165,7 +1165,7 @@ void platform_cache_edid(void * platform __unused)
 
 }
 
-void platform_invalidate_edid(void * platform __unused)
+void platform_invalidate_hdmi_config(void * platform __unused)
 {
 
 }

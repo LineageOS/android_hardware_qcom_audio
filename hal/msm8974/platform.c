@@ -1738,6 +1738,10 @@ acdb_init_fail:
         strdup("SLIM_6_RX Format");
     my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
         strdup("SLIM_6_RX SampleRate");
+    my_data->current_backend_cfg[HDMI_RX_BACKEND].bitwidth_mixer_ctl =
+        strdup("HDMI_RX Bit Format");
+    my_data->current_backend_cfg[HDMI_RX_BACKEND].samplerate_mixer_ctl =
+        strdup("HDMI_RX SampleRate");
 
     my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].bitwidth_mixer_ctl =
         strdup("USB_AUDIO_RX Format");
@@ -4105,6 +4109,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     int backend_idx = DEFAULT_CODEC_BACKEND;
     struct platform_data *my_data = (struct platform_data *)adev->platform;
     int na_mode = platform_get_native_support();
+    edid_audio_info *edid_info = (edid_audio_info *)my_data->edid_info;
 
     backend_idx = platform_get_backend_index(snd_device);
 
@@ -4211,8 +4216,21 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                    __func__, bit_width, sample_rate, channels);
     }
 
+    if (backend_idx == HDMI_RX_BACKEND) {
+        //Check EDID info for supported samplerate
+        if (!edid_is_supported_sr(edid_info,sample_rate)) {
+            //reset to current sample rate
+            sample_rate = my_data->current_backend_cfg[backend_idx].sample_rate;
+        }
+        //Check EDID info for supported bit widhth
+        if (!edid_is_supported_bps(edid_info,bit_width)) {
+            //reset to current sample rate
+            bit_width = my_data->current_backend_cfg[backend_idx].bit_width;
+        }
+    }
     ALOGI("%s:becf: afe: Codec selected backend: %d updated bit width: %d and sample rate: %d",
           __func__, backend_idx , bit_width, sample_rate);
+
     // Force routing if the expected bitwdith or samplerate
     // is not same as current backend comfiguration
     if ((bit_width != my_data->current_backend_cfg[backend_idx].bit_width) ||
@@ -4917,13 +4935,18 @@ void platform_cache_edid(void * platform)
     platform_get_edid_info(platform);
 }
 
-void platform_invalidate_edid(void * platform)
+void platform_invalidate_hdmi_config(void * platform)
 {
+    //reset HDMI EDID info
     struct platform_data *my_data = (struct platform_data *)platform;
     my_data->edid_valid = false;
     if (my_data->edid_info) {
         memset(my_data->edid_info, 0, sizeof(struct edid_audio_info));
     }
+
+    //reset HDMI_RX_BACKEND to default values
+    my_data->current_backend_cfg[HDMI_RX_BACKEND].sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    my_data->current_backend_cfg[HDMI_RX_BACKEND].bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
 }
 
 int platform_set_mixer_control(struct stream_out *out, const char * mixer_ctl_name,

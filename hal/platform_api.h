@@ -130,7 +130,6 @@ unsigned char platform_map_to_edid_format(int format);
 bool platform_is_edid_supported_format(void *platform, int format);
 bool platform_is_edid_supported_sample_rate(void *platform, int sample_rate);
 void platform_cache_edid(void * platform);
-void platform_invalidate_edid(void * platform);
 void platform_invalidate_hdmi_config(void * platform);
 int platform_set_hdmi_config(void *platform, uint32_t channel_count,
                              uint32_t sample_rate, bool enable_passthrough);

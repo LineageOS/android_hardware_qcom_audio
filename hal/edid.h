@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014, 2016, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -97,4 +97,8 @@ typedef struct edid_audio_info {
 #else
 bool edid_get_sink_caps(edid_audio_info* info, char *edid_data);
 #endif
+
+bool edid_is_supported_sr(edid_audio_info* info, int sr);
+bool edid_is_supported_bps(edid_audio_info* info, int bps);
+
 #endif /* EDID_H */
