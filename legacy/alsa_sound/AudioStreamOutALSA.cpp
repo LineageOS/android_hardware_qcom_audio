@@ -256,6 +256,9 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
     }
 #endif
 
+    if (!bytes) {
+        return 0;
+    }
     period_size = mHandle->periodSize;
     do {
         if (write_pending < period_size) {
