@@ -987,7 +987,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
          * usecase. This is to avoid switching devices for voice call when
          * check_usecases_codec_backend() is called below.
          */
-        if (voice_is_in_call(adev) && adev->mode == AUDIO_MODE_IN_CALL) {
+        if (voice_is_in_call(adev) && adev->mode != AUDIO_MODE_NORMAL) {
             vc_usecase = get_usecase_from_list(adev,
                                                get_usecase_id_from_usecase_type(adev, VOICE_CALL));
             if ((vc_usecase) && ((vc_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
@@ -3666,8 +3666,7 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
         if (amplifier_set_mode(mode) != 0)
             ALOGE("Failed setting amplifier mode");
         adev->mode = mode;
-        if ((mode == AUDIO_MODE_NORMAL || mode == AUDIO_MODE_IN_COMMUNICATION) &&
-                voice_is_in_call(adev)) {
+        if ((mode == AUDIO_MODE_NORMAL) && voice_is_in_call(adev)) {
             adev->voice.is_in_call = false;
             voice_stop_call(adev);
             platform_set_gsm_mode(adev->platform, false);
