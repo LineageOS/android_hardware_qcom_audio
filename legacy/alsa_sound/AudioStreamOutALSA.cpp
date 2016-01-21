@@ -112,6 +112,10 @@ ssize_t AudioStreamOutALSA::write(const void *buffer, size_t bytes)
 
     int write_pending = bytes;
 
+    if (bytes == 0) {
+        return 0;
+    }
+
     if((strcmp(mHandle->useCase, SND_USE_CASE_VERB_IP_VOICECALL)) &&
        (strcmp(mHandle->useCase, SND_USE_CASE_MOD_PLAY_VOIP))) {
         mParent->mLock.lock();
