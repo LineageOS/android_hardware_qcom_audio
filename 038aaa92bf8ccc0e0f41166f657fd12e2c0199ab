@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1fcbff3d_f5626c16",
+        "filename": "legacy/alsa_sound/AudioStreamOutALSA.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 259,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-01-22T05:55:58Z",
+      "side": 1,
+      "message": "Can you fail quickly at the beginning of the function instead, or is it required that you do this here because some other setup occurs?",
+      "revId": "038aaa92bf8ccc0e0f41166f657fd12e2c0199ab",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
