@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (c) 2013-2014, 2016 The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -161,7 +162,7 @@ void audio_extn_sound_trigger_stop_lab(struct stream_in *in)
     struct sound_trigger_info  *st_ses_info = NULL;
     audio_event_info_t event;
 
-    if (!st_dev || !in)
+    if (!st_dev || !in || !in->is_st_session_active)
        return;
 
     pthread_mutex_lock(&st_dev->lock);
@@ -171,6 +172,7 @@ void audio_extn_sound_trigger_stop_lab(struct stream_in *in)
         event.u.ses_info = st_ses_info->st_ses;
         ALOGV("%s: AUDIO_EVENT_STOP_LAB pcm %p", __func__, st_ses_info->st_ses.pcm);
         st_dev->st_callback(AUDIO_EVENT_STOP_LAB, &event);
+        in->is_st_session_active = false;
     }
 }
 void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in)
