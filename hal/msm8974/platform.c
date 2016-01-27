@@ -125,6 +125,7 @@
 #define EVENT_EXTERNAL_SPK_2 "qc_ext_spk_2"
 #define EVENT_EXTERNAL_MIC   "qc_ext_mic"
 #define MAX_CAL_NAME 20
+#define MAX_MIME_TYPE_LENGTH 30
 
 char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
         [WCD9XXX_ANC_CAL] = "anc_cal",
@@ -133,7 +134,7 @@ char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
 
 #define  AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED  "is_hw_dec_session_allowed"
 
-char * dsp_only_decoders_mime[] = {
+char dsp_only_decoders_mime[][MAX_MIME_TYPE_LENGTH] = {
     "audio/x-ms-wma" /* wma*/ ,
     "audio/x-ms-wma-lossless" /* wma lossless */ ,
     "audio/x-ms-wma-pro" /* wma prop */ ,
@@ -924,7 +925,11 @@ static bool platform_is_i2s_ext_modem(const char *snd_card_name,
 
 static void set_platform_defaults()
 {
-    int32_t dev;
+    int32_t dev, count = 0;
+    char dsp_decoder_property[PROPERTY_VALUE_MAX];
+    const char *MEDIA_MIMETYPE_AUDIO_ALAC = "audio/alac";
+    const char *MEDIA_MIMETYPE_AUDIO_APE = "audio/x-ape";
+
     for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
         backend_table[dev] = NULL;
     }
@@ -954,6 +959,28 @@ static void set_platform_defaults()
     backend_table[SND_DEVICE_OUT_TRANSMISSION_FM] = strdup("transmission-fm");
     backend_table[SND_DEVICE_OUT_HEADPHONES] = strdup("headphones");
     backend_table[SND_DEVICE_OUT_HEADPHONES_44_1] = strdup("headphones-44.1");
+
+
+     /*remove ALAC & APE from DSP decoder list based on software decoder availability*/
+     for (count = 0; count < sizeof(dsp_only_decoders_mime)/sizeof(dsp_only_decoders_mime[0]);
+            count++) {
+
+         if (!strncmp(MEDIA_MIMETYPE_AUDIO_ALAC, dsp_only_decoders_mime[count],
+              strlen(dsp_only_decoders_mime[count]))) {
+
+             if(property_get_bool("use.qti.sw.alac.decoder", false)) {
+                 ALOGD("Alac software decoder is available...removing alac from DSP decoder list");
+                 strncpy(dsp_only_decoders_mime[count],"none",5);
+             }
+         } else if (!strncmp(MEDIA_MIMETYPE_AUDIO_APE, dsp_only_decoders_mime[count],
+              strlen(dsp_only_decoders_mime[count]))) {
+
+             if(property_get_bool("use.qti.sw.ape.decoder", false)) {
+                 ALOGD("APE software decoder is available...removing ape from DSP decoder list");
+                 strncpy(dsp_only_decoders_mime[count],"none",5);
+             }
+         }
+     }
 }
 
 void get_cvd_version(char *cvd_version, struct audio_device *adev)
