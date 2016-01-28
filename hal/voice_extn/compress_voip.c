@@ -38,6 +38,8 @@
 
 #define COMPRESS_VOIP_IO_BUF_SIZE_NB 320
 #define COMPRESS_VOIP_IO_BUF_SIZE_WB 640
+#define COMPRESS_VOIP_IO_BUF_SIZE_SWB 1280
+#define COMPRESS_VOIP_IO_BUF_SIZE_FB 1920
 
 struct pcm_config pcm_config_voip_nb = {
     .channels = 1,
@@ -51,6 +53,22 @@ struct pcm_config pcm_config_voip_wb = {
     .channels = 1,
     .rate = 16000, /* changed when the stream is opened */
     .period_size = COMPRESS_VOIP_IO_BUF_SIZE_WB/2,
+    .period_count = 10,
+    .format = PCM_FORMAT_S16_LE,
+};
+
+struct pcm_config pcm_config_voip_swb = {
+    .channels = 1,
+    .rate = 32000, /* changed when the stream is opened */
+    .period_size = COMPRESS_VOIP_IO_BUF_SIZE_SWB/2,
+    .period_count = 10,
+    .format = PCM_FORMAT_S16_LE,
+};
+
+struct pcm_config pcm_config_voip_fb = {
+    .channels = 1,
+    .rate = 48000, /* changed when the stream is opened */
+    .period_size = COMPRESS_VOIP_IO_BUF_SIZE_FB/2,
     .period_count = 10,
     .format = PCM_FORMAT_S16_LE,
 };
@@ -467,15 +485,24 @@ void voice_extn_compress_voip_in_get_parameters(struct stream_in *in,
 
 int voice_extn_compress_voip_out_get_buffer_size(struct stream_out *out)
 {
-    if (out->config.rate == 16000)
+    if (out->config.rate == 48000)
+        return COMPRESS_VOIP_IO_BUF_SIZE_FB;
+    else if (out->config.rate== 32000)
+        return COMPRESS_VOIP_IO_BUF_SIZE_SWB;
+    else if (out->config.rate == 16000)
         return COMPRESS_VOIP_IO_BUF_SIZE_WB;
     else
         return COMPRESS_VOIP_IO_BUF_SIZE_NB;
+
 }
 
 int voice_extn_compress_voip_in_get_buffer_size(struct stream_in *in)
 {
-    if (in->config.rate == 16000)
+    if (in->config.rate == 48000)
+        return COMPRESS_VOIP_IO_BUF_SIZE_FB;
+    else if (in->config.rate== 32000)
+        return COMPRESS_VOIP_IO_BUF_SIZE_SWB;
+    else if (in->config.rate == 16000)
         return COMPRESS_VOIP_IO_BUF_SIZE_WB;
     else
         return COMPRESS_VOIP_IO_BUF_SIZE_NB;
@@ -570,7 +597,11 @@ int voice_extn_compress_voip_open_output_stream(struct stream_out *out)
     out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_MONO;
     out->channel_mask = AUDIO_CHANNEL_OUT_MONO;
     out->usecase = USECASE_COMPRESS_VOIP_CALL;
-    if (out->sample_rate == 16000)
+    if (out->sample_rate == 48000)
+        out->config = pcm_config_voip_fb;
+    else if (out->sample_rate == 32000)
+        out->config = pcm_config_voip_swb;
+    else if (out->sample_rate == 16000)
         out->config = pcm_config_voip_wb;
     else
         out->config = pcm_config_voip_nb;
@@ -624,7 +655,11 @@ int voice_extn_compress_voip_open_input_stream(struct stream_in *in)
         goto done;
 
     in->usecase = USECASE_COMPRESS_VOIP_CALL;
-    if (in->config.rate == 16000)
+    if (in->config.rate == 48000)
+        in->config = pcm_config_voip_fb;
+    else if (in->config.rate == 32000)
+        in->config = pcm_config_voip_swb;
+    else if (in->config.rate == 16000)
         in->config = pcm_config_voip_wb;
     else
         in->config = pcm_config_voip_nb;
@@ -716,7 +751,8 @@ bool voice_extn_compress_voip_is_config_supported(struct audio_config *config)
     ret = voice_extn_compress_voip_is_format_supported(config->format);
     if (ret) {
         if ((popcount(config->channel_mask) == 1) &&
-            (config->sample_rate == 8000 || config->sample_rate == 16000))
+            (config->sample_rate == 8000 || config->sample_rate == 16000 ||
+             config->sample_rate == 32000 || config->sample_rate == 48000))
             ret = ((voip_data.sample_rate == 0) ? true:
                     (voip_data.sample_rate == config->sample_rate));
         else
