@@ -2057,7 +2057,7 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
 {
     struct stream_out *out = (struct stream_out *)stream;
     struct str_parms *query = str_parms_create_str(keys);
-    char *str;
+    char *str = (char*) NULL;
     char value[256];
     struct str_parms *reply = str_parms_create();
     size_t i, j;
@@ -2065,6 +2065,12 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
     bool first = true;
 
     if (!query || !reply) {
+        if (reply) {
+            str_parms_destroy(reply);
+        }
+        if (query) {
+            str_parms_destroy(query);
+        }
         ALOGE("out_get_parameters: failed to allocate mem for query or reply");
         return NULL;
     }
@@ -2110,6 +2116,8 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
             strlcat(value, "false", sizeof(value));
         }
         str_parms_add_str(reply, "is_direct_pcm_track", value);
+        if (str)
+            free(str);
         str = str_parms_to_str(reply);
     }
 
@@ -2132,6 +2140,8 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
             i++;
         }
         str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_FORMATS, value);
+        if (str)
+            free(str);
         str = str_parms_to_str(reply);
     }
     str_parms_destroy(query);
@@ -2717,6 +2727,12 @@ static char* in_get_parameters(const struct audio_stream *stream,
     struct str_parms *reply = str_parms_create();
 
     if (!query || !reply) {
+        if (reply) {
+            str_parms_destroy(reply);
+        }
+        if (query) {
+            str_parms_destroy(query);
+        }
         ALOGE("in_get_parameters: failed to create query or reply");
         return NULL;
     }
@@ -3436,6 +3452,12 @@ static char* adev_get_parameters(const struct audio_hw_device *dev,
     int ret = 0;
 
     if (!query || !reply) {
+        if (reply) {
+            str_parms_destroy(reply);
+        }
+        if (query) {
+            str_parms_destroy(query);
+        }
         ALOGE("adev_get_parameters: failed to create query or reply");
         return NULL;
     }
