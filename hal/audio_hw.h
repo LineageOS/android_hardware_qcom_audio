@@ -368,7 +368,7 @@ int enable_snd_device(struct audio_device *adev,
 int enable_audio_route(struct audio_device *adev,
                        struct audio_usecase *usecase);
 
-struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
+struct audio_usecase *get_usecase_from_list(const struct audio_device *adev,
                                                    audio_usecase_t uc_id);
 
 bool is_offload_usecase(audio_usecase_t uc_id);
