@@ -58,6 +58,8 @@ public:
                                           const char *device_address,
                                           const char *device_name);
         virtual void setPhoneState(audio_mode_t state);
+        virtual void setForceUse(audio_policy_force_use_t usage,
+                                 audio_policy_forced_cfg_t config);
 
         virtual bool isOffloadSupported(const audio_offload_info_t& offloadInfo);
 
@@ -80,11 +82,19 @@ public:
 
 protected:
 
+#ifdef NON_WEARABLE_TARGET
+         status_t checkAndSetVolume(audio_stream_type_t stream,
+                                                    int index,
+                                                    const sp<AudioOutputDescriptor>& outputDesc,
+                                                    audio_devices_t device,
+                                                    int delayMs = 0, bool force = false);
+#else
          status_t checkAndSetVolume(audio_stream_type_t stream,
                                                    int index,
                                                    const sp<SwAudioOutputDescriptor>& outputDesc,
                                                    audio_devices_t device,
                                                    int delayMs = 0, bool force = false);
+#endif
 
         // selects the most appropriate device on output for current state
         // must be called every time a condition that affects the device choice for a given output is

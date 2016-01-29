@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -67,6 +67,8 @@ enum {
     SND_DEVICE_OUT_SPEAKER_AND_HDMI,
     SND_DEVICE_OUT_BT_SCO,
     SND_DEVICE_OUT_BT_SCO_WB,
+    SND_DEVICE_OUT_BT_A2DP,
+    SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP,
     SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES,
     SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES,
     SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET,
@@ -342,4 +344,18 @@ struct csd_data {
     get_sample_rate_t get_sample_rate;
 };
 
+/*
+ * ID for setting mute and lateny on the device side
+ * through Device PP Params mixer control.
+ */
+#define DEVICE_PARAM_MUTE_ID    0
+#define DEVICE_PARAM_LATENCY_ID 1
+
+#define ENUM_TO_STRING(X) #X
+
+struct audio_device_to_audio_interface {
+    audio_devices_t device;
+    char device_name[100];
+    char interface_name[100];
+};
 #endif // QCOM_AUDIO_PLATFORM_H

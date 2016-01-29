@@ -42,16 +42,39 @@
 #define AUDIO_OUTPUT_FLAG_INCALL_MUSIC 0x8000
 #endif
 
-#ifdef FM_ENABLED
-#define AUDIO_DEVICE_OUT_FM 0x80000
-#define AUDIO_DEVICE_OUT_FM_TX 0x100000
-#define AUDIO_SOURCE_FM_RX 9
-#define AUDIO_SOURCE_FM_RX_A2DP 10
-#define AUDIO_DEVICE_IN_FM_RX (AUDIO_DEVICE_BIT_IN | 0x8000)
-#define AUDIO_DEVICE_IN_FM_RX_A2DP (AUDIO_DEVICE_BIT_IN | 0x10000)
+#ifndef AUDIO_DEVICE_OUT_FM_TX
+#define AUDIO_DEVICE_OUT_FM_TX 0x8000000
 #endif
 
+#ifndef FLAC_OFFLOAD_ENABLED
+#define AUDIO_FORMAT_FLAC 0x1B000000UL
+#endif
+
+#ifndef WMA_OFFLOAD_ENABLED
+#define AUDIO_FORMAT_WMA 0x12000000UL
+#define AUDIO_FORMAT_WMA_PRO 0x13000000UL
+#endif
+
+#ifndef ALAC_OFFLOAD_ENABLED
+#define AUDIO_FORMAT_ALAC 0x1C000000UL
+#endif
+
+#ifndef APE_OFFLOAD_ENABLED
+#define AUDIO_FORMAT_APE 0x1D000000UL
+#endif
+
+#ifndef COMPRESS_METADATA_NEEDED
+#define audio_extn_parse_compress_metadata(out, parms) (0)
+#else
+int audio_extn_parse_compress_metadata(struct stream_out *out,
+                                       struct str_parms *parms);
+#endif
+
+#ifdef PCM_OFFLOAD_ENABLED_24
 #define PCM_OUTPUT_BIT_WIDTH (config->offload_info.bit_width)
+#else
+#define PCM_OUTPUT_BIT_WIDTH (CODEC_BACKEND_DEFAULT_BIT_WIDTH)
+#endif
 
 #define MAX_LENGTH_MIXER_CONTROL_IN_INT                  (128)
 
@@ -113,6 +136,18 @@ void audio_extn_usb_start_capture(void *adev);
 void audio_extn_usb_stop_capture();
 void audio_extn_usb_set_proxy_sound_card(uint32_t sndcard_idx);
 bool audio_extn_usb_is_proxy_inuse();
+#endif
+
+#ifndef SPLIT_A2DP_ENABLED
+#define audio_extn_a2dp_init()                       (0)
+#define audio_extn_a2dp_start_playback()             (0)
+#define audio_extn_a2dp_stop_playback()              (0)
+#define audio_extn_a2dp_set_parameters(parms)      (0)
+#else
+void audio_extn_a2dp_init();
+void audio_extn_a2dp_start_playback();
+void audio_extn_a2dp_stop_playback();
+void audio_extn_a2dp_set_parameters(struct str_parms *parms);
 #endif
 
 #ifndef SSR_ENABLED
@@ -368,6 +403,12 @@ typedef enum {
 #ifndef AUDIO_FORMAT_E_AC3_JOC
 #define AUDIO_FORMAT_E_AC3_JOC  0x19000000UL
 #endif
+ 
+#ifndef AUDIO_FORMAT_DTS_LBR
+#define AUDIO_FORMAT_DTS_LBR 0x1E000000UL
+#endif
+
+int read_line_from_file(const char *path, char *buf, size_t count);
 
 #ifndef KPI_OPTIMIZE_ENABLED
 #define audio_extn_perf_lock_init() (0)

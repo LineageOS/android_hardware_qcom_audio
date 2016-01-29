@@ -62,8 +62,8 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_KPI_OPTIMIZE)),true)
     LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FM)),true)
-    LOCAL_CFLAGS += -DFM_ENABLED
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FM_POWER_OPT)),true)
+    LOCAL_CFLAGS += -DFM_POWER_OPT
     LOCAL_SRC_FILES += audio_extn/fm.c
 endif
 
@@ -160,7 +160,29 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTIPLE_TUNNEL)), true)
 endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FLAC_DECODER)),true)
-    LOCAL_CFLAGS += -DQTI_FLAC_DECODER
+    LOCAL_CFLAGS += -DFLAC_OFFLOAD_ENABLED
+    LOCAL_CFLAGS += -DCOMPRESS_METADATA_NEEDED
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_VORBIS_OFFLOAD)),true)
+    LOCAL_CFLAGS += -DVORBIS_OFFLOAD_ENABLED
+    LOCAL_CFLAGS += -DCOMPRESS_METADATA_NEEDED
+
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_WMA_OFFLOAD)),true)
+    LOCAL_CFLAGS += -DWMA_OFFLOAD_ENABLED
+    LOCAL_CFLAGS += -DCOMPRESS_METADATA_NEEDED
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_ALAC_OFFLOAD)),true)
+    LOCAL_CFLAGS += -DALAC_OFFLOAD_ENABLED
+    LOCAL_CFLAGS += -DCOMPRESS_METADATA_NEEDED
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_APE_OFFLOAD)),true)
+    LOCAL_CFLAGS += -DAPE_OFFLOAD_ENABLED
+    LOCAL_CFLAGS += -DCOMPRESS_METADATA_NEEDED
 endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DEV_ARBI)),true)
@@ -168,8 +190,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DEV_ARBI)),true)
     LOCAL_SRC_FILES += audio_extn/dev_arbi.c
 endif
 
+ifneq ($(TARGET_SUPPORTS_WEARABLES),true)
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_RECORD_PLAY_CONCURRENCY)),true)
     LOCAL_CFLAGS += -DRECORD_PLAY_CONCURRENCY
+endif
 endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_ACDB_LICENSE)), true)
@@ -190,6 +214,21 @@ endif
 
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SPLIT_A2DP)),true)
+    LOCAL_CFLAGS += -DSPLIT_A2DP_ENABLED
+    LOCAL_SRC_FILES += audio_extn/a2dp.c
+endif
+
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SOURCE_TRACKING)),true)
+    LOCAL_CFLAGS += -DSOURCE_TRACKING_ENABLED
+    LOCAL_SRC_FILES += audio_extn/source_track.c
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUDIOSPHERE)),true)
+    LOCAL_CFLAGS += -DAUDIOSPHERE_ENABLED
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
@@ -197,6 +236,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libtinycompress \
 	libaudioroute \
 	libdl \
+	libhardware \
 	libexpat
 
 LOCAL_C_INCLUDES += \

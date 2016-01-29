@@ -37,7 +37,7 @@ enum {
 /*
  * Below are the devices for which is back end is same, SLIMBUS_0_RX.
  * All these devices are handled by the internal HW codec. We can
- * enable any one of these devices at any time
+ * enable any one of these devices at any time.
  */
 #define AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND \
     (AUDIO_DEVICE_OUT_EARPIECE | AUDIO_DEVICE_OUT_SPEAKER | \
@@ -57,18 +57,22 @@ enum {
     SND_DEVICE_OUT_HANDSET = SND_DEVICE_OUT_BEGIN,
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_SPEAKER_REVERSE,
+    SND_DEVICE_OUT_SPEAKER_WSA,
     SND_DEVICE_OUT_HEADPHONES,
     SND_DEVICE_OUT_LINE,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_LINE,
     SND_DEVICE_OUT_VOICE_HANDSET,
     SND_DEVICE_OUT_VOICE_SPEAKER,
+    SND_DEVICE_OUT_VOICE_SPEAKER_WSA,
     SND_DEVICE_OUT_VOICE_HEADPHONES,
     SND_DEVICE_OUT_VOICE_LINE,
     SND_DEVICE_OUT_HDMI,
     SND_DEVICE_OUT_SPEAKER_AND_HDMI,
     SND_DEVICE_OUT_BT_SCO,
     SND_DEVICE_OUT_BT_SCO_WB,
+    SND_DEVICE_OUT_BT_A2DP,
+    SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP,
     SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES,
     SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES,
     SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET,
@@ -145,6 +149,10 @@ enum {
     SND_DEVICE_IN_SPEAKER_DMIC_NS_BROADSIDE,
     SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_BROADSIDE,
     SND_DEVICE_IN_VOICE_FLUENCE_DMIC_AANC,
+    SND_DEVICE_IN_HANDSET_QMIC,
+    SND_DEVICE_IN_SPEAKER_QMIC_AEC,
+    SND_DEVICE_IN_SPEAKER_QMIC_NS,
+    SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS,
     SND_DEVICE_IN_END,
 
     SND_DEVICE_MAX = SND_DEVICE_IN_END,
@@ -260,4 +268,12 @@ struct csd_data {
 
 int platform_get_subsys_image_name (char *buf);
 
+
+#define ENUM_TO_STRING(X) #X
+
+struct audio_device_to_audio_interface {
+    audio_devices_t device;
+    char device_name[100];
+    char interface_name[100];
+};
 #endif // QCOM_AUDIO_PLATFORM_H

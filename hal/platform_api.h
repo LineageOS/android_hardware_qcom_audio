@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -99,4 +99,6 @@ int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t p
 void platform_set_echo_reference(void *platform, bool enable);
 void platform_get_device_to_be_id_map(int **be_id_map, int *length);
 
+int platform_set_audio_device_interface(const char * device_name, const char *intf_name,
+                                        const char * codec_type);
 #endif // AUDIO_PLATFORM_API_H

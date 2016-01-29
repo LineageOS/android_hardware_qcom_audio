@@ -266,11 +266,16 @@ static bool is_supported_format(audio_format_t format)
         format == AUDIO_FORMAT_AAC_LC ||
         format == AUDIO_FORMAT_AAC_HE_V1 ||
         format == AUDIO_FORMAT_AAC_HE_V2 ||
+        format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD ||
+        format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD ||
 #ifdef FLAC_OFFLOAD_ENABLED
         format == AUDIO_FORMAT_FLAC ||
 #endif
-        format == AUDIO_FORMAT_PCM_16_BIT_OFFLOAD ||
-        format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD)
+        format == AUDIO_FORMAT_ALAC ||
+        format == AUDIO_FORMAT_APE ||
+        format == AUDIO_FORMAT_VORBIS ||
+        format == AUDIO_FORMAT_WMA ||
+        format == AUDIO_FORMAT_WMA_PRO)
            return true;
 
     return false;
@@ -295,6 +300,21 @@ static int get_snd_codec_id(audio_format_t format)
         id = SND_AUDIOCODEC_FLAC;
         break;
 #endif
+    case AUDIO_FORMAT_ALAC:
+        id = SND_AUDIOCODEC_ALAC;
+        break;
+    case AUDIO_FORMAT_APE:
+        id = SND_AUDIOCODEC_APE;
+        break;
+    case AUDIO_FORMAT_VORBIS:
+        id = SND_AUDIOCODEC_VORBIS;
+        break;
+    case AUDIO_FORMAT_WMA:
+        id = SND_AUDIOCODEC_WMA;
+        break;
+    case AUDIO_FORMAT_WMA_PRO:
+        id = SND_AUDIOCODEC_WMA_PRO;
+        break;
     default:
         ALOGE("%s: Unsupported audio format :%x", __func__, format);
     }
@@ -388,7 +408,7 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_utils_send_app_type_cfg(usecase);
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(mixer_path, snd_device);
-    ALOGV("%s: apply mixer and update path: %s", __func__, mixer_path);
+    ALOGD("%s: apply mixer and update path: %s", __func__, mixer_path);
     audio_route_apply_and_update_path(adev->audio_route, mixer_path);
     ALOGV("%s: exit", __func__);
     return 0;
@@ -410,7 +430,7 @@ int disable_audio_route(struct audio_device *adev,
         snd_device = usecase->out_snd_device;
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(mixer_path, snd_device);
-    ALOGV("%s: reset and update mixer path: %s", __func__, mixer_path);
+    ALOGD("%s: reset and update mixer path: %s", __func__, mixer_path);
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_FREE);
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_FREE);
@@ -452,6 +472,10 @@ int enable_snd_device(struct audio_device *adev,
     if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
        audio_extn_usb_start_capture(adev);
 
+    if (SND_DEVICE_OUT_BT_A2DP == snd_device ||
+       (SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP) == snd_device)
+        audio_extn_a2dp_start_playback();
+
     if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
         snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
         audio_extn_spkr_prot_is_enabled()) {
@@ -464,8 +488,7 @@ int enable_snd_device(struct audio_device *adev,
             return -EINVAL;
         }
     } else {
-        ALOGV("%s: snd_device(%d: %s)", __func__,
-        snd_device, device_name);
+        ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
         /* due to the possibility of calibration overwrite between listen
             and audio, notify listen hal before audio calibration is sent */
         audio_extn_sound_trigger_update_device_status(snd_device,
@@ -509,8 +532,7 @@ int disable_snd_device(struct audio_device *adev,
     }
 
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
-        ALOGV("%s: snd_device(%d: %s)", __func__,
-              snd_device, device_name);
+        ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
         /* exit usb play back thread */
         if(SND_DEVICE_OUT_USB_HEADSET == snd_device ||
            SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET == snd_device)
@@ -519,6 +541,10 @@ int disable_snd_device(struct audio_device *adev,
         /* exit usb capture thread */
         if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
             audio_extn_usb_stop_capture();
+
+        if (SND_DEVICE_OUT_BT_A2DP == snd_device ||
+           (SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP) == snd_device)
+            audio_extn_a2dp_stop_playback();
 
         if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
             snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
@@ -716,14 +742,15 @@ static int read_hdmi_channel_masks(struct stream_out *out)
     return ret;
 }
 
-static audio_usecase_t get_voice_usecase_id_from_list(struct audio_device *adev)
+audio_usecase_t get_usecase_id_from_usecase_type(struct audio_device *adev,
+                                                 usecase_type_t type)
 {
     struct audio_usecase *usecase;
     struct listnode *node;
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if (usecase->type == VOICE_CALL) {
+        if (usecase->type == type) {
             ALOGV("%s: usecase id %d", __func__, usecase->id);
             return usecase->id;
         }
@@ -780,7 +807,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
          */
         if (voice_is_in_call(adev) && adev->mode == AUDIO_MODE_IN_CALL) {
             vc_usecase = get_usecase_from_list(adev,
-                                               get_voice_usecase_id_from_list(adev));
+                                               get_usecase_id_from_usecase_type(adev, VOICE_CALL));
             if ((vc_usecase) && ((vc_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
                 (usecase->devices == AUDIO_DEVICE_IN_VOICE_CALL))) {
                 in_snd_device = vc_usecase->in_snd_device;
@@ -1049,9 +1076,20 @@ int start_input_stream(struct stream_in *in)
         }
         break;
     }
+
+    ALOGV("%s: pcm_prepare", __func__);
+    ret = pcm_prepare(in->pcm);
+    if (ret < 0) {
+        ALOGE("%s: pcm_prepare returned %d", __func__, ret);
+        pcm_close(in->pcm);
+        in->pcm = NULL;
+        goto error_open;
+    }
+
     audio_extn_perf_lock_release();
 
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
+
     return ret;
 
 error_open:
@@ -1502,6 +1540,17 @@ int start_output_stream(struct stream_out *out)
             }
             break;
         }
+
+        ALOGV("%s: pcm_prepare", __func__);
+        if (pcm_is_ready(out->pcm)) {
+            ret = pcm_prepare(out->pcm);
+            if (ret < 0) {
+                ALOGE("%s: pcm_prepare returned %d", __func__, ret);
+                pcm_close(out->pcm);
+                out->pcm = NULL;
+                goto error_open;
+            }
+        }
     } else {
         out->pcm = NULL;
         out->compr = compress_open(adev->snd_card,
@@ -1527,7 +1576,9 @@ int start_output_stream(struct stream_out *out)
         if (adev->offload_effects_start_output != NULL)
             adev->offload_effects_start_output(out->handle, out->pcm_device_id);
     }
-    ALOGV("%s: exit", __func__);
+
+    ALOGD("%s: exit", __func__);
+
     return 0;
 error_open:
     stop_output_stream(out);
@@ -1699,9 +1750,6 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
     int ret = 0;
     char value[32];
     bool is_meta_data_params = false;
-    struct compr_gapless_mdata tmp_mdata;
-    tmp_mdata.encoder_delay = 0;
-    tmp_mdata.encoder_padding = 0;
 
     if (!out || !parms) {
         ALOGE("%s: return invalid ",__func__);
@@ -1717,56 +1765,32 @@ static int parse_compress_metadata(struct stream_out *out, struct str_parms *par
         out->send_new_metadata = 1;
     }
 
-#ifdef FLAC_OFFLOAD_ENABLED
-    if (out->format == AUDIO_FORMAT_FLAC) {
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.flac_dec.min_blk_size = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.flac_dec.max_blk_size = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_FRAME_SIZE, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.flac_dec.min_frame_size = atoi(value);
-            out->send_new_metadata = 1;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_FRAME_SIZE, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.flac_dec.max_frame_size = atoi(value);
-            out->send_new_metadata = 1;
-        }
-    }
-#endif
+    ret = audio_extn_parse_compress_metadata(out, parms);
 
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_SAMPLE_RATE, value, sizeof(value));
     if(ret >= 0)
         is_meta_data_params = true;
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_NUM_CHANNEL, value, sizeof(value));
-    if(ret >= 0 )
+    if(ret >= 0)
         is_meta_data_params = true;
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_AVG_BIT_RATE, value, sizeof(value));
-    if(ret >= 0 )
+    if(ret >= 0)
         is_meta_data_params = true;
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
     if (ret >= 0) {
         is_meta_data_params = true;
-        tmp_mdata.encoder_delay = atoi(value); //whats a good limit check?
+        out->gapless_mdata.encoder_delay = atoi(value); //whats a good limit check?
     }
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
     if (ret >= 0) {
         is_meta_data_params = true;
-        tmp_mdata.encoder_padding = atoi(value);
+        out->gapless_mdata.encoder_padding = atoi(value);
     }
 
     if(!is_meta_data_params) {
         ALOGV("%s: Not gapless meta data params", __func__);
         return 0;
     }
-    out->gapless_mdata = tmp_mdata;
     out->send_new_metadata = 1;
     ALOGV("%s new encoder delay %u and padding %u", __func__,
           out->gapless_mdata.encoder_delay, out->gapless_mdata.encoder_padding);

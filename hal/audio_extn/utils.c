@@ -94,6 +94,8 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_PCM_16_BIT_OFFLOAD),
     STRING_TO_ENUM(AUDIO_FORMAT_PCM_24_BIT_OFFLOAD),
     STRING_TO_ENUM(AUDIO_FORMAT_FLAC),
+    STRING_TO_ENUM(AUDIO_FORMAT_ALAC),
+    STRING_TO_ENUM(AUDIO_FORMAT_APE),
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_LC),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_HE_V1),
@@ -558,6 +560,27 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
     rc = 0;
 exit_send_app_type_cfg:
     return rc;
+}
+
+int read_line_from_file(const char *path, char *buf, size_t count)
+{
+    char * fgets_ret;
+    FILE * fd;
+    int rv;
+
+    fd = fopen(path, "r");
+    if (fd == NULL)
+        return -1;
+
+    fgets_ret = fgets(buf, (int)count, fd);
+    if (NULL != fgets_ret) {
+        rv = (int)strlen(buf);
+    } else {
+        rv = ferror(fd);
+    }
+    fclose(fd);
+
+   return rv;
 }
 
 void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
