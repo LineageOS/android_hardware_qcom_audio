@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -301,9 +301,28 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
          */
         query_44_1 = str_parms_create_str(AUDIO_PARAMETER_KEY_NATIVE_AUDIO);
         reply_44_1 = str_parms_create();
+        if (!query_44_1 || !reply_44_1) {
+            if (query_44_1) {
+                str_parms_destroy(query_44_1);
+            }
+            if (reply_44_1) {
+                str_parms_destroy(reply_44_1);
+            }
+
+            ALOGE("%s: param creation failed", __func__);
+            return;
+        }
+
         platform_get_parameters(adev->platform, query_44_1, reply_44_1);
 
         parms_disable_44_1 = str_parms_create();
+        if (!parms_disable_44_1) {
+            str_parms_destroy(query_44_1);
+            str_parms_destroy(reply_44_1);
+            ALOGE("%s: param creation failed for parms_disable_44_1", __func__);
+            return;
+        }
+
         str_parms_add_str(parms_disable_44_1, AUDIO_PARAMETER_KEY_NATIVE_AUDIO, "false");
         platform_set_parameters(adev->platform, parms_disable_44_1);
         str_parms_destroy(parms_disable_44_1);
