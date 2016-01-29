@@ -2454,7 +2454,7 @@ exit:
 
     if (ret != 0) {
         if (out->pcm)
-            ALOGE("%s: error %zd - %s", __func__, ret, pcm_get_error(out->pcm));
+            ALOGE("%s: error %d, %s", __func__, (int)ret, pcm_get_error(out->pcm));
         if (out->usecase == USECASE_COMPRESS_VOIP_CALL) {
             pthread_mutex_lock(&adev->lock);
             voice_extn_compress_voip_close_output_stream(&out->stream.common);
