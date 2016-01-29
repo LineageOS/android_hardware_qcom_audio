@@ -896,7 +896,7 @@ static int read_hdmi_channel_masks(struct stream_out *out)
     return ret;
 }
 
-static audio_usecase_t get_voice_usecase_id_from_list(struct audio_device *adev)
+static audio_usecase_t get_voice_usecase_id_from_list(const struct audio_device *adev)
 {
     struct audio_usecase *usecase;
     struct listnode *node;
@@ -911,7 +911,7 @@ static audio_usecase_t get_voice_usecase_id_from_list(struct audio_device *adev)
     return USECASE_INVALID;
 }
 
-struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
+struct audio_usecase *get_usecase_from_list(const struct audio_device *adev,
                                             audio_usecase_t uc_id)
 {
     struct audio_usecase *usecase;
@@ -2403,7 +2403,7 @@ exit:
 
     if (ret != 0) {
         if (out->pcm)
-            ALOGE("%s: error %ld - %s", __func__, ret, pcm_get_error(out->pcm));
+            ALOGE("%s: error %d, %s", __func__, (int)ret, pcm_get_error(out->pcm));
         if (out->usecase == USECASE_COMPRESS_VOIP_CALL) {
             pthread_mutex_lock(&adev->lock);
             voice_extn_compress_voip_close_output_stream(&out->stream.common);
@@ -3104,6 +3104,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->stream.drain = out_drain;
             out->stream.flush = out_flush;
         }
+
         if (config->offload_info.channel_mask)
             out->channel_mask = config->offload_info.channel_mask;
         else if (config->channel_mask) {

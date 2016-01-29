@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -689,7 +689,7 @@ bool voice_extn_compress_voip_pcm_prop_check()
         return false;
 }
 
-bool voice_extn_compress_voip_is_active(struct audio_device *adev)
+bool voice_extn_compress_voip_is_active(const struct audio_device *adev)
 {
     struct audio_usecase *voip_usecase = NULL;
     voip_usecase = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);

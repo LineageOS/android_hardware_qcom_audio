@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -1012,7 +1012,7 @@ void *platform_init(struct audio_device *adev)
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data = NULL;
     int retry_num = 0, snd_card_num = 0, key = 0;
-    const char *snd_card_name;
+    char *snd_card_name = NULL;
     char *cvd_version = NULL;
 
     my_data = calloc(1, sizeof(struct platform_data));
@@ -1039,7 +1039,7 @@ void *platform_init(struct audio_device *adev)
             continue;
         }
 
-        snd_card_name = mixer_get_name(adev->mixer);
+        snd_card_name = strdup(mixer_get_name(adev->mixer));
         ALOGV("%s: snd_card_name: %s", __func__, snd_card_name);
 
         my_data->hw_info = hw_info_init(snd_card_name);
@@ -1059,7 +1059,11 @@ void *platform_init(struct audio_device *adev)
             if (!adev->audio_route) {
                 ALOGE("%s: Failed to init audio route controls, aborting.",
                        __func__);
-                free(my_data);
+                if (my_data)
+                    free(my_data);
+                if (snd_card_name)
+                    free(snd_card_name);
+                mixer_close(adev->mixer);
                 return NULL;
             }
             adev->snd_card = snd_card_num;
@@ -1072,7 +1076,11 @@ void *platform_init(struct audio_device *adev)
 
     if (snd_card_num >= MAX_SND_CARD) {
         ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
-        free(my_data);
+        if (my_data)
+            free(my_data);
+        if (snd_card_name)
+            free(snd_card_name);
+        mixer_close(adev->mixer);
         return NULL;
     }
 
@@ -3260,7 +3268,7 @@ done:
 
 void platform_get_device_to_be_id_map(int **device_to_be_id, int *length)
 {
-     *device_to_be_id = msm_device_to_be_id;
+     *device_to_be_id = (int*) msm_device_to_be_id;
      *length = msm_be_id_array_len;
 }
 
