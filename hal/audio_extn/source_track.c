@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -91,8 +91,8 @@
 #define MAX_SECTORS                                         8
 #define MAX_STR_SIZE                                       2048
 
-struct audio_device_to_audio_interface audio_device_to_interface_table[];
-int audio_device_to_interface_table_len;
+extern struct audio_device_to_audio_interface audio_device_to_interface_table[];
+extern int audio_device_to_interface_table_len;
 
 struct sound_focus_param {
     uint16_t start_angle[MAX_SECTORS];
@@ -203,7 +203,7 @@ audio_devices_t get_input_audio_device(audio_devices_t device)
     return in_device;
 }
 
-static int derive_mixer_ctl_from_usecase_intf(struct audio_device *adev,
+static int derive_mixer_ctl_from_usecase_intf(const struct audio_device *adev,
                                               char *mixer_ctl_name) {
     struct audio_usecase *usecase = NULL;
     audio_devices_t in_device;
@@ -330,7 +330,7 @@ done:
     return ret;
 }
 
-static int get_soundfocus_sourcetracking_data(struct audio_device *adev,
+static int get_soundfocus_sourcetracking_data(const struct audio_device *adev,
                                         const int bitmask,
                                         struct sound_focus_param *sound_focus_data,
                                         struct source_tracking_param *source_tracking_data)
@@ -496,7 +496,7 @@ static void send_soundfocus_sourcetracking_params(struct str_parms *reply,
     }
 }
 
-void audio_extn_source_track_get_parameters(struct audio_device *adev,
+void audio_extn_source_track_get_parameters(const struct audio_device *adev,
                                             struct str_parms *query,
                                             struct str_parms *reply)
 {
