@@ -222,7 +222,7 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev,
 #else
 void audio_extn_source_track_set_parameters(struct audio_device *adev,
                                             struct str_parms *parms);
-void audio_extn_source_track_get_parameters(struct audio_device *adev,
+void audio_extn_source_track_get_parameters(const struct audio_device *adev,
                                             struct str_parms *query,
                                             struct str_parms *reply);
 #endif
@@ -1110,7 +1110,8 @@ void audio_extn_perf_lock_acquire(int *handle, int duration,
 {
 
     if (!perf_lock_opts || !size || !perf_lock_acq || !handle) {
-        ALOGE("%s: Invalid arguments", __func__);
+        ALOGE("%s: Incorrect params, Failed to acquire perf lock, err ",
+              __func__);
         return;
     }
     /*
