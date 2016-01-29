@@ -260,6 +260,8 @@ endif
 
 LOCAL_CFLAGS += -Wall -Werror
 
+LOCAL_CFLAGS += -Wall -Werror
+
 LOCAL_COPY_HEADERS_TO   := mm-audio
 LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
 
