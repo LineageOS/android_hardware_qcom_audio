@@ -3465,7 +3465,7 @@ done:
 
 void platform_get_device_to_be_id_map(int **device_to_be_id, int *length)
 {
-     *device_to_be_id = (int *)msm_device_to_be_id;
+     *device_to_be_id = (int*) msm_device_to_be_id;
      *length = msm_be_id_array_len;
 }
 
