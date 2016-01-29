@@ -64,6 +64,7 @@ struct audio_extn_module {
     uint32_t proxy_channel_num;
     bool hpx_enabled;
     bool vbat_enabled;
+    bool hifi_audio_enabled;
 };
 
 static struct audio_extn_module aextnmod = {
@@ -73,6 +74,7 @@ static struct audio_extn_module aextnmod = {
     .proxy_channel_num = 2,
     .hpx_enabled = 0,
     .vbat_enabled = 0,
+    .hifi_audio_enabled = 0,
 };
 
 #define AUDIO_PARAMETER_KEY_ANC        "anc_enabled"
@@ -332,6 +334,28 @@ void audio_extn_check_and_set_dts_hpx_state(const struct audio_device *adev)
         return;
     if (adev->offload_effects_set_hpx_state)
         adev->offload_effects_set_hpx_state(aextnmod.hpx_enabled);
+}
+#endif
+
+#ifdef HIFI_AUDIO_ENABLED
+bool audio_extn_is_hifi_audio_enabled(void)
+{
+    ALOGV("%s: status: %d", __func__, aextnmod.hifi_audio_enabled);
+    return (aextnmod.hifi_audio_enabled ? true: false);
+}
+
+bool audio_extn_is_hifi_audio_supported(void)
+{
+    /*
+     * for internal codec, check for hifiaudio property to enable hifi audio
+     */
+    if (property_get_bool("persist.audio.hifi.int_codec", false))
+    {
+        ALOGD("%s: hifi audio supported on internal codec", __func__);
+        aextnmod.hifi_audio_enabled = 1;
+    }
+
+    return (aextnmod.hifi_audio_enabled ? true: false);
 }
 #endif
 
