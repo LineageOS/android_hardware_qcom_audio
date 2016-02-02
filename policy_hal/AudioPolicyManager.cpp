@@ -1422,7 +1422,8 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
 
     if ((stream == AUDIO_STREAM_VOICE_CALL) &&
         (channelMask == 1) &&
-        (samplingRate == 8000 || samplingRate == 16000)) {
+        (samplingRate == 8000 || samplingRate == 16000 ||
+         samplingRate == 32000 || samplingRate == 48000)) {
         // Allow Voip direct output only if:
         // audio mode is MODE_IN_COMMUNCATION; AND
         // voip output is not opened already; AND
