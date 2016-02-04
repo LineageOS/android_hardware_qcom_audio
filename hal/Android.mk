@@ -10,7 +10,7 @@ AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 ifneq ($(filter msm8960,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="2"
 endif
-ifneq ($(filter msm8974 msm8226 msm8084 msm8992 msm8994,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8974 msm8226 msm8084 msm8992 msm8994 msm8996,$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM = msm8974
 ifneq ($(filter msm8974,$(TARGET_BOARD_PLATFORM)),)
@@ -35,6 +35,12 @@ ifneq ($(filter msm8994,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="4"
   LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
 endif
+ifneq ($(filter msm8996,$(TARGET_BOARD_PLATFORM)),)
+  LOCAL_CFLAGS := -DPLATFORM_MSM8996
+  LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="4"
+  LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
+endif
+
 endif
 
 LOCAL_SRC_FILES := \
@@ -99,7 +105,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DSM_FEEDBACK)),true)
     LOCAL_SRC_FILES += audio_extn/dsm_feedback.c
 endif
 
-ifneq ($(filter msm8992 msm8994,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8992 msm8994 msm8996,$(TARGET_BOARD_PLATFORM)),)
   # push codec/mad calibration to HW dep node
   # applicable to msm8992/8994 or newer platforms
   LOCAL_CFLAGS += -DHWDEP_CAL_ENABLED
