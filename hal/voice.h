@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2014-2016 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@
 #define VOICE_SESS_IDX     (BASE_SESS_IDX)
 
 #ifdef MULTI_VOICE_SESSION_ENABLED
-#define MAX_VOICE_SESSIONS 5
+#define MAX_VOICE_SESSIONS 7
 #else
 #define MAX_VOICE_SESSIONS 1
 #endif

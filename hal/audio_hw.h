@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 The Android Open Source Project
+ * Copyright (C) 2013-2016 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,13 +69,29 @@ enum {
     USECASE_AUDIO_RECORD,
     USECASE_AUDIO_RECORD_LOW_LATENCY,
 
-    USECASE_VOICE_CALL,
+    /* Voice extension usecases
+     *
+     * Following usecase are specific to voice session names created by
+     * MODEM and APPS on 8992/8994/8084/8974 platforms.
+     */
+    USECASE_VOICE_CALL,  /* Usecase setup for voice session on first subscription for DSDS/DSDA */
+    USECASE_VOICE2_CALL, /* Usecase setup for voice session on second subscription for DSDS/DSDA */
+    USECASE_VOLTE_CALL,  /* Usecase setup for VoLTE session on first subscription */
+    USECASE_QCHAT_CALL,  /* Usecase setup for QCHAT session */
+    USECASE_VOWLAN_CALL, /* Usecase setup for VoWLAN session */
 
-    /* Voice extension usecases */
-    USECASE_VOICE2_CALL,
-    USECASE_VOLTE_CALL,
-    USECASE_QCHAT_CALL,
-    USECASE_VOWLAN_CALL,
+    /*
+     * Following usecase are specific to voice session names created by
+     * MODEM and APPS on 8996 platforms.
+     */
+
+    USECASE_VOICEMMODE1_CALL, /* Usecase setup for Voice/VoLTE/VoWLAN sessions on first
+                               * subscription for DSDS/DSDA
+                               */
+    USECASE_VOICEMMODE2_CALL, /* Usecase setup for voice/VoLTE/VoWLAN sessions on second
+                               * subscription for DSDS/DSDA
+                               */
+
     USECASE_INCALL_REC_UPLINK,
     USECASE_INCALL_REC_DOWNLINK,
     USECASE_INCALL_REC_UPLINK_AND_DOWNLINK,

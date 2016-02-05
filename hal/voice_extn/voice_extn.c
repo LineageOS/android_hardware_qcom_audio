@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2014-2016 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,17 +41,21 @@
 
 #define VOICE_EXTN_PARAMETER_VALUE_MAX_LEN 256
 
-#define VOICE2_VSID 0x10DC1000
-#define VOLTE_VSID  0x10C02000
-#define QCHAT_VSID  0x10803000
-#define VOWLAN_VSID 0x10002000
-#define ALL_VSID    0xFFFFFFFF
+#define VOICE2_VSID              0x10DC1000
+#define VOLTE_VSID               0x10C02000
+#define QCHAT_VSID               0x10803000
+#define VOWLAN_VSID              0x10002000
+#define VOICEMMODE1_VSID         0x11C05000
+#define VOICEMMODE2_VSID         0x11DC5000
+#define ALL_VSID                 0xFFFFFFFF
 
 /* Voice Session Indices */
 #define VOICE2_SESS_IDX    (VOICE_SESS_IDX + 1)
 #define VOLTE_SESS_IDX     (VOICE_SESS_IDX + 2)
 #define QCHAT_SESS_IDX     (VOICE_SESS_IDX + 3)
 #define VOWLAN_SESS_IDX    (VOICE_SESS_IDX + 4)
+#define MMODE1_SESS_IDX    (VOICE_SESS_IDX + 5)
+#define MMODE2_SESS_IDX    (VOICE_SESS_IDX + 6)
 
 /* Call States */
 #define CALL_HOLD           (BASE_CALL_STATE + 2)
@@ -84,6 +88,8 @@ static bool is_valid_vsid(uint32_t vsid)
         vsid == VOICE2_VSID ||
         vsid == VOLTE_VSID ||
         vsid == QCHAT_VSID ||
+        vsid == VOICEMMODE1_VSID ||
+        vsid == VOICEMMODE2_VSID ||
         vsid == VOWLAN_VSID)
         return true;
     else
@@ -113,6 +119,14 @@ static audio_usecase_t voice_extn_get_usecase_for_session_idx(const int index)
 
     case VOWLAN_SESS_IDX:
         usecase_id = USECASE_VOWLAN_CALL;
+        break;
+
+    case MMODE1_SESS_IDX:
+        usecase_id = USECASE_VOICEMMODE1_CALL;
+        break;
+
+    case MMODE2_SESS_IDX:
+        usecase_id = USECASE_VOICEMMODE2_CALL;
         break;
 
     default:
@@ -356,6 +370,8 @@ void voice_extn_init(struct audio_device *adev)
     adev->voice.session[VOLTE_SESS_IDX].vsid =  VOLTE_VSID;
     adev->voice.session[QCHAT_SESS_IDX].vsid =  QCHAT_VSID;
     adev->voice.session[VOWLAN_SESS_IDX].vsid = VOWLAN_VSID;
+    adev->voice.session[MMODE1_SESS_IDX].vsid = VOICEMMODE1_VSID;
+    adev->voice.session[MMODE2_SESS_IDX].vsid = VOICEMMODE2_VSID;
 }
 
 int voice_extn_get_session_from_use_case(struct audio_device *adev,
@@ -383,6 +399,14 @@ int voice_extn_get_session_from_use_case(struct audio_device *adev,
 
     case USECASE_VOWLAN_CALL:
         *session = &adev->voice.session[VOWLAN_SESS_IDX];
+        break;
+
+    case USECASE_VOICEMMODE1_CALL:
+        *session = &adev->voice.session[MMODE1_SESS_IDX];
+        break;
+
+    case USECASE_VOICEMMODE2_CALL:
+        *session = &adev->voice.session[MMODE2_SESS_IDX];
         break;
 
     default:
