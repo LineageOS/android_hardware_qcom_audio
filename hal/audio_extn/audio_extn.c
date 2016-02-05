@@ -449,11 +449,13 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
         // Refresh device selection for anc playback
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase->type == PCM_PLAYBACK) {
+            if (usecase->type != PCM_CAPTURE) {
                 if (usecase->stream.out->devices == \
                     AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                     usecase->stream.out->devices ==  \
-                    AUDIO_DEVICE_OUT_WIRED_HEADSET) {
+                    AUDIO_DEVICE_OUT_WIRED_HEADSET ||
+                    usecase->stream.out->devices ==  \
+                    AUDIO_DEVICE_OUT_EARPIECE) {
                         select_devices(adev, usecase->id);
                         ALOGV("%s: switching device completed", __func__);
                         break;
