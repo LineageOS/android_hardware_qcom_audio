@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 The Android Open Source Project
+ * Copyright (C) 2013-2014 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -172,8 +172,6 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_VOLTE_CALL] = "volte-call",
     [USECASE_QCHAT_CALL] = "qchat-call",
     [USECASE_VOWLAN_CALL] = "vowlan-call",
-    [USECASE_VOICEMMODE1_CALL] = "voicemmode1-call",
-    [USECASE_VOICEMMODE2_CALL] = "voicemmode2-call",
 
     [USECASE_AUDIO_SPKR_CALIB_RX] = "spkr-rx-calib",
     [USECASE_AUDIO_SPKR_CALIB_TX] = "spkr-vi-record",

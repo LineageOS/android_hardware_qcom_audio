@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 The Android Open Source Project
+ * Copyright (C) 2013-2014 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -222,26 +222,12 @@ enum {
 #define VOLTE_CALL_PCM_DEVICE 21
 #define QCHAT_CALL_PCM_DEVICE 33
 #define VOWLAN_CALL_PCM_DEVICE -1
-#elif PLATFORM_MSM8996
-#define VOICE_CALL_PCM_DEVICE 40
-#define VOICE2_CALL_PCM_DEVICE 41
-#define VOLTE_CALL_PCM_DEVICE 14
-#define QCHAT_CALL_PCM_DEVICE 20
-#define VOWLAN_CALL_PCM_DEVICE 33
 #else
 #define VOICE_CALL_PCM_DEVICE 2
 #define VOICE2_CALL_PCM_DEVICE 22
 #define VOLTE_CALL_PCM_DEVICE 14
 #define QCHAT_CALL_PCM_DEVICE 20
 #define VOWLAN_CALL_PCM_DEVICE 36
-#endif
-
-#ifdef PLATFORM_MSM8996
-#define VOICEMMODE1_CALL_PCM_DEVICE 2
-#define VOICEMMODE2_CALL_PCM_DEVICE 22
-#else
-#define VOICEMMODE1_CALL_PCM_DEVICE 44
-#define VOICEMMODE2_CALL_PCM_DEVICE 45
 #endif
 
 #define AFE_PROXY_PLAYBACK_PCM_DEVICE 7
