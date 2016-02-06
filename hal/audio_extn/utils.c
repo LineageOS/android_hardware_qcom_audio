@@ -622,13 +622,11 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
         app_type_cfg[len++] = acdb_dev_id;
         if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC))
-#ifdef HDMI_PASSTHROUGH_ENABLED
-            && (out->flags  & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)
-#endif
-            )
+            && audio_extn_dolby_is_passthrough_stream(usecase->stream.out->flags)) {
             app_type_cfg[len++] = sample_rate * 4;
-        else
+        } else {
             app_type_cfg[len++] = sample_rate;
+        }
         ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
               __func__, usecase->stream.out->app_type_cfg.app_type, acdb_dev_id, sample_rate);
     } else if (usecase->type == PCM_CAPTURE) {
