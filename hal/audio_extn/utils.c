@@ -663,7 +663,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
         app_type_cfg[len++] = acdb_dev_id;
         if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC))
-            && audio_extn_dolby_is_passthrough_stream(usecase->stream.out)) {
+            && audio_extn_dolby_is_passthrough_stream(usecase->stream.out->flags)) {
             app_type_cfg[len++] = sample_rate * 4;
         } else {
             app_type_cfg[len++] = sample_rate;
