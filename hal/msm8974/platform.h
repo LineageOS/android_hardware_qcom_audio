@@ -283,6 +283,7 @@ enum {
 #endif
 
 #define LIB_CSD_CLIENT "libcsd-client.so"
+#define MIXER_CARD 0
 /* CSD-CLIENT related functions */
 #ifdef PLATFORM_APQ8084
 typedef int (*init_t)(bool);
