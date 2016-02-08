@@ -764,6 +764,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_hpx_set_parameters(adev, parms);
    audio_extn_pm_set_parameters(parms);
    audio_extn_source_track_set_parameters(adev, parms);
+   audio_extn_fbsp_set_parameters(parms);
    check_and_set_hdmi_connection_status(parms);
    if (adev->offload_effects_set_parameters != NULL)
        adev->offload_effects_set_parameters(parms);
@@ -781,6 +782,7 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     audio_extn_dts_eagle_get_parameters(adev, query, reply);
     audio_extn_hpx_get_parameters(query, reply);
     audio_extn_source_track_get_parameters(adev, query, reply);
+    audio_extn_fbsp_get_parameters(query, reply);
     if (adev->offload_effects_get_parameters != NULL)
         adev->offload_effects_get_parameters(query, reply);
 
