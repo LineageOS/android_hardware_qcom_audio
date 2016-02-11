@@ -622,8 +622,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
                __func__, platform_get_default_app_type(adev->platform), acdb_dev_id, sample_rate);
     } else if (usecase->type == PCM_PLAYBACK) {
 
-         if ((24 == usecase->stream.out->bit_width) &&
-             (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+         if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
              usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
          } else if ((usecase->stream.out->app_type_cfg.sample_rate == OUTPUT_SAMPLING_RATE_44100 &&
                       !(audio_is_this_native_usecase(usecase))) ||
