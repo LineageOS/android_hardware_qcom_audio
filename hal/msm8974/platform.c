@@ -1335,6 +1335,7 @@ void *platform_init(struct audio_device *adev)
         if (!snd_card_name) {
             ALOGE("failed to allocate memory for snd_card_name\n");
             free(my_data);
+            mixer_close(adev->mixer);
             return NULL;
         }
         ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
@@ -1401,6 +1402,7 @@ void *platform_init(struct audio_device *adev)
                 free(my_data);
                 free(snd_card_name);
                 free(snd_card_name_t);
+                mixer_close(adev->mixer);
                 return NULL;
             }
             adev->snd_card = snd_card_num;
@@ -1409,6 +1411,7 @@ void *platform_init(struct audio_device *adev)
         }
         retry_num = 0;
         snd_card_num++;
+        mixer_close(adev->mixer);
     }
 
     if (snd_card_num >= MAX_SND_CARD) {
