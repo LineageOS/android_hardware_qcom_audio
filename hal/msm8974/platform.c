@@ -2186,11 +2186,10 @@ int64_t platform_render_latency(audio_usecase_t usecase)
 int platform_update_usecase_from_source(int source, int usecase)
 {
     ALOGV("%s: input source :%d", __func__, source);
-    if(source == AUDIO_SOURCE_FM_TUNER)
-        usecase = USECASE_AUDIO_RECORD_FM_VIRTUAL;
-    return usecase;
 
     switch(source) {
+        case AUDIO_SOURCE_FM_TUNER:
+            return USECASE_AUDIO_RECORD_FM_VIRTUAL;
         case AUDIO_SOURCE_VOICE_UPLINK:
             return USECASE_INCALL_REC_UPLINK;
         case AUDIO_SOURCE_VOICE_DOWNLINK:
