@@ -2126,7 +2126,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ret = -errno;
         ALOGVV("%s: writing buffer (%d bytes) to compress device returned %d", __func__, bytes, ret);
         if (ret >= 0 && ret < (ssize_t)bytes) {
-            ALOGD("No space available in compress driver, post msg to cb thread");
+            ALOGV("No space available in compress driver, post msg to cb thread");
             send_offload_cmd_l(out, OFFLOAD_CMD_WAIT_FOR_BUFFER);
         } else if (-ENETRESET == ret) {
             ALOGE("copl %s: received sound card offline state on compress write", __func__);
