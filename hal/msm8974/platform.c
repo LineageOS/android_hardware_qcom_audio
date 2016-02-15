@@ -4571,6 +4571,11 @@ int platform_get_spkr_prot_snd_device(snd_device_t snd_device)
     }
 }
 
+int platform_spkr_prot_is_wsa_analog_mode(void *adev __unused)
+{
+    return 0;
+}
+
 /*
  * This is a lookup table to map android audio input device to audio h/w interface (backend).
  * The table can be extended for other input devices by adding appropriate entries.

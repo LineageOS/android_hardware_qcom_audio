@@ -5094,16 +5094,20 @@ done:
     return ret;
 }
 
-int platform_get_wsa_mode(void *adev)
+int platform_spkr_prot_is_wsa_analog_mode(void *adev)
 {
     struct audio_device *adev_h = adev;
     char *snd_card_name;
 
+    /*
+     * wsa analog mode is decided based on the sound card name
+     */
     snd_card_name = mixer_get_name(adev_h->mixer);
     if ((!strcmp(snd_card_name, "msm8952-skum-snd-card")) ||
         (!strcmp(snd_card_name, "msm8952-snd-card")) ||
         (!strcmp(snd_card_name, "msm8952-snd-card-mtp")) ||
-        (!strcmp(snd_card_name, "msm8976-skun-snd-card")))
+        (!strcmp(snd_card_name, "msm8976-skun-snd-card")) ||
+        (!strcmp(snd_card_name, "msm8953-snd-card-mtp")))
         return 1;
     else
         return 0;

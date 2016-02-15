@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2016, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -94,6 +94,9 @@
 /*Speaker processing state*/
 #define SPKR_PROCESSING_IN_PROGRESS 1
 #define SPKR_PROCESSING_IN_IDLE 0
+
+/* In wsa analog mode vi feedback DAI supports at max 2 channels*/
+#define WSA_ANALOG_MODE_CHANNELS 2
 
 #define MAX_PATH             (256)
 #define THERMAL_SYSFS "/sys/class/thermal"
@@ -993,6 +996,10 @@ void audio_extn_spkr_prot_init(void *adev)
     handle.spkr_prot_t0 = -1;
 
     if (is_wsa_present()) {
+        if (platform_spkr_prot_is_wsa_analog_mode(adev) == 1) {
+            ALOGD("%s: WSA analog mode", __func__);
+            pcm_config_skr_prot.channels = WSA_ANALOG_MODE_CHANNELS;
+        }
         pthread_cond_init(&handle.spkr_calib_cancel, NULL);
         pthread_cond_init(&handle.spkr_calibcancel_ack, NULL);
         pthread_mutex_init(&handle.mutex_spkr_prot, NULL);
