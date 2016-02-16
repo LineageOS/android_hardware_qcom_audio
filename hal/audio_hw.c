@@ -1997,7 +1997,7 @@ static int out_standby(struct audio_stream *stream)
         pthread_mutex_unlock(&adev->lock);
     }
     pthread_mutex_unlock(&out->lock);
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
     return 0;
 }
 
@@ -2311,20 +2311,20 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     lock_output_stream(out);
 
     if (SND_CARD_STATE_OFFLINE == snd_scard_state) {
-        // increase written size during SSR to avoid mismatch
-        // with the written frames count in AF
-        if (!is_offload_usecase(out->usecase))
-            out->written += bytes / (out->config.channels * sizeof(short));
 
-        if (out->pcm) {
-            ALOGD(" %s: sound card is not active/SSR state", __func__);
-            ret= -EIO;
-            goto exit;
-        } else if (is_offload_usecase(out->usecase)) {
-            //during SSR for compress usecase we should return error to flinger
+        if (is_offload_usecase(out->usecase)) {
+            /*during SSR for compress usecase we should return error to flinger*/
             ALOGD(" copl %s: sound card is not active/SSR state", __func__);
             pthread_mutex_unlock(&out->lock);
             return -ENETRESET;
+        } else {
+            /* increase written size during SSR to avoid mismatch
+             * with the written frames count in AF
+             */
+            out->written += bytes / (out->config.channels * sizeof(short));
+            ALOGD(" %s: sound card is not active/SSR state", __func__);
+            ret= -EIO;
+            goto exit;
         }
     }
 
@@ -2434,9 +2434,8 @@ exit:
             out->standby = true;
         }
         out_standby(&out->stream.common);
-        usleep(bytes * 1000000 / audio_stream_out_frame_size(stream) /
+        usleep((uint64_t)bytes * 1000000 / audio_stream_out_frame_size(stream) /
                         out_get_sample_rate(&out->stream.common));
-
     }
     return bytes;
 }
@@ -2550,11 +2549,13 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
                     ret = 0;
                 }
             }
+        } else if (adev->snd_card_status.state == SND_CARD_STATE_OFFLINE) {
+            *frames = out->written;
+            clock_gettime(CLOCK_MONOTONIC, timestamp);
+            ret = 0;
         }
     }
-
     pthread_mutex_unlock(&out->lock);
-
     return ret;
 }
 
@@ -2864,7 +2865,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         return bytes;
     }
 
-    if (in->pcm && (SND_CARD_STATE_OFFLINE == snd_scard_state)) {
+    if (SND_CARD_STATE_OFFLINE == snd_scard_state) {
         ALOGD(" %s: sound card is not active/SSR state", __func__);
         ret= -EIO;;
         goto exit;
@@ -2930,7 +2931,7 @@ exit:
         memset(buffer, 0, bytes);
         in_standby(&in->stream.common);
         ALOGV("%s: read failed status %d- sleeping for buffer duration", __func__, ret);
-        usleep(bytes * 1000000 / audio_stream_in_frame_size(stream) /
+        usleep((uint64_t)bytes * 1000000 / audio_stream_in_frame_size(stream) /
                                    in_get_sample_rate(&in->stream.common));
     }
     return bytes;
