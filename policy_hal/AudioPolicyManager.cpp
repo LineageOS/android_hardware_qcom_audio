@@ -279,15 +279,21 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
 
 #ifdef FM_POWER_OPT
         // handle FM device connection state to trigger FM AFE loopback
-        if(device == AUDIO_DEVICE_OUT_FM && hasPrimaryOutput()) {
-           audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, false /*fromCache*/);
+        if (device == AUDIO_DEVICE_OUT_FM && hasPrimaryOutput()) {
+           audio_devices_t newDevice = AUDIO_DEVICE_NONE;
            if (state == AUDIO_POLICY_DEVICE_STATE_AVAILABLE) {
                mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, 1);
-               newDevice = newDevice | AUDIO_DEVICE_OUT_FM;
+               newDevice = (audio_devices_t)(getNewOutputDevice(mPrimaryOutput, false)|AUDIO_DEVICE_OUT_FM);
+               mFMIsActive = true;
            } else {
+               newDevice = (audio_devices_t)(getNewOutputDevice(mPrimaryOutput, false));
+               mFMIsActive = false;
                mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, -1);
            }
            AudioParameter param = AudioParameter();
+           float volumeDb = mPrimaryOutput->mCurVolume[AUDIO_STREAM_MUSIC];
+           mPrevFMVolumeDb = volumeDb;
+           param.addFloat(String8("fm_volume"), Volume::DbToAmpl(volumeDb));
            param.addInt(String8("handle_fm"), (int)newDevice);
            mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString());
         }
@@ -641,7 +647,7 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
     /// Opens: can these line be executed after the switch of volume curves???
     // if leaving call state, handle special case of active streams
     // pertaining to sonification strategy see handleIncallSonification()
-    if (isInCall()) {
+    if (isStateInCall(oldState)) {
         ALOGV("setPhoneState() in call state management: new state is %d", state);
         for (size_t j = 0; j < mOutputs.size(); j++) {
             audio_io_handle_t curOutput = mOutputs.keyAt(j);
@@ -1225,10 +1231,16 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
         }
 #ifdef FM_POWER_OPT
     } else if (stream == AUDIO_STREAM_MUSIC && hasPrimaryOutput() &&
-               outputDesc == mPrimaryOutput) {
-        AudioParameter param = AudioParameter();
-        param.addFloat(String8("fm_volume"), Volume::DbToAmpl(volumeDb));
-        mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString(), delayMs);
+               outputDesc == mPrimaryOutput && mFMIsActive) {
+        /* Avoid unnecessary set_parameter calls as it puts the primary
+           outputs FastMixer in HOT_IDLE leading to breaks in audio */
+        if (volumeDb != mPrevFMVolumeDb) {
+            mPrevFMVolumeDb = volumeDb;
+            AudioParameter param = AudioParameter();
+            param.addFloat(String8("fm_volume"), Volume::DbToAmpl(volumeDb));
+            //Double delayMs to avoid sound burst while device switch.
+            mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString(), delayMs*2);
+        }
 #endif /* FM_POWER_OPT end */
     }
 
@@ -1949,7 +1961,9 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
     : AudioPolicyManager(clientInterface),
       mHdmiAudioDisabled(false),
       mHdmiAudioEvent(false),
-      mPrevPhoneState(0)
+      mPrevPhoneState(0),
+      mPrevFMVolumeDb(0.0f),
+      mFMIsActive(false)
 {
     char ssr_enabled[PROPERTY_VALUE_MAX] = {0};
     bool prop_ssr_enabled = false;
