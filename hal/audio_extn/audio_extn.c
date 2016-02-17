@@ -220,7 +220,7 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev,
 #else
 void audio_extn_source_track_set_parameters(struct audio_device *adev,
                                             struct str_parms *parms);
-void audio_extn_source_track_get_parameters(struct audio_device *adev,
+void audio_extn_source_track_get_parameters(const struct audio_device *adev,
                                             struct str_parms *query,
                                             struct str_parms *reply);
 #endif
@@ -1085,8 +1085,11 @@ void audio_extn_perf_lock_acquire(int *handle, int duration,
                                  int *perf_lock_opts, int size)
 {
 
-    if (!perf_lock_opts || !size || !perf_lock_acq || !handle)
-        return -EINVAL;
+    if (!perf_lock_opts || !size || !perf_lock_acq || !handle) {
+        ALOGE("%s: Incorrect params, Failed to acquire perf lock, err ",
+              __func__);
+        return;
+    }
     /*
      * Acquire performance lock for 1 sec during device path bringup.
      * Lock will be released either after 1 sec or when perf_lock_release
