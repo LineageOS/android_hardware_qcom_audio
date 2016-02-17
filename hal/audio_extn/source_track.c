@@ -261,6 +261,12 @@ static int parse_soundfocus_sourcetracking_keys(struct str_parms *parms)
     int ret = 0, err;
     char *kv_pairs = str_parms_to_str(parms);
 
+    if(kv_pairs == NULL) {
+        ret = -ENOMEM;
+        ALOGE("[%s] key-value pair is NULL",__func__);
+        goto done;
+    }
+
     ALOGV_IF(kv_pairs != NULL, "%s: enter: %s", __func__, kv_pairs);
 
     len = strlen(kv_pairs);
@@ -322,7 +328,8 @@ static int parse_soundfocus_sourcetracking_keys(struct str_parms *parms)
     }
 
 done:
-    free(kv_pairs);
+    if (kv_pairs)
+        free(kv_pairs);
     if(value != NULL)
         free(value);
     ALOGV("%s: returning bitmask = %d", __func__, ret);
@@ -442,8 +449,8 @@ static void send_soundfocus_sourcetracking_params(struct str_parms *reply,
             if ((i >=4) && (sound_focus_data.start_angle[i] == 0xFFFF))
                 continue;
             if (i)
-                snprintf(value + strlen(value), MAX_STR_SIZE, ",");
-            snprintf(value + strlen(value), MAX_STR_SIZE, "%d", sound_focus_data.start_angle[i]);
+                snprintf(value + strlen(value) - 1, MAX_STR_SIZE, ",");
+            snprintf(value + strlen(value) - 1, MAX_STR_SIZE, "%d", sound_focus_data.start_angle[i]);
         }
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_SOUND_FOCUS_START_ANGLES, value);
     }
@@ -469,8 +476,8 @@ static void send_soundfocus_sourcetracking_params(struct str_parms *reply,
             if ((i >=4) && (source_tracking_data.vad[i] == 0xFF))
                 continue;
             if (i)
-                snprintf(value + strlen(value), MAX_STR_SIZE, ",");
-            snprintf(value + strlen(value), MAX_STR_SIZE, "%d", source_tracking_data.vad[i]);
+                snprintf(value + strlen(value) - 1, MAX_STR_SIZE, ",");
+            snprintf(value + strlen(value) - 1, MAX_STR_SIZE, "%d", source_tracking_data.vad[i]);
         }
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_SOURCE_TRACK_VAD, value);
     }
@@ -489,8 +496,8 @@ static void send_soundfocus_sourcetracking_params(struct str_parms *reply,
     if (bitmask & BITMASK_AUDIO_PARAMETER_KEY_SOURCE_TRACK_POLAR_ACTIVITY) {
         for (i = 0; i < 360; i++) {
             if (i)
-                snprintf(value + strlen(value), MAX_STR_SIZE, ",");
-            snprintf(value + strlen(value), MAX_STR_SIZE, "%d", source_tracking_data.polar_activity[i]);
+                snprintf(value + strlen(value) - 1, MAX_STR_SIZE, ",");
+            snprintf(value + strlen(value) - 1, MAX_STR_SIZE, "%d", source_tracking_data.polar_activity[i]);
         }
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_SOURCE_TRACK_POLAR_ACTIVITY, value);
     }
@@ -527,6 +534,12 @@ void audio_extn_source_track_set_parameters(struct audio_device *adev,
     char sound_focus_mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = "Sound Focus";
     char *value = NULL;
     char *kv_pairs = str_parms_to_str(parms);
+
+    if(kv_pairs == NULL) {
+        ret = -ENOMEM;
+        ALOGE("[%s] key-value pair is NULL",__func__);
+        goto done;
+    }
 
     len = strlen(kv_pairs);
     value = (char*)calloc(len, sizeof(char));
@@ -632,7 +645,8 @@ void audio_extn_source_track_set_parameters(struct audio_device *adev,
     }
 
 done:
-    free(kv_pairs);
+    if (kv_pairs)
+        free(kv_pairs);
     if(value != NULL)
         free(value);
     return;
