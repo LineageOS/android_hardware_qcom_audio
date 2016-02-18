@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -182,6 +182,7 @@ enum {
 enum {
     DEFAULT_CODEC_BACKEND,
     HEADPHONE_44_1_BACKEND,
+    HDMI_RX_BACKEND,
     MAX_CODEC_BACKENDS
 };
 

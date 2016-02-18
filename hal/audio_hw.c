@@ -980,7 +980,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 
     /* Enable new sound devices */
     if (out_snd_device != SND_DEVICE_NONE) {
-        if (usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND)
+        if ((usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
+                (usecase->devices & AUDIO_DEVICE_OUT_HDMI))
             check_usecases_codec_backend(adev, usecase, out_snd_device);
         enable_snd_device(adev, out_snd_device);
     }
@@ -3426,8 +3427,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     if (ret >= 0) {
         val = atoi(value);
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-            ALOGV("invalidate cached edid");
-            platform_invalidate_edid(adev->platform);
+            ALOGV("invalidate cached hdmi config");
+            platform_invalidate_hdmi_config(adev->platform);
         }
     }
 
