@@ -127,6 +127,7 @@ int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel
 int platform_set_edid_channels_configuration(void *platform, int channels);
 unsigned char platform_map_to_edid_format(int format);
 bool platform_is_edid_supported_format(void *platform, int format);
+bool platform_is_edid_supported_sample_rate(void *platform, int sample_rate);
 void platform_cache_edid(void * platform);
 void platform_invalidate_edid(void * platform);
 int platform_set_hdmi_config(struct stream_out *out);

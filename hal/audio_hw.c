@@ -231,11 +231,12 @@ struct string_to_enum {
 
 static const struct string_to_enum out_channels_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_CHANNEL_OUT_STEREO),
-    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_QUAD),/* QUAD_BACK is same as QUAD */
-    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_QUAD_SIDE),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_2POINT1),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_QUAD),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_SURROUND),
     STRING_TO_ENUM(AUDIO_CHANNEL_OUT_PENTA),
-    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_5POINT1), /* 5POINT1_BACK is same as 5POINT1 */
-    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_5POINT1_SIDE),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_5POINT1),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_6POINT1),
     STRING_TO_ENUM(AUDIO_CHANNEL_OUT_7POINT1),
 };
 
@@ -243,6 +244,23 @@ static const struct string_to_enum out_formats_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_AC3),
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3),
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
+    STRING_TO_ENUM(AUDIO_FORMAT_DTS),
+    STRING_TO_ENUM(AUDIO_FORMAT_DTS_HD),
+};
+
+//list of all supported sample rates by HDMI specification.
+static const int out_hdmi_sample_rates[] = {
+    32000, 44100, 48000, 88200, 96000, 176400, 192000,
+};
+
+static const struct string_to_enum out_hdmi_sample_rates_name_to_enum_table[] = {
+    STRING_TO_ENUM(32000),
+    STRING_TO_ENUM(44100),
+    STRING_TO_ENUM(48000),
+    STRING_TO_ENUM(88200),
+    STRING_TO_ENUM(96000),
+    STRING_TO_ENUM(176400),
+    STRING_TO_ENUM(192000),
 };
 
 static struct audio_device *adev = NULL;
@@ -799,39 +817,81 @@ static void check_and_route_capture_usecases(struct audio_device *adev,
     }
 }
 
+static void reset_hdmi_sink_caps(struct stream_out *out) {
+    int i = 0;
+
+    for (i = 0; i<= MAX_SUPPORTED_CHANNEL_MASKS; i++) {
+        out->supported_channel_masks[i] = 0;
+    }
+    for (i = 0; i<= MAX_SUPPORTED_FORMATS; i++) {
+        out->supported_formats[i] = 0;
+    }
+    for (i = 0; i<= MAX_SUPPORTED_SAMPLE_RATES; i++) {
+        out->supported_sample_rates[i] = 0;
+    }
+}
+
 /* must be called with hw device mutex locked */
-static int read_hdmi_channel_masks(struct stream_out *out)
+static int read_hdmi_sink_caps(struct stream_out *out)
 {
-    int ret = 0, i = 0;
+    int ret = 0, i = 0, j = 0;
     int channels = platform_edid_get_max_channels(out->dev->platform);
 
+    reset_hdmi_sink_caps(out);
+
     switch (channels) {
-        /*
-         * Do not handle stereo output in Multi-channel cases
-         * Stereo case is handled in normal playback path
-         */
-    case 6:
-        ALOGV("%s: HDMI supports Quad and 5.1", __func__);
-        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_QUAD;
-        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_QUAD_SIDE;
-        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_PENTA;
-        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_5POINT1;
-        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_5POINT1_SIDE;
-        break;
     case 8:
-        ALOGV("%s: HDMI supports Quad, 5.1 and 7.1 channels", __func__);
-        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_QUAD;
-        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_QUAD_SIDE;
-        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_PENTA;
-        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_5POINT1;
-        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_5POINT1_SIDE;
+        ALOGV("%s: HDMI supports 7.1 channels", __func__);
         out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_7POINT1;
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_6POINT1;
+    case 6:
+        ALOGV("%s: HDMI supports 5.1 channels", __func__);
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_5POINT1;
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_PENTA;
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_QUAD;
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_SURROUND;
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_2POINT1;
+    case 2:
+        ALOGV("%s: HDMI supports 2 channels", __func__);
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_STEREO;
         break;
     default:
-        ALOGE("HDMI does not support multi channel playback");
+        ALOGE("invalid/nonstandard channal count[%d]",channels);
         ret = -ENOSYS;
         break;
     }
+
+    // check channel format caps
+    i = 0;
+    if (platform_is_edid_supported_format(out->dev->platform, AUDIO_FORMAT_AC3)) {
+        ALOGV(":%s HDMI supports AC3/EAC3 formats", __func__);
+        out->supported_formats[i++] = AUDIO_FORMAT_AC3;
+        //Adding EAC3/EAC3_JOC formats if AC3 is supported by the sink.
+        //EAC3/EAC3_JOC will be converted to AC3 for decoding if needed
+        out->supported_formats[i++] = AUDIO_FORMAT_E_AC3;
+        out->supported_formats[i++] = AUDIO_FORMAT_E_AC3_JOC;
+    }
+
+    if (platform_is_edid_supported_format(out->dev->platform, AUDIO_FORMAT_DTS)) {
+        ALOGV(":%s HDMI supports DTS format", __func__);
+        out->supported_formats[i++] = AUDIO_FORMAT_DTS;
+    }
+
+    if (platform_is_edid_supported_format(out->dev->platform, AUDIO_FORMAT_DTS_HD)) {
+        ALOGV(":%s HDMI supports DTS HD format", __func__);
+        out->supported_formats[i++] = AUDIO_FORMAT_DTS_HD;
+    }
+
+
+    // check sample rate caps
+    i = 0;
+    for (j = 0; j < MAX_SUPPORTED_SAMPLE_RATES; j++) {
+        if (platform_is_edid_supported_sample_rate(out->dev->platform, out_hdmi_sample_rates[j])) {
+            ALOGV(":%s HDMI supports sample rate:%d", __func__, out_hdmi_sample_rates[j]);
+            out->supported_sample_rates[i++] = out_hdmi_sample_rates[j];
+        }
+    }
+
     return ret;
 }
 
@@ -1653,7 +1713,7 @@ static int stop_output_stream(struct stream_out *out)
         ALOGV("Disable passthrough , reset mixer to pcm");
         /* NO_PASSTHROUGH */
         out->compr_config.codec->compr_passthr = 0;
-        audio_extn_dolby_set_hdmi_config(adev, out);
+        platform_set_hdmi_config(out);
         audio_extn_dolby_set_dap_bypass(adev, DAP_STATE_ON);
     }
     /* Must be called after removing the usecase from list */
@@ -1732,7 +1792,7 @@ int start_output_stream(struct stream_out *out)
             } else
                 check_and_set_hdmi_channels(adev, out->config.channels);
         }
-        audio_extn_dolby_set_hdmi_config(adev, out);
+        platform_set_hdmi_config(out);
     }
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
@@ -2234,6 +2294,31 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
             free(str);
         str = str_parms_to_str(reply);
     }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_SAMPLING_RATES, value, sizeof(value));
+    if (ret >= 0) {
+        value[0] = '\0';
+        i = 0;
+        first = true;
+        while (out->supported_sample_rates[i] != 0) {
+            for (j = 0; j < ARRAY_SIZE(out_hdmi_sample_rates_name_to_enum_table); j++) {
+                if (out_hdmi_sample_rates_name_to_enum_table[j].value == out->supported_sample_rates[i]) {
+                    if (!first) {
+                        strlcat(value, "|", sizeof(value));
+                    }
+                    strlcat(value, out_hdmi_sample_rates_name_to_enum_table[j].name, sizeof(value));
+                    first = false;
+                    break;
+                }
+            }
+            i++;
+        }
+        str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_SAMPLING_RATES, value);
+        if (str)
+            free(str);
+        str = str_parms_to_str(reply);
+    }
+
     str_parms_destroy(query);
     str_parms_destroy(reply);
     ALOGV("%s: exit: returns - %s", __func__, str);
@@ -3009,8 +3094,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
     out = (struct stream_out *)calloc(1, sizeof(struct stream_out));
 
-    ALOGD("%s: enter: sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)\
-        stream_handle(%p)",__func__, config->sample_rate, config->channel_mask,
+    ALOGD("%s: enter: format(%#x) sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)\
+        stream_handle(%p)", __func__, config->format, config->sample_rate, config->channel_mask,
         devices, flags, &out->stream);
 
 
@@ -3037,6 +3122,23 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->non_blocking = 0;
     out->use_small_bufs = false;
 
+    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL &&
+        (flags & AUDIO_OUTPUT_FLAG_DIRECT)) {
+        pthread_mutex_lock(&adev->lock);
+        ALOGV("AUDIO_DEVICE_OUT_AUX_DIGITAL and DIRECT|OFFLOAD, check hdmi caps");
+        ret = read_hdmi_sink_caps(out);
+        pthread_mutex_unlock(&adev->lock);
+        if (ret != 0) {
+            if (ret == -ENOSYS) {
+                /* ignore and go with default */
+                ret = 0;
+            } else {
+                ALOGE("error reading hdmi sink caps");
+                goto error_open;
+            }
+        }
+    }
+
     /* Init use case and pcm_config */
     if ((out->flags & AUDIO_OUTPUT_FLAG_DIRECT) &&
         !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD ||
@@ -3045,8 +3147,14 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->devices & AUDIO_DEVICE_OUT_PROXY)) {
 
         pthread_mutex_lock(&adev->lock);
-        if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
-            ret = read_hdmi_channel_masks(out);
+        if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            /*
+            * Do not handle stereo output in Multi-channel cases
+            * Stereo case is handled in normal playback path
+            */
+            if (out->supported_channel_masks[0] == AUDIO_CHANNEL_OUT_STEREO)
+                ret = AUDIO_CHANNEL_OUT_STEREO;
+        }
 
         if (out->devices & AUDIO_DEVICE_OUT_PROXY)
             ret = audio_extn_read_afe_proxy_channel_masks(out);
@@ -3058,9 +3166,12 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         if (config->channel_mask == 0)
             config->channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
+        if (config->format == 0)
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
 
         out->channel_mask = config->channel_mask;
         out->sample_rate = config->sample_rate;
+        out->format = config->format;
         out->usecase = USECASE_AUDIO_PLAYBACK_MULTI_CH;
         out->config = pcm_config_hdmi_multi;
         out->config.rate = config->sample_rate;
@@ -3085,15 +3196,11 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             goto error_open;
         }
 
-        if ((out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
-            ((audio_extn_dolby_is_passthrough_stream(out->flags)))) {
-            ALOGV("read and update_pass through formats");
-            ret = audio_extn_dolby_update_passt_formats(adev, out);
-            if(ret != 0) {
-                goto error_open;
-            }
+        if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             if(config->offload_info.format == 0)
                 config->offload_info.format = out->supported_formats[0];
+            if (config->offload_info.sample_rate == 0)
+                config->offload_info.sample_rate = out->supported_sample_rates[0];
         }
 
         if (!is_supported_format(config->offload_info.format) &&
@@ -3125,9 +3232,16 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         }
 
         if (out->usecase == USECASE_INVALID) {
-            ALOGE("%s, Max allowed OFFLOAD usecase reached ... ", __func__);
-            ret = -EEXIST;
-            goto error_open;
+            if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL &&
+                    config->format == 0 && config->sample_rate == 0 &&
+                    config->channel_mask == 0) {
+                ALOGI("%s dummy open to query sink cap",__func__);
+                out->usecase = USECASE_AUDIO_PLAYBACK_OFFLOAD;
+            } else {
+                ALOGE("%s, Max allowed OFFLOAD usecase reached ... ", __func__);
+                ret = -EEXIST;
+                goto error_open;
+            }
         }
 
         if (config->offload_info.channel_mask)

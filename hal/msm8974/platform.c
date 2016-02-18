@@ -4249,12 +4249,23 @@ unsigned char platform_map_to_edid_format(int audio_format)
         ALOGV("%s:E_AC3", __func__);
         format = DOLBY_DIGITAL_PLUS;
         break;
+    case AUDIO_FORMAT_DTS:
+        ALOGV("%s:DTS", __func__);
+        format = DTS;
+        break;
+    case AUDIO_FORMAT_DTS_HD:
+        ALOGV("%s:DTS_HD", __func__);
+        format = DTS_HD;
+        break;
     case AUDIO_FORMAT_PCM_16_BIT:
     case AUDIO_FORMAT_PCM_16_BIT_OFFLOAD:
     case AUDIO_FORMAT_PCM_24_BIT_OFFLOAD:
-    default:
         ALOGV("%s:PCM", __func__);
-        format =  LPCM;
+        format = LPCM;
+        break;
+    default:
+        ALOGE("%s:invalid format:%d", __func__,format);
+        format =  -1;
         break;
     }
     return format;
@@ -4288,6 +4299,11 @@ bool platform_is_edid_supported_format(void *platform, int format)
     int i, ret;
     unsigned char format_id = platform_map_to_edid_format(format);
 
+    if (format_id <= 0) {
+        ALOGE("%s invalid edid format mappting for :%x" ,__func__, format);
+        return false;
+    }
+
     ret = platform_get_edid_info(platform);
     info = (edid_audio_info *)my_data->edid_info;
     if (ret == 0 && info != NULL) {
@@ -4298,16 +4314,45 @@ bool platform_is_edid_supported_format(void *platform, int format)
               *  & DOLBY_DIGITAL_PLUS
               */
             if (info->audio_blocks_array[i].format_id == format_id) {
-                ALOGV("%s:platform_is_edid_supported_format true %x",
+                ALOGV("%s:returns true %x",
                       __func__, format);
                 return true;
             }
         }
     }
-    ALOGV("%s:platform_is_edid_supported_format false %x",
+    ALOGV("%s:returns false %x",
            __func__, format);
     return false;
 }
+
+bool platform_is_edid_supported_sample_rate(void *platform, int sample_rate)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    edid_audio_info *info = NULL;
+    int num_audio_blocks;
+    int i, ret, count;
+
+    ret = platform_get_edid_info(platform);
+    info = (edid_audio_info *)my_data->edid_info;
+    if (ret == 0 && info != NULL) {
+        for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
+             /*
+              * To check
+              *  is there any special for CONFIG_HDMI_PASSTHROUGH_CONVERT
+              *  & DOLBY_DIGITAL_PLUS
+              */
+            if (info->audio_blocks_array[i].sampling_freq == sample_rate) {
+                ALOGV("%s: returns true %d", __func__, sample_rate);
+                return true;
+            }
+        }
+    }
+    ALOGV("%s: returns false %d", __func__, sample_rate);
+
+    return false;
+}
+
 
 int platform_set_edid_channels_configuration(void *platform, int channels) {
 

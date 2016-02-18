@@ -1152,6 +1152,12 @@ bool platform_is_edid_supported_format(void *platform __unused,
     return  false;
 }
 
+bool platform_is_edid_supported_sample_rate(void *platform __unused,
+                                    int sample_rate __unused)
+{
+    return false;
+}
+
 void platform_cache_edid(void * platform __unused)
 {
 
