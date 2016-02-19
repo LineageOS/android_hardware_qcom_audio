@@ -2049,29 +2049,16 @@ int native_audio_set_params(struct platform_data *platform,
     return ret;
 }
 
-int check_hdset_combo_device(struct audio_device *adev, snd_device_t snd_device)
+int check_hdset_combo_device(snd_device_t snd_device)
 {
     int ret = false;
-    struct listnode *node;
-    int i =0;
 
-    if (SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES == snd_device)
+    if (SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES == snd_device ||
+        SND_DEVICE_OUT_SPEAKER_AND_LINE == snd_device ||
+        SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1 == snd_device ||
+        SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2 == snd_device ||
+        SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET == snd_device)
         ret = true;
-    else {
-         list_for_each(node, &adev->usecase_list) {
-            struct audio_usecase *uc;
-            uc = node_to_item(node, struct audio_usecase, list);
-            ALOGD("%s: (%d) use case %s snd device %s",
-                __func__, i++, use_case_table[uc->id],
-                platform_get_snd_device_name(uc->out_snd_device));
-
-            if (SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES == uc->out_snd_device)
-                ret = true;
-        }
-    }
-    ALOGV("%s:napb: (%s) snd_device (%s)",
-          __func__, (ret == false ? "false":"true"),
-          platform_get_snd_device_name(snd_device));
 
     return ret;
 }
@@ -3884,7 +3871,7 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
     }
 
     if (audio_is_true_native_stream_active(adev)) {
-        if (check_hdset_combo_device(adev, snd_device)) {
+        if (check_hdset_combo_device(snd_device)) {
         /*
          * In true native mode Tasha has a limitation that one port at 44.1 khz
          * cannot drive both spkr and hdset, to simiplify the solution lets
@@ -4569,6 +4556,11 @@ int platform_get_spkr_prot_snd_device(snd_device_t snd_device)
         default:
              return snd_device;
     }
+}
+
+int platform_spkr_prot_is_wsa_analog_mode(void *adev __unused)
+{
+    return 0;
 }
 
 /*

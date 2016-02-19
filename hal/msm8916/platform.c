@@ -222,6 +222,7 @@ struct platform_data {
     bool ec_ref_enabled;
     bool is_wsa_speaker;
     bool is_acdb_initialized;
+    bool hifi_audio;
     /* Vbat monitor related flags */
     bool is_vbat_speaker;
     bool gsm_mode_enabled;
@@ -1773,6 +1774,14 @@ void *platform_init(struct audio_device *adev)
     if (ret)
         my_data->is_vbat_speaker = true;
 
+    /*
+     * Check if hifi audio( i.e. 96, 192 KHZ) is enabled for this platform,
+     * enable hifi audio by default for external codec targets
+     */
+    ret = audio_extn_is_hifi_audio_supported();
+    if (ret || is_external_codec)
+        my_data->hifi_audio = true;
+
     my_data->voice_feature_set = VOICE_FEATURE_SET_DEFAULT;
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
     if (my_data->acdb_handle == NULL) {
@@ -1891,16 +1900,22 @@ acdb_init_fail:
         my_data->current_backend_cfg[idx].bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     }
 
-    my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
-        strdup("SLIM_0_RX Format");
-    my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
-        strdup("SLIM_0_RX SampleRate");
+    if (is_external_codec) {
+        my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
+            strdup("SLIM_0_RX Format");
+        my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
+            strdup("SLIM_0_RX SampleRate");
 
-    my_data->current_backend_cfg[HEADPHONE_44_1_BACKEND].bitwidth_mixer_ctl =
-        strdup("SLIM_5_RX Format");
-    my_data->current_backend_cfg[HEADPHONE_44_1_BACKEND].samplerate_mixer_ctl =
-        strdup("SLIM_5_RX SampleRate");
-
+        my_data->current_backend_cfg[HEADPHONE_44_1_BACKEND].bitwidth_mixer_ctl =
+            strdup("SLIM_5_RX Format");
+        my_data->current_backend_cfg[HEADPHONE_44_1_BACKEND].samplerate_mixer_ctl =
+            strdup("SLIM_5_RX SampleRate");
+    } else {
+        my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
+            strdup("MI2S_RX Format");
+        my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
+            strdup("MI2S_RX SampleRate");
+    }
 
     ret = audio_extn_utils_get_codec_version(snd_card_name,
                                              my_data->adev->snd_card,
@@ -2337,29 +2352,16 @@ int native_audio_set_params(struct platform_data *platform,
     return ret;
 }
 
-int check_hdset_combo_device(struct audio_device *adev, snd_device_t snd_device)
+int check_hdset_combo_device(snd_device_t snd_device)
 {
     int ret = false;
-    struct listnode *node;
-    int i =0;
 
-    if (SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES == snd_device)
+    if (SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES == snd_device ||
+        SND_DEVICE_OUT_SPEAKER_AND_LINE == snd_device ||
+        SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1 == snd_device ||
+        SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2 == snd_device ||
+        SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET == snd_device)
         ret = true;
-    else {
-         list_for_each(node, &adev->usecase_list) {
-            struct audio_usecase *uc;
-            uc = node_to_item(node, struct audio_usecase, list);
-            ALOGD("%s: (%d) use case %s snd device %s",
-                __func__, i++, use_case_table[uc->id],
-                platform_get_snd_device_name(uc->out_snd_device));
-
-            if (SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES == uc->out_snd_device)
-                ret = true;
-        }
-    }
-    ALOGV("%s:napb: (%s) snd_device (%s)",
-          __func__, (ret == false ? "false":"true"),
-          platform_get_snd_device_name(snd_device));
 
     return ret;
 }
@@ -4084,44 +4086,6 @@ bool platform_use_small_buffer(audio_offload_info_t* info)
     return OFFLOAD_USE_SMALL_BUFFER;
 }
 
-int platform_is_external_codec (char *snd_card_name)
-{
-
-    if (!strncmp(snd_card_name, "msm8952-tomtom-snd-card",
-                  sizeof("msm8952-tomtom-snd-card")) ||
-        !strncmp(snd_card_name, "msm8952-tasha-snd-card",
-                  sizeof("msm8952-tasha-snd-card")) ||
-        !strncmp(snd_card_name, "msm8952-tashalite-snd-card",
-                  sizeof("msm8952-tashalite-snd-card")) ||
-        !strncmp(snd_card_name, "msm8952-tasha-skun-snd-card",
-                  sizeof("msm8952-tasha-skun-snd-card")) ||
-        !strncmp(snd_card_name, "msm8976-tasha-snd-card",
-                  sizeof("msm8976-tasha-snd-card")) ||
-        !strncmp(snd_card_name, "msm8976-tashalite-snd-card",
-                  sizeof("msm8976-tashalite-snd-card")) ||
-        !strncmp(snd_card_name, "msm8976-tasha-skun-snd-card",
-                  sizeof("msm8976-tasha-skun-snd-card")) ||
-        !strncmp(snd_card_name, "msm8937-tasha-snd-card",
-                  sizeof("msm8937-tasha-snd-card")) ||
-         !strncmp(snd_card_name, "msm8937-tashalite-snd-card",
-                  sizeof("msm8937-tashalite-snd-card"))  ||
-         !strncmp(snd_card_name, "msm8953-tasha-snd-card",
-                  sizeof("msm8953-tasha-snd-card")) ||
-         !strncmp(snd_card_name, "msm8953-tashalite-snd-card",
-                  sizeof("msm8953-tashalite-snd-card")))
-    {
-        /* external codec, for rest/old of the external codecs
-           we dont support this funtionality(chaning AFE params)
-           at the monment
-         */
-        return 1;
-    }
-    else {
-        /* internal codec */
-        return 0;
-    }
-}
-
 /*
  * configures afe with bit width and Sample Rate
  */
@@ -4133,7 +4097,6 @@ int platform_set_codec_backend_cfg(struct audio_device* adev,
     int backend_idx = DEFAULT_CODEC_BACKEND;
     struct platform_data *my_data = (struct platform_data *)adev->platform;
     const char *snd_card_name = mixer_get_name(adev->mixer);
-    int is_external_codec = platform_is_external_codec(snd_card_name);
     int na_mode = platform_get_native_support();
 
 
@@ -4146,14 +4109,8 @@ int platform_set_codec_backend_cfg(struct audio_device* adev,
         my_data->current_backend_cfg[backend_idx].bit_width) {
 
         struct  mixer_ctl *ctl;
-        if (!is_external_codec) {
-            ctl = mixer_get_ctl_by_name(adev->mixer,
-                        "MI2S_RX Format");
-
-        } else {
-            ctl = mixer_get_ctl_by_name(adev->mixer,
+        ctl = mixer_get_ctl_by_name(adev->mixer,
                         my_data->current_backend_cfg[backend_idx].bitwidth_mixer_ctl);
-        }
         if (!ctl) {
             ALOGE("%s:becf: afe: Could not get ctl for mixer command - %s",
                   __func__,
@@ -4182,9 +4139,10 @@ int platform_set_codec_backend_cfg(struct audio_device* adev,
     // TODO: This has to be more dynamic based on policy file
 
     if ((sample_rate != my_data->current_backend_cfg[(int)backend_idx].sample_rate) &&
-            (is_external_codec)) {
-            /* sample rate update is needed only for external codecs which
-               support 24 bit playback*/
+            (my_data->hifi_audio)) {
+            /*
+             * sample rate update is needed only for hifi audio enabled platforms
+             */
             char *rate_str = NULL;
             struct  mixer_ctl *ctl;
 
@@ -4311,7 +4269,7 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
     }
 
     if (audio_is_true_native_stream_active(adev)) {
-        if (check_hdset_combo_device(adev, snd_device)) {
+        if (check_hdset_combo_device(snd_device)) {
         /*
          * In true native mode Tasha has a limitation that one port at 44.1 khz
          * cannot drive both spkr and hdset, to simiplify the solution lets
@@ -4356,14 +4314,12 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
     }
 
     /*
-     * Sample rate greater than 48K is only supported by external codecs on
-     * specific devices e.g. Headphones, reset the sample rate to
-     * default value if not external codec.
+     * reset the sample rate to default value(48K), if hifi audio is not supported
      */
-    if (!is_external_codec) {
-        ALOGD("%s:becf: afe: For internal codec only 48 is supported \
-              Configure afe to default Sample Rate(48k)", __func__);
-        sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    if (!my_data->hifi_audio) {
+               ALOGD("%s:becf: afe: only 48KHZ sample rate is supported \
+                      Configure afe to default Sample Rate(48k)", __func__);
+               sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
     }
 
     //check if mulitchannel clip needs to be down sampled to 48k
@@ -5094,16 +5050,20 @@ done:
     return ret;
 }
 
-int platform_get_wsa_mode(void *adev)
+int platform_spkr_prot_is_wsa_analog_mode(void *adev)
 {
     struct audio_device *adev_h = adev;
     char *snd_card_name;
 
+    /*
+     * wsa analog mode is decided based on the sound card name
+     */
     snd_card_name = mixer_get_name(adev_h->mixer);
     if ((!strcmp(snd_card_name, "msm8952-skum-snd-card")) ||
         (!strcmp(snd_card_name, "msm8952-snd-card")) ||
         (!strcmp(snd_card_name, "msm8952-snd-card-mtp")) ||
-        (!strcmp(snd_card_name, "msm8976-skun-snd-card")))
+        (!strcmp(snd_card_name, "msm8976-skun-snd-card")) ||
+        (!strcmp(snd_card_name, "msm8953-snd-card-mtp")))
         return 1;
     else
         return 0;
