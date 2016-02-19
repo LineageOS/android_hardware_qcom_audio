@@ -28,8 +28,11 @@
 #include "audio_extn.h"
 #include <linux/msm_audio.h>
 
-#define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
-#define MIXER_XML_PATH_WCD9330 "/system/etc/mixer_paths_wcd9330.xml"
+#define MIXER_XML_DEFAULT_PATH "/system/etc/mixer_paths.xml"
+#define MIXER_XML_BASE_STRING "/system/etc/mixer_paths"
+#define TOMTOM_8226_SND_CARD_NAME "msm8226-tomtom-snd-card"
+#define TOMTOM_MIXER_FILE_SUFFIX "wcd9330"
+
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
 #define CVD_VERSION_MIXER_CTL "CVD Version"
@@ -921,11 +924,14 @@ done:
 void *platform_init(struct audio_device *adev)
 {
     char value[PROPERTY_VALUE_MAX];
-    struct platform_data *my_data;
-    int retry_num = 0, snd_card_num = 0;
-    bool dual_mic_config = false;
+    struct platform_data *my_data = NULL;
+    int retry_num = 0, snd_card_num = 0, key = 0, ret = 0;
+    bool dual_mic_config = false, use_default_mixer_path = true;
     const char *snd_card_name;
     char *cvd_version = NULL;
+    char *snd_internal_name = NULL;
+    char *tmp = NULL;
+    char mixer_xml_file[MIXER_PATH_MAX_LENGTH]= {0};
 
     my_data = calloc(1, sizeof(struct platform_data));
 
@@ -967,16 +973,44 @@ void *platform_init(struct audio_device *adev)
             continue;
         }
 
-        ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
+        if ((snd_internal_name = strtok_r(snd_card_name, "-", &tmp)) != NULL) {
+           /* Get the codec internal name from the sound card name
+            * and form the mixer paths file name dynamically. This
+            * is generic way of picking any codec name based mixer
+            * files in future with no code change. This code
+            * assumes mixer files are formed with format as
+            * mixer_paths_internalcodecname.xml
 
-        if (!strncmp(snd_card_name, "msm8226-tomtom-snd-card",
-                     sizeof("msm8226-tomtom-snd-card"))) {
-            ALOGD("%s: Call MIXER_XML_PATH_WCD9330", __func__);
-            adev->audio_route = audio_route_init(snd_card_num,
-                                                 MIXER_XML_PATH_WCD9330);
-        } else {
-            adev->audio_route = audio_route_init(snd_card_num, MIXER_XML_PATH);
+            * If this dynamically read mixer files fails to open then it
+            * falls back to default mixer file i.e mixer_paths.xml. This is
+            * done to preserve backward compatibility but not mandatory as
+            * long as the mixer files are named as per above assumption.
+            */
+
+            if ((snd_internal_name = strtok_r(NULL, "-", &tmp)) != NULL) {
+                // need to carryforward old file name
+                if (!strncmp(snd_card_name, TOMTOM_8226_SND_CARD_NAME,
+                             sizeof(TOMTOM_8226_SND_CARD_NAME))) {
+                    snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s.xml",
+                             MIXER_XML_BASE_STRING, TOMTOM_MIXER_FILE_SUFFIX );
+                } else {
+                    snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s.xml",
+                             MIXER_XML_BASE_STRING, snd_internal_name);
+                }
+
+                if (F_OK == access(mixer_xml_file, 0)) {
+                    use_default_mixer_path = false;
+                }
+            }
         }
+
+        if (use_default_mixer_path) {
+            memset(mixer_xml_file, 0, sizeof(mixer_xml_file));
+            strlcpy(mixer_xml_file, MIXER_XML_DEFAULT_PATH, MIXER_PATH_MAX_LENGTH);
+        }
+
+        ALOGD("%s: Loading mixer file: %s", __func__, mixer_xml_file);
+        adev->audio_route = audio_route_init(snd_card_num, mixer_xml_file);
 
         if (!adev->audio_route) {
             ALOGE("%s: Failed to init audio route controls, aborting.", __func__);
