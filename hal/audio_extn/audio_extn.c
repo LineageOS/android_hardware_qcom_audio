@@ -64,6 +64,7 @@ struct audio_extn_module {
     uint32_t proxy_channel_num;
     bool hpx_enabled;
     bool vbat_enabled;
+    bool hifi_audio_enabled;
 };
 
 static struct audio_extn_module aextnmod = {
@@ -73,6 +74,7 @@ static struct audio_extn_module aextnmod = {
     .proxy_channel_num = 2,
     .hpx_enabled = 0,
     .vbat_enabled = 0,
+    .hifi_audio_enabled = 0,
 };
 
 #define AUDIO_PARAMETER_KEY_ANC        "anc_enabled"
@@ -335,6 +337,28 @@ void audio_extn_check_and_set_dts_hpx_state(const struct audio_device *adev)
 }
 #endif
 
+#ifdef HIFI_AUDIO_ENABLED
+bool audio_extn_is_hifi_audio_enabled(void)
+{
+    ALOGV("%s: status: %d", __func__, aextnmod.hifi_audio_enabled);
+    return (aextnmod.hifi_audio_enabled ? true: false);
+}
+
+bool audio_extn_is_hifi_audio_supported(void)
+{
+    /*
+     * for internal codec, check for hifiaudio property to enable hifi audio
+     */
+    if (property_get_bool("persist.audio.hifi.int_codec", false))
+    {
+        ALOGD("%s: hifi audio supported on internal codec", __func__);
+        aextnmod.hifi_audio_enabled = 1;
+    }
+
+    return (aextnmod.hifi_audio_enabled ? true: false);
+}
+#endif
+
 #ifdef VBAT_MONITOR_ENABLED
 bool audio_extn_is_vbat_enabled(void)
 {
@@ -420,9 +444,28 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
          */
         query_44_1 = str_parms_create_str(AUDIO_PARAMETER_KEY_NATIVE_AUDIO);
         reply_44_1 = str_parms_create();
+        if (!query_44_1 || !reply_44_1) {
+            if (query_44_1) {
+                str_parms_destroy(query_44_1);
+            }
+            if (reply_44_1) {
+                str_parms_destroy(reply_44_1);
+            }
+
+            ALOGE("%s: param creation failed", __func__);
+            return;
+        }
+
         platform_get_parameters(adev->platform, query_44_1, reply_44_1);
 
         parms_disable_44_1 = str_parms_create();
+        if (!parms_disable_44_1) {
+            str_parms_destroy(query_44_1);
+            str_parms_destroy(reply_44_1);
+            ALOGE("%s: param creation failed for parms_disable_44_1", __func__);
+            return;
+        }
+
         str_parms_add_str(parms_disable_44_1, AUDIO_PARAMETER_KEY_NATIVE_AUDIO, "false");
         platform_set_parameters(adev->platform, parms_disable_44_1);
         str_parms_destroy(parms_disable_44_1);
@@ -1066,8 +1109,10 @@ void audio_extn_perf_lock_acquire(int *handle, int duration,
                                  int *perf_lock_opts, int size)
 {
 
-    if (!perf_lock_opts || !size || !perf_lock_acq || !handle)
-        return -EINVAL;
+    if (!perf_lock_opts || !size || !perf_lock_acq || !handle) {
+        ALOGE("%s: Invalid arguments", __func__);
+        return;
+    }
     /*
      * Acquire performance lock for 1 sec during device path bringup.
      * Lock will be released either after 1 sec or when perf_lock_release

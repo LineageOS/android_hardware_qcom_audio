@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -129,6 +129,14 @@ bool audio_extn_should_use_handset_anc(int in_channels);
 #else
 bool audio_extn_is_vbat_enabled(void);
 bool audio_extn_can_use_vbat(void);
+#endif
+
+#ifndef HIFI_AUDIO_ENABLED
+#define audio_extn_is_hifi_audio_enabled()               (0)
+#define audio_extn_is_hifi_audio_supported()             (0)
+#else
+bool audio_extn_is_hifi_audio_enabled(void);
+bool audio_extn_is_hifi_audio_supported(void);
 #endif
 
 #ifndef FLUENCE_ENABLED

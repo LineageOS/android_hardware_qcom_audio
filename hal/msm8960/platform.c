@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -1205,4 +1205,9 @@ int platform_get_spkr_prot_acdb_id(snd_device_t snd_device __unused)
 int platform_get_spkr_prot_snd_device(snd_device_t snd_device __unused)
 {
     return -ENOSYS;
+}
+
+int platform_spkr_prot_is_wsa_analog_mode(void *adev __unused)
+{
+    return 0;
 }
