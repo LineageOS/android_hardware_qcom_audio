@@ -659,7 +659,7 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
     /// Opens: can these line be executed after the switch of volume curves???
     // if leaving call state, handle special case of active streams
     // pertaining to sonification strategy see handleIncallSonification()
-    if (isInCall()) {
+    if (isStateInCall(oldState)) {
         ALOGV("setPhoneState() in call state management: new state is %d", state);
         for (size_t j = 0; j < mOutputs.size(); j++) {
             audio_io_handle_t curOutput = mOutputs.keyAt(j);
@@ -671,7 +671,7 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
             }
         }
 
-        // force reevaluating accessibility routing when call starts
+        // force reevaluating accessibility routing when call stops
         mpClientInterface->invalidateStream(AUDIO_STREAM_ACCESSIBILITY);
     }
 
@@ -947,6 +947,9 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
                 handleIncallSonification((audio_stream_type_t)stream, true, true, curOutput);
            }
         }
+
+       // force reevaluating accessibility routing when call starts
+       mpClientInterface->invalidateStream(AUDIO_STREAM_ACCESSIBILITY);
     }
 
     // Flag that ringtone volume must be limited to music volume until we exit MODE_RINGTONE
