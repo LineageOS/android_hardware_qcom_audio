@@ -94,7 +94,7 @@ static struct listnode *operator_specific_device_table[SND_DEVICE_MAX];
 
 /* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
-typedef int  (*acdb_init_v2_cvd_t)(char *, char *);
+typedef int  (*acdb_init_v2_cvd_t)(char *, char *, int);
 typedef int  (*acdb_init_v2_t)(char *);
 typedef int  (*acdb_init_t)();
 typedef void (*acdb_send_audio_cal_t)(int, int);
@@ -1098,7 +1098,7 @@ void *platform_init(struct audio_device *adev)
             ALOGV("%s: Could not find the symbol acdb_loader_send_gain_dep_cal from %s",
                   __func__, LIB_ACDB_LOADER);
 
-#if defined (PLATFORM_MSM8994)
+#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996)
         acdb_init_v2_cvd_t acdb_init;
         acdb_init = (acdb_init_v2_cvd_t)dlsym(my_data->acdb_handle,
                                               "acdb_loader_init_v2");
@@ -1112,7 +1112,7 @@ void *platform_init(struct audio_device *adev)
         if (!cvd_version)
             ALOGE("failed to allocate cvd_version");
         else
-            acdb_init((char *)snd_card_name, cvd_version);
+            acdb_init((char *)snd_card_name, cvd_version, 0);
         free(cvd_version);
 #elif defined (PLATFORM_MSM8084)
         acdb_init_v2_t acdb_init;
