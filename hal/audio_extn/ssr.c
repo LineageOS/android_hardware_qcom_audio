@@ -374,7 +374,6 @@ void audio_extn_ssr_update_enabled()
 
 bool audio_extn_ssr_get_enabled()
 {
-    ALOGV("%s: is_ssr_enabled:%d", __func__, ssrmod.is_ssr_enabled);
     return (ssrmod.is_ssr_enabled ? true: false);
 }
 

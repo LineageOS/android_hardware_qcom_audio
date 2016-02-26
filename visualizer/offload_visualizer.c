@@ -306,7 +306,7 @@ int configure_proxy_capture(struct mixer *mixer, int value) {
 }
 
 
-void *capture_thread_loop(void *arg)
+void *capture_thread_loop(void *arg __unused)
 {
     int16_t data[AUDIO_CAPTURE_PERIOD_SIZE * AUDIO_CAPTURE_CHANNEL_COUNT * sizeof(int16_t)];
     audio_buffer_t buf;
@@ -414,7 +414,7 @@ void *capture_thread_loop(void *arg)
 
 __attribute__ ((visibility ("default")))
 int visualizer_hal_start_output(audio_io_handle_t output, int pcm_id) {
-    int ret;
+    int ret = 0;
     struct listnode *node;
 
     ALOGV("%s output %d pcm_id %d", __func__, output, pcm_id);
@@ -652,7 +652,7 @@ int visualizer_get_parameter(effect_context_t *context, effect_param_t *p, uint3
     return 0;
 }
 
-int visualizer_set_parameter(effect_context_t *context, effect_param_t *p, uint32_t size)
+int visualizer_set_parameter(effect_context_t *context, effect_param_t *p, uint32_t size __unused)
 {
     visualizer_context_t *visu_ctxt = (visualizer_context_t *)context;
 
@@ -785,8 +785,8 @@ int visualizer_process(effect_context_t *context,
     return 0;
 }
 
-int visualizer_command(effect_context_t * context, uint32_t cmdCode, uint32_t cmdSize,
-        void *pCmdData, uint32_t *replySize, void *pReplyData)
+int visualizer_command(effect_context_t * context, uint32_t cmdCode, uint32_t cmdSize __unused,
+        void *pCmdData __unused, uint32_t *replySize, void *pReplyData)
 {
     visualizer_context_t * visu_ctxt = (visualizer_context_t *)context;
 
@@ -908,7 +908,7 @@ int visualizer_command(effect_context_t * context, uint32_t cmdCode, uint32_t cm
  */
 
 int effect_lib_create(const effect_uuid_t *uuid,
-                         int32_t sessionId,
+                         int32_t sessionId __unused,
                          int32_t ioId,
                          effect_handle_t *pHandle) {
     int ret;
@@ -1029,8 +1029,8 @@ int effect_lib_get_descriptor(const effect_uuid_t *uuid,
 
  /* Stub function for effect interface: never called for offloaded effects */
 int effect_process(effect_handle_t self,
-                       audio_buffer_t *inBuffer,
-                       audio_buffer_t *outBuffer)
+                       audio_buffer_t *inBuffer __unused,
+                       audio_buffer_t *outBuffer __unused)
 {
     effect_context_t * context = (effect_context_t *)self;
     int status = 0;
