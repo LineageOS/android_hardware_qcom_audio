@@ -21,6 +21,7 @@
 #define QCOM_AUDIO_HW_H
 
 #include <cutils/list.h>
+#include <hardware/audio_amplifier.h>
 #include <hardware/audio.h>
 #include <tinyalsa/asoundlib.h>
 #include <tinycompress/tinycompress.h>
@@ -308,6 +309,7 @@ struct audio_device {
      * or other capabilities are present for the device corresponding to that usecase.
      */
     struct pcm_params *use_case_table[AUDIO_USECASE_MAX];
+    amplifier_device_t *amp;
 };
 
 int select_devices(struct audio_device *adev,
