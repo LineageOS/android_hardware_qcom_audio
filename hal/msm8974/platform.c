@@ -3893,15 +3893,13 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
     }
 
     /*
-     * 24 bit playback on speakers is allowed through 48
-     * khz backend only
+     * hifi playback not supported on spkr devices, limit the Sample Rate
+     * to 48 khz.
      */
-    if ((24 == bit_width) &&
-            (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
-        bit_width = (uint32_t)platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
+    if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-        ALOGD("%s:becf: afe: 24 bit playback on speakers"
-              "Configure afe to default Sample Rate(48k)", __func__);
+        ALOGD("%s:becf: afe: playback on speakers Configure afe to \
+            default Sample Rate(48k)", __func__);
     }
 
     /*
