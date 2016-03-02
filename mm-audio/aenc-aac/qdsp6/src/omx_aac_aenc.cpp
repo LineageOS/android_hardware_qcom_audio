@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -155,10 +155,17 @@ void omx_aac_aenc::wait_for_event()
        ts.tv_nsec += ((SLEEP_MS%1000) * 1000000);
        rc = pthread_cond_timedwait(&cond, &m_event_lock, &ts);
        if (rc == ETIMEDOUT && !m_is_event_done) {
-            DEBUG_PRINT("Timed out waiting for flush");
-            if (ioctl( m_drv_fd, AUDIO_FLUSH, 0) == -1)
-                DEBUG_PRINT_ERROR("Flush:Input port, ioctl flush failed %d\n",
-                    errno);
+           DEBUG_PRINT("Timed out waiting for flush");
+           if (ioctl(m_drv_fd, AUDIO_FLUSH, 0) < 0)
+           {
+               DEBUG_PRINT_ERROR("Flush:Input port, ioctl failed error: \
+                   rc:%d, %s, no:%d \n", rc, strerror(errno), errno);
+               if (m_cb.EventHandler)
+                   m_cb.EventHandler(&this->m_cmp, this->m_app_data,
+                                     OMX_EventError, OMX_ErrorInvalidState,
+                                     OMX_COMPONENT_GENERATE_EVENT, NULL);
+               break;
+           }
        }
     }
     m_is_event_done = 0;
