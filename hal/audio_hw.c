@@ -1652,13 +1652,28 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             compress_set_gapless_metadata(out->compr, &out->gapless_mdata);
             out->send_new_metadata = 0;
         }
+        unsigned int avail;
+        struct timespec tstamp;
+        ret = compress_get_hpointer(out->compr, &avail, &tstamp);
+        /* Do not limit write size if the available frames count is unknown */
+        if (ret != 0) {
+            avail = bytes;
+        }
+        if (avail == 0) {
+            ret = 0;
+        } else {
+            if (avail > bytes) {
+                avail = bytes;
+            }
+            ret = compress_write(out->compr, buffer, avail);
+            ALOGVV("%s: writing buffer (%d bytes) to compress device returned %zd",
+                   __func__, avail, ret);
+        }
 
-        ret = compress_write(out->compr, buffer, bytes);
-        ALOGVV("%s: writing buffer (%d bytes) to compress device returned %d", __func__, bytes, ret);
         if (ret >= 0 && ret < (ssize_t)bytes) {
             send_offload_cmd_l(out, OFFLOAD_CMD_WAIT_FOR_BUFFER);
         }
-        if (!out->playback_started) {
+        if (ret > 0 && !out->playback_started) {
             compress_start(out->compr);
             out->playback_started = 1;
             out->offload_state = OFFLOAD_STATE_PLAYING;
