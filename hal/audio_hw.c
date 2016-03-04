@@ -754,7 +754,8 @@ static void check_and_route_capture_usecases(struct audio_device *adev,
                 usecase != uc_info &&
                 usecase->in_snd_device != snd_device &&
                 ((uc_info->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) &&
-                ((usecase->devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_CODEC_BACKEND)) &&
+                 (((usecase->devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_CODEC_BACKEND) ||
+                  (usecase->type == VOICE_CALL))) &&
                 (usecase->id != USECASE_AUDIO_SPKR_CALIB_TX)) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
