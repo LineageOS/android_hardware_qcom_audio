@@ -1564,7 +1564,8 @@ int platform_acdb_init(void *platform)
 #define TZ_TYPE "/sys/class/thermal/thermal_zone%d/type"
 #define TZ_WSA "/sys/class/thermal/thermal_zone%d/temp"
 
-static bool is_wsa_found(int *wsaCount)
+static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
+                                   bool *is_wsa_combo_supported)
 {
     DIR *tdir = NULL;
     struct dirent *tdirent = NULL;
@@ -1614,6 +1615,18 @@ static bool is_wsa_found(int *wsaCount)
          ALOGD("Found %d WSA present on the platform", wsa_count);
          found = true;
          *wsaCount = wsa_count;
+
+        /* update wsa combo supported flag based on sound card name */
+        /* wsa combo flag needs to be set to true only for hardware
+           combinations which has support for both wsa and non-wsa speaker */
+        if (snd_card_name && (!strncmp(snd_card_name, "msm8953-snd-card-mtp",
+                sizeof("msm8953-snd-card-mtp"))) ||
+            !strncmp(snd_card_name, "msm8952-skum-snd-card",
+                sizeof("msm8952-skum-snd-card"))) {
+            *is_wsa_combo_supported = true;
+        } else {
+            *is_wsa_combo_supported = false;
+        }
     }
     closedir(tdir);
     chdir(cwd); /* Restore current working dir */
@@ -1634,6 +1647,7 @@ void *platform_init(struct audio_device *adev)
     struct mixer_ctl *ctl = NULL;
     int idx;
     int wsaCount =0;
+    bool is_wsa_combo_supported = false;
 
     my_data = calloc(1, sizeof(struct platform_data));
 
@@ -1749,14 +1763,19 @@ void *platform_init(struct audio_device *adev)
         }
     }
 
-    if (is_wsa_found(&wsaCount)) {
+    if (check_and_get_wsa_info(snd_card_name, &wsaCount, &is_wsa_combo_supported)) {
         /*Set ACDB ID of Stereo speaker if two WSAs are present*/
         /*Default ACDB ID for wsa speaker is that for mono*/
         if (wsaCount == 2) {
             platform_set_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_WSA, 15);
             platform_set_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_VBAT, 15);
         }
+
         my_data->is_wsa_speaker = true;
+
+        if (is_wsa_combo_supported)
+            hw_info_enable_wsa_combo_usecase_support(my_data->hw_info);
+
     }
 
     property_get("persist.audio.FFSP.enable", ffspEnable, "");
