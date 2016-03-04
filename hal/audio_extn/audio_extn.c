@@ -29,7 +29,62 @@
 #include "platform.h"
 #include "platform_api.h"
 
+struct snd_card_split cur_snd_card_split = {
+    .device = {0},
+    .snd_card = {0},
+    .form_factor = {0},
+};
 
+struct snd_card_split *audio_extn_get_snd_card_split()
+{
+    return &cur_snd_card_split;
+}
+
+void audio_extn_set_snd_card_split(const char* in_snd_card_name)
+{
+    /* sound card name follows below mentioned convention
+       <target name>-<sound card name>-<form factor>-snd-card
+       parse target name, sound card name and form factor
+    */
+    char *snd_card_name = strdup(in_snd_card_name);
+    char *tmp = NULL;
+    char *device = NULL;
+    char *snd_card = NULL;
+    char *form_factor = NULL;
+
+    if (in_snd_card_name == NULL) {
+        ALOGE("%s: snd_card_name passed is NULL", __func__);
+        goto on_error;
+    }
+
+    device = strtok_r(snd_card_name, "-", &tmp);
+    if (device == NULL) {
+        ALOGE("%s: called on invalid snd card name", __func__);
+        goto on_error;
+    }
+    strlcpy(cur_snd_card_split.device, device, HW_INFO_ARRAY_MAX_SIZE);
+
+    snd_card = strtok_r(NULL, "-", &tmp);
+    if (snd_card == NULL) {
+        ALOGE("%s: called on invalid snd card name", __func__);
+        goto on_error;
+    }
+    strlcpy(cur_snd_card_split.snd_card, snd_card, HW_INFO_ARRAY_MAX_SIZE);
+
+    form_factor = strtok_r(NULL, "-", &tmp);
+    if (form_factor == NULL) {
+        ALOGE("%s: called on invalid snd card name", __func__);
+        goto on_error;
+    }
+    strlcpy(cur_snd_card_split.form_factor, form_factor, HW_INFO_ARRAY_MAX_SIZE);
+
+    ALOGI("%s: snd_card_name(%s) device(%s) snd_card(%s) form_factor(%s)",
+               __func__, in_snd_card_name, device, snd_card, form_factor);
+
+on_error:
+    if (snd_card_name)
+        free(snd_card_name);
+}
 
 #ifdef KPI_OPTIMIZE_ENABLED
 typedef int (*perf_lock_acquire_t)(int, int, int*, int);

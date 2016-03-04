@@ -307,20 +307,19 @@ int enable_snd_device(struct audio_device *adev,
 {
     int i, num_devices = 0;
     snd_device_t new_snd_devices[2];
-
+    int ret_val = -EINVAL;
     if (snd_device < SND_DEVICE_MIN ||
         snd_device >= SND_DEVICE_MAX) {
         ALOGE("%s: Invalid sound device %d", __func__, snd_device);
-        return -EINVAL;
+        goto on_error;
     }
 
     platform_send_audio_calibration(adev->platform, snd_device);
 
-    adev->snd_dev_ref_cnt[snd_device]++;
-    if (adev->snd_dev_ref_cnt[snd_device] > 1) {
+    if (adev->snd_dev_ref_cnt[snd_device] >= 1) {
         ALOGV("%s: snd_device(%d: %s) is already active",
               __func__, snd_device, platform_get_snd_device_name(snd_device));
-        return 0;
+        goto on_success;
     }
 
     /* due to the possibility of calibration overwrite between listen
@@ -337,12 +336,11 @@ int enable_snd_device(struct audio_device *adev,
         snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
         audio_extn_spkr_prot_is_enabled()) {
         if (audio_extn_spkr_prot_get_acdb_id(snd_device) < 0) {
-            adev->snd_dev_ref_cnt[snd_device]--;
-            return -EINVAL;
+            goto on_error;
         }
         if (audio_extn_spkr_prot_start_processing(snd_device)) {
             ALOGE("%s: spkr_start_processing failed", __func__);
-            return -EINVAL;
+            goto on_error;
         }
     } else if (platform_can_split_snd_device(snd_device, &num_devices, new_snd_devices)) {
         for (i = 0; i < num_devices; i++) {
@@ -350,12 +348,20 @@ int enable_snd_device(struct audio_device *adev,
         }
         platform_set_speaker_gain_in_combo(adev, snd_device, true);
     } else {
-        const char * dev_path = platform_get_snd_device_name(snd_device);
-        ALOGV("%s: snd_device(%d: %s)", __func__, snd_device, dev_path);
-        audio_route_apply_and_update_path(adev->audio_route, dev_path);
-    }
+        char device_name[DEVICE_NAME_MAX_SIZE] = {0};
+        if (platform_get_snd_device_name_extn(adev->platform, snd_device, device_name) < 0 ) {
+            ALOGE(" %s: Invalid sound device returned", __func__);
+            goto on_error;
+        }
 
-    return 0;
+        ALOGV("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
+        audio_route_apply_and_update_path(adev->audio_route, device_name);
+    }
+on_success:
+    adev->snd_dev_ref_cnt[snd_device]++;
+    ret_val = 0;
+on_error:
+    return ret_val;
 }
 
 int disable_snd_device(struct audio_device *adev,
@@ -375,9 +381,6 @@ int disable_snd_device(struct audio_device *adev,
     }
     adev->snd_dev_ref_cnt[snd_device]--;
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
-        const char * dev_path = platform_get_snd_device_name(snd_device);
-        ALOGV("%s: snd_device(%d: %s)", __func__, snd_device, dev_path);
-
         audio_extn_dsm_feedback_enable(adev, snd_device, false);
         if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
             snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
@@ -389,7 +392,14 @@ int disable_snd_device(struct audio_device *adev,
             }
             platform_set_speaker_gain_in_combo(adev, snd_device, false);
         } else {
-            audio_route_reset_and_update_path(adev->audio_route, dev_path);
+            char device_name[DEVICE_NAME_MAX_SIZE] = {0};
+            if (platform_get_snd_device_name_extn(adev->platform, snd_device, device_name) < 0 ) {
+                ALOGE(" %s: Invalid sound device returned", __func__);
+                return -EINVAL;
+            }
+
+            ALOGV("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
+            audio_route_reset_and_update_path(adev->audio_route, device_name);
         }
         audio_extn_sound_trigger_update_device_status(snd_device,
                                         ST_EVENT_SND_DEVICE_FREE);
