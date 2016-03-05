@@ -1,5 +1,5 @@
 /* hfp.c
-Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -49,6 +49,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #define HFP_RX_VOLUME     "SEC AUXPCM LOOPBACK Volume"
 #elif defined PLATFORM_MSM8996
 #define HFP_RX_VOLUME     "PRI AUXPCM LOOPBACK Volume"
+#elif defined PLATFORM_MSMCOBALT
+#define HFP_RX_VOLUME     "SLIMBUS_7 LOOPBACK Volume"
 #else
 #define HFP_RX_VOLUME     "Internal HFP RX Volume"
 #endif

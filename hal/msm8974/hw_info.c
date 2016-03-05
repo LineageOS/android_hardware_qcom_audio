@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -306,6 +306,31 @@ static void  update_hardware_info_8996(struct hardware_info *hw_info, const char
     }
 }
 
+static void  update_hardware_info_msmcobalt(struct hardware_info *hw_info, const char *snd_card_name)
+{
+    if (!strcmp(snd_card_name, "msmcobalt-tasha-fluid-snd-card")) {
+        strlcpy(hw_info->type, " fluid", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msmcobalt", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)tasha_fluid_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tasha_fluid_variant_devices);
+        strlcpy(hw_info->dev_extn, "-fluid", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "msmcobalt-tasha-liquid-snd-card")) {
+        strlcpy(hw_info->type, " liquid", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msmcobalt", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)tasha_liquid_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tasha_liquid_variant_devices);
+        strlcpy(hw_info->dev_extn, "-liquid", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "msmcobalt-tasha-db-snd-card")) {
+        strlcpy(hw_info->type, " dragon-board", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msmcobalt", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)tasha_DB_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tasha_DB_variant_devices);
+        strlcpy(hw_info->dev_extn, "-db", sizeof(hw_info->dev_extn));
+    } else {
+        ALOGW("%s: Not a msmcobalt device", __func__);
+    }
+}
+
 static void  update_hardware_info_8974(struct hardware_info *hw_info, const char *snd_card_name)
 {
     if (!strcmp(snd_card_name, "msm8974-taiko-mtp-snd-card")) {
@@ -434,6 +459,9 @@ void *hw_info_init(const char *snd_card_name)
     } else if(strstr(snd_card_name, "msm8996")) {
         ALOGV("8996 - variant soundcard");
         update_hardware_info_8996(hw_info, snd_card_name);
+    } else if(strstr(snd_card_name, "msmcobalt")) {
+        ALOGV("MSMCOBALT - variant soundcard");
+        update_hardware_info_msmcobalt(hw_info, snd_card_name);
     } else {
         ALOGE("%s: Unsupported target %s:",__func__, snd_card_name);
         free(hw_info);
