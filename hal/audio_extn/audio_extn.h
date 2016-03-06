@@ -268,4 +268,14 @@ int audio_extn_perf_lock_init(void);
 void audio_extn_perf_lock_acquire(void);
 void audio_extn_perf_lock_release(void);
 #endif /* KPI_OPTIMIZE_ENABLED */
+
+#ifndef IMPEDANCE_DETECTION_ENABLED
+#define audio_extn_get_hph_impedance(adev, query, reply) 0
+#else
+#define AUDIO_PARAMETER_KEY_HPHL_IMPEDANCE "hphl_impedance"
+#define AUDIO_PARAMETER_KEY_HPHR_IMPEDANCE "hphr_impedance"
+
+void audio_extn_get_hph_impedance(const struct audio_device *adev,
+            struct str_parms *query, struct str_parms *reply);
+#endif
 #endif /* AUDIO_EXTN_H */
