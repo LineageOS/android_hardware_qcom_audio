@@ -432,6 +432,8 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     audio_extn_get_fluence_parameters(adev, query, reply);
     get_active_offload_usecases(adev, query, reply);
 
+    audio_extn_get_hph_impedance(adev, query, reply);
+
     kv_pairs = str_parms_to_str(reply);
     ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);
     free(kv_pairs);
@@ -632,3 +634,38 @@ void audio_extn_perf_lock_release(void)
     }
 }
 #endif /* KPI_OPTIMIZE_ENABLED */
+
+#ifdef IMPEDANCE_DETECTION_ENABLED
+void audio_extn_get_hph_impedance(const struct audio_device *adev,
+            struct str_parms *query, struct str_parms *reply)
+{
+    int ret = 0, err = 0;
+    char left[256] = {0}, right[256] = {0};
+    struct mixer_ctl *ctl;
+    unsigned int hphL = 0, hphR = 0;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, "HPHL Impedance");
+    if (ctl) {
+        hphL = mixer_ctl_get_value(ctl, 0);
+
+        err = str_parms_get_str(query, AUDIO_PARAMETER_KEY_HPHL_IMPEDANCE,
+                left, sizeof(left));
+
+        if (err >= 0) {
+            str_parms_add_int(reply, AUDIO_PARAMETER_KEY_HPHL_IMPEDANCE, hphL);
+        }
+    }
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, "HPHR Impedance");
+    if (ctl) {
+        hphR = mixer_ctl_get_value(ctl, 0);
+
+        err = str_parms_get_str(query, AUDIO_PARAMETER_KEY_HPHR_IMPEDANCE,
+                right, sizeof(right));
+
+        if (err >= 0) {
+            str_parms_add_int(reply, AUDIO_PARAMETER_KEY_HPHR_IMPEDANCE, hphR);
+        }
+    }
+}
+#endif
