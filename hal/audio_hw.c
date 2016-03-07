@@ -3431,6 +3431,26 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             (in->dev->mode != AUDIO_MODE_IN_COMMUNICATION)) {
         audio_extn_compr_cap_init(in);
     } else {
+        if(adev->mode == AUDIO_MODE_IN_CALL) {
+            if (config->sample_rate == 0)
+                config->sample_rate = AFE_PROXY_SAMPLING_RATE;
+            if (config->sample_rate != 48000 && config->sample_rate != 16000 &&
+                config->sample_rate != 8000) {
+                config->sample_rate = AFE_PROXY_SAMPLING_RATE;
+                ret = -EINVAL;
+                goto err_open;
+            }
+            if (config->format == AUDIO_FORMAT_DEFAULT)
+                config->format = AUDIO_FORMAT_PCM_16_BIT;
+            if (config->format != AUDIO_FORMAT_PCM_16_BIT) {
+                config->format = AUDIO_FORMAT_PCM_16_BIT;
+                ret = -EINVAL;
+                goto err_open;
+            }
+            in->usecase = USECASE_AUDIO_RECORD_AFE_PROXY;
+            in->config = pcm_config_afe_proxy_record;
+            in->config.rate = config->sample_rate;
+        }
         in->config.channels = channel_count;
         frame_size = audio_stream_in_frame_size(&in->stream);
         buffer_size = get_input_buffer_size(config->sample_rate,
