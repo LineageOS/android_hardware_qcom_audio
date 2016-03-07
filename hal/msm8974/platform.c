@@ -1675,8 +1675,6 @@ acdb_init_fail:
 
     /* init usb */
     audio_extn_usb_init(adev);
-    /* update sound cards appropriately */
-    audio_extn_usb_set_proxy_sound_card(adev->snd_card);
 
     /* init dap hal */
     audio_extn_dap_hal_init(adev->snd_card);
@@ -1737,6 +1735,11 @@ acdb_init_fail:
         strdup("SLIM_6_RX Format");
     my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
         strdup("SLIM_6_RX SampleRate");
+
+    my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].bitwidth_mixer_ctl =
+        strdup("USB_AUDIO_RX Format");
+    my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].samplerate_mixer_ctl =
+        strdup("USB_AUDIO_RX SampleRate");
 
     my_data->edid_info = NULL;
     free(snd_card_name);
@@ -2213,6 +2216,8 @@ static int platform_get_backend_index(snd_device_t snd_device)
                         port = HEADPHONE_BACKEND;
                 else if (strcmp(backend_tag_table[snd_device], "hdmi") == 0)
                         port = HDMI_RX_BACKEND;
+                else if (strcmp(backend_tag_table[snd_device], "usb-headphones") == 0)
+                        port = USB_AUDIO_RX_BACKEND;
         }
     } else {
         ALOGV("%s:napb: Invalid device - %d ", __func__, snd_device);
@@ -2568,6 +2573,12 @@ bool platform_can_split_snd_device(void *platform,
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_HDMI;
         status = true;
+    } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET &&
+               !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_USB_HEADSET)) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
+        new_snd_devices[1] = SND_DEVICE_OUT_USB_HEADSET;
+        status = true;
     }
 
     ALOGD("%s: snd_device(%d) num devices(%d) new_snd_devices(%d)", __func__,
@@ -2623,6 +2634,9 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                                AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_HDMI;
         } else if (devices == (AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET |
+                               AUDIO_DEVICE_OUT_SPEAKER)) {
+            snd_device = SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET;
+        } else if (devices == (AUDIO_DEVICE_OUT_USB_DEVICE |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET;
         } else {
@@ -2735,6 +2749,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
         ALOGD("%s: setting USB hadset channel capability(2) for Proxy", __func__);
         audio_extn_set_afe_proxy_channel_mixer(adev, 2);
+        snd_device = SND_DEVICE_OUT_USB_HEADSET;
+    } else if (devices & AUDIO_DEVICE_OUT_USB_DEVICE) {
         snd_device = SND_DEVICE_OUT_USB_HEADSET;
     } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
         snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
@@ -3070,6 +3086,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_FM_TUNER) {
             snd_device = SND_DEVICE_IN_CAPTURE_FM;
+        } else if (in_device & AUDIO_DEVICE_IN_USB_DEVICE ) {
+            snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else {
             ALOGE("%s: Unknown input device(s) %#x", __func__, in_device);
             ALOGW("%s: Using default handset-mic", __func__);
@@ -3112,6 +3130,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             snd_device = SND_DEVICE_IN_HDMI_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
                    out_device & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
+            snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
+        } else if (out_device & AUDIO_DEVICE_OUT_USB_DEVICE) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else {
             ALOGE("%s: Unknown output device(s) %#x", __func__, out_device);
@@ -3997,6 +4017,8 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
                  mixer_ctl_set_enum_by_string(ctl, "S24_3LE");
             else
                  mixer_ctl_set_enum_by_string(ctl, "S24_LE");
+        } else if (bit_width == 32) {
+            mixer_ctl_set_enum_by_string(ctl, "S24_LE");
         } else {
             mixer_ctl_set_enum_by_string(ctl, "S16_LE");
         }
@@ -4176,6 +4198,13 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         ALOGD("%s:becf: afe: napb not active - set (48k) default rate",
               __func__);
+    }
+
+    if (backend_idx == USB_AUDIO_RX_BACKEND) {
+        unsigned int channels = audio_channel_count_from_out_mask(usecase->stream.out->channel_mask);
+        audio_extn_usb_is_config_supported(&bit_width, &sample_rate, channels);
+        ALOGV("%s: USB BE configured as bit_width(%d)sample_rate(%d)channels(%d)",
+                   __func__, bit_width, sample_rate, channels);
     }
 
     ALOGI("%s:becf: afe: Codec selected backend: %d updated bit width: %d and sample rate: %d",

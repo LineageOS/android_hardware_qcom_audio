@@ -677,11 +677,7 @@ int audio_extn_get_afe_proxy_parameters(const struct audio_device *adev,
     ret = str_parms_get_str(query, AUDIO_PARAMETER_CAN_OPEN_PROXY, value,
                             sizeof(value));
     if (ret >= 0) {
-        if (audio_extn_usb_is_proxy_inuse() ||
-            !adev->allow_afe_proxy_usage)
-            val = 0;
-        else
-            val = 1;
+        val = (adev->allow_afe_proxy_usage ? 1: 0);
         str_parms_add_int(reply, AUDIO_PARAMETER_CAN_OPEN_PROXY, val);
     }
     ALOGV("%s: called ... can_use_proxy %d", __func__, val);

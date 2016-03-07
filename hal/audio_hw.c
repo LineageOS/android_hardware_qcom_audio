@@ -537,14 +537,7 @@ int enable_snd_device(struct audio_device *adev,
 
     if (audio_extn_spkr_prot_is_enabled())
          audio_extn_spkr_prot_calib_cancel(adev);
-    /* start usb playback thread */
-    if(SND_DEVICE_OUT_USB_HEADSET == snd_device ||
-       SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET == snd_device)
-        audio_extn_usb_start_playback(adev);
 
-    /* start usb capture thread */
-    if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
-       audio_extn_usb_start_capture(adev);
 
     if (platform_can_enable_spkr_prot_on_device(snd_device) &&
          audio_extn_spkr_prot_is_enabled()) {
@@ -553,7 +546,7 @@ int enable_snd_device(struct audio_device *adev,
            return -EINVAL;
        }
        audio_extn_dev_arbi_acquire(snd_device);
-        if (audio_extn_spkr_prot_start_processing(snd_device)) {
+       if (audio_extn_spkr_prot_start_processing(snd_device)) {
             ALOGE("%s: spkr_start_processing failed", __func__);
             audio_extn_dev_arbi_release(snd_device);
             return -EINVAL;
@@ -621,15 +614,6 @@ int disable_snd_device(struct audio_device *adev,
 
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
-        /* exit usb play back thread */
-        if(SND_DEVICE_OUT_USB_HEADSET == snd_device ||
-           SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET == snd_device)
-            audio_extn_usb_stop_playback();
-
-        /* exit usb capture thread */
-        if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
-            audio_extn_usb_stop_capture();
-
         if (platform_can_enable_spkr_prot_on_device(snd_device) &&
              audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing(snd_device);
@@ -1157,8 +1141,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 
     /* Enable new sound devices */
     if (out_snd_device != SND_DEVICE_NONE) {
-        if (usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND)
-            check_usecases_codec_backend(adev, usecase, out_snd_device);
+        check_usecases_codec_backend(adev, usecase, out_snd_device);
         enable_snd_device(adev, out_snd_device);
     }
 
@@ -3819,7 +3802,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             ALOGV("cache new edid");
             platform_cache_edid(adev->platform);
-        } else if (val & AUDIO_DEVICE_OUT_USB_DEVICE) {
+        } else if ((val & AUDIO_DEVICE_OUT_USB_DEVICE) ||
+                   (val & AUDIO_DEVICE_IN_USB_DEVICE)) {
             /*
              * Do not allow AFE proxy port usage by WFD source when USB headset is connected.
              * Per AudioPolicyManager, USB device is higher priority than WFD.
@@ -3827,6 +3811,10 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
              * If WFD use case occupies AFE proxy, it may result unintended behavior while
              * starting voice call on USB
              */
+            ret = str_parms_get_str(parms, "card", value, sizeof(value));
+            if (ret >= 0) {
+                audio_extn_usb_add_device(val, atoi(value));
+            }
             ALOGV("detected USB connect .. disable proxy");
             adev->allow_afe_proxy_usage = false;
         }
@@ -3838,7 +3826,12 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             ALOGV("invalidate cached edid");
             platform_invalidate_edid(adev->platform);
-        } else if (val & AUDIO_DEVICE_OUT_USB_DEVICE) {
+        } else if ((val & AUDIO_DEVICE_OUT_USB_DEVICE) ||
+                   (val & AUDIO_DEVICE_IN_USB_DEVICE)) {
+            ret = str_parms_get_str(parms, "card", value, sizeof(value));
+            if (ret >= 0) {
+                audio_extn_usb_remove_device(val, atoi(value));
+            }
             ALOGV("detected USB disconnect .. enable proxy");
             adev->allow_afe_proxy_usage = true;
         }
