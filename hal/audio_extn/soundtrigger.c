@@ -193,7 +193,7 @@ void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in)
             in->channel_mask = audio_channel_in_mask_from_count(in->config.channels);
             in->is_st_session = true;
             in->is_st_session_active = true;
-            ALOGD("%s: capture_handle %d is sound trigger", __func__, in->capture_handle);
+            ALOGV("%s: capture_handle %d is sound trigger", __func__, in->capture_handle);
             break;
         }
     }
@@ -222,7 +222,7 @@ void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
         return;
     }
 
-    ALOGI("%s: device 0x%x of type %d for Event %d",
+    ALOGV("%s: device 0x%x of type %d for Event %d",
         __func__, snd_device, device_type, event);
     if (device_type == PCM_CAPTURE) {
         switch(event) {
@@ -293,7 +293,7 @@ int audio_extn_sound_trigger_init(struct audio_device *adev)
     char sound_trigger_lib[100];
     void *lib_handle;
 
-    ALOGI("%s: Enter", __func__);
+    ALOGV("%s: Enter", __func__);
 
     st_dev = (struct sound_trigger_audio_device*)
                         calloc(1, sizeof(struct sound_trigger_audio_device));
@@ -314,7 +314,7 @@ int audio_extn_sound_trigger_init(struct audio_device *adev)
         status = -EINVAL;
         goto cleanup;
     }
-    ALOGI("%s: DLOPEN successful for %s", __func__, sound_trigger_lib);
+    ALOGV("%s: DLOPEN successful for %s", __func__, sound_trigger_lib);
 
     st_dev->st_callback = (sound_trigger_hw_call_back_t)
               dlsym(st_dev->lib_handle, "sound_trigger_hw_call_back");
@@ -341,7 +341,7 @@ cleanup:
 
 void audio_extn_sound_trigger_deinit(struct audio_device *adev)
 {
-    ALOGI("%s: Enter", __func__);
+    ALOGV("%s: Enter", __func__);
     if (st_dev && (st_dev->adev == adev) && st_dev->lib_handle) {
         dlclose(st_dev->lib_handle);
         free(st_dev);

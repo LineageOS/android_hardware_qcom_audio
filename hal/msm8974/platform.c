@@ -489,7 +489,7 @@ static void check_operator()
     int mccmnc;
     property_get("gsm.sim.operator.numeric",value,"0");
     mccmnc = atoi(value);
-    ALOGD("%s: tmus mccmnc %d", __func__, mccmnc);
+    ALOGV("%s: tmus mccmnc %d", __func__, mccmnc);
     switch(mccmnc) {
     /* TMUS MCC(310), MNC(490, 260, 026) */
     case 310490:
@@ -655,7 +655,7 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable, audio_d
             platform_add_backend_name(adev->platform, my_data->ec_ref_mixer_path, snd_device);
         }
 
-        ALOGD("%s: enabling %s", __func__, my_data->ec_ref_mixer_path);
+        ALOGV("%s: enabling %s", __func__, my_data->ec_ref_mixer_path);
         audio_route_apply_and_update_path(adev->audio_route, my_data->ec_ref_mixer_path);
     }
 }
@@ -832,7 +832,7 @@ static void platform_csd_init(struct platform_data *my_data)
         goto done;
     }
 
-    ALOGD("%s: num_modems %d\n", __func__, modems);
+    ALOGV("%s: num_modems %d\n", __func__, modems);
     if (modems > 0)
         my_data->csd = open_csd_client(false /*is_i2s_ext_modem*/);
 
@@ -1017,7 +1017,7 @@ void *platform_init(struct audio_device *adev)
             goto init_failed;
         }
         adev->snd_card = snd_card_num;
-        ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
+        ALOGV("%s: Opened sound card:%d", __func__, snd_card_num);
         break;
     }
 
@@ -1359,7 +1359,7 @@ void platform_add_operator_specific_device(snd_device_t snd_device,
 
     list_add_tail(operator_specific_device_table[snd_device], &device->list);
 
-    ALOGD("%s : deivce[%s] -> operator[%s] mixer_path[%s] acdb_id [%d]", __func__,
+    ALOGV("%s : deivce[%s] -> operator[%s] mixer_path[%s] acdb_id [%d]", __func__,
             platform_get_snd_device_name(snd_device), operator, mixer_path, acdb_id);
 
 }
@@ -1407,7 +1407,7 @@ int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
         return -EINVAL;
     }
     if (my_data->acdb_send_audio_cal) {
-        ALOGD("%s: sending audio calibration for snd_device(%d) acdb_id(%d)",
+        ALOGV("%s: sending audio calibration for snd_device(%d) acdb_id(%d)",
               __func__, snd_device, acdb_dev_id);
         if (snd_device >= SND_DEVICE_OUT_BEGIN &&
                 snd_device < SND_DEVICE_OUT_END)
@@ -2410,7 +2410,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         info->mccmnc = strdup(str + strlen(name) + 1);
 
         list_add_tail(&operator_info_list, &info->list);
-        ALOGD("%s: add operator[%s] mccmnc[%s]", __func__, info->name, info->mccmnc);
+        ALOGV("%s: add operator[%s] mccmnc[%s]", __func__, info->name, info->mccmnc);
     }
 
     memset(value, 0, sizeof(value));

@@ -272,7 +272,7 @@ int enable_audio_route(struct audio_device *adev,
 
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(adev->platform, mixer_path, snd_device);
-    ALOGD("%s: apply and update mixer path: %s", __func__, mixer_path);
+    ALOGV("%s: apply and update mixer path: %s", __func__, mixer_path);
     audio_route_apply_and_update_path(adev->audio_route, mixer_path);
 
     ALOGV("%s: exit", __func__);
@@ -295,7 +295,7 @@ int disable_audio_route(struct audio_device *adev,
         snd_device = usecase->out_snd_device;
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(adev->platform, mixer_path, snd_device);
-    ALOGD("%s: reset and update mixer path: %s", __func__, mixer_path);
+    ALOGV("%s: reset and update mixer path: %s", __func__, mixer_path);
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
 
     ALOGV("%s: exit", __func__);
@@ -351,7 +351,7 @@ int enable_snd_device(struct audio_device *adev,
         platform_set_speaker_gain_in_combo(adev, snd_device, true);
     } else {
         const char * dev_path = platform_get_snd_device_name(snd_device);
-        ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, dev_path);
+        ALOGV("%s: snd_device(%d: %s)", __func__, snd_device, dev_path);
         audio_route_apply_and_update_path(adev->audio_route, dev_path);
     }
 
@@ -376,7 +376,7 @@ int disable_snd_device(struct audio_device *adev,
     adev->snd_dev_ref_cnt[snd_device]--;
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
         const char * dev_path = platform_get_snd_device_name(snd_device);
-        ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, dev_path);
+        ALOGV("%s: snd_device(%d: %s)", __func__, snd_device, dev_path);
 
         audio_extn_dsm_feedback_enable(adev, snd_device, false);
         if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
@@ -676,7 +676,7 @@ int select_devices(struct audio_device *adev,
         return 0;
     }
 
-    ALOGD("%s: out_snd_device(%d: %s) in_snd_device(%d: %s)", __func__,
+    ALOGV("%s: out_snd_device(%d: %s) in_snd_device(%d: %s)", __func__,
           out_snd_device, platform_get_snd_device_name(out_snd_device),
           in_snd_device,  platform_get_snd_device_name(in_snd_device));
 
@@ -867,7 +867,7 @@ error_open:
 
 error_config:
     adev->active_input = NULL;
-    ALOGD("%s: exit: status(%d)", __func__, ret);
+    ALOGV("%s: exit: status(%d)", __func__, ret);
 
     return ret;
 }
@@ -1044,12 +1044,12 @@ static bool allow_hdmi_channel_config(struct audio_device *adev)
              * max channels of remaining use cases.
              */
             if (usecase->id == USECASE_VOICE_CALL) {
-                ALOGD("%s: voice call is active, no change in HDMI channels",
+                ALOGV("%s: voice call is active, no change in HDMI channels",
                       __func__);
                 ret = false;
                 break;
             } else if (usecase->id == USECASE_AUDIO_PLAYBACK_MULTI_CH) {
-                ALOGD("%s: multi channel playback is active, "
+                ALOGV("%s: multi channel playback is active, "
                       "no change in HDMI channels", __func__);
                 ret = false;
                 break;
@@ -1070,7 +1070,7 @@ static int check_and_set_hdmi_channels(struct audio_device *adev,
         return 0;
 
     if (channels == adev->cur_hdmi_channels) {
-        ALOGD("%s: Requested channels are same as current", __func__);
+        ALOGV("%s: Requested channels are same as current", __func__);
         return 0;
     }
 
@@ -1445,7 +1445,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     bool select_new_device = false;
     int status = 0;
 
-    ALOGD("%s: enter: usecase(%d: %s) kvpairs: %s",
+    ALOGV("%s: enter: usecase(%d: %s) kvpairs: %s",
           __func__, out->usecase, use_case_table[out->usecase], kvpairs);
     parms = str_parms_create_str(kvpairs);
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
@@ -1921,7 +1921,7 @@ static int in_standby(struct audio_stream *stream)
     lock_input_stream(in);
 
     if (!in->standby && in->is_st_session) {
-        ALOGD("%s: sound trigger pcm stop lab", __func__);
+        ALOGV("%s: sound trigger pcm stop lab", __func__);
         audio_extn_sound_trigger_stop_lab(in);
         in->standby = true;
     }
@@ -2382,7 +2382,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 error_open:
     free(out);
     *stream_out = NULL;
-    ALOGD("%s: exit: ret %d", __func__, ret);
+    ALOGV("%s: exit: ret %d", __func__, ret);
     return ret;
 }
 
@@ -2420,7 +2420,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     int ret;
     int status = 0;
 
-    ALOGD("%s: enter: %s", __func__, kvpairs);
+    ALOGV("%s: enter: %s", __func__, kvpairs);
 
     pthread_mutex_lock(&adev->lock);
 
@@ -2549,7 +2549,7 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 
     pthread_mutex_lock(&adev->lock);
     if (adev->mode != mode) {
-        ALOGD("%s: mode %d\n", __func__, mode);
+        ALOGV("%s: mode %d\n", __func__, mode);
         adev->mode = mode;
         if ((mode == AUDIO_MODE_NORMAL || mode == AUDIO_MODE_IN_COMMUNICATION) &&
                 voice_is_in_call(adev)) {
@@ -2569,7 +2569,7 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
     int ret;
     struct audio_device *adev = (struct audio_device *)dev;
 
-    ALOGD("%s: state %d\n", __func__, state);
+    ALOGV("%s: state %d\n", __func__, state);
     pthread_mutex_lock(&adev->lock);
     ret = voice_set_mic_mute(adev, state);
     adev->mic_muted = state;
@@ -2903,7 +2903,7 @@ static int adev_open(const hw_module_t *module, const char *name,
 {
     int i, ret;
 
-    ALOGD("%s: enter", __func__);
+    ALOGV("%s: enter", __func__);
     if (strcmp(name, AUDIO_HARDWARE_INTERFACE) != 0) return -EINVAL;
     pthread_mutex_lock(&adev_init_lock);
     if (audio_device_ref_count != 0) {
