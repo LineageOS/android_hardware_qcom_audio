@@ -3392,7 +3392,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->config.rate = config->sample_rate;
     in->format = config->format;
 
-    if (in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) {
+    if (in->device == AUDIO_DEVICE_IN_TELEPHONY_RX || voice_is_call_state_active(adev)) {
         if (adev->mode != AUDIO_MODE_IN_CALL) {
             ret = -EINVAL;
             goto err_open;

@@ -256,6 +256,7 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
 
     if (voice_is_call_state_active(adev)) {
         switch (in->source) {
+        case AUDIO_SOURCE_MIC:
         case AUDIO_SOURCE_VOICE_UPLINK:
             if (audio_extn_compr_cap_enabled() &&
                 audio_extn_compr_cap_format_supported(in->config.format)) {
@@ -273,6 +274,7 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
             rec_mode = INCALL_REC_DOWNLINK;
             break;
         case AUDIO_SOURCE_VOICE_CALL:
+        case AUDIO_SOURCE_VOICE_COMMUNICATION:
             if (audio_extn_compr_cap_enabled() &&
                 audio_extn_compr_cap_format_supported(in->config.format)) {
                 in->usecase = USECASE_INCALL_REC_UPLINK_AND_DOWNLINK_COMPRESS;
