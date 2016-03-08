@@ -31,6 +31,8 @@
 #define XSTR(x) STR(x)
 #define STR(x) #x
 
+#define SOUND_TRIGGER_LIBRARY_PATH "hw/sound_trigger.primary.%s.so"
+
 struct sound_trigger_info  {
     struct sound_trigger_session_info st_ses;
     bool lab_stopped;
@@ -303,7 +305,7 @@ int audio_extn_sound_trigger_init(struct audio_device *adev)
     }
 
     snprintf(sound_trigger_lib, sizeof(sound_trigger_lib),
-             "/system/vendor/lib/hw/sound_trigger.primary.%s.so",
+             SOUND_TRIGGER_LIBRARY_PATH,
               XSTR(SOUND_TRIGGER_PLATFORM_NAME));
 
     st_dev->lib_handle = dlopen(sound_trigger_lib, RTLD_NOW);

@@ -33,6 +33,8 @@
 #include "audio_extn.h"
 #include <linux/msm_audio_calibration.h>
 
+#define THERMAL_CLIENT_LIBRARY_PATH "libthermalclient.so"
+
 #ifdef SPKR_PROT_ENABLED
 
 /*Range of spkr temparatures -30C to 80C*/
@@ -710,7 +712,7 @@ void audio_extn_spkr_prot_init(void *adev)
     pthread_mutex_init(&handle.mutex_spkr_prot, NULL);
     pthread_mutex_init(&handle.spkr_calib_cancelack_mutex, NULL);
     pthread_mutex_init(&handle.spkr_prot_thermalsync_mutex, NULL);
-    handle.thermal_handle = dlopen("/vendor/lib/libthermalclient.so",
+    handle.thermal_handle = dlopen(THERMAL_CLIENT_LIBRARY_PATH,
             RTLD_NOW);
     if (!handle.thermal_handle) {
         ALOGE("%s: DLOPEN for thermal client failed", __func__);
