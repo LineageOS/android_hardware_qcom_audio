@@ -3876,7 +3876,18 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         }
     }
 
-    if (backend_idx != HEADPHONE_44_1_BACKEND) {
+    if (backend_idx == HDMI_RX_BACKEND) {
+        //Check EDID info for supported samplerate
+        if (!edid_is_supported_sr(edid_info,sample_rate)) {
+            //reset to current sample rate
+            sample_rate = my_data->current_backend_cfg[backend_idx].sample_rate;
+        }
+        //Check EDID info for supported bit widhth
+        if (!edid_is_supported_bps(edid_info,bit_width)) {
+            //reset to current sample rate
+            bit_width = my_data->current_backend_cfg[backend_idx].bit_width;
+        }
+    } else if (backend_idx != HEADPHONE_44_1_BACKEND) {
         // 16 bit playbacks are allowed through 16 bit/48 khz backend only for
         // all non-native streams
         if (16 == bit_width) {
@@ -3891,24 +3902,12 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
             bit_width = (uint32_t)platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
             sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         }
-    }
-
-    if (backend_idx == HDMI_RX_BACKEND) {
-        //Check EDID info for supported samplerate
-        if (!edid_is_supported_sr(edid_info,sample_rate)) {
-            //reset to current sample rate
-            sample_rate = my_data->current_backend_cfg[backend_idx].sample_rate;
-        }
-        //Check EDID info for supported bit widhth
-        if (!edid_is_supported_bps(edid_info,bit_width)) {
-            //reset to current sample rate
-            bit_width = my_data->current_backend_cfg[backend_idx].bit_width;
-        }
         // 24 bit native clips must be played at 48Khz for non native backend
         if ((24 == bit_width) && (OUTPUT_SAMPLING_RATE_44100 == sample_rate)) {
             sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         }
     }
+
     ALOGI("%s Codec selected backend: %d updated bit width: %d and sample rate: %d",
                __func__, backend_idx, bit_width, sample_rate);
     // Force routing if the expected bitwdith or samplerate
