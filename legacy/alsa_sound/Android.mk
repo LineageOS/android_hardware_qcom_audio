@@ -159,8 +159,7 @@ endif
 
 LOCAL_STATIC_LIBRARIES := \
     libmedia_helper \
-    libaudiohw_legacy \
-    libaudiopolicy_legacy \
+    libaudiohw_legacy
 
 LOCAL_SHARED_LIBRARIES := \
     libcutils \
@@ -202,42 +201,5 @@ LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
-
-ifeq ($(USE_LEGACY_AUDIO_POLICY), 1)
-include $(CLEAR_VARS)
-
-LOCAL_CFLAGS += $(common_cflags)
-
-LOCAL_SRC_FILES := \
-    audio_policy_hal.cpp \
-    AudioPolicyManagerALSA.cpp
-
-ifeq ($(call is-board-platform,msm8974),true)
-  LOCAL_MODULE := audio_policy.msm8974
-endif
-
-ifeq ($(TARGET_BOARD_PLATFORM),msm8960)
-  LOCAL_MODULE := audio_policy.msm8960
-endif
-
-ifeq ($(TARGET_BOARD_PLATFORM),msm8610)
-  LOCAL_MODULE := audio_policy.msm8610
-endif
-
-LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
-LOCAL_MODULE_TAGS := optional
-
-LOCAL_STATIC_LIBRARIES := \
-    libmedia_helper \
-    libaudiopolicy_legacy
-
-LOCAL_SHARED_LIBRARIES := \
-    libcutils \
-    libutils \
-
-LOCAL_C_INCLUDES += hardware/libhardware_legacy/audio
-
-include $(BUILD_SHARED_LIBRARY)
-endif
 
 endif
