@@ -1724,8 +1724,10 @@ static int out_get_render_position(const struct audio_stream_out *stream,
     if ((out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) && (dsp_frames != NULL)) {
         lock_output_stream(out);
         if (out->compr != NULL) {
-            compress_get_tstamp(out->compr, (unsigned long *)dsp_frames,
-                    &out->sample_rate);
+            unsigned long frames = 0;
+            // TODO: check return value
+            compress_get_tstamp(out->compr, &frames, &out->sample_rate);
+            *dsp_frames = (uint32_t)frames;
             ALOGVV("%s rendered frames %d sample_rate %d",
                    __func__, *dsp_frames, out->sample_rate);
         }
@@ -1757,13 +1759,14 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
                                    uint64_t *frames, struct timespec *timestamp)
 {
     struct stream_out *out = (struct stream_out *)stream;
-    int ret = -1;
+    int ret = -EINVAL;
     unsigned long dsp_frames;
 
     lock_output_stream(out);
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
         if (out->compr != NULL) {
+            // TODO: check return value
             compress_get_tstamp(out->compr, &dsp_frames,
                     &out->sample_rate);
             ALOGVV("%s rendered frames %ld sample_rate %d",
