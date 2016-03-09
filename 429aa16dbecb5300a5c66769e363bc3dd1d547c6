@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ffb9cba7_6f70bea6",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 3434,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-09T05:18:23Z",
+      "side": 1,
+      "message": "That\u0027s weird, I wonder why in call recording wouldn\u0027t fall into the case at line 3395? This is just a copy of what\u0027s being done up there, but that case looks like it was meant to address in call recording...",
+      "revId": "429aa16dbecb5300a5c66769e363bc3dd1d547c6",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
