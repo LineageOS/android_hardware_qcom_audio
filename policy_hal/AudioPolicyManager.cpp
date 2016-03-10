@@ -1597,15 +1597,21 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     // FIXME: We should check the audio session here but we do not have it in this context.
     // This may prevent offloading in rare situations where effects are left active by apps
     // in the background.
-
-    if (((flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) == 0) &&
-            !mEffects.isNonOffloadableEffectEnabled()) {
-        profile = getProfileForDirectOutput(device,
-                                           samplingRate,
-                                           format,
-                                           channelMask,
-                                           (audio_output_flags_t)flags);
+    //
+    // Supplementary annotation:
+    // For sake of track offload introduced, we need a rollback for both compress offload
+    // and track offload use cases.
+    if ((flags & (AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_DIRECT_PCM)) &&
+                mEffects.isNonOffloadableEffectEnabled()) {
+        ALOGD("non offloadable effect is enabled, try with non direct output");
+        goto non_direct_output;
     }
+
+    profile = getProfileForDirectOutput(device,
+                                       samplingRate,
+                                       format,
+                                       channelMask,
+                                       (audio_output_flags_t)flags);
 
     if (profile != 0) {
 
