@@ -2066,7 +2066,9 @@ exit:
         ALOGV("%s: read failed - sleeping for buffer duration", __func__);
         usleep(bytes * 1000000 / audio_stream_in_frame_size(stream) /
                in_get_sample_rate(&in->stream.common));
-    } else {
+        memset(buffer, 0, bytes); // clear return data
+    }
+    if (bytes > 0) {
         in->frames_read += bytes / audio_stream_in_frame_size(stream);
     }
     return bytes;
