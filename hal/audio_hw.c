@@ -2838,9 +2838,11 @@ static void adev_close_output_stream(struct audio_hw_device *dev __unused,
     ALOGD("%s: enter:stream_handle(%p)",__func__, out);
 
     if (out->usecase == USECASE_COMPRESS_VOIP_CALL) {
+        pthread_mutex_lock(&out->lock);
         pthread_mutex_lock(&adev->lock);
         ret = voice_extn_compress_voip_close_output_stream(&stream->common);
         pthread_mutex_unlock(&adev->lock);
+        pthread_mutex_unlock(&out->lock);
         if(ret != 0)
             ALOGE("%s: Compress voip output cannot be closed, error:%d",
                   __func__, ret);
@@ -3244,9 +3246,11 @@ static void adev_close_input_stream(struct audio_hw_device *dev __unused,
     ALOGD("%s: enter:stream_handle(%p)",__func__, in);
 
     if (in->usecase == USECASE_COMPRESS_VOIP_CALL) {
+        pthread_mutex_lock(&in->lock);
         pthread_mutex_lock(&adev->lock);
         ret = voice_extn_compress_voip_close_input_stream(&stream->common);
         pthread_mutex_unlock(&adev->lock);
+        pthread_mutex_unlock(&in->lock);
         if (ret != 0)
             ALOGE("%s: Compress voip input cannot be closed, error:%d",
                   __func__, ret);
