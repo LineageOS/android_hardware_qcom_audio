@@ -71,7 +71,11 @@ static int32_t hfp_set_volume(struct audio_device *adev, float value)
 {
     int32_t vol, ret = 0;
     struct mixer_ctl *ctl;
+#ifdef EXTERNAL_BT_SUPPORTED
+    const char *mixer_ctl_name = "PRI AUXPCM LOOPBACK Volume";
+#else
     const char *mixer_ctl_name = "Internal HFP RX Volume";
+#endif
 
     ALOGV("%s: entry", __func__);
     ALOGD("%s: (%f)\n", __func__, value);
@@ -115,6 +119,8 @@ static int32_t start_hfp(struct audio_device *adev,
     int32_t pcm_dev_rx_id, pcm_dev_tx_id, pcm_dev_asm_rx_id, pcm_dev_asm_tx_id;
 
     ALOGD("%s: enter", __func__);
+    adev->enable_hfp = true;
+    platform_set_mic_mute(adev->platform, false);
 
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
     uc_info->id = hfpmod.ucid;
@@ -237,6 +243,16 @@ static int32_t stop_hfp(struct audio_device *adev)
     /* 3. Disable the rx and tx devices */
     disable_snd_device(adev, uc_info->out_snd_device);
     disable_snd_device(adev, uc_info->in_snd_device);
+
+    /* Disable the echo reference for HFP Tx */
+    platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
+
+    /* Set the unmute Tx mixer control */
+    if (voice_get_mic_mute(adev)) {
+        platform_set_mic_mute(adev->platform, false);
+        ALOGD("%s: unMute HFP Tx", __func__);
+    }
+    adev->enable_hfp = false;
 
     list_remove(&uc_info->list);
     free(uc_info);

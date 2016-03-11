@@ -76,6 +76,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HFP)),true)
     LOCAL_SRC_FILES += audio_extn/hfp.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_SUPPORTED_EXTERNAL_BT)),true)
+    LOCAL_CFLAGS += -DEXTERNAL_BT_SUPPORTED
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_NO_AUDIO_OUT)),true)
     LOCAL_CFLAGS += -DNO_AUDIO_OUT
 endif

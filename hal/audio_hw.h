@@ -239,6 +239,7 @@ struct audio_device {
     bool bt_wb_speech_enabled;
     bool mic_muted;
     bool enable_voicerx;
+    bool enable_hfp;
 
     int snd_card;
     unsigned int cur_codec_backend_samplerate;
