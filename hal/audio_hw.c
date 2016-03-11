@@ -913,7 +913,9 @@ static bool force_device_switch(struct audio_usecase *usecase)
 
     if (is_offload_usecase(usecase->id) &&
         (usecase->stream.out) &&
-        (usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100)) {
+        (usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) &&
+        (usecase->stream.out->devices == AUDIO_DEVICE_OUT_WIRED_HEADSET ||
+         usecase->stream.out->devices == AUDIO_DEVICE_OUT_WIRED_HEADPHONE)) {
         is_it_true_mode = (NATIVE_AUDIO_MODE_TRUE_44_1 == platform_get_native_support()? true : false);
          if ((is_it_true_mode && !adev->native_playback_enabled) ||
              (!is_it_true_mode && adev->native_playback_enabled)){
