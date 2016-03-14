@@ -26,7 +26,7 @@ endif
 ifeq ($(strip $(QCOM_FM_ENABLED)),true)
     common_cflags += -DQCOM_FM_ENABLED
 endif
-ifeq ($(strip $(QCOM_PROXY_DEVICE_ENABLED)),true)
+ifneq ($(strip $(QCOM_PROXY_DEVICE_ENABLED)),false)
     common_cflags += -DQCOM_PROXY_DEVICE_ENABLED
 endif
 ifneq ($(strip $(QCOM_OUTPUT_FLAGS_ENABLED)),false)
