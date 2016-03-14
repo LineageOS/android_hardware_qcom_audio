@@ -3502,6 +3502,7 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
         adev->mode = mode;
         if ((mode == AUDIO_MODE_NORMAL || mode == AUDIO_MODE_IN_COMMUNICATION) &&
                 voice_is_in_call(adev)) {
+            adev->voice.is_in_call = false;
             voice_stop_call(adev);
             platform_set_gsm_mode(adev->platform, false);
             adev->current_call_output = NULL;
