@@ -298,6 +298,8 @@ int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,
 #define audio_extn_spkr_prot_stop_processing(snd_device)     (0)
 #define audio_extn_spkr_prot_is_enabled() (false)
 #define audio_extn_spkr_prot_set_parameters(parms, value, len)   (0)
+#define audio_extn_fbsp_set_parameters(parms)   (0)
+#define audio_extn_fbsp_get_parameters(query, reply)   (0)
 #else
 void audio_extn_spkr_prot_init(void *adev);
 int audio_extn_spkr_prot_start_processing(snd_device_t snd_device);
@@ -306,6 +308,9 @@ bool audio_extn_spkr_prot_is_enabled();
 void audio_extn_spkr_prot_calib_cancel(void *adev);
 void audio_extn_spkr_prot_set_parameters(struct str_parms *parms,
                                          char *value, int len);
+int audio_extn_fbsp_set_parameters(struct str_parms *parms);
+int audio_extn_fbsp_get_parameters(struct str_parms *query,
+                                   struct str_parms *reply);
 #endif
 
 #ifndef COMPRESS_CAPTURE_ENABLED
