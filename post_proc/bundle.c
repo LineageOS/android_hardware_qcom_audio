@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -254,7 +254,7 @@ exit:
 __attribute__ ((visibility ("default")))
 int offload_effects_bundle_hal_stop_output(audio_io_handle_t output, int pcm_id)
 {
-    int ret;
+    int ret = -1;
     struct listnode *node;
     struct listnode *fx_node;
     output_context_t *out_ctxt;
