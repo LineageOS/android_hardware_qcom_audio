@@ -27,9 +27,9 @@
 #include <audio_route/audio_route.h>
 #include "voice.h"
 
-#define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
-#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/system/lib/soundfx/libqcompostprocbundle.so"
-#define ADM_LIBRARY_PATH "/system/vendor/lib/libadm.so"
+#define VISUALIZER_LIBRARY_PATH "soundfx/libqcomvisualizer.so"
+#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "soundfx/libqcompostprocbundle.so"
+#define ADM_LIBRARY_PATH "libadm.so"
 
 /* Flags used to initialize acdb_settings variable that goes to ACDB library */
 #define DMIC_FLAG       0x00000002
