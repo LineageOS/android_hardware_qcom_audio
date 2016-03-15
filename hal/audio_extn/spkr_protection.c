@@ -198,6 +198,7 @@ static int spkr_calibrate(int t0)
     int32_t pcm_dev_rx_id = -1, pcm_dev_tx_id = -1;
     struct timespec ts;
 
+    status.status = 0;
     if (!adev) {
         ALOGE("%s: Invalid params", __func__);
         return -EINVAL;
