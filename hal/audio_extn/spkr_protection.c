@@ -312,6 +312,7 @@ static int spkr_calibrate(int t0)
     struct timespec ts;
     bool acquire_device = false;
 
+    status.status = 0;
     if (!adev) {
         ALOGE("%s: Invalid params", __func__);
         return -EINVAL;
