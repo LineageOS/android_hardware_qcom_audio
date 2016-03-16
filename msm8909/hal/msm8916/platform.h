@@ -264,4 +264,12 @@ struct csd_data {
 
 int platform_get_subsys_image_name (char *buf);
 
+
+#define ENUM_TO_STRING(X) #X
+
+struct audio_device_to_audio_interface {
+    audio_devices_t device;
+    char device_name[100];
+    char interface_name[100];
+};
 #endif // QCOM_AUDIO_PLATFORM_H
