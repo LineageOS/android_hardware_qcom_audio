@@ -20,7 +20,8 @@ LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
 	liblog \
-	libtinyalsa
+	libtinyalsa \
+	libdl
 
 LOCAL_MODULE_TAGS := optional
 
