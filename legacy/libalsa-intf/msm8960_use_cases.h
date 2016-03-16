@@ -246,7 +246,6 @@ static card_mapping_t card_mapping_list[] = {
 
 #define SND_USE_CASE_DEV_FM_HEADSET      "FM Headset"
 #define SND_USE_CASE_DEV_FM_SPEAKER      "FM Speaker"
-#define SND_USE_CASE_DEV_FM_TX           "FM Tx"
 #define SND_USE_CASE_DEV_ANC_HEADSET     "ANC Headset"
 #define SND_USE_CASE_DEV_ANC_HANDSET     "ANC Handset"
 #define SND_USE_CASE_DEV_BTSCO_NB_RX        "BT SCO Rx"
@@ -255,7 +254,6 @@ static card_mapping_t card_mapping_list[] = {
 #define SND_USE_CASE_DEV_BTSCO_WB_TX        "BT SCO WB Tx"
 #define SND_USE_CASE_DEV_SPEAKER_HEADSET "Speaker Headset"
 #define SND_USE_CASE_DEV_SPEAKER_ANC_HEADSET "Speaker ANC Headset"
-#define SND_USE_CASE_DEV_SPEAKER_FM_TX   "Speaker FM Tx"
 #define SND_USE_CASE_DEV_TTY_HEADSET_RX  "TTY Headset Rx"
 #define SND_USE_CASE_DEV_TTY_HEADSET_TX  "TTY Headset Tx"
 #define SND_USE_CASE_DEV_TTY_FULL_RX  "TTY Full Rx"
