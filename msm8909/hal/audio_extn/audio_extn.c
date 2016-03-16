@@ -57,6 +57,8 @@ static struct audio_extn_module aextnmod = {
 #define AUDIO_PARAMETER_CUSTOM_STEREO  "stereo_as_dual_mono"
 /* Query offload playback instances count */
 #define AUDIO_PARAMETER_OFFLOAD_NUM_ACTIVE "offload_num_active"
+#define AUDIO_PARAMETER_KEY_ASPHERE_ENABLE   "asphere_enable"
+#define AUDIO_PARAMETER_KEY_ASPHERE_STRENGTH "asphere_strength"
 
 #ifndef FM_POWER_OPT
 #define audio_extn_fm_set_parameters(adev, parms) (0)
@@ -464,6 +466,103 @@ static int get_active_offload_usecases(const struct audio_device *adev,
     return ret;
 }
 
+#ifndef AUDIOSPHERE_ENABLED
+#define audio_extn_asphere_set_parameters(adev, parms)  (0)
+#define audio_extn_asphere_get_parameters(adev, query, reply) (0)
+#else
+int32_t audio_extn_asphere_set_parameters(const struct audio_device *adev,
+                                     struct str_parms *parms)
+{
+    int ret = 0, val[2];
+    char value[32] = {0};
+    int set_enable, set_strength;
+    int enable = -1, strength = -1;
+    struct mixer_ctl *ctl = NULL;
+    const char *mixer_ctl_name = "MSM ASphere Set Param";
+    char propValue[PROPERTY_VALUE_MAX] = {0};
+    bool asphere_prop_enabled = false;
+
+    if (property_get("audio.pp.asphere.enabled", propValue, "false")) {
+        if (!strncmp("true", propValue, 4))
+            asphere_prop_enabled = true;
+    }
+
+    if (!asphere_prop_enabled) {
+        ALOGV("%s: property not set!!! not doing anything", __func__);
+        return ret;
+    }
+
+    set_enable = str_parms_get_str(parms,
+                            AUDIO_PARAMETER_KEY_ASPHERE_ENABLE,
+                            value, sizeof(value));
+    if (set_enable > 0)
+        enable = atoi(value);
+
+    set_strength = str_parms_get_str(parms,
+                            AUDIO_PARAMETER_KEY_ASPHERE_STRENGTH,
+                            value, sizeof(value));
+    if (set_strength > 0)
+        strength = atoi(value);
+
+    if (set_enable >= 0 || set_strength >= 0) {
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s: could not get ctl for mixer cmd - %s",
+                  __func__, mixer_ctl_name);
+            return -EINVAL;
+        }
+        ALOGD("%s: set ctl \"%s:%d,%d\"",
+              __func__, mixer_ctl_name, enable, strength);
+        val[0] = enable;
+        val[1] = strength;
+        ret = mixer_ctl_set_array(ctl, val, sizeof(val)/sizeof(val[0]));
+        if (ret)
+            ALOGE("%s: set ctl failed!!!\"%s:%d,%d\"",
+                  __func__, mixer_ctl_name, enable, strength);
+    }
+    ALOGV("%s: exit ret %d", __func__, ret);
+    return ret;
+}
+
+int32_t audio_extn_asphere_get_parameters(const struct audio_device *adev,
+                                          struct str_parms *query,
+                                          struct str_parms *reply)
+{
+    int ret = 0, val[2] = {-1, -1};
+    char value[32] = {0};
+    int get_enable, get_strength;
+    struct mixer_ctl *ctl = NULL;
+    const char *mixer_ctl_name = "MSM ASphere Set Param";
+
+    get_enable = str_parms_get_str(query,
+                                   AUDIO_PARAMETER_KEY_ASPHERE_ENABLE,
+                                   value, sizeof(value));
+    get_strength = str_parms_get_str(query,
+                                     AUDIO_PARAMETER_KEY_ASPHERE_STRENGTH,
+                                     value, sizeof(value));
+    if (get_enable > 0 || get_strength > 0) {
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s: could not get ctl for mixer cmd - %s",
+                  __func__, mixer_ctl_name);
+            return -EINVAL;
+        }
+        ret = mixer_ctl_get_array(ctl, val, sizeof(val)/sizeof(val[0]));
+        if (ret)
+            ALOGE("%s: got ctl failed!!! \"%s:%d,%d\"",
+                   __func__, mixer_ctl_name, val[0], val[1]);
+        if (get_enable > 0)
+            str_parms_add_int(reply,
+                              AUDIO_PARAMETER_KEY_ASPHERE_ENABLE, val[0]);
+        if (get_strength > 0)
+            str_parms_add_int(reply,
+                              AUDIO_PARAMETER_KEY_ASPHERE_STRENGTH, val[1]);
+    }
+    ALOGV("%s: exit ret %d", __func__, ret);
+    return ret;
+}
+#endif
+
 void audio_extn_set_parameters(struct audio_device *adev,
                                struct str_parms *parms)
 {
@@ -480,6 +579,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_customstereo_set_parameters(adev, parms);
    audio_extn_pm_set_parameters(parms);
    audio_extn_source_track_set_parameters(adev, parms);
+   audio_extn_asphere_set_parameters(adev, parms);
 }
 
 void audio_extn_get_parameters(const struct audio_device *adev,
@@ -491,6 +591,7 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     audio_extn_get_fluence_parameters(adev, query, reply);
     get_active_offload_usecases(adev, query, reply);
     audio_extn_source_track_get_parameters(adev, query, reply);
+    audio_extn_asphere_get_parameters(adev, query, reply);
     kv_pairs = str_parms_to_str(reply);
     ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);
     free(kv_pairs);
