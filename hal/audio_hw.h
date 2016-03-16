@@ -85,8 +85,8 @@ enum {
     USECASE_AUDIO_PLAYBACK_LOW_LATENCY,
     USECASE_AUDIO_PLAYBACK_MULTI_CH,
     USECASE_AUDIO_PLAYBACK_OFFLOAD,
-#ifdef MULTIPLE_OFFLOAD_ENABLED
     USECASE_AUDIO_PLAYBACK_OFFLOAD2,
+#ifdef MULTIPLE_OFFLOAD_ENABLED
     USECASE_AUDIO_PLAYBACK_OFFLOAD3,
     USECASE_AUDIO_PLAYBACK_OFFLOAD4,
     USECASE_AUDIO_PLAYBACK_OFFLOAD5,
@@ -96,8 +96,6 @@ enum {
     USECASE_AUDIO_PLAYBACK_OFFLOAD9,
 #endif
     USECASE_AUDIO_PLAYBACK_ULL,
-
-    USECASE_AUDIO_DIRECT_PCM_OFFLOAD,
 
     /* FM usecase */
     USECASE_AUDIO_PLAYBACK_FM,
@@ -354,6 +352,9 @@ struct audio_device {
     adm_deregister_stream_t adm_deregister_stream;
     adm_request_focus_t adm_request_focus;
     adm_abandon_focus_t adm_abandon_focus;
+
+    bool multi_offload_enable;
+
     amplifier_device_t *amp;
 };
 
