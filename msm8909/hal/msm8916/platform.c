@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -589,7 +589,6 @@ static bool is_misc_usecase(audio_usecase_t usecase) {
      return ret;
 }
 
-
 static void update_codec_type(const char *snd_card_name) {
 
      if (!strncmp(snd_card_name, "msm8939-tapan-snd-card",
@@ -598,13 +597,13 @@ static void update_codec_type(const char *snd_card_name) {
                   sizeof("msm8939-tapan9302-snd-card"))||
          !strncmp(snd_card_name, "msm8939-tomtom9330-snd-card",
                   sizeof("msm8939-tomtom9330-snd-card")) ||
-        !strncmp(snd_card_name, "msm8x09-tasha9326-snd-card",
-                  sizeof("msm8x09-tasha9326-snd-card")))
-     {
+         !strncmp(snd_card_name, "msm8x09-tasha9326-snd-card",
+                  sizeof("msm8x09-tasha9326-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          is_external_codec = true;
      }
 }
+
 static void query_platform(const char *snd_card_name,
                                       char *mixer_xml_path)
 {
@@ -1552,6 +1551,18 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device)
         return -EINVAL;
     }
     return acdb_device_table[snd_device];
+}
+
+int platform_set_snd_device_bit_width(snd_device_t snd_device, unsigned int bit_width)
+{
+    ALOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
+int platform_get_snd_device_bit_width(snd_device_t snd_device)
+{
+    ALOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
 }
 
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
@@ -2961,4 +2972,69 @@ int platform_get_subsys_image_name(char *buf)
 {
     strlcpy(buf, PLATFORM_IMAGE_NAME, sizeof(PLATFORM_IMAGE_NAME));
     return 0;
+}
+
+/*
+ * This is a lookup table to map android audio input device to audio h/w interface (backend).
+ * The table can be extended for other input devices by adding appropriate entries.
+ * The audio interface for a particular input device need to be added in
+ * audio_platform_info.xml file.
+ */
+struct audio_device_to_audio_interface audio_device_to_interface_table[] = {
+    {AUDIO_DEVICE_IN_BUILTIN_MIC, ENUM_TO_STRING(AUDIO_DEVICE_IN_BUILTIN_MIC), ""},
+    {AUDIO_DEVICE_IN_BACK_MIC, ENUM_TO_STRING(AUDIO_DEVICE_IN_BACK_MIC), ""},
+};
+
+int audio_device_to_interface_table_len  =
+    sizeof(audio_device_to_interface_table) / sizeof(audio_device_to_interface_table[0]);
+
+int platform_set_audio_device_interface(const char * device_name,
+                                        const char *intf_name,
+                                        const char *codec_type)
+{
+    int ret = 0;
+    int i;
+
+    if (device_name == NULL || intf_name == NULL || codec_type == NULL) {
+        ALOGE("%s: Invalid input", __func__);
+
+        ret = -EINVAL;
+        goto done;
+    }
+
+    ALOGD("%s: Enter, device name:%s, intf name:%s, codec_type:%s", __func__,
+                            device_name, intf_name, codec_type);
+
+    size_t device_name_len = strlen(device_name);
+    for (i = 0; i < audio_device_to_interface_table_len; i++) {
+        char* name = audio_device_to_interface_table[i].device_name;
+        size_t name_len = strlen(name);
+        if ((name_len == device_name_len) &&
+            (strncmp(device_name, name, name_len) == 0)) {
+            if (is_external_codec &&
+               (strncmp(codec_type, "external", strlen(codec_type)) == 0)) {
+                ALOGD("%s: Matched device name:%s, overwrite intf name with %s",
+                  __func__, device_name, intf_name);
+
+                strlcpy(audio_device_to_interface_table[i].interface_name, intf_name,
+                    sizeof(audio_device_to_interface_table[i].interface_name));
+            } else if (!is_external_codec &&
+                       (strncmp(codec_type, "internal", strlen(codec_type)) == 0)) {
+                ALOGD("%s: Matched device name:%s, overwrite intf name with %s",
+                  __func__, device_name, intf_name);
+
+                strlcpy(audio_device_to_interface_table[i].interface_name, intf_name,
+                    sizeof(audio_device_to_interface_table[i].interface_name));
+            } else
+                ALOGE("Invalid codec_type specified. Ignoring this interface entry.");
+            goto done;
+        }
+    }
+    ALOGE("%s: Could not find matching device name %s",
+            __func__, device_name);
+
+    ret = -EINVAL;
+
+done:
+    return ret;
 }

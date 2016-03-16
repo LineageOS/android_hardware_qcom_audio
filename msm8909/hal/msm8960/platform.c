@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -416,6 +416,18 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info __
 }
 
 int platform_get_snd_device_acdb_id(snd_device_t snd_device __unused)
+{
+    ALOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
+int platform_set_snd_device_bit_width(snd_device_t snd_device, unsigned int bit_width)
+{
+    ALOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
+int platform_get_snd_device_bit_width(snd_device_t snd_device)
 {
     ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
@@ -1085,4 +1097,11 @@ int platform_get_fluence_type(void *platform __unused, char *value __unused,
 uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info __unused)
 {
     return 0;
+}
+
+int platform_set_audio_device_interface(const char * device_name __unused,
+                                        const char *intf_name __unused,
+                                        const char *codec_type __unused)
+{
+    return -ENOSYS;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -333,6 +333,9 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_DMIC_NS_BROADSIDE] = "speaker-dmic-broadside",
     [SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_BROADSIDE] = "speaker-dmic-broadside",
 };
+
+// Platform specific backend bit width table
+static int backend_bit_width_table[SND_DEVICE_MAX] = {0};
 
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
 static int acdb_device_table[SND_DEVICE_MAX] = {
@@ -795,6 +798,9 @@ static void set_platform_defaults()
     int32_t dev;
     for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
         backend_table[dev] = NULL;
+    }
+    for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
+        backend_bit_width_table[dev] = 16;
     }
 
     // TBD - do these go to the platform-info.xml file.
@@ -1397,7 +1403,32 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device)
     return acdb_device_table[snd_device];
 }
 
-int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
+int platform_set_snd_device_bit_width(snd_device_t snd_device, unsigned int bit_width)
+{
+    int ret = 0;
+
+    if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
+        ALOGE("%s: Invalid snd_device = %d",
+            __func__, snd_device);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    backend_bit_width_table[snd_device] = bit_width;
+done:
+    return ret;
+}
+
+int platform_get_snd_device_bit_width(snd_device_t snd_device)
+{
+    if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
+        ALOGE("%s: Invalid snd_device = %d", __func__, snd_device);
+        return DEFAULT_OUTPUT_SAMPLING_RATE;
+    }
+    return backend_bit_width_table[snd_device];
+}
+
+int platform_send_audio_calibration(void *platform, snd_device_t snd_device,
                                     int app_type, int sample_rate)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -2834,11 +2865,15 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
         }
     }
 
-    // 24 bit playback on speakers and all 16 bit playbacks is allowed through
-    // 16 bit/48 khz backend only
-    if ((16 == bit_width) ||
-        ((24 == bit_width) &&
-         (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER))) {
+    // 16 bit playback on speakers is allowed through 48 khz backend only
+    if (16 == bit_width) {
+        sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    }
+    // 24 bit playback on speakers is allowed through 48 khz backend only
+    // bit width re-configured based on platform info
+    if ((24 == bit_width) &&
+        (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+        bit_width = (uint32_t)platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
     }
     // Force routing if the expected bitwdith or samplerate
@@ -2916,4 +2951,54 @@ void platform_get_device_to_be_id_map(int **device_to_be_id, int *length)
 {
      *device_to_be_id = msm_device_to_be_id;
      *length = msm_be_id_array_len;
+}
+ /* This is a lookup table to map android audio input device to audio h/w interface (backend).
+ * The table can be extended for other input devices by adding appropriate entries.
+ * Also the audio interface for a particular input device can be overriden by adding
+ * corresponding entry in audio_platform_info.xml file.
+ */
+struct audio_device_to_audio_interface audio_device_to_interface_table[] = {
+    {AUDIO_DEVICE_IN_BUILTIN_MIC, ENUM_TO_STRING(AUDIO_DEVICE_IN_BUILTIN_MIC), "SLIMBUS_0"},
+    {AUDIO_DEVICE_IN_BACK_MIC, ENUM_TO_STRING(AUDIO_DEVICE_IN_BACK_MIC), "SLIMBUS_0"},
+};
+
+int audio_device_to_interface_table_len  =
+    sizeof(audio_device_to_interface_table) / sizeof(audio_device_to_interface_table[0]);
+
+int platform_set_audio_device_interface(const char *device_name, const char *intf_name,
+                                        const char *codec_type __unused)
+{
+    int ret = 0;
+    int i;
+
+    if (device_name == NULL || intf_name == NULL) {
+        ALOGE("%s: Invalid input", __func__);
+
+        ret = -EINVAL;
+        goto done;
+    }
+
+    ALOGD("%s: Enter, device name:%s, intf name:%s", __func__, device_name, intf_name);
+
+    size_t device_name_len = strlen(device_name);
+    for (i = 0; i < audio_device_to_interface_table_len; i++) {
+        char* name = audio_device_to_interface_table[i].device_name;
+        size_t name_len = strlen(name);
+        if ((name_len == device_name_len) &&
+            (strncmp(device_name, name, name_len) == 0)) {
+            ALOGD("%s: Matched device name:%s, overwrite intf name with %s",
+                  __func__, device_name, intf_name);
+
+            strlcpy(audio_device_to_interface_table[i].interface_name, intf_name,
+                    sizeof(audio_device_to_interface_table[i].interface_name));
+            goto done;
+        }
+    }
+    ALOGE("%s: Could not find matching device name %s",
+            __func__, device_name);
+
+    ret = -EINVAL;
+
+done:
+    return ret;
 }
