@@ -30,10 +30,6 @@
 #include <hardware_legacy/AudioHardwareInterface.h>
 #include <hardware_legacy/AudioSystemLegacy.h>
 
-#ifdef QCOM_FM_ENABLED
-#define AUDIO_DEVICE_OUT_FM_TX 0x10000
-#endif
-
 namespace android_audio_legacy {
 
 extern "C" {
@@ -96,7 +92,6 @@ static uint32_t audio_device_conv_table[][HAL_API_REV_NUM] =
 #endif
 #ifdef QCOM_FM_ENABLED
     { AudioSystem::DEVICE_OUT_FM, AUDIO_DEVICE_OUT_FM },
-    { AudioSystem::DEVICE_OUT_FM_TX, AUDIO_DEVICE_OUT_FM_TX },
 #endif
     { AudioSystem::DEVICE_OUT_DEFAULT, AUDIO_DEVICE_OUT_DEFAULT },
     /* input devices */
@@ -674,7 +669,6 @@ static uint32_t adev_get_supported_devices(const struct audio_hw_device *dev)
 #endif
 #ifdef QCOM_FM_ENABLED
             AUDIO_DEVICE_OUT_FM |
-            AUDIO_DEVICE_OUT_FM_TX |
 #endif
             AUDIO_DEVICE_OUT_DEFAULT |
             /* IN */
