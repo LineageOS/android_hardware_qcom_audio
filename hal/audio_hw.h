@@ -281,6 +281,10 @@ struct audio_device {
     adm_deregister_stream_t adm_deregister_stream;
     adm_request_focus_t adm_request_focus;
     adm_abandon_focus_t adm_abandon_focus;
+
+    /* logging */
+    snd_device_t last_logged_snd_device[AUDIO_USECASE_MAX][2]; /* [out, in] */
+
 };
 
 int select_devices(struct audio_device *adev,

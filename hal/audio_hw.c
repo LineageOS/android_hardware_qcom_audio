@@ -676,9 +676,36 @@ int select_devices(struct audio_device *adev,
         return 0;
     }
 
-    ALOGV("%s: out_snd_device(%d: %s) in_snd_device(%d: %s)", __func__,
-          out_snd_device, platform_get_snd_device_name(out_snd_device),
-          in_snd_device,  platform_get_snd_device_name(in_snd_device));
+    if (out_snd_device != SND_DEVICE_NONE &&
+            out_snd_device != adev->last_logged_snd_device[uc_id][0]) {
+        ALOGD("%s: changing use case %s output device from(%d: %s, acdb %d) to (%d: %s, acdb %d)",
+              __func__,
+              use_case_table[uc_id],
+              adev->last_logged_snd_device[uc_id][0],
+              platform_get_snd_device_name(adev->last_logged_snd_device[uc_id][0]),
+              adev->last_logged_snd_device[uc_id][0] != SND_DEVICE_NONE ?
+                      platform_get_snd_device_acdb_id(adev->last_logged_snd_device[uc_id][0]) :
+                      -1,
+              out_snd_device,
+              platform_get_snd_device_name(out_snd_device),
+              platform_get_snd_device_acdb_id(out_snd_device));
+        adev->last_logged_snd_device[uc_id][0] = out_snd_device;
+    }
+    if (in_snd_device != SND_DEVICE_NONE &&
+            in_snd_device != adev->last_logged_snd_device[uc_id][1]) {
+        ALOGD("%s: changing use case %s input device from(%d: %s, acdb %d) to (%d: %s, acdb %d)",
+              __func__,
+              use_case_table[uc_id],
+              adev->last_logged_snd_device[uc_id][1],
+              platform_get_snd_device_name(adev->last_logged_snd_device[uc_id][1]),
+              adev->last_logged_snd_device[uc_id][1] != SND_DEVICE_NONE ?
+                      platform_get_snd_device_acdb_id(adev->last_logged_snd_device[uc_id][1]) :
+                      -1,
+              in_snd_device,
+              platform_get_snd_device_name(in_snd_device),
+              platform_get_snd_device_acdb_id(in_snd_device));
+        adev->last_logged_snd_device[uc_id][1] = in_snd_device;
+    }
 
     /*
      * Limitation: While in call, to do a device switch we need to disable
@@ -867,7 +894,7 @@ error_open:
 
 error_config:
     adev->active_input = NULL;
-    ALOGV("%s: exit: status(%d)", __func__, ret);
+    ALOGW("%s: exit: status(%d)", __func__, ret);
 
     return ret;
 }
@@ -2387,7 +2414,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 error_open:
     free(out);
     *stream_out = NULL;
-    ALOGV("%s: exit: ret %d", __func__, ret);
+    ALOGW("%s: exit: ret %d", __func__, ret);
     return ret;
 }
 
@@ -2554,7 +2581,7 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 
     pthread_mutex_lock(&adev->lock);
     if (adev->mode != mode) {
-        ALOGV("%s: mode %d\n", __func__, mode);
+        ALOGD("%s: mode %d", __func__, (int)mode);
         adev->mode = mode;
         if ((mode == AUDIO_MODE_NORMAL || mode == AUDIO_MODE_IN_COMMUNICATION) &&
                 voice_is_in_call(adev)) {
@@ -2574,7 +2601,7 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
     int ret;
     struct audio_device *adev = (struct audio_device *)dev;
 
-    ALOGV("%s: state %d\n", __func__, state);
+    ALOGD("%s: state %d", __func__, (int)state);
     pthread_mutex_lock(&adev->lock);
     ret = voice_set_mic_mute(adev, state);
     adev->mic_muted = state;
@@ -2908,7 +2935,7 @@ static int adev_open(const hw_module_t *module, const char *name,
 {
     int i, ret;
 
-    ALOGV("%s: enter", __func__);
+    ALOGD("%s: enter", __func__);
     if (strcmp(name, AUDIO_HARDWARE_INTERFACE) != 0) return -EINVAL;
     pthread_mutex_lock(&adev_init_lock);
     if (audio_device_ref_count != 0) {
@@ -3062,7 +3089,7 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     audio_extn_perf_lock_init();
 
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
     return 0;
 }
 
