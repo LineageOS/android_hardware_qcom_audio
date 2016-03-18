@@ -27,6 +27,16 @@
 #define ALOGVV(a...) do { } while(0)
 #endif
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
+// A device mask for all audio output devices that are considered "remote" when evaluating
+// active output devices in isStreamActiveRemotely()
+#define APM_AUDIO_OUT_DEVICE_REMOTE_ALL  AUDIO_DEVICE_OUT_REMOTE_SUBMIX
+// A device mask for all audio input and output devices where matching inputs/outputs on device
+// type alone is not enough: the address must match too
+#define APM_AUDIO_DEVICE_MATCH_ADDRESS_ALL (AUDIO_DEVICE_IN_REMOTE_SUBMIX | \
+                                            AUDIO_DEVICE_OUT_REMOTE_SUBMIX)
+
 #include <inttypes.h>
 #include <math.h>
 
@@ -687,6 +697,423 @@ status_t AudioPolicyManagerCustom::getInputForAttr(const audio_attributes_t *att
     mpClientInterface->onAudioPortListUpdate();
 
     return NO_ERROR;
+}
+
+audio_devices_t AudioPolicyManagerCustom::getNewOutputDevice(const sp<AudioOutputDescriptor>& outputDesc,
+                                                       bool fromCache)
+{
+    audio_devices_t device = AUDIO_DEVICE_NONE;
+
+    ssize_t index = mAudioPatches.indexOfKey(outputDesc->mPatchHandle);
+    if (index >= 0) {
+        sp<AudioPatch> patchDesc = mAudioPatches.valueAt(index);
+        if (patchDesc->mUid != mUidCached) {
+            ALOGV("getNewOutputDevice() device %08x forced by patch %d",
+                  outputDesc->device(), outputDesc->mPatchHandle);
+            return outputDesc->device();
+        }
+    }
+
+    // check the following by order of priority to request a routing change if necessary:
+    // 1: the strategy enforced audible is active and enforced on the output:
+    //      use device for strategy enforced audible
+    // 2: we are in call or the strategy phone is active on the output:
+    //      use device for strategy phone
+    // 3: the strategy for enforced audible is active but not enforced on the output:
+    //      use the device for strategy enforced audible
+    // 4: the strategy accessibility is active on the output:
+    //      use device for strategy accessibility
+    // 5: the strategy sonification is active on the output:
+    //      use device for strategy sonification
+    // 6: the strategy "respectful" sonification is active on the output:
+    //      use device for strategy "respectful" sonification
+    // 7: the strategy media is active on the output:
+    //      use device for strategy media
+    // 8: the strategy DTMF is active on the output:
+    //      use device for strategy DTMF
+    // 9: the strategy for beacon, a.k.a. "transmitted through speaker" is active on the output:
+    //      use device for strategy t-t-s
+    if (isStrategyActive(outputDesc, STRATEGY_ENFORCED_AUDIBLE) &&
+        mEngine->getForceUse(AUDIO_POLICY_FORCE_FOR_SYSTEM) == AUDIO_POLICY_FORCE_SYSTEM_ENFORCED) {
+        device = getDeviceForStrategy(STRATEGY_ENFORCED_AUDIBLE, fromCache);
+    } else if (isInCall() ||
+                    isStrategyActive(outputDesc, STRATEGY_PHONE)) {
+        device = getDeviceForStrategy(STRATEGY_PHONE, fromCache);
+    } else if (isStrategyActive(outputDesc, STRATEGY_ENFORCED_AUDIBLE)) {
+        device = getDeviceForStrategy(STRATEGY_ENFORCED_AUDIBLE, fromCache);
+    } else if (isStrategyActive(outputDesc, STRATEGY_ACCESSIBILITY)) {
+        device = getDeviceForStrategy(STRATEGY_ACCESSIBILITY, fromCache);
+    } else if (isStrategyActive(outputDesc, STRATEGY_SONIFICATION)) {
+        device = getDeviceForStrategy(STRATEGY_SONIFICATION, fromCache);
+    } else if (isStrategyActive(outputDesc, STRATEGY_SONIFICATION_RESPECTFUL)) {
+        device = getDeviceForStrategy(STRATEGY_SONIFICATION_RESPECTFUL, fromCache);
+    } else if (isStrategyActive(outputDesc, STRATEGY_MEDIA)) {
+        device = getDeviceForStrategy(STRATEGY_MEDIA, fromCache);
+    } else if (isStrategyActive(outputDesc, STRATEGY_DTMF)) {
+        device = getDeviceForStrategy(STRATEGY_DTMF, fromCache);
+    } else if (isStrategyActive(outputDesc, STRATEGY_TRANSMITTED_THROUGH_SPEAKER)) {
+        device = getDeviceForStrategy(STRATEGY_TRANSMITTED_THROUGH_SPEAKER, fromCache);
+    } else if (isStrategyActive(outputDesc, STRATEGY_REROUTING)) {
+        device = getDeviceForStrategy(STRATEGY_REROUTING, fromCache);
+    }
+
+    ALOGV("getNewOutputDevice() selected device %x", device);
+    return device;
+}
+
+void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
+{
+    ALOGV("setPhoneState() state %d", state);
+    // store previous phone state for management of sonification strategy below
+    int oldState = mEngine->getPhoneState();
+
+    if (mEngine->setPhoneState(state) != NO_ERROR) {
+        ALOGW("setPhoneState() invalid or same state %d", state);
+        return;
+    }
+    /// Opens: can these line be executed after the switch of volume curves???
+    // if leaving call state, handle special case of active streams
+    // pertaining to sonification strategy see handleIncallSonification()
+    if (isStateInCall(oldState)) {
+        ALOGV("setPhoneState() in call state management: new state is %d", state);
+        for (int stream = 0; stream < AUDIO_STREAM_CNT; stream++) {
+            if (stream == AUDIO_STREAM_PATCH) {
+                continue;
+            }
+            handleIncallSonification((audio_stream_type_t)stream, false, true);
+        }
+
+        // force reevaluating accessibility routing when call stops
+        mpClientInterface->invalidateStream(AUDIO_STREAM_ACCESSIBILITY);
+    }
+
+    /**
+     * Switching to or from incall state or switching between telephony and VoIP lead to force
+     * routing command.
+     */
+    bool force = ((is_state_in_call(oldState) != is_state_in_call(state))
+                  || (is_state_in_call(state) && (state != oldState)));
+
+    // check for device and output changes triggered by new phone state
+    checkA2dpSuspend();
+    checkOutputForAllStrategies();
+    updateDevicesAndOutputs();
+
+    int delayMs = 0;
+    if (isStateInCall(state)) {
+        nsecs_t sysTime = systemTime();
+        for (size_t i = 0; i < mOutputs.size(); i++) {
+            sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
+            // mute media and sonification strategies and delay device switch by the largest
+            // latency of any output where either strategy is active.
+            // This avoid sending the ring tone or music tail into the earpiece or headset.
+            if ((isStrategyActive(desc, STRATEGY_MEDIA,
+                                  SONIFICATION_HEADSET_MUSIC_DELAY,
+                                  sysTime) ||
+                 isStrategyActive(desc, STRATEGY_SONIFICATION,
+                                  SONIFICATION_HEADSET_MUSIC_DELAY,
+                                  sysTime)) &&
+                    (delayMs < (int)desc->latency()*2)) {
+                delayMs = desc->latency()*2;
+            }
+            setStrategyMute(STRATEGY_MEDIA, true, desc);
+            setStrategyMute(STRATEGY_MEDIA, false, desc, MUTE_TIME_MS,
+                getDeviceForStrategy(STRATEGY_MEDIA, true /*fromCache*/));
+            setStrategyMute(STRATEGY_SONIFICATION, true, desc);
+            setStrategyMute(STRATEGY_SONIFICATION, false, desc, MUTE_TIME_MS,
+                getDeviceForStrategy(STRATEGY_SONIFICATION, true /*fromCache*/));
+        }
+    }
+
+    if (hasPrimaryOutput()) {
+        // Note that despite the fact that getNewOutputDevice() is called on the primary output,
+        // the device returned is not necessarily reachable via this output
+        audio_devices_t rxDevice = getNewOutputDevice(mPrimaryOutput, false /*fromCache*/);
+        // force routing command to audio hardware when ending call
+        // even if no device change is needed
+        if (isStateInCall(oldState) && rxDevice == AUDIO_DEVICE_NONE) {
+            rxDevice = mPrimaryOutput->device();
+        }
+
+        if (state == AUDIO_MODE_IN_CALL) {
+            updateCallRouting(rxDevice, delayMs);
+        } else if (oldState == AUDIO_MODE_IN_CALL) {
+            if (mCallRxPatch != 0) {
+                mpClientInterface->releaseAudioPatch(mCallRxPatch->mAfPatchHandle, 0);
+                mCallRxPatch.clear();
+            }
+            if (mCallTxPatch != 0) {
+                mpClientInterface->releaseAudioPatch(mCallTxPatch->mAfPatchHandle, 0);
+                mCallTxPatch.clear();
+            }
+            setOutputDevice(mPrimaryOutput, rxDevice, force, 0);
+        } else {
+            setOutputDevice(mPrimaryOutput, rxDevice, force, 0);
+        }
+    }
+    // if entering in call state, handle special case of active streams
+    // pertaining to sonification strategy see handleIncallSonification()
+    if (isStateInCall(state)) {
+        ALOGV("setPhoneState() in call state management: new state is %d", state);
+        for (int stream = 0; stream < AUDIO_STREAM_CNT; stream++) {
+            if (stream == AUDIO_STREAM_PATCH) {
+                continue;
+            }
+            handleIncallSonification((audio_stream_type_t)stream, true, true);
+        }
+
+        // force reevaluating accessibility routing when call starts
+        mpClientInterface->invalidateStream(AUDIO_STREAM_ACCESSIBILITY);
+    }
+
+    // Flag that ringtone volume must be limited to music volume until we exit MODE_RINGTONE
+    if (state == AUDIO_MODE_RINGTONE &&
+        isStreamActive(AUDIO_STREAM_MUSIC, SONIFICATION_HEADSET_MUSIC_DELAY)) {
+        mLimitRingtoneVolume = true;
+    } else {
+        mLimitRingtoneVolume = false;
+    }
+}
+
+void AudioPolicyManagerCustom::setForceUse(audio_policy_force_use_t usage,
+                                         audio_policy_forced_cfg_t config)
+{
+    ALOGV("setForceUse() usage %d, config %d, mPhoneState %d", usage, config, mEngine->getPhoneState());
+
+    if (mEngine->setForceUse(usage, config) != NO_ERROR) {
+        ALOGW("setForceUse() could not set force cfg %d for usage %d", config, usage);
+        return;
+    }
+    bool forceVolumeReeval = (usage == AUDIO_POLICY_FORCE_FOR_COMMUNICATION) ||
+            (usage == AUDIO_POLICY_FORCE_FOR_DOCK) ||
+            (usage == AUDIO_POLICY_FORCE_FOR_SYSTEM);
+
+    // check for device and output changes triggered by new force usage
+    checkA2dpSuspend();
+    checkOutputForAllStrategies();
+    updateDevicesAndOutputs();
+    if (mEngine->getPhoneState() == AUDIO_MODE_IN_CALL && hasPrimaryOutput()) {
+        audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, true /*fromCache*/);
+        updateCallRouting(newDevice);
+    }
+    for (size_t i = 0; i < mOutputs.size(); i++) {
+        sp<SwAudioOutputDescriptor> outputDesc = mOutputs.valueAt(i);
+        audio_devices_t newDevice = getNewOutputDevice(outputDesc, true /*fromCache*/);
+        if ((mEngine->getPhoneState() != AUDIO_MODE_IN_CALL) || (outputDesc != mPrimaryOutput)) {
+            setOutputDevice(outputDesc, newDevice, (newDevice != AUDIO_DEVICE_NONE));
+        }
+        if (forceVolumeReeval && (newDevice != AUDIO_DEVICE_NONE)) {
+            applyStreamVolumes(outputDesc, newDevice, 0, true);
+        }
+    }
+
+    audio_io_handle_t activeInput = mInputs.getActiveInput();
+    if (activeInput != 0) {
+        sp<AudioInputDescriptor> activeDesc = mInputs.valueFor(activeInput);
+        audio_devices_t newDevice = getNewInputDevice(activeInput);
+        // Force new input selection if the new device can not be reached via current input
+        if (activeDesc->mProfile->mSupportedDevices.types() & (newDevice & ~AUDIO_DEVICE_BIT_IN)) {
+            setInputDevice(activeInput, newDevice);
+        } else {
+            closeInput(activeInput);
+        }
+    }
+}
+
+status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDesc,
+                                            audio_stream_type_t stream,
+                                            bool forceDeviceUpdate)
+{
+    // always handle stream stop, check which stream type is stopping
+    handleEventForBeacon(stream == AUDIO_STREAM_TTS ? STOPPING_BEACON : STOPPING_OUTPUT);
+
+    // handle special case for sonification while in call
+    if (isInCall()) {
+        handleIncallSonification(stream, false, false);
+    }
+
+    if (outputDesc->mRefCount[stream] > 0) {
+        // decrement usage count of this stream on the output
+        outputDesc->changeRefCount(stream, -1);
+
+        // store time at which the stream was stopped - see isStreamActive()
+        if (outputDesc->mRefCount[stream] == 0 || forceDeviceUpdate) {
+            outputDesc->mStopTime[stream] = systemTime();
+            audio_devices_t newDevice = getNewOutputDevice(outputDesc, false /*fromCache*/);
+            // delay the device switch by twice the latency because stopOutput() is executed when
+            // the track stop() command is received and at that time the audio track buffer can
+            // still contain data that needs to be drained. The latency only covers the audio HAL
+            // and kernel buffers. Also the latency does not always include additional delay in the
+            // audio path (audio DSP, CODEC ...)
+            setOutputDevice(outputDesc, newDevice, false, outputDesc->latency()*2);
+
+            // force restoring the device selection on other active outputs if it differs from the
+            // one being selected for this output
+            for (size_t i = 0; i < mOutputs.size(); i++) {
+                audio_io_handle_t curOutput = mOutputs.keyAt(i);
+                sp<AudioOutputDescriptor> desc = mOutputs.valueAt(i);
+                if (desc != outputDesc &&
+                        desc->isActive() &&
+                        outputDesc->sharesHwModuleWith(desc) &&
+                        (newDevice != desc->device())) {
+                    setOutputDevice(desc,
+                                    getNewOutputDevice(desc, false /*fromCache*/),
+                                    true,
+                                    outputDesc->latency()*2);
+                }
+            }
+            // update the outputs if stopping one with a stream that can affect notification routing
+            handleNotificationRoutingForStream(stream);
+        }
+        return NO_ERROR;
+    } else {
+        ALOGW("stopOutput() refcount is already 0");
+        return INVALID_OPERATION;
+    }
+}
+
+status_t AudioPolicyManagerCustom::startSource(sp<AudioOutputDescriptor> outputDesc,
+                                             audio_stream_type_t stream,
+                                             audio_devices_t device,
+                                             uint32_t *delayMs)
+{
+    // cannot start playback of STREAM_TTS if any other output is being used
+    uint32_t beaconMuteLatency = 0;
+
+    *delayMs = 0;
+    if (stream == AUDIO_STREAM_TTS) {
+        ALOGV("\t found BEACON stream");
+        if (!mTtsOutputAvailable && mOutputs.isAnyOutputActive(AUDIO_STREAM_TTS /*streamToIgnore*/)) {
+            return INVALID_OPERATION;
+        } else {
+            beaconMuteLatency = handleEventForBeacon(STARTING_BEACON);
+        }
+    } else {
+        // some playback other than beacon starts
+        beaconMuteLatency = handleEventForBeacon(STARTING_OUTPUT);
+    }
+
+    // check active before incrementing usage count
+    bool force = !outputDesc->isActive();
+
+    // increment usage count for this stream on the requested output:
+    // NOTE that the usage count is the same for duplicated output and hardware output which is
+    // necessary for a correct control of hardware output routing by startOutput() and stopOutput()
+    outputDesc->changeRefCount(stream, 1);
+
+    if (outputDesc->mRefCount[stream] == 1 || device != AUDIO_DEVICE_NONE) {
+        // starting an output being rerouted?
+        if (device == AUDIO_DEVICE_NONE) {
+            device = getNewOutputDevice(outputDesc, false /*fromCache*/);
+        }
+        routing_strategy strategy = getStrategy(stream);
+        bool shouldWait = (strategy == STRATEGY_SONIFICATION) ||
+                            (strategy == STRATEGY_SONIFICATION_RESPECTFUL) ||
+                            (beaconMuteLatency > 0);
+        uint32_t waitMs = beaconMuteLatency;
+        for (size_t i = 0; i < mOutputs.size(); i++) {
+            sp<AudioOutputDescriptor> desc = mOutputs.valueAt(i);
+            if (desc != outputDesc) {
+                // force a device change if any other output is managed by the same hw
+                // module and has a current device selection that differs from selected device.
+                // In this case, the audio HAL must receive the new device selection so that it can
+                // change the device currently selected by the other active output.
+                if (outputDesc->sharesHwModuleWith(desc) &&
+                    desc->device() != device) {
+                    force = true;
+                }
+                // wait for audio on other active outputs to be presented when starting
+                // a notification so that audio focus effect can propagate, or that a mute/unmute
+                // event occurred for beacon
+                uint32_t latency = desc->latency();
+                if (shouldWait && desc->isActive(latency * 2) && (waitMs < latency)) {
+                    waitMs = latency;
+                }
+            }
+        }
+        uint32_t muteWaitMs = setOutputDevice(outputDesc, device, force);
+
+        // handle special case for sonification while in call
+        if (isInCall()) {
+            handleIncallSonification(stream, true, false);
+        }
+
+        // apply volume rules for current stream and device if necessary
+        checkAndSetVolume(stream,
+                          mStreams.valueFor(stream).getVolumeIndex(device),
+                          outputDesc,
+                          device);
+
+        // update the outputs if starting an output with a stream that can affect notification
+        // routing
+        handleNotificationRoutingForStream(stream);
+
+        // force reevaluating accessibility routing when ringtone or alarm starts
+        if (strategy == STRATEGY_SONIFICATION) {
+            mpClientInterface->invalidateStream(AUDIO_STREAM_ACCESSIBILITY);
+        }
+    }
+    return NO_ERROR;
+}
+
+void AudioPolicyManagerCustom::handleIncallSonification(audio_stream_type_t stream,
+                                                      bool starting, bool stateChange)
+{
+    if(!hasPrimaryOutput()) {
+        return;
+    }
+
+    // if the stream pertains to sonification strategy and we are in call we must
+    // mute the stream if it is low visibility. If it is high visibility, we must play a tone
+    // in the device used for phone strategy and play the tone if the selected device does not
+    // interfere with the device used for phone strategy
+    // if stateChange is true, we are called from setPhoneState() and we must mute or unmute as
+    // many times as there are active tracks on the output
+    const routing_strategy stream_strategy = getStrategy(stream);
+    if ((stream_strategy == STRATEGY_SONIFICATION) ||
+            ((stream_strategy == STRATEGY_SONIFICATION_RESPECTFUL))) {
+        sp<SwAudioOutputDescriptor> outputDesc = mPrimaryOutput;
+        ALOGV("handleIncallSonification() stream %d starting %d device %x stateChange %d",
+                stream, starting, outputDesc->mDevice, stateChange);
+        if (outputDesc->mRefCount[stream]) {
+            int muteCount = 1;
+            if (stateChange) {
+                muteCount = outputDesc->mRefCount[stream];
+            }
+            if (audio_is_low_visibility(stream)) {
+                ALOGV("handleIncallSonification() low visibility, muteCount %d", muteCount);
+                for (int i = 0; i < muteCount; i++) {
+                    setStreamMute(stream, starting, mPrimaryOutput);
+                }
+            } else {
+                ALOGV("handleIncallSonification() high visibility");
+                if (outputDesc->device() &
+                        getDeviceForStrategy(STRATEGY_PHONE, true /*fromCache*/)) {
+                    ALOGV("handleIncallSonification() high visibility muted, muteCount %d", muteCount);
+                    for (int i = 0; i < muteCount; i++) {
+                        setStreamMute(stream, starting, mPrimaryOutput);
+                    }
+                }
+                if (starting) {
+                    mpClientInterface->startTone(AUDIO_POLICY_TONE_IN_CALL_NOTIFICATION,
+                                                 AUDIO_STREAM_VOICE_CALL);
+                } else {
+                    mpClientInterface->stopTone();
+                }
+            }
+        }
+    }
+}
+
+void AudioPolicyManagerCustom::handleNotificationRoutingForStream(audio_stream_type_t stream) {
+    switch(stream) {
+    case AUDIO_STREAM_MUSIC:
+        checkOutputForStrategy(STRATEGY_SONIFICATION_RESPECTFUL);
+        updateDevicesAndOutputs();
+        break;
+    default:
+        break;
+    }
 }
 
 status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,

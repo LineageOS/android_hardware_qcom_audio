@@ -49,6 +49,9 @@ public:
                                          audio_input_flags_t flags,
                                          audio_port_handle_t selectedDeviceId,
                                          input_type_t *inputType);
+        virtual void setPhoneState(audio_mode_t state);
+        virtual void setForceUse(audio_policy_force_use_t usage,
+                                 audio_policy_forced_cfg_t config);
 
 protected:
         // manages A2DP output suspend/restore according to phone state and BT SCO usage
@@ -60,9 +63,33 @@ protected:
                                            audio_devices_t device,
                                            int delayMs = 0, bool force = false);
 
+        // selects the most appropriate device on output for current state
+        // must be called every time a condition that affects the device choice for a given output is
+        // changed: connected device, phone state, force use, output start, output stop..
+        // see getDeviceForStrategy() for the use of fromCache parameter
+        virtual audio_devices_t getNewOutputDevice(const sp<AudioOutputDescriptor>& outputDesc,
+                                           bool fromCache);
+
         void updateCallRouting(audio_devices_t rxDevice, int delayMs = 0);
 
+        // if argument "device" is different from AUDIO_DEVICE_NONE,  startSource() will force
+        // the re-evaluation of the output device.
+        status_t startSource(sp<AudioOutputDescriptor> outputDesc,
+                             audio_stream_type_t stream,
+                             audio_devices_t device,
+                             uint32_t *delayMs);
+        status_t stopSource(sp<AudioOutputDescriptor> outputDesc,
+                            audio_stream_type_t stream,
+                            bool forceDeviceUpdate);
+
+        // handle special cases for sonification strategy while in call: mute streams or replace by
+        // a special tone in the device used for communication
+        void handleIncallSonification(audio_stream_type_t stream, bool starting, bool stateChange);
 private:
+        // updates device caching and output for streams that can influence the
+        //    routing of notifications
+        void handleNotificationRoutingForStream(audio_stream_type_t stream);
+        // Used for voip + voice concurrency usecase
         float mPrevFMVolumeDb;
         bool mFMIsActive;
 };
