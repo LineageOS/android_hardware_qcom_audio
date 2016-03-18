@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7faddb67_3b3fabd7",
+        "filename": "legacy/policy_hal/AudioPolicyManager.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 109,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-18T19:10:51Z",
+      "side": 1,
+      "message": "Note that we aren\u0027t overriding the parent implementations of these 4 functions because they are calling setDeviceConnectionStateInt to manage REMOTE_SUBMIX, where it should make no difference whether we call the parent implementation instead.",
+      "range": {
+        "startLine": 106,
+        "startChar": 0,
+        "endLine": 109,
+        "endChar": 13
+      },
+      "revId": "ef63860862a1ea7225868158f5d8c8a8c70a9596",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
