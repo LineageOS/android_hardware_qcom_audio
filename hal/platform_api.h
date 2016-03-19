@@ -20,6 +20,8 @@
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
 const char *platform_get_snd_device_name(snd_device_t snd_device);
+int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
+                                      char *device_name);
 void platform_add_backend_name(void *platform, char *mixer_path,
                                                     snd_device_t snd_device);
 bool platform_send_gain_dep_cal(void *platform, int level);
@@ -69,7 +71,7 @@ int platform_set_snd_device_backend(snd_device_t snd_device, const char * backen
                                     const char * hw_interface);
 
 /* From platform_info.c */
-int platform_info_init(void *);
+int platform_info_init(const char *filename, void *);
 
 int platform_get_usecase_index(const char * usecase);
 int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
