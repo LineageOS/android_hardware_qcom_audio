@@ -25,6 +25,8 @@
 #include "platform_api.h"
 #include <platform.h>
 
+#define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
+
 typedef enum {
     ROOT,
     ACDB,
@@ -342,7 +344,7 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
     }
 }
 
-int platform_info_init(const char *filename, void *platform)
+int platform_info_init(void *platform)
 {
     XML_Parser      parser;
     FILE            *file;
@@ -350,22 +352,13 @@ int platform_info_init(const char *filename, void *platform)
     int             bytes_read;
     void            *buf;
     static const uint32_t kBufSize = 1024;
-    char   platform_info_file_name[MIXER_PATH_MAX_LENGTH]= {0};
+
     section = ROOT;
 
-    if (filename == NULL) {
-        strlcpy(platform_info_file_name, PLATFORM_INFO_XML_PATH, MIXER_PATH_MAX_LENGTH);
-    } else {
-        strlcpy(platform_info_file_name, filename, MIXER_PATH_MAX_LENGTH);
-    }
-
-    ALOGV("%s: platform info file name is %s", __func__, platform_info_file_name);
-
-    file = fopen(platform_info_file_name, "r");
-
+    file = fopen(PLATFORM_INFO_XML_PATH, "r");
     if (!file) {
         ALOGD("%s: Failed to open %s, using defaults.",
-            __func__, platform_info_file_name);
+            __func__, PLATFORM_INFO_XML_PATH);
         ret = -ENODEV;
         goto done;
     }
@@ -400,7 +393,7 @@ int platform_info_init(const char *filename, void *platform)
         if (XML_ParseBuffer(parser, bytes_read,
                             bytes_read == 0) == XML_STATUS_ERROR) {
             ALOGE("%s: XML_ParseBuffer failed, for %s",
-                __func__, platform_info_file_name);
+                __func__, PLATFORM_INFO_XML_PATH);
             ret = -EINVAL;
             goto err_free_parser;
         }

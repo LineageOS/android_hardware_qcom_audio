@@ -129,8 +129,6 @@ struct platform_data {
     char *snd_card_name;
     int max_vol_index;
     int max_mic_count;
-
-    void *hw_info;
 };
 
 static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -934,8 +932,7 @@ void *platform_init(struct audio_device *adev)
     char *snd_internal_name = NULL;
     char *tmp = NULL;
     char mixer_xml_file[MIXER_PATH_MAX_LENGTH]= {0};
-    char platform_info_file[MIXER_PATH_MAX_LENGTH]= {0};
-    struct snd_card_split *snd_split_handle = NULL;
+
     my_data = calloc(1, sizeof(struct platform_data));
 
     my_data->adev = adev;
@@ -943,6 +940,9 @@ void *platform_init(struct audio_device *adev)
     list_init(&operator_info_list);
 
     set_platform_defaults(my_data);
+
+    /* Initialize platform specific ids and/or backends*/
+    platform_info_init(my_data);
 
     while (snd_card_num < MAX_SND_CARD) {
         adev->mixer = mixer_open(snd_card_num);
@@ -973,67 +973,41 @@ void *platform_init(struct audio_device *adev)
             continue;
         }
 
-        set_snd_card_split(snd_card_name);
-        snd_split_handle = get_snd_card_split();
+        if ((snd_internal_name = strtok_r(snd_card_name, "-", &tmp)) != NULL) {
+           /* Get the codec internal name from the sound card name
+            * and form the mixer paths file name dynamically. This
+            * is generic way of picking any codec name based mixer
+            * files in future with no code change. This code
+            * assumes mixer files are formed with format as
+            * mixer_paths_internalcodecname.xml
 
-        my_data->hw_info = hw_info_init(snd_card_name);
+            * If this dynamically read mixer files fails to open then it
+            * falls back to default mixer file i.e mixer_paths.xml. This is
+            * done to preserve backward compatibility but not mandatory as
+            * long as the mixer files are named as per above assumption.
+            */
 
-        /* Get the codec internal name from the sound card and/or form factor
-         * name and form the mixer paths and platfor info file name dynamically.
-         * This is generic way of picking any codec and forma factor name based
-         * mixer and platform info files in future with no code change.
-
-         * current code extends and looks for any of the exteneded mixer path and
-         * platform info file present based on codec and form factor.
-
-         * order of picking appropriate file is
-         * <i>   mixer_paths_<codec_name>_<form_factor>.xml, if file not present
-         * <ii>  mixer_paths_<codec_name>.xml, if file not present
-         * <iii> mixer_paths.xml
-
-         * same order is followed for audio_platform_info.xml as well
-         */
-
-        // need to carryforward old file name
-        if (!strncmp(snd_card_name, TOMTOM_8226_SND_CARD_NAME,
+            if ((snd_internal_name = strtok_r(NULL, "-", &tmp)) != NULL) {
+                // need to carryforward old file name
+                if (!strncmp(snd_card_name, TOMTOM_8226_SND_CARD_NAME,
                              sizeof(TOMTOM_8226_SND_CARD_NAME))) {
-            snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s.xml",
+                    snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s.xml",
                              MIXER_XML_BASE_STRING, TOMTOM_MIXER_FILE_SUFFIX );
-        } else {
-
-            snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s_%s.xml",
-                             MIXER_XML_BASE_STRING, snd_split_handle->snd_card,
-                             snd_split_handle->form_factor);
-
-            if (F_OK != access(mixer_xml_file, 0)) {
-                memset(mixer_xml_file, 0, sizeof(mixer_xml_file));
-                snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s.xml",
-                             MIXER_XML_BASE_STRING, snd_split_handle->snd_card);
-
-                if (F_OK != access(mixer_xml_file, 0)) {
-                    memset(mixer_xml_file, 0, sizeof(mixer_xml_file));
-                    strlcpy(mixer_xml_file, MIXER_XML_DEFAULT_PATH, MIXER_PATH_MAX_LENGTH);
+                } else {
+                    snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s.xml",
+                             MIXER_XML_BASE_STRING, snd_internal_name);
                 }
-            }
 
-            snprintf(platform_info_file, sizeof(platform_info_file), "%s_%s_%s.xml",
-                             PLATFORM_INFO_XML_BASE_STRING, snd_split_handle->snd_card,
-                             snd_split_handle->form_factor);
-
-            if (F_OK != access(platform_info_file, 0)) {
-                memset(platform_info_file, 0, sizeof(platform_info_file));
-                snprintf(platform_info_file, sizeof(platform_info_file), "%s_%s.xml",
-                             PLATFORM_INFO_XML_BASE_STRING, snd_split_handle->snd_card);
-
-                if (F_OK != access(platform_info_file, 0)) {
-                    memset(platform_info_file, 0, sizeof(platform_info_file));
-                    strlcpy(platform_info_file, PLATFORM_INFO_XML_PATH, MIXER_PATH_MAX_LENGTH);
+                if (F_OK == access(mixer_xml_file, 0)) {
+                    use_default_mixer_path = false;
                 }
             }
         }
 
-        /* Initialize platform specific ids and/or backends*/
-        platform_info_init(platform_info_file, my_data);
+        if (use_default_mixer_path) {
+            memset(mixer_xml_file, 0, sizeof(mixer_xml_file));
+            strlcpy(mixer_xml_file, MIXER_XML_DEFAULT_PATH, MIXER_PATH_MAX_LENGTH);
+        }
 
         ALOGD("%s: Loading mixer file: %s", __func__, mixer_xml_file);
         adev->audio_route = audio_route_init(snd_card_num, mixer_xml_file);
@@ -1221,8 +1195,6 @@ void platform_deinit(void *platform)
     struct platform_data *my_data = (struct platform_data *)platform;
     close_csd_client(my_data->csd);
 
-    hw_info_deinit(my_data->hw_info);
-
     for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
         if (backend_tag_table[dev])
             free(backend_tag_table[dev]);
@@ -1265,29 +1237,6 @@ const char *platform_get_snd_device_name(snd_device_t snd_device)
         return device_table[snd_device];
     } else
         return "none";
-}
-
-int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
-                                      char *device_name)
-{
-    struct platform_data *my_data = (struct platform_data *)platform;
-
-    if (platform == NULL || device_name == NULL) {
-        ALOGW("%s: something wrong, use legacy get_snd_device name", __func__);
-        device_name = platform_get_snd_device_name(snd_device);
-    } else if (snd_device >= SND_DEVICE_MIN && snd_device < SND_DEVICE_MAX) {
-        if (operator_specific_device_table[snd_device] != NULL) {
-            strlcpy(device_name, get_operator_specific_device_mixer_path(snd_device),
-                    DEVICE_NAME_MAX_SIZE);
-        } else {
-            strlcpy(device_name, device_table[snd_device], DEVICE_NAME_MAX_SIZE);
-        }
-        hw_info_append_hw_type(my_data->hw_info, snd_device, device_name);
-    } else {
-        strlcpy(device_name, "none", DEVICE_NAME_MAX_SIZE);
-    }
-
-    return 0;
 }
 
 void platform_add_backend_name(void *platform, char *mixer_path,
