@@ -149,6 +149,9 @@ enum {
 
 };
 
+#define DEVICE_NAME_MAX_SIZE   128
+#define HW_INFO_ARRAY_MAX_SIZE 32
+
 #define DEFAULT_OUTPUT_SAMPLING_RATE 48000
 
 #define ALL_SESSION_VSID                0xFFFFFFFF
@@ -303,4 +306,6 @@ struct csd_data {
     get_sample_rate_t get_sample_rate;
 };
 
+#define PLATFORM_INFO_XML_PATH          "/system/etc/audio_platform_info.xml"
+#define PLATFORM_INFO_XML_BASE_STRING   "/system/etc/audio_platform_info"
 #endif // QCOM_AUDIO_PLATFORM_H
