@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -215,7 +215,7 @@ enum {
  * the buffer size of an input/output stream
  */
 #define DEEP_BUFFER_OUTPUT_PERIOD_SIZE 1920
-#define DEEP_BUFFER_OUTPUT_PERIOD_COUNT 2
+#define DEEP_BUFFER_OUTPUT_PERIOD_COUNT 3
 #define LOW_LATENCY_OUTPUT_PERIOD_SIZE 240
 #define LOW_LATENCY_OUTPUT_PERIOD_COUNT 2
 
