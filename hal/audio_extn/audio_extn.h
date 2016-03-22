@@ -19,14 +19,6 @@
 
 #include <cutils/str_parms.h>
 
-#define HW_INFO_ARRAY_MAX_SIZE 32
-
-struct snd_card_split {
-    char device[HW_INFO_ARRAY_MAX_SIZE];
-    char snd_card[HW_INFO_ARRAY_MAX_SIZE];
-    char form_factor[HW_INFO_ARRAY_MAX_SIZE];
-};
-
 void *audio_extn_extspk_init(struct audio_device *adev);
 void audio_extn_extspk_deinit(void *extn);
 void audio_extn_extspk_update(void* extn);
@@ -118,24 +110,4 @@ int audio_extn_perf_lock_init(void);
 void audio_extn_perf_lock_acquire(void);
 void audio_extn_perf_lock_release(void);
 #endif /* KPI_OPTIMIZE_ENABLED */
-
-#ifndef HW_VARIANTS_ENABLED
-#define hw_info_init(snd_card_name)                  (0)
-#define hw_info_deinit(hw_info)                      (0)
-#define hw_info_append_hw_type(hw_info,\
-        snd_device, device_name)                     (0)
-#else
-void *hw_info_init(const char *snd_card_name);
-void hw_info_deinit(void *hw_info);
-void hw_info_append_hw_type(void *hw_info, snd_device_t snd_device,
-                             char *device_name);
-#endif
-
-#ifndef PLATFORM_BFAMILY
-#define get_snd_card_split()                         (0)
-#define set_snd_card_split(snd_card_name)            (0)
-#else
-struct snd_card_split *get_snd_card_split();
-void set_snd_card_split(const char* snd_card_name);
-#endif
 #endif /* AUDIO_EXTN_H */
