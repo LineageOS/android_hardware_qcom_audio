@@ -50,11 +50,11 @@ LOCAL_SRC_FILES := \
 	platform_info.c \
 	audio_extn/ext_speaker.c \
 	audio_extn/audio_extn.c \
-	$(AUDIO_PLATFORM)/platform.c
+	$(AUDIO_PLATFORM)/platform.c \
 
 ifdef MULTIPLE_HW_VARIANTS_ENABLED
   LOCAL_CFLAGS += -DHW_VARIANTS_ENABLED
-  LOCAL_SRC_FILES +=  $(AUDIO_PLATFORM)/hw_info.c
+  LOCAL_SRC_FILES +=  $(AUDIO_PLATFORM)/hw_info.c \
 endif
 
 LOCAL_SHARED_LIBRARIES := \
