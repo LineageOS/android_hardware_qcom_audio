@@ -491,7 +491,7 @@ static void check_operator()
     int mccmnc;
     property_get("gsm.sim.operator.numeric",value,"0");
     mccmnc = atoi(value);
-    ALOGV("%s: tmus mccmnc %d", __func__, mccmnc);
+    ALOGD("%s: tmus mccmnc %d", __func__, mccmnc);
     switch(mccmnc) {
     /* TMUS MCC(310), MNC(490, 260, 026) */
     case 310490:
@@ -834,7 +834,7 @@ static void platform_csd_init(struct platform_data *my_data)
         goto done;
     }
 
-    ALOGV("%s: num_modems %d\n", __func__, modems);
+    ALOGD("%s: num_modems %d\n", __func__, modems);
     if (modems > 0)
         my_data->csd = open_csd_client(false /*is_i2s_ext_modem*/);
 
@@ -1043,7 +1043,7 @@ void *platform_init(struct audio_device *adev)
             goto init_failed;
         }
         adev->snd_card = snd_card_num;
-        ALOGV("%s: Opened sound card:%d", __func__, snd_card_num);
+        ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
         break;
     }
 
@@ -1410,7 +1410,7 @@ void platform_add_operator_specific_device(snd_device_t snd_device,
 
     list_add_tail(operator_specific_device_table[snd_device], &device->list);
 
-    ALOGV("%s : deivce[%s] -> operator[%s] mixer_path[%s] acdb_id [%d]", __func__,
+    ALOGD("%s: device[%s] -> operator[%s] mixer_path[%s] acdb_id[%d]", __func__,
             platform_get_snd_device_name(snd_device), operator, mixer_path, acdb_id);
 
 }
