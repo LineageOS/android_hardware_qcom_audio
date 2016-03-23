@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7faddb67_63880a1f",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 326,
+      "author": {
+        "id": 10094
+      },
+      "writtenOn": "2016-03-23T21:29:52Z",
+      "side": 1,
+      "message": "slightly changed this from the original patch.  We can change the pointers in the array, but not the contents of what they point to.",
+      "range": {
+        "startLine": 326,
+        "startChar": 0,
+        "endLine": 326,
+        "endChar": 52
+      },
+      "revId": "28d166ae4017d8b96dba51448b55dc38fbe3099b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
