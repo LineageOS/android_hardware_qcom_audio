@@ -247,7 +247,8 @@ struct stream_in {
     audio_input_flags_t flags;
     bool is_st_session;
     bool is_st_session_active;
-
+    int sample_rate;
+    int bit_width;
     struct audio_device *dev;
 };
 
