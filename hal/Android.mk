@@ -39,8 +39,8 @@ ifneq ($(filter msm8996,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSM8996
   LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="4"
   LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
+  MULTIPLE_HW_VARIANTS_ENABLED := true
 endif
-
 endif
 
 LOCAL_SRC_FILES := \
@@ -50,6 +50,11 @@ LOCAL_SRC_FILES := \
 	audio_extn/ext_speaker.c \
 	audio_extn/audio_extn.c \
 	$(AUDIO_PLATFORM)/platform.c
+
+ifdef MULTIPLE_HW_VARIANTS_ENABLED
+  LOCAL_CFLAGS += -DHW_VARIANTS_ENABLED
+  LOCAL_SRC_FILES +=  $(AUDIO_PLATFORM)/hw_info.c
+endif
 
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
