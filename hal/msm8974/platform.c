@@ -37,6 +37,7 @@
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
 #define CVD_VERSION_MIXER_CTL "CVD Version"
 
+#define min(a, b) ((a) < (b) ? (a) : (b))
 
 /*
  * This file will have a maximum of 38 bytes:
@@ -985,7 +986,7 @@ void *platform_init(struct audio_device *adev)
 
         // need to carryforward old file name
         if (!strncmp(snd_card_name, TOMTOM_8226_SND_CARD_NAME,
-                             sizeof(TOMTOM_8226_SND_CARD_NAME))) {
+                     min(strlen(TOMTOM_8226_SND_CARD_NAME), strlen(snd_card_name)))) {
             snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s.xml",
                              MIXER_XML_BASE_STRING, TOMTOM_MIXER_FILE_SUFFIX );
         } else {
@@ -1030,11 +1031,13 @@ void *platform_init(struct audio_device *adev)
          *         example: msm8994-tomtom-mtp-snd-card
          *     <b> or sub string of the card name, i.e. <device>-<codec>
          *         example: msm8994-tomtom
-         * so use length of my_data->snd_card_name for comparision
+         * snd_card_name is truncated to 32 charaters as per mixer_get_name() implementation
+         * so use min of my_data->snd_card_name and snd_card_name length for comparison
          */
 
         if (my_data->snd_card_name != NULL &&
-                strncmp(snd_card_name, my_data->snd_card_name, strlen(my_data->snd_card_name)) != 0) {
+                strncmp(snd_card_name, my_data->snd_card_name,
+                        min(strlen(snd_card_name), strlen(my_data->snd_card_name))) != 0) {
             ALOGI("%s: found valid sound card %s, but not primary sound card %s",
                    __func__, snd_card_name, my_data->snd_card_name);
             retry_num = 0;
