@@ -528,7 +528,6 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
     (void)pthread_cond_timedwait(&handle.spkr_calib_cancel,
         &handle.mutex_spkr_prot, &ts);
     ALOGD("%s: Speaker calibration done", __func__);
-    cleanup = true;
     pthread_mutex_lock(&handle.spkr_calib_cancelack_mutex);
     if (handle.cancel_spkr_calib) {
         status.status = -EAGAIN;
@@ -607,12 +606,6 @@ exit:
         if (acdb_fd > 0)
             close(acdb_fd);
 
-        if (!handle.cancel_spkr_calib && cleanup) {
-            pthread_mutex_unlock(&handle.spkr_calib_cancelack_mutex);
-            pthread_cond_wait(&handle.spkr_calib_cancel,
-            &handle.mutex_spkr_prot);
-            pthread_mutex_lock(&handle.spkr_calib_cancelack_mutex);
-        }
         if (disable_rx) {
             list_remove(&uc_info_rx->list);
             if (audio_extn_is_vbat_enabled())
