@@ -31,7 +31,11 @@
 #define XSTR(x) STR(x)
 #define STR(x) #x
 
-#define SOUND_TRIGGER_LIBRARY_PATH "hw/sound_trigger.primary.%s.so"
+#ifdef __LP64__
+#define SOUND_TRIGGER_LIBRARY_PATH "/system/vendor/lib64/hw/sound_trigger.primary.%s.so"
+#else
+#define SOUND_TRIGGER_LIBRARY_PATH "/system/vendor/lib/hw/sound_trigger.primary.%s.so"
+#endif
 
 struct sound_trigger_info  {
     struct sound_trigger_session_info st_ses;
