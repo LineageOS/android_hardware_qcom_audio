@@ -1311,14 +1311,14 @@ static void set_platform_defaults()
 
             if(property_get_bool("use.qti.sw.alac.decoder", false)) {
                 ALOGD("Alac software decoder is available...removing alac from DSP decoder list");
-                strncpy(dsp_only_decoders_mime[count],"none",5);
+                strlcpy(dsp_only_decoders_mime[count],"none",5);
             }
         } else if (!strncmp(MEDIA_MIMETYPE_AUDIO_APE, dsp_only_decoders_mime[count],
              strlen(dsp_only_decoders_mime[count]))) {
 
             if(property_get_bool("use.qti.sw.ape.decoder", false)) {
                 ALOGD("APE software decoder is available...removing ape from DSP decoder list");
-                strncpy(dsp_only_decoders_mime[count],"none",5);
+                strlcpy(dsp_only_decoders_mime[count],"none",5);
            }
         }
     }
@@ -1445,7 +1445,7 @@ static void send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibra
                               sizeof(struct param_data), &calib);
         if (ret < 0) {
             ALOGE("%s get_calibration failed type=%s calib.size=%d\n"
-                , __func__, cal_name_info[type], codec_buffer.size);
+                , __func__, cal_name_info[type], calib.buff_size);
             free(calib.buff);
             continue;
         }
@@ -1619,13 +1619,14 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
         /* update wsa combo supported flag based on sound card name */
         /* wsa combo flag needs to be set to true only for hardware
            combinations which has support for both wsa and non-wsa speaker */
-        if (snd_card_name && ((!strncmp(snd_card_name, "msm8953-snd-card-mtp",
-                sizeof("msm8953-snd-card-mtp"))) ||
-            (!strncmp(snd_card_name, "msm8952-skum-snd-card",
-                sizeof("msm8952-skum-snd-card"))))) {
-            *is_wsa_combo_supported = true;
-        } else {
-            *is_wsa_combo_supported = false;
+        *is_wsa_combo_supported = false;
+        if(snd_card_name) {
+            if ((!strncmp(snd_card_name, "msm8953-snd-card-mtp",
+                    sizeof("msm8953-snd-card-mtp")) ||
+                (!strncmp(snd_card_name, "msm8952-skum-snd-card",
+                    sizeof("msm8952-skum-snd-card"))))) {
+                *is_wsa_combo_supported = true;
+            }
         }
     }
     closedir(tdir);
@@ -2306,10 +2307,13 @@ void native_audio_get_params(struct str_parms *query,
 int native_audio_set_params(struct platform_data *platform,
                             struct str_parms *parms, char *value, int len)
 {
-    int ret = 0;
+    int ret = -1;
     struct audio_usecase *usecase;
     struct listnode *node;
     int mode = NATIVE_AUDIO_MODE_INVALID;
+
+    if (!value)
+        return ret;
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_NATIVE_AUDIO_MODE,
                              value, len);
