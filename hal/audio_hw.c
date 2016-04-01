@@ -73,6 +73,8 @@
 #include "sound/compress_params.h"
 #include "sound/asound.h"
 
+#include <audio_utils/format.h>
+
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /* ToDo: Check and update a proper value in msec */
 #define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 50
@@ -2244,7 +2246,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         // increase written size during SSR to avoid mismatch
         // with the written frames count in AF
         if (!is_offload_usecase(out->usecase))
-            out->written += bytes / (out->config.channels * sizeof(short));
+            out->written += bytes / (out->config.channels * audio_bytes_per_sample(out->format));
 
         if (out->pcm) {
             ALOGD(" %s: sound card is not active/SSR state", __func__);
@@ -2338,13 +2340,23 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
             if (out->usecase == USECASE_AUDIO_PLAYBACK_AFE_PROXY)
                 ret = pcm_mmap_write(out->pcm, (void *)buffer, bytes);
-            else
+            else {
+                if (out->format == AUDIO_FORMAT_PCM_8_24_BIT) {
+                    //convert from 8_24 to 24_8, bytes have to be converted to
+                    //frames since memcpy_by_audio_format
+                    //expects size in frames and a 8_24 is 4 bytes.
+                    memcpy_by_audio_format((void*)buffer,
+                        AUDIO_FORMAT_PCM_24_BIT_OFFLOAD,
+                        buffer, AUDIO_FORMAT_PCM_8_24_BIT,
+                        (bytes / audio_bytes_per_sample(out->format)));
+                }
                 ret = pcm_write(out->pcm, (void *)buffer, bytes);
+            }
 
             if (ret < 0)
                 ret = -errno;
             else if (ret == 0)
-                out->written += bytes / (out->config.channels * sizeof(short));
+                out->written += bytes / (out->config.channels * audio_bytes_per_sample(out->format));
 
             if (adev->adm_abandon_focus)
                 adev->adm_abandon_focus(adev->adm_data, out->handle);
@@ -3192,9 +3204,23 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->config = pcm_config_low_latency;
         out->sample_rate = out->config.rate;
     } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
-        format = AUDIO_FORMAT_PCM_16_BIT;
+        format = out->format;
+
         out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
         out->config = pcm_config_deep_buffer;
+        out->config.rate = config->sample_rate;
+
+        if (config->format == AUDIO_FORMAT_PCM_16_BIT) {
+            out->bit_width = 16;
+        } else if (config->format == AUDIO_FORMAT_PCM_8_24_BIT) {
+            out->bit_width = 24;
+            out->config.format = PCM_FORMAT_S24_LE;
+        } else {
+            ALOGE("format has to be either 16/32 bit %d", config->format);
+            ret = -EINVAL;
+            goto error_open;
+        }
+
         out->sample_rate = out->config.rate;
     } else {
         /* primary path is the default path selected if no other outputs are available/suitable */
