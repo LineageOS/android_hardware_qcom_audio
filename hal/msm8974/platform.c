@@ -262,7 +262,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = "voice-rec-dmic-ef-fluence",
     [SND_DEVICE_IN_VOICE_REC_HEADSET_MIC] = "headset-mic",
 
-    [SND_DEVICE_IN_UNPROCESSED_MIC] = "voice-rec-mic",
+    [SND_DEVICE_IN_UNPROCESSED_MIC] = "unprocessed-mic",
     [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = "headset-mic",
 
     [SND_DEVICE_IN_VOICE_RX] = "voice-rx",
