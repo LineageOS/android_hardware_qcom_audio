@@ -1422,7 +1422,8 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
 
     if ((stream == AUDIO_STREAM_VOICE_CALL) &&
         (channelMask == 1) &&
-        (samplingRate == 8000 || samplingRate == 16000)) {
+        (samplingRate == 8000 || samplingRate == 16000 ||
+         samplingRate == 32000 || samplingRate == 48000)) {
         // Allow Voip direct output only if:
         // audio mode is MODE_IN_COMMUNCATION; AND
         // voip output is not opened already; AND
@@ -1903,10 +1904,15 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
             // If the already active input uses AUDIO_SOURCE_HOTWORD then it is closed,
             // otherwise the active input continues and the new input cannot be started.
             sp<AudioInputDescriptor> activeDesc = mInputs.valueFor(activeInput);
-            if (activeDesc->mInputSource == AUDIO_SOURCE_HOTWORD) {
+            if ((activeDesc->mInputSource == AUDIO_SOURCE_HOTWORD) &&
+                    !activeDesc->hasPreemptedSession(session)) {
                 ALOGW("startInput(%d) preempting low-priority input %d", input, activeInput);
-                stopInput(activeInput, activeDesc->mSessions.itemAt(0));
-                releaseInput(activeInput, activeDesc->mSessions.itemAt(0));
+                audio_session_t activeSession = activeDesc->mSessions.itemAt(0);
+                SortedVector<audio_session_t> sessions = activeDesc->getPreemptedSessions();
+                sessions.add(activeSession);
+                inputDesc->setPreemptedSessions(sessions);
+                stopInput(activeInput, activeSession);
+                releaseInput(activeInput, activeSession);
             } else {
                 ALOGE("startInput(%d) failed: other input %d already started", input, activeInput);
                 return INVALID_OPERATION;
