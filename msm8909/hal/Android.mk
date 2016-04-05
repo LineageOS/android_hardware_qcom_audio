@@ -44,6 +44,10 @@ LOCAL_SRC_FILES := \
 LOCAL_SRC_FILES += audio_extn/audio_extn.c \
                    audio_extn/utils.c
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_ASM_LOOPBACK_RX)),true)
+  LOCAL_CFLAGS += -DASM_LOOPBACK_RX_ENABLED
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PCM_OFFLOAD)),true)
     LOCAL_CFLAGS += -DPCM_OFFLOAD_ENABLED
 endif
