@@ -3010,59 +3010,53 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->extspk = audio_extn_extspk_init(adev);
     audio_extn_sound_trigger_init(adev);
 
-    if (access(VISUALIZER_LIBRARY_PATH, R_OK) == 0) {
-        adev->visualizer_lib = dlopen(VISUALIZER_LIBRARY_PATH, RTLD_NOW);
-        if (adev->visualizer_lib == NULL) {
-            ALOGE("%s: DLOPEN failed for %s", __func__, VISUALIZER_LIBRARY_PATH);
-        } else {
-            ALOGV("%s: DLOPEN successful for %s", __func__, VISUALIZER_LIBRARY_PATH);
-            adev->visualizer_start_output =
-                        (int (*)(audio_io_handle_t, int))dlsym(adev->visualizer_lib,
-                                                        "visualizer_hal_start_output");
-            adev->visualizer_stop_output =
-                        (int (*)(audio_io_handle_t, int))dlsym(adev->visualizer_lib,
-                                                        "visualizer_hal_stop_output");
-        }
+    adev->visualizer_lib = dlopen(VISUALIZER_LIBRARY_PATH, RTLD_NOW);
+    if (adev->visualizer_lib == NULL) {
+        ALOGW("%s: DLOPEN failed for %s", __func__, VISUALIZER_LIBRARY_PATH);
+    } else {
+        ALOGV("%s: DLOPEN successful for %s", __func__, VISUALIZER_LIBRARY_PATH);
+        adev->visualizer_start_output =
+                    (int (*)(audio_io_handle_t, int))dlsym(adev->visualizer_lib,
+                                                    "visualizer_hal_start_output");
+        adev->visualizer_stop_output =
+                    (int (*)(audio_io_handle_t, int))dlsym(adev->visualizer_lib,
+                                                    "visualizer_hal_stop_output");
     }
 
-    if (access(OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH, R_OK) == 0) {
-        adev->offload_effects_lib = dlopen(OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH, RTLD_NOW);
-        if (adev->offload_effects_lib == NULL) {
-            ALOGE("%s: DLOPEN failed for %s", __func__,
-                  OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH);
-        } else {
-            ALOGV("%s: DLOPEN successful for %s", __func__,
-                  OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH);
-            adev->offload_effects_start_output =
-                        (int (*)(audio_io_handle_t, int))dlsym(adev->offload_effects_lib,
-                                         "offload_effects_bundle_hal_start_output");
-            adev->offload_effects_stop_output =
-                        (int (*)(audio_io_handle_t, int))dlsym(adev->offload_effects_lib,
-                                         "offload_effects_bundle_hal_stop_output");
-        }
+    adev->offload_effects_lib = dlopen(OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH, RTLD_NOW);
+    if (adev->offload_effects_lib == NULL) {
+        ALOGW("%s: DLOPEN failed for %s", __func__,
+              OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH);
+    } else {
+        ALOGV("%s: DLOPEN successful for %s", __func__,
+              OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH);
+        adev->offload_effects_start_output =
+                    (int (*)(audio_io_handle_t, int))dlsym(adev->offload_effects_lib,
+                                     "offload_effects_bundle_hal_start_output");
+        adev->offload_effects_stop_output =
+                    (int (*)(audio_io_handle_t, int))dlsym(adev->offload_effects_lib,
+                                     "offload_effects_bundle_hal_stop_output");
     }
 
-    if (access(ADM_LIBRARY_PATH, R_OK) == 0) {
-        adev->adm_lib = dlopen(ADM_LIBRARY_PATH, RTLD_NOW);
-        if (adev->adm_lib == NULL) {
-            ALOGE("%s: DLOPEN failed for %s", __func__, ADM_LIBRARY_PATH);
-        } else {
-            ALOGV("%s: DLOPEN successful for %s", __func__, ADM_LIBRARY_PATH);
-            adev->adm_init = (adm_init_t)
-                                    dlsym(adev->adm_lib, "adm_init");
-            adev->adm_deinit = (adm_deinit_t)
-                                    dlsym(adev->adm_lib, "adm_deinit");
-            adev->adm_register_input_stream = (adm_register_input_stream_t)
-                                    dlsym(adev->adm_lib, "adm_register_input_stream");
-            adev->adm_register_output_stream = (adm_register_output_stream_t)
-                                    dlsym(adev->adm_lib, "adm_register_output_stream");
-            adev->adm_deregister_stream = (adm_deregister_stream_t)
-                                    dlsym(adev->adm_lib, "adm_deregister_stream");
-            adev->adm_request_focus = (adm_request_focus_t)
-                                    dlsym(adev->adm_lib, "adm_request_focus");
-            adev->adm_abandon_focus = (adm_abandon_focus_t)
-                                    dlsym(adev->adm_lib, "adm_abandon_focus");
-        }
+    adev->adm_lib = dlopen(ADM_LIBRARY_PATH, RTLD_NOW);
+    if (adev->adm_lib == NULL) {
+        ALOGW("%s: DLOPEN failed for %s", __func__, ADM_LIBRARY_PATH);
+    } else {
+        ALOGV("%s: DLOPEN successful for %s", __func__, ADM_LIBRARY_PATH);
+        adev->adm_init = (adm_init_t)
+                                dlsym(adev->adm_lib, "adm_init");
+        adev->adm_deinit = (adm_deinit_t)
+                                dlsym(adev->adm_lib, "adm_deinit");
+        adev->adm_register_input_stream = (adm_register_input_stream_t)
+                                dlsym(adev->adm_lib, "adm_register_input_stream");
+        adev->adm_register_output_stream = (adm_register_output_stream_t)
+                                dlsym(adev->adm_lib, "adm_register_output_stream");
+        adev->adm_deregister_stream = (adm_deregister_stream_t)
+                                dlsym(adev->adm_lib, "adm_deregister_stream");
+        adev->adm_request_focus = (adm_request_focus_t)
+                                dlsym(adev->adm_lib, "adm_request_focus");
+        adev->adm_abandon_focus = (adm_abandon_focus_t)
+                                dlsym(adev->adm_lib, "adm_abandon_focus");
     }
 
     adev->bt_wb_speech_enabled = false;
