@@ -581,6 +581,13 @@ audio_devices_t AudioPolicyManagerCustom::getNewOutputDevice(const sp<AudioOutpu
 {
     audio_devices_t device = AUDIO_DEVICE_NONE;
 
+    bool isSonificationDevice = true;
+    //Sonification should not be selected for proxy and hdmi
+    if (outputDesc->device() == AUDIO_DEVICE_OUT_PROXY ||
+        outputDesc->device() == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        isSonificationDevice = false;
+    }
+
     ssize_t index = mAudioPatches.indexOfKey(outputDesc->mPatchHandle);
     if (index >= 0) {
         sp<AudioPatch> patchDesc = mAudioPatches.valueAt(index);
@@ -621,7 +628,8 @@ audio_devices_t AudioPolicyManagerCustom::getNewOutputDevice(const sp<AudioOutpu
         device = getDeviceForStrategy(STRATEGY_ENFORCED_AUDIBLE, fromCache);
     } else if (isStrategyActive(outputDesc, STRATEGY_SONIFICATION)||
                 (isStrategyActive(mPrimaryOutput,STRATEGY_SONIFICATION)
-                && (!isStrategyActive(mPrimaryOutput,STRATEGY_MEDIA)))) {
+                && (!isStrategyActive(mPrimaryOutput,STRATEGY_MEDIA))
+                && isSonificationDevice)) {
         device = getDeviceForStrategy(STRATEGY_SONIFICATION, fromCache);
     } else if (isStrategyActive(outputDesc, STRATEGY_SONIFICATION_RESPECTFUL) ||
                 isStrategyActive(mPrimaryOutput,STRATEGY_SONIFICATION_RESPECTFUL)) {
