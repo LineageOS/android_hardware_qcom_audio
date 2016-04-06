@@ -45,7 +45,6 @@ TARGET_USES_QCOM_MM_AUDIO := true
 AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS := false
 
 AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := true
--include $(TOPDIR)vendor/qcom/proprietary/mm-audio-internal/dolby/dax/device/dax2_msm8996_hw/dax2_msm8996_hw.mk
 
 AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
 AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
