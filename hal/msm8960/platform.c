@@ -746,9 +746,11 @@ void *platform_init(struct audio_device *adev)
         ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
 
         my_data->hw_info = hw_info_init(snd_card_name);
+#ifdef HW_VARIANTS_ENABLED
         if (!my_data->hw_info) {
             ALOGE("%s: Failed to init hardware info", __func__);
         } else {
+#endif
             if (!strncmp(snd_card_name, "msm8226-tomtom-snd-card",
                          sizeof("msm8226-tomtom-snd-card"))) {
                 ALOGE("%s: Call MIXER_XML_PATH_WCD9330", __func__);
@@ -768,7 +770,9 @@ void *platform_init(struct audio_device *adev)
             adev->snd_card = snd_card_num;
             ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
             break;
+#ifdef HW_VARIANTS_ENABLED
         }
+#endif
         retry_num = 0;
         snd_card_num++;
     }
