@@ -673,7 +673,6 @@ int audio_extn_get_afe_proxy_parameters(const struct audio_device *adev,
 {
     int ret, val = 0;
     char value[32]={0};
-    char *str = NULL;
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_CAN_OPEN_PROXY, value,
                             sizeof(value));
