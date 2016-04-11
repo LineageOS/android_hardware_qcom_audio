@@ -751,7 +751,8 @@ static void* spkr_calibration_thread()
                 continue;
             } else {
                 ALOGD("%s: wsa speaker idle %ld,minimum time %ld", __func__, sec, min_idle_time);
-                if (!(sec > min_idle_time || handle.trigger_cal)) {
+                if (!adev->primary_output ||
+                    ((sec < min_idle_time) && !handle.trigger_cal)) {
                     pthread_mutex_unlock(&adev->lock);
                     spkr_calibrate_wait();
                     continue;
