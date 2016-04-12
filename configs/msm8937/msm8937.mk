@@ -50,6 +50,9 @@ AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
 AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 ##AUDIO_FEATURE_FLAGS
 
+#Audio Specific device overlays
+DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
+
 ## Audio configuration file
 
 PRODUCT_COPY_FILES +=\
