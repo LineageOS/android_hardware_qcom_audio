@@ -2370,7 +2370,10 @@ static int out_get_render_position(const struct audio_stream_out *stream,
     if (is_offload_usecase(out->usecase)) {
         ssize_t ret = 0;
         lock_output_stream(out);
-        if (out->compr != NULL) {
+
+        if (SND_CARD_STATE_OFFLINE == get_snd_card_state(adev)) {
+            ret = -EINVAL;
+        } else if (out->compr != NULL) {
             ret = compress_get_tstamp(out->compr, (unsigned long *)dsp_frames,
                     &out->sample_rate);
             if (ret < 0)
@@ -2383,10 +2386,10 @@ static int out_get_render_position(const struct audio_stream_out *stream,
             ALOGE(" ERROR: sound card not active Unable to get time stamp from compress driver");
             set_snd_card_state(adev,SND_CARD_STATE_OFFLINE);
             return -EINVAL;
-        } else if(ret < 0) {
+        } else if (ret < 0) {
             ALOGE(" ERROR: Unable to get time stamp from compress driver");
             return -EINVAL;
-        } else if (get_snd_card_state(adev) == SND_CARD_STATE_OFFLINE){
+        } else if (get_snd_card_state(adev) == SND_CARD_STATE_OFFLINE) {
             /*
              * Handle corner case where compress session is closed during SSR
              * and timestamp is queried
@@ -2431,7 +2434,9 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
     lock_output_stream(out);
 
     if (is_offload_usecase(out->usecase)) {
-        if (out->compr != NULL) {
+        if (SND_CARD_STATE_OFFLINE == get_snd_card_state(out->dev)) {
+            ret = -EINVAL;
+        } else if (out->compr != NULL) {
             ret = compress_get_tstamp(out->compr, &dsp_frames,
                     &out->sample_rate);
             ALOGVV("%s rendered frames %ld sample_rate %d",
