@@ -581,6 +581,13 @@ audio_devices_t AudioPolicyManagerCustom::getNewOutputDevice(const sp<AudioOutpu
 {
     audio_devices_t device = AUDIO_DEVICE_NONE;
 
+    bool isSonificationDevice = true;
+    //Sonification should not be selected for proxy and hdmi
+    if (outputDesc->device() == AUDIO_DEVICE_OUT_PROXY ||
+        outputDesc->device() == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        isSonificationDevice = false;
+    }
+
     ssize_t index = mAudioPatches.indexOfKey(outputDesc->mPatchHandle);
     if (index >= 0) {
         sp<AudioPatch> patchDesc = mAudioPatches.valueAt(index);
@@ -621,7 +628,8 @@ audio_devices_t AudioPolicyManagerCustom::getNewOutputDevice(const sp<AudioOutpu
         device = getDeviceForStrategy(STRATEGY_ENFORCED_AUDIBLE, fromCache);
     } else if (isStrategyActive(outputDesc, STRATEGY_SONIFICATION)||
                 (isStrategyActive(mPrimaryOutput,STRATEGY_SONIFICATION)
-                && (!isStrategyActive(mPrimaryOutput,STRATEGY_MEDIA)))) {
+                && (!isStrategyActive(mPrimaryOutput,STRATEGY_MEDIA))
+                && isSonificationDevice)) {
         device = getDeviceForStrategy(STRATEGY_SONIFICATION, fromCache);
     } else if (isStrategyActive(outputDesc, STRATEGY_SONIFICATION_RESPECTFUL) ||
                 isStrategyActive(mPrimaryOutput,STRATEGY_SONIFICATION_RESPECTFUL)) {
@@ -1601,10 +1609,21 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         flags = AUDIO_OUTPUT_FLAG_TTS;
     }
 
+    // check if direct output for track offload already exits
+    bool is_track_offload_active = false;
+    for (size_t i = 0; i < mOutputs.size(); i++) {
+        sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
+        if (desc->mFlags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) {
+            is_track_offload_active = true;
+            ALOGD("Track offload already active");
+            break;
+        }
+    }
+
     // Do offload magic here
     if ((flags == AUDIO_OUTPUT_FLAG_NONE) &&
         (stream == AUDIO_STREAM_MUSIC) &&
-        (offloadInfo != NULL) &&
+        (offloadInfo != NULL) && !is_track_offload_active &&
         ((offloadInfo->usage == AUDIO_USAGE_MEDIA) || (offloadInfo->usage == AUDIO_USAGE_GAME))) {
         flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_DIRECT_PCM);
         ALOGD("AudioCustomHAL --> Force Direct Flag .. flag (0x%x)", flags);
