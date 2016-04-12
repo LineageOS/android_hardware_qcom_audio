@@ -1067,7 +1067,7 @@ static void set_platform_defaults()
 
 
      /*remove ALAC & APE from DSP decoder list based on software decoder availability*/
-     for (count = 0; count < sizeof(dsp_only_decoders_mime)/sizeof(dsp_only_decoders_mime[0]);
+     for (count = 0; count < (int32_t)(sizeof(dsp_only_decoders_mime)/sizeof(dsp_only_decoders_mime[0]));
             count++) {
 
          if (!strncmp(MEDIA_MIMETYPE_AUDIO_ALAC, dsp_only_decoders_mime[count],
@@ -1300,7 +1300,7 @@ void *platform_init(struct audio_device *adev)
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data = NULL;
     int retry_num = 0, snd_card_num = 0, key = 0;
-    const char *snd_card_name = NULL, *snd_card_name_t = NULL;
+    char *snd_card_name = NULL, *snd_card_name_t = NULL;
     char *cvd_version = NULL;
     char *snd_internal_name = NULL;
     char *tmp = NULL;
@@ -1399,9 +1399,12 @@ void *platform_init(struct audio_device *adev)
             if (!adev->audio_route) {
                 ALOGE("%s: Failed to init audio route controls, aborting.",
                        __func__);
-                free(my_data);
-                free(snd_card_name);
-                free(snd_card_name_t);
+                if (my_data)
+                    free(my_data);
+                if (snd_card_name)
+                    free(snd_card_name);
+                if (snd_card_name_t)
+                    free(snd_card_name_t);
                 mixer_close(adev->mixer);
                 return NULL;
             }
@@ -1416,11 +1419,13 @@ void *platform_init(struct audio_device *adev)
 
     if (snd_card_num >= MAX_SND_CARD) {
         ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
-        free(my_data);
+        if (my_data)
+            free(my_data);
         if (snd_card_name)
             free(snd_card_name);
         if (snd_card_name_t)
             free(snd_card_name_t);
+        mixer_close(adev->mixer);
         return NULL;
     }
 
@@ -1891,6 +1896,7 @@ int platform_get_default_app_type(void *platform)
 
 int platform_get_default_app_type_v2(void *platform, usecase_type_t  type)
 {
+    ALOGV("%s: Platform: %p, type: %d", __func__, platform, type);
     if(type == PCM_CAPTURE)
         return DEFAULT_APP_TYPE_TX_PATH;
     else
@@ -2035,9 +2041,10 @@ int native_audio_set_params(struct platform_data *platform,
                     (usecase->stream.out->devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                     usecase->stream.out->devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) &&
                     OUTPUT_SAMPLING_RATE_44100 == usecase->stream.out->sample_rate) {
-                         ALOGD("%s:napb: triggering dynamic device switch for usecase(%d: %s)"
-                               " stream(%p), device(%d)", __func__, usecase->id,
-                               use_case_table[usecase->id], usecase->stream,
+                         ALOGD("%s:napb: triggering dynamic device switch for usecase %d, %s"
+                               " stream %p, device (%u)", __func__, usecase->id,
+                               use_case_table[usecase->id],
+                               (void*) usecase->stream.out,
                                usecase->stream.out->devices);
                          select_devices(platform->adev, usecase->id);
                  }
@@ -2679,11 +2686,16 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
             if (channel_count == 2) {
                 snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_STEREO;
-            } else if (adev->active_input->enable_ns)
-                snd_device = SND_DEVICE_IN_VOICE_REC_MIC_NS;
-            else if (my_data->fluence_type != FLUENCE_NONE &&
+            } else if (my_data->fluence_type != FLUENCE_NONE &&
                      my_data->fluence_in_voice_rec) {
-                snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
+                if (my_data->fluence_type & FLUENCE_QUAD_MIC) {
+                    snd_device = SND_DEVICE_IN_HANDSET_QMIC;
+                } else {
+                    snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
+                }
+                platform_set_echo_reference(adev->platform, true, out_device);
+            } else if (adev->active_input->enable_ns) {
+                snd_device = SND_DEVICE_IN_VOICE_REC_MIC_NS;
             } else {
                 snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
             }
@@ -3540,7 +3552,7 @@ void platform_get_parameters(void *platform,
 
             //check if unsupported mime type or not
             if(decoder_mime_type) {
-                int i = 0;
+                unsigned int i = 0;
                 for (i = 0; i < sizeof(dsp_only_decoders_mime)/sizeof(dsp_only_decoders_mime[0]); i++) {
                     if (!strncmp(decoder_mime_type, dsp_only_decoders_mime[i],
                     strlen(dsp_only_decoders_mime[i]))) {
@@ -3995,7 +4007,7 @@ done:
 
 void platform_get_device_to_be_id_map(int **device_to_be_id, int *length)
 {
-     *device_to_be_id = msm_device_to_be_id;
+     *device_to_be_id = (int*) msm_device_to_be_id;
      *length = msm_be_id_array_len;
 }
 int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask, int snd_id)

@@ -210,15 +210,19 @@ struct stream_in *audio_extn_ssr_get_stream();
 #endif
 
 #ifndef HW_VARIANTS_ENABLED
-#define hw_info_init(snd_card_name)                  (0)
-#define hw_info_deinit(hw_info)                      (0)
+#define hw_info_init(snd_card_name)                      (0)
+#define hw_info_deinit(hw_info)                          (0)
 #define hw_info_append_hw_type(hw_info,\
-        snd_device, device_name)                     (0)
+        snd_device, device_name)                         (0)
+#define hw_info_enable_wsa_combo_usecase_support(hw_info)   (0)
+
 #else
 void *hw_info_init(const char *snd_card_name);
 void hw_info_deinit(void *hw_info);
 void hw_info_append_hw_type(void *hw_info, snd_device_t snd_device,
                              char *device_name);
+void hw_info_enable_wsa_combo_usecase_support(void *hw_info);
+
 #endif
 
 #ifndef AUDIO_LISTEN_ENABLED
@@ -294,6 +298,8 @@ int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,
 #define audio_extn_spkr_prot_stop_processing(snd_device)     (0)
 #define audio_extn_spkr_prot_is_enabled() (false)
 #define audio_extn_spkr_prot_set_parameters(parms, value, len)   (0)
+#define audio_extn_fbsp_set_parameters(parms)   (0)
+#define audio_extn_fbsp_get_parameters(query, reply)   (0)
 #else
 void audio_extn_spkr_prot_init(void *adev);
 int audio_extn_spkr_prot_start_processing(snd_device_t snd_device);
@@ -302,6 +308,9 @@ bool audio_extn_spkr_prot_is_enabled();
 void audio_extn_spkr_prot_calib_cancel(void *adev);
 void audio_extn_spkr_prot_set_parameters(struct str_parms *parms,
                                          char *value, int len);
+int audio_extn_fbsp_set_parameters(struct str_parms *parms);
+int audio_extn_fbsp_get_parameters(struct str_parms *query,
+                                   struct str_parms *reply);
 #endif
 
 #ifndef COMPRESS_CAPTURE_ENABLED

@@ -1303,7 +1303,7 @@ static void set_platform_defaults()
     backend_table[SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = strdup("vbat-voice-speaker");
 
     /*remove ALAC & APE from DSP decoder list based on software decoder availability*/
-    for (count = 0; count < sizeof(dsp_only_decoders_mime)/sizeof(dsp_only_decoders_mime[0]);
+    for (count = 0; count < (int32_t) (sizeof(dsp_only_decoders_mime)/sizeof(dsp_only_decoders_mime[0]));
             count++) {
 
         if (!strncmp(MEDIA_MIMETYPE_AUDIO_ALAC, dsp_only_decoders_mime[count],
@@ -1311,14 +1311,14 @@ static void set_platform_defaults()
 
             if(property_get_bool("use.qti.sw.alac.decoder", false)) {
                 ALOGD("Alac software decoder is available...removing alac from DSP decoder list");
-                strncpy(dsp_only_decoders_mime[count],"none",5);
+                strlcpy(dsp_only_decoders_mime[count],"none",5);
             }
         } else if (!strncmp(MEDIA_MIMETYPE_AUDIO_APE, dsp_only_decoders_mime[count],
              strlen(dsp_only_decoders_mime[count]))) {
 
             if(property_get_bool("use.qti.sw.ape.decoder", false)) {
                 ALOGD("APE software decoder is available...removing ape from DSP decoder list");
-                strncpy(dsp_only_decoders_mime[count],"none",5);
+                strlcpy(dsp_only_decoders_mime[count],"none",5);
            }
         }
     }
@@ -1445,7 +1445,7 @@ static void send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibra
                               sizeof(struct param_data), &calib);
         if (ret < 0) {
             ALOGE("%s get_calibration failed type=%s calib.size=%d\n"
-                , __func__, cal_name_info[type], codec_buffer.size);
+                , __func__, cal_name_info[type], calib.buff_size);
             free(calib.buff);
             continue;
         }
@@ -1564,7 +1564,8 @@ int platform_acdb_init(void *platform)
 #define TZ_TYPE "/sys/class/thermal/thermal_zone%d/type"
 #define TZ_WSA "/sys/class/thermal/thermal_zone%d/temp"
 
-static bool is_wsa_found(int *wsaCount)
+static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
+                                   bool *is_wsa_combo_supported)
 {
     DIR *tdir = NULL;
     struct dirent *tdirent = NULL;
@@ -1614,6 +1615,19 @@ static bool is_wsa_found(int *wsaCount)
          ALOGD("Found %d WSA present on the platform", wsa_count);
          found = true;
          *wsaCount = wsa_count;
+
+        /* update wsa combo supported flag based on sound card name */
+        /* wsa combo flag needs to be set to true only for hardware
+           combinations which has support for both wsa and non-wsa speaker */
+        *is_wsa_combo_supported = false;
+        if(snd_card_name) {
+            if ((!strncmp(snd_card_name, "msm8953-snd-card-mtp",
+                    sizeof("msm8953-snd-card-mtp")) ||
+                (!strncmp(snd_card_name, "msm8952-skum-snd-card",
+                    sizeof("msm8952-skum-snd-card"))))) {
+                *is_wsa_combo_supported = true;
+            }
+        }
     }
     closedir(tdir);
     chdir(cwd); /* Restore current working dir */
@@ -1634,6 +1648,7 @@ void *platform_init(struct audio_device *adev)
     struct mixer_ctl *ctl = NULL;
     int idx;
     int wsaCount =0;
+    bool is_wsa_combo_supported = false;
 
     my_data = calloc(1, sizeof(struct platform_data));
 
@@ -1749,14 +1764,19 @@ void *platform_init(struct audio_device *adev)
         }
     }
 
-    if (is_wsa_found(&wsaCount)) {
+    if (check_and_get_wsa_info((char *)snd_card_name, &wsaCount, &is_wsa_combo_supported)) {
         /*Set ACDB ID of Stereo speaker if two WSAs are present*/
         /*Default ACDB ID for wsa speaker is that for mono*/
         if (wsaCount == 2) {
             platform_set_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_WSA, 15);
             platform_set_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_VBAT, 15);
         }
+
         my_data->is_wsa_speaker = true;
+
+        if (is_wsa_combo_supported)
+            hw_info_enable_wsa_combo_usecase_support(my_data->hw_info);
+
     }
 
     property_get("persist.audio.FFSP.enable", ffspEnable, "");
@@ -2287,10 +2307,13 @@ void native_audio_get_params(struct str_parms *query,
 int native_audio_set_params(struct platform_data *platform,
                             struct str_parms *parms, char *value, int len)
 {
-    int ret = 0;
+    int ret = -1;
     struct audio_usecase *usecase;
     struct listnode *node;
     int mode = NATIVE_AUDIO_MODE_INVALID;
+
+    if (!value)
+        return ret;
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_NATIVE_AUDIO_MODE,
                              value, len);
@@ -2340,7 +2363,7 @@ int native_audio_set_params(struct platform_data *platform,
                     OUTPUT_SAMPLING_RATE_44100 == usecase->stream.out->sample_rate) {
                          ALOGD("%s:napb: triggering dynamic device switch for usecase(%d: %s)"
                                " stream(%p), device(%d)", __func__, usecase->id,
-                               use_case_table[usecase->id], usecase->stream,
+                               use_case_table[usecase->id], (void*) usecase->stream.out,
                                usecase->stream.out->devices);
                          select_devices(platform->adev, usecase->id);
                  }
@@ -3448,7 +3471,7 @@ static int parse_audiocal_cfg(struct str_parms *parms, acdb_audio_cal_cfg_t *cal
 
 static void set_audiocal(void *platform, struct str_parms *parms, char *value, int len) {
     struct platform_data *my_data = (struct platform_data *)platform;
-    struct stream_out out={0};
+    struct stream_out out;
     acdb_audio_cal_cfg_t cal={0};
     uint8_t *dptr = NULL;
     int32_t dlen;
@@ -3689,7 +3712,7 @@ int platform_update_lch(void *platform, struct voice_session *session,
 
 static void get_audiocal(void *platform, void *keys, void *pReply) {
     struct platform_data *my_data = (struct platform_data *)platform;
-    struct stream_out out={0};
+    struct stream_out out;
     struct str_parms *query = (struct str_parms *)keys;
     struct str_parms *reply=(struct str_parms *)pReply;
     acdb_audio_cal_cfg_t cal={0};
@@ -3838,7 +3861,7 @@ void platform_get_parameters(void *platform,
 
             //check if unsupported mime type or not
             if(decoder_mime_type) {
-                int i = 0;
+                unsigned int i = 0;
                 for (i = 0; i < sizeof(dsp_only_decoders_mime)/sizeof(dsp_only_decoders_mime[0]); i++) {
                     if (!strncmp(decoder_mime_type, dsp_only_decoders_mime[i],
                     strlen(dsp_only_decoders_mime[i]))) {
@@ -4420,7 +4443,7 @@ done:
 
 void platform_get_device_to_be_id_map(int **device_to_be_id, int *length)
 {
-     *device_to_be_id = msm_device_to_be_id;
+     *device_to_be_id = (int*) msm_device_to_be_id;
      *length = msm_be_id_array_len;
 }
 int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask, int snd_id)
@@ -5000,7 +5023,7 @@ done:
  * corresponding entry in audio_platform_info.xml file.
  */
 struct speaker_device_to_tz_names speaker_device_tz_names = {
-    {SND_DEVICE_OUT_SPEAKER, "", ""},
+    SND_DEVICE_OUT_SPEAKER, "", ""
 };
 
 const char *platform_get_spkr_1_tz_name(snd_device_t snd_device)
@@ -5031,7 +5054,7 @@ int platform_set_spkr_device_tz_names(snd_device_t index,
         goto done;
     }
     if (index != speaker_device_tz_names.snd_device) {
-        ALOGE("%s: not matching speaker device\n");
+        ALOGE("%s: not matching speaker device\n", __func__);
         ret = -EINVAL;
         goto done;
     }
@@ -5052,7 +5075,7 @@ done:
 int platform_spkr_prot_is_wsa_analog_mode(void *adev)
 {
     struct audio_device *adev_h = adev;
-    char *snd_card_name;
+    const char *snd_card_name;
 
     /*
      * wsa analog mode is decided based on the sound card name

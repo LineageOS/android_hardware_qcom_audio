@@ -32,7 +32,7 @@ ifneq ($(filter msm8996,$(TARGET_BOARD_PLATFORM)),)
 endif
 endif
 
-ifneq ($(filter msm8916 msm8909 msm8952 msm8937 thorium titanium msmgold,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8916 msm8909 msm8952 msm8937 thorium msm8953 msmgold,$(TARGET_BOARD_PLATFORM)),)
   AUDIO_PLATFORM = msm8916
   MULTIPLE_HW_VARIANTS_ENABLED := true
   LOCAL_CFLAGS := -DPLATFORM_MSM8916
@@ -281,6 +281,8 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PM_SUPPORT)),true)
     LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/libperipheralclient/inc
     LOCAL_SHARED_LIBRARIES += libperipheral_client
 endif
+
+#LOCAL_CFLAGS += -Wall -Werror
 
 LOCAL_COPY_HEADERS_TO   := mm-audio
 LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
