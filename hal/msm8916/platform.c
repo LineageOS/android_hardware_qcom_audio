@@ -103,6 +103,7 @@
 #define MAX_SAD_BLOCKS      10
 #define SAD_BLOCK_SIZE      3
 #define MAX_CVD_VERSION_STRING_SIZE    100
+#define MAX_SND_CARD_STRING_SIZE    100
 
 /* EDID format ID for LPCM audio */
 #define EDID_FORMAT_LPCM    1
@@ -129,6 +130,8 @@
 #define AUDIO_PARAMETER_KEY_AUD_CALDATA   "cal_data"
 #define AUDIO_PARAMETER_KEY_AUD_CALRESULT "cal_result"
 
+/* Reload ACDB files from specified path */
+#define AUDIO_PARAMETER_KEY_RELOAD_ACDB "reload_acdb"
 
 /* Query external audio device connection status */
 #define AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE "ext_audio_device"
@@ -195,6 +198,7 @@ typedef int (*acdb_set_audio_cal_t) (void *, void *, uint32_t);
 typedef int (*acdb_get_audio_cal_t) (void *, void *, uint32_t*);
 typedef int (*acdb_send_common_top_t) (void);
 typedef int (*acdb_set_codec_data_t) (void *, char *);
+typedef int (*acdb_reload_t) (char *, char *, char *, int);
 
 typedef struct codec_backend_cfg {
     uint32_t sample_rate;
@@ -239,6 +243,7 @@ struct platform_data {
     acdb_get_default_app_type_t acdb_get_default_app_type;
     acdb_send_common_top_t     acdb_send_common_top;
     acdb_set_codec_data_t      acdb_set_codec_data;
+    acdb_reload_t              acdb_reload;
 #ifdef RECORD_PLAY_CONCURRENCY
     bool rec_play_conc_set;
 #endif
@@ -250,6 +255,9 @@ struct platform_data {
     char ec_ref_mixer_path[64];
     char codec_version[CODEC_VERSION_MAX_LENGTH];
     int hw_dep_fd;
+    char cvd_version[MAX_CVD_VERSION_STRING_SIZE];
+    char snd_card_name[MAX_SND_CARD_STRING_SIZE];
+    int metainfo_key;
 };
 
 static bool is_external_codec = false;
@@ -1416,6 +1424,13 @@ int platform_acdb_init(void *platform)
 
     result = my_data->acdb_init(acdb_snd_card_name, cvd_version, key);
 
+    /* Save these variables in platform_data. These will be used
+       while reloading ACDB files during run time. */
+    strlcpy(my_data->cvd_version, cvd_version, MAX_CVD_VERSION_STRING_SIZE);
+    strlcpy(my_data->snd_card_name, acdb_snd_card_name,
+                                               MAX_SND_CARD_STRING_SIZE);
+    my_data->metainfo_key = key;
+
     if (cvd_version)
         free(cvd_version);
     if (!result) {
@@ -1737,6 +1752,13 @@ void *platform_init(struct audio_device *adev)
                                                     "acdb_loader_init_v2");
         if (my_data->acdb_init == NULL) {
             ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__, dlerror());
+            goto acdb_init_fail;
+        }
+
+        my_data->acdb_reload = (acdb_reload_t)dlsym(my_data->acdb_handle,
+                                                    "acdb_loader_reload_acdb_files");
+        if (my_data->acdb_reload == NULL) {
+            ALOGE("%s: dlsym error %s for acdb_loader_reload_acdb_files", __func__, dlerror());
             goto acdb_init_fail;
         }
         platform_acdb_init(my_data);
@@ -3408,6 +3430,16 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
                 my_data->voice_feature_set = 0;
             }
         }
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_RELOAD_ACDB,
+                            value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_RELOAD_ACDB);
+
+        my_data->acdb_reload(value, my_data->snd_card_name,
+                              my_data->cvd_version, my_data->metainfo_key);
+
     }
 
 #ifdef RECORD_PLAY_CONCURRENCY
