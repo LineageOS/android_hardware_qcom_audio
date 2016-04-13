@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 #define LOG_TAG "soundtrigger"
-/* #define LOG_NDEBUG 0 */
+/*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
 
 #include <errno.h>
@@ -134,15 +134,17 @@ int audio_extn_sound_trigger_read(struct stream_in *in, void *buffer,
     if (in->standby)
         in->standby = false;
 
+    ALOGD("audio_extn_sound_trigger_read");
+
     pthread_mutex_lock(&st_dev->lock);
     st_info = get_sound_trigger_info(in->capture_handle);
-    pthread_mutex_unlock(&st_dev->lock);
     if (st_info) {
         event.u.aud_info.ses_info = &st_info->st_ses;
         event.u.aud_info.buf = buffer;
         event.u.aud_info.num_bytes = bytes;
         ret = st_dev->st_callback(AUDIO_EVENT_READ_SAMPLES, &event);
     }
+    pthread_mutex_unlock(&st_dev->lock);
 
 exit:
     if (ret) {
@@ -150,7 +152,7 @@ exit:
             in->is_st_session_active = false;
         memset(buffer, 0, bytes);
         ALOGV("%s: read failed status %d - sleep", __func__, ret);
-        usleep((bytes * 1000000) / (audio_stream_in_frame_size((struct audio_stream_in *)in) *
+        usleep(((int64_t)bytes * 1000000) / (audio_stream_in_frame_size((struct audio_stream_in *)in) *
                                    in->config.rate));
     }
     return ret;
@@ -165,15 +167,17 @@ void audio_extn_sound_trigger_stop_lab(struct stream_in *in)
     if (!st_dev || !in || !in->is_st_session_active)
        return;
 
+    ALOGD("audio_extn_sound_trigger_stop_lab");
+
     pthread_mutex_lock(&st_dev->lock);
     st_ses_info = get_sound_trigger_info(in->capture_handle);
-    pthread_mutex_unlock(&st_dev->lock);
     if (st_ses_info) {
         event.u.ses_info = st_ses_info->st_ses;
         ALOGV("%s: AUDIO_EVENT_STOP_LAB pcm %p", __func__, st_ses_info->st_ses.pcm);
         st_dev->st_callback(AUDIO_EVENT_STOP_LAB, &event);
         in->is_st_session_active = false;
     }
+    pthread_mutex_unlock(&st_dev->lock);
 }
 void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in)
 {
@@ -227,6 +231,7 @@ void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
     ALOGI("%s: device 0x%x of type %d for Event %d",
         __func__, snd_device, device_type, event);
     if (device_type == PCM_CAPTURE) {
+        pthread_mutex_lock(&st_dev->lock);
         switch(event) {
         case ST_EVENT_SND_DEVICE_FREE:
             st_dev->st_callback(AUDIO_EVENT_CAPTURE_DEVICE_INACTIVE, NULL);
@@ -238,6 +243,7 @@ void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
             ALOGW("%s:invalid event %d for device 0x%x",
                                   __func__, event, snd_device);
         }
+        pthread_mutex_unlock(&st_dev->lock);
     }/*Events for output device, if required can be placed here in else*/
 }
 
@@ -253,6 +259,7 @@ void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
         return;
     }
 
+    pthread_mutex_lock(&st_dev->lock);
     ret = str_parms_get_str(params, "SND_CARD_STATUS", value,
                             sizeof(value));
     if (ret > 0) {
@@ -287,6 +294,7 @@ void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
         event.u.value = val;
         st_dev->st_callback(AUDIO_EVENT_NUM_ST_SESSIONS, &event);
     }
+    pthread_mutex_unlock(&st_dev->lock);
 }
 
 int audio_extn_sound_trigger_init(struct audio_device *adev)
