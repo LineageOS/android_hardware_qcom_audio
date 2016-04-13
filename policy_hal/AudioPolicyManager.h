@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2009 The Android Open Source Project
@@ -140,7 +140,9 @@ private:
                 const audio_offload_info_t *offloadInfo);
         // Used for voip + voice concurrency usecase
         int mPrevPhoneState;
+#ifdef VOICE_CONCURRENCY
         int mvoice_call_state;
+#endif
 #ifdef RECORD_PLAY_CONCURRENCY
         // Used for record + playback concurrency
         bool mIsInputRequestOnProgress;
