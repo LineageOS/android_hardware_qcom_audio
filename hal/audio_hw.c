@@ -1579,11 +1579,24 @@ static int destroy_offload_callback_thread(struct stream_out *out)
     return 0;
 }
 
-static bool allow_hdmi_channel_config(struct audio_device *adev)
+static bool allow_hdmi_channel_config(struct audio_device *adev,
+                                      bool enable_passthru)
 {
     struct listnode *node;
     struct audio_usecase *usecase;
     bool ret = true;
+
+    if (enable_passthru && !audio_extn_passthru_is_enabled()) {
+        ret = false;
+        goto exit;
+    }
+
+    if (audio_extn_passthru_is_active()) {
+        ALOGI("%s: Compress audio passthrough is active,"
+              "no HDMI config change allowed", __func__);
+        ret = false;
+        goto exit;
+    }
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
@@ -1595,54 +1608,80 @@ static bool allow_hdmi_channel_config(struct audio_device *adev)
              * max channels of remaining use cases.
              */
             if (usecase->id == USECASE_VOICE_CALL) {
-                ALOGD("%s: voice call is active, no change in HDMI channels",
+                ALOGV("%s: voice call is active, no change in HDMI channels",
                       __func__);
                 ret = false;
                 break;
             } else if (usecase->id == USECASE_AUDIO_PLAYBACK_MULTI_CH) {
-                ALOGD("%s: multi channel playback is active, "
-                      "no change in HDMI channels", __func__);
-                ret = false;
-                break;
+                if (!enable_passthru) {
+                    ALOGV("%s: multi channel playback is active, "
+                          "no change in HDMI channels", __func__);
+                    ret = false;
+                    break;
+                }
             } else if (is_offload_usecase(usecase->id) &&
                        audio_channel_count_from_out_mask(usecase->stream.out->channel_mask) > 2) {
-                ALOGD("%s:multi-channel(%x) compress offload playback is active"
-                      ", no change in HDMI channels", __func__,
-                      usecase->stream.out->channel_mask);
-                ret = false;
-                break;
+                if (!enable_passthru) {
+                    ALOGD("%s:multi-channel(%x) compress offload playback is active"
+                        ", no change in HDMI channels", __func__,
+                        usecase->stream.out->channel_mask);
+                    ret = false;
+                    break;
+                }
             }
         }
     }
+    ALOGV("allow hdmi config %d", ret);
+exit:
     return ret;
 }
 
-static int check_and_set_hdmi_channels(struct audio_device *adev,
-                                       unsigned int channels)
+static int check_and_set_hdmi_config(struct audio_device *adev,
+                                     uint32_t channels,
+                                     uint32_t sample_rate,
+                                     audio_format_t format,
+                                     bool enable_passthru)
 {
     struct listnode *node;
     struct audio_usecase *usecase;
+    int32_t factor = 1;
+    bool config = false;
 
-    unsigned int supported_channels = platform_edid_get_max_channels(
-                                          adev->platform);
-    ALOGV("supported_channels %d, channels %d", supported_channels, channels);
-    /* Check if change in HDMI channel config is allowed */
-    if (!allow_hdmi_channel_config(adev))
-        return 0;
+    ALOGV("%s channels %d sample_rate %d format:%x enable_passthru:%d",
+         __func__, channels, sample_rate, format, enable_passthru);
 
-    if (channels > supported_channels)
-        channels = supported_channels;
+    if (channels != adev->cur_hdmi_channels) {
+        ALOGV("channel does not match current hdmi channels");
+        config = true;
+    }
 
-    if (channels == adev->cur_hdmi_channels) {
-        ALOGD("%s: Requested channels are same as current channels(%d)",
-               __func__, channels);
+    if (sample_rate != adev->cur_hdmi_sample_rate) {
+        ALOGV("sample rate does not match current hdmi sample rate");
+        config = true;
+    }
+
+    if (format != adev->cur_hdmi_format) {
+        ALOGV("format does not match current hdmi format");
+        config = true;
+    }
+
+    /* TBD - add check for bit width */
+    if (!config) {
+        ALOGV("No need to config hdmi");
         return 0;
     }
 
-    /*TODO: CHECK for passthrough don't set channel map for passthrough*/
-    platform_set_hdmi_channels(adev->platform, channels);
-    platform_set_edid_channels_configuration(adev->platform, channels);
+    if (enable_passthru &&
+        (format == AUDIO_FORMAT_E_AC3)) {
+        ALOGV("factor 4 for E_AC3 passthru");
+        factor = 4;
+    }
+
+    platform_set_hdmi_config(adev->platform, channels, factor * sample_rate,
+                             enable_passthru);
     adev->cur_hdmi_channels = channels;
+    adev->cur_hdmi_format = format;
+    adev->cur_hdmi_sample_rate = sample_rate;
 
     /*
      * Deroute all the playback streams routed to HDMI so that
@@ -1657,6 +1696,10 @@ static int check_and_set_hdmi_channels(struct audio_device *adev,
         }
     }
 
+    bool was_active = audio_extn_keep_alive_is_active();
+    if (was_active)
+        audio_extn_keep_alive_stop();
+
     /*
      * Enable all the streams disabled above. Now the HDMI backend
      * will be activated with new channel configuration
@@ -1669,8 +1712,58 @@ static int check_and_set_hdmi_channels(struct audio_device *adev,
         }
     }
 
+    if (was_active)
+        audio_extn_keep_alive_start();
+
     return 0;
 }
+
+/* called with out lock taken */
+static int check_and_set_hdmi_backend(struct stream_out *out)
+{
+    struct audio_device *adev = out->dev;
+    int ret;
+    bool enable_passthru = false;
+
+    if (!(out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL))
+        return -1;
+
+    ALOGV("%s usecase %s out->format:%x out->bit_width:%d", __func__, use_case_table[out->usecase],out->format,out->bit_width);
+
+    if (is_offload_usecase(out->usecase) &&
+        audio_extn_dolby_is_passthrough_stream(out)) {
+        enable_passthru = true;
+    }
+
+    /* Check if change in HDMI channel config is allowed */
+    if (!allow_hdmi_channel_config(adev, enable_passthru)) {
+        return -EPERM;
+    }
+
+    if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+        uint32_t channels;
+        ALOGV("Offload usecase, enable passthru %d", enable_passthru);
+
+        if (enable_passthru) {
+            audio_extn_passthru_on_start(out);
+            audio_extn_dolby_update_passt_stream_configuration(adev, out);
+        }
+
+        /* For pass through case, the backend should be configured as stereo */
+        channels = enable_passthru ? DEFAULT_HDMI_OUT_CHANNELS :
+                                     out->compr_config.codec->ch_in;
+
+        ret = check_and_set_hdmi_config(adev, channels,
+                                        out->sample_rate, out->format,
+                                        enable_passthru);
+    } else
+        ret = check_and_set_hdmi_config(adev, out->config.channels,
+                                        out->config.rate,
+                                        out->format,
+                                        false);
+    return ret;
+}
+
 
 static int stop_output_stream(struct stream_out *out)
 {
@@ -1688,7 +1781,7 @@ static int stop_output_stream(struct stream_out *out)
     }
 
     if (is_offload_usecase(out->usecase) &&
-        !(audio_extn_dolby_is_passthrough_stream(out->flags))) {
+        !(audio_extn_dolby_is_passthrough_stream(out))) {
         if (adev->visualizer_stop_output != NULL)
             adev->visualizer_stop_output(out->handle, out->pcm_device_id);
 
@@ -1708,17 +1801,20 @@ static int stop_output_stream(struct stream_out *out)
     free(uc_info);
 
     if (is_offload_usecase(out->usecase) &&
-        (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
-        (audio_extn_dolby_is_passthrough_stream(out->flags))) {
+        (audio_extn_dolby_is_passthrough_stream(out))) {
         ALOGV("Disable passthrough , reset mixer to pcm");
         /* NO_PASSTHROUGH */
         out->compr_config.codec->compr_passthr = 0;
-        platform_set_hdmi_config(out);
+
+        /* Must be called after removing the usecase from list */
+        if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
+                check_and_set_hdmi_config(adev, DEFAULT_HDMI_OUT_CHANNELS,
+                                          DEFAULT_HDMI_OUT_SAMPLE_RATE,
+                                          DEFAULT_HDMI_OUT_FORMAT,
+                                          false);
+        audio_extn_passthru_on_stop(out);
         audio_extn_dolby_set_dap_bypass(adev, DAP_STATE_ON);
     }
-    /* Must be called after removing the usecase from list */
-    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
-        check_and_set_hdmi_channels(adev, DEFAULT_HDMI_OUT_CHANNELS);
 
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
@@ -1727,7 +1823,6 @@ static int stop_output_stream(struct stream_out *out)
 int start_output_stream(struct stream_out *out)
 {
     int ret = 0;
-    int sink_channels = 0;
     char prop_value[PROPERTY_VALUE_MAX] = {0};
     struct audio_usecase *uc_info;
     struct audio_device *adev = out->dev;
@@ -1763,37 +1858,18 @@ int start_output_stream(struct stream_out *out)
         goto error_config;
     }
 
+    /* This must be called before adding this usecase to the list */
+    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        /* This call can fail if compress pass thru is already active */
+        check_and_set_hdmi_backend(out);
+    }
+
     uc_info->id = out->usecase;
     uc_info->type = PCM_PLAYBACK;
     uc_info->stream.out = out;
     uc_info->devices = out->devices;
     uc_info->in_snd_device = SND_DEVICE_NONE;
     uc_info->out_snd_device = SND_DEVICE_NONE;
-    /* This must be called before adding this usecase to the list */
-    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-        if (is_offload_usecase(out->usecase)) {
-            if (audio_extn_dolby_is_passthrough_stream(out->flags)) {
-                audio_extn_dolby_update_passt_stream_configuration(adev, out);
-            }
-        }
-        property_get("audio.use.hdmi.sink.cap", prop_value, NULL);
-        if (!strncmp("true", prop_value, 4)) {
-            sink_channels = platform_edid_get_max_channels(out->dev->platform);
-            ALOGD("%s: set HDMI channel count[%d] based on sink capability",
-                   __func__, sink_channels);
-            check_and_set_hdmi_channels(adev, sink_channels);
-        } else {
-            if (is_offload_usecase(out->usecase)) {
-                unsigned int ch_count =  out->compr_config.codec->ch_in;
-                if (audio_extn_dolby_is_passthrough_stream(out->flags))
-                    /* backend channel config for passthrough stream is stereo */
-                    ch_count = 2;
-                check_and_set_hdmi_channels(adev, ch_count);
-            } else
-                check_and_set_hdmi_channels(adev, out->config.channels);
-        }
-        platform_set_hdmi_config(out);
-    }
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
     audio_extn_perf_lock_acquire(&adev->perf_lock_handle, 0,
@@ -1881,7 +1957,7 @@ int start_output_stream(struct stream_out *out)
         if (audio_extn_is_dolby_format(out->format))
             audio_extn_dolby_send_ddp_endp_params(adev);
 #endif
-        if (!(audio_extn_dolby_is_passthrough_stream(out->flags))) {
+        if (!(audio_extn_dolby_is_passthrough_stream(out))) {
             if (adev->visualizer_start_output != NULL)
                 adev->visualizer_start_output(out->handle, out->pcm_device_id);
             if (adev->offload_effects_start_output != NULL)
@@ -2130,7 +2206,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         if ((out->devices == AUDIO_DEVICE_OUT_AUX_DIGITAL ||
                 out->devices == AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET) &&
                 val == AUDIO_DEVICE_NONE) {
-            if (!audio_extn_dolby_is_passthrough_stream(out->flags))
+            if (!audio_extn_dolby_is_passthrough_stream(out))
                 val = AUDIO_DEVICE_OUT_SPEAKER;
         }
 
@@ -2352,7 +2428,7 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
         out->muted = (left == 0.0f);
         return 0;
     } else if (is_offload_usecase(out->usecase)) {
-        if (audio_extn_dolby_is_passthrough_stream(out->flags)) {
+        if (audio_extn_dolby_is_passthrough_stream(out)) {
             /*
              * Set mute or umute on HDMI passthrough stream.
              * Only take left channel into account.
@@ -2673,6 +2749,11 @@ static int out_pause(struct audio_stream_out* stream)
 
             out->offload_state = OFFLOAD_STATE_PAUSED;
 
+            if (audio_extn_passthru_is_active()) {
+                ALOGV("offload use case, pause passthru");
+                audio_extn_passthru_on_pause(out);
+            }
+
             audio_extn_dts_eagle_fade(adev, false, out);
             audio_extn_dts_notify_playback_state(out->usecase, 0,
                                                  out->sample_rate, popcount(out->channel_mask),
@@ -2696,11 +2777,18 @@ static int out_resume(struct audio_stream_out* stream)
             struct audio_device *adev = out->dev;
             int snd_scard_state = get_snd_card_state(adev);
 
-            if (SND_CARD_STATE_ONLINE == snd_scard_state)
+            if (SND_CARD_STATE_ONLINE == snd_scard_state) {
+                if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+                    pthread_mutex_lock(&out->dev->lock);
+                    ALOGV("offload resume, check and set hdmi backend again");
+                    check_and_set_hdmi_backend(out);
+                    pthread_mutex_unlock(&out->dev->lock);
+                }
                 status = compress_resume(out->compr);
-
-            out->offload_state = OFFLOAD_STATE_PLAYING;
-
+            }
+            if (!status) {
+                out->offload_state = OFFLOAD_STATE_PLAYING;
+            }
             audio_extn_dts_eagle_fade(adev, true, out);
             audio_extn_dts_notify_playback_state(out->usecase, 0, out->sample_rate,
                                                      popcount(out->channel_mask), 1);
@@ -3235,7 +3323,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL &&
                     config->format == 0 && config->sample_rate == 0 &&
                     config->channel_mask == 0) {
-                ALOGI("%s dummy open to query sink cap",__func__);
+                ALOGI("%s dummy open to query sink capability",__func__);
                 out->usecase = USECASE_AUDIO_PLAYBACK_OFFLOAD;
             } else {
                 ALOGE("%s, Max allowed OFFLOAD usecase reached ... ", __func__);
@@ -3267,7 +3355,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
              ((config->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM)) {
             out->compr_config.fragment_size =
                platform_get_pcm_offload_buffer_size(&config->offload_info);
-        } else if (audio_extn_dolby_is_passthrough_stream(out->flags)) {
+        } else if (audio_extn_dolby_is_passthrough_stream(out)) {
             out->compr_config.fragment_size =
                audio_extn_dolby_get_passt_buffer_size(&config->offload_info);
         } else {
@@ -3329,7 +3417,14 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                 __func__, config->offload_info.version,
                 config->offload_info.bit_rate);
         //Decide if we need to use gapless mode by default
-        check_and_set_gapless_mode(adev);
+        if (!audio_extn_dolby_is_passthrough_stream(out)) {
+            ALOGV("%s: don't enable gapless for passthrough", __func__);
+            check_and_set_gapless_mode(adev);
+        }
+
+        if (audio_extn_dolby_is_passthrough_stream(out)) {
+            out->flags |= AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH;
+        }
     } else if (out->flags & AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
         ret = voice_extn_check_and_set_incall_music_usecase(adev, out);
         if (ret != 0) {
@@ -3381,8 +3476,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->sample_rate = out->config.rate;
     }
 
-    ALOGV("%s devices %d,flags %x, format %x, out->sample_rate %d, out->bit_width %d",
-           __func__, devices, flags, format, out->sample_rate, out->bit_width);
+    ALOGV("%s devices %d,flags %x, format %x, out->sample_rate %d, out->bit_width %d out->flags:%x, flags:%x",
+           __func__, devices, flags, format, out->sample_rate, out->bit_width, out->flags, flags);
     /* TODO remove this hardcoding and check why width is zero*/
     if (out->bit_width == 0)
         out->bit_width = 16;

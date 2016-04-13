@@ -71,6 +71,8 @@
 #define MAX_SUPPORTED_FORMATS 15
 #define MAX_SUPPORTED_SAMPLE_RATES 7
 #define DEFAULT_HDMI_OUT_CHANNELS   2
+#define DEFAULT_HDMI_OUT_SAMPLE_RATE 48000
+#define DEFAULT_HDMI_OUT_FORMAT AUDIO_FORMAT_PCM_16_BIT
 
 #define SND_CARD_STATE_OFFLINE 0
 #define SND_CARD_STATE_ONLINE 1
@@ -323,6 +325,9 @@ struct audio_device {
     bool speaker_lr_swap;
     struct voice voice;
     unsigned int cur_hdmi_channels;
+    audio_format_t cur_hdmi_format;
+    unsigned int cur_hdmi_sample_rate;
+    unsigned int cur_hdmi_bit_width;
     unsigned int cur_wfd_channels;
     bool bt_wb_speech_enabled;
     bool allow_afe_proxy_usage;

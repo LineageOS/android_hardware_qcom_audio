@@ -649,6 +649,27 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
          ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
              __func__, usecase->stream.out->app_type_cfg.app_type, acdb_dev_id, sample_rate);
 
+        if ((24 == usecase->stream.out->bit_width) &&
+            (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+            usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        } else if ((snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
+            usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
+            (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
+            usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        }
+        sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
+
+        app_type_cfg[len++] = usecase->stream.out->app_type_cfg.app_type;
+        app_type_cfg[len++] = acdb_dev_id;
+        if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
+            (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC))
+            && audio_extn_dolby_is_passthrough_stream(usecase->stream.out)) {
+            app_type_cfg[len++] = sample_rate * 4;
+        } else {
+            app_type_cfg[len++] = sample_rate;
+        }
+        ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
+              __func__, usecase->stream.out->app_type_cfg.app_type, acdb_dev_id, sample_rate);
     } else if (usecase->type == PCM_CAPTURE) {
          app_type_cfg[len++] = platform_get_default_app_type_v2(adev->platform, usecase->type);
          app_type_cfg[len++] = acdb_dev_id;
@@ -984,7 +1005,7 @@ void audio_utils_set_hdmi_channel_status(struct stream_out *out, char * buffer, 
     if (audio_extn_is_dolby_format(out->format) &&
         /*TODO:Extend code to support DTS passthrough*/
         /*set compressed channel status bits*/
-        audio_extn_dolby_is_passthrough_stream(out->flags)){
+        audio_extn_dolby_is_passthrough_stream(out)){
         get_compressed_channel_status(buffer, bytes, channel_status, AUDIO_PARSER_CODEC_AC3);
     } else
 #endif

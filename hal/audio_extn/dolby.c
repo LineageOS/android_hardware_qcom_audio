@@ -478,10 +478,35 @@ void audio_extn_dolby_update_passt_stream_configuration(
     }
 }
 
-bool audio_extn_dolby_is_passthrough_stream(int flags) {
+bool audio_extn_dolby_is_passthrough_stream(struct stream_out *out) {
 
-    if (flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)
-        return true;
+    //check passthrough system property
+    if (!property_get_bool("audio.offload.passthrough", false)) {
+        return false;
+    }
+
+    //check supported device, currently only on HDMI.
+    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        //passthrough flag
+        if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)
+            return true;
+        //direct flag, check supported formats.
+        if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT) {
+            if (audio_extn_passthru_is_supported_format(out->format)) {
+                if (platform_is_edid_supported_format(out->dev->platform,
+                        out->format)) {
+                    return true;
+                } else if (audio_extn_is_dolby_format(out->format) &&
+                            platform_is_edid_supported_format(out->dev->platform,
+                                AUDIO_FORMAT_AC3)){
+                    //return true for EAC3/EAC3_JOC formats
+                    //if sink supports only AC3
+                    return true;
+                }
+            }
+        }
+    }
+
     return false;
 }
 
