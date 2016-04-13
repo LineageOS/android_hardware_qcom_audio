@@ -63,12 +63,11 @@ public:
                                          audio_io_handle_t *input,
                                          audio_session_t session,
                                          uid_t uid,
-                                         uint32_t samplingRate,
-                                         audio_format_t format,
-                                         audio_channel_mask_t channelMask,
+                                         const audio_config_base_t *config,
                                          audio_input_flags_t flags,
                                          audio_port_handle_t selectedDeviceId,
-                                         input_type_t *inputType);
+                                         input_type_t *inputType,
+                                         audio_port_handle_t *portId);
         // indicates to the audio policy manager that the input starts being used.
         virtual status_t startInput(audio_io_handle_t input,
                                     audio_session_t session);
@@ -141,12 +140,10 @@ private:
                 audio_session_t session,
                 audio_stream_type_t *stream,
                 uid_t uid,
-                uint32_t samplingRate,
-                audio_format_t format,
-                audio_channel_mask_t channelMask,
+                const audio_config_t *config,
                 audio_output_flags_t flags,
                 audio_port_handle_t selectedDeviceId,
-                const audio_offload_info_t *offloadInfo);
+                audio_port_handle_t *portId);
         // Used for voip + voice concurrency usecase
         int mPrevPhoneState;
 #ifdef VOICE_CONCURRENCY
