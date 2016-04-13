@@ -2158,20 +2158,24 @@ static int add_remove_audio_effect(const struct audio_stream *stream,
     lock_input_stream(in);
     pthread_mutex_lock(&in->dev->lock);
     if ((in->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
+            in->source == AUDIO_SOURCE_VOICE_RECOGNITION ||
             adev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
             in->enable_aec != enable &&
             (memcmp(&desc.type, FX_IID_AEC, sizeof(effect_uuid_t)) == 0)) {
         in->enable_aec = enable;
         if (!enable)
             platform_set_echo_reference(in->dev, enable, AUDIO_DEVICE_NONE);
-        adev->enable_voicerx = enable;
-        struct audio_usecase *usecase;
-        struct listnode *node;
-        list_for_each(node, &adev->usecase_list) {
-            usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase->type == PCM_PLAYBACK) {
-                select_devices(adev, usecase->id);
-            break;
+        if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
+            adev->mode == AUDIO_MODE_IN_COMMUNICATION) {
+            adev->enable_voicerx = enable;
+            struct audio_usecase *usecase;
+            struct listnode *node;
+            list_for_each(node, &adev->usecase_list) {
+                usecase = node_to_item(node, struct audio_usecase, list);
+                if (usecase->type == PCM_PLAYBACK) {
+                    select_devices(adev, usecase->id);
+                    break;
+                }
             }
         }
         if (!in->standby)
