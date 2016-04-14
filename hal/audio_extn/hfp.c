@@ -133,7 +133,7 @@ static int32_t hfp_set_volume(struct audio_device *adev, float value)
 static int32_t start_hfp(struct audio_device *adev,
                          struct str_parms *parms __unused)
 {
-    int32_t i, ret = 0;
+    int32_t ret = 0;
     struct audio_usecase *uc_info;
     int32_t pcm_dev_rx_id, pcm_dev_tx_id, pcm_dev_asm_rx_id, pcm_dev_asm_tx_id;
 
@@ -243,7 +243,7 @@ exit:
 
 static int32_t stop_hfp(struct audio_device *adev)
 {
-    int32_t i, ret = 0;
+    int32_t ret = 0;
     struct audio_usecase *uc_info;
 
     ALOGD("%s: enter", __func__);

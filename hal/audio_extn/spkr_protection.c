@@ -242,7 +242,6 @@ int get_tzn(const char *sensor_name)
 
 static void spkr_prot_set_spkrstatus(bool enable)
 {
-    struct timespec ts;
     if (enable)
        handle.spkr_in_use = true;
     else {
@@ -255,7 +254,6 @@ void audio_extn_spkr_prot_calib_cancel(void *adev)
 {
     pthread_t threadid;
     struct audio_usecase *uc_info;
-    int count = 0;
     threadid = pthread_self();
     ALOGV("%s: Entry", __func__);
     if (pthread_equal(handle.speaker_prot_threadid, threadid) || !adev) {
@@ -657,7 +655,6 @@ static void* spkr_calibration_thread()
 {
     unsigned long sec = 0;
     int t0;
-    int i = 0;
     int t0_spk_1 = 0;
     int t0_spk_2 = 0;
     bool goahead = false;
@@ -1131,9 +1128,8 @@ static void spkr_calibrate_signal()
 int audio_extn_fbsp_set_parameters(struct str_parms *parms)
 {
     int ret= 0 , err;
-    char *str;
     char *value = NULL;
-    int val, len, i;
+    int len;
     char *test_r = NULL;
     char *cfg_str;
     int wait_time, ftm_time;
@@ -1241,7 +1237,6 @@ int audio_extn_fbsp_get_parameters(struct str_parms *query,
         get_spkr_prot_ftm_param(value);
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_FBSP_GET_FTM_PARAM, value);
     }
-done:
     return err;
 }
 

@@ -391,7 +391,6 @@ void audio_extn_utils_update_streams_output_cfg_list(void *platform,
 void audio_extn_utils_dump_streams_output_cfg_list(
                                        struct listnode *streams_output_cfg_list)
 {
-    int i=0;
     struct listnode *node_i, *node_j;
     struct streams_output_cfg *so_info;
     struct stream_format *sf_info;
@@ -418,7 +417,6 @@ void audio_extn_utils_release_streams_output_cfg_list(
 {
     struct listnode *node_i, *node_j;
     struct streams_output_cfg *so_info;
-    struct stream_format *sf_info;
 
     ALOGV("%s", __func__);
     while (!list_empty(streams_output_cfg_list)) {
@@ -490,10 +488,9 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
                                   audio_channel_mask_t channel_mask,
                                   struct stream_app_type_cfg *app_type_cfg)
 {
-    struct listnode *node_i, *node_j, *node_k;
+    struct listnode *node_i, *node_j;
     struct streams_output_cfg *so_info;
     struct stream_format *sf_info;
-    struct stream_sample_rate *ss_info;
     char value[PROPERTY_VALUE_MAX] = {0};
 
     if ((24 == bit_width) &&
@@ -567,7 +564,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
     char mixer_ctl_name[MAX_LENGTH_MIXER_CONTROL_IN_INT];
     int app_type_cfg[MAX_LENGTH_MIXER_CONTROL_IN_INT], len = 0, rc;
     struct mixer_ctl *ctl;
-    int pcm_device_id, acdb_dev_id, snd_device = usecase->out_snd_device;
+    int pcm_device_id = 0, acdb_dev_id, snd_device = usecase->out_snd_device;
     int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
     char value[PROPERTY_VALUE_MAX] = {0};
 
@@ -855,7 +852,6 @@ int b64encode(uint8_t *inp, int ilen, char* outp)
         default:
             break;
     }
-done:
     outp[k] = '\0';
     return k;
 }
@@ -890,8 +886,6 @@ int audio_extn_utils_get_codec_version(const char *snd_card_name,
 void get_default_compressed_channel_status(
                                   unsigned char *channel_status)
 {
-     int32_t status = 0;
-     unsigned char bit_index;
      memset(channel_status,0,24);
 
      /* block start bit in preamble bit 3 */
@@ -937,7 +931,6 @@ void get_lpcm_channel_status(uint32_t sampleRate,
                                                   unsigned char *channel_status)
 {
      int32_t status = 0;
-     unsigned char bit_index;
      memset(channel_status,0,24);
      /* block start bit in preamble bit 3 */
      channel_status[0] |= PROFESSIONAL;
@@ -989,7 +982,7 @@ void audio_utils_set_hdmi_channel_status(struct stream_out *out, char * buffer, 
     struct snd_aes_iec958 iec958;
     const char *mixer_ctl_name = "IEC958 Playback PCM Stream";
     struct mixer_ctl *ctl;
-    int i=0;
+    ALOGV("%s: buffer %s bytes %zd", __func__, buffer, bytes);
 #ifdef HDMI_PASSTHROUGH_ENABLED
     if (audio_extn_is_dolby_format(out->format) &&
         /*TODO:Extend code to support DTS passthrough*/
