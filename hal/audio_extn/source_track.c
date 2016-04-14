@@ -449,8 +449,8 @@ static void send_soundfocus_sourcetracking_params(struct str_parms *reply,
             if ((i >=4) && (sound_focus_data.start_angle[i] == 0xFFFF))
                 continue;
             if (i)
-                snprintf(value + strlen(value) - 1, MAX_STR_SIZE, ",");
-            snprintf(value + strlen(value) - 1, MAX_STR_SIZE, "%d", sound_focus_data.start_angle[i]);
+                snprintf(value + strlen(value), MAX_STR_SIZE - strlen(value) - 1, ",");
+            snprintf(value + strlen(value), MAX_STR_SIZE - strlen(value) - 1, "%d", sound_focus_data.start_angle[i]);
         }
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_SOUND_FOCUS_START_ANGLES, value);
     }
@@ -461,8 +461,8 @@ static void send_soundfocus_sourcetracking_params(struct str_parms *reply,
             if ((i >=4) && (sound_focus_data.enable[i] == 0xFF))
                 continue;
             if (i)
-                snprintf(value + strlen(value), MAX_STR_SIZE, ",");
-            snprintf(value + strlen(value), MAX_STR_SIZE, "%d", sound_focus_data.enable[i]);
+                snprintf(value + strlen(value), MAX_STR_SIZE - strlen(value) - 1, ",");
+            snprintf(value + strlen(value), MAX_STR_SIZE - strlen(value) - 1, "%d", sound_focus_data.enable[i]);
         }
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_SOUND_FOCUS_ENABLE_SECTORS, value);
     }
@@ -476,8 +476,8 @@ static void send_soundfocus_sourcetracking_params(struct str_parms *reply,
             if ((i >=4) && (source_tracking_data.vad[i] == 0xFF))
                 continue;
             if (i)
-                snprintf(value + strlen(value) - 1, MAX_STR_SIZE, ",");
-            snprintf(value + strlen(value) - 1, MAX_STR_SIZE, "%d", source_tracking_data.vad[i]);
+                snprintf(value + strlen(value), MAX_STR_SIZE - strlen(value) - 1, ",");
+            snprintf(value + strlen(value), MAX_STR_SIZE - strlen(value) - 1, "%d", source_tracking_data.vad[i]);
         }
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_SOURCE_TRACK_VAD, value);
     }
@@ -496,8 +496,8 @@ static void send_soundfocus_sourcetracking_params(struct str_parms *reply,
     if (bitmask & BITMASK_AUDIO_PARAMETER_KEY_SOURCE_TRACK_POLAR_ACTIVITY) {
         for (i = 0; i < 360; i++) {
             if (i)
-                snprintf(value + strlen(value) - 1, MAX_STR_SIZE, ",");
-            snprintf(value + strlen(value) - 1, MAX_STR_SIZE, "%d", source_tracking_data.polar_activity[i]);
+                snprintf(value + strlen(value), MAX_STR_SIZE - strlen(value) - 1, ",");
+            snprintf(value + strlen(value), MAX_STR_SIZE - strlen(value) - 1, "%d", source_tracking_data.polar_activity[i]);
         }
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_SOURCE_TRACK_POLAR_ACTIVITY, value);
     }
