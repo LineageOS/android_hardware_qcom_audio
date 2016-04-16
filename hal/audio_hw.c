@@ -485,6 +485,8 @@ static void check_and_route_capture_usecases(struct audio_device *adev,
     bool switch_device[AUDIO_USECASE_MAX];
     int i, num_uc_to_switch = 0;
 
+    platform_check_and_set_capture_backend_cfg(adev, uc_info, snd_device);
+
     /*
      * This function is to make sure that all the active capture usecases
      * are always routed to the same input sound device.
@@ -1292,7 +1294,7 @@ static int check_input_parameters(uint32_t sample_rate,
                                   audio_format_t format,
                                   int channel_count)
 {
-    if (format != AUDIO_FORMAT_PCM_16_BIT) {
+    if ((format != AUDIO_FORMAT_PCM_16_BIT) && (format != AUDIO_FORMAT_PCM_8_24_BIT)) {
         ALOGE("%s: unsupported AUDIO FORMAT (%d) ", __func__, format);
         return -EINVAL;
     }
@@ -1335,9 +1337,8 @@ static size_t get_input_buffer_size(uint32_t sample_rate,
     size = (sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC) / 1000;
     if (is_low_latency)
         size = configured_low_latency_capture_period_size;
-    /* ToDo: should use frame_size computed based on the format and
-       channel_count here. */
-    size *= sizeof(short) * channel_count;
+
+    size *= channel_count * audio_bytes_per_sample(format);
 
     /* make sure the size is multiple of 32 bytes
      * At 48 kHz mono 16-bit PCM:
@@ -1942,9 +1943,10 @@ static uint32_t in_get_channels(const struct audio_stream *stream)
     return in->channel_mask;
 }
 
-static audio_format_t in_get_format(const struct audio_stream *stream __unused)
+static audio_format_t in_get_format(const struct audio_stream *stream)
 {
-    return AUDIO_FORMAT_PCM_16_BIT;
+    struct stream_in *in = (struct stream_in *)stream;
+    return in->format;
 }
 
 static int in_set_format(struct audio_stream *stream __unused, audio_format_t format __unused)
@@ -2055,6 +2057,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     struct stream_in *in = (struct stream_in *)stream;
     struct audio_device *adev = in->dev;
     int i, ret = -1;
+    int *int_buf_stream = NULL;
 
     lock_input_stream(in);
 
@@ -2084,8 +2087,22 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     if (in->pcm) {
         if (in->usecase == USECASE_AUDIO_RECORD_AFE_PROXY) {
             ret = pcm_mmap_read(in->pcm, buffer, bytes);
-        } else
+        } else {
             ret = pcm_read(in->pcm, buffer, bytes);
+            if (!ret && bytes > 0 && (in->format == AUDIO_FORMAT_PCM_8_24_BIT)) {
+                if (bytes % 4 == 0) {
+                    /* data from DSP comes in 24_8 format, convert it to 8_24 */
+                    int_buf_stream = buffer;
+                    for (size_t itt=0; itt < bytes/4 ; itt++) {
+                        int_buf_stream[itt] >>= 8;
+                    }
+                } else {
+                    ALOGE("%s: !!! something wrong !!! ... data not 32 bit aligned ", __func__);
+                    ret = -EINVAL;
+                    goto exit;
+                }
+            }
+        }
     }
 
     if (adev->adm_abandon_focus)
@@ -2689,7 +2706,18 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->channel_mask = config->channel_mask;
     in->capture_handle = handle;
     in->flags = flags;
+    in->format = config->format;
     // in->frames_read = 0;
+
+    if (in->format == AUDIO_FORMAT_DEFAULT)
+        config->format = AUDIO_FORMAT_PCM_16_BIT;
+
+    if (config->format == AUDIO_FORMAT_PCM_FLOAT ||
+        config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED) {
+        config->format = AUDIO_FORMAT_PCM_8_24_BIT;
+        ret = -EINVAL;
+        goto err_open;
+    }
 
     /* Update config params with the requested sample rate and channels */
     if (in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) {
@@ -2701,8 +2729,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             ret = -EINVAL;
             goto err_open;
         }
-        if (config->format == AUDIO_FORMAT_DEFAULT)
-            config->format = AUDIO_FORMAT_PCM_16_BIT;
+
         if (config->format != AUDIO_FORMAT_PCM_16_BIT) {
             config->format = AUDIO_FORMAT_PCM_16_BIT;
             ret = -EINVAL;
@@ -2721,6 +2748,9 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 #endif
         }
         in->config = pcm_config_audio_capture;
+
+        if (config->format == AUDIO_FORMAT_PCM_8_24_BIT)
+            in->config.format = PCM_FORMAT_S24_LE;
 
         frame_size = audio_stream_in_frame_size(&in->stream);
         buffer_size = get_input_buffer_size(config->sample_rate,
