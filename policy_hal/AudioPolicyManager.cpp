@@ -1719,6 +1719,13 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     }
 
 non_direct_output:
+
+    // A request for HW A/V sync cannot fallback to a mixed output because time
+    // stamps are embedded in audio data
+    if ((flags & AUDIO_OUTPUT_FLAG_HW_AV_SYNC) != 0) {
+        return AUDIO_IO_HANDLE_NONE;
+    }
+
     // ignoring channel mask due to downmix capability in mixer
 
     // open a non direct output
@@ -1934,7 +1941,7 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
         // if input maps to a dynamic policy with an activity listener, notify of state change
         if ((inputDesc->mPolicyMix != NULL)
                 && ((inputDesc->mPolicyMix->mCbFlags & AudioMix::kCbFlagNotifyActivity) != 0)) {
-            mpClientInterface->onDynamicPolicyMixStateUpdate(inputDesc->mPolicyMix->mRegistrationId,
+            mpClientInterface->onDynamicPolicyMixStateUpdate(inputDesc->mPolicyMix->mDeviceAddress,
                     MIX_STATE_MIXING);
         }
 
@@ -1951,7 +1958,7 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
             if (inputDesc->mPolicyMix == NULL) {
                 address = String8("0");
             } else if (inputDesc->mPolicyMix->mMixType == MIX_TYPE_PLAYERS) {
-                address = inputDesc->mPolicyMix->mRegistrationId;
+                address = inputDesc->mPolicyMix->mDeviceAddress;
             }
             if (address != "") {
                 setDeviceConnectionStateInt(AUDIO_DEVICE_OUT_REMOTE_SUBMIX,
