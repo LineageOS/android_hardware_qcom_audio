@@ -2023,11 +2023,11 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
 
     if (!inputDesc->isActive() || mInputRoutes.hasRouteChanged(session)) {
         // if input maps to a dynamic policy with an activity listener, notify of state change
-        /*if ((inputDesc->mPolicyMix != NULL)
+        if ((inputDesc->mPolicyMix != NULL)
                 && ((inputDesc->mPolicyMix->mCbFlags & AudioMix::kCbFlagNotifyActivity) != 0)) {
             mpClientInterface->onDynamicPolicyMixStateUpdate(inputDesc->mPolicyMix->mRegistrationId,
                     MIX_STATE_MIXING);
-        }*/
+        }
 
         if (mInputs.activeInputsCount() == 0) {
             SoundTrigger::setCaptureState(true);
@@ -2041,9 +2041,9 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
             String8 address = String8("");
             if (inputDesc->mPolicyMix == NULL) {
                 address = String8("0");
-            } /*else if (inputDesc->mPolicyMix->mMixType == MIX_TYPE_PLAYERS) {
+            } else if (inputDesc->mPolicyMix->mMixType == MIX_TYPE_PLAYERS) {
                 address = inputDesc->mPolicyMix->mRegistrationId;
-            }*/
+            }
             if (address != "") {
                 setDeviceConnectionStateInt(AUDIO_DEVICE_OUT_REMOTE_SUBMIX,
                         AUDIO_POLICY_DEVICE_STATE_AVAILABLE,
