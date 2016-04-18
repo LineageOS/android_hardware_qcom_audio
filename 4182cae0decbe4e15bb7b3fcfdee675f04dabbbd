@@ -16,6 +16,24 @@
       "revId": "4182cae0decbe4e15bb7b3fcfdee675f04dabbbd",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5faad753_1adc2945",
+        "filename": "msm8909/hal/msm8916/hw_info.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 256,
+      "author": {
+        "id": 10094
+      },
+      "writtenOn": "2016-04-18T14:36:56Z",
+      "side": 1,
+      "message": "err, that won\u0027t work.  Nevermind.",
+      "parentUuid": "5faad753_5ad2a136",
+      "revId": "4182cae0decbe4e15bb7b3fcfdee675f04dabbbd",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
