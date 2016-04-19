@@ -81,7 +81,6 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms);
 void voice_get_parameters(struct audio_device *adev, struct str_parms *query,
                           struct str_parms *reply);
 void voice_init(struct audio_device *adev);
-bool voice_is_in_call(struct audio_device *adev);
 bool voice_is_in_call_rec_stream(struct stream_in *in);
 int voice_set_mic_mute(struct audio_device *dev, bool state);
 bool voice_get_mic_mute(struct audio_device *dev);
@@ -93,4 +92,5 @@ int voice_check_and_set_incall_music_usecase(struct audio_device *adev,
 int voice_check_and_stop_incall_rec_usecase(struct audio_device *adev,
                                             struct stream_in *in);
 void voice_update_devices_for_all_voice_usecases(struct audio_device *adev);
+bool voice_is_call_state_active(struct audio_device *adev);
 #endif //VOICE_H
