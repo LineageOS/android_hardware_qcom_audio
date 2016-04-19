@@ -22,6 +22,7 @@
 #include <tinyalsa/asoundlib.h>
 #include <sound/audio_effects.h>
 #include <audio_effects/effect_equalizer.h>
+#include <inttypes.h>
 
 #include "effect_api.h"
 #include "equalizer.h"
@@ -184,7 +185,7 @@ const char * equalizer_get_preset_name(equalizer_context_t *context __unused,
 
 int equalizer_get_num_presets(equalizer_context_t *context __unused)
 {
-    ALOGV("%s: ctxt %p, presets_num: %d", __func__, context,
+    ALOGV("%s: ctxt %p, presets_num: %zu", __func__, context,
            sizeof(equalizer_preset_names)/sizeof(char *));
     return sizeof(equalizer_preset_names)/sizeof(char *);
 }
@@ -489,6 +490,12 @@ int equalizer_stop(effect_context_t *context, output_context_t *output __unused)
     equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
 
     ALOGV("%s: ctxt %p", __func__, eq_ctxt);
+    if (offload_eq_get_enable_flag(&(eq_ctxt->offload_eq)) &&
+        eq_ctxt->ctl) {
+        struct eq_params eq;
+        eq.enable_flag = false;
+        offload_eq_send_params(eq_ctxt->ctl, &eq, OFFLOAD_SEND_EQ_ENABLE_FLAG);
+    }
     eq_ctxt->ctl = NULL;
     return 0;
 }

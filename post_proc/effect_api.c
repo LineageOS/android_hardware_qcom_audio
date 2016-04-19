@@ -15,7 +15,7 @@
  */
 
 #define LOG_TAG "offload_effect_api"
-#define LOG_NDEBUG 0
+//#define LOG_NDEBUG 0
 //#define VERY_VERY_VERBOSE_LOGGING
 #ifdef VERY_VERY_VERBOSE_LOGGING
 #define ALOGVV ALOGV
@@ -438,7 +438,7 @@ void offload_reverb_set_reflections_level(struct reverb_params *reverb,
 void offload_reverb_set_reflections_delay(struct reverb_params *reverb,
                                           int reflections_delay)
 {
-    ALOGVV("%s: ref delay", __func__, reflections_delay);
+    ALOGVV("%s: ref delay %d", __func__, reflections_delay);
     reverb->reflections_delay = reflections_delay;
 }
 
