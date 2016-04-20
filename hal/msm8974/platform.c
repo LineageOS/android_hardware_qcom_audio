@@ -828,7 +828,7 @@ void platform_set_gsm_mode(void *platform, bool enable)
 }
 
 void platform_set_echo_reference(struct audio_device *adev, bool enable,
-                                 audio_devices_t out_device)
+                                 audio_devices_t out_device __unused)
 {
     struct platform_data *my_data = (struct platform_data *)adev->platform;
 
@@ -1029,8 +1029,8 @@ static bool platform_is_i2s_ext_modem(const char *snd_card_name,
 
 static void set_platform_defaults()
 {
-    int32_t dev, count = 0;
-    char dsp_decoder_property[PROPERTY_VALUE_MAX];
+    int32_t dev;
+    unsigned int count = 0;
     const char *MEDIA_MIMETYPE_AUDIO_ALAC = "audio/alac";
     const char *MEDIA_MIMETYPE_AUDIO_APE = "audio/x-ape";
 
@@ -1299,9 +1299,8 @@ void *platform_init(struct audio_device *adev)
     char baseband[PROPERTY_VALUE_MAX];
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data = NULL;
-    int retry_num = 0, snd_card_num = 0, key = 0;
+    int retry_num = 0, snd_card_num = 0;
     char *snd_card_name = NULL, *snd_card_name_t = NULL;
-    char *cvd_version = NULL;
     char *snd_internal_name = NULL;
     char *tmp = NULL;
     char mixer_xml_file[MIXER_PATH_MAX_LENGTH]= {0};
@@ -2092,7 +2091,6 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_dev_id, acdb_dev_type;
-    struct audio_device *adev = my_data->adev;
     int snd_device = SND_DEVICE_OUT_SPEAKER;
 
     if (usecase->type == PCM_PLAYBACK)
@@ -2920,7 +2918,6 @@ int platform_edid_get_max_channels(void *platform)
     int max_channels = 2;
     int i = 0, ret = 0;
     struct platform_data *my_data = (struct platform_data *)platform;
-    struct audio_device *adev = my_data->adev;
     edid_audio_info *info = NULL;
     ret = platform_get_edid_info(platform);
     info = (edid_audio_info *)my_data->edid_info;
@@ -3027,7 +3024,6 @@ static int update_external_device_status(struct platform_data *my_data,
 static int parse_audiocal_cfg(struct str_parms *parms, acdb_audio_cal_cfg_t *cal)
 {
     int err;
-    unsigned int val;
     char value[64];
     int ret = 0;
 
@@ -3094,7 +3090,7 @@ static int parse_audiocal_cfg(struct str_parms *parms, acdb_audio_cal_cfg_t *cal
 static void set_audiocal(void *platform, struct str_parms *parms, char *value, int len) {
     struct platform_data *my_data = (struct platform_data *)platform;
     struct stream_out out;
-    acdb_audio_cal_cfg_t cal={0};
+    acdb_audio_cal_cfg_t cal;
     uint8_t *dptr = NULL;
     int32_t dlen;
     int err, ret;
@@ -3193,9 +3189,8 @@ static void perf_lock_set_params(struct platform_data *platform,
 int platform_set_parameters(void *platform, struct str_parms *parms)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
-    char *str;
     char *value=NULL;
-    int val, len;
+    int len;
     int ret = 0, err;
     char *kv_pairs = str_parms_to_str(parms);
 
@@ -3403,7 +3398,7 @@ static void get_audiocal(void *platform, void *keys, void *pReply) {
     struct stream_out out;
     struct str_parms *query = (struct str_parms *)keys;
     struct str_parms *reply=(struct str_parms *)pReply;
-    acdb_audio_cal_cfg_t cal={0};
+    acdb_audio_cal_cfg_t cal;
     uint8_t *dptr = NULL;
     char value[512] = {0};
     char *rparms=NULL;
@@ -3455,7 +3450,6 @@ static void get_audiocal(void *platform, void *keys, void *pReply) {
     if (my_data->acdb_get_audio_cal != NULL) {
         ret = my_data->acdb_get_audio_cal((void*)&cal, (void*)dptr, &param_len);
         if (ret == 0) {
-            int dlen;
             if(param_len == 0 || param_len == MAX_SET_CAL_BYTE_SIZE) {
                 ret = -EINVAL;
                 goto done_key_audcal;
@@ -3499,7 +3493,6 @@ void platform_get_parameters(void *platform,
                             struct str_parms *reply)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
-    char *str = NULL;
     char value[512] = {0};
     int ret;
     char *kv_pairs = NULL;
@@ -3566,7 +3559,6 @@ void platform_get_parameters(void *platform,
         str_parms_add_int(reply, AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED, isallowed);
     }
 
-done:
     kv_pairs = str_parms_to_str(reply);
     ALOGV_IF(kv_pairs != NULL, "%s: exit: returns - %s", __func__, kv_pairs);
     free(kv_pairs);
@@ -3818,7 +3810,6 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
 {
     bool backend_change = false;
     struct listnode *node;
-    struct stream_out *out = NULL;
     unsigned int bit_width;
     unsigned int sample_rate;
     int backend_idx = DEFAULT_CODEC_BACKEND;
@@ -3946,7 +3937,6 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
     unsigned int new_bit_width;
     unsigned int new_sample_rate;
     int backend_idx = DEFAULT_CODEC_BACKEND;
-    struct platform_data *my_data = (struct platform_data *)adev->platform;
 
     backend_idx = platform_get_backend_index(snd_device);
 
@@ -4108,10 +4098,7 @@ int platform_get_edid_info(void *platform)
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     char block[MAX_SAD_BLOCKS * SAD_BLOCK_SIZE];
-    char *sad = block;
-    int num_audio_blocks;
-    int channel_count = 2;
-    int i, ret, count;
+    int ret, count;
 
     struct mixer_ctl *ctl;
     char edid_data[MAX_SAD_BLOCKS * SAD_BLOCK_SIZE + 1] = {0};
@@ -4200,7 +4187,6 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
     int ret;
     unsigned int i;
     int set_values[8] = {0};
-    char device_num[13]; // device number up to 2 digit
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     ALOGV("%s channel_count:%d",__func__, ch_count);
@@ -4298,10 +4284,8 @@ void platform_reset_edid_info(void *platform) {
 bool platform_is_edid_supported_format(void *platform, int format)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
-    struct audio_device *adev = my_data->adev;
     edid_audio_info *info = NULL;
-    int num_audio_blocks;
-    int i, ret, count;
+    int i, ret;
     unsigned char format_id = platform_map_to_edid_format(format);
 
     ret = platform_get_edid_info(platform);
@@ -4328,11 +4312,9 @@ bool platform_is_edid_supported_format(void *platform, int format)
 int platform_set_edid_channels_configuration(void *platform, int channels) {
 
     struct platform_data *my_data = (struct platform_data *)platform;
-    struct audio_device *adev = my_data->adev;
     edid_audio_info *info = NULL;
-    int num_audio_blocks;
     int channel_count = 2;
-    int i, ret, count;
+    int i, ret;
     char default_channelMap[MAX_CHANNELS_SUPPORTED] = {0};
 
     ret = platform_get_edid_info(platform);

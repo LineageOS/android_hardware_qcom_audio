@@ -170,7 +170,6 @@ exit:
 
 void audio_extn_sound_trigger_stop_lab(struct stream_in *in)
 {
-    int status = 0;
     struct sound_trigger_info  *st_ses_info = NULL;
     audio_event_info_t event;
 
@@ -341,7 +340,6 @@ int audio_extn_sound_trigger_init(struct audio_device *adev)
 {
     int status = 0;
     char sound_trigger_lib[100];
-    void *lib_handle;
 
     ALOGI("%s: Enter", __func__);
 

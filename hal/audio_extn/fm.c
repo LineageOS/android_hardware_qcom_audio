@@ -114,7 +114,7 @@ static int32_t fm_set_volume(struct audio_device *adev, float value, bool persis
 
 static int32_t fm_stop(struct audio_device *adev)
 {
-    int32_t i, ret = 0;
+    int32_t ret = 0;
     struct audio_usecase *uc_info;
 
     ALOGD("%s: enter", __func__);
@@ -153,7 +153,7 @@ static int32_t fm_stop(struct audio_device *adev)
 
 static int32_t fm_start(struct audio_device *adev)
 {
-    int32_t i, ret = 0;
+    int32_t ret = 0;
     struct audio_usecase *uc_info;
     int32_t pcm_dev_rx_id, pcm_dev_tx_id;
 
