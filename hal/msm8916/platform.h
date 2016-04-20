@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -191,12 +191,7 @@ enum {
 #define HEADPHONE_44_1_BACKEND_PORT     5
 enum {
     DEFAULT_CODEC_BACKEND,
-    SLIMBUS_0_RX = DEFAULT_CODEC_BACKEND,
     HEADPHONE_44_1_BACKEND,
-    SLIMBUS_5_RX = HEADPHONE_44_1_BACKEND,
-    HEADPHONE_BACKEND,
-    SLIMBUS_6_RX = HEADPHONE_BACKEND,
-    HDMI_RX_BACKEND,
     MAX_CODEC_BACKENDS
 };
 #define AUDIO_PARAMETER_KEY_NATIVE_AUDIO "audio.nat.codec.enabled"
