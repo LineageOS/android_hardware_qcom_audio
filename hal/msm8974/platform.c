@@ -1424,10 +1424,8 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
                    devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
             snd_device = SND_DEVICE_OUT_USB_HEADSET;
-#ifdef FM_ENABLED
         } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
             snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
-#endif
         } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
             if (audio_extn_should_use_handset_anc(channel_count))
                 snd_device = SND_DEVICE_OUT_ANC_HANDSET;
@@ -1473,10 +1471,8 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         ALOGD("%s: setting USB hadset channel capability(2) for Proxy", __func__);
         audio_extn_set_afe_proxy_channel_mixer(adev, 2);
         snd_device = SND_DEVICE_OUT_USB_HEADSET;
-#ifdef FM_ENABLED
     } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
         snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
-#endif
     } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
         snd_device = SND_DEVICE_OUT_HANDSET;
 #ifdef AFE_PROXY_ENABLED
@@ -2073,9 +2069,7 @@ bool platform_listen_update_status(snd_device_t snd_device)
 {
     if ((snd_device >= SND_DEVICE_IN_BEGIN) &&
         (snd_device < SND_DEVICE_IN_END) &&
-#ifdef FM_ENABLED
         (snd_device != SND_DEVICE_IN_CAPTURE_FM) &&
-#endif
         (snd_device != SND_DEVICE_IN_CAPTURE_VI_FEEDBACK))
         return true;
     else
