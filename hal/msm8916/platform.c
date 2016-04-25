@@ -1064,6 +1064,27 @@ static void query_platform(const char *snd_card_name,
         msm_device_to_be_id = msm_device_to_be_id_external_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+    } else if (!strncmp(snd_card_name, "msm8917-tmo-snd-card",
+                  sizeof("msm8917-tmo-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_SKU2,
+               MAX_MIXER_XML_PATH);
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+    } else if (!strncmp(snd_card_name, "msm8917-sku5-snd-card",
+                  sizeof("msm8917-sku5-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_SKU2,
+               MAX_MIXER_XML_PATH);
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+    } else if (!strncmp(snd_card_name, "msm8940-sku6-snd-card",
+                  sizeof("msm8940-sku6-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_SKU1,
+               MAX_MIXER_XML_PATH);
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
     } else {
         strlcpy(mixer_xml_path, MIXER_XML_PATH,
                 sizeof(MIXER_XML_PATH));
@@ -3540,6 +3561,9 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     char *kv_pairs = NULL;
 
     kv_pairs = str_parms_to_str(parms);
+    if(!kv_pairs)
+        return ret;
+
     len = strlen(kv_pairs);
     ALOGV("%s: enter: - %s", __func__, kv_pairs);
     free(kv_pairs);
