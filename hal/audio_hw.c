@@ -2706,18 +2706,39 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->channel_mask = config->channel_mask;
     in->capture_handle = handle;
     in->flags = flags;
-    in->format = config->format;
-    // in->frames_read = 0;
 
-    if (in->format == AUDIO_FORMAT_DEFAULT)
+    // restrict 24 bit capture for unprocessed source only
+    // for other sources if 24 bit requested reject 24 and set 16 bit capture only
+    if (config->format == AUDIO_FORMAT_DEFAULT) {
         config->format = AUDIO_FORMAT_PCM_16_BIT;
+    } else if (config->format == AUDIO_FORMAT_PCM_FLOAT ||
+               config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED ||
+               config->format == AUDIO_FORMAT_PCM_8_24_BIT) {
+        bool ret_error = false;
+        /* 24 bit is restricted to UNPROCESSED source only,also format supported
+           from HAL is 8_24
+           *> In case of UNPROCESSED source, for 24 bit, if format requested is other than
+              8_24 return error indicating supported format is 8_24
+           *> In case of any other source requesting 24 bit or float return error
+              indicating format supported is 16 bit only.
 
-    if (config->format == AUDIO_FORMAT_PCM_FLOAT ||
-        config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED) {
-        config->format = AUDIO_FORMAT_PCM_8_24_BIT;
-        ret = -EINVAL;
-        goto err_open;
+           on error flinger will retry with supported format passed
+         */
+        if (source != AUDIO_SOURCE_UNPROCESSED) {
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
+            ret_error = true;
+        } else if (config->format != AUDIO_FORMAT_PCM_8_24_BIT) {
+            config->format = AUDIO_FORMAT_PCM_8_24_BIT;
+            ret_error = true;
+        }
+
+        if (ret_error) {
+            ret = -EINVAL;
+            goto err_open;
+        }
     }
+
+    in->format = config->format;
 
     /* Update config params with the requested sample rate and channels */
     if (in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) {
