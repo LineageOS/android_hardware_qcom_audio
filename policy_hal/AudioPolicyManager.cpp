@@ -460,80 +460,43 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
         return false;
     }
 
-    char propValue[PROPERTY_VALUE_MAX];
-    bool pcmOffload = false;
-#ifdef PCM_OFFLOAD_ENABLED
-    if ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM_OFFLOAD) {
-        bool prop_enabled = false;
-        if ((AUDIO_FORMAT_PCM_16_BIT_OFFLOAD == offloadInfo.format) &&
-               property_get("audio.offload.pcm.16bit.enable", propValue, NULL)) {
-            prop_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
-        }
-
-#ifdef PCM_OFFLOAD_ENABLED_24
-        if ((AUDIO_FORMAT_PCM_24_BIT_OFFLOAD == offloadInfo.format) &&
-               property_get("audio.offload.pcm.24bit.enable", propValue, NULL)) {
-            prop_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
-        }
-#endif
-
-        if (prop_enabled) {
-            ALOGI("PCM offload property is enabled");
-            pcmOffload = true;
-        }
-
-        if (!pcmOffload) {
-            ALOGD("system property not enabled for PCM offload format[%x]",offloadInfo.format);
-            return false;
-        }
+    //check if it's multi-channel AAC (includes sub formats) and FLAC format
+    if ((popcount(offloadInfo.channel_mask) > 2) &&
+        (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC) ||
+        ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_VORBIS))) {
+        ALOGD("offload disabled for multi-channel AAC,FLAC and VORBIS format");
+        return false;
     }
-#endif
-    if (!pcmOffload) {
-
-        bool compressedOffloadDisabled = property_get_bool("audio.offload.compress.disable", false);
-        if (compressedOffloadDisabled) {
-            ALOGI("compressed offload disabled by audio.offload.compress.disable=%d", compressedOffloadDisabled);
-            return false;
-        }
-
-        //check if it's multi-channel AAC (includes sub formats) and FLAC format
-        if ((popcount(offloadInfo.channel_mask) > 2) &&
-           (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC) ||
-            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_VORBIS))) {
-               ALOGD("offload disabled for multi-channel AAC,FLAC and VORBIS format");
-               return false;
-        }
 
 #ifdef AUDIO_EXTN_FORMATS_ENABLED
-            //check if it's multi-channel FLAC/ALAC/WMA format with sample rate > 48k
-        if ((popcount(offloadInfo.channel_mask) > 2) &&
-            (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_FLAC) ||
-            (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_ALAC) && (offloadInfo.sample_rate > 48000)) ||
-            (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA) && (offloadInfo.sample_rate > 48000)) ||
-            (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA_PRO) && (offloadInfo.sample_rate > 48000)) ||
-            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC_ADTS))) {
-                ALOGD("offload disabled for multi-channel FLAC/ALAC/WMA/AAC_ADTS clips with sample rate > 48kHz");
-            return false;
-        }
+    //check if it's multi-channel FLAC/ALAC/WMA format with sample rate > 48k
+    if ((popcount(offloadInfo.channel_mask) > 2) &&
+        (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_FLAC) ||
+        (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_ALAC) && (offloadInfo.sample_rate > 48000)) ||
+        (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA) && (offloadInfo.sample_rate > 48000)) ||
+        (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA_PRO) && (offloadInfo.sample_rate > 48000)) ||
+        ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC_ADTS))) {
+            ALOGD("offload disabled for multi-channel FLAC/ALAC/WMA/AAC_ADTS clips with sample rate > 48kHz");
+        return false;
+    }
 #endif
-        //TODO: enable audio offloading with video when ready
-        const bool allowOffloadWithVideo =
-                property_get_bool("audio.offload.video", false /* default_value */);
-        if (offloadInfo.has_video && !allowOffloadWithVideo) {
-            ALOGV("isOffloadSupported: has_video == true, returning false");
-            return false;
-        }
+    //TODO: enable audio offloading with video when ready
+    const bool allowOffloadWithVideo =
+            property_get_bool("audio.offload.video", false /* default_value */);
+    if (offloadInfo.has_video && !allowOffloadWithVideo) {
+        ALOGV("isOffloadSupported: has_video == true, returning false");
+        return false;
+    }
 
-        const bool allowOffloadStreamingWithVideo = property_get_bool("av.streaming.offload.enable",
-                                                                   false /*default value*/);
-        if(offloadInfo.has_video && offloadInfo.is_streaming && !allowOffloadStreamingWithVideo) {
-            ALOGW("offload disabled by av.streaming.offload.enable = %s ", propValue );
-            return false;
-        }
-
+    const bool allowOffloadStreamingWithVideo = property_get_bool("av.streaming.offload.enable",
+                                                               false /*default value*/);
+    if (offloadInfo.has_video && offloadInfo.is_streaming && !allowOffloadStreamingWithVideo) {
+        ALOGW("offload disabled by av.streaming.offload.enable %d",allowOffloadStreamingWithVideo);
+        return false;
     }
 
     //If duration is less than minimum value defined in property, return false
+    char propValue[PROPERTY_VALUE_MAX];
     if (property_get("audio.offload.min.duration.secs", propValue, NULL)) {
         if (offloadInfo.duration_us < (atoi(propValue) * 1000000 )) {
             ALOGV("Offload denied by duration < audio.offload.min.duration.secs(=%s)", propValue);
@@ -545,18 +508,18 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
         //do not check duration for other audio formats, e.g. dolby AAC/AC3 and amrwb+ formats
         if ((offloadInfo.format == AUDIO_FORMAT_MP3) ||
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC) ||
-            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_VORBIS) ||
-#ifdef AUDIO_EXTN_FORMATS_ENABLED
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_FLAC) ||
-            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA) ||
+            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_VORBIS))
+            return false;
+
+#ifdef AUDIO_EXTN_FORMATS_ENABLED
+        if (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA) ||
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA_PRO) ||
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_ALAC) ||
             ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_APE) ||
-            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC_ADTS) ||
-#endif
-            pcmOffload)
+            ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC_ADTS))
             return false;
-
+#endif
     }
 
     // Do not allow offloading if one non offloadable effect is enabled. This prevents from
@@ -1334,6 +1297,19 @@ bool AudioPolicyManagerCustom::isDirectOutput(audio_io_handle_t output) {
     return false;
 }
 
+bool static isDirectPCMEnabled(int bitWidth)
+{
+    bool directPCMEnabled = false;
+    if (bitWidth == 24 || bitWidth == 32)
+        directPCMEnabled =
+             property_get_bool("audio.offload.pcm.24bit.enable", false);
+    else
+        directPCMEnabled =
+             property_get_bool("audio.offload.pcm.16bit.enable", false);
+
+    return directPCMEnabled;
+}
+
 status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *attr,
                                               audio_io_handle_t *output,
                                               audio_session_t session,
@@ -1349,23 +1325,21 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
     audio_offload_info_t tOffloadInfo = AUDIO_INFO_INITIALIZER;
 
     bool offloadDisabled = property_get_bool("audio.offload.disable", false);
-    bool pcmOffloadEnabled = false;
+    uint32_t bitWidth = (audio_bytes_per_sample(format) * 8);
 
     if (offloadDisabled) {
         ALOGI("offload disabled by audio.offload.disable=%d", offloadDisabled);
     }
 
-    //read track offload property only if the global offload switch is off.
-    if (!offloadDisabled) {
-         pcmOffloadEnabled = property_get_bool("audio.offload.track.enable", false);
-    }
+    if (!offloadDisabled && (offloadInfo == NULL) &&
+        isDirectPCMEnabled(bitWidth) &&
+        (flags == AUDIO_OUTPUT_FLAG_NONE)) {
 
-    if (offloadInfo == NULL && pcmOffloadEnabled) {
         tOffloadInfo.sample_rate  = samplingRate;
         tOffloadInfo.channel_mask = channelMask;
         tOffloadInfo.format = format;
         tOffloadInfo.stream_type = *stream;
-        tOffloadInfo.bit_width = 16;    //hard coded for PCM_16
+        tOffloadInfo.bit_width = bitWidth;
         if (attr != NULL) {
             ALOGV("found attribute .. setting usage %d ", attr->usage);
             tOffloadInfo.usage = attr->usage;
