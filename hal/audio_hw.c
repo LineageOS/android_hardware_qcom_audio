@@ -268,17 +268,27 @@ static const struct string_to_enum out_hdmi_sample_rates_name_to_enum_table[] = 
 static struct audio_device *adev = NULL;
 static pthread_mutex_t adev_init_lock;
 static unsigned int audio_device_ref_count;
+//cache last MBDRC cal step level
+static int last_known_cal_step = -1 ;
 
 __attribute__ ((visibility ("default")))
 bool audio_hw_send_gain_dep_calibration(int level) {
     bool ret_val = false;
-    ALOGV("%s: called ... ", __func__);
+    ALOGV("%s: called ...", __func__);
 
     pthread_mutex_lock(&adev_init_lock);
 
     if (adev != NULL && adev->platform != NULL) {
         pthread_mutex_lock(&adev->lock);
         ret_val = platform_send_gain_dep_cal(adev->platform, level);
+
+        // if cal set fails, cache level info
+        // if cal set succeds, reset known last cal set
+        if (!ret_val)
+            last_known_cal_step = level;
+        else if (last_known_cal_step != -1)
+            last_known_cal_step = -1;
+
         pthread_mutex_unlock(&adev->lock);
     } else {
         ALOGE("%s: %s is NULL", __func__, adev == NULL ? "adev" : "adev->platform");
@@ -2550,6 +2560,12 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             out->standby = true;
             goto exit;
         }
+
+        if (last_known_cal_step != -1) {
+            ALOGD("%s: retry previous failed cal level set", __func__);
+            audio_hw_send_gain_dep_calibration(last_known_cal_step);
+        }
+
         if (!is_offload_usecase(out->usecase) && adev->adm_register_output_stream)
             adev->adm_register_output_stream(adev->adm_data, out->handle, out->flags);
     }
