@@ -46,6 +46,7 @@
 
 #define AHAL_GAIN_DEPENDENT_INTERFACE_FUNCTION "audio_hw_send_gain_dep_calibration"
 #define AHAL_GAIN_GET_MAPPING_TABLE "audio_hw_get_gain_level_mapping"
+#define DEFAULT_CAL_STEP 0
 
 enum {
     VOL_LISTENER_STATE_UNINITIALIZED,
@@ -232,7 +233,7 @@ static void check_and_set_gain_dep_cal()
     // 4. if new value is different than the current value then load new calibration
 
     struct listnode *node = NULL;
-    float new_vol = 0.0;
+    float new_vol = -1.0;
     int max_level = 0;
     vol_listener_context_t *context = NULL;
     if (dumping_enabled) {
@@ -261,7 +262,9 @@ static void check_and_set_gain_dep_cal()
 
             if (new_vol >= 1 && total_volume_cal_step > 0) { // max amplitude, use highest DRC level
                 gain_dep_cal_level = volume_curve_gain_mapping_table[total_volume_cal_step - 1].level;
-            } else if (new_vol <= 0) {
+            } else if (new_vol == -1) {
+                gain_dep_cal_level = DEFAULT_CAL_STEP;
+            } else if (new_vol == 0) {
                 gain_dep_cal_level = volume_curve_gain_mapping_table[0].level;
             } else {
                 for (max_level = 0; max_level + 1 < total_volume_cal_step; max_level++) {
