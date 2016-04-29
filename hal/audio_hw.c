@@ -233,6 +233,8 @@ static int set_voice_volume_l(struct audio_device *adev, float volume);
 static struct audio_device *adev = NULL;
 static pthread_mutex_t adev_init_lock;
 static unsigned int audio_device_ref_count;
+//cache last MBDRC cal step level
+static int last_known_cal_step = -1 ;
 
 static bool may_use_noirq_mode(struct audio_device *adev, audio_usecase_t uc_id,
                                int flags __unused)
@@ -380,6 +382,13 @@ bool audio_hw_send_gain_dep_calibration(int level) {
         pthread_mutex_lock(&adev->lock);
         ret_val = platform_send_gain_dep_cal(adev->platform, level);
         pthread_mutex_unlock(&adev->lock);
+
+        // if cal set fails, cache level info
+        // if cal set succeds, reset known last cal set
+        if (!ret_val)
+            last_known_cal_step = level;
+        else if (last_known_cal_step != -1)
+            last_known_cal_step = -1;
     } else {
         ALOGE("%s: %s is NULL", __func__, adev == NULL ? "adev" : "adev->platform");
     }
@@ -1994,6 +2003,11 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         if (ret != 0) {
             out->standby = true;
             goto exit;
+        }
+
+        if (last_known_cal_step != -1) {
+            ALOGD("%s: retry previous failed cal level set", __func__);
+            audio_hw_send_gain_dep_calibration(last_known_cal_step);
         }
     }
 
