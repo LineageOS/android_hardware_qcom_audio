@@ -2915,7 +2915,6 @@ void platform_get_parameters(void *platform,
     /* Handle audio calibration keys */
     get_audiocal(platform, query, reply);
 
-done:
     kv_pairs = str_parms_to_str(reply);
     ALOGV_IF(kv_pairs != NULL, "%s: exit: returns - %s", __func__, kv_pairs);
     free(kv_pairs);

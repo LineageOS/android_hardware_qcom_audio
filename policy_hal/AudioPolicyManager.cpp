@@ -1079,8 +1079,6 @@ status_t AudioPolicyManagerCustom::startSource(sp<AudioOutputDescriptor> outputD
                 }
             }
         }
-        uint32_t muteWaitMs = setOutputDevice(outputDesc, device, force);
-
         // handle special case for sonification while in call
         if (isInCall()) {
             handleIncallSonification(stream, true, false, outputDesc->mIoHandle);
@@ -1304,7 +1302,6 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         const audio_offload_info_t *offloadInfo)
 {
     audio_io_handle_t output = AUDIO_IO_HANDLE_NONE;
-    uint32_t latency = 0;
     status_t status;
 
 #ifdef AUDIO_POLICY_TEST
@@ -1725,8 +1722,8 @@ status_t AudioPolicyManagerCustom::getInputForAttr(const audio_attributes_t *att
                                              audio_port_handle_t selectedDeviceId,
                                              input_type_t *inputType)
 {
-    audio_source_t inputSource = attr->source;
 #ifdef VOICE_CONCURRENCY
+    audio_source_t inputSource = attr->source;
 
     char propValue[PROPERTY_VALUE_MAX];
     bool prop_rec_enabled=false, prop_voip_enabled = false;
@@ -1961,9 +1958,11 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
     : AudioPolicyManager(clientInterface),
       mHdmiAudioDisabled(false),
       mHdmiAudioEvent(false),
-      mPrevPhoneState(0),
-      mPrevFMVolumeDb(0.0f),
+      mPrevPhoneState(0)
+#ifdef FM_POWER_OPT
+      ,mPrevFMVolumeDb(0.0f),
       mFMIsActive(false)
+#endif
 {
     char ssr_enabled[PROPERTY_VALUE_MAX] = {0};
     bool prop_ssr_enabled = false;
@@ -1973,14 +1972,14 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
     }
 
     for (size_t i = 0; i < mHwModules.size(); i++) {
-        ALOGV("Hw module %d", i);
+        ALOGV("Hw module %zu", i);
         for (size_t j = 0; j < mHwModules[i]->mInputProfiles.size(); j++) {
             const sp<IOProfile> inProfile = mHwModules[i]->mInputProfiles[j];
-            ALOGV("Input profile ", j);
+            ALOGV("Input profile %zu", j);
             for (size_t k = 0; k  < inProfile->mChannelMasks.size(); k++) {
                 audio_channel_mask_t channelMask =
                     inProfile->mChannelMasks.itemAt(k);
-                ALOGV("Channel Mask %x size %d", channelMask,
+                ALOGV("Channel Mask %x size %zu", channelMask,
                     inProfile->mChannelMasks.size());
                 if (AUDIO_CHANNEL_IN_5POINT1 == channelMask) {
                     if (!prop_ssr_enabled) {
@@ -1988,7 +1987,7 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
                             " input profile as SSR(surround sound record)"
                             " is not supported on this chipset variant");
                         inProfile->mChannelMasks.removeItemsAt(k, 1);
-                        ALOGV("Channel Mask size now %d",
+                        ALOGV("Channel Mask size now %zu",
                             inProfile->mChannelMasks.size());
                     }
                 }

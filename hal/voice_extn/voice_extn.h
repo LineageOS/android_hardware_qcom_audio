@@ -105,7 +105,7 @@ static void voice_extn_out_get_parameters(struct stream_out *out __unused,
 int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
                                                   struct stream_out *out);
 #else
-static int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev __unused,
+inline int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev __unused,
                                                          struct stream_out *out __unused)
 {
     return -ENOSYS;

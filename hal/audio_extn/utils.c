@@ -755,7 +755,6 @@ int b64encode(uint8_t *inp, int ilen, char* outp)
         default:
             break;
     }
-done:
     outp[k] = '\0';
     return k;
 }

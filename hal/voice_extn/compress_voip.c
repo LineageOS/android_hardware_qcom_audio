@@ -392,7 +392,6 @@ int voice_extn_compress_voip_set_parameters(struct audio_device *adev,
         voip_set_dtx(adev, flag);
     }
 
-done:
     ALOGV("%s: exit", __func__);
     free(kv_pairs);
     return ret;
