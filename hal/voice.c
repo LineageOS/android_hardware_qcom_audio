@@ -411,8 +411,13 @@ snd_device_t voice_get_incall_rec_snd_device(snd_device_t in_snd_device)
     return incall_record_device;
 }
 
+#ifdef INCALL_MUSIC_ENABLED
 int voice_check_and_set_incall_music_usecase(struct audio_device *adev,
                                              struct stream_out *out)
+#else
+inline int voice_check_and_set_incall_music_usecase(struct audio_device *adev __unused,
+                                                         struct stream_out *out __unused)
+#endif
 {
     int ret = 0;
 
