@@ -62,6 +62,7 @@ struct voice {
     int tty_mode;
     bool mic_mute;
     float volume;
+    bool is_in_call;
     bool in_call;
 };
 
