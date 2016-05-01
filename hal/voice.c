@@ -416,11 +416,13 @@ int voice_check_and_set_incall_music_usecase(struct audio_device *adev,
 {
     int ret = 0;
 
+#ifdef INCALL_MUSIC_ENABLED
     ret = voice_extn_check_and_set_incall_music_usecase(adev, out);
     if (ret == -ENOSYS) {
         /* Incall music delivery is used only for LCH call state */
         ret = -EINVAL;
     }
+#endif
 
     return ret;
 }
