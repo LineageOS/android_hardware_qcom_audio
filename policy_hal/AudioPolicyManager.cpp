@@ -1079,6 +1079,8 @@ status_t AudioPolicyManagerCustom::startSource(sp<AudioOutputDescriptor> outputD
                 }
             }
         }
+        setOutputDevice(outputDesc, device, force);
+
         // handle special case for sonification while in call
         if (isInCall()) {
             handleIncallSonification(stream, true, false, outputDesc->mIoHandle);
