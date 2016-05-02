@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2016, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -136,7 +136,6 @@ static int vi_feed_no_channels;
 
 static void spkr_prot_set_spkrstatus(bool enable)
 {
-    struct timespec ts;
     if (enable)
        handle.spkr_in_use = true;
     else {
@@ -149,7 +148,6 @@ void audio_extn_spkr_prot_calib_cancel(void *adev)
 {
     pthread_t threadid;
     struct audio_usecase *uc_info;
-    int count = 0;
     threadid = pthread_self();
     ALOGV("%s: Entry", __func__);
     if (pthread_equal(handle.speaker_prot_threadid, threadid) || !adev) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2016, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -111,7 +111,7 @@ void voice_set_sidetone(struct audio_device *adev,
 
 int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 {
-    int i, ret = 0;
+    int  ret = 0;
     struct audio_usecase *uc_info;
     struct voice_session *session = NULL;
 
@@ -166,7 +166,7 @@ int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 
 int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 {
-    int i, ret = 0;
+    int  ret = 0;
     struct audio_usecase *uc_info;
     int pcm_dev_rx_id, pcm_dev_tx_id;
     uint32_t sample_rate = 8000;
@@ -316,7 +316,6 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
 {
     int ret = 0;
     uint32_t session_id;
-    int usecase_id;
     int rec_mode = INCALL_REC_NONE;
 
     if (voice_is_call_state_active(adev)) {
@@ -507,9 +506,7 @@ void voice_get_parameters(struct audio_device *adev,
 
 int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
 {
-    char *str;
     char value[32];
-    int val;
     int ret = 0, err;
     char *kv_pairs = str_parms_to_str(parms);
 
