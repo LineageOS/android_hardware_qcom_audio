@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -154,10 +154,6 @@ static struct ssr_module ssrmod = {
 };
 
 static void *ssr_process_thread(void *context);
-
-/* Use AAC/DTS channel mapping as default channel mapping: C,FL,FR,Ls,Rs,LFE */
-static const int chan_map[] = { 1, 2, 4, 3, 0, 5};
-
 
 static int32_t drc_init_lib(int num_chan, int sample_rate __unused)
 {
@@ -424,7 +420,6 @@ int32_t audio_extn_ssr_init(struct stream_in *in, int num_out_chan)
 {
     uint32_t ret = -1;
     char c_multi_ch_dump[128] = {0};
-    char c_ssr_3mic[128] = {0};
     uint32_t buffer_size;
 
     ALOGD("%s: ssr case, sample rate %d", __func__, in->config.rate);
@@ -559,7 +554,6 @@ fail:
 
 int32_t audio_extn_ssr_deinit()
 {
-    int i;
 
     ALOGV("%s: entry", __func__);
     deinit_ssr_process_thread();
@@ -681,7 +675,6 @@ int32_t audio_extn_ssr_read(struct audio_stream_in *stream,
                        void *buffer, size_t bytes)
 {
     struct stream_in *in = (struct stream_in *)stream;
-    struct audio_device *adev = in->dev;
     int32_t ret = 0;
     struct pcm_buffer_queue *in_buf;
     struct pcm_buffer_queue *out_buf;

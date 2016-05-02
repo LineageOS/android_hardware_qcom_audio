@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2016, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -137,8 +137,8 @@ struct speaker_prot_session {
     bool spkr_in_use;
     struct timespec spkr_last_time_used;
     bool wsa_found;
-    char *spkr_1_tz_name;
-    char *spkr_2_tz_name;
+    const char *spkr_1_tz_name;
+    const char *spkr_2_tz_name;
     int spkr_1_tzn;
     int spkr_2_tzn;
 };
@@ -226,7 +226,6 @@ int get_tzn(const char *sensor_name)
 
 static void spkr_prot_set_spkrstatus(bool enable)
 {
-    struct timespec ts;
     if (enable)
        handle.spkr_in_use = true;
     else {
@@ -239,7 +238,6 @@ void audio_extn_spkr_prot_calib_cancel(void *adev)
 {
     pthread_t threadid;
     struct audio_usecase *uc_info;
-    int count = 0;
     threadid = pthread_self();
     ALOGV("%s: Entry", __func__);
     if (pthread_equal(handle.speaker_prot_threadid, threadid) || !adev) {

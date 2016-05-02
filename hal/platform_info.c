@@ -293,7 +293,6 @@ done:
 
 static void process_native_support(const XML_Char **attr)
 {
-    int index;
 
     if (strcmp(attr[0], "name") != 0) {
         ALOGE("%s: 'name' not found, no NATIVE_AUDIO_44.1 set!", __func__);
@@ -354,9 +353,6 @@ done:
 static void start_tag(void *userdata __unused, const XML_Char *tag_name,
                       const XML_Char **attr)
 {
-    const XML_Char              *attr_name = NULL;
-    const XML_Char              *attr_value = NULL;
-    unsigned int                i;
 
     if (strcmp(tag_name, "bit_width_configs") == 0) {
         section = BITWIDTH;

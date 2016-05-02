@@ -101,7 +101,7 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev,
 #else
 void audio_extn_source_track_set_parameters(struct audio_device *adev,
                                             struct str_parms *parms);
-void audio_extn_source_track_get_parameters(struct audio_device *adev,
+void audio_extn_source_track_get_parameters(const struct audio_device *adev,
                                             struct str_parms *query,
                                             struct str_parms *reply);
 #endif
@@ -527,7 +527,6 @@ int audio_extn_get_afe_proxy_parameters(struct str_parms *query,
 {
     int ret, val;
     char value[32]={0};
-    char *str = NULL;
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_CAN_OPEN_PROXY, value,
                             sizeof(value));

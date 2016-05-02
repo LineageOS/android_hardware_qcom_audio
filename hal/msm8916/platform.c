@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -1040,140 +1040,6 @@ void platform_set_gsm_mode(void *platform, bool enable)
 
 
 
-static struct csd_data *open_csd_client()
-{
-    struct csd_data *csd = calloc(1, sizeof(struct csd_data));
-    if (!csd) {
-        ALOGE("failed to allocate csd_data mem");
-        return NULL;
-    }
-
-    csd->csd_client = dlopen(LIB_CSD_CLIENT, RTLD_NOW);
-    if (csd->csd_client == NULL) {
-        ALOGE("%s: DLOPEN failed for %s", __func__, LIB_CSD_CLIENT);
-        goto error;
-    } else {
-        ALOGV("%s: DLOPEN successful for %s", __func__, LIB_CSD_CLIENT);
-
-        csd->deinit = (deinit_t)dlsym(csd->csd_client,
-                                             "csd_client_deinit");
-        if (csd->deinit == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_deinit", __func__,
-                  dlerror());
-            goto error;
-        }
-        csd->disable_device = (disable_device_t)dlsym(csd->csd_client,
-                                             "csd_client_disable_device");
-        if (csd->disable_device == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_disable_device",
-                  __func__, dlerror());
-            goto error;
-        }
-        csd->enable_device_config = (enable_device_config_t)dlsym(csd->csd_client,
-                                               "csd_client_enable_device_config");
-        if (csd->enable_device_config == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_enable_device_config",
-                  __func__, dlerror());
-            goto error;
-        }
-        csd->enable_device = (enable_device_t)dlsym(csd->csd_client,
-                                             "csd_client_enable_device");
-        if (csd->enable_device == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_enable_device",
-                  __func__, dlerror());
-            goto error;
-        }
-        csd->start_voice = (start_voice_t)dlsym(csd->csd_client,
-                                             "csd_client_start_voice");
-        if (csd->start_voice == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_start_voice",
-                  __func__, dlerror());
-            goto error;
-        }
-        csd->stop_voice = (stop_voice_t)dlsym(csd->csd_client,
-                                             "csd_client_stop_voice");
-        if (csd->stop_voice == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_stop_voice",
-                  __func__, dlerror());
-            goto error;
-        }
-        csd->volume = (volume_t)dlsym(csd->csd_client,
-                                             "csd_client_volume");
-        if (csd->volume == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_volume",
-                  __func__, dlerror());
-            goto error;
-        }
-        csd->mic_mute = (mic_mute_t)dlsym(csd->csd_client,
-                                             "csd_client_mic_mute");
-        if (csd->mic_mute == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_mic_mute",
-                  __func__, dlerror());
-            goto error;
-        }
-        csd->slow_talk = (slow_talk_t)dlsym(csd->csd_client,
-                                             "csd_client_slow_talk");
-        if (csd->slow_talk == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_slow_talk",
-                  __func__, dlerror());
-            goto error;
-        }
-        csd->start_playback = (start_playback_t)dlsym(csd->csd_client,
-                                             "csd_client_start_playback");
-        if (csd->start_playback == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_start_playback",
-                  __func__, dlerror());
-            goto error;
-        }
-        csd->stop_playback = (stop_playback_t)dlsym(csd->csd_client,
-                                             "csd_client_stop_playback");
-        if (csd->stop_playback == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_stop_playback",
-                  __func__, dlerror());
-            goto error;
-        }
-        csd->set_lch = (set_lch_t)dlsym(csd->csd_client, "csd_client_set_lch");
-        if (csd->set_lch == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_set_lch",
-                  __func__, dlerror());
-            /* Ignore the error as this is not mandatory function for
-             * basic voice call to work.
-             */
-        }
-        csd->start_record = (start_record_t)dlsym(csd->csd_client,
-                                             "csd_client_start_record");
-        if (csd->start_record == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_start_record",
-                  __func__, dlerror());
-            goto error;
-        }
-        csd->stop_record = (stop_record_t)dlsym(csd->csd_client,
-                                             "csd_client_stop_record");
-        if (csd->stop_record == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_stop_record",
-                  __func__, dlerror());
-            goto error;
-        }
-
-
-        csd->init = (init_t)dlsym(csd->csd_client, "csd_client_init");
-
-        if (csd->init == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_init",
-                  __func__, dlerror());
-            goto error;
-        } else {
-            csd->init();
-        }
-    }
-    return csd;
-
-error:
-    free(csd);
-    csd = NULL;
-    return csd;
-}
-
 void close_csd_client(struct csd_data *csd)
 {
     if (csd != NULL) {
@@ -1493,14 +1359,11 @@ static bool is_wsa_found(int *wsaCount)
 
 void *platform_init(struct audio_device *adev)
 {
-    char platform[PROPERTY_VALUE_MAX];
-    char baseband[PROPERTY_VALUE_MAX];
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data = NULL;
-    int retry_num = 0, snd_card_num = 0, key = 0;
+    int retry_num = 0, snd_card_num = 0;
     const char *snd_card_name;
     char mixer_xml_path[MAX_MIXER_XML_PATH],ffspEnable[PROPERTY_VALUE_MAX];
-    char *cvd_version = NULL;
     const char *mixer_ctl_name = "Set HPX ActiveBe";
     struct mixer_ctl *ctl = NULL;
     int idx;
@@ -2133,8 +1996,9 @@ int native_audio_set_params(struct platform_data *platform,
                     usecase->stream.out->devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) &&
                     OUTPUT_SAMPLING_RATE_44100 == usecase->stream.out->sample_rate) {
                          ALOGD("%s: triggering dynamic device switch for usecase(%d: %s)"
-                               " stream(%p), device(%d)", __func__, usecase->id,
-                               use_case_table[usecase->id], usecase->stream,
+                               " stream(%p), device(%u)", __func__, usecase->id,
+                               use_case_table[usecase->id],
+                               (void*) usecase->stream.out,
                                usecase->stream.out->devices);
                          select_devices(platform->adev, usecase->id);
                  }
@@ -2170,7 +2034,6 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_dev_id, acdb_dev_type;
-    struct audio_device *adev = my_data->adev;
     int snd_device = SND_DEVICE_OUT_SPEAKER;
 
     if (usecase->type == PCM_PLAYBACK)
@@ -2350,7 +2213,7 @@ int platform_stop_voice_call(void *platform, uint32_t vsid)
     return ret;
 }
 
-int platform_get_sample_rate(void *platform, uint32_t *rate)
+int platform_get_sample_rate(void *platform __unused, uint32_t *rate __unused)
 {
     return 0;
 }
@@ -3049,7 +2912,6 @@ int platform_edid_get_max_channels(void *platform)
     int max_channels = 2;
     int i = 0, ret = 0;
     struct platform_data *my_data = (struct platform_data *)platform;
-    struct audio_device *adev = my_data->adev;
     edid_audio_info *info = NULL;
     ret = platform_get_edid_info(platform);
     info = (edid_audio_info *)my_data->edid_info;
@@ -3126,167 +2988,10 @@ static int set_hd_voice(struct platform_data *my_data, bool state)
     return ret;
 }
 
-static int update_external_device_status(struct platform_data *my_data,
-                                 char* event_name, bool status)
-{
-    int ret = 0;
-    struct audio_usecase *usecase;
-    struct listnode *node;
-
-    ALOGD("Recieved  external event switch %s", event_name);
-
-    if (!strcmp(event_name, EVENT_EXTERNAL_SPK_1))
-        my_data->external_spk_1 = status;
-    else if (!strcmp(event_name, EVENT_EXTERNAL_SPK_2))
-        my_data->external_spk_2 = status;
-    else if (!strcmp(event_name, EVENT_EXTERNAL_MIC))
-        my_data->external_mic = status;
-    else {
-        ALOGE("The audio event type is not found");
-        return -EINVAL;
-    }
-
-    list_for_each(node, &my_data->adev->usecase_list) {
-        usecase = node_to_item(node, struct audio_usecase, list);
-        select_devices(my_data->adev, usecase->id);
-    }
-
-    return ret;
-}
-
-static int parse_audiocal_cfg(struct str_parms *parms, acdb_audio_cal_cfg_t *cal)
-{
-    int err;
-    unsigned int val;
-    char value[64];
-    int ret = 0;
-
-    if(parms == NULL || cal == NULL)
-        return ret;
-
-    err = str_parms_get_str(parms, "cal_persist", value, sizeof(value));
-    if (err >= 0) {
-        str_parms_del(parms, "cal_persist");
-        cal->persist = (uint32_t) strtoul(value, NULL, 0);
-        ret = ret | 0x1;
-    }
-    err = str_parms_get_str(parms, "cal_apptype", value, sizeof(value));
-    if (err >= 0) {
-        str_parms_del(parms, "cal_apptype");
-        cal->app_type = (uint32_t) strtoul(value, NULL, 0);
-        ret = ret | 0x2;
-    }
-    err = str_parms_get_str(parms, "cal_caltype", value, sizeof(value));
-    if (err >= 0) {
-        str_parms_del(parms, "cal_caltype");
-        cal->cal_type = (uint32_t) strtoul(value, NULL, 0);
-        ret = ret | 0x4;
-    }
-    err = str_parms_get_str(parms, "cal_samplerate", value, sizeof(value));
-    if (err >= 0) {
-        str_parms_del(parms, "cal_samplerate");
-        cal->sampling_rate = (uint32_t) strtoul(value, NULL, 0);
-        ret = ret | 0x8;
-    }
-    err = str_parms_get_str(parms, "cal_devid", value, sizeof(value));
-    if (err >= 0) {
-        str_parms_del(parms, "cal_devid");
-        cal->dev_id = (uint32_t) strtoul(value, NULL, 0);
-        ret = ret | 0x10;
-    }
-    err = str_parms_get_str(parms, "cal_snddevid", value, sizeof(value));
-    if (err >= 0) {
-        str_parms_del(parms, "cal_snddevid");
-        cal->snd_dev_id = (uint32_t) strtoul(value, NULL, 0);
-        ret = ret | 0x20;
-    }
-    err = str_parms_get_str(parms, "cal_topoid", value, sizeof(value));
-    if (err >= 0) {
-        str_parms_del(parms, "cal_topoid");
-        cal->topo_id = (uint32_t) strtoul(value, NULL, 0);
-        ret = ret | 0x40;
-    }
-    err = str_parms_get_str(parms, "cal_moduleid", value, sizeof(value));
-    if (err >= 0) {
-        str_parms_del(parms, "cal_moduleid");
-        cal->module_id = (uint32_t) strtoul(value, NULL, 0);
-        ret = ret | 0x80;
-    }
-    err = str_parms_get_str(parms, "cal_paramid", value, sizeof(value));
-    if (err >= 0) {
-        str_parms_del(parms, "cal_paramid");
-        cal->param_id = (uint32_t) strtoul(value, NULL, 0);
-        ret = ret | 0x100;
-    }
-    return ret;
-}
-
-static void set_audiocal(void *platform, struct str_parms *parms, char *value, int len) {
-    struct platform_data *my_data = (struct platform_data *)platform;
-    struct stream_out out={0};
-    acdb_audio_cal_cfg_t cal={0};
-    uint8_t *dptr = NULL;
-    int32_t dlen;
-    int err, ret;
-    if(value == NULL || platform == NULL || parms == NULL) {
-        ALOGE("[%s] received null pointer, failed",__func__);
-        goto done_key_audcal;
-    }
-
-    /* parse audio calibration keys */
-    ret = parse_audiocal_cfg(parms, &cal);
-
-    /* handle audio calibration data now */
-    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_AUD_CALDATA, value, len);
-    if (err >= 0) {
-        str_parms_del(parms, AUDIO_PARAMETER_KEY_AUD_CALDATA);
-        dlen = strlen(value);
-        if(dlen <= 0) {
-            ALOGE("[%s] null data received",__func__);
-            goto done_key_audcal;
-        }
-        dptr = (uint8_t*) calloc(dlen, sizeof(uint8_t));
-        if(dptr == NULL) {
-            ALOGE("[%s] memory allocation failed for %d",__func__, dlen);
-            goto done_key_audcal;
-        }
-        dlen = b64decode(value, strlen(value), dptr);
-        if(dlen<=0) {
-            ALOGE("[%s] data decoding failed %d", __func__, dlen);
-            goto done_key_audcal;
-        }
-
-        if(cal.dev_id) {
-          if(audio_is_input_device(cal.dev_id)) {
-              cal.snd_dev_id = platform_get_input_snd_device(platform, cal.dev_id);
-          } else {
-              out.devices = cal.dev_id;
-              cal.snd_dev_id = platform_get_output_snd_device(platform, &out);
-          }
-        }
-        cal.acdb_dev_id = platform_get_snd_device_acdb_id(cal.snd_dev_id);
-        ALOGD("Setting audio calibration for snd_device(%d) acdb_id(%d)",
-                cal.snd_dev_id, cal.acdb_dev_id);
-        if(cal.acdb_dev_id == -EINVAL) {
-            ALOGE("[%s] Invalid acdb_device id %d for snd device id %d",
-                       __func__, cal.acdb_dev_id, cal.snd_dev_id);
-            goto done_key_audcal;
-        }
-        if(my_data->acdb_set_audio_cal) {
-            ret = my_data->acdb_set_audio_cal((void *)&cal, (void*)dptr, dlen);
-        }
-    }
-done_key_audcal:
-    if(dptr != NULL)
-        free(dptr);
-}
-
 int platform_set_parameters(void *platform, struct str_parms *parms)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
-    char *str;
     char value[256] = {0};
-    int val;
     int ret = 0, err;
     char *kv_pairs = NULL;
 
@@ -3459,107 +3164,11 @@ int platform_update_lch(void *platform, struct voice_session *session,
     return ret;
 }
 
-static void get_audiocal(void *platform, void *keys, void *pReply) {
-    struct platform_data *my_data = (struct platform_data *)platform;
-    struct stream_out out={0};
-    struct str_parms *query = (struct str_parms *)keys;
-    struct str_parms *reply=(struct str_parms *)pReply;
-    acdb_audio_cal_cfg_t cal={0};
-    uint8_t *dptr = NULL;
-    char value[512] = {0};
-    char *rparms=NULL;
-    int ret=0, err;
-    uint32_t param_len;
-
-    if(query==NULL || platform==NULL || reply==NULL) {
-        ALOGE("[%s] received null pointer",__func__);
-        ret=-EINVAL;
-        goto done;
-    }
-    /* parse audiocal configuration keys */
-    ret = parse_audiocal_cfg(query, &cal);
-    if(ret == 0) {
-        /* No calibration keys found */
-        goto done;
-    }
-    err = str_parms_get_str(query, AUDIO_PARAMETER_KEY_AUD_CALDATA, value, sizeof(value));
-    if (err >= 0) {
-        str_parms_del(query, AUDIO_PARAMETER_KEY_AUD_CALDATA);
-    } else {
-        goto done;
-    }
-
-    if(cal.dev_id & AUDIO_DEVICE_BIT_IN) {
-        cal.snd_dev_id = platform_get_input_snd_device(platform, cal.dev_id);
-    } else if(cal.dev_id) {
-        out.devices = cal.dev_id;
-        cal.snd_dev_id = platform_get_output_snd_device(platform, &out);
-    }
-    cal.acdb_dev_id =  platform_get_snd_device_acdb_id(cal.snd_dev_id);
-    if (cal.acdb_dev_id < 0) {
-        ALOGE("%s: Failed. Could not find acdb id for snd device(%d)",
-              __func__, cal.snd_dev_id);
-        ret = -EINVAL;
-        goto done_key_audcal;
-    }
-    ALOGD("[%s] Getting audio calibration for snd_device(%d) acdb_id(%d)",
-           __func__, cal.snd_dev_id, cal.acdb_dev_id);
-
-    param_len = MAX_SET_CAL_BYTE_SIZE;
-    dptr = (uint8_t*)calloc(param_len, sizeof(uint8_t));
-    if(dptr == NULL) {
-        ALOGE("[%s] Memory allocation failed for length %d",__func__,param_len);
-        ret = -ENOMEM;
-        goto done_key_audcal;
-    }
-    if (my_data->acdb_get_audio_cal != NULL) {
-        ret = my_data->acdb_get_audio_cal((void*)&cal, (void*)dptr, &param_len);
-        if (ret == 0) {
-            int dlen;
-            if(param_len == 0 || param_len == MAX_SET_CAL_BYTE_SIZE) {
-                ret = -EINVAL;
-                goto done_key_audcal;
-            }
-            /* Allocate memory for encoding */
-            rparms = (char*)calloc((param_len*2), sizeof(char));
-            if(rparms == NULL) {
-                ALOGE("[%s] Memory allocation failed for size %d",
-                            __func__, param_len*2);
-                ret = -ENOMEM;
-                goto done_key_audcal;
-            }
-            if(cal.persist==0 && cal.module_id && cal.param_id) {
-                err = b64encode(dptr+12, param_len-12, rparms);
-            } else {
-                err = b64encode(dptr, param_len, rparms);
-            }
-            if(err < 0) {
-                ALOGE("[%s] failed to convert data to string", __func__);
-                ret = -EINVAL;
-                goto done_key_audcal;
-            }
-            str_parms_add_int(reply, AUDIO_PARAMETER_KEY_AUD_CALRESULT, ret);
-            str_parms_add_str(reply, AUDIO_PARAMETER_KEY_AUD_CALDATA, rparms);
-        }
-    }
-done_key_audcal:
-    if(ret != 0) {
-        str_parms_add_int(reply, AUDIO_PARAMETER_KEY_AUD_CALRESULT, ret);
-        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_AUD_CALDATA, "");
-    }
-done:
-    if(dptr != NULL)
-        free(dptr);
-    if(rparms != NULL)
-        free(rparms);
-}
-
 void platform_get_parameters(void *platform,
                             struct str_parms *query,
                             struct str_parms *reply)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
-    char *str = NULL;
     char value[512] = {0};
     int ret;
     char *kv_pairs = NULL;
@@ -3609,7 +3218,7 @@ void platform_get_parameters(void *platform,
 
             //check if unsupported mime type or not
             if(decoder_mime_type) {
-                int i = 0;
+                unsigned int i = 0;
                 for (i = 0; i < sizeof(dsp_only_decoders_mime)/sizeof(dsp_only_decoders_mime[0]); i++) {
                     if (!strncmp(decoder_mime_type, dsp_only_decoders_mime[i],
                     strlen(dsp_only_decoders_mime[i]))) {
@@ -3888,7 +3497,7 @@ int platform_set_codec_backend_cfg(struct audio_device* adev,
     ALOGV("%s bit width: %d, sample rate: %d\n", __func__, bit_width, sample_rate);
 
     const char *snd_card_name = mixer_get_name(adev->mixer);
-    int is_external_codec = platform_is_external_codec(snd_card_name);
+    int is_external_codec = platform_is_external_codec((char *)snd_card_name);
 
 
 
@@ -4123,7 +3732,6 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
     unsigned int new_bit_width;
     unsigned int new_sample_rate;
     int backend_idx = DEFAULT_CODEC_BACKEND;
-    struct platform_data *my_data = (struct platform_data *)adev->platform;
 
     ALOGV("%s: usecase = %d", __func__, usecase->id );
 
@@ -4187,7 +3795,7 @@ bool platform_use_small_buffer(audio_offload_info_t* info)
 
 void platform_get_device_to_be_id_map(int **device_to_be_id, int *length)
 {
-     *device_to_be_id = msm_device_to_be_id;
+     *device_to_be_id = (int*) msm_device_to_be_id;
      *length = msm_be_id_array_len;
 }
 int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask, int snd_id)
@@ -4288,10 +3896,7 @@ int platform_get_edid_info(void *platform)
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     char block[MAX_SAD_BLOCKS * SAD_BLOCK_SIZE];
-    char *sad = block;
-    int num_audio_blocks;
-    int channel_count = 2;
-    int i, ret, count;
+    int ret, count;
 
     struct mixer_ctl *ctl;
     char edid_data[MAX_SAD_BLOCKS * SAD_BLOCK_SIZE + 1] = {0};
@@ -4381,7 +3986,6 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
     int ret;
     unsigned int i;
     int set_values[8] = {0};
-    char device_num[13]; // device number up to 2 digit
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     ALOGV("%s channel_count:%d",__func__, ch_count);
@@ -4479,10 +4083,8 @@ void platform_reset_edid_info(void *platform) {
 bool platform_is_edid_supported_format(void *platform, int format)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
-    struct audio_device *adev = my_data->adev;
     edid_audio_info *info = NULL;
-    int num_audio_blocks;
-    int i, ret, count;
+    int i, ret;
     unsigned char format_id = platform_map_to_edid_format(format);
 
     ret = platform_get_edid_info(platform);
@@ -4509,11 +4111,9 @@ bool platform_is_edid_supported_format(void *platform, int format)
 int platform_set_edid_channels_configuration(void *platform, int channels) {
 
     struct platform_data *my_data = (struct platform_data *)platform;
-    struct audio_device *adev = my_data->adev;
     edid_audio_info *info = NULL;
-    int num_audio_blocks;
     int channel_count = 2;
-    int i, ret, count;
+    int i, ret;
     char default_channelMap[MAX_CHANNELS_SUPPORTED] = {0};
 
     ret = platform_get_edid_info(platform);
@@ -4769,7 +4369,7 @@ done:
  * corresponding entry in audio_platform_info.xml file.
  */
 struct speaker_device_to_tz_names speaker_device_tz_names = {
-    {SND_DEVICE_OUT_SPEAKER, "", ""},
+    SND_DEVICE_OUT_SPEAKER, {0}, {0}
 };
 
 const char *platform_get_spkr_1_tz_name(snd_device_t snd_device)
@@ -4792,7 +4392,6 @@ int platform_set_spkr_device_tz_names(snd_device_t index,
                                       const char *spkr_1_tz_name, const char *spkr_2_tz_name)
 {
     int ret = 0;
-    int i;
 
     if (spkr_1_tz_name == NULL && spkr_2_tz_name == NULL) {
         ALOGE("%s: Invalid input", __func__);
@@ -4800,7 +4399,7 @@ int platform_set_spkr_device_tz_names(snd_device_t index,
         goto done;
     }
     if (index != speaker_device_tz_names.snd_device) {
-        ALOGE("%s: not matching speaker device\n");
+        ALOGE("%s: not matching speaker device\n",__func__);
         ret = -EINVAL;
         goto done;
     }
@@ -4821,7 +4420,7 @@ done:
 int platform_get_wsa_mode(void *adev)
 {
     struct audio_device *adev_h = adev;
-    char *snd_card_name;
+    const char *snd_card_name;
 
     snd_card_name = mixer_get_name(adev_h->mixer);
     if ((!strcmp(snd_card_name, "msm8952-skum-snd-card")) ||

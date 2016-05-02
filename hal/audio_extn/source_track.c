@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -90,8 +90,9 @@
 
 #define MAX_SECTORS                                         8
 #define MAX_STR_SIZE                                       2048
+#define MAX_INTERFACE                                      10
 
-struct audio_device_to_audio_interface audio_device_to_interface_table[];
+struct audio_device_to_audio_interface audio_device_to_interface_table[MAX_INTERFACE];
 int audio_device_to_interface_table_len;
 
 struct sound_focus_param {
@@ -255,9 +256,8 @@ done:
 
 static int parse_soundfocus_sourcetracking_keys(struct str_parms *parms)
 {
-    char *str;
     char *value = NULL;
-    int val, len;
+    int len;
     int ret = 0, err;
     char *kv_pairs = str_parms_to_str(parms);
 
@@ -339,7 +339,7 @@ static int get_soundfocus_sourcetracking_data(struct audio_device *adev,
     char sound_focus_mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = "Sound Focus";
     char source_tracking_mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = "Source Tracking";
     int ret = -EINVAL;
-    int i, count;
+    int count;
 
     if (bitmask & BITMASK_AUDIO_PARAMETER_KEYS_SOUND_FOCUS) {
         /* Derive the mixer control name based on the use case and the audio interface
@@ -434,7 +434,7 @@ static void send_soundfocus_sourcetracking_params(struct str_parms *reply,
                                                 const struct sound_focus_param sound_focus_data,
                                                 const struct source_tracking_param source_tracking_data)
 {
-    int i = 0, len = 0;
+    int i = 0;
     char value[MAX_STR_SIZE] = "";
 
     if (bitmask & BITMASK_AUDIO_PARAMETER_KEY_SOUND_FOCUS_START_ANGLES) {
