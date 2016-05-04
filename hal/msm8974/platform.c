@@ -491,6 +491,7 @@ static const struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
 
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
+#define ULL_PLATFORM_DELAY         (7*1000LL)
 
 static pthread_once_t check_op_once_ctl = PTHREAD_ONCE_INIT;
 static bool is_tmus = false;
@@ -2524,6 +2525,8 @@ int64_t platform_render_latency(audio_usecase_t usecase)
             return DEEP_BUFFER_PLATFORM_DELAY;
         case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
             return LOW_LATENCY_PLATFORM_DELAY;
+        case USECASE_AUDIO_PLAYBACK_ULL:
+            return ULL_PLATFORM_DELAY;
         default:
             return 0;
     }
