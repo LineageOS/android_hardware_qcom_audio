@@ -140,7 +140,6 @@ void audio_extn_passthru_on_start(struct stream_out * out)
 /* called with adev lock held */
 void audio_extn_passthru_on_stop(struct stream_out * out)
 {
-    struct audio_device * adev = out->dev;
     if (android_atomic_acquire_load(&compress_passthru_active) > 0) {
         /*
          * its possible the count is already zero if pause was called before

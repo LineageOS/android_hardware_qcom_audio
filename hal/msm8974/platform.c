@@ -4393,8 +4393,8 @@ unsigned char platform_map_to_edid_format(int audio_format)
         format = LPCM;
         break;
     default:
-        ALOGE("%s:invalid format:%d", __func__,format);
         format =  -1;
+        ALOGE("%s:invalid format:%d", __func__,format);
         break;
     }
     return format;
@@ -4457,10 +4457,8 @@ bool platform_is_edid_supported_format(void *platform, int format)
 bool platform_is_edid_supported_sample_rate(void *platform, int sample_rate)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
-    struct audio_device *adev = my_data->adev;
     edid_audio_info *info = NULL;
-    int num_audio_blocks;
-    int i, ret, count;
+    int i, ret;
 
     ret = platform_get_edid_info(platform);
     info = (edid_audio_info *)my_data->edid_info;

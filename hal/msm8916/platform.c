@@ -4450,8 +4450,8 @@ unsigned char platform_map_to_edid_format(int audio_format)
         format = LPCM;
         break;
     default:
-        ALOGE("%s:invalid format:%d", __func__,format);
         format =  -1;
+        ALOGE("%s:invalid format:%d", __func__,format);
         break;
     }
     return format;
@@ -4514,10 +4514,8 @@ bool platform_is_edid_supported_format(void *platform, int format)
 bool platform_is_edid_supported_sample_rate(void *platform, int sample_rate)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
-    struct audio_device *adev = my_data->adev;
     edid_audio_info *info = NULL;
-    int num_audio_blocks;
-    int i, ret, count;
+    int i, ret;
 
     ret = platform_get_edid_info(platform);
     info = (edid_audio_info *)my_data->edid_info;
@@ -4601,6 +4599,22 @@ int platform_set_mixer_control(struct stream_out *out, const char * mixer_ctl_na
     struct mixer_ctl *ctl = NULL;
     ALOGD("setting mixer ctl %s with value %s", mixer_ctl_name, mixer_val);
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    return mixer_ctl_set_enum_by_string(ctl, mixer_val);
+}
+
+static int set_mixer_control(struct mixer *mixer,
+                             const char * mixer_ctl_name,
+                             const char *mixer_val)
+{
+    struct mixer_ctl *ctl;
+    ALOGD("setting mixer ctl %s with value %s", mixer_ctl_name, mixer_val);
+    ctl = mixer_get_ctl_by_name(mixer, mixer_ctl_name);
     if (!ctl) {
         ALOGE("%s: could not get ctl for mixer cmd - %s",
               __func__, mixer_ctl_name);
