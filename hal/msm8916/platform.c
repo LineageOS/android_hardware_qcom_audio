@@ -4435,12 +4435,23 @@ unsigned char platform_map_to_edid_format(int audio_format)
         ALOGV("%s:E_AC3", __func__);
         format = DOLBY_DIGITAL_PLUS;
         break;
+    case AUDIO_FORMAT_DTS:
+        ALOGV("%s:DTS", __func__);
+        format = DTS;
+        break;
+    case AUDIO_FORMAT_DTS_HD:
+        ALOGV("%s:DTS_HD", __func__);
+        format = DTS_HD;
+        break;
     case AUDIO_FORMAT_PCM_16_BIT:
     case AUDIO_FORMAT_PCM_16_BIT_OFFLOAD:
     case AUDIO_FORMAT_PCM_24_BIT_OFFLOAD:
-    default:
         ALOGV("%s:PCM", __func__);
-        format =  LPCM;
+        format = LPCM;
+        break;
+    default:
+        ALOGE("%s:invalid format:%d", __func__,format);
+        format =  -1;
         break;
     }
     return format;
@@ -4474,6 +4485,11 @@ bool platform_is_edid_supported_format(void *platform, int format)
     int i, ret;
     unsigned char format_id = platform_map_to_edid_format(format);
 
+    if (format_id <= 0) {
+        ALOGE("%s invalid edid format mappting for :%x" ,__func__, format);
+        return false;
+    }
+
     ret = platform_get_edid_info(platform);
     info = (edid_audio_info *)my_data->edid_info;
     if (ret == 0 && info != NULL) {
@@ -4484,14 +4500,42 @@ bool platform_is_edid_supported_format(void *platform, int format)
               *  & DOLBY_DIGITAL_PLUS
               */
             if (info->audio_blocks_array[i].format_id == format_id) {
-                ALOGV("%s:platform_is_edid_supported_format true %x",
+                ALOGV("%s:returns true %x",
                       __func__, format);
                 return true;
             }
         }
     }
-    ALOGV("%s:platform_is_edid_supported_format false %x",
+    ALOGV("%s:returns false %x",
            __func__, format);
+    return false;
+}
+
+bool platform_is_edid_supported_sample_rate(void *platform, int sample_rate)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    edid_audio_info *info = NULL;
+    int num_audio_blocks;
+    int i, ret, count;
+
+    ret = platform_get_edid_info(platform);
+    info = (edid_audio_info *)my_data->edid_info;
+    if (ret == 0 && info != NULL) {
+        for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
+             /*
+              * To check
+              *  is there any special for CONFIG_HDMI_PASSTHROUGH_CONVERT
+              *  & DOLBY_DIGITAL_PLUS
+              */
+            if (info->audio_blocks_array[i].sampling_freq == sample_rate) {
+                ALOGV("%s: returns true %d", __func__, sample_rate);
+                return true;
+            }
+        }
+    }
+    ALOGV("%s: returns false %d", __func__, sample_rate);
+
     return false;
 }
 
@@ -4566,91 +4610,74 @@ int platform_set_mixer_control(struct stream_out *out, const char * mixer_ctl_na
     return mixer_ctl_set_enum_by_string(ctl, mixer_val);
 }
 
-int platform_set_hdmi_config(struct stream_out *out)
+int platform_set_hdmi_config(void *platform, uint32_t channel_count,
+                             uint32_t sample_rate, bool enable_passthrough)
 {
-    struct listnode *node;
-    struct audio_usecase *usecase;
-    struct audio_device *adev = out->dev;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
     const char *hdmi_format_ctrl = "HDMI RX Format";
-    const char *hdmi_rate_ctrl = "HDMI_RX SampleRate";
-    int sample_rate = out->sample_rate;
-    /*TODO: Add rules and check if this needs to be done.*/
-    if((is_offload_usecase(out->usecase)) &&
-        (out->compr_config.codec->compr_passthr == PASSTHROUGH ||
-        out->compr_config.codec->compr_passthr == PASSTHROUGH_CONVERT)) {
-        /* TODO: can we add mixer control for channels here avoid setting */
-        if ((out->format == AUDIO_FORMAT_E_AC3 ||
-            out->format == AUDIO_FORMAT_E_AC3_JOC) &&
-            (out->compr_config.codec->compr_passthr == PASSTHROUGH))
-            sample_rate = out->sample_rate * 4;
-        ALOGD("%s:HDMI compress format and samplerate %d, sample_rate %d",
-               __func__, out->sample_rate, sample_rate);
-        platform_set_mixer_control(out, hdmi_format_ctrl, "Compr");
-        switch (sample_rate) {
-            case 32000:
-                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_32");
-                break;
-            case 44100:
-                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_44_1");
-                break;
-            case 96000:
-                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_96");
-                break;
-            case 176400:
-                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_176_4");
-                break;
-            case 192000:
-                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_192");
-                break;
-            case 128000:
-                if (out->format != AUDIO_FORMAT_E_AC3) {
-                    platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_128");
-                    break;
-                } else
-                   ALOGW("Unsupported sample rate for E_AC3 32K");
-            default:
-            case 48000:
-                platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_48");
-                break;
-        }
+    const char *hdmi_rate_ctrl   = "HDMI_RX SampleRate";
+    const char *hdmi_chans_ctrl  = "HDMI_RX Channels";
+    const char *channel_cnt_str  = NULL;
+
+    ALOGI("%s ch[%d] sr[%d], pthru[%d]", __func__,
+        channel_count, sample_rate, enable_passthrough);
+
+    switch (channel_count) {
+    case 8:
+        channel_cnt_str = "Eight"; break;
+    case 7:
+        channel_cnt_str = "Seven"; break;
+    case 6:
+        channel_cnt_str = "Six"; break;
+    case 5:
+        channel_cnt_str = "Five"; break;
+    case 4:
+        channel_cnt_str = "Four"; break;
+    case 3:
+        channel_cnt_str = "Three"; break;
+    default:
+        channel_cnt_str = "Two"; break;
+    }
+    ALOGV("%s: HDMI channel count: %s", __func__, channel_cnt_str);
+    set_mixer_control(adev->mixer, hdmi_chans_ctrl, channel_cnt_str);
+
+    if (enable_passthrough) {
+        ALOGD("%s:HDMI compress format", __func__);
+        set_mixer_control(adev->mixer, hdmi_format_ctrl, "Compr");
     } else {
-        ALOGD("%s: HDMI pcm and samplerate %d", __func__,
-               out->sample_rate);
-        platform_set_mixer_control(out, hdmi_format_ctrl, "LPCM");
-        platform_set_mixer_control(out, hdmi_rate_ctrl, "KHZ_48");
+        ALOGD("%s: HDMI PCM format", __func__);
+        set_mixer_control(adev->mixer, hdmi_format_ctrl, "LPCM");
     }
 
-    /*
-     * Deroute all the playback streams routed to HDMI so that
-     * the back end is deactivated. Note that backend will not
-     * be deactivated if any one stream is connected to it.
-     */
-    list_for_each(node, &adev->usecase_list) {
-        usecase = node_to_item(node, struct audio_usecase, list);
-        ALOGV("%s:disable: usecase type %d, devices 0x%x", __func__,
-               usecase->type, usecase->devices);
-        if (usecase->type == PCM_PLAYBACK &&
-                usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-            disable_audio_route(adev, usecase);
-        }
-    }
-
-    /*
-     * Enable all the streams disabled above. Now the HDMI backend
-     * will be activated with new channel configuration
-     */
-    list_for_each(node, &adev->usecase_list) {
-        usecase = node_to_item(node, struct audio_usecase, list);
-        ALOGV("%s:enable: usecase type %d, devices 0x%x", __func__,
-               usecase->type, usecase->devices);
-        if (usecase->type == PCM_PLAYBACK &&
-                usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-            enable_audio_route(adev, usecase);
-        }
+    switch (sample_rate) {
+    case 32000:
+        set_mixer_control(adev->mixer, hdmi_rate_ctrl, "KHZ_32");
+        break;
+    case 44100:
+        set_mixer_control(adev->mixer, hdmi_rate_ctrl, "KHZ_44P1");
+        break;
+    case 96000:
+        set_mixer_control(adev->mixer, hdmi_rate_ctrl, "KHZ_96");
+        break;
+    case 128000:
+        set_mixer_control(adev->mixer, hdmi_rate_ctrl, "KHZ_128");
+        break;
+    case 176400:
+        set_mixer_control(adev->mixer, hdmi_rate_ctrl, "KHZ_176_4");
+        break;
+    case 192000:
+        set_mixer_control(adev->mixer, hdmi_rate_ctrl, "KHZ_192");
+        break;
+    default:
+    case 48000:
+        set_mixer_control(adev->mixer, hdmi_rate_ctrl, "KHZ_48");
+        break;
     }
 
     return 0;
 }
+
 
 int platform_set_device_params(struct stream_out *out, int param, int value)
 {

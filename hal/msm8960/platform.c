@@ -1153,6 +1153,12 @@ bool platform_is_edid_supported_format(void *platform __unused,
     return  false;
 }
 
+bool platform_is_edid_supported_sample_rate(void *platform __unused,
+                                    int sample_rate __unused)
+{
+    return false;
+}
+
 void platform_cache_edid(void * platform __unused)
 {
 
@@ -1163,7 +1169,10 @@ void platform_invalidate_edid(void * platform __unused)
 
 }
 
-int platform_set_hdmi_config(struct stream_out *out __unused)
+int platform_set_hdmi_config(void *platform __unused,
+                                    uint32_t channel_count __unused,
+                                    uint32_t sample_rate __unused,
+                                    bool enable_passthrough __unused)
 {
     return 0;
 }

@@ -408,22 +408,6 @@ bool audio_extn_is_dolby_format(audio_format_t format)
 #endif /* DS1_DOLBY_DDP_ENABLED || DS2_DOLBY_DAP_ENABLED */
 
 #ifdef HDMI_PASSTHROUGH_ENABLED
-int audio_extn_dolby_update_passt_formats(struct audio_device *adev,
-                                          struct stream_out *out) {
-    int32_t i = 0, ret = -ENOSYS;
-
-    if (platform_is_edid_supported_format(adev->platform, AUDIO_FORMAT_AC3) ||
-        platform_is_edid_supported_format(adev->platform, AUDIO_FORMAT_E_AC3)) {
-        out->supported_formats[i++] = AUDIO_FORMAT_AC3;
-        out->supported_formats[i++] = AUDIO_FORMAT_E_AC3;
-        /* Reciever must support JOC and advertise, otherwise JOC is treated as DDP */
-        out->supported_formats[i++] = AUDIO_FORMAT_E_AC3_JOC;
-        ret = 0;
-    }
-    ALOGV("%s: ret = %d", __func__, ret);
-    return ret;
-}
-
 bool audio_extn_dolby_is_passt_convert_supported(struct audio_device *adev,
                                                  struct stream_out *out) {
 
@@ -494,16 +478,36 @@ void audio_extn_dolby_update_passt_stream_configuration(
     }
 }
 
-bool audio_extn_dolby_is_passthrough_stream(int flags) {
+bool audio_extn_dolby_is_passthrough_stream(struct stream_out *out) {
 
-    if (flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)
-        return true;
+    //check passthrough system property
+    if (!property_get_bool("audio.offload.passthrough", false)) {
+        return false;
+    }
+
+    //check supported device, currently only on HDMI.
+    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        //passthrough flag
+        if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)
+            return true;
+        //direct flag, check supported formats.
+        if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT) {
+            if (audio_extn_passthru_is_supported_format(out->format)) {
+                if (platform_is_edid_supported_format(out->dev->platform,
+                        out->format)) {
+                    return true;
+                } else if (audio_extn_is_dolby_format(out->format) &&
+                            platform_is_edid_supported_format(out->dev->platform,
+                                AUDIO_FORMAT_AC3)){
+                    //return true for EAC3/EAC3_JOC formats
+                    //if sink supports only AC3
+                    return true;
+                }
+            }
+        }
+    }
+
     return false;
-}
-
-int audio_extn_dolby_set_hdmi_config(struct audio_device *adev,
-                                                    struct stream_out *out) {
-    return platform_set_hdmi_config(out);
 }
 
 int audio_extn_dolby_get_passt_buffer_size(audio_offload_info_t* info) {

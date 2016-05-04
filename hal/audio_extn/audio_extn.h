@@ -400,31 +400,48 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev);
 #endif
 
 #ifndef HDMI_PASSTHROUGH_ENABLED
-#define audio_extn_dolby_update_passt_formats(adev, out)                   (0)
 #define audio_extn_dolby_update_passt_stream_configuration(adev, out)      (0)
 #define audio_extn_dolby_is_passt_convert_supported(adev, out)             (0)
 #define audio_extn_dolby_is_passt_supported(adev, out)                     (0)
-#define audio_extn_dolby_is_passthrough_stream(flags)                      (0)
-#define audio_extn_dolby_set_hdmi_config(adev, out)                        (0)
+#define audio_extn_dolby_is_passthrough_stream(out)                        (0)
 #define audio_extn_dolby_get_passt_buffer_size(info)                       (0)
 #define audio_extn_dolby_set_passt_volume(out, mute)                       (0)
 #define audio_extn_dolby_set_passt_latency(out, latency)                   (0)
-#define AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH  0x4000
+#define audio_extn_passthru_is_supported_format(f) (0)
+#define audio_extn_passthru_should_drop_data(o) (0)
+#define audio_extn_passthru_on_start(o) do {} while(0)
+#define audio_extn_passthru_on_stop(o) do {} while(0)
+#define audio_extn_passthru_on_pause(o) do {} while(0)
+#define audio_extn_passthru_is_enabled() (0)
+#define audio_extn_passthru_is_active() (0)
+#define audio_extn_passthru_set_parameters(a, p) (-ENOSYS)
+#define audio_extn_passthru_init(a) do {} while(0)
+#define audio_extn_passthru_should_standby(o) (1)
+
+#define AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH  0x1000
 #else
-int audio_extn_dolby_update_passt_formats(struct audio_device *adev,
-                                          struct stream_out *out);
 bool audio_extn_dolby_is_passt_convert_supported(struct audio_device *adev,
                                                  struct stream_out *out);
 bool audio_extn_dolby_is_passt_supported(struct audio_device *adev,
                                          struct stream_out *out);
 void audio_extn_dolby_update_passt_stream_configuration(struct audio_device *adev,
                                                  struct stream_out *out);
-bool audio_extn_dolby_is_passthrough_stream(int flags);
-int audio_extn_dolby_set_hdmi_config(struct audio_device *adev,
-                                     struct stream_out *out);
+bool audio_extn_dolby_is_passthrough_stream(struct stream_out *out);
 int audio_extn_dolby_get_passt_buffer_size(audio_offload_info_t* info);
 int audio_extn_dolby_set_passt_volume(struct stream_out *out, int mute);
 int audio_extn_dolby_set_passt_latency(struct stream_out *out, int latency);
+bool audio_extn_passthru_is_supported_format(audio_format_t format);
+bool audio_extn_passthru_should_drop_data(struct stream_out * out);
+void audio_extn_passthru_on_start(struct stream_out *out);
+void audio_extn_passthru_on_stop(struct stream_out *out);
+void audio_extn_passthru_on_pause(struct stream_out *out);
+int audio_extn_passthru_set_parameters(struct audio_device *adev,
+                                       struct str_parms *parms);
+bool audio_extn_passthru_is_enabled();
+bool audio_extn_passthru_is_active();
+void audio_extn_passthru_init(struct audio_device *adev);
+bool audio_extn_passthru_should_standby(struct stream_out *out);
+
 #endif
 
 #ifndef HFP_ENABLED
@@ -541,4 +558,21 @@ void audio_extn_perf_lock_release(int *handle);
 #else
 void audio_utils_set_hdmi_channel_status(struct stream_out *out, char * buffer, size_t bytes);
 #endif
+
+#ifndef KEEP_ALIVE_ENABLED
+#define audio_extn_keep_alive_init(a) do {} while(0)
+#define audio_extn_keep_alive_start() do {} while(0)
+#define audio_extn_keep_alive_stop() do {} while(0)
+#define audio_extn_keep_alive_is_active() (false)
+#define audio_extn_keep_alive_set_parameters(adev, parms) (0)
+#else
+void audio_extn_keep_alive_init(struct audio_device *adev);
+void audio_extn_keep_alive_start();
+void audio_extn_keep_alive_stop();
+bool audio_extn_keep_alive_is_active();
+int audio_extn_keep_alive_set_parameters(struct audio_device *adev,
+                                         struct str_parms *parms);
+#endif
+
+
 #endif /* AUDIO_EXTN_H */

@@ -67,9 +67,12 @@
 #define ACDB_DEV_TYPE_OUT 1
 #define ACDB_DEV_TYPE_IN 2
 
-#define MAX_SUPPORTED_CHANNEL_MASKS 8
-#define MAX_SUPPORTED_FORMATS 3
+#define MAX_SUPPORTED_CHANNEL_MASKS 14
+#define MAX_SUPPORTED_FORMATS 15
+#define MAX_SUPPORTED_SAMPLE_RATES 7
 #define DEFAULT_HDMI_OUT_CHANNELS   2
+#define DEFAULT_HDMI_OUT_SAMPLE_RATE 48000
+#define DEFAULT_HDMI_OUT_FORMAT AUDIO_FORMAT_PCM_16_BIT
 
 #define SND_CARD_STATE_OFFLINE 0
 #define SND_CARD_STATE_ONLINE 1
@@ -199,6 +202,7 @@ struct stream_out {
     /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
     audio_format_t supported_formats[MAX_SUPPORTED_FORMATS+1];
+    uint32_t supported_sample_rates[MAX_SUPPORTED_SAMPLE_RATES+1];
     bool muted;
     uint64_t written; /* total frames written, not cleared when entering standby */
     audio_io_handle_t handle;
@@ -321,6 +325,9 @@ struct audio_device {
     bool speaker_lr_swap;
     struct voice voice;
     unsigned int cur_hdmi_channels;
+    audio_format_t cur_hdmi_format;
+    unsigned int cur_hdmi_sample_rate;
+    unsigned int cur_hdmi_bit_width;
     unsigned int cur_wfd_channels;
     bool bt_wb_speech_enabled;
     bool allow_afe_proxy_usage;
