@@ -264,6 +264,9 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_HEADSET_MIC] = "headset-mic",
 
     [SND_DEVICE_IN_UNPROCESSED_MIC] = "unprocessed-mic",
+    [SND_DEVICE_IN_UNPROCESSED_STEREO_MIC] = "voice-rec-dmic-ef",
+    [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = "three-mic",
+    [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = "quad-mic",
     [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = "headset-mic",
 
     [SND_DEVICE_IN_VOICE_RX] = "voice-rx",
@@ -357,6 +360,9 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
 
     [SND_DEVICE_IN_UNPROCESSED_MIC] = ACDB_ID_VOICE_REC_MIC,
     [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = ACDB_ID_HEADSET_MIC_AEC,
+    [SND_DEVICE_IN_UNPROCESSED_STEREO_MIC] = 35,
+    [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = 125,
+    [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = 125,
 
     [SND_DEVICE_IN_VOICE_RX] = 44,
 
@@ -456,6 +462,9 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
 
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_STEREO_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_THREE_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_QUAD_MIC)},
 
     {TO_NAME_INDEX(SND_DEVICE_IN_THREE_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_QUAD_MIC)},
@@ -2104,7 +2113,19 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         }
     } else if (source == AUDIO_SOURCE_UNPROCESSED) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
-            snd_device = SND_DEVICE_IN_UNPROCESSED_MIC;
+            if (((channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK) ||
+                 (channel_mask == AUDIO_CHANNEL_IN_STEREO)) &&
+                       (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
+                snd_device = SND_DEVICE_IN_UNPROCESSED_STEREO_MIC;
+            } else if (((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) &&
+                       (my_data->source_mic_type & SOURCE_THREE_MIC)) {
+                snd_device = SND_DEVICE_IN_UNPROCESSED_THREE_MIC;
+            } else if (((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) &&
+                       (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
+                snd_device = SND_DEVICE_IN_UNPROCESSED_QUAD_MIC;
+            } else {
+                snd_device = SND_DEVICE_IN_UNPROCESSED_MIC;
+            }
         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC;
         }
@@ -2527,6 +2548,26 @@ int64_t platform_render_latency(audio_usecase_t usecase)
         default:
             return 0;
     }
+}
+
+bool platform_check_and_set_capture_backend_cfg(struct audio_device* adev,
+         struct audio_usecase *usecase, snd_device_t snd_device)
+{
+    enum pcm_format  in_pcm_format = PCM_FORMAT_S16_LE;
+
+    if (adev && adev->active_input)
+        in_pcm_format = adev->active_input->config.format;
+
+    // allow 24 bit recording only if voice call is not active
+    if (!voice_is_in_call(adev) &&
+        adev->mode != AUDIO_MODE_IN_COMMUNICATION &&
+        in_pcm_format == PCM_FORMAT_S24_LE) {
+        audio_route_apply_and_update_path(adev->audio_route, "set-capture-format-24le");
+    } else {
+        audio_route_apply_and_update_path(adev->audio_route, "set-capture-format-default");
+    }
+
+    return true;
 }
 
 int platform_set_snd_device_backend(snd_device_t device, const char *backend_tag,

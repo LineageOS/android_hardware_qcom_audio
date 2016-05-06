@@ -203,6 +203,7 @@ struct stream_in {
     bool is_st_session_active;
 
     struct audio_device *dev;
+    audio_format_t format;
 };
 
 typedef enum {
