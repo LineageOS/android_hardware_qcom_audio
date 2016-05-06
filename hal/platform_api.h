@@ -86,4 +86,7 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
 
 int platform_set_parameters(void *platform, struct str_parms *parms);
 
+bool platform_check_and_set_capture_backend_cfg(struct audio_device* adev,
+                   struct audio_usecase *usecase, snd_device_t snd_device);
+
 #endif // AUDIO_PLATFORM_API_H
