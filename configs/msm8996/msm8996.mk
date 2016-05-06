@@ -164,3 +164,6 @@ audio.safx.pbe.enabled=true
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.parser.ip.buffer.size=262144
 
+#enable hw aac encoder by default
+PRODUCT_PROPERTY_OVERRIDES += \
+qcom.hw.aac.encoder=true
