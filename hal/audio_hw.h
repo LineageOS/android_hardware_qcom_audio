@@ -207,6 +207,7 @@ struct stream_in {
     int af_period_multiplier;
     bool routing_change;
     struct audio_device *dev;
+    audio_format_t format;
 };
 
 typedef enum {
