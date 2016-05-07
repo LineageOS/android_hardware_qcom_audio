@@ -354,7 +354,7 @@ AudioHardwareALSA::AudioHardwareALSA() :
            property_get("ro.baseband.arch", baseband_arch, "");
            if (!strcmp("msm8960", platform) &&
                (!strcmp("mdm", baseband) || !strcmp("sglte2", baseband) ||
-                !strcmp("mdm", baseband_arch))) {
+                !strcmp("mdm", baseband_arch) || !strcmp("dsda", baseband_arch))) {
                ALOGV("Detected Fusion tabla 2.x");
                mFusion3Platform = true;
                if((fp = fopen("/sys/devices/system/soc/soc0/platform_version","r")) == NULL) {
