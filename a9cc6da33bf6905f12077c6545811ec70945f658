@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5faad753_07efb2b0",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 637,
+      "author": {
+        "id": 10094
+      },
+      "writtenOn": "2016-05-09T18:06:52Z",
+      "side": 1,
+      "message": "won\u0027t this be hit when recursively calling into enable_snd_device?",
+      "range": {
+        "startLine": 637,
+        "startChar": 12,
+        "endLine": 637,
+        "endChar": 63
+      },
+      "revId": "a9cc6da33bf6905f12077c6545811ec70945f658",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5faad753_a72b3ee9",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 704,
+      "author": {
+        "id": 10094
+      },
+      "writtenOn": "2016-05-09T18:06:52Z",
+      "side": 1,
+      "message": "same",
+      "range": {
+        "startLine": 704,
+        "startChar": 16,
+        "endLine": 704,
+        "endChar": 61
+      },
+      "revId": "a9cc6da33bf6905f12077c6545811ec70945f658",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
