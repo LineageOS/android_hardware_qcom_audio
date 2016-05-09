@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "5faad753_a131ee0d",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 656,
+      "author": {
+        "id": 32
+      },
+      "writtenOn": "2016-05-09T04:05:58Z",
+      "side": 1,
+      "message": "Yep, needs added to both paths.",
+      "parentUuid": "5faad753_01a7a251",
+      "range": {
+        "startLine": 656,
+        "startChar": 8,
+        "endLine": 656,
+        "endChar": 32
+      },
+      "revId": "8322d99b0cf0f3f6d243ec34fb93a73d12657a62",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5faad753_e1ab661a",
         "filename": "hal/msm8974/platform.c",
         "patchSetId": 1
@@ -36,6 +60,24 @@
       "writtenOn": "2016-05-09T02:47:59Z",
       "side": 1,
       "message": "I\u0027m not sure if these values here are always correct? Anything with custom values (m9, clark, sambar, AFAIK) here would be required to update their platform_infos if this patch goes in.",
+      "revId": "8322d99b0cf0f3f6d243ec34fb93a73d12657a62",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5faad753_c1342afe",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 896,
+      "author": {
+        "id": 32
+      },
+      "writtenOn": "2016-05-09T04:05:58Z",
+      "side": 1,
+      "message": "Yes, there is a new \"interface\" tag that should be set per-path in the XML.\n\nUnless I\u0027m mistaken, the code should do the same thing it\u0027s already doing if interface isn\u0027t set since it will be treated as having the same backend.",
+      "parentUuid": "5faad753_e1ab661a",
       "revId": "8322d99b0cf0f3f6d243ec34fb93a73d12657a62",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
