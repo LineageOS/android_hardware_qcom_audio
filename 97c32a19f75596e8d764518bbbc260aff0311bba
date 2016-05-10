@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5faad753_6ae2e603",
+        "filename": "policy_hal/AudioPolicyManager.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 464,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2016-05-10T18:04:40Z",
+      "side": 1,
+      "message": "100 chars",
+      "revId": "97c32a19f75596e8d764518bbbc260aff0311bba",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
