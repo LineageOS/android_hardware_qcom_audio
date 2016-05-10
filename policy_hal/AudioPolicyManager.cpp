@@ -461,7 +461,8 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
         const bool allowOffloadStreamingWithVideo = property_get_bool("av.streaming.offload.enable",
                                                                    false /*default value*/);
         if(offloadInfo.has_video && offloadInfo.is_streaming && !allowOffloadStreamingWithVideo) {
-            ALOGW("offload disabled by av.streaming.offload.enable = %s ", propValue );
+            ALOGW("offload disabled by av.streaming.offload.enable = %d",
+                    allowOffloadStreamingWithVideo);
             return false;
         }
 
