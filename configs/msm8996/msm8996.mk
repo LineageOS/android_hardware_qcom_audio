@@ -189,3 +189,9 @@ audio.parser.ip.buffer.size=262144
 #enable hw aac encoder by default
 PRODUCT_PROPERTY_OVERRIDES += \
 qcom.hw.aac.encoder=true
+
+#enable software decoders for ALAC and APE
+PRODUCT_PROPERTY_OVERRIDES += \
+use.qti.sw.alac.decoder=true
+PRODUCT_PROPERTY_OVERRIDES += \
+use.qti.sw.ape.decoder=true
