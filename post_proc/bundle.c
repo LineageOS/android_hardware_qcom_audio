@@ -181,7 +181,7 @@ bool effects_enabled()
  * Interface from audio HAL
  */
 __attribute__ ((visibility ("default")))
-int offload_effects_bundle_hal_start_output(audio_io_handle_t output, int pcm_id)
+int offload_effects_bundle_hal_start_output(audio_io_handle_t output, int pcm_id, struct mixer *mixer)
 {
     int ret = 0;
     struct listnode *node;
@@ -213,18 +213,18 @@ int offload_effects_bundle_hal_start_output(audio_io_handle_t output, int pcm_id
     /* populate the mixer control to send offload parameters */
     snprintf(mixer_string, sizeof(mixer_string),
              "%s %d", "Audio Effects Config", out_ctxt->pcm_device_id);
-    out_ctxt->mixer = mixer_open(MIXER_CARD);
-    if (!out_ctxt->mixer) {
-        ALOGE("Failed to open mixer");
+
+    if (!mixer) {
+        ALOGE("Invalid mixer");
         out_ctxt->ctl = NULL;
         ret = -EINVAL;
         free(out_ctxt);
         goto exit;
     } else {
+        out_ctxt->mixer = mixer;
         out_ctxt->ctl = mixer_get_ctl_by_name(out_ctxt->mixer, mixer_string);
         if (!out_ctxt->ctl) {
             ALOGE("mixer_get_ctl_by_name failed");
-            mixer_close(out_ctxt->mixer);
             out_ctxt->mixer = NULL;
             ret = -EINVAL;
             free(out_ctxt);
@@ -279,9 +279,6 @@ int offload_effects_bundle_hal_stop_output(audio_io_handle_t output, int pcm_id)
         if (fx_ctxt->ops.stop)
             fx_ctxt->ops.stop(fx_ctxt, out_ctxt);
     }
-
-    if (out_ctxt->mixer)
-        mixer_close(out_ctxt->mixer);
 
     list_remove(&out_ctxt->outputs_list_node);
 

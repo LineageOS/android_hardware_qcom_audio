@@ -180,7 +180,6 @@ struct stream_out {
     audio_io_handle_t handle;
 
     int non_blocking;
-    bool use_small_bufs;
     int playback_started;
     int offload_state;
     pthread_cond_t offload_cond;
@@ -280,7 +279,7 @@ struct audio_device {
     int (*visualizer_start_output)(audio_io_handle_t, int);
     int (*visualizer_stop_output)(audio_io_handle_t, int);
     void *offload_effects_lib;
-    int (*offload_effects_start_output)(audio_io_handle_t, int);
+    int (*offload_effects_start_output)(audio_io_handle_t, int, struct mixer *);
     int (*offload_effects_stop_output)(audio_io_handle_t, int);
 
     struct sound_card_status snd_card_status;

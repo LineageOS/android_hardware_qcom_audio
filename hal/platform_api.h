@@ -78,7 +78,6 @@ int platform_info_init(void);
 struct audio_offload_info_t;
 uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info);
 uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info);
-bool platform_use_small_buffer(audio_offload_info_t* info);
 
 int platform_get_usecase_index(const char * usecase);
 int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
