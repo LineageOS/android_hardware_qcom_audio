@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -1109,11 +1109,6 @@ int platform_get_fluence_type(void *platform __unused, char *value __unused,
 uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info __unused)
 {
     return 0;
-}
-
-bool platform_use_small_buffer(audio_offload_info_t* info)
-{
-    return false;
 }
 
 int platform_get_edid_info(void *platform __unused)

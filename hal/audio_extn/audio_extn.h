@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -39,17 +39,6 @@
 #define AUDIO_EXTN_H
 
 #include <cutils/str_parms.h>
-
-#ifndef PCM_OFFLOAD_ENABLED
-#define AUDIO_FORMAT_PCM_OFFLOAD 0x1A000000UL
-#define AUDIO_FORMAT_PCM_16_BIT_OFFLOAD (AUDIO_FORMAT_PCM_OFFLOAD | AUDIO_FORMAT_PCM_SUB_16_BIT)
-#define AUDIO_FORMAT_PCM_24_BIT_OFFLOAD (AUDIO_FORMAT_PCM_OFFLOAD | AUDIO_FORMAT_PCM_SUB_8_24_BIT)
-#define AUDIO_OFFLOAD_CODEC_FORMAT  "music_offload_codec_format"
-#define audio_is_offload_pcm(format) (0)
-#define OFFLOAD_USE_SMALL_BUFFER false
-#else
-#define OFFLOAD_USE_SMALL_BUFFER ((info->format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM_OFFLOAD)
-#endif
 
 #ifndef AFE_PROXY_ENABLED
 #define AUDIO_DEVICE_OUT_PROXY 0x40000

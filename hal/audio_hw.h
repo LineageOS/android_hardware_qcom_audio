@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -84,7 +84,6 @@ enum {
     USECASE_AUDIO_PLAYBACK_LOW_LATENCY,
     USECASE_AUDIO_PLAYBACK_MULTI_CH,
     USECASE_AUDIO_PLAYBACK_OFFLOAD,
-#ifdef MULTIPLE_OFFLOAD_ENABLED
     USECASE_AUDIO_PLAYBACK_OFFLOAD2,
     USECASE_AUDIO_PLAYBACK_OFFLOAD3,
     USECASE_AUDIO_PLAYBACK_OFFLOAD4,
@@ -93,7 +92,6 @@ enum {
     USECASE_AUDIO_PLAYBACK_OFFLOAD7,
     USECASE_AUDIO_PLAYBACK_OFFLOAD8,
     USECASE_AUDIO_PLAYBACK_OFFLOAD9,
-#endif
     USECASE_AUDIO_PLAYBACK_ULL,
 
     USECASE_AUDIO_DIRECT_PCM_OFFLOAD,
@@ -206,7 +204,6 @@ struct stream_out {
     struct stream_app_type_cfg app_type_cfg;
 
     int non_blocking;
-    bool use_small_bufs;
     int playback_started;
     int offload_state;
     pthread_cond_t offload_cond;
@@ -335,7 +332,7 @@ struct audio_device {
     int (*visualizer_start_output)(audio_io_handle_t, int);
     int (*visualizer_stop_output)(audio_io_handle_t, int);
     void *offload_effects_lib;
-    int (*offload_effects_start_output)(audio_io_handle_t, int);
+    int (*offload_effects_start_output)(audio_io_handle_t, int, struct mixer *);
     int (*offload_effects_stop_output)(audio_io_handle_t, int);
 
     struct sound_card_status snd_card_status;
