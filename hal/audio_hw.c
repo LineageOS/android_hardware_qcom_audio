@@ -52,6 +52,8 @@
 
 #include "sound/compress_params.h"
 
+/* COMPRESS_OFFLOAD_FRAGMENT_SIZE must be more than 8KB and a multiple of 32KB if more than 32KB.
+ * COMPRESS_OFFLOAD_FRAGMENT_SIZE * COMPRESS_OFFLOAD_NUM_FRAGMENTS must be less than 8MB. */
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE (256 * 1024)
 // 2 buffers causes problems with high bitrate files
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 3
