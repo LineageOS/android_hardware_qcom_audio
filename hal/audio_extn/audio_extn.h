@@ -22,16 +22,6 @@
 
 #include <cutils/str_parms.h>
 
-#if 0
-#define AUDIO_FORMAT_PCM_OFFLOAD 0x17000000UL
-#define AUDIO_FORMAT_PCM_16_BIT_OFFLOAD (AUDIO_FORMAT_PCM_OFFLOAD | AUDIO_FORMAT_PCM_SUB_16_BIT)
-#define AUDIO_FORMAT_PCM_24_BIT_OFFLOAD (AUDIO_FORMAT_PCM_OFFLOAD | AUDIO_FORMAT_PCM_SUB_8_24_BIT)
-#define AUDIO_OFFLOAD_CODEC_FORMAT  "music_offload_codec_format"
-#define audio_is_offload_pcm(format) (0)
-#else
-#define OFFLOAD_USE_SMALL_BUFFER ((info->format & AUDIO_FORMAT_PCM_OFFLOAD) == AUDIO_FORMAT_PCM_OFFLOAD)
-#endif
-
 #ifndef AFE_PROXY_ENABLED
 #define AUDIO_DEVICE_OUT_PROXY 0x40000
 #endif
