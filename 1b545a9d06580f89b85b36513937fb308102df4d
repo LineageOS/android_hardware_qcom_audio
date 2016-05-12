@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5faad753_cfa2039b",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2061,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-05-12T20:54:18Z",
+      "side": 0,
+      "message": "Shouldn\u0027t this case be removed too?",
+      "revId": "1b545a9d06580f89b85b36513937fb308102df4d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
