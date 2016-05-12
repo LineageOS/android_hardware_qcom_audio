@@ -41,8 +41,6 @@
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
-#define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
-#define MIXER_XML_PATH_WCD9330 "/system/etc/mixer_paths_wcd9330.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
 
@@ -154,8 +152,6 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_RECORD_COMPRESS] = {COMPRESS_CAPTURE_DEVICE, COMPRESS_CAPTURE_DEVICE},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
                                           LOWLATENCY_PCM_DEVICE},
-    [USECASE_AUDIO_RECORD_FM_VIRTUAL] = {MULTIMEDIA2_PCM_DEVICE,
-                                  MULTIMEDIA2_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_FM] = {FM_PLAYBACK_PCM_DEVICE, FM_CAPTURE_PCM_DEVICE},
     [USECASE_AUDIO_HFP_SCO] = {HFP_PCM_RX, HFP_SCO_RX},
     [USECASE_AUDIO_HFP_SCO_WB] = {HFP_PCM_RX, HFP_SCO_RX},
@@ -444,7 +440,6 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_LOW_LATENCY)},
-    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_FM_VIRTUAL)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_FM)},
     {TO_NAME_INDEX(USECASE_AUDIO_HFP_SCO)},
     {TO_NAME_INDEX(USECASE_AUDIO_HFP_SCO_WB)},
@@ -760,30 +755,21 @@ void *platform_init(struct audio_device *adev)
         ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
 
         my_data->hw_info = hw_info_init(snd_card_name);
-        if (!my_data->hw_info) {
-            ALOGE("%s: Failed to init hardware info", __func__);
-        } else {
-            if (!strncmp(snd_card_name, "msm8226-tomtom-snd-card",
-                         sizeof("msm8226-tomtom-snd-card"))) {
-                ALOGE("%s: Call MIXER_XML_PATH_WCD9330", __func__);
 
-                adev->audio_route = audio_route_init(snd_card_num,
-                                                     MIXER_XML_PATH_WCD9330);
-            } else if (audio_extn_read_xml(adev, snd_card_num, MIXER_XML_PATH,
-                                    MIXER_XML_PATH_AUXPCM) == -ENOSYS)
-                adev->audio_route = audio_route_init(snd_card_num,
-                                                 MIXER_XML_PATH);
-            if (!adev->audio_route) {
-                ALOGE("%s: Failed to init audio route controls, aborting.",
-                       __func__);
-                free(my_data);
-                mixer_close(adev->mixer);
-                return NULL;
-            }
-            adev->snd_card = snd_card_num;
-            ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
-            break;
+        adev->audio_route = audio_route_init(snd_card_num,
+                                         MIXER_XML_PATH);
+        if (!adev->audio_route) {
+            ALOGE("%s: Failed to init audio route controls, aborting.",
+                   __func__);
+            free(my_data);
+            mixer_close(adev->mixer);
+            return NULL;
         }
+
+        adev->snd_card = snd_card_num;
+        ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
+        break;
+
         retry_num = 0;
         snd_card_num++;
         mixer_close(adev->mixer);
@@ -2018,8 +2004,6 @@ int platform_update_usecase_from_source(int source, int usecase)
             return USECASE_INCALL_REC_DOWNLINK;
         case AUDIO_SOURCE_VOICE_CALL:
             return USECASE_INCALL_REC_UPLINK_AND_DOWNLINK;
-        case AUDIO_SOURCE_FM_TUNER:
-            return USECASE_AUDIO_RECORD_FM_VIRTUAL;
         default:
             return usecase;
     }
