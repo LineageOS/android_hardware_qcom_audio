@@ -2056,7 +2056,7 @@ int platform_update_usecase_from_source(int source, int usecase)
             return USECASE_INCALL_REC_DOWNLINK;
         case AUDIO_SOURCE_VOICE_CALL:
             return USECASE_INCALL_REC_UPLINK_AND_DOWNLINK;
-#if 0 /* This is actually breaking FM playback/recording in MM */
+#if 0
         case AUDIO_SOURCE_FM_TUNER:
             return USECASE_AUDIO_RECORD_FM_VIRTUAL;
 #endif
