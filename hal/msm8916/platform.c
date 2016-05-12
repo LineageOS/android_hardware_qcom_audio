@@ -1970,7 +1970,7 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
     const char * be_itf2 = hw_interface_table[snd_device2];
 
     if (NULL != be_itf1 && NULL != be_itf2) {
-        if (0 != strcmp(be_itf1, be_itf2))
+        if ((NULL == strstr(be_itf2, be_itf1)) && (NULL == strstr(be_itf1, be_itf2)))
             result = false;
     } else if (NULL == be_itf1 && NULL != be_itf2) {
             result = false;
