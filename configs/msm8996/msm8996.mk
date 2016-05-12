@@ -141,6 +141,10 @@ audio.offload.track.enable=true
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.deep_buffer.media=true
 
+#Default pcm audio sink buffer size in msec. This is used in calculating framecount
+PRODUCT_PROPERTY_OVERRIDES += \
+media.stagefright.audio.sink=280
+
 #enable voice path for PCM VoIP by default
 PRODUCT_PROPERTY_OVERRIDES += \
 use.voice.path.for.pcm.voip=true
