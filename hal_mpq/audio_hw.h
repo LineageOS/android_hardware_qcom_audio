@@ -66,7 +66,6 @@ typedef enum {
     USECASE_AUDIO_RECORD,
     USECASE_AUDIO_RECORD_COMPRESS,
     USECASE_AUDIO_RECORD_LOW_LATENCY,
-    USECASE_AUDIO_RECORD_FM_VIRTUAL,
 
     /* Voice usecase */
     USECASE_VOICE_CALL,
@@ -332,7 +331,6 @@ static const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_RECORD] = "audio-record",
     [USECASE_AUDIO_RECORD_COMPRESS] = "audio-record-compress",
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = "low-latency-record",
-    [USECASE_AUDIO_RECORD_FM_VIRTUAL] = "fm-virtual-record",
     [USECASE_AUDIO_PLAYBACK_FM] = "play-fm",
     [USECASE_VOICE_CALL] = "voice-call",
 

@@ -41,8 +41,6 @@
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
-#define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
-#define MIXER_XML_PATH_WCD9330 "/system/etc/mixer_paths_wcd9330.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
 
@@ -154,8 +152,6 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_RECORD_COMPRESS] = {COMPRESS_CAPTURE_DEVICE, COMPRESS_CAPTURE_DEVICE},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
                                           LOWLATENCY_PCM_DEVICE},
-    [USECASE_AUDIO_RECORD_FM_VIRTUAL] = {MULTIMEDIA2_PCM_DEVICE,
-                                  MULTIMEDIA2_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_FM] = {FM_PLAYBACK_PCM_DEVICE, FM_CAPTURE_PCM_DEVICE},
     [USECASE_AUDIO_HFP_SCO] = {HFP_PCM_RX, HFP_SCO_RX},
     [USECASE_AUDIO_HFP_SCO_WB] = {HFP_PCM_RX, HFP_SCO_RX},
@@ -453,7 +449,6 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_LOW_LATENCY)},
-    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_FM_VIRTUAL)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_FM)},
     {TO_NAME_INDEX(USECASE_AUDIO_HFP_SCO)},
     {TO_NAME_INDEX(USECASE_AUDIO_HFP_SCO_WB)},
@@ -769,34 +764,20 @@ void *platform_init(struct audio_device *adev)
         ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
 
         my_data->hw_info = hw_info_init(snd_card_name);
-#ifdef HW_VARIANTS_ENABLED
-        if (!my_data->hw_info) {
-            ALOGE("%s: Failed to init hardware info", __func__);
-        } else {
-#endif
-            if (!strncmp(snd_card_name, "msm8226-tomtom-snd-card",
-                         sizeof("msm8226-tomtom-snd-card"))) {
-                ALOGE("%s: Call MIXER_XML_PATH_WCD9330", __func__);
 
-                adev->audio_route = audio_route_init(snd_card_num,
-                                                     MIXER_XML_PATH_WCD9330);
-            } else if (audio_extn_read_xml(adev, snd_card_num, MIXER_XML_PATH,
-                                    MIXER_XML_PATH_AUXPCM) == -ENOSYS)
-                adev->audio_route = audio_route_init(snd_card_num,
-                                                 MIXER_XML_PATH);
-            if (!adev->audio_route) {
-                ALOGE("%s: Failed to init audio route controls, aborting.",
-                       __func__);
-                free(my_data);
-                mixer_close(adev->mixer);
-                return NULL;
-            }
-            adev->snd_card = snd_card_num;
-            ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
-            break;
-#ifdef HW_VARIANTS_ENABLED
+        adev->audio_route = audio_route_init(snd_card_num,
+                                         MIXER_XML_PATH);
+        if (!adev->audio_route) {
+            ALOGE("%s: Failed to init audio route controls, aborting.",
+                   __func__);
+            free(my_data);
+            mixer_close(adev->mixer);
+            return NULL;
         }
-#endif
+        adev->snd_card = snd_card_num;
+        ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
+        break;
+
         retry_num = 0;
         snd_card_num++;
         mixer_close(adev->mixer);
@@ -1229,18 +1210,13 @@ int platform_set_voice_volume(void *platform, int volume)
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     struct mixer_ctl *ctl;
-    //const char *mixer_ctl_name = "Voice Rx Gain";
     const char *mixer_ctl_name = "Voice Rx Volume";
     int vol_index = 0, ret = 0;
-    uint32_t set_values[ ] = {0,
-                              ALL_SESSION_VSID,
-                              DEFAULT_VOLUME_RAMP_DURATION_MS};
 
     // Voice volume levels are mapped to adsp volume levels as follows.
     // 100 -> 5, 80 -> 4, 60 -> 3, 40 -> 2, 20 -> 1  0 -> 0
     // But this values don't changed in kernel. So, below change is need.
     vol_index = (int)percent_to_index(volume, MIN_VOL_INDEX, MAX_VOL_INDEX);
-    set_values[0] = vol_index;
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
@@ -1248,8 +1224,6 @@ int platform_set_voice_volume(void *platform, int volume)
               __func__, mixer_ctl_name);
         return -EINVAL;
     }
-    //ALOGV("Setting voice volume index: %d", set_values[0]);
-    //mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
     ALOGV("Setting voice volume index: %d", vol_index);
     mixer_ctl_set_value(ctl, 0, vol_index);
 
@@ -1269,11 +1243,7 @@ int platform_set_mic_mute(void *platform, bool state)
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voice Tx Mute";
     int ret = 0;
-    uint32_t set_values[ ] = {0,
-                              ALL_SESSION_VSID,
-                              DEFAULT_VOLUME_RAMP_DURATION_MS};
 
-    set_values[0] = state;
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
@@ -1281,7 +1251,6 @@ int platform_set_mic_mute(void *platform, bool state)
         return -EINVAL;
     }
     ALOGV("Setting voice mute state: %d", state);
-    //mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
     mixer_ctl_set_value(ctl, 0, state);
 
     if (my_data->csd != NULL) {
@@ -1300,9 +1269,7 @@ int platform_set_device_mute(void *platform, bool state, char *dir)
     struct mixer_ctl *ctl;
     char *mixer_ctl_name = NULL;
     int ret = 0;
-    uint32_t set_values[ ] = {0,
-                              ALL_SESSION_VSID,
-                              0};
+
     if(dir == NULL) {
         ALOGE("%s: Invalid direction:%s", __func__, dir);
         return -EINVAL;
@@ -1316,7 +1283,6 @@ int platform_set_device_mute(void *platform, bool state, char *dir)
         return -EINVAL;
     }
 
-    set_values[0] = state;
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
@@ -1326,7 +1292,6 @@ int platform_set_device_mute(void *platform, bool state, char *dir)
 
     ALOGV("%s: Setting device mute state: %d, mixer ctrl:%s",
           __func__,state, mixer_ctl_name);
-    //mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
     mixer_ctl_set_value(ctl, 0, state);
 
     return ret;
@@ -2044,10 +2009,6 @@ int platform_update_usecase_from_source(int source, int usecase)
             return USECASE_INCALL_REC_DOWNLINK;
         case AUDIO_SOURCE_VOICE_CALL:
             return USECASE_INCALL_REC_UPLINK_AND_DOWNLINK;
-#if 0 /* This is actually breaking FM playback/recording in MM */
-        case AUDIO_SOURCE_FM_TUNER:
-            return USECASE_AUDIO_RECORD_FM_VIRTUAL;
-#endif
         default:
             return usecase;
     }

@@ -123,8 +123,7 @@ static int pcm_device_table[AUDIO_USECASE_MAX][4] = {
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {USECASE_AUDIO_RECORD_LOW_LATENCY,
                                           LOWLATENCY_PCM_DEVICE,
                                           LOWLATENCY_PCM_DEVICE, 0},
-   /* [USECASE_AUDIO_RECORD_FM_VIRTUAL] = {,
-                                  MULTIMEDIA2_PCM_DEVICE},
+/*
     [USECASE_AUDIO_PLAYBACK_FM] = {FM_PLAYBACK_PCM_DEVICE, FM_CAPTURE_PCM_DEVICE},
     [USECASE_VOICE_CALL] = {VOICE_CALL_PCM_DEVICE, VOICE_CALL_PCM_DEVICE},
     [USECASE_VOICE2_CALL] = {VOICE2_CALL_PCM_DEVICE, VOICE2_CALL_PCM_DEVICE},
@@ -1313,7 +1312,5 @@ int64_t platform_render_latency(audio_usecase_t usecase)
 int platform_update_usecase_from_source(int source, int usecase)
 {
     ALOGV("%s: input source :%d", __func__, source);
-    if(source == AUDIO_SOURCE_FM_RX_A2DP)
-        usecase = USECASE_AUDIO_RECORD_FM_VIRTUAL;
     return usecase;
 }
