@@ -611,14 +611,24 @@ static struct csd_data *open_csd_client()
             goto error;
         }
         csd->start_voice = (start_voice_t)dlsym(csd->csd_client,
-                                             "csd_client_start_voice");
+#ifdef SAMSUNG_CSDCLIENT
+            "csd_client_start_voice_og"
+#else
+            "csd_client_start_voice"
+#endif
+                                               );
         if (csd->start_voice == NULL) {
             ALOGE("%s: dlsym error %s for csd_client_start_voice",
                   __func__, dlerror());
             goto error;
         }
         csd->stop_voice = (stop_voice_t)dlsym(csd->csd_client,
-                                             "csd_client_stop_voice");
+#ifdef SAMSUNG_CSDCLIENT
+            "csd_client_stop_voice_og"
+#else
+            "csd_client_stop_voice"
+#endif
+                                             );
         if (csd->stop_voice == NULL) {
             ALOGE("%s: dlsym error %s for csd_client_stop_voice",
                   __func__, dlerror());

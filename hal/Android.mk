@@ -69,6 +69,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_USBAUDIO)),true)
     LOCAL_SRC_FILES += audio_extn/usb.c
 endif
 
+ifeq ($(BOARD_HAVE_SAMSUNG_CSDCLIENT),true)
+  LOCAL_CFLAGS += -DSAMSUNG_CSDCLIENT
+  LOCAL_SRC_FILES += msm8960/platform.c
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HFP)),true)
     LOCAL_CFLAGS += -DHFP_ENABLED
     LOCAL_SRC_FILES += audio_extn/hfp.c
