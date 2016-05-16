@@ -259,6 +259,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_MIC] = "voice-rec-mic",
     [SND_DEVICE_IN_VOICE_REC_MIC_NS] = "voice-rec-mic",
     [SND_DEVICE_IN_VOICE_REC_MIC_AEC] = "voice-rec-mic",
+    [SND_DEVICE_IN_VOICE_REC_MIC_AEC_NS] = "voice-rec-mic",
     [SND_DEVICE_IN_VOICE_REC_DMIC_STEREO] = "voice-rec-dmic-ef",
     [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = "voice-rec-dmic-ef-fluence",
     [SND_DEVICE_IN_VOICE_REC_HEADSET_MIC] = "headset-mic",
@@ -354,6 +355,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_MIC] = ACDB_ID_VOICE_REC_MIC,
     [SND_DEVICE_IN_VOICE_REC_MIC_NS] = 113,
     [SND_DEVICE_IN_VOICE_REC_MIC_AEC] = 112,
+    [SND_DEVICE_IN_VOICE_REC_MIC_AEC_NS] = 114,
     [SND_DEVICE_IN_VOICE_REC_DMIC_STEREO] = 35,
     [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = 43,
     [SND_DEVICE_IN_VOICE_REC_HEADSET_MIC] = ACDB_ID_HEADSET_MIC_AEC,
@@ -456,6 +458,7 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_MIC_NS)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_MIC_AEC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_MIC_AEC_NS)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_DMIC_STEREO)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_HEADSET_MIC)},
@@ -2101,13 +2104,18 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_QUAD_MIC;
             }
             if (snd_device == SND_DEVICE_NONE) {
-                if (adev->active_input->enable_ns)
-                    snd_device = SND_DEVICE_IN_VOICE_REC_MIC_NS;
-                else if (adev->active_input->enable_aec) {
-                    snd_device = SND_DEVICE_IN_VOICE_REC_MIC_AEC;
+                if (adev->active_input->enable_aec) {
+                    if (adev->active_input->enable_ns) {
+                        snd_device = SND_DEVICE_IN_VOICE_REC_MIC_AEC_NS;
+                    } else {
+                        snd_device = SND_DEVICE_IN_VOICE_REC_MIC_AEC;
+                    }
                     platform_set_echo_reference(adev, true, out_device);
-               } else
+                } else if (adev->active_input->enable_ns) {
+                    snd_device = SND_DEVICE_IN_VOICE_REC_MIC_NS;
+                } else {
                     snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
+                }
             }
         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_VOICE_REC_HEADSET_MIC;
