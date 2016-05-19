@@ -2246,17 +2246,17 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         pthread_mutex_lock(&adev->lock);
 
         /*
-         * When HDMI cable is unplugged/usb hs is disconnected the
-         * music playback is paused and the policy manager sends routing=0
-         * But the audioflingercontinues to write data until standby time
-         * (3sec). As the HDMI core is turned off, the write gets blocked.
+         * When HDMI cable is unplugged the music playback is paused and
+         * the policy manager sends routing=0. But the audioflinger continues
+         * to write data until standby time (3sec). As the HDMI core is
+         * turned off, the write gets blocked.
          * Avoid this by routing audio to speaker until standby.
          */
-        if ((out->devices == AUDIO_DEVICE_OUT_AUX_DIGITAL ||
-                out->devices == AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET) &&
-                val == AUDIO_DEVICE_NONE) {
-            if (!audio_extn_dolby_is_passthrough_stream(out))
-                val = AUDIO_DEVICE_OUT_SPEAKER;
+        if ((out->devices == AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+                (val == AUDIO_DEVICE_NONE) &&
+                !audio_extn_dolby_is_passthrough_stream(out) &&
+                (platform_get_edid_info(adev->platform) != 0) /* HDMI disconnected */) {
+            val = AUDIO_DEVICE_OUT_SPEAKER;
         }
 
         /*
