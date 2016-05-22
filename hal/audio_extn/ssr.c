@@ -301,7 +301,7 @@ static int32_t ssr_read_coeffs_from_file()
     return 0;
 }
 
-static int32_t DRC_init_lib(int num_chan, int sample_rate)
+static int32_t DRC_init_lib(int num_chan, int sample_rate __unused)
 {
     int ret = 0;
     const char *cfgFileName;
@@ -887,7 +887,7 @@ int32_t audio_extn_ssr_deinit()
     return 0;
 }
 
-static void *ssr_process_thread(void *context)
+static void *ssr_process_thread(void *context __unused)
 {
     int32_t ret;
 
@@ -1019,7 +1019,7 @@ int32_t audio_extn_ssr_read(struct audio_stream_in *stream,
     return ret;
 }
 
-void audio_extn_ssr_set_parameters(struct audio_device *adev,
+void audio_extn_ssr_set_parameters(struct audio_device *adev __unused,
                                    struct str_parms *parms)
 {
     int err;
@@ -1055,7 +1055,7 @@ void audio_extn_ssr_set_parameters(struct audio_device *adev,
     }
 }
 
-void audio_extn_ssr_get_parameters(const struct audio_device *adev,
+void audio_extn_ssr_get_parameters(const struct audio_device *adev __unused,
                                    struct str_parms *parms,
                                    struct str_parms *reply)
 {
