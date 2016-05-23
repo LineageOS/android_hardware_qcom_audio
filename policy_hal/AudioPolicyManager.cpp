@@ -279,15 +279,20 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
 
 #ifdef FM_POWER_OPT
         // handle FM device connection state to trigger FM AFE loopback
-        if(device == AUDIO_DEVICE_OUT_FM && hasPrimaryOutput()) {
+        if (device == AUDIO_DEVICE_OUT_FM && hasPrimaryOutput()) {
            audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, false /*fromCache*/);
            if (state == AUDIO_POLICY_DEVICE_STATE_AVAILABLE) {
                mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, 1);
                newDevice = newDevice | AUDIO_DEVICE_OUT_FM;
+               mFMIsActive = true;
            } else {
+               mFMIsActive = false;
                mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, -1);
            }
            AudioParameter param = AudioParameter();
+           float volumeDb = mPrimaryOutput->mCurVolume[AUDIO_STREAM_MUSIC];
+           mPrevFMVolumeDb = volumeDb;
+           param.addFloat(String8("fm_volume"), Volume::DbToAmpl(volumeDb));
            param.addInt(String8("handle_fm"), (int)newDevice);
            mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString());
         }
@@ -1270,7 +1275,7 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
         }
 #ifdef FM_POWER_OPT
     } else if (stream == AUDIO_STREAM_MUSIC && hasPrimaryOutput() &&
-               outputDesc == mPrimaryOutput) {
+               outputDesc == mPrimaryOutput && mFMIsActive) {
         /* Avoid unnecessary set_parameter calls as it puts the primary
            outputs FastMixer in HOT_IDLE leading to breaks in audio */
         if (volumeDb != mPrevFMVolumeDb) {
@@ -2029,7 +2034,8 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
       mHdmiAudioDisabled(false),
       mHdmiAudioEvent(false),
       mPrevPhoneState(0),
-      mPrevFMVolumeDb(0.0f)
+      mPrevFMVolumeDb(0.0f),
+      mFMIsActive(false)
 {
 
     for (size_t i = 0; i < mHwModules.size(); i++) {
