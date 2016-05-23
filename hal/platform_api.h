@@ -108,7 +108,6 @@ void platform_snd_card_update(void *platform, int snd_scard_state);
 
 struct audio_offload_info_t;
 uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info);
-uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info);
 uint32_t platform_get_compress_passthrough_buffer_size(audio_offload_info_t* info);
 
 bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
@@ -151,4 +150,5 @@ int platform_set_sidetone(struct audio_device *adev,
                           snd_device_t out_snd_device,
                           bool enable,
                           char * str);
+bool platform_supports_true_32bit();
 #endif // AUDIO_PLATFORM_API_H

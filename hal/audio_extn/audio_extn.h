@@ -524,10 +524,17 @@ typedef enum {
 #define AUDIO_FORMAT_DTS_LBR 0x1E000000UL
 #endif
 
+#define DIV_ROUND_UP(x, y) (((x) + (y) - 1)/(y))
+#define ALIGN(x, y) ((y) * DIV_ROUND_UP((x), (y)))
+
 int b64decode(char *inp, int ilen, uint8_t* outp);
 int b64encode(uint8_t *inp, int ilen, char* outp);
 int read_line_from_file(const char *path, char *buf, size_t count);
 int audio_extn_utils_get_codec_version(const char *snd_card_name, int card_num, char *codec_version);
+audio_format_t alsa_format_to_hal(uint32_t alsa_format);
+uint32_t hal_format_to_alsa(audio_format_t pcm_format);
+void audio_extn_utils_update_direct_pcm_fragment_size(struct stream_out *out);
+
 #ifndef KPI_OPTIMIZE_ENABLED
 #define audio_extn_perf_lock_init() (0)
 #define audio_extn_perf_lock_acquire(handle, duration, opts, size) (0)
