@@ -54,5 +54,9 @@
         <device name="SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES" backend="headphones" interface="SLIMBUS_6_RX"/>
         <device name="SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES" backend="headphones" interface="SLIMBUS_6_RX"/>
     </backend_names>
+     <pcm_ids>
+       <usecase name="USECASE_AUDIO_RECORD_LOW_LATENCY" type="in" id="19" />
+       <usecase name="USECASE_AUDIO_PLAYBACK_ULL" type="out" id="19" />
+     </pcm_ids>
 </audio_platform_info>
 
