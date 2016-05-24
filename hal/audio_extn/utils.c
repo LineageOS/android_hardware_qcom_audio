@@ -96,8 +96,10 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
 };
 
 const struct string_to_enum s_format_name_to_enum_table[] = {
-    STRING_TO_ENUM(AUDIO_FORMAT_PCM_16_BIT),
     STRING_TO_ENUM(AUDIO_FORMAT_PCM_8_BIT),
+    STRING_TO_ENUM(AUDIO_FORMAT_PCM_16_BIT),
+    STRING_TO_ENUM(AUDIO_FORMAT_PCM_8_24_BIT),
+    STRING_TO_ENUM(AUDIO_FORMAT_PCM_32_BIT),
     STRING_TO_ENUM(AUDIO_FORMAT_MP3),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC),
     STRING_TO_ENUM(AUDIO_FORMAT_VORBIS),
