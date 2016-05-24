@@ -37,7 +37,7 @@
 #include <platform.h>
 
 #define SILENCE_MIXER_PATH "silence-playback hdmi"
-#define SILENCE_DEV_ID 5            /* index into machine driver */
+#define SILENCE_DEV_ID 32           /* index into machine driver */
 #define SILENCE_INTERVAL_US 2000000
 
 typedef enum {
@@ -147,22 +147,71 @@ static int open_silence_stream()
 void audio_extn_keep_alive_start()
 {
     struct audio_device * adev = (struct audio_device *)ka.userdata;
-
-    if (ka.state == STATE_DEINIT)
-        return;
-
-    if (audio_extn_passthru_is_active())
-        return;
+    char mixer_ctl_name[MAX_LENGTH_MIXER_CONTROL_IN_INT];
+    int app_type_cfg[MAX_LENGTH_MIXER_CONTROL_IN_INT], len = 0, rc;
+    struct mixer_ctl *ctl;
+    int acdb_dev_id, snd_device;
+    int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
 
     pthread_mutex_lock(&ka.lock);
 
-    if (ka.state == STATE_ACTIVE)
+    if (ka.state == STATE_DEINIT) {
+        ALOGE(" %s : Invalid state ",__func__);
+        return;
+    }
+
+    if (audio_extn_passthru_is_active()) {
+        ALOGE(" %s : Pass through is already active", __func__);
+        return;
+    }
+
+    if (ka.state == STATE_ACTIVE) {
+        ALOGV(" %s : Keep alive state is already Active",__func__ );
         goto exit;
+    }
 
     ka.done = false;
-    //todo: platform_send_audio_calibration is replaced by audio_extn_utils_send_audio_calibration
-    //check why audio cal needs to be set
-    //platform_send_audio_calibration(adev->platform, SND_DEVICE_OUT_HDMI);
+
+    /*configure app type */
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+             "Audio Stream %d App Type Cfg",SILENCE_DEV_ID);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s", __func__,
+              mixer_ctl_name);
+        rc = -EINVAL;
+        goto exit;
+    }
+
+    snd_device = SND_DEVICE_OUT_HDMI;
+    acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
+    if (acdb_dev_id < 0) {
+        ALOGE("%s: Couldn't get the acdb dev id", __func__);
+        rc = -EINVAL;
+        goto exit;
+    }
+
+    sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+    app_type_cfg[len++] = platform_get_default_app_type(adev->platform);
+    app_type_cfg[len++] = acdb_dev_id;
+    app_type_cfg[len++] = sample_rate;
+
+    ALOGI("%s:%d PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
+          __func__, __LINE__,
+          platform_get_default_app_type(adev->platform),
+          acdb_dev_id, sample_rate);
+    mixer_ctl_set_array(ctl, app_type_cfg, len);
+
+    /*send calibration*/
+    struct audio_usecase *usecase = calloc(1, sizeof(struct audio_usecase));
+    usecase->type = PCM_PLAYBACK;
+    usecase->out_snd_device = SND_DEVICE_OUT_HDMI;
+
+    platform_send_audio_calibration(adev->platform, usecase,
+                platform_get_default_app_type(adev->platform), sample_rate);
+
+    /*apply audio route */
     audio_route_apply_and_update_path(adev->audio_route, SILENCE_MIXER_PATH);
 
     if (open_silence_stream() == 0) {
@@ -181,10 +230,10 @@ void audio_extn_keep_alive_stop()
 {
     struct audio_device * adev = (struct audio_device *)ka.userdata;
 
+    pthread_mutex_lock(&ka.lock);
+
     if (ka.state == STATE_DEINIT)
         return;
-
-    pthread_mutex_lock(&ka.lock);
 
     if (ka.state == STATE_IDLE)
         goto exit;
@@ -211,7 +260,7 @@ int audio_extn_keep_alive_set_parameters(struct audio_device *adev __unused,
     char value[32];
     int ret;
 
-    ret = str_parms_get_str(parms, "connect", value, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value, sizeof(value));
     if (ret >= 0) {
         int val = atoi(value);
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
@@ -237,12 +286,10 @@ int audio_extn_keep_alive_set_parameters(struct audio_device *adev __unused,
 
 static void * keep_alive_loop(void * context __unused)
 {
-    struct audio_device *adev = (struct audio_device *)ka.userdata;
     struct keep_alive_cmd *cmd = NULL;
     struct listnode *item;
     uint8_t * silence = NULL;
-    int32_t bytes = 0, count = 0, i;
-    struct stream_out * p_out = NULL;
+    int32_t bytes = 0;
 
     while (true) {
         pthread_mutex_lock(&ka.lock);

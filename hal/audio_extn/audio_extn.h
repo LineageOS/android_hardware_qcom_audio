@@ -354,7 +354,6 @@ void audio_extn_dolby_set_dmid(struct audio_device *adev);
                                     AUDIO_CHANNEL_OUT_FRONT_CENTER | AUDIO_CHANNEL_OUT_BACK_CENTER)
 #endif
 
-
 #if defined(DS1_DOLBY_DDP_ENABLED) || defined(DS1_DOLBY_DAP_ENABLED) || defined(DS2_DOLBY_DAP_ENABLED)
 void audio_extn_dolby_set_license(struct audio_device *adev);
 #else
@@ -389,13 +388,13 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev);
 #endif
 
 #ifndef HDMI_PASSTHROUGH_ENABLED
-#define audio_extn_dolby_update_passt_stream_configuration(adev, out)      (0)
-#define audio_extn_dolby_is_passt_convert_supported(adev, out)             (0)
-#define audio_extn_dolby_is_passt_supported(adev, out)                     (0)
-#define audio_extn_dolby_is_passthrough_stream(out)                        (0)
-#define audio_extn_dolby_get_passt_buffer_size(info)                       (0)
-#define audio_extn_dolby_set_passt_volume(out, mute)                       (0)
-#define audio_extn_dolby_set_passt_latency(out, latency)                   (0)
+#define audio_extn_passthru_update_stream_configuration(adev, out)            (0)
+#define audio_extn_passthru_is_convert_supported(adev, out)                   (0)
+#define audio_extn_passthru_is_passt_supported(adev, out)                     (0)
+#define audio_extn_passthru_is_passthrough_stream(out)                        (0)
+#define audio_extn_passthru_get_buffer_size(info)                             (0)
+#define audio_extn_passthru_set_volume(out, mute)                             (0)
+#define audio_extn_passthru_set_latency(out, latency)                         (0)
 #define audio_extn_passthru_is_supported_format(f) (0)
 #define audio_extn_passthru_should_drop_data(o) (0)
 #define audio_extn_passthru_on_start(o) do {} while(0)
@@ -409,16 +408,16 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev);
 
 #define AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH  0x1000
 #else
-bool audio_extn_dolby_is_passt_convert_supported(struct audio_device *adev,
+bool audio_extn_passthru_is_convert_supported(struct audio_device *adev,
                                                  struct stream_out *out);
-bool audio_extn_dolby_is_passt_supported(struct audio_device *adev,
+bool audio_extn_passthru_is_passt_supported(struct audio_device *adev,
                                          struct stream_out *out);
-void audio_extn_dolby_update_passt_stream_configuration(struct audio_device *adev,
+void audio_extn_passthru_update_stream_configuration(struct audio_device *adev,
                                                  struct stream_out *out);
-bool audio_extn_dolby_is_passthrough_stream(struct stream_out *out);
-int audio_extn_dolby_get_passt_buffer_size(audio_offload_info_t* info);
-int audio_extn_dolby_set_passt_volume(struct stream_out *out, int mute);
-int audio_extn_dolby_set_passt_latency(struct stream_out *out, int latency);
+bool audio_extn_passthru_is_passthrough_stream(struct stream_out *out);
+int audio_extn_passthru_get_buffer_size(audio_offload_info_t* info);
+int audio_extn_passthru_set_volume(struct stream_out *out, int mute);
+int audio_extn_passthru_set_latency(struct stream_out *out, int latency);
 bool audio_extn_passthru_is_supported_format(audio_format_t format);
 bool audio_extn_passthru_should_drop_data(struct stream_out * out);
 void audio_extn_passthru_on_start(struct stream_out *out);
@@ -430,7 +429,6 @@ bool audio_extn_passthru_is_enabled();
 bool audio_extn_passthru_is_active();
 void audio_extn_passthru_init(struct audio_device *adev);
 bool audio_extn_passthru_should_standby(struct stream_out *out);
-
 #endif
 
 #ifndef HFP_ENABLED

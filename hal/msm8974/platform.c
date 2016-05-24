@@ -1642,6 +1642,9 @@ void *platform_init(struct audio_device *adev)
         platform_acdb_init(my_data);
     }
 
+    /* init keep-alive for compress passthru */
+    audio_extn_keep_alive_init(adev);
+
 acdb_init_fail:
 
     set_platform_defaults(my_data);
