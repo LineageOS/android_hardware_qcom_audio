@@ -5323,3 +5323,26 @@ int platform_get_spkr_prot_snd_device(snd_device_t snd_device)
              return snd_device;
     }
 }
+
+int platform_set_sidetone(struct audio_device *adev,
+                          snd_device_t out_snd_device,
+                          bool enable,
+                          char *str)
+{
+    int ret;
+    if (out_snd_device == SND_DEVICE_OUT_USB_HEADSET) {
+            ret = audio_extn_usb_enable_sidetone(out_snd_device, enable);
+            if (ret)
+                ALOGI("%s: usb device %d does not support device sidetone\n",
+                  __func__, out_snd_device);
+    } else {
+        ALOGV("%s: sidetone out device(%d) mixer cmd = %s\n",
+              __func__, out_snd_device, str);
+
+        if (enable)
+            audio_route_apply_and_update_path(adev->audio_route, str);
+        else
+            audio_route_reset_and_update_path(adev->audio_route, str);
+    }
+    return 0;
+}
