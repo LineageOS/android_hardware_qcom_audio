@@ -17,6 +17,15 @@
 #ifndef AUDIO_PLATFORM_API_H
 #define AUDIO_PLATFORM_API_H
 
+#include "voice.h"
+#define MAX_VOLUME_CAL_STEPS 15
+
+struct amp_db_and_gain_table {
+    float amp;
+    float db;
+    uint32_t level;
+};
+
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
 const char *platform_get_snd_device_name(snd_device_t snd_device);
@@ -57,6 +66,17 @@ void platform_add_operator_specific_device(snd_device_t snd_device,
                                            const char *operator,
                                            const char *mixer_path,
                                            unsigned int acdb_id);
+/* return true if adding entry success
+   return false if adding entry fails */
+
+bool platform_add_gain_level_mapping(struct amp_db_and_gain_table *tbl_entry);
+
+/* return 0 if no custome mapping table found or when error detected
+            use default mapping in this case
+   return > 0 indicates number of entries in mapping table */
+
+int platform_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl,
+                                    int table_size);
 
 /* returns the latency for a usecase in Us */
 int64_t platform_render_latency(audio_usecase_t usecase);

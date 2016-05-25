@@ -24,6 +24,7 @@
 #include <audio_hw.h>
 #include "platform_api.h"
 #include <platform.h>
+#include <math.h>
 
 typedef enum {
     ROOT,
@@ -32,6 +33,7 @@ typedef enum {
     BACKEND_NAME,
     CONFIG_PARAMS,
     OPERATOR_SPECIFIC,
+    GAIN_LEVEL_MAPPING,
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
@@ -42,6 +44,7 @@ static void process_backend_name(const XML_Char **attr);
 static void process_config_params(const XML_Char **attr);
 static void process_root(const XML_Char **attr);
 static void process_operator_specific(const XML_Char **attr);
+static void process_gain_db_to_level_map(const XML_Char **attr);
 
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
@@ -50,6 +53,7 @@ static section_process_fn section_table[] = {
     [BACKEND_NAME] = process_backend_name,
     [CONFIG_PARAMS] = process_config_params,
     [OPERATOR_SPECIFIC] = process_operator_specific,
+    [GAIN_LEVEL_MAPPING] = process_gain_db_to_level_map,
 };
 
 static section_t section;
@@ -191,6 +195,29 @@ done:
     return;
 }
 
+static void process_gain_db_to_level_map(const XML_Char **attr)
+{
+    struct amp_db_and_gain_table tbl_entry;
+
+    if ((strcmp(attr[0], "db") != 0) ||
+        (strcmp(attr[2], "level") != 0)) {
+        ALOGE("%s: invalid attribute passed  %s %sexpected amp db level",
+               __func__, attr[0], attr[2]);
+        goto done;
+    }
+
+    tbl_entry.db = atof(attr[1]);
+    tbl_entry.amp = exp(tbl_entry.db * 0.115129f);
+    tbl_entry.level = atoi(attr[3]);
+
+    ALOGV("%s: amp [%f]  db [%f] level [%d]", __func__,
+           tbl_entry.amp, tbl_entry.db, tbl_entry.level);
+    platform_add_gain_level_mapping(&tbl_entry);
+
+done:
+    return;
+}
+
 static void process_acdb_id(const XML_Char **attr)
 {
     int index;
@@ -297,6 +324,8 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
         section = CONFIG_PARAMS;
     } else if (strcmp(tag_name, "operator_specific") == 0) {
         section = OPERATOR_SPECIFIC;
+    } else if (strcmp(tag_name, "gain_db_to_level_mapping") == 0) {
+        section = GAIN_LEVEL_MAPPING;
     } else if (strcmp(tag_name, "device") == 0) {
         if ((section != ACDB) && (section != BACKEND_NAME) && (section != OPERATOR_SPECIFIC)) {
             ALOGE("device tag only supported for acdb/backend names");
@@ -322,6 +351,14 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
 
         section_process_fn fn = section_table[section];
         fn(attr);
+    } else if (strcmp(tag_name, "gain_level_map") == 0) {
+        if (section != GAIN_LEVEL_MAPPING) {
+            ALOGE("usecase tag only supported with GAIN_LEVEL_MAPPING section");
+            return;
+        }
+
+        section_process_fn fn = section_table[GAIN_LEVEL_MAPPING];
+        fn(attr);
     }
 
     return;
@@ -338,6 +375,8 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
     } else if (strcmp(tag_name, "config_params") == 0) {
         section = ROOT;
     } else if (strcmp(tag_name, "operator_specific") == 0) {
+        section = ROOT;
+    } else if (strcmp(tag_name, "gain_db_to_level_mapping") == 0) {
         section = ROOT;
     }
 }

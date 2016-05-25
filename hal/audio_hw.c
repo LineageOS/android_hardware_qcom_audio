@@ -369,6 +369,27 @@ bool audio_hw_send_gain_dep_calibration(int level) {
     return ret_val;
 }
 
+__attribute__ ((visibility ("default")))
+int audio_hw_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl,
+                                    int table_size) {
+     int ret_val = 0;
+     ALOGV("%s: enter ... ", __func__);
+
+     pthread_mutex_lock(&adev_init_lock);
+     if (adev == NULL) {
+         ALOGW("%s: adev is NULL .... ", __func__);
+         goto done;
+     }
+
+     pthread_mutex_lock(&adev->lock);
+     ret_val = platform_get_gain_level_mapping(mapping_tbl, table_size);
+     pthread_mutex_unlock(&adev->lock);
+done:
+     pthread_mutex_unlock(&adev_init_lock);
+     ALOGV("%s: exit ... ", __func__);
+     return ret_val;
+}
+
 static bool is_supported_format(audio_format_t format)
 {
     switch (format) {
