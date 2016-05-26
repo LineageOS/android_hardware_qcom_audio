@@ -667,6 +667,8 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_INCALL_REC_DOWNLINK)},
     {TO_NAME_INDEX(USECASE_INCALL_REC_UPLINK_AND_DOWNLINK)},
     {TO_NAME_INDEX(USECASE_AUDIO_HFP_SCO)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_FM)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_FM_VIRTUAL)},
 };
 
 #define NO_COLS 2
@@ -1065,7 +1067,6 @@ static void set_platform_defaults()
     backend_tag_table[SND_DEVICE_IN_USB_HEADSET_MIC] = strdup("usb-headset-mic");
     backend_tag_table[SND_DEVICE_IN_CAPTURE_FM] = strdup("capture-fm");
     backend_tag_table[SND_DEVICE_OUT_TRANSMISSION_FM] = strdup("transmission-fm");
-    backend_tag_table[SND_DEVICE_OUT_HEADPHONES] = strdup("headphones");
     backend_tag_table[SND_DEVICE_OUT_HEADPHONES_44_1] = strdup("headphones-44.1");
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = strdup("voice-speaker-vbat");
 
