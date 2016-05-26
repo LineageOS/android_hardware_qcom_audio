@@ -436,6 +436,11 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = "quad-mic",
     [SND_DEVICE_IN_THREE_MIC] = "three-mic",
     [SND_DEVICE_IN_HANDSET_TMIC] = "three-mic",
+    [SND_DEVICE_IN_UNPROCESSED_MIC] = "unprocessed-mic",
+    [SND_DEVICE_IN_UNPROCESSED_STEREO_MIC] = "voice-rec-dmic-ef",
+    [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = "three-mic",
+    [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = "quad-mic",
+    [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = "headset-mic",
 };
 
 // Platform specific backend bit width table
@@ -543,6 +548,11 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = 129,
     [SND_DEVICE_IN_THREE_MIC] = 46, /* for APSS Surround Sound Recording */
     [SND_DEVICE_IN_HANDSET_TMIC] = 125, /* for 3mic recording with fluence */
+    [SND_DEVICE_IN_UNPROCESSED_MIC] = 143,
+    [SND_DEVICE_IN_UNPROCESSED_STEREO_MIC] = 144,
+    [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = 145,
+    [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = 146,
+    [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = 147,
 };
 
 struct name_to_index {
@@ -649,6 +659,11 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS)},
     {TO_NAME_INDEX(SND_DEVICE_IN_THREE_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_TMIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_STEREO_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_THREE_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_QUAD_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC)},
 };
 
 static char * backend_tag_table[SND_DEVICE_MAX] = {0};
@@ -2887,6 +2902,24 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                     snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
             }
         }
+    } else if (source == AUDIO_SOURCE_UNPROCESSED) {
+         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+             if (((channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK) ||
+                 (channel_mask == AUDIO_CHANNEL_IN_STEREO)) &&
+                 (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
+                 snd_device = SND_DEVICE_IN_UNPROCESSED_STEREO_MIC;
+             } else if (((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) &&
+                 (my_data->source_mic_type & SOURCE_THREE_MIC)) {
+                 snd_device = SND_DEVICE_IN_UNPROCESSED_THREE_MIC;
+             } else if (((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) &&
+                 (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
+                 snd_device = SND_DEVICE_IN_UNPROCESSED_QUAD_MIC;
+             } else {
+                 snd_device = SND_DEVICE_IN_UNPROCESSED_MIC;
+             }
+         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+             snd_device = SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC;
+         }
     } else if (source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
         if (out_device & AUDIO_DEVICE_OUT_SPEAKER)
             in_device = AUDIO_DEVICE_IN_BACK_MIC;
