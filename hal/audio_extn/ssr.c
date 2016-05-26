@@ -344,7 +344,8 @@ int audio_extn_ssr_check_and_set_usecase(struct stream_in *in)
     if (audio_extn_ssr_get_enabled() &&
            ((channel_count == 2) || (channel_count == 6)) &&
            ((AUDIO_SOURCE_MIC == source) || (AUDIO_SOURCE_CAMCORDER == source)) &&
-           ((AUDIO_DEVICE_IN_BUILTIN_MIC == devices) || (AUDIO_DEVICE_IN_BACK_MIC == devices))) {
+           ((AUDIO_DEVICE_IN_BUILTIN_MIC == devices) || (AUDIO_DEVICE_IN_BACK_MIC == devices)) &&
+           (in->format == AUDIO_FORMAT_PCM_16_BIT)) {
 
         ALOGD("%s: Found SSR use case starting SSR lib with channel_count :%d",
                       __func__, channel_count);

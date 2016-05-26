@@ -3,6 +3,7 @@
 #BOARD_USES_GENERIC_AUDIO := true
 BOARD_USES_ALSA_AUDIO := true
 USE_CUSTOM_AUDIO_POLICY := 1
+USE_XML_AUDIO_POLICY_CONF := 1
 BOARD_SUPPORTS_SOUND_TRIGGER := true
 AUDIO_USE_LL_AS_PRIMARY_OUTPUT := true
 AUDIO_FEATURE_ENABLED_HIFI_AUDIO := true
@@ -82,6 +83,23 @@ hardware/qcom/audio/configs/msm8937/audio_platform_info.xml:system/etc/audio_pla
 hardware/qcom/audio/configs/msm8937/audio_platform_info_extcodec.xml:system/etc/audio_platform_info_extcodec.xml \
 hardware/qcom/audio/configs/msm8937/aanc_tuning_mixer.txt:system/etc/aanc_tuning_mixer.txt
 
+#XML Audio configuration files
+ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
+ifeq ($(TARGET_USES_AOSP), true)
+PRODUCT_COPY_FILES += \
+    $(TOPDIR)hardware/qcom/audio/configs/common/audio_policy_configuration.xml:/system/etc/audio_policy_configuration.xml
+else
+PRODUCT_COPY_FILES += \
+    $(TOPDIR)hardware/qcom/audio/configs/msm8937/audio_policy_configuration.xml:system/etc/audio_policy_configuration.xml
+endif
+PRODUCT_COPY_FILES += \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:/system/etc/a2dp_audio_policy_configuration.xml \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:/system/etc/audio_policy_volumes.xml \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/default_volume_tables.xml:/system/etc/default_volume_tables.xml \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/r_submix_audio_policy_configuration.xml:/system/etc/r_submix_audio_policy_configuration.xml \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/usb_audio_policy_configuration.xml:/system/etc/usb_audio_policy_configuration.xml
+endif
+
 # Reduce client buffer size for fast audio output tracks
 PRODUCT_PROPERTY_OVERRIDES += \
      af.fast_track_multiplier=1
@@ -128,6 +146,10 @@ audio.offload.track.enable=true
 #Enable music through deep buffer
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.deep_buffer.media=true
+
+#Default pcm audio sink buffer size in msec. This is used in calculating framecount
+PRODUCT_PROPERTY_OVERRIDES += \
+media.stagefright.audio.sink=280
 
 #enable voice path for PCM VoIP by default
 PRODUCT_PROPERTY_OVERRIDES += \
