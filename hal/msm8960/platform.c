@@ -1069,6 +1069,12 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev __unused
     return false;
 }
 
+bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev __unused,
+                                              struct audio_usecase *usecase __unused)
+{
+    return false;
+}
+
 int platform_get_usecase_index(const char * usecase __unused)
 {
     return -ENOSYS;
