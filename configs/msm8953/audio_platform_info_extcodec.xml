@@ -50,6 +50,7 @@
     </pcm_ids>
     <config_params>
         <param key="native_audio_mode" value="src"/>
+        <param key="input_mic_max_count" value="4"/>
     </config_params>
     <backend_names>
         <device name="SND_DEVICE_OUT_HEADPHONES" backend="headphones" interface="SLIMBUS_6_RX"/>

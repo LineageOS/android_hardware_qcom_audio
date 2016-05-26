@@ -53,6 +53,7 @@
         <param key="spkr_1_tz_name" value="wsatz.11"/>
         <param key="spkr_2_tz_name" value="wsatz.12"/>
         <param key="native_audio_mode" value="src"/>
+        <param key="input_mic_max_count" value="4"/>
     </config_params>
 
     <backend_names>

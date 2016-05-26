@@ -66,6 +66,7 @@
         <!-- In the below value string, first parameter indicates size -->
         <!-- followed by perf lock options                             -->
         <param key="perf_lock_opts" value="4, 0x101, 0x704, 0x20F, 0x1E01"/>
+        <param key="input_mic_max_count" value="4"/>
     </config_params>
     <backend_names>
         <device name="SND_DEVICE_OUT_HEADPHONES" backend="headphones" interface="SLIMBUS_6_RX"/>
