@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -399,7 +399,7 @@ void audio_extn_ds2_set_parameters(struct audio_device *adev,
 typedef enum {
     DAP_STATE_ON = 0,
     DAP_STATE_BYPASS,
-};
+} dap_state;
 #ifndef AUDIO_FORMAT_E_AC3_JOC
 #define AUDIO_FORMAT_E_AC3_JOC  0x19000000UL
 #endif

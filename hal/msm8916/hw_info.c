@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014, 2016 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -51,24 +51,24 @@ struct hardware_info {
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
-static const snd_device_t taiko_fluid_variant_devices[] = {
+__unused static const snd_device_t taiko_fluid_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
 };
 
-static const snd_device_t taiko_CDP_variant_devices[] = {
+__unused static const snd_device_t taiko_CDP_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
     SND_DEVICE_IN_QUAD_MIC,
 };
 
-static const snd_device_t taiko_apq8084_CDP_variant_devices[] = {
+__unused static const snd_device_t taiko_apq8084_CDP_variant_devices[] = {
     SND_DEVICE_IN_HANDSET_MIC,
 };
 
-static const snd_device_t taiko_liquid_variant_devices[] = {
+__unused static const snd_device_t taiko_liquid_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
@@ -83,7 +83,7 @@ static const snd_device_t taiko_liquid_variant_devices[] = {
     SND_DEVICE_IN_SPEAKER_STEREO_DMIC,
 };
 
-static const snd_device_t taiko_DB_variant_devices[] = {
+__unused static const snd_device_t taiko_DB_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
@@ -92,7 +92,7 @@ static const snd_device_t taiko_DB_variant_devices[] = {
     SND_DEVICE_IN_QUAD_MIC,
 };
 
-static const snd_device_t tapan_lite_variant_devices[] = {
+__unused static const snd_device_t tapan_lite_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
@@ -101,14 +101,14 @@ static const snd_device_t tapan_lite_variant_devices[] = {
     SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES,
 };
 
-static const snd_device_t tapan_skuf_variant_devices[] = {
+__unused static const snd_device_t tapan_skuf_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,
     /*SND_DEVICE_OUT_SPEAKER_AND_ANC_FB_HEADSET,*/
 };
 
-static const snd_device_t tapan_lite_skuf_variant_devices[] = {
+__unused static const snd_device_t tapan_lite_skuf_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
@@ -117,7 +117,7 @@ static const snd_device_t tapan_lite_skuf_variant_devices[] = {
     SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES,
 };
 
-static const snd_device_t helicon_skuab_variant_devices[] = {
+__unused static const snd_device_t helicon_skuab_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET,

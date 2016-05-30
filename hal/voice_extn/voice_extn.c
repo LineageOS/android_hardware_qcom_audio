@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2016 The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -150,7 +150,6 @@ static int update_calls(struct audio_device *adev)
     audio_usecase_t usecase_id = 0;
     enum voice_lch_mode lch_mode;
     struct voice_session *session = NULL;
-    int fd = 0;
     int ret = 0;
 
     ALOGD("%s: enter:", __func__);
@@ -434,7 +433,6 @@ int voice_extn_stop_call(struct audio_device *adev)
 int voice_extn_set_parameters(struct audio_device *adev,
                               struct str_parms *parms)
 {
-    char *str;
     int value;
     int ret = 0, err;
     char *kv_pairs = str_parms_to_str(parms);

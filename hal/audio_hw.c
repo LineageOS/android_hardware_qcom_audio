@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -210,7 +210,7 @@ static const struct string_to_enum out_channels_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_CHANNEL_OUT_7POINT1),
 };
 
-static const struct string_to_enum out_formats_name_to_enum_table[] = {
+__unused static const struct string_to_enum out_formats_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_AC3),
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3),
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
@@ -220,7 +220,7 @@ static struct audio_device *adev = NULL;
 static pthread_mutex_t adev_init_lock;
 static unsigned int audio_device_ref_count;
 
-static int set_voice_volume_l(struct audio_device *adev, float volume);
+__unused static int set_voice_volume_l(struct audio_device *adev, float volume);
 
 static int check_and_set_gapless_mode(struct audio_device *adev) {
 
@@ -766,7 +766,6 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     struct audio_usecase *voip_usecase = NULL;
     struct audio_usecase *hfp_usecase = NULL;
     audio_usecase_t hfp_ucid;
-    struct listnode *node;
     int status = 0;
 
     usecase = get_usecase_from_list(adev, uc_id);
@@ -939,7 +938,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 
 static int stop_input_stream(struct stream_in *in)
 {
-    int i, ret = 0;
+    int ret = 0;
     struct audio_usecase *uc_info;
     struct audio_device *adev = in->dev;
 
@@ -1379,7 +1378,7 @@ static int check_and_set_hdmi_channels(struct audio_device *adev,
 
 static int stop_output_stream(struct stream_out *out)
 {
-    int i, ret = 0;
+    int ret = 0;
     struct audio_usecase *uc_info;
     struct audio_device *adev = out->dev;
 
@@ -1777,12 +1776,9 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 {
     struct stream_out *out = (struct stream_out *)stream;
     struct audio_device *adev = out->dev;
-    struct audio_usecase *usecase;
-    struct listnode *node;
     struct str_parms *parms;
     char value[32];
     int ret = 0, val = 0, err;
-    bool select_new_device = false;
 
     ALOGD("%s: enter: usecase(%d: %s) kvpairs: %s",
           __func__, out->usecase, use_case_table[out->usecase], kvpairs);
@@ -2012,7 +2008,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         ret = compress_write(out->compr, buffer, bytes);
         if (ret < 0)
             ret = -errno;
-        ALOGVV("%s: writing buffer (%d bytes) to compress device returned %d", __func__, bytes, ret);
+        ALOGVV("%s: writing buffer (%zd bytes) to compress device returned %zd", __func__, bytes, ret);
         if (ret >= 0 && ret < (ssize_t)bytes) {
             ALOGD("No space available in compress driver, post msg to cb thread");
             send_offload_cmd_l(out, OFFLOAD_CMD_WAIT_FOR_BUFFER);
@@ -2034,7 +2030,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         if (out->pcm) {
             if (out->muted)
                 memset((void *)buffer, 0, bytes);
-            ALOGVV("%s: writing buffer (%d bytes) to pcm device", __func__, bytes);
+            ALOGE("%s: writing buffer (%zd bytes) to pcm device", __func__, bytes);
             if (out->usecase == USECASE_AUDIO_PLAYBACK_AFE_PROXY)
                 ret = pcm_mmap_write(out->pcm, (void *)buffer, bytes);
             else
@@ -2057,7 +2053,7 @@ exit:
 
     if (ret != 0) {
         if (out->pcm)
-            ALOGE("%s: error %ld - %s", __func__, ret, pcm_get_error(out->pcm));
+            ALOGE("%s: error %zd - %s", __func__, ret, pcm_get_error(out->pcm));
         if (out->usecase == USECASE_COMPRESS_VOIP_CALL) {
             pthread_mutex_lock(&adev->lock);
             voice_extn_compress_voip_close_output_stream(&out->stream.common);
@@ -2374,7 +2370,6 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     struct stream_in *in = (struct stream_in *)stream;
     struct audio_device *adev = in->dev;
     struct str_parms *parms;
-    char *str;
     char value[32];
     int ret = 0, val = 0, err;
 
@@ -2417,7 +2412,6 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
         }
     }
 
-done:
     pthread_mutex_unlock(&adev->lock);
     pthread_mutex_unlock(&in->lock);
 
@@ -2433,7 +2427,6 @@ static char* in_get_parameters(const struct audio_stream *stream,
     struct stream_in *in = (struct stream_in *)stream;
     struct str_parms *query = str_parms_create_str(keys);
     char *str;
-    char value[256];
     struct str_parms *reply = str_parms_create();
 
     if (!query || !reply) {
@@ -2464,7 +2457,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
 {
     struct stream_in *in = (struct stream_in *)stream;
     struct audio_device *adev = in->dev;
-    int i, ret = -1;
+    int ret = -1;
     int snd_scard_state = get_snd_card_state(adev);
 
     pthread_mutex_lock(&in->lock);
@@ -2599,7 +2592,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 {
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_out *out;
-    int i, ret = 0;
+    int ret = 0;
     audio_format_t format;
 
     *stream_out = NULL;
@@ -2914,7 +2907,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 {
     struct audio_device *adev = (struct audio_device *)dev;
     struct str_parms *parms;
-    char *str;
     char value[32];
     int val;
     int ret;
@@ -2929,7 +2921,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     if (ret >= 0) {
         char *snd_card_status = value+2;
         if (strstr(snd_card_status, "OFFLINE")) {
-            struct listnode *node;
             struct audio_usecase *usecase;
 
             ALOGD("Received sound card OFFLINE status");
@@ -3377,8 +3368,6 @@ static int period_size_is_plausible_for_low_latency(int period_size)
 static int adev_open(const hw_module_t *module, const char *name,
                      hw_device_t **device)
 {
-    int i, ret;
-
     ALOGD("%s: enter", __func__);
     if (strcmp(name, AUDIO_HARDWARE_INTERFACE) != 0) return -EINVAL;
 

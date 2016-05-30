@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -777,7 +777,7 @@ void platform_set_echo_reference(void *platform, bool enable)
 
 }
 
-static struct csd_data *open_csd_client()
+__unused static struct csd_data *open_csd_client()
 {
     struct csd_data *csd = calloc(1, sizeof(struct csd_data));
     if (!csd) {
@@ -1058,7 +1058,7 @@ int platform_acdb_init(void *platform)
     property_get("audio.ds1.metainfo.key",value,"0");
     key = atoi(value);
     snd_card_name = mixer_get_name(my_data->adev->mixer);
-    result = my_data->acdb_init(snd_card_name, cvd_version, key);
+    result = my_data->acdb_init((char *)snd_card_name, cvd_version, key);
     if (cvd_version)
         free(cvd_version);
     if (!result) {
@@ -1135,14 +1135,11 @@ static bool is_wsa_found(int *wsaCount)
 
 void *platform_init(struct audio_device *adev)
 {
-    char platform[PROPERTY_VALUE_MAX];
-    char baseband[PROPERTY_VALUE_MAX];
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data = NULL;
-    int retry_num = 0, snd_card_num = 0, key = 0;
+    int retry_num = 0, snd_card_num = 0;
     const char *snd_card_name;
     char mixer_xml_path[100],ffspEnable[PROPERTY_VALUE_MAX];
-    char *cvd_version = NULL;
     int wsaCount =0;
 
     my_data = calloc(1, sizeof(struct platform_data));
@@ -1557,13 +1554,13 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device)
     return acdb_device_table[snd_device];
 }
 
-int platform_set_snd_device_bit_width(snd_device_t snd_device, unsigned int bit_width)
+int platform_set_snd_device_bit_width(snd_device_t snd_device __unused, unsigned int bit_width __unused)
 {
     ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
 }
 
-int platform_get_snd_device_bit_width(snd_device_t snd_device)
+int platform_get_snd_device_bit_width(snd_device_t snd_device __unused)
 {
     ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
@@ -1574,7 +1571,6 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_dev_id, acdb_dev_type;
-    struct audio_device *adev = my_data->adev;
     int snd_device = SND_DEVICE_OUT_SPEAKER;
 
     if (usecase->type == PCM_PLAYBACK) {
@@ -2482,9 +2478,7 @@ static int set_hd_voice(struct platform_data *my_data, bool state)
 int platform_set_parameters(void *platform, struct str_parms *parms)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
-    char *str;
     char value[256] = {0};
-    int val;
     int ret = 0, err;
     char *kv_pairs = NULL;
 
@@ -2661,7 +2655,6 @@ void platform_get_parameters(void *platform,
                             struct str_parms *reply)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
-    char *str = NULL;
     char value[256] = {0};
     int ret;
     char *kv_pairs = NULL;
@@ -2710,7 +2703,7 @@ void platform_get_parameters(void *platform,
 
             //check if unsupported mime type or not
             if(decoder_mime_type) {
-                int i = 0;
+                unsigned int i = 0;
                 for (i = 0; i < sizeof(dsp_only_decoders_mime)/sizeof(dsp_only_decoders_mime[0]); i++) {
                     if (!strncmp(decoder_mime_type, dsp_only_decoders_mime[i],
                     strlen(dsp_only_decoders_mime[i]))) {
@@ -2941,7 +2934,7 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
 
 void platform_get_device_to_be_id_map(int **device_to_be_id, int *length)
 {
-     *device_to_be_id = msm_device_to_be_id;
+     *device_to_be_id = (int *)msm_device_to_be_id;
      *length = msm_be_id_array_len;
 }
 

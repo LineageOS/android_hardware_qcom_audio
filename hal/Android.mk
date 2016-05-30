@@ -243,6 +243,8 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUXPCM_BT)),true)
     LOCAL_CFLAGS += -DAUXPCM_BT_ENABLED
 endif
 
+LOCAL_CFLAGS += -Wall -Werror
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PM_SUPPORT)),true)
     LOCAL_CFLAGS += -DPM_SUPPORT_ENABLED
     LOCAL_SRC_FILES += audio_extn/pm.c

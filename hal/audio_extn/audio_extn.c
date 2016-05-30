@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -392,7 +392,6 @@ int audio_extn_get_afe_proxy_parameters(struct str_parms *query,
 {
     int ret, val;
     char value[32]={0};
-    char *str = NULL;
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_CAN_OPEN_PROXY, value,
                             sizeof(value));
