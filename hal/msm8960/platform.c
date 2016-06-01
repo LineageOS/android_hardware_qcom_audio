@@ -1119,11 +1119,6 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info __unuse
     return 0;
 }
 
-bool platform_use_small_buffer(audio_offload_info_t* info)
-{
-    return false;
-}
-
 int platform_get_edid_info(void *platform __unused)
 {
    return -ENOSYS;
