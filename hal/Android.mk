@@ -235,13 +235,15 @@ LOCAL_SHARED_LIBRARIES := \
 	libtinycompress \
 	libaudioroute \
 	libdl \
-	libexpat
+	libexpat \
+	libaudioutils
 
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
 	external/tinycompress/include \
 	external/expat/lib \
 	hardware/libhardware/include \
+	system/media/audio_utils/include \
 	$(call include-path-for, audio-route) \
 	$(call include-path-for, audio-effects) \
 	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \

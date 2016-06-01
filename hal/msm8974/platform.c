@@ -662,6 +662,8 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_VOLTE_CALL)},
     {TO_NAME_INDEX(USECASE_QCHAT_CALL)},
     {TO_NAME_INDEX(USECASE_VOWLAN_CALL)},
+    {TO_NAME_INDEX(USECASE_VOICEMMODE1_CALL)},
+    {TO_NAME_INDEX(USECASE_VOICEMMODE2_CALL)},
     {TO_NAME_INDEX(USECASE_INCALL_REC_UPLINK)},
     {TO_NAME_INDEX(USECASE_INCALL_REC_DOWNLINK)},
     {TO_NAME_INDEX(USECASE_INCALL_REC_UPLINK_AND_DOWNLINK)},
@@ -724,8 +726,8 @@ static int msm_device_to_be_id [][NO_COLS] = {
 static int msm_device_to_be_id [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_EARPIECE                       ,       2},
        {AUDIO_DEVICE_OUT_SPEAKER                        ,       2},
-       {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       2},
-       {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       2},
+       {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       41},
+       {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       41},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO                  ,       11},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET          ,       11},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT           ,       11},
@@ -1029,10 +1031,13 @@ static bool platform_is_i2s_ext_modem(const char *snd_card_name,
     if (!strncmp(snd_card_name, "apq8084-taiko-i2s-mtp-snd-card",
                  sizeof("apq8084-taiko-i2s-mtp-snd-card")) ||
         !strncmp(snd_card_name, "apq8084-taiko-i2s-cdp-snd-card",
-                 sizeof("apq8084-taiko-i2s-cdp-snd-card"))) {
+                 sizeof("apq8084-taiko-i2s-cdp-snd-card")) ||
+        !strncmp(snd_card_name, "apq8096-tasha-i2c-snd-card",
+                 sizeof("apq8096-tasha-i2c-snd-card"))) {
         plat_data->is_i2s_ext_modem = true;
     }
-    ALOGV("%s, is_i2s_ext_modem:%d",__func__, plat_data->is_i2s_ext_modem);
+    ALOGV("%s, is_i2s_ext_modem:%d soundcard name is %s",__func__, 
+           plat_data->is_i2s_ext_modem, snd_card_name);
 
     return plat_data->is_i2s_ext_modem;
 }
@@ -1565,7 +1570,8 @@ acdb_init_fail:
      */
     property_get("ro.board.platform", platform, "");
     property_get("ro.baseband", baseband, "");
-    if (!strncmp("apq8084", platform, sizeof("apq8084")) &&
+    if ((!strncmp("apq8084", platform, sizeof("apq8084")) ||
+        !strncmp("msm8996", platform, sizeof("msm8996"))) &&
         !strncmp("mdm", baseband, (sizeof("mdm")-1))) {
          my_data->csd = open_csd_client(my_data->is_i2s_ext_modem);
     } else {
@@ -1750,7 +1756,7 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
     const char * be_itf2 = hw_interface_table[snd_device2];
 
     if (NULL != be_itf1 && NULL != be_itf2) {
-        if (0 != strcmp(be_itf1, be_itf2))
+        if ((NULL == strstr(be_itf2, be_itf1)) && (NULL == strstr(be_itf1, be_itf2)))
             result = false;
     } else if (NULL == be_itf1 && NULL != be_itf2) {
             result = false;

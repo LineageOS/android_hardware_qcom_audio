@@ -209,8 +209,16 @@ enum {
  * so if format = 16-bit PCM and channels = Stereo, frame size = 2 ch * 2 = 4 bytes
  * DEEP_BUFFER_OUTPUT_PERIOD_SIZE = 1024 means 1024 * 4 = 4096 bytes
  * We should take care of returning proper size when AudioFlinger queries for
+
+ * TODO: period_size is set to 1920 frames - which would
+ * correspond to 40 ms, considering 48Khz stereo
+ * this would mean for higher sampling rates
+ * buffering time would reduce. If required
+ * modify the period_size, start_threshold etc
  * the buffer size of an input/output stream
  */
+
+
 #define DEEP_BUFFER_OUTPUT_PERIOD_SIZE 1920
 #define DEEP_BUFFER_OUTPUT_PERIOD_COUNT 2
 #define LOW_LATENCY_OUTPUT_PERIOD_SIZE 240

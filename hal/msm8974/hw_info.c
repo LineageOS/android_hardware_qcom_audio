@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -244,6 +244,20 @@ static void  update_hardware_info_8084(struct hardware_info *hw_info, const char
     }
 }
 
+static void  update_hardware_info_8096(struct hardware_info *hw_info, const char *snd_card_name)
+{
+    if (!strcmp(snd_card_name, "apq8096-tasha-i2c-snd-card")) {
+        ALOGW("%s: Updating hardware info for APQ 8096", __func__);
+        strlcpy(hw_info->type, "mtp", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "apq8096", sizeof(hw_info->name));
+        hw_info->snd_devices = NULL;
+        hw_info->num_snd_devices = 0;
+        strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
+    } else {
+        ALOGW("%s: Not an 8096 device", __func__);
+    }
+}
+
 static void  update_hardware_info_8994(struct hardware_info *hw_info, const char *snd_card_name)
 {
     if (!strcmp(snd_card_name, "msm8994-tomtom-mtp-snd-card")) {
@@ -431,6 +445,9 @@ void *hw_info_init(const char *snd_card_name)
     } else if(strstr(snd_card_name, "msm8994")) {
         ALOGV("8994 - variant soundcard");
         update_hardware_info_8994(hw_info, snd_card_name);
+    } else if(strstr(snd_card_name, "apq8096")) {
+        ALOGV("8096 - variant soundcard");
+        update_hardware_info_8096(hw_info, snd_card_name);
     } else if(strstr(snd_card_name, "msm8996")) {
         ALOGV("8996 - variant soundcard");
         update_hardware_info_8996(hw_info, snd_card_name);

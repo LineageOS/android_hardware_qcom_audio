@@ -73,6 +73,7 @@
 #include "sound/compress_params.h"
 #include "sound/asound.h"
 
+#include <audio_utils/format.h>
 
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /* ToDo: Check and update a proper value in msec */
@@ -249,19 +250,28 @@ static const struct string_to_enum out_formats_name_to_enum_table[] = {
 static struct audio_device *adev = NULL;
 static pthread_mutex_t adev_init_lock;
 static unsigned int audio_device_ref_count;
-
+//cache last MBDRC cal step level
+static int last_known_cal_step = -1 ;
 static int set_voice_volume_l(struct audio_device *adev, float volume);
 
 __attribute__ ((visibility ("default")))
 bool audio_hw_send_gain_dep_calibration(int level) {
     bool ret_val = false;
-    ALOGV("%s: called ... ", __func__);
+    ALOGV("%s: called ...", __func__);
 
     pthread_mutex_lock(&adev_init_lock);
 
     if (adev != NULL && adev->platform != NULL) {
         pthread_mutex_lock(&adev->lock);
         ret_val = platform_send_gain_dep_cal(adev->platform, level);
+
+        // if cal set fails, cache level info
+        // if cal set succeds, reset known last cal set
+        if (!ret_val)
+            last_known_cal_step = level;
+        else if (last_known_cal_step != -1)
+            last_known_cal_step = -1;
+
         pthread_mutex_unlock(&adev->lock);
     } else {
         ALOGE("%s: %s is NULL", __func__, adev == NULL ? "adev" : "adev->platform");
@@ -784,8 +794,10 @@ static void check_usecases_codec_backend(struct audio_device *adev,
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        ALOGV("%s: curr device: %s, usecase device: %s", __func__,
+        ALOGV("%s: curr device: %s, usecase %s"
+              "usecase device: %s", __func__,
               platform_get_snd_device_name(snd_device),
+              use_case_table[usecase->id],
               platform_get_snd_device_name(usecase->out_snd_device));
         if (usecase->type != PCM_CAPTURE &&
             usecase != uc_info &&
@@ -863,7 +875,7 @@ static void check_and_route_capture_usecases(struct audio_device *adev,
                 usecase->in_snd_device != snd_device &&
                 ((uc_info->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) &&
                  (((usecase->devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_CODEC_BACKEND) ||
-                  (usecase->type == VOICE_CALL))) &&
+                  (usecase->type == VOICE_CALL) || (usecase->type == VOIP_CALL))) &&
                 (usecase->id != USECASE_AUDIO_SPKR_CALIB_TX)) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
@@ -1005,12 +1017,15 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
          * be switched to new device when select_devices() is called for voice call
          * usecase. This is to avoid switching devices for voice call when
          * check_usecases_codec_backend() is called below.
+         * choose voice call device only if the use case device is
+         * also using the codec backend
          */
         if (voice_is_in_call(adev) && adev->mode != AUDIO_MODE_NORMAL) {
             vc_usecase = get_usecase_from_list(adev,
                                                get_usecase_id_from_usecase_type(adev, VOICE_CALL));
-            if ((vc_usecase) && ((vc_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
-                (usecase->devices == AUDIO_DEVICE_IN_VOICE_CALL))) {
+            if ((vc_usecase) && (((vc_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) &&
+                                 (usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND)) ||
+                                (usecase->devices == AUDIO_DEVICE_IN_VOICE_CALL))) {
                 in_snd_device = vc_usecase->in_snd_device;
                 out_snd_device = vc_usecase->out_snd_device;
             }
@@ -2116,17 +2131,17 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         pthread_mutex_lock(&adev->lock);
 
         /*
-         * When HDMI cable is unplugged/usb hs is disconnected the
-         * music playback is paused and the policy manager sends routing=0
-         * But the audioflingercontinues to write data until standby time
-         * (3sec). As the HDMI core is turned off, the write gets blocked.
+         * When HDMI cable is unplugged the music playback is paused and
+         * the policy manager sends routing=0. But the audioflinger continues
+         * to write data until standby time (3sec). As the HDMI core is
+         * turned off, the write gets blocked.
          * Avoid this by routing audio to speaker until standby.
          */
-        if ((out->devices == AUDIO_DEVICE_OUT_AUX_DIGITAL ||
-                out->devices == AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET) &&
-                val == AUDIO_DEVICE_NONE) {
-            if (!audio_extn_dolby_is_passthrough_stream(out->flags))
-                val = AUDIO_DEVICE_OUT_SPEAKER;
+        if ((out->devices == AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+                (val == AUDIO_DEVICE_NONE) &&
+                !audio_extn_dolby_is_passthrough_stream(out->flags) &&
+                (platform_get_edid_info(adev->platform) != 0) /* HDMI disconnected */) {
+            val = AUDIO_DEVICE_OUT_SPEAKER;
         }
 
         /*
@@ -2368,7 +2383,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         // increase written size during SSR to avoid mismatch
         // with the written frames count in AF
         if (!is_offload_usecase(out->usecase))
-            out->written += bytes / (out->config.channels * sizeof(short));
+            out->written += bytes / (out->config.channels * audio_bytes_per_sample(out->format));
 
         if (out->pcm) {
             ALOGD(" %s: sound card is not active/SSR state", __func__);
@@ -2400,6 +2415,12 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             out->standby = true;
             goto exit;
         }
+
+        if (last_known_cal_step != -1) {
+            ALOGD("%s: retry previous failed cal level set", __func__);
+            audio_hw_send_gain_dep_calibration(last_known_cal_step);
+        }
+
         if (!is_offload_usecase(out->usecase) && adev->adm_register_output_stream)
             adev->adm_register_output_stream(adev->adm_data, out->handle, out->flags);
     }
@@ -2461,13 +2482,23 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
             if (out->usecase == USECASE_AUDIO_PLAYBACK_AFE_PROXY)
                 ret = pcm_mmap_write(out->pcm, (void *)buffer, bytes);
-            else
+            else {
+                if (out->format == AUDIO_FORMAT_PCM_8_24_BIT) {
+                    //convert from 8_24 to 24_8, bytes have to be converted to
+                    //frames since memcpy_by_audio_format
+                    //expects size in frames and a 8_24 is 4 bytes.
+                    memcpy_by_audio_format((void*)buffer,
+                        AUDIO_FORMAT_PCM_24_BIT_OFFLOAD,
+                        buffer, AUDIO_FORMAT_PCM_8_24_BIT,
+                        (bytes / audio_bytes_per_sample(out->format)));
+                }
                 ret = pcm_write(out->pcm, (void *)buffer, bytes);
+            }
 
             if (ret < 0)
                 ret = -errno;
             else if (ret == 0)
-                out->written += bytes / (out->config.channels * sizeof(short));
+                out->written += bytes / (out->config.channels * audio_bytes_per_sample(out->format));
 
             if (adev->adm_abandon_focus)
                 adev->adm_abandon_focus(adev->adm_data, out->handle);
@@ -2513,7 +2544,10 @@ static int out_get_render_position(const struct audio_stream_out *stream,
     if (is_offload_usecase(out->usecase)) {
         ssize_t ret = 0;
         lock_output_stream(out);
-        if (out->compr != NULL) {
+
+        if (SND_CARD_STATE_OFFLINE == get_snd_card_state(adev)) {
+            ret = -EINVAL;
+        } else if (out->compr != NULL) {
             ret = compress_get_tstamp(out->compr, (unsigned long *)dsp_frames,
                     &out->sample_rate);
             if (ret < 0)
@@ -2526,10 +2560,10 @@ static int out_get_render_position(const struct audio_stream_out *stream,
             ALOGE(" ERROR: sound card not active Unable to get time stamp from compress driver");
             set_snd_card_state(adev,SND_CARD_STATE_OFFLINE);
             return -EINVAL;
-        } else if(ret < 0) {
+        } else if (ret < 0) {
             ALOGE(" ERROR: Unable to get time stamp from compress driver");
             return -EINVAL;
-        } else if (get_snd_card_state(adev) == SND_CARD_STATE_OFFLINE){
+        } else if (get_snd_card_state(adev) == SND_CARD_STATE_OFFLINE) {
             /*
              * Handle corner case where compress session is closed during SSR
              * and timestamp is queried
@@ -2574,7 +2608,9 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
     lock_output_stream(out);
 
     if (is_offload_usecase(out->usecase)) {
-        if (out->compr != NULL) {
+        if (SND_CARD_STATE_OFFLINE == get_snd_card_state(out->dev)) {
+            ret = -EINVAL;
+        } else if (out->compr != NULL) {
             ret = compress_get_tstamp(out->compr, &dsp_frames,
                     &out->sample_rate);
             ALOGVV("%s rendered frames %ld sample_rate %d",
@@ -3323,9 +3359,23 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->config = pcm_config_low_latency;
         out->sample_rate = out->config.rate;
     } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
-        format = AUDIO_FORMAT_PCM_16_BIT;
+        format = out->format;
+
         out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
         out->config = pcm_config_deep_buffer;
+        out->config.rate = config->sample_rate;
+
+        if (config->format == AUDIO_FORMAT_PCM_16_BIT) {
+            out->bit_width = 16;
+        } else if (config->format == AUDIO_FORMAT_PCM_8_24_BIT) {
+            out->bit_width = 24;
+            out->config.format = PCM_FORMAT_S24_LE;
+        } else {
+            ALOGE("format has to be either 16/32 bit %d", config->format);
+            ret = -EINVAL;
+            goto error_open;
+        }
+
         out->sample_rate = out->config.rate;
     } else {
         /* primary path is the default path selected if no other outputs are available/suitable */
@@ -3579,6 +3629,16 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             ALOGV("cache new edid");
             platform_cache_edid(adev->platform);
+        } else if (val & AUDIO_DEVICE_OUT_USB_DEVICE) {
+            /*
+             * Do not allow AFE proxy port usage by WFD source when USB headset is connected.
+             * Per AudioPolicyManager, USB device is higher priority than WFD.
+             * For Voice call over USB headset, voice call audio is routed to AFE proxy ports.
+             * If WFD use case occupies AFE proxy, it may result unintended behavior while
+             * starting voice call on USB
+             */
+            ALOGV("detected USB connect .. disable proxy");
+            adev->allow_afe_proxy_usage = false;
         }
     }
 
@@ -3588,6 +3648,9 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             ALOGV("invalidate cached hdmi config");
             platform_invalidate_hdmi_config(adev->platform);
+        } else if (val & AUDIO_DEVICE_OUT_USB_DEVICE) {
+            ALOGV("detected USB disconnect .. enable proxy");
+            adev->allow_afe_proxy_usage = true;
         }
     }
 
@@ -4016,6 +4079,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->out_device = AUDIO_DEVICE_NONE;
     adev->bluetooth_nrec = true;
     adev->acdb_settings = TTY_MODE_OFF;
+    adev->allow_afe_proxy_usage = true;
     /* adev->cur_hdmi_channels = 0;  by calloc() */
     adev->snd_dev_ref_cnt = calloc(SND_DEVICE_MAX, sizeof(int));
     voice_init(adev);

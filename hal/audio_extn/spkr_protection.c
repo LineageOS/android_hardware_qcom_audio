@@ -93,6 +93,7 @@
 #define SPKR_PROCESSING_IN_IDLE 0
 
 #define MAX_PATH             (256)
+#define MAX_STR_SIZE         (1024)
 #define THERMAL_SYSFS "/sys/class/thermal"
 #define TZ_TYPE "/sys/class/thermal/thermal_zone%d/type"
 #define TZ_WSA "/sys/class/thermal/thermal_zone%d/temp"
@@ -749,7 +750,8 @@ static void* spkr_calibration_thread()
                 continue;
             } else {
                 ALOGD("%s: wsa speaker idle %ld,minimum time %ld", __func__, sec, min_idle_time);
-                if (!(sec > min_idle_time || handle.trigger_cal)) {
+                if (!adev->primary_output ||
+                    ((sec < min_idle_time) && !handle.trigger_cal)) {
                     pthread_mutex_unlock(&adev->lock);
                     spkr_calibrate_wait();
                     continue;
@@ -962,7 +964,8 @@ static void get_spkr_prot_thermal_cal(char *param)
         ALOGE("%s: failed to open cal file\n", __func__);
         status = -EINVAL;
     }
-    sprintf(param, "SpkrCalStatus: %d; R0: %lf, %lf; T0: %lf, %lf",
+    snprintf(param, MAX_STR_SIZE - strlen(param) - 1,
+            "SpkrCalStatus: %d; R0: %lf, %lf; T0: %lf, %lf",
             status, dr0[SP_V2_SPKR_1], dr0[SP_V2_SPKR_2],
             dt0[SP_V2_SPKR_1], dt0[SP_V2_SPKR_2]);
     ALOGD("%s:: param = %s\n", __func__, param);
@@ -1086,7 +1089,8 @@ static void get_spkr_prot_ftm_param(char *param)
             ftm_status[i] = -EINVAL;
         }
     }
-    sprintf(param, "SpkrParamStatus: %d, %d; Rdc: %lf, %lf; Temp: %lf, %lf;"
+    snprintf(param, MAX_STR_SIZE - strlen(param) - 1,
+            "SpkrParamStatus: %d, %d; Rdc: %lf, %lf; Temp: %lf, %lf;"
             " Freq: %lf, %lf; Rect: %lf, %lf; Qmct: %lf, %lf",
             ftm_status[SP_V2_SPKR_1], ftm_status[SP_V2_SPKR_2],
             rdc[SP_V2_SPKR_1], rdc[SP_V2_SPKR_2], temp[SP_V2_SPKR_1],
@@ -1217,7 +1221,7 @@ int audio_extn_fbsp_get_parameters(struct str_parms *query,
                                    struct str_parms *reply)
 {
     int err = 0;
-    char value[1024] = {0};
+    char value[MAX_STR_SIZE] = {0};
 
     if (!handle.spkr_prot_enable) {
         ALOGD("%s: Speaker protection disabled", __func__);

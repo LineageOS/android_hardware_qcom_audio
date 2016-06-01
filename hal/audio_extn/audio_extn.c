@@ -529,7 +529,7 @@ done:
 
 #ifndef AFE_PROXY_ENABLED
 #define audio_extn_set_afe_proxy_parameters(adev, parms)  (0)
-#define audio_extn_get_afe_proxy_parameters(query, reply) (0)
+#define audio_extn_get_afe_proxy_parameters(adev, query, reply) (0)
 #else
 static int32_t afe_proxy_set_channel_mapping(struct audio_device *adev,
                                                      int channel_count)
@@ -643,23 +643,25 @@ void audio_extn_set_afe_proxy_parameters(struct audio_device *adev,
     }
 }
 
-int audio_extn_get_afe_proxy_parameters(struct str_parms *query,
+int audio_extn_get_afe_proxy_parameters(const struct audio_device *adev,
+                                        struct str_parms *query,
                                         struct str_parms *reply)
 {
-    int ret, val;
+    int ret, val = 0;
     char value[32]={0};
     char *str = NULL;
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_CAN_OPEN_PROXY, value,
                             sizeof(value));
     if (ret >= 0) {
-        if (audio_extn_usb_is_proxy_inuse())
+        if (audio_extn_usb_is_proxy_inuse() ||
+            !adev->allow_afe_proxy_usage)
             val = 0;
         else
             val = 1;
         str_parms_add_int(reply, AUDIO_PARAMETER_CAN_OPEN_PROXY, val);
     }
-
+    ALOGV("%s: called ... can_use_proxy %d", __func__, val);
     return 0;
 }
 
@@ -751,7 +753,7 @@ void audio_extn_get_parameters(const struct audio_device *adev,
                               struct str_parms *reply)
 {
     char *kv_pairs = NULL;
-    audio_extn_get_afe_proxy_parameters(query, reply);
+    audio_extn_get_afe_proxy_parameters(adev, query, reply);
     audio_extn_get_fluence_parameters(adev, query, reply);
     audio_extn_ssr_get_parameters(adev, query, reply);
     get_active_offload_usecases(adev, query, reply);

@@ -324,6 +324,7 @@ struct audio_device {
     unsigned int cur_hdmi_channels;
     unsigned int cur_wfd_channels;
     bool bt_wb_speech_enabled;
+    bool allow_afe_proxy_usage;
 
     int snd_card;
     unsigned int cur_codec_backend_samplerate;
