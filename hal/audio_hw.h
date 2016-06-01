@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -374,7 +374,7 @@ int enable_snd_device(struct audio_device *adev,
 int enable_audio_route(struct audio_device *adev,
                        struct audio_usecase *usecase);
 
-struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
+struct audio_usecase *get_usecase_from_list(const struct audio_device *adev,
                                                    audio_usecase_t uc_id);
 
 bool is_offload_usecase(audio_usecase_t uc_id);
@@ -382,7 +382,7 @@ bool is_offload_usecase(audio_usecase_t uc_id);
 int pcm_ioctl(struct pcm *pcm, int request, ...);
 
 int get_snd_card_state(struct audio_device *adev);
-audio_usecase_t get_usecase_id_from_usecase_type(struct audio_device *adev,
+audio_usecase_t get_usecase_id_from_usecase_type(const struct audio_device *adev,
                                                  usecase_type_t type);
 
 #define LITERAL_TO_STRING(x) #x

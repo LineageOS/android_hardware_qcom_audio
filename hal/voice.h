@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -62,7 +62,6 @@ struct voice {
     int tty_mode;
     bool mic_mute;
     float volume;
-    bool is_in_call;
     bool in_call;
 };
 
@@ -82,8 +81,8 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms);
 void voice_get_parameters(struct audio_device *adev, struct str_parms *query,
                           struct str_parms *reply);
 void voice_init(struct audio_device *adev);
-bool voice_is_in_call(struct audio_device *adev);
-bool voice_is_in_call_rec_stream(struct stream_in *in);
+bool voice_is_in_call(const struct audio_device *adev);
+bool voice_is_in_call_rec_stream(const struct stream_in *in);
 int voice_set_mic_mute(struct audio_device *dev, bool state);
 bool voice_get_mic_mute(struct audio_device *dev);
 int voice_set_volume(struct audio_device *adev, float volume);

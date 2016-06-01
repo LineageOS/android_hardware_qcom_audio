@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -288,6 +288,8 @@ int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,
 #define audio_extn_spkr_prot_get_acdb_id(snd_device)         (-EINVAL)
 #define audio_extn_get_spkr_prot_snd_device(snd_device) (snd_device)
 #define audio_extn_spkr_prot_set_parameters(parms, value, len)   (0)
+#define audio_extn_fbsp_set_parameters(parms)   (0)
+#define audio_extn_fbsp_get_parameters(query, reply)   (0)
 #else
 void audio_extn_spkr_prot_init(void *adev);
 int audio_extn_spkr_prot_start_processing(snd_device_t snd_device);
@@ -298,6 +300,9 @@ int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device);
 void audio_extn_spkr_prot_calib_cancel(void *adev);
 void audio_extn_spkr_prot_set_parameters(struct str_parms *parms,
                                          char *value, int len);
+int audio_extn_fbsp_set_parameters(struct str_parms *parms);
+int audio_extn_fbsp_get_parameters(struct str_parms *query,
+                                   struct str_parms *reply);
 #endif
 
 #ifndef COMPRESS_CAPTURE_ENABLED

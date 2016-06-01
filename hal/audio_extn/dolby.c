@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2010 The Android Open Source Project
@@ -655,7 +655,8 @@ int audio_extn_dap_hal_init(int snd_card) {
     ds2extnmod.dap_hal_set_hw_info(SND_CARD, (void*)(&snd_card));
     ALOGV("%s Sound card number is:%d",__func__,snd_card);
 
-    platform_get_device_to_be_id_map(&device_be_id_map.device_id_to_be_id, &device_be_id_map.len);
+    platform_get_device_to_be_id_map((int**)&device_be_id_map.device_id_to_be_id,
+            &device_be_id_map.len);
     ds2extnmod.dap_hal_set_hw_info(DEVICE_BE_ID_MAP, (void*)(&device_be_id_map));
     ALOGV("%s Set be id map len:%d",__func__,device_be_id_map.len);
     ret = 0;
@@ -771,10 +772,9 @@ void audio_extn_dolby_set_license(struct audio_device *adev)
     if (ds2extnmod.dap_hal_set_hw_info) {
         ds2extnmod.dap_hal_set_hw_info(DMID, (void*)(&dolby_license.dmid));
     } else {
-        ALOGV("%s: dap_hal_set_hw_info is NULL", __func__);
-        return ret;
+        ALOGE("%s: dap_hal_set_hw_info is NULL", __func__);
     }
-    return 0;
+    return;
 }
 
 

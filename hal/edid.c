@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2014 The Android Open Source Project
@@ -684,4 +684,45 @@ bool edid_get_sink_caps(edid_audio_info* info, char *edid_data)
     dump_speaker_allocation(info);
     dump_edid_data(info);
     return true;
+}
+
+bool edid_is_supported_sr(edid_audio_info* info, int sr)
+{
+    int i = 0;
+    if (info != NULL && sr != 0) {
+        for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
+            if (info->audio_blocks_array[i].sampling_freq == sr) {
+                ALOGV("%s: returns true for sample rate [%d]",
+                      __func__, sr);
+                return true;
+            }
+        }
+    }
+    ALOGV("%s: returns false for sample rate [%d]",
+           __func__, sr);
+    return false;
+}
+
+bool edid_is_supported_bps(edid_audio_info* info, int bps)
+{
+    int i = 0;
+
+    if (bps == 16) {
+        //16 bit bps is always supported
+        //some oem may not update 16bit support in their edid info
+        return true;
+    }
+
+    if (info != NULL && bps != 0) {
+        for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
+            if (info->audio_blocks_array[i].bits_per_sample == bps) {
+                ALOGV("%s: returns true for bit width [%d]",
+                      __func__, bps);
+                return true;
+            }
+        }
+    }
+    ALOGV("%s: returns false for bit width [%d]",
+           __func__, bps);
+    return false;
 }

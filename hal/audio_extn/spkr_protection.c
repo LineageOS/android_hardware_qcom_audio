@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2016, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -66,9 +66,6 @@
 #define MIN_RESISTANCE_SPKR_Q24 (2 * (1 << 24))
 #define MAX_RESISTANCE_SPKR_Q24 (40 * (1 << 24))
 
-/*Number of Attempts for WSA equilibrium t0 reads*/
-#define NUM_ATTEMPTS 5
-
 /*Path where the calibration file will be stored*/
 #define CALIB_FILE "/data/misc/audio/audio.cal"
 
@@ -102,6 +99,12 @@
 
 #define AUDIO_PARAMETER_KEY_SPKR_TZ_1     "spkr_1_tz_name"
 #define AUDIO_PARAMETER_KEY_SPKR_TZ_2     "spkr_2_tz_name"
+
+#define AUDIO_PARAMETER_KEY_FBSP_TRIGGER_SPKR_CAL   "trigger_spkr_cal"
+#define AUDIO_PARAMETER_KEY_FBSP_GET_SPKR_CAL       "get_spkr_cal"
+#define AUDIO_PARAMETER_KEY_FBSP_CFG_WAIT_TIME      "fbsp_cfg_wait_time"
+#define AUDIO_PARAMETER_KEY_FBSP_CFG_FTM_TIME       "fbsp_cfg_ftm_time"
+#define AUDIO_PARAMETER_KEY_FBSP_GET_FTM_PARAM      "get_ftm_param"
 
 /*Modes of Speaker Protection*/
 enum speaker_protection_mode {
@@ -138,6 +141,9 @@ struct speaker_prot_session {
     bool wsa_found;
     int spkr_1_tzn;
     int spkr_2_tzn;
+    bool trigger_cal;
+    pthread_mutex_t cal_wait_cond_mutex;
+    pthread_cond_t cal_wait_condition;
 };
 
 static struct pcm_config pcm_config_skr_prot = {
@@ -273,14 +279,15 @@ static bool is_speaker_in_use(unsigned long *sec)
         ALOGE("%s: Invalid params", __func__);
         return true;
     }
-     if (handle.spkr_in_use) {
+    if (handle.spkr_in_use) {
         *sec = 0;
-         return true;
-     } else {
-         clock_gettime(CLOCK_BOOTTIME, &temp);
-         *sec = temp.tv_sec - handle.spkr_last_time_used.tv_sec;
-         return false;
-     }
+        handle.trigger_cal = false;
+        return true;
+    } else {
+        clock_gettime(CLOCK_BOOTTIME, &temp);
+        *sec = temp.tv_sec - handle.spkr_last_time_used.tv_sec;
+        return false;
+    }
 }
 
 
@@ -447,6 +454,8 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
         uc_info_rx->out_snd_device = SND_DEVICE_OUT_SPEAKER_PROTECTED;
     disable_rx = true;
     list_add_tail(&adev->usecase_list, &uc_info_rx->list);
+    platform_check_and_set_codec_backend_cfg(adev, uc_info_rx,
+                                             uc_info_rx->out_snd_device);
     if (audio_extn_is_vbat_enabled())
          enable_snd_device(adev, SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT);
     else
@@ -536,15 +545,6 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
                 ALOGD("%s: spkr_prot_thread calib Success R0 %d %d",
                  __func__, status.r0[SP_V2_SPKR_1], status.r0[SP_V2_SPKR_2]);
                 FILE *fp;
-
-                vi_feed_no_channels = vi_feed_get_channels(adev);
-                ALOGD("%s: vi_feed_no_channels %d", __func__, vi_feed_no_channels);
-                if (vi_feed_no_channels < 0) {
-                    ALOGE("%s: no of channels negative !!", __func__);
-                    /* limit the number of channels to 2*/
-                    vi_feed_no_channels = 2;
-                }
-
                 fp = fopen(CALIB_FILE,"wb");
                 if (!fp) {
                     ALOGE("%s: spkr_prot_thread File open failed %s",
@@ -635,6 +635,19 @@ exit:
     return status.status;
 }
 
+static void spkr_calibrate_wait()
+{
+    struct timespec ts;
+
+    clock_gettime(CLOCK_REALTIME, &ts);
+    ts.tv_sec += WAKEUP_MIN_IDLE_CHECK;
+    ts.tv_nsec = 0;
+    pthread_mutex_lock(&handle.cal_wait_cond_mutex);
+    pthread_cond_timedwait(&handle.cal_wait_condition,
+                           &handle.cal_wait_cond_mutex, &ts);
+    pthread_mutex_unlock(&handle.cal_wait_cond_mutex);
+}
+
 static void* spkr_calibration_thread()
 {
     unsigned long sec = 0;
@@ -642,7 +655,6 @@ static void* spkr_calibration_thread()
     int i = 0;
     int t0_spk_1 = 0;
     int t0_spk_2 = 0;
-    int t0_spk_prior = 0;
     bool goahead = false;
     struct audio_cal_info_spk_prot_cfg protCfg;
     FILE *fp;
@@ -689,14 +701,6 @@ static void* spkr_calibration_thread()
     if (fp) {
         int i;
         bool spkr_calibrated = true;
-        /* HAL for speaker protection is always calibrating for stereo usecase*/
-        vi_feed_no_channels = vi_feed_get_channels(adev);
-        ALOGD("%s: vi_feed_no_channels %d", __func__, vi_feed_no_channels);
-        if (vi_feed_no_channels < 0) {
-            ALOGE("%s: no of channels negative !!", __func__);
-            /* limit the number of channels to 2*/
-            vi_feed_no_channels = 2;
-        }
         for (i = 0; i < vi_feed_no_channels; i++) {
             fread(&protCfg.r0[i], sizeof(protCfg.r0[i]), 1, fp);
             fread(&protCfg.t0[i], sizeof(protCfg.t0[i]), 1, fp);
@@ -741,13 +745,13 @@ static void* spkr_calibration_thread()
             if (is_speaker_in_use(&sec)) {
                 ALOGV("%s: WSA Speaker in use retry calibration", __func__);
                 pthread_mutex_unlock(&adev->lock);
-                sleep(WAKEUP_MIN_IDLE_CHECK);
+                spkr_calibrate_wait();
                 continue;
             } else {
                 ALOGD("%s: wsa speaker idle %ld,minimum time %ld", __func__, sec, min_idle_time);
-                if (sec < min_idle_time) {
+                if (!(sec > min_idle_time || handle.trigger_cal)) {
                     pthread_mutex_unlock(&adev->lock);
-                    sleep(WAKEUP_MIN_IDLE_CHECK);
+                    spkr_calibrate_wait();
                     continue;
                }
                goahead = true;
@@ -755,7 +759,7 @@ static void* spkr_calibration_thread()
            if (!list_empty(&adev->usecase_list)) {
                 ALOGD("%s: Usecase active re-try calibration", __func__);
                 pthread_mutex_unlock(&adev->lock);
-                sleep(WAKEUP_MIN_IDLE_CHECK);
+                spkr_calibrate_wait();
                 continue;
            }
            if (goahead) {
@@ -765,92 +769,46 @@ static void* spkr_calibration_thread()
                    thermal_fd = -1;
                    thermal_fd = open(wsa_path, O_RDONLY);
                    if (thermal_fd > 0) {
-                       for (i = 0; i < NUM_ATTEMPTS; i++) {
-                            if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0) {
-                                t0_spk_1 = atoi(buf);
-                                if (i > 0 && (t0_spk_1 != t0_spk_prior)) {
-                                    ALOGE("%s: spkr1 curr temp: %d, prev temp: %d\n",
-                                          __func__, t0_spk_1, t0_spk_prior);
-                                    break;
-                                }
-                                t0_spk_prior = t0_spk_1;
-                                pthread_mutex_unlock(&adev->lock);
-                                sleep(1);
-                                pthread_mutex_lock(&adev->lock);
-                                if (is_speaker_in_use(&sec))
-                                    break;
-                            } else {
-                               ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
-                               break;
-                            }
-                        }
-                        close(thermal_fd);
+                       if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0)
+                            t0_spk_1 = atoi(buf);
+                       else
+                           ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
+                       close(thermal_fd);
                    } else {
                        ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
                    }
-                   if (i == NUM_ATTEMPTS) {
-                       if (t0_spk_1 < TZ_TEMP_MIN_THRESHOLD ||
-                           t0_spk_1 > TZ_TEMP_MAX_THRESHOLD) {
-                           pthread_mutex_unlock(&adev->lock);
-                           sleep(WAKEUP_MIN_IDLE_CHECK);
-                           continue;
-                       }
-                       ALOGD("%s: temp T0 for spkr1 %d\n", __func__, t0_spk_1);
-                       /*Convert temp into q6 format*/
-                       t0_spk_1 = (t0_spk_1 * (1 << 6));
-                   } else {
-                       ALOGV("%s: thermal equilibrium failed for spkr1 in %d/%d readings\n",
-                                                __func__, i, NUM_ATTEMPTS);
+                   if (t0_spk_1 < TZ_TEMP_MIN_THRESHOLD ||
+                       t0_spk_1 > TZ_TEMP_MAX_THRESHOLD) {
                        pthread_mutex_unlock(&adev->lock);
-                       sleep(WAKEUP_MIN_IDLE_CHECK);
+                       spkr_calibrate_wait();
                        continue;
                    }
+                   ALOGD("%s: temp T0 for spkr1 %d\n", __func__, t0_spk_1);
+                   /*Convert temp into q6 format*/
+                   t0_spk_1 = (t0_spk_1 * (1 << 6));
                }
                if (spk_2_tzn >= 0) {
                    snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_2_tzn);
                    ALOGV("%s: wsa_path: %s\n", __func__, wsa_path);
                    thermal_fd = open(wsa_path, O_RDONLY);
                    if (thermal_fd > 0) {
-                       for (i = 0; i < NUM_ATTEMPTS; i++) {
-                            if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0) {
-                                t0_spk_2 = atoi(buf);
-                                if (i > 0 && (t0_spk_2 != t0_spk_prior)) {
-                                    ALOGE("%s: spkr2 curr temp: %d, prev temp: %d\n",
-                                          __func__, t0_spk_2, t0_spk_prior);
-                                    break;
-                                }
-                                t0_spk_prior = t0_spk_2;
-                                pthread_mutex_unlock(&adev->lock);
-                                sleep(1);
-                                pthread_mutex_lock(&adev->lock);
-                                if (is_speaker_in_use(&sec))
-                                    break;
-                            } else {
-                               ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
-                               break;
-                            }
-                        }
-                        close(thermal_fd);
+                       if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0)
+                           t0_spk_2 = atoi(buf);
+                       else
+                           ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
+                       close(thermal_fd);
                    } else {
                        ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
                    }
-                   if (i == NUM_ATTEMPTS) {
-                       if (t0_spk_2 < TZ_TEMP_MIN_THRESHOLD ||
-                           t0_spk_2 > TZ_TEMP_MAX_THRESHOLD) {
-                           pthread_mutex_unlock(&adev->lock);
-                           sleep(WAKEUP_MIN_IDLE_CHECK);
-                           continue;
-                       }
-                       ALOGD("%s: temp T0 for spkr2 %d\n", __func__, t0_spk_2);
-                       /*Convert temp into q6 format*/
-                       t0_spk_2 = (t0_spk_2 * (1 << 6));
-                   } else {
-                       ALOGV("%s: thermal equilibrium failed for spkr2 in %d/%d readings\n",
-                                                __func__, i, NUM_ATTEMPTS);
+                   if (t0_spk_2 < TZ_TEMP_MIN_THRESHOLD ||
+                       t0_spk_2 > TZ_TEMP_MAX_THRESHOLD) {
                        pthread_mutex_unlock(&adev->lock);
-                       sleep(WAKEUP_MIN_IDLE_CHECK);
+                       spkr_calibrate_wait();
                        continue;
                    }
+                   ALOGD("%s: temp T0 for spkr2 %d\n", __func__, t0_spk_2);
+                   /*Convert temp into q6 format*/
+                   t0_spk_2 = (t0_spk_2 * (1 << 6));
                }
            }
            pthread_mutex_unlock(&adev->lock);
@@ -882,12 +840,12 @@ static void* spkr_calibration_thread()
         if (is_speaker_in_use(&sec)) {
             ALOGV("%s: Speaker in use retry calibration", __func__);
             pthread_mutex_unlock(&adev->lock);
-            sleep(WAKEUP_MIN_IDLE_CHECK);
+            spkr_calibrate_wait();
             continue;
         } else {
-            if (sec < min_idle_time) {
+            if (!(sec > min_idle_time || handle.trigger_cal)) {
                 pthread_mutex_unlock(&adev->lock);
-                sleep(WAKEUP_MIN_IDLE_CHECK);
+                spkr_calibrate_wait();
                 continue;
             }
             goahead = true;
@@ -896,7 +854,7 @@ static void* spkr_calibration_thread()
             ALOGD("%s: Usecase active re-try calibration", __func__);
             goahead = false;
             pthread_mutex_unlock(&adev->lock);
-            sleep(WAKEUP_MIN_IDLE_CHECK);
+            spkr_calibrate_wait();
             continue;
         }
         if (goahead) {
@@ -969,6 +927,319 @@ void audio_extn_spkr_prot_set_parameters(struct str_parms *parms,
           tz_names.spkr_1_name, tz_names.spkr_2_name);
 }
 
+static int spkr_vi_channels(struct audio_device *adev)
+{
+    int vi_channels;
+
+    vi_channels = vi_feed_get_channels(adev);
+    ALOGD("%s: vi_channels %d", __func__, vi_channels);
+    if (vi_channels < 0 || vi_channels > SP_V2_NUM_MAX_SPKRS) {
+        /* limit the number of channels to SP_V2_NUM_MAX_SPKRS */
+        vi_channels = SP_V2_NUM_MAX_SPKRS;
+    }
+    return vi_channels;
+}
+
+static void get_spkr_prot_thermal_cal(char *param)
+{
+    int i, status = 0;
+    int r0[SP_V2_NUM_MAX_SPKRS] = {0}, t0[SP_V2_NUM_MAX_SPKRS] = {0};
+    double dr0[SP_V2_NUM_MAX_SPKRS] = {0}, dt0[SP_V2_NUM_MAX_SPKRS] = {0};
+
+    FILE *fp = fopen(CALIB_FILE,"rb");
+    if (fp) {
+        for (i = 0; i < vi_feed_no_channels; i++) {
+            fread(&r0[i], sizeof(int), 1, fp);
+            fread(&t0[i], sizeof(int), 1, fp);
+            /* Convert from ADSP format to readable format */
+            dr0[i] = ((double)r0[i])/(1 << 24);
+            dt0[i] = ((double)t0[i])/(1 << 6);
+        }
+        ALOGV("%s: R0= %lf, %lf, T0= %lf, %lf",
+              __func__, dr0[0], dr0[1], dt0[0], dt0[1]);
+        fclose(fp);
+    } else {
+        ALOGE("%s: failed to open cal file\n", __func__);
+        status = -EINVAL;
+    }
+    sprintf(param, "SpkrCalStatus: %d; R0: %lf, %lf; T0: %lf, %lf",
+            status, dr0[SP_V2_SPKR_1], dr0[SP_V2_SPKR_2],
+            dt0[SP_V2_SPKR_1], dt0[SP_V2_SPKR_2]);
+    ALOGD("%s:: param = %s\n", __func__, param);
+
+    return;
+}
+
+#ifdef MSM_SPKR_PROT_IN_FTM_MODE
+
+static int set_spkr_prot_ftm_cfg(int wait_time, int ftm_time)
+{
+    int ret = 0;
+    struct audio_cal_sp_th_vi_ftm_cfg th_cal_data;
+    struct audio_cal_sp_ex_vi_ftm_cfg ex_cal_data;
+
+    int cal_fd = open("/dev/msm_audio_cal",O_RDWR | O_NONBLOCK);
+    if (cal_fd < 0) {
+        ALOGE("%s: open msm_acdb failed", __func__);
+        ret = -ENODEV;
+        goto done;
+    }
+
+    memset(&th_cal_data, 0, sizeof(th_cal_data));
+    th_cal_data.hdr.data_size = sizeof(th_cal_data);
+    th_cal_data.hdr.version = VERSION_0_0;
+    th_cal_data.hdr.cal_type = AFE_FB_SPKR_PROT_TH_VI_CAL_TYPE;
+    th_cal_data.hdr.cal_type_size = sizeof(th_cal_data.cal_type);
+    th_cal_data.cal_type.cal_hdr.version = VERSION_0_0;
+    th_cal_data.cal_type.cal_hdr.buffer_number = 0;
+    th_cal_data.cal_type.cal_info.wait_time[SP_V2_SPKR_1] = wait_time;
+    th_cal_data.cal_type.cal_info.wait_time[SP_V2_SPKR_2] = wait_time;
+    th_cal_data.cal_type.cal_info.ftm_time[SP_V2_SPKR_1] = ftm_time;
+    th_cal_data.cal_type.cal_info.ftm_time[SP_V2_SPKR_2] = ftm_time;
+    th_cal_data.cal_type.cal_info.mode = MSM_SPKR_PROT_IN_FTM_MODE; // FTM mode
+    th_cal_data.cal_type.cal_data.mem_handle = -1;
+
+    if (ioctl(cal_fd, AUDIO_SET_CALIBRATION, &th_cal_data))
+        ALOGE("%s: failed to set TH VI FTM_CFG, errno = %d", __func__, errno);
+
+    memset(&ex_cal_data, 0, sizeof(ex_cal_data));
+    ex_cal_data.hdr.data_size = sizeof(ex_cal_data);
+    ex_cal_data.hdr.version = VERSION_0_0;
+    ex_cal_data.hdr.cal_type = AFE_FB_SPKR_PROT_EX_VI_CAL_TYPE;
+    ex_cal_data.hdr.cal_type_size = sizeof(ex_cal_data.cal_type);
+    ex_cal_data.cal_type.cal_hdr.version = VERSION_0_0;
+    ex_cal_data.cal_type.cal_hdr.buffer_number = 0;
+    ex_cal_data.cal_type.cal_info.wait_time[SP_V2_SPKR_1] = wait_time;
+    ex_cal_data.cal_type.cal_info.wait_time[SP_V2_SPKR_2] = wait_time;
+    ex_cal_data.cal_type.cal_info.ftm_time[SP_V2_SPKR_1] = ftm_time;
+    ex_cal_data.cal_type.cal_info.ftm_time[SP_V2_SPKR_2] = ftm_time;
+    ex_cal_data.cal_type.cal_info.mode = MSM_SPKR_PROT_IN_FTM_MODE; // FTM mode
+    ex_cal_data.cal_type.cal_data.mem_handle = -1;
+
+    if (ioctl(cal_fd, AUDIO_SET_CALIBRATION, &ex_cal_data))
+        ALOGE("%s: failed to set EX VI FTM_CFG, ret = %d", __func__, errno);
+
+    if (cal_fd > 0)
+        close(cal_fd);
+done:
+    return ret;
+}
+
+static void get_spkr_prot_ftm_param(char *param)
+{
+    struct audio_cal_sp_th_vi_param th_vi_cal_data;
+    struct audio_cal_sp_ex_vi_param ex_vi_cal_data;
+    int i;
+    int ftm_status[SP_V2_NUM_MAX_SPKRS];
+    double rdc[SP_V2_NUM_MAX_SPKRS], temp[SP_V2_NUM_MAX_SPKRS];
+    double f[SP_V2_NUM_MAX_SPKRS], r[SP_V2_NUM_MAX_SPKRS], q[SP_V2_NUM_MAX_SPKRS];
+
+    int cal_fd = open("/dev/msm_audio_cal",O_RDWR | O_NONBLOCK);
+    if (cal_fd < 0) {
+        ALOGE("%s: open msm_acdb failed", __func__);
+        goto done;
+    }
+
+    memset(&th_vi_cal_data, 0, sizeof(th_vi_cal_data));
+    th_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_1] = -EINVAL;
+    th_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_2] = -EINVAL;
+    th_vi_cal_data.hdr.data_size = sizeof(th_vi_cal_data);
+    th_vi_cal_data.hdr.version = VERSION_0_0;
+    th_vi_cal_data.hdr.cal_type = AFE_FB_SPKR_PROT_TH_VI_CAL_TYPE;
+    th_vi_cal_data.hdr.cal_type_size = sizeof(th_vi_cal_data.cal_type);
+    th_vi_cal_data.cal_type.cal_hdr.version = VERSION_0_0;
+    th_vi_cal_data.cal_type.cal_hdr.buffer_number = 0;
+    th_vi_cal_data.cal_type.cal_data.mem_handle = -1;
+
+    if (ioctl(cal_fd, AUDIO_GET_CALIBRATION, &th_vi_cal_data))
+        ALOGE("%s: Error %d in getting th_vi_cal_data", __func__, errno);
+
+    memset(&ex_vi_cal_data, 0, sizeof(ex_vi_cal_data));
+    ex_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_1] = -EINVAL;
+    ex_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_2] = -EINVAL;
+    ex_vi_cal_data.hdr.data_size = sizeof(ex_vi_cal_data);
+    ex_vi_cal_data.hdr.version = VERSION_0_0;
+    ex_vi_cal_data.hdr.cal_type = AFE_FB_SPKR_PROT_EX_VI_CAL_TYPE;
+    ex_vi_cal_data.hdr.cal_type_size = sizeof(ex_vi_cal_data.cal_type);
+    ex_vi_cal_data.cal_type.cal_hdr.version = VERSION_0_0;
+    ex_vi_cal_data.cal_type.cal_hdr.buffer_number = 0;
+    ex_vi_cal_data.cal_type.cal_data.mem_handle = -1;
+
+    if (ioctl(cal_fd, AUDIO_GET_CALIBRATION, &ex_vi_cal_data))
+        ALOGE("%s: Error %d in getting ex_vi_cal_data", __func__, errno);
+
+    for (i = 0; i < vi_feed_no_channels; i++) {
+        /* Convert from ADSP format to readable format */
+        rdc[i] = ((double)th_vi_cal_data.cal_type.cal_info.r_dc_q24[i])/(1<<24);
+        temp[i] = ((double)th_vi_cal_data.cal_type.cal_info.temp_q22[i])/(1<<22);
+        f[i] = ((double)ex_vi_cal_data.cal_type.cal_info.freq_q20[i])/(1<<20);
+        r[i] = ((double)ex_vi_cal_data.cal_type.cal_info.resis_q24[i])/(1<<24);
+        q[i] = ((double)ex_vi_cal_data.cal_type.cal_info.qmct_q24[i])/(1<<24);
+
+        if (th_vi_cal_data.cal_type.cal_info.status[i] == 0 &&
+            ex_vi_cal_data.cal_type.cal_info.status[i] == 0) {
+            ftm_status[i] = 0;
+        } else if (th_vi_cal_data.cal_type.cal_info.status[i] == -EAGAIN &&
+                   ex_vi_cal_data.cal_type.cal_info.status[i] == -EAGAIN) {
+            ftm_status[i] = -EAGAIN;
+        } else {
+            ftm_status[i] = -EINVAL;
+        }
+    }
+    sprintf(param, "SpkrParamStatus: %d, %d; Rdc: %lf, %lf; Temp: %lf, %lf;"
+            " Freq: %lf, %lf; Rect: %lf, %lf; Qmct: %lf, %lf",
+            ftm_status[SP_V2_SPKR_1], ftm_status[SP_V2_SPKR_2],
+            rdc[SP_V2_SPKR_1], rdc[SP_V2_SPKR_2], temp[SP_V2_SPKR_1],
+            temp[SP_V2_SPKR_2], f[SP_V2_SPKR_1], f[SP_V2_SPKR_2],
+            r[SP_V2_SPKR_1], r[SP_V2_SPKR_2], q[SP_V2_SPKR_1], q[SP_V2_SPKR_2]);
+    ALOGD("%s:: param = %s\n", __func__, param);
+
+    if (cal_fd > 0)
+        close(cal_fd);
+done:
+    return;
+}
+
+#else
+
+static void get_spkr_prot_ftm_param(char *param __unused)
+{
+
+    ALOGD("%s: not supported", __func__);
+    return;
+}
+
+static int set_spkr_prot_ftm_cfg(int wait_time __unused, int ftm_time __unused)
+{
+    ALOGD("%s: not supported", __func__);
+    return -ENOSYS;
+}
+#endif
+
+static void spkr_calibrate_signal()
+{
+    pthread_mutex_lock(&handle.cal_wait_cond_mutex);
+    pthread_cond_signal(&handle.cal_wait_condition);
+    pthread_mutex_unlock(&handle.cal_wait_cond_mutex);
+}
+
+int audio_extn_fbsp_set_parameters(struct str_parms *parms)
+{
+    int ret= 0 , err;
+    char *str;
+    char *value = NULL;
+    int val, len, i;
+    char *test_r = NULL;
+    char *cfg_str;
+    int wait_time, ftm_time;
+    char *kv_pairs = str_parms_to_str(parms);
+
+    if(kv_pairs == NULL) {
+        ret = -ENOMEM;
+        ALOGE("[%s] key-value pair is NULL",__func__);
+        goto done;
+    }
+    ALOGV_IF(kv_pairs != NULL, "%s: enter: %s", __func__, kv_pairs);
+
+    len = strlen(kv_pairs);
+    value = (char*)calloc(len, sizeof(char));
+    if(value == NULL) {
+        ret = -ENOMEM;
+        ALOGE("[%s] failed to allocate memory",__func__);
+        goto done;
+    }
+    if (!handle.spkr_prot_enable) {
+        ALOGD("%s: Speaker protection disabled", __func__);
+        goto done;
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FBSP_TRIGGER_SPKR_CAL, value,
+                            len);
+    if (err >= 0) {
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_FBSP_TRIGGER_SPKR_CAL);
+        if ((strcmp(value, "true") == 0) || (strcmp(value, "yes") == 0)) {
+            handle.trigger_cal = true;
+            spkr_calibrate_signal();
+        }
+        goto done;
+    }
+
+    /* Expected key value pair is in below format:
+     * AUDIO_PARAM_FBSP_CFG_WAIT_TIME=waittime;AUDIO_PARAM_FBSP_CFG_FTM_TIME=ftmtime;
+     * Parse waittime and ftmtime from it.
+     */
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FBSP_CFG_WAIT_TIME,
+                            value, len);
+    if (err >= 0) {
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_FBSP_CFG_WAIT_TIME);
+        cfg_str = strtok_r(value, ";", &test_r);
+        if (cfg_str == NULL) {
+            ALOGE("%s: incorrect wait time cfg_str", __func__);
+            ret = -EINVAL;
+            goto done;
+        }
+        wait_time = atoi(cfg_str);
+        ALOGV(" %s: cfg_str = %s, wait_time = %d", __func__, cfg_str, wait_time);
+
+        err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FBSP_CFG_FTM_TIME,
+                                value, len);
+        if (err >= 0) {
+            str_parms_del(parms, AUDIO_PARAMETER_KEY_FBSP_CFG_FTM_TIME);
+            cfg_str = strtok_r(value, ";", &test_r);
+            if (cfg_str == NULL) {
+                ALOGE("%s: incorrect ftm time cfg_str", __func__);
+                ret = -EINVAL;
+                goto done;
+            }
+            ftm_time = atoi(cfg_str);
+            ALOGV(" %s: cfg_str = %s, ftm_time = %d", __func__, cfg_str, ftm_time);
+
+            ret = set_spkr_prot_ftm_cfg(wait_time, ftm_time);
+            if (ret < 0) {
+                ALOGE("%s: set_spkr_prot_ftm_cfg failed", __func__);
+                goto done;
+            }
+        }
+    }
+
+done:
+    ALOGV("%s: exit with code(%d)", __func__, ret);
+
+    if(kv_pairs != NULL)
+        free(kv_pairs);
+    if(value != NULL)
+        free(value);
+
+    return ret;
+}
+
+int audio_extn_fbsp_get_parameters(struct str_parms *query,
+                                   struct str_parms *reply)
+{
+    int err = 0;
+    char value[1024] = {0};
+
+    if (!handle.spkr_prot_enable) {
+        ALOGD("%s: Speaker protection disabled", __func__);
+        return -EINVAL;
+    }
+
+    err = str_parms_get_str(query, AUDIO_PARAMETER_KEY_FBSP_GET_SPKR_CAL, value,
+                                                          sizeof(value));
+    if (err >= 0) {
+        get_spkr_prot_thermal_cal(value);
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_FBSP_GET_SPKR_CAL, value);
+    }
+    err = str_parms_get_str(query, AUDIO_PARAMETER_KEY_FBSP_GET_FTM_PARAM, value,
+                            sizeof(value));
+    if (err >= 0) {
+        get_spkr_prot_ftm_param(value);
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_FBSP_GET_FTM_PARAM, value);
+    }
+done:
+    return err;
+}
+
 void audio_extn_spkr_prot_init(void *adev)
 {
     char value[PROPERTY_VALUE_MAX];
@@ -990,6 +1261,11 @@ void audio_extn_spkr_prot_init(void *adev)
     handle.spkr_prot_mode = MSM_SPKR_PROT_DISABLED;
     handle.spkr_processing_state = SPKR_PROCESSING_IN_IDLE;
     handle.spkr_prot_t0 = -1;
+    handle.trigger_cal = false;
+    /* HAL for speaker protection is always calibrating for stereo usecase*/
+    vi_feed_no_channels = spkr_vi_channels(adev);
+    pthread_cond_init(&handle.cal_wait_condition, NULL);
+    pthread_mutex_init(&handle.cal_wait_cond_mutex, NULL);
 
     if (is_wsa_present()) {
         pthread_cond_init(&handle.spkr_calib_cancel, NULL);
@@ -1057,7 +1333,8 @@ void audio_extn_spkr_prot_init(void *adev)
         property_get("ro.board.platform", platform, "");
         if (!strncmp("apq8084", platform, sizeof("apq8084"))) {
             platform_set_snd_device_backend(SND_DEVICE_OUT_VOICE_SPEAKER,
-                                            "speaker-protected");
+                                            "speaker-protected",
+                                            "SLIMBUS_0_RX");
         }
     }
 }

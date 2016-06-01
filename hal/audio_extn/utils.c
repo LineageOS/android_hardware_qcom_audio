@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2014 The Android Open Source Project
@@ -375,6 +375,7 @@ void audio_extn_utils_update_streams_output_cfg_list(void *platform,
     root = config_node("", "");
     if (root == NULL) {
         ALOGE("cfg_list, NULL config root");
+        free(data);
         return;
     }
 
@@ -382,6 +383,9 @@ void audio_extn_utils_update_streams_output_cfg_list(void *platform,
     load_output(root, platform, streams_output_cfg_list);
 
     send_app_type_cfg(platform, mixer, streams_output_cfg_list);
+
+    config_free(root);
+    free(data);
 }
 
 void audio_extn_utils_dump_streams_output_cfg_list(
@@ -618,13 +622,11 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
         app_type_cfg[len++] = acdb_dev_id;
         if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC))
-#ifdef HDMI_PASSTHROUGH_ENABLED
-            && (out->flags  & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)
-#endif
-            )
+            && audio_extn_dolby_is_passthrough_stream(usecase->stream.out->flags)) {
             app_type_cfg[len++] = sample_rate * 4;
-        else
+        } else {
             app_type_cfg[len++] = sample_rate;
+        }
         ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
               __func__, usecase->stream.out->app_type_cfg.app_type, acdb_dev_id, sample_rate);
     } else if (usecase->type == PCM_CAPTURE) {

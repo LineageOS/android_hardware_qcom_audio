@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2016, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -142,7 +142,7 @@ void voice_extn_compress_voip_in_get_parameters(struct stream_in *in,
                                                 struct str_parms *query,
                                                 struct str_parms *reply);
 bool voice_extn_compress_voip_pcm_prop_check();
-bool voice_extn_compress_voip_is_active(struct audio_device *adev);
+bool voice_extn_compress_voip_is_active(const struct audio_device *adev);
 bool voice_extn_compress_voip_is_format_supported(audio_format_t format);
 bool voice_extn_compress_voip_is_config_supported(struct audio_config *config);
 bool voice_extn_compress_voip_is_started(struct audio_device *adev);
