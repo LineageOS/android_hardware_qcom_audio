@@ -54,7 +54,7 @@ static int32_t mDevices = 0;
 static int32_t mCurrDevice = 0;
 static const char* DTS_EAGLE_STR = DTS_EAGLE_KEY;
 
-static int do_DTS_Eagle_params_stream(struct stream_out *out, struct dts_eagle_param_desc_alsa *t, bool get) {
+static int do_DTS_Eagle_params_stream(const struct stream_out *out, struct dts_eagle_param_desc_alsa *t, bool get) {
     char mixer_string[128];
     char mixer_str_query[128];
     struct mixer_ctl *ctl;
@@ -309,7 +309,7 @@ void audio_extn_dts_eagle_set_parameters(struct audio_device *adev, struct str_p
         }
 
         if (dts_found && count > 1 && size != (int)(count * sizeof(int))) {
-            ALOGE("DTS_EAGLE_HAL (%s): size/count mismatch (size = %i bytes, count = %i integers / %u bytes).", __func__, size, count, count*sizeof(int));
+            ALOGE("DTS_EAGLE_HAL (%s): size/count mismatch (size = %i bytes, count = %i integers / %lu bytes).", __func__, size, count, (long unsigned int)count*sizeof(int));
         } else if (dts_found) {
             ALOGI("DTS_EAGLE_HAL (%s): param detected: %s", __func__, str_parms_to_str(parms));
             if (!(*t))
@@ -347,7 +347,6 @@ int audio_extn_dts_eagle_get_parameters(const struct audio_device *adev,
                   struct str_parms *query, struct str_parms *reply) {
     int ret, val;
     char value[32] = { 0 }, prop[PROPERTY_VALUE_MAX];
-    char params[PARAM_GET_MAX_SIZE];
 
     ALOGV("DTS_EAGLE_HAL (%s): enter", __func__);
 
@@ -391,7 +390,8 @@ int audio_extn_dts_eagle_get_parameters(const struct audio_device *adev,
 
         if (dts_found) {
             ALOGI("DTS_EAGLE_HAL (%s): param (get) detected: %s", __func__, str_parms_to_str(query));
-            struct dts_eagle_param_desc_alsa *t = (struct dts_eagle_param_desc_alsa *)params;
+            struct dts_eagle_param_desc_alsa *t = (struct dts_eagle_param_desc_alsa*)malloc(PARAM_GET_MAX_SIZE);
+
             if (t) {
                 char buf[chars_4_int*count];
                 t->alsa_effect_ID = DTS_EAGLE_MODULE;
@@ -407,7 +407,7 @@ int audio_extn_dts_eagle_get_parameters(const struct audio_device *adev,
                 }
                 ret = do_DTS_Eagle_params(adev, t, true, NULL);
                 if (ret >= 0) {
-                    data = (int*)(params + sizeof(struct dts_eagle_param_desc_alsa));
+                    data = (int*)(t + sizeof(struct dts_eagle_param_desc_alsa));
                     for (i = 0; i < count; i++)
                         idx += snprintf(&buf[idx], chars_4_int, "%i,", data[i]);
                     buf[idx > 0 ? idx-1 : 0] = 0;
