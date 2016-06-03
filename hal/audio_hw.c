@@ -1357,6 +1357,7 @@ static void *offload_thread_loop(void *context)
 
         if (out->compr == NULL) {
             ALOGE("%s: Compress handle is NULL", __func__);
+            free(cmd);
             pthread_cond_signal(&out->cond);
             continue;
         }
