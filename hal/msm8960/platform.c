@@ -1102,3 +1102,13 @@ bool platform_check_and_set_capture_backend_cfg(struct audio_device* adev __unus
     return false;
 }
 
+bool platform_add_gain_level_mapping(struct amp_db_and_gain_table *tbl_entry __unused)
+{
+    return false;
+}
+
+int platform_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl __unused,
+                                    int table_size __unused)
+{
+    return 0;
+}

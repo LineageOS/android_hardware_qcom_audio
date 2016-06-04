@@ -53,6 +53,7 @@ LOCAL_MODULE_RELATIVE_PATH := soundfx
 LOCAL_MODULE:= libvolumelistener
 
 LOCAL_C_INCLUDES := \
+        hardware/qcom/audio/hal \
 	$(call include-path-for, audio-effects)
 
 include $(BUILD_SHARED_LIBRARY)

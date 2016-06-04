@@ -2733,3 +2733,53 @@ int platform_swap_lr_channels(struct audio_device *adev, bool swap_channels)
     }
     return 0;
 }
+
+static struct amp_db_and_gain_table tbl_mapping[MAX_VOLUME_CAL_STEPS];
+static int num_gain_tbl_entry = 0;
+
+bool platform_add_gain_level_mapping(struct amp_db_and_gain_table *tbl_entry) {
+
+    ALOGV("%s: enter .. add %f %f %d", __func__, tbl_entry->amp, tbl_entry->db, tbl_entry->level);
+    if (num_gain_tbl_entry == -1) {
+        ALOGE("%s: num entry beyond valid step levels or corrupted..rejecting custom mapping",
+               __func__);
+        return false;
+    }
+
+    if (num_gain_tbl_entry >= MAX_VOLUME_CAL_STEPS) {
+        ALOGE("%s: max entry reached max[%d] current index[%d]  .. rejecting", __func__,
+               MAX_VOLUME_CAL_STEPS, num_gain_tbl_entry);
+        num_gain_tbl_entry  = -1; // indicates error and no more info will be cached
+        return false;
+    }
+
+    if (num_gain_tbl_entry > 0 && tbl_mapping[num_gain_tbl_entry - 1].amp >= tbl_entry->amp) {
+        ALOGE("%s: value not in ascending order .. rejecting custom mapping", __func__);
+        num_gain_tbl_entry  = -1; // indicates error and no more info will be cached
+        return false;
+    }
+
+    tbl_mapping[num_gain_tbl_entry] = *tbl_entry;
+    ++num_gain_tbl_entry;
+
+    return true;
+}
+
+int platform_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl,
+                                    int table_size) {
+    int itt = 0;
+    ALOGV("platform_get_gain_level_mapping called ");
+
+    if (num_gain_tbl_entry <= 0 || num_gain_tbl_entry > MAX_VOLUME_CAL_STEPS) {
+        ALOGD("%s: empty or currupted gain_mapping_table", __func__);
+        return 0;
+    }
+
+    for (; itt < num_gain_tbl_entry && itt <= table_size; itt++) {
+        mapping_tbl[itt] = tbl_mapping[itt];
+        ALOGV("%s: added amp[%f] db[%f] level[%d]", __func__,
+               mapping_tbl[itt].amp, mapping_tbl[itt].db, mapping_tbl[itt].level);
+    }
+
+    return num_gain_tbl_entry;
+}
