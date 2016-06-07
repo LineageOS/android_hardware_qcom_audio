@@ -3539,6 +3539,16 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             ALOGV("cache new edid");
             platform_cache_edid(adev->platform);
+        } else if (val & AUDIO_DEVICE_OUT_USB_DEVICE) {
+            /*
+             * Do not allow AFE proxy port usage by WFD source when USB headset is connected.
+             * Per AudioPolicyManager, USB device is higher priority than WFD.
+             * For Voice call over USB headset, voice call audio is routed to AFE proxy ports.
+             * If WFD use case occupies AFE proxy, it may result unintended behavior while
+             * starting voice call on USB
+             */
+            ALOGV("detected USB connect .. disable proxy");
+            adev->allow_afe_proxy_usage = false;
         }
     }
 
@@ -3548,6 +3558,9 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             ALOGV("invalidate cached edid");
             platform_invalidate_edid(adev->platform);
+        } else if (val & AUDIO_DEVICE_OUT_USB_DEVICE) {
+            ALOGV("detected USB disconnect .. enable proxy");
+            adev->allow_afe_proxy_usage = true;
         }
     }
 
@@ -3656,6 +3669,7 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
         adev->mode = mode;
         if ((mode == AUDIO_MODE_NORMAL || mode == AUDIO_MODE_IN_COMMUNICATION) &&
                 voice_is_in_call(adev)) {
+            adev->voice.is_in_call = false;
             voice_stop_call(adev);
             platform_set_gsm_mode(adev->platform, false);
             adev->current_call_output = NULL;
@@ -3981,6 +3995,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->out_device = AUDIO_DEVICE_NONE;
     adev->bluetooth_nrec = true;
     adev->acdb_settings = TTY_MODE_OFF;
+    adev->allow_afe_proxy_usage = true;
     /* adev->cur_hdmi_channels = 0;  by calloc() */
     adev->snd_dev_ref_cnt = calloc(SND_DEVICE_MAX, sizeof(int));
     voice_init(adev);
