@@ -855,8 +855,9 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
         if (pCmdData == NULL ||
             cmdSize < (int)(sizeof(effect_param_t) + sizeof(uint32_t)) ||
             pReplyData == NULL ||
-            *replySize < (int)(sizeof(effect_param_t) + sizeof(uint32_t) +
-                               sizeof(uint16_t))) {
+            *replySize < (int)(sizeof(effect_param_t) + sizeof(uint32_t) + sizeof(uint16_t)) ||
+            // constrain memcpy below
+            ((effect_param_t *)pCmdData)->psize > *replySize - sizeof(effect_param_t)) {
             status = -EINVAL;
             ALOGW("EFFECT_CMD_GET_PARAM invalid command cmdSize %d *replySize %d",
                   cmdSize, *replySize);
