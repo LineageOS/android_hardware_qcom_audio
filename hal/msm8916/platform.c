@@ -1045,6 +1045,24 @@ int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
     return 0;
 }
 
+bool platform_check_and_set_capture_backend_cfg(struct audio_device* adev __unused,
+                                              struct audio_usecase *usecase __unused,
+                                              snd_device_t snd_device)
+{
+    return false;
+}
+
+bool platform_add_gain_level_mapping(struct amp_db_and_gain_table *tbl_entry __unused)
+{
+    return false;
+}
+
+int platform_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl __unused,
+                                    int table_size __unused)
+{
+    return 0;
+}
+
 void platform_add_backend_name(void *platform, char *mixer_path,
                                snd_device_t snd_device)
 {
@@ -1533,8 +1551,6 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         snd_device = SND_DEVICE_OUT_USB_HEADSET;
     } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
         snd_device = SND_DEVICE_OUT_HANDSET;
-    } else if (devices & AUDIO_DEVICE_OUT_PROXY) {
-        snd_device = SND_DEVICE_OUT_AFE_PROXY;
     } else {
         ALOGE("%s: Unknown device(s) %#x", __func__, devices);
     }
