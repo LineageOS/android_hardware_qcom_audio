@@ -1183,7 +1183,11 @@ int platform_start_voice_call(void *platform, uint32_t vsid)
     int ret = 0;
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->start_voice(vsid);
+#else
+        ret = my_data->csd->start_voice();
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_start_voice error %d\n", __func__, ret);
         }
@@ -1197,7 +1201,11 @@ int platform_stop_voice_call(void *platform, uint32_t vsid)
     int ret = 0;
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->stop_voice(vsid);
+#else
+        ret = my_data->csd->stop_voice();
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_stop_voice error %d\n", __func__, ret);
         }
@@ -1228,7 +1236,11 @@ int platform_set_voice_volume(void *platform, int volume)
     mixer_ctl_set_value(ctl, 0, vol_index);
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->volume(ALL_SESSION_VSID, volume);
+#else
+        ret = my_data->csd->volume(volume);
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_volume error %d", __func__, ret);
         }
@@ -1254,7 +1266,11 @@ int platform_set_mic_mute(void *platform, bool state)
     mixer_ctl_set_value(ctl, 0, state);
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->mic_mute(ALL_SESSION_VSID, state);
+#else
+        ret = my_data->csd->mic_mute(state);
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_mic_mute error %d", __func__, ret);
         }
@@ -1819,7 +1835,11 @@ static int platform_set_slowtalk(struct platform_data *my_data, bool state)
     }
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->slow_talk(ALL_SESSION_VSID, state);
+#else
+        ret = my_data->csd->slow_talk(state);
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_client_disable_device, failed, error %d",
                   __func__, ret);
@@ -1894,7 +1914,11 @@ int platform_set_incall_recording_session_id(void *platform,
     struct platform_data *my_data = (struct platform_data *)platform;
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->start_record(ALL_SESSION_VSID, rec_mode);
+#else
+        ret = my_data->csd->start_record(rec_mode);
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_client_start_record failed, error %d",
                   __func__, ret);
@@ -1910,7 +1934,11 @@ int platform_stop_incall_recording_usecase(void *platform)
     struct platform_data *my_data = (struct platform_data *)platform;
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->stop_record(ALL_SESSION_VSID);
+#else
+        ret = my_data->csd->stop_record();
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_client_stop_record failed, error %d",
                   __func__, ret);
@@ -1926,7 +1954,11 @@ int platform_start_incall_music_usecase(void *platform)
     struct platform_data *my_data = (struct platform_data *)platform;
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->start_playback(ALL_SESSION_VSID);
+#else
+        ret = my_data->csd->start_playback();
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_client_start_playback failed, error %d",
                   __func__, ret);
@@ -1942,7 +1974,11 @@ int platform_stop_incall_music_usecase(void *platform)
     struct platform_data *my_data = (struct platform_data *)platform;
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->stop_playback(ALL_SESSION_VSID);
+#else
+        ret = my_data->csd->stop_playback();
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_client_stop_playback failed, error %d",
                   __func__, ret);
