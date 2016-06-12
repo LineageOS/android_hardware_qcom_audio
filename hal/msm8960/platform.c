@@ -38,6 +38,8 @@
 #include "sound/msmcal-hwdep.h"
 #endif
 
+#define UNUSED(a) ((void)(a))
+
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
 
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
@@ -602,14 +604,24 @@ static struct csd_data *open_csd_client()
             goto error;
         }
         csd->start_voice = (start_voice_t)dlsym(csd->csd_client,
-                                             "csd_client_start_voice");
+#ifdef SAMSUNG_CSDCLIENT
+                "csd_client_start_voice_og"
+#else
+                "csd_client_start_voice"
+#endif
+                );
         if (csd->start_voice == NULL) {
             ALOGE("%s: dlsym error %s for csd_client_start_voice",
                   __func__, dlerror());
             goto error;
         }
         csd->stop_voice = (stop_voice_t)dlsym(csd->csd_client,
-                                             "csd_client_stop_voice");
+#ifdef SAMSUNG_CSDCLIENT
+                "csd_client_stop_voice_og"
+#else
+                "csd_client_stop_voice"
+#endif
+                );
         if (csd->stop_voice == NULL) {
             ALOGE("%s: dlsym error %s for csd_client_stop_voice",
                   __func__, dlerror());
@@ -1175,7 +1187,12 @@ int platform_start_voice_call(void *platform, uint32_t vsid)
     int ret = 0;
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->start_voice(vsid);
+#else
+        UNUSED(vsid);
+        ret = my_data->csd->start_voice();
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_start_voice error %d\n", __func__, ret);
         }
@@ -1189,7 +1206,12 @@ int platform_stop_voice_call(void *platform, uint32_t vsid)
     int ret = 0;
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->stop_voice(vsid);
+#else
+        UNUSED(vsid);
+        ret = my_data->csd->stop_voice();
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_stop_voice error %d\n", __func__, ret);
         }
@@ -1204,9 +1226,12 @@ int platform_set_voice_volume(void *platform, int volume)
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voice Rx Volume";
     int vol_index = 0, ret = 0;
-    uint32_t set_values[ ] = {0,
-                              ALL_SESSION_VSID,
-                              DEFAULT_VOLUME_RAMP_DURATION_MS};
+    uint32_t set_values[ ] = {0
+#ifdef NEW_CSDCLIENT
+                              , ALL_SESSION_VSID,
+                              DEFAULT_VOLUME_RAMP_DURATION_MS
+#endif
+    };
 
     // Voice volume levels are mapped to adsp volume levels as follows.
     // 100 -> 5, 80 -> 4, 60 -> 3, 40 -> 2, 20 -> 1  0 -> 0
@@ -1224,7 +1249,11 @@ int platform_set_voice_volume(void *platform, int volume)
     mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->volume(ALL_SESSION_VSID, volume);
+#else
+        ret = my_data->csd->volume(volume);
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_volume error %d", __func__, ret);
         }
@@ -1239,9 +1268,12 @@ int platform_set_mic_mute(void *platform, bool state)
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voice Tx Mute";
     int ret = 0;
-    uint32_t set_values[ ] = {0,
-                              ALL_SESSION_VSID,
-                              DEFAULT_VOLUME_RAMP_DURATION_MS};
+    uint32_t set_values[ ] = {0
+#ifdef NEW_CSDCLIENT
+                              , ALL_SESSION_VSID,
+                              DEFAULT_VOLUME_RAMP_DURATION_MS
+#endif
+    };
 
     set_values[0] = state;
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
@@ -1254,7 +1286,11 @@ int platform_set_mic_mute(void *platform, bool state)
     mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->mic_mute(ALL_SESSION_VSID, state);
+#else
+        ret = my_data->csd->mic_mute(state);
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_mic_mute error %d", __func__, ret);
         }
@@ -1269,9 +1305,13 @@ int platform_set_device_mute(void *platform, bool state, char *dir)
     struct mixer_ctl *ctl;
     char *mixer_ctl_name = NULL;
     int ret = 0;
-    uint32_t set_values[ ] = {0,
-                              ALL_SESSION_VSID,
-                              0};
+    uint32_t set_values[ ] = {0
+#ifdef NEW_CSDCLIENT
+                              , ALL_SESSION_VSID,
+                              0
+#endif
+    };
+
     if(dir == NULL) {
         ALOGE("%s: Invalid direction:%s", __func__, dir);
         return -EINVAL;
@@ -1798,8 +1838,11 @@ static int platform_set_slowtalk(struct platform_data *my_data, bool state)
     struct audio_device *adev = my_data->adev;
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Slowtalk Enable";
-    uint32_t set_values[ ] = {0,
-                              ALL_SESSION_VSID};
+    uint32_t set_values[ ] = {0
+#ifdef NEW_CSDCLIENT
+                              , ALL_SESSION_VSID
+#endif
+    };
 
     set_values[0] = state;
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
@@ -1814,7 +1857,11 @@ static int platform_set_slowtalk(struct platform_data *my_data, bool state)
     }
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->slow_talk(ALL_SESSION_VSID, state);
+#else
+        ret = my_data->csd->slow_talk(state);
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_client_disable_device, failed, error %d",
                   __func__, ret);
@@ -1889,7 +1936,11 @@ int platform_set_incall_recording_session_id(void *platform,
     struct platform_data *my_data = (struct platform_data *)platform;
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->start_record(ALL_SESSION_VSID, rec_mode);
+#else
+        ret = my_data->csd->start_record(rec_mode);
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_client_start_record failed, error %d",
                   __func__, ret);
@@ -1905,7 +1956,11 @@ int platform_stop_incall_recording_usecase(void *platform)
     struct platform_data *my_data = (struct platform_data *)platform;
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->stop_record(ALL_SESSION_VSID);
+#else
+        ret = my_data->csd->stop_record();
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_client_stop_record failed, error %d",
                   __func__, ret);
@@ -1921,7 +1976,11 @@ int platform_start_incall_music_usecase(void *platform)
     struct platform_data *my_data = (struct platform_data *)platform;
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->start_playback(ALL_SESSION_VSID);
+#else
+        ret = my_data->csd->start_playback();
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_client_start_playback failed, error %d",
                   __func__, ret);
@@ -1937,7 +1996,11 @@ int platform_stop_incall_music_usecase(void *platform)
     struct platform_data *my_data = (struct platform_data *)platform;
 
     if (my_data->csd != NULL) {
+#ifdef NEW_CSDCLIENT
         ret = my_data->csd->stop_playback(ALL_SESSION_VSID);
+#else
+        ret = my_data->csd->stop_playback();
+#endif
         if (ret < 0) {
             ALOGE("%s: csd_client_stop_playback failed, error %d",
                   __func__, ret);

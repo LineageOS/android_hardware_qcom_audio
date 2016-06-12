@@ -138,8 +138,11 @@ static int voip_set_volume(struct audio_device *adev, int volume)
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voip Rx Volume";
     int vol_index = 0;
-    uint32_t set_values[ ] = {0,
-                              DEFAULT_VOLUME_RAMP_DURATION_MS};
+    uint32_t set_values[ ] = {0
+#ifdef NEW_CSDCLIENT
+                              , DEFAULT_VOLUME_RAMP_DURATION_MS
+#endif
+    };
 
     ALOGV("%s: enter", __func__);
 
@@ -167,8 +170,11 @@ static int voip_set_mic_mute(struct audio_device *adev, bool state)
 {
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voip Tx Mute";
-    uint32_t set_values[ ] = {0,
-                              DEFAULT_VOLUME_RAMP_DURATION_MS};
+    uint32_t set_values[ ] = {0
+#ifdef NEW_CSDCLIENT
+                              , DEFAULT_VOLUME_RAMP_DURATION_MS
+#endif
+    };
 
     ALOGV("%s: enter, state=%d", __func__, state);
 
