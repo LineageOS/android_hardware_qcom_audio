@@ -1124,10 +1124,25 @@ int platform_switch_voice_call_device_pre(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int ret = 0;
+#ifdef USE_ES325_2MIC
+    struct audio_device *adev = my_data->adev;
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "ES325 2Mic Enable";
+#endif
 
     if (my_data->csd != NULL &&
         my_data->adev->mode == AUDIO_MODE_IN_CALL) {
         /* This must be called before disabling mixer controls on APQ side */
+#ifdef USE_ES325_2MIC
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                  __func__, mixer_ctl_name);
+            return -EINVAL;
+        }
+        ALOGV("Disabling ES325 2Mic: %d", 0);
+        mixer_ctl_set_value(ctl, 0, 0);
+#endif
         ret = my_data->csd->disable_device();
         if (ret < 0) {
             ALOGE("%s: csd_client_disable_device, failed, error %d",
@@ -1167,13 +1182,52 @@ int platform_switch_voice_call_usecase_route_post(void *platform,
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_rx_id, acdb_tx_id;
     int ret = 0;
+#ifdef USE_ES325_2MIC
+    struct audio_device *adev = my_data->adev;
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name1 = "VEQ Enable";
+    const char *mixer_ctl_name2 = "ES325 2Mic Enable";
+#endif
 
     acdb_rx_id = acdb_device_table[out_snd_device];
     acdb_tx_id = acdb_device_table[in_snd_device];
 
     if (my_data->csd != NULL) {
         if (acdb_rx_id > 0 && acdb_tx_id > 0) {
-            ret = my_data->csd->enable_device(acdb_rx_id, acdb_tx_id,
+            int tmp_acdb_tx_id = acdb_tx_id;
+
+#ifdef USE_ES325_2MIC
+            ALOGV("Enabling ES325 2Mic: %d", 1);
+            if (acdb_tx_id == 4) {
+                tmp_acdb_tx_id = 34;
+
+                ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name1);
+                if (!ctl) {
+                    ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                          __func__, mixer_ctl_name1);
+                    return -EINVAL;
+                }
+                mixer_ctl_set_value(ctl, 1, 0);
+
+                ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name2);
+                if (!ctl) {
+                    ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                          __func__, mixer_ctl_name2);
+                    return -EINVAL;
+                }
+                mixer_ctl_set_value(ctl, 1, 0);
+            } else {
+                ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name1);
+                if (!ctl) {
+                    ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                          __func__, mixer_ctl_name1);
+                    return -EINVAL;
+                }
+                mixer_ctl_set_value(ctl, 0, 0);
+            }
+#endif
+
+            ret = my_data->csd->enable_device(acdb_rx_id, tmp_acdb_tx_id,
                                               my_data->adev->acdb_settings);
             if (ret < 0) {
                 ALOGE("%s: csd_enable_device, failed, error %d",
