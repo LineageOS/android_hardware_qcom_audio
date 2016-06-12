@@ -128,6 +128,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_LOW_LATENCY_CAPTURE)),true)
     LOCAL_CFLAGS += -DLOW_LATENCY_CAPTURE_USE_CASE=1
 endif
 
+ifeq ($(strip $(BOARD_HAVE_NEW_QCOM_CSDCLIENT)),true)
+    LOCAL_CFLAGS += -DNEW_CSDCLIENT
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \

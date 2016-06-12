@@ -256,6 +256,7 @@ typedef int (*init_t)();
 typedef int (*deinit_t)();
 typedef int (*disable_device_t)();
 typedef int (*enable_device_t)(int, int, uint32_t);
+#ifdef NEW_CSDCLIENT
 typedef int (*volume_t)(uint32_t, int);
 typedef int (*mic_mute_t)(uint32_t, int);
 typedef int (*slow_talk_t)(uint32_t, uint8_t);
@@ -265,6 +266,18 @@ typedef int (*start_playback_t)(uint32_t);
 typedef int (*stop_playback_t)(uint32_t);
 typedef int (*start_record_t)(uint32_t, int);
 typedef int (*stop_record_t)(uint32_t);
+#else
+typedef int (*volume_t)(int);
+typedef int (*mic_mute_t)(int);
+typedef int (*slow_talk_t)(uint8_t);
+typedef int (*start_voice_t)(void);
+typedef int (*stop_voice_t)(void);
+typedef int (*start_playback_t)();
+typedef int (*stop_playback_t)();
+typedef int (*start_record_t)(int);
+typedef int (*stop_record_t)(void);
+#endif
+
 /* CSD Client structure */
 struct csd_data {
     void *csd_client;
