@@ -131,6 +131,7 @@
     <ctl name="HDMI Mixer MultiMedia4" value="0" />
     <ctl name="HDMI Mixer MultiMedia5" value="0" />
     <ctl name="HDMI Mixer MultiMedia7" value="0" />
+    <ctl name="HDMI Mixer MultiMedia9" value="0" />
     <ctl name="HDMI Mixer MultiMedia10" value="0" />
     <ctl name="HDMI Mixer MultiMedia11" value="0" />
     <ctl name="HDMI Mixer MultiMedia12" value="0" />
@@ -481,7 +482,6 @@
 
     <!-- Incall Music -->
     <ctl name="Incall_Music Audio Mixer MultiMedia2" value="0" />
-    <ctl name="Incall_Music_2 Audio Mixer MultiMedia9" value="0" />
     <!-- Incall Music End -->
 
     <!-- compress-voip-call start -->
@@ -799,6 +799,10 @@
 
     <path name="compress-offload-playback hdmi">
         <ctl name="HDMI Mixer MultiMedia4" value="1" />
+    </path>
+
+    <path name="silence-playback hdmi">
+        <ctl name="HDMI Mixer MultiMedia9" value="1" />
     </path>
 
     <path name="compress-offload-playback bt-sco">
