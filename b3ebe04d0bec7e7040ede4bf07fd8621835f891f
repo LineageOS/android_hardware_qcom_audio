@@ -49,6 +49,30 @@
     },
     {
       "key": {
+        "uuid": "5faad753_489c7b0d",
+        "filename": "hal/msm8960/platform.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1190,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-06-14T18:11:17Z",
+      "side": 1,
+      "message": "https://github.com/CyanogenMod/android_device_qcom_common/blob/cm-13.0/init/init_msm.h#L39 then call UNUSED(vsid) in the ifndef NEW_CSDCLIENT case?",
+      "parentUuid": "5faad753_68ecd78e",
+      "range": {
+        "startLine": 1190,
+        "startChar": 60,
+        "endLine": 1190,
+        "endChar": 68
+      },
+      "revId": "b3ebe04d0bec7e7040ede4bf07fd8621835f891f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5faad753_0857635a",
         "filename": "hal/msm8960/platform.c",
         "patchSetId": 4
