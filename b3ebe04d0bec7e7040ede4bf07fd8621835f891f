@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "5faad753_68ecd78e",
+        "filename": "hal/msm8960/platform.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1190,
+      "author": {
+        "id": 444
+      },
+      "writtenOn": "2016-06-14T17:47:08Z",
+      "side": 1,
+      "message": "Any other way to avoid the compiler warning when ifndef NEW_CSDCLIENT? Would rather keep the compile clean free of warnings, and not let this ruin that. :)",
+      "parentUuid": "5faad753_685e1777",
+      "range": {
+        "startLine": 1190,
+        "startChar": 60,
+        "endLine": 1190,
+        "endChar": 68
+      },
+      "revId": "b3ebe04d0bec7e7040ede4bf07fd8621835f891f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5faad753_0857635a",
         "filename": "hal/msm8960/platform.c",
         "patchSetId": 4
