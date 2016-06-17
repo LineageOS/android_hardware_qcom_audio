@@ -264,10 +264,10 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_HEADSET_MIC] = "headset-mic",
 
     [SND_DEVICE_IN_UNPROCESSED_MIC] = "unprocessed-mic",
-    [SND_DEVICE_IN_UNPROCESSED_STEREO_MIC] = "voice-rec-dmic-ef",
-    [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = "three-mic",
-    [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = "quad-mic",
-    [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = "headset-mic",
+    [SND_DEVICE_IN_UNPROCESSED_STEREO_MIC] = "unprocessed-stereo-mic",
+    [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = "unprocessed-three-mic",
+    [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = "unprocessed-quad-mic",
+    [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = "unprocessed-headset-mic",
 
     [SND_DEVICE_IN_VOICE_RX] = "voice-rx",
 
