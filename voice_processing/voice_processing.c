@@ -90,7 +90,7 @@ static const effect_descriptor_t qcom_default_aec_descriptor = {
         { 0x7b491460, 0x8d4d, 0x11e0, 0xbd61, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } }, // type
         { 0x0f8d0d2a, 0x59e5, 0x45fe, 0xb6e4, { 0x24, 0x8c, 0x8a, 0x79, 0x91, 0x09 } }, // uuid
         EFFECT_CONTROL_API_VERSION,
-        (EFFECT_FLAG_TYPE_PRE_PROC|EFFECT_FLAG_DEVICE_IND),
+        (EFFECT_FLAG_TYPE_PRE_PROC|EFFECT_FLAG_DEVICE_IND|EFFECT_FLAG_HW_ACC_TUNNEL),
         0,
         0,
         "Acoustic Echo Canceler",
@@ -102,7 +102,7 @@ static const effect_descriptor_t qcom_default_ns_descriptor = {
         { 0x58b4b260, 0x8e06, 0x11e0, 0xaa8e, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } }, // type
         { 0x1d97bb0b, 0x9e2f, 0x4403, 0x9ae3, { 0x58, 0xc2, 0x55, 0x43, 0x06, 0xf8 } }, // uuid
         EFFECT_CONTROL_API_VERSION,
-        (EFFECT_FLAG_TYPE_PRE_PROC|EFFECT_FLAG_DEVICE_IND),
+        (EFFECT_FLAG_TYPE_PRE_PROC|EFFECT_FLAG_DEVICE_IND|EFFECT_FLAG_HW_ACC_TUNNEL),
         0,
         0,
         "Noise Suppression",
@@ -115,7 +115,7 @@ static const effect_descriptor_t qcom_default_ns_descriptor = {
 //        { 0x0a8abfe0, 0x654c, 0x11e0, 0xba26, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } }, // type
 //        { 0x0dd49521, 0x8c59, 0x40b1, 0xb403, { 0xe0, 0x8d, 0x5f, 0x01, 0x87, 0x5e } }, // uuid
 //        EFFECT_CONTROL_API_VERSION,
-//        (EFFECT_FLAG_TYPE_PRE_PROC|EFFECT_FLAG_DEVICE_IND),
+//        (EFFECT_FLAG_TYPE_PRE_PROC|EFFECT_FLAG_DEVICE_IND|EFFECT_FLAG_HW_ACC_TUNNEL),
 //        0,
 //        0,
 //        "Automatic Gain Control",
