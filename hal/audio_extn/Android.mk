@@ -128,6 +128,10 @@ ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito atoll sdm660 msm8937 m
   MULTIPLE_HW_VARIANTS_ENABLED := true
 endif
 
+ifeq ($(QCPATH),)
+     LOCAL_CFLAGS += -D_OSS
+endif
+
 LOCAL_SRC_FILES:= ssr.c
 
 LOCAL_CFLAGS += \
