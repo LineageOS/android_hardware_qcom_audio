@@ -148,6 +148,10 @@ LOCAL_CFLAGS += \
     -Wno-unused-function \
     -Wno-unused-variable
 
+ifeq ($(QCPATH),)
+  LOCAL_CFLAGS += -D_OSS
+endif
+
 LOCAL_SHARED_LIBRARIES := \
     libaudioutils \
     libcutils \
