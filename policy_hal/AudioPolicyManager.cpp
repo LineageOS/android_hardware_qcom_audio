@@ -1758,16 +1758,22 @@ non_direct_output:
 
     // for non direct outputs, only PCM is supported
     if (audio_is_linear_pcm(format)) {
-        if (forced_deep) {
-            flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_DEEP_BUFFER);
-            ALOGI("setting force DEEP buffer now ");
-        }
         // get which output is suitable for the specified stream. The actual
         // routing change will happen when startOutput() will be called
         SortedVector<audio_io_handle_t> outputs = getOutputsForDevice(device, mOutputs);
 
         // at this stage we should ignore the DIRECT flag as no direct output could be found earlier
         flags = (audio_output_flags_t)(flags & ~AUDIO_OUTPUT_FLAG_DIRECT);
+
+        if (forced_deep) {
+            flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_DEEP_BUFFER);
+            ALOGI("setting force DEEP buffer now ");
+        } else if(flags == AUDIO_OUTPUT_FLAG_NONE) {
+            // no deep buffer playback is requested hence fallback to primary
+            flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_PRIMARY);
+            ALOGI("FLAG None hence request for a primary output");
+        }
+
         output = selectOutput(outputs, flags, format);
     }
     ALOGW_IF((output == 0), "getOutput() could not find output for stream %d, samplingRate %d,"
