@@ -2005,6 +2005,13 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
       mPrevFMVolumeDb(0.0f),
       mFMIsActive(false)
 {
+
+#ifdef USE_XML_AUDIO_POLICY_CONF
+    ALOGD("USE_XML_AUDIO_POLICY_CONF is TRUE");
+#else
+    ALOGD("USE_XML_AUDIO_POLICY_CONF is FALSE");
+#endif
+
 #ifdef RECORD_PLAY_CONCURRENCY
     mIsInputRequestOnProgress = false;
 #endif
