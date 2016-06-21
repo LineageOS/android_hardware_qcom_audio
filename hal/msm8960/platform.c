@@ -1173,6 +1173,14 @@ int platform_switch_voice_call_usecase_route_post(void *platform,
     acdb_rx_id = acdb_device_table[out_snd_device];
     acdb_tx_id = acdb_device_table[in_snd_device];
 
+#ifdef HTC_CSDCLIENT
+    if (acdb_rx_id == acdb_device_table[(snd_device_t)SND_DEVICE_OUT_BT_SCO])
+        acdb_rx_id = 1127;
+
+    if (acdb_tx_id == acdb_device_table[(snd_device_t)SND_DEVICE_IN_BT_SCO_MIC])
+        acdb_tx_id = 1027;
+#endif
+
     if (my_data->csd != NULL) {
         if (acdb_rx_id > 0 && acdb_tx_id > 0) {
             ret = my_data->csd->enable_device(acdb_rx_id, acdb_tx_id,
