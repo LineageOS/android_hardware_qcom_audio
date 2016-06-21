@@ -244,17 +244,6 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             checkA2dpSuspend();
         }
 
-        updateDevicesAndOutputs();
-#ifdef DOLBY_ENABLE
-        // Before closing the opened outputs, update endpoint property with device capabilities
-        audio_devices_t audioOutputDevice = getDeviceForStrategy(getStrategy(AUDIO_STREAM_MUSIC), true);
-        mDolbyAudioPolicy.setEndpointSystemProperty(audioOutputDevice, mHwModules);
-#endif // DOLBY_END
-        if (mEngine->getPhoneState() == AUDIO_MODE_IN_CALL && hasPrimaryOutput()) {
-            audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, false /*fromCache*/);
-            updateCallRouting(newDevice);
-        }
-
 #ifdef FM_POWER_OPT
         // handle FM device connection state to trigger FM AFE loopback
         if (device == AUDIO_DEVICE_OUT_FM && hasPrimaryOutput()) {
@@ -263,6 +252,7 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
                mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, 1);
                newDevice = (audio_devices_t)(getNewOutputDevice(mPrimaryOutput, false)|AUDIO_DEVICE_OUT_FM);
                mFMIsActive = true;
+               mPrimaryOutput->mDevice = newDevice & ~AUDIO_DEVICE_OUT_FM;
            } else {
                newDevice = (audio_devices_t)(getNewOutputDevice(mPrimaryOutput, false));
                mFMIsActive = false;
@@ -276,6 +266,17 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
            mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString());
         }
 #endif /* FM_POWER_OPT end */
+
+        updateDevicesAndOutputs();
+#ifdef DOLBY_ENABLE
+        // Before closing the opened outputs, update endpoint property with device capabilities
+        audio_devices_t audioOutputDevice = getDeviceForStrategy(getStrategy(AUDIO_STREAM_MUSIC), true);
+        mDolbyAudioPolicy.setEndpointSystemProperty(audioOutputDevice, mHwModules);
+#endif // DOLBY_END
+        if (mEngine->getPhoneState() == AUDIO_MODE_IN_CALL && hasPrimaryOutput()) {
+            audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, false /*fromCache*/);
+            updateCallRouting(newDevice);
+        }
 
         for (size_t i = 0; i < mOutputs.size(); i++) {
             sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
