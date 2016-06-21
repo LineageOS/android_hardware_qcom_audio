@@ -44,6 +44,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FM_POWER_OPT)),true)
 LOCAL_CFLAGS += -DFM_POWER_OPT
 endif
 
+ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
+LOCAL_CFLAGS += -DUSE_XML_AUDIO_POLICY_CONF
+endif
+
 LOCAL_CFLAGS += -Wno-error -fpermissive
 
 LOCAL_MODULE := libaudiopolicymanager
