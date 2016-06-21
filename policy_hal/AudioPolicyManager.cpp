@@ -1484,6 +1484,12 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
       mPrevPhoneState(0)
 {
 
+#ifdef USE_XML_AUDIO_POLICY_CONF
+    ALOGD("USE_XML_AUDIO_POLICY_CONF is TRUE");
+#else
+    ALOGD("USE_XML_AUDIO_POLICY_CONF is FALSE");
+#endif
+
     //TODO: Check the new logic to parse policy conf and update the below code
     //      Need this when SSR encoding is enabled
     char ssr_enabled[PROPERTY_VALUE_MAX] = {0};
