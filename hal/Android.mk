@@ -132,6 +132,10 @@ ifeq ($(strip $(BOARD_HAVE_NEW_QCOM_CSDCLIENT)),true)
     LOCAL_CFLAGS += -DNEW_CSDCLIENT
 endif
 
+ifeq ($(strip $(BOARD_HAVE_HTC_CSDCLIENT)),true)
+    LOCAL_CFLAGS += -DHTC_CSDCLIENT
+endif
+
 ifeq ($(strip $(BOARD_HAVE_SAMSUNG_CSDCLIENT)),true)
     LOCAL_CFLAGS += -DSAMSUNG_CSDCLIENT
 endif
