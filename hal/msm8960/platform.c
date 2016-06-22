@@ -594,9 +594,8 @@ static struct csd_data *open_csd_client()
         csd->deinit = (deinit_t)dlsym(csd->csd_client,
                                              "csd_client_deinit");
         if (csd->deinit == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_deinit", __func__,
+            ALOGW("%s: dlsym error %s for csd_client_deinit", __func__,
                   dlerror());
-            goto error;
         }
         csd->disable_device = (disable_device_t)dlsym(csd->csd_client,
                                              "csd_client_disable_device");
@@ -688,9 +687,8 @@ static struct csd_data *open_csd_client()
         csd->init = (init_t)dlsym(csd->csd_client, "csd_client_init");
 
         if (csd->init == NULL) {
-            ALOGE("%s: dlsym error %s for csd_client_init",
+            ALOGW("%s: dlsym error %s for csd_client_init",
                   __func__, dlerror());
-            goto error;
         } else {
             csd->init();
         }
@@ -706,7 +704,11 @@ error:
 void close_csd_client(struct csd_data *csd)
 {
     if (csd != NULL) {
-        csd->deinit();
+        if (csd->deinit == NULL) {
+            ALOGW("%s: CSD deinit function not present", __func__);
+        } else {
+            csd->deinit();
+        }
         dlclose(csd->csd_client);
         free(csd);
         csd = NULL;
