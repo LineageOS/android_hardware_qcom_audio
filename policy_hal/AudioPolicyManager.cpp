@@ -97,6 +97,37 @@ audio_output_flags_t AudioPolicyManagerCustom::getFallBackPath()
     return flag;
 }
 #endif /*VOICE_CONCURRENCY*/
+
+void AudioPolicyManagerCustom::moveGlobalEffect()
+{
+    audio_io_handle_t dstOutput = getOutputForEffect();
+    if (hasPrimaryOutput() && dstOutput != mPrimaryOutput->mIoHandle) {
+#ifdef DOLBY_ENABLE
+        status_t status =
+                        mpClientInterface->moveEffects(AUDIO_SESSION_OUTPUT_MIX,
+                                                    mPrimaryOutput->mIoHandle,
+                                                    dstOutput);
+        if (status == NO_ERROR) {
+            for (size_t i = 0; i < mEffects.size(); i++) {
+                 sp<EffectDescriptor> desc = mEffects.valueAt(i);
+                 if (desc->mSession == AUDIO_SESSION_OUTPUT_MIX) {
+                     // update the mIo member of EffectDescriptor
+                     // for the global effect
+                     ALOGV("%s updating mIo", __FUNCTION__);
+                     desc->mIo = dstOutput;
+                 }
+            }
+        } else {
+                ALOGW("%s moveEffects from %d to %d failed", __FUNCTION__,
+                                     mPrimaryOutput->mIoHandle, dstOutput);
+        }
+#else // DOLBY_END
+        mpClientInterface->moveEffects(AUDIO_SESSION_OUTPUT_MIX,
+                                   mPrimaryOutput->mIoHandle, dstOutput);
+#endif
+    }
+}
+
 // ----------------------------------------------------------------------------
 // AudioPolicyInterface implementation
 // ----------------------------------------------------------------------------
@@ -818,6 +849,10 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
                 }
             }
         }
+        // If effects where present on any of the above closed outputs,
+        // audioflinger moved them to the primary output by default
+        // move them back to the appropriate output.
+        moveGlobalEffect();
     }
 
     if ((AUDIO_MODE_IN_CALL == oldState || AUDIO_MODE_IN_COMMUNICATION == oldState) &&
@@ -886,6 +921,10 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
                     closeOutput(mOutputs.keyAt(i));
                 }
             }
+            // If effects where present on any of the above closed outputs,
+            // audioflinger moved them to the primary output by default
+            // move them back to the appropriate output.
+            moveGlobalEffect();
         } else if ((oldState == AUDIO_MODE_IN_COMMUNICATION) &&
                     (mEngine->getPhoneState() == AUDIO_MODE_NORMAL)) {
             // call invalidate for music so that music can fallback to compress
@@ -1934,6 +1973,10 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
                 closeOutput(mOutputs.keyAt(i));
             }
         }
+        // If effects where present on any of the above closed outputs,
+        // audioflinger moved them to the primary output by default
+        // move them back to the appropriate output.
+        moveGlobalEffect();
     }
 #endif
 
