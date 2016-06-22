@@ -123,6 +123,7 @@ protected:
         static audio_output_flags_t getFallBackPath();
         int mFallBackflag;
 #endif /*VOICE_CONCURRENCY*/
+        void moveGlobalEffect();
 
         // handle special cases for sonification strategy while in call: mute streams or replace by
         // a special tone in the device used for communication
