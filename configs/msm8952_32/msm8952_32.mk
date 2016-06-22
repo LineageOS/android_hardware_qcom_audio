@@ -1,3 +1,64 @@
+#AUDIO_FEATURE_FLAGS
+USE_CUSTOM_AUDIO_POLICY := 1
+BOARD_USES_ALSA_AUDIO := true
+BOARD_SUPPORTS_SOUND_TRIGGER := true
+BOARD_USES_SRS_TRUEMEDIA := false
+
+AUDIO_USE_LL_AS_PRIMARY_OUTPUT := true
+AUDIO_FEATURE_ENABLED_VBAT_MONITOR := true
+AUDIO_FEATURE_ENABLED_VOICE_CONCURRENCY := true
+AUDIO_FEATURE_ENABLED_ANC_HEADSET := true
+##AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE := true
+##AUDIO_FEATURE_ENABLED_COMPRESS_VOIP := true
+AUDIO_FEATURE_ENABLED_EXTN_FORMATS := true
+AUDIO_FEATURE_ENABLED_EXTN_FLAC_DECODER := true
+AUDIO_FEATURE_ENABLED_EXTN_RESAMPLER := true
+AUDIO_FEATURE_ENABLED_FM_POWER_OPT := true
+AUDIO_FEATURE_ENABLED_FLUENCE := true
+AUDIO_FEATURE_ENABLED_HFP := true
+##AUDIO_FEATURE_ENABLED_INCALL_MUSIC := true
+AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS := true
+AUDIO_FEATURE_ENABLED_PCM_OFFLOAD := true
+AUDIO_FEATURE_ENABLED_PCM_OFFLOAD_24 := true
+AUDIO_FEATURE_ENABLED_FLAC_OFFLOAD := true
+AUDIO_FEATURE_ENABLED_VORBIS_OFFLOAD := true
+AUDIO_FEATURE_ENABLED_WMA_OFFLOAD := true
+AUDIO_FEATURE_ENABLED_ALAC_OFFLOAD := true
+AUDIO_FEATURE_ENABLED_APE_OFFLOAD := true
+AUDIO_FEATURE_ENABLED_AAC_ADTS_OFFLOAD := true
+AUDIO_FEATURE_ENABLED_PROXY_DEVICE := true
+AUDIO_FEATURE_ENABLED_SPKR_PROTECTION := true
+AUDIO_FEATURE_ENABLED_SSR := true
+##AUDIO_FEATURE_ENABLED_MULTIPLE_TUNNEL := true
+AUDIO_FEATURE_ENABLED_KPI_OPTIMIZE := true
+AUDIO_FEATURE_ENABLED_NT_PAUSE_TIMEOUT := true
+MM_AUDIO_ENABLED_FTM := true
+MM_AUDIO_ENABLED_SAFX := true
+AUDIO_FEATURE_ENABLED_ACDB_LICENSE := true
+#AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := true
+TARGET_USES_QCOM_MM_AUDIO := true
+##AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS := true
+DTS_CODEC_M_ := true
+##AUDIO_FEATURE_ENABLED_DTS_EAGLE := true
+AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
+AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
+##AUDIO_FEATURE_ENABLED_HDMI_SPK := true
+AUDIO_FEATURE_ENABLED_HDMI_SPK := true
+AUDIO_FEATURE_ENABLED_HDMI_EDID := true
+AUDIO_FEATURE_ENABLED_EXT_HDMI := true
+#
+###not supported feature
+##AUDIO_FEATURE_ENABLED_CUSTOMSTEREO := true
+##AUDIO_FEATURE_ENABLED_LISTEN := true
+##DOLBY_DAP := true
+##DOLBY_DDP := true
+##DOLBY_UDC := true
+##DOLBY_UDC_MULTICHANNEL := true
+##DOLBY_UDC_STREAMING_HLS := true
+##AUDIO_FEATURE_ENABLED_DEV_ARBI := true
+##AUDIO_FEATURE_ENABLED_CUSTOMSTEREO := true
+##AUDIO_FEATURE_FLAGS
+#
 #Audio Specific device overlays
 DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
 #enable software decoders for ALAC and APE
@@ -50,6 +111,12 @@ else
 PRODUCT_COPY_FILES += \
     $(TOPDIR)hardware/qcom/audio/configs/msm8952_32/audio_policy_configuration.xml:system/etc/audio_policy_configuration.xml
 endif
+PRODUCT_COPY_FILES += \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:/system/etc/a2dp_audio_policy_configuration.xml \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:/system/etc/audio_policy_volumes.xml \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/default_volume_tables.xml:/system/etc/default_volume_tables.xml \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/r_submix_audio_policy_configuration.xml:/system/etc/r_submix_audio_policy_configuration.xml \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/usb_audio_policy_configuration.xml:/system/etc/usb_audio_policy_configuration.xml
 endif
 
 PRODUCT_PACKAGES += \
