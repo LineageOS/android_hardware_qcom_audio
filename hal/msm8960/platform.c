@@ -743,6 +743,7 @@ void *platform_init(struct audio_device *adev)
 {
     char platform[PROPERTY_VALUE_MAX];
     char baseband[PROPERTY_VALUE_MAX];
+    char baseband_arch[PROPERTY_VALUE_MAX];
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data = NULL;
     int retry_num = 0, snd_card_num = 0;
@@ -889,8 +890,10 @@ void *platform_init(struct audio_device *adev)
      */
     property_get("ro.board.platform", platform, "");
     property_get("ro.baseband", baseband, "");
+    property_get("ro.baseband.arch", baseband_arch, "");
     if (!strncmp("msm8960", platform, sizeof("msm8960")) &&
-        !strncmp("mdm", baseband, sizeof("mdm"))) {
+        (!strncmp("mdm", baseband, sizeof("mdm")) ||
+         !strncmp("mdm", baseband_arch, sizeof("mdm")))) {
          my_data->csd = open_csd_client();
     }
 
