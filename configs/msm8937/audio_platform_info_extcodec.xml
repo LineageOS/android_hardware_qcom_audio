@@ -48,6 +48,8 @@
         <usecase name="USECASE_VOICEMMODE2_CALL" type="in" id="36"/>
         <usecase name="USECASE_VOICEMMODE2_CALL" type="out" id="36"/>
         <usecase name="USECASE_AUDIO_SPKR_CALIB_TX" type="in" id="37"/>
+        <usecase name="USECASE_QCHAT_CALL" type="in" id="42"/>
+        <usecase name="USECASE_QCHAT_CALL" type="out" id="42"/>
     </pcm_ids>
     <config_params>
         <param key="spkr_1_tz_name" value="wsatz.11"/>

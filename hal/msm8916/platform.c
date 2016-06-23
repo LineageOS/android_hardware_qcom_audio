@@ -254,12 +254,6 @@ struct platform_data {
 };
 
 static bool is_external_codec = false;
-static const int pcm_device_table_of_ext_codec[AUDIO_USECASE_MAX][2] = {
-   [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE_OF_EXT_CODEC, QCHAT_CALL_PCM_DEVICE_OF_EXT_CODEC}
-};
-
-/* List of use cases that has different PCM device ID's for internal and external codecs */
-static const int misc_usecase[AUDIO_USECASE_MAX] = { USECASE_QCHAT_CALL };
 
 int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {DEEP_BUFFER_PCM_DEVICE,
@@ -773,20 +767,6 @@ static int msm_device_to_be_id_external_codec [][NO_COLS] = {
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define PCM_OFFLOAD_PLATFORM_DELAY (30*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
-
-static bool is_misc_usecase(audio_usecase_t usecase) {
-     bool ret = false;
-     int i;
-
-     for (i = 0; i < AUDIO_USECASE_MAX; i++) {
-          if(usecase == misc_usecase[i]) {
-             ret = true;
-             break;
-          }
-     }
-     return ret;
-}
-
 
 static void update_codec_type(const char *snd_card_name) {
 
@@ -2097,17 +2077,10 @@ int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
 {
     int device_id = -1;
 
-    if (is_external_codec && is_misc_usecase(usecase)) {
-        if (device_type == PCM_PLAYBACK)
-            device_id = pcm_device_table_of_ext_codec[usecase][0];
-        else
-            device_id = pcm_device_table_of_ext_codec[usecase][1];
-    } else {
-        if (device_type == PCM_PLAYBACK)
-            device_id = pcm_device_table[usecase][0];
-        else
-            device_id = pcm_device_table[usecase][1];
-    }
+    if (device_type == PCM_PLAYBACK)
+        device_id = pcm_device_table[usecase][0];
+    else
+        device_id = pcm_device_table[usecase][1];
     return device_id;
 }
 

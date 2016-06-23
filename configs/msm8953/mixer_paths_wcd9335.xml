@@ -462,6 +462,9 @@
     <ctl name="QCHAT_Tx Mixer SLIM_0_TX_QCHAT" value="0" />
     <ctl name="INTERNAL_BT_SCO_RX_Voice Mixer QCHAT" value="0" />
     <ctl name="QCHAT_Tx Mixer INTERNAL_BT_SCO_TX_QCHAT" value="0" />
+    <ctl name="HDMI_RX_Voice Mixer QCHAT" value="0" />
+    <ctl name="AFE_PCM_RX_Voice Mixer QCHAT" value="0" />
+    <ctl name="QCHAT_Tx Mixer AFE_PCM_TX_QCHAT" value="0" />
     <!-- QCHAT end-->
 
     <!-- VoWLAN start -->
@@ -1586,6 +1589,46 @@
     <path name="compress-voip-call vbat-voice-speaker">
         <path name="echo-reference vbat-speaker-mono" />
         <path name="compress-voip-call"/>
+    </path>
+
+    <path name="qchat-call">
+        <ctl name="SLIM_0_RX_Voice Mixer QCHAT" value="1" />
+        <ctl name="QCHAT_Tx Mixer SLIM_0_TX_QCHAT" value="1" />
+    </path>
+
+    <path name="qchat-call bt-sco">
+        <ctl name="INTERNAL_BT_SCO_RX_Voice Mixer QCHAT" value="1" />
+        <ctl name="QCHAT_Tx Mixer INTERNAL_BT_SCO_TX_QCHAT" value="1" />
+    </path>
+
+    <path name="qchat-call bt-sco-wb">
+        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <path name="qchat-call bt-sco" />
+    </path>
+
+    <path name="qchat-call headphones">
+        <ctl name="SLIM_6_RX_Voice Mixer QCHAT" value="1" />
+        <ctl name="QCHAT_Tx Mixer SLIM_0_TX_QCHAT" value="1" />
+    </path>
+
+    <path name="qchat-call hdmi">
+        <ctl name="HDMI_RX_Voice Mixer QCHAT" value="1" />
+        <ctl name="QCHAT_Tx Mixer SLIM_0_TX_QCHAT" value="1" />
+    </path>
+
+    <path name="qchat-call afe-proxy">
+        <ctl name="AFE_PCM_RX_Voice Mixer QCHAT" value="1" />
+        <ctl name="QCHAT_Tx Mixer AFE_PCM_TX_QCHAT" value="1" />
+    </path>
+
+    <path name="qchat-call usb-headphones">
+        <ctl name="AFE_PCM_RX_Voice Mixer QCHAT" value="1" />
+        <ctl name="QCHAT_Tx Mixer AFE_PCM_TX_QCHAT" value="1" />
+    </path>
+
+    <path name="qchat-call vbat-voice-speaker">
+        <path name="echo-reference vbat-speaker-mono" />
+        <path name="qchat-call"/>
     </path>
 
     <path name="vowlan-call">

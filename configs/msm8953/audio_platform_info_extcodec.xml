@@ -47,6 +47,8 @@
         <usecase name="USECASE_VOICEMMODE1_CALL" type="out" id="35"/>
         <usecase name="USECASE_VOICEMMODE2_CALL" type="in" id="36"/>
         <usecase name="USECASE_VOICEMMODE2_CALL" type="out" id="36"/>
+        <usecase name="USECASE_QCHAT_CALL" type="in" id="42"/>
+        <usecase name="USECASE_QCHAT_CALL" type="out" id="42"/>
     </pcm_ids>
     <config_params>
         <param key="native_audio_mode" value="src"/>
