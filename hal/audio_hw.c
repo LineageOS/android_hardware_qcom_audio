@@ -268,17 +268,27 @@ static const struct string_to_enum out_hdmi_sample_rates_name_to_enum_table[] = 
 static struct audio_device *adev = NULL;
 static pthread_mutex_t adev_init_lock;
 static unsigned int audio_device_ref_count;
+//cache last MBDRC cal step level
+static int last_known_cal_step = -1 ;
 
 __attribute__ ((visibility ("default")))
 bool audio_hw_send_gain_dep_calibration(int level) {
     bool ret_val = false;
-    ALOGV("%s: called ... ", __func__);
+    ALOGV("%s: called ...", __func__);
 
     pthread_mutex_lock(&adev_init_lock);
 
     if (adev != NULL && adev->platform != NULL) {
         pthread_mutex_lock(&adev->lock);
         ret_val = platform_send_gain_dep_cal(adev->platform, level);
+
+        // if cal set fails, cache level info
+        // if cal set succeds, reset known last cal set
+        if (!ret_val)
+            last_known_cal_step = level;
+        else if (last_known_cal_step != -1)
+            last_known_cal_step = -1;
+
         pthread_mutex_unlock(&adev->lock);
     } else {
         ALOGE("%s: %s is NULL", __func__, adev == NULL ? "adev" : "adev->platform");
@@ -1263,7 +1273,7 @@ int start_input_stream(struct stream_in *in)
     if (get_usecase_from_list(adev, in->usecase) != NULL) {
         ALOGE("%s: use case assigned already in use, stream(%p)usecase(%d: %s)",
             __func__, &in->stream, in->usecase, use_case_table[in->usecase]);
-        goto error_config;
+        return -EINVAL;
     }
 
     in->pcm_device_id = platform_get_pcm_device_id(in->usecase, PCM_CAPTURE);
@@ -2009,6 +2019,8 @@ static int check_input_parameters(uint32_t sample_rate,
     switch (channel_count) {
     case 1:
     case 2:
+    case 3:
+    case 4:
     case 6:
         break;
     default:
@@ -2244,17 +2256,17 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         pthread_mutex_lock(&adev->lock);
 
         /*
-         * When HDMI cable is unplugged/usb hs is disconnected the
-         * music playback is paused and the policy manager sends routing=0
-         * But the audioflingercontinues to write data until standby time
-         * (3sec). As the HDMI core is turned off, the write gets blocked.
+         * When HDMI cable is unplugged the music playback is paused and
+         * the policy manager sends routing=0. But the audioflinger continues
+         * to write data until standby time (3sec). As the HDMI core is
+         * turned off, the write gets blocked.
          * Avoid this by routing audio to speaker until standby.
          */
-        if ((out->devices == AUDIO_DEVICE_OUT_AUX_DIGITAL ||
-                out->devices == AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET) &&
-                val == AUDIO_DEVICE_NONE) {
-            if (!audio_extn_dolby_is_passthrough_stream(out))
-                val = AUDIO_DEVICE_OUT_SPEAKER;
+        if ((out->devices == AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+                (val == AUDIO_DEVICE_NONE) &&
+                !audio_extn_dolby_is_passthrough_stream(out) &&
+                (platform_get_edid_info(adev->platform) != 0) /* HDMI disconnected */) {
+            val = AUDIO_DEVICE_OUT_SPEAKER;
         }
 
         /*
@@ -2548,6 +2560,12 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             out->standby = true;
             goto exit;
         }
+
+        if (last_known_cal_step != -1) {
+            ALOGD("%s: retry previous failed cal level set", __func__);
+            audio_hw_send_gain_dep_calibration(last_known_cal_step);
+        }
+
         if (!is_offload_usecase(out->usecase) && adev->adm_register_output_stream)
             adev->adm_register_output_stream(adev->adm_data, out->handle, out->flags);
     }
@@ -3985,8 +4003,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     bool is_low_latency = false;
 
     *stream_in = NULL;
-    if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0)
+    if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0) {
+        ALOGE("%s: invalid input parameters", __func__);
         return -EINVAL;
+    }
 
     in = (struct stream_in *)calloc(1, sizeof(struct stream_in));
 
