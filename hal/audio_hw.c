@@ -2040,6 +2040,9 @@ static int out_standby(struct audio_stream *stream)
         if (adev->adm_deregister_stream)
             adev->adm_deregister_stream(adev->adm_data, out->handle);
 
+        if (is_offload_usecase(out->usecase))
+            stop_compressed_output_l(out);
+
         pthread_mutex_lock(&adev->lock);
 
         amplifier_output_stream_standby((struct audio_stream_out *) stream);
@@ -2053,7 +2056,6 @@ static int out_standby(struct audio_stream *stream)
             }
         } else {
             ALOGD("copl(%p):standby", out);
-            stop_compressed_output_l(out);
             out->send_next_track_params = false;
             out->is_compr_metadata_avail = false;
             out->gapless_mdata.encoder_delay = 0;
