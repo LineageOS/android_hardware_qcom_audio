@@ -730,7 +730,9 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_set_anc_parameters(adev, parms);
    audio_extn_set_fluence_parameters(adev, parms);
    audio_extn_set_afe_proxy_parameters(adev, parms);
+#ifndef FM_POWER_OPT
    audio_extn_fm_set_parameters(adev, parms);
+#endif
    audio_extn_sound_trigger_set_parameters(adev, parms);
    audio_extn_listen_set_parameters(adev, parms);
    audio_extn_ssr_set_parameters(adev, parms);
