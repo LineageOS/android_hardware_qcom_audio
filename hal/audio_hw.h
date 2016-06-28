@@ -182,13 +182,6 @@ struct stream_app_type_cfg {
     int app_type;
 };
 
-struct compr_pcm_config {
-    uint32_t hal_fragment_size;
-    audio_format_t hal_ip_format;
-    audio_format_t hal_op_format;
-    void *convert_buffer;
-};
-
 struct stream_out {
     struct audio_stream_out stream;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
@@ -230,7 +223,10 @@ struct stream_out {
     bool send_next_track_params;
     bool is_compr_metadata_avail;
     unsigned int bit_width;
-    struct compr_pcm_config compr_pcm_config;
+    uint32_t hal_fragment_size;
+    audio_format_t hal_ip_format;
+    audio_format_t hal_op_format;
+    void *convert_buffer;
 
     struct audio_device *dev;
 };
