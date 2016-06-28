@@ -501,6 +501,9 @@ typedef enum {
 int b64decode(char *inp, int ilen, uint8_t* outp);
 int b64encode(uint8_t *inp, int ilen, char* outp);
 int read_line_from_file(const char *path, char *buf, size_t count);
+audio_format_t pcm_format_to_hal(uint32_t pcm_format);
+uint32_t hal_format_to_pcm(audio_format_t hal_format);
+
 
 #ifndef KPI_OPTIMIZE_ENABLED
 #define audio_extn_perf_lock_init() (0)

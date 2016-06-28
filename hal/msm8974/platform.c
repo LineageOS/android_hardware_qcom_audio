@@ -194,6 +194,7 @@ typedef struct {
 } native_audio_prop;
 
 static native_audio_prop na_props = {0, 0};
+static bool supports_true_32_bit = false;
 
 struct platform_data {
     struct audio_device *adev;
@@ -3009,6 +3010,29 @@ done_key_audcal:
         free(dptr);
 }
 
+static void true_32_bit_set_params(struct str_parms *parms,
+                                 char *value, int len)
+{
+    int ret = 0;
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_TRUE_32_BIT,
+                            value,len);
+    if (ret >= 0) {
+        if (value && !strncmp(value, "true", sizeof("src")))
+            supports_true_32_bit = true;
+        else
+            supports_true_32_bit = false;
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_TRUE_32_BIT);
+    }
+
+}
+
+
+bool platform_supports_true_32bit()
+{
+   return supports_true_32_bit;
+}
+
 int platform_set_parameters(void *platform, struct str_parms *parms)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -3124,6 +3148,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     /* handle audio calibration parameters */
     set_audiocal(platform, parms, value, len);
     native_audio_set_params(platform, parms, value, len);
+    true_32_bit_set_params(parms, value, len);
 done:
     ALOGV("%s: exit with code(%d)", __func__, ret);
     if(kv_pairs != NULL)
