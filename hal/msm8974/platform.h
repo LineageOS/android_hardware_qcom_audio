@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -165,6 +165,7 @@ enum {
     SND_DEVICE_IN_SPEAKER_DMIC_AEC_BROADSIDE,
     SND_DEVICE_IN_SPEAKER_DMIC_NS_BROADSIDE,
     SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_BROADSIDE,
+    SND_DEVICE_IN_VOICE_FLUENCE_DMIC_AANC,
     SND_DEVICE_IN_HANDSET_QMIC,
     SND_DEVICE_IN_SPEAKER_QMIC_AEC,
     SND_DEVICE_IN_SPEAKER_QMIC_NS,
@@ -181,7 +182,12 @@ enum {
 
 enum {
     DEFAULT_CODEC_BACKEND,
+    SLIMBUS_0_RX = DEFAULT_CODEC_BACKEND,
     HEADPHONE_44_1_BACKEND,
+    SLIMBUS_5_RX = HEADPHONE_44_1_BACKEND,
+    HEADPHONE_BACKEND,
+    SLIMBUS_6_RX = HEADPHONE_BACKEND,
+    HDMI_RX_BACKEND,
     MAX_CODEC_BACKENDS
 };
 
@@ -203,8 +209,16 @@ enum {
  * so if format = 16-bit PCM and channels = Stereo, frame size = 2 ch * 2 = 4 bytes
  * DEEP_BUFFER_OUTPUT_PERIOD_SIZE = 1024 means 1024 * 4 = 4096 bytes
  * We should take care of returning proper size when AudioFlinger queries for
+
+ * TODO: period_size is set to 1920 frames - which would
+ * correspond to 40 ms, considering 48Khz stereo
+ * this would mean for higher sampling rates
+ * buffering time would reduce. If required
+ * modify the period_size, start_threshold etc
  * the buffer size of an input/output stream
  */
+
+
 #define DEEP_BUFFER_OUTPUT_PERIOD_SIZE 1920
 #define DEEP_BUFFER_OUTPUT_PERIOD_COUNT 2
 #define LOW_LATENCY_OUTPUT_PERIOD_SIZE 240
@@ -260,7 +274,7 @@ enum {
 #define PLAYBACK_OFFLOAD_DEVICE2 17
 #endif
 
-#ifdef PLATFORM_APQ8084
+#if defined (PLATFORM_APQ8084) || defined (PLATFORM_MSM8996)
 #define PLAYBACK_OFFLOAD_DEVICE3 18
 #define PLAYBACK_OFFLOAD_DEVICE4 34
 #define PLAYBACK_OFFLOAD_DEVICE5 35
@@ -269,7 +283,7 @@ enum {
 #define PLAYBACK_OFFLOAD_DEVICE8 38
 #define PLAYBACK_OFFLOAD_DEVICE9 39
 #endif
-#if defined (PLATFORM_MSM8994) || defined (PLATFORM_MSM8996)
+#ifdef PLATFORM_MSM8994
 #define PLAYBACK_OFFLOAD_DEVICE3 18
 #define PLAYBACK_OFFLOAD_DEVICE4 37
 #define PLAYBACK_OFFLOAD_DEVICE5 38

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -709,10 +709,6 @@ static int vol_prc_lib_release(effect_handle_t handle)
         ALOGE("%s: Got invalid handle while release, DO NOTHING ", __func__);
         return status;
     }
-
-    if (recv_contex == NULL) {
-        return status;
-    }
     pthread_mutex_lock(&vol_listner_init_lock);
     session_id = recv_contex->session_id;
     stream_type = recv_contex->stream_type;
@@ -766,7 +762,14 @@ static int vol_prc_lib_get_descriptor(const effect_uuid_t *uuid,
                                       effect_descriptor_t *descriptor)
 {
     int i = 0;
+
+    if (property_get_bool("audio.vol_based_mbdrc.enabled", 0)) {
+        ALOGW("Volume based MBDRC not enabled ... bailingout");
+        return -EINVAL;
+    }
+
     ALOGV("%s Called ", __func__);
+
     if (lib_init() != 0) {
         return init_status;
     }
