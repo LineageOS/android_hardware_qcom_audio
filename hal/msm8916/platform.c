@@ -767,6 +767,7 @@ static int msm_device_to_be_id_external_codec [][NO_COLS] = {
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define PCM_OFFLOAD_PLATFORM_DELAY (30*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
+#define ULL_PLATFORM_DELAY (6*1000LL)
 
 static void update_codec_type(const char *snd_card_name) {
 
@@ -3825,6 +3826,8 @@ int64_t platform_render_latency(audio_usecase_t usecase)
         case USECASE_AUDIO_PLAYBACK_OFFLOAD:
         case USECASE_AUDIO_PLAYBACK_OFFLOAD2:
             return PCM_OFFLOAD_PLATFORM_DELAY;
+        case USECASE_AUDIO_PLAYBACK_ULL:
+            return ULL_PLATFORM_DELAY;
         default:
             return 0;
     }
