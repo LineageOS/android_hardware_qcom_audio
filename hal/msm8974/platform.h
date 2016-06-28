@@ -198,6 +198,7 @@ enum {
 };
 
 #define AUDIO_PARAMETER_KEY_NATIVE_AUDIO "audio.nat.codec.enabled"
+#define AUDIO_PARAMETER_KEY_TRUE_32_BIT "true_32_bit"
 
 #define ALL_SESSION_VSID                0xFFFFFFFF
 #define DEFAULT_MUTE_RAMP_DURATION_MS   20

@@ -232,23 +232,25 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SOURCE_TRACKING)),true)
 endif
 
 LOCAL_SHARED_LIBRARIES := \
-	liblog \
-	libcutils \
-	libtinyalsa \
-	libtinycompress \
-	libaudioroute \
-	libdl \
-	libexpat
+        liblog \
+        libcutils \
+        libtinyalsa \
+        libtinycompress \
+        libaudioroute \
+        libdl \
+        libaudioutils \
+        libexpat
 
 LOCAL_C_INCLUDES += \
-	external/tinyalsa/include \
-	external/tinycompress/include \
-	external/expat/lib \
-	$(call include-path-for, audio-route) \
-	$(call include-path-for, audio-effects) \
-	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \
-	$(LOCAL_PATH)/audio_extn \
-	$(LOCAL_PATH)/voice_extn
+        external/tinyalsa/include \
+        external/tinycompress/include \
+        external/expat/lib \
+        system/media/audio_utils/include \
+        $(call include-path-for, audio-route) \
+        $(call include-path-for, audio-effects) \
+        $(LOCAL_PATH)/$(AUDIO_PLATFORM) \
+        $(LOCAL_PATH)/audio_extn \
+        $(LOCAL_PATH)/voice_extn
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_LISTEN)),true)
     LOCAL_CFLAGS += -DAUDIO_LISTEN_ENABLED
