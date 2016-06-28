@@ -37,10 +37,14 @@
 #include "audio_extn.h"
 #include "platform_api.h"
 #include <platform.h>
+#include <cutils/properties.h>
+
+#include "sound/compress_params.h"
 
 static const audio_format_t audio_passthru_formats[] = {
     AUDIO_FORMAT_AC3,
     AUDIO_FORMAT_E_AC3,
+    AUDIO_FORMAT_E_AC3_JOC,
     AUDIO_FORMAT_DTS,
     AUDIO_FORMAT_DTS_HD
 };
@@ -63,9 +67,11 @@ bool audio_extn_passthru_is_supported_format(audio_format_t format)
 
     for (i = 0; i < num_passthru_formats; i++) {
         if (format == audio_passthru_formats[i]) {
+            ALOGD("%s : pass through format is true", __func__);
             return true;
         }
     }
+    ALOGD("%s : pass through format is false", __func__);
     return false;
 }
 
@@ -76,11 +82,6 @@ bool audio_extn_passthru_is_supported_format(audio_format_t format)
  */
 bool audio_extn_passthru_should_drop_data(struct stream_out * out)
 {
-    /* Make this product specific */
-    if (!(out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
-        ALOGI("drop data as end device 0x%x is unsupported", out->devices);
-        return true;
-    }
 
     if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
         if (android_atomic_acquire_load(&compress_passthru_active) > 0) {
@@ -158,8 +159,6 @@ void audio_extn_passthru_on_pause(struct stream_out * out __unused)
 {
     if (android_atomic_acquire_load(&compress_passthru_active) == 0)
         return;
-
-    android_atomic_dec(&compress_passthru_active);
 }
 
 int audio_extn_passthru_set_parameters(struct audio_device *adev __unused,
@@ -182,4 +181,144 @@ void audio_extn_passthru_init(struct audio_device *adev __unused)
 bool audio_extn_passthru_should_standby(struct stream_out * out __unused)
 {
     return true;
+}
+
+bool audio_extn_passthru_is_convert_supported(struct audio_device *adev,
+                                                 struct stream_out *out)
+{
+
+    bool convert = false;
+    switch (out->format) {
+    case AUDIO_FORMAT_E_AC3:
+    case AUDIO_FORMAT_E_AC3_JOC:
+    case AUDIO_FORMAT_DTS_HD:
+        if (!platform_is_edid_supported_format(adev->platform,
+            out->format)) {
+            ALOGD("%s:PASSTHROUGH_CONVERT supported", __func__);
+            convert = true;
+        }
+        break;
+    default:
+        ALOGD("%s: PASSTHROUGH_CONVERT not supported for format 0x%x",
+              __func__, out->format);
+        break;
+    }
+    ALOGD("%s: convert %d", __func__, convert);
+    return convert;
+}
+
+bool audio_extn_passthru_is_passt_supported(struct audio_device *adev,
+                                         struct stream_out *out)
+{
+    bool passt = false;
+    switch (out->format) {
+    case AUDIO_FORMAT_E_AC3:
+        if (platform_is_edid_supported_format(adev->platform, out->format)) {
+            ALOGV("%s:PASSTHROUGH supported for format %x",
+                   __func__, out->format);
+            passt = true;
+        }
+        break;
+    case AUDIO_FORMAT_AC3:
+        if (platform_is_edid_supported_format(adev->platform, AUDIO_FORMAT_AC3)
+            || platform_is_edid_supported_format(adev->platform,
+            AUDIO_FORMAT_E_AC3)) {
+            ALOGV("%s:PASSTHROUGH supported for format %x",
+                   __func__, out->format);
+            passt = true;
+        }
+        break;
+    case AUDIO_FORMAT_E_AC3_JOC:
+         /* Check for DDP capability in edid for JOC contents.*/
+         if (platform_is_edid_supported_format(adev->platform,
+             AUDIO_FORMAT_E_AC3)) {
+             ALOGV("%s:PASSTHROUGH supported for format %x",
+                   __func__, out->format);
+             passt = true;
+         }
+         break;
+    case AUDIO_FORMAT_DTS:
+        if (platform_is_edid_supported_format(adev->platform, AUDIO_FORMAT_DTS)
+            || platform_is_edid_supported_format(adev->platform,
+            AUDIO_FORMAT_DTS_HD)) {
+            ALOGV("%s:PASSTHROUGH supported for format %x",
+                   __func__, out->format);
+            passt = true;
+        }
+        break;
+    case AUDIO_FORMAT_DTS_HD:
+        if (platform_is_edid_supported_format(adev->platform, out->format)) {
+            ALOGV("%s:PASSTHROUGH supported for format %x",
+                   __func__, out->format);
+            passt = true;
+        }
+        break;
+    default:
+        ALOGV("%s:Passthrough not supported", __func__);
+    }
+    return passt;
+}
+
+void audio_extn_passthru_update_stream_configuration(
+        struct audio_device *adev, struct stream_out *out)
+{
+    if (audio_extn_passthru_is_passt_supported(adev, out)) {
+        ALOGV("%s:PASSTHROUGH", __func__);
+        out->compr_config.codec->compr_passthr = PASSTHROUGH;
+    } else if (audio_extn_passthru_is_convert_supported(adev, out)){
+        ALOGV("%s:PASSTHROUGH CONVERT", __func__);
+        out->compr_config.codec->compr_passthr = PASSTHROUGH_CONVERT;
+    } else {
+        ALOGV("%s:NO PASSTHROUGH", __func__);
+        out->compr_config.codec->compr_passthr = LEGACY_PCM;
+    }
+}
+
+bool audio_extn_passthru_is_passthrough_stream(struct stream_out *out)
+{
+    //check passthrough system property
+    if (!property_get_bool("audio.offload.passthrough", false)) {
+        return false;
+    }
+
+    //check supported device, currently only on HDMI.
+    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        //passthrough flag
+        if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)
+            return true;
+        //direct flag, check supported formats.
+        if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT) {
+            if (audio_extn_passthru_is_supported_format(out->format)) {
+                if (platform_is_edid_supported_format(out->dev->platform,
+                        out->format)) {
+                    ALOGV("%s : return true",__func__);
+                    return true;
+                } else if (audio_extn_is_dolby_format(out->format) &&
+                            platform_is_edid_supported_format(out->dev->platform,
+                                AUDIO_FORMAT_AC3)){
+                    //return true for EAC3/EAC3_JOC formats
+                    //if sink supports only AC3
+                    ALOGV("%s : return true",__func__);
+                    return true;
+                }
+            }
+        }
+    }
+    ALOGV("%s : return false",__func__);
+    return false;
+}
+
+int audio_extn_passthru_get_buffer_size(audio_offload_info_t* info)
+{
+    return platform_get_compress_passthrough_buffer_size(info);
+}
+
+int audio_extn_passthru_set_volume(struct stream_out *out,  int mute)
+{
+    return platform_set_device_params(out, DEVICE_PARAM_MUTE_ID, mute);
+}
+
+int audio_extn_passthru_set_latency(struct stream_out *out, int latency)
+{
+    return platform_set_device_params(out, DEVICE_PARAM_LATENCY_ID, latency);
 }

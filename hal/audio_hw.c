@@ -338,6 +338,10 @@ static bool is_supported_format(audio_format_t format)
         format == AUDIO_FORMAT_PCM_24_BIT_PACKED ||
         format == AUDIO_FORMAT_PCM_8_24_BIT ||
         format == AUDIO_FORMAT_PCM_16_BIT ||
+        format == AUDIO_FORMAT_AC3 ||
+        format == AUDIO_FORMAT_E_AC3 ||
+        format == AUDIO_FORMAT_DTS ||
+        format == AUDIO_FORMAT_DTS_HD ||
         format == AUDIO_FORMAT_FLAC ||
         format == AUDIO_FORMAT_ALAC ||
         format == AUDIO_FORMAT_APE ||
@@ -383,6 +387,17 @@ static int get_snd_codec_id(audio_format_t format)
         break;
     case AUDIO_FORMAT_WMA_PRO:
         id = SND_AUDIOCODEC_WMA_PRO;
+        break;
+    case AUDIO_FORMAT_AC3:
+        id = SND_AUDIOCODEC_AC3;
+        break;
+    case AUDIO_FORMAT_E_AC3:
+    case AUDIO_FORMAT_E_AC3_JOC:
+        id = SND_AUDIOCODEC_EAC3;
+        break;
+    case AUDIO_FORMAT_DTS:
+    case AUDIO_FORMAT_DTS_HD:
+        id = SND_AUDIOCODEC_DTS;
         break;
     default:
         ALOGE("%s: Unsupported audio format :%x", __func__, format);
@@ -537,14 +552,7 @@ int enable_snd_device(struct audio_device *adev,
 
     if (audio_extn_spkr_prot_is_enabled())
          audio_extn_spkr_prot_calib_cancel(adev);
-    /* start usb playback thread */
-    if(SND_DEVICE_OUT_USB_HEADSET == snd_device ||
-       SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET == snd_device)
-        audio_extn_usb_start_playback(adev);
 
-    /* start usb capture thread */
-    if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
-       audio_extn_usb_start_capture(adev);
 
     if (platform_can_enable_spkr_prot_on_device(snd_device) &&
          audio_extn_spkr_prot_is_enabled()) {
@@ -553,7 +561,7 @@ int enable_snd_device(struct audio_device *adev,
            return -EINVAL;
        }
        audio_extn_dev_arbi_acquire(snd_device);
-        if (audio_extn_spkr_prot_start_processing(snd_device)) {
+       if (audio_extn_spkr_prot_start_processing(snd_device)) {
             ALOGE("%s: spkr_start_processing failed", __func__);
             audio_extn_dev_arbi_release(snd_device);
             return -EINVAL;
@@ -621,15 +629,6 @@ int disable_snd_device(struct audio_device *adev,
 
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
-        /* exit usb play back thread */
-        if(SND_DEVICE_OUT_USB_HEADSET == snd_device ||
-           SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET == snd_device)
-            audio_extn_usb_stop_playback();
-
-        /* exit usb capture thread */
-        if(SND_DEVICE_IN_USB_HEADSET_MIC == snd_device)
-            audio_extn_usb_stop_capture();
-
         if (platform_can_enable_spkr_prot_on_device(snd_device) &&
              audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing(snd_device);
@@ -872,9 +871,6 @@ static int read_hdmi_sink_caps(struct stream_out *out)
         out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_QUAD;
         out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_SURROUND;
         out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_2POINT1;
-    case 2:
-        ALOGV("%s: HDMI supports 2 channels", __func__);
-        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_STEREO;
         break;
     default:
         ALOGE("invalid/nonstandard channal count[%d]",channels);
@@ -1157,8 +1153,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 
     /* Enable new sound devices */
     if (out_snd_device != SND_DEVICE_NONE) {
-        if (usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND)
-            check_usecases_codec_backend(adev, usecase, out_snd_device);
+        check_usecases_codec_backend(adev, usecase, out_snd_device);
         enable_snd_device(adev, out_snd_device);
     }
 
@@ -1511,6 +1506,7 @@ static void *offload_thread_loop(void *context)
 
         if (out->compr == NULL) {
             ALOGE("%s: Compress handle is NULL", __func__);
+            free(cmd);
             pthread_cond_signal(&out->cond);
             continue;
         }
@@ -1755,8 +1751,9 @@ static int check_and_set_hdmi_backend(struct stream_out *out)
     ALOGV("%s usecase %s out->format:%x out->bit_width:%d", __func__, use_case_table[out->usecase],out->format,out->bit_width);
 
     if (is_offload_usecase(out->usecase) &&
-        audio_extn_dolby_is_passthrough_stream(out)) {
+        audio_extn_passthru_is_passthrough_stream(out)) {
         enable_passthru = true;
+        ALOGV("%s : enable_passthru is set to true", __func__);
     }
 
     /* Check if change in HDMI channel config is allowed */
@@ -1770,7 +1767,7 @@ static int check_and_set_hdmi_backend(struct stream_out *out)
 
         if (enable_passthru) {
             audio_extn_passthru_on_start(out);
-            audio_extn_dolby_update_passt_stream_configuration(adev, out);
+            audio_extn_passthru_update_stream_configuration(adev, out);
         }
 
         /* For pass through case, the backend should be configured as stereo */
@@ -1805,7 +1802,7 @@ static int stop_output_stream(struct stream_out *out)
     }
 
     if (is_offload_usecase(out->usecase) &&
-        !(audio_extn_dolby_is_passthrough_stream(out))) {
+        !(audio_extn_passthru_is_passthrough_stream(out))) {
         if (adev->visualizer_stop_output != NULL)
             adev->visualizer_stop_output(out->handle, out->pcm_device_id);
 
@@ -1825,21 +1822,21 @@ static int stop_output_stream(struct stream_out *out)
     free(uc_info);
 
     if (is_offload_usecase(out->usecase) &&
-        (audio_extn_dolby_is_passthrough_stream(out))) {
+        (audio_extn_passthru_is_passthrough_stream(out))) {
         ALOGV("Disable passthrough , reset mixer to pcm");
         /* NO_PASSTHROUGH */
         out->compr_config.codec->compr_passthr = 0;
 
-        /* Must be called after removing the usecase from list */
-        if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
-                check_and_set_hdmi_config(adev, DEFAULT_HDMI_OUT_CHANNELS,
-                                          DEFAULT_HDMI_OUT_SAMPLE_RATE,
-                                          DEFAULT_HDMI_OUT_FORMAT,
-                                          false);
         audio_extn_passthru_on_stop(out);
         audio_extn_dolby_set_dap_bypass(adev, DAP_STATE_ON);
     }
 
+    /* Must be called after removing the usecase from list */
+    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
+        check_and_set_hdmi_config(adev, DEFAULT_HDMI_OUT_CHANNELS,
+                                  DEFAULT_HDMI_OUT_SAMPLE_RATE,
+                                  DEFAULT_HDMI_OUT_FORMAT,
+                                  false);
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
@@ -1980,7 +1977,7 @@ int start_output_stream(struct stream_out *out)
         if (audio_extn_is_dolby_format(out->format))
             audio_extn_dolby_send_ddp_endp_params(adev);
 #endif
-        if (!(audio_extn_dolby_is_passthrough_stream(out))) {
+        if (!(audio_extn_passthru_is_passthrough_stream(out))) {
             if (adev->visualizer_start_output != NULL)
                 adev->visualizer_start_output(out->handle, out->pcm_device_id);
             if (adev->offload_effects_start_output != NULL)
@@ -2264,7 +2261,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
          */
         if ((out->devices == AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
                 (val == AUDIO_DEVICE_NONE) &&
-                !audio_extn_dolby_is_passthrough_stream(out) &&
+                !audio_extn_passthru_is_passthrough_stream(out) &&
                 (platform_get_edid_info(adev->platform) != 0) /* HDMI disconnected */) {
             val = AUDIO_DEVICE_OUT_SPEAKER;
         }
@@ -2487,13 +2484,13 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
         out->muted = (left == 0.0f);
         return 0;
     } else if (is_offload_usecase(out->usecase)) {
-        if (audio_extn_dolby_is_passthrough_stream(out)) {
+        if (audio_extn_passthru_is_passthrough_stream(out)) {
             /*
              * Set mute or umute on HDMI passthrough stream.
              * Only take left channel into account.
              * Mute is 0 and unmute 1
              */
-            audio_extn_dolby_set_passt_volume(out, (left == 0.0f));
+            audio_extn_passthru_set_volume(out, (left == 0.0f));
         } else {
             char mixer_ctl_name[128];
             struct audio_device *adev = out->dev;
@@ -2545,6 +2542,13 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ret= -EIO;
             goto exit;
         }
+    }
+
+    if (audio_extn_passthru_should_drop_data(out)) {
+        ALOGD(" %s : Drop data as compress passthrough session is going on", __func__);
+        usleep((uint64_t)bytes * 1000000 / audio_stream_out_frame_size(stream) /
+                        out_get_sample_rate(&out->stream.common));
+        goto exit;
     }
 
     if (out->standby) {
@@ -3395,7 +3399,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         }
 
         if (!is_supported_format(config->offload_info.format) &&
-                !audio_extn_is_dolby_format(config->offload_info.format)) {
+                !audio_extn_passthru_is_supported_format(config->offload_info.format)) {
             ALOGE("%s: Unsupported audio format %x " , __func__, config->offload_info.format);
             ret = -EINVAL;
             goto error_open;
@@ -3449,21 +3453,19 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
         out->bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
 
-        if (audio_extn_is_dolby_format(config->offload_info.format))
-            out->compr_config.codec->id =
-                audio_extn_dolby_get_snd_codec_id(adev, out,
-                                                  config->offload_info.format);
-        else
-            out->compr_config.codec->id =
-                get_snd_codec_id(config->offload_info.format);
+        out->compr_config.codec->id = get_snd_codec_id(config->offload_info.format);
+        if (audio_extn_is_dolby_format(config->offload_info.format)) {
+            audio_extn_dolby_send_ddp_endp_params(adev);
+            audio_extn_dolby_set_dmid(adev);
+        }
 
         if ((config->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM) {
             out->compr_config.fragment_size =
                platform_get_pcm_offload_buffer_size(&config->offload_info);
             out->compr_config.fragments = DIRECT_PCM_NUM_FRAGMENTS;
-        } else if (audio_extn_dolby_is_passthrough_stream(out)) {
+        } else if (audio_extn_passthru_is_passthrough_stream(out)) {
             out->compr_config.fragment_size =
-               audio_extn_dolby_get_passt_buffer_size(&config->offload_info);
+               audio_extn_passthru_get_buffer_size(&config->offload_info);
             out->compr_config.fragments = COMPRESS_OFFLOAD_NUM_FRAGMENTS;
         } else {
             out->compr_config.fragment_size =
@@ -3517,14 +3519,14 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
          * AV playback
          * Direct PCM playback
          */
-        if (audio_extn_dolby_is_passthrough_stream(out) ||
+        if (audio_extn_passthru_is_passthrough_stream(out) ||
             config->offload_info.has_video ||
             out->flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) {
             check_and_set_gapless_mode(adev, false);
         } else
             check_and_set_gapless_mode(adev, true);
 
-        if (audio_extn_dolby_is_passthrough_stream(out)) {
+        if (audio_extn_passthru_is_passthrough_stream(out)) {
             out->flags |= AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH;
         }
     } else if (out->flags & AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
@@ -3819,7 +3821,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             ALOGV("cache new edid");
             platform_cache_edid(adev->platform);
-        } else if (val & AUDIO_DEVICE_OUT_USB_DEVICE) {
+        } else if ((val & AUDIO_DEVICE_OUT_USB_DEVICE) ||
+                   (val & AUDIO_DEVICE_IN_USB_DEVICE)) {
             /*
              * Do not allow AFE proxy port usage by WFD source when USB headset is connected.
              * Per AudioPolicyManager, USB device is higher priority than WFD.
@@ -3827,6 +3830,10 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
              * If WFD use case occupies AFE proxy, it may result unintended behavior while
              * starting voice call on USB
              */
+            ret = str_parms_get_str(parms, "card", value, sizeof(value));
+            if (ret >= 0) {
+                audio_extn_usb_add_device(val, atoi(value));
+            }
             ALOGV("detected USB connect .. disable proxy");
             adev->allow_afe_proxy_usage = false;
         }
@@ -3837,8 +3844,13 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         val = atoi(value);
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             ALOGV("invalidate cached edid");
-            platform_invalidate_edid(adev->platform);
-        } else if (val & AUDIO_DEVICE_OUT_USB_DEVICE) {
+            platform_invalidate_hdmi_config(adev->platform);
+        } else if ((val & AUDIO_DEVICE_OUT_USB_DEVICE) ||
+                   (val & AUDIO_DEVICE_IN_USB_DEVICE)) {
+            ret = str_parms_get_str(parms, "card", value, sizeof(value));
+            if (ret >= 0) {
+                audio_extn_usb_remove_device(val, atoi(value));
+            }
             ALOGV("detected USB disconnect .. enable proxy");
             adev->allow_afe_proxy_usage = true;
         }

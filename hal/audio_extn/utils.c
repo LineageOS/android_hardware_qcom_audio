@@ -107,8 +107,10 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_AMR_WB),
     STRING_TO_ENUM(AUDIO_FORMAT_AC3),
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3),
-#ifdef AUDIO_EXTN_FORMATS_ENABLED
     STRING_TO_ENUM(AUDIO_FORMAT_DTS),
+    STRING_TO_ENUM(AUDIO_FORMAT_DTS_HD),
+#ifdef AUDIO_EXTN_FORMATS_ENABLED
+    STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
     STRING_TO_ENUM(AUDIO_FORMAT_WMA),
     STRING_TO_ENUM(AUDIO_FORMAT_WMA_PRO),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_ADIF),
@@ -639,20 +641,6 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
                 sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
          }
 
-         app_type_cfg[len++] = usecase->stream.out->app_type_cfg.app_type;
-         app_type_cfg[len++] = acdb_dev_id;
-         if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
-             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC)) &&
-             (usecase->stream.out->flags  & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
-             app_type_cfg[len++] = sample_rate * 4;
-         else
-             app_type_cfg[len++] = sample_rate;
-
-         ALOGI("%s:%d PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
-               __func__, __LINE__,
-               platform_get_default_app_type(adev->platform),
-               acdb_dev_id, sample_rate);
-
         if ((24 == usecase->stream.out->bit_width) &&
             (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
@@ -667,7 +655,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
         app_type_cfg[len++] = acdb_dev_id;
         if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC))
-            && audio_extn_dolby_is_passthrough_stream(usecase->stream.out)) {
+            && audio_extn_passthru_is_passthrough_stream(usecase->stream.out)) {
             app_type_cfg[len++] = sample_rate * 4;
         } else {
             app_type_cfg[len++] = sample_rate;
@@ -1009,7 +997,7 @@ void audio_utils_set_hdmi_channel_status(struct stream_out *out, char * buffer, 
     if (audio_extn_is_dolby_format(out->format) &&
         /*TODO:Extend code to support DTS passthrough*/
         /*set compressed channel status bits*/
-        audio_extn_dolby_is_passthrough_stream(out)){
+        audio_extn_passthru_is_passthrough_stream(out)){
         get_compressed_channel_status(buffer, bytes, channel_status, AUDIO_PARSER_CODEC_AC3);
     } else
 #endif

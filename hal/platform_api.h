@@ -130,7 +130,6 @@ unsigned char platform_map_to_edid_format(int format);
 bool platform_is_edid_supported_format(void *platform, int format);
 bool platform_is_edid_supported_sample_rate(void *platform, int sample_rate);
 void platform_cache_edid(void * platform);
-void platform_invalidate_edid(void * platform);
 void platform_invalidate_hdmi_config(void * platform);
 int platform_set_hdmi_config(void *platform, uint32_t channel_count,
                              uint32_t sample_rate, bool enable_passthrough);
@@ -148,4 +147,8 @@ bool platform_can_split_snd_device(void *platform,
                                    snd_device_t *new_snd_devices);
 
 bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_device2);
+int platform_set_sidetone(struct audio_device *adev,
+                          snd_device_t out_snd_device,
+                          bool enable,
+                          char * str);
 #endif // AUDIO_PLATFORM_API_H
