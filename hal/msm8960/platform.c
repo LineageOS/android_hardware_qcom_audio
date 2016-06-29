@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -1080,8 +1080,9 @@ int platform_set_usecase_pcm_id(audio_usecase_t usecase __unused, int32_t type _
     return -ENOSYS;
 }
 
-int platform_set_snd_device_backend(snd_device_t snd_device __unused,
-                                    const char * backend __unused)
+int platform_set_snd_device_backend(snd_device_t device __unused,
+                                    const char *backend __unused,
+                                    const char *hw_interface __unused)
 {
     return -ENOSYS;
 }
@@ -1157,7 +1158,7 @@ void platform_cache_edid(void * platform __unused)
 
 }
 
-void platform_invalidate_edid(void * platform __unused)
+void platform_invalidate_hdmi_config(void * platform __unused)
 {
 
 }
@@ -1195,4 +1196,17 @@ int platform_set_snd_device_name(snd_device_t snd_device __unused,
                                  const char * name __unused)
 {
     return -ENOSYS;
+}
+
+bool platform_can_split_snd_device(snd_device_t in_snd_device __unused,
+                                   int *num_devices __unused,
+                                   snd_device_t *out_snd_devices __unused)
+{
+    return false;
+}
+
+bool platform_check_backends_match(snd_device_t snd_device1 __unused,
+                                   snd_device_t snd_device2 __unused)
+{
+    return true;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -220,7 +220,7 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev,
 #else
 void audio_extn_source_track_set_parameters(struct audio_device *adev,
                                             struct str_parms *parms);
-void audio_extn_source_track_get_parameters(struct audio_device *adev,
+void audio_extn_source_track_get_parameters(const struct audio_device *adev,
                                             struct str_parms *query,
                                             struct str_parms *reply);
 #endif
@@ -398,6 +398,9 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
     char value[32] ={0};
     struct listnode *node;
     struct audio_usecase *usecase;
+    struct str_parms *query_44_1;
+    struct str_parms *reply_44_1;
+    struct str_parms *parms_disable_44_1;
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_ANC, value,
                             sizeof(value));
@@ -407,19 +410,63 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
         else
             aextnmod.anc_enabled = false;
 
+        /* Store current 44.1 configuration and disable it temporarily before
+         * changing ANC state.
+         * Since 44.1 playback is not allowed with anc on.
+         * If ANC switch is done when 44.1 is active three devices would need
+         * sequencing 1. "headphones-44.1", 2. "headphones-anc" and
+         * 3. "headphones".
+         * Note: Enable/diable of anc would affect other two device's state.
+         */
+        query_44_1 = str_parms_create_str(AUDIO_PARAMETER_KEY_NATIVE_AUDIO);
+        reply_44_1 = str_parms_create();
+        if (!query_44_1 || !reply_44_1) {
+            if (query_44_1) {
+                str_parms_destroy(query_44_1);
+            }
+            if (reply_44_1) {
+                str_parms_destroy(reply_44_1);
+            }
+
+            ALOGE("%s: param creation failed", __func__);
+            return;
+        }
+
+        platform_get_parameters(adev->platform, query_44_1, reply_44_1);
+
+        parms_disable_44_1 = str_parms_create();
+        if (!parms_disable_44_1) {
+            str_parms_destroy(query_44_1);
+            str_parms_destroy(reply_44_1);
+            ALOGE("%s: param creation failed for parms_disable_44_1", __func__);
+            return;
+        }
+
+        str_parms_add_str(parms_disable_44_1, AUDIO_PARAMETER_KEY_NATIVE_AUDIO, "false");
+        platform_set_parameters(adev->platform, parms_disable_44_1);
+        str_parms_destroy(parms_disable_44_1);
+
+        // Refresh device selection for anc playback
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase->type == PCM_PLAYBACK) {
+            if (usecase->type != PCM_CAPTURE) {
                 if (usecase->stream.out->devices == \
                     AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                     usecase->stream.out->devices ==  \
-                    AUDIO_DEVICE_OUT_WIRED_HEADSET) {
+                    AUDIO_DEVICE_OUT_WIRED_HEADSET ||
+                    usecase->stream.out->devices ==  \
+                    AUDIO_DEVICE_OUT_EARPIECE) {
                         select_devices(adev, usecase->id);
-                        ALOGV("%s: switching device", __func__);
+                        ALOGV("%s: switching device completed", __func__);
                         break;
                 }
             }
         }
+
+        // Restore 44.1 configuration on top of updated anc state
+        platform_set_parameters(adev->platform, reply_44_1);
+        str_parms_destroy(query_44_1);
+        str_parms_destroy(reply_44_1);
     }
 
     ALOGD("%s: anc_enabled:%d", __func__, aextnmod.anc_enabled);
@@ -482,7 +529,7 @@ done:
 
 #ifndef AFE_PROXY_ENABLED
 #define audio_extn_set_afe_proxy_parameters(adev, parms)  (0)
-#define audio_extn_get_afe_proxy_parameters(query, reply) (0)
+#define audio_extn_get_afe_proxy_parameters(adev, query, reply) (0)
 #else
 static int32_t afe_proxy_set_channel_mapping(struct audio_device *adev,
                                                      int channel_count)
@@ -596,23 +643,25 @@ void audio_extn_set_afe_proxy_parameters(struct audio_device *adev,
     }
 }
 
-int audio_extn_get_afe_proxy_parameters(struct str_parms *query,
+int audio_extn_get_afe_proxy_parameters(const struct audio_device *adev,
+                                        struct str_parms *query,
                                         struct str_parms *reply)
 {
-    int ret, val;
+    int ret, val = 0;
     char value[32]={0};
     char *str = NULL;
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_CAN_OPEN_PROXY, value,
                             sizeof(value));
     if (ret >= 0) {
-        if (audio_extn_usb_is_proxy_inuse())
+        if (audio_extn_usb_is_proxy_inuse() ||
+            !adev->allow_afe_proxy_usage)
             val = 0;
         else
             val = 1;
         str_parms_add_int(reply, AUDIO_PARAMETER_CAN_OPEN_PROXY, val);
     }
-
+    ALOGV("%s: called ... can_use_proxy %d", __func__, val);
     return 0;
 }
 
@@ -693,6 +742,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_hpx_set_parameters(adev, parms);
    audio_extn_pm_set_parameters(parms);
    audio_extn_source_track_set_parameters(adev, parms);
+   audio_extn_fbsp_set_parameters(parms);
    check_and_set_hdmi_connection_status(parms);
    if (adev->offload_effects_set_parameters != NULL)
        adev->offload_effects_set_parameters(parms);
@@ -703,13 +753,14 @@ void audio_extn_get_parameters(const struct audio_device *adev,
                               struct str_parms *reply)
 {
     char *kv_pairs = NULL;
-    audio_extn_get_afe_proxy_parameters(query, reply);
+    audio_extn_get_afe_proxy_parameters(adev, query, reply);
     audio_extn_get_fluence_parameters(adev, query, reply);
     audio_extn_ssr_get_parameters(adev, query, reply);
     get_active_offload_usecases(adev, query, reply);
     audio_extn_dts_eagle_get_parameters(adev, query, reply);
     audio_extn_hpx_get_parameters(query, reply);
     audio_extn_source_track_get_parameters(adev, query, reply);
+    audio_extn_fbsp_get_parameters(query, reply);
     if (adev->offload_effects_get_parameters != NULL)
         adev->offload_effects_get_parameters(query, reply);
 
@@ -1038,8 +1089,11 @@ void audio_extn_perf_lock_acquire(int *handle, int duration,
                                  int *perf_lock_opts, int size)
 {
 
-    if (!perf_lock_opts || !size || !perf_lock_acq || !handle)
-        return -EINVAL;
+    if (!perf_lock_opts || !size || !perf_lock_acq || !handle) {
+        ALOGE("%s: Incorrect params, Failed to acquire perf lock, err ",
+              __func__);
+        return;
+    }
     /*
      * Acquire performance lock for 1 sec during device path bringup.
      * Lock will be released either after 1 sec or when perf_lock_release
