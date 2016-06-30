@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010, The Linux Foundation. All rights reserved.
+Copyright (c) 2010, 2016, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -189,6 +189,7 @@ fail_pipe:
 
 void omx_aac_thread_stop(struct aac_ipc_info *aac_info) {
     DEBUG_DETAIL("%s stop server\n", __FUNCTION__);
+    aac_info->dead = 1;
     close(aac_info->pipe_in);
     close(aac_info->pipe_out);
     pthread_join(aac_info->thr,NULL);
