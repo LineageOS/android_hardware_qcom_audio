@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010, The Linux Foundation. All rights reserved.
+Copyright (c) 2010, 2016, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -189,6 +189,7 @@ fail_pipe:
 
 void omx_amr_thread_stop(struct amr_ipc_info *amr_info) {
     DEBUG_DETAIL("%s stop server\n", __FUNCTION__);
+    amr_info->dead = 1;
     close(amr_info->pipe_in);
     close(amr_info->pipe_out);
     pthread_join(amr_info->thr,NULL);
