@@ -2547,7 +2547,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
     if (SND_CARD_STATE_OFFLINE == snd_scard_state) {
 
-        if (is_offload_usecase(out->usecase)) {
+        if ((!(out->flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM)) && is_offload_usecase(out->usecase)) {
             /*during SSR for compress usecase we should return error to flinger*/
             ALOGD(" copl %s: sound card is not active/SSR state", __func__);
             pthread_mutex_unlock(&out->lock);
