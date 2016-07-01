@@ -70,6 +70,9 @@
 
 #define QMIC_FLAG 0x00000004
 
+#define TOSTRING_(x) #x
+#define TOSTRING(x) TOSTRING_(x)
+
 char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
         [WCD9XXX_MBHC_CAL] = "mbhc_cal",
 };
@@ -133,6 +136,8 @@ struct platform_data {
     void *hw_info;
     char ec_ref_mixer_path[64];
     bool speaker_lr_swap;
+
+    int max_vol_index;
 };
 
 int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -876,6 +881,10 @@ void *platform_init(struct audio_device *adev)
         return NULL;
     }
 
+    //set max volume step for voice call
+    property_get("ro.config.vc_call_vol_steps", value, TOSTRING(MAX_VOL_INDEX));
+    my_data->max_vol_index = atoi(value);
+
     my_data->adev = adev;
     my_data->fluence_in_spkr_mode = false;
     my_data->fluence_in_voice_call = false;
@@ -1336,7 +1345,7 @@ int platform_set_voice_volume(void *platform, int volume)
     // Voice volume levels are mapped to adsp volume levels as follows.
     // 100 -> 5, 80 -> 4, 60 -> 3, 40 -> 2, 20 -> 1  0 -> 0
     // But this values don't changed in kernel. So, below change is need.
-    vol_index = (int)percent_to_index(volume, MIN_VOL_INDEX, MAX_VOL_INDEX);
+    vol_index = (int)percent_to_index(volume, MIN_VOL_INDEX, my_data->max_vol_index);
     set_values[0] = vol_index;
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
