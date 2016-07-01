@@ -1242,7 +1242,6 @@ int audio_extn_fbsp_get_parameters(struct str_parms *query,
         get_spkr_prot_ftm_param(value);
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_FBSP_GET_FTM_PARAM, value);
     }
-done:
     return err;
 }
 

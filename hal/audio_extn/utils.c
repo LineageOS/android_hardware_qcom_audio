@@ -567,7 +567,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
     char mixer_ctl_name[MAX_LENGTH_MIXER_CONTROL_IN_INT];
     int app_type_cfg[MAX_LENGTH_MIXER_CONTROL_IN_INT], len = 0, rc;
     struct mixer_ctl *ctl;
-    int pcm_device_id, acdb_dev_id, snd_device = usecase->out_snd_device;
+    int pcm_device_id = 0, acdb_dev_id, snd_device = usecase->out_snd_device;
     int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
     char value[PROPERTY_VALUE_MAX] = {0};
 
@@ -855,7 +855,6 @@ int b64encode(uint8_t *inp, int ilen, char* outp)
         default:
             break;
     }
-done:
     outp[k] = '\0';
     return k;
 }
