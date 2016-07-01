@@ -2086,14 +2086,14 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
     }
 
     for (size_t i = 0; i < mHwModules.size(); i++) {
-        ALOGV("Hw module %d", i);
+        ALOGV("Hw module %zu", i);
         for (size_t j = 0; j < mHwModules[i]->mInputProfiles.size(); j++) {
             const sp<IOProfile> inProfile = mHwModules[i]->mInputProfiles[j];
-            ALOGV("Input profile ", j);
+            ALOGV("Input profile %zu", j);
             for (size_t k = 0; k  < inProfile->mChannelMasks.size(); k++) {
                 audio_channel_mask_t channelMask =
                     inProfile->mChannelMasks.itemAt(k);
-                ALOGV("Channel Mask %x size %d", channelMask,
+                ALOGV("Channel Mask %x size %zu", channelMask,
                     inProfile->mChannelMasks.size());
                 if (AUDIO_CHANNEL_IN_5POINT1 == channelMask) {
                     if (!prop_ssr_enabled) {
@@ -2101,7 +2101,7 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
                             " input profile as SSR(surround sound record)"
                             " is not supported on this chipset variant");
                         inProfile->mChannelMasks.removeItemsAt(k, 1);
-                        ALOGV("Channel Mask size now %d",
+                        ALOGV("Channel Mask size now %zu",
                             inProfile->mChannelMasks.size());
                     }
                 }
