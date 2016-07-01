@@ -26,6 +26,8 @@ struct amp_db_and_gain_table {
     uint32_t level;
 };
 
+enum card_status_t;
+
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
 const char *platform_get_snd_device_name(snd_device_t snd_device);
@@ -109,4 +111,5 @@ int platform_set_parameters(void *platform, struct str_parms *parms);
 bool platform_check_and_set_capture_backend_cfg(struct audio_device* adev,
                    struct audio_usecase *usecase, snd_device_t snd_device);
 
+int platform_snd_card_update(void *platform, enum card_status_t status);
 #endif // AUDIO_PLATFORM_API_H

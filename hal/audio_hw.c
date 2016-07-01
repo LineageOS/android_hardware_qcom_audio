@@ -348,6 +348,27 @@ static void release_in_focus(struct stream_in *in, long ns __unused)
         adev->adm_abandon_focus(adev->adm_data, in->capture_handle);
 }
 
+static int parse_snd_card_status(struct str_parms * parms, int * card,
+                                 card_status_t * status)
+{
+    char value[32]={0};
+    char state[32]={0};
+
+    int ret = str_parms_get_str(parms, "SND_CARD_STATUS", value, sizeof(value));
+
+    if (ret < 0)
+        return -1;
+
+    // sscanf should be okay as value is of max length 32.
+    // same as sizeof state.
+    if (sscanf(value, "%d,%s", card, state) < 2)
+        return -1;
+
+    *status = !strcmp(state, "ONLINE") ? CARD_STATUS_ONLINE :
+                                         CARD_STATUS_OFFLINE;
+    return 0;
+}
+
 __attribute__ ((visibility ("default")))
 bool audio_hw_send_gain_dep_calibration(int level) {
     bool ret_val = false;
@@ -1006,6 +1027,14 @@ int start_input_stream(struct stream_in *in)
     struct audio_device *adev = in->dev;
 
     ALOGV("%s: enter: usecase(%d)", __func__, in->usecase);
+
+    if (in->card_status == CARD_STATUS_OFFLINE ||
+        adev->card_status == CARD_STATUS_OFFLINE) {
+        ALOGW("in->card_status or adev->card_status offline, try again");
+        ret = -EAGAIN;
+        goto error_config;
+    }
+
     in->pcm_device_id = platform_get_pcm_device_id(in->usecase, PCM_CAPTURE);
     if (in->pcm_device_id < 0) {
         ALOGE("%s: Could not find PCM device id for the usecase(%d)",
@@ -1074,7 +1103,6 @@ int start_input_stream(struct stream_in *in)
         ret = pcm_start(in->pcm);
     }
     audio_extn_perf_lock_release();
-
     ALOGV("%s: exit", __func__);
 
     return ret;
@@ -1373,6 +1401,14 @@ int start_output_stream(struct stream_out *out)
 
     ALOGV("%s: enter: usecase(%d: %s) devices(%#x)",
           __func__, out->usecase, use_case_table[out->usecase], out->devices);
+
+    if (out->card_status == CARD_STATUS_OFFLINE ||
+        adev->card_status == CARD_STATUS_OFFLINE) {
+        ALOGW("out->card_status or adev->card_status offline, try again");
+        ret = -EAGAIN;
+        goto error_config;
+    }
+
     out->pcm_device_id = platform_get_pcm_device_id(out->usecase, PCM_PLAYBACK);
     if (out->pcm_device_id < 0) {
         ALOGE("%s: Invalid PCM device id(%d) for the usecase(%d)",
@@ -1848,6 +1884,46 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
     return -ENOSYS;
 }
 
+// note: this call is safe only if the stream_cb is
+// removed first in close_output_stream (as is done now).
+static void out_snd_mon_cb(void * stream, struct str_parms * parms)
+{
+    if (!stream || !parms)
+        return;
+
+    struct stream_out *out = (struct stream_out *)stream;
+    struct audio_device *adev = out->dev;
+
+    card_status_t status;
+    int card;
+    if (parse_snd_card_status(parms, &card, &status) < 0)
+        return;
+
+    pthread_mutex_lock(&adev->lock);
+    bool valid_cb = (card == adev->snd_card);
+    pthread_mutex_unlock(&adev->lock);
+
+    if (!valid_cb)
+        return;
+
+    ALOGV("out_snd_mon_cb for card %d usecase %s", card,
+          use_case_table[out->usecase]);
+
+    lock_output_stream(out);
+    if (out->card_status != status)
+        out->card_status = status;
+    pthread_mutex_unlock(&out->lock);
+
+    // a better solution would be to report error back to AF and let
+    // it put the stream to standby
+    if (status == CARD_STATUS_OFFLINE) {
+        ALOGW("new state == offline, move stream to standby");
+        out_standby(&out->stream.common);
+    }
+
+    return;
+}
+
 #ifdef NO_AUDIO_OUT
 static ssize_t out_write_for_no_output(struct audio_stream_out *stream,
                                        const void *buffer, size_t bytes)
@@ -2256,6 +2332,43 @@ static int in_set_gain(struct audio_stream_in *stream __unused, float gain __unu
     return 0;
 }
 
+static void in_snd_mon_cb(void * stream, struct str_parms * parms)
+{
+    if (!stream || !parms)
+        return;
+
+    struct stream_in *in = (struct stream_in *)stream;
+    struct audio_device *adev = in->dev;
+
+    card_status_t status;
+    int card;
+    if (parse_snd_card_status(parms, &card, &status) < 0)
+        return;
+
+    pthread_mutex_lock(&adev->lock);
+    bool valid_cb = (card == adev->snd_card);
+    pthread_mutex_unlock(&adev->lock);
+
+    if (!valid_cb)
+        return;
+
+    lock_input_stream(in);
+    if (in->card_status != status)
+        in->card_status = status;
+    pthread_mutex_unlock(&in->lock);
+
+    ALOGW("in_snd_mon_cb for card %d usecase %s, status %s", card,
+          use_case_table[in->usecase],
+          status == CARD_STATUS_OFFLINE ? "offline" : "online");
+
+    // a better solution would be to report error back to AF and let
+    // it put the stream to standby
+    if (status == CARD_STATUS_OFFLINE)
+        in_standby(&in->stream.common);
+
+    return;
+}
+
 static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
                        size_t bytes)
 {
@@ -2651,6 +2764,19 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     config->channel_mask = out->stream.common.get_channels(&out->stream.common);
     config->sample_rate = out->stream.common.get_sample_rate(&out->stream.common);
 
+
+    /*
+       By locking output stream before registering, we allow the callback
+       to update stream's state only after stream's initial state is set to
+       adev state.
+    */
+    lock_output_stream(out);
+    audio_extn_snd_mon_register_listener(out, out_snd_mon_cb);
+    pthread_mutex_lock(&adev->lock);
+    out->card_status = adev->card_status;
+    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&out->lock);
+
     *stream_out = &out->stream;
     ALOGV("%s: exit", __func__);
     return 0;
@@ -2669,6 +2795,10 @@ static void adev_close_output_stream(struct audio_hw_device *dev __unused,
     struct audio_device *adev = out->dev;
 
     ALOGV("%s: enter", __func__);
+
+    // must deregister from sndmonitor first to prevent races
+    // between the callback and close_stream
+    audio_extn_snd_mon_unregister_listener(out);
     out_standby(&stream->common);
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
         destroy_offload_callback_thread(out);
@@ -3010,6 +3140,13 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
        get sound trigger pcm if present */
     audio_extn_sound_trigger_check_and_get_session(in);
 
+    lock_input_stream(in);
+    audio_extn_snd_mon_register_listener(in, in_snd_mon_cb);
+    pthread_mutex_lock(&adev->lock);
+    in->card_status = adev->card_status;
+    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&in->lock);
+
     *stream_in = &in->stream;
     ALOGV("%s: exit", __func__);
     return 0;
@@ -3025,6 +3162,9 @@ static void adev_close_input_stream(struct audio_hw_device *dev __unused,
 {
     ALOGV("%s", __func__);
 
+    // must deregister from sndmonitor first to prevent races
+    // between the callback and close_stream
+    audio_extn_snd_mon_unregister_listener(stream);
     in_standby(&stream->common);
     free(stream);
 
@@ -3177,6 +3317,7 @@ static int adev_close(hw_device_t *device)
     if (!adev)
         return 0;
 
+    audio_extn_snd_mon_unregister_listener(adev);
     pthread_mutex_lock(&adev_init_lock);
 
     if ((--audio_device_ref_count) == 0) {
@@ -3217,6 +3358,29 @@ static int period_size_is_plausible_for_low_latency(int period_size)
     default:
         return 0;
     }
+}
+
+static void adev_snd_mon_cb(void * stream __unused, struct str_parms * parms)
+{
+    int card;
+    card_status_t status;
+
+    if (!parms)
+        return;
+
+    if (parse_snd_card_status(parms, &card, &status) < 0)
+        return;
+
+    pthread_mutex_lock(&adev->lock);
+    bool valid_cb = (card == adev->snd_card);
+    if (valid_cb) {
+        if (adev->card_status != status) {
+            adev->card_status = status;
+            platform_snd_card_update(adev->platform, status);
+        }
+    }
+    pthread_mutex_unlock(&adev->lock);
+    return;
 }
 
 static int adev_open(const hw_module_t *module, const char *name,
@@ -3285,7 +3449,6 @@ static int adev_open(const hw_module_t *module, const char *name,
         pthread_mutex_unlock(&adev_init_lock);
         return -EINVAL;
     }
-
     adev->extspk = audio_extn_extspk_init(adev);
     audio_extn_sound_trigger_init(adev);
 
@@ -3390,6 +3553,11 @@ static int adev_open(const hw_module_t *module, const char *name,
         adev->adm_data = adev->adm_init();
 
     audio_extn_perf_lock_init();
+    audio_extn_snd_mon_init();
+    pthread_mutex_lock(&adev->lock);
+    audio_extn_snd_mon_register_listener(NULL, adev_snd_mon_cb);
+    adev->card_status = CARD_STATUS_ONLINE;
+    pthread_mutex_unlock(&adev->lock);
 
     ALOGD("%s: exit", __func__);
     return 0;

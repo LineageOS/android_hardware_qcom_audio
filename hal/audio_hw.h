@@ -51,6 +51,11 @@
 #define MAX_SUPPORTED_CHANNEL_MASKS 2
 #define DEFAULT_HDMI_OUT_CHANNELS   2
 
+typedef enum card_status_t {
+    CARD_STATUS_OFFLINE,
+    CARD_STATUS_ONLINE
+} card_status_t;
+
 /* These are the supported use cases by the hardware.
  * Each usecase is mapped to a specific PCM device.
  * Refer to pcm_device_table[].
@@ -181,6 +186,7 @@ struct stream_out {
     int af_period_multiplier;
     bool routing_change;
     struct audio_device *dev;
+    card_status_t card_status;
 };
 
 struct stream_in {
@@ -208,6 +214,7 @@ struct stream_in {
     bool routing_change;
     struct audio_device *dev;
     audio_format_t format;
+    card_status_t card_status;
 };
 
 typedef enum {
@@ -271,6 +278,8 @@ struct audio_device {
     int snd_card;
     void *platform;
     void *extspk;
+
+    card_status_t card_status;
 
     void *visualizer_lib;
     int (*visualizer_start_output)(audio_io_handle_t, int);
