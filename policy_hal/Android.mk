@@ -29,6 +29,8 @@ LOCAL_STATIC_LIBRARIES := \
     libbase \
     libmedia_helper \
 
+LOCAL_CLANG_CFLAGS += -Wno-overloaded-virtual -Wno-unused-variable -Wno-unused-private-field 
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HDMI_SPK)),true)
 LOCAL_CFLAGS += -DAUDIO_EXTN_HDMI_SPK_ENABLED
 endif
