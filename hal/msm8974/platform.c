@@ -3566,7 +3566,6 @@ void platform_get_parameters(void *platform,
         str_parms_add_int(reply, AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED, isallowed);
     }
 
-done:
     kv_pairs = str_parms_to_str(reply);
     ALOGV_IF(kv_pairs != NULL, "%s: exit: returns - %s", __func__, kv_pairs);
     free(kv_pairs);

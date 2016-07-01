@@ -1105,7 +1105,7 @@ static void query_platform(const char *snd_card_name,
 }
 
 void platform_set_echo_reference(struct audio_device *adev, bool enable,
-    audio_devices_t out_device)
+    audio_devices_t out_device __unused)
 {
     struct platform_data *my_data = (struct platform_data *)adev->platform;
 
@@ -2256,7 +2256,7 @@ int platform_get_default_app_type(void *platform)
         return DEFAULT_APP_TYPE;
 }
 
-int platform_get_default_app_type_v2(void *platform, usecase_type_t  type)
+int platform_get_default_app_type_v2(void *platform __unused, usecase_type_t  type)
 {
     if(type == PCM_CAPTURE)
         return DEFAULT_APP_TYPE_TX_PATH;
@@ -2638,7 +2638,7 @@ int platform_stop_voice_call(void *platform, uint32_t vsid)
     return ret;
 }
 
-int platform_get_sample_rate(void *platform, uint32_t *rate)
+int platform_get_sample_rate(void *platform __unused, uint32_t *rate __unused)
 {
     return 0;
 }
