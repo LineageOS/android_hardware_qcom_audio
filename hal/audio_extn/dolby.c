@@ -737,7 +737,7 @@ int audio_extn_ds2_enable(struct audio_device *adev) {
     return 0;
 }
 
-int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, int state) {
+int audio_extn_dolby_set_dap_bypass(struct audio_device *adev __unused, int state) {
 
     ALOGV("%s: state %d", __func__, state);
     if (ds2extnmod.dap_hal_set_hw_info) {
@@ -749,7 +749,7 @@ int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, int state) {
     return 0;
 }
 
-void audio_extn_dolby_set_license(struct audio_device *adev)
+void audio_extn_dolby_set_license(struct audio_device *adev __unused)
 {
     int i_key=0;
     char c_key[128] = {0};
