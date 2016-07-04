@@ -94,11 +94,12 @@ typedef struct edid_audio_info {
 
 #ifndef HDMI_EDID
 #define edid_get_sink_caps(info, edid_data) (0)
+#define edid_is_supported_sr(info, sr) (0)
+#define edid_is_supported_bps(info, bps) (0)
 #else
 bool edid_get_sink_caps(edid_audio_info* info, char *edid_data);
-#endif
-
 bool edid_is_supported_sr(edid_audio_info* info, int sr);
 bool edid_is_supported_bps(edid_audio_info* info, int bps);
+#endif
 
 #endif /* EDID_H */
