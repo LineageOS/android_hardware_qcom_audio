@@ -75,15 +75,6 @@
 #define MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE (2 * 1024)
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE_FOR_AV_STREAMING (2 * 1024)
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
-/* Used in calculating fragment size for pcm offload */
-#define PCM_OFFLOAD_BUFFER_DURATION 40 /* 40 millisecs */
-
-/* MAX PCM fragment size cannot be increased  further due
- * to flinger's cblk size of 1mb,and it has to be a multiple of
- * 24 - lcm of channels supported by DSP
- */
-#define MAX_PCM_OFFLOAD_FRAGMENT_SIZE (240 * 1024)
-#define MIN_PCM_OFFLOAD_FRAGMENT_SIZE  512
 
 /*
  * Offload buffer size for compress passthrough
@@ -91,8 +82,6 @@
 #define MIN_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE (2 * 1024)
 #define MAX_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE (8 * 1024)
 
-#define DIV_ROUND_UP(x, y) (((x) + (y) - 1)/(y))
-#define ALIGN(x, y) ((y) * DIV_ROUND_UP((x), (y)))
 /*
  * This file will have a maximum of 38 bytes:
  *
@@ -208,6 +197,7 @@ typedef struct codec_backend_cfg {
 } codec_backend_cfg_t;
 
 static native_audio_prop na_props = {0, 0, 0};
+static bool supports_true_32_bit = false;
 
 struct platform_data {
     struct audio_device *adev;
@@ -2382,6 +2372,28 @@ int native_audio_set_params(struct platform_data *platform,
     return ret;
 }
 
+static void true_32_bit_set_params(struct str_parms *parms,
+                                 char *value, int len)
+{
+    int ret = 0;
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_TRUE_32_BIT,
+                            value,len);
+    if (ret >= 0) {
+        if (value && !strncmp(value, "true", sizeof("src")))
+            supports_true_32_bit = true;
+        else
+            supports_true_32_bit = false;
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_TRUE_32_BIT);
+    }
+
+}
+
+bool platform_supports_true_32bit()
+{
+    return supports_true_32_bit;
+}
+
 int check_hdset_combo_device(snd_device_t snd_device)
 {
     int ret = false;
@@ -3610,6 +3622,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
 
     native_audio_set_params(platform, parms, value, sizeof(value));
     audio_extn_spkr_prot_set_parameters(parms, value, len);
+    true_32_bit_set_params(parms, value, len);
     ALOGV("%s: exit with code(%d)", __func__, ret);
     return ret;
 }
@@ -3984,33 +3997,6 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
     return fragment_size;
 }
 
-uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
-{
-    uint32_t fragment_size = 0;
-    uint32_t bytes_per_sample;
-    uint32_t pcm_offload_time = PCM_OFFLOAD_BUFFER_DURATION;
-
-    bytes_per_sample = audio_bytes_per_sample(info->format);
-
-    //duration is set to 40 ms worth of stereo data at 48Khz
-    //with 16 bit per sample, modify this when the channel
-    //configuration is different
-    fragment_size = (pcm_offload_time
-                     * info->sample_rate
-                     * bytes_per_sample
-                     * popcount(info->channel_mask))/1000;
-    if(fragment_size < MIN_PCM_OFFLOAD_FRAGMENT_SIZE)
-        fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
-    else if(fragment_size > MAX_PCM_OFFLOAD_FRAGMENT_SIZE)
-        fragment_size = MAX_PCM_OFFLOAD_FRAGMENT_SIZE;
-    // To have same PCM samples for all channels, the buffer size requires to
-    // be multiple of (number of channels * bytes per sample)
-    // For writes to succeed, the buffer must be written at address which is multiple of 32
-    fragment_size = ALIGN(fragment_size, (bytes_per_sample * popcount(info->channel_mask) * 32));
-
-    ALOGI("PCM offload Fragment size to %d bytes", fragment_size);
-    return fragment_size;
-}
 
 /*
  * configures afe with bit width and Sample Rate
@@ -5199,60 +5185,6 @@ int platform_set_audio_device_interface(const char * device_name,
 
     ret = -EINVAL;
 
-done:
-    return ret;
-}
-
- /*
- * This is a lookup table to map names of speaker device with respective left and right TZ names.
- * Also the tz names for a particular left or right speaker can be overriden by adding
- * corresponding entry in audio_platform_info.xml file.
- */
-struct speaker_device_to_tz_names speaker_device_tz_names = {
-    SND_DEVICE_OUT_SPEAKER, "", ""
-};
-
-const char *platform_get_spkr_1_tz_name(snd_device_t snd_device)
-{
-    if (snd_device >= SND_DEVICE_MIN && snd_device < SND_DEVICE_MAX)
-        return speaker_device_tz_names.spkr_1_tz_name;
-    else
-        return "";
-}
-
-const char *platform_get_spkr_2_tz_name(snd_device_t snd_device)
-{
-    if (snd_device >= SND_DEVICE_MIN && snd_device < SND_DEVICE_MAX)
-        return speaker_device_tz_names.spkr_2_tz_name;
-    else
-        return "";
-}
-
-int platform_set_spkr_device_tz_names(snd_device_t index,
-                                      const char *spkr_1_tz_name, const char *spkr_2_tz_name)
-{
-    int ret = 0;
-
-    if (spkr_1_tz_name == NULL && spkr_2_tz_name == NULL) {
-        ALOGE("%s: Invalid input", __func__);
-        ret = -EINVAL;
-        goto done;
-    }
-    if (index != speaker_device_tz_names.snd_device) {
-        ALOGE("%s: not matching speaker device\n", __func__);
-        ret = -EINVAL;
-        goto done;
-    }
-    ALOGD("%s: Enter, spkr_1_tz_name :%s, spkr_2_tz_name:%s",
-            __func__, spkr_1_tz_name, spkr_2_tz_name);
-
-    if (spkr_1_tz_name != NULL)
-        strlcpy(speaker_device_tz_names.spkr_1_tz_name, spkr_1_tz_name,
-                sizeof(speaker_device_tz_names.spkr_1_tz_name));
-
-    if (spkr_2_tz_name != NULL)
-        strlcpy(speaker_device_tz_names.spkr_2_tz_name, spkr_2_tz_name,
-                sizeof(speaker_device_tz_names.spkr_2_tz_name));
 done:
     return ret;
 }

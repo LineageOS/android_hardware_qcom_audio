@@ -99,6 +99,7 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_PCM_16_BIT),
     STRING_TO_ENUM(AUDIO_FORMAT_PCM_24_BIT_PACKED),
     STRING_TO_ENUM(AUDIO_FORMAT_PCM_8_24_BIT),
+    STRING_TO_ENUM(AUDIO_FORMAT_PCM_32_BIT),
     STRING_TO_ENUM(AUDIO_FORMAT_PCM_8_BIT),
     STRING_TO_ENUM(AUDIO_FORMAT_MP3),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC),
@@ -700,6 +701,124 @@ int read_line_from_file(const char *path, char *buf, size_t count)
     fclose(fd);
 
    return rv;
+}
+
+/*Translates ALSA formats to AOSP PCM formats*/
+audio_format_t alsa_format_to_hal(uint32_t alsa_format)
+{
+    audio_format_t format;
+
+    switch(alsa_format) {
+    case SNDRV_PCM_FORMAT_S16_LE:
+        format = AUDIO_FORMAT_PCM_16_BIT;
+        break;
+    case SNDRV_PCM_FORMAT_S24_3LE:
+        format = AUDIO_FORMAT_PCM_24_BIT_PACKED;
+        break;
+    case SNDRV_PCM_FORMAT_S24_LE:
+        format = AUDIO_FORMAT_PCM_8_24_BIT;
+        break;
+    case SNDRV_PCM_FORMAT_S32_LE:
+        format = AUDIO_FORMAT_PCM_32_BIT;
+        break;
+    default:
+        ALOGW("Incorrect ALSA format");
+        format = AUDIO_FORMAT_INVALID;
+    }
+    return format;
+}
+
+/*Translates hal format (AOSP) to alsa formats*/
+uint32_t hal_format_to_alsa(audio_format_t hal_format)
+{
+    uint32_t alsa_format;
+
+    switch (hal_format) {
+    case AUDIO_FORMAT_PCM_32_BIT: {
+        if (platform_supports_true_32bit())
+            alsa_format = SNDRV_PCM_FORMAT_S32_LE;
+        else
+            alsa_format = SNDRV_PCM_FORMAT_S24_3LE;
+        }
+        break;
+    case AUDIO_FORMAT_PCM_8_BIT:
+        alsa_format = SNDRV_PCM_FORMAT_S8;
+        break;
+    case AUDIO_FORMAT_PCM_24_BIT_PACKED:
+        alsa_format = SNDRV_PCM_FORMAT_S24_3LE;
+        break;
+    case AUDIO_FORMAT_PCM_8_24_BIT: {
+        if (platform_supports_true_32bit())
+            alsa_format = SNDRV_PCM_FORMAT_S32_LE;
+        else
+            alsa_format = SNDRV_PCM_FORMAT_S24_3LE;
+        }
+        break;
+    case AUDIO_FORMAT_PCM_FLOAT:
+        alsa_format = SNDRV_PCM_FORMAT_S24_3LE;
+        break;
+    default:
+    case AUDIO_FORMAT_PCM_16_BIT:
+        alsa_format = SNDRV_PCM_FORMAT_S16_LE;
+        break;
+    }
+    return alsa_format;
+}
+
+uint32_t get_alsa_fragment_size(uint32_t bytes_per_sample,
+                                  uint32_t sample_rate,
+                                  uint32_t noOfChannels)
+{
+    uint32_t fragment_size = 0;
+    uint32_t pcm_offload_time = PCM_OFFLOAD_BUFFER_DURATION;
+
+    fragment_size = (pcm_offload_time
+                     * sample_rate
+                     * bytes_per_sample
+                     * noOfChannels)/1000;
+    if (fragment_size < MIN_PCM_OFFLOAD_FRAGMENT_SIZE)
+        fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
+    else if (fragment_size > MAX_PCM_OFFLOAD_FRAGMENT_SIZE)
+        fragment_size = MAX_PCM_OFFLOAD_FRAGMENT_SIZE;
+    /*To have same PCM samples for all channels, the buffer size requires to
+     *be multiple of (number of channels * bytes per sample)
+     *For writes to succeed, the buffer must be written at address which is multiple of 32
+     */
+    fragment_size = ALIGN(fragment_size, (bytes_per_sample * noOfChannels * 32));
+
+    ALOGI("PCM offload Fragment size to %d bytes", fragment_size);
+    return fragment_size;
+}
+
+/* Calculates the fragment size required to configure compress session.
+ * Based on the alsa format selected, decide if conversion is needed in
+
+ * HAL ( e.g. convert AUDIO_FORMAT_PCM_FLOAT input format to
+ * AUDIO_FORMAT_PCM_24_BIT_PACKED before writing to the compress driver.
+ */
+void audio_extn_utils_update_direct_pcm_fragment_size(struct stream_out *out)
+{
+    audio_format_t dst_format = out->compr_pcm_config.hal_op_format;
+    audio_format_t src_format = out->compr_pcm_config.hal_ip_format;
+    uint32_t hal_op_bytes_per_sample = audio_bytes_per_sample(dst_format);
+    uint32_t hal_ip_bytes_per_sample = audio_bytes_per_sample(src_format);
+
+    out->compr_config.fragment_size =
+             get_alsa_fragment_size(hal_op_bytes_per_sample,
+                                      out->sample_rate,
+                                      popcount(out->channel_mask));
+
+    if ((src_format != dst_format) &&
+         hal_op_bytes_per_sample != hal_ip_bytes_per_sample) {
+
+        out->compr_pcm_config.hal_fragment_size =
+                  ((out->compr_config.fragment_size * hal_ip_bytes_per_sample) /
+                   hal_op_bytes_per_sample);
+        ALOGI("enable conversion hal_input_fragment_size is %d src_format %x dst_format %x",
+               out->compr_pcm_config.hal_fragment_size, src_format, dst_format);
+    } else {
+        out->compr_pcm_config.hal_fragment_size = out->compr_config.fragment_size;
+    }
 }
 
 void audio_extn_utils_send_audio_calibration(struct audio_device *adev,

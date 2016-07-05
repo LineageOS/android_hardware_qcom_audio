@@ -208,6 +208,8 @@ enum {
 #define AUDIO_PARAMETER_KEY_NATIVE_AUDIO "audio.nat.codec.enabled"
 #define AUDIO_PARAMETER_KEY_NATIVE_AUDIO_MODE "native_audio_mode"
 
+#define AUDIO_PARAMETER_KEY_TRUE_32_BIT "true_32_bit"
+
 #define ALL_SESSION_VSID                0xFFFFFFFF
 #define DEFAULT_MUTE_RAMP_DURATION_MS   20
 #define DEFAULT_VOLUME_RAMP_DURATION_MS 20
@@ -236,6 +238,17 @@ enum {
 #define HDMI_MULTI_PERIOD_COUNT 8
 #define HDMI_MULTI_DEFAULT_CHANNEL_COUNT 6
 #define HDMI_MULTI_PERIOD_BYTES (HDMI_MULTI_PERIOD_SIZE * HDMI_MULTI_DEFAULT_CHANNEL_COUNT * 2)
+
+
+/* Used in calculating fragment size for pcm offload */
+#define PCM_OFFLOAD_BUFFER_DURATION 40 /* 40 millisecs */
+
+/* MAX PCM fragment size cannot be increased  further due
+ * to flinger's cblk size of 1mb,and it has to be a multiple of
+ * 24 - lcm of channels supported by DSP
+ */
+#define MAX_PCM_OFFLOAD_FRAGMENT_SIZE (240 * 1024)
+#define MIN_PCM_OFFLOAD_FRAGMENT_SIZE 512
 
 #define AUDIO_CAPTURE_PERIOD_DURATION_MSEC 20
 #define AUDIO_CAPTURE_PERIOD_COUNT 2
