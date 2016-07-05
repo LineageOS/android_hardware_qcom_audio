@@ -80,6 +80,7 @@ PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msmcobalt/sound_trigger_mixer_paths.xml:system/etc/sound_trigger_mixer_paths.xml \
     hardware/qcom/audio/configs/msmcobalt/sound_trigger_mixer_paths_wcd9330.xml:system/etc/sound_trigger_mixer_paths_wcd9330.xml \
     hardware/qcom/audio/configs/msmcobalt/sound_trigger_platform_info.xml:system/etc/sound_trigger_platform_info.xml \
+    hardware/qcom/audio/configs/msmcobalt/graphite_ipc_platform_info.xml:system/etc/graphite_ipc_platform_info.xml \
     hardware/qcom/audio/configs/msmcobalt/audio_platform_info.xml:system/etc/audio_platform_info.xml
 
 #XML Audio configuration files
