@@ -97,7 +97,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FM_POWER_OPT)),true)
     LOCAL_SRC_FILES += audio_extn/fm.c
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_USBAUDIO)),true)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_USB_TUNNEL_AUDIO)),true)
     LOCAL_CFLAGS += -DUSB_HEADSET_ENABLED
     LOCAL_SRC_FILES += audio_extn/usb.c
 endif
