@@ -40,8 +40,6 @@
 
 #define UNUSED(a) ((void)(a))
 
-#define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
-
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
@@ -94,7 +92,6 @@
 char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
         [WCD9XXX_ANC_CAL] = "anc_cal",
         [WCD9XXX_MBHC_CAL] = "mbhc_cal",
-        [WCD9XXX_MAD_CAL] = "mad_cal",
 };
 #endif
 
@@ -511,9 +508,6 @@ static int send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibrat
     for (type = WCD9XXX_ANC_CAL; type < WCD9XXX_MAX_CAL; type++) {
         struct wcdcal_ioctl_buffer codec_buffer;
         struct param_data calib;
-
-        if (!strcmp(cal_name_info[type], "mad_cal"))
-            calib.acdb_id = SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID;
         calib.get_size = 1;
         ret = acdb_loader_get_calibration(cal_name_info[type], sizeof(struct param_data),
                                                                  &calib);
