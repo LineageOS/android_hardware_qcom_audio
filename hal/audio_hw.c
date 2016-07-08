@@ -169,8 +169,8 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = "low-latency-playback",
     [USECASE_AUDIO_PLAYBACK_MULTI_CH] = "multi-channel-playback",
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] = "compress-offload-playback",
-#ifdef MULTIPLE_OFFLOAD_ENABLED
     [USECASE_AUDIO_PLAYBACK_OFFLOAD2] = "compress-offload-playback2",
+#ifdef MULTIPLE_OFFLOAD_ENABLED
     [USECASE_AUDIO_PLAYBACK_OFFLOAD3] = "compress-offload-playback3",
     [USECASE_AUDIO_PLAYBACK_OFFLOAD4] = "compress-offload-playback4",
     [USECASE_AUDIO_PLAYBACK_OFFLOAD5] = "compress-offload-playback5",
@@ -180,7 +180,6 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_OFFLOAD9] = "compress-offload-playback9",
 #endif
     [USECASE_AUDIO_PLAYBACK_ULL] = "audio-ull-playback",
-    [USECASE_AUDIO_DIRECT_PCM_OFFLOAD] = "compress-offload-playback2",
 
     [USECASE_AUDIO_RECORD] = "audio-record",
     [USECASE_AUDIO_RECORD_COMPRESS] = "audio-record-compress",
@@ -216,8 +215,8 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
 
 static const audio_usecase_t offload_usecases[] = {
     USECASE_AUDIO_PLAYBACK_OFFLOAD,
-#ifdef MULTIPLE_OFFLOAD_ENABLED
     USECASE_AUDIO_PLAYBACK_OFFLOAD2,
+#ifdef MULTIPLE_OFFLOAD_ENABLED
     USECASE_AUDIO_PLAYBACK_OFFLOAD3,
     USECASE_AUDIO_PLAYBACK_OFFLOAD4,
     USECASE_AUDIO_PLAYBACK_OFFLOAD5,
@@ -226,7 +225,6 @@ static const audio_usecase_t offload_usecases[] = {
     USECASE_AUDIO_PLAYBACK_OFFLOAD8,
     USECASE_AUDIO_PLAYBACK_OFFLOAD9,
 #endif
-    USECASE_AUDIO_DIRECT_PCM_OFFLOAD,
 };
 
 #define STRING_TO_ENUM(string) { #string, string }
@@ -1231,26 +1229,36 @@ bool is_offload_usecase(audio_usecase_t uc_id)
     return false;
 }
 
-static audio_usecase_t get_offload_usecase(struct audio_device *adev)
+static audio_usecase_t get_offload_usecase(struct audio_device *adev, bool is_direct_pcm)
 {
-    audio_usecase_t ret = USECASE_AUDIO_PLAYBACK_OFFLOAD;
-    unsigned int i, num_usecase = sizeof(offload_usecases)/sizeof(offload_usecases[0]);
-    char value[PROPERTY_VALUE_MAX] = {0};
+    audio_usecase_t ret_uc = USECASE_INVALID;
+    unsigned int offload_uc_index;
+    unsigned int num_usecase = sizeof(offload_usecases)/sizeof(offload_usecases[0]);
+    if (!adev->multi_offload_enable) {
+        if (is_direct_pcm)
+            ret_uc = USECASE_AUDIO_PLAYBACK_OFFLOAD2;
+        else
+            ret_uc = USECASE_AUDIO_PLAYBACK_OFFLOAD;
 
-    property_get("audio.offload.multiple.enabled", value, NULL);
-    if (!(atoi(value) || !strncmp("true", value, 4)))
-        num_usecase = 1; /* If prop is not set, limit the num of offload usecases to 1 */
+        pthread_mutex_lock(&adev->lock);
+        if (get_usecase_from_list(adev, ret_uc) != NULL)
+           ret_uc = USECASE_INVALID;
+        pthread_mutex_unlock(&adev->lock);
+
+        return ret_uc;
+    }
 
     ALOGV("%s: num_usecase: %d", __func__, num_usecase);
-    for (i = 0; i < num_usecase; i++) {
-        if (!(adev->offload_usecases_state & (0x1<<i))) {
-            adev->offload_usecases_state |= 0x1 << i;
-            ret = offload_usecases[i];
+    for (offload_uc_index = 0; offload_uc_index < num_usecase; offload_uc_index++) {
+        if (!(adev->offload_usecases_state & (0x1 << offload_uc_index))) {
+            adev->offload_usecases_state |= 0x1 << offload_uc_index;
+            ret_uc = offload_usecases[offload_uc_index];
             break;
         }
     }
-    ALOGV("%s: offload usecase is %d", __func__, ret);
-    return ret;
+
+    ALOGV("%s: offload usecase is %d", __func__, ret_uc);
+    return ret_uc;
 }
 
 static void free_offload_usecase(struct audio_device *adev,
@@ -2242,7 +2250,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             out->standby = true;
             goto exit;
         }
-        if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD && adev->adm_register_output_stream)
+        if (!is_offload_usecase(out->usecase) && adev->adm_register_output_stream)
             adev->adm_register_output_stream(adev->adm_data, out->handle, out->flags);
     }
 
@@ -3037,11 +3045,11 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->stream.pause = out_pause;
             out->stream.flush = out_flush;
             out->stream.resume = out_resume;
-            out->usecase = get_offload_usecase(adev);
+            out->usecase = get_offload_usecase(adev, true);
             ALOGV("DIRECT_PCM usecase ... usecase selected %d ", out->usecase);
         } else {
             ALOGV("%s:: inserting OFFLOAD_USECASE", __func__);
-            out->usecase = get_offload_usecase(adev);
+            out->usecase = get_offload_usecase(adev, false);
 
             out->stream.set_callback = out_set_callback;
             out->stream.pause = out_pause;
@@ -3049,6 +3057,20 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->stream.drain = out_drain;
             out->stream.flush = out_flush;
         }
+
+        if (out->usecase == USECASE_INVALID) {
+            if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL &&
+                    config->format == 0 && config->sample_rate == 0 &&
+                    config->channel_mask == 0) {
+                ALOGI("%s dummy open to query sink capability",__func__);
+                out->usecase = USECASE_AUDIO_PLAYBACK_OFFLOAD;
+            } else {
+                ALOGE("%s, Max allowed OFFLOAD usecase reached ... ", __func__);
+                ret = -EEXIST;
+                goto error_open;
+            }
+        }
+
         if (config->offload_info.channel_mask)
             out->channel_mask = config->offload_info.channel_mask;
         else if (config->channel_mask) {
@@ -3984,6 +4006,8 @@ static int adev_open(const hw_module_t *module, const char *name,
             configured_low_latency_capture_period_size = trial;
         }
     }
+
+    adev->multi_offload_enable = property_get_bool("audio.offload.multiple.enabled", false);
 
     pthread_mutex_unlock(&adev_init_lock);
 

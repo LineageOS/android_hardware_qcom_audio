@@ -267,12 +267,12 @@ int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                         MULTIMEDIA2_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] =
                      {PLAYBACK_OFFLOAD_DEVICE, PLAYBACK_OFFLOAD_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD2] = {PLAYBACK_OFFLOAD_DEVICE2, PLAYBACK_OFFLOAD_DEVICE2},
 #ifdef MULTIPLE_OFFLOAD_ENABLED
     /* Below entries are initialized with invalid values
      * Valid values should be updated from fnc platform_info_init()
      * based on pcm ids defined in audio_platform_info.xml.
      */
-    [USECASE_AUDIO_PLAYBACK_OFFLOAD2] = {-1, -1},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD3] = {-1, -1},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD4] = {-1, -1},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD5] = {-1, -1},
@@ -282,8 +282,6 @@ int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_OFFLOAD9] = {-1, -1},
 #endif
     [USECASE_AUDIO_PLAYBACK_ULL] = {MULTIMEDIA3_PCM_DEVICE, MULTIMEDIA3_PCM_DEVICE},
-    [USECASE_AUDIO_DIRECT_PCM_OFFLOAD] =
-                     {PLAYBACK_OFFLOAD_DEVICE2, PLAYBACK_OFFLOAD_DEVICE2},
     [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_COMPRESS] = {COMPRESS_CAPTURE_DEVICE, COMPRESS_CAPTURE_DEVICE},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
@@ -668,8 +666,8 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_LOW_LATENCY)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_MULTI_CH)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD)},
-#ifdef MULTIPLE_OFFLOAD_ENABLED
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD2)},
+#ifdef MULTIPLE_OFFLOAD_ENABLED
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD3)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD4)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD5)},
@@ -679,7 +677,6 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD9)},
 #endif
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_ULL)},
-    {TO_NAME_INDEX(USECASE_AUDIO_DIRECT_PCM_OFFLOAD)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_LOW_LATENCY)},
     {TO_NAME_INDEX(USECASE_VOICE_CALL)},
@@ -3286,7 +3283,6 @@ bool platform_listen_usecase_needs_event(audio_usecase_t uc_id)
     case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
     case USECASE_AUDIO_PLAYBACK_MULTI_CH:
     case USECASE_AUDIO_PLAYBACK_OFFLOAD:
-    case USECASE_AUDIO_DIRECT_PCM_OFFLOAD:
         needs_event = true;
         break;
     /* concurrent playback in low latency allowed */
@@ -3350,7 +3346,6 @@ bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id)
     case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
     case USECASE_AUDIO_PLAYBACK_MULTI_CH:
     case USECASE_AUDIO_PLAYBACK_OFFLOAD:
-    case USECASE_AUDIO_DIRECT_PCM_OFFLOAD:
         needs_event = true;
         break;
     /* concurrent playback in low latency allowed */
