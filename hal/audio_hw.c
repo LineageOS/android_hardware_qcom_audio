@@ -2626,6 +2626,17 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->config.channels = audio_channel_count_from_out_mask(out->channel_mask);
         out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels * 2);
     } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
+        pthread_mutex_lock(&adev->lock);
+        bool offline = (adev->card_status == CARD_STATUS_OFFLINE);
+        pthread_mutex_unlock(&adev->lock);
+
+        // reject offload during card offline to allow
+        // fallback to s/w paths
+        if (offline) {
+            ret = -ENODEV;
+            goto error_open;
+        }
+
         if (config->offload_info.version != AUDIO_INFO_INITIALIZER.version ||
             config->offload_info.size != AUDIO_INFO_INITIALIZER.size) {
             ALOGE("%s: Unsupported Offload information", __func__);
