@@ -1228,6 +1228,10 @@ static void *offload_thread_loop(void *context)
             send_callback = true;
             event = STREAM_CBK_EVENT_DRAIN_READY;
             break;
+        case OFFLOAD_CMD_ERROR:
+            send_callback = true;
+            event = STREAM_CBK_EVENT_ERROR;
+            break;
         default:
             ALOGE("%s unknown command received: %d", __func__, cmd->cmd);
             break;
@@ -1653,6 +1657,28 @@ static int out_standby(struct audio_stream *stream)
     return 0;
 }
 
+static int out_on_error(struct audio_stream *stream)
+{
+    struct stream_out *out = (struct stream_out *)stream;
+    struct audio_device *adev = out->dev;
+    bool do_standby = false;
+
+    lock_output_stream(out);
+    if (!out->standby) {
+        if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+            stop_compressed_output_l(out);
+            send_offload_cmd_l(out, OFFLOAD_CMD_ERROR);
+        } else
+            do_standby = true;
+    }
+    pthread_mutex_unlock(&out->lock);
+
+    if (do_standby)
+        return out_standby(&out->stream.common);
+
+    return 0;
+}
+
 static int out_dump(const struct audio_stream *stream __unused, int fd __unused)
 {
     return 0;
@@ -1906,20 +1932,17 @@ static void out_snd_mon_cb(void * stream, struct str_parms * parms)
     if (!valid_cb)
         return;
 
-    ALOGV("out_snd_mon_cb for card %d usecase %s", card,
-          use_case_table[out->usecase]);
-
     lock_output_stream(out);
     if (out->card_status != status)
         out->card_status = status;
     pthread_mutex_unlock(&out->lock);
 
-    // a better solution would be to report error back to AF and let
-    // it put the stream to standby
-    if (status == CARD_STATUS_OFFLINE) {
-        ALOGW("new state == offline, move stream to standby");
-        out_standby(&out->stream.common);
-    }
+    ALOGW("out_snd_mon_cb for card %d usecase %s, status %s", card,
+          use_case_table[out->usecase],
+          status == CARD_STATUS_OFFLINE ? "offline" : "online");
+
+    if (status == CARD_STATUS_OFFLINE)
+        out_on_error(stream);
 
     return;
 }
@@ -2024,11 +2047,12 @@ exit:
     pthread_mutex_unlock(&out->lock);
 
     if (ret != 0) {
+        out_on_error(&out->stream.common);
         if (out->pcm)
             ALOGE("%s: error %zu - %s", __func__, ret, pcm_get_error(out->pcm));
-        out_standby(&out->stream.common);
-        usleep(bytes * 1000000 / audio_stream_out_frame_size(stream) /
-               out_get_sample_rate(&out->stream.common));
+        if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD)
+            usleep(bytes * 1000000 / audio_stream_out_frame_size(stream) /
+                   out_get_sample_rate(&out->stream.common));
     }
     return bytes;
 }
