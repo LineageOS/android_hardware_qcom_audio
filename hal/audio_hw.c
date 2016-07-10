@@ -341,6 +341,8 @@ int enable_snd_device(struct audio_device *adev,
         ALOGV("%s: snd_device(%d: %s) is already active",
               __func__, snd_device, platform_get_snd_device_name(snd_device));
         return 0;
+    } else {
+        platform_send_audio_calibration(adev->platform, snd_device);
     }
 
     if (audio_extn_spkr_prot_is_enabled())
@@ -370,7 +372,6 @@ int enable_snd_device(struct audio_device *adev,
         /* due to the possibility of calibration overwrite between listen
             and audio, notify sound trigger hal before audio calibration is sent */
                 ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, dev_path);
-        platform_send_audio_calibration(adev->platform, snd_device);
         audio_route_apply_and_update_path(adev->audio_route, dev_path);
     }
 
