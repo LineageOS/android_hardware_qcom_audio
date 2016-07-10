@@ -336,6 +336,8 @@ int enable_snd_device(struct audio_device *adev,
         return -EINVAL;
     }
 
+    platform_send_audio_calibration(adev->platform, snd_device);
+
     adev->snd_dev_ref_cnt[snd_device]++;
     if (adev->snd_dev_ref_cnt[snd_device] > 1) {
         ALOGV("%s: snd_device(%d: %s) is already active",
@@ -370,7 +372,6 @@ int enable_snd_device(struct audio_device *adev,
         /* due to the possibility of calibration overwrite between listen
             and audio, notify sound trigger hal before audio calibration is sent */
                 ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, dev_path);
-        platform_send_audio_calibration(adev->platform, snd_device);
         audio_route_apply_and_update_path(adev->audio_route, dev_path);
     }
 
