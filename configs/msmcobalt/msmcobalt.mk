@@ -201,3 +201,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
 use.qti.sw.alac.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 use.qti.sw.ape.decoder=true
+
+#enable hw aac encoder by default
+PRODUCT_PROPERTY_OVERRIDES += \
+qcom.hw.aac.encoder=true
+
