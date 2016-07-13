@@ -2037,6 +2037,8 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         list_add_tail(&operator_info_list, &info->list);
         ALOGV("%s: add operator[%s] mccmnc[%s]", __func__, info->name, info->mccmnc);
     }
+
+    audio_extn_hfp_set_parameters(my_data->adev, parms);
 done:
     ALOGV("%s: exit with code(%d)", __func__, ret);
     if (kv_pairs != NULL)
