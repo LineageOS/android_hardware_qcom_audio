@@ -105,6 +105,7 @@ typedef void (*acdb_send_audio_cal_t)(int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
 typedef int (*acdb_send_gain_dep_cal_t)(int, int, int, int, int);
+typedef int (*acdb_send_custom_top_t) (void);
 
 /* Audio calibration related functions */
 struct platform_data {
@@ -119,11 +120,21 @@ struct platform_data {
     bool speaker_lr_swap;
 
     void *acdb_handle;
+#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996)
+    acdb_init_v2_cvd_t acdb_init;
+#elif defined (PLATFORM_MSM8084)
+    acdb_init_v2_t acdb_init;
+#else
+    acdb_init_t acdb_init;
+#endif
     acdb_deallocate_t          acdb_deallocate;
     acdb_send_audio_cal_t      acdb_send_audio_cal;
     acdb_send_voice_cal_t      acdb_send_voice_cal;
     acdb_reload_vocvoltable_t  acdb_reload_vocvoltable;
     acdb_send_gain_dep_cal_t   acdb_send_gain_dep_cal;
+    acdb_send_custom_top_t     acdb_send_custom_top;
+    bool acdb_initialized;
+
     struct csd_data *csd;
     char ec_ref_mixer_path[64];
 
@@ -946,6 +957,39 @@ done:
     return;
 }
 
+static int platform_acdb_init(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+
+    if (!my_data->acdb_init) {
+        ALOGE("%s: no acdb_init fn provided", __func__);
+        return -1;
+    }
+
+    if (my_data->acdb_initialized) {
+        ALOGW("acdb is already initialized");
+        return 0;
+    }
+
+#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996)
+    char *cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
+    if (!cvd_version)
+        ALOGE("failed to allocate cvd_version");
+    else {
+        get_cvd_version(cvd_version, adev);
+        my_data->acdb_init((char *)my_data->snd_card_name, cvd_version, 0);
+        free(cvd_version);
+    }
+#elif defined (PLATFORM_MSM8084)
+    my_data->acdb_init((char *)my_data->snd_card_name);
+#else
+    my_data->acdb_init();
+#endif
+    my_data->acdb_initialized = true;
+    return 0;
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char value[PROPERTY_VALUE_MAX];
@@ -1198,39 +1242,38 @@ void *platform_init(struct audio_device *adev)
         acdb_init_v2_cvd_t acdb_init;
         acdb_init = (acdb_init_v2_cvd_t)dlsym(my_data->acdb_handle,
                                               "acdb_loader_init_v2");
-        if (acdb_init == NULL) {
-            ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__, dlerror());
-            goto acdb_init_fail;
-        }
+        if (acdb_init == NULL)
+            ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__,
+                  dlerror());
 
-        cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
-        get_cvd_version(cvd_version, adev);
-        if (!cvd_version)
-            ALOGE("failed to allocate cvd_version");
-        else
-            acdb_init((char *)snd_card_name, cvd_version, 0);
-        free(cvd_version);
 #elif defined (PLATFORM_MSM8084)
         acdb_init_v2_t acdb_init;
         acdb_init = (acdb_init_v2_t)dlsym(my_data->acdb_handle,
                                           "acdb_loader_init_v2");
-        if (acdb_init == NULL) {
-            ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__, dlerror());
-            goto acdb_init_fail;
-        }
-        acdb_init((char *)snd_card_name);
+        if (acdb_init == NULL)
+            ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__,
+                  dlerror());
+
 #else
         acdb_init_t acdb_init;
         acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_init_ACDB");
         if (acdb_init == NULL)
-            ALOGE("%s: dlsym error %s for acdb_loader_init_ACDB", __func__, dlerror());
-        else
-            acdb_init();
+            ALOGE("%s: dlsym error %s for acdb_loader_init_ACDB", __func__,
+                  dlerror());
 #endif
-    }
+        my_data->acdb_init = acdb_init;
 
-acdb_init_fail:
+        my_data->acdb_send_custom_top = (acdb_send_custom_top_t)
+                                        dlsym(my_data->acdb_handle,
+                                              "acdb_loader_send_common_custom_topology");
+
+        if (!my_data->acdb_send_custom_top)
+            ALOGE("%s: Could not find the symbol acdb_get_default_app_type from %s",
+                  __func__, LIB_ACDB_LOADER);
+
+        platform_acdb_init(my_data);
+    }
 
     audio_extn_spkr_prot_init(adev);
 
@@ -2782,4 +2825,16 @@ int platform_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl,
     }
 
     return num_gain_tbl_entry;
+}
+
+int platform_snd_card_update(void *platform, card_status_t status)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+
+    if (status == CARD_STATUS_ONLINE) {
+        if (my_data->acdb_send_custom_top)
+            my_data->acdb_send_custom_top();
+    }
+    return 0;
 }

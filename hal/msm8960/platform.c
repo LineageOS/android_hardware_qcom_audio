@@ -1112,3 +1112,9 @@ int platform_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl __
 {
     return 0;
 }
+
+int platform_snd_card_update(void *platform __unsed,
+                             card_status_t status __unused)
+{
+    return -1;
+}

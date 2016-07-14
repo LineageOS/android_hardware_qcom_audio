@@ -2208,3 +2208,9 @@ int platform_swap_lr_channels(struct audio_device *adev, bool swap_channels)
     }
     return 0;
 }
+
+int platform_snd_card_update(void *platform __unsed,
+                             card_status_t status __unused)
+{
+    return -1;
+}
