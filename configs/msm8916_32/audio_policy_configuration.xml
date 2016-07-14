@@ -54,6 +54,7 @@
                 <item>Built-In Mic</item>
                 <item>Built-In Back Mic</item>
                 <item>FM Tuner</item>
+                <item>In Call-Voice</item>
             </attachedDevices>
             <defaultOutputDevice>Speaker</defaultOutputDevice>
             <mixPorts>
@@ -188,6 +189,11 @@
                              samplingRates="8000,11025,12000,16000,22050,24000,32000,44100,48000"
                              channelMasks="AUDIO_CHANNEL_IN_MONO,AUDIO_CHANNEL_IN_STEREO,AUDIO_CHANNEL_IN_FRONT_BACK"/>
                 </devicePort>
+                <devicePort tagName="In Call-Voice" type="AUDIO_DEVICE_IN_VOICE_CALL" role="source">
+                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT,AUDIO_FORMAT_AMR_NB,AUDIO_FORMAT_AMR_WB,AUDIO_FORMAT_QCELP,AUDIO_FORMAT_EVRC,AUDIO_FORMAT_EVRCB,AUDIO_FORMAT_EVRCWB,AUDIO_FORMAT_EVRCNW"
+                             samplingRates="8000,11025,12000,16000,22050,24000,32000,44100,48000"
+                             channelMasks="AUDIO_CHANNEL_IN_MONO,AUDIO_CHANNEL_IN_STEREO,AUDIO_CHANNEL_IN_FRONT_BACK"/>
+                </devicePort>
                 <devicePort tagName="FM Tuner" type="AUDIO_DEVICE_IN_FM_TUNER" role="source">
                     <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
                              samplingRates="48000"
@@ -224,7 +230,7 @@
                 <route type="mix" sink="BT SCO All"
                        sources="primary output,low_latency,compressed_offload,voip_rx"/>
                 <route type="mix" sink="primary input"
-                       sources="Built-In Mic,Wired Headset Mic,BT SCO Headset Mic,Built-In Back Mic,FM Tuner"/>
+                       sources="Built-In Mic,Wired Headset Mic,BT SCO Headset Mic,Built-In Back Mic,FM Tuner,In Call-Voice"/>
             </routes>
 
         </module>
