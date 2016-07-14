@@ -738,7 +738,11 @@ static void check_and_route_capture_usecases(struct audio_device *adev,
 static int read_hdmi_channel_masks(struct stream_out *out)
 {
     int ret = 0;
+#if 0
     int channels = platform_edid_get_max_channels(out->dev->platform);
+#else
+    int channels = platform_legacy_edid_get_max_channels();
+#endif
 
     switch (channels) {
         /*
@@ -1423,7 +1427,11 @@ int start_output_stream(struct stream_out *out)
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
         property_get("audio.use.hdmi.sink.cap", prop_value, NULL);
         if (!strncmp("true", prop_value, 4)) {
+#if 0
             sink_channels = platform_edid_get_max_channels(out->dev->platform);
+#else
+            sink_channels = platform_legacy_edid_get_max_channels();
+#endif
             ALOGD("%s: set HDMI channel count[%d] based on sink capability", __func__, sink_channels);
             check_and_set_hdmi_channels(adev, sink_channels);
         } else {

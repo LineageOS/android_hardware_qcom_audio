@@ -296,4 +296,7 @@ struct csd_data {
     stop_record_t stop_record;
 };
 
+/* Legacy EDID channel retrieval */
+int platform_legacy_edid_get_max_channels();
+
 #endif // QCOM_AUDIO_PLATFORM_H

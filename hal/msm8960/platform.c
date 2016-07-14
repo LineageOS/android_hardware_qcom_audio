@@ -1779,6 +1779,85 @@ int platform_set_hdmi_channels(void *platform,  int channel_count)
     return 0;
 }
 
+/* Legacy EDID channel retrieval */
+#define MAX_EDID_BLOCKS 10
+#define MAX_SHORT_AUDIO_DESC_CNT        30
+#define MIN_AUDIO_DESC_LENGTH           3
+#define MAX_CHANNELS_SUPPORTED          8
+
+int platform_legacy_edid_get_max_channels() {
+    unsigned char channels[16];
+    unsigned char formats[16];
+    unsigned char frequency[16];
+    unsigned char bitrate[16];
+    unsigned char* data = NULL;
+    unsigned char* original_data_ptr = NULL;
+    int i = 0;
+    int count = 0;
+    int channel_count = 0;
+    int length = 0;
+    int nIndex = 0;
+    int nCountDesc = 0;
+    unsigned int sad[MAX_SHORT_AUDIO_DESC_CNT];
+
+    const char* file = "/sys/class/graphics/fb1/audio_data_block";
+    FILE* fpaudiocaps = fopen(file, "rb");
+    if (fpaudiocaps) {
+        ALOGD("Opened audio_data_block successfully...\n");
+        fseek(fpaudiocaps, 0, SEEK_END);
+        long size = ftell(fpaudiocaps);
+        ALOGD("audio_data_block size is %ld\n", size);
+        data = (unsigned char*)malloc(size);
+        if (data) {
+            fseek(fpaudiocaps, 0, SEEK_SET);
+            original_data_ptr = data;
+            fread(data, 1, size, fpaudiocaps);
+        }
+        fclose(fpaudiocaps);
+    } else {
+        ALOGE("Failed to open audio_caps");
+    }
+
+    if (data) {
+        memcpy(&count, data, sizeof(int));
+        data += sizeof(int);
+        ALOGD("Audio Block Count is %d\n", count);
+        memcpy(&length, data, sizeof(int));
+        data += sizeof(int);
+        ALOGD("Total length is %d\n", length);
+
+        while (length >= MIN_AUDIO_DESC_LENGTH
+                && count < MAX_SHORT_AUDIO_DESC_CNT) {
+            sad[nIndex] =    (unsigned int)data[0]
+                          + ((unsigned int)data[1] << 8)
+                          + ((unsigned int)data[2] << 16);
+            nIndex += 1;
+            nCountDesc++;
+            length -= MIN_AUDIO_DESC_LENGTH;
+            data += MIN_AUDIO_DESC_LENGTH;
+        }
+        ALOGD("Total # of audio descriptors is %d\n", nCountDesc);
+
+        for (i = 0; i < nCountDesc; i++) {
+            channels[i]  = (sad[i] & 0x7) + 1;
+            formats[i]   = (sad[i] & 0xFF) >> 3;
+            frequency[i] = (sad[i] >> 8) & 0xFF;
+            bitrate[i]   = (sad[i] >> 16) & 0xFF;
+        }
+    }
+
+    if (original_data_ptr)
+        free(original_data_ptr);
+
+    for (i = 0; i < nCountDesc && i < MAX_EDID_BLOCKS; i++) {
+        if ((int)channels[i] > channel_count
+                && (int)channels[i] <= MAX_CHANNELS_SUPPORTED)
+            channel_count = (int)channels[i];
+    }
+
+    return channel_count;
+}
+
 int platform_edid_get_max_channels(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
