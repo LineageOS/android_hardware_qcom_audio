@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3fa7e38b_77ae76e8",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 347,
+      "author": {
+        "id": 32
+      },
+      "writtenOn": "2016-07-14T16:00:29Z",
+      "side": 1,
+      "message": "Seems like it would make more sense here? No reason to recalibrate an active device.",
+      "revId": "76d4975c6ea5b51d2b5e1de4116d0e05248c948d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
