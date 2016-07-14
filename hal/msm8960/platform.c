@@ -1779,6 +1779,77 @@ int platform_set_hdmi_channels(void *platform,  int channel_count)
     return 0;
 }
 
+/* Legacy EDID channel retrieval */
+#define MAX_EDID_BLOCKS             10
+#define MAX_SHORT_AUDIO_DESC_CNT    30
+#define MIN_AUDIO_DESC_LENGTH       3
+#define MAX_CHANNELS_SUPPORTED      8
+
+int legacy_edid_get_max_channels() {
+    unsigned char channels[16];
+    unsigned char* data = NULL;
+    int i = 0;
+    int count = 0;
+    int channel_count = 0;
+    int length = 0;
+    int nCountDesc = 0;
+    unsigned int sad[MAX_SHORT_AUDIO_DESC_CNT];
+
+    const char* file = "/sys/class/graphics/fb1/audio_data_block";
+    FILE* fpaudiocaps = fopen(file, "rb");
+    if (fpaudiocaps) {
+        ALOGV("%s: Opened audio_data_block successfully\n", __func__);
+        fseek(fpaudiocaps, 0, SEEK_END);
+        long size = ftell(fpaudiocaps);
+        ALOGV("%s: audio_data_block size is %ld\n", __func__, size);
+        data = (unsigned char*)malloc(size);
+        if (data) {
+            fseek(fpaudiocaps, 0, SEEK_SET);
+            fread(data, 1, size, fpaudiocaps);
+        }
+        fclose(fpaudiocaps);
+    } else {
+        ALOGE("%s: Failed to open audio_caps", __func__);
+    }
+
+    if (data) {
+        memcpy(&count, data, sizeof(int));
+        data += sizeof(int);
+        ALOGV("%s: Audio Block Count is %d\n", __func__, count);
+        memcpy(&length, data, sizeof(int));
+        data += sizeof(int);
+        ALOGV("%s: Total length is %d\n", __func__, length);
+
+        for (i = 0; length >= MIN_AUDIO_DESC_LENGTH
+                && count < MAX_SHORT_AUDIO_DESC_CNT; i++) {
+            sad[i] =    (unsigned int)data[0]
+                     + ((unsigned int)data[1] << 8)
+                     + ((unsigned int)data[2] << 16);
+            nCountDesc++;
+            length -= MIN_AUDIO_DESC_LENGTH;
+            data += MIN_AUDIO_DESC_LENGTH;
+        }
+        ALOGV("%s: Total # of audio descriptors is %d\n",
+                __func__, nCountDesc);
+
+        for (i = 0; i < nCountDesc; i++)
+            channels[i] = (sad[i] & 0x7) + 1;
+
+        free(data);
+    }
+
+    for (i = 0; i < nCountDesc && i < MAX_EDID_BLOCKS; i++) {
+        if ((int)channels[i] > channel_count
+                && (int)channels[i] <= MAX_CHANNELS_SUPPORTED)
+            channel_count = (int)channels[i];
+    }
+
+    ALOGD("%s: Max channels reported by audio_data_block is: %d\n",
+            __func__, channel_count);
+
+    return channel_count;
+}
+
 int platform_edid_get_max_channels(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -1794,6 +1865,13 @@ int platform_edid_get_max_channels(void *platform)
 
     ctl = mixer_get_ctl_by_name(adev->mixer, AUDIO_DATA_BLOCK_MIXER_CTL);
     if (!ctl) {
+        /* A-Family devices likely do not have HDMI EDID ctl,
+         * attempt fall-back to legacy sysfs EDID retrieval.
+         */
+        max_channels = legacy_edid_get_max_channels();
+        if (max_channels > 0)
+            return max_channels;
+
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
               __func__, AUDIO_DATA_BLOCK_MIXER_CTL);
         return 0;
