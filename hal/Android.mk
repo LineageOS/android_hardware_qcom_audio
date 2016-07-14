@@ -128,6 +128,11 @@ ifneq ($(filter msm8992 msm8994 msm8996,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_SRC_FILES += audio_extn/hwdep_cal.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SND_MONITOR)), true)
+    LOCAL_CFLAGS += -DSND_MONITOR_ENABLED
+    LOCAL_SRC_FILES += audio_extn/sndmonitor.c
+endif
+
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
 LOCAL_MODULE_RELATIVE_PATH := hw
