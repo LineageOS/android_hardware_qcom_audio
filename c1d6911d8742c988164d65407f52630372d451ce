@@ -1,0 +1,61 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3fa7e38b_62d796ef",
+        "filename": "hal/msm8960/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1858,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-07-15T01:57:00Z",
+      "side": 1,
+      "message": "Seems a little excessive for just the channel count. Might be worth it to break it down into a few functions? Also I guess that would depend on how much of the legacy functionality is going to pulled over here. It might be good to have a helper function that parses the data, and a few platform_legacy_edid_get_* functions instead.",
+      "range": {
+        "startLine": 1858,
+        "startChar": 11,
+        "endLine": 1858,
+        "endChar": 24
+      },
+      "revId": "c1d6911d8742c988164d65407f52630372d451ce",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3fa7e38b_c2ff6a65",
+        "filename": "hal/msm8960/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1862,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-07-15T01:57:00Z",
+      "side": 1,
+      "message": "You could also have an ifdef or dynamic check here instead of adding something to the platform_api.h header, especially since the platform API already exposes the get_max_channels function.",
+      "revId": "c1d6911d8742c988164d65407f52630372d451ce",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3fa7e38b_0206e287",
+        "filename": "hal/msm8960/platform.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 300,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-07-15T01:57:00Z",
+      "side": 1,
+      "message": "I think this goes into the platform_api.h header instead.",
+      "revId": "c1d6911d8742c988164d65407f52630372d451ce",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
