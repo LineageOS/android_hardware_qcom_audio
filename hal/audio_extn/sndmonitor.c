@@ -430,8 +430,19 @@ void * monitor_thread_loop(void * args __unused)
 
     while (1) {
         if (poll(pfd, num_poll_fds, -1) < 0) {
+            int errno_ = errno;
             ALOGE("poll() failed w/ err %s", strerror(errno));
-            break;
+            switch (errno_) {
+            case EINTR:
+            case ENOMEM:
+                sleep(2);
+                continue;
+            default:
+                /* above errors can be caused due to current system
+                   state .. any other error is not expected */
+                LOG_ALWAYS_FATAL("unxpected poll() system call failure");
+                break;
+            }
         }
         ALOGV("out of poll()");
 
@@ -446,6 +457,11 @@ void * monitor_thread_loop(void * args __unused)
                 break;
         } else if (ERROR_IN_FD(&pfd[0])) {
             // do not consider for poll again
+            // POLLERR - can this happen?
+            // POLLHUP - adev must not close pipe
+            // POLLNVAL - fd is valid
+            LOG_ALWAYS_FATAL("unxpected error in pipe poll fd 0x%x",
+                             pfd[0].revents);
             pfd[0].fd *= -1;
         }
 
@@ -456,6 +472,11 @@ void * monitor_thread_loop(void * args __unused)
                 on_sndcard_state_update(s);
             else if (ERROR_IN_FD(&pfd[i])) {
                 // do not consider for poll again
+                // POLLERR - can this happen as we are reading from a fs?
+                // POLLHUP - not valid for cardN/state
+                // POLLNVAL - fd is valid
+                LOG_ALWAYS_FATAL("unxpected error in card poll fd 0x%x",
+                                 pfd[i].revents);
                 pfd[i].fd *= -1;
             }
             ++i;
@@ -467,11 +488,17 @@ void * monitor_thread_loop(void * args __unused)
                 on_dev_event(d);
             else if (ERROR_IN_FD(&pfd[i])) {
                 // do not consider for poll again
+                // POLLERR - can this happen as we are reading from a fs?
+                // POLLHUP - not valid for switch/state
+                // POLLNVAL - fd is valid
+                LOG_ALWAYS_FATAL("unxpected error in dev poll fd 0x%x",
+                                 pfd[i].revents);
                 pfd[i].fd *= -1;
             }
             ++i;
         }
     }
+
     return NULL;
 }
 
