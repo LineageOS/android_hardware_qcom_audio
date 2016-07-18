@@ -1907,6 +1907,14 @@
         <ctl name= "RX INT2 SPLINE MIX HPHR Native Switch" value="1" />
     </path>
 
+    <path name="hph-highquality-mode">
+        <ctl name="RX HPH Mode" value="CLS_H_LOHIFI" />
+    </path>
+
+    <path name="hph-lowpower-mode">
+        <ctl name="RX HPH Mode" value="CLS_H_LP" />
+    </path>
+
     <path name="line">
         <path name="headphones" />
     </path>
