@@ -90,9 +90,7 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
 #ifdef INCALL_MUSIC_ENABLED
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_INCALL_MUSIC),
 #endif
-#ifdef HDMI_PASSTHROUGH_ENABLED
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH),
-#endif
 };
 
 const struct string_to_enum s_format_name_to_enum_table[] = {
@@ -133,6 +131,7 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_ADTS_LC),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_ADTS_HE_V1),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_ADTS_HE_V2),
+    STRING_TO_ENUM(AUDIO_FORMAT_DSD),
 #endif
 };
 
@@ -515,6 +514,21 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
                                __func__, sample_rate);
         }
     }
+
+    /* Set sampling rate to 176.4 for DSD64
+     * and 352.8Khz for DSD128.
+     * Set Bit Width to 16. output will be 16 bit
+     * post DoP in ASM.
+     */
+    if ((flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH) &&
+        (format == AUDIO_FORMAT_DSD)) {
+        bit_width = 16;
+        if (sample_rate == INPUT_SAMPLING_RATE_DSD64)
+            sample_rate = OUTPUT_SAMPLING_RATE_DSD64;
+        else if (sample_rate == INPUT_SAMPLING_RATE_DSD128)
+            sample_rate = OUTPUT_SAMPLING_RATE_DSD128;
+    }
+
     ALOGV("%s: flags: %x, format: %x sample_rate %d",
            __func__, flags, format, sample_rate);
     list_for_each(node_i, streams_output_cfg_list) {

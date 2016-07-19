@@ -82,6 +82,7 @@
 /* ToDo: Check and update a proper value in msec */
 #define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 50
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
+#define DSD_VOLUME_MIN_DB (-110)
 
 #define PROXY_OPEN_RETRY_COUNT           100
 #define PROXY_OPEN_WAIT_TIME             20
@@ -501,6 +502,7 @@ static bool is_supported_format(audio_format_t format)
         format == AUDIO_FORMAT_FLAC ||
         format == AUDIO_FORMAT_ALAC ||
         format == AUDIO_FORMAT_APE ||
+        format == AUDIO_FORMAT_DSD ||
         format == AUDIO_FORMAT_VORBIS ||
         format == AUDIO_FORMAT_WMA ||
         format == AUDIO_FORMAT_WMA_PRO)
@@ -540,6 +542,9 @@ static int get_snd_codec_id(audio_format_t format)
         break;
     case AUDIO_FORMAT_APE:
         id = SND_AUDIOCODEC_APE;
+        break;
+    case AUDIO_FORMAT_DSD:
+        id = SND_AUDIOCODEC_DSD;
         break;
     case AUDIO_FORMAT_VORBIS:
         id = SND_AUDIOCODEC_VORBIS;
@@ -1166,6 +1171,28 @@ exit:
     return active;
 }
 
+/*
+ * if native DSD playback active
+ */
+bool audio_is_dsd_native_stream_active(struct audio_device *adev)
+{
+    bool active = false;
+    struct listnode *node = NULL;
+    struct audio_usecase *uc = NULL;
+    struct stream_out *curr_out = NULL;
+
+    list_for_each(node, &adev->usecase_list) {
+        uc = node_to_item(node, struct audio_usecase, list);
+        curr_out = (struct stream_out*) uc->stream.out;
+
+        if (curr_out && PCM_PLAYBACK == uc->type &&
+               (DSD_NATIVE_BACKEND == platform_get_backend_index(uc->out_snd_device))) {
+            active = true;
+            ALOGV("%s:DSD playback is active", __func__);
+        }
+    }
+    return active;
+}
 
 static bool force_device_switch(struct audio_usecase *usecase)
 {
@@ -2537,6 +2564,14 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
     return latency;
 }
 
+static float AmpToDb(float amplification)
+{
+    if (amplification == 0) {
+        return DSD_VOLUME_MIN_DB;
+    }
+    return 20 * log10(amplification);
+}
+
 static int out_set_volume(struct audio_stream_out *stream, float left,
                           float right)
 {
@@ -2555,6 +2590,20 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
              * Mute is 0 and unmute 1
              */
             audio_extn_passthru_set_volume(out, (left == 0.0f));
+        } else if (out->format == AUDIO_FORMAT_DSD){
+            char mixer_ctl_name[128] =  "DSD Volume";
+            struct audio_device *adev = out->dev;
+            struct mixer_ctl *ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+
+            if (!ctl) {
+                ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                      __func__, mixer_ctl_name);
+                return -EINVAL;
+            }
+            volume[0] = (int)(AmpToDb(left));
+            volume[1] = (int)(AmpToDb(right));
+            mixer_ctl_set_array(ctl, volume, sizeof(volume)/sizeof(volume[0]));
+            return 0;
         } else {
             char mixer_ctl_name[128];
             struct audio_device *adev = out->dev;
@@ -3666,12 +3715,24 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                 __func__, config->offload_info.version,
                 config->offload_info.bit_rate);
 
+        /*Check if DSD audio format is supported in codec
+         *and there is no active native DSD use case
+         */
+
+        if ((config->format == AUDIO_FORMAT_DSD) &&
+               (!platform_check_codec_dsd_support(adev->platform) ||
+               audio_is_dsd_native_stream_active(adev))) {
+            ret = -EINVAL;
+            goto error_open;
+        }
+
         /* Disable gapless if any of the following is true
          * passthrough playback
          * AV playback
          * Direct PCM playback
          */
         if (audio_extn_passthru_is_passthrough_stream(out) ||
+            (config->format == AUDIO_FORMAT_DSD) ||
             config->offload_info.has_video ||
             out->flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) {
             check_and_set_gapless_mode(adev, false);
@@ -3680,6 +3741,10 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
         if (audio_extn_passthru_is_passthrough_stream(out)) {
             out->flags |= AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH;
+        }
+        if (config->format == AUDIO_FORMAT_DSD) {
+            out->flags |= AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH;
+            out->compr_config.codec->compr_passthr = PASSTHROUGH_DSD;
         }
     } else if (out->flags & AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
         ret = voice_extn_check_and_set_incall_music_usecase(adev, out);
