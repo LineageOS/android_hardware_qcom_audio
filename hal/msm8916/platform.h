@@ -289,7 +289,11 @@ enum {
 #define COMPRESS_VOIP_CALL_PCM_DEVICE 3
 
 /* Define macro for Internal FM volume mixer */
+#ifdef PLATFORM_MSMFALCON
+#define FM_RX_VOLUME "SLIMBUS_8 LOOPBACK Volume"
+#else
 #define FM_RX_VOLUME "Internal FM RX Volume"
+#endif
 
 #define LOWLATENCY_PCM_DEVICE 12
 #define EC_REF_RX "I2S_RX"

@@ -819,7 +819,9 @@ static void update_codec_type(const char *snd_card_name) {
          !strncmp(snd_card_name, "msm8953-tasha-snd-card",
                   sizeof("msm8953-tasha-snd-card")) ||
          !strncmp(snd_card_name, "msm8953-tashalite-snd-card",
-                  sizeof("msm8953-tashalite-snd-card")))
+                  sizeof("msm8953-tashalite-snd-card")) ||
+         !strncmp(snd_card_name, "msmfalcon-tasha-snd-card",
+                  sizeof("msmfalcon-tasha-snd-card")))
      {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          is_external_codec = true;
@@ -1107,6 +1109,13 @@ static void query_platform(const char *snd_card_name,
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+    } else if (!strncmp(snd_card_name, "msmfalcon-tasha-snd-card",
+                 sizeof("msmfalcon-tasha-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9335,
+                sizeof(MIXER_XML_PATH_WCD9335));
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
     } else {
         strlcpy(mixer_xml_path, MIXER_XML_PATH,
                 sizeof(MIXER_XML_PATH));
