@@ -2070,6 +2070,12 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
         prop_ssr_enabled = atoi(ssr_enabled) || !strncmp("true", ssr_enabled, 4);
     }
 
+#ifdef USE_XML_AUDIO_POLICY_CONF
+    ALOGD("USE_XML_AUDIO_POLICY_CONF is TRUE");
+#else
+    ALOGD("USE_XML_AUDIO_POLICY_CONF is FALSE");
+#endif
+
     //TODO: Check the new logic to parse policy conf and update the below code
     //      Need this when SSR encoding is enabled
 
