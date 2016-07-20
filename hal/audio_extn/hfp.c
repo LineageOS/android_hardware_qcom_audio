@@ -28,9 +28,11 @@
 #include <stdlib.h>
 #include <cutils/str_parms.h>
 
-#define AUDIO_PARAMETER_HFP_ENABLE      "hfp_enable"
+#define AUDIO_PARAMETER_HFP_ENABLE            "hfp_enable"
 #define AUDIO_PARAMETER_HFP_SET_SAMPLING_RATE "hfp_set_sampling_rate"
-#define AUDIO_PARAMETER_KEY_HFP_VOLUME "hfp_volume"
+#define AUDIO_PARAMETER_KEY_HFP_VOLUME        "hfp_volume"
+#define AUDIO_PARAMETER_HFP_VOL_MIXER_CTL     "hfp_vol_mixer_ctl"
+#define AUDIO_PARAMATER_HFP_VALUE_MAX         128
 
 static int32_t start_hfp(struct audio_device *adev,
                                struct str_parms *parms);
@@ -43,6 +45,7 @@ struct hfp_module {
     struct pcm *hfp_pcm_rx;
     struct pcm *hfp_pcm_tx;
     float  hfp_volume;
+    char   hfp_vol_mixer_ctl[AUDIO_PARAMATER_HFP_VALUE_MAX];
     bool   is_hfp_running;
     audio_usecase_t ucid;
 };
@@ -53,6 +56,7 @@ static struct hfp_module hfpmod = {
     .hfp_pcm_rx = NULL,
     .hfp_pcm_tx = NULL,
     .hfp_volume = 0,
+    .hfp_vol_mixer_ctl = {0, },
     .is_hfp_running = 0,
     .ucid = USECASE_AUDIO_HFP_SCO,
 };
@@ -71,11 +75,6 @@ static int32_t hfp_set_volume(struct audio_device *adev, float value)
 {
     int32_t vol, ret = 0;
     struct mixer_ctl *ctl;
-#ifdef EXTERNAL_BT_SUPPORTED
-    const char *mixer_ctl_name = "PRI AUXPCM LOOPBACK Volume";
-#else
-    const char *mixer_ctl_name = "Internal HFP RX Volume";
-#endif
 
     ALOGV("%s: entry", __func__);
     ALOGD("%s: (%f)\n", __func__, value);
@@ -96,10 +95,19 @@ static int32_t hfp_set_volume(struct audio_device *adev, float value)
     }
 
     ALOGD("%s: Setting HFP volume to %d \n", __func__, vol);
-    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (0 == hfpmod.hfp_vol_mixer_ctl[0]) {
+#ifdef EXTERNAL_BT_SUPPORTED
+        strcpy(hfpmod.hfp_vol_mixer_ctl, "PRI AUXPCM LOOPBACK Volume");
+#else
+        strcpy(hfpmod.hfp_vol_mixer_ctl, "Internal HFP RX Volume");
+#endif
+        ALOGW("%s: Defaulting hfp mixer control to: %s",
+                 __func__, hfpmod.hfp_vol_mixer_ctl);
+    }
+    ctl = mixer_get_ctl_by_name(adev->mixer, hfpmod.hfp_vol_mixer_ctl);
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
-              __func__, mixer_ctl_name);
+              __func__, hfpmod.hfp_vol_mixer_ctl);
         return -EINVAL;
     }
     if(mixer_ctl_set_value(ctl, 0, vol) < 0) {
@@ -283,7 +291,7 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *
     int rate;
     int val;
     float vol;
-    char value[32]={0};
+    char value[AUDIO_PARAMATER_HFP_VALUE_MAX] = {0, };
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_ENABLE, value,
                             sizeof(value));
@@ -317,6 +325,15 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *
             if (val > 0)
                 select_devices(adev, hfpmod.ucid);
         }
+    }
+
+    memset(value, 0, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_VOL_MIXER_CTL,
+                          value, sizeof(value));
+    if (ret >= 0) {
+        ALOGD("%s: mixer ctl name: %s", __func__, value);
+        strcpy(hfpmod.hfp_vol_mixer_ctl, value);
+        str_parms_del(parms, AUDIO_PARAMETER_HFP_VOL_MIXER_CTL);
     }
 
     memset(value, 0, sizeof(value));
