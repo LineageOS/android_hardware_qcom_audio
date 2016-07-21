@@ -255,30 +255,30 @@ static int usb_get_sample_rates(char *rates_str,
      * Support both the bit_widths
      */
     ALOGV("%s: rates_str %s", __func__, rates_str);
+    next_sr_string = strtok_r(rates_str, "Rates: ", &temp_ptr);
+    if (next_sr_string == NULL) {
+        ALOGE("%s: could not find min rates string", __func__);
+        return -EINVAL;
+    }
     if (strstr(rates_str, "continuous") != NULL) {
-        next_sr_string = strtok_r(rates_str, " ,", &temp_ptr);
-        if (next_sr_string == NULL) {
-            ALOGE("%s: could not find min rates string", __func__);
-            return -EINVAL;
-        }
-        min_sr = atoi(next_sr_string);
+        min_sr = (uint32_t)atoi(next_sr_string);
         next_sr_string = strtok_r(NULL, " ,.-", &temp_ptr);
         if (next_sr_string == NULL) {
             ALOGE("%s: could not find max rates string", __func__);
             return -EINVAL;
         }
-        max_sr = atoi(next_sr_string);
+        max_sr = (uint32_t)atoi(next_sr_string);
 
-        for (i = 0; i < MAX_SAMPLE_RATE_SIZE; i++)
+        for (i = 0; i < MAX_SAMPLE_RATE_SIZE; i++) {
             if (supported_sample_rates[i] >= min_sr &&
-                supported_sample_rates[i] <= max_sr)
+                supported_sample_rates[i] <= max_sr) {
                 config->rates[sr_size++] = supported_sample_rates[i];
-    } else {
-        next_sr_string = strtok_r(rates_str, " ,", &temp_ptr);
-        if (next_sr_string == NULL) {
-            ALOGE("%s: get_numof_rates: could not find rates string", __func__);
-            return -EINVAL;
+                ALOGI_IF(usb_audio_debug_enable,
+                    "%s: continuous sample rate supported_sample_rates[%d] %d",
+                    __func__, i, supported_sample_rates[i]);
+            }
         }
+    } else {
         do {
             sr = (uint32_t)atoi(next_sr_string);
             for (i = 0; i < MAX_SAMPLE_RATE_SIZE; i++) {

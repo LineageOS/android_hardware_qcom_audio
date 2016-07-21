@@ -285,8 +285,20 @@ static void update_hardware_info_8x16(struct hardware_info *hw_info, const char 
         hw_info->snd_devices = NULL;
         hw_info->num_snd_devices = 0;
         strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "msmfalcon-snd-card-mtp")) {
+        strlcpy(hw_info->type, "", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msmfalcon", sizeof(hw_info->name));
+        hw_info->snd_devices = NULL;
+        hw_info->num_snd_devices = 0;
+        strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "msmfalcon-tasha-snd-card")) {
+        strlcpy(hw_info->type, "", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msmfalcon", sizeof(hw_info->name));
+        hw_info->snd_devices = NULL;
+        hw_info->num_snd_devices = 0;
+        strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
     } else {
-        ALOGW("%s: Not an 8x16/8909/8917/8937/8939/8940/8952/8953 device", __func__);
+        ALOGW("%s: Not an 8x16/8909/8917/8937/8939/8940/8952/8953/falcon device", __func__);
     }
 
     hw_info->is_wsa_combo_suppported = false;
@@ -306,7 +318,7 @@ void *hw_info_init(const char *snd_card_name)
         strstr(snd_card_name, "msm8909") || strstr(snd_card_name, "msm8952") ||
         strstr(snd_card_name, "msm8976") || strstr(snd_card_name, "msm8953") ||
         strstr(snd_card_name, "msm8937") || strstr(snd_card_name, "msm8917") ||
-        strstr(snd_card_name, "msm8940") ) {
+        strstr(snd_card_name, "msm8940") || strstr(snd_card_name, "msmfalcon")) {
         ALOGV("8x16 - variant soundcard");
         update_hardware_info_8x16(hw_info, snd_card_name);
     } else {
