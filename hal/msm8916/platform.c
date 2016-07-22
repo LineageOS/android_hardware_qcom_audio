@@ -2421,6 +2421,17 @@ int check_hdset_combo_device(snd_device_t snd_device)
     return ret;
 }
 
+int check_44100_support_device(audio_devices_t out_device)
+{
+    int ret = true;
+
+    if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
+        out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
+        out_device & AUDIO_DEVICE_OUT_LINE)
+        ret = false;
+
+    return ret;
+}
 
 static int platform_get_backend_index(snd_device_t snd_device)
 {
@@ -4218,14 +4229,12 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     }
 
     /*
-     * hifi playback not supported on spkr devices, limit the Sample Rate
+     * hifi playback not supported on non-44.1-support devices, limit the Sample Rate
      * to 48 khz.
      */
-    if (SND_DEVICE_OUT_SPEAKER == snd_device ||
-        SND_DEVICE_OUT_SPEAKER_WSA == snd_device ||
-        SND_DEVICE_OUT_SPEAKER_VBAT == snd_device) {
+    if (check_44100_support_device(usecase->devices)) {
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-        ALOGD("%s:becf: afe: playback on speaker device Configure afe to "
+        ALOGD("%s:becf: afe: playback on non-44.1-support device Configure afe to "
             "default Sample Rate(48k)", __func__);
     }
 
