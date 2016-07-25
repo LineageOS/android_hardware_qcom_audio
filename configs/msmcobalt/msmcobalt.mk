@@ -75,6 +75,8 @@ PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msmcobalt/mixer_paths.xml:system/etc/mixer_paths.xml \
     hardware/qcom/audio/configs/msmcobalt/mixer_paths_tasha.xml:system/etc/mixer_paths_tasha.xml \
     hardware/qcom/audio/configs/msmcobalt/mixer_paths_tavil.xml:system/etc/mixer_paths_tavil.xml \
+    hardware/qcom/audio/configs/msmcobalt/mixer_paths_skuk.xml:system/etc/mixer_paths_skuk.xml \
+    hardware/qcom/audio/configs/msmcobalt/mixer_paths_skuk.xml:system/etc/mixer_paths_qvr.xml \
     hardware/qcom/audio/configs/msmcobalt/mixer_paths_dtp.xml:system/etc/mixer_paths_dtp.xml \
     hardware/qcom/audio/configs/msmcobalt/mixer_paths_i2s.xml:system/etc/mixer_paths_i2s.xml \
     hardware/qcom/audio/configs/msmcobalt/aanc_tuning_mixer.txt:system/etc/aanc_tuning_mixer.txt \
