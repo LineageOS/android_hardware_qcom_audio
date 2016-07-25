@@ -89,6 +89,7 @@ uint32_t recpath = 0;
 uint32_t pcmplayback = 0;
 uint32_t tunnel      = 0;
 uint32_t format = 1;
+uint32_t amrwb_enable=0;
 #define DEBUG_PRINT printf
 unsigned to_idle_transition = 0;
 unsigned long total_pcm_bytes;
@@ -110,6 +111,7 @@ unsigned long total_pcm_bytes;
 #define MIN_BITRATE 4 /* Bit rate 1 - 13.6 , 2 - 6.2 , 3 - 2.7 , 4 - 1.0 kbps*/
 #define MAX_BITRATE 4
 #define AMR_HEADER_SIZE 6
+#define AMRWB_HEADER_SIZE 9
 #define FAILED(result) (result != OMX_ErrorNone)
 
 #define SUCCEEDED(result) (result == OMX_ErrorNone)
@@ -499,6 +501,7 @@ int main(int argc, char **argv)
 
     struct sigaction sa;
     char amr_header[6] = {0x23, 0x21, 0x41, 0x4D, 0x52, 0x0A};
+    char amrwb_header[9] = {0x23, 0x21, 0x41, 0x4D, 0x52,0x2D, 0x57, 0x42, 0x0A};
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = &signal_handler;
     sigaction(SIGABRT, &sa, NULL);
@@ -513,7 +516,7 @@ int main(int argc, char **argv)
     pthread_mutex_init(&etb_lock, 0);
     pthread_mutex_init(&etb_lock1, 0);
 
-    if (argc >= 8) {
+    if (argc >= 9) {
         in_filename = argv[1];
           out_filename = argv[2];
     tunnel =  (uint32_t)atoi(argv[3]);
@@ -521,23 +524,35 @@ int main(int argc, char **argv)
         dtxenable  = (uint32_t)atoi(argv[5]);
         recpath      = (uint32_t)atoi(argv[6]); // No configuration support yet..
         rectime      = (uint32_t)atoi(argv[7]);
+        amrwb_enable = (uint32_t)atoi(argv[8]);
 
     } else {
           DEBUG_PRINT(" invalid format: \n");
-          DEBUG_PRINT("ex: ./mm-aenc-omxamr-test INPUTFILE OUTPUTFILE Tunnel BANDMODE DTXENABLE RECORDPATH RECORDTIME\n");
+          DEBUG_PRINT("ex: ./mm-aenc-omxamr-test INPUTFILE OUTPUTFILE Tunnel BANDMODE DTXENABLE RECORDPATH RECORDTIME amrwb_enable \n");
           DEBUG_PRINT("Bandmode 1-7, dtxenable 0-1\n");
           DEBUG_PRINT("RECORDPATH 0(TX),1(RX),2(BOTH),3(MIC)\n");
           DEBUG_PRINT("RECORDTIME in seconds for AST Automation\n");
+	  DEBUG_PRINT("amrwb_enable:1-amrwb 0-amrnb\n");
           return 0;
     }
     if(recpath != 3) {
           DEBUG_PRINT("For RECORDPATH Only MIC supported\n");
           return 0;
     }
-    if(tunnel == 0)
-        aud_comp = "OMX.qcom.audio.encoder.amrnb";
-    else
-        aud_comp = "OMX.qcom.audio.encoder.tunneled.amrnb";
+    if(!amrwb_enable)
+    {
+        if(tunnel == 0)
+            aud_comp = "OMX.qcom.audio.encoder.amrnb";
+        else
+            aud_comp = "OMX.qcom.audio.encoder.tunneled.amrnb";
+    }
+    else {
+        if(tunnel == 0)
+            aud_comp = "OMX.qcom.audio.encoder.amrwb";
+        else
+            aud_comp = "OMX.qcom.audio.encoder.tunneled.amrwb";
+    }
+
     if(Init_Encoder(aud_comp)!= 0x00)
     {
         DEBUG_PRINT("Decoder Init failed\n");
@@ -589,7 +604,10 @@ int main(int argc, char **argv)
             }
             wait_for_event();
             fseek(outputBufferFile, 0,SEEK_SET);
-            fwrite(amr_header,1,AMR_HEADER_SIZE,outputBufferFile);
+            if(!amrwb_enable)
+                fwrite(amr_header,1,AMR_HEADER_SIZE,outputBufferFile);
+            else
+                fwrite(amrwb_header,1,AMRWB_HEADER_SIZE,outputBufferFile);
 
             result = OMX_FreeHandle(amr_enc_handle);
             if (result != OMX_ErrorNone) {
@@ -1013,7 +1031,11 @@ static int open_audio_file ()
     error_code = -1;
     return error_code;
     }
-    fseek(outputBufferFile, AMR_HEADER_SIZE, SEEK_SET);
+    if(!amrwb_enable) {
+        fseek(outputBufferFile, AMR_HEADER_SIZE, SEEK_SET);
+    } else {
+        fseek(outputBufferFile, AMRWB_HEADER_SIZE, SEEK_SET);
+    }
     return error_code;
 }
 

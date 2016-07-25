@@ -60,6 +60,8 @@ This module contains the class definition for openMAX encoder component.
 #include <semaphore.h>
 #include <linux/msm_audio.h>
 #include <linux/msm_audio_amrnb.h>
+#include <linux/msm_audio_amrwb.h>
+
 extern "C" {
     void * get_omx_component_factory_fn(void);
 }
@@ -144,6 +146,7 @@ class omx_amr_aenc;
 class omx_amr_aenc: public qc_omx_component
 {
 public:
+    int amrwb_enable;
     omx_amr_aenc();                             // constructor
     virtual ~omx_amr_aenc();                    // destructor
 
