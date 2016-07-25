@@ -288,10 +288,18 @@
     <ctl name="SpkrRight SWR DAC_Port Switch" value="0" />
 
     <ctl name="AIF1_CAP Mixer SLIM TX0" value="0" />
+    <ctl name="AIF1_CAP Mixer SLIM TX2" value="0" />
     <ctl name="CDC_IF TX0 MUX" value="ZERO" />
+    <ctl name="CDC_IF TX2 MUX" value="ZERO" />
     <ctl name="ADC MUX0" value="ZERO" />
+    <ctl name="ADC MUX2" value="ZERO" />
     <ctl name="DMIC MUX0" value="ZERO" />
+    <ctl name="DMIC MUX2" value="ZERO" />
+
     <ctl name="DEC0 Volume" value="0" />
+    <ctl name="DEC2 Volume" value="0" />
+    <ctl name="RX7 Digital Volume" value="84" />
+    <ctl name="RX8 Digital Volume" value="84" />
 
     <!-- IIR/voice anc -->
     <!-- IIR/voice anc end -->
@@ -1269,6 +1277,12 @@
     </path>
 
     <path name="dmic3">
+        <ctl name="AIF1_CAP Mixer SLIM TX2" value="1" />
+        <ctl name="CDC_IF TX2 MUX" value="DEC2" />
+        <ctl name="SLIM_0_TX Channels" value="One" />
+        <ctl name="ADC MUX2" value="DMIC" />
+        <ctl name="DMIC MUX2" value="DMIC2" />
+        <ctl name="DEC2 Volume" value="84" />
     </path>
 
     <path name="dmic4">
@@ -1304,6 +1318,15 @@
     </path>
 
     <path name="speaker-mono">
+        <ctl name="SLIM RX0 MUX" value="AIF1_PB" />
+        <ctl name="CDC_IF RX0 MUX" value="SLIM RX0" />
+        <ctl name="SLIM_0_RX Channels" value="One" />
+        <ctl name="RX INT7_1 MIX1 INP0" value="RX0" />
+        <ctl name="COMP7 Switch" value="1" />
+        <ctl name="SpkrLeft COMP Switch" value="1" />
+        <ctl name="SpkrLeft BOOST Switch" value="1" />
+        <ctl name="SpkrLeft VISENSE Switch" value="1" />
+        <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
     </path>
 
     <path name="speaker-liquid">
@@ -1360,6 +1383,16 @@
     </path>
 
     <path name="handset">
+        <ctl name="SLIM RX0 MUX" value="AIF1_PB" />
+        <ctl name="CDC_IF RX0 MUX" value="SLIM RX0" />
+        <ctl name="SLIM_0_RX Channels" value="One" />
+        <ctl name="RX INT7_1 MIX1 INP0" value="RX0" />
+        <ctl name="COMP7 Switch" value="1" />
+        <ctl name="SpkrLeft COMP Switch" value="1" />
+        <ctl name="SpkrLeft BOOST Switch" value="1" />
+        <ctl name="SpkrLeft VISENSE Switch" value="1" />
+        <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
+        <ctl name="RX7 Digital Volume" value="76" />
     </path>
 
     <path name="handset-mic">
