@@ -16,6 +16,24 @@
       "revId": "ec8f7417487dc8730d622e94c4b01f59fee7baba",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3fa7e38b_f54fa231",
+        "filename": "hal/msm8960/platform.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1796,
+      "author": {
+        "id": 5531
+      },
+      "writtenOn": "2016-07-26T05:08:04Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "3fa7e38b_6cbbf371",
+      "revId": "ec8f7417487dc8730d622e94c4b01f59fee7baba",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
