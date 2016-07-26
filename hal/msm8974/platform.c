@@ -229,6 +229,7 @@ struct platform_data {
     bool edid_valid;
     char ec_ref_mixer_path[64];
     codec_backend_cfg_t current_backend_cfg[MAX_CODEC_BACKENDS];
+    int hw_dep_fd;
 };
 
 static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -1078,9 +1079,10 @@ static int send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibrat
 
 static void audio_hwdep_send_cal(struct platform_data *plat_data)
 {
-    int fd;
+    int fd = plat_data->hw_dep_fd;
 
-    fd = hw_util_open(plat_data->adev->snd_card);
+    if (fd < 0)
+        fd = hw_util_open(plat_data->adev->snd_card);
     if (fd == -1) {
         ALOGE("%s error open\n", __func__);
         return;
@@ -1092,13 +1094,17 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
     if (acdb_loader_get_calibration == NULL) {
         ALOGE("%s: ERROR. dlsym Error:%s acdb_loader_get_calibration", __func__,
            dlerror());
-        close(fd);
+        if (fd >= 0) {
+            close(fd);
+            plat_data->hw_dep_fd = -1;
+        }
         return;
     }
     if (send_codec_cal(acdb_loader_get_calibration, fd) < 0)
         ALOGE("%s: Could not send anc cal", __FUNCTION__);
 
-    close(fd);
+    send_codec_cal(acdb_loader_get_calibration, plat_data, fd);
+    plat_data->hw_dep_fd = fd;
 }
 
 int platform_acdb_init(void *platform)
@@ -1265,6 +1271,7 @@ void *platform_init(struct audio_device *adev)
     my_data->slowtalk = false;
     my_data->hd_voice = false;
     my_data->edid_info = NULL;
+    my_data->hw_dep_fd = -1;
 
     property_get("ro.qc.sdk.audio.fluencetype", my_data->fluence_cap, "");
     if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro"))) {
@@ -1438,6 +1445,11 @@ void platform_deinit(void *platform)
     if (my_data->edid_info) {
         free(my_data->edid_info);
         my_data->edid_info = NULL;
+    }
+
+    if (my_data->hw_dep_fd >= 0) {
+        close(my_data->hw_dep_fd);
+        my_data->hw_dep_fd = -1;
     }
 
     hw_info_deinit(my_data->hw_info);
