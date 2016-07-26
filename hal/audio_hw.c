@@ -1777,14 +1777,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             bool same_dev = out->devices == new_dev;
             out->devices = new_dev;
 
-            if (!out->standby) {
-                if (!same_dev) {
-                    ALOGV("update routing change");
-                    out->routing_change = true;
-                }
-                select_devices(adev, out->usecase);
-            }
-
             if (output_drives_call(adev, out)) {
                 if (!voice_is_in_call(adev)) {
                     if (adev->mode == AUDIO_MODE_IN_CALL) {
@@ -1796,6 +1788,15 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                     voice_update_devices_for_all_voice_usecases(adev);
                 }
             }
+
+            if (!out->standby) {
+                if (!same_dev) {
+                    ALOGV("update routing change");
+                    out->routing_change = true;
+                }
+                select_devices(adev, out->usecase);
+            }
+
         }
 
         pthread_mutex_unlock(&adev->lock);
