@@ -82,8 +82,14 @@ bool audio_extn_passthru_is_supported_format(audio_format_t format)
  */
 bool audio_extn_passthru_should_drop_data(struct stream_out * out)
 {
-
-    if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+    /*Drop data only
+     *stream is routed to HDMI and
+     *stream has PCM format or
+     *if a compress offload (DSP decode) session
+     */
+    if ((out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+        (((out->format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM) ||
+        ((out->compr_config.codec != NULL) && (out->compr_config.codec->compr_passthr == LEGACY_PCM)))) {
         if (android_atomic_acquire_load(&compress_passthru_active) > 0) {
             ALOGI("drop data as pass thru is active");
             return true;
@@ -111,9 +117,6 @@ void audio_extn_passthru_on_start(struct stream_out * out)
 
     ALOGV("inc pass thru count to notify other streams");
     android_atomic_inc(&compress_passthru_active);
-
-    ALOGV("keep_alive_stop");
-    audio_extn_keep_alive_stop();
 
     while (true) {
         /* find max period time among active playback use cases */

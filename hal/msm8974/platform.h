@@ -463,4 +463,13 @@ struct audio_device_to_audio_interface {
     char device_name[100];
     char interface_name[100];
 };
+
+struct audio_backend_cfg {
+    unsigned int   sample_rate;
+    unsigned int   channels;
+    unsigned int   bit_width;
+    bool           passthrough_enabled;
+    audio_format_t format;
+};
+
 #endif // QCOM_AUDIO_PLATFORM_H
