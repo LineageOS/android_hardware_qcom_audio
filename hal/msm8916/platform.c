@@ -1456,10 +1456,12 @@ int platform_acdb_init(void *platform)
     int result;
     char value[PROPERTY_VALUE_MAX];
     cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
-    if (!cvd_version)
+    if (!cvd_version) {
         ALOGE("Failed to allocate cvd version");
-    else
+        return -1;
+    } else {
         get_cvd_version(cvd_version, my_data->adev);
+    }
 
     property_get("audio.ds1.metainfo.key",value,"0");
     key = atoi(value);
@@ -2339,7 +2341,7 @@ int native_audio_set_params(struct platform_data *platform,
     struct listnode *node;
     int mode = NATIVE_AUDIO_MODE_INVALID;
 
-    if (!value)
+    if (!value || !parms)
         return ret;
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_NATIVE_AUDIO_MODE,
