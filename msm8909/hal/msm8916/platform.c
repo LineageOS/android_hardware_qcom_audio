@@ -1605,8 +1605,23 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
             acdb_dev_type = ACDB_DEV_TYPE_OUT;
         else
             acdb_dev_type = ACDB_DEV_TYPE_IN;
-        my_data->acdb_send_audio_cal(acdb_dev_id, acdb_dev_type, app_type,
+
+        if ((usecase->type == PCM_HFP_CALL)) {
+            /* TX path calibration */
+            my_data->acdb_send_audio_cal(acdb_dev_id, acdb_dev_type, app_type,
                                      sample_rate);
+
+            /* RX path calibration */
+            snd_device = usecase->out_snd_device;
+            acdb_dev_id = acdb_device_table[snd_device];
+            ALOGV("%s: sending audio calibration for snd_device(%d) acdb_id(%d)",
+                       __func__, snd_device, acdb_dev_id);
+            my_data->acdb_send_audio_cal(acdb_dev_id, ACDB_DEV_TYPE_OUT, APP_TYPE_SYSTEM_SOUNDS,
+                                     sample_rate);
+        } else {
+            my_data->acdb_send_audio_cal(acdb_dev_id, acdb_dev_type, app_type,
+                                     sample_rate);
+        }
     }
     return 0;
 }
