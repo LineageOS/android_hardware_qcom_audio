@@ -120,7 +120,7 @@ tunnel.audio.encode=false
 
 #Buffer size in kbytes for compress offload playback
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.buffer.size.kb=32
+audio.offload.buffer.size.kb=64
 
 #Enable offload audio video playback by default
 PRODUCT_PROPERTY_OVERRIDES += \

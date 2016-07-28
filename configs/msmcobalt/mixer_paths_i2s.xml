@@ -68,31 +68,6 @@
     <ctl name="SLIM RX3 MUX" value="AIF1_PB" />
     <ctl name="CLASS_H_DSM MUX" value="ZERO" />
 
-    <!-- Voice -->
-    <ctl name="Voice Stub Tx Mixer PRI_MI2S_TX" value="0" />
-    <ctl name="QUAT_MI2S_RX_Voice Mixer Voice Stub" value="0" />
-    <ctl name="Voice Stub Tx Mixer QUAT_MI2S_TX" value="0" />
-    <ctl name="PRI_MI2S_RX_Voice Mixer Voice Stub" value="0" />
-    <ctl name="QUAT_MI2S_RX Port Mixer PRI_MI2S_TX" value="0" />
-    <ctl name="PRI_MI2S_RX Port Mixer QUAT_MI2S_TX" value="0" />
-    <!-- Voice end-->
-    <!-- VoLTE -->
-    <ctl name="VoLTE Stub Tx Mixer PRI_MI2S_TX" value="0" />
-    <ctl name="QUAT_MI2S_RX_Voice Mixer VoLTE Stub" value="0" />
-    <ctl name="VoLTE Stub Tx Mixer QUAT_MI2S_TX" value="0" />
-    <ctl name="PRI_MI2S_RX_Voice Mixer VoLTE Stub" value="0" />
-    <ctl name="QUAT_MI2S_RX Port Mixer PRI_MI2S_TX" value="0" />
-    <ctl name="PRI_MI2S_RX Port Mixer QUAT_MI2S_TX" value="0" />
-    <!-- VoLTE end-->
-    <!-- Voice2 -->
-    <ctl name="Voice2 Stub Tx Mixer PRI_MI2S_TX" value="0" />
-    <ctl name="QUAT_MI2S_RX_Voice Mixer Voice2 Stub" value="0" />
-    <ctl name="Voice2 Stub Tx Mixer QUAT_MI2S_TX" value="0" />
-    <ctl name="PRI_MI2S_RX_Voice Mixer Voice2 Stub" value="0" />
-    <ctl name="QUAT_MI2S_RX Port Mixer PRI_MI2S_TX" value="0" />
-    <ctl name="PRI_MI2S_RX Port Mixer QUAT_MI2S_TX" value="0" />
-    <!-- Voice2 end-->
-
     <!-- RT Proxy Cal -->
     <ctl name="RT_PROXY_1_RX SetCalMode" value="CAL_MODE_NONE" />
     <ctl name="RT_PROXY_1_TX SetCalMode" value="CAL_MODE_NONE" />
@@ -117,33 +92,6 @@
 
     <path name="audio-record-compress">
         <ctl name="MultiMedia8 Mixer AUX_PCM_UL_TX" value="1" />
-    </path>
-
-    <path name="voice-call">
-        <ctl name="Voice Stub Tx Mixer PRI_MI2S_TX" value="1" />
-        <ctl name="QUAT_MI2S_RX_Voice Mixer Voice Stub" value="1" />
-        <ctl name="Voice Stub Tx Mixer QUAT_MI2S_TX" value="1" />
-        <ctl name="PRI_MI2S_RX_Voice Mixer Voice Stub" value="1" />
-        <ctl name="QUAT_MI2S_RX Port Mixer PRI_MI2S_TX" value="1" />
-        <ctl name="PRI_MI2S_RX Port Mixer QUAT_MI2S_TX" value="1" />
-    </path>
-
-    <path name="volte-call">
-        <ctl name="VoLTE Stub Tx Mixer PRI_MI2S_TX" value="1" />
-        <ctl name="QUAT_MI2S_RX_Voice Mixer VoLTE Stub" value="1" />
-        <ctl name="VoLTE Stub Tx Mixer QUAT_MI2S_TX" value="1" />
-        <ctl name="PRI_MI2S_RX_Voice Mixer VoLTE Stub" value="1" />
-        <ctl name="QUAT_MI2S_RX Port Mixer PRI_MI2S_TX" value="1" />
-        <ctl name="PRI_MI2S_RX Port Mixer QUAT_MI2S_TX" value="1" />
-    </path>
-
-    <path name="voice2-call">
-        <ctl name="Voice2 Stub Tx Mixer PRI_MI2S_TX" value="1" />
-        <ctl name="QUAT_MI2S_RX_Voice Mixer Voice2 Stub" value="1" />
-        <ctl name="Voice2 Stub Tx Mixer QUAT_MI2S_TX" value="1" />
-        <ctl name="PRI_MI2S_RX_Voice Mixer Voice2 Stub" value="1" />
-        <ctl name="QUAT_MI2S_RX Port Mixer PRI_MI2S_TX" value="1" />
-        <ctl name="PRI_MI2S_RX Port Mixer QUAT_MI2S_TX" value="1" />
     </path>
 
     <!-- These are actual sound device specific mixer settings -->

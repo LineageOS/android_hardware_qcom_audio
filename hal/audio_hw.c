@@ -808,7 +808,7 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
                 (usecase->in_snd_device != snd_device || force_routing) &&
                 ((uc_info->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) &&
                  (((usecase->devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_CODEC_BACKEND) ||
-                  (usecase->type == VOICE_CALL))) &&
+                  (usecase->type == VOICE_CALL) || (usecase->type == VOIP_CALL))) &&
                 (usecase->id != USECASE_AUDIO_SPKR_CALIB_TX)) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
@@ -2139,7 +2139,7 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
     else if(out->usecase == USECASE_COMPRESS_VOIP_CALL)
         return voice_extn_compress_voip_out_get_buffer_size(out);
     else if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM)
-        return out->compr_pcm_config.hal_fragment_size;
+        return out->hal_fragment_size;
 
     return out->config.period_size *
                 audio_stream_out_frame_size((const struct audio_stream_out *)stream);
@@ -2556,7 +2556,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             /* increase written size during SSR to avoid mismatch
              * with the written frames count in AF
              */
-            out->written += bytes / (out->config.channels * sizeof(short));
+            if (audio_bytes_per_sample(out->format) != 0)
+                out->written += bytes / (out->config.channels * audio_bytes_per_sample(out->format));
             ALOGD(" %s: sound card is not active/SSR state", __func__);
             ret= -EIO;
             goto exit;
@@ -2612,27 +2613,27 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             }
         }
         if ((out->flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) &&
-                      (out->compr_pcm_config.convert_buffer) != NULL) {
+                      (out->convert_buffer) != NULL) {
 
-            if ((bytes > out->compr_pcm_config.hal_fragment_size)) {
+            if ((bytes > out->hal_fragment_size)) {
                 ALOGW("Error written bytes %zu > %d (fragment_size)",
-                       bytes, out->compr_pcm_config.hal_fragment_size);
+                       bytes, out->hal_fragment_size);
                 pthread_mutex_unlock(&out->lock);
                 return -EINVAL;
             } else {
-                audio_format_t dst_format = out->compr_pcm_config.hal_op_format;
-                audio_format_t src_format = out->compr_pcm_config.hal_ip_format;
+                audio_format_t dst_format = out->hal_op_format;
+                audio_format_t src_format = out->hal_ip_format;
 
                 uint32_t frames = bytes / format_to_bitwidth_table[src_format];
                 uint32_t bytes_to_write = frames * format_to_bitwidth_table[dst_format];
 
-                memcpy_by_audio_format(out->compr_pcm_config.convert_buffer,
+                memcpy_by_audio_format(out->convert_buffer,
                                        dst_format,
                                        buffer,
                                        src_format,
                                        frames);
 
-                ret = compress_write(out->compr, out->compr_pcm_config.convert_buffer,
+                ret = compress_write(out->compr, out->convert_buffer,
                                      bytes_to_write);
 
                 /*Convert written bytes in audio flinger format*/
@@ -2681,15 +2682,31 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             if (adev->adm_request_focus)
                 adev->adm_request_focus(adev->adm_data, out->handle);
 
-            if (out->usecase == USECASE_AUDIO_PLAYBACK_AFE_PROXY)
+            if (out->usecase == USECASE_AUDIO_PLAYBACK_AFE_PROXY) {
                 ret = pcm_mmap_write(out->pcm, (void *)buffer, bytes);
-            else
+            } else if (out->hal_op_format != out->hal_ip_format &&
+                       out->convert_buffer != NULL) {
+
+                memcpy_by_audio_format(out->convert_buffer,
+                                       out->hal_op_format,
+                                       buffer,
+                                       out->hal_ip_format,
+                                       out->config.period_size * out->config.channels);
+
+                ret = pcm_write(out->pcm, out->convert_buffer,
+                                 (out->config.period_size *
+                                 out->config.channels *
+                                 format_to_bitwidth_table[out->hal_op_format]));
+            } else {
                 ret = pcm_write(out->pcm, (void *)buffer, bytes);
+            }
 
             if (ret < 0)
                 ret = -errno;
-            else if (ret == 0)
-                out->written += bytes / (out->config.channels * sizeof(short));
+            else if (ret == 0 && (audio_bytes_per_sample(out->format) != 0))
+                out->written += bytes / (out->config.channels * audio_bytes_per_sample(out->format));
+            else
+                ret = -EINVAL;
 
             if (adev->adm_abandon_focus)
                 adev->adm_abandon_focus(adev->adm_data, out->handle);
@@ -3365,7 +3382,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->handle = handle;
     out->bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     out->non_blocking = 0;
-    out->compr_pcm_config.convert_buffer = NULL;
+    out->convert_buffer = NULL;
 
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL &&
         (flags & AUDIO_OUTPUT_FLAG_DIRECT)) {
@@ -3534,15 +3551,15 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->compr_config.codec->format = hal_format_to_alsa(
                                               config->offload_info.format);
 
-            out->compr_pcm_config.hal_op_format = alsa_format_to_hal(
+            out->hal_op_format = alsa_format_to_hal(
                                                   out->compr_config.codec->format);
-            out->compr_pcm_config.hal_ip_format = out->format;
+            out->hal_ip_format = out->format;
 
             /*for direct PCM playback populate bit_width based on selected alsa format as
              *hal input format and alsa format might differ based on platform support.
              */
             out->bit_width = audio_bytes_per_sample(
-                             out->compr_pcm_config.hal_op_format) << 3;
+                             out->hal_op_format) << 3;
 
             out->compr_config.fragments = DIRECT_PCM_NUM_FRAGMENTS;
 
@@ -3555,13 +3572,13 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             /*if hal input and output fragment size is different this indicates HAL input format is
              *not same as the alsa format
              */
-            if (out->compr_pcm_config.hal_fragment_size != out->compr_config.fragment_size) {
+            if (out->hal_fragment_size != out->compr_config.fragment_size) {
                 /*Allocate a buffer to convert input data to the alsa configured format.
                  *size of convert buffer is equal to the size required to hold one fragment size
                  *worth of pcm data, this is because flinger does not write more than fragment_size
                  */
-                out->compr_pcm_config.convert_buffer = calloc(1,out->compr_config.fragment_size);
-                if (out->compr_pcm_config.convert_buffer == NULL){
+                out->convert_buffer = calloc(1,out->compr_config.fragment_size);
+                if (out->convert_buffer == NULL){
                     ALOGE("Allocation failed for convert buffer for size %d", out->compr_config.fragment_size);
                     ret = -ENOMEM;
                     goto error_open;
@@ -3641,30 +3658,46 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->usecase = USECASE_AUDIO_PLAYBACK_AFE_PROXY;
         out->config = pcm_config_afe_proxy_playback;
         adev->voice_tx_output = out;
-    } else if (out->flags & AUDIO_OUTPUT_FLAG_RAW) {
-        out->usecase = USECASE_AUDIO_PLAYBACK_ULL;
-        out->config = pcm_config_low_latency;
-        out->sample_rate = out->config.rate;
-    } else if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
-        format = AUDIO_FORMAT_PCM_16_BIT;
-        out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
-        out->config = pcm_config_low_latency;
-        out->sample_rate = out->config.rate;
-    } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
-        format = AUDIO_FORMAT_PCM_16_BIT;
-        out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
-        out->config = pcm_config_deep_buffer;
-        out->sample_rate = out->config.rate;
     } else {
-        /* primary path is the default path selected if no other outputs are available/suitable */
-        format = AUDIO_FORMAT_PCM_16_BIT;
-        out->usecase = USECASE_AUDIO_PLAYBACK_PRIMARY;
-        out->config = PCM_CONFIG_AUDIO_PLAYBACK_PRIMARY;
+        if (out->flags & AUDIO_OUTPUT_FLAG_RAW) {
+            out->usecase = USECASE_AUDIO_PLAYBACK_ULL;
+            out->config = pcm_config_low_latency;
+        } else if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
+            out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
+            out->config = pcm_config_low_latency;
+        } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
+            out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
+            out->config = pcm_config_deep_buffer;
+        } else {
+            /* primary path is the default path selected if no other outputs are available/suitable */
+            out->usecase = USECASE_AUDIO_PLAYBACK_PRIMARY;
+            out->config = PCM_CONFIG_AUDIO_PLAYBACK_PRIMARY;
+        }
+        out->hal_ip_format = format = out->format;
+        out->config.format = hal_format_to_pcm(out->hal_ip_format);
+        out->hal_op_format = pcm_format_to_hal(out->config.format);
+        out->bit_width = format_to_bitwidth_table[out->hal_op_format] << 3;
+        out->config.rate = config->sample_rate;
         out->sample_rate = out->config.rate;
+        out->config.channels = audio_channel_count_from_out_mask(out->channel_mask);
+        if (out->hal_ip_format != out->hal_op_format) {
+            uint32_t buffer_size = out->config.period_size *
+                                   format_to_bitwidth_table[out->hal_op_format] *
+                                   out->config.channels;
+            out->convert_buffer = calloc(1, buffer_size);
+            if (out->convert_buffer == NULL){
+                ALOGE("Allocation failed for convert buffer for size %d",
+                       out->compr_config.fragment_size);
+                ret = -ENOMEM;
+                goto error_open;
+            }
+            ALOGD("Convert buffer allocated of size %d", buffer_size);
+        }
     }
 
-    ALOGV("%s devices %d,flags %x, format %x, out->sample_rate %d, out->bit_width %d out->flags:%x, flags:%x",
-           __func__, devices, flags, format, out->sample_rate, out->bit_width, out->flags, flags);
+    ALOGV("%s devices:%d, format:%x, out->sample_rate:%d,out->bit_width:%d out->format:%d out->flags:%x, flags:%x",
+          __func__, devices, format, out->sample_rate, out->bit_width, out->format, out->flags, flags);
+
     /* TODO remove this hardcoding and check why width is zero*/
     if (out->bit_width == 0)
         out->bit_width = 16;
@@ -3735,8 +3768,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     return 0;
 
 error_open:
-    if (out->compr_pcm_config.convert_buffer)
-        free(out->compr_pcm_config.convert_buffer);
+    if (out->convert_buffer)
+        free(out->convert_buffer);
     free(out);
     *stream_out = NULL;
     ALOGD("%s: exit: ret %d", __func__, ret);
@@ -3763,13 +3796,16 @@ static void adev_close_output_stream(struct audio_hw_device *dev __unused,
         out_standby(&stream->common);
 
     if (is_offload_usecase(out->usecase)) {
-        if (out->compr_pcm_config.convert_buffer != NULL)
-            free(out->compr_pcm_config.convert_buffer);
         audio_extn_dts_remove_state_notifier_node(out->usecase);
         destroy_offload_callback_thread(out);
         free_offload_usecase(adev, out->usecase);
         if (out->compr_config.codec != NULL)
             free(out->compr_config.codec);
+    }
+
+    if (out->convert_buffer != NULL) {
+        free(out->convert_buffer);
+        out->convert_buffer = NULL;
     }
 
     if (adev->voice_tx_output == out)

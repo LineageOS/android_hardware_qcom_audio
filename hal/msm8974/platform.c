@@ -689,6 +689,8 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_FM_VIRTUAL)},
     {TO_NAME_INDEX(USECASE_AUDIO_SPKR_CALIB_RX)},
     {TO_NAME_INDEX(USECASE_AUDIO_SPKR_CALIB_TX)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_AFE_PROXY)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_AFE_PROXY)},
 };
 
 #define NO_COLS 2
@@ -1106,14 +1108,14 @@ static void set_platform_defaults(struct platform_data * my_data)
 
              if(property_get_bool("use.qti.sw.alac.decoder", false)) {
                  ALOGD("Alac software decoder is available...removing alac from DSP decoder list");
-                 strncpy(dsp_only_decoders_mime[count],"none",5);
+                 strlcpy(dsp_only_decoders_mime[count],"none",5);
              }
          } else if (!strncmp(MEDIA_MIMETYPE_AUDIO_APE, dsp_only_decoders_mime[count],
               strlen(dsp_only_decoders_mime[count]))) {
 
              if(property_get_bool("use.qti.sw.ape.decoder", false)) {
                  ALOGD("APE software decoder is available...removing ape from DSP decoder list");
-                 strncpy(dsp_only_decoders_mime[count],"none",5);
+                 strlcpy(dsp_only_decoders_mime[count],"none",5);
              }
          }
      }
@@ -1302,10 +1304,12 @@ static int platform_acdb_init(void *platform)
     int result;
     char value[PROPERTY_VALUE_MAX];
     cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
-    if (!cvd_version)
+    if (!cvd_version) {
         ALOGE("Failed to allocate cvd version");
-    else
+        return -1;
+    } else {
         get_cvd_version(cvd_version, my_data->adev);
+    }
 
     property_get("audio.ds1.metainfo.key",value,"0");
     key = atoi(value);
@@ -2120,10 +2124,13 @@ void native_audio_get_params(struct str_parms *query,
 int native_audio_set_params(struct platform_data *platform,
                             struct str_parms *parms, char *value, int len)
 {
-    int ret = 0;
+    int ret = -1;
     struct audio_usecase *usecase;
     struct listnode *node;
     int mode = NATIVE_AUDIO_MODE_INVALID;
+
+    if (!value || !parms)
+        return ret;
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_NATIVE_AUDIO_MODE,
                              value, len);
