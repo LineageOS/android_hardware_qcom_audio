@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -208,7 +208,7 @@ bool effects_enabled()
  * Interface from audio HAL
  */
 __attribute__ ((visibility ("default")))
-int offload_effects_bundle_hal_start_output(audio_io_handle_t output, int pcm_id)
+int offload_effects_bundle_hal_start_output(audio_io_handle_t output, int pcm_id, struct mixer *mixer)
 {
     int ret = 0;
     struct listnode *node;
@@ -244,19 +244,17 @@ int offload_effects_bundle_hal_start_output(audio_io_handle_t output, int pcm_id
     /* populate the mixer control to send offload parameters */
     snprintf(mixer_string, sizeof(mixer_string),
              "%s %d", "Audio Effects Config", out_ctxt->pcm_device_id);
-    out_ctxt->mixer = mixer_open(MIXER_CARD);
-    if (!out_ctxt->mixer) {
-        ALOGE("Failed to open mixer");
+    if (!mixer) {
+        ALOGE("Invalid mixer");
         out_ctxt->ctl = NULL;
         out_ctxt->ref_ctl = NULL;
         ret = -EINVAL;
         free(out_ctxt);
         goto exit;
     } else {
-        out_ctxt->ctl = mixer_get_ctl_by_name(out_ctxt->mixer, mixer_string);
+        out_ctxt->ctl = mixer;
         if (!out_ctxt->ctl) {
             ALOGE("mixer_get_ctl_by_name failed");
-            mixer_close(out_ctxt->mixer);
             out_ctxt->mixer = NULL;
             ret = -EINVAL;
             free(out_ctxt);
@@ -304,9 +302,6 @@ int offload_effects_bundle_hal_stop_output(audio_io_handle_t output, int pcm_id)
         ret = -ENOSYS;
         goto exit;
     }
-
-    if (out_ctxt->mixer)
-        mixer_close(out_ctxt->mixer);
 
     list_for_each(fx_node, &out_ctxt->effects_list) {
         effect_context_t *fx_ctxt = node_to_item(fx_node,

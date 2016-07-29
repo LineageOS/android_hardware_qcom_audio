@@ -209,9 +209,9 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                          MULTIMEDIA2_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] =
                      {PLAYBACK_OFFLOAD_DEVICE, PLAYBACK_OFFLOAD_DEVICE},
-#ifdef MULTIPLE_OFFLOAD_ENABLED
     [USECASE_AUDIO_PLAYBACK_OFFLOAD2] =
                      {PLAYBACK_OFFLOAD_DEVICE2, PLAYBACK_OFFLOAD_DEVICE2},
+#ifdef MULTIPLE_OFFLOAD_ENABLED
     [USECASE_AUDIO_PLAYBACK_OFFLOAD3] =
                      {PLAYBACK_OFFLOAD_DEVICE3, PLAYBACK_OFFLOAD_DEVICE3},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD4] =
@@ -227,9 +227,6 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_OFFLOAD9] =
                      {PLAYBACK_OFFLOAD_DEVICE9, PLAYBACK_OFFLOAD_DEVICE9},
 #endif
-
-    [USECASE_AUDIO_DIRECT_PCM_OFFLOAD] =
-                     {PLAYBACK_OFFLOAD_DEVICE2, PLAYBACK_OFFLOAD_DEVICE2},
 
     [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_COMPRESS] = {COMPRESS_CAPTURE_DEVICE, COMPRESS_CAPTURE_DEVICE},
@@ -570,8 +567,8 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_ULL)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_MULTI_CH)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD)},
-#ifdef MULTIPLE_OFFLOAD_ENABLED
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD2)},
+#ifdef MULTIPLE_OFFLOAD_ENABLED
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD3)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD4)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD5)},
@@ -580,7 +577,6 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD8)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD9)},
 #endif
-    {TO_NAME_INDEX(USECASE_AUDIO_DIRECT_PCM_OFFLOAD)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_LOW_LATENCY)},
     {TO_NAME_INDEX(USECASE_VOICE_CALL)},
@@ -656,6 +652,7 @@ static int msm_be_id_array_len  =
 
 
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
+#define PCM_OFFLOAD_PLATFORM_DELAY (30*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 
 void platform_set_echo_reference(void *platform, bool enable)
@@ -2839,7 +2836,7 @@ void platform_get_parameters(void *platform,
     free(kv_pairs);
 }
 
-/* Delay in Us */
+/* Delay in Us, only to be used for PCM formats */
 int64_t platform_render_latency(audio_usecase_t usecase)
 {
     switch (usecase) {
@@ -2847,6 +2844,9 @@ int64_t platform_render_latency(audio_usecase_t usecase)
             return DEEP_BUFFER_PLATFORM_DELAY;
         case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
             return LOW_LATENCY_PLATFORM_DELAY;
+        case USECASE_AUDIO_PLAYBACK_OFFLOAD:
+        case USECASE_AUDIO_PLAYBACK_OFFLOAD2:
+            return PCM_OFFLOAD_PLATFORM_DELAY;
         default:
             return 0;
     }
@@ -2936,19 +2936,17 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
 uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
 {
     uint32_t fragment_size = 0;
-    uint32_t bits_per_sample = 16;
+    uint32_t bytes_per_sample = 16;
     uint32_t pcm_offload_time = PCM_OFFLOAD_BUFFER_DURATION;
 
-    if (info->format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD) {
-        bits_per_sample = 32;
-    }
+    bytes_per_sample = audio_bytes_per_sample(info->format);
 
     //duration is set to 40 ms worth of stereo data at 48Khz
     //with 16 bit per sample, modify this when the channel
     //configuration is different
     fragment_size = (pcm_offload_time
                      * info->sample_rate
-                     * (bits_per_sample >> 3)
+                     * bytes_per_sample
                      * popcount(info->channel_mask))/1000;
     // To have same PCM samples for all channels, the buffer size requires to
     // be multiple of (number of channels * bytes per sample)
@@ -2964,17 +2962,16 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
     return fragment_size;
 }
 
-bool platform_use_small_buffer(audio_offload_info_t* info)
-{
-    return OFFLOAD_USE_SMALL_BUFFER;
-}
-
+/*
+** configures afe with bit width and Sample Rate
+*/
 int platform_set_codec_backend_cfg(struct audio_device* adev,
-                         unsigned int bit_width, unsigned int sample_rate)
+                         unsigned int bit_width, unsigned int sample_rate,
+                         audio_format_t format)
 {
-    ALOGV("%s bit width: %d, sample rate: %d", __func__, bit_width, sample_rate);
-
+    ALOGV("%s bit width: %d, sample rate: %d\n", __func__, bit_width, sample_rate);
     int ret = 0;
+
     if (bit_width != adev->cur_codec_backend_bit_width) {
         const char * mixer_ctl_name = "SLIM_0_RX Format";
         struct  mixer_ctl *ctl;
@@ -2986,13 +2983,17 @@ int platform_set_codec_backend_cfg(struct audio_device* adev,
         }
 
         if (bit_width == 24) {
+            if (format == AUDIO_FORMAT_PCM_24_BIT_PACKED)
+                mixer_ctl_set_enum_by_string(ctl, "S24_3LE");
+            else
                 mixer_ctl_set_enum_by_string(ctl, "S24_LE");
         } else {
             mixer_ctl_set_enum_by_string(ctl, "S16_LE");
             sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         }
         adev->cur_codec_backend_bit_width = bit_width;
-        ALOGE("Backend bit width is set to %d ", bit_width);
+        ALOGE("%s:becf: afe: %s mixer set to %d bit for %x format",__func__,
+               mixer_ctl_name, bit_width, format);
     }
 
     /*
@@ -3124,13 +3125,17 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev, struct 
     unsigned int new_bit_width, old_bit_width;
     unsigned int new_sample_rate, old_sample_rate;
 
+    ALOGV("%s: usecase = %d", __func__, usecase->id );
+    audio_format_t format;
+
     new_bit_width = old_bit_width = adev->cur_codec_backend_bit_width;
     new_sample_rate = old_sample_rate = adev->cur_codec_backend_samplerate;
+    format = usecase->stream.out->format;
 
     ALOGW("Codec backend bitwidth %d, samplerate %d", old_bit_width, old_sample_rate);
     if (platform_check_codec_backend_cfg(adev, usecase,
                                       &new_bit_width, &new_sample_rate)) {
-        platform_set_codec_backend_cfg(adev, new_bit_width, new_sample_rate);
+        platform_set_codec_backend_cfg(adev, new_bit_width, new_sample_rate, format);
         return true;
     }
 
@@ -3426,8 +3431,8 @@ unsigned char platform_map_to_edid_format(int audio_format)
         format = DOLBY_DIGITAL_PLUS;
         break;
     case AUDIO_FORMAT_PCM_16_BIT:
-    case AUDIO_FORMAT_PCM_16_BIT_OFFLOAD:
-    case AUDIO_FORMAT_PCM_24_BIT_OFFLOAD:
+    case AUDIO_FORMAT_PCM_24_BIT_PACKED:
+    case AUDIO_FORMAT_PCM_8_24_BIT:
     default:
         ALOGV("%s:PCM", __func__);
         format =  LPCM;

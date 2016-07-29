@@ -76,6 +76,8 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
 
 const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_PCM_16_BIT),
+    STRING_TO_ENUM(AUDIO_FORMAT_PCM_24_BIT_PACKED),
+    STRING_TO_ENUM(AUDIO_FORMAT_PCM_8_24_BIT),
     STRING_TO_ENUM(AUDIO_FORMAT_PCM_8_BIT),
     STRING_TO_ENUM(AUDIO_FORMAT_MP3),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC),
@@ -97,8 +99,6 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_QCELP),
     STRING_TO_ENUM(AUDIO_FORMAT_MP2),
     STRING_TO_ENUM(AUDIO_FORMAT_EVRCNW),
-    STRING_TO_ENUM(AUDIO_FORMAT_PCM_16_BIT_OFFLOAD),
-    STRING_TO_ENUM(AUDIO_FORMAT_PCM_24_BIT_OFFLOAD),
     STRING_TO_ENUM(AUDIO_FORMAT_FLAC),
     STRING_TO_ENUM(AUDIO_FORMAT_ALAC),
     STRING_TO_ENUM(AUDIO_FORMAT_APE),
@@ -558,8 +558,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
         goto exit_send_app_type_cfg;
     }
 
-    if ((24 == usecase->stream.out->bit_width) &&
-        (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+    if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
         sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
     } else {
         sample_rate = out->app_type_cfg.sample_rate;
