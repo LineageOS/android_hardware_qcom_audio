@@ -186,3 +186,6 @@ audio.safx.pbe.enabled=true
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.parser.ip.buffer.size=262144
 
+#flac sw decoder 24 bit decode capability
+PRODUCT_PROPERTY_OVERRIDES += \
+flac.sw.decoder.24bit.support=true

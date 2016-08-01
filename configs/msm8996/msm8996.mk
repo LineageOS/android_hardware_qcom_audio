@@ -196,3 +196,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
 use.qti.sw.alac.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 use.qti.sw.ape.decoder=true
+
+#flac sw decoder 24 bit decode capability
+PRODUCT_PROPERTY_OVERRIDES += \
+flac.sw.decoder.24bit.support=true
