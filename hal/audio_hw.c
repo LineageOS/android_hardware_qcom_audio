@@ -1098,10 +1098,16 @@ int start_input_stream(struct stream_in *in)
         in->pcm = NULL;
         goto error_open;
     }
-    register_in_stream(in);
     if (in->realtime) {
         ret = pcm_start(in->pcm);
+        if (ret < 0) {
+            ALOGE("%s: RT pcm_start failed ret %d", __func__, ret);
+            pcm_close(in->pcm);
+            in->pcm = NULL;
+            goto error_open;
+        }
     }
+    register_in_stream(in);
     audio_extn_perf_lock_release();
     ALOGV("%s: exit", __func__);
 
@@ -1503,10 +1509,16 @@ int start_output_stream(struct stream_out *out)
             adev->offload_effects_start_output(out->handle, out->pcm_device_id);
     }
     ret = 0;
-    register_out_stream(out);
     if (out->realtime) {
         ret = pcm_start(out->pcm);
+        if (ret < 0) {
+            ALOGE("%s: RT pcm_start failed ret %d", __func__, ret);
+            pcm_close(out->pcm);
+            out->pcm = NULL;
+            goto error_open;
+        }
     }
+    register_out_stream(out);
     audio_extn_perf_lock_release();
     ALOGV("%s: exit", __func__);
     return ret;
