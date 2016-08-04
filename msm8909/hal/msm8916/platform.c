@@ -248,6 +248,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = "speaker-and-headphones",
     [SND_DEVICE_OUT_VOICE_HANDSET] = "voice-handset",
     [SND_DEVICE_OUT_VOICE_SPEAKER] = "voice-speaker",
+    [SND_DEVICE_OUT_VOICE_SPEAKER_HFP] = "voice-speaker-hfp",
     [SND_DEVICE_OUT_VOICE_SPEAKER_WSA] = "wsa-voice-speaker",
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = "voice-headphones",
     [SND_DEVICE_OUT_HDMI] = "hdmi",
@@ -296,6 +297,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_HEADSET_MIC] = "headset-mic",
     [SND_DEVICE_IN_HEADSET_MIC_FLUENCE] = "headset-mic",
     [SND_DEVICE_IN_VOICE_SPEAKER_MIC] = "voice-speaker-mic",
+    [SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP] = "voice-speaker-mic-hfp",
     [SND_DEVICE_IN_VOICE_HEADSET_MIC] = "voice-headset-mic",
     [SND_DEVICE_IN_HDMI_MIC] = "hdmi-mic",
     [SND_DEVICE_IN_BT_SCO_MIC] = "bt-sco-mic",
@@ -343,6 +345,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = 10,
     [SND_DEVICE_OUT_VOICE_HANDSET] = 7,
     [SND_DEVICE_OUT_VOICE_SPEAKER] = 14,
+    [SND_DEVICE_OUT_VOICE_SPEAKER_HFP] = 140,
     [SND_DEVICE_OUT_VOICE_SPEAKER_WSA] = 135,
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
     [SND_DEVICE_OUT_HDMI] = 18,
@@ -390,6 +393,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_HEADSET_MIC] = 8,
     [SND_DEVICE_IN_HEADSET_MIC_FLUENCE] = 47,
     [SND_DEVICE_IN_VOICE_SPEAKER_MIC] = 11,
+    [SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP] = 141,
     [SND_DEVICE_IN_VOICE_HEADSET_MIC] = 8,
     [SND_DEVICE_IN_HDMI_MIC] = 4,
     [SND_DEVICE_IN_BT_SCO_MIC] = 21,
@@ -443,6 +447,7 @@ struct snd_device_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_HFP)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_WSA)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HDMI)},
@@ -487,6 +492,7 @@ struct snd_device_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_SPEAKER_DMIC_NS)},
     {TO_NAME_INDEX(SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HEADSET_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HEADSET_MIC_FLUENCE)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_SPEAKER_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_HEADSET_MIC)},
@@ -1954,6 +1960,8 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
                 if (my_data->is_wsa_speaker)
                     snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_WSA;
+                else if (audio_extn_hfp_is_active(adev))
+                    snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_HFP;
                 else
                     snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
         } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
@@ -2142,8 +2150,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 }
             } else {
                 snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
-                if (audio_extn_hfp_is_active(adev))
+                if (audio_extn_hfp_is_active(adev)) {
+                    snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP;
                     platform_set_echo_reference(adev->platform, true);
+                }
             }
         }
     } else if (source == AUDIO_SOURCE_CAMCORDER) {
