@@ -2989,9 +2989,12 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         if (config->channel_mask == 0)
             config->channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
+        if (config->format == 0)
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
 
         out->channel_mask = config->channel_mask;
         out->sample_rate = config->sample_rate;
+        out->format = config->format;
         out->usecase = USECASE_AUDIO_PLAYBACK_MULTI_CH;
         out->config = pcm_config_hdmi_multi;
         out->config.rate = config->sample_rate;
