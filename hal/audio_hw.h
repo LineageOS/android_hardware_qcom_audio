@@ -79,6 +79,11 @@
 
 #define MAX_PERF_LOCK_OPTS 20
 
+typedef enum card_status_t {
+    CARD_STATUS_OFFLINE,
+    CARD_STATUS_ONLINE
+} card_status_t;
+
 /* These are the supported use cases by the hardware.
  * Each usecase is mapped to a specific PCM device.
  * Refer to pcm_device_table[].
@@ -162,6 +167,7 @@ enum {
     OFFLOAD_CMD_DRAIN,              /* send a full drain request to DSP */
     OFFLOAD_CMD_PARTIAL_DRAIN,      /* send a partial drain request to DSP */
     OFFLOAD_CMD_WAIT_FOR_BUFFER,    /* wait for buffer released by DSP */
+    OFFLOAD_CMD_ERROR,              /* offload playback hit some error */
 };
 
 enum {

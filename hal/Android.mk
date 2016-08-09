@@ -315,6 +315,11 @@ LOCAL_CFLAGS += -Wall -Werror
 LOCAL_COPY_HEADERS_TO   := mm-audio
 LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SND_MONITOR)), true)
+    LOCAL_CFLAGS += -DSND_MONITOR_ENABLED
+    LOCAL_SRC_FILES += audio_extn/sndmonitor.c
+endif
+
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
 LOCAL_MODULE_RELATIVE_PATH := hw
