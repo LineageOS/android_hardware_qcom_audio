@@ -3764,7 +3764,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->compr_config.codec->bit_rate =
                     config->offload_info.bit_rate;
         out->compr_config.codec->ch_in =
-                audio_channel_count_from_out_mask(config->channel_mask);
+                audio_channel_count_from_out_mask(out->channel_mask);
         out->compr_config.codec->ch_out = out->compr_config.codec->ch_in;
         out->bit_width = AUDIO_OUTPUT_BIT_WIDTH;
         /*TODO: Do we need to change it for passthrough */

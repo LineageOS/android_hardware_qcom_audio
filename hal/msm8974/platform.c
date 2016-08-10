@@ -3886,8 +3886,8 @@ void platform_get_parameters(void *platform,
                 !strncmp("true", propValue, 4);
         }
 
-        if (prop_playback_enabled && (voice_is_in_call(my_data->adev) ||
-             (SND_CARD_STATE_OFFLINE == get_snd_card_state(my_data->adev)))) {
+        if ((prop_playback_enabled && (voice_is_in_call(my_data->adev))) ||
+             (SND_CARD_STATE_OFFLINE == get_snd_card_state(my_data->adev))) {
             char *decoder_mime_type = value;
 
             //check if unsupported mime type or not
