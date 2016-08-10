@@ -292,6 +292,12 @@
     <ctl name="SpkrRight VISENSE Switch" value="0" />
     <ctl name="SpkrLeft SWR DAC_Port Switch" value="0" />
     <ctl name="SpkrRight SWR DAC_Port Switch" value="0" />
+    <ctl name="SLIM0_RX_VI_FB_LCH_MUX" value="ZERO" />
+    <ctl name="SLIM0_RX_VI_FB_RCH_MUX" value="ZERO" />
+    <ctl name="VI_FEED_TX Channels" value="Two" />
+    <ctl name="AIF4_VI Mixer SPKR_VI_1" value="0" />
+    <ctl name="AIF4_VI Mixer SPKR_VI_2" value="0" />
+    <ctl name="SLIM_4_TX Format" value="UNPACKED" />
 
     <ctl name="AIF1_CAP Mixer SLIM TX0" value="0" />
     <ctl name="AIF1_CAP Mixer SLIM TX2" value="0" />
@@ -1370,11 +1376,21 @@
     </path>
 
     <path name="speaker-protected">
+        <ctl name="AIF4_VI Mixer SPKR_VI_1" value="1" />
+        <ctl name="AIF4_VI Mixer SPKR_VI_2" value="1" />
+        <ctl name="SLIM_4_TX Format" value="PACKED_16B" />
         <path name="speaker" />
+        <ctl name="VI_FEED_TX Channels" value="Two" />
+        <ctl name="SLIM0_RX_VI_FB_LCH_MUX" value="SLIM4_TX" />
+        <ctl name="SLIM0_RX_VI_FB_RCH_MUX" value="SLIM4_TX" />
     </path>
 
     <path name="voice-speaker-protected">
+        <ctl name="AIF4_VI Mixer SPKR_VI_1" value="1" />
+        <ctl name="SLIM_4_TX Format" value="PACKED_16B" />
         <path name="speaker-mono" />
+        <ctl name="VI_FEED_TX Channels" value="One" />
+        <ctl name="SLIM0_RX_VI_FB_LCH_MUX" value="SLIM4_TX" />
     </path>
 
     <path name="vi-feedback">
