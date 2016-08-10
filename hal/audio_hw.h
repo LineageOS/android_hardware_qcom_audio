@@ -228,6 +228,10 @@ struct stream_out {
     audio_format_t hal_op_format;
     void *convert_buffer;
 
+    bool realtime;
+    int af_period_multiplier;
+    bool routing_change;
+
     struct audio_device *dev;
 };
 
@@ -252,6 +256,10 @@ struct stream_in {
     bool is_st_session_active;
     int sample_rate;
     int bit_width;
+    bool realtime;
+    int af_period_multiplier;
+    bool routing_change;
+
     struct audio_device *dev;
 };
 
@@ -308,6 +316,12 @@ typedef void (*adm_register_input_stream_t)(void *, audio_io_handle_t, audio_inp
 typedef void (*adm_deregister_stream_t)(void *, audio_io_handle_t);
 typedef void (*adm_request_focus_t)(void *, audio_io_handle_t);
 typedef void (*adm_abandon_focus_t)(void *, audio_io_handle_t);
+typedef void (*adm_set_config_t)(void *, audio_io_handle_t,
+                                         struct pcm *,
+                                         struct pcm_config *);
+typedef void (*adm_request_focus_v2_t)(void *, audio_io_handle_t, long);
+typedef bool (*adm_is_noirq_avail_t)(void *, int, int, int);
+typedef void (*adm_on_routing_change_t)(void *, audio_io_handle_t);
 
 struct audio_device {
     struct audio_hw_device device;
@@ -361,6 +375,10 @@ struct audio_device {
     adm_deregister_stream_t adm_deregister_stream;
     adm_request_focus_t adm_request_focus;
     adm_abandon_focus_t adm_abandon_focus;
+    adm_set_config_t adm_set_config;
+    adm_request_focus_v2_t adm_request_focus_v2;
+    adm_is_noirq_avail_t adm_is_noirq_avail;
+    adm_on_routing_change_t adm_on_routing_change;
 
     void (*offload_effects_get_parameters)(struct str_parms *,
                                            struct str_parms *);

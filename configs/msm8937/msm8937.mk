@@ -219,3 +219,7 @@ persist.speaker.prot.enable=false
 #Enable HW AAC Encoder by default
 PRODUCT_PROPERTY_OVERRIDES += \
 qcom.hw.aac.encoder=true
+
+#flac sw decoder 24 bit decode capability
+PRODUCT_PROPERTY_OVERRIDES += \
+flac.sw.decoder.24bit.support=true

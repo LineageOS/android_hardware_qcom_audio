@@ -36,6 +36,7 @@
  */
 
 #define LOG_TAG "audio_hw_primary"
+#define ATRACE_TAG (ATRACE_TAG_AUDIO|ATRACE_TAG_HAL)
 /*#define LOG_NDEBUG 0*/
 /*#define VERY_VERY_VERBOSE_LOGGING*/
 #ifdef VERY_VERY_VERBOSE_LOGGING
@@ -55,6 +56,7 @@
 #include <sys/prctl.h>
 
 #include <cutils/log.h>
+#include <cutils/trace.h>
 #include <cutils/str_parms.h>
 #include <cutils/properties.h>
 #include <cutils/atomic.h>
@@ -92,6 +94,8 @@
 #define PCM_CONFIG_AUDIO_PLAYBACK_PRIMARY pcm_config_deep_buffer
 #endif
 
+#define ULL_PERIOD_SIZE (DEFAULT_OUTPUT_SAMPLING_RATE/1000)
+
 static unsigned int configured_low_latency_capture_period_size =
         LOW_LATENCY_CAPTURE_PERIOD_SIZE;
 
@@ -117,6 +121,20 @@ struct pcm_config pcm_config_low_latency = {
     .avail_min = LOW_LATENCY_OUTPUT_PERIOD_SIZE / 4,
 };
 
+static int af_period_multiplier = 4;
+struct pcm_config pcm_config_rt = {
+    .channels = 2,
+    .rate = DEFAULT_OUTPUT_SAMPLING_RATE,
+    .period_size = ULL_PERIOD_SIZE, //1 ms
+    .period_count = 512, //=> buffer size is 512ms
+    .format = PCM_FORMAT_S16_LE,
+    .start_threshold = ULL_PERIOD_SIZE*8, //8ms
+    .stop_threshold = INT_MAX,
+    .silence_threshold = 0,
+    .silence_size = 0,
+    .avail_min = ULL_PERIOD_SIZE, //1 ms
+};
+
 struct pcm_config pcm_config_hdmi_multi = {
     .channels = HDMI_MULTI_DEFAULT_CHANNEL_COUNT, /* changed when the stream is opened */
     .rate = DEFAULT_OUTPUT_SAMPLING_RATE, /* changed when the stream is opened */
@@ -132,6 +150,19 @@ struct pcm_config pcm_config_audio_capture = {
     .channels = 2,
     .period_count = AUDIO_CAPTURE_PERIOD_COUNT,
     .format = PCM_FORMAT_S16_LE,
+};
+
+struct pcm_config pcm_config_audio_capture_rt = {
+    .channels = 2,
+    .rate = DEFAULT_OUTPUT_SAMPLING_RATE,
+    .period_size = ULL_PERIOD_SIZE,
+    .period_count = 512,
+    .format = PCM_FORMAT_S16_LE,
+    .start_threshold = 0,
+    .stop_threshold = INT_MAX,
+    .silence_threshold = 0,
+    .silence_size = 0,
+    .avail_min = ULL_PERIOD_SIZE, //1 ms
 };
 
 #define AFE_PROXY_CHANNEL_COUNT 2
@@ -284,6 +315,116 @@ static unsigned int audio_device_ref_count;
 //cache last MBDRC cal step level
 static int last_known_cal_step = -1 ;
 
+static bool may_use_noirq_mode(struct audio_device *adev, audio_usecase_t uc_id,
+                               int flags __unused)
+{
+    int dir = 0;
+    switch (uc_id) {
+        case USECASE_AUDIO_RECORD_LOW_LATENCY:
+            dir = 1;
+        case USECASE_AUDIO_PLAYBACK_ULL:
+            break;
+        default:
+            return false;
+    }
+
+    int dev_id = platform_get_pcm_device_id(uc_id, dir == 0 ?
+                                            PCM_PLAYBACK : PCM_CAPTURE);
+    if (adev->adm_is_noirq_avail)
+        return adev->adm_is_noirq_avail(adev->adm_data,
+                                        adev->snd_card, dev_id, dir);
+    return false;
+}
+
+static void register_out_stream(struct stream_out *out)
+{
+    struct audio_device *adev = out->dev;
+    if (is_offload_usecase(out->usecase) ||
+        !adev->adm_register_output_stream)
+        return;
+
+    // register stream first for backward compatibility
+    adev->adm_register_output_stream(adev->adm_data,
+                                     out->handle,
+                                     out->flags);
+
+    if (!adev->adm_set_config)
+        return;
+
+    if (out->realtime)
+        adev->adm_set_config(adev->adm_data,
+                             out->handle,
+                             out->pcm, &out->config);
+}
+
+static void register_in_stream(struct stream_in *in)
+{
+    struct audio_device *adev = in->dev;
+    if (!adev->adm_register_input_stream)
+        return;
+
+    adev->adm_register_input_stream(adev->adm_data,
+                                    in->capture_handle,
+                                    in->flags);
+
+    if (!adev->adm_set_config)
+        return;
+
+    if (in->realtime)
+        adev->adm_set_config(adev->adm_data,
+                             in->capture_handle,
+                             in->pcm,
+                             &in->config);
+}
+
+static void request_out_focus(struct stream_out *out, long ns)
+{
+    struct audio_device *adev = out->dev;
+
+    if (out->routing_change) {
+        out->routing_change = false;
+        // must be checked for backward compatibility
+        if (adev->adm_on_routing_change)
+            adev->adm_on_routing_change(adev->adm_data, out->handle);
+    }
+
+    if (adev->adm_request_focus_v2)
+        adev->adm_request_focus_v2(adev->adm_data, out->handle, ns);
+    else if (adev->adm_request_focus)
+        adev->adm_request_focus(adev->adm_data, out->handle);
+}
+
+static void request_in_focus(struct stream_in *in, long ns)
+{
+    struct audio_device *adev = in->dev;
+
+    if (in->routing_change) {
+        in->routing_change = false;
+        if (adev->adm_on_routing_change)
+            adev->adm_on_routing_change(adev->adm_data, in->capture_handle);
+    }
+
+    if (adev->adm_request_focus_v2)
+        adev->adm_request_focus_v2(adev->adm_data, in->capture_handle, ns);
+    else if (adev->adm_request_focus)
+        adev->adm_request_focus(adev->adm_data, in->capture_handle);
+}
+
+static void release_out_focus(struct stream_out *out)
+{
+    struct audio_device *adev = out->dev;
+
+    if (adev->adm_abandon_focus)
+        adev->adm_abandon_focus(adev->adm_data, out->handle);
+}
+
+static void release_in_focus(struct stream_in *in)
+{
+    struct audio_device *adev = in->dev;
+    if (adev->adm_abandon_focus)
+        adev->adm_abandon_focus(adev->adm_data, in->capture_handle);
+}
+
 __attribute__ ((visibility ("default")))
 bool audio_hw_send_gain_dep_calibration(int level) {
     bool ret_val = false;
@@ -366,6 +507,12 @@ static bool is_supported_format(audio_format_t format)
            return true;
 
     return false;
+}
+
+static inline bool is_mmap_usecase(audio_usecase_t uc_id)
+{
+    return (uc_id == USECASE_AUDIO_RECORD_AFE_PROXY) ||
+           (uc_id == USECASE_AUDIO_PLAYBACK_AFE_PROXY);
 }
 
 static int get_snd_codec_id(audio_format_t format)
@@ -1324,6 +1471,8 @@ int start_input_stream(struct stream_in *in)
     if (in->usecase == USECASE_AUDIO_RECORD_AFE_PROXY) {
         flags |= PCM_MMAP | PCM_NOIRQ;
         pcm_open_retry_count = PROXY_OPEN_RETRY_COUNT;
+    } else if (in->realtime) {
+        flags |= PCM_MMAP | PCM_NOIRQ;
     }
 
     while (1) {
@@ -1352,6 +1501,13 @@ int start_input_stream(struct stream_in *in)
         pcm_close(in->pcm);
         in->pcm = NULL;
         goto error_open;
+    }
+
+    register_in_stream(in);
+    if (in->realtime) {
+        ret = pcm_start(in->pcm);
+        if (ret < 0)
+            goto error_open;
     }
 
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
@@ -1920,6 +2076,8 @@ int start_output_stream(struct stream_out *out)
         if (out->usecase == USECASE_AUDIO_PLAYBACK_AFE_PROXY) {
             flags |= PCM_MMAP | PCM_NOIRQ;
             pcm_open_retry_count = PROXY_OPEN_RETRY_COUNT;
+        } else if (out->realtime) {
+            flags |= PCM_MMAP | PCM_NOIRQ;
         } else
             flags |= PCM_MONOTONIC;
 
@@ -2000,10 +2158,20 @@ int start_output_stream(struct stream_out *out)
             audio_extn_check_and_set_dts_hpx_state(adev);
         }
     }
+
+    if (ret == 0) {
+        register_out_stream(out);
+        if (out->realtime) {
+            ret = pcm_start(out->pcm);
+            if (ret < 0)
+                goto error_open;
+        }
+    }
+
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
     ALOGD("%s: exit", __func__);
 
-    return 0;
+    return ret;
 error_open:
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
     stop_output_stream(out);
@@ -2141,7 +2309,7 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
     else if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM)
         return out->hal_fragment_size;
 
-    return out->config.period_size *
+    return out->config.period_size * out->af_period_multiplier *
                 audio_stream_out_frame_size((const struct audio_stream_out *)stream);
 }
 
@@ -2304,15 +2472,9 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
          *       playback to headset.
          */
         if (val != 0) {
-            out->devices = val;
-
-            if (!out->standby) {
-                audio_extn_perf_lock_acquire(&adev->perf_lock_handle, 0,
-                                             adev->perf_lock_opts,
-                                             adev->perf_lock_opts_size);
-                select_devices(adev, out->usecase);
-                audio_extn_perf_lock_release(&adev->perf_lock_handle);
-            }
+            audio_devices_t new_dev = val;
+            bool same_dev = out->devices == new_dev;
+            out->devices = new_dev;
 
             if (output_drives_call(adev, out)) {
                 if(!voice_is_in_call(adev)) {
@@ -2324,6 +2486,18 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                     adev->current_call_output = out;
                     voice_update_devices_for_all_voice_usecases(adev);
                 }
+            }
+
+            if (!out->standby) {
+                audio_extn_perf_lock_acquire(&adev->perf_lock_handle, 0,
+                                             adev->perf_lock_opts,
+                                             adev->perf_lock_opts_size);
+                if (!same_dev) {
+                    ALOGV("update routing change");
+                    out->routing_change = true;
+                }
+                select_devices(adev, out->usecase);
+                audio_extn_perf_lock_release(&adev->perf_lock_handle);
             }
         }
 
@@ -2478,11 +2652,21 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
 
 static uint32_t out_get_latency(const struct audio_stream_out *stream)
 {
+    uint32_t period_ms;
     struct stream_out *out = (struct stream_out *)stream;
     uint32_t latency = 0;
 
     if (is_offload_usecase(out->usecase)) {
         latency = COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
+    } else if (out->realtime) {
+        // since the buffer won't be filled up faster than realtime,
+        // return a smaller number
+        if (out->config.rate)
+            period_ms = (out->af_period_multiplier * out->config.period_size *
+                         1000) / (out->config.rate);
+        else
+            period_ms = 0;
+        latency = period_ms + platform_render_latency(out->usecase)/1000;
     } else {
         latency = (out->config.period_count * out->config.period_size * 1000) /
            (out->config.rate);
@@ -2589,9 +2773,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ALOGD("%s: retry previous failed cal level set", __func__);
             audio_hw_send_gain_dep_calibration(last_known_cal_step);
         }
-
-        if (!is_offload_usecase(out->usecase) && adev->adm_register_output_stream)
-            adev->adm_register_output_stream(adev->adm_data, out->handle, out->flags);
     }
 
     if (adev->is_channel_status_set == false && (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)){
@@ -2679,12 +2860,19 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
             ALOGVV("%s: writing buffer (%zu bytes) to pcm device", __func__, bytes);
 
-            if (adev->adm_request_focus)
-                adev->adm_request_focus(adev->adm_data, out->handle);
+            long ns = 0;
 
-            if (out->usecase == USECASE_AUDIO_PLAYBACK_AFE_PROXY) {
+            if (out->config.rate)
+                ns = pcm_bytes_to_frames(out->pcm, bytes)*1000000000LL/
+                                                     out->config.rate;
+
+            bool use_mmap = is_mmap_usecase(out->usecase) || out->realtime;
+
+            request_out_focus(out, ns);
+
+            if (use_mmap)
                 ret = pcm_mmap_write(out->pcm, (void *)buffer, bytes);
-            } else if (out->hal_op_format != out->hal_ip_format &&
+            else if (out->hal_op_format != out->hal_ip_format &&
                        out->convert_buffer != NULL) {
 
                 memcpy_by_audio_format(out->convert_buffer,
@@ -2701,15 +2889,14 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                 ret = pcm_write(out->pcm, (void *)buffer, bytes);
             }
 
+            release_out_focus(out);
+
             if (ret < 0)
                 ret = -errno;
             else if (ret == 0 && (audio_bytes_per_sample(out->format) != 0))
                 out->written += bytes / (out->config.channels * audio_bytes_per_sample(out->format));
             else
                 ret = -EINVAL;
-
-            if (adev->adm_abandon_focus)
-                adev->adm_abandon_focus(adev->adm_data, out->handle);
         }
     }
 
@@ -3011,8 +3198,8 @@ static size_t in_get_buffer_size(const struct audio_stream *stream)
     else if(audio_extn_compr_cap_usecase_supported(in->usecase))
         return audio_extn_compr_cap_get_buffer_size(in->config.format);
 
-    return in->config.period_size *
-                audio_stream_in_frame_size((const struct audio_stream_in *)stream);
+    return in->config.period_size * in->af_period_multiplier *
+        audio_stream_in_frame_size((const struct audio_stream_in *)stream);
 }
 
 static uint32_t in_get_channels(const struct audio_stream *stream)
@@ -3125,8 +3312,11 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
         if (((int)in->device != val) && (val != 0)) {
             in->device = val;
             /* If recording is in progress, change the tx device to new device */
-            if (!in->standby && !in->is_st_session)
+            if (!in->standby && !in->is_st_session) {
+                ALOGV("update input routing change");
+                in->routing_change = true;
                 ret = select_devices(adev, in->usecase);
+            }
         }
     }
 
@@ -3212,19 +3402,24 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             goto exit;
         }
         in->standby = 0;
-        if (adev->adm_register_input_stream)
-            adev->adm_register_input_stream(adev->adm_data, in->capture_handle, in->flags);
     }
 
-    if (adev->adm_request_focus)
-        adev->adm_request_focus(adev->adm_data, in->capture_handle);
+    // what's the duration requested by the client?
+    long ns = 0;
+
+    if (in->config.rate)
+        ns = pcm_bytes_to_frames(in->pcm, bytes)*1000000000LL/
+                                             in->config.rate;
+
+    request_in_focus(in, ns);
+    bool use_mmap = is_mmap_usecase(in->usecase) || in->realtime;
 
     if (in->pcm) {
         if (audio_extn_ssr_get_stream() == in) {
             ret = audio_extn_ssr_read(stream, buffer, bytes);
         } else if (audio_extn_compr_cap_usecase_supported(in->usecase)) {
             ret = audio_extn_compr_cap_read(in, buffer, bytes);
-        } else if (in->usecase == USECASE_AUDIO_RECORD_AFE_PROXY) {
+        } else if (use_mmap) {
             ret = pcm_mmap_read(in->pcm, buffer, bytes);
         } else {
             ret = pcm_read(in->pcm, buffer, bytes);
@@ -3246,8 +3441,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         }
     }
 
-    if (adev->adm_abandon_focus)
-        adev->adm_abandon_focus(adev->adm_data, in->capture_handle);
+    release_in_focus(in);
 
     /*
      * Instead of writing zeroes here, we could trust the hardware
@@ -3661,7 +3855,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     } else {
         if (out->flags & AUDIO_OUTPUT_FLAG_RAW) {
             out->usecase = USECASE_AUDIO_PLAYBACK_ULL;
-            out->config = pcm_config_low_latency;
+            out->realtime = may_use_noirq_mode(adev, USECASE_AUDIO_PLAYBACK_ULL,
+                                               out->flags);
+            out->config = out->realtime ? pcm_config_rt : pcm_config_low_latency;
         } else if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
             out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
             out->config = pcm_config_low_latency;
@@ -3748,6 +3944,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->stream.get_next_write_timestamp = out_get_next_write_timestamp;
     out->stream.get_presentation_position = out_get_presentation_position;
 
+    out->af_period_multiplier  = out->realtime ? af_period_multiplier : 1;
     out->standby = 1;
     /* out->muted = false; by calloc() */
     /* out->written = 0; by calloc() */
@@ -4188,12 +4385,21 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 #if LOW_LATENCY_CAPTURE_USE_CASE
         in->usecase = USECASE_AUDIO_RECORD_LOW_LATENCY;
 #endif
+        in->realtime = may_use_noirq_mode(adev, in->usecase, in->flags);
     }
-    in->config = pcm_config_audio_capture;
-    in->config.rate = config->sample_rate;
+
     in->format = config->format;
+    if (in->realtime) {
+        in->config = pcm_config_audio_capture_rt;
+        in->sample_rate = in->config.rate;
+        in->af_period_multiplier = af_period_multiplier;
+    } else {
+        in->config = pcm_config_audio_capture;
+        in->config.rate = config->sample_rate;
+        in->sample_rate = config->sample_rate;
+        in->af_period_multiplier = 1;
+    }
     in->bit_width = 16;
-    in->sample_rate = config->sample_rate;
 
     if (in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) {
         if (adev->mode != AUDIO_MODE_IN_CALL) {
@@ -4269,14 +4475,17 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             }
         }
 
-        in->format = config->format;
         in->config.channels = channel_count;
-        frame_size = audio_stream_in_frame_size(&in->stream);
-        buffer_size = get_input_buffer_size(config->sample_rate,
-                                            config->format,
-                                            channel_count,
-                                            is_low_latency);
-        in->config.period_size = buffer_size / frame_size;
+        if (!in->realtime) {
+            in->format = config->format;
+            frame_size = audio_stream_in_frame_size(&in->stream);
+            buffer_size = get_input_buffer_size(config->sample_rate,
+                                                config->format,
+                                                channel_count,
+                                                is_low_latency);
+            in->config.period_size = buffer_size / frame_size;
+        }
+
         if ((in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) &&
                (in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
                (voice_extn_compress_voip_is_format_supported(in->format)) &&
@@ -4535,6 +4744,14 @@ static int adev_open(const hw_module_t *module, const char *name,
                                     dlsym(adev->adm_lib, "adm_request_focus");
             adev->adm_abandon_focus = (adm_abandon_focus_t)
                                     dlsym(adev->adm_lib, "adm_abandon_focus");
+            adev->adm_set_config = (adm_set_config_t)
+                                    dlsym(adev->adm_lib, "adm_set_config");
+            adev->adm_request_focus_v2 = (adm_request_focus_v2_t)
+                                    dlsym(adev->adm_lib, "adm_request_focus_v2");
+            adev->adm_is_noirq_avail = (adm_is_noirq_avail_t)
+                                    dlsym(adev->adm_lib, "adm_is_noirq_avail");
+            adev->adm_on_routing_change = (adm_on_routing_change_t)
+                                    dlsym(adev->adm_lib, "adm_on_routing_change");
         }
     }
 
@@ -4564,6 +4781,16 @@ static int adev_open(const hw_module_t *module, const char *name,
         if (period_size_is_plausible_for_low_latency(trial)) {
             configured_low_latency_capture_period_size = trial;
         }
+    }
+
+    if (property_get("audio_hal.period_multiplier", value, NULL) > 0) {
+        af_period_multiplier = atoi(value);
+        if (af_period_multiplier < 0)
+            af_period_multiplier = 2;
+        else if (af_period_multiplier > 4)
+            af_period_multiplier = 4;
+
+        ALOGV("new period_multiplier = %d", af_period_multiplier);
     }
 
     adev->multi_offload_enable = property_get_bool("audio.offload.multiple.enabled", false);

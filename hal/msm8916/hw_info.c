@@ -297,8 +297,14 @@ static void update_hardware_info_8x16(struct hardware_info *hw_info, const char 
         hw_info->snd_devices = NULL;
         hw_info->num_snd_devices = 0;
         strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
+     } else if (!strcmp(snd_card_name, "msm8920-sku7-snd-card")) {
+        strlcpy(hw_info->type, "", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msm8920", sizeof(hw_info->name));
+        hw_info->snd_devices = NULL;
+        hw_info->num_snd_devices = 0;
+        strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
     } else {
-        ALOGW("%s: Not an 8x16/8909/8917/8937/8939/8940/8952/8953/falcon device", __func__);
+        ALOGW("%s: Not an 8x16/8909/8917/8920/8937/8939/8940/8952/8953/falcon device", __func__);
     }
 
     hw_info->is_wsa_combo_suppported = false;
