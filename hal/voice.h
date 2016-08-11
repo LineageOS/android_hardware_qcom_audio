@@ -58,6 +58,7 @@ struct voice_session {
 struct voice {
     struct voice_session session[MAX_VOICE_SESSIONS];
     int tty_mode;
+    bool hac;
     bool mic_mute;
     float volume;
     bool is_in_call;
