@@ -52,6 +52,7 @@ AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS := false
 AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
 AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 AUDIO_FEATURE_ENABLED_USB_TUNNEL_AUDIO := true
+AUDIO_FEATURE_ENABLED_SPLIT_A2DP := true
 ##AUDIO_FEATURE_FLAGS
 
 #Audio Specific device overlays
@@ -189,3 +190,7 @@ audio.parser.ip.buffer.size=262144
 #flac sw decoder 24 bit decode capability
 PRODUCT_PROPERTY_OVERRIDES += \
 flac.sw.decoder.24bit.support=true
+
+#split a2dp DSP supported encoder list
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.bt.a2dp_offload_cap=sbc-aptx

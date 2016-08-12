@@ -716,6 +716,13 @@ int enable_snd_device(struct audio_device *adev,
          audio_extn_spkr_prot_calib_cancel(adev);
 
 
+    if (((SND_DEVICE_OUT_BT_A2DP == snd_device) ||
+       (SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device))
+        && (audio_extn_a2dp_start_playback() < 0)) {
+           ALOGE(" fail to configure A2dp control path ");
+           return -EINVAL;
+    }
+
     if (platform_can_enable_spkr_prot_on_device(snd_device) &&
          audio_extn_spkr_prot_is_enabled()) {
        if (platform_get_spkr_prot_acdb_id(snd_device) < 0) {
@@ -791,6 +798,11 @@ int disable_snd_device(struct audio_device *adev,
 
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
+
+        if ((SND_DEVICE_OUT_BT_A2DP == snd_device) ||
+           (SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device))
+            audio_extn_a2dp_stop_playback();
+
         if (platform_can_enable_spkr_prot_on_device(snd_device) &&
              audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing(snd_device);
@@ -832,7 +844,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
     struct audio_usecase *usecase;
     bool switch_device[AUDIO_USECASE_MAX];
     int i, num_uc_to_switch = 0;
-
+    bool force_restart_session = false;
     /*
      * This function is to make sure that all the usecases that are active on
      * the hardware codec backend are always routed to any one device that is
@@ -852,7 +864,15 @@ static void check_usecases_codec_backend(struct audio_device *adev,
      */
     bool force_routing = platform_check_and_set_codec_backend_cfg(adev, uc_info,
                          snd_device);
-
+    /* For a2dp device reconfigure all active sessions
+     * with new AFE encoder format based on a2dp state
+     */
+    if ((SND_DEVICE_OUT_BT_A2DP == snd_device ||
+         SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device) &&
+         audio_extn_a2dp_is_force_device_switch()) {
+         force_routing = true;
+         force_restart_session = true;
+    }
     ALOGD("%s:becf: force routing %d", __func__, force_routing);
 
     /* Disable all the usecases on the shared backend other than the
@@ -871,8 +891,9 @@ static void check_usecases_codec_backend(struct audio_device *adev,
               platform_check_backends_match(snd_device, usecase->out_snd_device));
         if (usecase->type != PCM_CAPTURE &&
             usecase != uc_info &&
-            (usecase->out_snd_device != snd_device || force_routing)  &&
-            usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND &&
+            (usecase->out_snd_device != snd_device || force_routing) &&
+            (usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND ||
+            force_restart_session) &&
             platform_check_backends_match(snd_device, usecase->out_snd_device)) {
                 ALOGD("%s:becf: check_usecases (%s) is active on (%s) - disabling ..",
                     __func__, use_case_table[usecase->id],
@@ -1163,6 +1184,14 @@ static bool force_device_switch(struct audio_usecase *usecase)
         }
     }
 
+    // Force all a2dp output devices to reconfigure for proper AFE encode format
+    if((usecase->stream.out) &&
+       (usecase->stream.out->devices & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) &&
+       audio_extn_a2dp_is_force_device_switch()) {
+         ALOGD("Force a2dp device switch to update new encoder config");
+         ret = true;
+     }
+
     return ret;
 }
 
@@ -1214,7 +1243,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         } else if (voice_extn_compress_voip_is_active(adev)) {
             voip_usecase = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
             if ((voip_usecase) && ((voip_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) &&
-                (usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) &&
+                ((usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
+                  ((usecase->devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_CODEC_BACKEND)) &&
                  (voip_usecase->stream.out != adev->primary_output))) {
                     in_snd_device = voip_usecase->in_snd_device;
                     out_snd_device = voip_usecase->out_snd_device;
@@ -2340,13 +2370,6 @@ static int out_standby(struct audio_stream *stream)
 
     ALOGD("%s: enter: stream (%p) usecase(%d: %s)", __func__,
           stream, out->usecase, use_case_table[out->usecase]);
-    if (out->usecase == USECASE_COMPRESS_VOIP_CALL) {
-        /* Ignore standby in case of voip call because the voip output
-         * stream is closed in adev_close_output_stream()
-         */
-        ALOGD("%s: Ignore Standby in VOIP call", __func__);
-        return 0;
-    }
 
     lock_output_stream(out);
     if (!out->standby) {
@@ -2358,7 +2381,13 @@ static int out_standby(struct audio_stream *stream)
 
         pthread_mutex_lock(&adev->lock);
         out->standby = true;
-        if (!is_offload_usecase(out->usecase)) {
+        if (out->usecase == USECASE_COMPRESS_VOIP_CALL) {
+            voice_extn_compress_voip_close_output_stream(stream);
+            pthread_mutex_unlock(&adev->lock);
+            pthread_mutex_unlock(&out->lock);
+            ALOGD("VOIP output entered standby");
+            return 0;
+        } else if (!is_offload_usecase(out->usecase)) {
             if (out->pcm) {
                 pcm_close(out->pcm);
                 out->pcm = NULL;
@@ -2451,6 +2480,17 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 !audio_extn_passthru_is_passthrough_stream(out) &&
                 (platform_get_edid_info(adev->platform) != 0) /* HDMI disconnected */) {
             val = AUDIO_DEVICE_OUT_SPEAKER;
+        }
+        /*
+         * When A2DP is disconnected the
+         * music playback is paused and the policy manager sends routing=0
+         * But the audioflingercontinues to write data until standby time
+         * (3sec). As BT is turned off, the write gets blocked.
+         * Avoid this by routing audio to speaker until standby.
+         */
+        if ((out->devices & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) &&
+                (val == AUDIO_DEVICE_NONE)) {
+                val = AUDIO_DEVICE_OUT_SPEAKER;
         }
 
         /*
@@ -3230,14 +3270,6 @@ static int in_standby(struct audio_stream *stream)
     ALOGD("%s: enter: stream (%p) usecase(%d: %s)", __func__,
           stream, in->usecase, use_case_table[in->usecase]);
 
-    if (in->usecase == USECASE_COMPRESS_VOIP_CALL) {
-        /* Ignore standby in case of voip call because the voip input
-         * stream is closed in adev_close_input_stream()
-         */
-        ALOGV("%s: Ignore Standby in VOIP call", __func__);
-        return status;
-    }
-
     lock_input_stream(in);
     if (!in->standby && in->is_st_session) {
         ALOGD("%s: sound trigger pcm stop lab", __func__);
@@ -3251,11 +3283,16 @@ static int in_standby(struct audio_stream *stream)
 
         pthread_mutex_lock(&adev->lock);
         in->standby = true;
-        if (in->pcm) {
-            pcm_close(in->pcm);
-            in->pcm = NULL;
+        if (in->usecase == USECASE_COMPRESS_VOIP_CALL) {
+            voice_extn_compress_voip_close_input_stream(stream);
+            ALOGD("VOIP input entered standby");
+        } else {
+            if (in->pcm) {
+                pcm_close(in->pcm);
+                in->pcm = NULL;
+            }
+            status = stop_input_stream(in);
         }
-        status = stop_input_stream(in);
         pthread_mutex_unlock(&adev->lock);
     }
     pthread_mutex_unlock(&in->lock);
@@ -4177,6 +4214,22 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     }
 
     audio_extn_set_parameters(adev, parms);
+    // reconfigure should be done only after updating a2dpstate in audio extn
+    ret = str_parms_get_str(parms,"reconfigA2dp", value, sizeof(value));
+    if (ret >= 0) {
+        struct audio_usecase *usecase;
+        struct listnode *node;
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if ((usecase->type == PCM_PLAYBACK) &&
+                (usecase->devices & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP)){
+                ALOGD("reconfigure a2dp... forcing device switch");
+                //force device switch to re configure encoder
+                select_devices(adev, usecase->id);
+                break;
+            }
+        }
+    }
 
 done:
     str_parms_destroy(parms);

@@ -171,6 +171,20 @@ int audio_extn_usb_set_sidetone_gain(struct str_parms *parms,
                                      char *value, int len);
 #endif
 
+#ifndef SPLIT_A2DP_ENABLED
+#define audio_extn_a2dp_init(adev)                       (0)
+#define audio_extn_a2dp_start_playback()                 (0)
+#define audio_extn_a2dp_stop_playback()                  (0)
+#define audio_extn_a2dp_set_parameters(parms)            (0)
+#define audio_extn_a2dp_is_force_device_switch()         (0)
+#else
+void audio_extn_a2dp_init(void *adev);
+int audio_extn_a2dp_start_playback();
+void audio_extn_a2dp_stop_playback();
+void audio_extn_a2dp_set_parameters(struct str_parms *parms);
+bool audio_extn_a2dp_is_force_device_switch();
+#endif
+
 #ifndef SSR_ENABLED
 #define audio_extn_ssr_check_and_set_usecase(in)      (0)
 #define audio_extn_ssr_init(in, num_out_chan)         (0)

@@ -244,6 +244,7 @@ static int voip_stop_call(struct audio_device *adev)
 {
     int ret = 0;
     struct audio_usecase *uc_info;
+    struct listnode *node;
 
     ALOGD("%s: enter, out_stream_count=%d, in_stream_count=%d",
            __func__, voip_data.out_stream_count, voip_data.in_stream_count);
@@ -277,6 +278,12 @@ static int voip_stop_call(struct audio_device *adev)
 
         list_remove(&uc_info->list);
         free(uc_info);
+
+        // restore device for other active usecases
+        list_for_each(node, &adev->usecase_list) {
+            uc_info = node_to_item(node, struct audio_usecase, list);
+            select_devices(adev, uc_info->id);
+        }
     } else
         ALOGV("%s: NO-OP because out_stream_count=%d, in_stream_count=%d",
                __func__, voip_data.out_stream_count, voip_data.in_stream_count);
