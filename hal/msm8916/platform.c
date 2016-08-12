@@ -1367,12 +1367,10 @@ int platform_set_mic_mute(void *platform, bool state)
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voice Tx Mute";
     int ret = 0;
-    uint32_t set_values[ ] = {0,
-                              ALL_SESSION_VSID,
-                              DEFAULT_MUTE_RAMP_DURATION_MS};
+    uint32_t set_values[ ] = {0};
 
     if (audio_extn_hfp_is_active(adev))
-        mixer_ctl_name = "HFP Tx Mute";
+        mixer_ctl_name = "HFP TX Mute";
 
     set_values[0] = state;
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
