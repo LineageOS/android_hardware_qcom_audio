@@ -107,6 +107,22 @@
     <ctl name="HDMI Mixer MultiMedia14" value="0" />
     <ctl name="HDMI Mixer MultiMedia15" value="0" />
     <ctl name="HDMI Mixer MultiMedia16" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia1" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia2" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia3" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia4" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia5" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia6" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia7" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia8" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia9" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia10" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia11" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia12" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia13" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia14" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia15" value="0" />
+    <ctl name="DISPLAY_PORT Mixer MultiMedia16" value="0" />
     <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia1" value="0" />
     <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia1" value="0" />
     <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia2" value="0" />
@@ -435,8 +451,17 @@
         <ctl name="HDMI Mixer MultiMedia1" value="1" />
     </path>
 
+    <path name="deep-buffer-playback display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia1" value="1" />
+    </path>
+
     <path name="deep-buffer-playback speaker-and-hdmi">
         <path name="deep-buffer-playback hdmi" />
+        <path name="deep-buffer-playback" />
+    </path>
+
+    <path name="deep-buffer-playback speaker-and-display-port">
+        <path name="deep-buffer-playback display-port" />
         <path name="deep-buffer-playback" />
     </path>
 
@@ -483,6 +508,10 @@
         <ctl name="HDMI Mixer MultiMedia5" value="1" />
     </path>
 
+    <path name="low-latency-playback display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia5" value="1" />
+    </path>
+
     <path name="low-latency-playback bt-sco">
         <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia5" value="1" />
     </path>
@@ -494,6 +523,11 @@
 
     <path name="low-latency-playback speaker-and-hdmi">
         <path name="low-latency-playback hdmi" />
+        <path name="low-latency-playback" />
+    </path>
+
+    <path name="low-latency-playback speaker-and-display-port">
+        <path name="low-latency-playback display-port" />
         <path name="low-latency-playback" />
     </path>
 
@@ -540,6 +574,10 @@
         <ctl name="HDMI Mixer MultiMedia8" value="1" />
     </path>
 
+    <path name="audio-ull-playback display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia3" value="1" />
+    </path>
+
     <path name="audio-ull-playback bt-sco">
         <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia8" value="1" />
     </path>
@@ -554,6 +592,11 @@
         <path name="audio-ull-playback" />
     </path>
 
+    <path name="audio-ull-playback speaker-and-display-port">
+        <path name="audio-ull-playback display-port" />
+        <path name="audio-ull-playback" />
+    </path>
+
     <path name="audio-ull-playback afe-proxy">
         <ctl name="AFE_PCM_RX Audio Mixer MultiMedia8" value="1" />
     </path>
@@ -564,6 +607,10 @@
 
     <path name="multi-channel-playback hdmi">
         <ctl name="HDMI Mixer MultiMedia2" value="1" />
+    </path>
+
+    <path name="multi-channel-playback display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia2" value="1" />
     </path>
 
     <path name="multi-channel-playback afe-proxy">
@@ -586,6 +633,14 @@
         <ctl name="HDMI Mixer MultiMedia9" value="1" />
     </path>
 
+    <path name="compress-offload-playback display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia4" value="1" />
+    </path>
+
+    <path name="silence-playback display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia9" value="1" />
+    </path>
+
     <path name="compress-offload-playback bt-sco">
         <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia4" value="1" />
     </path>
@@ -597,6 +652,11 @@
 
     <path name="compress-offload-playback speaker-and-hdmi">
         <path name="compress-offload-playback hdmi" />
+        <path name="compress-offload-playback" />
+    </path>
+
+    <path name="compress-offload-playback speaker-and-display-port">
+        <path name="compress-offload-playback display-port" />
         <path name="compress-offload-playback" />
     </path>
 
@@ -638,6 +698,10 @@
         <ctl name="HDMI Mixer MultiMedia7" value="1" />
     </path>
 
+    <path name="compress-offload-playback2 display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia7" value="1" />
+    </path>
+
     <path name="compress-offload-playback2 bt-sco">
         <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia7" value="1" />
     </path>
@@ -649,6 +713,11 @@
 
     <path name="compress-offload-playback2 speaker-and-hdmi">
         <path name="compress-offload-playback2 hdmi" />
+        <path name="compress-offload-playback2" />
+    </path>
+
+    <path name="compress-offload-playback2 speaker-and-display-port">
+        <path name="compress-offload-playback2 display-port" />
         <path name="compress-offload-playback2" />
     </path>
 
@@ -690,6 +759,10 @@
         <ctl name="HDMI Mixer MultiMedia10" value="1" />
     </path>
 
+    <path name="compress-offload-playback3 display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia10" value="1" />
+    </path>
+
     <path name="compress-offload-playback3 bt-sco">
         <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia10" value="1" />
     </path>
@@ -701,6 +774,11 @@
 
     <path name="compress-offload-playback3 speaker-and-hdmi">
         <path name="compress-offload-playback3 hdmi" />
+        <path name="compress-offload-playback3" />
+    </path>
+
+    <path name="compress-offload-playback3 speaker-and-display-port">
+        <path name="compress-offload-playback3 display-port" />
         <path name="compress-offload-playback3" />
     </path>
 
@@ -742,6 +820,10 @@
         <ctl name="HDMI Mixer MultiMedia11" value="1" />
     </path>
 
+    <path name="compress-offload-playback4 display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia11" value="1" />
+    </path>
+
     <path name="compress-offload-playback4 bt-sco">
         <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia11" value="1" />
     </path>
@@ -755,6 +837,12 @@
         <path name="compress-offload-playback4 hdmi" />
         <path name="compress-offload-playback4" />
     </path>
+
+    <path name="compress-offload-playback4 speaker-and-display-port">
+        <path name="compress-offload-playback4 display-port" />
+        <path name="compress-offload-playback4" />
+    </path>
+
 
     <path name="compress-offload-playback4 afe-proxy">
         <ctl name="AFE_PCM_RX Audio Mixer MultiMedia11" value="1" />
@@ -794,6 +882,10 @@
         <ctl name="HDMI Mixer MultiMedia12" value="1" />
     </path>
 
+    <path name="compress-offload-playback5 display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia12" value="1" />
+    </path>
+
     <path name="compress-offload-playback5 bt-sco">
         <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia12" value="1" />
     </path>
@@ -805,6 +897,11 @@
 
     <path name="compress-offload-playback5 speaker-and-hdmi">
         <path name="compress-offload-playback5 hdmi" />
+        <path name="compress-offload-playback5" />
+    </path>
+
+    <path name="compress-offload-playback5 speaker-and-display-port">
+        <path name="compress-offload-playback5 display-port" />
         <path name="compress-offload-playback5" />
     </path>
 
@@ -846,6 +943,10 @@
         <ctl name="HDMI Mixer MultiMedia13" value="1" />
     </path>
 
+    <path name="compress-offload-playback6 display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia13" value="1" />
+    </path>
+
     <path name="compress-offload-playback6 bt-sco">
         <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia13" value="1" />
     </path>
@@ -857,6 +958,11 @@
 
     <path name="compress-offload-playback6 speaker-and-hdmi">
         <path name="compress-offload-playback6 hdmi" />
+        <path name="compress-offload-playback6" />
+    </path>
+
+    <path name="compress-offload-playback6 speaker-and-display-port">
+        <path name="compress-offload-playback6 display-port" />
         <path name="compress-offload-playback6" />
     </path>
 
@@ -898,6 +1004,10 @@
         <ctl name="HDMI Mixer MultiMedia14" value="1" />
     </path>
 
+    <path name="compress-offload-playback7 display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia14" value="1" />
+    </path>
+
     <path name="compress-offload-playback7 bt-sco">
         <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia14" value="1" />
     </path>
@@ -909,6 +1019,11 @@
 
     <path name="compress-offload-playback7 speaker-and-hdmi">
         <path name="compress-offload-playback7 hdmi" />
+        <path name="compress-offload-playback7" />
+    </path>
+
+    <path name="compress-offload-playback7 speaker-and-display-port">
+        <path name="compress-offload-playback7 display-port" />
         <path name="compress-offload-playback7" />
     </path>
 
@@ -950,6 +1065,10 @@
         <ctl name="HDMI Mixer MultiMedia15" value="1" />
     </path>
 
+    <path name="compress-offload-playback8 display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia15" value="1" />
+    </path>
+
     <path name="compress-offload-playback8 bt-sco">
         <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia15" value="1" />
     </path>
@@ -961,6 +1080,11 @@
 
     <path name="compress-offload-playback8 speaker-and-hdmi">
         <path name="compress-offload-playback8 hdmi" />
+        <path name="compress-offload-playback8" />
+    </path>
+
+    <path name="compress-offload-playback8 speaker-and-display-port">
+        <path name="compress-offload-playback8 display-port" />
         <path name="compress-offload-playback8" />
     </path>
 
@@ -1002,6 +1126,10 @@
         <ctl name="HDMI Mixer MultiMedia16" value="1" />
     </path>
 
+    <path name="compress-offload-playback9 display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia16" value="1" />
+    </path>
+
     <path name="compress-offload-playback9 bt-sco">
         <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia16" value="1" />
     </path>
@@ -1013,6 +1141,11 @@
 
     <path name="compress-offload-playback9 speaker-and-hdmi">
         <path name="compress-offload-playback9 hdmi" />
+        <path name="compress-offload-playback9" />
+    </path>
+
+    <path name="compress-offload-playback9 speaker-and-display-port">
+        <path name="compress-offload-playback9 display-port" />
         <path name="compress-offload-playback9" />
     </path>
 
@@ -1733,6 +1866,9 @@
     <path name="hdmi">
     </path>
 
+    <path name="display-port">
+    </path>
+
     <path name="speaker-and-usb-headphones">
         <path name="speaker" />
         <path name="usb-headphones" />
@@ -1741,6 +1877,11 @@
     <path name="speaker-and-hdmi">
         <path name="speaker" />
         <path name="hdmi" />
+    </path>
+
+    <path name="speaker-and-display-port">
+        <path name="speaker" />
+        <path name="display-port" />
     </path>
 
     <path name="voice-rec-mic">
