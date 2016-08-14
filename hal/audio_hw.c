@@ -1362,10 +1362,6 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                                         out_snd_device,
                                                         in_snd_device);
         enable_audio_route_for_voice_usecases(adev, usecase);
-        /* Enable sidetone only if voice/voip call already exists */
-        if (voice_is_call_state_active(adev) ||
-            voice_extn_compress_voip_is_started(adev))
-            voice_set_sidetone(adev, out_snd_device, true);
     }
 
     usecase->in_snd_device = in_snd_device;
@@ -1385,6 +1381,13 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     }
 
     enable_audio_route(adev, usecase);
+
+    if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL) {
+        /* Enable sidetone only if other voice/voip call already exists */
+        if (voice_is_call_state_active(adev) ||
+            voice_extn_compress_voip_is_started(adev))
+            voice_set_sidetone(adev, out_snd_device, true);
+    }
 
     /* Applicable only on the targets that has external modem.
      * Enable device command should be sent to modem only after
