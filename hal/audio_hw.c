@@ -2349,15 +2349,16 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             }
 
             if (!out->standby) {
-                audio_extn_perf_lock_acquire(&adev->perf_lock_handle, 0,
-                                             adev->perf_lock_opts,
-                                             adev->perf_lock_opts_size);
                 if (!same_dev) {
                     ALOGV("update routing change");
                     out->routing_change = true;
+                    audio_extn_perf_lock_acquire(&adev->perf_lock_handle, 0,
+                                                 adev->perf_lock_opts,
+                                                 adev->perf_lock_opts_size);
                 }
                 select_devices(adev, out->usecase);
-                audio_extn_perf_lock_release(&adev->perf_lock_handle);
+                if (!same_dev)
+                    audio_extn_perf_lock_release(&adev->perf_lock_handle);
             }
         }
 
