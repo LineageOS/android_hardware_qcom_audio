@@ -19,7 +19,7 @@ AUDIO_FEATURE_ENABLED_FM_POWER_OPT := true
 AUDIO_FEATURE_ENABLED_FLUENCE := true
 AUDIO_FEATURE_ENABLED_HDMI_SPK := true
 AUDIO_FEATURE_ENABLED_HDMI_EDID := true
-#AUDIO_FEATURE_ENABLED_HDMI_PASSTHROUGH := true
+AUDIO_FEATURE_ENABLED_HDMI_PASSTHROUGH := true
 #AUDIO_FEATURE_ENABLED_KEEP_ALIVE := true
 #AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := true
 #DOLBY_DDP := true
@@ -168,9 +168,9 @@ audio.dolby.ds2.hardbypass=true
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.offload.multiple.enabled=false
 
-#Disable Compress passthrough playback
+#Enable Compress passthrough playback
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.passthrough=false
+audio.offload.passthrough=true
 
 #Disable surround sound recording
 PRODUCT_PROPERTY_OVERRIDES += \
