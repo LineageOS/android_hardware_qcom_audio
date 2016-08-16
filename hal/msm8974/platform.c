@@ -4290,7 +4290,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     // default backend
     // force routing is not required here, caller will do it anyway
     if ((voice_is_in_call(adev) || adev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
-        backend_idx == DEFAULT_CODEC_BACKEND) {
+        usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
         ALOGW("%s:becf: afe:Use default bw and sr for voice/voip calls ",
               __func__);
         bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
