@@ -487,6 +487,12 @@ int platform_get_default_app_type(void *platform __unused)
     return -ENOSYS;
 }
 
+bool platform_can_enable_spkr_prot_on_device(snd_device_t snd_device __unused)
+{
+    ALOGE("%s: Not implemented", __func__);
+    return false;
+}
+
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
                                     int app_type __unused, int sample_rate __unused)
 {
