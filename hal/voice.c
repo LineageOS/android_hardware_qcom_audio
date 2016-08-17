@@ -124,6 +124,11 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
         return -EINVAL;
     }
 
+    if (session->state.current == CALL_ACTIVE) {
+        ALOGE("%s: already call is active !!!!", __func__);
+        return -EINVAL;
+    }
+
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
     if (!uc_info) {
         ALOGE("start_call: couldn't allocate mem for audio_usecase");
@@ -396,7 +401,6 @@ int voice_start_call(struct audio_device *adev)
 int voice_stop_call(struct audio_device *adev)
 {
     int ret = 0;
-
     adev->voice.in_call = false;
     ret = voice_extn_stop_call(adev);
     if (ret == -ENOSYS) {
