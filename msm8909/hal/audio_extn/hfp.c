@@ -310,7 +310,7 @@ int hfp_set_mic_mute(struct audio_device *adev, bool state)
 
     ALOGI("%s: enter, state=%d", __func__, state);
 
-    if (adev->mode == AUDIO_MODE_IN_COMMUNICATION) {
+    if (adev->mode == AUDIO_MODE_IN_CALL) {
         set_values[0] = state;
         ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
         if (!ctl) {

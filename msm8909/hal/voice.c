@@ -329,10 +329,10 @@ int voice_set_mic_mute(struct audio_device *adev, bool state)
     int err = 0;
 
     adev->voice.mic_mute = state;
-    if (adev->mode == AUDIO_MODE_IN_CALL)
-        err = platform_set_mic_mute(adev->platform, state);
-    if (adev->mode == AUDIO_MODE_IN_COMMUNICATION && audio_extn_hfp_is_active(adev)) {
+    if (adev->mode == AUDIO_MODE_IN_CALL && audio_extn_hfp_is_active(adev)) {
         err = hfp_set_mic_mute(adev, state);
+    } else if (adev->mode == AUDIO_MODE_IN_CALL) {
+        err = platform_set_mic_mute(adev->platform, state);
     } else if (adev->mode == AUDIO_MODE_IN_COMMUNICATION) {
         err = voice_extn_compress_voip_set_mic_mute(adev, state);
     }
