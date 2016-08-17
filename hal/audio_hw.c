@@ -621,6 +621,36 @@ static int enable_audio_route_for_voice_usecases(struct audio_device *adev,
     return 0;
 }
 
+/*
+ * Enable ASRC mode if native or DSD stream is active.
+ */
+static void audio_check_and_set_asrc_mode(struct audio_device *adev, snd_device_t snd_device)
+{
+    if (SND_DEVICE_OUT_HEADPHONES == snd_device &&
+       !adev->asrc_mode_enabled) {
+        struct listnode *node = NULL;
+        struct audio_usecase *uc = NULL;
+        struct stream_out *curr_out = NULL;
+
+        list_for_each(node, &adev->usecase_list) {
+            uc = node_to_item(node, struct audio_usecase, list);
+            curr_out = (struct stream_out*) uc->stream.out;
+
+            if (curr_out && PCM_PLAYBACK == uc->type) {
+                if((platform_get_backend_index(uc->out_snd_device) == HEADPHONE_44_1_BACKEND) ||
+                      (platform_get_backend_index(uc->out_snd_device) == DSD_NATIVE_BACKEND)) {
+                    ALOGD("%s:DSD or native stream detected enabling asrcmode in hardware",
+                          __func__);
+                    audio_route_apply_and_update_path(adev->audio_route,
+                                                  "asrc-mode");
+                    adev->asrc_mode_enabled = true;
+                    break;
+                }
+            }
+        }
+    }
+}
+
 int pcm_ioctl(struct pcm *pcm, int request, ...)
 {
     va_list ap;
@@ -772,7 +802,8 @@ int enable_snd_device(struct audio_device *adev,
             audio_route_apply_and_update_path(adev->audio_route,
                                               "true-native-mode");
             adev->native_playback_enabled = true;
-        }
+        } else
+            audio_check_and_set_asrc_mode(adev, snd_device);
     }
     return 0;
 }
@@ -829,6 +860,11 @@ int disable_snd_device(struct audio_device *adev,
             audio_route_reset_and_update_path(adev->audio_route,
                                               "true-native-mode");
             adev->native_playback_enabled = false;
+        } else if (SND_DEVICE_OUT_HEADPHONES == snd_device &&
+                 adev->asrc_mode_enabled) {
+            ALOGD("%s: %d: disabling asrc mode in hardware", __func__, __LINE__);
+            audio_route_reset_and_update_path(adev->audio_route, "asrc-mode");
+            adev->asrc_mode_enabled = false;
         }
 
         audio_extn_dev_arbi_release(snd_device);
@@ -900,7 +936,9 @@ static void check_usecases_codec_backend(struct audio_device *adev,
             ((usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
              (usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) ||
              (force_restart_session)) &&
-            platform_check_backends_match(snd_device, usecase->out_snd_device)) {
+            (platform_check_backends_match(snd_device, usecase->out_snd_device)||
+             (platform_check_codec_asrc_support(adev->platform) && !adev->asrc_mode_enabled &&
+              platform_check_if_backend_has_to_be_disabled(snd_device,usecase->out_snd_device)))) {
                 ALOGD("%s:becf: check_usecases (%s) is active on (%s) - disabling ..",
                     __func__, use_case_table[usecase->id],
                       platform_get_snd_device_name(usecase->out_snd_device));

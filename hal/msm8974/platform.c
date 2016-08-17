@@ -248,6 +248,7 @@ struct platform_data {
     int source_mic_type;
     int max_mic_count;
     bool is_dsd_supported;
+    bool is_asrc_supported;
 };
 
 static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -1759,6 +1760,7 @@ acdb_init_fail:
     if(strstr(snd_card_name, "tavil")) {
         ALOGD("%s:DSD playback is supported", __func__);
         my_data->is_dsd_supported = true;
+        my_data->is_asrc_supported = true;
         platform_set_native_support(NATIVE_AUDIO_MODE_MULTIPLE_44_1);
     }
 
@@ -1921,6 +1923,32 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
     }
 
     ALOGV("%s: be_itf1 = %s, be_itf2 = %s, match %d", __func__, be_itf1, be_itf2, result);
+    return result;
+}
+
+bool platform_check_if_backend_has_to_be_disabled(snd_device_t new_snd_device,
+                                                  snd_device_t cuurent_snd_device)
+{
+    bool result = false;
+
+    ALOGV("%s: current snd device = %s, new snd device = %s", __func__,
+                platform_get_snd_device_name(cuurent_snd_device),
+                platform_get_snd_device_name(new_snd_device));
+
+    if ((new_snd_device < SND_DEVICE_MIN) || (new_snd_device >= SND_DEVICE_OUT_END) ||
+            (cuurent_snd_device < SND_DEVICE_MIN) || (cuurent_snd_device >= SND_DEVICE_OUT_END)) {
+        ALOGE("%s: Invalid snd_device",__func__);
+        return false;
+    }
+
+    if (cuurent_snd_device == SND_DEVICE_OUT_HEADPHONES &&
+            (new_snd_device == SND_DEVICE_OUT_HEADPHONES_44_1 ||
+             new_snd_device == SND_DEVICE_OUT_HEADPHONES_DSD)) {
+        result = true;
+    }
+
+    ALOGV("%s: Need to disable current backend %s, %d",
+          __func__, platform_get_snd_device_name(cuurent_snd_device), result);
     return result;
 }
 
@@ -2129,6 +2157,12 @@ bool platform_check_codec_dsd_support(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     return my_data->is_dsd_supported;
+}
+
+bool platform_check_codec_asrc_support(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    return my_data->is_asrc_supported;
 }
 
 int platform_get_native_support()

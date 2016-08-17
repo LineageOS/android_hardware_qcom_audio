@@ -5413,3 +5413,14 @@ bool platform_check_codec_dsd_support(void *platform __unused)
 {
     return false;
 }
+
+bool platform_check_codec_asrc_support(void *platform __unused)
+{
+    return false;
+}
+
+bool platform_check_if_backend_has_to_be_disabled(snd_device_t new_snd_device __unused,
+                                                  snd_device_t cuurent_snd_device __unused)
+{
+    return false;
+}
