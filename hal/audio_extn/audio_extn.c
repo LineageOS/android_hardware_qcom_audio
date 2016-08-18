@@ -763,6 +763,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_pm_set_parameters(parms);
    audio_extn_source_track_set_parameters(adev, parms);
    audio_extn_fbsp_set_parameters(parms);
+   audio_extn_keep_alive_set_parameters(adev, parms);
    check_and_set_hdmi_connection_status(parms);
    if (adev->offload_effects_set_parameters != NULL)
        adev->offload_effects_set_parameters(parms);

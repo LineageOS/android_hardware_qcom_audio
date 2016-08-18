@@ -38,7 +38,7 @@
 
 #define SILENCE_MIXER_PATH "silence-playback hdmi"
 #define SILENCE_DEV_ID 32           /* index into machine driver */
-#define SILENCE_INTERVAL_US 2000000
+#define SILENCE_INTERVAL 2 /*In secs*/
 
 typedef enum {
     STATE_DEINIT = -1,
@@ -52,7 +52,9 @@ typedef enum {
 
 typedef struct {
     pthread_mutex_t lock;
+    pthread_mutex_t sleep_lock;
     pthread_cond_t  cond;
+    pthread_cond_t  wake_up_cond;
     pthread_t thread;
     state_t state;
     struct listnode cmd_list;
@@ -88,6 +90,8 @@ void audio_extn_keep_alive_init(struct audio_device *adev)
     ka.pcm = NULL;
     pthread_mutex_init(&ka.lock, (const pthread_mutexattr_t *) NULL);
     pthread_cond_init(&ka.cond, (const pthread_condattr_t *) NULL);
+    pthread_cond_init(&ka.wake_up_cond, (const pthread_condattr_t *) NULL);
+    pthread_mutex_init(&ka.sleep_lock, (const pthread_mutexattr_t *) NULL);
     list_init(&ka.cmd_list);
     if (pthread_create(&ka.thread,  (const pthread_attr_t *) NULL,
                        keep_alive_loop, NULL) < 0) {
@@ -143,6 +147,27 @@ static int open_silence_stream()
     return 0;
 }
 
+
+static int set_mixer_control(struct mixer *mixer,
+                             const char * mixer_ctl_name,
+                             const char *mixer_val)
+{
+    struct mixer_ctl *ctl;
+    if ((mixer == NULL) || (mixer_ctl_name == NULL) || (mixer_val == NULL)) {
+       ALOGE("%s: Invalid input", __func__);
+       return -EINVAL;
+    }
+    ALOGD("setting mixer ctl %s with value %s", mixer_ctl_name, mixer_val);
+    ctl = mixer_get_ctl_by_name(mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    return mixer_ctl_set_enum_by_string(ctl, mixer_val);
+}
+
 /* must be called with adev lock held */
 void audio_extn_keep_alive_start()
 {
@@ -151,23 +176,33 @@ void audio_extn_keep_alive_start()
     int app_type_cfg[MAX_LENGTH_MIXER_CONTROL_IN_INT], len = 0, rc;
     struct mixer_ctl *ctl;
     int acdb_dev_id, snd_device;
+    struct listnode *node;
+    struct audio_usecase *usecase;
     int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
 
     pthread_mutex_lock(&ka.lock);
 
     if (ka.state == STATE_DEINIT) {
         ALOGE(" %s : Invalid state ",__func__);
-        return;
+        goto exit;
     }
 
     if (audio_extn_passthru_is_active()) {
         ALOGE(" %s : Pass through is already active", __func__);
-        return;
+        goto exit;
     }
 
     if (ka.state == STATE_ACTIVE) {
         ALOGV(" %s : Keep alive state is already Active",__func__ );
         goto exit;
+    }
+
+    /* Dont start keep_alive if any other PCM session is routed to HDMI*/
+    list_for_each(node, &adev->usecase_list) {
+         usecase = node_to_item(node, struct audio_usecase, list);
+         if (usecase->type == PCM_PLAYBACK &&
+                 usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
+             goto exit;
     }
 
     ka.done = false;
@@ -202,9 +237,15 @@ void audio_extn_keep_alive_start()
           platform_get_default_app_type(adev->platform),
           acdb_dev_id, sample_rate);
     mixer_ctl_set_array(ctl, app_type_cfg, len);
+    /*Configure HDMI Backend with default values, this as well
+     *helps reconfigure HDMI backend after passthrough
+     */
+    set_mixer_control(adev->mixer, "HDMI RX Format", "LPCM");
+    set_mixer_control(adev->mixer, "HDMI_RX SampleRate", "KHZ_48");
+    set_mixer_control(adev->mixer, "HDMI_RX Channels", "Two");
 
     /*send calibration*/
-    struct audio_usecase *usecase = calloc(1, sizeof(struct audio_usecase));
+    usecase = calloc(1, sizeof(struct audio_usecase));
     usecase->type = PCM_PLAYBACK;
     usecase->out_snd_device = SND_DEVICE_OUT_HDMI;
 
@@ -232,13 +273,13 @@ void audio_extn_keep_alive_stop()
 
     pthread_mutex_lock(&ka.lock);
 
-    if (ka.state == STATE_DEINIT)
-        return;
-
-    if (ka.state == STATE_IDLE)
+    if ((ka.state == STATE_DEINIT) || (ka.state == STATE_IDLE))
         goto exit;
 
+    pthread_mutex_lock(&ka.sleep_lock);
     ka.done = true;
+    pthread_cond_signal(&ka.wake_up_cond);
+    pthread_mutex_unlock(&ka.sleep_lock);
     while (ka.state != STATE_IDLE) {
         pthread_cond_wait(&ka.cond, &ka.lock);
     }
@@ -290,6 +331,7 @@ static void * keep_alive_loop(void * context __unused)
     struct listnode *item;
     uint8_t * silence = NULL;
     int32_t bytes = 0;
+    struct timespec ts;
 
     while (true) {
         pthread_mutex_lock(&ka.lock);
@@ -328,9 +370,17 @@ static void * keep_alive_loop(void * context __unused)
              * Just something to keep the connection alive is sufficient.
              * Hence a short burst of silence periodically.
              */
-            usleep(SILENCE_INTERVAL_US);
-        }
+            pthread_mutex_lock(&ka.sleep_lock);
+            clock_gettime(CLOCK_REALTIME, &ts);
+            ts.tv_sec += SILENCE_INTERVAL;
+            ts.tv_nsec = 0;
 
+            if (!ka.done)
+              pthread_cond_timedwait(&ka.wake_up_cond,
+                            &ka.sleep_lock, &ts);
+
+            pthread_mutex_unlock(&ka.sleep_lock);
+        }
         pthread_mutex_lock(&ka.lock);
         ka.state = STATE_IDLE;
         pthread_cond_signal(&ka.cond);
