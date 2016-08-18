@@ -16,6 +16,24 @@
       "revId": "6c4b9af4baf27664addf11a7c42a19901f0297d6",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1fa4df85_60048b7c",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1564,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-08-18T04:20:06Z",
+      "side": 1,
+      "message": "Depends if you want HAC to take precedence over ANC or VOIP.",
+      "parentUuid": "3fa7e38b_3f641722",
+      "revId": "6c4b9af4baf27664addf11a7c42a19901f0297d6",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
