@@ -98,9 +98,9 @@ int audio_hw_call_back(sound_trigger_event_type_t event,
             status = -ENOMEM;
             break;
         }
-        memcpy(&st_ses_info->st_ses, &config->st_ses, sizeof (config->st_ses));
-        ALOGV("%s: add capture_handle %d pcm %p", __func__,
-              st_ses_info->st_ses.capture_handle, st_ses_info->st_ses.pcm);
+        memcpy(&st_ses_info->st_ses, &config->st_ses, sizeof (struct sound_trigger_session_info));
+        ALOGV("%s: add capture_handle %d st session opaque ptr %p", __func__,
+              st_ses_info->st_ses.capture_handle, st_ses_info->st_ses.p_ses);
         list_add_tail(&st_dev->st_ses_list, &st_ses_info->list);
         break;
 
@@ -112,12 +112,12 @@ int audio_hw_call_back(sound_trigger_event_type_t event,
         }
         st_ses_info = get_sound_trigger_info(config->st_ses.capture_handle);
         if (!st_ses_info) {
-            ALOGE("%s: pcm %p not in the list!", __func__, config->st_ses.pcm);
+            ALOGE("%s: st session opaque ptr %p not in the list!", __func__, config->st_ses.p_ses);
             status = -EINVAL;
             break;
         }
-        ALOGV("%s: remove capture_handle %d pcm %p", __func__,
-              st_ses_info->st_ses.capture_handle, st_ses_info->st_ses.pcm);
+        ALOGV("%s: remove capture_handle %d st session opaque ptr %p", __func__,
+              st_ses_info->st_ses.capture_handle, st_ses_info->st_ses.p_ses);
         list_remove(&st_ses_info->list);
         free(st_ses_info);
         break;
@@ -181,7 +181,7 @@ void audio_extn_sound_trigger_stop_lab(struct stream_in *in)
     pthread_mutex_unlock(&st_dev->lock);
     if (st_ses_info) {
         event.u.ses_info = st_ses_info->st_ses;
-        ALOGV("%s: AUDIO_EVENT_STOP_LAB pcm %p", __func__, st_ses_info->st_ses.pcm);
+        ALOGV("%s: AUDIO_EVENT_STOP_LAB st sess %p", __func__, st_ses_info->st_ses.p_ses);
         st_dev->st_callback(AUDIO_EVENT_STOP_LAB, &event);
         in->is_st_session_active = false;
     }
@@ -201,7 +201,6 @@ void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in)
     list_for_each(node, &st_dev->st_ses_list) {
         st_ses_info = node_to_item(node, struct sound_trigger_info , list);
         if (st_ses_info->st_ses.capture_handle == in->capture_handle) {
-            in->pcm = st_ses_info->st_ses.pcm;
             in->config = st_ses_info->st_ses.config;
             in->channel_mask = audio_channel_in_mask_from_count(in->config.channels);
             in->is_st_session = true;
