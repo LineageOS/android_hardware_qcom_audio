@@ -599,7 +599,7 @@ static const char *get_operator_specific_device_mixer_path(snd_device_t snd_devi
 
 bool platform_send_gain_dep_cal(void *platform __unused, int level __unused)
 {
-    return 0;
+    return true;
 }
 
 void platform_set_echo_reference(struct audio_device *adev, bool enable,

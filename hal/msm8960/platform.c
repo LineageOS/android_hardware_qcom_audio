@@ -1072,7 +1072,7 @@ int platform_swap_lr_channels(struct audio_device *adev, bool swap_channels)
 bool platform_send_gain_dep_cal(void *platform __unused,
                                 int level __unused)
 {
-    return 0;
+    return true;
 }
 
 bool platform_can_split_snd_device(snd_device_t in_snd_device __unused,
