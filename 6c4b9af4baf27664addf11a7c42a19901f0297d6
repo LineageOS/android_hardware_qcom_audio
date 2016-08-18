@@ -34,6 +34,24 @@
       "revId": "6c4b9af4baf27664addf11a7c42a19901f0297d6",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1fa4df85_00035744",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1564,
+      "author": {
+        "id": 13897
+      },
+      "writtenOn": "2016-08-18T07:38:08Z",
+      "side": 1,
+      "message": "I think HAC should be given the max priority, as it is done in the original commit. If HAC is enabled, the user probably really needs it.",
+      "parentUuid": "1fa4df85_60048b7c",
+      "revId": "6c4b9af4baf27664addf11a7c42a19901f0297d6",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
