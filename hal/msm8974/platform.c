@@ -2678,7 +2678,12 @@ bool platform_can_split_snd_device(void *platform,
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_USB_HEADSET;
         status = true;
+    } else if (SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
+        new_snd_devices[1] = SND_DEVICE_OUT_BT_A2DP;
     }
+
 
     ALOGD("%s: snd_device(%d) num devices(%d) new_snd_devices(%d)", __func__,
         snd_device, *num_devices, *new_snd_devices);

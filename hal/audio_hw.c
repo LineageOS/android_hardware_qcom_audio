@@ -750,14 +750,6 @@ int enable_snd_device(struct audio_device *adev,
     if (audio_extn_spkr_prot_is_enabled())
          audio_extn_spkr_prot_calib_cancel(adev);
 
-
-    if (((SND_DEVICE_OUT_BT_A2DP == snd_device) ||
-       (SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device))
-        && (audio_extn_a2dp_start_playback() < 0)) {
-           ALOGE(" fail to configure A2dp control path ");
-           return -EINVAL;
-    }
-
     if (platform_can_enable_spkr_prot_on_device(snd_device) &&
          audio_extn_spkr_prot_is_enabled()) {
        if (platform_get_spkr_prot_acdb_id(snd_device) < 0) {
@@ -777,6 +769,13 @@ int enable_snd_device(struct audio_device *adev,
         }
     } else {
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
+
+       if ((SND_DEVICE_OUT_BT_A2DP == snd_device) &&
+           (audio_extn_a2dp_start_playback() < 0)) {
+           ALOGE(" fail to configure A2dp control path ");
+           return -EINVAL;
+       }
+
         /* due to the possibility of calibration overwrite between listen
             and audio, notify listen hal before audio calibration is sent */
         audio_extn_sound_trigger_update_device_status(snd_device,
@@ -835,10 +834,6 @@ int disable_snd_device(struct audio_device *adev,
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
 
-        if ((SND_DEVICE_OUT_BT_A2DP == snd_device) ||
-           (SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device))
-            audio_extn_a2dp_stop_playback();
-
         if (platform_can_enable_spkr_prot_on_device(snd_device) &&
              audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing(snd_device);
@@ -850,6 +845,9 @@ int disable_snd_device(struct audio_device *adev,
         } else {
             audio_route_reset_and_update_path(adev->audio_route, device_name);
         }
+
+        if (SND_DEVICE_OUT_BT_A2DP == snd_device)
+            audio_extn_a2dp_stop_playback();
 
         if (snd_device == SND_DEVICE_OUT_HDMI)
             adev->is_channel_status_set = false;
@@ -4145,8 +4143,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         }
     }
 
-    audio_extn_set_parameters(adev, parms);
-    // reconfigure should be done only after updating a2dpstate in audio extn
     ret = str_parms_get_str(parms,"reconfigA2dp", value, sizeof(value));
     if (ret >= 0) {
         struct audio_usecase *usecase;
@@ -4156,13 +4152,17 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             if ((usecase->type == PCM_PLAYBACK) &&
                 (usecase->devices & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP)){
                 ALOGD("reconfigure a2dp... forcing device switch");
+                lock_output_stream(usecase->stream.out);
+                audio_extn_a2dp_set_handoff_mode(true);
                 //force device switch to re configure encoder
                 select_devices(adev, usecase->id);
+                audio_extn_a2dp_set_handoff_mode(false);
+                pthread_mutex_unlock(&usecase->stream.out->lock);
                 break;
             }
         }
     }
-
+    audio_extn_set_parameters(adev, parms);
 done:
     str_parms_destroy(parms);
     pthread_mutex_unlock(&adev->lock);
