@@ -135,8 +135,11 @@ extern "C" {
 #define FALSE 0
 
 #define NUMOFFRAMES                   1
-#define MAXFRAMELENGTH                32
-#define OMX_AMR_OUTPUT_BUFFER_SIZE    ((NUMOFFRAMES * (sizeof(ENC_META_OUT) + MAXFRAMELENGTH) \
+#define AMRNB_MAXFRAMELENGTH                32
+#define AMRWB_MAXFRAMELENGTH                62
+#define OMX_AMRNB_OUTPUT_BUFFER_SIZE    ((NUMOFFRAMES * (sizeof(ENC_META_OUT) + AMRNB_MAXFRAMELENGTH) \
+                        + 1))
+#define OMX_AMRWB_OUTPUT_BUFFER_SIZE    ((NUMOFFRAMES * (sizeof(ENC_META_OUT) + AMRWB_MAXFRAMELENGTH) \
                         + 1))
 #define FRAMEDURATION                 20000
 
