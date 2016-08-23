@@ -55,6 +55,8 @@
         <usecase name="USECASE_AUDIO_SPKR_CALIB_TX" type="in" id="35"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_AFE_PROXY" type="out" id="6"/>
         <usecase name="USECASE_AUDIO_RECORD_AFE_PROXY" type="in" id="7"/>
+        <usecase name="USECASE_AUDIO_RECORD_LOW_LATENCY" type="in" id="17" />
+        <usecase name="USECASE_AUDIO_PLAYBACK_ULL" type="out" id="17" />
     </pcm_ids>
     <config_params>
         <param key="spkr_1_tz_name" value="wsatz.13"/>

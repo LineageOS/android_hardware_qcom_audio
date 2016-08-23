@@ -2028,6 +2028,11 @@
         <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
     </path>
 
+    <path name="wsa-speaker-and-headphones">
+        <path name="wsa-speaker" />
+        <path name="headphones" />
+    </path>
+
     <path name="usb-headphones">
     </path>
 
@@ -2041,6 +2046,11 @@
     </path>
 
     <path name="speaker-and-usb-headphones">
+        <path name="wsa-speaker" />
+        <path name="usb-headphones" />
+    </path>
+
+    <path name="wsa-speaker-and-usb-headphones">
         <path name="wsa-speaker" />
         <path name="usb-headphones" />
     </path>
@@ -2247,5 +2257,10 @@
 
     <path name="speaker-and-line">
         <path name="speaker-and-headphones" />
+    </path>
+
+    <path name="wsa-speaker-and-line">
+        <path name="wsa-speaker" />
+        <path name="headphones" />
     </path>
 </mixer>
