@@ -529,12 +529,28 @@ int main(int argc, char **argv)
     } else {
           DEBUG_PRINT(" invalid format: \n");
           DEBUG_PRINT("ex: ./mm-aenc-omxamr-test INPUTFILE OUTPUTFILE Tunnel BANDMODE DTXENABLE RECORDPATH RECORDTIME amrwb_enable \n");
-          DEBUG_PRINT("Bandmode 1-7, dtxenable 0-1\n");
+          DEBUG_PRINT("amrnb:Bandmode 1-8 amrwb:Bandmode 0-8, dtxenable 0-1\n");
           DEBUG_PRINT("RECORDPATH 0(TX),1(RX),2(BOTH),3(MIC)\n");
           DEBUG_PRINT("RECORDTIME in seconds for AST Automation\n");
 	  DEBUG_PRINT("amrwb_enable:1-amrwb 0-amrnb\n");
           return 0;
     }
+
+    if (!amrwb_enable && (bandmode < 1 || bandmode > 8)) {
+          DEBUG_PRINT("%d Bandmode is not supported for amrnb:supported Bandmodes are 1-8\n",bandmode);
+          return 0;
+    }
+
+    if (amrwb_enable && (bandmode < 0 || bandmode > 8)) {
+          DEBUG_PRINT("%d Bandmode not supported for amrwb:supported Bandmodes are 0-8\n",bandmode);
+          return 0;
+    }
+
+    if (dtxenable != 0 && dtxenable != 1) {
+          DEBUG_PRINT("dtxenable not supported:dtxenable should be 0-1\n");
+          return 0;
+    }
+
     if(recpath != 3) {
           DEBUG_PRINT("For RECORDPATH Only MIC supported\n");
           return 0;
