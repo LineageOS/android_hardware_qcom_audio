@@ -281,7 +281,6 @@ omx_amr_aenc::omx_amr_aenc(): m_tmp_meta_buf(NULL),
         m_out_act_buf_count (OMX_CORE_NUM_OUTPUT_BUFFERS),
         m_inp_current_buf_count(0),
         m_out_current_buf_count(0),
-        output_buffer_size((OMX_U32)OMX_AMR_OUTPUT_BUFFER_SIZE),
         input_buffer_size(OMX_CORE_INPUT_BUFFER_SIZE),
         m_session_id(0),
         m_inp_bEnabled(OMX_TRUE),
@@ -1136,6 +1135,15 @@ OMX_ERRORTYPE omx_amr_aenc::component_init(OMX_STRING role)
 		sizeof(component_Role.cRole));
         DEBUG_PRINT("\ncomponent_init: Component %s LOADED is invalid\n", role);
     }
+
+    if (!amrwb_enable)
+    {
+        output_buffer_size = (OMX_U32)OMX_AMRNB_OUTPUT_BUFFER_SIZE;
+    }
+    else
+    {
+        output_buffer_size = (OMX_U32)OMX_AMRWB_OUTPUT_BUFFER_SIZE;
+    }
     if(pcm_input)
     {
         m_tmp_meta_buf = (OMX_U8*) malloc(sizeof(OMX_U8) *
@@ -1146,12 +1154,22 @@ OMX_ERRORTYPE omx_amr_aenc::component_init(OMX_STRING role)
             return OMX_ErrorInsufficientResources;
         }
     }
-    m_tmp_out_meta_buf =
-		(OMX_U8*)malloc(sizeof(OMX_U8)*OMX_AMR_OUTPUT_BUFFER_SIZE);
-        if ( m_tmp_out_meta_buf == NULL ){
-            DEBUG_PRINT_ERROR("Mem alloc failed for out meta buf\n");
-                return OMX_ErrorInsufficientResources;
-            }
+
+    if (!amrwb_enable)
+    {
+        m_tmp_out_meta_buf =
+            (OMX_U8*)malloc(sizeof(OMX_U8)*OMX_AMRNB_OUTPUT_BUFFER_SIZE);
+    }
+    else
+    {
+        m_tmp_out_meta_buf =
+            (OMX_U8*)malloc(sizeof(OMX_U8)*OMX_AMRWB_OUTPUT_BUFFER_SIZE);
+    }
+
+    if (m_tmp_out_meta_buf == NULL ){
+        DEBUG_PRINT_ERROR("Mem alloc failed for out meta buf\n");
+        return OMX_ErrorInsufficientResources;
+    }
 
     if(!amrwb_enable) {
         if(0 == pcm_input)
