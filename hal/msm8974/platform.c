@@ -1129,6 +1129,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_HDMI] = strdup("SLIMBUS_0_RX-and-HDMI_RX");
     hw_interface_table[SND_DEVICE_OUT_DISPLAY_PORT] = strdup("DISPLAY_PORT_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_DISPLAY_PORT] = strdup("SLIMBUS_0_RX-and-DISPLAY_PORT_RX");
+    hw_interface_table[SND_DEVICE_OUT_USB_HEADSET] = strdup("USB_AUDIO_RX");
+    hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = strdup("SLIMBUS_0_RX-and-USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TX] = strdup("AFE_PCM_RX");
 
     my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
@@ -1728,6 +1730,10 @@ acdb_init_fail:
         if (idx == HEADPHONE_44_1_BACKEND)
             my_data->current_backend_cfg[idx].sample_rate = OUTPUT_SAMPLING_RATE_44100;
         my_data->current_backend_cfg[idx].bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+        my_data->current_backend_cfg[idx].channels = CODEC_BACKEND_DEFAULT_CHANNELS;
+        my_data->current_backend_cfg[idx].bitwidth_mixer_ctl = NULL;
+        my_data->current_backend_cfg[idx].samplerate_mixer_ctl = NULL;
+        my_data->current_backend_cfg[idx].channels_mixer_ctl = NULL;
     }
 
     my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
@@ -1798,6 +1804,8 @@ acdb_init_fail:
         strdup("USB_AUDIO_RX Format");
     my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].samplerate_mixer_ctl =
         strdup("USB_AUDIO_RX SampleRate");
+    my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].channels_mixer_ctl =
+        strdup("USB_AUDIO_RX Channels");
 
     my_data->edid_info = NULL;
     free(snd_card_name);
@@ -2305,14 +2313,14 @@ int check_hdset_combo_device(snd_device_t snd_device)
     return ret;
 }
 
-int check_44100_support_device(audio_devices_t out_device)
+int codec_device_supports_native_playback(audio_devices_t out_device)
 {
-    int ret = true;
+    int ret = false;
 
     if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
         out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
         out_device & AUDIO_DEVICE_OUT_LINE)
-        ret = false;
+        ret = true;
 
     return ret;
 }
@@ -4194,6 +4202,30 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
 }
 
 /*
+ * return backend_idx on which voice call is active
+ */
+static int platform_get_voice_call_backend(struct audio_device* adev)
+{
+   struct audio_usecase *uc = NULL;
+   struct listnode *node;
+   snd_device_t out_snd_device = SND_DEVICE_NONE;
+
+   int backend_idx = -1;
+
+   if (voice_is_in_call(adev) || adev->mode == AUDIO_MODE_IN_COMMUNICATION) {
+       list_for_each(node, &adev->usecase_list) {
+           uc =  node_to_item(node, struct audio_usecase, list);
+           if (uc && (uc->type == VOICE_CALL || uc->type == VOIP_CALL) && uc->stream.out) {
+               out_snd_device = platform_get_output_snd_device(adev->platform, uc->stream.out);
+               backend_idx = platform_get_backend_index(out_snd_device);
+               break;
+           }
+       }
+   }
+   return backend_idx;
+}
+
+/*
  * configures afe with bit width and Sample Rate
  */
 static int platform_set_codec_backend_cfg(struct audio_device* adev,
@@ -4296,7 +4328,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             mixer_ctl_set_enum_by_string(ctl, rate_str);
             my_data->current_backend_cfg[backend_idx].sample_rate = sample_rate;
     }
-    if ((backend_idx == HDMI_RX_BACKEND || backend_idx == DISP_PORT_RX_BACKEND) &&
+    if ((my_data->current_backend_cfg[backend_idx].channels_mixer_ctl) &&
         (channels != my_data->current_backend_cfg[backend_idx].channels)) {
         struct  mixer_ctl *ctl;
         char *channel_cnt_str = NULL;
@@ -4328,7 +4360,10 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
         }
         mixer_ctl_set_enum_by_string(ctl, channel_cnt_str);
         my_data->current_backend_cfg[backend_idx].channels = channels;
-        platform_set_edid_channels_configuration(adev->platform, channels);
+
+        if (backend_idx == HDMI_RX_BACKEND)
+            platform_set_edid_channels_configuration(adev->platform, channels);
+
         ALOGD("%s:becf: afe: %s set to %s", __func__,
                my_data->current_backend_cfg[backend_idx].channels_mixer_ctl, channel_cnt_str);
     }
@@ -4484,12 +4519,12 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     // For voice calls use default configuration i.e. 16b/48K, only applicable to
     // default backend
     // force routing is not required here, caller will do it anyway
-    if ((voice_is_in_call(adev) || adev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
-        usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) {
+    if (backend_idx == platform_get_voice_call_backend(adev)) {
         ALOGW("%s:becf: afe:Use default bw and sr for voice/voip calls ",
               __func__);
         bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+        channels = CODEC_BACKEND_DEFAULT_CHANNELS;
     } else {
         /*
          * The backend should be configured at highest bit width and/or
@@ -4528,53 +4563,47 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         }
     }
 
-    if (audio_is_true_native_stream_active(adev)) {
-        if (check_hdset_combo_device(snd_device)) {
-        /*
-         * In true native mode Tasha has a limitation that one port at 44.1 khz
-         * cannot drive both spkr and hdset, to simiplify the solution lets
-         * move the AFE to 48khzwhen a ring tone selects combo device.
-         */
-            sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-            bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-            ALOGD("%s:becf: afe: port has to run at 48k for a combo device",
-                  __func__);
-        } else {
-        /*
-         * in single BE mode, if native audio playback
-         * is active then it will take priority
-         */
-            sample_rate = OUTPUT_SAMPLING_RATE_44100;
-            ALOGD("%s:becf: afe: true napb active set rate to 44.1 khz",
-                  __func__);
+    /* Native playback is preferred for Headphone/HS device over 192Khz */
+    if (codec_device_supports_native_playback(usecase->devices)) {
+        if (audio_is_true_native_stream_active(adev)) {
+            if (check_hdset_combo_device(snd_device)) {
+                /*
+                 * In true native mode Tasha has a limitation that one port at 44.1 khz
+                 * cannot drive both spkr and hdset, to simiplify the solution lets
+                 * move the AFE to 48khzwhen a ring tone selects combo device.
+                 * or if NATIVE playback is not enabled.
+                 */
+                    sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+                    bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+                    ALOGD("%s:becf: afe: port has to run at 48k for a combo device",
+                          __func__);
+            } else {
+             /*
+              * in single BE mode, if native audio playback
+              * is active then it will take priority
+              */
+                 sample_rate = OUTPUT_SAMPLING_RATE_44100;
+                 ALOGD("%s:becf: afe: true napb active set rate to 44.1 khz",
+                       __func__);
+            }
+        } else if (OUTPUT_SAMPLING_RATE_44100 == sample_rate) {
+                 sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+                 ALOGD("%s:becf: afe: napb not active - set (48k) default rate",
+                       __func__);
         }
-    }
-
-    /*
-     * hifi playback not supported on non-44.1-support devices, limit the Sample Rate
-     * to 48 khz.
-     */
-    if (check_44100_support_device(usecase->devices)) {
+    } else if ((usecase->devices & AUDIO_DEVICE_OUT_SPEAKER) ||
+               (usecase->devices & AUDIO_DEVICE_OUT_EARPIECE) ) {
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-        ALOGD("%s:becf: afe: playback on non-44.1-support device Configure afe to "
+        ALOGD("%s:becf: afe: playback on codec device not supporting native playback set "
             "default Sample Rate(48k)", __func__);
     }
 
-    /*
-     * native playback is not enabled.Configure afe to default Sample Rate(48k)
-     */
-    if (NATIVE_AUDIO_MODE_INVALID == na_mode &&
-            OUTPUT_SAMPLING_RATE_44100 == sample_rate) {
-        sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-        ALOGD("%s:becf: afe: napb not active - set (48k) default rate",
-              __func__);
-    }
-
     if (backend_idx == USB_AUDIO_RX_BACKEND) {
-        unsigned int channels = audio_channel_count_from_out_mask(usecase->stream.out->channel_mask);
-        audio_extn_usb_is_config_supported(&bit_width, &sample_rate, channels);
+        audio_extn_usb_is_config_supported(&bit_width, &sample_rate, &channels);
         ALOGV("%s: USB BE configured as bit_width(%d)sample_rate(%d)channels(%d)",
                    __func__, bit_width, sample_rate, channels);
+        if (channels != my_data->current_backend_cfg[backend_idx].channels)
+            channels_updated = true;
     }
 
     if (backend_idx == HDMI_RX_BACKEND || backend_idx == DISP_PORT_RX_BACKEND) {

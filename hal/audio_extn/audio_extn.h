@@ -165,7 +165,7 @@ void audio_extn_usb_add_device(audio_devices_t device, int card);
 void audio_extn_usb_remove_device(audio_devices_t device, int card);
 bool audio_extn_usb_is_config_supported(unsigned int *bit_width,
                                         unsigned int *sample_rate,
-                                        unsigned int ch);
+                                        unsigned int *ch);
 int audio_extn_usb_enable_sidetone(int device, bool enable);
 int audio_extn_usb_set_sidetone_gain(struct str_parms *parms,
                                      char *value, int len);

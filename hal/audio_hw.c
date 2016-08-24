@@ -934,6 +934,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
             (usecase->out_snd_device != snd_device || force_routing) &&
             ((usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
              (usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) ||
+             (usecase->devices & AUDIO_DEVICE_OUT_USB_DEVICE) ||
              (force_restart_session)) &&
             (platform_check_backends_match(snd_device, usecase->out_snd_device)||
              (platform_check_codec_asrc_support(adev->platform) && !adev->asrc_mode_enabled &&
@@ -2786,7 +2787,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         if (ret < 0)
             ret = -errno;
         ALOGVV("%s: writing buffer (%zu bytes) to compress device returned %zd", __func__, bytes, ret);
-        if (ret >= 0 && ret < (ssize_t)bytes) {
+        /*msg to cb thread only if non blocking write is enabled*/
+        if (ret >= 0 && ret < (ssize_t)bytes && out->non_blocking) {
             ALOGD("No space available in compress driver, post msg to cb thread");
             send_offload_cmd_l(out, OFFLOAD_CMD_WAIT_FOR_BUFFER);
         } else if (-ENETRESET == ret) {
