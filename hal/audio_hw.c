@@ -2688,8 +2688,11 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             /* increase written size during SSR to avoid mismatch
              * with the written frames count in AF
              */
-            if (audio_bytes_per_sample(out->format) != 0)
-                out->written += bytes / (out->config.channels * audio_bytes_per_sample(out->format));
+            // bytes per frame
+            size_t bpf = audio_bytes_per_sample(out->format) *
+                         audio_channel_count_from_out_mask(out->channel_mask);
+            if (bpf != 0)
+                out->written += bytes / bpf;
             ALOGD(" %s: sound card is not active/SSR state", __func__);
             ret= -EIO;
             goto exit;
@@ -3653,7 +3656,12 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         else if (config->channel_mask) {
             out->channel_mask = config->channel_mask;
             config->offload_info.channel_mask = config->channel_mask;
+        } else {
+            ALOGE("out->channel_mask not set for OFFLOAD/DIRECT_PCM");
+            ret = -EINVAL;
+            goto error_open;
         }
+
         format = out->format = config->offload_info.format;
         out->sample_rate = config->offload_info.sample_rate;
 
