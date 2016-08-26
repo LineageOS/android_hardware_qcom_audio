@@ -694,7 +694,7 @@
     </path>
 
     <path name="audio-ull-playback">
-        <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia3" value="1" />
+        <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia8" value="1" />
     </path>
 
     <path name="audio-ull-playback speaker-protected">
@@ -702,7 +702,7 @@
     </path>
 
     <path name="audio-ull-playback headphones">
-        <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia3" value="1" />
+        <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia8" value="1" />
     </path>
 
     <path name="audio-ull-playback speaker-and-headphones">
@@ -711,11 +711,11 @@
     </path>
 
     <path name="audio-ull-playback hdmi">
-        <ctl name="HDMI Mixer MultiMedia3" value="1" />
+        <ctl name="HDMI Mixer MultiMedia8" value="1" />
     </path>
 
     <path name="audio-ull-playback bt-sco">
-        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia3" value="1" />
+        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia8" value="1" />
     </path>
 
     <path name="audio-ull-playback bt-sco-wb">
@@ -729,11 +729,11 @@
     </path>
 
     <path name="audio-ull-playback afe-proxy">
-        <ctl name="AFE_PCM_RX Audio Mixer MultiMedia3" value="1" />
+        <ctl name="AFE_PCM_RX Audio Mixer MultiMedia8" value="1" />
     </path>
 
     <path name="audio-ull-playback usb-headphones">
-        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia3" value="1" />
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia8" value="1" />
     </path>
 
     <path name="multi-channel-playback hdmi">
@@ -1223,11 +1223,11 @@
     </path>
 
     <path name="low-latency-record">
-      <ctl name="MultiMedia5 Mixer SLIM_0_TX" value="1" />
+      <ctl name="MultiMedia8 Mixer SLIM_0_TX" value="1" />
     </path>
 
     <path name="low-latency-record bt-sco">
-      <ctl name="MultiMedia5 Mixer SLIM_7_TX" value="1" />
+      <ctl name="MultiMedia8 Mixer SLIM_7_TX" value="1" />
     </path>
 
     <path name="low-latency-record bt-sco-wb">
@@ -1236,11 +1236,11 @@
     </path>
 
     <path name="low-latency-record usb-headset-mic">
-        <ctl name="MultiMedia5 Mixer USB_AUDIO_TX" value="1" />
+        <ctl name="MultiMedia8 Mixer USB_AUDIO_TX" value="1" />
     </path>
 
     <path name="low-latency-record capture-fm">
-      <ctl name="MultiMedia5 Mixer SLIM_8_TX" value="1" />
+      <ctl name="MultiMedia8 Mixer SLIM_8_TX" value="1" />
     </path>
 
     <path name="fm-virtual-record capture-fm">
@@ -1876,8 +1876,8 @@
         <ctl name="SLIM RX2 MUX" value="AIF4_PB" />
         <ctl name="SLIM RX3 MUX" value="AIF4_PB" />
         <ctl name="SLIM_6_RX Channels" value="Two" />
-        <ctl name= "RX INT1_1 MIX1 INP0" value="RX2" />
-        <ctl name= "RX INT2_1 MIX1 INP0" value="RX3" />
+        <ctl name= "RX INT1_2 MUX" value="RX2" />
+        <ctl name= "RX INT2_2 MUX" value="RX3" />
         <ctl name="RX INT1 DEM MUX" value="CLSH_DSM_OUT" />
         <ctl name="RX INT2 DEM MUX" value="CLSH_DSM_OUT" />
     </path>
@@ -1905,6 +1905,14 @@
         <ctl name= "RX INT2_1 MIX1 INP0" value="RX3" />
         <ctl name= "RX INT1 SPLINE MIX HPHL Native Switch" value="1" />
         <ctl name= "RX INT2 SPLINE MIX HPHR Native Switch" value="1" />
+    </path>
+
+    <path name="hph-highquality-mode">
+        <ctl name="RX HPH Mode" value="CLS_H_LOHIFI" />
+    </path>
+
+    <path name="hph-lowpower-mode">
+        <ctl name="RX HPH Mode" value="CLS_H_LP" />
     </path>
 
     <path name="line">
