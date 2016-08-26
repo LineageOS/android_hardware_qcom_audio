@@ -209,7 +209,6 @@ enum {
 #define MAX_PORT                        6
 #define ALL_CODEC_BACKEND_PORT          0
 #define HEADPHONE_44_1_BACKEND_PORT     5
-#define MAX_CODEC_TX_BACKENDS           1
 enum {
     DEFAULT_CODEC_BACKEND,
     SLIMBUS_0_RX = DEFAULT_CODEC_BACKEND,
@@ -223,6 +222,12 @@ enum {
     DISP_PORT_RX_BACKEND,
     USB_AUDIO_RX_BACKEND,
     MAX_CODEC_BACKENDS
+};
+enum {
+    DEFAULT_CODEC_TX_BACKEND,
+    SLIMBUS_0_TX = DEFAULT_CODEC_TX_BACKEND,
+    USB_AUDIO_TX_BACKEND,
+    MAX_CODEC_TX_BACKENDS
 };
 #define AUDIO_PARAMETER_KEY_NATIVE_AUDIO "audio.nat.codec.enabled"
 #define AUDIO_PARAMETER_KEY_NATIVE_AUDIO_MODE "native_audio_mode"
