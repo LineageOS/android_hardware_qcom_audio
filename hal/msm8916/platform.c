@@ -4343,8 +4343,8 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
             struct audio_usecase *uc;
             uc = node_to_item(node, struct audio_usecase, list);
             struct stream_out *out = (struct stream_out*) uc->stream.out;
-            unsigned int out_channels = audio_channel_count_from_out_mask(out->channel_mask);
             if (uc->type == PCM_PLAYBACK && out && usecase != uc) {
+                unsigned int out_channels = audio_channel_count_from_out_mask(out->channel_mask);
 
                 ALOGD("%s:napb: (%d) - (%s)id (%d) sr %d bw "
                       "(%d) ch (%d) device %s", __func__, i++, use_case_table[uc->id],
