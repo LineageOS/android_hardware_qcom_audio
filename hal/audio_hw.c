@@ -651,6 +651,16 @@ int enable_snd_device(struct audio_device *adev,
             goto on_error;
         }
 
+        /*
+         * For some unknown reason, the device name gets empty for
+         * msm8960 devices. Because we're sure that the sound device is valid,
+         * copy it manually and apply the correct route.
+        */
+
+        if (strlen(device_name) == 0) {
+            strcpy(device_name, platform_get_snd_device_name(snd_device));
+        }
+
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
         audio_route_apply_and_update_path(adev->audio_route, device_name);
     }
@@ -706,6 +716,14 @@ int disable_snd_device(struct audio_device *adev,
             if (platform_get_snd_device_name_extn(adev->platform, snd_device, device_name) < 0 ) {
                 ALOGE(" %s: Invalid sound device returned", __func__);
                 return -EINVAL;
+            }
+
+            /*
+             * Same reason as in enable_snd_device()
+             */
+
+            if (strlen(device_name) == 0) {
+                strcpy(device_name, platform_get_snd_device_name(snd_device));
             }
 
             ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
