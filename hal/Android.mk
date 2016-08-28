@@ -285,6 +285,14 @@ endif
 endif
 
 ifeq ($(strip $(BOARD_SUPPORTS_SOUND_TRIGGER)),true)
+    ST_FEATURE_ENABLE := true
+endif
+
+ifeq ($(strip $(BOARD_SUPPORTS_SOUND_TRIGGER_HAL)),true)
+    ST_FEATURE_ENABLE := true
+endif
+
+ifeq ($(ST_FEATURE_ENABLE), true)
     LOCAL_CFLAGS += -DSOUND_TRIGGER_ENABLED
     LOCAL_CFLAGS += -DSOUND_TRIGGER_PLATFORM_NAME=$(TARGET_BOARD_PLATFORM)
     LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/sound_trigger
