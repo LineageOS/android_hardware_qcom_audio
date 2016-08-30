@@ -247,6 +247,8 @@ struct platform_data {
     int metainfo_key;
     int source_mic_type;
     int max_mic_count;
+    bool is_dsd_supported;
+    bool is_asrc_supported;
 };
 
 static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -334,6 +336,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_VBAT] = "speaker-vbat",
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = "speaker-reverse",
     [SND_DEVICE_OUT_HEADPHONES] = "headphones",
+    [SND_DEVICE_OUT_HEADPHONES_DSD] = "headphones-dsd",
     [SND_DEVICE_OUT_HEADPHONES_44_1] = "headphones-44.1",
     [SND_DEVICE_OUT_LINE] = "line",
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = "speaker-and-headphones",
@@ -451,6 +454,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = 14,
     [SND_DEVICE_OUT_LINE] = 10,
     [SND_DEVICE_OUT_HEADPHONES] = 10,
+    [SND_DEVICE_OUT_HEADPHONES_DSD] = 10,
     [SND_DEVICE_OUT_HEADPHONES_44_1] = 10,
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = 10,
     [SND_DEVICE_OUT_SPEAKER_AND_LINE] = 10,
@@ -568,6 +572,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_VBAT)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_REVERSE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES_DSD)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES_44_1)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_LINE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES)},
@@ -1102,11 +1107,13 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_IN_USB_HEADSET_MIC] = strdup("usb-headset-mic");
     backend_tag_table[SND_DEVICE_IN_CAPTURE_FM] = strdup("capture-fm");
     backend_tag_table[SND_DEVICE_OUT_TRANSMISSION_FM] = strdup("transmission-fm");
+    backend_tag_table[SND_DEVICE_OUT_HEADPHONES_DSD] = strdup("headphones-dsd");
     backend_tag_table[SND_DEVICE_OUT_HEADPHONES_44_1] = strdup("headphones-44.1");
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = strdup("voice-speaker-vbat");
     backend_tag_table[SND_DEVICE_OUT_BT_A2DP] = strdup("bt-a2dp");
     backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP] = strdup("speaker-and-bt-a2dp");
 
+    hw_interface_table[SND_DEVICE_OUT_HEADPHONES_DSD] = strdup("SLIMBUS_2_RX");
     hw_interface_table[SND_DEVICE_OUT_HEADPHONES_44_1] = strdup("SLIMBUS_5_RX");
     hw_interface_table[SND_DEVICE_OUT_HDMI] = strdup("HDMI_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_HDMI] = strdup("SLIMBUS_0_RX-and-HDMI_RX");
@@ -1715,6 +1722,11 @@ acdb_init_fail:
     my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
         strdup("SLIM_0_RX SampleRate");
 
+    my_data->current_backend_cfg[DSD_NATIVE_BACKEND].bitwidth_mixer_ctl =
+        strdup("SLIM_2_RX Format");
+    my_data->current_backend_cfg[DSD_NATIVE_BACKEND].samplerate_mixer_ctl =
+        strdup("SLIM_2_RX SampleRate");
+
     my_data->current_backend_cfg[HEADPHONE_44_1_BACKEND].bitwidth_mixer_ctl =
         strdup("SLIM_5_RX Format");
     my_data->current_backend_cfg[HEADPHONE_44_1_BACKEND].samplerate_mixer_ctl =
@@ -1743,6 +1755,13 @@ acdb_init_fail:
         } else {
             platform_set_native_support(NATIVE_AUDIO_MODE_INVALID);
         }
+    }
+
+    if(strstr(snd_card_name, "tavil")) {
+        ALOGD("%s:DSD playback is supported", __func__);
+        my_data->is_dsd_supported = true;
+        my_data->is_asrc_supported = true;
+        platform_set_native_support(NATIVE_AUDIO_MODE_MULTIPLE_44_1);
     }
 
     my_data->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
@@ -1904,6 +1923,32 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
     }
 
     ALOGV("%s: be_itf1 = %s, be_itf2 = %s, match %d", __func__, be_itf1, be_itf2, result);
+    return result;
+}
+
+bool platform_check_if_backend_has_to_be_disabled(snd_device_t new_snd_device,
+                                                  snd_device_t cuurent_snd_device)
+{
+    bool result = false;
+
+    ALOGV("%s: current snd device = %s, new snd device = %s", __func__,
+                platform_get_snd_device_name(cuurent_snd_device),
+                platform_get_snd_device_name(new_snd_device));
+
+    if ((new_snd_device < SND_DEVICE_MIN) || (new_snd_device >= SND_DEVICE_OUT_END) ||
+            (cuurent_snd_device < SND_DEVICE_MIN) || (cuurent_snd_device >= SND_DEVICE_OUT_END)) {
+        ALOGE("%s: Invalid snd_device",__func__);
+        return false;
+    }
+
+    if (cuurent_snd_device == SND_DEVICE_OUT_HEADPHONES &&
+            (new_snd_device == SND_DEVICE_OUT_HEADPHONES_44_1 ||
+             new_snd_device == SND_DEVICE_OUT_HEADPHONES_DSD)) {
+        result = true;
+    }
+
+    ALOGV("%s: Need to disable current backend %s, %d",
+          __func__, platform_get_snd_device_name(cuurent_snd_device), result);
     return result;
 }
 
@@ -2092,7 +2137,8 @@ int platform_get_snd_device_bit_width(snd_device_t snd_device)
 
 int platform_set_native_support(int na_mode)
 {
-    if (NATIVE_AUDIO_MODE_SRC == na_mode || NATIVE_AUDIO_MODE_TRUE_44_1 == na_mode) {
+    if (NATIVE_AUDIO_MODE_SRC == na_mode || NATIVE_AUDIO_MODE_TRUE_44_1 == na_mode
+        || NATIVE_AUDIO_MODE_MULTIPLE_44_1 == na_mode) {
         na_props.platform_na_prop_enabled = na_props.ui_na_prop_enabled = true;
         na_props.na_mode = na_mode;
         ALOGD("%s:napb: native audio playback enabled in (%s) mode v2.0", __func__,
@@ -2105,6 +2151,18 @@ int platform_set_native_support(int na_mode)
     }
 
     return 0;
+}
+
+bool platform_check_codec_dsd_support(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    return my_data->is_dsd_supported;
+}
+
+bool platform_check_codec_asrc_support(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    return my_data->is_asrc_supported;
 }
 
 int platform_get_native_support()
@@ -2159,6 +2217,8 @@ int native_audio_set_params(struct platform_data *platform,
             mode = NATIVE_AUDIO_MODE_SRC;
         else if (value && !strncmp(value, "true", sizeof("true")))
             mode = NATIVE_AUDIO_MODE_TRUE_44_1;
+        else if (value && !strncmp(value, "multiple", sizeof("multiple")))
+            mode = NATIVE_AUDIO_MODE_MULTIPLE_44_1;
         else {
             mode = NATIVE_AUDIO_MODE_INVALID;
             ALOGE("%s:napb:native_audio_mode in platform info xml,invalid mode string",
@@ -2238,7 +2298,7 @@ int check_44100_support_device(audio_devices_t out_device)
     return ret;
 }
 
-static int platform_get_backend_index(snd_device_t snd_device)
+int platform_get_backend_index(snd_device_t snd_device)
 {
     int32_t port = DEFAULT_CODEC_BACKEND;
 
@@ -2247,6 +2307,9 @@ static int platform_get_backend_index(snd_device_t snd_device)
                 if (strncmp(backend_tag_table[snd_device], "headphones-44.1",
                             sizeof("headphones-44.1")) == 0)
                         port = HEADPHONE_44_1_BACKEND;
+                else if (strncmp(backend_tag_table[snd_device], "headphones-dsd",
+                            sizeof("headphones-dsd")) == 0)
+                        port = DSD_NATIVE_BACKEND;
                 else if (strncmp(backend_tag_table[snd_device], "headphones",
                             sizeof("headphones")) == 0)
                         port = HEADPHONE_BACKEND;
@@ -2764,6 +2827,12 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         } else if (NATIVE_AUDIO_MODE_SRC == na_mode &&
                    OUTPUT_SAMPLING_RATE_44100 == sample_rate) {
                 snd_device = SND_DEVICE_OUT_HEADPHONES_44_1;
+        } else if (NATIVE_AUDIO_MODE_MULTIPLE_44_1 == na_mode &&
+                   (sample_rate % OUTPUT_SAMPLING_RATE_44100 == 0) &&
+                   (out->format != AUDIO_FORMAT_DSD)) {
+                snd_device = SND_DEVICE_OUT_HEADPHONES_44_1;
+        } else if (out->format == AUDIO_FORMAT_DSD) {
+                snd_device = SND_DEVICE_OUT_HEADPHONES_DSD;
         } else
             snd_device = SND_DEVICE_OUT_HEADPHONES;
     } else if (devices & AUDIO_DEVICE_OUT_LINE) {
@@ -4070,14 +4139,6 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
               my_data->current_backend_cfg[backend_idx].bitwidth_mixer_ctl, bit_width, format);
     }
 
-    /*
-     * Backend sample rate configuration follows:
-     * 16 bit playback - 48khz for streams at any valid sample rate
-     * 24 bit playback - 48khz for stream sample rate less than 48khz
-     * 24 bit playback - 96khz for sample rate range of 48khz to 96khz
-     * 24 bit playback - 192khz for sample rate range of 96khz to 192 khz
-     * Upper limit is inclusive in the sample rate range.
-     */
     if (sample_rate !=
        my_data->current_backend_cfg[backend_idx].sample_rate) {
             char *rate_str = NULL;
@@ -4096,13 +4157,23 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
                 rate_str = "KHZ_44P1";
                 break;
             case 64000:
-            case 88200:
             case 96000:
                 rate_str = "KHZ_96";
                 break;
+            case 88200:
+                rate_str = "KHZ_88P2";
+                break;
             case 176400:
+                rate_str = "KHZ_176P4";
+                break;
             case 192000:
                 rate_str = "KHZ_192";
+                break;
+            case 352800:
+                rate_str = "KHZ_352P8";
+                break;
+            case 384000:
+                rate_str = "KHZ_384";
                 break;
             default:
                 rate_str = "KHZ_48";
@@ -4177,6 +4248,17 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
         } else {
             ALOGD("%s: HDMI PCM format", __func__);
             mixer_ctl_set_enum_by_string(ctl, "LPCM");
+        }
+    }
+
+    if (snd_device == SND_DEVICE_OUT_HEADPHONES || snd_device ==
+        SND_DEVICE_OUT_HEADPHONES_44_1) {
+        if (sample_rate > 48000 || (sample_rate == 48000 && bit_width >= 24)) {
+            ALOGV("%s: apply HPH HQ mode\n", __func__);
+            audio_route_apply_and_update_path(adev->audio_route, "hph-highquality-mode");
+        } else {
+            ALOGV("%s: apply HPH LP mode\n", __func__);
+            audio_route_apply_and_update_path(adev->audio_route, "hph-lowpower-mode");
         }
     }
 
@@ -4400,6 +4482,24 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
             channels_updated = true;
     }
 
+    /*
+     * Map native sampling rates to upper limit range
+     * if multiple of native sampling rates are not supported.
+     */
+    if (NATIVE_AUDIO_MODE_MULTIPLE_44_1 != na_mode) {
+        switch (sample_rate) {
+            case 88200:
+                sample_rate = 96000;
+                break;
+            case 176400:
+                sample_rate = 192000;
+                break;
+            case 352800:
+                sample_rate = 192000;
+                break;
+        }
+    }
+
     ALOGI("%s:becf: afe: Codec selected backend: %d updated bit width: %d and sample rate: %d",
           __func__, backend_idx , bit_width, sample_rate);
 
@@ -4440,6 +4540,17 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
     /*this is populated by check_codec_backend_cfg hence set default value to false*/
     backend_cfg.passthrough_enabled = false;
 
+    /* Set Backend sampling rate to 176.4 for DSD64 and
+     * 352.8Khz for DSD128.
+     * Set Bit Width to 16
+     */
+    if ((backend_idx == DSD_NATIVE_BACKEND) && (backend_cfg.format == AUDIO_FORMAT_DSD)) {
+        backend_cfg.bit_width = 16;
+        if (backend_cfg.sample_rate == INPUT_SAMPLING_RATE_DSD64)
+            backend_cfg.sample_rate = OUTPUT_SAMPLING_RATE_DSD64;
+        else if (backend_cfg.sample_rate == INPUT_SAMPLING_RATE_DSD128)
+            backend_cfg.sample_rate = OUTPUT_SAMPLING_RATE_DSD128;
+    }
     ALOGI("%s:becf: afe: bitwidth %d, samplerate %d channels %d"
           ", backend_idx %d usecase = %d device (%s)", __func__, backend_cfg.bit_width,
           backend_cfg.sample_rate, backend_cfg.channels, backend_idx, usecase->id,

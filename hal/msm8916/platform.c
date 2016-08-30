@@ -2448,7 +2448,7 @@ int check_44100_support_device(audio_devices_t out_device)
     return ret;
 }
 
-static int platform_get_backend_index(snd_device_t snd_device)
+int platform_get_backend_index(snd_device_t snd_device)
 {
     int32_t port = DEFAULT_CODEC_BACKEND;
 
@@ -5407,4 +5407,20 @@ int platform_set_sidetone(struct audio_device *adev,
             audio_route_reset_and_update_path(adev->audio_route, str);
     }
     return 0;
+}
+
+bool platform_check_codec_dsd_support(void *platform __unused)
+{
+    return false;
+}
+
+bool platform_check_codec_asrc_support(void *platform __unused)
+{
+    return false;
+}
+
+bool platform_check_if_backend_has_to_be_disabled(snd_device_t new_snd_device __unused,
+                                                  snd_device_t cuurent_snd_device __unused)
+{
+    return false;
 }
