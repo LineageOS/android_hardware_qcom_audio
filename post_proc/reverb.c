@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2014, 2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -629,8 +629,17 @@ int reverb_enable(effect_context_t *context)
         (reverb_ctxt->next_preset == REVERB_PRESET_NONE))
         return 0;
 
-    if (!offload_reverb_get_enable_flag(&(reverb_ctxt->offload_reverb)))
+    if (!offload_reverb_get_enable_flag(&(reverb_ctxt->offload_reverb))) {
         offload_reverb_set_enable_flag(&(reverb_ctxt->offload_reverb), true);
+        if (reverb_ctxt->preset == true && reverb_ctxt->ctl)
+            offload_reverb_send_params(reverb_ctxt->ctl, &reverb_ctxt->offload_reverb,
+                                       OFFLOAD_SEND_REVERB_ENABLE_FLAG |
+                                       OFFLOAD_SEND_REVERB_PRESET);
+        if (reverb_ctxt->preset == true && reverb_ctxt->hw_acc_fd > 0)
+            hw_acc_reverb_send_params(reverb_ctxt->hw_acc_fd, &reverb_ctxt->offload_reverb,
+                                      OFFLOAD_SEND_REVERB_ENABLE_FLAG |
+                                      OFFLOAD_SEND_REVERB_PRESET);
+    }
     return 0;
 }
 
