@@ -475,12 +475,12 @@ audio_devices_t AudioPolicyManagerCustom::getNewOutputDevice(const sp<AudioOutpu
 {
     audio_devices_t device = AUDIO_DEVICE_NONE;
 
-    ssize_t index = mAudioPatches.indexOfKey(outputDesc->mPatchHandle);
+    ssize_t index = mAudioPatches.indexOfKey(outputDesc->getPatchHandle());
     if (index >= 0) {
         sp<AudioPatch> patchDesc = mAudioPatches.valueAt(index);
         if (patchDesc->mUid != mUidCached) {
             ALOGV("getNewOutputDevice() device %08x forced by patch %d",
-                  outputDesc->device(), outputDesc->mPatchHandle);
+                  outputDesc->device(), outputDesc->getPatchHandle());
             return outputDesc->device();
         }
     }
@@ -852,7 +852,7 @@ status_t AudioPolicyManagerCustom::startSource(sp<AudioOutputDescriptor> outputD
 
         // apply volume rules for current stream and device if necessary
         checkAndSetVolume(stream,
-                          mStreams.valueFor(stream).getVolumeIndex(device),
+                          mVolumeCurves->getVolumeIndex(stream, device),
                           outputDesc,
                           device);
 
@@ -977,7 +977,7 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
         float voiceVolume;
         // Force voice volume to max for bluetooth SCO as volume is managed by the headset
         if (stream == AUDIO_STREAM_VOICE_CALL) {
-            voiceVolume = (float)index/(float)mStreams.valueFor(stream).getVolumeIndexMax();
+            voiceVolume = (float)index/(float)mVolumeCurves->getVolumeIndexMax(stream);
         } else {
             voiceVolume = 1.0;
         }
@@ -1170,7 +1170,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     // skip direct output selection if the request can obviously be attached to a mixed output
     // and not explicitly requested
     if (((flags & AUDIO_OUTPUT_FLAG_DIRECT) == 0) &&
-            audio_is_linear_pcm(format) && samplingRate <= MAX_MIXER_SAMPLING_RATE &&
+            audio_is_linear_pcm(format) && samplingRate <= SAMPLE_RATE_HZ_MAX &&
             audio_channel_count_from_out_mask(channelMask) <= 2) {
         goto non_direct_output;
     }
@@ -1216,7 +1216,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         // if the selected profile is offloaded and no offload info was specified,
         // create a default one
         audio_offload_info_t defaultOffloadInfo = AUDIO_INFO_INITIALIZER;
-        if ((profile->mFlags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) && !offloadInfo) {
+        if ((profile->getFlags() & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) && !offloadInfo) {
             flags = (audio_output_flags_t)(flags | AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD);
             defaultOffloadInfo.sample_rate = samplingRate;
             defaultOffloadInfo.channel_mask = channelMask;
@@ -1261,7 +1261,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
                 mpClientInterface->closeOutput(output);
             }
             // fall back to mixer output if possible when the direct output could not be open
-            if (audio_is_linear_pcm(format) && samplingRate <= MAX_MIXER_SAMPLING_RATE) {
+            if (audio_is_linear_pcm(format) && samplingRate <= SAMPLE_RATE_HZ_MAX) {
                 goto non_direct_output;
             }
             return AUDIO_IO_HANDLE_NONE;
@@ -1343,20 +1343,22 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
         ALOGV("Hw module %d", i);
         for (size_t j = 0; j < mHwModules[i]->mInputProfiles.size(); j++) {
             const sp<IOProfile> inProfile = mHwModules[i]->mInputProfiles[j];
-            ALOGV("Input profile ", j);
-            for (size_t k = 0; k  < inProfile->mChannelMasks.size(); k++) {
-                audio_channel_mask_t channelMask =
-                    inProfile->mChannelMasks.itemAt(k);
-                ALOGV("Channel Mask %x size %d", channelMask,
-                    inProfile->mChannelMasks.size());
-                if (AUDIO_CHANNEL_IN_5POINT1 == channelMask) {
-                    if (!prop_ssr_enabled) {
-                        ALOGI("removing AUDIO_CHANNEL_IN_5POINT1 from"
-                            " input profile as SSR(surround sound record)"
-                            " is not supported on this chipset variant");
-                        inProfile->mChannelMasks.removeItemsAt(k, 1);
-                        ALOGV("Channel Mask size now %d",
-                            inProfile->mChannelMasks.size());
+            AudioProfileVector profiles = inProfile->getAudioProfiles();
+            for (size_t k = 0; k < profiles.size(); k++){
+                ChannelsVector channels = profiles[k]->getChannels();
+                for (size_t x = 0; x < channels.size(); x++) {
+                    audio_channel_mask_t channelMask = channels[x];
+                    ALOGV("Channel Mask %x size %d", channelMask,
+                         channels.size());
+                    if (AUDIO_CHANNEL_IN_5POINT1 == channelMask) {
+                        if (!prop_ssr_enabled) {
+                            ALOGI("removing AUDIO_CHANNEL_IN_5POINT1 from"
+                                " input profile as SSR(surround sound record)"
+                                " is not supported on this chipset variant");
+                            channels.removeItemsAt(x, 1);
+                            ALOGV("Channel Mask size now %d",
+                                channels.size());
+						}
                     }
                 }
             }
