@@ -585,12 +585,12 @@ audio_devices_t AudioPolicyManagerCustom::getNewOutputDevice(const sp<AudioOutpu
 {
     audio_devices_t device = AUDIO_DEVICE_NONE;
 
-    ssize_t index = mAudioPatches.indexOfKey(outputDesc->mPatchHandle);
+    ssize_t index = mAudioPatches.indexOfKey(outputDesc->getPatchHandle());
     if (index >= 0) {
         sp<AudioPatch> patchDesc = mAudioPatches.valueAt(index);
         if (patchDesc->mUid != mUidCached) {
             ALOGV("getNewOutputDevice() device %08x forced by patch %d",
-                  outputDesc->device(), outputDesc->mPatchHandle);
+                  outputDesc->device(), outputDesc->getPatchHandle());
             return outputDesc->device();
         }
     }
@@ -1147,7 +1147,7 @@ status_t AudioPolicyManagerCustom::startSource(sp<AudioOutputDescriptor> outputD
 
         // apply volume rules for current stream and device if necessary
         checkAndSetVolume(stream,
-                          mStreams.valueFor(stream).getVolumeIndex(device),
+                          mVolumeCurves->getVolumeIndex(stream, device),
                           outputDesc,
                           device);
 
@@ -1275,7 +1275,7 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
         float voiceVolume;
         // Force voice volume to max for bluetooth SCO as volume is managed by the headset
         if (stream == AUDIO_STREAM_VOICE_CALL) {
-            voiceVolume = (float)index/(float)mStreams.valueFor(stream).getVolumeIndexMax();
+            voiceVolume = (float)index/(float)mVolumeCurves->getVolumeIndexMax(stream);
         } else {
             voiceVolume = 1.0;
         }
@@ -1618,7 +1618,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     // skip direct output selection if the request can obviously be attached to a mixed output
     // and not explicitly requested
     if (((flags & (AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_DIRECT_PCM)) == 0) &&
-            audio_is_linear_pcm(format) && samplingRate <= MAX_MIXER_SAMPLING_RATE &&
+            audio_is_linear_pcm(format) && samplingRate <= SAMPLE_RATE_HZ_MAX &&
             audio_channel_count_from_out_mask(channelMask) <= 2) {
         goto non_direct_output;
     }
@@ -1648,7 +1648,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     if (profile != 0) {
 
         if (!(flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) &&
-             (profile->mFlags & AUDIO_OUTPUT_FLAG_DIRECT_PCM)) {
+             (profile->getFlags() & AUDIO_OUTPUT_FLAG_DIRECT_PCM)) {
             ALOGI("got Direct_PCM without requesting ... reject ");
             profile = NULL;
             goto non_direct_output;
@@ -1684,7 +1684,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         // if the selected profile is offloaded and no offload info was specified,
         // create a default one
         audio_offload_info_t defaultOffloadInfo = AUDIO_INFO_INITIALIZER;
-        if ((profile->mFlags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) && !offloadInfo) {
+        if ((profile->getFlags() & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) && !offloadInfo) {
             flags = (audio_output_flags_t)(flags | AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD);
             defaultOffloadInfo.sample_rate = samplingRate;
             defaultOffloadInfo.channel_mask = channelMask;
@@ -1729,7 +1729,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
                 mpClientInterface->closeOutput(output);
             }
             // fall back to mixer output if possible when the direct output could not be open
-            if (audio_is_linear_pcm(format) && samplingRate <= MAX_MIXER_SAMPLING_RATE) {
+            if (audio_is_linear_pcm(format) && samplingRate <= SAMPLE_RATE_HZ_MAX) {
                 goto non_direct_output;
             }
             return AUDIO_IO_HANDLE_NONE;
@@ -1891,8 +1891,8 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
     }
     sp<AudioInputDescriptor> inputDesc = mInputs.valueAt(index);
 
-    index = inputDesc->mSessions.indexOf(session);
-    if (index < 0) {
+    sp<AudioSession> audioSession = inputDesc->getAudioSession(session);
+    if (audioSession == 0) {
         ALOGW("startInput() unknown session %d on input %d", session, input);
         return BAD_VALUE;
     }
@@ -1907,11 +1907,14 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
             // If the already active input uses AUDIO_SOURCE_HOTWORD then it is closed,
             // otherwise the active input continues and the new input cannot be started.
             sp<AudioInputDescriptor> activeDesc = mInputs.valueFor(activeInput);
-            if ((activeDesc->mInputSource == AUDIO_SOURCE_HOTWORD) &&
+            if ((activeDesc->inputSource() == AUDIO_SOURCE_HOTWORD) &&
                     !activeDesc->hasPreemptedSession(session)) {
                 ALOGW("startInput(%d) preempting low-priority input %d", input, activeInput);
-                audio_session_t activeSession = activeDesc->mSessions.itemAt(0);
-                SortedVector<audio_session_t> sessions = activeDesc->getPreemptedSessions();
+                //FIXME: consider all active sessions
+                AudioSessionCollection activeSessions = activeDesc->getActiveAudioSessions();
+                audio_session_t activeSession = activeSessions.keyAt(0);
+                SortedVector<audio_session_t> sessions =
+                                           activeDesc->getPreemptedSessions();
                 sessions.add(activeSession);
                 inputDesc->setPreemptedSessions(sessions);
                 stopInput(activeInput, activeSession);
@@ -1969,11 +1972,11 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
     }
 #endif
 
-    if (inputDesc->mRefCount == 0 || mInputRoutes.hasRouteChanged(session)) {
+    if (!inputDesc->isActive() || mInputRoutes.hasRouteChanged(session)) {
         // if input maps to a dynamic policy with an activity listener, notify of state change
         if ((inputDesc->mPolicyMix != NULL)
                 && ((inputDesc->mPolicyMix->mCbFlags & AudioMix::kCbFlagNotifyActivity) != 0)) {
-            mpClientInterface->onDynamicPolicyMixStateUpdate(inputDesc->mPolicyMix->mRegistrationId,
+            mpClientInterface->onDynamicPolicyMixStateUpdate(inputDesc->mPolicyMix->mDeviceAddress,
                     MIX_STATE_MIXING);
         }
 
@@ -1990,7 +1993,7 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
             if (inputDesc->mPolicyMix == NULL) {
                 address = String8("0");
             } else if (inputDesc->mPolicyMix->mMixType == MIX_TYPE_PLAYERS) {
-                address = inputDesc->mPolicyMix->mRegistrationId;
+                address = inputDesc->mPolicyMix->mDeviceAddress;
             }
             if (address != "") {
                 setDeviceConnectionStateInt(AUDIO_DEVICE_OUT_REMOTE_SUBMIX,
@@ -2000,9 +2003,9 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
         }
     }
 
-    ALOGV("AudioPolicyManager::startInput() input source = %d", inputDesc->mInputSource);
+    ALOGV("AudioPolicyManager::startInput() input source = %d", audioSession->inputSource());
 
-    inputDesc->mRefCount++;
+    audioSession->changeActiveCount(1);
 #ifdef RECORD_PLAY_CONCURRENCY
     mIsInputRequestOnProgress = false;
 #endif
@@ -2049,20 +2052,23 @@ void AudioPolicyManagerCustom::closeAllInputs() {
 
     for(size_t input_index = mInputs.size(); input_index > 0; input_index--) {
         sp<AudioInputDescriptor> inputDesc = mInputs.valueAt(input_index-1);
-        ssize_t patch_index = mAudioPatches.indexOfKey(inputDesc->mPatchHandle);
+        ssize_t patch_index = mAudioPatches.indexOfKey(inputDesc->getPatchHandle());
         if (patch_index >= 0) {
             sp<AudioPatch> patchDesc = mAudioPatches.valueAt(patch_index);
             status_t status = mpClientInterface->releaseAudioPatch(patchDesc->mAfPatchHandle, 0);
             mAudioPatches.removeItemsAt(patch_index);
             patchRemoved = true;
         }
-        if ((inputDesc->mIsSoundTrigger) && (mInputs.size() == 1)) {
+        if ((inputDesc->getOpenRefCount() > 0) && inputDesc->isSoundTrigger()
+            && (mInputs.size() == 1)) {
             ALOGD("Do not close sound trigger input handle");
         } else {
             mpClientInterface->closeInput(mInputs.keyAt(input_index-1));
             mInputs.removeItem(mInputs.keyAt(input_index-1));
         }
     }
+    mInputs.clear();
+    SoundTrigger::setCaptureState(false);
     nextAudioPortGeneration();
 
     if (patchRemoved) {
@@ -2089,20 +2095,22 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
         ALOGV("Hw module %zu", i);
         for (size_t j = 0; j < mHwModules[i]->mInputProfiles.size(); j++) {
             const sp<IOProfile> inProfile = mHwModules[i]->mInputProfiles[j];
-            ALOGV("Input profile %zu", j);
-            for (size_t k = 0; k  < inProfile->mChannelMasks.size(); k++) {
-                audio_channel_mask_t channelMask =
-                    inProfile->mChannelMasks.itemAt(k);
-                ALOGV("Channel Mask %x size %zu", channelMask,
-                    inProfile->mChannelMasks.size());
-                if (AUDIO_CHANNEL_IN_5POINT1 == channelMask) {
-                    if (!prop_ssr_enabled) {
-                        ALOGI("removing AUDIO_CHANNEL_IN_5POINT1 from"
-                            " input profile as SSR(surround sound record)"
-                            " is not supported on this chipset variant");
-                        inProfile->mChannelMasks.removeItemsAt(k, 1);
-                        ALOGV("Channel Mask size now %zu",
-                            inProfile->mChannelMasks.size());
+            AudioProfileVector profiles = inProfile->getAudioProfiles();
+            for (size_t k = 0; k < profiles.size(); k++){
+                ChannelsVector channels = profiles[k]->getChannels();
+                for (size_t x = 0; x < channels.size(); x++) {
+                    audio_channel_mask_t channelMask = channels[x];
+                    ALOGV("Channel Mask %x size %zu", channelMask,
+                         channels.size());
+                    if (AUDIO_CHANNEL_IN_5POINT1 == channelMask) {
+                        if (!prop_ssr_enabled) {
+                            ALOGI("removing AUDIO_CHANNEL_IN_5POINT1 from"
+                                " input profile as SSR(surround sound record)"
+                                " is not supported on this chipset variant");
+                            channels.removeItemsAt(x, 1);
+                            ALOGV("Channel Mask size now %zu",
+                                channels.size());
+						}
                     }
                 }
             }
