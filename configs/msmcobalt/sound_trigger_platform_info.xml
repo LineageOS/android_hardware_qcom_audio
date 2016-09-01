@@ -63,6 +63,15 @@
             <param detection_event_ids="0x00012C0D, 0x0, 0x00012C29" />
             <param capture_event_ids="0x00020013, 0x0,0x00020015" />
         </gcs_uid>
+        <gcs_uid>
+            <param uid="0x2" />
+            <param did="0x4" />
+            <param load_sound_model_ids="0x00012C0D, 0x1, 0x00012C14" />
+            <param confidence_levels_ids="0x00012C0D, 0x1, 0x00012C28" />
+            <param operation_mode_ids="0x00012C0D, 0x1 0x00012C28" />
+            <param detection_event_ids="0x00012C0D, 0x1, 0x00012C29" />
+            <param capture_event_ids="0x00020013, 0x1,0x00020015" />
+        </gcs_uid>
 
         <!-- Module and param ids with which the algorithm is integrated
             in non-graphite firmware (note these must come after gcs params) -->
