@@ -45,10 +45,14 @@
     <ctl name="Voip Evrc Min Max Rate Config" id="1" value="4" />
     <ctl name="Voip Dtx Mode" value="0" />
     <ctl name="TTY Mode" value="OFF" />
+    <ctl name="DEC0 Volume" value="84" />
+    <ctl name="DEC2 Volume" value="84" />
     <ctl name="DEC5 Volume" value="84" />
     <ctl name="DEC6 Volume" value="84" />
     <ctl name="DEC7 Volume" value="84" />
     <ctl name="DEC8 Volume" value="84" />
+    <ctl name="ADC1 Volume" value="12" />
+    <ctl name="ADC2 Volume" value="12" />
     <ctl name="CDC_IF TX5 MUX" value="ZERO" />
     <ctl name="CDC_IF TX6 MUX" value="ZERO" />
     <ctl name="CDC_IF TX7 MUX" value="ZERO" />
@@ -381,8 +385,6 @@
     <ctl name="DMIC MUX0" value="ZERO" />
     <ctl name="DMIC MUX2" value="ZERO" />
 
-    <ctl name="DEC0 Volume" value="0" />
-    <ctl name="DEC2 Volume" value="0" />
     <ctl name="RX7 Digital Volume" value="84" />
     <ctl name="RX8 Digital Volume" value="84" />
 
