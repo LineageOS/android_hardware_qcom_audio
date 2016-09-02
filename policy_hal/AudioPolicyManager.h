@@ -39,6 +39,10 @@ namespace android {
 #ifndef AUDIO_EXTN_AFE_PROXY_ENABLED
 #define AUDIO_DEVICE_OUT_PROXY 0x1000000
 #endif
+
+#define MAX_BITRATE_WMA          384000
+#define MAX_BITRATE_WMA_PRO      1536000
+#define MAX_BITRATE_WMA_LOSSLESS 1152000
 // ----------------------------------------------------------------------------
 
 class AudioPolicyManagerCustom: public AudioPolicyManager
