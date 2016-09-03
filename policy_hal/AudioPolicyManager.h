@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2009 The Android Open Source Project
@@ -87,6 +87,7 @@ protected:
         status_t startSource(sp<AudioOutputDescriptor> outputDesc,
                              audio_stream_type_t stream,
                              audio_devices_t device,
+                             const char *address,
                              uint32_t *delayMs);
          status_t stopSource(sp<AudioOutputDescriptor> outputDesc,
                             audio_stream_type_t stream,
@@ -106,14 +107,9 @@ protected:
         //parameter indicates if HDMI plug in/out detected
         bool mHdmiAudioEvent;
 private:
-        static float volIndexToAmpl(audio_devices_t device, const StreamDescriptor& streamDesc,
-                int indexInUi);
         // updates device caching and output for streams that can influence the
         //    routing of notifications
         void handleNotificationRoutingForStream(audio_stream_type_t stream);
-        static bool isVirtualInputDevice(audio_devices_t device);
-        static bool deviceDistinguishesOnAddress(audio_devices_t device);
-        uint32_t nextUniqueId();
         // internal method to return the output handle for the given device and format
         audio_io_handle_t getOutputForDevice(
                 audio_devices_t device,
@@ -138,8 +134,9 @@ private:
                 const audio_offload_info_t *offloadInfo);
         // Used for voip + voice concurrency usecase
         int mPrevPhoneState;
+#ifdef VOICE_CONCURRENCY
         int mvoice_call_state;
-
+#endif
 };
 
 };
