@@ -14,7 +14,6 @@ AUDIO_FEATURE_ENABLED_COMPRESS_VOIP := true
 AUDIO_FEATURE_ENABLED_CUSTOMSTEREO := true
 AUDIO_FEATURE_ENABLED_EXTN_FORMATS := true
 AUDIO_FEATURE_ENABLED_EXTN_FLAC_DECODER := true
-AUDIO_FEATURE_ENABLED_EXTN_RESAMPLER := true
 AUDIO_FEATURE_ENABLED_FM_POWER_OPT := true
 AUDIO_FEATURE_ENABLED_FLUENCE := true
 AUDIO_FEATURE_ENABLED_HDMI_SPK := true
@@ -35,7 +34,6 @@ AUDIO_FEATURE_ENABLED_AAC_ADTS_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_PROXY_DEVICE := true
 AUDIO_FEATURE_ENABLED_KPI_OPTIMIZE := true
 AUDIO_FEATURE_ENABLED_SPKR_PROTECTION := true
-AUDIO_FEATURE_ENABLED_SSR := true
 AUDIO_FEATURE_ENABLED_ACDB_LICENSE := true
 
 AUDIO_FEATURE_ENABLED_DTS_EAGLE := false
@@ -50,43 +48,35 @@ AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS := false
 #DOLBY_DDP := true
 AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
 AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
+
+ifneq ($(QCPATH),)
+AUDIO_FEATURE_ENABLED_EXTN_RESAMPLER := true
+AUDIO_FEATURE_ENABLED_SSR := true
+endif
+
 ##AUDIO_FEATURE_FLAGS
 
 #Audio Specific device overlays
-DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
+DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio-caf/msm8996/configs/common/overlay
 
 # Audio configuration file
-ifeq ($(TARGET_USES_AOSP), true)
 PRODUCT_COPY_FILES += \
-    device/qcom/common/media/audio_policy.conf:system/etc/audio_policy.conf
-else
-PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/msm8996/audio_policy.conf:system/etc/audio_policy.conf
-endif
+    hardware/qcom/audio-caf/msm8996/configs/msm8996/audio_policy.conf:system/etc/audio_policy.conf
 
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/msm8996/audio_output_policy.conf:system/vendor/etc/audio_output_policy.conf \
-    hardware/qcom/audio/configs/msm8996/audio_effects.conf:system/vendor/etc/audio_effects.conf \
-    hardware/qcom/audio/configs/msm8996/mixer_paths.xml:system/etc/mixer_paths.xml \
-    hardware/qcom/audio/configs/msm8996/mixer_paths_tasha.xml:system/etc/mixer_paths_tasha.xml \
-    hardware/qcom/audio/configs/msm8996/mixer_paths_dtp.xml:system/etc/mixer_paths_dtp.xml \
-    hardware/qcom/audio/configs/msm8996/mixer_paths_i2s.xml:system/etc/mixer_paths_i2s.xml \
-    hardware/qcom/audio/configs/msm8996/aanc_tuning_mixer.txt:system/etc/aanc_tuning_mixer.txt \
-    hardware/qcom/audio/configs/msm8996/audio_platform_info_i2s.xml:system/etc/audio_platform_info_i2s.xml \
-    hardware/qcom/audio/configs/msm8996/sound_trigger_mixer_paths.xml:system/etc/sound_trigger_mixer_paths.xml \
-    hardware/qcom/audio/configs/msm8996/sound_trigger_mixer_paths_wcd9330.xml:system/etc/sound_trigger_mixer_paths_wcd9330.xml \
-    hardware/qcom/audio/configs/msm8996/sound_trigger_platform_info.xml:system/etc/sound_trigger_platform_info.xml \
-    hardware/qcom/audio/configs/msm8996/audio_platform_info.xml:system/etc/audio_platform_info.xml
+    hardware/qcom/audio-caf/msm8996/configs/msm8996/audio_output_policy.conf:system/vendor/etc/audio_output_policy.conf \
+    hardware/qcom/audio-caf/msm8996/configs/msm8996/audio_effects.conf:system/vendor/etc/audio_effects.conf \
+    hardware/qcom/audio-caf/msm8996/configs/msm8996/aanc_tuning_mixer.txt:system/etc/aanc_tuning_mixer.txt \
+    hardware/qcom/audio-caf/msm8996/configs/msm8996/audio_platform_info_i2s.xml:system/etc/audio_platform_info_i2s.xml \
+    hardware/qcom/audio-caf/msm8996/configs/msm8996/sound_trigger_mixer_paths.xml:system/etc/sound_trigger_mixer_paths.xml \
+    hardware/qcom/audio-caf/msm8996/configs/msm8996/sound_trigger_mixer_paths_wcd9330.xml:system/etc/sound_trigger_mixer_paths_wcd9330.xml \
+    hardware/qcom/audio-caf/msm8996/configs/msm8996/sound_trigger_platform_info.xml:system/etc/sound_trigger_platform_info.xml
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
-ifeq ($(TARGET_USES_AOSP), true)
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)hardware/qcom/audio/configs/common/audio_policy_configuration.xml:/system/etc/audio_policy_configuration.xml
-else
-PRODUCT_COPY_FILES += \
-    $(TOPDIR)hardware/qcom/audio/configs/msm8996/audio_policy_configuration.xml:system/etc/audio_policy_configuration.xml
-endif
+    $(TOPDIR)hardware/qcom/audio-caf/msm8996/configs/msm8996/audio_policy_configuration.xml:system/etc/audio_policy_configuration.xml
+
 PRODUCT_COPY_FILES += \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:/system/etc/a2dp_audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:/system/etc/audio_policy_volumes.xml \
@@ -97,7 +87,7 @@ endif
 
 # Listen configuration file
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/msm8996/listen_platform_info.xml:system/etc/listen_platform_info.xml
+    hardware/qcom/audio-caf/msm8996/configs/msm8996/listen_platform_info.xml:system/etc/listen_platform_info.xml
 
 # Reduce client buffer size for fast audio output tracks
 PRODUCT_PROPERTY_OVERRIDES += \
