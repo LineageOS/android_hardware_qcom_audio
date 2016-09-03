@@ -588,4 +588,17 @@ int audio_extn_keep_alive_set_parameters(struct audio_device *adev,
 #endif
 
 
+typedef void (* snd_mon_cb)(void * stream, struct str_parms * parms);
+#ifndef SND_MONITOR_ENABLED
+#define audio_extn_snd_mon_init()           (0)
+#define audio_extn_snd_mon_deinit()         (0)
+#define audio_extn_snd_mon_register_listener(stream, cb) (0)
+#define audio_extn_snd_mon_unregister_listener(stream) (0)
+#else
+int audio_extn_snd_mon_init();
+int audio_extn_snd_mon_deinit();
+int audio_extn_snd_mon_register_listener(void *stream, snd_mon_cb cb);
+int audio_extn_snd_mon_unregister_listener(void *stream);
+#endif
+
 #endif /* AUDIO_EXTN_H */

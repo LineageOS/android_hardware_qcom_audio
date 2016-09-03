@@ -37,6 +37,8 @@ typedef struct {
     int na_mode;
 } native_audio_prop;
 
+enum card_status_t;
+
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
 const char *platform_get_snd_device_name(snd_device_t snd_device);
