@@ -96,7 +96,7 @@ static struct audio_extn_module aextnmod = {
 * this is done when device switch happens by setting audioparamter
 */
 
-#define HDMI_PLUG_STATUS_NOTIFY_ENABLE 0x30
+#define EXT_DISPLAY_PLUG_STATUS_NOTIFY_ENABLE 0x30
 
 static ssize_t update_sysfs_node(const char *path, const char *data, size_t len)
 {
@@ -121,56 +121,60 @@ static ssize_t update_sysfs_node(const char *path, const char *data, size_t len)
     return err;
 }
 
-static int get_hdmi_sysfs_node_index()
+static int get_ext_disp_sysfs_node_index(int ext_disp_type)
 {
-    static int node_index = -1;
+    int node_index = -1;
     char fbvalue[80] = {0};
     char fbpath[80] = {0};
     int i = 0;
-    FILE *hdmi_fp = NULL;
-
-    if(node_index >= 0) {
-        //hdmi sysfs node will not change so we just need to get the index once.
-        ALOGV("HDMI sysfs node is at fb%d", node_index);
-        return node_index;
-    }
+    FILE *ext_disp_fd = NULL;
 
     for(i = 0; i < 3; i++) {
         snprintf(fbpath, sizeof(fbpath),
                   "/sys/class/graphics/fb%d/msm_fb_type", i);
-        hdmi_fp = fopen(fbpath, "r");
-        if(hdmi_fp) {
-            fread(fbvalue, sizeof(char), 80, hdmi_fp);
-            if(strncmp(fbvalue, "dtv panel", strlen("dtv panel")) == 0) {
-                node_index = i;
-                ALOGV("HDMI is at fb%d",i);
-                fclose(hdmi_fp);
-                return node_index;
+        ext_disp_fd = fopen(fbpath, "r");
+        if (ext_disp_fd) {
+            if (fread(fbvalue, sizeof(char), 80, ext_disp_fd)) {
+                if(((strncmp(fbvalue, "dtv panel", strlen("dtv panel")) == 0) &&
+                    (ext_disp_type == EXT_DISPLAY_TYPE_HDMI)) ||
+                   ((strncmp(fbvalue, "dp panel", strlen("dp panel")) == 0) &&
+                    (ext_disp_type == EXT_DISPLAY_TYPE_DP))) {
+                    node_index = i;
+                    ALOGD("%s: Ext Disp:%d is at fb%d", __func__, ext_disp_type, i);
+                    fclose(ext_disp_fd);
+                    return node_index;
+                }
             }
-            fclose(hdmi_fp);
+            fclose(ext_disp_fd);
         } else {
-            ALOGE("Failed to open fb node %d",i);
+            ALOGE("%s: Failed to open fb node %d", __func__, i);
         }
     }
 
     return -1;
 }
 
-static int update_hdmi_sysfs_node(int node_value)
+static int update_ext_disp_sysfs_node(const struct audio_device *adev, int node_value)
 {
-    char hdmi_ack_path[80] = {0};
-    char hdmi_ack_value[3] = {0};
+    char ext_disp_ack_path[80] = {0};
+    char ext_disp_ack_value[3] = {0};
     int index, ret = -1;
+    int ext_disp_type = platform_get_ext_disp_type(adev->platform);
 
-    index = get_hdmi_sysfs_node_index();
+    if (ext_disp_type < 0) {
+        ALOGE("%s, Unable to get the external display type, err:%d",
+              __func__, ext_disp_type);
+        return -EINVAL;
+    }
 
+    index = get_ext_disp_sysfs_node_index(ext_disp_type);
     if (index >= 0) {
-        snprintf(hdmi_ack_value, sizeof(hdmi_ack_value), "%d", node_value);
-        snprintf(hdmi_ack_path, sizeof(hdmi_ack_path),
+        snprintf(ext_disp_ack_value, sizeof(ext_disp_ack_value), "%d", node_value);
+        snprintf(ext_disp_ack_path, sizeof(ext_disp_ack_path),
                   "/sys/class/graphics/fb%d/hdmi_audio_cb", index);
 
-        ret = update_sysfs_node(hdmi_ack_path, hdmi_ack_value,
-                sizeof(hdmi_ack_value));
+        ret = update_sysfs_node(ext_disp_ack_path, ext_disp_ack_value,
+                sizeof(ext_disp_ack_value));
 
         ALOGI("update hdmi_audio_cb at fb[%d] to:[%d] %s",
             index, node_value, (ret >= 0) ? "success":"fail");
@@ -179,25 +183,27 @@ static int update_hdmi_sysfs_node(int node_value)
     return ret;
 }
 
-static void check_and_set_hdmi_connection_status(struct str_parms *parms)
+static void check_and_set_ext_disp_connection_status(const struct audio_device *adev,
+                                                     struct str_parms *parms)
 {
     char value[32] = {0};
     static bool is_hdmi_sysfs_node_init = false;
 
     if (str_parms_get_str(parms, "connect", value, sizeof(value)) >= 0
-            && (atoi(value) & AUDIO_DEVICE_OUT_HDMI)) {
-        //params = "connect=1024" for HDMI connection.
+            && (atoi(value) & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+        //params = "connect=1024" for external display connection.
         if (is_hdmi_sysfs_node_init == false) {
+            //check if this is different for dp and hdmi
             is_hdmi_sysfs_node_init = true;
-            update_hdmi_sysfs_node(HDMI_PLUG_STATUS_NOTIFY_ENABLE);
+            update_ext_disp_sysfs_node(adev, EXT_DISPLAY_PLUG_STATUS_NOTIFY_ENABLE);
         }
-        update_hdmi_sysfs_node(1);
+        update_ext_disp_sysfs_node(adev, 1);
     } else if(str_parms_get_str(parms, "disconnect", value, sizeof(value)) >= 0
-            && (atoi(value) & AUDIO_DEVICE_OUT_HDMI)){
-        //params = "disconnect=1024" for HDMI disconnection.
-        update_hdmi_sysfs_node(0);
+            && (atoi(value) & AUDIO_DEVICE_OUT_AUX_DIGITAL)){
+        //params = "disconnect=1024" for external display disconnection.
+        update_ext_disp_sysfs_node(adev, 0);
     } else {
-        // handle hdmi devices only
+        // handle ext disp devices only
         return;
     }
 }
@@ -764,7 +770,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_source_track_set_parameters(adev, parms);
    audio_extn_fbsp_set_parameters(parms);
    audio_extn_keep_alive_set_parameters(adev, parms);
-   check_and_set_hdmi_connection_status(parms);
+   check_and_set_ext_disp_connection_status(adev, parms);
    if (adev->offload_effects_set_parameters != NULL)
        adev->offload_effects_set_parameters(parms);
 }

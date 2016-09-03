@@ -255,6 +255,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
 
     [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = "afe-proxy-playback",
     [USECASE_AUDIO_RECORD_AFE_PROXY] = "afe-proxy-record",
+    [USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE] = "silence-playback",
 };
 
 static const audio_usecase_t offload_usecases[] = {
@@ -849,7 +850,7 @@ int disable_snd_device(struct audio_device *adev,
         if (SND_DEVICE_OUT_BT_A2DP == snd_device)
             audio_extn_a2dp_stop_playback();
 
-        if (snd_device == SND_DEVICE_OUT_HDMI)
+        if (snd_device == SND_DEVICE_OUT_HDMI || snd_device == SND_DEVICE_OUT_DISPLAY_PORT)
             adev->is_channel_status_set = false;
         else if (SND_DEVICE_OUT_HEADPHONES == snd_device &&
                  adev->native_playback_enabled) {
@@ -1083,6 +1084,13 @@ static int read_hdmi_sink_caps(struct stream_out *out)
     int channels = platform_edid_get_max_channels(out->dev->platform);
 
     reset_hdmi_sink_caps(out);
+
+    /* Cache ext disp type */
+    ret = platform_get_ext_disp_type(adev->platform);
+    if (ret < 0) {
+        ALOGE("%s: Failed to query disp type, ret:%d", __func__, ret);
+        return ret;
+    }
 
     switch (channels) {
     case 8:
@@ -4108,7 +4116,12 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     if (ret >= 0) {
         val = atoi(value);
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-            ALOGV("cache new edid");
+            ALOGV("cache new ext disp type and edid");
+            ret = platform_get_ext_disp_type(adev->platform);
+            if (ret < 0) {
+                ALOGE("%s: Failed to query disp type, ret:%d", __func__, ret);
+                return ret;
+            }
             platform_cache_edid(adev->platform);
         } else if ((val & AUDIO_DEVICE_OUT_USB_DEVICE) ||
                    !(val ^ AUDIO_DEVICE_IN_USB_DEVICE)) {

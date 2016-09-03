@@ -36,8 +36,6 @@
 #include "platform_api.h"
 #include <platform.h>
 
-#define SILENCE_MIXER_PATH "silence-playback hdmi"
-#define SILENCE_DEV_ID 32           /* index into machine driver */
 #define SILENCE_INTERVAL 2 /*In secs*/
 
 typedef enum {
@@ -131,11 +129,14 @@ static int open_silence_stream()
     if (ka.pcm)
         return -EEXIST;
 
-    ALOGD("opening silence device %d", SILENCE_DEV_ID);
+    int silence_pcm_dev_id = platform_get_pcm_device_id(USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE,
+                                                        PCM_PLAYBACK);
+
+    ALOGD("opening silence device %d", silence_pcm_dev_id);
     struct audio_device * adev = (struct audio_device *)ka.userdata;
-    ka.pcm = pcm_open(adev->snd_card, SILENCE_DEV_ID,
+    ka.pcm = pcm_open(adev->snd_card, silence_pcm_dev_id,
                       flags, &silence_config);
-    ALOGD("opened silence device %d", SILENCE_DEV_ID);
+    ALOGD("opened silence device %d", silence_pcm_dev_id);
     if (ka.pcm == NULL || !pcm_is_ready(ka.pcm)) {
         ALOGE("%s: %s", __func__, pcm_get_error(ka.pcm));
         if (ka.pcm != NULL) {
@@ -208,8 +209,10 @@ void audio_extn_keep_alive_start()
     ka.done = false;
 
     /*configure app type */
+    int silence_pcm_dev_id = platform_get_pcm_device_id(USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE,
+                                                        PCM_PLAYBACK);
     snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
-             "Audio Stream %d App Type Cfg",SILENCE_DEV_ID);
+             "Audio Stream %d App Type Cfg", silence_pcm_dev_id);
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
@@ -219,7 +222,28 @@ void audio_extn_keep_alive_start()
         goto exit;
     }
 
-    snd_device = SND_DEVICE_OUT_HDMI;
+    /* Configure HDMI/DP Backend with default values, this as well
+     * helps reconfigure HDMI/DP backend after passthrough.
+     */
+    int ext_disp_type = platform_get_ext_disp_type(adev->platform);
+    switch(ext_disp_type) {
+        case EXT_DISPLAY_TYPE_HDMI:
+            snd_device = SND_DEVICE_OUT_HDMI;
+            set_mixer_control(adev->mixer, "HDMI RX Format", "LPCM");
+            set_mixer_control(adev->mixer, "HDMI_RX SampleRate", "KHZ_48");
+            set_mixer_control(adev->mixer, "HDMI_RX Channels", "Two");
+            break;
+        case EXT_DISPLAY_TYPE_DP:
+            snd_device = SND_DEVICE_OUT_DISPLAY_PORT;
+            set_mixer_control(adev->mixer, "Display Port Format", "LPCM");
+            set_mixer_control(adev->mixer, "Display Port RX SampleRate", "KHZ_48");
+            set_mixer_control(adev->mixer, "Display Port RX Channels", "Two");
+            break;
+        default:
+            ALOGE("%s: Invalid external display type:%d", __func__, ext_disp_type);
+            goto exit;
+    }
+
     acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
     if (acdb_dev_id < 0) {
         ALOGE("%s: Couldn't get the acdb dev id", __func__);
@@ -237,23 +261,27 @@ void audio_extn_keep_alive_start()
           platform_get_default_app_type(adev->platform),
           acdb_dev_id, sample_rate);
     mixer_ctl_set_array(ctl, app_type_cfg, len);
-    /*Configure HDMI Backend with default values, this as well
-     *helps reconfigure HDMI backend after passthrough
-     */
-    set_mixer_control(adev->mixer, "HDMI RX Format", "LPCM");
-    set_mixer_control(adev->mixer, "HDMI_RX SampleRate", "KHZ_48");
-    set_mixer_control(adev->mixer, "HDMI_RX Channels", "Two");
 
     /*send calibration*/
     usecase = calloc(1, sizeof(struct audio_usecase));
     usecase->type = PCM_PLAYBACK;
-    usecase->out_snd_device = SND_DEVICE_OUT_HDMI;
+    usecase->out_snd_device = snd_device;
 
     platform_send_audio_calibration(adev->platform, usecase,
                 platform_get_default_app_type(adev->platform), sample_rate);
 
     /*apply audio route */
-    audio_route_apply_and_update_path(adev->audio_route, SILENCE_MIXER_PATH);
+    switch(ext_disp_type) {
+        case EXT_DISPLAY_TYPE_HDMI:
+            audio_route_apply_and_update_path(adev->audio_route, "silence-playback hdmi");
+            break;
+        case EXT_DISPLAY_TYPE_DP:
+            audio_route_apply_and_update_path(adev->audio_route, "silence-playback display-port");
+            break;
+        default:
+            ALOGE("%s: Invalid external display type:%d", __func__, ext_disp_type);
+            goto exit;
+    }
 
     if (open_silence_stream() == 0) {
         send_cmd_l(REQUEST_WRITE);
@@ -284,7 +312,19 @@ void audio_extn_keep_alive_stop()
         pthread_cond_wait(&ka.cond, &ka.lock);
     }
     close_silence_stream();
-    audio_route_reset_and_update_path(adev->audio_route, SILENCE_MIXER_PATH);
+
+    /*apply audio route */
+    int ext_disp_type = platform_get_ext_disp_type(adev->platform);
+    switch(ext_disp_type) {
+        case EXT_DISPLAY_TYPE_HDMI:
+            audio_route_reset_and_update_path(adev->audio_route, "silence-playback hdmi");
+            break;
+        case EXT_DISPLAY_TYPE_DP:
+            audio_route_reset_and_update_path(adev->audio_route, "silence-playback display-port");
+            break;
+        default:
+            ALOGE("%s: Invalid external display type:%d", __func__, ext_disp_type);
+    }
 
 exit:
     pthread_mutex_unlock(&ka.lock);

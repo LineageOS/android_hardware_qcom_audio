@@ -667,6 +667,11 @@ int platform_set_device_mute(void *platform __unused, bool state __unused, char 
     return -ENOSYS;
 }
 
+int platform_get_ext_disp_type(void *platform)
+{
+    return EXT_DISPLAY_TYPE_HDMI;
+}
+
 snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devices)
 {
     struct platform_data *my_data = (struct platform_data *)platform;

@@ -158,4 +158,5 @@ bool platform_check_if_backend_has_to_be_disabled(snd_device_t new_snd_device, s
 bool platform_check_codec_dsd_support(void *platform);
 bool platform_check_codec_asrc_support(void *platform);
 int platform_get_backend_index(snd_device_t snd_device);
+int platform_get_ext_disp_type(void *platform);
 #endif // AUDIO_PLATFORM_API_H
