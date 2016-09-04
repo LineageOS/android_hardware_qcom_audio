@@ -43,16 +43,6 @@ public:
                                              audio_policy_dev_state_t state,
                                              const char *device_address,
                                              const char *device_name);
-        virtual status_t getInputForAttr(const audio_attributes_t *attr,
-                                         audio_io_handle_t *input,
-                                         audio_session_t session,
-                                         uid_t uid,
-                                         uint32_t samplingRate,
-                                         audio_format_t format,
-                                         audio_channel_mask_t channelMask,
-                                         audio_input_flags_t flags,
-                                         audio_port_handle_t selectedDeviceId,
-                                         input_type_t *inputType);
         virtual void setPhoneState(audio_mode_t state);
         virtual void setForceUse(audio_policy_force_use_t usage,
                                  audio_policy_forced_cfg_t config);
@@ -60,6 +50,18 @@ public:
 protected:
         // manages A2DP output suspend/restore according to phone state and BT SCO usage
         void checkA2dpSuspend();
+
+        // internal method to return the input handle for the given device and format
+        audio_io_handle_t getInputForDevice(audio_devices_t device,
+                String8 address,
+                audio_session_t session,
+                uid_t uid,
+                audio_source_t inputSource,
+                uint32_t samplingRate,
+                audio_format_t format,
+                audio_channel_mask_t channelMask,
+                audio_input_flags_t flags,
+                AudioMix *policyMix);
 
         // check that volume change is permitted, compute and send new volume to audio hardware
         virtual status_t checkAndSetVolume(audio_stream_type_t stream, int index,

@@ -290,6 +290,10 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             }
         }
 
+        if (state == AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE) {
+            cleanUpForDevice(devDesc);
+        }
+
         mpClientInterface->onAudioPortListUpdate();
         return NO_ERROR;
     }  // end if is output device
@@ -366,6 +370,10 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             updateCallRouting(newDevice);
         }
 
+        if (state == AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE) {
+            cleanUpForDevice(devDesc);
+        }
+
         mpClientInterface->onAudioPortListUpdate();
         return NO_ERROR;
     } // end if is input device
@@ -382,9 +390,6 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
 void AudioPolicyManagerCustom::updateCallRouting(audio_devices_t rxDevice, int delayMs)
 {
     bool createTxPatch = false;
-    struct audio_patch patch;
-    patch.num_sources = 1;
-    patch.num_sinks = 1;
     status_t status;
     audio_patch_handle_t afPatchHandle;
     DeviceVector deviceList;
@@ -417,8 +422,11 @@ void AudioPolicyManagerCustom::updateCallRouting(audio_devices_t rxDevice, int d
                 == AUDIO_DEVICE_NONE) {
             createTxPatch = true;
         }
-    } else {
-        // create RX path audio patch
+    } else { // create RX path audio patch
+        struct audio_patch patch;
+
+        patch.num_sources = 1;
+        patch.num_sinks = 1;
         deviceList = mAvailableOutputDevices.getDevicesFromType(rxDevice);
         ALOG_ASSERT(!deviceList.isEmpty(),
                     "updateCallRouting() selected device not in output device list");
@@ -438,14 +446,6 @@ void AudioPolicyManagerCustom::updateCallRouting(audio_devices_t rxDevice, int d
                                                 AUDIO_OUTPUT_FLAG_NONE,
                                                 AUDIO_FORMAT_INVALID);
         if (output != AUDIO_IO_HANDLE_NONE) {
-            // close active input (if any) before opening new input
-            audio_io_handle_t activeInput = mInputs.getActiveInput();
-            if (activeInput != 0) {
-                ALOGV("updateCallRouting() close active input before opening new input");
-                sp<AudioInputDescriptor> activeDesc = mInputs.valueFor(activeInput);
-                stopInput(activeInput, activeDesc->mSessions.itemAt(0));
-                releaseInput(activeInput, activeDesc->mSessions.itemAt(0));
-            }
             sp<SwAudioOutputDescriptor> outputDesc = mOutputs.valueFor(output);
             ALOG_ASSERT(!outputDesc->isDuplicated(),
                         "updateCallRouting() RX device output is duplicated");
@@ -465,9 +465,9 @@ void AudioPolicyManagerCustom::updateCallRouting(audio_devices_t rxDevice, int d
         }
         createTxPatch = true;
     }
-    if (createTxPatch) {
-
+    if (createTxPatch) { // create TX path audio patch
         struct audio_patch patch;
+
         patch.num_sources = 1;
         patch.num_sinks = 1;
         deviceList = mAvailableInputDevices.getDevicesFromType(txDevice);
@@ -505,7 +505,9 @@ void AudioPolicyManagerCustom::updateCallRouting(audio_devices_t rxDevice, int d
         if (activeInput != 0) {
             sp<AudioInputDescriptor> activeDesc = mInputs.valueFor(activeInput);
             if (activeDesc->getModuleHandle() == txSourceDeviceDesc->getModuleHandle()) {
-                audio_session_t activeSession = activeDesc->mSessions.itemAt(0);
+                //FIXME: consider all active sessions
+                AudioSessionCollection activeSessions = activeDesc->getActiveAudioSessions();
+                audio_session_t activeSession = activeSessions.keyAt(0);
                 stopInput(activeInput, activeSession);
                 releaseInput(activeInput, activeSession);
             }
@@ -523,191 +525,6 @@ void AudioPolicyManagerCustom::updateCallRouting(audio_devices_t rxDevice, int d
     }
 }
 
-status_t AudioPolicyManagerCustom::getInputForAttr(const audio_attributes_t *attr,
-                                             audio_io_handle_t *input,
-                                             audio_session_t session,
-                                             uid_t uid,
-                                             uint32_t samplingRate,
-                                             audio_format_t format,
-                                             audio_channel_mask_t channelMask,
-                                             audio_input_flags_t flags,
-                                             audio_port_handle_t selectedDeviceId,
-                                             input_type_t *inputType)
-{
-    ALOGV("getInputForAttr() source %d, samplingRate %d, format %d, channelMask %x,"
-            "session %d, flags %#x",
-          attr->source, samplingRate, format, channelMask, session, flags);
-
-    *input = AUDIO_IO_HANDLE_NONE;
-    *inputType = API_INPUT_INVALID;
-    audio_devices_t device;
-    // handle legacy remote submix case where the address was not always specified
-    String8 address = String8("");
-    bool isSoundTrigger = false;
-    audio_source_t inputSource = attr->source;
-    audio_source_t halInputSource;
-    AudioMix *policyMix = NULL;
-
-    if (inputSource == AUDIO_SOURCE_DEFAULT) {
-        inputSource = AUDIO_SOURCE_MIC;
-    }
-    halInputSource = inputSource;
-
-    // Explicit routing?
-    sp<DeviceDescriptor> deviceDesc;
-    for (size_t i = 0; i < mAvailableInputDevices.size(); i++) {
-        if (mAvailableInputDevices[i]->getId() == selectedDeviceId) {
-            deviceDesc = mAvailableInputDevices[i];
-            break;
-        }
-    }
-    mInputRoutes.addRoute(session, SessionRoute::STREAM_TYPE_NA, inputSource, deviceDesc, uid);
-
-    if (inputSource == AUDIO_SOURCE_REMOTE_SUBMIX &&
-            strncmp(attr->tags, "addr=", strlen("addr=")) == 0) {
-        status_t ret = mPolicyMixes.getInputMixForAttr(*attr, &policyMix);
-        if (ret != NO_ERROR) {
-            return ret;
-        }
-        *inputType = API_INPUT_MIX_EXT_POLICY_REROUTE;
-        device = AUDIO_DEVICE_IN_REMOTE_SUBMIX;
-        address = String8(attr->tags + strlen("addr="));
-    } else {
-        device = getDeviceAndMixForInputSource(inputSource, &policyMix);
-        if (device == AUDIO_DEVICE_NONE) {
-            ALOGW("getInputForAttr() could not find device for source %d", inputSource);
-            return BAD_VALUE;
-        }
-        // block request to open input on USB during voice call
-        if((AUDIO_MODE_IN_CALL == mEngine->getPhoneState()) &&
-            (device == AUDIO_DEVICE_IN_USB_DEVICE)) {
-            ALOGV("getInputForAttr(): blocking the request to open input on USB device");
-            return BAD_VALUE;
-        }
-        if (policyMix != NULL) {
-            address = policyMix->mRegistrationId;
-            if (policyMix->mMixType == MIX_TYPE_RECORDERS) {
-                // there is an external policy, but this input is attached to a mix of recorders,
-                // meaning it receives audio injected into the framework, so the recorder doesn't
-                // know about it and is therefore considered "legacy"
-                *inputType = API_INPUT_LEGACY;
-            } else {
-                // recording a mix of players defined by an external policy, we're rerouting for
-                // an external policy
-                *inputType = API_INPUT_MIX_EXT_POLICY_REROUTE;
-            }
-        } else if (audio_is_remote_submix_device(device)) {
-            address = String8("0");
-            *inputType = API_INPUT_MIX_CAPTURE;
-        } else if (device == AUDIO_DEVICE_IN_TELEPHONY_RX) {
-            *inputType = API_INPUT_TELEPHONY_RX;
-        } else {
-            *inputType = API_INPUT_LEGACY;
-        }
-
-        // adapt channel selection to input source
-        switch (inputSource) {
-        case AUDIO_SOURCE_VOICE_UPLINK:
-            channelMask |= AUDIO_CHANNEL_IN_VOICE_UPLINK;
-            break;
-        case AUDIO_SOURCE_VOICE_DOWNLINK:
-            channelMask |= AUDIO_CHANNEL_IN_VOICE_DNLINK;
-            break;
-        case AUDIO_SOURCE_VOICE_CALL:
-            channelMask |= AUDIO_CHANNEL_IN_VOICE_UPLINK | AUDIO_CHANNEL_IN_VOICE_DNLINK;
-            break;
-        default:
-            break;
-        }
-
-        if (inputSource == AUDIO_SOURCE_HOTWORD) {
-            ssize_t index = mSoundTriggerSessions.indexOfKey(session);
-            if (index >= 0) {
-                *input = mSoundTriggerSessions.valueFor(session);
-                isSoundTrigger = true;
-                flags = (audio_input_flags_t)(flags | AUDIO_INPUT_FLAG_HW_HOTWORD);
-                ALOGV("SoundTrigger capture on session %d input %d", session, *input);
-            } else {
-                halInputSource = AUDIO_SOURCE_VOICE_RECOGNITION;
-            }
-        }
-    }
-
-    // find a compatible input profile (not necessarily identical in parameters)
-    sp<IOProfile> profile;
-    // samplingRate and flags may be updated by getInputProfile
-    uint32_t profileSamplingRate = samplingRate;
-    audio_format_t profileFormat = format;
-    audio_channel_mask_t profileChannelMask = channelMask;
-    audio_input_flags_t profileFlags = flags;
-    for (;;) {
-        profile = getInputProfile(device, address,
-                                  profileSamplingRate, profileFormat, profileChannelMask,
-                                  profileFlags);
-        if (profile != 0) {
-            break; // success
-        } else if (profileFlags != AUDIO_INPUT_FLAG_NONE) {
-            profileFlags = AUDIO_INPUT_FLAG_NONE; // retry
-        } else { // fail
-            ALOGW("getInputForAttr() could not find profile for device 0x%X, samplingRate %u,"
-                    "format %#x, channelMask 0x%X, flags %#x",
-                    device, samplingRate, format, channelMask, flags);
-            return BAD_VALUE;
-        }
-    }
-
-    if (profile->getModuleHandle() == 0) {
-        ALOGE("getInputForAttr(): HW module %s not opened", profile->getModuleName());
-        return NO_INIT;
-    }
-
-    audio_config_t config = AUDIO_CONFIG_INITIALIZER;
-    config.sample_rate = profileSamplingRate;
-    config.channel_mask = profileChannelMask;
-    config.format = profileFormat;
-
-    status_t status = mpClientInterface->openInput(profile->getModuleHandle(),
-                                                   input,
-                                                   &config,
-                                                   &device,
-                                                   address,
-                                                   halInputSource,
-                                                   profileFlags);
-
-    // only accept input with the exact requested set of parameters
-    if (status != NO_ERROR || *input == AUDIO_IO_HANDLE_NONE ||
-        (profileSamplingRate != config.sample_rate) ||
-        (profileFormat != config.format) ||
-        (profileChannelMask != config.channel_mask)) {
-        ALOGW("getInputForAttr() failed opening input: samplingRate %d, format %d,"
-                " channelMask %x",
-                samplingRate, format, channelMask);
-        if (*input != AUDIO_IO_HANDLE_NONE) {
-            mpClientInterface->closeInput(*input);
-        }
-        return BAD_VALUE;
-    }
-
-    sp<AudioInputDescriptor> inputDesc = new AudioInputDescriptor(profile);
-    inputDesc->mInputSource = inputSource;
-    inputDesc->mRefCount = 0;
-    inputDesc->mOpenRefCount = 1;
-    inputDesc->mSamplingRate = profileSamplingRate;
-    inputDesc->mFormat = profileFormat;
-    inputDesc->mChannelMask = profileChannelMask;
-    inputDesc->mDevice = device;
-    inputDesc->mSessions.add(session);
-    inputDesc->mIsSoundTrigger = isSoundTrigger;
-    inputDesc->mPolicyMix = policyMix;
-
-    ALOGV("getInputForAttr() returns input type = %d", *inputType);
-
-    addInput(*input, inputDesc);
-    mpClientInterface->onAudioPortListUpdate();
-
-    return NO_ERROR;
-}
-
 void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
 {
     ALOGV("setPhoneState() state %d", state);
@@ -723,10 +540,7 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
     // pertaining to sonification strategy see handleIncallSonification()
     if (isStateInCall(oldState)) {
         ALOGV("setPhoneState() in call state management: new state is %d", state);
-        for (int stream = 0; stream < AUDIO_STREAM_CNT; stream++) {
-            if (stream == AUDIO_STREAM_PATCH) {
-                continue;
-            }
+        for (int stream = 0; stream < AUDIO_STREAM_FOR_POLICY_CNT; stream++) {
             handleIncallSonification((audio_stream_type_t)stream, false, true);
         }
 
@@ -802,10 +616,7 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
     // pertaining to sonification strategy see handleIncallSonification()
     if (isStateInCall(state)) {
         ALOGV("setPhoneState() in call state management: new state is %d", state);
-        for (int stream = 0; stream < AUDIO_STREAM_CNT; stream++) {
-            if (stream == AUDIO_STREAM_PATCH) {
-                continue;
-            }
+        for (int stream = 0; stream < AUDIO_STREAM_FOR_POLICY_CNT; stream++) {
             handleIncallSonification((audio_stream_type_t)stream, true, true);
         }
 
@@ -839,6 +650,7 @@ void AudioPolicyManagerCustom::setForceUse(audio_policy_force_use_t usage,
     checkA2dpSuspend();
     checkOutputForAllStrategies();
     updateDevicesAndOutputs();
+
     if (mEngine->getPhoneState() == AUDIO_MODE_IN_CALL && hasPrimaryOutput()) {
         audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, true /*fromCache*/);
         updateCallRouting(newDevice);
@@ -859,12 +671,165 @@ void AudioPolicyManagerCustom::setForceUse(audio_policy_force_use_t usage,
         sp<AudioInputDescriptor> activeDesc = mInputs.valueFor(activeInput);
         audio_devices_t newDevice = getNewInputDevice(activeInput);
         // Force new input selection if the new device can not be reached via current input
-        if (activeDesc->mProfile->mSupportedDevices.types() & (newDevice & ~AUDIO_DEVICE_BIT_IN)) {
+        if (activeDesc->mProfile->getSupportedDevices().types() & (newDevice & ~AUDIO_DEVICE_BIT_IN)) {
             setInputDevice(activeInput, newDevice);
         } else {
             closeInput(activeInput);
         }
     }
+}
+
+audio_io_handle_t AudioPolicyManagerCustom::getInputForDevice(audio_devices_t device,
+                                                        String8 address,
+                                                        audio_session_t session,
+                                                        uid_t uid,
+                                                        audio_source_t inputSource,
+                                                        uint32_t samplingRate,
+                                                        audio_format_t format,
+                                                        audio_channel_mask_t channelMask,
+                                                        audio_input_flags_t flags,
+                                                        AudioMix *policyMix)
+{
+    audio_io_handle_t input = AUDIO_IO_HANDLE_NONE;
+    audio_source_t halInputSource = inputSource;
+    bool isSoundTrigger = false;
+
+    // adapt channel selection to input source
+    switch (inputSource) {
+    case AUDIO_SOURCE_VOICE_UPLINK:
+        channelMask |= AUDIO_CHANNEL_IN_VOICE_UPLINK;
+        break;
+    case AUDIO_SOURCE_VOICE_DOWNLINK:
+        channelMask |= AUDIO_CHANNEL_IN_VOICE_DNLINK;
+        break;
+    case AUDIO_SOURCE_VOICE_CALL:
+        channelMask |= AUDIO_CHANNEL_IN_VOICE_UPLINK | AUDIO_CHANNEL_IN_VOICE_DNLINK;
+        break;
+    default:
+        break;
+    }
+
+    if (inputSource == AUDIO_SOURCE_HOTWORD) {
+        ssize_t index = mSoundTriggerSessions.indexOfKey(session);
+        if (index >= 0) {
+            input = mSoundTriggerSessions.valueFor(session);
+            isSoundTrigger = true;
+            flags = (audio_input_flags_t)(flags | AUDIO_INPUT_FLAG_HW_HOTWORD);
+            ALOGV("SoundTrigger capture on session %d input %d", session, input);
+        } else {
+            halInputSource = AUDIO_SOURCE_VOICE_RECOGNITION;
+        }
+    }
+
+    // find a compatible input profile (not necessarily identical in parameters)
+    sp<IOProfile> profile;
+    // samplingRate and flags may be updated by getInputProfile
+    uint32_t profileSamplingRate = (samplingRate == 0) ? SAMPLE_RATE_HZ_DEFAULT : samplingRate;
+    audio_format_t profileFormat = format;
+    audio_channel_mask_t profileChannelMask = channelMask;
+    audio_input_flags_t profileFlags = flags;
+    for (;;) {
+        profile = getInputProfile(device, address,
+                                  profileSamplingRate, profileFormat, profileChannelMask,
+                                  profileFlags);
+        if (profile != 0) {
+            break; // success
+        } else if (profileFlags != AUDIO_INPUT_FLAG_NONE) {
+            profileFlags = AUDIO_INPUT_FLAG_NONE; // retry
+        } else { // fail
+            ALOGW("getInputForDevice() could not find profile for device 0x%X,"
+                  "samplingRate %u, format %#x, channelMask 0x%X, flags %#x",
+                    device, samplingRate, format, channelMask, flags);
+            return input;
+        }
+    }
+    // Pick input sampling rate if not specified by client
+    if (samplingRate == 0) {
+        samplingRate = profileSamplingRate;
+    }
+
+    if (profile->getModuleHandle() == 0) {
+        ALOGE("getInputForAttr(): HW module %s not opened", profile->getModuleName());
+        return input;
+    }
+
+    sp<AudioSession> audioSession = new AudioSession(session,
+                                                              inputSource,
+                                                              format,
+                                                              samplingRate,
+                                                              channelMask,
+                                                              flags,
+                                                              uid,
+                                                              isSoundTrigger,
+                                                              policyMix, mpClientInterface);
+
+// TODO enable input reuse
+#if 0
+    // reuse an open input if possible
+    for (size_t i = 0; i < mInputs.size(); i++) {
+        sp<AudioInputDescriptor> desc = mInputs.valueAt(i);
+        // reuse input if it shares the same profile and same sound trigger attribute
+        if (profile == desc->mProfile &&
+            isSoundTrigger == desc->isSoundTrigger()) {
+
+            sp<AudioSession> as = desc->getAudioSession(session);
+            if (as != 0) {
+                // do not allow unmatching properties on same session
+                if (as->matches(audioSession)) {
+                    as->changeOpenCount(1);
+                } else {
+                    ALOGW("getInputForDevice() record with different attributes"
+                          " exists for session %d", session);
+                    return input;
+                }
+            } else {
+                desc->addAudioSession(session, audioSession);
+            }
+            ALOGV("getInputForDevice() reusing input %d", mInputs.keyAt(i));
+            return mInputs.keyAt(i);
+        }
+    }
+#endif
+
+    audio_config_t config = AUDIO_CONFIG_INITIALIZER;
+    config.sample_rate = profileSamplingRate;
+    config.channel_mask = profileChannelMask;
+    config.format = profileFormat;
+
+    status_t status = mpClientInterface->openInput(profile->getModuleHandle(),
+                                                   &input,
+                                                   &config,
+                                                   &device,
+                                                   address,
+                                                   halInputSource,
+                                                   profileFlags);
+
+    // only accept input with the exact requested set of parameters
+    if (status != NO_ERROR || input == AUDIO_IO_HANDLE_NONE ||
+        (profileSamplingRate != config.sample_rate) ||
+        !audio_formats_match(profileFormat, config.format) ||
+        (profileChannelMask != config.channel_mask)) {
+        ALOGW("getInputForAttr() failed opening input: samplingRate %d"
+              ", format %d, channelMask %x",
+                samplingRate, format, channelMask);
+        if (input != AUDIO_IO_HANDLE_NONE) {
+            mpClientInterface->closeInput(input);
+        }
+        return AUDIO_IO_HANDLE_NONE;
+    }
+
+    sp<AudioInputDescriptor> inputDesc = new AudioInputDescriptor(profile);
+    inputDesc->mSamplingRate = profileSamplingRate;
+    inputDesc->mFormat = profileFormat;
+    inputDesc->mChannelMask = profileChannelMask;
+    inputDesc->mDevice = device;
+    inputDesc->mPolicyMix = policyMix;
+    inputDesc->addAudioSession(session, audioSession);
+
+    addInput(input, inputDesc);
+    mpClientInterface->onAudioPortListUpdate();
+
+    return input;
 }
 
 status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
@@ -906,12 +871,12 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
         float voiceVolume;
         // Force voice volume to max for bluetooth SCO as volume is managed by the headset
         if (stream == AUDIO_STREAM_VOICE_CALL) {
-            voiceVolume = (float)index/(float)mStreams.valueFor(stream).getVolumeIndexMax();
+            voiceVolume = (float)index/(float)mVolumeCurves->getVolumeIndexMax(stream);
         } else {
             voiceVolume = 1.0;
         }
 
-        if (voiceVolume != mLastVoiceVolume && outputDesc == mPrimaryOutput) {
+        if (voiceVolume != mLastVoiceVolume) {
             mpClientInterface->setVoiceVolume(voiceVolume, delayMs);
             mLastVoiceVolume = voiceVolume;
         }
@@ -946,23 +911,25 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
     }
 
     for (size_t i = 0; i < mHwModules.size(); i++) {
-        ALOGV("Hw module %d", i);
+        ALOGV("Hw module %zu", i);
         for (size_t j = 0; j < mHwModules[i]->mInputProfiles.size(); j++) {
             const sp<IOProfile> inProfile = mHwModules[i]->mInputProfiles[j];
-            ALOGV("Input profile ", j);
-            for (size_t k = 0; k  < inProfile->mChannelMasks.size(); k++) {
-                audio_channel_mask_t channelMask =
-                    inProfile->mChannelMasks.itemAt(k);
-                ALOGV("Channel Mask %x size %d", channelMask,
-                    inProfile->mChannelMasks.size());
-                if (AUDIO_CHANNEL_IN_5POINT1 == channelMask) {
-                    if (!prop_ssr_enabled) {
-                        ALOGI("removing AUDIO_CHANNEL_IN_5POINT1 from"
-                            " input profile as SSR(surround sound record)"
-                            " is not supported on this chipset variant");
-                        inProfile->mChannelMasks.removeItemsAt(k, 1);
-                        ALOGV("Channel Mask size now %d",
-                            inProfile->mChannelMasks.size());
+            AudioProfileVector profiles = inProfile->getAudioProfiles();
+            for (size_t k = 0; k < profiles.size(); k++){
+                ChannelsVector channels = profiles[k]->getChannels();
+                for (size_t x = 0; x < channels.size(); x++) {
+                    audio_channel_mask_t channelMask = channels[x];
+                    ALOGV("Channel Mask %x size %zu", channelMask,
+                         channels.size());
+                    if (AUDIO_CHANNEL_IN_5POINT1 == channelMask) {
+                        if (!prop_ssr_enabled) {
+                            ALOGI("removing AUDIO_CHANNEL_IN_5POINT1 from"
+                                " input profile as SSR(surround sound record)"
+                                " is not supported on this chipset variant");
+                            channels.removeItemsAt(x, 1);
+                            ALOGV("Channel Mask size now %zu",
+                                channels.size());
+                        }
                     }
                 }
             }
