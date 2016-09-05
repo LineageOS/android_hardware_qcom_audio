@@ -119,7 +119,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE)),true)
     LOCAL_SRC_FILES += audio_extn/compress_capture.c
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_NEW_SAMPLE_RATE)),true)
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_NEW_SAMPLE_RATE)),false)
     LOCAL_CFLAGS += -DNEW_SAMPLE_RATE_ENABLED
 endif
 
