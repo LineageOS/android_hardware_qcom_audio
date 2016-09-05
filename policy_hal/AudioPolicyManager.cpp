@@ -992,7 +992,7 @@ status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDe
 #ifdef NON_WEARABLE_TARGET
     sp<AudioOutputDescriptor> outputDesc = outputDesc1;
 #else
-    const sp<SwAudioOutputDescriptor> outputDesc = (SwAudioOutputDescriptor *) outputDesc1.get();
+    sp<SwAudioOutputDescriptor> outputDesc = (sp<SwAudioOutputDescriptor>) outputDesc1;
 #endif
     handleEventForBeacon(stream == AUDIO_STREAM_TTS ? STOPPING_BEACON : STOPPING_OUTPUT);
 
@@ -1065,7 +1065,7 @@ status_t AudioPolicyManagerCustom::startSource(sp<AudioOutputDescriptor> outputD
 #ifdef NON_WEARABLE_TARGET
     sp<AudioOutputDescriptor> outputDesc = outputDesc1;
 #else
-    const sp<SwAudioOutputDescriptor> outputDesc = (SwAudioOutputDescriptor *) outputDesc1.get();
+    sp<SwAudioOutputDescriptor> outputDesc = (sp<SwAudioOutputDescriptor>) outputDesc1;
 #endif
 
     *delayMs = 0;
@@ -1218,7 +1218,7 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
 #else
 status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
                                                     int index,
-                                                    const sp<AudioOutputDescriptor>& outputDesc1,
+                                                    const sp<SwAudioOutputDescriptor>& outputDesc,
                                                     audio_devices_t device,
                                                     int delayMs, bool force)
 
@@ -1228,10 +1228,6 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
         ALOGW("checkAndSetVolume() invalid stream %d", stream);
         return INVALID_OPERATION;
     }
-
-#ifndef NON_WEARABLE_TARGET
-    const sp<SwAudioOutputDescriptor> outputDesc = (SwAudioOutputDescriptor *) outputDesc1.get();
-#endif
 
     // do not change actual stream volume if the stream is muted
     if (outputDesc->mMuteCount[stream] != 0) {
