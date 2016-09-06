@@ -4692,11 +4692,14 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     }
     in->bit_width = 16;
 
-    if (in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) {
-        if (adev->mode != AUDIO_MODE_IN_CALL) {
-            ret = -EINVAL;
-            goto err_open;
-        }
+    if ((in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) &&
+          (adev->mode != AUDIO_MODE_IN_CALL)) {
+        ret = -EINVAL;
+        goto err_open;
+    }
+
+    if ((in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) ||
+             (in->device == AUDIO_DEVICE_IN_PROXY)) {
         if (config->sample_rate == 0)
             config->sample_rate = AFE_PROXY_SAMPLING_RATE;
         if (config->sample_rate != 48000 && config->sample_rate != 16000 &&
@@ -5014,6 +5017,7 @@ static int adev_open(const hw_module_t *module, const char *name,
                                                         "visualizer_hal_stop_output");
         }
     }
+    audio_extn_init();
     audio_extn_listen_init(adev, adev->snd_card);
     audio_extn_sound_trigger_init(adev);
     audio_extn_gef_init(adev);
