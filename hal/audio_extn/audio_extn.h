@@ -44,6 +44,10 @@
 #define AUDIO_DEVICE_OUT_PROXY 0x40000
 #endif
 
+#ifndef AUDIO_DEVICE_IN_PROXY
+#define AUDIO_DEVICE_IN_PROXY (AUDIO_DEVICE_BIT_IN | 0x1000000)
+#endif
+
 #ifndef INCALL_MUSIC_ENABLED
 #define AUDIO_OUTPUT_FLAG_INCALL_MUSIC 0x8000
 #endif
@@ -501,6 +505,7 @@ int audio_extn_pm_vote (void);
 void audio_extn_pm_unvote(void);
 #endif
 
+void audio_extn_init(void);
 void audio_extn_utils_update_streams_cfg_lists(void *platform,
                                   struct mixer *mixer,
                                   struct listnode *streams_output_cfg_list,
