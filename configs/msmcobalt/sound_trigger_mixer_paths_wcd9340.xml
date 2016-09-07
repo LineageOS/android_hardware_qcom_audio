@@ -84,10 +84,10 @@
     </path>
 
     <path name="listen-cpe-handset-mic">
-        <ctl name="MAD Input" "DMIC0" />
-        <ctl name="MAD_SEL MUX" "SPE" />
-        <ctl name="MAD_INP MUX" "MAD" />
-        <ctl name="MAD_CPE1 Switch" 1 />
+        <ctl name="MAD Input" value="DMIC0" />
+        <ctl name="MAD_SEL MUX" value="SPE" />
+        <ctl name="MAD_INP MUX" value="MAD" />
+        <ctl name="MAD_CPE1 Switch" value="1" />
     </path>
 
     <path name="listen-cpe-handset-mic-ecpp">

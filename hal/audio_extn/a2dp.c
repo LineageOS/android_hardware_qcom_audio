@@ -176,9 +176,9 @@ struct custom_enc_cfg_aptx_t
 /* API to identify DSP encoder captabilities */
 static void a2dp_offload_codec_cap_parser(char *value)
 {
-    char *tok = NULL;
+    char *tok = NULL,*saveptr;
 
-    tok = strtok(value, "-");
+    tok = strtok_r(value, "-", &saveptr);
     while (tok != NULL) {
         if (strcmp(tok, "sbc") == 0) {
             ALOGD("%s: SBC offload supported\n",__func__);
@@ -189,7 +189,7 @@ static void a2dp_offload_codec_cap_parser(char *value)
             a2dp.is_a2dp_offload_supported = true;
             break;
         }
-        tok = strtok(NULL,"-");
+        tok = strtok_r(NULL, "-", &saveptr);
     };
 }
 
@@ -549,8 +549,7 @@ int audio_extn_a2dp_start_playback()
     if(a2dp.a2dp_suspended == true) {
         //session will be restarted after suspend completion
         ALOGD("a2dp start requested during suspend state");
-        a2dp.a2dp_total_active_session_request++;
-        return 0;
+        return -ENOSYS;
     }
 
     if (!a2dp.a2dp_started && !a2dp.a2dp_total_active_session_request) {
@@ -593,14 +592,6 @@ int audio_extn_a2dp_stop_playback()
         return -ENOSYS;
     }
 
-    if(a2dp.a2dp_suspended == true) {
-        ALOGD("STOP playback is called during suspend state");
-
-        // sessions are already closed during suspend, just update active sessions counts
-         if(a2dp.a2dp_total_active_session_request > 0)
-            a2dp.a2dp_total_active_session_request--;
-         return 0;
-    }
     if (a2dp.a2dp_started && (a2dp.a2dp_total_active_session_request > 0))
         a2dp.a2dp_total_active_session_request--;
 
@@ -614,8 +605,6 @@ int audio_extn_a2dp_stop_playback()
             ALOGE("stop stream to BT IPC lib failed");
         else
             ALOGV("stop steam to BT IPC lib successful");
-        a2dp.is_handoff_in_progress = false;
-
          memset(&dummy_reset_config, 0x0, sizeof(struct sbc_enc_cfg_t));
         ctl_enc_config = mixer_get_ctl_by_name(a2dp.adev->mixer,
                                                MIXER_ENC_CONFIG_BLOCK);
@@ -672,42 +661,25 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
          if (a2dp.bt_lib_handle && (a2dp.bt_state != A2DP_STATE_DISCONNECTED) ) {
              if ((!strncmp(value,"true",sizeof(value)))) {
                 ALOGD("Setting a2dp to suspend state");
-                int active_sessions = a2dp.a2dp_total_active_session_request, count = 0;
-                //Force close all active sessions on suspend (if any)
-                for(count  = 0; count< active_sessions; count ++)
-                    audio_extn_a2dp_stop_playback();
-                a2dp.a2dp_total_active_session_request = active_sessions;
                 a2dp.a2dp_suspended = true;
-
                 if(a2dp.audio_suspend_stream)
                    a2dp.audio_suspend_stream();
             } else if (a2dp.a2dp_suspended == true) {
                 ALOGD("Resetting a2dp suspend state");
                 if(a2dp.clear_a2dpsuspend_flag)
                     a2dp.clear_a2dpsuspend_flag();
-
                 a2dp.a2dp_suspended = false;
-                //Force restart all active sessions post suspend (if any)
-                if(a2dp.a2dp_total_active_session_request > 0){
-                    int active_sessions = a2dp.a2dp_total_active_session_request;
-                    a2dp.a2dp_total_active_session_request = 0;
-                    audio_extn_a2dp_start_playback();
-                    a2dp.a2dp_total_active_session_request = active_sessions;
-                }
             }
         }
         goto param_handled;
      }
-     ret = str_parms_get_str(parms,"reconfigA2dp", value, sizeof(value));
-     if (ret >= 0) {
-         if (a2dp.bt_lib_handle && (a2dp.bt_state != A2DP_STATE_DISCONNECTED)) {
-             if (!strncmp(value,"true",sizeof(value)))
-                 a2dp.is_handoff_in_progress = true;
-         }
-         goto param_handled;
-     }
 param_handled:
      ALOGV("end of a2dp setparam");
+}
+
+void audio_extn_a2dp_set_handoff_mode(bool is_on)
+{
+    a2dp.is_handoff_in_progress = is_on;
 }
 
 bool audio_extn_a2dp_is_force_device_switch()

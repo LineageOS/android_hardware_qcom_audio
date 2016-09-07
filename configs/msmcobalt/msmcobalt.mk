@@ -19,7 +19,7 @@ AUDIO_FEATURE_ENABLED_FM_POWER_OPT := true
 AUDIO_FEATURE_ENABLED_FLUENCE := true
 AUDIO_FEATURE_ENABLED_HDMI_SPK := true
 AUDIO_FEATURE_ENABLED_HDMI_EDID := true
-#AUDIO_FEATURE_ENABLED_HDMI_PASSTHROUGH := true
+AUDIO_FEATURE_ENABLED_HDMI_PASSTHROUGH := true
 #AUDIO_FEATURE_ENABLED_KEEP_ALIVE := true
 #AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := true
 #DOLBY_DDP := true
@@ -79,6 +79,7 @@ PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msmcobalt/audio_platform_info_i2s.xml:system/etc/audio_platform_info_i2s.xml \
     hardware/qcom/audio/configs/msmcobalt/sound_trigger_mixer_paths.xml:system/etc/sound_trigger_mixer_paths.xml \
     hardware/qcom/audio/configs/msmcobalt/sound_trigger_mixer_paths_wcd9330.xml:system/etc/sound_trigger_mixer_paths_wcd9330.xml \
+    hardware/qcom/audio/configs/msmcobalt/sound_trigger_mixer_paths_wcd9340.xml:system/etc/sound_trigger_mixer_paths_wcd9340.xml \
     hardware/qcom/audio/configs/msmcobalt/sound_trigger_platform_info.xml:system/etc/sound_trigger_platform_info.xml \
     hardware/qcom/audio/configs/msmcobalt/graphite_ipc_platform_info.xml:system/etc/graphite_ipc_platform_info.xml \
     hardware/qcom/audio/configs/msmcobalt/audio_platform_info.xml:system/etc/audio_platform_info.xml
@@ -168,9 +169,9 @@ audio.dolby.ds2.hardbypass=true
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.offload.multiple.enabled=false
 
-#Disable Compress passthrough playback
+#Enable Compress passthrough playback
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.passthrough=false
+audio.offload.passthrough=true
 
 #Disable surround sound recording
 PRODUCT_PROPERTY_OVERRIDES += \
