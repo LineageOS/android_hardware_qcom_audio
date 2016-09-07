@@ -61,6 +61,8 @@
     <ctl name="DMIC MUX6" value="ZERO" />
     <ctl name="DMIC MUX7" value="ZERO" />
     <ctl name="DMIC MUX8" value="ZERO" />
+    <ctl name="AMIC MUX0" value="ZERO" />
+    <ctl name="AMIC MUX6" value="ZERO" />
     <ctl name="SLIMBUS_0_RX Port Mixer SLIM_0_TX" value="0" />
     <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia1" value="0" />
     <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia4" value="0" />
@@ -372,8 +374,6 @@
     <ctl name="RX INT2 MIX3 DSD HPHR Switch" value="0" />
     <ctl name="RX INT1 DEM MUX" value="CLSH_DSM_OUT" />
     <ctl name="RX INT2 DEM MUX" value="CLSH_DSM_OUT" />
-    <ctl name="AIF1_CAP Mixer SLIM TX0" value="0" />
-    <ctl name="AIF1_CAP Mixer SLIM TX2" value="0" />
     <ctl name="CDC_IF TX0 MUX" value="ZERO" />
     <ctl name="CDC_IF TX2 MUX" value="ZERO" />
     <ctl name="ADC MUX0" value="ZERO" />
@@ -1380,9 +1380,19 @@
 
     <!-- These are actual sound device specific mixer settings -->
     <path name="amic1">
+        <ctl name="AIF1_CAP Mixer SLIM TX6" value="1"/>
+        <ctl name="SLIM_0_TX Channels" value="One" />
+        <ctl name="CDC_IF TX6 MUX" value="DEC6" />
+        <ctl name="ADC MUX6" value="AMIC" />
+        <ctl name="AMIC MUX6" value="ADC1" />
     </path>
 
     <path name="amic2">
+        <ctl name="AIF1_CAP Mixer SLIM TX0" value="1"/>
+        <ctl name="SLIM_0_TX Channels" value="One" />
+        <ctl name="CDC_IF TX0 MUX" value="DEC0" />
+        <ctl name="ADC MUX0" value="AMIC" />
+        <ctl name="AMIC MUX0" value="ADC2" />
     </path>
 
     <!-- For Tavil, DMIC numbered from 0 to 5 -->
