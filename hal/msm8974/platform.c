@@ -1987,32 +1987,6 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
     return result;
 }
 
-bool platform_check_if_backend_has_to_be_disabled(snd_device_t new_snd_device,
-                                                  snd_device_t cuurent_snd_device)
-{
-    bool result = false;
-
-    ALOGV("%s: current snd device = %s, new snd device = %s", __func__,
-                platform_get_snd_device_name(cuurent_snd_device),
-                platform_get_snd_device_name(new_snd_device));
-
-    if ((new_snd_device < SND_DEVICE_MIN) || (new_snd_device >= SND_DEVICE_OUT_END) ||
-            (cuurent_snd_device < SND_DEVICE_MIN) || (cuurent_snd_device >= SND_DEVICE_OUT_END)) {
-        ALOGE("%s: Invalid snd_device",__func__);
-        return false;
-    }
-
-    if (cuurent_snd_device == SND_DEVICE_OUT_HEADPHONES &&
-            (new_snd_device == SND_DEVICE_OUT_HEADPHONES_44_1 ||
-             new_snd_device == SND_DEVICE_OUT_HEADPHONES_DSD)) {
-        result = true;
-    }
-
-    ALOGV("%s: Need to disable current backend %s, %d",
-          __func__, platform_get_snd_device_name(cuurent_snd_device), result);
-    return result;
-}
-
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
 {
     int device_id;
@@ -4723,7 +4697,8 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                  ALOGD("%s:becf: afe: true napb active set rate to 44.1 khz",
                        __func__);
             }
-        } else if (OUTPUT_SAMPLING_RATE_44100 == sample_rate) {
+        } else if ((OUTPUT_SAMPLING_RATE_44100 == sample_rate) &&
+                   (na_mode != NATIVE_AUDIO_MODE_MULTIPLE_44_1)) {
                  sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
                  ALOGD("%s:becf: afe: napb not active - set (48k) default rate",
                        __func__);

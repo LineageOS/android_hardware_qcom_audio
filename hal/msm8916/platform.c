@@ -5618,12 +5618,6 @@ bool platform_check_codec_asrc_support(void *platform __unused)
     return false;
 }
 
-bool platform_check_if_backend_has_to_be_disabled(snd_device_t new_snd_device __unused,
-                                                  snd_device_t cuurent_snd_device __unused)
-{
-    return false;
-}
-
 int platform_send_audio_cal(void* platform __unused,
         int acdb_dev_id __unused, int acdb_device_type __unused,
         int app_type __unused, int topology_id __unused,
