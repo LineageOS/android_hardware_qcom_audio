@@ -3754,7 +3754,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
         audio_extn_dts_create_state_notifier_node(out->usecase);
 
-        create_offload_callback_thread(out);
         ALOGV("%s: offloaded output offload_info version %04x bit rate %d",
                 __func__, config->offload_info.version,
                 config->offload_info.bit_rate);
@@ -3790,6 +3789,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->flags |= AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH;
             out->compr_config.codec->compr_passthr = PASSTHROUGH_DSD;
         }
+
+        create_offload_callback_thread(out);
+
     } else if (out->flags & AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
         ret = voice_extn_check_and_set_incall_music_usecase(adev, out);
         if (ret != 0) {
