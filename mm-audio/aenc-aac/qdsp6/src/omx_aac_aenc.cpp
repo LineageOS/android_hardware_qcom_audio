@@ -1460,7 +1460,7 @@ OMX_ERRORTYPE  omx_aac_aenc::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
                     case 0:
                     case 1:
                     {
-                        drv_aac_enc_config.stream_format = 65535;
+                        drv_aac_enc_config.stream_format = AUDIO_AAC_FORMAT_ADTS;
                         DEBUG_PRINT("Setting AUDIO_AAC_FORMAT_ADTS\n");
                         break;
                     }
