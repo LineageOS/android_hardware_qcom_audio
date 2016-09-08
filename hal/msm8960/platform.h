@@ -92,6 +92,9 @@ enum {
 
 };
 
+#define DEVICE_NAME_MAX_SIZE   128
+#define HW_INFO_ARRAY_MAX_SIZE 32
+
 #define MIXER_CARD 0
 #define SOUND_CARD 0
 #define MIXER_PATH_MAX_LENGTH 100
@@ -121,6 +124,9 @@ enum {
 #define LOW_LATENCY_CAPTURE_SAMPLE_RATE 48000
 #define LOW_LATENCY_CAPTURE_PERIOD_SIZE 240
 #define LOW_LATENCY_CAPTURE_USE_CASE 0
+
+#define PLATFORM_INFO_XML_PATH          "/system/etc/audio_platform_info.xml"
+#define PLATFORM_INFO_XML_BASE_STRING   "/system/etc/audio_platform_info"
 
 #define AFE_PROXY_PLAYBACK_PCM_DEVICE 7
 #define AFE_PROXY_RECORD_PCM_DEVICE 8
