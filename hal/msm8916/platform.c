@@ -1823,8 +1823,7 @@ void *platform_init(struct audio_device *adev)
         my_data->acdb_reload = (acdb_reload_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_reload_acdb_files");
         if (my_data->acdb_reload == NULL) {
-            ALOGE("%s: dlsym error %s for acdb_loader_reload_acdb_files", __func__, dlerror());
-            goto acdb_init_fail;
+            ALOGW("%s: dlsym error %s for acdb_loader_reload_acdb_files, reloading will not be available", __func__, dlerror());
         }
         platform_acdb_init(my_data);
     }
@@ -3639,7 +3638,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_RELOAD_ACDB,
                             value, sizeof(value));
-    if (err >= 0) {
+    if (err >= 0 && my_data->acdb_reload != NULL) {
         str_parms_del(parms, AUDIO_PARAMETER_KEY_RELOAD_ACDB);
 
         my_data->acdb_reload(value, my_data->snd_card_name,
