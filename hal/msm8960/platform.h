@@ -92,6 +92,9 @@ enum {
 
 };
 
+#define DEVICE_NAME_MAX_SIZE   128
+#define HW_INFO_ARRAY_MAX_SIZE 32
+
 #define MIXER_CARD 0
 #define SOUND_CARD 0
 #define MIXER_PATH_MAX_LENGTH 100
