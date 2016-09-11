@@ -1078,7 +1078,7 @@ int start_input_stream(struct stream_in *in)
     if (get_usecase_from_list(adev, in->usecase) != NULL) {
         ALOGE("%s: use case assigned already in use, stream(%p)usecase(%d: %s)",
             __func__, &in->stream, in->usecase, use_case_table[in->usecase]);
-        goto error_config;
+        return -EINVAL;
     }
 
     in->pcm_device_id = platform_get_pcm_device_id(in->usecase, PCM_CAPTURE);
