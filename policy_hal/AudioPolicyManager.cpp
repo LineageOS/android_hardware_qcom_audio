@@ -1444,7 +1444,11 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
         } else {
             ALOGI("%s:: attribute is NULL .. no usage set", __func__);
         }
-        offloadInfo = &tOffloadInfo;
+
+        if (isOffloadSupported(tOffloadInfo)) {
+            ALOGV("inferred offload information not supported, disabling offload.");
+            offloadInfo = &tOffloadInfo;
+        }
     }
 
     return AudioPolicyManager::getOutputForAttr(attr, output, session, stream,
