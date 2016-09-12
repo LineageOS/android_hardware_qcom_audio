@@ -75,8 +75,6 @@
 #define SND_CARD_STATE_OFFLINE 0
 #define SND_CARD_STATE_ONLINE 1
 
-#define MAX_PERF_LOCK_OPTS 20
-
 /* These are the supported use cases by the hardware.
  * Each usecase is mapped to a specific PCM device.
  * Refer to pcm_device_table[].
@@ -88,7 +86,6 @@ enum {
     USECASE_AUDIO_PLAYBACK_LOW_LATENCY,
     USECASE_AUDIO_PLAYBACK_MULTI_CH,
     USECASE_AUDIO_PLAYBACK_OFFLOAD,
-#ifdef MULTIPLE_OFFLOAD_ENABLED
     USECASE_AUDIO_PLAYBACK_OFFLOAD2,
     USECASE_AUDIO_PLAYBACK_OFFLOAD3,
     USECASE_AUDIO_PLAYBACK_OFFLOAD4,
@@ -97,10 +94,8 @@ enum {
     USECASE_AUDIO_PLAYBACK_OFFLOAD7,
     USECASE_AUDIO_PLAYBACK_OFFLOAD8,
     USECASE_AUDIO_PLAYBACK_OFFLOAD9,
-#endif
     USECASE_AUDIO_PLAYBACK_ULL,
 
-    USECASE_AUDIO_DIRECT_PCM_OFFLOAD,
 
     /* FM usecase */
     USECASE_AUDIO_PLAYBACK_FM,
@@ -209,7 +204,6 @@ struct stream_out {
     struct stream_app_type_cfg app_type_cfg;
 
     int non_blocking;
-    bool use_small_bufs;
     int playback_started;
     int offload_state;
     pthread_cond_t offload_cond;
@@ -337,13 +331,11 @@ struct audio_device {
     int (*visualizer_start_output)(audio_io_handle_t, int);
     int (*visualizer_stop_output)(audio_io_handle_t, int);
     void *offload_effects_lib;
-    int (*offload_effects_start_output)(audio_io_handle_t, int);
+    int (*offload_effects_start_output)(audio_io_handle_t, int, struct mixer *);
     int (*offload_effects_stop_output)(audio_io_handle_t, int);
 
     struct sound_card_status snd_card_status;
     int (*offload_effects_set_hpx_state)(bool);
-
-    amplifier_device_t *amp;
 
     void *adm_data;
     void *adm_lib;
@@ -354,9 +346,9 @@ struct audio_device {
     adm_deregister_stream_t adm_deregister_stream;
     adm_request_focus_t adm_request_focus;
     adm_abandon_focus_t adm_abandon_focus;
-    int perf_lock_handle;
-    int perf_lock_opts[MAX_PERF_LOCK_OPTS];
-    int perf_lock_opts_size;
+    bool multi_offload_enable;
+
+    amplifier_device_t *amp;
 };
 
 int select_devices(struct audio_device *adev,
@@ -371,7 +363,7 @@ int enable_snd_device(struct audio_device *adev,
 int enable_audio_route(struct audio_device *adev,
                        struct audio_usecase *usecase);
 
-struct audio_usecase *get_usecase_from_list(const struct audio_device *adev,
+struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
                                                    audio_usecase_t uc_id);
 
 bool is_offload_usecase(audio_usecase_t uc_id);

@@ -241,6 +241,7 @@ void *platform_init(struct audio_device *adev)
     adev->audio_route = audio_route_init(MIXER_CARD, MIXER_XML_PATH);
     if (!adev->audio_route) {
         ALOGE("%s: Failed to init audio route controls, aborting.", __func__);
+        mixer_close(adev->mixer);
         return NULL;
     }
 
@@ -1059,8 +1060,7 @@ int platform_set_usecase_pcm_id(audio_usecase_t usecase __unused, int32_t type _
 }
 
 int platform_set_snd_device_backend(snd_device_t snd_device __unused,
-                                    const char * backend __unused,
-                                    const char * hw_interface __unused)
+                                    const char * backend __unused)
 {
     return -ENOSYS;
 }
@@ -1156,23 +1156,4 @@ int platform_set_snd_device_name(snd_device_t snd_device __unused,
                                  const char * name __unused)
 {
     return -ENOSYS;
-}
-
-bool platform_send_gain_dep_cal(void *platform __unused,
-                                int level __unused)
-{
-    return 0;
-}
-
-bool platform_can_split_snd_device(snd_device_t in_snd_device __unused,
-                                   int *num_devices __unused,
-                                   snd_device_t *out_snd_devices __unused)
-{
-    return false;
-}
-
-bool platform_check_backends_match(snd_device_t snd_device1 __unused,
-                                   snd_device_t snd_device2 __unused)
-{
-    return true;
 }

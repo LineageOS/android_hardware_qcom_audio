@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013, 2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -966,7 +966,6 @@ int32_t audio_extn_ssr_read(struct audio_stream_in *stream,
                        void *buffer, size_t bytes)
 {
     struct stream_in *in = (struct stream_in *)stream;
-    struct audio_device *adev = in->dev;
     int32_t ret = 0;
     struct pcm_buffer_queue *in_buf;
     struct pcm_buffer_queue *out_buf;
