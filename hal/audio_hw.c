@@ -76,7 +76,7 @@ static unsigned int configured_low_latency_capture_period_size =
 /* This constant enables extended precision handling.
  * TODO The flag is off until more testing is done.
  */
-static const bool k_enable_extended_precision = true;
+static bool k_enable_extended_precision = true;
 
 struct pcm_config pcm_config_deep_buffer = {
     .channels = 2,
@@ -3874,6 +3874,10 @@ static int adev_open(const hw_module_t *module, const char *name,
             configured_low_latency_capture_period_size = trial;
         }
     }
+
+    property_get("audio_hal.k_enable_extended_precision", value, NULL);
+    if (!(atoi(value) || !strncmp("false", value, 5)))
+        k_enable_extended_precision = false;
 
     if (k_enable_extended_precision)
         adev_verify_devices(adev);
