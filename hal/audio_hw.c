@@ -76,7 +76,7 @@ static unsigned int configured_low_latency_capture_period_size =
 /* This constant enables extended precision handling.
  * TODO The flag is off until more testing is done.
  */
-static const bool k_enable_extended_precision = true;
+static const bool k_enable_extended_precision = false;
 
 struct pcm_config pcm_config_deep_buffer = {
     .channels = 2,
