@@ -76,6 +76,8 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
 
 const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_PCM_16_BIT),
+    STRING_TO_ENUM(AUDIO_FORMAT_PCM_24_BIT_PACKED),
+    STRING_TO_ENUM(AUDIO_FORMAT_PCM_8_24_BIT),
     STRING_TO_ENUM(AUDIO_FORMAT_PCM_8_BIT),
     STRING_TO_ENUM(AUDIO_FORMAT_MP3),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC),
@@ -97,8 +99,6 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_QCELP),
     STRING_TO_ENUM(AUDIO_FORMAT_MP2),
     STRING_TO_ENUM(AUDIO_FORMAT_EVRCNW),
-    STRING_TO_ENUM(AUDIO_FORMAT_PCM_16_BIT_OFFLOAD),
-    STRING_TO_ENUM(AUDIO_FORMAT_PCM_24_BIT_OFFLOAD),
     STRING_TO_ENUM(AUDIO_FORMAT_FLAC),
     STRING_TO_ENUM(AUDIO_FORMAT_ALAC),
     STRING_TO_ENUM(AUDIO_FORMAT_APE),
@@ -367,7 +367,6 @@ void audio_extn_utils_update_streams_output_cfg_list(void *platform,
 void audio_extn_utils_dump_streams_output_cfg_list(
                                        struct listnode *streams_output_cfg_list)
 {
-    int i=0;
     struct listnode *node_i, *node_j;
     struct streams_output_cfg *so_info;
     struct stream_format *sf_info;
@@ -394,7 +393,6 @@ void audio_extn_utils_release_streams_output_cfg_list(
 {
     struct listnode *node_i, *node_j;
     struct streams_output_cfg *so_info;
-    struct stream_format *sf_info;
 
     ALOGV("%s", __func__);
     while (!list_empty(streams_output_cfg_list)) {
@@ -464,10 +462,9 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
                                   uint32_t bit_width,
                                   struct stream_app_type_cfg *app_type_cfg)
 {
-    struct listnode *node_i, *node_j, *node_k;
+    struct listnode *node_i, *node_j;
     struct streams_output_cfg *so_info;
     struct stream_format *sf_info;
-    struct stream_sample_rate *ss_info;
 
     if ((24 == bit_width) &&
         (devices & AUDIO_DEVICE_OUT_SPEAKER)) {
@@ -561,8 +558,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
         goto exit_send_app_type_cfg;
     }
 
-    if ((24 == usecase->stream.out->bit_width) &&
-        (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+    if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
         sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
     } else {
         sample_rate = out->app_type_cfg.sample_rate;

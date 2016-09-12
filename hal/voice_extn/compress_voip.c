@@ -224,7 +224,7 @@ static int voip_set_dtx(struct audio_device *adev, bool enable)
 
 static int voip_stop_call(struct audio_device *adev)
 {
-    int i, ret = 0;
+    int ret = 0;
     struct audio_usecase *uc_info;
 
     ALOGD("%s: enter, out_stream_count=%d, in_stream_count=%d",
@@ -270,7 +270,7 @@ static int voip_stop_call(struct audio_device *adev)
 static int voip_start_call(struct audio_device *adev,
                            struct pcm_config *voip_config)
 {
-    int i, ret = 0;
+    int ret = 0;
     struct audio_usecase *uc_info;
     int pcm_dev_rx_id, pcm_dev_tx_id;
     unsigned int flags = PCM_OUT | PCM_MONOTONIC;
@@ -366,10 +366,8 @@ error_start_voip:
 int voice_extn_compress_voip_set_parameters(struct audio_device *adev,
                                              struct str_parms *parms)
 {
-    char *str;
     char value[32]={0};
     int ret = 0, err, rate;
-    int min_rate, max_rate;
     bool flag;
     char *kv_pairs = str_parms_to_str(parms);
 
@@ -402,7 +400,6 @@ void voice_extn_compress_voip_get_parameters(struct str_parms *query,
 {
     int ret;
     char value[32]={0};
-    char *str = NULL;
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_VOIP_OUT_STREAM_COUNT,
                             value, sizeof(value));
@@ -423,7 +420,7 @@ void voice_extn_compress_voip_out_get_parameters(struct stream_out *out,
                                                  struct str_parms *query,
                                                  struct str_parms *reply)
 {
-    int ret, val;
+    int ret;
     char value[32]={0};
 
     ALOGD("%s: enter", __func__);
@@ -444,7 +441,7 @@ void voice_extn_compress_voip_in_get_parameters(struct stream_in *in,
                                                 struct str_parms *query,
                                                 struct str_parms *reply)
 {
-    int ret, val;
+    int ret;
     char value[32]={0};
     char *kv_pairs = NULL;
 
@@ -518,7 +515,6 @@ error:
 int voice_extn_compress_voip_start_input_stream(struct stream_in *in)
 {
     int ret = 0;
-    struct audio_usecase *uc_info;
     struct audio_device *adev = in->dev;
     int snd_card_status = get_snd_card_state(adev);
 
@@ -562,7 +558,7 @@ int voice_extn_compress_voip_close_output_stream(struct audio_stream *stream)
 
 int voice_extn_compress_voip_open_output_stream(struct stream_out *out)
 {
-    int mode, ret;
+    int ret;
 
     ALOGD("%s: enter", __func__);
 
@@ -604,9 +600,7 @@ int voice_extn_compress_voip_close_input_stream(struct audio_stream *stream)
 
 int voice_extn_compress_voip_open_input_stream(struct stream_in *in)
 {
-    int sample_rate;
-    int buffer_size,frame_size;
-    int mode, ret;
+    int ret;
 
     ALOGD("%s: enter", __func__);
 
@@ -688,7 +682,7 @@ bool voice_extn_compress_voip_pcm_prop_check()
         return false;
 }
 
-bool voice_extn_compress_voip_is_active(const struct audio_device *adev)
+bool voice_extn_compress_voip_is_active(struct audio_device *adev)
 {
     struct audio_usecase *voip_usecase = NULL;
     voip_usecase = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);

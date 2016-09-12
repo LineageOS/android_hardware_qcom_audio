@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2016, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -111,7 +111,7 @@ void voice_set_sidetone(struct audio_device *adev,
 
 int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 {
-    int ret = 0;
+    int  ret = 0;
     struct audio_usecase *uc_info;
     struct voice_session *session = NULL;
 
@@ -131,6 +131,8 @@ int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     }
 
     session->state.current = CALL_INACTIVE;
+    if (adev->mode == AUDIO_MODE_NORMAL)
+        adev->voice.is_in_call = false;
 
     /* Disable sidetone only when no calls are active */
     if (!voice_is_call_state_active(adev))
@@ -164,7 +166,7 @@ int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 
 int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 {
-    int ret = 0;
+    int  ret = 0;
     struct audio_usecase *uc_info;
     int pcm_dev_rx_id, pcm_dev_tx_id;
     uint32_t sample_rate = 8000;
@@ -274,12 +276,12 @@ bool voice_is_call_state_active(struct audio_device *adev)
     return call_state;
 }
 
-bool voice_is_in_call(const struct audio_device *adev)
+bool voice_is_in_call(struct audio_device *adev)
 {
     return adev->voice.in_call;
 }
 
-bool voice_is_in_call_rec_stream(const struct stream_in *in)
+bool voice_is_in_call_rec_stream(struct stream_in *in)
 {
     bool in_call_rec = false;
 

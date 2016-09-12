@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2016 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -39,17 +39,6 @@
 #define AUDIO_EXTN_H
 
 #include <cutils/str_parms.h>
-
-#ifndef PCM_OFFLOAD_ENABLED
-#define AUDIO_FORMAT_PCM_OFFLOAD 0x1A000000UL
-#define AUDIO_FORMAT_PCM_16_BIT_OFFLOAD (AUDIO_FORMAT_PCM_OFFLOAD | AUDIO_FORMAT_PCM_SUB_16_BIT)
-#define AUDIO_FORMAT_PCM_24_BIT_OFFLOAD (AUDIO_FORMAT_PCM_OFFLOAD | AUDIO_FORMAT_PCM_SUB_8_24_BIT)
-#define AUDIO_OFFLOAD_CODEC_FORMAT  "music_offload_codec_format"
-#define audio_is_offload_pcm(format) (0)
-#define OFFLOAD_USE_SMALL_BUFFER false
-#else
-#define OFFLOAD_USE_SMALL_BUFFER ((info->format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM_OFFLOAD)
-#endif
 
 #ifndef AFE_PROXY_ENABLED
 #define AUDIO_DEVICE_OUT_PROXY 0x40000
@@ -472,13 +461,11 @@ int b64encode(uint8_t *inp, int ilen, char* outp);
 
 #ifndef KPI_OPTIMIZE_ENABLED
 #define audio_extn_perf_lock_init() (0)
-#define audio_extn_perf_lock_acquire(handle, duration, opts, size) (0)
-#define audio_extn_perf_lock_release(handle) (0)
+#define audio_extn_perf_lock_acquire() (0)
+#define audio_extn_perf_lock_release() (0)
 #else
 int audio_extn_perf_lock_init(void);
-void audio_extn_perf_lock_acquire(int *handle, int duration,
-                                 int *opts, int size);
-void audio_extn_perf_lock_release(int *handle);
-
+void audio_extn_perf_lock_acquire(void);
+void audio_extn_perf_lock_release(void);
 #endif /* KPI_OPTIMIZE_ENABLED */
 #endif /* AUDIO_EXTN_H */

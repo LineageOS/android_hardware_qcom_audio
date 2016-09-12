@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2009 The Android Open Source Project
@@ -104,6 +104,7 @@ protected:
         static audio_output_flags_t getFallBackPath();
         int mFallBackflag;
 #endif /*VOICE_CONCURRENCY*/
+        void moveGlobalEffect();
 
         // handle special cases for sonification strategy while in call: mute streams or replace by
         // a special tone in the device used for communication
@@ -147,10 +148,8 @@ private:
         // Used for record + playback concurrency
         bool mIsInputRequestOnProgress;
 #endif
-#ifdef FM_POWER_OPT
         float mPrevFMVolumeDb;
         bool mFMIsActive;
-#endif
 };
 
 };

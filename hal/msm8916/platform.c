@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -522,6 +522,7 @@ static int msm_device_to_be_id_external_codec [][NO_COLS] = {
 
 
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
+#define PCM_OFFLOAD_PLATFORM_DELAY (30*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 
 static void query_platform(const char *snd_card_name,
@@ -882,19 +883,19 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
     if (acdb_loader_get_calibration == NULL) {
         ALOGE("%s: ERROR. dlsym Error:%s acdb_loader_get_calibration", __func__,
            dlerror());
+        close(fd);
         return;
     }
     if (send_codec_cal(acdb_loader_get_calibration, fd) < 0)
         ALOGE("%s: Could not send anc cal", __FUNCTION__);
+    close(fd);
 }
 
 void *platform_init(struct audio_device *adev)
 {
-    char platform[PROPERTY_VALUE_MAX];
-    char baseband[PROPERTY_VALUE_MAX];
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data = NULL;
-    int retry_num = 0, snd_card_num = 0, key = 0;
+    int retry_num = 0, snd_card_num = 0;
     const char *snd_card_name;
     char mixer_xml_path[100],ffspEnable[PROPERTY_VALUE_MAX];
     char *cvd_version = NULL;
@@ -937,6 +938,7 @@ void *platform_init(struct audio_device *adev)
                 ALOGE("%s: Failed to init audio route controls, aborting.",
                        __func__);
                 free(my_data);
+                mixer_close(adev->mixer);
                 return NULL;
             }
             adev->snd_card = snd_card_num;
@@ -945,6 +947,7 @@ void *platform_init(struct audio_device *adev)
         }
         retry_num = 0;
         snd_card_num++;
+        mixer_close(adev->mixer);
     }
 
     if (snd_card_num >= MAX_SND_CARD) {
@@ -2176,9 +2179,7 @@ static int set_hd_voice(struct platform_data *my_data, bool state)
 int platform_set_parameters(void *platform, struct str_parms *parms)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
-    char *str;
     char value[256] = {0};
-    int val;
     int ret = 0, err;
     char *kv_pairs = NULL;
 
@@ -2392,7 +2393,7 @@ void platform_get_parameters(void *platform,
     free(kv_pairs);
 }
 
-/* Delay in Us */
+/* Delay in Us, only to be used for PCM formats */
 int64_t platform_render_latency(audio_usecase_t usecase)
 {
     switch (usecase) {
@@ -2400,6 +2401,9 @@ int64_t platform_render_latency(audio_usecase_t usecase)
             return DEEP_BUFFER_PLATFORM_DELAY;
         case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
             return LOW_LATENCY_PLATFORM_DELAY;
+        case USECASE_AUDIO_PLAYBACK_OFFLOAD:
+        case USECASE_AUDIO_PLAYBACK_OFFLOAD2:
+             return PCM_OFFLOAD_PLATFORM_DELAY;
         default:
             return 0;
     }
@@ -2435,7 +2439,6 @@ bool platform_listen_usecase_needs_event(audio_usecase_t uc_id)
     case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
     case USECASE_AUDIO_PLAYBACK_MULTI_CH:
     case USECASE_AUDIO_PLAYBACK_OFFLOAD:
-    case USECASE_AUDIO_DIRECT_PCM_OFFLOAD:
         needs_event = true;
         break;
     /* concurrent playback in low latency allowed */
@@ -2497,7 +2500,6 @@ bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id)
     case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
     case USECASE_AUDIO_PLAYBACK_MULTI_CH:
     case USECASE_AUDIO_PLAYBACK_OFFLOAD:
-    case USECASE_AUDIO_DIRECT_PCM_OFFLOAD:
         needs_event = true;
         break;
     /* concurrent playback in low latency allowed */
@@ -2569,19 +2571,17 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
 uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
 {
     uint32_t fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
-    uint32_t bits_per_sample = 16;
+    uint32_t bytes_per_sample;
     uint32_t pcm_offload_time = PCM_OFFLOAD_BUFFER_DURATION;
 
-    if (info->format == AUDIO_FORMAT_PCM_24_BIT_OFFLOAD) {
-        bits_per_sample = 32;
-    }
+    bytes_per_sample = audio_bytes_per_sample(info->format);
 
     //duration is set to 40 ms worth of stereo data at 48Khz
     //with 16 bit per sample, modify this when the channel
     //configuration is different
     fragment_size = (pcm_offload_time
                      * info->sample_rate
-                     * (bits_per_sample >> 3)
+                     * bytes_per_sample
                      * popcount(info->channel_mask))/1000;
     fragment_size = ALIGN( fragment_size, 1024);
 
@@ -2590,13 +2590,12 @@ uint32_t platform_get_pcm_offload_buffer_size(audio_offload_info_t* info)
     else if(fragment_size > MAX_PCM_OFFLOAD_FRAGMENT_SIZE)
         fragment_size = MAX_PCM_OFFLOAD_FRAGMENT_SIZE;
 
+    // To have same PCM samples for all channels, the buffer size requires to
+    // be multiple of (number of channels * bytes per sample)
+    // For writes to succeed, the buffer must be written at address which is multiple of 32
+    fragment_size = ALIGN(fragment_size, ((bytes_per_sample) * popcount(info->channel_mask) * 32));
     ALOGV("%s: fragment_size %d", __func__, fragment_size);
     return fragment_size;
-}
-
-bool platform_use_small_buffer(audio_offload_info_t* info)
-{
-    return OFFLOAD_USE_SMALL_BUFFER;
 }
 
 void platform_get_device_to_be_id_map(int **device_to_be_id, int *length)
@@ -2627,8 +2626,7 @@ int platform_set_usecase_pcm_id(audio_usecase_t usecase __unused, int32_t type _
 }
 
 int platform_set_snd_device_backend(snd_device_t snd_device __unused,
-                                    const char * backend __unused,
-                                    const char * hw_interface __unused)
+                                    const char * backend __unused)
 {
     return -ENOSYS;
 }

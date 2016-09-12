@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -34,6 +34,7 @@
 #ifdef FM_POWER_OPT
 #define AUDIO_PARAMETER_KEY_HANDLE_FM "handle_fm"
 #define AUDIO_PARAMETER_KEY_FM_VOLUME "fm_volume"
+#define AUDIO_PARAMETER_KEY_FM_MUTE "fm_mute"
 
 static struct pcm_config pcm_config_fm = {
     .channels = 2,
@@ -50,6 +51,7 @@ struct fm_module {
     struct pcm *fm_pcm_rx;
     struct pcm *fm_pcm_tx;
     bool is_fm_running;
+    bool is_fm_muted;
     float fm_volume;
     bool restart_fm;
     int scard_state;
@@ -60,6 +62,7 @@ static struct fm_module fmmod = {
   .fm_pcm_tx = NULL,
   .fm_volume = 0,
   .is_fm_running = 0,
+  .is_fm_muted = 0,
   .restart_fm = 0,
   .scard_state = SND_CARD_STATE_ONLINE,
 };
@@ -83,6 +86,12 @@ static int32_t fm_set_volume(struct audio_device *adev, float value)
     vol  = lrint((value * 0x2000) + 0.5);
     fmmod.fm_volume = value;
 
+    if (fmmod.is_fm_muted == true && vol > 0) {
+        ALOGD("%s: fm is muted, applying '0' volume instead of '%d'.",
+                                                        __func__, vol);
+        vol = 0;
+    }
+
     if (!fmmod.is_fm_running) {
         ALOGV("%s: FM not active, ignoring set_fm_volume call", __func__);
         return -EIO;
@@ -102,7 +111,7 @@ static int32_t fm_set_volume(struct audio_device *adev, float value)
 
 static int32_t fm_stop(struct audio_device *adev)
 {
-    int32_t i, ret = 0;
+    int32_t ret = 0;
     struct audio_usecase *uc_info;
 
     ALOGD("%s: enter", __func__);
@@ -141,7 +150,7 @@ static int32_t fm_stop(struct audio_device *adev)
 
 static int32_t fm_start(struct audio_device *adev)
 {
-    int32_t i, ret = 0;
+    int32_t ret = 0;
     struct audio_usecase *uc_info;
     int32_t pcm_dev_rx_id, pcm_dev_tx_id;
 
@@ -280,6 +289,16 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
         fm_set_volume(adev, vol);
     }
 
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FM_MUTE,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        if (value[0] == '1')
+            fmmod.is_fm_muted = true;
+        else
+            fmmod.is_fm_muted = false;
+        ALOGV("%s: set_fm_volume from param mute", __func__);
+        fm_set_volume(adev, fmmod.fm_volume);
+    }
 exit:
     ALOGV("%s: exit", __func__);
 }

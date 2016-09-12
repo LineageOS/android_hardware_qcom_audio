@@ -155,11 +155,6 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTIPLE_TUNNEL)), true)
     LOCAL_CFLAGS += -DMULTIPLE_OFFLOAD_ENABLED
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FLAC_OFFLOAD)),true)
-    LOCAL_CFLAGS += -DFLAC_OFFLOAD_ENABLED
-    LOCAL_CFLAGS += -DCOMPRESS_METADATA_NEEDED
-endif
-
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FLAC_DECODER)),true)
     LOCAL_CFLAGS += -DFLAC_OFFLOAD_ENABLED
     LOCAL_CFLAGS += -DCOMPRESS_METADATA_NEEDED
@@ -256,8 +251,6 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUXPCM_BT)),true)
 endif
 
 LOCAL_CFLAGS += -Wall -Werror
-LOCAL_CLANG_CFLAGS += -Wno-unused-variable -Wno-missing-field-initializers
-LOCAL_CLANG_CFLAGS += -Wno-typedef-redefinition
 
 LOCAL_COPY_HEADERS_TO   := mm-audio
 LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
