@@ -76,7 +76,12 @@ static unsigned int configured_low_latency_capture_period_size =
 /* This constant enables extended precision handling.
  * TODO The flag is off until more testing is done.
  */
+
+#ifdef USE_XML_AUDIO_POLICY_CONF
+static const bool k_enable_extended_precision = false;
+#else
 static const bool k_enable_extended_precision = true;
+#endif
 
 struct pcm_config pcm_config_deep_buffer = {
     .channels = 2,
