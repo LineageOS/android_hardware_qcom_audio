@@ -241,6 +241,10 @@ struct stream_out {
     bool routing_change;
 
     struct audio_device *dev;
+    void* qaf_stream_handle;
+    pthread_cond_t qaf_offload_cond;
+    pthread_t qaf_offload_thread;
+    struct listnode qaf_offload_cmd_list;
 };
 
 struct stream_in {
@@ -426,6 +430,16 @@ int pcm_ioctl(struct pcm *pcm, int request, ...);
 int get_snd_card_state(struct audio_device *adev);
 audio_usecase_t get_usecase_id_from_usecase_type(const struct audio_device *adev,
                                                  usecase_type_t type);
+
+int adev_open_output_stream(struct audio_hw_device *dev,
+                            audio_io_handle_t handle,
+                            audio_devices_t devices,
+                            audio_output_flags_t flags,
+                            struct audio_config *config,
+                            struct audio_stream_out **stream_out,
+                            const char *address __unused);
+void adev_close_output_stream(struct audio_hw_device *dev __unused,
+                              struct audio_stream_out *stream);
 
 #define LITERAL_TO_STRING(x) #x
 #define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\

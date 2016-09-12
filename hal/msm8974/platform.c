@@ -42,6 +42,7 @@
 #include "edid.h"
 #include "sound/compress_params.h"
 #include "sound/msmcal-hwdep.h"
+#include <linux/msm_audio_calibration.h>
 
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
 #define MIXER_XML_DEFAULT_PATH "/system/etc/mixer_paths.xml"
@@ -4116,6 +4117,54 @@ void platform_get_parameters(void *platform,
     free(kv_pairs);
 }
 
+unsigned char* platform_get_license(void *platform, int *size)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    char value[PROPERTY_VALUE_MAX] = {0};
+    acdb_audio_cal_cfg_t cal;
+    unsigned char *dptr = NULL;
+    int ret=0;
+    uint32_t param_len;
+
+    if (platform == NULL) {
+        ALOGE("[%s] received null pointer %d ",__func__, __LINE__);
+        ret = -EINVAL;
+        goto done;
+    }
+    memset(&cal, 0, sizeof(cal));
+    cal.persist = 1;
+    cal.cal_type = AUDIO_CORE_METAINFO_CAL_TYPE;
+    if (!property_get("audio.qaf.acdbid", value , "") && !atoi(value)) {
+        ALOGE("[%s] audio.qaf.acdbid is not set %d ",__func__, __LINE__);
+        ret = -EINVAL;
+        goto done;
+    }
+    cal.acdb_dev_id = (uint32_t) atoi (value);
+    param_len = MAX_SET_CAL_BYTE_SIZE;
+    dptr = (unsigned char*) calloc(param_len, sizeof(unsigned char*));
+    if (dptr == NULL) {
+        ALOGE("[%s] Memory allocation failed for length %d",__func__,param_len);
+        ret = -ENOMEM;
+        goto done;
+    }
+    if (my_data->acdb_get_audio_cal != NULL) {
+        ret = my_data->acdb_get_audio_cal((void*)&cal, (void*)dptr, &param_len);
+        ALOGE("%s, ret[%d], param_len[%d] line %d", __func__, ret, param_len, __LINE__);
+        if (ret == 0) {
+            *size = param_len;
+            return dptr;
+        } else {
+            *size = 0;
+        }
+    }
+done:
+    if (dptr != NULL)
+        free(dptr);
+
+    return NULL;
+}
+
+/* Delay in Us */
 /* Delay in Us, only to be used for PCM formats */
 int64_t platform_render_latency(audio_usecase_t usecase)
 {

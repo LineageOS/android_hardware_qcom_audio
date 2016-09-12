@@ -3987,6 +3987,13 @@ void platform_get_parameters(void *platform,
     free(kv_pairs);
 }
 
+unsigned char* platform_get_license(void *platform __unused, int *size __unused)
+{
+    ALOGE("%s: Not implemented", __func__);
+    return NULL;
+}
+
+
 /* Delay in Us, only to be used for PCM formats */
 int64_t platform_render_latency(audio_usecase_t usecase)
 {

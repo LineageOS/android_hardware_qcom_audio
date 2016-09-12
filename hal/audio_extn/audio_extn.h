@@ -581,6 +581,29 @@ void audio_extn_perf_lock_release(int *handle);
 void audio_utils_set_hdmi_channel_status(struct stream_out *out, char * buffer, size_t bytes);
 #endif
 
+#ifdef QAF_EXTN_ENABLED
+bool audio_extn_qaf_is_enabled();
+void audio_extn_qaf_deinit();
+void audio_extn_qaf_close_output_stream(struct audio_hw_device *dev __unused,
+                                        struct audio_stream_out *stream);
+int audio_extn_qaf_open_output_stream(struct audio_hw_device *dev,
+                                   audio_io_handle_t handle,
+                                   audio_devices_t devices,
+                                   audio_output_flags_t flags,
+                                   struct audio_config *config,
+                                   struct audio_stream_out **stream_out,
+                                   const char *address __unused);
+int audio_extn_qaf_init(struct audio_device *adev);
+int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *parms);
+#else
+#define audio_extn_qaf_is_enabled()                                     (0)
+#define audio_extn_qaf_deinit()                                         (0)
+#define audio_extn_qaf_close_output_stream         adev_close_output_stream
+#define audio_extn_qaf_open_output_stream           adev_open_output_stream
+#define audio_extn_qaf_init(adev)                                       (0)
+#define audio_extn_qaf_set_parameters(adev, parms)                      (0)
+#endif
+
 #ifndef KEEP_ALIVE_ENABLED
 #define audio_extn_keep_alive_init(a) do {} while(0)
 #define audio_extn_keep_alive_start() do {} while(0)
