@@ -77,8 +77,8 @@
     <ctl name="DEC8 Volume" value="84" />
     <ctl name="COMP1 Switch" value="1" />
     <ctl name="COMP2 Switch" value="1" />
-    <ctl name="COMP7 Switch" value="1" />
-    <ctl name="COMP8 Switch" value="1" />
+    <ctl name="COMP7 Switch" value="0" />
+    <ctl name="COMP8 Switch" value="0" />
     <ctl name="RX HPH Mode" value="CLS_H_LP" />
     <ctl name="SLIMBUS_3_RX Port Mixer MI2S_TX" value="0" />
     <ctl name="SLIMBUS_0_RX Port Mixer SLIM_0_TX" value="0" />
@@ -352,6 +352,7 @@
     <ctl name="SLIM RX4 MUX" value="ZERO" />
     <ctl name="SLIM RX5 MUX" value="ZERO" />
     <ctl name="EAR PA Gain" value="G_6_DB" />
+    <ctl name="EAR SPKR PA Gain" value="G_DEFAULT" />
     <ctl name="SpkrLeft COMP Switch" value="0" />
     <ctl name="SpkrRight COMP Switch" value="0" />
     <ctl name="SpkrLeft BOOST Switch" value="0" />
@@ -530,6 +531,9 @@
     <ctl name="ANC0 FB MUX" value="ZERO" />
     <ctl name="ANC1 FB MUX" value="ZERO" />
     <ctl name="ANC EAR Enable Switch" value="0" />
+    <ctl name="ANC OUT EAR SPKR Enable Switch" value="0" />
+    <ctl name="ANC SPKR PA Enable Switch" value="0" />
+    <ctl name="SpkrLeft WSA PA Gain" value="G_0_DB" />
     <!-- anc handset end -->
     <ctl name="ANC Function" value="OFF" />
     <ctl name="ANC HPHL Enable Switch" value="0" />
@@ -1830,6 +1834,8 @@
     </path>
 
     <path name="speaker">
+        <ctl name="COMP7 Switch" value="1" />
+        <ctl name="COMP8 Switch" value="1" />
         <ctl name="SLIM RX0 MUX" value="AIF_MIX1_PB" />
         <ctl name="SLIM RX1 MUX" value="AIF_MIX1_PB" />
         <ctl name="SLIM_0_RX Channels" value="Two" />
@@ -1846,6 +1852,7 @@
     </path>
 
     <path name="speaker-fluid">
+        <ctl name="COMP7 Switch" value="1" />
         <ctl name="SLIM RX0 MUX" value="AIF_MIX1_PB" />
         <ctl name="SLIM_0_RX Channels" value="One" />
         <ctl name="RX INT7_1 MIX1 INP0" value="RX0" />
@@ -1856,6 +1863,7 @@
     </path>
 
     <path name="speaker-mono">
+        <ctl name="COMP7 Switch" value="1" />
         <ctl name="SLIM RX0 MUX" value="AIF_MIX1_PB" />
         <ctl name="SLIM_0_RX Channels" value="One" />
         <ctl name="RX INT7_1 MIX1 INP0" value="RX0" />
@@ -1948,14 +1956,14 @@
     </path>
 
     <path name="handset">
+        <ctl name="COMP7 Switch" value="1" />
         <ctl name="SLIM RX0 MUX" value="AIF_MIX1_PB" />
         <ctl name="SLIM_0_RX Channels" value="One" />
         <ctl name="RX INT7_1 MIX1 INP0" value="RX0" />
         <ctl name="SpkrLeft COMP Switch" value="1" />
         <ctl name="SpkrLeft BOOST Switch" value="1" />
-        <ctl name="SpkrLeft VISENSE Switch" value="1" />
         <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
-        <ctl name="RX7 Digital Volume" value="76" />
+        <ctl name="EAR SPKR PA Gain" value="G_6_DB" />
     </path>
 
     <path name="handset-mic">
@@ -1994,16 +2002,14 @@
 
     <path name="anc-handset">
         <ctl name="ANC Function" value="ON" />
+        <ctl name="ANC Slot" value="6" />
         <ctl name="SLIM RX0 MUX" value="AIF_MIX1_PB" />
         <ctl name="SLIM_0_RX Channels" value="One" />
-        <ctl name="RX INT0_1 MIX1 INP0" value="RX0" />
-        <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT" />
-        <ctl name="RX0 Digital Volume" value="81" />
-        <ctl name="ANC Slot" value="6" />
-        <ctl name="ADC MUX10" value="DMIC" />
-        <ctl name="DMIC MUX10" value="DMIC2" />
-        <ctl name="ANC0 FB MUX" value="ANC_IN_EAR" />
-        <ctl name="ANC EAR Enable Switch" value="1" />
+        <ctl name="RX INT7_1 MIX1 INP0" value="RX0" />
+        <ctl name="ANC OUT EAR SPKR Enable Switch" value="1" />
+        <ctl name="ANC SPKR PA Enable Switch" value="1" />
+        <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
+        <ctl name="SpkrLeft WSA PA Gain" value="G_6_DB" />
     </path>
 
     <path name="headphones">
@@ -2309,6 +2315,9 @@
         <ctl name="ADC MUX7" value="DMIC" />
         <ctl name="DMIC MUX7" value="DMIC0" />
         <ctl name="IIR0 INP0 MUX" value="DEC6" />
+        <ctl name="ADC MUX10" value="DMIC" />
+        <ctl name="DMIC MUX10" value="DMIC4" />
+        <ctl name="ANC0 FB MUX" value="ANC_IN_EAR_SPKR" />
     </path>
 
     <!-- Dual MIC devices -->
