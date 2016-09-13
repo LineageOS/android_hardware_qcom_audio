@@ -1010,23 +1010,36 @@ void *platform_init(struct audio_device *adev)
     list_init(&operator_info_list);
 
     set_platform_defaults(my_data);
+    bool card_verifed[MAX_SND_CARD] = {0};
+    const int retry_limit = property_get_int32("audio.snd_card.open.retries", RETRY_NUMBER);
 
-    while (snd_card_num < MAX_SND_CARD) {
-        adev->mixer = mixer_open(snd_card_num);
+    for (;;) {
+        if (snd_card_num >= MAX_SND_CARD) {
+            if (retry_num++ >= retry_limit) {
+                ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
+                goto init_failed;
+            }
 
-        while (!adev->mixer && retry_num < RETRY_NUMBER) {
+            snd_card_num = 0;
             usleep(RETRY_US);
-            adev->mixer = mixer_open(snd_card_num);
-            retry_num++;
+            continue;
         }
+
+        if (card_verifed[snd_card_num]) {
+            ++snd_card_num;
+            continue;
+        }
+
+        adev->mixer = mixer_open(snd_card_num);
 
         if (!adev->mixer) {
             ALOGE("%s: Unable to open the mixer card: %d", __func__,
-                   snd_card_num);
-            retry_num = 0;
-            snd_card_num++;
+               snd_card_num);
+            ++snd_card_num;
             continue;
         }
+
+        card_verifed[snd_card_num] = true;
 
         snd_card_name = mixer_get_name(adev->mixer);
         my_data->hw_info = hw_info_init(snd_card_name);
@@ -1106,8 +1119,9 @@ void *platform_init(struct audio_device *adev)
                         min(strlen(snd_card_name), strlen(my_data->snd_card_name))) != 0) {
             ALOGI("%s: found valid sound card %s, but not primary sound card %s",
                    __func__, snd_card_name, my_data->snd_card_name);
-            retry_num = 0;
-            snd_card_num++;
+            ++snd_card_num;
+            mixer_close(adev->mixer);
+            adev->mixer = NULL;
             hw_info_deinit(my_data->hw_info);
             my_data->hw_info = NULL;
             continue;
@@ -1120,16 +1134,15 @@ void *platform_init(struct audio_device *adev)
 
         if (!adev->audio_route) {
             ALOGE("%s: Failed to init audio route controls, aborting.", __func__);
+            mixer_close(adev->mixer);
+            adev->mixer = NULL;
+            hw_info_deinit(my_data->hw_info);
+            my_data->hw_info = NULL;
             goto init_failed;
         }
         adev->snd_card = snd_card_num;
         ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
         break;
-    }
-
-    if (snd_card_num >= MAX_SND_CARD) {
-        ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
-        goto init_failed;
     }
 
     //set max volume step for voice call
