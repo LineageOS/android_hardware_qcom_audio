@@ -112,4 +112,5 @@ bool platform_check_and_set_capture_backend_cfg(struct audio_device* adev,
                    struct audio_usecase *usecase, snd_device_t snd_device);
 
 int platform_snd_card_update(void *platform, enum card_status_t status);
+int platform_update_usecase_from_source(int source, audio_usecase_t usecase);
 #endif // AUDIO_PLATFORM_API_H

@@ -15,7 +15,6 @@
  */
 #define LOG_TAG "msm8974_platform"
 /*#define LOG_NDEBUG 0*/
-#define LOG_NDDEBUG 0
 
 #include <stdlib.h>
 #include <dlfcn.h>
@@ -163,7 +162,8 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                               AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
                                           LOWLATENCY_PCM_DEVICE},
-
+    [USECASE_AUDIO_RECORD_FM_VIRTUAL] = {MULTIMEDIA2_PCM_DEVICE,
+                                  MULTIMEDIA2_PCM_DEVICE},
     [USECASE_VOICE_CALL] = {VOICE_CALL_PCM_DEVICE,
                             VOICE_CALL_PCM_DEVICE},
     [USECASE_VOICE2_CALL] = {VOICE2_CALL_PCM_DEVICE, VOICE2_CALL_PCM_DEVICE},
@@ -290,6 +290,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_HANDSET_QMIC] = "quad-mic",
     [SND_DEVICE_IN_HANDSET_TMIC_AEC] = "three-mic",
     [SND_DEVICE_IN_HANDSET_QMIC_AEC] = "quad-mic",
+
+    [SND_DEVICE_IN_CAPTURE_FM] = "capture-fm",
 };
 
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
@@ -378,7 +380,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = 125,
 
     [SND_DEVICE_IN_VOICE_RX] = 44,
-
+    [SND_DEVICE_IN_CAPTURE_FM] = 0,
     [SND_DEVICE_IN_THREE_MIC] = 46,
     [SND_DEVICE_IN_QUAD_MIC] = 46,
     [SND_DEVICE_IN_CAPTURE_VI_FEEDBACK] = 102,
@@ -487,6 +489,8 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_QMIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_TMIC_AEC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_QMIC_AEC)},
+
+    {TO_NAME_INDEX(SND_DEVICE_IN_CAPTURE_FM)},
 };
 
 static char * backend_tag_table[SND_DEVICE_MAX] = {0};
@@ -899,6 +903,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_IN_BT_SCO_MIC_WB_NREC] = strdup("bt-sco-wb");
     backend_tag_table[SND_DEVICE_OUT_VOICE_TX] = strdup("afe-proxy");
     backend_tag_table[SND_DEVICE_IN_VOICE_RX] = strdup("afe-proxy");
+    backend_tag_table[SND_DEVICE_IN_CAPTURE_FM] = strdup("capture-fm");
 
     hw_interface_table[SND_DEVICE_OUT_HANDSET] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER] = strdup("SLIMBUS_0_RX");
@@ -2258,6 +2263,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 }
             }
         }
+    } else if (source == AUDIO_SOURCE_FM_TUNER) {
+        snd_device = SND_DEVICE_IN_CAPTURE_FM;
     } else if (source == AUDIO_SOURCE_DEFAULT) {
         goto exit;
     }
@@ -2318,6 +2325,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             }
         } else if (in_device & AUDIO_DEVICE_IN_AUX_DIGITAL) {
             snd_device = SND_DEVICE_IN_HDMI_MIC;
+        } else if (in_device & AUDIO_DEVICE_IN_FM_TUNER) {
+            snd_device = SND_DEVICE_IN_CAPTURE_FM;
         } else {
             ALOGE("%s: Unknown input device(s) %#x", __func__, in_device);
             ALOGW("%s: Using default handset-mic", __func__);
@@ -2613,6 +2622,24 @@ int64_t platform_render_latency(audio_usecase_t usecase)
             return ULL_PLATFORM_DELAY;
         default:
             return 0;
+    }
+}
+
+int platform_update_usecase_from_source(int source, int usecase)
+{
+    ALOGV("%s: input source :%d", __func__, source);
+
+    switch(source) {
+        case AUDIO_SOURCE_FM_TUNER:
+            return USECASE_AUDIO_RECORD_FM_VIRTUAL;
+        case AUDIO_SOURCE_VOICE_UPLINK:
+            return USECASE_INCALL_REC_UPLINK;
+        case AUDIO_SOURCE_VOICE_DOWNLINK:
+            return USECASE_INCALL_REC_DOWNLINK;
+        case AUDIO_SOURCE_VOICE_CALL:
+            return USECASE_INCALL_REC_UPLINK_AND_DOWNLINK;
+        default:
+            return usecase;
     }
 }
 
