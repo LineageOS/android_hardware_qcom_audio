@@ -16,7 +16,6 @@
 
 #define LOG_TAG "msm8916_platform"
 /*#define LOG_NDEBUG 0*/
-#define LOG_NDDEBUG 0
 
 #include <stdlib.h>
 #include <dlfcn.h>
@@ -165,6 +164,8 @@ int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
                                           LOWLATENCY_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD_FM_VIRTUAL] = {MULTIMEDIA2_PCM_DEVICE,
+                                          MULTIMEDIA2_PCM_DEVICE},
     [USECASE_AUDIO_HFP_SCO] = {HFP_PCM_RX, HFP_SCO_RX},
     [USECASE_AUDIO_HFP_SCO_WB] = {HFP_PCM_RX, HFP_SCO_RX},
     [USECASE_VOICE_CALL] = {VOICE_CALL_PCM_DEVICE, VOICE_CALL_PCM_DEVICE},
@@ -1092,6 +1093,24 @@ int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
     }
 
     return 0;
+}
+
+int platform_update_usecase_from_source(int source, int usecase)
+{
+    ALOGV("%s: input source :%d", __func__, source);
+
+    switch(source) {
+        case AUDIO_SOURCE_FM_TUNER:
+            return USECASE_AUDIO_RECORD_FM_VIRTUAL;
+        case AUDIO_SOURCE_VOICE_UPLINK:
+            return USECASE_INCALL_REC_UPLINK;
+        case AUDIO_SOURCE_VOICE_DOWNLINK:
+            return USECASE_INCALL_REC_DOWNLINK;
+        case AUDIO_SOURCE_VOICE_CALL:
+            return USECASE_INCALL_REC_UPLINK_AND_DOWNLINK;
+        default:
+            return usecase;
+    }
 }
 
 bool platform_check_and_set_playback_backend_cfg(struct audio_device* adev __unused,
