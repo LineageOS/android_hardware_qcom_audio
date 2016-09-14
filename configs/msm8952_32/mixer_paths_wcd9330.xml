@@ -414,7 +414,19 @@
     <ctl name="MAD Input" value="DMIC1" />
     <!-- listen end-->
     <!-- afe-proxy -->
+    <ctl name="AFE_PCM_RX Audio Mixer MultiMedia1" value="0" />
     <ctl name="AFE_PCM_RX Audio Mixer MultiMedia2" value="0" />
+    <ctl name="AFE_PCM_RX Audio Mixer MultiMedia3" value="0" />
+    <ctl name="AFE_PCM_RX Audio Mixer MultiMedia4" value="0" />
+    <ctl name="AFE_PCM_RX Audio Mixer MultiMedia5" value="0" />
+    <ctl name="AFE_PCM_RX Audio Mixer MultiMedia7" value="0" />
+    <ctl name="AFE_PCM_RX Audio Mixer MultiMedia10" value="0" />
+    <ctl name="AFE_PCM_RX Audio Mixer MultiMedia11" value="0" />
+    <ctl name="AFE_PCM_RX Audio Mixer MultiMedia12" value="0" />
+    <ctl name="AFE_PCM_RX Audio Mixer MultiMedia13" value="0" />
+    <ctl name="AFE_PCM_RX Audio Mixer MultiMedia14" value="0" />
+    <ctl name="AFE_PCM_RX Audio Mixer MultiMedia15" value="0" />
+    <ctl name="AFE_PCM_RX Audio Mixer MultiMedia16" value="0" />
     <!-- afe-proxy end-->
     <ctl name="AFE_PCM_RX Port Mixer INTERNAL_FM_TX" value="0" />
 
