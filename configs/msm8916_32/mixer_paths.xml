@@ -662,6 +662,14 @@
         <path name="adc1" />
     </path>
 
+    <path name="unprocessed-handset-mic">
+        <path name="handset-mic" />
+    </path>
+
+    <path name="unprocessed-mic">
+        <path name="unprocessed-handset-mic" />
+    </path>
+
     <path name="ADSP testfwk">
         <ctl name="MI2S_DL_HL Switch" value="1" />
     </path>
