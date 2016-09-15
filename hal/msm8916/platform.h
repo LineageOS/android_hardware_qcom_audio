@@ -33,6 +33,13 @@ enum {
 };
 
 enum {
+    SOURCE_MONO_MIC  = 0x1,            /* Target contains 1 mic */
+    SOURCE_DUAL_MIC  = 0x2,            /* Target contains 2 mics */
+    SOURCE_THREE_MIC = 0x4,            /* Target contains 3 mics */
+    SOURCE_QUAD_MIC  = 0x8,            /* Target contains 4 mics */
+};
+
+enum {
     SPKR_1,
     SPKR_2
 };
@@ -190,6 +197,7 @@ enum {
     SND_DEVICE_IN_SPEAKER_QMIC_NS,
     SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS,
     SND_DEVICE_IN_THREE_MIC,
+    SND_DEVICE_IN_HANDSET_TMIC,
     SND_DEVICE_IN_END,
 
     SND_DEVICE_MAX = SND_DEVICE_IN_END,
@@ -286,6 +294,9 @@ enum {
 
 #define AFE_PROXY_PLAYBACK_PCM_DEVICE 7
 #define AFE_PROXY_RECORD_PCM_DEVICE 8
+
+#define PLATFORM_MAX_MIC_COUNT "input_mic_max_count"
+#define PLATFORM_DEFAULT_MIC_COUNT 2
 
 #define LIB_CSD_CLIENT "libcsd-client.so"
 /* CSD-CLIENT related functions */
