@@ -32,7 +32,8 @@
 #define VOL_FLAG ( EFFECT_FLAG_TYPE_INSERT | \
                    EFFECT_FLAG_VOLUME_IND | \
                    EFFECT_FLAG_DEVICE_IND | \
-                   EFFECT_FLAG_OFFLOAD_SUPPORTED)
+                   EFFECT_FLAG_OFFLOAD_SUPPORTED | \
+                   EFFECT_FLAG_NO_PROCESS)
 
 #define PRINT_STREAM_TYPE(i) ALOGV("descriptor found and is of stream type %s ",\
                                                             i == MUSIC?"MUSIC": \
@@ -331,41 +332,6 @@ static inline int16_t clamp16(int32_t sample)
         sample = 0x7FFF ^ (sample>>31);
     return sample;
 }
-
-static int vol_effect_process(effect_handle_t self,
-                              audio_buffer_t *in_buffer,
-                              audio_buffer_t *out_buffer)
-{
-    int status = 0;
-    ALOGV("%s Called ", __func__);
-
-    vol_listener_context_t *context = (vol_listener_context_t *)self;
-    pthread_mutex_lock(&vol_listner_init_lock);
-
-    if (context->state != VOL_LISTENER_STATE_ACTIVE) {
-        ALOGE("%s: state is not active .. return error", __func__);
-        status = -EINVAL;
-        goto exit;
-    }
-
-    // calculation based on channel count 2
-    if (in_buffer->raw != out_buffer->raw) {
-        if (context->config.outputCfg.accessMode == EFFECT_BUFFER_ACCESS_ACCUMULATE) {
-            size_t i;
-            for (i = 0; i < out_buffer->frameCount*2; i++) {
-                out_buffer->s16[i] = clamp16(out_buffer->s16[i] + in_buffer->s16[i]);
-            }
-        } else {
-            memcpy(out_buffer->raw, in_buffer->raw, out_buffer->frameCount * 2 * sizeof(int16_t));
-        }
-
-    }
-
-exit:
-    pthread_mutex_unlock(&vol_listner_init_lock);
-    return status;
-}
-
 
 static int vol_effect_command(effect_handle_t self,
                               uint32_t cmd_code, uint32_t cmd_size,
@@ -818,7 +784,7 @@ static int vol_prc_lib_get_descriptor(const effect_uuid_t *uuid,
 
 /* effect_handle_t interface implementation for volume listener effect */
 static const struct effect_interface_s effect_interface = {
-    vol_effect_process,
+    NULL,
     vol_effect_command,
     vol_effect_get_descriptor,
     NULL,
