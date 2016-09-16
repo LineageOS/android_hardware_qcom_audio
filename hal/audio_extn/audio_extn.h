@@ -165,7 +165,7 @@ void audio_extn_usb_add_device(audio_devices_t device, int card);
 void audio_extn_usb_remove_device(audio_devices_t device, int card);
 bool audio_extn_usb_is_config_supported(unsigned int *bit_width,
                                         unsigned int *sample_rate,
-                                        unsigned int ch);
+                                        unsigned int *ch);
 int audio_extn_usb_enable_sidetone(int device, bool enable);
 int audio_extn_usb_set_sidetone_gain(struct str_parms *parms,
                                      char *value, int len);
@@ -406,6 +406,12 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev);
 #ifndef AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH
 #define AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH  0x10000
 #endif
+
+enum {
+    EXT_DISPLAY_TYPE_NONE,
+    EXT_DISPLAY_TYPE_HDMI,
+    EXT_DISPLAY_TYPE_DP
+};
 
 #ifndef HDMI_PASSTHROUGH_ENABLED
 #define audio_extn_passthru_update_stream_configuration(adev, out)            (0)

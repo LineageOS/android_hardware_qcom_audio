@@ -255,6 +255,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
 
     [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = "afe-proxy-playback",
     [USECASE_AUDIO_RECORD_AFE_PROXY] = "afe-proxy-record",
+    [USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE] = "silence-playback",
 };
 
 static const audio_usecase_t offload_usecases[] = {
@@ -849,7 +850,7 @@ int disable_snd_device(struct audio_device *adev,
         if (SND_DEVICE_OUT_BT_A2DP == snd_device)
             audio_extn_a2dp_stop_playback();
 
-        if (snd_device == SND_DEVICE_OUT_HDMI)
+        if (snd_device == SND_DEVICE_OUT_HDMI || snd_device == SND_DEVICE_OUT_DISPLAY_PORT)
             adev->is_channel_status_set = false;
         else if (SND_DEVICE_OUT_HEADPHONES == snd_device &&
                  adev->native_playback_enabled) {
@@ -933,6 +934,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
             (usecase->out_snd_device != snd_device || force_routing) &&
             ((usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
              (usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) ||
+             (usecase->devices & AUDIO_DEVICE_OUT_USB_DEVICE) ||
              (force_restart_session)) &&
             (platform_check_backends_match(snd_device, usecase->out_snd_device)||
              (platform_check_codec_asrc_support(adev->platform) && !adev->asrc_mode_enabled &&
@@ -1083,6 +1085,13 @@ static int read_hdmi_sink_caps(struct stream_out *out)
     int channels = platform_edid_get_max_channels(out->dev->platform);
 
     reset_hdmi_sink_caps(out);
+
+    /* Cache ext disp type */
+    ret = platform_get_ext_disp_type(adev->platform);
+    if (ret < 0) {
+        ALOGE("%s: Failed to query disp type, ret:%d", __func__, ret);
+        return ret;
+    }
 
     switch (channels) {
     case 8:
@@ -2778,7 +2787,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         if (ret < 0)
             ret = -errno;
         ALOGVV("%s: writing buffer (%zu bytes) to compress device returned %zd", __func__, bytes, ret);
-        if (ret >= 0 && ret < (ssize_t)bytes) {
+        /*msg to cb thread only if non blocking write is enabled*/
+        if (ret >= 0 && ret < (ssize_t)bytes && out->non_blocking) {
             ALOGD("No space available in compress driver, post msg to cb thread");
             send_offload_cmd_l(out, OFFLOAD_CMD_WAIT_FOR_BUFFER);
         } else if (-ENETRESET == ret) {
@@ -3754,7 +3764,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
         audio_extn_dts_create_state_notifier_node(out->usecase);
 
-        create_offload_callback_thread(out);
         ALOGV("%s: offloaded output offload_info version %04x bit rate %d",
                 __func__, config->offload_info.version,
                 config->offload_info.bit_rate);
@@ -3790,6 +3799,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->flags |= AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH;
             out->compr_config.codec->compr_passthr = PASSTHROUGH_DSD;
         }
+
+        create_offload_callback_thread(out);
+
     } else if (out->flags & AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
         ret = voice_extn_check_and_set_incall_music_usecase(adev, out);
         if (ret != 0) {
@@ -4106,7 +4118,12 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     if (ret >= 0) {
         val = atoi(value);
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-            ALOGV("cache new edid");
+            ALOGV("cache new ext disp type and edid");
+            ret = platform_get_ext_disp_type(adev->platform);
+            if (ret < 0) {
+                ALOGE("%s: Failed to query disp type, ret:%d", __func__, ret);
+                return ret;
+            }
             platform_cache_edid(adev->platform);
         } else if ((val & AUDIO_DEVICE_OUT_USB_DEVICE) ||
                    !(val ^ AUDIO_DEVICE_IN_USB_DEVICE)) {

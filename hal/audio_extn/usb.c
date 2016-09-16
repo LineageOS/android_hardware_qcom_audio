@@ -739,7 +739,7 @@ static bool usb_get_best_match_for_sample_rate(
                  "%s: USB ch(%d)bw(%d), stm ch(%d)bw(%d)sr(%d), candidate(%d)",
                  __func__, dev_info->channels, dev_info->bit_width,
                  ch, bit_width, stream_sample_rate, candidate);
-        if ((dev_info->bit_width != bit_width) && dev_info->channels != ch)
+        if ((dev_info->bit_width != bit_width) || dev_info->channels != ch)
             continue;
 
         candidate = 0;
@@ -786,34 +786,32 @@ exit:
 static bool usb_audio_backend_apply_policy(struct listnode *dev_list,
                                            unsigned int *bit_width,
                                            unsigned int *sample_rate,
-                                           unsigned int ch)
+                                           unsigned int *ch)
 {
-    unsigned int channel;
     bool is_usb_supported = true;
 
     ALOGV("%s: from stream: bit-width(%d) sample_rate(%d) channels (%d)",
-           __func__, *bit_width, *sample_rate, ch);
+           __func__, *bit_width, *sample_rate, *ch);
     if (list_empty(dev_list)) {
         *sample_rate = 48000;
         *bit_width = 16;
-        channel = 2;
+        *ch = 2;
         ALOGI("%s: list is empty,fall back to default setting", __func__);
         goto exit;
     }
     usb_get_best_match_for_bit_width(dev_list, *bit_width, bit_width);
     usb_get_best_match_for_channels(dev_list,
                                     *bit_width,
-                                    ch,
-                                    &channel);
+                                    *ch,
+                                    ch);
     usb_get_best_match_for_sample_rate(dev_list,
                                        *bit_width,
-                                       channel,
+                                       *ch,
                                        *sample_rate,
                                        sample_rate);
 exit:
     ALOGV("%s: Updated sample rate per profile: bit-width(%d) rate(%d) chs(%d)",
-           __func__, *bit_width, *sample_rate, channel);
-    usb_set_channel_mixer_ctl(channel, "USB_AUDIO_RX Channels");
+           __func__, *bit_width, *sample_rate, *ch);
     return is_usb_supported;
 }
 
@@ -885,14 +883,14 @@ int audio_extn_usb_enable_sidetone(int device, bool enable)
 
 bool audio_extn_usb_is_config_supported(unsigned int *bit_width,
                                         unsigned int *sample_rate,
-                                        unsigned int ch)
+                                        unsigned int *ch)
 {
     struct listnode *node_i;
     struct usb_card_config *card_info;
     bool is_usb_supported = false;
 
     ALOGV("%s: from stream: bit-width(%d) sample_rate(%d) ch(%d)",
-           __func__, *bit_width, *sample_rate, ch);
+           __func__, *bit_width, *sample_rate, *ch);
     list_for_each(node_i, &usbmod->usb_card_conf_list) {
         card_info = node_to_item(node_i, struct usb_card_config, list);
         ALOGI_IF(usb_audio_debug_enable,
@@ -908,8 +906,8 @@ bool audio_extn_usb_is_config_supported(unsigned int *bit_width,
             break;
         }
     }
-    ALOGV("%s: updated: bit-width(%d) sample_rate(%d)",
-           __func__, *bit_width, *sample_rate);
+    ALOGV("%s: updated: bit-width(%d) sample_rate(%d) channels (%d)",
+           __func__, *bit_width, *sample_rate, *ch);
 
     return is_usb_supported;
 }
