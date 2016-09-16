@@ -68,7 +68,6 @@
 #define PLATFORM_INFO_XML_PATH_EXTCODEC  "/system/etc/audio_platform_info_extcodec.xml"
 
 #define LIB_ACDB_LOADER "libacdbloader.so"
-#define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
 #define CVD_VERSION_MIXER_CTL "CVD Version"
 
 #define MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE (256 * 1024)
@@ -243,6 +242,7 @@ struct platform_data {
     struct csd_data *csd;
     void *edid_info;
     bool edid_valid;
+    int ext_disp_type;
     codec_backend_cfg_t current_backend_cfg[MAX_CODEC_BACKENDS];
     codec_backend_cfg_t current_tx_backend_cfg[MAX_CODEC_TX_BACKENDS];
     char ec_ref_mixer_path[64];
@@ -318,6 +318,7 @@ int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                           AFE_PROXY_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_AFE_PROXY] = {AFE_PROXY_PLAYBACK_PCM_DEVICE,
                                         AFE_PROXY_RECORD_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE] = {MULTIMEDIA9_PCM_DEVICE, -1},
 };
 
 /* Array to store sound devices */
@@ -346,6 +347,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_LINE] = "voice-line",
     [SND_DEVICE_OUT_HDMI] = "hdmi",
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = "speaker-and-hdmi",
+    [SND_DEVICE_OUT_DISPLAY_PORT] = "display-port",
+    [SND_DEVICE_OUT_SPEAKER_AND_DISPLAY_PORT] = "speaker-and-display-port",
     [SND_DEVICE_OUT_BT_SCO] = "bt-sco-headset",
     [SND_DEVICE_OUT_BT_SCO_WB] = "bt-sco-headset-wb",
     [SND_DEVICE_OUT_BT_A2DP] = "bt-a2dp",
@@ -467,6 +470,8 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
     [SND_DEVICE_OUT_HDMI] = 18,
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 14,
+    [SND_DEVICE_OUT_DISPLAY_PORT] = 18,
+    [SND_DEVICE_OUT_SPEAKER_AND_DISPLAY_PORT] = 14,
     [SND_DEVICE_OUT_BT_SCO] = 22,
     [SND_DEVICE_OUT_BT_SCO_WB] = 39,
     [SND_DEVICE_OUT_BT_A2DP] = 20,
@@ -590,6 +595,8 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_LINE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HDMI)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HDMI)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_DISPLAY_PORT)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_DISPLAY_PORT)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_BT_SCO)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_BT_SCO_WB)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_BT_A2DP)},
@@ -712,6 +719,7 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_INCALL_REC_UPLINK_AND_DOWNLINK)},
     {TO_NAME_INDEX(USECASE_AUDIO_HFP_SCO)},
     {TO_NAME_INDEX(USECASE_AUDIO_SPKR_CALIB_TX)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE)},
 };
 
 #define NO_COLS 2
@@ -1203,6 +1211,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_OUT_BT_SCO_WB] = strdup("bt-sco-wb");
     backend_tag_table[SND_DEVICE_OUT_HDMI] = strdup("hdmi");
     backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_HDMI] = strdup("speaker-and-hdmi");
+    backend_tag_table[SND_DEVICE_OUT_DISPLAY_PORT] = strdup("display-port");
+    backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_DISPLAY_PORT] = strdup("speaker-and-display-port");
     backend_tag_table[SND_DEVICE_OUT_VOICE_TX] = strdup("afe-proxy");
     backend_tag_table[SND_DEVICE_IN_VOICE_RX] = strdup("afe-proxy");
     backend_tag_table[SND_DEVICE_OUT_AFE_PROXY] = strdup("afe-proxy");
@@ -1219,6 +1229,8 @@ static void set_platform_defaults(struct platform_data * my_data)
 
     hw_interface_table[SND_DEVICE_OUT_HDMI] = strdup("HDMI_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_HDMI] = strdup("SLIMBUS_0_RX-and-HDMI_RX");
+    hw_interface_table[SND_DEVICE_OUT_DISPLAY_PORT] = strdup("DISPLAY_PORT_RX");
+    hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_DISPLAY_PORT] = strdup("SLIMBUS_0_RX-and-DISPLAY_PORT_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TX] = strdup("AFE_PCM_RX");
 
     my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
@@ -1672,6 +1684,7 @@ void *platform_init(struct audio_device *adev)
     my_data->slowtalk = false;
     my_data->hd_voice = false;
     my_data->edid_info = NULL;
+    my_data->ext_disp_type = EXT_DISPLAY_TYPE_NONE;
     my_data->is_wsa_speaker = false;
     my_data->hw_dep_fd = -1;
 
@@ -1931,6 +1944,13 @@ acdb_init_fail:
         strdup("HDMI_RX SampleRate");
     my_data->current_backend_cfg[HDMI_RX_BACKEND].channels_mixer_ctl =
         strdup("HDMI_RX Channels");
+
+    my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].bitwidth_mixer_ctl =
+        strdup("Display Port RX Bit Format");
+    my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].samplerate_mixer_ctl =
+        strdup("Display Port RX SampleRate");
+    my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].channels_mixer_ctl =
+        strdup("Display Port RX Channels");
 
     ret = audio_extn_utils_get_codec_version(snd_card_name,
                                              my_data->adev->snd_card,
@@ -2462,6 +2482,8 @@ int platform_get_backend_index(snd_device_t snd_device)
                         port = HEADPHONE_BACKEND;
                 else if (strcmp(backend_tag_table[snd_device], "hdmi") == 0)
                         port = HDMI_RX_BACKEND;
+                else if (strcmp(backend_tag_table[snd_device], "display-port") == 0)
+                        port = DISP_PORT_RX_BACKEND;
                 else if (strcmp(backend_tag_table[snd_device], "usb-headphones") == 0)
                         port = USB_AUDIO_RX_BACKEND;
         }
@@ -2824,6 +2846,19 @@ bool platform_can_split_snd_device(void *platform,
 
         new_snd_devices[1] = SND_DEVICE_OUT_HDMI;
         status = true;
+    } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_DISPLAY_PORT &&
+               !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_DISPLAY_PORT)) {
+        *num_devices = 2;
+
+        if (my_data->is_vbat_speaker)
+            new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER_VBAT;
+        else if (my_data->is_wsa_speaker)
+            new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER_WSA;
+        else
+            new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
+
+        new_snd_devices[1] = SND_DEVICE_OUT_DISPLAY_PORT;
+        status = true;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_USB_HEADSET)) {
         *num_devices = 2;
@@ -2840,6 +2875,42 @@ bool platform_can_split_snd_device(void *platform,
         snd_device, *num_devices, *new_snd_devices);
 
     return status;
+}
+
+int platform_get_ext_disp_type(void *platform)
+{
+    int disp_type;
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (my_data->ext_disp_type != EXT_DISPLAY_TYPE_NONE) {
+         ALOGD("%s: Returning cached ext disp type:%s",
+               __func__, (my_data->ext_disp_type == EXT_DISPLAY_TYPE_DP) ? "DisplayPort" : "HDMI");
+         return my_data->ext_disp_type;
+    }
+
+#ifdef DISPLAY_PORT_ENABLED
+    struct audio_device *adev = my_data->adev;
+    struct mixer_ctl *ctl;
+    char *mixer_ctl_name = "External Display Type";
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    disp_type = mixer_ctl_get_value(ctl, 0);
+    if (disp_type == EXT_DISPLAY_TYPE_NONE) {
+         ALOGE("%s: Invalid external display type: %d", __func__, disp_type);
+         return -EINVAL;
+    }
+#else
+    disp_type = EXT_DISPLAY_TYPE_HDMI;
+#endif
+    my_data->ext_disp_type = disp_type;
+    ALOGD("%s: ext disp type:%s", __func__, (disp_type == EXT_DISPLAY_TYPE_DP) ? "DisplayPort" : "HDMI");
+    return disp_type;
 }
 
 snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *out)
@@ -2899,7 +2970,17 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
         } else if (devices == (AUDIO_DEVICE_OUT_AUX_DIGITAL |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
-            snd_device = SND_DEVICE_OUT_SPEAKER_AND_HDMI;
+            switch(my_data->ext_disp_type) {
+                case EXT_DISPLAY_TYPE_HDMI:
+                     snd_device = SND_DEVICE_OUT_SPEAKER_AND_HDMI;
+                     break;
+                case EXT_DISPLAY_TYPE_DP:
+                     snd_device = SND_DEVICE_OUT_SPEAKER_AND_DISPLAY_PORT;
+                     break;
+                default:
+                     ALOGE("%s: Invalid disp_type %d", __func__, my_data->ext_disp_type);
+                     goto exit;
+            }
         } else if (devices == (AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET;
@@ -3043,7 +3124,17 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         else
             snd_device = SND_DEVICE_OUT_BT_SCO;
     } else if (devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-        snd_device = SND_DEVICE_OUT_HDMI ;
+            switch(my_data->ext_disp_type) {
+                case EXT_DISPLAY_TYPE_HDMI:
+                    snd_device = SND_DEVICE_OUT_HDMI;
+                    break;
+                case EXT_DISPLAY_TYPE_DP:
+                    snd_device = SND_DEVICE_OUT_DISPLAY_PORT;
+                    break;
+                default:
+                     ALOGE("%s: Invalid disp_type %d", __func__, my_data->ext_disp_type);
+                     goto exit;
+            }
     } else if (devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
         snd_device = SND_DEVICE_OUT_BT_A2DP;
     } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
@@ -3468,7 +3559,7 @@ int platform_set_hdmi_channels(void *platform,  int channel_count)
     struct audio_device *adev = my_data->adev;
     struct mixer_ctl *ctl;
     const char *channel_cnt_str = NULL;
-    const char *mixer_ctl_name = "HDMI_RX Channels";
+    char *mixer_ctl_name;
     switch (channel_count) {
     case 8:
         channel_cnt_str = "Eight"; break;
@@ -3485,13 +3576,25 @@ int platform_set_hdmi_channels(void *platform,  int channel_count)
     default:
         channel_cnt_str = "Two"; break;
     }
+
+    switch(my_data->ext_disp_type) {
+        case EXT_DISPLAY_TYPE_HDMI:
+            mixer_ctl_name = "HDMI_RX Channels";
+            break;
+        case EXT_DISPLAY_TYPE_DP:
+            mixer_ctl_name = "Display Port RX Channels";
+            break;
+        default:
+            ALOGE("%s: Invalid disp_type %d", __func__, my_data->ext_disp_type);
+            return -EINVAL;
+    }
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
               __func__, mixer_ctl_name);
         return -EINVAL;
     }
-    ALOGV("HDMI channel count: %s", channel_cnt_str);
+    ALOGV("Ext disp channel count: %s", channel_cnt_str);
     mixer_ctl_set_enum_by_string(ctl, channel_cnt_str);
     return 0;
 }
@@ -4162,7 +4265,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             mixer_ctl_set_enum_by_string(ctl, rate_str);
             my_data->current_backend_cfg[backend_idx].sample_rate = sample_rate;
     }
-    if ((backend_idx == HDMI_RX_BACKEND) &&
+    if ((backend_idx == HDMI_RX_BACKEND || backend_idx == DISP_PORT_RX_BACKEND) &&
         (channels != my_data->current_backend_cfg[backend_idx].channels)) {
         struct  mixer_ctl *ctl;
         char *channel_cnt_str = NULL;
@@ -4199,22 +4302,32 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
                my_data->current_backend_cfg[backend_idx].channels_mixer_ctl, channel_cnt_str);
     }
 
-    if (backend_idx == HDMI_RX_BACKEND) {
-        const char *hdmi_format_ctrl = "HDMI RX Format";
-        struct mixer_ctl *ctl;
-        ctl = mixer_get_ctl_by_name(adev->mixer,hdmi_format_ctrl);
+    bool set_ext_disp_format = false;
+    char *ext_disp_format = NULL;
 
+    if (backend_idx == HDMI_RX_BACKEND) {
+        ext_disp_format = "HDMI RX Format";
+        set_ext_disp_format = true;
+    } else if (backend_idx == DISP_PORT_RX_BACKEND) {
+        ext_disp_format = "Display Port Rx Format";
+        set_ext_disp_format = true;
+    } else {
+        ALOGV("%s: Format doesnt have to be set", __func__);
+    }
+
+    if (set_ext_disp_format) {
+        struct mixer_ctl *ctl = mixer_get_ctl_by_name(adev->mixer, ext_disp_format);
         if (!ctl) {
             ALOGE("%s:becf: afe: Could not get ctl for mixer command - %s",
-                   __func__, hdmi_format_ctrl);
+                   __func__, ext_disp_format);
             return -EINVAL;
         }
 
         if (passthrough_enabled) {
-            ALOGD("%s:HDMI compress format", __func__);
+            ALOGD("%s:Ext display compress format", __func__);
             mixer_ctl_set_enum_by_string(ctl, "Compr");
         } else {
-            ALOGD("%s: HDMI PCM format", __func__);
+            ALOGD("%s: Ext display PCM format", __func__);
             mixer_ctl_set_enum_by_string(ctl, "LPCM");
         }
     }
@@ -4228,6 +4341,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
  */
 static void platform_check_hdmi_backend_cfg(struct audio_device* adev,
                                    struct audio_usecase* usecase,
+                                   int backend_idx,
                                    struct audio_backend_cfg *hdmi_backend_cfg)
 {
     unsigned int bit_width;
@@ -4261,13 +4375,13 @@ static void platform_check_hdmi_backend_cfg(struct audio_device* adev,
         //Check EDID info for supported samplerate
         if (!edid_is_supported_sr(edid_info,sample_rate)) {
             //reset to current sample rate
-            sample_rate = my_data->current_backend_cfg[HDMI_RX_BACKEND].sample_rate;
+            sample_rate = my_data->current_backend_cfg[backend_idx].sample_rate;
         }
 
         //Check EDID info for supported bit width
         if (!edid_is_supported_bps(edid_info,bit_width)) {
             //reset to current sample rate
-            bit_width = my_data->current_backend_cfg[HDMI_RX_BACKEND].bit_width;
+            bit_width = my_data->current_backend_cfg[backend_idx].bit_width;
         }
 
         if (channels > max_supported_channels)
@@ -4430,7 +4544,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         hdmi_backend_cfg.channels = channels;
         hdmi_backend_cfg.passthrough_enabled = false;
 
-        platform_check_hdmi_backend_cfg(adev, usecase, &hdmi_backend_cfg);
+        platform_check_hdmi_backend_cfg(adev, usecase, backend_idx, &hdmi_backend_cfg);
 
         bit_width = hdmi_backend_cfg.bit_width;
         sample_rate = hdmi_backend_cfg.sample_rate;
@@ -4879,7 +4993,7 @@ int platform_get_edid_info(void *platform)
     struct audio_device *adev = my_data->adev;
     char block[MAX_SAD_BLOCKS * SAD_BLOCK_SIZE];
     int ret, count;
-
+    char *mix_ctl_name;
     struct mixer_ctl *ctl;
     char edid_data[MAX_SAD_BLOCKS * SAD_BLOCK_SIZE + 1] = {0};
     edid_audio_info *info;
@@ -4889,17 +5003,28 @@ int platform_get_edid_info(void *platform)
         return 0;
     }
 
+    switch(my_data->ext_disp_type) {
+        case EXT_DISPLAY_TYPE_HDMI:
+            mix_ctl_name = "HDMI EDID";
+            break;
+        case EXT_DISPLAY_TYPE_DP:
+            mix_ctl_name = "Display Port EDID";
+            break;
+        default:
+            ALOGE("%s: Invalid disp_type %d", __func__, my_data->ext_disp_type);
+            return -EINVAL;
+    }
+
     if (my_data->edid_info == NULL) {
         my_data->edid_info =
             (struct edid_audio_info *)calloc(1, sizeof(struct edid_audio_info));
     }
 
     info = my_data->edid_info;
-
-    ctl = mixer_get_ctl_by_name(adev->mixer, AUDIO_DATA_BLOCK_MIXER_CTL);
+    ctl = mixer_get_ctl_by_name(adev->mixer, mix_ctl_name);
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
-              __func__, AUDIO_DATA_BLOCK_MIXER_CTL);
+              __func__, mix_ctl_name);
         goto fail;
     }
 
@@ -4918,8 +5043,9 @@ int platform_get_edid_info(void *platform)
     }
     edid_data[0] = count;
     memcpy(&edid_data[1], block, count);
+
     if (!edid_get_sink_caps(info, edid_data)) {
-        ALOGE("%s: Failed to get HDMI sink capabilities", __func__);
+        ALOGE("%s: Failed to get extn disp sink capabilities", __func__);
         goto fail;
     }
     my_data->edid_valid = true;
@@ -4938,16 +5064,28 @@ fail:
 int platform_set_channel_allocation(void *platform, int channel_alloc)
 {
     struct mixer_ctl *ctl;
-    const char *mixer_ctl_name = "HDMI RX CA";
+    char *mixer_ctl_name;
     int ret;
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
+
+    switch(my_data->ext_disp_type) {
+        case EXT_DISPLAY_TYPE_HDMI:
+            mixer_ctl_name = "HDMI RX CA";
+            break;
+        case EXT_DISPLAY_TYPE_DP:
+            mixer_ctl_name = "Display Port RX CA";
+            break;
+        default:
+            ALOGE("%s: Invalid disp_type %d", __func__, my_data->ext_disp_type);
+            return -EINVAL;
+    }
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
               __func__, mixer_ctl_name);
-        ret = EINVAL;
+        return -EINVAL;
     }
     ALOGD(":%s channel allocation = 0x%x", __func__, channel_alloc);
     ret = mixer_ctl_set_value(ctl, 0, channel_alloc);
@@ -4962,7 +5100,7 @@ int platform_set_channel_allocation(void *platform, int channel_alloc)
 int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd_id)
 {
     struct mixer_ctl *ctl;
-    char mixer_ctl_name[44]; // max length of name is 44 as defined
+    char mixer_ctl_name[44] = {0}; // max length of name is 44 as defined
     int ret;
     unsigned int i;
     int set_values[8] = {0};
@@ -5178,16 +5316,25 @@ void platform_cache_edid(void * platform)
 
 void platform_invalidate_hdmi_config(void * platform)
 {
+    //reset ext display EDID info
     struct platform_data *my_data = (struct platform_data *)platform;
     my_data->edid_valid = false;
     if (my_data->edid_info) {
         memset(my_data->edid_info, 0, sizeof(struct edid_audio_info));
     }
 
-    //reset HDMI_RX_BACKEND to default values
-    my_data->current_backend_cfg[HDMI_RX_BACKEND].sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-    my_data->current_backend_cfg[HDMI_RX_BACKEND].bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    my_data->current_backend_cfg[HDMI_RX_BACKEND].channels = DEFAULT_HDMI_OUT_CHANNELS;
+    if (my_data->ext_disp_type == EXT_DISPLAY_TYPE_HDMI) {
+        //reset HDMI_RX_BACKEND to default values
+        my_data->current_backend_cfg[HDMI_RX_BACKEND].sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+        my_data->current_backend_cfg[HDMI_RX_BACKEND].channels = DEFAULT_HDMI_OUT_CHANNELS;
+        my_data->current_backend_cfg[HDMI_RX_BACKEND].bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    } else {
+        //reset Display port BACKEND to default values
+        my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+        my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].channels = DEFAULT_HDMI_OUT_CHANNELS;
+        my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    }
+    my_data->ext_disp_type = EXT_DISPLAY_TYPE_NONE;
 }
 
 int platform_set_mixer_control(struct stream_out *out, const char * mixer_ctl_name,

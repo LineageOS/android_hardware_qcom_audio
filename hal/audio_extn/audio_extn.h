@@ -407,6 +407,12 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev);
 #define AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH  0x10000
 #endif
 
+enum {
+    EXT_DISPLAY_TYPE_NONE,
+    EXT_DISPLAY_TYPE_HDMI,
+    EXT_DISPLAY_TYPE_DP
+};
+
 #ifndef HDMI_PASSTHROUGH_ENABLED
 #define audio_extn_passthru_update_stream_configuration(adev, out)            (0)
 #define audio_extn_passthru_is_convert_supported(adev, out)                   (0)
