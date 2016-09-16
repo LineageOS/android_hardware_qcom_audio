@@ -547,6 +547,7 @@ int enable_audio_route(struct audio_device *adev,
     else
         snd_device = usecase->out_snd_device;
 
+    audio_extn_utils_send_app_type_cfg(adev, usecase);
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(adev->platform, mixer_path, snd_device);
     ALOGD("%s: usecase(%d) apply and update mixer path: %s", __func__,  usecase->id, mixer_path);
@@ -3704,6 +3705,7 @@ static int adev_open(const hw_module_t *module, const char *name,
         }
     }
 
+    audio_extn_utils_send_default_app_type_cfg(adev->platform, adev->mixer);
     audio_device_ref_count++;
 
     if (property_get("audio_hal.period_multiplier", value, NULL) > 0) {

@@ -1525,6 +1525,13 @@ done:
     return ret;
 }
 
+int platform_get_default_app_type_v2(void *platform, usecase_type_t type __unused,
+                                     int *app_type)
+{
+    ALOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
 int platform_get_snd_device_acdb_id(snd_device_t snd_device)
 {
     if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {

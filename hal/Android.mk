@@ -60,6 +60,7 @@ LOCAL_SRC_FILES := \
 	platform_info.c \
 	audio_extn/ext_speaker.c \
 	audio_extn/audio_extn.c \
+	audio_extn/utils.c \
 	$(AUDIO_PLATFORM)/platform.c
 
 ifdef MULTIPLE_HW_VARIANTS_ENABLED
