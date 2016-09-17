@@ -2063,14 +2063,16 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             else
                 ret = pcm_write(out->pcm, (void *)buffer, bytes);
 
-            if (ret == 0)
-                out->written += bytes / (out->config.channels * sizeof(short));
-
             release_out_focus(out, ns);
         }
     }
 
 exit:
+    // For PCM we always consume the buffer and return #bytes regardless of ret.
+    if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+        out->written += bytes / (out->config.channels * sizeof(short));
+    }
+
     pthread_mutex_unlock(&out->lock);
 
     if (ret != 0) {
