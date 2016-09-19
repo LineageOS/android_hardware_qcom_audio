@@ -179,7 +179,11 @@ int thread_status;
 
 #define MIXER_CARD 0
 #define SOUND_CARD 0
+#ifdef PLATFORM_MSMCOBALT
+#define CAPTURE_DEVICE 7
+#else
 #define CAPTURE_DEVICE 8
+#endif
 
 /* Proxy port supports only MMAP read and those fixed parameters*/
 #define AUDIO_CAPTURE_CHANNEL_COUNT 2
