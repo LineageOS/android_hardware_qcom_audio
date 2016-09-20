@@ -3583,6 +3583,8 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     char *kv_pairs = NULL;
 
     kv_pairs = str_parms_to_str(parms);
+    if(!kv_pairs)
+        return ret;
     len = strlen(kv_pairs);
     ALOGV("%s: enter: - %s", __func__, kv_pairs);
     free(kv_pairs);
