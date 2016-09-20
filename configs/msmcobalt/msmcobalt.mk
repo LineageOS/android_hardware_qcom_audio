@@ -78,6 +78,7 @@ PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msmcobalt/mixer_paths_dtp.xml:system/etc/mixer_paths_dtp.xml \
     hardware/qcom/audio/configs/msmcobalt/mixer_paths_i2s.xml:system/etc/mixer_paths_i2s.xml \
     hardware/qcom/audio/configs/msmcobalt/aanc_tuning_mixer.txt:system/etc/aanc_tuning_mixer.txt \
+    hardware/qcom/audio/configs/msmcobalt/aanc_tuning_mixer_tavil.txt:system/etc/aanc_tuning_mixer_tavil.txt \
     hardware/qcom/audio/configs/msmcobalt/audio_platform_info_i2s.xml:system/etc/audio_platform_info_i2s.xml \
     hardware/qcom/audio/configs/msmcobalt/sound_trigger_mixer_paths.xml:system/etc/sound_trigger_mixer_paths.xml \
     hardware/qcom/audio/configs/msmcobalt/sound_trigger_mixer_paths_wcd9330.xml:system/etc/sound_trigger_mixer_paths_wcd9330.xml \
