@@ -300,25 +300,34 @@ static int usb_get_capability(int type,
                               struct usb_card_config *usb_card_info,
                               int card)
 {
-    int32_t err = 1;
     int32_t size = 0;
     int32_t fd=-1;
-    int32_t altset_index = 1;
     int32_t channels_no;
-    char *str_start, *channel_start, *bit_width_start, *rates_str_start,
-         *target;
+    char *str_start = NULL;
+    char *str_end = NULL;
+    char *channel_start = NULL;
+    char *bit_width_start = NULL;
+    char *rates_str_start = NULL;
+    char *target = NULL;
     char *read_buf = NULL;
     char *rates_str = NULL;
-    char path[128], altset[9];
+    char path[128];
     int ret = 0;
     char *bit_width_str = NULL;
     struct usb_device_config * usb_device_info;
+    bool check = false;
 
+    memset(path, 0, sizeof(path));
     ALOGV("%s: for %s", __func__, (type == USB_PLAYBACK) ?
           PLAYBACK_PROFILE_STR : CAPTURE_PROFILE_STR);
 
-    snprintf(path, sizeof(path), "/proc/asound/card%u/stream0",
+    ret = snprintf(path, sizeof(path), "/proc/asound/card%u/stream0",
              card);
+    if(ret < 0) {
+        ALOGE("%s: failed on snprintf (%d) to path %s\n",
+          __func__, ret, path);
+        goto done;
+    }
 
     fd = open(path, O_RDONLY);
     if (fd <0) {
@@ -336,7 +345,10 @@ static int usb_get_capability(int type,
         goto done;
     }
 
-    err = read(fd, read_buf, USB_BUFF_SIZE);
+    if(read(fd, read_buf, USB_BUFF_SIZE) < 0) {
+        ALOGE("file read error\n");
+        goto done;
+    }
     str_start = strstr(read_buf, ((type == USB_PLAYBACK) ?
                        PLAYBACK_PROFILE_STR : CAPTURE_PROFILE_STR));
     if (str_start == NULL) {
@@ -346,21 +358,21 @@ static int usb_get_capability(int type,
         ret = -EINVAL;
         goto done;
     }
-    ALOGV("%s: usb_config = %s\n", __func__, str_start);
+    str_end = strstr(read_buf, ((type == USB_PLAYBACK) ?
+                       CAPTURE_PROFILE_STR : PLAYBACK_PROFILE_STR));
+    if (str_end > str_start)
+        check = true;
+
+    ALOGV("%s: usb_config = %s, check %d\n", __func__, str_start, check);
 
     while (str_start != NULL) {
-        sprintf(altset, "Altset %d", altset_index);
-        ALOGV("%s: altset_index %d\n", __func__, altset_index);
-        str_start = strstr(str_start, altset);
-        if (str_start == NULL) {
-            if (altset_index == 1) {
-                ALOGE("%s: error %s section not found in usb config file",
-                       __func__, (type == USB_PLAYBACK) ?
-                      PLAYBACK_PROFILE_STR : CAPTURE_PROFILE_STR);
-                ret = -EINVAL;
-            }
+        str_start = strstr(str_start, "Altset");
+        if ((str_start == NULL) || (check  && (str_start >= str_end))) {
+            ALOGV("%s: done parsing %s\n", __func__, str_start);
             break;
         }
+        ALOGV("%s: remaining string %s\n", __func__, str_start);
+        str_start += sizeof("Altset");
         usb_device_info = calloc(1, sizeof(struct usb_device_config));
         if (usb_device_info == NULL) {
             ALOGE("%s: error unable to allocate memory",
@@ -368,7 +380,6 @@ static int usb_get_capability(int type,
             ret = -ENOMEM;
             break;
         }
-        altset_index++;
         /* Bit bit_width parsing */
         bit_width_start = strstr(str_start, "Format: ");
         if (bit_width_start == NULL) {
@@ -883,7 +894,8 @@ int audio_extn_usb_enable_sidetone(int device, bool enable)
 
 bool audio_extn_usb_is_config_supported(unsigned int *bit_width,
                                         unsigned int *sample_rate,
-                                        unsigned int *ch)
+                                        unsigned int *ch,
+                                        bool is_playback)
 {
     struct listnode *node_i;
     struct usb_card_config *card_info;
@@ -897,7 +909,14 @@ bool audio_extn_usb_is_config_supported(unsigned int *bit_width,
                  "%s: card_dev_type (0x%x), card_no(%d)",
                  __func__,  card_info->usb_device_type, card_info->usb_card);
         /* Currently only apply the first playback sound card configuration */
-        if (card_info->usb_device_type == AUDIO_DEVICE_OUT_USB_DEVICE) {
+        if (is_playback && card_info->usb_device_type == AUDIO_DEVICE_OUT_USB_DEVICE) {
+            is_usb_supported = usb_audio_backend_apply_policy(
+                                           &card_info->usb_device_conf_list,
+                                           bit_width,
+                                           sample_rate,
+                                           ch);
+            break;
+        } else if (card_info->usb_device_type == AUDIO_DEVICE_IN_USB_DEVICE ) {
             is_usb_supported = usb_audio_backend_apply_policy(
                                            &card_info->usb_device_conf_list,
                                            bit_width,
