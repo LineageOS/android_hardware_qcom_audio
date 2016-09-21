@@ -350,6 +350,79 @@ static void release_in_focus(struct stream_in *in, long ns __unused)
         adev->adm_abandon_focus(adev->adm_data, in->capture_handle);
 }
 
+// Time string format similar to logcat, buffer_length must be >= 19 chars.
+static void ns2string(int64_t ns, char *buffer, int buffer_length)
+{
+    const int one_second = 1000000000;
+    const time_t sec = ns / one_second;
+    struct tm tm;
+    localtime_r(&sec, &tm);
+    snprintf(buffer, buffer_length, "%02d-%02d %02d:%02d:%02d.%03d",
+        tm.tm_mon + 1, // localtime_r uses months in 0 - 11 range
+        tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,
+        (int)(ns % one_second / 1000000));
+}
+
+// Convert timespec to nsec.
+static int64_t ts2ns(const struct timespec *ts)
+{
+    return ts->tv_sec * 1000000000LL + ts->tv_nsec;
+}
+
+// Log errors: consecutive errors with the same code will
+// be aggregated if they occur within one second.
+// A mutual exclusion lock must be held before calling.
+static void log_error_l(struct error_log *log, int code) {
+    ++log->errors;
+
+    struct timespec now_ts = { 0, 0 };
+    (void)clock_gettime(CLOCK_REALTIME, &now_ts);
+    const int64_t now = ts2ns(&now_ts);
+
+    // Within 1 second, cluster the same error codes together.
+    const int one_second = 1000000000;
+    if (code == log->entries[log->idx].code &&
+            now - log->entries[log->idx].last_time < one_second) {
+        log->entries[log->idx].count++;
+        log->entries[log->idx].last_time = now;
+        return;
+    }
+
+    // Add new error entry.
+    if (++log->idx >= ARRAY_SIZE(log->entries)) {
+        log->idx = 0;
+    }
+    log->entries[log->idx].count = 1;
+    log->entries[log->idx].code = code;
+    log->entries[log->idx].first_time = now;
+    log->entries[log->idx].last_time = now;
+}
+
+// Dump information in the error log. A mutual exclusion lock
+// should be held, but if that cannot be obtained, one should
+// make a copy of the error log before calling -- the call is
+// still safe, but there might be some misinterpreted data.
+static void log_dump_l(const struct error_log *log, int fd)
+{
+    dprintf(fd, "      Errors: %u\n", log->errors);
+    if (log->errors == 0)
+        return;
+
+    dprintf(fd, "      Index Code  Freq          First time           Last time\n");
+    for (size_t i = 0; i < ARRAY_SIZE(log->entries); ++i) {
+        if (log->entries[i].count != 0) {
+            char first_time[32];
+            char last_time[32];
+            ns2string(log->entries[i].first_time, first_time, sizeof(first_time));
+            ns2string(log->entries[i].last_time, last_time, sizeof(last_time));
+            dprintf(fd, "      %c%4zu %4d %5d  %s  %s\n",
+                    i == log->idx ? '*' : ' ', // mark head position
+                    i, log->entries[i].code, log->entries[i].count,
+                    first_time, last_time);
+        }
+    }
+}
+
 static int parse_snd_card_status(struct str_parms * parms, int * card,
                                  card_status_t * status)
 {
@@ -1700,8 +1773,25 @@ static int out_on_error(struct audio_stream *stream)
     return 0;
 }
 
-static int out_dump(const struct audio_stream *stream __unused, int fd __unused)
+static int out_dump(const struct audio_stream *stream, int fd)
 {
+    struct stream_out *out = (struct stream_out *)stream;
+
+    // We try to get the lock for consistency,
+    // but it isn't necessary for these variables.
+    // If we're not in standby, we may be blocked on a write.
+    const bool locked = (pthread_mutex_trylock(&out->lock) == 0);
+    dprintf(fd, "      Standby: %s\n", out->standby ? "yes" : "no");
+    dprintf(fd, "      Frames written: %lld\n", (long long)out->written);
+
+    if (locked) {
+        log_dump_l(&out->error_log, fd);
+        pthread_mutex_unlock(&out->lock);
+    } else {
+        // We don't have the lock here, copy for safety.
+        struct error_log log = out->error_log;
+        log_dump_l(&log, fd);
+    }
     return 0;
 }
 
@@ -1992,6 +2082,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     struct stream_out *out = (struct stream_out *)stream;
     struct audio_device *adev = out->dev;
     ssize_t ret = 0;
+    int error_code = ERROR_CODE_STANDBY;
 
     lock_output_stream(out);
     if (out->standby) {
@@ -2044,9 +2135,13 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             out->playback_started = 1;
             out->offload_state = OFFLOAD_STATE_PLAYING;
         }
+        if (ret < 0) {
+            log_error_l(&out->error_log, ERROR_CODE_WRITE);
+        }
         pthread_mutex_unlock(&out->lock);
         return ret;
     } else {
+        error_code = ERROR_CODE_WRITE;
         if (out->pcm) {
             if (out->muted)
                 memset((void *)buffer, 0, bytes);
@@ -2064,6 +2159,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                 ret = pcm_write(out->pcm, (void *)buffer, bytes);
 
             release_out_focus(out, ns);
+        } else {
+            LOG_ALWAYS_FATAL("out->pcm is NULL after starting output stream");
         }
     }
 
@@ -2072,16 +2169,24 @@ exit:
     if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
         out->written += bytes / (out->config.channels * sizeof(short));
     }
+    long long sleeptime_us = 0;
+    if (ret != 0) {
+        log_error_l(&out->error_log, error_code);
+        if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+            ALOGE_IF(out->pcm != NULL,
+                    "%s: error %zd - %s", __func__, ret, pcm_get_error(out->pcm));
+            sleeptime_us = bytes * 1000000LL / audio_stream_out_frame_size(stream) /
+                out_get_sample_rate(&out->stream.common);
+            // usleep not guaranteed for values over 1 second but we don't limit here.
+        }
+    }
 
     pthread_mutex_unlock(&out->lock);
 
     if (ret != 0) {
-        if (out->pcm)
-            ALOGE("%s: error %zu - %s", __func__, ret, pcm_get_error(out->pcm));
         out_on_error(&out->stream.common);
-        if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD)
-            usleep(bytes * 1000000 / audio_stream_out_frame_size(stream) /
-                   out_get_sample_rate(&out->stream.common));
+        if (sleeptime_us != 0)
+            usleep(sleeptime_us);
     }
     return bytes;
 }
