@@ -1364,9 +1364,10 @@ int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
 {
     struct platform_data *my_data = (struct platform_data *)platform;
 
-    if (platform == NULL || device_name == NULL) {
+    if (platform == NULL) {
         ALOGW("%s: something wrong, use legacy get_snd_device name", __func__);
-        device_name = platform_get_snd_device_name(snd_device);
+        strlcpy(device_name, platform_get_snd_device_name(snd_device),
+                DEVICE_NAME_MAX_SIZE);
     } else if (snd_device >= SND_DEVICE_MIN && snd_device < SND_DEVICE_MAX) {
         if (operator_specific_device_table[snd_device] != NULL) {
             strlcpy(device_name, get_operator_specific_device_mixer_path(snd_device),
