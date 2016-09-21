@@ -2755,6 +2755,14 @@ int platform_swap_lr_channels(struct audio_device *adev, bool swap_channels)
     struct platform_data *my_data = (struct platform_data *)adev->platform;
 
     if (my_data->speaker_lr_swap != swap_channels) {
+
+        // do not swap channels in audio modes with concurrent capture and playback
+        // as this may break the echo reference
+        if ((adev->mode == AUDIO_MODE_IN_COMMUNICATION) || (adev->mode == AUDIO_MODE_IN_CALL)) {
+            ALOGV("%s: will not swap due to audio mode %d", __func__, adev->mode);
+            return 0;
+        }
+
         my_data->speaker_lr_swap = swap_channels;
 
         list_for_each(node, &adev->usecase_list) {
