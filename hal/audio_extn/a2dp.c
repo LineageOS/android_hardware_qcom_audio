@@ -52,8 +52,6 @@
 #define MEDIA_FMT_AAC_AOT_LC                               2
 #define MEDIA_FMT_AAC_AOT_SBR                              5
 #define MEDIA_FMT_AAC_AOT_PS                               29
-#define MEDIA_FMT_AAC_FORMAT_FLAG_ADTS                     0
-#define MEDIA_FMT_AAC_FORMAT_FLAG_RAW                      3
 #define PCM_CHANNEL_L                                      1
 #define PCM_CHANNEL_R                                      2
 #define PCM_CHANNEL_C                                      3
@@ -131,7 +129,7 @@ struct aac_enc_cfg_t {
     uint32_t      bit_rate;
     uint32_t      enc_mode;
     uint16_t      aac_fmt_flag;
-    uint32_t      channel_cfg;
+    uint16_t      channel_cfg;
     uint32_t      sample_rate;
 } ;
 
@@ -462,6 +460,7 @@ bool configure_aac_enc_format(audio_aac_encoder_config *aac_bt_cfg)
     memset(&aac_dsp_cfg, 0x0, sizeof(struct aac_enc_cfg_t));
     aac_dsp_cfg.enc_format = ENC_MEDIA_FMT_AAC;
     aac_dsp_cfg.bit_rate = aac_bt_cfg->bitrate;
+    aac_dsp_cfg.sample_rate = aac_bt_cfg->sampling_rate;
     switch(aac_bt_cfg->enc_mode) {
         case 0:
             aac_dsp_cfg.enc_mode = MEDIA_FMT_AAC_AOT_LC;
@@ -474,10 +473,7 @@ bool configure_aac_enc_format(audio_aac_encoder_config *aac_bt_cfg)
             aac_dsp_cfg.enc_mode = MEDIA_FMT_AAC_AOT_SBR;
             break;
     }
-    if (aac_bt_cfg->format_flag)
-        aac_dsp_cfg.aac_fmt_flag = MEDIA_FMT_AAC_FORMAT_FLAG_RAW;
-    else
-        aac_dsp_cfg.aac_fmt_flag = MEDIA_FMT_AAC_FORMAT_FLAG_ADTS;
+    aac_dsp_cfg.aac_fmt_flag = aac_bt_cfg->format_flag;
     aac_dsp_cfg.channel_cfg = aac_bt_cfg->channels;
     ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aac_dsp_cfg,
                               sizeof(struct aac_enc_cfg_t));
