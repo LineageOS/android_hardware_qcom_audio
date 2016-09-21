@@ -2618,7 +2618,8 @@ int64_t platform_render_latency(audio_usecase_t usecase)
 }
 
 bool platform_check_and_set_capture_backend_cfg(struct audio_device* adev,
-         struct audio_usecase *usecase, snd_device_t snd_device)
+         struct audio_usecase *usecase __unused,
+         snd_device_t snd_device __unused)
 {
     enum pcm_format  in_pcm_format = PCM_FORMAT_S16_LE;
 

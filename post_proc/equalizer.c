@@ -183,7 +183,7 @@ const char * equalizer_get_preset_name(equalizer_context_t *context __unused,
 
 int equalizer_get_num_presets(equalizer_context_t *context __unused)
 {
-    ALOGV("%s: presets_num: %d", __func__,
+    ALOGV("%s: presets_num: %zu", __func__,
            sizeof(equalizer_preset_names)/sizeof(char *));
     return sizeof(equalizer_preset_names)/sizeof(char *);
 }
