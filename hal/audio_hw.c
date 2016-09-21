@@ -2076,9 +2076,9 @@ exit:
     pthread_mutex_unlock(&out->lock);
 
     if (ret != 0) {
-        out_on_error(&out->stream.common);
         if (out->pcm)
             ALOGE("%s: error %zu - %s", __func__, ret, pcm_get_error(out->pcm));
+        out_on_error(&out->stream.common);
         if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD)
             usleep(bytes * 1000000 / audio_stream_out_frame_size(stream) /
                    out_get_sample_rate(&out->stream.common));
