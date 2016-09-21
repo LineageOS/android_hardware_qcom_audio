@@ -3039,8 +3039,12 @@ static int out_flush(struct audio_stream_out* stream)
     if (is_offload_usecase(out->usecase)) {
         ALOGD("copl(%p):calling compress flush", out);
         lock_output_stream(out);
-        stop_compressed_output_l(out);
-        out->written = 0;
+        if (out->offload_state == OFFLOAD_STATE_PAUSED) {
+            stop_compressed_output_l(out);
+            out->written = 0;
+        } else {
+            ALOGW("%s called in invalid state %d", __func__, out->offload_state);
+        }
         pthread_mutex_unlock(&out->lock);
         ALOGD("copl(%p):out of compress flush", out);
         return 0;
