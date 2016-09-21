@@ -5639,3 +5639,43 @@ bool platform_check_if_backend_has_to_be_disabled(snd_device_t new_snd_device __
 {
     return false;
 }
+
+int platform_send_audio_cal(void* platform __unused,
+        int acdb_dev_id __unused, int acdb_device_type __unused,
+        int app_type __unused, int topology_id __unused,
+        int sample_rate __unused, uint32_t module_id __unused,
+        uint32_t param_id __unused, void* data __unused,
+        int length __unused, bool persist __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_get_audio_cal(void* platform __unused,
+        int acdb_dev_id __unused, int acdb_device_type __unused,
+        int app_type __unused, int topology_id __unused,
+        int sample_rate __unused, uint32_t module_id __unused,
+        uint32_t param_id __unused, void* data __unused,
+        int* length __unused, bool persist __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_store_audio_cal(void* platform __unused,
+        int acdb_dev_id __unused, int acdb_device_type __unused,
+        int app_type __unused, int topology_id __unused,
+        int sample_rate __unused, uint32_t module_id __unused,
+        uint32_t param_id __unused,  void* data __unused,
+        int length __unused)
+{
+     return -ENOSYS;
+}
+
+int platform_retrieve_audio_cal(void* platform __unused,
+        int acdb_dev_id __unused, int acdb_device_type __unused,
+        int app_type __unused, int topology_id __unused,
+        int sample_rate __unused, uint32_t module_id __unused,
+        uint32_t param_id __unused, void* data __unused,
+        int* length __unused)
+{
+    return -ENOSYS;
+}
