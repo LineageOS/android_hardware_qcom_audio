@@ -4000,7 +4000,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             ALOGV("cache new edid");
             platform_cache_edid(adev->platform);
         } else if ((val & AUDIO_DEVICE_OUT_USB_DEVICE) ||
-                   (val & AUDIO_DEVICE_IN_USB_DEVICE)) {
+                   !(val ^ AUDIO_DEVICE_IN_USB_DEVICE)) {
             /*
              * Do not allow AFE proxy port usage by WFD source when USB headset is connected.
              * Per AudioPolicyManager, USB device is higher priority than WFD.
@@ -4024,7 +4024,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             ALOGV("invalidate cached edid");
             platform_invalidate_hdmi_config(adev->platform);
         } else if ((val & AUDIO_DEVICE_OUT_USB_DEVICE) ||
-                   (val & AUDIO_DEVICE_IN_USB_DEVICE)) {
+                   !(val ^ AUDIO_DEVICE_IN_USB_DEVICE)) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
                 audio_extn_usb_remove_device(val, atoi(value));
