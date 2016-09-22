@@ -1121,6 +1121,15 @@ static void query_platform(const char *snd_card_name,
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
 
     }
+
+    char platvalue[PROPERTY_VALUE_MAX];
+
+    property_get("ro.audio.customplatform",platvalue,"0");
+    if (strncmp(platvalue,"0", 1)) {
+        snprintf(mixer_xml_path, MAX_MIXER_XML_PATH,
+                   "/system/etc/mixer_paths_%s.xml",
+                   platvalue);
+    }
 }
 
 void platform_set_echo_reference(struct audio_device *adev, bool enable,
