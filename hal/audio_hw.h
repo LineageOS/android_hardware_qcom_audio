@@ -51,6 +51,8 @@
 #define MAX_SUPPORTED_CHANNEL_MASKS 2
 #define DEFAULT_HDMI_OUT_CHANNELS   2
 
+#define ERROR_LOG_ENTRIES 16
+
 typedef enum card_status_t {
     CARD_STATUS_OFFLINE,
     CARD_STATUS_ONLINE
@@ -148,6 +150,24 @@ struct offload_cmd {
     int data[];
 };
 
+enum {
+    ERROR_CODE_STANDBY,
+    ERROR_CODE_WRITE,
+};
+
+struct error_log_entry {
+    int32_t code;
+    int32_t count;
+    int64_t first_time;
+    int64_t last_time;
+};
+
+struct error_log {
+    uint32_t errors;
+    uint32_t idx;
+    struct error_log_entry entries[ERROR_LOG_ENTRIES];
+};
+
 struct stream_out {
     struct audio_stream_out stream;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
@@ -188,6 +208,8 @@ struct stream_out {
     bool routing_change;
     struct audio_device *dev;
     card_status_t card_status;
+
+    struct error_log error_log;
 };
 
 struct stream_in {
