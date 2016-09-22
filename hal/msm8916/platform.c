@@ -1040,7 +1040,7 @@ int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
 {
     struct platform_data *my_data = (struct platform_data *)platform;
 
-    if (platform == NULL || device_name == NULL) {
+    if (platform == NULL) {
         ALOGW("%s: something wrong, use legacy get_snd_device name", __func__);
         strlcpy(device_name, platform_get_snd_device_name(snd_device),
                  DEVICE_NAME_MAX_SIZE);

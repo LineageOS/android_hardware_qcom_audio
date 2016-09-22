@@ -27,6 +27,7 @@ struct amp_db_and_gain_table {
 };
 
 enum card_status_t;
+struct audio_usecase;
 
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);

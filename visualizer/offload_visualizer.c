@@ -81,11 +81,11 @@ struct effect_context_s {
     effect_ops_t ops;
 };
 
-typedef struct output_context_s {
+struct output_context_s {
     struct listnode outputs_list_node;  /* node in active_outputs_list */
     audio_io_handle_t handle; /* io handle */
     struct listnode effects_list; /* list of effects attached to this output */
-} output_context_t;
+};
 
 
 /* maximum time since last capture buffer update before resetting capture buffer. This means
@@ -427,7 +427,7 @@ void *capture_thread_loop(void *arg __unused)
 
 __attribute__ ((visibility ("default")))
 int visualizer_hal_start_output(audio_io_handle_t output, int pcm_id) {
-    int ret;
+    int ret = 0;
     struct listnode *node;
 
     ALOGV("%s output %d pcm_id %d", __func__, output, pcm_id);
@@ -473,7 +473,7 @@ exit:
 
 __attribute__ ((visibility ("default")))
 int visualizer_hal_stop_output(audio_io_handle_t output, int pcm_id) {
-    int ret;
+    int ret = 0;
     struct listnode *node;
     struct listnode *fx_node;
     output_context_t *out_ctxt;
@@ -869,8 +869,8 @@ int visualizer_command(effect_context_t * context, uint32_t cmdCode, uint32_t cm
     case VISUALIZER_CMD_MEASURE: {
         if (pReplyData == NULL || replySize == NULL ||
                 *replySize < (sizeof(int32_t) * MEASUREMENT_COUNT)) {
-            ALOGV("%s VISUALIZER_CMD_MEASURE error *replySize %d <"
-                    "(sizeof(int32_t) * MEASUREMENT_COUNT) %d",
+            ALOGV("%s VISUALIZER_CMD_MEASURE error *replySize %u <"
+                    "(sizeof(int32_t) * MEASUREMENT_COUNT) %zu",
                     __func__, *replySize, sizeof(int32_t) * MEASUREMENT_COUNT);
             android_errorWriteLog(0x534e4554, "30229821");
             return -EINVAL;
