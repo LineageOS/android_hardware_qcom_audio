@@ -147,10 +147,10 @@ int platform_get_spkr_prot_acdb_id(snd_device_t snd_device);
 int platform_get_spkr_prot_snd_device(snd_device_t snd_device);
 int platform_get_vi_feedback_snd_device(snd_device_t snd_device);
 int platform_spkr_prot_is_wsa_analog_mode(void *adev);
-bool platform_can_split_snd_device(void *platform,
-                                   snd_device_t snd_device,
-                                   int *num_devices,
-                                   snd_device_t *new_snd_devices);
+int platform_split_snd_device(void *platform,
+                              snd_device_t snd_device,
+                              int *num_devices,
+                              snd_device_t *new_snd_devices);
 
 bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_device2);
 int platform_set_sidetone(struct audio_device *adev,

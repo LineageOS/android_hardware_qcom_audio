@@ -2393,8 +2393,8 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
         return -EINVAL;
     }
 
-    if(!platform_can_split_snd_device(my_data, snd_device,
-            &num_devices, new_snd_device)) {
+    if (platform_split_snd_device(my_data, snd_device,
+                                  &num_devices, new_snd_device) < 0) {
         new_snd_device[0] = snd_device;
     }
 
@@ -2697,58 +2697,58 @@ int platform_set_device_mute(void *platform, bool state, char *dir)
     return ret;
 }
 
-bool platform_can_split_snd_device(void *platform,
-                                   snd_device_t snd_device,
-                                   int *num_devices,
-                                   snd_device_t *new_snd_devices)
+int platform_split_snd_device(void *platform,
+                              snd_device_t snd_device,
+                              int *num_devices,
+                              snd_device_t *new_snd_devices)
 {
-    bool status = false;
+    int ret = -EINVAL;
     struct platform_data *my_data = (struct platform_data *)platform;
 
     if ( NULL == num_devices || NULL == new_snd_devices || NULL == my_data) {
         ALOGE("%s: NULL pointer ..", __func__);
-        return false;
+        return -EINVAL;
     }
 
     /*
      * If wired headset/headphones/line devices share the same backend
-     * with speaker/earpiece this routine returns false.
+     * with speaker/earpiece this routine returns -EINVAL.
      */
     if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES &&
         !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_HEADPHONES)) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_HEADPHONES;
-        status = true;
+        ret = 0;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HDMI &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_HDMI)) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_HDMI;
-        status = true;
+        ret = 0;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_DISPLAY_PORT &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_DISPLAY_PORT)) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_DISPLAY_PORT;
-        status = true;
+        ret = 0;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_USB_HEADSET)) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_USB_HEADSET;
-        status = true;
+        ret = 0;
     } else if (SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_BT_A2DP;
-        status = true;
+        ret = 0;
     }
 
     ALOGD("%s: snd_device(%d) num devices(%d) new_snd_devices(%d)", __func__,
         snd_device, *num_devices, *new_snd_devices);
 
-    return status;
+    return ret;
 }
 
 int platform_get_ext_disp_type(void *platform)
@@ -4829,7 +4829,8 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
           backend_cfg.sample_rate, backend_cfg.channels, backend_idx, usecase->id,
           platform_get_snd_device_name(snd_device));
 
-    if (!platform_can_split_snd_device(my_data, snd_device, &num_devices, new_snd_devices))
+    if (platform_split_snd_device(my_data, snd_device, &num_devices,
+                                  new_snd_devices) < 0)
         new_snd_devices[0] = snd_device;
 
     for (i = 0; i < num_devices; i++) {
