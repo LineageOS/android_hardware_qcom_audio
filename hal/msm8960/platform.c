@@ -1237,7 +1237,48 @@ bool platform_can_split_snd_device(void *platform __unused,
 bool platform_check_backends_match(snd_device_t snd_device1 __unused,
                                    snd_device_t snd_device2 __unused)
 {
-    return true;
+    return -ENOSYS;
+}
+
+int platform_send_audio_cal(void* platform __unused,
+        int acdb_dev_id __unused, int acdb_device_type __unused,
+        int app_type __unused, int topology_id __unused,
+        int sample_rate __unused, uint32_t module_id,
+        uint32_t param_id, void* data __unused,
+        int length __unused, bool persist __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_get_audio_cal(void* platform __unused,
+        int acdb_dev_id __unused, int acdb_device_type __unused,
+        int app_type __unused, int topology_id __unused,
+        int sample_rate __unused, uint32_t module_id,
+        uint32_t param_id, void* data __unused,
+        int* length __unused, bool persist __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_store_audio_cal(void* platform __unused,
+        int acdb_dev_id __unused, int acdb_device_type __unused,
+        int app_type __unused, int topology_id __unused,
+        int sample_rate __unused,  uint32_t module_id,
+        uint32_t param_id, void* data __unused,
+        int length __unused)
+{
+     return -ENOSYS;
+}
+
+
+int platform_retrieve_audio_cal(void* platform __unused,
+        int acdb_dev_id __unused, int acdb_device_type __unused,
+        int app_type __unused, int topology_id __unused,
+        int sample_rate __unused, uint32_t module_id,
+        uint32_t param_id, void* data __unused,
+        int* length __unused)
+{
+    return -ENOSYS;
 }
 
 int platform_set_sidetone(struct audio_device *adev,

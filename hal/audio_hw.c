@@ -1450,6 +1450,12 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                                 usecase->stream.out->channel_mask,
                                                 &usecase->stream.out->app_type_cfg);
         ALOGI("%s Selected apptype: %d", __func__, usecase->stream.out->app_type_cfg.app_type);
+
+        /* Notify device change info to effect clients registered */
+        audio_extn_gef_notify_device_config(
+                usecase->stream.out->devices,
+                usecase->stream.out->channel_mask,
+                platform_get_snd_device_acdb_id(usecase->out_snd_device));
     }
 
     enable_audio_route(adev, usecase);
@@ -4570,6 +4576,7 @@ static int adev_close(hw_device_t *device)
         audio_extn_listen_deinit(adev);
         audio_extn_utils_release_streams_output_cfg_list(&adev->streams_output_cfg_list);
         audio_route_free(adev->audio_route);
+        audio_extn_gef_deinit();
         free(adev->snd_dev_ref_cnt);
         platform_deinit(adev->platform);
         if (adev->adm_deinit)
@@ -4698,6 +4705,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     }
     audio_extn_listen_init(adev, adev->snd_card);
     audio_extn_sound_trigger_init(adev);
+    audio_extn_gef_init(adev);
 
     if (access(OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH, R_OK) == 0) {
         adev->offload_effects_lib = dlopen(OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH, RTLD_NOW);

@@ -596,6 +596,41 @@ int audio_extn_keep_alive_set_parameters(struct audio_device *adev,
                                          struct str_parms *parms);
 #endif
 
+#ifndef AUDIO_GENERIC_EFFECT_FRAMEWORK_ENABLED
+
+#define audio_extn_gef_init(adev) (0)
+#define audio_extn_gef_deinit() (0)
+#define audio_extn_gef_notify_device_config(devices, cmask, acdb_id) (0)
+#define audio_extn_gef_send_audio_cal(dev, acdb_dev_id, acdb_device_type,\
+    app_type, topology_id, sample_rate, module_id, param_id, data, length, persist) (0)
+#define audio_extn_gef_get_audio_cal(adev, acdb_dev_id, acdb_device_type,\
+    app_type, topology_id, sample_rate, module_id, param_id, data, length, persist) (0)
+#define audio_extn_gef_store_audio_cal(adev, acdb_dev_id, acdb_device_type,\
+    app_type, topology_id, sample_rate, module_id, param_id, data, length) (0)
+#define audio_extn_gef_retrieve_audio_cal(adev, acdb_dev_id, acdb_device_type,\
+    app_type, topology_id, sample_rate, module_id, param_id, data, length) (0)
+
+#else
+
+void audio_extn_gef_init(struct audio_device *adev);
+void audio_extn_gef_deinit();
+
+void audio_extn_gef_notify_device_config(audio_devices_t audio_device,
+    audio_channel_mask_t channel_mask, int acdb_id);
+int audio_extn_gef_send_audio_cal(void* adev, int acdb_dev_id, int acdb_device_type,
+    int app_type, int topology_id, int sample_rate, uint32_t module_id, uint32_t param_id,
+    void* data, int length, bool persist);
+int audio_extn_gef_get_audio_cal(void* adev, int acdb_dev_id, int acdb_device_type,
+    int app_type, int topology_id, int sample_rate, uint32_t module_id, uint32_t param_id,
+    void* data, int* length, bool persist);
+int audio_extn_gef_store_audio_cal(void* adev, int acdb_dev_id, int acdb_device_type,
+    int app_type, int topology_id, int sample_rate, uint32_t module_id, uint32_t param_id,
+    void* data, int length);
+int audio_extn_gef_retrieve_audio_cal(void* adev, int acdb_dev_id, int acdb_device_type,
+    int app_type, int topology_id, int sample_rate, uint32_t module_id, uint32_t param_id,
+    void* data, int* length);
+
+#endif /* AUDIO_GENERIC_EFFECT_FRAMEWORK_ENABLED */
 
 typedef void (* snd_mon_cb)(void * stream, struct str_parms * parms);
 #ifndef SND_MONITOR_ENABLED

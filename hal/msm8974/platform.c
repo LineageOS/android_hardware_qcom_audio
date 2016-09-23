@@ -5625,3 +5625,153 @@ int platform_set_sidetone(struct audio_device *adev,
     }
     return 0;
 }
+
+static void make_cal_cfg(acdb_audio_cal_cfg_t* cal, int acdb_dev_id,
+        int acdb_device_type, int app_type, int topology_id,
+        int sample_rate, uint32_t module_id, uint32_t param_id, bool persist)
+{
+    int persist_send_flags = 1;
+
+    if (!cal) {
+        return;
+    }
+
+    if (persist)
+        persist_send_flags |= 0x2;
+
+    memset(cal, 0, sizeof(acdb_audio_cal_cfg_t));
+
+    cal->persist = persist;
+    cal->app_type = app_type;
+    cal->acdb_dev_id = acdb_dev_id;
+    cal->sampling_rate = sample_rate;
+    cal->topo_id = topology_id;
+    //if module and param id is set to 0, the whole blob will be stored
+    //or sent to the DSP
+    cal->module_id = module_id;
+    cal->param_id = param_id;
+    cal->cal_type = acdb_device_type;
+    cal->persist = persist;
+
+}
+
+int platform_send_audio_cal(void* platform, int acdb_dev_id,
+       int acdb_device_type, int app_type, int topology_id, int sample_rate,
+       uint32_t module_id, uint32_t param_id, void* data, int length, bool persist)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    acdb_audio_cal_cfg_t cal;
+    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
+
+    if (!my_data) {
+        ret = -EINVAL;
+        goto ERROR_RETURN;
+    }
+
+    make_cal_cfg(&cal, acdb_dev_id, acdb_device_type, app_type, topology_id,
+        sample_rate, module_id, param_id, true);
+
+    if (my_data->acdb_set_audio_cal) {
+        // persist audio cal in local cache
+        if (persist) {
+            ret = my_data->acdb_set_audio_cal((void*)&cal, data, (uint32_t)length);
+        }
+        // send audio cal to dsp
+        if (ret == 0) {
+            cal.persist = false;
+            ret = my_data->acdb_set_audio_cal((void*)&cal, data, (uint32_t)length);
+            if (persist && (ret != 0)) {
+                ALOGV("[%s] audio cal stored with success, ignore set cal failure", __func__);
+                ret = 0;
+            }
+        }
+    }
+
+ERROR_RETURN:
+    return ret;
+}
+
+int platform_get_audio_cal(void* platform, int acdb_dev_id,
+       int acdb_device_type, int app_type, int topology_id,
+       int sample_rate, uint32_t module_id, uint32_t param_id,
+       void* data, int* length, bool persist)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    acdb_audio_cal_cfg_t cal;
+    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
+
+    if (!my_data) {
+        ret = -EINVAL;
+        goto ERROR_RETURN;
+    }
+
+    make_cal_cfg(&cal, acdb_dev_id, acdb_device_type, app_type, topology_id,
+        sample_rate, module_id, param_id, false);
+
+    if (my_data->acdb_get_audio_cal) {
+        // get cal from dsp
+        ret = my_data->acdb_get_audio_cal((void*)&cal, data, (uint32_t*)length);
+        // get cached cal if prevoius attempt fails and persist flag is set
+        if ((ret != 0) && persist) {
+            cal.persist = true;
+            ret = my_data->acdb_get_audio_cal((void*)&cal, data, (uint32_t*)length);
+        }
+    }
+
+ERROR_RETURN:
+    return ret;
+}
+
+int platform_store_audio_cal(void* platform, int acdb_dev_id,
+       int acdb_device_type, int app_type, int topology_id,
+       int sample_rate, uint32_t module_id, uint32_t param_id,
+       void* data, int length)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    acdb_audio_cal_cfg_t cal;
+    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
+
+    if (!my_data) {
+        ret = -EINVAL;
+        goto ERROR_RETURN;
+    }
+
+    make_cal_cfg(&cal, acdb_dev_id, acdb_device_type, app_type, topology_id,
+        sample_rate, module_id, param_id, true);
+
+    if (my_data->acdb_set_audio_cal) {
+        ret = my_data->acdb_set_audio_cal((void*)&cal, data, (uint32_t)length);
+    }
+
+ERROR_RETURN:
+    return ret;
+}
+
+int platform_retrieve_audio_cal(void* platform, int acdb_dev_id,
+        int acdb_device_type, int app_type, int topology_id,
+        int sample_rate, uint32_t module_id, uint32_t param_id,
+        void* data, int* length)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    acdb_audio_cal_cfg_t cal;
+    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
+
+    if (!my_data) {
+        ret = -EINVAL;
+        goto ERROR_RETURN;
+    }
+
+    make_cal_cfg(&cal, acdb_dev_id, acdb_device_type, app_type, topology_id,
+        sample_rate, module_id, param_id, true);
+
+    if (my_data->acdb_get_audio_cal) {
+        ret = my_data->acdb_get_audio_cal((void*)&cal, data, (uint32_t*)length);
+    }
+
+ERROR_RETURN:
+    return ret;
+}

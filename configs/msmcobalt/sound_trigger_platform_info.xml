@@ -27,19 +27,17 @@
 <!--- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                             -->
 <sound_trigger_platform_info>
     <param version="0x0101" /> <!-- this must be the first param -->
-
     <common_config>
-        <param max_cpe_sessions="2" />
+        <param max_cpe_sessions="1" />
+        <param max_wdsp_sessions="2" />
         <param max_ape_sessions="8" />
         <param enable_failure_detection="false" />
     </common_config>
-
     <acdb_ids>
-        <param DEVICE_HANDSET_APE_ACDB_ID="100" />
-        <param DEVICE_HANDSET_CPE_ACDB_ID="128" />
-        <param DEVICE_HANDSET_CPE_ECPP_ACDB_ID="128" />
+        <param DEVICE_HANDSET_MIC_APE="100" />
+        <param DEVICE_HANDSET_MIC_CPE="128" />
+        <param DEVICE_HANDSET_MIC_ECPP_CPE="128" />
     </acdb_ids>
-
     <!-- Multiple sound_model_config tags can be listed, each with unique   -->
     <!-- vendor_uuid. The below tag represents QTI SVA engine sound model   -->
     <!-- configuration. ISV must use their own unique vendor_uuid.          -->
@@ -53,26 +51,23 @@
         <param max_ape_phrases="10" />
         <param max_ape_users="10" />
         <param sample_rate="16000" />
-
-        <gcs_uid>
+        <gcs_usecase>
             <param uid="0x1" />
-            <param did="0x4" />
-            <param load_sound_model_ids="0x00012C0D, 0x0, 0x00012C14" />
-            <param confidence_levels_ids="0x00012C0D, 0x0, 0x00012C28" />
-            <param operation_mode_ids="0x00012C0D, 0x0, 0x00012C28" />
-            <param detection_event_ids="0x00012C0D, 0x0, 0x00012C29" />
-            <param capture_event_ids="0x00020013, 0x0,0x00020015" />
-        </gcs_uid>
-        <gcs_uid>
+            <!-- module_id, instance_id, param_id -->
+            <param load_sound_model_ids="0x00012C0D, 0x2, 0x00012C14" />
+            <param confidence_levels_ids="0x00012C0D, 0x2, 0x00012C28" />
+            <param detection_event_ids="0x00012C0D, 0x2, 0x00012C29" />
+            <param read_cmd_ids="0x00020013, 0x2, 0x00020015" />
+            <param read_rsp_ids="0x00020013, 0x2, 0x00020016" />
+        </gcs_usecase>
+        <gcs_usecase>
             <param uid="0x2" />
-            <param did="0x4" />
-            <param load_sound_model_ids="0x00012C0D, 0x1, 0x00012C14" />
-            <param confidence_levels_ids="0x00012C0D, 0x1, 0x00012C28" />
-            <param operation_mode_ids="0x00012C0D, 0x1 0x00012C28" />
-            <param detection_event_ids="0x00012C0D, 0x1, 0x00012C29" />
-            <param capture_event_ids="0x00020013, 0x1,0x00020015" />
-        </gcs_uid>
-
+            <param load_sound_model_ids="0x00012C0D, 0x3, 0x00012C14" />
+            <param confidence_levels_ids="0x00012C0D, 0x3, 0x00012C28" />
+            <param detection_event_ids="0x00012C0D, 0x3, 0x00012C29" />
+            <param read_cmd_ids="0x00020013, 0x3, 0x00020015" />
+            <param read_rsp_ids="0x00020013, 0x3, 0x00020016" />
+        </gcs_usecase>
         <!-- Module and param ids with which the algorithm is integrated
             in non-graphite firmware (note these must come after gcs params) -->
         <param load_sound_model_ids="0x00012C0D, 0x00012C14" />
@@ -87,5 +82,4 @@
         <param capture_keyword="PCM_packet, RT, 2000" />
         <param client_capture_read_delay="2000" />
     </sound_model_config>
-
 </sound_trigger_platform_info>
