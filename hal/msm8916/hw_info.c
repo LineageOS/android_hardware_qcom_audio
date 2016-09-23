@@ -324,7 +324,8 @@ void *hw_info_init(const char *snd_card_name)
         strstr(snd_card_name, "msm8909") || strstr(snd_card_name, "msm8952") ||
         strstr(snd_card_name, "msm8976") || strstr(snd_card_name, "msm8953") ||
         strstr(snd_card_name, "msm8937") || strstr(snd_card_name, "msm8917") ||
-        strstr(snd_card_name, "msm8940") || strstr(snd_card_name, "msmfalcon")) {
+        strstr(snd_card_name, "msm8940") || strstr(snd_card_name, "msm8920") ||
+        strstr(snd_card_name, "msmfalcon")) {
         ALOGV("8x16 - variant soundcard");
         update_hardware_info_8x16(hw_info, snd_card_name);
     } else {
