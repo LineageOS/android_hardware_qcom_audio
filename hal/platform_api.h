@@ -100,9 +100,9 @@ int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t p
 void platform_set_echo_reference(struct audio_device *adev, bool enable, audio_devices_t out_device);
 int platform_swap_lr_channels(struct audio_device *adev, bool swap_channels);
 
-bool platform_can_split_snd_device(snd_device_t in_snd_device,
-                                   int *num_devices,
-                                   snd_device_t *out_snd_devices);
+int platform_can_split_snd_device(snd_device_t in_snd_device,
+                                  int *num_devices,
+                                  snd_device_t *out_snd_devices);
 
 bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_device2);
 

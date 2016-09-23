@@ -1075,11 +1075,11 @@ bool platform_send_gain_dep_cal(void *platform __unused,
     return true;
 }
 
-bool platform_can_split_snd_device(snd_device_t in_snd_device __unused,
+int platform_can_split_snd_device(snd_device_t in_snd_device __unused,
                                    int *num_devices __unused,
                                    snd_device_t *out_snd_devices __unused)
 {
-    return false;
+    return -ENOSYS;
 }
 
 bool platform_check_backends_match(snd_device_t snd_device1 __unused,
