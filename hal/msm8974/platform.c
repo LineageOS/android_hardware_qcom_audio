@@ -183,7 +183,9 @@ typedef int (*acdb_set_audio_cal_t) (void *, void *, uint32_t);
 typedef int (*acdb_get_audio_cal_t) (void *, void *, uint32_t*);
 typedef int (*acdb_send_common_top_t) (void);
 typedef int (*acdb_set_codec_data_t) (void *, char *);
+#if ENABLED_ACDB_RELOAD
 typedef int (*acdb_reload_t) (char *, char *, char *, int);
+#endif
 
 typedef struct codec_backend_cfg {
     uint32_t sample_rate;
@@ -231,7 +233,9 @@ struct platform_data {
     acdb_get_default_app_type_t acdb_get_default_app_type;
     acdb_send_common_top_t     acdb_send_common_top;
     acdb_set_codec_data_t      acdb_set_codec_data;
+#if ENABLED_ACDB_RELOAD
     acdb_reload_t              acdb_reload;
+#endif
     void *hw_info;
     acdb_send_gain_dep_cal_t   acdb_send_gain_dep_cal;
     struct csd_data *csd;
@@ -1641,12 +1645,14 @@ void *platform_init(struct audio_device *adev)
             goto acdb_init_fail;
         }
 
+#if ENABLED_ACDB_RELOAD
         my_data->acdb_reload = (acdb_reload_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_reload_acdb_files");
         if (my_data->acdb_reload == NULL) {
             ALOGE("%s: dlsym error %s for acdb_loader_reload_acdb_files", __func__, dlerror());
             goto acdb_init_fail;
         }
+#endif
         platform_acdb_init(my_data);
     }
 
@@ -3588,6 +3594,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         }
     }
 
+#if ENABLED_ACDB_RELOAD
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_RELOAD_ACDB,
                             value, len);
     if (err >= 0) {
@@ -3597,6 +3604,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
                               my_data->cvd_version, my_data->metainfo_key);
 
     }
+#endif
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE,
                             value, len);
