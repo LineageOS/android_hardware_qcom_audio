@@ -93,7 +93,7 @@ static int usb_sidetone_gain = 0;
 
 static const char * const usb_sidetone_enable_str[] = {
     "Sidetone Playback Switch",
-    "Mic Playback Switchs",
+    "Mic Playback Switch",
 };
 
 static const char * const usb_sidetone_volume_str[] = {
