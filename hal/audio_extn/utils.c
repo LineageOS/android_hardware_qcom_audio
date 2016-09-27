@@ -630,9 +630,6 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
                     usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
          }
 
-         if (!audio_extn_is_hifi_audio_enabled())
-             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-
          sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
 
          property_get("audio.playback.mch.downsample",value,"");
