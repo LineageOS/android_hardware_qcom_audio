@@ -2099,7 +2099,7 @@
         <ctl name="DMIC MUX7" value="DMIC0" />
         <ctl name="SLIM TX8 MUX" value="DEC8" />
         <ctl name="ADC MUX8" value="DMIC" />
-        <ctl name="DMIC MUX8" value="DMIC1" />
+        <ctl name="DMIC MUX8" value="DMIC2" />
         <ctl name="SLIM_0_TX Channels" value="Two" />
     </path>
 
@@ -2111,7 +2111,7 @@
         <ctl name="DMIC MUX7" value="DMIC0" />
         <ctl name="SLIM TX8 MUX" value="DEC8" />
         <ctl name="ADC MUX8" value="DMIC" />
-        <ctl name="DMIC MUX8" value="DMIC1" />
+        <ctl name="DMIC MUX8" value="DMIC2" />
         <ctl name="SLIM_0_TX Channels" value="Two" />
     </path>
 
@@ -2158,7 +2158,7 @@
         <ctl name="DMIC MUX7" value="DMIC0" />
         <ctl name="SLIM TX8 MUX" value="DEC8" />
         <ctl name="ADC MUX8" value="DMIC" />
-        <ctl name="DMIC MUX8" value="DMIC1" />
+        <ctl name="DMIC MUX8" value="DMIC2" />
     </path>
 
     <path name="dmic-broadside">
