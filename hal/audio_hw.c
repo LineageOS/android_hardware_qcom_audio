@@ -3714,7 +3714,9 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     int ret = 0, buffer_size, frame_size;
     int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
     bool is_low_latency = false;
+#ifdef SSR_ENABLED
     bool updated_params = false;
+#endif
 
     *stream_in = NULL;
     if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0) {
@@ -3798,6 +3800,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->config = pcm_config_afe_proxy_record;
         in->config.channels = channel_count;
         in->config.rate = config->sample_rate;
+#ifdef SSR_ENABLED
     } else if (!audio_extn_check_and_set_multichannel_usecase(adev,
                 in, config, &updated_params)) {
         if (updated_params == true) {
@@ -3807,6 +3810,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             goto err_open;
         }
         ALOGD("%s: created surround sound session succesfully",__func__);
+#endif
     } else if (audio_extn_compr_cap_enabled() &&
             audio_extn_compr_cap_format_supported(config->format) &&
             (in->dev->mode != AUDIO_MODE_IN_COMMUNICATION)) {
