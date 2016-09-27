@@ -4345,8 +4345,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->config.channels = channel_count;
         in->config.rate = config->sample_rate;
         in->sample_rate = config->sample_rate;
+#ifdef SSR_ENABLED
     } else if (!audio_extn_ssr_check_and_set_usecase(in)) {
         ALOGD("%s: created surround sound session succesfully",__func__);
+#endif
     } else if (audio_extn_compr_cap_enabled() &&
             audio_extn_compr_cap_format_supported(config->format) &&
             (in->dev->mode != AUDIO_MODE_IN_COMMUNICATION)) {
