@@ -28,4 +28,6 @@ LOCAL_PROPRIETARY_MODULE := true
 
 include $(BUILD_SHARED_LIBRARY)
 
+#test app compilation
+include $(LOCAL_PATH)/test/Android.mk
 endif
