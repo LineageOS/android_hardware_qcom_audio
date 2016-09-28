@@ -1034,6 +1034,10 @@ status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDe
                                     dev,
                                     force,
                                     delayMs);
+                        // re-apply device specific volume if not done by setOutputDevice()
+                        if (!force) {
+                            applyStreamVolumes(desc, newDevice, delayMs);
+                        }
                 }
             }
             // update the outputs if stopping one with a stream that can affect notification routing
