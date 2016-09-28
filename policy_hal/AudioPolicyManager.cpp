@@ -772,6 +772,7 @@ status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDe
 
             // force restoring the device selection on other active outputs if it differs from the
             // one being selected for this output
+            uint32_t delayMs = outputDesc->latency()*2;
             for (size_t i = 0; i < mOutputs.size(); i++) {
                 audio_io_handle_t curOutput = mOutputs.keyAt(i);
                 sp<AudioOutputDescriptor> desc = mOutputs.valueAt(i);
@@ -791,6 +792,10 @@ status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDe
                                     dev,
                                     force,
                                     delayMs);
+                        // re-apply device specific volume if not done by setOutputDevice()
+                        if (!force) {
+                            applyStreamVolumes(desc, newDevice, delayMs);
+                        }
                 }
             }
             // update the outputs if stopping one with a stream that can affect notification routing
