@@ -2165,7 +2165,7 @@ int platform_get_snd_device_bit_width(snd_device_t snd_device)
 {
     if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
         ALOGE("%s: Invalid snd_device = %d", __func__, snd_device);
-        return DEFAULT_OUTPUT_SAMPLING_RATE;
+        return CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     }
     return backend_bit_width_table[snd_device];
 }
@@ -4363,7 +4363,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             else
                  ret = mixer_ctl_set_enum_by_string(ctl, "S24_LE");
         } else if (bit_width == 32) {
-            ret = mixer_ctl_set_enum_by_string(ctl, "S24_LE");
+            ret = mixer_ctl_set_enum_by_string(ctl, "S32_LE");
         } else {
             ret = mixer_ctl_set_enum_by_string(ctl, "S16_LE");
         }
@@ -4705,6 +4705,12 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         }
     } else if ((usecase->devices & AUDIO_DEVICE_OUT_SPEAKER) ||
                (usecase->devices & AUDIO_DEVICE_OUT_EARPIECE) ) {
+
+        if (bit_width >= 24) {
+            bit_width = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
+            ALOGD("%s:becf: afe: reset bitwidth to %d (based on supported"
+                   " value for this platform)", __func__, bit_width);
+        }
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         ALOGD("%s:becf: afe: playback on codec device not supporting native playback set "
             "default Sample Rate(48k)", __func__);
@@ -4724,6 +4730,15 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         hdmi_backend_cfg.sample_rate = sample_rate;
         hdmi_backend_cfg.channels = channels;
         hdmi_backend_cfg.passthrough_enabled = false;
+
+        /*
+         * HDMI does not support 384Khz/32bit playback hence configure BE to 24b/192Khz
+         * TODO: Instead have the validation against edid return the next best match
+         */
+        if (bit_width > 24)
+            hdmi_backend_cfg.bit_width = 24;
+        if (sample_rate > 192000)
+            hdmi_backend_cfg.sample_rate = 192000;
 
         platform_check_hdmi_backend_cfg(adev, usecase, backend_idx, &hdmi_backend_cfg);
 

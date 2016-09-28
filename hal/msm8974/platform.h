@@ -257,7 +257,14 @@ enum {
  * We should take care of returning proper size when AudioFlinger queries for
  * the buffer size of an input/output stream
  */
+
+/* for 384Khz output below period size corresponds to 20ms worth duration of buffer,
+ * current implementation can support buffer size of 40ms duration
+ * for 32b/384Khz/stereo output.
+ */
 #define DEEP_BUFFER_OUTPUT_PERIOD_SIZE 1920
+#define DEEP_BUFFER_OUTPUT_PERIOD_DURATION 40 /* 40 milisecs */
+
 #define DEEP_BUFFER_OUTPUT_PERIOD_COUNT 2
 #define LOW_LATENCY_OUTPUT_PERIOD_SIZE 240
 #define LOW_LATENCY_OUTPUT_PERIOD_COUNT 2

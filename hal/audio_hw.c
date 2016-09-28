@@ -2228,6 +2228,35 @@ static size_t get_input_buffer_size(uint32_t sample_rate,
     return size;
 }
 
+static size_t get_output_period_size(uint32_t sample_rate,
+                                    audio_format_t format,
+                                    int channel_count,
+                                    int duration /*in millisecs*/)
+{
+    size_t size = 0;
+    uint32_t bytes_per_sample = audio_bytes_per_sample(format);
+
+    if ((duration == 0) || (sample_rate == 0) ||
+        (bytes_per_sample == 0) || (channel_count == 0)) {
+        ALOGW("Invalid config duration %d sr %d bps %d ch %d", duration, sample_rate,
+               bytes_per_sample, channel_count);
+        return -EINVAL;
+    }
+
+    size = (sample_rate *
+            duration *
+            bytes_per_sample *
+            channel_count) / 1000;
+    /*
+     * To have same PCM samples for all channels, the buffer size requires to
+     * be multiple of (number of channels * bytes per sample)
+     * For writes to succeed, the buffer must be written at address which is multiple of 32
+     */
+    size = ALIGN(size, (bytes_per_sample * channel_count * 32));
+
+    return (size/(channel_count * bytes_per_sample));
+}
+
 static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out)
 {
     uint64_t actual_frames_rendered = 0;
@@ -3898,6 +3927,17 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->config = pcm_config_afe_proxy_playback;
         adev->voice_tx_output = out;
     } else {
+        unsigned int channels = 0;
+        /*Update config params to default if not set by the caller*/
+        if (config->sample_rate == 0)
+            config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        if (config->channel_mask == AUDIO_CHANNEL_NONE)
+            config->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+        if (config->format == AUDIO_FORMAT_DEFAULT)
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
+
+        channels = audio_channel_count_from_out_mask(out->channel_mask);
+
         if (out->flags & AUDIO_OUTPUT_FLAG_RAW) {
             out->usecase = USECASE_AUDIO_PLAYBACK_ULL;
             out->realtime = may_use_noirq_mode(adev, USECASE_AUDIO_PLAYBACK_ULL,
@@ -3909,6 +3949,13 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
             out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
             out->config = pcm_config_deep_buffer;
+            out->config.period_size = get_output_period_size(config->sample_rate, out->format,
+                                                 channels, DEEP_BUFFER_OUTPUT_PERIOD_DURATION);
+            if (out->config.period_size <= 0) {
+                ALOGE("Invalid configuration period size is not valid");
+                ret = -EINVAL;
+                goto error_open;
+            }
         } else {
             /* primary path is the default path selected if no other outputs are available/suitable */
             out->usecase = USECASE_AUDIO_PLAYBACK_PRIMARY;
@@ -3920,7 +3967,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->bit_width = format_to_bitwidth_table[out->hal_op_format] << 3;
         out->config.rate = config->sample_rate;
         out->sample_rate = out->config.rate;
-        out->config.channels = audio_channel_count_from_out_mask(out->channel_mask);
+        out->config.channels = channels;
         if (out->hal_ip_format != out->hal_op_format) {
             uint32_t buffer_size = out->config.period_size *
                                    format_to_bitwidth_table[out->hal_op_format] *

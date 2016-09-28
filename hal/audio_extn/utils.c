@@ -495,7 +495,7 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
     struct stream_format *sf_info;
     char value[PROPERTY_VALUE_MAX] = {0};
 
-    if ((24 == bit_width) &&
+    if ((bit_width >= 24) &&
         (devices & AUDIO_DEVICE_OUT_SPEAKER)) {
         int32_t bw = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
         if (-ENOSYS != bw)
