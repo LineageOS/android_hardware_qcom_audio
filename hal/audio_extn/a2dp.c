@@ -62,6 +62,7 @@
 #define MEDIA_FMT_SBC_ALLOCATION_METHOD_LOUDNESS           0
 #define MEDIA_FMT_SBC_ALLOCATION_METHOD_SNR                1
 #define MIXER_ENC_CONFIG_BLOCK     "SLIM_7_RX Encoder Config"
+#define MIXER_ENC_BIT_FORMAT       "AFE Input Bit Format"
 #define MIXER_ENC_FMT_SBC          "SBC"
 #define MIXER_ENC_FMT_AAC          "AAC"
 #define MIXER_ENC_FMT_APTX         "APTX"
@@ -103,7 +104,7 @@ struct a2dp_data {
     audio_get_codec_config_t audio_get_codec_config;
     enum A2DP_STATE bt_state;
     audio_format_t bt_encoder_format;
-    void *enc_config_data;
+    uint32_t enc_sampling_rate;
     bool a2dp_started;
     bool a2dp_suspended;
     int  a2dp_total_active_session_request;
@@ -280,7 +281,7 @@ static int close_a2dp_output()
         a2dp.a2dp_total_active_session_request = 0;
         a2dp.a2dp_suspended = false;
         a2dp.bt_encoder_format = AUDIO_FORMAT_INVALID;
-        a2dp.enc_config_data = NULL;
+        a2dp.enc_sampling_rate = 48000;
         a2dp.bt_state = A2DP_STATE_DISCONNECTED;
     } else {
         ALOGD("close a2dp called in improper state");
@@ -288,7 +289,7 @@ static int close_a2dp_output()
         a2dp.a2dp_total_active_session_request = 0;
         a2dp.a2dp_suspended = false;
         a2dp.bt_encoder_format = AUDIO_FORMAT_INVALID;
-        a2dp.enc_config_data = NULL;
+        a2dp.enc_sampling_rate = 48000;
         a2dp.bt_state = A2DP_STATE_DISCONNECTED;
     }
 
@@ -298,7 +299,7 @@ static int close_a2dp_output()
 /* API to configure SBC DSP encoder */
 bool configure_sbc_enc_format(audio_sbc_encoder_config *sbc_bt_cfg)
 {
-    struct mixer_ctl *ctl_enc_data;
+    struct mixer_ctl *ctl_enc_data = NULL, *ctrl_bit_format = NULL;
     struct sbc_enc_cfg_t sbc_dsp_cfg;
     bool is_configured = false;
     int ret = 0;
@@ -343,8 +344,25 @@ bool configure_sbc_enc_format(audio_sbc_encoder_config *sbc_bt_cfg)
     if (ret != 0) {
         ALOGE("%s: failed to set SBC encoder config", __func__);
         is_configured = false;
-    } else
-        is_configured = true;
+        goto fail;
+    }
+    ctrl_bit_format = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                            MIXER_ENC_BIT_FORMAT);
+    if (!ctrl_bit_format) {
+        ALOGE(" ERROR bit format CONFIG data mixer control not identifed");
+        is_configured = false;
+        goto fail;
+    }
+    ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S16_LE");
+    if (ret != 0) {
+        ALOGE("%s: Failed to set bit format to encoder", __func__);
+        is_configured = false;
+        goto fail;
+    }
+    is_configured = true;
+    a2dp.enc_sampling_rate = sbc_bt_cfg->sampling_rate;
+    ALOGV("Successfully updated SBC enc format with samplingrate: %d channelmode:%d",
+           sbc_dsp_cfg.sample_rate, sbc_dsp_cfg.channel_mode);
 fail:
     return is_configured;
 }
@@ -352,7 +370,7 @@ fail:
 /* API to configure APTX DSP encoder */
 bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
 {
-    struct mixer_ctl *ctl_enc_data;
+    struct mixer_ctl *ctl_enc_data = NULL, *ctrl_bit_format = NULL;
     struct custom_enc_cfg_aptx_t aptx_dsp_cfg;
     bool is_configured = false;
     int ret = 0;
@@ -388,17 +406,33 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         is_configured = false;
         goto fail;
     }
+    ctrl_bit_format = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                            MIXER_ENC_BIT_FORMAT);
+    if (!ctrl_bit_format) {
+        ALOGE("ERROR bit format CONFIG data mixer control not identifed");
+        is_configured = false;
+        goto fail;
+    } else {
+        ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S16_LE");
+        if (ret != 0) {
+            ALOGE("%s: Failed to set bit format to encoder", __func__);
+            is_configured = false;
+            goto fail;
+        }
+    }
     is_configured = true;
+    a2dp.enc_sampling_rate = aptx_bt_cfg->sampling_rate;
+    ALOGV("Successfully updated APTX enc format with samplingrate: %d channels:%d",
+           aptx_dsp_cfg.sample_rate, aptx_dsp_cfg.num_channels);
 fail:
     return is_configured;
 }
 
 /* API to configure APTX HD DSP encoder
- * TODO: ADD 24 bit configuration support
  */
 bool configure_aptx_hd_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
 {
-    struct mixer_ctl *ctl_enc_data;
+    struct mixer_ctl *ctl_enc_data = NULL, *ctrl_bit_format = NULL;
     struct custom_enc_cfg_aptx_t aptx_dsp_cfg;
     bool is_configured = false;
     int ret = 0;
@@ -412,6 +446,7 @@ bool configure_aptx_hd_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         is_configured = false;
         goto fail;
     }
+
     a2dp.bt_encoder_format = AUDIO_FORMAT_APTX_HD;
     memset(&aptx_dsp_cfg, 0x0, sizeof(struct custom_enc_cfg_aptx_t));
     aptx_dsp_cfg.enc_format = ENC_MEDIA_FMT_APTX_HD;
@@ -434,7 +469,22 @@ bool configure_aptx_hd_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         is_configured = false;
         goto fail;
     }
+    ctrl_bit_format = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_BIT_FORMAT);
+    if (!ctrl_bit_format) {
+        ALOGE(" ERROR  bit format CONFIG data mixer control not identifed");
+        is_configured = false;
+        goto fail;
+    }
+    ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S24_LE");
+    if (ret != 0) {
+        ALOGE("%s: Failed to set APTX HD encoder config", __func__);
+        is_configured = false;
+        goto fail;
+    }
     is_configured = true;
+    a2dp.enc_sampling_rate = aptx_bt_cfg->sampling_rate;
+    ALOGV("Successfully updated APTX HD encformat with samplingrate: %d channels:%d",
+           aptx_dsp_cfg.sample_rate, aptx_dsp_cfg.num_channels);
 fail:
     return is_configured;
 }
@@ -442,7 +492,7 @@ fail:
 /* API to configure AAC DSP encoder */
 bool configure_aac_enc_format(audio_aac_encoder_config *aac_bt_cfg)
 {
-    struct mixer_ctl *ctl_enc_data;
+    struct mixer_ctl *ctl_enc_data = NULL, *ctrl_bit_format = NULL;
     struct aac_enc_cfg_t aac_dsp_cfg;
     bool is_configured = false;
     int ret = 0;
@@ -480,8 +530,25 @@ bool configure_aac_enc_format(audio_aac_encoder_config *aac_bt_cfg)
     if (ret != 0) {
         ALOGE("%s: failed to set SBC encoder config", __func__);
         is_configured = false;
-    } else
-        is_configured = true;
+        goto fail;
+    }
+    ctrl_bit_format = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                            MIXER_ENC_BIT_FORMAT);
+    if (!ctrl_bit_format) {
+        is_configured = false;
+        ALOGE(" ERROR  bit format CONFIG data mixer control not identifed");
+        goto fail;
+    }
+    ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S16_LE");
+    if (ret != 0) {
+        ALOGE("%s: Failed to set bit format to encoder", __func__);
+        is_configured = false;
+        goto fail;
+    }
+    is_configured = true;
+    a2dp.enc_sampling_rate = aac_bt_cfg->sampling_rate;
+    ALOGV("Successfully updated AAC enc format with samplingrate: %d channels:%d",
+           aac_dsp_cfg.sample_rate, aac_dsp_cfg.channel_cfg);
 fail:
     return is_configured;
 }
@@ -592,7 +659,7 @@ int audio_extn_a2dp_stop_playback()
         a2dp.a2dp_total_active_session_request--;
 
     if ( a2dp.a2dp_started && !a2dp.a2dp_total_active_session_request) {
-        struct mixer_ctl *ctl_enc_config;
+        struct mixer_ctl *ctl_enc_config, *ctrl_bit_format;
         struct sbc_enc_cfg_t dummy_reset_config;
 
         ALOGV("calling BT module stream stop");
@@ -610,6 +677,16 @@ int audio_extn_a2dp_stop_playback()
             ret = mixer_ctl_set_array(ctl_enc_config, (void *)&dummy_reset_config,
                                             sizeof(struct sbc_enc_cfg_t));
              a2dp.bt_encoder_format = ENC_MEDIA_FMT_NONE;
+        }
+        ctrl_bit_format = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                                MIXER_ENC_BIT_FORMAT);
+        if (!ctrl_bit_format) {
+            ALOGE(" ERROR  bit format CONFIG data mixer control not identifed");
+        } else {
+            ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S16_LE");
+            if (ret != 0) {
+                ALOGE("%s: Failed to set bit format to encoder", __func__);
+            }
         }
     }
     if(!a2dp.a2dp_total_active_session_request)
@@ -684,6 +761,15 @@ bool audio_extn_a2dp_is_force_device_switch()
     return a2dp.is_handoff_in_progress;
 }
 
+void audio_extn_a2dp_get_apptype_params(uint32_t *sample_rate,
+                                        uint32_t *bit_width)
+{
+    if(a2dp.bt_encoder_format == AUDIO_FORMAT_APTX_HD)
+        *bit_width = 24;
+    else
+        *bit_width = 16;
+    *sample_rate = a2dp.enc_sampling_rate;
+}
 void audio_extn_a2dp_init (void *adev)
 {
   a2dp.adev = (struct audio_device*)adev;
@@ -693,7 +779,7 @@ void audio_extn_a2dp_init (void *adev)
   a2dp.a2dp_total_active_session_request = 0;
   a2dp.a2dp_suspended = false;
   a2dp.bt_encoder_format = AUDIO_FORMAT_INVALID;
-  a2dp.enc_config_data = NULL;
+  a2dp.enc_sampling_rate = 48000;
   a2dp.is_a2dp_offload_supported = false;
   a2dp.is_handoff_in_progress = false;
   update_offload_codec_capabilities();

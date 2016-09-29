@@ -529,6 +529,13 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
             sample_rate = OUTPUT_SAMPLING_RATE_DSD128;
     }
 
+    if(devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
+        //TODO: Handle fractional sampling rate configuration for LL
+        audio_extn_a2dp_get_apptype_params(&sample_rate, &bit_width);
+        ALOGI("%s using %d sampling rate %d bit width for A2DP CoPP",
+              __func__, sample_rate, bit_width);
+    }
+
     ALOGV("%s: flags: %x, format: %x sample_rate %d",
            __func__, flags, format, sample_rate);
     list_for_each(node_i, streams_output_cfg_list) {
