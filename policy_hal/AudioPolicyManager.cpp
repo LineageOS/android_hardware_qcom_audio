@@ -2084,7 +2084,12 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
                     MIX_STATE_MIXING);
         }
 
-        if (mInputs.activeInputsCountOnDevices() == 0) {
+        // indicate active capture to sound trigger service if starting capture from a mic on
+        // primary HW module
+        audio_devices_t device = getNewInputDevice(input);
+        audio_devices_t primaryInputDevices = availablePrimaryInputDevices();
+        if (((device & primaryInputDevices & ~AUDIO_DEVICE_BIT_IN) != 0) &&
+                mInputs.activeInputsCountOnDevices() == 0) {
             SoundTrigger::setCaptureState(true);
         }
         setInputDevice(input, getNewInputDevice(input), true /* force */);
