@@ -1234,6 +1234,7 @@ bool audio_is_dsd_native_stream_active(struct audio_device *adev)
                (DSD_NATIVE_BACKEND == platform_get_backend_index(uc->out_snd_device))) {
             active = true;
             ALOGV("%s:DSD playback is active", __func__);
+            break;
         }
     }
     return active;
@@ -2617,10 +2618,13 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
 
 static float AmpToDb(float amplification)
 {
-    if (amplification == 0) {
-        return DSD_VOLUME_MIN_DB;
+    float db = DSD_VOLUME_MIN_DB;
+    if (amplification > 0) {
+        db = 20 * log10(amplification);
+        if(db < DSD_VOLUME_MIN_DB)
+            return DSD_VOLUME_MIN_DB;
     }
-    return 20 * log10(amplification);
+    return db;
 }
 
 static int out_set_volume(struct audio_stream_out *stream, float left,
@@ -3785,13 +3789,13 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                 __func__, config->offload_info.version,
                 config->offload_info.bit_rate);
 
-        /*Check if DSD audio format is supported in codec
-         *and there is no active native DSD use case
+        /* Check if DSD audio format is supported in codec
+         * and there is no active native DSD use case
          */
 
         if ((config->format == AUDIO_FORMAT_DSD) &&
-               (!platform_check_codec_dsd_support(adev->platform) ||
-               audio_is_dsd_native_stream_active(adev))) {
+                (!platform_check_codec_dsd_support(adev->platform) ||
+                audio_is_dsd_native_stream_active(adev))) {
             ret = -EINVAL;
             goto error_open;
         }
@@ -3802,9 +3806,9 @@ int adev_open_output_stream(struct audio_hw_device *dev,
          * Direct PCM playback
          */
         if (audio_extn_passthru_is_passthrough_stream(out) ||
-            (config->format == AUDIO_FORMAT_DSD) ||
-            config->offload_info.has_video ||
-            out->flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) {
+                (config->format == AUDIO_FORMAT_DSD) ||
+                config->offload_info.has_video ||
+                out->flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) {
             check_and_set_gapless_mode(adev, false);
         } else
             check_and_set_gapless_mode(adev, true);

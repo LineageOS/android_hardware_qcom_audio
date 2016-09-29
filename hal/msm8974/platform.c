@@ -60,7 +60,8 @@
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define CVD_VERSION_MIXER_CTL "CVD Version"
 
-#define MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE (256 * 1024)
+#define FLAC_COMPRESS_OFFLOAD_FRAGMENT_SIZE (256 * 1024)
+#define MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE (2 * 1024 * 1024)
 #define MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE (2 * 1024)
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE_FOR_AV_STREAMING (2 * 1024)
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
@@ -2961,7 +2962,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     }
 
     if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-        devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
+        devices & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
+        devices & AUDIO_DEVICE_OUT_LINE) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADSET
             && audio_extn_get_anc_enabled()) {
             if (audio_extn_should_use_fb_anc())
@@ -4296,18 +4298,21 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
         fragment_size = info->offload_buffer_size;
     }
 
-    // For FLAC use max size since it is loss less, and has sampling rates
-    // upto 192kHZ
-    if (info != NULL && !info->has_video &&
-        info->format == AUDIO_FORMAT_FLAC) {
-       fragment_size = MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-       ALOGV("FLAC fragment size %d", fragment_size);
-    }
-
-    if (info != NULL && info->has_video && info->is_streaming) {
-        fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE_FOR_AV_STREAMING;
-        ALOGV("%s: offload fragment size reduced for AV streaming to %d",
-               __func__, fragment_size);
+    if (info != NULL && !info->has_video) {
+        if (info->is_streaming) {
+            fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE_FOR_AV_STREAMING;
+            ALOGV("%s: offload fragment size reduced for AV streaming to %d",
+                   __func__, fragment_size);
+        } else if (info->format == AUDIO_FORMAT_FLAC) {
+            fragment_size = FLAC_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+            ALOGV("FLAC fragment size %d", fragment_size);
+        } else if (info->format == AUDIO_FORMAT_DSD) {
+            fragment_size = MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+            if((property_get("audio.native.dsd.buffer.size.kb", value, "")) &&
+                    atoi(value))
+                fragment_size =  atoi(value) * 1024;
+            ALOGV("DSD fragment size %d", fragment_size);
+        }
     }
 
     fragment_size = ALIGN( fragment_size, 1024);
