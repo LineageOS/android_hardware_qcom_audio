@@ -393,7 +393,7 @@
     <ctl name="AFE_PCM_RX Audio Mixer MultiMedia5" value="0" />
     <!-- usb headset end -->
     <!-- fm -->
-    <ctl name="SLIMBUS_8 LOOPBACK Volume" value="1" />
+    <ctl name="SLIMBUS_8 LOOPBACK Volume" value="0" />
     <ctl name="SLIMBUS_0_RX Port Mixer SLIM_8_TX" value="0" />
     <ctl name="SLIMBUS_DL_HL Switch" value="0" />
     <ctl name="SLIMBUS_6_RX Port Mixer SLIM_8_TX" value="0" />
