@@ -164,7 +164,8 @@ bool audio_extn_usb_is_proxy_inuse();
 #endif
 
 #ifndef SSR_ENABLED
-#define audio_extn_ssr_check_and_set_usecase(in)      (0)
+#define audio_extn_ssr_check_usecase(in)      (0)
+#define audio_extn_ssr_set_usecase(in, config, update_params)      (0)
 #define audio_extn_ssr_init(in, num_out_chan)         (0)
 #define audio_extn_ssr_deinit()                       (0)
 #define audio_extn_ssr_update_enabled()               (0)
@@ -174,7 +175,10 @@ bool audio_extn_usb_is_proxy_inuse();
 #define audio_extn_ssr_get_parameters(adev, parms, reply) (0)
 #define audio_extn_ssr_get_stream()                   (0)
 #else
-int audio_extn_ssr_check_and_set_usecase(struct stream_in *in);
+bool audio_extn_ssr_check_usecase(struct stream_in *in);
+int audio_extn_ssr_set_usecase(struct stream_in *in,
+                                         struct audio_config *config,
+                                         bool *update_params);
 int32_t audio_extn_ssr_init(struct stream_in *in,
                             int num_out_chan);
 int32_t audio_extn_ssr_deinit();
@@ -189,6 +193,10 @@ void audio_extn_ssr_get_parameters(const struct audio_device *adev,
                                    struct str_parms *reply);
 struct stream_in *audio_extn_ssr_get_stream();
 #endif
+int audio_extn_check_and_set_multichannel_usecase(struct audio_device *adev,
+                                                  struct stream_in *in,
+                                                  struct audio_config *config,
+                                                  bool *update_params);
 
 #ifndef HW_VARIANTS_ENABLED
 #define hw_info_init(snd_card_name)                  (0)
