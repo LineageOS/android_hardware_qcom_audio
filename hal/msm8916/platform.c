@@ -5686,3 +5686,8 @@ int platform_retrieve_audio_cal(void* platform __unused,
 {
     return -ENOSYS;
 }
+
+int platform_get_max_mic_count(void *platform) {
+    struct platform_data *my_data = (struct platform_data *)platform;
+    return my_data->max_mic_count;
+}
