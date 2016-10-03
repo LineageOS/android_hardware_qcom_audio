@@ -164,7 +164,7 @@ bool audio_extn_usb_is_proxy_inuse();
 #endif
 
 #ifndef SSR_ENABLED
-#define audio_extn_ssr_check_and_set_usecase(in)      (0)
+#define audio_extn_ssr_check_and_set_usecase(in)      (-1)
 #define audio_extn_ssr_init(in, num_out_chan)         (0)
 #define audio_extn_ssr_deinit()                       (0)
 #define audio_extn_ssr_update_enabled()               (0)
