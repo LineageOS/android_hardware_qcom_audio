@@ -24,6 +24,23 @@
 #define CODEC_BACKEND_DEFAULT_BIT_WIDTH 16
 #define CODEC_BACKEND_DEFAULT_SAMPLE_RATE 48000
 
+#define PCM_CHANNEL_FL    1  /* Front left channel.                           */
+#define PCM_CHANNEL_FR    2  /* Front right channel.                          */
+#define PCM_CHANNEL_FC    3  /* Front center channel.                         */
+#define PCM_CHANNEL_LS    4  /* Left surround channel.                        */
+#define PCM_CHANNEL_RS    5  /* Right surround channel.                       */
+#define PCM_CHANNEL_LFE   6  /* Low frequency effect channel.                 */
+#define PCM_CHANNEL_CS    7  /* Center surround channel; Rear center channel. */
+#define PCM_CHANNEL_LB    8  /* Left back channel; Rear left channel.         */
+#define PCM_CHANNEL_RB    9  /* Right back channel; Rear right channel.       */
+#define PCM_CHANNEL_TS   10  /* Top surround channel.                         */
+#define PCM_CHANNEL_CVH  11  /* Center vertical height channel.               */
+#define PCM_CHANNEL_MS   12  /* Mono surround channel.                        */
+#define PCM_CHANNEL_FLC  13  /* Front left of center.                         */
+#define PCM_CHANNEL_FRC  14  /* Front right of center.                        */
+#define PCM_CHANNEL_RLC  15  /* Rear left of center.                          */
+#define PCM_CHANNEL_RRC  16  /* Rear right of center.                         */
+
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
 int platform_is_acdb_initialized(void *platform);
@@ -100,4 +117,6 @@ void platform_get_device_to_be_id_map(int **be_id_map, int *length);
 
 int platform_set_audio_device_interface(const char * device_name, const char *intf_name,
                                         const char * codec_type);
+int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd_id);
+int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask, int snd_id);
 #endif // AUDIO_PLATFORM_API_H
