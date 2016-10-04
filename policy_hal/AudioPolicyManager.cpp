@@ -2002,38 +2002,6 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
     ALOGD("USE_XML_AUDIO_POLICY_CONF is FALSE");
 #endif
 
-    //TODO: Check the new logic to parse policy conf and update the below code
-    //      Need this when SSR encoding is enabled
-
-    if (property_get("ro.qc.sdk.audio.ssr", ssr_enabled, NULL)) {
-        prop_ssr_enabled = atoi(ssr_enabled) || !strncmp("true", ssr_enabled, 4);
-    }
-
-    for (size_t i = 0; i < mHwModules.size(); i++) {
-        ALOGV("Hw module %zu", i);
-        for (size_t j = 0; j < mHwModules[i]->mInputProfiles.size(); j++) {
-            const sp<IOProfile> inProfile = mHwModules[i]->mInputProfiles[j];
-            AudioProfileVector profiles = inProfile->getAudioProfiles();
-            for (size_t k = 0; k < profiles.size(); k++){
-                ChannelsVector channels = profiles[k]->getChannels();
-                for (size_t x = 0; x < channels.size(); x++) {
-                    audio_channel_mask_t channelMask = channels[x];
-                    ALOGV("Channel Mask %x size %zu", channelMask,
-                         channels.size());
-                    if (AUDIO_CHANNEL_IN_5POINT1 == channelMask) {
-                        if (!prop_ssr_enabled) {
-                            ALOGI("removing AUDIO_CHANNEL_IN_5POINT1 from"
-                                " input profile as SSR(surround sound record)"
-                                " is not supported on this chipset variant");
-                            channels.removeItemsAt(x, 1);
-                            ALOGV("Channel Mask size now %zu",
-                                channels.size());
-                        }
-                    }
-                }
-            }
-        }
-    }
 #ifdef RECORD_PLAY_CONCURRENCY
     mIsInputRequestOnProgress = false;
 #endif
