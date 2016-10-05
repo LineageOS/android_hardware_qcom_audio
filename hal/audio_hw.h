@@ -240,7 +240,7 @@ struct stream_in {
     card_status_t card_status;
 };
 
-typedef enum {
+typedef enum usecase_type_t {
     PCM_PLAYBACK,
     PCM_CAPTURE,
     VOICE_CALL,
