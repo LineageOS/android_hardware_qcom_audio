@@ -620,7 +620,9 @@ int enable_snd_device(struct audio_device *adev,
             ALOGE("%s: spkr_start_processing failed", __func__);
             goto on_error;
         }
-    } else if (platform_can_split_snd_device(snd_device, &num_devices, new_snd_devices)) {
+    } else if (platform_can_split_snd_device(snd_device,
+                                             &num_devices,
+                                             new_snd_devices) == 0) {
         for (i = 0; i < num_devices; i++) {
             enable_snd_device(adev, new_snd_devices[i]);
         }
@@ -664,7 +666,9 @@ int disable_snd_device(struct audio_device *adev,
             snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
             audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing(snd_device);
-        } else if (platform_can_split_snd_device(snd_device, &num_devices, new_snd_devices)) {
+        } else if (platform_can_split_snd_device(snd_device,
+                                                 &num_devices,
+                                                 new_snd_devices) == 0) {
             for (i = 0; i < num_devices; i++) {
                 disable_snd_device(adev, new_snd_devices[i]);
             }
@@ -684,6 +688,114 @@ int disable_snd_device(struct audio_device *adev,
     }
 
     return 0;
+}
+
+/*
+  legend:
+  uc - existing usecase
+  new_uc - new usecase
+  d1, d11, d2 - SND_DEVICE enums
+  a1, a2 - corresponding ANDROID device enums
+  B, B1, B2 - backend strings
+
+case 1
+  uc->dev  d1 (a1)               B1
+  new_uc->dev d1 (a1), d2 (a2)   B1, B2
+
+  resolution: disable and enable uc->dev on d1
+
+case 2
+  uc->dev d1 (a1)        B1
+  new_uc->dev d11 (a1)   B1
+
+  resolution: need to switch uc since d1 and d11 are related
+  (e.g. speaker and voice-speaker)
+  use ANDROID_DEVICE_OUT enums to match devices since SND_DEVICE enums may vary
+
+case 3
+  uc->dev d1 (a1)        B1
+  new_uc->dev d2 (a2)    B2
+
+  resolution: no need to switch uc
+
+case 4
+  uc->dev d1 (a1)      B
+  new_uc->dev d2 (a2)  B
+
+  resolution: disable enable uc-dev on d2 since backends match
+  we cannot enable two streams on two different devices if they
+  share the same backend. e.g. if offload is on speaker device using
+  QUAD_MI2S backend and a low-latency stream is started on voice-handset
+  using the same backend, offload must also be switched to voice-handset.
+
+case 5
+  uc->dev  d1 (a1)                  B
+  new_uc->dev d1 (a1), d2 (a2)      B
+
+  resolution: disable enable uc-dev on d2 since backends match
+  we cannot enable two streams on two different devices if they
+  share the same backend.
+
+case 6
+  uc->dev  d1 a1    B1
+  new_uc->dev d2 a1 B2
+
+  resolution: no need to switch
+
+case 7
+
+  uc->dev d1 (a1), d2 (a2)       B1, B2
+  new_uc->dev d1                 B1
+
+  resolution: no need to switch
+
+*/
+static snd_device_t derive_playback_snd_device(struct audio_usecase *uc,
+                                               struct audio_usecase *new_uc,
+                                               snd_device_t new_snd_device)
+{
+    audio_devices_t a1 = uc->stream.out->devices;
+    audio_devices_t a2 = new_uc->stream.out->devices;
+
+    snd_device_t d1 = uc->out_snd_device;
+    snd_device_t d2 = new_snd_device;
+
+    // Treat as a special case when a1 and a2 are not disjoint
+    if ((a1 != a2) && (a1 & a2)) {
+        snd_device_t d3[2];
+        int num_devices = 0;
+        int ret = platform_can_split_snd_device(popcount(a1) > 1 ? d1 : d2,
+                                                &num_devices,
+                                                d3);
+        if (ret < 0) {
+            if (ret != -ENOSYS) {
+                ALOGW("%s failed to split snd_device %d",
+                      __func__,
+                      popcount(a1) > 1 ? d1 : d2);
+            }
+            goto end;
+        }
+
+        // NB: case 7 is hypothetical and isn't a practical usecase yet.
+        // But if it does happen, we need to give priority to d2 if
+        // the combo devices active on the existing usecase share a backend.
+        // This is because we cannot have a usecase active on a combo device
+        // and a new usecase requests one device in this combo pair.
+        if (platform_check_backends_match(d3[0], d3[1])) {
+            return d2; // case 5
+        } else {
+            return d1; // case 1
+        }
+    } else {
+        if (platform_check_backends_match(d1, d2)) {
+            return d2; // case 2, 4
+        } else {
+            return d1; // case 6, 3
+        }
+    }
+
+end:
+    return d2; // return whatever was calculated before.
 }
 
 static void check_and_route_playback_usecases(struct audio_device *adev,
@@ -734,10 +846,15 @@ static void check_and_route_playback_usecases(struct audio_device *adev,
             }
         }
 
+        snd_device_t d_device;
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
             if (switch_device[usecase->id]) {
-                enable_snd_device(adev, snd_device);
+                d_device = derive_playback_snd_device(usecase, uc_info,
+                                                      snd_device);
+                enable_snd_device(adev, d_device);
+                /* Update the out_snd_device before enabling the audio route */
+                usecase->out_snd_device = d_device;
             }
         }
 
@@ -745,9 +862,7 @@ static void check_and_route_playback_usecases(struct audio_device *adev,
            specified usecase to new snd devices */
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            /* Update the out_snd_device only before enabling the audio route */
             if (switch_device[usecase->id] ) {
-                usecase->out_snd_device = snd_device;
                 enable_audio_route(adev, usecase);
             }
         }
