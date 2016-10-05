@@ -4422,7 +4422,8 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
 
     if (snd_device == SND_DEVICE_OUT_HEADPHONES || snd_device ==
         SND_DEVICE_OUT_HEADPHONES_44_1) {
-        if (sample_rate > 48000 || (sample_rate == 48000 && bit_width >= 24)) {
+        if (sample_rate > 48000 ||
+            (bit_width >= 24 && (sample_rate == 48000  || sample_rate == 44100))) {
             ALOGV("%s: apply HPH HQ mode\n", __func__);
             audio_route_apply_and_update_path(adev->audio_route, "hph-highquality-mode");
         } else {

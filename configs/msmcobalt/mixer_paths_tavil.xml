@@ -478,6 +478,9 @@
     <ctl name="RX INT1 DEM MUX" value="CLSH_DSM_OUT" />
     <ctl name="RX INT2 DEM MUX" value="CLSH_DSM_OUT" />
 
+    <!-- Headphone Default mode - uLP -->
+    <ctl name="RX HPH Mode" value="CLS_H_ULP" />
+
     <!-- IIR/voice anc -->
     <ctl name="IIR0 Band1" id ="0" value="268435456" />
     <ctl name="IIR0 Band1" id ="1" value="0" />
@@ -1901,6 +1904,14 @@
         <ctl name="RX INT1 MIX3 DSD HPHL Switch" value="1" />
         <ctl name="RX INT2 MIX3 DSD HPHR Switch" value="1" />
         <ctl name="SLIM_2_RX Format" value="DSD_DOP" />
+    </path>
+
+    <path name="hph-highquality-mode">
+        <ctl name="RX HPH Mode" value="CLS_H_LOHIFI" />
+    </path>
+
+    <path name="hph-lowpower-mode">
+        <ctl name="RX HPH Mode" value="CLS_H_ULP" />
     </path>
 
     <path name="true-native-mode">

@@ -189,7 +189,7 @@ void audio_extn_a2dp_set_handoff_mode(bool is_on);
 #endif
 
 #ifndef SSR_ENABLED
-#define audio_extn_ssr_check_and_set_usecase(in)      (0)
+#define audio_extn_ssr_check_and_set_usecase(in)      (-1)
 #define audio_extn_ssr_init(in, num_out_chan)         (0)
 #define audio_extn_ssr_deinit()                       (0)
 #define audio_extn_ssr_update_enabled()               (0)
