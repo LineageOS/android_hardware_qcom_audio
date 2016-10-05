@@ -105,6 +105,9 @@ void audio_extn_dsm_feedback_enable(struct audio_device *adev,
                          bool benable);
 #endif
 
+void audio_extn_utils_send_default_app_type_cfg(void *platform, struct mixer *mixer);
+int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
+                                       struct audio_usecase *usecase);
 #ifndef HWDEP_CAL_ENABLED
 #define  audio_extn_hwdep_cal_send(snd_card, acdb_handle) (0)
 #else
