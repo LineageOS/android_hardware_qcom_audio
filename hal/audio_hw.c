@@ -1176,6 +1176,19 @@ struct audio_usecase *get_usecase_from_list(const struct audio_device *adev,
     return NULL;
 }
 
+struct stream_in *get_next_active_input(const struct audio_device *adev)
+{
+    struct audio_usecase *usecase;
+    struct listnode *node;
+
+    list_for_each_reverse(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type == PCM_CAPTURE)
+            return usecase->stream.in;
+    }
+    return NULL;
+}
+
 /*
  * is a true native playback active
  */
@@ -1486,7 +1499,7 @@ static int stop_input_stream(struct stream_in *in)
     struct audio_usecase *uc_info;
     struct audio_device *adev = in->dev;
 
-    adev->active_input = NULL;
+    adev->active_input = get_next_active_input(adev);
 
     ALOGV("%s: enter: usecase(%d: %s)", __func__,
           in->usecase, use_case_table[in->usecase]);
@@ -1633,7 +1646,7 @@ error_open:
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
     stop_input_stream(in);
 error_config:
-    adev->active_input = NULL;
+    adev->active_input = get_next_active_input(adev);
     /*
      * sleep 50ms to allow sufficient time for kernel
      * drivers to recover incases like SSR.
