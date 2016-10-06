@@ -1131,10 +1131,9 @@ static int read_hdmi_sink_caps(struct stream_out *out)
     reset_hdmi_sink_caps(out);
 
     /* Cache ext disp type */
-    ret = platform_get_ext_disp_type(adev->platform);
-    if (ret < 0) {
+    if (platform_get_ext_disp_type(adev->platform) <= 0) {
         ALOGE("%s: Failed to query disp type, ret:%d", __func__, ret);
-        return ret;
+        return -EINVAL;
     }
 
     switch (channels) {
