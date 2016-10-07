@@ -1049,12 +1049,29 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
     close(fd);
 }
 
+const char * get_snd_card_name_for_acdb_loader(const char *snd_card_name) {
+
+    if(snd_card_name == NULL)
+        return NULL;
+
+    // Both tasha & tasha-lite uses tasha ACDB files
+    // simulate sound card name for tasha lite, so that
+    // ACDB module loads tasha ACDB files for tasha lite
+    if(!strncmp(snd_card_name, "msm8x09-tasha9326-snd-card",
+             sizeof("msm8x09-tasha9326-snd-card"))) {
+       ALOGD("using tasha ACDB files for tasha-lite");
+       return "msm8x09-tasha-snd-card";
+   } else {
+       return snd_card_name;
+   }
+}
+
 int platform_acdb_init(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     char *cvd_version = NULL;
     int key = 0;
-    const char *snd_card_name;
+    const char *snd_card_name, *acdb_snd_card_name;
     int result;
     char value[PROPERTY_VALUE_MAX];
     cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
@@ -1066,7 +1083,10 @@ int platform_acdb_init(void *platform)
     property_get("audio.ds1.metainfo.key",value,"0");
     key = atoi(value);
     snd_card_name = mixer_get_name(my_data->adev->mixer);
-    result = my_data->acdb_init((char *)snd_card_name, cvd_version, key);
+    acdb_snd_card_name = get_snd_card_name_for_acdb_loader(snd_card_name);
+
+    result = my_data->acdb_init((char *)acdb_snd_card_name, cvd_version, key);
+
     if (cvd_version)
         free(cvd_version);
     if (!result) {
