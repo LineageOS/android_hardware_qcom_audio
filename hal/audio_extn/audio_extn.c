@@ -79,7 +79,7 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev,
 #else
 void audio_extn_source_track_set_parameters(struct audio_device *adev,
                                             struct str_parms *parms);
-void audio_extn_source_track_get_parameters(struct audio_device *adev,
+void audio_extn_source_track_get_parameters(const struct audio_device *adev,
                                             struct str_parms *query,
                                             struct str_parms *reply);
 #endif
