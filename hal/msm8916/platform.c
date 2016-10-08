@@ -1461,7 +1461,6 @@ static void get_source_mic_type(struct platform_data * my_data)
      }
 }
 
-
 void *platform_init(struct audio_device *adev)
 {
     char value[PROPERTY_VALUE_MAX];
@@ -4669,4 +4668,9 @@ int platform_get_wsa_mode(void *adev)
         return 1;
     else
         return 0;
+}
+
+int platform_get_max_mic_count(void *platform) {
+    struct platform_data *my_data = (struct platform_data *)platform;
+    return my_data->max_mic_count;
 }
