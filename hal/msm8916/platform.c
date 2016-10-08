@@ -3063,3 +3063,138 @@ int platform_set_audio_device_interface(const char * device_name,
 done:
     return ret;
 }
+
+int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask, int snd_id)
+{
+    int ret = 0;
+    int channels = audio_channel_count_from_out_mask(channel_mask);
+
+    char channel_map[8];
+    memset(channel_map, 0, sizeof(channel_map));
+    /* Following are all most common standard WAV channel layouts
+       overridden by channel mask if its allowed and different */
+    switch (channels) {
+        case 1:
+            /* AUDIO_CHANNEL_OUT_MONO */
+            channel_map[0] = PCM_CHANNEL_FC;
+        case 2:
+            /* AUDIO_CHANNEL_OUT_STEREO */
+            channel_map[0] = PCM_CHANNEL_FL;
+            channel_map[1] = PCM_CHANNEL_FR;
+        case 3:
+            /* AUDIO_CHANNEL_OUT_2POINT1 */
+            channel_map[0] = PCM_CHANNEL_FL;
+            channel_map[1] = PCM_CHANNEL_FR;
+            channel_map[2] = PCM_CHANNEL_FC;
+            break;
+        case 4:
+            /* AUDIO_CHANNEL_OUT_QUAD_SIDE */
+            channel_map[0] = PCM_CHANNEL_FL;
+            channel_map[1] = PCM_CHANNEL_FR;
+            channel_map[2] = PCM_CHANNEL_LS;
+            channel_map[3] = PCM_CHANNEL_RS;
+            if (channel_mask == AUDIO_CHANNEL_OUT_QUAD_BACK)
+            {
+                channel_map[2] = PCM_CHANNEL_LB;
+                channel_map[3] = PCM_CHANNEL_RB;
+            }
+            if (channel_mask == AUDIO_CHANNEL_OUT_SURROUND)
+            {
+                channel_map[2] = PCM_CHANNEL_FC;
+                channel_map[3] = PCM_CHANNEL_CS;
+            }
+            break;
+        case 5:
+            /* AUDIO_CHANNEL_OUT_PENTA */
+            channel_map[0] = PCM_CHANNEL_FL;
+            channel_map[1] = PCM_CHANNEL_FR;
+            channel_map[2] = PCM_CHANNEL_FC;
+            channel_map[3] = PCM_CHANNEL_LB;
+            channel_map[4] = PCM_CHANNEL_RB;
+            break;
+        case 6:
+            /* AUDIO_CHANNEL_OUT_5POINT1 */
+            channel_map[0] = PCM_CHANNEL_FL;
+            channel_map[1] = PCM_CHANNEL_FR;
+            channel_map[2] = PCM_CHANNEL_FC;
+            channel_map[3] = PCM_CHANNEL_LFE;
+            channel_map[4] = PCM_CHANNEL_LB;
+            channel_map[5] = PCM_CHANNEL_RB;
+            if (channel_mask == AUDIO_CHANNEL_OUT_5POINT1_SIDE)
+            {
+                channel_map[4] = PCM_CHANNEL_LS;
+                channel_map[5] = PCM_CHANNEL_RS;
+            }
+            break;
+        case 7:
+            /* AUDIO_CHANNEL_OUT_6POINT1 */
+            channel_map[0] = PCM_CHANNEL_FL;
+            channel_map[1] = PCM_CHANNEL_FR;
+            channel_map[2] = PCM_CHANNEL_FC;
+            channel_map[3] = PCM_CHANNEL_LFE;
+            channel_map[4] = PCM_CHANNEL_LB;
+            channel_map[5] = PCM_CHANNEL_RB;
+            channel_map[6] = PCM_CHANNEL_CS;
+        case 8:
+            /* AUDIO_CHANNEL_OUT_7POINT1 */
+            channel_map[0] = PCM_CHANNEL_FL;
+            channel_map[1] = PCM_CHANNEL_FR;
+            channel_map[2] = PCM_CHANNEL_FC;
+            channel_map[3] = PCM_CHANNEL_LFE;
+            channel_map[4] = PCM_CHANNEL_LB;
+            channel_map[5] = PCM_CHANNEL_RB;
+            channel_map[6] = PCM_CHANNEL_LS;
+            channel_map[7] = PCM_CHANNEL_RS;
+            break;
+        default:
+            ALOGE("unsupported channels %d for setting channel map", channels);
+            return -1;
+    }
+    ret = platform_set_channel_map(platform, channels, channel_map, snd_id);
+    return ret;
+}
+
+int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd_id)
+{
+    struct mixer_ctl *ctl;
+    char mixer_ctl_name[44]; // max length of name is 44 as defined
+    int ret;
+    unsigned int i;
+    int set_values[8] = {0};
+    char device_num[13]; // device number up to 2 digit
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    ALOGV("%s channel_count:%d",__func__, ch_count);
+    if (NULL == ch_map) {
+        ALOGE("%s: Invalid channel mapping used", __func__);
+        return -EINVAL;
+    }
+    strlcpy(mixer_ctl_name, "Playback Channel Map", sizeof(mixer_ctl_name));
+    if (snd_id >= 0) {
+        snprintf(device_num, sizeof(device_num), "%d", snd_id);
+        strncat(mixer_ctl_name, device_num, 13);
+    }
+
+    ALOGD("%s mixer_ctl_name:%s", __func__, mixer_ctl_name);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+    for (i = 0; i< ARRAY_SIZE(set_values); i++) {
+        set_values[i] = ch_map[i];
+    }
+
+    ALOGD("%s: set mapping(%d %d %d %d %d %d %d %d) for channel:%d", __func__,
+        set_values[0], set_values[1], set_values[2], set_values[3], set_values[4],
+        set_values[5], set_values[6], set_values[7], ch_count);
+
+    ret = mixer_ctl_set_array(ctl, set_values, ch_count);
+    if (ret < 0) {
+        ALOGE("%s: Could not set ctl, error:%d ch_count:%d",
+              __func__, ret, ch_count);
+    }
+    return ret;
+}
