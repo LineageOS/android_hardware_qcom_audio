@@ -177,4 +177,5 @@ int platform_retrieve_audio_cal(void* platform, int acdb_dev_id, int acdb_device
     int app_type, int topology_id, int sample_rate, uint32_t module_id, uint32_t param_id,
     void* data, int* length);
 
+unsigned char* platform_get_license(void* platform, int* size);
 #endif // AUDIO_PLATFORM_API_H

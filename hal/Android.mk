@@ -248,6 +248,12 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SPLIT_A2DP)),true)
     LOCAL_SRC_FILES += audio_extn/a2dp.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_QAF)),true)
+    LOCAL_CFLAGS += -DQAF_EXTN_ENABLED
+    LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/qaf/
+    LOCAL_SRC_FILES += audio_extn/qaf.c
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \

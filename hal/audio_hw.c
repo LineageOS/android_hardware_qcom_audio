@@ -2807,8 +2807,14 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         if ( ret == (ssize_t)bytes && !out->non_blocking)
             out->written += bytes;
 
-        if (!out->playback_started && ret >= 0) {
-            compress_start(out->compr);
+        /* Call compr start only when non-zero bytes of data is there to be rendered */
+        if (!out->playback_started && ret > 0) {
+            int status = compress_start(out->compr);
+            if (status < 0) {
+                ret = status;
+                ALOGE("%s: compr start failed with err %d", __func__, errno);
+                goto exit;
+            }
             audio_extn_dts_eagle_fade(adev, true, out);
             out->playback_started = 1;
             out->offload_state = OFFLOAD_STATE_PLAYING;
@@ -2885,8 +2891,9 @@ exit:
             out->standby = true;
         }
         out_standby(&out->stream.common);
-        usleep((uint64_t)bytes * 1000000 / audio_stream_out_frame_size(stream) /
-                        out_get_sample_rate(&out->stream.common));
+        if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD))
+            usleep((uint64_t)bytes * 1000000 / audio_stream_out_frame_size(stream) /
+                            out_get_sample_rate(&out->stream.common));
     }
     return bytes;
 }
@@ -3489,7 +3496,7 @@ static int in_remove_audio_effect(const struct audio_stream *stream,
     return add_remove_audio_effect(stream, effect, false);
 }
 
-static int adev_open_output_stream(struct audio_hw_device *dev,
+int adev_open_output_stream(struct audio_hw_device *dev,
                                    audio_io_handle_t handle,
                                    audio_devices_t devices,
                                    audio_output_flags_t flags,
@@ -3958,7 +3965,7 @@ error_open:
     return ret;
 }
 
-static void adev_close_output_stream(struct audio_hw_device *dev __unused,
+void adev_close_output_stream(struct audio_hw_device *dev __unused,
                                      struct audio_stream_out *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
@@ -4574,6 +4581,8 @@ static int adev_close(hw_device_t *device)
     if ((--audio_device_ref_count) == 0) {
         audio_extn_sound_trigger_deinit(adev);
         audio_extn_listen_deinit(adev);
+        if (audio_extn_qaf_is_enabled())
+            audio_extn_qaf_deinit();
         audio_extn_utils_release_streams_output_cfg_list(&adev->streams_output_cfg_list);
         audio_route_free(adev->audio_route);
         audio_extn_gef_deinit();
@@ -4610,6 +4619,8 @@ static int period_size_is_plausible_for_low_latency(int period_size)
 static int adev_open(const hw_module_t *module, const char *name,
                      hw_device_t **device)
 {
+    int ret;
+
     ALOGD("%s: enter", __func__);
     if (strcmp(name, AUDIO_HARDWARE_INTERFACE) != 0) return -EINVAL;
 
@@ -4684,7 +4695,24 @@ static int adev_open(const hw_module_t *module, const char *name,
         ALOGE("%s: Failed to init platform data, aborting.", __func__);
         *device = NULL;
         pthread_mutex_unlock(&adev_init_lock);
+        pthread_mutex_destroy(&adev->lock);
+        pthread_mutex_destroy(&adev->snd_card_status.lock);
         return -EINVAL;
+    }
+
+    if (audio_extn_qaf_is_enabled()) {
+        ret = audio_extn_qaf_init(adev);
+        if (ret < 0) {
+            free(adev);
+            ALOGE("%s: Failed to init platform data, aborting.", __func__);
+            *device = NULL;
+            pthread_mutex_unlock(&adev_init_lock);
+            pthread_mutex_destroy(&adev->lock);
+            return ret;
+        }
+
+        adev->device.open_output_stream = audio_extn_qaf_open_output_stream;
+        adev->device.close_output_stream = audio_extn_qaf_close_output_stream;
     }
 
     adev->snd_card_status.state = SND_CARD_STATE_ONLINE;

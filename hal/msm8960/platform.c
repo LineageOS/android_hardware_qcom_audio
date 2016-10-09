@@ -1039,6 +1039,12 @@ int platform_stop_incall_music_usecase(void *platform __unused)
     return -ENOSYS;
 }
 
+unsigned char* platform_get_license(void *platform, int *size)
+{
+    ALOGE("%s: Not implemented", __func__);
+    return NULL;
+}
+
 /* Delay in Us */
 int64_t platform_render_latency(audio_usecase_t usecase)
 {
