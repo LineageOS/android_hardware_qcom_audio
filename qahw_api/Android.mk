@@ -24,7 +24,6 @@ LOCAL_COPY_HEADERS      := inc/qahw_api.h
 LOCAL_COPY_HEADERS      += inc/qahw_defs.h
 
 LOCAL_PRELINK_MODULE    := false
-LOCAL_PROPRIETARY_MODULE := true
 
 include $(BUILD_SHARED_LIBRARY)
 
