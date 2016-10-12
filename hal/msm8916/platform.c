@@ -132,6 +132,9 @@
 
 #define MAX_SET_CAL_BYTE_SIZE 65536
 
+/* Mixer path names */
+#define AFE_SIDETONE_MIXER_PATH "afe-sidetone"
+
 #define AUDIO_PARAMETER_KEY_FLUENCE_TYPE  "fluence"
 #define AUDIO_PARAMETER_KEY_SLOWTALK      "st_enable"
 #define AUDIO_PARAMETER_KEY_HD_VOICE      "hd_voice"
@@ -5913,18 +5916,36 @@ int platform_set_sidetone(struct audio_device *adev,
             ALOGI("Debug: Disable sidetone");
         } else {
             ret = audio_extn_usb_enable_sidetone(out_snd_device, enable);
-            if (ret)
-                ALOGI("%s: usb device %d does not support device sidetone\n",
-                  __func__, out_snd_device);
-        }
+            if (ret) {
+                /*fall back to AFE sidetone*/
+                ALOGV("%s: No USB sidetone supported, switching to AFE sidetone",
+                       __func__);
+
+                if (enable)
+                    audio_route_apply_and_update_path(adev->audio_route, AFE_SIDETONE_MIXER_PATH);
+                else
+                    audio_route_reset_and_update_path(adev->audio_route, AFE_SIDETONE_MIXER_PATH);
+            }
+	}
     } else {
         ALOGV("%s: sidetone out device(%d) mixer cmd = %s\n",
               __func__, out_snd_device, str);
 
-        if (enable)
-            audio_route_apply_and_update_path(adev->audio_route, str);
-        else
-            audio_route_reset_and_update_path(adev->audio_route, str);
+        if (enable) {
+            ret = audio_route_apply_and_update_path(adev->audio_route, str);
+            if (ret) {
+                ALOGV("%s: No device sidetone supported, switching to AFE sidetone",
+                       __func__);
+                audio_route_apply_and_update_path(adev->audio_route, AFE_SIDETONE_MIXER_PATH);
+            }
+        } else {
+            ret = audio_route_reset_and_update_path(adev->audio_route, str);
+            if (ret) {
+                ALOGV("%s: No device sidetone supported, switching to AFE sidetone",
+                       __func__);
+                audio_route_reset_and_update_path(adev->audio_route, AFE_SIDETONE_MIXER_PATH);
+            }
+        }
     }
     return 0;
 }
