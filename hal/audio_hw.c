@@ -4226,7 +4226,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             ret = platform_get_ext_disp_type(adev->platform);
             if (ret < 0) {
                 ALOGE("%s: Failed to query disp type, ret:%d", __func__, ret);
-                return ret;
+                status = ret;
+                goto done;
             }
             platform_cache_edid(adev->platform);
         } else if ((val & AUDIO_DEVICE_OUT_USB_DEVICE) ||
