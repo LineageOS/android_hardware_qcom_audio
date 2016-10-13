@@ -129,7 +129,7 @@ static int get_ext_disp_sysfs_node_index(int ext_disp_type)
     int i = 0;
     FILE *ext_disp_fd = NULL;
 
-    for(i = 0; i < 3; i++) {
+    while (1) {
         snprintf(fbpath, sizeof(fbpath),
                   "/sys/class/graphics/fb%d/msm_fb_type", i);
         ext_disp_fd = fopen(fbpath, "r");
@@ -146,8 +146,10 @@ static int get_ext_disp_sysfs_node_index(int ext_disp_type)
                 }
             }
             fclose(ext_disp_fd);
+            i++;
         } else {
-            ALOGE("%s: Failed to open fb node %d", __func__, i);
+            ALOGE("%s: Scanned till end of fbs or Failed to open fb node %d", __func__, i);
+            break;
         }
     }
 
