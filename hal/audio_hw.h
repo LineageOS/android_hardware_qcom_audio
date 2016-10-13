@@ -268,6 +268,8 @@ struct stream_in {
     int bit_width;
     bool realtime;
     int af_period_multiplier;
+    struct stream_app_type_cfg app_type_cfg;
+
     struct audio_device *dev;
 };
 
@@ -291,6 +293,8 @@ struct audio_usecase {
     audio_devices_t devices;
     snd_device_t out_snd_device;
     snd_device_t in_snd_device;
+    struct stream_app_type_cfg out_app_type_cfg;
+    struct stream_app_type_cfg in_app_type_cfg;
     union stream_ptr stream;
 };
 
@@ -309,9 +313,14 @@ struct stream_sample_rate {
     uint32_t sample_rate;
 };
 
-struct streams_output_cfg {
+typedef union {
+    audio_output_flags_t out_flags;
+    audio_input_flags_t in_flags;
+} audio_io_flags_t;
+
+struct streams_io_cfg {
     struct listnode list;
-    audio_output_flags_t flags;
+    audio_io_flags_t flags;
     struct listnode format_list;
     struct listnode sample_rate_list;
     struct stream_app_type_cfg app_type_cfg;
@@ -346,6 +355,7 @@ struct audio_device {
     int *snd_dev_ref_cnt;
     struct listnode usecase_list;
     struct listnode streams_output_cfg_list;
+    struct listnode streams_input_cfg_list;
     struct audio_route *audio_route;
     int acdb_settings;
     bool speaker_lr_swap;
