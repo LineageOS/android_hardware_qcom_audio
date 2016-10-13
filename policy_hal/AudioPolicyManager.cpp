@@ -435,6 +435,48 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
     return BAD_VALUE;
 }
 
+bool AudioPolicyManagerCustom::isInvalidationOfMusicStreamNeeded(routing_strategy strategy)
+{
+    if (strategy == STRATEGY_MEDIA) {
+        for (size_t i = 0; i < mOutputs.size(); i++) {
+            sp<SwAudioOutputDescriptor> newOutputDesc = mOutputs.valueAt(i);
+            if (newOutputDesc->mFormat == AUDIO_FORMAT_DSD)
+                return false;
+        }
+    }
+    return true;
+}
+
+void AudioPolicyManagerCustom::checkOutputForStrategy(routing_strategy strategy)
+{
+    audio_devices_t oldDevice = getDeviceForStrategy(strategy, true /*fromCache*/);
+    audio_devices_t newDevice = getDeviceForStrategy(strategy, false /*fromCache*/);
+    SortedVector<audio_io_handle_t> srcOutputs = getOutputsForDevice(oldDevice, mOutputs);
+    SortedVector<audio_io_handle_t> dstOutputs = getOutputsForDevice(newDevice, mOutputs);
+
+    // also take into account external policy-related changes: add all outputs which are
+    // associated with policies in the "before" and "after" output vectors
+    ALOGV("checkOutputForStrategy(): policy related outputs");
+    for (size_t i = 0 ; i < mPreviousOutputs.size() ; i++) {
+        const sp<SwAudioOutputDescriptor> desc = mPreviousOutputs.valueAt(i);
+        if (desc != 0 && desc->mPolicyMix != NULL) {
+            srcOutputs.add(desc->mIoHandle);
+            ALOGV(" previous outputs: adding %d", desc->mIoHandle);
+        }
+    }
+    for (size_t i = 0 ; i < mOutputs.size() ; i++) {
+        const sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
+        if (desc != 0 && desc->mPolicyMix != NULL) {
+            dstOutputs.add(desc->mIoHandle);
+            ALOGV(" new outputs: adding %d", desc->mIoHandle);
+        }
+    }
+
+    if (!vectorsEqual(srcOutputs,dstOutputs) && isInvalidationOfMusicStreamNeeded(strategy)) {
+        AudioPolicyManager::checkOutputForStrategy(strategy);
+    }
+}
+
 // This function checks for the parameters which can be offloaded.
 // This can be enhanced depending on the capability of the DSP and policy
 // of the system.
