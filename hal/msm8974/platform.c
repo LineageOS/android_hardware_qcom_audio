@@ -240,7 +240,6 @@ struct platform_data {
     int ext_disp_type;
     char ec_ref_mixer_path[64];
     codec_backend_cfg_t current_backend_cfg[MAX_CODEC_BACKENDS];
-    codec_backend_cfg_t current_tx_backend_cfg[MAX_CODEC_TX_BACKENDS];
     char codec_version[CODEC_VERSION_MAX_LENGTH];
     int hw_dep_fd;
     char cvd_version[MAX_CVD_VERSION_STRING_SIZE];
@@ -1732,6 +1731,8 @@ acdb_init_fail:
             my_data->current_backend_cfg[idx].sample_rate = OUTPUT_SAMPLING_RATE_44100;
         my_data->current_backend_cfg[idx].bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         my_data->current_backend_cfg[idx].channels = CODEC_BACKEND_DEFAULT_CHANNELS;
+        if (idx > MAX_RX_CODEC_BACKENDS)
+            my_data->current_backend_cfg[idx].channels = CODEC_BACKEND_DEFAULT_TX_CHANNELS;
         my_data->current_backend_cfg[idx].bitwidth_mixer_ctl = NULL;
         my_data->current_backend_cfg[idx].samplerate_mixer_ctl = NULL;
         my_data->current_backend_cfg[idx].channels_mixer_ctl = NULL;
@@ -1752,15 +1753,17 @@ acdb_init_fail:
     my_data->current_backend_cfg[HEADPHONE_44_1_BACKEND].samplerate_mixer_ctl =
         strdup("SLIM_5_RX SampleRate");
 
-    my_data->current_tx_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
+    my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
         strdup("SLIM_0_TX Format");
-    my_data->current_tx_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
+    my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
         strdup("SLIM_0_TX SampleRate");
 
-    my_data->current_tx_backend_cfg[USB_AUDIO_TX_BACKEND].bitwidth_mixer_ctl =
+    my_data->current_backend_cfg[USB_AUDIO_TX_BACKEND].bitwidth_mixer_ctl =
         strdup("USB_AUDIO_TX Format");
-    my_data->current_tx_backend_cfg[USB_AUDIO_TX_BACKEND].samplerate_mixer_ctl =
+    my_data->current_backend_cfg[USB_AUDIO_TX_BACKEND].samplerate_mixer_ctl =
         strdup("USB_AUDIO_TX SampleRate");
+    my_data->current_backend_cfg[USB_AUDIO_TX_BACKEND].channels_mixer_ctl =
+        strdup("USB_AUDIO_TX Channels");
 
     ret = audio_extn_utils_get_codec_version(snd_card_name,
                                              my_data->adev->snd_card,
@@ -2335,7 +2338,7 @@ int platform_get_backend_index(snd_device_t snd_device)
 {
     int32_t port = DEFAULT_CODEC_BACKEND;
 
-    if (snd_device >= SND_DEVICE_MIN && snd_device < SND_DEVICE_MAX) {
+    if (snd_device >= SND_DEVICE_OUT_BEGIN && snd_device < SND_DEVICE_OUT_END) {
         if (backend_tag_table[snd_device] != NULL) {
                 if (strncmp(backend_tag_table[snd_device], "headphones-44.1",
                             sizeof("headphones-44.1")) == 0)
@@ -2353,28 +2356,17 @@ int platform_get_backend_index(snd_device_t snd_device)
                 else if (strcmp(backend_tag_table[snd_device], "usb-headphones") == 0)
                         port = USB_AUDIO_RX_BACKEND;
         }
-    } else {
-        ALOGV("%s:napb: Invalid device - %d ", __func__, snd_device);
-    }
-
-    ALOGV("%s:napb: backend port - %d snd_device %d", __func__, port, snd_device);
-    return port;
-}
-
-static int platform_get_capture_backend_index(snd_device_t snd_device)
-{
-    int32_t port = DEFAULT_CODEC_TX_BACKEND;
-
-    if (snd_device >= SND_DEVICE_MIN && snd_device < SND_DEVICE_MAX) {
+    } else if (snd_device >= SND_DEVICE_IN_BEGIN && snd_device < SND_DEVICE_IN_END) {
+        port = DEFAULT_CODEC_TX_BACKEND;
         if (backend_tag_table[snd_device] != NULL) {
                 if (strcmp(backend_tag_table[snd_device], "usb-headset-mic") == 0)
                         port = USB_AUDIO_TX_BACKEND;
         }
     } else {
-        ALOGW("%s: Invalid device - %d ", __func__, snd_device);
+        ALOGW("%s:napb: Invalid device - %d ", __func__, snd_device);
     }
 
-    ALOGV("%s: backend port - %d snd_device %d", __func__, port, snd_device);
+    ALOGV("%s:napb: backend port - %d device - %d ", __func__, port, snd_device);
     return port;
 }
 
@@ -4303,7 +4295,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
                          snd_device_t snd_device, struct audio_backend_cfg backend_cfg)
 {
     int ret = 0;
-    int backend_idx = DEFAULT_CODEC_BACKEND;
+    int backend_idx = platform_get_backend_index(snd_device);
     struct platform_data *my_data = (struct platform_data *)adev->platform;
     backend_idx = platform_get_backend_index(snd_device);
     unsigned int bit_width = backend_cfg.bit_width;
@@ -4313,13 +4305,14 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
     bool passthrough_enabled = backend_cfg.passthrough_enabled;
 
     ALOGI("%s:becf: afe: bitwidth %d, samplerate %d channels %d"
-          ", backend_idx %d device (%s)", __func__,  bit_width, sample_rate, channels, backend_idx,
+          ", backend_idx %d device (%s)", __func__,  bit_width,
+          sample_rate, channels, backend_idx,
           platform_get_snd_device_name(snd_device));
 
     if (bit_width !=
         my_data->current_backend_cfg[backend_idx].bit_width) {
 
-        struct  mixer_ctl *ctl;
+        struct  mixer_ctl *ctl = NULL;
         ctl = mixer_get_ctl_by_name(adev->mixer,
                     my_data->current_backend_cfg[backend_idx].bitwidth_mixer_ctl);
         if (!ctl) {
@@ -4331,23 +4324,30 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
 
         if (bit_width == 24) {
             if (format == AUDIO_FORMAT_PCM_24_BIT_PACKED)
-                 mixer_ctl_set_enum_by_string(ctl, "S24_3LE");
+                 ret = mixer_ctl_set_enum_by_string(ctl, "S24_3LE");
             else
-                 mixer_ctl_set_enum_by_string(ctl, "S24_LE");
+                 ret = mixer_ctl_set_enum_by_string(ctl, "S24_LE");
         } else if (bit_width == 32) {
-            mixer_ctl_set_enum_by_string(ctl, "S24_LE");
+            ret = mixer_ctl_set_enum_by_string(ctl, "S24_LE");
         } else {
-            mixer_ctl_set_enum_by_string(ctl, "S16_LE");
+            ret = mixer_ctl_set_enum_by_string(ctl, "S16_LE");
         }
-        my_data->current_backend_cfg[backend_idx].bit_width = bit_width;
-        ALOGD("%s:becf: afe: %s mixer set to %d bit for %x format", __func__,
-              my_data->current_backend_cfg[backend_idx].bitwidth_mixer_ctl, bit_width, format);
+        if ( ret < 0) {
+            ALOGE("%s:becf: afe: fail for %s mixer set to %d bit for %x format", __func__,
+                  my_data->current_backend_cfg[backend_idx].bitwidth_mixer_ctl, bit_width, format);
+        } else {
+            my_data->current_backend_cfg[backend_idx].bit_width = bit_width;
+            ALOGD("%s:becf: afe: %s mixer set to %d bit for %x format", __func__,
+                  my_data->current_backend_cfg[backend_idx].bitwidth_mixer_ctl, bit_width, format);
+        }
+        /* set the ret as 0 and not pass back to upper layer */
+        ret = 0;
     }
 
     if (sample_rate !=
        my_data->current_backend_cfg[backend_idx].sample_rate) {
             char *rate_str = NULL;
-            struct  mixer_ctl *ctl;
+            struct  mixer_ctl *ctl = NULL;
 
             switch (sample_rate) {
             case 8000:
@@ -4401,7 +4401,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
     }
     if ((my_data->current_backend_cfg[backend_idx].channels_mixer_ctl) &&
         (channels != my_data->current_backend_cfg[backend_idx].channels)) {
-        struct  mixer_ctl *ctl;
+        struct  mixer_ctl *ctl = NULL;
         char *channel_cnt_str = NULL;
 
         switch (channels) {
@@ -4417,6 +4417,9 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             channel_cnt_str = "Four"; break;
         case 3:
             channel_cnt_str = "Three"; break;
+        case 1:
+            channel_cnt_str = "One"; break;
+        case 2:
         default:
             channel_cnt_str = "Two"; break;
         }
@@ -4436,7 +4439,8 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             platform_set_edid_channels_configuration(adev->platform, channels);
 
         ALOGD("%s:becf: afe: %s set to %s", __func__,
-               my_data->current_backend_cfg[backend_idx].channels_mixer_ctl, channel_cnt_str);
+               my_data->current_backend_cfg[backend_idx].channels_mixer_ctl,
+               channel_cnt_str);
     }
 
     bool set_ext_disp_format = false;
@@ -4786,126 +4790,6 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
 }
 
 /*
- * configures afe with bit width and Sample Rate
- */
-
-static int platform_set_capture_codec_backend_cfg(struct audio_device* adev,
-                         snd_device_t snd_device,
-                         struct audio_backend_cfg backend_cfg)
-{
-    int ret = 0;
-    int backend_idx = platform_get_capture_backend_index(snd_device);
-    struct platform_data *my_data = (struct platform_data *)adev->platform;
-
-    ALOGI("%s:txbecf: afe: bitwidth %d, samplerate %d, backend_idx %d device (%s)",
-          __func__, backend_cfg.bit_width, backend_cfg.sample_rate, backend_idx,
-          platform_get_snd_device_name(snd_device));
-
-    if (backend_cfg.bit_width!=
-        my_data->current_tx_backend_cfg[backend_idx].bit_width) {
-
-        struct  mixer_ctl *ctl = NULL;
-        ctl = mixer_get_ctl_by_name(adev->mixer,
-                        my_data->current_tx_backend_cfg[backend_idx].bitwidth_mixer_ctl);
-        if (!ctl) {
-            ALOGE("%s:txbecf: afe: Could not get ctl for mixer command - %s",
-                  __func__,
-                  my_data->current_tx_backend_cfg[backend_idx].bitwidth_mixer_ctl);
-            return -EINVAL;
-        }
-        if (backend_cfg.bit_width == 24) {
-            if (backend_cfg.format == AUDIO_FORMAT_PCM_24_BIT_PACKED)
-                ret = mixer_ctl_set_enum_by_string(ctl, "S24_3LE");
-            else
-                ret = mixer_ctl_set_enum_by_string(ctl, "S24_LE");
-        } else {
-            ret = mixer_ctl_set_enum_by_string(ctl, "S16_LE");
-        }
-
-        if (ret < 0) {
-            ALOGE("%s:txbecf: afe: Could not set ctl for mixer command - %s",
-                  __func__,
-                  my_data->current_tx_backend_cfg[backend_idx].bitwidth_mixer_ctl);
-            return -EINVAL;
-        }
-
-        my_data->current_tx_backend_cfg[backend_idx].bit_width = backend_cfg.bit_width;
-        ALOGD("%s:txbecf: afe: %s mixer set to %d bit", __func__,
-              my_data->current_tx_backend_cfg[backend_idx].bitwidth_mixer_ctl,
-              backend_cfg.bit_width);
-    }
-
-    /*
-     * Backend sample rate configuration follows:
-     * 16 bit record - 48khz for streams at any valid sample rate
-     * 24 bit record - 48khz for stream sample rate less than 48khz
-     * 24 bit record - 96khz for sample rate range of 48khz to 96khz
-     * 24 bit record - 192khz for sample rate range of 96khz to 192 khz
-     * Upper limit is inclusive in the sample rate range.
-     */
-    // TODO: This has to be more dynamic based on policy file
-
-    if (backend_cfg.sample_rate !=
-        my_data->current_tx_backend_cfg[(int)backend_idx].sample_rate) {
-            /*
-             * sample rate update is needed only for hifi audio enabled platforms
-             */
-            char *rate_str = NULL;
-            struct  mixer_ctl *ctl = NULL;
-
-            switch (backend_cfg.sample_rate) {
-            case 8000:
-            case 11025:
-            case 16000:
-            case 22050:
-            case 32000:
-            case 44100:
-            case 48000:
-                rate_str = "KHZ_48";
-                break;
-            case 64000:
-            case 88200:
-            case 96000:
-                rate_str = "KHZ_96";
-                break;
-            case 176400:
-            case 192000:
-                rate_str = "KHZ_192";
-                break;
-            default:
-                rate_str = "KHZ_48";
-                break;
-            }
-
-            ctl = mixer_get_ctl_by_name(adev->mixer,
-                my_data->current_tx_backend_cfg[backend_idx].samplerate_mixer_ctl);
-
-            if (!ctl) {
-                ALOGE("%s:txbecf: afe: Could not get ctl to set the Sample Rate for mixer command - %s",
-                      __func__,
-                      my_data->current_tx_backend_cfg[backend_idx].samplerate_mixer_ctl);
-                return -EINVAL;
-            }
-
-            ALOGD("%s:txbecf: afe: %s set to %s", __func__,
-                  my_data->current_tx_backend_cfg[backend_idx].samplerate_mixer_ctl,
-                  rate_str);
-            ret = mixer_ctl_set_enum_by_string(ctl, rate_str);
-            if (ret < 0) {
-                ALOGE("%s:txbecf: afe: Could not set ctl for mixer command - %s",
-                      __func__,
-                      my_data->current_tx_backend_cfg[backend_idx].samplerate_mixer_ctl);
-                return -EINVAL;
-            }
-
-            my_data->current_tx_backend_cfg[backend_idx].sample_rate =
-                                        backend_cfg.sample_rate;
-    }
-
-    return ret;
-}
-
-/*
  * goes through all the current usecases and picks the highest
  * bitwidth & samplerate
  */
@@ -4924,20 +4808,21 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
     channels = backend_cfg->channels;
 
     ALOGI("%s:txbecf: afe: Codec selected backend: %d current bit width: %d and "
-          "sample rate: %d",__func__,backend_idx, bit_width, sample_rate);
+          "sample rate: %d, channels %d",__func__,backend_idx, bit_width,
+          sample_rate, channels);
 
     // For voice calls use default configuration i.e. 16b/48K, only applicable to
     // default backend
     // force routing is not required here, caller will do it anyway
     if (voice_is_in_call(adev) || adev->mode == AUDIO_MODE_IN_COMMUNICATION) {
-        ALOGW("%s:txbecf: afe:Use default bw and sr for voice/voip calls and "
+        ALOGW("%s:txbecf: afe: Use default bw and sr for voice/voip calls and "
               "for unprocessed/camera source", __func__);
         bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
     }
     if (backend_idx == USB_AUDIO_TX_BACKEND) {
         audio_extn_usb_is_config_supported(&bit_width, &sample_rate, &channels, false);
-        ALOGV("%s: USB BE configured as bit_width(%d)sample_rate(%d)channels(%d)",
+        ALOGV("%s:txbecf: afe: USB BE configured as bit_width(%d)sample_rate(%d)channels(%d)",
               __func__, bit_width, sample_rate, channels);
     }
 
@@ -4945,14 +4830,17 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
           "sample rate: %d", __func__, backend_idx, bit_width, sample_rate);
     // Force routing if the expected bitwdith or samplerate
     // is not same as current backend comfiguration
-    if ((bit_width != my_data->current_tx_backend_cfg[backend_idx].bit_width) ||
-        (sample_rate != my_data->current_tx_backend_cfg[backend_idx].sample_rate)) {
+    if ((bit_width != my_data->current_backend_cfg[backend_idx].bit_width) ||
+        (sample_rate != my_data->current_backend_cfg[backend_idx].sample_rate) ||
+        (channels != my_data->current_backend_cfg[backend_idx].channels)) {
         backend_cfg->bit_width = bit_width;
         backend_cfg->sample_rate= sample_rate;
+        backend_cfg->channels = channels;
         backend_change = true;
         ALOGI("%s:txbecf: afe: Codec backend needs to be updated. new bit width: %d "
-              "new sample rate: %d", __func__, backend_cfg->bit_width,
-              backend_cfg->sample_rate);
+              "new sample rate: %d new channel: %d",
+              __func__, backend_cfg->bit_width,
+              backend_cfg->sample_rate, backend_cfg->channels);
     }
 
     return backend_change;
@@ -4961,7 +4849,7 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
 bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev,
     struct audio_usecase *usecase, snd_device_t snd_device)
 {
-    int backend_idx = platform_get_capture_backend_index(snd_device);
+    int backend_idx = platform_get_backend_index(snd_device);
     int ret = 0;
     struct audio_backend_cfg backend_cfg;
 
@@ -4987,8 +4875,8 @@ bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev,
           platform_get_snd_device_name(snd_device));
     if (platform_check_capture_codec_backend_cfg(adev, backend_idx,
                                                  &backend_cfg)) {
-        ret = platform_set_capture_codec_backend_cfg(adev, snd_device,
-                                                     backend_cfg);
+        ret = platform_set_codec_backend_cfg(adev, snd_device,
+                                             backend_cfg);
         if(!ret)
             return true;
     }
