@@ -166,12 +166,6 @@
     <ctl name="MultiMedia1 Mixer USB_AUDIO_TX" value="0" />
     <ctl name="MultiMedia5 Mixer USB_AUDIO_TX" value="0" />
     <ctl name="MultiMedia8 Mixer USB_AUDIO_TX" value="0" />
-    <ctl name="USB_AUDIO_RX Channels" value="One" />
-    <ctl name="USB_AUDIO_RX SampleRate" value="KHZ_48" />
-    <ctl name="USB_AUDIO_RX Format" value="S16_LE" />
-    <ctl name="USB_AUDIO_TX Channels" value="One" />
-    <ctl name="USB_AUDIO_TX SampleRate" value="KHZ_48" />
-    <ctl name="USB_AUDIO_TX Format" value="S16_LE" />
     <ctl name="MultiMedia6 Mixer SLIM_0_TX" value="0" />
     <ctl name="SLIM_2_RX Format" value="UNPACKED" />
     <ctl name="SLIM_2_RX SampleRate" value="KHZ_48" />
