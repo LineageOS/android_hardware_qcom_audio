@@ -464,6 +464,11 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
          }
     }
 #endif
+    if (property_get_bool("voice.dsd.playback.conc.disabled", true) &&
+        isInCall() &&  (offloadInfo.format == AUDIO_FORMAT_DSD)) {
+        ALOGD("blocking DSD compress offload on call mode");
+        return false;
+    }
 #ifdef RECORD_PLAY_CONCURRENCY
     char recConcPropValue[PROPERTY_VALUE_MAX];
     bool prop_rec_play_enabled = false;
@@ -846,6 +851,26 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
     }
 
 #endif
+
+    sp<SwAudioOutputDescriptor> outputDesc = NULL;
+    for (size_t i = 0; i < mOutputs.size(); i++) {
+        outputDesc = mOutputs.valueAt(i);
+        if ((outputDesc == NULL) || (outputDesc->mProfile == NULL)) {
+            ALOGD("voice_conc:ouput desc / profile is NULL");
+            continue;
+        }
+
+        if (property_get_bool("voice.dsd.playback.conc.disabled", true) &&
+            (outputDesc->mFlags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
+            (outputDesc->mFormat == AUDIO_FORMAT_DSD)) {
+            ALOGD("voice_conc:calling closeOutput on call mode for DSD COMPRESS output");
+            closeOutput(mOutputs.keyAt(i));
+            // call invalidate for music, so that DSD compress will fallback to deep-buffer.
+            mpClientInterface->invalidateStream(AUDIO_STREAM_MUSIC);
+        }
+
+    }
+
 #ifdef RECORD_PLAY_CONCURRENCY
     char recConcPropValue[PROPERTY_VALUE_MAX];
     bool prop_rec_play_enabled = false;
