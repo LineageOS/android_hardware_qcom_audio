@@ -325,6 +325,11 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC] = "quad-mic",
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = "quad-mic",
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = "quad-mic",
+    [SND_DEVICE_IN_UNPROCESSED_MIC] = "unprocessed-mic",
+    [SND_DEVICE_IN_UNPROCESSED_STEREO_MIC] = "voice-rec-dmic-ef",
+    [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = "three-mic",
+    [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = "quad-mic",
+    [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = "headset-mic",
 };
 
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
@@ -419,6 +424,11 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC] = 126,
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = 127,
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = 129,
+    [SND_DEVICE_IN_UNPROCESSED_MIC] = 143,
+    [SND_DEVICE_IN_UNPROCESSED_STEREO_MIC] = 144,
+    [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = 145,
+    [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = 146,
+    [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = 147,
 };
 
 struct snd_device_index {
@@ -2173,6 +2183,21 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             } else {
                 snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
             }
+        }
+    } else if (source == AUDIO_SOURCE_UNPROCESSED) {
+        if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+            if (((channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK) ||
+                (channel_mask == AUDIO_CHANNEL_IN_STEREO))) {
+                snd_device = SND_DEVICE_IN_UNPROCESSED_STEREO_MIC;
+            } else if ((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) {
+                snd_device = SND_DEVICE_IN_UNPROCESSED_THREE_MIC;
+            } else if ((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) {
+                snd_device = SND_DEVICE_IN_UNPROCESSED_QUAD_MIC;
+            } else {
+                snd_device = SND_DEVICE_IN_UNPROCESSED_MIC;
+            }
+        } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+            snd_device = SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC;
         }
     } else if ((source == AUDIO_SOURCE_VOICE_COMMUNICATION) ||
               (mode == AUDIO_MODE_IN_COMMUNICATION)) {
