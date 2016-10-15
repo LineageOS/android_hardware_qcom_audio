@@ -106,10 +106,12 @@
     </path>
 
     <path name="listen-ape-handset-mic">
-        <ctl name="MAD_BROADCAST Switch" value="1" />
-        <ctl name="TX13 INP MUX" value="MAD_BRDCST" />
-        <ctl name="AIF4_MAD Mixer SLIM TX13" value="1" />
         <ctl name="MAD Input" value="DMIC0" />
+        <ctl name="MAD_SEL MUX" value="MSM" />
+        <ctl name="MAD_INP MUX" value="MAD" />
+        <ctl name="MAD_BROADCAST Switch" value="1" />
+        <ctl name="CDC_IF TX13 MUX" value="MAD_BRDCST" />
+        <ctl name="AIF4_MAD Mixer SLIM TX13" value="1" />
     </path>
 
 </mixer>

@@ -190,33 +190,6 @@ static void usb_soundcard_list_controls(struct mixer *mixer)
     }
 }
 
-static int usb_set_channel_mixer_ctl(int channel,
-                                     char *ch_mixer_ctl_name)
-{
-    struct mixer_ctl *ctl;
-
-    ctl = mixer_get_ctl_by_name(usbmod->adev->mixer, ch_mixer_ctl_name);
-    if (!ctl) {
-       ALOGE("%s: Could not get ctl for mixer cmd - %s",
-             __func__, ch_mixer_ctl_name);
-       return -EINVAL;
-    }
-    switch (channel) {
-       case 1:
-           mixer_ctl_set_enum_by_string(ctl, "One");
-           break;
-       case 2:
-           mixer_ctl_set_enum_by_string(ctl, "Two");
-           break;
-       default:
-           ALOGV("%s: channel(%d) not supported, set as default 2 channels",
-                 __func__, channel);
-           mixer_ctl_set_enum_by_string(ctl, "Two");
-           break;
-    }
-    return 0;
-}
-
 static int usb_set_dev_id_mixer_ctl(unsigned int usb_usecase_type, int card,
                                     char *dev_mixer_ctl_name)
 {
@@ -472,22 +445,12 @@ static int usb_get_device_pb_config(struct usb_card_config *usb_card_info,
                                     int card)
 {
     int ret;
-    struct listnode *node_d;
-    struct usb_device_config *dev_info;
 
     /* get capabilities */
     if ((ret = usb_get_capability(USB_PLAYBACK, usb_card_info, card))) {
         ALOGE("%s: could not get Playback capabilities from usb device",
                __func__);
         goto exit;
-    }
-    /* Currently only use the first profile using to configure channel for simplification */
-    list_for_each(node_d, &usb_card_info->usb_device_conf_list) {
-        dev_info = node_to_item(node_d, struct usb_device_config, list);
-        if (dev_info != NULL) {
-            usb_set_channel_mixer_ctl(dev_info->channels, "USB_AUDIO_RX Channels");
-            break;
-        }
     }
     usb_set_dev_id_mixer_ctl(USB_PLAYBACK, card, "USB_AUDIO_RX dev_token");
 
@@ -500,22 +463,12 @@ static int usb_get_device_cap_config(struct usb_card_config *usb_card_info,
                                       int card)
 {
     int ret;
-    struct listnode *node_d;
-    struct usb_device_config *dev_info;
 
     /* get capabilities */
     if ((ret = usb_get_capability(USB_CAPTURE, usb_card_info, card))) {
         ALOGE("%s: could not get Playback capabilities from usb device",
                __func__);
         goto exit;
-    }
-    /* Currently only use the first profile using to configure channel for simplification */
-    list_for_each(node_d, &usb_card_info->usb_device_conf_list) {
-        dev_info = node_to_item(node_d, struct usb_device_config, list);
-        if (dev_info != NULL) {
-            usb_set_channel_mixer_ctl(dev_info->channels, "USB_AUDIO_TX Channels");
-            break;
-        }
     }
     usb_set_dev_id_mixer_ctl(USB_CAPTURE, card, "USB_AUDIO_TX dev_token");
 
@@ -909,14 +862,8 @@ bool audio_extn_usb_is_config_supported(unsigned int *bit_width,
                  "%s: card_dev_type (0x%x), card_no(%d)",
                  __func__,  card_info->usb_device_type, card_info->usb_card);
         /* Currently only apply the first playback sound card configuration */
-        if (is_playback && card_info->usb_device_type == AUDIO_DEVICE_OUT_USB_DEVICE) {
-            is_usb_supported = usb_audio_backend_apply_policy(
-                                           &card_info->usb_device_conf_list,
-                                           bit_width,
-                                           sample_rate,
-                                           ch);
-            break;
-        } else if (card_info->usb_device_type == AUDIO_DEVICE_IN_USB_DEVICE ) {
+        if ((is_playback && card_info->usb_device_type == AUDIO_DEVICE_OUT_USB_DEVICE) ||
+            ((!is_playback) && card_info->usb_device_type == AUDIO_DEVICE_IN_USB_DEVICE)){
             is_usb_supported = usb_audio_backend_apply_policy(
                                            &card_info->usb_device_conf_list,
                                            bit_width,

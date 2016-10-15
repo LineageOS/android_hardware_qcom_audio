@@ -1229,6 +1229,11 @@ int platform_get_spkr_prot_snd_device(snd_device_t snd_device __unused)
     return -ENOSYS;
 }
 
+int platform_get_vi_feedback_snd_device(snd_device_t snd_device __unused)
+{
+    return -ENOSYS;
+}
+
 int platform_spkr_prot_is_wsa_analog_mode(void *adev __unused)
 {
     return 0;

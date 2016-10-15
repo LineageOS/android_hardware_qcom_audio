@@ -24,6 +24,8 @@
 #define CODEC_BACKEND_DEFAULT_BIT_WIDTH 16
 #define CODEC_BACKEND_DEFAULT_SAMPLE_RATE 48000
 #define CODEC_BACKEND_DEFAULT_CHANNELS 2
+#define CODEC_BACKEND_DEFAULT_TX_CHANNELS 1
+
 
 enum {
     NATIVE_AUDIO_MODE_SRC = 1,
@@ -143,6 +145,7 @@ void platform_set_gsm_mode(void *platform, bool enable);
 bool platform_can_enable_spkr_prot_on_device(snd_device_t snd_device);
 int platform_get_spkr_prot_acdb_id(snd_device_t snd_device);
 int platform_get_spkr_prot_snd_device(snd_device_t snd_device);
+int platform_get_vi_feedback_snd_device(snd_device_t snd_device);
 int platform_spkr_prot_is_wsa_analog_mode(void *adev);
 bool platform_can_split_snd_device(void *platform,
                                    snd_device_t snd_device,

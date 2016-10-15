@@ -302,6 +302,26 @@ bool audio_extn_hfp_is_active(struct audio_device *adev)
         return false;
 }
 
+int hfp_set_mic_mute(struct audio_device *adev, bool state)
+{
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "HFP TX Mute";
+    uint32_t set_values[ ] = {0};
+
+    ALOGI("%s: enter, state=%d", __func__, state);
+
+    set_values[0] = state;
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+               __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+    mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+    ALOGV("%s: exit", __func__);
+    return 0;
+}
+
 audio_usecase_t audio_extn_hfp_get_usecase()
 {
     return hfpmod.ucid;
