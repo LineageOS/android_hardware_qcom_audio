@@ -34,12 +34,14 @@
 #include <cutils/log.h>
 #include <cutils/str_parms.h>
 
+/* Device state*/
+#define AUDIO_PARAMETER_KEY_DEV_SHUTDOWN "dev_shutdown"
+
 static s_audio_subsys audio_ss;
 
 int audio_extn_pm_vote(void)
 {
     int err, intfd, ret;
-    FILE *fd;
     enum pm_event subsys_state;
     char halPropVal[PROPERTY_VALUE_MAX];
     bool prop_unload_image = false;
