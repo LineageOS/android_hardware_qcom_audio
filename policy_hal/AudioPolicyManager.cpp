@@ -511,6 +511,14 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
             ALOGD("offload disabled for multi-channel FLAC/ALAC/WMA/AAC_ADTS clips with sample rate > 48kHz");
         return false;
     }
+
+    if ((((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA) && (offloadInfo.bit_rate > MAX_BITRATE_WMA)) ||
+        (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA_PRO) && (offloadInfo.bit_rate > MAX_BITRATE_WMA_PRO)) ||
+        (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA_PRO) && (offloadInfo.bit_rate > MAX_BITRATE_WMA_LOSSLESS))){
+        //Safely choose the min bitrate as threshold and leave the restriction to NT decoder as we can't distinguish wma pro and wma lossless here.
+        ALOGD("offload disabled for WMA/WMA_PRO/WMA_LOSSLESS clips with bit rate over maximum supported value");
+        return false;
+    }
 #endif
     //TODO: enable audio offloading with video when ready
     const bool allowOffloadWithVideo =
@@ -1064,6 +1072,7 @@ status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDe
                         outputDesc->sharesHwModuleWith(desc) &&
                         (newDevice != desc->device())) {
                         audio_devices_t dev = getNewOutputDevice(mOutputs.valueFor(curOutput), false /*fromCache*/);
+                        bool force = desc->device() != dev;
                         uint32_t delayMs;
                         if (dev == prevDevice) {
                             delayMs = 0;
@@ -1072,7 +1081,7 @@ status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDe
                         }
                         setOutputDevice(desc,
                                     dev,
-                                    true,
+                                    force,
                                     delayMs);
                 }
             }
