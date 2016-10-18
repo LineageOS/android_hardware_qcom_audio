@@ -45,6 +45,8 @@
     <ctl name="LSM7 Port" value="None" />
     <ctl name="LSM8 Port" value="None" />
     <ctl name="QUAT_MI2S_TX LSM Function" value="None" />
+    <ctl name="MADONOFF Switch" value="0"/>
+    <ctl name="MAD Input" value="DMIC1" />
 
     <path name="listen-voice-wakeup-1">
         <ctl name="QUAT_MI2S_TX LSM Function" value="SWAUDIO" />
@@ -88,13 +90,18 @@
         <ctl name="LSM8 Mixer QUAT_MI2S_TX" value="1" />
     </path>
 
-    <path name="listen-handset-mic">
+    <path name="listen-ape-handset-mic">
         <ctl name="AIF1_CAP Mixer SLIM TX6" value="1"/>
         <ctl name="MI2S_TX Channels" value="One" />
         <ctl name="SLIM TX6 MUX" value="DEC6" />
         <ctl name="DEC6 Volume" value="102" />
         <ctl name="ADC MUX6" value="DMIC" />
         <ctl name="DMIC MUX6" value="DMIC0" />
+    </path>
+
+    <path name="listen-cpe-handset-mic">
+        <ctl name="MADONOFF Switch" value="1"/>
+        <ctl name="MAD Input" value="DMIC0" />
     </path>
 
 </mixer>
