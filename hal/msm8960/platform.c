@@ -1534,13 +1534,25 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_AANC_HANDSET_MIC;
             } else if (my_data->fluence_type == FLUENCE_NONE ||
                 my_data->fluence_in_voice_call == false) {
-                snd_device = SND_DEVICE_IN_HANDSET_MIC;
+                if (voice_extn_compress_voip_is_active(adev) &&
+                        voice_extn_dedicated_voip_device_prop_check())
+                    snd_device = SND_DEVICE_IN_VOIP_HANDSET_MIC;
+                else
+                    snd_device = SND_DEVICE_IN_HANDSET_MIC;
                 set_echo_reference(adev, true);
             } else {
-                snd_device = SND_DEVICE_IN_VOICE_DMIC;
+                if (voice_extn_compress_voip_is_active(adev) &&
+                        voice_extn_dedicated_voip_device_prop_check())
+                    snd_device = SND_DEVICE_IN_VOIP_HANDSET_MIC;
+                else
+                    snd_device = SND_DEVICE_IN_VOICE_DMIC;
             }
         } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
-            snd_device = SND_DEVICE_IN_VOICE_HEADSET_MIC;
+            if (voice_extn_compress_voip_is_active(adev) &&
+                    voice_extn_dedicated_voip_device_prop_check())
+                snd_device = SND_DEVICE_IN_VOIP_HEADSET_MIC;
+            else
+                snd_device = SND_DEVICE_IN_VOICE_HEADSET_MIC;
             set_echo_reference(adev, true);
         } else if (out_device & AUDIO_DEVICE_OUT_ALL_SCO) {
             if (my_data->btsco_sample_rate == SAMPLE_RATE_16KHZ)
@@ -1553,11 +1565,18 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 my_data->fluence_in_spkr_mode) {
                 if(my_data->fluence_type & FLUENCE_QUAD_MIC) {
                     snd_device = SND_DEVICE_IN_VOICE_SPEAKER_QMIC;
+                } else if (voice_extn_compress_voip_is_active(adev) &&
+                        voice_extn_dedicated_voip_device_prop_check()) {
+                    snd_device = SND_DEVICE_IN_VOIP_SPEAKER_MIC;
                 } else {
                     snd_device = SND_DEVICE_IN_VOICE_SPEAKER_DMIC;
                 }
             } else {
-                snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
+                if (voice_extn_compress_voip_is_active(adev) &&
+                        voice_extn_dedicated_voip_device_prop_check())
+                    snd_device = SND_DEVICE_IN_VOIP_SPEAKER_MIC;
+                else
+                    snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
                 set_echo_reference(adev, true);
             }
         } else if (out_device & AUDIO_DEVICE_OUT_TELEPHONY_TX)
