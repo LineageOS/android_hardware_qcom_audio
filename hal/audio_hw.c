@@ -1222,6 +1222,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     if ((usecase->type == VOICE_CALL) ||
         (usecase->type == VOIP_CALL)  ||
         (usecase->type == PCM_HFP_CALL)) {
+        if(usecase->stream.out == NULL) {
+            ALOGE("%s: stream.out is NULL", __func__);
+            return -EINVAL;
+        }
         out_snd_device = platform_get_output_snd_device(adev->platform,
                                                         usecase->stream.out);
         in_snd_device = platform_get_input_snd_device(adev->platform, usecase->stream.out->devices);
@@ -1265,6 +1269,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             }
         }
         if (usecase->type == PCM_PLAYBACK) {
+            if (usecase->stream.out == NULL) {
+                ALOGE("%s: stream.out is NULL", __func__);
+                return -EINVAL;
+            }
             usecase->devices = usecase->stream.out->devices;
             in_snd_device = SND_DEVICE_NONE;
             if (out_snd_device == SND_DEVICE_NONE) {
@@ -1277,6 +1285,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                 }
             }
         } else if (usecase->type == PCM_CAPTURE) {
+            if (usecase->stream.in == NULL) {
+                ALOGE("%s: stream.in is NULL", __func__);
+                return -EINVAL;
+            }
             usecase->devices = usecase->stream.in->device;
             out_snd_device = SND_DEVICE_NONE;
             if (in_snd_device == SND_DEVICE_NONE) {
