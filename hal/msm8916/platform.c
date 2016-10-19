@@ -770,6 +770,14 @@ static void query_platform(const char *snd_card_name,
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
 
+    } else if (!strncmp(snd_card_name, "msm8909-skuq-snd-card",
+                 sizeof("msm8909-skuq-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_QRD_SKUT,
+                sizeof(MIXER_XML_PATH_QRD_SKUT));
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
     } else if (!strncmp(snd_card_name, "msm8909-pm8916-snd-card",
                  sizeof("msm8909-pm8916-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_MSM8909_PM8916,
