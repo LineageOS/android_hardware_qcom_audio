@@ -2452,7 +2452,15 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 (val == AUDIO_DEVICE_NONE)) {
                 val = AUDIO_DEVICE_OUT_SPEAKER;
         }
-
+        /* To avoid a2dp to sco overlapping force route BT usecases
+         * to speaker based on Phone state
+         */
+        if ((val & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) &&
+            ((adev->mode == AUDIO_MODE_RINGTONE) ||
+            (adev->mode == AUDIO_MODE_IN_CALL))) {
+            ALOGD("Forcing a2dp routing to speaker for ring/call mode");
+            val = AUDIO_DEVICE_OUT_SPEAKER;
+        }
         /*
          * select_devices() call below switches all the usecases on the same
          * backend to the new device. Refer to check_usecases_codec_backend() in
