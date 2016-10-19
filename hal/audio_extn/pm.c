@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014,2016 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,6 +32,7 @@
 
 #include "pm.h"
 #include <cutils/log.h>
+#include <cutils/str_parms.h>
 
 static s_audio_subsys audio_ss;
 
@@ -118,7 +119,7 @@ void audio_extn_pm_set_parameters(struct str_parms *parms)
     }
 }
 
-void audio_extn_pm_event_notifier(void *client_data, enum pm_event event)
+void audio_extn_pm_event_notifier(void *client_data __unused, enum pm_event event)
 {
     pm_client_event_acknowledge(audio_ss.pm_handle, event);
 
