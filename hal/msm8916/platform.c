@@ -4304,7 +4304,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             else
                 mixer_ctl_set_enum_by_string(ctl, "S24_LE");
         } else if (bit_width == 32) {
-            mixer_ctl_set_enum_by_string(ctl, "S24_LE");
+            mixer_ctl_set_enum_by_string(ctl, "S32_LE");
         } else {
             mixer_ctl_set_enum_by_string(ctl, "S16_LE");
         }
@@ -4640,6 +4640,13 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     } else if ((usecase->devices & AUDIO_DEVICE_OUT_SPEAKER) ||
                (usecase->devices & AUDIO_DEVICE_OUT_EARPIECE) ) {
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+
+        if (bit_width >= 24) {
+            bit_width = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
+            ALOGD("%s:becf: afe: reset bitwidth to %d (based on supported"
+                  " value for this platform)", __func__, bit_width);
+        }
+
         ALOGD("%s:becf: afe: playback on codec device not supporting native playback set "
             "default Sample Rate(48k)", __func__);
     }
@@ -4659,6 +4666,13 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         hdmi_backend_cfg.sample_rate = sample_rate;
         hdmi_backend_cfg.channels = channels;
         hdmi_backend_cfg.passthrough_enabled = false;
+
+        /*HDMI does not support 384Khz/32bit playback hence configure BE to 24b/192Khz*/
+        /* TODO: Instead have the validation against edid return the next best match*/
+        if (bit_width > 24)
+            hdmi_backend_cfg.bit_width = 24;
+        if (sample_rate > 192000)
+            hdmi_backend_cfg.sample_rate = 192000;
 
         platform_check_hdmi_backend_cfg(adev, usecase, backend_idx, &hdmi_backend_cfg);
 
@@ -5614,12 +5628,6 @@ bool platform_check_codec_dsd_support(void *platform __unused)
 }
 
 bool platform_check_codec_asrc_support(void *platform __unused)
-{
-    return false;
-}
-
-bool platform_check_if_backend_has_to_be_disabled(snd_device_t new_snd_device __unused,
-                                                  snd_device_t cuurent_snd_device __unused)
 {
     return false;
 }

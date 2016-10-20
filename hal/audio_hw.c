@@ -622,29 +622,75 @@ static int enable_audio_route_for_voice_usecases(struct audio_device *adev,
     return 0;
 }
 
-/*
- * Enable ASRC mode if native or DSD stream is active.
- */
-static void audio_check_and_set_asrc_mode(struct audio_device *adev, snd_device_t snd_device)
+static void enable_asrc_mode(struct audio_device *adev)
 {
-    if (SND_DEVICE_OUT_HEADPHONES == snd_device &&
-       !adev->asrc_mode_enabled) {
+    ALOGV("%s", __func__);
+    audio_route_apply_and_update_path(adev->audio_route,
+                                  "asrc-mode");
+    adev->asrc_mode_enabled = true;
+}
+
+static void disable_asrc_mode(struct audio_device *adev)
+{
+    ALOGV("%s", __func__);
+    audio_route_reset_and_update_path(adev->audio_route,
+                                  "asrc-mode");
+    adev->asrc_mode_enabled = false;
+}
+
+/*
+ * - Enable ASRC mode for incoming mix path use case(Headphone backend)if Headphone
+ *   44.1 or Native DSD backends are enabled for any of current use case.
+ *   e.g. 48-> + (Naitve DSD or Headphone 44.1)
+ * - Disable current mix path use case(Headphone backend) and re-enable it with
+ *   ASRC mode for incoming Headphone 44.1 or Native DSD use case.
+ *   e.g. Naitve DSD or Headphone 44.1 -> + 48
+ */
+static void check_and_set_asrc_mode(struct audio_device *adev, snd_device_t snd_device)
+{
+    ALOGV("%s snd device %d", __func__, snd_device);
+    int new_backend_idx = platform_get_backend_index(snd_device);
+
+    if (((new_backend_idx == HEADPHONE_BACKEND) ||
+            (new_backend_idx == HEADPHONE_44_1_BACKEND) ||
+            (new_backend_idx == DSD_NATIVE_BACKEND)) &&
+            !adev->asrc_mode_enabled) {
         struct listnode *node = NULL;
         struct audio_usecase *uc = NULL;
         struct stream_out *curr_out = NULL;
+        int usecase_backend_idx = DEFAULT_CODEC_BACKEND;
 
         list_for_each(node, &adev->usecase_list) {
             uc = node_to_item(node, struct audio_usecase, list);
             curr_out = (struct stream_out*) uc->stream.out;
-
             if (curr_out && PCM_PLAYBACK == uc->type) {
-                if((platform_get_backend_index(uc->out_snd_device) == HEADPHONE_44_1_BACKEND) ||
-                      (platform_get_backend_index(uc->out_snd_device) == DSD_NATIVE_BACKEND)) {
+                usecase_backend_idx = platform_get_backend_index(uc->out_snd_device);
+
+                if((new_backend_idx == HEADPHONE_BACKEND) &&
+                       ((usecase_backend_idx == HEADPHONE_44_1_BACKEND) ||
+                       (usecase_backend_idx == DSD_NATIVE_BACKEND))) {
                     ALOGD("%s:DSD or native stream detected enabling asrcmode in hardware",
                           __func__);
-                    audio_route_apply_and_update_path(adev->audio_route,
-                                                  "asrc-mode");
-                    adev->asrc_mode_enabled = true;
+                    enable_asrc_mode(adev);
+                    break;
+                } else if(((new_backend_idx == HEADPHONE_44_1_BACKEND) ||
+                          (new_backend_idx == DSD_NATIVE_BACKEND)) &&
+                          (usecase_backend_idx == HEADPHONE_BACKEND)) {
+                    ALOGD("%s:48K stream detected, disabling and enabling it with asrcmode in hardware",
+                          __func__);
+                    disable_audio_route(adev, uc);
+                    disable_snd_device(adev, uc->out_snd_device);
+                    // Apply true-high-quality-mode if DSD or > 44.1KHz or >=24-bit
+                    if (new_backend_idx == DSD_NATIVE_BACKEND)
+                        audio_route_apply_and_update_path(adev->audio_route,
+                                                "hph-true-highquality-mode");
+                    else if ((new_backend_idx == HEADPHONE_44_1_BACKEND) &&
+                             (curr_out->bit_width >= 24))
+                        audio_route_apply_and_update_path(adev->audio_route,
+                                                     "hph-highquality-mode");
+                    enable_asrc_mode(adev);
+                    enable_snd_device(adev, uc->out_snd_device);
+                    enable_audio_route(adev, uc);
                     break;
                 }
             }
@@ -802,8 +848,7 @@ int enable_snd_device(struct audio_device *adev,
             audio_route_apply_and_update_path(adev->audio_route,
                                               "true-native-mode");
             adev->native_playback_enabled = true;
-        } else
-            audio_check_and_set_asrc_mode(adev, snd_device);
+        }
     }
     return 0;
 }
@@ -862,8 +907,8 @@ int disable_snd_device(struct audio_device *adev,
         } else if (SND_DEVICE_OUT_HEADPHONES == snd_device &&
                  adev->asrc_mode_enabled) {
             ALOGD("%s: %d: disabling asrc mode in hardware", __func__, __LINE__);
-            audio_route_reset_and_update_path(adev->audio_route, "asrc-mode");
-            adev->asrc_mode_enabled = false;
+            disable_asrc_mode(adev);
+            audio_route_apply_and_update_path(adev->audio_route, "hph-lowpower-mode");
         }
 
         audio_extn_dev_arbi_release(snd_device);
@@ -936,9 +981,8 @@ static void check_usecases_codec_backend(struct audio_device *adev,
              (usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) ||
              (usecase->devices & AUDIO_DEVICE_OUT_USB_DEVICE) ||
              (force_restart_session)) &&
-            (platform_check_backends_match(snd_device, usecase->out_snd_device)||
-             (platform_check_codec_asrc_support(adev->platform) && !adev->asrc_mode_enabled &&
-              platform_check_if_backend_has_to_be_disabled(snd_device,usecase->out_snd_device)))) {
+             (platform_check_backends_match(snd_device, usecase->out_snd_device))) {
+
                 ALOGD("%s:becf: check_usecases (%s) is active on (%s) - disabling ..",
                     __func__, use_case_table[usecase->id],
                       platform_get_snd_device_name(usecase->out_snd_device));
@@ -1087,10 +1131,9 @@ static int read_hdmi_sink_caps(struct stream_out *out)
     reset_hdmi_sink_caps(out);
 
     /* Cache ext disp type */
-    ret = platform_get_ext_disp_type(adev->platform);
-    if (ret < 0) {
+    if (platform_get_ext_disp_type(adev->platform) <= 0) {
         ALOGE("%s: Failed to query disp type, ret:%d", __func__, ret);
-        return ret;
+        return -EINVAL;
     }
 
     switch (channels) {
@@ -1422,6 +1465,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     /* Enable new sound devices */
     if (out_snd_device != SND_DEVICE_NONE) {
         check_usecases_codec_backend(adev, usecase, out_snd_device);
+        if (platform_check_codec_asrc_support(adev->platform))
+            check_and_set_asrc_mode(adev, out_snd_device);
         enable_snd_device(adev, out_snd_device);
     }
 
@@ -2181,6 +2226,35 @@ static size_t get_input_buffer_size(uint32_t sample_rate,
     size &= ~0x1f;
 
     return size;
+}
+
+static size_t get_output_period_size(uint32_t sample_rate,
+                                    audio_format_t format,
+                                    int channel_count,
+                                    int duration /*in millisecs*/)
+{
+    size_t size = 0;
+    uint32_t bytes_per_sample = audio_bytes_per_sample(format);
+
+    if ((duration == 0) || (sample_rate == 0) ||
+        (bytes_per_sample == 0) || (channel_count == 0)) {
+        ALOGW("Invalid config duration %d sr %d bps %d ch %d", duration, sample_rate,
+               bytes_per_sample, channel_count);
+        return -EINVAL;
+    }
+
+    size = (sample_rate *
+            duration *
+            bytes_per_sample *
+            channel_count) / 1000;
+    /*
+     * To have same PCM samples for all channels, the buffer size requires to
+     * be multiple of (number of channels * bytes per sample)
+     * For writes to succeed, the buffer must be written at address which is multiple of 32
+     */
+    size = ALIGN(size, (bytes_per_sample * channel_count * 32));
+
+    return (size/(channel_count * bytes_per_sample));
 }
 
 static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out)
@@ -3853,6 +3927,17 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->config = pcm_config_afe_proxy_playback;
         adev->voice_tx_output = out;
     } else {
+        unsigned int channels = 0;
+        /*Update config params to default if not set by the caller*/
+        if (config->sample_rate == 0)
+            config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        if (config->channel_mask == AUDIO_CHANNEL_NONE)
+            config->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+        if (config->format == AUDIO_FORMAT_DEFAULT)
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
+
+        channels = audio_channel_count_from_out_mask(out->channel_mask);
+
         if (out->flags & AUDIO_OUTPUT_FLAG_RAW) {
             out->usecase = USECASE_AUDIO_PLAYBACK_ULL;
             out->realtime = may_use_noirq_mode(adev, USECASE_AUDIO_PLAYBACK_ULL,
@@ -3864,6 +3949,13 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
             out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
             out->config = pcm_config_deep_buffer;
+            out->config.period_size = get_output_period_size(config->sample_rate, out->format,
+                                                 channels, DEEP_BUFFER_OUTPUT_PERIOD_DURATION);
+            if (out->config.period_size <= 0) {
+                ALOGE("Invalid configuration period size is not valid");
+                ret = -EINVAL;
+                goto error_open;
+            }
         } else {
             /* primary path is the default path selected if no other outputs are available/suitable */
             out->usecase = USECASE_AUDIO_PLAYBACK_PRIMARY;
@@ -3875,7 +3967,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->bit_width = format_to_bitwidth_table[out->hal_op_format] << 3;
         out->config.rate = config->sample_rate;
         out->sample_rate = out->config.rate;
-        out->config.channels = audio_channel_count_from_out_mask(out->channel_mask);
+        out->config.channels = channels;
         if (out->hal_ip_format != out->hal_op_format) {
             uint32_t buffer_size = out->config.period_size *
                                    format_to_bitwidth_table[out->hal_op_format] *

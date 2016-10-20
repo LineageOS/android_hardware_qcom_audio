@@ -1987,32 +1987,6 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
     return result;
 }
 
-bool platform_check_if_backend_has_to_be_disabled(snd_device_t new_snd_device,
-                                                  snd_device_t cuurent_snd_device)
-{
-    bool result = false;
-
-    ALOGV("%s: current snd device = %s, new snd device = %s", __func__,
-                platform_get_snd_device_name(cuurent_snd_device),
-                platform_get_snd_device_name(new_snd_device));
-
-    if ((new_snd_device < SND_DEVICE_MIN) || (new_snd_device >= SND_DEVICE_OUT_END) ||
-            (cuurent_snd_device < SND_DEVICE_MIN) || (cuurent_snd_device >= SND_DEVICE_OUT_END)) {
-        ALOGE("%s: Invalid snd_device",__func__);
-        return false;
-    }
-
-    if (cuurent_snd_device == SND_DEVICE_OUT_HEADPHONES &&
-            (new_snd_device == SND_DEVICE_OUT_HEADPHONES_44_1 ||
-             new_snd_device == SND_DEVICE_OUT_HEADPHONES_DSD)) {
-        result = true;
-    }
-
-    ALOGV("%s: Need to disable current backend %s, %d",
-          __func__, platform_get_snd_device_name(cuurent_snd_device), result);
-    return result;
-}
-
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
 {
     int device_id;
@@ -2191,7 +2165,7 @@ int platform_get_snd_device_bit_width(snd_device_t snd_device)
 {
     if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
         ALOGE("%s: Invalid snd_device = %d", __func__, snd_device);
-        return DEFAULT_OUTPUT_SAMPLING_RATE;
+        return CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     }
     return backend_bit_width_table[snd_device];
 }
@@ -4389,7 +4363,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             else
                  ret = mixer_ctl_set_enum_by_string(ctl, "S24_LE");
         } else if (bit_width == 32) {
-            ret = mixer_ctl_set_enum_by_string(ctl, "S24_LE");
+            ret = mixer_ctl_set_enum_by_string(ctl, "S32_LE");
         } else {
             ret = mixer_ctl_set_enum_by_string(ctl, "S16_LE");
         }
@@ -4723,13 +4697,20 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                  ALOGD("%s:becf: afe: true napb active set rate to 44.1 khz",
                        __func__);
             }
-        } else if (OUTPUT_SAMPLING_RATE_44100 == sample_rate) {
+        } else if ((OUTPUT_SAMPLING_RATE_44100 == sample_rate) &&
+                   (na_mode != NATIVE_AUDIO_MODE_MULTIPLE_44_1)) {
                  sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
                  ALOGD("%s:becf: afe: napb not active - set (48k) default rate",
                        __func__);
         }
     } else if ((usecase->devices & AUDIO_DEVICE_OUT_SPEAKER) ||
                (usecase->devices & AUDIO_DEVICE_OUT_EARPIECE) ) {
+
+        if (bit_width >= 24) {
+            bit_width = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
+            ALOGD("%s:becf: afe: reset bitwidth to %d (based on supported"
+                   " value for this platform)", __func__, bit_width);
+        }
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         ALOGD("%s:becf: afe: playback on codec device not supporting native playback set "
             "default Sample Rate(48k)", __func__);
@@ -4749,6 +4730,15 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         hdmi_backend_cfg.sample_rate = sample_rate;
         hdmi_backend_cfg.channels = channels;
         hdmi_backend_cfg.passthrough_enabled = false;
+
+        /*
+         * HDMI does not support 384Khz/32bit playback hence configure BE to 24b/192Khz
+         * TODO: Instead have the validation against edid return the next best match
+         */
+        if (bit_width > 24)
+            hdmi_backend_cfg.bit_width = 24;
+        if (sample_rate > 192000)
+            hdmi_backend_cfg.sample_rate = 192000;
 
         platform_check_hdmi_backend_cfg(adev, usecase, backend_idx, &hdmi_backend_cfg);
 

@@ -474,6 +474,8 @@
 
     <!-- Headphone Default mode - uLP -->
     <ctl name="RX HPH Mode" value="CLS_H_ULP" />
+    <ctl name="ASRC0 Output Mode" value="INT" />
+    <ctl name="ASRC1 Output Mode" value="INT" />
 
     <!-- IIR/voice anc -->
     <ctl name="IIR0 Band1" id ="0" value="268435456" />
@@ -1881,6 +1883,8 @@
     </path>
 
     <path name="asrc-mode">
+        <ctl name="ASRC0 Output Mode" value="FRAC" />
+        <ctl name="ASRC1 Output Mode" value="FRAC" />
         <ctl name="RX INT1_2 NATIVE MUX" value="ON" />
         <ctl name="RX INT2_2 NATIVE MUX" value="ON" />
         <ctl name="ASRC0 MUX" value="ASRC_IN_HPHL" />
