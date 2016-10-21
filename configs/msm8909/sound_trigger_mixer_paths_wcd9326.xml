@@ -50,47 +50,48 @@
 
     <path name="listen-voice-wakeup-1">
         <ctl name="QUAT_MI2S_TX LSM Function" value="SWAUDIO" />
-        <ctl name="LSM1 Port" value="QUAT_MI2S_TX" />
+        <ctl name="LSM1 Port" value="ADM_LSM_TX" />
         <ctl name="LSM1 Mixer QUAT_MI2S_TX" value="1" />
     </path>
 
     <path name="listen-voice-wakeup-2">
         <ctl name="QUAT_MI2S_TX LSM Function" value="SWAUDIO" />
-        <ctl name="LSM2 Port" value="QUAT_MI2S_TX" />
+        <ctl name="LSM2 Port" value="ADM_LSM_TX" />
         <ctl name="LSM2 Mixer QUAT_MI2S_TX" value="1" />
     </path>
     <path name="listen-voice-wakeup-3">
         <ctl name="QUAT_MI2S_TX LSM Function" value="SWAUDIO" />
-        <ctl name="LSM3 Port" value="QUAT_MI2S_TX" />
+        <ctl name="LSM3 Port" value="ADM_LSM_TX" />
         <ctl name="LSM3 Mixer QUAT_MI2S_TX" value="1" />
     </path>
     <path name="listen-voice-wakeup-4">
         <ctl name="QUAT_MI2S_TX LSM Function" value="SWAUDIO" />
-        <ctl name="LSM4 Port" value="QUAT_MI2S_TX" />
+        <ctl name="LSM4 Port" value="ADM_LSM_TX" />
         <ctl name="LSM4 Mixer QUAT_MI2S_TX" value="1" />
     </path>
     <path name="listen-voice-wakeup-5">
         <ctl name="QUAT_MI2S_TX LSM Function" value="SWAUDIO" />
-        <ctl name="LSM5 Port" value="QUAT_MI2S_TX" />
+        <ctl name="LSM5 Port" value="ADM_LSM_TX" />
         <ctl name="LSM5 Mixer QUAT_MI2S_TX" value="1" />
     </path>
     <path name="listen-voice-wakeup-6">
         <ctl name="QUAT_MI2S_TX LSM Function" value="SWAUDIO" />
-        <ctl name="LSM6 Port" value="QUAT_MI2S_TX" />
+        <ctl name="LSM6 Port" value="ADM_LSM_TX" />
         <ctl name="LSM6 Mixer QUAT_MI2S_TX" value="1" />
     </path>
     <path name="listen-voice-wakeup-7">
         <ctl name="QUAT_MI2S_TX LSM Function" value="SWAUDIO" />
-        <ctl name="LSM7 Port" value="QUAT_MI2S_TX" />
+        <ctl name="LSM7 Port" value="ADM_LSM_TX" />
         <ctl name="LSM7 Mixer QUAT_MI2S_TX" value="1" />
     </path>
     <path name="listen-voice-wakeup-8">
         <ctl name="QUAT_MI2S_TX LSM Function" value="SWAUDIO" />
-        <ctl name="LSM8 Port" value="QUAT_MI2S_TX" />
+        <ctl name="LSM8 Port" value="ADM_LSM_TX" />
         <ctl name="LSM8 Mixer QUAT_MI2S_TX" value="1" />
     </path>
 
     <path name="listen-ape-handset-mic">
+        <ctl name="MI2S TX SampleRate" value="KHZ_16"/>
         <ctl name="AIF1_CAP Mixer SLIM TX6" value="1"/>
         <ctl name="MI2S_TX Channels" value="One" />
         <ctl name="SLIM TX6 MUX" value="DEC6" />
