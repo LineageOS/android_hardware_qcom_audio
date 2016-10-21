@@ -301,6 +301,7 @@ enum {
 #define AFE_PROXY_RECORD_PCM_DEVICE 8
 
 #define PLATFORM_MAX_MIC_COUNT "input_mic_max_count"
+#define PLATFORM_DEFAULT_EXTERNAL_CODEC_MIC_COUNT 4
 #define PLATFORM_DEFAULT_MIC_COUNT 2
 
 #define LIB_CSD_CLIENT "libcsd-client.so"

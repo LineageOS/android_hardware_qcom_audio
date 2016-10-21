@@ -375,6 +375,7 @@ enum {
 
 #define PLATFORM_MAX_MIC_COUNT "input_mic_max_count"
 #define PLATFORM_DEFAULT_MIC_COUNT 2
+#define PLATFORM_DEFAULT_EXTERNAL_CODEC_MIC_COUNT 4
 
 #define LIB_CSD_CLIENT "libcsd-client.so"
 /* CSD-CLIENT related functions */
