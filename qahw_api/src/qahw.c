@@ -31,6 +31,7 @@
 /*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
 
+#include <dlfcn.h>
 #include <utils/Log.h>
 #include <stdlib.h>
 #include <cutils/list.h>
@@ -46,6 +47,9 @@
  */
 #define QAHW_MODULE_API_VERSION_CURRENT QAHW_MODULE_API_VERSION_0_0
 
+typedef uint64_t (*qahwi_in_read_v2_t)(audio_stream_in_t *in, void* buffer,
+                                       size_t bytes, uint64_t *timestamp);
+
 typedef struct {
     audio_hw_device_t *audio_device;
     char module_name[MAX_MODULE_NAME_LENGTH];
@@ -54,6 +58,7 @@ typedef struct {
     struct listnode out_list;
     pthread_mutex_t lock;
     uint32_t ref_count;
+    const hw_module_t* module;
 } qahw_module_t;
 
 typedef struct {
@@ -74,6 +79,7 @@ typedef struct {
     qahw_module_t *module;
     struct listnode list;
     pthread_mutex_t lock;
+    qahwi_in_read_v2_t qahwi_in_read_v2;
 } qahw_stream_in_t;
 
 typedef enum {
@@ -916,8 +922,11 @@ ssize_t qahw_in_read(qahw_stream_handle_t *in_handle,
 
     pthread_mutex_lock(&qahw_stream_in->lock);
     in = qahw_stream_in->stream;
-    /*TBD:: call HAL timestamp read API*/
-    if (in->read) {
+    if (qahw_stream_in->qahwi_in_read_v2) {
+        rc = qahw_stream_in->qahwi_in_read_v2(in, in_buf->buffer,
+                                         in_buf->bytes, in_buf->timestamp);
+        in_buf->offset = 0;
+    } else if (in->read) {
         rc = in->read(in, in_buf->buffer, in_buf->bytes);
         in_buf->offset = 0;
     } else {
@@ -1322,6 +1331,20 @@ int qahw_open_input_stream(qahw_module_handle_t *hw_module,
         list_add_tail(&qahw_module->in_list, &qahw_stream_in->list);
     }
 
+    /* dlsym qahwi_in_read_v2 if timestamp flag is used */
+    if (!rc && (flags & QAHW_INPUT_FLAG_TIMESTAMP)) {
+        const char *error;
+
+        /* clear any existing errors */
+        dlerror();
+        qahw_stream_in->qahwi_in_read_v2 = (qahwi_in_read_v2_t)
+                          dlsym(qahw_module->module->dso, "qahwi_in_read_v2");
+        if ((error = dlerror()) != NULL) {
+            ALOGI("%s: dlsym error %s for qahwi_in_read_v2", __func__, error);
+            qahw_stream_in->qahwi_in_read_v2 = NULL;
+        }
+    }
+
 exit:
     pthread_mutex_unlock(&qahw_module->lock);
     return rc;
@@ -1423,6 +1446,7 @@ qahw_module_handle_t *qahw_load_module(const char *hw_module_id)
         audio_hw_device_close(audio_device);
         goto error_exit;
     }
+    qahw_module->module = module;
     ALOGD("%s::Loaded HAL %s module %p", __func__, ahal_name, qahw_module);
 
     if (!qahw_list_count)

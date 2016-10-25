@@ -17,7 +17,8 @@ LOCAL_SRC_FILES := \
 LOCAL_SHARED_LIBRARIES := \
     liblog \
     libcutils \
-    libhardware
+    libhardware \
+    libdl
 
 LOCAL_COPY_HEADERS_TO   := mm-audio/qahw_api/inc
 LOCAL_COPY_HEADERS      := inc/qahw_api.h
