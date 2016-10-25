@@ -96,6 +96,14 @@ protected:
         // see getDeviceForStrategy() for the use of fromCache parameter
         audio_devices_t getNewOutputDevice(const sp<AudioOutputDescriptor>& outputDesc,
                                            bool fromCache);
+
+        // avoid invalidation for active music stream on  previous outputs
+        // which is supported on the new device.
+        bool isInvalidationOfMusicStreamNeeded(routing_strategy strategy);
+
+        // Must be called before updateDevicesAndOutputs()
+        void checkOutputForStrategy(routing_strategy strategy);
+
         // returns true if given output is direct output
         bool isDirectOutput(audio_io_handle_t output);
 
