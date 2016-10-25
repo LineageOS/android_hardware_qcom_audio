@@ -16,6 +16,29 @@
       "revId": "48cb155324e04896c78fdf471bd82ec859dbbdbe",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff2e2bb8_616d9e03",
+        "filename": "hal/msm8960/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1575,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-10-25T01:47:43Z",
+      "side": 1,
+      "message": "It\u0027s happening here too. Usually this is for the case that you\u0027re not doing echo cancellation through ACDB, so I\u0027m less worried about this. FWIW it doesn\u0027t seem like the 8974 HAL is setting echo references for most input devices regardless of whether it\u0027s a VOIP case.",
+      "range": {
+        "startLine": 1575,
+        "startChar": 16,
+        "endLine": 1575,
+        "endChar": 47
+      },
+      "revId": "48cb155324e04896c78fdf471bd82ec859dbbdbe",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
