@@ -123,6 +123,16 @@ AM_CFLAGS += -DWMA_OFFLOAD_ENABLED
 AM_CFLAGS += -DCOMPRESS_METADATA_NEEDED
 endif
 
+if COMPRESS_INPUT
+AM_CFLAGS += -DCOMPRESS_INPUT_ENABLED
+c_sources += audio_extn/compress_in.c
+endif
+
+if AUDIO_HW_EXTN_API
+AM_CFLAGS += -DAUDIO_HW_EXTN_API_ENABLED
+c_sources += audio_hw_extn_api.c
+endif
+
 h_sources = audio_extn/audio_defs.h \
             audio_extn/audio_extn.h \
             audio_hw.h \

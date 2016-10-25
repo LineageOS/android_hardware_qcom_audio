@@ -593,6 +593,8 @@ audio_format_t pcm_format_to_hal(uint32_t pcm_format);
 uint32_t hal_format_to_pcm(audio_format_t hal_format);
 
 void audio_extn_utils_update_direct_pcm_fragment_size(struct stream_out *out);
+size_t audio_extn_utils_convert_format_24_8_to_8_24(void *buf, size_t bytes);
+int get_snd_codec_id(audio_format_t format);
 
 #ifndef KPI_OPTIMIZE_ENABLED
 #define audio_extn_perf_lock_init() (0)
@@ -697,6 +699,27 @@ int audio_extn_snd_mon_init();
 int audio_extn_snd_mon_deinit();
 int audio_extn_snd_mon_register_listener(void *stream, snd_mon_cb cb);
 int audio_extn_snd_mon_unregister_listener(void *stream);
+#endif
+
+#ifdef COMPRESS_INPUT_ENABLED
+bool audio_extn_cin_applicable_stream(struct stream_in *in);
+bool audio_extn_cin_attached_usecase(audio_usecase_t uc_id);
+size_t audio_extn_cin_get_buffer_size(struct stream_in *in);
+int audio_extn_cin_start_input_stream(struct stream_in *in);
+void audio_extn_cin_stop_input_stream(struct stream_in *in);
+void audio_extn_cin_close_input_stream(struct stream_in *in);
+int audio_extn_cin_read(struct stream_in *in, void *buffer,
+                        size_t bytes, size_t *bytes_read);
+int audio_extn_cin_configure_input_stream(struct stream_in *in);
+#else
+#define audio_extn_cin_applicable_stream(in) (false)
+#define audio_extn_cin_attached_usecase(uc_id) (false)
+#define audio_extn_cin_get_buffer_size(in) (0)
+#define audio_extn_cin_start_input_stream(in) (0)
+#define audio_extn_cin_stop_input_stream(in) (0)
+#define audio_extn_cin_close_input_stream(in) (0)
+#define audio_extn_cin_read(in, buffer, bytes, bytes_read) (0)
+#define audio_extn_cin_configure_input_stream(in) (0)
 #endif
 
 #endif /* AUDIO_EXTN_H */

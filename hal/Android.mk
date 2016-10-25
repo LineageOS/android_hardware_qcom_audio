@@ -254,6 +254,16 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_QAF)),true)
     LOCAL_SRC_FILES += audio_extn/qaf.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_INPUT)),true)
+    LOCAL_CFLAGS += -DCOMPRESS_INPUT_ENABLED
+    LOCAL_SRC_FILES += audio_extn/compress_in.c
+endif
+
+ifeq ($(strip $(BOARD_SUPPORTS_QAHW)),true)
+    LOCAL_CFLAGS += -DAUDIO_HW_EXTN_API_ENABLED
+    LOCAL_SRC_FILES += audio_hw_extn_api.c
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
@@ -262,7 +272,6 @@ LOCAL_SHARED_LIBRARIES := \
 	libaudioroute \
 	libdl \
 	libaudioutils \
-	libhardware \
 	libexpat
 
 LOCAL_C_INCLUDES += \

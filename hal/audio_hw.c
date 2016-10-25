@@ -227,6 +227,9 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
 
     [USECASE_AUDIO_RECORD] = "audio-record",
     [USECASE_AUDIO_RECORD_COMPRESS] = "audio-record-compress",
+    [USECASE_AUDIO_RECORD_COMPRESS2] = "audio-record-compress2",
+    [USECASE_AUDIO_RECORD_COMPRESS3] = "audio-record-compress3",
+    [USECASE_AUDIO_RECORD_COMPRESS4] = "audio-record-compress4",
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = "low-latency-record",
     [USECASE_AUDIO_RECORD_FM_VIRTUAL] = "fm-virtual-record",
     [USECASE_AUDIO_PLAYBACK_FM] = "play-fm",
@@ -503,62 +506,6 @@ static inline bool is_mmap_usecase(audio_usecase_t uc_id)
 {
     return (uc_id == USECASE_AUDIO_RECORD_AFE_PROXY) ||
            (uc_id == USECASE_AUDIO_PLAYBACK_AFE_PROXY);
-}
-
-static int get_snd_codec_id(audio_format_t format)
-{
-    int id = 0;
-
-    switch (format & AUDIO_FORMAT_MAIN_MASK) {
-    case AUDIO_FORMAT_MP3:
-        id = SND_AUDIOCODEC_MP3;
-        break;
-    case AUDIO_FORMAT_AAC:
-        id = SND_AUDIOCODEC_AAC;
-        break;
-    case AUDIO_FORMAT_AAC_ADTS:
-        id = SND_AUDIOCODEC_AAC;
-        break;
-    case AUDIO_FORMAT_PCM:
-        id = SND_AUDIOCODEC_PCM;
-        break;
-    case AUDIO_FORMAT_FLAC:
-        id = SND_AUDIOCODEC_FLAC;
-        break;
-    case AUDIO_FORMAT_ALAC:
-        id = SND_AUDIOCODEC_ALAC;
-        break;
-    case AUDIO_FORMAT_APE:
-        id = SND_AUDIOCODEC_APE;
-        break;
-    case AUDIO_FORMAT_DSD:
-        id = SND_AUDIOCODEC_DSD;
-        break;
-    case AUDIO_FORMAT_VORBIS:
-        id = SND_AUDIOCODEC_VORBIS;
-        break;
-    case AUDIO_FORMAT_WMA:
-        id = SND_AUDIOCODEC_WMA;
-        break;
-    case AUDIO_FORMAT_WMA_PRO:
-        id = SND_AUDIOCODEC_WMA_PRO;
-        break;
-    case AUDIO_FORMAT_AC3:
-        id = SND_AUDIOCODEC_AC3;
-        break;
-    case AUDIO_FORMAT_E_AC3:
-    case AUDIO_FORMAT_E_AC3_JOC:
-        id = SND_AUDIOCODEC_EAC3;
-        break;
-    case AUDIO_FORMAT_DTS:
-    case AUDIO_FORMAT_DTS_HD:
-        id = SND_AUDIOCODEC_DTS;
-        break;
-    default:
-        ALOGE("%s: Unsupported audio format :%x", __func__, format);
-    }
-
-    return id;
 }
 
 int get_snd_card_state(struct audio_device *adev)
@@ -1750,6 +1697,14 @@ int start_input_stream(struct stream_in *in)
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d), channels %d format %d",
           __func__, adev->snd_card, in->pcm_device_id, in->config.channels, in->config.format);
 
+   if (audio_extn_cin_attached_usecase(in->usecase)) {
+       ret = audio_extn_cin_start_input_stream(in);
+       if (ret)
+           goto error_open;
+       else
+           goto done_open;
+   }
+
     unsigned int flags = PCM_IN;
     unsigned int pcm_open_retry_count = 0;
 
@@ -1795,6 +1750,7 @@ int start_input_stream(struct stream_in *in)
             goto error_open;
     }
 
+done_open:
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
     ALOGD("%s: exit", __func__);
 
@@ -3400,6 +3356,8 @@ static size_t in_get_buffer_size(const struct audio_stream *stream)
         return voice_extn_compress_voip_in_get_buffer_size(in);
     else if(audio_extn_compr_cap_usecase_supported(in->usecase))
         return audio_extn_compr_cap_get_buffer_size(in->config.format);
+    else if(audio_extn_cin_attached_usecase(in->usecase))
+        return audio_extn_cin_get_buffer_size(in);
 
     return in->config.period_size * in->af_period_multiplier *
         audio_stream_in_frame_size((const struct audio_stream_in *)stream);
@@ -3450,6 +3408,8 @@ static int in_standby(struct audio_stream *stream)
             voice_extn_compress_voip_close_input_stream(stream);
             ALOGD("VOIP input entered standby");
         } else {
+            if (audio_extn_cin_attached_usecase(in->usecase))
+                audio_extn_cin_stop_input_stream(in);
             if (in->pcm) {
                 pcm_close(in->pcm);
                 in->pcm = NULL;
@@ -3586,7 +3546,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     struct audio_device *adev = in->dev;
     int ret = -1;
     int snd_scard_state = get_snd_card_state(adev);
-    int *int_buf_stream = NULL;
+    size_t bytes_read = 0;
 
     lock_input_stream(in);
 
@@ -3620,14 +3580,16 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     // what's the duration requested by the client?
     long ns = 0;
 
-    if (in->config.rate)
+    if (in->pcm && in->config.rate)
         ns = pcm_bytes_to_frames(in->pcm, bytes)*1000000000LL/
                                              in->config.rate;
 
     request_in_focus(in, ns);
     bool use_mmap = is_mmap_usecase(in->usecase) || in->realtime;
 
-    if (in->pcm) {
+    if (audio_extn_cin_attached_usecase(in->usecase)) {
+        ret = audio_extn_cin_read(in, buffer, bytes, &bytes_read);
+    } else if (in->pcm) {
         if (audio_extn_ssr_get_stream() == in) {
             ret = audio_extn_ssr_read(stream, buffer, bytes);
         } else if (audio_extn_compr_cap_usecase_supported(in->usecase)) {
@@ -3636,23 +3598,19 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             ret = pcm_mmap_read(in->pcm, buffer, bytes);
         } else {
             ret = pcm_read(in->pcm, buffer, bytes);
-            if ( !ret && bytes > 0 && (in->format == AUDIO_FORMAT_PCM_8_24_BIT)) {
-                if (bytes % 4 == 0) {
-                    /* data from DSP comes in 24_8 format, convert it to 8_24 */
-                    int_buf_stream = buffer;
-                    size_t itt = 0;
-                    for (itt = 0; itt < bytes/4 ; itt++) {
-                        int_buf_stream[itt] >>= 8;
-                    }
-                } else {
-                    ALOGE("%s: !!! something wrong !!! ... data not 32 bit aligned ", __func__);
+            /* data from DSP comes in 24_8 format, convert it to 8_24 */
+            if (!ret && bytes > 0 && (in->format == AUDIO_FORMAT_PCM_8_24_BIT)) {
+                if (audio_extn_utils_convert_format_24_8_to_8_24(buffer, bytes)
+                    != bytes) {
                     ret = -EINVAL;
                     goto exit;
                 }
-            } if (ret < 0) {
+            } else if (ret < 0) {
                 ret = -errno;
             }
         }
+        /* bytes read is always set to bytes for non compress usecases */
+        bytes_read = bytes;
     }
 
     release_in_focus(in);
@@ -3686,7 +3644,7 @@ exit:
         usleep((uint64_t)bytes * 1000000 / audio_stream_in_frame_size(stream) /
                                    in_get_sample_rate(&in->stream.common));
     }
-    return bytes;
+    return bytes_read;
 }
 
 static uint32_t in_get_input_frames_lost(struct audio_stream_in *stream __unused)
@@ -4606,7 +4564,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                   audio_devices_t devices,
                                   struct audio_config *config,
                                   struct audio_stream_in **stream_in,
-                                  audio_input_flags_t flags __unused,
+                                  audio_input_flags_t flags,
                                   const char *address __unused,
                                   audio_source_t source)
 {
@@ -4660,17 +4618,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->capture_handle = handle;
     in->flags = flags;
 
-    /* Update config params with the requested sample rate and channels */
-    in->usecase = USECASE_AUDIO_RECORD;
-    if (config->sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE &&
-            (flags & AUDIO_INPUT_FLAG_FAST) != 0) {
-        is_low_latency = true;
-#if LOW_LATENCY_CAPTURE_USE_CASE
-        in->usecase = USECASE_AUDIO_RECORD_LOW_LATENCY;
-#endif
-        in->realtime = may_use_noirq_mode(adev, in->usecase, in->flags);
-    }
-
     in->format = config->format;
     if (in->realtime) {
         in->config = pcm_config_audio_capture_rt;
@@ -4683,6 +4630,58 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->af_period_multiplier = 1;
     }
     in->bit_width = 16;
+
+    /* restrict 24 bit capture for unprocessed source only
+     * for other sources if 24 bit requested reject 24 and set 16 bit capture only
+     */
+    if (config->format == AUDIO_FORMAT_DEFAULT) {
+        config->format = AUDIO_FORMAT_PCM_16_BIT;
+    } else if ((config->format == AUDIO_FORMAT_PCM_FLOAT) ||
+               (config->format == AUDIO_FORMAT_PCM_32_BIT) ||
+               (config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED) ||
+               (config->format == AUDIO_FORMAT_PCM_8_24_BIT)) {
+        bool ret_error = false;
+        in->bit_width = 24;
+        /* 24 bit is restricted to UNPROCESSED source only,also format supported
+           from HAL is 24_packed and 8_24
+         *> In case of UNPROCESSED source, for 24 bit, if format requested is other than
+            24_packed return error indicating supported format is 24_packed
+         *> In case of any other source requesting 24 bit or float return error
+            indicating format supported is 16 bit only.
+
+            on error flinger will retry with supported format passed
+         */
+        if ((source != AUDIO_SOURCE_UNPROCESSED) &&
+            (source != AUDIO_SOURCE_CAMCORDER)) {
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
+            if (config->sample_rate > 48000)
+                config->sample_rate = 48000;
+            ret_error = true;
+        } else if (config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED) {
+            in->config.format = PCM_FORMAT_S24_3LE;
+        } else if (config->format == AUDIO_FORMAT_PCM_8_24_BIT) {
+            in->config.format = PCM_FORMAT_S24_LE;
+        } else {
+            config->format = AUDIO_FORMAT_PCM_24_BIT_PACKED;
+            ret_error = true;
+        }
+
+        if (ret_error) {
+            ret = -EINVAL;
+            goto err_open;
+        }
+    }
+
+    /* Update config params with the requested sample rate and channels */
+    in->usecase = USECASE_AUDIO_RECORD;
+    if (config->sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE &&
+            (flags & AUDIO_INPUT_FLAG_FAST) != 0) {
+        is_low_latency = true;
+#if LOW_LATENCY_CAPTURE_USE_CASE
+        in->usecase = USECASE_AUDIO_RECORD_LOW_LATENCY;
+#endif
+        in->realtime = may_use_noirq_mode(adev, in->usecase, in->flags);
+    }
 
     if (in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) {
         if (adev->mode != AUDIO_MODE_IN_CALL) {
@@ -4723,48 +4722,11 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             audio_extn_compr_cap_format_supported(config->format) &&
             (in->dev->mode != AUDIO_MODE_IN_COMMUNICATION)) {
         audio_extn_compr_cap_init(in);
+    } else if (audio_extn_cin_applicable_stream(in)) {
+        ret = audio_extn_cin_configure_input_stream(in);
+        if (ret)
+            goto err_open;
     } else {
-        /* restrict 24 bit capture for unprocessed source only
-         * for other sources if 24 bit requested reject 24 and set 16 bit capture only
-         */
-        if (config->format == AUDIO_FORMAT_DEFAULT) {
-            config->format = AUDIO_FORMAT_PCM_16_BIT;
-        } else if ((config->format == AUDIO_FORMAT_PCM_FLOAT) ||
-                (config->format == AUDIO_FORMAT_PCM_32_BIT) ||
-                (config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED) ||
-                (config->format == AUDIO_FORMAT_PCM_8_24_BIT)) {
-            bool ret_error = false;
-            in->bit_width = 24;
-            /* 24 bit is restricted to UNPROCESSED source only,also format supported
-               from HAL is 24_packed and 8_24
-             *> In case of UNPROCESSED source, for 24 bit, if format requested is other than
-             24_packed return error indicating supported format is 24_packed
-             *> In case of any other source requesting 24 bit or float return error
-             indicating format supported is 16 bit only.
-
-             on error flinger will retry with supported format passed
-             */
-            if ((source != AUDIO_SOURCE_UNPROCESSED) &&
-                (source != AUDIO_SOURCE_CAMCORDER)) {
-                config->format = AUDIO_FORMAT_PCM_16_BIT;
-                if( config->sample_rate > 48000)
-                    config->sample_rate = 48000;
-                ret_error = true;
-            } else if (config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED) {
-                in->config.format = PCM_FORMAT_S24_3LE;
-            } else if (config->format == AUDIO_FORMAT_PCM_8_24_BIT) {
-                in->config.format = PCM_FORMAT_S24_LE;
-            } else {
-                config->format = AUDIO_FORMAT_PCM_24_BIT_PACKED;
-                ret_error = true;
-            }
-
-            if (ret_error) {
-                ret = -EINVAL;
-                goto err_open;
-            }
-        }
-
         in->config.channels = channel_count;
         if (!in->realtime) {
             in->format = config->format;
@@ -4831,9 +4793,11 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
         audio_extn_ssr_deinit();
     }
 
-    if(audio_extn_compr_cap_enabled() &&
+    if (audio_extn_compr_cap_enabled() &&
             audio_extn_compr_cap_format_supported(in->config.format))
         audio_extn_compr_cap_deinit();
+    if (audio_extn_cin_attached_usecase(in->usecase))
+        audio_extn_cin_close_input_stream(in);
 
     if (in->is_st_session) {
         ALOGV("%s: sound trigger pcm stop lab", __func__);
@@ -4872,6 +4836,7 @@ static int adev_close(hw_device_t *device)
         platform_deinit(adev->platform);
         if (adev->adm_deinit)
             adev->adm_deinit(adev->adm_data);
+        qahwi_deinit(device);
         free(device);
         adev = NULL;
     }
@@ -5120,6 +5085,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     if (adev->adm_init)
         adev->adm_data = adev->adm_init();
 
+    qahwi_init(*device);
     audio_extn_perf_lock_init();
     ALOGV("%s: exit", __func__);
     return 0;

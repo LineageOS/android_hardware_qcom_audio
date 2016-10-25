@@ -34,6 +34,7 @@
 #include "platform_api.h"
 #include "audio_extn.h"
 #include "voice.h"
+#include "sound/compress_params.h"
 
 #ifdef AUDIO_EXTERNAL_HDMI_ENABLED
 #ifdef HDMI_PASSTHROUGH_ENABLED
@@ -104,6 +105,7 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_HW_HOTWORD),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_RAW),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_SYNC),
+    STRING_TO_ENUM(AUDIO_INPUT_FLAG_TIMESTAMP),
 };
 
 const struct string_to_enum s_format_name_to_enum_table[] = {
@@ -1079,6 +1081,66 @@ void audio_extn_utils_update_direct_pcm_fragment_size(struct stream_out *out)
     } else {
         out->hal_fragment_size = out->compr_config.fragment_size;
     }
+}
+
+/* converts pcm format 24_8 to 8_24 inplace */
+size_t audio_extn_utils_convert_format_24_8_to_8_24(void *buf, size_t bytes)
+{
+    size_t i = 0;
+    int *int_buf_stream = buf;
+
+    if ((bytes % 4) != 0) {
+        ALOGE("%s: wrong inout buffer! ... is not 32 bit aligned ", __func__);
+        return -EINVAL;
+    }
+
+    for (; i < (bytes / 4); i++)
+        int_buf_stream[i] >>= 8;
+
+    return bytes;
+}
+
+int get_snd_codec_id(audio_format_t format)
+{
+    int id = 0;
+
+    switch (format & AUDIO_FORMAT_MAIN_MASK) {
+    case AUDIO_FORMAT_MP3:
+        id = SND_AUDIOCODEC_MP3;
+        break;
+    case AUDIO_FORMAT_AAC:
+        id = SND_AUDIOCODEC_AAC;
+        break;
+    case AUDIO_FORMAT_AAC_ADTS:
+        id = SND_AUDIOCODEC_AAC;
+        break;
+    case AUDIO_FORMAT_PCM_OFFLOAD:
+    case AUDIO_FORMAT_PCM:
+        id = SND_AUDIOCODEC_PCM;
+        break;
+    case AUDIO_FORMAT_FLAC:
+        id = SND_AUDIOCODEC_FLAC;
+        break;
+    case AUDIO_FORMAT_ALAC:
+        id = SND_AUDIOCODEC_ALAC;
+        break;
+    case AUDIO_FORMAT_APE:
+        id = SND_AUDIOCODEC_APE;
+        break;
+    case AUDIO_FORMAT_VORBIS:
+        id = SND_AUDIOCODEC_VORBIS;
+        break;
+    case AUDIO_FORMAT_WMA:
+        id = SND_AUDIOCODEC_WMA;
+        break;
+    case AUDIO_FORMAT_WMA_PRO:
+        id = SND_AUDIOCODEC_WMA_PRO;
+        break;
+    default:
+        ALOGE("%s: Unsupported audio format :%x", __func__, format);
+    }
+
+    return id;
 }
 
 void audio_extn_utils_send_audio_calibration(struct audio_device *adev,

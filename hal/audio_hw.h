@@ -47,6 +47,7 @@
 #include <audio_route/audio_route.h>
 #include "audio_defs.h"
 #include "voice.h"
+#include "audio_hw_extn_api.h"
 
 #define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
 #define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/system/lib/soundfx/libqcompostprocbundle.so"
@@ -117,6 +118,9 @@ enum {
     /* Capture usecases */
     USECASE_AUDIO_RECORD,
     USECASE_AUDIO_RECORD_COMPRESS,
+    USECASE_AUDIO_RECORD_COMPRESS2,
+    USECASE_AUDIO_RECORD_COMPRESS3,
+    USECASE_AUDIO_RECORD_COMPRESS4,
     USECASE_AUDIO_RECORD_LOW_LATENCY,
     USECASE_AUDIO_RECORD_FM_VIRTUAL,
 
@@ -273,6 +277,8 @@ struct stream_in {
     bool realtime;
     int af_period_multiplier;
     struct stream_app_type_cfg app_type_cfg;
+    void *cin_extn;
+    qahwi_stream_in_t qahwi_in;
 
     struct audio_device *dev;
 };
@@ -413,6 +419,7 @@ struct audio_device {
     int perf_lock_opts_size;
     bool native_playback_enabled;
     bool asrc_mode_enabled;
+    qahwi_device_t qahwi_dev;
 };
 
 int select_devices(struct audio_device *adev,

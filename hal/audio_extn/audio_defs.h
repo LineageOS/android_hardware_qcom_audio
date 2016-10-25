@@ -106,4 +106,9 @@
 /* Set or Query stream profile type */
 #define AUDIO_PARAMETER_STREAM_PROFILE "audio_stream_profile"
 
+/* audio inout flag for timestamp mode.
+ * check other input flags defined in audio.h for conflicts
+ */
+#define AUDIO_INPUT_FLAG_TIMESTAMP 0x80000000
+
 #endif /* AUDIO_DEFS_H */
