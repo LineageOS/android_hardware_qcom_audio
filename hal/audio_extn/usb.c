@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013, 2016-2017 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -79,6 +79,7 @@ struct usb_card_config {
     int usb_sidetone_index[USB_SIDETONE_MAX_INDEX];
     int usb_sidetone_vol_min;
     int usb_sidetone_vol_max;
+    int endian;
 };
 
 struct usb_module {
@@ -213,6 +214,29 @@ static int usb_set_dev_id_mixer_ctl(unsigned int usb_usecase_type, int card,
     }
     mixer_ctl_set_value(ctl, 0, dev_token);
 
+    return 0;
+}
+
+static int usb_set_endian_mixer_ctl(int endian, char *endian_mixer_ctl_name)
+{
+    struct mixer_ctl *ctl = mixer_get_ctl_by_name(usbmod->adev->mixer,
+                                                  endian_mixer_ctl_name);
+    if (!ctl) {
+       ALOGE("%s: Could not get ctl for mixer cmd - %s",
+             __func__, endian_mixer_ctl_name);
+       return -EINVAL;
+    }
+
+    switch (endian) {
+       case 0:
+       case 1:
+           mixer_ctl_set_value(ctl, 0, endian);
+           break;
+       default:
+           ALOGW("%s: endianness(%d) not supported",
+                 __func__, endian);
+           break;
+    }
     return 0;
 }
 
@@ -377,14 +401,17 @@ static int usb_get_capability(int type,
         }
         memcpy(bit_width_str, bit_width_start, size);
         bit_width_str[size] = '\0';
-        if (strstr(bit_width_str, "S16_LE"))
-            usb_device_info->bit_width = 16;
-        else if (strstr(bit_width_str, "S24_LE"))
-            usb_device_info->bit_width = 24;
-        else if (strstr(bit_width_str, "S24_3LE"))
-            usb_device_info->bit_width = 24;
-        else if (strstr(bit_width_str, "S32_LE"))
-            usb_device_info->bit_width = 32;
+
+        const char * formats[] = { "S32", "S24_3", "S24", "S16" };
+        const int    bit_width[] = { 32,  24,      24,     16};
+        for (size_t i = 0; i < ARRAY_SIZE(formats); i++) {
+            const char * s = strstr(bit_width_str, formats[i]);
+            if (s) {
+                usb_device_info->bit_width = bit_width[i];
+                usb_card_info->endian = strstr(s, "BE") ? 1 : 0;
+                break;
+            }
+        }
 
         if (bit_width_str)
             free(bit_width_str);
@@ -454,7 +481,7 @@ static int usb_get_device_pb_config(struct usb_card_config *usb_card_info,
         goto exit;
     }
     usb_set_dev_id_mixer_ctl(USB_PLAYBACK, card, "USB_AUDIO_RX dev_token");
-
+    usb_set_endian_mixer_ctl(usb_card_info->endian, "USB_AUDIO_RX endian");
 exit:
 
     return ret;
@@ -472,6 +499,7 @@ static int usb_get_device_cap_config(struct usb_card_config *usb_card_info,
         goto exit;
     }
     usb_set_dev_id_mixer_ctl(USB_CAPTURE, card, "USB_AUDIO_TX dev_token");
+    usb_set_endian_mixer_ctl(usb_card_info->endian, "USB_AUDIO_TX endian");
 
 exit:
     return ret;
@@ -535,12 +563,13 @@ static void usb_print_active_device(void){
     ALOGI("%s", __func__);
     list_for_each(node_i, &usbmod->usb_card_conf_list) {
         card_info = node_to_item(node_i, struct usb_card_config, list);
-        ALOGI("%s: card_dev_type (0x%x), card_no(%d)",
-               __func__,  card_info->usb_device_type, card_info->usb_card);
+        ALOGI("%s: card_dev_type (0x%x), card_no(%d), %s",
+               __func__,  card_info->usb_device_type,
+              card_info->usb_card, card_info->endian ? "BE" : "LE");
         list_for_each(node_j, &card_info->usb_device_conf_list) {
             dev_info = node_to_item(node_j, struct usb_device_config, list);
             ALOGI("%s: bit-width(%d) channel(%d)",
-                   __func__, dev_info->bit_width, dev_info->channels);
+                  __func__, dev_info->bit_width, dev_info->channels);
             for (i =  0; i < dev_info->rate_size; i++)
                 ALOGI("%s: rate %d", __func__, dev_info->rates[i]);
         }
