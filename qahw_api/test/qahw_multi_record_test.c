@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <cutils/list.h>
+#include <signal.h>
 #include "qahw_api.h"
 #include "qahw_defs.h"
 
@@ -82,90 +83,112 @@ static pthread_mutex_t glock;
 static volatile int tests_running;
 static volatile int tests_completed;
 
-#define SOUNDFOCUS_PARAMS "SoundFocus.start_angles;SoundFocus.enable_sectors;" \
-                          "SoundFocus.gain_step"
-#define SOURCETRACK_PARAMS "SourceTrack.vad;SourceTrack.doa_speech;SourceTrack.doa_noise;"\
-                           "SourceTrack.polar_activity;ssr.noise_level;ssr.noise_level_after_ns"
+#define SOUNDFOCUS_SET_PARAMS_STR_LEN 100
+#define SOUNDFOCUS_SET_PARAMS "SoundFocus.start_angles=%s;"\
+                              "SoundFocus.enable_sectors=%s;" \
+                              "SoundFocus.gain_step=%d"
+int sourcetrack_done = 0;
+static pthread_mutex_t glock;
+static pthread_mutex_t sourcetrack_lock;
+char soundfocus_param[100];
+pthread_cond_t gcond;
+int tests_running;
+bool gerror;
+
+void sourcetrack_signal_handler(void)
+{
+/* Function to read keyboard interupt to enable user to set parameters
+   for sourcetracking usecase Dynamically */
+
+    pthread_mutex_lock(&sourcetrack_lock);
+    read_soundfocus_param();
+    pthread_mutex_unlock(&sourcetrack_lock);
+}
+
+void read_soundfocus_param(void)
+{
+    char params[50] = {0};
+    char *start_angle = NULL;
+    char *enable_sector = NULL;
+    unsigned int gain_step;
+
+    printf("Enter soundfocusparams (startangle;enablesector;gainstep):::::");
+    scanf("%s",params);
+
+    start_angle = strtok(params, ";");
+    enable_sector = strtok(NULL, ";" );
+    gain_step = atoi(strtok(NULL, ";"));
+
+    snprintf(soundfocus_param, SOUNDFOCUS_SET_PARAMS_STR_LEN,
+             SOUNDFOCUS_SET_PARAMS, start_angle, enable_sector,
+             gain_step);
+}
 
 void *read_sourcetrack_data(void* data)
 {
-    char kvpair_soundfocus[200] = SOUNDFOCUS_PARAMS;
-    char kvpair_sourcetrack[200] = SOURCETRACK_PARAMS;
-    char *string = NULL;
-    char *token = NULL;
-    char choice = '\0';
-    int i =0;
-    qahw_module_handle_t *qawh_module_handle = (qahw_module_handle_t *) data;
+    int idx =0, status = 0,count = 0, sect = 0;
+    qahw_param_id param;
+    qahw_param_payload payload;
+    struct qahw_sound_focus_param sound_focus_data;
+    qahw_module_handle_t *qawh_module_handle = NULL;
 
-    while (true) {
-        fprintf(log_file, "\nGet SoundFocus Params from app");
-        string = qahw_get_parameters(qawh_module_handle, kvpair_soundfocus);
-        if (!string) {
-            fprintf(log_file, "Error.Failed Get SoundFocus Params\n");
-        } else {
-            token = strtok (string , "=");
-            while (token) {
-                if (*token == 'S') {
-                    choice = *(token + 11);
-                    token = strtok (NULL,",;");
-                    i=0;
-                }
-                switch (choice) {
-                    case 'g':
-                        fprintf(log_file, "\nSoundFocus.gain_step=%s",token);
-                        break;
-                    case 'e':
-                        fprintf(log_file, "\nSoundFocus.enable_sectors[%d]=%s",i,token);
-                        i++;
-                        break;
-                    case 's':
-                        fprintf(log_file, "\nSoundFocus.start_angles[%d]=%s",i,token);
-                        i++;
-                        break;
-                }
-                token = strtok (NULL,",;=");
-            }
-        }
-        choice = '\0';
-        fprintf(log_file, "\nGet SourceTracking Params from app");
-        string = qahw_get_parameters(qawh_module_handle, kvpair_sourcetrack);
-        if (!string) {
-            fprintf(log_file, "Error.Failed Get SourceTrack Params\n");
-        } else {
-            token = strtok (string , "=");
-            while (token) {
-                if (*token == 'S') {
-                    choice = *(token + 12);
-                    if (choice == 'd')
-                        choice = *(token + 16);
-                    token = strtok (NULL,",;");
-                    i=0;
-                }
-                switch (choice) {
-                    case 'p':
-                        fprintf(log_file, "\nSourceTrack.polar_activity=%s,",token);
-                        choice = '\0';
-                        break;
-                    case 'v':
-                        fprintf(log_file, "\nSourceTrack.vad[%d]=%s",i,token);
-                        i++;
-                        break;
-                    case 's':
-                        fprintf(log_file, "\nSourceTrack.doa_speech=%s",token);
-                        break;
-                    case 'n':
-                        fprintf(log_file, "\nSourceTrack.doa_noise[%d]=%s",i,token);
-                        i++;
-                        break;
-                    default :
-                        fprintf(log_file, "%s,",token);
-                        break;
-                }
-                token = strtok (NULL,",;=");
-            }
-        }
-        if (tests_completed > 0 && tests_running == 0)
+    qawh_module_handle = (qahw_module_handle_t *)data;
+
+    while (1) {
+        sleep(1);
+        if (sourcetrack_done == 1)
             return NULL;
+
+        pthread_mutex_lock(&sourcetrack_lock);
+        status = qahw_set_parameters(qawh_module_handle, soundfocus_param);
+        if (status != 0)
+            printf("Error.Failed Set SoundFocus Params\n");
+
+        printf("\nGet SoundFocus Params from app");
+        param = QAHW_PARAM_SOUND_FOCUS;
+        status = qahw_get_param_data(qawh_module_handle, param, &payload);
+        if (status < 0) {
+                printf("Failed to get sound focus params\n");
+        } else {
+           memcpy (&sound_focus_data, &payload.sf_params,
+                   sizeof(struct qahw_sound_focus_param));
+           for (idx = 0; idx < 4; idx++){
+                printf("\nstart_angle[%d]=%d",idx,
+                        payload.sf_params.start_angle[idx]);
+                printf(" enable[%d]=%d",idx,
+                        payload.sf_params.enable[idx]);
+                printf(" gain=%d\n",payload.sf_params.gain_step);
+           }
+        }
+        param = QAHW_PARAM_SOURCE_TRACK;
+        status = qahw_get_param_data(qawh_module_handle, param, &payload);
+        if (status < 0) {
+            printf ("Failed to get source tracking params\n");
+        } else {
+            for (idx = 0; idx < 4; idx++){
+                printf("vad[%d]=%d ",idx, payload.st_params.vad[idx]);
+                if (idx < 3)
+                    printf("doa_noise[%d]=%d \n",
+                            idx, payload.st_params.doa_noise[idx]);
+            }
+            printf("doa_speech=%d\n",payload.st_params.doa_speech);
+            printf("polar_activity:");
+            for (sect = 0; sect < 4; sect++ ){
+                printf("\nSector No-%d:\n",sect + 1);
+                idx = sound_focus_data.start_angle[sect];
+                count = sound_focus_data.start_angle[(sect + 1)%4] -
+                        sound_focus_data.start_angle[sect];
+                if (count <0)
+                    count = count + 360;
+                do {
+                    printf("%d,",payload.st_params.polar_activity[idx%360]);
+                    count--;
+                    idx++;
+                } while (count);
+                printf("\n");
+            }
+        }
+        pthread_mutex_unlock(&sourcetrack_lock);
     }
 }
 
@@ -350,6 +373,11 @@ void *start_input(void *thread_param)
                   fprintf(log_file, "error(%d) getting current time after 8th read!, handle(%d)", ret, params->handle);
           }
           count++;
+      fwrite(in_buf.buffer, sizeof(char), buffer_size, fd);
+      if(difftime(time(0), start_time) > params->loopTime) {
+          sourcetrack_done = 1;
+          printf("\nTest completed.\n");
+          break;
       }
 
       time_elapsed = difftime(time(0), start_time);
@@ -694,6 +722,27 @@ int main(int argc, char* argv[]) {
     pthread_t sourcetrack_thread;
     int ret = -1;
 
+    if (source_track && max_recordings_requested) {
+        if (pthread_mutex_init(&sourcetrack_lock, NULL) != 0) {
+               printf("\n mutex init failed\n");
+               source_track = 0;
+               goto sourcetrack_error;
+        }
+        signal(SIGQUIT, sourcetrack_signal_handler);
+        printf("NOTE::::To set sourcetracking params at runtime press 'Ctrl+\\' from keyboard\n");
+        read_soundfocus_param();
+        printf("Create source tracking thread \n");
+        ret = pthread_create(&sourcetrack_thread,
+                NULL, read_sourcetrack_data,
+                (void *)qahw_mod_handle);
+        if (ret) {
+            printf(" Failed to create source tracking thread \n ");
+            source_track = 0;
+            pthread_mutex_destroy(&sourcetrack_lock);
+            goto sourcetrack_error;
+        }
+    }
+
     if (thread_active[0] == 1) {
         fprintf(log_file, "\n Create first record thread \n");
         ret = pthread_create(&tid[0], NULL, start_input, (void *)&params[0]);
@@ -736,18 +785,6 @@ int main(int argc, char* argv[]) {
             if (log_file != stdout)
                 fprintf(stdout, " Failed to create fourth record thread \n ");
             thread_active[3] = 0;
-        }
-    }
-    if (source_tracking && max_recordings_requested) {
-        fprintf(log_file, "Create source tracking thread \n");
-        ret = pthread_create(&sourcetrack_thread,
-                NULL, read_sourcetrack_data,
-                (void *)qahw_mod_handle);
-        if (ret) {
-            fprintf(log_file, " Failed to create source tracking thread \n ");
-            if (log_file != stdout)
-                fprintf(stdout, " Failed to create source tracking thread \n ");
-            source_tracking = 0;
         }
     }
     fprintf(log_file, " All threads started \n");
@@ -794,11 +831,13 @@ int main(int argc, char* argv[]) {
         pthread_join(tid[3], NULL);
         fprintf(log_file, " after fourth record thread exit \n");
     }
-    if (source_tracking) {
-        pthread_join(sourcetrack_thread,NULL);
-        fprintf(log_file, " after source tracking thread exit \n");
-    }
 
+sourcetrack_error:
+    if (source_track) {
+        pthread_join(sourcetrack_thread,NULL);
+        pthread_mutex_destroy(&sourcetrack_lock);
+        printf("after source tracking thread exit \n");
+    }
     ret = qahw_unload_module(qahw_mod_handle);
     if (ret) {
         fprintf(log_file, "could not unload hal %d \n",ret);
