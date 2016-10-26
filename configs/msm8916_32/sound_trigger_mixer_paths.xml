@@ -90,7 +90,7 @@
         <ctl name="LSM8 Mixer TERT_MI2S_TX" value="1" />
     </path>
 
-    <path name="listen-handset-mic">
+    <path name="listen-ape-handset-mic">
         <ctl name="DEC1 MUX" value="ADC2" />
         <ctl name="ADC2 MUX" value="INP3" />
     </path>
