@@ -1296,17 +1296,34 @@ bool AudioPolicyManagerCustom::isDirectOutput(audio_io_handle_t output) {
     return false;
 }
 
-bool static isDirectPCMEnabled(int bitWidth)
+bool static tryForDirectPCM(int bitWidth, audio_output_flags_t *flags)
 {
-    bool directPCMEnabled = false;
-    if (bitWidth == 24 || bitWidth == 32)
-        directPCMEnabled =
-             property_get_bool("audio.offload.pcm.24bit.enable", false);
-    else
-        directPCMEnabled =
-             property_get_bool("audio.offload.pcm.16bit.enable", false);
+    bool playerDirectPCM = false; // Output request for Track created by mediaplayer
+    bool trackDirectPCM = false;  // Output request for track created by other apps
 
-    return directPCMEnabled;
+    // Direct PCM is allowed only if
+    // In case of mediaPlayer playback
+    // 16 bit direct pcm or 24bit direct PCM property is set and
+    // the FLAG requested is DIRECT_PCM ( NuPlayer case) or
+    // In case of AudioTracks created by apps
+    // track offload is enabled and FLAG requested is FLAG_NONE.
+
+    if (*flags == AUDIO_OUTPUT_FLAG_DIRECT_PCM) {
+       if (bitWidth == 24 || bitWidth == 32)
+           playerDirectPCM =
+                property_get_bool("audio.offload.pcm.24bit.enable", false);
+       else
+           playerDirectPCM =
+                property_get_bool("audio.offload.pcm.16bit.enable", false);
+       // Reset flag to NONE so that we can still reuse direct pcm criteria check
+       // in getOutputforDevice
+       *flags = AUDIO_OUTPUT_FLAG_NONE;
+    } else if ( *flags == AUDIO_OUTPUT_FLAG_NONE) {
+        trackDirectPCM = property_get_bool("audio.offload.track.enable", true);
+    }
+
+    ALOGI("%s for Direct PCM",trackDirectPCM || playerDirectPCM?"Check":"Dont check");
+    return trackDirectPCM || playerDirectPCM;
 }
 
 status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *attr,
@@ -1331,8 +1348,7 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
     }
 
     if (!offloadDisabled && (offloadInfo == NULL) &&
-        isDirectPCMEnabled(bitWidth) &&
-        (flags == AUDIO_OUTPUT_FLAG_NONE)) {
+        tryForDirectPCM(bitWidth, &flags)) {
 
         tOffloadInfo.sample_rate  = samplingRate;
         tOffloadInfo.channel_mask = channelMask;
