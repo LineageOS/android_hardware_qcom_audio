@@ -67,6 +67,7 @@
         <param key="perf_lock_opts" value="4, 0x101, 0x704, 0x20F, 0x1E01"/>
         <param key="native_audio_mode" value="src"/>
         <param key="input_mic_max_count" value="4"/>
+        <param key="true_32_bit" value="true"/>
         <!-- In the below value string, the value indicates sidetone gain in dB -->
         <param key="usb_sidetone_gain" value="35"/>
     </config_params>
