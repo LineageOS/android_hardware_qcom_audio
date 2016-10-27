@@ -4697,10 +4697,31 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                  ALOGD("%s:becf: afe: true napb active set rate to 44.1 khz",
                        __func__);
             }
-        } else if ((OUTPUT_SAMPLING_RATE_44100 == sample_rate) &&
-                   (na_mode != NATIVE_AUDIO_MODE_MULTIPLE_44_1)) {
-                 sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-                 ALOGD("%s:becf: afe: napb not active - set (48k) default rate",
+        } else if (na_mode != NATIVE_AUDIO_MODE_MULTIPLE_44_1) {
+            /*
+             * Map native sampling rates to upper limit range
+             * if multiple of native sampling rates are not supported.
+             * This check also indicates that this is not tavil codec
+             * And 32bit/384kHz is only supported on tavil
+             * Hence reset 32b/384kHz to 24b/192kHz.
+             */
+            switch (sample_rate) {
+                case 44100:
+                    sample_rate = 48000;
+                    break;
+                case 88200:
+                    sample_rate = 96000;
+                    break;
+                case 176400:
+                case 352800:
+                case 384000:
+                    sample_rate = 192000;
+                    break;
+            }
+            if (bit_width > 24)
+                bit_width = 24;
+
+            ALOGD("%s:becf: afe: napb not active - set non fractional rate",
                        __func__);
         }
     } else if ((usecase->devices & AUDIO_DEVICE_OUT_SPEAKER) ||
@@ -4751,23 +4772,6 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
             channels_updated = true;
     }
 
-    /*
-     * Map native sampling rates to upper limit range
-     * if multiple of native sampling rates are not supported.
-     */
-    if (NATIVE_AUDIO_MODE_MULTIPLE_44_1 != na_mode) {
-        switch (sample_rate) {
-            case 88200:
-                sample_rate = 96000;
-                break;
-            case 176400:
-                sample_rate = 192000;
-                break;
-            case 352800:
-                sample_rate = 192000;
-                break;
-        }
-    }
 
     ALOGI("%s:becf: afe: Codec selected backend: %d updated bit width: %d and sample rate: %d",
           __func__, backend_idx , bit_width, sample_rate);
