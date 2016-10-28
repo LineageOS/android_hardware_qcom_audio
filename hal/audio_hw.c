@@ -2034,7 +2034,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         if (out->pcm) {
             if (out->muted)
                 memset((void *)buffer, 0, bytes);
-            ALOGE("%s: writing buffer (%zd bytes) to pcm device", __func__, bytes);
+            ALOGVV("%s: writing buffer (%zd bytes) to pcm device", __func__, bytes);
             if (out->usecase == USECASE_AUDIO_PLAYBACK_AFE_PROXY)
                 ret = pcm_mmap_write(out->pcm, (void *)buffer, bytes);
             else
