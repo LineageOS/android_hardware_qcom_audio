@@ -5631,10 +5631,14 @@ int platform_set_sidetone(struct audio_device *adev,
 {
     int ret;
     if (out_snd_device == SND_DEVICE_OUT_USB_HEADSET) {
+        if (property_get_bool("audio.debug.usb.disable_sidetone", 0)) {
+            ALOGI("Debug: Disable sidetone");
+        } else {
             ret = audio_extn_usb_enable_sidetone(out_snd_device, enable);
             if (ret)
                 ALOGI("%s: usb device %d does not support device sidetone\n",
                   __func__, out_snd_device);
+        }
     } else {
         ALOGV("%s: sidetone out device(%d) mixer cmd = %s\n",
               __func__, out_snd_device, str);
