@@ -336,6 +336,11 @@ static char * device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC] = "quad-mic",
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = "quad-mic",
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = "quad-mic",
+    [SND_DEVICE_IN_UNPROCESSED_MIC] = "unprocessed-mic",
+    [SND_DEVICE_IN_UNPROCESSED_STEREO_MIC] = "voice-rec-dmic-ef",
+    [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = "three-mic",
+    [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = "quad-mic",
+    [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = "headset-mic",
 };
 
 // Platform specific backend bit width table
@@ -436,6 +441,11 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC] = 126,
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = 127,
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = 129,
+    [SND_DEVICE_IN_UNPROCESSED_MIC] = 143,
+    [SND_DEVICE_IN_UNPROCESSED_STEREO_MIC] = 144,
+    [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = 145,
+    [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = 146,
+    [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = 147,
 };
 
 struct name_to_index {
@@ -764,6 +774,14 @@ static void query_platform(const char *snd_card_name,
 
     } else if (!strncmp(snd_card_name, "msm8909-skut-snd-card",
                  sizeof("msm8909-skut-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_QRD_SKUT,
+                sizeof(MIXER_XML_PATH_QRD_SKUT));
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+
+    } else if (!strncmp(snd_card_name, "msm8909-skuq-snd-card",
+                 sizeof("msm8909-skuq-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_QRD_SKUT,
                 sizeof(MIXER_XML_PATH_QRD_SKUT));
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
@@ -1121,12 +1139,29 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
     close(fd);
 }
 
+const char * get_snd_card_name_for_acdb_loader(const char *snd_card_name) {
+
+    if(snd_card_name == NULL)
+        return NULL;
+
+    // Both tasha & tasha-lite uses tasha ACDB files
+    // simulate sound card name for tasha lite, so that
+    // ACDB module loads tasha ACDB files for tasha lite
+    if(!strncmp(snd_card_name, "msm8x09-tasha9326-snd-card",
+             sizeof("msm8x09-tasha9326-snd-card"))) {
+       ALOGD("using tasha ACDB files for tasha-lite");
+       return "msm8x09-tasha-snd-card";
+   } else {
+       return snd_card_name;
+   }
+}
+
 int platform_acdb_init(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     char *cvd_version = NULL;
     int key = 0;
-    const char *snd_card_name;
+    const char *snd_card_name, *acdb_snd_card_name;
     int result;
     char value[PROPERTY_VALUE_MAX];
     cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
@@ -1138,7 +1173,10 @@ int platform_acdb_init(void *platform)
     property_get("audio.ds1.metainfo.key",value,"0");
     key = atoi(value);
     snd_card_name = mixer_get_name(my_data->adev->mixer);
-    result = my_data->acdb_init((char *)snd_card_name, cvd_version, key);
+    acdb_snd_card_name = get_snd_card_name_for_acdb_loader(snd_card_name);
+
+    result = my_data->acdb_init((char *)acdb_snd_card_name, cvd_version, key);
+
     if (cvd_version)
         free(cvd_version);
     if (!result) {
@@ -2266,6 +2304,21 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
             }
         }
+    } else if (source == AUDIO_SOURCE_UNPROCESSED) {
+        if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+            if (((channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK) ||
+                (channel_mask == AUDIO_CHANNEL_IN_STEREO))) {
+                snd_device = SND_DEVICE_IN_UNPROCESSED_STEREO_MIC;
+            } else if ((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) {
+                snd_device = SND_DEVICE_IN_UNPROCESSED_THREE_MIC;
+            } else if ((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) {
+                snd_device = SND_DEVICE_IN_UNPROCESSED_QUAD_MIC;
+            } else {
+                snd_device = SND_DEVICE_IN_UNPROCESSED_MIC;
+            }
+        } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+            snd_device = SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC;
+        }
     } else if ((source == AUDIO_SOURCE_VOICE_COMMUNICATION) ||
               (mode == AUDIO_MODE_IN_COMMUNICATION)) {
         if (out_device & AUDIO_DEVICE_OUT_SPEAKER)
@@ -3183,6 +3236,141 @@ int platform_set_audio_device_interface(const char * device_name,
     ret = -EINVAL;
 
 done:
+    return ret;
+}
+
+int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask, int snd_id)
+{
+    int ret = 0;
+    int channels = audio_channel_count_from_out_mask(channel_mask);
+
+    char channel_map[8];
+    memset(channel_map, 0, sizeof(channel_map));
+    /* Following are all most common standard WAV channel layouts
+       overridden by channel mask if its allowed and different */
+    switch (channels) {
+        case 1:
+            /* AUDIO_CHANNEL_OUT_MONO */
+            channel_map[0] = PCM_CHANNEL_FC;
+        case 2:
+            /* AUDIO_CHANNEL_OUT_STEREO */
+            channel_map[0] = PCM_CHANNEL_FL;
+            channel_map[1] = PCM_CHANNEL_FR;
+        case 3:
+            /* AUDIO_CHANNEL_OUT_2POINT1 */
+            channel_map[0] = PCM_CHANNEL_FL;
+            channel_map[1] = PCM_CHANNEL_FR;
+            channel_map[2] = PCM_CHANNEL_FC;
+            break;
+        case 4:
+            /* AUDIO_CHANNEL_OUT_QUAD_SIDE */
+            channel_map[0] = PCM_CHANNEL_FL;
+            channel_map[1] = PCM_CHANNEL_FR;
+            channel_map[2] = PCM_CHANNEL_LS;
+            channel_map[3] = PCM_CHANNEL_RS;
+            if (channel_mask == AUDIO_CHANNEL_OUT_QUAD_BACK)
+            {
+                channel_map[2] = PCM_CHANNEL_LB;
+                channel_map[3] = PCM_CHANNEL_RB;
+            }
+            if (channel_mask == AUDIO_CHANNEL_OUT_SURROUND)
+            {
+                channel_map[2] = PCM_CHANNEL_FC;
+                channel_map[3] = PCM_CHANNEL_CS;
+            }
+            break;
+        case 5:
+            /* AUDIO_CHANNEL_OUT_PENTA */
+            channel_map[0] = PCM_CHANNEL_FL;
+            channel_map[1] = PCM_CHANNEL_FR;
+            channel_map[2] = PCM_CHANNEL_FC;
+            channel_map[3] = PCM_CHANNEL_LB;
+            channel_map[4] = PCM_CHANNEL_RB;
+            break;
+        case 6:
+            /* AUDIO_CHANNEL_OUT_5POINT1 */
+            channel_map[0] = PCM_CHANNEL_FL;
+            channel_map[1] = PCM_CHANNEL_FR;
+            channel_map[2] = PCM_CHANNEL_FC;
+            channel_map[3] = PCM_CHANNEL_LFE;
+            channel_map[4] = PCM_CHANNEL_LB;
+            channel_map[5] = PCM_CHANNEL_RB;
+            if (channel_mask == AUDIO_CHANNEL_OUT_5POINT1_SIDE)
+            {
+                channel_map[4] = PCM_CHANNEL_LS;
+                channel_map[5] = PCM_CHANNEL_RS;
+            }
+            break;
+        case 7:
+            /* AUDIO_CHANNEL_OUT_6POINT1 */
+            channel_map[0] = PCM_CHANNEL_FL;
+            channel_map[1] = PCM_CHANNEL_FR;
+            channel_map[2] = PCM_CHANNEL_FC;
+            channel_map[3] = PCM_CHANNEL_LFE;
+            channel_map[4] = PCM_CHANNEL_LB;
+            channel_map[5] = PCM_CHANNEL_RB;
+            channel_map[6] = PCM_CHANNEL_CS;
+        case 8:
+            /* AUDIO_CHANNEL_OUT_7POINT1 */
+            channel_map[0] = PCM_CHANNEL_FL;
+            channel_map[1] = PCM_CHANNEL_FR;
+            channel_map[2] = PCM_CHANNEL_FC;
+            channel_map[3] = PCM_CHANNEL_LFE;
+            channel_map[4] = PCM_CHANNEL_LB;
+            channel_map[5] = PCM_CHANNEL_RB;
+            channel_map[6] = PCM_CHANNEL_LS;
+            channel_map[7] = PCM_CHANNEL_RS;
+            break;
+        default:
+            ALOGE("unsupported channels %d for setting channel map", channels);
+            return -1;
+    }
+    ret = platform_set_channel_map(platform, channels, channel_map, snd_id);
+    return ret;
+}
+
+int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd_id)
+{
+    struct mixer_ctl *ctl;
+    char mixer_ctl_name[44]; // max length of name is 44 as defined
+    int ret;
+    unsigned int i;
+    int set_values[8] = {0};
+    char device_num[13]; // device number up to 2 digit
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    ALOGV("%s channel_count:%d",__func__, ch_count);
+    if (NULL == ch_map) {
+        ALOGE("%s: Invalid channel mapping used", __func__);
+        return -EINVAL;
+    }
+    strlcpy(mixer_ctl_name, "Playback Channel Map", sizeof(mixer_ctl_name));
+    if (snd_id >= 0) {
+        snprintf(device_num, sizeof(device_num), "%d", snd_id);
+        strncat(mixer_ctl_name, device_num, 13);
+    }
+
+    ALOGD("%s mixer_ctl_name:%s", __func__, mixer_ctl_name);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+    for (i = 0; i< ARRAY_SIZE(set_values); i++) {
+        set_values[i] = ch_map[i];
+    }
+
+    ALOGD("%s: set mapping(%d %d %d %d %d %d %d %d) for channel:%d", __func__,
+        set_values[0], set_values[1], set_values[2], set_values[3], set_values[4],
+        set_values[5], set_values[6], set_values[7], ch_count);
+
+    ret = mixer_ctl_set_array(ctl, set_values, ch_count);
+    if (ret < 0) {
+        ALOGE("%s: Could not set ctl, error:%d ch_count:%d",
+              __func__, ret, ch_count);
+    }
     return ret;
 }
 

@@ -3,6 +3,7 @@ USE_CUSTOM_AUDIO_POLICY := 1
 BOARD_USES_ALSA_AUDIO := true
 BOARD_SUPPORTS_SOUND_TRIGGER := true
 
+AUDIO_FEATURE_ENABLED_SOURCE_TRACKING:= true
 #AUDIO_FEATURE_ENABLED_ANC_HEADSET := true
 #AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE := true
 ifneq ($(TARGET_SUPPORTS_WEARABLES),true)
@@ -37,7 +38,7 @@ AUDIO_FEATURE_ENABLED_VOICE_CONCURRENCY := true
 AUDIO_FEATURE_ENABLED_RECORD_PLAY_CONCURRENCY := true
 ifneq ($(TARGET_SUPPORTS_WEARABLES),true)
 AUDIO_FEATURE_ENABLED_KPI_OPTIMIZE := true
-#AUDIO_FEATURE_ENABLED_PM_SUPPORT := true
+AUDIO_FEATURE_ENABLED_PM_SUPPORT := true
 endif
 ifneq ($(TARGET_SUPPORTS_WEARABLES),true)
 #BOARD_USES_SRS_TRUEMEDIA := true
@@ -84,6 +85,7 @@ PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msm8909/mixer_paths_skue.xml:system/etc/mixer_paths_skue.xml \
     hardware/qcom/audio/configs/msm8909/mixer_paths_qrd_skut.xml:system/etc/mixer_paths_qrd_skut.xml \
     hardware/qcom/audio/configs/msm8909/sound_trigger_mixer_paths.xml:system/etc/sound_trigger_mixer_paths.xml \
+    hardware/qcom/audio/configs/msm8909/sound_trigger_mixer_paths_wcd9326.xml:system/etc/sound_trigger_mixer_paths_wcd9326.xml \
     hardware/qcom/audio/configs/msm8909/sound_trigger_platform_info.xml:system/etc/sound_trigger_platform_info.xml \
     hardware/qcom/audio/configs/msm8909/audio_platform_info.xml:system/etc/audio_platform_info.xml
 

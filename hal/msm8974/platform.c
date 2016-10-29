@@ -332,6 +332,11 @@ static char * device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_DMIC_AEC_BROADSIDE] = "speaker-dmic-broadside",
     [SND_DEVICE_IN_SPEAKER_DMIC_NS_BROADSIDE] = "speaker-dmic-broadside",
     [SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_BROADSIDE] = "speaker-dmic-broadside",
+    [SND_DEVICE_IN_UNPROCESSED_MIC] = "unprocessed-mic",
+    [SND_DEVICE_IN_UNPROCESSED_STEREO_MIC] = "voice-rec-dmic-ef",
+    [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = "three-mic",
+    [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = "quad-mic",
+    [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = "headset-mic",
 };
 
 // Platform specific backend bit width table
@@ -426,6 +431,11 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_DMIC_AEC_BROADSIDE] = 119,
     [SND_DEVICE_IN_SPEAKER_DMIC_NS_BROADSIDE] = 121,
     [SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_BROADSIDE] = 120,
+    [SND_DEVICE_IN_UNPROCESSED_MIC] = 143,
+    [SND_DEVICE_IN_UNPROCESSED_STEREO_MIC] = 144,
+    [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = 145,
+    [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = 146,
+    [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = 147,
 };
 
 struct name_to_index {
@@ -519,6 +529,11 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_SPEAKER_DMIC_AEC_BROADSIDE)},
     {TO_NAME_INDEX(SND_DEVICE_IN_SPEAKER_DMIC_NS_BROADSIDE)},
     {TO_NAME_INDEX(SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_BROADSIDE)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_STEREO_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_THREE_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_QUAD_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC)},
 };
 
 static char * backend_table[SND_DEVICE_MAX] = {0};
@@ -2016,6 +2031,21 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
             }
         }
+    } else if (source == AUDIO_SOURCE_UNPROCESSED) {
+         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+             if ((channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK) ||
+                 (channel_mask == AUDIO_CHANNEL_IN_STEREO)) {
+                 snd_device = SND_DEVICE_IN_UNPROCESSED_STEREO_MIC;
+             } else if ((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) {
+                 snd_device = SND_DEVICE_IN_UNPROCESSED_THREE_MIC;
+             } else if ((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) {
+                 snd_device = SND_DEVICE_IN_UNPROCESSED_QUAD_MIC;
+             } else {
+                 snd_device = SND_DEVICE_IN_UNPROCESSED_MIC;
+             }
+         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+             snd_device = SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC;
+         }
     } else if (source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
         if (out_device & AUDIO_DEVICE_OUT_SPEAKER)
             in_device = AUDIO_DEVICE_IN_BACK_MIC;
@@ -3012,6 +3042,19 @@ int platform_set_audio_device_interface(const char *device_name, const char *int
 
 done:
     return ret;
+}
+
+int platform_set_channel_map(void *platform __unused, int ch_count __unused,
+                             char *ch_map __unused, int snd_id __unused)
+{
+    return -ENOSYS;
+}
+
+int platform_set_stream_channel_map(void *platform __unused,
+                                    audio_channel_mask_t channel_mask __unused,
+                                    int snd_id __unused)
+{
+    return -ENOSYS;
 }
 
 int platform_set_snd_device_name(snd_device_t device, const char *name)

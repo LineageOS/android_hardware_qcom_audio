@@ -1683,7 +1683,11 @@ int start_output_stream(struct stream_out *out)
                 goto error_open;
             }
         }
+        platform_set_stream_channel_map(adev->platform, out->channel_mask,
+                                    out->pcm_device_id);
     } else {
+        platform_set_stream_channel_map(adev->platform, out->channel_mask,
+                                    out->pcm_device_id);
         out->pcm = NULL;
         out->compr = compress_open(adev->snd_card,
                                    out->pcm_device_id,
