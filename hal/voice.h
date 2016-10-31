@@ -97,5 +97,8 @@ snd_device_t voice_get_incall_rec_snd_device(snd_device_t in_snd_device);
 void voice_set_sidetone(struct audio_device *adev,
                        snd_device_t out_snd_device,
                        bool enable);
+void voice_check_and_update_aanc_path(struct audio_device *adev,
+                                      snd_device_t out_snd_device,
+                                      bool enable);
 bool voice_is_call_state_active(struct audio_device *adev);
 #endif //VOICE_H

@@ -1424,6 +1424,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         if (voice_is_call_state_active(adev) ||
             voice_extn_compress_voip_is_started(adev))
             voice_set_sidetone(adev, usecase->out_snd_device, false);
+
+        /* Disable aanc only if voice call exists */
+        if (voice_is_call_state_active(adev))
+            voice_check_and_update_aanc_path(adev, usecase->out_snd_device, false);
     }
 
     /* Disable current sound devices */
@@ -1494,6 +1498,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     enable_audio_route(adev, usecase);
 
     if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL) {
+        /* Enable aanc only if voice call exists */
+        if (voice_is_call_state_active(adev))
+            voice_check_and_update_aanc_path(adev, out_snd_device, true);
+
         /* Enable sidetone only if other voice/voip call already exists */
         if (voice_is_call_state_active(adev) ||
             voice_extn_compress_voip_is_started(adev))
