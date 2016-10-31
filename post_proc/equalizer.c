@@ -266,8 +266,12 @@ int equalizer_get_parameter(effect_context_t *context, effect_param_t *p,
 
     case EQ_PARAM_BAND_LEVEL:
         param2 = *param_tmp;
-        if (param2 >= NUM_EQ_BANDS) {
+        if (param2 < 0 || param2 >= NUM_EQ_BANDS) {
             p->status = -EINVAL;
+            if (param2 < 0) {
+                android_errorWriteLog(0x534e4554, "32438598");
+                ALOGW("\tERROR EQ_PARAM_BAND_LEVEL band %d", param2);
+            }
             break;
         }
         *(int16_t *)value = (int16_t)equalizer_get_band_level(eq_ctxt, param2);
@@ -275,8 +279,12 @@ int equalizer_get_parameter(effect_context_t *context, effect_param_t *p,
 
     case EQ_PARAM_CENTER_FREQ:
         param2 = *param_tmp;
-        if (param2 >= NUM_EQ_BANDS) {
-           p->status = -EINVAL;
+        if (param2 < 0 || param2 >= NUM_EQ_BANDS) {
+            p->status = -EINVAL;
+            if (param2 < 0) {
+                android_errorWriteLog(0x534e4554, "32436341");
+                ALOGW("\tERROR EQ_PARAM_CENTER_FREQ band %d", param2);
+            }
             break;
         }
         *(int32_t *)value = equalizer_get_center_frequency(eq_ctxt, param2);
@@ -284,8 +292,12 @@ int equalizer_get_parameter(effect_context_t *context, effect_param_t *p,
 
     case EQ_PARAM_BAND_FREQ_RANGE:
         param2 = *param_tmp;
-        if (param2 >= NUM_EQ_BANDS) {
+        if (param2 < 0 || param2 >= NUM_EQ_BANDS) {
             p->status = -EINVAL;
+            if (param2 < 0) {
+                android_errorWriteLog(0x534e4554, "32247948");
+                ALOGW("\tERROR EQ_PARAM_BAND_FREQ_RANGE band %d", param2);
+            }
            break;
         }
        equalizer_get_band_freq_range(eq_ctxt, param2, (uint32_t *)value,
