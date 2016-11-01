@@ -238,8 +238,6 @@ struct stream_out {
 
     bool realtime;
     int af_period_multiplier;
-    bool routing_change;
-
     struct audio_device *dev;
     void* qaf_stream_handle;
     pthread_cond_t qaf_offload_cond;
@@ -270,8 +268,6 @@ struct stream_in {
     int bit_width;
     bool realtime;
     int af_period_multiplier;
-    bool routing_change;
-
     struct audio_device *dev;
 };
 

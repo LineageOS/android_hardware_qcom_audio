@@ -435,6 +435,48 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
     return BAD_VALUE;
 }
 
+bool AudioPolicyManagerCustom::isInvalidationOfMusicStreamNeeded(routing_strategy strategy)
+{
+    if (strategy == STRATEGY_MEDIA) {
+        for (size_t i = 0; i < mOutputs.size(); i++) {
+            sp<SwAudioOutputDescriptor> newOutputDesc = mOutputs.valueAt(i);
+            if (newOutputDesc->mFormat == AUDIO_FORMAT_DSD)
+                return false;
+        }
+    }
+    return true;
+}
+
+void AudioPolicyManagerCustom::checkOutputForStrategy(routing_strategy strategy)
+{
+    audio_devices_t oldDevice = getDeviceForStrategy(strategy, true /*fromCache*/);
+    audio_devices_t newDevice = getDeviceForStrategy(strategy, false /*fromCache*/);
+    SortedVector<audio_io_handle_t> srcOutputs = getOutputsForDevice(oldDevice, mOutputs);
+    SortedVector<audio_io_handle_t> dstOutputs = getOutputsForDevice(newDevice, mOutputs);
+
+    // also take into account external policy-related changes: add all outputs which are
+    // associated with policies in the "before" and "after" output vectors
+    ALOGV("checkOutputForStrategy(): policy related outputs");
+    for (size_t i = 0 ; i < mPreviousOutputs.size() ; i++) {
+        const sp<SwAudioOutputDescriptor> desc = mPreviousOutputs.valueAt(i);
+        if (desc != 0 && desc->mPolicyMix != NULL) {
+            srcOutputs.add(desc->mIoHandle);
+            ALOGV(" previous outputs: adding %d", desc->mIoHandle);
+        }
+    }
+    for (size_t i = 0 ; i < mOutputs.size() ; i++) {
+        const sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
+        if (desc != 0 && desc->mPolicyMix != NULL) {
+            dstOutputs.add(desc->mIoHandle);
+            ALOGV(" new outputs: adding %d", desc->mIoHandle);
+        }
+    }
+
+    if (!vectorsEqual(srcOutputs,dstOutputs) && isInvalidationOfMusicStreamNeeded(strategy)) {
+        AudioPolicyManager::checkOutputForStrategy(strategy);
+    }
+}
+
 // This function checks for the parameters which can be offloaded.
 // This can be enhanced depending on the capability of the DSP and policy
 // of the system.
@@ -2189,40 +2231,6 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
     ALOGD("USE_XML_AUDIO_POLICY_CONF is FALSE");
 #endif
 
-    //TODO: Check the new logic to parse policy conf and update the below code
-    //      Need this when SSR encoding is enabled
-    char ssr_enabled[PROPERTY_VALUE_MAX] = {0};
-    bool prop_ssr_enabled = false;
-
-    if (property_get("ro.qc.sdk.audio.ssr", ssr_enabled, NULL)) {
-        prop_ssr_enabled = atoi(ssr_enabled) || !strncmp("true", ssr_enabled, 4);
-    }
-
-    for (size_t i = 0; i < mHwModules.size(); i++) {
-        ALOGV("Hw module %zu", i);
-        for (size_t j = 0; j < mHwModules[i]->mInputProfiles.size(); j++) {
-            const sp<IOProfile> inProfile = mHwModules[i]->mInputProfiles[j];
-            AudioProfileVector profiles = inProfile->getAudioProfiles();
-            for (size_t k = 0; k < profiles.size(); k++){
-                ChannelsVector channels = profiles[k]->getChannels();
-                for (size_t x = 0; x < channels.size(); x++) {
-                    audio_channel_mask_t channelMask = channels[x];
-                    ALOGV("Channel Mask %x size %zu", channelMask,
-                         channels.size());
-                    if (AUDIO_CHANNEL_IN_5POINT1 == channelMask) {
-                        if (!prop_ssr_enabled) {
-                            ALOGI("removing AUDIO_CHANNEL_IN_5POINT1 from"
-                                " input profile as SSR(surround sound record)"
-                                " is not supported on this chipset variant");
-                            channels.removeItemsAt(x, 1);
-                            ALOGV("Channel Mask size now %zu",
-                                channels.size());
-                        }
-                    }
-                }
-            }
-        }
-    }
 #ifdef RECORD_PLAY_CONCURRENCY
     mIsInputRequestOnProgress = false;
 #endif
