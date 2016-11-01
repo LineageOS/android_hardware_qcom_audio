@@ -4689,11 +4689,11 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
      */
     // TODO: This has to be more dynamic based on policy file
 
-    if ((my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl) &&
+    if (passthrough_enabled || ((my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl) &&
         (sample_rate != my_data->current_backend_cfg[(int)backend_idx].sample_rate) &&
             (my_data->hifi_audio ||
             backend_idx == USB_AUDIO_RX_BACKEND ||
-            backend_idx == USB_AUDIO_TX_BACKEND)) {
+            backend_idx == USB_AUDIO_TX_BACKEND))) {
             /*
              * sample rate update is needed only for hifi audio enabled platforms
              */
@@ -4701,11 +4701,15 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             struct  mixer_ctl *ctl = NULL;
 
             switch (sample_rate) {
+            case 32000:
+                if (passthrough_enabled) {
+                    rate_str = "KHZ_32";
+                    break;
+                }
             case 8000:
             case 11025:
             case 16000:
             case 22050:
-            case 32000:
             case 48000:
                 rate_str = "KHZ_48";
                 break;
@@ -4731,6 +4735,11 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             case 384000:
                 rate_str = "KHZ_384";
                 break;
+            case 144000:
+                if (passthrough_enabled) {
+                    rate_str = "KHZ_144";
+                    break;
+                }
             default:
                 rate_str = "KHZ_48";
                 break;
@@ -5646,6 +5655,7 @@ unsigned char platform_map_to_edid_format(int audio_format)
         format = AAC;
         break;
     case AUDIO_FORMAT_E_AC3:
+    case AUDIO_FORMAT_E_AC3_JOC:
         ALOGV("%s:E_AC3", __func__);
         format = DOLBY_DIGITAL_PLUS;
         break;

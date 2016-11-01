@@ -3987,7 +3987,11 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->compr_config.codec->ch_in =
                 audio_channel_count_from_out_mask(out->channel_mask);
         out->compr_config.codec->ch_out = out->compr_config.codec->ch_in;
-        out->bit_width = AUDIO_OUTPUT_BIT_WIDTH;
+        /* Update bit width only for non passthrough usecases.
+         * For passthrough usecases, the output will always be opened @16 bit
+         */
+        if (!audio_extn_passthru_is_passthrough_stream(out))
+            out->bit_width = AUDIO_OUTPUT_BIT_WIDTH;
         /*TODO: Do we need to change it for passthrough */
         out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
 
