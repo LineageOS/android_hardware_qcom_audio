@@ -1668,7 +1668,7 @@
     </path>
 
     <path name="speaker-mic">
-        <path name="adc1" />
+        <path name="dmic2" />
     </path>
 
     <path name="speaker-mic-liquid">
@@ -1727,7 +1727,7 @@
     </path>
 
     <path name="handset-mic">
-        <path name="adc1" />
+        <path name="dmic3" />
     </path>
 
     <path name="handset-mic-db">
@@ -2085,7 +2085,7 @@
     </path>
 
     <path name="voice-tty-vco-handset-mic">
-        <path name="adc1" />
+        <path name="dmic1" />
     </path>
 
     <path name="unprocessed-handset-mic">

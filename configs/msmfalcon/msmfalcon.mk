@@ -3,10 +3,10 @@
 #AUDIO_FEATURE_FLAGS
 BOARD_USES_ALSA_AUDIO := true
 USE_CUSTOM_AUDIO_POLICY := 1
-USE_XML_AUDIO_POLICY_CONF := 0
-BOARD_SUPPORTS_SOUND_TRIGGER := true
+USE_XML_AUDIO_POLICY_CONF := 1
+BOARD_SUPPORTS_SOUND_TRIGGER_HAL := true
 AUDIO_USE_LL_AS_PRIMARY_OUTPUT := true
-
+AUDIO_FEATURE_ENABLED_HIFI_AUDIO := true
 AUDIO_FEATURE_ENABLED_VBAT_MONITOR := true
 AUDIO_FEATURE_ENABLED_ANC_HEADSET := true
 AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE := false
@@ -19,6 +19,10 @@ AUDIO_FEATURE_ENABLED_FM_POWER_OPT := true
 AUDIO_FEATURE_ENABLED_FLUENCE := true
 AUDIO_FEATURE_ENABLED_HDMI_SPK := true
 AUDIO_FEATURE_ENABLED_HDMI_EDID := true
+AUDIO_FEATURE_ENABLED_HDMI_PASSTHROUGH := true
+#AUDIO_FEATURE_ENABLED_KEEP_ALIVE := true
+AUDIO_FEATURE_ENABLED_DISPLAY_PORT := true
+AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := true
 AUDIO_FEATURE_ENABLED_HFP := true
 AUDIO_FEATURE_ENABLED_INCALL_MUSIC := false
 AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS := true
@@ -30,7 +34,7 @@ AUDIO_FEATURE_ENABLED_WMA_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_ALAC_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_APE_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_AAC_ADTS_OFFLOAD := true
-#AUDIO_FEATURE_ENABLED_PROXY_DEVICE := true
+AUDIO_FEATURE_ENABLED_PROXY_DEVICE := true
 AUDIO_FEATURE_ENABLED_KPI_OPTIMIZE := true
 AUDIO_FEATURE_ENABLED_SPKR_PROTECTION := true
 AUDIO_FEATURE_ENABLED_SSR := true
@@ -47,6 +51,9 @@ AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS := false
 
 AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
 AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
+AUDIO_FEATURE_ENABLED_GEF_SUPPORT := true
+AUDIO_FEATURE_ENABLED_USB_TUNNEL_AUDIO := true
+AUDIO_FEATURE_ENABLED_SPLIT_A2DP := true
 ##AUDIO_FEATURE_FLAGS
 
 #Audio Specific device overlays
@@ -66,12 +73,18 @@ PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msmfalcon/audio_effects.conf:system/vendor/etc/audio_effects.conf \
     hardware/qcom/audio/configs/msmfalcon/mixer_paths.xml:system/etc/mixer_paths.xml \
     hardware/qcom/audio/configs/msmfalcon/mixer_paths_wcd9335.xml:system/etc/mixer_paths_wcd9335.xml \
+    hardware/qcom/audio/configs/msmfalcon/mixer_paths_wcd9340.xml:system/etc/mixer_paths_wcd9340.xml \
+    hardware/qcom/audio/configs/msmfalcon/mixer_paths_wcd9326.xml:system/etc/mixer_paths_wcd9326.xml \
     hardware/qcom/audio/configs/msmfalcon/mixer_paths_i2s.xml:system/etc/mixer_paths_i2s.xml \
+    hardware/qcom/audio/configs/msmfalcon/aanc_tuning_mixer.txt:system/etc/aanc_tuning_mixer.txt \
+    hardware/qcom/audio/configs/msmfalcon/aanc_tuning_mixer_tavil.txt:system/etc/aanc_tuning_mixer_tavil.txt \
+    hardware/qcom/audio/configs/msmfalcon/audio_platform_info_extcodec.xml:system/etc/audio_platform_info_extcodec.xml \
     hardware/qcom/audio/configs/msmfalcon/audio_platform_info.xml:system/etc/audio_platform_info.xml \
-    hardware/qcom/audio/configs/msmfalcon/audio_platform_info_i2s.xml:system/etc/audio_platform_info_i2s.xml \
     hardware/qcom/audio/configs/msmfalcon/sound_trigger_mixer_paths.xml:system/etc/sound_trigger_mixer_paths.xml \
+    hardware/qcom/audio/configs/msmfalcon/sound_trigger_mixer_paths_wcd9330.xml:system/etc/sound_trigger_mixer_paths_wcd9330.xml \
+    hardware/qcom/audio/configs/msmfalcon/sound_trigger_mixer_paths_wcd9340.xml:system/etc/sound_trigger_mixer_paths_wcd9340.xml \
     hardware/qcom/audio/configs/msmfalcon/sound_trigger_platform_info.xml:system/etc/sound_trigger_platform_info.xml \
-    hardware/qcom/audio/configs/msmfalcon/aanc_tuning_mixer.txt:system/etc/aanc_tuning_mixer.txt
+    hardware/qcom/audio/configs/msmfalcon/graphite_ipc_platform_info.xml:system/etc/graphite_ipc_platform_info.xml \
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
@@ -158,9 +171,9 @@ audio.dolby.ds2.hardbypass=true
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.offload.multiple.enabled=false
 
-#Disable Compress passthrough playback
+#Enable Compress passthrough playback
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.passthrough=false
+audio.offload.passthrough=true
 
 #Disable surround sound recording
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -178,3 +191,32 @@ audio.safx.pbe.enabled=true
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.parser.ip.buffer.size=262144
 
+#flac sw decoder 24 bit decode capability
+PRODUCT_PROPERTY_OVERRIDES += \
+flac.sw.decoder.24bit.support=true
+
+#split a2dp DSP supported encoder list
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.bt.a2dp_offload_cap=sbc-aptx
+
+#enable software decoders for ALAC and APE
+PRODUCT_PROPERTY_OVERRIDES += \
+use.qti.sw.alac.decoder=true
+PRODUCT_PROPERTY_OVERRIDES += \
+use.qti.sw.ape.decoder=true
+
+#enable hw aac encoder by default
+PRODUCT_PROPERTY_OVERRIDES += \
+qcom.hw.aac.encoder=true
+
+#Disable FM a2dp concurrency
+PRODUCT_PROPERTY_OVERRIDES += \
+fm.a2dp.conc.disabled=true
+
+#audio becoming noisy intent broadcast delay
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.noisy.broadcast.delay=600
+
+#Enable HIFI audio support for internal codec
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.audio.hifi.int_codec=true
