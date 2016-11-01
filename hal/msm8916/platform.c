@@ -57,6 +57,7 @@
 #define MIXER_XML_PATH_WCD9306 "/system/etc/mixer_paths_wcd9306.xml"
 #define MIXER_XML_PATH_WCD9330 "/system/etc/mixer_paths_wcd9330.xml"
 #define MIXER_XML_PATH_WCD9335 "/system/etc/mixer_paths_wcd9335.xml"
+#define MIXER_XML_PATH_WCD9340 "/system/etc/mixer_paths_wcd9340.xml"
 #ifdef LINUX_ENABLED
 #define MIXER_XML_PATH "/etc/mixer_paths.xml"
 #define MIXER_XML_PATH_MSM8909_PM8916 "/etc/mixer_paths_msm8909_pm8916.xml"
@@ -75,6 +76,7 @@
 #define MIXER_XML_PATH_SKU2 "/system/etc/mixer_paths_qrd_sku2.xml"
 #define PLATFORM_INFO_XML_PATH_EXTCODEC  "/system/etc/audio_platform_info_extcodec.xml"
 #define MIXER_XML_PATH_WCD9326 "/system/etc/mixer_paths_wcd9326.xml"
+#define MIXER_XML_PATH_SKUN "/system/etc/mixer_paths_qrd_skun.xml"
 #define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_WCD9326_I2S  "/system/etc/mixer_paths_wcd9326_i2s.xml"
 #define MIXER_XML_PATH_WCD9330_I2S "/system/etc/mixer_paths_wcd9330_i2s.xml"
@@ -158,6 +160,8 @@ char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
 #define AUDIO_PARAMETER_KEY_REC_PLAY_CONC "rec_play_conc_on"
 
 #define  AUDIO_PARAMETER_IS_HW_DECODER_SESSION_AVAILABLE  "is_hw_dec_session_available"
+
+static char *default_rx_backend = NULL;
 
 char dsp_only_decoders_mime[][MAX_MIME_TYPE_LENGTH] = {
     "audio/x-ms-wma" /* wma*/ ,
@@ -880,7 +884,11 @@ static void update_codec_type(const char *snd_card_name) {
          !strncmp(snd_card_name, "apq8009-tashalite-snd-card",
                   sizeof("apq8009-tashalite-snd-card")) ||
          !strncmp(snd_card_name, "mdm9607-tomtom-i2s-snd-card",
-                  sizeof("mdm9607-tomtom-i2s-snd-card")))
+                  sizeof("mdm9607-tomtom-i2s-snd-card")) ||
+         !strncmp(snd_card_name, "msmfalcon-tashalite-snd-card",
+                  sizeof("msmfalcon-tashalite-snd-card")) ||
+         !strncmp(snd_card_name, "msmfalcon-tavil-snd-card",
+                  sizeof("msmfalcon-tavil-snd-card")))
      {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          is_external_codec = true;
@@ -1168,10 +1176,38 @@ static void query_platform(const char *snd_card_name,
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+    } else if (!strncmp(snd_card_name, "msmfalcon-snd-card",
+                  sizeof("msmfalcon-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH,
+               MAX_MIXER_XML_PATH);
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+    } else if (!strncmp(snd_card_name, "msmfalcon-snd-card-mtp",
+                  sizeof("msmfalcon-snd-card-mtp"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_MTP,
+               MAX_MIXER_XML_PATH);
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
     } else if (!strncmp(snd_card_name, "msmfalcon-tasha-snd-card",
                  sizeof("msmfalcon-tasha-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9335,
                 sizeof(MIXER_XML_PATH_WCD9335));
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+    } else if (!strncmp(snd_card_name, "msmfalcon-tashalite-snd-card",
+                 sizeof("msmfalcon-tashalite-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9326,
+                sizeof(MIXER_XML_PATH_WCD9326));
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+    } else if (!strncmp(snd_card_name, "msmfalcon-tavil-snd-card",
+                 sizeof("msmfalcon-tavil-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9340,
+                sizeof(MIXER_XML_PATH_WCD9340));
         msm_device_to_be_id = msm_device_to_be_id_external_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
@@ -1537,6 +1573,11 @@ const char * get_snd_card_name_for_acdb_loader(const char *snd_card_name) {
         return "msm8953-tasha-snd-card";
     }
 
+    if(!strncmp(snd_card_name, "msmfalcon-tashalite-snd-card",
+             sizeof("msmfalcon-tashalite-snd-card"))) {
+        ALOGD("using tasha ACDB files for tasha-lite");
+        return "msmfalcon-tasha-snd-card";
+    }
    return snd_card_name;
 }
 
@@ -1600,6 +1641,12 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
     char file[10] = "wsa";
     bool found = false;
     int wsa_count = 0;
+
+    /* SL/SH hardware always has wsa by default, no need to add wsa */
+    if(!strncmp(snd_card_name, "msmfalcon", strlen("msmfalcon"))) {
+        ALOGD(" Ignore WSA extension for msm falcon varients");
+        return false;
+    }
 
     if (!getcwd(cwd, sizeof(cwd)))
         return false;
@@ -1973,6 +2020,8 @@ acdb_init_fail:
 
     my_data->edid_info = NULL;
 
+    default_rx_backend = strdup("SLIMBUS_0_RX");
+
     /* initialize backend config */
     for (idx = 0; idx < MAX_CODEC_BACKENDS; idx++) {
         my_data->current_backend_cfg[idx].sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
@@ -1993,10 +2042,11 @@ acdb_init_fail:
         my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
             strdup("SLIM_0_RX SampleRate");
 
-    my_data->current_backend_cfg[DSD_NATIVE_BACKEND].bitwidth_mixer_ctl =
-        strdup("SLIM_2_RX Format");
-    my_data->current_backend_cfg[DSD_NATIVE_BACKEND].samplerate_mixer_ctl =
-        strdup("SLIM_2_RX SampleRate");
+        my_data->current_backend_cfg[DSD_NATIVE_BACKEND].bitwidth_mixer_ctl =
+            strdup("SLIM_2_RX Format");
+        my_data->current_backend_cfg[DSD_NATIVE_BACKEND].samplerate_mixer_ctl =
+            strdup("SLIM_2_RX SampleRate");
+
         my_data->current_backend_cfg[HEADPHONE_44_1_BACKEND].bitwidth_mixer_ctl =
             strdup("SLIM_5_RX Format");
         my_data->current_backend_cfg[HEADPHONE_44_1_BACKEND].samplerate_mixer_ctl =
@@ -2012,15 +2062,38 @@ acdb_init_fail:
         my_data->current_backend_cfg[SLIMBUS_0_TX].samplerate_mixer_ctl =
             strdup("SLIM_0_TX SampleRate");
     } else {
-        my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
-            strdup("MI2S_RX Format");
-        my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
-            strdup("MI2S_RX SampleRate");
+        if (!strncmp(snd_card_name, "msmfalcon", strlen("msmfalcon"))) {
 
-        my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
-            strdup("MI2S_TX Format");
-        my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
-            strdup("MI2S_TX SampleRate");
+            my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
+                strdup("INT4_MI2S_RX Format");
+            my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
+                strdup("INT4_MI2S_RX SampleRate");
+
+            my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
+                strdup("INT3_MI2S_TX Format");
+            my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
+                strdup("INT3_MI2S_TX SampleRate");
+
+            if (default_rx_backend)
+                free(default_rx_backend);
+            default_rx_backend = strdup("INT4_MI2S_RX");
+
+        } else {
+            my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
+                strdup("MI2S_RX Format");
+            my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
+                strdup("MI2S_RX SampleRate");
+
+            my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
+                strdup("MI2S_TX Format");
+            my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
+                strdup("MI2S_TX SampleRate");
+        }
+        my_data->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
+            strdup("INT0_MI2S_RX Format");
+        my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
+            strdup("INT0_MI2S_RX SampleRate");
+
     }
     my_data->current_backend_cfg[USB_AUDIO_TX_BACKEND].bitwidth_mixer_ctl =
         strdup("USB_AUDIO_TX Format");
@@ -2093,6 +2166,9 @@ void platform_deinit(void *platform)
         close(my_data->hw_dep_fd);
         my_data->hw_dep_fd = -1;
     }
+
+    if (default_rx_backend)
+        free(default_rx_backend);
 
     hw_info_deinit(my_data->hw_info);
     close_csd_client(my_data->csd);
@@ -2211,9 +2287,9 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
     if (NULL != be_itf1 && NULL != be_itf2) {
         if ((NULL == strstr(be_itf2, be_itf1)) && (NULL == strstr(be_itf1, be_itf2)))
             result = false;
-    } else if (NULL == be_itf1 && NULL != be_itf2 && (NULL == strstr(be_itf2, DEFAULT_RX_BACKEND))) {
+    } else if (NULL == be_itf1 && NULL != be_itf2 && (NULL == strstr(be_itf2, default_rx_backend))) {
             result = false;
-    } else if (NULL != be_itf1 && NULL == be_itf2 && (NULL == strstr(be_itf1, DEFAULT_RX_BACKEND))) {
+    } else if (NULL != be_itf1 && NULL == be_itf2 && (NULL == strstr(be_itf1, default_rx_backend))) {
             result = false;
     }
 

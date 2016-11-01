@@ -149,11 +149,17 @@ static void update_hardware_info_8x16(struct hardware_info *hw_info, const char 
         strlcpy(hw_info->name, "msm8917", sizeof(hw_info->name));
      } else if (!strcmp(snd_card_name, "msm8940-sku6-snd-card")) {
         strlcpy(hw_info->name, "msm8940", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msmfalcon-snd-card")) {
+        strlcpy(hw_info->name, "msmfalcon", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "msmfalcon-snd-card-mtp")) {
         strlcpy(hw_info->name, "msmfalcon", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "msmfalcon-tasha-snd-card")) {
         strlcpy(hw_info->name, "msmfalcon", sizeof(hw_info->name));
-     } else if (!strcmp(snd_card_name, "msm8920-sku7-snd-card")) {
+    } else if (!strcmp(snd_card_name, "msmfalcon-tavil-snd-card")) {
+        strlcpy(hw_info->name, "msmfalcon", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msmfalcon-tashalite-snd-card")) {
+        strlcpy(hw_info->name, "msmfalcon", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8920-sku7-snd-card")) {
         strlcpy(hw_info->name, "msm8920", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "apq8009-tashalite-snd-card")) {
         strlcpy(hw_info->name, "apq8009", sizeof(hw_info->name));
