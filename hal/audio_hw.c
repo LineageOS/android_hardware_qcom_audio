@@ -4440,6 +4440,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     int ret = 0, buffer_size, frame_size;
     int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
     bool is_low_latency = false;
+    bool channel_mask_updated = false;
 
     *stream_in = NULL;
     if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0) {
@@ -4534,7 +4535,14 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->config.channels = channel_count;
         in->config.rate = config->sample_rate;
         in->sample_rate = config->sample_rate;
-    } else if (!audio_extn_ssr_check_and_set_usecase(in)) {
+    } else if (!audio_extn_check_and_set_multichannel_usecase(adev,
+                in, config, &channel_mask_updated)) {
+        if (channel_mask_updated == true) {
+            ALOGD("%s: return error to retry with updated channel mask (%#x)",
+                   __func__, config->channel_mask);
+            ret = -EINVAL;
+            goto err_open;
+        }
         ALOGD("%s: created surround sound session succesfully",__func__);
     } else if (audio_extn_compr_cap_enabled() &&
             audio_extn_compr_cap_format_supported(config->format) &&

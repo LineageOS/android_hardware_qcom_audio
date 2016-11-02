@@ -181,4 +181,5 @@ int platform_retrieve_audio_cal(void* platform, int acdb_dev_id, int acdb_device
     void* data, int* length);
 
 unsigned char* platform_get_license(void* platform, int* size);
+int platform_get_max_mic_count(void *platform);
 #endif // AUDIO_PLATFORM_API_H
