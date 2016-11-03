@@ -1428,7 +1428,9 @@ int platform_set_mic_mute(void *platform, bool state)
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voice Tx Mute";
     int ret = 0;
-    uint32_t set_values[ ] = {0};
+    uint32_t set_values[ ] = {0,
+                              ALL_SESSION_VSID,
+                              DEFAULT_MUTE_RAMP_DURATION_MS};
 
     if (audio_extn_hfp_is_active(adev))
         mixer_ctl_name = "HFP TX Mute";
@@ -1441,7 +1443,11 @@ int platform_set_mic_mute(void *platform, bool state)
         return -EINVAL;
     }
     ALOGV("Setting voice mute state: %d", state);
-    ret = mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+    // "HFP TX mute" mixer control has xcount of 1.
+    if (audio_extn_hfp_is_active(adev))
+        ret = mixer_ctl_set_array(ctl, set_values, 1 /*count*/);
+    else
+        ret = mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
     return ret;
 }
 
