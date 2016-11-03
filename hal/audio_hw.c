@@ -4259,10 +4259,13 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value, sizeof(value));
     if (ret >= 0) {
         val = atoi(value);
-        if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-            ALOGV("invalidate cached edid");
-            platform_invalidate_hdmi_config(adev->platform);
-        } else if ((val & AUDIO_DEVICE_OUT_USB_DEVICE) ||
+        /*
+         * The HDMI / Displayport disconnect handling has been moved to
+         * audio extension to ensure that its parameters are not
+         * invalidated prior to updating sysfs of the disconnect event
+         * Invalidate will be handled by audio_extn_ext_disp_set_parameters()
+         */
+        if ((val & AUDIO_DEVICE_OUT_USB_DEVICE) ||
                    !(val ^ AUDIO_DEVICE_IN_USB_DEVICE)) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
