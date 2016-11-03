@@ -780,8 +780,8 @@ static int msm_device_to_be_id_internal_codec [][NO_COLS] = {
 static int msm_device_to_be_id_external_codec [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_EARPIECE                       ,       2},
        {AUDIO_DEVICE_OUT_SPEAKER                        ,       2},
-       {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       2},
-       {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       2},
+       {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       41},
+       {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       41},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO                  ,       11},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET          ,       11},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT           ,       11},
@@ -2924,6 +2924,7 @@ bool platform_can_split_snd_device(void *platform,
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_BT_A2DP;
+        status = true;
     }
 
     ALOGD("%s: snd_device(%d) num devices(%d) new_snd_devices(%d)", __func__,
@@ -5670,4 +5671,9 @@ int platform_retrieve_audio_cal(void* platform __unused,
         int* length __unused)
 {
     return -ENOSYS;
+}
+
+int platform_get_max_mic_count(void *platform) {
+    struct platform_data *my_data = (struct platform_data *)platform;
+    return my_data->max_mic_count;
 }

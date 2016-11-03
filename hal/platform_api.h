@@ -163,6 +163,7 @@ bool platform_check_codec_dsd_support(void *platform);
 bool platform_check_codec_asrc_support(void *platform);
 int platform_get_backend_index(snd_device_t snd_device);
 int platform_get_ext_disp_type(void *platform);
+void platform_invalidate_hdmi_config(void *platform);
 
 int platform_send_audio_cal(void* platform, int acdb_dev_id, int acdb_device_type,
     int app_type, int topology_id, int sample_rate, uint32_t module_id, uint32_t param_id,
@@ -181,4 +182,5 @@ int platform_retrieve_audio_cal(void* platform, int acdb_dev_id, int acdb_device
     void* data, int* length);
 
 unsigned char* platform_get_license(void* platform, int* size);
+int platform_get_max_mic_count(void *platform);
 #endif // AUDIO_PLATFORM_API_H

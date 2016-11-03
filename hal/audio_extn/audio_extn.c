@@ -185,7 +185,7 @@ static int update_ext_disp_sysfs_node(const struct audio_device *adev, int node_
     return ret;
 }
 
-static void check_and_set_ext_disp_connection_status(const struct audio_device *adev,
+static void audio_extn_ext_disp_set_parameters(const struct audio_device *adev,
                                                      struct str_parms *parms)
 {
     char value[32] = {0};
@@ -204,12 +204,13 @@ static void check_and_set_ext_disp_connection_status(const struct audio_device *
             && (atoi(value) & AUDIO_DEVICE_OUT_AUX_DIGITAL)){
         //params = "disconnect=1024" for external display disconnection.
         update_ext_disp_sysfs_node(adev, 0);
+        ALOGV("invalidate cached edid");
+        platform_invalidate_hdmi_config(adev->platform);
     } else {
         // handle ext disp devices only
         return;
     }
 }
-
 
 #ifndef FM_POWER_OPT
 #define audio_extn_fm_set_parameters(adev, parms) (0)
@@ -772,7 +773,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_source_track_set_parameters(adev, parms);
    audio_extn_fbsp_set_parameters(parms);
    audio_extn_keep_alive_set_parameters(adev, parms);
-   check_and_set_ext_disp_connection_status(adev, parms);
+   audio_extn_ext_disp_set_parameters(adev, parms);
    if (adev->offload_effects_set_parameters != NULL)
        adev->offload_effects_set_parameters(parms);
 }
@@ -1144,3 +1145,52 @@ void audio_extn_perf_lock_release(int *handle)
     }
 }
 #endif /* KPI_OPTIMIZE_ENABLED */
+
+static int audio_extn_set_multichannel_mask(struct audio_device *adev,
+                                            struct stream_in *in,
+                                            struct audio_config *config,
+                                            bool *channel_mask_updated)
+{
+    int ret = -EINVAL;
+    int channel_count = audio_channel_count_from_in_mask(in->channel_mask);
+    *channel_mask_updated = false;
+
+    int max_mic_count = platform_get_max_mic_count(adev->platform);
+    /* validate input params*/
+    if ((channel_count == 6) &&
+        (in->format == AUDIO_FORMAT_PCM_16_BIT)) {
+
+        switch (max_mic_count) {
+            case 4:
+                config->channel_mask = AUDIO_CHANNEL_INDEX_MASK_4;
+                break;
+            case 3:
+                config->channel_mask = AUDIO_CHANNEL_INDEX_MASK_3;
+                break;
+            case 2:
+                config->channel_mask = AUDIO_CHANNEL_IN_STEREO;
+                break;
+            default:
+                config->channel_mask = AUDIO_CHANNEL_IN_STEREO;
+                break;
+        }
+        ret = 0;
+        *channel_mask_updated = true;
+    }
+    return ret;
+}
+
+int audio_extn_check_and_set_multichannel_usecase(struct audio_device *adev,
+                                                  struct stream_in *in,
+                                                  struct audio_config *config,
+                                                  bool *update_params)
+{
+    bool ssr_supported = false;
+    ssr_supported = audio_extn_ssr_check_usecase(in);
+    if (ssr_supported) {
+        return audio_extn_ssr_set_usecase(in, config, update_params);
+    } else {
+        return audio_extn_set_multichannel_mask(adev, in, config,
+                                                update_params);
+    }
+}

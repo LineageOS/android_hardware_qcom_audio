@@ -2452,7 +2452,15 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 (val == AUDIO_DEVICE_NONE)) {
                 val = AUDIO_DEVICE_OUT_SPEAKER;
         }
-
+        /* To avoid a2dp to sco overlapping force route BT usecases
+         * to speaker based on Phone state
+         */
+        if ((val & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) &&
+            ((adev->mode == AUDIO_MODE_RINGTONE) ||
+            (adev->mode == AUDIO_MODE_IN_CALL))) {
+            ALOGD("Forcing a2dp routing to speaker for ring/call mode");
+            val = AUDIO_DEVICE_OUT_SPEAKER;
+        }
         /*
          * select_devices() call below switches all the usecases on the same
          * backend to the new device. Refer to check_usecases_codec_backend() in
@@ -4251,10 +4259,13 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value, sizeof(value));
     if (ret >= 0) {
         val = atoi(value);
-        if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-            ALOGV("invalidate cached edid");
-            platform_invalidate_hdmi_config(adev->platform);
-        } else if ((val & AUDIO_DEVICE_OUT_USB_DEVICE) ||
+        /*
+         * The HDMI / Displayport disconnect handling has been moved to
+         * audio extension to ensure that its parameters are not
+         * invalidated prior to updating sysfs of the disconnect event
+         * Invalidate will be handled by audio_extn_ext_disp_set_parameters()
+         */
+        if ((val & AUDIO_DEVICE_OUT_USB_DEVICE) ||
                    !(val ^ AUDIO_DEVICE_IN_USB_DEVICE)) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
@@ -4440,6 +4451,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     int ret = 0, buffer_size, frame_size;
     int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
     bool is_low_latency = false;
+    bool channel_mask_updated = false;
 
     *stream_in = NULL;
     if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0) {
@@ -4534,7 +4546,14 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->config.channels = channel_count;
         in->config.rate = config->sample_rate;
         in->sample_rate = config->sample_rate;
-    } else if (!audio_extn_ssr_check_and_set_usecase(in)) {
+    } else if (!audio_extn_check_and_set_multichannel_usecase(adev,
+                in, config, &channel_mask_updated)) {
+        if (channel_mask_updated == true) {
+            ALOGD("%s: return error to retry with updated channel mask (%#x)",
+                   __func__, config->channel_mask);
+            ret = -EINVAL;
+            goto err_open;
+        }
         ALOGD("%s: created surround sound session succesfully",__func__);
     } else if (audio_extn_compr_cap_enabled() &&
             audio_extn_compr_cap_format_supported(config->format) &&
