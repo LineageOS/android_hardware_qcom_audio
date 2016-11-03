@@ -795,8 +795,8 @@ static int msm_device_to_be_id [][NO_COLS] = {
 static int msm_device_to_be_id [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_EARPIECE                       ,       2},
        {AUDIO_DEVICE_OUT_SPEAKER                        ,       2},
-       {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       2},
-       {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       2},
+       {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       41},
+       {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       41},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO                  ,       11},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET          ,       11},
        {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT           ,       11},
