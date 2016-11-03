@@ -111,4 +111,30 @@
  */
 #define AUDIO_INPUT_FLAG_TIMESTAMP 0x80000000
 
+/* MAX SECTORS for sourcetracking feature */
+#define MAX_SECTORS 8
+
+struct qahw_source_tracking_param {
+    uint8_t   vad[MAX_SECTORS];
+    uint16_t  doa_speech;
+    uint16_t  doa_noise[3];
+    uint8_t   polar_activity[360];
+};
+
+struct qahw_sound_focus_param {
+    uint16_t  start_angle[MAX_SECTORS];
+    uint8_t   enable[MAX_SECTORS];
+    uint16_t  gain_step;
+};
+
+typedef union {
+    struct qahw_source_tracking_param st_params;
+    struct qahw_sound_focus_param sf_params;
+} qahw_param_payload;
+
+typedef enum {
+    QAHW_PARAM_SOURCE_TRACK,
+    QAHW_PARAM_SOUND_FOCUS
+} qahw_param_id;
+
 #endif /* AUDIO_DEFS_H */

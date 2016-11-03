@@ -48,6 +48,39 @@ uint64_t timestamp;
 };
 #endif
 
+int qahwi_get_param_data(const struct audio_device *adev,
+                         qahw_param_id param_id, qahw_param_payload *payload)
+{
+    int ret = 0;
+
+    if (adev == NULL) {
+        ALOGE("%s::INVALID PARAM\n",__func__);
+        return -EINVAL;
+    }
+
+    if (payload == NULL) {
+        ALOGE("%s::INVALID PAYLOAD VALUE\n",__func__);
+        return -EINVAL;
+    }
+
+    switch (param_id) {
+        case QAHW_PARAM_SOUND_FOCUS:
+              ret = audio_extn_get_soundfocus_data(adev,
+                     (struct qahw_sound_focus_param *)payload);
+              break;
+        case QAHW_PARAM_SOURCE_TRACK:
+              ret = audio_extn_get_sourcetrack_data(adev,
+                     (struct qahw_source_tracking_param*)payload);
+              break;
+       default:
+             ALOGE("%s::INVALID PARAM ID:%d\n",__func__,param_id);
+             ret = -EINVAL;
+             break;
+
+        return ret;
+        }
+}
+
 ssize_t qahwi_in_read_v2(struct audio_stream_in *stream, void* buffer,
                           size_t bytes, uint64_t *timestamp)
 {
