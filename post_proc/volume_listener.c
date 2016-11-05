@@ -358,7 +358,9 @@ static int vol_effect_command(effect_handle_t self,
             ALOGE("%s: EFFECT_CMD_INIT: %s, sending -EINVAL", __func__,
                   (p_reply_data == NULL) ? "p_reply_data is NULL" :
                   "*reply_size != sizeof(int)");
-            return -EINVAL;
+            android_errorWriteLog(0x534e4554, "32669549");
+            status = -EINVAL;
+            goto exit;
         }
         *(int *)p_reply_data = 0;
         break;
@@ -367,7 +369,9 @@ static int vol_effect_command(effect_handle_t self,
         ALOGV("%s :: cmd called EFFECT_CMD_SET_CONFIG", __func__);
         if (p_cmd_data == NULL || cmd_size != sizeof(effect_config_t)
                 || p_reply_data == NULL || reply_size == NULL || *reply_size != sizeof(int)) {
-            return -EINVAL;
+            android_errorWriteLog(0x534e4554, "32669549");
+            status = -EINVAL;
+            goto exit;
         }
         context->config = *(effect_config_t *)p_cmd_data;
         *(int *)p_reply_data = 0;
@@ -391,7 +395,9 @@ static int vol_effect_command(effect_handle_t self,
             ALOGE("%s: EFFECT_CMD_OFFLOAD: %s, sending -EINVAL", __func__,
                   (p_reply_data == NULL) ? "p_reply_data is NULL" :
                   "*reply_size != sizeof(int)");
-            return -EINVAL;
+            android_errorWriteLog(0x534e4554, "32669549");
+            status = -EINVAL;
+            goto exit;
         }
         *(int *)p_reply_data = 0;
         break;
