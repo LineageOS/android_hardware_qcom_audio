@@ -312,9 +312,6 @@ int offload_effects_bundle_hal_stop_output(audio_io_handle_t output, int pcm_id)
             fx_ctxt->ops.stop(fx_ctxt, out_ctxt);
     }
 
-    if (out_ctxt->mixer)
-        mixer_close(out_ctxt->mixer);
-
     list_remove(&out_ctxt->outputs_list_node);
 
 #ifdef DTS_EAGLE
