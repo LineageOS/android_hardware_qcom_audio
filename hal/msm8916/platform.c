@@ -5016,6 +5016,29 @@ int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel
     return ret;
 }
 
+void platform_check_and_update_copp_sample_rate(void* platform, snd_device_t snd_device,
+                                                unsigned int stream_sr, int* sample_rate)
+{
+    struct platform_data* my_data = (struct platform_data *)platform;
+    int backend_idx = platform_get_backend_index(snd_device);
+    int device_sr = my_data->current_backend_cfg[backend_idx].sample_rate;
+    /*Check if device SR is multiple of 8K or 11.025 Khz
+     *check if the stream SR is multiple of same base, if not set
+     *copp sample rate equal to device sample rate.
+     */
+     if (!(((sample_rate_multiple(device_sr, SAMPLE_RATE_8000)) &&
+                 (sample_rate_multiple(stream_sr, SAMPLE_RATE_8000))) ||
+           ((sample_rate_multiple(device_sr, SAMPLE_RATE_11025)) &&
+                 (sample_rate_multiple(stream_sr, SAMPLE_RATE_11025))))) {
+         *sample_rate = device_sr;
+     } else
+         *sample_rate = stream_sr;
+
+     ALOGI("sn_device %d device sr %d stream sr %d copp sr %d", snd_device, device_sr, stream_sr
+, *sample_rate);
+
+}
+
 int platform_get_edid_info(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
