@@ -95,6 +95,39 @@ void voice_set_sidetone(struct audio_device *adev,
     return;
 }
 
+static bool voice_is_aanc_device(snd_device_t out_device,
+                                 char *mixer_path)
+{
+    bool is_aanc_dev;
+
+    switch (out_device) {
+        case SND_DEVICE_OUT_ANC_HANDSET:
+            is_aanc_dev = true;
+            strlcpy(mixer_path, "aanc-path", MIXER_PATH_MAX_LENGTH);
+            break;
+        default:
+            is_aanc_dev = false;
+            break;
+    }
+
+    return is_aanc_dev;
+}
+
+void voice_check_and_update_aanc_path(struct audio_device *adev,
+                                      snd_device_t out_snd_device,
+                                      bool enable)
+{
+    char mixer_path[MIXER_PATH_MAX_LENGTH];
+
+    ALOGV("%s: %s, out_snd_device: %d\n",
+          __func__, (enable ? "enable" : "disable"), out_snd_device);
+
+    if (voice_is_aanc_device(out_snd_device, mixer_path))
+        platform_update_aanc_path(adev, out_snd_device, enable, mixer_path);
+
+    return;
+}
+
 int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 {
     int ret = 0;
@@ -124,6 +157,10 @@ int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     /* Disable sidetone only when no calls are active */
     if (!voice_is_call_state_active(adev))
         voice_set_sidetone(adev, uc_info->out_snd_device, false);
+
+    /* Disable aanc only when no calls are active */
+    if (!voice_is_call_state_active(adev))
+        voice_check_and_update_aanc_path(adev, uc_info->out_snd_device, false);
 
     ret = platform_stop_voice_call(adev->platform, session->vsid);
 
@@ -228,6 +265,10 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 
     pcm_start(session->pcm_tx);
     pcm_start(session->pcm_rx);
+
+    /* Enable aanc only when no calls are active */
+    if (!voice_is_call_state_active(adev))
+        voice_check_and_update_aanc_path(adev, uc_info->out_snd_device, true);
 
     /* Enable sidetone only when no calls are already active */
     if (!voice_is_call_state_active(adev))

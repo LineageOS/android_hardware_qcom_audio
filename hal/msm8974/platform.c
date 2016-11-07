@@ -5647,6 +5647,22 @@ int platform_set_sidetone(struct audio_device *adev,
     return 0;
 }
 
+void platform_update_aanc_path(struct audio_device *adev,
+                               snd_device_t out_snd_device,
+                               bool enable,
+                               char *str)
+{
+    ALOGD("%s: aanc out device(%d) mixer cmd = %s, enable = %d\n",
+          __func__, out_snd_device, str, enable);
+
+    if (enable)
+        audio_route_apply_and_update_path(adev->audio_route, str);
+    else
+        audio_route_reset_and_update_path(adev->audio_route, str);
+
+    return;
+}
+
 static void make_cal_cfg(acdb_audio_cal_cfg_t* cal, int acdb_dev_id,
         int acdb_device_type, int app_type, int topology_id,
         int sample_rate, uint32_t module_id, uint32_t param_id, bool persist)
