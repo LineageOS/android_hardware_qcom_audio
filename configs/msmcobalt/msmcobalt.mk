@@ -211,3 +211,6 @@ use.qti.sw.ape.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 qcom.hw.aac.encoder=true
 
+#Disable FM a2dp concurrency
+PRODUCT_PROPERTY_OVERRIDES += \
+fm.a2dp.conc.disabled=true
