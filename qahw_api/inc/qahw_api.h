@@ -421,6 +421,13 @@ size_t qahw_get_input_buffer_size(const qahw_module_handle_t *hw_module,
 /*returns current QTI HAL version */
 int qahw_get_version();
 
+/* Api to implement get parameters based on keyword param_id
+ * and store data in payload.
+ */
+int qahw_get_param_data(const qahw_module_handle_t *hw_module,
+                        qahw_param_id param_id,
+                        qahw_param_payload *payload);
+
 __END_DECLS
 
 #endif  // QTI_AUDIO_HAL_API_H

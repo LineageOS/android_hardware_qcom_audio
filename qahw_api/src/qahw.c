@@ -91,6 +91,10 @@ static struct listnode qahw_module_list;
 static int qahw_list_count;
 static pthread_mutex_t qahw_module_init_lock = PTHREAD_MUTEX_INITIALIZER;
 
+typedef int (*qahwi_get_param_data_t) (const struct audio_device *,
+                              qahw_param_id, qahw_param_payload *);
+qahwi_get_param_data_t qahwi_get_param_data;
+
 /** Start of internal functions */
 /******************************************************************************/
 
@@ -1208,6 +1212,39 @@ exit:
     return str_param;
 }
 
+/* Api to implement get parameters  based on keyword param_id
+ * and store data in payload.
+ */
+int qahw_get_param_data(const qahw_module_handle_t *hw_module,
+                        qahw_param_id param_id,
+                        qahw_param_payload *payload)
+{
+    int ret = 0;
+    qahw_module_t *qahw_module = (qahw_module_t *)hw_module;
+    qahw_module_t *qahw_module_temp;
+
+    pthread_mutex_lock(&qahw_module_init_lock);
+    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    pthread_mutex_unlock(&qahw_module_init_lock);
+    if (qahw_module_temp == NULL) {
+        ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
+        goto exit;
+    }
+
+    pthread_mutex_lock(&qahw_module->lock);
+
+    if (qahwi_get_param_data){
+        ret = qahwi_get_param_data (qahw_module->audio_device, param_id, payload);
+    } else {
+         ret = -ENOSYS;
+         ALOGE("%s not supported\n",__func__);
+    }
+    pthread_mutex_unlock(&qahw_module->lock);
+
+exit:
+     return ret;
+}
+
 /* Returns audio input buffer size according to parameters passed or
  * 0 if one of the parameters is not supported.
  * See also get_buffer_size which is for a particular stream.
@@ -1506,6 +1543,11 @@ qahw_module_handle_t *qahw_load_module(const char *hw_module_id)
     }
     qahw_module->module = module;
     ALOGD("%s::Loaded HAL %s module %p", __func__, ahal_name, qahw_module);
+
+    qahwi_get_param_data = (qahwi_get_param_data_t) dlsym (module->dso,
+                            "qahwi_get_param_data");
+    if (!qahwi_get_param_data)
+         ALOGD("%s::qahwi_get_param_data api is not defined\n",__func__);
 
     if (!qahw_list_count)
         list_init(&qahw_module_list);

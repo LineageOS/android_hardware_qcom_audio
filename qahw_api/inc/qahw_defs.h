@@ -217,6 +217,32 @@ typedef struct {
     uint32_t reserved[64]; /*reserved for future */
 } qahw_in_buffer_t;
 
+#define MAX_SECTORS 8
+
+struct qahw_source_tracking_param {
+    uint8_t   vad[MAX_SECTORS];
+    uint16_t  doa_speech;
+    uint16_t  doa_noise[3];
+    uint8_t   polar_activity[360];
+};
+
+struct qahw_sound_focus_param {
+    uint16_t  start_angle[MAX_SECTORS];
+    uint8_t   enable[MAX_SECTORS];
+    uint16_t  gain_step;
+};
+
+typedef union {
+    struct qahw_source_tracking_param st_params;
+    struct qahw_sound_focus_param sf_params;
+} qahw_param_payload;
+
+typedef enum {
+    QAHW_PARAM_SOURCE_TRACK,
+    QAHW_PARAM_SOUND_FOCUS
+} qahw_param_id;
+
+
 __END_DECLS
 
 #endif  // QTI_AUDIO_HAL_DEFS_H
