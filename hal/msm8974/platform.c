@@ -196,6 +196,7 @@ struct platform_data {
     struct csd_data *csd;
     void *edid_info;
     bool edid_valid;
+    int hw_dep_fd;
 };
 
 static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -928,13 +929,14 @@ struct param_data {
     void   *buff;
 };
 
-static int send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibration, int fd)
+static void send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibration, int fd)
 {
-    int ret = 0, type;
+    int type;
 
     for (type = WCD9XXX_ANC_CAL; type < WCD9XXX_MAX_CAL; type++) {
         struct wcdcal_ioctl_buffer codec_buffer;
         struct param_data calib;
+        int ret;
 
         if (!strcmp(cal_name_info[type], "mad_cal"))
             calib.acdb_id = SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID;
@@ -943,16 +945,22 @@ static int send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibrat
                                                                  &calib);
         if (ret < 0) {
             ALOGE("%s get_calibration failed\n", __func__);
-            return ret;
+            continue;
         }
         calib.get_size = 0;
         calib.buff = malloc(calib.buff_size);
+        if(calib.buff == NULL) {
+            ALOGE("%s mem allocation for %d bytes for %s failed\n"
+                , __func__, calib.buff_size, cal_name_info[type]);
+            continue;
+        }
+
         ret = acdb_loader_get_calibration(cal_name_info[type],
                               sizeof(struct param_data), &calib);
         if (ret < 0) {
             ALOGE("%s get_calibration failed\n", __func__);
             free(calib.buff);
-            return ret;
+            continue;
         }
         codec_buffer.buffer = calib.buff;
         codec_buffer.size = calib.data_size;
@@ -963,14 +971,14 @@ static int send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibrat
         ALOGD("%s cal sent for %s", __func__, cal_name_info[type]);
         free(calib.buff);
     }
-    return ret;
 }
 
 static void audio_hwdep_send_cal(struct platform_data *plat_data)
 {
-    int fd;
+    int fd = plat_data->hw_dep_fd;
 
-    fd = hw_util_open(plat_data->adev->snd_card);
+    if (fd < 0)
+        fd = hw_util_open(plat_data->adev->snd_card);
     if (fd == -1) {
         ALOGE("%s error open\n", __func__);
         return;
@@ -982,12 +990,15 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
     if (acdb_loader_get_calibration == NULL) {
         ALOGE("%s: ERROR. dlsym Error:%s acdb_loader_get_calibration", __func__,
            dlerror());
-        close(fd);
+        if (fd >= 0) {
+            close(fd);
+            plat_data->hw_dep_fd = -1;
+        }
         return;
     }
-    if (send_codec_cal(acdb_loader_get_calibration, fd) < 0)
-        ALOGE("%s: Could not send anc cal", __FUNCTION__);
-    close(fd);
+
+    send_codec_cal(acdb_loader_get_calibration, fd);
+    plat_data->hw_dep_fd = fd;
 }
 
 void *platform_init(struct audio_device *adev)
@@ -1082,6 +1093,7 @@ void *platform_init(struct audio_device *adev)
     my_data->slowtalk = false;
     my_data->hd_voice = false;
     my_data->edid_info = NULL;
+    my_data->hw_dep_fd = -1;
 
     property_get("ro.qc.sdk.audio.fluencetype", my_data->fluence_cap, "");
     if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro"))) {
@@ -1240,6 +1252,11 @@ void platform_deinit(void *platform)
     if (my_data->edid_info) {
         free(my_data->edid_info);
         my_data->edid_info = NULL;
+    }
+
+    if (my_data->hw_dep_fd >= 0) {
+        close(my_data->hw_dep_fd);
+        my_data->hw_dep_fd = -1;
     }
 
     hw_info_deinit(my_data->hw_info);
