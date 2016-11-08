@@ -79,8 +79,8 @@ typedef enum edid_audio_format_id {
 
 typedef struct edid_audio_block_info {
     edid_audio_format_id format_id;
-    int sampling_freq;
-    int bits_per_sample;
+    int sampling_freq_bitmask;
+    int bits_per_sample_bitmask;
     int channels;
 } edid_audio_block_info;
 
@@ -100,5 +100,6 @@ bool edid_get_sink_caps(edid_audio_info* info, char *edid_data);
 
 bool edid_is_supported_sr(edid_audio_info* info, int sr);
 bool edid_is_supported_bps(edid_audio_info* info, int bps);
+int edid_get_highest_supported_sr(edid_audio_info* info);
 
 #endif /* EDID_H */

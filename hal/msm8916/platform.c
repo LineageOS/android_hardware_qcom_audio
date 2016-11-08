@@ -4500,8 +4500,12 @@ static void platform_check_hdmi_backend_cfg(struct audio_device* adev,
 
         //Check EDID info for supported samplerate
         if (!edid_is_supported_sr(edid_info,sample_rate)) {
-            //reset to current sample rate
-            sample_rate = my_data->current_backend_cfg[backend_idx].sample_rate;
+            //check to see if current BE sample rate is supported by EDID
+            //else assign the highest sample rate supported by EDID
+            if (edid_is_supported_sr(edid_info,my_data->current_backend_cfg[backend_idx].sample_rate))
+                sample_rate = my_data->current_backend_cfg[backend_idx].sample_rate;
+            else
+                sample_rate = edid_get_highest_supported_sr(edid_info);
         }
 
         //Check EDID info for supported bit width
@@ -5275,24 +5279,13 @@ bool platform_is_edid_supported_sample_rate(void *platform, int sample_rate)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     edid_audio_info *info = NULL;
-    int i, ret;
+    int ret = 0;
 
     ret = platform_get_edid_info(platform);
     info = (edid_audio_info *)my_data->edid_info;
     if (ret == 0 && info != NULL) {
-        for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
-             /*
-              * To check
-              *  is there any special for CONFIG_HDMI_PASSTHROUGH_CONVERT
-              *  & DOLBY_DIGITAL_PLUS
-              */
-            if (info->audio_blocks_array[i].sampling_freq == sample_rate) {
-                ALOGV("%s: returns true %d", __func__, sample_rate);
-                return true;
-            }
-        }
+        return edid_is_supported_sr(info, sample_rate);
     }
-    ALOGV("%s: returns false %d", __func__, sample_rate);
 
     return false;
 }
