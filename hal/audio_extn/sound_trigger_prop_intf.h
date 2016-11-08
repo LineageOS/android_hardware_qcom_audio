@@ -7,7 +7,7 @@
 
 struct sound_trigger_session_info {
     int capture_handle;
-    void* p_ses;
+    void* pcm;
     struct pcm_config config;
 };
 
