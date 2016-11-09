@@ -43,6 +43,17 @@ ifneq ($(filter msm8996,$(TARGET_BOARD_PLATFORM)),)
 endif
 endif
 
+ifneq ($(filter msm8916 msm8909 msm8952,$(TARGET_BOARD_PLATFORM)),)
+  AUDIO_PLATFORM = msm8916
+  LOCAL_CFLAGS := -DPLATFORM_MSM8916
+ifneq ($(filter msm8909,$(TARGET_BOARD_PLATFORM)),)
+  LOCAL_CFLAGS := -DPLATFORM_MSM8909
+endif
+  LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="2"
+  LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
+  MULTIPLE_HW_VARIANTS_ENABLED := true
+endif
+
 LOCAL_SRC_FILES := \
 	audio_hw.c \
 	voice.c \
@@ -118,6 +129,11 @@ ifneq ($(filter msm8992 msm8994 msm8996,$(TARGET_BOARD_PLATFORM)),)
   # applicable to msm8992/8994 or newer platforms
   LOCAL_CFLAGS += -DHWDEP_CAL_ENABLED
   LOCAL_SRC_FILES += audio_extn/hwdep_cal.c
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SND_MONITOR)), true)
+    LOCAL_CFLAGS += -DSND_MONITOR_ENABLED
+    LOCAL_SRC_FILES += audio_extn/sndmonitor.c
 endif
 
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)

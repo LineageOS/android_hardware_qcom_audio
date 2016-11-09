@@ -23,6 +23,7 @@
 #include <cutils/log.h>
 #include <hardware/audio_effect.h>
 #include <cutils/properties.h>
+#include <platform_api.h>
 
 #define PRIMARY_HAL_PATH XSTR(LIB_AUDIO_HAL)
 #define XSTR(x) STR(x)
@@ -44,6 +45,8 @@
 #define MAX_GAIN_LEVELS 5
 
 #define AHAL_GAIN_DEPENDENT_INTERFACE_FUNCTION "audio_hw_send_gain_dep_calibration"
+#define AHAL_GAIN_GET_MAPPING_TABLE "audio_hw_get_gain_level_mapping"
+#define DEFAULT_CAL_STEP 0
 
 enum {
     VOL_LISTENER_STATE_UNINITIALIZED,
@@ -142,14 +145,10 @@ const effect_descriptor_t vol_listener_notification_descriptor = {
     "Qualcomm Technologies Inc",
 };
 
-struct amp_db_and_gain_table {
-    float amp;
-    float db;
-    uint32_t level;
-} amp_to_dBLevel_table;
+static int total_volume_cal_step = MAX_GAIN_LEVELS;
 
 // using gain level for non-drc volume curve
-static const struct amp_db_and_gain_table  volume_curve_gain_mapping_table[MAX_GAIN_LEVELS] =
+struct amp_db_and_gain_table  volume_curve_gain_mapping_table[MAX_VOLUME_CAL_STEPS] =
 {
     /* Level 0 in the calibration database contains default calibration */
     { 0.001774, -55, 5 },
@@ -157,6 +156,16 @@ static const struct amp_db_and_gain_table  volume_curve_gain_mapping_table[MAX_G
     { 0.630957,  -4, 3 },
     { 0.794328,  -2, 2 },
     { 1.0,        0, 1 },
+    { 0, 0, -1 },
+    { 0, 0, -1 },
+    { 0, 0, -1 },
+    { 0, 0, -1 },
+    { 0, 0, -1 },
+    { 0, 0, -1 },
+    { 0, 0, -1 },
+    { 0, 0, -1 },
+    { 0, 0, -1 },
+    { 0, 0, -1 }
 };
 
 static const effect_descriptor_t *descriptors[] = {
@@ -177,6 +186,8 @@ static float current_vol = 0.0;
 
 /* HAL interface to send calibration */
 static bool (*send_gain_dep_cal)(int);
+
+static int (*get_custom_gain_table)(struct amp_db_and_gain_table *, int);
 
 /* if dumping allowed */
 static bool dumping_enabled = false;
@@ -222,7 +233,7 @@ static void check_and_set_gain_dep_cal()
     // 4. if new value is different than the current value then load new calibration
 
     struct listnode *node = NULL;
-    float new_vol = 0.0;
+    float new_vol = -1.0;
     int max_level = 0;
     vol_listener_context_t *context = NULL;
     if (dumping_enabled) {
@@ -249,12 +260,14 @@ static void check_and_set_gain_dep_cal()
             // send Gain dep cal level
             int gain_dep_cal_level = -1;
 
-            if (new_vol >= 1) { // max amplitude, use highest DRC level
-                gain_dep_cal_level = volume_curve_gain_mapping_table[MAX_GAIN_LEVELS - 1].level;
-            } else if (new_vol <= 0) {
+            if (new_vol >= 1 && total_volume_cal_step > 0) { // max amplitude, use highest DRC level
+                gain_dep_cal_level = volume_curve_gain_mapping_table[total_volume_cal_step - 1].level;
+            } else if (new_vol == -1) {
+                gain_dep_cal_level = DEFAULT_CAL_STEP;
+            } else if (new_vol == 0) {
                 gain_dep_cal_level = volume_curve_gain_mapping_table[0].level;
             } else {
-                for (max_level = 0; max_level + 1 < MAX_GAIN_LEVELS; max_level++) {
+                for (max_level = 0; max_level + 1 < total_volume_cal_step; max_level++) {
                     if (new_vol < volume_curve_gain_mapping_table[max_level + 1].amp &&
                         new_vol >= volume_curve_gain_mapping_table[max_level].amp) {
                         gain_dep_cal_level = volume_curve_gain_mapping_table[max_level].level;
@@ -570,13 +583,16 @@ static int vol_effect_get_descriptor(effect_handle_t   self,
 
 static void init_once()
 {
-    int i = 0;
+    int max_table_ent = 0;
     if (initialized) {
         ALOGV("%s : already init .. do nothing", __func__);
         return;
     }
 
     ALOGD("%s Called ", __func__);
+    send_gain_dep_cal = NULL;
+    get_custom_gain_table = NULL;
+
     pthread_mutex_init(&vol_listner_init_lock, NULL);
 
     // get hal function pointer
@@ -584,17 +600,47 @@ static void init_once()
         void *hal_lib_pointer = dlopen(PRIMARY_HAL_PATH, RTLD_NOW);
         if (hal_lib_pointer == NULL) {
             ALOGE("%s: DLOPEN failed for %s", __func__, PRIMARY_HAL_PATH);
-            send_gain_dep_cal = NULL;
         } else {
             ALOGV("%s: DLOPEN of %s Succes .. next get HAL entry function", __func__, PRIMARY_HAL_PATH);
             send_gain_dep_cal = (bool (*)(int))dlsym(hal_lib_pointer, AHAL_GAIN_DEPENDENT_INTERFACE_FUNCTION);
             if (send_gain_dep_cal == NULL) {
                 ALOGE("Couldnt able to get the function symbol");
             }
+            get_custom_gain_table = (int (*) (struct amp_db_and_gain_table *, int))dlsym(hal_lib_pointer, AHAL_GAIN_GET_MAPPING_TABLE);
+            if (get_custom_gain_table == NULL) {
+                ALOGE("Couldnt able to get the function AHAL_GAIN_GET_MAPPING_TABLE  symbol");
+            } else {
+                max_table_ent = get_custom_gain_table(volume_curve_gain_mapping_table, MAX_VOLUME_CAL_STEPS);
+                // if number of entries is 0 use default
+                // if number of entries > MAX_VOLUME_CAL_STEPS (this should never happen) then in this case
+                // use only default number of steps but this will result in unexpected behaviour
+
+                if (max_table_ent > 0 && max_table_ent <= MAX_VOLUME_CAL_STEPS) {
+                    if (max_table_ent < total_volume_cal_step) {
+                        for (int i = max_table_ent; i < total_volume_cal_step; i++ ) {
+                            volume_curve_gain_mapping_table[i].amp = 0;
+                            volume_curve_gain_mapping_table[i].db = 0;
+                            volume_curve_gain_mapping_table[i].level = -1;
+                        }
+                    }
+                    total_volume_cal_step = max_table_ent;
+                    ALOGD("%s: using custome volume table", __func__);
+                } else {
+                    ALOGD("%s: using default volume table", __func__);
+                }
+
+                if (dumping_enabled) {
+                    ALOGD("%s: dumping table here .. size of table received %d",
+                           __func__, max_table_ent);
+                    for (int i = 0; i < MAX_VOLUME_CAL_STEPS ; i++)
+                        ALOGD("[%d]  %f %f %d", i, volume_curve_gain_mapping_table[i].amp,
+                                                   volume_curve_gain_mapping_table[i].db,
+                                                   volume_curve_gain_mapping_table[i].level);
+                }
+            }
         }
     } else {
         ALOGE("%s: not able to acces lib %s ", __func__, PRIMARY_HAL_PATH);
-        send_gain_dep_cal = NULL;
     }
 
     // check system property to see if dumping is required

@@ -105,6 +105,7 @@ typedef void (*acdb_send_audio_cal_t)(int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
 typedef int (*acdb_send_gain_dep_cal_t)(int, int, int, int, int);
+typedef int (*acdb_send_custom_top_t) (void);
 
 /* Audio calibration related functions */
 struct platform_data {
@@ -119,11 +120,21 @@ struct platform_data {
     bool speaker_lr_swap;
 
     void *acdb_handle;
+#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996)
+    acdb_init_v2_cvd_t acdb_init;
+#elif defined (PLATFORM_MSM8084)
+    acdb_init_v2_t acdb_init;
+#else
+    acdb_init_t acdb_init;
+#endif
     acdb_deallocate_t          acdb_deallocate;
     acdb_send_audio_cal_t      acdb_send_audio_cal;
     acdb_send_voice_cal_t      acdb_send_voice_cal;
     acdb_reload_vocvoltable_t  acdb_reload_vocvoltable;
     acdb_send_gain_dep_cal_t   acdb_send_gain_dep_cal;
+    acdb_send_custom_top_t     acdb_send_custom_top;
+    bool acdb_initialized;
+
     struct csd_data *csd;
     char ec_ref_mixer_path[64];
 
@@ -259,6 +270,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_MIC] = "voice-rec-mic",
     [SND_DEVICE_IN_VOICE_REC_MIC_NS] = "voice-rec-mic",
     [SND_DEVICE_IN_VOICE_REC_MIC_AEC] = "voice-rec-mic",
+    [SND_DEVICE_IN_VOICE_REC_MIC_AEC_NS] = "voice-rec-mic",
     [SND_DEVICE_IN_VOICE_REC_DMIC_STEREO] = "voice-rec-dmic-ef",
     [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = "voice-rec-dmic-ef-fluence",
     [SND_DEVICE_IN_VOICE_REC_HEADSET_MIC] = "headset-mic",
@@ -354,6 +366,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_MIC] = ACDB_ID_VOICE_REC_MIC,
     [SND_DEVICE_IN_VOICE_REC_MIC_NS] = 113,
     [SND_DEVICE_IN_VOICE_REC_MIC_AEC] = 112,
+    [SND_DEVICE_IN_VOICE_REC_MIC_AEC_NS] = 114,
     [SND_DEVICE_IN_VOICE_REC_DMIC_STEREO] = 35,
     [SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = 43,
     [SND_DEVICE_IN_VOICE_REC_HEADSET_MIC] = ACDB_ID_HEADSET_MIC_AEC,
@@ -456,6 +469,7 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_MIC_NS)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_MIC_AEC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_MIC_AEC_NS)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_DMIC_STEREO)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_HEADSET_MIC)},
@@ -500,6 +514,7 @@ static const struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
 
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
+#define ULL_PLATFORM_DELAY         (7*1000LL)
 
 static pthread_once_t check_op_once_ctl = PTHREAD_ONCE_INIT;
 static bool is_tmus = false;
@@ -942,6 +957,39 @@ done:
     return;
 }
 
+static int platform_acdb_init(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+
+    if (!my_data->acdb_init) {
+        ALOGE("%s: no acdb_init fn provided", __func__);
+        return -1;
+    }
+
+    if (my_data->acdb_initialized) {
+        ALOGW("acdb is already initialized");
+        return 0;
+    }
+
+#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996)
+    char *cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
+    if (!cvd_version)
+        ALOGE("failed to allocate cvd_version");
+    else {
+        get_cvd_version(cvd_version, adev);
+        my_data->acdb_init((char *)my_data->snd_card_name, cvd_version, 0);
+        free(cvd_version);
+    }
+#elif defined (PLATFORM_MSM8084)
+    my_data->acdb_init((char *)my_data->snd_card_name);
+#else
+    my_data->acdb_init();
+#endif
+    my_data->acdb_initialized = true;
+    return 0;
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char value[PROPERTY_VALUE_MAX];
@@ -1194,39 +1242,38 @@ void *platform_init(struct audio_device *adev)
         acdb_init_v2_cvd_t acdb_init;
         acdb_init = (acdb_init_v2_cvd_t)dlsym(my_data->acdb_handle,
                                               "acdb_loader_init_v2");
-        if (acdb_init == NULL) {
-            ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__, dlerror());
-            goto acdb_init_fail;
-        }
+        if (acdb_init == NULL)
+            ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__,
+                  dlerror());
 
-        cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
-        get_cvd_version(cvd_version, adev);
-        if (!cvd_version)
-            ALOGE("failed to allocate cvd_version");
-        else
-            acdb_init((char *)snd_card_name, cvd_version, 0);
-        free(cvd_version);
 #elif defined (PLATFORM_MSM8084)
         acdb_init_v2_t acdb_init;
         acdb_init = (acdb_init_v2_t)dlsym(my_data->acdb_handle,
                                           "acdb_loader_init_v2");
-        if (acdb_init == NULL) {
-            ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__, dlerror());
-            goto acdb_init_fail;
-        }
-        acdb_init((char *)snd_card_name);
+        if (acdb_init == NULL)
+            ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__,
+                  dlerror());
+
 #else
         acdb_init_t acdb_init;
         acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_init_ACDB");
         if (acdb_init == NULL)
-            ALOGE("%s: dlsym error %s for acdb_loader_init_ACDB", __func__, dlerror());
-        else
-            acdb_init();
+            ALOGE("%s: dlsym error %s for acdb_loader_init_ACDB", __func__,
+                  dlerror());
 #endif
-    }
+        my_data->acdb_init = acdb_init;
 
-acdb_init_fail:
+        my_data->acdb_send_custom_top = (acdb_send_custom_top_t)
+                                        dlsym(my_data->acdb_handle,
+                                              "acdb_loader_send_common_custom_topology");
+
+        if (!my_data->acdb_send_custom_top)
+            ALOGE("%s: Could not find the symbol acdb_get_default_app_type from %s",
+                  __func__, LIB_ACDB_LOADER);
+
+        platform_acdb_init(my_data);
+    }
 
     audio_extn_spkr_prot_init(adev);
 
@@ -2100,13 +2147,18 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_QUAD_MIC;
             }
             if (snd_device == SND_DEVICE_NONE) {
-                if (adev->active_input->enable_ns)
-                    snd_device = SND_DEVICE_IN_VOICE_REC_MIC_NS;
-                else if (adev->active_input->enable_aec) {
-                    snd_device = SND_DEVICE_IN_VOICE_REC_MIC_AEC;
+                if (adev->active_input->enable_aec) {
+                    if (adev->active_input->enable_ns) {
+                        snd_device = SND_DEVICE_IN_VOICE_REC_MIC_AEC_NS;
+                    } else {
+                        snd_device = SND_DEVICE_IN_VOICE_REC_MIC_AEC;
+                    }
                     platform_set_echo_reference(adev, true, out_device);
-               } else
+                } else if (adev->active_input->enable_ns) {
+                    snd_device = SND_DEVICE_IN_VOICE_REC_MIC_NS;
+                } else {
                     snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
+                }
             }
         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_VOICE_REC_HEADSET_MIC;
@@ -2545,6 +2597,8 @@ int64_t platform_render_latency(audio_usecase_t usecase)
             return DEEP_BUFFER_PLATFORM_DELAY;
         case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
             return LOW_LATENCY_PLATFORM_DELAY;
+        case USECASE_AUDIO_PLAYBACK_ULL:
+            return ULL_PLATFORM_DELAY;
         default:
             return 0;
     }
@@ -2719,6 +2773,68 @@ int platform_swap_lr_channels(struct audio_device *adev, bool swap_channels)
                 break;
             }
         }
+    }
+    return 0;
+}
+
+static struct amp_db_and_gain_table tbl_mapping[MAX_VOLUME_CAL_STEPS];
+static int num_gain_tbl_entry = 0;
+
+bool platform_add_gain_level_mapping(struct amp_db_and_gain_table *tbl_entry) {
+
+    ALOGV("%s: enter .. add %f %f %d", __func__, tbl_entry->amp, tbl_entry->db, tbl_entry->level);
+    if (num_gain_tbl_entry == -1) {
+        ALOGE("%s: num entry beyond valid step levels or corrupted..rejecting custom mapping",
+               __func__);
+        return false;
+    }
+
+    if (num_gain_tbl_entry >= MAX_VOLUME_CAL_STEPS) {
+        ALOGE("%s: max entry reached max[%d] current index[%d]  .. rejecting", __func__,
+               MAX_VOLUME_CAL_STEPS, num_gain_tbl_entry);
+        num_gain_tbl_entry  = -1; // indicates error and no more info will be cached
+        return false;
+    }
+
+    if (num_gain_tbl_entry > 0 && tbl_mapping[num_gain_tbl_entry - 1].amp >= tbl_entry->amp) {
+        ALOGE("%s: value not in ascending order .. rejecting custom mapping", __func__);
+        num_gain_tbl_entry  = -1; // indicates error and no more info will be cached
+        return false;
+    }
+
+    tbl_mapping[num_gain_tbl_entry] = *tbl_entry;
+    ++num_gain_tbl_entry;
+
+    return true;
+}
+
+int platform_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl,
+                                    int table_size) {
+    int itt = 0;
+    ALOGV("platform_get_gain_level_mapping called ");
+
+    if (num_gain_tbl_entry <= 0 || num_gain_tbl_entry > MAX_VOLUME_CAL_STEPS) {
+        ALOGD("%s: empty or currupted gain_mapping_table", __func__);
+        return 0;
+    }
+
+    for (; itt < num_gain_tbl_entry && itt <= table_size; itt++) {
+        mapping_tbl[itt] = tbl_mapping[itt];
+        ALOGV("%s: added amp[%f] db[%f] level[%d]", __func__,
+               mapping_tbl[itt].amp, mapping_tbl[itt].db, mapping_tbl[itt].level);
+    }
+
+    return num_gain_tbl_entry;
+}
+
+int platform_snd_card_update(void *platform, card_status_t status)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+
+    if (status == CARD_STATUS_ONLINE) {
+        if (my_data->acdb_send_custom_top)
+            my_data->acdb_send_custom_top();
     }
     return 0;
 }
