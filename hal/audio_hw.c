@@ -3570,6 +3570,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     int ret = 0, buffer_size, frame_size;
     int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
     bool is_low_latency = false;
+    bool updated_params = false;
 
     *stream_in = NULL;
     if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0)
@@ -3651,28 +3652,16 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->config = pcm_config_afe_proxy_record;
         in->config.channels = channel_count;
         in->config.rate = config->sample_rate;
-    } else if (audio_extn_ssr_get_enabled() &&
-                 ((channel_count == 2) ||(channel_count == 6)) &&
-                 ((AUDIO_SOURCE_MIC == source) || (AUDIO_SOURCE_CAMCORDER == source))) {
-                ALOGD("Found SSR use case starting SSR lib with channel_count :%d", channel_count);
-                if(audio_extn_ssr_init(in, channel_count)) {
-                    ALOGE("%s: audio_extn_ssr_init failed", __func__);
-                    if(channel_count == 2 ) {
-                    ALOGD("%s:falling back to default record usecase", __func__);
-                    in->config.channels = channel_count;
-                    frame_size = audio_stream_in_frame_size(&in->stream);
-                    buffer_size = get_input_buffer_size(config->sample_rate,
-                                            config->format,
-                                            channel_count,
-                                            is_low_latency);
-                    in->config.period_size = buffer_size / frame_size;
-				} else {
-                    ALOGD("%s:unable to start SSR record session for 6 channel input", __func__);
+    } else if (!audio_extn_check_and_set_multichannel_usecase(adev,
+                    in, config, &updated_params)) {
+            if (updated_params == true) {
+                ALOGD("%s: updated params, return error for retry channel mask (%#x)",
+                                           __func__, config->channel_mask);
                     ret = -EINVAL;
                     goto err_open;
-                }
-            } else
-	            in->usecase = USECASE_AUDIO_RECORD_3MIC_SSR;
+            }
+            ALOGD("%s: created surround sound session succesfully",__func__);
+            in->usecase = USECASE_AUDIO_RECORD_3MIC_SSR;
     } else if (audio_extn_compr_cap_enabled() &&
             audio_extn_compr_cap_format_supported(config->format) &&
             (in->dev->mode != AUDIO_MODE_IN_COMMUNICATION)) {

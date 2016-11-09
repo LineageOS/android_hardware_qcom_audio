@@ -2678,3 +2678,7 @@ void platform_cache_edid(void * platform __unused)
 void platform_invalidate_edid(void * platform __unused)
 {
 }
+
+int platform_get_max_mic_count(void *platform) {
+    return 0;
+}
