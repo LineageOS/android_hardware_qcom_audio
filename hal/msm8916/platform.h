@@ -32,6 +32,13 @@ enum {
     FLUENCE_BROADSIDE = 0x2,
 };
 
+enum {
+    SOURCE_MONO_MIC  = 0x1,            /* Target contains 1 mic */
+    SOURCE_DUAL_MIC  = 0x2,            /* Target contains 2 mics */
+    SOURCE_THREE_MIC = 0x4,            /* Target contains 3 mics */
+    SOURCE_QUAD_MIC  = 0x8,            /* Target contains 4 mics */
+};
+
 /*
  * Below are the devices for which is back end is same, SLIMBUS_0_RX.
  * All these devices are handled by the internal HW codec. We can
@@ -225,6 +232,9 @@ enum {
 #define VOLTE_CALL_PCM_DEVICE 15
 #define QCHAT_CALL_PCM_DEVICE 14
 #define VOWLAN_CALL_PCM_DEVICE 16
+
+#define PLATFORM_DEFAULT_EXTERNAL_CODEC_MIC_COUNT 3
+#define PLATFORM_DEFAULT_MIC_COUNT 2
 
 #define LIB_CSD_CLIENT "libcsd-client.so"
 /* CSD-CLIENT related functions */
