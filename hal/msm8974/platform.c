@@ -1526,8 +1526,8 @@ done:
     return ret;
 }
 
-int platform_get_default_app_type_v2(void *platform, usecase_type_t type __unused,
-                                     int *app_type)
+int platform_get_default_app_type_v2(void *platform __unused, usecase_type_t type __unused,
+                                     int *app_type __unused)
 {
     ALOGE("%s: Not implemented", __func__);
     return -ENOSYS;
@@ -2159,10 +2159,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             } else if ((channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK) &&
                        (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
                 snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_STEREO;
-            } else if (((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) &&
+            } else if ((channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) &&
                        (my_data->source_mic_type & SOURCE_THREE_MIC)) {
                 snd_device = SND_DEVICE_IN_THREE_MIC;
-            } else if (((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) &&
+            } else if ((channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) &&
                        (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
                 snd_device = SND_DEVICE_IN_QUAD_MIC;
             }
@@ -2189,10 +2189,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                  (channel_mask == AUDIO_CHANNEL_IN_STEREO)) &&
                        (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
                 snd_device = SND_DEVICE_IN_UNPROCESSED_STEREO_MIC;
-            } else if (((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) &&
+            } else if ((channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) &&
                        (my_data->source_mic_type & SOURCE_THREE_MIC)) {
                 snd_device = SND_DEVICE_IN_UNPROCESSED_THREE_MIC;
-            } else if (((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) &&
+            } else if ((channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) &&
                        (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
                 snd_device = SND_DEVICE_IN_UNPROCESSED_QUAD_MIC;
             } else {
@@ -2280,10 +2280,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             !(in_device & AUDIO_DEVICE_IN_COMMUNICATION)) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
             if ((my_data->source_mic_type & SOURCE_QUAD_MIC) &&
-                (int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) {
+                channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) {
                 snd_device = SND_DEVICE_IN_QUAD_MIC;
             } else if ((my_data->source_mic_type & SOURCE_THREE_MIC) &&
-                       (int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) {
+                       channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) {
                 snd_device = SND_DEVICE_IN_THREE_MIC;
             } else if ((my_data->source_mic_type & SOURCE_DUAL_MIC) &&
                        channel_count == 2) {
