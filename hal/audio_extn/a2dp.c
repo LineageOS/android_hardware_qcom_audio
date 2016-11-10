@@ -751,6 +751,27 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
                 if(a2dp.clear_a2dpsuspend_flag)
                     a2dp.clear_a2dpsuspend_flag();
                 a2dp.a2dp_suspended = false;
+                /*
+                 * It is possible that before suspend,a2dp sessions can be active
+                 * for example during music + voice activation concurrency
+                 * a2dp suspend will be called & BT will change to sco mode
+                 * though music is paused as a part of voice activation
+                 * compress session close happens only after pause timeout(10secs)
+                 * so if resume request comes before pause timeout as a2dp session
+                 * is already active IPC start will not be called from APM/audio_hw
+                 * Fix is to call a2dp start for IPC library post suspend
+                 * based on number of active session count
+                 */
+                if (a2dp.a2dp_total_active_session_request > 0) {
+                    ALOGD(" Calling IPC lib start post suspend state");
+                    if(a2dp.audio_start_stream) {
+                        ret =  a2dp.audio_start_stream();
+                        if (ret != 0) {
+                            ALOGE("BT controller start failed");
+                            a2dp.a2dp_started = false;
+                        }
+                    }
+                }
             }
         }
         goto param_handled;
