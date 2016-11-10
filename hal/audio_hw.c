@@ -1206,6 +1206,19 @@ struct audio_usecase *get_usecase_from_list(const struct audio_device *adev,
     return NULL;
 }
 
+struct stream_in *get_next_active_input(const struct audio_device *adev)
+{
+    struct audio_usecase *usecase;
+    struct listnode *node;
+
+    list_for_each_reverse(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type == PCM_CAPTURE)
+            return usecase->stream.in;
+    }
+    return NULL;
+}
+
 /*
  * is a true native playback active
  */
@@ -1424,6 +1437,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         if (voice_is_call_state_active(adev) ||
             voice_extn_compress_voip_is_started(adev))
             voice_set_sidetone(adev, usecase->out_snd_device, false);
+
+        /* Disable aanc only if voice call exists */
+        if (voice_is_call_state_active(adev))
+            voice_check_and_update_aanc_path(adev, usecase->out_snd_device, false);
     }
 
     /* Disable current sound devices */
@@ -1494,6 +1511,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     enable_audio_route(adev, usecase);
 
     if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL) {
+        /* Enable aanc only if voice call exists */
+        if (voice_is_call_state_active(adev))
+            voice_check_and_update_aanc_path(adev, out_snd_device, true);
+
         /* Enable sidetone only if other voice/voip call already exists */
         if (voice_is_call_state_active(adev) ||
             voice_extn_compress_voip_is_started(adev))
@@ -1519,7 +1540,7 @@ static int stop_input_stream(struct stream_in *in)
     struct audio_usecase *uc_info;
     struct audio_device *adev = in->dev;
 
-    adev->active_input = NULL;
+    adev->active_input = get_next_active_input(adev);
 
     ALOGV("%s: enter: usecase(%d: %s)", __func__,
           in->usecase, use_case_table[in->usecase]);
@@ -1666,7 +1687,7 @@ error_open:
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
     stop_input_stream(in);
 error_config:
-    adev->active_input = NULL;
+    adev->active_input = get_next_active_input(adev);
     /*
      * sleep 50ms to allow sufficient time for kernel
      * drivers to recover incases like SSR.

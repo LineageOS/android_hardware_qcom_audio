@@ -5631,10 +5631,14 @@ int platform_set_sidetone(struct audio_device *adev,
 {
     int ret;
     if (out_snd_device == SND_DEVICE_OUT_USB_HEADSET) {
+        if (property_get_bool("audio.debug.usb.disable_sidetone", 0)) {
+            ALOGI("Debug: Disable sidetone");
+        } else {
             ret = audio_extn_usb_enable_sidetone(out_snd_device, enable);
             if (ret)
                 ALOGI("%s: usb device %d does not support device sidetone\n",
                   __func__, out_snd_device);
+        }
     } else {
         ALOGV("%s: sidetone out device(%d) mixer cmd = %s\n",
               __func__, out_snd_device, str);
@@ -5645,6 +5649,22 @@ int platform_set_sidetone(struct audio_device *adev,
             audio_route_reset_and_update_path(adev->audio_route, str);
     }
     return 0;
+}
+
+void platform_update_aanc_path(struct audio_device *adev,
+                               snd_device_t out_snd_device,
+                               bool enable,
+                               char *str)
+{
+    ALOGD("%s: aanc out device(%d) mixer cmd = %s, enable = %d\n",
+          __func__, out_snd_device, str, enable);
+
+    if (enable)
+        audio_route_apply_and_update_path(adev->audio_route, str);
+    else
+        audio_route_reset_and_update_path(adev->audio_route, str);
+
+    return;
 }
 
 static void make_cal_cfg(acdb_audio_cal_cfg_t* cal, int acdb_dev_id,

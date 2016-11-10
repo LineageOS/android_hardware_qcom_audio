@@ -5623,6 +5623,14 @@ int platform_set_sidetone(struct audio_device *adev,
     return 0;
 }
 
+void platform_update_aanc_path(struct audio_device *adev __unused,
+                               snd_device_t out_snd_device __unused,
+                               bool enable __unused,
+                               char *str __unused)
+{
+   return;
+}
+
 bool platform_check_codec_dsd_support(void *platform __unused)
 {
     return false;
