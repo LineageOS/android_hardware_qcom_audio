@@ -197,7 +197,11 @@ struct platform_data {
     void *edid_info;
     bool edid_valid;
     int hw_dep_fd;
+    int source_mic_type;
+    int max_mic_count;
 };
+
+static bool is_external_codec = false;
 
 static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {DEEP_BUFFER_PCM_DEVICE,
@@ -671,6 +675,15 @@ static int msm_be_id_array_len  =
 #define PCM_OFFLOAD_PLATFORM_DELAY (30*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 
+static void update_codec_type(const char *snd_card_name) {
+    if (!strncmp(snd_card_name, "msm8994-tomtom-mtp-snd-card",
+         sizeof("msm8994-tomtom-mtp-snd-card")))
+        {
+            ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
+            is_external_codec = true;
+        }
+}
+
 void platform_set_echo_reference(void *platform, bool enable)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -859,7 +872,7 @@ static bool platform_is_i2s_ext_modem(const char *snd_card_name,
     return plat_data->is_i2s_ext_modem;
 }
 
-static void set_platform_defaults()
+static void set_platform_defaults(struct platform_data * my_data)
 {
     int32_t dev;
     for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
@@ -889,6 +902,11 @@ static void set_platform_defaults()
     backend_table[SND_DEVICE_IN_USB_HEADSET_MIC] = strdup("usb-headset-mic");
     backend_table[SND_DEVICE_IN_CAPTURE_FM] = strdup("capture-fm");
     backend_table[SND_DEVICE_OUT_TRANSMISSION_FM] = strdup("transmission-fm");
+    if (is_external_codec) {
+        my_data->max_mic_count = PLATFORM_DEFAULT_EXTERNAL_CODEC_MIC_COUNT;
+    } else {
+        my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
+    }
 }
 
 void get_cvd_version(char *cvd_version, struct audio_device *adev)
@@ -1016,6 +1034,27 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
     plat_data->hw_dep_fd = fd;
 }
 
+static void get_source_mic_type(struct platform_data * my_data)
+{
+    // support max to mono, example if max count is 3, usecase supports Three, dual and mono mic
+    switch (my_data->max_mic_count) {
+        case 4:
+           my_data->source_mic_type |= SOURCE_QUAD_MIC;
+        case 3:
+            my_data->source_mic_type |= SOURCE_THREE_MIC;
+        case 2:
+            my_data->source_mic_type |= SOURCE_DUAL_MIC;
+        case 1:
+            my_data->source_mic_type |= SOURCE_MONO_MIC;
+            break;
+        default:
+            ALOGE("%s: max_mic_count (%d), is not supported, setting to default",
+                   __func__, my_data->max_mic_count);
+            my_data->source_mic_type = SOURCE_MONO_MIC | SOURCE_DUAL_MIC;
+            break;
+    }
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char platform[PROPERTY_VALUE_MAX];
@@ -1081,6 +1120,7 @@ void *platform_init(struct audio_device *adev)
                 return NULL;
             }
             adev->snd_card = snd_card_num;
+            update_codec_type(snd_card_name);
             ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
             break;
         }
@@ -1217,7 +1257,7 @@ void *platform_init(struct audio_device *adev)
 
 acdb_init_fail:
 
-    set_platform_defaults();
+    set_platform_defaults(my_data);
 
     /* Initialize ACDB ID's */
     if (my_data->is_i2s_ext_modem)
@@ -1237,6 +1277,14 @@ acdb_init_fail:
     } else {
          my_data->csd = NULL;
     }
+
+    /* obtain source mic type from max mic count*/
+    get_source_mic_type(my_data);
+    ALOGD("%s: Fluence_Type(%d) max_mic_count(%d) mic_type(0x%x) fluence_in_voice_call(%d)"
+          " fluence_in_voice_rec(%d) fluence_in_spkr_mode(%d) ",
+          __func__, my_data->fluence_type, my_data->max_mic_count, my_data->source_mic_type,
+          my_data->fluence_in_voice_call, my_data->fluence_in_voice_rec,
+          my_data->fluence_in_spkr_mode);
 
     /* init usb */
     audio_extn_usb_init(adev);
@@ -1965,8 +2013,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
     snd_device_t snd_device = SND_DEVICE_NONE;
     int channel_count = popcount(channel_mask);
 
-    ALOGV("%s: enter: out_device(%#x) in_device(%#x)",
-          __func__, out_device, in_device);
+    ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
+          __func__, out_device, in_device, channel_count, channel_mask);
     if (my_data->external_mic) {
         if ((out_device != AUDIO_DEVICE_NONE && voice_is_in_call(adev)) ||
             voice_extn_compress_voip_is_active(adev) || audio_extn_hfp_is_active(adev)) {
@@ -2188,20 +2236,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         goto exit;
     }
 
-
-    if((audio_extn_ssr_get_enabled()) && (channel_count == 2) &&
-             ((AUDIO_SOURCE_MIC == source) || (AUDIO_SOURCE_CAMCORDER == source))) {
-        //TODO:: check whether SSR mode is on or not
-        //Force input from 3 mic
+    if (adev->active_input && (audio_extn_ssr_get_stream() == adev->active_input))
         snd_device = SND_DEVICE_IN_SSR_3MIC;
-    }
-
-    if((audio_extn_ssr_get_enabled()) && (channel_count == 2) &&
-             ((AUDIO_SOURCE_MIC == source) || (AUDIO_SOURCE_CAMCORDER == source))) {
-        //TODO:: check whether SSR mode is on or not
-        //Force input from 3 mic
-        snd_device = SND_DEVICE_IN_SSR_3MIC;
-    }
 
     if (snd_device != SND_DEVICE_NONE) {
         goto exit;

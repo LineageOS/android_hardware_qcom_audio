@@ -153,6 +153,8 @@ struct platform_data {
     void *hw_info;
     struct csd_data *csd;
     int hw_dep_fd;
+    int source_mic_type;
+    int max_mic_count;
 };
 
 static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -916,6 +918,27 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
     plat_data->hw_dep_fd = fd;
 }
 
+static void get_source_mic_type(struct platform_data * my_data)
+{
+    // support max to mono, example if max count is 3, usecase supports Three, dual and mono mic
+    switch (my_data->max_mic_count) {
+        case 4:
+           my_data->source_mic_type |= SOURCE_QUAD_MIC;
+        case 3:
+            my_data->source_mic_type |= SOURCE_THREE_MIC;
+        case 2:
+            my_data->source_mic_type |= SOURCE_DUAL_MIC;
+        case 1:
+            my_data->source_mic_type |= SOURCE_MONO_MIC;
+            break;
+        default:
+            ALOGE("%s: max_mic_count (%d), is not supported, setting to default",
+                 __func__, my_data->max_mic_count);
+            my_data->source_mic_type = SOURCE_MONO_MIC | SOURCE_DUAL_MIC;
+            break;
+     }
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char value[PROPERTY_VALUE_MAX];
@@ -1095,6 +1118,14 @@ void *platform_init(struct audio_device *adev)
 acdb_init_fail:
     /* Initialize ACDB ID's */
     platform_info_init(PLATFORM_INFO_XML_PATH);
+
+    /* obtain source mic type from max mic count*/
+    get_source_mic_type(my_data);
+    ALOGD("%s: Fluence_Type(%d) max_mic_count(%d) mic_type(0x%x) fluence_in_voice_call(%d)"
+          " fluence_in_voice_rec(%d) fluence_in_spkr_mode(%d) ",
+          __func__, my_data->fluence_type, my_data->max_mic_count, my_data->source_mic_type,
+          my_data->fluence_in_voice_call, my_data->fluence_in_voice_rec,
+          my_data->fluence_in_spkr_mode);
 
     /* init usb */
     audio_extn_usb_init(adev);
@@ -1777,8 +1808,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
     snd_device_t snd_device = SND_DEVICE_NONE;
     int channel_count = popcount(channel_mask);
 
-    ALOGV("%s: enter: out_device(%#x) in_device(%#x)",
-          __func__, out_device, in_device);
+    ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
+          __func__, out_device, in_device, channel_count, channel_mask);
     if ((out_device != AUDIO_DEVICE_NONE) && (voice_is_in_call(adev) ||
         voice_extn_compress_voip_is_active(adev) || audio_extn_hfp_is_active(adev))) {
         if ((adev->voice.tty_mode != TTY_MODE_OFF) &&
@@ -2297,6 +2328,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         str_parms_del(parms, AUDIO_PARAMETER_KEY_REC_PLAY_CONC);
     }
 #endif
+
     ALOGV("%s: exit with code(%d)", __func__, ret);
     return ret;
 }

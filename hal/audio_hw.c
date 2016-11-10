@@ -1696,6 +1696,8 @@ static int check_input_parameters(uint32_t sample_rate,
     switch (channel_count) {
     case 1:
     case 2:
+    case 3:
+    case 4:
     case 6:
         break;
     default:
@@ -3572,8 +3574,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     bool is_low_latency = false;
 
     *stream_in = NULL;
-    if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0)
+    if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0) {
+        ALOGE("%s: invalid input parameters", __func__);
         return -EINVAL;
+    }
 
     in = (struct stream_in *)calloc(1, sizeof(struct stream_in));
 
