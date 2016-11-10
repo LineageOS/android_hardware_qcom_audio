@@ -843,8 +843,14 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
                     closeOutput(mOutputs.keyAt(i));
                 }
             } else if (AUDIO_OUTPUT_FLAG_DEEP_BUFFER == mFallBackflag) {
-                if ((outputDesc->mProfile->mFlags & AUDIO_OUTPUT_FLAG_DIRECT)
-                                &&  prop_playback_enabled) {
+                if (outputDesc->mProfile->mFlags & AUDIO_OUTPUT_FLAG_VOIP_RX) {
+                    if (prop_voip_enabled) {
+                        ALOGD("voice_conc:calling closeOutput on call mode for DIRECT  output");
+                        closeOutput(mOutputs.keyAt(i));
+                    }
+                }
+                else if (prop_playback_enabled
+                           && (outputDesc->mProfile->mFlags & AUDIO_OUTPUT_FLAG_DIRECT)) {
                     ALOGD("voice_conc:calling closeOutput on call mode for COMPRESS output");
                     closeOutput(mOutputs.keyAt(i));
                 }
