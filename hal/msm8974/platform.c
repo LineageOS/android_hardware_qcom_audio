@@ -562,7 +562,7 @@ static char *get_current_operator()
     char mccmnc[PROPERTY_VALUE_MAX];
     char *ret = NULL;
 
-    property_get("gsm.sim.operator.numeric",mccmnc,"0");
+    property_get("gsm.sim.operator.numeric",mccmnc,"00000");
 
     list_for_each(node, &operator_info_list) {
         info_item = node_to_item(node, struct operator_info, list);
