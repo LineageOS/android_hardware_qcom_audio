@@ -252,7 +252,8 @@ int offload_effects_bundle_hal_start_output(audio_io_handle_t output, int pcm_id
         free(out_ctxt);
         goto exit;
     } else {
-        out_ctxt->ctl = mixer;
+        out_ctxt->mixer = mixer;
+        out_ctxt->ctl = mixer_get_ctl_by_name(out_ctxt->mixer, mixer_string);
         if (!out_ctxt->ctl) {
             ALOGE("mixer_get_ctl_by_name failed");
             out_ctxt->mixer = NULL;
