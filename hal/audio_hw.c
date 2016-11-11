@@ -4404,7 +4404,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
              */
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
-                audio_extn_usb_add_device(val, atoi(value));
+                audio_extn_usb_add_device(AUDIO_DEVICE_OUT_USB_DEVICE, atoi(value));
+                audio_extn_usb_add_device(AUDIO_DEVICE_IN_USB_DEVICE, atoi(value));
             }
             ALOGV("detected USB connect .. disable proxy");
             adev->allow_afe_proxy_usage = false;
