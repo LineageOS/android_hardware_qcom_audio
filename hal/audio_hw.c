@@ -1303,7 +1303,7 @@ static bool force_device_switch(struct audio_usecase *usecase)
 
     // Force all a2dp output devices to reconfigure for proper AFE encode format
     if((usecase->stream.out) &&
-       (usecase->stream.out->devices & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) &&
+       (usecase->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
        audio_extn_a2dp_is_force_device_switch()) {
          ALOGD("Force a2dp device switch to update new encoder config");
          ret = true;
@@ -2469,14 +2469,14 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
          * (3sec). As BT is turned off, the write gets blocked.
          * Avoid this by routing audio to speaker until standby.
          */
-        if ((out->devices & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) &&
+        if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
                 (val == AUDIO_DEVICE_NONE)) {
                 val = AUDIO_DEVICE_OUT_SPEAKER;
         }
         /* To avoid a2dp to sco overlapping force route BT usecases
          * to speaker based on Phone state
          */
-        if ((val & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) &&
+        if ((val & AUDIO_DEVICE_OUT_ALL_A2DP) &&
             ((adev->mode == AUDIO_MODE_RINGTONE) ||
             (adev->mode == AUDIO_MODE_IN_CALL))) {
             ALOGD("Forcing a2dp routing to speaker for ring/call mode");
@@ -4304,7 +4304,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
             if ((usecase->type == PCM_PLAYBACK) &&
-                (usecase->devices & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP)){
+                (usecase->devices & AUDIO_DEVICE_OUT_ALL_A2DP)){
                 ALOGD("reconfigure a2dp... forcing device switch");
                 lock_output_stream(usecase->stream.out);
                 audio_extn_a2dp_set_handoff_mode(true);
