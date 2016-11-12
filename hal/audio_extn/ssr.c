@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -36,53 +36,34 @@
 #include "audio_extn.h"
 #include "platform.h"
 #include "platform_api.h"
-#include "surround_filters_interface.h"
 #include "surround_rec_interface.h"
 
 #ifdef SSR_ENABLED
 #define COEFF_ARRAY_SIZE            4
 #define FILT_SIZE                   ((512+1)* 6)  /* # ((FFT bins)/2+1)*numOutputs */
-#define SSR_CHANNEL_INPUT_NUM       4
 #define SSR_CHANNEL_OUTPUT_NUM      6
-#define SSR_PERIOD_COUNT            8
 #define SSR_PERIOD_SIZE             240
-#define SSR_INPUT_FRAME_SIZE        (SSR_PERIOD_SIZE * SSR_PERIOD_COUNT)
 
 #define NUM_IN_BUFS                 4
 #define NUM_OUT_BUFS                4
+#define NUM_IN_CHANNELS             3
 
-#define SURROUND_FILE_1R "/system/etc/surround_sound/filter1r.pcm"
-#define SURROUND_FILE_2R "/system/etc/surround_sound/filter2r.pcm"
-#define SURROUND_FILE_3R "/system/etc/surround_sound/filter3r.pcm"
-#define SURROUND_FILE_4R "/system/etc/surround_sound/filter4r.pcm"
-
-#define SURROUND_FILE_1I "/system/etc/surround_sound/filter1i.pcm"
-#define SURROUND_FILE_2I "/system/etc/surround_sound/filter2i.pcm"
-#define SURROUND_FILE_3I "/system/etc/surround_sound/filter3i.pcm"
-#define SURROUND_FILE_4I "/system/etc/surround_sound/filter4i.pcm"
-
-#define LIB_SURROUND_PROC       "libsurround_proc.so"
 #define LIB_SURROUND_3MIC_PROC  "libsurround_3mic_proc.so"
 #define LIB_DRC                 "libdrc.so"
 
 #define AUDIO_PARAMETER_SSRMODE_ON        "ssrOn"
 
 
-typedef int  (*surround_filters_init_t)(void *, int, int, Word16 **,
-                                        Word16 **, int, int, int, Profiler *);
-typedef void (*surround_filters_release_t)(void *);
-typedef int  (*surround_filters_set_channel_map_t)(void *, const int *);
-typedef void (*surround_filters_intl_process_t)(void *, Word16 *, Word16 *);
-
+typedef short Word16;
 typedef const get_param_data_t* (*surround_rec_get_get_param_data_t)(void);
 typedef const set_param_data_t* (*surround_rec_get_set_param_data_t)(void);
 typedef int (*surround_rec_init_t)(void **, int, int, int, int, const char *);
 typedef void (*surround_rec_deinit_t)(void *);
 typedef void (*surround_rec_process_t)(void *, const int16_t *, int16_t *);
 
-typedef int (*DRC_init_t)(void **, int, int, const char *);
-typedef void (*DRC_deinit_t)(void *);
-typedef int (*DRC_process_t)(void *, const int16_t *, int16_t *);
+typedef int (*drc_init_t)(void **, int, int, const char *);
+typedef void (*drc_deinit_t)(void *);
+typedef int (*drc_process_t)(void *, const int16_t *, int16_t *);
 
 struct pcm_buffer {
     void *data;
@@ -97,21 +78,15 @@ struct pcm_buffer_queue {
 struct ssr_module {
     int                 ssr_3mic;
     int                 num_out_chan;
-    FILE                *fp_4ch;
-    FILE                *fp_6ch;
-    Word16             **real_coeffs;
-    Word16             **imag_coeffs;
+    FILE                *fp_input;
+    FILE                *fp_output;
     void                *surround_obj;
     Word16              *surround_raw_buffer;
+    int                  surround_raw_buffer_size;
     bool                 is_ssr_enabled;
     struct stream_in    *in;
     void                *drc_obj;
 
-    void *surround_filters_handle;
-    surround_filters_init_t surround_filters_init;
-    surround_filters_release_t surround_filters_release;
-    surround_filters_set_channel_map_t surround_filters_set_channel_map;
-    surround_filters_intl_process_t surround_filters_intl_process;
 
     void *surround_rec_handle;
     surround_rec_get_get_param_data_t surround_rec_get_get_param_data;
@@ -120,10 +95,10 @@ struct ssr_module {
     surround_rec_deinit_t surround_rec_deinit;
     surround_rec_process_t surround_rec_process;
 
-    void *DRC_handle;
-    DRC_init_t DRC_init;
-    DRC_deinit_t DRC_deinit;
-    DRC_process_t DRC_process;
+    void *drc_handle;
+    drc_init_t drc_init;
+    drc_deinit_t drc_deinit;
+    drc_process_t drc_process;
 
     pthread_t ssr_process_thread;
     bool ssr_process_thread_started;
@@ -143,21 +118,14 @@ struct ssr_module {
 };
 
 static struct ssr_module ssrmod = {
-    .fp_4ch = NULL,
-    .fp_6ch = NULL,
-    .real_coeffs = NULL,
-    .imag_coeffs = NULL,
+    .fp_input = NULL,
+    .fp_output = NULL,
     .surround_obj = NULL,
     .surround_raw_buffer = NULL,
+    .surround_raw_buffer_size = 0,
     .is_ssr_enabled = 0,
     .in = NULL,
     .drc_obj = NULL,
-
-    .surround_filters_handle = NULL,
-    .surround_filters_init = NULL,
-    .surround_filters_release = NULL,
-    .surround_filters_set_channel_map = NULL,
-    .surround_filters_intl_process = NULL,
 
     .surround_rec_handle = NULL,
     .surround_rec_get_get_param_data = NULL,
@@ -166,10 +134,10 @@ static struct ssr_module ssrmod = {
     .surround_rec_deinit = NULL,
     .surround_rec_process = NULL,
 
-    .DRC_handle = NULL,
-    .DRC_init = NULL,
-    .DRC_deinit = NULL,
-    .DRC_process = NULL,
+    .drc_handle = NULL,
+    .drc_init = NULL,
+    .drc_deinit = NULL,
+    .drc_process = NULL,
 
     .ssr_process_thread_stop = 0,
     .ssr_process_thread_started = 0,
@@ -187,148 +155,34 @@ static struct ssr_module ssrmod = {
 
 static void *ssr_process_thread(void *context);
 
-/* Use AAC/DTS channel mapping as default channel mapping: C,FL,FR,Ls,Rs,LFE */
-static const int chan_map[] = { 1, 2, 4, 3, 0, 5};
-
-/* Rotine to read coeffs from File and updates real and imaginary
-   coeff array member variable */
-static int32_t ssr_read_coeffs_from_file()
-{
-    FILE    *flt1r;
-    FILE    *flt2r;
-    FILE    *flt3r;
-    FILE    *flt4r;
-    FILE    *flt1i;
-    FILE    *flt2i;
-    FILE    *flt3i;
-    FILE    *flt4i;
-    int i;
-
-    if ( (flt1r = fopen(SURROUND_FILE_1R, "rb")) == NULL ) {
-        ALOGE("%s: Cannot open filter co-efficient "
-              "file %s", __func__, SURROUND_FILE_1R);
-        return -EINVAL;
-    }
-
-    if ( (flt2r = fopen(SURROUND_FILE_2R, "rb")) == NULL ) {
-        ALOGE("%s: Cannot open filter "
-              "co-efficient file %s", __func__, SURROUND_FILE_2R);
-        return -EINVAL;
-    }
-
-    if ( (flt3r = fopen(SURROUND_FILE_3R, "rb")) == NULL ) {
-        ALOGE("%s: Cannot open filter "
-              "co-efficient file %s", __func__, SURROUND_FILE_3R);
-        return  -EINVAL;
-    }
-
-    if ( (flt4r = fopen(SURROUND_FILE_4R, "rb")) == NULL ) {
-        ALOGE("%s: Cannot open filter "
-              "co-efficient file %s", __func__, SURROUND_FILE_4R);
-        return  -EINVAL;
-    }
-
-    if ( (flt1i = fopen(SURROUND_FILE_1I, "rb")) == NULL ) {
-        ALOGE("%s: Cannot open filter "
-              "co-efficient file %s", __func__, SURROUND_FILE_1I);
-        return -EINVAL;
-    }
-
-    if ( (flt2i = fopen(SURROUND_FILE_2I, "rb")) == NULL ) {
-        ALOGE("%s: Cannot open filter "
-              "co-efficient file %s", __func__, SURROUND_FILE_2I);
-        return -EINVAL;
-    }
-
-    if ( (flt3i = fopen(SURROUND_FILE_3I, "rb")) == NULL ) {
-        ALOGE("%s: Cannot open filter "
-              "co-efficient file %s", __func__, SURROUND_FILE_3I);
-        return -EINVAL;
-    }
-
-    if ( (flt4i = fopen(SURROUND_FILE_4I, "rb")) == NULL ) {
-        ALOGE("%s: Cannot open filter "
-              "co-efficient file %s", __func__, SURROUND_FILE_4I);
-        return -EINVAL;
-    }
-    ALOGV("%s: readCoeffsFromFile all filter "
-          "files opened", __func__);
-
-    for (i=0; i<COEFF_ARRAY_SIZE; i++) {
-        ssrmod.real_coeffs[i] = (Word16 *)calloc(FILT_SIZE, sizeof(Word16));
-    }
-    for (i=0; i<COEFF_ARRAY_SIZE; i++) {
-        ssrmod.imag_coeffs[i] = (Word16 *)calloc(FILT_SIZE, sizeof(Word16));
-    }
-
-    /* Read real co-efficients */
-    if (NULL != ssrmod.real_coeffs[0]) {
-        fread(ssrmod.real_coeffs[0], sizeof(int16), FILT_SIZE, flt1r);
-    }
-    if (NULL != ssrmod.real_coeffs[0]) {
-        fread(ssrmod.real_coeffs[1], sizeof(int16), FILT_SIZE, flt2r);
-    }
-    if (NULL != ssrmod.real_coeffs[0]) {
-        fread(ssrmod.real_coeffs[2], sizeof(int16), FILT_SIZE, flt3r);
-    }
-    if (NULL != ssrmod.real_coeffs[0]) {
-        fread(ssrmod.real_coeffs[3], sizeof(int16), FILT_SIZE, flt4r);
-    }
-
-    /* read imaginary co-efficients */
-    if (NULL != ssrmod.imag_coeffs[0]) {
-        fread(ssrmod.imag_coeffs[0], sizeof(int16), FILT_SIZE, flt1i);
-    }
-    if (NULL != ssrmod.imag_coeffs[0]) {
-        fread(ssrmod.imag_coeffs[1], sizeof(int16), FILT_SIZE, flt2i);
-    }
-    if (NULL != ssrmod.imag_coeffs[0]) {
-        fread(ssrmod.imag_coeffs[2], sizeof(int16), FILT_SIZE, flt3i);
-    }
-    if (NULL != ssrmod.imag_coeffs[0]) {
-        fread(ssrmod.imag_coeffs[3], sizeof(int16), FILT_SIZE, flt4i);
-    }
-
-    fclose(flt1r);
-    fclose(flt2r);
-    fclose(flt3r);
-    fclose(flt4r);
-    fclose(flt1i);
-    fclose(flt2i);
-    fclose(flt3i);
-    fclose(flt4i);
-
-    return 0;
-}
-
-static int32_t DRC_init_lib(int num_chan, int sample_rate __unused)
+static int32_t drc_init_lib(int num_chan, int sample_rate __unused)
 {
     int ret = 0;
-    const char *cfgFileName;
+    const char *cfgFileName = "";
 
-    if ( ssrmod.drc_obj ) {
+    if (ssrmod.drc_obj) {
         ALOGE("%s: DRC library is already initialized", __func__);
         return 0;
     }
 
-    ssrmod.DRC_handle = dlopen(LIB_DRC, RTLD_NOW);
-    if (ssrmod.DRC_handle == NULL) {
+    ssrmod.drc_handle = dlopen(LIB_DRC, RTLD_NOW);
+    if (ssrmod.drc_handle == NULL) {
         ALOGE("%s: DLOPEN failed for %s", __func__, LIB_DRC);
         ret = -ENOSYS;
         goto init_fail;
     }
 
     ALOGV("%s: DLOPEN successful for %s", __func__, LIB_DRC);
-    ssrmod.DRC_init = (DRC_init_t)
-        dlsym(ssrmod.DRC_handle, "DRC_init");
-    ssrmod.DRC_deinit = (DRC_deinit_t)
-        dlsym(ssrmod.DRC_handle, "DRC_deinit");
-    ssrmod.DRC_process = (DRC_process_t)
-        dlsym(ssrmod.DRC_handle, "DRC_process");
+    ssrmod.drc_init = (drc_init_t)
+        dlsym(ssrmod.drc_handle, "DRC_init");
+    ssrmod.drc_deinit = (drc_deinit_t)
+        dlsym(ssrmod.drc_handle, "DRC_deinit");
+    ssrmod.drc_process = (drc_process_t)
+        dlsym(ssrmod.drc_handle, "DRC_process");
 
-    if (!ssrmod.DRC_init ||
-        !ssrmod.DRC_deinit ||
-        !ssrmod.DRC_process){
+    if (!ssrmod.drc_init ||
+        !ssrmod.drc_deinit ||
+        !ssrmod.drc_process){
         ALOGW("%s: Could not find one of the symbols from %s",
               __func__, LIB_DRC);
         ret = -ENOSYS;
@@ -342,10 +196,10 @@ static int32_t DRC_init_lib(int num_chan, int sample_rate __unused)
         cfgFileName = "/system/etc/drc/drc_cfg_AZ.txt";
     }
 
-    ALOGV("%s: Calling DRC_init: num ch: %d, period: %d, cfg file: %s", __func__, num_chan, SSR_PERIOD_SIZE, cfgFileName);
-    ret = ssrmod.DRC_init(&ssrmod.drc_obj, num_chan, SSR_PERIOD_SIZE, cfgFileName);
+    ALOGV("%s: Calling drc_init: num ch: %d, period: %d, cfg file: %s", __func__, num_chan, SSR_PERIOD_SIZE, cfgFileName);
+    ret = ssrmod.drc_init(&ssrmod.drc_obj, num_chan, SSR_PERIOD_SIZE, cfgFileName);
     if (ret) {
-        ALOGE("DRC_init failed with ret:%d",ret);
+        ALOGE("drc_init failed with ret:%d",ret);
         ret = -EINVAL;
         goto init_fail;
     }
@@ -354,17 +208,16 @@ static int32_t DRC_init_lib(int num_chan, int sample_rate __unused)
 
 init_fail:
     if (ssrmod.drc_obj) {
-        free(ssrmod.drc_obj);
         ssrmod.drc_obj = NULL;
     }
-    if(ssrmod.DRC_handle) {
-        dlclose(ssrmod.DRC_handle);
-        ssrmod.DRC_handle = NULL;
+    if(ssrmod.drc_handle) {
+        dlclose(ssrmod.drc_handle);
+        ssrmod.drc_handle = NULL;
     }
     return ret;
 }
 
-static int32_t ssr_init_surround_sound_3mic_lib(unsigned long buffersize, int num_out_chan, int sample_rate)
+static int32_t ssr_init_surround_sound_3mic_lib(unsigned long buffersize, int num_in_chan, int num_out_chan, int sample_rate)
 {
     int ret = 0;
     const char *cfgFileName = NULL;
@@ -374,19 +227,10 @@ static int32_t ssr_init_surround_sound_3mic_lib(unsigned long buffersize, int nu
         return 0;
     }
 
-    /* Allocate memory for input buffer */
-    ssrmod.surround_raw_buffer = (Word16 *) calloc(buffersize,
-                                              sizeof(Word16));
-    if ( !ssrmod.surround_raw_buffer ) {
-       ALOGE("%s: Memory allocation failure. Not able to allocate "
-             "memory for surroundInputBuffer", __func__);
-       ret = -ENOMEM;
-       goto init_fail;
-    }
-
     ssrmod.surround_rec_handle = dlopen(LIB_SURROUND_3MIC_PROC, RTLD_NOW);
     if (ssrmod.surround_rec_handle == NULL) {
         ALOGE("%s: DLOPEN failed for %s", __func__, LIB_SURROUND_3MIC_PROC);
+        goto init_fail;
     } else {
         ALOGV("%s: DLOPEN successful for %s", __func__, LIB_SURROUND_3MIC_PROC);
         ssrmod.surround_rec_get_get_param_data = (surround_rec_get_get_param_data_t)
@@ -413,6 +257,18 @@ static int32_t ssr_init_surround_sound_3mic_lib(unsigned long buffersize, int nu
         }
     }
 
+    /* Allocate memory for input buffer */
+    ssrmod.surround_raw_buffer = (Word16 *) calloc(buffersize,
+                                              sizeof(Word16));
+    if (!ssrmod.surround_raw_buffer) {
+       ALOGE("%s: Memory allocation failure. Not able to allocate "
+             "memory for surroundInputBuffer", __func__);
+       ret = -ENOMEM;
+       goto init_fail;
+    }
+
+    ssrmod.surround_raw_buffer_size = buffersize;
+
     ssrmod.num_out_chan = num_out_chan;
 
     if (num_out_chan == 6) {
@@ -423,9 +279,10 @@ static int32_t ssr_init_surround_sound_3mic_lib(unsigned long buffersize, int nu
         ALOGE("%s: No cfg file for num_out_chan: %d", __func__, num_out_chan);
     }
 
-    ALOGV("%s: Calling surround_rec_init: in ch: %d, out ch: %d, period: %d, sample rate: %d, cfg file: %s", __func__, SSR_CHANNEL_INPUT_NUM, num_out_chan, SSR_PERIOD_SIZE, sample_rate, cfgFileName);
-    ret = ssrmod.surround_rec_init(&ssrmod.surround_obj,
-        SSR_CHANNEL_INPUT_NUM, num_out_chan, SSR_PERIOD_SIZE, sample_rate, cfgFileName);
+    ALOGV("%s: Calling surround_rec_init: in ch: %d, out ch: %d, period: %d, sample rate: %d, cfg file: %s",
+          __func__, num_in_chan, num_out_chan, SSR_PERIOD_SIZE, sample_rate, cfgFileName);
+     ret = ssrmod.surround_rec_init(&ssrmod.surround_obj,
+        num_in_chan, num_out_chan, SSR_PERIOD_SIZE, sample_rate, cfgFileName);
     if (ret) {
         ALOGE("surround_rec_init failed with ret:%d",ret);
         ret = -EINVAL;
@@ -436,172 +293,18 @@ static int32_t ssr_init_surround_sound_3mic_lib(unsigned long buffersize, int nu
 
 init_fail:
     if (ssrmod.surround_obj) {
-        free(ssrmod.surround_obj);
         ssrmod.surround_obj = NULL;
     }
     if (ssrmod.surround_raw_buffer) {
         free(ssrmod.surround_raw_buffer);
         ssrmod.surround_raw_buffer = NULL;
+        ssrmod.surround_raw_buffer_size = 0;
     }
     if(ssrmod.surround_rec_handle) {
         dlclose(ssrmod.surround_rec_handle);
         ssrmod.surround_rec_handle = NULL;
     }
     return ret;
-}
-
-static int32_t ssr_init_surround_sound_lib(unsigned long buffersize)
-{
-    /* sub_woofer channel assignment: default as first
-       microphone input channel */
-    int sub_woofer = 0;
-    /* frequency upper bound for sub_woofer:
-       frequency=(low_freq-1)/FFT_SIZE*samplingRate, default as 4 */
-    int low_freq = 4;
-    /* frequency upper bound for spatial processing:
-       frequency=(high_freq-1)/FFT_SIZE*samplingRate, default as 100 */
-    int high_freq = 100;
-    int i, ret = 0;
-
-    if ( ssrmod.surround_obj ) {
-        ALOGE("%s: ola filter library is already initialized", __func__);
-        return 0;
-    }
-
-    ssrmod.num_out_chan = SSR_CHANNEL_OUTPUT_NUM;
-
-    /* Allocate memory for input buffer */
-    ssrmod.surround_raw_buffer = (Word16 *) calloc(buffersize,
-                                              sizeof(Word16));
-    if ( !ssrmod.surround_raw_buffer ) {
-       ALOGE("%s: Memory allocation failure. Not able to allocate "
-             "memory for surroundInputBuffer", __func__);
-       goto init_fail;
-    }
-
-    /* Allocate memory for real and imag coeffs array */
-    ssrmod.real_coeffs = (Word16 **) calloc(COEFF_ARRAY_SIZE, sizeof(Word16 *));
-    if ( !ssrmod.real_coeffs ) {
-        ALOGE("%s: Memory allocation failure during real "
-              "Coefficient array", __func__);
-        goto init_fail;
-    }
-
-    ssrmod.imag_coeffs = (Word16 **) calloc(COEFF_ARRAY_SIZE, sizeof(Word16 *));
-    if ( !ssrmod.imag_coeffs ) {
-        ALOGE("%s: Memory allocation failure during imaginary "
-              "Coefficient array", __func__);
-        goto init_fail;
-    }
-
-    if( ssr_read_coeffs_from_file() != 0) {
-        ALOGE("%s: Error while loading coeffs from file", __func__);
-        goto init_fail;
-    }
-
-    ssrmod.surround_filters_handle = dlopen(LIB_SURROUND_PROC, RTLD_NOW);
-    if (ssrmod.surround_filters_handle == NULL) {
-        ALOGE("%s: DLOPEN failed for %s", __func__, LIB_SURROUND_PROC);
-    } else {
-        ALOGV("%s: DLOPEN successful for %s", __func__, LIB_SURROUND_PROC);
-        ssrmod.surround_filters_init = (surround_filters_init_t)
-        dlsym(ssrmod.surround_filters_handle, "surround_filters_init");
-
-        ssrmod.surround_filters_release = (surround_filters_release_t)
-         dlsym(ssrmod.surround_filters_handle, "surround_filters_release");
-
-        ssrmod.surround_filters_set_channel_map = (surround_filters_set_channel_map_t)
-         dlsym(ssrmod.surround_filters_handle, "surround_filters_set_channel_map");
-
-        ssrmod.surround_filters_intl_process = (surround_filters_intl_process_t)
-        dlsym(ssrmod.surround_filters_handle, "surround_filters_intl_process");
-
-        if (!ssrmod.surround_filters_init ||
-            !ssrmod.surround_filters_release ||
-            !ssrmod.surround_filters_set_channel_map ||
-            !ssrmod.surround_filters_intl_process){
-            ALOGW("%s: Could not find the one of the symbols from %s",
-                  __func__, LIB_SURROUND_PROC);
-            goto init_fail;
-        }
-    }
-
-    /* calculate the size of data to allocate for surround_obj */
-    ret = ssrmod.surround_filters_init(NULL,
-                  6, // Num output channel
-                  4,     // Num input channel
-                  ssrmod.real_coeffs,       // Coeffs hardcoded in header
-                  ssrmod.imag_coeffs,       // Coeffs hardcoded in header
-                  sub_woofer,
-                  low_freq,
-                  high_freq,
-                  NULL);
-
-    if ( ret > 0 ) {
-        ALOGV("%s: Allocating surroundObj size is %d", __func__, ret);
-        ssrmod.surround_obj = (void *)malloc(ret);
-        if (NULL != ssrmod.surround_obj) {
-            memset(ssrmod.surround_obj,0,ret);
-            /* initialize after allocating the memory for surround_obj */
-            ret = ssrmod.surround_filters_init(ssrmod.surround_obj,
-                        6,
-                        4,
-                        ssrmod.real_coeffs,
-                        ssrmod.imag_coeffs,
-                        sub_woofer,
-                        low_freq,
-                        high_freq,
-                        NULL);
-            if (0 != ret) {
-               ALOGE("%s: surround_filters_init failed with ret:%d",__func__, ret);
-               ssrmod.surround_filters_release(ssrmod.surround_obj);
-               goto init_fail;
-            }
-        } else {
-            ALOGE("%s: Allocationg surround_obj failed", __func__);
-            goto init_fail;
-        }
-    } else {
-        ALOGE("%s: surround_filters_init(surround_obj=Null) "
-              "failed with ret: %d", __func__, ret);
-        goto init_fail;
-    }
-
-    (void) ssrmod.surround_filters_set_channel_map(ssrmod.surround_obj, chan_map);
-
-    return 0;
-
-init_fail:
-    if (ssrmod.surround_obj) {
-        free(ssrmod.surround_obj);
-        ssrmod.surround_obj = NULL;
-    }
-    if (ssrmod.surround_raw_buffer) {
-        free(ssrmod.surround_raw_buffer);
-        ssrmod.surround_raw_buffer = NULL;
-    }
-    if (ssrmod.real_coeffs){
-        for (i =0; i<COEFF_ARRAY_SIZE; i++ ) {
-            if (ssrmod.real_coeffs[i]) {
-                free(ssrmod.real_coeffs[i]);
-                ssrmod.real_coeffs[i] = NULL;
-            }
-        }
-        free(ssrmod.real_coeffs);
-        ssrmod.real_coeffs = NULL;
-    }
-    if (ssrmod.imag_coeffs){
-        for (i =0; i<COEFF_ARRAY_SIZE; i++ ) {
-            if (ssrmod.imag_coeffs[i]) {
-                free(ssrmod.imag_coeffs[i]);
-                ssrmod.imag_coeffs[i] = NULL;
-            }
-        }
-        free(ssrmod.imag_coeffs);
-        ssrmod.imag_coeffs = NULL;
-    }
-
-    return -ENOMEM;
 }
 
 void audio_extn_ssr_update_enabled()
@@ -626,6 +329,56 @@ bool audio_extn_ssr_get_enabled()
         return true;
 
     return false;
+}
+
+bool  audio_extn_ssr_check_usecase(struct stream_in *in) {
+    int ret = false;
+    int channel_count = audio_channel_count_from_in_mask(in->channel_mask);
+    audio_devices_t devices = in->device;
+    audio_source_t source = in->source;
+
+    if ((audio_extn_ssr_get_enabled()) &&
+            ((channel_count == 2) || (channel_count == 6)) &&
+            ((AUDIO_SOURCE_MIC == source) || (AUDIO_SOURCE_CAMCORDER == source)) &&
+            ((AUDIO_DEVICE_IN_BUILTIN_MIC == devices) || (AUDIO_DEVICE_IN_BACK_MIC == devices))) {
+        ALOGD("%s: Found SSR use case, starting SSR lib with channel_count :%d",
+                      __func__, channel_count);
+        ret = true;
+    }
+    return ret;
+}
+
+int audio_extn_ssr_set_usecase(struct stream_in *in,
+                               struct audio_config *config,
+                               bool *update_params)
+{
+    int ret = -EINVAL;
+    int channel_count = audio_channel_count_from_in_mask(in->channel_mask);
+    audio_channel_representation_t representation =
+                  audio_channel_mask_get_representation(in->channel_mask);
+    *update_params = false;
+
+    if (audio_extn_ssr_check_usecase(in)) {
+
+        if (representation == AUDIO_CHANNEL_REPRESENTATION_INDEX) {
+            /* update params in case channel representation index.
+             * on returning error, flinger will retry with supported representation passed
+             */
+            ALOGD("%s: SSR supports only channel representation position, channel_mask(%#x)"
+                              ,__func__, config->channel_mask);
+            config->channel_mask = AUDIO_CHANNEL_IN_5POINT1;
+            ret = 0;
+            *update_params = true;
+        } else {
+            if (!audio_extn_ssr_init(in, channel_count)) {
+                ALOGD("%s: Created SSR session succesfully", __func__);
+                ret = 0;
+            } else {
+                ALOGE("%s: Unable to start SSR record session", __func__);
+            }
+        }
+    }
+    return ret;
 }
 
 static void pcm_buffer_queue_push(struct pcm_buffer_queue **queue,
@@ -659,11 +412,15 @@ static void deinit_ssr_process_thread()
 {
     pthread_mutex_lock(&ssrmod.ssr_process_lock);
     ssrmod.ssr_process_thread_stop = 1;
-    free(ssrmod.in_buf_data);
+
+    if(ssrmod.in_buf_data != NULL)
+       free(ssrmod.in_buf_data);
     ssrmod.in_buf_data = NULL;
     ssrmod.in_buf = NULL;
     ssrmod.in_buf_free = NULL;
-    free(ssrmod.out_buf_data);
+
+    if(ssrmod.out_buf_data != NULL)
+       free(ssrmod.out_buf_data);
     ssrmod.out_buf_data = NULL;
     ssrmod.out_buf = NULL;
     ssrmod.out_buf_free = NULL;
@@ -683,9 +440,8 @@ struct stream_in *audio_extn_ssr_get_stream()
 
 int32_t audio_extn_ssr_init(struct stream_in *in, int num_out_chan)
 {
-    uint32_t ret;
+    uint32_t ret = -1;
     char c_multi_ch_dump[128] = {0};
-    char c_ssr_3mic[128] = {0};
     uint32_t buffer_size;
 
     ALOGD("%s: ssr case, sample rate %d", __func__, in->config.rate);
@@ -695,41 +451,30 @@ int32_t audio_extn_ssr_init(struct stream_in *in, int num_out_chan)
         audio_extn_ssr_deinit();
     }
 
-    in->config.channels = SSR_CHANNEL_INPUT_NUM;
-    in->config.period_size = SSR_PERIOD_SIZE;
-    in->config.period_count = SSR_PERIOD_COUNT;
-
-    /* use 4k hardcoded buffer size for ssr*/
-    buffer_size = SSR_INPUT_FRAME_SIZE;
-    ALOGV("%s: buffer_size: %d", __func__, buffer_size);
-
-    property_get("persist.audio.ssr.3mic",c_ssr_3mic,"0");
-    if (0 == strncmp("true", c_ssr_3mic, sizeof(c_ssr_3mic)-1)) {
+    if (audio_extn_ssr_get_enabled()) {
         ssrmod.ssr_3mic = 1;
     } else {
-        ssrmod.ssr_3mic = 0;
+        ALOGE(" Rejecting SSR -- init is called without enabling SSR");
+        goto fail;
     }
 
+    /* buffer size equals to  period_size * period_count */     
+    buffer_size = SSR_PERIOD_SIZE * NUM_IN_CHANNELS * sizeof(int16_t);
+    ALOGV("%s: buffer_size: %d", __func__, buffer_size);
+
     if (ssrmod.ssr_3mic != 0) {
-        ret = ssr_init_surround_sound_3mic_lib(buffer_size, num_out_chan, in->config.rate);
+        ret = ssr_init_surround_sound_3mic_lib(buffer_size, NUM_IN_CHANNELS, num_out_chan, in->config.rate);
         if (0 != ret) {
             ALOGE("%s: ssr_init_surround_sound_3mic_lib failed: %d  "
                   "buffer_size:%d", __func__, ret, buffer_size);
             goto fail;
         }
-    } else {
-        ret = ssr_init_surround_sound_lib(buffer_size);
-        if (0 != ret) {
-            ALOGE("%s: initSurroundSoundLibrary failed: %d  "
-                  "handle->bufferSize:%d", __func__, ret, buffer_size);
-            goto fail;
-        }
     }
 
     /* Initialize DRC if available */
-    ret = DRC_init_lib(num_out_chan, in->config.rate);
+    ret = drc_init_lib(num_out_chan, in->config.rate);
     if (0 != ret) {
-        ALOGE("%s: DRC_init_lib failed, ret %d", __func__, ret);
+        ALOGE("%s: drc_init_lib failed, ret %d", __func__, ret);
     }
 
     pthread_mutex_lock(&ssrmod.ssr_process_lock);
@@ -787,19 +532,36 @@ int32_t audio_extn_ssr_init(struct stream_in *in, int num_out_chan)
         ssrmod.ssr_process_thread_started = 1;
         ALOGV("%s: done creating thread", __func__);
     }
+
+    in->config.channels = NUM_IN_CHANNELS;
+    in->config.period_size = SSR_PERIOD_SIZE;
+    in->config.period_count = in->config.channels * sizeof(int16_t);
+
     pthread_mutex_unlock(&ssrmod.ssr_process_lock);
 
     property_get("ssr.pcmdump",c_multi_ch_dump,"0");
     if (0 == strncmp("true", c_multi_ch_dump, sizeof("ssr.dump-pcm"))) {
         /* Remember to change file system permission of data(e.g. chmod 777 data/),
           otherwise, fopen may fail */
-        if ( !ssrmod.fp_4ch)
-            ssrmod.fp_4ch = fopen("/data/misc/audio/4ch.pcm", "wb");
-        if ( !ssrmod.fp_6ch)
-            ssrmod.fp_6ch = fopen("/data/misc/audio/6ch.pcm", "wb");
-        if ((!ssrmod.fp_4ch) || (!ssrmod.fp_6ch))
-            ALOGE("%s: mfp_4ch or mfp_6ch open failed: mfp_4ch:%p mfp_6ch:%p",
-                  __func__, ssrmod.fp_4ch, ssrmod.fp_6ch);
+        if ( !ssrmod.fp_input) {
+            ALOGD("%s: Opening ssr input dump file \n", __func__);
+            ssrmod.fp_input = fopen("/data/misc/audio/ssr_input_3ch.pcm", "wb");
+        }
+
+        if ( !ssrmod.fp_output) {
+            if(ssrmod.num_out_chan == 6) {
+                ALOGD("%s: Opening ssr input dump file for 6 channel\n", __func__);
+                ssrmod.fp_output = fopen("/data/misc/audio/ssr_output_6ch.pcm", "wb");
+            } else {
+                ALOGD("%s: Opening ssr input dump file for 2 channel\n", __func__);
+                ssrmod.fp_output = fopen("/data/misc/audio/ssr_output_2ch.pcm", "wb");
+            }
+        }
+
+        if ((!ssrmod.fp_input) || (!ssrmod.fp_output)) {
+            ALOGE("%s: input dump or ouput dump open failed: mfp_4ch:%p mfp_6ch:%p",
+                  __func__, ssrmod.fp_input, ssrmod.fp_output);
+        }
     }
 
     ssrmod.in = in;
@@ -814,13 +576,12 @@ fail:
 
 int32_t audio_extn_ssr_deinit()
 {
-    int i;
 
     ALOGV("%s: entry", __func__);
     deinit_ssr_process_thread();
 
     if (ssrmod.drc_obj) {
-        ssrmod.DRC_deinit(ssrmod.drc_obj);
+        ssrmod.drc_deinit(ssrmod.drc_obj);
         ssrmod.drc_obj = NULL;
     }
 
@@ -829,45 +590,20 @@ int32_t audio_extn_ssr_deinit()
         if (ssrmod.ssr_3mic) {
             ssrmod.surround_rec_deinit(ssrmod.surround_obj);
             ssrmod.surround_obj = NULL;
-        } else {
-            ssrmod.surround_filters_release(ssrmod.surround_obj);
-            if (ssrmod.surround_obj)
-                free(ssrmod.surround_obj);
-            ssrmod.surround_obj = NULL;
-            if (ssrmod.real_coeffs){
-                for (i =0; i<COEFF_ARRAY_SIZE; i++ ) {
-                    if (ssrmod.real_coeffs[i]) {
-                        free(ssrmod.real_coeffs[i]);
-                        ssrmod.real_coeffs[i] = NULL;
-                    }
-                }
-                free(ssrmod.real_coeffs);
-                ssrmod.real_coeffs = NULL;
-            }
-            if (ssrmod.imag_coeffs){
-                for (i =0; i<COEFF_ARRAY_SIZE; i++ ) {
-                    if (ssrmod.imag_coeffs[i]) {
-                        free(ssrmod.imag_coeffs[i]);
-                        ssrmod.imag_coeffs[i] = NULL;
-                    }
-                }
-                free(ssrmod.imag_coeffs);
-                ssrmod.imag_coeffs = NULL;
-            }
         }
         if (ssrmod.surround_raw_buffer) {
             free(ssrmod.surround_raw_buffer);
             ssrmod.surround_raw_buffer = NULL;
         }
-        if (ssrmod.fp_4ch)
-            fclose(ssrmod.fp_4ch);
-        if (ssrmod.fp_6ch)
-            fclose(ssrmod.fp_6ch);
+        if (ssrmod.fp_input)
+            fclose(ssrmod.fp_input);
+        if (ssrmod.fp_output)
+            fclose(ssrmod.fp_output);
     }
 
-    if(ssrmod.DRC_handle) {
-        dlclose(ssrmod.DRC_handle);
-        ssrmod.DRC_handle = NULL;
+    if(ssrmod.drc_handle) {
+        dlclose(ssrmod.drc_handle);
+        ssrmod.drc_handle = NULL;
     }
 
     if(ssrmod.surround_rec_handle) {
@@ -875,13 +611,11 @@ int32_t audio_extn_ssr_deinit()
         ssrmod.surround_rec_handle = NULL;
     }
 
-    if(ssrmod.surround_filters_handle) {
-        dlclose(ssrmod.surround_filters_handle);
-        ssrmod.surround_filters_handle = NULL;
-    }
-
     ssrmod.in = NULL;
-    ssrmod.is_ssr_mode_on = false;
+    //SSR session can be closed due to device switch
+    //Do not force reset ssr mode
+
+    //ssrmod.is_ssr_mode_on = false;
     ALOGV("%s: exit", __func__);
 
     return 0;
@@ -922,25 +656,22 @@ static void *ssr_process_thread(void *context __unused)
             ssrmod.surround_rec_process(ssrmod.surround_obj,
                 (int16_t *) in_buf->buffer.data,
                 (int16_t *) out_buf->buffer.data);
-        } else {
-            ssrmod.surround_filters_intl_process(ssrmod.surround_obj,
-                (uint16_t *) out_buf->buffer.data, in_buf->buffer.data);
         }
 
         /* Run DRC if initialized */
         if (ssrmod.drc_obj != NULL) {
             ALOGV("%s: Running DRC", __func__);
-            ret = ssrmod.DRC_process(ssrmod.drc_obj, out_buf->buffer.data, out_buf->buffer.data);
+            ret = ssrmod.drc_process(ssrmod.drc_obj, out_buf->buffer.data, out_buf->buffer.data);
             if (ret != 0) {
-                ALOGE("%s: DRC_process returned %d", __func__, ret);
+                ALOGE("%s: drc_process returned %d", __func__, ret);
             }
         }
 
         /*dump for raw pcm data*/
-        if (ssrmod.fp_4ch)
-            fwrite(in_buf->buffer.data, 1, in_buf->buffer.length, ssrmod.fp_4ch);
-        if (ssrmod.fp_6ch)
-            fwrite(out_buf->buffer.data, 1, out_buf->buffer.length, ssrmod.fp_6ch);
+        if (ssrmod.fp_input)
+            fwrite(in_buf->buffer.data, 1, in_buf->buffer.length, ssrmod.fp_input);
+        if (ssrmod.fp_output)
+            fwrite(out_buf->buffer.data, 1, out_buf->buffer.length, ssrmod.fp_output);
 
         pthread_mutex_lock(&ssrmod.ssr_process_lock);
 
@@ -977,7 +708,7 @@ int32_t audio_extn_ssr_read(struct audio_stream_in *stream,
         return -ENOMEM;
     }
 
-    ret = pcm_read(in->pcm, ssrmod.surround_raw_buffer, SSR_INPUT_FRAME_SIZE);
+    ret = pcm_read(in->pcm, ssrmod.surround_raw_buffer, ssrmod.surround_raw_buffer_size);
     if (ret < 0) {
         ALOGE("%s: %s ret:%d", __func__, pcm_get_error(in->pcm),ret);
         return ret;
@@ -1024,14 +755,14 @@ void audio_extn_ssr_set_parameters(struct audio_device *adev __unused,
     int err;
     char value[4096] = {0};
 
-	//Do not update SSR mode during recording
+    //Do not update SSR mode during recording
     if ( !ssrmod.surround_obj) {
         int ret = 0;
         ret = str_parms_get_str(parms, AUDIO_PARAMETER_SSRMODE_ON, value,
                                 sizeof(value));
         if (ret >= 0) {
             if (strcmp(value, "true") == 0) {
-				ALOGD("Received SSR session request..setting SSR mode to true");
+                ALOGD("Received SSR session request..setting SSR mode to true");
                 ssrmod.is_ssr_mode_on = true;
             } else {
                 ALOGD("resetting SSR mode to false");
