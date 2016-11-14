@@ -50,7 +50,13 @@
         <param max_cpe_users="3" />
         <param max_ape_phrases="10" />
         <param max_ape_users="10" />
+        <!-- Profile specific data which the algorithm can support -->
         <param sample_rate="16000" />
+        <param bit_width="16" />
+        <param channel_count="1"/>
+        <!-- adm_cfg_profile should match with the one defined under adm_config -->
+        <!-- Set it to NONE if LSM directly connects to AFE -->
+        <param adm_cfg_profile="NONE" />
         <gcs_usecase>
             <param uid="0x1" />
             <!-- module_id, instance_id, param_id -->
@@ -82,4 +88,13 @@
         <param capture_keyword="PCM_packet, RT, 2000" />
         <param client_capture_read_delay="2000" />
     </sound_model_config>
+
+    <!-- Multiple adm_config tags can be listed, each with unique profile name. -->
+    <!-- app_type to match corresponding value from ACDB -->
+    <adm_config>
+        <param adm_cfg_profile="DEFAULT" />
+        <param app_type="69938" />
+        <param sample_rate="16000" />
+        <param bit_width="16" />
+    </adm_config>
 </sound_trigger_platform_info>
