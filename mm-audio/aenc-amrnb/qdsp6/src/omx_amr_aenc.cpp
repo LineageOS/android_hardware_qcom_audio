@@ -1102,13 +1102,28 @@ OMX_ERRORTYPE omx_amr_aenc::component_init(OMX_STRING role)
     component_Role.nVersion.nVersion = OMX_SPEC_VERSION;
     if (!strcmp(role,"OMX.qcom.audio.encoder.amrnb"))
     {
+        amrwb_enable = 0;
         pcm_input = 1;
         component_Role.nSize = (OMX_U32)sizeof(role);
         strlcpy((char *)component_Role.cRole, (const char*)role,
 		sizeof(component_Role.cRole));
         DEBUG_PRINT("\ncomponent_init: Component %s LOADED \n", role);
-    } else if (!strcmp(role,"OMX.qcom.audio.encoder.tunneled.amrnb"))
-    {
+    } else if (!strcmp(role,"OMX.qcom.audio.encoder.tunneled.amrnb")) {
+        amrwb_enable = 0;
+        pcm_input = 0;
+        component_Role.nSize = (OMX_U32)sizeof(role);
+        strlcpy((char *)component_Role.cRole, (const char*)role,
+		sizeof(component_Role.cRole));
+        DEBUG_PRINT("\ncomponent_init: Component %s LOADED \n", role);
+    } else if (!strcmp(role,"OMX.qcom.audio.encoder.amrwb")) {
+        amrwb_enable = 1;
+        pcm_input = 1;
+        component_Role.nSize = (OMX_U32)sizeof(role);
+        strlcpy((char *)component_Role.cRole, (const char*)role,
+		sizeof(component_Role.cRole));
+        DEBUG_PRINT("\ncomponent_init: Component %s LOADED \n", role);
+    } else if (!strcmp(role,"OMX.qcom.audio.encoder.tunneled.amrwb")) {
+        amrwb_enable = 1;
         pcm_input = 0;
         component_Role.nSize = (OMX_U32)sizeof(role);
         strlcpy((char *)component_Role.cRole, (const char*)role,
@@ -1124,12 +1139,12 @@ OMX_ERRORTYPE omx_amr_aenc::component_init(OMX_STRING role)
     if(pcm_input)
     {
         m_tmp_meta_buf = (OMX_U8*) malloc(sizeof(OMX_U8) *
-                         (OMX_CORE_INPUT_BUFFER_SIZE + sizeof(META_IN)));
+                (OMX_CORE_INPUT_BUFFER_SIZE + sizeof(META_IN)));
 
         if (m_tmp_meta_buf == NULL){
             DEBUG_PRINT_ERROR("Mem alloc failed for tmp meta buf\n");
-                return OMX_ErrorInsufficientResources;
-	}
+            return OMX_ErrorInsufficientResources;
+        }
     }
     m_tmp_out_meta_buf =
 		(OMX_U8*)malloc(sizeof(OMX_U8)*OMX_AMR_OUTPUT_BUFFER_SIZE);
@@ -1138,16 +1153,29 @@ OMX_ERRORTYPE omx_amr_aenc::component_init(OMX_STRING role)
                 return OMX_ErrorInsufficientResources;
             }
 
-    if(0 == pcm_input)
-    {
-        m_drv_fd = open("/dev/msm_amrnb_in",O_RDONLY);
-    DEBUG_PRINT("Driver in Tunnel mode open\n");
-    }
-    else
-    {
-        m_drv_fd = open("/dev/msm_amrnb_in",O_RDWR);
-    DEBUG_PRINT("Driver in Non Tunnel mode open\n");
-    }
+    if(!amrwb_enable) {
+        if(0 == pcm_input)
+        {
+            m_drv_fd = open("/dev/msm_amrnb_in",O_RDONLY);
+            DEBUG_PRINT("Driver in Tunnel mode open\n");
+        }
+        else
+        {
+            m_drv_fd = open("/dev/msm_amrnb_in",O_RDWR);
+            DEBUG_PRINT("Driver in Non Tunnel mode open\n");
+        }
+    } else {
+        if(0 == pcm_input)
+        {
+            m_drv_fd = open("/dev/msm_amrwb_in",O_RDONLY);
+            DEBUG_PRINT("Driver in Tunnel mode open\n");
+        }
+        else
+        {
+            m_drv_fd = open("/dev/msm_amrwb_in",O_RDWR);
+            DEBUG_PRINT("Driver in Non Tunnel mode open\n");
+        }
+	}
     if (m_drv_fd < 0)
     {
         DEBUG_PRINT_ERROR("Component_init Open Failed[%d] errno[%d]",\
@@ -1417,6 +1445,7 @@ OMX_ERRORTYPE  omx_amr_aenc::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
             {
 
                 struct msm_audio_amrnb_enc_config_v2 drv_amr_enc_config;
+                struct msm_audio_amrwb_enc_config drv_amrwb_enc_config;
                 struct msm_audio_stream_config drv_stream_config;
                 struct msm_audio_buf_cfg buf_cfg;
                 struct msm_audio_config pcm_cfg;
@@ -1433,22 +1462,49 @@ OMX_ERRORTYPE  omx_amr_aenc::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
                     DEBUG_PRINT_ERROR("ioctl AUDIO_SET_STREAM_CONFIG failed, \
 					errno[%d]\n", errno);
                 }
+                if(!amrwb_enable)
+                {
+                    if(ioctl(m_drv_fd, AUDIO_GET_AMRNB_ENC_CONFIG_V2,
+                                &drv_amr_enc_config) == -1)
+                    {
+                        DEBUG_PRINT_ERROR("ioctl AUDIO_GET_AMRNB_ENC_CONFIG_V2 \
+                                failed, errno[%d]\n", errno);
+                    }
+                } else {
+                    if(ioctl(m_drv_fd, AUDIO_GET_AMRWB_ENC_CONFIG,
+                                &drv_amrwb_enc_config) == -1)
+                    {
+                        DEBUG_PRINT_ERROR("ioctl AUDIO_GET_AMRWB_ENC_CONFIG \
+                                failed, errno[%d]\n", errno);
+                    }
+                }
+                if(!amrwb_enable) {
+                    drv_amr_enc_config.band_mode = m_amr_param.eAMRBandMode;
+                    drv_amr_enc_config.dtx_enable = m_amr_param.eAMRDTXMode;
+                    drv_amr_enc_config.frame_format = m_amr_param.eAMRFrameFormat;
+                } else {
+                    drv_amrwb_enc_config.band_mode = m_amr_param.eAMRBandMode;
+                    drv_amrwb_enc_config.dtx_enable = m_amr_param.eAMRDTXMode;
+                    drv_amrwb_enc_config.frame_format = m_amr_param.eAMRFrameFormat;
+                }
 
-                if(ioctl(m_drv_fd, AUDIO_GET_AMRNB_ENC_CONFIG_V2,
-			&drv_amr_enc_config) == -1)
+                if(!amrwb_enable)
                 {
-                    DEBUG_PRINT_ERROR("ioctl AUDIO_GET_AMRNB_ENC_CONFIG_V2 \
-					failed, errno[%d]\n", errno);
+                    if(ioctl(m_drv_fd, AUDIO_SET_AMRNB_ENC_CONFIG_V2, &drv_amr_enc_config)
+                            == -1)
+                    {
+                        DEBUG_PRINT_ERROR("ioctl AUDIO_SET_AMRNB_ENC_CONFIG_V2 \
+                                failed, errno[%d]\n", errno);
+                    }
+                } else {
+                    if(ioctl(m_drv_fd, AUDIO_SET_AMRWB_ENC_CONFIG, &drv_amrwb_enc_config)
+                            == -1)
+                    {
+                        DEBUG_PRINT_ERROR("ioctl AUDIO_SET_AMRWB_ENC_CONFIG \
+                                failed, errno[%d]\n", errno);
+                    }
                 }
-        drv_amr_enc_config.band_mode = m_amr_param.eAMRBandMode;
-        drv_amr_enc_config.dtx_enable = m_amr_param.eAMRDTXMode;
-        drv_amr_enc_config.frame_format = m_amr_param.eAMRFrameFormat;
-        if(ioctl(m_drv_fd, AUDIO_SET_AMRNB_ENC_CONFIG_V2, &drv_amr_enc_config)
-		== -1)
-                {
-                    DEBUG_PRINT_ERROR("ioctl AUDIO_SET_AMRNB_ENC_CONFIG_V2 \
-					failed, errno[%d]\n", errno);
-                }
+
                 if (ioctl(m_drv_fd, AUDIO_GET_BUF_CFG, &buf_cfg) == -1)
                 {
                     DEBUG_PRINT_ERROR("ioctl AUDIO_GET_BUF_CFG, errno[%d]\n",
