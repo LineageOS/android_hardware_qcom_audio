@@ -968,7 +968,7 @@ void *platform_init(struct audio_device *adev)
             ALOGE("%s: Could not find the symbol acdb_loader_deallocate_ACDB from %s",
                   __func__, LIB_ACDB_LOADER);
 
-        my_data->acdb_send_audio_cal_v3 = (acdb_send_audio_cal_t)dlsym(my_data->acdb_handle,
+        my_data->acdb_send_audio_cal_v3 = (acdb_send_audio_cal_v3_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_send_audio_cal_v3");
         if (!my_data->acdb_send_audio_cal_v3)
             ALOGE("%s: Could not find the symbol acdb_send_audio_cal from %s",
@@ -1094,7 +1094,7 @@ int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
 
 bool platform_check_and_set_capture_backend_cfg(struct audio_device* adev __unused,
                                               struct audio_usecase *usecase __unused,
-                                              snd_device_t snd_device)
+                                              snd_device_t snd_device __unused)
 {
     return false;
 }

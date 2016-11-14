@@ -2177,7 +2177,7 @@ static void out_snd_mon_cb(void * stream, struct str_parms * parms)
 
 #ifdef NO_AUDIO_OUT
 static ssize_t out_write_for_no_output(struct audio_stream_out *stream,
-                                       const void *buffer, size_t bytes)
+                                       const void *buffer __unused, size_t bytes)
 {
     struct stream_out *out = (struct stream_out *)stream;
 
@@ -2185,7 +2185,8 @@ static ssize_t out_write_for_no_output(struct audio_stream_out *stream,
      * Sleep for the amount of buffer duration
      */
     lock_output_stream(out);
-    usleep(bytes * 1000000 / audio_stream_out_frame_size(&out->stream.common) /
+    usleep(bytes * 1000000 / audio_stream_out_frame_size(
+            (const struct audio_stream_out *)&out->stream) /
             out_get_sample_rate(&out->stream.common));
     pthread_mutex_unlock(&out->lock);
     return bytes;
