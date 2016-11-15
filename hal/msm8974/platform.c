@@ -1106,6 +1106,11 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = strdup("voice-speaker-vbat");
     backend_tag_table[SND_DEVICE_OUT_BT_A2DP] = strdup("bt-a2dp");
     backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP] = strdup("speaker-and-bt-a2dp");
+#ifdef OP3_SPEAKER_AND_HEADPHONES_ENABLED
+    backend_tag_table[SND_DEVICE_OUT_SPEAKER] = strdup("quat_i2s");
+    backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER] = strdup("quat_i2s");
+    backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = strdup("speaker-and-headphones");
+#endif
 
     hw_interface_table[SND_DEVICE_OUT_HEADPHONES_44_1] = strdup("SLIMBUS_5_RX");
     hw_interface_table[SND_DEVICE_OUT_HDMI] = strdup("HDMI_RX");

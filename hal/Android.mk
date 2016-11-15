@@ -314,6 +314,10 @@ ifneq ($(strip $(AUDIO_FEATURE_ENABLED_EXT_AMPLIFIER)),false)
     LOCAL_SRC_FILES += audio_extn/audio_amplifier.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_OP3_SPEAKER_AND_HEADPHONES)),true)
+    LOCAL_CFLAGS += -DOP3_SPEAKER_AND_HEADPHONES_ENABLED
+endif
+
 LOCAL_CFLAGS += -Wall -Werror
 LOCAL_CLANG_CFLAGS += -Wno-unused-variable -Wno-unused-function -Wno-missing-field-initializers
 
