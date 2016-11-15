@@ -308,9 +308,14 @@ int equalizer_get_parameter(effect_context_t *context, effect_param_t *p,
     case EQ_PARAM_GET_PRESET_NAME:
         param2 = *param_tmp;
         ALOGV("%s: EQ_PARAM_GET_PRESET_NAME: param2: %d", __func__, param2);
-        if (param2 >= equalizer_get_num_presets(eq_ctxt)) {
-            p->status = -EINVAL;
-            break;
+        if ((param2 < 0 && param2 != PRESET_CUSTOM) ||
+            param2 >= equalizer_get_num_presets(eq_ctxt)) {
+                p->status = -EINVAL;
+                if (param2 < 0) {
+                    android_errorWriteLog(0x534e4554, "32588016");
+                    ALOGW("\tERROR EQ_PARAM_GET_PRESET_NAME preset %d", param2);
+                }
+                break;
         }
         name = (char *)value;
         strlcpy(name, equalizer_get_preset_name(eq_ctxt, param2), p->vsize - 1);
@@ -365,8 +370,12 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
     case EQ_PARAM_BAND_LEVEL:
         band =  *param_tmp;
         level = (int32_t)(*(int16_t *)value);
-        if (band >= NUM_EQ_BANDS) {
-           p->status = -EINVAL;
+        if (band < 0 || band >= NUM_EQ_BANDS) {
+            p->status = -EINVAL;
+            if (band < 0) {
+                android_errorWriteLog(0x534e4554, "32585400");
+                ALOGW("\tERROR EQ_PARAM_BAND_LEVEL band %d", band);
+            }
             break;
         }
         equalizer_set_band_level(eq_ctxt, band, level);
