@@ -48,6 +48,7 @@ struct hardware_info {
     char dev_extn[HW_INFO_ARRAY_MAX_SIZE];
     snd_device_t  *snd_devices;
     bool is_wsa_combo_suppported;
+    bool is_stereo_spkr;
 };
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
@@ -187,6 +188,7 @@ void *hw_info_init(const char *snd_card_name)
     strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
     hw_info->is_wsa_combo_suppported = false;
 
+    hw_info->is_stereo_spkr = true;
     if (strstr(snd_card_name, "msm8x16") || strstr(snd_card_name, "msm8939") ||
         strstr(snd_card_name, "msm8909") || strstr(snd_card_name, "msm8952") ||
         strstr(snd_card_name, "msm8976") || strstr(snd_card_name, "msm8953") ||
@@ -267,4 +269,11 @@ void hw_info_append_hw_type(void *hw_info, snd_device_t snd_device,
         }
     }
     ALOGD("%s : device_name = %s", __func__,device_name);
+}
+
+bool hw_info_is_stereo_spkr(void *hw_info)
+{
+    struct hardware_info *my_data = (struct hardware_info*) hw_info;
+
+    return my_data->is_stereo_spkr;
 }

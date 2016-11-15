@@ -4007,14 +4007,16 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
 
     }
 
-    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_MONO_SPEAKER, value, len);
-    if (err >= 0) {
-        if (!strncmp("left", value, sizeof("left")))
-            my_data->mono_speaker = SPKR_1;
-        else if (!strncmp("right", value, sizeof("right")))
-            my_data->mono_speaker = SPKR_2;
+    if (hw_info_is_stereo_spkr(my_data->hw_info)) {
+        err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_MONO_SPEAKER, value, len);
+        if (err >= 0) {
+            if (!strncmp("left", value, sizeof("left")))
+                my_data->mono_speaker = SPKR_1;
+            else if (!strncmp("right", value, sizeof("right")))
+                my_data->mono_speaker = SPKR_2;
 
-        str_parms_del(parms, AUDIO_PARAMETER_KEY_MONO_SPEAKER);
+            str_parms_del(parms, AUDIO_PARAMETER_KEY_MONO_SPEAKER);
+        }
     }
 
 #ifdef RECORD_PLAY_CONCURRENCY
