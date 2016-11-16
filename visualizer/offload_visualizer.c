@@ -179,7 +179,7 @@ int thread_status;
 
 #define MIXER_CARD 0
 #define SOUND_CARD 0
-#ifdef PLATFORM_MSMCOBALT
+#ifdef PLATFORM_MSM8998
 #define CAPTURE_DEVICE 7
 #else
 #define CAPTURE_DEVICE 8
