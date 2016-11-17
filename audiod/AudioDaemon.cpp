@@ -1,5 +1,5 @@
 /* AudioDaemon.cpp
-Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -69,7 +69,7 @@ namespace android {
     {
         FILE *fp;
         int fd;
-        char *ptr, *saveptr;
+        char *ptr, *saveptr, *card_id = NULL;
         char buffer[128];
         int line = 0;
         String8 path;
@@ -84,9 +84,21 @@ namespace android {
         sndcardFdPair.clear();
         memset(buffer, 0x0, sizeof(buffer));
         while ((fgets(buffer, sizeof(buffer), fp) != NULL)) {
-            if (line % 2)
+            if (line++ % 2)
                 continue;
             ptr = strtok_r(buffer, " [", &saveptr);
+            if (!ptr)
+                continue;
+
+            card_id = strtok_r(saveptr+1, "]", &saveptr);
+            if (!card_id)
+                continue;
+            //Only consider sound cards associated with ADSP
+            if ((strncasecmp(card_id, "msm", 3) != 0) &&
+                (strncasecmp(card_id, "apq", 3) != 0)) {
+                ALOGD("Skipping non-ADSP sound card %s", card_id);
+                continue;
+            }
             if (ptr) {
                 path = "/proc/asound/card";
                 path += ptr;
@@ -101,7 +113,6 @@ namespace android {
                     sndcardFdPair.push_back(std::make_pair(sndcard, fd));
                 }
             }
-            line++;
         }
 
         ALOGV("%s: %d sound cards detected", __func__, sndcardFdPair.size());
