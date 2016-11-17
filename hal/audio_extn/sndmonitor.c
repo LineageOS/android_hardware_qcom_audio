@@ -162,11 +162,6 @@ static int add_new_sndcard(int card, int fd)
     return 0;
 }
 
-static int validate_snd_card(const char *id)
-{
-    return !strncasecmp(id, "msm", 3) ? 0 : -1;
-}
-
 static int enum_sndcards()
 {
     const char *cards = "/proc/asound/cards";
@@ -208,7 +203,8 @@ static int enum_sndcards()
             continue;
 
         // Only consider sound cards associated with ADSP
-        if (validate_snd_card((const char *)card_id) < 0) {
+        if ((strncasecmp(card_id, "msm", 3) != 0) &&
+            (strncasecmp(card_id, "apq", 3) != 0)) {
             ALOGW("Skip over non-ADSP snd card %s", card_id);
             continue;
         }
