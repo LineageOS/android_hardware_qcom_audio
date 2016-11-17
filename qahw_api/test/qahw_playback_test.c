@@ -141,6 +141,7 @@ void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
     char *kvpair_type;
     char param[100];
     char *token = NULL;
+    int value = 0;
     int len = 0;
     int size = 0;
 
@@ -166,8 +167,8 @@ void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
         while (token) {
             len = strcspn(kvpair_type, "=");
             size = len + strlen(token) + 2;
-            token = atoi(token);
-            snprintf(kvpair, size, kvpair_type, token);
+            value = atoi(token);
+            snprintf(kvpair, size, kvpair_type, value);
             kvpair += size - 1;
             kvpair_type += len + 3;
             token = strtok(NULL, ",");
