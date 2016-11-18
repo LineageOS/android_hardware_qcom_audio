@@ -5299,6 +5299,32 @@ uint32_t platform_get_compress_passthrough_buffer_size(
     return fragment_size;
 }
 
+void platform_check_and_update_copp_sample_rate(void* platform, snd_device_t snd_device,
+                                                unsigned int stream_sr, int* sample_rate)
+{
+    struct platform_data* my_data = (struct platform_data *)platform;
+    int backend_idx = platform_get_backend_index(snd_device);
+    int device_sr = my_data->current_backend_cfg[backend_idx].sample_rate;
+    /*
+     *Check if device SR is multiple of 8K or 11.025 Khz
+     *check if the stream SR is multiple of same base, if yes
+     *then have copp SR equal to stream SR, this ensures that
+     *post processing happens at stream SR, else have
+     *copp SR equal to device SR.
+     */
+     if (!(((sample_rate_multiple(device_sr, SAMPLE_RATE_8000)) &&
+                 (sample_rate_multiple(stream_sr, SAMPLE_RATE_8000))) ||
+           ((sample_rate_multiple(device_sr, SAMPLE_RATE_11025)) &&
+                 (sample_rate_multiple(stream_sr, SAMPLE_RATE_11025))))) {
+         *sample_rate = device_sr;
+     } else
+         *sample_rate = stream_sr;
+
+     ALOGI("sn_device %d device sr %d stream sr %d copp sr %d", snd_device, device_sr, stream_sr
+, *sample_rate);
+
+}
+
 void platform_reset_edid_info(void *platform) {
 
     ALOGV("%s:", __func__);
