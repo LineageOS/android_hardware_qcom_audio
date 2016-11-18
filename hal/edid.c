@@ -86,55 +86,107 @@ static const char * edid_format_to_str(unsigned char format)
     return format_str;
 }
 
-static int get_edid_sf(unsigned char byte)
+static bool is_supported_sr(unsigned char sr_byte, int sampling_rate )
+{
+    int result = 0;
+
+    ALOGV("%s: sr_byte: %d, sampling_freq: %d",__func__, sr_byte, sampling_rate);
+    switch (sampling_rate) {
+    case 192000:
+        result = (sr_byte & BIT(6));
+        break;
+    case 176400:
+        result = (sr_byte & BIT(5));
+        break;
+    case 96000:
+        result = (sr_byte & BIT(4));
+        break;
+    case 88200:
+        result = (sr_byte & BIT(3));
+        break;
+    case 48000:
+        result = (sr_byte & BIT(2));
+        break;
+    case 44100:
+        result = (sr_byte & BIT(1));
+        break;
+    case 32000:
+        result = (sr_byte & BIT(0));
+        break;
+     default:
+        break;
+    }
+
+    if (result)
+        return true;
+
+    return false;
+}
+
+static unsigned char get_edid_bps_byte(unsigned char byte,
+                        unsigned char format)
+{
+    if (format == 0) {
+        ALOGV("%s: not lpcm format, return 0",__func__);
+        return 0;
+    }
+    return byte;
+}
+
+static bool is_supported_bps(unsigned char bps_byte, int bps)
+{
+    int result = 0;
+
+    switch (bps) {
+    case 24:
+        ALOGV("24bit");
+        result = (bps_byte & BIT(2));
+        break;
+    case 20:
+        ALOGV("20bit");
+        result = (bps_byte & BIT(1));
+        break;
+    case 16:
+        ALOGV("16bit");
+        result = (bps_byte & BIT(0));
+        break;
+     default:
+        break;
+    }
+
+    if (result)
+        return true;
+
+    return false;
+}
+
+static int get_highest_edid_sf(unsigned char byte)
 {
     int nfreq = 0;
 
     if (byte & BIT(6)) {
-        ALOGV("192kHz");
+        ALOGV("Highest: 192kHz");
         nfreq = 192000;
     } else if (byte & BIT(5)) {
-        ALOGV("176kHz");
+        ALOGV("Highest: 176kHz");
         nfreq = 176000;
     } else if (byte & BIT(4)) {
-        ALOGV("96kHz");
+        ALOGV("Highest: 96kHz");
         nfreq = 96000;
     } else if (byte & BIT(3)) {
-        ALOGV("88.2kHz");
+        ALOGV("Highest: 88.2kHz");
         nfreq = 88200;
     } else if (byte & BIT(2)) {
-        ALOGV("48kHz");
+        ALOGV("Highest: 48kHz");
         nfreq = 48000;
     } else if (byte & BIT(1)) {
-        ALOGV("44.1kHz");
+        ALOGV("Highest: 44.1kHz");
         nfreq = 44100;
     } else if (byte & BIT(0)) {
-        ALOGV("32kHz");
+        ALOGV("Highest: 32kHz");
         nfreq = 32000;
     }
     return nfreq;
-}
-
-static int get_edid_bps(unsigned char byte,
-                        unsigned char format)
-{
-    int bits_per_sample = 0;
-    if (format == 1) {
-        if (byte & BIT(2)) {
-            ALOGV("24bit");
-            bits_per_sample = 24;
-        } else if (byte & BIT(1)) {
-            ALOGV("20bit");
-            bits_per_sample = 20;
-        } else if (byte & BIT(0)) {
-            ALOGV("16bit");
-            bits_per_sample = 16;
-        }
-    } else {
-        ALOGV("not lpcm format, return 0");
-        return 0;
-    }
-    return bits_per_sample;
 }
 
 static void update_channel_map(edid_audio_info* info)
@@ -589,8 +641,8 @@ static void dump_edid_data(edid_audio_info *info)
     for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
         ALOGV("%s:FormatId:%d rate:%d bps:%d channels:%d", __func__,
               info->audio_blocks_array[i].format_id,
-              info->audio_blocks_array[i].sampling_freq,
-              info->audio_blocks_array[i].bits_per_sample,
+              info->audio_blocks_array[i].sampling_freq_bitmask,
+              info->audio_blocks_array[i].bits_per_sample_bitmask,
               info->audio_blocks_array[i].channels);
     }
     ALOGV("%s:no of audio blocks:%d", __func__, info->audio_blocks);
@@ -670,16 +722,16 @@ bool edid_get_sink_caps(edid_audio_info* info, char *edid_data)
         ALOGD("info->audio_blocks_array[i].format_id %s",
               edid_format_to_str(formats[i]));
 
-        ALOGV("Frequency Byte %d\n", frequency[i]);
-        info->audio_blocks_array[i].sampling_freq = get_edid_sf(frequency[i]);
-        ALOGV("info->audio_blocks_array[i].sampling_freq %d",
-              info->audio_blocks_array[i].sampling_freq);
+        ALOGV("Frequency Bitmask %d\n", frequency[i]);
+        info->audio_blocks_array[i].sampling_freq_bitmask = frequency[i];
+        ALOGV("info->audio_blocks_array[i].sampling_freq_bitmask %d",
+              info->audio_blocks_array[i].sampling_freq_bitmask);
 
-        ALOGV("BitsPerSample Byte %d\n", bitrate[i]);
-        info->audio_blocks_array[i].bits_per_sample =
-                   get_edid_bps(bitrate[i],formats[i]);
-        ALOGV("info->audio_blocks_array[i].bits_per_sample %d",
-              info->audio_blocks_array[i].bits_per_sample);
+        ALOGV("BitsPerSample Bitmask %d\n", bitrate[i]);
+        info->audio_blocks_array[i].bits_per_sample_bitmask =
+                   get_edid_bps_byte(bitrate[i],formats[i]);
+        ALOGV("info->audio_blocks_array[i].bits_per_sample_bitmask %d",
+              info->audio_blocks_array[i].bits_per_sample_bitmask);
     }
     dump_speaker_allocation(info);
     dump_edid_data(info);
@@ -691,7 +743,7 @@ bool edid_is_supported_sr(edid_audio_info* info, int sr)
     int i = 0;
     if (info != NULL && sr != 0) {
         for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
-            if (info->audio_blocks_array[i].sampling_freq == sr) {
+        if (is_supported_sr(info->audio_blocks_array[i].sampling_freq_bitmask , sr)) {
                 ALOGV("%s: returns true for sample rate [%d]",
                       __func__, sr);
                 return true;
@@ -715,7 +767,7 @@ bool edid_is_supported_bps(edid_audio_info* info, int bps)
 
     if (info != NULL && bps != 0) {
         for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
-            if (info->audio_blocks_array[i].bits_per_sample == bps) {
+            if (is_supported_bps(info->audio_blocks_array[i].bits_per_sample_bitmask, bps)) {
                 ALOGV("%s: returns true for bit width [%d]",
                       __func__, bps);
                 return true;
@@ -725,4 +777,25 @@ bool edid_is_supported_bps(edid_audio_info* info, int bps)
     ALOGV("%s: returns false for bit width [%d]",
            __func__, bps);
     return false;
+}
+
+int edid_get_highest_supported_sr(edid_audio_info* info)
+{
+    int sr = 0;
+    int highest_sr = 0;
+    int i;
+
+    if (info != NULL) {
+        for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
+          sr = get_highest_edid_sf(info->audio_blocks_array[i].sampling_freq_bitmask);
+          if (sr > highest_sr)
+            highest_sr = sr;
+        }
+    }
+    else
+        ALOGE("%s: info is NULL", __func__);
+
+    ALOGV("%s: returns [%d] for highest supported sr",
+        __func__, highest_sr);
+    return highest_sr;
 }
