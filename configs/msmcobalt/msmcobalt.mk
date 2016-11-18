@@ -214,3 +214,7 @@ qcom.hw.aac.encoder=true
 #Disable FM a2dp concurrency
 PRODUCT_PROPERTY_OVERRIDES += \
 fm.a2dp.conc.disabled=true
+
+#audio becoming noisy intent broadcast delay
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.noisy.broadcast.delay=600
