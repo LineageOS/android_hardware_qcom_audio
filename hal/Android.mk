@@ -93,6 +93,12 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/voice_extn \
 	external/expat/lib
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SMART_PA_TFA_98XX)),true)
+    LOCAL_SHARED_LIBRARIES += libexTfa98xx
+    LOCAL_CFLAGS += -DSMART_PA_TFA_98XX_SUPPORTED
+    LOCAL_SRC_FILES += audio_extn/tfa_98xx.c
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS)),true)
     LOCAL_CFLAGS += -DMULTI_VOICE_SESSION_ENABLED
     LOCAL_SRC_FILES += voice_extn/voice_extn.c
