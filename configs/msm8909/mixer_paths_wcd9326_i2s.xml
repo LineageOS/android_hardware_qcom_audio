@@ -1385,67 +1385,17 @@
        <path name="voicemmode2-call usb-headphones" />
     </path>
 
-    <path name="voicemmode1-call">
-        <ctl name="SLIM_0_RX_Voice Mixer VoiceMMode1" value="1" />
-        <ctl name="VoiceMMode1_Tx Mixer SLIM_0_TX_MMode1" value="1" />
-    </path>
-
     <path name="voicemmode1-call hdmi">
         <ctl name="HDMI_RX_Voice Mixer VoiceMMode1" value="1" />
         <ctl name="VoiceMMode1_Tx Mixer SLIM_0_TX_MMode1" value="1" />
     </path>
 
-    <path name="voicemmode1-call bt-sco">
-        <ctl name="INTERNAL_BT_SCO_RX_Voice Mixer VoiceMMode1" value="1" />
-        <ctl name="VoiceMMode1_Tx Mixer INT_BT_SCO_TX_MMode1" value="1" />
-    </path>
-
-    <path name="voicemmode1-call bt-sco-wb">
-        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
-        <path name="voicemmode1-call bt-sco" />
-    </path>
-
-    <path name="voicemmode1-call afe-proxy">
-        <ctl name="AFE_PCM_RX_Voice Mixer VoiceMMode1" value="1" />
-        <ctl name="VoiceMMode1_Tx Mixer AFE_PCM_TX_MMode1" value="1" />
-    </path>
-
-    <path name="voicemmode1-call usb-headphones">
-        <ctl name="AFE_PCM_RX_Voice Mixer VoiceMMode1" value="1" />
-        <ctl name="VoiceMMode1_Tx Mixer AFE_PCM_TX_MMode1" value="1" />
-    </path>
-
     <path name="voicemmode1-call speaker-protected">
-    </path>
-
-    <path name="voicemmode2-call">
-        <ctl name="SLIM_0_RX_Voice Mixer VoiceMMode2" value="1" />
-        <ctl name="VoiceMMode2_Tx Mixer SLIM_0_TX_MMode2" value="1" />
     </path>
 
     <path name="voicemmode2-call hdmi">
         <ctl name="HDMI_RX_Voice Mixer VoiceMMode2" value="1" />
         <ctl name="VoiceMMode2_Tx Mixer SLIM_0_TX_MMode2" value="1" />
-    </path>
-
-    <path name="voicemmode2-call bt-sco">
-        <ctl name="INTERNAL_BT_SCO_RX_Voice Mixer VoiceMMode2" value="1" />
-        <ctl name="VoiceMMode2_Tx Mixer INT_BT_SCO_TX_MMode2" value="1" />
-    </path>
-
-    <path name="voicemmode2-call bt-sco-wb">
-        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
-        <path name="voicemmode2-call bt-sco" />
-    </path>
-
-    <path name="voicemmode2-call afe-proxy">
-        <ctl name="AFE_PCM_RX_Voice Mixer VoiceMMode2" value="1" />
-        <ctl name="VoiceMMode2_Tx Mixer AFE_PCM_TX_MMode2" value="1" />
-    </path>
-
-    <path name="voicemmode2-call usb-headphones">
-        <ctl name="AFE_PCM_RX_Voice Mixer VoiceMMode2" value="1" />
-        <ctl name="VoiceMMode2_Tx Mixer AFE_PCM_TX_MMode2" value="1" />
     </path>
 
     <path name="voicemmode2-call speaker-protected">
