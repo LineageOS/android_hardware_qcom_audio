@@ -1,3 +1,16 @@
+# This file was modified by Dolby Laboratories, Inc. The portions of the
+# code that are surrounded by "DOLBY..." are copyrighted and
+# licensed separately, as follows:
+#
+# (C)  2016 Dolby Laboratories, Inc.
+# All rights reserved.
+#
+# This program is protected under international and U.S. Copyright laws as
+# an unpublished work. This program is confidential and proprietary to the
+# copyright owners. Reproduction or disclosure, in whole or in part, or the
+# production of derivative works therefrom without the express permission of
+# the copyright owners is prohibited.
+#
 ifneq ($(USE_LEGACY_AUDIO_POLICY), 1)
 ifeq ($(USE_CUSTOM_AUDIO_POLICY), 1)
 LOCAL_PATH := $(call my-dir)
@@ -64,6 +77,11 @@ endif
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FM_POWER_OPT)),true)
 LOCAL_CFLAGS += -DFM_POWER_OPT
 endif
+# DOLBY_START
+ifeq ($(strip $(DOLBY_ENABLE)),true)
+LOCAL_CFLAGS += $(dolby_cflags)
+endif
+# DOLBY_END
 
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
 LOCAL_CFLAGS += -DUSE_XML_AUDIO_POLICY_CONF
