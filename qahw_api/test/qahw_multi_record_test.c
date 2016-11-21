@@ -213,6 +213,7 @@ void *start_input(void *thread_param)
   }
 
   printf("closing input");
+  fclose(fd);
 
   // Close output stream and device.
   rc = qahw_in_standby(in_handle);
