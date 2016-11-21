@@ -52,7 +52,7 @@
 // type alone is not enough: the address must match too
 #define APM_AUDIO_DEVICE_MATCH_ADDRESS_ALL (AUDIO_DEVICE_IN_REMOTE_SUBMIX | \
                                             AUDIO_DEVICE_OUT_REMOTE_SUBMIX)
-
+#define SAMPLE_RATE_8000 8000
 #include <inttypes.h>
 #include <math.h>
 
@@ -1337,7 +1337,7 @@ bool AudioPolicyManagerCustom::isDirectOutput(audio_io_handle_t output) {
     return false;
 }
 
-bool static tryForDirectPCM(int bitWidth, audio_output_flags_t *flags)
+bool static tryForDirectPCM(int bitWidth, audio_output_flags_t *flags, uint32_t samplingRate)
 {
     bool playerDirectPCM = false; // Output request for Track created by mediaplayer
     bool trackDirectPCM = false;  // Output request for track created by other apps
@@ -1364,7 +1364,7 @@ bool static tryForDirectPCM(int bitWidth, audio_output_flags_t *flags)
        // Reset flag to NONE so that we can still reuse direct pcm criteria check
        // in getOutputforDevice
        *flags = AUDIO_OUTPUT_FLAG_NONE;
-    } else if ( *flags == AUDIO_OUTPUT_FLAG_NONE) {
+    } else if ((*flags == AUDIO_OUTPUT_FLAG_NONE) && (samplingRate % SAMPLE_RATE_8000 == 0)) {
         trackDirectPCM = property_get_bool("audio.offload.track.enable", true);
     }
 
@@ -1391,7 +1391,7 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
     uint32_t bitWidth = (audio_bytes_per_sample(format) * 8);
 
 
-    if (tryForDirectPCM(bitWidth, &flags) &&
+    if (tryForDirectPCM(bitWidth, &flags, samplingRate) &&
         (offloadInfo == NULL)) {
 
         tOffloadInfo.sample_rate  = samplingRate;
