@@ -5684,7 +5684,7 @@ int platform_set_sidetone(struct audio_device *adev,
     int ret;
     if ((out_snd_device == SND_DEVICE_OUT_USB_HEADSET) ||
             (out_snd_device == SND_DEVICE_OUT_USB_HEADPHONES)) {
-        if (property_get_bool("audio.debug.usb.disable_sidetone", 0)) {
+        if (property_get_bool("audio.usb.disable.sidetone", 0)) {
             ALOGI("Debug: Disable sidetone");
         } else {
             ret = audio_extn_usb_enable_sidetone(out_snd_device, enable);
