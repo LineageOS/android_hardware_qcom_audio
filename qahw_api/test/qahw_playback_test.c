@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2015 The Android Open Source Project *
@@ -27,6 +27,8 @@
 #include <time.h>
 #include "qahw_api.h"
 #include "qahw_defs.h"
+#include "qahw_effect_api.h"
+#include "qahw_effect_test.h"
 
 #define nullptr NULL
 
@@ -42,6 +44,8 @@
 #define ID_DATA 0x61746164
 
 #define FORMAT_PCM 1
+
+static thread_data_t *ethread_data = NULL;
 
 struct wav_header {
     uint32_t riff_id;
@@ -377,6 +381,11 @@ int play_file(qahw_stream_handle_t* out_handle, FILE* in_file,
         bytes_remaining -= bytes_written;
         fprintf(log_file, "bytes_written %zd, bytes_remaining %zd\n",
                 bytes_written, bytes_remaining);
+
+        // set eq preset
+        if (ethread_data) {
+            effect_thread_command(ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_SET_PARAM, 0, NULL);
+        }
     }
 
     return rc;
@@ -552,6 +561,8 @@ void usage() {
     printf(" -k  --kpi-mode                            - Required for Latency KPI measurement\n");
     printf("                                             file path is not used here as file playback is not done in this mode\n");
     printf("                                             file path and other file specific options would be ignored in this mode.\n\n");
+    printf(" -e  --effect-type <effect type>           - Effect used for test\n");
+    printf("                                             0:bassboost 1:virtualizer 2:equalizer 3:visualizer 4:reverb others:null");
     printf(" \n Examples \n");
     printf(" hal_play_test -f /etc/Anukoledenadu.wav     -> plays Wav stream with default params\n\n");
     printf(" hal_play_test -f /etc/MateRani.mp3 -t 2 -d 2 -v 0.01 -r 44100 -c 2 \n");
@@ -591,6 +602,10 @@ void usage() {
     printf("                                          ->avg_bit_rate,sample_rate,wma_bit_per_sample,wma_block_align\n");
     printf("                                          ->wma_channel_mask,wma_encode_option,wma_format_tag\n");
     printf(" hal_play_test -K -F 4                    -> Measure latency KPIs for low latency output\n\n");
+    printf(" hal_play_test /etc//Moto_320kbps.mp3 -t 2 -d 2 -v 0.1 -r 44100 -c 2 -e 2\n");
+    printf("                                          -> plays MP3 stream(-t = 2) on speaker device(-d = 2)\n");
+    printf("                                          -> 2 channels and 44100 sample rate\n\n");
+    printf("                                          -> sound effect equalizer enabled\n\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -639,12 +654,15 @@ int main(int argc, char* argv[]) {
         {"kvpairs",       required_argument,    0, 'k'},
         {"flags",         required_argument,    0, 'F'},
         {"kpi-mode",      no_argument,          0, 'K'},
+        {"effect-path",   required_argument,    0, 'e'},
         {"help",          no_argument,          0, 'h'},
         {0, 0, 0, 0}
     };
 
     int opt = 0;
     int option_index = 0;
+    int effect_index = -1;
+    thread_func_t ethread_func = NULL;
     proxy_params.hdr.riff_id = ID_RIFF;
     proxy_params.hdr.riff_sz = 0;
     proxy_params.hdr.riff_fmt = ID_WAVE;
@@ -660,7 +678,7 @@ int main(int argc, char* argv[]) {
     proxy_params.hdr.data_sz = 0;
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:v:l:t:a:w:k:D:KF:h",
+                              "-f:r:c:b:d:v:l:t:a:w:k:D:KF:e:h",
                               long_options,
                               &option_index)) != -1) {
             switch (opt) {
@@ -714,6 +732,14 @@ int main(int argc, char* argv[]) {
             case 'F':
                 flags = atoll(optarg);
                 flags_set = true;
+            case 'e':
+                effect_index = atoi(optarg);
+                if (effect_index < 0 || effect_index >= EFFECT_NUM) {
+                    fprintf(stderr, "Invalid effect type %d\n", effect_index);
+                    effect_index = -1;
+                } else {
+                    ethread_func = effect_thread_funcs[effect_index];
+                }
                 break;
             case 'h':
                 usage();
@@ -754,6 +780,9 @@ int main(int argc, char* argv[]) {
     if (output_device & AUDIO_DEVICE_OUT_ALL_A2DP)
         fprintf(stdout, "Saving pcm data to file: %s\n", proxy_params.acp.file_name);
 
+    if (effect_index != -1)
+        fprintf(stdout, "Effect type:%s\n", effect_str[effect_index]);
+
     fprintf(stdout, "Starting audio hal tests.\n");
 
     qahw_mod_handle = qahw_load_module(mod_name);
@@ -776,6 +805,7 @@ int main(int argc, char* argv[]) {
 
         if (!flags_set)
             flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING;
+            flags |= AUDIO_OUTPUT_FLAG_DIRECT;
 
         switch (filetype) {
         case FILE_WAV:
@@ -919,16 +949,53 @@ int main(int argc, char* argv[]) {
         if (!rc)
             proxy_thread_active = true;
     }
+
+    // create effect thread, use thread_data to transfer command
+    if (ethread_func)
+        ethread_data = create_effect_thread(ethread_func);
+
+    if (ethread_data) {
+        // load effect module
+        effect_thread_command(ethread_data, EFFECT_LOAD_LIB, -1, 0, NULL);
+
+        // get effect desc
+        effect_thread_command(ethread_data, EFFECT_GET_DESC, -1, 0, NULL);
+
+        // create effect
+        ethread_data->io_handle = handle;
+        effect_thread_command(ethread_data, EFFECT_CREATE, -1, 0, NULL);
+
+        // enable effect
+        effect_thread_command(ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_ENABLE, 0, NULL);
+    }
+
     play_file(out_handle,
               file_stream,
              (flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD));
 
+    if (ethread_data) {
+        // disable effect
+        effect_thread_command(ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_DISABLE, 0, NULL);
+
+        // release effect
+        effect_thread_command(ethread_data, EFFECT_RELEASE, -1, 0, NULL);
+
+        // unload effect module
+        effect_thread_command(ethread_data, EFFECT_UNLOAD_LIB, -1, 0, NULL);
+
+        // destroy effect thread
+        destroy_effect_thread(ethread_data);
+
+        free(ethread_data);
+        ethread_data = NULL;
+    }
+
     if (proxy_thread_active) {
-        /*
-         * DSP gives drain ack for last buffer which will close proxy thread before
-         * app reads last buffer. So add sleep before exiting proxy thread to read
-         * last buffer of data. This is not a calculated value.
-         */
+       /*
+        * DSP gives drain ack for last buffer which will close proxy thread before
+        * app reads last buffer. So add sleep before exiting proxy thread to read
+        * last buffer of data. This is not a calculated value.
+        */
         usleep(500000);
         proxy_params.acp.thread_exit = true;
         fprintf(log_file, "wait for proxy thread exit\n");

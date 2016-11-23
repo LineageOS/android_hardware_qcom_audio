@@ -3,7 +3,8 @@ bin_PROGRAMS = hal_play_test
 PLAY_CPPFLAGS = -Wno-sign-compare
 PLAY_INCLUDES = -I $(top_srcdir)/qahw_api/inc
 
-hal_play_test_SOURCES = qahw_playback_test.c
+hal_play_test_SOURCES = qahw_playback_test.c \
+                        qahw_effect_test.c
 hal_play_test_CPPFLAGS = $(PLAY_CPPFLAGS) $(PLAY_INCLUDES)
 hal_play_test_CPPFLAGS += -D__unused=__attribute__\(\(__unused__\)\)
 hal_play_test_LDADD = -lutils ../libqahw.la
