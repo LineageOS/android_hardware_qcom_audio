@@ -825,6 +825,32 @@ static int msm_device_to_be_id [][NO_COLS] = {
        {AUDIO_DEVICE_NONE                               ,      -1},
        {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
 };
+#elif PLATFORM_MSM8998
+static int msm_device_to_be_id [][NO_COLS] = {
+       {AUDIO_DEVICE_OUT_EARPIECE                       ,       2},
+       {AUDIO_DEVICE_OUT_SPEAKER                        ,       2},
+       {AUDIO_DEVICE_OUT_WIRED_HEADSET                  ,       41},
+       {AUDIO_DEVICE_OUT_WIRED_HEADPHONE                ,       41},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO                  ,       11},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET          ,       11},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT           ,       11},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP                 ,       -1},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES      ,       -1},
+       {AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER         ,       -1},
+       {AUDIO_DEVICE_OUT_AUX_DIGITAL                    ,       4},
+       {AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET              ,       9},
+       {AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET              ,       9},
+       {AUDIO_DEVICE_OUT_USB_ACCESSORY                  ,       -1},
+       {AUDIO_DEVICE_OUT_USB_DEVICE                     ,       -1},
+       {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
+       {AUDIO_DEVICE_OUT_PROXY                          ,       9},
+/* Add the correct be ids */
+       {AUDIO_DEVICE_OUT_FM                             ,       7},
+       {AUDIO_DEVICE_OUT_FM_TX                          ,       8},
+       {AUDIO_DEVICE_OUT_ALL                            ,      -1},
+       {AUDIO_DEVICE_NONE                               ,      -1},
+       {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
+};
 #else
 static int msm_device_to_be_id [][NO_COLS] = {
     {AUDIO_DEVICE_NONE, -1},

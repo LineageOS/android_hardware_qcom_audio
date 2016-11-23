@@ -1649,11 +1649,35 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                                 &usecase->stream.out->app_type_cfg);
         ALOGI("%s Selected apptype: %d", __func__, usecase->stream.out->app_type_cfg.app_type);
 
+        if ((24 == usecase->stream.out->bit_width) &&
+                (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+            usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        } else if ((out_snd_device == SND_DEVICE_OUT_HDMI ||
+                    out_snd_device == SND_DEVICE_OUT_USB_HEADSET ||
+                    out_snd_device == SND_DEVICE_OUT_DISPLAY_PORT) &&
+                   (usecase->stream.out->sample_rate >= OUTPUT_SAMPLING_RATE_44100)) {
+            /*
+             * To best utlize DSP, check if the stream sample rate is supported/multiple of
+             * configured device sample rate, if not update the COPP rate to be equal to the
+             * device sample rate, else open COPP at stream sample rate
+             */
+            platform_check_and_update_copp_sample_rate(adev->platform, out_snd_device,
+                    usecase->stream.out->sample_rate,
+                    &usecase->stream.out->app_type_cfg.sample_rate);
+        } else if ((out_snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
+                    usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
+                    (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
+            usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        }
+
         /* Notify device change info to effect clients registered */
+        pthread_mutex_unlock(&adev->lock);
         audio_extn_gef_notify_device_config(
                 usecase->stream.out->devices,
                 usecase->stream.out->channel_mask,
+                usecase->stream.out->app_type_cfg.sample_rate,
                 platform_get_snd_device_acdb_id(usecase->out_snd_device));
+        pthread_mutex_lock(&adev->lock);
     }
 
     enable_audio_route(adev, usecase);
