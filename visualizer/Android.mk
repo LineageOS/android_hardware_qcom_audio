@@ -21,8 +21,8 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 
-ifneq ($(filter msmcobalt,$(TARGET_BOARD_PLATFORM)),)
-    LOCAL_CFLAGS += -DPLATFORM_MSMCOBALT
+ifneq ($(filter msm8998,$(TARGET_BOARD_PLATFORM)),)
+    LOCAL_CFLAGS += -DPLATFORM_MSM8998
 endif
 
 LOCAL_SHARED_LIBRARIES := \

@@ -49,7 +49,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #define HFP_RX_VOLUME     "SEC AUXPCM LOOPBACK Volume"
 #elif defined PLATFORM_MSM8996
 #define HFP_RX_VOLUME     "PRI AUXPCM LOOPBACK Volume"
-#elif defined (PLATFORM_MSMCOBALT) || defined (PLATFORM_MSMFALCON)
+#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_MSMFALCON)
 #define HFP_RX_VOLUME     "SLIMBUS_7 LOOPBACK Volume"
 #else
 #define HFP_RX_VOLUME     "Internal HFP RX Volume"
