@@ -103,6 +103,26 @@ AM_CFLAGS += -I ${WORKSPACE}/audio/mm-audio/sound_trigger/
 c_sources += audio_extn/soundtrigger.c
 endif
 
+if FLAC_SUPPORT
+AM_CFLAGS += -DFLAC_OFFLOAD_ENABLED
+AM_CFLAGS += -DCOMPRESS_METADATA_NEEDED
+endif
+
+if ALAC_SUPPORT
+AM_CFLAGS += -DALAC_OFFLOAD_ENABLED
+AM_CFLAGS += -DCOMPRESS_METADATA_NEEDED
+endif
+
+if VORBIS_SUPPORT
+AM_CFLAGS += -DVORBIS_OFFLOAD_ENABLED
+AM_CFLAGS += -DCOMPRESS_METADATA_NEEDED
+endif
+
+if WMA_SUPPORT
+AM_CFLAGS += -DWMA_OFFLOAD_ENABLED
+AM_CFLAGS += -DCOMPRESS_METADATA_NEEDED
+endif
+
 h_sources = audio_extn/audio_defs.h \
             audio_extn/audio_extn.h \
             audio_hw.h \

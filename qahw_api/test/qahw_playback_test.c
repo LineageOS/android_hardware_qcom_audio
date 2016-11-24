@@ -36,7 +36,11 @@ enum {
     FILE_WAV = 1,
     FILE_MP3,
     FILE_AAC,
-    FILE_AAC_ADTS
+    FILE_AAC_ADTS,
+    FILE_FLAC,
+    FILE_ALAC,
+    FILE_VORBIS,
+    FILE_WMA
 };
 
 typedef enum {
@@ -50,6 +54,78 @@ static pthread_cond_t write_cond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t drain_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t drain_cond = PTHREAD_COND_INITIALIZER;
 
+#define FLAC_KVPAIR "music_offload_avg_bit_rate=%d;" \
+                    "music_offload_flac_max_blk_size=%d;" \
+                    "music_offload_flac_max_frame_size=%d;" \
+                    "music_offload_flac_min_blk_size=%d;" \
+                    "music_offload_flac_min_frame_size=%d;" \
+                    "music_offload_sample_rate=%d;"
+
+#define ALAC_KVPAIR "music_offload_alac_avg_bit_rate=%d;" \
+                    "music_offload_alac_bit_depth=%d;" \
+                    "music_offload_alac_channel_layout_tag=%d;" \
+                    "music_offload_alac_compatible_version=%d;" \
+                    "music_offload_alac_frame_length=%d;" \
+                    "music_offload_alac_kb=%d;" \
+                    "music_offload_alac_max_frame_bytes=%d;" \
+                    "music_offload_alac_max_run=%d;" \
+                    "music_offload_alac_mb=%d;" \
+                    "music_offload_alac_num_channels=%d;" \
+                    "music_offload_alac_pb=%d;" \
+                    "music_offload_alac_sampling_rate=%d;" \
+                    "music_offload_avg_bit_rate=%d;" \
+                    "music_offload_sample_rate=%d;"
+
+#define VORBIS_KVPAIR "music_offload_avg_bit_rate=%d;" \
+                      "music_offload_sample_rate=%d;" \
+                      "music_offload_vorbis_bitstream_fmt=%d;"
+
+#define WMA_KVPAIR "music_offload_avg_bit_rate=%d;" \
+                   "music_offload_sample_rate=%d;" \
+                   "music_offload_wma_bit_per_sample=%d;" \
+                   "music_offload_wma_block_align=%d;" \
+                   "music_offload_wma_channel_mask=%d;" \
+                   "music_offload_wma_encode_option=%d;" \
+                   "music_offload_wma_format_tag=%d;"
+
+void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
+{
+    char *kvpair_type;
+    char param[100];
+    char *token = NULL;
+    int len = 0;
+    int size = 0;
+
+    switch (filetype) {
+    case FILE_FLAC:
+        kvpair_type = FLAC_KVPAIR;
+        break;
+    case FILE_ALAC:
+        kvpair_type = ALAC_KVPAIR;
+        break;
+    case FILE_VORBIS:
+        kvpair_type = VORBIS_KVPAIR;
+        break;
+    case FILE_WMA:
+        kvpair_type = WMA_KVPAIR;
+        break;
+    default:
+        break;
+    }
+
+    if (kvpair_type) {
+        token = strtok(kvpair_values, ",");
+        while (token) {
+            len = strcspn(kvpair_type, "=");
+            size = len + strlen(token) + 2;
+            token = atoi(token);
+            snprintf(kvpair, size, kvpair_type, token);
+            kvpair += size - 1;
+            kvpair_type += len + 3;
+            token = strtok(NULL, ",");
+        }
+    }
+}
 
 int async_callback(qahw_stream_callback_event_t event, void *param,
                   void *cookie)
@@ -248,10 +324,13 @@ void usage() {
     printf(" -v  --volume <float volume level>         - Volume level float value between 0.0 - 1.0.\n");
     printf(" -d  --device <decimal value>              - see system/media/audio/include/system/audio.h for device values\n");
     printf("                                             Optional Argument and Default value is 2, i.e Speaker\n\n");
-    printf(" -t  --file-type <file type>               - 1:WAV 2:MP3 3:AAC 4:AAC_ADTS\n");
+    printf(" -t  --file-type <file type>               - 1:WAV 2:MP3 3:AAC 4:AAC_ADTS 5:FLAC\n");
+    printf("                                             6:ALAC 7:VORBIS 8:WMA\n");
     printf("                                             Required for non WAV formats\n\n");
     printf(" -a  --aac-type <aac type>                 - Required for AAC streams\n");
     printf("                                             1: LC 2: HE_V1 3: HE_V2\n\n");
+    printf(" -k  --kvpairs <values>                    - Metadata information of clip\n");
+    printf("                                             See Example for more info\n\n");
     printf(" -l  --log-file <FILEPATH>                 - File path for debug msg, to print\n");
     printf("                                             on console use stdout or 1 \n\n");
     printf(" \n Examples \n");
@@ -268,6 +347,26 @@ void usage() {
     printf("                                          -> AAC format type is HE V2(-a = 3)\n");
     printf("                                          -> 2 channels and 16000 sample rate\n");
     printf("                                          -> note that the sample rate is half the actual sample rate\n\n");
+    printf(" hal_play_test /etc/2.0_16bit_48khz.m4a -k 1536000,16,0,0,4096,14,16388,0,10,2,40,48000,1536000,48000 -t 6 -r 48000 -c 2 -v 0.5 \n");
+    printf("                                          -> Play alac clip (-t = 6)\n");
+    printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
+    printf("                                          ->alac_avg_bit_rate,alac_bit_depth,alac_channel_layout,alac_compatible_version,\n");
+    printf("                                          ->alac_frame_length,alac_kb,alac_max_frame_bytes,alac_max_run,alac_mb,\n");
+    printf("                                          ->alac_num_channels,alac_pb,alac_sampling_rate,avg_bit_rate,sample_rate\n\n");
+    printf(" hal_play_test /etc/DIL CHAHTA HAI.flac -k 0,4096,13740,4096,14 -t 5 -r 48000 -c 2 -v 0.5 \n");
+    printf("                                          -> Play flac clip (-t = 5)\n");
+    printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
+    printf("                                          ->avg_bit_rate,flac_max_blk_size,flac_max_frame_size\n");
+    printf("                                          ->flac_min_blk_size,flac_min_frame_size,sample_rate\n");
+    printf(" hal_play_test /etc/vorbis.mka -k 500000,48000,1 -t 7 -r 48000 -c 2 -v 0.5 \n");
+    printf("                                          -> Play vorbis clip (-t = 7)\n");
+    printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
+    printf("                                          ->avg_bit_rate,sample_rate,vorbis_bitstream_fmt\n");
+    printf(" hal_play_test /etc/file.wma -k 192000,48000,16,8192,3,15,353 -t 8 -r 48000 -c 2 -v 0.5 \n");
+    printf("                                          -> Play wma clip (-t = 8)\n");
+    printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
+    printf("                                          ->avg_bit_rate,sample_rate,wma_bit_per_sample,wma_block_align\n");
+    printf("                                          ->wma_channel_mask,wma_encode_option,wma_format_tag\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -279,6 +378,8 @@ int main(int argc, char* argv[]) {
     const char *mod_name = "audio.primary";
     qahw_stream_handle_t* out_handle = nullptr;
     int rc = 0;
+    char *kvpair_values = NULL;
+    char kvpair[1000] = {0};
 
     /*
      * Default values
@@ -300,6 +401,7 @@ int main(int argc, char* argv[]) {
         {"log-file",      required_argument,    0, 'l'},
         {"file-type",     required_argument,    0, 't'},
         {"aac-type",      required_argument,    0, 'a'},
+        {"kvpairs",       required_argument,    0, 'k'},
         {"help",          no_argument,          0, 'h'},
         {0, 0, 0, 0}
     };
@@ -308,7 +410,7 @@ int main(int argc, char* argv[]) {
     int option_index = 0;
     while ((opt = getopt_long(argc,
                               argv,
-                              "-r:c:d:v:l::t:a:h",
+                              "-r:c:d:v:l::t:a:k:h",
                               long_options,
                               &option_index)) != -1) {
             switch (opt) {
@@ -344,6 +446,9 @@ int main(int argc, char* argv[]) {
             case 'a':
                 format_type = atoi(optarg);
                 break;
+            case 'k':
+                kvpair_values = optarg;
+                break;
             case 'h':
                 usage();
                 return 0;
@@ -372,6 +477,7 @@ int main(int argc, char* argv[]) {
     fprintf(stdout, "Volume level:%f\n", vol_level);
     fprintf(stdout, "Output Device:%d\n", output_device);
     fprintf(stdout, "Format Type:%d\n", format_type);
+    fprintf(stdout, "kvpair values:%s\n", kvpair_values);
 
     fprintf(stdout, "Starting audio hal tests.\n");
 
@@ -424,8 +530,38 @@ int main(int argc, char* argv[]) {
         config.offload_info.format = get_aac_format(filetype, format_type);
         flags |= AUDIO_OUTPUT_FLAG_NON_BLOCKING;
         break;
-
-
+    case FILE_FLAC:
+        config.channel_mask = audio_channel_out_mask_from_count(channels);
+        config.offload_info.channel_mask = config.channel_mask;
+        config.sample_rate = sample_rate;
+        config.offload_info.sample_rate = sample_rate;
+        config.offload_info.format = AUDIO_FORMAT_FLAC;
+        flags |= AUDIO_OUTPUT_FLAG_NON_BLOCKING;
+        break;
+    case FILE_ALAC:
+        config.channel_mask = audio_channel_out_mask_from_count(channels);
+        config.offload_info.channel_mask = config.channel_mask;
+        config.sample_rate = sample_rate;
+        config.offload_info.sample_rate = sample_rate;
+        config.offload_info.format = AUDIO_FORMAT_ALAC;
+        flags |= AUDIO_OUTPUT_FLAG_NON_BLOCKING;
+        break;
+    case FILE_VORBIS:
+        config.channel_mask = audio_channel_out_mask_from_count(channels);
+        config.offload_info.channel_mask = config.channel_mask;
+        config.sample_rate = sample_rate;
+        config.offload_info.sample_rate = sample_rate;
+        config.offload_info.format = AUDIO_FORMAT_VORBIS;
+        flags |= AUDIO_OUTPUT_FLAG_NON_BLOCKING;
+        break;
+    case FILE_WMA:
+        config.channel_mask = audio_channel_out_mask_from_count(channels);
+        config.offload_info.channel_mask = config.channel_mask;
+        config.sample_rate = sample_rate;
+        config.offload_info.sample_rate = sample_rate;
+        config.offload_info.format = AUDIO_FORMAT_WMA;
+        flags |= AUDIO_OUTPUT_FLAG_NON_BLOCKING;
+        break;
     default:
        fprintf(stderr, "Does not support given filetype\n");
        usage();
@@ -451,6 +587,23 @@ int main(int argc, char* argv[]) {
     if (rc) {
         fprintf(stdout, "could not open output stream %d \n", rc);
         goto EXIT;
+    }
+
+    switch(filetype) {
+    case FILE_WMA:
+    case FILE_VORBIS:
+    case FILE_ALAC:
+    case FILE_FLAC:
+        if (!kvpair_values) {
+           fprintf (log_file, "Error!!No metadata for the Clip\n");
+           fprintf (stdout, "Error!!No metadata for the Clip\n");
+           goto EXIT;
+        }
+        read_kvpair(kvpair, kvpair_values, filetype);
+        qahw_out_set_parameters(out_handle, kvpair);
+        break;
+    default:
+        break;
     }
 
     play_file(out_handle,
