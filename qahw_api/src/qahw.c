@@ -1087,6 +1087,64 @@ exit:
     return rc;
 }
 
+int qahw_set_mic_mute(qahw_module_handle_t *hw_module, bool state)
+{
+    int rc = -EINVAL;
+    qahw_module_t *qahw_module = (qahw_module_t *)hw_module;
+    qahw_module_t *qahw_module_temp;
+
+    pthread_mutex_lock(&qahw_module_init_lock);
+    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    pthread_mutex_unlock(&qahw_module_init_lock);
+    if (qahw_module_temp == NULL) {
+        ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
+        goto exit;
+    }
+
+    pthread_mutex_lock(&qahw_module->lock);
+    if (qahw_module->audio_device->set_mic_mute) {
+        rc = qahw_module->audio_device->set_mic_mute(qahw_module->audio_device,
+                                                 state);
+    } else {
+        rc = -ENOSYS;
+        ALOGW("%s not supported", __func__);
+    }
+    pthread_mutex_unlock(&qahw_module->lock);
+
+exit:
+    return rc;
+}
+
+int qahw_get_mic_mute(qahw_module_handle_t *hw_module, bool *state)
+{
+    size_t rc = 0;
+    qahw_module_t *qahw_module = (qahw_module_t *)hw_module;
+    qahw_module_t *qahw_module_temp;
+    audio_hw_device_t *audio_device;
+
+    pthread_mutex_lock(&qahw_module_init_lock);
+    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    pthread_mutex_unlock(&qahw_module_init_lock);
+    if (qahw_module_temp == NULL) {
+        ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
+        goto exit;
+    }
+
+    pthread_mutex_lock(&qahw_module->lock);
+    audio_device = qahw_module->audio_device;
+    if (qahw_module->audio_device->get_mic_mute) {
+        rc = audio_device->get_mic_mute(qahw_module->audio_device,
+                                                 &state);
+    } else {
+        rc = -ENOSYS;
+        ALOGW("%s not supported", __func__);
+    }
+    pthread_mutex_unlock(&qahw_module->lock);
+
+exit:
+    return rc;
+}
+
 /* set/get global audio parameters */
 int qahw_set_parameters(qahw_module_handle_t *hw_module, const char *kv_pairs)
 {
