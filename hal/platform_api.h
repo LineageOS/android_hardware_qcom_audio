@@ -25,7 +25,9 @@
 #define CODEC_BACKEND_DEFAULT_SAMPLE_RATE 48000
 #define CODEC_BACKEND_DEFAULT_CHANNELS 2
 #define CODEC_BACKEND_DEFAULT_TX_CHANNELS 1
-
+#define SAMPLE_RATE_8000 8000
+#define SAMPLE_RATE_11025 11025
+#define sample_rate_multiple(sr, base) ((sr % base)== 0?true:false)
 
 enum {
     NATIVE_AUDIO_MODE_SRC = 1,
@@ -147,10 +149,10 @@ int platform_get_spkr_prot_acdb_id(snd_device_t snd_device);
 int platform_get_spkr_prot_snd_device(snd_device_t snd_device);
 int platform_get_vi_feedback_snd_device(snd_device_t snd_device);
 int platform_spkr_prot_is_wsa_analog_mode(void *adev);
-bool platform_can_split_snd_device(void *platform,
-                                   snd_device_t snd_device,
-                                   int *num_devices,
-                                   snd_device_t *new_snd_devices);
+int platform_split_snd_device(void *platform,
+                              snd_device_t snd_device,
+                              int *num_devices,
+                              snd_device_t *new_snd_devices);
 
 bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_device2);
 int platform_set_sidetone(struct audio_device *adev,
@@ -187,4 +189,6 @@ int platform_retrieve_audio_cal(void* platform, int acdb_dev_id, int acdb_device
 
 unsigned char* platform_get_license(void* platform, int* size);
 int platform_get_max_mic_count(void *platform);
+void platform_check_and_update_copp_sample_rate(void *platform, snd_device_t snd_device,
+     unsigned int stream_sr,int *sample_rate);
 #endif // AUDIO_PLATFORM_API_H

@@ -2,4 +2,4 @@
 #
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = adec-aac adec-mp3 aenc-aac
+SUBDIRS = aenc-aac aenc-amrnb aenc-g711

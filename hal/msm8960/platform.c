@@ -1237,12 +1237,14 @@ int platform_get_vi_feedback_snd_device(snd_device_t snd_device __unused)
 int platform_spkr_prot_is_wsa_analog_mode(void *adev __unused)
 {
     return 0;
-bool platform_can_split_snd_device(void *platform __unused,
-                                   snd_device_t in_snd_device __unused,
-                                   int *num_devices __unused,
-                                   snd_device_t *out_snd_devices __unused)
+
+}
+
+int platform_can_split_snd_device(snd_device_t in_snd_device __unused,
+                                  int *num_devices __unused,
+                                  snd_device_t *out_snd_devices __unused)
 {
-    return false;
+    return -ENOSYS;
 }
 
 bool platform_check_backends_match(snd_device_t snd_device1 __unused,

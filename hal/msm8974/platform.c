@@ -446,6 +446,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_QMIC_FLUENCE] = "quad-mic",
     [SND_DEVICE_IN_THREE_MIC] = "three-mic",
     [SND_DEVICE_IN_HANDSET_TMIC] = "three-mic",
+    [SND_DEVICE_IN_VOICE_REC_TMIC] = "three-mic",
     [SND_DEVICE_IN_UNPROCESSED_MIC] = "unprocessed-mic",
     [SND_DEVICE_IN_UNPROCESSED_STEREO_MIC] = "voice-rec-dmic-ef",
     [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = "three-mic",
@@ -570,6 +571,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_REC_QMIC_FLUENCE] = 125,
     [SND_DEVICE_IN_THREE_MIC] = 46, /* for APSS Surround Sound Recording */
     [SND_DEVICE_IN_HANDSET_TMIC] = 125, /* for 3mic recording with fluence */
+    [SND_DEVICE_IN_VOICE_REC_TMIC] = 125,
     [SND_DEVICE_IN_UNPROCESSED_MIC] = 143,
     [SND_DEVICE_IN_UNPROCESSED_STEREO_MIC] = 144,
     [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = 145,
@@ -693,6 +695,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_QMIC_FLUENCE)},
     {TO_NAME_INDEX(SND_DEVICE_IN_THREE_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_TMIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_TMIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_STEREO_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_THREE_MIC)},
@@ -2393,8 +2396,8 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
         return -EINVAL;
     }
 
-    if(!platform_can_split_snd_device(my_data, snd_device,
-            &num_devices, new_snd_device)) {
+    if (platform_split_snd_device(my_data, snd_device,
+                                  &num_devices, new_snd_device) < 0) {
         new_snd_device[0] = snd_device;
     }
 
@@ -2697,58 +2700,58 @@ int platform_set_device_mute(void *platform, bool state, char *dir)
     return ret;
 }
 
-bool platform_can_split_snd_device(void *platform,
-                                   snd_device_t snd_device,
-                                   int *num_devices,
-                                   snd_device_t *new_snd_devices)
+int platform_split_snd_device(void *platform,
+                              snd_device_t snd_device,
+                              int *num_devices,
+                              snd_device_t *new_snd_devices)
 {
-    bool status = false;
+    int ret = -EINVAL;
     struct platform_data *my_data = (struct platform_data *)platform;
 
     if ( NULL == num_devices || NULL == new_snd_devices || NULL == my_data) {
         ALOGE("%s: NULL pointer ..", __func__);
-        return false;
+        return -EINVAL;
     }
 
     /*
      * If wired headset/headphones/line devices share the same backend
-     * with speaker/earpiece this routine returns false.
+     * with speaker/earpiece this routine returns -EINVAL.
      */
     if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES &&
         !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_HEADPHONES)) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_HEADPHONES;
-        status = true;
+        ret = 0;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HDMI &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_HDMI)) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_HDMI;
-        status = true;
+        ret = 0;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_DISPLAY_PORT &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_DISPLAY_PORT)) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_DISPLAY_PORT;
-        status = true;
+        ret = 0;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_USB_HEADSET)) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_USB_HEADSET;
-        status = true;
+        ret = 0;
     } else if (SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_BT_A2DP;
-        status = true;
+        ret = 0;
     }
 
     ALOGD("%s: snd_device(%d) num devices(%d) new_snd_devices(%d)", __func__,
         snd_device, *num_devices, *new_snd_devices);
 
-    return status;
+    return ret;
 }
 
 int platform_get_ext_disp_type(void *platform)
@@ -3138,7 +3141,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                      snd_device = SND_DEVICE_IN_VOICE_REC_QMIC_FLUENCE;
                 } else if ((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
                     (my_data->source_mic_type & SOURCE_THREE_MIC)) {
-                    snd_device = SND_DEVICE_IN_HANDSET_TMIC;
+                    snd_device = SND_DEVICE_IN_VOICE_REC_TMIC;
                 } else if ((my_data->fluence_type & FLUENCE_DUAL_MIC) &&
                     (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
                     snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
@@ -4562,8 +4565,12 @@ static void platform_check_hdmi_backend_cfg(struct audio_device* adev,
 
         //Check EDID info for supported samplerate
         if (!edid_is_supported_sr(edid_info,sample_rate)) {
-            //reset to current sample rate
-            sample_rate = my_data->current_backend_cfg[backend_idx].sample_rate;
+            //check to see if current BE sample rate is supported by EDID
+            //else assign the highest sample rate supported by EDID
+            if (edid_is_supported_sr(edid_info,my_data->current_backend_cfg[backend_idx].sample_rate))
+                sample_rate = my_data->current_backend_cfg[backend_idx].sample_rate;
+            else
+                sample_rate = edid_get_highest_supported_sr(edid_info);
         }
 
         //Check EDID info for supported bit width
@@ -4829,7 +4836,8 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
           backend_cfg.sample_rate, backend_cfg.channels, backend_idx, usecase->id,
           platform_get_snd_device_name(snd_device));
 
-    if (!platform_can_split_snd_device(my_data, snd_device, &num_devices, new_snd_devices))
+    if (platform_split_snd_device(my_data, snd_device, &num_devices,
+                                  new_snd_devices) < 0)
         new_snd_devices[0] = snd_device;
 
     for (i = 0; i < num_devices; i++) {
@@ -5299,6 +5307,32 @@ uint32_t platform_get_compress_passthrough_buffer_size(
     return fragment_size;
 }
 
+void platform_check_and_update_copp_sample_rate(void* platform, snd_device_t snd_device,
+                                                unsigned int stream_sr, int* sample_rate)
+{
+    struct platform_data* my_data = (struct platform_data *)platform;
+    int backend_idx = platform_get_backend_index(snd_device);
+    int device_sr = my_data->current_backend_cfg[backend_idx].sample_rate;
+    /*
+     *Check if device SR is multiple of 8K or 11.025 Khz
+     *check if the stream SR is multiple of same base, if yes
+     *then have copp SR equal to stream SR, this ensures that
+     *post processing happens at stream SR, else have
+     *copp SR equal to device SR.
+     */
+     if (!(((sample_rate_multiple(device_sr, SAMPLE_RATE_8000)) &&
+                 (sample_rate_multiple(stream_sr, SAMPLE_RATE_8000))) ||
+           ((sample_rate_multiple(device_sr, SAMPLE_RATE_11025)) &&
+                 (sample_rate_multiple(stream_sr, SAMPLE_RATE_11025))))) {
+         *sample_rate = device_sr;
+     } else
+         *sample_rate = stream_sr;
+
+     ALOGI("sn_device %d device sr %d stream sr %d copp sr %d", snd_device, device_sr, stream_sr
+, *sample_rate);
+
+}
+
 void platform_reset_edid_info(void *platform) {
 
     ALOGV("%s:", __func__);
@@ -5347,24 +5381,13 @@ bool platform_is_edid_supported_sample_rate(void *platform, int sample_rate)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     edid_audio_info *info = NULL;
-    int i, ret;
+    int ret = 0;
 
     ret = platform_get_edid_info(platform);
     info = (edid_audio_info *)my_data->edid_info;
     if (ret == 0 && info != NULL) {
-        for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
-             /*
-              * To check
-              *  is there any special for CONFIG_HDMI_PASSTHROUGH_CONVERT
-              *  & DOLBY_DIGITAL_PLUS
-              */
-            if (info->audio_blocks_array[i].sampling_freq == sample_rate) {
-                ALOGV("%s: returns true %d", __func__, sample_rate);
-                return true;
-            }
-        }
+        return edid_is_supported_sr(info, sample_rate);
     }
-    ALOGV("%s: returns false %d", __func__, sample_rate);
 
     return false;
 }

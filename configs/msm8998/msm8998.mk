@@ -152,9 +152,9 @@ audio.offload.track.enable=true
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.deep_buffer.media=true
 
-#Default pcm audio sink buffer size in msec. This is used in calculating framecount
+#QC property used when calculating client heap size in audio flinger
 PRODUCT_PROPERTY_OVERRIDES += \
-media.stagefright.audio.sink=280
+audio.heap.size.multiplier=7
 
 #enable voice path for PCM VoIP by default
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -214,3 +214,7 @@ qcom.hw.aac.encoder=true
 #Disable FM a2dp concurrency
 PRODUCT_PROPERTY_OVERRIDES += \
 fm.a2dp.conc.disabled=true
+
+#audio becoming noisy intent broadcast delay
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.noisy.broadcast.delay=600
