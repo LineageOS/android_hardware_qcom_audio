@@ -41,7 +41,11 @@
 #endif
 #endif
 
+#ifdef LINUX_ENABLED
+#define AUDIO_OUTPUT_POLICY_VENDOR_CONFIG_FILE "/etc/audio_output_policy.conf"
+#else
 #define AUDIO_OUTPUT_POLICY_VENDOR_CONFIG_FILE "/vendor/etc/audio_output_policy.conf"
+#endif
 
 #define OUTPUTS_TAG "outputs"
 

@@ -1,0 +1,123 @@
+AM_CFLAGS = -I ${WORKSPACE}/external/tinyalsa/include \
+        -I ${WORKSPACE}/system/media/audio_effects/include \
+        -I ${WORKSPACE}/system/media/audio_utils/include \
+        -I $(top_srcdir)/hal \
+        -I $(top_srcdir)/hal/audio_extn \
+        -I $(top_srcdir)/hal/voice_extn \
+        -I $(top_srcdir)/hal/msm8916
+
+c_sources = audio_hw.c \
+            voice.c \
+            platform_info.c \
+            msm8916/platform.c \
+            audio_extn/audio_extn.c \
+            audio_extn/utils.c
+
+if HDMI_EDID
+AM_CFLAGS += -DHDMI_EDID
+c_sources += edid.c
+endif
+
+if FM_POWER_OPT
+AM_CFLAGS += -DFM_POWER_OPT
+c_sources += audio_extn/fm.c
+endif
+
+if USBAUDIO
+AM_CFLAGS += -DUSB_HEADSET_ENABLED
+c_sources += audio_extn/usb.c
+endif
+
+if HFP
+AM_CFLAGS += -DHFP_ENABLED
+c_sources += audio_extn/hfp.c
+endif
+
+if SSR
+AM_CFLAGS += -DSSR_ENABLED
+c_sources += audio_extn/ssr.c
+AM_CFLAGS +=  -I ${WORKSPACE}/audio/mm-audio-noship/surround_sound_3mic/libsurround_3mic_proc/surround_rec_interface/inc/
+endif
+
+if MULTI_VOICE_SESSIONS
+AM_CFLAGS += -DMULTI_VOICE_SESSION_ENABLED
+c_sources += voice_extn/voice_extn.c
+endif
+
+if COMPRESS_VOIP
+AM_CFLAGS += -DCOMPRESS_VOIP_ENABLED
+c_sources += voice_extn/compress_voip.c
+endif
+
+if SPKR_PROTECTION
+AM_CFLAGS += -DSPKR_PROT_ENABLED
+c_sources += audio_extn/spkr_protection.c
+endif
+
+if HW_VARIANTS
+AM_CFLAGS += -DHW_VARIANTS_ENABLED
+c_sources +=  msm8916/hw_info.c
+endif
+
+if COMPRESS_CAPTURE
+AM_CFLAGS += -DCOMPRESS_CAPTURE_ENABLED
+c_sources += audio_extn/compress_capture.c
+endif
+
+if DTS_EAGLE
+AM_CFLAGS += -DDTS_EAGLE
+c_sources += audio_extn/dts_eagle.c
+endif
+
+if DOLBY_DDP
+AM_CFLAGS += -DDS1_DOLBY_DDP_ENABLED
+c_sources += audio_extn/dolby.c
+endif
+
+if DS1_DOLBY_DAP
+AM_CFLAGS += -DDS1_DOLBY_DAP_ENABLED
+if DOLBY_DDP
+c_sources += audio_extn/dolby.c
+endif
+endif
+
+if DEV_ARBI
+AM_CFLAGS += -DDEV_ARBI_ENABLED
+c_sources += audio_extn/dev_arbi.c
+endif
+
+if SOURCE_TRACKING
+AM_CFLAGS += -DSOURCE_TRACKING_ENABLED
+c_sources += audio_extn/source_track.c
+endif
+
+if LISTEN
+AM_CFLAGS += -DAUDIO_LISTEN_ENABLED
+AM_CFLAGS += -I ${WORKSPACE}/audio/mm-audio-noship/audio-listen
+c_sources += audio_extn/listen.c
+endif
+
+if SOUND_TRIGGER
+AM_CFLAGS += -DSOUND_TRIGGER_ENABLED
+AM_CFLAGS += -I ${WORKSPACE}/audio/mm-audio/sound_trigger/
+c_sources += audio_extn/soundtrigger.c
+endif
+
+h_sources = audio_extn/audio_defs.h \
+            audio_extn/audio_extn.h \
+            audio_hw.h \
+            voice.h
+
+library_include_HEADERS = $(h_sources)
+library_includedir = $(includedir)
+
+lib_LTLIBRARIES = audio_primary_default.la
+audio_primary_default_la_SOURCES = $(c_sources)
+audio_primary_default_la_LIBADD = $(GLIB_LIBS) -llog -lcutils -ltinyalsa
+audio_primary_default_la_LIBADD += -ltinycompress -laudioroute -ldl -lexpat -laudioutils
+audio_primary_default_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
+audio_primary_default_la_CFLAGS += -Dstrlcat=g_strlcat
+audio_primary_default_la_CFLAGS += -DINT_MAX=0x7fffffff
+audio_primary_default_la_CFLAGS += -D__unused=__attribute__\(\(__unused__\)\)
+audio_primary_default_la_CFLAGS += -DLINUX_ENABLED
+audio_primary_default_la_LDFLAGS = -module -shared -avoid-version

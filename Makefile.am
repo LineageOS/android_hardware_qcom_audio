@@ -1,0 +1,2 @@
+SUBDIRS = hal
+ACLOCAL_AMFLAGS = -I m4
