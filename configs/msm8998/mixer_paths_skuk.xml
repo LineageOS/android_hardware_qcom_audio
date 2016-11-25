@@ -600,6 +600,10 @@
         <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia1" value="1" />
     </path>
 
+    <path name="deep-buffer-playback usb-headset">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia1" value="1" />
+    </path>
+
     <path name="deep-buffer-playback speaker-and-usb-headphones">
         <path name="deep-buffer-playback usb-headphones" />
         <path name="deep-buffer-playback" />
@@ -654,6 +658,10 @@
     </path>
 
     <path name="low-latency-playback usb-headphones">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia5" value="1" />
+    </path>
+
+    <path name="low-latency-playback usb-headset">
         <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia5" value="1" />
     </path>
 
@@ -723,6 +731,10 @@
         <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia8" value="1" />
     </path>
 
+    <path name="audio-ull-playback usb-headset">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia8" value="1" />
+    </path>
+
     <path name="multi-channel-playback hdmi">
         <ctl name="HDMI Mixer MultiMedia2" value="1" />
     </path>
@@ -783,6 +795,10 @@
     </path>
 
     <path name="compress-offload-playback usb-headphones">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia4" value="1" />
+    </path>
+
+    <path name="compress-offload-playback usb-headset">
         <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia4" value="1" />
     </path>
 
@@ -847,6 +863,10 @@
         <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia7" value="1" />
     </path>
 
+    <path name="compress-offload-playback2 usb-headset">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia7" value="1" />
+    </path>
+
     <path name="compress-offload-playback2 speaker-and-usb-headphones">
         <path name="compress-offload-playback2 usb-headphones" />
         <path name="compress-offload-playback2" />
@@ -905,6 +925,10 @@
     </path>
 
     <path name="compress-offload-playback3 usb-headphones">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="compress-offload-playback3 usb-headset">
         <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia10" value="1" />
     </path>
 
@@ -970,6 +994,10 @@
         <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia11" value="1" />
     </path>
 
+    <path name="compress-offload-playback4 usb-headset">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia11" value="1" />
+    </path>
+
     <path name="compress-offload-playback4 speaker-and-usb-headphones">
         <path name="compress-offload-playback4 usb-headphones" />
         <path name="compress-offload-playback4" />
@@ -1028,6 +1056,10 @@
     </path>
 
     <path name="compress-offload-playback5 usb-headphones">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia12" value="1" />
+    </path>
+
+    <path name="compress-offload-playback5 usb-headset">
         <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia12" value="1" />
     </path>
 
@@ -1092,6 +1124,10 @@
         <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia13" value="1" />
     </path>
 
+    <path name="compress-offload-playback6 usb-headset">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia13" value="1" />
+    </path>
+
     <path name="compress-offload-playback6 speaker-and-usb-headphones">
         <path name="compress-offload-playback6 usb-headphones" />
         <path name="compress-offload-playback6" />
@@ -1150,6 +1186,10 @@
     </path>
 
     <path name="compress-offload-playback7 usb-headphones">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia14" value="1" />
+    </path>
+
+    <path name="compress-offload-playback7 usb-headset">
         <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia14" value="1" />
     </path>
 
@@ -1214,6 +1254,10 @@
         <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia15" value="1" />
     </path>
 
+    <path name="compress-offload-playback8 usb-headset">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia15" value="1" />
+    </path>
+
     <path name="compress-offload-playback8 speaker-and-usb-headphones">
         <path name="compress-offload-playback8 usb-headphones" />
         <path name="compress-offload-playback8" />
@@ -1272,6 +1316,10 @@
     </path>
 
     <path name="compress-offload-playback9 usb-headphones">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="compress-offload-playback9 usb-headset">
         <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia16" value="1" />
     </path>
 
@@ -1536,6 +1584,11 @@
 
     <path name="compress-voip-call usb-headphones">
         <ctl name="USB_AUDIO_RX_Voice Mixer Voip" value="1" />
+        <ctl name="Voip_Tx Mixer SLIM_0_TX_Voip" value="1" />
+    </path>
+
+    <path name="compress-voip-call usb-headset">
+        <ctl name="USB_AUDIO_RX_Voice Mixer Voip" value="1" />
         <ctl name="Voip_Tx Mixer USB_AUDIO_TX_Voip" value="1" />
     </path>
 
@@ -1576,6 +1629,11 @@
 
     <path name="voicemmode1-call usb-headphones">
         <ctl name="USB_AUDIO_RX_Voice Mixer VoiceMMode1" value="1" />
+        <ctl name="VoiceMMode1_Tx Mixer SLIM_0_TX_MMode1" value="1" />
+    </path>
+
+    <path name="voicemmode1-call usb-headset">
+        <ctl name="USB_AUDIO_RX_Voice Mixer VoiceMMode1" value="1" />
         <ctl name="VoiceMMode1_Tx Mixer USB_AUDIO_TX_MMode1" value="1" />
     </path>
 
@@ -1615,6 +1673,11 @@
     </path>
 
     <path name="voicemmode2-call usb-headphones">
+        <ctl name="USB_AUDIO_RX_Voice Mixer VoiceMMode2" value="1" />
+        <ctl name="VoiceMMode2_Tx Mixer SLIM_0_TX_MMode2" value="1" />
+    </path>
+
+    <path name="voicemmode2-call usb-headset">
         <ctl name="USB_AUDIO_RX_Voice Mixer VoiceMMode2" value="1" />
         <ctl name="VoiceMMode2_Tx Mixer USB_AUDIO_TX_MMode2" value="1" />
     </path>
@@ -1991,6 +2054,9 @@
     </path>
 
     <path name="usb-headphones">
+    </path>
+
+    <path name="usb-headset">
     </path>
 
     <path name="afe-proxy">
