@@ -219,6 +219,10 @@ static char * device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOIP_HANDSET] = "voip-handset-comm",
     [SND_DEVICE_OUT_VOIP_SPEAKER] = "voip-speaker-comm",
     [SND_DEVICE_OUT_VOIP_HEADPHONES] = "voip-headset-comm",
+#ifdef DOCK_SUPPORT
+    [SND_DEVICE_OUT_DOCK] = "dock",
+    [SND_DEVICE_OUT_SPEAKER_AND_DOCK] = "speaker-and-dock",
+#endif
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
@@ -382,6 +386,10 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOIP_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOIP_SPEAKER)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOIP_HEADPHONES)},
+#ifdef DOCK_SUPPORT
+    {TO_NAME_INDEX(SND_DEVICE_OUT_DOCK)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_DOCK)},
+#endif
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_AEC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_NS)},
@@ -1325,12 +1333,58 @@ int platform_set_device_mute(void *platform, bool state, char *dir)
     return ret;
 }
 
+#ifdef DOCK_SUPPORT
+bool is_dock_connected()
+{
+    FILE *dock_node = NULL;
+    char buf[32];
+    bool connected = false;
+
+    dock_node = fopen(DOCK_SWITCH, "r");
+    if (dock_node) {
+        fread(buf, sizeof(char), 32, dock_node);
+        connected = atoi(buf) > 0;
+        fclose(dock_node);
+    }
+    return connected;
+}
+#endif
+
+#ifdef MOTOROLA_EMU_AUDIO
+int emu_antipop_state = 0;
+
+int set_emu_antipop(struct audio_device *adev, int emu_antipop)
+{
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "EMU Antipop";
+
+    if (emu_antipop == emu_antipop_state) return 0;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+    ALOGV("Setting EMU Antipop to %d", emu_antipop);
+    mixer_ctl_set_value(ctl, 0, emu_antipop);
+    emu_antipop_state = emu_antipop;
+    return 0;
+}
+#endif
+
 snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devices)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     audio_mode_t mode = adev->mode;
     snd_device_t snd_device = SND_DEVICE_NONE;
+#ifdef DOCK_SUPPORT
+    bool dock_connected = is_dock_connected();
+#ifdef MOTOROLA_EMU_AUDIO
+    if (!dock_connected) set_emu_antipop(adev, 0);
+#endif
+#endif
 
     audio_channel_mask_t channel_mask = (adev->active_input == NULL) ?
                                 AUDIO_CHANNEL_IN_MONO : adev->active_input->channel_mask;
@@ -1360,6 +1414,14 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
                                AUDIO_DEVICE_OUT_SPEAKER)) ||
                     devices == (AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
+#ifdef DOCK_SUPPORT
+            if (dock_connected) {
+                snd_device = SND_DEVICE_OUT_SPEAKER_AND_DOCK;
+#ifdef MOTOROLA_EMU_AUDIO
+                set_emu_antipop(adev, 1);
+#endif
+            } else
+#endif
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET;
         } else {
             ALOGE("%s: Invalid combo device(%#x)", __func__, devices);
@@ -1422,6 +1484,14 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
             }
         } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
                    devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
+#ifdef DOCK_SUPPORT
+            if (dock_connected) {
+                snd_device = SND_DEVICE_OUT_DOCK;
+#ifdef MOTOROLA_EMU_AUDIO
+                set_emu_antipop(adev, 1);
+#endif
+            } else
+#endif
             snd_device = SND_DEVICE_OUT_USB_HEADSET;
         } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
             snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
@@ -1465,9 +1535,20 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         snd_device = SND_DEVICE_OUT_HDMI ;
     } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
                devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
+#ifdef DOCK_SUPPORT
+        if (dock_connected) {
+            snd_device = SND_DEVICE_OUT_DOCK;
+#ifdef MOTOROLA_EMU_AUDIO
+            set_emu_antipop(adev, 1);
+#endif
+        } else {
+#endif
         ALOGD("%s: setting USB hadset channel capability(2) for Proxy", __func__);
         audio_extn_set_afe_proxy_channel_mixer(adev, 2);
         snd_device = SND_DEVICE_OUT_USB_HEADSET;
+#ifdef DOCK_SUPPORT
+        }
+#endif
     } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
         snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
     } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
@@ -1502,6 +1583,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                                 AUDIO_CHANNEL_IN_MONO : adev->active_input->channel_mask;
     snd_device_t snd_device = SND_DEVICE_NONE;
     int channel_count = popcount(channel_mask);
+#ifdef DOCK_SUPPORT
+    bool dock_connected = is_dock_connected();
+#endif
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x)",
           __func__, out_device, in_device);
@@ -1706,6 +1790,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             snd_device = SND_DEVICE_IN_HDMI_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET ||
                    in_device & AUDIO_DEVICE_IN_DGTL_DOCK_HEADSET) {
+#ifdef DOCK_SUPPORT
+            if (dock_connected) snd_device = SND_DEVICE_IN_HANDSET_MIC;
+            else
+#endif
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_FM_TUNER) {
             snd_device = SND_DEVICE_IN_CAPTURE_FM;
@@ -1735,6 +1823,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             snd_device = SND_DEVICE_IN_HDMI_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
                    out_device & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
+#ifdef DOCK_SUPPORT
+            if (dock_connected) snd_device = SND_DEVICE_IN_HANDSET_MIC;
+            else
+#endif
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else {
             ALOGE("%s: Unknown output device(s) %#x", __func__, out_device);
