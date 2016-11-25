@@ -140,6 +140,14 @@ ifeq ($(strip $(BOARD_HAVE_SAMSUNG_CSDCLIENT)),true)
     LOCAL_CFLAGS += -DSAMSUNG_CSDCLIENT
 endif
 
+ifeq ($(strip $(BOARD_USES_MOTOROLA_EMU_AUDIO)),true)
+    LOCAL_CFLAGS += -DDOCK_SUPPORT -DMOTOROLA_EMU_AUDIO
+endif
+
+ifeq ($(strip $(BOARD_HAVE_SAMSUNG_AUDIO)),true)
+    LOCAL_CFLAGS += -DDOCK_SUPPORT
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \

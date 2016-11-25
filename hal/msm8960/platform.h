@@ -31,9 +31,16 @@ enum {
  * All these devices are handled by the internal HW codec. We can
  * enable any one of these devices at any time
  */
+#ifdef DOCK_SUPPORT
+#define AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND \
+    (AUDIO_DEVICE_OUT_EARPIECE | AUDIO_DEVICE_OUT_SPEAKER | \
+     AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE | \
+     AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET)
+#else
 #define AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND \
     (AUDIO_DEVICE_OUT_EARPIECE | AUDIO_DEVICE_OUT_SPEAKER | \
      AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE)
+#endif
 
 /* Sound devices specific to the platform
  * The DEVICE_OUT_* and DEVICE_IN_* should be mapped to these sound
@@ -75,6 +82,10 @@ enum {
     SND_DEVICE_OUT_VOIP_HANDSET,
     SND_DEVICE_OUT_VOIP_SPEAKER,
     SND_DEVICE_OUT_VOIP_HEADPHONES,
+#ifdef DOCK_SUPPORT
+    SND_DEVICE_OUT_DOCK,
+    SND_DEVICE_OUT_SPEAKER_AND_DOCK,
+#endif
     SND_DEVICE_OUT_END,
 
     /*
@@ -291,5 +302,11 @@ struct csd_data {
     start_record_t start_record;
     stop_record_t stop_record;
 };
+
+#ifdef MOTOROLA_EMU_AUDIO
+#define DOCK_SWITCH "/sys/devices/virtual/switch/semu_audio/state"
+#elif DOCK_SUPPORT
+#define DOCK_SWITCH "/sys/devices/virtual/switch/dock/state"
+#endif
 
 #endif // QCOM_AUDIO_PLATFORM_H
