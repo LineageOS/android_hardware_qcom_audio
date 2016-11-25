@@ -85,6 +85,7 @@ struct usb_module {
     struct listnode usb_card_conf_list;
     struct audio_device *adev;
     int sidetone_gain;
+    bool is_capture_supported;
 };
 
 static struct usb_module *usbmod = NULL;
@@ -878,6 +879,16 @@ bool audio_extn_usb_is_config_supported(unsigned int *bit_width,
     return is_usb_supported;
 }
 
+bool audio_extn_usb_is_capture_supported()
+{
+    if (usbmod == NULL) {
+        ALOGE("%s: USB device object is NULL", __func__);
+        return false;
+    }
+    ALOGV("%s: capture_supported %d",__func__,usbmod->is_capture_supported);
+    return usbmod->is_capture_supported;
+}
+
 void audio_extn_usb_add_device(audio_devices_t device, int card)
 {
     struct usb_card_config *usb_card_info;
@@ -921,6 +932,7 @@ void audio_extn_usb_add_device(audio_devices_t device, int card)
         if (!usb_get_device_cap_config(usb_card_info, card)) {
             usb_card_info->usb_card = card;
             usb_card_info->usb_device_type = AUDIO_DEVICE_IN_USB_DEVICE;
+            usbmod->is_capture_supported = true;
             list_add_tail(&usbmod->usb_card_conf_list, &usb_card_info->list);
             goto exit;
         }
@@ -974,6 +986,7 @@ void audio_extn_usb_remove_device(audio_devices_t device, int card)
             free(node_to_item(node_i, struct usb_card_config, list));
         }
     }
+    usbmod->is_capture_supported = false;
 exit:
     if (usb_audio_debug_enable)
         usb_print_active_device();
@@ -993,6 +1006,7 @@ void audio_extn_usb_init(void *adev)
     list_init(&usbmod->usb_card_conf_list);
     usbmod->adev = (struct audio_device*)adev;
     usbmod->sidetone_gain = usb_sidetone_gain;
+    usbmod->is_capture_supported = false;
 exit:
     return;
 }

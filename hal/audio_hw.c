@@ -4439,7 +4439,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                    !(val ^ AUDIO_DEVICE_IN_USB_DEVICE)) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
-                audio_extn_usb_remove_device(val, atoi(value));
+                audio_extn_usb_remove_device(AUDIO_DEVICE_OUT_USB_DEVICE, atoi(value));
+                audio_extn_usb_remove_device(AUDIO_DEVICE_IN_USB_DEVICE, atoi(value));
             }
             ALOGV("detected USB disconnect .. enable proxy");
             adev->allow_afe_proxy_usage = true;
