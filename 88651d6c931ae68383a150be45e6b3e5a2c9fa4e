@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5f681702_d768d7bb",
+        "filename": "hal/msm8960/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1384,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-11-26T05:16:33Z",
+      "side": 1,
+      "message": "Can\u0027t say I\u0027m a fan of the fact these are two separate ifdefs, but DOCK_SUPPORT does nothing without MOTOROLA_EMU_AUDIO defined...",
+      "revId": "88651d6c931ae68383a150be45e6b3e5a2c9fa4e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f681702_7774639a",
+        "filename": "hal/msm8960/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1539,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-11-26T05:16:33Z",
+      "side": 1,
+      "message": "Isn\u0027t the indentation level wrong here?",
+      "revId": "88651d6c931ae68383a150be45e6b3e5a2c9fa4e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f681702_976f7fc4",
+        "filename": "hal/msm8960/platform.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 41,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-11-26T05:16:33Z",
+      "side": 1,
+      "message": "You could also add\n\n#ifdef\n\nAUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET | \\ \n\n#endif\n\nin between the two lines here as well.",
+      "revId": "88651d6c931ae68383a150be45e6b3e5a2c9fa4e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
