@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5f681702_37d78b26",
+        "filename": "hal/msm8960/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1348,
+      "author": {
+        "id": 1063
+      },
+      "writtenOn": "2016-11-26T05:27:28Z",
+      "side": 1,
+      "message": "Why not use a bool here instead of passing 0/1 and converting it to a bool below?",
+      "revId": "b663fc44318bfa56af3fe6604c03323be88726c7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
