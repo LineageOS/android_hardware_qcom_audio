@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "5f681702_d2aaa5d0",
+        "filename": "hal/msm8960/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1384,
+      "author": {
+        "id": 129
+      },
+      "writtenOn": "2016-11-26T12:31:37Z",
+      "side": 1,
+      "message": "It does, see the lines below. DOCK_SUPPORT selects the dock snd devices and works by itself, MOTOROLA_EMU_AUDIO just adds the EMU Antipop mixer control handling and changes the path where the dock connection is checked (from the dock itself to the dock audio jack sensing). DOCK_SUPPORT is meant to be used by samsungs and possibly others, DOCK_SUPPORT + MOTOROLA_EMU_AUDIO by motorolas with EMU audio.",
+      "parentUuid": "5f681702_d768d7bb",
+      "revId": "88651d6c931ae68383a150be45e6b3e5a2c9fa4e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5f681702_7774639a",
         "filename": "hal/msm8960/platform.c",
         "patchSetId": 1
@@ -36,6 +54,24 @@
     },
     {
       "key": {
+        "uuid": "5f681702_12b53d32",
+        "filename": "hal/msm8960/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1539,
+      "author": {
+        "id": 129
+      },
+      "writtenOn": "2016-11-26T12:31:37Z",
+      "side": 1,
+      "message": "Yes it is, thanks, I\u0027ll fix it.",
+      "parentUuid": "5f681702_7774639a",
+      "revId": "88651d6c931ae68383a150be45e6b3e5a2c9fa4e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5f681702_976f7fc4",
         "filename": "hal/msm8960/platform.h",
         "patchSetId": 1
@@ -47,6 +83,24 @@
       "writtenOn": "2016-11-26T05:16:33Z",
       "side": 1,
       "message": "You could also add\n\n#ifdef\n\nAUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET | \\ \n\n#endif\n\nin between the two lines here as well.",
+      "revId": "88651d6c931ae68383a150be45e6b3e5a2c9fa4e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f681702_52885570",
+        "filename": "hal/msm8960/platform.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 41,
+      "author": {
+        "id": 129
+      },
+      "writtenOn": "2016-11-26T12:31:37Z",
+      "side": 1,
+      "message": "Really? afaik #ifdef can\u0027t be used inside #define",
+      "parentUuid": "5f681702_976f7fc4",
       "revId": "88651d6c931ae68383a150be45e6b3e5a2c9fa4e",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
