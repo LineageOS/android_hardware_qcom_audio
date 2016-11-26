@@ -16,6 +16,24 @@
       "revId": "b663fc44318bfa56af3fe6604c03323be88726c7",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f681702_f296c194",
+        "filename": "hal/msm8960/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1348,
+      "author": {
+        "id": 129
+      },
+      "writtenOn": "2016-11-26T12:50:23Z",
+      "side": 1,
+      "message": "You mean the mess few lines below, right?\nYes, you\u0027re right, it\u0027s unnecessarily overcomplicated, I\u0027ll fix it. Though keeping it all int and ditching the bool makes more sense, as int is what the mixer control takes.",
+      "parentUuid": "5f681702_37d78b26",
+      "revId": "b663fc44318bfa56af3fe6604c03323be88726c7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
