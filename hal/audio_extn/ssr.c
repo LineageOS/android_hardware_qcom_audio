@@ -331,32 +331,54 @@ bool audio_extn_ssr_get_enabled()
     return false;
 }
 
-int audio_extn_ssr_check_and_set_usecase(struct stream_in *in)
-{
-    int ret = -1;
+bool  audio_extn_ssr_check_usecase(struct stream_in *in) {
+    int ret = false;
     int channel_count = audio_channel_count_from_in_mask(in->channel_mask);
     audio_devices_t devices = in->device;
     audio_source_t source = in->source;
 
-    /* validate input params
-     * only stereo and 5:1 channel config is supported
-     * only AUDIO_DEVICE_IN_BUILTIN_MIC, AUDIO_DEVICE_IN_BACK_MIC supports 3 mics */
-    if (audio_extn_ssr_get_enabled() &&
-           ((channel_count == 2) || (channel_count == 6)) &&
-           ((AUDIO_SOURCE_MIC == source) || (AUDIO_SOURCE_CAMCORDER == source)) &&
-           ((AUDIO_DEVICE_IN_BUILTIN_MIC == devices) || (AUDIO_DEVICE_IN_BACK_MIC == devices))) {
-
-        ALOGD("%s: Found SSR use case starting SSR lib with channel_count :%d",
+    if ((audio_extn_ssr_get_enabled()) &&
+            ((channel_count == 2) || (channel_count == 6)) &&
+            ((AUDIO_SOURCE_MIC == source) || (AUDIO_SOURCE_CAMCORDER == source)) &&
+            ((AUDIO_DEVICE_IN_BUILTIN_MIC == devices) || (AUDIO_DEVICE_IN_BACK_MIC == devices))) {
+        ALOGD("%s: Found SSR use case, starting SSR lib with channel_count :%d",
                       __func__, channel_count);
+        ret = true;
+    }
+    return ret;
+}
 
-        if (!audio_extn_ssr_init(in, channel_count)) {
-            ALOGD("%s: Created SSR session succesfully", __func__);
+int audio_extn_ssr_set_usecase(struct stream_in *in,
+                               struct audio_config *config,
+                               bool *update_params)
+{
+    int ret = -EINVAL;
+    int channel_count = audio_channel_count_from_in_mask(in->channel_mask);
+    audio_channel_representation_t representation =
+                  audio_channel_mask_get_representation(in->channel_mask);
+    *update_params = false;
+
+    if (audio_extn_ssr_check_usecase(in)) {
+
+        if (representation == AUDIO_CHANNEL_REPRESENTATION_INDEX) {
+            /* update params in case channel representation index.
+             * on returning error, flinger will retry with supported representation passed
+             */
+            ALOGD("%s: SSR supports only channel representation position, channel_mask(%#x)"
+                              ,__func__, config->channel_mask);
+            config->channel_mask = AUDIO_CHANNEL_IN_5POINT1;
             ret = 0;
+            *update_params = true;
         } else {
-            ALOGE("%s: Unable to start SSR record session", __func__);
+            if (!audio_extn_ssr_init(in, channel_count)) {
+                ALOGD("%s: Created SSR session succesfully", __func__);
+                ret = 0;
+            } else {
+                ALOGE("%s: Unable to start SSR record session", __func__);
+            }
         }
-   }
-   return ret;
+    }
+    return ret;
 }
 
 static void pcm_buffer_queue_push(struct pcm_buffer_queue **queue,

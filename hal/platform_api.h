@@ -125,4 +125,5 @@ const char *platform_get_spkr_2_tz_name(snd_device_t snd_device);
 bool platform_can_enable_spkr_prot_on_device(snd_device_t snd_device);
 int platform_get_wsa_mode(void *adev);
 void platform_set_gsm_mode(void *platform, bool enable);
+int platform_get_max_mic_count(void *platform);
 #endif // AUDIO_PLATFORM_API_H

@@ -976,3 +976,51 @@ void audio_extn_perf_lock_release(void)
         ALOGE("%s: Perf lock release error \n", __func__);
 }
 #endif /* KPI_OPTIMIZE_ENABLED */
+
+static int audio_extn_set_multichannel_usecase(struct audio_device *adev,
+                                               struct stream_in *in,
+                                               struct audio_config *config,
+                                               bool *update_params)
+{
+    int ret = -EINVAL;
+    int channel_count = audio_channel_count_from_in_mask(in->channel_mask);
+    *update_params = false;
+
+    int max_mic_count = platform_get_max_mic_count(adev->platform);
+    /* validate input params*/
+    if ((channel_count == 6) &&
+        (in->format == AUDIO_FORMAT_PCM_16_BIT)) {
+
+        switch (max_mic_count) {
+            case 4:
+                config->channel_mask = AUDIO_CHANNEL_INDEX_MASK_4;
+                break;
+            case 3:
+                config->channel_mask = AUDIO_CHANNEL_INDEX_MASK_3;
+                break;
+            case 2:
+                config->channel_mask = AUDIO_CHANNEL_IN_STEREO;
+                break;
+            default:
+                config->channel_mask = AUDIO_CHANNEL_IN_STEREO;
+                break;
+        }
+        ret = 0;
+        *update_params = true;
+    }
+    return ret;
+}
+
+int audio_extn_check_and_set_multichannel_usecase(struct audio_device *adev,
+                                                  struct stream_in *in,
+                                                  struct audio_config *config,
+                                                  bool *update_params)
+{
+    bool ssr_supported = false;
+    ssr_supported = audio_extn_ssr_check_usecase(in);
+    if (ssr_supported) {
+        return audio_extn_ssr_set_usecase(in, config, update_params);
+    } else {
+        return audio_extn_set_multichannel_usecase(adev, in, config, update_params);
+    }
+}
