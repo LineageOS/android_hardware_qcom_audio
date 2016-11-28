@@ -3625,7 +3625,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
                 if (bytes % 4 == 0) {
                     /* data from DSP comes in 24_8 format, convert it to 8_24 */
                     int_buf_stream = buffer;
-                    for (size_t itt=0; itt < bytes/4 ; itt++) {
+                    size_t itt = 0;
+                    for (itt = 0; itt < bytes/4 ; itt++) {
                         int_buf_stream[itt] >>= 8;
                     }
                 } else {
