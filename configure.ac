@@ -78,6 +78,7 @@ AM_CONDITIONAL([PM_SUPPORT], [test x$AUDIO_FEATURE_ENABLED_PM_SUPPORT = xtrue])
 AC_CONFIG_FILES([ \
         Makefile \
         hal/Makefile \
+        qahw_api/Makefile
         ])
 
 AC_OUTPUT
