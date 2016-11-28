@@ -1846,6 +1846,8 @@ static int check_input_parameters(uint32_t sample_rate,
     switch (channel_count) {
     case 1:
     case 2:
+    case 3:
+    case 4:
     case 6:
         break;
     default:
@@ -3109,9 +3111,13 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         if (config->channel_mask == 0)
             config->channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
+        if (config->format == 0)
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
+
 
         out->channel_mask = config->channel_mask;
         out->sample_rate = config->sample_rate;
+        out->format = config->format;
         out->usecase = USECASE_AUDIO_PLAYBACK_MULTI_CH;
         out->config = pcm_config_hdmi_multi;
         out->config.rate = config->sample_rate;
@@ -3737,10 +3743,13 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     int ret = 0, buffer_size, frame_size;
     int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
     bool is_low_latency = false;
+    bool updated_params = false;
 
     *stream_in = NULL;
-    if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0)
+    if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0) {
+        ALOGE("%s: invalid input parameters", __func__);
         return -EINVAL;
+    }
 
     in = (struct stream_in *)calloc(1, sizeof(struct stream_in));
 
@@ -3818,28 +3827,16 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->config = pcm_config_afe_proxy_record;
         in->config.channels = channel_count;
         in->config.rate = config->sample_rate;
-    } else if (audio_extn_ssr_get_enabled() &&
-                 ((channel_count == 2) ||(channel_count == 6)) &&
-                 ((AUDIO_SOURCE_MIC == source) || (AUDIO_SOURCE_CAMCORDER == source))) {
-                ALOGD("Found SSR use case starting SSR lib with channel_count :%d", channel_count);
-                if(audio_extn_ssr_init(in, channel_count)) {
-                    ALOGE("%s: audio_extn_ssr_init failed", __func__);
-                    if(channel_count == 2 ) {
-                    ALOGD("%s:falling back to default record usecase", __func__);
-                    in->config.channels = channel_count;
-                    frame_size = audio_stream_in_frame_size(&in->stream);
-                    buffer_size = get_input_buffer_size(config->sample_rate,
-                                            config->format,
-                                            channel_count,
-                                            is_low_latency);
-                    in->config.period_size = buffer_size / frame_size;
-				} else {
-                    ALOGD("%s:unable to start SSR record session for 6 channel input", __func__);
+    } else if (!audio_extn_check_and_set_multichannel_usecase(adev,
+                    in, config, &updated_params)) {
+            if (updated_params == true) {
+                ALOGD("%s: updated params, return error for retry channel mask (%#x)",
+                                           __func__, config->channel_mask);
                     ret = -EINVAL;
                     goto err_open;
-                }
-            } else
-	            in->usecase = USECASE_AUDIO_RECORD_3MIC_SSR;
+            }
+            ALOGD("%s: created surround sound session succesfully",__func__);
+            in->usecase = USECASE_AUDIO_RECORD_3MIC_SSR;
     } else if (audio_extn_compr_cap_enabled() &&
             audio_extn_compr_cap_format_supported(config->format) &&
             (in->dev->mode != AUDIO_MODE_IN_COMMUNICATION)) {

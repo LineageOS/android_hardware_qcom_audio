@@ -111,6 +111,7 @@ void platform_cache_edid(void * platform);
 void platform_invalidate_edid(void * platform);
 int platform_set_hdmi_config(struct stream_out *out);
 int platform_set_device_params(struct stream_out *out, int param, int value);
+int platform_get_max_mic_count(void *platform);
 
 bool platform_can_split_snd_device(snd_device_t in_snd_device,
                                    int *num_devices,
