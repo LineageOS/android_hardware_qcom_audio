@@ -23,7 +23,7 @@ void audio_extn_tfa_98xx_disable_speaker(snd_device_t snd_device);
 void audio_extn_tfa_98xx_set_mode();
 void audio_extn_tfa_98xx_set_mode_bt(void);
 void audio_extn_tfa_98xx_update(void);
-void audio_extn_tfa_98xx_set_voice_vol(int vol);
+void audio_extn_tfa_98xx_set_voice_vol(float vol);
 int audio_extn_tfa_98xx_init(struct audio_device *adev);
 void audio_extn_tfa_98xx_deinit(void);
 bool audio_extn_tfa_98xx_is_supported(void);
