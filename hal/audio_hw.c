@@ -521,7 +521,8 @@ static bool is_supported_format(audio_format_t format)
         format == AUDIO_FORMAT_DSD ||
         format == AUDIO_FORMAT_VORBIS ||
         format == AUDIO_FORMAT_WMA ||
-        format == AUDIO_FORMAT_WMA_PRO)
+        format == AUDIO_FORMAT_WMA_PRO ||
+        format == AUDIO_FORMAT_APTX)
            return true;
 
     return false;
@@ -4051,6 +4052,10 @@ int adev_open_output_stream(struct audio_hw_device *dev,
 
         if (config->offload_info.format == AUDIO_FORMAT_FLAC)
             out->compr_config.codec->options.flac_dec.sample_size = AUDIO_OUTPUT_BIT_WIDTH;
+
+        if (config->offload_info.format == AUDIO_FORMAT_APTX) {
+            audio_extn_send_aptx_dec_bt_addr_to_dsp(out);
+        }
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
