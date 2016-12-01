@@ -1341,6 +1341,7 @@ bool static tryForDirectPCM(int bitWidth, audio_output_flags_t *flags)
 {
     bool playerDirectPCM = false; // Output request for Track created by mediaplayer
     bool trackDirectPCM = false;  // Output request for track created by other apps
+    bool offloadDisabled = property_get_bool("audio.offload.disable", false);
 
     // Direct PCM is allowed only if
     // In case of mediaPlayer playback
@@ -1348,6 +1349,10 @@ bool static tryForDirectPCM(int bitWidth, audio_output_flags_t *flags)
     // the FLAG requested is DIRECT_PCM ( NuPlayer case) or
     // In case of AudioTracks created by apps
     // track offload is enabled and FLAG requested is FLAG_NONE.
+
+    if (offloadDisabled) {
+        ALOGI("offload disabled by audio.offload.disable=%d", offloadDisabled);
+    }
 
     if (*flags == AUDIO_OUTPUT_FLAG_DIRECT_PCM) {
        if (bitWidth == 24 || bitWidth == 32)
@@ -1363,8 +1368,10 @@ bool static tryForDirectPCM(int bitWidth, audio_output_flags_t *flags)
         trackDirectPCM = property_get_bool("audio.offload.track.enable", true);
     }
 
-    ALOGI("%s for Direct PCM",trackDirectPCM || playerDirectPCM?"Check":"Dont check");
-    return trackDirectPCM || playerDirectPCM;
+    ALOGI("Direct PCM %s for this request",
+       (!offloadDisabled && (trackDirectPCM || playerDirectPCM))?"can be enabled":"is disabled");
+
+    return (!offloadDisabled && (trackDirectPCM || playerDirectPCM));
 }
 
 status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *attr,
@@ -1381,15 +1388,11 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
 {
     audio_offload_info_t tOffloadInfo = AUDIO_INFO_INITIALIZER;
 
-    bool offloadDisabled = property_get_bool("audio.offload.disable", false);
     uint32_t bitWidth = (audio_bytes_per_sample(format) * 8);
 
-    if (offloadDisabled) {
-        ALOGI("offload disabled by audio.offload.disable=%d", offloadDisabled);
-    }
 
-    if (!offloadDisabled && (offloadInfo == NULL) &&
-        tryForDirectPCM(bitWidth, &flags)) {
+    if (tryForDirectPCM(bitWidth, &flags) &&
+        (offloadInfo == NULL)) {
 
         tOffloadInfo.sample_rate  = samplingRate;
         tOffloadInfo.channel_mask = channelMask;
