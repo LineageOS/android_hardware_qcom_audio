@@ -79,6 +79,8 @@
 
 #define MAX_PERF_LOCK_OPTS 20
 
+#define MAX_STREAM_PROFILE_STR_LEN 32
+
 typedef enum card_status_t {
     CARD_STATUS_OFFLINE,
     CARD_STATUS_ONLINE
@@ -206,6 +208,7 @@ struct stream_out {
     audio_format_t format;
     audio_devices_t devices;
     audio_output_flags_t flags;
+    char profile[MAX_STREAM_PROFILE_STR_LEN];
     audio_usecase_t usecase;
     /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
@@ -262,6 +265,7 @@ struct stream_in {
     audio_format_t format;
     audio_io_handle_t capture_handle;
     audio_input_flags_t flags;
+    char profile[MAX_STREAM_PROFILE_STR_LEN];
     bool is_st_session;
     bool is_st_session_active;
     int sample_rate;
@@ -321,6 +325,7 @@ typedef union {
 struct streams_io_cfg {
     struct listnode list;
     audio_io_flags_t flags;
+    char profile[MAX_STREAM_PROFILE_STR_LEN];
     struct listnode format_list;
     struct listnode sample_rate_list;
     struct stream_app_type_cfg app_type_cfg;

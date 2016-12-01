@@ -103,4 +103,7 @@
 
 #define AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED  "is_hw_dec_session_allowed"
 
+/* Set or Query stream profile type */
+#define AUDIO_PARAMETER_STREAM_PROFILE "audio_stream_profile"
+
 #endif /* AUDIO_DEFS_H */

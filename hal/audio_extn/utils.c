@@ -54,6 +54,7 @@
 
 #define DYNAMIC_VALUE_TAG "dynamic"
 #define FLAGS_TAG "flags"
+#define PROFILES_TAG "profile"
 #define FORMATS_TAG "formats"
 #define SAMPLING_RATES_TAG "sampling_rates"
 #define BIT_WIDTH_TAG "bit_width"
@@ -286,6 +287,8 @@ static void update_streams_cfg_list(cnode *root, void *platform,
     while (node) {
         if (strcmp(node->name, FLAGS_TAG) == 0) {
             s_info->flags = parse_flag_names((char *)node->value);
+        } else if (strcmp(node->name, PROFILES_TAG) == 0) {
+            strlcpy(s_info->profile, (char *)node->value, sizeof(s_info->profile));
         } else if (strcmp(node->name, FORMATS_TAG) == 0) {
             parse_format_names((char *)node->value, s_info);
         } else if (strcmp(node->name, SAMPLING_RATES_TAG) == 0) {
@@ -578,18 +581,22 @@ void audio_extn_utils_update_stream_input_app_type_cfg(void *platform,
                                   audio_format_t format,
                                   uint32_t sample_rate,
                                   uint32_t bit_width,
+                                  char* profile,
                                   struct stream_app_type_cfg *app_type_cfg)
 {
     struct listnode *node_i, *node_j;
     struct streams_io_cfg *s_info;
     struct stream_format *sf_info;
 
-    ALOGV("%s: flags: 0x%x, format: 0x%x sample_rate %d",
-           __func__, flags, format, sample_rate);
+    ALOGV("%s: flags: 0x%x, format: 0x%x sample_rate %d, profile %s",
+           __func__, flags, format, sample_rate, profile);
 
     list_for_each(node_i, streams_input_cfg_list) {
         s_info = node_to_item(node_i, struct streams_io_cfg, list);
-        if (s_info->flags.in_flags == flags) {
+        /* Along with flags do profile matching if set at either end.*/
+        if (s_info->flags.in_flags == flags &&
+            ((profile[0] == '\0' && s_info->profile[0] == '\0') ||
+             strncmp(s_info->profile, profile, sizeof(s_info->profile)) == 0)) {
             list_for_each(node_j, &s_info->format_list) {
                 sf_info = node_to_item(node_j, struct stream_format, list);
                 if (sf_info->format == format) {
@@ -613,6 +620,7 @@ void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
                                   uint32_t sample_rate,
                                   uint32_t bit_width,
                                   audio_channel_mask_t channel_mask,
+                                  char *profile,
                                   struct stream_app_type_cfg *app_type_cfg)
 {
     struct listnode *node_i, *node_j;
@@ -661,11 +669,14 @@ void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
               __func__, sample_rate, bit_width);
     }
 
-    ALOGV("%s: flags: %x, format: %x sample_rate %d",
-           __func__, flags, format, sample_rate);
+    ALOGV("%s: flags: %x, format: %x sample_rate %d, profile %s",
+           __func__, flags, format, sample_rate, profile);
     list_for_each(node_i, streams_output_cfg_list) {
         s_info = node_to_item(node_i, struct streams_io_cfg, list);
-        if (s_info->flags.out_flags == flags) {
+        /* Along with flags do profile matching if set at either end.*/
+        if (s_info->flags.out_flags == flags &&
+            ((profile[0] == '\0' && s_info->profile[0] == '\0') ||
+             strncmp(s_info->profile, profile, sizeof(s_info->profile)) == 0)) {
             list_for_each(node_j, &s_info->format_list) {
                 sf_info = node_to_item(node_j, struct stream_format, list);
                 if (sf_info->format == format) {
@@ -723,6 +734,7 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
                                                 usecase->stream.out->sample_rate,
                                                 usecase->stream.out->bit_width,
                                                 usecase->stream.out->channel_mask,
+                                                usecase->stream.out->profile,
                                                 &usecase->stream.out->app_type_cfg);
         ALOGV("%s Selected apptype: %d", __func__, usecase->stream.out->app_type_cfg.app_type);
         break;
@@ -734,6 +746,7 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
                                                 usecase->stream.in->format,
                                                 usecase->stream.in->sample_rate,
                                                 usecase->stream.in->bit_width,
+                                                usecase->stream.in->profile,
                                                 &usecase->stream.in->app_type_cfg);
         ALOGV("%s Selected apptype: %d", __func__, usecase->stream.in->app_type_cfg.app_type);
         break;

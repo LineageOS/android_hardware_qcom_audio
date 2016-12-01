@@ -162,6 +162,9 @@ __BEGIN_DECLS
 
 #define QAHW_OFFLOAD_CODEC_VORBIS_BITSTREAM_FMT "music_offload_vorbis_bitstream_fmt"
 
+/* Set or Query stream profile type */
+#define QAHW_PARAMETER_STREAM_PROFILE "audio_stream_profile"
+
 /* Query fm volume */
 #define QAHW_PARAMETER_KEY_FM_VOLUME "fm_volume"
 

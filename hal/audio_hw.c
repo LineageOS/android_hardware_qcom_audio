@@ -2671,6 +2671,20 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         pthread_mutex_unlock(&out->lock);
     }
 
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_PROFILE, value, sizeof(value));
+    if (err >= 0) {
+        strlcpy(out->profile, value, sizeof(out->profile));
+        ALOGV("updating stream profile with value '%s'", out->profile);
+        lock_output_stream(out);
+        audio_extn_utils_update_stream_output_app_type_cfg(adev->platform,
+                                                          &adev->streams_output_cfg_list,
+                                                          out->devices, out->flags, out->format,
+                                                          out->sample_rate, out->bit_width,
+                                                          out->channel_mask, out->profile,
+                                                          &out->app_type_cfg);
+        pthread_mutex_unlock(&out->lock);
+    }
+
     str_parms_destroy(parms);
 error:
     ALOGV("%s: exit: code(%d)", __func__, ret);
@@ -3508,6 +3522,17 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
         }
     }
 
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_PROFILE, value, sizeof(value));
+    if (err >= 0) {
+        strlcpy(in->profile, value, sizeof(in->profile));
+        ALOGV("updating stream profile with value '%s'", in->profile);
+        audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
+                                                          &adev->streams_input_cfg_list,
+                                                          in->device, in->flags, in->format,
+                                                          in->sample_rate, in->bit_width,
+                                                          in->profile, &in->app_type_cfg);
+    }
+
     pthread_mutex_unlock(&adev->lock);
     pthread_mutex_unlock(&in->lock);
 
@@ -4130,7 +4155,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     audio_extn_utils_update_stream_output_app_type_cfg(adev->platform,
                                                 &adev->streams_output_cfg_list,
                                                 devices, flags, format, out->sample_rate,
-                                                out->bit_width, out->channel_mask,
+                                                out->bit_width, out->channel_mask, out->profile,
                                                 &out->app_type_cfg);
     if ((out->usecase == USECASE_AUDIO_PLAYBACK_PRIMARY) ||
         (flags & AUDIO_OUTPUT_FLAG_PRIMARY)) {
@@ -4764,7 +4789,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
                                                 &adev->streams_input_cfg_list,
                                                 devices, flags, in->format, in->sample_rate,
-                                                in->bit_width, &in->app_type_cfg);
+                                                in->bit_width, in->profile, &in->app_type_cfg);
 
     /* This stream could be for sound trigger lab,
        get sound trigger pcm if present */
