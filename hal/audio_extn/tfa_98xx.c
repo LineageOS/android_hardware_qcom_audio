@@ -404,14 +404,26 @@ void audio_extn_tfa_98xx_set_mode(void)
             return;
 
         ret = tfa_98xx_set_func_mode(I2S_CLOCK_ENABLE, data->adev, new_func_mode);
-        if (ret)
-        {
+        if (ret) {
             ALOGE("%s: tfa_98xx_set_func_mode enable return %d\n", __func__, ret);
         }
         data->update_ref_cnt = true;
     }
 
     ALOGV("%s: exit\n", __func__);
+}
+
+void audio_extn_tfa_98xx_set_mode_bt(void)
+{
+    struct speaker_data *data = tfa98xx_speaker_data;
+    int ret = 0;
+
+    if (data) {
+        ret = tfa_98xx_set_func_mode(I2S_CLOCK_ENABLE, data->adev, Func_Mode_BT);
+        if (ret) {
+            ALOGE("%s: tfa_98xx_set_func_mode enable return %d\n", __func__, ret);
+        }
+    }
 }
 
 void audio_extn_tfa_98xx_update(void)

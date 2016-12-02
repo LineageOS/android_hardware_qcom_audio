@@ -21,6 +21,7 @@
 int audio_extn_tfa_98xx_enable_speaker(void);
 void audio_extn_tfa_98xx_disable_speaker(snd_device_t snd_device);
 void audio_extn_tfa_98xx_set_mode();
+void audio_extn_tfa_98xx_set_mode_bt(void);
 void audio_extn_tfa_98xx_update(void);
 void audio_extn_tfa_98xx_set_voice_vol(int vol);
 int audio_extn_tfa_98xx_init(struct audio_device *adev);
@@ -30,6 +31,7 @@ bool audio_extn_tfa_98xx_is_supported(void);
 #define audio_extn_tfa_98xx_enable_speaker(void)                (0)
 #define audio_extn_tfa_98xx_disable_speaker(snd_device)         (0)
 #define audio_extn_tfa_98xx_set_mode()                          (0)
+#define audio_extn_tfa_98xx_set_mode_bt()                       (0)
 #define audio_extn_tfa_98xx_update(void)                        (0)
 #define audio_extn_tfa_98xx_set_voice_vol(vol)                  (0)
 #define audio_extn_tfa_98xx_init(adev)                          (0)
