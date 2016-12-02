@@ -23,6 +23,7 @@
 #include <dlfcn.h>
 #include "audio_extn.h"
 #include <platform.h>
+#include <math.h>
 
 #define LIB_SPEAKER_BUNDLE "/system/lib/libexTfa98xx.so"
 
@@ -48,6 +49,8 @@ typedef enum exTfa98xx_Func_Mode exTfa98xx_func_mode_t;
 
 #define I2S_CLOCK_ENABLE        1
 #define I2S_CLOCK_DISABLE       0
+#define HFP_MAX_VOLUME          (15.000000)
+#define TFA_98XX_HFP_VSETPS     (5.0)
 
 exTfa98xx_audio_mode_t current_audio_mode = Audio_Mode_None;
 
@@ -335,6 +338,9 @@ void audio_extn_tfa_98xx_disable_speaker(snd_device_t snd_device)
             }
         }
 
+        if (data->adev->enable_hfp)
+            data->set_speaker_volume_step(0, 0);
+
         tfa_98xx_disable_speaker();
     }
 
@@ -459,13 +465,25 @@ on_error:
 
 }
 
-
-void audio_extn_tfa_98xx_set_voice_vol(int vol)
+void audio_extn_tfa_98xx_set_voice_vol(float vol)
 {
     struct speaker_data *data = tfa98xx_speaker_data;
+    int vsteps = 0;
 
-    if (data)
-        data->set_speaker_volume_step(vol, vol);
+    if (data) {
+        if (data->adev->enable_hfp) {
+            if (vol < 0.0) {
+                vol = 0.0;
+            } else {
+                vol = ((vol > HFP_MAX_VOLUME) ? 1.0 : (vol / HFP_MAX_VOLUME));
+            }
+            vsteps = (int)floorf((1.0 - vol) * TFA_98XX_HFP_VSETPS);
+        } else {
+            return;
+        }
+        ALOGD("%s: vsteps %d\n", __func__, vsteps);
+        data->set_speaker_volume_step(vsteps, vsteps);
+    }
 }
 
 bool audio_extn_tfa_98xx_is_supported(void)

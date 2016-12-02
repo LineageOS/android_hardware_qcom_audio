@@ -89,6 +89,7 @@ static int32_t hfp_set_volume(struct audio_device *adev, float value)
     ALOGD("%s: (%f)\n", __func__, value);
 
     hfpmod.hfp_volume = value;
+    audio_extn_tfa_98xx_set_voice_vol(value);
 
     if (value < 0.0) {
         ALOGW("%s: (%f) Under 0.0, assuming 0.0\n", __func__, value);
