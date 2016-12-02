@@ -385,6 +385,7 @@ struct audio_device {
     bool is_channel_status_set;
     void *platform;
     unsigned int offload_usecases_state;
+    unsigned int pcm_record_uc_state;
     void *visualizer_lib;
     int (*visualizer_start_output)(audio_io_handle_t, int);
     int (*visualizer_stop_output)(audio_io_handle_t, int);

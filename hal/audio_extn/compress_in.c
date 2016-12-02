@@ -84,7 +84,8 @@ static pthread_mutex_t cin_lock = PTHREAD_MUTEX_INITIALIZER;
 
 bool audio_extn_cin_applicable_stream(struct stream_in *in)
 {
-    if (in->flags & AUDIO_INPUT_FLAG_TIMESTAMP)
+    if ((in->flags & AUDIO_INPUT_FLAG_TIMESTAMP) ||
+        in->usecase == USECASE_AUDIO_RECORD_COMPRESS2)
         return true;
 
     return false;
@@ -256,7 +257,8 @@ int audio_extn_cin_configure_input_stream(struct stream_in *in)
     int ret = 0, buffer_size = 0, meta_size = sizeof(struct snd_codec_metadata);
     cin_private_data_t *cin_data = NULL;
 
-    if (!COMPRESSED_TIMESTAMP_FLAG) {
+    if (!COMPRESSED_TIMESTAMP_FLAG &&
+        (in->flags & AUDIO_INPUT_FLAG_TIMESTAMP)) {
         ALOGE("%s: timestamp mode not supported!", __func__);
         return -EINVAL;
     }

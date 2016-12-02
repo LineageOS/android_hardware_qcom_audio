@@ -4672,7 +4672,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         }
     }
 
-    /* Update config params with the requested sample rate and channels */
     in->usecase = USECASE_AUDIO_RECORD;
     if (config->sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE &&
             (flags & AUDIO_INPUT_FLAG_FAST) != 0) {
@@ -4683,6 +4682,24 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->realtime = may_use_noirq_mode(adev, in->usecase, in->flags);
     }
 
+    pthread_mutex_lock(&adev->lock);
+    if (in->usecase == USECASE_AUDIO_RECORD) {
+        if (!(adev->pcm_record_uc_state) &&
+            ((flags & AUDIO_INPUT_FLAG_TIMESTAMP) == 0)) {
+            ALOGV("%s: pcm record usecase", __func__);
+            adev->pcm_record_uc_state = 1;
+        } else {
+            /*
+             * Assign default compress record use case, actual use case
+             * assignment will happen later.
+             */
+             in->usecase = USECASE_AUDIO_RECORD_COMPRESS2;
+             ALOGV("%s: compress record usecase", __func__);
+        }
+    }
+    pthread_mutex_unlock(&adev->lock);
+
+    /* Update config params with the requested sample rate and channels */
     if (in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) {
         if (adev->mode != AUDIO_MODE_IN_CALL) {
             ret = -EINVAL;
@@ -4796,6 +4813,13 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     if (audio_extn_compr_cap_enabled() &&
             audio_extn_compr_cap_format_supported(in->config.format))
         audio_extn_compr_cap_deinit();
+
+    if (in->usecase == USECASE_AUDIO_RECORD) {
+        pthread_mutex_lock(&adev->lock);
+        adev->pcm_record_uc_state = 0;
+        pthread_mutex_unlock(&adev->lock);
+    }
+
     if (audio_extn_cin_attached_usecase(in->usecase))
         audio_extn_cin_close_input_stream(in);
 
@@ -4927,6 +4951,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     list_init(&adev->usecase_list);
     adev->cur_wfd_channels = 2;
     adev->offload_usecases_state = 0;
+    adev->pcm_record_uc_state = 0;
     adev->is_channel_status_set = false;
     adev->perf_lock_opts[0] = 0x101;
     adev->perf_lock_opts[1] = 0x20E;
