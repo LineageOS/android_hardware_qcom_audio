@@ -259,6 +259,8 @@ static int32_t start_hfp(struct audio_device *adev,
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
+    audio_extn_tfa_98xx_set_mode_bt();
+
     select_devices(adev, hfpmod.ucid);
 
     pcm_dev_rx_id = platform_get_pcm_device_id(uc_info->id, PCM_PLAYBACK);
