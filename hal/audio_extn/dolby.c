@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2014, 2016 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2010 The Android Open Source Project
@@ -517,11 +517,13 @@ void audio_extn_dolby_set_license(struct audio_device *adev)
 struct ds2_extn_module  {
    void *ds2_handle;
    dap_hal_set_hw_info_t dap_hal_set_hw_info;
+   int license_status;
 };
 
 static struct ds2_extn_module ds2extnmod = {
     .ds2_handle = NULL,
     .dap_hal_set_hw_info = NULL,
+    .license_status = -EINVAL,
 };
 
 int audio_extn_dap_hal_init(int snd_card) {
@@ -554,6 +556,7 @@ close:
     dlclose(ds2extnmod.ds2_handle);
     ds2extnmod.ds2_handle = NULL;
     ds2extnmod.dap_hal_set_hw_info = NULL;
+    ds2extnmod.license_status = -EINVAL;
 ret:
     return ret;
 }
@@ -564,6 +567,7 @@ int audio_extn_dap_hal_deinit() {
        ds2extnmod.ds2_handle = NULL;
     }
     ds2extnmod.dap_hal_set_hw_info = NULL;
+    ds2extnmod.license_status = -EINVAL;
     return 0;
 }
 
@@ -572,6 +576,11 @@ void audio_extn_dolby_ds2_set_endpoint(struct audio_device *adev) {
     struct audio_usecase *usecase;
     int endpoint = 0;
     bool send = false;
+
+    //This is to check if the license is set successfully
+    if(ds2extnmod.license_status < 0) {
+        audio_extn_dolby_set_license(adev);
+    }
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
@@ -656,7 +665,10 @@ void audio_extn_dolby_set_license(struct audio_device *adev __unused)
     dolby_license.dmid = i_dmid;
     dolby_license.license_key = i_key;
     if (ds2extnmod.dap_hal_set_hw_info) {
-        ds2extnmod.dap_hal_set_hw_info(DMID, (void*)(&dolby_license.dmid));
+        ds2extnmod.license_status = ds2extnmod.dap_hal_set_hw_info(DMID, (void*)(&dolby_license.dmid));
+        if (ds2extnmod.license_status < 0) {
+            ALOGE("%s Could not set DS1 License. Status: %d",__func__, ds2extnmod.license_status);
+        }
     } else {
         ALOGV("%s: dap_hal_set_hw_info is NULL", __func__);
         return;
