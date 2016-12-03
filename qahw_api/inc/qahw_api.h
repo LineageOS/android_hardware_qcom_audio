@@ -395,6 +395,12 @@ int qahw_set_voice_volume(qahw_module_handle_t *hw_module, float volume);
  */
 int qahw_set_mode(qahw_module_handle_t *hw_module, audio_mode_t mode);
 
+/* Mute/unmute mic during voice/voip/HFP call */
+int qahw_set_mic_mute(qahw_module_handle_t *hw_module, bool state);
+
+/* Get mute/unmute status of mic during voice call */
+int qahw_get_mic_mute(qahw_module_handle_t *hw_module, bool *state);
+
 /* set/get global audio parameters */
 int qahw_set_parameters(qahw_module_handle_t *hw_module, const char *kv_pairs);
 

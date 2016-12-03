@@ -38,6 +38,7 @@ struct audio_config_params {
     char output_filename[256];
     double loopTime;
     char profile[50];
+    bool bt_wbs;
 };
 
 #define SOUNDFOCUS_PARAMS "SoundFocus.start_angles;SoundFocus.enable_sectors;" \
@@ -184,6 +185,11 @@ void *start_input(void *thread_param)
   strlcat(param, params->profile, sizeof(param));
   qahw_in_set_parameters(in_handle, param);
 
+  if (params->input_device == AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
+      char param1[50];
+      snprintf(param1, sizeof(param1), "bt_wbs=%s", ((params->bt_wbs == 1) ? "on" : "off"));
+      qahw_set_parameters(qahw_mod_handle, param1);
+  }
   printf("\nPlease speak into the microphone for %lf seconds.\n", params->loopTime);
 
   FILE *fd = fopen(params->output_filename,"w");
@@ -246,12 +252,14 @@ int read_config_params_from_user(struct audio_config_params *thread_param, int r
 
     thread_param->kStreamName = "input_stream";
 
-    printf(" \n Enter input device (4->built-in mic, 16->wired_headset .. etc) ::::: ");
+    printf(" \n Enter input device (4->built-in mic, 16->wired_headset, 8->sco_mic .. etc) ::::: ");
     scanf(" %d", &device);
-    if (device & AUDIO_DEVICE_IN_BUILTIN_MIC)
-        thread_param->input_device = AUDIO_DEVICE_IN_BUILTIN_MIC;
-    else if (device & AUDIO_DEVICE_IN_WIRED_HEADSET)
-        thread_param->input_device = AUDIO_DEVICE_IN_WIRED_HEADSET;
+    thread_param->input_device = device | AUDIO_DEVICE_BIT_IN;
+
+    if (thread_param->input_device == AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
+         printf(" \n Enable wbs for BT sco?? (1 - Enable 0 - Disable) ::::: ");
+         scanf("%d", &thread_param->bt_wbs);
+    }
 
     printf(" \n Enter the channels (1 -mono, 2 -stereo and 4 -quad channels) ::::: ");
     scanf(" %d", &channels);
@@ -283,7 +291,7 @@ int read_config_params_from_user(struct audio_config_params *thread_param, int r
     scanf(" %d", &sample_rate);
     thread_param->config.sample_rate = sample_rate;
 
-#ifdef MULTIRECORD_SUPPOT
+#ifdef MULTIRECORD_SUPPORT
     printf(" \n Enter profile (none, record_fluence, record_mec, record_unprocessed etc) :::: ");
     scanf(" %s", thread_param->profile);
 #else
@@ -325,7 +333,7 @@ int main() {
         printf(" qahw_load_module failed");
         return -1;
     }
-#ifdef MULTIRECORD_SUPPOT
+#ifdef MULTIRECORD_SUPPORT
     printf("Starting audio hal multi recording test. \n");
     printf(" Enter number of record sessions to be started \n");
     printf("             (Maximum of 4 record sessions are allowed)::::  ");
@@ -435,7 +443,7 @@ int main() {
 
         if (test_completed)
             break;
-#ifdef MULTIRECORD_SUPPOT
+#ifdef MULTIRECORD_SUPPORT
         char ch;
         printf("\n Bad mic test required (y/n):::");
         scanf(" %c", &ch);

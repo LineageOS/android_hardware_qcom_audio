@@ -18,7 +18,7 @@
  */
 
 #define LOG_TAG "msm8974_platform"
-/*#define LOG_NDEBUG 0*/
+//#define LOG_NDEBUG 0
 #define LOG_NDDEBUG 0
 /*#define VERY_VERY_VERBOSE_LOGGING*/
 #ifdef VERY_VERY_VERBOSE_LOGGING
@@ -65,6 +65,8 @@
 #define MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE (2 * 1024)
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE_FOR_AV_STREAMING (2 * 1024)
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
+
+#define DEFAULT_RX_BACKEND "SLIMBUS_0_RX"
 
 /*
  * Offload buffer size for compress passthrough
@@ -368,7 +370,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = "voice-tty-hco-handset",
     [SND_DEVICE_OUT_VOICE_TX] = "voice-tx",
     [SND_DEVICE_OUT_AFE_PROXY] = "afe-proxy",
-    [SND_DEVICE_OUT_USB_HEADSET] = "usb-headphones",
+    [SND_DEVICE_OUT_USB_HEADSET] = "usb-headset",
+    [SND_DEVICE_OUT_USB_HEADPHONES] = "usb-headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = "speaker-and-usb-headphones",
     [SND_DEVICE_OUT_TRANSMISSION_FM] = "transmission-fm",
     [SND_DEVICE_OUT_ANC_HEADSET] = "anc-headphones",
@@ -495,6 +498,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TX] = 45,
     [SND_DEVICE_OUT_AFE_PROXY] = 0,
     [SND_DEVICE_OUT_USB_HEADSET] = 45,
+    [SND_DEVICE_OUT_USB_HEADPHONES] = 45,
     [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 14,
     [SND_DEVICE_OUT_TRANSMISSION_FM] = 0,
     [SND_DEVICE_OUT_ANC_HEADSET] = 26,
@@ -622,6 +626,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_AFE_PROXY)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_USB_HEADSET)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_USB_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_TRANSMISSION_FM)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_ANC_HEADSET)},
@@ -1136,7 +1141,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_OUT_VOICE_TX] = strdup("afe-proxy");
     backend_tag_table[SND_DEVICE_IN_VOICE_RX] = strdup("afe-proxy");
     backend_tag_table[SND_DEVICE_OUT_AFE_PROXY] = strdup("afe-proxy");
-    backend_tag_table[SND_DEVICE_OUT_USB_HEADSET] = strdup("usb-headphones");
+    backend_tag_table[SND_DEVICE_OUT_USB_HEADSET] = strdup("usb-headset");
+    backend_tag_table[SND_DEVICE_OUT_USB_HEADPHONES] = strdup("usb-headphones");
     backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] =
         strdup("speaker-and-usb-headphones");
     backend_tag_table[SND_DEVICE_IN_USB_HEADSET_MIC] = strdup("usb-headset-mic");
@@ -1156,6 +1162,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_DISPLAY_PORT] = strdup("DISPLAY_PORT_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_DISPLAY_PORT] = strdup("SLIMBUS_0_RX-and-DISPLAY_PORT_RX");
     hw_interface_table[SND_DEVICE_OUT_USB_HEADSET] = strdup("USB_AUDIO_RX");
+    hw_interface_table[SND_DEVICE_OUT_USB_HEADPHONES] = strdup("USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = strdup("SLIMBUS_0_RX-and-USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TX] = strdup("AFE_PCM_RX");
 
@@ -1980,9 +1987,9 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
     if (NULL != be_itf1 && NULL != be_itf2) {
         if ((NULL == strstr(be_itf2, be_itf1)) && (NULL == strstr(be_itf1, be_itf2)))
             result = false;
-    } else if (NULL == be_itf1 && NULL != be_itf2) {
+    } else if (NULL == be_itf1 && NULL != be_itf2 && (NULL == strstr(be_itf2, DEFAULT_RX_BACKEND))) {
             result = false;
-    } else if (NULL != be_itf1 && NULL == be_itf2) {
+    } else if (NULL != be_itf1 && NULL == be_itf2 && (NULL == strstr(be_itf1, DEFAULT_RX_BACKEND))) {
             result = false;
     }
 
@@ -2355,7 +2362,8 @@ int platform_get_backend_index(snd_device_t snd_device)
                         port = HDMI_RX_BACKEND;
                 else if (strcmp(backend_tag_table[snd_device], "display-port") == 0)
                         port = DISP_PORT_RX_BACKEND;
-                else if (strcmp(backend_tag_table[snd_device], "usb-headphones") == 0)
+                else if ((strcmp(backend_tag_table[snd_device], "usb-headphones") == 0) ||
+                           (strcmp(backend_tag_table[snd_device], "usb-headset") == 0))
                         port = USB_AUDIO_RX_BACKEND;
         }
     } else if (snd_device >= SND_DEVICE_IN_BEGIN && snd_device < SND_DEVICE_IN_END) {
@@ -2996,7 +3004,10 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         audio_extn_set_afe_proxy_channel_mixer(adev, 2);
         snd_device = SND_DEVICE_OUT_USB_HEADSET;
     } else if (devices & AUDIO_DEVICE_OUT_USB_DEVICE) {
-        snd_device = SND_DEVICE_OUT_USB_HEADSET;
+        if (audio_extn_usb_is_capture_supported())
+            snd_device = SND_DEVICE_OUT_USB_HEADSET;
+        else
+            snd_device = SND_DEVICE_OUT_USB_HEADPHONES;
     } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
         snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
     } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
@@ -3380,7 +3391,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                    out_device & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_USB_DEVICE) {
-            snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
+            if (audio_extn_usb_is_capture_supported())
+              snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
+            else
+              snd_device = SND_DEVICE_IN_HANDSET_MIC;
         } else {
             ALOGE("%s: Unknown output device(s) %#x", __func__, out_device);
             ALOGW("%s: Using default handset-mic", __func__);
@@ -5656,7 +5670,8 @@ int platform_set_sidetone(struct audio_device *adev,
                           char *str)
 {
     int ret;
-    if (out_snd_device == SND_DEVICE_OUT_USB_HEADSET) {
+    if ((out_snd_device == SND_DEVICE_OUT_USB_HEADSET) ||
+            (out_snd_device == SND_DEVICE_OUT_USB_HEADPHONES)) {
         if (property_get_bool("audio.debug.usb.disable_sidetone", 0)) {
             ALOGI("Debug: Disable sidetone");
         } else {
@@ -5846,4 +5861,54 @@ ERROR_RETURN:
 int platform_get_max_mic_count(void *platform) {
     struct platform_data *my_data = (struct platform_data *)platform;
     return my_data->max_mic_count;
+}
+
+static struct amp_db_and_gain_table tbl_mapping[MAX_VOLUME_CAL_STEPS];
+static int num_gain_tbl_entry = 0;
+
+bool platform_add_gain_level_mapping(struct amp_db_and_gain_table *tbl_entry) {
+
+    ALOGV("%s: enter .. add %f %f %d", __func__, tbl_entry->amp, tbl_entry->db, tbl_entry->level);
+    if (num_gain_tbl_entry == -1) {
+        ALOGE("%s: num entry beyond valid step levels or corrupted..rejecting custom mapping",
+               __func__);
+        return false;
+    }
+
+    if (num_gain_tbl_entry >= MAX_VOLUME_CAL_STEPS) {
+        ALOGE("%s: max entry reached max[%d] current index[%d]  .. rejecting", __func__,
+               MAX_VOLUME_CAL_STEPS, num_gain_tbl_entry);
+        num_gain_tbl_entry  = -1; // indicates error and no more info will be cached
+        return false;
+    }
+
+    if (num_gain_tbl_entry > 0 && tbl_mapping[num_gain_tbl_entry - 1].amp >= tbl_entry->amp) {
+        ALOGE("%s: value not in ascending order .. rejecting custom mapping", __func__);
+        num_gain_tbl_entry  = -1; // indicates error and no more info will be cached
+        return false;
+    }
+
+    tbl_mapping[num_gain_tbl_entry] = *tbl_entry;
+    ++num_gain_tbl_entry;
+
+    return true;
+}
+
+int platform_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl,
+                                    int table_size) {
+    int itt = 0;
+    ALOGV("platform_get_gain_level_mapping called ");
+
+    if (num_gain_tbl_entry <= 0 || num_gain_tbl_entry > MAX_VOLUME_CAL_STEPS) {
+        ALOGD("%s: empty or currupted gain_mapping_table", __func__);
+        return 0;
+    }
+
+    for (; itt < num_gain_tbl_entry && itt <= table_size; itt++) {
+        mapping_tbl[itt] = tbl_mapping[itt];
+        ALOGV("%s: added amp[%f] db[%f] level[%d]", __func__,
+               mapping_tbl[itt].amp, mapping_tbl[itt].db, mapping_tbl[itt].level);
+    }
+
+    return num_gain_tbl_entry;
 }

@@ -469,6 +469,27 @@ static int check_and_set_gapless_mode(struct audio_device *adev, bool enable_gap
     return 0;
 }
 
+__attribute__ ((visibility ("default")))
+int audio_hw_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl,
+                                    int table_size) {
+     int ret_val = 0;
+     ALOGV("%s: enter ... ", __func__);
+
+     pthread_mutex_lock(&adev_init_lock);
+     if (adev == NULL) {
+         ALOGW("%s: adev is NULL .... ", __func__);
+         goto done;
+     }
+
+     pthread_mutex_lock(&adev->lock);
+     ret_val = platform_get_gain_level_mapping(mapping_tbl, table_size);
+     pthread_mutex_unlock(&adev->lock);
+done:
+     pthread_mutex_unlock(&adev_init_lock);
+     ALOGV("%s: exit ... ", __func__);
+     return ret_val;
+}
+
 static bool is_supported_format(audio_format_t format)
 {
     if (format == AUDIO_FORMAT_MP3 ||
@@ -3625,7 +3646,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
                 if (bytes % 4 == 0) {
                     /* data from DSP comes in 24_8 format, convert it to 8_24 */
                     int_buf_stream = buffer;
-                    for (size_t itt=0; itt < bytes/4 ; itt++) {
+                    size_t itt = 0;
+                    for (itt = 0; itt < bytes/4 ; itt++) {
                         int_buf_stream[itt] >>= 8;
                     }
                 } else {
@@ -4397,7 +4419,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
              */
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
-                audio_extn_usb_add_device(val, atoi(value));
+                audio_extn_usb_add_device(AUDIO_DEVICE_OUT_USB_DEVICE, atoi(value));
+                audio_extn_usb_add_device(AUDIO_DEVICE_IN_USB_DEVICE, atoi(value));
             }
             ALOGV("detected USB connect .. disable proxy");
             adev->allow_afe_proxy_usage = false;
@@ -4417,7 +4440,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                    !(val ^ AUDIO_DEVICE_IN_USB_DEVICE)) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
-                audio_extn_usb_remove_device(val, atoi(value));
+                audio_extn_usb_remove_device(AUDIO_DEVICE_OUT_USB_DEVICE, atoi(value));
+                audio_extn_usb_remove_device(AUDIO_DEVICE_IN_USB_DEVICE, atoi(value));
             }
             ALOGV("detected USB disconnect .. enable proxy");
             adev->allow_afe_proxy_usage = true;

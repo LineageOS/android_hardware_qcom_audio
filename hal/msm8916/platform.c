@@ -39,10 +39,6 @@
 #include <dirent.h>
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
 #define MAX_MIXER_XML_PATH  100
-#define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
-#define MIXER_XML_PATH_MTP "/system/etc/mixer_paths_mtp.xml"
-#define MIXER_XML_PATH_SBC "/system/etc/mixer_paths_sbc.xml"
-#define MIXER_XML_PATH_MSM8909_PM8916 "/system/etc/mixer_paths_msm8909_pm8916.xml"
 #define MIXER_XML_PATH_QRD_SKUH "/system/etc/mixer_paths_qrd_skuh.xml"
 #define MIXER_XML_PATH_QRD_SKUI "/system/etc/mixer_paths_qrd_skui.xml"
 #define MIXER_XML_PATH_QRD_SKUHF "/system/etc/mixer_paths_qrd_skuhf.xml"
@@ -53,7 +49,6 @@
 #define MIXER_XML_PATH_SKUL "/system/etc/mixer_paths_skul.xml"
 #define MIXER_XML_PATH_SKUM "/system/etc/mixer_paths_qrd_skum.xml"
 #define MIXER_XML_PATH_SKU1 "/system/etc/mixer_paths_qrd_sku1.xml"
-#define MIXER_XML_PATH_SKU2 "/system/etc/mixer_paths_qrd_sku2.xml"
 #define MIXER_XML_PATH_SKUN_CAJON "/system/etc/mixer_paths_qrd_skun_cajon.xml"
 #define MIXER_XML_PATH_SKU3 "/system/etc/mixer_paths_qrd_sku3.xml"
 #define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
@@ -62,10 +57,30 @@
 #define MIXER_XML_PATH_WCD9306 "/system/etc/mixer_paths_wcd9306.xml"
 #define MIXER_XML_PATH_WCD9330 "/system/etc/mixer_paths_wcd9330.xml"
 #define MIXER_XML_PATH_WCD9335 "/system/etc/mixer_paths_wcd9335.xml"
-#define MIXER_XML_PATH_WCD9326 "/system/etc/mixer_paths_wcd9326.xml"
-#define MIXER_XML_PATH_SKUN "/system/etc/mixer_paths_qrd_skun.xml"
-#define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
+#ifdef LINUX_ENABLED
+#define MIXER_XML_PATH "/etc/mixer_paths.xml"
+#define MIXER_XML_PATH_MSM8909_PM8916 "/etc/mixer_paths_msm8909_pm8916.xml"
+#define MIXER_XML_PATH_MTP "/etc/mixer_paths_mtp.xml"
+#define MIXER_XML_PATH_SKU2 "/etc/mixer_paths_qrd_sku2.xml"
+#define MIXER_XML_PATH_WCD9326 "/etc/mixer_paths_wcd9326.xml"
+#define PLATFORM_INFO_XML_PATH_EXTCODEC  "/etc/audio_platform_info_extcodec.xml"
+#define PLATFORM_INFO_XML_PATH      "/etc/audio_platform_info.xml"
+#define MIXER_XML_PATH_WCD9326_I2S "/etc/mixer_paths_wcd9326_i2s.xml"
+#define MIXER_XML_PATH_WCD9330_I2S "/etc/mixer_paths_wcd9330_i2s.xml"
+#define MIXER_XML_PATH_SBC "/etc/mixer_paths_sbc.xml"
+#else
+#define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
+#define MIXER_XML_PATH_MSM8909_PM8916 "/system/etc/mixer_paths_msm8909_pm8916.xml"
+#define MIXER_XML_PATH_MTP "/system/etc/mixer_paths_mtp.xml"
+#define MIXER_XML_PATH_SKU2 "/system/etc/mixer_paths_qrd_sku2.xml"
 #define PLATFORM_INFO_XML_PATH_EXTCODEC  "/system/etc/audio_platform_info_extcodec.xml"
+#define MIXER_XML_PATH_WCD9326 "/system/etc/mixer_paths_wcd9326.xml"
+#define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
+#define MIXER_XML_PATH_WCD9326_I2S  "/system/etc/mixer_paths_wcd9326_i2s.xml"
+#define MIXER_XML_PATH_WCD9330_I2S "/system/etc/mixer_paths_wcd9330_i2s.xml"
+#define MIXER_XML_PATH_SBC "/system/etc/mixer_paths_sbc.xml"
+#endif
+#define MIXER_XML_PATH_SKUN "/system/etc/mixer_paths_qrd_skun.xml"
 
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define CVD_VERSION_MIXER_CTL "CVD Version"
@@ -75,6 +90,7 @@
 #define MIN_COMPRESS_OFFLOAD_FRAGMENT_SIZE (2 * 1024)
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE_FOR_AV_STREAMING (2 * 1024)
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
+#define DEFAULT_RX_BACKEND "SLIMBUS_0_RX"
 
 /*
  * Offload buffer size for compress passthrough
@@ -367,7 +383,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = "voice-tty-hco-handset",
     [SND_DEVICE_OUT_VOICE_TX] = "voice-tx",
     [SND_DEVICE_OUT_AFE_PROXY] = "afe-proxy",
-    [SND_DEVICE_OUT_USB_HEADSET] = "usb-headphones",
+    [SND_DEVICE_OUT_USB_HEADSET] = "usb-headset",
+    [SND_DEVICE_OUT_USB_HEADPHONES] = "usb-headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = "speaker-and-usb-headphones",
     [SND_DEVICE_OUT_TRANSMISSION_FM] = "transmission-fm",
     [SND_DEVICE_OUT_ANC_HEADSET] = "anc-headphones",
@@ -500,6 +517,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TX] = 45,
     [SND_DEVICE_OUT_AFE_PROXY] = 0,
     [SND_DEVICE_OUT_USB_HEADSET] = 45,
+    [SND_DEVICE_OUT_USB_HEADPHONES] = 45,
     [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 14,
     [SND_DEVICE_OUT_TRANSMISSION_FM] = 0,
     [SND_DEVICE_OUT_ANC_HEADSET] = 26,
@@ -634,6 +652,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TX)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_AFE_PROXY)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_USB_HEADSET)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_USB_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_TRANSMISSION_FM)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_ANC_HEADSET)},
@@ -850,7 +869,11 @@ static void update_codec_type(const char *snd_card_name) {
          !strncmp(snd_card_name, "msm8953-tashalite-snd-card",
                   sizeof("msm8953-tashalite-snd-card")) ||
          !strncmp(snd_card_name, "msmfalcon-tasha-snd-card",
-                  sizeof("msmfalcon-tasha-snd-card")))
+                  sizeof("msmfalcon-tasha-snd-card")) ||
+         !strncmp(snd_card_name, "apq8009-tashalite-snd-card",
+                  sizeof("apq8009-tashalite-snd-card")) ||
+         !strncmp(snd_card_name, "mdm9607-tomtom-i2s-snd-card",
+                  sizeof("mdm9607-tomtom-i2s-snd-card")))
      {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          is_external_codec = true;
@@ -1152,6 +1175,20 @@ static void query_platform(const char *snd_card_name,
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+   } else if (!strncmp(snd_card_name, "apq8009-tashalite-snd-card",
+                 sizeof("apq8009-tashalite-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9326_I2S,
+               MAX_MIXER_XML_PATH);
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+    } else if (!strncmp(snd_card_name, "mdm9607-tomtom-i2s-snd-card",
+                 sizeof("mdm9607-tomtom-i2s-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9330_I2S,
+                sizeof(MIXER_XML_PATH_WCD9330_I2S));
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
     } else {
         strlcpy(mixer_xml_path, MIXER_XML_PATH,
                 sizeof(MIXER_XML_PATH));
@@ -1248,7 +1285,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_OUT_VOICE_TX] = strdup("afe-proxy");
     backend_tag_table[SND_DEVICE_IN_VOICE_RX] = strdup("afe-proxy");
     backend_tag_table[SND_DEVICE_OUT_AFE_PROXY] = strdup("afe-proxy");
-    backend_tag_table[SND_DEVICE_OUT_USB_HEADSET] = strdup("usb-headphones");
+    backend_tag_table[SND_DEVICE_OUT_USB_HEADSET] = strdup("usb-headset");
+    backend_tag_table[SND_DEVICE_OUT_USB_HEADPHONES] = strdup("usb-headphones");
     backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] =
         strdup("speaker-and-usb-headphones");
     backend_tag_table[SND_DEVICE_IN_USB_HEADSET_MIC] = strdup("usb-headset-mic");
@@ -1268,6 +1306,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_DISPLAY_PORT] = strdup("DISPLAY_PORT_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_DISPLAY_PORT] = strdup("SLIMBUS_0_RX-and-DISPLAY_PORT_RX");
     hw_interface_table[SND_DEVICE_OUT_USB_HEADSET] = strdup("USB_AUDIO_RX");
+    hw_interface_table[SND_DEVICE_OUT_USB_HEADPHONES] = strdup("USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = strdup("SLIMBUS_0_RX-and-USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TX] = strdup("AFE_PCM_RX");
 
@@ -2165,9 +2204,9 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
     if (NULL != be_itf1 && NULL != be_itf2) {
         if ((NULL == strstr(be_itf2, be_itf1)) && (NULL == strstr(be_itf1, be_itf2)))
             result = false;
-    } else if (NULL == be_itf1 && NULL != be_itf2) {
+    } else if (NULL == be_itf1 && NULL != be_itf2 && (NULL == strstr(be_itf2, DEFAULT_RX_BACKEND))) {
             result = false;
-    } else if (NULL != be_itf1 && NULL == be_itf2) {
+    } else if (NULL != be_itf1 && NULL == be_itf2 && (NULL == strstr(be_itf1, DEFAULT_RX_BACKEND))) {
             result = false;
     }
 
@@ -3257,7 +3296,10 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         audio_extn_set_afe_proxy_channel_mixer(adev, 2);
         snd_device = SND_DEVICE_OUT_USB_HEADSET;
     } else if (devices & AUDIO_DEVICE_OUT_USB_DEVICE) {
-        snd_device = SND_DEVICE_OUT_USB_HEADSET;
+        if (audio_extn_usb_is_capture_supported())
+           snd_device = SND_DEVICE_OUT_USB_HEADSET;
+        else
+           snd_device = SND_DEVICE_OUT_USB_HEADPHONES;
     } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
         snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
     } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
@@ -3655,7 +3697,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                    out_device & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else if (out_device & AUDIO_DEVICE_OUT_USB_DEVICE) {
-            snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
+            if (audio_extn_usb_is_capture_supported())
+                snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
+            else
+                snd_device = SND_DEVICE_IN_HANDSET_MIC;
         } else {
             ALOGE("%s: Unknown output device(s) %#x", __func__, out_device);
             ALOGW("%s: Using default handset-mic", __func__);
@@ -5719,7 +5764,8 @@ int platform_set_sidetone(struct audio_device *adev,
                           char *str)
 {
     int ret;
-    if (out_snd_device == SND_DEVICE_OUT_USB_HEADSET) {
+    if ((out_snd_device == SND_DEVICE_OUT_USB_HEADSET) ||
+         (out_snd_device == SND_DEVICE_OUT_USB_HEADPHONES)) {
             ret = audio_extn_usb_enable_sidetone(out_snd_device, enable);
             if (ret)
                 ALOGI("%s: usb device %d does not support device sidetone\n",
@@ -5787,4 +5833,15 @@ int platform_retrieve_audio_cal(void* platform __unused,
 int platform_get_max_mic_count(void *platform) {
     struct platform_data *my_data = (struct platform_data *)platform;
     return my_data->max_mic_count;
+}
+
+bool platform_add_gain_level_mapping(struct amp_db_and_gain_table *tbl_entry __unused)
+{
+    return false;
+}
+
+int platform_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl __unused,
+                                    int table_size __unused)
+{
+    return 0;
 }

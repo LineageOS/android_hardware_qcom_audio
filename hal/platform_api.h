@@ -20,6 +20,8 @@
 #ifndef AUDIO_PLATFORM_API_H
 #define AUDIO_PLATFORM_API_H
 #include <sound/voice_params.h>
+#include "audio_hw.h"
+#include "voice.h"
 
 #define CODEC_BACKEND_DEFAULT_BIT_WIDTH 16
 #define CODEC_BACKEND_DEFAULT_SAMPLE_RATE 48000
@@ -28,6 +30,13 @@
 #define SAMPLE_RATE_8000 8000
 #define SAMPLE_RATE_11025 11025
 #define sample_rate_multiple(sr, base) ((sr % base)== 0?true:false)
+#define MAX_VOLUME_CAL_STEPS 15
+
+struct amp_db_and_gain_table {
+    float amp;
+    float db;
+    uint32_t level;
+};
 
 enum {
     NATIVE_AUDIO_MODE_SRC = 1,
@@ -47,6 +56,19 @@ enum card_status_t;
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
 const char *platform_get_snd_device_name(snd_device_t snd_device);
+
+/* return true if adding entry success
+   return false if adding entry fails */
+
+bool platform_add_gain_level_mapping(struct amp_db_and_gain_table *tbl_entry);
+
+/* return 0 if no custome mapping table found or when error detected
+            use default mapping in this case
+   return > 0 indicates number of entries in mapping table */
+
+int platform_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl,
+                                    int table_size);
+
 int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
                                       char *device_name);
 void platform_add_backend_name(char *mixer_path, snd_device_t snd_device,

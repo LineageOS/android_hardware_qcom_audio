@@ -74,6 +74,13 @@
         <!-- In the below value string, the value indicates sidetone gain in dB -->
         <param key="usb_sidetone_gain" value="35"/>
     </config_params>
+    <gain_db_to_level_mapping>
+        <gain_level_map db="-59" level="5"/>
+        <gain_level_map db="-17.4" level="4"/>
+        <gain_level_map db="-13.8" level="3"/>
+        <gain_level_map db="-10.2" level="2"/>
+        <gain_level_map db="0" level="1"/>
+    </gain_db_to_level_mapping>
     <backend_names>
         <device name="SND_DEVICE_OUT_HEADPHONES" backend="headphones" interface="SLIMBUS_6_RX"/>
         <device name="SND_DEVICE_OUT_LINE" backend="headphones" interface="SLIMBUS_6_RX"/>

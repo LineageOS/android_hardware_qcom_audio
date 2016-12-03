@@ -158,6 +158,7 @@ int32_t audio_extn_get_afe_proxy_channel_count();
 #define audio_extn_usb_is_config_supported(bit_width, sample_rate, ch, pb) (0)
 #define audio_extn_usb_enable_sidetone(device, enable)                 (0)
 #define audio_extn_usb_set_sidetone_gain(parms, value, len)            (0)
+#define audio_extn_usb_is_capture_supported()                          (0)
 #else
 void audio_extn_usb_init(void *adev);
 void audio_extn_usb_deinit();
@@ -170,6 +171,7 @@ bool audio_extn_usb_is_config_supported(unsigned int *bit_width,
 int audio_extn_usb_enable_sidetone(int device, bool enable);
 int audio_extn_usb_set_sidetone_gain(struct str_parms *parms,
                                      char *value, int len);
+bool audio_extn_usb_is_capture_supported();
 #endif
 
 #ifndef SPLIT_A2DP_ENABLED
