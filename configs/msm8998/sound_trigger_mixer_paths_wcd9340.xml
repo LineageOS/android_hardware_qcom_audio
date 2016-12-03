@@ -90,6 +90,13 @@
         <ctl name="MAD_CPE1 Switch" value="1" />
     </path>
 
+    <path name="listen-cpe-headset-mic">
+        <ctl name="MAD Input" value="ADC2" />
+        <ctl name="MAD_SEL MUX" value="SPE" />
+        <ctl name="MAD_INP MUX" value="MAD" />
+        <ctl name="MAD_CPE1 Switch" value="1" />
+    </path>
+
     <path name="listen-cpe-handset-mic-ecpp">
         <ctl name="CLK MODE" value="INTERNAL" />
         <ctl name="EC BUF MUX INP" value="DEC1" />
