@@ -2370,6 +2370,8 @@ int platform_get_backend_index(snd_device_t snd_device)
         if (backend_tag_table[snd_device] != NULL) {
                 if (strcmp(backend_tag_table[snd_device], "usb-headset-mic") == 0)
                         port = USB_AUDIO_TX_BACKEND;
+                else if (strstr(backend_tag_table[snd_device], "bt-sco") != NULL)
+                        port = BT_SCO_TX_BACKEND;
         }
     } else {
         ALOGW("%s:napb: Invalid device - %d ", __func__, snd_device);
@@ -3025,6 +3027,10 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
+    /*
+     * TODO: active_input always points to last opened input. Source returned will
+     * be wrong if more than one active inputs are present.
+     */
     audio_source_t  source = (adev->active_input == NULL) ?
                                 AUDIO_SOURCE_DEFAULT : adev->active_input->source;
 
@@ -4357,8 +4363,8 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
           sample_rate, channels, backend_idx,
           platform_get_snd_device_name(snd_device));
 
-    if (bit_width !=
-        my_data->current_backend_cfg[backend_idx].bit_width) {
+    if ((my_data->current_backend_cfg[backend_idx].bitwidth_mixer_ctl) &&
+        (bit_width != my_data->current_backend_cfg[backend_idx].bit_width)) {
 
         struct  mixer_ctl *ctl = NULL;
         ctl = mixer_get_ctl_by_name(adev->mixer,
@@ -4392,8 +4398,8 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
         ret = 0;
     }
 
-    if (sample_rate !=
-       my_data->current_backend_cfg[backend_idx].sample_rate) {
+    if ((my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl) &&
+        (sample_rate != my_data->current_backend_cfg[backend_idx].sample_rate)) {
             char *rate_str = NULL;
             struct  mixer_ctl *ctl = NULL;
 

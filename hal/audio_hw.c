@@ -1089,10 +1089,19 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
     struct audio_usecase *usecase;
     bool switch_device[AUDIO_USECASE_MAX];
     int i, num_uc_to_switch = 0;
+    int backend_check_cond = AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND;
 
     bool force_routing = platform_check_and_set_capture_codec_backend_cfg(adev, uc_info,
                          snd_device);
     ALOGD("%s:becf: force routing %d", __func__, force_routing);
+
+    /*
+     * Make sure out devices is checked against out codec backend device and
+     * also in devices against in codec backend. Checking out device against in
+     * codec backend or vice versa causes issues.
+     */
+    if (uc_info->type == PCM_CAPTURE)
+        backend_check_cond = AUDIO_DEVICE_IN_ALL_CODEC_BACKEND;
     /*
      * This function is to make sure that all the active capture usecases
      * are always routed to the same input sound device.
@@ -1108,10 +1117,13 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
+        /*
+         * TODO: Enhance below condition to handle BT sco/USB multi recording
+         */
         if (usecase->type != PCM_PLAYBACK &&
                 usecase != uc_info &&
                 (usecase->in_snd_device != snd_device || force_routing) &&
-                ((uc_info->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) &&
+                ((uc_info->devices & backend_check_cond) &&
                  (((usecase->devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_CODEC_BACKEND) ||
                   (usecase->type == VOICE_CALL) || (usecase->type == VOIP_CALL))) &&
                 (usecase->id != USECASE_AUDIO_SPKR_CALIB_TX)) {
