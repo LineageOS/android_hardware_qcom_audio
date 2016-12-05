@@ -2017,6 +2017,7 @@
         <ctl name="RX INT1 MIX3 DSD HPHL Switch" value="1" />
         <ctl name="RX INT2 MIX3 DSD HPHR Switch" value="1" />
         <ctl name="SLIM_2_RX Format" value="DSD_DOP" />
+        <ctl name="RX HPH Mode" value="CLS_H_HIFI" />
     </path>
 
     <path name="hph-highquality-mode">
