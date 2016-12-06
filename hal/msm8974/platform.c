@@ -1010,23 +1010,36 @@ void *platform_init(struct audio_device *adev)
     list_init(&operator_info_list);
 
     set_platform_defaults(my_data);
+    bool card_verifed[MAX_SND_CARD] = {0};
+    const int retry_limit = property_get_int32("audio.snd_card.open.retries", RETRY_NUMBER);
 
-    while (snd_card_num < MAX_SND_CARD) {
-        adev->mixer = mixer_open(snd_card_num);
+    for (;;) {
+        if (snd_card_num >= MAX_SND_CARD) {
+            if (retry_num++ >= retry_limit) {
+                ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
+                goto init_failed;
+            }
 
-        while (!adev->mixer && retry_num < RETRY_NUMBER) {
+            snd_card_num = 0;
             usleep(RETRY_US);
-            adev->mixer = mixer_open(snd_card_num);
-            retry_num++;
+            continue;
         }
+
+        if (card_verifed[snd_card_num]) {
+            ++snd_card_num;
+            continue;
+        }
+
+        adev->mixer = mixer_open(snd_card_num);
 
         if (!adev->mixer) {
             ALOGE("%s: Unable to open the mixer card: %d", __func__,
-                   snd_card_num);
-            retry_num = 0;
-            snd_card_num++;
+               snd_card_num);
+            ++snd_card_num;
             continue;
         }
+
+        card_verifed[snd_card_num] = true;
 
         snd_card_name = mixer_get_name(adev->mixer);
         my_data->hw_info = hw_info_init(snd_card_name);
@@ -1106,8 +1119,9 @@ void *platform_init(struct audio_device *adev)
                         min(strlen(snd_card_name), strlen(my_data->snd_card_name))) != 0) {
             ALOGI("%s: found valid sound card %s, but not primary sound card %s",
                    __func__, snd_card_name, my_data->snd_card_name);
-            retry_num = 0;
-            snd_card_num++;
+            ++snd_card_num;
+            mixer_close(adev->mixer);
+            adev->mixer = NULL;
             hw_info_deinit(my_data->hw_info);
             my_data->hw_info = NULL;
             continue;
@@ -1120,16 +1134,15 @@ void *platform_init(struct audio_device *adev)
 
         if (!adev->audio_route) {
             ALOGE("%s: Failed to init audio route controls, aborting.", __func__);
+            mixer_close(adev->mixer);
+            adev->mixer = NULL;
+            hw_info_deinit(my_data->hw_info);
+            my_data->hw_info = NULL;
             goto init_failed;
         }
         adev->snd_card = snd_card_num;
         ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
         break;
-    }
-
-    if (snd_card_num >= MAX_SND_CARD) {
-        ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
-        goto init_failed;
     }
 
     //set max volume step for voice call
@@ -1850,47 +1863,46 @@ int platform_set_device_mute(void *platform, bool state, char *dir)
     return ret;
 }
 
-bool platform_can_split_snd_device(snd_device_t snd_device,
-                                   int *num_devices,
-                                   snd_device_t *new_snd_devices)
+int platform_can_split_snd_device(snd_device_t snd_device,
+                                  int *num_devices,
+                                  snd_device_t *new_snd_devices)
 {
-    bool status = false;
-
+    int ret = -EINVAL;
     if (NULL == num_devices || NULL == new_snd_devices) {
         ALOGE("%s: NULL pointer ..", __func__);
-        return false;
+        return -EINVAL;
     }
 
     /*
      * If wired headset/headphones/line devices share the same backend
-     * with speaker/earpiece this routine returns false.
+     * with speaker/earpiece this routine returns -EINVAL.
      */
     if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES &&
         !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_HEADPHONES)) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_HEADPHONES;
-        status = true;
+        ret = 0;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_LINE &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_LINE)) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_LINE;
-        status = true;
+        ret = 0;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_SAFE_AND_HEADPHONES &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER_SAFE, SND_DEVICE_OUT_HEADPHONES)) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER_SAFE;
         new_snd_devices[1] = SND_DEVICE_OUT_HEADPHONES;
-        status = true;
+        ret = 0;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_SAFE_AND_LINE &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER_SAFE, SND_DEVICE_OUT_LINE)) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER_SAFE;
         new_snd_devices[1] = SND_DEVICE_OUT_LINE;
-        status = true;
+        ret = 0;
     }
-    return status;
+    return ret;
 }
 
 snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devices)
@@ -2742,6 +2754,14 @@ int platform_swap_lr_channels(struct audio_device *adev, bool swap_channels)
     struct platform_data *my_data = (struct platform_data *)adev->platform;
 
     if (my_data->speaker_lr_swap != swap_channels) {
+
+        // do not swap channels in audio modes with concurrent capture and playback
+        // as this may break the echo reference
+        if ((adev->mode == AUDIO_MODE_IN_COMMUNICATION) || (adev->mode == AUDIO_MODE_IN_CALL)) {
+            ALOGV("%s: will not swap due to audio mode %d", __func__, adev->mode);
+            return 0;
+        }
+
         my_data->speaker_lr_swap = swap_channels;
 
         list_for_each(node, &adev->usecase_list) {

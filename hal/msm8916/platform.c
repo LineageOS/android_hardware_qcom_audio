@@ -1424,35 +1424,35 @@ int platform_set_device_mute(void *platform, bool state, char *dir)
     return ret;
 }
 
-bool platform_can_split_snd_device(snd_device_t snd_device,
+int platform_can_split_snd_device(snd_device_t snd_device,
                                    int *num_devices,
                                    snd_device_t *new_snd_devices)
 {
-    bool status = false;
+    int ret = -EINVAL;
 
     if (NULL == num_devices || NULL == new_snd_devices) {
         ALOGE("%s: NULL pointer ..", __func__);
-        return false;
+        return -EINVAL;
     }
 
     /*
      * If wired headset/headphones/line devices share the same backend
-     * with speaker/earpiece this routine returns false.
+     * with speaker/earpiece this routine -EINVAL.
      */
     if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES &&
         !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_HEADPHONES)) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_HEADPHONES;
-        status = true;
+        ret = 0;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_LINE &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_LINE)) {
         *num_devices = 2;
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_LINE;
-        status = true;
+        ret = 0;
     }
-    return status;
+    return ret;
 }
 
 snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devices)
