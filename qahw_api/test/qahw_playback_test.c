@@ -24,10 +24,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <time.h>
 #include "qahw_api.h"
 #include "qahw_defs.h"
 
 #define nullptr NULL
+
+#define LATENCY_NODE "/sys/kernel/debug/audio_out_latency_measurement_node"
+#define LATENCY_NODE_INIT_STR "1"
 
 #define AFE_PROXY_SAMPLING_RATE 48000
 #define AFE_PROXY_CHANNEL_COUNT 2
@@ -171,8 +175,8 @@ void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
     }
 }
 
-int async_callback(qahw_stream_callback_event_t event, void *param,
-                  void *cookie)
+int async_callback(qahw_stream_callback_event_t event, void *param __unused,
+                  void *cookie __unused)
 {
     switch (event) {
     case QAHW_STREAM_CBK_EVENT_WRITE_READY:
@@ -276,10 +280,10 @@ int write_to_hal(qahw_stream_handle_t* out_handle, char *data,
 
     ret = qahw_out_write(out_handle, &out_buf);
     if (ret < 0 || ret == bytes) {
-        fprintf(log_file, "Writing data to hal failed or full write %ld, %ld\n",
+        fprintf(log_file, "Writing data to hal failed or full write %zd, %zd\n",
             ret, bytes);
     } else if (ret != bytes) {
-        fprintf(log_file, "ret %ld, bytes %ld\n", ret, bytes);
+        fprintf(log_file, "ret %zd, bytes %zd\n", ret, bytes);
         fprintf(log_file, "Waiting for event write ready\n");
         pthread_cond_wait(&write_cond, &write_lock);
         fprintf(log_file, "out of wait for event write ready\n");
@@ -310,7 +314,6 @@ int play_file(qahw_stream_handle_t* out_handle, FILE* in_file,
     size_t bytes_written = 0;
     size_t bytes_read = 0;
     char  *data = NULL;
-    qahw_out_buffer_t out_buf;
     bool exit = false;
 
     if (is_offload) {
@@ -332,17 +335,15 @@ int play_file(qahw_stream_handle_t* out_handle, FILE* in_file,
     while (!exit) {
         if (!bytes_remaining) {
             bytes_read = fread(data, 1, bytes_wanted, in_file);
-            fprintf(log_file, "fread from file %ld\n", bytes_read);
+            fprintf(log_file, "fread from file %zd\n", bytes_read);
             if (bytes_read <= 0) {
                 if (feof(in_file)) {
                     fprintf(log_file, "End of file\n");
                     if (is_offload) {
                         pthread_mutex_lock(&drain_lock);
-                        if (is_offload) {
-                            qahw_out_drain(out_handle, QAHW_DRAIN_ALL);
-                            pthread_cond_wait(&drain_cond, &drain_lock);
-                            fprintf(log_file, "Out of compress drain\n");
-                        }
+                        qahw_out_drain(out_handle, QAHW_DRAIN_ALL);
+                        pthread_cond_wait(&drain_cond, &drain_lock);
+                        fprintf(log_file, "Out of compress drain\n");
                         pthread_mutex_unlock(&drain_lock);
                     }
                 } else {
@@ -356,11 +357,11 @@ int play_file(qahw_stream_handle_t* out_handle, FILE* in_file,
         }
 
         offset = write_length - bytes_remaining;
-        fprintf(log_file, "bytes_remaining %ld, offset %d, write length %ld\n",
+        fprintf(log_file, "bytes_remaining %zd, offset %d, write length %zd\n",
                 bytes_remaining, offset, write_length);
         bytes_written = write_to_hal(out_handle, data+offset, bytes_remaining);
         bytes_remaining -= bytes_written;
-        fprintf(log_file, "bytes_written %ld, bytes_remaining %ld\n",
+        fprintf(log_file, "bytes_written %zd, bytes_remaining %zd\n",
                 bytes_written, bytes_remaining);
     }
 
@@ -428,10 +429,92 @@ audio_format_t get_aac_format(int filetype, aac_format_type_t format_type)
     return aac_format;
 }
 
+int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
+    int rc = 0;
+    int offset = 0;
+    size_t bytes_wanted = 0;
+    size_t write_length = 0;
+    size_t bytes_remaining = 0;
+    size_t bytes_written = 0;
+    char  *data = NULL;
+    int ret = 0, count = 0;
+    struct timespec ts_cold, ts_cont;
+    uint64_t tcold, tcont, scold = 0, uscold = 0, scont = 0, uscont = 0;
+
+    if (is_offload) {
+        fprintf(log_file, "Set callback for offload stream\n");
+        qahw_out_set_callback(out_handle, async_callback, NULL);
+    }
+
+    FILE *fd_latency_node = fopen(LATENCY_NODE, "r+");
+    if (fd_latency_node) {
+        ret = fwrite(LATENCY_NODE_INIT_STR, sizeof(LATENCY_NODE_INIT_STR), 1, fd_latency_node);
+        if (ret<1)
+            fprintf(log_file, "error(%d) writing to debug node!", ret);
+        fflush(fd_latency_node);
+    } else {
+        fprintf(log_file, "debug node(%s) open failed!", LATENCY_NODE);
+        return -1;
+    }
+
+    bytes_wanted = qahw_out_get_buffer_size(out_handle);
+    data = (char *) calloc (1, bytes_wanted);
+    if (data == NULL) {
+        fprintf(log_file, "calloc failed!!\n");
+        return -ENOMEM;
+    }
+
+    while (count < 64) {
+        if (!bytes_remaining) {
+            bytes_remaining = write_length = bytes_wanted;
+        }
+        if (count == 0) {
+            ret = clock_gettime(CLOCK_REALTIME, &ts_cold);
+            if (ret) {
+                fprintf(log_file, "error(%d) fetching start time for cold latency", ret);
+                return -1;
+            }
+        } else if (count == 16) {
+            int *d = (int *)data;
+            d[0] = 0x01010000;
+            ret = clock_gettime(CLOCK_REALTIME, &ts_cont);
+            if (ret) {
+                fprintf(log_file, "error(%d) fetching start time for continuous latency", ret);
+                return -1;
+            }
+        }
+
+        offset = write_length - bytes_remaining;
+        bytes_written = write_to_hal(out_handle, data+offset, bytes_remaining);
+        bytes_remaining -= bytes_written;
+        fprintf(log_file, "bytes_written %zd, bytes_remaining %zd\n",
+                bytes_written, bytes_remaining);
+
+        if (count == 16) {
+            int *i = (int *)data;
+            i[0] = 0x00000000;
+        }
+        count++;
+    }
+
+    char latency_buf[200] = {0};
+    fread((void *) latency_buf, 100, 1, fd_latency_node);
+    fclose(fd_latency_node);
+    sscanf(latency_buf, " %llu,%llu,%*llu,%*llu,%llu,%llu", &scold, &uscold, &scont, &uscont);
+    tcold = scold*1000 - ts_cold.tv_sec*1000 + uscold/1000 - ts_cold.tv_nsec/1000000;
+    tcont = scont*1000 - ts_cont.tv_sec*1000 + uscont/1000 - ts_cont.tv_nsec/1000000;
+    fprintf(log_file, "\n values from debug node %s\n", latency_buf);
+    fprintf(log_file, " cold latency %llums, continuous latency %llums,\n", tcold, tcont);
+    fprintf(log_file, " **Note: please add DSP Pipe/PP latency numbers to this, for final latency values\n");
+    return rc;
+}
+
 void usage() {
     printf(" \n Command \n");
-    printf(" \n hal_play_test <file path>    - path of file to be played\n");
+    printf(" \n hal_play_test -f file-path <options>   - Plays audio file from the path provided\n");
     printf(" \n Options\n");
+    printf(" -f  --file-path <file path>               - file path to be used for playback.\n");
+    printf("                                             file path must be provided unless -K(--kpi) is used\n\n");
     printf(" -r  --sample-rate <sampling rate>         - Required for Non-WAV streams\n");
     printf("                                             For AAC-HE pls specify half the sample rate\n\n");
     printf(" -c  --channel count <channels>            - Required for Non-WAV streams\n\n");
@@ -447,45 +530,50 @@ void usage() {
     printf("                                             See Example for more info\n\n");
     printf(" -l  --log-file <ABSOLUTE FILEPATH>        - File path for debug msg, to print\n");
     printf("                                             on console use stdout or 1 \n\n");
-    printf(" -f  --pcm-dump <ABSOLUTE FILEPATH>        - File path to save pcm data from proxy\n");
+    printf(" -D  --dump-file <ABSOLUTE FILEPATH>       - File path to dump pcm data from proxy\n");
+    printf(" -F  --flags <int value for output flags>  - Output flag to be used\n\n");
+    printf(" -k  --kpi-mode                            - Required for Latency KPI measurement\n");
+    printf("                                             file path is not used here as file playback is not done in this mode\n");
+    printf("                                             file path and other file specific options would be ignored in this mode.\n\n");
     printf(" \n Examples \n");
-    printf(" hal_play_test /etc/Anukoledenadu.wav     -> plays Wav stream with default params\n\n");
-    printf(" hal_play_test /etc/MateRani.mp3 -t 2 -d 2 -v 0.01 -r 44100 -c 2 \n");
+    printf(" hal_play_test -f /etc/Anukoledenadu.wav     -> plays Wav stream with default params\n\n");
+    printf(" hal_play_test -f /etc/MateRani.mp3 -t 2 -d 2 -v 0.01 -r 44100 -c 2 \n");
     printf("                                          -> plays MP3 stream(-t = 2) on speaker device(-d = 2)\n");
     printf("                                          -> 2 channels and 44100 sample rate\n\n");
-    printf(" hal_play_test /etc/v1-CBR-32kHz-stereo-40kbps.mp3 -t 2 -d 128 -v 0.01 -r 32000 -c 2 -f /data/proxy_dump.wav\n");
+    printf(" hal_play_test -f /etc/v1-CBR-32kHz-stereo-40kbps.mp3 -t 2 -d 128 -v 0.01 -r 32000 -c 2 -D /data/proxy_dump.wav\n");
     printf("                                          -> plays MP3 stream(-t = 2) on BT device(-d = 128)\n");
     printf("                                          -> 2 channels and 32000 sample rate\n");
-    printf("                                          -> saves pcm data to file at /data/proxy_dump.wav\n\n");
-    printf(" hal_play_test /etc/AACLC-71-48000Hz-384000bps.aac  -t 4 -d 2 -v 0.05 -r 48000 -c 2 -a 1 \n");
+    printf("                                          -> dumps pcm data to file at /data/proxy_dump.wav\n\n");
+    printf(" hal_play_test -f /etc/AACLC-71-48000Hz-384000bps.aac  -t 4 -d 2 -v 0.05 -r 48000 -c 2 -a 1 \n");
     printf("                                          -> plays AAC-ADTS stream(-t = 4) on speaker device(-d = 2)\n");
     printf("                                          -> AAC format type is LC(-a = 1)\n");
     printf("                                          -> 2 channels and 48000 sample rate\n\n");
-    printf(" hal_play_test /etc/AACHE-adts-stereo-32000KHz-128000Kbps.aac  -t 4 -d 2 -v 0.05 -r 16000 -c 2 -a 3 \n");
+    printf(" hal_play_test -f /etc/AACHE-adts-stereo-32000KHz-128000Kbps.aac  -t 4 -d 2 -v 0.05 -r 16000 -c 2 -a 3 \n");
     printf("                                          -> plays AAC-ADTS stream(-t = 4) on speaker device(-d = 2)\n");
     printf("                                          -> AAC format type is HE V2(-a = 3)\n");
     printf("                                          -> 2 channels and 16000 sample rate\n");
     printf("                                          -> note that the sample rate is half the actual sample rate\n\n");
-    printf(" hal_play_test /etc/2.0_16bit_48khz.m4a -k 1536000,16,0,0,4096,14,16388,0,10,2,40,48000,1536000,48000 -t 6 -r 48000 -c 2 -v 0.5 \n");
+    printf(" hal_play_test -f /etc/2.0_16bit_48khz.m4a -k 1536000,16,0,0,4096,14,16388,0,10,2,40,48000,1536000,48000 -t 6 -r 48000 -c 2 -v 0.5 \n");
     printf("                                          -> Play alac clip (-t = 6)\n");
     printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
     printf("                                          ->alac_avg_bit_rate,alac_bit_depth,alac_channel_layout,alac_compatible_version,\n");
     printf("                                          ->alac_frame_length,alac_kb,alac_max_frame_bytes,alac_max_run,alac_mb,\n");
     printf("                                          ->alac_num_channels,alac_pb,alac_sampling_rate,avg_bit_rate,sample_rate\n\n");
-    printf(" hal_play_test /etc/DIL CHAHTA HAI.flac -k 0,4096,13740,4096,14 -t 5 -r 48000 -c 2 -v 0.5 \n");
+    printf(" hal_play_test -f /etc/DIL CHAHTA HAI.flac -k 0,4096,13740,4096,14 -t 5 -r 48000 -c 2 -v 0.5 \n");
     printf("                                          -> Play flac clip (-t = 5)\n");
     printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
     printf("                                          ->avg_bit_rate,flac_max_blk_size,flac_max_frame_size\n");
     printf("                                          ->flac_min_blk_size,flac_min_frame_size,sample_rate\n");
-    printf(" hal_play_test /etc/vorbis.mka -k 500000,48000,1 -t 7 -r 48000 -c 2 -v 0.5 \n");
+    printf(" hal_play_test -f /etc/vorbis.mka -k 500000,48000,1 -t 7 -r 48000 -c 2 -v 0.5 \n");
     printf("                                          -> Play vorbis clip (-t = 7)\n");
     printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
     printf("                                          ->avg_bit_rate,sample_rate,vorbis_bitstream_fmt\n");
-    printf(" hal_play_test /etc/file.wma -k 192000,48000,16,8192,3,15,353 -t 8 -r 48000 -c 2 -v 0.5 \n");
+    printf(" hal_play_test -f /etc/file.wma -k 192000,48000,16,8192,3,15,353 -t 8 -r 48000 -c 2 -v 0.5 \n");
     printf("                                          -> Play wma clip (-t = 8)\n");
     printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
     printf("                                          ->avg_bit_rate,sample_rate,wma_bit_per_sample,wma_block_align\n");
     printf("                                          ->wma_channel_mask,wma_encode_option,wma_format_tag\n");
+    printf(" hal_play_test -K -F 4                    -> Measure latency KPIs for low latency output\n\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -504,25 +592,32 @@ int main(int argc, char* argv[]) {
     /*
      * Default values
      */
+    bool kpi_mode = false;
+    bool flags_set = false;
+    bool proxy_thread_active = false;
     int filetype = FILE_WAV;
     int sample_rate = 44100;
     int channels = 2;
-    const int audio_device_base = 0x2;/* spkr device*/
     aac_format_type_t format_type = AAC_LC;
     log_file = stdout;
     audio_devices_t output_device = AUDIO_DEVICE_OUT_SPEAKER;
+    audio_output_flags_t flags = AUDIO_OUTPUT_FLAG_NONE;
     proxy_params.acp.file_name = "/data/pcm_dump.wav";
 
     struct option long_options[] = {
         /* These options set a flag. */
+        {"file-path",     required_argument,    0, 'f'},
         {"device",        required_argument,    0, 'd'},
         {"sample-rate",   required_argument,    0, 'r'},
         {"channels",      required_argument,    0, 'c'},
         {"volume",        required_argument,    0, 'v'},
         {"log-file",      required_argument,    0, 'l'},
+        {"dump-file",     required_argument,    0, 'D'},
         {"file-type",     required_argument,    0, 't'},
         {"aac-type",      required_argument,    0, 'a'},
         {"kvpairs",       required_argument,    0, 'k'},
+        {"flags",         required_argument,    0, 'F'},
+        {"kpi-mode",      no_argument,          0, 'K'},
         {"help",          no_argument,          0, 'h'},
         {0, 0, 0, 0}
     };
@@ -544,10 +639,13 @@ int main(int argc, char* argv[]) {
     proxy_params.hdr.data_sz = 0;
     while ((opt = getopt_long(argc,
                               argv,
-                              "-r:c:d:v:l:t:a:k:f:h",
+                              "-f:r:c:d:v:l:t:a:k:D:KF:h",
                               long_options,
                               &option_index)) != -1) {
             switch (opt) {
+            case 'f':
+                filename = optarg;
+                break;
             case 'r':
                 sample_rate = atoi(optarg);
                 break;
@@ -555,21 +653,18 @@ int main(int argc, char* argv[]) {
                 channels = atoi(optarg);
                 break;
             case 'd':
-                output_device = atoi(optarg);
+                output_device = atoll(optarg);
                 break;
             case 'v':
                 vol_level = atof(optarg);
                 break;
             case 'l':
-                /*
-                 * Fix Me: unable to log to a given file.
-                 */
                 log_filename = optarg;
-                if((log_file = fopen(log_filename,"wb"))== NULL) {
+                if (strcasecmp(log_filename, "stdout") &&
+                    strcasecmp(log_filename, "1") &&
+                    (log_file = fopen(log_filename,"wb")) == NULL) {
                     fprintf(stderr, "Cannot open log file %s\n", log_filename);
-                    /*
-                     * continue to log to std out.
-                     */
+                    /* continue to log to std out. */
                     log_file = stdout;
                 }
 
@@ -583,8 +678,15 @@ int main(int argc, char* argv[]) {
             case 'k':
                 kvpair_values = optarg;
                 break;
-            case 'f':
+            case 'D':
                 proxy_params.acp.file_name = optarg;
+                break;
+            case 'K':
+                kpi_mode = true;
+                break;
+            case 'F':
+                flags = atoll(optarg);
+                flags_set = true;
                 break;
             case 'h':
                 usage();
@@ -593,21 +695,20 @@ int main(int argc, char* argv[]) {
          }
     }
 
-    filename = argv[1];
-    if((file_stream = fopen(filename, "r"))== NULL) {
-        fprintf(stderr, "Cannot Open Audio File %s\n", filename);
-        goto EXIT;
+    if (!kpi_mode) {
+        if (filename == nullptr) {
+            fprintf(stderr, "File name is must for non kpi-mode\n");
+            usage();
+            goto EXIT;
+        }
+        if ((file_stream = fopen(filename, "r"))== NULL) {
+            fprintf(stderr, "Cannot Open Audio File %s\n", filename);
+            goto EXIT;
+        }
+        fprintf(stdout, "Playing:%s\n", filename);
+        fprintf(stdout, "File Type:%d\n", filetype);
     }
 
-    /*
-     * Set to a high number so it doesn't interfere with existing stream handles
-     */
-
-    audio_io_handle_t handle = 0x999;
-    audio_output_flags_t flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD;
-
-    fprintf(stdout, "Playing:%s\n", filename);
-    fprintf(stdout, "File Type:%d\n", filetype);
     fprintf(stdout, "Sample Rate:%d\n", sample_rate);
     fprintf(stdout, "Channels:%d\n", channels);
     fprintf(stdout, "Log file:%s\n", log_filename);
@@ -615,6 +716,13 @@ int main(int argc, char* argv[]) {
     fprintf(stdout, "Output Device:%d\n", output_device);
     fprintf(stdout, "Format Type:%d\n", format_type);
     fprintf(stdout, "kvpair values:%s\n", kvpair_values);
+    fprintf(stdout, "Output Flags:%d\n", flags);
+
+    /*
+     * Set to a high number so it doesn't interfere with existing stream handles
+     */
+    audio_io_handle_t handle = 0x999;
+
     if (output_device & AUDIO_DEVICE_OUT_ALL_A2DP)
         fprintf(stdout, "Saving pcm data to file: %s\n", proxy_params.acp.file_name);
 
@@ -625,87 +733,69 @@ int main(int argc, char* argv[]) {
     audio_config_t config;
     memset(&config, 0, sizeof(audio_config_t));
 
-    switch (filetype) {
-    case FILE_WAV:
-        /*
-         * Read the wave header
-         */
-        rc = fread (header, 44 , 1, file_stream);
-        if (rc != 1) {
-           fprintf(stdout, "Error .Fread failed\n");
-           exit(0);
-        }
-        if (strncmp (header, "RIFF", 4) && strncmp (header+8, "WAVE", 4)) {
-           fprintf(stdout, "Not a wave format\n");
-           exit (1);
-        }
-        memcpy (&channels, &header[22], 2);
-        memcpy (&sample_rate, &header[24], 4);
-        config.channel_mask = audio_channel_out_mask_from_count(channels);
-        config.offload_info.channel_mask = config.channel_mask;
-        config.offload_info.sample_rate = sample_rate;
+    if (kpi_mode) {
         config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
-        break;
+    } else {
 
-    case FILE_MP3:
-        config.channel_mask = audio_channel_out_mask_from_count(channels);
-        config.offload_info.channel_mask = config.channel_mask;
-        config.sample_rate = sample_rate;
-        config.offload_info.sample_rate = sample_rate;
-        config.offload_info.format = AUDIO_FORMAT_MP3;
-        flags |= AUDIO_OUTPUT_FLAG_NON_BLOCKING;
-        break;
+        if (!flags_set)
+            flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING;
 
-    case FILE_AAC:
-    case FILE_AAC_ADTS:
-        config.channel_mask = audio_channel_out_mask_from_count(channels);
-        config.offload_info.channel_mask = config.channel_mask;
-        config.sample_rate = sample_rate;
-        config.offload_info.sample_rate = sample_rate;
-        if (!is_valid_aac_format_type(format_type)) {
-            fprintf(log_file, "Invalid format type for AAC %d\n", format_type);
-            goto EXIT;
+        switch (filetype) {
+        case FILE_WAV:
+            /*
+             * Read the wave header
+             */
+            rc = fread (header, 44 , 1, file_stream);
+            if (rc != 1) {
+               fprintf(stdout, "Error .Fread failed\n");
+               exit(0);
+            }
+            if (strncmp (header, "RIFF", 4) && strncmp (header+8, "WAVE", 4)) {
+               fprintf(stdout, "Not a wave format\n");
+               exit (1);
+            }
+            memcpy (&channels, &header[22], 2);
+            memcpy (&sample_rate, &header[24], 4);
+            config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
+            if (!flags_set)
+                flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD;
+            break;
+
+        case FILE_MP3:
+            config.offload_info.format = AUDIO_FORMAT_MP3;
+            break;
+
+        case FILE_AAC:
+        case FILE_AAC_ADTS:
+            if (!is_valid_aac_format_type(format_type)) {
+                fprintf(log_file, "Invalid format type for AAC %d\n", format_type);
+                goto EXIT;
+            }
+            config.offload_info.format = get_aac_format(filetype, format_type);
+            break;
+        case FILE_FLAC:
+            config.offload_info.format = AUDIO_FORMAT_FLAC;
+            break;
+        case FILE_ALAC:
+            config.offload_info.format = AUDIO_FORMAT_ALAC;
+            break;
+        case FILE_VORBIS:
+            config.offload_info.format = AUDIO_FORMAT_VORBIS;
+            break;
+        case FILE_WMA:
+            config.offload_info.format = AUDIO_FORMAT_WMA;
+            break;
+        default:
+           fprintf(stderr, "Does not support given filetype\n");
+           usage();
+           return 0;
         }
-        config.offload_info.format = get_aac_format(filetype, format_type);
-        flags |= AUDIO_OUTPUT_FLAG_NON_BLOCKING;
-        break;
-    case FILE_FLAC:
-        config.channel_mask = audio_channel_out_mask_from_count(channels);
-        config.offload_info.channel_mask = config.channel_mask;
-        config.sample_rate = sample_rate;
-        config.offload_info.sample_rate = sample_rate;
-        config.offload_info.format = AUDIO_FORMAT_FLAC;
-        flags |= AUDIO_OUTPUT_FLAG_NON_BLOCKING;
-        break;
-    case FILE_ALAC:
-        config.channel_mask = audio_channel_out_mask_from_count(channels);
-        config.offload_info.channel_mask = config.channel_mask;
-        config.sample_rate = sample_rate;
-        config.offload_info.sample_rate = sample_rate;
-        config.offload_info.format = AUDIO_FORMAT_ALAC;
-        flags |= AUDIO_OUTPUT_FLAG_NON_BLOCKING;
-        break;
-    case FILE_VORBIS:
-        config.channel_mask = audio_channel_out_mask_from_count(channels);
-        config.offload_info.channel_mask = config.channel_mask;
-        config.sample_rate = sample_rate;
-        config.offload_info.sample_rate = sample_rate;
-        config.offload_info.format = AUDIO_FORMAT_VORBIS;
-        flags |= AUDIO_OUTPUT_FLAG_NON_BLOCKING;
-        break;
-    case FILE_WMA:
-        config.channel_mask = audio_channel_out_mask_from_count(channels);
-        config.offload_info.channel_mask = config.channel_mask;
-        config.sample_rate = sample_rate;
-        config.offload_info.sample_rate = sample_rate;
-        config.offload_info.format = AUDIO_FORMAT_WMA;
-        flags |= AUDIO_OUTPUT_FLAG_NON_BLOCKING;
-        break;
-    default:
-       fprintf(stderr, "Does not support given filetype\n");
-       usage();
-       return 0;
     }
+    config.channel_mask = audio_channel_out_mask_from_count(channels);
+    config.sample_rate = sample_rate;
+    config.format = config.offload_info.format;
+    config.offload_info.channel_mask = config.channel_mask;
+    config.offload_info.sample_rate = sample_rate;
     config.offload_info.version = AUDIO_OFFLOAD_INFO_VERSION_CURRENT;
     config.offload_info.size = sizeof(audio_offload_info_t);
 
@@ -728,6 +818,11 @@ int main(int argc, char* argv[]) {
         , rc, out_handle);
     if (rc) {
         fprintf(stdout, "could not open output stream %d \n", rc);
+        goto EXIT;
+    }
+
+    if (kpi_mode) {
+        measure_kpi_values(out_handle, (flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD));
         goto EXIT;
     }
 
@@ -760,24 +855,30 @@ int main(int argc, char* argv[]) {
         proxy_params.acp.kInputSource = AUDIO_SOURCE_UNPROCESSED;
         proxy_params.acp.thread_exit = false;
         fprintf(log_file, "create thread to read data from proxy \n");
-        pthread_create(&proxy_thread, NULL, proxy_read, (void *)&proxy_params);
+        rc = pthread_create(&proxy_thread, NULL, proxy_read, (void *)&proxy_params);
+        if (!rc)
+            proxy_thread_active = true;
     }
     play_file(out_handle,
               file_stream,
              (flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD));
 
-    /*
-     * DSP gives drain ack for last buffer which will close proxy thread before
-     * app reads last buffer. So add sleep before exiting proxy thread to read
-     * last buffer of data. This is not a calculated value.
-     */
-    usleep(500000);
-    proxy_params.acp.thread_exit = true;
-    fprintf(log_file, "wait for thread exit\n");
+    if (proxy_thread_active) {
+        /*
+         * DSP gives drain ack for last buffer which will close proxy thread before
+         * app reads last buffer. So add sleep before exiting proxy thread to read
+         * last buffer of data. This is not a calculated value.
+         */
+        usleep(500000);
+        proxy_params.acp.thread_exit = true;
+        fprintf(log_file, "wait for proxy thread exit\n");
+    }
 
 EXIT:
 
-    pthread_join(proxy_thread, NULL);
+    if (proxy_thread_active)
+        pthread_join(proxy_thread, NULL);
+
     if (out_handle != nullptr) {
         rc = qahw_out_standby(out_handle);
         if (rc) {
