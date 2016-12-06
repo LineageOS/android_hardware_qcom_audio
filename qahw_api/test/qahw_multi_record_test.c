@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <cutils/list.h>
 #include <signal.h>
+#include <errno.h>
 #include "qahw_api.h"
 #include "qahw_defs.h"
 
@@ -88,12 +89,8 @@ static volatile int tests_completed;
                               "SoundFocus.enable_sectors=%s;" \
                               "SoundFocus.gain_step=%d"
 int sourcetrack_done = 0;
-static pthread_mutex_t glock;
 static pthread_mutex_t sourcetrack_lock;
 char soundfocus_param[100];
-pthread_cond_t gcond;
-int tests_running;
-bool gerror;
 
 void sourcetrack_signal_handler(void)
 {
@@ -142,50 +139,50 @@ void *read_sourcetrack_data(void* data)
         pthread_mutex_lock(&sourcetrack_lock);
         status = qahw_set_parameters(qawh_module_handle, soundfocus_param);
         if (status != 0)
-            printf("Error.Failed Set SoundFocus Params\n");
+            fprintf(log_file, "Error.Failed Set SoundFocus Params\n");
 
-        printf("\nGet SoundFocus Params from app");
+        fprintf(log_file, "\nGet SoundFocus Params from app");
         param = QAHW_PARAM_SOUND_FOCUS;
         status = qahw_get_param_data(qawh_module_handle, param, &payload);
         if (status < 0) {
-                printf("Failed to get sound focus params\n");
+                fprintf(log_file, "Failed to get sound focus params\n");
         } else {
            memcpy (&sound_focus_data, &payload.sf_params,
                    sizeof(struct qahw_sound_focus_param));
            for (idx = 0; idx < 4; idx++){
-                printf("\nstart_angle[%d]=%d",idx,
+                fprintf(log_file, "\nstart_angle[%d]=%d",idx,
                         payload.sf_params.start_angle[idx]);
-                printf(" enable[%d]=%d",idx,
+                fprintf(log_file, " enable[%d]=%d",idx,
                         payload.sf_params.enable[idx]);
-                printf(" gain=%d\n",payload.sf_params.gain_step);
+                fprintf(log_file, " gain=%d\n",payload.sf_params.gain_step);
            }
         }
         param = QAHW_PARAM_SOURCE_TRACK;
         status = qahw_get_param_data(qawh_module_handle, param, &payload);
         if (status < 0) {
-            printf ("Failed to get source tracking params\n");
+            fprintf (log_file, "Failed to get source tracking params\n");
         } else {
             for (idx = 0; idx < 4; idx++){
-                printf("vad[%d]=%d ",idx, payload.st_params.vad[idx]);
+                fprintf(log_file, "vad[%d]=%d ",idx, payload.st_params.vad[idx]);
                 if (idx < 3)
-                    printf("doa_noise[%d]=%d \n",
+                    fprintf(log_file, "doa_noise[%d]=%d \n",
                             idx, payload.st_params.doa_noise[idx]);
             }
-            printf("doa_speech=%d\n",payload.st_params.doa_speech);
-            printf("polar_activity:");
+            fprintf(log_file, "doa_speech=%d\n",payload.st_params.doa_speech);
+            fprintf(log_file, "polar_activity:");
             for (sect = 0; sect < 4; sect++ ){
-                printf("\nSector No-%d:\n",sect + 1);
+                fprintf(log_file, "\nSector No-%d:\n",sect + 1);
                 idx = sound_focus_data.start_angle[sect];
                 count = sound_focus_data.start_angle[(sect + 1)%4] -
                         sound_focus_data.start_angle[sect];
                 if (count <0)
                     count = count + 360;
                 do {
-                    printf("%d,",payload.st_params.polar_activity[idx%360]);
+                    fprintf(log_file, "%d,",payload.st_params.polar_activity[idx%360]);
                     count--;
                     idx++;
                 } while (count);
-                printf("\n");
+                fprintf(log_file, "\n");
             }
         }
         pthread_mutex_unlock(&sourcetrack_lock);
@@ -279,6 +276,7 @@ void *start_input(void *thread_param)
   /* Get buffer size to get upper bound on data to read from the HAL */
   size_t buffer_size = qahw_in_get_buffer_size(in_handle);
   char *buffer = (char *)calloc(1, buffer_size);
+  size_t written_size;
   if (buffer == NULL) {
       fprintf(log_file, "calloc failed!!, handle(%d)\n", params->handle);
       if (log_file != stdout)
@@ -373,17 +371,18 @@ void *start_input(void *thread_param)
                   fprintf(log_file, "error(%d) getting current time after 8th read!, handle(%d)", ret, params->handle);
           }
           count++;
-      fwrite(in_buf.buffer, sizeof(char), buffer_size, fd);
-      if(difftime(time(0), start_time) > params->loopTime) {
-          sourcetrack_done = 1;
-          printf("\nTest completed.\n");
-          break;
       }
 
       time_elapsed = difftime(time(0), start_time);
-      fwrite(in_buf.buffer, 1, buffer_size, fd);
+      written_size = fwrite(in_buf.buffer, 1, buffer_size, fd);
+      if (written_size < buffer_size) {
+         printf("Error in fwrite(%d)=%s\n",ferror(fd), strerror(ferror(fd)));
+         break;
+      }
       data_sz += buffer_size;
   }
+  /*Stopping sourcetracking thread*/
+  sourcetrack_done = 1;
 
   /* update lengths in header */
   hdr.data_sz = data_sz;
@@ -411,8 +410,9 @@ void *start_input(void *thread_param)
   }
 
   fprintf(log_file, " closing input, handle(%d)", params->handle);
+  printf("closing input");
 
-  /* Close output stream and device. */
+  /* Close input stream and device. */
   rc = qahw_in_standby(in_handle);
   if (rc) {
       fprintf(log_file, "out standby failed %d, handle(%d)\n",rc, params->handle);
@@ -523,10 +523,10 @@ void usage() {
     printf(" \n Examples \n");
     printf(" hal_rec_test     -> start a recording stream with default configurations\n\n");
     printf(" hal_rec_test -i  -> start a recording stream and get configurations from user interactively\n\n");
-    printf(" hal_rec_test -d 2 -f 1 -r 44100 -c 2 -t 8 -D 2 -S -> start a recording session, with device 2[built-in-mic],\n");
+    printf(" hal_rec_test -d 2 -f 1 -r 44100 -c 2 -t 8 -D 2 -> start a recording session, with device 2[built-in-mic],\n");
     printf("                                           format 1[AUDIO_FORMAT_PCM_16_BIT], sample rate 44100, \n");
     printf("                                           channels 2[AUDIO_CHANNEL_IN_STEREO], record data for 8 secs\n");
-    printf("                                           start recording after 2 secs, and capture source tracking params.\n\n");
+    printf("                                           start recording after 2 secs.\n\n");
     printf(" hal_rec_test -F 1 --kpi-mode -> start a recording with low latency input flag and calculate latency KPIs\n\n");
 }
 
@@ -722,10 +722,10 @@ int main(int argc, char* argv[]) {
     pthread_t sourcetrack_thread;
     int ret = -1;
 
-    if (source_track && max_recordings_requested) {
+    if (source_tracking && max_recordings_requested) {
         if (pthread_mutex_init(&sourcetrack_lock, NULL) != 0) {
                printf("\n mutex init failed\n");
-               source_track = 0;
+               source_tracking = 0;
                goto sourcetrack_error;
         }
         signal(SIGQUIT, sourcetrack_signal_handler);
@@ -737,7 +737,7 @@ int main(int argc, char* argv[]) {
                 (void *)qahw_mod_handle);
         if (ret) {
             printf(" Failed to create source tracking thread \n ");
-            source_track = 0;
+            source_tracking = 0;
             pthread_mutex_destroy(&sourcetrack_lock);
             goto sourcetrack_error;
         }
@@ -833,7 +833,7 @@ int main(int argc, char* argv[]) {
     }
 
 sourcetrack_error:
-    if (source_track) {
+    if (source_tracking) {
         pthread_join(sourcetrack_thread,NULL);
         pthread_mutex_destroy(&sourcetrack_lock);
         printf("after source tracking thread exit \n");
