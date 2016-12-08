@@ -41,10 +41,8 @@ static s_audio_subsys audio_ss;
 
 int audio_extn_pm_vote(void)
 {
-    int err, intfd, ret;
+    int ret;
     enum pm_event subsys_state;
-    char halPropVal[PROPERTY_VALUE_MAX];
-    bool prop_unload_image = false;
     bool pm_reg = false;
     bool pm_supp = false;
 
@@ -74,26 +72,6 @@ int audio_extn_pm_vote(void)
        pm_reg == true) {
        ALOGD("%s: Voting for subsystem power up", __func__);
        pm_client_connect(audio_ss.pm_handle);
-
-       if (property_get("sys.audio.init", halPropVal, NULL)) {
-           prop_unload_image = !(strncmp("false", halPropVal, sizeof("false")));
-       }
-       /*
-        * adsp-loader loads modem/adsp image at boot up to play boot tone,
-        * before peripheral manager service is up. Once PM is up, vote to PM
-        * and unload the image to give control to PM to load/unload image
-        */
-       if (prop_unload_image) {
-           intfd = open(BOOT_IMG_SYSFS_PATH, O_WRONLY);
-           if (intfd == -1) {
-               ALOGE("failed to open fd in write mode, %d", errno);
-           } else {
-               ALOGD("%s: write to sysfs to unload image", __func__);
-               err = write(intfd, UNLOAD_IMAGE, 1);
-               close(intfd);
-               property_set("sys.audio.init", "true");
-          }
-       }
     }
     return 0;
 }
@@ -123,6 +101,11 @@ void audio_extn_pm_set_parameters(struct str_parms *parms)
 
 void audio_extn_pm_event_notifier(void *client_data __unused, enum pm_event event)
 {
+
+    int err, intfd;
+    char halPropVal[PROPERTY_VALUE_MAX];
+    bool prop_unload_image = false;
+
     pm_client_event_acknowledge(audio_ss.pm_handle, event);
 
     /* Closing and re-opening of session is done based on snd card status given
@@ -143,6 +126,26 @@ void audio_extn_pm_event_notifier(void *client_data __unused, enum pm_event even
 
     case EVENT_PERIPH_IS_ONLINE:
         ALOGV("%s: %s is online", __func__, audio_ss.img_name);
+
+        if (property_get("sys.audio.init", halPropVal, NULL)) {
+           prop_unload_image = !(strncmp("false", halPropVal, sizeof("false")));
+        }
+        /*
+         * adsp-loader loads modem/adsp image at boot up to play boot tone,
+         * before peripheral manager service is up. Once PM is up, vote to PM
+         * and unload the image to give control to PM to load/unload image
+         */
+        if (prop_unload_image) {
+           intfd = open(BOOT_IMG_SYSFS_PATH, O_WRONLY);
+           if (intfd == -1) {
+               ALOGE("failed to open fd in write mode, %d", errno);
+           } else {
+               ALOGD("%s: write to sysfs to unload image", __func__);
+               err = write(intfd, UNLOAD_IMAGE, 1);
+               close(intfd);
+               property_set("sys.audio.init", "true");
+          }
+        }
     break;
 
     default:
