@@ -496,6 +496,7 @@ done:
 static bool is_supported_format(audio_format_t format)
 {
     if (format == AUDIO_FORMAT_MP3 ||
+        format == AUDIO_FORMAT_MP2 ||
         format == AUDIO_FORMAT_AAC_LC ||
         format == AUDIO_FORMAT_AAC_HE_V1 ||
         format == AUDIO_FORMAT_AAC_HE_V2 ||
