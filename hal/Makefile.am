@@ -133,6 +133,10 @@ AM_CFLAGS += -DAUDIO_HW_EXTN_API_ENABLED
 c_sources += audio_hw_extn_api.c
 endif
 
+if AFE_PROXY
+AM_CFLAGS += -DAFE_PROXY_ENABLED
+endif
+
 h_sources = audio_extn/audio_defs.h \
             audio_extn/audio_extn.h \
             audio_hw.h \
