@@ -4712,11 +4712,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     pthread_mutex_unlock(&adev->lock);
 
     /* Update config params with the requested sample rate and channels */
-    if (in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) {
-        if (adev->mode != AUDIO_MODE_IN_CALL) {
-            ret = -EINVAL;
-            goto err_open;
-        }
     if ((in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) &&
           (adev->mode != AUDIO_MODE_IN_CALL)) {
         ret = -EINVAL;
