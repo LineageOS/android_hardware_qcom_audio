@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, 2016 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016-2017 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -360,6 +360,27 @@ void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
     if ((ret >= 0) && audio_is_input_device(val)) {
         event.u.value = val;
         st_dev->st_callback(AUDIO_EVENT_DEVICE_DISCONNECT, &event);
+    }
+
+    ret = str_parms_get_str(params, "SVA_EXEC_MODE", value, sizeof(value));
+    if (ret >= 0) {
+        strlcpy(event.u.str_value, value, sizeof(event.u.str_value));
+        st_dev->st_callback(AUDIO_EVENT_SVA_EXEC_MODE, &event);
+    }
+}
+
+void audio_extn_sound_trigger_get_parameters(const struct audio_device *adev __unused,
+                       struct str_parms *query, struct str_parms *reply)
+{
+    audio_event_info_t event;
+    int ret;
+    char value[32];
+
+    ret = str_parms_get_str(query, "SVA_EXEC_MODE_STATUS", value,
+                                                  sizeof(value));
+    if (ret >= 0) {
+        st_dev->st_callback(AUDIO_EVENT_SVA_EXEC_MODE_STATUS, &event);
+        str_parms_add_int(reply, "SVA_EXEC_MODE_STATUS", event.u.value);
     }
 }
 
