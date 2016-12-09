@@ -3331,7 +3331,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0)
         return -EINVAL;
 
-    if (audio_extn_tfa_98xx_is_supported() && audio_extn_hfp_is_active(adev))
+    if (audio_extn_tfa_98xx_is_supported() && (audio_extn_hfp_is_active(adev) || voice_is_in_call(adev)))
         return -EINVAL;
 
     in = (struct stream_in *)calloc(1, sizeof(struct stream_in));
