@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5f681702_bac98e79",
+        "filename": "policy_hal/AudioPolicyManager.cpp",
+        "patchSetId": 3
+      },
+      "lineNbr": 1119,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2016-12-09T14:27:52Z",
+      "side": 1,
+      "message": "This part had wrong indentation too :/",
+      "range": {
+        "startLine": 1119,
+        "startChar": 20,
+        "endLine": 1119,
+        "endChar": 24
+      },
+      "revId": "39416199f8cb8714cb7e909a47d35af923562f87",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
