@@ -3135,10 +3135,11 @@ int platform_set_voice_volume(void *platform, int volume)
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
               __func__, mixer_ctl_name);
-        return -EINVAL;
+        ret = -EINVAL;
+    } else {
+        ALOGV("%s: Setting voice volume index: %d", __func__, set_values[0]);
+        mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
     }
-    ALOGV("Setting voice volume index: %d", set_values[0]);
-    mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
 
     if (my_data->csd != NULL) {
         ret = my_data->csd->volume(ALL_SESSION_VSID, volume,
@@ -3166,10 +3167,11 @@ int platform_set_mic_mute(void *platform, bool state)
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
               __func__, mixer_ctl_name);
-        return -EINVAL;
+        ret = -EINVAL;
+    } else {
+        ALOGV("%s Setting voice mute state: %d", __func__, state);
+        mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
     }
-    ALOGV("Setting voice mute state: %d", state);
-    mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
 
     if (my_data->csd != NULL) {
         ret = my_data->csd->mic_mute(ALL_SESSION_VSID, state,
