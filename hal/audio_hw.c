@@ -1051,8 +1051,10 @@ static void check_usecases_codec_backend(struct audio_device *adev,
             ((usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
              (usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) ||
              (usecase->devices & AUDIO_DEVICE_OUT_USB_DEVICE) ||
-             (force_restart_session)) &&
-             (platform_check_backends_match(snd_device, usecase->out_snd_device))) {
+             (usecase->devices & AUDIO_DEVICE_OUT_ALL_A2DP) ||
+             (usecase->devices & AUDIO_DEVICE_OUT_ALL_SCO)) &&
+             ((force_restart_session) ||
+             (platform_check_backends_match(snd_device, usecase->out_snd_device)))) {
 
                 ALOGD("%s:becf: check_usecases (%s) is active on (%s) - disabling ..",
                     __func__, use_case_table[usecase->id],
@@ -1398,9 +1400,11 @@ static bool force_device_switch(struct audio_usecase *usecase)
     }
 
     // Force all a2dp output devices to reconfigure for proper AFE encode format
+    //Also handle a case where in earlier a2dp start failed as A2DP stream was
+    //in suspended state, hence try to trigger a retry when we again get a routing request.
     if((usecase->stream.out) &&
        (usecase->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
-       audio_extn_a2dp_is_force_device_switch()) {
+        audio_extn_a2dp_is_force_device_switch()) {
          ALOGD("Force a2dp device switch to update new encoder config");
          ret = true;
      }
@@ -2607,7 +2611,10 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         /* To avoid a2dp to sco overlapping force route BT usecases
          * to speaker based on Phone state
          */
-        if ((val & AUDIO_DEVICE_OUT_ALL_A2DP) &&
+        if ((((val & AUDIO_DEVICE_OUT_SPEAKER) &&
+                  (val & AUDIO_DEVICE_OUT_ALL_A2DP)) ||
+              ((adev->snd_dev_ref_cnt[SND_DEVICE_OUT_BT_A2DP] == 0) &&
+                  (val & AUDIO_DEVICE_OUT_ALL_A2DP))) &&
             ((adev->mode == AUDIO_MODE_RINGTONE) ||
             (adev->mode == AUDIO_MODE_IN_CALL))) {
             ALOGD("Forcing a2dp routing to speaker for ring/call mode");

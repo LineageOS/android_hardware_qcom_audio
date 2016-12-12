@@ -788,7 +788,9 @@ void audio_extn_a2dp_set_handoff_mode(bool is_on)
 bool audio_extn_a2dp_is_force_device_switch()
 {
     //During encoder reconfiguration mode, force a2dp device switch
-    return a2dp.is_handoff_in_progress;
+    // Or if a2dp device is selected but earlier start failed ( as a2dp
+    // was suspended, force retry.
+    return a2dp.is_handoff_in_progress || !a2dp.a2dp_started;
 }
 
 void audio_extn_a2dp_get_apptype_params(uint32_t *sample_rate,

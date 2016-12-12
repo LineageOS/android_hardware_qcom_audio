@@ -1207,6 +1207,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_USB_HEADPHONES] = strdup("USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = strdup("SLIMBUS_0_RX-and-USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TX] = strdup("AFE_PCM_RX");
+    hw_interface_table[SND_DEVICE_OUT_AFE_PROXY] = strdup("PROXY_PORT_RX");
 
     my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
 
@@ -4703,6 +4704,14 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     struct platform_data *my_data = (struct platform_data *)adev->platform;
     int na_mode = platform_get_native_support();
     bool channels_updated = false;
+
+    /*BT devices backend is not configured from HAL hence skip*/
+    if (snd_device == SND_DEVICE_OUT_BT_A2DP ||
+        snd_device == SND_DEVICE_OUT_BT_SCO ||
+        snd_device == SND_DEVICE_OUT_BT_SCO_WB) {
+        backend_change = false;
+        return backend_change;
+    }
 
     backend_idx = platform_get_backend_index(snd_device);
 
