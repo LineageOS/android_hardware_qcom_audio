@@ -524,6 +524,7 @@ void usage() {
     printf(" -r  --sample-rate <sampling rate>         - Required for Non-WAV streams\n");
     printf("                                             For AAC-HE pls specify half the sample rate\n\n");
     printf(" -c  --channel count <channels>            - Required for Non-WAV streams\n\n");
+    printf(" -b  --bitwidth <bitwidth>                 - Give either 16 or 24.Default value is 16.\n\n");
     printf(" -v  --volume <float volume level>         - Volume level float value between 0.0 - 1.0.\n");
     printf(" -d  --device <decimal value>              - see system/media/audio/include/system/audio.h for device values\n");
     printf("                                             Optional Argument and Default value is 2, i.e Speaker\n\n");
@@ -604,6 +605,7 @@ int main(int argc, char* argv[]) {
     int filetype = FILE_WAV;
     int sample_rate = 44100;
     int channels = 2;
+    int bitwidth = 16;
     aac_format_type_t format_type = AAC_LC;
     log_file = stdout;
     audio_devices_t output_device = AUDIO_DEVICE_OUT_SPEAKER;
@@ -616,6 +618,7 @@ int main(int argc, char* argv[]) {
         {"device",        required_argument,    0, 'd'},
         {"sample-rate",   required_argument,    0, 'r'},
         {"channels",      required_argument,    0, 'c'},
+        {"bitwidth",      required_argument,    0, 'b'},
         {"volume",        required_argument,    0, 'v'},
         {"log-file",      required_argument,    0, 'l'},
         {"dump-file",     required_argument,    0, 'D'},
@@ -645,7 +648,7 @@ int main(int argc, char* argv[]) {
     proxy_params.hdr.data_sz = 0;
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:d:v:l:t:a:k:D:KF:h",
+                              "-f:r:c:b:d:v:l:t:a:k:D:KF:h",
                               long_options,
                               &option_index)) != -1) {
             switch (opt) {
@@ -655,8 +658,11 @@ int main(int argc, char* argv[]) {
             case 'r':
                 sample_rate = atoi(optarg);
                 break;
-            case 'c':;
+            case 'c':
                 channels = atoi(optarg);
+                break;
+            case 'b':
+                bitwidth = atoi(optarg);
                 break;
             case 'd':
                 output_device = atoll(optarg);
@@ -717,6 +723,7 @@ int main(int argc, char* argv[]) {
 
     fprintf(stdout, "Sample Rate:%d\n", sample_rate);
     fprintf(stdout, "Channels:%d\n", channels);
+    fprintf(stdout, "Bitwidth:%d\n", bitwidth);
     fprintf(stdout, "Log file:%s\n", log_filename);
     fprintf(stdout, "Volume level:%f\n", vol_level);
     fprintf(stdout, "Output Device:%d\n", output_device);
@@ -771,7 +778,13 @@ int main(int argc, char* argv[]) {
             }
             memcpy (&channels, &header[22], 2);
             memcpy (&sample_rate, &header[24], 4);
-            config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
+            memcpy (&bitwidth, &header[34], 2);
+            if (bitwidth == 32)
+                config.offload_info.format = AUDIO_FORMAT_PCM_32_BIT;
+            else if (bitwidth == 24)
+                config.offload_info.format = AUDIO_FORMAT_PCM_24_BIT_PACKED;
+            else
+                config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
             if (!flags_set)
                 flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD;
             break;
@@ -824,6 +837,7 @@ int main(int argc, char* argv[]) {
     config.format = config.offload_info.format;
     config.offload_info.channel_mask = config.channel_mask;
     config.offload_info.sample_rate = sample_rate;
+    config.offload_info.bit_width = bitwidth;
     config.offload_info.version = AUDIO_OFFLOAD_INFO_VERSION_CURRENT;
     config.offload_info.size = sizeof(audio_offload_info_t);
 

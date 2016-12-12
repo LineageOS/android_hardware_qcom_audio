@@ -339,6 +339,7 @@ void *start_input(void *thread_param)
   while(true) {
       if(time_elapsed < params->record_delay) {
           usleep(1000000*(params->record_delay - time_elapsed));
+          time_elapsed = difftime(time(0), start_time);
           continue;
       } else if (time_elapsed > params->record_delay + params->record_length) {
           fprintf(log_file, "\n Test for session with handle(%d) completed.\n", params->handle);
