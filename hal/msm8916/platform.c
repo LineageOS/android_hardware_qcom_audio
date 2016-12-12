@@ -283,6 +283,7 @@ struct platform_data {
 };
 
 static bool is_external_codec = false;
+static bool is_slimbus_interface = false;
 
 int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {DEEP_BUFFER_PCM_DEVICE,
@@ -854,6 +855,13 @@ static int msm_device_to_be_id_external_codec [][NO_COLS] = {
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 #define ULL_PLATFORM_DELAY (6*1000LL)
 
+static void update_interface(const char *snd_card_name) {
+     if (!strncmp(snd_card_name, "apq8009-tashalite-snd-card",
+                  sizeof("apq8009-tashalite-snd-card"))) {
+         is_slimbus_interface = false;
+     }
+}
+
 static void update_codec_type(const char *snd_card_name) {
 
      if (!strncmp(snd_card_name, "msm8939-tapan-snd-card",
@@ -899,6 +907,7 @@ static void update_codec_type(const char *snd_card_name) {
      {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          is_external_codec = true;
+         is_slimbus_interface = true;
      }
 }
 static void query_platform(const char *snd_card_name,
@@ -1795,6 +1804,7 @@ void *platform_init(struct audio_device *adev)
             }
             adev->snd_card = snd_card_num;
             update_codec_type(snd_card_name);
+            update_interface(snd_card_name);
             ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
             break;
         }
@@ -2043,7 +2053,7 @@ acdb_init_fail:
         my_data->current_backend_cfg[idx].channels_mixer_ctl = NULL;
     }
 
-    if (is_external_codec) {
+    if (is_slimbus_interface) {
         my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
             strdup("SLIM_0_RX Format");
         my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
@@ -2090,6 +2100,8 @@ acdb_init_fail:
                 strdup("MI2S_RX Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
                 strdup("MI2S_RX SampleRate");
+            my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].channels_mixer_ctl =
+                strdup("MI2S_RX Channels");
 
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
                 strdup("MI2S_TX Format");
