@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2011 The Android Open Source Project *
@@ -233,14 +233,26 @@ struct qahw_sound_focus_param {
     uint16_t  gain_step;
 };
 
+struct aptx_dec_bt_addr {
+    uint32_t nap;
+    uint32_t uap;
+    uint32_t lap;
+};
+
+struct qahw_aptx_dec_param {
+   struct aptx_dec_bt_addr bt_addr;
+};
+
 typedef union {
     struct qahw_source_tracking_param st_params;
     struct qahw_sound_focus_param sf_params;
+    struct qahw_aptx_dec_param aptx_params;
 } qahw_param_payload;
 
 typedef enum {
     QAHW_PARAM_SOURCE_TRACK,
-    QAHW_PARAM_SOUND_FOCUS
+    QAHW_PARAM_SOUND_FOCUS,
+    QAHW_PARAM_APTX_DEC
 } qahw_param_id;
 
 
