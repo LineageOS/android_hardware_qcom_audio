@@ -88,7 +88,12 @@ enum {
     FILE_FLAC,
     FILE_ALAC,
     FILE_VORBIS,
-    FILE_WMA
+    FILE_WMA,
+    FILE_AC3,
+    FILE_EAC3,
+    FILE_EAC3_JOC,
+    FILE_DTS,
+    FILE_MP2
 };
 
 typedef enum {
@@ -794,6 +799,19 @@ int main(int argc, char* argv[]) {
             break;
         case FILE_WMA:
             config.offload_info.format = AUDIO_FORMAT_WMA;
+            break;
+        case FILE_MP2:
+            config.offload_info.format = AUDIO_FORMAT_MP2;
+            break;
+        case FILE_AC3:
+            config.offload_info.format = AUDIO_FORMAT_AC3;
+            break;
+        case FILE_EAC3:
+        case FILE_EAC3_JOC:
+            config.offload_info.format = AUDIO_FORMAT_E_AC3;
+            break;
+        case FILE_DTS:
+            config.offload_info.format = AUDIO_FORMAT_DTS;
             break;
         default:
            fprintf(stderr, "Does not support given filetype\n");

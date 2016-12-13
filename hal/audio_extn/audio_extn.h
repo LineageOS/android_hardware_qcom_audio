@@ -426,7 +426,7 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev);
 #endif
 
 #ifndef AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH
-#define AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH  0x10000
+#define AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH  0x1000
 #endif
 
 enum {
