@@ -31,6 +31,7 @@
 #include "audio_extn.h"
 #include "voice_extn.h"
 #include "sound/msmcal-hwdep.h"
+#include "audio_extn/tfa_98xx.h"
 #include <dirent.h>
 #define MAX_MIXER_XML_PATH  100
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
@@ -1304,13 +1305,17 @@ int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
     else
         acdb_dev_type = ACDB_DEV_TYPE_IN;
 
-    if ((my_data->acdb_send_audio_cal_v3) && (snd_device == SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP)) {
+    if ((my_data->acdb_send_audio_cal_v3) &&
+        (snd_device == SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP) &&
+        !audio_extn_tfa_98xx_is_supported() ) {
             /* TX path calibration */
             my_data->acdb_send_audio_cal_v3(acdb_dev_id, ACDB_DEV_TYPE_IN,
                                 DEFAULT_APP_TYPE_TX_PATH, sample_rate, BUFF_IDX_0);
             my_data->acdb_send_audio_cal_v3(acdb_dev_id, ACDB_DEV_TYPE_OUT,
                                 DEFAULT_APP_TYPE_RX_PATH, sample_rate, BUFF_IDX_0);
-    } else if ((my_data->acdb_send_audio_cal_v3) && (snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_HFP)) {
+    } else if ((my_data->acdb_send_audio_cal_v3) &&
+               (snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_HFP) &&
+               !audio_extn_tfa_98xx_is_supported()) {
             /* RX path calibration */
             ALOGV("%s: sending audio calibration for snd_device(%d) acdb_id(%d)",
                        __func__, snd_device, acdb_dev_id);
