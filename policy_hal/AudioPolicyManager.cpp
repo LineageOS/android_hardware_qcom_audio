@@ -297,9 +297,6 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
                mFMIsActive = false;
            }
            AudioParameter param = AudioParameter();
-           float volumeDb = mPrimaryOutput->mCurVolume[AUDIO_STREAM_MUSIC];
-           mPrevFMVolumeDb = volumeDb;
-           param.addFloat(String8("fm_volume"), Volume::DbToAmpl(volumeDb));
            param.addInt(String8("handle_fm"), (int)newDevice);
            mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString());
         }
