@@ -2740,7 +2740,7 @@
     </path>
 
     <path name="audio-ull-playback bt-a2dp">
-        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia3" value="1" />
+        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia8" value="1" />
     </path>
 
     <path name="deep-buffer-playback speaker-and-bt-a2dp">
