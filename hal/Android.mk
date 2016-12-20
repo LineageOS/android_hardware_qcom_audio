@@ -89,6 +89,9 @@ ifeq ($(strip $(AUDIO_FEATURE_SAMSUNG_DUAL_SIM)),true)
     LOCAL_SRC_FILES += voice_extn/msim_voice_extn.c
 endif
 endif
+ifneq ($(HUAWEI_SOUND_PARAM_PATH),)
+    LOCAL_CFLAGS += -DHUAWEI_SOUND_PARAM_PATH=\"$(HUAWEI_SOUND_PARAM_PATH)\"
+endif
 
 ifneq ($(filter apq8084 msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
 ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),false)
