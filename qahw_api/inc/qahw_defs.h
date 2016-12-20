@@ -165,10 +165,11 @@ __BEGIN_DECLS
 /* Set or Query stream profile type */
 #define QAHW_PARAMETER_STREAM_PROFILE "audio_stream_profile"
 
-/* audio inout flag for timestamp mode.
+/* audio input flags for compress and timestamp mode.
  * check other input flags defined in audio.h for conflicts
  */
 #define QAHW_INPUT_FLAG_TIMESTAMP 0x80000000
+#define QAHW_INPUT_FLAG_COMPRESS  0x40000000
 
 /* Query fm volume */
 #define QAHW_PARAMETER_KEY_FM_VOLUME "fm_volume"
