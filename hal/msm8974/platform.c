@@ -3088,6 +3088,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                                 AUDIO_CHANNEL_IN_MONO : adev->active_input->channel_mask;
     snd_device_t snd_device = SND_DEVICE_NONE;
     int channel_count = popcount(channel_mask);
+    int str_bitwidth = adev->active_input->bit_width;
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
           __func__, out_device, in_device, channel_count, channel_mask);
@@ -3190,9 +3191,36 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
     } else if (source == AUDIO_SOURCE_CAMCORDER) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
             in_device & AUDIO_DEVICE_IN_BACK_MIC) {
-            snd_device = SND_DEVICE_IN_CAMCORDER_MIC;
-        }
-    } else if (source == AUDIO_SOURCE_VOICE_RECOGNITION) {
+
+            if (str_bitwidth == 16) {
+                if ((my_data->fluence_type & FLUENCE_DUAL_MIC) &&
+                    (my_data->source_mic_type & SOURCE_DUAL_MIC) &&
+                    (channel_count == 2))
+                    snd_device = SND_DEVICE_IN_HANDSET_STEREO_DMIC;
+                else
+                    snd_device = SND_DEVICE_IN_CAMCORDER_MIC;
+            }
+            /*
+             * for other bit widths
+             */
+            else {
+                if (((channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK) ||
+                    (channel_mask == AUDIO_CHANNEL_IN_STEREO)) &&
+                    (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
+                    snd_device = SND_DEVICE_IN_UNPROCESSED_STEREO_MIC;
+                }
+                else if (((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) &&
+                         (my_data->source_mic_type & SOURCE_THREE_MIC)) {
+                         snd_device = SND_DEVICE_IN_UNPROCESSED_THREE_MIC;
+               } else if (((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) &&
+                          (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
+                          snd_device = SND_DEVICE_IN_UNPROCESSED_QUAD_MIC;
+               } else {
+                          snd_device = SND_DEVICE_IN_UNPROCESSED_MIC;
+               }
+           }
+       }
+    }  else if (source == AUDIO_SOURCE_VOICE_RECOGNITION) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
             if (my_data->fluence_in_voice_rec && channel_count == 1) {
                 if ((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
@@ -3240,7 +3268,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                  snd_device = SND_DEVICE_IN_UNPROCESSED_MIC;
              }
          } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
-             snd_device = SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC;
+                 snd_device = SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC;
          }
     } else if (source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
         if (out_device & AUDIO_DEVICE_OUT_SPEAKER)
