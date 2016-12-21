@@ -221,3 +221,7 @@ audio.noisy.broadcast.delay=600
 #Enable HIFI audio support for internal codec
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.audio.hifi.int_codec=true
+
+#offload pausetime out duration to 3 secs to inline with other outputs
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.pstimeout.secs=3

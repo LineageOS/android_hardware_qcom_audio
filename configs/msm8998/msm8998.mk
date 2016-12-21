@@ -218,3 +218,7 @@ fm.a2dp.conc.disabled=true
 #audio becoming noisy intent broadcast delay
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.noisy.broadcast.delay=600
+
+#offload pausetime out duration to 3 secs to inline with other outputs
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.pstimeout.secs=3
