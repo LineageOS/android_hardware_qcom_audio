@@ -731,6 +731,15 @@ int main(int argc, char* argv[]) {
 
     qahw_mod_handle = qahw_load_module(mod_name);
 
+    /*
+     * set device connection state for HDMI.
+     */
+     if (output_device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+         char param[100] = {0};
+         snprintf(param, sizeof(param), "%s=%d", "connect", AUDIO_DEVICE_OUT_AUX_DIGITAL);
+         qahw_set_parameters(qahw_mod_handle, param);
+     }
+
     audio_config_t config;
     memset(&config, 0, sizeof(audio_config_t));
 
@@ -890,12 +899,21 @@ EXIT:
         if (rc) {
             fprintf(stdout, "could not close output stream %d \n", rc);
         }
+    }
 
-        rc = qahw_unload_module(qahw_mod_handle);
-        if (rc) {
-            fprintf(stdout, "could not unload hal  %d \n", rc);
-            return -1;
-        }
+    /*
+     * reset device connection state for HDMI.
+     */
+     if (output_device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+         char param[100] = {0};
+         snprintf(param, sizeof(param), "%s=%d", "disconnect", AUDIO_DEVICE_OUT_AUX_DIGITAL);
+         qahw_set_parameters(qahw_mod_handle, param);
+     }
+
+    rc = qahw_unload_module(qahw_mod_handle);
+    if (rc) {
+        fprintf(stdout, "could not unload hal  %d \n", rc);
+        return -1;
     }
 
     if ((log_file != stdout) && (log_file != nullptr))
