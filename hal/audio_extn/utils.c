@@ -763,18 +763,23 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
     }
 }
 
-int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
-                                       struct audio_usecase *usecase)
+static int send_app_type_cfg_for_device(struct audio_device *adev,
+                                        struct audio_usecase *usecase,
+                                        int split_snd_device)
 {
     char mixer_ctl_name[MAX_LENGTH_MIXER_CONTROL_IN_INT];
     size_t app_type_cfg[MAX_LENGTH_MIXER_CONTROL_IN_INT] = {0};
     int len = 0, rc;
     struct mixer_ctl *ctl;
-    int pcm_device_id, acdb_dev_id = 0, snd_device = usecase->out_snd_device;
+    int pcm_device_id = 0, acdb_dev_id, app_type;
+    int snd_device = split_snd_device, snd_device_be_idx = -1;
     int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
     char value[PROPERTY_VALUE_MAX] = {0};
 
-    ALOGV("%s", __func__);
+    ALOGV("%s: usecase->out_snd_device %s, usecase->in_snd_device %s, split_snd_device %s",
+          __func__, platform_get_snd_device_name(usecase->out_snd_device),
+          platform_get_snd_device_name(usecase->in_snd_device),
+          platform_get_snd_device_name(split_snd_device));
 
     if (usecase->type != PCM_PLAYBACK && usecase->type != PCM_CAPTURE) {
         ALOGE("%s: not a playback/capture path, no need to cfg app type", __func__);
@@ -791,18 +796,16 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
         goto exit_send_app_type_cfg;
     }
     if (usecase->type == PCM_PLAYBACK) {
-        snd_device = usecase->out_snd_device;
         pcm_device_id = platform_get_pcm_device_id(usecase->id, PCM_PLAYBACK);
         snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
             "Audio Stream %d App Type Cfg", pcm_device_id);
-        acdb_dev_id = platform_get_snd_device_acdb_id(usecase->out_snd_device);
     } else if (usecase->type == PCM_CAPTURE) {
-        snd_device = usecase->in_snd_device;
         pcm_device_id = platform_get_pcm_device_id(usecase->id, PCM_CAPTURE);
         snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
             "Audio Stream Capture %d App Type Cfg", pcm_device_id);
-        acdb_dev_id = platform_get_snd_device_acdb_id(usecase->in_snd_device);
     }
+
+    acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
     if (acdb_dev_id <= 0) {
         ALOGE("%s: Couldn't get the acdb dev id", __func__);
         rc = -EINVAL;
@@ -818,6 +821,13 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
     }
     snd_device = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
                  platform_get_spkr_prot_snd_device(snd_device) : snd_device;
+
+    snd_device_be_idx = platform_get_snd_device_backend_index(snd_device);
+    if (snd_device_be_idx < 0) {
+        ALOGE("%s: Couldn't get the backend index for snd device %s ret=%d",
+              __func__, platform_get_snd_device_name(snd_device),
+              snd_device_be_idx);
+    }
 
     if ((usecase->type == PCM_PLAYBACK) && (usecase->stream.out != NULL)) {
         if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
@@ -860,7 +870,8 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
         }
         sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
 
-        app_type_cfg[len++] = usecase->stream.out->app_type_cfg.app_type;
+        app_type = usecase->stream.out->app_type_cfg.app_type;
+        app_type_cfg[len++] = app_type;
         app_type_cfg[len++] = acdb_dev_id;
         if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC))
@@ -869,29 +880,81 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
         } else {
             app_type_cfg[len++] = sample_rate;
         }
+        if (snd_device_be_idx > 0)
+            app_type_cfg[len++] = snd_device_be_idx;
 
-         ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
-             __func__, usecase->stream.out->app_type_cfg.app_type, acdb_dev_id, sample_rate);
+         ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d, snd_device_be_idx %d",
+             __func__, app_type, acdb_dev_id, sample_rate, snd_device_be_idx);
 
     } else if ((usecase->type == PCM_CAPTURE) && (usecase->stream.in != NULL)) {
-        app_type_cfg[len++] = usecase->stream.in->app_type_cfg.app_type;
+        app_type = usecase->stream.in->app_type_cfg.app_type;
+        app_type_cfg[len++] = app_type;
         app_type_cfg[len++] = acdb_dev_id;
-        app_type_cfg[len++] = usecase->stream.in->app_type_cfg.sample_rate;
-        ALOGI("%s CAPTURE app_type %d, acdb_dev_id %d, sample_rate %d",
-           __func__, usecase->stream.in->app_type_cfg.app_type, acdb_dev_id,
-           usecase->stream.in->app_type_cfg.sample_rate);
+        sample_rate = usecase->stream.in->app_type_cfg.sample_rate;
+        app_type_cfg[len++] = sample_rate;
+        if (snd_device_be_idx > 0)
+            app_type_cfg[len++] = snd_device_be_idx;
+        ALOGI("%s CAPTURE app_type %d, acdb_dev_id %d, sample_rate %d, snd_device_be_idx %d",
+           __func__, app_type, acdb_dev_id, sample_rate, snd_device_be_idx);
     } else {
-        app_type_cfg[len++] = platform_get_default_app_type_v2(adev->platform, usecase->type);
+        app_type = platform_get_default_app_type_v2(adev->platform, usecase->type);
+        app_type_cfg[len++] = app_type;
         app_type_cfg[len++] = acdb_dev_id;
         app_type_cfg[len++] = sample_rate;
-        ALOGI("%s default app_type %d, acdb_dev_id %d, sample_rate %d",
-              __func__, platform_get_default_app_type_v2(adev->platform, usecase->type),
-              acdb_dev_id, sample_rate);
+        if (snd_device_be_idx > 0)
+            app_type_cfg[len++] = snd_device_be_idx;
+        ALOGI("%s default app_type %d, acdb_dev_id %d, sample_rate %d, snd_device_be_idx %d",
+              __func__, app_type, acdb_dev_id, sample_rate, snd_device_be_idx);
     }
 
     mixer_ctl_set_array(ctl, app_type_cfg, len);
     rc = 0;
 exit_send_app_type_cfg:
+    return rc;
+}
+
+int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
+                                       struct audio_usecase *usecase)
+{
+    int i, num_devices = 0;
+    snd_device_t new_snd_devices[SND_DEVICE_OUT_END] = {0};
+    int rc = 0;
+
+    switch (usecase->type) {
+    case PCM_PLAYBACK:
+        ALOGD("%s: usecase->out_snd_device %s",
+              __func__, platform_get_snd_device_name(usecase->out_snd_device));
+        /* check for out combo device */
+        if (platform_split_snd_device(adev->platform,
+                                      usecase->out_snd_device,
+                                      &num_devices, new_snd_devices)) {
+            new_snd_devices[0] = usecase->out_snd_device;
+            num_devices = 1;
+        }
+        break;
+    case PCM_CAPTURE:
+        ALOGD("%s: usecase->in_snd_device %s",
+              __func__, platform_get_snd_device_name(usecase->in_snd_device));
+        /* check for in combo device */
+        if (platform_split_snd_device(adev->platform,
+                                      usecase->in_snd_device,
+                                      &num_devices, new_snd_devices)) {
+            new_snd_devices[0] = usecase->in_snd_device;
+            num_devices = 1;
+        }
+        break;
+    default:
+        ALOGI("%s: not a playback/capture path, no need to cfg app type", __func__);
+        rc = 0;
+        break;
+    }
+
+    for (i = 0; i < num_devices; i++) {
+        rc = send_app_type_cfg_for_device(adev, usecase, new_snd_devices[i]);
+        if (rc)
+            break;
+    }
+
     return rc;
 }
 
