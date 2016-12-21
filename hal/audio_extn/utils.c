@@ -1136,6 +1136,9 @@ int get_snd_codec_id(audio_format_t format)
     case AUDIO_FORMAT_WMA_PRO:
         id = SND_AUDIOCODEC_WMA_PRO;
         break;
+    case AUDIO_FORMAT_MP2:
+        id = SND_AUDIOCODEC_MP2;
+        break;
     default:
         ALOGE("%s: Unsupported audio format :%x", __func__, format);
     }
