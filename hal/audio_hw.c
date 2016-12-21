@@ -1712,8 +1712,6 @@ static int stop_input_stream(struct stream_in *in)
     struct audio_usecase *uc_info;
     struct audio_device *adev = in->dev;
 
-    adev->active_input = get_next_active_input(adev);
-
     ALOGV("%s: enter: usecase(%d: %s)", __func__,
           in->usecase, use_case_table[in->usecase]);
     uc_info = get_usecase_from_list(adev, in->usecase);
@@ -1734,6 +1732,8 @@ static int stop_input_stream(struct stream_in *in)
 
     list_remove(&uc_info->list);
     free(uc_info);
+
+    adev->active_input = get_next_active_input(adev);
 
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
