@@ -18,6 +18,7 @@
 //#define LOG_NDEBUG 0
 #include <stdlib.h>
 #include <dlfcn.h>
+#include <math.h>
 
 #include <cutils/list.h>
 #include <cutils/log.h>
@@ -229,7 +230,7 @@ static void check_and_set_gain_dep_cal()
 {
     // iterate through list and make decision to set new gain dep cal level for speaker device
     // 1. find all usecase active on speaker
-    // 2. find average of left and right for each usecase
+    // 2. find energy sum for each usecase
     // 3. find the highest of all the active usecase
     // 4. if new value is different than the current value then load new calibration
 
@@ -243,14 +244,21 @@ static void check_and_set_gain_dep_cal()
 
     ALOGV("%s ==> Start ...", __func__);
 
-    // select the highest volume on speaker device
+    float sum_energy = 0.0;
+    bool sum_energy_used = false;
+    float temp_vol = 0;
+    // compute energy sum for the active speaker device (pick loudest of both channels)
     list_for_each(node, &vol_effect_list) {
         context = node_to_item(node, struct vol_listener_context_s, effect_list_node);
         if ((context->state == VOL_LISTENER_STATE_ACTIVE) &&
-            (context->dev_id & AUDIO_DEVICE_OUT_SPEAKER) &&
-            (new_vol < (context->left_vol + context->right_vol) / 2)) {
-            new_vol = (context->left_vol + context->right_vol) / 2;
+            (context->dev_id & AUDIO_DEVICE_OUT_SPEAKER)) {
+            sum_energy_used = true;
+            temp_vol = fmax(context->left_vol, context->right_vol);
+            sum_energy += temp_vol * temp_vol;
         }
+    }
+    if (sum_energy_used) {
+        new_vol = fmin(sqrt(sum_energy), 1.0);
     }
 
     if (new_vol != current_vol) {
