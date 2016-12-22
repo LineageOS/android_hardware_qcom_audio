@@ -95,11 +95,6 @@ char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
 };
 #endif
 
-enum {
-	VOICE_FEATURE_SET_DEFAULT,
-	VOICE_FEATURE_SET_VOLUME_BOOST
-};
-
 #define TOSTRING_(x) #x
 #define TOSTRING(x) TOSTRING_(x)
 
@@ -114,7 +109,6 @@ typedef void (*acdb_deallocate_t)();
 typedef int  (*acdb_init_t)();
 typedef void (*acdb_send_audio_cal_t)(int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
-typedef int (*acdb_reload_vocvoltable_t)(int);
 typedef int (*acdb_loader_get_calibration_t)(char *attr, int size, void *data);
 acdb_loader_get_calibration_t acdb_loader_get_calibration;
 
@@ -130,12 +124,10 @@ struct platform_data {
     bool slowtalk;
     /* Audio calibration related functions */
     void                       *acdb_handle;
-    int                        voice_feature_set;
     acdb_init_t                acdb_init;
     acdb_deallocate_t          acdb_deallocate;
     acdb_send_audio_cal_t      acdb_send_audio_cal;
     acdb_send_voice_cal_t      acdb_send_voice_cal;
-    acdb_reload_vocvoltable_t  acdb_reload_vocvoltable;
 
     void *hw_info;
     struct csd_data *csd;
@@ -845,7 +837,6 @@ void *platform_init(struct audio_device *adev)
         }
     }
 
-    my_data->voice_feature_set = VOICE_FEATURE_SET_DEFAULT;
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
     if (my_data->acdb_handle == NULL) {
         ALOGE("%s: DLOPEN failed for %s", __func__, LIB_ACDB_LOADER);
@@ -867,12 +858,6 @@ void *platform_init(struct audio_device *adev)
                                                     "acdb_loader_send_voice_cal");
         if (!my_data->acdb_send_voice_cal)
             ALOGE("%s: Could not find the symbol acdb_loader_send_voice_cal from %s",
-                  __func__, LIB_ACDB_LOADER);
-
-        my_data->acdb_reload_vocvoltable = (acdb_reload_vocvoltable_t)dlsym(my_data->acdb_handle,
-                                                    "acdb_loader_reload_vocvoltable");
-        if (!my_data->acdb_reload_vocvoltable)
-            ALOGE("%s: Could not find the symbol acdb_loader_reload_vocvoltable from %s",
                   __func__, LIB_ACDB_LOADER);
 
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
@@ -2067,24 +2052,6 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
             ALOGE("%s: Failed to set slow talk err: %d", __func__, ret);
     }
 
-    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOLUME_BOOST,
-                            value, sizeof(value));
-    if (err >= 0) {
-        str_parms_del(parms, AUDIO_PARAMETER_KEY_VOLUME_BOOST);
-
-        if (my_data->acdb_reload_vocvoltable == NULL) {
-            ALOGE("%s: acdb_reload_vocvoltable is NULL", __func__);
-        } else if (!strcmp(value, "on")) {
-            if (!my_data->acdb_reload_vocvoltable(VOICE_FEATURE_SET_VOLUME_BOOST)) {
-                my_data->voice_feature_set = 1;
-            }
-        } else {
-            if (!my_data->acdb_reload_vocvoltable(VOICE_FEATURE_SET_DEFAULT)) {
-                my_data->voice_feature_set = 0;
-            }
-        }
-    }
-
     ALOGV("%s: exit with code(%d)", __func__, ret);
     free(kv_pairs);
     return ret;
@@ -2187,18 +2154,6 @@ void platform_get_parameters(void *platform,
     if (ret >= 0) {
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_SLOWTALK,
                           my_data->slowtalk?"true":"false");
-    }
-
-    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_VOLUME_BOOST,
-                            value, sizeof(value));
-    if (ret >= 0) {
-        if (my_data->voice_feature_set == VOICE_FEATURE_SET_VOLUME_BOOST) {
-            strlcpy(value, "on", sizeof(value));
-        } else {
-            strlcpy(value, "off", sizeof(value));
-        }
-
-        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_VOLUME_BOOST, value);
     }
 
     kv_pairs = str_parms_to_str(reply);
