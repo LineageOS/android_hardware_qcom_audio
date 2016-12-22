@@ -869,11 +869,13 @@ void *platform_init(struct audio_device *adev)
             ALOGE("%s: Could not find the symbol acdb_loader_send_voice_cal from %s",
                   __func__, LIB_ACDB_LOADER);
 
+#if 0 // Not supported on 8960
         my_data->acdb_reload_vocvoltable = (acdb_reload_vocvoltable_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_reload_vocvoltable");
         if (!my_data->acdb_reload_vocvoltable)
             ALOGE("%s: Could not find the symbol acdb_loader_reload_vocvoltable from %s",
                   __func__, LIB_ACDB_LOADER);
+#endif
 
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_init_ACDB");
@@ -2067,6 +2069,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
             ALOGE("%s: Failed to set slow talk err: %d", __func__, ret);
     }
 
+#if 0 // Not supported on 8960
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOLUME_BOOST,
                             value, sizeof(value));
     if (err >= 0) {
@@ -2084,6 +2087,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
             }
         }
     }
+#endif
 
     ALOGV("%s: exit with code(%d)", __func__, ret);
     free(kv_pairs);
@@ -2189,6 +2193,7 @@ void platform_get_parameters(void *platform,
                           my_data->slowtalk?"true":"false");
     }
 
+#if 0 // Not supported on 8960
     ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_VOLUME_BOOST,
                             value, sizeof(value));
     if (ret >= 0) {
@@ -2200,6 +2205,7 @@ void platform_get_parameters(void *platform,
 
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_VOLUME_BOOST, value);
     }
+#endif
 
     kv_pairs = str_parms_to_str(reply);
     ALOGV_IF(kv_pairs != NULL, "%s: exit: returns - %s", __func__, kv_pairs);
