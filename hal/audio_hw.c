@@ -4308,6 +4308,7 @@ static void close_compress_sessions(struct audio_device *adev)
                 pthread_mutex_unlock(&adev->lock);
                 out_standby(&out->stream.common);
                 pthread_mutex_lock(&adev->lock);
+                tempnode = list_head(&adev->usecase_list);
             }
        }
     }
