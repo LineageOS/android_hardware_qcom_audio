@@ -22,6 +22,24 @@
       "revId": "425a9a744b6226ff77e0a77174e76670f91e2ea8",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f681702_581daf0d",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 4
+      },
+      "lineNbr": 12,
+      "author": {
+        "id": 444
+      },
+      "writtenOn": "2016-12-23T21:05:09Z",
+      "side": 1,
+      "message": "yeah woops. will fix.",
+      "parentUuid": "5f681702_3829d337",
+      "revId": "425a9a744b6226ff77e0a77174e76670f91e2ea8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
