@@ -380,9 +380,9 @@ static void send_app_type_cfg(void *platform, struct mixer *mixer,
             if (app_type_cfg[i+1] == 0)
                 break;
             else if (app_type_cfg[i+1] == (size_t)s_info->app_type_cfg.app_type) {
-                if (app_type_cfg[i+2] < s_info->app_type_cfg.sample_rate)
+                if (app_type_cfg[i+2] < (size_t)s_info->app_type_cfg.sample_rate)
                     app_type_cfg[i+2] = s_info->app_type_cfg.sample_rate;
-                if (app_type_cfg[i+3] < s_info->app_type_cfg.bit_width)
+                if (app_type_cfg[i+3] < (size_t)s_info->app_type_cfg.bit_width)
                     app_type_cfg[i+3] = s_info->app_type_cfg.bit_width;
                 update = false;
                 break;
@@ -402,9 +402,9 @@ static void send_app_type_cfg(void *platform, struct mixer *mixer,
             if (app_type_cfg[i+1] == 0)
                 break;
             else if (app_type_cfg[i+1] == (size_t)s_info->app_type_cfg.app_type) {
-                if (app_type_cfg[i+2] < s_info->app_type_cfg.sample_rate)
+                if (app_type_cfg[i+2] < (size_t)s_info->app_type_cfg.sample_rate)
                     app_type_cfg[i+2] = s_info->app_type_cfg.sample_rate;
-                if (app_type_cfg[i+3] < s_info->app_type_cfg.bit_width)
+                if (app_type_cfg[i+3] < (size_t)s_info->app_type_cfg.bit_width)
                     app_type_cfg[i+3] = s_info->app_type_cfg.bit_width;
                 update = false;
                 break;

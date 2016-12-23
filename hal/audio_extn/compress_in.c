@@ -84,8 +84,7 @@ static pthread_mutex_t cin_lock = PTHREAD_MUTEX_INITIALIZER;
 
 bool audio_extn_cin_applicable_stream(struct stream_in *in)
 {
-    if ((in->flags & AUDIO_INPUT_FLAG_TIMESTAMP) ||
-        in->usecase == USECASE_AUDIO_RECORD_COMPRESS2)
+    if (in->flags & (AUDIO_INPUT_FLAG_COMPRESS | AUDIO_INPUT_FLAG_TIMESTAMP))
         return true;
 
     return false;

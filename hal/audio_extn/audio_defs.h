@@ -106,10 +106,11 @@
 /* Set or Query stream profile type */
 #define AUDIO_PARAMETER_STREAM_PROFILE "audio_stream_profile"
 
-/* audio inout flag for timestamp mode.
+/* audio input flags for compress and timestamp mode.
  * check other input flags defined in audio.h for conflicts
  */
 #define AUDIO_INPUT_FLAG_TIMESTAMP 0x80000000
+#define AUDIO_INPUT_FLAG_COMPRESS  0x40000000
 
 /* MAX SECTORS for sourcetracking feature */
 #define MAX_SECTORS 8
