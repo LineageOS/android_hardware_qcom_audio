@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5f681702_753cf6c7",
+        "filename": "hal/msm8960/platform.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2076,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-12-23T19:25:21Z",
+      "side": 0,
+      "message": "What you probably want is to set the voice_feature_set variable  to a disabled state here. (0?) That way it won\u0027t go up to the user as a volume boost button in the UI.",
+      "revId": "9c27ca13da3f598dbbaba6e9c90965f27436cd8a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
