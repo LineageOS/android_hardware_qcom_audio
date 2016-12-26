@@ -102,6 +102,12 @@ typedef enum {
     AAC_HE_V2
 } aac_format_type_t;
 
+typedef enum {
+    WMA = 1,
+    WMA_PRO,
+    WMA_LOSSLESS
+} wma_format_type_t;
+
 static pthread_mutex_t write_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t write_cond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t drain_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -139,6 +145,8 @@ static pthread_cond_t drain_cond = PTHREAD_COND_INITIALIZER;
                    "music_offload_wma_block_align=%d;" \
                    "music_offload_wma_channel_mask=%d;" \
                    "music_offload_wma_encode_option=%d;" \
+                   "music_offload_wma_encode_option1=%d;" \
+                   "music_offload_wma_encode_option2=%d;" \
                    "music_offload_wma_format_tag=%d;"
 
 void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
@@ -533,6 +541,8 @@ void usage() {
     printf("                                             Required for non WAV formats\n\n");
     printf(" -a  --aac-type <aac type>                 - Required for AAC streams\n");
     printf("                                             1: LC 2: HE_V1 3: HE_V2\n\n");
+    printf(" -w  --wma-type <wma type>                 - Required for WMA clips.Default vlaue is 1\n");
+    printf("                                             1: WMA 2: WMAPRO 3:WMA_LOSSLESS \n\n");
     printf(" -k  --kvpairs <values>                    - Metadata information of clip\n");
     printf("                                             See Example for more info\n\n");
     printf(" -l  --log-file <ABSOLUTE FILEPATH>        - File path for debug msg, to print\n");
@@ -575,7 +585,7 @@ void usage() {
     printf("                                          -> Play vorbis clip (-t = 7)\n");
     printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
     printf("                                          ->avg_bit_rate,sample_rate,vorbis_bitstream_fmt\n");
-    printf(" hal_play_test -f /etc/file.wma -k 192000,48000,16,8192,3,15,353 -t 8 -r 48000 -c 2 -v 0.5 \n");
+    printf(" hal_play_test -f /etc/file.wma -k 192000,48000,16,8192,3,15,0,0,353 -t 8 -w 1 -r 48000 -c 2 -v 0.5 \n");
     printf("                                          -> Play wma clip (-t = 8)\n");
     printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
     printf("                                          ->avg_bit_rate,sample_rate,wma_bit_per_sample,wma_block_align\n");
@@ -607,6 +617,7 @@ int main(int argc, char* argv[]) {
     int channels = 2;
     int bitwidth = 16;
     aac_format_type_t format_type = AAC_LC;
+    wma_format_type_t wma_format_type = WMA;
     log_file = stdout;
     audio_devices_t output_device = AUDIO_DEVICE_OUT_SPEAKER;
     audio_output_flags_t flags = AUDIO_OUTPUT_FLAG_NONE;
@@ -624,6 +635,7 @@ int main(int argc, char* argv[]) {
         {"dump-file",     required_argument,    0, 'D'},
         {"file-type",     required_argument,    0, 't'},
         {"aac-type",      required_argument,    0, 'a'},
+        {"wma-type",      required_argument,    0, 'w'},
         {"kvpairs",       required_argument,    0, 'k'},
         {"flags",         required_argument,    0, 'F'},
         {"kpi-mode",      no_argument,          0, 'K'},
@@ -648,7 +660,7 @@ int main(int argc, char* argv[]) {
     proxy_params.hdr.data_sz = 0;
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:v:l:t:a:k:D:KF:h",
+                              "-f:r:c:b:d:v:l:t:a:w:k:D:KF:h",
                               long_options,
                               &option_index)) != -1) {
             switch (opt) {
@@ -686,6 +698,9 @@ int main(int argc, char* argv[]) {
                 break;
             case 'a':
                 format_type = atoi(optarg);
+                break;
+            case 'w':
+                wma_format_type = atoi(optarg);
                 break;
             case 'k':
                 kvpair_values = optarg;
@@ -811,7 +826,10 @@ int main(int argc, char* argv[]) {
             config.offload_info.format = AUDIO_FORMAT_VORBIS;
             break;
         case FILE_WMA:
-            config.offload_info.format = AUDIO_FORMAT_WMA;
+            if (wma_format_type == WMA)
+               config.offload_info.format = AUDIO_FORMAT_WMA;
+            else
+               config.offload_info.format = AUDIO_FORMAT_WMA_PRO;
             break;
         case FILE_MP2:
             config.offload_info.format = AUDIO_FORMAT_MP2;
