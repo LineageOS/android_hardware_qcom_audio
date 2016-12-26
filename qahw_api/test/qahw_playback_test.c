@@ -25,6 +25,7 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#include <signal.h>
 #include "qahw_api.h"
 #include "qahw_defs.h"
 #include "qahw_effect_api.h"
@@ -80,6 +81,7 @@ struct proxy_data {
     struct wav_header hdr;
 };
 FILE * log_file = NULL;
+volatile bool stop_playback = false;
 const char *log_filename = NULL;
 float vol_level = 0.01;
 pthread_t proxy_thread;
@@ -152,6 +154,11 @@ static pthread_cond_t drain_cond = PTHREAD_COND_INITIALIZER;
                    "music_offload_wma_encode_option1=%d;" \
                    "music_offload_wma_encode_option2=%d;" \
                    "music_offload_wma_format_tag=%d;"
+
+void stop_signal_handler(int signal)
+{
+   stop_playback = true;
+}
 
 void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
 {
@@ -350,7 +357,7 @@ int play_file(qahw_stream_handle_t* out_handle, FILE* in_file,
         return -ENOMEM;
     }
 
-    while (!exit) {
+    while (!exit && !stop_playback) {
         if (!bytes_remaining) {
             bytes_read = fread(data, 1, bytes_wanted, in_file);
             fprintf(log_file, "fread from file %zd\n", bytes_read);
@@ -968,6 +975,9 @@ int main(int argc, char* argv[]) {
         // enable effect
         effect_thread_command(ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_ENABLE, 0, NULL);
     }
+    /* Register the SIGINT to close the App properly */
+    if (signal(SIGINT, stop_signal_handler) == SIG_ERR)
+        fprintf(log_file, "Failed to register SIGINT:%d\n",errno);
 
     play_file(out_handle,
               file_stream,
