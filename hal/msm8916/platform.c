@@ -884,16 +884,16 @@ static void update_codec_type(const char *snd_card_name) {
                   sizeof("msm8953-tasha-snd-card")) ||
          !strncmp(snd_card_name, "msm8953-tashalite-snd-card",
                   sizeof("msm8953-tashalite-snd-card")) ||
-         !strncmp(snd_card_name, "msmfalcon-tasha-snd-card",
-                  sizeof("msmfalcon-tasha-snd-card")) ||
+         !strncmp(snd_card_name, "sdm660-tasha-snd-card",
+                  sizeof("sdm660-tasha-snd-card")) ||
          !strncmp(snd_card_name, "apq8009-tashalite-snd-card",
                   sizeof("apq8009-tashalite-snd-card")) ||
          !strncmp(snd_card_name, "mdm9607-tomtom-i2s-snd-card",
                   sizeof("mdm9607-tomtom-i2s-snd-card")) ||
-         !strncmp(snd_card_name, "msmfalcon-tashalite-snd-card",
-                  sizeof("msmfalcon-tashalite-snd-card")) ||
-         !strncmp(snd_card_name, "msmfalcon-tavil-snd-card",
-                  sizeof("msmfalcon-tavil-snd-card")))
+         !strncmp(snd_card_name, "sdm660-tashalite-snd-card",
+                  sizeof("sdm660-tashalite-snd-card")) ||
+         !strncmp(snd_card_name, "sdm660-tavil-snd-card",
+                  sizeof("sdm660-tavil-snd-card")))
      {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          is_external_codec = true;
@@ -1181,36 +1181,36 @@ static void query_platform(const char *snd_card_name,
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
-    } else if (!strncmp(snd_card_name, "msmfalcon-snd-card",
-                  sizeof("msmfalcon-snd-card"))) {
+    } else if (!strncmp(snd_card_name, "sdm660-snd-card",
+                  sizeof("sdm660-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH,
                MAX_MIXER_XML_PATH);
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
-    } else if (!strncmp(snd_card_name, "msmfalcon-snd-card-mtp",
-                  sizeof("msmfalcon-snd-card-mtp"))) {
+    } else if (!strncmp(snd_card_name, "sdm660-snd-card-mtp",
+                  sizeof("sdm660-snd-card-mtp"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_MTP,
                MAX_MIXER_XML_PATH);
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
-    } else if (!strncmp(snd_card_name, "msmfalcon-tasha-snd-card",
-                 sizeof("msmfalcon-tasha-snd-card"))) {
+    } else if (!strncmp(snd_card_name, "sdm660-tasha-snd-card",
+                 sizeof("sdm660-tasha-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9335,
                 sizeof(MIXER_XML_PATH_WCD9335));
         msm_device_to_be_id = msm_device_to_be_id_external_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
-    } else if (!strncmp(snd_card_name, "msmfalcon-tashalite-snd-card",
-                 sizeof("msmfalcon-tashalite-snd-card"))) {
+    } else if (!strncmp(snd_card_name, "sdm660-tashalite-snd-card",
+                 sizeof("sdm660-tashalite-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9326,
                 sizeof(MIXER_XML_PATH_WCD9326));
         msm_device_to_be_id = msm_device_to_be_id_external_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
-    } else if (!strncmp(snd_card_name, "msmfalcon-tavil-snd-card",
-                 sizeof("msmfalcon-tavil-snd-card"))) {
+    } else if (!strncmp(snd_card_name, "sdm660-tavil-snd-card",
+                 sizeof("sdm660-tavil-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9340,
                 sizeof(MIXER_XML_PATH_WCD9340));
         msm_device_to_be_id = msm_device_to_be_id_external_codec;
@@ -1578,10 +1578,10 @@ const char * get_snd_card_name_for_acdb_loader(const char *snd_card_name) {
         return "msm8953-tasha-snd-card";
     }
 
-    if(!strncmp(snd_card_name, "msmfalcon-tashalite-snd-card",
-             sizeof("msmfalcon-tashalite-snd-card"))) {
+    if(!strncmp(snd_card_name, "sdm660-tashalite-snd-card",
+             sizeof("sdm660-tashalite-snd-card"))) {
         ALOGD("using tasha ACDB files for tasha-lite");
-        return "msmfalcon-tasha-snd-card";
+        return "sdm660-tasha-snd-card";
     }
    return snd_card_name;
 }
@@ -1648,8 +1648,8 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
     int wsa_count = 0;
 
     /* SL/SH hardware always has wsa by default, no need to add wsa */
-    if(!strncmp(snd_card_name, "msmfalcon", strlen("msmfalcon"))) {
-        ALOGD(" Ignore WSA extension for msm falcon varients");
+    if(!strncmp(snd_card_name, "sdm660", strlen("sdm660"))) {
+        ALOGD(" Ignore WSA extension for sdm 660 varients");
         return false;
     }
 
@@ -2067,7 +2067,7 @@ acdb_init_fail:
         my_data->current_backend_cfg[SLIMBUS_0_TX].samplerate_mixer_ctl =
             strdup("SLIM_0_TX SampleRate");
     } else {
-        if (!strncmp(snd_card_name, "msmfalcon", strlen("msmfalcon"))) {
+        if (!strncmp(snd_card_name, "sdm660", strlen("sdm660"))) {
 
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("INT4_MI2S_RX Format");
