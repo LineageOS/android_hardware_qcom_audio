@@ -2203,14 +2203,30 @@ static ssize_t out_write_for_no_output(struct audio_stream_out *stream,
                                        const void *buffer, size_t bytes)
 {
     struct stream_out *out = (struct stream_out *)stream;
-
-    /* No Output device supported other than BT for playback.
-     * Sleep for the amount of buffer duration
-     */
+    struct timespec t = { .tv_sec = 0, .tv_nsec = 0 };
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    const int64_t now = (t.tv_sec * 1000000000LL + t.tv_nsec) / 1000;
     lock_output_stream(out);
-    usleep(bytes * 1000000 / audio_stream_out_frame_size(&out->stream.common) /
-            out_get_sample_rate(&out->stream.common));
+    const int64_t elapsed_time_since_last_write = now - out->last_write_time_us;
+    int64_t sleep_time = bytes * 1000000LL / audio_stream_out_frame_size(stream) /
+               out_get_sample_rate(&stream->common) - elapsed_time_since_last_write;
+    if (sleep_time > 0) {
+        usleep(sleep_time);
+    } else {
+        // we don't sleep when we exit standby (this is typical for a real alsa buffer).
+        sleep_time = 0;
+    }
+    out->last_write_time_us = now + sleep_time;
     pthread_mutex_unlock(&out->lock);
+    // last_write_time_us is an approximation of when the (simulated) alsa
+    // buffer is believed completely full. The usleep above waits for more space
+    // in the buffer, but by the end of the sleep the buffer is considered
+    // topped-off.
+    //
+    // On the subsequent out_write(), we measure the elapsed time spent in
+    // the mixer. This is subtracted from the sleep estimate based on frames,
+    // thereby accounting for drain in the alsa buffer during mixing.
+    // This is a crude approximation; we don't handle underruns precisely.
     return bytes;
 }
 #endif

@@ -210,6 +210,8 @@ struct stream_out {
     card_status_t card_status;
 
     struct error_log error_log;
+
+    int64_t last_write_time_us;
 };
 
 struct stream_in {
