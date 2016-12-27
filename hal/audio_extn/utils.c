@@ -147,6 +147,10 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_ADTS_HE_V1),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_ADTS_HE_V2),
     STRING_TO_ENUM(AUDIO_FORMAT_DSD),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_LATM),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_LATM_LC),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_LATM_HE_V1),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_LATM_HE_V2),
 #endif
 };
 
@@ -1112,6 +1116,9 @@ int get_snd_codec_id(audio_format_t format)
         id = SND_AUDIOCODEC_AAC;
         break;
     case AUDIO_FORMAT_AAC_ADTS:
+        id = SND_AUDIOCODEC_AAC;
+        break;
+    case AUDIO_FORMAT_AAC_LATM:
         id = SND_AUDIOCODEC_AAC;
         break;
     case AUDIO_FORMAT_PCM_OFFLOAD:
