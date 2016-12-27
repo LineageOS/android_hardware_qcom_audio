@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -555,12 +555,73 @@ void audio_extn_source_track_get_parameters(const struct audio_device *adev,
     }
 }
 
+static int set_source_track_data(struct audio_device *adev,
+                           struct sound_focus_param *sound_focus_param)
+{
+    int i, ret, count;
+    struct mixer_ctl *ctl;
+    char sound_focus_mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = "Sound Focus";
+
+    /* Derive the mixer control name based on the use case and the audio h/w
+     * interface name for the corresponding audio device
+     */
+    ret = derive_mixer_ctl_from_usecase_intf(adev, sound_focus_mixer_ctl_name);
+    if (ret != 0) {
+        ALOGE("%s: Could not set Sound Focus Params:%d", __func__, ret);
+        return ret;
+    } else {
+        ALOGV("%s: Mixer Ctl name: %s", __func__, sound_focus_mixer_ctl_name);
+    }
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, sound_focus_mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                __func__, sound_focus_mixer_ctl_name);
+        ret = -EINVAL;
+        return ret;
+    } else {
+        ALOGV("%s: Setting Sound Focus Params", __func__);
+
+        for (i = 0; i < MAX_SECTORS;i++) {
+            ALOGV("%s: start_angles[%d] = %d", __func__, i, sound_focus_param->start_angle[i]);
+        }
+        for (i = 0; i < MAX_SECTORS;i++) {
+            ALOGV("%s: enable_sectors[%d] = %d", __func__, i, sound_focus_param->enable[i]);
+        }
+        ALOGV("%s: gain_step = %d", __func__, sound_focus_param->gain_step);
+
+        mixer_ctl_update(ctl);
+        count = mixer_ctl_get_num_values(ctl);
+        if (count != sizeof(struct sound_focus_param)) {
+            ALOGE("%s: mixer_ctl_get_num_values() invalid data size", __func__);
+            return ret;
+        }
+
+        // Set the parameters on the mixer control derived above
+        ret = mixer_ctl_set_array(ctl, (void *)sound_focus_param, count);
+        if (ret != 0) {
+            ALOGE("%s: mixer_ctl_set_array() failed to set Sound Focus Params:%d",
+                      __func__, ret);
+        }
+    }
+    return ret;
+}
+
+int audio_extn_set_soundfocus_data(struct audio_device *adev,
+                              struct sound_focus_param *payload)
+{
+    int ret = 0;
+    struct sound_focus_param *sound_focus_data = payload;
+
+    ret = set_source_track_data(adev, sound_focus_data);
+
+    return ret ;
+}
+
 void audio_extn_source_track_set_parameters(struct audio_device *adev,
                                             struct str_parms *parms)
 {
-    int len, ret, count;;
-    struct mixer_ctl *ctl;
-    char sound_focus_mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = "Sound Focus";
+    int len, ret;
     char *value = NULL;
     char *kv_pairs = str_parms_to_str(parms);
 
@@ -626,51 +687,7 @@ void audio_extn_source_track_set_parameters(struct audio_device *adev,
             goto done;
         }
 
-        /* Derive the mixer control name based on the use case and the audio h/w
-         * interface name for the corresponding audio device
-         */
-        ret = derive_mixer_ctl_from_usecase_intf(adev, sound_focus_mixer_ctl_name);
-        if (ret != 0) {
-            ALOGE("%s: Could not set Sound Focus Params", __func__);
-
-            goto done;
-        } else {
-            ALOGV("%s: Mixer Ctl name: %s", __func__, sound_focus_mixer_ctl_name);
-        }
-
-        ctl = mixer_get_ctl_by_name(adev->mixer, sound_focus_mixer_ctl_name);
-        if (!ctl) {
-            ALOGE("%s: Could not get ctl for mixer cmd - %s",
-                  __func__, sound_focus_mixer_ctl_name);
-
-            goto done;
-        } else {
-            ALOGV("%s: Setting Sound Focus Params", __func__);
-
-            for (i = 0; i < MAX_SECTORS;i++) {
-                ALOGV("%s: start_angles[%d] = %d", __func__, i, sound_focus_param.start_angle[i]);
-            }
-            for (i = 0; i < MAX_SECTORS;i++) {
-                ALOGV("%s: enable_sectors[%d] = %d", __func__, i, sound_focus_param.enable[i]);
-            }
-            ALOGV("%s: gain_step = %d", __func__, sound_focus_param.gain_step);
-
-            mixer_ctl_update(ctl);
-            count = mixer_ctl_get_num_values(ctl);
-            if (count != sizeof(struct sound_focus_param)) {
-                ALOGE("%s: mixer_ctl_get_num_values() invalid data size", __func__);
-
-                goto done;
-            }
-
-            // Set the parameters on the mixer control derived above
-            ret = mixer_ctl_set_array(ctl, (void *)&sound_focus_param, count);
-            if (ret != 0) {
-                ALOGE("%s: mixer_ctl_set_array() failed to set Sound Focus Params", __func__);
-
-                goto done;
-            }
-       }
+        set_source_track_data(adev, &sound_focus_param);
     }
 
 done:
