@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -1347,6 +1347,18 @@ bool platform_add_gain_level_mapping(struct amp_db_and_gain_table *tbl_entry __u
 
 int platform_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl __unused,
                                     int table_size __unused)
+{
+    return 0;
+}
+
+int platform_get_meta_info_key_from_list(void *platform __unused,
+                                         char *mod_name __unused)
+{
+    return 0;
+}
+
+int platform_set_acdb_metainfo_key(void *platform __unused, char *name __unused,
+                                   int key __unused)
 {
     return 0;
 }

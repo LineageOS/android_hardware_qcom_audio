@@ -531,7 +531,7 @@ int audio_extn_pm_vote (void);
 void audio_extn_pm_unvote(void);
 #endif
 
-void audio_extn_init(void);
+void audio_extn_init(struct audio_device *adev);
 void audio_extn_utils_update_streams_cfg_lists(void *platform,
                                   struct mixer *mixer,
                                   struct listnode *streams_output_cfg_list,

@@ -5069,7 +5069,7 @@ static int adev_open(const hw_module_t *module, const char *name,
                                                         "visualizer_hal_stop_output");
         }
     }
-    audio_extn_init();
+    audio_extn_init(adev);
     audio_extn_listen_init(adev, adev->snd_card);
     audio_extn_sound_trigger_init(adev);
     audio_extn_gef_init(adev);
