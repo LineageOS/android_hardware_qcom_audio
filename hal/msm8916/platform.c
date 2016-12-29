@@ -3456,7 +3456,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                                 AUDIO_CHANNEL_IN_MONO : adev->active_input->channel_mask;
     snd_device_t snd_device = SND_DEVICE_NONE;
     int channel_count = popcount(channel_mask);
-    int str_bitwidth = adev->active_input->bit_width;
+    int str_bitwidth = (adev->active_input == NULL) ?
+                    CODEC_BACKEND_DEFAULT_BIT_WIDTH : adev->active_input->bit_width;
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
           __func__, out_device, in_device, channel_count, channel_mask);
