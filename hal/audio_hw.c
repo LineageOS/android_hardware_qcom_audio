@@ -2204,11 +2204,17 @@ static ssize_t out_write_for_no_output(struct audio_stream_out *stream,
 {
     struct stream_out *out = (struct stream_out *)stream;
     struct timespec t = { .tv_sec = 0, .tv_nsec = 0 };
+    int64_t now;
+    int64_t elapsed_time_since_last_write = 0;
+    int64_t sleep_time;
+
     clock_gettime(CLOCK_MONOTONIC, &t);
-    const int64_t now = (t.tv_sec * 1000000000LL + t.tv_nsec) / 1000;
+    now = (t.tv_sec * 1000000000LL + t.tv_nsec) / 1000;
+
     lock_output_stream(out);
-    const int64_t elapsed_time_since_last_write = now - out->last_write_time_us;
-    int64_t sleep_time = bytes * 1000000LL / audio_stream_out_frame_size(stream) /
+    if (out->last_write_time_us)
+        elapsed_time_since_last_write = now - out->last_write_time_us;
+    sleep_time = bytes * 1000000LL / audio_stream_out_frame_size(stream) /
                out_get_sample_rate(&stream->common) - elapsed_time_since_last_write;
     if (sleep_time > 0) {
         usleep(sleep_time);
