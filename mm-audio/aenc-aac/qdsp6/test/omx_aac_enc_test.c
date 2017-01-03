@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2014,2016 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -105,8 +105,10 @@ unsigned int audaac_hdr_bit_index;
 
 FILE *F1 = NULL;
 
-uint32_t samplerate = 44100;
-uint32_t channels = 2;
+uint32_t aac_samplerate = 0;
+uint32_t pcm_samplerate = 0;
+uint32_t aac_channels = 0;
+uint32_t pcm_channels = 0;
 uint32_t bitrate = 128000;
 uint32_t pcmplayback = 0;
 uint32_t tunnel      = 0;
@@ -520,17 +522,17 @@ int main(int argc, char **argv)
     if (argc >= 9) {
       in_filename = argv[1];
       out_filename = argv[2];
-      samplerate = (uint32_t)atoi(argv[3]);
-      channels = (uint32_t)atoi(argv[4]);
+      aac_samplerate = (uint32_t)atoi(argv[3]);
+      aac_channels = (uint32_t)atoi(argv[4]);
       tunnel  = (uint32_t)atoi(argv[5]);
       rectime = (uint32_t)atoi(argv[6]);
       bitrate = (uint32_t)atoi(argv[7]);
       format =  (uint32_t)atoi(argv[8]);
       profile = (uint32_t)atoi(argv[9]);
 
-	  DEBUG_PRINT("Input parameters: samplerate = %d, channels = %d, tunnel = %d,"
+	  DEBUG_PRINT("Input parameters: aac_samplerate = %d, channels = %d, tunnel = %d,"
 				  " rectime = %d, bitrate = %d, format = %d, profile = %d\n",
-				  samplerate, channels, tunnel, rectime, bitrate, format, profile);
+				  aac_samplerate, aac_channels, tunnel, rectime, bitrate, format, profile);
 
 	  if (!((profile == 2) || (profile == 5) || (profile == 29))) {
 		  DEBUG_PRINT("profile = %d, not supported. Supported "
@@ -542,22 +544,22 @@ int main(int argc, char **argv)
 					  "formats are ADTS(1), RAW(6)\n", format);
 		  return 0;
 	  }
-	  if ((channels > 2) || (channels <= 0)) {
+	  if ((aac_channels > 2) || (aac_channels <= 0)) {
 		  DEBUG_PRINT("channels = %d, not supported. Supported "
-					  "number of channels are 1 and 2\n", channels);
+					  "number of channels are 1 and 2\n", aac_channels);
 		  return 0;
 	  }
-	  if ((samplerate < 8000) && (samplerate > 48000)) {
+	  if ((aac_samplerate < 8000) && (aac_samplerate > 48000)) {
 		  DEBUG_PRINT("samplerate = %d, not supported, Supported "
 					  "samplerates are 8000, 11025, 12000, 16000, 22050, "
-					  "24000, 32000, 44100, 48000\n", samplerate);
+					  "24000, 32000, 44100, 48000\n", aac_samplerate);
 		  return 0;
 	  } else {
 		  if ((profile == 5) || (profile == 29)) {
-			  if (samplerate < 24000) {
+			  if (aac_samplerate < 24000) {
 				  DEBUG_PRINT("samplerate = %d, not supported for AAC+/EAAC+."
 							  " Supported samplerates are 24000, 32000,"
-							  " 44100, 48000\n", samplerate);
+							  " 44100, 48000\n", aac_samplerate);
 				  return 0;
 			  }
 		  }
@@ -791,8 +793,8 @@ int Play_Encoder()
     }
 
     pcmparam.nPortIndex   = 0;
-    pcmparam.nChannels    =  channels;
-    pcmparam.nSamplingRate = samplerate;
+    pcmparam.nChannels    =  pcm_channels;
+    pcmparam.nSamplingRate = pcm_samplerate;
     OMX_SetParameter(aac_enc_handle,OMX_IndexParamAudioPcm,&pcmparam);
 
 
@@ -815,9 +817,9 @@ int Play_Encoder()
 
 
     aacparam.nPortIndex   =  1;
-    aacparam.nChannels    =  channels; //2 ; /* 1-> mono 2-> stereo*/
+    aacparam.nChannels    =  aac_channels; //2 ; /* 1-> mono 2-> stereo*/
     aacparam.nBitRate     =  bitrate;
-    aacparam.nSampleRate  =  samplerate;
+    aacparam.nSampleRate  =  aac_samplerate;
     aacparam.eChannelMode =  OMX_AUDIO_ChannelModeStereo;
     aacparam.eAACStreamFormat    =  (OMX_AUDIO_AACSTREAMFORMATTYPE)format;
     aacparam.eAACProfile = (OMX_AUDIO_AACPROFILETYPE)profile;
@@ -1141,8 +1143,8 @@ void audaac_rec_install_adts_header_variable (uint16  byte_num)
   adts_sample_index srate_enum;
   uint32  value;
 
-  uint32   sample_index = samplerate;
-  uint8   channel_config = (uint8)channels;
+  uint32   sample_index = (uint32)aac_samplerate;
+  uint8   channel_config = (uint8)aac_channels;
 
   /* Store Sync word first */
   audaac_header[0] = 0xFF;
@@ -1153,8 +1155,8 @@ void audaac_rec_install_adts_header_variable (uint16  byte_num)
   if ((format == OMX_AUDIO_AACStreamFormatRAW) &&
       ((profile == OMX_AUDIO_AACObjectHE) ||
        (profile == OMX_AUDIO_AACObjectHE_PS))){
-      if (samplerate >= 24000)
-          sample_index = samplerate/2;
+      if (aac_samplerate >= 24000)
+          sample_index = aac_samplerate/2;
   }
 
   /* ID field, 1 bit */
@@ -1286,8 +1288,8 @@ static OMX_ERRORTYPE parse_pcm_header()
     DEBUG_PRINT("Channel Count is %d\n", hdr.num_channels);
     DEBUG_PRINT("\n***************************************************************\n");
 
-    samplerate = hdr.sample_rate;
-    channels = hdr.num_channels;
+    pcm_samplerate = hdr.sample_rate;
+    pcm_channels = hdr.num_channels;
 
     return OMX_ErrorNone;
 }
