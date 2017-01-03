@@ -102,6 +102,12 @@ typedef enum {
     AAC_HE_V2
 } aac_format_type_t;
 
+typedef enum {
+    WMA = 1,
+    WMA_PRO,
+    WMA_LOSSLESS
+} wma_format_type_t;
+
 static pthread_mutex_t write_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t write_cond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t drain_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -139,6 +145,8 @@ static pthread_cond_t drain_cond = PTHREAD_COND_INITIALIZER;
                    "music_offload_wma_block_align=%d;" \
                    "music_offload_wma_channel_mask=%d;" \
                    "music_offload_wma_encode_option=%d;" \
+                   "music_offload_wma_encode_option1=%d;" \
+                   "music_offload_wma_encode_option2=%d;" \
                    "music_offload_wma_format_tag=%d;"
 
 void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
@@ -524,6 +532,7 @@ void usage() {
     printf(" -r  --sample-rate <sampling rate>         - Required for Non-WAV streams\n");
     printf("                                             For AAC-HE pls specify half the sample rate\n\n");
     printf(" -c  --channel count <channels>            - Required for Non-WAV streams\n\n");
+    printf(" -b  --bitwidth <bitwidth>                 - Give either 16 or 24.Default value is 16.\n\n");
     printf(" -v  --volume <float volume level>         - Volume level float value between 0.0 - 1.0.\n");
     printf(" -d  --device <decimal value>              - see system/media/audio/include/system/audio.h for device values\n");
     printf("                                             Optional Argument and Default value is 2, i.e Speaker\n\n");
@@ -532,6 +541,8 @@ void usage() {
     printf("                                             Required for non WAV formats\n\n");
     printf(" -a  --aac-type <aac type>                 - Required for AAC streams\n");
     printf("                                             1: LC 2: HE_V1 3: HE_V2\n\n");
+    printf(" -w  --wma-type <wma type>                 - Required for WMA clips.Default vlaue is 1\n");
+    printf("                                             1: WMA 2: WMAPRO 3:WMA_LOSSLESS \n\n");
     printf(" -k  --kvpairs <values>                    - Metadata information of clip\n");
     printf("                                             See Example for more info\n\n");
     printf(" -l  --log-file <ABSOLUTE FILEPATH>        - File path for debug msg, to print\n");
@@ -574,7 +585,7 @@ void usage() {
     printf("                                          -> Play vorbis clip (-t = 7)\n");
     printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
     printf("                                          ->avg_bit_rate,sample_rate,vorbis_bitstream_fmt\n");
-    printf(" hal_play_test -f /etc/file.wma -k 192000,48000,16,8192,3,15,353 -t 8 -r 48000 -c 2 -v 0.5 \n");
+    printf(" hal_play_test -f /etc/file.wma -k 192000,48000,16,8192,3,15,0,0,353 -t 8 -w 1 -r 48000 -c 2 -v 0.5 \n");
     printf("                                          -> Play wma clip (-t = 8)\n");
     printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
     printf("                                          ->avg_bit_rate,sample_rate,wma_bit_per_sample,wma_block_align\n");
@@ -604,7 +615,9 @@ int main(int argc, char* argv[]) {
     int filetype = FILE_WAV;
     int sample_rate = 44100;
     int channels = 2;
+    int bitwidth = 16;
     aac_format_type_t format_type = AAC_LC;
+    wma_format_type_t wma_format_type = WMA;
     log_file = stdout;
     audio_devices_t output_device = AUDIO_DEVICE_OUT_SPEAKER;
     audio_output_flags_t flags = AUDIO_OUTPUT_FLAG_NONE;
@@ -616,11 +629,13 @@ int main(int argc, char* argv[]) {
         {"device",        required_argument,    0, 'd'},
         {"sample-rate",   required_argument,    0, 'r'},
         {"channels",      required_argument,    0, 'c'},
+        {"bitwidth",      required_argument,    0, 'b'},
         {"volume",        required_argument,    0, 'v'},
         {"log-file",      required_argument,    0, 'l'},
         {"dump-file",     required_argument,    0, 'D'},
         {"file-type",     required_argument,    0, 't'},
         {"aac-type",      required_argument,    0, 'a'},
+        {"wma-type",      required_argument,    0, 'w'},
         {"kvpairs",       required_argument,    0, 'k'},
         {"flags",         required_argument,    0, 'F'},
         {"kpi-mode",      no_argument,          0, 'K'},
@@ -645,7 +660,7 @@ int main(int argc, char* argv[]) {
     proxy_params.hdr.data_sz = 0;
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:d:v:l:t:a:k:D:KF:h",
+                              "-f:r:c:b:d:v:l:t:a:w:k:D:KF:h",
                               long_options,
                               &option_index)) != -1) {
             switch (opt) {
@@ -655,8 +670,11 @@ int main(int argc, char* argv[]) {
             case 'r':
                 sample_rate = atoi(optarg);
                 break;
-            case 'c':;
+            case 'c':
                 channels = atoi(optarg);
+                break;
+            case 'b':
+                bitwidth = atoi(optarg);
                 break;
             case 'd':
                 output_device = atoll(optarg);
@@ -680,6 +698,9 @@ int main(int argc, char* argv[]) {
                 break;
             case 'a':
                 format_type = atoi(optarg);
+                break;
+            case 'w':
+                wma_format_type = atoi(optarg);
                 break;
             case 'k':
                 kvpair_values = optarg;
@@ -717,6 +738,7 @@ int main(int argc, char* argv[]) {
 
     fprintf(stdout, "Sample Rate:%d\n", sample_rate);
     fprintf(stdout, "Channels:%d\n", channels);
+    fprintf(stdout, "Bitwidth:%d\n", bitwidth);
     fprintf(stdout, "Log file:%s\n", log_filename);
     fprintf(stdout, "Volume level:%f\n", vol_level);
     fprintf(stdout, "Output Device:%d\n", output_device);
@@ -771,7 +793,13 @@ int main(int argc, char* argv[]) {
             }
             memcpy (&channels, &header[22], 2);
             memcpy (&sample_rate, &header[24], 4);
-            config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
+            memcpy (&bitwidth, &header[34], 2);
+            if (bitwidth == 32)
+                config.offload_info.format = AUDIO_FORMAT_PCM_32_BIT;
+            else if (bitwidth == 24)
+                config.offload_info.format = AUDIO_FORMAT_PCM_24_BIT_PACKED;
+            else
+                config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
             if (!flags_set)
                 flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD;
             break;
@@ -798,7 +826,10 @@ int main(int argc, char* argv[]) {
             config.offload_info.format = AUDIO_FORMAT_VORBIS;
             break;
         case FILE_WMA:
-            config.offload_info.format = AUDIO_FORMAT_WMA;
+            if (wma_format_type == WMA)
+               config.offload_info.format = AUDIO_FORMAT_WMA;
+            else
+               config.offload_info.format = AUDIO_FORMAT_WMA_PRO;
             break;
         case FILE_MP2:
             config.offload_info.format = AUDIO_FORMAT_MP2;
@@ -824,6 +855,7 @@ int main(int argc, char* argv[]) {
     config.format = config.offload_info.format;
     config.offload_info.channel_mask = config.channel_mask;
     config.offload_info.sample_rate = sample_rate;
+    config.offload_info.bit_width = bitwidth;
     config.offload_info.version = AUDIO_OFFLOAD_INFO_VERSION_CURRENT;
     config.offload_info.size = sizeof(audio_offload_info_t);
 

@@ -56,14 +56,15 @@
 #define MIXER_XML_PATH_I2S "/system/etc/mixer_paths_i2s.xml"
 #define MIXER_XML_PATH_WCD9306 "/system/etc/mixer_paths_wcd9306.xml"
 #define MIXER_XML_PATH_WCD9330 "/system/etc/mixer_paths_wcd9330.xml"
-#define MIXER_XML_PATH_WCD9335 "/system/etc/mixer_paths_wcd9335.xml"
 #define MIXER_XML_PATH_WCD9340 "/system/etc/mixer_paths_wcd9340.xml"
 #ifdef LINUX_ENABLED
+/* For LE platforms */
 #define MIXER_XML_PATH "/etc/mixer_paths.xml"
 #define MIXER_XML_PATH_MSM8909_PM8916 "/etc/mixer_paths_msm8909_pm8916.xml"
 #define MIXER_XML_PATH_MTP "/etc/mixer_paths_mtp.xml"
 #define MIXER_XML_PATH_SKU2 "/etc/mixer_paths_qrd_sku2.xml"
 #define MIXER_XML_PATH_WCD9326 "/etc/mixer_paths_wcd9326.xml"
+#define MIXER_XML_PATH_WCD9335 "/etc/mixer_paths_wcd9335.xml"
 #define PLATFORM_INFO_XML_PATH_EXTCODEC  "/etc/audio_platform_info_extcodec.xml"
 #define PLATFORM_INFO_XML_PATH      "/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_WCD9326_I2S "/etc/mixer_paths_wcd9326_i2s.xml"
@@ -76,6 +77,7 @@
 #define MIXER_XML_PATH_SKU2 "/system/etc/mixer_paths_qrd_sku2.xml"
 #define PLATFORM_INFO_XML_PATH_EXTCODEC  "/system/etc/audio_platform_info_extcodec.xml"
 #define MIXER_XML_PATH_WCD9326 "/system/etc/mixer_paths_wcd9326.xml"
+#define MIXER_XML_PATH_WCD9335 "/system/etc/mixer_paths_wcd9335.xml"
 #define MIXER_XML_PATH_SKUN "/system/etc/mixer_paths_qrd_skun.xml"
 #define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_WCD9326_I2S  "/system/etc/mixer_paths_wcd9326_i2s.xml"
@@ -281,6 +283,7 @@ struct platform_data {
 };
 
 static bool is_external_codec = false;
+static bool is_slimbus_interface = false;
 
 int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {DEEP_BUFFER_PCM_DEVICE,
@@ -852,6 +855,13 @@ static int msm_device_to_be_id_external_codec [][NO_COLS] = {
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 #define ULL_PLATFORM_DELAY (6*1000LL)
 
+static void update_interface(const char *snd_card_name) {
+     if (!strncmp(snd_card_name, "apq8009-tashalite-snd-card",
+                  sizeof("apq8009-tashalite-snd-card"))) {
+         is_slimbus_interface = false;
+     }
+}
+
 static void update_codec_type(const char *snd_card_name) {
 
      if (!strncmp(snd_card_name, "msm8939-tapan-snd-card",
@@ -897,6 +907,7 @@ static void update_codec_type(const char *snd_card_name) {
      {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          is_external_codec = true;
+         is_slimbus_interface = true;
      }
 }
 static void query_platform(const char *snd_card_name,
@@ -1357,6 +1368,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_USB_HEADPHONES] = strdup("USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = strdup("SLIMBUS_0_RX-and-USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TX] = strdup("AFE_PCM_RX");
+    hw_interface_table[SND_DEVICE_OUT_AFE_PROXY] = strdup("PROXY_PORT_RX");
 
     my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
     /*remove ALAC & APE from DSP decoder list based on software decoder availability*/
@@ -1793,6 +1805,7 @@ void *platform_init(struct audio_device *adev)
             }
             adev->snd_card = snd_card_num;
             update_codec_type(snd_card_name);
+            update_interface(snd_card_name);
             ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
             break;
         }
@@ -2041,7 +2054,7 @@ acdb_init_fail:
         my_data->current_backend_cfg[idx].channels_mixer_ctl = NULL;
     }
 
-    if (is_external_codec) {
+    if (is_slimbus_interface) {
         my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
             strdup("SLIM_0_RX Format");
         my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
@@ -2088,6 +2101,8 @@ acdb_init_fail:
                 strdup("MI2S_RX Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
                 strdup("MI2S_RX SampleRate");
+            my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].channels_mixer_ctl =
+                strdup("MI2S_RX Channels");
 
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
                 strdup("MI2S_TX Format");
@@ -4774,6 +4789,14 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     struct platform_data *my_data = (struct platform_data *)adev->platform;
     int na_mode = platform_get_native_support();
     bool channels_updated = false;
+
+    /*BT devices backend is not configured from HAL hence skip*/
+    if (snd_device == SND_DEVICE_OUT_BT_A2DP ||
+        snd_device == SND_DEVICE_OUT_BT_SCO ||
+        snd_device == SND_DEVICE_OUT_BT_SCO_WB) {
+        backend_change = false;
+        return backend_change;
+    }
 
     backend_idx = platform_get_backend_index(snd_device);
 
