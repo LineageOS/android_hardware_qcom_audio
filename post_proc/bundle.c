@@ -56,6 +56,8 @@
 #include "effect_util.h"
 #endif
 
+#define EFFECT_CMD_HW_ACC 21
+
 enum {
     EFFECT_STATE_UNINITIALIZED,
     EFFECT_STATE_INITIALIZED,
