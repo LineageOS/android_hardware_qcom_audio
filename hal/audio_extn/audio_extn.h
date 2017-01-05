@@ -135,6 +135,14 @@ bool audio_extn_is_vbat_enabled(void);
 bool audio_extn_can_use_vbat(void);
 #endif
 
+#ifndef RAS_ENABLED
+#define audio_extn_is_ras_enabled()                      (0)
+#define audio_extn_can_use_ras()                         (0)
+#else
+bool audio_extn_is_ras_enabled(void);
+bool audio_extn_can_use_ras(void);
+#endif
+
 #ifndef HIFI_AUDIO_ENABLED
 #define audio_extn_is_hifi_audio_enabled()               (0)
 #define audio_extn_is_hifi_audio_supported()             (0)
