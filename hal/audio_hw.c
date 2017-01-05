@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -392,7 +392,7 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_BUSY);
     audio_extn_utils_send_audio_calibration(adev, usecase);
     audio_extn_utils_send_app_type_cfg(usecase);
-    strcpy(mixer_path, use_case_table[usecase->id]);
+    strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
     platform_add_backend_name(mixer_path, snd_device);
     ALOGD("%s: apply mixer and update path: %s", __func__, mixer_path);
     audio_route_apply_and_update_path(adev->audio_route, mixer_path);
@@ -414,7 +414,7 @@ int disable_audio_route(struct audio_device *adev,
         snd_device = usecase->in_snd_device;
     else
         snd_device = usecase->out_snd_device;
-    strcpy(mixer_path, use_case_table[usecase->id]);
+    strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
     platform_add_backend_name(mixer_path, snd_device);
     ALOGD("%s: reset and update mixer path: %s", __func__, mixer_path);
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
@@ -1890,9 +1890,9 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
             for (j = 0; j < ARRAY_SIZE(out_channels_name_to_enum_table); j++) {
                 if (out_channels_name_to_enum_table[j].value == out->supported_channel_masks[i]) {
                     if (!first) {
-                        strcat(value, "|");
+                        strlcat(value, "|", sizeof(value));
                     }
-                    strcat(value, out_channels_name_to_enum_table[j].name);
+                    strlcat(value, out_channels_name_to_enum_table[j].name, sizeof(value));
                     first = false;
                     break;
                 }

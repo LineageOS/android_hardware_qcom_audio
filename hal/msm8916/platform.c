@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -3206,7 +3206,7 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
     strlcpy(mixer_ctl_name, "Playback Channel Map", sizeof(mixer_ctl_name));
     if (snd_id >= 0) {
         snprintf(device_num, sizeof(device_num), "%d", snd_id);
-        strncat(mixer_ctl_name, device_num, 13);
+        strlcat(mixer_ctl_name, device_num, sizeof(mixer_ctl_name));
     }
 
     ALOGD("%s mixer_ctl_name:%s", __func__, mixer_ctl_name);
