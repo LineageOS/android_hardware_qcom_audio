@@ -33,12 +33,20 @@ __BEGIN_DECLS
 #ifdef AUDIO_HW_EXTN_API_ENABLED
 #include <hardware/audio.h>
 typedef struct qahwi_stream_in qahwi_stream_in_t;
+typedef struct qahwi_stream_out qahwi_stream_out_t;
 typedef struct qahwi_device qahwi_device_t;
 
 struct qahwi_stream_in {
     struct audio_stream_in base;
     bool is_inititalized;
     void *ibuf;
+};
+
+struct qahwi_stream_out {
+    struct audio_stream_out base;
+    bool is_inititalized;
+    size_t buf_size;
+    void *obuf;
 };
 
 struct qahwi_device {
@@ -50,6 +58,7 @@ void qahwi_init(hw_device_t *device);
 void qahwi_deinit(hw_device_t *device);
 #else
 typedef void *qahwi_stream_in_t;
+typedef void *qahwi_stream_out_t;
 typedef void *qahwi_device_t;
 
 #define qahwi_init(device) (0)
