@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fa3479d7_83351e48",
+        "filename": "hal/msm8916/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1277,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-01-06T19:12:52Z",
+      "side": 1,
+      "message": "Is this intended to be fopened here and on the line below as well?",
+      "range": {
+        "startLine": 1277,
+        "startChar": 22,
+        "endLine": 1277,
+        "endChar": 65
+      },
+      "revId": "8694c56048ba82e2c89acb9b187987da86e1b81f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa3479d7_633a3a38",
+        "filename": "hal/msm8916/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1283,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-01-06T19:12:52Z",
+      "side": 1,
+      "message": "Using an else if is a little hard to read to me here, since the fread depends on success of fopen.",
+      "range": {
+        "startLine": 1283,
+        "startChar": 14,
+        "endLine": 1283,
+        "endChar": 21
+      },
+      "revId": "8694c56048ba82e2c89acb9b187987da86e1b81f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
