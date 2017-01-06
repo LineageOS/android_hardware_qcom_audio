@@ -3203,6 +3203,10 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
         ALOGE("%s: Invalid channel mapping used", __func__);
         return -EINVAL;
     }
+    if ((ch_count < 1) || ch_count > FCC_8) {
+        ALOGE("%s: Channel count %d out of range",__func__,ch_count);
+        return -EINVAL;
+    }
     strlcpy(mixer_ctl_name, "Playback Channel Map", sizeof(mixer_ctl_name));
     if (snd_id >= 0) {
         snprintf(device_num, sizeof(device_num), "%d", snd_id);
