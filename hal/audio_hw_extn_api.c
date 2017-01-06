@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -48,13 +48,14 @@ uint64_t timestamp;
 };
 #endif
 
-int qahwi_get_param_data(const struct audio_device *adev,
+int qahwi_get_param_data(const struct audio_hw_device *adev,
                          qahw_param_id param_id, qahw_param_payload *payload)
 {
     int ret = 0;
+    const struct audio_device *dev = (const struct audio_device *)adev;
 
     if (adev == NULL) {
-        ALOGE("%s::INVALID PARAM\n",__func__);
+        ALOGE("%s::INVALID PARAM adev\n",__func__);
         return -EINVAL;
     }
 
@@ -65,20 +66,48 @@ int qahwi_get_param_data(const struct audio_device *adev,
 
     switch (param_id) {
         case QAHW_PARAM_SOUND_FOCUS:
-              ret = audio_extn_get_soundfocus_data(adev,
+              ret = audio_extn_get_soundfocus_data(dev,
                      (struct qahw_sound_focus_param *)payload);
               break;
         case QAHW_PARAM_SOURCE_TRACK:
-              ret = audio_extn_get_sourcetrack_data(adev,
+              ret = audio_extn_get_sourcetrack_data(dev,
                      (struct qahw_source_tracking_param*)payload);
               break;
        default:
              ALOGE("%s::INVALID PARAM ID:%d\n",__func__,param_id);
              ret = -EINVAL;
              break;
+    }
+    return ret;
+}
 
-        return ret;
-        }
+int qahwi_set_param_data(struct audio_hw_device *adev,
+                         qahw_param_id param_id, qahw_param_payload *payload)
+{
+    int ret = 0;
+    struct audio_device *dev = (struct audio_device *)adev;
+
+    if (adev == NULL) {
+        ALOGE("%s::INVALID PARAM adev\n",__func__);
+        return -EINVAL;
+    }
+
+    if (payload == NULL) {
+        ALOGE("%s::INVALID PAYLOAD VALUE\n",__func__);
+        return -EINVAL;
+    }
+
+    switch (param_id) {
+        case QAHW_PARAM_SOUND_FOCUS:
+              ret = audio_extn_set_soundfocus_data(dev,
+                     (struct qahw_sound_focus_param *)payload);
+              break;
+       default:
+             ALOGE("%s::INVALID PARAM ID:%d\n",__func__,param_id);
+             ret = -EINVAL;
+             break;
+    }
+    return ret;
 }
 
 ssize_t qahwi_in_read_v2(struct audio_stream_in *stream, void* buffer,
