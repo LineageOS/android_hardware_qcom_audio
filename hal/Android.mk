@@ -74,6 +74,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SSR)),true)
     LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/surround_sound/
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_HUAWEI_SOUND_PARAM_PATH)),true)
+    LOCAL_CFLAGS += -DHUAWEI_SOUND_PARAM_PATH
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS)),true)
     LOCAL_CFLAGS += -DMULTI_VOICE_SESSION_ENABLED
     LOCAL_SRC_FILES += voice_extn/voice_extn.c
@@ -88,9 +92,6 @@ ifeq ($(strip $(AUDIO_FEATURE_SAMSUNG_DUAL_SIM)),true)
     LOCAL_CFLAGS += -DSAMSUNG_DUAL_SIM
     LOCAL_SRC_FILES += voice_extn/msim_voice_extn.c
 endif
-endif
-ifneq ($(HUAWEI_SOUND_PARAM_PATH),)
-    LOCAL_CFLAGS += -DHUAWEI_SOUND_PARAM_PATH=\"$(HUAWEI_SOUND_PARAM_PATH)\"
 endif
 
 ifneq ($(filter apq8084 msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
