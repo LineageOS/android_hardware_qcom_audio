@@ -116,9 +116,6 @@ struct audio_block_header
 /* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
 typedef int  (*acdb_init_t)();
-#ifdef HUAWEI_SOUND_PARAM_PATH
-typedef void (*acdb_set_param_path_t)(char *path);
-#endif
 typedef void (*acdb_send_audio_cal_t)(int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
@@ -142,9 +139,6 @@ struct platform_data {
     void                       *acdb_handle;
     int                        voice_feature_set;
     acdb_init_t                acdb_init;
-#ifdef HUAWEI_SOUND_PARAM_PATH
-    acdb_set_param_path_t      acdb_set_param_path;
-#endif
     acdb_deallocate_t          acdb_deallocate;
     acdb_send_audio_cal_t      acdb_send_audio_cal;
     acdb_send_voice_cal_t      acdb_send_voice_cal;
@@ -850,6 +844,52 @@ static void set_platform_defaults(struct platform_data * my_data __unused)
     backend_table[SND_DEVICE_OUT_TRANSMISSION_FM] = strdup("transmission-fm");
 }
 
+#ifdef HUAWEI_SOUND_PARAM_PATH
+
+#define MAX_PATH             (256)
+
+#define HUAWEI_DEFAULT_PRODUCT "default"
+
+#define HUAWEI_PRODUCT_IDENTIFIER_PATH \
+                "/sys/bus/platform/drivers/hw_audio_info/hw_audio_info/product_identifier"
+
+typedef void (*acdb_set_param_path_t)(char *path);
+
+static void initialize_huawei_sound_param_path(void *acdb_handle)
+{
+        acdb_set_param_path_t set_param_path;
+
+        set_param_path = (acdb_set_param_path_t)dlsym(acdb_handle, "acdb_loader_set_param_path");
+        if (!set_param_path) {
+            ALOGE("%s: Could not find the symbol acdb_loader_set_param_path from %s",
+                  __func__, LIB_ACDB_LOADER);
+        } else {
+            char product[MAX_PATH] = {0};
+            char path[MAX_PATH] = {0};
+            FILE *f;
+
+            if ((f = fopen(HUAWEI_PRODUCT_IDENTIFIER_PATH, "r")) == NULL) {
+                ALOGW("%s: Could not load product-identifier from %s errno %d", __func__,
+                        HUAWEI_PRODUCT_IDENTIFIER_PATH, errno);
+                strcpy(product, HUAWEI_DEFAULT_PRODUCT);
+            } else {
+                if (fread(product, 1, sizeof(product)-1, f) <= 0) {
+                    ALOGW("%s: Error reading the product-identifier from %s errno %d", __func__,
+                            HUAWEI_PRODUCT_IDENTIFIER_PATH, errno);
+                    strcpy(product, HUAWEI_DEFAULT_PRODUCT);
+                }
+                fclose(f);
+            }
+
+            snprintf(path, sizeof(path), "/system/etc/sound_param/%s/", product);
+            ALOGI("%s: Using param_path %s", __func__, path);
+
+            set_param_path(path);
+        }
+}
+
+#endif
+
 void *platform_init(struct audio_device *adev)
 {
     char platform[PROPERTY_VALUE_MAX];
@@ -992,15 +1032,11 @@ void *platform_init(struct audio_device *adev)
         if (!my_data->acdb_reload_vocvoltable)
             ALOGE("%s: Could not find the symbol acdb_loader_reload_vocvoltable from %s",
                   __func__, LIB_ACDB_LOADER);
+
 #ifdef HUAWEI_SOUND_PARAM_PATH
-        my_data->acdb_set_param_path = (acdb_set_param_path_t)dlsym(my_data->acdb_handle,
-                                                    "acdb_loader_set_param_path");
-        if (!my_data->acdb_set_param_path)
-            ALOGE("%s: Could not find the symbol acdb_loader_set_param_path from %s",
-                  __func__, LIB_ACDB_LOADER);
-        else
-            my_data->acdb_set_param_path(HUAWEI_SOUND_PARAM_PATH);
+        initialize_huawei_sound_param_path(my_data->acdb_handle);
 #endif
+
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_init_ACDB");
         if (my_data->acdb_init == NULL)
