@@ -1,6 +1,6 @@
 bin_PROGRAMS = hal_play_test
 
-PLAY_CPPFLAGS = -Wno-sign-compare
+PLAY_CPPFLAGS = -Wno-sign-compare -Werror
 PLAY_INCLUDES = -I $(top_srcdir)/qahw_api/inc
 
 hal_play_test_SOURCES = qahw_playback_test.c \

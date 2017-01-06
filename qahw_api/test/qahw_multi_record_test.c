@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2015 The Android Open Source Project *
@@ -37,6 +37,7 @@
 
 static bool kpi_mode;
 FILE * log_file = NULL;
+volatile bool stop_record = false;
 
 #define ID_RIFF 0x46464952
 #define ID_WAVE 0x45564157
@@ -92,15 +93,11 @@ int sourcetrack_done = 0;
 static pthread_mutex_t sourcetrack_lock;
 char soundfocus_param[100];
 
-void sourcetrack_signal_handler(void)
+void stop_signal_handler(int signal)
 {
-/* Function to read keyboard interupt to enable user to set parameters
-   for sourcetracking usecase Dynamically */
-
-    pthread_mutex_lock(&sourcetrack_lock);
-    read_soundfocus_param();
-    pthread_mutex_unlock(&sourcetrack_lock);
+   stop_record = true;
 }
+
 
 void read_soundfocus_param(void)
 {
@@ -119,6 +116,16 @@ void read_soundfocus_param(void)
     snprintf(soundfocus_param, SOUNDFOCUS_SET_PARAMS_STR_LEN,
              SOUNDFOCUS_SET_PARAMS, start_angle, enable_sector,
              gain_step);
+}
+
+void sourcetrack_signal_handler(int signal)
+{
+/* Function to read keyboard interupt to enable user to set parameters
+   for sourcetracking usecase Dynamically */
+
+    pthread_mutex_lock(&sourcetrack_lock);
+    read_soundfocus_param();
+    pthread_mutex_unlock(&sourcetrack_lock);
 }
 
 void *read_sourcetrack_data(void* data)
@@ -336,7 +343,7 @@ void *start_input(void *thread_param)
 
   memset(&in_buf,0, sizeof(qahw_in_buffer_t));
   start_time = time(0);
-  while(true) {
+  while(true && !stop_record) {
       if(time_elapsed < params->record_delay) {
           usleep(1000000*(params->record_delay - time_elapsed));
           time_elapsed = difftime(time(0), start_time);
@@ -729,8 +736,10 @@ int main(int argc, char* argv[]) {
                source_tracking = 0;
                goto sourcetrack_error;
         }
-        signal(SIGQUIT, sourcetrack_signal_handler);
-        printf("NOTE::::To set sourcetracking params at runtime press 'Ctrl+\\' from keyboard\n");
+        if (signal(SIGQUIT, sourcetrack_signal_handler) == SIG_ERR)
+            fprintf(log_file, "Failed to register SIGQUIT:%d\n",errno);
+        else
+            printf("NOTE::::To set sourcetracking params at runtime press 'Ctrl+\\' from keyboard\n");
         read_soundfocus_param();
         printf("Create source tracking thread \n");
         ret = pthread_create(&sourcetrack_thread,
@@ -743,6 +752,10 @@ int main(int argc, char* argv[]) {
             goto sourcetrack_error;
         }
     }
+
+    /* Register the SIGINT to close the App properly */
+    if (signal(SIGINT, stop_signal_handler) == SIG_ERR)
+        fprintf(log_file, "Failed to register SIGINT:%d\n",errno);
 
     if (thread_active[0] == 1) {
         fprintf(log_file, "\n Create first record thread \n");
