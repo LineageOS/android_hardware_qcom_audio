@@ -5755,12 +5755,12 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
     char mixer_ctl_name[44] = {0}; // max length of name is 44 as defined
     int ret;
     unsigned int i;
-    int set_values[8] = {0};
+    int set_values[FCC_8] = {0};
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     ALOGV("%s channel_count:%d",__func__, ch_count);
-    if (NULL == ch_map) {
-        ALOGE("%s: Invalid channel mapping used", __func__);
+    if (NULL == ch_map || (ch_count < 1) || (ch_count > FCC_8)) {
+        ALOGE("%s: Invalid channel mapping or channel count value", __func__);
         return -EINVAL;
     }
 
@@ -5782,7 +5782,7 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
               __func__, mixer_ctl_name);
         return -EINVAL;
     }
-    for (i = 0; i< ARRAY_SIZE(set_values); i++) {
+    for (i = 0; i < (unsigned int)ch_count; i++) {
         set_values[i] = ch_map[i];
     }
 
@@ -5790,7 +5790,7 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
         set_values[0], set_values[1], set_values[2], set_values[3], set_values[4],
         set_values[5], set_values[6], set_values[7], ch_count);
 
-    ret = mixer_ctl_set_array(ctl, set_values, ch_count);
+    ret = mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
     if (ret < 0) {
         ALOGE("%s: Could not set ctl, error:%d ch_count:%d",
               __func__, ret, ch_count);
