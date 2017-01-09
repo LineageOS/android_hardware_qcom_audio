@@ -2212,6 +2212,11 @@ void platform_deinit(void *platform)
         my_data->edid_info = NULL;
     }
 
+    if (my_data->adev->mixer) {
+        mixer_close(my_data->adev->mixer);
+        my_data->adev->mixer = NULL;
+    }
+
     free(platform);
     /* deinit usb */
     audio_extn_usb_deinit();
