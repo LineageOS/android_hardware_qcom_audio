@@ -1109,7 +1109,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                     if (usecase->type == VOIP_CALL)
                         status = platform_switch_voice_call_device_post(adev->platform,
                                                                         usecase->out_snd_device,
-                                                                        usecase->in_snd_device);
+                                                                        platform_get_input_snd_device(adev->platform, uc_info->devices));
                     enable_audio_route(adev, usecase);
                 }
             }
