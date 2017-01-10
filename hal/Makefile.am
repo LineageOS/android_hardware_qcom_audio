@@ -4,12 +4,12 @@ AM_CFLAGS = -I ${WORKSPACE}/external/tinyalsa/include \
         -I $(top_srcdir)/hal \
         -I $(top_srcdir)/hal/audio_extn \
         -I $(top_srcdir)/hal/voice_extn \
-        -I $(top_srcdir)/hal/msm8916
+        -I $(top_srcdir)/hal/${TARGET_PLATFORM}
 
 c_sources = audio_hw.c \
             voice.c \
             platform_info.c \
-            msm8916/platform.c \
+            ${TARGET_PLATFORM}/platform.c \
             audio_extn/audio_extn.c \
             audio_extn/utils.c
 
@@ -56,7 +56,7 @@ endif
 
 if HW_VARIANTS
 AM_CFLAGS += -DHW_VARIANTS_ENABLED
-c_sources +=  msm8916/hw_info.c
+c_sources +=  ${TARGET_PLATFORM}/hw_info.c
 endif
 
 if COMPRESS_CAPTURE
@@ -123,6 +123,20 @@ AM_CFLAGS += -DWMA_OFFLOAD_ENABLED
 AM_CFLAGS += -DCOMPRESS_METADATA_NEEDED
 endif
 
+if COMPRESS_INPUT
+AM_CFLAGS += -DCOMPRESS_INPUT_ENABLED
+c_sources += audio_extn/compress_in.c
+endif
+
+if AUDIO_HW_EXTN_API
+AM_CFLAGS += -DAUDIO_HW_EXTN_API_ENABLED
+c_sources += audio_hw_extn_api.c
+endif
+
+if AFE_PROXY
+AM_CFLAGS += -DAFE_PROXY_ENABLED
+endif
+
 h_sources = audio_extn/audio_defs.h \
             audio_extn/audio_extn.h \
             audio_hw.h \
@@ -139,5 +153,5 @@ audio_primary_default_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 audio_primary_default_la_CFLAGS += -Dstrlcat=g_strlcat
 audio_primary_default_la_CFLAGS += -DINT_MAX=0x7fffffff
 audio_primary_default_la_CFLAGS += -D__unused=__attribute__\(\(__unused__\)\)
-audio_primary_default_la_CFLAGS += -DLINUX_ENABLED
+audio_primary_default_la_CFLAGS += -DLINUX_ENABLED $(TARGET_CFLAGS) -DAUDIO_EXTN_FORMATS_ENABLED
 audio_primary_default_la_LDFLAGS = -module -shared -avoid-version

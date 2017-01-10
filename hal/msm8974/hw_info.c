@@ -47,6 +47,7 @@ struct hardware_info {
     uint32_t num_snd_devices;
     char dev_extn[HW_INFO_ARRAY_MAX_SIZE];
     snd_device_t  *snd_devices;
+    bool is_stereo_spkr;
 };
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
@@ -323,6 +324,7 @@ static void  update_hardware_info_msm8998(struct hardware_info *hw_info, const c
         strlcpy(hw_info->name, "msm8998", sizeof(hw_info->name));
         hw_info->snd_devices = (snd_device_t *)tasha_fluid_variant_devices;
         hw_info->num_snd_devices = ARRAY_SIZE(tasha_fluid_variant_devices);
+        hw_info->is_stereo_spkr = false;
         strlcpy(hw_info->dev_extn, "-fluid", sizeof(hw_info->dev_extn));
     } else if (!strcmp(snd_card_name, "msm8998-tasha-liquid-snd-card")) {
         strlcpy(hw_info->type, " liquid", sizeof(hw_info->type));
@@ -446,6 +448,7 @@ void *hw_info_init(const char *snd_card_name)
 
     hw_info->snd_devices = NULL;
     hw_info->num_snd_devices = 0;
+    hw_info->is_stereo_spkr = true;
     strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
     strlcpy(hw_info->type, "", sizeof(hw_info->type));
     strlcpy(hw_info->name, "", sizeof(hw_info->name));
@@ -510,4 +513,11 @@ void hw_info_append_hw_type(void *hw_info, snd_device_t snd_device,
         }
     }
     ALOGD("%s : device_name = %s", __func__,device_name);
+}
+
+bool hw_info_is_stereo_spkr(void *hw_info)
+{
+    struct hardware_info *my_data = (struct hardware_info*) hw_info;
+
+    return my_data->is_stereo_spkr;
 }

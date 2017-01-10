@@ -95,6 +95,8 @@ namespace android {
                 continue;
             //Only consider sound cards associated with ADSP
             if ((strncasecmp(card_id, "msm", 3) != 0) &&
+                (strncasecmp(card_id, "sdm", 3) != 0) &&
+                (strncasecmp(card_id, "sdc", 3) != 0) &&
                 (strncasecmp(card_id, "apq", 3) != 0)) {
                 ALOGD("Skipping non-ADSP sound card %s", card_id);
                 continue;

@@ -35,14 +35,14 @@ ifneq ($(filter msm8998,$(TARGET_BOARD_PLATFORM)),)
 endif
 endif
 
-ifneq ($(filter msm8916 msm8909 msm8952 msm8937 thorium msm8953 msmgold msmfalcon,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8916 msm8909 msm8952 msm8937 thorium msm8953 msmgold sdm660,$(TARGET_BOARD_PLATFORM)),)
   AUDIO_PLATFORM = msm8916
   MULTIPLE_HW_VARIANTS_ENABLED := true
   LOCAL_CFLAGS := -DPLATFORM_MSM8916
 ifneq ($(filter msm8909,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSM8909
 endif
-ifneq ($(filter msmfalcon,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm660,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSMFALCON
 endif
 endif
@@ -254,6 +254,16 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_QAF)),true)
     LOCAL_SRC_FILES += audio_extn/qaf.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_INPUT)),true)
+    LOCAL_CFLAGS += -DCOMPRESS_INPUT_ENABLED
+    LOCAL_SRC_FILES += audio_extn/compress_in.c
+endif
+
+ifeq ($(strip $(BOARD_SUPPORTS_QAHW)),true)
+    LOCAL_CFLAGS += -DAUDIO_HW_EXTN_API_ENABLED
+    LOCAL_SRC_FILES += audio_hw_extn_api.c
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
@@ -262,7 +272,6 @@ LOCAL_SHARED_LIBRARIES := \
 	libaudioroute \
 	libdl \
 	libaudioutils \
-	libhardware \
 	libexpat
 
 LOCAL_C_INCLUDES += \

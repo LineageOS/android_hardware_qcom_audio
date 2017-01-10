@@ -240,6 +240,7 @@ int audio_extn_check_and_set_multichannel_usecase(struct audio_device *adev,
 #define hw_info_append_hw_type(hw_info,\
         snd_device, device_name)                         (0)
 #define hw_info_enable_wsa_combo_usecase_support(hw_info)   (0)
+#define hw_info_is_stereo_spkr(hw_info)   (0)
 
 #else
 void *hw_info_init(const char *snd_card_name);
@@ -247,6 +248,7 @@ void hw_info_deinit(void *hw_info);
 void hw_info_append_hw_type(void *hw_info, snd_device_t snd_device,
                              char *device_name);
 void hw_info_enable_wsa_combo_usecase_support(void *hw_info);
+bool hw_info_is_stereo_spkr(void *hw_info);
 
 #endif
 
@@ -424,7 +426,7 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev);
 #endif
 
 #ifndef AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH
-#define AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH  0x10000
+#define AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH  0x1000
 #endif
 
 enum {
@@ -508,14 +510,17 @@ void audio_extn_pm_unvote(void);
 #endif
 
 void audio_extn_init(void);
-void audio_extn_utils_update_streams_output_cfg_list(void *platform,
+void audio_extn_utils_update_streams_cfg_lists(void *platform,
                                   struct mixer *mixer,
-                                  struct listnode *streams_output_cfg_list);
-void audio_extn_utils_dump_streams_output_cfg_list(
-                                  struct listnode *streams_output_cfg_list);
-void audio_extn_utils_release_streams_output_cfg_list(
-                                  struct listnode *streams_output_cfg_list);
-void audio_extn_utils_update_stream_app_type_cfg(void *platform,
+                                  struct listnode *streams_output_cfg_list,
+                                  struct listnode *streams_input_cfg_list);
+void audio_extn_utils_dump_streams_cfg_lists(
+                                  struct listnode *streams_output_cfg_list,
+                                  struct listnode *streams_input_cfg_list);
+void audio_extn_utils_release_streams_cfg_lists(
+                                  struct listnode *streams_output_cfg_list,
+                                  struct listnode *streams_input_cfg_list);
+void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
                                   struct listnode *streams_output_cfg_list,
                                   audio_devices_t devices,
                                   audio_output_flags_t flags,
@@ -523,11 +528,24 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
                                   uint32_t sample_rate,
                                   uint32_t bit_width,
                                   audio_channel_mask_t channel_mask,
+                                  char *profile,
+                                  struct stream_app_type_cfg *app_type_cfg);
+void audio_extn_utils_update_stream_input_app_type_cfg(void *platform,
+                                  struct listnode *streams_input_cfg_list,
+                                  audio_devices_t devices,
+                                  audio_input_flags_t flags,
+                                  audio_format_t format,
+                                  uint32_t sample_rate,
+                                  uint32_t bit_width,
+                                  char *profile,
                                   struct stream_app_type_cfg *app_type_cfg);
 int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
                                        struct audio_usecase *usecase);
 void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
                                              struct audio_usecase *usecase);
+void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
+                                  struct audio_device *adev,
+                                  struct audio_usecase *usecase);
 #ifdef DS2_DOLBY_DAP_ENABLED
 #define LIB_DS2_DAP_HAL "vendor/lib/libhwdaphal.so"
 #define SET_HW_INFO_FUNC "dap_hal_set_hw_info"
@@ -584,6 +602,8 @@ audio_format_t pcm_format_to_hal(uint32_t pcm_format);
 uint32_t hal_format_to_pcm(audio_format_t hal_format);
 
 void audio_extn_utils_update_direct_pcm_fragment_size(struct stream_out *out);
+size_t audio_extn_utils_convert_format_24_8_to_8_24(void *buf, size_t bytes);
+int get_snd_codec_id(audio_format_t format);
 
 #ifndef KPI_OPTIMIZE_ENABLED
 #define audio_extn_perf_lock_init() (0)
@@ -688,6 +708,27 @@ int audio_extn_snd_mon_init();
 int audio_extn_snd_mon_deinit();
 int audio_extn_snd_mon_register_listener(void *stream, snd_mon_cb cb);
 int audio_extn_snd_mon_unregister_listener(void *stream);
+#endif
+
+#ifdef COMPRESS_INPUT_ENABLED
+bool audio_extn_cin_applicable_stream(struct stream_in *in);
+bool audio_extn_cin_attached_usecase(audio_usecase_t uc_id);
+size_t audio_extn_cin_get_buffer_size(struct stream_in *in);
+int audio_extn_cin_start_input_stream(struct stream_in *in);
+void audio_extn_cin_stop_input_stream(struct stream_in *in);
+void audio_extn_cin_close_input_stream(struct stream_in *in);
+int audio_extn_cin_read(struct stream_in *in, void *buffer,
+                        size_t bytes, size_t *bytes_read);
+int audio_extn_cin_configure_input_stream(struct stream_in *in);
+#else
+#define audio_extn_cin_applicable_stream(in) (false)
+#define audio_extn_cin_attached_usecase(uc_id) (false)
+#define audio_extn_cin_get_buffer_size(in) (0)
+#define audio_extn_cin_start_input_stream(in) (0)
+#define audio_extn_cin_stop_input_stream(in) (0)
+#define audio_extn_cin_close_input_stream(in) (0)
+#define audio_extn_cin_read(in, buffer, bytes, bytes_read) (0)
+#define audio_extn_cin_configure_input_stream(in) (0)
 #endif
 
 #endif /* AUDIO_EXTN_H */

@@ -699,7 +699,7 @@
     </path>
 
     <path name="audio-ull-playback display-port">
-        <ctl name="DISPLAY_PORT Mixer MultiMedia3" value="1" />
+        <ctl name="DISPLAY_PORT Mixer MultiMedia8" value="1" />
     </path>
 
     <path name="audio-ull-playback bt-sco">
@@ -2017,7 +2017,6 @@
         <ctl name="RX INT1 MIX3 DSD HPHL Switch" value="1" />
         <ctl name="RX INT2 MIX3 DSD HPHR Switch" value="1" />
         <ctl name="SLIM_2_RX Format" value="DSD_DOP" />
-        <ctl name="RX HPH Mode" value="CLS_H_HIFI" />
     </path>
 
     <path name="hph-highquality-mode">
@@ -2471,7 +2470,7 @@
     </path>
 
     <path name="audio-ull-playback bt-a2dp">
-        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia3" value="1" />
+        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia8" value="1" />
     </path>
 
     <path name="deep-buffer-playback speaker-and-bt-a2dp">

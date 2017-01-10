@@ -502,6 +502,36 @@ static void send_soundfocus_sourcetracking_params(struct str_parms *reply,
     }
 }
 
+int audio_extn_get_soundfocus_data(const struct audio_device *adev,
+                                   struct sound_focus_param *payload)
+{
+    int ret = 0;
+    int bitmask =0;
+    struct sound_focus_param *sound_focus_data = payload;
+
+    bitmask = BITMASK_AUDIO_PARAMETER_KEYS_SOUND_FOCUS;
+
+    ret = get_soundfocus_sourcetracking_data(adev, bitmask,
+                    sound_focus_data, NULL);
+
+    return ret ;
+}
+
+int audio_extn_get_sourcetrack_data(const struct audio_device *adev,
+                              struct source_tracking_param *payload)
+{
+    int ret = 0;
+    int bitmask = 0;
+    struct source_tracking_param *source_tracking_data = payload;
+
+    bitmask = BITMASK_AUDIO_PARAMETER_KEYS_SOURCE_TRACKING;
+
+    ret = get_soundfocus_sourcetracking_data(adev, bitmask,
+                    NULL, source_tracking_data);
+
+    return ret ;
+}
+
 void audio_extn_source_track_get_parameters(const struct audio_device *adev,
                                             struct str_parms *query,
                                             struct str_parms *reply)

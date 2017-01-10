@@ -48,6 +48,7 @@ struct hardware_info {
     char dev_extn[HW_INFO_ARRAY_MAX_SIZE];
     snd_device_t  *snd_devices;
     bool is_wsa_combo_suppported;
+    bool is_stereo_spkr;
 };
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
@@ -149,18 +150,24 @@ static void update_hardware_info_8x16(struct hardware_info *hw_info, const char 
         strlcpy(hw_info->name, "msm8917", sizeof(hw_info->name));
      } else if (!strcmp(snd_card_name, "msm8940-sku6-snd-card")) {
         strlcpy(hw_info->name, "msm8940", sizeof(hw_info->name));
-    } else if (!strcmp(snd_card_name, "msmfalcon-snd-card-mtp")) {
-        strlcpy(hw_info->name, "msmfalcon", sizeof(hw_info->name));
-    } else if (!strcmp(snd_card_name, "msmfalcon-tasha-snd-card")) {
-        strlcpy(hw_info->name, "msmfalcon", sizeof(hw_info->name));
-     } else if (!strcmp(snd_card_name, "msm8920-sku7-snd-card")) {
+    } else if (!strcmp(snd_card_name, "sdm660-snd-card")) {
+        strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "sdm660-snd-card-mtp")) {
+        strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "sdm660-tasha-snd-card")) {
+        strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "sdm660-tavil-snd-card")) {
+        strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "sdm660-tashalite-snd-card")) {
+        strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8920-sku7-snd-card")) {
         strlcpy(hw_info->name, "msm8920", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "apq8009-tashalite-snd-card")) {
         strlcpy(hw_info->name, "apq8009", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "mdm9607-tomtom-i2s-snd-card")) {
         strlcpy(hw_info->name, "mdm9607", sizeof(hw_info->name));
     } else {
-        ALOGW("%s: Not an 8x16/8909/8917/8920/8937/8939/8940/8952/8953/falcon device", __func__);
+        ALOGW("%s: Not an 8x16/8909/8917/8920/8937/8939/8940/8952/8953/660 device", __func__);
     }
 }
 
@@ -181,12 +188,13 @@ void *hw_info_init(const char *snd_card_name)
     strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
     hw_info->is_wsa_combo_suppported = false;
 
+    hw_info->is_stereo_spkr = true;
     if (strstr(snd_card_name, "msm8x16") || strstr(snd_card_name, "msm8939") ||
         strstr(snd_card_name, "msm8909") || strstr(snd_card_name, "msm8952") ||
         strstr(snd_card_name, "msm8976") || strstr(snd_card_name, "msm8953") ||
         strstr(snd_card_name, "msm8937") || strstr(snd_card_name, "msm8917") ||
         strstr(snd_card_name, "msm8940") || strstr(snd_card_name, "msm8920") ||
-        strstr(snd_card_name, "msmfalcon") || strstr(snd_card_name, "apq8009") ||
+        strstr(snd_card_name, "sdm660") || strstr(snd_card_name, "apq8009") ||
 		strstr(snd_card_name, "mdm9607")) {
         ALOGV("8x16 - variant soundcard");
         update_hardware_info_8x16(hw_info, snd_card_name);
@@ -261,4 +269,11 @@ void hw_info_append_hw_type(void *hw_info, snd_device_t snd_device,
         }
     }
     ALOGD("%s : device_name = %s", __func__,device_name);
+}
+
+bool hw_info_is_stereo_spkr(void *hw_info)
+{
+    struct hardware_info *my_data = (struct hardware_info*) hw_info;
+
+    return my_data->is_stereo_spkr;
 }
