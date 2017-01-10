@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2011 The Android Open Source Project *
@@ -425,6 +425,13 @@ int qahw_get_version();
  * and store data in payload.
  */
 int qahw_get_param_data(const qahw_module_handle_t *hw_module,
+                        qahw_param_id param_id,
+                        qahw_param_payload *payload);
+
+/* Api to implement set parameters based on keyword param_id
+ * and data present in payload.
+ */
+int qahw_set_param_data(const qahw_module_handle_t *hw_module,
                         qahw_param_id param_id,
                         qahw_param_payload *payload);
 

@@ -113,6 +113,9 @@
 
 #define MAX_SET_CAL_BYTE_SIZE 65536
 
+/* Mixer path names */
+#define AFE_SIDETONE_MIXER_PATH "afe-sidetone"
+
 #define AUDIO_PARAMETER_KEY_FLUENCE_TYPE  "fluence"
 #define AUDIO_PARAMETER_KEY_SLOWTALK      "st_enable"
 #define AUDIO_PARAMETER_KEY_HD_VOICE      "hd_voice"
@@ -2924,6 +2927,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     }
 
     if ((mode == AUDIO_MODE_IN_CALL) ||
+        voice_is_in_call(adev) ||
         voice_extn_compress_voip_is_active(adev)) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             devices & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
@@ -3094,7 +3098,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
     ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
           __func__, out_device, in_device, channel_count, channel_mask);
     if (my_data->external_mic) {
-        if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) ||
+        if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) || voice_is_in_call(adev) ||
             voice_extn_compress_voip_is_active(adev) || audio_extn_hfp_is_active(adev))) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                out_device & AUDIO_DEVICE_OUT_EARPIECE ||
@@ -3109,7 +3113,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
     if (snd_device != AUDIO_DEVICE_NONE)
         goto exit;
 
-    if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) ||
+    if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) || voice_is_in_call(adev) ||
         voice_extn_compress_voip_is_active(adev) || audio_extn_hfp_is_active(adev))) {
         if ((adev->voice.tty_mode != TTY_MODE_OFF) &&
             !voice_extn_compress_voip_is_active(adev)) {
@@ -5761,18 +5765,37 @@ int platform_set_sidetone(struct audio_device *adev,
             ALOGI("Debug: Disable sidetone");
         } else {
             ret = audio_extn_usb_enable_sidetone(out_snd_device, enable);
-            if (ret)
-                ALOGI("%s: usb device %d does not support device sidetone\n",
-                  __func__, out_snd_device);
+            if (ret) {
+                /*fall back to AFE sidetone*/
+                ALOGV("%s: No USB sidetone supported, switching to AFE sidetone",
+                        __func__);
+
+                if (enable)
+                    audio_route_apply_and_update_path(adev->audio_route, AFE_SIDETONE_MIXER_PATH);
+                else
+                    audio_route_reset_and_update_path(adev->audio_route, AFE_SIDETONE_MIXER_PATH);
+            }
         }
     } else {
         ALOGV("%s: sidetone out device(%d) mixer cmd = %s\n",
               __func__, out_snd_device, str);
 
-        if (enable)
-            audio_route_apply_and_update_path(adev->audio_route, str);
-        else
-            audio_route_reset_and_update_path(adev->audio_route, str);
+        if (enable) {
+            ret = audio_route_apply_and_update_path(adev->audio_route, str);
+            if (ret) {
+                ALOGV("%s: No device sidetone supported, switching to AFE sidetone",
+                        __func__);
+                audio_route_apply_and_update_path(adev->audio_route, AFE_SIDETONE_MIXER_PATH);
+            }
+        }
+        else {
+            ret = audio_route_reset_and_update_path(adev->audio_route, str);
+            if (ret) {
+                 ALOGV("%s: No device sidetone supported, switching to AFE sidetone",
+                        __func__);
+                audio_route_reset_and_update_path(adev->audio_route, AFE_SIDETONE_MIXER_PATH);
+            }
+        }
     }
     return 0;
 }

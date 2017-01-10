@@ -132,6 +132,9 @@
 
 #define MAX_SET_CAL_BYTE_SIZE 65536
 
+/* Mixer path names */
+#define AFE_SIDETONE_MIXER_PATH "afe-sidetone"
+
 #define AUDIO_PARAMETER_KEY_FLUENCE_TYPE  "fluence"
 #define AUDIO_PARAMETER_KEY_SLOWTALK      "st_enable"
 #define AUDIO_PARAMETER_KEY_HD_VOICE      "hd_voice"
@@ -528,7 +531,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_AFE_PROXY] = 0,
     [SND_DEVICE_OUT_USB_HEADSET] = 45,
     [SND_DEVICE_OUT_USB_HEADPHONES] = 45,
-    [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 14,
+    [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 45,
     [SND_DEVICE_OUT_TRANSMISSION_FM] = 0,
     [SND_DEVICE_OUT_ANC_HEADSET] = 26,
     [SND_DEVICE_OUT_ANC_FB_HEADSET] = 27,
@@ -2701,7 +2704,8 @@ int platform_get_backend_index(snd_device_t snd_device)
                         port = HDMI_RX_BACKEND;
                 else if (strcmp(backend_tag_table[snd_device], "display-port") == 0)
                         port = DISP_PORT_RX_BACKEND;
-                else if (strcmp(backend_tag_table[snd_device], "usb-headphones") == 0)
+                else if ((strcmp(backend_tag_table[snd_device], "usb-headphones") == 0) ||
+                            (strcmp(backend_tag_table[snd_device], "usb-headset") == 0))
                         port = USB_AUDIO_RX_BACKEND;
         }
     } else if (snd_device >= SND_DEVICE_IN_BEGIN && snd_device < SND_DEVICE_IN_END) {
@@ -3243,6 +3247,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     }
 
     if ((mode == AUDIO_MODE_IN_CALL) ||
+        voice_is_in_call(adev) ||
         voice_extn_compress_voip_is_active(adev)) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             devices & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
@@ -3451,7 +3456,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
     ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
           __func__, out_device, in_device, channel_count, channel_mask);
     if (my_data->external_mic) {
-        if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) ||
+        if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) || voice_is_in_call(adev) ||
             voice_extn_compress_voip_is_active(adev) || audio_extn_hfp_is_active(adev))) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                out_device & AUDIO_DEVICE_OUT_EARPIECE ||
@@ -3466,7 +3471,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
     if (snd_device != AUDIO_DEVICE_NONE)
         goto exit;
 
-    if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) ||
+    if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) || voice_is_in_call(adev) ||
         voice_extn_compress_voip_is_active(adev) || audio_extn_hfp_is_active(adev))) {
         if ((adev->voice.tty_mode != TTY_MODE_OFF) &&
             !voice_extn_compress_voip_is_active(adev)) {
@@ -4080,6 +4085,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
 
     native_audio_set_params(platform, parms, value, sizeof(value));
     audio_extn_spkr_prot_set_parameters(parms, value, len);
+    audio_extn_usb_set_sidetone_gain(parms, value, len);
     true_32_bit_set_params(parms, value, len);
     ALOGV("%s: exit with code(%d)", __func__, ret);
     return ret;
@@ -4557,12 +4563,14 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
 
     if ((my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl) &&
         (sample_rate != my_data->current_backend_cfg[(int)backend_idx].sample_rate) &&
-            (my_data->hifi_audio)) {
+            (my_data->hifi_audio ||
+            backend_idx == USB_AUDIO_RX_BACKEND ||
+            backend_idx == USB_AUDIO_TX_BACKEND)) {
             /*
              * sample rate update is needed only for hifi audio enabled platforms
              */
             char *rate_str = NULL;
-            struct  mixer_ctl *ctl;
+            struct  mixer_ctl *ctl = NULL;
 
             switch (sample_rate) {
             case 8000:
@@ -4618,7 +4626,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
     }
     if ((my_data->current_backend_cfg[backend_idx].channels_mixer_ctl) &&
         (channels != my_data->current_backend_cfg[backend_idx].channels)) {
-        struct  mixer_ctl *ctl;
+        struct  mixer_ctl *ctl = NULL;
         char *channel_cnt_str = NULL;
 
         switch (channels) {
@@ -4804,8 +4812,9 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     sample_rate = backend_cfg->sample_rate;
     channels = backend_cfg->channels;
 
-    ALOGI("%s:becf: afe: Codec selected backend: %d current bit width: %d sample rate: %d channels: %d",
-          __func__, backend_idx, bit_width, sample_rate, channels);
+    ALOGI("%s:becf: afe: Codec selected backend: %d current bit width: %d sample rate: %d channels: %d "
+            "usecase %d device (%s)", __func__, backend_idx, bit_width, sample_rate, channels,
+            usecase->id, platform_get_snd_device_name(snd_device));
 
     // For voice calls use default configuration i.e. 16b/48K, only applicable to
     // default backend
@@ -4975,9 +4984,9 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
             channels_updated = true;
     }
 
-    ALOGI("%s:becf: afe: Codec selected backend: %d updated bit width: %d and sample rate: %d",
-          __func__,
-        backend_idx, bit_width, sample_rate);
+    ALOGI("%s:becf: afe: Codec selected backend: %d updated bit width: %d "
+            "sample rate: %d channels: %d", __func__, backend_idx,
+            bit_width, sample_rate, channels);
     // Force routing if the expected bitwdith or samplerate
     // is not same as current backend comfiguration
     if ((bit_width != my_data->current_backend_cfg[backend_idx].bit_width) ||
@@ -5913,18 +5922,36 @@ int platform_set_sidetone(struct audio_device *adev,
             ALOGI("Debug: Disable sidetone");
         } else {
             ret = audio_extn_usb_enable_sidetone(out_snd_device, enable);
-            if (ret)
-                ALOGI("%s: usb device %d does not support device sidetone\n",
-                  __func__, out_snd_device);
-        }
+            if (ret) {
+                /*fall back to AFE sidetone*/
+                ALOGV("%s: No USB sidetone supported, switching to AFE sidetone",
+                       __func__);
+
+                if (enable)
+                    audio_route_apply_and_update_path(adev->audio_route, AFE_SIDETONE_MIXER_PATH);
+                else
+                    audio_route_reset_and_update_path(adev->audio_route, AFE_SIDETONE_MIXER_PATH);
+            }
+	}
     } else {
         ALOGV("%s: sidetone out device(%d) mixer cmd = %s\n",
               __func__, out_snd_device, str);
 
-        if (enable)
-            audio_route_apply_and_update_path(adev->audio_route, str);
-        else
-            audio_route_reset_and_update_path(adev->audio_route, str);
+        if (enable) {
+            ret = audio_route_apply_and_update_path(adev->audio_route, str);
+            if (ret) {
+                ALOGV("%s: No device sidetone supported, switching to AFE sidetone",
+                       __func__);
+                audio_route_apply_and_update_path(adev->audio_route, AFE_SIDETONE_MIXER_PATH);
+            }
+        } else {
+            ret = audio_route_reset_and_update_path(adev->audio_route, str);
+            if (ret) {
+                ALOGV("%s: No device sidetone supported, switching to AFE sidetone",
+                       __func__);
+                audio_route_reset_and_update_path(adev->audio_route, AFE_SIDETONE_MIXER_PATH);
+            }
+        }
     }
     return 0;
 }

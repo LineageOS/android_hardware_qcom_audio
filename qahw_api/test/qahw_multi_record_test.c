@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2015 The Android Open Source Project *
@@ -37,6 +37,7 @@
 
 static bool kpi_mode;
 FILE * log_file = NULL;
+volatile bool stop_record = false;
 
 #define ID_RIFF 0x46464952
 #define ID_WAVE 0x45564157
@@ -84,15 +85,39 @@ static pthread_mutex_t glock;
 static volatile int tests_running;
 static volatile int tests_completed;
 
-#define SOUNDFOCUS_SET_PARAMS_STR_LEN 100
-#define SOUNDFOCUS_SET_PARAMS "SoundFocus.start_angles=%s;"\
-                              "SoundFocus.enable_sectors=%s;" \
-                              "SoundFocus.gain_step=%d"
 int sourcetrack_done = 0;
 static pthread_mutex_t sourcetrack_lock;
-char soundfocus_param[100];
+struct qahw_sound_focus_param sound_focus_data;
 
-void sourcetrack_signal_handler(void)
+void stop_signal_handler(int signal)
+{
+   stop_record = true;
+}
+
+
+void read_soundfocus_param(void)
+{
+    int i = 0;
+    uint16_t start_angle[4] = {0};
+    uint8_t enable_sector[4] = {0};
+    uint16_t gain_step;
+
+    printf("\nEnter soundfocusparams startangle :::::");
+    scanf("%hd %hd %hd %hd",&start_angle[0], &start_angle[1],
+                            &start_angle[2], &start_angle[3]);
+    memcpy(&sound_focus_data.start_angle, start_angle, sizeof(start_angle));
+
+    printf("\nEnter soundfocusparams enablesector :::::");
+    scanf("%hhd %hhd %hhd %hhd",&enable_sector[0], &enable_sector[1],
+                                &enable_sector[2], &enable_sector[3]);
+    memcpy(&sound_focus_data.enable, enable_sector, sizeof(enable_sector));
+
+    printf("\nEnter soundfocusparams gainstep:::::");
+    scanf("%hd",&gain_step);
+    memcpy(&sound_focus_data.gain_step, &gain_step, sizeof(gain_step));
+}
+
+void sourcetrack_signal_handler(int signal)
 {
 /* Function to read keyboard interupt to enable user to set parameters
    for sourcetracking usecase Dynamically */
@@ -102,31 +127,11 @@ void sourcetrack_signal_handler(void)
     pthread_mutex_unlock(&sourcetrack_lock);
 }
 
-void read_soundfocus_param(void)
-{
-    char params[50] = {0};
-    char *start_angle = NULL;
-    char *enable_sector = NULL;
-    unsigned int gain_step;
-
-    printf("Enter soundfocusparams (startangle;enablesector;gainstep):::::");
-    scanf("%s",params);
-
-    start_angle = strtok(params, ";");
-    enable_sector = strtok(NULL, ";" );
-    gain_step = atoi(strtok(NULL, ";"));
-
-    snprintf(soundfocus_param, SOUNDFOCUS_SET_PARAMS_STR_LEN,
-             SOUNDFOCUS_SET_PARAMS, start_angle, enable_sector,
-             gain_step);
-}
-
 void *read_sourcetrack_data(void* data)
 {
     int idx =0, status = 0,count = 0, sect = 0;
     qahw_param_id param;
     qahw_param_payload payload;
-    struct qahw_sound_focus_param sound_focus_data;
     qahw_module_handle_t *qawh_module_handle = NULL;
 
     qawh_module_handle = (qahw_module_handle_t *)data;
@@ -137,12 +142,13 @@ void *read_sourcetrack_data(void* data)
             return NULL;
 
         pthread_mutex_lock(&sourcetrack_lock);
-        status = qahw_set_parameters(qawh_module_handle, soundfocus_param);
+        payload = (qahw_param_payload)sound_focus_data;
+        param = QAHW_PARAM_SOUND_FOCUS;
+        status = qahw_set_param_data(qawh_module_handle, param, &payload);
         if (status != 0)
             fprintf(log_file, "Error.Failed Set SoundFocus Params\n");
 
         fprintf(log_file, "\nGet SoundFocus Params from app");
-        param = QAHW_PARAM_SOUND_FOCUS;
         status = qahw_get_param_data(qawh_module_handle, param, &payload);
         if (status < 0) {
                 fprintf(log_file, "Failed to get sound focus params\n");
@@ -336,7 +342,7 @@ void *start_input(void *thread_param)
 
   memset(&in_buf,0, sizeof(qahw_in_buffer_t));
   start_time = time(0);
-  while(true) {
+  while(true && !stop_record) {
       if(time_elapsed < params->record_delay) {
           usleep(1000000*(params->record_delay - time_elapsed));
           time_elapsed = difftime(time(0), start_time);
@@ -528,6 +534,8 @@ void usage() {
     printf("                                           format 1[AUDIO_FORMAT_PCM_16_BIT], sample rate 44100, \n");
     printf("                                           channels 2[AUDIO_CHANNEL_IN_STEREO], record data for 8 secs\n");
     printf("                                           start recording after 2 secs.\n\n");
+    printf(" hal_rec_test -S -c 1 -r 48000 -t 30 -> Enable Sourcetracking\n");
+    printf("                                      For mono channel 48kHz rate for 30seconds\n\n");
     printf(" hal_rec_test -F 1 --kpi-mode -> start a recording with low latency input flag and calculate latency KPIs\n\n");
 }
 
@@ -729,8 +737,10 @@ int main(int argc, char* argv[]) {
                source_tracking = 0;
                goto sourcetrack_error;
         }
-        signal(SIGQUIT, sourcetrack_signal_handler);
-        printf("NOTE::::To set sourcetracking params at runtime press 'Ctrl+\\' from keyboard\n");
+        if (signal(SIGQUIT, sourcetrack_signal_handler) == SIG_ERR)
+            fprintf(log_file, "Failed to register SIGQUIT:%d\n",errno);
+        else
+            printf("NOTE::::To set sourcetracking params at runtime press 'Ctrl+\\' from keyboard\n");
         read_soundfocus_param();
         printf("Create source tracking thread \n");
         ret = pthread_create(&sourcetrack_thread,
@@ -743,6 +753,10 @@ int main(int argc, char* argv[]) {
             goto sourcetrack_error;
         }
     }
+
+    /* Register the SIGINT to close the App properly */
+    if (signal(SIGINT, stop_signal_handler) == SIG_ERR)
+        fprintf(log_file, "Failed to register SIGINT:%d\n",errno);
 
     if (thread_active[0] == 1) {
         fprintf(log_file, "\n Create first record thread \n");
