@@ -1139,6 +1139,17 @@ int get_snd_codec_id(audio_format_t format)
     case AUDIO_FORMAT_MP2:
         id = SND_AUDIOCODEC_MP2;
         break;
+    case AUDIO_FORMAT_AC3:
+        id = SND_AUDIOCODEC_AC3;
+        break;
+    case AUDIO_FORMAT_E_AC3:
+    case AUDIO_FORMAT_E_AC3_JOC:
+        id = SND_AUDIOCODEC_EAC3;
+        break;
+    case AUDIO_FORMAT_DTS:
+    case AUDIO_FORMAT_DTS_HD:
+        id = SND_AUDIOCODEC_DTS;
+        break;
     default:
         ALOGE("%s: Unsupported audio format :%x", __func__, format);
     }
