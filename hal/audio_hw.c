@@ -778,6 +778,9 @@ int enable_snd_device(struct audio_device *adev,
     } else {
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
 
+       if (platform_check_codec_asrc_support(adev->platform))
+           check_and_set_asrc_mode(adev, snd_device);
+
        if ((SND_DEVICE_OUT_BT_A2DP == snd_device) &&
            (audio_extn_a2dp_start_playback() < 0)) {
            ALOGE(" fail to configure A2dp control path ");
@@ -1597,8 +1600,6 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     /* Enable new sound devices */
     if (out_snd_device != SND_DEVICE_NONE) {
         check_usecases_codec_backend(adev, usecase, out_snd_device);
-        if (platform_check_codec_asrc_support(adev->platform))
-            check_and_set_asrc_mode(adev, out_snd_device);
         enable_snd_device(adev, out_snd_device);
     }
 
