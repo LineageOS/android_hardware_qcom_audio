@@ -36,10 +36,51 @@
 #define ALOGVV(a...) do { } while(0)
 #endif
 
-#define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
+#define COMPRESS_OFFLOAD_NUM_FRAGMENTS 2
+#define COMPRESS_OFFLOAD_FRAGMENT_SIZE (2 * 1024)
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
 #define QAF_DEFAULT_COMPR_AUDIO_HANDLE 1001
 #define QAF_DEFAULT_COMPR_PASSTHROUGH_HANDLE 1002
+#define QAF_DEFAULT_PASSTHROUGH_HANDLE 1003
+/*
+ * MS12 Latency (Input Buffer Processing latency)+
+ * Kernel Latency (Calculated based on the available offload buffer size) +
+ * DSP Latency (Calculated based on the Platform render latency)
+*/
+#define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 300
+#define PCM_OFFLOAD_PLAYBACK_LATENCY 248
+
+/*
+ * Buffer size for compress passthrough is 8192 bytes
+ */
+#define COMPRESS_PASSTHROUGH_BUFFER_SIZE \
+     (COMPRESS_OFFLOAD_NUM_FRAGMENTS * COMPRESS_OFFLOAD_FRAGMENT_SIZE)
+/*
+ * Frame size for DD/DDP is 1536 samples corresponding to 32ms.
+ */
+#define DD_FRAME_SIZE 1536
+/*
+ * DD encoder output size for 32ms.
+ */
+#define DD_ENCODER_OUTPUT_SIZE 2560
+/*
+ * DDP encoder output size for 32ms.
+ */
+#define DDP_ENCODER_OUTPUT_SIZE 4608
+
+/*
+ * Frame size for DD/DDP is 1536 samples.
+ * For a bit rate of 640 bps, DD encoder output size is 2560 bytes of
+ * 32ms;
+ * DDP encoder output size is 4608 bytes of 32 ms.
+ * Kernel buffer buffer allocation for compress passthrough is
+ * 2 x 2048 bytes = 4096 bytes
+ * The Latency for DD (measured in samples) is calculated as:
+ * Time taken to play 8192 bytes (for DD) = 4096 x 32/2560 = 51.2ms
+ * Samples for 51.2ms = 51.2 x 1536/32 = 2457 samples.
+ * Latency calculated similarly for DPP is 1365 samples.
+ */
+#define TRANSCODE_LATENCY(buffer_size, frame_size, encoder_output_in_bytes) ((buffer_size * frame_size) / encoder_output_in_bytes)
 
 #include <stdlib.h>
 #include <pthread.h>
@@ -62,19 +103,11 @@
 #include "sound/compress_params.h"
 
 #define QAF_OUTPUT_SAMPLING_RATE 48000
-#define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 50
-#define QAF_PLAYBACK_LATENCY 30
-
-#define QAF_LATENCY (COMPRESS_OFFLOAD_PLAYBACK_LATENCY + QAF_PLAYBACK_LATENCY)
+#define PCM_OFFLOAD_BUFFER_SIZE 7680
 
 #ifdef QAF_DUMP_ENABLED
 FILE *fp_output_writer_hdmi = NULL;
 #endif
-
-typedef enum {
-AUDIO_OUTPUT_FLAG_MAIN = 0x4000, // Flag for Main Input Stream
-AUDIO_OUTPUT_FLAG_ASSOCIATED = 0x8000, // Flag for Assocated Input Stream
-} qaf_audio_output_flags_t;
 
 struct qaf {
     struct audio_device *adev;
@@ -99,21 +132,78 @@ struct qaf {
     pthread_mutex_t lock;
     struct stream_out *stream_drain_main;
     struct stream_out *qaf_compr_offload_out;
+    struct stream_out *qaf_compr_offload_out_mch;
     struct stream_out *qaf_compr_passthrough_out;
+    struct stream_out *qaf_passthrough_out;
+    bool hdmi_connect;
     int passthrough_enabled;
     int hdmi_sink_channels;
-    bool multi_ch_out_enabled;
     bool main_output_active;
     bool assoc_output_active;
+    bool qaf_msmd_enabled;
 };
 
 static struct qaf *qaf_mod = NULL;
+static int qaf_stream_set_param(struct stream_out *out, const char *kv_pair) __attribute__ ((unused));
 
 static void lock_output_stream(struct stream_out *out)
 {
     pthread_mutex_lock(&out->pre_lock);
     pthread_mutex_lock(&out->lock);
     pthread_mutex_unlock(&out->pre_lock);
+}
+
+static bool audio_extn_qaf_passthrough_enabled(struct stream_out *out)
+{
+    ALOGV("%s %d ", __func__, __LINE__);
+    if ((!property_get_bool("audio.qaf.reencode", false)) &&
+        property_get_bool("audio.qaf.passthrough", false)) {
+        if (property_get_bool("audio.offload.passthrough", false)) {
+            if (((out->format == AUDIO_FORMAT_AC3) && platform_is_edid_supported_format(qaf_mod->adev->platform, AUDIO_FORMAT_AC3)) ||
+                ((out->format == AUDIO_FORMAT_E_AC3) && platform_is_edid_supported_format(qaf_mod->adev->platform, AUDIO_FORMAT_E_AC3)) ||
+                ((out->format == AUDIO_FORMAT_DTS) && platform_is_edid_supported_format(qaf_mod->adev->platform, AUDIO_FORMAT_DTS)) ||
+                ((out->format == AUDIO_FORMAT_DTS_HD) && platform_is_edid_supported_format(qaf_mod->adev->platform, AUDIO_FORMAT_DTS_HD))) {
+                return true;
+            }
+        } else {
+            if ((out->format == AUDIO_FORMAT_PCM_16_BIT) && (popcount(out->channel_mask) > 2)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+static int qaf_out_callback(stream_callback_event_t event, void *param __unused, void *cookie)
+{
+    struct stream_out *out = (struct stream_out *)cookie;
+
+    out->offload_callback(event, NULL, out->offload_cookie);
+    return 0;
+}
+
+static int create_output_stream(struct stream_out *out, struct audio_config *config, audio_output_flags_t flags, audio_devices_t devices, int handle_id)
+{
+    int ret = 0;
+
+    ALOGV("%s %d", __func__, __LINE__);
+    if ((handle_id == QAF_DEFAULT_PASSTHROUGH_HANDLE) &&
+        (NULL == qaf_mod->qaf_passthrough_out)) {
+        pthread_mutex_lock(&qaf_mod->lock);
+        lock_output_stream(out);
+        ret = adev_open_output_stream((struct audio_hw_device *) qaf_mod->adev, handle_id, devices,
+                                         flags, config, (struct audio_stream_out **) &(qaf_mod->qaf_passthrough_out), NULL);
+        if (ret < 0) {
+            pthread_mutex_unlock(&out->lock);
+            pthread_mutex_unlock(&qaf_mod->lock);
+            ALOGE("%s: adev_open_output_stream failed with ret = %d!", __func__, ret);
+            return -EINVAL;
+        }
+        qaf_mod->qaf_passthrough_out->stream.set_callback((struct audio_stream_out *)qaf_mod->qaf_passthrough_out, (stream_callback_t) qaf_out_callback, out);
+        pthread_mutex_unlock(&out->lock);
+        pthread_mutex_unlock(&qaf_mod->lock);
+    }
+    return ret;
 }
 
 static int qaf_send_offload_cmd_l(struct stream_out* out, int command)
@@ -151,12 +241,24 @@ static int qaf_out_standby(struct audio_stream *stream)
           stream, out->usecase, use_case_table[out->usecase]);
 
     lock_output_stream(out);
+    if (qaf_mod->qaf_passthrough_out && qaf_mod->hdmi_connect) {
+        if ((out->format == AUDIO_FORMAT_PCM_16_BIT) && (popcount(out->channel_mask) <= 2)) {
+            pthread_mutex_unlock(&out->lock);
+            return status;
+        }
+        status = qaf_mod->qaf_passthrough_out->stream.common.standby((struct audio_stream *) qaf_mod->qaf_passthrough_out);
+        if (!out->standby) {
+            out->standby = true;
+        }
+        pthread_mutex_unlock(&out->lock);
+        return status;
+    }
+
     if (!out->standby) {
         out->standby = true;
         status = audio_extn_qaf_stream_stop(out);
     }
     pthread_mutex_unlock(&out->lock);
-    out->written = 0;
     return status;
 }
 
@@ -167,22 +269,6 @@ static int qaf_stream_set_param(struct stream_out *out, const char *kv_pair)
         return -EINVAL;
 
     return qaf_mod->qaf_audio_stream_set_param(out->qaf_stream_handle, kv_pair);
-}
-
-static int qaf_out_set_parameters(struct audio_stream *stream, const char *kvpairs)
-{
-    struct stream_out *out = (struct stream_out *)stream;
-    int ret = 0;
-
-    ALOGV("%s: enter: usecase(%d: %s) kvpairs: %s",
-          __func__, out->usecase, use_case_table[out->usecase], kvpairs);
-    lock_output_stream(out);
-    ret = qaf_stream_set_param(out, kvpairs);
-    pthread_mutex_unlock(&out->lock);
-    if ((NULL != qaf_mod->qaf_compr_offload_out)) {
-        qaf_mod->qaf_compr_offload_out->stream.common.set_parameters((struct audio_stream *) qaf_mod->qaf_compr_offload_out, kvpairs);
-    }
-    return ret;
 }
 
 static int qaf_write_input_buffer(struct stream_out *out, const void *buffer, int bytes)
@@ -251,6 +337,18 @@ static ssize_t qaf_out_write(struct audio_stream_out *stream, const void *buffer
     ALOGV("qaf_out_write bytes = %d, usecase[%d] and flags[%x] for handle[%p]",(int)bytes, out->usecase, out->flags, out);
     lock_output_stream(out);
 
+    if (qaf_mod->qaf_passthrough_out && qaf_mod->hdmi_connect) {
+        if ((out->format == AUDIO_FORMAT_PCM_16_BIT) && (popcount(out->channel_mask) <= 2)) {
+            ALOGD(" %s : Drop data as compress passthrough session is going on", __func__);
+            usleep(bytes * 1000000 / audio_stream_out_frame_size(stream) /
+                            out->stream.common.get_sample_rate(&out->stream.common));
+            goto exit;
+        }
+        ret = qaf_mod->qaf_passthrough_out->stream.write((struct audio_stream_out *)(qaf_mod->qaf_passthrough_out), buffer, bytes);
+        pthread_mutex_unlock(&out->lock);
+        return ret;
+    }
+
     if (out->standby) {
         out->standby = false;
         pthread_mutex_lock(&adev->lock);
@@ -303,13 +401,35 @@ static int qaf_get_timestamp(struct stream_out *out, uint64_t *frames, struct ti
     int ret = 0;
     struct str_parms *parms;
     int value = 0;
+    int latency = 0;
     int signed_frames = 0;
-    const char* kvpairs = NULL;
+    char* kvpairs = NULL;
 
     ALOGV("%s out->format %d", __func__, out->format);
+    kvpairs = qaf_mod->qaf_audio_stream_get_param(out->qaf_stream_handle, "get_latency");
+    if (kvpairs) {
+        parms = str_parms_create_str(kvpairs);
+        ret = str_parms_get_int(parms, "get_latency", &latency);
+        if (ret >= 0) {
+            str_parms_destroy(parms);
+            parms = NULL;
+        }
+        free(kvpairs);
+        kvpairs = NULL;
+    }
+    // MS12 Latency + Kernel Latency + Dsp Latency
+    if (qaf_mod->qaf_compr_offload_out != NULL) {
+        out->platform_latency = latency + (COMPRESS_OFFLOAD_NUM_FRAGMENTS * PCM_OFFLOAD_BUFFER_SIZE \
+                                       /(popcount(qaf_mod->qaf_compr_offload_out->channel_mask) * sizeof(short))) \
+                                       +((platform_render_latency(qaf_mod->qaf_compr_offload_out->usecase) * qaf_mod->qaf_compr_offload_out->sample_rate) / 1000000LL);
+    } else if (NULL != qaf_mod->qaf_compr_passthrough_out) {
+        out->platform_latency = latency + ((qaf_mod->qaf_compr_passthrough_out->format == AUDIO_FORMAT_AC3) ? TRANSCODE_LATENCY(COMPRESS_PASSTHROUGH_BUFFER_SIZE, DD_FRAME_SIZE, DD_ENCODER_OUTPUT_SIZE) : TRANSCODE_LATENCY(COMPRESS_PASSTHROUGH_BUFFER_SIZE, DD_FRAME_SIZE, DDP_ENCODER_OUTPUT_SIZE)) \
+                                        + (COMPRESS_OFFLOAD_PLAYBACK_LATENCY *  qaf_mod->qaf_compr_passthrough_out->sample_rate/1000);
+    }
+
     if(out->format & AUDIO_FORMAT_PCM_16_BIT) {
-       *frames = out->written;
-       signed_frames = out->written - (platform_render_latency(out->usecase) * out->sample_rate / 1000000LL);
+       *frames = 0;
+       signed_frames = out->written - out->platform_latency;
        // It would be unusual for this value to be negative, but check just in case ...
        if (signed_frames >= 0) {
            *frames = signed_frames;
@@ -322,7 +442,7 @@ static int qaf_get_timestamp(struct stream_out *out, uint64_t *frames, struct ti
             ret = str_parms_get_int(parms, "position", &value);
             if (ret >= 0) {
                 *frames = value;
-                signed_frames = value - (platform_render_latency(out->usecase) * out->sample_rate / 1000000LL);
+                signed_frames = value - out->platform_latency;
                 // It would be unusual for this value to be negative, but check just in case ...
                 if (signed_frames >= 0) {
                     *frames = signed_frames;
@@ -343,6 +463,13 @@ static int qaf_out_get_presentation_position(const struct audio_stream_out *stre
     struct stream_out *out = (struct stream_out *)stream;
     int ret = -1;
     lock_output_stream(out);
+
+    if (qaf_mod->qaf_passthrough_out && qaf_mod->hdmi_connect) {
+        ret = qaf_mod->qaf_passthrough_out->stream.get_presentation_position((struct audio_stream_out *)qaf_mod->qaf_passthrough_out, frames, timestamp);
+        pthread_mutex_unlock(&out->lock);
+        return ret;
+    }
+
     ret = qaf_get_timestamp(out, frames, timestamp);
     pthread_mutex_unlock(&out->lock);
 
@@ -363,30 +490,34 @@ static int qaf_out_pause(struct audio_stream_out* stream)
     struct stream_out *out = (struct stream_out *)stream;
     int status = -ENOSYS;
     ALOGE("%s", __func__);
+
     lock_output_stream(out);
+    if (qaf_mod->qaf_passthrough_out && qaf_mod->hdmi_connect) {
+        status = qaf_mod->qaf_passthrough_out->stream.pause((struct audio_stream_out *) qaf_mod->qaf_passthrough_out);
+        out->offload_state = OFFLOAD_STATE_PAUSED;
+        pthread_mutex_unlock(&out->lock);
+        return status;
+    }
+
     status = qaf_stream_pause(out);
     pthread_mutex_unlock(&out->lock);
     return status;
 }
 
-static int qaf_out_resume(struct audio_stream_out* stream)
-{
-    struct stream_out *out = (struct stream_out *)stream;
-    int status = -ENOSYS;
-    ALOGD("%s", __func__);
-    lock_output_stream(out);
-    status = qaf_stream_start(out);
-    pthread_mutex_unlock(&out->lock);
-    ALOGD("%s Exit", __func__);
-    return status;
-}
-
-static int qaf_out_drain(struct audio_stream_out* stream, audio_drain_type_t type __unused )
+static int qaf_out_drain(struct audio_stream_out* stream, audio_drain_type_t type)
 {
     struct stream_out *out = (struct stream_out *)stream;
     int status = 0;
     ALOGV("%s stream_handle = %p , format = %x", __func__, out->qaf_stream_handle, out->format);
+
     lock_output_stream(out);
+    if (qaf_mod->qaf_passthrough_out && qaf_mod->hdmi_connect) {
+        status = qaf_mod->qaf_passthrough_out->stream.drain((struct audio_stream_out*)(qaf_mod->qaf_passthrough_out), type);
+        pthread_mutex_unlock(&out->lock);
+        return status;
+    }
+
+
     if (out->offload_callback && out->qaf_stream_handle) {
         /* Stream stop will trigger EOS and on EOS_EVENT received
            from callback DRAIN_READY command is sent */
@@ -412,18 +543,41 @@ static int qaf_out_flush(struct audio_stream_out* stream)
     struct stream_out *out = (struct stream_out *)stream;
     ALOGV("%s", __func__);
     int status = -ENOSYS;
+
     lock_output_stream(out);
+    if (qaf_mod->qaf_passthrough_out && qaf_mod->hdmi_connect) {
+        status = qaf_mod->qaf_passthrough_out->stream.flush((struct audio_stream_out *)qaf_mod->qaf_passthrough_out);
+        out->offload_state = OFFLOAD_STATE_IDLE;
+        pthread_mutex_unlock(&out->lock);
+        return status;
+    }
+
     status = audio_extn_qaf_stream_flush(out);
     pthread_mutex_unlock(&out->lock);
     ALOGV("%s Exit", __func__);
     return status;
 }
 
-static uint32_t qaf_out_get_latency(const struct audio_stream_out *stream __unused)
+static uint32_t qaf_out_get_latency(const struct audio_stream_out *stream)
 {
+    struct stream_out *out = (struct stream_out *)stream;
     uint32_t latency = 0;
 
-    latency = QAF_LATENCY;
+
+    lock_output_stream(out);
+    if (qaf_mod->qaf_passthrough_out && qaf_mod->hdmi_connect) {
+        latency = qaf_mod->qaf_passthrough_out->stream.get_latency((struct audio_stream_out *)qaf_mod->qaf_passthrough_out);
+        ALOGV("%s: latency = %u", __FUNCTION__, latency);
+        pthread_mutex_unlock(&out->lock);
+        return latency;
+    }
+    pthread_mutex_unlock(&out->lock);
+
+    if (is_offload_usecase(out->usecase)) {
+        latency = COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
+    } else {
+        latency = PCM_OFFLOAD_PLAYBACK_LATENCY;
+    }
     ALOGV("%s: Latency %d", __func__, latency);
     return latency;
 }
@@ -444,23 +598,49 @@ static void notify_event_callback(audio_session_handle_t session_handle __unused
     int ret;
     audio_output_flags_t flags;
     struct qaf* qaf_module = (struct qaf* ) prv_data;
+
     ALOGV("%s device 0x%X, %d in event = %d", __func__, device, __LINE__, event_id);
 
     if (event_id == AUDIO_DATA_EVENT) {
         ALOGVV("Device id %x %s %d, bytes to written %d", device, __func__,__LINE__, size);
 
+        if ((qaf_mod->qaf_passthrough_out != NULL) && qaf_mod->hdmi_connect) {
+            pthread_mutex_lock(&qaf_module->lock);
+            if (qaf_mod->qaf_compr_offload_out != NULL) {
+                adev_close_output_stream((struct audio_hw_device *) qaf_mod->adev,
+                                             (struct audio_stream_out *) (qaf_mod->qaf_compr_offload_out));
+                qaf_mod->qaf_compr_offload_out = NULL;
+            }
+            if (qaf_mod->qaf_compr_offload_out_mch) {
+                adev_close_output_stream((struct audio_hw_device *) qaf_mod->adev,
+                                             (struct audio_stream_out *) (qaf_mod->qaf_compr_offload_out_mch));
+                qaf_mod->qaf_compr_offload_out_mch = NULL;
+            }
+            pthread_mutex_unlock(&qaf_module->lock);
+            ALOGV("%s %d DROPPING DATA", __func__, __LINE__);
+            return;
+        } else {
+            if (qaf_mod->qaf_passthrough_out != NULL) {
+                pthread_mutex_lock(&qaf_module->lock);
+                adev_close_output_stream((struct audio_hw_device *) qaf_mod->adev,
+                                            (struct audio_stream_out *) (qaf_mod->qaf_passthrough_out));
+                qaf_mod->qaf_passthrough_out = NULL;
+                qaf_mod->main_output_active = false;
+                pthread_mutex_unlock(&qaf_module->lock);
+            }
+        }
         pthread_mutex_lock(&qaf_module->lock);
         if ((device == (AUDIO_DEVICE_OUT_AUX_DIGITAL | AUDIO_COMPRESSED_OUT_DD)) ||
             (device == (AUDIO_DEVICE_OUT_AUX_DIGITAL | AUDIO_COMPRESSED_OUT_DDP))) {
 
-            if (NULL == qaf_mod->qaf_compr_passthrough_out) {
+            if (NULL == qaf_mod->qaf_compr_passthrough_out && qaf_mod->hdmi_connect) {
                 struct audio_config config;
                 audio_devices_t devices;
 
-                if (qaf_mod->qaf_compr_offload_out) {
+                if (qaf_mod->qaf_compr_offload_out_mch) {
                     adev_close_output_stream((struct audio_hw_device *) qaf_mod->adev,
-                                                 (struct audio_stream_out *) (qaf_mod->qaf_compr_offload_out));
-                    qaf_mod->qaf_compr_offload_out = NULL;
+                                                 (struct audio_stream_out *) (qaf_mod->qaf_compr_offload_out_mch));
+                    qaf_mod->qaf_compr_offload_out_mch = NULL;
                 }
 
                 config.sample_rate = config.offload_info.sample_rate = QAF_OUTPUT_SAMPLING_RATE;
@@ -474,7 +654,7 @@ static void notify_event_callback(audio_session_handle_t session_handle __unused
 
                 config.offload_info.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
                 config.offload_info.channel_mask = config.channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
-                flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_NON_BLOCKING;
+                flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_DIRECT_PCM;
                 devices = AUDIO_DEVICE_OUT_AUX_DIGITAL;
 
                 ret = adev_open_output_stream((struct audio_hw_device *) qaf_mod->adev, QAF_DEFAULT_COMPR_PASSTHROUGH_HANDLE, devices,
@@ -484,55 +664,65 @@ static void notify_event_callback(audio_session_handle_t session_handle __unused
                     pthread_mutex_unlock(&qaf_module->lock);
                     return;
                 }
+                qaf_mod->qaf_compr_passthrough_out->compr_config.fragments = COMPRESS_OFFLOAD_NUM_FRAGMENTS;
             }
 
             if (!qaf_mod->passthrough_enabled)
                 qaf_mod->passthrough_enabled = 1;
 
-            ret = qaf_mod->qaf_compr_passthrough_out->stream.write((struct audio_stream_out *) qaf_mod->qaf_compr_passthrough_out, buf, size);
-        } else {
-            if (device == AUDIO_DEVICE_OUT_AUX_DIGITAL && !qaf_mod->multi_ch_out_enabled) {
-                if (qaf_mod->qaf_compr_offload_out) {
-                    adev_close_output_stream((struct audio_hw_device *) qaf_mod->adev,
-                                                 (struct audio_stream_out *) (qaf_mod->qaf_compr_offload_out));
-                    qaf_mod->qaf_compr_offload_out = NULL;
-                }
-                qaf_mod->multi_ch_out_enabled = 1;
-            } else if (device == AUDIO_DEVICE_OUT_SPEAKER && qaf_mod->multi_ch_out_enabled) {
-                if (qaf_mod->qaf_compr_offload_out) {
-                    adev_close_output_stream((struct audio_hw_device *) qaf_mod->adev,
-                                                 (struct audio_stream_out *) (qaf_mod->qaf_compr_offload_out));
-                    qaf_mod->qaf_compr_offload_out = NULL;
-                }
-                qaf_mod->multi_ch_out_enabled = 0;
-            }
-
-            if (NULL == qaf_mod->qaf_compr_offload_out) {
+            if (qaf_mod->qaf_compr_passthrough_out)
+                ret = qaf_mod->qaf_compr_passthrough_out->stream.write((struct audio_stream_out *) qaf_mod->qaf_compr_passthrough_out, buf, size);
+        } else if ((device & AUDIO_DEVICE_OUT_AUX_DIGITAL) && ((qaf_mod->hdmi_connect) &&
+                   (qaf_mod->qaf_passthrough_out == NULL) && (qaf_mod->hdmi_sink_channels > 2))) {
+            if (NULL == qaf_mod->qaf_compr_offload_out_mch) {
                 struct audio_config config;
                 audio_devices_t devices;
 
                 config.sample_rate = config.offload_info.sample_rate = QAF_OUTPUT_SAMPLING_RATE;
                 config.offload_info.version = AUDIO_INFO_INITIALIZER.version;
                 config.offload_info.size = AUDIO_INFO_INITIALIZER.size;
-                config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT_OFFLOAD;
+                config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
                 config.offload_info.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-                config.format = AUDIO_FORMAT_PCM_16_BIT_OFFLOAD;
+                config.format = AUDIO_FORMAT_PCM_16_BIT;
                 devices = AUDIO_DEVICE_NONE;
 
-                if (device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-                    if (qaf_mod->hdmi_sink_channels == 8) {
-                        config.offload_info.channel_mask = config.channel_mask = AUDIO_CHANNEL_OUT_7POINT1;
-                    } else if (qaf_mod->hdmi_sink_channels == 6) {
-                        config.offload_info.channel_mask = config.channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
-                    } else {
-                        config.offload_info.channel_mask = config.channel_mask = AUDIO_CHANNEL_OUT_STEREO;
-                    }
-                    devices = AUDIO_DEVICE_OUT_AUX_DIGITAL;
+                if (qaf_mod->hdmi_sink_channels == 8) {
+                    config.offload_info.channel_mask = config.channel_mask = AUDIO_CHANNEL_OUT_7POINT1;
+                } else if (qaf_mod->hdmi_sink_channels == 6) {
+                    config.offload_info.channel_mask = config.channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
                 } else {
                     config.offload_info.channel_mask = config.channel_mask = AUDIO_CHANNEL_OUT_STEREO;
-                    qaf_mod->multi_ch_out_enabled = 0;
                 }
-                flags = AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING;
+                devices = AUDIO_DEVICE_OUT_AUX_DIGITAL;
+                flags = AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_DIRECT_PCM;
+
+                ret = adev_open_output_stream((struct audio_hw_device *) qaf_mod->adev, QAF_DEFAULT_COMPR_AUDIO_HANDLE, devices,
+                                                 flags, &config, (struct audio_stream_out **) &(qaf_mod->qaf_compr_offload_out_mch), NULL);
+                if (ret < 0) {
+                    ALOGE("%s: adev_open_output_stream failed with ret = %d!", __func__, ret);
+                    pthread_mutex_unlock(&qaf_module->lock);
+                    return;
+                }
+                qaf_mod->qaf_compr_offload_out_mch->compr_config.fragments = COMPRESS_OFFLOAD_NUM_FRAGMENTS;
+            }
+
+            if (qaf_mod->qaf_compr_offload_out_mch)
+                ret = qaf_mod->qaf_compr_offload_out_mch->stream.write((struct audio_stream_out *) qaf_mod->qaf_compr_offload_out_mch, buf, size);
+        } else {
+
+            if (NULL == qaf_mod->qaf_compr_offload_out && qaf_mod->qaf_passthrough_out == NULL) {
+                struct audio_config config;
+                audio_devices_t devices;
+
+                config.sample_rate = config.offload_info.sample_rate = QAF_OUTPUT_SAMPLING_RATE;
+                config.offload_info.version = AUDIO_INFO_INITIALIZER.version;
+                config.offload_info.size = AUDIO_INFO_INITIALIZER.size;
+                config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
+                config.offload_info.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+                config.format = AUDIO_FORMAT_PCM_16_BIT;
+                config.offload_info.channel_mask = config.channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+                devices = AUDIO_DEVICE_OUT_SPEAKER;
+                flags = AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_DIRECT_PCM;
 
                 /* TODO:: Need to Propagate errors to framework */
                 ret = adev_open_output_stream((struct audio_hw_device *) qaf_mod->adev, QAF_DEFAULT_COMPR_AUDIO_HANDLE, devices,
@@ -542,14 +732,23 @@ static void notify_event_callback(audio_session_handle_t session_handle __unused
                     pthread_mutex_unlock(&qaf_module->lock);
                     return;
                 }
+                qaf_mod->qaf_compr_offload_out->compr_config.fragments = COMPRESS_OFFLOAD_NUM_FRAGMENTS;
+                qaf_mod->qaf_compr_offload_out->info.channel_mask = config.offload_info.channel_mask;
+                qaf_mod->qaf_compr_offload_out->info.format = config.offload_info.format;
+                qaf_mod->qaf_compr_offload_out->info.sample_rate = config.offload_info.sample_rate;
             }
 
-            if (qaf_mod->passthrough_enabled) {
+            if (!qaf_mod->hdmi_connect && (qaf_mod->qaf_compr_passthrough_out || qaf_mod->qaf_compr_offload_out_mch)) {
                 qaf_mod->passthrough_enabled = 0;
                 if (qaf_mod->qaf_compr_passthrough_out) {
                     adev_close_output_stream((struct audio_hw_device *) qaf_mod->adev,
                                                  (struct audio_stream_out *) (qaf_mod->qaf_compr_passthrough_out));
                     qaf_mod->qaf_compr_passthrough_out = NULL;
+                }
+                if (qaf_mod->qaf_compr_offload_out_mch) {
+                    adev_close_output_stream((struct audio_hw_device *) qaf_mod->adev,
+                                                 (struct audio_stream_out *) (qaf_mod->qaf_compr_offload_out_mch));
+                    qaf_mod->qaf_compr_offload_out_mch = NULL;
                 }
             }
 
@@ -557,10 +756,11 @@ static void notify_event_callback(audio_session_handle_t session_handle __unused
              * TODO:: Since this is mixed data,
              * need to identify to which stream the error should be sent
              */
-            ret = qaf_mod->qaf_compr_offload_out->stream.write((struct audio_stream_out *) qaf_mod->qaf_compr_offload_out, buf, size);
+            if (qaf_mod->qaf_compr_offload_out)
+                ret = qaf_mod->qaf_compr_offload_out->stream.write((struct audio_stream_out *) qaf_mod->qaf_compr_offload_out, buf, size);
         }
 
-        ALOGVV("%s:%d stream write ret = %d for out handle[%p]", __func__, __LINE__, ret, qaf_mod->qaf_compr_offload_out);
+        ALOGVV("%s:%d stream write ret = %d", __func__, __LINE__, ret);
         pthread_mutex_unlock(&qaf_module->lock);
     } else if (event_id == AUDIO_EOS_MAIN_DD_DDP_EVENT || event_id == AUDIO_EOS_MAIN_AAC_EVENT) {
         /* TODO:: Only MAIN Stream EOS Event is added, need to add ASSOC stream EOS Event */
@@ -624,9 +824,19 @@ static int qaf_stream_open(struct stream_out *out, struct audio_config *config, 
     if (!qaf_mod->qaf_audio_stream_open)
         return -EINVAL;
 
+    if (audio_extn_qaf_passthrough_enabled(out) && qaf_mod->hdmi_connect) {
+        ALOGV("%s %d passthrough is enabled", __func__, __LINE__);
+        status =  create_output_stream(out, config, flags, devices, QAF_DEFAULT_PASSTHROUGH_HANDLE);
+        if (status < 0) {
+            ALOGE("%s: adev_open_output_stream failed with ret = %d!", __func__, status);
+            return -EINVAL;
+        }
+        return 0;
+    }
+
     audio_stream_config_t input_config;
     input_config.sample_rate = config->sample_rate;
-    input_config.channel_mask = config->channel_mask;
+    input_config.channels = popcount(config->channel_mask);
     input_config.format = config->format;
 
     if ((config->format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC) {
@@ -635,8 +845,8 @@ static int qaf_stream_open(struct stream_out *out, struct audio_config *config, 
         input_config.format = AUDIO_FORMAT_AAC_ADTS;
     }
 
-    ALOGV("%s %d audio_stream_open sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x) format(%#x)\
-      ",__func__, __LINE__, input_config.sample_rate, input_config.channel_mask, devices, flags, input_config.format);
+    ALOGV("%s %d audio_stream_open sample_rate(%d) channels(%d) devices(%#x) flags(%#x) format(%#x)\
+      ",__func__, __LINE__, input_config.sample_rate, input_config.channels, devices, flags, input_config.format);
 
     /* TODO to send appropriated flags when support for system tones is added */
     if (input_config.format == AUDIO_FORMAT_PCM_16_BIT) {
@@ -694,6 +904,70 @@ static int qaf_stream_open(struct stream_out *out, struct audio_config *config, 
     return status;
 }
 
+static int audio_extn_qaf_stream_open(struct stream_out *out)
+{
+    int status = -ENOSYS;
+    struct audio_config config;
+    audio_devices_t devices;
+
+    config.sample_rate = config.offload_info.sample_rate = QAF_OUTPUT_SAMPLING_RATE;
+    config.offload_info.version = AUDIO_INFO_INITIALIZER.version;
+    config.offload_info.size = AUDIO_INFO_INITIALIZER.size;
+    config.offload_info.format = out->format;
+    config.offload_info.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    config.format = out->format;
+    config.offload_info.channel_mask = config.channel_mask = out->channel_mask;
+
+    devices = AUDIO_DEVICE_OUT_SPEAKER;
+    status = qaf_stream_open(out, &config, out->flags, devices);
+    ALOGV("%s %d status %d", __func__, __LINE__, status);
+    return status;
+}
+
+static int qaf_out_resume(struct audio_stream_out* stream)
+{
+    struct stream_out *out = (struct stream_out *)stream;
+    int status = -ENOSYS;
+    ALOGV("%s", __func__);
+    lock_output_stream(out);
+    if ((!property_get_bool("audio.qaf.reencode", false)) &&
+        property_get_bool("audio.qaf.passthrough", false)) {
+        if (property_get_bool("audio.offload.passthrough", false)) {
+            if (qaf_mod->qaf_passthrough_out && qaf_mod->hdmi_connect &&
+                (((out->format == AUDIO_FORMAT_E_AC3) && platform_is_edid_supported_format(qaf_mod->adev->platform, AUDIO_FORMAT_E_AC3)) ||
+                ((out->format == AUDIO_FORMAT_AC3) && platform_is_edid_supported_format(qaf_mod->adev->platform, AUDIO_FORMAT_AC3)))) {
+                status = qaf_mod->qaf_passthrough_out->stream.resume((struct audio_stream_out*) qaf_mod->qaf_passthrough_out);
+                if (!status)
+                    out->offload_state = OFFLOAD_STATE_PLAYING;
+                pthread_mutex_unlock(&out->lock);
+                return status;
+            } else {
+                if ((out->format == AUDIO_FORMAT_E_AC3) || (out->format == AUDIO_FORMAT_AC3)) {
+                    status = audio_extn_qaf_stream_open(out);
+                    if (!status)
+                        out->offload_state = OFFLOAD_STATE_PLAYING;
+                    out->offload_callback(STREAM_CBK_EVENT_WRITE_READY, NULL, out->offload_cookie);
+                }
+            }
+        } else {
+            if ((out->format == AUDIO_FORMAT_PCM_16_BIT) && (popcount(out->channel_mask) > 2)) {
+                if (qaf_mod->qaf_passthrough_out && qaf_mod->hdmi_connect) {
+                    status = qaf_mod->qaf_passthrough_out->stream.resume((struct audio_stream_out*) qaf_mod->qaf_passthrough_out);
+                    if (!status)
+                        out->offload_state = OFFLOAD_STATE_PLAYING;
+                    pthread_mutex_unlock(&out->lock);
+                    return status;
+                }
+            }
+        }
+    }
+
+    status = qaf_stream_start(out);
+    pthread_mutex_unlock(&out->lock);
+    ALOGD("%s Exit", __func__);
+    return status;
+}
+
 static int qaf_deinit()
 {
     ALOGV("%s %d", __func__, __LINE__);
@@ -702,6 +976,11 @@ static int qaf_deinit()
             adev_close_output_stream((struct audio_hw_device *) qaf_mod->adev, (struct audio_stream_out *) (qaf_mod->qaf_compr_offload_out));
         if (qaf_mod->qaf_compr_passthrough_out != NULL)
             adev_close_output_stream((struct audio_hw_device *) qaf_mod->adev, (struct audio_stream_out *) (qaf_mod->qaf_compr_passthrough_out));
+
+        if (qaf_mod->qaf_passthrough_out) {
+            adev_close_output_stream((struct audio_hw_device *) qaf_mod->adev, (struct audio_stream_out *) (qaf_mod->qaf_passthrough_out));
+            qaf_mod->qaf_passthrough_out = NULL;
+        }
 
         if (qaf_mod->qaf_lib != NULL) {
             dlclose(qaf_mod->qaf_lib);
@@ -726,7 +1005,7 @@ static void *qaf_offload_thread_loop(void *context)
     set_sched_policy(0, SP_FOREGROUND);
     prctl(PR_SET_NAME, (unsigned long)"Offload Callback", 0, 0, 0);
 
-    ALOGE("%s", __func__);
+    ALOGV("%s", __func__);
     lock_output_stream(out);
     for (;;) {
         struct offload_cmd *cmd = NULL;
@@ -825,6 +1104,89 @@ static int qaf_destroy_offload_callback_thread(struct stream_out *out)
     return 0;
 }
 
+static int qaf_out_set_parameters(struct audio_stream *stream, const char *kvpairs)
+{
+    struct str_parms *parms, *new_parms;
+    char value[32];
+    char *new_kv_pairs;
+    int val = 0;
+    struct stream_out *out = (struct stream_out *)stream;
+    int ret = 0;
+    int err = 0;
+
+    ALOGV("%s: enter: usecase(%d: %s) kvpairs: %s",
+          __func__, out->usecase, use_case_table[out->usecase], kvpairs);
+    if ((NULL != qaf_mod->qaf_compr_offload_out)) {
+        if (qaf_mod->qaf_msmd_enabled) {
+            if (qaf_mod->passthrough_enabled && qaf_mod->hdmi_connect)
+                return 1;
+
+            parms = str_parms_create_str(kvpairs);
+            err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
+
+            /* usecase : hdmi sink which supports only 2-channel pcm */
+            if (err >= 0) {
+                val = atoi(value);
+                if ((val & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+                        ((qaf_mod->hdmi_sink_channels == 2) && !(qaf_mod->passthrough_enabled))) {
+                    new_parms = str_parms_create();
+                    val |= AUDIO_DEVICE_OUT_SPEAKER;
+                    str_parms_add_int(new_parms, AUDIO_PARAMETER_STREAM_ROUTING, val);
+                    new_kv_pairs = str_parms_to_str(new_parms);
+                    qaf_mod->qaf_compr_offload_out->stream.common.set_parameters((struct audio_stream *) qaf_mod->qaf_compr_offload_out, new_kv_pairs);
+                    free(new_kv_pairs);
+                    str_parms_destroy(new_parms);
+                }
+            }
+            str_parms_destroy(parms);
+        } else {
+            if (!(qaf_mod->passthrough_enabled && qaf_mod->hdmi_connect))
+                qaf_mod->qaf_compr_offload_out->stream.common.set_parameters((struct audio_stream *) qaf_mod->qaf_compr_offload_out, kvpairs);
+        }
+    }
+
+    if (audio_extn_qaf_passthrough_enabled(out)) {
+        parms = str_parms_create_str(kvpairs);
+        if (!parms) {
+            ALOGE("str_parms_create_str failed!");
+        } else {
+            err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
+            if (err >= 0) {
+                val = atoi(value);
+                if ((val & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+                    (qaf_mod->qaf_passthrough_out == NULL)) {
+                        audio_output_flags_t flags;
+                        struct audio_config config;
+                        audio_devices_t devices;
+
+                        config.sample_rate = config.offload_info.sample_rate = QAF_OUTPUT_SAMPLING_RATE;
+                        config.offload_info.version = AUDIO_INFO_INITIALIZER.version;
+                        config.offload_info.size = AUDIO_INFO_INITIALIZER.size;
+                        config.offload_info.format = out->format;
+                        config.offload_info.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+                        config.format = out->format;
+                        config.offload_info.channel_mask = config.channel_mask = out->channel_mask;
+
+                        devices = AUDIO_DEVICE_OUT_AUX_DIGITAL;
+                        flags = out->flags;
+
+                        if (out->qaf_stream_handle) {
+                            qaf_out_pause((struct audio_stream_out*)out);
+                            qaf_out_flush((struct audio_stream_out*)out);
+                            qaf_out_drain((struct audio_stream_out*)out, (audio_drain_type_t)STREAM_CBK_EVENT_DRAIN_READY);
+                            qaf_stream_close(out);
+                        }
+                        create_output_stream(out, &config, flags, devices, QAF_DEFAULT_PASSTHROUGH_HANDLE);
+                        qaf_mod->main_output_active = true;
+                }
+            }
+            str_parms_destroy(parms);
+        }
+    }
+
+    return ret;
+}
+
 int audio_extn_qaf_open_output_stream(struct audio_hw_device *dev,
                                    audio_io_handle_t handle,
                                    audio_devices_t devices,
@@ -855,7 +1217,7 @@ int audio_extn_qaf_open_output_stream(struct audio_hw_device *dev,
     out->stream.get_latency = qaf_out_get_latency;
     out->stream.write = qaf_out_write;
     out->stream.get_presentation_position = qaf_out_get_presentation_position;
-
+    out->platform_latency = 0;
     ret = qaf_stream_open(out, config, flags, devices);
     if (ret < 0) {
         ALOGE("%s, Error opening QAF stream err[%d]!", __func__, ret);
@@ -889,6 +1251,17 @@ void audio_extn_qaf_close_output_stream(struct audio_hw_device *dev,
     struct stream_out *out = (struct stream_out *)stream;
 
     ALOGV("%s: enter:stream_handle(%p) format = %x", __func__, out, out->format);
+    if (qaf_mod->qaf_passthrough_out) {
+        ALOGD("%s %d closing stream handle %p", __func__, __LINE__, qaf_mod->qaf_passthrough_out);
+        pthread_mutex_lock(&qaf_mod->lock);
+        adev_close_output_stream((struct audio_hw_device *) qaf_mod->adev, (struct audio_stream_out *) (qaf_mod->qaf_passthrough_out));
+        adev_close_output_stream(dev, stream);
+        qaf_mod->qaf_passthrough_out = NULL;
+        qaf_mod->main_output_active = false;
+        pthread_mutex_unlock(&qaf_mod->lock);
+        return;
+    }
+
     if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         qaf_destroy_offload_callback_thread(out);
     }
@@ -934,6 +1307,11 @@ int audio_extn_qaf_session_open(struct qaf *qaf_mod,
         qaf_mod->qaf_register_event_callback(qaf_mod->session_handle,
                                              qaf_mod, &notify_event_callback,
                                              AUDIO_DATA_EVENT);
+
+    if (property_get_bool("audio.qaf.msmd", false)) {
+        qaf_mod->qaf_msmd_enabled = 1;
+    }
+
     return status;
 }
 
@@ -948,6 +1326,7 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
     char *format_params, *kv_parirs;
     struct str_parms *qaf_params;
     char value[32];
+    char prop_value[PROPERTY_VALUE_MAX];
     bool passth_support = false;
 
     ALOGV("%s %d ", __func__, __LINE__);
@@ -963,7 +1342,9 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
                 property_get_bool("audio.qaf.reencode", false)) {
 
                 qaf_params = str_parms_create();
-                if (platform_is_edid_supported_format(adev->platform, AUDIO_FORMAT_E_AC3)) {
+                property_get("audio.qaf.hdmi.out", prop_value, NULL);
+                if (platform_is_edid_supported_format(adev->platform, AUDIO_FORMAT_E_AC3) &&
+                                                          (strncmp(prop_value, "ddp", 3) == 0)) {
                     passth_support = true;
                     if (qaf_params) {
                         str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_RENDER_FORMAT,
@@ -978,8 +1359,14 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
                 }
 
                 if (passth_support) {
-                    str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_DEVICE,
-                                          AUDIO_QAF_PARAMETER_VALUE_DEVICE_HDMI);
+                    qaf_mod->passthrough_enabled = 1;
+                    if (qaf_mod->qaf_msmd_enabled) {
+                        str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_DEVICE,
+                                                    AUDIO_QAF_PARAMETER_VALUE_DEVICE_HDMI_AND_SPK);
+                    } else {
+                        str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_DEVICE,
+                                              AUDIO_QAF_PARAMETER_VALUE_DEVICE_HDMI);
+                    }
                     format_params = str_parms_to_str(qaf_params);
 
                     qaf_mod->qaf_audio_session_set_param(qaf_mod->session_handle, format_params);
@@ -996,21 +1383,39 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
                           ALOGV("%s: Switching Qaf output to 7.1 channels", __func__);
                           str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_CHANNELS,
                                                 AUDIO_QAF_PARAMETER_VALUE_8_CHANNELS);
-                          str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_DEVICE,
-                                                AUDIO_QAF_PARAMETER_VALUE_DEVICE_HDMI);
+                          if (qaf_mod->qaf_msmd_enabled) {
+                              str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_DEVICE,
+                                                    AUDIO_QAF_PARAMETER_VALUE_DEVICE_HDMI_AND_SPK);
+                          } else {
+                              str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_DEVICE,
+                                                    AUDIO_QAF_PARAMETER_VALUE_DEVICE_HDMI);
+                          }
                           qaf_mod->hdmi_sink_channels = channels;
                           break;
                     case 6:
                           ALOGV("%s: Switching Qaf output to 5.1 channels", __func__);
                           str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_CHANNELS,
                                                 AUDIO_QAF_PARAMETER_VALUE_6_CHANNELS);
-                          str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_DEVICE,
-                                                AUDIO_QAF_PARAMETER_VALUE_DEVICE_HDMI);
+                          if (qaf_mod->qaf_msmd_enabled) {
+                              str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_DEVICE,
+                                                    AUDIO_QAF_PARAMETER_VALUE_DEVICE_HDMI_AND_SPK);
+                          } else {
+                              str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_DEVICE,
+                                                    AUDIO_QAF_PARAMETER_VALUE_DEVICE_HDMI);
+                          }
                           qaf_mod->hdmi_sink_channels = channels;
                           break;
                     default:
-                          str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_DEVICE,
-                                                AUDIO_QAF_PARAMETER_VALUE_DEVICE_SPEAKER);
+                          ALOGV("%s: Switching Qaf output to default channels", __func__);
+                          str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_CHANNELS,
+                                                AUDIO_QAF_PARAMETER_VALUE_DEFAULT_CHANNELS);
+                          if (qaf_mod->qaf_msmd_enabled) {
+                              str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_DEVICE,
+                                                    AUDIO_QAF_PARAMETER_VALUE_DEVICE_HDMI_AND_SPK);
+                          } else {
+                              str_parms_add_str(qaf_params, AUDIO_QAF_PARAMETER_KEY_DEVICE,
+                                                    AUDIO_QAF_PARAMETER_VALUE_DEVICE_SPEAKER);
+                          }
                           qaf_mod->hdmi_sink_channels = 2;
                         break;
                 }
@@ -1019,6 +1424,7 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
                 qaf_mod->qaf_audio_session_set_param(qaf_mod->session_handle, format_params);
                 str_parms_destroy(qaf_params);
             }
+            qaf_mod->hdmi_connect = 1;
         }
     }
 
@@ -1033,6 +1439,8 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
                                   AUDIO_QAF_PARAMETER_VALUE_PCM);
             qaf_mod->hdmi_sink_channels = 0;
 
+            qaf_mod->passthrough_enabled = 0;
+            qaf_mod->hdmi_connect = 0;
             format_params = str_parms_to_str(qaf_params);
             qaf_mod->qaf_audio_session_set_param(qaf_mod->session_handle, format_params);
             str_parms_destroy(qaf_params);
