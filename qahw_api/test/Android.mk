@@ -3,7 +3,8 @@ LOCAL_PATH := $(call my-dir)
 # audio_hal_playback_test
 # ==============================================================================
 include $(CLEAR_VARS)
-LOCAL_SRC_FILES := qahw_playback_test.c
+LOCAL_SRC_FILES := qahw_playback_test.c \
+                   qahw_effect_test.c
 LOCAL_MODULE := hal_play_test
 
 hal-play-inc     = $(TARGET_OUT_HEADERS)/mm-audio/qahw_api/inc

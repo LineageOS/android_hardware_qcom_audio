@@ -89,7 +89,7 @@ int sourcetrack_done = 0;
 static pthread_mutex_t sourcetrack_lock;
 struct qahw_sound_focus_param sound_focus_data;
 
-void stop_signal_handler(int signal)
+void stop_signal_handler(int signal __unused)
 {
    stop_record = true;
 }
@@ -97,7 +97,6 @@ void stop_signal_handler(int signal)
 
 void read_soundfocus_param(void)
 {
-    int i = 0;
     uint16_t start_angle[4] = {0};
     uint8_t enable_sector[4] = {0};
     uint16_t gain_step;
@@ -117,7 +116,7 @@ void read_soundfocus_param(void)
     memcpy(&sound_focus_data.gain_step, &gain_step, sizeof(gain_step));
 }
 
-void sourcetrack_signal_handler(int signal)
+void sourcetrack_signal_handler(int signal __unused)
 {
 /* Function to read keyboard interupt to enable user to set parameters
    for sourcetracking usecase Dynamically */
