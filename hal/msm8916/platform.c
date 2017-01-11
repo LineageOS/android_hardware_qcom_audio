@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -47,6 +47,7 @@
 #define MIXER_XML_PATH_SKUC "/system/etc/mixer_paths_skuc.xml"
 #define MIXER_XML_PATH_SKUE "/system/etc/mixer_paths_skue.xml"
 #define MIXER_XML_PATH_SKUL "/system/etc/mixer_paths_skul.xml"
+#define MIXER_XML_PATH_SKUS "/system/etc/mixer_paths_skus.xml"
 #define MIXER_XML_PATH_SKUM "/system/etc/mixer_paths_qrd_skum.xml"
 #define MIXER_XML_PATH_SKU1 "/system/etc/mixer_paths_qrd_sku1.xml"
 #define MIXER_XML_PATH_SKUN_CAJON "/system/etc/mixer_paths_qrd_skun_cajon.xml"
@@ -905,6 +906,8 @@ static void update_codec_type(const char *snd_card_name) {
                   sizeof("mdm9607-tomtom-i2s-snd-card")) ||
          !strncmp(snd_card_name, "sdm660-tashalite-snd-card",
                   sizeof("sdm660-tashalite-snd-card")) ||
+         !strncmp(snd_card_name, "sdm660-tasha-skus-snd-card",
+                  sizeof("sdm660-tasha-skus-snd-card")) ||
          !strncmp(snd_card_name, "sdm660-tavil-snd-card",
                   sizeof("sdm660-tavil-snd-card")))
      {
@@ -1220,6 +1223,13 @@ static void query_platform(const char *snd_card_name,
                  sizeof("sdm660-tashalite-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9326,
                 sizeof(MIXER_XML_PATH_WCD9326));
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+    } else if (!strncmp(snd_card_name, "sdm660-tasha-skus-snd-card",
+                 sizeof("sdm660-tasha-skus-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_SKUS,
+                sizeof(MIXER_XML_PATH_SKUS));
         msm_device_to_be_id = msm_device_to_be_id_external_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
