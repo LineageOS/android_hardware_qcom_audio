@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -47,6 +47,7 @@
 #define MIXER_XML_PATH_SKUC "/system/etc/mixer_paths_skuc.xml"
 #define MIXER_XML_PATH_SKUE "/system/etc/mixer_paths_skue.xml"
 #define MIXER_XML_PATH_SKUL "/system/etc/mixer_paths_skul.xml"
+#define MIXER_XML_PATH_SKUS "/system/etc/mixer_paths_skus.xml"
 #define MIXER_XML_PATH_SKUM "/system/etc/mixer_paths_qrd_skum.xml"
 #define MIXER_XML_PATH_SKU1 "/system/etc/mixer_paths_qrd_sku1.xml"
 #define MIXER_XML_PATH_SKUN_CAJON "/system/etc/mixer_paths_qrd_skun_cajon.xml"
@@ -905,6 +906,8 @@ static void update_codec_type(const char *snd_card_name) {
                   sizeof("mdm9607-tomtom-i2s-snd-card")) ||
          !strncmp(snd_card_name, "sdm660-tashalite-snd-card",
                   sizeof("sdm660-tashalite-snd-card")) ||
+         !strncmp(snd_card_name, "sdm660-tasha-skus-snd-card",
+                  sizeof("sdm660-tasha-skus-snd-card")) ||
          !strncmp(snd_card_name, "sdm660-tavil-snd-card",
                   sizeof("sdm660-tavil-snd-card")))
      {
@@ -1220,6 +1223,13 @@ static void query_platform(const char *snd_card_name,
                  sizeof("sdm660-tashalite-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9326,
                 sizeof(MIXER_XML_PATH_WCD9326));
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+    } else if (!strncmp(snd_card_name, "sdm660-tasha-skus-snd-card",
+                 sizeof("sdm660-tasha-skus-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_SKUS,
+                sizeof(MIXER_XML_PATH_SKUS));
         msm_device_to_be_id = msm_device_to_be_id_external_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
@@ -2210,6 +2220,11 @@ void platform_deinit(void *platform)
     if (my_data->edid_info) {
         free(my_data->edid_info);
         my_data->edid_info = NULL;
+    }
+
+    if (my_data->adev->mixer) {
+        mixer_close(my_data->adev->mixer);
+        my_data->adev->mixer = NULL;
     }
 
     free(platform);
@@ -3451,7 +3466,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                                 AUDIO_CHANNEL_IN_MONO : adev->active_input->channel_mask;
     snd_device_t snd_device = SND_DEVICE_NONE;
     int channel_count = popcount(channel_mask);
-    int str_bitwidth = adev->active_input->bit_width;
+    int str_bitwidth = (adev->active_input == NULL) ?
+                    CODEC_BACKEND_DEFAULT_BIT_WIDTH : adev->active_input->bit_width;
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
           __func__, out_device, in_device, channel_count, channel_mask);

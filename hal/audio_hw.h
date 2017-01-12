@@ -256,6 +256,8 @@ struct stream_out {
     pthread_cond_t qaf_offload_cond;
     pthread_t qaf_offload_thread;
     struct listnode qaf_offload_cmd_list;
+    uint32_t platform_latency;
+    audio_offload_info_t info;
 };
 
 struct stream_in {

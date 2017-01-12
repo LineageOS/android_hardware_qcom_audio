@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -159,6 +159,8 @@ static void update_hardware_info_8x16(struct hardware_info *hw_info, const char 
     } else if (!strcmp(snd_card_name, "sdm660-tavil-snd-card")) {
         strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "sdm660-tashalite-snd-card")) {
+        strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "sdm660-tasha-skus-snd-card")) {
         strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "msm8920-sku7-snd-card")) {
         strlcpy(hw_info->name, "msm8920", sizeof(hw_info->name));
