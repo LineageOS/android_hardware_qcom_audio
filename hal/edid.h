@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014, 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -92,14 +92,30 @@ typedef struct edid_audio_info {
     int  channel_allocation;
 } edid_audio_info;
 
-#ifndef HDMI_EDID
-#define edid_get_sink_caps(info, edid_data) (0)
-#else
-bool edid_get_sink_caps(edid_audio_info* info, char *edid_data);
-#endif
-
+#ifdef HDMI_EDID
 bool edid_is_supported_sr(edid_audio_info* info, int sr);
 bool edid_is_supported_bps(edid_audio_info* info, int bps);
 int edid_get_highest_supported_sr(edid_audio_info* info);
+bool edid_get_sink_caps(edid_audio_info* info, char *edid_data);
+#else
+static bool __unused edid_is_supported_sr(edid_audio_info* info __unused, int sr __unused)
+{
+    return false;
+}
+static bool __unused edid_is_supported_bps(edid_audio_info* info __unused, int bps __unused)
+{
+    return false;
+}
+
+static bool __unused edid_get_sink_caps(edid_audio_info* info __unused, char* edid_data __unused)
+{
+    return false;
+}
+
+static int __unused edid_get_highest_supported_sr(edid_audio_info* info __unused)
+{
+    return 0;
+}
+#endif
 
 #endif /* EDID_H */
