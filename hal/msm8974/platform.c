@@ -2274,8 +2274,10 @@ int platform_update_usecase_from_source(int source, int usecase)
     ALOGV("%s: input source :%d", __func__, source);
 
     switch(source) {
+#ifdef FM_ENABLED
         case AUDIO_SOURCE_FM_TUNER:
             return USECASE_AUDIO_RECORD_FM_VIRTUAL;
+#endif
         case AUDIO_SOURCE_VOICE_UPLINK:
             return USECASE_INCALL_REC_UPLINK;
         case AUDIO_SOURCE_VOICE_DOWNLINK:
