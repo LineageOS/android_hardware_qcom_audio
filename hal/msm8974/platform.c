@@ -1596,10 +1596,6 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
                    devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
             snd_device = SND_DEVICE_OUT_USB_HEADSET;
-#ifdef FM_ENABLED
-        } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
-            snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
-#endif
         } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
             if (adev->voice.hac)
                 snd_device = SND_DEVICE_OUT_VOICE_HAC_HANDSET;
@@ -1648,10 +1644,6 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         ALOGD("%s: setting USB hadset channel capability(2) for Proxy", __func__);
         audio_extn_set_afe_proxy_channel_mixer(adev, 2);
         snd_device = SND_DEVICE_OUT_USB_HEADSET;
-#ifdef FM_ENABLED
-    } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
-        snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
-#endif
     } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
         /*HAC support for voice-ish audio (eg visual voicemail)*/
         if (adev->voice.hac)
@@ -2274,8 +2266,6 @@ int platform_update_usecase_from_source(int source, int usecase)
     ALOGV("%s: input source :%d", __func__, source);
 
     switch(source) {
-        case AUDIO_SOURCE_FM_TUNER:
-            return USECASE_AUDIO_RECORD_FM_VIRTUAL;
         case AUDIO_SOURCE_VOICE_UPLINK:
             return USECASE_INCALL_REC_UPLINK;
         case AUDIO_SOURCE_VOICE_DOWNLINK:
@@ -2291,9 +2281,6 @@ bool platform_listen_update_status(snd_device_t snd_device)
 {
     if ((snd_device >= SND_DEVICE_IN_BEGIN) &&
         (snd_device < SND_DEVICE_IN_END) &&
-#ifdef FM_ENABLED
-        (snd_device != SND_DEVICE_IN_CAPTURE_FM) &&
-#endif
         (snd_device != SND_DEVICE_IN_CAPTURE_VI_FEEDBACK))
         return true;
     else
