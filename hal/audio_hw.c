@@ -4196,7 +4196,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->bit_width = 16;
     audio_extn_utils_update_stream_output_app_type_cfg(adev->platform,
                                                 &adev->streams_output_cfg_list,
-                                                devices, flags, format, out->sample_rate,
+                                                devices, out->flags, format, out->sample_rate,
                                                 out->bit_width, out->channel_mask, out->profile,
                                                 &out->app_type_cfg);
     if ((out->usecase == USECASE_AUDIO_PLAYBACK_PRIMARY) ||
