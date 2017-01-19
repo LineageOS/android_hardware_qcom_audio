@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2014 The Android Open Source Project
@@ -1162,7 +1162,7 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
 {
     int type = usecase->type;
 
-    if (type == PCM_PLAYBACK) {
+    if (type == PCM_PLAYBACK && usecase->stream.out != NULL) {
         struct stream_out *out = usecase->stream.out;
         int snd_device = usecase->out_snd_device;
         snd_device = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
@@ -1170,7 +1170,7 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
         platform_send_audio_calibration(adev->platform, usecase,
                                         out->app_type_cfg.app_type,
                                         usecase->stream.out->app_type_cfg.sample_rate);
-    } else if (type == PCM_CAPTURE) {
+    } else if (type == PCM_CAPTURE && usecase->stream.in != NULL) {
         platform_send_audio_calibration(adev->platform, usecase,
                          usecase->stream.in->app_type_cfg.app_type,
                          usecase->stream.in->app_type_cfg.sample_rate);
