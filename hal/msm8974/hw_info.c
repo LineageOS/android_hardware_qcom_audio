@@ -338,6 +338,10 @@ static void  update_hardware_info_msm8998(struct hardware_info *hw_info, const c
         hw_info->snd_devices = (snd_device_t *)tasha_DB_variant_devices;
         hw_info->num_snd_devices = ARRAY_SIZE(tasha_DB_variant_devices);
         strlcpy(hw_info->dev_extn, "-db", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "msm8998-qvr-tavil-snd-card")) {
+        hw_info->is_stereo_spkr = false;
+    } else if (!strcmp(snd_card_name, "msm8998-skuk-tavil-snd-card")) {
+        hw_info->is_stereo_spkr = false;
     } else {
         ALOGW("%s: Not a msm8998 device", __func__);
     }
