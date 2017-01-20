@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -132,6 +132,8 @@ enum {
     SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT,
     SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT,
     SND_DEVICE_OUT_VOICE_SPEAKER_2_PROTECTED_VBAT,
+    SND_DEVICE_OUT_SPEAKER_PROTECTED_RAS,
+    SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT_RAS,
 #ifdef RECORD_PLAY_CONCURRENCY
     SND_DEVICE_OUT_VOIP_HANDSET,
     SND_DEVICE_OUT_VOIP_SPEAKER,

@@ -54,6 +54,7 @@ AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 AUDIO_FEATURE_ENABLED_GEF_SUPPORT := true
 AUDIO_FEATURE_ENABLED_USB_TUNNEL_AUDIO := true
 AUDIO_FEATURE_ENABLED_SPLIT_A2DP := true
+AUDIO_FEATURE_ENABLED_RAS := true
 ##AUDIO_FEATURE_FLAGS
 
 #Audio Specific device overlays
@@ -127,6 +128,10 @@ persist.audio.fluence.speaker=true
 #disable tunnel encoding
 PRODUCT_PROPERTY_OVERRIDES += \
 tunnel.audio.encode=false
+
+#Disable RAS Feature by default
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.audio.ras.enabled=false
 
 #Buffer size in kbytes for compress offload playback
 PRODUCT_PROPERTY_OVERRIDES += \
