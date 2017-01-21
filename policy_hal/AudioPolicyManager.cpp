@@ -52,7 +52,7 @@
 // type alone is not enough: the address must match too
 #define APM_AUDIO_DEVICE_MATCH_ADDRESS_ALL (AUDIO_DEVICE_IN_REMOTE_SUBMIX | \
                                             AUDIO_DEVICE_OUT_REMOTE_SUBMIX)
-
+#define SAMPLE_RATE_8000 8000
 #include <inttypes.h>
 #include <math.h>
 
@@ -322,9 +322,6 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
                mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, -1);
            }
            AudioParameter param = AudioParameter();
-           float volumeDb = mPrimaryOutput->mCurVolume[AUDIO_STREAM_MUSIC];
-           mPrevFMVolumeDb = volumeDb;
-           param.addFloat(String8("fm_volume"), Volume::DbToAmpl(volumeDb));
            param.addInt(String8("handle_fm"), (int)newDevice);
            mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString());
         }
@@ -475,7 +472,7 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
     }
 
     if ((prop_rec_play_enabled) &&
-         ((true == mIsInputRequestOnProgress) || (mInputs.activeInputsCount() > 0))) {
+         ((true == mIsInputRequestOnProgress) || (mInputs.activeInputsCountOnDevices() > 0))) {
         ALOGD("copl: blocking  compress offload for record concurrency");
         return false;
     }
@@ -1291,17 +1288,41 @@ bool AudioPolicyManagerCustom::isDirectOutput(audio_io_handle_t output) {
     return false;
 }
 
-bool static isDirectPCMEnabled(int bitWidth)
+bool static tryForDirectPCM(int bitWidth, audio_output_flags_t *flags, uint32_t samplingRate)
 {
-    bool directPCMEnabled = false;
-    if (bitWidth == 24 || bitWidth == 32)
-        directPCMEnabled =
-             property_get_bool("audio.offload.pcm.24bit.enable", false);
-    else
-        directPCMEnabled =
-             property_get_bool("audio.offload.pcm.16bit.enable", false);
+    bool playerDirectPCM = false; // Output request for Track created by mediaplayer
+    bool trackDirectPCM = false;  // Output request for track created by other apps
+    bool offloadDisabled = property_get_bool("audio.offload.disable", false);
 
-    return directPCMEnabled;
+    // Direct PCM is allowed only if
+    // In case of mediaPlayer playback
+    // 16 bit direct pcm or 24bit direct PCM property is set and
+    // the FLAG requested is DIRECT_PCM ( NuPlayer case) or
+    // In case of AudioTracks created by apps
+    // track offload is enabled and FLAG requested is FLAG_NONE.
+
+    if (offloadDisabled) {
+        ALOGI("offload disabled by audio.offload.disable=%d", offloadDisabled);
+    }
+
+    if (*flags == AUDIO_OUTPUT_FLAG_DIRECT_PCM) {
+       if (bitWidth == 24 || bitWidth == 32)
+           playerDirectPCM =
+                property_get_bool("audio.offload.pcm.24bit.enable", false);
+       else
+           playerDirectPCM =
+                property_get_bool("audio.offload.pcm.16bit.enable", false);
+       // Reset flag to NONE so that we can still reuse direct pcm criteria check
+       // in getOutputforDevice
+       *flags = AUDIO_OUTPUT_FLAG_NONE;
+    } else if ((*flags == AUDIO_OUTPUT_FLAG_NONE) && (samplingRate % SAMPLE_RATE_8000 == 0)) {
+        trackDirectPCM = property_get_bool("audio.offload.track.enable", true);
+    }
+
+    ALOGI("Direct PCM %s for this request",
+       (!offloadDisabled && (trackDirectPCM || playerDirectPCM))?"can be enabled":"is disabled");
+
+    return (!offloadDisabled && (trackDirectPCM || playerDirectPCM));
 }
 
 status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *attr,
@@ -1318,16 +1339,11 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
 {
     audio_offload_info_t tOffloadInfo = AUDIO_INFO_INITIALIZER;
 
-    bool offloadDisabled = property_get_bool("audio.offload.disable", false);
     uint32_t bitWidth = (audio_bytes_per_sample(format) * 8);
 
-    if (offloadDisabled) {
-        ALOGI("offload disabled by audio.offload.disable=%d", offloadDisabled);
-    }
 
-    if (!offloadDisabled && (offloadInfo == NULL) &&
-        isDirectPCMEnabled(bitWidth) &&
-        (flags == AUDIO_OUTPUT_FLAG_NONE)) {
+    if (tryForDirectPCM(bitWidth, &flags, samplingRate) &&
+        (offloadInfo == NULL)) {
 
         tOffloadInfo.sample_rate  = samplingRate;
         tOffloadInfo.channel_mask = channelMask;
@@ -1521,7 +1537,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         prop_rec_play_enabled = atoi(recConcPropValue) || !strncmp("true", recConcPropValue, 4);
     }
     if ((prop_rec_play_enabled) &&
-            ((true == mIsInputRequestOnProgress) || (mInputs.activeInputsCount() > 0))) {
+            ((true == mIsInputRequestOnProgress) || (mInputs.activeInputsCountOnDevices() > 0))) {
         if (AUDIO_MODE_IN_COMMUNICATION == mEngine->getPhoneState()) {
             if (AUDIO_OUTPUT_FLAG_VOIP_RX & flags) {
                 // allow VoIP using voice path
@@ -1945,7 +1961,7 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
         prop_rec_play_enabled = atoi(getPropValue) || !strncmp("true", getPropValue, 4);
     }
 
-    if ((prop_rec_play_enabled) &&(mInputs.activeInputsCount() == 0)){
+    if ((prop_rec_play_enabled) &&(mInputs.activeInputsCountOnDevices() == 0)){
         // send update to HAL on record playback concurrency
         AudioParameter param = AudioParameter();
         param.add(String8("rec_play_conc_on"), String8("true"));
@@ -2041,7 +2057,7 @@ status_t AudioPolicyManagerCustom::stopInput(audio_io_handle_t input,
         prop_rec_play_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
     }
 
-    if ((prop_rec_play_enabled) && (mInputs.activeInputsCount() == 0)) {
+    if ((prop_rec_play_enabled) && (mInputs.activeInputsCountOnDevices() == 0)) {
 
         //send update to HAL on record playback concurrency
         AudioParameter param = AudioParameter();
