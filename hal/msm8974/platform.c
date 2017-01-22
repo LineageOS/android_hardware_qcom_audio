@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -2237,8 +2237,9 @@ int platform_set_native_support(int na_mode)
         || NATIVE_AUDIO_MODE_MULTIPLE_44_1 == na_mode) {
         na_props.platform_na_prop_enabled = na_props.ui_na_prop_enabled = true;
         na_props.na_mode = na_mode;
-        ALOGD("%s:napb: native audio playback enabled in (%s) mode v2.0", __func__,
-              ((na_mode == NATIVE_AUDIO_MODE_SRC)?"SRC mode":"True 44.1 mode"));
+        ALOGD("%s:napb: native audio playback enabled in (%s) mode", __func__,
+              ((na_mode == NATIVE_AUDIO_MODE_SRC)?"SRC":
+               (na_mode == NATIVE_AUDIO_MODE_TRUE_44_1)?"True":"Multiple"));
     }
     else {
         na_props.platform_na_prop_enabled = false;
@@ -4831,8 +4832,13 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
             ALOGD("%s:becf: afe: napb not active - set non fractional rate",
                        __func__);
         }
-    } else if ((usecase->devices & AUDIO_DEVICE_OUT_SPEAKER) ||
-               (usecase->devices & AUDIO_DEVICE_OUT_EARPIECE) ) {
+    }
+
+    /*
+     * Check if the device is speaker or handset,assumption handset shares
+     * backend with speaker, and these devices are restricited to 48kHz.
+     */
+    if (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device)) {
 
         if (bit_width >= 24) {
             bit_width = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -503,6 +503,9 @@ static bool is_supported_format(audio_format_t format)
         format == AUDIO_FORMAT_AAC_ADTS_LC ||
         format == AUDIO_FORMAT_AAC_ADTS_HE_V1 ||
         format == AUDIO_FORMAT_AAC_ADTS_HE_V2 ||
+        format == AUDIO_FORMAT_AAC_LATM_LC ||
+        format == AUDIO_FORMAT_AAC_LATM_HE_V1 ||
+        format == AUDIO_FORMAT_AAC_LATM_HE_V2 ||
         format == AUDIO_FORMAT_PCM_24_BIT_PACKED ||
         format == AUDIO_FORMAT_PCM_8_24_BIT ||
         format == AUDIO_FORMAT_PCM_FLOAT ||
@@ -3988,8 +3991,10 @@ int adev_open_output_stream(struct audio_hw_device *dev,
 
         if ((config->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC)
              out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
-        if ((config->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC_ADTS)
+        else if ((config->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC_ADTS)
             out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_MP4ADTS;
+        else if ((config->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC_LATM)
+            out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_MP4LATM;
 
         if ((config->offload_info.format & AUDIO_FORMAT_MAIN_MASK) ==
              AUDIO_FORMAT_PCM) {
