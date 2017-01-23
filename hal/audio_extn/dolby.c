@@ -592,7 +592,7 @@ void audio_extn_dolby_set_dmid(struct audio_device *adev)
 }
 
 #ifndef DS2_DOLBY_DAP_ENABLED
-void audio_extn_dolby_set_license(struct audio_device *adev)
+void audio_extn_dolby_set_license(struct audio_device *adev __unused)
 {
     int ret, key=0;
     char value[128] = {0};
@@ -634,9 +634,7 @@ static struct ds2_extn_module ds2extnmod = {
 };
 
 int audio_extn_dap_hal_init(int snd_card) {
-    char c_dmid[128] = {0};
-    void *handle = NULL;
-    int i_dmid, ret = -EINVAL;
+    int ret = -EINVAL;
     dap_hal_device_be_id_map_t device_be_id_map;
 
     ALOGV("%s: opening DAP HAL lib\n", __func__);
@@ -655,7 +653,7 @@ int audio_extn_dap_hal_init(int snd_card) {
     ds2extnmod.dap_hal_set_hw_info(SND_CARD, (void*)(&snd_card));
     ALOGV("%s Sound card number is:%d",__func__,snd_card);
 
-    platform_get_device_to_be_id_map(&device_be_id_map.device_id_to_be_id, &device_be_id_map.len);
+    platform_get_device_to_be_id_map((int**)&device_be_id_map.device_id_to_be_id, &device_be_id_map.len);
     ds2extnmod.dap_hal_set_hw_info(DEVICE_BE_ID_MAP, (void*)(&device_be_id_map));
     ALOGV("%s Set be id map len:%d",__func__,device_be_id_map.len);
     ret = 0;
@@ -681,9 +679,7 @@ int audio_extn_dap_hal_deinit() {
 void audio_extn_dolby_ds2_set_endpoint(struct audio_device *adev) {
     struct listnode *node;
     struct audio_usecase *usecase;
-    struct mixer_ctl *ctl;
-    const char *mixer_ctl_name = "DS1 DAP Endpoint";
-    int endpoint = 0, ret;
+    int endpoint = 0;
     bool send = false;
 
     list_for_each(node, &adev->usecase_list) {
@@ -736,7 +732,7 @@ int audio_extn_ds2_enable(struct audio_device *adev) {
     return 0;
 }
 
-int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, int state) {
+int audio_extn_dolby_set_dap_bypass(struct audio_device *adev __unused, int state) {
 
     ALOGV("%s: state %d", __func__, state);
     if (ds2extnmod.dap_hal_set_hw_info) {
@@ -748,12 +744,12 @@ int audio_extn_dolby_set_dap_bypass(struct audio_device *adev, int state) {
     return 0;
 }
 
-void audio_extn_dolby_set_license(struct audio_device *adev)
+void audio_extn_dolby_set_license(struct audio_device *adev __unused)
 {
     int i_key=0;
     char c_key[128] = {0};
     char c_dmid[128] = {0};
-    int i_dmid, ret = -EINVAL;
+    int i_dmid;
     struct dolby_param_license dolby_license;
 
 #ifdef DOLBY_ACDB_LICENSE
@@ -772,16 +768,16 @@ void audio_extn_dolby_set_license(struct audio_device *adev)
         ds2extnmod.dap_hal_set_hw_info(DMID, (void*)(&dolby_license.dmid));
     } else {
         ALOGV("%s: dap_hal_set_hw_info is NULL", __func__);
-        return ret;
+        return ;
     }
-    return 0;
+    return ;
 }
 
 
 void audio_extn_ds2_set_parameters(struct audio_device *adev,
                                    struct str_parms *parms)
 {
-    int val, ret;
+    int ret;
     char value[32]={0};
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SND_CARD_STATUS, value,
