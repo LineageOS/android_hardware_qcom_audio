@@ -404,6 +404,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_ANC_HEADSET] = "voice-anc-headphones",
     [SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET] = "voice-anc-fb-headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET] = "speaker-and-anc-headphones",
+    [SND_DEVICE_OUT_SPEAKER_AND_ANC_FB_HEADSET] = "speaker-and-anc-fb-headphones",
     [SND_DEVICE_OUT_ANC_HANDSET] = "anc-handset",
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = "speaker-protected",
     [SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED] = "voice-speaker-protected",
@@ -533,6 +534,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_ANC_HEADSET] = 26,
     [SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET] = 27,
     [SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET] = 26,
+    [SND_DEVICE_OUT_SPEAKER_AND_ANC_FB_HEADSET] = 27,
     [SND_DEVICE_OUT_ANC_HANDSET] = 103,
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = 124,
     [SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED] = 101,
@@ -662,6 +664,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_ANC_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_ANC_FB_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_ANC_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED)},
@@ -2464,7 +2467,8 @@ int check_hdset_combo_device(snd_device_t snd_device)
         SND_DEVICE_OUT_SPEAKER_AND_LINE == snd_device ||
         SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1 == snd_device ||
         SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2 == snd_device ||
-        SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET == snd_device)
+        SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET == snd_device ||
+        SND_DEVICE_OUT_SPEAKER_AND_ANC_FB_HEADSET == snd_device)
         ret = true;
 
     return ret;
@@ -2972,9 +2976,12 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
         } else if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADSET |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
-            if (audio_extn_get_anc_enabled())
-                snd_device = SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET;
-            else if (my_data->external_spk_1)
+            if (audio_extn_get_anc_enabled()) {
+                if (audio_extn_should_use_fb_anc())
+                    snd_device = SND_DEVICE_OUT_SPEAKER_AND_ANC_FB_HEADSET;
+                else
+                    snd_device = SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET;
+            } else if (my_data->external_spk_1)
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1;
             else if (my_data->external_spk_2)
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2;
