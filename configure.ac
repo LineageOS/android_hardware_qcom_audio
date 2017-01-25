@@ -35,7 +35,7 @@ AC_SUBST([AUDIOROUTE_CFLAGS])
 AC_ARG_WITH(sanitized-headers,
         AS_HELP_STRING([--with-sanitized-headers=DIR],
                 [Specify the location of the sanitized Linux headers]),
-        [CPPFLAGS="$CPPFLAGS -idirafter $withval"])
+        [CPPFLAGS="$CPPFLAGS -I $withval"])
 
 
 AC_ARG_WITH([glib],
@@ -110,6 +110,7 @@ AM_CONDITIONAL([APTX_DECODER], [test x$AUDIO_FEATURE_ENABLED_APTX_DECODER = xtru
 AM_CONDITIONAL([ADSP_HDLR], [test x$AUDIO_FEATURE_ADSP_HDLR_ENABLED = xtrue])
 AM_CONDITIONAL([AUDIO_IP_HDLR], [test x$AUDIO_FEATURE_IP_HDLR_ENABLED = xtrue])
 AM_CONDITIONAL([SPLIT_A2DP], [test x$AUDIO_FEATURE_ENABLED_SPLIT_A2DP = xtrue])
+AM_CONDITIONAL([QAF_SUPPORT], [test x$AUDIO_FEATURE_ENABLED_QAF = xtrue])
 
 AC_CONFIG_FILES([ \
         Makefile \

@@ -172,6 +172,11 @@ AM_CFLAGS += -DAUDIO_EXTN_IP_HDLR_ENABLED
 c_sources += audio_extn/ip_hdlr_intf.c
 endif
 
+if QAF_SUPPORT
+AM_CFLAGS += -DQAF_EXTN_ENABLED
+c_sources += audio_extn/qaf.c
+endif
+
 h_sources = audio_extn/audio_defs.h \
             audio_extn/audio_extn.h \
             audio_hw.h \
