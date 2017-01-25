@@ -778,6 +778,9 @@ int enable_snd_device(struct audio_device *adev,
     } else {
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
 
+       if (platform_check_codec_asrc_support(adev->platform))
+           check_and_set_asrc_mode(adev, snd_device);
+
        if ((SND_DEVICE_OUT_BT_A2DP == snd_device) &&
            (audio_extn_a2dp_start_playback() < 0)) {
            ALOGE(" fail to configure A2dp control path ");
@@ -1597,8 +1600,6 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     /* Enable new sound devices */
     if (out_snd_device != SND_DEVICE_NONE) {
         check_usecases_codec_backend(adev, usecase, out_snd_device);
-        if (platform_check_codec_asrc_support(adev->platform))
-            check_and_set_asrc_mode(adev, out_snd_device);
         enable_snd_device(adev, out_snd_device);
     }
 
@@ -4704,6 +4705,16 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->capture_handle = handle;
     in->flags = flags;
 
+    in->usecase = USECASE_AUDIO_RECORD;
+    if (config->sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE &&
+            (flags & AUDIO_INPUT_FLAG_FAST) != 0) {
+        is_low_latency = true;
+#if LOW_LATENCY_CAPTURE_USE_CASE
+        in->usecase = USECASE_AUDIO_RECORD_LOW_LATENCY;
+#endif
+        in->realtime = may_use_noirq_mode(adev, in->usecase, in->flags);
+    }
+
     in->format = config->format;
     if (in->realtime) {
         in->config = pcm_config_audio_capture_rt;
@@ -4756,16 +4767,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             ret = -EINVAL;
             goto err_open;
         }
-    }
-
-    in->usecase = USECASE_AUDIO_RECORD;
-    if (config->sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE &&
-            (flags & AUDIO_INPUT_FLAG_FAST) != 0) {
-        is_low_latency = true;
-#if LOW_LATENCY_CAPTURE_USE_CASE
-        in->usecase = USECASE_AUDIO_RECORD_LOW_LATENCY;
-#endif
-        in->realtime = may_use_noirq_mode(adev, in->usecase, in->flags);
     }
 
     /* Update config params with the requested sample rate and channels */
