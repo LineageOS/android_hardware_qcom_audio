@@ -21,6 +21,10 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 
+ifeq ($(AUDIO_DISABLE_VISUALIZER_CALIBRATION),true)
+LOCAL_CFLAGS += -DDISABLE_CALIBRATION
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
 	liblog \

@@ -30,6 +30,7 @@
 #include <tinyalsa/asoundlib.h>
 #include <audio_effects/effect_visualizer.h>
 
+#ifndef DISABLE_CALIBRATION
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define ACDB_DEV_TYPE_OUT 1
 #define AFE_PROXY_ACDB_ID 45
@@ -39,6 +40,7 @@ static void* acdb_handle;
 typedef void (*acdb_send_audio_cal_t)(int, int);
 
 acdb_send_audio_cal_t acdb_send_audio_cal;
+#endif
 
 enum {
     EFFECT_STATE_UNINITIALIZED,
@@ -304,8 +306,10 @@ int configure_proxy_capture(struct mixer *mixer, int value) {
     const char *proxy_ctl_name = "AFE_PCM_RX Audio Mixer MultiMedia4";
     struct mixer_ctl *ctl;
 
+#ifndef DISABLE_CALIBRATION
     if (value && acdb_send_audio_cal)
         acdb_send_audio_cal(AFE_PROXY_ACDB_ID, ACDB_DEV_TYPE_OUT);
+#endif
 
     ctl = mixer_get_ctl_by_name(mixer, proxy_ctl_name);
     if (ctl == NULL) {
@@ -627,6 +631,7 @@ int visualizer_init(effect_context_t *context)
 
     set_config(context, &context->config);
 
+#ifndef DISABLE_CALIBRATION
     if (acdb_handle == NULL) {
         acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
         if (acdb_handle == NULL) {
@@ -639,6 +644,7 @@ int visualizer_init(effect_context_t *context)
                       __func__, LIB_ACDB_LOADER);
             }
     }
+#endif
 
     return 0;
 }
