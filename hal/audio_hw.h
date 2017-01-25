@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -49,9 +49,15 @@
 #include "voice.h"
 #include "audio_hw_extn_api.h"
 
+#if LINUX_ENABLED
+#define VISUALIZER_LIBRARY_PATH "/usr/lib/libqcomvisualizer.so"
+#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/usr/lib/libqcompostprocbundle.so"
+#define ADM_LIBRARY_PATH "/usr/lib/libadm.so"
+#else
 #define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
 #define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/system/lib/soundfx/libqcompostprocbundle.so"
 #define ADM_LIBRARY_PATH "/system/vendor/lib/libadm.so"
+#endif
 
 /* Flags used to initialize acdb_settings variable that goes to ACDB library */
 #define NONE_FLAG            0x00000000
@@ -250,6 +256,8 @@ struct stream_out {
     pthread_cond_t qaf_offload_cond;
     pthread_t qaf_offload_thread;
     struct listnode qaf_offload_cmd_list;
+    uint32_t platform_latency;
+    audio_offload_info_t info;
 };
 
 struct stream_in {

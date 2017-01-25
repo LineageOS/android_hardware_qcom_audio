@@ -826,8 +826,11 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
                continue;
             }
 
-            if (AUDIO_OUTPUT_FLAG_FAST == mFallBackflag) {
-                if (((!outputDesc->isDuplicated() &&outputDesc->mProfile->mFlags & AUDIO_OUTPUT_FLAG_PRIMARY))
+            bool isFastFallBackNeeded =
+               ((AUDIO_OUTPUT_FLAG_DEEP_BUFFER | AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD | AUDIO_OUTPUT_FLAG_DIRECT_PCM) & outputDesc->mProfile->mFlags);
+
+            if ((AUDIO_OUTPUT_FLAG_FAST == mFallBackflag) && isFastFallBackNeeded) {
+                if (((!outputDesc->isDuplicated() && outputDesc->mProfile->mFlags & AUDIO_OUTPUT_FLAG_PRIMARY))
                             && prop_playback_enabled) {
                     ALOGD("voice_conc:calling suspendOutput on call mode for primary output");
                     mpClientInterface->suspendOutput(mOutputs.keyAt(i));
@@ -1196,8 +1199,10 @@ status_t AudioPolicyManagerCustom::startSource(sp<AudioOutputDescriptor> outputD
         beaconMuteLatency = handleEventForBeacon(STARTING_OUTPUT);
     }
 
+    // force device change if the output is inactive and no audio patch is already present.
     // check active before incrementing usage count
-    bool force = !outputDesc->isActive();
+    bool force = !outputDesc->isActive() &&
+            (outputDesc->getPatchHandle() == AUDIO_PATCH_HANDLE_NONE);
 
     // increment usage count for this stream on the requested output:
     // NOTE that the usage count is the same for duplicated output and hardware output which is
@@ -1217,12 +1222,17 @@ status_t AudioPolicyManagerCustom::startSource(sp<AudioOutputDescriptor> outputD
         for (size_t i = 0; i < mOutputs.size(); i++) {
             sp<AudioOutputDescriptor> desc = mOutputs.valueAt(i);
             if (desc != outputDesc) {
-                // force a device change if any other output is managed by the same hw
-                // module and has a current device selection that differs from selected device.
+                // force a device change if any other output is:
+                // - managed by the same hw module
+                // - has a current device selection that differs from selected device.
+                // - supports currently selected device
+                // - has an active audio patch
                 // In this case, the audio HAL must receive the new device selection so that it can
                 // change the device currently selected by the other active output.
                 if (outputDesc->sharesHwModuleWith(desc) &&
-                    desc->device() != device) {
+                        desc->device() != device &&
+                        desc->supportedDevices() & device &&
+                        desc->getPatchHandle() != AUDIO_PATCH_HANDLE_NONE) {
                     force = true;
                 }
                 // wait for audio on other active outputs to be presented when starting
@@ -1608,6 +1618,11 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
        prop_voip_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
     }
 
+    bool isDeepBufferFallBackNeeded =
+        ((AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD | AUDIO_OUTPUT_FLAG_DIRECT_PCM) & flags);
+    bool isFastFallBackNeeded =
+        ((AUDIO_OUTPUT_FLAG_DEEP_BUFFER | AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD | AUDIO_OUTPUT_FLAG_DIRECT_PCM) & flags);
+
     if (prop_play_enabled && mvoice_call_state) {
         //check if voice call is active  / running in background
         if((AUDIO_MODE_IN_CALL == mEngine->getPhoneState()) ||
@@ -1622,10 +1637,12 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
                 }
             }
             else {
-                if (AUDIO_OUTPUT_FLAG_FAST == mFallBackflag) {
+                if (isFastFallBackNeeded &&
+                    (AUDIO_OUTPUT_FLAG_FAST == mFallBackflag)) {
                     ALOGD("voice_conc:IN call mode adding ULL flags .. flags: %x ", flags );
                     flags = AUDIO_OUTPUT_FLAG_FAST;
-                } else if (AUDIO_OUTPUT_FLAG_DEEP_BUFFER == mFallBackflag) {
+                } else if (isDeepBufferFallBackNeeded &&
+                           (AUDIO_OUTPUT_FLAG_DEEP_BUFFER == mFallBackflag)) {
                     if (AUDIO_STREAM_MUSIC == stream) {
                         flags = AUDIO_OUTPUT_FLAG_DEEP_BUFFER;
                         ALOGD("voice_conc:IN call mode adding deep-buffer flags %x ", flags );
@@ -2224,13 +2241,7 @@ void AudioPolicyManagerCustom::closeAllInputs() {
             mAudioPatches.removeItemsAt(patch_index);
             patchRemoved = true;
         }
-        if ((inputDesc->getOpenRefCount() > 0) && inputDesc->isSoundTrigger()
-            && (mInputs.size() == 1)) {
-            ALOGD("Do not close sound trigger input handle");
-        } else {
-            mpClientInterface->closeInput(mInputs.keyAt(input_index-1));
-            mInputs.removeItem(mInputs.keyAt(input_index-1));
-        }
+        mpClientInterface->closeInput(mInputs.keyAt(input_index-1));
     }
     mInputs.clear();
     SoundTrigger::setCaptureState(false);

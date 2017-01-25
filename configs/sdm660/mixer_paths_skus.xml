@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.    -->
+<!-- Copyright (c) 2017, The Linux Foundation. All rights reserved.         -->
 <!--                                                                        -->
 <!-- Redistribution and use in source and binary forms, with or without     -->
 <!-- modification, are permitted provided that the following conditions are -->
@@ -22,6 +22,7 @@
 <!-- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF   -->
 <!-- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR        -->
 <!-- BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,  -->
+<!-- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE   -->
 <!-- OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN -->
 <!-- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                          -->
 <mixer>
@@ -35,7 +36,6 @@
     <ctl name="Voice Rx Gain" id="0" value="0" />
     <ctl name="Voice Rx Gain" id="1" value="-1" />
     <ctl name="Voice Rx Gain" id="2" value="20" />
-    <ctl name="Voice Sidetone Enable" value="0" />
     <ctl name="Voip Tx Mute" id="0" value="0" />
     <ctl name="Voip Tx Mute" id="1" value="500" />
     <ctl name="Voip Rx Gain" id="0" value="0" />
@@ -590,14 +590,6 @@
         <ctl name="VOC_EXT_EC MUX" value="SLIM_1_TX" />
    </path>
 
-    <path name="echo-reference speaker-vbat-mono-2">
-        <ctl name="AIF3_CAP Mixer SLIM TX2" value="1" />
-        <ctl name="SLIM TX2 MUX" value="RX_MIX_TX2" />
-        <ctl name="RX MIX TX2 MUX" value="RX_MIX_VBAT8" />
-        <ctl name="SLIM_1_TX Channels" value="One" />
-        <ctl name="VOC_EXT_EC MUX" value="SLIM_1_TX" />
-   </path>
-
    <path name="echo-reference speaker-vbat">
         <ctl name="AIF3_CAP Mixer SLIM TX1" value="1" />
         <ctl name="AIF3_CAP Mixer SLIM TX2" value="1" />
@@ -765,7 +757,7 @@
     </path>
 
     <path name="audio-ull-playback display-port">
-        <ctl name="DISPLAY_PORT Mixer MultiMedia3" value="1" />
+        <ctl name="DISPLAY_PORT Mixer MultiMedia8" value="1" />
     </path>
 
     <path name="audio-ull-playback bt-sco">
@@ -1637,11 +1629,6 @@
         <path name="compress-voip-call"/>
     </path>
 
-    <path name="compress-voip-call voice-speaker-2-vbat">
-        <path name="echo-reference speaker-vbat-mono-2" />
-        <path name="compress-voip-call"/>
-    </path>
-
     <path name="vowlan-call">
         <ctl name="SLIM_0_RX_Voice Mixer VoWLAN" value="1" />
         <ctl name="VoWLAN_Tx Mixer SLIM_0_TX_VoWLAN" value="1" />
@@ -1684,11 +1671,6 @@
 
     <path name="vowlan-call voice-speaker-vbat">
         <path name="echo-reference speaker-vbat-mono" />
-        <path name="vowlan-call"/>
-    </path>
-
-    <path name="vowlan-call voice-speaker-2-vbat">
-        <path name="echo-reference speaker-vbat-mono-2" />
         <path name="vowlan-call"/>
     </path>
 
@@ -1737,11 +1719,6 @@
         <path name="voicemmode1-call"/>
     </path>
 
-    <path name="voicemmode1-call voice-speaker-2-vbat">
-        <path name="echo-reference speaker-vbat-mono-2" />
-        <path name="voicemmode1-call"/>
-    </path>
-
     <path name="voicemmode2-call">
         <ctl name="SLIM_0_RX_Voice Mixer VoiceMMode2" value="1" />
         <ctl name="VoiceMMode2_Tx Mixer SLIM_0_TX_MMode2" value="1" />
@@ -1784,11 +1761,6 @@
 
     <path name="voicemmode2-call voice-speaker-vbat">
         <path name="echo-reference speaker-vbat-mono" />
-        <path name="voicemmode2-call"/>
-    </path>
-
-    <path name="voicemmode2-call voice-speaker-2-vbat">
-        <path name="echo-reference speaker-vbat-mono-2" />
         <path name="voicemmode2-call"/>
     </path>
 
@@ -1925,21 +1897,14 @@
     </path>
 
     <path name="speaker">
-        <ctl name="COMP7 Switch" value="1" />
-        <ctl name="COMP8 Switch" value="1" />
+	<ctl name="COMP7 Switch" value="1" />
         <ctl name="SLIM RX0 MUX" value="AIF_MIX1_PB" />
-        <ctl name="SLIM RX1 MUX" value="AIF_MIX1_PB" />
-        <ctl name="SLIM_0_RX Channels" value="Two" />
+        <ctl name="SLIM_0_RX Channels" value="One" />
         <ctl name="RX INT7_1 MIX1 INP0" value="RX0" />
-        <ctl name="RX INT8_1 MIX1 INP0" value="RX1" />
         <ctl name="SpkrLeft COMP Switch" value="1" />
-        <ctl name="SpkrRight COMP Switch" value="1" />
         <ctl name="SpkrLeft BOOST Switch" value="1" />
-        <ctl name="SpkrRight BOOST Switch" value="1" />
         <ctl name="SpkrLeft VISENSE Switch" value="1" />
-        <ctl name="SpkrRight VISENSE Switch" value="1" />
         <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
-        <ctl name="SpkrRight SWR DAC_Port Switch" value="1" />
     </path>
 
     <path name="speaker-fluid">
@@ -1964,17 +1929,6 @@
         <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
     </path>
 
-    <path name="speaker-mono-2">
-        <ctl name="COMP8 Switch" value="1" />
-        <ctl name="SLIM RX1 MUX" value="AIF_MIX1_PB" />
-        <ctl name="SLIM_0_RX Channels" value="One" />
-        <ctl name="RX INT8_1 MIX1 INP0" value="RX1" />
-        <ctl name="SpkrRight COMP Switch" value="1" />
-        <ctl name="SpkrRight BOOST Switch" value="1" />
-        <ctl name="SpkrRight VISENSE Switch" value="1" />
-        <ctl name="SpkrRight SWR DAC_Port Switch" value="1" />
-    </path>
-
     <path name="speaker-liquid">
         <path name="speaker" />
     </path>
@@ -1984,15 +1938,9 @@
        <ctl name="RX INT7 VBAT SPKRL VBAT Enable" value="1" />
    </path>
 
-   <path name="speaker-vbat-mono-2">
-       <path name="speaker-mono-2" />
-       <ctl name="RX INT8 VBAT SPKRL VBAT Enable" value="1" />
-   </path>
-
    <path name="speaker-vbat">
        <path name="speaker" />
        <ctl name="RX INT7 VBAT SPKRL VBAT Enable" value="1" />
-       <ctl name="RX INT8 VBAT SPKRR VBAT Enable" value="1" />
    </path>
 
    <path name="sidetone-iir">
@@ -2013,19 +1961,15 @@
     <path name="sidetone-handset">
         <path name="sidetone-iir" />
         <ctl name="IIR0 INP0 Volume" value="54" />
-        <ctl name="RX INT7 MIX2 INP" value="SRC0" />
-    </path>
-
-    <path name="afe-sidetone">
-        <ctl name="Voice Sidetone Enable" value="1" />
+        <ctl name="RX INT0 MIX2 INP" value="SRC0" />
     </path>
 
     <path name="speaker-mic">
-        <path name="dmic2" />
+        <path name="dmic3" />
     </path>
 
     <path name="speaker-mic-liquid">
-        <path name="dmic2" />
+        <path name="dmic3" />
         <ctl name="DEC7 Volume" value="111" />
     </path>
 
@@ -2036,26 +1980,16 @@
 
     <path name="speaker-protected">
         <ctl name="AIF4_VI Mixer SPKR_VI_1" value="1" />
-        <ctl name="AIF4_VI Mixer SPKR_VI_2" value="1" />
 	<ctl name="SLIM_4_TX Format" value="PACKED_16B" />
-        <path name="speaker" />
-        <ctl name="VI_FEED_TX Channels" value="Two" />
-        <ctl name="SLIM0_RX_VI_FB_LCH_MUX"  value="SLIM4_TX" />
-        <ctl name="SLIM0_RX_VI_FB_RCH_MUX"  value="SLIM4_TX" />
-    </path>
-
-    <path name="voice-speaker-protected">
-        <ctl name="AIF4_VI Mixer SPKR_VI_1" value="1" />
-        <ctl name="SLIM_4_TX Format" value="PACKED_16B" />
         <path name="speaker-mono" />
         <ctl name="VI_FEED_TX Channels" value="One" />
         <ctl name="SLIM0_RX_VI_FB_LCH_MUX"  value="SLIM4_TX" />
     </path>
 
-    <path name="voice-speaker-2-protected">
-        <ctl name="AIF4_VI Mixer SPKR_VI_2" value="1" />
-        <ctl name="SLIM_4_TX Format" value="PACKED_16B" />
-        <path name="speaker-mono-2" />
+    <path name="voice-speaker-protected">
+        <ctl name="AIF4_VI Mixer SPKR_VI_1" value="1" />
+	<ctl name="SLIM_4_TX Format" value="PACKED_16B" />
+        <path name="speaker-mono" />
         <ctl name="VI_FEED_TX Channels" value="One" />
         <ctl name="SLIM0_RX_VI_FB_LCH_MUX"  value="SLIM4_TX" />
     </path>
@@ -2063,16 +1997,9 @@
     <path name="vi-feedback">
     </path>
 
-    <path name="vi-feedback-mono-1">
-    </path>
-
-    <path name="vi-feedback-mono-2">
-    </path>
-
     <path name="speaker-protected-vbat">
         <path name="speaker-protected" />
         <ctl name="RX INT7 VBAT SPKRL VBAT Enable" value="1" />
-        <ctl name="RX INT8 VBAT SPKRR VBAT Enable" value="1" />
     </path>
 
     <path name="voice-speaker-protected-vbat">
@@ -2080,20 +2007,12 @@
         <ctl name="RX INT7 VBAT SPKRL VBAT Enable" value="1" />
     </path>
 
-    <path name="voice-speaker-2-protected-vbat">
-        <path name="voice-speaker-2-protected" />
-        <ctl name="RX INT8 VBAT SPKRL VBAT Enable" value="1" />
-    </path>
-
     <path name="handset">
-        <ctl name="COMP7 Switch" value="1" />
-        <ctl name="SLIM RX0 MUX" value="AIF_MIX1_PB" />
+	<ctl name="SLIM RX0 MUX" value="AIF_MIX1_PB" />
         <ctl name="SLIM_0_RX Channels" value="One" />
-        <ctl name="RX INT7_1 MIX1 INP0" value="RX0" />
-        <ctl name="SpkrLeft COMP Switch" value="1" />
-        <ctl name="SpkrLeft BOOST Switch" value="1" />
-        <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
-        <ctl name="EAR SPKR PA Gain" value="G_6_DB" />
+        <ctl name="RX INT0_1 MIX1 INP0" value="RX0" />
+        <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT" />
+        <ctl name="EAR PA Gain" value="G_6_DB" />
     </path>
 
     <path name="handset-mic">
@@ -2127,7 +2046,7 @@
         <ctl name="DMIC MUX6" value="DMIC2" />
         <ctl name="SLIM TX8 MUX" value="DEC8" />
         <ctl name="ADC MUX8" value="DMIC" />
-        <ctl name="DMIC MUX8" value="DMIC5" />
+        <ctl name="DMIC MUX8" value="DMIC4" />
     </path>
 
     <path name="anc-handset">
@@ -2211,10 +2130,6 @@
         <path name="speaker-mono" />
     </path>
 
-    <path name="voice-speaker-2">
-        <path name="speaker-mono-2" />
-    </path>
-
     <path name="voice-speaker-fluid">
         <path name="speaker-fluid" />
     </path>
@@ -2225,10 +2140,6 @@
 
     <path name="voice-speaker-vbat">
         <path name="speaker-vbat-mono" />
-    </path>
-
-    <path name="voice-speaker-2-vbat">
-        <path name="speaker-vbat-mono-2" />
     </path>
 
     <path name="voice-headphones">
@@ -2470,7 +2381,7 @@
         <ctl name="AIF1_CAP Mixer SLIM TX8" value="1" />
         <ctl name="SLIM TX7 MUX" value="DEC7" />
         <ctl name="ADC MUX7" value="DMIC" />
-        <ctl name="DMIC MUX7" value="DMIC2" />
+        <ctl name="DMIC MUX7" value="DMIC0" />
         <ctl name="SLIM TX8 MUX" value="DEC8" />
         <ctl name="ADC MUX8" value="DMIC" />
         <ctl name="DMIC MUX8" value="DMIC4" />
@@ -2482,10 +2393,10 @@
         <ctl name="AIF1_CAP Mixer SLIM TX8" value="1" />
         <ctl name="SLIM TX7 MUX" value="DEC7" />
         <ctl name="ADC MUX7" value="DMIC" />
-        <ctl name="DMIC MUX7" value="DMIC1" />
+        <ctl name="DMIC MUX7" value="DMIC0" />
         <ctl name="SLIM TX8 MUX" value="DEC8" />
         <ctl name="ADC MUX8" value="DMIC" />
-        <ctl name="DMIC MUX8" value="DMIC5" />
+        <ctl name="DMIC MUX8" value="DMIC4" />
         <ctl name="SLIM_0_TX Channels" value="Two" />
     </path>
 
@@ -2557,10 +2468,10 @@
         <ctl name="SLIM_0_TX Channels" value="Two" />
         <ctl name="SLIM TX7 MUX" value="DEC7" />
         <ctl name="ADC MUX7" value="DMIC" />
-        <ctl name="DMIC MUX7" value="DMIC1" />
+        <ctl name="DMIC MUX7" value="DMIC0" />
         <ctl name="SLIM TX8 MUX" value="DEC8" />
         <ctl name="ADC MUX8" value="DMIC" />
-        <ctl name="DMIC MUX8" value="DMIC2" />
+        <ctl name="DMIC MUX8" value="DMIC4" />
     </path>
 
     <path name="dmic-broadside">
@@ -2663,7 +2574,7 @@
     </path>
 
     <path name="voice-tty-vco-handset-mic">
-        <path name="dmic1" />
+        <path name="dmic3" />
     </path>
 
     <path name="listen-handset-mic">

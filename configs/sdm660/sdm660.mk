@@ -75,6 +75,7 @@ PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/sdm660/mixer_paths_wcd9335.xml:system/etc/mixer_paths_wcd9335.xml \
     hardware/qcom/audio/configs/sdm660/mixer_paths_wcd9340.xml:system/etc/mixer_paths_wcd9340.xml \
     hardware/qcom/audio/configs/sdm660/mixer_paths_wcd9326.xml:system/etc/mixer_paths_wcd9326.xml \
+    hardware/qcom/audio/configs/sdm660/mixer_paths_skus.xml:system/etc/mixer_paths_skus.xml \
     hardware/qcom/audio/configs/sdm660/mixer_paths_i2s.xml:system/etc/mixer_paths_i2s.xml \
     hardware/qcom/audio/configs/sdm660/aanc_tuning_mixer.txt:system/etc/aanc_tuning_mixer.txt \
     hardware/qcom/audio/configs/sdm660/aanc_tuning_mixer_tavil.txt:system/etc/aanc_tuning_mixer_tavil.txt \
@@ -220,3 +221,7 @@ audio.noisy.broadcast.delay=600
 #Enable HIFI audio support for internal codec
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.audio.hifi.int_codec=true
+
+#offload pausetime out duration to 3 secs to inline with other outputs
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.pstimeout.secs=3

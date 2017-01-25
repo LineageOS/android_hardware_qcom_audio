@@ -128,6 +128,16 @@ AM_CFLAGS += -DCOMPRESS_INPUT_ENABLED
 c_sources += audio_extn/compress_in.c
 endif
 
+if COMPRESS_PASSTHROUGH
+AM_CFLAGS += -DHDMI_PASSTHROUGH_ENABLED
+c_sources += audio_extn/passthru.c
+endif
+
+if KEEP_ALIVE
+AM_CFLAGS += -DKEEP_ALIVE_ENABLED
+c_sources += audio_extn/keep_alive.c
+endif
+
 if AUDIO_HW_EXTN_API
 AM_CFLAGS += -DAUDIO_HW_EXTN_API_ENABLED
 c_sources += audio_hw_extn_api.c

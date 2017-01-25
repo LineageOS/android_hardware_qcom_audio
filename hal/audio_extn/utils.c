@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2014 The Android Open Source Project
@@ -147,6 +147,10 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_ADTS_HE_V1),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_ADTS_HE_V2),
     STRING_TO_ENUM(AUDIO_FORMAT_DSD),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_LATM),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_LATM_LC),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_LATM_HE_V1),
+    STRING_TO_ENUM(AUDIO_FORMAT_AAC_LATM_HE_V2),
 #endif
 };
 
@@ -1114,6 +1118,9 @@ int get_snd_codec_id(audio_format_t format)
     case AUDIO_FORMAT_AAC_ADTS:
         id = SND_AUDIOCODEC_AAC;
         break;
+    case AUDIO_FORMAT_AAC_LATM:
+        id = SND_AUDIOCODEC_AAC;
+        break;
     case AUDIO_FORMAT_PCM_OFFLOAD:
     case AUDIO_FORMAT_PCM:
         id = SND_AUDIOCODEC_PCM;
@@ -1139,6 +1146,17 @@ int get_snd_codec_id(audio_format_t format)
     case AUDIO_FORMAT_MP2:
         id = SND_AUDIOCODEC_MP2;
         break;
+    case AUDIO_FORMAT_AC3:
+        id = SND_AUDIOCODEC_AC3;
+        break;
+    case AUDIO_FORMAT_E_AC3:
+    case AUDIO_FORMAT_E_AC3_JOC:
+        id = SND_AUDIOCODEC_EAC3;
+        break;
+    case AUDIO_FORMAT_DTS:
+    case AUDIO_FORMAT_DTS_HD:
+        id = SND_AUDIOCODEC_DTS;
+        break;
     default:
         ALOGE("%s: Unsupported audio format :%x", __func__, format);
     }
@@ -1151,7 +1169,7 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
 {
     int type = usecase->type;
 
-    if (type == PCM_PLAYBACK) {
+    if (type == PCM_PLAYBACK && usecase->stream.out != NULL) {
         struct stream_out *out = usecase->stream.out;
         int snd_device = usecase->out_snd_device;
         snd_device = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
@@ -1159,7 +1177,7 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
         platform_send_audio_calibration(adev->platform, usecase,
                                         out->app_type_cfg.app_type,
                                         usecase->stream.out->app_type_cfg.sample_rate);
-    } else if (type == PCM_CAPTURE) {
+    } else if (type == PCM_CAPTURE && usecase->stream.in != NULL) {
         platform_send_audio_calibration(adev->platform, usecase,
                          usecase->stream.in->app_type_cfg.app_type,
                          usecase->stream.in->app_type_cfg.sample_rate);

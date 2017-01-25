@@ -12,7 +12,8 @@ LOCAL_MODULE_OWNER := qti
 LOCAL_C_INCLUDES   := $(libqahw-inc)
 
 LOCAL_SRC_FILES := \
-    src/qahw.c
+    src/qahw.c \
+    src/qahw_effect.c
 
 LOCAL_SHARED_LIBRARIES := \
     liblog \
@@ -23,6 +24,13 @@ LOCAL_SHARED_LIBRARIES := \
 LOCAL_COPY_HEADERS_TO   := mm-audio/qahw_api/inc
 LOCAL_COPY_HEADERS      := inc/qahw_api.h
 LOCAL_COPY_HEADERS      += inc/qahw_defs.h
+LOCAL_COPY_HEADERS      += inc/qahw_effect_api.h
+LOCAL_COPY_HEADERS      += inc/qahw_effect_bassboost.h
+LOCAL_COPY_HEADERS      += inc/qahw_effect_environmentalreverb.h
+LOCAL_COPY_HEADERS      += inc/qahw_effect_equalizer.h
+LOCAL_COPY_HEADERS      += inc/qahw_effect_presetreverb.h
+LOCAL_COPY_HEADERS      += inc/qahw_effect_virtualizer.h
+LOCAL_COPY_HEADERS      += inc/qahw_effect_visualizer.h
 
 LOCAL_PRELINK_MODULE    := false
 
