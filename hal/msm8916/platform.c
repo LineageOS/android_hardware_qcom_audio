@@ -37,6 +37,7 @@
 #include "sound/compress_params.h"
 #include "sound/msmcal-hwdep.h"
 #include <dirent.h>
+#include <linux/msm_audio.h>
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
 #define MAX_MIXER_XML_PATH  100
 #define MIXER_XML_PATH_QRD_SKUH "/system/etc/mixer_paths_qrd_skuh.xml"
@@ -202,6 +203,12 @@ typedef struct acdb_audio_cal_cfg {
     uint32_t             param_id;
 } acdb_audio_cal_cfg_t;
 
+enum {
+    CAL_MODE_SEND           = 0x1,
+    CAL_MODE_PERSIST        = 0x2,
+    CAL_MODE_RTAC           = 0x4
+};
+
 /* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
 typedef int  (*acdb_init_t)(const char *, char *, int);
@@ -216,6 +223,7 @@ typedef int (*acdb_get_audio_cal_t) (void *, void *, uint32_t*);
 typedef int (*acdb_send_common_top_t) (void);
 typedef int (*acdb_set_codec_data_t) (void *, char *);
 typedef int (*acdb_reload_t) (char *, char *, char *, int);
+typedef int (*acdb_send_gain_dep_cal_t)(int, int, int, int, int);
 
 typedef struct codec_backend_cfg {
     uint32_t sample_rate;
@@ -269,6 +277,7 @@ struct platform_data {
     bool rec_play_conc_set;
 #endif
     void *hw_info;
+    acdb_send_gain_dep_cal_t   acdb_send_gain_dep_cal;
     struct csd_data *csd;
     void *edid_info;
     bool edid_valid;
@@ -1988,6 +1997,11 @@ void *platform_init(struct audio_device *adev)
             ALOGE("%s: Could not find the symbol acdb_get_default_app_type from %s",
                   __func__, LIB_ACDB_LOADER);
 
+        my_data->acdb_send_gain_dep_cal = (acdb_send_gain_dep_cal_t)dlsym(my_data->acdb_handle,
+                                                    "acdb_loader_send_gain_dep_cal");
+        if (!my_data->acdb_send_gain_dep_cal)
+            ALOGV("%s: Could not find the symbol acdb_loader_send_gain_dep_cal from %s",
+                  __func__, LIB_ACDB_LOADER);
 
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_init_v2");
@@ -5831,10 +5845,60 @@ int platform_spkr_prot_is_wsa_analog_mode(void *adev)
         return 0;
 }
 
-bool platform_send_gain_dep_cal(void *platform __unused,
-                                int level __unused)
+bool platform_send_gain_dep_cal(void *platform,
+                                int level )
 {
-    return 0;
+    bool ret_val = false;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    int acdb_dev_id, app_type;
+    int acdb_dev_type = MSM_SNDDEV_CAP_RX;
+    int mode = CAL_MODE_RTAC;
+    struct listnode *node;
+    struct audio_usecase *usecase;
+
+    if (my_data->acdb_send_gain_dep_cal == NULL) {
+        ALOGE("%s: dlsym error for acdb_send_gain_dep_cal", __func__);
+        return ret_val;
+    }
+
+    if (!voice_is_in_call(adev)) {
+        ALOGV("%s: Not Voice call usecase, apply new cal for level %d",
+               __func__, level);
+
+        // find the current active sound device
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+
+            if (usecase != NULL &&
+                usecase->type == PCM_PLAYBACK &&
+                usecase->stream.out->devices == AUDIO_DEVICE_OUT_SPEAKER) {
+
+                ALOGV("%s: out device is %d", __func__,  usecase->out_snd_device);
+                app_type = usecase->stream.out->app_type_cfg.app_type;
+
+                if (audio_extn_spkr_prot_is_enabled()) {
+                    acdb_dev_id = platform_get_spkr_prot_acdb_id(usecase->out_snd_device);
+                } else {
+                    acdb_dev_id = acdb_device_table[usecase->out_snd_device];
+                }
+
+                if (!my_data->acdb_send_gain_dep_cal(acdb_dev_id, app_type,
+                                                     acdb_dev_type, mode, level)) {
+                    // set ret_val true if at least one calibration is set successfully
+                    ret_val = true;
+                } else {
+                    ALOGE("%s: my_data->acdb_send_gain_dep_cal failed ", __func__);
+                }
+            } else {
+                ALOGW("%s: Usecase list is empty", __func__);
+            }
+        }
+    } else {
+        ALOGW("%s: Voice call in progress .. ignore setting new cal",
+              __func__);
+    }
+    return ret_val;
 }
 
 bool platform_can_enable_spkr_prot_on_device(snd_device_t snd_device)
