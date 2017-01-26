@@ -284,6 +284,7 @@
     <ctl name="SpkrLeft SWR DAC_Port Switch" value="0" />
     <ctl name="SpkrRight SWR DAC_Port Switch" value="0" />
     <ctl name="SpkrLeft WSA PA Gain" value="G_0_DB" />
+    <ctl name="EAR SPKR PA Gain" value="G_DEFAULT" />
 
     <!-- Volume controls -->
     <ctl name="HPHL Volume" value="9" />
@@ -1594,8 +1595,8 @@
 
     <path name="speaker">
         <ctl name="INT4_MI2S_RX Channels" value="Two" />
-        <ctl name="RX4 MIX1 INP1" value="RX1" />
-        <ctl name="RX5 MIX1 INP1" value="RX2" />
+        <ctl name="RX4 MIX1 INP1" value="RX4" />
+        <ctl name="RX5 MIX1 INP1" value="RX5" />
         <ctl name="COMP1 Switch" value="1" />
         <ctl name="COMP2 Switch" value="1" />
         <ctl name="SpkrLeft COMP Switch" value="1" />
@@ -1610,7 +1611,7 @@
 
     <path name="speaker-mono">
         <ctl name="INT4_MI2S_RX Channels" value="One" />
-        <ctl name="RX4 MIX1 INP1" value="RX1" />
+        <ctl name="RX4 MIX1 INP1" value="RX4" />
         <ctl name="COMP1 Switch" value="1" />
         <ctl name="SpkrLeft COMP Switch" value="1" />
         <ctl name="SpkrLeft BOOST Switch" value="1" />
@@ -1620,7 +1621,7 @@
 
     <path name="speaker-mono-2">
         <ctl name="INT4_MI2S_RX Channels" value="One" />
-        <ctl name="RX5 MIX1 INP1" value="RX2" />
+        <ctl name="RX5 MIX1 INP1" value="RX4" />
         <ctl name="COMP2 Switch" value="1" />
         <ctl name="SpkrRight COMP Switch" value="1" />
         <ctl name="SpkrRight BOOST Switch" value="1" />
@@ -1726,6 +1727,7 @@
 
     <path name="handset">
         <path name="speaker-mono" />
+        <ctl name="EAR SPKR PA Gain" value="G_6_DB" />
     </path>
 
     <path name="handset-mic">
