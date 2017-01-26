@@ -2971,15 +2971,21 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_BT_SCO;
         } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
                 if (my_data->is_vbat_speaker) {
-                    if (my_data->mono_speaker == SPKR_1)
+                    if (hw_info_is_stereo_spkr(my_data->hw_info)) {
+                        if (my_data->mono_speaker == SPKR_1)
+                            snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_VBAT;
+                        else
+                            snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT;
+                    } else
                         snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_VBAT;
-                    else
-                        snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT;
                 } else {
-                    if (my_data->mono_speaker == SPKR_1)
-                        snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
-                    else
-                        snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_2;
+                    if (hw_info_is_stereo_spkr(my_data->hw_info)) {
+                        if (my_data->mono_speaker == SPKR_1)
+                            snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
+                        else
+                            snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_2;
+                    } else
+                            snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
                 }
         } else if (devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
             snd_device = SND_DEVICE_OUT_BT_A2DP;

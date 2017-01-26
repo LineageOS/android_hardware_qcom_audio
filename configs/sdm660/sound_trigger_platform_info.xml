@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--- Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.       -->
+<!--- Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.       -->
 <!---                                                                           -->
 <!--- Redistribution and use in source and binary forms, with or without        -->
 <!--- modification, are permitted provided that the following conditions are    -->
@@ -97,4 +97,10 @@
         <param sample_rate="16000" />
         <param bit_width="16" />
     </adm_config>
+
+    <!-- backend_type tag defines backend type for each device -->
+    <!-- Default value is assumed for devices that are not listed here -->
+    <backend_type>
+        <param DEVICE_HANDSET_MIC_ECPP_CPE="BACKEND_ECPP" />
+    </backend_type>
 </sound_trigger_platform_info>

@@ -31,6 +31,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 
@@ -62,10 +63,12 @@ const char * effect_str[EFFECT_NUM] = {
     "reverb",
 };
 
-void *bassboost_thread_func(void* data) {
+void *bassboost_thread_func(void* data __unused) {
+    return NULL;
 }
 
-void *virtualizer_thread_func(void* data) {
+void *virtualizer_thread_func(void* data __unused) {
+    return NULL;
 }
 
 void *equalizer_thread_func(void* data) {
@@ -151,10 +154,12 @@ void *equalizer_thread_func(void* data) {
     return NULL;
 }
 
-void *visualizer_thread_func(void* data) {
+void *visualizer_thread_func(void* data __unused) {
+    return NULL;
 }
 
-void *reverb_thread_func(void* data) {
+void *reverb_thread_func(void* data __unused) {
+    return NULL;
 }
 
 thread_data_t *create_effect_thread(thread_func_t func_ptr) {
@@ -195,11 +200,9 @@ void effect_thread_command(thread_data_t *ethread_data,
 
     pthread_mutex_lock(&ethread_data->mutex);
     ethread_data->cmd = cmd;
-    if (cmd_code >= 0) {
-        ethread_data->cmd_code = cmd_code;
-        ethread_data->cmd_size = cmd_size;
-        ethread_data->cmd_data = cmd_data;
-    }
+    ethread_data->cmd_code = cmd_code;
+    ethread_data->cmd_size = cmd_size;
+    ethread_data->cmd_data = cmd_data;
     pthread_mutex_unlock(&ethread_data->mutex);
     pthread_cond_signal(&ethread_data->loop_cond);
 

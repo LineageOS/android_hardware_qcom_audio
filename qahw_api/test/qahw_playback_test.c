@@ -22,6 +22,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <time.h>
@@ -156,15 +157,14 @@ static pthread_cond_t drain_cond = PTHREAD_COND_INITIALIZER;
                    "music_offload_wma_encode_option2=%d;" \
                    "music_offload_wma_format_tag=%d;"
 
-void stop_signal_handler(int signal)
+void stop_signal_handler(int signal __unused)
 {
    stop_playback = true;
 }
 
 void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
 {
-    char *kvpair_type;
-    char param[100];
+    char *kvpair_type = NULL;
     char *token = NULL;
     int value = 0;
     int len = 0;
@@ -291,6 +291,7 @@ void *proxy_read (void* data)
         }
         fprintf(log_file, "pcm data saved to file %s", params->acp.file_name);
     }
+    return 0;
 }
 
 int write_to_hal(qahw_stream_handle_t* out_handle, char *data,
@@ -636,7 +637,7 @@ int main(int argc, char* argv[]) {
     FILE *file_stream = NULL;
     char header[44] = {0};
     char* filename = nullptr;
-    qahw_module_handle_t *qahw_mod_handle;
+    qahw_module_handle_t *qahw_mod_handle = NULL;
     const char *mod_name = "audio.primary";
     qahw_stream_handle_t* out_handle = nullptr;
     int rc = 0;

@@ -742,4 +742,32 @@ int audio_extn_cin_configure_input_stream(struct stream_in *in);
 #define audio_extn_cin_configure_input_stream(in) (0)
 #endif
 
+#ifndef SOURCE_TRACKING_ENABLED
+static int __unused audio_extn_get_soundfocus_data(
+                                   const struct audio_device *adev __unused,
+                                   struct sound_focus_param *payload __unused)
+{
+    return -ENOSYS;
+}
+static int __unused audio_extn_get_sourcetrack_data(
+                                   const struct audio_device *adev __unused,
+                                   struct source_tracking_param *payload __unused)
+{
+    return -ENOSYS;
+}
+static int __unused audio_extn_set_soundfocus_data(
+                                   struct audio_device *adev __unused,
+                                   struct sound_focus_param *payload __unused)
+{
+    return -ENOSYS;
+}
+#else
+int audio_extn_get_soundfocus_data(const struct audio_device *adev,
+                                   struct sound_focus_param *payload);
+int audio_extn_get_sourcetrack_data(const struct audio_device *adev,
+                                    struct source_tracking_param *payload);
+int audio_extn_set_soundfocus_data(struct audio_device *adev,
+                                   struct sound_focus_param *payload);
+#endif
+
 #endif /* AUDIO_EXTN_H */
