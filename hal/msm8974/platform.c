@@ -120,7 +120,7 @@ struct platform_data {
     bool speaker_lr_swap;
 
     void *acdb_handle;
-#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996)
+#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998)
     acdb_init_v2_cvd_t acdb_init;
 #elif defined (PLATFORM_MSM8084)
     acdb_init_v2_t acdb_init;
@@ -974,7 +974,7 @@ static int platform_acdb_init(void *platform)
         return 0;
     }
 
-#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996)
+#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998)
     char *cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
     if (!cvd_version)
         ALOGE("failed to allocate cvd_version");
@@ -1253,7 +1253,7 @@ void *platform_init(struct audio_device *adev)
             ALOGV("%s: Could not find the symbol acdb_loader_send_gain_dep_cal from %s",
                   __func__, LIB_ACDB_LOADER);
 
-#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996)
+#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998)
         acdb_init_v2_cvd_t acdb_init;
         acdb_init = (acdb_init_v2_cvd_t)dlsym(my_data->acdb_handle,
                                               "acdb_loader_init_v2");
