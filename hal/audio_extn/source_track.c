@@ -88,24 +88,10 @@
       BITMASK_AUDIO_PARAMETER_KEY_SOURCE_TRACK_DOA_NOISE |\
       BITMASK_AUDIO_PARAMETER_KEY_SOURCE_TRACK_POLAR_ACTIVITY)
 
-#define MAX_SECTORS                                         8
 #define MAX_STR_SIZE                                       2048
 
 extern struct audio_device_to_audio_interface audio_device_to_interface_table[];
 extern int audio_device_to_interface_table_len;
-
-struct sound_focus_param {
-    uint16_t start_angle[MAX_SECTORS];
-    uint8_t enable[MAX_SECTORS];
-    uint16_t gain_step;
-};
-
-struct source_tracking_param {
-    uint8_t vad[MAX_SECTORS];
-    uint16_t doa_speech;
-    uint16_t doa_noise[3];
-    uint8_t polar_activity[360];
-};
 
 static int add_audio_intf_name_to_mixer_ctl(audio_devices_t device, char *mixer_ctl_name,
                                 struct audio_device_to_audio_interface *table, int len)

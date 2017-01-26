@@ -48,7 +48,7 @@
 #define QAHW_MODULE_API_VERSION_CURRENT QAHW_MODULE_API_VERSION_0_0
 
 typedef uint64_t (*qahwi_in_read_v2_t)(audio_stream_in_t *in, void* buffer,
-                                       size_t bytes, uint64_t *timestamp);
+                                       size_t bytes, int64_t *timestamp);
 
 typedef int (*qahwi_get_param_data_t) (const audio_hw_device_t *,
                               qahw_param_id, qahw_param_payload *);
@@ -1142,8 +1142,7 @@ int qahw_get_mic_mute(qahw_module_handle_t *hw_module, bool *state)
     pthread_mutex_lock(&qahw_module->lock);
     audio_device = qahw_module->audio_device;
     if (qahw_module->audio_device->get_mic_mute) {
-        rc = audio_device->get_mic_mute(qahw_module->audio_device,
-                                                 &state);
+        rc = audio_device->get_mic_mute(qahw_module->audio_device, state);
     } else {
         rc = -ENOSYS;
         ALOGW("%s not supported", __func__);
@@ -1675,7 +1674,6 @@ int qahw_unload_module(qahw_module_handle_t *hw_module)
 error_exit:
     pthread_mutex_unlock(&qahw_module_init_lock);
 
-exit:
     return rc;
 }
 
