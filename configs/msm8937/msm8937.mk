@@ -3,7 +3,7 @@
 #BOARD_USES_GENERIC_AUDIO := true
 BOARD_USES_ALSA_AUDIO := true
 
-ifneq ($(TARGET_USES_AOSP), true)
+ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 USE_CUSTOM_AUDIO_POLICY := 1
 #AUDIO_FEATURE_ENABLED_VOICE_CONCURRENCY := true
 AUDIO_FEATURE_ENABLED_AAC_ADTS_OFFLOAD := true
@@ -60,7 +60,7 @@ BOARD_SUPPORTS_QAHW := true
 DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
 
 # Audio configuration file
-ifeq ($(TARGET_USES_AOSP), true)
+ifeq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 PRODUCT_COPY_FILES += \
     device/qcom/common/media/audio_policy.conf:system/etc/audio_policy.conf
 else
@@ -96,7 +96,7 @@ hardware/qcom/audio/configs/msm8937/aanc_tuning_mixer.txt:system/etc/aanc_tuning
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
-ifeq ($(TARGET_USES_AOSP), true)
+ifeq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 PRODUCT_COPY_FILES += \
     $(TOPDIR)hardware/qcom/audio/configs/common/audio_policy_configuration.xml:/system/etc/audio_policy_configuration.xml
 else
