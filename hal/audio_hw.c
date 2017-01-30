@@ -2332,6 +2332,8 @@ int start_output_stream(struct stream_out *out)
             compress_set_max_poll_wait(out->compr, 1000);
         }
 
+        audio_extn_utils_compress_set_render_mode(out);
+
         audio_extn_dts_create_state_notifier_node(out->usecase);
         audio_extn_dts_notify_playback_state(out->usecase, 0, out->sample_rate,
                                              popcount(out->channel_mask),
@@ -4137,6 +4139,14 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
 
+        if ((flags & AUDIO_OUTPUT_FLAG_TIMESTAMP) &&
+            (flags & AUDIO_OUTPUT_FLAG_HW_AV_SYNC)) {
+            out->render_mode = RENDER_MODE_AUDIO_STC_MASTER;
+        } else if(flags & AUDIO_OUTPUT_FLAG_TIMESTAMP) {
+            out->render_mode = RENDER_MODE_AUDIO_MASTER;
+        } else {
+            out->render_mode = RENDER_MODE_AUDIO_NO_TIMESTAMP;
+        }
 
         out->send_new_metadata = 1;
         out->send_next_track_params = false;
