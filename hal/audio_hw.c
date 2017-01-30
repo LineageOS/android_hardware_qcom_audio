@@ -2243,7 +2243,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     }
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
-        ALOGVV("%s: writing buffer (%d bytes) to compress device", __func__, bytes);
+        ALOGVV("%s: writing buffer (%zu bytes) to compress device", __func__, bytes);
         if (out->send_new_metadata) {
             ALOGVV("send new gapless metadata");
             compress_set_gapless_metadata(out->compr, &out->gapless_mdata);
@@ -2286,7 +2286,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             if (out->muted)
                 memset((void *)buffer, 0, bytes);
 
-            ALOGVV("%s: writing buffer (%d bytes) to pcm device", __func__, bytes);
+            ALOGVV("%s: writing buffer (%zu bytes) to pcm device", __func__, bytes);
 
             long ns = pcm_bytes_to_frames(out->pcm, bytes)*1000000000LL/
                                                 out->config.rate;
@@ -2678,7 +2678,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     lock_input_stream(in);
 
     if (in->is_st_session) {
-        ALOGVV(" %s: reading on st session bytes=%d", __func__, bytes);
+        ALOGVV(" %s: reading on st session bytes=%zu", __func__, bytes);
         /* Read from sound trigger HAL */
         audio_extn_sound_trigger_read(in, buffer, bytes);
         pthread_mutex_unlock(&in->lock);
