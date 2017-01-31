@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2009 The Android Open Source Project
@@ -73,23 +73,17 @@ protected:
                                                    audio_devices_t device,
                                                    int delayMs = 0, bool force = false);
 
-        // selects the most appropriate device on output for current state
-        // must be called every time a condition that affects the device choice for a given output is
-        // changed: connected device, phone state, force use, output start, output stop..
-        // see getDeviceForStrategy() for the use of fromCache parameter
-        audio_devices_t getNewOutputDevice(const sp<AudioOutputDescriptor>& outputDesc,
-                                           bool fromCache);
         // returns true if given output is direct output
         bool isDirectOutput(audio_io_handle_t output);
 
         // if argument "device" is different from AUDIO_DEVICE_NONE,  startSource() will force
         // the re-evaluation of the output device.
-        status_t startSource(sp<AudioOutputDescriptor> outputDesc,
+        status_t startSource(const sp<AudioOutputDescriptor>& outputDesc,
                              audio_stream_type_t stream,
                              audio_devices_t device,
                              const char *address,
                              uint32_t *delayMs);
-         status_t stopSource(sp<AudioOutputDescriptor> outputDesc,
+         status_t stopSource(const sp<AudioOutputDescriptor>& outputDesc,
                             audio_stream_type_t stream,
                             bool forceDeviceUpdate);
 
@@ -114,6 +108,7 @@ private:
         audio_io_handle_t getOutputForDevice(
                 audio_devices_t device,
                 audio_session_t session,
+                uid_t client,
                 audio_stream_type_t stream,
                 uint32_t samplingRate,
                 audio_format_t format,
@@ -126,17 +121,14 @@ private:
                 audio_session_t session,
                 audio_stream_type_t *stream,
                 uid_t uid,
-                uint32_t samplingRate,
-                audio_format_t format,
-                audio_channel_mask_t channelMask,
+                const audio_config_t *config,
                 audio_output_flags_t flags,
                 audio_port_handle_t selectedDeviceId,
-                const audio_offload_info_t *offloadInfo);
+                audio_port_handle_t *portId);
         // Used for voip + voice concurrency usecase
         int mPrevPhoneState;
 #ifdef VOICE_CONCURRENCY
         int mvoice_call_state;
 #endif
 };
-
 };
