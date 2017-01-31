@@ -805,13 +805,6 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
             "Audio Stream Capture %d App Type Cfg", pcm_device_id);
     }
 
-    acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
-    if (acdb_dev_id <= 0) {
-        ALOGE("%s: Couldn't get the acdb dev id", __func__);
-        rc = -EINVAL;
-        goto exit_send_app_type_cfg;
-    }
-
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s", __func__,
@@ -821,6 +814,13 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
     }
     snd_device = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
                  platform_get_spkr_prot_snd_device(snd_device) : snd_device;
+
+    acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
+    if (acdb_dev_id <= 0) {
+        ALOGE("%s: Couldn't get the acdb dev id", __func__);
+        rc = -EINVAL;
+        goto exit_send_app_type_cfg;
+    }
 
     snd_device_be_idx = platform_get_snd_device_backend_index(snd_device);
     if (snd_device_be_idx < 0) {
