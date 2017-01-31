@@ -58,7 +58,7 @@ typedef enum
     REVERB_PARAM_BYPASS
 } qahw_env_reverb_params;
 
-//t_reverb_settings is equal to SLEnvironmentalReverbSettings defined in OpenSL ES specification.
+//qahw_reverb_settings is equal to SLEnvironmentalReverbSettings defined in OpenSL ES specification.
 typedef struct s_reverb_settings {
     int16_t     roomLevel;
     int16_t     roomHFLevel;

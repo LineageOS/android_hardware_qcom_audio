@@ -119,11 +119,14 @@ enum qahw_effect_command_e {
    QAHW_EFFECT_CMD_SET_DEVICE,           // set audio device (see audio.h, audio_devices_t)
    QAHW_EFFECT_CMD_SET_VOLUME,           // set volume
    QAHW_EFFECT_CMD_SET_AUDIO_MODE,       // set the audio mode (normal, ring, ...)
-   QAHW_EFFECT_CMD_SET_CONFIG_REVERSE,   // configure effect engine reverse stream(see effect_config_t)
+   QAHW_EFFECT_CMD_SET_CONFIG_REVERSE,   // configure effect engine reverse stream
+                                         // (see effect_config_t)
    QAHW_EFFECT_CMD_SET_INPUT_DEVICE,     // set capture device (see audio.h, audio_devices_t)
    QAHW_EFFECT_CMD_GET_CONFIG,           // read effect engine configuration
-   QAHW_EFFECT_CMD_GET_CONFIG_REVERSE,   // read configure effect engine reverse stream configuration
-   QAHW_EFFECT_CMD_GET_FEATURE_SUPPORTED_CONFIGS,// get all supported configurations for a feature.
+   QAHW_EFFECT_CMD_GET_CONFIG_REVERSE,   // read configure effect engine reverse stream
+                                         // configuration
+   QAHW_EFFECT_CMD_GET_FEATURE_SUPPORTED_CONFIGS, // get all supported configurations for
+                                                  // a feature.
    QAHW_EFFECT_CMD_GET_FEATURE_CONFIG,   // get current feature configuration
    QAHW_EFFECT_CMD_SET_FEATURE_CONFIG,   // set current feature configuration
    QAHW_EFFECT_CMD_SET_AUDIO_SOURCE,     // set the audio source (see audio.h, audio_source_t)
@@ -255,8 +258,8 @@ enum qahw_effect_command_e {
 // description:
 //  Set the rendering device the audio output path is connected to. See audio.h, audio_devices_t
 //  for device values.
-//  The effect implementation must set QAHW_EFFECT_FLAG_DEVICE_IND flag in its descriptor to receive this
-//  command when the device changes
+//  The effect implementation must set QAHW_EFFECT_FLAG_DEVICE_IND flag in its descriptor to
+//  receive this command when the device changes
 //--------------------------------------------------------------------------------------------------
 // command format:
 //  size: sizeof(uint32_t)
@@ -270,12 +273,12 @@ enum qahw_effect_command_e {
 //--------------------------------------------------------------------------------------------------
 // description:
 //  Set and get volume. Used by audio framework to delegate volume control to effect engine.
-//  The effect implementation must set QAHW_EFFECT_FLAG_VOLUME_IND or QAHW_EFFECT_FLAG_VOLUME_CTRL flag in
-//  its descriptor to receive this command before every call to process() function
-//  If QAHW_EFFECT_FLAG_VOLUME_CTRL flag is set in the effect descriptor, the effect engine must return
-//  the volume that should be applied before the effect is processed. The overall volume (the volume
-//  actually applied by the effect engine multiplied by the returned value) should match the value
-//  indicated in the command.
+//  The effect implementation must set QAHW_EFFECT_FLAG_VOLUME_IND or QAHW_EFFECT_FLAG_VOLUME_CTRL
+//  flag in its descriptor to receive this command before every call to process() function
+//  If QAHW_EFFECT_FLAG_VOLUME_CTRL flag is set in the effect descriptor, the effect engine must
+//  return the volume that should be applied before the effect is processed. The overall volume
+//  (the volume actually applied by the effect engine multiplied by the returned value) should
+//  match the value indicated in the command.
 //--------------------------------------------------------------------------------------------------
 // command format:
 //  size: n * sizeof(uint32_t)
@@ -295,8 +298,8 @@ enum qahw_effect_command_e {
 // command: QAHW_EFFECT_CMD_SET_AUDIO_MODE
 //--------------------------------------------------------------------------------------------------
 // description:
-//  Set the audio mode. The effect implementation must set QAHW_EFFECT_FLAG_AUDIO_MODE_IND flag in its
-//  descriptor to receive this command when the audio mode changes.
+//  Set the audio mode. The effect implementation must set QAHW_EFFECT_FLAG_AUDIO_MODE_IND flag
+//  in its descriptor to receive this command when the audio mode changes.
 //--------------------------------------------------------------------------------------------------
 // command format:
 //  size: sizeof(uint32_t)
@@ -325,8 +328,8 @@ enum qahw_effect_command_e {
 // description:
 //  Set the capture device the audio input path is connected to. See audio.h, audio_devices_t
 //  for device values.
-//  The effect implementation must set QAHW_EFFECT_FLAG_DEVICE_IND flag in its descriptor to receive this
-//  command when the device changes
+//  The effect implementation must set QAHW_EFFECT_FLAG_DEVICE_IND flag in its descriptor to
+//  receive this command when the device changes
 //--------------------------------------------------------------------------------------------------
 // command format:
 //  size: sizeof(uint32_t)
@@ -521,7 +524,8 @@ enum qahw_effect_buffer_access_e {
 
 // feature identifiers for QAHW_EFFECT_CMD_GET_FEATURE_SUPPORTED_CONFIGS command
 enum qahw_effect_feature_e {
-    QAHW_EFFECT_FEATURE_AUX_CHANNELS, // supports auxiliary channels (e.g. dual mic noise suppressor)
+    QAHW_EFFECT_FEATURE_AUX_CHANNELS, // supports auxiliary channels
+                                      // (e.g. dual mic noise suppressor)
     QAHW_EFFECT_FEATURE_CNT
 };
 
@@ -534,7 +538,8 @@ typedef struct qahw_channel_config_s {
 
 
 // Values for bit field "mask" in buffer_config_t. If a bit is set, the corresponding field
-// in buffer_config_t must be taken into account when executing the QAHW_EFFECT_CMD_SET_CONFIG command
+// in buffer_config_t must be taken into account when executing the QAHW_EFFECT_CMD_SET_CONFIG
+// command
 #define QAHW_EFFECT_CONFIG_BUFFER    0x0001  // buffer field must be taken into account
 #define QAHW_EFFECT_CONFIG_SMP_RATE  0x0002  // samplingRate field must be taken into account
 #define QAHW_EFFECT_CONFIG_CHANNELS  0x0004  // channels field must be taken into account
@@ -546,17 +551,18 @@ typedef struct qahw_channel_config_s {
                                 QAHW_EFFECT_CONFIG_ACC_MODE | QAHW_EFFECT_CONFIG_PROVIDER)
 
 
-// effect_config_s structure describes the format of the pCmdData argument of QAHW_EFFECT_CMD_SET_CONFIG
-// command to configure audio parameters and buffers for effect engine input and output.
+// effect_config_s structure describes the format of the pCmdData argument of
+// QAHW_EFFECT_CMD_SET_CONFIG command to configure audio parameters and buffers for effect
+// engine input and output.
 typedef struct qahw_effect_config_s {
     qahw_buffer_config_t   input_cfg;
     qahw_buffer_config_t   output_cfg;
 } qahw_effect_config_t;
 
 
-// effect_param_s structure describes the format of the pCmdData argument of QAHW_EFFECT_CMD_SET_PARAM
-// command and pCmdData and pReplyData of QAHW_EFFECT_CMD_GET_PARAM command.
-// psize and vsize represent the actual size of parameter and value.
+// effect_param_s structure describes the format of the pCmdData argument of
+// QAHW_EFFECT_CMD_SET_PARAM command and pCmdData and pReplyData of QAHW_EFFECT_CMD_GET_PARAM
+// command. psize and vsize represent the actual size of parameter and value.
 //
 // NOTE: the start of value field inside the data field is always on a 32 bit boundary:
 //
