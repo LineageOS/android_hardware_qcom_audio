@@ -96,12 +96,6 @@ protected:
                                                    int delayMs = 0, bool force = false);
 #endif
 
-        // selects the most appropriate device on output for current state
-        // must be called every time a condition that affects the device choice for a given output is
-        // changed: connected device, phone state, force use, output start, output stop..
-        // see getDeviceForStrategy() for the use of fromCache parameter
-        audio_devices_t getNewOutputDevice(const sp<AudioOutputDescriptor>& outputDesc,
-                                           bool fromCache);
         // returns true if given output is direct output
         bool isDirectOutput(audio_io_handle_t output);
 
@@ -155,8 +149,10 @@ private:
         // Used for record + playback concurrency
         bool mIsInputRequestOnProgress;
 #endif
+#ifdef FM_POWER_OPT
         float mPrevFMVolumeDb;
         bool mFMIsActive;
+#endif
 
 };
 
