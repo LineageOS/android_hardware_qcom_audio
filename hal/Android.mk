@@ -268,6 +268,11 @@ ifeq ($(strip $(BOARD_SUPPORTS_QAHW)),true)
     LOCAL_SRC_FILES += audio_hw_extn_api.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_BT_HAL)),true)
+    LOCAL_CFLAGS += -DAUDIO_EXTN_BT_HAL_ENABLED
+    LOCAL_SRC_FILES += audio_extn/bt_hal.c
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
