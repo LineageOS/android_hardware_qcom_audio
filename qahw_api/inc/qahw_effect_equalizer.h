@@ -66,10 +66,10 @@ enum
     EQ_PRESET_POP,
     EQ_PRESET_ROCK,
     EQ_PRESET_FX_BOOSTER,
-    EQ_PRESET_MAX_NUM,
+    EQ_PRESET_LAST = EQ_PRESET_FX_BOOSTER
 };
 
-//t_equalizer_settings groups all current equalizer setting for backup and restore.
+//qahw_equalizer_settings groups all current equalizer setting for backup and restore.
 typedef struct s_equalizer_settings {
     uint16_t curPreset;
     uint16_t numBands;

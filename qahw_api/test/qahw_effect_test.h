@@ -29,15 +29,30 @@
 
 #include <pthread.h>
 
-#define EFFECT_NUM 5
+/* effect generic definations */
+enum {
+    EFFECT_BASSBOOST = 0,
+    EFFECT_VIRTUALIZER,
+    EFFECT_EQUALIZER,
+    EFFECT_VISUALIZER,
+    EFFECT_REVERB,
+    EFFECT_AUDIOSPHERE,
+    EFFECT_MAX
+};
+
+extern const char *effect_str[EFFECT_MAX];
+
+/* defination of effect thread entries and data structures */
 typedef void* (*thread_func_t)(void *);
-extern thread_func_t effect_thread_funcs[EFFECT_NUM];
+extern thread_func_t effect_thread_funcs[EFFECT_MAX];
 
 void *bassboost_thread_func(void*);   // thread main of bassboost effect
 void *virtualizer_thread_func(void*); // thread main of virtualizer effect
 void *equalizer_thread_func(void*);   // thread main of equalizer effect
 void *visualizer_thread_func(void*);  // thread main of visualizer effect
 void *reverb_thread_func(void*);      // thread main of reverb effect
+void *command_thread_func(void*);     // thread main of effect command
+void *asphere_thread_func(void*);     // thread main of audiosphere effect
 
 typedef struct thread_data {
     pthread_t         effect_thread;
@@ -45,7 +60,8 @@ typedef struct thread_data {
     pthread_mutex_t   mutex;
     pthread_cond_t    loop_cond;
     audio_io_handle_t io_handle;
-    bool              exit;
+    int               who_am_i;
+    volatile bool     exit;
     int               cmd;
     uint32_t          cmd_code;
     uint32_t          cmd_size;
@@ -54,11 +70,17 @@ typedef struct thread_data {
     void              *reply_data;
 } thread_data_t;
 
-extern thread_data_t *create_effect_thread(thread_func_t);
-extern void effect_thread_command(thread_data_t *, int, uint32_t, uint32_t, void *);
-extern void destroy_effect_thread(thread_data_t *);
+typedef struct cmd_data {
+    pthread_t         cmd_thread;
+    pthread_attr_t    attr;
+    volatile bool     exit;
+    thread_data_t     **fx_data_ptr;
+} cmd_data_t;
 
-extern const char *effect_str[EFFECT_NUM];
+/* effect thread manipulate operations */
+extern thread_data_t *create_effect_thread(int, thread_func_t);
+extern void notify_effect_command(thread_data_t *, int, uint32_t, uint32_t, void *);
+extern void destroy_effect_thread(thread_data_t *);
 
 enum {
     EFFECT_LOAD_LIB = 1,
@@ -71,3 +93,27 @@ enum {
     EFFECT_EXIT
 };
 
+enum {
+    TTY_INVALID = 0,
+    TTY_ENABLE,
+    TTY_DISABLE,
+    TTY_BB_SET_STRENGTH,
+    TTY_VT_SET_STRENGTH,
+    TTY_EQ_SET_PRESET,
+    TTY_EQ_SET_CUSTOM,
+    TTY_RB_SET_PRESET,
+    TTY_ASPHERE_SET_STRENGTH,
+};
+
+/* user prompt definations */
+#define TTY_CMD_MAX 4
+
+typedef struct cmd_def {
+    char     *cmd_str;
+    uint32_t cmd_id;
+    char     *cmd_prompt;
+} cmd_def_t;
+
+int get_key_from_name(int, const char *);
+char *get_prompt_from_name(int, const char *);
+bool is_valid_input(char *);

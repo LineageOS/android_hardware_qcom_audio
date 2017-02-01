@@ -135,6 +135,14 @@ bool audio_extn_is_vbat_enabled(void);
 bool audio_extn_can_use_vbat(void);
 #endif
 
+#ifndef RAS_ENABLED
+#define audio_extn_is_ras_enabled()                      (0)
+#define audio_extn_can_use_ras()                         (0)
+#else
+bool audio_extn_is_ras_enabled(void);
+bool audio_extn_can_use_ras(void);
+#endif
+
 #ifndef HIFI_AUDIO_ENABLED
 #define audio_extn_is_hifi_audio_enabled()               (0)
 #define audio_extn_is_hifi_audio_supported()             (0)
@@ -655,6 +663,26 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
 #define audio_extn_qaf_open_output_stream           adev_open_output_stream
 #define audio_extn_qaf_init(adev)                                       (0)
 #define audio_extn_qaf_set_parameters(adev, parms)                      (0)
+#endif
+
+#ifdef AUDIO_EXTN_BT_HAL_ENABLED
+int audio_extn_bt_hal_load(void **handle);
+int audio_extn_bt_hal_open_output_stream(void *handle, int in_rate, audio_channel_mask_t channel_mask, int bit_width);
+int audio_extn_bt_hal_unload(void *handle);
+int audio_extn_bt_hal_close_output_stream(void *handle);
+int audio_extn_bt_hal_out_write(void *handle, void *buf, int size);
+struct audio_stream_out *audio_extn_bt_hal_get_output_stream(void *handle);
+void *audio_extn_bt_hal_get_device(void *handle);
+int audio_extn_bt_hal_get_latency(void *handle);
+#else
+#define audio_extn_bt_hal_load(...)                   (-EINVAL)
+#define audio_extn_bt_hal_unload(...)                 (-EINVAL)
+#define audio_extn_bt_hal_open_output_stream(...)     (-EINVAL)
+#define audio_extn_bt_hal_close_output_stream(...)    (-EINVAL)
+#define audio_extn_bt_hal_out_write(...)              (-EINVAL)
+#define audio_extn_bt_hal_get_latency(...)            (-EINVAL)
+#define audio_extn_bt_hal_get_output_stream(...)      NULL
+#define audio_extn_bt_hal_get_device(...)             NULL
 #endif
 
 #ifndef KEEP_ALIVE_ENABLED

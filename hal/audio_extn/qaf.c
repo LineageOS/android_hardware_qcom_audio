@@ -82,6 +82,12 @@
  */
 #define TRANSCODE_LATENCY(buffer_size, frame_size, encoder_output_in_bytes) ((buffer_size * frame_size) / encoder_output_in_bytes)
 
+/*
+ * QAF Latency to process buffers since out_write from primary HAL
+ */
+#define QAF_COMPRESS_OFFLOAD_PROCESSING_LATENCY 18
+#define QAF_PCM_OFFLOAD_PROCESSING_LATENCY 48
+
 #include <stdlib.h>
 #include <pthread.h>
 #include <errno.h>
@@ -135,6 +141,7 @@ struct qaf {
     struct stream_out *qaf_compr_offload_out_mch;
     struct stream_out *qaf_compr_passthrough_out;
     struct stream_out *qaf_passthrough_out;
+    void *bt_hdl;
     bool hdmi_connect;
     int passthrough_enabled;
     int hdmi_sink_channels;
@@ -422,6 +429,8 @@ static int qaf_get_timestamp(struct stream_out *out, uint64_t *frames, struct ti
         out->platform_latency = latency + (COMPRESS_OFFLOAD_NUM_FRAGMENTS * PCM_OFFLOAD_BUFFER_SIZE \
                                        /(popcount(qaf_mod->qaf_compr_offload_out->channel_mask) * sizeof(short))) \
                                        +((platform_render_latency(qaf_mod->qaf_compr_offload_out->usecase) * qaf_mod->qaf_compr_offload_out->sample_rate) / 1000000LL);
+    } else if (audio_extn_bt_hal_get_output_stream(qaf_mod->bt_hdl) != NULL) {
+        out->platform_latency = latency + audio_extn_bt_hal_get_latency(qaf_mod->bt_hdl);
     } else if (NULL != qaf_mod->qaf_compr_passthrough_out) {
         out->platform_latency = latency + ((qaf_mod->qaf_compr_passthrough_out->format == AUDIO_FORMAT_AC3) ? TRANSCODE_LATENCY(COMPRESS_PASSTHROUGH_BUFFER_SIZE, DD_FRAME_SIZE, DD_ENCODER_OUTPUT_SIZE) : TRANSCODE_LATENCY(COMPRESS_PASSTHROUGH_BUFFER_SIZE, DD_FRAME_SIZE, DDP_ENCODER_OUTPUT_SIZE)) \
                                         + (COMPRESS_OFFLOAD_PLAYBACK_LATENCY *  qaf_mod->qaf_compr_passthrough_out->sample_rate/1000);
@@ -578,6 +587,15 @@ static uint32_t qaf_out_get_latency(const struct audio_stream_out *stream)
     } else {
         latency = PCM_OFFLOAD_PLAYBACK_LATENCY;
     }
+
+    if (audio_extn_bt_hal_get_output_stream(qaf_mod->bt_hdl) != NULL) {
+
+        if (is_offload_usecase(out->usecase)) {
+            latency = audio_extn_bt_hal_get_latency(qaf_mod->bt_hdl) + QAF_COMPRESS_OFFLOAD_PROCESSING_LATENCY;
+        } else {
+            latency = audio_extn_bt_hal_get_latency(qaf_mod->bt_hdl) + QAF_PCM_OFFLOAD_PROCESSING_LATENCY;
+        }
+    }
     ALOGV("%s: Latency %d", __func__, latency);
     return latency;
 }
@@ -598,6 +616,7 @@ static void notify_event_callback(audio_session_handle_t session_handle __unused
     int ret;
     audio_output_flags_t flags;
     struct qaf* qaf_module = (struct qaf* ) prv_data;
+    struct audio_stream_out *bt_stream = NULL;
 
     ALOGV("%s device 0x%X, %d in event = %d", __func__, device, __LINE__, event_id);
 
@@ -709,8 +728,18 @@ static void notify_event_callback(audio_session_handle_t session_handle __unused
             if (qaf_mod->qaf_compr_offload_out_mch)
                 ret = qaf_mod->qaf_compr_offload_out_mch->stream.write((struct audio_stream_out *) qaf_mod->qaf_compr_offload_out_mch, buf, size);
         } else {
+            bt_stream = audio_extn_bt_hal_get_output_stream(qaf_mod->bt_hdl);
+            if (bt_stream != NULL) {
+                if (qaf_mod->qaf_compr_offload_out) {
+                    adev_close_output_stream((struct audio_hw_device *) qaf_mod->adev,
+                                                 (struct audio_stream_out *) (qaf_mod->qaf_compr_offload_out));
+                    qaf_mod->qaf_compr_offload_out = NULL;
+                }
 
-            if (NULL == qaf_mod->qaf_compr_offload_out && qaf_mod->qaf_passthrough_out == NULL) {
+                audio_extn_bt_hal_out_write(qaf_mod->bt_hdl, buf, size);
+            }
+
+            if (NULL == qaf_mod->qaf_compr_offload_out && bt_stream == NULL && qaf_mod->qaf_passthrough_out == NULL) {
                 struct audio_config config;
                 audio_devices_t devices;
 
@@ -756,7 +785,7 @@ static void notify_event_callback(audio_session_handle_t session_handle __unused
              * TODO:: Since this is mixed data,
              * need to identify to which stream the error should be sent
              */
-            if (qaf_mod->qaf_compr_offload_out)
+            if (bt_stream == NULL && qaf_mod->qaf_compr_offload_out)
                 ret = qaf_mod->qaf_compr_offload_out->stream.write((struct audio_stream_out *) qaf_mod->qaf_compr_offload_out, buf, size);
         }
 
@@ -1142,6 +1171,32 @@ static int qaf_out_set_parameters(struct audio_stream *stream, const char *kvpai
         } else {
             if (!(qaf_mod->passthrough_enabled && qaf_mod->hdmi_connect))
                 qaf_mod->qaf_compr_offload_out->stream.common.set_parameters((struct audio_stream *) qaf_mod->qaf_compr_offload_out, kvpairs);
+
+            parms = str_parms_create_str(kvpairs);
+            if (!parms) {
+                ALOGE("str_parms_create_str failed!");
+            } else {
+                err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
+                if (err >= 0) {
+                    val = atoi(value);
+                    if (val == AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) { //BT routing
+                        if (audio_extn_bt_hal_get_output_stream(qaf_mod->bt_hdl) == NULL && audio_extn_bt_hal_get_device(qaf_mod->bt_hdl) != NULL) {
+                            ret = audio_extn_bt_hal_open_output_stream(qaf_mod->bt_hdl,
+                                    QAF_OUTPUT_SAMPLING_RATE,
+                                    AUDIO_CHANNEL_OUT_STEREO,
+                                    CODEC_BACKEND_DEFAULT_BIT_WIDTH);
+                            if (ret != 0) {
+                                ALOGE("%s: BT Output stream open failure!", __FUNCTION__);
+                            }
+                        }
+                    } else if (val != 0) {
+                        if (audio_extn_bt_hal_get_output_stream(qaf_mod->bt_hdl)!= NULL) {
+                            audio_extn_bt_hal_close_output_stream(qaf_mod->bt_hdl);
+                        }
+                    }
+                }
+                str_parms_destroy(parms);
+            }
         }
     }
 
@@ -1425,6 +1480,13 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
                 str_parms_destroy(qaf_params);
             }
             qaf_mod->hdmi_connect = 1;
+        } else if (val & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) {
+            ALOGV("%s: Opening a2dp output...", __FUNCTION__);
+            status = audio_extn_bt_hal_load(&qaf_mod->bt_hdl);
+            if(status != 0) {
+                ALOGE("%s:Error opening BT module", __FUNCTION__);
+                return status;
+            }
         }
     }
 
@@ -1444,6 +1506,9 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
             format_params = str_parms_to_str(qaf_params);
             qaf_mod->qaf_audio_session_set_param(qaf_mod->session_handle, format_params);
             str_parms_destroy(qaf_params);
+        } else if (val & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) {
+            ALOGV("%s: Closing a2dp output...", __FUNCTION__);
+            audio_extn_bt_hal_unload(qaf_mod->bt_hdl);
         }
     }
 

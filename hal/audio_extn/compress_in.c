@@ -142,9 +142,10 @@ static void free_cin_usecase(audio_usecase_t uc_id)
     pthread_mutex_lock(&cin_lock);
     for (i = 0; i < sizeof(cin_usecases) /
                     sizeof(cin_usecases[0]); i++) {
-        if (uc_id == cin_usecases[i])
+        if (uc_id == cin_usecases[i]) {
             cin_usecases_state &= ~(0x1 << i);
             break;
+        }
     }
     pthread_mutex_unlock(&cin_lock);
 }

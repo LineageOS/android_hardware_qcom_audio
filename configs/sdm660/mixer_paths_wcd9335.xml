@@ -2459,6 +2459,10 @@
         <ctl name="IIR0 INP0 MUX" value="DEC6" />
     </path>
 
+    <path name="aanc-fluence-dmic-handset">
+        <path name="aanc-handset-mic" />
+    </path>
+
     <!-- Dual MIC devices -->
     <path name="handset-dmic-endfire">
         <ctl name="AIF1_CAP Mixer SLIM TX7" value="1" />
@@ -2797,4 +2801,5 @@
         <path name="audio-ull-playback bt-a2dp" />
         <path name="audio-ull-playback" />
     </path>
+
 </mixer>

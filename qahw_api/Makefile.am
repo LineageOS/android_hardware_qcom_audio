@@ -3,6 +3,7 @@ AM_CFLAGS = -I $(top_srcdir)/qahw_api/inc
 h_sources = inc/qahw_api.h \
             inc/qahw_defs.h \
             inc/qahw_effect_api.h \
+            inc/qahw_effect_audiosphere.h \
             inc/qahw_effect_bassboost.h \
             inc/qahw_effect_environmentalreverb.h \
             inc/qahw_effect_equalizer.h \
