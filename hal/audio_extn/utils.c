@@ -1741,3 +1741,71 @@ int audio_extn_utils_compress_set_render_mode(struct stream_out *out __unused)
     return 0;
 }
 #endif
+
+#ifdef SNDRV_COMPRESS_CLK_REC_MODE
+int audio_extn_utils_compress_set_clk_rec_mode(
+            struct audio_usecase *usecase)
+{
+    struct snd_compr_metadata metadata;
+    struct stream_out *out = NULL;
+    int ret = -EINVAL;
+
+    if (usecase != NULL && usecase->type != PCM_PLAYBACK) {
+        ALOGE("%s:: Invalid use case", __func__);
+        goto exit;
+    }
+
+    out = usecase->stream.out;
+    if (!out) {
+        ALOGE("%s:: invalid stream", __func__);
+        goto exit;
+    }
+
+    if (!is_offload_usecase(out->usecase)) {
+        ALOGE("%s:: not supported for non offload session", __func__);
+        goto exit;
+    }
+
+    if (out->render_mode != RENDER_MODE_AUDIO_STC_MASTER) {
+        ALOGD("%s:: clk recovery is only supported in STC render mode",
+                __func__);
+        ret = 0;
+        goto exit;
+    }
+
+    if (!out->compr) {
+        ALOGD("%s:: Invalid compress handle",
+                __func__);
+        goto exit;
+    }
+    metadata.key = SNDRV_COMPRESS_CLK_REC_MODE;
+    switch(usecase->out_snd_device) {
+        case SND_DEVICE_OUT_HDMI:
+        case SND_DEVICE_OUT_SPEAKER_AND_HDMI:
+        case SND_DEVICE_OUT_DISPLAY_PORT:
+        case SND_DEVICE_OUT_SPEAKER_AND_DISPLAY_PORT:
+            metadata.value[0] = SNDRV_COMPRESS_CLK_REC_MODE_NONE;
+            break;
+        default:
+            metadata.value[0] = SNDRV_COMPRESS_CLK_REC_MODE_AUTO;
+            break;
+    }
+
+    ALOGD("%s:: clk recovery mode %d",__func__, metadata.value[0]);
+
+    ret = compress_set_metadata(out->compr, &metadata);
+    if(ret) {
+        ALOGE("%s::error %s", __func__, compress_get_error(out->compr));
+    }
+
+exit:
+    return ret;
+}
+#else
+int audio_extn_utils_compress_set_clk_rec_mode(
+            struct audio_usecase *usecase __unused)
+{
+    ALOGD("%s:: configuring render mode not supported", __func__);
+    return 0;
+}
+#endif
