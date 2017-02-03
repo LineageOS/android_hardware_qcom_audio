@@ -213,12 +213,6 @@ static void audio_extn_ext_disp_set_parameters(const struct audio_device *adev,
 void audio_extn_fm_set_parameters(struct audio_device *adev,
                                    struct str_parms *parms);
 #endif
-#ifndef HFP_ENABLED
-#define audio_extn_hfp_set_parameters(adev, parms) (0)
-#else
-void audio_extn_hfp_set_parameters(struct audio_device *adev,
-                                           struct str_parms *parms);
-#endif
 
 #ifndef SOURCE_TRACKING_ENABLED
 #define audio_extn_source_track_set_parameters(adev, parms) (0)
