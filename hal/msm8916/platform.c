@@ -5323,10 +5323,13 @@ int platform_set_snd_device_backend(snd_device_t device, const char *backend_tag
           platform_get_snd_device_name(device),
           backend_tag_table[device] != NULL ? backend_tag_table[device]: "null",
           backend_tag);
-    if (backend_tag_table[device]) {
-        free(backend_tag_table[device]);
+
+    if (backend_tag != NULL ) {
+        if (backend_tag_table[device]) {
+           free(backend_tag_table[device]);
+        }
+        backend_tag_table[device] = strdup(backend_tag);
     }
-    backend_tag_table[device] = strdup(backend_tag);
 
     if (hw_interface != NULL) {
         if (hw_interface_table[device])
