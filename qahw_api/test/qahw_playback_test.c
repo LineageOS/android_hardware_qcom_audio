@@ -46,6 +46,7 @@
 #define ID_DATA 0x61746164
 
 #define FORMAT_PCM 1
+#define WAV_HEADER_LENGTH_MAX 46
 
 static thread_data_t *ethread_data = NULL;
 static cmd_data_t cmd_data;
@@ -656,15 +657,46 @@ void usage() {
     printf("                                          -> sound effect equalizer enabled\n\n");
 }
 
+static int get_wav_header_length (FILE* file_stream)
+{
+    int subchunk_size = 0, wav_header_len = 0;
+
+    fseek(file_stream, 16, SEEK_SET);
+    if(fread(&subchunk_size, 4, 1, file_stream) != 1) {
+        fprintf(stdout, "Unable to read subchunk:\n");
+        exit (1);
+    }
+    if(subchunk_size < 16) {
+        fprintf(stdout, "This is not a valid wav file \n");
+    } else {
+          switch (subchunk_size) {
+          case 16:
+              fprintf(stdout, "44-byte wav header \n");
+              wav_header_len = 44;
+              break;
+          case 18:
+              fprintf(stdout, "46-byte wav header \n");
+              wav_header_len = 46;
+              break;
+          default:
+              fprintf(stdout, "Header contains extra data and is larger than 46 bytes: subchunk_size=%d \n", subchunk_size);
+              wav_header_len = subchunk_size;
+              break;
+          }
+    }
+    return wav_header_len;
+}
+
+
 int main(int argc, char* argv[]) {
 
     FILE *file_stream = NULL;
-    char header[44] = {0};
+    char header[WAV_HEADER_LENGTH_MAX] = {0};
     char* filename = nullptr;
     qahw_module_handle_t *qahw_mod_handle = NULL;
     const char *mod_name = "audio.primary";
     qahw_stream_handle_t* out_handle = nullptr;
-    int rc = 0;
+    int rc = 0, wav_header_len = 0;
     char *kvpair_values = NULL;
     char kvpair[1000] = {0};
     struct proxy_data proxy_params;
@@ -874,7 +906,12 @@ int main(int argc, char* argv[]) {
             /*
              * Read the wave header
              */
-            rc = fread (header, 44 , 1, file_stream);
+            if((wav_header_len = get_wav_header_length(file_stream)) <= 0) {
+                fprintf(stdout, "wav header length is invalid:%d\n", wav_header_len);
+                exit(1);
+            }
+            fseek(file_stream, 0, SEEK_SET);
+            rc = fread (header, wav_header_len, 1, file_stream);
             if (rc != 1) {
                fprintf(stdout, "Error .Fread failed\n");
                exit(0);
