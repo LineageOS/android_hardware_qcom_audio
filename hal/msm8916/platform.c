@@ -5046,7 +5046,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
         ext_disp_format = "HDMI RX Format";
         set_ext_disp_format = true;
     } else if (backend_idx == DISP_PORT_RX_BACKEND) {
-        ext_disp_format = "Display Port Rx Format";
+        ext_disp_format = "Display Port RX Format";
         set_ext_disp_format = true;
     } else {
         ALOGV("%s: Format doesnt have to be set", __func__);
