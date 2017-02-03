@@ -79,6 +79,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HIFI_AUDIO)),true)
     LOCAL_CFLAGS += -DHIFI_AUDIO_ENABLED
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_RAS)),true)
+    LOCAL_CFLAGS += -DRAS_ENABLED
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_VBAT_MONITOR)),true)
     LOCAL_CFLAGS += -DVBAT_MONITOR_ENABLED
 endif
@@ -262,6 +266,11 @@ endif
 ifeq ($(strip $(BOARD_SUPPORTS_QAHW)),true)
     LOCAL_CFLAGS += -DAUDIO_HW_EXTN_API_ENABLED
     LOCAL_SRC_FILES += audio_hw_extn_api.c
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_BT_HAL)),true)
+    LOCAL_CFLAGS += -DAUDIO_EXTN_BT_HAL_ENABLED
+    LOCAL_SRC_FILES += audio_extn/bt_hal.c
 endif
 
 LOCAL_SHARED_LIBRARIES := \

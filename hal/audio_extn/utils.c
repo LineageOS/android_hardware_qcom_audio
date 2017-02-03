@@ -1157,6 +1157,9 @@ int get_snd_codec_id(audio_format_t format)
     case AUDIO_FORMAT_DTS_HD:
         id = SND_AUDIOCODEC_DTS;
         break;
+    case AUDIO_FORMAT_DSD:
+        id = SND_AUDIOCODEC_DSD;
+        break;
     default:
         ALOGE("%s: Unsupported audio format :%x", __func__, format);
     }

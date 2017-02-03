@@ -21,10 +21,13 @@ LOCAL_SHARED_LIBRARIES := \
     libhardware \
     libdl
 
+LOCAL_CFLAGS += -Wall -Werror
+
 LOCAL_COPY_HEADERS_TO   := mm-audio/qahw_api/inc
 LOCAL_COPY_HEADERS      := inc/qahw_api.h
 LOCAL_COPY_HEADERS      += inc/qahw_defs.h
 LOCAL_COPY_HEADERS      += inc/qahw_effect_api.h
+LOCAL_COPY_HEADERS      += inc/qahw_effect_audiosphere.h
 LOCAL_COPY_HEADERS      += inc/qahw_effect_bassboost.h
 LOCAL_COPY_HEADERS      += inc/qahw_effect_environmentalreverb.h
 LOCAL_COPY_HEADERS      += inc/qahw_effect_equalizer.h

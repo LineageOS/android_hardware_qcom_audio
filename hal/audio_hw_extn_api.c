@@ -49,7 +49,8 @@ uint64_t timestamp;
 #endif
 
 int qahwi_get_param_data(const struct audio_hw_device *adev,
-                         qahw_param_id param_id, qahw_param_payload *payload)
+                         audio_extn_param_id param_id,
+                         audio_extn_param_payload *payload)
 {
     int ret = 0;
     const struct audio_device *dev = (const struct audio_device *)adev;
@@ -65,13 +66,13 @@ int qahwi_get_param_data(const struct audio_hw_device *adev,
     }
 
     switch (param_id) {
-        case QAHW_PARAM_SOUND_FOCUS:
+        case AUDIO_EXTN_PARAM_SOUND_FOCUS:
               ret = audio_extn_get_soundfocus_data(dev,
-                     (struct qahw_sound_focus_param *)payload);
+                     (struct sound_focus_param *)payload);
               break;
-        case QAHW_PARAM_SOURCE_TRACK:
+        case AUDIO_EXTN_PARAM_SOURCE_TRACK:
               ret = audio_extn_get_sourcetrack_data(dev,
-                     (struct qahw_source_tracking_param*)payload);
+                     (struct source_tracking_param*)payload);
               break;
        default:
              ALOGE("%s::INVALID PARAM ID:%d\n",__func__,param_id);
@@ -82,7 +83,8 @@ int qahwi_get_param_data(const struct audio_hw_device *adev,
 }
 
 int qahwi_set_param_data(struct audio_hw_device *adev,
-                         qahw_param_id param_id, qahw_param_payload *payload)
+                         audio_extn_param_id param_id,
+                         audio_extn_param_payload *payload)
 {
     int ret = 0;
     struct audio_device *dev = (struct audio_device *)adev;
@@ -98,9 +100,9 @@ int qahwi_set_param_data(struct audio_hw_device *adev,
     }
 
     switch (param_id) {
-        case QAHW_PARAM_SOUND_FOCUS:
+        case AUDIO_EXTN_PARAM_SOUND_FOCUS:
               ret = audio_extn_set_soundfocus_data(dev,
-                     (struct qahw_sound_focus_param *)payload);
+                     (struct sound_focus_param *)payload);
               break;
        default:
              ALOGE("%s::INVALID PARAM ID:%d\n",__func__,param_id);

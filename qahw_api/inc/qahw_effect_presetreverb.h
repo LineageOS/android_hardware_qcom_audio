@@ -32,13 +32,13 @@ static const qahw_effect_uuid_t SL_IID_PRESETREVERB_ = { 0x47382d60, 0xddd8, 0x1
         { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } };
 const qahw_effect_uuid_t * const SL_IID_PRESETREVERB = &SL_IID_PRESETREVERB_;
 
-static const qahw_effect_uuid_t SL_IID_INS_PRESETREVERB_ = { 0xaa2bebf6, 0x47cf, 0x4613, 0x9bca,
+static const qahw_effect_uuid_t SL_IID_INS_PRESETREVERB_UUID_ = { 0xaa2bebf6, 0x47cf, 0x4613, 0x9bca,
         { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } };
-const qahw_effect_uuid_t * const SL_IID_INS_PRESETREVERB = &SL_IID_INS_PRESETREVERB_;
+const qahw_effect_uuid_t * const SL_IID_INS_PRESETREVERB_UUID = &SL_IID_INS_PRESETREVERB_UUID_;
 
-static const qahw_effect_uuid_t SL_IID_AUX_PRESETREVERB_ = { 0x6987be09, 0xb142, 0x4b41, 0x9056,
+static const qahw_effect_uuid_t SL_IID_AUX_PRESETREVERB_UUID_ = { 0x6987be09, 0xb142, 0x4b41, 0x9056,
         { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } };
-const qahw_effect_uuid_t * const SL_IID_AUX_PRESETREVERB = &SL_IID_AUX_PRESETREVERB_;
+const qahw_effect_uuid_t * const SL_IID_AUX_PRESETREVERB_UUID = &SL_IID_AUX_PRESETREVERB_UUID_;
 
 /* enumerated parameter settings for preset reverb effect */
 typedef enum

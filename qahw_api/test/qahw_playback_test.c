@@ -22,6 +22,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <time.h>
@@ -47,6 +48,7 @@
 #define FORMAT_PCM 1
 
 static thread_data_t *ethread_data = NULL;
+static cmd_data_t cmd_data;
 
 struct wav_header {
     uint32_t riff_id;
@@ -156,15 +158,14 @@ static pthread_cond_t drain_cond = PTHREAD_COND_INITIALIZER;
                    "music_offload_wma_encode_option2=%d;" \
                    "music_offload_wma_format_tag=%d;"
 
-void stop_signal_handler(int signal)
+void stop_signal_handler(int signal __unused)
 {
    stop_playback = true;
 }
 
 void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
 {
-    char *kvpair_type;
-    char param[100];
+    char *kvpair_type = NULL;
     char *token = NULL;
     int value = 0;
     int len = 0;
@@ -291,6 +292,7 @@ void *proxy_read (void* data)
         }
         fprintf(log_file, "pcm data saved to file %s", params->acp.file_name);
     }
+    return 0;
 }
 
 int write_to_hal(qahw_stream_handle_t* out_handle, char *data,
@@ -390,11 +392,6 @@ int play_file(qahw_stream_handle_t* out_handle, FILE* in_file,
         bytes_remaining -= bytes_written;
         fprintf(log_file, "bytes_written %zd, bytes_remaining %zd\n",
                 bytes_written, bytes_remaining);
-
-        // set eq preset
-        if (ethread_data) {
-            effect_thread_command(ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_SET_PARAM, 0, NULL);
-        }
     }
 
     return rc;
@@ -585,7 +582,7 @@ void usage() {
     printf("                                             file path is not used here as file playback is not done in this mode\n");
     printf("                                             file path and other file specific options would be ignored in this mode.\n\n");
     printf(" -e  --effect-type <effect type>           - Effect used for test\n");
-    printf("                                             0:bassboost 1:virtualizer 2:equalizer 3:visualizer 4:reverb others:null");
+    printf("                                             0:bassboost 1:virtualizer 2:equalizer 3:visualizer(NA) 4:reverb 5:audiosphere others:null");
     printf(" \n Examples \n");
     printf(" hal_play_test -f /etc/Anukoledenadu.wav     -> plays Wav stream with default params\n\n");
     printf(" hal_play_test -f /etc/MateRani.mp3 -t 2 -d 2 -v 0.01 -r 44100 -c 2 \n");
@@ -625,7 +622,7 @@ void usage() {
     printf("                                          ->avg_bit_rate,sample_rate,wma_bit_per_sample,wma_block_align\n");
     printf("                                          ->wma_channel_mask,wma_encode_option,wma_format_tag\n");
     printf(" hal_play_test -K -F 4                    -> Measure latency KPIs for low latency output\n\n");
-    printf(" hal_play_test /etc//Moto_320kbps.mp3 -t 2 -d 2 -v 0.1 -r 44100 -c 2 -e 2\n");
+    printf(" hal_play_test -f /etc//Moto_320kbps.mp3 -t 2 -d 2 -v 0.1 -r 44100 -c 2 -e 2\n");
     printf("                                          -> plays MP3 stream(-t = 2) on speaker device(-d = 2)\n");
     printf("                                          -> 2 channels and 44100 sample rate\n\n");
     printf("                                          -> sound effect equalizer enabled\n\n");
@@ -636,7 +633,7 @@ int main(int argc, char* argv[]) {
     FILE *file_stream = NULL;
     char header[44] = {0};
     char* filename = nullptr;
-    qahw_module_handle_t *qahw_mod_handle;
+    qahw_module_handle_t *qahw_mod_handle = NULL;
     const char *mod_name = "audio.primary";
     qahw_stream_handle_t* out_handle = nullptr;
     int rc = 0;
@@ -755,10 +752,16 @@ int main(int argc, char* argv[]) {
             case 'F':
                 flags = atoll(optarg);
                 flags_set = true;
+                break;
             case 'e':
                 effect_index = atoi(optarg);
-                if (effect_index < 0 || effect_index >= EFFECT_NUM) {
+                if (effect_index < 0 || effect_index >= EFFECT_MAX) {
                     fprintf(stderr, "Invalid effect type %d\n", effect_index);
+                    effect_index = -1;
+                } else if (effect_index == 3) {
+                    // visualizer is a special effect that is not perceivable by hearing
+                    // hence, add as an exception in test app.
+                    fprintf(stdout, "visualizer effect testing is not available\n");
                     effect_index = -1;
                 } else {
                     ethread_func = effect_thread_funcs[effect_index];
@@ -826,9 +829,10 @@ int main(int argc, char* argv[]) {
         config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
     } else {
 
-        if (!flags_set)
+        if (!flags_set) {
             flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING;
             flags |= AUDIO_OUTPUT_FLAG_DIRECT;
+        }
 
         switch (filetype) {
         case FILE_WAV:
@@ -975,23 +979,41 @@ int main(int argc, char* argv[]) {
     }
 
     // create effect thread, use thread_data to transfer command
-    if (ethread_func)
-        ethread_data = create_effect_thread(ethread_func);
+    if (ethread_func &&
+            (flags & (AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_DIRECT))) {
+        ethread_data = create_effect_thread(effect_index, ethread_func);
+
+        // create effect command thread
+        cmd_data.exit = false;
+        cmd_data.fx_data_ptr = &ethread_data;
+        pthread_attr_init(&cmd_data.attr);
+        pthread_attr_setdetachstate(&cmd_data.attr, PTHREAD_CREATE_JOINABLE);
+        rc = pthread_create(&cmd_data.cmd_thread, &cmd_data.attr,
+                &command_thread_func, &cmd_data);
+        if (rc < 0) {
+            fprintf(stderr, "Could not create effect command thread!\n");
+            goto EXIT;
+        }
+    }
 
     if (ethread_data) {
         // load effect module
-        effect_thread_command(ethread_data, EFFECT_LOAD_LIB, -1, 0, NULL);
+        notify_effect_command(ethread_data, EFFECT_LOAD_LIB, -1, 0, NULL);
 
         // get effect desc
-        effect_thread_command(ethread_data, EFFECT_GET_DESC, -1, 0, NULL);
+        notify_effect_command(ethread_data, EFFECT_GET_DESC, -1, 0, NULL);
 
         // create effect
         ethread_data->io_handle = handle;
-        effect_thread_command(ethread_data, EFFECT_CREATE, -1, 0, NULL);
+        notify_effect_command(ethread_data, EFFECT_CREATE, -1, 0, NULL);
+
+        // broadcast device info
+        notify_effect_command(ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_SET_DEVICE, sizeof(audio_devices_t), &output_device);
 
         // enable effect
-        effect_thread_command(ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_ENABLE, 0, NULL);
+        notify_effect_command(ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_ENABLE, 0, NULL);
     }
+
     /* Register the SIGINT to close the App properly */
     if (signal(SIGINT, stop_signal_handler) == SIG_ERR)
         fprintf(log_file, "Failed to register SIGINT:%d\n",errno);
@@ -1002,19 +1024,31 @@ int main(int argc, char* argv[]) {
 
     if (ethread_data) {
         // disable effect
-        effect_thread_command(ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_DISABLE, 0, NULL);
+        notify_effect_command(ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_DISABLE, 0, NULL);
 
         // release effect
-        effect_thread_command(ethread_data, EFFECT_RELEASE, -1, 0, NULL);
+        notify_effect_command(ethread_data, EFFECT_RELEASE, -1, 0, NULL);
 
         // unload effect module
-        effect_thread_command(ethread_data, EFFECT_UNLOAD_LIB, -1, 0, NULL);
+        notify_effect_command(ethread_data, EFFECT_UNLOAD_LIB, -1, 0, NULL);
 
         // destroy effect thread
         destroy_effect_thread(ethread_data);
 
         free(ethread_data);
         ethread_data = NULL;
+
+        // destory effect command thread
+        cmd_data.exit = true;
+        usleep(100000);  // give a chance for thread to exit gracefully
+        rc = pthread_cancel(cmd_data.cmd_thread);
+        if (rc != 0) {
+            fprintf(stderr, "Fail to cancel thread!\n");
+        }
+        rc = pthread_join(cmd_data.cmd_thread, NULL);
+        if (rc < 0) {
+            fprintf(stderr, "Fail to join effect command thread!\n");
+        }
     }
 
     if (proxy_thread_active) {

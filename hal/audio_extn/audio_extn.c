@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -65,6 +65,7 @@ struct audio_extn_module {
     bool hpx_enabled;
     bool vbat_enabled;
     bool hifi_audio_enabled;
+    bool ras_enabled;
 };
 
 static struct audio_extn_module aextnmod;
@@ -378,6 +379,23 @@ bool audio_extn_can_use_vbat(void)
 
     ALOGD("%s: vbat.enabled property is set to %s", __func__, prop_vbat_enabled);
     return (aextnmod.vbat_enabled ? true: false);
+}
+#endif
+
+#ifdef RAS_ENABLED
+bool audio_extn_is_ras_enabled(void)
+{
+    ALOGD("%s: status: %d", __func__, aextnmod.ras_enabled);
+    return (aextnmod.ras_enabled ? true: false);
+}
+
+bool audio_extn_can_use_ras(void)
+{
+    if (property_get_bool("persist.audio.ras.enabled", false))
+        aextnmod.ras_enabled = 1;
+
+    ALOGD("%s: ras.enabled property is set to %d", __func__, aextnmod.ras_enabled);
+    return (aextnmod.ras_enabled ? true: false);
 }
 #endif
 

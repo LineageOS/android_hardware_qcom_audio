@@ -778,6 +778,9 @@ int enable_snd_device(struct audio_device *adev,
     } else {
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
 
+       if (platform_check_codec_asrc_support(adev->platform))
+           check_and_set_asrc_mode(adev, snd_device);
+
        if ((SND_DEVICE_OUT_BT_A2DP == snd_device) &&
            (audio_extn_a2dp_start_playback() < 0)) {
            ALOGE(" fail to configure A2dp control path ");
@@ -1106,7 +1109,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                     if (usecase->type == VOIP_CALL)
                         status = platform_switch_voice_call_device_post(adev->platform,
                                                                         usecase->out_snd_device,
-                                                                        usecase->in_snd_device);
+                                                                        platform_get_input_snd_device(adev->platform, uc_info->devices));
                     enable_audio_route(adev, usecase);
                 }
             }
@@ -1597,8 +1600,6 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     /* Enable new sound devices */
     if (out_snd_device != SND_DEVICE_NONE) {
         check_usecases_codec_backend(adev, usecase, out_snd_device);
-        if (platform_check_codec_asrc_support(adev->platform))
-            check_and_set_asrc_mode(adev, out_snd_device);
         enable_snd_device(adev, out_snd_device);
     }
 
@@ -4216,7 +4217,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->bit_width = 16;
     audio_extn_utils_update_stream_output_app_type_cfg(adev->platform,
                                                 &adev->streams_output_cfg_list,
-                                                devices, flags, format, out->sample_rate,
+                                                devices, out->flags, format, out->sample_rate,
                                                 out->bit_width, out->channel_mask, out->profile,
                                                 &out->app_type_cfg);
     if ((out->usecase == USECASE_AUDIO_PLAYBACK_PRIMARY) ||

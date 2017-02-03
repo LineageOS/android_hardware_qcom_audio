@@ -135,6 +135,14 @@ bool audio_extn_is_vbat_enabled(void);
 bool audio_extn_can_use_vbat(void);
 #endif
 
+#ifndef RAS_ENABLED
+#define audio_extn_is_ras_enabled()                      (0)
+#define audio_extn_can_use_ras()                         (0)
+#else
+bool audio_extn_is_ras_enabled(void);
+bool audio_extn_can_use_ras(void);
+#endif
+
 #ifndef HIFI_AUDIO_ENABLED
 #define audio_extn_is_hifi_audio_enabled()               (0)
 #define audio_extn_is_hifi_audio_supported()             (0)
@@ -657,6 +665,26 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
 #define audio_extn_qaf_set_parameters(adev, parms)                      (0)
 #endif
 
+#ifdef AUDIO_EXTN_BT_HAL_ENABLED
+int audio_extn_bt_hal_load(void **handle);
+int audio_extn_bt_hal_open_output_stream(void *handle, int in_rate, audio_channel_mask_t channel_mask, int bit_width);
+int audio_extn_bt_hal_unload(void *handle);
+int audio_extn_bt_hal_close_output_stream(void *handle);
+int audio_extn_bt_hal_out_write(void *handle, void *buf, int size);
+struct audio_stream_out *audio_extn_bt_hal_get_output_stream(void *handle);
+void *audio_extn_bt_hal_get_device(void *handle);
+int audio_extn_bt_hal_get_latency(void *handle);
+#else
+#define audio_extn_bt_hal_load(...)                   (-EINVAL)
+#define audio_extn_bt_hal_unload(...)                 (-EINVAL)
+#define audio_extn_bt_hal_open_output_stream(...)     (-EINVAL)
+#define audio_extn_bt_hal_close_output_stream(...)    (-EINVAL)
+#define audio_extn_bt_hal_out_write(...)              (-EINVAL)
+#define audio_extn_bt_hal_get_latency(...)            (-EINVAL)
+#define audio_extn_bt_hal_get_output_stream(...)      NULL
+#define audio_extn_bt_hal_get_device(...)             NULL
+#endif
+
 #ifndef KEEP_ALIVE_ENABLED
 #define audio_extn_keep_alive_init(a) do {} while(0)
 #define audio_extn_keep_alive_start() do {} while(0)
@@ -740,6 +768,34 @@ int audio_extn_cin_configure_input_stream(struct stream_in *in);
 #define audio_extn_cin_close_input_stream(in) (0)
 #define audio_extn_cin_read(in, buffer, bytes, bytes_read) (0)
 #define audio_extn_cin_configure_input_stream(in) (0)
+#endif
+
+#ifndef SOURCE_TRACKING_ENABLED
+static int __unused audio_extn_get_soundfocus_data(
+                                   const struct audio_device *adev __unused,
+                                   struct sound_focus_param *payload __unused)
+{
+    return -ENOSYS;
+}
+static int __unused audio_extn_get_sourcetrack_data(
+                                   const struct audio_device *adev __unused,
+                                   struct source_tracking_param *payload __unused)
+{
+    return -ENOSYS;
+}
+static int __unused audio_extn_set_soundfocus_data(
+                                   struct audio_device *adev __unused,
+                                   struct sound_focus_param *payload __unused)
+{
+    return -ENOSYS;
+}
+#else
+int audio_extn_get_soundfocus_data(const struct audio_device *adev,
+                                   struct sound_focus_param *payload);
+int audio_extn_get_sourcetrack_data(const struct audio_device *adev,
+                                    struct source_tracking_param *payload);
+int audio_extn_set_soundfocus_data(struct audio_device *adev,
+                                   struct sound_focus_param *payload);
 #endif
 
 #endif /* AUDIO_EXTN_H */
