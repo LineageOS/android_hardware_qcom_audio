@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -31,6 +31,7 @@
 #define SAMPLE_RATE_11025 11025
 #define sample_rate_multiple(sr, base) ((sr % base)== 0?true:false)
 #define MAX_VOLUME_CAL_STEPS 15
+#define ACDB_METAINFO_KEY_MODULE_NAME_LEN 100
 
 struct amp_db_and_gain_table {
     float amp;
@@ -82,6 +83,8 @@ int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_i
 int platform_get_snd_device_acdb_id(snd_device_t snd_device);
 int platform_set_snd_device_bit_width(snd_device_t snd_device, unsigned int bit_width);
 int platform_get_snd_device_bit_width(snd_device_t snd_device);
+int platform_set_acdb_metainfo_key(void *platform, char *name, int key);
+int platform_get_meta_info_key_from_list(void *platform, char *mod_name);
 int platform_set_native_support(int na_mode);
 int platform_get_native_support();
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,

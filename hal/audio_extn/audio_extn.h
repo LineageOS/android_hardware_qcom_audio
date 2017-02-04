@@ -531,7 +531,7 @@ int audio_extn_pm_vote (void);
 void audio_extn_pm_unvote(void);
 #endif
 
-void audio_extn_init(void);
+void audio_extn_init(struct audio_device *adev);
 void audio_extn_utils_update_streams_cfg_lists(void *platform,
                                   struct mixer *mixer,
                                   struct listnode *streams_output_cfg_list,
@@ -799,6 +799,20 @@ int audio_extn_get_sourcetrack_data(const struct audio_device *adev,
                                     struct source_tracking_param *payload);
 int audio_extn_set_soundfocus_data(struct audio_device *adev,
                                    struct sound_focus_param *payload);
+#endif
+
+#ifndef APTX_DECODER_ENABLED
+#define audio_extn_aptx_dec_set_license(adev); (0)
+#define audio_extn_set_aptx_dec_bt_addr(adev, parms); (0)
+#define audio_extn_send_aptx_dec_bt_addr_to_dsp(out); (0)
+#define audio_extn_parse_aptx_dec_bt_addr(value); (0)
+#define audio_extn_set_aptx_dec_params(payload); (0)
+#else
+static void audio_extn_aptx_dec_set_license(struct audio_device *adev);
+static void audio_extn_set_aptx_dec_bt_addr(struct audio_device *adev, struct str_parms *parms);
+void audio_extn_send_aptx_dec_bt_addr_to_dsp(struct stream_out *out);
+static void audio_extn_parse_aptx_dec_bt_addr(char *value);
+int audio_extn_set_aptx_dec_params(struct aptx_dec_param *payload);
 #endif
 
 #endif /* AUDIO_EXTN_H */

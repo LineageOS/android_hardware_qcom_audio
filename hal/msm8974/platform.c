@@ -190,6 +190,7 @@ enum {
 /* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
 typedef int  (*acdb_init_t)(const char *, char *, int);
+typedef int  (*acdb_init_v3_t)(const char *, char *, struct listnode *);
 typedef void (*acdb_send_audio_cal_t)(int, int, int , int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
@@ -201,6 +202,7 @@ typedef int (*acdb_get_audio_cal_t) (void *, void *, uint32_t*);
 typedef int (*acdb_send_common_top_t) (void);
 typedef int (*acdb_set_codec_data_t) (void *, char *);
 typedef int (*acdb_reload_t) (char *, char *, char *, int);
+typedef int (*acdb_reload_v2_t) (char *, char *, char *, struct listnode *);
 
 typedef struct codec_backend_cfg {
     uint32_t sample_rate;
@@ -214,6 +216,12 @@ typedef struct codec_backend_cfg {
 static native_audio_prop na_props = {0, 0, 0};
 static bool supports_true_32_bit = false;
 typedef int (*acdb_send_gain_dep_cal_t)(int, int, int, int, int);
+
+struct meta_key_list {
+    struct listnode list;
+    struct audio_cal_info_metainfo cal_info;
+    char name[ACDB_METAINFO_KEY_MODULE_NAME_LEN];
+};
 
 struct platform_data {
     struct audio_device *adev;
@@ -240,6 +248,7 @@ struct platform_data {
     void                       *acdb_handle;
     int                        voice_feature_set;
     acdb_init_t                acdb_init;
+    acdb_init_v3_t             acdb_init_v3;
     acdb_deallocate_t          acdb_deallocate;
     acdb_send_audio_cal_t      acdb_send_audio_cal;
     acdb_set_audio_cal_t       acdb_set_audio_cal;
@@ -250,6 +259,7 @@ struct platform_data {
     acdb_send_common_top_t     acdb_send_common_top;
     acdb_set_codec_data_t      acdb_set_codec_data;
     acdb_reload_t              acdb_reload;
+    acdb_reload_v2_t           acdb_reload_v2;
     void *hw_info;
     acdb_send_gain_dep_cal_t   acdb_send_gain_dep_cal;
     struct csd_data *csd;
@@ -262,11 +272,11 @@ struct platform_data {
     int hw_dep_fd;
     char cvd_version[MAX_CVD_VERSION_STRING_SIZE];
     char snd_card_name[MAX_SND_CARD_STRING_SIZE];
-    int metainfo_key;
     int source_mic_type;
     int max_mic_count;
     bool is_dsd_supported;
     bool is_asrc_supported;
+    struct listnode acdb_meta_key_list;
 };
 
 static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -394,6 +404,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_ANC_HEADSET] = "voice-anc-headphones",
     [SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET] = "voice-anc-fb-headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET] = "speaker-and-anc-headphones",
+    [SND_DEVICE_OUT_SPEAKER_AND_ANC_FB_HEADSET] = "speaker-and-anc-fb-headphones",
     [SND_DEVICE_OUT_ANC_HANDSET] = "anc-handset",
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = "speaker-protected",
     [SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED] = "voice-speaker-protected",
@@ -523,6 +534,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_ANC_HEADSET] = 26,
     [SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET] = 27,
     [SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET] = 26,
+    [SND_DEVICE_OUT_SPEAKER_AND_ANC_FB_HEADSET] = 27,
     [SND_DEVICE_OUT_ANC_HANDSET] = 103,
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = 124,
     [SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED] = 101,
@@ -652,6 +664,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_ANC_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_ANC_FB_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_ANC_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED)},
@@ -1419,10 +1432,12 @@ static int platform_acdb_init(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     char *cvd_version = NULL;
-    int key = 0;
     const char *snd_card_name;
-    int result;
-    char value[PROPERTY_VALUE_MAX];
+    int result = -1;
+    struct listnode *node;
+    struct meta_key_list *key_info;
+    int key = 0;
+
     cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
     if (!cvd_version) {
         ALOGE("Failed to allocate cvd version");
@@ -1431,17 +1446,22 @@ static int platform_acdb_init(void *platform)
         get_cvd_version(cvd_version, my_data->adev);
     }
 
-    property_get("audio.ds1.metainfo.key",value,"0");
-    key = atoi(value);
     snd_card_name = mixer_get_name(my_data->adev->mixer);
-    result = my_data->acdb_init(snd_card_name, cvd_version, key);
+    if (my_data->acdb_init_v3) {
+        result = my_data->acdb_init_v3(snd_card_name, cvd_version,
+                                           &my_data->acdb_meta_key_list);
+    } else if (my_data->acdb_init) {
+        node = list_head(&my_data->acdb_meta_key_list);
+        key_info = node_to_item(node, struct meta_key_list, list);
+        key = key_info->cal_info.nKey;
+        result = my_data->acdb_init(snd_card_name, cvd_version, key);
+    }
 
     /* Save these variables in platform_data. These will be used
        while reloading ACDB files during run time. */
     strlcpy(my_data->cvd_version, cvd_version, MAX_CVD_VERSION_STRING_SIZE);
     strlcpy(my_data->snd_card_name, snd_card_name,
                                                MAX_SND_CARD_STRING_SIZE);
-    my_data->metainfo_key = key;
 
     if (cvd_version)
         free(cvd_version);
@@ -1671,6 +1691,16 @@ void *platform_init(struct audio_device *adev)
     if (ret)
         my_data->is_vbat_speaker = true;
 
+    list_init(&my_data->acdb_meta_key_list);
+
+    set_platform_defaults(my_data);
+
+    /* Initialize ACDB ID's */
+    if (my_data->is_i2s_ext_modem)
+        platform_info_init(PLATFORM_INFO_XML_PATH_I2S, my_data);
+    else
+        platform_info_init(PLATFORM_INFO_XML_PATH, my_data);
+
     my_data->voice_feature_set = VOICE_FEATURE_SET_DEFAULT;
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
     if (my_data->acdb_handle == NULL) {
@@ -1741,11 +1771,23 @@ void *platform_init(struct audio_device *adev)
                   __func__, LIB_ACDB_LOADER);
 
 
+        my_data->acdb_init_v3 = (acdb_init_v3_t)dlsym(my_data->acdb_handle,
+                                                     "acdb_loader_init_v3");
+        if (my_data->acdb_init_v3 == NULL) {
+            ALOGE("%s: dlsym error %s for acdb_loader_init_v3", __func__, dlerror());
+        }
+
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
-                                                    "acdb_loader_init_v2");
+                                                     "acdb_loader_init_v3");
         if (my_data->acdb_init == NULL) {
-            ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__, dlerror());
+            ALOGE("%s: dlsym error %s for acdb_loader_init_v3", __func__, dlerror());
             goto acdb_init_fail;
+        }
+
+        my_data->acdb_reload_v2 = (acdb_reload_v2_t)dlsym(my_data->acdb_handle,
+                                                    "acdb_loader_reload_acdb_files_v2");
+        if (my_data->acdb_reload_v2 == NULL) {
+            ALOGE("%s: dlsym error %s for acdb_loader_reload_acdb_files_v2", __func__, dlerror());
         }
 
         my_data->acdb_reload = (acdb_reload_t)dlsym(my_data->acdb_handle,
@@ -1762,13 +1804,6 @@ void *platform_init(struct audio_device *adev)
 
 acdb_init_fail:
 
-    set_platform_defaults(my_data);
-
-    /* Initialize ACDB ID's */
-    if (my_data->is_i2s_ext_modem)
-        platform_info_init(PLATFORM_INFO_XML_PATH_I2S, my_data);
-    else
-        platform_info_init(PLATFORM_INFO_XML_PATH, my_data);
 
     if (audio_extn_can_use_ras()) {
         if (property_get_bool("persist.speaker.prot.enable", false)) {
@@ -1815,7 +1850,6 @@ acdb_init_fail:
     audio_extn_ssr_update_enabled();
     audio_extn_spkr_prot_init(adev);
 
-    audio_extn_dolby_set_license(adev);
 
     /* init audio device arbitration */
     audio_extn_dev_arbi_init();
@@ -2194,6 +2228,46 @@ done:
     return ret;
 }
 
+int platform_set_acdb_metainfo_key(void *platform, char *name, int key)
+{
+    struct meta_key_list *key_info;
+    struct platform_data *pdata = (struct platform_data *)platform;
+
+    key_info = (struct meta_key_list *)calloc(1, sizeof(struct meta_key_list));
+    if (!key_info) {
+        ALOGE("%s: Could not allocate memory for key %d", __func__, key);
+        return -ENOMEM;
+    }
+
+    key_info->cal_info.nKey = key;
+    strlcpy(key_info->name, name, sizeof(key_info->name));
+    list_add_tail(&pdata->acdb_meta_key_list, &key_info->list);
+
+    ALOGD("%s: successfully added module %s and key %d to the list", __func__,
+               key_info->name, key_info->cal_info.nKey);
+    return 0;
+}
+
+int platform_get_meta_info_key_from_list(void *platform, char *mod_name)
+{
+    struct listnode *node;
+    struct meta_key_list *key_info;
+    struct platform_data *pdata = (struct platform_data *)platform;
+    int key = 0;
+
+    ALOGV("%s: for module %s", __func__, mod_name);
+
+    list_for_each(node, &pdata->acdb_meta_key_list) {
+        key_info = node_to_item(node, struct meta_key_list, list);
+        if (strcmp(key_info->name, mod_name) == 0) {
+            key = key_info->cal_info.nKey;
+            ALOGD("%s: Found key %d for module %s", __func__, key, mod_name);
+            break;
+        }
+    }
+    return key;
+}
+
 int platform_get_default_app_type(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -2393,7 +2467,8 @@ int check_hdset_combo_device(snd_device_t snd_device)
         SND_DEVICE_OUT_SPEAKER_AND_LINE == snd_device ||
         SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1 == snd_device ||
         SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2 == snd_device ||
-        SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET == snd_device)
+        SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET == snd_device ||
+        SND_DEVICE_OUT_SPEAKER_AND_ANC_FB_HEADSET == snd_device)
         ret = true;
 
     return ret;
@@ -2901,9 +2976,12 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
         } else if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADSET |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
-            if (audio_extn_get_anc_enabled())
-                snd_device = SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET;
-            else if (my_data->external_spk_1)
+            if (audio_extn_get_anc_enabled()) {
+                if (audio_extn_should_use_fb_anc())
+                    snd_device = SND_DEVICE_OUT_SPEAKER_AND_ANC_FB_HEADSET;
+                else
+                    snd_device = SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET;
+            } else if (my_data->external_spk_1)
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1;
             else if (my_data->external_spk_2)
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2;
@@ -3866,6 +3944,9 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     int len;
     int ret = 0, err;
     char *kv_pairs = str_parms_to_str(parms);
+    struct listnode *node;
+    struct meta_key_list *key_info;
+    int key = 0;
 
     if(kv_pairs == NULL) {
         ret = -ENOMEM;
@@ -3935,9 +4016,16 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     if (err >= 0) {
         str_parms_del(parms, AUDIO_PARAMETER_KEY_RELOAD_ACDB);
 
-        my_data->acdb_reload(value, my_data->snd_card_name,
-                              my_data->cvd_version, my_data->metainfo_key);
-
+        if (my_data->acdb_reload_v2) {
+            my_data->acdb_reload_v2(value, my_data->snd_card_name,
+                                  my_data->cvd_version, &my_data->acdb_meta_key_list);
+        } else if (my_data->acdb_reload) {
+            node = list_head(&my_data->acdb_meta_key_list);
+            key_info = node_to_item(node, struct meta_key_list, list);
+            key = key_info->cal_info.nKey;
+            my_data->acdb_reload(value, my_data->snd_card_name,
+                                  my_data->cvd_version, key);
+        }
     }
 
     if (hw_info_is_stereo_spkr(my_data->hw_info)) {
@@ -4510,17 +4598,21 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
         ret = 0;
     }
 
-    if ((my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl) &&
-        (sample_rate != my_data->current_backend_cfg[backend_idx].sample_rate)) {
+    if (passthrough_enabled || ((my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl) &&
+        (sample_rate != my_data->current_backend_cfg[backend_idx].sample_rate))) {
             char *rate_str = NULL;
             struct  mixer_ctl *ctl = NULL;
 
             switch (sample_rate) {
+            case 32000:
+                if (passthrough_enabled) {
+                    rate_str = "KHZ_32";
+                    break;
+                }
             case 8000:
             case 11025:
             case 16000:
             case 22050:
-            case 32000:
             case 48000:
                 rate_str = "KHZ_48";
                 break;
@@ -4546,7 +4638,12 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             case 384000:
                 rate_str = "KHZ_384";
                 break;
-            default:
+            case 144000:
+                if (passthrough_enabled) {
+                    rate_str = "KHZ_144";
+                    break;
+                }
+           default:
                 rate_str = "KHZ_48";
                 break;
             }
@@ -5412,6 +5509,7 @@ unsigned char platform_map_to_edid_format(int audio_format)
         format = AAC;
         break;
     case AUDIO_FORMAT_E_AC3:
+    case AUDIO_FORMAT_E_AC3_JOC:
         ALOGV("%s:E_AC3", __func__);
         format = DOLBY_DIGITAL_PLUS;
         break;

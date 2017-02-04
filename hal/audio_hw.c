@@ -521,7 +521,8 @@ static bool is_supported_format(audio_format_t format)
         format == AUDIO_FORMAT_DSD ||
         format == AUDIO_FORMAT_VORBIS ||
         format == AUDIO_FORMAT_WMA ||
-        format == AUDIO_FORMAT_WMA_PRO)
+        format == AUDIO_FORMAT_WMA_PRO ||
+        format == AUDIO_FORMAT_APTX)
            return true;
 
     return false;
@@ -3986,7 +3987,11 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->compr_config.codec->ch_in =
                 audio_channel_count_from_out_mask(out->channel_mask);
         out->compr_config.codec->ch_out = out->compr_config.codec->ch_in;
-        out->bit_width = AUDIO_OUTPUT_BIT_WIDTH;
+        /* Update bit width only for non passthrough usecases.
+         * For passthrough usecases, the output will always be opened @16 bit
+         */
+        if (!audio_extn_passthru_is_passthrough_stream(out))
+            out->bit_width = AUDIO_OUTPUT_BIT_WIDTH;
         /*TODO: Do we need to change it for passthrough */
         out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
 
@@ -4051,6 +4056,10 @@ int adev_open_output_stream(struct audio_hw_device *dev,
 
         if (config->offload_info.format == AUDIO_FORMAT_FLAC)
             out->compr_config.codec->options.flac_dec.sample_size = AUDIO_OUTPUT_BIT_WIDTH;
+
+        if (config->offload_info.format == AUDIO_FORMAT_APTX) {
+            audio_extn_send_aptx_dec_bt_addr_to_dsp(out);
+        }
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
@@ -5069,7 +5078,7 @@ static int adev_open(const hw_module_t *module, const char *name,
                                                         "visualizer_hal_stop_output");
         }
     }
-    audio_extn_init();
+    audio_extn_init(adev);
     audio_extn_listen_init(adev, adev->snd_card);
     audio_extn_sound_trigger_init(adev);
     audio_extn_gef_init(adev);

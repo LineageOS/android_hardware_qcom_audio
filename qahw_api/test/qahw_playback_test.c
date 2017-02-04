@@ -46,6 +46,7 @@
 #define ID_DATA 0x61746164
 
 #define FORMAT_PCM 1
+#define WAV_HEADER_LENGTH_MAX 46
 
 static thread_data_t *ethread_data = NULL;
 static cmd_data_t cmd_data;
@@ -102,7 +103,8 @@ enum {
     FILE_EAC3,
     FILE_EAC3_JOC,
     FILE_DTS,
-    FILE_MP2
+    FILE_MP2,
+    FILE_APTX
 };
 
 typedef enum {
@@ -552,6 +554,28 @@ int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
     return rc;
 }
 
+void parse_aptx_dec_bt_addr(char *value, struct qahw_aptx_dec_param *aptx_cfg)
+{
+    int ba[6];
+    char *str, *tok;
+    uint32_t addr[3];
+    int i = 0;
+
+    tok = strtok_r(value, ":", &str);
+    while (tok != NULL) {
+        ba[i] = strtol(tok, NULL, 16);
+        i++;
+        tok = strtok_r(NULL, ":", &str);
+    }
+    addr[0] = (ba[0] << 8) | ba[1];
+    addr[1] = ba[2];
+    addr[2] = (ba[3] << 16) | (ba[4] << 8) | ba[5];
+
+    aptx_cfg->bt_addr.nap = addr[0];
+    aptx_cfg->bt_addr.uap = addr[1];
+    aptx_cfg->bt_addr.lap = addr[2];
+}
+
 void usage() {
     printf(" \n Command \n");
     printf(" \n hal_play_test -f file-path <options>   - Plays audio file from the path provided\n");
@@ -583,6 +607,7 @@ void usage() {
     printf("                                             file path and other file specific options would be ignored in this mode.\n\n");
     printf(" -e  --effect-type <effect type>           - Effect used for test\n");
     printf("                                             0:bassboost 1:virtualizer 2:equalizer 3:visualizer(NA) 4:reverb 5:audiosphere others:null");
+    printf(" -A  --bt-addr <bt device addr>            - Required to set bt device adress for aptx decoder\n");
     printf(" \n Examples \n");
     printf(" hal_play_test -f /etc/Anukoledenadu.wav     -> plays Wav stream with default params\n\n");
     printf(" hal_play_test -f /etc/MateRani.mp3 -t 2 -d 2 -v 0.01 -r 44100 -c 2 \n");
@@ -621,6 +646,10 @@ void usage() {
     printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
     printf("                                          ->avg_bit_rate,sample_rate,wma_bit_per_sample,wma_block_align\n");
     printf("                                          ->wma_channel_mask,wma_encode_option,wma_format_tag\n");
+    printf(" hal_play_test -f /etc/03_Kuch_Khaas_BE.btaptx -t 9 -d 2 -v 0.2 -r 44100 -c 2 -A 00:02:5b:00:ff:03 \n");
+    printf("                                          -> Play aptx clip (-t = 9)\n");
+    printf("                                          -> 2 channels and 44100 sample rate\n");
+    printf("                                          -> BT addr: bt_addr=00:02:5b:00:ff:03\n");
     printf(" hal_play_test -K -F 4                    -> Measure latency KPIs for low latency output\n\n");
     printf(" hal_play_test -f /etc//Moto_320kbps.mp3 -t 2 -d 2 -v 0.1 -r 44100 -c 2 -e 2\n");
     printf("                                          -> plays MP3 stream(-t = 2) on speaker device(-d = 2)\n");
@@ -628,19 +657,53 @@ void usage() {
     printf("                                          -> sound effect equalizer enabled\n\n");
 }
 
+static int get_wav_header_length (FILE* file_stream)
+{
+    int subchunk_size = 0, wav_header_len = 0;
+
+    fseek(file_stream, 16, SEEK_SET);
+    if(fread(&subchunk_size, 4, 1, file_stream) != 1) {
+        fprintf(stdout, "Unable to read subchunk:\n");
+        exit (1);
+    }
+    if(subchunk_size < 16) {
+        fprintf(stdout, "This is not a valid wav file \n");
+    } else {
+          switch (subchunk_size) {
+          case 16:
+              fprintf(stdout, "44-byte wav header \n");
+              wav_header_len = 44;
+              break;
+          case 18:
+              fprintf(stdout, "46-byte wav header \n");
+              wav_header_len = 46;
+              break;
+          default:
+              fprintf(stdout, "Header contains extra data and is larger than 46 bytes: subchunk_size=%d \n", subchunk_size);
+              wav_header_len = subchunk_size;
+              break;
+          }
+    }
+    return wav_header_len;
+}
+
+
 int main(int argc, char* argv[]) {
 
     FILE *file_stream = NULL;
-    char header[44] = {0};
+    char header[WAV_HEADER_LENGTH_MAX] = {0};
     char* filename = nullptr;
     qahw_module_handle_t *qahw_mod_handle = NULL;
     const char *mod_name = "audio.primary";
     qahw_stream_handle_t* out_handle = nullptr;
-    int rc = 0;
+    int rc = 0, wav_header_len = 0;
     char *kvpair_values = NULL;
     char kvpair[1000] = {0};
     struct proxy_data proxy_params;
-
+    char *ba = NULL;
+    qahw_param_payload payload;
+    qahw_param_id param_id;
+    struct qahw_aptx_dec_param aptx_params;
     /*
      * Default values
      */
@@ -675,6 +738,7 @@ int main(int argc, char* argv[]) {
         {"flags",         required_argument,    0, 'F'},
         {"kpi-mode",      no_argument,          0, 'K'},
         {"effect-path",   required_argument,    0, 'e'},
+        {"bt-addr",       required_argument,    0, 'A'},
         {"help",          no_argument,          0, 'h'},
         {0, 0, 0, 0}
     };
@@ -698,7 +762,7 @@ int main(int argc, char* argv[]) {
     proxy_params.hdr.data_sz = 0;
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:v:l:t:a:w:k:D:KF:e:h",
+                              "-f:r:c:b:d:v:l:t:a:w:k:D:KF:e:A:h",
                               long_options,
                               &option_index)) != -1) {
             switch (opt) {
@@ -766,6 +830,9 @@ int main(int argc, char* argv[]) {
                 } else {
                     ethread_func = effect_thread_funcs[effect_index];
                 }
+                break;
+            case 'A':
+                ba = optarg;
                 break;
             case 'h':
                 usage();
@@ -839,7 +906,12 @@ int main(int argc, char* argv[]) {
             /*
              * Read the wave header
              */
-            rc = fread (header, 44 , 1, file_stream);
+            if((wav_header_len = get_wav_header_length(file_stream)) <= 0) {
+                fprintf(stdout, "wav header length is invalid:%d\n", wav_header_len);
+                exit(1);
+            }
+            fseek(file_stream, 0, SEEK_SET);
+            rc = fread (header, wav_header_len, 1, file_stream);
             if (rc != 1) {
                fprintf(stdout, "Error .Fread failed\n");
                exit(0);
@@ -902,6 +974,9 @@ int main(int argc, char* argv[]) {
         case FILE_DTS:
             config.offload_info.format = AUDIO_FORMAT_DTS;
             break;
+        case FILE_APTX:
+            config.offload_info.format = AUDIO_FORMAT_APTX;
+            break;
         default:
            fprintf(stderr, "Does not support given filetype\n");
            usage();
@@ -924,6 +999,23 @@ int main(int argc, char* argv[]) {
     if (output_device & AUDIO_DEVICE_OUT_ALL_A2DP) {
         output_device = AUDIO_DEVICE_OUT_PROXY;
     }
+    if (filetype == FILE_APTX) {
+        if (ba != NULL) {
+            parse_aptx_dec_bt_addr(ba, &aptx_params);
+            payload = (qahw_param_payload)aptx_params;
+            param_id = QAHW_PARAM_APTX_DEC;
+            fprintf(log_file, "Send BT addr nap %d, uap %d lap %d to HAL\n", aptx_params.bt_addr.nap,
+                        aptx_params.bt_addr.uap, aptx_params.bt_addr.lap);
+            rc = qahw_set_param_data(qahw_mod_handle, param_id, &payload);
+            if (rc != 0)
+                 printf("Error.Failed Set BT addr\n");
+        } else {
+            fprintf(log_file, "BT addr is NULL, Need valid BT addr for aptx file playback to work\n");
+            fprintf(stderr, "BT addr is NULL, Need valid BT addr for aptx file playback to work\n");
+            goto EXIT;
+        }
+    }
+
     fprintf(log_file, "calling open_out_put_stream:\n");
     rc = qahw_open_output_stream(qahw_mod_handle,
                                  handle,
