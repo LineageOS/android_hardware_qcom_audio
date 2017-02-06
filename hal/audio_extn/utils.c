@@ -830,15 +830,6 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
     }
 
     if ((usecase->type == PCM_PLAYBACK) && (usecase->stream.out != NULL)) {
-        if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
-            usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        } else if ((usecase->stream.out->app_type_cfg.sample_rate == OUTPUT_SAMPLING_RATE_44100 &&
-                     !(audio_is_this_native_usecase(usecase))) ||
-                     (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
-                   usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        }
-
-        sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
 
         property_get("audio.playback.mch.downsample",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
@@ -848,8 +839,7 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
                sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         }
 
-        if ((24 == usecase->stream.out->bit_width) &&
-            (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+        if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         } else if ((snd_device == SND_DEVICE_OUT_HDMI ||
                     snd_device == SND_DEVICE_OUT_USB_HEADSET ||
@@ -863,9 +853,11 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
               platform_check_and_update_copp_sample_rate(adev->platform, snd_device,
                                       usecase->stream.out->sample_rate,
                                       &usecase->stream.out->app_type_cfg.sample_rate);
-        } else if ((snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
+        } else if (((snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
+                     !audio_is_this_native_usecase(usecase)) &&
             usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
             (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
+            /* Reset to default if no native stream is active*/
             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         }
         sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
