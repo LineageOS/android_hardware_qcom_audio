@@ -152,6 +152,10 @@ if APTX_DECODER
 AM_CFLAGS += -DAPTX_DECODER_ENABLED
 endif
 
+if AFE_PROXY
+AM_CFLAGS += -DAFE_PROXY_ENABLED
+endif
+
 h_sources = audio_extn/audio_defs.h \
             audio_extn/audio_extn.h \
             audio_hw.h \
