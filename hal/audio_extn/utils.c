@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2014 The Android Open Source Project
@@ -593,8 +593,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_usecase *usecase)
         goto exit_send_app_type_cfg;
     }
 
-    if ((24 == usecase->stream.out->bit_width) &&
-        (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+    if ((usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
         out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
     } else if ((snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
         usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
