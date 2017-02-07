@@ -27,6 +27,8 @@
 #include <errno.h>
 #include <time.h>
 #include <signal.h>
+#include <cutils/str_parms.h>
+#include <tinyalsa/asoundlib.h>
 #include "qahw_api.h"
 #include "qahw_defs.h"
 #include "qahw_effect_api.h"
@@ -53,6 +55,9 @@
 #define MAX_PLAYBACK_STREAMS   2
 #define PRIMARY_STREAM_INDEX   0
 
+#define KVPAIRS_MAX 100
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[1]))
+
 static int get_wav_header_length (FILE* file_stream);
 static void init_streams(void);
 
@@ -74,6 +79,12 @@ enum {
     FILE_MP2,
     FILE_APTX
 };
+
+typedef enum {
+    USB_MODE_DEVICE,
+    USB_MODE_HOST,
+    USB_MODE_NONE
+} usb_mode_type_t;
 
 typedef enum {
     AAC_LC = 1,
@@ -126,23 +137,28 @@ struct drift_data {
 };
 
 typedef struct {
-    qahw_module_handle_t *qahw_mod_handle;
+    qahw_module_handle_t *qahw_in_hal_handle;
+    qahw_module_handle_t *qahw_out_hal_handle;
     audio_io_handle_t handle;
     char* filename;
     FILE* file_stream;
     int filetype;
     int stream_index;
     audio_devices_t output_device;
+    audio_devices_t input_device;
     audio_config_t config;
     audio_output_flags_t flags;
     qahw_stream_handle_t* out_handle;
+    qahw_stream_handle_t* in_handle;
     int channels;
     aac_format_type_t aac_fmt_type;
     wma_format_type_t wma_fmt_type;
     char *kvpair_values;
     bool flags_set;
+    usb_mode_type_t usb_mode;
     int effect_index;
     bool drift_query;
+    char *device_url;
     thread_func_t ethread_func;
     thread_data_t *ethread_data;
     cmd_data_t cmd_data;
@@ -151,6 +167,11 @@ typedef struct {
     pthread_cond_t drain_cond;
     pthread_mutex_t drain_lock;
 }stream_config;
+
+
+qahw_module_handle_t *primary_hal_handle = NULL;
+qahw_module_handle_t *usb_hal_handle = NULL;
+qahw_module_handle_t *bt_hal_handle = NULL;
 
 
 FILE * log_file = NULL;
@@ -219,14 +240,17 @@ static void init_streams(void)
     for ( i = 0; i < MAX_PLAYBACK_STREAMS; i++) {
         memset(&stream_param[i], 0, sizeof(stream_config));
 
-        stream_param[i].qahw_mod_handle                     =   nullptr;
+        stream_param[i].qahw_out_hal_handle                 =   nullptr;
+        stream_param[i].qahw_in_hal_handle                  =   nullptr;
         stream_param[i].filename                            =   nullptr;
         stream_param[i].file_stream                         =   nullptr;
         stream_param[i].filetype                            =   FILE_WAV;
         stream_param[i].stream_index                        =   i+1;
         stream_param[i].output_device                       =   AUDIO_DEVICE_OUT_SPEAKER;
+        stream_param[i].input_device                        =   AUDIO_DEVICE_NONE;
         stream_param[i].flags                               =   AUDIO_OUTPUT_FLAG_NONE;
         stream_param[i].out_handle                          =   nullptr;
+        stream_param[i].in_handle                           =   nullptr;
         stream_param[i].channels                            =   2;
         stream_param[i].config.offload_info.sample_rate     =   44100;
         stream_param[i].config.offload_info.bit_width       =   16;
@@ -234,9 +258,11 @@ static void init_streams(void)
         stream_param[i].wma_fmt_type                        =   WMA;
         stream_param[i].kvpair_values                       =   nullptr;
         stream_param[i].flags_set                           =   false;
+        stream_param[i].usb_mode                            =   USB_MODE_DEVICE;
         stream_param[i].effect_index                        =   -1;
         stream_param[i].ethread_func                        =   nullptr;
         stream_param[i].ethread_data                        =   nullptr;
+        stream_param[i].device_url                          =   "stream";
 
         pthread_mutex_init(&stream_param[i].write_lock, (const pthread_mutexattr_t *)NULL);
         pthread_cond_init(&stream_param[i].write_cond, (const pthread_condattr_t *) NULL);
@@ -412,6 +438,32 @@ void *drift_read(void* data)
         usleep(100000);
     }
 }
+static int is_eof(stream_config *stream) {
+    if (stream->filename) {
+        if (feof(stream->file_stream)) {
+            fprintf(log_file, "stream %d: error in fread, error %d\n", stream->stream_index, ferror(stream->file_stream));
+            fprintf(stderr, "stream %d: error in fread, error %d\n", stream->stream_index, ferror(stream->file_stream));
+            return true;
+        }
+    } else if (AUDIO_DEVICE_NONE != stream->input_device)
+        /*
+         * assuming this is called after we got -ve bytes value from hal read
+         */
+        return true;
+    return false;
+}
+static int read_bytes(stream_config *stream, void *buff, int size) {
+    if (stream->filename)
+        return fread(buff, 1, size, stream->file_stream);
+    else if (AUDIO_DEVICE_NONE != stream->input_device) {
+        qahw_in_buffer_t in_buf;
+        memset(&in_buf,0, sizeof(qahw_in_buffer_t));
+        in_buf.buffer = buff;
+        in_buf.bytes = size;
+        return qahw_in_read(stream->in_handle, &in_buf);
+    }
+
+}
 
 /* Entry point function for stream playback
  * Opens the stream
@@ -424,7 +476,6 @@ void *start_stream_playback (void* stream_data)
 {
     int rc = 0;
     stream_config *params = (stream_config*) stream_data;
-    const char* stream_name = "output_stream";
     bool proxy_thread_active = false;
     pthread_t proxy_thread;
 
@@ -434,13 +485,13 @@ void *start_stream_playback (void* stream_data)
 
     if (params->output_device & AUDIO_DEVICE_OUT_ALL_A2DP)
         params->output_device = AUDIO_DEVICE_OUT_PROXY;
-    rc = qahw_open_output_stream(params->qahw_mod_handle,
+    rc = qahw_open_output_stream(params->qahw_out_hal_handle,
                              params->handle,
                              params->output_device,
                              params->flags,
                              &(params->config),
                              &(params->out_handle),
-                             stream_name);
+                             params->device_url);
 
     if (rc) {
         fprintf(log_file, "stream %d: could not open output stream, error - %d \n", params->stream_index, rc);
@@ -541,7 +592,7 @@ void *start_stream_playback (void* stream_data)
     }
 
     if (params->output_device & AUDIO_DEVICE_OUT_PROXY) {
-        proxy_params.acp.qahw_mod_handle = params->qahw_mod_handle;
+        proxy_params.acp.qahw_mod_handle = params->qahw_out_hal_handle;
         proxy_params.acp.handle = stream_handle;
         stream_handle--;
         proxy_params.acp.input_device = AUDIO_DEVICE_IN_PROXY;
@@ -585,10 +636,11 @@ void *start_stream_playback (void* stream_data)
 
     while (!exit && !stop_playback) {
         if (!bytes_remaining) {
-            bytes_read = fread(data_ptr, 1, bytes_wanted, params->file_stream);
-            fprintf(log_file, "\nstream %d: fread from file %zd bytes\n", params->stream_index, bytes_read);
+            fprintf(log_file, "\nstream %d: reading bytes %zd\n", params->stream_index, bytes_wanted);
+            bytes_read = read_bytes(params, data_ptr, bytes_wanted);
+            fprintf(log_file, "stream %d: read bytes %zd\n", params->stream_index, bytes_read);
             if (bytes_read <= 0) {
-                if (feof(params->file_stream)) {
+                if (is_eof(params)) {
                     fprintf(log_file, "stream %d: end of file\n", params->stream_index);
                     if (is_offload) {
                         pthread_mutex_lock(&params->drain_lock);
@@ -598,9 +650,6 @@ void *start_stream_playback (void* stream_data)
                         fprintf(log_file, "stream %d: playback completed successfully\n", params->stream_index);
                         pthread_mutex_unlock(&params->drain_lock);
                     }
-                } else {
-                    fprintf(log_file, "stream %d: error in fread, error %d\n", params->stream_index, ferror(params->file_stream));
-                    fprintf(stderr, "stream %d: error in fread, error %d\n", params->stream_index, ferror(params->file_stream));
                 }
                 exit = true;
                 continue;
@@ -678,6 +727,9 @@ void *start_stream_playback (void* stream_data)
         fprintf(log_file, "stream %d: could not close output stream, error - %d \n", params->stream_index, rc);
         fprintf(stderr, "stream %d: could not close output stream, error - %d \n", params->stream_index, rc);
     }
+
+    if (data_ptr)
+        free(data_ptr);
 
     fprintf(log_file, "stream %d: stream closed\n", params->stream_index);
     return;
@@ -882,6 +934,9 @@ static void get_file_format(stream_config *stream_info)
            usage();
            return;
     }
+    stream_info->config.sample_rate = stream_info->config.offload_info.sample_rate;
+    stream_info->config.format = stream_info->config.offload_info.format;
+    stream_info->config.channel_mask = stream_info->config.offload_info.channel_mask = audio_channel_in_mask_from_count(stream_info->channels);
     return;
 }
 
@@ -992,12 +1047,241 @@ void parse_aptx_dec_bt_addr(char *value, struct qahw_aptx_dec_param *aptx_cfg)
     aptx_cfg->bt_addr.lap = addr[2];
 }
 
+typedef struct {
+    char *string;
+    int val;
+} param_converter_type;
+
+param_converter_type format_table[] = {
+    {"AUDIO_FORMAT_PCM_16_BIT",        AUDIO_FORMAT_PCM_16_BIT},
+    {"AUDIO_FORMAT_PCM_32_BIT",        AUDIO_FORMAT_PCM_32_BIT},
+    {"AUDIO_FORMAT_PCM_8_BIT",         AUDIO_FORMAT_PCM_8_BIT},
+    {"AUDIO_FORMAT_PCM_8_24_BIT",      AUDIO_FORMAT_PCM_8_24_BIT},
+    {"AUDIO_FORMAT_PCM_24_BIT_PACKED", AUDIO_FORMAT_PCM_24_BIT_PACKED}
+};
+
+
+int rate_table[] = {48000, 44100};
+
+
+static int get_kvpairs_string(char *kvpairs, const char *key, char *value) {
+    struct str_parms *parms = NULL;
+
+    if (!kvpairs)
+        return -1;
+
+    parms = str_parms_create_str(kvpairs);
+    if (str_parms_get_str(parms, key, value, KVPAIRS_MAX) < 0)
+        return -1;
+
+    str_parms_destroy(parms);
+    return 1;
+}
+
+static int get_pcm_format(char *kvpairs) {
+    bool match = false;
+    int i = 0;
+    char value[KVPAIRS_MAX] = {0};
+
+    if(!kvpairs)
+        return -1;
+
+
+    if (get_kvpairs_string(kvpairs, QAHW_PARAMETER_STREAM_SUP_FORMATS, value) < 0)
+        return -1;
+
+    fprintf(log_file, "formats=%s\n", value);
+
+   /*
+    * for now we assume usb hal/pcm device announces suport for one format ONLY
+    */
+    for (i = 0; i < sizeof(format_table); i++) {
+        if(!strncmp(format_table[i].string, value, sizeof(value))) {
+            match = true;
+            break;
+        }
+    }
+
+    if (match)
+        return format_table[i].val;
+    else
+        return -1;
+
+}
+
+
+static int get_rate(char *kvpairs) {
+    int match = false;
+    int rate = 0;
+    int i = 0;
+    char value[KVPAIRS_MAX] = {0};
+
+    if(!kvpairs)
+        return -1;
+
+    if (get_kvpairs_string(kvpairs, QAHW_PARAMETER_STREAM_SUP_SAMPLING_RATES, value) < 0)
+        return -1;
+
+    fprintf(log_file, "sample rates=%s\n", value);
+   /*
+    * for now we assume usb hal/pcm device announces suport for one rate ONLY
+    */
+
+    rate = atoi(value);
+    for (i = 0; i < ARRAY_SIZE(rate_table); i++)
+        if (rate_table[i] == rate)
+            match = true;
+
+    if (match)
+        return rate;
+    else
+        return -1;
+}
+
+
+static int get_channels(char *kvpairs) {
+    int ch = -1;
+    char value[KVPAIRS_MAX] = {0};
+
+    if(!kvpairs)
+        return -1;
+
+    if (get_kvpairs_string(kvpairs, QAHW_PARAMETER_STREAM_SUP_CHANNELS, value) < 0)
+        return -1;
+
+    fprintf(log_file, "channels=%s\n", value);
+
+   /*
+    * this is to work around a bug in usb hal which annouces support for stereo
+    * though the pcm dev/host stream is mono.
+    */
+    if (strstr(value, "MONO"))
+        ch = 1;
+    else if (strstr(value, "STEREO"))
+        ch = 2;
+
+    return ch;
+}
+
+
+static int detect_stream_params(stream_config *stream) {
+    bool detection_needed = false;
+    bool is_usb_loopback = false;
+    int direction = PCM_OUT;
+    audio_devices_t dev = stream->input_device;
+
+    int rc = 0;
+    char *param_string = NULL;
+    int ch = 0;
+
+    if (AUDIO_DEVICE_IN_USB_DEVICE == stream->input_device ||
+        AUDIO_DEVICE_OUT_USB_DEVICE == stream->output_device)
+        if (USB_MODE_DEVICE == stream->usb_mode)
+            detection_needed = true;
+
+    if (!detection_needed)
+    /*
+     * we will go with given params through args or with default params.
+     */
+        return true;
+
+    if (AUDIO_DEVICE_IN_USB_DEVICE == stream->input_device)
+        direction = PCM_IN;
+    else
+        direction = PCM_OUT;
+
+    fprintf(log_file, "%s: opening %s stream\n", __func__, ((direction == PCM_IN)? "input":"output"));
+
+    if (PCM_IN == direction)
+        rc = qahw_open_input_stream(stream->qahw_in_hal_handle,
+                                stream->handle,
+                                stream->input_device,
+                                &(stream->config),
+                                &(stream->in_handle),
+                                AUDIO_OUTPUT_FLAG_NONE,
+                                stream->device_url,
+                                AUDIO_SOURCE_DEFAULT);
+    else
+        rc = qahw_open_output_stream(stream->qahw_out_hal_handle,
+                                stream->handle,
+                                stream->output_device,
+                                stream->flags,
+                                &(stream->config),
+                                &(stream->out_handle),
+                                stream->device_url);
+
+    if (rc) {
+        fprintf(log_file, "stream could not be opened\n");
+        fprintf(stderr, "stream could not be opened\n");
+        return rc;
+    }
+
+    fprintf(log_file,"\n**Supported Parameters**\n");
+    if (PCM_IN == direction)
+        param_string = qahw_in_get_parameters(stream->in_handle, QAHW_PARAMETER_STREAM_SUP_SAMPLING_RATES);
+    else
+        param_string = qahw_out_get_parameters(stream->out_handle, QAHW_PARAMETER_STREAM_SUP_SAMPLING_RATES);
+
+    if ((stream->config.sample_rate = get_rate(param_string)) <= 0) {
+        fprintf(log_file, "Unable to extract sample rate val =(%d) string(%s)\n", stream->config.sample_rate, param_string);
+        fprintf(stderr, "Unable to extract sample rate val =(%d) string(%s)\n", stream->config.sample_rate, param_string);
+        return -1;
+    }
+    if (PCM_IN == direction)
+        param_string = qahw_in_get_parameters(stream->in_handle, QAHW_PARAMETER_STREAM_SUP_CHANNELS);
+    else
+        param_string = qahw_out_get_parameters(stream->out_handle, QAHW_PARAMETER_STREAM_SUP_CHANNELS);
+
+    if ((ch = get_channels(param_string)) <= 0) {
+        fprintf(log_file, "Unable to extract channels =(%d) string(%s)\n", ch, param_string);
+        fprintf(stderr, "Unable to extract channels =(%d) string(%s)\n", ch, param_string);
+        return -1;
+    }
+    stream->config.channel_mask = audio_channel_in_mask_from_count(ch);
+
+    if (PCM_IN == direction)
+        param_string = qahw_in_get_parameters(stream->in_handle, QAHW_PARAMETER_STREAM_SUP_FORMATS);
+    else
+        param_string = qahw_out_get_parameters(stream->out_handle, QAHW_PARAMETER_STREAM_SUP_FORMATS);
+
+    if ((stream->config.format = get_pcm_format(param_string)) <= 0) {
+        fprintf(log_file, "Unable to extract pcm format val =(%d) string(%s)\n", stream->config.format, param_string);
+        fprintf(stderr, "Unable to extract pcm format val =(%d) string(%s)\n", stream->config.format, param_string);
+        return -1;
+    }
+    stream->config.offload_info.format = stream->config.format;
+    fprintf(log_file, "\n**Extracted Parameters**\nrate=%d\nch=%d,ch_mask=0x%x\nformats=%d\n\n",
+        stream->config.sample_rate,
+        ch, stream->config.channel_mask,
+        stream->config.format);
+    /*
+     * Detection done now close usb stream it will be re-open later
+     */
+    fprintf(log_file, "%s:closing the usb stream\n", __func__);
+
+    if (PCM_IN == direction)
+        rc = qahw_close_input_stream(stream->in_handle);
+    else
+        rc = qahw_close_output_stream(stream->out_handle);
+
+    if (rc) {
+        fprintf(log_file, "%s:stream could not be closed\n", __func__);
+        fprintf(stderr, "%s:stream could not be closed\n", __func__);
+        return rc;
+    }
+    stream->config.offload_info.sample_rate = stream->config.sample_rate;
+    stream->config.offload_info.format = stream->config.format;
+    stream->config.offload_info.channel_mask = stream->config.channel_mask;
+    return rc;
+
+}
 void usage() {
     printf(" \n Command \n");
     printf(" \n hal_play_test -f file-path <options>   - Plays audio file from the path provided\n");
     printf(" \n Options\n");
     printf(" -f  --file-path <file path>               - file path to be used for playback.\n");
     printf("                                             file path must be provided unless -K(--kpi) is used\n\n");
+    printf("                                             file path must be provided unless -s(input data is not from a file) is used\n\n");
     printf(" -r  --sample-rate <sampling rate>         - Required for Non-WAV streams\n");
     printf("                                             For AAC-HE pls specify half the sample rate\n\n");
     printf(" -c  --channel count <channels>            - Required for Non-WAV streams\n\n");
@@ -1005,6 +1289,9 @@ void usage() {
     printf(" -v  --volume <float volume level>         - Volume level float value between 0.0 - 1.0.\n");
     printf(" -d  --device <decimal value>              - see system/media/audio/include/system/audio.h for device values\n");
     printf("                                             Optional Argument and Default value is 2, i.e Speaker\n\n");
+    printf(" -s  --source-device <decimal value>       - see system/media/audio/include/system/audio.h for device values\n");
+    printf("                                             obtain data from a device instead of an SD card file\n\n");
+    printf("                                             for example catpure data from USB HAL(device) and play it on Regular HAL(device)\n\n");
     printf(" -t  --file-type <file type>               - 1:WAV 2:MP3 3:AAC 4:AAC_ADTS 5:FLAC\n");
     printf("                                             6:ALAC 7:VORBIS 8:WMA 10:AAC_LATM \n");
     printf("                                             Required for non WAV formats\n\n");
@@ -1027,55 +1314,77 @@ void usage() {
     printf(" -q  --query drift                         - Required for querying avtime vs hdmi drift\n");
     printf(" -P                                        - Argument to do multi-stream playback, currently 2 streams are supported to run concurrently\n");
     printf("                                             Put -P and mention required attributes for the next stream\n");
+    printf("                                             0:bassboost 1:virtualizer 2:equalizer 3:visualizer(NA) 4:reverb 5:audiosphere others:null");
+    printf(" PLUS                                      - For multi-stream playback, currently 2 streams are supported to play concurrently\n");
+    printf("                                             Put PLUS and mention required attributes for the next files");
+    printf(" -u  --device-nodeurl                      - URL of PCM device\n");
+    printf("                                             in the following format card=x;device=x");
+    printf("                                             this option is mandatory in working with USB HAL");
+    printf(" -m  --mode                                - usb operating mode(Device Mode is default)\n");
+    printf("                                             0:Device Mode(host drives the stream and its params and so no need to give params as input)\n");
+    printf("                                             1:Host Mode(user can give stream and stream params via a stream(SD card file) or setup loopback with given params\n");
     printf(" \n Examples \n");
-    printf(" hal_play_test -f /etc/Anukoledenadu.wav     -> plays Wav stream with default params\n\n");
-    printf(" hal_play_test -f /etc/MateRani.mp3 -t 2 -d 2 -v 0.01 -r 44100 -c 2 \n");
+    printf(" hal_play_test -f /data/Anukoledenadu.wav  -> plays Wav stream with default params\n\n");
+    printf(" hal_play_test -f /data/MateRani.mp3 -t 2 -d 2 -v 0.01 -r 44100 -c 2 \n");
     printf("                                          -> plays MP3 stream(-t = 2) on speaker device(-d = 2)\n");
     printf("                                          -> 2 channels and 44100 sample rate\n\n");
-    printf(" hal_play_test -f /etc/v1-CBR-32kHz-stereo-40kbps.mp3 -t 2 -d 128 -v 0.01 -r 32000 -c 2 -D /data/proxy_dump.wav\n");
+    printf(" hal_play_test -f /data/v1-CBR-32kHz-stereo-40kbps.mp3 -t 2 -d 128 -v 0.01 -r 32000 -c 2 -D /data/proxy_dump.wav\n");
     printf("                                          -> plays MP3 stream(-t = 2) on BT device(-d = 128)\n");
     printf("                                          -> 2 channels and 32000 sample rate\n");
     printf("                                          -> dumps pcm data to file at /data/proxy_dump.wav\n\n");
-    printf(" hal_play_test -f /etc/AACLC-71-48000Hz-384000bps.aac  -t 4 -d 2 -v 0.05 -r 48000 -c 2 -a 1 \n");
+    printf(" hal_play_test -f /data/AACLC-71-48000Hz-384000bps.aac  -t 4 -d 2 -v 0.05 -r 48000 -c 2 -a 1 \n");
     printf("                                          -> plays AAC-ADTS stream(-t = 4) on speaker device(-d = 2)\n");
     printf("                                          -> AAC format type is LC(-a = 1)\n");
     printf("                                          -> 2 channels and 48000 sample rate\n\n");
-    printf(" hal_play_test -f /etc/AACHE-adts-stereo-32000KHz-128000Kbps.aac  -t 4 -d 2 -v 0.05 -r 16000 -c 2 -a 3 \n");
+    printf(" hal_play_test -f /data/AACHE-adts-stereo-32000KHz-128000Kbps.aac  -t 4 -d 2 -v 0.05 -r 16000 -c 2 -a 3 \n");
     printf("                                          -> plays AAC-ADTS stream(-t = 4) on speaker device(-d = 2)\n");
     printf("                                          -> AAC format type is HE V2(-a = 3)\n");
     printf("                                          -> 2 channels and 16000 sample rate\n");
     printf("                                          -> note that the sample rate is half the actual sample rate\n\n");
-    printf(" hal_play_test -f /etc/2.0_16bit_48khz.m4a -k 1536000,16,0,0,4096,14,16388,0,10,2,40,48000,1536000,48000 -t 6 -r 48000 -c 2 -v 0.5 \n");
+    printf(" hal_play_test -f /data/2.0_16bit_48khz.m4a -k 1536000,16,0,0,4096,14,16388,0,10,2,40,48000,1536000,48000 -t 6 -r 48000 -c 2 -v 0.5 \n");
     printf("                                          -> Play alac clip (-t = 6)\n");
     printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
     printf("                                          ->alac_avg_bit_rate,alac_bit_depth,alac_channel_layout,alac_compatible_version,\n");
     printf("                                          ->alac_frame_length,alac_kb,alac_max_frame_bytes,alac_max_run,alac_mb,\n");
     printf("                                          ->alac_num_channels,alac_pb,alac_sampling_rate,avg_bit_rate,sample_rate\n\n");
-    printf(" hal_play_test -f /etc/DIL CHAHTA HAI.flac -k 0,4096,13740,4096,14 -t 5 -r 48000 -c 2 -v 0.5 \n");
+    printf(" hal_play_test -f /data/DIL CHAHTA HAI.flac -k 0,4096,13740,4096,14 -t 5 -r 48000 -c 2 -v 0.5 \n");
     printf("                                          -> Play flac clip (-t = 5)\n");
     printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
     printf("                                          ->avg_bit_rate,flac_max_blk_size,flac_max_frame_size\n");
     printf("                                          ->flac_min_blk_size,flac_min_frame_size,sample_rate\n");
-    printf(" hal_play_test -f /etc/vorbis.mka -k 500000,48000,1 -t 7 -r 48000 -c 2 -v 0.5 \n");
+    printf(" hal_play_test -f /data/vorbis.mka -k 500000,48000,1 -t 7 -r 48000 -c 2 -v 0.5 \n");
     printf("                                          -> Play vorbis clip (-t = 7)\n");
     printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
     printf("                                          ->avg_bit_rate,sample_rate,vorbis_bitstream_fmt\n");
-    printf(" hal_play_test -f /etc/file.wma -k 192000,48000,16,8192,3,15,0,0,353 -t 8 -w 1 -r 48000 -c 2 -v 0.5 \n");
+    printf(" hal_play_test -f /data/file.wma -k 192000,48000,16,8192,3,15,0,0,353 -t 8 -w 1 -r 48000 -c 2 -v 0.5 \n");
     printf("                                          -> Play wma clip (-t = 8)\n");
     printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
     printf("                                          ->avg_bit_rate,sample_rate,wma_bit_per_sample,wma_block_align\n");
     printf("                                          ->wma_channel_mask,wma_encode_option,wma_format_tag\n");
-    printf(" hal_play_test -f /etc/03_Kuch_Khaas_BE.btaptx -t 9 -d 2 -v 0.2 -r 44100 -c 2 -A 00:02:5b:00:ff:03 \n");
+    printf(" hal_play_test -f /data/03_Kuch_Khaas_BE.btaptx -t 9 -d 2 -v 0.2 -r 44100 -c 2 -A 00:02:5b:00:ff:03 \n");
     printf("                                          -> Play aptx clip (-t = 9)\n");
     printf("                                          -> 2 channels and 44100 sample rate\n");
     printf("                                          -> BT addr: bt_addr=00:02:5b:00:ff:03\n\n");
     printf(" hal_play_test -f /data/silence.ac3 -t 9 -r 48000 -c 2 -v 0.05 -F 16433 -P -f /data/music_48k.ac3 -t 9 -r 48000 -c 2 -F 32817\n");
     printf("                                          -> Plays a silence clip as main stream and music clip as associated\n\n");
     printf(" hal_play_test -K -F 4                    -> Measure latency KPIs for low latency output\n\n");
-    printf(" hal_play_test -f /etc//Moto_320kbps.mp3 -t 2 -d 2 -v 0.1 -r 44100 -c 2 -e 2\n");
+    printf(" hal_play_test -f /data/Moto_320kbps.mp3 -t 2 -d 2 -v 0.1 -r 44100 -c 2 -e 2\n");
     printf("                                          -> plays MP3 stream(-t = 2) on speaker device(-d = 2)\n");
     printf("                                          -> 2 channels and 44100 sample rate\n\n");
     printf("                                          -> sound effect equalizer enabled\n\n");
+    printf(" hal_play_test -d 2 -v 0.05 -s 2147487744 -u \"card=1\\;device=0\" \n");
+    printf("                                          -> capture audio stream from usb device(HAL)@ 44.1 KHz, 2ch\n");
+    printf("                                          -> and loop/play it back on to primary HAL \n\n");
+    printf("                                          -> Device Mode is default\n");
+    printf("                                          -> card=1\\;device=0 -> specifies the URL, pls not that the ';' is escaped\n\n");
+    printf(" hal_play_test -f /data/Anukoledenadu.wav -d 16384 -u \"card=1\\;device=0\" \n");
+    printf("                                          -> Play PCM to USB out\n\n");
+    printf(" hal_play_test -d 16384 -u \"card=1\\;device=0\" -s 2\n");
+    printf("                                          ->Capture PCM from Local Mic and play it on USB(usb to primary hal loopback)\n\n");
+    printf(" hal_play_test -d 16384 -u \"card=1\\;device=0\" -s 2 -P -d 2 -v 0.05 -s 2147487744 -u \"card=1\\;device=0\"\n");
+    printf("                                          ->full duplex, setup both primary to usb and usb to primary loopbacks\n");
+    printf("                                          ->Note:-P separates the steam params for both the loopbacks\n");
+    printf("                                          ->Note:all the USB device commmands(above) should be accompanied with the host side commands\n\n");
 }
 
 static int get_wav_header_length (FILE* file_stream)
@@ -1110,11 +1419,81 @@ static int get_wav_header_length (FILE* file_stream)
     return wav_header_len;
 }
 
+static qahw_module_handle_t * load_hal(audio_devices_t dev) {
+    qahw_module_handle_t *hal = NULL;
+
+    if ((AUDIO_DEVICE_IN_USB_DEVICE == dev) ||
+        (AUDIO_DEVICE_OUT_USB_DEVICE == dev)){
+        if (!usb_hal_handle) {
+            fprintf(log_file,"\nLoading usb HAL\n");
+            if ((usb_hal_handle = qahw_load_module(QAHW_MODULE_ID_USB)) == NULL) {
+                fprintf(log_file,"failure in Loading usb HAL\n");
+                fprintf(stderr,"failure in Loading usb HAL\n");
+                return NULL;
+            }
+        }
+        hal = usb_hal_handle;
+    }
+/*  else if ((AUDIO_DEVICE_IN_BLUETOOTH_A2DP == dev) ||
+               (AUDIO_DEVICE_OUT_BLUETOOTH_A2DP == dev)){
+        if (!bt_hal_handle) {
+            fprintf(log_file,"Loading BT HAL\n");
+            if ((bt_hal_handle = qahw_load_module(QAHW_MODULE_ID_A2DP)) == NULL) {
+                fprintf(log_file,"failure in Loading BT HAL\n");
+                fprintf(stderr,"failure in Loading BT HAL\n");
+                return NULL;
+            }
+        }
+        hal = bt_hal_handle;
+    }*/
+    else {
+        if (!primary_hal_handle) {
+            fprintf(log_file,"\nLoading Primary HAL\n");
+            if ((primary_hal_handle = qahw_load_module(QAHW_MODULE_ID_PRIMARY)) == NULL) {
+                fprintf(log_file,"failure in Loading Primary HAL\n");
+                fprintf(stderr,"failure in Loading primary HAL\n");
+                return NULL;
+            }
+        }
+        hal = primary_hal_handle;
+    }
+    return hal;
+}
+/*
+ * this function unloads all the loaded hal modules so this should be called
+ * after all the stream playback are concluded.
+ */
+static int unload_hals() {
+
+    if (usb_hal_handle) {
+        fprintf(log_file,"\nUnLoading usb HAL\n");
+        if (qahw_unload_module(usb_hal_handle) < 0) {
+            fprintf(log_file,"failure in Un Loading usb HAL\n");
+            fprintf(stderr,"failure in Un Loading usb HAL\n");
+            return -1;
+        }
+    }
+    if (bt_hal_handle) {
+        fprintf(log_file,"UnLoading BT HAL\n");
+        if (qahw_unload_module(bt_hal_handle) < 0) {
+            fprintf(log_file,"failure in UnLoading BT HAL\n");
+            fprintf(stderr,"failure in Un Loading BT HAL\n");
+            return -1;
+        }
+    }
+    if (primary_hal_handle) {
+        fprintf(log_file,"\nUnLoading Primary HAL\n");
+        if (qahw_unload_module(primary_hal_handle) < 0) {
+            fprintf(log_file,"failure in Un Loading Primary HAL\n");
+            fprintf(stderr,"failure in Un Loading primary HAL\n");
+            return -1;
+        }
+    }
+    return 1;
+}
+
 
 int main(int argc, char* argv[]) {
-
-    qahw_module_handle_t *qahw_mod_handle = NULL;
-    const char *mod_name = "audio.primary";
     char *ba = NULL;
     qahw_param_payload payload;
     qahw_param_id param_id;
@@ -1126,6 +1505,7 @@ int main(int argc, char* argv[]) {
 
     log_file = stdout;
     proxy_params.acp.file_name = "/data/pcm_dump.wav";
+    stream_config *stream = NULL;
     init_streams();
 
     int num_of_streams = 1;
@@ -1133,7 +1513,8 @@ int main(int argc, char* argv[]) {
     struct option long_options[] = {
         /* These options set a flag. */
         {"file-path",     required_argument,    0, 'f'},
-        {"device",        required_argument,    0, 'd'},
+        {"output-device", required_argument,    0, 'd'},
+        {"input-device",  required_argument,    0, 's'},
         {"sample-rate",   required_argument,    0, 'r'},
         {"channels",      required_argument,    0, 'c'},
         {"bitwidth",      required_argument,    0, 'b'},
@@ -1150,6 +1531,8 @@ int main(int argc, char* argv[]) {
         {"effect-path",   required_argument,    0, 'e'},
         {"bt-addr",       required_argument,    0, 'A'},
         {"query drift",   no_argument,          0, 'q'},
+        {"device-nodeurl",required_argument,    0, 'u'},
+        {"mode",          required_argument,    0, 'm'},
         {"help",          no_argument,          0, 'h'},
         {0, 0, 0, 0}
     };
@@ -1173,7 +1556,7 @@ int main(int argc, char* argv[]) {
 
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:v:l:t:a:w:k:PD:KF:e:A:qh",
+                              "-f:r:c:b:d:s:v:l:t:a:w:k:PD:KF:e:A:u:m:qh",
                               long_options,
                               &option_index)) != -1) {
 
@@ -1185,15 +1568,20 @@ int main(int argc, char* argv[]) {
             break;
         case 'r':
             stream_param[i].config.offload_info.sample_rate = atoi(optarg);
+            stream_param[i].config.sample_rate = atoi(optarg);
             break;
         case 'c':
             stream_param[i].channels = atoi(optarg);
+            stream_param[i].config.channel_mask = audio_channel_out_mask_from_count(atoi(optarg));
             break;
         case 'b':
             stream_param[i].config.offload_info.bit_width = atoi(optarg);
             break;
         case 'd':
             stream_param[i].output_device = atoll(optarg);
+            break;
+        case 's':
+            stream_param[i].input_device = atoll(optarg);
             break;
         case 'v':
             vol_level = atof(optarg);
@@ -1261,6 +1649,12 @@ int main(int argc, char* argv[]) {
             i++;
             fprintf(log_file, "Stream index incremented to %d\n", i);
             break;
+        case 'u':
+            stream_param[i].device_url = optarg;
+            break;
+        case 'm':
+            stream_param[i].usb_mode = atoi(optarg);
+            break;
         case 'h':
             usage();
             return 0;
@@ -1284,8 +1678,6 @@ int main(int argc, char* argv[]) {
         goto exit;
     }
 
-    qahw_mod_handle = qahw_load_module(mod_name);
-
     /* Register the SIGINT to close the App properly */
     if (signal(SIGINT, stop_signal_handler) == SIG_ERR) {
         fprintf(log_file, "Failed to register SIGINT:%d\n",errno);
@@ -1293,69 +1685,97 @@ int main(int argc, char* argv[]) {
     }
 
     for (i = 0; i < num_of_streams; i++) {
-        fprintf(log_file, "Playing:%s\n", stream_param[i].filename);
-        
-        stream_param[i].qahw_mod_handle = qahw_mod_handle;
+        stream = &stream_param[i];
 
-        if (kpi_mode == false) {
+        if ((kpi_mode == false) && 
+            (AUDIO_DEVICE_NONE == stream->input_device)){
             if (stream_param[PRIMARY_STREAM_INDEX].filename == nullptr) {
                 fprintf(log_file, "Primary file name is must for non kpi-mode\n");
                 fprintf(stderr, "Primary file name is must for non kpi-mode\n");
                 goto exit;
             }
-            if ((stream_param[i].file_stream = fopen(stream_param[i].filename, "r"))== NULL) {
-                fprintf(log_file, "Cannot open audio file %s\n", stream_param[i].filename);
-                fprintf(stderr, "Cannot open audio file %s\n", stream_param[i].filename);
-                goto exit;
-            }
         }
 
-        if (stream_param[i].output_device & AUDIO_DEVICE_OUT_ALL_A2DP)
+        if (stream->output_device != AUDIO_DEVICE_NONE)
+            if ((stream->qahw_out_hal_handle = load_hal(stream->output_device)) <= 0)
+                goto exit;
+
+        if (stream->input_device != AUDIO_DEVICE_NONE)
+            if ((stream->qahw_in_hal_handle = load_hal(stream->input_device))== 0)
+                goto exit;
+
+        if ((AUDIO_DEVICE_NONE != stream->output_device) &&
+            (AUDIO_DEVICE_NONE != stream->input_device))
+            /*
+             * hal loopback at what params we need to probably detect.
+             */
+             if(detect_stream_params(stream) < 0)
+                goto exit;
+
+        if (stream->filename) {
+            if ((stream->file_stream = fopen(stream->filename, "r"))== NULL) {
+                fprintf(log_file, "Cannot open audio file %s\n", stream->filename);
+                fprintf(stderr, "Cannot open audio file %s\n", stream->filename);
+                goto exit;
+            }
+            fprintf(log_file, "Playing from:%s\n", stream->filename);
+            get_file_format(&stream_param[i]);
+        } else if (AUDIO_DEVICE_NONE != stream->input_device) {
+            fprintf(log_file, "Playing from device:%x\n", stream->input_device);
+            fprintf(log_file, "Playing from url:%s\n", stream->device_url);
+            fprintf(log_file, "setting up input hal and stream:%s\n", stream->device_url);
+
+            rc = qahw_open_input_stream(stream->qahw_in_hal_handle,
+                                    stream->handle,
+                                    stream->input_device,
+                                    &(stream->config),
+                                    &(stream->in_handle),
+                                    AUDIO_OUTPUT_FLAG_NONE,
+                                    stream->device_url,
+                                    AUDIO_SOURCE_UNPROCESSED);
+            if (rc) {
+                fprintf(log_file, "input stream could not be re-opened\n");
+                fprintf(stderr, "input stream could not be re-opened\n");
+                return rc;
+            }
+            stream->flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING;
+            stream->flags |= AUDIO_OUTPUT_FLAG_DIRECT;
+        } else if (kpi_mode == true)
+            stream->config.format = stream->config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
+
+        if (stream->output_device & AUDIO_DEVICE_OUT_ALL_A2DP)
             fprintf(log_file, "Saving pcm data to file: %s\n", proxy_params.acp.file_name);
 
         /* Set device connection state for HDMI */
-        if (stream_param[i].output_device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        if (stream->output_device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             char param[100] = {0};
             snprintf(param, sizeof(param), "%s=%d", "connect", AUDIO_DEVICE_OUT_AUX_DIGITAL);
-            qahw_set_parameters(qahw_mod_handle, param);
+            qahw_set_parameters(stream->qahw_out_hal_handle, param);
         }
 
-        if (kpi_mode == true) {
-            stream_param[i].config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
-        } else {
-            get_file_format(&stream_param[i]);
-        }
-
-        fprintf(log_file, "stream %d: File Type:%d\n", stream_param[i].stream_index, stream_param[i].filetype);
-        fprintf(log_file, "stream %d: Audio Format:%d\n", stream_param[i].stream_index, stream_param[i].config.offload_info.format);
-        fprintf(log_file, "stream %d: Output Device:%d\n", stream_param[i].stream_index, stream_param[i].output_device);
-        fprintf(log_file, "stream %d: Output Flags:%d\n", stream_param[i].stream_index, stream_param[i].flags);
-        fprintf(log_file, "stream %d: Sample Rate:%d\n", stream_param[i].stream_index, stream_param[i].config.offload_info.sample_rate);
-        fprintf(log_file, "stream %d: Channels:%d\n", stream_param[i].stream_index, stream_param[i].channels);
-        fprintf(log_file, "stream %d: Bitwidth:%d\n", stream_param[i].stream_index, stream_param[i].config.offload_info.bit_width);
-        fprintf(log_file, "stream %d: AAC Format Type:%d\n", stream_param[i].stream_index, stream_param[i].aac_fmt_type);
-        fprintf(log_file, "stream %d: Kvpair Values:%s\n", stream_param[i].stream_index, stream_param[i].kvpair_values);
+        fprintf(log_file, "stream %d: File Type:%d\n", stream->stream_index, stream->filetype);
+        fprintf(log_file, "stream %d: Audio Format:%d\n", stream->stream_index, stream->config.offload_info.format);
+        fprintf(log_file, "stream %d: Output Device:%d\n", stream->stream_index, stream->output_device);
+        fprintf(log_file, "stream %d: Output Flags:%d\n", stream->stream_index, stream->flags);
+        fprintf(log_file, "stream %d: Sample Rate:%d\n", stream->stream_index, stream->config.offload_info.sample_rate);
+        fprintf(log_file, "stream %d: Channels:%d\n", stream->stream_index, stream->channels);
+        fprintf(log_file, "stream %d: Bitwidth:%d\n", stream->stream_index, stream->config.offload_info.bit_width);
+        fprintf(log_file, "stream %d: AAC Format Type:%d\n", stream->stream_index, stream->aac_fmt_type);
+        fprintf(log_file, "stream %d: Kvpair Values:%s\n", stream->stream_index, stream->kvpair_values);
         fprintf(log_file, "Log file:%s\n", log_filename);
         fprintf(log_file, "Volume level:%f\n", vol_level);
 
-        stream_param[i].config.offload_info.channel_mask = stream_param[i].config.channel_mask;
-        stream_param[i].config.offload_info.version = AUDIO_OFFLOAD_INFO_VERSION_CURRENT;
-        stream_param[i].config.offload_info.size = sizeof(audio_offload_info_t);
+        stream->config.offload_info.version = AUDIO_OFFLOAD_INFO_VERSION_CURRENT;
+        stream->config.offload_info.size = sizeof(audio_offload_info_t);
 
-        stream_param[i].config.channel_mask = audio_channel_out_mask_from_count(stream_param[i].channels);
-        stream_param[i].config.format = stream_param[i].config.offload_info.format;
-        stream_param[i].config.sample_rate = stream_param[i].config.offload_info.sample_rate;
-
-        fprintf(log_file, "stream %d: playing to output_device=%d \n", stream_param[i].stream_index, stream_param[i].output_device);
-
-        if (stream_param[i].filetype == FILE_APTX) {
+        if (stream->filetype == FILE_APTX) {
             if (ba != NULL) {
                 parse_aptx_dec_bt_addr(ba, &aptx_params);
                 payload = (qahw_param_payload)aptx_params;
                 param_id = QAHW_PARAM_APTX_DEC;
                 fprintf(log_file, "Send BT addr nap %d, uap %d lap %d to HAL\n", aptx_params.bt_addr.nap,
                             aptx_params.bt_addr.uap, aptx_params.bt_addr.lap);
-                rc = qahw_set_param_data(qahw_mod_handle, param_id, &payload);
+                rc = qahw_set_param_data(stream->qahw_out_hal_handle, param_id, &payload);
                 if (rc != 0)
                      fprintf(log_file, "Error.Failed Set BT addr\n");
                      fprintf(stderr, "Error.Failed Set BT addr\n");
@@ -1368,8 +1788,8 @@ int main(int argc, char* argv[]) {
 
         rc = pthread_create(&playback_thread[i], NULL, start_stream_playback, (void *)&stream_param[i]);
         if (rc) {
-            fprintf(log_file, "stream %d: failed to create thread\n", stream_param[i].stream_index);
-            fprintf(stderr, "stream %d: failed to create thread\n", stream_param[i].stream_index);
+            fprintf(log_file, "stream %d: failed to create thread\n", stream->stream_index);
+            fprintf(stderr, "stream %d: failed to create thread\n", stream->stream_index);
             exit(0);
         }
 
@@ -1391,19 +1811,24 @@ exit:
          if (stream_param[i].output_device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
              char param[100] = {0};
              snprintf(param, sizeof(param), "%s=%d", "disconnect", AUDIO_DEVICE_OUT_AUX_DIGITAL);
-             qahw_set_parameters(qahw_mod_handle, param);
+             qahw_set_parameters(stream_param[i].qahw_out_hal_handle, param);
          }
 
         if (stream_param[i].file_stream != nullptr)
             fclose(stream_param[i].file_stream);
+        else if (AUDIO_DEVICE_NONE != stream_param[i].input_device) {
+            if (stream->in_handle) {
+                rc = qahw_close_input_stream(stream->in_handle);
+                if (rc) {
+                    fprintf(log_file, "input stream could not be closed\n");
+                    fprintf(stderr, "input stream could not be closed\n");
+                    return rc;
+                }
+            }
+        }
     }
 
-    rc = qahw_unload_module(qahw_mod_handle);
-    if (rc) {
-        fprintf(log_file, "could not unload hal  %d \n", rc);
-        fprintf(stderr, "could not unload hal  %d \n", rc);
-        return -1;
-    }
+    rc = unload_hals();
 
     if ((log_file != stdout) && (log_file != nullptr))
         fclose(log_file);
