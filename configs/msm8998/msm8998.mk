@@ -207,7 +207,7 @@ flac.sw.decoder.24bit.support=true
 
 #split a2dp DSP supported encoder list
 PRODUCT_PROPERTY_OVERRIDES += \
-persist.bt.a2dp_offload_cap=sbc-aptx
+persist.bt.a2dp_offload_cap=sbc-aptx-aptxhd-aac
 
 #enable software decoders for ALAC and APE
 PRODUCT_PROPERTY_OVERRIDES += \
