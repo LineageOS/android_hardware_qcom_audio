@@ -855,6 +855,8 @@ static void check_and_route_playback_usecases(struct audio_device *adev,
     bool switch_device[AUDIO_USECASE_MAX];
     int i, num_uc_to_switch = 0;
 
+    platform_check_and_set_playback_backend_cfg(adev, uc_info, snd_device);
+
     /*
      * This function is to make sure that all the usecases that are active on
      * the hardware codec backend are always routed to any one device that is
@@ -1199,7 +1201,8 @@ int select_devices(struct audio_device *adev,
 
     /* Enable new sound devices */
     if (out_snd_device != SND_DEVICE_NONE) {
-        if (usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND)
+        if ((usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
+            (usecase->devices & AUDIO_DEVICE_OUT_USB_DEVICE))
             check_and_route_playback_usecases(adev, usecase, out_snd_device);
         enable_snd_device(adev, out_snd_device);
     }
@@ -3553,6 +3556,43 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_SCO_WB, value, sizeof(value));
     if (ret >= 0) {
         adev->bt_wb_speech_enabled = !strcmp(value, AUDIO_PARAMETER_VALUE_ON);
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value, sizeof(value));
+    if (ret >= 0) {
+        audio_devices_t device = (audio_devices_t)strtoul(value, NULL, 10);
+        if (device == AUDIO_DEVICE_OUT_USB_DEVICE) {
+            ret = str_parms_get_str(parms, "card", value, sizeof(value));
+            if (ret >= 0) {
+                const int card = atoi(value);
+                audio_extn_usb_add_device(AUDIO_DEVICE_OUT_USB_DEVICE, card);
+            }
+        } else if (device == AUDIO_DEVICE_IN_USB_DEVICE) {
+            ret = str_parms_get_str(parms, "card", value, sizeof(value));
+            if (ret >= 0) {
+                const int card = atoi(value);
+                audio_extn_usb_add_device(AUDIO_DEVICE_IN_USB_DEVICE, card);
+            }
+        }
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value, sizeof(value));
+    if (ret >= 0) {
+        audio_devices_t device = (audio_devices_t)strtoul(value, NULL, 10);
+        if (device == AUDIO_DEVICE_OUT_USB_DEVICE) {
+            ret = str_parms_get_str(parms, "card", value, sizeof(value));
+            if (ret >= 0) {
+                const int card = atoi(value);
+
+                audio_extn_usb_remove_device(AUDIO_DEVICE_OUT_USB_DEVICE, card);
+            }
+        } else if (device == AUDIO_DEVICE_IN_USB_DEVICE) {
+            ret = str_parms_get_str(parms, "card", value, sizeof(value));
+            if (ret >= 0) {
+                const int card = atoi(value);
+                audio_extn_usb_remove_device(AUDIO_DEVICE_IN_USB_DEVICE, card);
+            }
+        }
     }
 
     audio_extn_hfp_set_parameters(adev, parms);

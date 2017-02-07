@@ -74,6 +74,11 @@ ifdef MULTIPLE_HW_VARIANTS_ENABLED
   LOCAL_SRC_FILES +=  $(AUDIO_PLATFORM)/hw_info.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_USB_TUNNEL)),true)
+    LOCAL_CFLAGS += -DUSB_TUNNEL_ENABLED
+    LOCAL_SRC_FILES += audio_extn/usb.c
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
