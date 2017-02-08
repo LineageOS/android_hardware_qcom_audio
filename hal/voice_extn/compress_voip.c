@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -284,9 +284,14 @@ static int voip_stop_call(struct audio_device *adev)
             uc_info = node_to_item(node, struct audio_usecase, list);
             select_devices(adev, uc_info->id);
         }
-    } else
-        ALOGV("%s: NO-OP because out_stream_count=%d, in_stream_count=%d",
+    } else {
+        ALOGV("%s: unexpected because out_stream_count=%d, in_stream_count=%d",
                __func__, voip_data.out_stream_count, voip_data.in_stream_count);
+        uc_info = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
+        if (uc_info)
+            uc_info->stream.out = adev->primary_output;
+        ret = -EINVAL;
+    }
 
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
