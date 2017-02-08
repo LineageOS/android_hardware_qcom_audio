@@ -2914,6 +2914,10 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
            (out->config.rate);
     }
 
+    if ((AUDIO_DEVICE_OUT_BLUETOOTH_A2DP == out->devices) &&
+            !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD))
+        latency += audio_extn_a2dp_get_encoder_latency();
+
     ALOGV("%s: Latency %d", __func__, latency);
     return latency;
 }
