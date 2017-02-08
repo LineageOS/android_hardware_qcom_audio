@@ -2325,7 +2325,8 @@ int start_output_stream(struct stream_out *out)
         if (audio_extn_is_dolby_format(out->format))
             audio_extn_dolby_send_ddp_endp_params(adev);
 #endif
-        if (!(audio_extn_passthru_is_passthrough_stream(out))) {
+        if (!(audio_extn_passthru_is_passthrough_stream(out)) &&
+                (out->sample_rate != 176400 && out->sample_rate <= 192000)) {
             if (adev->visualizer_start_output != NULL)
                 adev->visualizer_start_output(out->handle, out->pcm_device_id);
             if (adev->offload_effects_start_output != NULL)
