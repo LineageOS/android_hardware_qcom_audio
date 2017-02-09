@@ -45,11 +45,47 @@
 #define ID_FMT  0x20746d66
 #define ID_DATA 0x61746164
 
+#define KV_PAIR_MAX_LENGTH  1000
+
 #define FORMAT_PCM 1
 #define WAV_HEADER_LENGTH_MAX 46
 
-static thread_data_t *ethread_data = NULL;
-static cmd_data_t cmd_data;
+#define MAX_PLAYBACK_STREAMS   2
+#define PRIMARY_STREAM_INDEX   0
+
+static int get_wav_header_length (FILE* file_stream);
+static void init_streams(void);
+
+
+enum {
+    FILE_WAV = 1,
+    FILE_MP3,
+    FILE_AAC,
+    FILE_AAC_ADTS,
+    FILE_FLAC,
+    FILE_ALAC,
+    FILE_VORBIS,
+    FILE_WMA,
+    FILE_AC3,
+    FILE_AAC_LATM,
+    FILE_EAC3,
+    FILE_EAC3_JOC,
+    FILE_DTS,
+    FILE_MP2,
+    FILE_APTX
+};
+
+typedef enum {
+    AAC_LC = 1,
+    AAC_HE_V1,
+    AAC_HE_V2
+} aac_format_type_t;
+
+typedef enum {
+    WMA = 1,
+    WMA_PRO,
+    WMA_LOSSLESS
+} wma_format_type_t;
 
 struct wav_header {
     uint32_t riff_id;
@@ -83,46 +119,51 @@ struct proxy_data {
     struct audio_config_params acp;
     struct wav_header hdr;
 };
+
+typedef struct {
+    qahw_module_handle_t *qahw_mod_handle;
+    audio_io_handle_t handle;
+    char* filename;
+    FILE* file_stream;
+    int filetype;
+    int stream_index;
+    audio_devices_t output_device;
+    audio_config_t config;
+    audio_output_flags_t flags;
+    qahw_stream_handle_t* out_handle;
+    int channels;
+    aac_format_type_t aac_fmt_type;
+    wma_format_type_t wma_fmt_type;
+    char *kvpair_values;
+    bool flags_set;
+    int effect_index;
+    thread_func_t ethread_func;
+    thread_data_t *ethread_data;
+    cmd_data_t cmd_data;
+    pthread_cond_t write_cond;
+    pthread_mutex_t write_lock;
+    pthread_cond_t drain_cond;
+    pthread_mutex_t drain_lock;
+}stream_config;
+
+
 FILE * log_file = NULL;
 volatile bool stop_playback = false;
 const char *log_filename = NULL;
 float vol_level = 0.01;
+struct proxy_data proxy_params;
+bool proxy_thread_active;
 pthread_t proxy_thread;
+pthread_t playback_thread[MAX_PLAYBACK_STREAMS];
+bool thread_active[MAX_PLAYBACK_STREAMS] = { false };
 
-enum {
-    FILE_WAV = 1,
-    FILE_MP3,
-    FILE_AAC,
-    FILE_AAC_ADTS,
-    FILE_FLAC,
-    FILE_ALAC,
-    FILE_VORBIS,
-    FILE_WMA,
-    FILE_AC3,
-    FILE_AAC_LATM,
-    FILE_EAC3,
-    FILE_EAC3_JOC,
-    FILE_DTS,
-    FILE_MP2,
-    FILE_APTX
-};
+stream_config stream_param[MAX_PLAYBACK_STREAMS];
+bool kpi_mode;
 
-typedef enum {
-    AAC_LC = 1,
-    AAC_HE_V1,
-    AAC_HE_V2
-} aac_format_type_t;
-
-typedef enum {
-    WMA = 1,
-    WMA_PRO,
-    WMA_LOSSLESS
-} wma_format_type_t;
-
-static pthread_mutex_t write_lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t write_cond = PTHREAD_COND_INITIALIZER;
-static pthread_mutex_t drain_lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t drain_cond = PTHREAD_COND_INITIALIZER;
+/*
+ * Set to a high number so it doesn't interfere with existing stream handles
+ */
+audio_io_handle_t stream_handle = 0x999;
 
 #define FLAC_KVPAIR "music_offload_avg_bit_rate=%d;" \
                     "music_offload_flac_max_blk_size=%d;" \
@@ -165,6 +206,44 @@ void stop_signal_handler(int signal __unused)
    stop_playback = true;
 }
 
+void usage();
+int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload);
+
+static void init_streams(void)
+{
+    int i = 0;
+    for ( i = 0; i < MAX_PLAYBACK_STREAMS; i++) {
+        memset(&stream_param[i], 0, sizeof(stream_config));
+
+        stream_param[i].qahw_mod_handle                     =   nullptr;
+        stream_param[i].filename                            =   nullptr;
+        stream_param[i].file_stream                         =   nullptr;
+        stream_param[i].filetype                            =   FILE_WAV;
+        stream_param[i].stream_index                        =   i+1;
+        stream_param[i].output_device                       =   AUDIO_DEVICE_OUT_SPEAKER;
+        stream_param[i].flags                               =   AUDIO_OUTPUT_FLAG_NONE;
+        stream_param[i].out_handle                          =   nullptr;
+        stream_param[i].channels                            =   2;
+        stream_param[i].config.offload_info.sample_rate     =   44100;
+        stream_param[i].config.offload_info.bit_width       =   16;
+        stream_param[i].aac_fmt_type                        =   AAC_LC;
+        stream_param[i].wma_fmt_type                        =   WMA;
+        stream_param[i].kvpair_values                       =   nullptr;
+        stream_param[i].flags_set                           =   false;
+        stream_param[i].effect_index                        =   -1;
+        stream_param[i].ethread_func                        =   nullptr;
+        stream_param[i].ethread_data                        =   nullptr;
+
+        pthread_mutex_init(&stream_param[i].write_lock, (const pthread_mutexattr_t *)NULL);
+        pthread_cond_init(&stream_param[i].write_cond, (const pthread_condattr_t *) NULL);
+        pthread_mutex_init(&stream_param[i].drain_lock, (const pthread_mutexattr_t *)NULL);
+        pthread_cond_init(&stream_param[i].drain_cond, (const pthread_condattr_t *) NULL);
+
+        stream_param[i].handle                              =   stream_handle;
+        stream_handle--;
+    }
+}
+
 void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
 {
     char *kvpair_type = NULL;
@@ -205,20 +284,28 @@ void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
 }
 
 int async_callback(qahw_stream_callback_event_t event, void *param __unused,
-                  void *cookie __unused)
+                  void *cookie)
 {
+    if(cookie == NULL) {
+        fprintf(log_file, "Invalid callback handle\n");
+        fprintf(stderr, "Invalid callback handle\n");
+        return 0;
+    }
+
+    stream_config *params = (stream_config*) cookie;
+
     switch (event) {
     case QAHW_STREAM_CBK_EVENT_WRITE_READY:
-        fprintf(log_file, "QAHW_STREAM_CBK_EVENT_DRAIN_READY\n");
-        pthread_mutex_lock(&write_lock);
-        pthread_cond_signal(&write_cond);
-        pthread_mutex_unlock(&write_lock);
+        fprintf(log_file, "stream %d: received event - QAHW_STREAM_CBK_EVENT_WRITE_READY\n", params->stream_index);
+        pthread_mutex_lock(&params->write_lock);
+        pthread_cond_signal(&params->write_cond);
+        pthread_mutex_unlock(&params->write_lock);
         break;
     case QAHW_STREAM_CBK_EVENT_DRAIN_READY:
-        fprintf(log_file, "QAHW_STREAM_CBK_EVENT_DRAIN_READY\n");
-        pthread_mutex_lock(&drain_lock);
-        pthread_cond_signal(&drain_cond);
-        pthread_mutex_unlock(&drain_lock);
+        fprintf(log_file, "stream %d: received event - QAHW_STREAM_CBK_EVENT_DRAIN_READY\n", params->stream_index);
+        pthread_mutex_lock(&params->drain_lock);
+        pthread_cond_signal(&params->drain_cond);
+        pthread_mutex_unlock(&params->drain_lock);
     default:
         break;
     }
@@ -297,89 +384,177 @@ void *proxy_read (void* data)
     return 0;
 }
 
-int write_to_hal(qahw_stream_handle_t* out_handle, char *data,
-              size_t bytes)
+
+/* Entry point function for stream playback
+ * Opens the stream
+ * Reads KV pairs, sets volume, allocates input buffer
+ * Opens proxy and effects threads if enabled
+ * Starts freading the file and writing to HAL
+ * Drains out and close the stream after EOF
+ */
+void *start_stream_playback (void* stream_data)
 {
-    ssize_t ret;
-    pthread_mutex_lock(&write_lock);
-    qahw_out_buffer_t out_buf;
+    int rc = 0;
+    stream_config *params = (stream_config*) stream_data;
+    const char* stream_name = "output_stream";
 
-    memset(&out_buf,0, sizeof(qahw_out_buffer_t));
-    out_buf.buffer = data;
-    out_buf.bytes = bytes;
+    rc = qahw_open_output_stream(params->qahw_mod_handle,
+                             params->handle,
+                             params->output_device,
+                             params->flags,
+                             &(params->config),
+                             &(params->out_handle),
+                             stream_name);
 
-    ret = qahw_out_write(out_handle, &out_buf);
-    if (ret < 0 || ret == bytes) {
-        fprintf(log_file, "Writing data to hal failed or full write %zd, %zd\n",
-            ret, bytes);
-    } else if (ret != bytes) {
-        fprintf(log_file, "ret %zd, bytes %zd\n", ret, bytes);
-        fprintf(log_file, "Waiting for event write ready\n");
-        pthread_cond_wait(&write_cond, &write_lock);
-        fprintf(log_file, "out of wait for event write ready\n");
+    if (rc) {
+        fprintf(log_file, "stream %d: could not open output stream, error - %d \n", params->stream_index, rc);
+        fprintf(stderr, "stream %d: could not open output stream, error - %d \n", params->stream_index, rc);
+        pthread_exit(0);
     }
 
-    pthread_mutex_unlock(&write_lock);
-    return ret;
-}
+    fprintf(log_file, "stream %d: open output stream is success, out_handle %p\n", params->stream_index, params->out_handle);
 
+    if (kpi_mode == true) {
+        measure_kpi_values(params->out_handle, params->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD);
+        rc = qahw_close_output_stream(params->out_handle);
+        if (rc) {
+            fprintf(log_file, "stream %d: could not close output stream %d, error - %d \n", params->stream_index, rc);
+            fprintf(stderr, "stream %d: could not close output stream %d, error - %d \n", params->stream_index, rc);
+        }
+        return;
+    }
 
-/* Play audio from a WAV file.
- *
- * Parameters:
- *  out_stream: A pointer to the output audio stream.
- *  in_file: A pointer to a SNDFILE object.
- *  config: A pointer to struct that contains audio configuration data.
- *
- * Returns: An int which has a non-negative number on success.
- */
+    switch(params->filetype) {
+        char kvpair[KV_PAIR_MAX_LENGTH] = {0};
+        case FILE_WMA:
+        case FILE_VORBIS:
+        case FILE_ALAC:
+        case FILE_FLAC:
+            fprintf(log_file, "%s:calling setparam for kvpairs\n", __func__);
+            if (!(params->kvpair_values)) {
+               fprintf(log_file, "stream %d: error!!No metadata for the clip\n", params->stream_index);
+               fprintf(stderr, "stream %d: error!!No metadata for the clip\n", params->stream_index);
+               pthread_exit(0);;
+            }
+            read_kvpair(kvpair, params->kvpair_values, params->filetype);
+            rc = qahw_out_set_parameters(params->out_handle, kvpair);
+            if(rc){
+                fprintf(log_file, "stream %d: failed to set kvpairs\n", params->stream_index);
+                fprintf(stderr, "stream %d: failed to set kvpairs\n", params->stream_index);
+                pthread_exit(0);;
+            }
+            fprintf(log_file, "stream %d: kvpairs are set\n", params->stream_index);
+            break;
+        default:
+            break;
+    }
 
-int play_file(qahw_stream_handle_t* out_handle, FILE* in_file,
-              bool is_offload) {
-    int rc = 0;
     int offset = 0;
+    bool is_offload = params->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD;
     size_t bytes_wanted = 0;
     size_t write_length = 0;
     size_t bytes_remaining = 0;
     size_t bytes_written = 0;
     size_t bytes_read = 0;
-    char  *data = NULL;
+    char  *data_ptr = NULL;
     bool exit = false;
 
     if (is_offload) {
-        fprintf(log_file, "Set callback for offload stream\n");
-        qahw_out_set_callback(out_handle, async_callback, NULL);
+        fprintf(log_file, "stream %d: set callback for offload stream for playback usecase\n", params->stream_index);
+        qahw_out_set_callback(params->out_handle, async_callback, params);
     }
 
-    rc = qahw_out_set_volume(out_handle, vol_level, vol_level);
-    if (rc < 0)
-        fprintf(log_file, "unable to set volume");
+    // create effect thread, use thread_data to transfer command
+    if (params->ethread_func &&
+            (params->flags & (AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_DIRECT))) {
 
-    bytes_wanted = qahw_out_get_buffer_size(out_handle);
-    data = (char *) malloc (bytes_wanted);
-    if (data == NULL) {
-        fprintf(log_file, "calloc failed!!\n");
-        return -ENOMEM;
+        fprintf(log_file, "stream %d: effect type:%s\n", params->stream_index, effect_str[params->effect_index]);
+        params->ethread_data = create_effect_thread(params->effect_index, params->ethread_func);
+
+        // create effect command thread
+        params->cmd_data.exit = false;
+        params->cmd_data.fx_data_ptr = &(params->ethread_data);
+        pthread_attr_init(&(params->cmd_data.attr));
+        pthread_attr_setdetachstate(&(params->cmd_data.attr), PTHREAD_CREATE_JOINABLE);
+        rc = pthread_create(&(params->cmd_data.cmd_thread), &(params->cmd_data.attr),
+                &command_thread_func, &(params->cmd_data));
+        if (rc < 0) {
+            fprintf(log_file, "stream %d: could not create effect command thread!\n", params->stream_index);
+            fprintf(stderr, "stream %d: could not create effect command thread!\n", params->stream_index);
+            pthread_exit(0);
+        }
+
+        fprintf(log_file, "stream %d: loading effects\n", params->stream_index);
+        if (params->ethread_data != nullptr) {
+            // load effect module
+            notify_effect_command(params->ethread_data, EFFECT_LOAD_LIB, -1, 0, NULL);
+
+            // get effect desc
+            notify_effect_command(params->ethread_data, EFFECT_GET_DESC, -1, 0, NULL);
+
+            // create effect
+            params->ethread_data->io_handle = params->handle;
+            notify_effect_command(params->ethread_data, EFFECT_CREATE, -1, 0, NULL);
+
+            // broadcast device info
+            notify_effect_command(params->ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_SET_DEVICE, sizeof(audio_devices_t), &(params->output_device));
+
+            // enable effect
+            notify_effect_command(params->ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_ENABLE, 0, NULL);
+        }
+    }
+
+    if (params->output_device & AUDIO_DEVICE_OUT_ALL_A2DP) {
+        params->output_device = AUDIO_DEVICE_OUT_PROXY;
+        proxy_params.acp.qahw_mod_handle = params->qahw_mod_handle;
+        proxy_params.acp.handle = stream_handle;
+        stream_handle--;
+        proxy_params.acp.input_device = AUDIO_DEVICE_IN_PROXY;
+        proxy_params.acp.flags = AUDIO_INPUT_FLAG_NONE;
+        proxy_params.acp.config.channel_mask = audio_channel_in_mask_from_count(AFE_PROXY_CHANNEL_COUNT);
+        proxy_params.acp.config.sample_rate = AFE_PROXY_SAMPLING_RATE;
+        proxy_params.acp.config.format = AUDIO_FORMAT_PCM_16_BIT;
+        proxy_params.acp.kStreamName = "input_stream";
+        proxy_params.acp.kInputSource = AUDIO_SOURCE_UNPROCESSED;
+        proxy_params.acp.thread_exit = false;
+        fprintf(log_file, "stream %d: create thread to read data from proxy\n", params->stream_index);
+        rc = pthread_create(&proxy_thread, NULL, proxy_read, (void *)&proxy_params);
+        if (!rc)
+            proxy_thread_active = true;
+    }
+
+    rc = qahw_out_set_volume(params->out_handle, vol_level, vol_level);
+    if (rc < 0) {
+        fprintf(log_file, "stream %d: unable to set volume\n", params->stream_index);
+        fprintf(stderr, "stream %d: unable to set volume\n", params->stream_index);
+    }
+
+    bytes_wanted = qahw_out_get_buffer_size(params->out_handle);
+    data_ptr = (char *) malloc (bytes_wanted);
+    if (data_ptr == NULL) {
+        fprintf(log_file, "stream %d: failed to allocate data buffer\n", params->stream_index);
+        fprintf(stderr, "stream %d: failed to allocate data buffer\n", params->stream_index);
+        pthread_exit(0);
     }
 
     while (!exit && !stop_playback) {
         if (!bytes_remaining) {
-            bytes_read = fread(data, 1, bytes_wanted, in_file);
-            fprintf(log_file, "fread from file %zd\n", bytes_read);
+            bytes_read = fread(data_ptr, 1, bytes_wanted, params->file_stream);
+            fprintf(log_file, "\nstream %d: fread from file %zd bytes\n", params->stream_index, bytes_read);
             if (bytes_read <= 0) {
-                if (feof(in_file)) {
-                    fprintf(log_file, "End of file\n");
+                if (feof(params->file_stream)) {
+                    fprintf(log_file, "stream %d: end of file\n", params->stream_index);
                     if (is_offload) {
-                        pthread_mutex_lock(&drain_lock);
-                        qahw_out_drain(out_handle, QAHW_DRAIN_ALL);
-                        pthread_cond_wait(&drain_cond, &drain_lock);
-                        fprintf(log_file, "Out of compress drain\n");
-                        fprintf(stdout, "Playback completed sucessfully\n");
-                        pthread_mutex_unlock(&drain_lock);
+                        pthread_mutex_lock(&params->drain_lock);
+                        qahw_out_drain(params->out_handle, QAHW_DRAIN_ALL);
+                        pthread_cond_wait(&params->drain_cond, &params->drain_lock);
+                        fprintf(log_file, "stream %d: out of compress drain\n", params->stream_index);
+                        fprintf(log_file, "stream %d: playback completed successfully\n", params->stream_index);
+                        pthread_mutex_unlock(&params->drain_lock);
                     }
                 } else {
-                    fprintf(log_file, "Error in fread --%d\n", ferror(in_file));
-                    fprintf(stderr, "Error in fread --%d\n", ferror(in_file));
+                    fprintf(log_file, "stream %d: error in fread, error %d\n", params->stream_index, ferror(params->file_stream));
+                    fprintf(stderr, "stream %d: error in fread, error %d\n", params->stream_index, ferror(params->file_stream));
                 }
                 exit = true;
                 continue;
@@ -388,15 +563,100 @@ int play_file(qahw_stream_handle_t* out_handle, FILE* in_file,
         }
 
         offset = write_length - bytes_remaining;
-        fprintf(log_file, "bytes_remaining %zd, offset %d, write length %zd\n",
-                bytes_remaining, offset, write_length);
-        bytes_written = write_to_hal(out_handle, data+offset, bytes_remaining);
+        fprintf(log_file, "stream %d: writing to hal %zd bytes, offset %d, write length %zd\n",
+                params->stream_index, bytes_remaining, offset, write_length);
+        bytes_written = write_to_hal(params->out_handle, data_ptr+offset, bytes_remaining, params);
         bytes_remaining -= bytes_written;
-        fprintf(log_file, "bytes_written %zd, bytes_remaining %zd\n",
-                bytes_written, bytes_remaining);
+        fprintf(log_file, "stream %d: bytes_written %zd, bytes_remaining %zd\n",
+                params->stream_index, bytes_written, bytes_remaining);
     }
 
-    return rc;
+    if (params->ethread_data != nullptr) {
+        fprintf(log_file, "stream %d: un-loading effects\n", params->stream_index);
+        // disable effect
+        notify_effect_command(params->ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_DISABLE, 0, NULL);
+
+        // release effect
+        notify_effect_command(params->ethread_data, EFFECT_RELEASE, -1, 0, NULL);
+
+        // unload effect module
+        notify_effect_command(params->ethread_data, EFFECT_UNLOAD_LIB, -1, 0, NULL);
+
+        // destroy effect thread
+        destroy_effect_thread(params->ethread_data);
+
+        free(params->ethread_data);
+        params->ethread_data = NULL;
+
+        // destory effect command thread
+        params->cmd_data.exit = true;
+        usleep(100000);  // give a chance for thread to exit gracefully
+        rc = pthread_cancel(params->cmd_data.cmd_thread);
+        if (rc != 0) {
+            fprintf(log_file, "Fail to cancel thread!\n");
+            fprintf(stderr, "Fail to cancel thread!\n");
+        }
+        rc = pthread_join(params->cmd_data.cmd_thread, NULL);
+        if (rc < 0) {
+            fprintf(log_file, "Fail to join effect command thread!\n");
+            fprintf(stderr, "Fail to join effect command thread!\n");
+        }
+    }
+
+    if (proxy_thread_active) {
+       /*
+        * DSP gives drain ack for last buffer which will close proxy thread before
+        * app reads last buffer. So add sleep before exiting proxy thread to read
+        * last buffer of data. This is not a calculated value.
+        */
+        usleep(500000);
+        proxy_params.acp.thread_exit = true;
+        fprintf(log_file, "wait for proxy thread exit\n");
+        pthread_join(proxy_thread, NULL);
+    }
+
+    rc = qahw_out_standby(params->out_handle);
+    if (rc) {
+        fprintf(log_file, "stream %d: out standby failed %d \n", params->stream_index, rc);
+        fprintf(stderr, "stream %d: out standby failed %d \n", params->stream_index, rc);
+    }
+
+    fprintf(log_file, "stream %d: closing output stream\n", params->stream_index);
+    rc = qahw_close_output_stream(params->out_handle);
+    if (rc) {
+        fprintf(log_file, "stream %d: could not close output stream, error - %d \n", params->stream_index, rc);
+        fprintf(stderr, "stream %d: could not close output stream, error - %d \n", params->stream_index, rc);
+    }
+
+    fprintf(log_file, "stream %d: stream closed\n", params->stream_index);
+    return;
+
+}
+
+int write_to_hal(qahw_stream_handle_t* out_handle, char *data, size_t bytes, void *params_ptr)
+{
+    stream_config *stream_params = (stream_config*) params_ptr;
+
+    ssize_t ret;
+    pthread_mutex_lock(&stream_params->write_lock);
+    qahw_out_buffer_t out_buf;
+
+    memset(&out_buf,0, sizeof(qahw_out_buffer_t));
+    out_buf.buffer = data;
+    out_buf.bytes = bytes;
+
+    ret = qahw_out_write(out_handle, &out_buf);
+    if (ret < 0) {
+        fprintf(log_file, "stream %d: writing data to hal failed (ret = %zd)\n", stream_params->stream_index, ret);
+    } else if (ret != bytes) {
+        fprintf(log_file, "stream %d: provided bytes %zd, written bytes %d\n",stream_params->stream_index, bytes, ret);
+        fprintf(log_file, "stream %d: waiting for event write ready\n", stream_params->stream_index);
+        pthread_cond_wait(&stream_params->write_cond, &stream_params->write_lock);
+        fprintf(log_file, "stream %d: out of wait for event write ready\n", stream_params->stream_index);
+    }
+
+    pthread_mutex_unlock(&stream_params->write_lock);
+    return ret;
 }
 
 bool is_valid_aac_format_type(aac_format_type_t format_type)
@@ -474,6 +734,106 @@ audio_format_t get_aac_format(int filetype, aac_format_type_t format_type)
     return aac_format;
 }
 
+static void get_file_format(stream_config *stream_info)
+{
+    int rc = 0;
+
+    if (!(stream_info->flags_set)) {
+        stream_info->flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING;
+        stream_info->flags |= AUDIO_OUTPUT_FLAG_DIRECT;
+    }
+
+    char header[WAV_HEADER_LENGTH_MAX] = {0};
+    int wav_header_len = 0;
+
+    switch (stream_info->filetype) {
+        case FILE_WAV:
+            /*
+             * Read the wave header
+             */
+            if((wav_header_len = get_wav_header_length(stream_info->file_stream)) <= 0) {
+                fprintf(log_file, "wav header length is invalid:%d\n", wav_header_len);
+                exit(1);
+            }
+            fseek(stream_info->file_stream, 0, SEEK_SET);
+            rc = fread (header, wav_header_len , 1, stream_info->file_stream);
+            if (rc != 1) {
+               fprintf(log_file, "Error fread failed\n");
+               fprintf(stderr, "Error fread failed\n");
+               exit(1);
+            }
+            if (strncmp (header, "RIFF", 4) && strncmp (header+8, "WAVE", 4)) {
+               fprintf(log_file, "Not a wave format\n");
+               fprintf(stderr, "Not a wave format\n");
+               exit (1);
+            }
+            memcpy (&stream_info->channels, &header[22], 2);
+            memcpy (&stream_info->config.offload_info.sample_rate, &header[24], 4);
+            memcpy (&stream_info->config.offload_info.bit_width, &header[34], 2);
+            if (stream_info->config.offload_info.bit_width == 32)
+                stream_info->config.offload_info.format = AUDIO_FORMAT_PCM_32_BIT;
+            else if (stream_info->config.offload_info.bit_width == 24)
+                stream_info->config.offload_info.format = AUDIO_FORMAT_PCM_24_BIT_PACKED;
+            else
+                stream_info->config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
+            if (!(stream_info->flags_set))
+                stream_info->flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD;
+            break;
+
+        case FILE_MP3:
+            stream_info->config.offload_info.format = AUDIO_FORMAT_MP3;
+            break;
+
+        case FILE_AAC:
+        case FILE_AAC_ADTS:
+        case FILE_AAC_LATM:
+            if (!is_valid_aac_format_type(stream_info->aac_fmt_type)) {
+                fprintf(log_file, "Invalid format type for AAC %d\n", stream_info->aac_fmt_type);
+                fprintf(stderr, "Invalid format type for AAC %d\n", stream_info->aac_fmt_type);
+                return;
+            }
+            stream_info->config.offload_info.format = get_aac_format(stream_info->filetype, stream_info->aac_fmt_type);
+            break;
+        case FILE_FLAC:
+            stream_info->config.offload_info.format = AUDIO_FORMAT_FLAC;
+            break;
+        case FILE_ALAC:
+            stream_info->config.offload_info.format = AUDIO_FORMAT_ALAC;
+            break;
+        case FILE_VORBIS:
+            stream_info->config.offload_info.format = AUDIO_FORMAT_VORBIS;
+            break;
+        case FILE_WMA:
+            if (stream_info->wma_fmt_type == WMA)
+               stream_info->config.offload_info.format = AUDIO_FORMAT_WMA;
+            else
+               stream_info->config.offload_info.format = AUDIO_FORMAT_WMA_PRO;
+            break;
+        case FILE_MP2:
+            stream_info->config.offload_info.format = AUDIO_FORMAT_MP2;
+            break;
+        case FILE_AC3:
+            stream_info->config.offload_info.format = AUDIO_FORMAT_AC3;
+            break;
+        case FILE_EAC3:
+        case FILE_EAC3_JOC:
+            stream_info->config.offload_info.format = AUDIO_FORMAT_E_AC3;
+            break;
+        case FILE_DTS:
+            stream_info->config.offload_info.format = AUDIO_FORMAT_DTS;
+            break;
+        case FILE_APTX:
+            stream_info->config.offload_info.format = AUDIO_FORMAT_APTX;
+            break;
+        default:
+           fprintf(log_file, "Does not support given filetype\n");
+           fprintf(stderr, "Does not support given filetype\n");
+           usage();
+           return;
+    }
+    return;
+}
+
 int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
     int rc = 0;
     int offset = 0;
@@ -487,8 +847,8 @@ int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
     uint64_t tcold, tcont, scold = 0, uscold = 0, scont = 0, uscont = 0;
 
     if (is_offload) {
-        fprintf(log_file, "Set callback for offload stream\n");
-        qahw_out_set_callback(out_handle, async_callback, NULL);
+        fprintf(log_file, "Set callback for offload stream in kpi mesaurement usecase\n");
+        qahw_out_set_callback(out_handle, async_callback, &stream_param[PRIMARY_STREAM_INDEX]);
     }
 
     FILE *fd_latency_node = fopen(LATENCY_NODE, "r+");
@@ -496,9 +856,11 @@ int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
         ret = fwrite(LATENCY_NODE_INIT_STR, sizeof(LATENCY_NODE_INIT_STR), 1, fd_latency_node);
         if (ret<1)
             fprintf(log_file, "error(%d) writing to debug node!", ret);
+            fprintf(stderr, "error(%d) writing to debug node!", ret);
         fflush(fd_latency_node);
     } else {
         fprintf(log_file, "debug node(%s) open failed!", LATENCY_NODE);
+        fprintf(stderr, "debug node(%s) open failed!", LATENCY_NODE);
         return -1;
     }
 
@@ -506,6 +868,7 @@ int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
     data = (char *) calloc (1, bytes_wanted);
     if (data == NULL) {
         fprintf(log_file, "calloc failed!!\n");
+        fprintf(stderr, "calloc failed!!\n");
         return -ENOMEM;
     }
 
@@ -517,6 +880,7 @@ int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
             ret = clock_gettime(CLOCK_REALTIME, &ts_cold);
             if (ret) {
                 fprintf(log_file, "error(%d) fetching start time for cold latency", ret);
+                fprintf(stderr, "error(%d) fetching start time for cold latency", ret);
                 return -1;
             }
         } else if (count == 16) {
@@ -525,12 +889,13 @@ int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
             ret = clock_gettime(CLOCK_REALTIME, &ts_cont);
             if (ret) {
                 fprintf(log_file, "error(%d) fetching start time for continuous latency", ret);
+                fprintf(stderr, "error(%d) fetching start time for continuous latency", ret);
                 return -1;
             }
         }
 
         offset = write_length - bytes_remaining;
-        bytes_written = write_to_hal(out_handle, data+offset, bytes_remaining);
+        bytes_written = write_to_hal(out_handle, data+offset, bytes_remaining, &stream_param[PRIMARY_STREAM_INDEX]);
         bytes_remaining -= bytes_written;
         fprintf(log_file, "bytes_written %zd, bytes_remaining %zd\n",
                 bytes_written, bytes_remaining);
@@ -606,8 +971,10 @@ void usage() {
     printf("                                             file path is not used here as file playback is not done in this mode\n");
     printf("                                             file path and other file specific options would be ignored in this mode.\n\n");
     printf(" -e  --effect-type <effect type>           - Effect used for test\n");
-    printf("                                             0:bassboost 1:virtualizer 2:equalizer 3:visualizer(NA) 4:reverb 5:audiosphere others:null");
-    printf(" -A  --bt-addr <bt device addr>            - Required to set bt device adress for aptx decoder\n");
+    printf("                                             0:bassboost 1:virtualizer 2:equalizer 3:visualizer(NA) 4:reverb 5:audiosphere others:null\n\n");
+    printf(" -A  --bt-addr <bt device addr>            - Required to set bt device adress for aptx decoder\n\n");
+    printf(" -P                                        - Argument to do multi-stream playback, currently 2 streams are supported to run concurrently\n");
+    printf("                                             Put -P and mention required attributes for the next stream\n");
     printf(" \n Examples \n");
     printf(" hal_play_test -f /etc/Anukoledenadu.wav     -> plays Wav stream with default params\n\n");
     printf(" hal_play_test -f /etc/MateRani.mp3 -t 2 -d 2 -v 0.01 -r 44100 -c 2 \n");
@@ -649,7 +1016,9 @@ void usage() {
     printf(" hal_play_test -f /etc/03_Kuch_Khaas_BE.btaptx -t 9 -d 2 -v 0.2 -r 44100 -c 2 -A 00:02:5b:00:ff:03 \n");
     printf("                                          -> Play aptx clip (-t = 9)\n");
     printf("                                          -> 2 channels and 44100 sample rate\n");
-    printf("                                          -> BT addr: bt_addr=00:02:5b:00:ff:03\n");
+    printf("                                          -> BT addr: bt_addr=00:02:5b:00:ff:03\n\n");
+    printf(" hal_play_test -f /data/silence.ac3 -t 9 -r 48000 -c 2 -v 0.05 -F 16433 -P -f /data/music_48k.ac3 -t 9 -r 48000 -c 2 -F 32817\n");
+    printf("                                          -> Plays a silence clip as main stream and music clip as associated\n\n");
     printf(" hal_play_test -K -F 4                    -> Measure latency KPIs for low latency output\n\n");
     printf(" hal_play_test -f /etc//Moto_320kbps.mp3 -t 2 -d 2 -v 0.1 -r 44100 -c 2 -e 2\n");
     printf("                                          -> plays MP3 stream(-t = 2) on speaker device(-d = 2)\n");
@@ -663,23 +1032,25 @@ static int get_wav_header_length (FILE* file_stream)
 
     fseek(file_stream, 16, SEEK_SET);
     if(fread(&subchunk_size, 4, 1, file_stream) != 1) {
-        fprintf(stdout, "Unable to read subchunk:\n");
+        fprintf(log_file, "Unable to read subchunk:\n");
+        fprintf(stderr, "Unable to read subchunk:\n");
         exit (1);
     }
     if(subchunk_size < 16) {
-        fprintf(stdout, "This is not a valid wav file \n");
+        fprintf(log_file, "This is not a valid wav file \n");
+        fprintf(stderr, "This is not a valid wav file \n");
     } else {
           switch (subchunk_size) {
           case 16:
-              fprintf(stdout, "44-byte wav header \n");
+              fprintf(log_file, "44-byte wav header \n");
               wav_header_len = 44;
               break;
           case 18:
-              fprintf(stdout, "46-byte wav header \n");
+              fprintf(log_file, "46-byte wav header \n");
               wav_header_len = 46;
               break;
           default:
-              fprintf(stdout, "Header contains extra data and is larger than 46 bytes: subchunk_size=%d \n", subchunk_size);
+              fprintf(log_file, "Header contains extra data and is larger than 46 bytes: subchunk_size=%d \n", subchunk_size);
               wav_header_len = subchunk_size;
               break;
           }
@@ -690,36 +1061,23 @@ static int get_wav_header_length (FILE* file_stream)
 
 int main(int argc, char* argv[]) {
 
-    FILE *file_stream = NULL;
-    char header[WAV_HEADER_LENGTH_MAX] = {0};
-    char* filename = nullptr;
     qahw_module_handle_t *qahw_mod_handle = NULL;
     const char *mod_name = "audio.primary";
-    qahw_stream_handle_t* out_handle = nullptr;
-    int rc = 0, wav_header_len = 0;
-    char *kvpair_values = NULL;
-    char kvpair[1000] = {0};
-    struct proxy_data proxy_params;
     char *ba = NULL;
     qahw_param_payload payload;
     qahw_param_id param_id;
     struct qahw_aptx_dec_param aptx_params;
-    /*
-     * Default values
-     */
-    bool kpi_mode = false;
-    bool flags_set = false;
-    bool proxy_thread_active = false;
-    int filetype = FILE_WAV;
-    int sample_rate = 44100;
-    int channels = 2;
-    int bitwidth = 16;
-    aac_format_type_t format_type = AAC_LC;
-    wma_format_type_t wma_format_type = WMA;
+    int rc = 0;
+    int i = 0;
+    int j = 0;
+    kpi_mode = false;
+    proxy_thread_active = false;
+
     log_file = stdout;
-    audio_devices_t output_device = AUDIO_DEVICE_OUT_SPEAKER;
-    audio_output_flags_t flags = AUDIO_OUTPUT_FLAG_NONE;
     proxy_params.acp.file_name = "/data/pcm_dump.wav";
+    init_streams();
+
+    int num_of_streams = 1;
 
     struct option long_options[] = {
         /* These options set a flag. */
@@ -737,6 +1095,7 @@ int main(int argc, char* argv[]) {
         {"kvpairs",       required_argument,    0, 'k'},
         {"flags",         required_argument,    0, 'F'},
         {"kpi-mode",      no_argument,          0, 'K'},
+        {"plus",          no_argument,          0, 'P'},
         {"effect-path",   required_argument,    0, 'e'},
         {"bt-addr",       required_argument,    0, 'A'},
         {"help",          no_argument,          0, 'h'},
@@ -745,453 +1104,255 @@ int main(int argc, char* argv[]) {
 
     int opt = 0;
     int option_index = 0;
-    int effect_index = -1;
-    thread_func_t ethread_func = NULL;
+
     proxy_params.hdr.riff_id = ID_RIFF;
     proxy_params.hdr.riff_sz = 0;
     proxy_params.hdr.riff_fmt = ID_WAVE;
     proxy_params.hdr.fmt_id = ID_FMT;
     proxy_params.hdr.fmt_sz = 16;
     proxy_params.hdr.audio_format = FORMAT_PCM;
-    proxy_params.hdr.num_channels = channels;
-    proxy_params.hdr.sample_rate = sample_rate;
+    proxy_params.hdr.num_channels = 2;
+    proxy_params.hdr.sample_rate = 44100;
     proxy_params.hdr.byte_rate = proxy_params.hdr.sample_rate * proxy_params.hdr.num_channels * 2;
     proxy_params.hdr.block_align = proxy_params.hdr.num_channels * 2;
     proxy_params.hdr.bits_per_sample = 16;
     proxy_params.hdr.data_id = ID_DATA;
     proxy_params.hdr.data_sz = 0;
+
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:v:l:t:a:w:k:D:KF:e:A:h",
+                              "-f:r:c:b:d:v:l:t:a:w:k:PD:KF:e:A:h",
                               long_options,
                               &option_index)) != -1) {
-            switch (opt) {
-            case 'f':
-                filename = optarg;
-                break;
-            case 'r':
-                sample_rate = atoi(optarg);
-                break;
-            case 'c':
-                channels = atoi(optarg);
-                break;
-            case 'b':
-                bitwidth = atoi(optarg);
-                break;
-            case 'd':
-                output_device = atoll(optarg);
-                break;
-            case 'v':
-                vol_level = atof(optarg);
-                break;
-            case 'l':
-                log_filename = optarg;
-                if (strcasecmp(log_filename, "stdout") &&
-                    strcasecmp(log_filename, "1") &&
-                    (log_file = fopen(log_filename,"wb")) == NULL) {
-                    fprintf(stderr, "Cannot open log file %s\n", log_filename);
-                    /* continue to log to std out. */
-                    log_file = stdout;
-                }
 
-                break;
-            case 't':
-                filetype = atoi(optarg);
-                break;
-            case 'a':
-                format_type = atoi(optarg);
-                break;
-            case 'w':
-                wma_format_type = atoi(optarg);
-                break;
-            case 'k':
-                kvpair_values = optarg;
-                break;
-            case 'D':
-                proxy_params.acp.file_name = optarg;
-                break;
-            case 'K':
-                kpi_mode = true;
-                break;
-            case 'F':
-                flags = atoll(optarg);
-                flags_set = true;
-                break;
-            case 'e':
-                effect_index = atoi(optarg);
-                if (effect_index < 0 || effect_index >= EFFECT_MAX) {
-                    fprintf(stderr, "Invalid effect type %d\n", effect_index);
-                    effect_index = -1;
-                } else if (effect_index == 3) {
-                    // visualizer is a special effect that is not perceivable by hearing
-                    // hence, add as an exception in test app.
-                    fprintf(stdout, "visualizer effect testing is not available\n");
-                    effect_index = -1;
-                } else {
-                    ethread_func = effect_thread_funcs[effect_index];
-                }
-                break;
-            case 'A':
-                ba = optarg;
-                break;
-            case 'h':
-                usage();
+        fprintf(log_file, "for argument %c, value is %s\n", opt, optarg);
+
+        switch (opt) {
+        case 'f':
+            stream_param[i].filename = optarg;
+            break;
+        case 'r':
+            stream_param[i].config.offload_info.sample_rate = atoi(optarg);
+            break;
+        case 'c':
+            stream_param[i].channels = atoi(optarg);
+            break;
+        case 'b':
+            stream_param[i].config.offload_info.bit_width = atoi(optarg);
+            break;
+        case 'd':
+            stream_param[i].output_device = atoll(optarg);
+            break;
+        case 'v':
+            vol_level = atof(optarg);
+            break;
+        case 'l':
+            log_filename = optarg;
+            if (strcasecmp(log_filename, "stdout") &&
+                strcasecmp(log_filename, "1") &&
+                (log_file = fopen(log_filename,"wb")) == NULL) {
+                fprintf(log_file, "Cannot open log file %s\n", log_filename);
+                fprintf(stderr, "Cannot open log file %s\n", log_filename);
+                /* continue to log to std out. */
+                log_file = stdout;
+            }
+            break;
+        case 't':
+            stream_param[i].filetype = atoi(optarg);
+            break;
+        case 'a':
+            stream_param[i].aac_fmt_type = atoi(optarg);
+            break;
+        case 'w':
+            stream_param[i].wma_fmt_type = atoi(optarg);
+            break;
+        case 'k':
+            stream_param[i].kvpair_values = optarg;
+            break;
+        case 'D':
+            proxy_params.acp.file_name = optarg;
+            break;
+        case 'K':
+            kpi_mode = true;
+            break;
+        case 'F':
+            stream_param[i].flags = atoll(optarg);
+            stream_param[i].flags_set = true;
+            break;
+        case 'e':
+            stream_param[i].effect_index = atoi(optarg);
+            if (stream_param[i].effect_index < 0 || stream_param[i].effect_index >= EFFECT_MAX) {
+                fprintf(log_file, "Invalid effect type %d\n", stream_param[i].effect_index);
+                fprintf(stderr, "Invalid effect type %d\n", stream_param[i].effect_index);
+                stream_param[i].effect_index = -1;
+            } else if (stream_param[i].effect_index == 3) {
+                // visualizer is a special effect that is not perceivable by hearing
+                // hence, add as an exception in test app.
+                fprintf(log_file, "visualizer effect testing is not available\n");
+                stream_param[i].effect_index = -1;
+            } else {
+                stream_param[i].ethread_func = effect_thread_funcs[stream_param[i].effect_index];
+            }
+            break;
+        case 'A':
+            ba = optarg;
+            break;
+        case 'P':
+            if(i >= MAX_PLAYBACK_STREAMS - 1) {
+                fprintf(log_file, "cannot have more than %d streams\n", MAX_PLAYBACK_STREAMS);
+                fprintf(stderr, "cannot have more than %d streams\n", MAX_PLAYBACK_STREAMS);
                 return 0;
-                break;
-         }
-    }
-
-    if (!kpi_mode) {
-        if (filename == nullptr) {
-            fprintf(stderr, "File name is must for non kpi-mode\n");
+            }
+            i++;
+            fprintf(log_file, "Stream index incremented to %d\n", i);
+            break;
+        case 'h':
             usage();
-            goto EXIT;
+            return 0;
+            break;
+
         }
-        if ((file_stream = fopen(filename, "r"))== NULL) {
-            fprintf(stderr, "Cannot Open Audio File %s\n", filename);
-            goto EXIT;
-        }
-        fprintf(stdout, "Playing:%s\n", filename);
-        fprintf(stdout, "File Type:%d\n", filetype);
     }
 
-    fprintf(stdout, "Sample Rate:%d\n", sample_rate);
-    fprintf(stdout, "Channels:%d\n", channels);
-    fprintf(stdout, "Bitwidth:%d\n", bitwidth);
-    fprintf(stdout, "Log file:%s\n", log_filename);
-    fprintf(stdout, "Volume level:%f\n", vol_level);
-    fprintf(stdout, "Output Device:%d\n", output_device);
-    fprintf(stdout, "Format Type:%d\n", format_type);
-    fprintf(stdout, "kvpair values:%s\n", kvpair_values);
-    fprintf(stdout, "Output Flags:%d\n", flags);
+    num_of_streams = i+1;
+    fprintf(log_file, "Starting audio hal tests for streams : %d\n", num_of_streams);
 
-    /*
-     * Set to a high number so it doesn't interfere with existing stream handles
-     */
-    audio_io_handle_t handle = 0x999;
+    if (kpi_mode == true && num_of_streams > 1) {
+        fprintf(log_file, "kpi-mode is not supported for multi-playback usecase\n");
+        fprintf(stderr, "kpi-mode is not supported for multi-playback usecase\n");
+        goto exit;
+    }
 
-    if (output_device & AUDIO_DEVICE_OUT_ALL_A2DP)
-        fprintf(stdout, "Saving pcm data to file: %s\n", proxy_params.acp.file_name);
-
-    if (effect_index != -1)
-        fprintf(stdout, "Effect type:%s\n", effect_str[effect_index]);
-
-    fprintf(stdout, "Starting audio hal tests.\n");
+    if (num_of_streams > 1 && stream_param[num_of_streams-1].output_device & AUDIO_DEVICE_OUT_ALL_A2DP) {
+        fprintf(log_file, "Proxy thread is not supported for multi-playback usecase\n");
+        fprintf(stderr, "Proxy thread is not supported for multi-playback usecase\n");
+        goto exit;
+    }
 
     qahw_mod_handle = qahw_load_module(mod_name);
 
-    /*
-     * set device connection state for HDMI.
-     */
-     if (output_device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-         char param[100] = {0};
-         snprintf(param, sizeof(param), "%s=%d", "connect", AUDIO_DEVICE_OUT_AUX_DIGITAL);
-         qahw_set_parameters(qahw_mod_handle, param);
-     }
-
-    audio_config_t config;
-    memset(&config, 0, sizeof(audio_config_t));
-
-    if (kpi_mode) {
-        config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
-    } else {
-
-        if (!flags_set) {
-            flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING;
-            flags |= AUDIO_OUTPUT_FLAG_DIRECT;
-        }
-
-        switch (filetype) {
-        case FILE_WAV:
-            /*
-             * Read the wave header
-             */
-            if((wav_header_len = get_wav_header_length(file_stream)) <= 0) {
-                fprintf(stdout, "wav header length is invalid:%d\n", wav_header_len);
-                exit(1);
-            }
-            fseek(file_stream, 0, SEEK_SET);
-            rc = fread (header, wav_header_len, 1, file_stream);
-            if (rc != 1) {
-               fprintf(stdout, "Error .Fread failed\n");
-               exit(0);
-            }
-            if (strncmp (header, "RIFF", 4) && strncmp (header+8, "WAVE", 4)) {
-               fprintf(stdout, "Not a wave format\n");
-               exit (1);
-            }
-            memcpy (&channels, &header[22], 2);
-            memcpy (&sample_rate, &header[24], 4);
-            memcpy (&bitwidth, &header[34], 2);
-            if (bitwidth == 32)
-                config.offload_info.format = AUDIO_FORMAT_PCM_32_BIT;
-            else if (bitwidth == 24)
-                config.offload_info.format = AUDIO_FORMAT_PCM_24_BIT_PACKED;
-            else
-                config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
-            if (!flags_set)
-                flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD;
-            break;
-
-        case FILE_MP3:
-            config.offload_info.format = AUDIO_FORMAT_MP3;
-            break;
-
-        case FILE_AAC:
-        case FILE_AAC_ADTS:
-        case FILE_AAC_LATM:
-            if (!is_valid_aac_format_type(format_type)) {
-                fprintf(log_file, "Invalid format type for AAC %d\n", format_type);
-                goto EXIT;
-            }
-            config.offload_info.format = get_aac_format(filetype, format_type);
-            break;
-        case FILE_FLAC:
-            config.offload_info.format = AUDIO_FORMAT_FLAC;
-            break;
-        case FILE_ALAC:
-            config.offload_info.format = AUDIO_FORMAT_ALAC;
-            break;
-        case FILE_VORBIS:
-            config.offload_info.format = AUDIO_FORMAT_VORBIS;
-            break;
-        case FILE_WMA:
-            if (wma_format_type == WMA)
-               config.offload_info.format = AUDIO_FORMAT_WMA;
-            else
-               config.offload_info.format = AUDIO_FORMAT_WMA_PRO;
-            break;
-        case FILE_MP2:
-            config.offload_info.format = AUDIO_FORMAT_MP2;
-            break;
-        case FILE_AC3:
-            config.offload_info.format = AUDIO_FORMAT_AC3;
-            break;
-        case FILE_EAC3:
-        case FILE_EAC3_JOC:
-            config.offload_info.format = AUDIO_FORMAT_E_AC3;
-            break;
-        case FILE_DTS:
-            config.offload_info.format = AUDIO_FORMAT_DTS;
-            break;
-        case FILE_APTX:
-            config.offload_info.format = AUDIO_FORMAT_APTX;
-            break;
-        default:
-           fprintf(stderr, "Does not support given filetype\n");
-           usage();
-           return 0;
-        }
-    }
-    config.channel_mask = audio_channel_out_mask_from_count(channels);
-    config.sample_rate = sample_rate;
-    config.format = config.offload_info.format;
-    config.offload_info.channel_mask = config.channel_mask;
-    config.offload_info.sample_rate = sample_rate;
-    config.offload_info.bit_width = bitwidth;
-    config.offload_info.version = AUDIO_OFFLOAD_INFO_VERSION_CURRENT;
-    config.offload_info.size = sizeof(audio_offload_info_t);
-
-    fprintf(log_file, "Now playing to output_device=%d sample_rate=%d \n"
-        , output_device, config.offload_info.sample_rate);
-    const char* stream_name = "output_stream";
-
-    if (output_device & AUDIO_DEVICE_OUT_ALL_A2DP) {
-        output_device = AUDIO_DEVICE_OUT_PROXY;
-    }
-    if (filetype == FILE_APTX) {
-        if (ba != NULL) {
-            parse_aptx_dec_bt_addr(ba, &aptx_params);
-            payload = (qahw_param_payload)aptx_params;
-            param_id = QAHW_PARAM_APTX_DEC;
-            fprintf(log_file, "Send BT addr nap %d, uap %d lap %d to HAL\n", aptx_params.bt_addr.nap,
-                        aptx_params.bt_addr.uap, aptx_params.bt_addr.lap);
-            rc = qahw_set_param_data(qahw_mod_handle, param_id, &payload);
-            if (rc != 0)
-                 printf("Error.Failed Set BT addr\n");
-        } else {
-            fprintf(log_file, "BT addr is NULL, Need valid BT addr for aptx file playback to work\n");
-            fprintf(stderr, "BT addr is NULL, Need valid BT addr for aptx file playback to work\n");
-            goto EXIT;
-        }
-    }
-
-    fprintf(log_file, "calling open_out_put_stream:\n");
-    rc = qahw_open_output_stream(qahw_mod_handle,
-                                 handle,
-                                 output_device,
-                                 flags,
-                                 &config,
-                                 &out_handle,
-                                 stream_name);
-    fprintf(log_file, "open output stream is sucess:%d  out_handhle %p\n"
-        , rc, out_handle);
-    if (rc) {
-        fprintf(stdout, "could not open output stream %d \n", rc);
-        goto EXIT;
-    }
-
-    if (kpi_mode) {
-        measure_kpi_values(out_handle, (flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD));
-        goto EXIT;
-    }
-
-    switch(filetype) {
-    case FILE_WMA:
-    case FILE_VORBIS:
-    case FILE_ALAC:
-    case FILE_FLAC:
-        if (!kvpair_values) {
-           fprintf (log_file, "Error!!No metadata for the Clip\n");
-           fprintf (stdout, "Error!!No metadata for the Clip\n");
-           goto EXIT;
-        }
-        read_kvpair(kvpair, kvpair_values, filetype);
-        qahw_out_set_parameters(out_handle, kvpair);
-        break;
-    default:
-        break;
-    }
-
-    if (output_device & AUDIO_DEVICE_OUT_PROXY) {
-        proxy_params.acp.qahw_mod_handle = qahw_mod_handle;
-        proxy_params.acp.handle = 0x998;
-        proxy_params.acp.input_device = AUDIO_DEVICE_IN_PROXY;
-        proxy_params.acp.flags = AUDIO_INPUT_FLAG_NONE;
-        proxy_params.acp.config.channel_mask = audio_channel_in_mask_from_count(AFE_PROXY_CHANNEL_COUNT);
-        proxy_params.acp.config.sample_rate = AFE_PROXY_SAMPLING_RATE;
-        proxy_params.acp.config.format = AUDIO_FORMAT_PCM_16_BIT;
-        proxy_params.acp.kStreamName = "input_stream";
-        proxy_params.acp.kInputSource = AUDIO_SOURCE_UNPROCESSED;
-        proxy_params.acp.thread_exit = false;
-        fprintf(log_file, "create thread to read data from proxy \n");
-        rc = pthread_create(&proxy_thread, NULL, proxy_read, (void *)&proxy_params);
-        if (!rc)
-            proxy_thread_active = true;
-    }
-
-    // create effect thread, use thread_data to transfer command
-    if (ethread_func &&
-            (flags & (AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_DIRECT))) {
-        ethread_data = create_effect_thread(effect_index, ethread_func);
-
-        // create effect command thread
-        cmd_data.exit = false;
-        cmd_data.fx_data_ptr = &ethread_data;
-        pthread_attr_init(&cmd_data.attr);
-        pthread_attr_setdetachstate(&cmd_data.attr, PTHREAD_CREATE_JOINABLE);
-        rc = pthread_create(&cmd_data.cmd_thread, &cmd_data.attr,
-                &command_thread_func, &cmd_data);
-        if (rc < 0) {
-            fprintf(stderr, "Could not create effect command thread!\n");
-            goto EXIT;
-        }
-    }
-
-    if (ethread_data) {
-        // load effect module
-        notify_effect_command(ethread_data, EFFECT_LOAD_LIB, -1, 0, NULL);
-
-        // get effect desc
-        notify_effect_command(ethread_data, EFFECT_GET_DESC, -1, 0, NULL);
-
-        // create effect
-        ethread_data->io_handle = handle;
-        notify_effect_command(ethread_data, EFFECT_CREATE, -1, 0, NULL);
-
-        // broadcast device info
-        notify_effect_command(ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_SET_DEVICE, sizeof(audio_devices_t), &output_device);
-
-        // enable effect
-        notify_effect_command(ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_ENABLE, 0, NULL);
-    }
-
     /* Register the SIGINT to close the App properly */
-    if (signal(SIGINT, stop_signal_handler) == SIG_ERR)
+    if (signal(SIGINT, stop_signal_handler) == SIG_ERR) {
         fprintf(log_file, "Failed to register SIGINT:%d\n",errno);
-
-    play_file(out_handle,
-              file_stream,
-             (flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD));
-
-    if (ethread_data) {
-        // disable effect
-        notify_effect_command(ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_DISABLE, 0, NULL);
-
-        // release effect
-        notify_effect_command(ethread_data, EFFECT_RELEASE, -1, 0, NULL);
-
-        // unload effect module
-        notify_effect_command(ethread_data, EFFECT_UNLOAD_LIB, -1, 0, NULL);
-
-        // destroy effect thread
-        destroy_effect_thread(ethread_data);
-
-        free(ethread_data);
-        ethread_data = NULL;
-
-        // destory effect command thread
-        cmd_data.exit = true;
-        usleep(100000);  // give a chance for thread to exit gracefully
-        rc = pthread_cancel(cmd_data.cmd_thread);
-        if (rc != 0) {
-            fprintf(stderr, "Fail to cancel thread!\n");
-        }
-        rc = pthread_join(cmd_data.cmd_thread, NULL);
-        if (rc < 0) {
-            fprintf(stderr, "Fail to join effect command thread!\n");
-        }
+        fprintf(stderr, "Failed to register SIGINT:%d\n",errno);
     }
 
-    if (proxy_thread_active) {
-       /*
-        * DSP gives drain ack for last buffer which will close proxy thread before
-        * app reads last buffer. So add sleep before exiting proxy thread to read
-        * last buffer of data. This is not a calculated value.
-        */
-        usleep(500000);
-        proxy_params.acp.thread_exit = true;
-        fprintf(log_file, "wait for proxy thread exit\n");
+    for (i = 0; i < num_of_streams; i++) {
+        fprintf(log_file, "Playing:%s\n", stream_param[i].filename);
+        
+        stream_param[i].qahw_mod_handle = qahw_mod_handle;
+
+        if (kpi_mode == false) {
+            if (stream_param[PRIMARY_STREAM_INDEX].filename == nullptr) {
+                fprintf(log_file, "Primary file name is must for non kpi-mode\n");
+                fprintf(stderr, "Primary file name is must for non kpi-mode\n");
+                goto exit;
+            }
+            if ((stream_param[i].file_stream = fopen(stream_param[i].filename, "r"))== NULL) {
+                fprintf(log_file, "Cannot open audio file %s\n", stream_param[i].filename);
+                fprintf(stderr, "Cannot open audio file %s\n", stream_param[i].filename);
+                goto exit;
+            }
+        }
+
+        if (stream_param[i].output_device & AUDIO_DEVICE_OUT_ALL_A2DP)
+            fprintf(log_file, "Saving pcm data to file: %s\n", proxy_params.acp.file_name);
+
+        /* Set device connection state for HDMI */
+        if (stream_param[i].output_device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            char param[100] = {0};
+            snprintf(param, sizeof(param), "%s=%d", "connect", AUDIO_DEVICE_OUT_AUX_DIGITAL);
+            qahw_set_parameters(qahw_mod_handle, param);
+        }
+
+        if (kpi_mode == true) {
+            stream_param[i].config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
+        } else {
+            get_file_format(&stream_param[i]);
+        }
+
+        fprintf(log_file, "stream %d: File Type:%d\n", stream_param[i].stream_index, stream_param[i].filetype);
+        fprintf(log_file, "stream %d: Audio Format:%d\n", stream_param[i].stream_index, stream_param[i].config.offload_info.format);
+        fprintf(log_file, "stream %d: Output Device:%d\n", stream_param[i].stream_index, stream_param[i].output_device);
+        fprintf(log_file, "stream %d: Output Flags:%d\n", stream_param[i].stream_index, stream_param[i].flags);
+        fprintf(log_file, "stream %d: Sample Rate:%d\n", stream_param[i].stream_index, stream_param[i].config.offload_info.sample_rate);
+        fprintf(log_file, "stream %d: Channels:%d\n", stream_param[i].stream_index, stream_param[i].channels);
+        fprintf(log_file, "stream %d: Bitwidth:%d\n", stream_param[i].stream_index, stream_param[i].config.offload_info.bit_width);
+        fprintf(log_file, "stream %d: AAC Format Type:%d\n", stream_param[i].stream_index, stream_param[i].aac_fmt_type);
+        fprintf(log_file, "stream %d: Kvpair Values:%s\n", stream_param[i].stream_index, stream_param[i].kvpair_values);
+        fprintf(log_file, "Log file:%s\n", log_filename);
+        fprintf(log_file, "Volume level:%f\n", vol_level);
+
+        stream_param[i].config.offload_info.channel_mask = stream_param[i].config.channel_mask;
+        stream_param[i].config.offload_info.version = AUDIO_OFFLOAD_INFO_VERSION_CURRENT;
+        stream_param[i].config.offload_info.size = sizeof(audio_offload_info_t);
+
+        stream_param[i].config.channel_mask = audio_channel_out_mask_from_count(stream_param[i].channels);
+        stream_param[i].config.format = stream_param[i].config.offload_info.format;
+        stream_param[i].config.sample_rate = stream_param[i].config.offload_info.sample_rate;
+
+        fprintf(log_file, "stream %d: playing to output_device=%d \n", stream_param[i].stream_index, stream_param[i].output_device);
+
+        if (stream_param[i].filetype == FILE_APTX) {
+            if (ba != NULL) {
+                parse_aptx_dec_bt_addr(ba, &aptx_params);
+                payload = (qahw_param_payload)aptx_params;
+                param_id = QAHW_PARAM_APTX_DEC;
+                fprintf(log_file, "Send BT addr nap %d, uap %d lap %d to HAL\n", aptx_params.bt_addr.nap,
+                            aptx_params.bt_addr.uap, aptx_params.bt_addr.lap);
+                rc = qahw_set_param_data(qahw_mod_handle, param_id, &payload);
+                if (rc != 0)
+                     fprintf(log_file, "Error.Failed Set BT addr\n");
+                     fprintf(stderr, "Error.Failed Set BT addr\n");
+            } else {
+                fprintf(log_file, "BT addr is NULL, Need valid BT addr for aptx file playback to work\n");
+                fprintf(stderr, "BT addr is NULL, Need valid BT addr for aptx file playback to work\n");
+                goto exit;
+            }
+        }
+
+        rc = pthread_create(&playback_thread[i], NULL, start_stream_playback, (void *)&stream_param[i]);
+        if (rc) {
+            fprintf(log_file, "stream %d: failed to create thread\n", stream_param[i].stream_index);
+            fprintf(stderr, "stream %d: failed to create thread\n", stream_param[i].stream_index);
+            exit(0);
+        }
+
+        thread_active[i] = true;
+
     }
 
-EXIT:
+exit:
 
-    if (proxy_thread_active)
-        pthread_join(proxy_thread, NULL);
-
-    if (out_handle != nullptr) {
-        rc = qahw_out_standby(out_handle);
-        if (rc) {
-            fprintf(stdout, "out standby failed %d \n", rc);
-        }
-
-        rc = qahw_close_output_stream(out_handle);
-        if (rc) {
-            fprintf(stdout, "could not close output stream %d \n", rc);
-        }
+    for (i=0; i<MAX_PLAYBACK_STREAMS; i++) {
+        if(thread_active[i])
+            pthread_join(playback_thread[i], NULL);
     }
 
     /*
-     * reset device connection state for HDMI.
+     * reset device connection state for HDMI and close the file streams
      */
-     if (output_device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-         char param[100] = {0};
-         snprintf(param, sizeof(param), "%s=%d", "disconnect", AUDIO_DEVICE_OUT_AUX_DIGITAL);
-         qahw_set_parameters(qahw_mod_handle, param);
-     }
+     for (i = 0; i < num_of_streams; i++) {
+         if (stream_param[i].output_device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+             char param[100] = {0};
+             snprintf(param, sizeof(param), "%s=%d", "disconnect", AUDIO_DEVICE_OUT_AUX_DIGITAL);
+             qahw_set_parameters(qahw_mod_handle, param);
+         }
+
+        if (stream_param[i].file_stream != nullptr)
+            fclose(stream_param[i].file_stream);
+    }
 
     rc = qahw_unload_module(qahw_mod_handle);
     if (rc) {
-        fprintf(stdout, "could not unload hal  %d \n", rc);
+        fprintf(log_file, "could not unload hal  %d \n", rc);
+        fprintf(stderr, "could not unload hal  %d \n", rc);
         return -1;
     }
 
     if ((log_file != stdout) && (log_file != nullptr))
         fclose(log_file);
 
-    if (file_stream != nullptr)
-        fclose(file_stream);
-
-    fprintf(stdout, "\nBYE BYE\n");
+    fprintf(log_file, "\nBYE BYE\n");
     return 0;
 }
