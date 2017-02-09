@@ -1824,7 +1824,7 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
     int wsa_count = 0;
 
     /* SL/SH hardware always has wsa by default, no need to add wsa */
-    if(!strncmp(snd_card_name, "sdm660", strlen("sdm660"))) {
+    if(snd_card_name && !strncmp(snd_card_name, "sdm660", strlen("sdm660"))) {
         ALOGD(" Ignore WSA extension for sdm 660 varients");
         return false;
     }
