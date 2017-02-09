@@ -253,12 +253,6 @@ bool audio_extn_hfp_is_active(struct audio_device *adev);
 audio_usecase_t audio_extn_hfp_get_usecase();
 #endif
 
-#ifndef HFP_ENABLED
-#define audio_extn_hfp_is_active(adev)                  (0)
-#else
-bool audio_extn_hfp_is_active(struct audio_device *adev);
-#endif
-
 #ifndef KPI_OPTIMIZE_ENABLED
 #define audio_extn_perf_lock_init() (0)
 #define audio_extn_perf_lock_acquire() (0)
