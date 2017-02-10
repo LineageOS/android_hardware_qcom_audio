@@ -214,7 +214,7 @@ typedef struct codec_backend_cfg {
     char     *channels_mixer_ctl;
 } codec_backend_cfg_t;
 
-static native_audio_prop na_props = {0, 0, 0};
+static native_audio_prop na_props = {0, 0, NATIVE_AUDIO_MODE_INVALID};
 static bool supports_true_32_bit = false;
 typedef int (*acdb_send_gain_dep_cal_t)(int, int, int, int, int);
 
@@ -2134,16 +2134,13 @@ acdb_init_fail:
                       __func__);
                 platform_set_native_support(NATIVE_AUDIO_MODE_SRC);
             }
-        } else {
-            platform_set_native_support(NATIVE_AUDIO_MODE_INVALID);
         }
-    }
-
-    if(strstr(snd_card_name, "tavil")) {
-        ALOGD("%s:DSD playback is supported", __func__);
-        my_data->is_dsd_supported = true;
-        my_data->is_asrc_supported = true;
-        platform_set_native_support(NATIVE_AUDIO_MODE_MULTIPLE_44_1);
+        if (strstr(snd_card_name, "tavil")) {
+            ALOGD("%s:DSD playback is supported", __func__);
+            my_data->is_dsd_supported = true;
+            my_data->is_asrc_supported = true;
+            platform_set_native_support(NATIVE_AUDIO_MODE_MULTIPLE_44_1);
+        }
     }
 
     my_data->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
