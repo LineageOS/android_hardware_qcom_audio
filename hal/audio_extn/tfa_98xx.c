@@ -512,7 +512,6 @@ int audio_extn_tfa_98xx_init(struct audio_device *adev)
         ret = data->set_speaker_calibration(0);
         if (ret) {
             ALOGE("%s: exTfa98xx_calibration return %d\n", __func__, ret);
-            goto err_init;
         }
 
         ret = tfa_98xx_set_audio_mode(I2S_CLOCK_DISABLE, adev, Audio_Mode_Music_Normal);
