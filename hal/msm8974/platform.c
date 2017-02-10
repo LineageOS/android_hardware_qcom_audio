@@ -158,11 +158,16 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                         MULTIMEDIA2_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_ULL] = {MULTIMEDIA3_PCM_DEVICE,
                                     MULTIMEDIA3_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_MMAP] = {MMAP_PLAYBACK_PCM_DEVICE,
+            MMAP_PLAYBACK_PCM_DEVICE},
 
     [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE,
                               AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
                                           LOWLATENCY_PCM_DEVICE},
+
+    [USECASE_AUDIO_RECORD_MMAP] = {MMAP_RECORD_PCM_DEVICE,
+            MMAP_RECORD_PCM_DEVICE},
 
     [USECASE_VOICE_CALL] = {VOICE_CALL_PCM_DEVICE,
                             VOICE_CALL_PCM_DEVICE},
@@ -499,8 +504,10 @@ static const struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_TTS)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_ULL)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_MMAP)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_LOW_LATENCY)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_MMAP)},
     {TO_NAME_INDEX(USECASE_VOICE_CALL)},
     {TO_NAME_INDEX(USECASE_VOICE2_CALL)},
     {TO_NAME_INDEX(USECASE_VOLTE_CALL)},
@@ -516,7 +523,8 @@ static const struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
 
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
-#define ULL_PLATFORM_DELAY         (7*1000LL)
+#define ULL_PLATFORM_DELAY         (3*1000LL)
+#define MMAP_PLATFORM_DELAY        (3*1000LL)
 
 static pthread_once_t check_op_once_ctl = PTHREAD_ONCE_INIT;
 static bool is_tmus = false;
@@ -2621,6 +2629,8 @@ int64_t platform_render_latency(audio_usecase_t usecase)
             return LOW_LATENCY_PLATFORM_DELAY;
         case USECASE_AUDIO_PLAYBACK_ULL:
             return ULL_PLATFORM_DELAY;
+        case USECASE_AUDIO_PLAYBACK_MMAP:
+            return MMAP_PLATFORM_DELAY;
         default:
             return 0;
     }

@@ -71,6 +71,7 @@ enum {
     USECASE_AUDIO_PLAYBACK_OFFLOAD,
     USECASE_AUDIO_PLAYBACK_TTS,
     USECASE_AUDIO_PLAYBACK_ULL,
+    USECASE_AUDIO_PLAYBACK_MMAP,
 
     /* HFP Use case*/
     USECASE_AUDIO_HFP_SCO,
@@ -79,6 +80,7 @@ enum {
     /* Capture usecases */
     USECASE_AUDIO_RECORD,
     USECASE_AUDIO_RECORD_LOW_LATENCY,
+    USECASE_AUDIO_RECORD_MMAP,
 
     /* Voice extension usecases
      *
@@ -238,6 +240,7 @@ struct stream_in {
     struct audio_device *dev;
     audio_format_t format;
     card_status_t card_status;
+    int capture_started;
 };
 
 typedef enum usecase_type_t {
