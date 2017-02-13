@@ -91,7 +91,7 @@ hardware/qcom/audio/configs/msm8953/sound_trigger_mixer_paths_wcd9335.xml:system
 hardware/qcom/audio/configs/msm8953/sound_trigger_platform_info.xml:system/etc/sound_trigger_platform_info.xml \
 hardware/qcom/audio/configs/msm8953/audio_platform_info.xml:system/etc/audio_platform_info.xml \
 hardware/qcom/audio/configs/msm8953/audio_platform_info_extcodec.xml:system/etc/audio_platform_info_extcodec.xml \
-hardware/qcom/audio/configs/msm8953/aanc_tuning_mixer.txt:system/etc/aanc_tuning_mixer.txt
+hardware/qcom/audio/configs/msm8953/audio_tuning_mixer.txt:system/etc/audio_tuning_mixer.txt
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
