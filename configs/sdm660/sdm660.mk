@@ -78,11 +78,13 @@ PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/sdm660/mixer_paths_wcd9340.xml:system/etc/mixer_paths_wcd9340.xml \
     hardware/qcom/audio/configs/sdm660/mixer_paths_wcd9326.xml:system/etc/mixer_paths_wcd9326.xml \
     hardware/qcom/audio/configs/sdm660/mixer_paths_skus.xml:system/etc/mixer_paths_skus.xml \
+    hardware/qcom/audio/configs/sdm660/mixer_paths_skush.xml:system/etc/mixer_paths_skush.xml \
     hardware/qcom/audio/configs/sdm660/mixer_paths_i2s.xml:system/etc/mixer_paths_i2s.xml \
     hardware/qcom/audio/configs/sdm660/aanc_tuning_mixer.txt:system/etc/aanc_tuning_mixer.txt \
     hardware/qcom/audio/configs/sdm660/aanc_tuning_mixer_tavil.txt:system/etc/aanc_tuning_mixer_tavil.txt \
     hardware/qcom/audio/configs/sdm660/audio_platform_info_extcodec.xml:system/etc/audio_platform_info_extcodec.xml \
     hardware/qcom/audio/configs/sdm660/audio_platform_info.xml:system/etc/audio_platform_info.xml \
+    hardware/qcom/audio/configs/sdm660/audio_platform_info_skush.xml:system/etc/audio_platform_info_skush.xml \
     hardware/qcom/audio/configs/sdm660/sound_trigger_mixer_paths.xml:system/etc/sound_trigger_mixer_paths.xml \
     hardware/qcom/audio/configs/sdm660/sound_trigger_mixer_paths_wcd9330.xml:system/etc/sound_trigger_mixer_paths_wcd9330.xml \
     hardware/qcom/audio/configs/sdm660/sound_trigger_mixer_paths_wcd9335.xml:system/etc/sound_trigger_mixer_paths_wcd9335.xml \
