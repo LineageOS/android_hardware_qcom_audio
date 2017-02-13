@@ -162,10 +162,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
 audio.dolby.ds2.enabled=true\
 audio.dolby.ds2.hardbypass=true
 
-#Enable compress passthrough session
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.passthrough=true
-
 #Disable Multiple offload sesison
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.offload.multiple.enabled=false

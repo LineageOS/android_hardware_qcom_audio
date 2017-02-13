@@ -45,7 +45,7 @@
 #endif
 
 #ifndef AUDIO_DEVICE_IN_PROXY
-#define AUDIO_DEVICE_IN_PROXY (AUDIO_DEVICE_BIT_IN | 0x1000000)
+#define AUDIO_DEVICE_IN_PROXY (AUDIO_DEVICE_BIT_IN | 0x2000000)
 #endif
 
 #ifndef INCALL_MUSIC_ENABLED
@@ -205,6 +205,7 @@ bool audio_extn_usb_is_capture_supported();
 #define audio_extn_a2dp_is_force_device_switch()         (0)
 #define audio_extn_a2dp_set_handoff_mode(is_on)          (0)
 #define audio_extn_a2dp_get_apptype_params(sample_rate,bit_width)    (0)
+#define audio_extn_a2dp_get_encoder_latency()            (0)
 
 #else
 void audio_extn_a2dp_init(void *adev);
@@ -215,6 +216,7 @@ bool audio_extn_a2dp_is_force_device_switch();
 void audio_extn_a2dp_set_handoff_mode(bool is_on);
 void audio_extn_a2dp_get_apptype_params(uint32_t *sample_rate,
                                         uint32_t *bit_width);
+uint32_t audio_extn_a2dp_get_encoder_latency();
 
 #endif
 
@@ -503,10 +505,13 @@ bool audio_extn_passthru_should_standby(struct stream_out *out);
 #define audio_extn_hfp_is_active(adev)                  (0)
 #define audio_extn_hfp_get_usecase()                    (-1)
 #define hfp_set_mic_mute(dev, state)                    (0)
+#define audio_extn_hfp_set_parameters(adev, parms)      (0)
 #else
 bool audio_extn_hfp_is_active(struct audio_device *adev);
 audio_usecase_t audio_extn_hfp_get_usecase();
 int hfp_set_mic_mute(struct audio_device *dev, bool state);
+void audio_extn_hfp_set_parameters(struct audio_device *adev,
+                                           struct str_parms *parms);
 #endif
 
 #ifndef DEV_ARBI_ENABLED

@@ -1,5 +1,4 @@
-/* hfp.c
-Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -44,6 +43,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #define AUDIO_PARAMETER_HFP_ENABLE      "hfp_enable"
 #define AUDIO_PARAMETER_HFP_SET_SAMPLING_RATE "hfp_set_sampling_rate"
 #define AUDIO_PARAMETER_KEY_HFP_VOLUME "hfp_volume"
+#define AUDIO_PARAMETER_HFP_PCM_DEV_ID "hfp_pcm_dev_id"
 
 #ifdef PLATFORM_MSM8994
 #define HFP_RX_VOLUME     "SEC AUXPCM LOOPBACK Volume"
@@ -67,6 +67,7 @@ struct hfp_module {
     struct pcm *hfp_pcm_tx;
     bool is_hfp_running;
     float hfp_volume;
+    int32_t hfp_pcm_dev_id;
     audio_usecase_t ucid;
 };
 
@@ -75,8 +76,9 @@ static struct hfp_module hfpmod = {
     .hfp_sco_tx = NULL,
     .hfp_pcm_rx = NULL,
     .hfp_pcm_tx = NULL,
-    .hfp_volume = 0,
     .is_hfp_running = 0,
+    .hfp_volume = 0,
+    .hfp_pcm_dev_id = HFP_ASM_RX_TX,
     .ucid = USECASE_AUDIO_HFP_SCO,
 };
 static struct pcm_config pcm_config_hfp = {
@@ -157,8 +159,8 @@ static int32_t start_hfp(struct audio_device *adev,
 
     pcm_dev_rx_id = platform_get_pcm_device_id(uc_info->id, PCM_PLAYBACK);
     pcm_dev_tx_id = platform_get_pcm_device_id(uc_info->id, PCM_CAPTURE);
-    pcm_dev_asm_rx_id = HFP_ASM_RX_TX;
-    pcm_dev_asm_tx_id = HFP_ASM_RX_TX;
+    pcm_dev_asm_rx_id = hfpmod.hfp_pcm_dev_id;
+    pcm_dev_asm_tx_id = hfpmod.hfp_pcm_dev_id;
     if (pcm_dev_rx_id < 0 || pcm_dev_tx_id < 0 ||
         pcm_dev_asm_rx_id < 0 || pcm_dev_asm_tx_id < 0 ) {
         ALOGE("%s: Invalid PCM devices (rx: %d tx: %d asm: rx tx %d) for the usecase(%d)",
@@ -167,11 +169,9 @@ static int32_t start_hfp(struct audio_device *adev,
         goto exit;
     }
 
-    ALOGV("%s: HFP PCM devices (hfp rx tx: %d pcm rx tx: %d) for the usecase(%d)",
-              __func__, pcm_dev_rx_id, pcm_dev_tx_id, uc_info->id);
+    ALOGD("%s: HFP PCM devices (rx: %d tx: %d pcm dev id: %d) usecase(%d)",
+              __func__, pcm_dev_rx_id, pcm_dev_tx_id, hfpmod.hfp_pcm_dev_id, uc_info->id);
 
-    ALOGV("%s: Opening PCM playback device card_id(%d) device_id(%d)",
-          __func__, adev->snd_card, pcm_dev_rx_id);
     hfpmod.hfp_sco_rx = pcm_open(adev->snd_card,
                                   pcm_dev_asm_rx_id,
                                   PCM_OUT, &pcm_config_hfp);
@@ -180,8 +180,7 @@ static int32_t start_hfp(struct audio_device *adev,
         ret = -EIO;
         goto exit;
     }
-    ALOGD("%s: Opening PCM capture device card_id(%d) device_id(%d)",
-          __func__, adev->snd_card, pcm_dev_tx_id);
+
     hfpmod.hfp_pcm_rx = pcm_open(adev->snd_card,
                                    pcm_dev_rx_id,
                                    PCM_OUT, &pcm_config_hfp);
@@ -190,6 +189,7 @@ static int32_t start_hfp(struct audio_device *adev,
         ret = -EIO;
         goto exit;
     }
+
     hfpmod.hfp_sco_tx = pcm_open(adev->snd_card,
                                   pcm_dev_asm_tx_id,
                                   PCM_IN, &pcm_config_hfp);
@@ -198,8 +198,7 @@ static int32_t start_hfp(struct audio_device *adev,
         ret = -EIO;
         goto exit;
     }
-    ALOGV("%s: Opening PCM capture device card_id(%d) device_id(%d)",
-          __func__, adev->snd_card, pcm_dev_tx_id);
+
     hfpmod.hfp_pcm_tx = pcm_open(adev->snd_card,
                                    pcm_dev_tx_id,
                                    PCM_IN, &pcm_config_hfp);
@@ -208,6 +207,7 @@ static int32_t start_hfp(struct audio_device *adev,
         ret = -EIO;
         goto exit;
     }
+
     if (pcm_start(hfpmod.hfp_sco_rx) < 0) {
         ALOGE("%s: pcm start for hfp sco rx failed", __func__);
         ret = -EINVAL;
@@ -338,10 +338,12 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_ENABLE, value,
                             sizeof(value));
     if (ret >= 0) {
-           if (!strncmp(value,"true",sizeof(value)))
-               ret = start_hfp(adev,parms);
-           else
-               stop_hfp(adev);
+            if (!strncmp(value, "true", sizeof(value)) && !hfpmod.is_hfp_running)
+                ret = start_hfp(adev,parms);
+            else if (!strncmp(value, "false", sizeof(value)) && hfpmod.is_hfp_running)
+                stop_hfp(adev);
+            else
+                ALOGE("hfp_enable=%s is unsupported", value);
     }
     memset(value, 0, sizeof(value));
     ret = str_parms_get_str(parms,AUDIO_PARAMETER_HFP_SET_SAMPLING_RATE, value,
@@ -381,6 +383,15 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *
         ALOGD("%s: set_hfp_volume usecase, Vol: [%f]", __func__, vol);
         hfp_set_volume(adev, vol);
     }
+
+    memset(value, 0, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_PCM_DEV_ID, value, sizeof(value));
+    if (ret >= 0) {
+        hfpmod.hfp_pcm_dev_id = atoi(value);
+        ALOGD("Updating HFP_PCM_DEV_ID as %d from platform XML", hfpmod.hfp_pcm_dev_id);
+        str_parms_del(parms, AUDIO_PARAMETER_HFP_PCM_DEV_ID);
+    }
+
 exit:
     ALOGV("%s Exit",__func__);
 }

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-16, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -185,6 +185,14 @@ static void a2dp_offload_codec_cap_parser(char *value)
             break;
         } else if (strcmp(tok, "aptx") == 0) {
             ALOGD("%s: aptx offload supported\n",__func__);
+            a2dp.is_a2dp_offload_supported = true;
+            break;
+        } else if (strcmp(tok, "aptxhd") == 0) {
+            ALOGD("%s: aptx HD offload supported\n",__func__);
+            a2dp.is_a2dp_offload_supported = true;
+            break;
+        } else if (strcmp(tok, "aac") == 0) {
+            ALOGD("%s: aac offload supported\n",__func__);
             a2dp.is_a2dp_offload_supported = true;
             break;
         }
@@ -815,5 +823,52 @@ void audio_extn_a2dp_init (void *adev)
   a2dp.is_a2dp_offload_supported = false;
   a2dp.is_handoff_in_progress = false;
   update_offload_codec_capabilities();
+}
+
+uint32_t audio_extn_a2dp_get_encoder_latency()
+{
+    void *codec_info = NULL;
+    uint8_t multi_cast = 0, num_dev = 1;
+    audio_format_t codec_type = AUDIO_FORMAT_INVALID;
+    uint32_t latency = 0;
+    int avsync_runtime_prop = 0;
+    int sbc_offset = 0, aptx_offset = 0, aptxhd_offset = 0, aac_offset = 0;
+    char value[PROPERTY_VALUE_MAX];
+
+    if (!a2dp.audio_get_codec_config) {
+        ALOGE(" a2dp handle is not identified");
+        return latency;
+    }
+    codec_info = a2dp.audio_get_codec_config(&multi_cast, &num_dev,
+                               &codec_type);
+
+    memset(value, '\0', sizeof(char)*PROPERTY_VALUE_MAX);
+    avsync_runtime_prop = property_get("audio.a2dp.codec.latency", value, NULL);
+    if (avsync_runtime_prop > 0) {
+        if (sscanf(value, "%d/%d/%d/%d",
+                  &sbc_offset, &aptx_offset, &aptxhd_offset, &aac_offset) != 4) {
+            ALOGI("Failed to parse avsync offset params from '%s'.", value);
+            avsync_runtime_prop = 0;
+        }
+    }
+
+    switch(codec_type) {
+        case AUDIO_FORMAT_SBC:
+            latency = (avsync_runtime_prop > 0) ? sbc_offset : 150;
+            break;
+        case AUDIO_FORMAT_APTX:
+            latency = (avsync_runtime_prop > 0) ? aptx_offset : 200;
+            break;
+        case AUDIO_FORMAT_APTX_HD:
+            latency = (avsync_runtime_prop > 0) ? aptxhd_offset : 200;
+            break;
+        case AUDIO_FORMAT_AAC:
+            latency = (avsync_runtime_prop > 0) ? aac_offset : 250;
+            break;
+        default:
+            latency = 200;
+            break;
+    }
+    return latency;
 }
 #endif // SPLIT_A2DP_ENABLED
