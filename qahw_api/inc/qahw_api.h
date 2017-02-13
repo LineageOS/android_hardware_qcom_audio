@@ -141,6 +141,16 @@ int qahw_out_set_parameters(qahw_stream_handle_t *stream, const char*kv_pairs);
 char* qahw_out_get_parameters(const qahw_stream_handle_t *stream,
                                const char *keys);
 
+/* API to set playback stream specific config parameters */
+int qahw_out_set_param_data(qahw_stream_handle_t *out_handle,
+                            qahw_param_id param_id,
+                            qahw_param_payload *payload);
+
+/* API to get playback stream specific config parameters */
+int qahw_out_get_param_data(qahw_stream_handle_t *out_handle,
+                            qahw_param_id param_id,
+                            qahw_param_payload *payload);
+
 /*
  * Return the audio hardware driver estimated latency in milliseconds.
  */
@@ -269,7 +279,6 @@ int qahw_open_input_stream(qahw_module_handle_t *hw_module,
                            audio_source_t source);
 
 int qahw_close_input_stream(qahw_stream_handle_t *in_handle);
-
 
 /*
  * Return the sampling rate in Hz - eg. 44100.

@@ -243,18 +243,36 @@ struct qahw_aptx_dec_param {
    struct aptx_dec_bt_addr bt_addr;
 };
 
+struct qahw_avt_device_drift_param {
+   /* Flag to indicate if resync is required on the client side for
+    * drift correction. Flag is set to TRUE for the first get_param response
+    * after device interface starts. This flag value can be used by client
+    * to identify if device interface restart has happened and if any
+    * re-sync is required at their end for drift correction.
+    */
+    uint32_t        resync_flag;
+    /* Accumulated drift value in microseconds.
+     * Positive drift value indicates AV timer is running faster than device.
+     * Negative drift value indicates AV timer is running slower than device.
+     */
+    int32_t         avt_device_drift_value;
+    /* 64-bit absolute timestamp of reference */
+    uint64_t        ref_timer_abs_ts;
+};
+
 typedef union {
     struct qahw_source_tracking_param st_params;
     struct qahw_sound_focus_param sf_params;
     struct qahw_aptx_dec_param aptx_params;
+    struct qahw_avt_device_drift_param drift_params;
 } qahw_param_payload;
 
 typedef enum {
     QAHW_PARAM_SOURCE_TRACK,
     QAHW_PARAM_SOUND_FOCUS,
-    QAHW_PARAM_APTX_DEC
+    QAHW_PARAM_APTX_DEC,
+    QAHW_PARAM_AVT_DEVICE_DRIFT /* PARAM to query AV timer vs device drift */
 } qahw_param_id;
-
 
 __END_DECLS
 
