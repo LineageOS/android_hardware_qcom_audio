@@ -146,6 +146,8 @@
     <ctl name="INT4_MI2S_RX Channels" value="One" />
     <ctl name="INT0_MI2S_RX Channels" value="One" />
     <ctl name="INT3_MI2S_TX Channels" value="One" />
+    <ctl name="I2S TX2 INP1" value="ZERO" />
+    <ctl name="I2S TX2 INP2" value="ZERO" />
     <ctl name="INT4_MI2S_RX Audio Mixer MultiMedia4" value="0" />
     <ctl name="HDMI Mixer MultiMedia4" value="0" />
     <ctl name="INT4_MI2S_RX_VI_FB_MONO_CH_MUX" value="ZERO" />
@@ -284,6 +286,7 @@
     <ctl name="SpkrLeft SWR DAC_Port Switch" value="0" />
     <ctl name="SpkrRight SWR DAC_Port Switch" value="0" />
     <ctl name="SpkrLeft WSA PA Gain" value="G_0_DB" />
+    <ctl name="EAR SPKR PA Gain" value="G_DEFAULT" />
 
     <!-- Volume controls -->
     <ctl name="HPHL Volume" value="9" />
@@ -1594,8 +1597,8 @@
 
     <path name="speaker">
         <ctl name="INT4_MI2S_RX Channels" value="Two" />
-        <ctl name="RX4 MIX1 INP1" value="RX1" />
-        <ctl name="RX5 MIX1 INP1" value="RX2" />
+        <ctl name="RX4 MIX1 INP1" value="RX4" />
+        <ctl name="RX5 MIX1 INP1" value="RX5" />
         <ctl name="COMP1 Switch" value="1" />
         <ctl name="COMP2 Switch" value="1" />
         <ctl name="SpkrLeft COMP Switch" value="1" />
@@ -1610,7 +1613,7 @@
 
     <path name="speaker-mono">
         <ctl name="INT4_MI2S_RX Channels" value="One" />
-        <ctl name="RX4 MIX1 INP1" value="RX1" />
+        <ctl name="RX4 MIX1 INP1" value="RX4" />
         <ctl name="COMP1 Switch" value="1" />
         <ctl name="SpkrLeft COMP Switch" value="1" />
         <ctl name="SpkrLeft BOOST Switch" value="1" />
@@ -1620,7 +1623,7 @@
 
     <path name="speaker-mono-2">
         <ctl name="INT4_MI2S_RX Channels" value="One" />
-        <ctl name="RX5 MIX1 INP1" value="RX2" />
+        <ctl name="RX5 MIX1 INP1" value="RX4" />
         <ctl name="COMP2 Switch" value="1" />
         <ctl name="SpkrRight COMP Switch" value="1" />
         <ctl name="SpkrRight BOOST Switch" value="1" />
@@ -1726,6 +1729,7 @@
 
     <path name="handset">
         <path name="speaker-mono" />
+        <ctl name="EAR SPKR PA Gain" value="G_6_DB" />
     </path>
 
     <path name="handset-mic">
@@ -1747,6 +1751,7 @@
         <ctl name="DEC1 MUX" value="DMIC1" />
         <ctl name="DEC2 MUX" value="DMIC3" />
         <ctl name="DEC3 MUX" value="DMIC4" />
+        <ctl name="I2S TX2 INP1" value="DEC3" />
     </path>
 
     <path name="anc-handset">
@@ -2034,7 +2039,9 @@
         <ctl name="DEC1 MUX" value="DMIC2" />
         <ctl name="DEC2 MUX" value="DMIC1" />
         <ctl name="DEC3 MUX" value="DMIC3" />
+        <ctl name="I2S TX2 INP1" value="DEC3" />
         <ctl name="DEC4 MUX" value="DMIC4" />
+        <ctl name="I2S TX2 INP2" value="DEC4" />
     </path>
 
     <path name="speaker-qmic-liquid">

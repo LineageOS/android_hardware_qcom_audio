@@ -66,6 +66,7 @@ struct audio_extn_module {
     bool vbat_enabled;
     bool hifi_audio_enabled;
     bool ras_enabled;
+    struct aptx_dec_bt_addr addr;
 };
 
 static struct audio_extn_module aextnmod;
@@ -77,6 +78,7 @@ static struct audio_extn_module aextnmod;
 /* Query offload playback instances count */
 #define AUDIO_PARAMETER_OFFLOAD_NUM_ACTIVE "offload_num_active"
 #define AUDIO_PARAMETER_HPX            "HPX"
+#define AUDIO_PARAMETER_APTX_DEC_BT_ADDR "bt_addr"
 
 /*
 * update sysfs node hdmi_audio_cb to enable notification acknowledge feature
@@ -762,7 +764,7 @@ static int get_active_offload_usecases(const struct audio_device *adev,
     return ret;
 }
 
-void audio_extn_init(void)
+void audio_extn_init(struct audio_device *adev)
 {
     aextnmod.anc_enabled = 0;
     aextnmod.aanc_enabled = 0;
@@ -771,6 +773,12 @@ void audio_extn_init(void)
     aextnmod.hpx_enabled = 0;
     aextnmod.vbat_enabled = 0;
     aextnmod.hifi_audio_enabled = 0;
+    aextnmod.addr.nap = 0;
+    aextnmod.addr.uap = 0;
+    aextnmod.addr.lap = 0;
+
+    audio_extn_dolby_set_license(adev);
+    audio_extn_aptx_dec_set_license(adev);
 }
 
 void audio_extn_set_parameters(struct audio_device *adev,
@@ -798,6 +806,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_qaf_set_parameters(adev, parms);
    if (adev->offload_effects_set_parameters != NULL)
        adev->offload_effects_set_parameters(parms);
+   audio_extn_set_aptx_dec_bt_addr(adev, parms);
 }
 
 void audio_extn_get_parameters(const struct audio_device *adev,
@@ -813,6 +822,7 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     audio_extn_hpx_get_parameters(query, reply);
     audio_extn_source_track_get_parameters(adev, query, reply);
     audio_extn_fbsp_get_parameters(query, reply);
+    audio_extn_sound_trigger_get_parameters(adev, query, reply);
     if (adev->offload_effects_get_parameters != NULL)
         adev->offload_effects_get_parameters(query, reply);
 
@@ -1216,3 +1226,83 @@ int audio_extn_check_and_set_multichannel_usecase(struct audio_device *adev,
                                                 update_params);
     }
 }
+
+#ifdef APTX_DECODER_ENABLED
+static void audio_extn_aptx_dec_set_license(struct audio_device *adev)
+{
+    int ret, key = 0;
+    char value[128] = {0};
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "APTX Dec License";
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return;
+    }
+    key = platform_get_meta_info_key_from_list(adev->platform, "aptx");
+
+    ALOGD("%s Setting APTX License with key:0x%x",__func__, key);
+    ret = mixer_ctl_set_value(ctl, 0, key);
+    if (ret)
+        ALOGE("%s: cannot set license, error:%d",__func__, ret);
+}
+
+static void audio_extn_set_aptx_dec_bt_addr(struct audio_device *adev, struct str_parms *parms)
+{
+    int ret = 0;
+    char value[256];
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_APTX_DEC_BT_ADDR, value,
+                            sizeof(value));
+    if (ret >= 0) {
+        audio_extn_parse_aptx_dec_bt_addr(value);
+    }
+}
+
+int audio_extn_set_aptx_dec_params(struct aptx_dec_param *payload)
+{
+    struct aptx_dec_param *aptx_cfg = payload;
+
+    aextnmod.addr.nap = aptx_cfg->bt_addr.nap;
+    aextnmod.addr.uap = aptx_cfg->bt_addr.uap;
+    aextnmod.addr.lap = aptx_cfg->bt_addr.lap;
+}
+
+static void audio_extn_parse_aptx_dec_bt_addr(char *value)
+{
+    int ba[6];
+    char *str, *tok;
+    uint32_t addr[3];
+    int i = 0;
+
+    ALOGV("%s: value %s", __func__, value);
+    tok = strtok_r(value, ":", &str);
+    while (tok != NULL) {
+        ba[i] = strtol(tok, NULL, 16);
+        i++;
+        tok = strtok_r(NULL, ":", &str);
+    }
+    addr[0] = (ba[0] << 8) | ba[1];
+    addr[1] = ba[2];
+    addr[2] = (ba[3] << 16) | (ba[4] << 8) | ba[5];
+
+    aextnmod.addr.nap = addr[0];
+    aextnmod.addr.uap = addr[1];
+    aextnmod.addr.lap = addr[2];
+}
+
+void audio_extn_send_aptx_dec_bt_addr_to_dsp(struct stream_out *out)
+{
+    char mixer_ctl_name[128];
+    struct mixer_ctl *ctl;
+    uint32_t addr[3];
+
+    ALOGV("%s", __func__);
+    out->compr_config.codec->options.aptx_dec.nap = aextnmod.addr.nap;
+    out->compr_config.codec->options.aptx_dec.uap = aextnmod.addr.uap;
+    out->compr_config.codec->options.aptx_dec.lap = aextnmod.addr.lap;
+}
+
+#endif //APTX_DECODER_ENABLED

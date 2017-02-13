@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2010 The Android Open Source Project
@@ -445,7 +445,6 @@ void audio_extn_dolby_set_dmid(struct audio_device *adev)
 void audio_extn_dolby_set_license(struct audio_device *adev)
 {
     int ret, key=0;
-    char value[128] = {0};
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "DS1 License";
 
@@ -456,9 +455,8 @@ void audio_extn_dolby_set_license(struct audio_device *adev)
         return;
     }
 
-    property_get("audio.ds1.metainfo.key",value,"0");
 #ifdef DOLBY_ACDB_LICENSE
-    key = atoi(value);
+    key = platform_get_meta_info_key_from_list(adev->platform, "dolby");
 #else
     key = 0;
 #endif
@@ -598,14 +596,12 @@ int audio_extn_dolby_set_dap_bypass(struct audio_device *adev __unused, int stat
 void audio_extn_dolby_set_license(struct audio_device *adev __unused)
 {
     int i_key=0;
-    char c_key[128] = {0};
     char c_dmid[128] = {0};
     int i_dmid;
     struct dolby_param_license dolby_license;
 
 #ifdef DOLBY_ACDB_LICENSE
-    property_get("audio.ds1.metainfo.key",c_key,"0");
-    i_key = atoi(c_key);
+    i_key = platform_get_meta_info_key_from_list(adev->platform, "dolby");
 #else
     /* As ACDB based license mechanism is disabled, force set the license key to 0*/
     i_key = 0;

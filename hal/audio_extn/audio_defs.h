@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2015, 2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -128,14 +128,26 @@ struct sound_focus_param {
     uint16_t  gain_step;
 };
 
+struct aptx_dec_bt_addr {
+    uint32_t nap;
+    uint32_t uap;
+    uint32_t lap;
+};
+
+struct aptx_dec_param {
+   struct aptx_dec_bt_addr bt_addr;
+};
+
 typedef union {
     struct source_tracking_param st_params;
     struct sound_focus_param sf_params;
+    struct aptx_dec_param aptx_params;
 } audio_extn_param_payload;
 
 typedef enum {
     AUDIO_EXTN_PARAM_SOURCE_TRACK,
-    AUDIO_EXTN_PARAM_SOUND_FOCUS
+    AUDIO_EXTN_PARAM_SOUND_FOCUS,
+    AUDIO_EXTN_PARAM_APTX_DEC
 } audio_extn_param_id;
 
 #endif /* AUDIO_DEFS_H */

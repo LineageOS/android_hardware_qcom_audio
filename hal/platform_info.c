@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -51,6 +51,7 @@ typedef enum {
     INTERFACE_NAME,
     CONFIG_PARAMS,
     GAIN_LEVEL_MAPPING,
+    ACDB_METAINFO_KEY,
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
@@ -63,6 +64,7 @@ static void process_interface_name(const XML_Char **attr);
 static void process_config_params(const XML_Char **attr);
 static void process_root(const XML_Char **attr);
 static void process_gain_db_to_level_map(const XML_Char **attr);
+static void process_acdb_metainfo_key(const XML_Char **attr);
 
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
@@ -73,6 +75,7 @@ static section_process_fn section_table[] = {
     [INTERFACE_NAME] = process_interface_name,
     [CONFIG_PARAMS] = process_config_params,
     [GAIN_LEVEL_MAPPING] = process_gain_db_to_level_map,
+    [ACDB_METAINFO_KEY] = process_acdb_metainfo_key,
 };
 
 static section_t section;
@@ -350,6 +353,29 @@ done:
     return;
 }
 
+/* process acdb meta info key value */
+static void process_acdb_metainfo_key(const XML_Char **attr)
+{
+    if (strcmp(attr[0], "name") != 0) {
+        ALOGE("%s: 'name' not found", __func__);
+        goto done;
+    }
+
+    if (strcmp(attr[2], "value") != 0) {
+        ALOGE("%s: 'value' not found", __func__);
+        goto done;
+    }
+
+    int key = atoi((char *)attr[3]);
+    if (platform_set_acdb_metainfo_key(my_data.platform, (char*)attr[1], key) < 0) {
+        ALOGE("%s: key %d was not set!", __func__, key);
+        goto done;
+    }
+
+done:
+    return;
+}
+
 static void start_tag(void *userdata __unused, const XML_Char *tag_name,
                       const XML_Char **attr)
 {
@@ -367,6 +393,8 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
         section = INTERFACE_NAME;
     } else if (strcmp(tag_name, "gain_db_to_level_mapping") == 0) {
         section = GAIN_LEVEL_MAPPING;
+    } else if(strcmp(tag_name, "acdb_metainfo_key") == 0) {
+        section = ACDB_METAINFO_KEY;
     } else if (strcmp(tag_name, "device") == 0) {
         if ((section != ACDB) && (section != BACKEND_NAME) && (section != BITWIDTH) &&
             (section != INTERFACE_NAME)) {
@@ -394,7 +422,7 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
         section_process_fn fn = section_table[PCM_ID];
         fn(attr);
     } else if (strcmp(tag_name, "param") == 0) {
-        if (section != CONFIG_PARAMS) {
+        if ((section != CONFIG_PARAMS) && (section != ACDB_METAINFO_KEY)) {
             ALOGE("param tag only supported with CONFIG_PARAMS section");
             return;
         }
@@ -422,6 +450,8 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
     } else if (strcmp(tag_name, "interface_names") == 0) {
         section = ROOT;
     } else if (strcmp(tag_name, "gain_db_to_level_mapping") == 0) {
+        section = ROOT;
+    } else if (strcmp(tag_name, "acdb_metainfo_key") == 0) {
         section = ROOT;
     }
 }
