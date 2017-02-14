@@ -838,4 +838,7 @@ int audio_extn_utils_compress_set_clk_rec_mode(struct audio_usecase *usecase);
 int audio_extn_utils_compress_set_render_window(
             struct stream_out *out,
             struct audio_out_render_window_param *render_window);
+int audio_extn_utils_compress_set_start_delay(
+            struct stream_out *out,
+            struct audio_out_start_delay_param *start_delay_param);
 #endif /* AUDIO_EXTN_H */

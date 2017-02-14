@@ -76,6 +76,10 @@ int qahwi_out_set_param_data(struct audio_stream_out *stream,
             ret = audio_extn_utils_compress_set_render_window(out,
                            (struct audio_out_render_window_param *)(payload));
            break;
+        case AUDIO_EXTN_PARAM_OUT_START_DELAY:
+            ret = audio_extn_utils_compress_set_start_delay(out,
+                           (struct audio_out_start_delay_param *)(payload));
+           break;
         default:
             ALOGE("%s:: unsupported param_id %d", __func__, param_id);
             break;
