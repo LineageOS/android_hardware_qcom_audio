@@ -42,9 +42,12 @@
 #define SAMPLE_RATE_11025         11025
 /* TODO: dynamically populate supported sample rates */
 static uint32_t supported_sample_rates[] =
-    {44100, 48000, 64000, 88200, 96000, 176400, 192000, 384000};
+    {192000, 176400, 96000, 88200, 64000, 48000, 44100};
+static uint32_t supported_sample_rates_mask[2];
+static const uint32_t MAX_SAMPLE_RATE_SIZE =
+        (sizeof(supported_sample_rates)/sizeof(supported_sample_rates[0]));
 
-#define  MAX_SAMPLE_RATE_SIZE  sizeof(supported_sample_rates)/sizeof(supported_sample_rates[0])
+// assert on sizeof bm v/s size of rates if needed
 
 enum usb_usecase_type{
     USB_PLAYBACK = 0,
@@ -211,7 +214,7 @@ static int usb_set_dev_id_mixer_ctl(unsigned int usb_usecase_type, int card,
     return 0;
 }
 
-static int usb_get_sample_rates(char *rates_str,
+static int usb_get_sample_rates(int type, char *rates_str,
                                 struct usb_device_config *config)
 {
     uint32_t i;
@@ -242,6 +245,7 @@ static int usb_get_sample_rates(char *rates_str,
             if (supported_sample_rates[i] >= min_sr &&
                 supported_sample_rates[i] <= max_sr) {
                 config->rates[sr_size++] = supported_sample_rates[i];
+                supported_sample_rates_mask[type] |= (1<<i);
                 ALOGI_IF(usb_audio_debug_enable,
                     "%s: continuous sample rate supported_sample_rates[%d] %d",
                     __func__, i, supported_sample_rates[i]);
@@ -256,6 +260,7 @@ static int usb_get_sample_rates(char *rates_str,
                         "%s: sr %d, supported_sample_rates[%d] %d -> matches!!",
                         __func__, sr, i, supported_sample_rates[i]);
                     config->rates[sr_size++] = supported_sample_rates[i];
+                    supported_sample_rates_mask[type] |= (1<<i);
                 }
             }
             next_sr_string = strtok_r(NULL, " ,.-", &temp_ptr);
@@ -418,7 +423,7 @@ static int usb_get_capability(int type,
         }
         memcpy(rates_str, rates_str_start, size);
         rates_str[size] = '\0';
-        ret = usb_get_sample_rates(rates_str, usb_device_info);
+        ret = usb_get_sample_rates(type, rates_str, usb_device_info);
         if (rates_str)
             free(rates_str);
         if (ret < 0) {
@@ -876,6 +881,68 @@ bool audio_extn_usb_is_config_supported(unsigned int *bit_width,
     return true;
 }
 
+#define _MAX(x, y) (((x) >= (y)) ? (x) : (y))
+#define _MIN(x, y) (((x) <= (y)) ? (x) : (y))
+
+int audio_extn_usb_get_max_channels()
+{
+    struct listnode *node_i, *node_j;
+    struct usb_device_config *dev_info;
+    struct usb_card_config *card_info;
+    unsigned int max_ch = 1;
+    list_for_each(node_i, &usbmod->usb_card_conf_list) {
+            card_info = node_to_item(node_i, struct usb_card_config, list);
+            list_for_each(node_j, &card_info->usb_device_conf_list) {
+                dev_info = node_to_item(node_j, struct usb_device_config, list);
+                max_ch = _MAX(max_ch, dev_info->channel_count);
+            }
+    }
+
+    return max_ch;
+}
+
+int audio_extn_usb_get_max_bit_width()
+{
+    struct listnode *node_i, *node_j;
+    struct usb_device_config *dev_info;
+    struct usb_card_config *card_info;
+    unsigned int max_bw = 16;
+    list_for_each(node_i, &usbmod->usb_card_conf_list) {
+            card_info = node_to_item(node_i, struct usb_card_config, list);
+            list_for_each(node_j, &card_info->usb_device_conf_list) {
+                dev_info = node_to_item(node_j, struct usb_device_config, list);
+                max_bw = _MAX(max_bw, dev_info->bit_width);
+            }
+    }
+
+    return max_bw;
+}
+
+int audio_extn_usb_sup_sample_rates(int type,
+                                    uint32_t *sample_rates,
+                                    uint32_t sample_rate_size)
+{
+    struct listnode *node_i, *node_j;
+    struct usb_device_config *dev_info;
+    struct usb_card_config *card_info;
+
+    if (type != USB_PLAYBACK && type != USB_CAPTURE)
+        return -1;
+
+    ALOGV("%s supported_sample_rates_mask 0x%x", __func__, supported_sample_rates_mask[type]);
+    uint32_t bm = supported_sample_rates_mask[type];
+    uint32_t tries = _MIN(sample_rate_size, (uint32_t)__builtin_popcount(bm));
+
+    int i = 0;
+    while (tries--) {
+        int idx = __builtin_ffs(bm) - 1;
+        sample_rates[i++] = supported_sample_rates[idx];
+        bm &= ~(1<<idx);
+    }
+
+    return i;
+}
+
 bool audio_extn_usb_is_capture_supported()
 {
     if (usbmod == NULL) {
@@ -997,6 +1064,8 @@ void audio_extn_usb_remove_device(audio_devices_t device, int card)
         }
     }
     usbmod->is_capture_supported = false;
+    supported_sample_rates_mask[USB_PLAYBACK] = 0;
+    supported_sample_rates_mask[USB_CAPTURE] = 0;
 exit:
     if (usb_audio_debug_enable)
         usb_print_active_device();
