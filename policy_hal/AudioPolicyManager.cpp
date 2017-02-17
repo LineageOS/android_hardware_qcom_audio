@@ -1593,6 +1593,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         // requested sample rate matches with that of voip input stream (if opened already)
         int value = 0;
         uint32_t mode = 0, voipOutCount = 1, voipSampleRate = 1;
+        bool is_vr_mode_on = false;
         String8 valueStr = mpClientInterface->getParameters((audio_io_handle_t)0,
                                                            String8("audio_mode"));
         AudioParameter result = AudioParameter(valueStr);
@@ -1627,6 +1628,25 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
                 }
             }
         }
+        //IF VOIP is going to be started at the same time as when
+        //vr is enabled, get VOIP to fallback to low latency
+        String8 vr_value;
+        valueStr =  mpClientInterface->getParameters((audio_io_handle_t)0,
+                                              String8("vr_audio_mode_on"));
+        result = AudioParameter(valueStr);
+        if (result.get(String8("vr_audio_mode_on"), vr_value) == NO_ERROR) {
+            is_vr_mode_on = vr_value.contains("true");
+            ALOGI("VR mode is %d, switch to primary output if request is for fast|raw",
+                is_vr_mode_on);
+        }
+
+        if (is_vr_mode_on) {
+             //check the flags being requested for, and clear FAST|RAW
+            flags = (audio_output_flags_t)(flags &
+                (~(AUDIO_OUTPUT_FLAG_FAST|AUDIO_OUTPUT_FLAG_RAW)));
+
+        }
+
     }
 
 #ifdef VOICE_CONCURRENCY
