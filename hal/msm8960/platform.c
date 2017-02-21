@@ -1104,6 +1104,11 @@ int platform_set_snd_device_backend(snd_device_t device __unused,
     return -ENOSYS;
 }
 
+int platform_get_snd_device_backend_index(snd_device_t device)
+{
+    return -ENOSYS;
+}
+
 bool platform_sound_trigger_device_needs_event(snd_device_t snd_device __unused)
 {
     return false;

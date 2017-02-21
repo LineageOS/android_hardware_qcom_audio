@@ -45,7 +45,7 @@
 #endif
 
 #ifndef AUDIO_DEVICE_IN_PROXY
-#define AUDIO_DEVICE_IN_PROXY (AUDIO_DEVICE_BIT_IN | 0x1000000)
+#define AUDIO_DEVICE_IN_PROXY (AUDIO_DEVICE_BIT_IN | 0x2000000)
 #endif
 
 #ifndef INCALL_MUSIC_ENABLED
@@ -505,10 +505,13 @@ bool audio_extn_passthru_should_standby(struct stream_out *out);
 #define audio_extn_hfp_is_active(adev)                  (0)
 #define audio_extn_hfp_get_usecase()                    (-1)
 #define hfp_set_mic_mute(dev, state)                    (0)
+#define audio_extn_hfp_set_parameters(adev, parms)      (0)
 #else
 bool audio_extn_hfp_is_active(struct audio_device *adev);
 audio_usecase_t audio_extn_hfp_get_usecase();
 int hfp_set_mic_mute(struct audio_device *dev, bool state);
+void audio_extn_hfp_set_parameters(struct audio_device *adev,
+                                           struct str_parms *parms);
 #endif
 
 #ifndef DEV_ARBI_ENABLED

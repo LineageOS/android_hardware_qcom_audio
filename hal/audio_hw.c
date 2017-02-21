@@ -1656,7 +1656,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             platform_check_and_update_copp_sample_rate(adev->platform, out_snd_device,
                     usecase->stream.out->sample_rate,
                     &usecase->stream.out->app_type_cfg.sample_rate);
-        } else if ((out_snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
+        } else if (((out_snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
+                     !audio_is_true_native_stream_active(adev)) &&
                     usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
                     (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
@@ -4381,6 +4382,9 @@ void adev_close_output_stream(struct audio_hw_device *dev __unused,
 
     if (adev->voice_tx_output == out)
         adev->voice_tx_output = NULL;
+
+    if (adev->primary_output == out)
+        adev->primary_output = NULL;
 
     pthread_cond_destroy(&out->cond);
     pthread_mutex_destroy(&out->lock);

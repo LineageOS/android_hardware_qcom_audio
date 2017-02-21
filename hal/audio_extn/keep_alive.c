@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -235,7 +235,7 @@ void audio_extn_keep_alive_start()
             break;
         case EXT_DISPLAY_TYPE_DP:
             snd_device = SND_DEVICE_OUT_DISPLAY_PORT;
-            set_mixer_control(adev->mixer, "Display Port Format", "LPCM");
+            set_mixer_control(adev->mixer, "Display Port RX Format", "LPCM");
             set_mixer_control(adev->mixer, "Display Port RX SampleRate", "KHZ_48");
             set_mixer_control(adev->mixer, "Display Port RX Channels", "Two");
             break;

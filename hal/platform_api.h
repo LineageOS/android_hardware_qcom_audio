@@ -52,6 +52,12 @@ typedef struct {
     int na_mode;
 } native_audio_prop;
 
+#define BE_DAI_NAME_MAX_LENGTH 24
+struct be_dai_name_struct {
+    unsigned int be_id;
+    char be_name[BE_DAI_NAME_MAX_LENGTH];
+};
+
 enum card_status_t;
 
 void *platform_init(struct audio_device *adev);
@@ -133,6 +139,7 @@ bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id);
 
 int platform_set_snd_device_backend(snd_device_t snd_device, const char * backend,
                                     const char * hw_interface);
+int platform_get_snd_device_backend_index(snd_device_t device);
 
 /* From platform_info.c */
 int platform_info_init(const char *filename, void *);
