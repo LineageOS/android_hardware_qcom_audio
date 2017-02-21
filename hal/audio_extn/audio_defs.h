@@ -106,6 +106,8 @@
 /* Set or Query stream profile type */
 #define AUDIO_PARAMETER_STREAM_PROFILE "audio_stream_profile"
 
+#define AUDIO_PARAMETER_KEY_VR_AUDIO_MODE "vr_audio_mode_on"
+
 /* audio input flags for compress and timestamp mode.
  * check other input flags defined in audio.h for conflicts
  */
