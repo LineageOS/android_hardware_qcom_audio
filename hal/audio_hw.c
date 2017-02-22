@@ -3792,13 +3792,13 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 #endif
             in->realtime = may_use_noirq_mode(adev, in->usecase, in->flags);
             if (!in->realtime) {
+                in->config = pcm_config_audio_capture;
                 frame_size = audio_stream_in_frame_size(&in->stream);
                 buffer_size = get_input_buffer_size(config->sample_rate,
                                                     config->format,
                                                     channel_count,
                                                    is_low_latency);
                 in->config.period_size = buffer_size / frame_size;
-                in->config = pcm_config_audio_capture;
                 in->config.rate = config->sample_rate;
                 in->af_period_multiplier = 1;
             } else {
