@@ -180,7 +180,12 @@ __BEGIN_DECLS
 /* type of asynchronous write callback events. Mutually exclusive */
 typedef enum {
     QAHW_STREAM_CBK_EVENT_WRITE_READY, /* non blocking write completed */
-    QAHW_STREAM_CBK_EVENT_DRAIN_READY  /* drain completed */
+    QAHW_STREAM_CBK_EVENT_DRAIN_READY,  /* drain completed */
+
+    QAHW_STREAM_CBK_EVENT_ADSP = 0x100    /* callback event from ADSP PP,
+                                           * corresponding payload will be
+                                           * sent as is to the client
+                                           */
 } qahw_stream_callback_event_t;
 
 typedef int qahw_stream_callback_t(qahw_stream_callback_event_t event,
@@ -273,6 +278,16 @@ struct qahw_out_start_delay_param {
    uint64_t       start_delay; /* session start delay in microseconds*/
 };
 
+#define QAHW_MAX_ADSP_STREAM_CMD_PAYLOAD_LEN 512
+
+/* payload format for HAL parameter
+ * QAHW_PARAM_ADSP_STREAM_CMD
+ */
+struct qahw_adsp_event {
+    uint32_t payload_length;       /* length in bytes of the payload */
+    void *payload;                 /* the actual payload */
+};
+
 typedef union {
     struct qahw_source_tracking_param st_params;
     struct qahw_sound_focus_param sf_params;
@@ -280,6 +295,7 @@ typedef union {
     struct qahw_avt_device_drift_param drift_params;
     struct qahw_out_render_window_param render_window_params;
     struct qahw_out_start_delay_param start_delay;
+    struct qahw_adsp_event adsp_event_params;
 } qahw_param_payload;
 
 typedef enum {
@@ -288,7 +304,8 @@ typedef enum {
     QAHW_PARAM_APTX_DEC,
     QAHW_PARAM_AVT_DEVICE_DRIFT, /* PARAM to query AV timer vs device drift */
     QAHW_PARAM_OUT_RENDER_WINDOW, /* PARAM to set render window */
-    QAHW_PARAM_OUT_START_DELAY /* PARAM to set session start delay*/
+    QAHW_PARAM_OUT_START_DELAY, /* PARAM to set session start delay*/
+    QAHW_PARAM_ADSP_STREAM_CMD
 } qahw_param_id;
 
 __END_DECLS

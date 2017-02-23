@@ -48,6 +48,7 @@
 
 #include "audio_hw.h"
 #include "audio_extn.h"
+#include "audio_defs.h"
 #include "platform.h"
 #include "platform_api.h"
 #include "edid.h"
@@ -1335,3 +1336,72 @@ void audio_extn_send_aptx_dec_bt_addr_to_dsp(struct stream_out *out)
 }
 
 #endif //APTX_DECODER_ENABLED
+
+int audio_extn_out_set_param_data(struct stream_out *out,
+                             audio_extn_param_id param_id,
+                             audio_extn_param_payload *payload) {
+    int ret = -EINVAL;
+
+    if (!out || !payload) {
+        ALOGE("%s:: Invalid Param",__func__);
+        return ret;
+    }
+
+    ALOGD("%s: enter: stream (%p) usecase(%d: %s) param_id %d", __func__,
+            out, out->usecase, use_case_table[out->usecase], param_id);
+
+    switch (param_id) {
+        case AUDIO_EXTN_PARAM_OUT_RENDER_WINDOW:
+            ret = audio_extn_utils_compress_set_render_window(out,
+                    (struct audio_out_render_window_param *)(payload));
+            break;
+        case AUDIO_EXTN_PARAM_OUT_START_DELAY:
+            ret = audio_extn_utils_compress_set_start_delay(out,
+                    (struct audio_out_start_delay_param *)(payload));
+            break;
+        case AUDIO_EXTN_PARAM_ADSP_STREAM_CMD:
+            ret = audio_extn_adsp_hdlr_stream_set_param(out->adsp_hdlr_stream_handle,
+                    ADSP_HDLR_STREAM_CMD_REGISTER_EVENT,
+                    (void *)&payload->adsp_event_params);
+            break;
+         default:
+            ALOGE("%s:: unsupported param_id %d", __func__, param_id);
+            break;
+    }
+    return ret;
+}
+
+/* API to get playback stream specific config parameters */
+int audio_extn_out_get_param_data(struct stream_out *out,
+                             audio_extn_param_id param_id,
+                             audio_extn_param_payload *payload)
+{
+    int ret = -EINVAL;
+    struct audio_usecase *uc_info;
+
+    if (!out || !payload) {
+        ALOGE("%s:: Invalid Param",__func__);
+        return ret;
+    }
+
+    switch (param_id) {
+        case AUDIO_EXTN_PARAM_AVT_DEVICE_DRIFT:
+            uc_info = get_usecase_from_list(out->dev, out->usecase);
+            if (uc_info == NULL) {
+                ALOGE("%s: Could not find the usecase (%d) in the list",
+                       __func__, out->usecase);
+                ret = -EINVAL;
+            } else {
+                ret = audio_extn_utils_get_avt_device_drift(uc_info,
+                        (struct audio_avt_device_drift_param *)payload);
+                if(ret)
+                    ALOGE("%s:: avdrift query failed error %d", __func__, ret);
+            }
+            break;
+        default:
+            ALOGE("%s:: unsupported param_id %d", __func__, param_id);
+            break;
+    }
+
+    return ret;
+}

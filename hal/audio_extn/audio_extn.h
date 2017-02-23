@@ -39,6 +39,7 @@
 #define AUDIO_EXTN_H
 
 #include <cutils/str_parms.h>
+#include "adsp_hdlr.h"
 
 #ifndef AFE_PROXY_ENABLED
 #define AUDIO_DEVICE_OUT_PROXY 0x40000
@@ -91,6 +92,10 @@
                                       AUDIO_FORMAT_AAC_SUB_HE_V1)
 #define AUDIO_FORMAT_AAC_LATM_HE_V2  (AUDIO_FORMAT_AAC_LATM |\
                                       AUDIO_FORMAT_AAC_SUB_HE_V2)
+#endif
+
+#ifndef AUDIO_FORMAT_AC4
+#define AUDIO_FORMAT_AC4  0x23000000UL
 #endif
 
 #ifndef AUDIO_OUTPUT_FLAG_TIMESTAMP
@@ -673,6 +678,13 @@ int audio_extn_qaf_open_output_stream(struct audio_hw_device *dev,
                                    const char *address __unused);
 int audio_extn_qaf_init(struct audio_device *adev);
 int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *parms);
+int audio_extn_qaf_out_set_param_data(struct stream_out *out,
+                           audio_extn_param_id param_id,
+                           audio_extn_param_payload *payload);
+int audio_extn_qaf_out_get_param_data(struct stream_out *out,
+                             audio_extn_param_id param_id,
+                             audio_extn_param_payload *payload);
+bool audio_extn_is_qaf_stream(struct stream_out *out);
 #else
 #define audio_extn_qaf_is_enabled()                                     (0)
 #define audio_extn_qaf_deinit()                                         (0)
@@ -680,6 +692,9 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
 #define audio_extn_qaf_open_output_stream           adev_open_output_stream
 #define audio_extn_qaf_init(adev)                                       (0)
 #define audio_extn_qaf_set_parameters(adev, parms)                      (0)
+#define audio_extn_qaf_out_set_param_data(out, param_id, payload)       (0)
+#define audio_extn_qaf_out_get_param_data(out, param_id, payload)       (0)
+#define audio_extn_is_qaf_stream(out)                                   (0)
 #endif
 
 #ifdef AUDIO_EXTN_BT_HAL_ENABLED
@@ -828,6 +843,12 @@ void audio_extn_send_aptx_dec_bt_addr_to_dsp(struct stream_out *out);
 static void audio_extn_parse_aptx_dec_bt_addr(char *value);
 int audio_extn_set_aptx_dec_params(struct aptx_dec_param *payload);
 #endif
+int audio_extn_out_set_param_data(struct stream_out *out,
+                             audio_extn_param_id param_id,
+                             audio_extn_param_payload *payload);
+int audio_extn_out_get_param_data(struct stream_out *out,
+                             audio_extn_param_id param_id,
+                             audio_extn_param_payload *payload);
 
 int audio_extn_utils_get_avt_device_drift(
                 struct audio_usecase *usecase,
