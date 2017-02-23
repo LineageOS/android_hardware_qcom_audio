@@ -3416,11 +3416,17 @@ int platform_split_snd_device(void *platform,
 {
     int ret = -EINVAL;
     struct platform_data *my_data = (struct platform_data *)platform;
+    bool is_voice_call_active = false;
     if (NULL == num_devices || NULL == new_snd_devices) {
         ALOGE("%s: NULL pointer ..", __func__);
         return -EINVAL;
     }
 
+    if ((my_data->adev->mode == AUDIO_MODE_IN_CALL) ||
+            voice_is_in_call(my_data->adev) ||
+            voice_extn_compress_voip_is_active(my_data->adev)) {
+        is_voice_call_active = true;
+    }
     /*
      * If wired headset/headphones/line devices share the same backend
      * with speaker/earpiece this routine returns -EINVAL.
@@ -3429,38 +3435,32 @@ int platform_split_snd_device(void *platform,
         !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_HEADPHONES)) {
         *num_devices = 2;
 
-         if (my_data->is_vbat_speaker)
-             new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER_VBAT;
-         else if (my_data->is_wsa_speaker)
-             new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER_WSA;
-         else
-             new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
-
-        new_snd_devices[1] = SND_DEVICE_OUT_HEADPHONES;
+        new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
+        if (is_voice_call_active)
+            new_snd_devices[1] = SND_DEVICE_OUT_VOICE_HEADPHONES;
+        else
+            new_snd_devices[1] = SND_DEVICE_OUT_HEADPHONES;
+        ret = 0;
+    } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET &&
+               !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_ANC_HEADSET)) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
+        if (is_voice_call_active)
+            new_snd_devices[1] = SND_DEVICE_OUT_VOICE_ANC_HEADSET;
+        else
+            new_snd_devices[1] = SND_DEVICE_OUT_ANC_HEADSET;
         ret = 0;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HDMI &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_HDMI)) {
         *num_devices = 2;
-
-        if (my_data->is_vbat_speaker)
-            new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER_VBAT;
-        else if (my_data->is_wsa_speaker)
-            new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER_WSA;
-        else
-            new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
-
+        new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_HDMI;
         ret = 0;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_DISPLAY_PORT &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_DISPLAY_PORT)) {
         *num_devices = 2;
 
-        if (my_data->is_vbat_speaker)
-            new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER_VBAT;
-        else if (my_data->is_wsa_speaker)
-            new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER_WSA;
-        else
-            new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
+        new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
 
         new_snd_devices[1] = SND_DEVICE_OUT_DISPLAY_PORT;
         ret = 0;
@@ -3476,9 +3476,30 @@ int platform_split_snd_device(void *platform,
         new_snd_devices[1] = SND_DEVICE_OUT_BT_A2DP;
         ret = 0;
     }
+    if (*num_devices == 2 && new_snd_devices[0] == SND_DEVICE_OUT_SPEAKER) {
+        if (my_data->is_vbat_speaker) {
+            if (is_voice_call_active)
+                new_snd_devices[0] = SND_DEVICE_OUT_VOICE_SPEAKER_VBAT;
+            else
+                new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER_VBAT;
+        } else if (my_data->is_wsa_speaker) {
+            if (is_voice_call_active)
+                new_snd_devices[0] = SND_DEVICE_OUT_VOICE_SPEAKER_WSA;
+            else
+                new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER_WSA;
+        } else {
+            if (is_voice_call_active)
+                new_snd_devices[0] = SND_DEVICE_OUT_VOICE_SPEAKER;
+        }
+    }
 
-    ALOGD("%s: snd_device(%d) num devices(%d) new_snd_devices(%d)", __func__,
-        snd_device, *num_devices, *new_snd_devices);
+    if (*num_devices == 2)
+        ALOGD("%s: snd_device(%d) new_snd_devices(0) (%s) new_snd_devices(1) (%s)", __func__,
+              snd_device, platform_get_snd_device_name(new_snd_devices[0]),
+              platform_get_snd_device_name(new_snd_devices[1]));
+    else
+        ALOGD("%s: snd_device(%d) new_snd_devices (%s)", __func__,
+              snd_device, platform_get_snd_device_name(snd_device));
 
     return ret;
 }
