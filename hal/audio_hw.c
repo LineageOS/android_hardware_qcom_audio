@@ -2794,7 +2794,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         }
 #endif
     } else if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) ||
-               (out->flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM)) {
+               (out->flags == AUDIO_OUTPUT_FLAG_DIRECT)) {
         ALOGD("%s: copl(%x): sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)",
               __func__, (unsigned int)out, config->sample_rate, config->channel_mask, devices, flags);
 
@@ -2819,7 +2819,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             goto error_open;
         }
 
-        if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) {
+        if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
             ALOGV("%s:: inserting DIRECT_PCM _USECASE", __func__);
             out->usecase = USECASE_AUDIO_DIRECT_PCM_OFFLOAD;
         } else {

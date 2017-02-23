@@ -1020,6 +1020,16 @@ bool AudioPolicyManagerCustom::isDirectOutput(audio_io_handle_t output) {
     return false;
 }
 
+bool static tryForDirectPCM(audio_output_flags_t flags)
+{
+    bool trackDirectPCM = false;  // Output request for track created by other apps
+
+    if (flags == AUDIO_OUTPUT_FLAG_NONE) {
+        trackDirectPCM = property_get_bool("audio.offload.track.enable", true);
+    }
+    return trackDirectPCM;
+}
+
 status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *attr,
                                                     audio_io_handle_t *output,
                                                     audio_session_t session,
@@ -1033,20 +1043,8 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
     audio_offload_info_t tOffloadInfo = AUDIO_INFO_INITIALIZER;
     audio_config_t tConfig;
 
-    bool offloadDisabled = property_get_bool("audio.offload.disable", false);
-    bool pcmOffloadEnabled = false;
-
-    if (offloadDisabled) {
-        ALOGI("offload disabled by audio.offload.disable=%d", offloadDisabled);
-    }
-
-    //read track offload property only if the global offload switch is off.
-    if (!offloadDisabled) {
-         pcmOffloadEnabled = property_get_bool("audio.offload.track.enable", false);
-    }
-
     memcpy(&tConfig, config, sizeof(audio_config_t));
-    if (pcmOffloadEnabled) &&
+    if ((flags == AUDIO_OUTPUT_FLAG_DIRECT || tryForDirectPCM(flags)) &&
             (!memcmp(&config->offload_info, &tOffloadInfo, sizeof(audio_offload_info_t)))) {
         tConfig.offload_info.sample_rate  = config->sample_rate;
         tConfig.offload_info.channel_mask = config->channel_mask;
@@ -1206,6 +1204,20 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         flags = (audio_output_flags_t)(flags | AUDIO_OUTPUT_FLAG_DIRECT);
     }
 
+    // Do internal direct magic here
+    bool offload_disabled = property_get_bool("audio.offload.disable", false);
+    if ((flags == AUDIO_OUTPUT_FLAG_NONE) &&
+        (stream == AUDIO_STREAM_MUSIC) &&
+        (offloadInfo != NULL) && !offload_disabled &&
+        ((offloadInfo->usage == AUDIO_USAGE_MEDIA) || (offloadInfo->usage == AUDIO_USAGE_GAME))) {
+        audio_output_flags_t old_flags = flags;
+        flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_DIRECT);
+        ALOGD("AudioCustomHAL --> Force Direct Flag .. old flags(0x%x)", old_flags);
+    } else if (flags == AUDIO_OUTPUT_FLAG_DIRECT && offload_disabled) {
+        ALOGD("AudioCustomHAL --> offloading is disabled: Force Remove Direct Flag");
+        flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_NONE);
+    }
+
     bool forced_deep = false;
     // only allow deep buffering for music stream type
     if (stream != AUDIO_STREAM_MUSIC) {
@@ -1220,20 +1232,11 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         flags = AUDIO_OUTPUT_FLAG_TTS;
     }
 
-    // Do offload magic here
-    if ((flags == AUDIO_OUTPUT_FLAG_NONE) &&
-        (stream == AUDIO_STREAM_MUSIC) &&
-        (offloadInfo != NULL) &&
-        ((offloadInfo->usage == AUDIO_USAGE_MEDIA) || (offloadInfo->usage == AUDIO_USAGE_GAME))) {
-        flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_DIRECT_PCM);
-        ALOGD("AudioCustomHAL --> Force Direct Flag .. flag (0x%x)", flags);
-    }
-
     sp<IOProfile> profile;
 
     // skip direct output selection if the request can obviously be attached to a mixed output
     // and not explicitly requested
-    if (((flags & (AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_DIRECT_PCM)) == 0) &&
+    if (((flags & AUDIO_OUTPUT_FLAG_DIRECT) == 0) &&
             audio_is_linear_pcm(format) && samplingRate <= SAMPLE_RATE_HZ_MAX &&
             audio_channel_count_from_out_mask(channelMask) <= 2) {
         goto non_direct_output;
@@ -1257,9 +1260,9 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
 
     if (profile != 0) {
 
-        if (!(flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) &&
-             (profile->getFlags() & AUDIO_OUTPUT_FLAG_DIRECT_PCM)) {
-            ALOGI("got Direct_PCM without requesting ... reject ");
+        if (!(flags & AUDIO_OUTPUT_FLAG_DIRECT) &&
+             (profile->getFlags() & AUDIO_OUTPUT_FLAG_DIRECT)) {
+            ALOGI("got Direct without requesting ... reject ");
             profile = NULL;
             goto non_direct_output;
         }
