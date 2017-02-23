@@ -398,6 +398,8 @@ void *start_stream_playback (void* stream_data)
     stream_config *params = (stream_config*) stream_data;
     const char* stream_name = "output_stream";
 
+    if (params->output_device & AUDIO_DEVICE_OUT_ALL_A2DP)
+        params->output_device = AUDIO_DEVICE_OUT_PROXY;
     rc = qahw_open_output_stream(params->qahw_mod_handle,
                              params->handle,
                              params->output_device,
@@ -504,8 +506,7 @@ void *start_stream_playback (void* stream_data)
         }
     }
 
-    if (params->output_device & AUDIO_DEVICE_OUT_ALL_A2DP) {
-        params->output_device = AUDIO_DEVICE_OUT_PROXY;
+    if (params->output_device & AUDIO_DEVICE_OUT_PROXY) {
         proxy_params.acp.qahw_mod_handle = params->qahw_mod_handle;
         proxy_params.acp.handle = stream_handle;
         stream_handle--;
