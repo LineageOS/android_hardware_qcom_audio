@@ -30,11 +30,11 @@ extern "C" {
 
 static const qahw_effect_uuid_t SL_IID_EQUALIZER_ = { 0x0bed4300, 0xddd6, 0x11db, 0x8f34,
         { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } };
-const qahw_effect_uuid_t * const SL_IID_EQUALIZER = &SL_IID_EQUALIZER_;
+static const qahw_effect_uuid_t * const SL_IID_EQUALIZER = &SL_IID_EQUALIZER_;
 
 static const qahw_effect_uuid_t SL_IID_EQUALIZER_UUID_ = { 0xa0dac280, 0x401c, 0x11e3, 0x9379,
         { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } };
-const qahw_effect_uuid_t * const SL_IID_EQUALIZER_UUID = &SL_IID_EQUALIZER_UUID_;
+static const qahw_effect_uuid_t * const SL_IID_EQUALIZER_UUID = &SL_IID_EQUALIZER_UUID_;
 
 /* enumerated parameters for Equalizer effect */
 typedef enum

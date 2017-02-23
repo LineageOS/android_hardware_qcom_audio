@@ -30,11 +30,11 @@ extern "C" {
 
 static const qahw_effect_uuid_t SL_IID_VISUALIZATION_ =
     { 0xe46b26a0, 0xdddd, 0x11db, 0x8afd, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } };
-const qahw_effect_uuid_t * const SL_IID_VISUALIZATION = &SL_IID_VISUALIZATION_;
+static const qahw_effect_uuid_t * const SL_IID_VISUALIZATION = &SL_IID_VISUALIZATION_;
 
 static const qahw_effect_uuid_t SL_IID_VISUALIZATION_UUID_ =
     { 0x7a8044a0, 0x1a71, 0x11e3, 0xa184, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } };
-const qahw_effect_uuid_t * const SL_IID_VISUALIZATION_UUID = &SL_IID_VISUALIZATION_UUID_;
+static const qahw_effect_uuid_t * const SL_IID_VISUALIZATION_UUID = &SL_IID_VISUALIZATION_UUID_;
 
 #define VISUALIZER_CAPTURE_SIZE_MAX 1024  // maximum capture size in samples
 #define VISUALIZER_CAPTURE_SIZE_MIN 128   // minimum capture size in samples
