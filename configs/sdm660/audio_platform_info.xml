@@ -31,8 +31,8 @@
     <interface_names>
         <device name="AUDIO_DEVICE_IN_BUILTIN_MIC" interface="SLIMBUS_0" codec_type="external"/>
         <device name="AUDIO_DEVICE_IN_BACK_MIC" interface="SLIMBUS_0" codec_type="external"/>
-        <device name="AUDIO_DEVICE_IN_BUILTIN_MIC" interface="TERT_MI2S" codec_type="internal"/>
-        <device name="AUDIO_DEVICE_IN_BACK_MIC" interface="TERT_MI2S" codec_type="internal"/>
+        <device name="AUDIO_DEVICE_IN_BUILTIN_MIC" interface="INT3_MI2S" codec_type="internal"/>
+        <device name="AUDIO_DEVICE_IN_BACK_MIC" interface="INT3_MI2S" codec_type="internal"/>
     </interface_names>
     <pcm_ids>
         <usecase name="USECASE_AUDIO_PLAYBACK_LOW_LATENCY" type="out" id="13"/>
