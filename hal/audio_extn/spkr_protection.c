@@ -684,6 +684,7 @@ static void* spkr_calibration_thread()
     char buf[32] = {0};
     int ret;
 
+    memset(&protCfg, 0, sizeof(protCfg));
     /* If the value of this persist.spkr.cal.duration is 0
      * then it means it will take 30min to calibrate
      * and if the value is greater than zero then it would take
@@ -1049,9 +1050,9 @@ static void get_spkr_prot_ftm_param(char *param)
     struct audio_cal_sp_th_vi_param th_vi_cal_data;
     struct audio_cal_sp_ex_vi_param ex_vi_cal_data;
     int i;
-    int ftm_status[SP_V2_NUM_MAX_SPKRS];
-    double rdc[SP_V2_NUM_MAX_SPKRS], temp[SP_V2_NUM_MAX_SPKRS];
-    double f[SP_V2_NUM_MAX_SPKRS], r[SP_V2_NUM_MAX_SPKRS], q[SP_V2_NUM_MAX_SPKRS];
+    int ftm_status[SP_V2_NUM_MAX_SPKRS] = {0};
+    double rdc[SP_V2_NUM_MAX_SPKRS] = {0}, temp[SP_V2_NUM_MAX_SPKRS] = {0};
+    double f[SP_V2_NUM_MAX_SPKRS] = {0}, r[SP_V2_NUM_MAX_SPKRS] = {0}, q[SP_V2_NUM_MAX_SPKRS] = {0};
 
     int cal_fd = open("/dev/msm_audio_cal",O_RDWR | O_NONBLOCK);
     if (cal_fd < 0) {
