@@ -2185,6 +2185,19 @@ int start_output_stream(struct stream_out *out)
         goto error_config;
     }
 
+    if (out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
+        if (!audio_extn_a2dp_is_ready()) {
+            if (out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
+                //combo usecase just by pass a2dp
+                ALOGW("%s: A2DP profile is not ready, route it to speaker", __func__);
+                out->devices = AUDIO_DEVICE_OUT_SPEAKER;
+            } else {
+                ALOGE("%s: A2DP profile is not ready, return error", __func__);
+                ret = -EAGAIN;
+                goto error_config;
+            }
+        }
+    }
     out->pcm_device_id = platform_get_pcm_device_id(out->usecase, PCM_PLAYBACK);
     if (out->pcm_device_id < 0) {
         ALOGE("%s: Invalid PCM device id(%d) for the usecase(%d)",
@@ -2647,17 +2660,27 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 (val == AUDIO_DEVICE_NONE)) {
                 val = AUDIO_DEVICE_OUT_SPEAKER;
         }
-        /* To avoid a2dp to sco overlapping force route BT usecases
-         * to speaker based on Phone state
+        /* To avoid a2dp to sco overlapping / BT device improper state
+         * check with BT lib about a2dp streaming support before routing
          */
-        if ((((val & AUDIO_DEVICE_OUT_SPEAKER) &&
-                  (val & AUDIO_DEVICE_OUT_ALL_A2DP)) ||
-              ((adev->snd_dev_ref_cnt[SND_DEVICE_OUT_BT_A2DP] == 0) &&
-                  (val & AUDIO_DEVICE_OUT_ALL_A2DP))) &&
-            ((adev->mode == AUDIO_MODE_RINGTONE) ||
-            (adev->mode == AUDIO_MODE_IN_CALL))) {
-            ALOGD("Forcing a2dp routing to speaker for ring/call mode");
-            val = AUDIO_DEVICE_OUT_SPEAKER;
+        if (val & AUDIO_DEVICE_OUT_ALL_A2DP) {
+            if (!audio_extn_a2dp_is_ready()) {
+                if (val & AUDIO_DEVICE_OUT_SPEAKER) {
+                    //combo usecase just by pass a2dp
+                    ALOGW("%s: A2DP profile is not ready,routing to speaker only", __func__);
+                    val = AUDIO_DEVICE_OUT_SPEAKER;
+                } else {
+                    ALOGE("%s: A2DP profile is not ready,ignoring routing request", __func__);
+                    /* update device to a2dp and don't route as BT returned error
+                     * However it is still possible a2dp routing called because
+                     * of current active device disconnection (like wired headset)
+                     */
+                    out->devices = val;
+                    pthread_mutex_unlock(&out->lock);
+                    pthread_mutex_unlock(&adev->lock);
+                    goto error;
+                }
+            }
         }
         /*
          * select_devices() call below switches all the usecases on the same

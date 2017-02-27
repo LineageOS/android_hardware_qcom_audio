@@ -30,11 +30,11 @@ extern "C" {
 
 static const qahw_effect_uuid_t SL_IID_VIRTUALIZER_ = { 0x37cc2c00, 0xdddd, 0x11db, 0x8577,
         { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } };
-const qahw_effect_uuid_t * const SL_IID_VIRTUALIZER = &SL_IID_VIRTUALIZER_;
+static const qahw_effect_uuid_t * const SL_IID_VIRTUALIZER = &SL_IID_VIRTUALIZER_;
 
 static const qahw_effect_uuid_t SL_IID_VIRTUALIZER_UUID_ = { 0x509a4498, 0x561a, 0x4bea, 0xb3b1,
         { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } };
-const qahw_effect_uuid_t * const SL_IID_VIRTUALIZER_UUID = &SL_IID_VIRTUALIZER_UUID_;
+static const qahw_effect_uuid_t * const SL_IID_VIRTUALIZER_UUID = &SL_IID_VIRTUALIZER_UUID_;
 
 /* enumerated parameter settings for virtualizer effect */
 /* to keep in sync with frameworks/base/media/java/android/media/audiofx/Virtualizer.java */
