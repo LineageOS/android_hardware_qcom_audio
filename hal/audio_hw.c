@@ -485,14 +485,20 @@ static bool is_supported_format(audio_format_t format)
         format == AUDIO_FORMAT_PCM_16_BIT ||
         format == AUDIO_FORMAT_AC3 ||
         format == AUDIO_FORMAT_E_AC3 ||
-        format == AUDIO_FORMAT_DTS ||
-        format == AUDIO_FORMAT_DTS_HD ||
         format == AUDIO_FORMAT_FLAC ||
         format == AUDIO_FORMAT_ALAC ||
+#ifdef APE_OFFLOAD_ENABLED
         format == AUDIO_FORMAT_APE ||
+#endif
+#ifdef VORBIS_OFFLOAD_ENABLED
         format == AUDIO_FORMAT_VORBIS ||
+#endif
+#ifdef WMA_OFFLOAD_ENABLED
         format == AUDIO_FORMAT_WMA ||
-        format == AUDIO_FORMAT_WMA_PRO)
+        format == AUDIO_FORMAT_WMA_PRO ||
+#endif
+        format == AUDIO_FORMAT_DTS ||
+        format == AUDIO_FORMAT_DTS_HD)
            return true;
 
     return false;
@@ -527,18 +533,24 @@ static int get_snd_codec_id(audio_format_t format)
     case AUDIO_FORMAT_ALAC:
         id = SND_AUDIOCODEC_ALAC;
         break;
+#ifdef APE_OFFLOAD_ENABLED
     case AUDIO_FORMAT_APE:
         id = SND_AUDIOCODEC_APE;
         break;
+#endif
+#ifdef VORBIS_OFFLOAD_ENABLED
     case AUDIO_FORMAT_VORBIS:
         id = SND_AUDIOCODEC_VORBIS;
         break;
+#endif
+#ifdef WMA_OFFLOAD_ENABLED
     case AUDIO_FORMAT_WMA:
         id = SND_AUDIOCODEC_WMA;
         break;
     case AUDIO_FORMAT_WMA_PRO:
         id = SND_AUDIOCODEC_WMA_PRO;
         break;
+#endif
     case AUDIO_FORMAT_AC3:
         id = SND_AUDIOCODEC_AC3;
         break;
