@@ -900,6 +900,7 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
     }
 
     else if (out->format == AUDIO_FORMAT_APE) {
+#ifdef APE_OFFLOAD_ENABLED
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_COMPATIBLE_VERSION, value, sizeof(value));
         if (ret >= 0) {
             out->compr_config.codec->options.ape.compatible_version = atoi(value);
@@ -964,18 +965,22 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
                 out->compr_config.codec->options.ape.num_channels,
                 out->compr_config.codec->options.ape.sample_rate,
                 out->compr_config.codec->options.ape.seek_table_present);
+#endif
     }
 
     else if (out->format == AUDIO_FORMAT_VORBIS) {
+#ifdef VORBIS_OFFLOAD_ENABLED
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_VORBIS_BITSTREAM_FMT, value, sizeof(value));
         if (ret >= 0) {
         // transcoded bitstream mode
             out->compr_config.codec->options.vorbis_dec.bit_stream_fmt = (atoi(value) > 0) ? 1 : 0;
             out->is_compr_metadata_avail = true;
         }
+#endif
     }
 
     else if (out->format == AUDIO_FORMAT_WMA || out->format == AUDIO_FORMAT_WMA_PRO) {
+#ifdef WMA_OFFLOAD_ENABLED
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_FORMAT_TAG, value, sizeof(value));
         if (ret >= 0) {
             out->compr_config.codec->format = atoi(value);
@@ -1026,6 +1031,7 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
                 out->compr_config.codec->options.wma.encodeopt,
                 out->compr_config.codec->options.wma.encodeopt1,
                 out->compr_config.codec->options.wma.encodeopt2);
+#endif
     }
 
     return ret;
