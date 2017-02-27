@@ -179,6 +179,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_KPI_OPTIMIZE)),true)
     LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_DISABLED_FM_VIRTUAL_RECORD)),true)
+    LOCAL_CFLAGS += -DNO_FM_VIRTUAL_RECORD
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
