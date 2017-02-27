@@ -30,15 +30,15 @@ extern "C" {
 
 static const qahw_effect_uuid_t SL_IID_ENVIRONMENTALREVERB_ = { 0xc2e5d5f0, 0x94bd, 0x4763, 0x9cac,
         { 0x4e, 0x23, 0x4d, 0x6, 0x83, 0x9e } };
-const qahw_effect_uuid_t * const SL_IID_ENVIRONMENTALREVERB = &SL_IID_ENVIRONMENTALREVERB_;
+static const qahw_effect_uuid_t * const SL_IID_ENVIRONMENTALREVERB = &SL_IID_ENVIRONMENTALREVERB_;
 
 static const qahw_effect_uuid_t SL_IID_INS_ENVIRONMENTALREVERB_UUID_ = { 0xeb64ea04, 0x973b, 0x43d2, 0x8f5e,
         { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } };
-const qahw_effect_uuid_t * const SL_IID_INS_ENVIRONMENTALREVERB_UUID = &SL_IID_INS_ENVIRONMENTALREVERB_UUID_;
+static const qahw_effect_uuid_t * const SL_IID_INS_ENVIRONMENTALREVERB_UUID = &SL_IID_INS_ENVIRONMENTALREVERB_UUID_;
 
 static const qahw_effect_uuid_t SL_IID_AUX_ENVIRONMENTALREVERB_UUID_ = { 0x79a18026, 0x18fd, 0x4185, 0x8233,
         { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } };
-const qahw_effect_uuid_t * const SL_IID_AUX_ENVIRONMENTALREVERB_UUID = &SL_IID_AUX_ENVIRONMENTALREVERB_UUID_;
+static const qahw_effect_uuid_t * const SL_IID_AUX_ENVIRONMENTALREVERB_UUID = &SL_IID_AUX_ENVIRONMENTALREVERB_UUID_;
 
 /* enumerated parameter settings for environmental reverb effect */
 typedef enum
