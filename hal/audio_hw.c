@@ -79,8 +79,6 @@
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /*DIRECT PCM has same buffer sizes as DEEP Buffer*/
 #define DIRECT_PCM_NUM_FRAGMENTS 2
-/* ToDo: Check and update a proper value in msec */
-#define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 50
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
 #define DSD_VOLUME_MIN_DB (-110)
 
@@ -2928,7 +2926,9 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
     uint32_t latency = 0;
 
     if (is_offload_usecase(out->usecase)) {
-        latency = COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
+        lock_output_stream(out);
+        latency = audio_extn_utils_compress_get_dsp_latency(out);
+        pthread_mutex_unlock(&out->lock);
     } else if (out->realtime) {
         // since the buffer won't be filled up faster than realtime,
         // return a smaller number

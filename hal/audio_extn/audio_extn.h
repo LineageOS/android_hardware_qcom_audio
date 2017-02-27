@@ -108,6 +108,11 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
 #define compress_set_next_track_param(compress, codec_options) (0)
 #endif
 
+#ifndef AUDIO_HW_EXTN_API_ENABLED
+#define compress_set_metadata(compress, metadata) (0)
+#define compress_get_metadata(compress, metadata) (0)
+#endif
+
 #define MAX_LENGTH_MIXER_CONTROL_IN_INT                  (128)
 
 void audio_extn_set_parameters(struct audio_device *adev,
@@ -823,4 +828,5 @@ int audio_extn_set_aptx_dec_params(struct aptx_dec_param *payload);
 int audio_extn_utils_get_avt_device_drift(
                 struct audio_usecase *usecase,
                 struct audio_avt_device_drift_param *drift_param);
+int audio_extn_utils_compress_get_dsp_latency(struct stream_out *out);
 #endif /* AUDIO_EXTN_H */
