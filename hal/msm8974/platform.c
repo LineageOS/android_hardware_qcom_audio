@@ -5360,9 +5360,9 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
         /* update cfg against other existing capture usecases on same backend */
         list_for_each(node, &adev->usecase_list) {
             uc = node_to_item(node, struct audio_usecase, list);
-            if (uc->type == PCM_CAPTURE &&
+            in = (struct stream_in *) uc->stream.in;
+            if (in != NULL && uc->type == PCM_CAPTURE &&
                 backend_idx == platform_get_backend_index(uc->in_snd_device)) {
-                in = (struct stream_in *) uc->stream.in;
                 uc_channels = audio_channel_count_from_in_mask(in->channel_mask);
 
                 ALOGV("%s:txbecf: uc %s, id %d, sr %d, bw %d, ch %d, device %s",
