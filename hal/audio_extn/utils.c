@@ -20,6 +20,7 @@
 #define LOG_TAG "audio_hw_utils"
 /* #define LOG_NDEBUG 0 */
 
+#include <inttypes.h>
 #include <errno.h>
 #include <cutils/properties.h>
 #include <cutils/config_utils.h>
@@ -1806,6 +1807,72 @@ int audio_extn_utils_compress_set_clk_rec_mode(
             struct audio_usecase *usecase __unused)
 {
     ALOGD("%s:: configuring render mode not supported", __func__);
+    return 0;
+}
+#endif
+
+#ifdef SNDRV_COMPRESS_RENDER_WINDOW
+int audio_extn_utils_compress_set_render_window(
+            struct stream_out *out,
+            struct audio_out_render_window_param *render_window)
+{
+    struct snd_compr_metadata metadata;
+    int ret = -EINVAL;
+
+    ALOGD("%s:: render window start 0x%"PRIx64" end 0x%"PRIx64"",
+          __func__,render_window->render_ws, render_window->render_we);
+
+    if(render_window == NULL) {
+        ALOGE("%s:: Invalid render_window", __func__);
+        goto exit;
+    }
+
+    if (!is_offload_usecase(out->usecase)) {
+        ALOGE("%s:: not supported for non offload session", __func__);
+        goto exit;
+    }
+
+    if ((out->render_mode == RENDER_MODE_AUDIO_MASTER) ||
+        (out->render_mode == RENDER_MODE_AUDIO_STC_MASTER)) {
+        memcpy(&out->render_window, render_window,
+               sizeof(struct audio_out_render_window_param));
+    } else {
+        ALOGD("%s:: only supported in timestamp mode, current "
+              "render mode mode %d", __func__, out->render_mode);
+        goto exit;
+    }
+
+    if (!out->compr) {
+        ALOGW("%s:: offload session not yet opened,"
+               "render window will be configure later", __func__);
+        /* store render window to reconfigure in start_output_stream() */
+       goto exit;
+    }
+
+    metadata.key = SNDRV_COMPRESS_RENDER_WINDOW;
+    /*render window start value */
+    metadata.value[0] = 0xFFFFFFFF & render_window->render_ws; /* lsb */
+    metadata.value[1] = \
+            (0xFFFFFFFF00000000 & render_window->render_ws) >> 32; /* msb*/
+    /*render window end value */
+    metadata.value[2] = 0xFFFFFFFF & render_window->render_we; /* lsb */
+    metadata.value[3] = \
+            (0xFFFFFFFF00000000 & render_window->render_we) >> 32; /* msb*/
+
+    ret = compress_set_metadata(out->compr, &metadata);
+    if(ret) {
+        ALOGE("%s::error %s", __func__, compress_get_error(out->compr));
+    }
+
+exit:
+    return ret;
+}
+#else
+int audio_extn_utils_compress_set_render_window(
+            struct stream_out *out __unused,
+            struct audio_out_render_window_param *render_window __unused)
+{
+    ALOGD("%s:: configuring render window not supported", __func__);
     return 0;
 }
 #endif

@@ -56,10 +56,33 @@ static void lock_output_stream(struct stream_out *out)
 }
 
 /* API to send playback stream specific config parameters */
-int qahwi_out_set_param_data(struct audio_stream_out *stream __unused,
-                             audio_extn_param_id param_id __unused,
-                             audio_extn_param_payload *payload __unused) {
-    return -ENOSYS;
+int qahwi_out_set_param_data(struct audio_stream_out *stream,
+                             audio_extn_param_id param_id,
+                             audio_extn_param_payload *payload) {
+    int ret = -EINVAL;
+    struct stream_out *out = (struct stream_out *)stream;
+
+    if (!stream || !payload) {
+        ALOGE("%s:: Invalid Param",__func__);
+        return ret;
+    }
+
+    lock_output_stream(out);
+    ALOGD("%s: enter: stream (%p) usecase(%d: %s) param_id %d", __func__,
+           stream, out->usecase, use_case_table[out->usecase], param_id);
+
+    switch (param_id) {
+        case AUDIO_EXTN_PARAM_OUT_RENDER_WINDOW:
+            ret = audio_extn_utils_compress_set_render_window(out,
+                           (struct audio_out_render_window_param *)(payload));
+           break;
+        default:
+            ALOGE("%s:: unsupported param_id %d", __func__, param_id);
+            break;
+    }
+
+    pthread_mutex_unlock(&out->lock);
+    return ret;
 }
 
 /* API to get playback stream specific config parameters */
