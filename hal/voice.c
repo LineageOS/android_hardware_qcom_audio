@@ -34,6 +34,8 @@
 #include "platform_api.h"
 #include "audio_extn.h"
 
+#define MIXER_CTL_VOICECALL_STATE "VOICE_CALL State"
+
 struct pcm_config pcm_config_voice_call = {
     .channels = 1,
     .rate = 8000,
@@ -487,11 +489,19 @@ int voice_set_volume(struct audio_device *adev, float volume)
 int voice_start_call(struct audio_device *adev)
 {
     int ret = 0;
+    struct mixer_ctl *ctl;
 
     adev->voice.in_call = true;
     ret = voice_extn_start_call(adev);
     if (ret == -ENOSYS) {
         ret = voice_start_usecase(adev, USECASE_VOICE_CALL);
+    }
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, MIXER_CTL_VOICECALL_STATE);
+    if (ctl == NULL) {
+        ALOGE("%s: Could not find %s\n", __func__, MIXER_CTL_VOICECALL_STATE);
+    } else {
+        mixer_ctl_set_enum_by_string(ctl, "On");
     }
 
     return ret;
@@ -500,11 +510,19 @@ int voice_start_call(struct audio_device *adev)
 int voice_stop_call(struct audio_device *adev)
 {
     int ret = 0;
+    struct mixer_ctl *ctl;
 
     adev->voice.in_call = false;
     ret = voice_extn_stop_call(adev);
     if (ret == -ENOSYS) {
         ret = voice_stop_usecase(adev, USECASE_VOICE_CALL);
+    }
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, MIXER_CTL_VOICECALL_STATE);
+    if (ctl == NULL) {
+        ALOGE("%s: Could not find %s\n", __func__, MIXER_CTL_VOICECALL_STATE);
+    } else {
+        mixer_ctl_set_enum_by_string(ctl, "Off");
     }
 
     return ret;
