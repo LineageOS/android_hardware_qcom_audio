@@ -39,7 +39,7 @@ BININSTALLDIR := $(DESTDIR)usr/bin
 # ---------------------------------------------------------------------------------
 #					BUILD
 # ---------------------------------------------------------------------------------
-all: libOmxQcelp13Enc.so.$(LIBVER) mm-aenc-omxqcelp13-test
+all: libOmxQcelp13Enc.so.$(LIBVER)
 
 install:
 	echo "intalling aenc-qcelp13 in $(DESTDIR)"
@@ -49,8 +49,7 @@ install:
 	install -m 555 libOmxQcelp13Enc.so.$(LIBVER) $(LIBINSTALLDIR)
 	cd $(LIBINSTALLDIR) && ln -s libOmxQcelp13Enc.so.$(LIBVER) libOmxQcelp13Enc.so.$(LIBMAJOR)
 	cd $(LIBINSTALLDIR) && ln -s libOmxQcelp13Enc.so.$(LIBMAJOR) libOmxQcelp13Enc.so
-	install -m 555 mm-aenc-omxqcelp13-test $(BININSTALLDIR)
-	
+
 # ---------------------------------------------------------------------------------
 #				COMPILE LIBRARY
 # ---------------------------------------------------------------------------------
@@ -63,18 +62,6 @@ SRCS += src/aenc_svr.c
 
 libOmxQcelp13Enc.so.$(LIBVER): $(SRCS)
 	$(CC) $(CPPFLAGS) $(CFLAGS_SO) $(LDFLAGS_SO) -Wl,-soname,libOmxQcelp13Enc.so.$(LIBMAJOR) -o $@ $^ $(LDFLAGS) $(LDLIBS)
-
-# ---------------------------------------------------------------------------------
-#				COMPILE TEST APP
-# ---------------------------------------------------------------------------------
-TEST_LDLIBS := -lpthread
-TEST_LDLIBS += -ldl
-TEST_LDLIBS += -lOmxCore
-
-TEST_SRCS := test/omx_qcelp13_enc_test.c
-
-mm-aenc-omxqcelp13-test: libOmxQcelp13Enc.so.$(LIBVER) $(TEST_SRCS)
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^ $(TEST_LDLIBS)
 
 # ---------------------------------------------------------------------------------
 #					END
