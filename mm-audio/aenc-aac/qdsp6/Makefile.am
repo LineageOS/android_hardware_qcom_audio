@@ -24,7 +24,3 @@ libOmxAacEnc_la_SOURCES = $(c_sources)
 libOmxAacEnc_la_CFLAGS = $(AM_CFLAGS) -fPIC
 libOmxAacEnc_la_LDLIBS = -lOmxCore -lstdc++ -lpthread
 libOmxAacEnc_la_LDFLAGS = -shared -version-info $(OMXAUDIO_LIBRARY_VERSION)
-
-bin_PROGRAMS = mm-aenc-omxaac-test
-mm_aenc_omxaac_test_SOURCES = test/omx_aac_enc_test.c
-mm_aenc_omxaac_test_LDADD = -lOmxCore -ldl -lpthread libOmxAacEnc.la

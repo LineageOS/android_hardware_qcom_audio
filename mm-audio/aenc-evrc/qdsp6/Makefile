@@ -39,7 +39,7 @@ BININSTALLDIR := $(DESTDIR)usr/bin
 # ---------------------------------------------------------------------------------
 #					BUILD
 # ---------------------------------------------------------------------------------
-all: libOmxEvrcEnc.so.$(LIBVER) mm-aenc-omxevrc-test
+all: libOmxEvrcEnc.so.$(LIBVER)
 
 install:
 	echo "intalling aenc-evrc in $(DESTDIR)"
@@ -49,8 +49,7 @@ install:
 	install -m 555 libOmxEvrcEnc.so.$(LIBVER) $(LIBINSTALLDIR)
 	cd $(LIBINSTALLDIR) && ln -s libOmxEvrcEnc.so.$(LIBVER) libOmxEvrcEnc.so.$(LIBMAJOR)
 	cd $(LIBINSTALLDIR) && ln -s libOmxEvrcEnc.so.$(LIBMAJOR) libOmxEvrcEnc.so
-	install -m 555 mm-aenc-omxevrc-test $(BININSTALLDIR)
-	
+
 # ---------------------------------------------------------------------------------
 #				COMPILE LIBRARY
 # ---------------------------------------------------------------------------------
@@ -63,18 +62,6 @@ SRCS += src/aenc_svr.c
 
 libOmxEvrcEnc.so.$(LIBVER): $(SRCS)
 	$(CC) $(CPPFLAGS) $(CFLAGS_SO) $(LDFLAGS_SO) -Wl,-soname,libOmxEvrcEnc.so.$(LIBMAJOR) -o $@ $^ $(LDFLAGS) $(LDLIBS)
-
-# ---------------------------------------------------------------------------------
-#				COMPILE TEST APP
-# ---------------------------------------------------------------------------------
-TEST_LDLIBS := -lpthread
-TEST_LDLIBS += -ldl
-TEST_LDLIBS += -lOmxCore
-
-TEST_SRCS := test/omx_evrc_enc_test.c
-
-mm-aenc-omxevrc-test: libOmxEvrcEnc.so.$(LIBVER) $(TEST_SRCS)
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^ $(TEST_LDLIBS)
 
 # ---------------------------------------------------------------------------------
 #					END
