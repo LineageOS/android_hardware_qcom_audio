@@ -42,34 +42,6 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 include $(BUILD_SHARED_LIBRARY)
 
-# ---------------------------------------------------------------------------------
-#             Make the apps-test (mm-aenc-omxaac-test)
-# ---------------------------------------------------------------------------------
-
-include $(CLEAR_VARS)
-
-mm-aac-enc-test-inc    := $(LOCAL_PATH)/inc
-mm-aac-enc-test-inc    += $(LOCAL_PATH)/test
-ifeq ($(strip $(TARGET_USES_QCOM_MM_AUDIO)),true)
-mm-aac-enc-test-inc    += $(TARGET_OUT_HEADERS)/mm-audio/audio-alsa 
-endif
-mm-aac-enc-test-inc    += $(TARGET_OUT_HEADERS)/mm-core/omxcore
-
-LOCAL_MODULE            := mm-aenc-omxaac-test
-LOCAL_MODULE_TAGS       := optional
-LOCAL_VENDOR_MODULE     := true
-LOCAL_CFLAGS            := $(libOmxAacEnc-def)
-LOCAL_C_INCLUDES        := $(mm-aac-enc-test-inc)
-LOCAL_PRELINK_MODULE    := false
-LOCAL_SHARED_LIBRARIES  := libmm-omxcore
-LOCAL_SHARED_LIBRARIES  += libOmxAacEnc
-ifeq ($(strip $(TARGET_USES_QCOM_MM_AUDIO)),true)
-LOCAL_SHARED_LIBRARIES  += libaudioalsa
-endif
-LOCAL_SRC_FILES         := test/omx_aac_enc_test.c
-
-include $(BUILD_EXECUTABLE)
-
 endif
 
 # ---------------------------------------------------------------------------------
