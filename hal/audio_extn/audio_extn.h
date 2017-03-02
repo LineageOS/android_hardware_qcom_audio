@@ -70,6 +70,31 @@ int audio_extn_hfp_set_mic_mute(struct audio_device *adev, bool state);
 
 #endif
 
+#ifndef USB_TUNNEL_ENABLED
+#define audio_extn_usb_init(adev)                                      (0)
+#define audio_extn_usb_deinit()                                        (0)
+#define audio_extn_usb_add_device(device, card)                        (0)
+#define audio_extn_usb_remove_device(device, card)                     (0)
+#define audio_extn_usb_is_config_supported(bit_width, sample_rate, ch, pb) (false)
+#define audio_extn_usb_enable_sidetone(device, enable)                 (0)
+#define audio_extn_usb_set_sidetone_gain(parms, value, len)            (0)
+#define audio_extn_usb_is_capture_supported()                          (false)
+#else
+void audio_extn_usb_init(void *adev);
+void audio_extn_usb_deinit();
+void audio_extn_usb_add_device(audio_devices_t device, int card);
+void audio_extn_usb_remove_device(audio_devices_t device, int card);
+bool audio_extn_usb_is_config_supported(unsigned int *bit_width,
+                                        unsigned int *sample_rate,
+                                        unsigned int *ch,
+                                        bool is_playback);
+int audio_extn_usb_enable_sidetone(int device, bool enable);
+int audio_extn_usb_set_sidetone_gain(struct str_parms *parms,
+                                     char *value, int len);
+bool audio_extn_usb_is_capture_supported();
+#endif
+
+
 #ifndef SOUND_TRIGGER_ENABLED
 #define audio_extn_sound_trigger_init(adev)                            (0)
 #define audio_extn_sound_trigger_deinit(adev)                          (0)

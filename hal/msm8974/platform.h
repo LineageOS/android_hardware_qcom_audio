@@ -41,6 +41,15 @@ enum {
      AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE | \
      AUDIO_DEVICE_OUT_LINE)
 
+/*
+ * Below are the input devices for which back end is same, SLIMBUS_0_TX.
+ * All these devices are handled by the internal HW codec. We can
+ * enable any one of these devices at any time
+ */
+#define AUDIO_DEVICE_IN_ALL_CODEC_BACKEND \
+    (AUDIO_DEVICE_IN_BUILTIN_MIC | AUDIO_DEVICE_IN_BACK_MIC | \
+     AUDIO_DEVICE_IN_WIRED_HEADSET | AUDIO_DEVICE_IN_VOICE_CALL) & ~AUDIO_DEVICE_BIT_IN
+
 /* Sound devices specific to the platform
  * The DEVICE_OUT_* and DEVICE_IN_* should be mapped to these sound
  * devices to enable corresponding mixer paths
@@ -78,6 +87,9 @@ enum {
     SND_DEVICE_OUT_SPEAKER_PROTECTED,
     SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED,
     SND_DEVICE_OUT_VOICE_SPEAKER_HFP,
+    SND_DEVICE_OUT_USB_HEADSET,
+    SND_DEVICE_OUT_USB_HEADPHONES,
+    SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET,
     SND_DEVICE_OUT_END,
 
     /*
@@ -142,6 +154,7 @@ enum {
 
     SND_DEVICE_IN_VOICE_RX,
 
+    SND_DEVICE_IN_USB_HEADSET_MIC,
     SND_DEVICE_IN_THREE_MIC,
     SND_DEVICE_IN_QUAD_MIC,
     SND_DEVICE_IN_CAPTURE_VI_FEEDBACK,
@@ -155,6 +168,24 @@ enum {
     SND_DEVICE_MAX = SND_DEVICE_IN_END,
 
 };
+#define DEFAULT_OUTPUT_SAMPLING_RATE    48000
+#define OUTPUT_SAMPLING_RATE_44100      44100
+enum {
+    DEFAULT_CODEC_BACKEND,
+    SLIMBUS_0_RX = DEFAULT_CODEC_BACKEND,
+    HEADPHONE_BACKEND,
+    SLIMBUS_6_RX = HEADPHONE_BACKEND,
+    HDMI_RX_BACKEND,
+    USB_AUDIO_RX_BACKEND,
+    MAX_RX_CODEC_BACKENDS = USB_AUDIO_RX_BACKEND,
+    /* TX BE follows RX BE */
+    SLIMBUS_0_TX,
+    DEFAULT_CODEC_TX_BACKEND = SLIMBUS_0_TX,
+    USB_AUDIO_TX_BACKEND,
+    BT_SCO_TX_BACKEND,
+    MAX_CODEC_BACKENDS
+};
+
 
 #define DEVICE_NAME_MAX_SIZE   128
 #define HW_INFO_ARRAY_MAX_SIZE 32
@@ -315,6 +346,23 @@ struct csd_data {
     stop_record_t stop_record;
     get_sample_rate_t get_sample_rate;
 };
+
+struct audio_backend_cfg {
+    unsigned int   sample_rate;
+    unsigned int   channels;
+    unsigned int   bit_width;
+    bool           passthrough_enabled;
+    audio_format_t format;
+};
+
+typedef struct codec_backend_cfg {
+    uint32_t sample_rate;
+    uint32_t bit_width;
+    uint32_t channels;
+    char     *bitwidth_mixer_ctl;
+    char     *samplerate_mixer_ctl;
+    char     *channels_mixer_ctl;
+} codec_backend_cfg_t;
 
 #define PLATFORM_INFO_XML_PATH          "/system/etc/audio_platform_info.xml"
 #define PLATFORM_INFO_XML_BASE_STRING   "/system/etc/audio_platform_info"
