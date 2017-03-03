@@ -154,6 +154,9 @@
     <ctl name="DISPLAY_PORT Mixer MultiMedia14" value="0" />
     <ctl name="DISPLAY_PORT Mixer MultiMedia15" value="0" />
     <ctl name="DISPLAY_PORT Mixer MultiMedia16" value="0" />
+    <ctl name="Display Port RX Bit Format" value="S16_LE" />
+    <ctl name="Display Port RX SampleRate" value="KHZ_48" />
+    <ctl name="Display Port RX Channels" value="Two" />
     <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia1" value="0" />
     <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia1" value="0" />
     <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia2" value="0" />
@@ -202,9 +205,15 @@
     <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia14" value="0" />
     <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia15" value="0" />
     <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia16" value="0" />
+    <ctl name="USB_AUDIO_RX Format" value="S16_LE" />
+    <ctl name="USB_AUDIO_RX SampleRate" value="KHZ_48" />
+    <ctl name="USB_AUDIO_RX Channels" value="Two" />
     <ctl name="MultiMedia1 Mixer USB_AUDIO_TX" value="0" />
     <ctl name="MultiMedia5 Mixer USB_AUDIO_TX" value="0" />
     <ctl name="MultiMedia8 Mixer USB_AUDIO_TX" value="0" />
+    <ctl name="USB_AUDIO_TX Format" value="S16_LE" />
+    <ctl name="USB_AUDIO_TX SampleRate" value="KHZ_48" />
+    <ctl name="USB_AUDIO_TX Channels" value="One" />
     <ctl name="MultiMedia6 Mixer SLIM_0_TX" value="0" />
     <ctl name="IIR0 INP0 MUX" value="ZERO" />
     <ctl name="IIR0 INP1 MUX" value="ZERO" />
