@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fa5d592f_28ef5520",
+        "filename": "hal/audio_extn/soundtrigger.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 204,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-03-04T21:30:20Z",
+      "side": 0,
+      "message": "This seems like the only real change?",
+      "revId": "25bbb88034a2d4febf1713023b8030c2f471ec75",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
