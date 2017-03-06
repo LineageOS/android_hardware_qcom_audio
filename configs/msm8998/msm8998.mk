@@ -230,3 +230,7 @@ audio.noisy.broadcast.delay=600
 #offload pausetime out duration to 3 secs to inline with other outputs
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.offload.pstimeout.secs=3
+
+#set adm buffering to 3 ms
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.adm.buffering.ms=3
