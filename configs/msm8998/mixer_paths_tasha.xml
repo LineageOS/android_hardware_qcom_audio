@@ -1986,7 +1986,7 @@
 
    <path name="speaker-vbat-mono-2">
        <path name="speaker-mono-2" />
-       <ctl name="RX INT8 VBAT SPKRL VBAT Enable" value="1" />
+       <ctl name="RX INT8 VBAT SPKRR VBAT Enable" value="1" />
    </path>
 
    <path name="speaker-vbat">
@@ -2082,7 +2082,7 @@
 
     <path name="voice-speaker-2-protected-vbat">
         <path name="voice-speaker-2-protected" />
-        <ctl name="RX INT8 VBAT SPKRL VBAT Enable" value="1" />
+        <ctl name="RX INT8 VBAT SPKRR VBAT Enable" value="1" />
     </path>
 
     <path name="handset">
