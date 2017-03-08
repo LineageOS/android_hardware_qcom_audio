@@ -159,6 +159,8 @@ static void update_hardware_info_8x16(struct hardware_info *hw_info, const char 
     } else if (!strcmp(snd_card_name, "sdm660-tasha-skus-snd-card")) {
         hw_info->is_stereo_spkr = false;
         strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "sdm660-snd-card-skush")) {
+        strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "msm8920-sku7-snd-card")) {
         strlcpy(hw_info->name, "msm8920", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "apq8009-tashalite-snd-card")) {
