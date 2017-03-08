@@ -28,8 +28,8 @@
 #include "audio_extn.h"
 #include <linux/msm_audio.h>
 
-#define MIXER_XML_DEFAULT_PATH "/system/etc/mixer_paths.xml"
-#define MIXER_XML_BASE_STRING "/system/etc/mixer_paths"
+#define MIXER_XML_DEFAULT_PATH "mixer_paths.xml"
+#define MIXER_XML_BASE_STRING "mixer_paths"
 #define TOMTOM_8226_SND_CARD_NAME "msm8226-tomtom-snd-card"
 #define TOMTOM_MIXER_FILE_SUFFIX "wcd9330"
 
@@ -1083,6 +1083,28 @@ platform_backend_config_init(struct platform_data *pdata)
             strdup("USB_AUDIO_RX Channels");
 }
 
+// Treblized config files will be located in /odm/etc or /vendor/etc.
+static const char *kConfigLocationList[] =
+        {"/odm/etc", "/vendor/etc", "/system/etc"};
+static const int kConfigLocationListSize =
+        (sizeof(kConfigLocationList) / sizeof(kConfigLocationList[0]));
+
+bool resolveConfigFile(char file_name[MIXER_PATH_MAX_LENGTH]) {
+    char full_config_path[MIXER_PATH_MAX_LENGTH];
+    for (int i = 0; i < kConfigLocationListSize; i++) {
+        snprintf(full_config_path,
+                 MIXER_PATH_MAX_LENGTH,
+                 "%s/%s",
+                 kConfigLocationList[i],
+                 file_name);
+        if (F_OK == access(full_config_path, 0)) {
+            strcpy(file_name, full_config_path);
+            return true;
+        }
+    }
+    return false;
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char value[PROPERTY_VALUE_MAX];
@@ -1166,15 +1188,15 @@ void *platform_init(struct audio_device *adev)
             snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s_%s.xml",
                              MIXER_XML_BASE_STRING, snd_split_handle->snd_card,
                              snd_split_handle->form_factor);
-
-            if (F_OK != access(mixer_xml_file, 0)) {
+            if (!resolveConfigFile(mixer_xml_file)) {
                 memset(mixer_xml_file, 0, sizeof(mixer_xml_file));
                 snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s.xml",
                              MIXER_XML_BASE_STRING, snd_split_handle->snd_card);
 
-                if (F_OK != access(mixer_xml_file, 0)) {
+                if (!resolveConfigFile(mixer_xml_file)) {
                     memset(mixer_xml_file, 0, sizeof(mixer_xml_file));
                     strlcpy(mixer_xml_file, MIXER_XML_DEFAULT_PATH, MIXER_PATH_MAX_LENGTH);
+                    resolveConfigFile(mixer_xml_file);
                 }
             }
 
@@ -1182,14 +1204,15 @@ void *platform_init(struct audio_device *adev)
                              PLATFORM_INFO_XML_BASE_STRING, snd_split_handle->snd_card,
                              snd_split_handle->form_factor);
 
-            if (F_OK != access(platform_info_file, 0)) {
+            if (!resolveConfigFile(platform_info_file)) {
                 memset(platform_info_file, 0, sizeof(platform_info_file));
                 snprintf(platform_info_file, sizeof(platform_info_file), "%s_%s.xml",
                              PLATFORM_INFO_XML_BASE_STRING, snd_split_handle->snd_card);
 
-                if (F_OK != access(platform_info_file, 0)) {
+                if (!resolveConfigFile(platform_info_file)) {
                     memset(platform_info_file, 0, sizeof(platform_info_file));
                     strlcpy(platform_info_file, PLATFORM_INFO_XML_PATH, MIXER_PATH_MAX_LENGTH);
+                    resolveConfigFile(platform_info_file);
                 }
             }
         }

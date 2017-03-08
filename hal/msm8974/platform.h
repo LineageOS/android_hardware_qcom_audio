@@ -364,6 +364,6 @@ typedef struct codec_backend_cfg {
     char     *channels_mixer_ctl;
 } codec_backend_cfg_t;
 
-#define PLATFORM_INFO_XML_PATH          "/system/etc/audio_platform_info.xml"
-#define PLATFORM_INFO_XML_BASE_STRING   "/system/etc/audio_platform_info"
+#define PLATFORM_INFO_XML_PATH          "audio_platform_info.xml"
+#define PLATFORM_INFO_XML_BASE_STRING   "audio_platform_info"
 #endif // QCOM_AUDIO_PLATFORM_H
