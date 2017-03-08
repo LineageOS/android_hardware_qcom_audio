@@ -148,10 +148,28 @@ struct qaf {
     bool main_output_active;
     bool assoc_output_active;
     bool qaf_msmd_enabled;
+    float vol_left;
+    float vol_right;
 };
 
 static struct qaf *qaf_mod = NULL;
 static int qaf_stream_set_param(struct stream_out *out, const char *kv_pair) __attribute__ ((unused));
+
+static bool is_ms12_format(audio_format_t format)
+{
+    if((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AC3)
+        return true;
+    if((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_E_AC3)
+        return true;
+    if((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC)
+        return true;
+    if((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC_ADTS)
+        return true;
+    if(format == AUDIO_FORMAT_PCM_16_BIT)
+        return true;
+
+    return false;
+}
 
 static void lock_output_stream(struct stream_out *out)
 {
@@ -293,6 +311,12 @@ static int qaf_write_input_buffer(struct stream_out *out, const void *buffer, in
 static int qaf_out_set_volume(struct audio_stream_out *stream __unused, float left,
                           float right)
 {
+    /* For ms12 formats, qaf_mod->qaf_compr_offload_out is allocated during the first
+     * call of notify_event_callback(). Therefore, the volume levels set during session
+     * open have to be cached and applied later */
+    qaf_mod->vol_left = left;
+    qaf_mod->vol_right = right;
+
     if (qaf_mod->qaf_compr_offload_out != NULL) {
         return qaf_mod->qaf_compr_offload_out->stream.set_volume(
             (struct audio_stream_out *)qaf_mod->qaf_compr_offload_out, left, right);
@@ -765,6 +789,8 @@ static void notify_event_callback(audio_session_handle_t session_handle __unused
                 qaf_mod->qaf_compr_offload_out->info.channel_mask = config.offload_info.channel_mask;
                 qaf_mod->qaf_compr_offload_out->info.format = config.offload_info.format;
                 qaf_mod->qaf_compr_offload_out->info.sample_rate = config.offload_info.sample_rate;
+
+                qaf_mod->qaf_compr_offload_out->stream.set_volume((struct audio_stream_out *)qaf_mod->qaf_compr_offload_out, qaf_mod->vol_left, qaf_mod->vol_right);
             }
 
             if (!qaf_mod->hdmi_connect && (qaf_mod->qaf_compr_passthrough_out || qaf_mod->qaf_compr_offload_out_mch)) {
@@ -1256,6 +1282,11 @@ int audio_extn_qaf_open_output_stream(struct audio_hw_device *dev,
     ret = adev_open_output_stream(dev, handle, devices, flags, config, stream_out, address);
     if (*stream_out == NULL) {
         goto error_open;
+    }
+
+    if ( false == is_ms12_format(config->format) ) {
+        ALOGV("%s: exiting qaf for non-ms12 format %x", __func__, config->format);
+        return ret;
     }
 
     out = (struct stream_out *) *stream_out;
