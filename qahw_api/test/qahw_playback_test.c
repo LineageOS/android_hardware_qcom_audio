@@ -120,6 +120,11 @@ struct proxy_data {
     struct wav_header hdr;
 };
 
+struct drift_data {
+    qahw_module_handle_t *out_handle;
+    volatile bool thread_exit;
+};
+
 typedef struct {
     qahw_module_handle_t *qahw_mod_handle;
     audio_io_handle_t handle;
@@ -137,6 +142,7 @@ typedef struct {
     char *kvpair_values;
     bool flags_set;
     int effect_index;
+    bool drift_query;
     thread_func_t ethread_func;
     thread_data_t *ethread_data;
     cmd_data_t cmd_data;
@@ -152,8 +158,6 @@ volatile bool stop_playback = false;
 const char *log_filename = NULL;
 float vol_level = 0.01;
 struct proxy_data proxy_params;
-bool proxy_thread_active;
-pthread_t proxy_thread;
 pthread_t playback_thread[MAX_PLAYBACK_STREAMS];
 bool thread_active[MAX_PLAYBACK_STREAMS] = { false };
 
@@ -384,6 +388,30 @@ void *proxy_read (void* data)
     return 0;
 }
 
+void *drift_read(void* data)
+{
+    struct drift_data* params = (struct drift_data*) data;
+    qahw_stream_handle_t* out_handle = params->out_handle;
+    struct qahw_avt_device_drift_param drift_param;
+    int rc = -EINVAL;
+
+    printf("drift quried at 100ms interval \n");
+    while (!(params->thread_exit)) {
+        memset(&drift_param, 0, sizeof(struct qahw_avt_device_drift_param));
+        rc = qahw_out_get_param_data(out_handle, QAHW_PARAM_AVT_DEVICE_DRIFT,
+                (qahw_param_payload *)&drift_param);
+        if (!rc) {
+            printf("resync flag = %d, drift %d, av timer %lld\n",
+                    drift_param.resync_flag,
+                    drift_param.avt_device_drift_value,
+                    drift_param.ref_timer_abs_ts);
+        } else {
+            printf("drift query failed rc = %d retry after 100ms\n", rc);
+        }
+
+        usleep(100000);
+    }
+}
 
 /* Entry point function for stream playback
  * Opens the stream
@@ -397,6 +425,12 @@ void *start_stream_playback (void* stream_data)
     int rc = 0;
     stream_config *params = (stream_config*) stream_data;
     const char* stream_name = "output_stream";
+    bool proxy_thread_active = false;
+    pthread_t proxy_thread;
+
+    bool drift_thread_active = false;
+    pthread_t drift_query_thread;
+    struct drift_data drift_params;
 
     if (params->output_device & AUDIO_DEVICE_OUT_ALL_A2DP)
         params->output_device = AUDIO_DEVICE_OUT_PROXY;
@@ -522,6 +556,17 @@ void *start_stream_playback (void* stream_data)
         rc = pthread_create(&proxy_thread, NULL, proxy_read, (void *)&proxy_params);
         if (!rc)
             proxy_thread_active = true;
+    } else if (params->drift_query &&
+              (params->output_device & AUDIO_DEVICE_OUT_HDMI) &&
+              !drift_thread_active) {
+        drift_params.out_handle = params->out_handle;
+        drift_params.thread_exit = false;
+        fprintf(log_file, "create thread to read avtime vs hdmi drift\n");
+        rc = pthread_create(&drift_query_thread, NULL, drift_read, (void *)&drift_params);
+        if (!rc)
+            drift_thread_active = true;
+        else
+            fprintf(log_file, "drift query thread creation failure %d\n", rc);
     }
 
     rc = qahw_out_set_volume(params->out_handle, vol_level, vol_level);
@@ -616,6 +661,11 @@ void *start_stream_playback (void* stream_data)
         pthread_join(proxy_thread, NULL);
     }
 
+    if (drift_thread_active) {
+        usleep(500000);
+        drift_params.thread_exit = true;
+        pthread_join(drift_query_thread, NULL);
+    }
     rc = qahw_out_standby(params->out_handle);
     if (rc) {
         fprintf(log_file, "stream %d: out standby failed %d \n", params->stream_index, rc);
@@ -974,6 +1024,7 @@ void usage() {
     printf(" -e  --effect-type <effect type>           - Effect used for test\n");
     printf("                                             0:bassboost 1:virtualizer 2:equalizer 3:visualizer(NA) 4:reverb 5:audiosphere others:null\n\n");
     printf(" -A  --bt-addr <bt device addr>            - Required to set bt device adress for aptx decoder\n\n");
+    printf(" -q  --query drift                         - Required for querying avtime vs hdmi drift\n");
     printf(" -P                                        - Argument to do multi-stream playback, currently 2 streams are supported to run concurrently\n");
     printf("                                             Put -P and mention required attributes for the next stream\n");
     printf(" \n Examples \n");
@@ -1072,7 +1123,6 @@ int main(int argc, char* argv[]) {
     int i = 0;
     int j = 0;
     kpi_mode = false;
-    proxy_thread_active = false;
 
     log_file = stdout;
     proxy_params.acp.file_name = "/data/pcm_dump.wav";
@@ -1099,6 +1149,7 @@ int main(int argc, char* argv[]) {
         {"plus",          no_argument,          0, 'P'},
         {"effect-path",   required_argument,    0, 'e'},
         {"bt-addr",       required_argument,    0, 'A'},
+        {"query drift",   no_argument,          0, 'q'},
         {"help",          no_argument,          0, 'h'},
         {0, 0, 0, 0}
     };
@@ -1122,7 +1173,7 @@ int main(int argc, char* argv[]) {
 
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:v:l:t:a:w:k:PD:KF:e:A:h",
+                              "-f:r:c:b:d:v:l:t:a:w:k:PD:KF:e:A:qh",
                               long_options,
                               &option_index)) != -1) {
 
@@ -1198,6 +1249,9 @@ int main(int argc, char* argv[]) {
         case 'A':
             ba = optarg;
             break;
+        case 'q':
+             stream_param[i].drift_query = true;
+             break;
         case 'P':
             if(i >= MAX_PLAYBACK_STREAMS - 1) {
                 fprintf(log_file, "cannot have more than %d streams\n", MAX_PLAYBACK_STREAMS);
