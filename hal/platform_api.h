@@ -20,12 +20,6 @@
 #include "voice.h"
 #define MAX_VOLUME_CAL_STEPS 15
 #define CODEC_BACKEND_DEFAULT_SAMPLE_RATE 48000
-#define CODEC_BACKEND_DEFAULT_BIT_WIDTH 16
-#define CODEC_BACKEND_DEFAULT_CHANNELS 2
-#define CODEC_BACKEND_DEFAULT_TX_CHANNELS 1
-#define SAMPLE_RATE_8000 8000
-#define SAMPLE_RATE_11025 11025
-#define sample_rate_multiple(sr, base) ((sr % base)== 0?true:false)
 
 struct amp_db_and_gain_table {
     float amp;
@@ -117,9 +111,6 @@ int platform_can_split_snd_device(snd_device_t in_snd_device,
 bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_device2);
 
 int platform_set_parameters(void *platform, struct str_parms *parms);
-
-bool platform_check_and_set_playback_backend_cfg(struct audio_device* adev,
-                   struct audio_usecase *usecase, snd_device_t snd_device);
 
 bool platform_check_and_set_capture_backend_cfg(struct audio_device* adev,
                    struct audio_usecase *usecase, snd_device_t snd_device);

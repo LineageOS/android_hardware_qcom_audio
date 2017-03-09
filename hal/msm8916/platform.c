@@ -1093,13 +1093,6 @@ int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
     return 0;
 }
 
-bool platform_check_and_set_playback_backend_cfg(struct audio_device* adev __unused,
-                                              struct audio_usecase *usecase __unused,
-                                              snd_device_t snd_device __unused)
-{
-    return false;
-}
-
 bool platform_check_and_set_capture_backend_cfg(struct audio_device* adev __unused,
                                               struct audio_usecase *usecase __unused,
                                               snd_device_t snd_device __unused)
