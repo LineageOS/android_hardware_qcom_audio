@@ -88,10 +88,6 @@ LOCAL_SHARED_LIBRARIES := \
 	libdl \
 	libexpat
 
-ifneq ($(filter msm8996,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_HEADER_LIBRARIES := sound_trigger.primary_headers
-endif
-
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
 	external/tinycompress/include \
