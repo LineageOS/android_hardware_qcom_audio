@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 The Android Open Source Project
+ * Copyright (C) 2013-2017 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -227,6 +227,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = "voice-tty-full-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = "voice-tty-vco-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = "voice-tty-hco-handset",
+    [SND_DEVICE_OUT_VOICE_TTY_FULL_USB] = "voice-tty-full-usb",
+    [SND_DEVICE_OUT_VOICE_TTY_VCO_USB] = "voice-tty-vco-usb",
     [SND_DEVICE_OUT_VOICE_TX] = "voice-tx",
     [SND_DEVICE_OUT_USB_HEADSET] = "usb-headset",
     [SND_DEVICE_OUT_USB_HEADPHONES] = "usb-headphones",
@@ -277,6 +279,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = "voice-tty-full-headset-mic",
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = "voice-tty-vco-handset-mic",
     [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = "voice-tty-hco-headset-mic",
+    [SND_DEVICE_IN_VOICE_TTY_FULL_USB_MIC] = "voice-tty-full-usb-mic",
+    [SND_DEVICE_IN_VOICE_TTY_HCO_USB_MIC] = "voice-tty-hco-usb-mic",
 
     [SND_DEVICE_IN_VOICE_REC_MIC] = "voice-rec-mic",
     [SND_DEVICE_IN_VOICE_REC_MIC_NS] = "voice-rec-mic",
@@ -330,6 +334,8 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = 37,
+    [SND_DEVICE_OUT_VOICE_TTY_FULL_USB] = 17,
+    [SND_DEVICE_OUT_VOICE_TTY_VCO_USB] = 17,
     [SND_DEVICE_OUT_VOICE_TX] = 45,
     [SND_DEVICE_OUT_USB_HEADSET] = 45,
     [SND_DEVICE_OUT_USB_HEADPHONES] = 45,
@@ -377,6 +383,8 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = 16,
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = 36,
     [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = 16,
+    [SND_DEVICE_IN_VOICE_TTY_FULL_USB_MIC] = 16,
+    [SND_DEVICE_IN_VOICE_TTY_HCO_USB_MIC] = 16,
 
     [SND_DEVICE_IN_VOICE_REC_MIC] = ACDB_ID_VOICE_REC_MIC,
     [SND_DEVICE_IN_VOICE_REC_MIC_NS] = 113,
@@ -442,13 +450,15 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_BT_SCO)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_BT_SCO_WB)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_FULL_USB)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_VCO_USB)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_USB_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_USB_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET)},
-
-    /* in */
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED)},
+
+    /* in */
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_AEC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_NS)},
@@ -488,6 +498,9 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_TTY_FULL_USB_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_TTY_HCO_USB_MIC)},
+
 
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_MIC_NS)},
@@ -2168,6 +2181,24 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
                 else
                     snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
                 }
+        } else if (devices & AUDIO_DEVICE_OUT_USB_DEVICE) {
+            if (voice_is_in_call(adev)) {
+                switch (adev->voice.tty_mode) {
+                    case TTY_MODE_FULL:
+                        snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_USB;
+                        break;
+                    case TTY_MODE_VCO:
+                        snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_USB;
+                        break;
+                    case TTY_MODE_HCO:
+                        // since Hearing will be on handset\speaker, use existing device
+                        snd_device = SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET;
+                        break;
+                    default:
+                        ALOGE("%s: Invalid TTY mode (%#x)",
+                              __func__, adev->voice.tty_mode);
+                }
+            }
         } else if (devices & AUDIO_DEVICE_OUT_ALL_SCO) {
             if (adev->bt_wb_speech_enabled) {
                 snd_device = SND_DEVICE_OUT_BT_SCO_WB;
@@ -2258,17 +2289,33 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
                 out_device & AUDIO_DEVICE_OUT_LINE) {
                 switch (adev->voice.tty_mode) {
-                case TTY_MODE_FULL:
-                    snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC;
-                    break;
-                case TTY_MODE_VCO:
-                    snd_device = SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC;
-                    break;
-                case TTY_MODE_HCO:
-                    snd_device = SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC;
-                    break;
-                default:
-                    ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->voice.tty_mode);
+                    case TTY_MODE_FULL:
+                        snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC;
+                        break;
+                    case TTY_MODE_VCO:
+                        snd_device = SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC;
+                        break;
+                    case TTY_MODE_HCO:
+                        snd_device = SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC;
+                        break;
+                    default:
+                        ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->voice.tty_mode);
+                }
+                goto exit;
+            } else if (out_device & AUDIO_DEVICE_OUT_USB_DEVICE) {
+                switch (adev->voice.tty_mode) {
+                    case TTY_MODE_FULL:
+                        snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_USB_MIC;
+                        break;
+                    case TTY_MODE_VCO:
+                        // since voice will be captured from handset mic, use existing device
+                        snd_device = SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC;
+                        break;
+                    case TTY_MODE_HCO:
+                        snd_device = SND_DEVICE_IN_VOICE_TTY_HCO_USB_MIC;
+                        break;
+                    default:
+                        ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->voice.tty_mode);
                 }
                 goto exit;
             }
