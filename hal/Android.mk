@@ -110,10 +110,6 @@ ifeq ($(strip $(BOARD_SUPPORTS_SOUND_TRIGGER)),true)
     LOCAL_CFLAGS += -DSOUND_TRIGGER_PLATFORM_NAME=$(TARGET_BOARD_PLATFORM)
     LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/sound_trigger
     LOCAL_SRC_FILES += audio_extn/soundtrigger.c
-ifneq ($(filter msm8996,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_HEADER_LIBRARIES := sound_trigger.primary_headers
-endif
-
 endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SPKR_PROTECTION)),true)
