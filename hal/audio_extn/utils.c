@@ -156,6 +156,17 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
 #endif
 };
 
+/* payload structure avt_device drift query */
+struct audio_avt_device_drift_stats {
+    uint32_t       minor_version;
+    /* Indicates the device interface direction as either
+     * source (Tx) or sink (Rx).
+    */
+    uint16_t        device_direction;
+    /*params exposed to client */
+    struct audio_avt_device_drift_param drift_param;
+};
+
 static char bTable[BASE_TABLE_SIZE] = {
             'A','B','C','D','E','F','G','H','I','J','K','L',
             'M','N','O','P','Q','R','S','T','U','V','W','X',
@@ -1564,3 +1575,75 @@ void audio_utils_set_hdmi_channel_status(struct stream_out *out, char * buffer, 
 
 }
 #endif
+
+int audio_extn_utils_get_avt_device_drift(
+                struct audio_usecase *usecase,
+                struct audio_avt_device_drift_param *drift_param)
+{
+    int ret = 0, count = 0;
+    char avt_device_drift_mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = {0};
+    struct mixer_ctl *ctl = NULL;
+    struct audio_avt_device_drift_stats drift_stats;
+    struct audio_device *adev = NULL;
+
+    if (usecase != NULL && usecase->type == PCM_PLAYBACK) {
+        adev = usecase->stream.out->dev;
+        switch(usecase->out_snd_device) {
+            case SND_DEVICE_OUT_HDMI:
+                strlcpy(avt_device_drift_mixer_ctl_name,
+                        "HDMI RX Drift",
+                        MIXER_PATH_MAX_LENGTH);
+                break;
+            case SND_DEVICE_OUT_DISPLAY_PORT:
+                strlcpy(avt_device_drift_mixer_ctl_name,
+                        "DISPLAY Port RX Drift",
+                        MIXER_PATH_MAX_LENGTH);
+                break;
+            default :
+                ALOGE("%s: Unsupported device %d",__func__,
+                        usecase->stream.out->devices);
+                ret = -EINVAL;
+        }
+    } else {
+        ALOGE("%s: Invalid usecase %d ",__func__, usecase->type);
+        ret = -EINVAL;
+    }
+
+    if(ret)
+        goto done;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, avt_device_drift_mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                __func__, avt_device_drift_mixer_ctl_name);
+
+        ret = -EINVAL;
+        goto done;
+    }
+
+    ALOGV("%s: Getting AV Timer vs Device Drift mixer ctrl name %s", __func__,
+            avt_device_drift_mixer_ctl_name);
+
+    mixer_ctl_update(ctl);
+    count = mixer_ctl_get_num_values(ctl);
+    if (count != sizeof(struct audio_avt_device_drift_stats)) {
+        ALOGE("%s: mixer_ctl_get_num_values() invalid drift_stats data size",
+                __func__);
+
+        ret = -EINVAL;
+        goto done;
+    }
+
+    ret = mixer_ctl_get_array(ctl, (void *)&drift_stats, count);
+    if (ret != 0) {
+        ALOGE("%s: mixer_ctl_get_array() failed to get drift_stats Params",
+                __func__);
+
+        ret = -EINVAL;
+        goto done;
+    }
+    memcpy(drift_param, &drift_stats.drift_param,
+            sizeof(struct audio_avt_device_drift_param));
+done:
+    return ret;
+}

@@ -47,14 +47,22 @@
  */
 #define QAHW_MODULE_API_VERSION_CURRENT QAHW_MODULE_API_VERSION_0_0
 
-typedef uint64_t (*qahwi_in_read_v2_t)(audio_stream_in_t *in, void* buffer,
-                                       size_t bytes, int64_t *timestamp);
-
 typedef int (*qahwi_get_param_data_t) (const audio_hw_device_t *,
                               qahw_param_id, qahw_param_payload *);
 
 typedef int (*qahwi_set_param_data_t) (audio_hw_device_t *,
                               qahw_param_id, qahw_param_payload *);
+
+typedef uint64_t (*qahwi_in_read_v2_t)(audio_stream_in_t *in, void* buffer,
+                                       size_t bytes, int64_t *timestamp);
+
+typedef int (*qahwi_out_set_param_data_t)(struct audio_stream_out *out,
+                                      qahw_param_id param_id,
+                                      qahw_param_payload *payload);
+
+typedef int (*qahwi_out_get_param_data_t)(struct audio_stream_out *out,
+                                      qahw_param_id param_id,
+                                      qahw_param_payload *payload);
 
 typedef struct {
     audio_hw_device_t *audio_device;
@@ -80,6 +88,8 @@ typedef struct {
     qahw_module_t *module;
     struct listnode list;
     pthread_mutex_t lock;
+    qahwi_out_set_param_data_t qahwi_out_get_param_data;
+    qahwi_out_get_param_data_t qahwi_out_set_param_data;
 } qahw_stream_out_t;
 
 typedef struct {
@@ -395,6 +405,67 @@ char *qahw_out_get_parameters(const qahw_stream_handle_t *out_handle,
 
 exit:
     return str_param;
+}
+
+/* API to get playback stream specific config parameters */
+int qahw_out_set_param_data(qahw_stream_handle_t *out_handle,
+                            qahw_param_id param_id,
+                            qahw_param_payload *payload)
+{
+    int rc = -EINVAL;
+    qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
+    audio_stream_out_t *out = NULL;
+
+    if (!payload) {
+        ALOGE("%s::Invalid param", __func__);
+        goto exit;
+    }
+
+    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+        ALOGE("%s::Invalid out handle %p", __func__, out_handle);
+        goto exit;
+    }
+
+    pthread_mutex_lock(&qahw_stream_out->lock);
+    out = qahw_stream_out->stream;
+    if (qahw_stream_out->qahwi_out_set_param_data) {
+        rc = qahw_stream_out->qahwi_out_set_param_data(out, param_id, payload);
+    } else {
+        rc = -ENOSYS;
+        ALOGW("%s not supported", __func__);
+    }
+    pthread_mutex_unlock(&qahw_stream_out->lock);
+
+exit:
+    return rc;
+}
+
+/* API to get playback stream specific config parameters */
+int qahw_out_get_param_data(qahw_stream_handle_t *out_handle,
+                            qahw_param_id param_id,
+                            qahw_param_payload *payload)
+{
+    int rc = -EINVAL;
+    qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
+    audio_stream_out_t *out = NULL;
+
+    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+        ALOGE("%s::Invalid out handle %p", __func__, out_handle);
+        goto exit;
+    }
+
+    pthread_mutex_lock(&qahw_stream_out->lock);
+    out = qahw_stream_out->stream;
+    if (qahw_stream_out->qahwi_out_get_param_data) {
+        rc = qahw_stream_out->qahwi_out_get_param_data(out, param_id, payload);
+    } else {
+        rc = -ENOSYS;
+        ALOGW("%s not supported", __func__);
+    }
+    pthread_mutex_unlock(&qahw_stream_out->lock);
+
+exit:
+    return rc;
 }
 
 uint32_t qahw_out_get_latency(const qahw_stream_handle_t *out_handle)
@@ -1373,7 +1444,29 @@ int qahw_open_output_stream(qahw_module_handle_t *hw_module,
         *out_handle = (void *)qahw_stream_out;
         pthread_mutex_init(&qahw_stream_out->lock, (const pthread_mutexattr_t *)NULL);
         list_add_tail(&qahw_module->out_list, &qahw_stream_out->list);
-    }
+
+        /* clear any existing errors */
+        const char *error;
+        dlerror();
+        qahw_stream_out->qahwi_out_get_param_data = (qahwi_out_get_param_data_t)
+                                                 dlsym(qahw_module->module->dso,
+                                                 "qahwi_out_get_param_data");
+        if ((error = dlerror()) != NULL) {
+            ALOGI("%s: dlsym error %s for qahwi_out_get_param_data",
+                   __func__, error);
+            qahw_stream_out->qahwi_out_get_param_data = NULL;
+        }
+
+        dlerror();
+        qahw_stream_out->qahwi_out_set_param_data = (qahwi_out_set_param_data_t)
+                                                 dlsym(qahw_module->module->dso,
+                                                 "qahwi_out_set_param_data");
+        if ((error = dlerror()) != NULL) {
+            ALOGI("%s: dlsym error %s for qahwi_out_set_param_data",
+                   __func__, error);
+            qahw_stream_out->qahwi_out_set_param_data = NULL;
+        }
+}
 
 exit:
     pthread_mutex_unlock(&qahw_module->lock);
