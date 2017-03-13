@@ -230,8 +230,6 @@ struct stream_out {
 
     bool realtime;
     int af_period_multiplier;
-    bool routing_change;
-
     struct audio_device *dev;
 };
 
@@ -258,8 +256,6 @@ struct stream_in {
     int bit_width;
     bool realtime;
     int af_period_multiplier;
-    bool routing_change;
-
     struct audio_device *dev;
 };
 
