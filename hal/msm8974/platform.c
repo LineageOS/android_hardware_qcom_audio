@@ -3090,12 +3090,18 @@ int platform_split_snd_device(void *platform,
 {
     int ret = -EINVAL;
     struct platform_data *my_data = (struct platform_data *)platform;
+    bool is_voice_call_active = false;
 
     if ( NULL == num_devices || NULL == new_snd_devices || NULL == my_data) {
         ALOGE("%s: NULL pointer ..", __func__);
         return -EINVAL;
     }
 
+    if ((my_data->adev->mode == AUDIO_MODE_IN_CALL) ||
+            voice_is_in_call(my_data->adev) ||
+            voice_extn_compress_voip_is_active(my_data->adev)) {
+        is_voice_call_active = true;
+    }
     /*
      * If wired headset/headphones/line devices share the same backend
      * with speaker/earpiece this routine returns -EINVAL.
@@ -3103,8 +3109,13 @@ int platform_split_snd_device(void *platform,
     if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES &&
         !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_HEADPHONES)) {
         *num_devices = 2;
-        new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
-        new_snd_devices[1] = SND_DEVICE_OUT_HEADPHONES;
+        if (is_voice_call_active) {
+            new_snd_devices[0] = SND_DEVICE_OUT_VOICE_SPEAKER;
+            new_snd_devices[1] = SND_DEVICE_OUT_VOICE_HEADPHONES;
+        } else {
+            new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
+            new_snd_devices[1] = SND_DEVICE_OUT_HEADPHONES;
+        }
         ret = 0;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HDMI &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_HDMI)) {
@@ -3131,8 +3142,14 @@ int platform_split_snd_device(void *platform,
         ret = 0;
     }
 
-    ALOGD("%s: snd_device(%d) num devices(%d) new_snd_devices(%d)", __func__,
-        snd_device, *num_devices, *new_snd_devices);
+    if (*num_devices == 2)
+        ALOGD("%s: snd_device(%d) new_snd_devices(0) (%s) new_snd_devices(1) (%s)", __func__,
+              snd_device, platform_get_snd_device_name(new_snd_devices[0]),
+              platform_get_snd_device_name(new_snd_devices[1]));
+    else
+        ALOGD("%s: snd_device(%d) new_snd_devices (%s)", __func__,
+              snd_device, platform_get_snd_device_name(snd_device));
+
 
     return ret;
 }
@@ -5360,9 +5377,9 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
         /* update cfg against other existing capture usecases on same backend */
         list_for_each(node, &adev->usecase_list) {
             uc = node_to_item(node, struct audio_usecase, list);
-            if (uc->type == PCM_CAPTURE &&
+            in = (struct stream_in *) uc->stream.in;
+            if (in != NULL && uc->type == PCM_CAPTURE &&
                 backend_idx == platform_get_backend_index(uc->in_snd_device)) {
-                in = (struct stream_in *) uc->stream.in;
                 uc_channels = audio_channel_count_from_in_mask(in->channel_mask);
 
                 ALOGV("%s:txbecf: uc %s, id %d, sr %d, bw %d, ch %d, device %s",

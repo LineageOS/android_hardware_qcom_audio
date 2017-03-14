@@ -86,10 +86,10 @@
         </gcs_usecase>
         <!-- Module and param ids with which the algorithm is integrated
             in non-graphite firmware (note these must come after gcs params)
-            Extends flexibility to have different ids based on execution type.
-            valid execution_type values: "WDSP" "ADSP" -->
+            Extends flexibility to have different ids based on execution mode.
+            valid execution_mode values: "WDSP" "ADSP" -->
         <lsm_usecase>
-            <param execution_type="ADSP" />
+            <param execution_mode="ADSP" />
             <param load_sound_model_ids="0x00012C1C, 0x00012C14" />
             <param unload_sound_model_ids="0x00012C1C, 0x00012C15" />
             <param confidence_levels_ids="0x00012C1C, 0x00012C07" />
@@ -98,7 +98,7 @@
         </lsm_usecase>
 
         <lsm_usecase>
-            <param execution_type="WDSP" />
+            <param execution_mode="WDSP" />
             <param load_sound_model_ids="0x00012C0D, 0x00012C14" />
             <param unload_sound_model_ids="0x00012C0D, 0x00012C15" />
             <param confidence_levels_ids="0x00012C0D, 0x00012C07" />
