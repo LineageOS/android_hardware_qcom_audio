@@ -75,6 +75,7 @@ ifdef MULTIPLE_HW_VARIANTS_ENABLED
 endif
 
 LOCAL_SHARED_LIBRARIES := \
+	libaudioutils \
 	liblog \
 	libcutils \
 	libtinyalsa \
