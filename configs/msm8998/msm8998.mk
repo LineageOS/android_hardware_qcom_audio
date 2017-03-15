@@ -73,8 +73,8 @@ PRODUCT_COPY_FILES += \
 endif
 
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/msm8998/audio_output_policy.conf:system/vendor/etc/audio_output_policy.conf \
-    hardware/qcom/audio/configs/msm8998/audio_effects.conf:system/vendor/etc/audio_effects.conf \
+    hardware/qcom/audio/configs/msm8998/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
+    hardware/qcom/audio/configs/msm8998/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
     hardware/qcom/audio/configs/msm8998/mixer_paths.xml:system/etc/mixer_paths.xml \
     hardware/qcom/audio/configs/msm8998/mixer_paths_tasha.xml:system/etc/mixer_paths_tasha.xml \
     hardware/qcom/audio/configs/msm8998/mixer_paths_tavil.xml:system/etc/mixer_paths_tavil.xml \

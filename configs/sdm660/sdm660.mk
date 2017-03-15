@@ -70,8 +70,8 @@ PRODUCT_COPY_FILES += \
 endif
 
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/sdm660/audio_output_policy.conf:system/vendor/etc/audio_output_policy.conf \
-    hardware/qcom/audio/configs/sdm660/audio_effects.conf:system/vendor/etc/audio_effects.conf \
+    hardware/qcom/audio/configs/sdm660/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
+    hardware/qcom/audio/configs/sdm660/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
     hardware/qcom/audio/configs/sdm660/mixer_paths.xml:system/etc/mixer_paths.xml \
     hardware/qcom/audio/configs/sdm660/mixer_paths_mtp.xml:system/etc/mixer_paths_mtp.xml \
     hardware/qcom/audio/configs/sdm660/mixer_paths_wcd9335.xml:system/etc/mixer_paths_wcd9335.xml \
