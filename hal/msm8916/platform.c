@@ -3229,6 +3229,132 @@ static int set_hd_voice(struct platform_data *my_data, bool state)
     return ret;
 }
 
+static int parse_audiocal_cfg(struct str_parms *parms, acdb_audio_cal_cfg_t *cal)
+{
+    int err;
+    char value[64];
+    int ret = 0;
+
+    if(parms == NULL || cal == NULL)
+        return ret;
+
+    err = str_parms_get_str(parms, "cal_persist", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_persist");
+        cal->persist = (uint32_t) strtoul(value, NULL, 0);
+        ret = ret | 0x1;
+    }
+    err = str_parms_get_str(parms, "cal_apptype", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_apptype");
+        cal->app_type = (uint32_t) strtoul(value, NULL, 0);
+        ret = ret | 0x2;
+    }
+    err = str_parms_get_str(parms, "cal_caltype", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_caltype");
+        cal->cal_type = (uint32_t) strtoul(value, NULL, 0);
+        ret = ret | 0x4;
+    }
+    err = str_parms_get_str(parms, "cal_samplerate", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_samplerate");
+        cal->sampling_rate = (uint32_t) strtoul(value, NULL, 0);
+        ret = ret | 0x8;
+    }
+    err = str_parms_get_str(parms, "cal_devid", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_devid");
+        cal->dev_id = (uint32_t) strtoul(value, NULL, 0);
+        ret = ret | 0x10;
+    }
+    err = str_parms_get_str(parms, "cal_snddevid", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_snddevid");
+        cal->snd_dev_id = (uint32_t) strtoul(value, NULL, 0);
+        ret = ret | 0x20;
+    }
+    err = str_parms_get_str(parms, "cal_topoid", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_topoid");
+        cal->topo_id = (uint32_t) strtoul(value, NULL, 0);
+        ret = ret | 0x40;
+    }
+    err = str_parms_get_str(parms, "cal_moduleid", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_moduleid");
+        cal->module_id = (uint32_t) strtoul(value, NULL, 0);
+        ret = ret | 0x80;
+    }
+    err = str_parms_get_str(parms, "cal_paramid", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_paramid");
+        cal->param_id = (uint32_t) strtoul(value, NULL, 0);
+        ret = ret | 0x100;
+    }
+    return ret;
+}
+
+static void set_audiocal(void *platform, struct str_parms *parms, char *value, int len) {
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct stream_out out;
+    acdb_audio_cal_cfg_t cal;
+    uint8_t *dptr = NULL;
+    int32_t dlen;
+    int err, ret;
+    if(value == NULL || platform == NULL || parms == NULL) {
+        ALOGE("[%s] received null pointer, failed",__func__);
+        goto done_key_audcal;
+    }
+
+    /* parse audio calibration keys */
+    ret = parse_audiocal_cfg(parms, &cal);
+
+    /* handle audio calibration data now */
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_AUD_CALDATA, value, len);
+    if (err >= 0) {
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_AUD_CALDATA);
+        dlen = strlen(value);
+        if(dlen <= 0) {
+            ALOGE("[%s] null data received",__func__);
+            goto done_key_audcal;
+        }
+        dptr = (uint8_t*) calloc(dlen, sizeof(uint8_t));
+        if(dptr == NULL) {
+            ALOGE("[%s] memory allocation failed for %d",__func__, dlen);
+            goto done_key_audcal;
+        }
+        dlen = b64decode(value, strlen(value), dptr);
+        if(dlen<=0) {
+            ALOGE("[%s] data decoding failed %d", __func__, dlen);
+            goto done_key_audcal;
+        }
+
+        if(cal.dev_id) {
+          if(audio_is_input_device(cal.dev_id)) {
+              cal.snd_dev_id = platform_get_input_snd_device(platform, cal.dev_id);
+          } else {
+              out.devices = cal.dev_id;
+              out.sample_rate = cal.sampling_rate;
+              cal.snd_dev_id = platform_get_output_snd_device(platform, &out);
+          }
+        }
+        cal.acdb_dev_id = platform_get_snd_device_acdb_id(cal.snd_dev_id);
+        ALOGD("Setting audio calibration for snd_device(%d) acdb_id(%d)",
+                cal.snd_dev_id, cal.acdb_dev_id);
+        if(cal.acdb_dev_id == -EINVAL) {
+            ALOGE("[%s] Invalid acdb_device id %d for snd device id %d",
+                       __func__, cal.acdb_dev_id, cal.snd_dev_id);
+            goto done_key_audcal;
+        }
+        if(my_data->acdb_set_audio_cal) {
+            ret = my_data->acdb_set_audio_cal((void *)&cal, (void*)dptr, dlen);
+        }
+    }
+done_key_audcal:
+    if(dptr != NULL)
+        free(dptr);
+}
 int platform_set_parameters(void *platform, struct str_parms *parms)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -3320,6 +3446,8 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         ALOGV("%s: max_mic_count %d", __func__, my_data->max_mic_count);
     }
 
+    /* handle audio calibration parameters */
+    set_audiocal(platform, parms, value, len);
     native_audio_set_params(platform, parms, value, sizeof(value));
     true_32_bit_set_params(parms, value, len);
     ALOGV("%s: exit with code(%d)", __func__, ret);
@@ -3426,6 +3554,100 @@ int platform_update_lch(void *platform, struct voice_session *session,
     return ret;
 }
 
+static void get_audiocal(void *platform, void *keys, void *pReply) {
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct stream_out out;
+    struct str_parms *query = (struct str_parms *)keys;
+    struct str_parms *reply=(struct str_parms *)pReply;
+    acdb_audio_cal_cfg_t cal;
+    uint8_t *dptr = NULL;
+    char value[512] = {0};
+    char *rparms=NULL;
+    int ret=0, err;
+    uint32_t param_len;
+
+    if(query==NULL || platform==NULL || reply==NULL) {
+        ALOGE("[%s] received null pointer",__func__);
+        ret=-EINVAL;
+        goto done;
+    }
+    /* parse audiocal configuration keys */
+    ret = parse_audiocal_cfg(query, &cal);
+    if(ret == 0) {
+        /* No calibration keys found */
+        goto done;
+    }
+    err = str_parms_get_str(query, AUDIO_PARAMETER_KEY_AUD_CALDATA, value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(query, AUDIO_PARAMETER_KEY_AUD_CALDATA);
+    } else {
+        goto done;
+    }
+
+    if(cal.dev_id & AUDIO_DEVICE_BIT_IN) {
+        cal.snd_dev_id = platform_get_input_snd_device(platform, cal.dev_id);
+    } else if(cal.dev_id) {
+        out.devices = cal.dev_id;
+        out.sample_rate = cal.sampling_rate;
+        cal.snd_dev_id = platform_get_output_snd_device(platform, &out);
+    }
+    cal.acdb_dev_id =  platform_get_snd_device_acdb_id(cal.snd_dev_id);
+    if (cal.acdb_dev_id < 0) {
+        ALOGE("%s: Failed. Could not find acdb id for snd device(%d)",
+              __func__, cal.snd_dev_id);
+        ret = -EINVAL;
+        goto done_key_audcal;
+    }
+    ALOGD("[%s] Getting audio calibration for snd_device(%d) acdb_id(%d)",
+           __func__, cal.snd_dev_id, cal.acdb_dev_id);
+
+    param_len = MAX_SET_CAL_BYTE_SIZE;
+    dptr = (uint8_t*)calloc(param_len, sizeof(uint8_t));
+    if(dptr == NULL) {
+        ALOGE("[%s] Memory allocation failed for length %d",__func__,param_len);
+        ret = -ENOMEM;
+        goto done_key_audcal;
+    }
+    if (my_data->acdb_get_audio_cal != NULL) {
+        ret = my_data->acdb_get_audio_cal((void*)&cal, (void*)dptr, &param_len);
+        if (ret == 0) {
+            if(param_len == 0 || param_len == MAX_SET_CAL_BYTE_SIZE) {
+                ret = -EINVAL;
+                goto done_key_audcal;
+            }
+            /* Allocate memory for encoding */
+            rparms = (char*)calloc((param_len*2), sizeof(char));
+            if(rparms == NULL) {
+                ALOGE("[%s] Memory allocation failed for size %d",
+                            __func__, param_len*2);
+                ret = -ENOMEM;
+                goto done_key_audcal;
+            }
+            if(cal.persist==0 && cal.module_id && cal.param_id) {
+                err = b64encode(dptr+12, param_len-12, rparms);
+            } else {
+                err = b64encode(dptr, param_len, rparms);
+            }
+            if(err < 0) {
+                ALOGE("[%s] failed to convert data to string", __func__);
+                ret = -EINVAL;
+                goto done_key_audcal;
+            }
+            str_parms_add_int(reply, AUDIO_PARAMETER_KEY_AUD_CALRESULT, ret);
+            str_parms_add_str(reply, AUDIO_PARAMETER_KEY_AUD_CALDATA, rparms);
+        }
+    }
+done_key_audcal:
+    if(ret != 0) {
+        str_parms_add_int(reply, AUDIO_PARAMETER_KEY_AUD_CALRESULT, ret);
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_AUD_CALDATA, "");
+    }
+done:
+    if(dptr != NULL)
+        free(dptr);
+    if(rparms != NULL)
+        free(rparms);
+}
 void platform_get_parameters(void *platform,
                             struct str_parms *query,
                             struct str_parms *reply)
@@ -3462,6 +3684,8 @@ void platform_get_parameters(void *platform,
 
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_VOLUME_BOOST, value);
     }
+    /* Handle audio calibration keys */
+    get_audiocal(platform, query, reply);
     native_audio_get_params(query, reply, value, sizeof(value));
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_IS_HW_DECODER_SESSION_AVAILABLE,
