@@ -389,58 +389,6 @@ static void release_in_focus(struct stream_in *in, long ns __unused)
         adev->adm_abandon_focus(adev->adm_data, in->capture_handle);
 }
 
-// Log errors: consecutive errors with the same code will
-// be aggregated if they occur within one second.
-// A mutual exclusion lock must be held before calling.
-static void log_error_l(struct error_log *log, int code) {
-    ++log->errors;
-
-    const int64_t now = audio_utils_get_real_time_ns();
-
-    // Within 1 second, cluster the same error codes together.
-    const int one_second = 1000000000;
-    if (code == log->entries[log->idx].code &&
-            now - log->entries[log->idx].last_time < one_second) {
-        log->entries[log->idx].count++;
-        log->entries[log->idx].last_time = now;
-        return;
-    }
-
-    // Add new error entry.
-    if (++log->idx >= ARRAY_SIZE(log->entries)) {
-        log->idx = 0;
-    }
-    log->entries[log->idx].count = 1;
-    log->entries[log->idx].code = code;
-    log->entries[log->idx].first_time = now;
-    log->entries[log->idx].last_time = now;
-}
-
-// Dump information in the error log. A mutual exclusion lock
-// should be held, but if that cannot be obtained, one should
-// make a copy of the error log before calling -- the call is
-// still safe, but there might be some misinterpreted data.
-static void log_dump_l(const struct error_log *log, int fd)
-{
-    dprintf(fd, "      Errors: %u\n", log->errors);
-    if (log->errors == 0)
-        return;
-
-    dprintf(fd, "      Index Code  Freq          First time           Last time\n");
-    for (size_t i = 0; i < ARRAY_SIZE(log->entries); ++i) {
-        if (log->entries[i].count != 0) {
-            char first_time[32];
-            char last_time[32];
-            audio_utils_ns_to_string(log->entries[i].first_time, first_time, sizeof(first_time));
-            audio_utils_ns_to_string(log->entries[i].last_time, last_time, sizeof(last_time));
-            dprintf(fd, "      %c%4zu %4d %5d  %s  %s\n",
-                    i == log->idx ? '*' : ' ', // mark head position
-                    i, log->entries[i].code, log->entries[i].count,
-                    first_time, last_time);
-        }
-    }
-}
-
 static int parse_snd_card_status(struct str_parms * parms, int * card,
                                  card_status_t * status)
 {
@@ -1970,13 +1918,12 @@ static int out_dump(const struct audio_stream *stream, int fd)
     dprintf(fd, "      Frames written: %lld\n", (long long)out->written);
 
     if (locked) {
-        log_dump_l(&out->error_log, fd);
         pthread_mutex_unlock(&out->lock);
-    } else {
-        // We don't have the lock here, copy for safety.
-        struct error_log log = out->error_log;
-        log_dump_l(&log, fd);
     }
+
+    // dump error info
+    (void)error_log_dump(
+            out->error_log, fd, "      " /* prefix */, 0 /* lines */, 0 /* limit_ns */);
     // dump power info (out->power_log may be null)
     (void)power_log_dump(out->power_log, fd, POWER_LOG_LINES,  0 /* limitNs */);
     return 0;
@@ -2333,7 +2280,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             out->offload_state = OFFLOAD_STATE_PLAYING;
         }
         if (ret < 0) {
-            log_error_l(&out->error_log, ERROR_CODE_WRITE);
+            error_log_log(out->error_log, ERROR_CODE_WRITE, audio_utils_get_real_time_ns());
         }
         pthread_mutex_unlock(&out->lock);
         // TODO: consider logging offload pcm
@@ -2371,7 +2318,7 @@ exit:
     const int64_t now_ns = audio_utils_get_real_time_ns();
 
     if (ret != 0) {
-        log_error_l(&out->error_log, error_code);
+        error_log_log(out->error_log, error_code, now_ns);
         if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
             ALOGE_IF(out->pcm != NULL,
                     "%s: error %zd - %s", __func__, ret, pcm_get_error(out->pcm));
@@ -3470,6 +3417,10 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     config->channel_mask = out->stream.common.get_channels(&out->stream.common);
     config->sample_rate = out->stream.common.get_sample_rate(&out->stream.common);
 
+    out->error_log = error_log_create(
+            ERROR_LOG_ENTRIES,
+            1000000000 /* aggregate consecutive identical errors within one second in ns */);
+
     const size_t POWER_LOG_FRAMES_PER_ENTRY =
             config->sample_rate * POWER_LOG_SAMPLING_INTERVAL_MS / 1000;
     // power_log may be null if the format is not supported
@@ -3528,6 +3479,9 @@ static void adev_close_output_stream(struct audio_hw_device *dev __unused,
 
     power_log_destroy(out->power_log);
     out->power_log = NULL;
+
+    error_log_destroy(out->error_log);
+    out->error_log = NULL;
 
     pthread_cond_destroy(&out->cond);
     pthread_mutex_destroy(&out->lock);
