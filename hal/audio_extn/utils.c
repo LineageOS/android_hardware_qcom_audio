@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2014 The Android Open Source Project
@@ -618,10 +618,6 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
          app_type_cfg[len++] = platform_get_default_app_type(adev->platform);
          app_type_cfg[len++] = acdb_dev_id;
          app_type_cfg[len++] = sample_rate;
-         ALOGI("%s:%d PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
-               __func__, __LINE__,
-               platform_get_default_app_type(adev->platform),
-               acdb_dev_id, sample_rate);
     } else if (usecase->type == PCM_PLAYBACK) {
 
          if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
@@ -661,23 +657,17 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
         } else {
             app_type_cfg[len++] = sample_rate;
         }
-        ALOGI("%s PLAYBACK app_type %d, acdb_dev_id %d, sample_rate %d",
-              __func__, usecase->stream.out->app_type_cfg.app_type, acdb_dev_id, sample_rate);
     } else if (usecase->type == PCM_CAPTURE) {
          app_type_cfg[len++] = platform_get_default_app_type_v2(adev->platform, usecase->type);
          app_type_cfg[len++] = acdb_dev_id;
          app_type_cfg[len++] = sample_rate;
-         ALOGI("%s CAPTURE app_type %d, acdb_dev_id %d, sample_rate %d",
-           __func__, platform_get_default_app_type_v2(adev->platform, usecase->type),
-           acdb_dev_id, sample_rate);
     }
 
     mixer_ctl_set_array(ctl, app_type_cfg, len);
+    ALOGI("%s %s app_type = %d, acdb_dev_id = %d, sample_rate = %d",
+         __func__, usecase->type == PCM_CAPTURE? "CAPTURE":"PLAYBACK", app_type_cfg[0],
+         app_type_cfg[1],app_type_cfg[2]);
     rc = 0;
-    ALOGI("%s:becf: adm: app_type %d, acdb_dev_id %d, sample_rate %d",
-          __func__,
-          platform_get_default_app_type_v2(adev->platform, usecase->type),
-          acdb_dev_id, sample_rate);
 exit_send_app_type_cfg:
     return rc;
 }

@@ -383,13 +383,6 @@ static void request_out_focus(struct stream_out *out, long ns)
 {
     struct audio_device *adev = out->dev;
 
-    if (out->routing_change) {
-        out->routing_change = false;
-        // must be checked for backward compatibility
-        if (adev->adm_on_routing_change)
-            adev->adm_on_routing_change(adev->adm_data, out->handle);
-    }
-
     if (adev->adm_request_focus_v2)
         adev->adm_request_focus_v2(adev->adm_data, out->handle, ns);
     else if (adev->adm_request_focus)
@@ -399,12 +392,6 @@ static void request_out_focus(struct stream_out *out, long ns)
 static void request_in_focus(struct stream_in *in, long ns)
 {
     struct audio_device *adev = in->dev;
-
-    if (in->routing_change) {
-        in->routing_change = false;
-        if (adev->adm_on_routing_change)
-            adev->adm_on_routing_change(adev->adm_data, in->capture_handle);
-    }
 
     if (adev->adm_request_focus_v2)
         adev->adm_request_focus_v2(adev->adm_data, in->capture_handle, ns);
@@ -2374,10 +2361,12 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             if (!out->standby) {
                 if (!same_dev) {
                     ALOGV("update routing change");
-                    out->routing_change = true;
                     audio_extn_perf_lock_acquire(&adev->perf_lock_handle, 0,
                                                  adev->perf_lock_opts,
                                                  adev->perf_lock_opts_size);
+                    if (adev->adm_on_routing_change)
+                        adev->adm_on_routing_change(adev->adm_data,
+                                                    out->handle);
                 }
                 select_devices(adev, out->usecase);
                 if (!same_dev)
@@ -3207,7 +3196,9 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
             /* If recording is in progress, change the tx device to new device */
             if (!in->standby && !in->is_st_session) {
                 ALOGV("update input routing change");
-                in->routing_change = true;
+                if (adev->adm_on_routing_change)
+                        adev->adm_on_routing_change(adev->adm_data,
+                                                    in->capture_handle);
                 ret = select_devices(adev, in->usecase);
             }
         }
