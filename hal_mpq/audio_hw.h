@@ -27,7 +27,7 @@
 #include "sound/compress_params.h"
 #include <audio_route/audio_route.h>
 
-#define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
+#define VISUALIZER_LIBRARY_PATH "/vendor/lib/soundfx/libqcomvisualizer.so"
 
 /* Flags used to initialize acdb_settings variable that goes to ACDB library */
 #define DMIC_FLAG       0x00000002
