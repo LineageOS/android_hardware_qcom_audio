@@ -29,7 +29,7 @@
 // local definitions
 //------------------------------------------------------------------------------
 
-#define EFFECTS_DESCRIPTOR_LIBRARY_PATH "/system/lib/soundfx/libqcomvoiceprocessingdescriptors.so"
+#define EFFECTS_DESCRIPTOR_LIBRARY_PATH "/vendor/lib/soundfx/libqcomvoiceprocessingdescriptors.so"
 
 // types of pre processing modules
 enum effect_id
