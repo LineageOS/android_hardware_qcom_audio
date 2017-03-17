@@ -29,11 +29,11 @@
 
 // dlopen() does not go through default library path search if there is a "/" in the library name.
 #ifdef __LP64__
-#define VISUALIZER_LIBRARY_PATH "/system/lib64/soundfx/libqcomvisualizer.so"
-#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/system/lib64/soundfx/libqcompostprocbundle.so"
+#define VISUALIZER_LIBRARY_PATH "/vendor/lib64/soundfx/libqcomvisualizer.so"
+#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/vendor/lib64/soundfx/libqcompostprocbundle.so"
 #else
-#define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
-#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/system/lib/soundfx/libqcompostprocbundle.so"
+#define VISUALIZER_LIBRARY_PATH "/vendor/lib/soundfx/libqcomvisualizer.so"
+#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/vendor/lib/soundfx/libqcompostprocbundle.so"
 #endif
 #define ADM_LIBRARY_PATH "libadm.so"
 
