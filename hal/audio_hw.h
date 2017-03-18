@@ -25,7 +25,6 @@
 #include <tinycompress/tinycompress.h>
 
 #include <audio_route/audio_route.h>
-#include <audio_utils/PowerLog.h>
 #include "voice.h"
 
 // dlopen() does not go through default library path search if there is a "/" in the library name.
@@ -53,11 +52,6 @@
 #define DEFAULT_HDMI_OUT_CHANNELS   2
 
 #define ERROR_LOG_ENTRIES 16
-
-#define POWER_LOG_LINES 40
-#define POWER_LOG_SAMPLING_INTERVAL_MS 50
-#define POWER_LOG_ENTRIES (1 /* minutes */ * 60 /* seconds */ * 1000 /* msec */ \
-                           / POWER_LOG_SAMPLING_INTERVAL_MS)
 
 typedef enum card_status_t {
     CARD_STATUS_OFFLINE,
@@ -218,7 +212,6 @@ struct stream_out {
     card_status_t card_status;
 
     struct error_log error_log;
-    power_log_t *power_log;
 };
 
 struct stream_in {
