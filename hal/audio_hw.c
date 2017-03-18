@@ -47,8 +47,6 @@
 #include <tinyalsa/asoundlib.h>
 #include <audio_effects/effect_aec.h>
 #include <audio_effects/effect_ns.h>
-#include <audio_utils/clock.h>
-#include <audio_utils/power.h>
 #include "audio_hw.h"
 #include "audio_extn.h"
 #include "platform_api.h"
@@ -389,13 +387,34 @@ static void release_in_focus(struct stream_in *in, long ns __unused)
         adev->adm_abandon_focus(adev->adm_data, in->capture_handle);
 }
 
+// Time string format similar to logcat, buffer_length must be >= 19 chars.
+static void ns2string(int64_t ns, char *buffer, int buffer_length)
+{
+    const int one_second = 1000000000;
+    const time_t sec = ns / one_second;
+    struct tm tm;
+    localtime_r(&sec, &tm);
+    snprintf(buffer, buffer_length, "%02d-%02d %02d:%02d:%02d.%03d",
+        tm.tm_mon + 1, // localtime_r uses months in 0 - 11 range
+        tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,
+        (int)(ns % one_second / 1000000));
+}
+
+// Convert timespec to nsec.
+static int64_t ts2ns(const struct timespec *ts)
+{
+    return ts->tv_sec * 1000000000LL + ts->tv_nsec;
+}
+
 // Log errors: consecutive errors with the same code will
 // be aggregated if they occur within one second.
 // A mutual exclusion lock must be held before calling.
 static void log_error_l(struct error_log *log, int code) {
     ++log->errors;
 
-    const int64_t now = audio_utils_get_real_time_ns();
+    struct timespec now_ts = { 0, 0 };
+    (void)clock_gettime(CLOCK_REALTIME, &now_ts);
+    const int64_t now = ts2ns(&now_ts);
 
     // Within 1 second, cluster the same error codes together.
     const int one_second = 1000000000;
@@ -431,8 +450,8 @@ static void log_dump_l(const struct error_log *log, int fd)
         if (log->entries[i].count != 0) {
             char first_time[32];
             char last_time[32];
-            audio_utils_ns_to_string(log->entries[i].first_time, first_time, sizeof(first_time));
-            audio_utils_ns_to_string(log->entries[i].last_time, last_time, sizeof(last_time));
+            ns2string(log->entries[i].first_time, first_time, sizeof(first_time));
+            ns2string(log->entries[i].last_time, last_time, sizeof(last_time));
             dprintf(fd, "      %c%4zu %4d %5d  %s  %s\n",
                     i == log->idx ? '*' : ' ', // mark head position
                     i, log->entries[i].code, log->entries[i].count,
@@ -1974,8 +1993,6 @@ static int out_dump(const struct audio_stream *stream, int fd)
         struct error_log log = out->error_log;
         log_dump_l(&log, fd);
     }
-    // dump power info (out->power_log may be null)
-    (void)power_log_dump(out->power_log, fd, POWER_LOG_LINES,  0 /* limitNs */);
     return 0;
 }
 
@@ -2293,9 +2310,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         }
     }
 
-    // this is always nonzero
-    const size_t frame_size = audio_stream_out_frame_size(stream);
-
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
         ALOGVV("%s: writing buffer (%zu bytes) to compress device", __func__, bytes);
         if (out->send_new_metadata) {
@@ -2333,7 +2347,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             log_error_l(&out->error_log, ERROR_CODE_WRITE);
         }
         pthread_mutex_unlock(&out->lock);
-        // TODO: consider logging offload pcm
         return ret;
     } else {
         error_code = ERROR_CODE_WRITE;
@@ -2365,14 +2378,12 @@ exit:
         out->written += bytes / (out->config.channels * sizeof(short));
     }
     long long sleeptime_us = 0;
-    const int64_t now_ns = audio_utils_get_real_time_ns();
-
     if (ret != 0) {
         log_error_l(&out->error_log, error_code);
         if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
             ALOGE_IF(out->pcm != NULL,
                     "%s: error %zd - %s", __func__, ret, pcm_get_error(out->pcm));
-            sleeptime_us = bytes * 1000000LL / frame_size /
+            sleeptime_us = bytes * 1000000LL / audio_stream_out_frame_size(stream) /
                 out_get_sample_rate(&out->stream.common);
             // usleep not guaranteed for values over 1 second but we don't limit here.
         }
@@ -2384,9 +2395,6 @@ exit:
         out_on_error(&out->stream.common);
         if (sleeptime_us != 0)
             usleep(sleeptime_us);
-    } else {
-        // only log if the data is properly written (out->power_log may be null)
-        power_log_log(out->power_log, buffer, bytes / frame_size, now_ns);
     }
     return bytes;
 }
@@ -2710,7 +2718,7 @@ static int out_get_mmap_position(const struct audio_stream_out *stream,
         ALOGE("%s: %s", __func__, pcm_get_error(out->pcm));
         return ret;
     }
-    position->time_nanoseconds = audio_utils_ns_from_timespec(&ts);
+    position->time_nanoseconds = ts2ns(&ts);
     return 0;
 }
 
@@ -3224,7 +3232,7 @@ static int in_get_mmap_position(const struct audio_stream_in *stream,
         ALOGE("%s: %s", __func__, pcm_get_error(in->pcm));
         return ret;
     }
-    position->time_nanoseconds = audio_utils_ns_from_timespec(&ts);
+    position->time_nanoseconds = ts2ns(&ts);
     return 0;
 }
 
@@ -3467,15 +3475,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     config->channel_mask = out->stream.common.get_channels(&out->stream.common);
     config->sample_rate = out->stream.common.get_sample_rate(&out->stream.common);
 
-    const size_t POWER_LOG_FRAMES_PER_ENTRY =
-            config->sample_rate * POWER_LOG_SAMPLING_INTERVAL_MS / 1000;
-    // power_log may be null if the format is not supported
-    out->power_log = power_log_create(
-            config->sample_rate,
-            audio_channel_count_from_out_mask(config->channel_mask),
-            config->format,
-            POWER_LOG_ENTRIES,
-            POWER_LOG_FRAMES_PER_ENTRY);
 
     /*
        By locking output stream before registering, we allow the callback
@@ -3522,9 +3521,6 @@ static void adev_close_output_stream(struct audio_hw_device *dev __unused,
 
     if (adev->voice_tx_output == out)
         adev->voice_tx_output = NULL;
-
-    power_log_destroy(out->power_log);
-    out->power_log = NULL;
 
     pthread_cond_destroy(&out->cond);
     pthread_mutex_destroy(&out->lock);
