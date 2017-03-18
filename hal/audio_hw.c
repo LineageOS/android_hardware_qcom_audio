@@ -1038,6 +1038,8 @@ static void check_usecases_codec_backend(struct audio_device *adev,
     struct listnode *node;
     struct audio_usecase *usecase;
     bool switch_device[AUDIO_USECASE_MAX];
+    snd_device_t uc_derive_snd_device;
+    snd_device_t derive_snd_device[AUDIO_USECASE_MAX];
     int i, num_uc_to_switch = 0;
     int status = 0;
     bool force_restart_session = false;
@@ -1085,11 +1087,11 @@ static void check_usecases_codec_backend(struct audio_device *adev,
               platform_get_snd_device_name(snd_device),
               platform_get_snd_device_name(usecase->out_snd_device),
               platform_check_backends_match(snd_device, usecase->out_snd_device));
+        uc_derive_snd_device = derive_playback_snd_device(adev->platform,
+                                           usecase, uc_info, snd_device);
         if (usecase->type != PCM_CAPTURE &&
             usecase != uc_info &&
-            (derive_playback_snd_device(adev->platform,
-                                        usecase, uc_info,
-                                        snd_device) != usecase->out_snd_device || force_routing) &&
+            ((uc_derive_snd_device != usecase->out_snd_device) || force_routing) &&
             ((usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
              (usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) ||
              (usecase->devices & AUDIO_DEVICE_OUT_USB_DEVICE) ||
@@ -1103,6 +1105,8 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                       platform_get_snd_device_name(usecase->out_snd_device));
                 disable_audio_route(adev, usecase);
                 switch_device[usecase->id] = true;
+                /* Enable existing usecase on derived playback device */
+                derive_snd_device[usecase->id] = uc_derive_snd_device;
                 num_uc_to_switch++;
         }
     }
@@ -1125,7 +1129,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
             if (switch_device[usecase->id]) {
-                enable_snd_device(adev, snd_device);
+                enable_snd_device(adev, derive_snd_device[usecase->id]);
             }
         }
 
@@ -1135,7 +1139,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
             usecase = node_to_item(node, struct audio_usecase, list);
             /* Update the out_snd_device only before enabling the audio route */
             if (switch_device[usecase->id]) {
-                usecase->out_snd_device = snd_device;
+                usecase->out_snd_device = derive_snd_device[usecase->id];
                 if (usecase->type != VOICE_CALL) {
                     ALOGD("%s:becf: enabling usecase (%s) on (%s)", __func__,
                          use_case_table[usecase->id],
