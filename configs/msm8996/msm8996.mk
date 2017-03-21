@@ -199,3 +199,10 @@ use.qti.sw.ape.decoder=true
 #flac sw decoder 24 bit decode capability
 PRODUCT_PROPERTY_OVERRIDES += \
 flac.sw.decoder.24bit.support=true
+
+# for HIDL related packages
+PRODUCT_PACKAGES += \
+    android.hardware.audio@2.0-service \
+    android.hardware.audio@2.0-impl \
+    android.hardware.audio.effect@2.0-impl \
+    android.hardware.soundtrigger@2.0-impl
