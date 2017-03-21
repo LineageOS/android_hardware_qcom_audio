@@ -233,6 +233,7 @@ struct platform_data {
     bool fluence_in_voice_call;
     bool fluence_in_voice_rec;
     bool fluence_in_audio_rec;
+    bool fluence_in_hfp_call;
     bool external_spk_1;
     bool external_spk_2;
     bool external_mic;
@@ -1859,6 +1860,7 @@ void *platform_init(struct audio_device *adev)
     my_data->fluence_in_voice_call = false;
     my_data->fluence_in_voice_rec = false;
     my_data->fluence_in_audio_rec = false;
+    my_data->fluence_in_hfp_call = false;
     my_data->external_spk_1 = false;
     my_data->external_spk_2 = false;
     my_data->external_mic = false;
@@ -1906,6 +1908,11 @@ void *platform_init(struct audio_device *adev)
         property_get("persist.audio.fluence.mode",value,"");
         if (!strncmp("broadside", value, sizeof("broadside"))) {
             my_data->fluence_mode = FLUENCE_BROADSIDE;
+        }
+
+        property_get("persist.audio.fluence.hfpcall",value,"");
+        if (!strncmp("true", value, sizeof("true"))) {
+            my_data->fluence_in_hfp_call = true;
         }
     }
 
@@ -2068,10 +2075,10 @@ acdb_init_fail:
     /* obtain source mic type from max mic count*/
     get_source_mic_type(my_data);
     ALOGD("%s: Fluence_Type(%d) max_mic_count(%d) mic_type(0x%x) fluence_in_voice_call(%d)"
-          " fluence_in_voice_rec(%d) fluence_in_spkr_mode(%d) ",
+          " fluence_in_voice_rec(%d) fluence_in_spkr_mode(%d) fluence_in_hfp_call(%d) ",
           __func__, my_data->fluence_type, my_data->max_mic_count, my_data->source_mic_type,
           my_data->fluence_in_voice_call, my_data->fluence_in_voice_rec,
-          my_data->fluence_in_spkr_mode);
+          my_data->fluence_in_spkr_mode, my_data->fluence_in_hfp_call);
 
     /* init usb */
     audio_extn_usb_init(adev);
@@ -3554,7 +3561,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 }
                 adev->acdb_settings |= ANC_FLAG;
             } else if (my_data->fluence_type == FLUENCE_NONE ||
-                my_data->fluence_in_voice_call == false) {
+                my_data->fluence_in_voice_call == false ||
+                my_data->fluence_in_hfp_call == false) {
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
                 if (audio_extn_hfp_is_active(adev))
                     platform_set_echo_reference(adev, true, out_device);
@@ -3579,7 +3587,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             }
         } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER) {
             if (my_data->fluence_type != FLUENCE_NONE &&
-                my_data->fluence_in_voice_call &&
+                (my_data->fluence_in_voice_call ||
+                 my_data->fluence_in_hfp_call) &&
                 my_data->fluence_in_spkr_mode) {
                 if((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
                    (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
