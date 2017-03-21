@@ -1684,6 +1684,7 @@
 
     <path name="speaker-mic">
         <path name="dmic2" />
+        <ctl name="IIR1 INP1 MUX" value="DEC1" />
     </path>
 
     <path name="speaker-mic-liquid">
@@ -1744,6 +1745,7 @@
 
     <path name="handset-mic">
         <path name="dmic3" />
+        <ctl name="IIR1 INP1 MUX" value="DEC1" />
     </path>
 
     <path name="handset-mic-db">
@@ -1792,6 +1794,7 @@
 
     <path name="headset-mic">
         <path name="adc2" />
+        <ctl name="IIR1 INP1 MUX" value="DEC1" />
     </path>
 
     <path name="headset-mic-liquid">
@@ -2039,7 +2042,7 @@
 
     <path name="dmic-broadside">
         <path name="speaker-dmic-broadside" />
-        <ctl name="IIR1 INP1 MUX" value="DEC7" />
+        <ctl name="IIR1 INP1 MUX" value="DEC1" />
     </path>
 
     <path name="voice-speaker-dmic-broadside">
