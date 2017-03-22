@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2014, 2017 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -4152,14 +4152,25 @@ OMX_ERRORTYPE  omx_aac_aenc::fill_this_buffer_proxy
             DEBUG_DETAIL("FTBP->Al_len[%lu]buf[%p]size[%d]numOutBuf[%d]\n",\
                          buffer->nAllocLen,m_tmp_out_meta_buf,
                          nReadbytes,nNumOutputBuf);
-            if(*m_tmp_out_meta_buf <= 0)
+            if(m_tmp_out_meta_buf == NULL)
+                return OMX_ErrorUndefined;
+
+            if(*m_tmp_out_meta_buf <= 0 || *m_tmp_out_meta_buf > CHAR_MAX)
                 return OMX_ErrorBadParameter;
-            szadifhr = AUDAAC_MAX_ADIF_HEADER_LENGTH; 
+            szadifhr = AUDAAC_MAX_ADIF_HEADER_LENGTH;
             numframes =  *m_tmp_out_meta_buf;
             metainfo  = (int)((sizeof(ENC_META_OUT) * numframes)+
-			sizeof(unsigned char));
+                sizeof(unsigned char));
+            /*
+            * add bounds checking
+            */
+            if ((metainfo > INT_MAX - szadifhr) ||
+                (buffer->nAllocLen < (nReadbytes + szadifhr)) ||
+                (metainfo > nReadbytes)) {
+                return OMX_ErrorBadParameter;
+            }
             audaac_rec_install_adif_header_variable(0,sample_idx,
-				(OMX_U8)m_aac_param.nChannels);
+                (OMX_U8)m_aac_param.nChannels);
             memcpy(buffer->pBuffer,m_tmp_out_meta_buf,metainfo);
             memcpy(buffer->pBuffer + metainfo,&audaac_header_adif[0],szadifhr);
             memcpy(buffer->pBuffer + metainfo + szadifhr,
