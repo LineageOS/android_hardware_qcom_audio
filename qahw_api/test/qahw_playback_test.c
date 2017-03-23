@@ -1175,6 +1175,9 @@ static int get_kvpairs_string(char *kvpairs, const char *key, char *value) {
         return -1;
 
     parms = str_parms_create_str(kvpairs);
+    if (parms == NULL)
+        return -1;
+
     if (str_parms_get_str(parms, key, value, KVPAIRS_MAX) < 0)
         return -1;
 
@@ -1199,7 +1202,7 @@ static int get_pcm_format(char *kvpairs) {
    /*
     * for now we assume usb hal/pcm device announces suport for one format ONLY
     */
-    for (i = 0; i < sizeof(format_table); i++) {
+    for (i = 0; i < (sizeof(format_table)/sizeof(format_table[0])); i++) {
         if(!strncmp(format_table[i].string, value, sizeof(value))) {
             match = true;
             break;
@@ -1337,8 +1340,8 @@ static int detect_stream_params(stream_config *stream) {
         param_string = qahw_out_get_parameters(stream->out_handle, QAHW_PARAMETER_STREAM_SUP_CHANNELS);
 
     if ((ch = get_channels(param_string)) <= 0) {
-        fprintf(log_file, "Unable to extract channels =(%d) string(%s)\n", ch, param_string);
-        fprintf(stderr, "Unable to extract channels =(%d) string(%s)\n", ch, param_string);
+        fprintf(log_file, "Unable to extract channels =(%d) string(%s)\n", ch, param_string == NULL ? "null":param_string);
+        fprintf(stderr, "Unable to extract channels =(%d) string(%s)\n", ch, param_string == NULL ? "null":param_string);
         return -1;
     }
     stream->config.channel_mask = audio_channel_in_mask_from_count(ch);
@@ -1933,7 +1936,7 @@ exit:
         if (stream_param[i].file_stream != nullptr)
             fclose(stream_param[i].file_stream);
         else if (AUDIO_DEVICE_NONE != stream_param[i].input_device) {
-            if (stream->in_handle) {
+            if (stream != NULL && stream->in_handle) {
                 rc = qahw_close_input_stream(stream->in_handle);
                 if (rc) {
                     fprintf(log_file, "input stream could not be closed\n");
