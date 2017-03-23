@@ -1071,7 +1071,7 @@ int tigger_event(qahw_stream_handle_t* out_handle)
 
     event_payload.num_events = 1;
     event_payload.event_id = 0x13236;
-    event_payload.module_id = 0x10EEC;
+    event_payload.module_id = 0x10940;
     event_payload.config_mask = 1;
 
     payload.adsp_event_params.payload_length = sizeof(event_payload);
