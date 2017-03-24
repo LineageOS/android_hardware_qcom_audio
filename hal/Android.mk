@@ -80,6 +80,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_USB_TUNNEL)),true)
 endif
 
 LOCAL_SHARED_LIBRARIES := \
+	libaudioutils \
 	liblog \
 	libcutils \
 	libtinyalsa \
