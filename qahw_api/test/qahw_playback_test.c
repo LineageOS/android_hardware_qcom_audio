@@ -64,6 +64,7 @@
 
 static int get_wav_header_length (FILE* file_stream);
 static void init_streams(void);
+int pthread_cancel(pthread_t thread);
 
 
 enum {
@@ -275,6 +276,14 @@ static bool request_wake_lock(bool wakelock_acquired, bool enable)
    }
    return wakelock_acquired;
 }
+
+#ifndef AUDIO_FORMAT_AAC_LATM
+#define AUDIO_FORMAT_AAC_LATM 0x23000000UL
+#define AUDIO_FORMAT_AAC_LATM_LC (AUDIO_FORMAT_AAC_LATM | AUDIO_FORMAT_AAC_SUB_LC)
+#define AUDIO_FORMAT_AAC_LATM_HE_V1 (AUDIO_FORMAT_AAC_LATM | AUDIO_FORMAT_AAC_SUB_HE_V1)
+#define AUDIO_FORMAT_AAC_LATM_HE_V2 (AUDIO_FORMAT_AAC_LATM | AUDIO_FORMAT_AAC_SUB_HE_V2)
+#endif
+
 
 void stop_signal_handler(int signal __unused)
 {
@@ -506,6 +515,7 @@ void *drift_read(void* data)
 
         usleep(100000);
     }
+    return NULL;
 }
 static int is_eof(stream_config *stream) {
     if (stream->filename) {
@@ -531,7 +541,33 @@ static int read_bytes(stream_config *stream, void *buff, int size) {
         in_buf.bytes = size;
         return qahw_in_read(stream->in_handle, &in_buf);
     }
+    return 0;
+}
 
+int write_to_hal(qahw_stream_handle_t* out_handle, char *data, size_t bytes, void *params_ptr)
+{
+    stream_config *stream_params = (stream_config*) params_ptr;
+
+    ssize_t ret;
+    pthread_mutex_lock(&stream_params->write_lock);
+    qahw_out_buffer_t out_buf;
+
+    memset(&out_buf,0, sizeof(qahw_out_buffer_t));
+    out_buf.buffer = data;
+    out_buf.bytes = bytes;
+
+    ret = qahw_out_write(out_handle, &out_buf);
+    if (ret < 0) {
+        fprintf(log_file, "stream %d: writing data to hal failed (ret = %zd)\n", stream_params->stream_index, ret);
+    } else if (ret != bytes) {
+        fprintf(log_file, "stream %d: provided bytes %zd, written bytes %d\n",stream_params->stream_index, bytes, ret);
+        fprintf(log_file, "stream %d: waiting for event write ready\n", stream_params->stream_index);
+        pthread_cond_wait(&stream_params->write_cond, &stream_params->write_lock);
+        fprintf(log_file, "stream %d: out of wait for event write ready\n", stream_params->stream_index);
+    }
+
+    pthread_mutex_unlock(&stream_params->write_lock);
+    return ret;
 }
 
 /* Entry point function for stream playback
@@ -572,10 +608,10 @@ void *start_stream_playback (void* stream_data)
         measure_kpi_values(params->out_handle, params->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD);
         rc = qahw_close_output_stream(params->out_handle);
         if (rc) {
-            fprintf(log_file, "stream %d: could not close output stream %d, error - %d \n", params->stream_index, rc);
-            fprintf(stderr, "stream %d: could not close output stream %d, error - %d \n", params->stream_index, rc);
+            fprintf(log_file, "stream %d: could not close output stream, error - %d \n", params->stream_index, rc);
+            fprintf(stderr, "stream %d: could not close output stream, error - %d \n", params->stream_index, rc);
         }
-        return;
+        return NULL;
     }
 
     switch(params->filetype) {
@@ -816,34 +852,8 @@ void *start_stream_playback (void* stream_data)
         free(data_ptr);
 
     fprintf(log_file, "stream %d: stream closed\n", params->stream_index);
-    return;
+    return NULL;
 
-}
-
-int write_to_hal(qahw_stream_handle_t* out_handle, char *data, size_t bytes, void *params_ptr)
-{
-    stream_config *stream_params = (stream_config*) params_ptr;
-
-    ssize_t ret;
-    pthread_mutex_lock(&stream_params->write_lock);
-    qahw_out_buffer_t out_buf;
-
-    memset(&out_buf,0, sizeof(qahw_out_buffer_t));
-    out_buf.buffer = data;
-    out_buf.bytes = bytes;
-
-    ret = qahw_out_write(out_handle, &out_buf);
-    if (ret < 0) {
-        fprintf(log_file, "stream %d: writing data to hal failed (ret = %zd)\n", stream_params->stream_index, ret);
-    } else if (ret != bytes) {
-        fprintf(log_file, "stream %d: provided bytes %zd, written bytes %d\n",stream_params->stream_index, bytes, ret);
-        fprintf(log_file, "stream %d: waiting for event write ready\n", stream_params->stream_index);
-        pthread_cond_wait(&stream_params->write_cond, &stream_params->write_lock);
-        fprintf(log_file, "stream %d: out of wait for event write ready\n", stream_params->stream_index);
-    }
-
-    pthread_mutex_unlock(&stream_params->write_lock);
-    return ret;
 }
 
 bool is_valid_aac_format_type(aac_format_type_t format_type)
@@ -1292,9 +1302,7 @@ static int get_channels(char *kvpairs) {
 
 static int detect_stream_params(stream_config *stream) {
     bool detection_needed = false;
-    bool is_usb_loopback = false;
     int direction = PCM_OUT;
-    audio_devices_t dev = stream->input_device;
 
     int rc = 0;
     char *param_string = NULL;
@@ -1324,7 +1332,7 @@ static int detect_stream_params(stream_config *stream) {
                                 stream->input_device,
                                 &(stream->config),
                                 &(stream->in_handle),
-                                AUDIO_OUTPUT_FLAG_NONE,
+                                AUDIO_INPUT_FLAG_NONE,
                                 stream->device_url,
                                 AUDIO_SOURCE_DEFAULT);
     else
@@ -1617,7 +1625,6 @@ int main(int argc, char* argv[]) {
     struct qahw_aptx_dec_param aptx_params;
     int rc = 0;
     int i = 0;
-    int j = 0;
     kpi_mode = false;
     event_trigger = false;
     bool wakelock_acquired = false;
@@ -1861,7 +1868,7 @@ int main(int argc, char* argv[]) {
                                     stream->input_device,
                                     &(stream->config),
                                     &(stream->in_handle),
-                                    AUDIO_OUTPUT_FLAG_NONE,
+                                    AUDIO_INPUT_FLAG_NONE,
                                     stream->device_url,
                                     AUDIO_SOURCE_UNPROCESSED);
             if (rc) {
