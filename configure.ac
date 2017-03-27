@@ -120,7 +120,8 @@ AC_CONFIG_FILES([ \
         hal/Makefile \
         post_proc/Makefile \
         qahw_api/Makefile \
-        qahw_api/test/Makefile
+        qahw_api/test/Makefile \
+        hdmi_in_test/Makefile
         ])
 
 AC_OUTPUT
