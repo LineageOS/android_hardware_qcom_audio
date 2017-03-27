@@ -1204,7 +1204,6 @@ int get_snd_codec_id(audio_format_t format)
     case AUDIO_FORMAT_AAC_LATM:
         id = SND_AUDIOCODEC_AAC;
         break;
-    case AUDIO_FORMAT_PCM_OFFLOAD:
     case AUDIO_FORMAT_PCM:
         id = SND_AUDIOCODEC_PCM;
         break;
