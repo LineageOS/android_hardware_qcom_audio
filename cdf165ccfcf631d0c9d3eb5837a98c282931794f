@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ba57610f_d83bf9e9",
+        "filename": "visualizer/offload_visualizer.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 897,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-03-28T01:10:05Z",
+      "side": 1,
+      "message": "Wait what? Isn\u0027t replySize potentially being dereferenced in the line above?",
+      "range": {
+        "startLine": 897,
+        "startChar": 16,
+        "endLine": 897,
+        "endChar": 25
+      },
+      "revId": "cdf165ccfcf631d0c9d3eb5837a98c282931794f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
