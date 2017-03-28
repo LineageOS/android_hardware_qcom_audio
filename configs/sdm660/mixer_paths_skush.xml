@@ -1686,7 +1686,8 @@
     </path>
 
     <path name="speaker-mic">
-        <path name="dmic3" />
+        <path name="dmic1" />
+        <ctl name="IIR1 INP1 MUX" value="DEC1" />
     </path>
 
     <path name="speaker-mic-liquid">
@@ -1749,6 +1750,7 @@
 
     <path name="handset-mic">
         <path name="dmic4" />
+        <ctl name="IIR1 INP1 MUX" value="DEC1" />
     </path>
 
     <path name="handset-mic-db">
@@ -1763,9 +1765,9 @@
 
     <path name="three-mic">
         <ctl name="INT3_MI2S_TX Channels" value="Three" />
-        <ctl name="DEC1 MUX" value="DMIC3" />
+        <ctl name="DEC1 MUX" value="DMIC1" />
         <ctl name="DEC2 MUX" value="DMIC4" />
-        <ctl name="DEC3 MUX" value="DMIC1" />
+        <ctl name="DEC3 MUX" value="DMIC3" />
         <ctl name="I2S TX2 INP1" value="DEC3" />
     </path>
 
@@ -1794,6 +1796,7 @@
 
     <path name="headset-mic">
         <path name="adc2" />
+        <ctl name="IIR1 INP1 MUX" value="DEC1" />
     </path>
 
     <path name="headset-mic-liquid">
@@ -1961,13 +1964,13 @@
     <!-- Dual MIC devices -->
     <path name="handset-dmic-endfire">
         <ctl name="DEC1 MUX" value="DMIC4" />
-        <ctl name="DEC2 MUX" value="DMIC1" />
+        <ctl name="DEC2 MUX" value="DMIC3" />
         <ctl name="INT3_MI2S_TX Channels" value="Two" />
     </path>
 
     <path name="speaker-dmic-endfire">
-        <ctl name="DEC1 MUX" value="DMIC3" />
-        <ctl name="DEC2 MUX" value="DMIC1" />
+        <ctl name="DEC1 MUX" value="DMIC1" />
+        <ctl name="DEC2 MUX" value="DMIC3" />
         <ctl name="INT3_MI2S_TX Channels" value="Two" />
     </path>
 
@@ -2035,13 +2038,13 @@
 
     <path name="speaker-dmic-broadside">
         <ctl name="INT3_MI2S_TX Channels" value="Two" />
-        <ctl name="DEC1 MUX" value="DMIC3" />
+        <ctl name="DEC1 MUX" value="DMIC1" />
         <ctl name="DEC2 MUX" value="DMIC4" />
     </path>
 
     <path name="dmic-broadside">
         <path name="speaker-dmic-broadside" />
-        <ctl name="IIR1 INP1 MUX" value="DEC7" />
+        <ctl name="IIR1 INP1 MUX" value="DEC1" />
     </path>
 
     <path name="voice-speaker-dmic-broadside">
@@ -2051,9 +2054,9 @@
     <!-- Quad MIC devices -->
     <path name="speaker-qmic">
         <ctl name="INT3_MI2S_TX Channels" value="Four" />
-        <ctl name="DEC1 MUX" value="DMIC3" />
+        <ctl name="DEC1 MUX" value="DMIC1" />
         <ctl name="DEC2 MUX" value="DMIC4" />
-        <ctl name="DEC3 MUX" value="DMIC1" />
+        <ctl name="DEC3 MUX" value="DMIC3" />
         <ctl name="I2S TX2 INP1" value="DEC3" />
         <ctl name="DEC4 MUX" value="DMIC2" />
         <ctl name="I2S TX2 INP2" value="DEC4" />
