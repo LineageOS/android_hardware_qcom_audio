@@ -2079,7 +2079,7 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
                                    uint64_t *frames, struct timespec *timestamp)
 {
     struct stream_out *out = (struct stream_out *)stream;
-    int ret = -ENODATA;
+    int ret = -EINVAL;
     unsigned long dsp_frames;
 
     lock_output_stream(out);
