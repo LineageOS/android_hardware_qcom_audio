@@ -1925,7 +1925,8 @@ static int out_dump(const struct audio_stream *stream, int fd)
     (void)error_log_dump(
             out->error_log, fd, "      " /* prefix */, 0 /* lines */, 0 /* limit_ns */);
     // dump power info (out->power_log may be null)
-    (void)power_log_dump(out->power_log, fd, POWER_LOG_LINES,  0 /* limitNs */);
+    (void)power_log_dump(
+            out->power_log, fd, "      " /* prefix */, POWER_LOG_LINES, 0 /* limit_ns */);
     return 0;
 }
 
