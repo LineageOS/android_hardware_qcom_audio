@@ -3821,6 +3821,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
         in->usecase = USECASE_AUDIO_RECORD_AFE_PROXY;
         in->config = pcm_config_afe_proxy_record;
+        in->af_period_multiplier = 1;
     } else {
         in->usecase = USECASE_AUDIO_RECORD;
         if (config->sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE &&
