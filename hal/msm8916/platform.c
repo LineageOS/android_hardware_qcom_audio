@@ -5326,7 +5326,9 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                  ALOGD("%s:becf: afe: true napb active set rate to 44.1 khz",
                        __func__);
             }
-        } else if (na_mode != NATIVE_AUDIO_MODE_MULTIPLE_44_1) {
+        } else if (na_mode != NATIVE_AUDIO_MODE_MULTIPLE_44_1 ||
+                   ((backend_idx != HEADPHONE_44_1_BACKEND) &&
+                     (backend_idx != DSD_NATIVE_BACKEND))) {
             /*
              * Map native sampling rates to upper limit range
              * if multiple of native sampling rates are not supported.
