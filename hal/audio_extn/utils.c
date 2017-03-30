@@ -822,8 +822,7 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         rc = -EINVAL;
         goto exit_send_app_type_cfg;
     }
-    snd_device = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
-                 platform_get_spkr_prot_snd_device(snd_device) : snd_device;
+    snd_device = platform_get_spkr_prot_snd_device(snd_device);
 
     acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
     if (acdb_dev_id <= 0) {
