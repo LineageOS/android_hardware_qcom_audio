@@ -2282,6 +2282,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         }
         if (ret < 0) {
             error_log_log(out->error_log, ERROR_CODE_WRITE, audio_utils_get_real_time_ns());
+        } else {
+            out->written += ret; // accumulate bytes written for offload.
         }
         pthread_mutex_unlock(&out->lock);
         // TODO: consider logging offload pcm
