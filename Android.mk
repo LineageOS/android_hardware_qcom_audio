@@ -18,7 +18,7 @@ include $(MY_LOCAL_PATH)/post_proc/Android.mk
 include $(MY_LOCAL_PATH)/qahw_api/Android.mk
 endif
 
-ifneq ($(TARGET_USES_AOSP), true)
+ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 include $(MY_LOCAL_PATH)/audiod/Android.mk
 endif
 

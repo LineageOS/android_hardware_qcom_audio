@@ -419,7 +419,7 @@ void audio_extn_dolby_set_dmid(struct audio_device *adev);
 #if defined(DS1_DOLBY_DDP_ENABLED) || defined(DS1_DOLBY_DAP_ENABLED) || defined(DS2_DOLBY_DAP_ENABLED)
 void audio_extn_dolby_set_license(struct audio_device *adev);
 #else
-#define audio_extn_dolby_set_license(adev)              (0)
+static void __unused audio_extn_dolby_set_license(struct audio_device *adev __unused) {};
 #endif
 
 #ifndef DS1_DOLBY_DAP_ENABLED
