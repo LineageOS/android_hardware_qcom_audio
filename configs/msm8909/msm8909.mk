@@ -64,6 +64,8 @@ TARGET_USES_QCOM_MM_AUDIO := true
 #Audio Specific device overlays
 DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
 
+USE_XML_AUDIO_POLICY_CONF := 1
+
 # Audio configuration file
 ifeq ($(TARGET_USES_AOSP), true)
 PRODUCT_COPY_FILES += \
