@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -347,6 +347,11 @@ static void  update_hardware_info_msm8998(struct hardware_info *hw_info, const c
     }
 }
 
+static void  update_hardware_info_sdm845(struct hardware_info *hw_info __unused, const char *snd_card_name __unused)
+{
+        ALOGW("%s: Not a sdm845 device", __func__);
+}
+
 static void  update_hardware_info_8974(struct hardware_info *hw_info, const char *snd_card_name)
 {
     if (!strcmp(snd_card_name, "msm8974-taiko-mtp-snd-card")) {
@@ -479,6 +484,9 @@ void *hw_info_init(const char *snd_card_name)
     } else if(strstr(snd_card_name, "msm8998")) {
         ALOGV("MSM8998 - variant soundcard");
         update_hardware_info_msm8998(hw_info, snd_card_name);
+    } else if(strstr(snd_card_name, "sdm845")) {
+        ALOGV("SDM845 - variant soundcard");
+        update_hardware_info_sdm845(hw_info, snd_card_name);
     } else {
         ALOGE("%s: Unsupported target %s:",__func__, snd_card_name);
         free(hw_info);
