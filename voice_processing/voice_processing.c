@@ -30,7 +30,8 @@
 // local definitions
 //------------------------------------------------------------------------------
 
-#define EFFECTS_DESCRIPTOR_LIBRARY_PATH "/system/lib/soundfx/libqcomvoiceprocessingdescriptors.so"
+#define EFFECTS_DESCRIPTOR_LIBRARY_PATH "/vendor/lib/soundfx/libqcomvoiceprocessingdescriptors.so"
+#define EFFECTS_DESCRIPTOR_LIBRARY_PATH2 "/system/lib/soundfx/libqcomvoiceprocessingdescriptors.so"
 
 // types of pre processing modules
 enum effect_id
@@ -426,12 +427,20 @@ static int init() {
     if (init_status <= 0)
         return init_status;
 
-    if (access(EFFECTS_DESCRIPTOR_LIBRARY_PATH, R_OK) == 0) {
-        lib_handle = dlopen(EFFECTS_DESCRIPTOR_LIBRARY_PATH, RTLD_NOW);
+    const char *path = EFFECTS_DESCRIPTOR_LIBRARY_PATH;
+    int result = access(path, R_OK);
+
+    if (result != 0) {
+        path = EFFECTS_DESCRIPTOR_LIBRARY_PATH2;
+        result = access(path, R_OK);
+    }
+
+    if (result == 0) {
+        lib_handle = dlopen(path, RTLD_NOW);
         if (lib_handle == NULL) {
-            ALOGE("%s: DLOPEN failed for %s", __func__, EFFECTS_DESCRIPTOR_LIBRARY_PATH);
+            ALOGE("%s: DLOPEN failed for %s", __func__, path);
         } else {
-            ALOGV("%s: DLOPEN successful for %s", __func__, EFFECTS_DESCRIPTOR_LIBRARY_PATH);
+            ALOGV("%s: DLOPEN successful for %s", __func__, path);
             desc = (const effect_descriptor_t *)dlsym(lib_handle,
                                                         "qcom_product_aec_descriptor");
             if (desc)
@@ -448,6 +457,8 @@ static int init() {
 //            if (desc)
 //                descriptors[AGC_ID] = desc;
         }
+    } else {
+        ALOGE("%s: can't find %s", __func__, path);
     }
 
     uuid_to_id_table[AEC_ID] = FX_IID_AEC;
