@@ -17,7 +17,7 @@ include $(MY_LOCAL_PATH)/visualizer/Android.mk
 include $(MY_LOCAL_PATH)/post_proc/Android.mk
 endif
 
-ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
+ifeq ($(USE_LEGACY_AUDIO_DAEMON), true)
 include $(MY_LOCAL_PATH)/audiod/Android.mk
 endif
 
