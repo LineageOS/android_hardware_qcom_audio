@@ -367,7 +367,7 @@ int audio_extn_ssr_set_usecase(struct stream_in *in,
              */
             ALOGD("%s: SSR supports only channel representation position, channel_mask(%#x)"
                               ,__func__, config->channel_mask);
-            config->channel_mask = AUDIO_CHANNEL_IN_5POINT1;
+            config->channel_mask = AUDIO_CHANNEL_IN_6;
             ret = 0;
             *update_params = true;
         } else {
