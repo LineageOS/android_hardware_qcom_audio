@@ -601,7 +601,7 @@
 
     <path name="speaker">
         <ctl name="RX3 MIX1 INP1" value="RX1" />
-        <ctl name="SPK DAC Switch" value="1" />
+        <ctl name="SPK" value="Switch" />
     </path>
 
     <path name="speaker-mic">
