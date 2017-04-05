@@ -57,6 +57,8 @@ void audio_extn_spkr_prot_calib_cancel(void *adev);
 #define audio_extn_hfp_is_active(adev)                  (0)
 #define audio_extn_hfp_get_usecase()                    (-1)
 #define audio_extn_hfp_set_parameters(adev, params)     (0)
+#define audio_extn_hfp_set_mic_mute(adev, state)        (0)
+
 #else
 bool audio_extn_hfp_is_active(struct audio_device *adev);
 
@@ -64,6 +66,8 @@ audio_usecase_t audio_extn_hfp_get_usecase();
 
 void audio_extn_hfp_set_parameters(struct audio_device *adev,
                                     struct str_parms *parms);
+int audio_extn_hfp_set_mic_mute(struct audio_device *adev, bool state);
+
 #endif
 
 #ifndef SOUND_TRIGGER_ENABLED
@@ -105,6 +109,9 @@ void audio_extn_dsm_feedback_enable(struct audio_device *adev,
                          bool benable);
 #endif
 
+void audio_extn_utils_send_default_app_type_cfg(void *platform, struct mixer *mixer);
+int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
+                                       struct audio_usecase *usecase);
 #ifndef HWDEP_CAL_ENABLED
 #define  audio_extn_hwdep_cal_send(snd_card, acdb_handle) (0)
 #else

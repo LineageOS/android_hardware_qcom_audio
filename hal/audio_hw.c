@@ -53,6 +53,7 @@
 #include "voice_extn.h"
 
 #include "sound/compress_params.h"
+#include "audio_extn/tfa_98xx.h"
 
 /* COMPRESS_OFFLOAD_FRAGMENT_SIZE must be more than 8KB and a multiple of 32KB if more than 32KB.
  * COMPRESS_OFFLOAD_FRAGMENT_SIZE * COMPRESS_OFFLOAD_NUM_FRAGMENTS must be less than 8MB. */
@@ -531,6 +532,18 @@ static int get_snd_codec_id(audio_format_t format)
     return id;
 }
 
+static int audio_ssr_status(struct audio_device *adev)
+{
+    int ret = 0;
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name = "Audio SSR Status";
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    ret = mixer_ctl_get_value(ctl, 0);
+    ALOGD("%s: value: %d", __func__, ret);
+    return ret;
+}
+
 int enable_audio_route(struct audio_device *adev,
                        struct audio_usecase *usecase)
 {
@@ -547,6 +560,7 @@ int enable_audio_route(struct audio_device *adev,
     else
         snd_device = usecase->out_snd_device;
 
+    audio_extn_utils_send_app_type_cfg(adev, usecase);
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(adev->platform, mixer_path, snd_device);
     ALOGD("%s: usecase(%d) apply and update mixer path: %s", __func__,  usecase->id, mixer_path);
@@ -668,6 +682,8 @@ int disable_snd_device(struct audio_device *adev,
         ALOGE("%s: device ref cnt is already 0", __func__);
         return -EINVAL;
     }
+    audio_extn_tfa_98xx_disable_speaker(snd_device);
+
     adev->snd_dev_ref_cnt[snd_device]--;
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
         audio_extn_dsm_feedback_enable(adev, snd_device, false);
@@ -1186,6 +1202,8 @@ int select_devices(struct audio_device *adev,
     usecase->in_snd_device = in_snd_device;
     usecase->out_snd_device = out_snd_device;
 
+    audio_extn_tfa_98xx_set_mode();
+
     enable_audio_route(adev, usecase);
 
     /* Applicable only on the targets that has external modem.
@@ -1242,6 +1260,9 @@ int start_input_stream(struct stream_in *in)
     struct audio_device *adev = in->dev;
 
     ALOGV("%s: enter: usecase(%d)", __func__, in->usecase);
+
+    if (audio_extn_tfa_98xx_is_supported() && !audio_ssr_status(adev))
+        return -EIO;
 
     if (in->card_status == CARD_STATUS_OFFLINE ||
         adev->card_status == CARD_STATUS_OFFLINE) {
@@ -1735,6 +1756,8 @@ int start_output_stream(struct stream_out *out)
     }
     register_out_stream(out);
     audio_extn_perf_lock_release();
+    audio_extn_tfa_98xx_enable_speaker();
+
     ALOGV("%s: exit", __func__);
     return ret;
 error_open:
@@ -2039,6 +2062,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                     out->routing_change = true;
                 }
                 select_devices(adev, out->usecase);
+                audio_extn_tfa_98xx_update();
             }
 
         }
@@ -2197,14 +2221,36 @@ static ssize_t out_write_for_no_output(struct audio_stream_out *stream,
                                        const void *buffer, size_t bytes)
 {
     struct stream_out *out = (struct stream_out *)stream;
+    struct timespec t = { .tv_sec = 0, .tv_nsec = 0 };
+    int64_t now;
+    int64_t elapsed_time_since_last_write = 0;
+    int64_t sleep_time;
 
-    /* No Output device supported other than BT for playback.
-     * Sleep for the amount of buffer duration
-     */
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    now = (t.tv_sec * 1000000000LL + t.tv_nsec) / 1000;
+
     lock_output_stream(out);
-    usleep(bytes * 1000000 / audio_stream_out_frame_size(&out->stream.common) /
-            out_get_sample_rate(&out->stream.common));
+    if (out->last_write_time_us)
+        elapsed_time_since_last_write = now - out->last_write_time_us;
+    sleep_time = bytes * 1000000LL / audio_stream_out_frame_size(stream) /
+               out_get_sample_rate(&stream->common) - elapsed_time_since_last_write;
+    if (sleep_time > 0) {
+        usleep(sleep_time);
+    } else {
+        // we don't sleep when we exit standby (this is typical for a real alsa buffer).
+        sleep_time = 0;
+    }
+    out->last_write_time_us = now + sleep_time;
     pthread_mutex_unlock(&out->lock);
+    // last_write_time_us is an approximation of when the (simulated) alsa
+    // buffer is believed completely full. The usleep above waits for more space
+    // in the buffer, but by the end of the sleep the buffer is considered
+    // topped-off.
+    //
+    // On the subsequent out_write(), we measure the elapsed time spent in
+    // the mixer. This is subtracted from the sleep estimate based on frames,
+    // thereby accounting for drain in the alsa buffer during mixing.
+    // This is a crude approximation; we don't handle underruns precisely.
     return bytes;
 }
 #endif
@@ -3279,7 +3325,11 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
 
     ALOGD("%s: state %d", __func__, (int)state);
     pthread_mutex_lock(&adev->lock);
-    ret = voice_set_mic_mute(adev, state);
+    if (audio_extn_tfa_98xx_is_supported() && adev->enable_hfp) {
+        ret = audio_extn_hfp_set_mic_mute(adev, state);
+    } else {
+        ret = voice_set_mic_mute(adev, state);
+    }
     adev->mic_muted = state;
     pthread_mutex_unlock(&adev->lock);
 
@@ -3319,6 +3369,9 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     ALOGV("%s: enter", __func__);
     *stream_in = NULL;
     if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0)
+        return -EINVAL;
+
+    if (audio_extn_tfa_98xx_is_supported() && (audio_extn_hfp_is_active(adev) || voice_is_in_call(adev)))
         return -EINVAL;
 
     in = (struct stream_in *)calloc(1, sizeof(struct stream_in));
@@ -3619,6 +3672,8 @@ static int adev_close(hw_device_t *device)
     if (!adev)
         return 0;
 
+    audio_extn_tfa_98xx_deinit();
+
     audio_extn_snd_mon_unregister_listener(adev);
     pthread_mutex_lock(&adev_init_lock);
 
@@ -3837,6 +3892,7 @@ static int adev_open(const hw_module_t *module, const char *name,
         }
     }
 
+    audio_extn_utils_send_default_app_type_cfg(adev->platform, adev->mixer);
     audio_device_ref_count++;
 
     if (property_get("audio_hal.period_multiplier", value, NULL) > 0) {
@@ -3848,6 +3904,8 @@ static int adev_open(const hw_module_t *module, const char *name,
         }
         ALOGV("new period_multiplier = %d", af_period_multiplier);
     }
+
+    audio_extn_tfa_98xx_init(adev);
 
     pthread_mutex_unlock(&adev_init_lock);
 

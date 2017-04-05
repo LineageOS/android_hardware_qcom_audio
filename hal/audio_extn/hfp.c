@@ -27,12 +27,17 @@
 #include "platform_api.h"
 #include <stdlib.h>
 #include <cutils/str_parms.h>
+#include "audio_extn/tfa_98xx.h"
 
 #define AUDIO_PARAMETER_HFP_ENABLE            "hfp_enable"
 #define AUDIO_PARAMETER_HFP_SET_SAMPLING_RATE "hfp_set_sampling_rate"
 #define AUDIO_PARAMETER_KEY_HFP_VOLUME        "hfp_volume"
 #define AUDIO_PARAMETER_HFP_VOL_MIXER_CTL     "hfp_vol_mixer_ctl"
 #define AUDIO_PARAMATER_HFP_VALUE_MAX         128
+
+#define AUDIO_PARAMETER_KEY_HFP_MIC_VOLUME "hfp_mic_volume"
+#define PLAYBACK_VOLUME_MAX 0x2000
+#define CAPTURE_VOLUME_DEFAULT                (15.0)
 
 static int32_t start_hfp(struct audio_device *adev,
                                struct str_parms *parms);
@@ -45,8 +50,10 @@ struct hfp_module {
     struct pcm *hfp_pcm_rx;
     struct pcm *hfp_pcm_tx;
     float  hfp_volume;
+    float  mic_volume;
     char   hfp_vol_mixer_ctl[AUDIO_PARAMATER_HFP_VALUE_MAX];
     bool   is_hfp_running;
+    bool   mic_mute;
     audio_usecase_t ucid;
 };
 
@@ -56,8 +63,10 @@ static struct hfp_module hfpmod = {
     .hfp_pcm_rx = NULL,
     .hfp_pcm_tx = NULL,
     .hfp_volume = 0,
+    .mic_volume = CAPTURE_VOLUME_DEFAULT,
     .hfp_vol_mixer_ctl = {0, },
     .is_hfp_running = 0,
+    .mic_mute = 0,
     .ucid = USECASE_AUDIO_HFP_SCO,
 };
 static struct pcm_config pcm_config_hfp = {
@@ -79,6 +88,9 @@ static int32_t hfp_set_volume(struct audio_device *adev, float value)
     ALOGV("%s: entry", __func__);
     ALOGD("%s: (%f)\n", __func__, value);
 
+    hfpmod.hfp_volume = value;
+    audio_extn_tfa_98xx_set_voice_vol(value);
+
     if (value < 0.0) {
         ALOGW("%s: (%f) Under 0.0, assuming 0.0\n", __func__, value);
         value = 0.0;
@@ -87,7 +99,6 @@ static int32_t hfp_set_volume(struct audio_device *adev, float value)
         ALOGW("%s: Volume brought with in range (%f)\n", __func__, value);
     }
     vol  = lrint((value * 0x2000) + 0.5);
-    hfpmod.hfp_volume = value;
 
     if (!hfpmod.is_hfp_running) {
         ALOGV("%s: HFP not active, ignoring set_hfp_volume call", __func__);
@@ -119,6 +130,115 @@ static int32_t hfp_set_volume(struct audio_device *adev, float value)
     return ret;
 }
 
+
+/*Set mic volume to value.
+*
+* This interface is used for mic volume control, set mic volume as value(range 0 ~ 15).
+*/
+static int hfp_set_mic_volume(struct audio_device *adev, float value)
+{
+    int volume, ret = 0;
+    char mixer_ctl_name[128];
+    struct mixer_ctl *ctl;
+    int pcm_device_id = HFP_ASM_RX_TX;
+
+    if (!hfpmod.is_hfp_running) {
+        ALOGE("%s: HFP not active, ignoring set_hfp_mic_volume call", __func__);
+        return -EIO;
+    }
+
+    if (value < 0.0) {
+        ALOGW("%s: (%f) Under 0.0, assuming 0.0\n", __func__, value);
+        value = 0.0;
+    } else if (value > CAPTURE_VOLUME_DEFAULT) {
+        value = CAPTURE_VOLUME_DEFAULT;
+        ALOGW("%s: Volume brought within range (%f)\n", __func__, value);
+    }
+
+    value = value / CAPTURE_VOLUME_DEFAULT;
+    memset(mixer_ctl_name, 0, sizeof(mixer_ctl_name));
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+             "Playback %d Volume", pcm_device_id);
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+    volume = (int)(value * PLAYBACK_VOLUME_MAX);
+
+    ALOGD("%s: Setting volume to %d (%s)\n", __func__, volume, mixer_ctl_name);
+    if (mixer_ctl_set_value(ctl, 0, volume) < 0) {
+        ALOGE("%s: Couldn't set HFP Volume: [%d]", __func__, volume);
+        return -EINVAL;
+    }
+
+    return ret;
+}
+
+static float hfp_get_mic_volume(struct audio_device *adev)
+{
+    int volume, ret = 0;
+    char mixer_ctl_name[128];
+    struct mixer_ctl *ctl;
+    int pcm_device_id = HFP_ASM_RX_TX;
+    float value = 0.0;
+
+    if (!hfpmod.is_hfp_running) {
+        ALOGE("%s: HFP not active, ignoring set_hfp_mic_volume call", __func__);
+        return -EIO;
+    }
+
+    memset(mixer_ctl_name, 0, sizeof(mixer_ctl_name));
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+             "Playback %d Volume", pcm_device_id);
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    volume = mixer_ctl_get_value(ctl, 0);
+    if ( volume < 0) {
+        ALOGE("%s: Couldn't set HFP Volume: [%d]", __func__, volume);
+        return -EINVAL;
+    }
+    ALOGD("%s: getting mic volume %d \n", __func__, volume);
+
+    value = (volume / PLAYBACK_VOLUME_MAX) * CAPTURE_VOLUME_DEFAULT;
+    if (value < 0.0) {
+        ALOGW("%s: (%f) Under 0.0, assuming 0.0\n", __func__, value);
+        value = 0.0;
+    } else if (value > CAPTURE_VOLUME_DEFAULT) {
+        value = CAPTURE_VOLUME_DEFAULT;
+        ALOGW("%s: Volume brought within range (%f)\n", __func__, value);
+    }
+
+    return value;
+}
+
+/*Set mic mute state.
+*
+* This interface is used for mic mute state control
+*/
+int audio_extn_hfp_set_mic_mute(struct audio_device *adev, bool state)
+{
+    int rc = 0;
+
+    if (state == hfpmod.mic_mute)
+        return rc;
+
+    if (state == true) {
+        hfpmod.mic_volume = hfp_get_mic_volume(adev);
+    }
+    rc = hfp_set_mic_volume(adev, (state == true) ? 0.0 : hfpmod.mic_volume);
+    adev->voice.mic_mute = state;
+    hfpmod.mic_mute = state;
+    ALOGD("%s: Setting mute state %d, rc %d\n", __func__, state, rc);
+    return rc;
+}
+
 static int32_t start_hfp(struct audio_device *adev,
                          struct str_parms *parms __unused)
 {
@@ -139,6 +259,8 @@ static int32_t start_hfp(struct audio_device *adev,
     uc_info->out_snd_device = SND_DEVICE_NONE;
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
+
+    audio_extn_tfa_98xx_set_mode_bt();
 
     select_devices(adev, hfpmod.ucid);
 
@@ -169,13 +291,16 @@ static int32_t start_hfp(struct audio_device *adev,
     }
     ALOGD("%s: Opening PCM capture device card_id(%d) device_id(%d)",
           __func__, adev->snd_card, pcm_dev_tx_id);
-    hfpmod.hfp_pcm_rx = pcm_open(adev->snd_card,
-                                   pcm_dev_rx_id,
-                                   PCM_OUT, &pcm_config_hfp);
-    if (hfpmod.hfp_pcm_rx && !pcm_is_ready(hfpmod.hfp_pcm_rx)) {
-        ALOGE("%s: %s", __func__, pcm_get_error(hfpmod.hfp_pcm_rx));
-        ret = -EIO;
-        goto exit;
+
+    if (audio_extn_tfa_98xx_is_supported() == false) {
+        hfpmod.hfp_pcm_rx = pcm_open(adev->snd_card,
+                                       pcm_dev_rx_id,
+                                       PCM_OUT, &pcm_config_hfp);
+        if (hfpmod.hfp_pcm_rx && !pcm_is_ready(hfpmod.hfp_pcm_rx)) {
+            ALOGE("%s: %s", __func__, pcm_get_error(hfpmod.hfp_pcm_rx));
+            ret = -EIO;
+            goto exit;
+        }
     }
     hfpmod.hfp_sco_tx = pcm_open(adev->snd_card,
                                   pcm_dev_asm_tx_id,
@@ -187,21 +312,32 @@ static int32_t start_hfp(struct audio_device *adev,
     }
     ALOGV("%s: Opening PCM capture device card_id(%d) device_id(%d)",
           __func__, adev->snd_card, pcm_dev_tx_id);
-    hfpmod.hfp_pcm_tx = pcm_open(adev->snd_card,
-                                   pcm_dev_tx_id,
-                                   PCM_IN, &pcm_config_hfp);
-    if (hfpmod.hfp_pcm_tx && !pcm_is_ready(hfpmod.hfp_pcm_tx)) {
-        ALOGE("%s: %s", __func__, pcm_get_error(hfpmod.hfp_pcm_tx));
-        ret = -EIO;
-        goto exit;
+
+    if (audio_extn_tfa_98xx_is_supported() == false) {
+        hfpmod.hfp_pcm_tx = pcm_open(adev->snd_card,
+                                       pcm_dev_tx_id,
+                                       PCM_IN, &pcm_config_hfp);
+        if (hfpmod.hfp_pcm_tx && !pcm_is_ready(hfpmod.hfp_pcm_tx)) {
+            ALOGE("%s: %s", __func__, pcm_get_error(hfpmod.hfp_pcm_tx));
+            ret = -EIO;
+            goto exit;
+        }
     }
     pcm_start(hfpmod.hfp_sco_rx);
     pcm_start(hfpmod.hfp_sco_tx);
-    pcm_start(hfpmod.hfp_pcm_rx);
-    pcm_start(hfpmod.hfp_pcm_tx);
+    if (audio_extn_tfa_98xx_is_supported() == false) {
+        pcm_start(hfpmod.hfp_pcm_rx);
+        pcm_start(hfpmod.hfp_pcm_tx);
+    }
+
+    audio_extn_tfa_98xx_enable_speaker();
 
     hfpmod.is_hfp_running = true;
     hfp_set_volume(adev, hfpmod.hfp_volume);
+
+    /* Set mic volume by mute status, we don't provide set mic volume in phone app, only
+    provide mute and unmute. */
+    audio_extn_hfp_set_mic_mute(adev, adev->mic_muted);
 
     ALOGD("%s: exit: status(%d)", __func__, ret);
     return 0;
@@ -348,6 +484,20 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *
         ALOGD("%s: set_hfp_volume usecase, Vol: [%f]", __func__, vol);
         hfp_set_volume(adev, vol);
     }
+
+    memset(value, 0, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HFP_MIC_VOLUME,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        if (sscanf(value, "%f", &vol) != 1){
+            ALOGE("%s: error in retrieving hfp mic volume", __func__);
+            ret = -EIO;
+            goto exit;
+        }
+        ALOGD("%s: set_hfp_mic_volume usecase, Vol: [%f]", __func__, vol);
+        hfp_set_mic_volume(adev, vol);
+    }
+
 exit:
     ALOGV("%s Exit",__func__);
 }

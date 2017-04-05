@@ -510,6 +510,8 @@ static const struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_INCALL_REC_DOWNLINK)},
     {TO_NAME_INDEX(USECASE_INCALL_REC_UPLINK_AND_DOWNLINK)},
     {TO_NAME_INDEX(USECASE_AUDIO_HFP_SCO)},
+    {TO_NAME_INDEX(USECASE_VOICEMMODE1_CALL)},
+    {TO_NAME_INDEX(USECASE_VOICEMMODE2_CALL)},
 };
 
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
@@ -562,7 +564,7 @@ static char *get_current_operator()
     char mccmnc[PROPERTY_VALUE_MAX];
     char *ret = NULL;
 
-    property_get("gsm.sim.operator.numeric",mccmnc,"0");
+    property_get("gsm.sim.operator.numeric",mccmnc,"00000");
 
     list_for_each(node, &operator_info_list) {
         info_item = node_to_item(node, struct operator_info, list);
@@ -1525,6 +1527,13 @@ done:
     return ret;
 }
 
+int platform_get_default_app_type_v2(void *platform, usecase_type_t type __unused,
+                                     int *app_type)
+{
+    ALOGE("%s: Not implemented", __func__);
+    return -ENOSYS;
+}
+
 int platform_get_snd_device_acdb_id(snd_device_t snd_device)
 {
     if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
@@ -1953,7 +1962,7 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         goto exit;
     }
 
-    if (voice_is_in_call(adev) || adev->enable_voicerx) {
+    if (voice_is_in_call(adev) || adev->enable_voicerx || audio_extn_hfp_is_active(adev)) {
         if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
             devices & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
             devices & AUDIO_DEVICE_OUT_LINE) {

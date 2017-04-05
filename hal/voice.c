@@ -29,6 +29,7 @@
 #include "voice_extn/voice_extn.h"
 #include "platform.h"
 #include "platform_api.h"
+#include "audio_extn/tfa_98xx.h"
 
 struct pcm_config pcm_config_voice_call = {
     .channels = 1,
@@ -146,6 +147,11 @@ int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     disable_snd_device(adev, uc_info->out_snd_device);
     disable_snd_device(adev, uc_info->in_snd_device);
 
+    if (audio_extn_tfa_98xx_is_supported() && voice_get_mic_mute(adev)) {
+        voice_set_mic_mute(adev, false);
+        ALOGD("%s: unMute voice Tx", __func__);
+    }
+
     list_remove(&uc_info->list);
     free(uc_info);
 
@@ -210,6 +216,8 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 
     pcm_start(session->pcm_tx);
     pcm_start(session->pcm_rx);
+
+    audio_extn_tfa_98xx_enable_speaker();
 
     /* Enable sidetone only when no calls are already active */
     if (!voice_is_call_state_active(adev))
@@ -531,6 +539,7 @@ void voice_update_devices_for_all_voice_usecases(struct audio_device *adev)
                   use_case_table[usecase->id]);
             usecase->stream.out = adev->current_call_output;
             select_devices(adev, usecase->id);
+            audio_extn_tfa_98xx_update();
         }
     }
 }
