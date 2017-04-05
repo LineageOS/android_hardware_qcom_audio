@@ -69,21 +69,21 @@ PRODUCT_COPY_FILES += \
     device/qcom/common/media/audio_policy.conf:system/etc/audio_policy.conf
 else
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/msmskunk/audio_policy.conf:system/etc/audio_policy.conf
+    hardware/qcom/audio/configs/sdm845/audio_policy.conf:system/etc/audio_policy.conf
 endif
 
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/msmskunk/audio_output_policy.conf:system/vendor/etc/audio_output_policy.conf \
-    hardware/qcom/audio/configs/msmskunk/audio_effects.conf:system/vendor/etc/audio_effects.conf \
-    hardware/qcom/audio/configs/msmskunk/mixer_paths_tavil.xml:system/etc/mixer_paths_tavil.xml \
+    hardware/qcom/audio/configs/sdm845/audio_output_policy.conf:system/vendor/etc/audio_output_policy.conf \
+    hardware/qcom/audio/configs/sdm845/audio_effects.conf:system/vendor/etc/audio_effects.conf \
+    hardware/qcom/audio/configs/sdm845/mixer_paths_tavil.xml:system/etc/mixer_paths_tavil.xml \
     hardware/qcom/audio/configs/msm8998/mixer_paths_skuk.xml:system/etc/mixer_paths_skuk.xml \
-    hardware/qcom/audio/configs/msmskunk/mixer_paths_i2s.xml:system/etc/mixer_paths_i2s.xml \
-    hardware/qcom/audio/configs/msmskunk/aanc_tuning_mixer_tavil.txt:system/etc/aanc_tuning_mixer_tavil.txt \
-    hardware/qcom/audio/configs/msmskunk/audio_platform_info_i2s.xml:system/etc/audio_platform_info_i2s.xml \
-    hardware/qcom/audio/configs/msmskunk/sound_trigger_mixer_paths_wcd9340.xml:system/etc/sound_trigger_mixer_paths_wcd9340.xml \
-    hardware/qcom/audio/configs/msmskunk/sound_trigger_platform_info.xml:system/etc/sound_trigger_platform_info.xml \
-    hardware/qcom/audio/configs/msmskunk/graphite_ipc_platform_info.xml:system/etc/graphite_ipc_platform_info.xml \
-    hardware/qcom/audio/configs/msmskunk/audio_platform_info.xml:system/etc/audio_platform_info.xml
+    hardware/qcom/audio/configs/sdm845/mixer_paths_i2s.xml:system/etc/mixer_paths_i2s.xml \
+    hardware/qcom/audio/configs/sdm845/aanc_tuning_mixer_tavil.txt:system/etc/aanc_tuning_mixer_tavil.txt \
+    hardware/qcom/audio/configs/sdm845/audio_platform_info_i2s.xml:system/etc/audio_platform_info_i2s.xml \
+    hardware/qcom/audio/configs/sdm845/sound_trigger_mixer_paths_wcd9340.xml:system/etc/sound_trigger_mixer_paths_wcd9340.xml \
+    hardware/qcom/audio/configs/sdm845/sound_trigger_platform_info.xml:system/etc/sound_trigger_platform_info.xml \
+    hardware/qcom/audio/configs/sdm845/graphite_ipc_platform_info.xml:system/etc/graphite_ipc_platform_info.xml \
+    hardware/qcom/audio/configs/sdm845/audio_platform_info.xml:system/etc/audio_platform_info.xml
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
@@ -92,7 +92,7 @@ PRODUCT_COPY_FILES += \
     $(TOPDIR)hardware/qcom/audio/configs/common/audio_policy_configuration.xml:/system/etc/audio_policy_configuration.xml
 else
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)hardware/qcom/audio/configs/msmskunk/audio_policy_configuration.xml:system/etc/audio_policy_configuration.xml
+    $(TOPDIR)hardware/qcom/audio/configs/sdm845/audio_policy_configuration.xml:system/etc/audio_policy_configuration.xml
 endif
 PRODUCT_COPY_FILES += \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:/system/etc/a2dp_audio_policy_configuration.xml \
@@ -104,7 +104,7 @@ endif
 
 # Listen configuration file
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/msmskunk/listen_platform_info.xml:system/etc/listen_platform_info.xml
+    hardware/qcom/audio/configs/sdm845/listen_platform_info.xml:system/etc/listen_platform_info.xml
 
 # Reduce client buffer size for fast audio output tracks
 PRODUCT_PROPERTY_OVERRIDES += \
