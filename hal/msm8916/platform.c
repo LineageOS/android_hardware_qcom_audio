@@ -6340,9 +6340,13 @@ unsigned char platform_map_to_edid_format(int audio_format)
         ALOGV("%s:PCM", __func__);
         format = LPCM;
         break;
+    case AUDIO_FORMAT_IEC61937:
+        ALOGV("%s:IEC61937", __func__);
+        format = 0;
+        break;
     default:
         format =  -1;
-        ALOGE("%s:invalid format:%d", __func__,format);
+        ALOGE("%s:invalid format:0x%x", __func__, audio_format);
         break;
     }
     return format;
@@ -6384,6 +6388,9 @@ bool platform_is_edid_supported_format(void *platform, int format)
     edid_audio_info *info = NULL;
     int i, ret;
     unsigned char format_id = platform_map_to_edid_format(format);
+
+    if (format == AUDIO_FORMAT_IEC61937)
+        return true;
 
     if (format_id <= 0) {
         ALOGE("%s invalid edid format mappting for :%x" ,__func__, format);

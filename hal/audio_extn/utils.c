@@ -143,6 +143,7 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_DTS),
     STRING_TO_ENUM(AUDIO_FORMAT_DTS_HD),
     STRING_TO_ENUM(AUDIO_FORMAT_DOLBY_TRUEHD),
+    STRING_TO_ENUM(AUDIO_FORMAT_IEC61937),
 #ifdef AUDIO_EXTN_FORMATS_ENABLED
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
     STRING_TO_ENUM(AUDIO_FORMAT_WMA),
@@ -1265,6 +1266,9 @@ int get_snd_codec_id(audio_format_t format)
         break;
     case AUDIO_FORMAT_DOLBY_TRUEHD:
         id = SND_AUDIOCODEC_TRUEHD;
+        break;
+    case AUDIO_FORMAT_IEC61937:
+        id = SND_AUDIOCODEC_IEC61937;
         break;
     case AUDIO_FORMAT_DSD:
         id = SND_AUDIOCODEC_DSD;
