@@ -77,7 +77,8 @@ enum {
     FILE_EAC3_JOC,
     FILE_DTS,
     FILE_MP2,
-    FILE_APTX
+    FILE_APTX,
+    FILE_TRUEHD
 };
 
 typedef enum {
@@ -961,6 +962,9 @@ static void get_file_format(stream_config *stream_info)
             break;
         case FILE_APTX:
             stream_info->config.offload_info.format = AUDIO_FORMAT_APTX;
+            break;
+        case FILE_TRUEHD:
+            stream_info->config.offload_info.format = AUDIO_FORMAT_DOLBY_TRUEHD;
             break;
         default:
            fprintf(log_file, "Does not support given filetype\n");

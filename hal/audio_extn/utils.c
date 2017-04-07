@@ -70,6 +70,10 @@
 #define BASE_TABLE_SIZE 64
 #define MAX_BASEINDEX_LEN 256
 
+#ifndef SND_AUDIOCODEC_TRUEHD
+#define SND_AUDIOCODEC_TRUEHD 0x00000023
+#endif
+
 #ifdef AUDIO_EXTERNAL_HDMI_ENABLED
 #define PROFESSIONAL        (1<<0)      /* 0 = consumer, 1 = professional */
 #define NON_LPCM            (1<<1)      /* 0 = audio, 1 = non-audio */
@@ -130,6 +134,7 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3),
     STRING_TO_ENUM(AUDIO_FORMAT_DTS),
     STRING_TO_ENUM(AUDIO_FORMAT_DTS_HD),
+    STRING_TO_ENUM(AUDIO_FORMAT_DOLBY_TRUEHD),
 #ifdef AUDIO_EXTN_FORMATS_ENABLED
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
     STRING_TO_ENUM(AUDIO_FORMAT_WMA),
@@ -900,7 +905,8 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         app_type_cfg[len++] = app_type;
         app_type_cfg[len++] = acdb_dev_id;
         if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
-            (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC))
+            (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC) ||
+            (usecase->stream.out->format == AUDIO_FORMAT_DOLBY_TRUEHD))
             && audio_extn_passthru_is_passthrough_stream(usecase->stream.out)) {
             app_type_cfg[len++] = sample_rate * 4;
         } else {
@@ -1245,6 +1251,9 @@ int get_snd_codec_id(audio_format_t format)
     case AUDIO_FORMAT_DTS:
     case AUDIO_FORMAT_DTS_HD:
         id = SND_AUDIOCODEC_DTS;
+        break;
+    case AUDIO_FORMAT_DOLBY_TRUEHD:
+        id = SND_AUDIOCODEC_TRUEHD;
         break;
     case AUDIO_FORMAT_DSD:
         id = SND_AUDIOCODEC_DSD;

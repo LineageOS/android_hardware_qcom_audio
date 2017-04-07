@@ -351,7 +351,8 @@ static bool audio_extn_qaf_passthrough_enabled(struct stream_out *out)
                 case AUDIO_FORMAT_AC3:
                 case AUDIO_FORMAT_E_AC3:
                 case AUDIO_FORMAT_DTS:
-                case AUDIO_FORMAT_DTS_HD: {
+                case AUDIO_FORMAT_DTS_HD:
+                case AUDIO_FORMAT_DOLBY_TRUEHD: {
                     is_enabled = true;
                     break;
                 }

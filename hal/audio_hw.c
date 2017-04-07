@@ -293,6 +293,7 @@ static const struct string_to_enum out_formats_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_AC3),
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3),
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
+    STRING_TO_ENUM(AUDIO_FORMAT_DOLBY_TRUEHD),
     STRING_TO_ENUM(AUDIO_FORMAT_DTS),
     STRING_TO_ENUM(AUDIO_FORMAT_DTS_HD),
 };
@@ -511,6 +512,7 @@ static bool is_supported_format(audio_format_t format)
         format == AUDIO_FORMAT_PCM_16_BIT ||
         format == AUDIO_FORMAT_AC3 ||
         format == AUDIO_FORMAT_E_AC3 ||
+        format == AUDIO_FORMAT_DOLBY_TRUEHD ||
         format == AUDIO_FORMAT_DTS ||
         format == AUDIO_FORMAT_DTS_HD ||
         format == AUDIO_FORMAT_FLAC ||
@@ -1311,6 +1313,11 @@ static int read_hdmi_sink_caps(struct stream_out *out)
         //EAC3/EAC3_JOC will be converted to AC3 for decoding if needed
         out->supported_formats[i++] = AUDIO_FORMAT_E_AC3;
         out->supported_formats[i++] = AUDIO_FORMAT_E_AC3_JOC;
+    }
+
+    if (platform_is_edid_supported_format(out->dev->platform, AUDIO_FORMAT_DOLBY_TRUEHD)) {
+        ALOGV(":%s HDMI supports TRUE HD format", __func__);
+        out->supported_formats[i++] = AUDIO_FORMAT_DOLBY_TRUEHD;
     }
 
     if (platform_is_edid_supported_format(out->dev->platform, AUDIO_FORMAT_DTS)) {
