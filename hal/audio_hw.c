@@ -4053,6 +4053,7 @@ static int adev_close(hw_device_t *device)
     if (!adev)
         return 0;
 
+    audio_extn_snd_mon_deinit();
     audio_extn_tfa_98xx_deinit();
 
     audio_extn_snd_mon_unregister_listener(adev);

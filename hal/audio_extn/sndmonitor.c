@@ -191,6 +191,7 @@ static int enum_sndcards()
 
         ret = add_new_sndcard(atoi(ptr), fd);
         if (ret != 0)
+            close(fd);
             continue;
 
         num_cards++;
@@ -219,6 +220,7 @@ static int enum_sndcards()
 
         ret = add_new_sndcard(CPE_MAGIC_NUM+num_cpe, fd);
         if (ret != 0)
+            close(fd);
             continue;
 
         num_cpe++;
