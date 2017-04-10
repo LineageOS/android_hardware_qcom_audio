@@ -422,8 +422,9 @@ int async_callback(qahw_stream_callback_event_t event, void *param,
     case QAHW_STREAM_CBK_EVENT_ADSP:
         fprintf(log_file, "stream %d: received event - QAHW_STREAM_CBK_EVENT_ADSP\n", params->stream_index);
         if (payload != NULL) {
-            fprintf(log_file, "param_length %d\n", payload[0]);
-            for (i=1; i* sizeof(uint32_t) <= payload[0]; i++)
+            fprintf(log_file, "event_type %d\n", payload[0]);
+            fprintf(log_file, "param_length %d\n", payload[1]);
+            for (i=2; i* sizeof(uint32_t) <= payload[1]; i++)
                 fprintf(log_file, "param[%d] = 0x%x\n", i, payload[i]);
         }
         break;
@@ -1239,6 +1240,7 @@ int tigger_event(qahw_stream_handle_t* out_handle)
     event_payload.module_id = 0x10940;
     event_payload.config_mask = 1;
 
+    payload.adsp_event_params.event_type = QAHW_STREAM_PP_EVENT;
     payload.adsp_event_params.payload_length = sizeof(event_payload);
     payload.adsp_event_params.payload = &event_payload;
 

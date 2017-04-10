@@ -199,12 +199,18 @@ typedef enum {
                                                  */
 } audio_extn_callback_id;
 
-#define AUDIO_MAX_ADSP_STREAM_CMD_PAYLOAD_LEN 508
+#define AUDIO_MAX_ADSP_STREAM_CMD_PAYLOAD_LEN 504
+
+typedef enum {
+    AUDIO_STREAM_PP_EVENT = 0,
+    AUDIO_STREAM_ENCDEC_EVENT = 1,
+} audio_event_id;
 
 /* payload format for HAL parameter
  * AUDIO_EXTN_PARAM_ADSP_STREAM_CMD
  */
 struct audio_adsp_event {
+ audio_event_id event_type;                  /* type of the event */
  uint32_t payload_length;                    /* length in bytes of the payload */
  void    *payload;                           /* the actual payload */
 };

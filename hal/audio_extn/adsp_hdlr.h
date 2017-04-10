@@ -42,6 +42,9 @@ struct adsp_hdlr_stream_cfg {
 };
 
 #ifdef AUDIO_EXTN_ADSP_HDLR_ENABLED
+
+typedef int (*adsp_event_callback_t)(void *handle, void *payload, void *cookie);
+
 int audio_extn_adsp_hdlr_init(struct mixer *mixer);
 int audio_extn_adsp_hdlr_deinit(void);
 int audio_extn_adsp_hdlr_stream_open(void **handle,
@@ -53,6 +56,9 @@ int audio_extn_adsp_hdlr_stream_set_callback(void *handle,
 int audio_extn_adsp_hdlr_stream_set_param(void *handle,
                     adsp_hdlr_cmd_t cmd,
                     void *param);
+int audio_extn_adsp_hdlr_stream_register_event(void *handle,
+                void *param, adsp_event_callback_t cb, void *cookie);
+int audio_extn_adsp_hdlr_stream_deregister_event(void *handle, void *param);
 #else
 #define audio_extn_adsp_hdlr_init(mixer)                                     (0)
 #define audio_extn_adsp_hdlr_deinit()                                        (0)
@@ -60,6 +66,8 @@ int audio_extn_adsp_hdlr_stream_set_param(void *handle,
 #define audio_extn_adsp_hdlr_stream_close(handle)                            (0)
 #define audio_extn_adsp_hdlr_stream_set_callback(handle, callback, cookie)   (0)
 #define audio_extn_adsp_hdlr_stream_set_param(handle, cmd, param)            (0)
+#define audio_extn_adsp_hdlr_stream_register_event(stream_data, param, cb)   (0)
+#define audio_extn_adsp_hdlr_stream_deregister_event(handle, param)          (0)
 #endif
 
 #endif

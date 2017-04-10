@@ -293,10 +293,16 @@ struct qahw_out_correct_drift {
 
 #define QAHW_MAX_ADSP_STREAM_CMD_PAYLOAD_LEN 512
 
+typedef enum {
+    QAHW_STREAM_PP_EVENT = 0,
+    QAHW_STREAM_ENCDEC_EVENT = 1,
+} qahw_event_id;
+
 /* payload format for HAL parameter
  * QAHW_PARAM_ADSP_STREAM_CMD
  */
 struct qahw_adsp_event {
+    qahw_event_id event_type;      /* type of the event */
     uint32_t payload_length;       /* length in bytes of the payload */
     void *payload;                 /* the actual payload */
 };
