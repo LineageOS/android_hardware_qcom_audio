@@ -47,7 +47,7 @@
 #define SAMPLE_RATE_11025         11025
 // Supported sample rates for USB
 static uint32_t supported_sample_rates[] =
-    {44100, 48000, 64000, 88200, 96000, 176400, 192000, 384000};
+    {44100, 48000, 64000, 88200, 96000, 176400, 192000, 352800, 384000};
 
 #define  MAX_SAMPLE_RATE_SIZE  sizeof(supported_sample_rates)/sizeof(supported_sample_rates[0])
 
