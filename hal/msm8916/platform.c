@@ -5323,7 +5323,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
     }
 
-    if (backend_idx == HDMI_RX_BACKEND) {
+    if ((backend_idx == HDMI_RX_BACKEND) || (backend_idx == DISP_PORT_RX_BACKEND)) {
         struct audio_backend_cfg hdmi_backend_cfg;
         hdmi_backend_cfg.bit_width = bit_width;
         hdmi_backend_cfg.sample_rate = sample_rate;
