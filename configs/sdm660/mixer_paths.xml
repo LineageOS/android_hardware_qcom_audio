@@ -287,6 +287,10 @@
     <ctl name="SpkrLeft SWR DAC_Port Switch" value="0" />
     <ctl name="SpkrRight SWR DAC_Port Switch" value="0" />
     <ctl name="SpkrLeft WSA PA Gain" value="G_0_DB" />
+    <ctl name="SpkrRight WSA PA Gain" value="G_0_DB" />
+    <ctl name="SpkrLeft WSA PA Mute" value="1" />
+    <ctl name="SpkrRight WSA PA Mute" value="1" />
+    <ctl name="EAR SPKR PA Gain" value="G_DEFAULT" />
 
     <!-- Volume controls -->
     <ctl name="HPHL Volume" value="9" />
@@ -1597,8 +1601,8 @@
 
     <path name="speaker">
         <ctl name="INT4_MI2S_RX Channels" value="Two" />
-        <ctl name="RX4 MIX1 INP1" value="RX1" />
-        <ctl name="RX5 MIX1 INP1" value="RX2" />
+        <ctl name="RX4 MIX1 INP1" value="RX4" />
+        <ctl name="RX5 MIX1 INP1" value="RX5" />
         <ctl name="COMP1 Switch" value="1" />
         <ctl name="COMP2 Switch" value="1" />
         <ctl name="SpkrLeft COMP Switch" value="1" />
@@ -1609,26 +1613,30 @@
         <ctl name="SpkrRight BOOST Switch" value="1" />
         <ctl name="SpkrRight VISENSE Switch" value="1" />
         <ctl name="SpkrRight SWR DAC_Port Switch" value="1" />
+        <ctl name="SpkrLeft WSA PA Mute" value="0" />
+        <ctl name="SpkrRight WSA PA Mute" value="0" />
     </path>
 
     <path name="speaker-mono">
         <ctl name="INT4_MI2S_RX Channels" value="One" />
-        <ctl name="RX4 MIX1 INP1" value="RX1" />
+        <ctl name="RX4 MIX1 INP1" value="RX4" />
         <ctl name="COMP1 Switch" value="1" />
         <ctl name="SpkrLeft COMP Switch" value="1" />
         <ctl name="SpkrLeft BOOST Switch" value="1" />
         <ctl name="SpkrLeft VISENSE Switch" value="1" />
         <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
+        <ctl name="SpkrLeft WSA PA Mute" value="0" />
     </path>
 
     <path name="speaker-mono-2">
         <ctl name="INT4_MI2S_RX Channels" value="One" />
-        <ctl name="RX5 MIX1 INP1" value="RX2" />
+        <ctl name="RX5 MIX1 INP1" value="RX4" />
         <ctl name="COMP2 Switch" value="1" />
         <ctl name="SpkrRight COMP Switch" value="1" />
         <ctl name="SpkrRight BOOST Switch" value="1" />
         <ctl name="SpkrRight VISENSE Switch" value="1" />
         <ctl name="SpkrRight SWR DAC_Port Switch" value="1" />
+        <ctl name="SpkrRight WSA PA Mute" value="0" />
     </path>
 
     <path name="speaker-fluid">
@@ -1674,6 +1682,7 @@
 
     <path name="speaker-mic">
         <path name="adc1" />
+        <ctl name="IIR1 INP1 MUX" value="DEC1" />
     </path>
 
     <path name="speaker-mic-liquid">
@@ -1728,11 +1737,13 @@
     </path>
 
     <path name="handset">
+        <ctl name="EAR SPKR PA Gain" value="G_3_DB" />
         <path name="speaker-mono" />
     </path>
 
     <path name="handset-mic">
         <path name="adc1" />
+        <ctl name="IIR1 INP1 MUX" value="DEC1" />
     </path>
 
     <path name="handset-mic-db">
@@ -1781,6 +1792,7 @@
 
     <path name="headset-mic">
         <path name="adc2" />
+        <ctl name="IIR1 INP1 MUX" value="DEC1" />
     </path>
 
     <path name="headset-mic-liquid">
@@ -2028,7 +2040,7 @@
 
     <path name="dmic-broadside">
         <path name="speaker-dmic-broadside" />
-        <ctl name="IIR1 INP1 MUX" value="DEC7" />
+        <ctl name="IIR1 INP1 MUX" value="DEC1" />
     </path>
 
     <path name="voice-speaker-dmic-broadside">
