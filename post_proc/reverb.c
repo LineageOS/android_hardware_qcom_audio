@@ -32,7 +32,7 @@ const effect_descriptor_t aux_env_reverb_descriptor = {
         { 0xc2e5d5f0, 0x94bd, 0x4763, 0x9cac, { 0x4e, 0x23, 0x4d, 0x06, 0x83, 0x9e } },
         { 0x79a18026, 0x18fd, 0x4185, 0x8233, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } },
         EFFECT_CONTROL_API_VERSION,
-        (EFFECT_FLAG_TYPE_AUXILIARY | EFFECT_FLAG_HW_ACC_TUNNEL),
+        (EFFECT_FLAG_TYPE_AUXILIARY | EFFECT_FLAG_HW_ACC_TUNNEL | EFFECT_FLAG_VOLUME_CTRL),
         0, /* TODO */
         1,
         "MSM offload Auxiliary Environmental Reverb",
@@ -44,7 +44,8 @@ const effect_descriptor_t ins_env_reverb_descriptor = {
         {0xc2e5d5f0, 0x94bd, 0x4763, 0x9cac, {0x4e, 0x23, 0x4d, 0x06, 0x83, 0x9e}},
         {0xeb64ea04, 0x973b, 0x43d2, 0x8f5e, {0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}},
         EFFECT_CONTROL_API_VERSION,
-        (EFFECT_FLAG_TYPE_INSERT | EFFECT_FLAG_INSERT_FIRST | EFFECT_FLAG_HW_ACC_TUNNEL),
+        (EFFECT_FLAG_TYPE_INSERT | EFFECT_FLAG_INSERT_FIRST | EFFECT_FLAG_HW_ACC_TUNNEL |
+                EFFECT_FLAG_VOLUME_CTRL),
         0, /* TODO */
         1,
         "MSM offload Insert Environmental Reverb",
@@ -56,7 +57,7 @@ const effect_descriptor_t aux_preset_reverb_descriptor = {
         {0x47382d60, 0xddd8, 0x11db, 0xbf3a, {0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}},
         {0x6987be09, 0xb142, 0x4b41, 0x9056, {0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}},
         EFFECT_CONTROL_API_VERSION,
-        (EFFECT_FLAG_TYPE_AUXILIARY | EFFECT_FLAG_HW_ACC_TUNNEL),
+        (EFFECT_FLAG_TYPE_AUXILIARY | EFFECT_FLAG_HW_ACC_TUNNEL | EFFECT_FLAG_VOLUME_CTRL),
         0, /* TODO */
         1,
         "MSM offload Auxiliary Preset Reverb",
@@ -68,7 +69,8 @@ const effect_descriptor_t ins_preset_reverb_descriptor = {
         {0x47382d60, 0xddd8, 0x11db, 0xbf3a, {0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}},
         {0xaa2bebf6, 0x47cf, 0x4613, 0x9bca, {0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}},
         EFFECT_CONTROL_API_VERSION,
-        (EFFECT_FLAG_TYPE_INSERT | EFFECT_FLAG_INSERT_FIRST | EFFECT_FLAG_HW_ACC_TUNNEL),
+        (EFFECT_FLAG_TYPE_INSERT | EFFECT_FLAG_INSERT_FIRST | EFFECT_FLAG_HW_ACC_TUNNEL |
+                EFFECT_FLAG_VOLUME_CTRL),
         0, /* TODO */
         1,
         "MSM offload Insert Preset Reverb",

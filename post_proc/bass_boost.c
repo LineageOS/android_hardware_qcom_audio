@@ -31,7 +31,8 @@ const effect_descriptor_t bassboost_descriptor = {
         {0x0634f220, 0xddd4, 0x11db, 0xa0fc, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b }},
         {0x2c4a8c24, 0x1581, 0x487f, 0x94f6, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}}, // uuid
         EFFECT_CONTROL_API_VERSION,
-        (EFFECT_FLAG_TYPE_INSERT | EFFECT_FLAG_DEVICE_IND | EFFECT_FLAG_HW_ACC_TUNNEL),
+        (EFFECT_FLAG_TYPE_INSERT | EFFECT_FLAG_DEVICE_IND | EFFECT_FLAG_HW_ACC_TUNNEL |
+                EFFECT_FLAG_VOLUME_CTRL),
         0, /* TODO */
         1,
         "MSM offload bassboost",
