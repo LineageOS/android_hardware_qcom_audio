@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2013, 2017 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -179,9 +179,8 @@ int thread_status;
 
 #define MIXER_CARD 0
 #define SOUND_CARD 0
-#ifdef PLATFORM_MSM8998
-#define CAPTURE_DEVICE 7
-#else
+
+#ifndef CAPTURE_DEVICE
 #define CAPTURE_DEVICE 8
 #endif
 
