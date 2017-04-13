@@ -1632,7 +1632,7 @@ int audio_extn_utils_get_avt_device_drift(
                 ret = -EINVAL;
         }
     } else {
-        ALOGE("%s: Invalid usecase %d ",__func__, usecase->type);
+        ALOGE("%s: Invalid usecase",__func__);
         ret = -EINVAL;
     }
 
@@ -1768,12 +1768,7 @@ int audio_extn_utils_compress_set_clk_rec_mode(
     struct stream_out *out = NULL;
     int ret = -EINVAL;
 
-    if (usecase == NULL) {
-        ALOGE("%s:: Invalid use case", __func__);
-        goto exit;
-    }
-
-    if (usecase->type != PCM_PLAYBACK) {
+    if (usecase == NULL || usecase->type != PCM_PLAYBACK) {
         ALOGE("%s:: Invalid use case", __func__);
         goto exit;
     }
