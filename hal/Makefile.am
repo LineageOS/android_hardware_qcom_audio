@@ -162,6 +162,11 @@ AM_CFLAGS += -DAUDIO_EXTN_ADSP_HDLR_ENABLED
 c_sources += audio_extn/adsp_hdlr.c
 endif
 
+if SPLIT_A2DP
+AM_CFLAGS += -DSPLIT_A2DP_ENABLED
+c_sources += audio_extn/a2dp.c
+endif
+
 h_sources = audio_extn/audio_defs.h \
             audio_extn/audio_extn.h \
             audio_hw.h \
