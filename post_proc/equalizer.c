@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -34,7 +34,7 @@ const effect_descriptor_t equalizer_descriptor = {
         {0x0bed4300, 0xddd6, 0x11db, 0x8f34, {0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}}, // type
         {0xa0dac280, 0x401c, 0x11e3, 0x9379, {0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}}, // uuid
         EFFECT_CONTROL_API_VERSION,
-        (EFFECT_FLAG_TYPE_INSERT | EFFECT_FLAG_HW_ACC_TUNNEL),
+        (EFFECT_FLAG_TYPE_INSERT | EFFECT_FLAG_HW_ACC_TUNNEL | EFFECT_FLAG_VOLUME_CTRL),
         0, /* TODO */
         1,
         "MSM offload equalizer",
@@ -196,7 +196,7 @@ const char * equalizer_get_preset_name(equalizer_context_t *context,
 int equalizer_get_num_presets(equalizer_context_t *context)
 {
     ALOGV("%s: ctxt %p, presets_num: %d", __func__, context,
-           sizeof(equalizer_preset_names)/sizeof(char *));
+           (int)(sizeof(equalizer_preset_names)/sizeof(char *)));
     return sizeof(equalizer_preset_names)/sizeof(char *);
 }
 
