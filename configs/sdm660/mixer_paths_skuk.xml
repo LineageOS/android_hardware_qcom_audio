@@ -701,7 +701,7 @@
     </path>
 
     <path name="audio-ull-playback display-port">
-        <ctl name="DISPLAY_PORT Mixer MultiMedia3" value="1" />
+        <ctl name="DISPLAY_PORT Mixer MultiMedia8" value="1" />
     </path>
 
     <path name="audio-ull-playback bt-sco">

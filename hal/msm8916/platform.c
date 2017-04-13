@@ -71,6 +71,7 @@
 #define MIXER_XML_PATH_WCD9326 "/etc/mixer_paths_wcd9326.xml"
 #define MIXER_XML_PATH_WCD9335 "/etc/mixer_paths_wcd9335.xml"
 #define PLATFORM_INFO_XML_PATH_EXTCODEC  "/etc/audio_platform_info_extcodec.xml"
+#define PLATFORM_INFO_XML_PATH_SKUSH  "/etc/audio_platform_info_skush.xml"
 #define PLATFORM_INFO_XML_PATH      "/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_WCD9326_I2S "/etc/mixer_paths_wcd9326_i2s.xml"
 #define MIXER_XML_PATH_WCD9330_I2S "/etc/mixer_paths_wcd9330_i2s.xml"
@@ -81,6 +82,7 @@
 #define MIXER_XML_PATH_MTP "/system/etc/mixer_paths_mtp.xml"
 #define MIXER_XML_PATH_SKU2 "/system/etc/mixer_paths_qrd_sku2.xml"
 #define PLATFORM_INFO_XML_PATH_EXTCODEC  "/system/etc/audio_platform_info_extcodec.xml"
+#define PLATFORM_INFO_XML_PATH_SKUSH "/system/etc/audio_platform_info_skush.xml"
 #define MIXER_XML_PATH_WCD9326 "/system/etc/mixer_paths_wcd9326.xml"
 #define MIXER_XML_PATH_WCD9335 "/system/etc/mixer_paths_wcd9335.xml"
 #define MIXER_XML_PATH_SKUN "/system/etc/mixer_paths_qrd_skun.xml"
@@ -2188,6 +2190,9 @@ void *platform_init(struct audio_device *adev)
     /* Initialize ACDB and PCM ID's */
     if (is_external_codec)
         platform_info_init(PLATFORM_INFO_XML_PATH_EXTCODEC, my_data);
+    else if (!strncmp(snd_card_name, "sdm660-snd-card-skush",
+               sizeof("sdm660-snd-card-skush")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_SKUSH, my_data);
     else
         platform_info_init(PLATFORM_INFO_XML_PATH, my_data);
 
@@ -5173,6 +5178,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     unsigned int sample_rate;
     unsigned int channels;
     bool passthrough_enabled = false;
+    bool voice_call_active = false;
     int backend_idx = DEFAULT_CODEC_BACKEND;
     struct platform_data *my_data = (struct platform_data *)adev->platform;
     int na_mode = platform_get_native_support();
@@ -5205,6 +5211,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         channels = CODEC_BACKEND_DEFAULT_CHANNELS;
+        voice_call_active = true;
     } else {
         /*
          * The backend should be configured at highest bit width and/or
@@ -5244,7 +5251,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     }
 
     /* Native playback is preferred for Headphone/HS device over 192Khz */
-    if (codec_device_supports_native_playback(usecase->devices)) {
+    if (!voice_call_active && codec_device_supports_native_playback(usecase->devices)) {
         if (audio_is_true_native_stream_active(adev)) {
             if (check_hdset_combo_device(snd_device)) {
                 /*
@@ -5255,8 +5262,8 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                  */
                     sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
                     bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-                    ALOGD("%s:becf: afe: port has to run at 48k for a combo device",
-                          __func__);
+                    ALOGD("%s:becf: afe: port to run at 48k if combo device or in voice call"
+                           , __func__);
             } else {
              /*
               * in single BE mode, if native audio playback
@@ -5321,7 +5328,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
     }
 
-    if (backend_idx == HDMI_RX_BACKEND) {
+    if ((backend_idx == HDMI_RX_BACKEND) || (backend_idx == DISP_PORT_RX_BACKEND)) {
         struct audio_backend_cfg hdmi_backend_cfg;
         hdmi_backend_cfg.bit_width = bit_width;
         hdmi_backend_cfg.sample_rate = sample_rate;
@@ -5494,9 +5501,9 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
         /* update cfg against other existing capture usecases on same backend */
         list_for_each(node, &adev->usecase_list) {
             uc = node_to_item(node, struct audio_usecase, list);
-            if (uc->type == PCM_CAPTURE &&
+            in = (struct stream_in *) uc->stream.in;
+            if (in != NULL && uc->type == PCM_CAPTURE &&
                 backend_idx == platform_get_backend_index(uc->in_snd_device)) {
-                in = (struct stream_in *) uc->stream.in;
                 uc_channels = audio_channel_count_from_in_mask(in->channel_mask);
 
                 ALOGV("%s:txbecf: uc %s, id %d, sr %d, bw %d, ch %d, device %s",

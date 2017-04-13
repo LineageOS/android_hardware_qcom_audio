@@ -479,27 +479,27 @@
     <ctl name="ASRC1 Output Mode" value="INT" />
 
     <!-- IIR/voice anc -->
-    <ctl name="IIR0 Band1" id ="0" value="268435456" />
+    <ctl name="IIR0 Band1" id ="0" value="0" />
     <ctl name="IIR0 Band1" id ="1" value="0" />
     <ctl name="IIR0 Band1" id ="2" value="0" />
     <ctl name="IIR0 Band1" id ="3" value="0" />
     <ctl name="IIR0 Band1" id ="4" value="0" />
-    <ctl name="IIR0 Band2" id ="0" value="268435456" />
+    <ctl name="IIR0 Band2" id ="0" value="0" />
     <ctl name="IIR0 Band2" id ="1" value="0" />
     <ctl name="IIR0 Band2" id ="2" value="0" />
     <ctl name="IIR0 Band2" id ="3" value="0" />
     <ctl name="IIR0 Band2" id ="4" value="0" />
-    <ctl name="IIR0 Band3" id ="0" value="268435456" />
+    <ctl name="IIR0 Band3" id ="0" value="0" />
     <ctl name="IIR0 Band3" id ="1" value="0" />
     <ctl name="IIR0 Band3" id ="2" value="0" />
     <ctl name="IIR0 Band3" id ="3" value="0" />
     <ctl name="IIR0 Band3" id ="4" value="0" />
-    <ctl name="IIR0 Band4" id ="0" value="268435456" />
+    <ctl name="IIR0 Band4" id ="0" value="0" />
     <ctl name="IIR0 Band4" id ="1" value="0" />
     <ctl name="IIR0 Band4" id ="2" value="0" />
     <ctl name="IIR0 Band4" id ="3" value="0" />
     <ctl name="IIR0 Band4" id ="4" value="0" />
-    <ctl name="IIR0 Band5" id ="0" value="268435456" />
+    <ctl name="IIR0 Band5" id ="0" value="0" />
     <ctl name="IIR0 Band5" id ="1" value="0" />
     <ctl name="IIR0 Band5" id ="2" value="0" />
     <ctl name="IIR0 Band5" id ="3" value="0" />
@@ -1859,6 +1859,31 @@
    </path>
 
    <path name="sidetone-iir">
+        <ctl name="IIR0 Band1" id ="0" value="268435456" />
+        <ctl name="IIR0 Band1" id ="1" value="0" />
+        <ctl name="IIR0 Band1" id ="2" value="0" />
+        <ctl name="IIR0 Band1" id ="3" value="0" />
+        <ctl name="IIR0 Band1" id ="4" value="0" />
+        <ctl name="IIR0 Band2" id ="0" value="268435456" />
+        <ctl name="IIR0 Band2" id ="1" value="0" />
+        <ctl name="IIR0 Band2" id ="2" value="0" />
+        <ctl name="IIR0 Band2" id ="3" value="0" />
+        <ctl name="IIR0 Band2" id ="4" value="0" />
+        <ctl name="IIR0 Band3" id ="0" value="268435456" />
+        <ctl name="IIR0 Band3" id ="1" value="0" />
+        <ctl name="IIR0 Band3" id ="2" value="0" />
+        <ctl name="IIR0 Band3" id ="3" value="0" />
+        <ctl name="IIR0 Band3" id ="4" value="0" />
+        <ctl name="IIR0 Band4" id ="0" value="268435456" />
+        <ctl name="IIR0 Band4" id ="1" value="0" />
+        <ctl name="IIR0 Band4" id ="2" value="0" />
+        <ctl name="IIR0 Band4" id ="3" value="0" />
+        <ctl name="IIR0 Band4" id ="4" value="0" />
+        <ctl name="IIR0 Band5" id ="0" value="268435456" />
+        <ctl name="IIR0 Band5" id ="1" value="0" />
+        <ctl name="IIR0 Band5" id ="2" value="0" />
+        <ctl name="IIR0 Band5" id ="3" value="0" />
+        <ctl name="IIR0 Band5" id ="4" value="0" />
         <ctl name="IIR0 Enable Band1" value="1" />
         <ctl name="IIR0 Enable Band2" value="1" />
         <ctl name="IIR0 Enable Band3" value="1" />
