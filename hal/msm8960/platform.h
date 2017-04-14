@@ -137,6 +137,8 @@ enum {
 #define LOW_LATENCY_CAPTURE_PERIOD_SIZE 240
 #define LOW_LATENCY_CAPTURE_USE_CASE 0
 
+#define HFP_ASM_RX_TX 24
+
 #define PLATFORM_INFO_XML_PATH          "/system/etc/audio_platform_info.xml"
 #define PLATFORM_INFO_XML_BASE_STRING   "/system/etc/audio_platform_info"
 
