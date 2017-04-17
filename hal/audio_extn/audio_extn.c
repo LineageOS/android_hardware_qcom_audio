@@ -1367,12 +1367,20 @@ int audio_extn_out_set_param_data(struct stream_out *out,
             ret = audio_extn_utils_compress_set_start_delay(out,
                     (struct audio_out_start_delay_param *)(payload));
             break;
+        case AUDIO_EXTN_PARAM_OUT_ENABLE_DRIFT_CORRECTION:
+            ret = audio_extn_utils_compress_enable_drift_correction(out,
+                    (struct audio_out_enable_drift_correction *)(payload));
+            break;
+        case AUDIO_EXTN_PARAM_OUT_CORRECT_DRIFT:
+            ret = audio_extn_utils_compress_correct_drift(out,
+                    (struct audio_out_correct_drift *)(payload));
+            break;
         case AUDIO_EXTN_PARAM_ADSP_STREAM_CMD:
             ret = audio_extn_adsp_hdlr_stream_set_param(out->adsp_hdlr_stream_handle,
                     ADSP_HDLR_STREAM_CMD_REGISTER_EVENT,
                     (void *)&payload->adsp_event_params);
             break;
-         default:
+        default:
             ALOGE("%s:: unsupported param_id %d", __func__, param_id);
             break;
     }

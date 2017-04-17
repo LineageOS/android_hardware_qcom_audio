@@ -278,6 +278,19 @@ struct qahw_out_start_delay_param {
    uint64_t       start_delay; /* session start delay in microseconds*/
 };
 
+struct qahw_out_enable_drift_correction {
+   bool        enable; /* enable drift correction*/
+};
+
+struct qahw_out_correct_drift {
+    /*
+     * adjust time in microseconds, a positive value
+     * to advance the clock or a negative value to
+     * delay the clock.
+     */
+    int64_t        adjust_time;
+};
+
 #define QAHW_MAX_ADSP_STREAM_CMD_PAYLOAD_LEN 512
 
 /* payload format for HAL parameter
@@ -295,6 +308,8 @@ typedef union {
     struct qahw_avt_device_drift_param drift_params;
     struct qahw_out_render_window_param render_window_params;
     struct qahw_out_start_delay_param start_delay;
+    struct qahw_out_enable_drift_correction drift_enable_param;
+    struct qahw_out_correct_drift drift_correction_param;
     struct qahw_adsp_event adsp_event_params;
 } qahw_param_payload;
 
@@ -305,6 +320,10 @@ typedef enum {
     QAHW_PARAM_AVT_DEVICE_DRIFT, /* PARAM to query AV timer vs device drift */
     QAHW_PARAM_OUT_RENDER_WINDOW, /* PARAM to set render window */
     QAHW_PARAM_OUT_START_DELAY, /* PARAM to set session start delay*/
+    /* enable adsp drift correction this must be called before out_write */
+    QAHW_PARAM_OUT_ENABLE_DRIFT_CORRECTION,
+    /* param to set drift value to be adjusted by dsp */
+    QAHW_PARAM_OUT_CORRECT_DRIFT,
     QAHW_PARAM_ADSP_STREAM_CMD
 } qahw_param_id;
 

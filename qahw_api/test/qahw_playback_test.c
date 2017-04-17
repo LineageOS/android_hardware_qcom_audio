@@ -139,6 +139,7 @@ struct proxy_data {
 
 struct drift_data {
     qahw_module_handle_t *out_handle;
+    bool enable_drift_correction;
     volatile bool thread_exit;
 };
 
@@ -174,6 +175,7 @@ typedef struct {
     usb_mode_type_t usb_mode;
     int effect_index;
     bool drift_query;
+    bool drift_correction;
     char *device_url;
     thread_func_t ethread_func;
     thread_data_t *ethread_data;
@@ -499,7 +501,7 @@ void *drift_read(void* data)
     struct qahw_avt_device_drift_param drift_param;
     int rc = -EINVAL;
 
-    printf("drift quried at 100ms interval \n");
+    printf("drift queried at 100ms interval\n");
     while (!(params->thread_exit)) {
         memset(&drift_param, 0, sizeof(struct qahw_avt_device_drift_param));
         rc = qahw_out_get_param_data(out_handle, QAHW_PARAM_AVT_DEVICE_DRIFT,
@@ -514,9 +516,23 @@ void *drift_read(void* data)
         }
 
         usleep(100000);
+        if (params->enable_drift_correction &&
+            drift_param.avt_device_drift_value) {
+            struct qahw_out_correct_drift param;
+            param.adjust_time = drift_param.avt_device_drift_value;
+            printf("sending drift correction value %dus\n",
+                    drift_param.avt_device_drift_value);
+            rc = qahw_out_set_param_data(out_handle,
+                          QAHW_PARAM_OUT_CORRECT_DRIFT,
+                         (qahw_param_payload *)&param);
+            if (rc < 0)
+                fprintf(log_file, "qahw_out_set_param_data failed with err %d %d\n",
+                        rc, __LINE__);
+        }
     }
     return NULL;
 }
+
 static int is_eof(stream_config *stream) {
     if (stream->filename) {
         if (feof(stream->file_stream)) {
@@ -711,12 +727,24 @@ void *start_stream_playback (void* stream_data)
         rc = pthread_create(&proxy_thread, NULL, proxy_read, (void *)&proxy_params);
         if (!rc)
             proxy_thread_active = true;
-    } else if (params->drift_query &&
-              (params->output_device & AUDIO_DEVICE_OUT_HDMI) &&
-              !drift_thread_active) {
+    } else if (params->drift_query && !drift_thread_active) {
+        struct qahw_out_enable_drift_correction drift_enable_param;
+
         drift_params.out_handle = params->out_handle;
         drift_params.thread_exit = false;
-        fprintf(log_file, "create thread to read avtime vs hdmi drift\n");
+        fprintf(log_file, "create thread to read avtimer vs device drift\n");
+        if(params->drift_correction) {
+            drift_params.enable_drift_correction = true;
+            drift_enable_param.enable = true;
+            rc = qahw_out_set_param_data(params->out_handle,
+                    QAHW_PARAM_OUT_ENABLE_DRIFT_CORRECTION,
+                    (qahw_param_payload *)&drift_enable_param);
+            if (rc < 0) {
+                fprintf(log_file, "qahw_out_set_param_data failed with err %d %d\n",
+                        rc, __LINE__);
+                drift_enable_param.enable = false;
+            }
+        }
         rc = pthread_create(&drift_query_thread, NULL, drift_read, (void *)&drift_params);
         if (!rc)
             drift_thread_active = true;
@@ -1446,7 +1474,8 @@ void usage() {
     printf(" -e  --effect-type <effect type>           - Effect used for test\n");
     printf("                                             0:bassboost 1:virtualizer 2:equalizer 3:visualizer(NA) 4:reverb 5:audiosphere others:null\n\n");
     printf(" -A  --bt-addr <bt device addr>            - Required to set bt device adress for aptx decoder\n\n");
-    printf(" -q  --query drift                         - Required for querying avtime vs hdmi drift\n");
+    printf(" -q  --drift query                         - Required for querying avtime vs hdmi drift\n");
+    printf(" -Q  --drift query and correction          - Enable Drift query and correction\n");
     printf(" -P                                        - Argument to do multi-stream playback, currently 2 streams are supported to run concurrently\n");
     printf("                                             Put -P and mention required attributes for the next stream\n");
     printf("                                             0:bassboost 1:virtualizer 2:equalizer 3:visualizer(NA) 4:reverb 5:audiosphere others:null");
@@ -1658,6 +1687,7 @@ int main(int argc, char* argv[]) {
         {"effect-path",   required_argument,    0, 'e'},
         {"bt-addr",       required_argument,    0, 'A'},
         {"query drift",   no_argument,          0, 'q'},
+        {"drift correction",   no_argument,     0, 'Q'},
         {"device-nodeurl",required_argument,    0, 'u'},
         {"mode",          required_argument,    0, 'm'},
         {"help",          no_argument,          0, 'h'},
@@ -1683,7 +1713,7 @@ int main(int argc, char* argv[]) {
 
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:s:v:l:t:a:w:k:PD:KF:Ee:A:u:m:qh",
+                              "-f:r:c:b:d:s:v:l:t:a:w:k:PD:KF:Ee:A:u:m:qQh",
                               long_options,
                               &option_index)) != -1) {
 
@@ -1769,6 +1799,10 @@ int main(int argc, char* argv[]) {
             break;
         case 'q':
              stream_param[i].drift_query = true;
+             break;
+        case 'Q':
+             stream_param[i].drift_query = true;
+             stream_param[i].drift_correction = true;
              break;
         case 'P':
             if(i >= MAX_PLAYBACK_STREAMS - 1) {
