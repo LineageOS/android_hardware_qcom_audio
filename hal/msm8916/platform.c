@@ -6529,11 +6529,19 @@ int platform_set_sidetone(struct audio_device *adev,
     return 0;
 }
 
-void platform_update_aanc_path(struct audio_device *adev __unused,
-                               snd_device_t out_snd_device __unused,
-                               bool enable __unused,
-                               char *str __unused)
+void platform_update_aanc_path(struct audio_device *adev,
+                               snd_device_t out_snd_device,
+                               bool enable,
+                               char *str)
 {
+    ALOGD("%s: aanc out device(%d) mixer cmd = %s, enable = %d\n",
+          __func__, out_snd_device, str, enable);
+
+    if (enable)
+        audio_route_apply_and_update_path(adev->audio_route, str);
+    else
+        audio_route_reset_and_update_path(adev->audio_route, str);
+
    return;
 }
 
