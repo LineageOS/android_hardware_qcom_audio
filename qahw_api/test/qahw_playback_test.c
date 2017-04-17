@@ -713,9 +713,12 @@ void *start_stream_playback (void* stream_data)
                         qahw_out_drain(params->out_handle, QAHW_DRAIN_ALL);
                         pthread_cond_wait(&params->drain_cond, &params->drain_lock);
                         fprintf(log_file, "stream %d: out of compress drain\n", params->stream_index);
-                        fprintf(log_file, "stream %d: playback completed successfully\n", params->stream_index);
                         pthread_mutex_unlock(&params->drain_lock);
                     }
+            /* Caution: Below ADL log shouldnt be altered without notifying automation APT since
+             * it used for automation testing
+             */
+                    fprintf(log_file, "ADL: stream %d: playback completed successfully\n", params->stream_index);
                 }
                 exit = true;
                 continue;
@@ -1779,7 +1782,10 @@ int main(int argc, char* argv[]) {
 
     wakelock_acquired = request_wake_lock(wakelock_acquired, true);
     num_of_streams = i+1;
-    fprintf(log_file, "Starting audio hal tests for streams : %d\n", num_of_streams);
+    /* Caution: Below ADL log shouldnt be altered without notifying automation APT since it used
+     * for automation testing
+     */
+    fprintf(log_file, "ADL: Starting audio hal tests for streams : %d\n", num_of_streams);
 
     if (kpi_mode == true && num_of_streams > 1) {
         fprintf(log_file, "kpi-mode is not supported for multi-playback usecase\n");
@@ -1953,6 +1959,9 @@ exit:
         fclose(log_file);
 
     wakelock_acquired = request_wake_lock(wakelock_acquired, false);
-    fprintf(log_file, "\nBYE BYE\n");
+    /* Caution: Below ADL log shouldnt be altered without notifying automation APT since it used
+     * for automation testing
+     */
+    fprintf(log_file, "\nADL: BYE BYE\n");
     return 0;
 }
