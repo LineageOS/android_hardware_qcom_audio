@@ -2223,6 +2223,9 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     int error_code = ERROR_CODE_STANDBY;
 
     lock_output_stream(out);
+    // this is always nonzero
+    const int frame_size = audio_stream_out_frame_size(stream);
+
     if (out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
         error_code = ERROR_CODE_WRITE;
         goto exit;
@@ -2243,9 +2246,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             audio_hw_send_gain_dep_calibration(last_known_cal_step);
         }
     }
-
-    // this is always nonzero
-    const size_t frame_size = audio_stream_out_frame_size(stream);
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
         ALOGVV("%s: writing buffer (%zu bytes) to compress device", __func__, bytes);
