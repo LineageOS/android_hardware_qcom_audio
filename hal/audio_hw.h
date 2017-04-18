@@ -446,6 +446,8 @@ int enable_audio_route(struct audio_device *adev,
 struct audio_usecase *get_usecase_from_list(const struct audio_device *adev,
                                                    audio_usecase_t uc_id);
 
+struct stream_in *get_next_active_input(const struct audio_device *adev);
+
 bool is_offload_usecase(audio_usecase_t uc_id);
 
 bool audio_is_true_native_stream_active(struct audio_device *adev);
