@@ -26,7 +26,9 @@
 #include <cutils/properties.h>
 #include <platform_api.h>
 
-#define PRIMARY_HAL_PATH XSTR(LIB_AUDIO_HAL)
+#define PRIMARY_HAL_FILENAME XSTR(LIB_AUDIO_HAL)
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
 #define XSTR(x) STR(x)
 #define STR(x) #x
 
@@ -199,6 +201,10 @@ struct listnode vol_effect_list;
 
 /* lock must be held when modifying or accessing created_effects_list */
 pthread_mutex_t vol_listner_init_lock;
+
+/* Treblized modules locations */
+static const char *primary_audio_hal_path[] =
+    {"/vendor/lib/hw/", "/system/lib/hw/"};
 
 /*
  *  Local functions
@@ -561,9 +567,27 @@ static int vol_effect_get_descriptor(effect_handle_t   self,
     return 0;
 }
 
+static bool resolve_audio_hal_path(char *file_name, int mode) {
+    char file_path[PATH_MAX];
+    unsigned long i;
+
+    for (i = 0; i < ARRAY_SIZE(primary_audio_hal_path); i++) {
+        snprintf(file_path, PATH_MAX, "%s/%s",
+            primary_audio_hal_path[i], file_name);
+        if (F_OK == access(file_path, mode)) {
+            strcpy(file_name, file_path);
+            return true;
+        }
+    }
+    return false;
+}
+
 static void init_once()
 {
     int max_table_ent = 0;
+    void *hal_lib_pointer = NULL;
+    char primary_hal_path[PATH_MAX] = {0};
+
     if (initialized) {
         ALOGV("%s : already init .. do nothing", __func__);
         return;
@@ -575,52 +599,54 @@ static void init_once()
 
     pthread_mutex_init(&vol_listner_init_lock, NULL);
 
+    strcpy(primary_hal_path, PRIMARY_HAL_FILENAME);
     // get hal function pointer
-    if (access(PRIMARY_HAL_PATH, R_OK) == 0) {
-        void *hal_lib_pointer = dlopen(PRIMARY_HAL_PATH, RTLD_NOW);
-        if (hal_lib_pointer == NULL) {
-            ALOGE("%s: DLOPEN failed for %s", __func__, PRIMARY_HAL_PATH);
+    if (resolve_audio_hal_path(primary_hal_path, R_OK)) {
+        hal_lib_pointer = dlopen(primary_hal_path, RTLD_NOW);
+    } else {
+        ALOGE("%s: not able to acces lib: %s", __func__, PRIMARY_HAL_FILENAME);
+    }
+
+    if (!hal_lib_pointer) {
+        ALOGE("%s: DLOPEN failed for %s", __func__, primary_hal_path);
+    } else {
+        ALOGV("%s: DLOPEN of %s Succes .. next get HAL entry function", __func__, primary_hal_path);
+        send_gain_dep_cal = (bool (*)(int))dlsym(hal_lib_pointer, AHAL_GAIN_DEPENDENT_INTERFACE_FUNCTION);
+        if (send_gain_dep_cal == NULL) {
+            ALOGE("Couldnt able to get the function symbol");
+        }
+        get_custom_gain_table = (int (*) (struct amp_db_and_gain_table *, int))dlsym(hal_lib_pointer, AHAL_GAIN_GET_MAPPING_TABLE);
+        if (get_custom_gain_table == NULL) {
+            ALOGE("Couldnt able to get the function AHAL_GAIN_GET_MAPPING_TABLE  symbol");
         } else {
-            ALOGV("%s: DLOPEN of %s Succes .. next get HAL entry function", __func__, PRIMARY_HAL_PATH);
-            send_gain_dep_cal = (bool (*)(int))dlsym(hal_lib_pointer, AHAL_GAIN_DEPENDENT_INTERFACE_FUNCTION);
-            if (send_gain_dep_cal == NULL) {
-                ALOGE("Couldnt able to get the function symbol");
-            }
-            get_custom_gain_table = (int (*) (struct amp_db_and_gain_table *, int))dlsym(hal_lib_pointer, AHAL_GAIN_GET_MAPPING_TABLE);
-            if (get_custom_gain_table == NULL) {
-                ALOGE("Couldnt able to get the function AHAL_GAIN_GET_MAPPING_TABLE  symbol");
-            } else {
-                max_table_ent = get_custom_gain_table(volume_curve_gain_mapping_table, MAX_VOLUME_CAL_STEPS);
-                // if number of entries is 0 use default
-                // if number of entries > MAX_VOLUME_CAL_STEPS (this should never happen) then in this case
-                // use only default number of steps but this will result in unexpected behaviour
+            max_table_ent = get_custom_gain_table(volume_curve_gain_mapping_table, MAX_VOLUME_CAL_STEPS);
+            // if number of entries is 0 use default
+            // if number of entries > MAX_VOLUME_CAL_STEPS (this should never happen) then in this case
+            // use only default number of steps but this will result in unexpected behaviour
 
-                if (max_table_ent > 0 && max_table_ent <= MAX_VOLUME_CAL_STEPS) {
-                    if (max_table_ent < total_volume_cal_step) {
-                        for (int i = max_table_ent; i < total_volume_cal_step; i++ ) {
-                            volume_curve_gain_mapping_table[i].amp = 0;
-                            volume_curve_gain_mapping_table[i].db = 0;
-                            volume_curve_gain_mapping_table[i].level = -1;
-                        }
+            if (max_table_ent > 0 && max_table_ent <= MAX_VOLUME_CAL_STEPS) {
+                if (max_table_ent < total_volume_cal_step) {
+                    for (int i = max_table_ent; i < total_volume_cal_step; i++ ) {
+                        volume_curve_gain_mapping_table[i].amp = 0;
+                        volume_curve_gain_mapping_table[i].db = 0;
+                        volume_curve_gain_mapping_table[i].level = -1;
                     }
-                    total_volume_cal_step = max_table_ent;
-                    ALOGD("%s: using custome volume table", __func__);
-                } else {
-                    ALOGD("%s: using default volume table", __func__);
                 }
+                total_volume_cal_step = max_table_ent;
+                ALOGD("%s: using custome volume table", __func__);
+            } else {
+                ALOGD("%s: using default volume table", __func__);
+            }
 
-                if (dumping_enabled) {
-                    ALOGD("%s: dumping table here .. size of table received %d",
-                           __func__, max_table_ent);
-                    for (int i = 0; i < MAX_VOLUME_CAL_STEPS ; i++)
-                        ALOGD("[%d]  %f %f %d", i, volume_curve_gain_mapping_table[i].amp,
-                                                   volume_curve_gain_mapping_table[i].db,
-                                                   volume_curve_gain_mapping_table[i].level);
-                }
+            if (dumping_enabled) {
+                ALOGD("%s: dumping table here .. size of table received %d",
+                       __func__, max_table_ent);
+                for (int i = 0; i < MAX_VOLUME_CAL_STEPS ; i++)
+                    ALOGD("[%d]  %f %f %d", i, volume_curve_gain_mapping_table[i].amp,
+                                               volume_curve_gain_mapping_table[i].db,
+                                               volume_curve_gain_mapping_table[i].level);
             }
         }
-    } else {
-        ALOGE("%s: not able to acces lib %s ", __func__, PRIMARY_HAL_PATH);
     }
 
     // check system property to see if dumping is required
