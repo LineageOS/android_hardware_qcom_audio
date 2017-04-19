@@ -58,6 +58,10 @@
 #define KVPAIRS_MAX 100
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[1]))
 
+#define FORMAT_DESCRIPTOR_SIZE 12
+#define SUBCHUNK1_SIZE(x) ((8) + (x))
+#define SUBCHUNK2_SIZE 8
+
 static int get_wav_header_length (FILE* file_stream);
 static void init_streams(void);
 
@@ -1007,7 +1011,7 @@ static void get_file_format(stream_config *stream_info)
     }
     stream_info->config.sample_rate = stream_info->config.offload_info.sample_rate;
     stream_info->config.format = stream_info->config.offload_info.format;
-    stream_info->config.channel_mask = stream_info->config.offload_info.channel_mask = audio_channel_in_mask_from_count(stream_info->channels);
+    stream_info->config.channel_mask = stream_info->config.offload_info.channel_mask = audio_channel_out_mask_from_count(stream_info->channels);
     return;
 }
 
@@ -1512,20 +1516,7 @@ static int get_wav_header_length (FILE* file_stream)
         fprintf(log_file, "This is not a valid wav file \n");
         fprintf(stderr, "This is not a valid wav file \n");
     } else {
-          switch (subchunk_size) {
-          case 16:
-              fprintf(log_file, "44-byte wav header \n");
-              wav_header_len = 44;
-              break;
-          case 18:
-              fprintf(log_file, "46-byte wav header \n");
-              wav_header_len = 46;
-              break;
-          default:
-              fprintf(log_file, "Header contains extra data and is larger than 46 bytes: subchunk_size=%d \n", subchunk_size);
-              wav_header_len = subchunk_size;
-              break;
-          }
+         wav_header_len = FORMAT_DESCRIPTOR_SIZE + SUBCHUNK1_SIZE(subchunk_size) + SUBCHUNK2_SIZE;
     }
     return wav_header_len;
 }
