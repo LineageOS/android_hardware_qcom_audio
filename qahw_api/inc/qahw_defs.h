@@ -181,6 +181,7 @@ __BEGIN_DECLS
 typedef enum {
     QAHW_STREAM_CBK_EVENT_WRITE_READY, /* non blocking write completed */
     QAHW_STREAM_CBK_EVENT_DRAIN_READY,  /* drain completed */
+    QAHW_STREAM_CBK_EVENT_ERROR,  /* stream hit some error */
 
     QAHW_STREAM_CBK_EVENT_ADSP = 0x100    /* callback event from ADSP PP,
                                            * corresponding payload will be

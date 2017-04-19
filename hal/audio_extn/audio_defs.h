@@ -193,7 +193,8 @@ struct audio_out_correct_drift {
 /* type of asynchronous write callback events. Mutually exclusive
  * event enums append those defined for stream_callback_event_t in audio.h */
 typedef enum {
-    AUDIO_EXTN_STREAM_CBK_EVENT_ADSP = 0x100    /* callback event from ADSP PP,
+    AUDIO_EXTN_STREAM_CBK_EVENT_ERROR = 0x2,  /* Remove this enum if its already in audio.h */
+    AUDIO_EXTN_STREAM_CBK_EVENT_ADSP = 0x100      /* callback event from ADSP PP,
                                                  * corresponding payload will be
                                                  * sent as is to the client
                                                  */

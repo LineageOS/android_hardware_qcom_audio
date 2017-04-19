@@ -428,6 +428,10 @@ int async_callback(qahw_stream_callback_event_t event, void *param,
                 fprintf(log_file, "param[%d] = 0x%x\n", i, payload[i]);
         }
         break;
+    case QAHW_STREAM_CBK_EVENT_ERROR:
+        fprintf(log_file, "stream %d: received event - QAHW_STREAM_CBK_EVENT_ERROR\n", params->stream_index);
+        stop_playback = true;
+        break;
     default:
         break;
     }
