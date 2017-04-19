@@ -468,6 +468,7 @@ void audio_extn_utils_update_streams_cfg_lists(void *platform,
                               streams_output_cfg_list,
                               streams_input_cfg_list);
             ALOGE("%s: could not load io policy config!", __func__);
+            free(root);
             return;
         }
     }
@@ -480,6 +481,7 @@ void audio_extn_utils_update_streams_cfg_lists(void *platform,
                                        streams_input_cfg_list);
 
     config_free(root);
+    free(root);
     free(data);
 }
 
