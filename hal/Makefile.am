@@ -11,7 +11,8 @@ c_sources = audio_hw.c \
             platform_info.c \
             ${TARGET_PLATFORM}/platform.c \
             audio_extn/audio_extn.c \
-            audio_extn/utils.c
+            audio_extn/utils.c \
+            acdb.c
 
 if HDMI_EDID
 AM_CFLAGS += -DHDMI_EDID
