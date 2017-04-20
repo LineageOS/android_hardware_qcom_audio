@@ -31,7 +31,11 @@
 #define SAMPLE_RATE_11025 11025
 #define sample_rate_multiple(sr, base) ((sr % base)== 0?true:false)
 #define MAX_VOLUME_CAL_STEPS 15
-#define ACDB_METAINFO_KEY_MODULE_NAME_LEN 100
+
+typedef enum {
+    PLATFORM,
+    ACDB_EXTN,
+} caller_t;
 
 struct amp_db_and_gain_table {
     float amp;
@@ -142,7 +146,7 @@ int platform_set_snd_device_backend(snd_device_t snd_device, const char * backen
 int platform_get_snd_device_backend_index(snd_device_t device);
 
 /* From platform_info.c */
-int platform_info_init(const char *filename, void *);
+int platform_info_init(const char *filename, void *, caller_t);
 
 void platform_snd_card_update(void *platform, int snd_scard_state);
 
