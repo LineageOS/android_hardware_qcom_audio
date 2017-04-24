@@ -4461,7 +4461,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     native_audio_set_params(platform, parms, value, sizeof(value));
     audio_extn_spkr_prot_set_parameters(parms, value, len);
     audio_extn_usb_set_sidetone_gain(parms, value, len);
-    audio_extn_hfp_set_parameters(adev, parms);
+    audio_extn_hfp_set_parameters(my_data->adev, parms);
     true_32_bit_set_params(parms, value, len);
     ALOGV("%s: exit with code(%d)", __func__, ret);
     return ret;
