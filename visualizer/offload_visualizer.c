@@ -498,7 +498,7 @@ exit:
 
 __attribute__ ((visibility ("default")))
 int visualizer_hal_stop_output(audio_io_handle_t output, int pcm_id) {
-    int ret;
+    int ret = 0;
     struct listnode *node;
     struct listnode *fx_node;
     output_context_t *out_ctxt;
