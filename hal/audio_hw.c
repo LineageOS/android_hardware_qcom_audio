@@ -252,6 +252,11 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
 
     [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = "afe-proxy-playback",
     [USECASE_AUDIO_RECORD_AFE_PROXY] = "afe-proxy-record",
+
+    [USECASE_INCALL_REC_UPLINK] = "incall-rec-uplink",
+    [USECASE_INCALL_REC_DOWNLINK] = "incall-rec-downlink",
+    [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK] = "incall-rec-uplink-and-downlink",
+
 };
 
 
@@ -1189,6 +1194,9 @@ static int stop_input_stream(struct stream_in *in)
         return -EINVAL;
     }
 
+    /* Close in-call recording streams */
+    voice_check_and_stop_incall_rec_usecase(adev, in);
+
     /* 1. Disable stream specific mixer controls */
     disable_audio_route(adev, uc_info);
 
@@ -1220,6 +1228,13 @@ int start_input_stream(struct stream_in *in)
         ret = -EAGAIN;
         goto error_config;
     }
+
+    /* Check if source matches incall recording usecase criteria */
+    ret = voice_check_and_set_incall_rec_usecase(adev, in);
+    if (ret)
+        goto error_config;
+    else
+        ALOGV("%s: usecase(%d)", __func__, in->usecase);
 
     in->pcm_device_id = platform_get_pcm_device_id(in->usecase, PCM_CAPTURE);
     if (in->pcm_device_id < 0) {
