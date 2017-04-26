@@ -89,7 +89,6 @@ struct string_to_enum {
 
 const struct string_to_enum s_flag_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_DIRECT),
-    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_DIRECT_PCM),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_PRIMARY),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_FAST),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_RAW),
@@ -1269,11 +1268,15 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
         platform_send_audio_calibration(adev->platform, usecase,
                          usecase->stream.in->app_type_cfg.app_type,
                          usecase->stream.in->app_type_cfg.sample_rate);
-    } else {
+    } else if (type == PCM_HFP_CALL) {
         /* when app type is default. the sample rate is not used to send cal */
         platform_send_audio_calibration(adev->platform, usecase,
                          platform_get_default_app_type_v2(adev->platform, usecase->type),
                          48000);
+    } else {
+        /* No need to send audio calibration for voice and voip call usecases */
+        if ((type != VOICE_CALL) && (type != VOIP_CALL))
+            ALOGW("%s: No audio calibration for usecase type = %d",  __func__, type);
     }
 }
 

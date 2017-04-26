@@ -808,7 +808,8 @@ bool audio_extn_a2dp_is_ready()
 {
     bool ret = false;
 
-    if ((a2dp.is_a2dp_offload_supported) &&
+    if ((a2dp.bt_state != A2DP_STATE_DISCONNECTED) &&
+        (a2dp.is_a2dp_offload_supported) &&
         (a2dp.audio_check_a2dp_ready))
            ret = a2dp.audio_check_a2dp_ready();
     return ret;
@@ -843,7 +844,9 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
         ALOGE(" a2dp handle is not identified");
         return latency;
     }
-    codec_info = a2dp.audio_get_codec_config(&multi_cast, &num_dev,
+
+    if (a2dp.a2dp_started)
+        codec_info = a2dp.audio_get_codec_config(&multi_cast, &num_dev,
                                &codec_type);
 
     memset(value, '\0', sizeof(char)*PROPERTY_VALUE_MAX);

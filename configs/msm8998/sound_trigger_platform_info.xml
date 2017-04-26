@@ -128,7 +128,7 @@
 
     <adm_config>
         <param adm_cfg_profile="FLUENCE" />
-        <param app_type="69943" />
+        <param app_type="69944" />
         <param sample_rate="16000" />
         <param bit_width="16" />
     </adm_config>
