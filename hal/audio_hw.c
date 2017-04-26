@@ -391,7 +391,7 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_BUSY);
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_BUSY);
     audio_extn_utils_send_audio_calibration(adev, usecase);
-    audio_extn_utils_send_app_type_cfg(usecase);
+    audio_extn_utils_send_app_type_cfg(adev, usecase);
     strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
     platform_add_backend_name(mixer_path, snd_device);
     ALOGD("%s: apply mixer and update path: %s", __func__, mixer_path);

@@ -82,6 +82,8 @@
 
 /* fallback app type if the default app type from acdb loader fails */
 #define DEFAULT_APP_TYPE  0x11130
+#define DEFAULT_APP_TYPE_RX_PATH  0x11130
+#define DEFAULT_APP_TYPE_TX_PATH 0x11132
 
 /* Retry for delay in FW loading*/
 #define RETRY_NUMBER 10
@@ -1422,6 +1424,15 @@ int platform_get_default_app_type(void *platform)
         return my_data->acdb_get_default_app_type();
     else
         return DEFAULT_APP_TYPE;
+}
+
+int platform_get_default_app_type_v2(void *platform __unused,
+                                     usecase_type_t type)
+{
+    if(type == PCM_CAPTURE)
+        return DEFAULT_APP_TYPE_TX_PATH;
+    else
+        return DEFAULT_APP_TYPE_RX_PATH;
 }
 
 int platform_get_snd_device_acdb_id(snd_device_t snd_device)
