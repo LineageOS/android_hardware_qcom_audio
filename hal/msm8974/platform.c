@@ -5989,6 +5989,17 @@ void platform_invalidate_hdmi_config(void * platform)
 {
     //reset ext display EDID info
     struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    struct audio_backend_cfg backend_cfg;
+    int backend_idx;
+    snd_device_t snd_device;
+
+    backend_cfg.sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    backend_cfg.channels = DEFAULT_HDMI_OUT_CHANNELS;
+    backend_cfg.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    backend_cfg.format = 0;
+    backend_cfg.passthrough_enabled = false;
+
     my_data->edid_valid = false;
     if (my_data->edid_info) {
         memset(my_data->edid_info, 0, sizeof(struct edid_audio_info));
@@ -5996,15 +6007,17 @@ void platform_invalidate_hdmi_config(void * platform)
 
     if (my_data->ext_disp_type == EXT_DISPLAY_TYPE_HDMI) {
         //reset HDMI_RX_BACKEND to default values
-        my_data->current_backend_cfg[HDMI_RX_BACKEND].sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-        my_data->current_backend_cfg[HDMI_RX_BACKEND].channels = DEFAULT_HDMI_OUT_CHANNELS;
-        my_data->current_backend_cfg[HDMI_RX_BACKEND].bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+        backend_idx = HDMI_RX_BACKEND;
+        snd_device = SND_DEVICE_OUT_HDMI;
     } else {
         //reset Display port BACKEND to default values
-        my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-        my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].channels = DEFAULT_HDMI_OUT_CHANNELS;
-        my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+        backend_idx = DISP_PORT_RX_BACKEND;
+        snd_device = SND_DEVICE_OUT_DISPLAY_PORT;
     }
+    platform_set_codec_backend_cfg(adev, snd_device, backend_cfg);
+    my_data->current_backend_cfg[backend_idx].sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    my_data->current_backend_cfg[backend_idx].channels = DEFAULT_HDMI_OUT_CHANNELS;
+    my_data->current_backend_cfg[backend_idx].bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     my_data->ext_disp_type = EXT_DISPLAY_TYPE_NONE;
 }
 
