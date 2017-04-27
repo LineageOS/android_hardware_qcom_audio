@@ -33,6 +33,8 @@
         <param max_ape_sessions="8" />
         <param enable_failure_detection="false" />
         <param support_device_switch="false" />
+        <!-- Transition will only occur if execution_type="DYNAMIC" -->
+        <param transit_to_adsp_on_playback="false" />
         <!-- Below backend params must match with port used in mixer path file -->
         <!-- param used to configure backend sample rate, format and channels -->
         <param backend_port_name="SLIM_0_TX" />
