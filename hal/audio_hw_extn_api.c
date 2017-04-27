@@ -76,7 +76,7 @@ int qahwi_out_set_param_data(struct audio_stream_out *stream,
         if (ret)
             ALOGE("%s::qaf_out_set_param_data failed error %d", __func__ , ret);
     } else {
-        if (out->standby)
+        if (out->standby && (param_id != AUDIO_EXTN_PARAM_OUT_CHANNEL_MAP))
             out->stream.write(&out->stream, NULL, 0);
         lock_output_stream(out);
         ret = audio_extn_out_set_param_data(out, param_id, payload);

@@ -2114,3 +2114,30 @@ int audio_extn_utils_compress_correct_drift(
     return 0;
 }
 #endif
+
+int audio_extn_utils_set_channel_map(
+            struct stream_out *out,
+            struct audio_out_channel_map_param *channel_map_param)
+{
+    int ret = -EINVAL, i = 0;
+    int channels = audio_channel_count_from_out_mask(out->channel_mask);
+
+    if (channel_map_param == NULL) {
+        ALOGE("%s:: Invalid channel_map", __func__);
+        goto exit;
+    }
+
+    if (channel_map_param->channels != channels) {
+        ALOGE("%s:: Channels(%d) does not match stream channels(%d)",
+                                __func__, channel_map_param->channels, channels);
+        goto exit;
+    }
+
+    for ( i = 0; i < channels; i++) {
+        ALOGV("%s:: channel_map[%d]- %d", __func__, i, channel_map_param->channel_map[i]);
+        out->channel_map_param.channel_map[i] = channel_map_param->channel_map[i];
+    }
+    ret = 0;
+exit:
+    return ret;
+}

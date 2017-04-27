@@ -209,6 +209,11 @@ struct audio_adsp_event {
  void    *payload;                           /* the actual payload */
 };
 
+struct audio_out_channel_map_param {
+   uint8_t       channels;                              /* Input Channels */
+   uint8_t       channel_map[AUDIO_CHANNEL_COUNT_MAX];  /* Input Channel Map */
+};
+
 typedef union {
     struct source_tracking_param st_params;
     struct sound_focus_param sf_params;
@@ -219,6 +224,7 @@ typedef union {
     struct audio_out_enable_drift_correction drift_enable_param;
     struct audio_out_correct_drift drift_correction_param;
     struct audio_adsp_event adsp_event_params;
+    struct audio_out_channel_map_param channel_map_param;
 } audio_extn_param_payload;
 
 typedef enum {
@@ -232,7 +238,9 @@ typedef enum {
     AUDIO_EXTN_PARAM_OUT_ENABLE_DRIFT_CORRECTION,
     /* param to set drift value to be adjusted by dsp */
     AUDIO_EXTN_PARAM_OUT_CORRECT_DRIFT,
-    AUDIO_EXTN_PARAM_ADSP_STREAM_CMD
+    AUDIO_EXTN_PARAM_ADSP_STREAM_CMD,
+    /* param to set input channel map for playback stream */
+    AUDIO_EXTN_PARAM_OUT_CHANNEL_MAP
 } audio_extn_param_id;
 
 #endif /* AUDIO_DEFS_H */

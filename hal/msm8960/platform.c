@@ -1148,7 +1148,8 @@ int platform_set_channel_map(void *platform __unused, int ch_count __unused,
 
 int platform_set_stream_channel_map(void *platform __unused,
                                     audio_channel_mask_t channel_mask __unused,
-                                    int snd_id __unused)
+                                    int snd_id __unused
+                                    uint8_t *input_channel_map __unused)
 {
     return -ENOSYS;
 }

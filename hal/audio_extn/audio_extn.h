@@ -870,4 +870,7 @@ int audio_extn_utils_compress_enable_drift_correction(
 int audio_extn_utils_compress_correct_drift(
             struct stream_out *out,
             struct audio_out_correct_drift *drift_correction_param);
+int audio_extn_utils_set_channel_map(
+            struct stream_out *out,
+            struct audio_out_channel_map_param *channel_map_param);
 #endif /* AUDIO_EXTN_H */

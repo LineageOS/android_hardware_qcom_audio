@@ -2342,9 +2342,6 @@ int start_output_stream(struct stream_out *out)
             break;
         }
 
-        platform_set_stream_channel_map(adev->platform, out->channel_mask,
-                                    out->pcm_device_id);
-
         ALOGV("%s: pcm_prepare", __func__);
         if (pcm_is_ready(out->pcm)) {
             ret = pcm_prepare(out->pcm);
@@ -2356,10 +2353,11 @@ int start_output_stream(struct stream_out *out)
             }
         }
         platform_set_stream_channel_map(adev->platform, out->channel_mask,
-                                    out->pcm_device_id);
+                   out->pcm_device_id, &out->channel_map_param.channel_map[0]);
+
     } else {
         platform_set_stream_channel_map(adev->platform, out->channel_mask,
-                                    out->pcm_device_id);
+                   out->pcm_device_id, &out->channel_map_param.channel_map[0]);
         out->pcm = NULL;
         out->compr = compress_open(adev->snd_card,
                                    out->pcm_device_id,
@@ -4188,6 +4186,9 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         } else {
             out->render_mode = RENDER_MODE_AUDIO_NO_TIMESTAMP;
         }
+
+        memset(&out->channel_map_param, 0,
+                sizeof(struct audio_out_channel_map_param));
 
         out->send_new_metadata = 1;
         out->send_next_track_params = false;
