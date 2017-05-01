@@ -149,3 +149,45 @@ ANC Slot:0
 SLIM RX0 MUX:ZERO
 RX INT7_1 MIX1 INP0:ZERO
 ANC Function:OFF
+
+#RAS_TEST_SPKR_PHONE_SPKR_STEREO
+acdb_dev_id:136
+!Playback
+Rxdevice:0
+
+enable
+SLIM RX0 MUX:AIF1_PB
+SLIM RX1 MUX:AIF1_PB
+CDC_IF RX0 MUX:SLIM RX0
+CDC_IF RX1 MUX:SLIM RX1
+SLIM_0_RX Channels:Two
+RX INT7_1 MIX1 INP0:RX0
+RX INT8_1 MIX1 INP0:RX1
+COMP7 Switch:1
+COMP8 Switch:1
+SpkrLeft COMP Switch:1
+SpkrRight COMP Switch:1
+SpkrLeft BOOST Switch:1
+SpkrRight BOOST Switch:1
+SpkrLeft VISENSE Switch:1
+SpkrRight VISENSE Switch:1
+SpkrLeft SWR DAC_Port Switch:1
+SpkrRight SWR DAC_Port Switch:1
+SLIMBUS_0_RX Audio Mixer MultiMedia1:1
+
+disable
+SLIM RX0 MUX:ZERO
+SLIM RX1 MUX:ZERO
+RX INT7_1 MIX1 INP0:ZERO
+RX INT8_1 MIX1 INP0:ZERO
+COMP7 Switch:0
+COMP8 Switch:0
+SpkrLeft COMP Switch:0
+SpkrRight COMP Switch:0
+SpkrLeft BOOST Switch:0
+SpkrRight BOOST Switch:0
+SpkrLeft VISENSE Switch:0
+SpkrRight VISENSE Switch:0
+SpkrLeft SWR DAC_Port Switch:0
+SpkrRight SWR DAC_Port Switch:0
+SLIMBUS_0_RX Audio Mixer MultiMedia1:0
