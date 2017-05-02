@@ -190,9 +190,10 @@ static int enum_sndcards()
         }
 
         ret = add_new_sndcard(atoi(ptr), fd);
-        if (ret != 0)
-            close(fd);
+        if (ret != 0) {
+            close(fd); // card state fd ownership is taken by sndcard on success
             continue;
+        }
 
         num_cards++;
 
@@ -219,9 +220,10 @@ static int enum_sndcards()
             continue;
 
         ret = add_new_sndcard(CPE_MAGIC_NUM+num_cpe, fd);
-        if (ret != 0)
-            close(fd);
+        if (ret != 0) {
+            close(fd); // card state fd ownership is taken by sndcard on success
             continue;
+        }
 
         num_cpe++;
         num_cards++;
