@@ -257,7 +257,7 @@ static int set_spkr_prot_cal(int cal_fd,
     cal_data.cal_type.cal_info.t0[SP_V2_SPKR_1] = protCfg->t0[SP_V2_SPKR_1];
     cal_data.cal_type.cal_info.t0[SP_V2_SPKR_2] = protCfg->t0[SP_V2_SPKR_2];
     cal_data.cal_type.cal_info.mode = protCfg->mode;
-    property_get("persist.spkr.cal.duration", value, "0");
+    property_get("persist.vendor.audio.spkr.cal.duration", value, "0");
     if (atoi(value) > 0) {
         ALOGD("%s: quick calibration enabled", __func__);
         cal_data.cal_type.cal_info.quick_calib_flag = 1;
@@ -542,7 +542,7 @@ static void* spkr_calibration_thread()
      * and if the value is greater than zero then it would take
      * that much amount of time to calibrate.
      */
-    property_get("persist.spkr.cal.duration", value, "0");
+    property_get("persist.vendor.audio.spkr.cal.duration", value, "0");
     if (atoi(value) > 0)
         min_idle_time = atoi(value);
     handle.speaker_prot_threadid = pthread_self();
@@ -700,7 +700,7 @@ void audio_extn_spkr_prot_init(void *adev)
         ALOGE("%s: Invalid params", __func__);
         return;
     }
-    property_get("persist.speaker.prot.enable", value, "");
+    property_get("persist.vendor.audio.speaker.prot.enable", value, "");
     handle.spkr_prot_enable = false;
     if (!strncmp("true", value, 4))
        handle.spkr_prot_enable = true;

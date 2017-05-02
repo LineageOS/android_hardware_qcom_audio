@@ -476,6 +476,7 @@ void audio_extn_utils_update_stream_app_type_cfg(void *platform,
 
     ALOGV("%s: flags: %x, format: %x sample_rate %d",
            __func__, flags, format, sample_rate);
+
     list_for_each(node_i, streams_output_cfg_list) {
         so_info = node_to_item(node_i, struct streams_output_cfg, list);
         if (so_info->flags == flags) {

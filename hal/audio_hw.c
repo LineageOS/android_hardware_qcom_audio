@@ -387,7 +387,7 @@ static int check_and_set_gapless_mode(struct audio_device *adev, bool enable_gap
     struct mixer_ctl *ctl;
 
     ALOGV("%s:", __func__);
-    gapless_enabled = property_get_bool("audio.offload.gapless.enabled", false);
+    gapless_enabled = property_get_bool("vendor.audio.offload.gapless.enabled", false);
 
     /*Disable gapless if its AV playback*/
     gapless_enabled = gapless_enabled && enable_gapless;
@@ -4084,7 +4084,7 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     char value[PROPERTY_VALUE_MAX];
     int trial;
-    if (property_get("audio_hal.period_size", value, NULL) > 0) {
+    if (property_get("vendor.audio_hal.period_size", value, NULL) > 0) {
         trial = atoi(value);
         if (period_size_is_plausible_for_low_latency(trial)) {
             pcm_config_low_latency.period_size = trial;
@@ -4093,14 +4093,14 @@ static int adev_open(const hw_module_t *module, const char *name,
             configured_low_latency_capture_period_size = trial;
         }
     }
-    if (property_get("audio_hal.in_period_size", value, NULL) > 0) {
+    if (property_get("vendor.audio_hal.in_period_size", value, NULL) > 0) {
         trial = atoi(value);
         if (period_size_is_plausible_for_low_latency(trial)) {
             configured_low_latency_capture_period_size = trial;
         }
     }
 
-    adev->multi_offload_enable = property_get_bool("audio.offload.multiple.enabled", false);
+    adev->multi_offload_enable = property_get_bool("vendor.audio.offload.multiple.enabled", false);
     pthread_mutex_unlock(&adev_init_lock);
 
     if (adev->adm_init)
