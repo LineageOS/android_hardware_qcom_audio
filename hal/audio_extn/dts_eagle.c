@@ -145,7 +145,7 @@ static int do_DTS_Eagle_params(const struct audio_device *adev, struct dts_eagle
 
 static void fade_node(bool need_data) {
     char prop[PROPERTY_VALUE_MAX];
-    property_get("use.dts_eagle", prop, "0");
+    property_get("vendor.audio.use.dts_eagle", prop, "0");
     if (strncmp("true", prop, sizeof("true")))
         return;
     int fd, n = 0;
@@ -172,7 +172,7 @@ int audio_extn_dts_eagle_fade(const struct audio_device *adev, bool fade_in, con
 
     ALOGV("DTS_EAGLE_HAL (%s): enter with fade %s requested", __func__, fade_in ? "in" : "out");
 
-    property_get("use.dts_eagle", prop, "0");
+    property_get("vendor.audio.use.dts_eagle", prop, "0");
     if (strncmp("true", prop, sizeof("true")))
         return 0;
 
@@ -195,7 +195,7 @@ void audio_extn_dts_eagle_set_parameters(struct audio_device *adev, struct str_p
 
     ALOGV("DTS_EAGLE_HAL (%s): enter", __func__);
 
-    property_get("use.dts_eagle", prop, "0");
+    property_get("vendor.audio.use.dts_eagle", prop, "0");
     if (strncmp("true", prop, sizeof("true")))
         return;
 
@@ -328,7 +328,7 @@ int audio_extn_dts_eagle_get_parameters(const struct audio_device *adev,
 
     ALOGV("DTS_EAGLE_HAL (%s): enter", __func__);
 
-    property_get("use.dts_eagle", prop, "0");
+    property_get("vendor.audio.use.dts_eagle", prop, "0");
     if (strncmp("true", prop, sizeof("true")))
         return 0;
 
@@ -421,7 +421,7 @@ void audio_extn_dts_create_state_notifier_node(int stream_out)
     char path[PATH_MAX];
     char value[MAX_LENGTH_OF_INTEGER_IN_STRING];
     int fd;
-    property_get("use.dts_eagle", prop, "0");
+    property_get("vendor.audio.use.dts_eagle", prop, "0");
     if ((!strncmp("true", prop, sizeof("true")) || atoi(prop))) {
         ALOGV("DTS_EAGLE_NODE_STREAM (%s): create_state_notifier_node - stream_out: %d", __func__, stream_out);
         strlcpy(path, STATE_NOTIFY_FILE, sizeof(path));
@@ -454,7 +454,7 @@ void audio_extn_dts_notify_playback_state(int stream_out, int has_video, int sam
     char value[MAX_LENGTH_OF_INTEGER_IN_STRING];
     char buf[1024];
     int fd;
-    property_get("use.dts_eagle", prop, "0");
+    property_get("vendor.audio.use.dts_eagle", prop, "0");
     if ((!strncmp("true", prop, sizeof("true")) || atoi(prop))) {
         ALOGV("DTS_EAGLE_NODE_STREAM (%s): notify_playback_state - is_playing: %d", __func__, is_playing);
         strlcpy(path, STATE_NOTIFY_FILE, sizeof(path));
@@ -481,7 +481,7 @@ void audio_extn_dts_remove_state_notifier_node(int stream_out)
     char path[PATH_MAX];
     char value[MAX_LENGTH_OF_INTEGER_IN_STRING];
     int fd;
-    property_get("use.dts_eagle", prop, "0");
+    property_get("vendor.audio.use.dts_eagle", prop, "0");
     if ((!strncmp("true", prop, sizeof("true")) || atoi(prop)) && (stream_out)) {
         ALOGV("DTS_EAGLE_NODE_STREAM (%s): remove_state_notifier_node: stream_out - %d", __func__, stream_out);
         strlcpy(path, STATE_NOTIFY_FILE, sizeof(path));
