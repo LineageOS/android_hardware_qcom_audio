@@ -520,7 +520,7 @@ void audio_extn_spkr_prot_init(void *adev)
         ALOGE("%s: Invalid params", __func__);
         return;
     }
-    property_get("persist.speaker.prot.enable", value, "");
+    property_get("persist.vendor.audio.speaker.prot.enable", value, "");
     handle.spkr_prot_enable = false;
     if (!strncmp("true", value, 4))
        handle.spkr_prot_enable = true;

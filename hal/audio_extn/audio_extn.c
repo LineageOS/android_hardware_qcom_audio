@@ -82,7 +82,7 @@ bool audio_extn_should_use_handset_anc(int in_channels)
 {
     char prop_aanc[PROPERTY_VALUE_MAX] = "false";
 
-    property_get("persist.aanc.enable", prop_aanc, "0");
+    property_get("persist.vendor.audio.aanc.enable", prop_aanc, "0");
     if (!strncmp("true", prop_aanc, 4)) {
         ALOGD("%s: AANC enabled in the property", __func__);
         aextnmod.aanc_enabled = 1;
@@ -96,7 +96,7 @@ bool audio_extn_should_use_fb_anc(void)
 {
   char prop_anc[PROPERTY_VALUE_MAX] = "feedforward";
 
-  property_get("persist.headset.anc.type", prop_anc, "0");
+  property_get("persist.vendor.audio.headset.anc.type", prop_anc, "0");
   if (!strncmp("feedback", prop_anc, sizeof("feedback"))) {
     ALOGD("%s: FB ANC headset type enabled\n", __func__);
     return true;
