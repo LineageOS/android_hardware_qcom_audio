@@ -251,10 +251,10 @@ static void update_offload_codec_capabilities()
 {
     char value[PROPERTY_VALUE_MAX] = {'\0'};
 
-    property_get("persist.bt.a2dp_offload_cap", value, "false");
+    property_get("persist.vendor.bt.a2dp_offload_cap", value, "false");
     ALOGD("get_offload_codec_capabilities = %s",value);
     a2dp.is_a2dp_offload_supported =
-            property_get_bool("persist.bt.a2dp_offload_cap", false);
+            property_get_bool("persist.vendor.bt.a2dp_offload_cap", false);
     if (strcmp(value, "false") != 0)
         a2dp_offload_codec_cap_parser(value);
     ALOGD("%s: codec cap = %s",__func__,value);
@@ -883,7 +883,7 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
     char value[PROPERTY_VALUE_MAX];
 
     memset(value, '\0', sizeof(char)*PROPERTY_VALUE_MAX);
-    avsync_runtime_prop = property_get("audio.a2dp.codec.latency", value, NULL);
+    avsync_runtime_prop = property_get("vendor.audio.a2dp.codec.latency", value, NULL);
     if (avsync_runtime_prop > 0) {
         if (sscanf(value, "%d/%d/%d/%d",
                   &sbc_offset, &aptx_offset, &aptxhd_offset, &aac_offset) != 4) {
