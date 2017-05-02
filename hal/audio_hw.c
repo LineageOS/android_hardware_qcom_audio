@@ -329,7 +329,7 @@ static int check_and_set_gapless_mode(struct audio_device *adev) {
     struct mixer_ctl *ctl;
 
     ALOGV("%s:", __func__);
-    property_get("audio.offload.gapless.enabled", value, NULL);
+    property_get("vendor.audio.offload.gapless.enabled", value, NULL);
     gapless_enabled = atoi(value) || !strncmp("true", value, 4);
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
@@ -1420,7 +1420,7 @@ int start_output_stream(struct stream_out *out)
 
     /* This must be called before adding this usecase to the list */
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-        property_get("audio.use.hdmi.sink.cap", prop_value, NULL);
+        property_get("vendor.audio.use.hdmi.sink.cap", prop_value, NULL);
         if (!strncmp("true", prop_value, 4)) {
             sink_channels = platform_edid_get_max_channels(out->dev->platform);
             ALOGD("%s: set HDMI channel count[%d] based on sink capability", __func__, sink_channels);
@@ -3435,7 +3435,7 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     char value[PROPERTY_VALUE_MAX];
     int trial;
-    if (property_get("audio_hal.period_size", value, NULL) > 0) {
+    if (property_get("vendor.audio_hal.period_size", value, NULL) > 0) {
         trial = atoi(value);
         if (period_size_is_plausible_for_low_latency(trial)) {
             pcm_config_low_latency.period_size = trial;
@@ -3444,7 +3444,7 @@ static int adev_open(const hw_module_t *module, const char *name,
             configured_low_latency_capture_period_size = trial;
         }
     }
-    if (property_get("audio_hal.in_period_size", value, NULL) > 0) {
+    if (property_get("vendor.audio_hal.in_period_size", value, NULL) > 0) {
         trial = atoi(value);
         if (period_size_is_plausible_for_low_latency(trial)) {
             configured_low_latency_capture_period_size = trial;
