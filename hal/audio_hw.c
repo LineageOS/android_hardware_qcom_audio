@@ -366,7 +366,7 @@ static int check_and_set_gapless_mode(struct audio_device *adev, bool enable_gap
     struct mixer_ctl *ctl;
 
     ALOGV("%s:", __func__);
-    gapless_enabled = property_get_bool("audio.offload.gapless.enabled", false);
+    gapless_enabled = property_get_bool("vendor.audio.offload.gapless.enabled", false);
 
     /*Disable gapless if its AV playback*/
     gapless_enabled = gapless_enabled && enable_gapless;
@@ -1231,7 +1231,7 @@ static audio_usecase_t get_offload_usecase(struct audio_device *adev)
     unsigned int i, num_usecase = sizeof(offload_usecases)/sizeof(offload_usecases[0]);
     char value[PROPERTY_VALUE_MAX] = {0};
 
-    property_get("audio.offload.multiple.enabled", value, NULL);
+    property_get("vendor.audio.offload.multiple.enabled", value, NULL);
     if (!(atoi(value) || !strncmp("true", value, 4)))
         num_usecase = 1; /* If prop is not set, limit the num of offload usecases to 1 */
 
@@ -3891,7 +3891,7 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     char value[PROPERTY_VALUE_MAX];
     int trial;
-    if (property_get("audio_hal.period_size", value, NULL) > 0) {
+    if (property_get("vendor.audio_hal.period_size", value, NULL) > 0) {
         trial = atoi(value);
         if (period_size_is_plausible_for_low_latency(trial)) {
             pcm_config_low_latency.period_size = trial;
@@ -3900,7 +3900,7 @@ static int adev_open(const hw_module_t *module, const char *name,
             configured_low_latency_capture_period_size = trial;
         }
     }
-    if (property_get("audio_hal.in_period_size", value, NULL) > 0) {
+    if (property_get("vendor.audio_hal.in_period_size", value, NULL) > 0) {
         trial = atoi(value);
         if (period_size_is_plausible_for_low_latency(trial)) {
             configured_low_latency_capture_period_size = trial;
