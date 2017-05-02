@@ -4128,6 +4128,7 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
     unsigned int offset1;
     unsigned int frames1;
     const char *step = "";
+    uint32_t mmap_size;
 
     ALOGV("%s", __func__);
     pthread_mutex_lock(&adev->lock);
@@ -4168,10 +4169,16 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
     }
     info->buffer_size_frames = pcm_get_buffer_size(out->pcm);
     info->burst_size_frames = out->config.period_size;
-    info->shared_memory_fd = pcm_get_poll_fd(out->pcm);
-
+    ret = platform_get_mmap_data_fd(adev->platform,
+                                    out->pcm_device_id, 0 /*playback*/,
+                                    &info->shared_memory_fd,
+                                    &mmap_size);
+    if (ret < 0) {
+        step = "get_mmap_fd";
+        goto exit;
+    }
     memset(info->shared_memory_address, 0, pcm_frames_to_bytes(out->pcm,
-                                                                info->buffer_size_frames));
+                                                               info->buffer_size_frames));
 
     ret = pcm_mmap_commit(out->pcm, 0, MMAP_PERIOD_SIZE);
     if (ret < 0) {
