@@ -504,7 +504,7 @@ int pbe_set_device(effect_context_t *context, uint32_t device)
     ALOGV("%s: device: %d", __func__, device);
     pbe_ctxt->device = device;
 
-    if (property_get("audio.safx.pbe.enabled", propValue, NULL)) {
+    if (property_get("vendor.audio.safx.pbe.enabled", propValue, NULL)) {
         pbe_enabled_by_prop = atoi(propValue) ||
                               !strncmp("true", propValue, 4);
     }
@@ -697,7 +697,7 @@ static int pbe_load_config(struct pbe_params *params)
         ALOGE("%s error resolving acdb func symbols", __func__);
         return -EFAULT;
     }
-    if (property_get("audio.safx.pbe.app.type", propValueStr, "0")) {
+    if (property_get("vendor.audio.safx.pbe.app.type", propValueStr, "0")) {
         propValue = atoll(propValueStr);
         if (propValue != 0) {
             pbe_app_type = propValue;
