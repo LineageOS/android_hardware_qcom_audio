@@ -74,7 +74,7 @@ bool audio_extn_compr_cap_enabled()
     char prop_value[PROPERTY_VALUE_MAX] = {0};
     bool tunnel_encode = false;
 
-    property_get("tunnel.audio.encode",prop_value,"0");
+    property_get("vendor.audio.tunnel.encode",prop_value,"0");
     if (!strncmp("true", prop_value, sizeof("true")))
         return true;
     else

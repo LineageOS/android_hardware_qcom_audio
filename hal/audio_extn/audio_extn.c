@@ -148,7 +148,7 @@ void audio_extn_hpx_set_parameters(struct audio_device *adev,
     struct mixer_ctl *ctl = NULL;
     ALOGV("%s", __func__);
 
-    property_get("use.dts_eagle", prop, "0");
+    property_get("vendor.audio.use.dts_eagle", prop, "0");
     if (strncmp("true", prop, sizeof("true")))
         return;
 
@@ -194,7 +194,7 @@ static int audio_extn_hpx_get_parameters(struct str_parms *query,
 void audio_extn_check_and_set_dts_hpx_state(const struct audio_device *adev)
 {
     char prop[PROPERTY_VALUE_MAX];
-    property_get("use.dts_eagle", prop, "0");
+    property_get("vendor.audio.use.dts_eagle", prop, "0");
     if (strncmp("true", prop, sizeof("true")))
         return;
     if (adev->offload_effects_set_hpx_state)
@@ -215,7 +215,7 @@ bool audio_extn_should_use_handset_anc(int in_channels)
 {
     char prop_aanc[PROPERTY_VALUE_MAX] = "false";
 
-    property_get("persist.aanc.enable", prop_aanc, "0");
+    property_get("persist.vendor.audio.aanc.enable", prop_aanc, "0");
     if (!strncmp("true", prop_aanc, 4)) {
         ALOGD("%s: AANC enabled in the property", __func__);
         aextnmod.aanc_enabled = 1;
@@ -229,7 +229,7 @@ bool audio_extn_should_use_fb_anc(void)
 {
   char prop_anc[PROPERTY_VALUE_MAX] = "feedforward";
 
-  property_get("persist.headset.anc.type", prop_anc, "0");
+  property_get("persist.vendor.audio.headset.anc.type", prop_anc, "0");
   if (!strncmp("feedback", prop_anc, sizeof("feedback"))) {
     ALOGD("%s: FB ANC headset type enabled\n", __func__);
     return true;

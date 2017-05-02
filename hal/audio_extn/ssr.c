@@ -311,7 +311,7 @@ void audio_extn_ssr_update_enabled()
 {
     char ssr_enabled[PROPERTY_VALUE_MAX] = "false";
 
-    property_get("ro.qc.sdk.audio.ssr",ssr_enabled,"0");
+    property_get("ro.vendor.audio.sdk.ssr",ssr_enabled,"0");
     if (!strncmp("true", ssr_enabled, 4)) {
         ALOGD("%s: surround sound recording is supported", __func__);
         ssrmod.is_ssr_enabled = true;
@@ -539,7 +539,7 @@ int32_t audio_extn_ssr_init(struct stream_in *in, int num_out_chan)
 
     pthread_mutex_unlock(&ssrmod.ssr_process_lock);
 
-    property_get("ssr.pcmdump",c_multi_ch_dump,"0");
+    property_get("vendor.audio.ssr.pcmdump",c_multi_ch_dump,"0");
     if (0 == strncmp("true", c_multi_ch_dump, sizeof("ssr.dump-pcm"))) {
         /* Remember to change file system permission of data(e.g. chmod 777 data/),
           otherwise, fopen may fail */

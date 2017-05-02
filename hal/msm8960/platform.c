@@ -255,7 +255,7 @@ void *platform_init(struct audio_device *adev)
     my_data->fluence_in_voice_rec = false;
     my_data->fluence_type = FLUENCE_NONE;
 
-    property_get("ro.qc.sdk.audio.fluencetype", value, "");
+    property_get("ro.vendor.audio.sdk.fluencetype", value, "");
     if (!strncmp("fluencepro", value, sizeof("fluencepro"))) {
         my_data->fluence_type = FLUENCE_QUAD_MIC;
     } else if (!strncmp("fluence", value, sizeof("fluence"))) {
@@ -265,17 +265,17 @@ void *platform_init(struct audio_device *adev)
     }
 
     if (my_data->fluence_type != FLUENCE_NONE) {
-        property_get("persist.audio.fluence.voicecall",value,"");
+        property_get("persist.vendor.audio.fluence.voicecall",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_call = true;
         }
 
-        property_get("persist.audio.fluence.voicerec",value,"");
+        property_get("persist.vendor.audio.fluence.voicerec",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_rec = true;
         }
 
-        property_get("persist.audio.fluence.speaker",value,"");
+        property_get("persist.vendor.audio.fluence.speaker",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_spkr_mode = true;
         }

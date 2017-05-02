@@ -1015,7 +1015,7 @@ void *platform_init(struct audio_device *adev)
     my_data->hd_voice = false;
     my_data->hw_dep_fd = -1;
 
-    property_get("ro.qc.sdk.audio.fluencetype", my_data->fluence_cap, "");
+    property_get("ro.vendor.audio.sdk.fluencetype", my_data->fluence_cap, "");
     if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro"))) {
         my_data->fluence_type = FLUENCE_QUAD_MIC | FLUENCE_DUAL_MIC;
     } else if (!strncmp("fluence", my_data->fluence_cap, sizeof("fluence"))) {
@@ -1025,32 +1025,32 @@ void *platform_init(struct audio_device *adev)
     }
 
     if (my_data->fluence_type != FLUENCE_NONE) {
-        property_get("persist.audio.fluence.voicecall",value,"");
+        property_get("persist.vendor.audio.fluence.voicecall",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_call = true;
         }
 
-        property_get("persist.audio.fluence.voicerec",value,"");
+        property_get("persist.vendor.audio.fluence.voicerec",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_rec = true;
         }
 
-        property_get("persist.audio.fluence.audiorec",value,"");
+        property_get("persist.vendor.audio.fluence.audiorec",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_audio_rec = true;
         }
 
-        property_get("persist.audio.fluence.speaker",value,"");
+        property_get("persist.vendor.audio.fluence.speaker",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_spkr_mode = true;
         }
 
-        property_get("persist.audio.fluence.mode",value,"");
+        property_get("persist.vendor.audio.fluence.mode",value,"");
         if (!strncmp("broadside", value, sizeof("broadside"))) {
             my_data->fluence_mode = FLUENCE_BROADSIDE;
         }
     }
-    property_get("persist.audio.FFSP.enable", ffspEnable, "");
+    property_get("persist.vendor.audio.FFSP.enable", ffspEnable, "");
     if (!strncmp("true", ffspEnable, sizeof("true"))) {
         acdb_device_table[SND_DEVICE_OUT_SPEAKER] = 131;
         acdb_device_table[SND_DEVICE_OUT_SPEAKER_REVERSE] = 131;
@@ -1623,7 +1623,7 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
     bool prop_rec_play_enabled = false;
     char recConcPropValue[PROPERTY_VALUE_MAX];
 
-    if (property_get("rec.playback.conc.disabled", recConcPropValue, NULL)) {
+    if (property_get("vendor.audio.rec.playback.conc.disabled", recConcPropValue, NULL)) {
         prop_rec_play_enabled = atoi(recConcPropValue) || !strncmp("true", recConcPropValue, 4);
     }
     use_voip_out_devices =  prop_rec_play_enabled &&
@@ -2628,7 +2628,7 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
 {
     char value[PROPERTY_VALUE_MAX] = {0};
     uint32_t fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-    if((property_get("audio.offload.buffer.size.kb", value, "")) &&
+    if((property_get("vendor.audio.offload.buffer.size.kb", value, "")) &&
             atoi(value)) {
         fragment_size =  atoi(value) * 1024;
     }

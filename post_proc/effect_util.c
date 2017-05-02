@@ -57,7 +57,7 @@ void create_effect_state_node(int device_id)
     char path[PATH_MAX];
     char value[MAX_LENGTH_OF_INTEGER_IN_STRING];
 
-    property_get("use.dts_eagle", prop, "0");
+    property_get("vendor.audio.use.dts_eagle", prop, "0");
     if (!strncmp("true", prop, sizeof("true")) || atoi(prop)) {
         ALOGV("create_effect_node for - device_id: %d", device_id);
         strlcpy(path, EFFECT_FILE, sizeof(path));
@@ -95,7 +95,7 @@ void update_effects_node(int device_id, int effect_type, int enable_or_set, int 
     char resultBuf[1024];
     int index1 = -1;
   //ALOGV("value of device_id and effect_type is %d and %d", device_id, effect_type);
-    property_get("use.dts_eagle", prop, "0");
+    property_get("vendor.audio.use.dts_eagle", prop, "0");
     if (!strncmp("true", prop, sizeof("true")) || atoi(prop)) {
         strlcpy(path, EFFECT_FILE, sizeof(path));
         snprintf(value, sizeof(value), "%d", device_id);
@@ -192,7 +192,7 @@ void remove_effect_state_node(int device_id)
     char path[PATH_MAX];
     char value[MAX_LENGTH_OF_INTEGER_IN_STRING];
 
-    property_get("use.dts_eagle", prop, "0");
+    property_get("vendor.audio.use.dts_eagle", prop, "0");
     if (!strncmp("true", prop, sizeof("true")) || atoi(prop)) {
         ALOGV("remove_state_notifier_node: device_id - %d", device_id);
         strlcpy(path, EFFECT_FILE, sizeof(path));
