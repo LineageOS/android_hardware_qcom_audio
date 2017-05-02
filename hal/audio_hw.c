@@ -3364,16 +3364,21 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         if (ret != 0)
             goto error_open;
 
-        if (config->sample_rate == 0)
-            config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        if (config->channel_mask == 0)
-            config->channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
-        if (config->format == AUDIO_FORMAT_DEFAULT)
-            config->format = AUDIO_FORMAT_PCM_16_BIT;
-
-        out->channel_mask = config->channel_mask;
-        out->sample_rate = config->sample_rate;
-        out->format = config->format;
+        if (config->sample_rate == 0) {
+            out->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        } else {
+            out->sample_rate = config->sample_rate;
+        }
+        if (config->channel_mask == 0) {
+            out->channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
+        } else {
+            out->channel_mask = config->channel_mask;
+        }
+        if (config->format == AUDIO_FORMAT_DEFAULT) {
+            out->format = AUDIO_FORMAT_PCM_16_BIT;
+        } else {
+            out->format = config->format;
+        }
         out->usecase = USECASE_AUDIO_PLAYBACK_HIFI;
         // does this change?
         out->config = hdmi ? pcm_config_hdmi_multi : pcm_config_hifi;
@@ -3442,24 +3447,16 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                 __func__, config->offload_info.version,
                 config->offload_info.bit_rate);
     } else  if (out->devices == AUDIO_DEVICE_OUT_TELEPHONY_TX) {
-        if (config->sample_rate == 0)
-            config->sample_rate = AFE_PROXY_SAMPLING_RATE;
-        if (config->sample_rate != 48000 && config->sample_rate != 16000 &&
-                config->sample_rate != 8000) {
-            config->sample_rate = AFE_PROXY_SAMPLING_RATE;
-            ret = -EINVAL;
-            goto error_open;
+        switch (config->sample_rate) {
+            case 8000:
+            case 16000:
+            case 48000:
+                out->sample_rate = config->sample_rate;
+                break;
+            default:
+                out->sample_rate = AFE_PROXY_SAMPLING_RATE;
         }
-        out->sample_rate = config->sample_rate;
-        out->config.rate = config->sample_rate;
-        if (config->format == AUDIO_FORMAT_DEFAULT)
-            config->format = AUDIO_FORMAT_PCM_16_BIT;
-        if (config->format != AUDIO_FORMAT_PCM_16_BIT) {
-            config->format = AUDIO_FORMAT_PCM_16_BIT;
-            ret = -EINVAL;
-            goto error_open;
-        }
-        out->format = config->format;
+        out->format = AUDIO_FORMAT_PCM_16_BIT;
         out->usecase = USECASE_AUDIO_PLAYBACK_AFE_PROXY;
         out->config = pcm_config_afe_proxy_playback;
         adev->voice_tx_output = out;
@@ -3502,6 +3499,19 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         }
         out->sample_rate = out->config.rate;
     }
+
+    if ((config->sample_rate != 0 && config->sample_rate != out->sample_rate) ||
+        (config->format != AUDIO_FORMAT_DEFAULT && config->format != out->format) ||
+        (config->channel_mask != 0 && config->channel_mask != out->channel_mask)) {
+        ALOGI("%s: Unsupported output config. sample_rate:%u format:%#x channel_mask:%#x",
+              __func__, config->sample_rate, config->format, config->channel_mask);
+        config->sample_rate = out->sample_rate;
+        config->format = out->format;
+        config->channel_mask = out->channel_mask;
+        ret = -EINVAL;
+        goto error_open;
+    }
+
     ALOGV("%s: Usecase(%s) config->format %#x  out->config.format %#x\n",
             __func__, use_case_table[out->usecase], config->format, out->config.format);
 
