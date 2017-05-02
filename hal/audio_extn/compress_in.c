@@ -121,7 +121,7 @@ static audio_usecase_t get_cin_usecase(void)
     unsigned int i, num_usecase = sizeof(cin_usecases) / sizeof(cin_usecases[0]);
     char value[PROPERTY_VALUE_MAX] = {0};
 
-    property_get("audio.record.multiple.enabled", value, NULL);
+    property_get("vendor.audio.record.multiple.enabled", value, NULL);
     if (!(atoi(value) || !strncmp("true", value, 4)))
         num_usecase = 1; /* If prop is not set, limit the num of record usecases to 1 */
 
