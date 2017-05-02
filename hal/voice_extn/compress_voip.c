@@ -672,7 +672,7 @@ bool voice_extn_compress_voip_pcm_prop_check()
 {
     char prop_value[PROPERTY_VALUE_MAX] = {0};
 
-    property_get("use.voice.path.for.pcm.voip", prop_value, "0");
+    property_get("vendor.voice.path.for.pcm.voip", prop_value, "0");
     if (!strncmp("true", prop_value, sizeof("true")))
     {
         ALOGD("%s: VoIP PCM property is enabled", __func__);
