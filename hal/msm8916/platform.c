@@ -6332,6 +6332,24 @@ int platform_spkr_prot_is_wsa_analog_mode(void *adev)
         return 0;
 }
 
+static bool can_enable_mbdrc_on_device(snd_device_t snd_device)
+{
+    bool ret = false;
+
+    if (snd_device == SND_DEVICE_OUT_SPEAKER ||
+        snd_device == SND_DEVICE_OUT_SPEAKER_WSA ||
+        snd_device == SND_DEVICE_OUT_SPEAKER_VBAT ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_2 ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_WSA ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_2_WSA) {
+        ret = true;
+    }
+    return ret;
+}
+
 bool platform_send_gain_dep_cal(void *platform,
                                 int level )
 {
@@ -6359,16 +6377,24 @@ bool platform_send_gain_dep_cal(void *platform,
 
             if (usecase != NULL &&
                 usecase->type == PCM_PLAYBACK &&
-                usecase->stream.out->devices == AUDIO_DEVICE_OUT_SPEAKER) {
+                usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
+                int new_snd_device[2] = {0};
+                int i, num_devices = 1;
 
                 ALOGV("%s: out device is %d", __func__,  usecase->out_snd_device);
                 app_type = usecase->stream.out->app_type_cfg.app_type;
 
-                if (audio_extn_spkr_prot_is_enabled()) {
-                    acdb_dev_id = platform_get_spkr_prot_acdb_id(usecase->out_snd_device);
-                } else {
-                    acdb_dev_id = acdb_device_table[usecase->out_snd_device];
-                }
+                if (platform_split_snd_device(my_data, usecase->out_snd_device,
+                                              &num_devices, new_snd_device) < 0)
+                    new_snd_device[0] = usecase->out_snd_device;
+
+                for (i = 0; i < num_devices; i++)
+                    if (can_enable_mbdrc_on_device(new_snd_device[i])) {
+                        if (audio_extn_spkr_prot_is_enabled())
+                            acdb_dev_id = platform_get_spkr_prot_acdb_id(new_snd_device[i]);
+                        else
+                            acdb_dev_id = acdb_device_table[new_snd_device[i]];
+                    }
 
                 if (!my_data->acdb_send_gain_dep_cal(acdb_dev_id, app_type,
                                                      acdb_dev_type, mode, level)) {
