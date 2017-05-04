@@ -21,7 +21,7 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 
-ifneq ($(filter sdm660 sdm845 msm8998,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm660 sdm845 msm8998 apq8098_latv,$(TARGET_BOARD_PLATFORM)),)
     LOCAL_CFLAGS += -DCAPTURE_DEVICE=7
 endif
 

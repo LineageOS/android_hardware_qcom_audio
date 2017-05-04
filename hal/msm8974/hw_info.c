@@ -486,7 +486,7 @@ void *hw_info_init(const char *snd_card_name)
     } else if(strstr(snd_card_name, "msm8996")) {
         ALOGV("8996 - variant soundcard");
         update_hardware_info_8996(hw_info, snd_card_name);
-    } else if(strstr(snd_card_name, "msm8998")) {
+    } else if((strstr(snd_card_name, "msm8998")) || (strstr(snd_card_name, "apq8098_latv"))) {
         ALOGV("MSM8998 - variant soundcard");
         update_hardware_info_msm8998(hw_info, snd_card_name);
     } else if(strstr(snd_card_name, "sdm845")) {
