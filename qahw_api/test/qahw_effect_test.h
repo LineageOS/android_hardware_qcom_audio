@@ -68,6 +68,8 @@ typedef struct thread_data {
     void              *cmd_data;
     uint32_t          *reply_size;
     void              *reply_data;
+    int               default_value;
+    bool              default_flag;
 } thread_data_t;
 
 typedef struct cmd_data {
