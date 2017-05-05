@@ -1521,10 +1521,19 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                 out_snd_device = vc_usecase->out_snd_device;
             }
         } else if (voice_extn_compress_voip_is_active(adev)) {
+            bool out_snd_device_backend_match = true;
+            if (usecase->stream.out != NULL) {
+                out_snd_device_backend_match = platform_check_backends_match(
+                                                   voip_usecase->out_snd_device,
+                                                   platform_get_output_snd_device(
+                                                       adev->platform,
+                                                       usecase->stream.out));
+            }
             voip_usecase = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
             if ((voip_usecase) && ((voip_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) &&
                 ((usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
                   ((usecase->devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_CODEC_BACKEND)) &&
+                out_snd_device_backend_match &&
                  (voip_usecase->stream.out != adev->primary_output))) {
                     in_snd_device = voip_usecase->in_snd_device;
                     out_snd_device = voip_usecase->out_snd_device;
