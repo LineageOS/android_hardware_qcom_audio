@@ -2060,7 +2060,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
           __func__, out_device, in_device, channel_count, channel_mask);
-    if ((out_device != AUDIO_DEVICE_NONE) && voice_is_in_call(adev)) {
+    if ((out_device != AUDIO_DEVICE_NONE) && (voice_is_in_call(adev) ||
+        audio_extn_hfp_is_active(adev))) {
         if (adev->voice.tty_mode != TTY_MODE_OFF) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                 out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
