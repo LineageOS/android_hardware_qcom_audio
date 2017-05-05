@@ -46,6 +46,7 @@
         <param DEVICE_HANDSET_MIC_PP_APE="135" />
         <param DEVICE_HANDSET_QMIC_APE="137" />
         <param DEVICE_HEADSET_MIC_CPE="139" />
+        <param DEVICE_HANDSET_DMIC_APE="149" />
     </acdb_ids>
     <!-- Multiple sound_model_config tags can be listed, each with unique   -->
     <!-- vendor_uuid. The below tag represents QTI SVA engine sound model   -->
