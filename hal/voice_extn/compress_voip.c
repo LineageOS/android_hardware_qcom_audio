@@ -631,9 +631,9 @@ int voice_extn_compress_voip_close_input_stream(struct audio_stream *stream)
     ALOGD("%s: enter", __func__);
 
     if(voip_data.in_stream_count > 0) {
-       adev->active_input = NULL;
        voip_data.in_stream_count--;
        status = voip_stop_call(adev);
+       adev->active_input = get_next_active_input(adev);
        in->pcm = NULL;
     }
 
