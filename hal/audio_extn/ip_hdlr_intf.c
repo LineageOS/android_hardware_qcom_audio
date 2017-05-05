@@ -107,6 +107,16 @@ struct rtic_event {
     uint8_t payload[0];
 };
 
+bool audio_extn_ip_hdlr_intf_supported(audio_format_t format)
+{
+    if ((format & AUDIO_FORMAT_MAIN_MASK == AUDIO_FORMAT_AC3) ||
+        (format & AUDIO_FORMAT_MAIN_MASK == AUDIO_FORMAT_E_AC3) ||
+        (format & AUDIO_FORMAT_MAIN_MASK == AUDIO_FORMAT_DOLBY_TRUEHD))
+        return true;
+    else
+        return false;
+}
+
 int audio_extn_ip_hdlr_intf_event(void *stream_handle, void *payload, void *ip_hdlr_handle)
 {
     ALOGVV("%s:[%d] handle = %p",__func__, ip_hdlr->ref_cnt, ip_hdlr_handle);

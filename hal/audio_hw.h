@@ -243,6 +243,7 @@ struct stream_out {
     bool offload_thread_blocked;
 
     void *adsp_hdlr_stream_handle;
+    void *ip_hdlr_handle;
 
     stream_callback_t client_callback;
     void *client_cookie;
