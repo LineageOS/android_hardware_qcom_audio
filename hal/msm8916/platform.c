@@ -435,6 +435,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_ANC_FB_HEADSET] = "anc-fb-headphones",
     [SND_DEVICE_OUT_VOICE_ANC_HEADSET] = "voice-anc-headphones",
     [SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET] = "voice-anc-fb-headphones",
+    [SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES] = "voice-speaker-and-voice-headphones",
+    [SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_ANC_HEADSET] = "voice-speaker-and-voice-anc-headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET] = "speaker-and-anc-headphones",
     [SND_DEVICE_OUT_ANC_HANDSET] = "anc-handset",
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = "speaker-protected",
@@ -549,6 +551,8 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = 135,
     [SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT] = 135,
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
+    [SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES] = 10,
+    [SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_ANC_HEADSET] = 10,
     [SND_DEVICE_OUT_HDMI] = 18,
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = 14,
     [SND_DEVICE_OUT_DISPLAY_PORT] = 18,
@@ -1428,6 +1432,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT] = strdup("vbat-voice-speaker-2");
     backend_tag_table[SND_DEVICE_OUT_BT_A2DP] = strdup("bt-a2dp");
     backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP] = strdup("speaker-and-bt-a2dp");
+    backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES] = strdup("speaker-and-headphones");
+    backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_ANC_HEADSET] = strdup("speaker-and-headphones");
 
     hw_interface_table[SND_DEVICE_OUT_HANDSET] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER] = strdup("SLIMBUS_0_RX");
@@ -1440,6 +1446,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_HEADPHONES_DSD] = strdup("SLIMBUS_2_RX");
     hw_interface_table[SND_DEVICE_OUT_HEADPHONES_44_1] = strdup("SLIMBUS_5_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = strdup("SLIMBUS_0_RX-and-SLIMBUS_6_RX");
+    hw_interface_table[SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES] = strdup("SLIMBUS_0_RX-and-SLIMBUS_6_RX");
+    hw_interface_table[SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_ANC_HEADSET] = strdup("SLIMBUS_0_RX-and-SLIMBUS_6_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_LINE] = strdup("SLIMBUS_0_RX-and-SLIMBUS_6_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1] = strdup("SLIMBUS_0_RX-and-SLIMBUS_6_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2] = strdup("SLIMBUS_0_RX-and-SLIMBUS_6_RX");
@@ -3453,6 +3461,24 @@ int platform_split_snd_device(void *platform,
 
         new_snd_devices[1] = SND_DEVICE_OUT_HEADPHONES;
         ret = 0;
+    } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET &&
+               !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_ANC_HEADSET)) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
+        new_snd_devices[1] = SND_DEVICE_OUT_HEADPHONES;
+        ret = 0;
+    } else if (snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES &&
+               !platform_check_backends_match(SND_DEVICE_OUT_VOICE_SPEAKER, SND_DEVICE_OUT_VOICE_HEADPHONES)) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_OUT_VOICE_SPEAKER;
+        new_snd_devices[1] = SND_DEVICE_OUT_VOICE_HEADPHONES;
+        ret = 0;
+    } else if (snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_ANC_HEADSET &&
+               !platform_check_backends_match(SND_DEVICE_OUT_VOICE_SPEAKER, SND_DEVICE_OUT_VOICE_ANC_HEADSET)) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_OUT_VOICE_SPEAKER;
+        new_snd_devices[1] = SND_DEVICE_OUT_VOICE_ANC_HEADSET;
+        ret = 0;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HDMI &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_HDMI)) {
         *num_devices = 2;
@@ -3568,12 +3594,26 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     }
 
     if (popcount(devices) == 2) {
+        bool is_active_voice_call = false;
+
+        /*
+        * This is special case handling for combo device use case during
+        * voice call. APM route use case to combo device if stream type is
+        * enforced audible (e.g. Camera shutter sound).
+        */
+        if ((mode == AUDIO_MODE_IN_CALL) ||
+            voice_is_in_call(adev) ||
+            voice_extn_compress_voip_is_active(adev))
+                is_active_voice_call = true;
+
         if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADPHONE |
                         AUDIO_DEVICE_OUT_SPEAKER)) {
             if (my_data->external_spk_1)
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1;
             else if (my_data->external_spk_2)
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2;
+            else if (is_active_voice_call)
+                snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES;
             else
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
         } else if (devices == (AUDIO_DEVICE_OUT_LINE |
@@ -3581,14 +3621,21 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_LINE;
         } else if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADSET |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
-            if (audio_extn_get_anc_enabled())
-                snd_device = SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET;
-            else if (my_data->external_spk_1)
+            if (audio_extn_get_anc_enabled()) {
+                if (is_active_voice_call)
+                    snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_ANC_HEADSET;
+                else
+                    snd_device = SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET;
+            } else if (my_data->external_spk_1)
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1;
             else if (my_data->external_spk_2)
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2;
-            else
-                snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
+            else {
+                if (is_active_voice_call)
+                    snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES;
+                else
+                    snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
+            }
         } else if (devices == (AUDIO_DEVICE_OUT_AUX_DIGITAL |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
             switch(my_data->ext_disp_type) {
