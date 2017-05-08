@@ -79,8 +79,8 @@ int audio_extn_hfp_set_mic_mute(struct audio_device *adev, bool state);
 #define audio_extn_usb_enable_sidetone(device, enable)                 (0)
 #define audio_extn_usb_set_sidetone_gain(parms, value, len)            (0)
 #define audio_extn_usb_is_capture_supported()                          (false)
-#define audio_extn_usb_get_max_channels()                              (0)
-#define audio_extn_usb_get_max_bit_width()                             (0)
+#define audio_extn_usb_get_max_channels(dir)                           (0)
+#define audio_extn_usb_get_max_bit_width(dir)                          (0)
 #define audio_extn_usb_sup_sample_rates(t, s, l)                       (0)
 #else
 void audio_extn_usb_init(void *adev);
@@ -95,9 +95,9 @@ int audio_extn_usb_enable_sidetone(int device, bool enable);
 int audio_extn_usb_set_sidetone_gain(struct str_parms *parms,
                                      char *value, int len);
 bool audio_extn_usb_is_capture_supported();
-int audio_extn_usb_get_max_channels();
-int audio_extn_usb_get_max_bit_width();
-int audio_extn_usb_sup_sample_rates(int type, uint32_t *sr, uint32_t l);
+int audio_extn_usb_get_max_channels(bool is_playback);
+int audio_extn_usb_get_max_bit_width(bool is_playback);
+int audio_extn_usb_sup_sample_rates(bool is_playback, uint32_t *sr, uint32_t l);
 #endif
 
 
