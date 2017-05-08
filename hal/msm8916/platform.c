@@ -1786,6 +1786,15 @@ const char * get_snd_card_name_for_acdb_loader(const char *snd_card_name) {
         ALOGD("using tasha ACDB files for tasha-lite");
         return "sdm660-tasha-snd-card";
     }
+
+    // Both tasha & tasha-lite uses tasha ACDB files
+    // simulate sound card name for tasha lite, so that
+    // ACDB module loads tasha ACDB files for tasha lite
+    if(!strncmp(snd_card_name, "msm8x09-tasha9326-snd-card",
+             sizeof("msm8x09-tasha9326-snd-card"))) {
+       ALOGD("using tasha ACDB files for tasha-lite");
+       return "msm8x09-tasha-snd-card";
+   }
    return snd_card_name;
 }
 
