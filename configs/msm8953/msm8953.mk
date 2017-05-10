@@ -119,22 +119,22 @@ af.fast_track_multiplier=1
 
 #Low latency audio buffer size in frames
 PRODUCT_PROPERTY_OVERRIDES += \
-audio_hal.period_size=192
+vendor.audio_hal.period_size=192
 
 ##fluencetype can be "fluence" or "fluencepro" or "none"
 PRODUCT_PROPERTY_OVERRIDES += \
-ro.qc.sdk.audio.fluencetype=none\
-persist.audio.fluence.voicecall=true\
-persist.audio.fluence.voicerec=false\
-persist.audio.fluence.speaker=true
+ro.vendor.audio.sdk.fluencetype=none\
+persist.vendor.audio.fluence.voicecall=true\
+persist.vendor.audio.fluence.voicerec=false\
+persist.vendor.audio.fluence.speaker=true
 
 #disable tunnel encoding
 PRODUCT_PROPERTY_OVERRIDES += \
-tunnel.audio.encode=false
+vendor.audio.tunnel.encode=false
 
 #Buffer size in kbytes for compress offload playback
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.buffer.size.kb=64
+vendor.audio.offload.buffer.size.kb=64
 
 #Minimum duration for offload playback in secs
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -144,98 +144,86 @@ audio.offload.min.duration.secs=30
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.offload.video=true
 
-#Enable 16 bit PCM offload by default
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.pcm.16bit.enable=true
-
-#Enable 24 bit PCM offload by default
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.pcm.24bit.enable=true
-
 #Enable audio track offload by default
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.track.enable=true
+vendor.audio.offload.track.enable=true
 
 #Enable music through deep buffer
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.deep_buffer.media=true
 
-#QC property used when calculating client heap size in audio flinger
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.heap.size.multiplier=7
-
 #enable voice path for PCM VoIP by default
 PRODUCT_PROPERTY_OVERRIDES += \
-use.voice.path.for.pcm.voip=true
+vendor.voice.path.for.pcm.voip=true
 
 #Enable multi channel aac through offload
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.multiaac.enable=true
+vendor.audio.offload.multiaac.enable=true
 
 #Enable DS2, Hardbypass feature for Dolby
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.dolby.ds2.enabled=true\
-audio.dolby.ds2.hardbypass=true
+vendor.audio.dolby.ds2.enabled=true\
+vendor.audio.dolby.ds2.hardbypass=true
 
 #Disable Multiple offload sesison
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.multiple.enabled=false
+vendor.audio.offload.multiple.enabled=false
 
 #Disable Compress passthrough playback
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.passthrough=false
+vendor.audio.offload.passthrough=false
 
 #Disable surround sound recording
 PRODUCT_PROPERTY_OVERRIDES += \
-ro.qc.sdk.audio.ssr=false
+ro.vendor.audio.sdk.ssr=false
 
 #enable dsp gapless mode by default
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.gapless.enabled=true
+vendor.audio.offload.gapless.enabled=true
 
 #enable pbe effects
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.safx.pbe.enabled=true
+vendor.audio.safx.pbe.enabled=true
 
 #parser input buffer size(256kb) in byte stream mode
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.parser.ip.buffer.size=262144
+vendor.audio.parser.ip.buffer.size=262144
 
 #enable downsampling for multi-channel content > 48Khz
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.playback.mch.downsample=true
+vendor.audio.playback.mch.downsample=true
 
 #enable software decoders for ALAC and APE.
 PRODUCT_PROPERTY_OVERRIDES += \
-use.qti.sw.alac.decoder=true\
-use.qti.sw.ape.decoder=true
+vendor.audio.use.sw.alac.decoder=true\
+vendor.audio.use.sw.ape.decoder=true
 
 #property for AudioSphere Post processing
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.pp.asphere.enabled=false
+vendor.audio.pp.asphere.enabled=false
 
 #Audio voice concurrency related flags
 PRODUCT_PROPERTY_OVERRIDES += \
-voice.playback.conc.disabled=true\
-voice.record.conc.disabled=false\
-voice.voip.conc.disabled=true
+vendor.voice.playback.conc.disabled=true\
+vendor.voice.record.conc.disabled=false\
+vendor.voice.voip.conc.disabled=true
 
 #Decides the audio fallback path during voice call,
 #deep-buffer and fast are the two allowed fallback paths now.
 PRODUCT_PROPERTY_OVERRIDES += \
-voice.conc.fallbackpath=deep-buffer
+vendor.voice.conc.fallbackpath=deep-buffer
 
 #Disable speaker protection by default
 PRODUCT_PROPERTY_OVERRIDES += \
-persist.speaker.prot.enable=false
+persist.vendor.audio.speaker.prot.enable=false
 
 #Enable HW AAC Encoder by default
 PRODUCT_PROPERTY_OVERRIDES += \
-qcom.hw.aac.encoder=true
+vendor.audio.hw.aac.encoder=true
 
 #flac sw decoder 24 bit decode capability
 PRODUCT_PROPERTY_OVERRIDES += \
-flac.sw.decoder.24bit.support=true
+vendor.audio.flac.sw.decoder.24bit=true
 
 # for HIDL related packages
 PRODUCT_PACKAGES += \
