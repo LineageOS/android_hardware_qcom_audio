@@ -468,6 +468,7 @@ void audio_extn_utils_update_streams_cfg_lists(void *platform,
                               streams_output_cfg_list,
                               streams_input_cfg_list);
             ALOGE("%s: could not load io policy config!", __func__);
+            free(root);
             return;
         }
     }
@@ -480,6 +481,7 @@ void audio_extn_utils_update_streams_cfg_lists(void *platform,
                                        streams_input_cfg_list);
 
     config_free(root);
+    free(root);
     free(data);
 }
 
@@ -838,8 +840,7 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         rc = -EINVAL;
         goto exit_send_app_type_cfg;
     }
-    snd_device = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
-                 platform_get_spkr_prot_snd_device(snd_device) : snd_device;
+    snd_device = platform_get_spkr_prot_snd_device(snd_device);
 
     acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
     if (acdb_dev_id <= 0) {
@@ -1268,7 +1269,7 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
         platform_send_audio_calibration(adev->platform, usecase,
                          usecase->stream.in->app_type_cfg.app_type,
                          usecase->stream.in->app_type_cfg.sample_rate);
-    } else if (type == PCM_HFP_CALL) {
+    } else if (type == PCM_HFP_CALL || type == PCM_CAPTURE) {
         /* when app type is default. the sample rate is not used to send cal */
         platform_send_audio_calibration(adev->platform, usecase,
                          platform_get_default_app_type_v2(adev->platform, usecase->type),

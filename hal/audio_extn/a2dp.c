@@ -832,22 +832,10 @@ void audio_extn_a2dp_init (void *adev)
 
 uint32_t audio_extn_a2dp_get_encoder_latency()
 {
-    void *codec_info = NULL;
-    uint8_t multi_cast = 0, num_dev = 1;
-    audio_format_t codec_type = AUDIO_FORMAT_INVALID;
     uint32_t latency = 0;
     int avsync_runtime_prop = 0;
     int sbc_offset = 0, aptx_offset = 0, aptxhd_offset = 0, aac_offset = 0;
     char value[PROPERTY_VALUE_MAX];
-
-    if (!a2dp.audio_get_codec_config) {
-        ALOGE(" a2dp handle is not identified");
-        return latency;
-    }
-
-    if (a2dp.a2dp_started)
-        codec_info = a2dp.audio_get_codec_config(&multi_cast, &num_dev,
-                               &codec_type);
 
     memset(value, '\0', sizeof(char)*PROPERTY_VALUE_MAX);
     avsync_runtime_prop = property_get("audio.a2dp.codec.latency", value, NULL);
@@ -859,7 +847,7 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
         }
     }
 
-    switch(codec_type) {
+    switch(a2dp.bt_encoder_format) {
         case AUDIO_FORMAT_SBC:
             latency = (avsync_runtime_prop > 0) ? sbc_offset : 150;
             break;

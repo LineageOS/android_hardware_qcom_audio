@@ -103,6 +103,9 @@ static void update_hardware_info_8x16(struct hardware_info *hw_info, const char 
     } else if (!strcmp(snd_card_name, "msm8909-skue-snd-card")) {
         strlcpy(hw_info->type, "skue", sizeof(hw_info->type));
         strlcpy(hw_info->name, "msm8909", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8909-skut-snd-card")) {
+        strlcpy(hw_info->type, "skut", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msm8909", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "msm8939-snd-card-skul")) {
         strlcpy(hw_info->type, "skul", sizeof(hw_info->type));
         strlcpy(hw_info->name, "msm8939", sizeof(hw_info->name));
@@ -167,6 +170,9 @@ static void update_hardware_info_8x16(struct hardware_info *hw_info, const char 
         strlcpy(hw_info->name, "apq8009", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "mdm9607-tomtom-i2s-snd-card")) {
         strlcpy(hw_info->name, "mdm9607", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8909-skuq-snd-card")) {
+        strlcpy(hw_info->type, "skuq", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "msm8909", sizeof(hw_info->name));
     } else {
         ALOGW("%s: Not an 8x16/8909/8917/8920/8937/8939/8940/8952/8953/660 device", __func__);
     }
