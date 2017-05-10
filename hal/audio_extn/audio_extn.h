@@ -473,6 +473,9 @@ enum {
     EXT_DISPLAY_TYPE_DP
 };
 
+/* Used to limit sample rate for TrueHD & EC3 */
+#define HDMI_PASSTHROUGH_MAX_SAMPLE_RATE 192000
+
 #ifndef HDMI_PASSTHROUGH_ENABLED
 #define audio_extn_passthru_update_stream_configuration(adev, out)            (0)
 #define audio_extn_passthru_is_convert_supported(adev, out)                   (0)

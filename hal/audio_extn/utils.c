@@ -916,10 +916,13 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC) ||
             (usecase->stream.out->format == AUDIO_FORMAT_DOLBY_TRUEHD))
             && audio_extn_passthru_is_passthrough_stream(usecase->stream.out)) {
-            app_type_cfg[len++] = sample_rate * 4;
-        } else {
-            app_type_cfg[len++] = sample_rate;
+
+            sample_rate = sample_rate * 4;
+            if (sample_rate > HDMI_PASSTHROUGH_MAX_SAMPLE_RATE)
+                sample_rate = HDMI_PASSTHROUGH_MAX_SAMPLE_RATE;
         }
+        app_type_cfg[len++] = sample_rate;
+
         if (snd_device_be_idx > 0)
             app_type_cfg[len++] = snd_device_be_idx;
 
