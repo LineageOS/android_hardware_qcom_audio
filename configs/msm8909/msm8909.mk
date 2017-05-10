@@ -84,6 +84,59 @@ PRODUCT_COPY_FILES += \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/usb_audio_policy_configuration.xml:/system/etc/usb_audio_policy_configuration.xml
 endif
 
+
+PRODUCT_PROPERTY_OVERRIDES += \
+ro.vendor.audio.sdk.ssr=false
+
+##fluencetype can be "fluence" or "fluencepro" or "none"
+PRODUCT_PROPERTY_OVERRIDES += \
+ro.vendor.audio.sdk.fluencetype=none\
+persist.vendor.audio.fluence.voicecall=true\
+persist.vendor.audio.fluence.voicerec=false\
+persist.vendor.audio.fluence.speaker=true
+
+#disable tunnel encoding
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.tunnel.encode=false
+
+#Buffer size in kbytes for compress offload playback
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.offload.buffer.size.kb=64
+
+#Minimum duration for offload playback in secs
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.min.duration.secs=30
+
+#Enable offload audio video playback by default
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.video=true
+
+#enable voice path for PCM VoIP by default
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.voice.path.for.pcm.voip=true
+
+#enable dsp gapless mode by default
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.offload.gapless.enabled=true
+
+#Audio voice concurrency related flags
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.voice.playback.conc.disabled=true\
+vendor.voice.record.conc.disabled=true\
+vendor.voice.voip.conc.disabled=true
+
+#Audio VoIP / playback record concurrency flags
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.rec.playback.conc.disabled=true
+
+#property to enable image unload by audio HAL
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.sys.init=false
+
+#Enable DS2 feature for Dolby
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.dolby.ds2.enabled=true
+
 PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-service \
     android.hardware.audio@2.0-impl \
