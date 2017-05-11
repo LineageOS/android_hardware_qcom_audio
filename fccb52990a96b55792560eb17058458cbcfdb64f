@@ -250,6 +250,24 @@
     },
     {
       "key": {
+        "uuid": "1a486d77_151dd3bd",
+        "filename": "hal/audio_extn/ultrasound.h",
+        "patchSetId": 3
+      },
+      "lineNbr": 21,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2017-05-11T16:09:49Z",
+      "side": 1,
+      "message": "Example of what Ethan suggests: https://github.com/LineageOS/android_hardware_qcom_audio/blob/cm-14.1-caf-8996/hal/audio_extn/audio_extn.h#L131-L139",
+      "parentUuid": "1a486d77_d5873b60",
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "1a486d77_15b6f33d",
         "filename": "hal/audio_hw.c",
         "patchSetId": 3
@@ -290,6 +308,52 @@
         "startChar": 36,
         "endLine": 4110,
         "endChar": 53
+      },
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_55234b05",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 326,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2017-05-11T16:09:49Z",
+      "side": 1,
+      "message": "One line only.",
+      "range": {
+        "startLine": 325,
+        "startChar": 0,
+        "endLine": 326,
+        "endChar": 44
+      },
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_3520cff6",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 328,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2017-05-11T16:09:49Z",
+      "side": 1,
+      "message": "Same.",
+      "range": {
+        "startLine": 327,
+        "startChar": 0,
+        "endLine": 328,
+        "endChar": 63
       },
       "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
