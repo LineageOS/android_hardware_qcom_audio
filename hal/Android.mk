@@ -314,6 +314,11 @@ ifneq ($(strip $(AUDIO_FEATURE_ENABLED_EXT_AMPLIFIER)),false)
     LOCAL_SRC_FILES += audio_extn/audio_amplifier.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ELLIPTIC_ULTRASOUND_SUPPORT)),true)
+    LOCAL_CFLAGS += -DELLIPTIC_ULTRASOUND_ENABLED
+    LOCAL_SRC_FILES += audio_extn/ultrasound.c
+endif
+
 LOCAL_CFLAGS += -Wall -Werror
 LOCAL_CLANG_CFLAGS += -Wno-unused-variable -Wno-unused-function -Wno-missing-field-initializers
 
