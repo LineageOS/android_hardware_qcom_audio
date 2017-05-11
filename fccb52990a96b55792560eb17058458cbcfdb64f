@@ -34,6 +34,201 @@
       "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_f59b57c7",
+        "filename": "hal/audio_extn/ultrasound.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 94,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T09:17:06Z",
+      "side": 1,
+      "message": "char buff[5] \u003d {0}; means you don\u0027t need line 102.",
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_d5a05bf6",
+        "filename": "hal/audio_extn/ultrasound.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 105,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T09:17:06Z",
+      "side": 1,
+      "message": "Why 84? Also, why not strtol here too?",
+      "range": {
+        "startLine": 105,
+        "startChar": 35,
+        "endLine": 105,
+        "endChar": 37
+      },
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_b5a5df05",
+        "filename": "hal/audio_extn/ultrasound.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 123,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T09:17:06Z",
+      "side": 1,
+      "message": "calloc returns zeroed memory. This statement is redundant.",
+      "range": {
+        "startLine": 123,
+        "startChar": 4,
+        "endLine": 123,
+        "endChar": 52
+      },
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_155f1310",
+        "filename": "hal/audio_extn/ultrasound.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 155,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T09:17:06Z",
+      "side": 1,
+      "message": "You should probably be consistent with your use if (...) { since the rest of the file seems to use that style.",
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_35b9ef2e",
+        "filename": "hal/audio_extn/ultrasound.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 167,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T09:17:06Z",
+      "side": 1,
+      "message": "If you fail this case, you can potentially leak tx_usecase.",
+      "range": {
+        "startLine": 167,
+        "startChar": 4,
+        "endLine": 167,
+        "endChar": 22
+      },
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_75af67e4",
+        "filename": "hal/audio_extn/ultrasound.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 208,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T09:17:06Z",
+      "side": 1,
+      "message": "What\u0027s wrong with checking against ranges? It makes the code easier to reason about.",
+      "range": {
+        "startLine": 208,
+        "startChar": 4,
+        "endLine": 208,
+        "endChar": 52
+      },
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_95aae3d2",
+        "filename": "hal/audio_extn/ultrasound.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 222,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T09:17:06Z",
+      "side": 1,
+      "message": "Redundant again",
+      "range": {
+        "startLine": 222,
+        "startChar": 4,
+        "endLine": 222,
+        "endChar": 56
+      },
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_55ac6bed",
+        "filename": "hal/audio_extn/ultrasound.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 247,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T09:17:06Z",
+      "side": 1,
+      "message": "Redundant",
+      "range": {
+        "startLine": 247,
+        "startChar": 4,
+        "endLine": 247,
+        "endChar": 56
+      },
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_15b6f33d",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 4110,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T09:17:06Z",
+      "side": 1,
+      "message": "Where are we sending this from?",
+      "range": {
+        "startLine": 4110,
+        "startChar": 36,
+        "endLine": 4110,
+        "endChar": 53
+      },
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
