@@ -1,0 +1,39 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1a486d77_3a58bc55",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T04:01:46Z",
+      "side": 1,
+      "message": "proximity",
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_1a55001d",
+        "filename": "hal/audio_extn/ultrasound.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 70,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T04:01:46Z",
+      "side": 1,
+      "message": "lots of trailing whitespace in this file",
+      "parentUuid": "",
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
