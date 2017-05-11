@@ -50,6 +50,9 @@ target_board_platform_cc_library_shared {
     }) + select(soong_config_variable("qtiaudio", "feature_sound_trigger"), {
         "true": ["audio_extn/soundtrigger.c"],
         default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_elliptic_ultrasound"), {
+        "true": ["audio_extn/ultrasound.c"],
+        default: [],
     }),
 
     cflags: [
@@ -73,6 +76,9 @@ target_board_platform_cc_library_shared {
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_sound_trigger"), {
         "true": ["-DSOUND_TRIGGER_ENABLED"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_elliptic_ultrasound"), {
+        "true": ["-DELLIPTIC_ULTRASOUND_ENABLED"],
         default: [],
     }) + select(soong_config_variable("ANDROID", "target_board_platform"), {
         "sdm845": [
