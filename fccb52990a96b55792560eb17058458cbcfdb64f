@@ -246,6 +246,30 @@
       "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_55c10b7f",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 4110,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2017-05-11T09:40:15Z",
+      "side": 1,
+      "message": "\u003e bgcngm@digital:~/android/lineage/vendor/xiaomi/lithium$ grep ultrasound_enable -r .\n\u003e ./proprietary/etc/elliptic_sensor.xml:        \u003csensor name\u003d\"Elliptic Proximity\" reader\u003d\"hexagon\" type\u003d\"4\" subtype\u003d\"401\" audio_notify\u003d\"ultrasound_enable\" use_case\u003d\"ultrasound_enable\"\u003e\u003c/sensor\u003e\n\u003e Binary file ./proprietary/lib/libultrasound.so matches\n\u003e Binary file ./proprietary/lib64/libultrasound.so matches",
+      "parentUuid": "1a486d77_15b6f33d",
+      "range": {
+        "startLine": 4110,
+        "startChar": 36,
+        "endLine": 4110,
+        "endChar": 53
+      },
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
