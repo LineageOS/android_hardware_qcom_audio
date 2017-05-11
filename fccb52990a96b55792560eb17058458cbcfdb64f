@@ -163,6 +163,30 @@
     },
     {
       "key": {
+        "uuid": "1a486d77_d5097b96",
+        "filename": "hal/audio_extn/ultrasound.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 208,
+      "author": {
+        "id": 14719
+      },
+      "writtenOn": "2017-05-11T14:34:06Z",
+      "side": 1,
+      "message": "This check is the same as check inside the proprietary hal.\nWe don\u0027t know really know why they did this that way.\nBut, if you think about it this is the same as:\nrx_device_id \u003c 0 || tx_device_id \u003c 0\nI\u0027ll change that to this one. I like it more.",
+      "parentUuid": "1a486d77_75af67e4",
+      "range": {
+        "startLine": 208,
+        "startChar": 4,
+        "endLine": 208,
+        "endChar": 52
+      },
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "1a486d77_95aae3d2",
         "filename": "hal/audio_extn/ultrasound.c",
         "patchSetId": 3
