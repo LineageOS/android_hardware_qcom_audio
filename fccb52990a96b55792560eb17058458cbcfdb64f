@@ -209,6 +209,23 @@
     },
     {
       "key": {
+        "uuid": "1a486d77_d5873b60",
+        "filename": "hal/audio_extn/ultrasound.h",
+        "patchSetId": 3
+      },
+      "lineNbr": 21,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T09:18:25Z",
+      "side": 1,
+      "message": "If you made dummy static inline or macro versions of these functions that return 0; or return; you wouldn\u0027t need to ifdef for ultrasound in a lot of the function calls.",
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "1a486d77_15b6f33d",
         "filename": "hal/audio_hw.c",
         "patchSetId": 3
