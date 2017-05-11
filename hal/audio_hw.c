@@ -76,6 +76,7 @@
 #include "audio_extn.h"
 #include "voice_extn.h"
 #include "ip_hdlr_intf.h"
+#include "ultrasound.h"
 
 #include "sound/compress_params.h"
 
@@ -438,6 +439,10 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_RECORD_BUS_REAR_SEAT] = "rear-seat-record",
     [USECASE_AUDIO_PLAYBACK_SYNTHESIZER] = "synth-loopback",
     [USECASE_AUDIO_RECORD_ECHO_REF_EXT] = "echo-reference-external",
+
+    /* For Elliptic Ultrasound proximity sensor */
+    [USECASE_AUDIO_ULTRASOUND_RX] = "ultrasound-rx",
+    [USECASE_AUDIO_ULTRASOUND_TX] = "ultrasound-tx",
 };
 
 static const audio_usecase_t offload_usecases[] = {
@@ -1310,6 +1315,9 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_utils_send_app_type_cfg(adev, usecase);
     if (audio_extn_is_maxx_audio_enabled())
         audio_extn_ma_set_device(usecase);
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+    if (usecase->id != USECASE_AUDIO_ULTRASOUND_TX)
+#endif
     audio_extn_utils_send_audio_calibration(adev, usecase);
     if ((usecase->type == PCM_PLAYBACK) && is_offload_usecase(usecase->id)) {
         out = usecase->stream.out;
@@ -1544,6 +1552,10 @@ int enable_snd_device(struct audio_device *adev,
                                         ST_EVENT_SND_DEVICE_BUSY);
         audio_extn_listen_update_device_status(snd_device,
                                         LISTEN_EVENT_SND_DEVICE_BUSY);
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+        if (snd_device != SND_DEVICE_OUT_ULTRASOUND_HANDSET &&
+            snd_device != SND_DEVICE_IN_ULTRASOUND_MIC)
+#endif
         if (platform_get_snd_device_acdb_id(snd_device) < 0) {
             audio_extn_sound_trigger_update_device_status(snd_device,
                                             ST_EVENT_SND_DEVICE_FREE);
@@ -1885,6 +1897,12 @@ static void check_usecases_codec_backend(struct audio_device *adev,
               platform_get_snd_device_name(snd_device),
               platform_get_snd_device_name(usecase->out_snd_device),
               platform_check_backends_match(snd_device, usecase->out_snd_device));
+
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+        if (usecase->id == USECASE_AUDIO_ULTRASOUND_RX)
+            continue;
+#endif
+
         if ((usecase->type != PCM_CAPTURE) && (usecase != uc_info) &&
                 (usecase->type != PCM_PASSTHROUGH)) {
             uc_derive_snd_device = derive_playback_snd_device(adev->platform,
@@ -2046,6 +2064,11 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
         /*
          * TODO: Enhance below condition to handle BT sco/USB multi recording
          */
+
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+        if (usecase->id == USECASE_AUDIO_ULTRASOUND_TX)
+            continue;
+#endif
 
         bool capture_uc_needs_routing = usecase->type != PCM_PLAYBACK && (usecase != uc_info &&
                                        (usecase->in_snd_device != snd_device || force_routing));
@@ -9123,6 +9146,15 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         }
     }
 
+    ret = str_parms_get_int(parms, "ultrasound-sensor", &val);
+    if (ret >= 0) {
+        if (val == 1) {
+            us_start();
+        } else {
+            us_stop();
+        }
+    }
+
     amplifier_set_parameters(parms);
     audio_extn_set_parameters(adev, parms);
 done:
@@ -10467,6 +10499,9 @@ static int adev_close(hw_device_t *device)
         free(device);
         adev = NULL;
     }
+
+    us_deinit();
+
     pthread_mutex_unlock(&adev_init_lock);
     enable_gcov();
     return 0;
@@ -10869,6 +10904,8 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     if (amplifier_open(adev) != 0)
         ALOGE("Amplifier initialization failed");
+
+    us_init(adev);
 
     *device = &adev->device.common;
 
