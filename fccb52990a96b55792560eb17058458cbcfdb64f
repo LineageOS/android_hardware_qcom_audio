@@ -77,6 +77,30 @@
     },
     {
       "key": {
+        "uuid": "1a486d77_794be1b0",
+        "filename": "hal/audio_extn/ultrasound.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 105,
+      "author": {
+        "id": 14719
+      },
+      "writtenOn": "2017-05-11T22:02:10Z",
+      "side": 1,
+      "message": "The 84 here is unknown.\nThis is the value the the stock binary uses.",
+      "parentUuid": "1a486d77_d5a05bf6",
+      "range": {
+        "startLine": 105,
+        "startChar": 35,
+        "endLine": 105,
+        "endChar": 37
+      },
+      "revId": "fccb52990a96b55792560eb17058458cbcfdb64f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "1a486d77_b5a5df05",
         "filename": "hal/audio_extn/ultrasound.c",
         "patchSetId": 3
