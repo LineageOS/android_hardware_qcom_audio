@@ -1,0 +1,90 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1a486d77_fa4a2482",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T03:29:32Z",
+      "side": 1,
+      "message": "ultrasound",
+      "range": {
+        "startLine": 7,
+        "startChar": 9,
+        "endLine": 7,
+        "endChar": 18
+      },
+      "revId": "e4259b32d250490aece07036cdf4690655e577be",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_5a7498ce",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 8,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T03:29:32Z",
+      "side": 1,
+      "message": "Newline between topic and message, otherwise git/gerrit barfs when formatting this.",
+      "revId": "e4259b32d250490aece07036cdf4690655e577be",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_3a81dc8f",
+        "filename": "hal/audio_extn/ultrasound.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T03:29:32Z",
+      "side": 1,
+      "message": "This is outdated",
+      "range": {
+        "startLine": 2,
+        "startChar": 26,
+        "endLine": 2,
+        "endChar": 37
+      },
+      "revId": "e4259b32d250490aece07036cdf4690655e577be",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_1a7e20af",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 76,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-11T03:29:32Z",
+      "side": 1,
+      "message": "It would be better to ifdef this, or even better, provide no-op implementations of the below functions so there\u0027s no need for ifdefs.",
+      "range": {
+        "startLine": 76,
+        "startChar": 10,
+        "endLine": 76,
+        "endChar": 20
+      },
+      "revId": "e4259b32d250490aece07036cdf4690655e577be",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
