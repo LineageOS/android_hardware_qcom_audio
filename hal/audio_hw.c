@@ -2378,7 +2378,7 @@ static int out_get_render_position(const struct audio_stream_out *stream,
         pthread_mutex_unlock(&out->lock);
         return 0;
     } else
-        return -EINVAL;
+        return -ENODATA;
 }
 
 static int out_add_audio_effect(const struct audio_stream *stream __unused,
@@ -2396,14 +2396,14 @@ static int out_remove_audio_effect(const struct audio_stream *stream __unused,
 static int out_get_next_write_timestamp(const struct audio_stream_out *stream __unused,
                                         int64_t *timestamp __unused)
 {
-    return -EINVAL;
+    return -ENOSYS;
 }
 
 static int out_get_presentation_position(const struct audio_stream_out *stream,
                                    uint64_t *frames, struct timespec *timestamp)
 {
     struct stream_out *out = (struct stream_out *)stream;
-    int ret = -EINVAL;
+    int ret = -ENODATA;
     unsigned long dsp_frames;
 
     lock_output_stream(out);
@@ -2828,7 +2828,7 @@ static char* in_get_parameters(const struct audio_stream *stream __unused,
 
 static int in_set_gain(struct audio_stream_in *stream __unused, float gain __unused)
 {
-    return 0;
+    return -ENOSYS;
 }
 
 static void in_snd_mon_cb(void * stream, struct str_parms * parms)
