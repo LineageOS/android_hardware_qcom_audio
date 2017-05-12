@@ -2,6 +2,29 @@
   "comments": [
     {
       "key": {
+        "uuid": "1a486d77_3c9b171a",
+        "filename": "hal/audio_extn/ultrasound.c",
+        "patchSetId": 11
+      },
+      "lineNbr": 227,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2017-05-12T13:58:51Z",
+      "side": 1,
+      "message": "PCM_OUT",
+      "range": {
+        "startLine": 227,
+        "startChar": 60,
+        "endLine": 227,
+        "endChar": 61
+      },
+      "revId": "6ed3b4d1146f63109000db33ed11038ddb391ce7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "1a486d77_fcd69fc4",
         "filename": "hal/audio_extn/ultrasound.c",
         "patchSetId": 11
