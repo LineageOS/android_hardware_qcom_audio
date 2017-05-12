@@ -2094,7 +2094,7 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
         str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_CHANNELS, value);
         str = str_parms_to_str(reply);
     } else {
-        str = strdup(keys);
+        str = strdup("");
     }
     str_parms_destroy(query);
     str_parms_destroy(reply);
