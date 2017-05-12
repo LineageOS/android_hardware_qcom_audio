@@ -33,6 +33,7 @@
 #include <dlfcn.h>
 #include <sys/resource.h>
 #include <sys/prctl.h>
+#include <limits.h>
 
 #include <cutils/log.h>
 #include <cutils/trace.h>
