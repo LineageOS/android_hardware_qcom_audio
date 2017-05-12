@@ -5219,7 +5219,8 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     /*BT devices backend is not configured from HAL hence skip*/
     if (snd_device == SND_DEVICE_OUT_BT_A2DP ||
         snd_device == SND_DEVICE_OUT_BT_SCO ||
-        snd_device == SND_DEVICE_OUT_BT_SCO_WB) {
+        snd_device == SND_DEVICE_OUT_BT_SCO_WB ||
+        snd_device == SND_DEVICE_OUT_AFE_PROXY) {
         backend_change = false;
         return backend_change;
     }
