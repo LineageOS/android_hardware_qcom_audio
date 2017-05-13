@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "1a486d77_1fb72d88",
+        "filename": "hal/audio_extn/ultrasound.h",
+        "patchSetId": 12
+      },
+      "lineNbr": 21,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2017-05-13T10:56:43Z",
+      "side": 1,
+      "message": "This is how it\u0027s done in every other audio hal extension ( see audio_amplifier.h )",
+      "parentUuid": "1a486d77_df02b53d",
+      "revId": "9d44f2bec1b7b7c125f4a968174a47f31eeff7f9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "1a486d77_bffff933",
         "filename": "hal/audio_hw.c",
         "patchSetId": 12
