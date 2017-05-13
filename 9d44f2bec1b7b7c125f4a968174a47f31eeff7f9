@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1a486d77_df02b53d",
+        "filename": "hal/audio_extn/ultrasound.h",
+        "patchSetId": 12
+      },
+      "lineNbr": 21,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-13T10:03:14Z",
+      "side": 1,
+      "message": "It\u0027s usually better to ifdef \u003creal implementation\u003e rather than the inverse.",
+      "revId": "9d44f2bec1b7b7c125f4a968174a47f31eeff7f9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a486d77_bffff933",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 12
+      },
+      "lineNbr": 666,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-05-13T10:03:14Z",
+      "side": 1,
+      "message": "Since it\u0027s a single line if statement, you can do this without the opening brace on line 662 and get rid of this ifdef block completely.",
+      "revId": "9d44f2bec1b7b7c125f4a968174a47f31eeff7f9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
