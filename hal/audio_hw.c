@@ -33,6 +33,7 @@
 #include <dlfcn.h>
 #include <sys/resource.h>
 #include <sys/prctl.h>
+#include <limits.h>
 
 #include <cutils/log.h>
 #include <cutils/trace.h>
@@ -2093,7 +2094,7 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
         str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_CHANNELS, value);
         str = str_parms_to_str(reply);
     } else {
-        str = strdup(keys);
+        str = strdup("");
     }
     str_parms_destroy(query);
     str_parms_destroy(reply);
@@ -2362,7 +2363,7 @@ static int out_get_render_position(const struct audio_stream_out *stream,
         pthread_mutex_unlock(&out->lock);
         return 0;
     } else
-        return -EINVAL;
+        return -ENODATA;
 }
 
 static int out_add_audio_effect(const struct audio_stream *stream __unused,
@@ -2380,14 +2381,14 @@ static int out_remove_audio_effect(const struct audio_stream *stream __unused,
 static int out_get_next_write_timestamp(const struct audio_stream_out *stream __unused,
                                         int64_t *timestamp __unused)
 {
-    return -EINVAL;
+    return -ENOSYS;
 }
 
 static int out_get_presentation_position(const struct audio_stream_out *stream,
                                    uint64_t *frames, struct timespec *timestamp)
 {
     struct stream_out *out = (struct stream_out *)stream;
-    int ret = -EINVAL;
+    int ret = -ENODATA;
     unsigned long dsp_frames;
 
     lock_output_stream(out);
@@ -2812,7 +2813,7 @@ static char* in_get_parameters(const struct audio_stream *stream __unused,
 
 static int in_set_gain(struct audio_stream_in *stream __unused, float gain __unused)
 {
-    return 0;
+    return -ENOSYS;
 }
 
 static void in_snd_mon_cb(void * stream, struct str_parms * parms)
@@ -4054,10 +4055,11 @@ static int adev_close(hw_device_t *device)
     if (!adev)
         return 0;
 
+    audio_extn_snd_mon_unregister_listener(adev);
     audio_extn_snd_mon_deinit();
+
     audio_extn_tfa_98xx_deinit();
 
-    audio_extn_snd_mon_unregister_listener(adev);
     pthread_mutex_lock(&adev_init_lock);
 
     if ((--audio_device_ref_count) == 0) {

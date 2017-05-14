@@ -1054,6 +1054,7 @@ void platform_deinit(void *platform)
         free(info_item);
     }
 
+    mixer_close(my_data->adev->mixer);
     free(platform);
 }
 
