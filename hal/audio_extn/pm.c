@@ -32,6 +32,7 @@
 
 #include "pm.h"
 #include <cutils/log.h>
+#include <cutils/str_parms.h>
 
 /* Device state*/
 #define AUDIO_PARAMETER_KEY_DEV_SHUTDOWN "dev_shutdown"
@@ -98,7 +99,7 @@ void audio_extn_pm_set_parameters(struct str_parms *parms)
     }
 }
 
-void audio_extn_pm_event_notifier(void *client_data, enum pm_event event)
+void audio_extn_pm_event_notifier(void *client_data __unused, enum pm_event event)
 {
 
     int err, intfd;
