@@ -719,15 +719,19 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
                        case  AUDIO_SOURCE_VOICE_COMMUNICATION:
                             if(prop_voip_enabled) {
                                 ALOGD("voice_conc:CLOSING VoIP input source on call setup :%d ",activeInput->inputSource());
-                                stopInput(activeInput->mIoHandle, activeDesc->mSessions.itemAt(0));
-                                releaseInput(activeInput->mIoHandle, activeDesc->mSessions.itemAt(0));
+                                AudioSessionCollection activeSessions = activeInput->getAudioSessions(true);
+                                audio_session_t activeSession = activeSessions.keyAt(0);
+                                stopInput(activeInput->mIoHandle, activeSession);
+                                releaseInput(activeInput->mIoHandle, activeSession);
                             }
                        break;
 
                        default:
                            ALOGD("voice_conc:CLOSING input on call setup  for inputSource: %d",activeInput->inputSource());
-                           stopInput(activeInput->mIoHandle, activeDesc->mSessions.itemAt(0));
-                           releaseInput(activeInput->mIoHandle, activeDesc->mSessions.itemAt(0));
+                           AudioSessionCollection activeSessions = activeInput->getAudioSessions(true);
+                           audio_session_t activeSession = activeSessions.keyAt(0);
+                           stopInput(activeInput->mIoHandle, activeSession);
+                           releaseInput(activeInput->mIoHandle, activeSession);
                        break;
                    }
                }
@@ -739,8 +743,10 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
                     sp<AudioInputDescriptor> activeInput = activeInputs[i];
                     if (AUDIO_SOURCE_VOICE_COMMUNICATION == activeInput->inputSource()) {
                         ALOGD("voice_conc:CLOSING VoIP on call setup : %d",activeInput->inputSource());
-                        stopInput(activeInput->mIoHandle, activeInput->mSessions.itemAt(0));
-                        releaseInput(activeInput->mIoHandle, activeInput->mSessions.itemAt(0));
+                        AudioSessionCollection activeSessions = activeInput->getAudioSessions(true);
+                        audio_session_t activeSession = activeSessions.keyAt(0);
+                        stopInput(activeInput->mIoHandle, activeSession);
+                        releaseInput(activeInput->mIoHandle, activeSession);
                     }
                 }
             }
@@ -770,33 +776,33 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
             }
 
             bool isFastFallBackNeeded =
-               ((AUDIO_OUTPUT_FLAG_DEEP_BUFFER | AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD | AUDIO_OUTPUT_FLAG_DIRECT_PCM) & outputDesc->mProfile->mFlags);
+               ((AUDIO_OUTPUT_FLAG_DEEP_BUFFER | AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD | AUDIO_OUTPUT_FLAG_DIRECT_PCM) & outputDesc->mProfile->getFlags());
 
             if ((AUDIO_OUTPUT_FLAG_FAST == mFallBackflag) && isFastFallBackNeeded) {
-                if (((!outputDesc->isDuplicated() && outputDesc->mProfile->mFlags & AUDIO_OUTPUT_FLAG_PRIMARY))
+                if (((!outputDesc->isDuplicated() && outputDesc->mProfile->getFlags() & AUDIO_OUTPUT_FLAG_PRIMARY))
                             && prop_playback_enabled) {
                     ALOGD("voice_conc:calling suspendOutput on call mode for primary output");
                     mpClientInterface->suspendOutput(mOutputs.keyAt(i));
                 } //Close compress all sessions
-                else if ((outputDesc->mProfile->mFlags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)
+                else if ((outputDesc->mProfile->getFlags() & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)
                                 &&  prop_playback_enabled) {
                     ALOGD("voice_conc:calling closeOutput on call mode for COMPRESS output");
                     closeOutput(mOutputs.keyAt(i));
                 }
-                else if ((outputDesc->mProfile->mFlags & AUDIO_OUTPUT_FLAG_VOIP_RX)
+                else if ((outputDesc->mProfile->getFlags() & AUDIO_OUTPUT_FLAG_VOIP_RX)
                                 && prop_voip_enabled) {
                     ALOGD("voice_conc:calling closeOutput on call mode for DIRECT  output");
                     closeOutput(mOutputs.keyAt(i));
                 }
             } else if (AUDIO_OUTPUT_FLAG_DEEP_BUFFER == mFallBackflag) {
-                if (outputDesc->mProfile->mFlags & AUDIO_OUTPUT_FLAG_VOIP_RX) {
+                if (outputDesc->mProfile->getFlags() & AUDIO_OUTPUT_FLAG_VOIP_RX) {
                     if (prop_voip_enabled) {
                         ALOGD("voice_conc:calling closeOutput on call mode for DIRECT  output");
                         closeOutput(mOutputs.keyAt(i));
                     }
                 }
                 else if (prop_playback_enabled
-                           && (outputDesc->mProfile->mFlags & AUDIO_OUTPUT_FLAG_DIRECT)) {
+                           && (outputDesc->mProfile->getFlags() & AUDIO_OUTPUT_FLAG_DIRECT)) {
                     ALOGD("voice_conc:calling closeOutput on call mode for COMPRESS output");
                     closeOutput(mOutputs.keyAt(i));
                 }
@@ -820,7 +826,7 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
                    ALOGD("voice_conc:ouput desc / profile is NULL");
                    continue;
                 }
-                if (!outputDesc->isDuplicated() && outputDesc->mProfile->mFlags & AUDIO_OUTPUT_FLAG_PRIMARY) {
+                if (!outputDesc->isDuplicated() && outputDesc->mProfile->getFlags() & AUDIO_OUTPUT_FLAG_PRIMARY) {
                     ALOGD("voice_conc:calling restoreOutput after call mode for primary output");
                     mpClientInterface->restoreOutput(mOutputs.keyAt(i));
                 }
@@ -885,7 +891,7 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
                    continue;
                 }
 
-                if (outputDesc->mProfile->mFlags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
+                if (outputDesc->mProfile->getFlags() & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
                     ALOGD("calling closeOutput on call mode for COMPRESS output");
                     closeOutput(mOutputs.keyAt(i));
                 }
@@ -2059,7 +2065,7 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
                ALOGD("ouput desc / profile is NULL");
                continue;
             }
-            if (outputDesc->mProfile->mFlags
+            if (outputDesc->mProfile->getFlags()
                             & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
                 // close compress  sessions
                 ALOGD("calling closeOutput on record conc for COMPRESS output");
