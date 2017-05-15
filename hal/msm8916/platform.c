@@ -76,6 +76,7 @@
 #define PLATFORM_INFO_XML_PATH      "/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_WCD9326_I2S "/etc/mixer_paths_wcd9326_i2s.xml"
 #define MIXER_XML_PATH_WCD9330_I2S "/etc/mixer_paths_wcd9330_i2s.xml"
+#define MIXER_XML_PATH_WCD9335_I2S "/etc/mixer_paths_wcd9335_i2s.xml"
 #define MIXER_XML_PATH_SBC "/etc/mixer_paths_sbc.xml"
 #else
 #define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
@@ -88,8 +89,9 @@
 #define MIXER_XML_PATH_WCD9335 "/system/etc/mixer_paths_wcd9335.xml"
 #define MIXER_XML_PATH_SKUN "/system/etc/mixer_paths_qrd_skun.xml"
 #define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
-#define MIXER_XML_PATH_WCD9326_I2S  "/system/etc/mixer_paths_wcd9326_i2s.xml"
+#define MIXER_XML_PATH_WCD9326_I2S "/system/etc/mixer_paths_wcd9326_i2s.xml"
 #define MIXER_XML_PATH_WCD9330_I2S "/system/etc/mixer_paths_wcd9330_i2s.xml"
+#define MIXER_XML_PATH_WCD9335_I2S "/system/etc/mixer_paths_wcd9335_i2s.xml"
 #define MIXER_XML_PATH_SBC "/system/etc/mixer_paths_sbc.xml"
 #endif
 #define MIXER_XML_PATH_SKUN "/system/etc/mixer_paths_qrd_skun.xml"
@@ -946,6 +948,8 @@ static void update_codec_type(const char *snd_card_name) {
                   sizeof("apq8009-tashalite-snd-card")) ||
          !strncmp(snd_card_name, "mdm9607-tomtom-i2s-snd-card",
                   sizeof("mdm9607-tomtom-i2s-snd-card")) ||
+         !strncmp(snd_card_name, "mdm-tasha-i2s-snd-card",
+                  sizeof("mdm-tasha-i2s-snd-card")) ||
          !strncmp(snd_card_name, "sdm660-tashalite-snd-card",
                   sizeof("sdm660-tashalite-snd-card")) ||
          !strncmp(snd_card_name, "sdm660-tasha-skus-snd-card",
@@ -1321,6 +1325,13 @@ static void query_platform(const char *snd_card_name,
                  sizeof("mdm9607-tomtom-i2s-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9330_I2S,
                 sizeof(MIXER_XML_PATH_WCD9330_I2S));
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+   } else if (!strncmp(snd_card_name, "mdm-tasha-i2s-snd-card",
+                       sizeof("mdm-tasha-i2s-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9335_I2S,
+                sizeof(MIXER_XML_PATH_WCD9335_I2S));
         msm_device_to_be_id = msm_device_to_be_id_external_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
