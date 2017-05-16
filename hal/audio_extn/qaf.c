@@ -170,6 +170,7 @@ typedef enum {
 
 struct qaf_module {
     audio_session_handle_t session_handle;
+    void *ip_hdlr_hdl;
     void *qaf_lib;
     int (*qaf_audio_session_open)(audio_session_handle_t* session_handle,
                                   audio_session_type_t s_type,
@@ -246,6 +247,7 @@ struct qaf {
 static int qaf_out_pause(struct audio_stream_out* stream);
 static int qaf_out_flush(struct audio_stream_out* stream);
 static int qaf_out_drain(struct audio_stream_out* stream, audio_drain_type_t type);
+static int qaf_session_close();
 
 //Global handle of QAF. Access to this should be protected by mutex lock.
 static struct qaf *p_qaf = NULL;
@@ -1249,6 +1251,13 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
     config.offload_info.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     config.offload_info.channel_mask = config.channel_mask = AUDIO_CHANNEL_OUT_STEREO;
 
+    if (event_id == AUDIO_SEC_FAIL_EVENT) {
+        DEBUG_MSG("%s Security failed, closing session");
+        qaf_session_close(qaf_mod);
+        pthread_mutex_unlock(&p_qaf->lock);
+        return;
+    }
+
     if (event_id == AUDIO_DATA_EVENT) {
         data_buffer_p = (int8_t*)buf;
         buffer_size = size;
@@ -1733,6 +1742,11 @@ static int qaf_session_close(struct qaf_module* qaf_mod)
     }
 
     if (qaf_mod->session_handle != NULL && qaf_mod->qaf_audio_session_close) {
+#ifdef AUDIO_EXTN_IP_HDLR_ENABLED
+        if (qaf_mod == &p_qaf->qaf_mod[MS12]) {
+            audio_extn_ip_hdlr_intf_close(qaf_mod->ip_hdlr_hdl, false, qaf_mod->session_handle);
+        }
+#endif
         qaf_mod->qaf_audio_session_close(qaf_mod->session_handle);
         qaf_mod->session_handle = NULL;
         qaf_mod->is_vol_set = false;
@@ -1789,7 +1803,7 @@ static int qaf_stream_close(struct stream_out *out)
 }
 
 /* Open a MM module session with QAF. */
-static int audio_extn_qaf_session_open(mm_module_type mod_type)
+static int audio_extn_qaf_session_open(mm_module_type mod_type, struct stream_out *out)
 {
     ALOGV("%s %d", __func__, __LINE__);
     unsigned char* license_data = NULL;
@@ -1812,6 +1826,7 @@ static int audio_extn_qaf_session_open(mm_module_type mod_type)
         return 0;
     }
 
+#ifndef AUDIO_EXTN_IP_HDLR_ENABLED
     if (mod_type == MS12) {
         //Getting the license
         license_data = platform_get_license((struct audio_hw_device *)(p_qaf->adev->platform),
@@ -1840,6 +1855,7 @@ static int audio_extn_qaf_session_open(mm_module_type mod_type)
             goto exit;
         }
     }
+#endif
 
     ret = qaf_mod->qaf_audio_session_open(&qaf_mod->session_handle,
                                           AUDIO_SESSION_BROADCAST,
@@ -1863,6 +1879,16 @@ static int audio_extn_qaf_session_open(mm_module_type mod_type)
                                              AUDIO_DATA_EVENT_V2);
 
     set_hdmi_configuration_to_module();
+
+#ifdef AUDIO_EXTN_IP_HDLR_ENABLED
+    if (mod_type == MS12) {
+        ret = audio_extn_ip_hdlr_intf_open(qaf_mod->ip_hdlr_hdl, false, qaf_mod->session_handle, out->usecase);
+        if (ret < 0) {
+            ERROR_MSG("audio_extn_ip_hdlr_intf_open failed, ret = %d", __func__, ret);
+            goto exit;
+        }
+    }
+#endif
 
 exit:
     if (license_data != NULL) {
@@ -1897,7 +1923,7 @@ static int qaf_stream_open(struct stream_out *out,
     }
 
     //Open the module session, if not opened already.
-    status = audio_extn_qaf_session_open(mmtype);
+    status = audio_extn_qaf_session_open(mmtype, out);
     qaf_mod = &(p_qaf->qaf_mod[mmtype]);
 
     if ((status != 0) || (qaf_mod->session_handle == NULL)) {
@@ -2819,21 +2845,42 @@ int audio_extn_qaf_init(struct audio_device *adev)
 
         if (i == MS12) {
             property_get("vendor.audio.qaf.library", value, NULL);
-        } else if (i == DTS_M8) {
-            property_get("vendor.audio.qaf.m8.library", value, NULL);
-        } else {
+            snprintf(lib_name, PROPERTY_VALUE_MAX, "%s", value);
+#ifdef AUDIO_EXTN_IP_HDLR_ENABLED
+{
+        int ret = 0;
+        ret = audio_extn_ip_hdlr_intf_init(&qaf_mod->ip_hdlr_hdl, lib_name, &qaf_mod->qaf_lib,
+                                           adev, USECASE_AUDIO_PLAYBACK_OFFLOAD);
+        if (ret < 0) {
+            ERROR_MSG("audio_extn_ip_hdlr_intf_init failed, ret = %d", ret);
             continue;
         }
-
-        snprintf(lib_name, PROPERTY_VALUE_MAX, "%s", value);
-
+        if (qaf_mod->qaf_lib == NULL) {
+            ERROR_MSG("failed to get library handle");
+            continue;
+        }
+}
+#else
         qaf_mod->qaf_lib = dlopen(lib_name, RTLD_NOW);
         if (qaf_mod->qaf_lib == NULL) {
             ERROR_MSG("DLOPEN failed for %s", lib_name);
             continue;
         }
-
         DEBUG_MSG("DLOPEN successful for %s", lib_name);
+#endif
+        } else if (i == DTS_M8) {
+            property_get("audio.qaf.m8.library", value, NULL);
+            snprintf(lib_name, PROPERTY_VALUE_MAX, "%s", value);
+            qaf_mod->qaf_lib = dlopen(lib_name, RTLD_NOW);
+            if (qaf_mod->qaf_lib == NULL) {
+                ERROR_MSG("DLOPEN failed for %s", lib_name);
+                continue;
+            }
+            DEBUG_MSG("DLOPEN successful for %s", lib_name);
+        } else {
+            continue;
+        }
+
         qaf_mod->qaf_audio_session_open =
                     (int (*)(audio_session_handle_t* session_handle, audio_session_type_t s_type,
                                   void *p_data, void* license_data))dlsym(qaf_mod->qaf_lib,
@@ -2896,8 +2943,17 @@ void audio_extn_qaf_deinit()
             qaf_session_close(&p_qaf->qaf_mod[i]);
 
             if (p_qaf->qaf_mod[i].qaf_lib != NULL) {
-                dlclose(p_qaf->qaf_mod[i].qaf_lib);
-                p_qaf->qaf_mod[i].qaf_lib = NULL;
+                if (i == MS12) {
+#ifdef AUDIO_EXTN_IP_HDLR_ENABLED
+                    audio_extn_ip_hdlr_intf_deinit(p_qaf->qaf_mod[i].ip_hdlr_hdl);
+#else
+                    dlclose(p_qaf->qaf_mod[i].qaf_lib);
+#endif
+                    p_qaf->qaf_mod[i].qaf_lib = NULL;
+                } else {
+                    dlclose(p_qaf->qaf_mod[i].qaf_lib);
+                    p_qaf->qaf_mod[i].qaf_lib = NULL;
+                }
             }
         }
         if (p_qaf->passthrough_out) {
