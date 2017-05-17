@@ -1698,3 +1698,46 @@ int audio_extn_utils_compress_get_dsp_latency(struct stream_out *out __unused)
     return COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
 }
 #endif
+
+#ifdef SNDRV_COMPRESS_RENDER_MODE
+int audio_extn_utils_compress_set_render_mode(struct stream_out *out)
+{
+    struct snd_compr_metadata metadata;
+    int ret = -EINVAL;
+
+    if (!(is_offload_usecase(out->usecase))) {
+        ALOGE("%s:: not supported for non offload session", __func__);
+        goto exit;
+    }
+
+    if (!out->compr) {
+        ALOGD("%s:: Invalid compress handle",
+                __func__);
+        goto exit;
+    }
+
+    ALOGD("%s:: render mode %d", __func__, out->render_mode);
+
+    metadata.key = SNDRV_COMPRESS_RENDER_MODE;
+    if (out->render_mode == RENDER_MODE_AUDIO_MASTER) {
+        metadata.value[0] = SNDRV_COMPRESS_RENDER_MODE_AUDIO_MASTER;
+    } else if (out->render_mode == RENDER_MODE_AUDIO_STC_MASTER) {
+        metadata.value[0] = SNDRV_COMPRESS_RENDER_MODE_STC_MASTER;
+    } else {
+        ret = 0;
+        goto exit;
+    }
+    ret = compress_set_metadata(out->compr, &metadata);
+    if(ret) {
+        ALOGE("%s::error %s", __func__, compress_get_error(out->compr));
+    }
+exit:
+    return ret;
+}
+#else
+int audio_extn_utils_compress_set_render_mode(struct stream_out *out __unused)
+{
+    ALOGD("%s:: configuring render mode not supported", __func__);
+    return 0;
+}
+#endif

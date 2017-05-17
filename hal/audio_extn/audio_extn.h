@@ -93,6 +93,10 @@
                                       AUDIO_FORMAT_AAC_SUB_HE_V2)
 #endif
 
+#ifndef AUDIO_OUTPUT_FLAG_TIMESTAMP
+#define AUDIO_OUTPUT_FLAG_TIMESTAMP 0x10000
+#endif
+
 #ifndef COMPRESS_METADATA_NEEDED
 #define audio_extn_parse_compress_metadata(out, parms) (0)
 #else
@@ -829,4 +833,5 @@ int audio_extn_utils_get_avt_device_drift(
                 struct audio_usecase *usecase,
                 struct audio_avt_device_drift_param *drift_param);
 int audio_extn_utils_compress_get_dsp_latency(struct stream_out *out);
+int audio_extn_utils_compress_set_render_mode(struct stream_out *out);
 #endif /* AUDIO_EXTN_H */
