@@ -265,6 +265,7 @@ struct stream_out {
     struct listnode qaf_offload_cmd_list;
     uint32_t platform_latency;
     render_mode_t render_mode;
+    struct audio_out_render_window_param render_window; /*render winodw*/
 
     audio_offload_info_t info;
 };

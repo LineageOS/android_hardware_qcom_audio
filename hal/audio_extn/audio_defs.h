@@ -164,18 +164,29 @@ struct audio_avt_device_drift_param {
     uint32_t        ref_timer_abs_ts_msw;
 };
 
+/*use these for setting infine window.i.e free run mode */
+#define AUDIO_MAX_RENDER_START_WINDOW 0x8000000000000000
+#define AUDIO_MAX_RENDER_END_WINDOW   0x7FFFFFFFFFFFFFFF
+
+struct audio_out_render_window_param {
+   uint64_t        render_ws; /* render window start value in microseconds*/
+   uint64_t        render_we; /* render window end value in microseconds*/
+};
+
 typedef union {
     struct source_tracking_param st_params;
     struct sound_focus_param sf_params;
     struct aptx_dec_param aptx_params;
     struct audio_avt_device_drift_param drift_params;
+    struct audio_out_render_window_param render_window_param;
 } audio_extn_param_payload;
 
 typedef enum {
     AUDIO_EXTN_PARAM_SOURCE_TRACK,
     AUDIO_EXTN_PARAM_SOUND_FOCUS,
     AUDIO_EXTN_PARAM_APTX_DEC,
-    AUDIO_EXTN_PARAM_AVT_DEVICE_DRIFT
+    AUDIO_EXTN_PARAM_AVT_DEVICE_DRIFT,
+    AUDIO_EXTN_PARAM_OUT_RENDER_WINDOW /* PARAM to set render window */
 } audio_extn_param_id;
 
 #endif /* AUDIO_DEFS_H */
