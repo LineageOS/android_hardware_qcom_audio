@@ -545,6 +545,7 @@ void *start_stream_playback (void* stream_data)
     size_t bytes_read = 0;
     char  *data_ptr = NULL;
     bool exit = false;
+    int32_t latency;
 
     if (is_offload) {
         fprintf(log_file, "stream %d: set callback for offload stream for playback usecase\n", params->stream_index);
@@ -634,6 +635,9 @@ void *start_stream_playback (void* stream_data)
         pthread_exit(0);
     }
 
+    latency = qahw_out_get_latency(params->out_handle);
+    fprintf(log_file, "playback latency before starting a session %dms!!\n",
+            latency);
     while (!exit && !stop_playback) {
         if (!bytes_remaining) {
             fprintf(log_file, "\nstream %d: reading bytes %zd\n", params->stream_index, bytes_wanted);
@@ -662,8 +666,10 @@ void *start_stream_playback (void* stream_data)
                 params->stream_index, bytes_remaining, offset, write_length);
         bytes_written = write_to_hal(params->out_handle, data_ptr+offset, bytes_remaining, params);
         bytes_remaining -= bytes_written;
-        fprintf(log_file, "stream %d: bytes_written %zd, bytes_remaining %zd\n",
-                params->stream_index, bytes_written, bytes_remaining);
+
+        latency = qahw_out_get_latency(params->out_handle);
+        fprintf(log_file, "stream %d: bytes_written %zd, bytes_remaining %zd latency %d\n",
+                params->stream_index, bytes_written, bytes_remaining, latency);
     }
 
     if (params->ethread_data != nullptr) {
