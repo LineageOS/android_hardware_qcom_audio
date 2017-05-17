@@ -157,7 +157,7 @@ int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                             DEEP_BUFFER_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
                                            LOWLATENCY_PCM_DEVICE},
-    [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {MULTIMEDIA2_PCM_DEVICE,
+    [USECASE_AUDIO_PLAYBACK_HIFI] = {MULTIMEDIA2_PCM_DEVICE,
                                         MULTIMEDIA2_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] =
                      {PLAYBACK_OFFLOAD_DEVICE, PLAYBACK_OFFLOAD_DEVICE},
@@ -462,7 +462,7 @@ static char * hw_interface_table[SND_DEVICE_MAX] = {0};
 static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_DEEP_BUFFER)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_LOW_LATENCY)},
-    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_MULTI_CH)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_HIFI)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_ULL)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD)},
@@ -1054,6 +1054,7 @@ void platform_deinit(void *platform)
         free(info_item);
     }
 
+    mixer_close(my_data->adev->mixer);
     free(platform);
 }
 
@@ -2292,4 +2293,31 @@ int platform_snd_card_update(void *platform __unused,
                              card_status_t status __unused)
 {
     return -1;
+}
+
+int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *usecase,
+                                       int app_type, int sample_rate)
+{
+    return -ENOSYS;
+}
+
+void platform_check_and_update_copp_sample_rate(void* platform, snd_device_t snd_device,
+                                                unsigned int stream_sr, int* sample_rate)
+{
+
+}
+
+int platform_get_snd_device_backend_index(snd_device_t snd_device)
+{
+    return -ENOSYS;
+}
+
+bool platform_supports_app_type_cfg() { return false; }
+
+void platform_add_app_type(int bw, const char *uc_type,
+                           int app_type, int max_sr) {}
+
+int platform_get_app_type_v2(void *platform, enum usecase_type_t type,
+                             int bw, int sr, int *app_type) {
+    return -ENOSYS;
 }

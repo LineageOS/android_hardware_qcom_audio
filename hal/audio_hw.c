@@ -33,6 +33,7 @@
 #include <dlfcn.h>
 #include <sys/resource.h>
 #include <sys/prctl.h>
+#include <limits.h>
 
 #include <cutils/log.h>
 #include <cutils/trace.h>
@@ -158,6 +159,17 @@ struct pcm_config pcm_config_mmap_playback = {
     .avail_min = MMAP_PERIOD_SIZE, //1 ms
 };
 
+struct pcm_config pcm_config_hifi = {
+    .channels = DEFAULT_CHANNEL_COUNT, /* changed when the stream is opened */
+    .rate = DEFAULT_OUTPUT_SAMPLING_RATE, /* changed when the stream is opened */
+    .period_size = DEEP_BUFFER_OUTPUT_PERIOD_SIZE, /* change #define */
+    .period_count = DEEP_BUFFER_OUTPUT_PERIOD_COUNT,
+    .format = PCM_FORMAT_S24_3LE,
+    .start_threshold = 0,
+    .stop_threshold = INT_MAX,
+    .avail_min = 0,
+};
+
 struct pcm_config pcm_config_audio_capture = {
     .channels = DEFAULT_CHANNEL_COUNT,
     .period_count = AUDIO_CAPTURE_PERIOD_COUNT,
@@ -226,7 +238,7 @@ struct pcm_config pcm_config_afe_proxy_record = {
 const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = "deep-buffer-playback",
     [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = "low-latency-playback",
-    [USECASE_AUDIO_PLAYBACK_MULTI_CH] = "multi-channel-playback",
+    [USECASE_AUDIO_PLAYBACK_HIFI] = "hifi-playback",
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] = "compress-offload-playback",
     [USECASE_AUDIO_PLAYBACK_TTS] = "audio-tts-playback",
     [USECASE_AUDIO_PLAYBACK_ULL] = "audio-ull-playback",
@@ -531,6 +543,7 @@ int enable_audio_route(struct audio_device *adev,
         snd_device = usecase->out_snd_device;
 
     audio_extn_utils_send_app_type_cfg(adev, usecase);
+    audio_extn_utils_send_audio_calibration(adev, usecase);
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(adev->platform, mixer_path, snd_device);
     ALOGD("%s: usecase(%d) apply and update mixer path: %s", __func__,  usecase->id, mixer_path);
@@ -949,6 +962,50 @@ static int read_hdmi_channel_masks(struct stream_out *out)
         break;
     }
     return ret;
+}
+
+static int read_usb_sup_sample_rates(struct stream_out *out)
+{
+    uint32_t *sr = out->supported_sample_rates;
+    size_t count = audio_extn_usb_sup_sample_rates(0 /*playback*/,
+                                                   sr,
+                                                   MAX_SUPPORTED_SAMPLE_RATES);
+#if !LOG_NDEBUG
+
+    for (size_t i=0; i<count; i++) {
+        ALOGV("%s %d", __func__, out->supported_sample_rates[i]);
+    }
+#endif
+    return count > 0 ? 0 : -1;
+}
+
+static int read_usb_sup_channel_masks(struct stream_out *out)
+{
+    int channels = audio_extn_usb_get_max_channels();
+    out->supported_channel_masks[0] =
+            channels < 3 ? audio_channel_out_mask_from_count(channels) :
+                           audio_channel_mask_for_index_assignment_from_count(channels);
+    return 0;
+}
+
+static int read_usb_sup_formats(struct stream_out *out)
+{
+    int bitwidth = audio_extn_usb_get_max_bit_width();
+    switch (bitwidth) {
+        case 24:
+            // XXX : usb.c returns 24 for s24 and s24_le?
+            out->supported_formats[0] = AUDIO_FORMAT_PCM_24_BIT_PACKED;
+            break;
+        case 32:
+            out->supported_formats[0] = AUDIO_FORMAT_PCM_32_BIT;
+            break;
+        case 16:
+        default :
+            out->supported_formats[0] = AUDIO_FORMAT_PCM_16_BIT;
+            break;
+    }
+
+    return 0;
 }
 
 static audio_usecase_t get_voice_usecase_id_from_list(struct audio_device *adev)
@@ -1518,8 +1575,8 @@ static bool allow_hdmi_channel_config(struct audio_device *adev)
                       __func__);
                 ret = false;
                 break;
-            } else if (usecase->id == USECASE_AUDIO_PLAYBACK_MULTI_CH) {
-                ALOGV("%s: multi channel playback is active, "
+            } else if (usecase->id == USECASE_AUDIO_PLAYBACK_HIFI) {
+                ALOGV("%s: hifi playback is active, "
                       "no change in HDMI channels", __func__);
                 ret = false;
                 break;
@@ -2084,6 +2141,7 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
     char *str;
     char value[256];
     struct str_parms *reply = str_parms_create();
+    bool replied = false;
     size_t i, j;
     int ret;
     bool first = true;
@@ -2106,9 +2164,65 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
             i++;
         }
         str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_CHANNELS, value);
+        replied = true;
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_FORMATS, value, sizeof(value));
+    if (ret >= 0) {
+        value[0] = '\0';
+        switch (out->supported_formats[0]) {
+            case AUDIO_FORMAT_PCM_16_BIT:
+                strcat(value, "AUDIO_FORMAT_PCM_16_BIT");
+                break;
+            case AUDIO_FORMAT_PCM_24_BIT_PACKED:
+                strcat(value, "AUDIO_FORMAT_PCM_24_BIT_PACKED");
+                break;
+            case AUDIO_FORMAT_PCM_32_BIT:
+                strcat(value, "AUDIO_FORMAT_PCM_32_BIT");
+                break;
+            default:
+                ALOGE("%s: unsupported format %#x", __func__,
+                      out->supported_formats[0]);
+                break;
+        }
+        str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_FORMATS, value);
+        replied = true;
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_SAMPLING_RATES,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        value[0] = '\0';
+        i=0;
+        int cursor = 0;
+        while (out->supported_sample_rates[i]) {
+            int avail = sizeof(value) - cursor;
+            ret = snprintf(value + cursor, avail, "%s%d",
+                           cursor > 0 ? "|" : "",
+                           out->supported_sample_rates[i]);
+            if (ret < 0 || ret >= avail) {
+                // if cursor is at the last element of the array
+                //    overwrite with \0 is duplicate work as
+                //    snprintf already put a \0 in place.
+                // else
+                //    we had space to write the '|' at value[cursor]
+                //    (which will be overwritten) or no space to fill
+                //    the first element (=> cursor == 0)
+                value[cursor] = '\0';
+                break;
+            }
+            cursor += ret;
+            ++i;
+        }
+        str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_SAMPLING_RATES,
+                          value);
+        replied = true;
+    }
+
+    if (replied) {
         str = str_parms_to_str(reply);
     } else {
-        str = strdup(keys);
+        str = strdup("");
     }
     str_parms_destroy(query);
     str_parms_destroy(reply);
@@ -2143,7 +2257,7 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
     struct stream_out *out = (struct stream_out *)stream;
     int volume[2];
 
-    if (out->usecase == USECASE_AUDIO_PLAYBACK_MULTI_CH) {
+    if (out->usecase == USECASE_AUDIO_PLAYBACK_HIFI) {
         /* only take left channel into account: the API is for stereo anyway */
         out->muted = (left == 0.0f);
         return 0;
@@ -2377,7 +2491,7 @@ static int out_get_render_position(const struct audio_stream_out *stream,
         pthread_mutex_unlock(&out->lock);
         return 0;
     } else
-        return -EINVAL;
+        return -ENODATA;
 }
 
 static int out_add_audio_effect(const struct audio_stream *stream __unused,
@@ -2395,14 +2509,14 @@ static int out_remove_audio_effect(const struct audio_stream *stream __unused,
 static int out_get_next_write_timestamp(const struct audio_stream_out *stream __unused,
                                         int64_t *timestamp __unused)
 {
-    return -EINVAL;
+    return -ENOSYS;
 }
 
 static int out_get_presentation_position(const struct audio_stream_out *stream,
                                    uint64_t *frames, struct timespec *timestamp)
 {
     struct stream_out *out = (struct stream_out *)stream;
-    int ret = -EINVAL;
+    int ret = -ENODATA;
     unsigned long dsp_frames;
 
     lock_output_stream(out);
@@ -2827,7 +2941,7 @@ static char* in_get_parameters(const struct audio_stream *stream __unused,
 
 static int in_set_gain(struct audio_stream_in *stream __unused, float gain __unused)
 {
-    return 0;
+    return -ENOSYS;
 }
 
 static void in_snd_mon_cb(void * stream, struct str_parms * parms)
@@ -3208,6 +3322,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_out *out;
     int i, ret;
+    const uint32_t direct_dev = (AUDIO_DEVICE_OUT_HDMI|AUDIO_DEVICE_OUT_USB_DEVICE);
 
     ALOGV("%s: enter: sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)",
           __func__, config->sample_rate, config->channel_mask, devices, flags);
@@ -3227,11 +3342,24 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->handle = handle;
 
     /* Init use case and pcm_config */
-    if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT &&
-            !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
-        out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+    if (audio_is_linear_pcm(out->format) &&
+        (out->flags == AUDIO_OUTPUT_FLAG_NONE ||
+         out->flags == AUDIO_OUTPUT_FLAG_DIRECT) &&
+        (out->devices & direct_dev)) {
+
+        bool hdmi = (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL);
+
         pthread_mutex_lock(&adev->lock);
-        ret = read_hdmi_channel_masks(out);
+        if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            ret = read_hdmi_channel_masks(out);
+        } else if (out->devices & AUDIO_DEVICE_OUT_USB_DEVICE) {
+            ret = read_usb_sup_formats(out) ||
+                  read_usb_sup_channel_masks(out) ||
+                  read_usb_sup_sample_rates(out);
+            ALOGV("plugged dev USB ret %d", ret);
+        } else {
+            ret = -1;
+        }
         pthread_mutex_unlock(&adev->lock);
         if (ret != 0)
             goto error_open;
@@ -3246,11 +3374,13 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->channel_mask = config->channel_mask;
         out->sample_rate = config->sample_rate;
         out->format = config->format;
-        out->usecase = USECASE_AUDIO_PLAYBACK_MULTI_CH;
-        out->config = pcm_config_hdmi_multi;
+        out->usecase = USECASE_AUDIO_PLAYBACK_HIFI;
+        // does this change?
+        out->config = hdmi ? pcm_config_hdmi_multi : pcm_config_hifi;
         out->config.rate = config->sample_rate;
         out->config.channels = audio_channel_count_from_out_mask(out->channel_mask);
         out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels * 2);
+        out->config.format = pcm_format_from_audio_format(out->format);
     } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         pthread_mutex_lock(&adev->lock);
         bool offline = (adev->card_status == CARD_STATUS_OFFLINE);
@@ -3949,13 +4079,13 @@ static int adev_verify_devices(struct audio_device *adev)
      *
      * [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {0, 0},
      * [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = {15, 15},
-     * [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {1, 1},
+     * [USECASE_AUDIO_PLAYBACK_HIFI] = {1, 1},
      * [USECASE_AUDIO_PLAYBACK_OFFLOAD] = {9, 9},
      * [USECASE_AUDIO_RECORD] = {0, 0},
      * [USECASE_AUDIO_RECORD_LOW_LATENCY] = {15, 15},
      * [USECASE_VOICE_CALL] = {2, 2},
      *
-     * USECASE_AUDIO_PLAYBACK_OFFLOAD, USECASE_AUDIO_PLAYBACK_MULTI_CH omitted.
+     * USECASE_AUDIO_PLAYBACK_OFFLOAD, USECASE_AUDIO_PLAYBACK_HIFI omitted.
      * USECASE_VOICE_CALL omitted, but possible for either input or output.
      */
 
@@ -4069,10 +4199,11 @@ static int adev_close(hw_device_t *device)
     if (!adev)
         return 0;
 
+    audio_extn_snd_mon_unregister_listener(adev);
     audio_extn_snd_mon_deinit();
+
     audio_extn_tfa_98xx_deinit();
 
-    audio_extn_snd_mon_unregister_listener(adev);
     pthread_mutex_lock(&adev_init_lock);
 
     if ((--audio_device_ref_count) == 0) {
@@ -4291,7 +4422,8 @@ static int adev_open(const hw_module_t *module, const char *name,
         }
     }
 
-    audio_extn_utils_send_default_app_type_cfg(adev->platform, adev->mixer);
+    // commented as full set of app type cfg is sent from platform
+    // audio_extn_utils_send_default_app_type_cfg(adev->platform, adev->mixer);
     audio_device_ref_count++;
 
     if (property_get("audio_hal.period_multiplier", value, NULL) > 0) {
