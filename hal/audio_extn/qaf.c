@@ -1785,7 +1785,7 @@ static int qaf_stream_open(struct stream_out *out,
                 ERROR_MSG("Stream Open FAILED !!!");
             }
         }
-    } else if ((flags & AUDIO_OUTPUT_FLAG_MAIN) || (!((flags & AUDIO_OUTPUT_FLAG_MAIN) && (flags & AUDIO_OUTPUT_FLAG_ASSOCIATED)))) {
+    } else if ((flags & AUDIO_OUTPUT_FLAG_MAIN) || ((!(flags & AUDIO_OUTPUT_FLAG_MAIN)) && (!(flags & AUDIO_OUTPUT_FLAG_ASSOCIATED)))) {
         /* Assume Main if no flag is set */
         if (is_dual_main_active(qaf_mod)) {
             ERROR_MSG("Dual Main already active. So, Cannot open main stream");
