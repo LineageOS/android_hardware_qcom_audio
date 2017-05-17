@@ -79,8 +79,6 @@
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /*DIRECT PCM has same buffer sizes as DEEP Buffer*/
 #define DIRECT_PCM_NUM_FRAGMENTS 2
-/* ToDo: Check and update a proper value in msec */
-#define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 50
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
 #define DSD_VOLUME_MIN_DB (-110)
 
@@ -1522,6 +1520,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             }
         } else if (voice_extn_compress_voip_is_active(adev)) {
             bool out_snd_device_backend_match = true;
+            voip_usecase = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
             if (usecase->stream.out != NULL) {
                 out_snd_device_backend_match = platform_check_backends_match(
                                                    voip_usecase->out_snd_device,
@@ -1529,7 +1528,6 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                                        adev->platform,
                                                        usecase->stream.out));
             }
-            voip_usecase = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
             if ((voip_usecase) && ((voip_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) &&
                 ((usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
                   ((usecase->devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_CODEC_BACKEND)) &&
@@ -2365,6 +2363,8 @@ int start_output_stream(struct stream_out *out)
             compress_set_max_poll_wait(out->compr, 1000);
         }
 
+        audio_extn_utils_compress_set_render_mode(out);
+
         audio_extn_dts_create_state_notifier_node(out->usecase);
         audio_extn_dts_notify_playback_state(out->usecase, 0, out->sample_rate,
                                              popcount(out->channel_mask),
@@ -2961,7 +2961,9 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
     uint32_t latency = 0;
 
     if (is_offload_usecase(out->usecase)) {
-        latency = COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
+        lock_output_stream(out);
+        latency = audio_extn_utils_compress_get_dsp_latency(out);
+        pthread_mutex_unlock(&out->lock);
     } else if (out->realtime) {
         // since the buffer won't be filled up faster than realtime,
         // return a smaller number
@@ -4133,6 +4135,14 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
             out->non_blocking = 1;
 
+        if ((flags & AUDIO_OUTPUT_FLAG_TIMESTAMP) &&
+            (flags & AUDIO_OUTPUT_FLAG_HW_AV_SYNC)) {
+            out->render_mode = RENDER_MODE_AUDIO_STC_MASTER;
+        } else if(flags & AUDIO_OUTPUT_FLAG_TIMESTAMP) {
+            out->render_mode = RENDER_MODE_AUDIO_MASTER;
+        } else {
+            out->render_mode = RENDER_MODE_AUDIO_NO_TIMESTAMP;
+        }
 
         out->send_new_metadata = 1;
         out->send_next_track_params = false;

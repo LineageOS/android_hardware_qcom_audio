@@ -29,13 +29,15 @@
 #include <cutils/log.h>
 #include <cutils/misc.h>
 
+
 #include "audio_hw.h"
 #include "platform.h"
 #include "platform_api.h"
 #include "audio_extn.h"
 #include "voice.h"
-#include "sound/compress_params.h"
-
+#include <sound/compress_params.h>
+#include <sound/compress_offload.h>
+#include <tinycompress/tinycompress.h>
 #ifdef AUDIO_EXTERNAL_HDMI_ENABLED
 #ifdef HDMI_PASSTHROUGH_ENABLED
 #include "audio_parsers.h"
@@ -82,6 +84,10 @@
 #define SR_192000           (14<<0)     /* 192kHz */
 
 #endif
+
+/* ToDo: Check and update a proper value in msec */
+#define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 50
+
 struct string_to_enum {
     const char *name;
     uint32_t value;
@@ -1650,3 +1656,88 @@ int audio_extn_utils_get_avt_device_drift(
 done:
     return ret;
 }
+
+#ifdef SNDRV_COMPRESS_PATH_DELAY
+int audio_extn_utils_compress_get_dsp_latency(struct stream_out *out)
+{
+    int ret = -EINVAL;
+    struct snd_compr_metadata metadata;
+    int delay_ms = COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
+
+    if (property_get_bool("audio.playback.dsp.pathdelay", false)) {
+        ALOGD("%s:: Quering DSP delay %d",__func__, __LINE__);
+        if (!(is_offload_usecase(out->usecase))) {
+            ALOGE("%s:: not supported for non offload session", __func__);
+            goto exit;
+        }
+
+        if (!out->compr) {
+            ALOGD("%s:: Invalid compress handle,returning default dsp latency",
+                    __func__);
+            goto exit;
+        }
+
+        metadata.key = SNDRV_COMPRESS_PATH_DELAY;
+        ret = compress_get_metadata(out->compr, &metadata);
+        if(ret) {
+            ALOGE("%s::error %s", __func__, compress_get_error(out->compr));
+            goto exit;
+        }
+        delay_ms = metadata.value[0] / 1000; /*convert to ms*/
+    } else {
+        ALOGD("%s:: Using Fix DSP delay",__func__);
+    }
+
+exit:
+    ALOGD("%s:: delay in ms is %d",__func__, delay_ms);
+    return delay_ms;
+}
+#else
+int audio_extn_utils_compress_get_dsp_latency(struct stream_out *out __unused)
+{
+    return COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
+}
+#endif
+
+#ifdef SNDRV_COMPRESS_RENDER_MODE
+int audio_extn_utils_compress_set_render_mode(struct stream_out *out)
+{
+    struct snd_compr_metadata metadata;
+    int ret = -EINVAL;
+
+    if (!(is_offload_usecase(out->usecase))) {
+        ALOGE("%s:: not supported for non offload session", __func__);
+        goto exit;
+    }
+
+    if (!out->compr) {
+        ALOGD("%s:: Invalid compress handle",
+                __func__);
+        goto exit;
+    }
+
+    ALOGD("%s:: render mode %d", __func__, out->render_mode);
+
+    metadata.key = SNDRV_COMPRESS_RENDER_MODE;
+    if (out->render_mode == RENDER_MODE_AUDIO_MASTER) {
+        metadata.value[0] = SNDRV_COMPRESS_RENDER_MODE_AUDIO_MASTER;
+    } else if (out->render_mode == RENDER_MODE_AUDIO_STC_MASTER) {
+        metadata.value[0] = SNDRV_COMPRESS_RENDER_MODE_STC_MASTER;
+    } else {
+        ret = 0;
+        goto exit;
+    }
+    ret = compress_set_metadata(out->compr, &metadata);
+    if(ret) {
+        ALOGE("%s::error %s", __func__, compress_get_error(out->compr));
+    }
+exit:
+    return ret;
+}
+#else
+int audio_extn_utils_compress_set_render_mode(struct stream_out *out __unused)
+{
+    ALOGD("%s:: configuring render mode not supported", __func__);
+    return 0;
+}
+#endif
