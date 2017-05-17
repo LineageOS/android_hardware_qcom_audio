@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2014-2017 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ typedef enum {
     CONFIG_PARAMS,
     OPERATOR_SPECIFIC,
     GAIN_LEVEL_MAPPING,
+    APP_TYPE,
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
@@ -45,6 +46,7 @@ static void process_config_params(const XML_Char **attr);
 static void process_root(const XML_Char **attr);
 static void process_operator_specific(const XML_Char **attr);
 static void process_gain_db_to_level_map(const XML_Char **attr);
+static void process_app_type(const XML_Char **attr);
 
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
@@ -54,6 +56,7 @@ static section_process_fn section_table[] = {
     [CONFIG_PARAMS] = process_config_params,
     [OPERATOR_SPECIFIC] = process_operator_specific,
     [GAIN_LEVEL_MAPPING] = process_gain_db_to_level_map,
+    [APP_TYPE] = process_app_type,
 };
 
 static section_t section;
@@ -307,6 +310,33 @@ done:
     return;
 }
 
+static void process_app_type(const XML_Char **attr)
+{
+    if (strcmp(attr[0], "uc_type")) {
+        ALOGE("%s: uc_type not found", __func__);
+        goto done;
+    }
+
+    if (strcmp(attr[2], "bit_width")) {
+        ALOGE("%s: bit_width not found", __func__);
+        goto done;
+    }
+
+    if (strcmp(attr[4], "id")) {
+        ALOGE("%s: id not found", __func__);
+        goto done;
+    }
+
+    if (strcmp(attr[6], "max_rate")) {
+        ALOGE("%s: max rate not found", __func__);
+        goto done;
+    }
+
+    platform_add_app_type(atoi(attr[3]), attr[1], atoi(attr[5]), atoi(attr[7]));
+done:
+    return;
+}
+
 static void start_tag(void *userdata __unused, const XML_Char *tag_name,
                       const XML_Char **attr)
 {
@@ -326,6 +356,8 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
         section = OPERATOR_SPECIFIC;
     } else if (strcmp(tag_name, "gain_db_to_level_mapping") == 0) {
         section = GAIN_LEVEL_MAPPING;
+    } else if (strcmp(tag_name, "app_types") == 0) {
+        section = APP_TYPE;
     } else if (strcmp(tag_name, "device") == 0) {
         if ((section != ACDB) && (section != BACKEND_NAME) && (section != OPERATOR_SPECIFIC)) {
             ALOGE("device tag only supported for acdb/backend names");
@@ -359,6 +391,14 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
 
         section_process_fn fn = section_table[GAIN_LEVEL_MAPPING];
         fn(attr);
+    } else if (!strcmp(tag_name, "app")) {
+        if (section != APP_TYPE) {
+            ALOGE("app tag only valid in section APP_TYPE");
+            return;
+        }
+
+        section_process_fn fn = section_table[APP_TYPE];
+        fn(attr);
     }
 
     return;
@@ -377,6 +417,8 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
     } else if (strcmp(tag_name, "operator_specific") == 0) {
         section = ROOT;
     } else if (strcmp(tag_name, "gain_db_to_level_mapping") == 0) {
+        section = ROOT;
+    } else if (strcmp(tag_name, "app_types") == 0) {
         section = ROOT;
     }
 }

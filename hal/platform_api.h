@@ -50,6 +50,8 @@ int platform_get_snd_device_index(char *snd_device_index_name);
 int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id);
 int platform_get_snd_device_acdb_id(snd_device_t snd_device);
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device);
+int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *usecase,
+                                           int app_type, int sample_rate);
 int platform_get_default_app_type_v2(void *platform, enum usecase_type_t type, int *app_type);
 int platform_switch_voice_call_device_pre(void *platform);
 int platform_switch_voice_call_enable_device_config(void *platform,
@@ -125,4 +127,11 @@ bool platform_check_and_set_capture_backend_cfg(struct audio_device* adev,
                    struct audio_usecase *usecase, snd_device_t snd_device);
 
 int platform_snd_card_update(void *platform, enum card_status_t status);
+void platform_check_and_update_copp_sample_rate(void *platform, snd_device_t snd_device,
+     unsigned int stream_sr,int *sample_rate);
+int platform_get_snd_device_backend_index(snd_device_t snd_device);
+bool platform_supports_app_type_cfg();
+int platform_get_app_type_v2(void *platform, enum usecase_type_t type,
+                             int bw, int sr, int *app_type);
+void platform_add_app_type(int bw, const char *uc_type, int app_type, int max_sr);
 #endif // AUDIO_PLATFORM_API_H

@@ -1133,3 +1133,31 @@ int platform_snd_card_update(void *platform __unused,
 {
     return -1;
 }
+
+int platform_get_snd_device_backend_index(snd_device_t snd_device)
+{
+    return -ENOSYS;
+}
+
+void platform_check_and_update_copp_sample_rate(void* platform, snd_device_t snd_device,
+                                                unsigned int stream_sr, int* sample_rate)
+{
+
+}
+
+int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *usecase,
+                                       int app_type, int sample_rate)
+{
+    return -ENOSYS;
+}
+
+bool platform_supports_app_type_cfg() { return false; }
+
+void platform_add_app_type(int bw, const char *uc_type,
+                           int app_type, int max_sr) {}
+
+
+int platform_get_app_type_v2(void *platform, enum usecase_type_t type,
+                             int bw, int sr, int *app_type) {
+    return -ENOSYS;
+}

@@ -61,7 +61,8 @@
 
 #define MAX_SND_CARD_NAME_LEN 31
 
-#define DEFAULT_APP_TYPE_RX_PATH  0x11130
+#define DEFAULT_APP_TYPE_RX_PATH  69936
+#define DEFAULT_APP_TYPE_TX_PATH  69938
 
 #define TOSTRING_(x) #x
 #define TOSTRING(x) TOSTRING_(x)
@@ -93,6 +94,12 @@ struct operator_specific_device {
     int acdb_id;
 };
 
+#define BE_DAI_NAME_MAX_LENGTH 24
+struct be_dai_name_struct {
+    unsigned int be_id;
+    char be_name[BE_DAI_NAME_MAX_LENGTH];
+};
+
 static struct listnode operator_info_list;
 static struct listnode *operator_specific_device_table[SND_DEVICE_MAX];
 
@@ -102,6 +109,7 @@ typedef int  (*acdb_init_v2_cvd_t)(char *, char *, int);
 typedef int  (*acdb_init_v2_t)(char *);
 typedef int  (*acdb_init_t)();
 typedef void (*acdb_send_audio_cal_t)(int, int);
+typedef void (*acdb_send_audio_cal_v3_t)(int, int, int, int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
 typedef int (*acdb_send_gain_dep_cal_t)(int, int, int, int, int);
@@ -129,6 +137,7 @@ struct platform_data {
 #endif
     acdb_deallocate_t          acdb_deallocate;
     acdb_send_audio_cal_t      acdb_send_audio_cal;
+    acdb_send_audio_cal_v3_t   acdb_send_audio_cal_v3;
     acdb_send_voice_cal_t      acdb_send_voice_cal;
     acdb_reload_vocvoltable_t  acdb_reload_vocvoltable;
     acdb_send_gain_dep_cal_t   acdb_send_gain_dep_cal;
@@ -151,7 +160,7 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                             DEEP_BUFFER_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
                                             LOWLATENCY_PCM_DEVICE},
-    [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {MULTIMEDIA2_PCM_DEVICE,
+    [USECASE_AUDIO_PLAYBACK_HIFI] = {MULTIMEDIA2_PCM_DEVICE,
                                          MULTIMEDIA2_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] = {PLAYBACK_OFFLOAD_DEVICE,
                                         PLAYBACK_OFFLOAD_DEVICE},
@@ -532,7 +541,7 @@ static char * hw_interface_table[SND_DEVICE_MAX] = {0};
 static const struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_DEEP_BUFFER)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_LOW_LATENCY)},
-    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_MULTI_CH)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_HIFI)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_TTS)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_ULL)},
@@ -558,6 +567,23 @@ static const struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_DSM_FEEDBACK)},
 };
 
+static const struct name_to_index usecase_type_index[USECASE_TYPE_MAX] = {
+    {TO_NAME_INDEX(PCM_PLAYBACK)},
+    {TO_NAME_INDEX(PCM_CAPTURE)},
+    {TO_NAME_INDEX(VOICE_CALL)},
+    {TO_NAME_INDEX(PCM_HFP_CALL)},
+};
+
+struct app_type_entry {
+    int uc_type;
+    int bit_width;
+    int app_type;
+    int max_rate;
+    struct listnode node; // membership in app_type_entry_list;
+};
+
+static struct listnode app_type_entry_list;
+
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 #define ULL_PLATFORM_DELAY         (3*1000LL)
@@ -565,6 +591,8 @@ static const struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
 
 static pthread_once_t check_op_once_ctl = PTHREAD_ONCE_INIT;
 static bool is_tmus = false;
+
+static int init_be_dai_name_table(struct audio_device *adev);
 
 static void check_operator()
 {
@@ -665,6 +693,15 @@ static const char *get_operator_specific_device_mixer_path(snd_device_t snd_devi
         ret = device->mixer_path;
 
     return ret;
+}
+
+inline bool platform_supports_app_type_cfg()
+{
+#ifdef PLATFORM_MSM8998
+    return true;
+#else
+    return false;
+#endif
 }
 
 bool platform_send_gain_dep_cal(void *platform, int level)
@@ -1122,6 +1159,53 @@ bool resolveConfigFile(char file_name[MIXER_PATH_MAX_LENGTH]) {
     return false;
 }
 
+static int
+platform_backend_app_type_cfg_init(struct platform_data *pdata,
+                                   struct mixer *mixer)
+{
+    size_t app_type_cfg[128] = {0};
+    int length, num_app_types = 0;
+    struct mixer_ctl *ctl = NULL;
+
+    const char *mixer_ctl_name = "App Type Config";
+    ctl = mixer_get_ctl_by_name(mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",__func__, mixer_ctl_name);
+        return -1;
+    }
+
+    length = 1; // reserve index 0 for number of app types
+
+    struct listnode *node;
+    struct app_type_entry *entry;
+    list_for_each(node, &app_type_entry_list) {
+        entry = node_to_item(node, struct app_type_entry, node);
+        app_type_cfg[length++] = entry->app_type;
+        app_type_cfg[length++] = entry->max_rate;
+        app_type_cfg[length++] = entry->bit_width;
+        ALOGI("%s add entry %d %d", __func__, entry->app_type, entry->bit_width);
+        num_app_types += 1;
+    }
+
+    // default for capture
+    int t;
+    platform_get_default_app_type_v2(pdata,
+                                     PCM_CAPTURE,
+                                     &t);
+    app_type_cfg[length++] = t;
+    app_type_cfg[length++] = 48000;
+    app_type_cfg[length++] = 16;
+    num_app_types += 1;
+
+    if (num_app_types) {
+        app_type_cfg[0] = num_app_types;
+        if (mixer_ctl_set_array(ctl, app_type_cfg, length) < 0) {
+            ALOGE("Failed to set app type cfg");
+        }
+    }
+    return 0;
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char value[PROPERTY_VALUE_MAX];
@@ -1140,6 +1224,7 @@ void *platform_init(struct audio_device *adev)
     my_data->adev = adev;
 
     list_init(&operator_info_list);
+    list_init(&app_type_entry_list);
 
     set_platform_defaults(my_data);
     bool card_verifed[MAX_SND_CARD] = {0};
@@ -1360,6 +1445,12 @@ void *platform_init(struct audio_device *adev)
             ALOGE("%s: Could not find the symbol acdb_loader_deallocate_ACDB from %s",
                   __func__, LIB_ACDB_LOADER);
 
+        my_data->acdb_send_audio_cal_v3 = (acdb_send_audio_cal_v3_t)dlsym(my_data->acdb_handle,
+                                                    "acdb_loader_send_audio_cal_v3");
+        if (!my_data->acdb_send_audio_cal_v3)
+            ALOGE("%s: Could not find the symbol acdb_send_audio_cal_v3 from %s",
+                  __func__, LIB_ACDB_LOADER);
+
         my_data->acdb_send_audio_cal = (acdb_send_audio_cal_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_send_audio_cal");
         if (!my_data->acdb_send_audio_cal)
@@ -1433,6 +1524,11 @@ void *platform_init(struct audio_device *adev)
 
     platform_backend_config_init(my_data);
 
+    init_be_dai_name_table(adev);
+
+    if (platform_supports_app_type_cfg())
+        platform_backend_app_type_cfg_init(my_data, adev->mixer);
+
     return my_data;
 
 init_failed:
@@ -1446,6 +1542,7 @@ void platform_deinit(void *platform)
     int32_t dev;
     struct operator_info *info_item;
     struct operator_specific_device *device_item;
+    struct app_type_entry *ap;
     struct listnode *node;
 
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -1481,6 +1578,13 @@ void platform_deinit(void *platform)
         free(info_item->name);
         free(info_item->mccmnc);
         free(info_item);
+    }
+
+    while (!list_empty(&app_type_entry_list)) {
+        node = list_head(&app_type_entry_list);
+        list_remove(node);
+        ap = node_to_item(node, struct app_type_entry, node);
+        free(ap);
     }
 
     mixer_close(my_data->adev->mixer);
@@ -1668,13 +1772,6 @@ done:
     return ret;
 }
 
-int platform_get_default_app_type_v2(void *platform __unused, usecase_type_t type __unused,
-                                     int *app_type __unused)
-{
-    ALOGE("%s: Not implemented", __func__);
-    return -ENOSYS;
-}
-
 int platform_get_snd_device_acdb_id(snd_device_t snd_device)
 {
     if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
@@ -1725,6 +1822,9 @@ int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_dev_id, acdb_dev_type;
 
+    if (platform_supports_app_type_cfg()) // use v2 instead
+        return -ENOSYS;
+
     acdb_dev_id = acdb_device_table[audio_extn_get_spkr_prot_snd_device(snd_device)];
     if (acdb_dev_id < 0) {
         ALOGE("%s: Could not find acdb id for device(%d)",
@@ -1743,6 +1843,63 @@ int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
     }
     return 0;
 }
+
+int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *usecase,
+                                       int app_type, int sample_rate)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    int acdb_dev_id, acdb_dev_type;
+    int snd_device = SND_DEVICE_OUT_SPEAKER;
+    int new_snd_device[SND_DEVICE_OUT_END] = {0};
+    int i, num_devices = 1;
+
+    if (!platform_supports_app_type_cfg()) // use v1 instead
+        return -ENOSYS;
+
+    if (usecase->type == PCM_PLAYBACK)
+        snd_device = usecase->out_snd_device;
+    else if (usecase->type == PCM_CAPTURE)
+        snd_device = usecase->in_snd_device;
+
+    // skipped over get_spkr_prot_device
+    acdb_dev_id = acdb_device_table[snd_device];
+    if (acdb_dev_id < 0) {
+        ALOGE("%s: Could not find acdb id for device(%d)",
+              __func__, snd_device);
+        return -EINVAL;
+    }
+
+    if (platform_can_split_snd_device(snd_device,
+                                      &num_devices, new_snd_device) < 0) {
+        new_snd_device[0] = snd_device;
+    }
+
+    for (i = 0; i < num_devices; i++) {
+        acdb_dev_id = acdb_device_table[new_snd_device[i]];
+        if (acdb_dev_id < 0) {
+            ALOGE("%s: Could not find acdb id for device(%d)",
+                  __func__, new_snd_device[i]);
+            return -EINVAL;
+        }
+        ALOGV("%s: sending audio calibration for snd_device(%d) acdb_id(%d)",
+              __func__, new_snd_device[i], acdb_dev_id);
+        if (new_snd_device[i] >= SND_DEVICE_OUT_BEGIN &&
+                new_snd_device[i] < SND_DEVICE_OUT_END)
+            acdb_dev_type = ACDB_DEV_TYPE_OUT;
+        else
+            acdb_dev_type = ACDB_DEV_TYPE_IN;
+
+        if (my_data->acdb_send_audio_cal_v3) {
+            my_data->acdb_send_audio_cal_v3(acdb_dev_id, acdb_dev_type,
+                                            app_type, sample_rate, i);
+        } else if (my_data->acdb_send_audio_cal) {
+            my_data->acdb_send_audio_cal(acdb_dev_id, acdb_dev_type); // this version differs from internal
+        }
+    }
+
+    return 0;
+}
+
 
 int platform_switch_voice_call_device_pre(void *platform)
 {
@@ -3361,12 +3518,12 @@ static bool platform_check_capture_backend_cfg(struct audio_device* adev,
     return backend_change;
 }
 
-static void platform_pick_playback_cfg_for_uc(struct audio_device *adev,
-                                              struct audio_usecase *usecase,
-                                              snd_device_t snd_device,
-                                              unsigned int *bit_width,
-                                              unsigned int *sample_rate,
-                                              unsigned int *channels)
+static void pick_playback_cfg_for_uc(struct audio_device *adev,
+                                     struct audio_usecase *usecase,
+                                     snd_device_t snd_device,
+                                     unsigned int *bit_width,
+                                     unsigned int *sample_rate,
+                                     unsigned int *channels)
 {
     int i =0;
     struct listnode *node;
@@ -3397,6 +3554,27 @@ static void platform_pick_playback_cfg_for_uc(struct audio_device *adev,
     return;
 }
 
+static void headset_is_config_supported(unsigned int *bit_width,
+                                        unsigned int *sample_rate,
+                                        unsigned int *channels) {
+    switch (*bit_width) {
+        case 16:
+        case 24:
+            break;
+        default:
+            *bit_width = 16;
+            break;
+    }
+
+    if (*sample_rate > 192000) {
+        *sample_rate = 192000;
+    }
+
+    if (*channels > 2) {
+        *channels = 2;
+    }
+}
+
 static bool platform_check_playback_backend_cfg(struct audio_device* adev,
                                              struct audio_usecase* usecase,
                                              snd_device_t snd_device,
@@ -3406,10 +3584,8 @@ static bool platform_check_playback_backend_cfg(struct audio_device* adev,
     unsigned int bit_width;
     unsigned int sample_rate;
     unsigned int channels;
-    bool passthrough_enabled = false;
     int backend_idx = DEFAULT_CODEC_BACKEND;
     struct platform_data *my_data = (struct platform_data *)adev->platform;
-    bool channels_updated = false;
 
     if (snd_device == SND_DEVICE_OUT_BT_SCO ||
         snd_device == SND_DEVICE_OUT_BT_SCO_WB) {
@@ -3443,10 +3619,10 @@ static bool platform_check_playback_backend_cfg(struct audio_device* adev,
          *
          * Exception: 16 bit playbacks is allowed through 16 bit/48/44.1 khz backend only
          */
-        platform_pick_playback_cfg_for_uc(adev, usecase, snd_device,
-                                          &bit_width,
-                                          &sample_rate,
-                                          &channels);
+        pick_playback_cfg_for_uc(adev, usecase, snd_device,
+                                 &bit_width,
+                                 &sample_rate,
+                                 &channels);
     }
 
     switch (backend_idx) {
@@ -3456,17 +3632,15 @@ static bool platform_check_playback_backend_cfg(struct audio_device* adev,
             ALOGV("%s: USB BE configured as bit_width(%d)sample_rate(%d)channels(%d)",
                   __func__, bit_width, sample_rate, channels);
             break;
-        case DEFAULT_CODEC_BACKEND:
         case HEADPHONE_BACKEND:
+            headset_is_config_supported(&bit_width, &sample_rate, &channels);
+            break;
+        case DEFAULT_CODEC_BACKEND:
         default:
             bit_width = platform_get_snd_device_bit_width(snd_device);
             sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
             channels = CODEC_BACKEND_DEFAULT_CHANNELS;
             break;
-    }
-
-    if (channels != my_data->current_backend_cfg[backend_idx].channels) {
-        channels_updated = true;
     }
 
     ALOGV("%s:becf: afe: Codec selected backend: %d updated bit width: %d and"
@@ -3475,13 +3649,13 @@ static bool platform_check_playback_backend_cfg(struct audio_device* adev,
 
     // Force routing if the expected bitwdith or samplerate
     // is not same as current backend comfiguration
-    if ((bit_width != my_data->current_backend_cfg[backend_idx].bit_width) ||
-        (sample_rate != my_data->current_backend_cfg[backend_idx].sample_rate) ||
-        passthrough_enabled || channels_updated) {
+    if (bit_width != my_data->current_backend_cfg[backend_idx].bit_width ||
+        sample_rate != my_data->current_backend_cfg[backend_idx].sample_rate ||
+        channels != my_data->current_backend_cfg[backend_idx].channels) {
         backend_cfg->bit_width = bit_width;
         backend_cfg->sample_rate = sample_rate;
         backend_cfg->channels = channels;
-        backend_cfg->passthrough_enabled = passthrough_enabled;
+        backend_cfg->passthrough_enabled = false;
         backend_change = true;
         ALOGV("%s:becf: afe: Codec backend needs to be updated. new bit width: %d"
               "new sample rate: %d new channels: %d",
@@ -3566,3 +3740,237 @@ bool platform_check_and_set_capture_backend_cfg(struct audio_device* adev,
     return false;
 }
 
+static int max_be_dai_names = 0;
+static const struct be_dai_name_struct *be_dai_name_table;
+
+/*
+ * Retrieves the be_dai_name_table from kernel to enable a mapping
+ * between sound device hw interfaces and backend IDs. This allows HAL to
+ * specify the backend a specific calibration is needed for.
+ */
+static int init_be_dai_name_table(struct audio_device *adev)
+{
+    const char *mixer_ctl_name = "Backend DAI Name Table";
+    struct mixer_ctl *ctl;
+    int i, j, ret, size;
+    bool valid_hw_interface;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer name %s\n",
+               __func__, mixer_ctl_name);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    mixer_ctl_update(ctl);
+
+    size = mixer_ctl_get_num_values(ctl);
+    if (size <= 0){
+        ALOGE("%s: Failed to get %s size %d\n",
+               __func__, mixer_ctl_name, size);
+        ret = -EFAULT;
+        goto done;
+    }
+
+    posix_memalign((void **)&be_dai_name_table, 32, size);
+    if (be_dai_name_table == NULL) {
+        ALOGE("%s: Failed to allocate memory for %s\n",
+               __func__, mixer_ctl_name);
+        ret = -ENOMEM;
+        goto freeMem;
+    }
+
+    ret = mixer_ctl_get_array(ctl, (void *)be_dai_name_table, size);
+    if (ret) {
+        ALOGE("%s: Failed to get %s, ret %d\n",
+               __func__, mixer_ctl_name, ret);
+        ret = -EFAULT;
+        goto freeMem;
+    }
+
+    if (be_dai_name_table != NULL) {
+        max_be_dai_names = size / sizeof(struct be_dai_name_struct);
+        ALOGV("%s: Successfully got %s, number of be dais is %d\n",
+              __func__, mixer_ctl_name, max_be_dai_names);
+        ret = 0;
+    } else {
+        ALOGE("%s: Failed to get %s\n", __func__, mixer_ctl_name);
+        ret = -EFAULT;
+        goto freeMem;
+    }
+
+    /*
+     * Validate all sound devices have a valid backend set to catch
+     * errors for uncommon sound devices
+     */
+    for (i = 0; i < SND_DEVICE_MAX; i++) {
+        valid_hw_interface = false;
+
+        if (hw_interface_table[i] == NULL) {
+            ALOGW("%s: sound device %s has no hw interface set\n",
+                  __func__, platform_get_snd_device_name(i));
+            continue;
+        }
+
+        for (j = 0; j < max_be_dai_names; j++) {
+            if (strcmp(hw_interface_table[i], be_dai_name_table[j].be_name)
+                == 0) {
+                valid_hw_interface = true;
+                break;
+            }
+        }
+        if (!valid_hw_interface)
+            ALOGD("%s: sound device %s does not have a valid hw interface set "
+                  "(disregard for combo devices) %s\n",
+                  __func__, platform_get_snd_device_name(i),
+                  hw_interface_table[i]);
+    }
+
+    goto done;
+
+freeMem:
+    if (be_dai_name_table) {
+        free((void *)be_dai_name_table);
+        be_dai_name_table = NULL;
+    }
+
+done:
+    return ret;
+}
+
+int platform_get_snd_device_backend_index(snd_device_t device)
+{
+    int i, be_dai_id;
+    const char * hw_interface_name = NULL;
+
+    ALOGV("%s: enter with device %d\n", __func__, device);
+
+    if ((device <= SND_DEVICE_MIN) || (device >= SND_DEVICE_MAX)) {
+        ALOGE("%s: Invalid snd_device = %d",
+              __func__, device);
+        be_dai_id = -EINVAL;
+        goto done;
+    }
+
+    /* Get string value of necessary backend for device */
+    hw_interface_name = hw_interface_table[device];
+    if (hw_interface_name == NULL) {
+        ALOGE("%s: no hw_interface set for device %d\n", __func__, device);
+        be_dai_id = -EINVAL;
+        goto done;
+    }
+
+    /* Check if be dai name table was retrieved successfully */
+    if (be_dai_name_table == NULL) {
+        ALOGE("%s: BE DAI Name Table is not present\n", __func__);
+        be_dai_id = -EFAULT;
+        goto done;
+    }
+
+    /* Get backend ID for device specified */
+    for (i = 0; i < max_be_dai_names; i++) {
+        if (strcmp(hw_interface_name, be_dai_name_table[i].be_name) == 0) {
+            be_dai_id = be_dai_name_table[i].be_id;
+            goto done;
+        }
+    }
+    ALOGE("%s: no interface matching name %s\n", __func__, hw_interface_name);
+    be_dai_id = -EINVAL;
+    goto done;
+
+done:
+    return be_dai_id;
+}
+
+void platform_check_and_update_copp_sample_rate(void* platform, snd_device_t snd_device,
+                                                unsigned int stream_sr, int* sample_rate)
+{
+    struct platform_data* my_data = (struct platform_data *)platform;
+    int backend_idx = platform_get_backend_index(snd_device);
+    int device_sr = my_data->current_backend_cfg[backend_idx].sample_rate;
+    /*
+     *Check if device SR is multiple of 8K or 11.025 Khz
+     *check if the stream SR is multiple of same base, if yes
+     *then have copp SR equal to stream SR, this ensures that
+     *post processing happens at stream SR, else have
+     *copp SR equal to device SR.
+     */
+    if (!(((sample_rate_multiple(device_sr, SAMPLE_RATE_8000)) &&
+           (sample_rate_multiple(stream_sr, SAMPLE_RATE_8000))) ||
+          ((sample_rate_multiple(device_sr, SAMPLE_RATE_11025)) &&
+           (sample_rate_multiple(stream_sr, SAMPLE_RATE_11025))))) {
+        *sample_rate = device_sr;
+    } else
+        *sample_rate = stream_sr;
+
+    ALOGI("sn_device %d device sr %d stream sr %d copp sr %d", snd_device, device_sr, stream_sr
+          , *sample_rate);
+
+}
+
+// called from info parser
+void platform_add_app_type(int bw, const char *uc_type,
+                           int app_type, int max_rate) {
+    struct app_type_entry *ap =
+            (struct app_type_entry *)calloc(1, sizeof(struct app_type_entry));
+
+    if (!ap) {
+        ALOGE("%s failed to allocate mem for app type", __func__);
+        return;
+    }
+
+    ap->uc_type = -1;
+    for (int i=0; i<USECASE_TYPE_MAX; i++) {
+        if (!strcmp(uc_type, usecase_type_index[i].name)) {
+            ap->uc_type = usecase_type_index[i].index;
+            break;
+        }
+    }
+
+    if (ap->uc_type == -1) {
+        free(ap);
+        return;
+    }
+
+    ALOGI("%s bw %d uc %s app_type %d max_rate %d",
+          __func__, bw, uc_type, app_type, max_rate);
+    ap->bit_width = bw;
+    ap->app_type = app_type;
+    ap->max_rate = max_rate;
+    list_add_tail(&app_type_entry_list, &ap->node);
+}
+
+
+int platform_get_default_app_type_v2(void *platform __unused,
+                                     usecase_type_t type,
+                                     int *app_type )
+{
+    if (type == PCM_PLAYBACK)
+        *app_type = DEFAULT_APP_TYPE_RX_PATH;
+    else
+        *app_type = DEFAULT_APP_TYPE_TX_PATH;
+    return 0;
+}
+
+int platform_get_app_type_v2(void *platform, usecase_type_t uc_type,
+                             int bw, int sr __unused,
+                             int *app_type)
+{
+    struct listnode *node;
+    struct app_type_entry *entry;
+    *app_type = -1;
+    list_for_each(node, &app_type_entry_list) {
+        entry = node_to_item(node, struct app_type_entry, node);
+        if (entry->bit_width == bw &&
+            entry->uc_type == uc_type) {
+            *app_type = entry->app_type;
+            break;
+        }
+    }
+
+    if (*app_type == -1) {
+        return platform_get_default_app_type_v2(platform, uc_type, app_type);
+    }
+    return 0;
+}
