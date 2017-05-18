@@ -173,12 +173,17 @@ struct audio_out_render_window_param {
    uint64_t        render_we; /* render window end value in microseconds*/
 };
 
+struct audio_out_start_delay_param {
+   uint64_t        start_delay; /* session start delay in microseconds*/
+};
+
 typedef union {
     struct source_tracking_param st_params;
     struct sound_focus_param sf_params;
     struct aptx_dec_param aptx_params;
     struct audio_avt_device_drift_param drift_params;
     struct audio_out_render_window_param render_window_param;
+    struct audio_out_start_delay_param start_delay;
 } audio_extn_param_payload;
 
 typedef enum {
@@ -186,7 +191,8 @@ typedef enum {
     AUDIO_EXTN_PARAM_SOUND_FOCUS,
     AUDIO_EXTN_PARAM_APTX_DEC,
     AUDIO_EXTN_PARAM_AVT_DEVICE_DRIFT,
-    AUDIO_EXTN_PARAM_OUT_RENDER_WINDOW /* PARAM to set render window */
+    AUDIO_EXTN_PARAM_OUT_RENDER_WINDOW, /* PARAM to set render window */
+    AUDIO_EXTN_PARAM_OUT_START_DELAY
 } audio_extn_param_id;
 
 #endif /* AUDIO_DEFS_H */

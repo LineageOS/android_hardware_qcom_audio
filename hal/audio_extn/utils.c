@@ -1876,3 +1876,63 @@ int audio_extn_utils_compress_set_render_window(
     return 0;
 }
 #endif
+
+#ifdef SNDRV_COMPRESS_START_DELAY
+int audio_extn_utils_compress_set_start_delay(
+            struct stream_out *out,
+            struct audio_out_start_delay_param *delay_param)
+{
+    struct snd_compr_metadata metadata;
+    int ret = -EINVAL;
+
+    if(delay_param == NULL) {
+        ALOGE("%s:: Invalid delay_param", __func__);
+        goto exit;
+    }
+
+    ALOGD("%s:: render start delay 0x%"PRIx64" ", __func__,
+          delay_param->start_delay);
+
+    if (!is_offload_usecase(out->usecase)) {
+        ALOGE("%s:: not supported for non offload session", __func__);
+        goto exit;
+    }
+
+   if ((out->render_mode == RENDER_MODE_AUDIO_MASTER) ||
+       (out->render_mode == RENDER_MODE_AUDIO_STC_MASTER)) {
+        /* store it to reconfigure in start_output_stream() */
+        out->delay_param.start_delay = delay_param->start_delay;
+    } else {
+        ALOGD("%s:: only supported in timestamp mode, current "
+              "render mode mode %d", __func__, out->render_mode);
+        goto exit;
+    }
+
+    if (!out->compr) {
+        ALOGW("%s:: offload session not yet opened,"
+               "start delay will be configure later", __func__);
+       goto exit;
+    }
+
+    metadata.key = SNDRV_COMPRESS_START_DELAY;
+    metadata.value[0] = 0xFFFFFFFF & delay_param->start_delay; /* lsb */
+    metadata.value[1] = \
+            (0xFFFFFFFF00000000 & delay_param->start_delay) >> 32; /* msb*/
+
+    ret = compress_set_metadata(out->compr, &metadata);
+    if(ret) {
+        ALOGE("%s::error %s", __func__, compress_get_error(out->compr));
+    }
+
+exit:
+    return ret;
+}
+#else
+int audio_extn_utils_compress_set_start_delay(
+            struct stream_out *out __unused,
+            struct audio_out_start_delay_param *delay_param __unused)
+{
+    ALOGD("%s:: configuring render window not supported", __func__);
+    return 0;
+}
+#endif

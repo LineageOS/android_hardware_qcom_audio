@@ -266,6 +266,7 @@ struct stream_out {
     uint32_t platform_latency;
     render_mode_t render_mode;
     struct audio_out_render_window_param render_window; /*render winodw*/
+    struct audio_out_start_delay_param delay_param; /*start delay*/
 
     audio_offload_info_t info;
 };
