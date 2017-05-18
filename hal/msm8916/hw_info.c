@@ -39,6 +39,11 @@
 #include "platform.h"
 #include "platform_api.h"
 
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_HW_INFO
+#include <log_utils.h>
+#endif
 
 struct hardware_info {
     char name[HW_INFO_ARRAY_MAX_SIZE];

@@ -34,6 +34,12 @@
 #include "sound/compress_params.h"
 #include "sound/devdep_params.h"
 
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_DOLBY
+#include <log_utils.h>
+#endif
+
 #ifdef DS1_DOLBY_DDP_ENABLED
 
 #define AUDIO_PARAMETER_DDP_DEV          "ddp_device"

@@ -40,6 +40,12 @@
 #include <platform.h>
 #include <math.h>
 
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_PLATFORM_INFO
+#include <log_utils.h>
+#endif
+
 #define BUF_SIZE                    1024
 
 typedef enum {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014, 2016-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2014 The Android Open Source Project
@@ -32,6 +32,12 @@
 #include "platform.h"
 #include "platform_api.h"
 #include "edid.h"
+
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_EDID
+#include <log_utils.h>
+#endif
 
 static const char * edid_format_to_str(unsigned char format)
 {

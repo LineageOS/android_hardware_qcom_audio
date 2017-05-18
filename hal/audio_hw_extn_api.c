@@ -40,6 +40,12 @@
 #include "audio_extn.h"
 #include "audio_hw_extn_api.h"
 
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_AUDIO_HW_EXTN_API
+#include <log_utils.h>
+#endif
+
 /* default timestamp metadata definition if not defined in kernel*/
 #ifndef COMPRESSED_TIMESTAMP_FLAG
 #define COMPRESSED_TIMESTAMP_FLAG 0
