@@ -260,18 +260,35 @@ struct qahw_avt_device_drift_param {
     uint64_t        ref_timer_abs_ts;
 };
 
+/*use these for setting infine window.i.e free run mode */
+#define QAHW_MAX_RENDER_START_WINDOW 0x8000000000000000
+#define QAHW_MAX_RENDER_END_WINDOW   0x7FFFFFFFFFFFFFFF
+
+struct qahw_out_render_window_param {
+   uint64_t        render_ws; /* render window start value microseconds*/
+   uint64_t        render_we; /* render window end value microseconds*/
+};
+
+struct qahw_out_start_delay_param {
+   uint64_t       start_delay; /* session start delay in microseconds*/
+};
+
 typedef union {
     struct qahw_source_tracking_param st_params;
     struct qahw_sound_focus_param sf_params;
     struct qahw_aptx_dec_param aptx_params;
     struct qahw_avt_device_drift_param drift_params;
+    struct qahw_out_render_window_param render_window_params;
+    struct qahw_out_start_delay_param start_delay;
 } qahw_param_payload;
 
 typedef enum {
     QAHW_PARAM_SOURCE_TRACK,
     QAHW_PARAM_SOUND_FOCUS,
     QAHW_PARAM_APTX_DEC,
-    QAHW_PARAM_AVT_DEVICE_DRIFT /* PARAM to query AV timer vs device drift */
+    QAHW_PARAM_AVT_DEVICE_DRIFT, /* PARAM to query AV timer vs device drift */
+    QAHW_PARAM_OUT_RENDER_WINDOW, /* PARAM to set render window */
+    QAHW_PARAM_OUT_START_DELAY /* PARAM to set session start delay*/
 } qahw_param_id;
 
 __END_DECLS
