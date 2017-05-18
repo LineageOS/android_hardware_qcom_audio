@@ -340,6 +340,13 @@ static int voip_start_call(struct audio_device *adev,
 
         select_devices(adev, USECASE_COMPRESS_VOIP_CALL);
 
+        if (uc_info->in_snd_device == SND_DEVICE_NONE &&
+            uc_info->out_snd_device == SND_DEVICE_NONE) {
+            ALOGD("No valid input output device return");
+            ret = -EIO;
+            goto error_start_voip;
+        }
+
         pcm_dev_rx_id = platform_get_pcm_device_id(uc_info->id, PCM_PLAYBACK);
         pcm_dev_tx_id = platform_get_pcm_device_id(uc_info->id, PCM_CAPTURE);
 
@@ -541,6 +548,14 @@ int voice_extn_compress_voip_start_output_stream(struct stream_out *out)
         goto error;
     }
 
+    if (out->devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+         if (!adev->bt_sco_on) {
+             ALOGE("%s: SCO profile is not ready, return error", __func__);
+             ret = -EAGAIN;
+             goto error;
+         }
+    }
+
     if (!voip_data.out_stream_count)
         ret = voice_extn_compress_voip_open_output_stream(out);
 
@@ -572,6 +587,12 @@ int voice_extn_compress_voip_start_input_stream(struct stream_in *in)
         CARD_STATUS_OFFLINE == adev->card_status) {
         ret = -ENETRESET;
         ALOGE("%s: sound card is not active/SSR returning error %d ", __func__, ret);
+        goto error;
+    }
+
+    if (audio_is_bluetooth_sco_device(in->device) && !adev->bt_sco_on) {
+        ret = -EIO;
+        ALOGE("%s SCO is not ready return error %d", __func__,ret);
         goto error;
     }
 
