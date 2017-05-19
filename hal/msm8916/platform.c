@@ -215,6 +215,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TX] = "voice-tx",
     [SND_DEVICE_OUT_AFE_PROXY] = "afe-proxy",
     [SND_DEVICE_OUT_USB_HEADSET] = "usb-headphones",
+    [SND_DEVICE_OUT_USB_HEADPHONES] = "usb-headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = "speaker-and-usb-headphones",
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = "speaker-protected",
     [SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED] = "voice-speaker-protected",
@@ -302,6 +303,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TX] = 45,
     [SND_DEVICE_OUT_AFE_PROXY] = 0,
     [SND_DEVICE_OUT_USB_HEADSET] = 45,
+    [SND_DEVICE_OUT_USB_HEADPHONES] = 45,
     [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 14,
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = 124,
     [SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED] = 101,
@@ -396,6 +398,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TX)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_AFE_PROXY)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_USB_HEADSET)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_USB_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED)},
@@ -663,6 +666,7 @@ static void set_platform_defaults()
     backend_table[SND_DEVICE_IN_VOICE_RX] = strdup("afe-proxy");
     backend_table[SND_DEVICE_OUT_AFE_PROXY] = strdup("afe-proxy");
     backend_table[SND_DEVICE_OUT_USB_HEADSET] = strdup("usb-headphones");
+    backend_table[SND_DEVICE_OUT_USB_HEADPHONES] = strdup("usb-headphones");
     backend_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] =
         strdup("speaker-and-usb-headphones");
     backend_table[SND_DEVICE_IN_USB_HEADSET_MIC] = strdup("usb-headset-mic");
