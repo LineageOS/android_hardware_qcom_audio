@@ -213,7 +213,6 @@ struct stream_out {
     int send_new_metadata;
     bool realtime;
     int af_period_multiplier;
-    bool routing_change;
     struct audio_device *dev;
     card_status_t card_status;
 
@@ -243,7 +242,6 @@ struct stream_in {
     bool is_st_session_active;
     bool realtime;
     int af_period_multiplier;
-    bool routing_change;
     struct audio_device *dev;
     audio_format_t format;
     card_status_t card_status;
