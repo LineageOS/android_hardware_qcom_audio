@@ -349,6 +349,7 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_RECORD_AFE_PROXY] = {AFE_PROXY_PLAYBACK_PCM_DEVICE,
                                         AFE_PROXY_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE] = {MULTIMEDIA9_PCM_DEVICE, -1},
+    [USECASE_AUDIO_TRANSCODE_LOOPBACK] = {TRANSCODE_LOOPBACK_RX_DEV_ID, TRANSCODE_LOOPBACK_TX_DEV_ID},
 
 };
 
@@ -5578,10 +5579,19 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
 
     backend_idx = platform_get_backend_index(snd_device);
 
-    backend_cfg.bit_width = usecase->stream.out->bit_width;
-    backend_cfg.sample_rate = usecase->stream.out->sample_rate;
-    backend_cfg.format = usecase->stream.out->format;
-    backend_cfg.channels = audio_channel_count_from_out_mask(usecase->stream.out->channel_mask);
+    if (usecase->type == TRANSCODE_LOOPBACK) {
+        backend_cfg.bit_width = usecase->stream.inout->out_config.bit_width;
+        backend_cfg.sample_rate = usecase->stream.inout->out_config.sample_rate;
+        backend_cfg.format = usecase->stream.inout->out_config.format;
+        backend_cfg.channels = audio_channel_count_from_out_mask(
+                usecase->stream.inout->out_config.channel_mask);
+    } else {
+        backend_cfg.bit_width = usecase->stream.out->bit_width;
+        backend_cfg.sample_rate = usecase->stream.out->sample_rate;
+        backend_cfg.format = usecase->stream.out->format;
+        backend_cfg.channels = audio_channel_count_from_out_mask(usecase->stream.out->channel_mask);
+    }
+
     /*this is populated by check_codec_backend_cfg hence set default value to false*/
     backend_cfg.passthrough_enabled = false;
 
@@ -5711,7 +5721,14 @@ bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev,
     struct audio_backend_cfg backend_cfg;
 
     backend_cfg.passthrough_enabled = false;
-    if(usecase->type == PCM_CAPTURE) {
+
+    if (usecase->type == TRANSCODE_LOOPBACK) {
+        backend_cfg.bit_width = usecase->stream.inout->in_config.bit_width;
+        backend_cfg.sample_rate = usecase->stream.inout->in_config.sample_rate;
+        backend_cfg.format = usecase->stream.inout->in_config.format;
+        backend_cfg.channels = audio_channel_count_from_out_mask(
+                usecase->stream.inout->in_config.channel_mask);
+    } else if (usecase->type == PCM_CAPTURE) {
         backend_cfg.sample_rate= usecase->stream.in->sample_rate;
         backend_cfg.bit_width= usecase->stream.in->bit_width;
         backend_cfg.format= usecase->stream.in->format;
