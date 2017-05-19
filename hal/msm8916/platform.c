@@ -2299,29 +2299,35 @@ int platform_snd_card_update(void *platform __unused,
     return -1;
 }
 
-int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *usecase,
-                                       int app_type, int sample_rate)
+int platform_send_audio_calibration_v2(void *platform __unused,
+                                       struct audio_usecase *usecase __unused,
+                                       int app_type __unused,
+                                       int sample_rate __unused)
 {
     return -ENOSYS;
 }
 
-void platform_check_and_update_copp_sample_rate(void* platform, snd_device_t snd_device,
-                                                unsigned int stream_sr, int* sample_rate)
+void platform_check_and_update_copp_sample_rate(void* platform __unused,
+                                               snd_device_t snd_device __unused,
+                                                unsigned int stream_sr __unused,
+                                                int* sample_rate __unused)
 {
 
 }
 
-int platform_get_snd_device_backend_index(snd_device_t snd_device)
+int platform_get_snd_device_backend_index(snd_device_t snd_device __unused)
 {
     return -ENOSYS;
 }
 
 bool platform_supports_app_type_cfg() { return false; }
 
-void platform_add_app_type(int bw, const char *uc_type,
-                           int app_type, int max_sr) {}
+void platform_add_app_type(int bw __unused, const char *uc_type __unused,
+                           int app_type __unused, int max_sr __unused) {}
 
-int platform_get_app_type_v2(void *platform, enum usecase_type_t type,
-                             int bw, int sr, int *app_type) {
+int platform_get_app_type_v2(void *platform __unused,
+                             enum usecase_type_t type __unused,
+                             int bw __unused, int sr __unused,
+                             int *app_type __unused) {
     return -ENOSYS;
 }
