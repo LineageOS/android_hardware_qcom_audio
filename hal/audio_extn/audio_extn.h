@@ -186,4 +186,8 @@ int audio_extn_snd_mon_register_listener(void *stream, snd_mon_cb cb);
 int audio_extn_snd_mon_unregister_listener(void *stream);
 #endif
 
+bool audio_extn_utils_resolve_config_file(char[]);
+void audio_extn_utils_get_platform_info(const char* snd_card_name,
+                                        char* platform_info_file);
+int audio_extn_utils_get_snd_card_num();
 #endif /* AUDIO_EXTN_H */

@@ -26,6 +26,7 @@
 #include <cutils/log.h>
 #include <cutils/misc.h>
 
+#include "acdb.h"
 #include "audio_hw.h"
 #include "platform.h"
 #include "platform_api.h"
@@ -292,4 +293,151 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
         platform_get_default_app_type_v2(adev->platform, type, &app_type);
         platform_send_audio_calibration_v2(adev->platform, usecase, app_type, 48000);
     }
+}
+
+#define MAX_SND_CARD 8
+#define RETRY_US 500000
+#define RETRY_NUMBER 10
+
+#define min(a, b) ((a) < (b) ? (a) : (b))
+
+static const char *kConfigLocationList[] =
+        {"/odm/etc", "/vendor/etc", "/system/etc"};
+static const int kConfigLocationListSize =
+        (sizeof(kConfigLocationList) / sizeof(kConfigLocationList[0]));
+
+bool audio_extn_utils_resolve_config_file(char file_name[MIXER_PATH_MAX_LENGTH])
+{
+    char full_config_path[MIXER_PATH_MAX_LENGTH];
+    for (int i = 0; i < kConfigLocationListSize; i++) {
+        snprintf(full_config_path,
+                 MIXER_PATH_MAX_LENGTH,
+                 "%s/%s",
+                 kConfigLocationList[i],
+                 file_name);
+        if (F_OK == access(full_config_path, 0)) {
+            strcpy(file_name, full_config_path);
+            return true;
+        }
+    }
+    return false;
+}
+
+/* platform_info_file should be size 'MIXER_PATH_MAX_LENGTH' */
+void audio_extn_utils_get_platform_info(const char* snd_card_name, char* platform_info_file)
+{
+    if (NULL == snd_card_name) {
+        return;
+    }
+
+    struct snd_card_split *snd_split_handle = NULL;
+
+    audio_extn_set_snd_card_split(snd_card_name);
+    snd_split_handle = audio_extn_get_snd_card_split();
+
+    snprintf(platform_info_file, MIXER_PATH_MAX_LENGTH, "%s_%s_%s.xml",
+                     PLATFORM_INFO_XML_BASE_STRING, snd_split_handle->snd_card,
+                     snd_split_handle->form_factor);
+
+    if (!audio_extn_utils_resolve_config_file(platform_info_file)) {
+        memset(platform_info_file, 0, MIXER_PATH_MAX_LENGTH);
+        snprintf(platform_info_file, MIXER_PATH_MAX_LENGTH, "%s_%s.xml",
+                     PLATFORM_INFO_XML_BASE_STRING, snd_split_handle->snd_card);
+
+        if (!audio_extn_utils_resolve_config_file(platform_info_file)) {
+            memset(platform_info_file, 0, MIXER_PATH_MAX_LENGTH);
+            strlcpy(platform_info_file, PLATFORM_INFO_XML_PATH, MIXER_PATH_MAX_LENGTH);
+            audio_extn_utils_resolve_config_file(platform_info_file);
+        }
+    }
+}
+
+int audio_extn_utils_get_snd_card_num()
+{
+
+    void *hw_info = NULL;
+    struct mixer *mixer = NULL;
+    int retry_num = 0;
+    int snd_card_num = 0;
+    const char* snd_card_name = NULL;
+    char platform_info_file[MIXER_PATH_MAX_LENGTH]= {0};
+
+    struct acdb_platform_data *my_data = calloc(1, sizeof(struct acdb_platform_data));
+
+    bool card_verifed[MAX_SND_CARD] = {0};
+    const int retry_limit = property_get_int32("audio.snd_card.open.retries", RETRY_NUMBER);
+
+    for (;;) {
+        if (snd_card_num >= MAX_SND_CARD) {
+            if (retry_num++ >= retry_limit) {
+                ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
+                snd_card_num = -1;
+                goto done;
+            }
+
+            snd_card_num = 0;
+            usleep(RETRY_US);
+            continue;
+        }
+
+        if (card_verifed[snd_card_num]) {
+            ++snd_card_num;
+            continue;
+        }
+
+        mixer = mixer_open(snd_card_num);
+
+        if (!mixer) {
+            ALOGE("%s: Unable to open the mixer card: %d", __func__,
+               snd_card_num);
+            ++snd_card_num;
+            continue;
+        }
+
+        card_verifed[snd_card_num] = true;
+
+        snd_card_name = mixer_get_name(mixer);
+        hw_info = hw_info_init(snd_card_name);
+
+        audio_extn_utils_get_platform_info(snd_card_name, platform_info_file);
+
+        /* Initialize snd card name specific ids and/or backends*/
+        snd_card_info_init(platform_info_file, my_data, &acdb_set_parameters);
+
+        /* validate the sound card name
+         * my_data->snd_card_name can contain
+         *     <a> complete sound card name, i.e. <device>-<codec>-<form_factor>-snd-card
+         *         example: msm8994-tomtom-mtp-snd-card
+         *     <b> or sub string of the card name, i.e. <device>-<codec>
+         *         example: msm8994-tomtom
+         * snd_card_name is truncated to 32 charaters as per mixer_get_name() implementation
+         * so use min of my_data->snd_card_name and snd_card_name length for comparison
+         */
+
+        if (my_data->snd_card_name != NULL &&
+                strncmp(snd_card_name, my_data->snd_card_name,
+                        min(strlen(snd_card_name), strlen(my_data->snd_card_name))) != 0) {
+            ALOGI("%s: found valid sound card %s, but not primary sound card %s",
+                   __func__, snd_card_name, my_data->snd_card_name);
+            ++snd_card_num;
+            mixer_close(mixer);
+            mixer = NULL;
+            hw_info_deinit(hw_info);
+            hw_info = NULL;
+            continue;
+        }
+
+        ALOGI("%s: found sound card %s, primary sound card expeted is %s",
+              __func__, snd_card_name, my_data->snd_card_name);
+        break;
+    }
+
+done:
+    mixer_close(mixer);
+    hw_info_deinit(hw_info);
+
+    if (my_data)
+        free(my_data);
+
+    return snd_card_num;
 }
