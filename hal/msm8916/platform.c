@@ -215,6 +215,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TX] = "voice-tx",
     [SND_DEVICE_OUT_AFE_PROXY] = "afe-proxy",
     [SND_DEVICE_OUT_USB_HEADSET] = "usb-headphones",
+    [SND_DEVICE_OUT_USB_HEADPHONES] = "usb-headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = "speaker-and-usb-headphones",
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = "speaker-protected",
     [SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED] = "voice-speaker-protected",
@@ -302,6 +303,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TX] = 45,
     [SND_DEVICE_OUT_AFE_PROXY] = 0,
     [SND_DEVICE_OUT_USB_HEADSET] = 45,
+    [SND_DEVICE_OUT_USB_HEADPHONES] = 45,
     [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 14,
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = 124,
     [SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED] = 101,
@@ -396,6 +398,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TX)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_AFE_PROXY)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_USB_HEADSET)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_USB_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED)},
@@ -663,6 +666,7 @@ static void set_platform_defaults()
     backend_table[SND_DEVICE_IN_VOICE_RX] = strdup("afe-proxy");
     backend_table[SND_DEVICE_OUT_AFE_PROXY] = strdup("afe-proxy");
     backend_table[SND_DEVICE_OUT_USB_HEADSET] = strdup("usb-headphones");
+    backend_table[SND_DEVICE_OUT_USB_HEADPHONES] = strdup("usb-headphones");
     backend_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] =
         strdup("speaker-and-usb-headphones");
     backend_table[SND_DEVICE_IN_USB_HEADSET_MIC] = strdup("usb-headset-mic");
@@ -2295,29 +2299,35 @@ int platform_snd_card_update(void *platform __unused,
     return -1;
 }
 
-int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *usecase,
-                                       int app_type, int sample_rate)
+int platform_send_audio_calibration_v2(void *platform __unused,
+                                       struct audio_usecase *usecase __unused,
+                                       int app_type __unused,
+                                       int sample_rate __unused)
 {
     return -ENOSYS;
 }
 
-void platform_check_and_update_copp_sample_rate(void* platform, snd_device_t snd_device,
-                                                unsigned int stream_sr, int* sample_rate)
+void platform_check_and_update_copp_sample_rate(void* platform __unused,
+                                               snd_device_t snd_device __unused,
+                                                unsigned int stream_sr __unused,
+                                                int* sample_rate __unused)
 {
 
 }
 
-int platform_get_snd_device_backend_index(snd_device_t snd_device)
+int platform_get_snd_device_backend_index(snd_device_t snd_device __unused)
 {
     return -ENOSYS;
 }
 
 bool platform_supports_app_type_cfg() { return false; }
 
-void platform_add_app_type(int bw, const char *uc_type,
-                           int app_type, int max_sr) {}
+void platform_add_app_type(int bw __unused, const char *uc_type __unused,
+                           int app_type __unused, int max_sr __unused) {}
 
-int platform_get_app_type_v2(void *platform, enum usecase_type_t type,
-                             int bw, int sr, int *app_type) {
+int platform_get_app_type_v2(void *platform __unused,
+                             enum usecase_type_t type __unused,
+                             int bw __unused, int sr __unused,
+                             int *app_type __unused) {
     return -ENOSYS;
 }
