@@ -67,7 +67,8 @@ LOCAL_SRC_FILES := \
 	audio_extn/ext_speaker.c \
 	audio_extn/audio_extn.c \
 	audio_extn/utils.c \
-	$(AUDIO_PLATFORM)/platform.c
+	$(AUDIO_PLATFORM)/platform.c \
+        acdb.c
 
 ifdef MULTIPLE_HW_VARIANTS_ENABLED
   LOCAL_CFLAGS += -DHW_VARIANTS_ENABLED
