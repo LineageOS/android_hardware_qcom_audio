@@ -175,7 +175,6 @@ const char * const use_case_table[AUDIO_USECASE_MAX];
  * We should take care of returning proper size when AudioFlinger queries for
  * the buffer size of an input/output stream
  */
-
 enum {
     OFFLOAD_CMD_EXIT,               /* exit compress offload thread loop*/
     OFFLOAD_CMD_DRAIN,              /* send a full drain request to DSP */
@@ -243,8 +242,10 @@ struct stream_out {
     struct listnode offload_cmd_list;
     bool offload_thread_blocked;
 
-    stream_callback_t offload_callback;
-    void *offload_cookie;
+    void *adsp_hdlr_stream_handle;
+
+    stream_callback_t client_callback;
+    void *client_cookie;
     struct compr_gapless_mdata gapless_mdata;
     int send_new_metadata;
     bool send_next_track_params;
