@@ -47,6 +47,7 @@ struct pcm_config pcm_config_voip_nb = {
     .period_size = COMPRESS_VOIP_IO_BUF_SIZE_NB/2,
     .period_count = 10,
     .format = PCM_FORMAT_S16_LE,
+    .stop_threshold = INT_MAX,
 };
 
 struct pcm_config pcm_config_voip_wb = {
@@ -55,6 +56,7 @@ struct pcm_config pcm_config_voip_wb = {
     .period_size = COMPRESS_VOIP_IO_BUF_SIZE_WB/2,
     .period_count = 10,
     .format = PCM_FORMAT_S16_LE,
+    .stop_threshold = INT_MAX,
 };
 
 struct pcm_config pcm_config_voip_swb = {
@@ -63,6 +65,7 @@ struct pcm_config pcm_config_voip_swb = {
     .period_size = COMPRESS_VOIP_IO_BUF_SIZE_SWB/2,
     .period_count = 10,
     .format = PCM_FORMAT_S16_LE,
+    .stop_threshold = INT_MAX,
 };
 
 struct pcm_config pcm_config_voip_fb = {
@@ -71,6 +74,7 @@ struct pcm_config pcm_config_voip_fb = {
     .period_size = COMPRESS_VOIP_IO_BUF_SIZE_FB/2,
     .period_count = 10,
     .format = PCM_FORMAT_S16_LE,
+    .stop_threshold = INT_MAX,
 };
 
 struct voip_data {
