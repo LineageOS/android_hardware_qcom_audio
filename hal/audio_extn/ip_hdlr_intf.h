@@ -32,7 +32,8 @@
 
 #ifdef AUDIO_EXTN_IP_HDLR_ENABLED
 
-int audio_extn_ip_hdlr_intf_open(void *handle, bool is_dsp_decode, void *aud_sess_handle);
+int audio_extn_ip_hdlr_intf_open(void *handle, bool is_dsp_decode, void *aud_sess_handle,
+                                 audio_usecase_t usecase);
 int audio_extn_ip_hdlr_intf_close(void *handle, bool is_dsp_decode, void *aud_sess_handle);
 int audio_extn_ip_hdlr_intf_init(void **handle, char *lib_path, void **lib_handle);
 int audio_extn_ip_hdlr_intf_deinit(void *handle);
@@ -40,7 +41,7 @@ bool audio_extn_ip_hdlr_intf_supported(audio_format_t format);
 
 #else
 
-#define audio_extn_ip_hdlr_intf_open(handle, is_dsp_decode, aud_sess_handle)  (0)
+#define audio_extn_ip_hdlr_intf_open(handle, is_dsp_decode, aud_sess_handle, usecase)  (0)
 #define audio_extn_ip_hdlr_intf_close(handle, is_dsp_decode, aud_sess_handle) (0)
 #define audio_extn_ip_hdlr_intf_init(handle, lib_path, lib_handle)            (0)
 #define audio_extn_ip_hdlr_intf_deinit(handle)                                (0)

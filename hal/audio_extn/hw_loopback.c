@@ -215,6 +215,9 @@ int32_t release_loopback_session(loopback_patch_t *active_loopback_patch)
     int32_t ret = 0;
     struct audio_usecase *uc_info;
     struct audio_device *adev = audio_loopback_mod->adev;
+    struct stream_inout *inout =  &active_loopback_patch->patch_stream;
+    struct audio_port_config *source_patch_config = &active_loopback_patch->
+                                                    loopback_source;
 
     /* 1. Close the PCM devices */
     if (active_loopback_patch->source_stream) {
@@ -251,8 +254,39 @@ int32_t release_loopback_session(loopback_patch_t *active_loopback_patch)
     list_remove(&uc_info->list);
     free(uc_info);
 
+    if (audio_extn_ip_hdlr_intf_supported(source_patch_config->format) && inout->ip_hdlr_handle) {
+        ret = audio_extn_ip_hdlr_intf_close(inout->ip_hdlr_handle, true, inout);
+        if (ret < 0)
+            ALOGE("%s: audio_extn_ip_hdlr_intf_close failed %d",__func__, ret);
+    }
+
+    /* close adsp hdrl session before standby */
+    if (inout->adsp_hdlr_stream_handle) {
+        ret = audio_extn_adsp_hdlr_stream_close(inout->adsp_hdlr_stream_handle);
+        if (ret)
+            ALOGE("%s: adsp_hdlr_stream_close failed %d",__func__, ret);
+        inout->adsp_hdlr_stream_handle = NULL;
+    }
+
+    if (audio_extn_ip_hdlr_intf_supported(source_patch_config->format) &&
+        inout->ip_hdlr_handle) {
+        audio_extn_ip_hdlr_intf_deinit(inout->ip_hdlr_handle);
+        inout->ip_hdlr_handle = NULL;
+    }
+
     ALOGD("%s: Release loopback session exit: status(%d)", __func__, ret);
     return ret;
+}
+
+/* Callback funtion called in the case of failures */
+int loopback_stream_cb(stream_callback_event_t event, void *param, void *cookie)
+{
+    if (event == AUDIO_EXTN_STREAM_CBK_EVENT_ERROR) {
+        pthread_mutex_lock(&audio_loopback_mod->lock);
+        release_loopback_session(cookie);
+        pthread_mutex_unlock(&audio_loopback_mod->lock);
+    }
+    return 0;
 }
 
 /* Create a loopback session based on active loopback patch selected */
@@ -269,6 +303,8 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
                                                     loopback_source;
     struct audio_port_config *sink_patch_config = &active_loopback_patch->
                                                     loopback_sink;
+    struct stream_inout *inout =  &active_loopback_patch->patch_stream;
+    struct adsp_hdlr_stream_cfg hdlr_stream_cfg;
 
     ALOGD("%s: Create loopback session begin", __func__);
 
@@ -302,6 +338,29 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
 
     ALOGD("%s: LOOPBACK PCM devices (rx: %d tx: %d) usecase(%d)",
         __func__, pcm_dev_asm_rx_id, pcm_dev_asm_tx_id, uc_info->id);
+
+    /* setup a channel for client <--> adsp communication for stream events */
+    inout->dev = adev;
+    inout->client_callback = loopback_stream_cb;
+    inout->client_cookie = active_loopback_patch;
+    hdlr_stream_cfg.pcm_device_id = pcm_dev_asm_rx_id;
+    hdlr_stream_cfg.flags = 0;
+    hdlr_stream_cfg.type = PCM_PLAYBACK;
+    ret = audio_extn_adsp_hdlr_stream_open(&inout->adsp_hdlr_stream_handle,
+            &hdlr_stream_cfg);
+    if (ret) {
+        ALOGE("%s: adsp_hdlr_stream_open failed %d", __func__, ret);
+        inout->adsp_hdlr_stream_handle = NULL;
+        goto exit;
+    }
+    if (audio_extn_ip_hdlr_intf_supported(source_patch_config->format)) {
+        ret = audio_extn_ip_hdlr_intf_init(&inout->ip_hdlr_handle, NULL, NULL);
+        if (ret < 0) {
+            ALOGE("%s: audio_extn_ip_hdlr_intf_init failed %d", __func__, ret);
+            inout->ip_hdlr_handle = NULL;
+            goto exit;
+        }
+    }
 
     if (source_patch_config->format == AUDIO_FORMAT_IEC61937) {
         // This is needed to set a known format to DSP and handle
@@ -378,6 +437,14 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
         ret = -EINVAL;
         goto exit;
     }
+    if (audio_extn_ip_hdlr_intf_supported(source_patch_config->format) && inout->ip_hdlr_handle) {
+        ret = audio_extn_ip_hdlr_intf_open(inout->ip_hdlr_handle, true, inout,
+                                           USECASE_AUDIO_TRANSCODE_LOOPBACK);
+        if (ret < 0) {
+            ALOGE("%s: audio_extn_ip_hdlr_intf_open failed %d",__func__, ret);
+            goto exit;
+        }
+    }
 
     /* Move patch state to running, now that session is set up */
     active_loopback_patch->patch_state = PATCH_RUNNING;
@@ -411,6 +478,7 @@ int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,
     int status = 0;
     patch_handle_type_t loopback_patch_type=0x0;
     loopback_patch_t loopback_patch, *active_loopback_patch = NULL;
+
     ALOGV("%s : Create audio patch begin", __func__);
 
     if ((audio_loopback_mod == NULL) || (dev == NULL)) {
