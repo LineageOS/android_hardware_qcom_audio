@@ -179,9 +179,8 @@ int thread_status;
 
 #define MIXER_CARD 0
 #define SOUND_CARD 0
-#ifdef PLATFORM_MSM8998
-#define CAPTURE_DEVICE 7
-#else
+
+#ifndef CAPTURE_DEVICE
 #define CAPTURE_DEVICE 8
 #endif
 
@@ -451,7 +450,7 @@ void *capture_thread_loop(void *arg)
 
 __attribute__ ((visibility ("default")))
 int visualizer_hal_start_output(audio_io_handle_t output, int pcm_id) {
-    int ret;
+    int ret = 0;
     struct listnode *node;
 
     ALOGV("%s output %d pcm_id %d", __func__, output, pcm_id);
@@ -502,7 +501,7 @@ exit:
 
 __attribute__ ((visibility ("default")))
 int visualizer_hal_stop_output(audio_io_handle_t output, int pcm_id) {
-    int ret;
+    int ret = 0;
     struct listnode *node;
     struct listnode *fx_node;
     output_context_t *out_ctxt;

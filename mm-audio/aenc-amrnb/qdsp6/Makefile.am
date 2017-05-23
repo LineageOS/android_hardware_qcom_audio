@@ -32,11 +32,3 @@ libOmxAmrEnc_la_LIBADD  = -lcutils -llog
 libOmxAmrEnc_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) $(GLIB_CFLAGS) -include glib.h -Dstrlcpy=g_strlcpy
 libOmxAmrEnc_la_CPPFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) $(GLIB_CFLAGS) -include glib.h -Dstrlcpy=g_strlcpy
 libOmxAmrEnc_la_LDFLAGS = $(GLIB_LIBS) -shared -avoid-version
-
-bin_PROGRAMS = mm_aenc_omxamr_test
-
-mm_aenc_omxamr_test_c_sources = test/omx_amr_enc_test.c
-mm_aenc_omxamr_test_CC = @CC@
-mm_aenc_omxamr_test_SOURCES = $(mm_aenc_omxamr_test_c_sources)
-mm_aenc_omxamr_test_LDADD = libOmxAmrEnc.la -lmm-omxcore
-mm_aenc_omxamr_test_CPPFLAGS = $(AM_CPPFLAGS) $(AM_CFLAGS)

@@ -545,6 +545,7 @@ void *start_stream_playback (void* stream_data)
     size_t bytes_read = 0;
     char  *data_ptr = NULL;
     bool exit = false;
+    int32_t latency;
 
     if (is_offload) {
         fprintf(log_file, "stream %d: set callback for offload stream for playback usecase\n", params->stream_index);
@@ -634,6 +635,9 @@ void *start_stream_playback (void* stream_data)
         pthread_exit(0);
     }
 
+    latency = qahw_out_get_latency(params->out_handle);
+    fprintf(log_file, "playback latency before starting a session %dms!!\n",
+            latency);
     while (!exit && !stop_playback) {
         if (!bytes_remaining) {
             fprintf(log_file, "\nstream %d: reading bytes %zd\n", params->stream_index, bytes_wanted);
@@ -662,8 +666,10 @@ void *start_stream_playback (void* stream_data)
                 params->stream_index, bytes_remaining, offset, write_length);
         bytes_written = write_to_hal(params->out_handle, data_ptr+offset, bytes_remaining, params);
         bytes_remaining -= bytes_written;
-        fprintf(log_file, "stream %d: bytes_written %zd, bytes_remaining %zd\n",
-                params->stream_index, bytes_written, bytes_remaining);
+
+        latency = qahw_out_get_latency(params->out_handle);
+        fprintf(log_file, "stream %d: bytes_written %zd, bytes_remaining %zd latency %d\n",
+                params->stream_index, bytes_written, bytes_remaining, latency);
     }
 
     if (params->ethread_data != nullptr) {
@@ -880,7 +886,7 @@ static void get_file_format(stream_config *stream_info)
             else
                 stream_info->config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
             if (!(stream_info->flags_set))
-                stream_info->flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD;
+                stream_info->flags = AUDIO_OUTPUT_FLAG_DIRECT_PCM|AUDIO_OUTPUT_FLAG_DIRECT;
             break;
 
         case FILE_MP3:
@@ -1017,8 +1023,8 @@ int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
     fread((void *) latency_buf, 100, 1, fd_latency_node);
     fclose(fd_latency_node);
     sscanf(latency_buf, " %llu,%llu,%*llu,%*llu,%llu,%llu", &scold, &uscold, &scont, &uscont);
-    tcold = scold*1000 - ts_cold.tv_sec*1000 + uscold/1000 - ts_cold.tv_nsec/1000000;
-    tcont = scont*1000 - ts_cont.tv_sec*1000 + uscont/1000 - ts_cont.tv_nsec/1000000;
+    tcold = scold*1000 - ((uint64_t)ts_cold.tv_sec)*1000 + uscold/1000 - ((uint64_t)ts_cold.tv_nsec)/1000000;
+    tcont = scont*1000 - ((uint64_t)ts_cont.tv_sec)*1000 + uscont/1000 - ((uint64_t)ts_cont.tv_nsec)/1000000;
     fprintf(log_file, "\n values from debug node %s\n", latency_buf);
     fprintf(log_file, " cold latency %llums, continuous latency %llums,\n", tcold, tcont);
     fprintf(log_file, " **Note: please add DSP Pipe/PP latency numbers to this, for final latency values\n");

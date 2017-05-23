@@ -39,7 +39,7 @@ BININSTALLDIR := $(DESTDIR)usr/bin
 # ---------------------------------------------------------------------------------
 #					BUILD
 # ---------------------------------------------------------------------------------
-all: libOmxG711Enc.so.$(LIBVER) mm-aenc-omxg711-test
+all: libOmxG711Enc.so.$(LIBVER)
 
 install:
 	echo "intalling aenc-g711 in $(DESTDIR)"
@@ -49,7 +49,6 @@ install:
 	install -m 555 libOmxG711Enc.so.$(LIBVER) $(LIBINSTALLDIR)
 	cd $(LIBINSTALLDIR) && ln -s libOmxG711Enc.so.$(LIBVER) libOmxG711Enc.so.$(LIBMAJOR)
 	cd $(LIBINSTALLDIR) && ln -s libOmxG711Enc.so.$(LIBMAJOR) libOmxG711Enc.so
-	install -m 555 mm-aenc-omxg711-test $(BININSTALLDIR)
 
 # ---------------------------------------------------------------------------------
 #				COMPILE LIBRARY
@@ -63,18 +62,6 @@ SRCS += src/aenc_svr.c
 
 libOmxG711Enc.so.$(LIBVER): $(SRCS)
 	$(CC) $(CPPFLAGS) $(CFLAGS_SO) $(LDFLAGS_SO) -Wl,-soname,libOmxG711Enc.so.$(LIBMAJOR) -o $@ $^ $(LDFLAGS) $(LDLIBS)
-
-# ---------------------------------------------------------------------------------
-#				COMPILE TEST APP
-# ---------------------------------------------------------------------------------
-TEST_LDLIBS := -lpthread
-TEST_LDLIBS += -ldl
-TEST_LDLIBS += -lOmxCore
-
-#TEST_SRCS := test/omx_g711_enc_test.c
-
-mm-aenc-omxg711-test: libOmxG711Enc.so.$(LIBVER) $(TEST_SRCS)
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^ $(TEST_LDLIBS)
 
 # ---------------------------------------------------------------------------------
 #					END

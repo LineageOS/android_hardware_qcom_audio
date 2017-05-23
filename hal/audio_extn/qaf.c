@@ -1580,6 +1580,59 @@ int audio_extn_qaf_init(struct audio_device *adev)
     property_get("audio.qaf.library", value, NULL);
     snprintf(lib_name, PROPERTY_VALUE_MAX, "%s", value);
 
+    qaf_mod->qaf_lib = dlopen(lib_name, RTLD_NOW);
+    if (qaf_mod->qaf_lib == NULL) {
+        ALOGE("%s: DLOPEN failed for %s", __func__, lib_name);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    ALOGV("%s: DLOPEN successful for %s", __func__, lib_name);
+    qaf_mod->qaf_audio_session_open =
+                (int (*)(audio_session_handle_t* session_handle, void *p_data, void* license_data))dlsym(qaf_mod->qaf_lib,
+                                                                 "audio_session_open");
+    qaf_mod->qaf_audio_session_close =
+                (int (*)(audio_session_handle_t session_handle))dlsym(qaf_mod->qaf_lib,
+                                                                 "audio_session_close");
+    qaf_mod->qaf_audio_stream_open =
+                (int (*)(audio_session_handle_t session_handle, audio_stream_handle_t* stream_handle,
+                 audio_stream_config_t input_config, audio_devices_t devices, stream_type_t flags))dlsym(qaf_mod->qaf_lib,
+                                                                 "audio_stream_open");
+    qaf_mod->qaf_audio_stream_close =
+                (int (*)(audio_stream_handle_t stream_handle))dlsym(qaf_mod->qaf_lib,
+                                                                 "audio_stream_close");
+    qaf_mod->qaf_audio_stream_set_param =
+                (int (*)(audio_stream_handle_t stream_handle, const char* kv_pairs))dlsym(qaf_mod->qaf_lib,
+                                                                 "audio_stream_set_param");
+    qaf_mod->qaf_audio_session_set_param =
+                (int (*)(audio_session_handle_t handle, const char* kv_pairs))dlsym(qaf_mod->qaf_lib,
+                                                                 "audio_session_set_param");
+    qaf_mod->qaf_audio_stream_get_param =
+                (char* (*)(audio_stream_handle_t stream_handle, const char* key))dlsym(qaf_mod->qaf_lib,
+                                                                 "audio_stream_get_param");
+    qaf_mod->qaf_audio_session_get_param =
+                (char* (*)(audio_session_handle_t handle, const char* key))dlsym(qaf_mod->qaf_lib,
+                                                                 "audio_session_get_param");
+    qaf_mod->qaf_audio_stream_start =
+                (int (*)(audio_stream_handle_t stream_handle))dlsym(qaf_mod->qaf_lib,
+                                                                 "audio_stream_start");
+    qaf_mod->qaf_audio_stream_stop =
+                (int (*)(audio_stream_handle_t stream_handle))dlsym(qaf_mod->qaf_lib,
+                                                                 "audio_stream_stop");
+    qaf_mod->qaf_audio_stream_pause =
+                (int (*)(audio_stream_handle_t stream_handle))dlsym(qaf_mod->qaf_lib,
+                                                                 "audio_stream_pause");
+    qaf_mod->qaf_audio_stream_flush =
+                (int (*)(audio_stream_handle_t stream_handle))dlsym(qaf_mod->qaf_lib,
+                                                                 "audio_stream_flush");
+    qaf_mod->qaf_audio_stream_write =
+                (int (*)(audio_stream_handle_t stream_handle, const void* buf, int size))dlsym(qaf_mod->qaf_lib,
+                                                                 "audio_stream_write");
+    qaf_mod->qaf_register_event_callback =
+                (void (*)(audio_session_handle_t session_handle, void *priv_data, notify_event_callback_t event_callback,
+                 audio_event_id_t event_id))dlsym(qaf_mod->qaf_lib,
+                                                                 "register_event_callback");
+
     license_data = platform_get_license((struct audio_hw_device *)(qaf_mod->adev->platform), &size);
     if (!license_data) {
         ALOGE("License is not present");
@@ -1618,6 +1671,10 @@ done:
         lic_config = NULL;
     }
     if (ret != 0) {
+        if (qaf_mod->qaf_lib != NULL) {
+            dlclose(qaf_mod->qaf_lib);
+            qaf_mod->qaf_lib = NULL;
+        }
         if (qaf_mod != NULL) {
             free(qaf_mod);
             qaf_mod = NULL;
