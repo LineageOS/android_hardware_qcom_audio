@@ -4509,6 +4509,10 @@ int hfp_feature_init(bool is_feature_enabled)
         init_config.fp_disable_audio_route = disable_audio_route;
         init_config.fp_disable_snd_device = disable_snd_device;
         init_config.fp_voice_get_mic_mute = voice_get_mic_mute;
+        init_config.fp_audio_extn_auto_hal_start_hfp_downlink =
+                                        audio_extn_auto_hal_start_hfp_downlink;
+        init_config.fp_audio_extn_auto_hal_stop_hfp_downlink =
+                                        audio_extn_auto_hal_stop_hfp_downlink;
 
         hfp_init(init_config);
         ALOGD("%s:: ---- Feature HFP is Enabled ----", __func__);
@@ -5477,6 +5481,14 @@ typedef void (*auto_hal_set_parameters_t)(struct audio_device*,
                                 struct str_parms*);
 static auto_hal_set_parameters_t auto_hal_set_parameters;
 
+typedef int (*auto_hal_start_hfp_downlink_t)(struct audio_device*,
+                                struct audio_usecase*);
+static auto_hal_start_hfp_downlink_t auto_hal_start_hfp_downlink;
+
+typedef int (*auto_hal_stop_hfp_downlink_t)(struct audio_device*,
+                                struct audio_usecase*);
+static auto_hal_stop_hfp_downlink_t auto_hal_stop_hfp_downlink;
+
 int auto_hal_feature_init(bool is_feature_enabled)
 {
     ALOGD("%s: Called with feature %s", __func__,
@@ -5520,7 +5532,13 @@ int auto_hal_feature_init(bool is_feature_enabled)
                             auto_hal_lib_handle, "auto_hal_set_audio_port_config")) ||
             !(auto_hal_set_parameters =
                  (auto_hal_set_parameters_t)dlsym(
-                            auto_hal_lib_handle, "auto_hal_set_parameters"))) {
+                            auto_hal_lib_handle, "auto_hal_set_parameters")) ||
+            !(auto_hal_start_hfp_downlink =
+                 (auto_hal_start_hfp_downlink_t)dlsym(
+                            auto_hal_lib_handle, "auto_hal_start_hfp_downlink")) ||
+            !(auto_hal_stop_hfp_downlink =
+                 (auto_hal_stop_hfp_downlink_t)dlsym(
+                            auto_hal_lib_handle, "auto_hal_stop_hfp_downlink"))) {
             ALOGE("%s: dlsym failed", __func__);
             goto feature_disabled;
         }
@@ -5545,6 +5563,8 @@ feature_disabled:
     auto_hal_get_audio_port = NULL;
     auto_hal_set_audio_port_config = NULL;
     auto_hal_set_parameters = NULL;
+    auto_hal_start_hfp_downlink = NULL;
+    auto_hal_stop_hfp_downlink = NULL;
 
     ALOGW(":: %s: ---- Feature AUTO_HAL is disabled ----", __func__);
     return -ENOSYS;
@@ -5561,6 +5581,9 @@ int audio_extn_auto_hal_init(struct audio_device *adev)
         auto_hal_init_config.fp_get_usecase_from_list = get_usecase_from_list;
         auto_hal_init_config.fp_get_output_period_size = get_output_period_size;
         auto_hal_init_config.fp_audio_extn_ext_hw_plugin_set_audio_gain = audio_extn_ext_hw_plugin_set_audio_gain;
+        auto_hal_init_config.fp_select_devices = select_devices;
+        auto_hal_init_config.fp_disable_audio_route = disable_audio_route;
+        auto_hal_init_config.fp_disable_snd_device = disable_snd_device;
         return auto_hal_init(adev, auto_hal_init_config);
     }
     else
@@ -5639,6 +5662,20 @@ void audio_extn_auto_hal_set_parameters(struct audio_device *adev,
 {
     if (auto_hal_set_parameters)
         auto_hal_set_parameters(adev, parms);
+}
+
+int audio_extn_auto_hal_start_hfp_downlink(struct audio_device *adev,
+                                struct audio_usecase *uc_info)
+{
+    return ((auto_hal_start_hfp_downlink) ?
+                            auto_hal_start_hfp_downlink(adev, uc_info): 0);
+}
+
+int audio_extn_auto_hal_stop_hfp_downlink(struct audio_device *adev,
+                                struct audio_usecase *uc_info)
+{
+    return ((auto_hal_stop_hfp_downlink) ?
+                            auto_hal_stop_hfp_downlink(adev, uc_info): 0);
 }
 // END: AUTO_HAL ===================================================================
 

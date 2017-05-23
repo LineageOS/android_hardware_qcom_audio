@@ -475,6 +475,10 @@ ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito bengal atoll sdm660 ms
   MULTIPLE_HW_VARIANTS_ENABLED := true
 endif
 
+ifeq ($(TARGET_BOARD_AUTO),true)
+  LOCAL_CFLAGS += -DPLATFORM_AUTO
+endif
+
 LOCAL_SRC_FILES:= \
         hfp.c
 
