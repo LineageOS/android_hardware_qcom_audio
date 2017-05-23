@@ -20,6 +20,7 @@
 #define LOG_TAG "audio_hw_utils"
 /* #define LOG_NDEBUG 0 */
 
+#include <inttypes.h>
 #include <errno.h>
 #include <cutils/properties.h>
 #include <cutils/config_utils.h>
@@ -29,13 +30,15 @@
 #include <cutils/log.h>
 #include <cutils/misc.h>
 
+
 #include "audio_hw.h"
 #include "platform.h"
 #include "platform_api.h"
 #include "audio_extn.h"
 #include "voice.h"
-#include "sound/compress_params.h"
-
+#include <sound/compress_params.h>
+#include <sound/compress_offload.h>
+#include <tinycompress/tinycompress.h>
 #ifdef AUDIO_EXTERNAL_HDMI_ENABLED
 #ifdef HDMI_PASSTHROUGH_ENABLED
 #include "audio_parsers.h"
@@ -82,6 +85,10 @@
 #define SR_192000           (14<<0)     /* 192kHz */
 
 #endif
+
+/* ToDo: Check and update a proper value in msec */
+#define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 50
+
 struct string_to_enum {
     const char *name;
     uint32_t value;
@@ -468,6 +475,7 @@ void audio_extn_utils_update_streams_cfg_lists(void *platform,
                               streams_output_cfg_list,
                               streams_input_cfg_list);
             ALOGE("%s: could not load io policy config!", __func__);
+            free(root);
             return;
         }
     }
@@ -480,6 +488,7 @@ void audio_extn_utils_update_streams_cfg_lists(void *platform,
                                        streams_input_cfg_list);
 
     config_free(root);
+    free(root);
     free(data);
 }
 
@@ -838,8 +847,7 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         rc = -EINVAL;
         goto exit_send_app_type_cfg;
     }
-    snd_device = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
-                 platform_get_spkr_prot_snd_device(snd_device) : snd_device;
+    snd_device = platform_get_spkr_prot_snd_device(snd_device);
 
     acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
     if (acdb_dev_id <= 0) {
@@ -1268,7 +1276,7 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
         platform_send_audio_calibration(adev->platform, usecase,
                          usecase->stream.in->app_type_cfg.app_type,
                          usecase->stream.in->app_type_cfg.sample_rate);
-    } else if (type == PCM_HFP_CALL) {
+    } else if (type == PCM_HFP_CALL || type == PCM_CAPTURE) {
         /* when app type is default. the sample rate is not used to send cal */
         platform_send_audio_calibration(adev->platform, usecase,
                          platform_get_default_app_type_v2(adev->platform, usecase->type),
@@ -1649,3 +1657,282 @@ int audio_extn_utils_get_avt_device_drift(
 done:
     return ret;
 }
+
+#ifdef SNDRV_COMPRESS_PATH_DELAY
+int audio_extn_utils_compress_get_dsp_latency(struct stream_out *out)
+{
+    int ret = -EINVAL;
+    struct snd_compr_metadata metadata;
+    int delay_ms = COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
+
+    if (property_get_bool("audio.playback.dsp.pathdelay", false)) {
+        ALOGD("%s:: Quering DSP delay %d",__func__, __LINE__);
+        if (!(is_offload_usecase(out->usecase))) {
+            ALOGE("%s:: not supported for non offload session", __func__);
+            goto exit;
+        }
+
+        if (!out->compr) {
+            ALOGD("%s:: Invalid compress handle,returning default dsp latency",
+                    __func__);
+            goto exit;
+        }
+
+        metadata.key = SNDRV_COMPRESS_PATH_DELAY;
+        ret = compress_get_metadata(out->compr, &metadata);
+        if(ret) {
+            ALOGE("%s::error %s", __func__, compress_get_error(out->compr));
+            goto exit;
+        }
+        delay_ms = metadata.value[0] / 1000; /*convert to ms*/
+    } else {
+        ALOGD("%s:: Using Fix DSP delay",__func__);
+    }
+
+exit:
+    ALOGD("%s:: delay in ms is %d",__func__, delay_ms);
+    return delay_ms;
+}
+#else
+int audio_extn_utils_compress_get_dsp_latency(struct stream_out *out __unused)
+{
+    return COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
+}
+#endif
+
+#ifdef SNDRV_COMPRESS_RENDER_MODE
+int audio_extn_utils_compress_set_render_mode(struct stream_out *out)
+{
+    struct snd_compr_metadata metadata;
+    int ret = -EINVAL;
+
+    if (!(is_offload_usecase(out->usecase))) {
+        ALOGE("%s:: not supported for non offload session", __func__);
+        goto exit;
+    }
+
+    if (!out->compr) {
+        ALOGD("%s:: Invalid compress handle",
+                __func__);
+        goto exit;
+    }
+
+    ALOGD("%s:: render mode %d", __func__, out->render_mode);
+
+    metadata.key = SNDRV_COMPRESS_RENDER_MODE;
+    if (out->render_mode == RENDER_MODE_AUDIO_MASTER) {
+        metadata.value[0] = SNDRV_COMPRESS_RENDER_MODE_AUDIO_MASTER;
+    } else if (out->render_mode == RENDER_MODE_AUDIO_STC_MASTER) {
+        metadata.value[0] = SNDRV_COMPRESS_RENDER_MODE_STC_MASTER;
+    } else {
+        ret = 0;
+        goto exit;
+    }
+    ret = compress_set_metadata(out->compr, &metadata);
+    if(ret) {
+        ALOGE("%s::error %s", __func__, compress_get_error(out->compr));
+    }
+exit:
+    return ret;
+}
+#else
+int audio_extn_utils_compress_set_render_mode(struct stream_out *out __unused)
+{
+    ALOGD("%s:: configuring render mode not supported", __func__);
+    return 0;
+}
+#endif
+
+#ifdef SNDRV_COMPRESS_CLK_REC_MODE
+int audio_extn_utils_compress_set_clk_rec_mode(
+            struct audio_usecase *usecase)
+{
+    struct snd_compr_metadata metadata;
+    struct stream_out *out = NULL;
+    int ret = -EINVAL;
+
+    if (usecase != NULL && usecase->type != PCM_PLAYBACK) {
+        ALOGE("%s:: Invalid use case", __func__);
+        goto exit;
+    }
+
+    out = usecase->stream.out;
+    if (!out) {
+        ALOGE("%s:: invalid stream", __func__);
+        goto exit;
+    }
+
+    if (!is_offload_usecase(out->usecase)) {
+        ALOGE("%s:: not supported for non offload session", __func__);
+        goto exit;
+    }
+
+    if (out->render_mode != RENDER_MODE_AUDIO_STC_MASTER) {
+        ALOGD("%s:: clk recovery is only supported in STC render mode",
+                __func__);
+        ret = 0;
+        goto exit;
+    }
+
+    if (!out->compr) {
+        ALOGD("%s:: Invalid compress handle",
+                __func__);
+        goto exit;
+    }
+    metadata.key = SNDRV_COMPRESS_CLK_REC_MODE;
+    switch(usecase->out_snd_device) {
+        case SND_DEVICE_OUT_HDMI:
+        case SND_DEVICE_OUT_SPEAKER_AND_HDMI:
+        case SND_DEVICE_OUT_DISPLAY_PORT:
+        case SND_DEVICE_OUT_SPEAKER_AND_DISPLAY_PORT:
+            metadata.value[0] = SNDRV_COMPRESS_CLK_REC_MODE_NONE;
+            break;
+        default:
+            metadata.value[0] = SNDRV_COMPRESS_CLK_REC_MODE_AUTO;
+            break;
+    }
+
+    ALOGD("%s:: clk recovery mode %d",__func__, metadata.value[0]);
+
+    ret = compress_set_metadata(out->compr, &metadata);
+    if(ret) {
+        ALOGE("%s::error %s", __func__, compress_get_error(out->compr));
+    }
+
+exit:
+    return ret;
+}
+#else
+int audio_extn_utils_compress_set_clk_rec_mode(
+            struct audio_usecase *usecase __unused)
+{
+    ALOGD("%s:: configuring render mode not supported", __func__);
+    return 0;
+}
+#endif
+
+#ifdef SNDRV_COMPRESS_RENDER_WINDOW
+int audio_extn_utils_compress_set_render_window(
+            struct stream_out *out,
+            struct audio_out_render_window_param *render_window)
+{
+    struct snd_compr_metadata metadata;
+    int ret = -EINVAL;
+
+    ALOGD("%s:: render window start 0x%"PRIx64" end 0x%"PRIx64"",
+          __func__,render_window->render_ws, render_window->render_we);
+
+    if(render_window == NULL) {
+        ALOGE("%s:: Invalid render_window", __func__);
+        goto exit;
+    }
+
+    if (!is_offload_usecase(out->usecase)) {
+        ALOGE("%s:: not supported for non offload session", __func__);
+        goto exit;
+    }
+
+    if ((out->render_mode == RENDER_MODE_AUDIO_MASTER) ||
+        (out->render_mode == RENDER_MODE_AUDIO_STC_MASTER)) {
+        memcpy(&out->render_window, render_window,
+               sizeof(struct audio_out_render_window_param));
+    } else {
+        ALOGD("%s:: only supported in timestamp mode, current "
+              "render mode mode %d", __func__, out->render_mode);
+        goto exit;
+    }
+
+    if (!out->compr) {
+        ALOGW("%s:: offload session not yet opened,"
+               "render window will be configure later", __func__);
+        /* store render window to reconfigure in start_output_stream() */
+       goto exit;
+    }
+
+    metadata.key = SNDRV_COMPRESS_RENDER_WINDOW;
+    /*render window start value */
+    metadata.value[0] = 0xFFFFFFFF & render_window->render_ws; /* lsb */
+    metadata.value[1] = \
+            (0xFFFFFFFF00000000 & render_window->render_ws) >> 32; /* msb*/
+    /*render window end value */
+    metadata.value[2] = 0xFFFFFFFF & render_window->render_we; /* lsb */
+    metadata.value[3] = \
+            (0xFFFFFFFF00000000 & render_window->render_we) >> 32; /* msb*/
+
+    ret = compress_set_metadata(out->compr, &metadata);
+    if(ret) {
+        ALOGE("%s::error %s", __func__, compress_get_error(out->compr));
+    }
+
+exit:
+    return ret;
+}
+#else
+int audio_extn_utils_compress_set_render_window(
+            struct stream_out *out __unused,
+            struct audio_out_render_window_param *render_window __unused)
+{
+    ALOGD("%s:: configuring render window not supported", __func__);
+    return 0;
+}
+#endif
+
+#ifdef SNDRV_COMPRESS_START_DELAY
+int audio_extn_utils_compress_set_start_delay(
+            struct stream_out *out,
+            struct audio_out_start_delay_param *delay_param)
+{
+    struct snd_compr_metadata metadata;
+    int ret = -EINVAL;
+
+    if(delay_param == NULL) {
+        ALOGE("%s:: Invalid delay_param", __func__);
+        goto exit;
+    }
+
+    ALOGD("%s:: render start delay 0x%"PRIx64" ", __func__,
+          delay_param->start_delay);
+
+    if (!is_offload_usecase(out->usecase)) {
+        ALOGE("%s:: not supported for non offload session", __func__);
+        goto exit;
+    }
+
+   if ((out->render_mode == RENDER_MODE_AUDIO_MASTER) ||
+       (out->render_mode == RENDER_MODE_AUDIO_STC_MASTER)) {
+        /* store it to reconfigure in start_output_stream() */
+        out->delay_param.start_delay = delay_param->start_delay;
+    } else {
+        ALOGD("%s:: only supported in timestamp mode, current "
+              "render mode mode %d", __func__, out->render_mode);
+        goto exit;
+    }
+
+    if (!out->compr) {
+        ALOGW("%s:: offload session not yet opened,"
+               "start delay will be configure later", __func__);
+       goto exit;
+    }
+
+    metadata.key = SNDRV_COMPRESS_START_DELAY;
+    metadata.value[0] = 0xFFFFFFFF & delay_param->start_delay; /* lsb */
+    metadata.value[1] = \
+            (0xFFFFFFFF00000000 & delay_param->start_delay) >> 32; /* msb*/
+
+    ret = compress_set_metadata(out->compr, &metadata);
+    if(ret) {
+        ALOGE("%s::error %s", __func__, compress_get_error(out->compr));
+    }
+
+exit:
+    return ret;
+}
+#else
+int audio_extn_utils_compress_set_start_delay(
+            struct stream_out *out __unused,
+            struct audio_out_start_delay_param *delay_param __unused)
+{
+    ALOGD("%s:: configuring render window not supported", __func__);
+    return 0;
+}
+#endif

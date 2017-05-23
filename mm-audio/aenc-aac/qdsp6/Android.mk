@@ -40,29 +40,6 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 include $(BUILD_SHARED_LIBRARY)
 
-# ---------------------------------------------------------------------------------
-#             Make the apps-test (mm-aenc-omxaac-test)
-# ---------------------------------------------------------------------------------
-
-include $(CLEAR_VARS)
-
-mm-aac-enc-test-inc    := $(LOCAL_PATH)/inc
-mm-aac-enc-test-inc    += $(LOCAL_PATH)/test
-mm-aac-enc-test-inc    += $(TARGET_OUT_HEADERS)/mm-audio/audio-alsa
-mm-aac-enc-test-inc    += $(TARGET_OUT_HEADERS)/mm-core/omxcore
-
-LOCAL_MODULE            := mm-aenc-omxaac-test
-LOCAL_MODULE_TAGS       := optional
-LOCAL_CFLAGS            := $(libOmxAacEnc-def)
-LOCAL_C_INCLUDES        := $(mm-aac-enc-test-inc)
-LOCAL_PRELINK_MODULE    := false
-LOCAL_SHARED_LIBRARIES  := libmm-omxcore
-LOCAL_SHARED_LIBRARIES  += libOmxAacEnc
-LOCAL_SHARED_LIBRARIES  += libaudioalsa
-LOCAL_SRC_FILES         := test/omx_aac_enc_test.c
-
-include $(BUILD_EXECUTABLE)
-
 endif
 
 # ---------------------------------------------------------------------------------

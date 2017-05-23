@@ -196,6 +196,12 @@ struct offload_cmd {
     int data[];
 };
 
+typedef enum render_mode {
+    RENDER_MODE_AUDIO_NO_TIMESTAMP = 0,
+    RENDER_MODE_AUDIO_MASTER,
+    RENDER_MODE_AUDIO_STC_MASTER,
+} render_mode_t;
+
 struct stream_app_type_cfg {
     int sample_rate;
     uint32_t bit_width;
@@ -252,11 +258,16 @@ struct stream_out {
     bool realtime;
     int af_period_multiplier;
     struct audio_device *dev;
+
     void* qaf_stream_handle;
     pthread_cond_t qaf_offload_cond;
     pthread_t qaf_offload_thread;
     struct listnode qaf_offload_cmd_list;
     uint32_t platform_latency;
+    render_mode_t render_mode;
+    struct audio_out_render_window_param render_window; /*render winodw*/
+    struct audio_out_start_delay_param delay_param; /*start delay*/
+
     audio_offload_info_t info;
 };
 
@@ -445,6 +456,8 @@ int enable_audio_route(struct audio_device *adev,
 
 struct audio_usecase *get_usecase_from_list(const struct audio_device *adev,
                                                    audio_usecase_t uc_id);
+
+struct stream_in *get_next_active_input(const struct audio_device *adev);
 
 bool is_offload_usecase(audio_usecase_t uc_id);
 

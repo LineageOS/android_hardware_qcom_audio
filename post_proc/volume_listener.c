@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -462,7 +462,7 @@ static int vol_effect_command(effect_handle_t self,
 
         // After changing the state and if device is speaker
         // recalculate gain dep cal level
-        if (context->dev_id == AUDIO_DEVICE_OUT_SPEAKER) {
+        if (context->dev_id & AUDIO_DEVICE_OUT_SPEAKER) {
                 check_and_set_gain_dep_cal();
         }
 
@@ -489,7 +489,7 @@ static int vol_effect_command(effect_handle_t self,
 
         // After changing the state and if device is speaker
         // recalculate gain dep cal level
-        if (context->dev_id == AUDIO_DEVICE_OUT_SPEAKER) {
+        if (context->dev_id & AUDIO_DEVICE_OUT_SPEAKER) {
             check_and_set_gain_dep_cal();
         }
 
@@ -520,8 +520,8 @@ static int vol_effect_command(effect_handle_t self,
                    __func__, context->dev_id, new_device);
 
             // check if old or new device is speaker
-            if ((context->dev_id ==  AUDIO_DEVICE_OUT_SPEAKER) ||
-                (new_device == AUDIO_DEVICE_OUT_SPEAKER)) {
+            if ((context->dev_id & AUDIO_DEVICE_OUT_SPEAKER) ||
+                (new_device & AUDIO_DEVICE_OUT_SPEAKER)) {
                 recompute_gain_dep_cal_Level = true;
             }
 
@@ -546,7 +546,7 @@ static int vol_effect_command(effect_handle_t self,
                 goto exit;
             }
 
-            if (context->dev_id == AUDIO_DEVICE_OUT_SPEAKER) {
+            if (context->dev_id & AUDIO_DEVICE_OUT_SPEAKER) {
                 recompute_gain_dep_cal_Level = true;
             }
 
@@ -771,7 +771,7 @@ static int vol_prc_lib_release(effect_handle_t handle)
             ALOGV("--- Found something to remove ---");
             list_remove(node);
             PRINT_STREAM_TYPE(context->stream_type);
-            if (context->dev_id == AUDIO_DEVICE_OUT_SPEAKER) {
+            if (context->dev_id & AUDIO_DEVICE_OUT_SPEAKER) {
                 recompute_flag = true;
             }
             list_remove(&context->effect_list_node);

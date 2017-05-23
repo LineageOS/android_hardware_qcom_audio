@@ -23,8 +23,3 @@ libOmxG711Enc_la_CFLAGS = $(AM_CFLAGS) -Dstrlcpy=g_strlcpy $(GLIB_CFLAGS) -inclu
 libOmxG711Enc_la_CPPFLAGS = $(AM_CFLAGS) -Dstrlcpy=g_strlcpy $(GLIB_CFLAGS) -include glib.h
 libOmxG711Enc_la_LIBADD = $(GLIB_LIBS) -lcutils -llog -lstdc++
 libOmxG711Enc_la_LDFLAGS = -shared -avoid-version
-
-bin_PROGRAMS = mm_aenc_omxg711_test
-mm_aenc_omxg711_test_SOURCES = ./test/omx_g711_enc_test.c
-mm_aenc_omxg711_test_CFLAGS = $(AM_CFLAGS) -Dstrlcpy=g_strlcpy $(GLIB_CFLAGS) -include glib.h
-mm_aenc_omxg711_test_LDADD = $(GLIB_LIBS) -lmm-omxcore -lpthread libOmxG711Enc.la
