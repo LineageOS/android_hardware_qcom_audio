@@ -271,10 +271,18 @@ static const struct string_to_enum out_channels_name_to_enum_table[] = {
 
 static int set_voice_volume_l(struct audio_device *adev, float volume);
 static struct audio_device *adev = NULL;
-static pthread_mutex_t adev_init_lock;
+static pthread_mutex_t adev_init_lock = PTHREAD_MUTEX_INITIALIZER;
 static unsigned int audio_device_ref_count;
 //cache last MBDRC cal step level
 static int last_known_cal_step = -1 ;
+
+// TODO: Consider moving this to a pthread_once() if we have more
+// static initialization required.
+static bool is_userdebug_or_eng_build() {
+    char value[PROPERTY_VALUE_MAX];
+    (void)property_get("ro.build.type", value, "unknown"); // ignore actual length
+    return strcmp(value, "userdebug") == 0 || strcmp(value, "eng") == 0;
+}
 
 static bool may_use_noirq_mode(struct audio_device *adev, audio_usecase_t uc_id,
                                int flags __unused)
@@ -2311,7 +2319,11 @@ exit:
         out->written += bytes / (out->config.channels * sizeof(short));
     }
     long long sleeptime_us = 0;
-    const int64_t now_ns = audio_utils_get_real_time_ns();
+
+    // only get time if needed for logging, as it is a system call on 32 bit devices.
+    // TODO: Consider always enabling for 64 bit vDSO using compile time check on __LP64__.
+    const int64_t now_ns = out->power_log != 0 || (ret != 0 && out->error_log != 0)
+            ? audio_utils_get_real_time_ns() : 0;
 
     if (ret != 0) {
         error_log_log(out->error_log, error_code, now_ns);
@@ -3421,15 +3433,19 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             ERROR_LOG_ENTRIES,
             1000000000 /* aggregate consecutive identical errors within one second in ns */);
 
-    const size_t POWER_LOG_FRAMES_PER_ENTRY =
-            config->sample_rate * POWER_LOG_SAMPLING_INTERVAL_MS / 1000;
     // power_log may be null if the format is not supported
-    out->power_log = power_log_create(
-            config->sample_rate,
-            audio_channel_count_from_out_mask(config->channel_mask),
-            config->format,
-            POWER_LOG_ENTRIES,
-            POWER_LOG_FRAMES_PER_ENTRY);
+    // or not a userdebug or eng build.
+    if (is_userdebug_or_eng_build()) {
+        const size_t POWER_LOG_FRAMES_PER_ENTRY =
+                (long long)config->sample_rate * POWER_LOG_SAMPLING_INTERVAL_MS / 1000;
+
+        out->power_log = power_log_create(
+                config->sample_rate,
+                audio_channel_count_from_out_mask(config->channel_mask),
+                config->format,
+                POWER_LOG_ENTRIES,
+                POWER_LOG_FRAMES_PER_ENTRY);
+    }
 
     /*
        By locking output stream before registering, we allow the callback
