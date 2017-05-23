@@ -1625,6 +1625,9 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
                     flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_VOIP_RX |
                                                  AUDIO_OUTPUT_FLAG_DIRECT);
                     ALOGD("Set VoIP and Direct output flags for PCM format");
+                } else {
+                   //If VoIP is going in audio path, make VoIP use primary output
+                   flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_FAST|AUDIO_OUTPUT_FLAG_PRIMARY);
                 }
             }
         }
