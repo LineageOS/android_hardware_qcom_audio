@@ -224,6 +224,11 @@ struct stream_inout {
     pthread_cond_t  cond;
     struct stream_config in_config;
     struct stream_config out_config;
+    struct audio_device *dev;
+    void *adsp_hdlr_stream_handle;
+    void *ip_hdlr_handle;
+    stream_callback_t client_callback;
+    void *client_cookie;
 };
 struct stream_out {
     struct audio_stream_out stream;

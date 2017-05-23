@@ -2543,7 +2543,7 @@ int start_output_stream(struct stream_out *out)
     ALOGD("%s: exit", __func__);
 
     if (audio_extn_ip_hdlr_intf_supported(out->format) && out->ip_hdlr_handle) {
-        ret = audio_extn_ip_hdlr_intf_open(out->ip_hdlr_handle, true, out);
+        ret = audio_extn_ip_hdlr_intf_open(out->ip_hdlr_handle, true, out, out->usecase);
         if (ret < 0)
             ALOGE("%s: audio_extn_ip_hdlr_intf_open failed %d",__func__, ret);
     }
