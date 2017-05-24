@@ -67,6 +67,7 @@ struct audio_extn_module {
     bool hifi_audio_enabled;
     bool ras_enabled;
     struct aptx_dec_bt_addr addr;
+    struct audio_device *adev;
 };
 
 static struct audio_extn_module aextnmod;
@@ -805,6 +806,7 @@ void audio_extn_init(struct audio_device *adev)
     aextnmod.addr.nap = 0;
     aextnmod.addr.uap = 0;
     aextnmod.addr.lap = 0;
+    aextnmod.adev = adev;
 
     audio_extn_dolby_set_license(adev);
     audio_extn_aptx_dec_set_license(adev);
