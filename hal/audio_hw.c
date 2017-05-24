@@ -967,9 +967,9 @@ static int read_hdmi_channel_masks(struct stream_out *out)
     return ret;
 }
 
-static ssize_t read_usb_sup_sample_rates(bool is_playback,
-                                         uint32_t *supported_sample_rates,
-                                         uint32_t max_rates)
+static ssize_t read_usb_sup_sample_rates(bool is_playback __unused,
+                                         uint32_t *supported_sample_rates __unused,
+                                         uint32_t max_rates __unused)
 {
     ssize_t count = audio_extn_usb_sup_sample_rates(is_playback,
                                                     supported_sample_rates,
@@ -1000,7 +1000,7 @@ static int read_usb_sup_channel_masks(bool is_playback,
     return 1;
 }
 
-static int read_usb_sup_formats(bool is_playback,
+static int read_usb_sup_formats(bool is_playback __unused,
                                 audio_format_t *supported_formats,
                                 uint32_t max_formats __unused)
 {
@@ -1864,7 +1864,9 @@ static int check_input_parameters(uint32_t sample_rate,
                                   audio_format_t format,
                                   int channel_count)
 {
-    if ((format != AUDIO_FORMAT_PCM_16_BIT) && (format != AUDIO_FORMAT_PCM_8_24_BIT)) {
+    if ((format != AUDIO_FORMAT_PCM_16_BIT) &&
+        (format != AUDIO_FORMAT_PCM_8_24_BIT) &&
+        (format != AUDIO_FORMAT_PCM_24_BIT_PACKED)) {
         ALOGE("%s: unsupported AUDIO FORMAT (%d) ", __func__, format);
         return -EINVAL;
     }
@@ -1885,6 +1887,7 @@ static int check_input_parameters(uint32_t sample_rate,
     case 32000:
     case 44100:
     case 48000:
+    case 96000:
         break;
     default:
         ALOGE("%s: unsupported (%d) samplerate passed ", __func__, sample_rate);
@@ -3985,6 +3988,42 @@ static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev __unu
             false /* is_low_latency: since we don't know, be conservative */);
 }
 
+static bool adev_input_allow_hifi_record(struct audio_device *adev,
+                                         audio_devices_t devices,
+                                         audio_input_flags_t flags,
+                                         audio_source_t source) {
+    const bool allowed = true;
+
+    if (!audio_is_usb_in_device(devices))
+        return !allowed;
+
+    switch (flags) {
+        case AUDIO_INPUT_FLAG_NONE:
+        case AUDIO_INPUT_FLAG_FAST: // just fast, not fast|raw || fast|mmap
+            break;
+        default:
+            return !allowed;
+    }
+
+    switch (source) {
+        case AUDIO_SOURCE_DEFAULT:
+        case AUDIO_SOURCE_MIC:
+        case AUDIO_SOURCE_UNPROCESSED:
+            break;
+        default:
+            return !allowed;
+    }
+
+    switch (adev->mode) {
+        case 0:
+            break;
+        default:
+            return !allowed;
+    }
+
+    return allowed;
+}
+
 static int adev_open_input_stream(struct audio_hw_device *dev,
                                   audio_io_handle_t handle,
                                   audio_devices_t devices,
@@ -4000,14 +4039,25 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
     bool is_low_latency = false;
     bool is_usb_dev = audio_is_usb_in_device(devices);
-    bool may_use_hifi_record = !(flags & (AUDIO_INPUT_FLAG_RAW|AUDIO_INPUT_FLAG_MMAP_NOIRQ));
-
-    ALOGV("%s: enter", __func__);
+    bool may_use_hifi_record = adev_input_allow_hifi_record(adev,
+                                                            devices,
+                                                            flags,
+                                                            source);
+    ALOGE("%s: enter", __func__);
     *stream_in = NULL;
+
+    if (config->sample_rate == 0)
+        config->sample_rate = DEFAULT_INPUT_SAMPLING_RATE;
+    if (config->channel_mask == AUDIO_CHANNEL_NONE)
+        config->channel_mask = AUDIO_CHANNEL_IN_MONO;
+    if (config->format == AUDIO_FORMAT_DEFAULT)
+        config->format = AUDIO_FORMAT_PCM_16_BIT;
+
     if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0)
         return -EINVAL;
 
-    if (audio_extn_tfa_98xx_is_supported() && (audio_extn_hfp_is_active(adev) || voice_is_in_call(adev)))
+    if (audio_extn_tfa_98xx_is_supported() &&
+        (audio_extn_hfp_is_active(adev) || voice_is_in_call(adev)))
         return -EINVAL;
 
     in = (struct stream_in *)calloc(1, sizeof(struct stream_in));
@@ -4146,6 +4196,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             }
         } else if ((config->sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE) &&
                 ((in->flags & AUDIO_INPUT_FLAG_MMAP_NOIRQ) != 0)) {
+            // FIXME: Add support for multichannel capture over USB using MMAP
             in->usecase = USECASE_AUDIO_RECORD_MMAP;
             in->config = pcm_config_mmap_capture;
             in->stream.start = in_start;
