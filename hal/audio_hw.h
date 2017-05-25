@@ -52,9 +52,6 @@
 #define MAX_SUPPORTED_CHANNEL_MASKS 2
 #define DEFAULT_HDMI_OUT_CHANNELS   2
 
-#define SND_CARD_STATE_OFFLINE 0
-#define SND_CARD_STATE_ONLINE 1
-
 typedef int snd_device_t;
 
 typedef enum card_status_t {
@@ -202,6 +199,7 @@ struct stream_out {
     unsigned int bit_width;
 
     struct audio_device *dev;
+    card_status_t card_status;
 };
 
 struct stream_in {
@@ -223,6 +221,7 @@ struct stream_in {
     int64_t frames_read; /* total frames read, not cleared when entering standby */
 
     struct audio_device *dev;
+    card_status_t card_status;
 };
 
 typedef enum {
@@ -248,11 +247,6 @@ struct audio_usecase {
     union stream_ptr stream;
 };
 
-struct sound_card_status {
-    pthread_mutex_t lock;
-    int state;
-};
-
 struct audio_device {
     struct audio_hw_device device;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
@@ -275,6 +269,7 @@ struct audio_device {
     unsigned int cur_wfd_channels;
 
     int snd_card;
+    card_status_t card_status;
     unsigned int cur_codec_backend_samplerate;
     unsigned int cur_codec_backend_bit_width;
     void *platform;
@@ -287,8 +282,6 @@ struct audio_device {
     void *offload_effects_lib;
     int (*offload_effects_start_output)(audio_io_handle_t, int, struct mixer *);
     int (*offload_effects_stop_output)(audio_io_handle_t, int);
-
-    struct sound_card_status snd_card_status;
 
     /* The pcm_params use_case_table is loaded by adev_verify_devices() upon
      * calling adev_open().
@@ -316,7 +309,6 @@ struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
                                                    audio_usecase_t uc_id);
 
 int pcm_ioctl(struct pcm *pcm, int request, ...);
-int get_snd_card_state(struct audio_device *adev);
 
 bool is_offload_usecase(audio_usecase_t uc_id);
 
