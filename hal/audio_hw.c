@@ -4300,6 +4300,18 @@ int adev_open_output_stream(struct audio_hw_device *dev,
             goto error_open;
         }
 
+        /* TrueHD only supported for 48k multiples (48k, 96k, 192k) */
+        if ((config->offload_info.format == AUDIO_FORMAT_DOLBY_TRUEHD) &&
+                (audio_extn_passthru_is_passthrough_stream(out)) &&
+                !((config->sample_rate == 48000) ||
+                  (config->sample_rate == 96000) ||
+                  (config->sample_rate == 192000))) {
+            ALOGE("%s: Unsupported sample rate %d for audio format %x",
+                    __func__, config->sample_rate, config->offload_info.format);
+            ret = -EINVAL;
+            goto error_open;
+        }
+
         out->compr_config.codec = (struct snd_codec *)
                                     calloc(1, sizeof(struct snd_codec));
 
