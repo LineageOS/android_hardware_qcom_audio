@@ -629,7 +629,6 @@ static int qaf_start_output_stream(struct stream_out *out)
 {
     int ret = 0;
     struct audio_device *adev = out->dev;
-    int snd_card_status = get_snd_card_state(adev);
 
     if ((out->usecase < 0) || (out->usecase >= AUDIO_USECASE_MAX)) {
         ret = -EINVAL;
@@ -641,7 +640,8 @@ static int qaf_start_output_stream(struct stream_out *out)
           __func__, &out->stream, out->usecase, use_case_table[out->usecase],
           out->devices);
 
-    if (SND_CARD_STATE_OFFLINE == snd_card_status) {
+    if (CARD_STATUS_OFFLINE == out->card_status ||
+        CARD_STATUS_OFFLINE == adev->card_status) {
         ALOGE("%s: sound card is not active/SSR returning error", __func__);
         ret = -EIO;
         usleep(50000);
