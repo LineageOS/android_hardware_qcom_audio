@@ -56,12 +56,6 @@ static struct audio_extn_module aextnmod = {
 /* Query offload playback instances count */
 #define AUDIO_PARAMETER_OFFLOAD_NUM_ACTIVE "offload_num_active"
 
-#ifndef FM_POWER_OPT
-#define audio_extn_fm_set_parameters(adev, parms) (0)
-#else
-void audio_extn_fm_set_parameters(struct audio_device *adev,
-                                   struct str_parms *parms);
-#endif
 #ifndef HFP_ENABLED
 #define audio_extn_hfp_set_parameters(adev, parms) (0)
 #else

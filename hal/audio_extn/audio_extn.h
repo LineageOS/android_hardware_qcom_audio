@@ -257,6 +257,13 @@ void audio_extn_perf_lock_acquire(void);
 void audio_extn_perf_lock_release(void);
 #endif /* KPI_OPTIMIZE_ENABLED */
 
+#ifndef FM_POWER_OPT
+#define audio_extn_fm_set_parameters(adev, parms) (0)
+#else
+void audio_extn_fm_set_parameters(struct audio_device *adev,
+                                   struct str_parms *parms);
+#endif
+
 typedef void (* snd_mon_cb)(void * stream, struct str_parms * parms);
 #ifndef SND_MONITOR_ENABLED
 #define audio_extn_snd_mon_init()           (0)
