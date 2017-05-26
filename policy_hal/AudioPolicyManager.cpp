@@ -1067,8 +1067,7 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
 
 audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         audio_devices_t device,
-        audio_session_t session __unused,
-        uid_t clientUid,
+        audio_session_t session,
         audio_stream_type_t stream,
         uint32_t samplingRate,
         audio_format_t format,
@@ -1278,14 +1277,15 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
                 if ((samplingRate == outputDesc->mSamplingRate) &&
                         audio_formats_match(format, outputDesc->mFormat) &&
                         (channelMask == outputDesc->mChannelMask)) {
-                    if (clientUid == outputDesc->mDirectClientUid) {
+                    if (session == outputDesc->mDirectClientSession) {
                         outputDesc->mDirectOpenCount++;
-                        ALOGV("getOutput() reusing direct output %d", mOutputs.keyAt(i));
+                        ALOGV("getOutput() reusing direct output %d for session %d",
+                                mOutputs.keyAt(i), session);
                         return mOutputs.keyAt(i);
                     } else {
-                        ALOGV("getOutput() do not reuse direct output because current client (%ld) "
-                              "is not the same as requesting client (%ld)",
-                              (long)outputDesc->mDirectClientUid, (long)clientUid);
+                        ALOGV("getOutput() do not reuse direct output because current client (%d) "
+                                "is not the same as requesting client (%d)",
+                                outputDesc->mDirectClientSession, session);
                         goto non_direct_output;
                     }
                 }
@@ -1355,7 +1355,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         outputDesc->mRefCount[stream] = 0;
         outputDesc->mStopTime[stream] = 0;
         outputDesc->mDirectOpenCount = 1;
-        outputDesc->mDirectClientUid = clientUid;
+        outputDesc->mDirectClientSession = session;
 
         audio_io_handle_t srcOutput = getOutputForEffect();
         addOutput(output, outputDesc);

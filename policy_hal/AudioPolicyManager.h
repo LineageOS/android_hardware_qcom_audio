@@ -108,7 +108,6 @@ private:
         audio_io_handle_t getOutputForDevice(
                 audio_devices_t device,
                 audio_session_t session,
-                uid_t client,
                 audio_stream_type_t stream,
                 uint32_t samplingRate,
                 audio_format_t format,
