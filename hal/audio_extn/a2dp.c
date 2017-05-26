@@ -794,6 +794,8 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
                    a2dp.audio_suspend_stream();
             } else if (a2dp.a2dp_suspended == true) {
                 ALOGD("Resetting a2dp suspend state");
+                struct audio_usecase *uc_info;
+                struct listnode *node;
                 if(a2dp.clear_a2dpsuspend_flag)
                     a2dp.clear_a2dpsuspend_flag();
                 a2dp.a2dp_suspended = false;
@@ -817,6 +819,13 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
                             a2dp.a2dp_started = false;
                         }
                     }
+                }
+                // restore A2DP device for active usecases
+                list_for_each(node, &a2dp.adev->usecase_list) {
+                    uc_info = node_to_item(node, struct audio_usecase, list);
+                    if ((uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
+                            (uc_info->out_snd_device != SND_DEVICE_OUT_BT_A2DP))
+                        select_devices(a2dp.adev, uc_info->id);
                 }
             }
         }
