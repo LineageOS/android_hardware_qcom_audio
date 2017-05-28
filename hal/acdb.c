@@ -29,7 +29,6 @@
 #include <platform_api.h>
 
 #define PLATFORM_CONFIG_KEY_SOUNDCARD_NAME "snd_card_name"
-#define PLATFORM_INFO_XML_PATH          "audio_platform_info.xml"
 
 int acdb_init(int snd_card_num)
 {
@@ -60,9 +59,6 @@ int acdb_init(int snd_card_num)
     }
 
     list_init(&my_data->acdb_meta_key_list);
-
-    /* Extract META KEY LIST INFO */
-    //platform_info_init(PLATFORM_INFO_XML_PATH, my_data);
 
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
     if (my_data->acdb_handle == NULL) {
@@ -125,21 +121,13 @@ int acdb_init(int snd_card_num)
         goto cleanup;
     }
 
-    int key = 0;
-    struct listnode *node = NULL;
-    struct meta_key_list *key_info = NULL;
-
-    if (my_data->acdb_init_v3) {
+    if (my_data->acdb_init_v3)
         result = my_data->acdb_init_v3(snd_card_name, cvd_version,
                                        &my_data->acdb_meta_key_list);
-    } else if (my_data->acdb_init_v2) {
-        node = list_head(&my_data->acdb_meta_key_list);
-        key_info = node_to_item(node, struct meta_key_list, list);
-        key = key_info->cal_info.nKey;
-        result = my_data->acdb_init_v2(snd_card_name, cvd_version, key);
-    } else {
+    else if (my_data->acdb_init_v2)
+        result = my_data->acdb_init_v2(snd_card_name, cvd_version, 0);
+    else
         result = my_data->acdb_init();
-    }
 
 cleanup:
     if (NULL != my_data) {
@@ -160,26 +148,6 @@ cleanup:
     free(snd_card_name);
 
     return result;
-}
-
-int acdb_set_metainfo_key(void *platform, char *name, int key) {
-
-    struct meta_key_list *key_info = (struct meta_key_list *)
-                                        calloc(1, sizeof(struct meta_key_list));
-    struct acdb_platform_data *pdata = (struct acdb_platform_data *)platform;
-    if (!key_info) {
-        ALOGE("%s: Could not allocate memory for key %d", __func__, key);
-        return -ENOMEM;
-    }
-
-    key_info->cal_info.nKey = key;
-    strlcpy(key_info->name, name, sizeof(key_info->name));
-    list_add_tail(&pdata->acdb_meta_key_list, &key_info->list);
-
-    ALOGD("%s: successfully added module %s and key %d to the list", __func__,
-               key_info->name, key_info->cal_info.nKey);
-
-    return 0;
 }
 
 int acdb_set_parameters(void *platform, struct str_parms *parms)

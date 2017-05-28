@@ -801,7 +801,9 @@ static void check_and_route_playback_usecases(struct audio_device *adev,
     bool switch_device[AUDIO_USECASE_MAX];
     int i, num_uc_to_switch = 0;
 
-    platform_check_and_set_playback_backend_cfg(adev, uc_info, snd_device);
+    bool force_routing =  platform_check_and_set_playback_backend_cfg(adev,
+                                                                      uc_info,
+                                                                      snd_device);
 
     /*
      * This function is to make sure that all the usecases that are active on
@@ -820,11 +822,13 @@ static void check_and_route_playback_usecases(struct audio_device *adev,
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if (usecase->type != PCM_CAPTURE &&
-                usecase != uc_info &&
-                usecase->out_snd_device != snd_device &&
-                usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND &&
-                platform_check_backends_match(snd_device, usecase->out_snd_device)) {
+        if (usecase->type == PCM_CAPTURE || usecase == uc_info)
+            continue;
+
+        if (force_routing ||
+            (usecase->out_snd_device != snd_device &&
+             usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND &&
+             platform_check_backends_match(snd_device, usecase->out_snd_device))) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
                   platform_get_snd_device_name(usecase->out_snd_device));
