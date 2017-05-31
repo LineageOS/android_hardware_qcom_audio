@@ -1503,9 +1503,10 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         ((offloadInfo->usage == AUDIO_USAGE_MEDIA) || (offloadInfo->usage == AUDIO_USAGE_GAME))) {
         audio_output_flags_t old_flags = flags;
         flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_DIRECT);
-        ALOGD("AudioCustomHAL --> Force Direct Flag .. old flags(0x%x)", old_flags);
-    } else if (flags == AUDIO_OUTPUT_FLAG_DIRECT && offload_disabled) {
-        ALOGD("AudioCustomHAL --> offloading is disabled: Force Remove Direct Flag");
+        ALOGD("Force Direct Flag .. old flags(0x%x)", old_flags);
+    } else if (flags == AUDIO_OUTPUT_FLAG_DIRECT &&
+                (offload_disabled || stream != AUDIO_STREAM_MUSIC)) {
+        ALOGD("Offloading is disabled or Stream is not music --> Force Remove Direct Flag");
         flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_NONE);
     }
 
