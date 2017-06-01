@@ -329,9 +329,12 @@ void *start_input(void *thread_param)
   strlcat(param, params->profile, sizeof(param));
   qahw_in_set_parameters(in_handle, param);
 
-  fprintf(log_file, "\n Please speak into the microphone for %lf seconds, handle(%d)\n", params->record_length, params->handle);
+  /* Caution: Below ADL log shouldnt be altered without notifying automation APT since it used for
+   * automation testing
+   */
+  fprintf(log_file, "\n ADL: Please speak into the microphone for %lf seconds, handle(%d)\n", params->record_length, params->handle);
   if (log_file != stdout)
-      fprintf(stdout, "\n Please speak into the microphone for %lf seconds, handle(%d)\n", params->record_length, params->handle);
+      fprintf(stdout, "\n ADL: Please speak into the microphone for %lf seconds, handle(%d)\n", params->record_length, params->handle);
 
   snprintf(file_name + name_len, sizeof(file_name) - name_len, "%d.wav", (0x99A - params->handle));
   FILE *fd = fopen(file_name,"w");
@@ -467,14 +470,17 @@ void *start_input(void *thread_param)
           fprintf(stdout, "could not close input stream %d, handle(%d)\n",rc, params->handle);
   }
 
-  /* Print instructions to access the file. */
-  fprintf(log_file, "\n\n The audio recording has been saved to %s. Please use adb pull to get "
+  /* Print instructions to access the file.
+   * Caution: Below ADL log shouldnt be altered without notifying automation APT since it used for
+   * automation testing
+   */
+  fprintf(log_file, "\n\n ADL: The audio recording has been saved to %s. Please use adb pull to get "
          "the file and play it using audacity. The audio data has the "
          "following characteristics:\n Sample rate: %i\n Format: %d\n "
          "Num channels: %i, handle(%d)\n\n",
          file_name, params->config.sample_rate, params->config.format, params->channels, params->handle);
   if (log_file != stdout)
-      fprintf(stdout, "\n\n The audio recording has been saved to %s. Please use adb pull to get "
+      fprintf(stdout, "\n\n ADL: The audio recording has been saved to %s. Please use adb pull to get "
          "the file and play it using audacity. The audio data has the "
          "following characteristics:\n Sample rate: %i\n Format: %d\n "
          "Num channels: %i, handle(%d)\n\n",
@@ -893,9 +899,12 @@ sourcetrack_error:
         fprintf(log_file, "could not unload hal %d \n",ret);
     }
 
-    fprintf(log_file, "\n Done with hal record test \n");
+    /* Caution: Below ADL log shouldnt be altered without notifying automation APT since it used
+     * for automation testing
+     */
+    fprintf(log_file, "\n ADL: Done with hal record test \n");
     if (log_file != stdout) {
-        fprintf(stdout, "\n Done with hal record test \n");
+        fprintf(stdout, "\n ADL: Done with hal record test \n");
         fclose(log_file);
     }
     wakelock_acquired = request_wake_lock(wakelock_acquired, false);
