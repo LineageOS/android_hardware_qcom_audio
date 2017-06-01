@@ -2564,4 +2564,59 @@
         <path name="audio-ull-playback" />
     </path>
 
+    <path name="mmap-playback">
+        <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="mmap-playback headphones">
+        <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="mmap-playback speaker-and-headphones">
+        <path name="mmap-playback" />
+        <path name="mmap-playback headphones" />
+    </path>
+
+    <path name="mmap-playback bt-sco">
+        <ctl name="AUX_PCM_RX Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="mmap-playback bt-sco-wb">
+        <ctl name="AUX PCM SampleRate" value="16000" />
+        <path name="mmap-playback bt-sco" />
+    </path>
+
+    <path name="mmap-playback afe-proxy">
+        <ctl name="AFE_PCM_RX Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="mmap-playback usb-headphones">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="mmap-playback usb-headset">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="mmap-record">
+      <ctl name="MultiMedia16 Mixer SLIM_0_TX" value="1" />
+    </path>
+
+    <path name="mmap-record bt-sco">
+      <ctl name="MultiMedia16 Mixer AUX_PCM_UL_TX" value="1" />
+    </path>
+
+    <path name="mmap-record bt-sco-wb">
+        <ctl name="AUX PCM SampleRate" value="16000" />
+        <path name="mmap-record bt-sco" />
+    </path>
+
+    <path name="mmap-record capture-fm">
+      <ctl name="MultiMedia16 Mixer TERT_MI2S_TX" value="1" />
+    </path>
+
+    <path name="mmap-record usb-headset-mic">
+       <ctl name="MultiMedia16 Mixer USB_AUDIO_TX" value="1" />
+    </path>
+
 </mixer>
