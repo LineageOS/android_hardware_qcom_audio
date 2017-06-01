@@ -238,6 +238,40 @@ audio_io_handle_t stream_handle = 0x999;
                    "music_offload_wma_encode_option2=%d;" \
                    "music_offload_wma_format_tag=%d;"
 
+static bool request_wake_lock(bool wakelock_acquired, bool enable)
+{
+   int system_ret;
+
+   if (enable) {
+       if (!wakelock_acquired) {
+           system_ret = system("echo audio_services > /sys/power/wake_lock");
+           if (system_ret < 0) {
+               fprintf(stderr, "%s.Failed to acquire audio_service lock\n", __func__);
+               fprintf(log_file, "%s.Failed to acquire audio_service lock\n", __func__);
+           } else {
+               wakelock_acquired = true;
+               fprintf(log_file, "%s.Success to acquire audio_service lock\n", __func__);
+           }
+       } else
+            fprintf(log_file, "%s.Lock is already acquired\n", __func__);
+   }
+
+   if (!enable) {
+       if (wakelock_acquired) {
+           system_ret = system("echo audio_services > /sys/power/wake_unlock");
+           if (system_ret < 0) {
+               fprintf(stderr, "%s.Failed to release audio_service lock\n", __func__);
+               fprintf(log_file, "%s.Failed to release audio_service lock\n", __func__);
+           } else {
+               wakelock_acquired = false;
+               fprintf(log_file, "%s.Success to release audio_service lock\n", __func__);
+           }
+       } else
+            fprintf(log_file, "%s.No Lock is acquired to release\n", __func__);
+   }
+   return wakelock_acquired;
+}
+
 void stop_signal_handler(int signal __unused)
 {
    stop_playback = true;
@@ -1585,6 +1619,7 @@ int main(int argc, char* argv[]) {
     int j = 0;
     kpi_mode = false;
     event_trigger = false;
+    bool wakelock_acquired = false;
 
     log_file = stdout;
     proxy_params.acp.file_name = "/data/pcm_dump.wav";
@@ -1750,6 +1785,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    wakelock_acquired = request_wake_lock(wakelock_acquired, true);
     num_of_streams = i+1;
     fprintf(log_file, "Starting audio hal tests for streams : %d\n", num_of_streams);
 
@@ -1926,6 +1962,7 @@ exit:
     if ((log_file != stdout) && (log_file != nullptr))
         fclose(log_file);
 
+    wakelock_acquired = request_wake_lock(wakelock_acquired, false);
     fprintf(log_file, "\nBYE BYE\n");
     return 0;
 }
