@@ -118,6 +118,7 @@ enum {
     USECASE_AUDIO_PLAYBACK_OFFLOAD8,
     USECASE_AUDIO_PLAYBACK_OFFLOAD9,
     USECASE_AUDIO_PLAYBACK_ULL,
+    USECASE_AUDIO_PLAYBACK_MMAP,
 
     /* FM usecase */
     USECASE_AUDIO_PLAYBACK_FM,
@@ -139,6 +140,7 @@ enum {
     USECASE_AUDIO_RECORD_VOIP,
     /* Voice usecase */
     USECASE_VOICE_CALL,
+    USECASE_AUDIO_RECORD_MMAP,
 
     /* Voice extension usecases */
     USECASE_VOICE2_CALL,
@@ -342,6 +344,7 @@ struct stream_in {
 
     struct audio_device *dev;
     card_status_t card_status;
+    int capture_started;
 };
 
 typedef enum {
