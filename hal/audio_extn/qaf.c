@@ -36,6 +36,7 @@
 #define ALOGVV(a...) do { } while(0)
 #endif
 
+#define DEBUG_MSG_VV(arg,...) ALOGVV("%s: %d:  " arg, __func__, __LINE__, ##__VA_ARGS__)
 #define DEBUG_MSG(arg,...) ALOGV("%s: %d:  " arg, __func__, __LINE__, ##__VA_ARGS__)
 #define ERROR_MSG(arg,...) ALOGE("%s: %d:  " arg, __func__, __LINE__, ##__VA_ARGS__)
 
@@ -58,6 +59,7 @@
 #define QAF_MODULE_PCM_INPUT_BUFFER_LATENCY 32
 
 #define MS12_PCM_OUT_FRAGMENT_SIZE 1536 //samples
+#define MS12_PCM_IN_FRAGMENT_SIZE 1536 //samples
 
 #define DD_FRAME_SIZE 1536
 #define DDP_FRAME_SIZE DD_FRAME_SIZE
@@ -147,9 +149,9 @@ typedef enum {
 
 typedef enum {
     QAF_IN_MAIN = 0, /* Single PID Main/Primary or Dual-PID stream */
-    QAF_IN_ASSOC, /* Associated/Secondary stream */
-    QAF_IN_PCM, /* PCM stream. */
-
+    QAF_IN_ASSOC,    /* Associated/Secondary stream */
+    QAF_IN_PCM,      /* PCM stream. */
+    QAF_IN_MAIN_2,   /* Single PID Main2 stream */
     MAX_QAF_MODULE_IN
 } mm_module_input_type;
 
@@ -303,6 +305,16 @@ static mm_module_type get_mm_module_for_format(audio_format_t format)
         default:
             return INVALID_MM_MODULE;
     }
+}
+
+static bool is_main_active(struct qaf_module* qaf_mod)
+{
+   return (qaf_mod->stream_in[QAF_IN_MAIN] || qaf_mod->stream_in[QAF_IN_MAIN_2]);
+}
+
+static bool is_dual_main_active(struct qaf_module* qaf_mod)
+{
+   return (qaf_mod->stream_in[QAF_IN_MAIN] && qaf_mod->stream_in[QAF_IN_MAIN_2]);
 }
 
 /* Gets the pcm output buffer size(in samples) for the mm module. */
@@ -491,7 +503,7 @@ static void close_qaf_passthrough_stream()
 /* Sends a command to output stream offload thread. */
 static int qaf_send_offload_cmd_l(struct stream_out* out, int command)
 {
-    DEBUG_MSG("command is %d", command);
+    DEBUG_MSG_VV("command is %d", command);
 
     struct offload_cmd *cmd = (struct offload_cmd *)calloc(1, sizeof(struct offload_cmd));
 
@@ -637,7 +649,6 @@ static int qaf_module_write_input_buffer(struct stream_out *out, const void *buf
 {
     int ret = -EINVAL;
     struct qaf_module *qaf_mod = NULL;
-    DEBUG_MSG("bytes = %d [%p]", bytes, out->qaf_stream_handle);
 
     qaf_mod = get_qaf_module_for_input_stream(out);
     if ((!qaf_mod) || (!qaf_mod->qaf_audio_stream_write)) {
@@ -657,7 +668,7 @@ static ssize_t qaf_out_write(struct audio_stream_out *stream, const void *buffer
     struct audio_device *adev = out->dev;
     ssize_t ret = 0;
 
-    DEBUG_MSG("bytes = %d, usecase[%d] and flags[%x] for handle[%p]",
+    DEBUG_MSG_VV("bytes = %d, usecase[%d] and flags[%x] for handle[%p]",
           (int)bytes, out->usecase, out->flags, out);
 
     lock_output_stream(out);
@@ -691,7 +702,7 @@ static ssize_t qaf_out_write(struct audio_stream_out *stream, const void *buffer
     }
 
     ret = qaf_module_write_input_buffer(out, buffer, bytes);
-    DEBUG_MSG("ret [%d]", (int)ret);
+    DEBUG_MSG_VV("ret [%d]", (int)ret);
 
     if (ret >= 0) {
         bytes = ret;
@@ -704,7 +715,7 @@ exit:
 
     if (ret < 0) {
         if (ret == -EAGAIN) {
-            DEBUG_MSG("No space available in mm module, post msg to cb thread");
+            DEBUG_MSG_VV("No space available in mm module, post msg to cb thread");
             ret = qaf_send_offload_cmd_l(out, OFFLOAD_CMD_WAIT_FOR_BUFFER);
             bytes = 0;
         } else if (ret == -ENOMEM || ret == -EPERM) {
@@ -719,11 +730,10 @@ exit:
     return bytes;
 }
 
-/* Gets PCM offload buffer size for QAF module output. */
-static uint32_t qaf_get_pcm_offload_buffer_size(struct qaf_module *qaf_mod,
-                                                audio_offload_info_t* info)
+/* Gets PCM offload buffer size for a given config. */
+static uint32_t qaf_get_pcm_offload_buffer_size(audio_offload_info_t* info,
+                                                uint32_t samples_per_frame)
 {
-    uint32_t samples_per_frame = get_pcm_output_buffer_size_samples(qaf_mod);
     uint32_t fragment_size = 0;
 
     fragment_size = (samples_per_frame * (info->bit_width >> 3) * popcount(info->channel_mask));
@@ -739,9 +749,20 @@ static uint32_t qaf_get_pcm_offload_buffer_size(struct qaf_module *qaf_mod,
     fragment_size = ALIGN(fragment_size,
                           ((info->bit_width >> 3) * popcount(info->channel_mask) * 32));
 
-    ALOGI("Qaf PCM offload Fragment size to %d bytes", fragment_size);
+    ALOGI("Qaf PCM offload Fragment size is %d bytes", fragment_size);
 
     return fragment_size;
+}
+
+static uint32_t qaf_get_pcm_offload_input_buffer_size(info)
+{
+    return qaf_get_pcm_offload_buffer_size(info, MS12_PCM_IN_FRAGMENT_SIZE);
+}
+
+static uint32_t qaf_get_pcm_offload_output_buffer_size(struct qaf_module *qaf_mod,
+                                                audio_offload_info_t* info)
+{
+    return qaf_get_pcm_offload_buffer_size(info, get_pcm_output_buffer_size_samples(qaf_mod));
 }
 
 /* Gets buffer latency in samples. */
@@ -1047,7 +1068,7 @@ static uint32_t qaf_out_get_latency(const struct audio_stream_out *stream)
     struct stream_out *out = (struct stream_out *)stream;
     uint32_t latency = 0;
     struct qaf_module *qaf_mod = NULL;
-    DEBUG_MSG("Output Stream %p", out);
+    DEBUG_MSG_VV("Output Stream %p", out);
 
     qaf_mod = get_qaf_module_for_input_stream(out);
     if (!qaf_mod) {
@@ -1091,7 +1112,7 @@ static uint32_t qaf_out_get_latency(const struct audio_stream_out *stream)
         }
     }
 
-    DEBUG_MSG("Latency %d", latency);
+    DEBUG_MSG_VV("Latency %d", latency);
     return latency;
 }
 
@@ -1139,12 +1160,10 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
     struct audio_stream_out *bt_stream = NULL;
     int format;
 
-    DEBUG_MSG("Device 0x%X, Event = 0x%X", device, event_id);
+    DEBUG_MSG_VV("Device 0x%X, Event = 0x%X, Bytes to write %d", device, event_id, size);
     pthread_mutex_lock(&p_qaf->lock);
 
     if (event_id == AUDIO_DATA_EVENT) {
-        DEBUG_MSG("Device id 0x%X, bytes to write %d", device, size);
-
         if (p_qaf->passthrough_out != NULL) {
             //If QAF passthrough is active then all the module output will be dropped.
             pthread_mutex_unlock(&p_qaf->lock);
@@ -1284,17 +1303,27 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
                 qaf_mod->stream_out[QAF_OUT_OFFLOAD_MCH]->compr_config.fragments =
                         COMPRESS_OFFLOAD_NUM_FRAGMENTS;
                 qaf_mod->stream_out[QAF_OUT_OFFLOAD_MCH]->compr_config.fragment_size =
-                        qaf_get_pcm_offload_buffer_size(qaf_mod, &config.offload_info);
+                        qaf_get_pcm_offload_output_buffer_size(qaf_mod, &config.offload_info);
 
                 p_qaf->mch_pcm_hdmi_enabled = true;
 
-                if (qaf_mod->stream_in[QAF_IN_MAIN]
-                    && qaf_mod->stream_in[QAF_IN_MAIN]->client_callback != NULL) {
+                if ((qaf_mod->stream_in[QAF_IN_MAIN]
+                    && qaf_mod->stream_in[QAF_IN_MAIN]->client_callback != NULL) ||
+                    (qaf_mod->stream_in[QAF_IN_MAIN_2]
+                    && qaf_mod->stream_in[QAF_IN_MAIN_2]->client_callback != NULL)) {
 
-                    qaf_mod->stream_out[QAF_OUT_OFFLOAD_MCH]->stream.set_callback(
+                    if (qaf_mod->stream_in[QAF_IN_MAIN]) {
+                        qaf_mod->stream_out[QAF_OUT_OFFLOAD_MCH]->stream.set_callback(
                             (struct audio_stream_out *)qaf_mod->stream_out[QAF_OUT_OFFLOAD_MCH],
                             qaf_mod->stream_in[QAF_IN_MAIN]->client_callback,
                             qaf_mod->stream_in[QAF_IN_MAIN]->client_cookie);
+                    }
+                    if (qaf_mod->stream_in[QAF_IN_MAIN_2]) {
+                        qaf_mod->stream_out[QAF_OUT_OFFLOAD_MCH]->stream.set_callback(
+                            (struct audio_stream_out *)qaf_mod->stream_out[QAF_OUT_OFFLOAD_MCH],
+                            qaf_mod->stream_in[QAF_IN_MAIN_2]->client_callback,
+                            qaf_mod->stream_in[QAF_IN_MAIN_2]->client_cookie);
+                    }
                 } else if (qaf_mod->stream_in[QAF_IN_PCM]
                            && qaf_mod->stream_in[QAF_IN_PCM]->client_callback != NULL) {
 
@@ -1307,6 +1336,8 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
                 int index = -1;
                 if (qaf_mod->adsp_hdlr_config[QAF_IN_MAIN].adsp_hdlr_config_valid)
                     index = (int) QAF_IN_MAIN;
+                else if (qaf_mod->adsp_hdlr_config[QAF_IN_MAIN_2].adsp_hdlr_config_valid)
+                    index = (int) QAF_IN_MAIN_2;
                 else if (qaf_mod->adsp_hdlr_config[QAF_IN_PCM].adsp_hdlr_config_valid)
                     index = (int) QAF_IN_PCM;
 
@@ -1389,13 +1420,23 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
                     return;
                 }
 
-                if (qaf_mod->stream_in[QAF_IN_MAIN]
-                    && qaf_mod->stream_in[QAF_IN_MAIN]->client_callback != NULL) {
+                if ((qaf_mod->stream_in[QAF_IN_MAIN]
+                    && qaf_mod->stream_in[QAF_IN_MAIN]->client_callback != NULL) ||
+                    (qaf_mod->stream_in[QAF_IN_MAIN_2]
+                    && qaf_mod->stream_in[QAF_IN_MAIN_2]->client_callback != NULL)) {
 
-                    qaf_mod->stream_out[QAF_OUT_OFFLOAD]->stream.set_callback(
+                    if (qaf_mod->stream_in[QAF_IN_MAIN]) {
+                        qaf_mod->stream_out[QAF_OUT_OFFLOAD]->stream.set_callback(
                             (struct audio_stream_out *)qaf_mod->stream_out[QAF_OUT_OFFLOAD],
                             qaf_mod->stream_in[QAF_IN_MAIN]->client_callback,
                             qaf_mod->stream_in[QAF_IN_MAIN]->client_cookie);
+                    }
+                    if (qaf_mod->stream_in[QAF_IN_MAIN_2]) {
+                        qaf_mod->stream_out[QAF_OUT_OFFLOAD]->stream.set_callback(
+                            (struct audio_stream_out *)qaf_mod->stream_out[QAF_OUT_OFFLOAD],
+                            qaf_mod->stream_in[QAF_IN_MAIN_2]->client_callback,
+                            qaf_mod->stream_in[QAF_IN_MAIN_2]->client_cookie);
+                    }
                 } else if (qaf_mod->stream_in[QAF_IN_PCM]
                            && qaf_mod->stream_in[QAF_IN_PCM]->client_callback != NULL) {
 
@@ -1408,7 +1449,7 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
                 qaf_mod->stream_out[QAF_OUT_OFFLOAD]->compr_config.fragments =
                         COMPRESS_OFFLOAD_NUM_FRAGMENTS;
                 qaf_mod->stream_out[QAF_OUT_OFFLOAD]->compr_config.fragment_size =
-                        qaf_get_pcm_offload_buffer_size(qaf_mod, &config.offload_info);
+                        qaf_get_pcm_offload_output_buffer_size(qaf_mod, &config.offload_info);
 
                 if (qaf_mod->is_vol_set) {
                     DEBUG_MSG("Setting Volume Left[%f], Right[%f]", qaf_mod->vol_left, qaf_mod->vol_right);
@@ -1421,6 +1462,8 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
                 int index = -1;
                 if (qaf_mod->adsp_hdlr_config[QAF_IN_MAIN].adsp_hdlr_config_valid)
                     index = (int) QAF_IN_MAIN;
+                else if (qaf_mod->adsp_hdlr_config[QAF_IN_MAIN_2].adsp_hdlr_config_valid)
+                    index = (int) QAF_IN_MAIN_2;
                 else if (qaf_mod->adsp_hdlr_config[QAF_IN_PCM].adsp_hdlr_config_valid)
                     index = (int) QAF_IN_PCM;
                 if (index >= 0) {
@@ -1449,16 +1492,18 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
                         size);
             }
         }
-
-        DEBUG_MSG("Bytes written = %d", ret);
+        DEBUG_MSG_VV("Bytes written = %d", ret);
     }
     else if (event_id == AUDIO_EOS_MAIN_DD_DDP_EVENT
+               || event_id == AUDIO_EOS_MAIN_2_DD_DDP_EVENT
                || event_id == AUDIO_EOS_MAIN_AAC_EVENT
                || event_id == AUDIO_EOS_MAIN_AC4_EVENT
                || event_id == AUDIO_EOS_ASSOC_DD_DDP_EVENT) {
         struct stream_out *out = qaf_mod->stream_in[QAF_IN_MAIN];
+        struct stream_out *out_main2 = qaf_mod->stream_in[QAF_IN_MAIN_2];
         struct stream_out *out_assoc = qaf_mod->stream_in[QAF_IN_ASSOC];
         bool *main_drain_received = &qaf_mod->drain_received[QAF_IN_MAIN];
+        bool *main2_drain_received = &qaf_mod->drain_received[QAF_IN_MAIN_2];
         bool *assoc_drain_received = &qaf_mod->drain_received[QAF_IN_ASSOC];
 
         /**
@@ -1474,6 +1519,15 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
             *assoc_drain_received = false;
             unlock_output_stream(out_assoc);
             DEBUG_MSG("sent associated DRAIN_READY");
+        } else if (event_id == AUDIO_EOS_MAIN_2_DD_DDP_EVENT
+                && (out_main2 != NULL)
+                && (*main2_drain_received)) {
+
+            lock_output_stream(out_main2);
+            out_main2->client_callback(STREAM_CBK_EVENT_DRAIN_READY, NULL, out_main2->client_cookie);
+            *main2_drain_received = false;
+            unlock_output_stream(out_main2);
+            DEBUG_MSG("sent main2 DRAIN_READY");
         } else if ((out != NULL) && (*main_drain_received)) {
             lock_output_stream(out);
             out->client_callback(STREAM_CBK_EVENT_DRAIN_READY, NULL, out->client_cookie);
@@ -1718,43 +1772,60 @@ static int qaf_stream_open(struct stream_out *out,
                                                 devices,
                                                 AUDIO_STREAM_SYSTEM_TONE);
         qaf_mod->stream_in[QAF_IN_PCM] = out;
-    } else {
-        if (!qaf_mod->stream_in[QAF_IN_MAIN]) {
-            if ((!(flags & AUDIO_OUTPUT_FLAG_MAIN)) && (flags & AUDIO_OUTPUT_FLAG_ASSOCIATED)) {
-                ERROR_MSG("Error main input is not active.");
-                return -EINVAL;
-            }
-
-            status = qaf_mod->qaf_audio_stream_open(qaf_mod->session_handle,
-                                                    &out->qaf_stream_handle,
-                                                    input_config,
-                                                    devices,
-                                                    AUDIO_STREAM_MAIN);
-            if (status == 0) {
-                DEBUG_MSG("Open stream for Input with Main stream contents with flag [%x] and stream handle [%p]",
-                      flags, out->qaf_stream_handle);
-                qaf_mod->stream_in[QAF_IN_MAIN] = out;
-            }
+    } else if ((flags & AUDIO_OUTPUT_FLAG_MAIN) && (flags & AUDIO_OUTPUT_FLAG_ASSOCIATED)) {
+        if (is_main_active(qaf_mod) || is_dual_main_active(qaf_mod)) {
+            ERROR_MSG("Dual Main or Main already active. So, Cannot open main and associated stream");
+            return -EINVAL;
         } else {
-            if (flags & AUDIO_OUTPUT_FLAG_MAIN) {
-                ERROR_MSG("Error main input is already active");
-                return -EINVAL;
-            } else if ((flags & AUDIO_OUTPUT_FLAG_ASSOCIATED)
-                       && (!qaf_mod->stream_in[QAF_IN_ASSOC])) {
-                status = qaf_mod->qaf_audio_stream_open(qaf_mod->session_handle,
-                                                        &out->qaf_stream_handle,
-                                                        input_config,
-                                                        devices,
-                                                        AUDIO_STREAM_ASSOCIATED);
-                if (status == 0) {
-                    DEBUG_MSG("Open stream for Input with only Associated flag [%x] stream handle [%p]",
-                          flags, out->qaf_stream_handle);
-                    qaf_mod->stream_in[QAF_IN_ASSOC] = out;
+            status = qaf_mod->qaf_audio_stream_open(qaf_mod->session_handle, &out->qaf_stream_handle, input_config, devices, /*flags*/AUDIO_STREAM_MAIN);
+            if (status == 0) {
+                DEBUG_MSG("Open stream for Input with both Main and Associated stream contents with flag(%x) and stream_handle(%p)", flags, out->qaf_stream_handle);
+                qaf_mod->stream_in[QAF_IN_MAIN] = out;
+            } else {
+                ERROR_MSG("Stream Open FAILED !!!");
+            }
+        }
+    } else if ((flags & AUDIO_OUTPUT_FLAG_MAIN) || (!((flags & AUDIO_OUTPUT_FLAG_MAIN) && (flags & AUDIO_OUTPUT_FLAG_ASSOCIATED)))) {
+        /* Assume Main if no flag is set */
+        if (is_dual_main_active(qaf_mod)) {
+            ERROR_MSG("Dual Main already active. So, Cannot open main stream");
+            return -EINVAL;
+        } else if (is_main_active(qaf_mod) && qaf_mod->stream_in[QAF_IN_ASSOC]) {
+            ERROR_MSG("Main and Associated already active. So, Cannot open main stream");
+            return -EINVAL;
+        } else if (is_main_active(qaf_mod) && (mmtype != MS12)) {
+            ERROR_MSG("Main already active and Not an MS12 format. So, Cannot open another main stream");
+            return -EINVAL;
+        } else {
+            status = qaf_mod->qaf_audio_stream_open(qaf_mod->session_handle, &out->qaf_stream_handle, input_config, devices, /*flags*/AUDIO_STREAM_MAIN);
+            if (status == 0) {
+                DEBUG_MSG("Open stream for Input with only Main flag(%x) stream_handle(%p)", flags, out->qaf_stream_handle);
+                if(qaf_mod->stream_in[QAF_IN_MAIN]) {
+                    qaf_mod->stream_in[QAF_IN_MAIN_2] = out;
+                } else {
+                    qaf_mod->stream_in[QAF_IN_MAIN] = out;
                 }
             } else {
-                ERROR_MSG("Invalid flag or associated is already active");
-                status = -EINVAL;
+                ERROR_MSG("Stream Open FAILED !!!");
             }
+        }
+    } else if ((flags & AUDIO_OUTPUT_FLAG_ASSOCIATED)) {
+        if (is_dual_main_active(qaf_mod)) {
+            ERROR_MSG("Dual Main already active. So, Cannot open associated stream");
+            return -EINVAL;
+        } else if (!is_main_active(qaf_mod)) {
+            ERROR_MSG("Main not active. So, Cannot open associated stream");
+            return -EINVAL;
+        } else if (qaf_mod->stream_in[QAF_IN_ASSOC]) {
+            ERROR_MSG("Associated already active. So, Cannot open associated stream");
+            return -EINVAL;
+        }
+        status = qaf_mod->qaf_audio_stream_open(qaf_mod->session_handle, &out->qaf_stream_handle, input_config, devices, /*flags*/AUDIO_STREAM_ASSOCIATED);
+        if (status == 0) {
+            DEBUG_MSG("Open stream for Input with only Associated flag(%x) stream handle(%p)", flags, out->qaf_stream_handle);
+            qaf_mod->stream_in[QAF_IN_ASSOC] = out;
+        } else {
+            ERROR_MSG("Stream Open FAILED !!!");
         }
     }
 
@@ -1849,11 +1920,11 @@ static void *qaf_offload_thread_loop(void *context)
         stream_callback_event_t event;
         bool send_callback = false;
 
-        DEBUG_MSG("List Empty %d (1:TRUE, 0:FALSE)", list_empty(&out->qaf_offload_cmd_list));
+        DEBUG_MSG_VV("List Empty %d (1:TRUE, 0:FALSE)", list_empty(&out->qaf_offload_cmd_list));
         if (list_empty(&out->qaf_offload_cmd_list)) {
-            DEBUG_MSG("SLEEPING");
+            DEBUG_MSG_VV("SLEEPING");
             pthread_cond_wait(&out->qaf_offload_cond, &out->lock);
-            DEBUG_MSG("RUNNING");
+            DEBUG_MSG_VV("RUNNING");
             continue;
         }
 
@@ -1871,7 +1942,7 @@ static void *qaf_offload_thread_loop(void *context)
         send_callback = false;
         switch (cmd->cmd) {
             case OFFLOAD_CMD_WAIT_FOR_BUFFER: {
-                DEBUG_MSG("wait for buffer availability");
+                DEBUG_MSG_VV("wait for buffer availability");
 
                 while (1) {
                     kvpairs = qaf_mod->qaf_audio_stream_get_param(out->qaf_stream_handle,
@@ -1881,12 +1952,12 @@ static void *qaf_offload_thread_loop(void *context)
                         ret = str_parms_get_int(parms, "buf_available", &value);
                         if (ret >= 0) {
                             if (value >= (int)out->compr_config.fragment_size) {
-                                DEBUG_MSG("buffer available");
+                                DEBUG_MSG_VV("buffer available");
                                 str_parms_destroy(parms);
                                 parms = NULL;
                                 break;
                             } else {
-                                DEBUG_MSG("sleep");
+                                DEBUG_MSG_VV("sleep");
                                 str_parms_destroy(parms);
                                 parms = NULL;
                                 usleep(10000);
@@ -1978,11 +2049,7 @@ static int qaf_out_set_parameters(struct audio_stream *stream, const char *kvpai
     /* Setting new device information to the mm module input streams.
      * This is needed if QAF module output streams are not created yet.
      */
-    if (qaf_mod->stream_in[QAF_IN_MAIN] == out || qaf_mod->stream_in[QAF_IN_ASSOC] == out) {
-        qaf_mod->stream_in[QAF_IN_MAIN]->devices = val;
-    } else {
-        out->devices = val;
-    }
+    out->devices = val;
 
     if (val == AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) {
         //If device is BT then open the BT stream if not already opened.
@@ -2214,7 +2281,10 @@ int audio_extn_qaf_open_output_stream(struct audio_hw_device *dev,
         out->config.period_count = DEEP_BUFFER_OUTPUT_PERIOD_COUNT;
         out->config.start_threshold = QAF_DEEP_BUFFER_OUTPUT_PERIOD_SIZE / 4;
         out->config.avail_min = QAF_DEEP_BUFFER_OUTPUT_PERIOD_SIZE / 4;
+    } else if(out->flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) {
+        out->compr_config.fragment_size = qaf_get_pcm_offload_input_buffer_size(&(config->offload_info));
     }
+
     *stream_out = &out->stream;
     if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         qaf_create_offload_callback_thread(out);
