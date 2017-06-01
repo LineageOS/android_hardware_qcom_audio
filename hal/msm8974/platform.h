@@ -385,6 +385,8 @@ enum {
 #define EC_REF_RX "I2S_RX"
 #else
 #define LOWLATENCY_PCM_DEVICE 15
+#define MMAP_PLAYBACK_PCM_DEVICE 18
+#define MMAP_RECORD_PCM_DEVICE 18
 #define EC_REF_RX "SLIM_RX"
 #endif
 
