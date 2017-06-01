@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -46,7 +46,8 @@ static const audio_format_t audio_passthru_formats[] = {
     AUDIO_FORMAT_E_AC3,
     AUDIO_FORMAT_E_AC3_JOC,
     AUDIO_FORMAT_DTS,
-    AUDIO_FORMAT_DTS_HD
+    AUDIO_FORMAT_DTS_HD,
+    AUDIO_FORMAT_DOLBY_TRUEHD
 };
 
 /*
@@ -216,6 +217,8 @@ bool audio_extn_passthru_is_passt_supported(struct audio_device *adev,
     bool passt = false;
     switch (out->format) {
     case AUDIO_FORMAT_E_AC3:
+    case AUDIO_FORMAT_DTS_HD:
+    case AUDIO_FORMAT_DOLBY_TRUEHD:
         if (platform_is_edid_supported_format(adev->platform, out->format)) {
             ALOGV("%s:PASSTHROUGH supported for format %x",
                    __func__, out->format);
@@ -244,13 +247,6 @@ bool audio_extn_passthru_is_passt_supported(struct audio_device *adev,
         if (platform_is_edid_supported_format(adev->platform, AUDIO_FORMAT_DTS)
             || platform_is_edid_supported_format(adev->platform,
             AUDIO_FORMAT_DTS_HD)) {
-            ALOGV("%s:PASSTHROUGH supported for format %x",
-                   __func__, out->format);
-            passt = true;
-        }
-        break;
-    case AUDIO_FORMAT_DTS_HD:
-        if (platform_is_edid_supported_format(adev->platform, out->format)) {
             ALOGV("%s:PASSTHROUGH supported for format %x",
                    __func__, out->format);
             passt = true;

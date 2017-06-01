@@ -59,33 +59,24 @@ static void lock_output_stream(struct stream_out *out)
 int qahwi_out_set_param_data(struct audio_stream_out *stream,
                              audio_extn_param_id param_id,
                              audio_extn_param_payload *payload) {
-    int ret = -EINVAL;
+    int ret = 0;
     struct stream_out *out = (struct stream_out *)stream;
 
-    if (!stream || !payload) {
-        ALOGE("%s:: Invalid Param",__func__);
-        return ret;
+    /* call qaf extn set_param if needed */
+    if (audio_extn_is_qaf_stream(out)) {
+        /* qaf acquires out->lock internally*/
+        ret = audio_extn_qaf_out_set_param_data(out, param_id, payload);
+        if (ret)
+            ALOGE("%s::qaf_out_set_param_data failed error %d", __func__ , ret);
+    } else {
+        if (out->standby)
+            out->stream.write(&out->stream, NULL, 0);
+        lock_output_stream(out);
+        ret = audio_extn_out_set_param_data(out, param_id, payload);
+        if (ret)
+            ALOGE("%s::audio_extn_out_set_param_data error %d", __func__, ret);
+        pthread_mutex_unlock(&out->lock);
     }
-
-    lock_output_stream(out);
-    ALOGD("%s: enter: stream (%p) usecase(%d: %s) param_id %d", __func__,
-           stream, out->usecase, use_case_table[out->usecase], param_id);
-
-    switch (param_id) {
-        case AUDIO_EXTN_PARAM_OUT_RENDER_WINDOW:
-            ret = audio_extn_utils_compress_set_render_window(out,
-                           (struct audio_out_render_window_param *)(payload));
-           break;
-        case AUDIO_EXTN_PARAM_OUT_START_DELAY:
-            ret = audio_extn_utils_compress_set_start_delay(out,
-                           (struct audio_out_start_delay_param *)(payload));
-           break;
-        default:
-            ALOGE("%s:: unsupported param_id %d", __func__, param_id);
-            break;
-    }
-
-    pthread_mutex_unlock(&out->lock);
     return ret;
 }
 
@@ -94,39 +85,25 @@ int qahwi_out_get_param_data(struct audio_stream_out *stream,
                              audio_extn_param_id param_id,
                              audio_extn_param_payload *payload)
 {
-    int ret = -EINVAL;
+    int ret;
     struct stream_out *out = (struct stream_out *)stream;
-    struct audio_usecase *uc_info;
 
-    if (!stream || !payload) {
-        ALOGE("%s:: Invalid Param",__func__);
-        return ret;
+    /* call qaf extn set_param if enabled */
+    if (audio_extn_is_qaf_stream(out)) {
+        /* qaf acquires out->lock internally*/
+        ret = audio_extn_qaf_out_get_param_data(out, param_id, payload);
+        if (ret)
+            ALOGE("%s::qaf_out_get_param_data failed error %d", __func__, ret);
+    } else  {
+        if (out->standby)
+            out->stream.write(&out->stream, NULL, 0);
+        lock_output_stream(out);
+        ret = audio_extn_out_get_param_data(out, param_id, payload);
+        if (ret)
+            ALOGE("%s::audio_extn_out_get_param_data failed error %d",__func__, ret);
+        pthread_mutex_unlock(&out->lock);
     }
 
-    lock_output_stream(out);
-    ALOGD("%s: enter: stream (%p) usecase(%d: %s) param_id %d", __func__,
-           stream, out->usecase, use_case_table[out->usecase], param_id);
-
-    switch (param_id) {
-        case AUDIO_EXTN_PARAM_AVT_DEVICE_DRIFT:
-            uc_info = get_usecase_from_list(out->dev, out->usecase);
-            if (uc_info == NULL) {
-                ALOGE("%s: Could not find the usecase (%d) in the list",
-                       __func__, out->usecase);
-                ret = -EINVAL;
-            } else {
-                ret = audio_extn_utils_get_avt_device_drift(uc_info,
-                        (struct audio_avt_device_drift_param *)payload);
-                if(ret)
-                    ALOGE("%s:: avdrift query failed error %d", __func__, ret);
-            }
-            break;
-        default:
-            ALOGE("%s:: unsupported param_id %d", __func__, param_id);
-            break;
-    }
-
-    pthread_mutex_unlock(&out->lock);
     return ret;
 }
 

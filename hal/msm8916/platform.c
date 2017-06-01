@@ -5457,11 +5457,19 @@ static void platform_check_hdmi_backend_cfg(struct audio_device* adev,
             channels = max_supported_channels;
 
     } else {
-        /*During pass through set default bit width and channels*/
-        channels = DEFAULT_HDMI_OUT_CHANNELS;
+        /*During pass through set default bit width */
+        if (usecase->stream.out->format == AUDIO_FORMAT_DOLBY_TRUEHD)
+            channels = 8;
+        else
+            channels = DEFAULT_HDMI_OUT_CHANNELS;
+
         if ((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
-            (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC))
+            (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC) ||
+            (usecase->stream.out->format == AUDIO_FORMAT_DOLBY_TRUEHD))
             sample_rate = sample_rate * 4 ;
+
+        if (!edid_is_supported_sr(edid_info, sample_rate))
+                sample_rate = edid_get_highest_supported_sr(edid_info);
 
         bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         /* We force route so that the BE format can be set to Compr */
@@ -6301,6 +6309,10 @@ unsigned char platform_map_to_edid_format(int audio_format)
         ALOGV("%s:E_AC3", __func__);
         format = DOLBY_DIGITAL_PLUS;
         break;
+    case AUDIO_FORMAT_DOLBY_TRUEHD:
+        ALOGV("%s:MAT", __func__);
+        format = MAT;
+        break;
     case AUDIO_FORMAT_DTS:
         ALOGV("%s:DTS", __func__);
         format = DTS;
@@ -6327,9 +6339,18 @@ uint32_t platform_get_compress_passthrough_buffer_size(
                                           audio_offload_info_t* info)
 {
     uint32_t fragment_size = MIN_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE;
+    char value[PROPERTY_VALUE_MAX] = {0};
+
+    if (((info->format == AUDIO_FORMAT_DOLBY_TRUEHD) ||
+            (info->format == AUDIO_FORMAT_IEC61937)) &&
+            property_get("audio.truehd.buffer.size.kb", value, "") &&
+            atoi(value)) {
+        fragment_size = atoi(value) * 1024;
+        goto done;
+    }
     if (!info->has_video)
         fragment_size = MIN_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE;
-
+done:
     return fragment_size;
 }
 

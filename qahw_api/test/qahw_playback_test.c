@@ -77,7 +77,8 @@ enum {
     FILE_EAC3_JOC,
     FILE_DTS,
     FILE_MP2,
-    FILE_APTX
+    FILE_APTX,
+    FILE_TRUEHD
 };
 
 typedef enum {
@@ -136,6 +137,16 @@ struct drift_data {
     volatile bool thread_exit;
 };
 
+struct event_data {
+    uint32_t version;
+    uint32_t num_events;
+    uint32_t event_id;
+    uint32_t module_id;
+    uint16_t instance_id;
+    uint16_t reserved;
+    uint32_t config_mask;
+};
+
 typedef struct {
     qahw_module_handle_t *qahw_in_hal_handle;
     qahw_module_handle_t *qahw_out_hal_handle;
@@ -184,6 +195,7 @@ bool thread_active[MAX_PLAYBACK_STREAMS] = { false };
 
 stream_config stream_param[MAX_PLAYBACK_STREAMS];
 bool kpi_mode;
+bool event_trigger;
 
 /*
  * Set to a high number so it doesn't interfere with existing stream handles
@@ -233,6 +245,7 @@ void stop_signal_handler(int signal __unused)
 
 void usage();
 int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload);
+int tigger_event(qahw_stream_handle_t* out_handle);
 
 static void init_streams(void)
 {
@@ -313,9 +326,12 @@ void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
     }
 }
 
-int async_callback(qahw_stream_callback_event_t event, void *param __unused,
+int async_callback(qahw_stream_callback_event_t event, void *param,
                   void *cookie)
 {
+    uint32_t *payload = param;
+    int i;
+
     if(cookie == NULL) {
         fprintf(log_file, "Invalid callback handle\n");
         fprintf(stderr, "Invalid callback handle\n");
@@ -336,6 +352,15 @@ int async_callback(qahw_stream_callback_event_t event, void *param __unused,
         pthread_mutex_lock(&params->drain_lock);
         pthread_cond_signal(&params->drain_cond);
         pthread_mutex_unlock(&params->drain_lock);
+        break;
+    case QAHW_STREAM_CBK_EVENT_ADSP:
+        fprintf(log_file, "stream %d: received event - QAHW_STREAM_CBK_EVENT_ADSP\n", params->stream_index);
+        if (payload != NULL) {
+            fprintf(log_file, "param_length %d\n", payload[0]);
+            for (i=1; i* sizeof(uint32_t) <= payload[0]; i++)
+                fprintf(log_file, "param[%d] = 0x%x\n", i, payload[i]);
+        }
+        break;
     default:
         break;
     }
@@ -349,7 +374,7 @@ void *proxy_read (void* data)
     qahw_in_buffer_t in_buf;
     char *buffer;
     int rc = 0;
-    int bytes_to_read, bytes_written = 0;
+    int bytes_to_read, bytes_written = 0, bytes_wrote = 0;
     FILE *fp = NULL;
     qahw_stream_handle_t* in_handle = nullptr;
 
@@ -391,7 +416,13 @@ void *proxy_read (void* data)
         while (!(params->acp.thread_exit)) {
             rc = qahw_in_read(in_handle, &in_buf);
             if (rc > 0) {
-                bytes_written += fwrite((char *)(in_buf.buffer), sizeof(char), (int)in_buf.bytes, fp);
+                bytes_wrote = fwrite((char *)(in_buf.buffer), sizeof(char), (int)in_buf.bytes, fp);
+                bytes_written += bytes_wrote;
+                if(bytes_wrote < in_buf.bytes) {
+                   stop_playback = true;
+                   fprintf(log_file, "Error in fwrite due to no memory(%d)=%s\n",ferror(fp), strerror(ferror(fp)));
+                   break;
+                }
             }
         }
         params->hdr.data_sz = bytes_written;
@@ -483,8 +514,6 @@ void *start_stream_playback (void* stream_data)
     pthread_t drift_query_thread;
     struct drift_data drift_params;
 
-    if (params->output_device & AUDIO_DEVICE_OUT_ALL_A2DP)
-        params->output_device = AUDIO_DEVICE_OUT_PROXY;
     rc = qahw_open_output_stream(params->qahw_out_hal_handle,
                              params->handle,
                              params->output_device,
@@ -638,6 +667,10 @@ void *start_stream_playback (void* stream_data)
     latency = qahw_out_get_latency(params->out_handle);
     fprintf(log_file, "playback latency before starting a session %dms!!\n",
             latency);
+
+    if (event_trigger == true)
+        tigger_event(params->out_handle);
+
     while (!exit && !stop_playback) {
         if (!bytes_remaining) {
             fprintf(log_file, "\nstream %d: reading bytes %zd\n", params->stream_index, bytes_wanted);
@@ -934,6 +967,9 @@ static void get_file_format(stream_config *stream_info)
         case FILE_APTX:
             stream_info->config.offload_info.format = AUDIO_FORMAT_APTX;
             break;
+        case FILE_TRUEHD:
+            stream_info->config.offload_info.format = AUDIO_FORMAT_DOLBY_TRUEHD;
+            break;
         default:
            fprintf(log_file, "Does not support given filetype\n");
            fprintf(stderr, "Does not support given filetype\n");
@@ -1029,6 +1065,42 @@ int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
     fprintf(log_file, " cold latency %llums, continuous latency %llums,\n", tcold, tcont);
     fprintf(log_file, " **Note: please add DSP Pipe/PP latency numbers to this, for final latency values\n");
     return rc;
+}
+
+int tigger_event(qahw_stream_handle_t* out_handle)
+{
+    qahw_param_payload payload;
+    struct event_data event_payload = {0};
+    int ret = 0;
+
+    event_payload.num_events = 1;
+    event_payload.event_id = 0x13236;
+    event_payload.module_id = 0x10940;
+    event_payload.config_mask = 1;
+
+    payload.adsp_event_params.payload_length = sizeof(event_payload);
+    payload.adsp_event_params.payload = &event_payload;
+
+    fprintf(log_file, "Set callback for event trigger usecase\n");
+    ret = qahw_out_set_callback(out_handle, async_callback,
+            &stream_param[PRIMARY_STREAM_INDEX]);
+    if (ret < 0) {
+        fprintf(log_file, "qahw_out_set_callback failed with err %d\n",
+                ret);
+        goto done;
+    }
+    fprintf(log_file, "Register for event using qahw_out_set_param_data\n");
+    ret = qahw_out_set_param_data(out_handle, QAHW_PARAM_ADSP_STREAM_CMD,
+            (qahw_param_payload *)&payload);
+    if (ret < 0) {
+        fprintf(log_file, "qahw_out_set_param_data failed with err %d\n",
+                ret);
+        goto done;
+    }
+    fprintf(log_file, "qahw_out_set_paramdata succeeded\n");
+
+done:
+    return ret;
 }
 
 void parse_aptx_dec_bt_addr(char *value, struct qahw_aptx_dec_param *aptx_cfg)
@@ -1314,6 +1386,7 @@ void usage() {
     printf(" -k  --kpi-mode                            - Required for Latency KPI measurement\n");
     printf("                                             file path is not used here as file playback is not done in this mode\n");
     printf("                                             file path and other file specific options would be ignored in this mode.\n\n");
+    printf(" -E  --event-trigger                       - Trigger DTMF event during playback\n");
     printf(" -e  --effect-type <effect type>           - Effect used for test\n");
     printf("                                             0:bassboost 1:virtualizer 2:equalizer 3:visualizer(NA) 4:reverb 5:audiosphere others:null\n\n");
     printf(" -A  --bt-addr <bt device addr>            - Required to set bt device adress for aptx decoder\n\n");
@@ -1334,10 +1407,13 @@ void usage() {
     printf(" hal_play_test -f /data/MateRani.mp3 -t 2 -d 2 -v 0.01 -r 44100 -c 2 \n");
     printf("                                          -> plays MP3 stream(-t = 2) on speaker device(-d = 2)\n");
     printf("                                          -> 2 channels and 44100 sample rate\n\n");
-    printf(" hal_play_test -f /data/v1-CBR-32kHz-stereo-40kbps.mp3 -t 2 -d 128 -v 0.01 -r 32000 -c 2 -D /data/proxy_dump.wav\n");
-    printf("                                          -> plays MP3 stream(-t = 2) on BT device(-d = 128)\n");
+    printf(" hal_play_test -f /data/v1-CBR-32kHz-stereo-40kbps.mp3 -t 2 -d 33554432 -v 0.01 -r 32000 -c 2 -D /data/proxy_dump.wav\n");
+    printf("                                          -> plays MP3 stream(-t = 2) on BT device in non-split path (-d = 33554432)\n");
     printf("                                          -> 2 channels and 32000 sample rate\n");
     printf("                                          -> dumps pcm data to file at /data/proxy_dump.wav\n\n");
+    printf(" hal_play_test -f /data/v1-CBR-32kHz-stereo-40kbps.mp3 -t 2 -d 128 -v 0.01 -r 32000 -c 2 \n");
+    printf("                                          -> plays MP3 stream(-t = 2) on BT device in split path (-d = 128)\n");
+    printf("                                          -> 2 channels and 32000 sample rate\n");
     printf(" hal_play_test -f /data/AACLC-71-48000Hz-384000bps.aac  -t 4 -d 2 -v 0.05 -r 48000 -c 2 -a 1 \n");
     printf("                                          -> plays AAC-ADTS stream(-t = 4) on speaker device(-d = 2)\n");
     printf("                                          -> AAC format type is LC(-a = 1)\n");
@@ -1508,6 +1584,7 @@ int main(int argc, char* argv[]) {
     int i = 0;
     int j = 0;
     kpi_mode = false;
+    event_trigger = false;
 
     log_file = stdout;
     proxy_params.acp.file_name = "/data/pcm_dump.wav";
@@ -1534,6 +1611,7 @@ int main(int argc, char* argv[]) {
         {"flags",         required_argument,    0, 'F'},
         {"kpi-mode",      no_argument,          0, 'K'},
         {"plus",          no_argument,          0, 'P'},
+        {"event-trigger", no_argument,          0, 'E'},
         {"effect-path",   required_argument,    0, 'e'},
         {"bt-addr",       required_argument,    0, 'A'},
         {"query drift",   no_argument,          0, 'q'},
@@ -1562,7 +1640,7 @@ int main(int argc, char* argv[]) {
 
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:s:v:l:t:a:w:k:PD:KF:e:A:u:m:qh",
+                              "-f:r:c:b:d:s:v:l:t:a:w:k:PD:KF:Ee:A:u:m:qh",
                               long_options,
                               &option_index)) != -1) {
 
@@ -1625,6 +1703,9 @@ int main(int argc, char* argv[]) {
             stream_param[i].flags = atoll(optarg);
             stream_param[i].flags_set = true;
             break;
+        case 'E':
+            event_trigger = true;
+            break;
         case 'e':
             stream_param[i].effect_index = atoi(optarg);
             if (stream_param[i].effect_index < 0 || stream_param[i].effect_index >= EFFECT_MAX) {
@@ -1676,9 +1757,13 @@ int main(int argc, char* argv[]) {
         fprintf(log_file, "kpi-mode is not supported for multi-playback usecase\n");
         fprintf(stderr, "kpi-mode is not supported for multi-playback usecase\n");
         goto exit;
+    } else if (event_trigger == true && num_of_streams > 1) {
+        fprintf(log_file, "event_trigger is not supported for multi-playback usecase\n");
+        fprintf(stderr, "event_trigger is not supported for multi-playback usecase\n");
+        goto exit;
     }
 
-    if (num_of_streams > 1 && stream_param[num_of_streams-1].output_device & AUDIO_DEVICE_OUT_ALL_A2DP) {
+    if (num_of_streams > 1 && stream_param[num_of_streams-1].output_device & AUDIO_DEVICE_OUT_PROXY) {
         fprintf(log_file, "Proxy thread is not supported for multi-playback usecase\n");
         fprintf(stderr, "Proxy thread is not supported for multi-playback usecase\n");
         goto exit;
@@ -1749,13 +1834,14 @@ int main(int argc, char* argv[]) {
         } else if (kpi_mode == true)
             stream->config.format = stream->config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
 
-        if (stream->output_device & AUDIO_DEVICE_OUT_ALL_A2DP)
+        if (stream->output_device & AUDIO_DEVICE_OUT_PROXY)
             fprintf(log_file, "Saving pcm data to file: %s\n", proxy_params.acp.file_name);
 
         /* Set device connection state for HDMI */
-        if (stream->output_device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        if ((stream->output_device == AUDIO_DEVICE_OUT_AUX_DIGITAL) ||
+            (stream->output_device == AUDIO_DEVICE_OUT_BLUETOOTH_A2DP)) {
             char param[100] = {0};
-            snprintf(param, sizeof(param), "%s=%d", "connect", AUDIO_DEVICE_OUT_AUX_DIGITAL);
+            snprintf(param, sizeof(param), "%s=%d", "connect", stream->output_device);
             qahw_set_parameters(stream->qahw_out_hal_handle, param);
         }
 
@@ -1814,9 +1900,10 @@ exit:
      * reset device connection state for HDMI and close the file streams
      */
      for (i = 0; i < num_of_streams; i++) {
-         if (stream_param[i].output_device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+         if ((stream_param[i].output_device == AUDIO_DEVICE_OUT_AUX_DIGITAL) ||
+             (stream_param[i].output_device == AUDIO_DEVICE_OUT_BLUETOOTH_A2DP)) {
              char param[100] = {0};
-             snprintf(param, sizeof(param), "%s=%d", "disconnect", AUDIO_DEVICE_OUT_AUX_DIGITAL);
+             snprintf(param, sizeof(param), "%s=%d", "disconnect", stream_param[i].output_device);
              qahw_set_parameters(stream_param[i].qahw_out_hal_handle, param);
          }
 

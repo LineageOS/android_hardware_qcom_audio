@@ -177,6 +177,25 @@ struct audio_out_start_delay_param {
    uint64_t        start_delay; /* session start delay in microseconds*/
 };
 
+/* type of asynchronous write callback events. Mutually exclusive
+ * event enums append those defined for stream_callback_event_t in audio.h */
+typedef enum {
+    AUDIO_EXTN_STREAM_CBK_EVENT_ADSP = 0x100      /* callback event from ADSP PP,
+                                                 * corresponding payload will be
+                                                 * sent as is to the client
+                                                 */
+} audio_extn_callback_id;
+
+#define AUDIO_MAX_ADSP_STREAM_CMD_PAYLOAD_LEN 508
+
+/* payload format for HAL parameter
+ * AUDIO_EXTN_PARAM_ADSP_STREAM_CMD
+ */
+struct audio_adsp_event {
+ uint32_t payload_length;                    /* length in bytes of the payload */
+ void    *payload;                           /* the actual payload */
+};
+
 typedef union {
     struct source_tracking_param st_params;
     struct sound_focus_param sf_params;
@@ -184,6 +203,7 @@ typedef union {
     struct audio_avt_device_drift_param drift_params;
     struct audio_out_render_window_param render_window_param;
     struct audio_out_start_delay_param start_delay;
+    struct audio_adsp_event adsp_event_params;
 } audio_extn_param_payload;
 
 typedef enum {
@@ -192,7 +212,8 @@ typedef enum {
     AUDIO_EXTN_PARAM_APTX_DEC,
     AUDIO_EXTN_PARAM_AVT_DEVICE_DRIFT,
     AUDIO_EXTN_PARAM_OUT_RENDER_WINDOW, /* PARAM to set render window */
-    AUDIO_EXTN_PARAM_OUT_START_DELAY
+    AUDIO_EXTN_PARAM_OUT_START_DELAY,
+    AUDIO_EXTN_PARAM_ADSP_STREAM_CMD
 } audio_extn_param_id;
 
 #endif /* AUDIO_DEFS_H */

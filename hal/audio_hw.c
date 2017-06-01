@@ -293,6 +293,7 @@ static const struct string_to_enum out_formats_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_AC3),
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3),
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
+    STRING_TO_ENUM(AUDIO_FORMAT_DOLBY_TRUEHD),
     STRING_TO_ENUM(AUDIO_FORMAT_DTS),
     STRING_TO_ENUM(AUDIO_FORMAT_DTS_HD),
 };
@@ -511,6 +512,7 @@ static bool is_supported_format(audio_format_t format)
         format == AUDIO_FORMAT_PCM_16_BIT ||
         format == AUDIO_FORMAT_AC3 ||
         format == AUDIO_FORMAT_E_AC3 ||
+        format == AUDIO_FORMAT_DOLBY_TRUEHD ||
         format == AUDIO_FORMAT_DTS ||
         format == AUDIO_FORMAT_DTS_HD ||
         format == AUDIO_FORMAT_FLAC ||
@@ -1246,7 +1248,7 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
                     /* Update voc calibration before enabling VoIP route */
                     if (usecase->type == VOIP_CALL)
                         status = platform_switch_voice_call_device_post(adev->platform,
-                                                                        usecase->out_snd_device,
+                                                                        platform_get_output_snd_device(adev->platform, uc_info->stream.out),
                                                                         usecase->in_snd_device);
                     enable_audio_route(adev, usecase);
                 }
@@ -1311,6 +1313,11 @@ static int read_hdmi_sink_caps(struct stream_out *out)
         //EAC3/EAC3_JOC will be converted to AC3 for decoding if needed
         out->supported_formats[i++] = AUDIO_FORMAT_E_AC3;
         out->supported_formats[i++] = AUDIO_FORMAT_E_AC3_JOC;
+    }
+
+    if (platform_is_edid_supported_format(out->dev->platform, AUDIO_FORMAT_DOLBY_TRUEHD)) {
+        ALOGV(":%s HDMI supports TRUE HD format", __func__);
+        out->supported_formats[i++] = AUDIO_FORMAT_DOLBY_TRUEHD;
     }
 
     if (platform_is_edid_supported_format(out->dev->platform, AUDIO_FORMAT_DTS)) {
@@ -2105,9 +2112,9 @@ static void *offload_thread_loop(void *context)
         lock_output_stream(out);
         out->offload_thread_blocked = false;
         pthread_cond_signal(&out->cond);
-        if (send_callback && out->offload_callback) {
-            ALOGVV("%s: sending offload_callback event %d", __func__, event);
-            out->offload_callback(event, NULL, out->offload_cookie);
+        if (send_callback && out->client_callback) {
+            ALOGVV("%s: sending client_callback event %d", __func__, event);
+            out->client_callback(event, NULL, out->client_cookie);
         }
         free(cmd);
     }
@@ -2362,7 +2369,7 @@ int start_output_stream(struct stream_out *out)
         /* compress_open sends params of the track, so reset the flag here */
         out->is_compr_metadata_avail = false;
 
-        if (out->offload_callback)
+        if (out->client_callback)
             compress_nonblock(out->compr, out->non_blocking);
 
         /* Since small bufs uses blocking writes, a write will be blocked
@@ -3431,11 +3438,21 @@ static int out_set_callback(struct audio_stream_out *stream,
             stream_callback_t callback, void *cookie)
 {
     struct stream_out *out = (struct stream_out *)stream;
+    int ret;
 
     ALOGV("%s", __func__);
     lock_output_stream(out);
-    out->offload_callback = callback;
-    out->offload_cookie = cookie;
+    out->client_callback = callback;
+    out->client_cookie = cookie;
+    if (out->adsp_hdlr_stream_handle) {
+        ret = audio_extn_adsp_hdlr_stream_set_callback(
+                                out->adsp_hdlr_stream_handle,
+                                callback,
+                                cookie);
+        if (ret)
+            ALOGW("%s:adsp hdlr callback registration failed %d",
+                   __func__, ret);
+    }
     pthread_mutex_unlock(&out->lock);
     return 0;
 }
@@ -3921,6 +3938,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     struct stream_out *out;
     int ret = 0;
     audio_format_t format;
+    struct adsp_hdlr_stream_cfg hdlr_stream_cfg;
 
     *stream_out = NULL;
 
@@ -4365,7 +4383,20 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)
         audio_extn_dts_notify_playback_state(out->usecase, 0, out->sample_rate,
                                              popcount(out->channel_mask), out->playback_started);
-
+    /* setup a channel for client <--> adsp communication for stream events */
+    if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) ||
+            (out->flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM)) {
+        hdlr_stream_cfg.pcm_device_id = platform_get_pcm_device_id(
+                out->usecase, PCM_PLAYBACK);
+        hdlr_stream_cfg.flags = out->flags;
+        hdlr_stream_cfg.type = PCM_PLAYBACK;
+        ret = audio_extn_adsp_hdlr_stream_open(&out->adsp_hdlr_stream_handle,
+                &hdlr_stream_cfg);
+        if (ret) {
+            ALOGE("%s: adsp_hdlr_stream_open failed %d",__func__, ret);
+            out->adsp_hdlr_stream_handle = NULL;
+        }
+    }
     ALOGV("%s: exit", __func__);
     return 0;
 
@@ -4386,6 +4417,14 @@ void adev_close_output_stream(struct audio_hw_device *dev __unused,
     int ret = 0;
 
     ALOGD("%s: enter:stream_handle(%p)",__func__, out);
+
+    /* close adsp hdrl session before standby */
+    if (out->adsp_hdlr_stream_handle) {
+        ret = audio_extn_adsp_hdlr_stream_close(out->adsp_hdlr_stream_handle);
+        if (ret)
+            ALOGE("%s: adsp_hdlr_stream_close failed %d",__func__, ret);
+        out->adsp_hdlr_stream_handle = NULL;
+    }
 
     if (out->usecase == USECASE_COMPRESS_VOIP_CALL) {
         pthread_mutex_lock(&adev->lock);
@@ -5080,6 +5119,7 @@ static int adev_close(hw_device_t *device)
         if (adev->adm_deinit)
             adev->adm_deinit(adev->adm_data);
         qahwi_deinit(device);
+        audio_extn_adsp_hdlr_deinit();
         free(device);
         adev = NULL;
     }
@@ -5334,6 +5374,7 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     qahwi_init(*device);
     audio_extn_perf_lock_init();
+    audio_extn_adsp_hdlr_init(adev->mixer);
     ALOGV("%s: exit", __func__);
     return 0;
 }
