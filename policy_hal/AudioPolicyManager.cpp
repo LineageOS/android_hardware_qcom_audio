@@ -1577,12 +1577,32 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_NONE);
     }
 
+    // check if direct output for pcm/track offload already exits
+    bool direct_pcm_already_in_use = false;
+    if (flags == AUDIO_OUTPUT_FLAG_DIRECT) {
+        for (size_t i = 0; i < mOutputs.size(); i++) {
+            sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
+            if (desc->mFlags == AUDIO_OUTPUT_FLAG_DIRECT) {
+                direct_pcm_already_in_use = true;
+                ALOGD("Direct PCM already in use");
+                break;
+            }
+        }
+        // prevent direct pcm for non-music stream blindly if direct pcm already in use
+        // for other music stream concurrency is handled after checking direct ouput usage
+        // and checking client
+        if (direct_pcm_already_in_use == true && stream != AUDIO_STREAM_MUSIC) {
+            ALOGD("disabling offload for non music stream as direct pcm is already in use");
+            flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_NONE);
+        }
+    }
+
     bool forced_deep = false;
     // only allow deep buffering for music stream type
     if (stream != AUDIO_STREAM_MUSIC) {
         flags = (audio_output_flags_t)(flags &~AUDIO_OUTPUT_FLAG_DEEP_BUFFER);
     } else if (/* stream == AUDIO_STREAM_MUSIC && */
-            flags == AUDIO_OUTPUT_FLAG_NONE &&
+            (flags == AUDIO_OUTPUT_FLAG_NONE || flags == AUDIO_OUTPUT_FLAG_DIRECT) &&
             property_get_bool("audio.deep_buffer.media", false /* default_value */)) {
             forced_deep = true;
     }
@@ -1649,6 +1669,14 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
                     }
                 }
             }
+        }
+        if (flags == AUDIO_OUTPUT_FLAG_DIRECT &&
+            direct_pcm_already_in_use == true &&
+            session != outputDesc->mDirectClientSession) {
+            ALOGV("getOutput() do not reuse direct pcm output because current client (%d) "
+                  "is not the same as requesting client (%d) for different output conf",
+                  outputDesc->mDirectClientSession, session);
+            goto non_direct_output;
         }
         // close direct output if currently open and configured with different parameters
         if (outputDesc != NULL) {
