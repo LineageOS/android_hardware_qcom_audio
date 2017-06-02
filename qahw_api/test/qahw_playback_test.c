@@ -739,6 +739,10 @@ void *start_stream_playback (void* stream_data)
         fprintf(log_file, "stream %d: writing to hal %zd bytes, offset %d, write length %zd\n",
                 params->stream_index, bytes_remaining, offset, write_length);
         bytes_written = write_to_hal(params->out_handle, data_ptr+offset, bytes_remaining, params);
+        if (bytes_written == -1) {
+            fprintf(stderr, "proxy_write failed in usb hal");
+            break;
+        }
         bytes_remaining -= bytes_written;
 
         latency = qahw_out_get_latency(params->out_handle);

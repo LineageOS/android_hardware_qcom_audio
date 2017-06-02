@@ -31,6 +31,7 @@
 /*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
 
+#include <inttypes.h>
 #include <errno.h>
 #include <cutils/log.h>
 
@@ -286,6 +287,117 @@ static int qahwi_open_input_stream(struct audio_hw_device *dev,
     return ret;
 }
 
+ssize_t qahwi_out_write_v2(struct audio_stream_out *stream, const void* buffer,
+                          size_t bytes, int64_t* timestamp)
+{
+    struct stream_out *out = (struct stream_out *)stream;
+    struct snd_codec_metadata *mdata = NULL;
+    size_t mdata_size = 0, bytes_written = 0;
+    char *buf = NULL;
+    ssize_t ret = 0;
+
+    if (!out->qahwi_out.is_inititalized) {
+        ALOGE("%s: invalid state!", __func__);
+        return -EINVAL;
+    }
+    if (COMPRESSED_TIMESTAMP_FLAG &&
+        (out->flags & AUDIO_OUTPUT_FLAG_TIMESTAMP)) {
+
+        mdata_size = sizeof(struct snd_codec_metadata);
+        buf = (char *) out->qahwi_out.obuf;
+        if (timestamp) {
+            mdata = (struct snd_codec_metadata *) buf;
+            mdata->length = bytes;
+            mdata->offset = mdata_size;
+            mdata->timestamp = *timestamp;
+        }
+        memcpy(buf + mdata_size, buffer, bytes);
+        ret = out->qahwi_out.base.write(&out->stream, (void *)buf, out->qahwi_out.buf_size);
+        if (ret <= 0) {
+            ALOGE("%s: error! write returned %zd", __func__, ret);
+        } else {
+            bytes_written = bytes;
+        }
+        ALOGV("%s: flag 0x%x, bytes %zd, read %zd, ret %zd timestamp 0x%"PRIx64"",
+              __func__, out->flags, bytes, bytes_written, ret, *timestamp);
+    } else {
+        bytes_written = out->qahwi_out.base.write(&out->stream, buffer, bytes);
+        ALOGV("%s: flag 0x%x, bytes %zd, read %zd, ret %zd",
+              __func__, out->flags, bytes, bytes_written, ret);
+    }
+    return bytes_written;
+}
+
+static void qahwi_close_output_stream(struct audio_hw_device *dev,
+                               struct audio_stream_out *stream_out)
+{
+    struct audio_device *adev = (struct audio_device *) dev;
+    struct stream_out *out = (struct stream_out *)stream_out;
+
+    ALOGV("%s", __func__);
+    if (!adev->qahwi_dev.is_inititalized || !out->qahwi_out.is_inititalized) {
+        ALOGE("%s: invalid state!", __func__);
+        return;
+    }
+    if (out->qahwi_out.obuf)
+        free(out->qahwi_out.obuf);
+    out->qahwi_out.buf_size = 0;
+    adev->qahwi_dev.base.close_output_stream(dev, stream_out);
+}
+
+static int qahwi_open_output_stream(struct audio_hw_device *dev,
+                             audio_io_handle_t handle,
+                             audio_devices_t devices,
+                             audio_output_flags_t flags,
+                             struct audio_config *config,
+                             struct audio_stream_out **stream_out,
+                             const char *address)
+{
+    struct audio_device *adev = (struct audio_device *) dev;
+    struct stream_out *out = NULL;
+    size_t buf_size = 0, mdata_size = 0;
+    int ret = 0;
+
+    ALOGV("%s: dev_init %d, flags 0x%x", __func__,
+              adev->qahwi_dev.is_inititalized, flags);
+    if (!adev->qahwi_dev.is_inititalized) {
+        ALOGE("%s: invalid state!", __func__);
+        return -EINVAL;
+    }
+
+    ret = adev->qahwi_dev.base.open_output_stream(dev, handle, devices, flags,
+                                                 config, stream_out, address);
+    if (ret)
+        return ret;
+
+    out = (struct stream_out *)*stream_out;
+    // keep adev fptrs before overriding
+    out->qahwi_out.base = out->stream;
+
+    out->qahwi_out.is_inititalized = true;
+
+    if (COMPRESSED_TIMESTAMP_FLAG &&
+        (flags & AUDIO_OUTPUT_FLAG_TIMESTAMP)) {
+        // set write to NULL as this is not supported in timestamp mode
+        out->stream.write = NULL;
+
+        mdata_size = sizeof(struct snd_codec_metadata);
+        buf_size = out->qahwi_out.base.common.get_buffer_size(&out->stream.common);
+        buf_size += mdata_size;
+        out->qahwi_out.buf_size = buf_size;
+        out->qahwi_out.obuf = malloc(buf_size);
+        if (!out->qahwi_out.obuf) {
+            ALOGE("%s: allocation failed for timestamp metadata!", __func__);
+            qahwi_close_output_stream(dev, &out->stream);
+            *stream_out = NULL;
+            ret = -ENOMEM;
+        }
+        ALOGD("%s: obuf %p, buff_size %zd",
+              __func__, out->qahwi_out.obuf, buf_size);
+    }
+    return ret;
+}
+
 void qahwi_init(hw_device_t *device)
 {
     struct audio_device *adev = (struct audio_device *) device;
@@ -298,6 +410,9 @@ void qahwi_init(hw_device_t *device)
 
     adev->device.open_input_stream = qahwi_open_input_stream;
     adev->device.close_input_stream = qahwi_close_input_stream;
+
+    adev->device.open_output_stream = qahwi_open_output_stream;
+    adev->device.close_output_stream = qahwi_close_output_stream;
 
     adev->qahwi_dev.is_inititalized = true;
 }

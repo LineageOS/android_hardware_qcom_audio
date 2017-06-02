@@ -2579,9 +2579,12 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
 
-    if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)
-        return out->compr_config.fragment_size;
-    else if(out->usecase == USECASE_COMPRESS_VOIP_CALL)
+    if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
+        if (out->flags & AUDIO_OUTPUT_FLAG_TIMESTAMP)
+            return out->compr_config.fragment_size - sizeof(struct snd_codec_metadata);
+        else
+            return out->compr_config.fragment_size;
+    } else if(out->usecase == USECASE_COMPRESS_VOIP_CALL)
         return voice_extn_compress_voip_out_get_buffer_size(out);
     else if (is_offload_usecase(out->usecase) &&
              out->flags == AUDIO_OUTPUT_FLAG_DIRECT)
@@ -4097,6 +4100,11 @@ int adev_open_output_stream(struct audio_hw_device *dev,
          */
         if (!audio_extn_passthru_is_passthrough_stream(out))
             out->bit_width = AUDIO_OUTPUT_BIT_WIDTH;
+
+        if (out->flags & AUDIO_OUTPUT_FLAG_TIMESTAMP)
+            out->compr_config.codec->flags |= COMPRESSED_TIMESTAMP_FLAG;
+        ALOGVV("%s : out->compr_config.codec->flags -> (%#x) ", __func__, out->compr_config.codec->flags);
+
         /*TODO: Do we need to change it for passthrough */
         out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
 
@@ -4159,6 +4167,9 @@ int adev_open_output_stream(struct audio_hw_device *dev,
             out->compr_config.fragments = COMPRESS_OFFLOAD_NUM_FRAGMENTS;
         }
 
+        if (out->flags & AUDIO_OUTPUT_FLAG_TIMESTAMP) {
+            out->compr_config.fragment_size += sizeof(struct snd_codec_metadata);
+        }
         if (config->offload_info.format == AUDIO_FORMAT_FLAC)
             out->compr_config.codec->options.flac_dec.sample_size = AUDIO_OUTPUT_BIT_WIDTH;
 
