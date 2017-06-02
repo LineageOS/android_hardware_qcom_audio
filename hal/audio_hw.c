@@ -538,7 +538,7 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_BUSY);
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_BUSY);
     audio_extn_utils_send_audio_calibration(adev, usecase);
-    audio_extn_utils_send_app_type_cfg(usecase);
+    audio_extn_utils_send_app_type_cfg(adev, usecase);
     strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
     platform_add_backend_name(mixer_path, snd_device);
     ALOGD("%s: apply mixer and update path: %s", __func__, mixer_path);
@@ -2027,7 +2027,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         pthread_mutex_unlock(&adev->lock);
     }
     if (is_offload_usecase(out->usecase)) {
-        pthread_mutex_lock(&out->lock);
+        lock_output_stream(out);
         parse_compress_metadata(out, parms);
         pthread_mutex_unlock(&out->lock);
     }
@@ -2566,7 +2566,6 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     if (!parms)
         goto error;
     lock_input_stream(in);
-
     pthread_mutex_lock(&adev->lock);
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_INPUT_SOURCE, value, sizeof(value));
