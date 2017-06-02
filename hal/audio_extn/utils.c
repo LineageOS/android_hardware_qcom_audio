@@ -1760,7 +1760,12 @@ int audio_extn_utils_compress_set_clk_rec_mode(
     struct stream_out *out = NULL;
     int ret = -EINVAL;
 
-    if (usecase != NULL && usecase->type != PCM_PLAYBACK) {
+    if (usecase == NULL) {
+        ALOGE("%s:: Invalid use case", __func__);
+        goto exit;
+    }
+
+    if (usecase->type != PCM_PLAYBACK) {
         ALOGE("%s:: Invalid use case", __func__);
         goto exit;
     }
@@ -1828,13 +1833,13 @@ int audio_extn_utils_compress_set_render_window(
     struct snd_compr_metadata metadata;
     int ret = -EINVAL;
 
-    ALOGD("%s:: render window start 0x%"PRIx64" end 0x%"PRIx64"",
-          __func__,render_window->render_ws, render_window->render_we);
-
     if(render_window == NULL) {
         ALOGE("%s:: Invalid render_window", __func__);
         goto exit;
     }
+
+    ALOGD("%s:: render window start 0x%"PRIx64" end 0x%"PRIx64"",
+          __func__,render_window->render_ws, render_window->render_we);
 
     if (!is_offload_usecase(out->usecase)) {
         ALOGE("%s:: not supported for non offload session", __func__);
