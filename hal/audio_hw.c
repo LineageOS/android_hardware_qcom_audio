@@ -1737,14 +1737,12 @@ int start_output_stream(struct stream_out *out)
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d) format(%#x)",
           __func__, adev->snd_card, out->pcm_device_id, out->config.format);
     if (!is_offload_usecase(out->usecase)) {
-        unsigned int flags = PCM_OUT;
+        unsigned int flags = PCM_OUT | PCM_MONOTONIC;
         unsigned int pcm_open_retry_count = 0;
         if (out->usecase == USECASE_AUDIO_PLAYBACK_AFE_PROXY) {
             flags |= PCM_MMAP | PCM_NOIRQ;
             pcm_open_retry_count = PROXY_OPEN_RETRY_COUNT;
-        } else
-            flags |= PCM_MONOTONIC;
-
+        }
         while (1) {
             out->pcm = pcm_open(adev->snd_card, out->pcm_device_id,
                                flags, &out->config);
