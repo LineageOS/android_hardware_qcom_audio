@@ -42,15 +42,15 @@
 #define SSR_PERIOD_SIZE             512
 #define SSR_INPUT_FRAME_SIZE        (SSR_PERIOD_SIZE * SSR_PERIOD_COUNT)
 
-#define SURROUND_FILE_1R "/system/etc/surround_sound/filter1r.pcm"
-#define SURROUND_FILE_2R "/system/etc/surround_sound/filter2r.pcm"
-#define SURROUND_FILE_3R "/system/etc/surround_sound/filter3r.pcm"
-#define SURROUND_FILE_4R "/system/etc/surround_sound/filter4r.pcm"
+#define SURROUND_FILE_1R "/vendor/etc/surround_sound/filter1r.pcm"
+#define SURROUND_FILE_2R "/vendor/etc/surround_sound/filter2r.pcm"
+#define SURROUND_FILE_3R "/vendor/etc/surround_sound/filter3r.pcm"
+#define SURROUND_FILE_4R "/vendor/etc/surround_sound/filter4r.pcm"
 
-#define SURROUND_FILE_1I "/system/etc/surround_sound/filter1i.pcm"
-#define SURROUND_FILE_2I "/system/etc/surround_sound/filter2i.pcm"
-#define SURROUND_FILE_3I "/system/etc/surround_sound/filter3i.pcm"
-#define SURROUND_FILE_4I "/system/etc/surround_sound/filter4i.pcm"
+#define SURROUND_FILE_1I "/vendor/etc/surround_sound/filter1i.pcm"
+#define SURROUND_FILE_2I "/vendor/etc/surround_sound/filter2i.pcm"
+#define SURROUND_FILE_3I "/vendor/etc/surround_sound/filter3i.pcm"
+#define SURROUND_FILE_4I "/vendor/etc/surround_sound/filter4i.pcm"
 
 #define LIB_SURROUND_PROC       "libsurround_proc.so"
 

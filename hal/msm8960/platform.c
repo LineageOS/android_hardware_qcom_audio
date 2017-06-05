@@ -36,7 +36,7 @@
  * This is the sysfs path for the HDMI audio data block
  */
 #define AUDIO_DATA_BLOCK_PATH "/sys/class/graphics/fb1/audio_data_block"
-#define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
+#define MIXER_XML_PATH "/vendor/etc/mixer_paths.xml"
 
 /*
  * This file will have a maximum of 38 bytes:
