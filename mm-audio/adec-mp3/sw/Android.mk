@@ -38,6 +38,7 @@ mm-mp3-dec-test-inc   += $(PV_TOP)/codecs_v2/omx/omx_mastercore/include \
 
 LOCAL_MODULE            := sw-adec-omxmp3-test
 LOCAL_MODULE_TAGS       := optional
+LOCAL_VENDOR_MODULE     := true
 LOCAL_CFLAGS            := $(libOmxMp3Dec-def)
 LOCAL_C_INCLUDES        := $(mm-mp3-dec-test-inc)
 LOCAL_PRELINK_MODULE    := false

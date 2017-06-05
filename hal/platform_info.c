@@ -38,7 +38,7 @@
 #include "platform_api.h"
 #include <platform.h>
 
-#define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
+#define PLATFORM_INFO_XML_PATH      "/vendor/etc/audio_platform_info.xml"
 #define BUF_SIZE                    1024
 
 typedef enum {

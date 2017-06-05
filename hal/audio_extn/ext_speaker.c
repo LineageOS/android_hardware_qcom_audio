@@ -22,9 +22,9 @@
 #include <dlfcn.h>
 
 #ifdef __LP64__
-        #define LIB_SPEAKER_BUNDLE "/system/lib64/soundfx/libspeakerbundle.so"
+        #define LIB_SPEAKER_BUNDLE "/vendor/lib64/soundfx/libspeakerbundle.so"
 #else
-        #define LIB_SPEAKER_BUNDLE "/system/lib/soundfx/libspeakerbundle.so"
+        #define LIB_SPEAKER_BUNDLE "/vendor/lib/soundfx/libspeakerbundle.so"
 #endif
 
 typedef void (*set_mode_t)(int);

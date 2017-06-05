@@ -37,6 +37,7 @@ mm-aac-dec-test-inc   += $(PV_TOP)/codecs_v2/omx/omx_mastercore/include \
 
 LOCAL_MODULE            := sw-adec-omxaac-test
 LOCAL_MODULE_TAGS       := optional
+LOCAL_VENDOR_MODULE     := true
 LOCAL_CFLAGS            := $(libOmxAacDec-def)
 LOCAL_C_INCLUDES        := $(mm-aac-dec-test-inc)
 LOCAL_PRELINK_MODULE    := false

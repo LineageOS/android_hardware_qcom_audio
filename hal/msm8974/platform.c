@@ -40,9 +40,9 @@
 
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
 
-#define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
-#define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
-#define MIXER_XML_PATH_WCD9330 "/system/etc/mixer_paths_wcd9330.xml"
+#define MIXER_XML_PATH "/vendor/etc/mixer_paths.xml"
+#define MIXER_XML_PATH_AUXPCM "/vendor/etc/mixer_paths_auxpcm.xml"
+#define MIXER_XML_PATH_WCD9330 "/vendor/etc/mixer_paths_wcd9330.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
 
@@ -881,7 +881,7 @@ static void initialize_huawei_sound_param_path(void *acdb_handle)
                 fclose(f);
             }
 
-            snprintf(path, sizeof(path), "/system/etc/sound_param/%s/", product);
+            snprintf(path, sizeof(path), "/vendor/etc/sound_param/%s/", product);
             ALOGI("%s: Using param_path %s", __func__, path);
 
             set_param_path(path);

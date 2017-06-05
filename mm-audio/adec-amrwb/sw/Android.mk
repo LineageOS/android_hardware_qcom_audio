@@ -38,6 +38,7 @@ mm-amr-dec-test-inc   += $(PV_TOP)/codecs_v2/omx/omx_mastercore/include \
 
 LOCAL_MODULE            := sw-adec-omxamrwb-test
 LOCAL_MODULE_TAGS       := optional
+LOCAL_VENDOR_MODULE     := true
 LOCAL_CFLAGS            := $(libOmxAmrDec-def)
 LOCAL_C_INCLUDES        := $(mm-amr-dec-test-inc)
 LOCAL_PRELINK_MODULE    := false
