@@ -3964,8 +3964,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_AANC_HANDSET_MIC;
                 adev->acdb_settings |= ANC_FLAG;
             } else if (my_data->fluence_type == FLUENCE_NONE ||
-                my_data->fluence_in_voice_call == false ||
-                my_data->fluence_in_hfp_call == false) {
+                (my_data->fluence_in_voice_call == false &&
+                 my_data->fluence_in_hfp_call == false)) {
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
                 if (audio_extn_hfp_is_active(adev))
                     platform_set_echo_reference(adev, true, out_device);
