@@ -164,8 +164,15 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
                 return NO_MEMORY;
             }
 
+            // Before checking outputs, broadcast connect event to allow HAL to retrieve dynamic
+            // parameters on newly connected devices (instead of opening the outputs...)
+            broadcastDeviceConnectionState(device, state, devDesc->mAddress);
+
             if (checkOutputsForDevice(devDesc, state, outputs, devDesc->mAddress) != NO_ERROR) {
                 mAvailableOutputDevices.remove(devDesc);
+
+                broadcastDeviceConnectionState(device, AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE,
+                                               devDesc->mAddress);
                 return INVALID_OPERATION;
             }
             // Propagate device availability to Engine
@@ -176,11 +183,6 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
                     "checkOutputsForDevice() returned no outputs but status OK");
             ALOGV("setDeviceConnectionState() checkOutputsForDevice() returned %zu outputs",
                   outputs.size());
-
-            // Send connect to HALs
-            AudioParameter param = AudioParameter(devDesc->mAddress);
-            param.addInt(String8(AUDIO_PARAMETER_DEVICE_CONNECT), device);
-            mpClientInterface->setParameters(AUDIO_IO_HANDLE_NONE, param.toString());
 
             } break;
         // handle output device disconnection
@@ -202,9 +204,7 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             ALOGV("setDeviceConnectionState() disconnecting output device %x", device);
 
             // Send Disconnect to HALs
-            AudioParameter param = AudioParameter(devDesc->mAddress);
-            param.addInt(String8(AUDIO_PARAMETER_DEVICE_DISCONNECT), device);
-            mpClientInterface->setParameters(AUDIO_IO_HANDLE_NONE, param.toString());
+            broadcastDeviceConnectionState(device, state, devDesc->mAddress);
 
             // remove device from available output devices
             mAvailableOutputDevices.remove(devDesc);
@@ -321,7 +321,14 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
                       device);
                 return INVALID_OPERATION;
             }
+
+            // Before checking intputs, broadcast connect event to allow HAL to retrieve dynamic
+            // parameters on newly connected devices (instead of opening the inputs...)
+            broadcastDeviceConnectionState(device, state, devDesc->mAddress);
+
             if (checkInputsForDevice(devDesc, state, inputs, devDesc->mAddress) != NO_ERROR) {
+                broadcastDeviceConnectionState(device, AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE,
+                                               devDesc->mAddress);
                 return INVALID_OPERATION;
             }
 
@@ -331,11 +338,6 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             } else {
                 return NO_MEMORY;
             }
-
-            // Set connect to HALs
-            AudioParameter param = AudioParameter(devDesc->mAddress);
-            param.addInt(String8(AUDIO_PARAMETER_DEVICE_CONNECT), device);
-            mpClientInterface->setParameters(AUDIO_IO_HANDLE_NONE, param.toString());
 
             // Propagate device availability to Engine
             mEngine->setDeviceConnectionState(devDesc, state);
@@ -351,9 +353,7 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             ALOGV("setDeviceConnectionState() disconnecting input device %x", device);
 
             // Set Disconnect to HALs
-            AudioParameter param = AudioParameter(devDesc->mAddress);
-            param.addInt(String8(AUDIO_PARAMETER_DEVICE_DISCONNECT), device);
-            mpClientInterface->setParameters(AUDIO_IO_HANDLE_NONE, param.toString());
+            broadcastDeviceConnectionState(device, state, devDesc->mAddress);
 
             checkInputsForDevice(devDesc, state, inputs, devDesc->mAddress);
             mAvailableInputDevices.remove(devDesc);
@@ -665,7 +665,7 @@ void AudioPolicyManagerCustom::setForceUse(audio_policy_force_use_t usage,
 
 }
 
-status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDesc,
+status_t AudioPolicyManagerCustom::stopSource(const sp<AudioOutputDescriptor>& outputDesc,
                                             audio_stream_type_t stream,
                                             bool forceDeviceUpdate)
 {
@@ -737,7 +737,7 @@ status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDe
         return INVALID_OPERATION;
     }
 }
-status_t AudioPolicyManagerCustom::startSource(sp<AudioOutputDescriptor> outputDesc,
+status_t AudioPolicyManagerCustom::startSource(const sp<AudioOutputDescriptor>& outputDesc,
                                              audio_stream_type_t stream,
                                              audio_devices_t device,
                                              const char *address,
