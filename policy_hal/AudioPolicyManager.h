@@ -101,11 +101,11 @@ protected:
 
         // if argument "device" is different from AUDIO_DEVICE_NONE,  startSource() will force
         // the re-evaluation of the output device.
-        status_t startSource(sp<AudioOutputDescriptor> outputDesc,
+        status_t startSource(const sp<AudioOutputDescriptor> outputDesc,
                              audio_stream_type_t stream,
                              audio_devices_t device,
                              uint32_t *delayMs);
-        status_t stopSource(sp<AudioOutputDescriptor> outputDesc,
+        status_t stopSource(const sp<AudioOutputDescriptor> outputDesc,
                             audio_stream_type_t stream,
                             bool forceDeviceUpdate);
         // event is one of STARTING_OUTPUT, STARTING_BEACON, STOPPING_OUTPUT, STOPPING_BEACON   313
