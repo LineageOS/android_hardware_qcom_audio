@@ -42,6 +42,8 @@ LOCAL_MODULE_TAGS := optional
 
 LOCAL_MODULE_RELATIVE_PATH := soundfx
 LOCAL_MODULE:= libqcompostprocbundle
+LOCAL_MODULE_OWNER := qti
+LOCAL_PROPRIETARY_MODULE := true
 
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -74,6 +76,8 @@ LOCAL_CFLAGS += -DHW_ACC_HPX
 endif
 
 LOCAL_MODULE:= libhwacceffectswrapper
+LOCAL_MODULE_OWNER := qti
+LOCAL_PROPRIETARY_MODULE := true
 
 include $(BUILD_STATIC_LIBRARY)
 endif
@@ -85,7 +89,7 @@ ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm660 sdm845,$(TARGET_BOARD_PLA
 
 include $(CLEAR_VARS)
 
-LOCAL_CFLAGS := -DLIB_AUDIO_HAL="/system/lib/hw/audio.primary."$(TARGET_BOARD_PLATFORM)".so"
+LOCAL_CFLAGS := -DLIB_AUDIO_HAL="/vendor/lib/hw/audio.primary."$(TARGET_BOARD_PLATFORM)".so"
 
 LOCAL_SRC_FILES:= \
         volume_listener.c
@@ -99,6 +103,8 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_MODULE_RELATIVE_PATH := soundfx
 LOCAL_MODULE:= libvolumelistener
+LOCAL_MODULE_OWNER := qti
+LOCAL_PROPRIETARY_MODULE := true
 
 LOCAL_C_INCLUDES := \
         hardware/qcom/audio/hal \

@@ -62,12 +62,12 @@
 #define MIXER_XML_PATH_I2S "/etc/mixer_paths_i2s.xml"
 #define PLATFORM_INFO_XML_PATH_I2S "/etc/audio_platform_info_i2s.xml"
 #else
-#define MIXER_XML_BASE_STRING "/system/etc/mixer_paths"
-#define MIXER_XML_DEFAULT_PATH "/system/etc/mixer_paths.xml"
-#define PLATFORM_INFO_XML_PATH "/system/etc/audio_platform_info.xml"
-#define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
-#define MIXER_XML_PATH_I2S "/system/etc/mixer_paths_i2s.xml"
-#define PLATFORM_INFO_XML_PATH_I2S "/system/etc/audio_platform_info_i2s.xml"
+#define MIXER_XML_BASE_STRING "/vendor/etc/mixer_paths"
+#define MIXER_XML_DEFAULT_PATH "/vendor/etc/mixer_paths.xml"
+#define PLATFORM_INFO_XML_PATH "/vendor/etc/audio_platform_info.xml"
+#define MIXER_XML_PATH_AUXPCM "/vendor/etc/mixer_paths_auxpcm.xml"
+#define MIXER_XML_PATH_I2S "/vendor/etc/mixer_paths_i2s.xml"
+#define PLATFORM_INFO_XML_PATH_I2S "/vendor/etc/audio_platform_info_i2s.xml"
 #endif
 
 #include <linux/msm_audio.h>

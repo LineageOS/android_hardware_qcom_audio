@@ -25,8 +25,10 @@ include $(CLEAR_VARS)
 libOmxAmrEnc-inc       := $(LOCAL_PATH)/inc
 libOmxAmrEnc-inc       += $(TARGET_OUT_HEADERS)/mm-core/omxcore
 
-LOCAL_MODULE            := libOmxAmrEnc
-LOCAL_MODULE_TAGS       := optional
+LOCAL_MODULE             := libOmxAmrEnc
+LOCAL_MODULE_TAGS        := optional
+LOCAL_MODULE_OWNER       := qti
+LOCAL_PROPRIETARY_MODULE := true
 LOCAL_CFLAGS            := $(libOmxAmrEnc-def)
 LOCAL_C_INCLUDES        := $(libOmxAmrEnc-inc)
 LOCAL_PRELINK_MODULE    := false
