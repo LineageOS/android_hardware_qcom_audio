@@ -1798,7 +1798,7 @@ int start_output_stream(struct stream_out *out)
             goto error_open;
         }
     } else {
-        unsigned int flags = PCM_OUT;
+        unsigned int flags = PCM_OUT | PCM_MONOTONIC;
         unsigned int pcm_open_retry_count = 0;
 
         if (out->usecase == USECASE_AUDIO_PLAYBACK_AFE_PROXY) {
@@ -1806,8 +1806,7 @@ int start_output_stream(struct stream_out *out)
             pcm_open_retry_count = PROXY_OPEN_RETRY_COUNT;
         } else if (out->realtime) {
             flags |= PCM_MMAP | PCM_NOIRQ;
-        } else
-            flags |= PCM_MONOTONIC;
+        }
 
         while (1) {
             out->pcm = pcm_open(adev->snd_card, out->pcm_device_id,
