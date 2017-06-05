@@ -8,7 +8,6 @@ libqahw-inc := $(LOCAL_PATH)/inc
 
 LOCAL_MODULE := libqahw
 LOCAL_MODULE_TAGS := optional
-LOCAL_MODULE_OWNER := qti
 LOCAL_C_INCLUDES   := $(libqahw-inc)
 
 LOCAL_SRC_FILES := \

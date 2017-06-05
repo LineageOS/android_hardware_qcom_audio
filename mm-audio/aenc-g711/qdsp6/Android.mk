@@ -25,8 +25,9 @@ include $(CLEAR_VARS)
 libOmxG711Enc-inc       := $(LOCAL_PATH)/inc
 libOmxG711Enc-inc       += $(TARGET_OUT_HEADERS)/mm-core/omxcore
 
-LOCAL_MODULE            := libOmxG711Enc
-LOCAL_MODULE_TAGS       := optional
+LOCAL_MODULE             := libOmxG711Enc
+LOCAL_MODULE_TAGS        := optional
+LOCAL_VENDOR_MODULE      := true
 LOCAL_CFLAGS            := $(libOmxG711Enc-def)
 LOCAL_C_INCLUDES        := $(libOmxG711Enc-inc)
 LOCAL_PRELINK_MODULE    := false
