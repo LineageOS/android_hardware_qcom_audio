@@ -324,14 +324,14 @@ bool audio_extn_utils_resolve_config_file(char file_name[MIXER_PATH_MAX_LENGTH])
 }
 
 /* platform_info_file should be size 'MIXER_PATH_MAX_LENGTH' */
-void audio_extn_utils_get_platform_info(const char* snd_card_name, char* platform_info_file)
+int audio_extn_utils_get_platform_info(const char* snd_card_name, char* platform_info_file)
 {
     if (NULL == snd_card_name) {
-        return;
+        return -1;
     }
 
     struct snd_card_split *snd_split_handle = NULL;
-
+    int ret = 0;
     audio_extn_set_snd_card_split(snd_card_name);
     snd_split_handle = audio_extn_get_snd_card_split();
 
@@ -347,9 +347,11 @@ void audio_extn_utils_get_platform_info(const char* snd_card_name, char* platfor
         if (!audio_extn_utils_resolve_config_file(platform_info_file)) {
             memset(platform_info_file, 0, MIXER_PATH_MAX_LENGTH);
             strlcpy(platform_info_file, PLATFORM_INFO_XML_PATH, MIXER_PATH_MAX_LENGTH);
-            audio_extn_utils_resolve_config_file(platform_info_file);
+            ret = audio_extn_utils_resolve_config_file(platform_info_file) ? 0 : -1;
         }
     }
+
+    return ret;
 }
 
 int audio_extn_utils_get_snd_card_num()
@@ -399,10 +401,17 @@ int audio_extn_utils_get_snd_card_num()
         snd_card_name = mixer_get_name(mixer);
         hw_info = hw_info_init(snd_card_name);
 
-        audio_extn_utils_get_platform_info(snd_card_name, platform_info_file);
+        if (audio_extn_utils_get_platform_info(snd_card_name, platform_info_file) < 0) {
+            ALOGE("Failed to find platform_info_file");
+            goto cleanup;
+        }
 
         /* Initialize snd card name specific ids and/or backends*/
-        snd_card_info_init(platform_info_file, my_data, &acdb_set_parameters);
+        if (snd_card_info_init(platform_info_file, my_data,
+                               &acdb_set_parameters) < 0) {
+            ALOGE("Failed to find platform_info_file");
+            goto cleanup;
+        }
 
         /* validate the sound card name
          * my_data->snd_card_name can contain
@@ -419,17 +428,18 @@ int audio_extn_utils_get_snd_card_num()
                         min(strlen(snd_card_name), strlen(my_data->snd_card_name))) != 0) {
             ALOGI("%s: found valid sound card %s, but not primary sound card %s",
                    __func__, snd_card_name, my_data->snd_card_name);
-            ++snd_card_num;
-            mixer_close(mixer);
-            mixer = NULL;
-            hw_info_deinit(hw_info);
-            hw_info = NULL;
-            continue;
+            goto cleanup;
         }
 
-        ALOGI("%s: found sound card %s, primary sound card expeted is %s",
+        ALOGI("%s: found sound card %s, primary sound card expected is %s",
               __func__, snd_card_name, my_data->snd_card_name);
         break;
+  cleanup:
+        ++snd_card_num;
+        mixer_close(mixer);
+        mixer = NULL;
+        hw_info_deinit(hw_info);
+        hw_info = NULL;
     }
 
 done:
