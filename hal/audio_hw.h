@@ -96,6 +96,7 @@ enum {
     USECASE_AUDIO_RECORD,
     USECASE_AUDIO_RECORD_LOW_LATENCY,
     USECASE_AUDIO_RECORD_MMAP,
+    USECASE_AUDIO_RECORD_HIFI,
 
     /* Voice extension usecases
      *
@@ -246,6 +247,14 @@ struct stream_in {
     audio_format_t format;
     card_status_t card_status;
     int capture_started;
+
+    struct stream_app_type_cfg app_type_cfg;
+
+    /* Array of supported channel mask configurations.
+       +1 so that the last entry is always 0 */
+    audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
+    audio_format_t supported_formats[MAX_SUPPORTED_FORMATS + 1];
+    uint32_t supported_sample_rates[MAX_SUPPORTED_SAMPLE_RATES + 1];
 };
 
 typedef enum usecase_type_t {

@@ -152,7 +152,7 @@ static int enum_sndcards()
     size_t len = 0;
     ssize_t bytes_read;
     char path[128] = {0};
-    char *ptr, *saveptr;
+    char *ptr, *saveptr, *card_id;
     int line_no=0;
     unsigned int num_cards=0, num_cpe=0;
     FILE *fp;
@@ -179,6 +179,19 @@ static int enum_sndcards()
         ptr = strtok_r(line, " [", &saveptr);
         if (!ptr)
             continue;
+
+        card_id = strtok_r(saveptr+1, "]", &saveptr);
+        if (!card_id)
+            continue;
+
+        // Limit to sound cards associated with ADSP
+        if ((strncasecmp(card_id, "msm", 3) != 0) &&
+            (strncasecmp(card_id, "sdm", 3) != 0) &&
+            (strncasecmp(card_id, "sdc", 3) != 0) &&
+            (strncasecmp(card_id, "apq", 3) != 0)) {
+            ALOGW("Skip over non-ADSP snd card %s", card_id);
+            continue;
+        }
 
         snprintf(path, sizeof(path), "/proc/asound/card%s/state", ptr);
         ALOGV("Opening sound card state : %s", path);

@@ -96,6 +96,7 @@ enum {
 #define SOUND_CARD 0
 #define MIXER_PATH_MAX_LENGTH 100
 #define DEFAULT_OUTPUT_SAMPLING_RATE 48000
+#define DEFAULT_INPUT_SAMPLING_RATE 48000
 
 /*
  * tinyAlsa library interprets period size as number of frames
