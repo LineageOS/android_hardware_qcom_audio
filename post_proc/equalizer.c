@@ -358,6 +358,7 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
     equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
     int voffset = ((p->psize - 1) / sizeof(int32_t) + 1) * sizeof(int32_t);
     void *value = p->data + voffset;
+    int32_t vsize = (int32_t) p->vsize;
     int32_t *param_tmp = (int32_t *)p->data;
     int32_t param = *param_tmp++;
     int32_t preset;
@@ -371,6 +372,10 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
 
     switch (param) {
     case EQ_PARAM_CUR_PRESET:
+        if (vsize < sizeof(int16_t)) {
+           p->status = -EINVAL;
+           break;
+        }
         preset = (int32_t)(*(uint16_t *)value);
 
         if ((preset >= equalizer_get_num_presets(eq_ctxt)) || (preset < 0)) {
@@ -380,6 +385,10 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
         equalizer_set_preset(eq_ctxt, preset);
         break;
     case EQ_PARAM_BAND_LEVEL:
+        if (vsize < sizeof(int16_t)) {
+            p->status = -EINVAL;
+            break;
+        }
         band =  *param_tmp;
         level = (int32_t)(*(int16_t *)value);
         if (band < 0 || band >= NUM_EQ_BANDS) {
@@ -393,6 +402,10 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
         equalizer_set_band_level(eq_ctxt, band, level);
         break;
     case EQ_PARAM_PROPERTIES: {
+        if (vsize < sizeof(int16_t)) {
+            p->status = -EINVAL;
+            break;
+        }
         int16_t *prop = (int16_t *)value;
         if ((int)prop[0] >= equalizer_get_num_presets(eq_ctxt)) {
             p->status = -EINVAL;
@@ -401,6 +414,13 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
         if (prop[0] >= 0) {
             equalizer_set_preset(eq_ctxt, (int)prop[0]);
         } else {
+            if (vsize < (2 + NUM_EQ_BANDS) * sizeof(int16_t)) {
+                android_errorWriteLog(0x534e4554, "37563371");
+                ALOGE("\tERROR EQ_PARAM_PROPERTIES valueSize %d < %d",
+                                  vsize, (2 + NUM_EQ_BANDS) * sizeof(int16_t));
+                p->status = -EINVAL;
+                break;
+            }
             if ((int)prop[1] != NUM_EQ_BANDS) {
                 p->status = -EINVAL;
                 break;
