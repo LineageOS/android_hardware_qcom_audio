@@ -47,6 +47,12 @@
 #include "audio_extn.h"
 #include "audio_hw.h"
 
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_GEF
+#include <log_utils.h>
+#endif
+
 #ifdef AUDIO_GENERIC_EFFECT_FRAMEWORK_ENABLED
 
 #if LINUX_ENABLED

@@ -39,6 +39,13 @@
 #include <sound/compress_params.h>
 #include <sound/compress_offload.h>
 #include <tinycompress/tinycompress.h>
+
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_UTILS
+#include <log_utils.h>
+#endif
+
 #ifdef AUDIO_EXTERNAL_HDMI_ENABLED
 #ifdef HDMI_PASSTHROUGH_ENABLED
 #include "audio_parsers.h"
