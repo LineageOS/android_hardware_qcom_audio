@@ -32,6 +32,7 @@ AUDIO_FEATURE_ENABLED_HFP := true
 AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS := true
 AUDIO_FEATURE_ENABLED_KPI_OPTIMIZE := true
 AUDIO_FEATURE_ENABLED_ACDB_LICENSE := true
+AUDIO_FEATURE_ENABLED_DYNAMIC_LOG := true
 MM_AUDIO_ENABLED_FTM := true
 TARGET_USES_QCOM_MM_AUDIO := true
 
@@ -47,11 +48,10 @@ PRODUCT_COPY_FILES += \
     device/qcom/common/media/audio_policy.conf:system/etc/audio_policy.conf
 else
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/msm8909/audio_policy.conf:system/etc/audio_policy.conf
+    hardware/qcom/audio/configs/msm8909/audio_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy.conf
 endif
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/msm8909/audio_policy.conf:system/etc/audio_policy.conf \
-    hardware/qcom/audio/configs/msm8909/audio_effects.conf:system/vendor/etc/audio_effects.conf \
+    hardware/qcom/audio/configs/msm8909/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
     hardware/qcom/audio/configs/msm8909/mixer_paths_qrd_skuh.xml:system/etc/mixer_paths_qrd_skuh.xml \
     hardware/qcom/audio/configs/msm8909/mixer_paths_qrd_skui.xml:system/etc/mixer_paths_qrd_skui.xml \
     hardware/qcom/audio/configs/msm8909/mixer_paths.xml:system/etc/mixer_paths.xml \

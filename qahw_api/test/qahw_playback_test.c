@@ -58,6 +58,10 @@
 #define KVPAIRS_MAX 100
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[1]))
 
+#define FORMAT_DESCRIPTOR_SIZE 12
+#define SUBCHUNK1_SIZE(x) ((8) + (x))
+#define SUBCHUNK2_SIZE 8
+
 static int get_wav_header_length (FILE* file_stream);
 static void init_streams(void);
 
@@ -237,6 +241,40 @@ audio_io_handle_t stream_handle = 0x999;
                    "music_offload_wma_encode_option1=%d;" \
                    "music_offload_wma_encode_option2=%d;" \
                    "music_offload_wma_format_tag=%d;"
+
+static bool request_wake_lock(bool wakelock_acquired, bool enable)
+{
+   int system_ret;
+
+   if (enable) {
+       if (!wakelock_acquired) {
+           system_ret = system("echo audio_services > /sys/power/wake_lock");
+           if (system_ret < 0) {
+               fprintf(stderr, "%s.Failed to acquire audio_service lock\n", __func__);
+               fprintf(log_file, "%s.Failed to acquire audio_service lock\n", __func__);
+           } else {
+               wakelock_acquired = true;
+               fprintf(log_file, "%s.Success to acquire audio_service lock\n", __func__);
+           }
+       } else
+            fprintf(log_file, "%s.Lock is already acquired\n", __func__);
+   }
+
+   if (!enable) {
+       if (wakelock_acquired) {
+           system_ret = system("echo audio_services > /sys/power/wake_unlock");
+           if (system_ret < 0) {
+               fprintf(stderr, "%s.Failed to release audio_service lock\n", __func__);
+               fprintf(log_file, "%s.Failed to release audio_service lock\n", __func__);
+           } else {
+               wakelock_acquired = false;
+               fprintf(log_file, "%s.Success to release audio_service lock\n", __func__);
+           }
+       } else
+            fprintf(log_file, "%s.No Lock is acquired to release\n", __func__);
+   }
+   return wakelock_acquired;
+}
 
 void stop_signal_handler(int signal __unused)
 {
@@ -684,9 +722,12 @@ void *start_stream_playback (void* stream_data)
                         qahw_out_drain(params->out_handle, QAHW_DRAIN_ALL);
                         pthread_cond_wait(&params->drain_cond, &params->drain_lock);
                         fprintf(log_file, "stream %d: out of compress drain\n", params->stream_index);
-                        fprintf(log_file, "stream %d: playback completed successfully\n", params->stream_index);
                         pthread_mutex_unlock(&params->drain_lock);
                     }
+            /* Caution: Below ADL log shouldnt be altered without notifying automation APT since
+             * it used for automation testing
+             */
+                    fprintf(log_file, "ADL: stream %d: playback completed successfully\n", params->stream_index);
                 }
                 exit = true;
                 continue;
@@ -698,6 +739,10 @@ void *start_stream_playback (void* stream_data)
         fprintf(log_file, "stream %d: writing to hal %zd bytes, offset %d, write length %zd\n",
                 params->stream_index, bytes_remaining, offset, write_length);
         bytes_written = write_to_hal(params->out_handle, data_ptr+offset, bytes_remaining, params);
+        if (bytes_written == -1) {
+            fprintf(stderr, "proxy_write failed in usb hal");
+            break;
+        }
         bytes_remaining -= bytes_written;
 
         latency = qahw_out_get_latency(params->out_handle);
@@ -978,7 +1023,7 @@ static void get_file_format(stream_config *stream_info)
     }
     stream_info->config.sample_rate = stream_info->config.offload_info.sample_rate;
     stream_info->config.format = stream_info->config.offload_info.format;
-    stream_info->config.channel_mask = stream_info->config.offload_info.channel_mask = audio_channel_in_mask_from_count(stream_info->channels);
+    stream_info->config.channel_mask = stream_info->config.offload_info.channel_mask = audio_channel_out_mask_from_count(stream_info->channels);
     return;
 }
 
@@ -1149,6 +1194,9 @@ static int get_kvpairs_string(char *kvpairs, const char *key, char *value) {
         return -1;
 
     parms = str_parms_create_str(kvpairs);
+    if (parms == NULL)
+        return -1;
+
     if (str_parms_get_str(parms, key, value, KVPAIRS_MAX) < 0)
         return -1;
 
@@ -1173,7 +1221,7 @@ static int get_pcm_format(char *kvpairs) {
    /*
     * for now we assume usb hal/pcm device announces suport for one format ONLY
     */
-    for (i = 0; i < sizeof(format_table); i++) {
+    for (i = 0; i < (sizeof(format_table)/sizeof(format_table[0])); i++) {
         if(!strncmp(format_table[i].string, value, sizeof(value))) {
             match = true;
             break;
@@ -1311,8 +1359,8 @@ static int detect_stream_params(stream_config *stream) {
         param_string = qahw_out_get_parameters(stream->out_handle, QAHW_PARAMETER_STREAM_SUP_CHANNELS);
 
     if ((ch = get_channels(param_string)) <= 0) {
-        fprintf(log_file, "Unable to extract channels =(%d) string(%s)\n", ch, param_string);
-        fprintf(stderr, "Unable to extract channels =(%d) string(%s)\n", ch, param_string);
+        fprintf(log_file, "Unable to extract channels =(%d) string(%s)\n", ch, param_string == NULL ? "null":param_string);
+        fprintf(stderr, "Unable to extract channels =(%d) string(%s)\n", ch, param_string == NULL ? "null":param_string);
         return -1;
     }
     stream->config.channel_mask = audio_channel_in_mask_from_count(ch);
@@ -1483,20 +1531,7 @@ static int get_wav_header_length (FILE* file_stream)
         fprintf(log_file, "This is not a valid wav file \n");
         fprintf(stderr, "This is not a valid wav file \n");
     } else {
-          switch (subchunk_size) {
-          case 16:
-              fprintf(log_file, "44-byte wav header \n");
-              wav_header_len = 44;
-              break;
-          case 18:
-              fprintf(log_file, "46-byte wav header \n");
-              wav_header_len = 46;
-              break;
-          default:
-              fprintf(log_file, "Header contains extra data and is larger than 46 bytes: subchunk_size=%d \n", subchunk_size);
-              wav_header_len = subchunk_size;
-              break;
-          }
+         wav_header_len = FORMAT_DESCRIPTOR_SIZE + SUBCHUNK1_SIZE(subchunk_size) + SUBCHUNK2_SIZE;
     }
     return wav_header_len;
 }
@@ -1585,6 +1620,7 @@ int main(int argc, char* argv[]) {
     int j = 0;
     kpi_mode = false;
     event_trigger = false;
+    bool wakelock_acquired = false;
 
     log_file = stdout;
     proxy_params.acp.file_name = "/data/pcm_dump.wav";
@@ -1750,8 +1786,12 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    wakelock_acquired = request_wake_lock(wakelock_acquired, true);
     num_of_streams = i+1;
-    fprintf(log_file, "Starting audio hal tests for streams : %d\n", num_of_streams);
+    /* Caution: Below ADL log shouldnt be altered without notifying automation APT since it used
+     * for automation testing
+     */
+    fprintf(log_file, "ADL: Starting audio hal tests for streams : %d\n", num_of_streams);
 
     if (kpi_mode == true && num_of_streams > 1) {
         fprintf(log_file, "kpi-mode is not supported for multi-playback usecase\n");
@@ -1910,7 +1950,7 @@ exit:
         if (stream_param[i].file_stream != nullptr)
             fclose(stream_param[i].file_stream);
         else if (AUDIO_DEVICE_NONE != stream_param[i].input_device) {
-            if (stream->in_handle) {
+            if (stream != NULL && stream->in_handle) {
                 rc = qahw_close_input_stream(stream->in_handle);
                 if (rc) {
                     fprintf(log_file, "input stream could not be closed\n");
@@ -1926,6 +1966,10 @@ exit:
     if ((log_file != stdout) && (log_file != nullptr))
         fclose(log_file);
 
-    fprintf(log_file, "\nBYE BYE\n");
+    wakelock_acquired = request_wake_lock(wakelock_acquired, false);
+    /* Caution: Below ADL log shouldnt be altered without notifying automation APT since it used
+     * for automation testing
+     */
+    fprintf(log_file, "\nADL: BYE BYE\n");
     return 0;
 }

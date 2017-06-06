@@ -224,7 +224,7 @@ bool audio_extn_usb_is_capture_supported();
 #else
 void audio_extn_a2dp_init(void *adev);
 int audio_extn_a2dp_start_playback();
-void audio_extn_a2dp_stop_playback();
+int audio_extn_a2dp_stop_playback();
 void audio_extn_a2dp_set_parameters(struct str_parms *parms);
 bool audio_extn_a2dp_is_force_device_switch();
 void audio_extn_a2dp_set_handoff_mode(bool is_on);
@@ -587,6 +587,8 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
 void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
                                   struct audio_device *adev,
                                   struct audio_usecase *usecase);
+int audio_extn_utils_get_snd_card_num();
+
 #ifdef DS2_DOLBY_DAP_ENABLED
 #define LIB_DS2_DAP_HAL "vendor/lib/libhwdaphal.so"
 #define SET_HW_INFO_FUNC "dap_hal_set_hw_info"

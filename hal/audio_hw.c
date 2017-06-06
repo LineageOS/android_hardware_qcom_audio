@@ -76,6 +76,12 @@
 #include "sound/compress_params.h"
 #include "sound/asound.h"
 
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_AUDIO_HW
+#include <log_utils.h>
+#endif
+
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /*DIRECT PCM has same buffer sizes as DEEP Buffer*/
 #define DIRECT_PCM_NUM_FRAGMENTS 2
@@ -1535,7 +1541,9 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         } else if (voice_extn_compress_voip_is_active(adev)) {
             bool out_snd_device_backend_match = true;
             voip_usecase = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
-            if (usecase->stream.out != NULL) {
+            if ((voip_usecase != NULL) &&
+                (usecase->type == PCM_PLAYBACK) &&
+                (usecase->stream.out != NULL)) {
                 out_snd_device_backend_match = platform_check_backends_match(
                                                    voip_usecase->out_snd_device,
                                                    platform_get_output_snd_device(
@@ -2579,9 +2587,12 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
 
-    if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)
-        return out->compr_config.fragment_size;
-    else if(out->usecase == USECASE_COMPRESS_VOIP_CALL)
+    if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
+        if (out->flags & AUDIO_OUTPUT_FLAG_TIMESTAMP)
+            return out->compr_config.fragment_size - sizeof(struct snd_codec_metadata);
+        else
+            return out->compr_config.fragment_size;
+    } else if(out->usecase == USECASE_COMPRESS_VOIP_CALL)
         return voice_extn_compress_voip_out_get_buffer_size(out);
     else if (is_offload_usecase(out->usecase) &&
              out->flags == AUDIO_OUTPUT_FLAG_DIRECT)
@@ -4097,6 +4108,11 @@ int adev_open_output_stream(struct audio_hw_device *dev,
          */
         if (!audio_extn_passthru_is_passthrough_stream(out))
             out->bit_width = AUDIO_OUTPUT_BIT_WIDTH;
+
+        if (out->flags & AUDIO_OUTPUT_FLAG_TIMESTAMP)
+            out->compr_config.codec->flags |= COMPRESSED_TIMESTAMP_FLAG;
+        ALOGVV("%s : out->compr_config.codec->flags -> (%#x) ", __func__, out->compr_config.codec->flags);
+
         /*TODO: Do we need to change it for passthrough */
         out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
 
@@ -4159,6 +4175,9 @@ int adev_open_output_stream(struct audio_hw_device *dev,
             out->compr_config.fragments = COMPRESS_OFFLOAD_NUM_FRAGMENTS;
         }
 
+        if (out->flags & AUDIO_OUTPUT_FLAG_TIMESTAMP) {
+            out->compr_config.fragment_size += sizeof(struct snd_codec_metadata);
+        }
         if (config->offload_info.format == AUDIO_FORMAT_FLAC)
             out->compr_config.codec->options.flac_dec.sample_size = AUDIO_OUTPUT_BIT_WIDTH;
 
@@ -5172,6 +5191,10 @@ static int adev_open(const hw_module_t *module, const char *name,
     }
 
     pthread_mutex_init(&adev->lock, (const pthread_mutexattr_t *) NULL);
+
+#ifdef DYNAMIC_LOG_ENABLED
+    register_for_dynamic_logging("hal");
+#endif
 
     adev->device.common.tag = HARDWARE_DEVICE_TAG;
     adev->device.common.version = AUDIO_DEVICE_API_VERSION_2_0;

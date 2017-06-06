@@ -54,7 +54,8 @@ LOCAL_SRC_FILES := \
 	audio_hw.c \
 	voice.c \
 	platform_info.c \
-	$(AUDIO_PLATFORM)/platform.c
+	$(AUDIO_PLATFORM)/platform.c \
+        acdb.c
 
 LOCAL_SRC_FILES += audio_extn/audio_extn.c \
                    audio_extn/utils.c
@@ -349,6 +350,12 @@ endif
 ifeq ($(strip $($AUDIO_FEATURE_ADSP_HDLR_ENABLED)),true)
     LOCAL_CFLAGS += -DAUDIO_EXTN_ADSP_HDLR_ENABLED
     LOCAL_SRC_FILES += audio_extn/adsp_hdlr.c
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DYNAMIC_LOG)), true)
+    LOCAL_CFLAGS += -DDYNAMIC_LOG_ENABLED
+    LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-log-utils
+    LOCAL_SHARED_LIBRARIES += libaudio_log_utils
 endif
 
 LOCAL_CFLAGS += -Wall -Werror

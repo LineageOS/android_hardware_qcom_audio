@@ -36,6 +36,12 @@
 #include "platform.h"
 #include "voice_extn.h"
 
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_COMPR_VOIP
+#include <log_utils.h>
+#endif
+
 #define COMPRESS_VOIP_IO_BUF_SIZE_NB 320
 #define COMPRESS_VOIP_IO_BUF_SIZE_WB 640
 #define COMPRESS_VOIP_IO_BUF_SIZE_SWB 1280

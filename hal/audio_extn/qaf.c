@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -116,6 +116,12 @@
 #include "audio_extn.h"
 #include <qti_audio.h>
 #include "sound/compress_params.h"
+
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_QAF
+#include <log_utils.h>
+#endif
 
 //TODO: Need to remove this.
 #define QAF_OUTPUT_SAMPLING_RATE 48000
@@ -1785,7 +1791,7 @@ static int qaf_stream_open(struct stream_out *out,
                 ERROR_MSG("Stream Open FAILED !!!");
             }
         }
-    } else if ((flags & AUDIO_OUTPUT_FLAG_MAIN) || (!((flags & AUDIO_OUTPUT_FLAG_MAIN) && (flags & AUDIO_OUTPUT_FLAG_ASSOCIATED)))) {
+    } else if ((flags & AUDIO_OUTPUT_FLAG_MAIN) || ((!(flags & AUDIO_OUTPUT_FLAG_MAIN)) && (!(flags & AUDIO_OUTPUT_FLAG_ASSOCIATED)))) {
         /* Assume Main if no flag is set */
         if (is_dual_main_active(qaf_mod)) {
             ERROR_MSG("Dual Main already active. So, Cannot open main stream");

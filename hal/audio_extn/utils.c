@@ -39,6 +39,13 @@
 #include <sound/compress_params.h>
 #include <sound/compress_offload.h>
 #include <tinycompress/tinycompress.h>
+
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_UTILS
+#include <log_utils.h>
+#endif
+
 #ifdef AUDIO_EXTERNAL_HDMI_ENABLED
 #ifdef HDMI_PASSTHROUGH_ENABLED
 #include "audio_parsers.h"
@@ -111,6 +118,7 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_INCALL_MUSIC),
 #endif
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH),
+    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_TIMESTAMP),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_NONE),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_FAST),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_HW_HOTWORD),
@@ -1760,7 +1768,12 @@ int audio_extn_utils_compress_set_clk_rec_mode(
     struct stream_out *out = NULL;
     int ret = -EINVAL;
 
-    if (usecase != NULL && usecase->type != PCM_PLAYBACK) {
+    if (usecase == NULL) {
+        ALOGE("%s:: Invalid use case", __func__);
+        goto exit;
+    }
+
+    if (usecase->type != PCM_PLAYBACK) {
         ALOGE("%s:: Invalid use case", __func__);
         goto exit;
     }
@@ -1828,13 +1841,13 @@ int audio_extn_utils_compress_set_render_window(
     struct snd_compr_metadata metadata;
     int ret = -EINVAL;
 
-    ALOGD("%s:: render window start 0x%"PRIx64" end 0x%"PRIx64"",
-          __func__,render_window->render_ws, render_window->render_we);
-
     if(render_window == NULL) {
         ALOGE("%s:: Invalid render_window", __func__);
         goto exit;
     }
+
+    ALOGD("%s:: render window start 0x%"PRIx64" end 0x%"PRIx64"",
+          __func__,render_window->render_ws, render_window->render_we);
 
     if (!is_offload_usecase(out->usecase)) {
         ALOGE("%s:: not supported for non offload session", __func__);
@@ -1945,3 +1958,66 @@ int audio_extn_utils_compress_set_start_delay(
     return 0;
 }
 #endif
+
+#define MAX_SND_CARD 8
+#define RETRY_US 500000
+#define RETRY_NUMBER 10
+
+int audio_extn_utils_get_snd_card_num()
+{
+
+    void *hw_info = NULL;
+    struct mixer *mixer = NULL;
+    int retry_num = 0;
+    int snd_card_num = 0;
+    char* snd_card_name = NULL;
+
+    while (snd_card_num < MAX_SND_CARD) {
+        mixer = mixer_open(snd_card_num);
+
+        while (!mixer && retry_num < RETRY_NUMBER) {
+            usleep(RETRY_US);
+            mixer = mixer_open(snd_card_num);
+            retry_num++;
+        }
+
+        if (!mixer) {
+            ALOGE("%s: Unable to open the mixer card: %d", __func__,
+                   snd_card_num);
+            retry_num = 0;
+            snd_card_num++;
+            continue;
+        }
+
+        snd_card_name = strdup(mixer_get_name(mixer));
+        if (!snd_card_name) {
+            ALOGE("failed to allocate memory for snd_card_name\n");
+            mixer_close(mixer);
+            return -1;
+        }
+        ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
+
+        hw_info = hw_info_init(snd_card_name);
+        if (hw_info) {
+            ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
+            break;
+        }
+        ALOGE("%s: Failed to init hardware info", __func__);
+        retry_num = 0;
+        snd_card_num++;
+        free(snd_card_name);
+        mixer_close(mixer);
+    }
+
+    mixer_close(mixer);
+    hw_info_deinit(hw_info);
+    if (snd_card_name)
+        free(snd_card_name);
+
+    if (snd_card_num >= MAX_SND_CARD) {
+        ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
+        return -1;
+    }
+
+    return snd_card_num;
+}

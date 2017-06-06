@@ -32,13 +32,19 @@
 #include <platform_api.h>
 #include "platform.h"
 #include "audio_extn.h"
+#include "acdb.h"
 #include "voice_extn.h"
 #include "edid.h"
 #include "sound/compress_params.h"
 #include "sound/msmcal-hwdep.h"
 #include <dirent.h>
 #include <linux/msm_audio.h>
-#include "linux/msm_audio_calibration.h"
+
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_PLATFORM
+#include <log_utils.h>
+#endif
 
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
 #define MAX_MIXER_XML_PATH  100
@@ -132,11 +138,6 @@
 #define DEFAULT_APP_TYPE_RX_PATH  0x11130
 #define DEFAULT_APP_TYPE_TX_PATH 0x11132
 
-/* Retry for delay in FW loading*/
-#define RETRY_NUMBER 20
-#define RETRY_US 500000
-#define MAX_SND_CARD 8
-
 #define SAMPLE_RATE_8KHZ  8000
 #define SAMPLE_RATE_16KHZ 16000
 
@@ -178,6 +179,11 @@ char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
 
 static char *default_rx_backend = NULL;
 
+#ifdef DYNAMIC_LOG_ENABLED
+extern void log_utils_init(void);
+extern void log_utils_deinit(void);
+#endif
+
 char dsp_only_decoders_mime[][MAX_MIME_TYPE_LENGTH] = {
     "audio/x-ms-wma" /* wma*/ ,
     "audio/x-ms-wma-lossless" /* wma lossless */ ,
@@ -217,24 +223,7 @@ enum {
     CAL_MODE_RTAC           = 0x4
 };
 
-/* Audio calibration related functions */
-typedef void (*acdb_deallocate_t)();
-typedef int  (*acdb_init_t)(const char *, char *, int);
-typedef int  (*acdb_init_v3_t)(const char *, char *, struct listnode *);
-typedef void (*acdb_send_audio_cal_t)(int, int, int , int);
-typedef void (*acdb_send_audio_cal_v3_t)(int, int, int, int, int);
-typedef void (*acdb_send_voice_cal_t)(int, int);
-typedef int (*acdb_reload_vocvoltable_t)(int);
-typedef int  (*acdb_get_default_app_type_t)(void);
-typedef int (*acdb_loader_get_calibration_t)(char *attr, int size, void *data);
 acdb_loader_get_calibration_t acdb_loader_get_calibration;
-typedef int (*acdb_set_audio_cal_t) (void *, void *, uint32_t);
-typedef int (*acdb_get_audio_cal_t) (void *, void *, uint32_t*);
-typedef int (*acdb_send_common_top_t) (void);
-typedef int (*acdb_set_codec_data_t) (void *, char *);
-typedef int (*acdb_reload_t) (char *, char *, char *, int);
-typedef int (*acdb_send_gain_dep_cal_t)(int, int, int, int, int);
-typedef int (*acdb_reload_v2_t) (char *, char *, char *, struct listnode *);
 
 typedef struct codec_backend_cfg {
     uint32_t sample_rate;
@@ -247,12 +236,6 @@ typedef struct codec_backend_cfg {
 
 static native_audio_prop na_props = {0, 0, NATIVE_AUDIO_MODE_INVALID};
 static bool supports_true_32_bit = false;
-
-struct meta_key_list {
-    struct listnode list;
-    struct audio_cal_info_metainfo cal_info;
-    char name[ACDB_METAINFO_KEY_MODULE_NAME_LEN];
-};
 
 static int max_be_dai_names = 0;
 static const struct be_dai_name_struct *be_dai_name_table;
@@ -2061,7 +2044,7 @@ void *platform_init(struct audio_device *adev)
 {
     char value[PROPERTY_VALUE_MAX];
     struct platform_data *my_data = NULL;
-    int retry_num = 0, snd_card_num = 0;
+    int snd_card_num = 0;
     const char *snd_card_name;
     char mixer_xml_path[MAX_MIXER_XML_PATH],ffspEnable[PROPERTY_VALUE_MAX];
     const char *mixer_ctl_name = "Set HPX ActiveBe";
@@ -2070,6 +2053,25 @@ void *platform_init(struct audio_device *adev)
     int wsaCount =0;
     bool is_wsa_combo_supported = false;
 
+    snd_card_num = audio_extn_utils_get_snd_card_num();
+    if(snd_card_num < 0) {
+        ALOGE("%s: Unable to find correct sound card", __func__);
+        return NULL;
+    }
+
+    adev->snd_card = snd_card_num;
+    ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
+
+    adev->mixer = mixer_open(snd_card_num);
+    if (!adev->mixer) {
+        ALOGE("%s: Unable to open the mixer card: %d", __func__,
+               snd_card_num);
+        return NULL;
+    }
+
+    snd_card_name = mixer_get_name(adev->mixer);
+    ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
+
     my_data = calloc(1, sizeof(struct platform_data));
 
     if (!my_data) {
@@ -2077,61 +2079,30 @@ void *platform_init(struct audio_device *adev)
         return NULL;
     }
 
-    while (snd_card_num < MAX_SND_CARD) {
-        adev->mixer = mixer_open(snd_card_num);
-
-        while (!adev->mixer && retry_num < RETRY_NUMBER) {
-            usleep(RETRY_US);
-            adev->mixer = mixer_open(snd_card_num);
-            retry_num++;
-        }
-
-        if (!adev->mixer) {
-            ALOGE("%s: Unable to open the mixer card: %d", __func__,
-                   snd_card_num);
-            retry_num = 0;
-            snd_card_num++;
-            continue;
-        }
-
-        snd_card_name = mixer_get_name(adev->mixer);
-        ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
-
-        my_data->hw_info = hw_info_init(snd_card_name);
-        if (!my_data->hw_info) {
-            ALOGE("%s: Failed to init hardware info", __func__);
-        } else {
-            query_platform(snd_card_name, mixer_xml_path);
-            ALOGD("%s: mixer path file is %s", __func__,
-                                    mixer_xml_path);
-            if (audio_extn_read_xml(adev, snd_card_num, mixer_xml_path,
-                                    MIXER_XML_PATH_AUXPCM) == -ENOSYS) {
-                adev->audio_route = audio_route_init(snd_card_num,
-                                                 mixer_xml_path);
-            }
-            if (!adev->audio_route) {
-                ALOGE("%s: Failed to init audio route controls, aborting.",
-                       __func__);
-                free(my_data);
-                mixer_close(adev->mixer);
-                return NULL;
-            }
-            adev->snd_card = snd_card_num;
-            update_codec_type(snd_card_name);
-            update_interface(snd_card_name);
-            ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
-            break;
-        }
-        retry_num = 0;
-        snd_card_num++;
-        mixer_close(adev->mixer);
-    }
-
-    if (snd_card_num >= MAX_SND_CARD) {
-        ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
+    my_data->hw_info = hw_info_init(snd_card_name);
+    if (!my_data->hw_info) {
+        ALOGE("%s: Failed to init hardware info", __func__);
         free(my_data);
         return NULL;
     }
+
+    query_platform(snd_card_name, mixer_xml_path);
+    ALOGD("%s: mixer path file is %s", __func__,
+                            mixer_xml_path);
+    if (audio_extn_read_xml(adev, snd_card_num, mixer_xml_path,
+                            MIXER_XML_PATH_AUXPCM) == -ENOSYS) {
+        adev->audio_route = audio_route_init(snd_card_num,
+                                         mixer_xml_path);
+    }
+    if (!adev->audio_route) {
+        ALOGE("%s: Failed to init audio route controls, aborting.",
+               __func__);
+        free(my_data);
+        mixer_close(adev->mixer);
+        return NULL;
+    }
+    update_codec_type(snd_card_name);
+    update_interface(snd_card_name);
 
     my_data->adev = adev;
     my_data->fluence_in_spkr_mode = false;
@@ -2239,12 +2210,12 @@ void *platform_init(struct audio_device *adev)
 
     /* Initialize ACDB and PCM ID's */
     if (is_external_codec)
-        platform_info_init(PLATFORM_INFO_XML_PATH_EXTCODEC, my_data);
+        platform_info_init(PLATFORM_INFO_XML_PATH_EXTCODEC, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "sdm660-snd-card-skush",
                sizeof("sdm660-snd-card-skush")))
-        platform_info_init(PLATFORM_INFO_XML_PATH_SKUSH, my_data);
+        platform_info_init(PLATFORM_INFO_XML_PATH_SKUSH, my_data, PLATFORM);
     else
-        platform_info_init(PLATFORM_INFO_XML_PATH, my_data);
+        platform_info_init(PLATFORM_INFO_XML_PATH, my_data, PLATFORM);
 
     my_data->voice_feature_set = VOICE_FEATURE_SET_DEFAULT;
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
@@ -2347,10 +2318,20 @@ void *platform_init(struct audio_device *adev)
             goto acdb_init_fail;
         }
 
-        platform_acdb_init(my_data);
+        int result = acdb_init(adev->snd_card);
+        if (!result) {
+            my_data->is_acdb_initialized = true;
+            ALOGD("ACDB initialized");
+            audio_hwdep_send_cal(my_data);
+        } else {
+            my_data->is_acdb_initialized = false;
+            ALOGD("ACDB initialization failed");
+        }
     }
     audio_extn_pm_vote();
-
+#ifdef DYNAMIC_LOG_ENABLED
+    log_utils_init();
+#endif
     /* Configure active back end for HPX*/
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (ctl) {
@@ -2586,6 +2567,9 @@ void platform_deinit(void *platform)
     /* deinit usb */
     audio_extn_usb_deinit();
     audio_extn_dap_hal_deinit();
+#ifdef DYNAMIC_LOG_ENABLED
+    log_utils_deinit();
+#endif
 }
 
 static int platform_is_acdb_initialized(void *platform)

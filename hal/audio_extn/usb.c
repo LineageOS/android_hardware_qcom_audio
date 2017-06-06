@@ -36,6 +36,12 @@
 #include <ctype.h>
 #include <math.h>
 
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_USB
+#include <log_utils.h>
+#endif
+
 #ifdef USB_HEADSET_ENABLED
 #define USB_BUFF_SIZE           2048
 #define CHANNEL_NUMBER_STR      "Channels: "

@@ -270,6 +270,7 @@ struct stream_out {
     struct audio_out_start_delay_param delay_param; /*start delay*/
 
     audio_offload_info_t info;
+    qahwi_stream_out_t qahwi_out;
 };
 
 struct stream_in {

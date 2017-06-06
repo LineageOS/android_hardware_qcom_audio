@@ -41,6 +41,12 @@
 #include "platform_api.h"
 #include "sound_trigger_prop_intf.h"
 
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_SND_TRIGGER
+#include <log_utils.h>
+#endif
+
 #define XSTR(x) STR(x)
 #define STR(x) #x
 #define MAX_LIBRARY_PATH 100

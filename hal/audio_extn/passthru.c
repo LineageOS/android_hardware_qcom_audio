@@ -40,6 +40,11 @@
 #include <cutils/properties.h>
 
 #include "sound/compress_params.h"
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_PASSTH
+#include <log_utils.h>
+#endif
 
 static const audio_format_t audio_passthru_formats[] = {
     AUDIO_FORMAT_AC3,
