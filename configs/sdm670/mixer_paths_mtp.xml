@@ -138,6 +138,7 @@
     <ctl name="USB_AUDIO_TX Format" value="S16_LE" />
     <ctl name="USB_AUDIO_TX SampleRate" value="KHZ_48" />
     <ctl name="USB_AUDIO_TX Channels" value="One" />
+    <ctl name="ADC1_INP1 Switch" value="0" />
     <ctl name="MultiMedia6 Mixer INT3_MI2S_TX" value="0" />
     <ctl name="INT4_MI2S_RX Channels" value="One" />
     <ctl name="INT0_MI2S_RX Channels" value="One" />
@@ -1458,6 +1459,7 @@
     <path name="adc1">
         <ctl name="ADC1 Volume" value="6" />
         <ctl name="DEC1 MUX" value="ADC1" />
+        <ctl name="ADC1_INP1 Switch" value="1" />
     </path>
 
     <path name="adc2">
