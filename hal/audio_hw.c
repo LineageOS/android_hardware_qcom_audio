@@ -3434,7 +3434,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
     // power_log may be null if the format is not supported
     // or not a userdebug or eng build.
-    if (is_userdebug_or_eng_build()) {
+    if (false /* is_userdebug_or_eng_build() */) {
         const size_t POWER_LOG_FRAMES_PER_ENTRY =
                 (long long)config->sample_rate * POWER_LOG_SAMPLING_INTERVAL_MS / 1000;
 
