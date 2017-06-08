@@ -81,6 +81,8 @@
 #define SND_AUDIOCODEC_TRUEHD 0x00000023
 #endif
 
+#define APP_TYPE_VOIP_AUDIO 0x1113A
+
 #ifdef AUDIO_EXTERNAL_HDMI_ENABLED
 #define PROFESSIONAL        (1<<0)      /* 0 = consumer, 1 = professional */
 #define NON_LPCM            (1<<1)      /* 0 = audio, 1 = non-audio */
@@ -119,6 +121,7 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
 #endif
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_TIMESTAMP),
+    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_VOIP_RX),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_NONE),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_FAST),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_HW_HOTWORD),
@@ -786,7 +789,10 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
         ALOGV("%s Selected apptype: %d", __func__, usecase->stream.out->app_type_cfg.app_type);
         break;
     case PCM_CAPTURE:
-        audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
+        if (usecase->id == USECASE_AUDIO_RECORD_VOIP)
+            usecase->stream.in->app_type_cfg.app_type = APP_TYPE_VOIP_AUDIO;
+        else
+            audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
                                                 &adev->streams_input_cfg_list,
                                                 usecase->stream.in->device,
                                                 usecase->stream.in->flags,
@@ -830,6 +836,7 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         (usecase->id != USECASE_AUDIO_PLAYBACK_LOW_LATENCY) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_MULTI_CH) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_ULL) &&
+        (usecase->id != USECASE_AUDIO_PLAYBACK_VOIP) &&
         (!is_offload_usecase(usecase->id)) &&
         (usecase->type != PCM_CAPTURE)) {
         ALOGV("%s: a rx/tx/loopback path where app type cfg is not required %d", __func__, usecase->id);
