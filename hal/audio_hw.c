@@ -1523,7 +1523,9 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         } else if (voice_extn_compress_voip_is_active(adev)) {
             bool out_snd_device_backend_match = true;
             voip_usecase = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
-            if (usecase->stream.out != NULL) {
+            if ((voip_usecase != NULL) &&
+                (usecase->type == PCM_PLAYBACK) &&
+                (usecase->stream.out != NULL)) {
                 out_snd_device_backend_match = platform_check_backends_match(
                                                    voip_usecase->out_snd_device,
                                                    platform_get_output_snd_device(
