@@ -1612,6 +1612,10 @@ void usage() {
     printf(" -I  --input-ch-map                        - input channel map");
     printf(" -M  --mixer-coeffs                        - mixer coefficient matrix");
     printf(" -i  --intr-strm                           - interactive stream indicator");
+    printf(" -C  --Device Config                       - Device Configuration params\n");
+    printf("                                             Params should be in the order defined in struct qahw_device_cfg_param. Order is: \n");
+    printf("                                             <sample_rate>, <channels>, <bit_width>, <format>, <device>, <channel_map[channels]>, <channel_allocation> \n");
+    printf("                                             Example(6 channel HDMI config): hal_play_test -f /data/ChID16bit_5.1ch_48k.wav -v 0.9 -d 1024 -c 6 -C 48000 6 16 1 1024 1 2 6 3 4 5 19\n");
     printf(" \n Examples \n");
     printf(" hal_play_test -f /data/Anukoledenadu.wav  -> plays Wav stream with default params\n\n");
     printf(" hal_play_test -f /data/MateRani.mp3 -t 2 -d 2 -v 0.01 -r 44100 -c 2 \n");
@@ -2006,6 +2010,8 @@ int main(int argc, char* argv[]) {
     int i = 0;
     int iter_i = 0;
     int iter_j = 0;
+    int chmap_iter = 0;
+
     kpi_mode = false;
     char mixer_ctrl_name[64] = {0};
     int mixer_ctrl_type = 0;
@@ -2015,6 +2021,10 @@ int main(int argc, char* argv[]) {
     log_file = stdout;
     proxy_params.acp.file_name = "/data/pcm_dump.wav";
     stream_config *stream = NULL;
+
+    struct qahw_device_cfg_param device_cfg_params;
+    bool send_device_config = false;
+
     init_streams();
 
     int num_of_streams = 1;
@@ -2046,6 +2056,7 @@ int main(int argc, char* argv[]) {
         {"mode",          required_argument,    0, 'm'},
         {"effect-preset",   required_argument,    0, 'p'},
         {"effect-strength", required_argument,    0, 'S'},
+        {"device-config", required_argument,    0, 'C'},
         {"help",          no_argument,          0, 'h'},
         {"output-ch-map", required_argument,    0, 'O'},
         {"input-ch-map",  required_argument,    0, 'I'},
@@ -2074,7 +2085,7 @@ int main(int argc, char* argv[]) {
 
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:s:v:l:t:a:w:k:PD:KF:Ee:A:u:m:S:p:qQhI:O:M:o:i:",
+                              "-f:r:c:b:d:s:v:l:t:a:w:k:PD:KF:Ee:A:u:m:S:C:p:qQhI:O:M:o:i:",
                               long_options,
                               &option_index)) != -1) {
 
@@ -2209,6 +2220,66 @@ int main(int argc, char* argv[]) {
             break;
         case 'o':
             mm_params.num_output_channels = atoi(optarg);
+        case 'C':
+            fprintf(log_file, " In Device config \n");
+            fprintf(stderr, " In Device config \n");
+            send_device_config = true;
+
+            //Read Sample Rate
+            if (optind < argc && *argv[optind] != '-') {
+                 device_cfg_params.sample_rate = atoi(optarg);
+                 fprintf(log_file, " Device config ::::  sample_rate - %d \n", device_cfg_params.sample_rate);
+                 fprintf(stderr, " Device config :::: sample_rate - %d \n", device_cfg_params.sample_rate);
+            }
+
+            //Read Channels
+            if (optind < argc && *argv[optind] != '-') {
+                 device_cfg_params.channels = atoi(argv[optind]);
+                 optind++;
+                 fprintf(log_file, " Device config :::: channels - %d \n", device_cfg_params.channels);
+                 fprintf(stderr, " Device config :::: channels - %d \n", device_cfg_params.channels);
+            }
+
+            //Read Bit width
+            if (optind < argc && *argv[optind] != '-') {
+                 device_cfg_params.bit_width = atoi(argv[optind]);
+                 optind++;
+                 fprintf(log_file, " Device config :::: bit_width - %d \n", device_cfg_params.bit_width);
+                 fprintf(stderr, " Device config :::: bit_width - %d \n", device_cfg_params.bit_width);
+            }
+
+            //Read Format
+            if (optind < argc && *argv[optind] != '-') {
+                 device_cfg_params.format = atoi(argv[optind]);
+                 optind++;
+                 fprintf(log_file, " Device config :::: format - %d \n", device_cfg_params.format);
+                 fprintf(stderr, " Device config :::: format - %d \n", device_cfg_params.format);
+            }
+
+            //Read Device
+            if (optind < argc && *argv[optind] != '-') {
+                 device_cfg_params.device = atoi(argv[optind]);
+                 optind++;
+                 fprintf(log_file, " Device config :::: device - %d \n", device_cfg_params.device);
+                 fprintf(stderr, " Device config :::: device - %d \n", device_cfg_params.device);
+            }
+
+            //Read Channel Map
+            while ((optind < argc && *argv[optind] != '-') && (chmap_iter < device_cfg_params.channels)) {
+                 device_cfg_params.channel_map[chmap_iter] = atoi(argv[optind]);
+                 optind++;
+                 fprintf(log_file, " Device config :::: channel_map[%d] - %d \n", chmap_iter, device_cfg_params.channel_map[chmap_iter]);
+                 fprintf(stderr, " Device config :::: channel_map[%d] - %d \n", chmap_iter, device_cfg_params.channel_map[chmap_iter]);
+                 chmap_iter++;
+            }
+
+            //Read Channel Allocation
+            if (optind < argc && *argv[optind] != '-') {
+                 device_cfg_params.channel_allocation = atoi(argv[optind]);
+                 optind++;
+                 fprintf(log_file, " Device config :::: channel_allocation - %d \n", device_cfg_params.channel_allocation);
+                 fprintf(stderr, " Device config :::: channel_allocation - %d \n", device_cfg_params.channel_allocation);
+            }
             break;
         case 'h':
             usage();
@@ -2365,11 +2436,20 @@ int main(int argc, char* argv[]) {
             fprintf(log_file, "Saving pcm data to file: %s\n", proxy_params.acp.file_name);
 
         /* Set device connection state for HDMI */
-        if ((stream->output_device == AUDIO_DEVICE_OUT_AUX_DIGITAL) ||
-            (stream->output_device == AUDIO_DEVICE_OUT_BLUETOOTH_A2DP)) {
+        if ((stream->output_device & AUDIO_DEVICE_OUT_AUX_DIGITAL) ||
+            (stream->output_device & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP)) {
             char param[100] = {0};
-            snprintf(param, sizeof(param), "%s=%d", "connect", stream->output_device);
+            uint32_t device = 0;
+
+            if (stream->output_device & AUDIO_DEVICE_OUT_AUX_DIGITAL)
+                device = AUDIO_DEVICE_OUT_AUX_DIGITAL;
+            else if (stream->output_device & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP)
+                device = AUDIO_DEVICE_OUT_BLUETOOTH_A2DP;
+
+            snprintf(param, sizeof(param), "%s=%d", "connect", device);
             qahw_set_parameters(stream->qahw_out_hal_handle, param);
+            fprintf(log_file, "Sending Connect Event: %s\n", param);
+            fprintf(stderr, "Sending Connect Event: %s\n", param);
         }
 
         fprintf(log_file, "stream %d: File Type:%d\n", stream->stream_index, stream->filetype);
@@ -2404,6 +2484,16 @@ int main(int argc, char* argv[]) {
                 goto exit;
             }
         }
+
+        if (send_device_config) {
+            payload = (qahw_param_payload)device_cfg_params;
+            rc = qahw_set_param_data(stream->qahw_out_hal_handle, QAHW_PARAM_DEVICE_CONFIG, &payload);
+            if (rc != 0) {
+                fprintf(log_file, "Set Device Config Failed\n");
+                fprintf(stderr, "Set Device Config Failed\n");
+            }
+        }
+
         if (is_dual_main && i >= 2 ) {
             stream_param[i].play_later = true;
             fprintf(log_file, "stream %d: play_later = %d\n", i, stream_param[i].play_later);
