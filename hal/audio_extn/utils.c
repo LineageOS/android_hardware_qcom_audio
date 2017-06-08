@@ -1609,36 +1609,39 @@ int audio_extn_utils_get_avt_device_drift(
 {
     int ret = 0, count = 0;
     char avt_device_drift_mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = {0};
+    const char *backend = NULL;
     struct mixer_ctl *ctl = NULL;
     struct audio_avt_device_drift_stats drift_stats;
     struct audio_device *adev = NULL;
 
     if (usecase != NULL && usecase->type == PCM_PLAYBACK) {
-        adev = usecase->stream.out->dev;
-        switch(usecase->out_snd_device) {
-            case SND_DEVICE_OUT_HDMI:
-                strlcpy(avt_device_drift_mixer_ctl_name,
-                        "HDMI RX Drift",
-                        MIXER_PATH_MAX_LENGTH);
-                break;
-            case SND_DEVICE_OUT_DISPLAY_PORT:
-                strlcpy(avt_device_drift_mixer_ctl_name,
-                        "DISPLAY Port RX Drift",
-                        MIXER_PATH_MAX_LENGTH);
-                break;
-            default :
-                ALOGE("%s: Unsupported device %d",__func__,
-                        usecase->stream.out->devices);
-                ret = -EINVAL;
+        backend = platform_get_snd_device_backend_interface(usecase->out_snd_device);
+        if (!backend) {
+            ALOGE("%s: Unsupported device %d", __func__,
+                   usecase->stream.out->devices);
+            ret = -EINVAL;
+            goto done;
+        }
+        strlcpy(avt_device_drift_mixer_ctl_name,
+                backend,
+                MIXER_PATH_MAX_LENGTH);
+
+        count = strlen(backend);
+        if (MIXER_PATH_MAX_LENGTH - count > 0) {
+            strlcat(&avt_device_drift_mixer_ctl_name[count],
+                    " DRIFT",
+                    MIXER_PATH_MAX_LENGTH - count);
+        } else {
+            ret = -EINVAL;
+            goto done;
         }
     } else {
-        ALOGE("%s: Invalid usecase %d ",__func__, usecase->type);
+        ALOGE("%s: Invalid usecase",__func__);
         ret = -EINVAL;
+        goto done;
     }
 
-    if(ret)
-        goto done;
-
+    adev = usecase->stream.out->dev;
     ctl = mixer_get_ctl_by_name(adev->mixer, avt_device_drift_mixer_ctl_name);
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
@@ -1768,12 +1771,7 @@ int audio_extn_utils_compress_set_clk_rec_mode(
     struct stream_out *out = NULL;
     int ret = -EINVAL;
 
-    if (usecase == NULL) {
-        ALOGE("%s:: Invalid use case", __func__);
-        goto exit;
-    }
-
-    if (usecase->type != PCM_PLAYBACK) {
+    if (usecase == NULL || usecase->type != PCM_PLAYBACK) {
         ALOGE("%s:: Invalid use case", __func__);
         goto exit;
     }
@@ -1854,11 +1852,8 @@ int audio_extn_utils_compress_set_render_window(
         goto exit;
     }
 
-    if ((out->render_mode == RENDER_MODE_AUDIO_MASTER) ||
-        (out->render_mode == RENDER_MODE_AUDIO_STC_MASTER)) {
-        memcpy(&out->render_window, render_window,
-               sizeof(struct audio_out_render_window_param));
-    } else {
+    if ((out->render_mode != RENDER_MODE_AUDIO_MASTER) &&
+        (out->render_mode != RENDER_MODE_AUDIO_STC_MASTER)) {
         ALOGD("%s:: only supported in timestamp mode, current "
               "render mode mode %d", __func__, out->render_mode);
         goto exit;
@@ -1920,11 +1915,8 @@ int audio_extn_utils_compress_set_start_delay(
         goto exit;
     }
 
-   if ((out->render_mode == RENDER_MODE_AUDIO_MASTER) ||
-       (out->render_mode == RENDER_MODE_AUDIO_STC_MASTER)) {
-        /* store it to reconfigure in start_output_stream() */
-        out->delay_param.start_delay = delay_param->start_delay;
-    } else {
+   if ((out->render_mode != RENDER_MODE_AUDIO_MASTER) &&
+       (out->render_mode != RENDER_MODE_AUDIO_STC_MASTER)) {
         ALOGD("%s:: only supported in timestamp mode, current "
               "render mode mode %d", __func__, out->render_mode);
         goto exit;
@@ -2021,3 +2013,104 @@ int audio_extn_utils_get_snd_card_num()
 
     return snd_card_num;
 }
+
+#ifdef SNDRV_COMPRESS_ENABLE_ADJUST_SESSION_CLOCK
+int audio_extn_utils_compress_enable_drift_correction(
+        struct stream_out *out,
+        struct audio_out_enable_drift_correction *drift)
+{
+    struct snd_compr_metadata metadata;
+    int ret = -EINVAL;
+
+    if(drift == NULL) {
+        ALOGE("%s:: Invalid param", __func__);
+        goto exit;
+    }
+
+    ALOGD("%s:: drift enable %d", __func__,drift->enable);
+
+    if (!is_offload_usecase(out->usecase)) {
+        ALOGE("%s:: not supported for non offload session", __func__);
+        goto exit;
+    }
+
+    if (!out->compr) {
+        ALOGW("%s:: offload session not yet opened,"
+                "start delay will be configure later", __func__);
+        goto exit;
+    }
+
+    metadata.key = SNDRV_COMPRESS_ENABLE_ADJUST_SESSION_CLOCK;
+    metadata.value[0] = drift->enable;
+    out->drift_correction_enabled = drift->enable;
+
+    ret = compress_set_metadata(out->compr, &metadata);
+    if(ret) {
+        ALOGE("%s::error %s", __func__, compress_get_error(out->compr));
+        out->drift_correction_enabled = false;
+    }
+
+exit:
+    return ret;
+}
+#else
+int audio_extn_utils_compress_enable_drift_correction(
+        struct stream_out *out __unused,
+        struct audio_out_enable_drift_correction *drift __unused)
+{
+    ALOGD("%s:: configuring drift enablement not supported", __func__);
+    return 0;
+}
+#endif
+
+#ifdef SNDRV_COMPRESS_ADJUST_SESSION_CLOCK
+int audio_extn_utils_compress_correct_drift(
+        struct stream_out *out,
+        struct audio_out_correct_drift *drift_param)
+{
+    struct snd_compr_metadata metadata;
+    int ret = -EINVAL;
+
+    if (drift_param == NULL) {
+        ALOGE("%s:: Invalid drift_param", __func__);
+        goto exit;
+    }
+
+    ALOGD("%s:: adjust time 0x%"PRIx64" ", __func__,
+            drift_param->adjust_time);
+
+    if (!is_offload_usecase(out->usecase)) {
+        ALOGE("%s:: not supported for non offload session", __func__);
+        goto exit;
+    }
+
+    if (!out->compr) {
+        ALOGW("%s:: offload session not yet opened", __func__);
+        goto exit;
+    }
+
+    if (!out->drift_correction_enabled) {
+        ALOGE("%s:: drift correction not enabled", __func__);
+        goto exit;
+    }
+
+    metadata.key = SNDRV_COMPRESS_ADJUST_SESSION_CLOCK;
+    metadata.value[0] = 0xFFFFFFFF & drift_param->adjust_time; /* lsb */
+    metadata.value[1] = \
+             (0xFFFFFFFF00000000 & drift_param->adjust_time) >> 32; /* msb*/
+
+    ret = compress_set_metadata(out->compr, &metadata);
+    if(ret)
+        ALOGE("%s::error %s", __func__, compress_get_error(out->compr));
+exit:
+    return ret;
+}
+#else
+int audio_extn_utils_compress_correct_drift(
+        struct stream_out *out __unused,
+        struct audio_out_correct_drift *drift_param __unused)
+{
+    ALOGD("%s:: setting adjust clock not supported", __func__);
+    return 0;
+}
+#endif

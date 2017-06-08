@@ -177,10 +177,23 @@ struct audio_out_start_delay_param {
    uint64_t        start_delay; /* session start delay in microseconds*/
 };
 
+struct audio_out_enable_drift_correction {
+   bool        enable; /* enable drift correction*/
+};
+
+struct audio_out_correct_drift {
+    /*
+     * adjust time in microseconds, a positive value
+     * to advance the clock or a negative value to
+     * delay the clock.
+     */
+    int64_t        adjust_time;
+};
+
 /* type of asynchronous write callback events. Mutually exclusive
  * event enums append those defined for stream_callback_event_t in audio.h */
 typedef enum {
-    AUDIO_EXTN_STREAM_CBK_EVENT_ADSP = 0x100      /* callback event from ADSP PP,
+    AUDIO_EXTN_STREAM_CBK_EVENT_ADSP = 0x100    /* callback event from ADSP PP,
                                                  * corresponding payload will be
                                                  * sent as is to the client
                                                  */
@@ -203,6 +216,8 @@ typedef union {
     struct audio_avt_device_drift_param drift_params;
     struct audio_out_render_window_param render_window_param;
     struct audio_out_start_delay_param start_delay;
+    struct audio_out_enable_drift_correction drift_enable_param;
+    struct audio_out_correct_drift drift_correction_param;
     struct audio_adsp_event adsp_event_params;
 } audio_extn_param_payload;
 
@@ -213,6 +228,10 @@ typedef enum {
     AUDIO_EXTN_PARAM_AVT_DEVICE_DRIFT,
     AUDIO_EXTN_PARAM_OUT_RENDER_WINDOW, /* PARAM to set render window */
     AUDIO_EXTN_PARAM_OUT_START_DELAY,
+    /* enable adsp drift correction this must be called before out_write */
+    AUDIO_EXTN_PARAM_OUT_ENABLE_DRIFT_CORRECTION,
+    /* param to set drift value to be adjusted by dsp */
+    AUDIO_EXTN_PARAM_OUT_CORRECT_DRIFT,
     AUDIO_EXTN_PARAM_ADSP_STREAM_CMD
 } audio_extn_param_id;
 
