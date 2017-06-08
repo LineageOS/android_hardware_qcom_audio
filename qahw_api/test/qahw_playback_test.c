@@ -52,7 +52,7 @@
 #define FORMAT_PCM 1
 #define WAV_HEADER_LENGTH_MAX 46
 
-#define MAX_PLAYBACK_STREAMS   2
+#define MAX_PLAYBACK_STREAMS   3
 #define PRIMARY_STREAM_INDEX   0
 
 #define KVPAIRS_MAX 100
@@ -176,6 +176,7 @@ typedef struct {
     int effect_index;
     bool drift_query;
     bool drift_correction;
+    bool play_later;
     char *device_url;
     thread_func_t ethread_func;
     thread_data_t *ethread_data;
@@ -186,6 +187,10 @@ typedef struct {
     pthread_mutex_t drain_lock;
 }stream_config;
 
+/* Lock for dual main usecase */
+pthread_cond_t dual_main_cond;
+pthread_mutex_t dual_main_lock;
+bool is_dual_main = false;
 
 qahw_module_handle_t *primary_hal_handle = NULL;
 qahw_module_handle_t *usb_hal_handle = NULL;
@@ -245,6 +250,11 @@ audio_io_handle_t stream_handle = 0x999;
                    "music_offload_wma_encode_option2=%d;" \
                    "music_offload_wma_format_tag=%d;"
 
+#ifndef AUDIO_OUTPUT_FLAG_ASSOCIATED
+#define AUDIO_OUTPUT_FLAG_ASSOCIATED 0x8000
+#endif
+
+
 static bool request_wake_lock(bool wakelock_acquired, bool enable)
 {
    int system_ret;
@@ -252,7 +262,6 @@ static bool request_wake_lock(bool wakelock_acquired, bool enable)
    if (enable) {
        if (!wakelock_acquired) {
            system_ret = system("echo audio_services > /sys/power/wake_lock");
-           if (system_ret < 0) {
                fprintf(stderr, "%s.Failed to acquire audio_service lock\n", __func__);
                fprintf(log_file, "%s.Failed to acquire audio_service lock\n", __func__);
            } else {
@@ -325,6 +334,7 @@ static void init_streams(void)
         stream_param[i].ethread_func                        =   nullptr;
         stream_param[i].ethread_data                        =   nullptr;
         stream_param[i].device_url                          =   "stream";
+        stream_param[i].play_later                          =   false;
 
         pthread_mutex_init(&stream_param[i].write_lock, (const pthread_mutexattr_t *)NULL);
         pthread_cond_init(&stream_param[i].write_cond, (const pthread_condattr_t *) NULL);
@@ -334,6 +344,8 @@ static void init_streams(void)
         stream_param[i].handle                              =   stream_handle;
         stream_handle--;
     }
+    pthread_mutex_init(&dual_main_lock, (const pthread_mutexattr_t *)NULL);
+    pthread_cond_init(&dual_main_cond, (const pthread_condattr_t *) NULL);
 }
 
 void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
@@ -586,6 +598,32 @@ int write_to_hal(qahw_stream_handle_t* out_handle, char *data, size_t bytes, voi
     return ret;
 }
 
+static bool is_assoc_active()
+{
+    int i = 0;
+    bool is_assoc_active = false;
+
+    for (i = 0; i < MAX_PLAYBACK_STREAMS; i++) {
+        if (stream_param[i].flags & AUDIO_OUTPUT_FLAG_ASSOCIATED) {
+            is_assoc_active = true;
+            break;
+        }
+    }
+    return is_assoc_active;
+}
+
+static int get_assoc_index()
+{
+    int i = 0;
+
+    for (i = 0; i < MAX_PLAYBACK_STREAMS; i++) {
+        if (stream_param[i].flags & AUDIO_OUTPUT_FLAG_ASSOCIATED) {
+            break;
+        }
+    }
+    return i;
+}
+
 /* Entry point function for stream playback
  * Opens the stream
  * Reads KV pairs, sets volume, allocates input buffer
@@ -604,6 +642,17 @@ void *start_stream_playback (void* stream_data)
     pthread_t drift_query_thread;
     struct drift_data drift_params;
 
+    memset(&drift_params, 0, sizeof(struct drift_data));
+
+    fprintf(log_file, "stream %d: play_later %d \n", params->stream_index, params->play_later);
+
+    if(params->play_later) {
+            pthread_mutex_lock(&dual_main_lock);
+            fprintf(log_file, "stream %d: waiting for dual main signal\n", params->stream_index);
+            pthread_cond_wait(&dual_main_cond, &dual_main_lock);
+            fprintf(log_file, "stream %d: after the dual main signal\n", params->stream_index);
+            pthread_mutex_unlock(&dual_main_lock);
+    }
     rc = qahw_open_output_stream(params->qahw_out_hal_handle,
                              params->handle,
                              params->output_device,
@@ -863,6 +912,14 @@ void *start_stream_playback (void* stream_data)
         drift_params.thread_exit = true;
         pthread_join(drift_query_thread, NULL);
     }
+    if ((params->flags & AUDIO_OUTPUT_FLAG_MAIN) && is_assoc_active()) {
+        fprintf(log_file, "Closing Associated as Main Stream reached EOF %d \n", params->stream_index, rc);
+        rc = qahw_close_output_stream(stream_param[get_assoc_index()].out_handle);
+        if (rc) {
+            fprintf(log_file, "stream %d: could not close output stream, error - %d \n", params->stream_index, rc);
+            fprintf(stderr, "stream %d: could not close output stream, error - %d \n", params->stream_index, rc);
+        }
+    }
     rc = qahw_out_standby(params->out_handle);
     if (rc) {
         fprintf(log_file, "stream %d: out standby failed %d \n", params->stream_index, rc);
@@ -880,6 +937,16 @@ void *start_stream_playback (void* stream_data)
         free(data_ptr);
 
     fprintf(log_file, "stream %d: stream closed\n", params->stream_index);
+    fprintf(log_file, "stream %d: is_dual_main- %d\n", params->stream_index,is_dual_main);
+    if (is_dual_main) {
+        usleep(500000);
+        pthread_mutex_lock(&dual_main_lock);
+        fprintf(log_file, "Dual main signal as we reached end of current running stream\n");
+        is_dual_main = false;
+        pthread_cond_signal(&dual_main_cond);
+        pthread_mutex_unlock(&dual_main_lock);
+    }
+
     return NULL;
 
 }
@@ -1856,6 +1923,18 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Failed to register SIGINT:%d\n",errno);
     }
 
+    /* Check for Dual main content */
+    if (num_of_streams >= 2) {
+         is_dual_main = true;
+
+         for(i = 0; i < num_of_streams; i++) {
+              fprintf(log_file, "is_dual_main - %d  stream_param[i].flags - %d\n", is_dual_main, stream_param[i].flags);
+              is_dual_main = is_dual_main && (stream_param[i].flags & AUDIO_OUTPUT_FLAG_MAIN);
+              fprintf(log_file, "is_dual_main - %d  stream_param[i].flags - %d\n", is_dual_main, stream_param[i].flags);
+         }
+
+    }
+
     for (i = 0; i < num_of_streams; i++) {
         stream = &stream_param[i];
 
@@ -1958,6 +2037,11 @@ int main(int argc, char* argv[]) {
                 goto exit;
             }
         }
+        if (is_dual_main && i >= 2 ) {
+            stream_param[i].play_later = true;
+            fprintf(log_file, "stream %d: play_later = %d\n", i, stream_param[i].play_later);
+        }
+
 
         rc = pthread_create(&playback_thread[i], NULL, start_stream_playback, (void *)&stream_param[i]);
         if (rc) {
