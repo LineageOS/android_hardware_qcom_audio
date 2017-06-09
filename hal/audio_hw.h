@@ -297,6 +297,8 @@ struct stream_out {
     audio_offload_info_t info;
     int started;
     qahwi_stream_out_t qahwi_out;
+
+    bool is_iec61937_info_available;
 };
 
 struct stream_in {

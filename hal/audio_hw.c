@@ -2407,7 +2407,6 @@ int start_output_stream(struct stream_out *out)
         if (audio_extn_passthru_is_enabled() &&
             audio_extn_passthru_is_passthrough_stream(out)) {
             audio_extn_passthru_on_start(out);
-            audio_extn_passthru_update_stream_configuration(adev, out);
         }
     }
 
@@ -3350,6 +3349,15 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         goto exit;
     }
 
+    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        /*ADD audio_extn_passthru_is_passthrough_stream(out) check*/
+        if ((audio_extn_passthru_is_enabled()) &&
+                (!out->is_iec61937_info_available)) {
+            audio_extn_passthru_update_stream_configuration(adev, out,
+                    buffer, bytes);
+            out->is_iec61937_info_available = true;
+        }
+    }
     if (out->standby) {
         out->standby = false;
         pthread_mutex_lock(&adev->lock);
