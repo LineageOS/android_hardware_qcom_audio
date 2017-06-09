@@ -1380,6 +1380,10 @@ int audio_extn_out_set_param_data(struct stream_out *out,
                     ADSP_HDLR_STREAM_CMD_REGISTER_EVENT,
                     (void *)&payload->adsp_event_params);
             break;
+        case AUDIO_EXTN_PARAM_OUT_CHANNEL_MAP:
+            ret = audio_extn_utils_set_channel_map(out,
+                    (struct audio_out_channel_map_param *)(payload));
+            break;
         default:
             ALOGE("%s:: unsupported param_id %d", __func__, param_id);
             break;

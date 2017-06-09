@@ -358,6 +358,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DYNAMIC_LOG)), true)
     LOCAL_SHARED_LIBRARIES += libaudio_log_utils
 endif
 
+ifeq ($(strip $($AUDIO_FEATURE_IP_HDLR_ENABLED)),true)
+    LOCAL_CFLAGS += -DAUDIO_EXTN_IP_HDLR_ENABLED
+    LOCAL_SRC_FILES += audio_extn/ip_hdlr_intf.c
+endif
+
 LOCAL_CFLAGS += -Wall -Werror
 
 LOCAL_COPY_HEADERS_TO   := mm-audio

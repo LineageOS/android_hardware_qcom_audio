@@ -268,6 +268,7 @@ struct stream_out {
     render_mode_t render_mode;
     bool drift_correction_enabled;
 
+    struct audio_out_channel_map_param channel_map_param; /* input channel map */
     audio_offload_info_t info;
     qahwi_stream_out_t qahwi_out;
 };

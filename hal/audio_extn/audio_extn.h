@@ -40,6 +40,7 @@
 
 #include <cutils/str_parms.h>
 #include "adsp_hdlr.h"
+#include "ip_hdlr_intf.h"
 
 #ifndef AFE_PROXY_ENABLED
 #define AUDIO_DEVICE_OUT_PROXY 0x40000
@@ -473,6 +474,9 @@ enum {
     EXT_DISPLAY_TYPE_DP
 };
 
+/* Used to limit sample rate for TrueHD & EC3 */
+#define HDMI_PASSTHROUGH_MAX_SAMPLE_RATE 192000
+
 #ifndef HDMI_PASSTHROUGH_ENABLED
 #define audio_extn_passthru_update_stream_configuration(adev, out)            (0)
 #define audio_extn_passthru_is_convert_supported(adev, out)                   (0)
@@ -870,4 +874,7 @@ int audio_extn_utils_compress_enable_drift_correction(
 int audio_extn_utils_compress_correct_drift(
             struct stream_out *out,
             struct audio_out_correct_drift *drift_correction_param);
+int audio_extn_utils_set_channel_map(
+            struct stream_out *out,
+            struct audio_out_channel_map_param *channel_map_param);
 #endif /* AUDIO_EXTN_H */

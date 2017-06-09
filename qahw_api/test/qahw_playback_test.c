@@ -62,6 +62,8 @@
 #define SUBCHUNK1_SIZE(x) ((8) + (x))
 #define SUBCHUNK2_SIZE 8
 
+#define DEFAULT_PRESET_STRENGTH -1
+
 static int get_wav_header_length (FILE* file_stream);
 static void init_streams(void);
 int pthread_cancel(pthread_t thread);
@@ -83,7 +85,8 @@ enum {
     FILE_DTS,
     FILE_MP2,
     FILE_APTX,
-    FILE_TRUEHD
+    FILE_TRUEHD,
+    FILE_IEC61937
 };
 
 typedef enum {
@@ -174,6 +177,7 @@ typedef struct {
     bool flags_set;
     usb_mode_type_t usb_mode;
     int effect_index;
+    int effect_preset_strength;
     bool drift_query;
     bool drift_correction;
     bool play_later;
@@ -330,6 +334,7 @@ static void init_streams(void)
         stream_param[i].kvpair_values                       =   nullptr;
         stream_param[i].flags_set                           =   false;
         stream_param[i].usb_mode                            =   USB_MODE_DEVICE;
+        stream_param[i].effect_preset_strength              =   DEFAULT_PRESET_STRENGTH;
         stream_param[i].effect_index                        =   -1;
         stream_param[i].ethread_func                        =   nullptr;
         stream_param[i].ethread_data                        =   nullptr;
@@ -417,10 +422,15 @@ int async_callback(qahw_stream_callback_event_t event, void *param,
     case QAHW_STREAM_CBK_EVENT_ADSP:
         fprintf(log_file, "stream %d: received event - QAHW_STREAM_CBK_EVENT_ADSP\n", params->stream_index);
         if (payload != NULL) {
-            fprintf(log_file, "param_length %d\n", payload[0]);
-            for (i=1; i* sizeof(uint32_t) <= payload[0]; i++)
+            fprintf(log_file, "event_type %d\n", payload[0]);
+            fprintf(log_file, "param_length %d\n", payload[1]);
+            for (i=2; i* sizeof(uint32_t) <= payload[1]; i++)
                 fprintf(log_file, "param[%d] = 0x%x\n", i, payload[i]);
         }
+        break;
+    case QAHW_STREAM_CBK_EVENT_ERROR:
+        fprintf(log_file, "stream %d: received event - QAHW_STREAM_CBK_EVENT_ERROR\n", params->stream_index);
+        stop_playback = true;
         break;
     default:
         break;
@@ -715,6 +725,7 @@ void *start_stream_playback (void* stream_data)
     bool exit = false;
     int32_t latency;
 
+
     if (is_offload) {
         fprintf(log_file, "stream %d: set callback for offload stream for playback usecase\n", params->stream_index);
         qahw_out_set_callback(params->out_handle, async_callback, params);
@@ -755,7 +766,9 @@ void *start_stream_playback (void* stream_data)
             // broadcast device info
             notify_effect_command(params->ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_SET_DEVICE, sizeof(audio_devices_t), &(params->output_device));
 
-            // enable effect
+            // Enable and Set default values
+            params->ethread_data->default_value = params->effect_preset_strength;
+            params->ethread_data->default_flag = true;
             notify_effect_command(params->ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_ENABLE, 0, NULL);
         }
     }
@@ -1120,6 +1133,9 @@ static void get_file_format(stream_config *stream_info)
         case FILE_TRUEHD:
             stream_info->config.offload_info.format = AUDIO_FORMAT_DOLBY_TRUEHD;
             break;
+        case FILE_IEC61937:
+            stream_info->config.offload_info.format = AUDIO_FORMAT_IEC61937;
+            break;
         default:
            fprintf(log_file, "Does not support given filetype\n");
            fprintf(stderr, "Does not support given filetype\n");
@@ -1228,6 +1244,7 @@ int tigger_event(qahw_stream_handle_t* out_handle)
     event_payload.module_id = 0x10940;
     event_payload.config_mask = 1;
 
+    payload.adsp_event_params.event_type = QAHW_STREAM_PP_EVENT;
     payload.adsp_event_params.payload_length = sizeof(event_payload);
     payload.adsp_event_params.payload = &event_payload;
 
@@ -1540,6 +1557,8 @@ void usage() {
     printf(" -E  --event-trigger                       - Trigger DTMF event during playback\n");
     printf(" -e  --effect-type <effect type>           - Effect used for test\n");
     printf("                                             0:bassboost 1:virtualizer 2:equalizer 3:visualizer(NA) 4:reverb 5:audiosphere others:null\n\n");
+    printf(" -p  --effect-preset <effect preset type>  - Effect preset type for respective effect-type\n");
+    printf(" -S  --effect-strength <effect strength>   - Effect strength for respective effect-type\n");
     printf(" -A  --bt-addr <bt device addr>            - Required to set bt device adress for aptx decoder\n\n");
     printf(" -q  --drift query                         - Required for querying avtime vs hdmi drift\n");
     printf(" -Q  --drift query and correction          - Enable Drift query and correction\n");
@@ -1757,6 +1776,8 @@ int main(int argc, char* argv[]) {
         {"drift correction",   no_argument,     0, 'Q'},
         {"device-nodeurl",required_argument,    0, 'u'},
         {"mode",          required_argument,    0, 'm'},
+        {"effect-preset",   required_argument,    0, 'p'},
+        {"effect-strength", required_argument,    0, 'S'},
         {"help",          no_argument,          0, 'h'},
         {0, 0, 0, 0}
     };
@@ -1780,7 +1801,7 @@ int main(int argc, char* argv[]) {
 
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:s:v:l:t:a:w:k:PD:KF:Ee:A:u:m:qQh",
+                              "-f:r:c:b:d:s:v:l:t:a:w:k:PD:KF:Ee:A:u:m:S:p:qQh",
                               long_options,
                               &option_index)) != -1) {
 
@@ -1860,6 +1881,12 @@ int main(int argc, char* argv[]) {
             } else {
                 stream_param[i].ethread_func = effect_thread_funcs[stream_param[i].effect_index];
             }
+            break;
+        case 'p':
+            stream_param[i].effect_preset_strength = atoi(optarg);
+            break;
+        case 'S':
+            stream_param[i].effect_preset_strength = atoi(optarg);
             break;
         case 'A':
             ba = optarg;

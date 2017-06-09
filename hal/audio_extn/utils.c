@@ -143,6 +143,7 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_DTS),
     STRING_TO_ENUM(AUDIO_FORMAT_DTS_HD),
     STRING_TO_ENUM(AUDIO_FORMAT_DOLBY_TRUEHD),
+    STRING_TO_ENUM(AUDIO_FORMAT_IEC61937),
 #ifdef AUDIO_EXTN_FORMATS_ENABLED
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
     STRING_TO_ENUM(AUDIO_FORMAT_WMA),
@@ -916,10 +917,13 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC) ||
             (usecase->stream.out->format == AUDIO_FORMAT_DOLBY_TRUEHD))
             && audio_extn_passthru_is_passthrough_stream(usecase->stream.out)) {
-            app_type_cfg[len++] = sample_rate * 4;
-        } else {
-            app_type_cfg[len++] = sample_rate;
+
+            sample_rate = sample_rate * 4;
+            if (sample_rate > HDMI_PASSTHROUGH_MAX_SAMPLE_RATE)
+                sample_rate = HDMI_PASSTHROUGH_MAX_SAMPLE_RATE;
         }
+        app_type_cfg[len++] = sample_rate;
+
         if (snd_device_be_idx > 0)
             app_type_cfg[len++] = snd_device_be_idx;
 
@@ -1262,6 +1266,9 @@ int get_snd_codec_id(audio_format_t format)
         break;
     case AUDIO_FORMAT_DOLBY_TRUEHD:
         id = SND_AUDIOCODEC_TRUEHD;
+        break;
+    case AUDIO_FORMAT_IEC61937:
+        id = SND_AUDIOCODEC_IEC61937;
         break;
     case AUDIO_FORMAT_DSD:
         id = SND_AUDIOCODEC_DSD;
@@ -2114,3 +2121,30 @@ int audio_extn_utils_compress_correct_drift(
     return 0;
 }
 #endif
+
+int audio_extn_utils_set_channel_map(
+            struct stream_out *out,
+            struct audio_out_channel_map_param *channel_map_param)
+{
+    int ret = -EINVAL, i = 0;
+    int channels = audio_channel_count_from_out_mask(out->channel_mask);
+
+    if (channel_map_param == NULL) {
+        ALOGE("%s:: Invalid channel_map", __func__);
+        goto exit;
+    }
+
+    if (channel_map_param->channels != channels) {
+        ALOGE("%s:: Channels(%d) does not match stream channels(%d)",
+                                __func__, channel_map_param->channels, channels);
+        goto exit;
+    }
+
+    for ( i = 0; i < channels; i++) {
+        ALOGV("%s:: channel_map[%d]- %d", __func__, i, channel_map_param->channel_map[i]);
+        out->channel_map_param.channel_map[i] = channel_map_param->channel_map[i];
+    }
+    ret = 0;
+exit:
+    return ret;
+}

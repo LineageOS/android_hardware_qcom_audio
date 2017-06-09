@@ -167,6 +167,11 @@ AM_CFLAGS += -DSPLIT_A2DP_ENABLED
 c_sources += audio_extn/a2dp.c
 endif
 
+if AUDIO_IP_HDLR
+AM_CFLAGS += -DAUDIO_EXTN_IP_HDLR_ENABLED
+c_sources += audio_extn/ip_hdlr_intf.c
+endif
+
 h_sources = audio_extn/audio_defs.h \
             audio_extn/audio_extn.h \
             audio_hw.h \

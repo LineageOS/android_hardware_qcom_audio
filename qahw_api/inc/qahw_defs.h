@@ -181,6 +181,7 @@ __BEGIN_DECLS
 typedef enum {
     QAHW_STREAM_CBK_EVENT_WRITE_READY, /* non blocking write completed */
     QAHW_STREAM_CBK_EVENT_DRAIN_READY,  /* drain completed */
+    QAHW_STREAM_CBK_EVENT_ERROR,  /* stream hit some error */
 
     QAHW_STREAM_CBK_EVENT_ADSP = 0x100    /* callback event from ADSP PP,
                                            * corresponding payload will be
@@ -293,12 +294,23 @@ struct qahw_out_correct_drift {
 
 #define QAHW_MAX_ADSP_STREAM_CMD_PAYLOAD_LEN 512
 
+typedef enum {
+    QAHW_STREAM_PP_EVENT = 0,
+    QAHW_STREAM_ENCDEC_EVENT = 1,
+} qahw_event_id;
+
 /* payload format for HAL parameter
  * QAHW_PARAM_ADSP_STREAM_CMD
  */
 struct qahw_adsp_event {
+    qahw_event_id event_type;      /* type of the event */
     uint32_t payload_length;       /* length in bytes of the payload */
     void *payload;                 /* the actual payload */
+};
+
+struct qahw_out_channel_map_param {
+   uint8_t       channels;                               /* Input Channels */
+   uint8_t       channel_map[AUDIO_CHANNEL_COUNT_MAX];   /* Input Channel Map */
 };
 
 typedef union {
@@ -311,20 +323,22 @@ typedef union {
     struct qahw_out_enable_drift_correction drift_enable_param;
     struct qahw_out_correct_drift drift_correction_param;
     struct qahw_adsp_event adsp_event_params;
+    struct qahw_out_channel_map_param channel_map_params;
 } qahw_param_payload;
 
 typedef enum {
     QAHW_PARAM_SOURCE_TRACK,
     QAHW_PARAM_SOUND_FOCUS,
     QAHW_PARAM_APTX_DEC,
-    QAHW_PARAM_AVT_DEVICE_DRIFT, /* PARAM to query AV timer vs device drift */
+    QAHW_PARAM_AVT_DEVICE_DRIFT,  /* PARAM to query AV timer vs device drift */
     QAHW_PARAM_OUT_RENDER_WINDOW, /* PARAM to set render window */
     QAHW_PARAM_OUT_START_DELAY, /* PARAM to set session start delay*/
     /* enable adsp drift correction this must be called before out_write */
     QAHW_PARAM_OUT_ENABLE_DRIFT_CORRECTION,
     /* param to set drift value to be adjusted by dsp */
     QAHW_PARAM_OUT_CORRECT_DRIFT,
-    QAHW_PARAM_ADSP_STREAM_CMD
+    QAHW_PARAM_ADSP_STREAM_CMD,
+    QAHW_PARAM_OUT_CHANNEL_MAP    /* PARAM to set i/p channel map */
 } qahw_param_id;
 
 __END_DECLS

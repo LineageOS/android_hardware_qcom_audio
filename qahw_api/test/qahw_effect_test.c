@@ -120,6 +120,9 @@ void *bassboost_thread_func(void* data) {
     int32_t                  rc;
     int                      reply_data;
     uint32_t                 reply_size = sizeof(int);
+    uint32_t array_size = sizeof(qahw_effect_param_t) + 2 * sizeof(int32_t);
+    uint32_t      buf32[array_size];
+    qahw_effect_param_t *values;
 
     pthread_mutex_lock(&thr_ctxt->mutex);
     while(!thr_ctxt->exit) {
@@ -153,6 +156,24 @@ void *bassboost_thread_func(void* data) {
                                      thr_ctxt->reply_size, thr_ctxt->reply_data);
             if (rc != 0) {
                 fprintf(stderr, "effect_command() returns %d\n", rc);
+            }
+            if (thr_ctxt->default_flag && (thr_ctxt->cmd_code == QAHW_EFFECT_CMD_ENABLE)) {
+                if (thr_ctxt->default_value == -1)
+                    thr_ctxt->default_value = 600;
+
+                values = (qahw_effect_param_t *)buf32;
+                values->psize = sizeof(int32_t);
+                values->vsize = sizeof(int32_t);
+                *(int32_t *)values->data = BASSBOOST_PARAM_STRENGTH;
+                memcpy((values->data + values->psize), &thr_ctxt->default_value, values->vsize);
+                rc = qahw_effect_command(effect_handle, QAHW_EFFECT_CMD_SET_PARAM,
+                                     array_size, (void *)values,
+                                     thr_ctxt->reply_size, thr_ctxt->reply_data);
+                if (rc != 0) {
+                    fprintf(stderr, "effect_command() returns %d\n", rc);
+                }else {
+                     thr_ctxt->default_flag = false;
+                }
             }
             break;
         case(EFFECT_PROC):
@@ -188,6 +209,9 @@ void *virtualizer_thread_func(void* data) {
     int32_t                  rc;
     int                      reply_data;
     uint32_t                 reply_size = sizeof(int);
+    uint32_t array_size = sizeof(qahw_effect_param_t) + 2 * sizeof(int32_t);
+    uint32_t      buf32[array_size];
+    qahw_effect_param_t *values;
 
     pthread_mutex_lock(&thr_ctxt->mutex);
     while(!thr_ctxt->exit) {
@@ -221,6 +245,24 @@ void *virtualizer_thread_func(void* data) {
                                      thr_ctxt->reply_size, thr_ctxt->reply_data);
             if (rc != 0) {
                 fprintf(stderr, "effect_command() returns %d\n", rc);
+            }
+            if (thr_ctxt->default_flag && (thr_ctxt->cmd_code == QAHW_EFFECT_CMD_ENABLE)) {
+                if (thr_ctxt->default_value == -1)
+                    thr_ctxt->default_value = 600;
+
+                values = (qahw_effect_param_t *)buf32;
+                values->psize = sizeof(int32_t);
+                values->vsize = sizeof(int32_t);
+                *(int32_t *)values->data = VIRTUALIZER_PARAM_STRENGTH;
+                memcpy((values->data + values->psize), &thr_ctxt->default_value, values->vsize);
+                rc = qahw_effect_command(effect_handle, QAHW_EFFECT_CMD_SET_PARAM,
+                                     array_size, (void *)values,
+                                     thr_ctxt->reply_size, thr_ctxt->reply_data);
+                if (rc != 0) {
+                    fprintf(stderr, "effect_command() returns %d\n", rc);
+                }else {
+                     thr_ctxt->default_flag = false;
+                }
             }
             break;
         case(EFFECT_PROC):
@@ -256,6 +298,9 @@ void *equalizer_thread_func(void* data) {
     int32_t                  rc;
     int                      reply_data;
     uint32_t                 reply_size = sizeof(int);
+    uint32_t array_size = sizeof(qahw_effect_param_t) + 2 * sizeof(int32_t);
+    uint32_t      buf32[array_size];
+    qahw_effect_param_t *values;
 
     pthread_mutex_lock(&thr_ctxt->mutex);
     while(!thr_ctxt->exit) {
@@ -289,6 +334,24 @@ void *equalizer_thread_func(void* data) {
                                      thr_ctxt->reply_size, thr_ctxt->reply_data);
             if (rc != 0) {
                 fprintf(stderr, "effect_command() returns %d\n", rc);
+            }
+            if (thr_ctxt->default_flag && (thr_ctxt->cmd_code == QAHW_EFFECT_CMD_ENABLE)) {
+                if (thr_ctxt->default_value == -1)
+                    thr_ctxt->default_value = 2;
+
+                values = (qahw_effect_param_t *)buf32;
+                values->psize = sizeof(int32_t);
+                values->vsize = sizeof(int32_t);
+                *(int32_t *)values->data = EQ_PARAM_CUR_PRESET;
+                memcpy((values->data + values->psize), &thr_ctxt->default_value, values->vsize);
+                rc = qahw_effect_command(effect_handle, QAHW_EFFECT_CMD_SET_PARAM,
+                                     array_size, (void *)values,
+                                     thr_ctxt->reply_size, thr_ctxt->reply_data);
+                if (rc != 0) {
+                    fprintf(stderr, "effect_command() returns %d\n", rc);
+                }else {
+                     thr_ctxt->default_flag = false;
+                }
             }
             break;
         case(EFFECT_PROC):
@@ -330,6 +393,9 @@ void *reverb_thread_func(void* data) {
     int32_t                  rc;
     int                      reply_data;
     uint32_t                 reply_size = sizeof(int);
+    uint32_t array_size = sizeof(qahw_effect_param_t) + 2 * sizeof(int32_t);
+    uint32_t      buf32[array_size];
+    qahw_effect_param_t *values;
 
     pthread_mutex_lock(&thr_ctxt->mutex);
     while(!thr_ctxt->exit) {
@@ -363,6 +429,24 @@ void *reverb_thread_func(void* data) {
                                      thr_ctxt->reply_size, thr_ctxt->reply_data);
             if (rc != 0) {
                 fprintf(stderr, "effect_command() returns %d\n", rc);
+            }
+            if (thr_ctxt->default_flag && (thr_ctxt->cmd_code == QAHW_EFFECT_CMD_ENABLE)) {
+                if (thr_ctxt->default_value == -1)
+                    thr_ctxt->default_value = 2;
+
+                values = (qahw_effect_param_t *)buf32;
+                values->psize = sizeof(int32_t);
+                values->vsize = sizeof(int32_t);
+                *(int32_t *)values->data = REVERB_PARAM_PRESET;
+                memcpy((values->data + values->psize), &thr_ctxt->default_value, values->vsize);
+                rc = qahw_effect_command(effect_handle, QAHW_EFFECT_CMD_SET_PARAM,
+                                     array_size, (void *)values,
+                                     thr_ctxt->reply_size, thr_ctxt->reply_data);
+                if (rc != 0) {
+                    fprintf(stderr, "effect_command() returns %d\n", rc);
+                }else {
+                     thr_ctxt->default_flag = false;
+                }
             }
             break;
         case(EFFECT_PROC):
@@ -402,7 +486,6 @@ void *command_thread_func(void* data) {
     uint32_t      preset;
     int           level;
     uint16_t      band_idx;
-    int           enable;
     qahw_effect_param_t *param = (qahw_effect_param_t *)buf32;
     qahw_effect_param_t *param_2 = (qahw_effect_param_t *)buf32_2;
 
@@ -421,28 +504,10 @@ void *command_thread_func(void* data) {
         cmd_key = get_key_from_name(fx_ctxt->who_am_i, cmd_str);
         switch (cmd_key) {
         case TTY_ENABLE:
-            enable = 1;
             notify_effect_command(fx_ctxt, EFFECT_CMD, QAHW_EFFECT_CMD_ENABLE, 0, NULL);
-            if (fx_ctxt->who_am_i == EFFECT_AUDIOSPHERE) {
-                param->psize = 2 * sizeof(int32_t);
-                *(int32_t *)param->data = ASPHERE_PARAM_ENABLE;
-                param->vsize = sizeof(int32_t);
-                memcpy((param->data + param->psize), &enable, param->vsize);
-
-                notify_effect_command(fx_ctxt, EFFECT_CMD, QAHW_EFFECT_CMD_SET_PARAM, size, param);
-            }
             break;
         case TTY_DISABLE:
-            enable = 0;
             notify_effect_command(fx_ctxt, EFFECT_CMD, QAHW_EFFECT_CMD_DISABLE, 0, NULL);
-            if (fx_ctxt->who_am_i == EFFECT_AUDIOSPHERE) {
-                param->psize = 2 * sizeof(int32_t);
-                *(int32_t *)param->data = ASPHERE_PARAM_ENABLE;
-                param->vsize = sizeof(int32_t);
-                memcpy((param->data + param->psize), &enable, param->vsize);
-
-                notify_effect_command(fx_ctxt, EFFECT_CMD, QAHW_EFFECT_CMD_SET_PARAM, size, param);
-            }
             break;
         case TTY_BB_SET_STRENGTH:
         case TTY_VT_SET_STRENGTH:
@@ -689,6 +754,10 @@ void *asphere_thread_func(void* data) {
     int32_t                  rc;
     int                      reply_data;
     uint32_t                 reply_size = sizeof(int);
+    uint32_t array_size = sizeof(qahw_effect_param_t) + 2 * sizeof(int32_t);
+    uint32_t      buf32[array_size];
+    qahw_effect_param_t *values;
+    int enable;
 
     pthread_mutex_lock(&thr_ctxt->mutex);
     while(!thr_ctxt->exit) {
@@ -722,6 +791,37 @@ void *asphere_thread_func(void* data) {
                                      thr_ctxt->reply_size, thr_ctxt->reply_data);
             if (rc != 0) {
                 fprintf(stderr, "effect_command() returns %d\n", rc);
+            }
+            if (thr_ctxt->cmd_code == QAHW_EFFECT_CMD_ENABLE || thr_ctxt->cmd_code == QAHW_EFFECT_CMD_DISABLE) {
+                enable = ((thr_ctxt->cmd_code == QAHW_EFFECT_CMD_ENABLE) ? 1 : 0);
+                values->psize = 2 * sizeof(int32_t);
+                values->vsize = sizeof(int32_t);
+                *(int32_t *)values->data = ASPHERE_PARAM_ENABLE;
+                memcpy((values->data + values->psize), &enable, values->vsize);
+                rc = qahw_effect_command(effect_handle, QAHW_EFFECT_CMD_SET_PARAM,
+                                     array_size, (void *)values,
+                                     thr_ctxt->reply_size, thr_ctxt->reply_data);
+                if (rc != 0) {
+                    fprintf(stderr, "effect_command() returns %d\n", rc);
+                }
+            }
+            if (thr_ctxt->default_flag && (thr_ctxt->cmd_code == QAHW_EFFECT_CMD_ENABLE)) {
+                if (thr_ctxt->default_value == -1)
+                    thr_ctxt->default_value = 600;
+
+                values = (qahw_effect_param_t *)buf32;
+                values->psize = sizeof(int32_t);
+                values->vsize = sizeof(int32_t);
+                *(int32_t *)values->data = ASPHERE_PARAM_STRENGTH;
+                memcpy((values->data + values->psize), &thr_ctxt->default_value, values->vsize);
+                rc = qahw_effect_command(effect_handle, QAHW_EFFECT_CMD_SET_PARAM,
+                                     array_size, (void *)values,
+                                     thr_ctxt->reply_size, thr_ctxt->reply_data);
+                if (rc != 0) {
+                    fprintf(stderr, "effect_command() returns %d\n", rc);
+                }else {
+                     thr_ctxt->default_flag = false;
+                }
             }
             break;
         case(EFFECT_PROC):
