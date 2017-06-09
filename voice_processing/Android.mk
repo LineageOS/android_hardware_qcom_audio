@@ -6,6 +6,8 @@ include $(CLEAR_VARS)
 LOCAL_MODULE:= libqcomvoiceprocessing
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_RELATIVE_PATH := soundfx
+LOCAL_MODULE_OWNER := qti
+LOCAL_PROPRIETARY_MODULE := true
 
 LOCAL_SRC_FILES:= \
     voice_processing.c
