@@ -144,6 +144,7 @@ bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id);
 int platform_set_snd_device_backend(snd_device_t snd_device, const char * backend,
                                     const char * hw_interface);
 int platform_get_snd_device_backend_index(snd_device_t device);
+const char * platform_get_snd_device_backend_interface(snd_device_t device);
 
 /* From platform_info.c */
 int platform_info_init(const char *filename, void *, caller_t);
@@ -167,7 +168,8 @@ int platform_set_channel_allocation(void *platform, int channel_alloc);
 int platform_get_edid_info(void *platform);
 int platform_set_channel_map(void *platform, int ch_count, char *ch_map,
                              int snd_id);
-int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask, int snd_id);
+int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask,
+                                   int snd_id, uint8_t *input_channel_map);
 int platform_set_edid_channels_configuration(void *platform, int channels);
 unsigned char platform_map_to_edid_format(int format);
 bool platform_is_edid_supported_format(void *platform, int format);

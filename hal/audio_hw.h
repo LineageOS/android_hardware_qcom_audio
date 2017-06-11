@@ -243,6 +243,7 @@ struct stream_out {
     bool offload_thread_blocked;
 
     void *adsp_hdlr_stream_handle;
+    void *ip_hdlr_handle;
 
     stream_callback_t client_callback;
     void *client_cookie;
@@ -266,9 +267,9 @@ struct stream_out {
     struct listnode qaf_offload_cmd_list;
     uint32_t platform_latency;
     render_mode_t render_mode;
-    struct audio_out_render_window_param render_window; /*render winodw*/
-    struct audio_out_start_delay_param delay_param; /*start delay*/
+    bool drift_correction_enabled;
 
+    struct audio_out_channel_map_param channel_map_param; /* input channel map */
     audio_offload_info_t info;
     qahwi_stream_out_t qahwi_out;
 };

@@ -177,23 +177,48 @@ struct audio_out_start_delay_param {
    uint64_t        start_delay; /* session start delay in microseconds*/
 };
 
+struct audio_out_enable_drift_correction {
+   bool        enable; /* enable drift correction*/
+};
+
+struct audio_out_correct_drift {
+    /*
+     * adjust time in microseconds, a positive value
+     * to advance the clock or a negative value to
+     * delay the clock.
+     */
+    int64_t        adjust_time;
+};
+
 /* type of asynchronous write callback events. Mutually exclusive
  * event enums append those defined for stream_callback_event_t in audio.h */
 typedef enum {
+    AUDIO_EXTN_STREAM_CBK_EVENT_ERROR = 0x2,  /* Remove this enum if its already in audio.h */
     AUDIO_EXTN_STREAM_CBK_EVENT_ADSP = 0x100      /* callback event from ADSP PP,
                                                  * corresponding payload will be
                                                  * sent as is to the client
                                                  */
 } audio_extn_callback_id;
 
-#define AUDIO_MAX_ADSP_STREAM_CMD_PAYLOAD_LEN 508
+#define AUDIO_MAX_ADSP_STREAM_CMD_PAYLOAD_LEN 504
+
+typedef enum {
+    AUDIO_STREAM_PP_EVENT = 0,
+    AUDIO_STREAM_ENCDEC_EVENT = 1,
+} audio_event_id;
 
 /* payload format for HAL parameter
  * AUDIO_EXTN_PARAM_ADSP_STREAM_CMD
  */
 struct audio_adsp_event {
+ audio_event_id event_type;                  /* type of the event */
  uint32_t payload_length;                    /* length in bytes of the payload */
  void    *payload;                           /* the actual payload */
+};
+
+struct audio_out_channel_map_param {
+   uint8_t       channels;                              /* Input Channels */
+   uint8_t       channel_map[AUDIO_CHANNEL_COUNT_MAX];  /* Input Channel Map */
 };
 
 typedef union {
@@ -203,7 +228,10 @@ typedef union {
     struct audio_avt_device_drift_param drift_params;
     struct audio_out_render_window_param render_window_param;
     struct audio_out_start_delay_param start_delay;
+    struct audio_out_enable_drift_correction drift_enable_param;
+    struct audio_out_correct_drift drift_correction_param;
     struct audio_adsp_event adsp_event_params;
+    struct audio_out_channel_map_param channel_map_param;
 } audio_extn_param_payload;
 
 typedef enum {
@@ -213,7 +241,13 @@ typedef enum {
     AUDIO_EXTN_PARAM_AVT_DEVICE_DRIFT,
     AUDIO_EXTN_PARAM_OUT_RENDER_WINDOW, /* PARAM to set render window */
     AUDIO_EXTN_PARAM_OUT_START_DELAY,
-    AUDIO_EXTN_PARAM_ADSP_STREAM_CMD
+    /* enable adsp drift correction this must be called before out_write */
+    AUDIO_EXTN_PARAM_OUT_ENABLE_DRIFT_CORRECTION,
+    /* param to set drift value to be adjusted by dsp */
+    AUDIO_EXTN_PARAM_OUT_CORRECT_DRIFT,
+    AUDIO_EXTN_PARAM_ADSP_STREAM_CMD,
+    /* param to set input channel map for playback stream */
+    AUDIO_EXTN_PARAM_OUT_CHANNEL_MAP
 } audio_extn_param_id;
 
 #endif /* AUDIO_DEFS_H */
