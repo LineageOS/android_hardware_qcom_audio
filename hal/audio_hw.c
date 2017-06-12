@@ -2436,7 +2436,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
     lock_output_stream(out);
     // this is always nonzero
-    const int frame_size = audio_stream_out_frame_size(stream);
+    const size_t frame_size = audio_stream_out_frame_size(stream);
+    const size_t frames = bytes / frame_size;
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
         error_code = ERROR_CODE_WRITE;
@@ -2527,7 +2528,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 exit:
     // For PCM we always consume the buffer and return #bytes regardless of ret.
     if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
-        out->written += bytes / (out->config.channels * sizeof(short));
+        out->written += frames;
     }
     long long sleeptime_us = 0;
 
@@ -2541,8 +2542,7 @@ exit:
         if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
             ALOGE_IF(out->pcm != NULL,
                     "%s: error %zd - %s", __func__, ret, pcm_get_error(out->pcm));
-            sleeptime_us = bytes * 1000000LL / frame_size /
-                out_get_sample_rate(&out->stream.common);
+            sleeptime_us = frames * 1000000LL / out_get_sample_rate(&out->stream.common);
             // usleep not guaranteed for values over 1 second but we don't limit here.
         }
     }
@@ -2555,7 +2555,7 @@ exit:
             usleep(sleeptime_us);
     } else {
         // only log if the data is properly written (out->power_log may be null)
-        power_log_log(out->power_log, buffer, bytes / frame_size, now_ns);
+        power_log_log(out->power_log, buffer, frames, now_ns);
     }
     return bytes;
 }
@@ -3102,6 +3102,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     int *int_buf_stream = NULL;
 
     lock_input_stream(in);
+    const size_t frame_size = audio_stream_in_frame_size(stream);
+    const size_t frames = bytes / frame_size;
 
     if (in->is_st_session) {
         ALOGVV(" %s: reading on st session bytes=%zu", __func__, bytes);
@@ -3173,12 +3175,11 @@ exit:
     if (ret != 0) {
         in_standby(&in->stream.common);
         ALOGV("%s: read failed - sleeping for buffer duration", __func__);
-        usleep(bytes * 1000000 / audio_stream_in_frame_size(stream) /
-               in_get_sample_rate(&in->stream.common));
+        usleep(frames * 1000000LL / in_get_sample_rate(&in->stream.common));
         memset(buffer, 0, bytes); // clear return data
     }
     if (bytes > 0) {
-        in->frames_read += bytes / audio_stream_in_frame_size(stream);
+        in->frames_read += frames;
     }
     return bytes;
 }
