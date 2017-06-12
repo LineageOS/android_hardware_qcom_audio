@@ -469,6 +469,15 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM8] =
                      {PLAYBACK_INTERACTIVE_STRM_DEVICE8, PLAYBACK_INTERACTIVE_STRM_DEVICE8},
     [USECASE_AUDIO_EC_REF_LOOPBACK] = {-1, -1}, /* pcm id updated from platform info file */
+    [USECASE_AUDIO_PLAYBACK_MEDIA] = {MEDIA_PCM_DEVICE,
+                                      MEDIA_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION] = {SYS_NOTIFICATION_PCM_DEVICE,
+                                                 SYS_NOTIFICATION_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE] = {NAV_GUIDANCE_PCM_DEVICE,
+                                             NAV_GUIDANCE_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_PHONE] = {PHONE_PCM_DEVICE,
+                                      PHONE_PCM_DEVICE},
+
 };
 
 /* Array to store sound devices */
@@ -565,6 +574,10 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_WSA_AND_BT_SCO_WB] = "wsa-speaker-and-bt-sco-wb",
     [SND_DEVICE_OUT_SPEAKER_WSA_AND_BT_SCO_SWB] = "wsa-speaker-and-bt-sco-wb",
     [SND_DEVICE_OUT_VOICE_HEARING_AID] = "hearing-aid",
+    [SND_DEVICE_OUT_BUS_MEDIA] = "bus-speaker",
+    [SND_DEVICE_OUT_BUS_SYS] = "bus-speaker",
+    [SND_DEVICE_OUT_BUS_NAV] = "bus-speaker",
+    [SND_DEVICE_OUT_BUS_PHN] = "bus-speaker",
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
@@ -697,6 +710,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOIP_SPEAKER] = "voip-speaker",
     [SND_DEVICE_OUT_VOIP_HEADPHONES] = "voip-headphones",
     [SND_DEVICE_IN_VOICE_HEARING_AID] = "hearing-aid-mic",
+    [SND_DEVICE_IN_BUS] = "bus-mic",
 };
 
 // Platform specific backend bit width table
@@ -819,6 +833,10 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_PROTECTED_RAS] = 134,
     [SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT_RAS] = 134,
     [SND_DEVICE_OUT_VOICE_HEARING_AID] = 45,
+    [SND_DEVICE_OUT_BUS_MEDIA] = 78,
+    [SND_DEVICE_OUT_BUS_SYS] = 78,
+    [SND_DEVICE_OUT_BUS_NAV] = 14,
+    [SND_DEVICE_OUT_BUS_PHN] = 94,
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
     [SND_DEVICE_IN_HANDSET_MIC_SB] = 163,
     [SND_DEVICE_IN_HANDSET_MIC_EXTERNAL] = 4,
@@ -946,6 +964,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_CAMCORDER_SELFIE_INVERT_LANDSCAPE] = 4,
     [SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT] = 4,
     [SND_DEVICE_IN_VOICE_HEARING_AID] = 44,
+    [SND_DEVICE_IN_BUS] = 11,
 };
 
 struct name_to_index {
@@ -1042,6 +1061,10 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOIP_SPEAKER)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOIP_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEARING_AID)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_BUS_MEDIA)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_BUS_SYS)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_BUS_NAV)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_BUS_PHN)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_SB)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_EXTERNAL)},
@@ -1171,6 +1194,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT)},
     /* For legacy xml file parsing */
     {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_BUS)},
 };
 
 static char * backend_tag_table[SND_DEVICE_MAX] = {0};
@@ -1232,7 +1256,10 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_VOIP)},
     {TO_NAME_INDEX(USECASE_AUDIO_TRANSCODE_LOOPBACK_RX)},
     {TO_NAME_INDEX(USECASE_AUDIO_TRANSCODE_LOOPBACK_TX)},
-
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_MEDIA)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_PHONE)},
 };
 
 static const struct name_to_index usecase_type_index[USECASE_TYPE_MAX] = {
@@ -2151,6 +2178,10 @@ static void set_platform_defaults(struct platform_data * my_data)
        Need snd_device to route voice call and use specific acdb tuning.
        Also, BT_RX is a virtual port to indicate bluetooth hearing aid. */
     hw_interface_table[SND_DEVICE_OUT_VOICE_HEARING_AID] = strdup("BT_RX"),
+    hw_interface_table[SND_DEVICE_OUT_BUS_MEDIA] = strdup("TERT_TDM_RX_0");
+    hw_interface_table[SND_DEVICE_OUT_BUS_SYS] = strdup("TERT_TDM_RX_0");
+    hw_interface_table[SND_DEVICE_OUT_BUS_NAV] = strdup("TERT_TDM_RX_1");
+    hw_interface_table[SND_DEVICE_OUT_BUS_PHN] = strdup("TERT_TDM_RX_2");
     hw_interface_table[SND_DEVICE_IN_HANDSET_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_HANDSET_MIC_SB] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_HANDSET_MIC_EXTERNAL] = strdup("SLIMBUS_0_TX");
@@ -2277,6 +2308,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_IN_CAMCORDER_SELFIE_INVERT_LANDSCAPE] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_VOICE_HEARING_AID] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_BUS] = strdup("TERT_TDM_TX_0");
     my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
 
      /*remove ALAC & APE from DSP decoder list based on software decoder availability*/
@@ -5797,6 +5829,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         ALOGD("%s: setting sink capability(%d) for Proxy", __func__, channel_count);
         snd_device = SND_DEVICE_OUT_AFE_PROXY;
         audio_extn_set_afe_proxy_channel_mixer(adev, channel_count, snd_device);
+    } else if (devices & AUDIO_DEVICE_OUT_BUS) {
+        snd_device = audio_extn_auto_hal_get_snd_device_for_car_audio_stream(out);
     } else {
         ALOGE("%s: Unknown device(s) %#x", __func__, devices);
     }
@@ -7633,9 +7667,13 @@ int64_t platform_render_latency(audio_usecase_t usecase)
 {
     switch (usecase) {
         case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
+        case USECASE_AUDIO_PLAYBACK_MEDIA:
+        case USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE:
             return DEEP_BUFFER_PLATFORM_DELAY;
         case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
         case USECASE_AUDIO_PLAYBACK_WITH_HAPTICS:
+        case USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION:
+        case USECASE_AUDIO_PLAYBACK_PHONE:
             return LOW_LATENCY_PLATFORM_DELAY;
         case USECASE_AUDIO_PLAYBACK_OFFLOAD:
         case USECASE_AUDIO_PLAYBACK_OFFLOAD2:
