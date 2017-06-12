@@ -93,6 +93,7 @@ static unsigned int configured_low_latency_capture_period_size =
 #define MMAP_PERIOD_COUNT_MAX 512
 #define MMAP_PERIOD_COUNT_DEFAULT (MMAP_PERIOD_COUNT_MAX)
 
+static const int64_t NANOS_PER_SECOND = 1000000000;
 
 /* This constant enables extended precision handling.
  * TODO The flag is off until more testing is done.
@@ -2966,8 +2967,25 @@ static int in_standby(struct audio_stream *stream)
     return status;
 }
 
-static int in_dump(const struct audio_stream *stream __unused, int fd __unused)
+static int in_dump(const struct audio_stream *stream, int fd)
 {
+    struct stream_in *in = (struct stream_in *)stream;
+
+    // We try to get the lock for consistency,
+    // but it isn't necessary for these variables.
+    // If we're not in standby, we may be blocked on a read.
+    const bool locked = (pthread_mutex_trylock(&in->lock) == 0);
+    dprintf(fd, "      Standby: %s\n", in->standby ? "yes" : "no");
+    dprintf(fd, "      Frames read: %lld\n", (long long)in->frames_read);
+    dprintf(fd, "      Frames muted: %lld\n", (long long)in->frames_muted);
+
+    if (locked) {
+        pthread_mutex_unlock(&in->lock);
+    }
+
+    // dump error info
+    (void)error_log_dump(
+            in->error_log, fd, "      " /* prefix */, 0 /* lines */, 0 /* limit_ns */);
     return 0;
 }
 
@@ -3100,6 +3118,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     struct audio_device *adev = in->dev;
     int i, ret = -1;
     int *int_buf_stream = NULL;
+    int error_code = ERROR_CODE_STANDBY; // initial errors are considered coming out of standby.
 
     lock_input_stream(in);
     const size_t frame_size = audio_stream_in_frame_size(stream);
@@ -3127,6 +3146,9 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         }
         in->standby = 0;
     }
+
+    // errors that occur here are read errors.
+    error_code = ERROR_CODE_READ;
 
     //what's the duration requested by the client?
     long ns = pcm_bytes_to_frames(in->pcm, bytes)*1000000000LL/
@@ -3166,17 +3188,21 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
      * to always provide zeroes when muted.
      * No need to acquire adev->lock to read mic_muted here as we don't change its state.
      */
-    if (ret == 0 && adev->mic_muted && in->usecase != USECASE_AUDIO_RECORD_AFE_PROXY)
+    if (ret == 0 && adev->mic_muted && in->usecase != USECASE_AUDIO_RECORD_AFE_PROXY) {
         memset(buffer, 0, bytes);
+        in->frames_muted += frames;
+    }
 
 exit:
     pthread_mutex_unlock(&in->lock);
 
     if (ret != 0) {
+        error_log_log(in->error_log, error_code, audio_utils_get_real_time_ns());
         in_standby(&in->stream.common);
         ALOGV("%s: read failed - sleeping for buffer duration", __func__);
         usleep(frames * 1000000LL / in_get_sample_rate(&in->stream.common));
         memset(buffer, 0, bytes); // clear return data
+        in->frames_muted += frames;
     }
     if (bytes > 0) {
         in->frames_read += frames;
@@ -4222,6 +4248,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
     in->config.channels = channel_count;
 
+    in->error_log = error_log_create(
+            ERROR_LOG_ENTRIES,
+            NANOS_PER_SECOND /* aggregate consecutive identical errors within one second */);
+
     /* This stream could be for sound trigger lab,
        get sound trigger pcm if present */
     audio_extn_sound_trigger_check_and_get_session(in);
@@ -4246,12 +4276,17 @@ err_open:
 static void adev_close_input_stream(struct audio_hw_device *dev __unused,
                                     struct audio_stream_in *stream)
 {
+    struct stream_in *in = (struct stream_in *)stream;
     ALOGV("%s", __func__);
 
     // must deregister from sndmonitor first to prevent races
     // between the callback and close_stream
     audio_extn_snd_mon_unregister_listener(stream);
     in_standby(&stream->common);
+
+    error_log_destroy(in->error_log);
+    in->error_log = NULL;
+
     free(stream);
 
     return;
