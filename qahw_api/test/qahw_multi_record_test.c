@@ -89,6 +89,40 @@ int sourcetrack_done = 0;
 static pthread_mutex_t sourcetrack_lock;
 struct qahw_sound_focus_param sound_focus_data;
 
+static bool request_wake_lock(bool wakelock_acquired, bool enable)
+{
+   int system_ret;
+
+   if (enable) {
+       if (!wakelock_acquired) {
+           system_ret = system("echo audio_services > /sys/power/wake_lock");
+           if (system_ret < 0) {
+               fprintf(stderr, "%s.Failed to acquire audio_service lock\n", __func__);
+               fprintf(log_file, "%s.Failed to acquire audio_service lock\n", __func__);
+           } else {
+               wakelock_acquired = true;
+               fprintf(log_file, "%s.Success to acquire audio_service lock\n", __func__);
+           }
+       } else
+            fprintf(log_file, "%s.Lock is already acquired\n", __func__);
+   }
+
+   if (!enable) {
+       if (wakelock_acquired) {
+           system_ret = system("echo audio_services > /sys/power/wake_unlock");
+           if (system_ret < 0) {
+               fprintf(stderr, "%s.Failed to release audio_service lock\n", __func__);
+               fprintf(log_file, "%s.Failed to release audio_service lock\n", __func__);
+           } else {
+               wakelock_acquired = false;
+               fprintf(log_file, "%s.Success to release audio_service lock\n", __func__);
+           }
+       } else
+            fprintf(log_file, "%s.No Lock is acquired to release\n", __func__);
+   }
+   return wakelock_acquired;
+}
+
 void stop_signal_handler(int signal __unused)
 {
    stop_record = true;
@@ -295,9 +329,12 @@ void *start_input(void *thread_param)
   strlcat(param, params->profile, sizeof(param));
   qahw_in_set_parameters(in_handle, param);
 
-  fprintf(log_file, "\n Please speak into the microphone for %lf seconds, handle(%d)\n", params->record_length, params->handle);
+  /* Caution: Below ADL log shouldnt be altered without notifying automation APT since it used for
+   * automation testing
+   */
+  fprintf(log_file, "\n ADL: Please speak into the microphone for %lf seconds, handle(%d)\n", params->record_length, params->handle);
   if (log_file != stdout)
-      fprintf(stdout, "\n Please speak into the microphone for %lf seconds, handle(%d)\n", params->record_length, params->handle);
+      fprintf(stdout, "\n ADL: Please speak into the microphone for %lf seconds, handle(%d)\n", params->record_length, params->handle);
 
   snprintf(file_name + name_len, sizeof(file_name) - name_len, "%d.wav", (0x99A - params->handle));
   FILE *fd = fopen(file_name,"w");
@@ -433,14 +470,17 @@ void *start_input(void *thread_param)
           fprintf(stdout, "could not close input stream %d, handle(%d)\n",rc, params->handle);
   }
 
-  /* Print instructions to access the file. */
-  fprintf(log_file, "\n\n The audio recording has been saved to %s. Please use adb pull to get "
+  /* Print instructions to access the file.
+   * Caution: Below ADL log shouldnt be altered without notifying automation APT since it used for
+   * automation testing
+   */
+  fprintf(log_file, "\n\n ADL: The audio recording has been saved to %s. Please use adb pull to get "
          "the file and play it using audacity. The audio data has the "
          "following characteristics:\n Sample rate: %i\n Format: %d\n "
          "Num channels: %i, handle(%d)\n\n",
          file_name, params->config.sample_rate, params->config.format, params->channels, params->handle);
   if (log_file != stdout)
-      fprintf(stdout, "\n\n The audio recording has been saved to %s. Please use adb pull to get "
+      fprintf(stdout, "\n\n ADL: The audio recording has been saved to %s. Please use adb pull to get "
          "the file and play it using audacity. The audio data has the "
          "following characteristics:\n Sample rate: %i\n Format: %d\n "
          "Num channels: %i, handle(%d)\n\n",
@@ -547,6 +587,7 @@ int main(int argc, char* argv[]) {
     bool interactive_mode = false, source_tracking = false;
     struct listnode param_list;
     char log_filename[256] = "stdout";
+    bool wakelock_acquired = false;
 
     log_file = stdout;
     list_init(&param_list);
@@ -624,6 +665,7 @@ int main(int argc, char* argv[]) {
          }
     }
 
+    wakelock_acquired = request_wake_lock(wakelock_acquired, true);
     qahw_mod_handle = qahw_load_module(mod_name);
     if(qahw_mod_handle == NULL) {
         fprintf(log_file, " qahw_load_module failed");
@@ -857,10 +899,14 @@ sourcetrack_error:
         fprintf(log_file, "could not unload hal %d \n",ret);
     }
 
-    fprintf(log_file, "\n Done with hal record test \n");
+    /* Caution: Below ADL log shouldnt be altered without notifying automation APT since it used
+     * for automation testing
+     */
+    fprintf(log_file, "\n ADL: Done with hal record test \n");
     if (log_file != stdout) {
-        fprintf(stdout, "\n Done with hal record test \n");
+        fprintf(stdout, "\n ADL: Done with hal record test \n");
         fclose(log_file);
     }
+    wakelock_acquired = request_wake_lock(wakelock_acquired, false);
     return 0;
 }

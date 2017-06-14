@@ -392,7 +392,10 @@ enum {
     LEGACY_PCM = 0,
     PASSTHROUGH,
     PASSTHROUGH_CONVERT,
-    PASSTHROUGH_DSD
+    PASSTHROUGH_DSD,
+    LISTEN,
+    PASSTHROUGH_GEN,
+    PASSTHROUGH_IEC61937
 };
 /*
  * ID for setting mute and lateny on the device side

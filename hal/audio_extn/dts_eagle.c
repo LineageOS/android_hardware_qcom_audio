@@ -33,6 +33,12 @@
 #include "platform.h"
 #include "platform_api.h"
 
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_DTS_EAGLE
+#include <log_utils.h>
+#endif
+
 #ifdef DTS_EAGLE
 
 #define AUDIO_PARAMETER_KEY_DTS_EAGLE   "DTS_EAGLE"

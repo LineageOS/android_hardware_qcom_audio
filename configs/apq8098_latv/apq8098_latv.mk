@@ -29,8 +29,11 @@ MM_AUDIO_ENABLED_SAFX := true
 AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS := false
 AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 AUDIO_FEATURE_ENABLED_USB_TUNNEL_AUDIO := true
-AUDIO_FEATURE_ENABLED_SPLIT_A2DP := true
+AUDIO_FEATURE_ENABLED_SPLIT_A2DP := false
 AUDIO_FEATURE_ENABLED_3D_AUDIO := false
+AUDIO_FEATURE_ENABLED_VOICE_PRINT := false
+USE_LEGACY_AUDIO_DAEMON := false
+USE_LEGACY_AUDIO_MEASUREMENT := false
 DOLBY_ENABLE := false
 endif
 
@@ -45,19 +48,19 @@ AUDIO_FEATURE_ENABLED_HDMI_EDID := true
 AUDIO_FEATURE_ENABLED_HDMI_PASSTHROUGH := true
 #AUDIO_FEATURE_ENABLED_KEEP_ALIVE := true
 AUDIO_FEATURE_ENABLED_DISPLAY_PORT := true
-AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := false
+AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := true
 AUDIO_FEATURE_ENABLED_HFP := true
 AUDIO_FEATURE_ENABLED_INCALL_MUSIC := false
 AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS := true
 AUDIO_FEATURE_ENABLED_KPI_OPTIMIZE := true
 AUDIO_FEATURE_ENABLED_SPKR_PROTECTION := true
-AUDIO_FEATURE_ENABLED_ACDB_LICENSE := false
+AUDIO_FEATURE_ENABLED_ACDB_LICENSE := true
 AUDIO_FEATURE_ENABLED_DEV_ARBI := false
 MM_AUDIO_ENABLED_FTM := true
 TARGET_USES_QCOM_MM_AUDIO := true
 AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
 AUDIO_FEATURE_ENABLED_GEF_SUPPORT := true
-BOARD_SUPPORTS_QAHW := false
+BOARD_SUPPORTS_QAHW := true
 AUDIO_FEATURE_ENABLED_RAS := true
 ##AUDIO_FEATURE_FLAGS
 
@@ -70,21 +73,28 @@ PRODUCT_COPY_FILES += \
     device/qcom/common/media/audio_policy.conf:system/etc/audio_policy.conf
 else
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/sdm845/audio_policy.conf:system/etc/audio_policy.conf
+    hardware/qcom/audio/configs/apq8098_latv/audio_policy.conf:system/etc/audio_policy.conf
 endif
 
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/sdm845/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
-    hardware/qcom/audio/configs/sdm845/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
-    hardware/qcom/audio/configs/sdm845/mixer_paths_tavil.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tavil.xml \
-    hardware/qcom/audio/configs/msm8998/mixer_paths_skuk.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_skuk.xml \
-    hardware/qcom/audio/configs/sdm845/mixer_paths_i2s.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_i2s.xml \
-    hardware/qcom/audio/configs/sdm845/aanc_tuning_mixer_tavil.txt:$(TARGET_COPY_OUT_VENDOR)/etc/aanc_tuning_mixer_tavil.txt \
-    hardware/qcom/audio/configs/sdm845/audio_platform_info_i2s.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_i2s.xml \
-    hardware/qcom/audio/configs/sdm845/sound_trigger_mixer_paths_wcd9340.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9340.xml \
-    hardware/qcom/audio/configs/sdm845/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
-    hardware/qcom/audio/configs/sdm845/graphite_ipc_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/graphite_ipc_platform_info.xml \
-    hardware/qcom/audio/configs/sdm845/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml
+    hardware/qcom/audio/configs/msm8998/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
+    hardware/qcom/audio/configs/msm8998/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
+    hardware/qcom/audio/configs/msm8998/mixer_paths.xml:system/etc/mixer_paths.xml \
+    hardware/qcom/audio/configs/msm8998/mixer_paths_tasha.xml:system/etc/mixer_paths_tasha.xml \
+    hardware/qcom/audio/configs/msm8998/mixer_paths_tavil.xml:system/etc/mixer_paths_tavil.xml \
+    hardware/qcom/audio/configs/msm8998/mixer_paths_skuk.xml:system/etc/mixer_paths_skuk.xml \
+    hardware/qcom/audio/configs/msm8998/mixer_paths_skuk.xml:system/etc/mixer_paths_qvr.xml \
+    hardware/qcom/audio/configs/msm8998/mixer_paths_dtp.xml:system/etc/mixer_paths_dtp.xml \
+    hardware/qcom/audio/configs/msm8998/mixer_paths_i2s.xml:system/etc/mixer_paths_i2s.xml \
+    hardware/qcom/audio/configs/msm8998/audio_tuning_mixer.txt:system/etc/audio_tuning_mixer.txt \
+    hardware/qcom/audio/configs/msm8998/audio_tuning_mixer_tavil.txt:system/etc/audio_tuning_mixer_tavil.txt \
+    hardware/qcom/audio/configs/msm8998/audio_platform_info_i2s.xml:system/etc/audio_platform_info_i2s.xml \
+    hardware/qcom/audio/configs/msm8998/sound_trigger_mixer_paths.xml:system/etc/sound_trigger_mixer_paths.xml \
+    hardware/qcom/audio/configs/msm8998/sound_trigger_mixer_paths_wcd9330.xml:system/etc/sound_trigger_mixer_paths_wcd9330.xml \
+    hardware/qcom/audio/configs/msm8998/sound_trigger_mixer_paths_wcd9340.xml:system/etc/sound_trigger_mixer_paths_wcd9340.xml \
+    hardware/qcom/audio/configs/msm8998/sound_trigger_platform_info.xml:system/etc/sound_trigger_platform_info.xml \
+    hardware/qcom/audio/configs/msm8998/graphite_ipc_platform_info.xml:system/etc/graphite_ipc_platform_info.xml \
+    hardware/qcom/audio/configs/msm8998/audio_platform_info.xml:system/etc/audio_platform_info.xml
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
@@ -93,7 +103,7 @@ PRODUCT_COPY_FILES += \
     $(TOPDIR)hardware/qcom/audio/configs/common/audio_policy_configuration.xml:/system/etc/audio_policy_configuration.xml
 else
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)hardware/qcom/audio/configs/sdm845/audio_policy_configuration.xml:system/etc/audio_policy_configuration.xml
+    $(TOPDIR)hardware/qcom/audio/configs/apq8098_latv/audio_policy_configuration.xml:system/etc/audio_policy_configuration.xml
 endif
 PRODUCT_COPY_FILES += \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:/system/etc/a2dp_audio_policy_configuration.xml \
@@ -105,7 +115,7 @@ endif
 
 # Listen configuration file
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/sdm845/listen_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/listen_platform_info.xml
+    hardware/qcom/audio/configs/msm8998/listen_platform_info.xml:system/etc/listen_platform_info.xml
 
 # Reduce client buffer size for fast audio output tracks
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -168,8 +178,8 @@ audio.offload.multiaac.enable=true
 
 #Enable DS2, Hardbypass feature for Dolby
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.dolby.ds2.enabled=false\
-audio.dolby.ds2.hardbypass=false
+audio.dolby.ds2.enabled=true\
+audio.dolby.ds2.hardbypass=true
 
 #Disable Multiple offload sesison
 PRODUCT_PROPERTY_OVERRIDES += \

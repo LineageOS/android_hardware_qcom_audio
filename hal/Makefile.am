@@ -11,7 +11,8 @@ c_sources = audio_hw.c \
             platform_info.c \
             ${TARGET_PLATFORM}/platform.c \
             audio_extn/audio_extn.c \
-            audio_extn/utils.c
+            audio_extn/utils.c \
+            acdb.c
 
 if HDMI_EDID
 AM_CFLAGS += -DHDMI_EDID
@@ -154,6 +155,26 @@ endif
 
 if AFE_PROXY
 AM_CFLAGS += -DAFE_PROXY_ENABLED
+endif
+
+if ADSP_HDLR
+AM_CFLAGS += -DAUDIO_EXTN_ADSP_HDLR_ENABLED
+c_sources += audio_extn/adsp_hdlr.c
+endif
+
+if SPLIT_A2DP
+AM_CFLAGS += -DSPLIT_A2DP_ENABLED
+c_sources += audio_extn/a2dp.c
+endif
+
+if AUDIO_IP_HDLR
+AM_CFLAGS += -DAUDIO_EXTN_IP_HDLR_ENABLED
+c_sources += audio_extn/ip_hdlr_intf.c
+endif
+
+if QAF_SUPPORT
+AM_CFLAGS += -DQAF_EXTN_ENABLED
+c_sources += audio_extn/qaf.c
 endif
 
 h_sources = audio_extn/audio_defs.h \

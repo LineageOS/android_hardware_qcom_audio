@@ -29,7 +29,7 @@ MM_AUDIO_ENABLED_SAFX := true
 AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS := false
 AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 AUDIO_FEATURE_ENABLED_USB_TUNNEL_AUDIO := true
-AUDIO_FEATURE_ENABLED_SPLIT_A2DP := false
+AUDIO_FEATURE_ENABLED_SPLIT_A2DP := true
 AUDIO_FEATURE_ENABLED_3D_AUDIO := false
 AUDIO_FEATURE_ENABLED_VOICE_PRINT := false
 USE_LEGACY_AUDIO_DAEMON := false
@@ -62,6 +62,7 @@ AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
 AUDIO_FEATURE_ENABLED_GEF_SUPPORT := true
 BOARD_SUPPORTS_QAHW := true
 AUDIO_FEATURE_ENABLED_RAS := true
+AUDIO_FEATURE_ENABLED_DYNAMIC_LOG := true
 ##AUDIO_FEATURE_FLAGS
 
 #Audio Specific device overlays
@@ -79,22 +80,22 @@ endif
 PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msm8998/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
     hardware/qcom/audio/configs/msm8998/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
-    hardware/qcom/audio/configs/msm8998/mixer_paths.xml:system/etc/mixer_paths.xml \
-    hardware/qcom/audio/configs/msm8998/mixer_paths_tasha.xml:system/etc/mixer_paths_tasha.xml \
-    hardware/qcom/audio/configs/msm8998/mixer_paths_tavil.xml:system/etc/mixer_paths_tavil.xml \
-    hardware/qcom/audio/configs/msm8998/mixer_paths_skuk.xml:system/etc/mixer_paths_skuk.xml \
-    hardware/qcom/audio/configs/msm8998/mixer_paths_skuk.xml:system/etc/mixer_paths_qvr.xml \
-    hardware/qcom/audio/configs/msm8998/mixer_paths_dtp.xml:system/etc/mixer_paths_dtp.xml \
-    hardware/qcom/audio/configs/msm8998/mixer_paths_i2s.xml:system/etc/mixer_paths_i2s.xml \
-    hardware/qcom/audio/configs/msm8998/audio_tuning_mixer.txt:system/etc/audio_tuning_mixer.txt \
-    hardware/qcom/audio/configs/msm8998/audio_tuning_mixer_tavil.txt:system/etc/audio_tuning_mixer_tavil.txt \
-    hardware/qcom/audio/configs/msm8998/audio_platform_info_i2s.xml:system/etc/audio_platform_info_i2s.xml \
-    hardware/qcom/audio/configs/msm8998/sound_trigger_mixer_paths.xml:system/etc/sound_trigger_mixer_paths.xml \
-    hardware/qcom/audio/configs/msm8998/sound_trigger_mixer_paths_wcd9330.xml:system/etc/sound_trigger_mixer_paths_wcd9330.xml \
-    hardware/qcom/audio/configs/msm8998/sound_trigger_mixer_paths_wcd9340.xml:system/etc/sound_trigger_mixer_paths_wcd9340.xml \
-    hardware/qcom/audio/configs/msm8998/sound_trigger_platform_info.xml:system/etc/sound_trigger_platform_info.xml \
-    hardware/qcom/audio/configs/msm8998/graphite_ipc_platform_info.xml:system/etc/graphite_ipc_platform_info.xml \
-    hardware/qcom/audio/configs/msm8998/audio_platform_info.xml:system/etc/audio_platform_info.xml
+    hardware/qcom/audio/configs/msm8998/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
+    hardware/qcom/audio/configs/msm8998/mixer_paths_tasha.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tasha.xml \
+    hardware/qcom/audio/configs/msm8998/mixer_paths_tavil.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tavil.xml \
+    hardware/qcom/audio/configs/msm8998/mixer_paths_skuk.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_skuk.xml \
+    hardware/qcom/audio/configs/msm8998/mixer_paths_skuk.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qvr.xml \
+    hardware/qcom/audio/configs/msm8998/mixer_paths_dtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_dtp.xml \
+    hardware/qcom/audio/configs/msm8998/mixer_paths_i2s.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_i2s.xml \
+    hardware/qcom/audio/configs/msm8998/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
+    hardware/qcom/audio/configs/msm8998/audio_tuning_mixer_tavil.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer_tavil.txt \
+    hardware/qcom/audio/configs/msm8998/audio_platform_info_i2s.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_i2s.xml \
+    hardware/qcom/audio/configs/msm8998/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
+    hardware/qcom/audio/configs/msm8998/sound_trigger_mixer_paths_wcd9330.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9330.xml \
+    hardware/qcom/audio/configs/msm8998/sound_trigger_mixer_paths_wcd9340.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9340.xml \
+    hardware/qcom/audio/configs/msm8998/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
+    hardware/qcom/audio/configs/msm8998/graphite_ipc_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/graphite_ipc_platform_info.xml \
+    hardware/qcom/audio/configs/msm8998/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
@@ -115,7 +116,7 @@ endif
 
 # Listen configuration file
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/msm8998/listen_platform_info.xml:system/etc/listen_platform_info.xml
+    hardware/qcom/audio/configs/msm8998/listen_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/listen_platform_info.xml
 
 # Reduce client buffer size for fast audio output tracks
 PRODUCT_PROPERTY_OVERRIDES += \

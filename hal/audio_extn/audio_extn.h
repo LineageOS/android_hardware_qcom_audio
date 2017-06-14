@@ -39,6 +39,8 @@
 #define AUDIO_EXTN_H
 
 #include <cutils/str_parms.h>
+#include "adsp_hdlr.h"
+#include "ip_hdlr_intf.h"
 
 #ifndef AFE_PROXY_ENABLED
 #define AUDIO_DEVICE_OUT_PROXY 0x40000
@@ -91,6 +93,10 @@
                                       AUDIO_FORMAT_AAC_SUB_HE_V1)
 #define AUDIO_FORMAT_AAC_LATM_HE_V2  (AUDIO_FORMAT_AAC_LATM |\
                                       AUDIO_FORMAT_AAC_SUB_HE_V2)
+#endif
+
+#ifndef AUDIO_FORMAT_AC4
+#define AUDIO_FORMAT_AC4  0x23000000UL
 #endif
 
 #ifndef AUDIO_OUTPUT_FLAG_TIMESTAMP
@@ -219,7 +225,7 @@ bool audio_extn_usb_is_capture_supported();
 #else
 void audio_extn_a2dp_init(void *adev);
 int audio_extn_a2dp_start_playback();
-void audio_extn_a2dp_stop_playback();
+int audio_extn_a2dp_stop_playback();
 void audio_extn_a2dp_set_parameters(struct str_parms *parms);
 bool audio_extn_a2dp_is_force_device_switch();
 void audio_extn_a2dp_set_handoff_mode(bool is_on);
@@ -468,6 +474,9 @@ enum {
     EXT_DISPLAY_TYPE_DP
 };
 
+/* Used to limit sample rate for TrueHD & EC3 */
+#define HDMI_PASSTHROUGH_MAX_SAMPLE_RATE 192000
+
 #ifndef HDMI_PASSTHROUGH_ENABLED
 #define audio_extn_passthru_update_stream_configuration(adev, out)            (0)
 #define audio_extn_passthru_is_convert_supported(adev, out)                   (0)
@@ -582,6 +591,8 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
 void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
                                   struct audio_device *adev,
                                   struct audio_usecase *usecase);
+int audio_extn_utils_get_snd_card_num();
+
 #ifdef DS2_DOLBY_DAP_ENABLED
 #define LIB_DS2_DAP_HAL "vendor/lib/libhwdaphal.so"
 #define SET_HW_INFO_FUNC "dap_hal_set_hw_info"
@@ -673,6 +684,13 @@ int audio_extn_qaf_open_output_stream(struct audio_hw_device *dev,
                                    const char *address __unused);
 int audio_extn_qaf_init(struct audio_device *adev);
 int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *parms);
+int audio_extn_qaf_out_set_param_data(struct stream_out *out,
+                           audio_extn_param_id param_id,
+                           audio_extn_param_payload *payload);
+int audio_extn_qaf_out_get_param_data(struct stream_out *out,
+                             audio_extn_param_id param_id,
+                             audio_extn_param_payload *payload);
+bool audio_extn_is_qaf_stream(struct stream_out *out);
 #else
 #define audio_extn_qaf_is_enabled()                                     (0)
 #define audio_extn_qaf_deinit()                                         (0)
@@ -680,6 +698,9 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
 #define audio_extn_qaf_open_output_stream           adev_open_output_stream
 #define audio_extn_qaf_init(adev)                                       (0)
 #define audio_extn_qaf_set_parameters(adev, parms)                      (0)
+#define audio_extn_qaf_out_set_param_data(out, param_id, payload)       (0)
+#define audio_extn_qaf_out_get_param_data(out, param_id, payload)       (0)
+#define audio_extn_is_qaf_stream(out)                                   (0)
 #endif
 
 #ifdef AUDIO_EXTN_BT_HAL_ENABLED
@@ -828,6 +849,12 @@ void audio_extn_send_aptx_dec_bt_addr_to_dsp(struct stream_out *out);
 static void audio_extn_parse_aptx_dec_bt_addr(char *value);
 int audio_extn_set_aptx_dec_params(struct aptx_dec_param *payload);
 #endif
+int audio_extn_out_set_param_data(struct stream_out *out,
+                             audio_extn_param_id param_id,
+                             audio_extn_param_payload *payload);
+int audio_extn_out_get_param_data(struct stream_out *out,
+                             audio_extn_param_id param_id,
+                             audio_extn_param_payload *payload);
 
 int audio_extn_utils_get_avt_device_drift(
                 struct audio_usecase *usecase,
@@ -841,4 +868,13 @@ int audio_extn_utils_compress_set_render_window(
 int audio_extn_utils_compress_set_start_delay(
             struct stream_out *out,
             struct audio_out_start_delay_param *start_delay_param);
+int audio_extn_utils_compress_enable_drift_correction(
+            struct stream_out *out,
+            struct audio_out_enable_drift_correction *drift_enable);
+int audio_extn_utils_compress_correct_drift(
+            struct stream_out *out,
+            struct audio_out_correct_drift *drift_correction_param);
+int audio_extn_utils_set_channel_map(
+            struct stream_out *out,
+            struct audio_out_channel_map_param *channel_map_param);
 #endif /* AUDIO_EXTN_H */

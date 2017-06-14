@@ -29,7 +29,7 @@ MM_AUDIO_ENABLED_SAFX := true
 AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS := false
 AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 AUDIO_FEATURE_ENABLED_USB_TUNNEL_AUDIO := true
-AUDIO_FEATURE_ENABLED_SPLIT_A2DP := false
+AUDIO_FEATURE_ENABLED_SPLIT_A2DP := true
 AUDIO_FEATURE_ENABLED_3D_AUDIO := false
 AUDIO_FEATURE_ENABLED_VOICE_PRINT := false
 USE_LEGACY_AUDIO_DAEMON := false
@@ -79,26 +79,26 @@ endif
 PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/sdm660/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
     hardware/qcom/audio/configs/sdm660/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
-    hardware/qcom/audio/configs/sdm660/mixer_paths.xml:system/etc/mixer_paths.xml \
-    hardware/qcom/audio/configs/sdm660/mixer_paths_mtp.xml:system/etc/mixer_paths_mtp.xml \
-    hardware/qcom/audio/configs/sdm660/mixer_paths_wcd9335.xml:system/etc/mixer_paths_wcd9335.xml \
-    hardware/qcom/audio/configs/sdm660/mixer_paths_wcd9340.xml:system/etc/mixer_paths_wcd9340.xml \
-    hardware/qcom/audio/configs/sdm660/mixer_paths_wcd9326.xml:system/etc/mixer_paths_wcd9326.xml \
-    hardware/qcom/audio/configs/sdm660/mixer_paths_skus.xml:system/etc/mixer_paths_skus.xml \
-    hardware/qcom/audio/configs/sdm660/mixer_paths_skush.xml:system/etc/mixer_paths_skush.xml \
-    hardware/qcom/audio/configs/sdm660/mixer_paths_i2s.xml:system/etc/mixer_paths_i2s.xml \
-    hardware/qcom/audio/configs/sdm660/audio_tuning_mixer.txt:system/etc/audio_tuning_mixer.txt \
-    hardware/qcom/audio/configs/sdm660/audio_tuning_mixer_tavil.txt:system/etc/audio_tuning_mixer_tavil.txt \
-    hardware/qcom/audio/configs/sdm660/audio_tuning_mixer_tasha.txt:system/etc/audio_tuning_mixer_tasha.txt \
-    hardware/qcom/audio/configs/sdm660/audio_platform_info_extcodec.xml:system/etc/audio_platform_info_extcodec.xml \
-    hardware/qcom/audio/configs/sdm660/audio_platform_info.xml:system/etc/audio_platform_info.xml \
-    hardware/qcom/audio/configs/sdm660/audio_platform_info_skush.xml:system/etc/audio_platform_info_skush.xml \
-    hardware/qcom/audio/configs/sdm660/sound_trigger_mixer_paths.xml:system/etc/sound_trigger_mixer_paths.xml \
-    hardware/qcom/audio/configs/sdm660/sound_trigger_mixer_paths_wcd9330.xml:system/etc/sound_trigger_mixer_paths_wcd9330.xml \
-    hardware/qcom/audio/configs/sdm660/sound_trigger_mixer_paths_wcd9335.xml:system/etc/sound_trigger_mixer_paths_wcd9335.xml \
-    hardware/qcom/audio/configs/sdm660/sound_trigger_mixer_paths_wcd9340.xml:system/etc/sound_trigger_mixer_paths_wcd9340.xml \
-    hardware/qcom/audio/configs/sdm660/sound_trigger_platform_info.xml:system/etc/sound_trigger_platform_info.xml \
-    hardware/qcom/audio/configs/sdm660/graphite_ipc_platform_info.xml:system/etc/graphite_ipc_platform_info.xml
+    hardware/qcom/audio/configs/sdm660/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
+    hardware/qcom/audio/configs/sdm660/mixer_paths_mtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_mtp.xml \
+    hardware/qcom/audio/configs/sdm660/mixer_paths_wcd9335.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wcd9335.xml \
+    hardware/qcom/audio/configs/sdm660/mixer_paths_wcd9340.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wcd9340.xml \
+    hardware/qcom/audio/configs/sdm660/mixer_paths_wcd9326.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wcd9326.xml \
+    hardware/qcom/audio/configs/sdm660/mixer_paths_skus.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_skus.xml \
+    hardware/qcom/audio/configs/sdm660/mixer_paths_skush.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_skush.xml \
+    hardware/qcom/audio/configs/sdm660/mixer_paths_i2s.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_i2s.xml \
+    hardware/qcom/audio/configs/sdm660/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
+    hardware/qcom/audio/configs/sdm660/audio_tuning_mixer_tavil.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer_tavil.txt \
+    hardware/qcom/audio/configs/sdm660/audio_tuning_mixer_tasha.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer_tasha.txt \
+    hardware/qcom/audio/configs/sdm660/audio_platform_info_extcodec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_extcodec.xml \
+    hardware/qcom/audio/configs/sdm660/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
+    hardware/qcom/audio/configs/sdm660/audio_platform_info_skush.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_skush.xml \
+    hardware/qcom/audio/configs/sdm660/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
+    hardware/qcom/audio/configs/sdm660/sound_trigger_mixer_paths_wcd9330.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9330.xml \
+    hardware/qcom/audio/configs/sdm660/sound_trigger_mixer_paths_wcd9335.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9335.xml \
+    hardware/qcom/audio/configs/sdm660/sound_trigger_mixer_paths_wcd9340.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9340.xml \
+    hardware/qcom/audio/configs/sdm660/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
+    hardware/qcom/audio/configs/sdm660/graphite_ipc_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/graphite_ipc_platform_info.xml
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
@@ -119,7 +119,7 @@ endif
 
 # Listen configuration file
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/sdm660/listen_platform_info.xml:system/etc/listen_platform_info.xml
+    hardware/qcom/audio/configs/sdm660/listen_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/listen_platform_info.xml
 
 # Reduce client buffer size for fast audio output tracks
 PRODUCT_PROPERTY_OVERRIDES += \

@@ -47,6 +47,10 @@
  */
 #define QAHW_MODULE_API_VERSION_CURRENT QAHW_MODULE_API_VERSION_0_0
 
+
+typedef uint64_t (*qahwi_out_write_v2_t)(audio_stream_out_t *out, const void* buffer,
+                                       size_t bytes, int64_t* timestamp);
+
 typedef int (*qahwi_get_param_data_t) (const audio_hw_device_t *,
                               qahw_param_id, qahw_param_payload *);
 
@@ -90,6 +94,7 @@ typedef struct {
     pthread_mutex_t lock;
     qahwi_out_set_param_data_t qahwi_out_get_param_data;
     qahwi_out_get_param_data_t qahwi_out_set_param_data;
+    qahwi_out_write_v2_t qahwi_out_write_v2;
 } qahw_stream_out_t;
 
 typedef struct {
@@ -535,10 +540,13 @@ ssize_t qahw_out_write(qahw_stream_handle_t *out_handle,
     }
 
     /*TBD:: validate other meta data parameters */
-
     pthread_mutex_lock(&qahw_stream_out->lock);
     out = qahw_stream_out->stream;
-    if (out->write) {
+    if (qahw_stream_out->qahwi_out_write_v2) {
+        rc = qahw_stream_out->qahwi_out_write_v2(out, out_buf->buffer,
+                                         out_buf->bytes, out_buf->timestamp);
+        out_buf->offset = 0;
+    } else if (out->write) {
         rc = out->write(out, out_buf->buffer, out_buf->bytes);
     } else {
         rc = -ENOSYS;
@@ -1467,6 +1475,19 @@ int qahw_open_output_stream(qahw_module_handle_t *hw_module,
             qahw_stream_out->qahwi_out_set_param_data = NULL;
         }
 }
+
+    /* dlsym qahwi_out_write_v2 */
+    if (!rc) {
+        const char *error;
+
+        /* clear any existing errors */
+        dlerror();
+        qahw_stream_out->qahwi_out_write_v2 = (qahwi_out_write_v2_t)dlsym(qahw_module->module->dso, "qahwi_out_write_v2");
+        if ((error = dlerror()) != NULL) {
+            ALOGI("%s: dlsym error %s for qahwi_out_write_v2", __func__, error);
+            qahw_stream_out->qahwi_out_write_v2 = NULL;
+        }
+    }
 
 exit:
     pthread_mutex_unlock(&qahw_module->lock);

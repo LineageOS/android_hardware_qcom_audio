@@ -80,7 +80,7 @@
     <ctl name="EAR_S" value="ZERO" />
     <ctl name="HPHL" value="ZERO" />
     <ctl name="HPHR" value="ZERO" />
-    <ctl name="SPK DAC Switch" value="0" />
+    <ctl name="SPK" value="ZERO" />
     <ctl name="MICBIAS CAPLESS Switch" value="0" />
     <ctl name="EAR PA Gain" value="POS_1P5_DB" />
     <ctl name="MI2S_RX Channels" value="One" />
@@ -604,7 +604,7 @@
 
     <path name="speaker">
         <ctl name="RX3 MIX1 INP1" value="RX1" />
-        <ctl name="SPK DAC Switch" value="1" />
+        <ctl name="SPK" value="Switch" />
     </path>
 
     <path name="speaker-mic">

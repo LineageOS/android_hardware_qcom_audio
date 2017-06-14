@@ -36,9 +36,16 @@
 #include <cutils/log.h>
 #include <cutils/str_parms.h>
 #include <audio_hw.h>
+#include "acdb.h"
 #include "platform_api.h"
 #include <platform.h>
 #include <math.h>
+
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_PLATFORM_INFO
+#include <log_utils.h>
+#endif
 
 #define BUF_SIZE                    1024
 
@@ -81,6 +88,7 @@ static section_process_fn section_table[] = {
 static section_t section;
 
 struct platform_info {
+    caller_t          caller;
     void             *platform;
     struct str_parms *kvpairs;
 };
@@ -369,9 +377,21 @@ static void process_acdb_metainfo_key(const XML_Char **attr)
     }
 
     int key = atoi((char *)attr[3]);
-    if (platform_set_acdb_metainfo_key(my_data.platform, (char*)attr[1], key) < 0) {
-        ALOGE("%s: key %d was not set!", __func__, key);
-        goto done;
+    switch(my_data.caller) {
+        case ACDB_EXTN:
+                if(acdb_set_metainfo_key(my_data.platform, (char*)attr[1], key) < 0) {
+                    ALOGE("%s: key %d was not set!", __func__, key);
+                    goto done;
+                }
+                break;
+        case PLATFORM:
+                if(platform_set_acdb_metainfo_key(my_data.platform, (char*)attr[1], key) < 0) {
+                    ALOGE("%s: key %d was not set!", __func__, key);
+                    goto done;
+                }
+                break;
+        default:
+                ALOGE("%s: unknown caller!", __func__);
     }
 
 done:
@@ -381,58 +401,73 @@ done:
 static void start_tag(void *userdata __unused, const XML_Char *tag_name,
                       const XML_Char **attr)
 {
-    if (strcmp(tag_name, "bit_width_configs") == 0) {
-        section = BITWIDTH;
-    } else if (strcmp(tag_name, "acdb_ids") == 0) {
-        section = ACDB;
-    } else if (strcmp(tag_name, "pcm_ids") == 0) {
-        section = PCM_ID;
-    } else if (strcmp(tag_name, "backend_names") == 0) {
-        section = BACKEND_NAME;
-    } else if (strcmp(tag_name, "config_params") == 0) {
-        section = CONFIG_PARAMS;
-    } else if (strcmp(tag_name, "interface_names") == 0) {
-        section = INTERFACE_NAME;
-    } else if (strcmp(tag_name, "gain_db_to_level_mapping") == 0) {
-        section = GAIN_LEVEL_MAPPING;
-    } else if(strcmp(tag_name, "acdb_metainfo_key") == 0) {
-        section = ACDB_METAINFO_KEY;
-    } else if (strcmp(tag_name, "device") == 0) {
-        if ((section != ACDB) && (section != BACKEND_NAME) && (section != BITWIDTH) &&
-            (section != INTERFACE_NAME)) {
-            ALOGE("device tag only supported for acdb/backend names/bitwitdh/interface names");
-            return;
-        }
+    if (my_data.caller == ACDB_EXTN) {
+        if(strcmp(tag_name, "acdb_metainfo_key") == 0) {
+            section = ACDB_METAINFO_KEY;
+        } else if (strcmp(tag_name, "param") == 0) {
+            if ((section != CONFIG_PARAMS) && (section != ACDB_METAINFO_KEY)) {
+                ALOGE("param tag only supported with CONFIG_PARAMS section");
+                return;
+            }
 
-        /* call into process function for the current section */
-        section_process_fn fn = section_table[section];
-        fn(attr);
-    } else if (strcmp(tag_name, "gain_level_map") == 0) {
-        if (section != GAIN_LEVEL_MAPPING) {
-            ALOGE("usecase tag only supported with GAIN_LEVEL_MAPPING section");
-            return;
+            section_process_fn fn = section_table[section];
+            fn(attr);
         }
+    } else if(my_data.caller == PLATFORM) {
+        if (strcmp(tag_name, "bit_width_configs") == 0) {
+            section = BITWIDTH;
+        } else if (strcmp(tag_name, "acdb_ids") == 0) {
+            section = ACDB;
+        } else if (strcmp(tag_name, "pcm_ids") == 0) {
+            section = PCM_ID;
+        } else if (strcmp(tag_name, "backend_names") == 0) {
+            section = BACKEND_NAME;
+        } else if (strcmp(tag_name, "config_params") == 0) {
+            section = CONFIG_PARAMS;
+        } else if (strcmp(tag_name, "interface_names") == 0) {
+            section = INTERFACE_NAME;
+        } else if (strcmp(tag_name, "gain_db_to_level_mapping") == 0) {
+            section = GAIN_LEVEL_MAPPING;
+        } else if(strcmp(tag_name, "acdb_metainfo_key") == 0) {
+            section = ACDB_METAINFO_KEY;
+        } else if (strcmp(tag_name, "device") == 0) {
+            if ((section != ACDB) && (section != BACKEND_NAME) && (section != BITWIDTH) &&
+                (section != INTERFACE_NAME)) {
+                ALOGE("device tag only supported for acdb/backend names/bitwitdh/interface names");
+                return;
+            }
 
-        section_process_fn fn = section_table[GAIN_LEVEL_MAPPING];
-        fn(attr);
-    } else if (strcmp(tag_name, "usecase") == 0) {
-        if (section != PCM_ID) {
-            ALOGE("usecase tag only supported with PCM_ID section");
-            return;
+            /* call into process function for the current section */
+            section_process_fn fn = section_table[section];
+            fn(attr);
+        } else if (strcmp(tag_name, "gain_level_map") == 0) {
+            if (section != GAIN_LEVEL_MAPPING) {
+                ALOGE("usecase tag only supported with GAIN_LEVEL_MAPPING section");
+                return;
+            }
+
+            section_process_fn fn = section_table[GAIN_LEVEL_MAPPING];
+            fn(attr);
+        } else if (strcmp(tag_name, "usecase") == 0) {
+            if (section != PCM_ID) {
+                ALOGE("usecase tag only supported with PCM_ID section");
+                return;
+            }
+
+            section_process_fn fn = section_table[PCM_ID];
+            fn(attr);
+        } else if (strcmp(tag_name, "param") == 0) {
+            if ((section != CONFIG_PARAMS) && (section != ACDB_METAINFO_KEY)) {
+                ALOGE("param tag only supported with CONFIG_PARAMS section");
+                return;
+            }
+
+            section_process_fn fn = section_table[section];
+            fn(attr);
         }
-
-        section_process_fn fn = section_table[PCM_ID];
-        fn(attr);
-    } else if (strcmp(tag_name, "param") == 0) {
-        if ((section != CONFIG_PARAMS) && (section != ACDB_METAINFO_KEY)) {
-            ALOGE("param tag only supported with CONFIG_PARAMS section");
-            return;
-        }
-
-        section_process_fn fn = section_table[section];
-        fn(attr);
+    } else {
+            ALOGE("%s: unknown caller!", __func__);
     }
-
     return;
 }
 
@@ -448,7 +483,9 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
         section = ROOT;
     } else if (strcmp(tag_name, "config_params") == 0) {
         section = ROOT;
-        platform_set_parameters(my_data.platform, my_data.kvpairs);
+        if (my_data.caller == PLATFORM) {
+            platform_set_parameters(my_data.platform, my_data.kvpairs);
+        }
     } else if (strcmp(tag_name, "interface_names") == 0) {
         section = ROOT;
     } else if (strcmp(tag_name, "gain_db_to_level_mapping") == 0) {
@@ -458,7 +495,7 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
     }
 }
 
-int platform_info_init(const char *filename, void *platform)
+int platform_info_init(const char *filename, void *platform, caller_t caller_type)
 {
     XML_Parser      parser;
     FILE            *file;
@@ -483,6 +520,7 @@ int platform_info_init(const char *filename, void *platform)
         goto err_close_file;
     }
 
+    my_data.caller = caller_type;
     my_data.platform = platform;
     my_data.kvpairs = str_parms_create();
 

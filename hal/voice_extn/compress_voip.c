@@ -36,6 +36,12 @@
 #include "platform.h"
 #include "voice_extn.h"
 
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_COMPR_VOIP
+#include <log_utils.h>
+#endif
+
 #define COMPRESS_VOIP_IO_BUF_SIZE_NB 320
 #define COMPRESS_VOIP_IO_BUF_SIZE_WB 640
 #define COMPRESS_VOIP_IO_BUF_SIZE_SWB 1280
@@ -47,6 +53,7 @@ struct pcm_config pcm_config_voip_nb = {
     .period_size = COMPRESS_VOIP_IO_BUF_SIZE_NB/2,
     .period_count = 10,
     .format = PCM_FORMAT_S16_LE,
+    .stop_threshold = INT_MAX,
 };
 
 struct pcm_config pcm_config_voip_wb = {
@@ -55,6 +62,7 @@ struct pcm_config pcm_config_voip_wb = {
     .period_size = COMPRESS_VOIP_IO_BUF_SIZE_WB/2,
     .period_count = 10,
     .format = PCM_FORMAT_S16_LE,
+    .stop_threshold = INT_MAX,
 };
 
 struct pcm_config pcm_config_voip_swb = {
@@ -63,6 +71,7 @@ struct pcm_config pcm_config_voip_swb = {
     .period_size = COMPRESS_VOIP_IO_BUF_SIZE_SWB/2,
     .period_count = 10,
     .format = PCM_FORMAT_S16_LE,
+    .stop_threshold = INT_MAX,
 };
 
 struct pcm_config pcm_config_voip_fb = {
@@ -71,6 +80,7 @@ struct pcm_config pcm_config_voip_fb = {
     .period_size = COMPRESS_VOIP_IO_BUF_SIZE_FB/2,
     .period_count = 10,
     .format = PCM_FORMAT_S16_LE,
+    .stop_threshold = INT_MAX,
 };
 
 struct voip_data {
@@ -288,7 +298,7 @@ static int voip_stop_call(struct audio_device *adev)
         ALOGV("%s: unexpected because out_stream_count=%d, in_stream_count=%d",
                __func__, voip_data.out_stream_count, voip_data.in_stream_count);
         uc_info = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
-        if (uc_info)
+        if (uc_info && !voip_data.out_stream_count)
             uc_info->stream.out = adev->primary_output;
         ret = -EINVAL;
     }
