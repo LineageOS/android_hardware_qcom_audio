@@ -2362,9 +2362,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             if (((channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK) ||
                 (channel_mask == AUDIO_CHANNEL_IN_STEREO))) {
                 snd_device = SND_DEVICE_IN_UNPROCESSED_STEREO_MIC;
-            } else if ((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) {
+            } else if (channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) {
                 snd_device = SND_DEVICE_IN_UNPROCESSED_THREE_MIC;
-            } else if ((int)channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) {
+            } else if (channel_mask == AUDIO_CHANNEL_INDEX_MASK_4) {
                 snd_device = SND_DEVICE_IN_UNPROCESSED_QUAD_MIC;
             } else {
                 snd_device = SND_DEVICE_IN_UNPROCESSED_MIC;
