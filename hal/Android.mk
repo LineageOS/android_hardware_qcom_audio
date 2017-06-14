@@ -6,6 +6,8 @@ include $(CLEAR_VARS)
 
 LOCAL_ARM_MODE := arm
 
+LOCAL_CFLAGS := -Wno-error -Wno-sign-compare
+
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
 ifneq ($(filter msm8974 msm8226 msm8610 apq8084 msm8994 msm8992 msm8996,$(TARGET_BOARD_PLATFORM)),)
