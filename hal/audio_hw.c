@@ -4998,6 +4998,10 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     out->a2dp_compress_mute = false;
     out->dynamic_pm_qos_enabled = 0;
 
+    if ((flags & AUDIO_OUTPUT_FLAG_BD10) &&
+        (property_get_bool("audio.matrix.limiter.enable", false)))
+        platform_set_device_params(out, DEVICE_PARAM_LIMITER_ID, 1);
+
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL &&
         (flags & AUDIO_OUTPUT_FLAG_DIRECT)) {
         pthread_mutex_lock(&adev->lock);

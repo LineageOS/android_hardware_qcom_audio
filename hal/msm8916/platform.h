@@ -428,6 +428,7 @@ enum {
  */
 #define DEVICE_PARAM_MUTE_ID    0
 #define DEVICE_PARAM_LATENCY_ID 1
+#define DEVICE_PARAM_LIMITER_ID 2
 
 #define ENUM_TO_STRING(X) #X
 
