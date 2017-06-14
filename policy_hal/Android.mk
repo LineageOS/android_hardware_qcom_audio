@@ -26,7 +26,8 @@ LOCAL_C_INCLUDES := $(TOPDIR)frameworks/av/services \
                     $(TOPDIR)frameworks/av/services/audiopolicy/engine/interface \
                     $(TOPDIR)frameworks/av/services/audiopolicy \
                     $(TOPDIR)frameworks/av/services/audiopolicy/common/managerdefinitions/include \
-                    $(call include-path-for, avextension)
+                    $(call include-path-for, avextension) \
+                    system/core/base/include
 
 
 LOCAL_SHARED_LIBRARIES := \
