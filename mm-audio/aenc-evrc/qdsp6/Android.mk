@@ -25,10 +25,8 @@ include $(CLEAR_VARS)
 libOmxEvrcEnc-inc       := $(LOCAL_PATH)/inc
 libOmxEvrcEnc-inc       += $(TARGET_OUT_HEADERS)/mm-core/omxcore
 
-LOCAL_MODULE             := libOmxEvrcEnc
-LOCAL_MODULE_TAGS        := optional
-LOCAL_MODULE_OWNER       := qti
-LOCAL_PROPRIETARY_MODULE := true
+LOCAL_MODULE            := libOmxEvrcEnc
+LOCAL_MODULE_TAGS       := optional
 LOCAL_CFLAGS            := $(libOmxEvrcEnc-def)
 LOCAL_C_INCLUDES        := $(libOmxEvrcEnc-inc)
 LOCAL_PRELINK_MODULE    := false
