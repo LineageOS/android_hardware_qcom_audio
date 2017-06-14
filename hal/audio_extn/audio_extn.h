@@ -906,8 +906,8 @@ int audio_extn_hw_loopback_set_audio_port_config(struct audio_hw_device *dev,
                                     const struct audio_port_config *config);
 int audio_extn_hw_loopback_get_audio_port(struct audio_hw_device *dev,
                                     struct audio_port *port_in);
-int audio_extn_loopback_init(struct audio_device *adev);
-void audio_extn_loopback_deinit(struct audio_device *adev);
+int audio_extn_hw_loopback_init(struct audio_device *adev);
+void audio_extn_hw_loopback_deinit(struct audio_device *adev);
 #else
 static int __unused audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev __unused,
                                      unsigned int num_sources __unused,
@@ -933,11 +933,11 @@ static int __unused audio_extn_hw_loopback_get_audio_port(struct audio_hw_device
 {
     return -ENOSYS;
 }
-static int __unused audio_extn_loopback_init(struct audio_device *adev __unused)
+static int __unused audio_extn_hw_loopback_init(struct audio_device *adev __unused)
 {
     return -ENOSYS;
 }
-static void __unused audio_extn_loopback_deinit(struct audio_device *adev __unused)
+static void __unused audio_extn_hw_loopback_deinit(struct audio_device *adev __unused)
 {
 }
 #endif

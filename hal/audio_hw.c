@@ -1562,6 +1562,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     struct audio_usecase *vc_usecase = NULL;
     struct audio_usecase *voip_usecase = NULL;
     struct audio_usecase *hfp_usecase = NULL;
+    struct stream_out stream_out;
     audio_usecase_t hfp_ucid;
     int status = 0;
 
@@ -1589,8 +1590,13 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             ALOGE("%s: stream.inout is NULL", __func__);
             return -EINVAL;
         }
-        out_snd_device = usecase->stream.inout->out_config.devices;
-        in_snd_device = usecase->stream.inout->in_config.devices;
+        stream_out.devices = usecase->stream.inout->out_config.devices;
+        stream_out.sample_rate = usecase->stream.inout->out_config.sample_rate;
+        stream_out.format = usecase->stream.inout->out_config.format;
+        stream_out.channel_mask = usecase->stream.inout->out_config.channel_mask;
+        out_snd_device = platform_get_output_snd_device(adev->platform,
+                                                        &stream_out);
+        in_snd_device = platform_get_input_snd_device(adev->platform, AUDIO_DEVICE_NONE);
         usecase->devices = (out_snd_device | in_snd_device);
     } else {
         /*
@@ -5537,7 +5543,7 @@ static int adev_close(hw_device_t *device)
         qahwi_deinit(device);
         audio_extn_adsp_hdlr_deinit();
         audio_extn_snd_mon_deinit();
-        audio_extn_loopback_deinit(adev);
+        audio_extn_hw_loopback_deinit(adev);
         if (adev->device_cfg_params) {
             free(adev->device_cfg_params);
             adev->device_cfg_params = NULL;
@@ -5724,7 +5730,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     audio_extn_init(adev);
     audio_extn_listen_init(adev, adev->snd_card);
     audio_extn_gef_init(adev);
-    audio_extn_loopback_init(adev);
+    audio_extn_hw_loopback_init(adev);
 
     if (access(OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH, R_OK) == 0) {
         adev->offload_effects_lib = dlopen(OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH, RTLD_NOW);
