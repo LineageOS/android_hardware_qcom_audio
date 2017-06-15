@@ -66,6 +66,7 @@
 enum {
     ERROR_CODE_STANDBY = 1,
     ERROR_CODE_WRITE,
+    ERROR_CODE_READ,
 };
 
 typedef enum card_status_t {
@@ -244,6 +245,7 @@ struct stream_in {
     bool enable_aec;
     bool enable_ns;
     int64_t frames_read; /* total frames read, not cleared when entering standby */
+    int64_t frames_muted; /* total frames muted, not cleared when entering standby */
 
     audio_io_handle_t capture_handle;
     audio_input_flags_t flags;
@@ -263,6 +265,8 @@ struct stream_in {
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
     audio_format_t supported_formats[MAX_SUPPORTED_FORMATS + 1];
     uint32_t supported_sample_rates[MAX_SUPPORTED_SAMPLE_RATES + 1];
+
+    error_log_t *error_log;
 };
 
 typedef enum usecase_type_t {
