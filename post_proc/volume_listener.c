@@ -43,6 +43,7 @@
                                                             i == RING?"RING": \
                                                             i == ALARM?"ALARM": \
                                                             i == VOICE_CALL?"Voice_call": \
+                                                            i == VC_CALL ?"VC_call":       \
                                                             i == NOTIFICATION?"Notification":\
                                                             "--INVALID--"); \
 
@@ -72,6 +73,7 @@ enum STREAM_TYPE {
     RING,
     ALARM,
     VOICE_CALL,
+    VC_CALL,
     NOTIFICATION,
     MAX_STREAM_TYPES,
 };
@@ -206,6 +208,8 @@ pthread_mutex_t vol_listner_init_lock;
 static const char *primary_audio_hal_path[] =
     {"/vendor/lib/hw/", "/system/lib/hw/"};
 
+static bool headset_cal_enabled;
+
 /*
  *  Local functions
  */
@@ -225,11 +229,26 @@ static void dump_list_l()
                 context->stream_type == RING ? "RING" :
                 context->stream_type == ALARM ? "ALARM" :
                 context->stream_type == VOICE_CALL ? "VOICE_CALL" :
+                context->stream_type == VC_CALL ? "VC_CALL" :
                 context->stream_type == NOTIFICATION ? "NOTIFICATION" : "--INVALID--",
                 context->dev_id, context->state, context->session_id, context->left_vol,context->right_vol);
     }
 
     ALOGW("DUMP_END :: ===========");
+}
+
+static inline bool valid_dev_in_context(struct vol_listener_context_s *context)
+{
+    if (context->dev_id == AUDIO_DEVICE_OUT_SPEAKER)
+        return true;
+
+    if (context->stream_type == VC_CALL && headset_cal_enabled &&
+        (context->dev_id == AUDIO_DEVICE_OUT_EARPIECE ||
+         context->dev_id == AUDIO_DEVICE_OUT_WIRED_HEADSET ||
+         context->dev_id == AUDIO_DEVICE_OUT_WIRED_HEADPHONE))
+        return true;
+
+    return false;
 }
 
 static void check_and_set_gain_dep_cal()
@@ -257,7 +276,7 @@ static void check_and_set_gain_dep_cal()
     list_for_each(node, &vol_effect_list) {
         context = node_to_item(node, struct vol_listener_context_s, effect_list_node);
         if ((context->state == VOL_LISTENER_STATE_ACTIVE) &&
-            (context->dev_id & AUDIO_DEVICE_OUT_SPEAKER)) {
+            valid_dev_in_context(context)) {
             sum_energy_used = true;
             temp_vol = fmax(context->left_vol, context->right_vol);
             sum_energy += temp_vol * temp_vol;
@@ -437,8 +456,8 @@ static int vol_effect_command(effect_handle_t self,
 
         // After changing the state and if device is speaker
         // recalculate gain dep cal level
-        if (context->dev_id == AUDIO_DEVICE_OUT_SPEAKER) {
-                check_and_set_gain_dep_cal();
+        if (valid_dev_in_context(context)) {
+            check_and_set_gain_dep_cal();
         }
 
         break;
@@ -464,7 +483,7 @@ static int vol_effect_command(effect_handle_t self,
 
         // After changing the state and if device is speaker
         // recalculate gain dep cal level
-        if (context->dev_id == AUDIO_DEVICE_OUT_SPEAKER) {
+        if (valid_dev_in_context(context)) {
             check_and_set_gain_dep_cal();
         }
 
@@ -495,8 +514,8 @@ static int vol_effect_command(effect_handle_t self,
                __func__, context->dev_id, new_device);
 
         // check if old or new device is speaker
-        if ((context->dev_id ==  AUDIO_DEVICE_OUT_SPEAKER) ||
-            (new_device == AUDIO_DEVICE_OUT_SPEAKER)) {
+        if (valid_dev_in_context(context) ||
+            new_device == AUDIO_DEVICE_OUT_SPEAKER) {
             recompute_gain_dep_cal_Level = true;
         }
 
@@ -521,7 +540,7 @@ static int vol_effect_command(effect_handle_t self,
             goto exit;
         }
 
-        if (context->dev_id == AUDIO_DEVICE_OUT_SPEAKER) {
+        if (valid_dev_in_context(context)) {
             recompute_gain_dep_cal_Level = true;
         }
 
@@ -649,13 +668,8 @@ static void init_once()
         }
     }
 
-    // check system property to see if dumping is required
-    char check_dump_val[PROPERTY_VALUE_MAX];
-    property_get("audio.volume.listener.dump", check_dump_val, "0");
-    if (atoi(check_dump_val)) {
-        dumping_enabled = true;
-    }
-
+    dumping_enabled = property_get_bool("audio.volume.listener.dump", false);
+    headset_cal_enabled = property_get_bool("audio.volume.headset.gain.depcal", false);
     init_status = 0;
     list_init(&vol_effect_list);
     initialized = true;
@@ -763,7 +777,7 @@ static int vol_prc_lib_release(effect_handle_t handle)
             ALOGV("--- Found something to remove ---");
             list_remove(node);
             PRINT_STREAM_TYPE(context->stream_type);
-            if (context->dev_id == AUDIO_DEVICE_OUT_SPEAKER) {
+            if (valid_dev_in_context(context)) {
                 recompute_flag = true;
             }
             free(context);

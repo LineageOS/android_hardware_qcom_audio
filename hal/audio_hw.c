@@ -66,7 +66,12 @@
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 3
 /* ToDo: Check and update a proper value in msec */
 #define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 96
+/* treat as unsigned Q1.13 */
+#define APP_TYPE_GAIN_DEFAULT         0x2000
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
+
+/* treat as unsigned Q1.13 */
+#define VOIP_PLAYBACK_VOLUME_MAX 0x2000
 
 #define PROXY_OPEN_RETRY_COUNT           100
 #define PROXY_OPEN_WAIT_TIME             20
@@ -204,6 +209,14 @@ struct pcm_config pcm_config_mmap_capture = {
     .avail_min = MMAP_PERIOD_SIZE, //1 ms
 };
 
+struct pcm_config pcm_config_voip = {
+    .channels = 1,
+    .period_count = 2,
+    .format = PCM_FORMAT_S16_LE,
+    .stop_threshold = INT_MAX,
+    .avail_min = 0,
+};
+
 #define AFE_PROXY_CHANNEL_COUNT 2
 #define AFE_PROXY_SAMPLING_RATE 48000
 
@@ -270,6 +283,8 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_INCALL_REC_DOWNLINK] = "incall-rec-downlink",
     [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK] = "incall-rec-uplink-and-downlink",
 
+    [USECASE_AUDIO_PLAYBACK_VOIP] = "audio-playback-voip",
+    [USECASE_AUDIO_RECORD_VOIP] = "audio-record-voip",
 };
 
 
@@ -523,6 +538,11 @@ static int audio_ssr_status(struct audio_device *adev)
     ret = mixer_ctl_get_value(ctl, 0);
     ALOGD("%s: value: %d", __func__, ret);
     return ret;
+}
+
+static void stream_app_type_cfg_init(struct stream_app_type_cfg *cfg)
+{
+    cfg->gain[0] = cfg->gain[1] = APP_TYPE_GAIN_DEFAULT;
 }
 
 int enable_audio_route(struct audio_device *adev,
@@ -1440,7 +1460,6 @@ error_open:
 error_config:
     adev->active_input = NULL;
     ALOGW("%s: exit: status(%d)", __func__, ret);
-
     return ret;
 }
 
@@ -1849,7 +1868,9 @@ int start_output_stream(struct stream_out *out)
     register_out_stream(out);
     audio_extn_perf_lock_release();
     audio_extn_tfa_98xx_enable_speaker();
-
+    audio_extn_utils_send_app_type_gain(out->dev,
+                                        out->app_type_cfg.app_type,
+                                        &out->app_type_cfg.gain[0]);
     ALOGV("%s: exit", __func__);
     return 0;
 error_open:
@@ -1896,17 +1917,18 @@ static int check_input_parameters(uint32_t sample_rate,
     return 0;
 }
 
-static size_t get_input_buffer_size(uint32_t sample_rate,
-                                    audio_format_t format,
-                                    int channel_count,
-                                    bool is_low_latency)
+static size_t get_stream_buffer_size(size_t duration_ms,
+                                     uint32_t sample_rate,
+                                     audio_format_t format,
+                                     int channel_count,
+                                     bool is_low_latency)
 {
     size_t size = 0;
 
     if (check_input_parameters(sample_rate, format, channel_count) != 0)
         return 0;
 
-    size = (sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC) / 1000;
+    size = (sample_rate * duration_ms) / 1000;
     if (is_low_latency)
         size = configured_low_latency_capture_period_size;
 
@@ -2365,6 +2387,16 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
         volume[0] = (int)(left * COMPRESS_PLAYBACK_VOLUME_MAX);
         volume[1] = (int)(right * COMPRESS_PLAYBACK_VOLUME_MAX);
         mixer_ctl_set_array(ctl, volume, sizeof(volume)/sizeof(volume[0]));
+        return 0;
+    } else if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP) {
+        out->app_type_cfg.gain[0] = (int)(left * VOIP_PLAYBACK_VOLUME_MAX);
+        out->app_type_cfg.gain[1] = (int)(right * VOIP_PLAYBACK_VOLUME_MAX);
+        if (!out->standby) {
+            // if in standby, cached volume will be sent after stream is opened
+            audio_extn_utils_send_app_type_gain(out->dev,
+                                                out->app_type_cfg.app_type,
+                                                &out->app_type_cfg.gain[0]);
+        }
         return 0;
     }
 
@@ -2900,7 +2932,6 @@ static int in_set_sample_rate(struct audio_stream *stream __unused, uint32_t rat
 static size_t in_get_buffer_size(const struct audio_stream *stream)
 {
     struct stream_in *in = (struct stream_in *)stream;
-
     return in->config.period_size * in->af_period_multiplier *
         audio_stream_in_frame_size((const struct audio_stream_in *)stream);
 }
@@ -3572,6 +3603,27 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->usecase = USECASE_AUDIO_PLAYBACK_AFE_PROXY;
         out->config = pcm_config_afe_proxy_playback;
         adev->voice_tx_output = out;
+    } else if ((out->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
+               (out->flags == (AUDIO_OUTPUT_FLAG_DIRECT |
+                               AUDIO_OUTPUT_FLAG_VOIP_RX))) {
+        uint32_t buffer_size, frame_size;
+        out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_MONO;
+        out->channel_mask = AUDIO_CHANNEL_OUT_MONO;
+        out->usecase = USECASE_AUDIO_PLAYBACK_VOIP;
+        out->config = pcm_config_voip;
+        out->config.format = pcm_format_from_audio_format(config->format);
+        out->config.rate = config->sample_rate;
+        out->config.channels =
+                audio_channel_count_from_out_mask(config->channel_mask);
+        buffer_size = get_stream_buffer_size(VOIP_PLAYBACK_PERIOD_DURATION_MSEC,
+                                             config->sample_rate,
+                                             config->format,
+                                             out->config.channels,
+                                             false /*is_low_latency*/);
+        frame_size = audio_bytes_per_sample(config->format) * out->config.channels;
+        out->config.period_size = buffer_size / frame_size;
+        out->config.period_count = VOIP_PLAYBACK_PERIOD_COUNT;
+        out->af_period_multiplier = 1;
     } else {
         if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
             out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
@@ -3716,6 +3768,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->card_status = adev->card_status;
     pthread_mutex_unlock(&adev->lock);
     pthread_mutex_unlock(&out->lock);
+
+    stream_app_type_cfg_init(&out->app_type_cfg);
 
     *stream_out = &out->stream;
 
@@ -3983,8 +4037,10 @@ static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev __unu
 {
     int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
 
-    return get_input_buffer_size(config->sample_rate, config->format, channel_count,
-            false /* is_low_latency: since we don't know, be conservative */);
+    return get_stream_buffer_size(AUDIO_CAPTURE_PERIOD_DURATION_MSEC,
+                                 config->sample_rate, config->format,
+                                 channel_count,
+                                 false /* is_low_latency: since we don't know, be conservative */);
 }
 
 static bool adev_input_allow_hifi_record(struct audio_device *adev,
@@ -4161,10 +4217,11 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->usecase = USECASE_AUDIO_RECORD_HIFI;
         in->config = pcm_config_audio_capture;
         frame_size = audio_stream_in_frame_size(&in->stream);
-        buffer_size = get_input_buffer_size(config->sample_rate,
-                                            config->format,
-                                            channel_count,
-                                            false /*is_low_latency*/);
+        buffer_size = get_stream_buffer_size(AUDIO_CAPTURE_PERIOD_DURATION_MSEC,
+                                             config->sample_rate,
+                                             config->format,
+                                             channel_count,
+                                             false /*is_low_latency*/);
         in->config.period_size = buffer_size / frame_size;
         in->config.rate = config->sample_rate;
         in->af_period_multiplier = 1;
@@ -4181,10 +4238,11 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             if (!in->realtime) {
                 in->config = pcm_config_audio_capture;
                 frame_size = audio_stream_in_frame_size(&in->stream);
-                buffer_size = get_input_buffer_size(config->sample_rate,
-                                                    config->format,
-                                                    channel_count,
-                                                    is_low_latency);
+                buffer_size = get_stream_buffer_size(AUDIO_CAPTURE_PERIOD_DURATION_MSEC,
+                                                     config->sample_rate,
+                                                     config->format,
+                                                     channel_count,
+                                                     is_low_latency);
                 in->config.period_size = buffer_size / frame_size;
                 in->config.rate = config->sample_rate;
                 in->af_period_multiplier = 1;
@@ -4204,13 +4262,33 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             in->stream.get_mmap_position = in_get_mmap_position;
             in->af_period_multiplier = 1;
             ALOGV("%s: USECASE_AUDIO_RECORD_MMAP", __func__);
+        } else if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
+                   in->dev->mode == AUDIO_MODE_IN_COMMUNICATION &&
+                   in->flags & AUDIO_INPUT_FLAG_VOIP_TX &&
+                   (config->sample_rate == 8000 ||
+                    config->sample_rate == 16000 ||
+                    config->sample_rate == 32000 ||
+                    config->sample_rate == 48000) &&
+                   channel_count == 1) {
+            in->usecase = USECASE_AUDIO_RECORD_VOIP;
+            in->config = pcm_config_audio_capture;
+            frame_size = audio_stream_in_frame_size(&in->stream);
+            buffer_size = get_stream_buffer_size(VOIP_CAPTURE_PERIOD_DURATION_MSEC,
+                                                 config->sample_rate,
+                                                 config->format,
+                                                 channel_count, false /*is_low_latency*/);
+            in->config.period_size = buffer_size / frame_size;
+            in->config.period_count = VOIP_CAPTURE_PERIOD_COUNT;
+            in->config.rate = config->sample_rate;
+            in->af_period_multiplier = 1;
         } else {
             in->config = pcm_config_audio_capture;
             frame_size = audio_stream_in_frame_size(&in->stream);
-            buffer_size = get_input_buffer_size(config->sample_rate,
-                                                config->format,
-                                                channel_count,
-                                                is_low_latency);
+            buffer_size = get_stream_buffer_size(AUDIO_CAPTURE_PERIOD_DURATION_MSEC,
+                                                 config->sample_rate,
+                                                 config->format,
+                                                 channel_count,
+                                                 is_low_latency);
             in->config.period_size = buffer_size / frame_size;
             in->config.rate = config->sample_rate;
             in->af_period_multiplier = 1;
@@ -4220,6 +4298,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     }
 
     in->config.channels = channel_count;
+    in->sample_rate  = in->config.rate;
 
     /* This stream could be for sound trigger lab,
        get sound trigger pcm if present */
@@ -4231,6 +4310,8 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->card_status = adev->card_status;
     pthread_mutex_unlock(&adev->lock);
     pthread_mutex_unlock(&in->lock);
+
+    stream_app_type_cfg_init(&in->app_type_cfg);
 
     *stream_in = &in->stream;
     ALOGV("%s: exit", __func__);

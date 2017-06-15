@@ -132,6 +132,10 @@ enum {
     USECASE_AUDIO_RECORD_AFE_PROXY,
     USECASE_AUDIO_DSM_FEEDBACK,
 
+    /* VOIP usecase*/
+    USECASE_AUDIO_PLAYBACK_VOIP,
+    USECASE_AUDIO_RECORD_VOIP,
+
     AUDIO_USECASE_MAX
 };
 
@@ -170,8 +174,10 @@ struct offload_cmd {
 
 struct stream_app_type_cfg {
     int sample_rate;
-    uint32_t bit_width;
+    uint32_t bit_width; // unused
+    const char *mode;
     int app_type;
+    int gain[2];
 };
 
 struct stream_out {
@@ -198,7 +204,6 @@ struct stream_out {
     bool muted;
     uint64_t written; /* total frames written, not cleared when entering standby */
     audio_io_handle_t handle;
-    struct stream_app_type_cfg app_type_cfg;
 
     int non_blocking;
     int playback_started;
@@ -219,6 +224,8 @@ struct stream_out {
 
     error_log_t *error_log;
     power_log_t *power_log;
+
+    struct stream_app_type_cfg app_type_cfg;
 };
 
 struct stream_in {
@@ -232,6 +239,7 @@ struct stream_in {
     int pcm_device_id;
     audio_devices_t device;
     audio_channel_mask_t channel_mask;
+    unsigned int sample_rate;
     audio_usecase_t usecase;
     bool enable_aec;
     bool enable_ns;
