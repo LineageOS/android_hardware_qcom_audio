@@ -196,6 +196,10 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                         AFE_PROXY_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_DSM_FEEDBACK] = {QUAT_MI2S_PCM_DEVICE, QUAT_MI2S_PCM_DEVICE},
 
+    [USECASE_AUDIO_PLAYBACK_VOIP] = {AUDIO_PLAYBACK_VOIP_PCM_DEVICE,
+                                     AUDIO_PLAYBACK_VOIP_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD_VOIP] = {AUDIO_RECORD_VOIP_PCM_DEVICE,
+                                   AUDIO_RECORD_VOIP_PCM_DEVICE},
 };
 
 /* Array to store sound devices */
@@ -573,6 +577,8 @@ static const struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_AFE_PROXY)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_AFE_PROXY)},
     {TO_NAME_INDEX(USECASE_AUDIO_DSM_FEEDBACK)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_VOIP)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_VOIP)},
 };
 
 static const struct name_to_index usecase_type_index[USECASE_TYPE_MAX] = {
@@ -587,6 +593,7 @@ struct app_type_entry {
     int bit_width;
     int app_type;
     int max_rate;
+    char *mode;
     struct listnode node; // membership in app_type_entry_list;
 };
 
@@ -722,6 +729,8 @@ bool platform_send_gain_dep_cal(void *platform, int level)
     int mode = CAL_MODE_RTAC;
     struct listnode *node;
     struct audio_usecase *usecase;
+    bool valid_uc_type = false;
+    bool valid_dev = false;
 
     if (my_data->acdb_send_gain_dep_cal == NULL) {
         ALOGE("%s: dlsym error for acdb_send_gain_dep_cal", __func__);
@@ -736,19 +745,20 @@ bool platform_send_gain_dep_cal(void *platform, int level)
         // find the current active sound device
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-
-            if (usecase != NULL &&
-                usecase->type == PCM_PLAYBACK &&
-                (usecase->stream.out->devices == AUDIO_DEVICE_OUT_SPEAKER)) {
-
-                ALOGV("%s: out device is %d", __func__,  usecase->out_snd_device);
-                if (audio_extn_spkr_prot_is_enabled()) {
+            valid_uc_type =  usecase->type == PCM_PLAYBACK;
+            audio_devices_t dev = usecase->stream.out->devices;
+            valid_dev = (dev == AUDIO_DEVICE_OUT_SPEAKER ||
+                         dev == AUDIO_DEVICE_OUT_WIRED_HEADSET ||
+                         dev == AUDIO_DEVICE_OUT_WIRED_HEADPHONE);
+             if (usecase != NULL && valid_uc_type && valid_dev) {
+                 ALOGV("%s: out device is %d", __func__,  usecase->out_snd_device);
+                 if (audio_extn_spkr_prot_is_enabled()) {
                     acdb_dev_id = audio_extn_spkr_prot_get_acdb_id(usecase->out_snd_device);
-                } else {
-                    acdb_dev_id = acdb_device_table[usecase->out_snd_device];
-                }
+                 } else {
+                     acdb_dev_id = acdb_device_table[usecase->out_snd_device];
+                 }
 
-                if (!my_data->acdb_send_gain_dep_cal(acdb_dev_id, app_type,
+                 if (!my_data->acdb_send_gain_dep_cal(acdb_dev_id, app_type,
                                                      acdb_dev_type, mode, level)) {
                     // set ret_val true if at least one calibration is set successfully
                     ret_val = true;
@@ -1540,6 +1550,7 @@ void platform_deinit(void *platform)
         node = list_head(&app_type_entry_list);
         list_remove(node);
         ap = node_to_item(node, struct app_type_entry, node);
+        if (ap->mode) free(ap->mode);
         free(ap);
     }
 
@@ -3050,7 +3061,9 @@ int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t p
         ALOGE("%s: invalid usecase type", __func__);
         ret = -EINVAL;
     }
-    ALOGV("%s: pcm_device_table[%d][%d] = %d", __func__, usecase, type, pcm_id);
+    ALOGV("%s: pcm_device_table[%d %s][%d] = %d", __func__, usecase,
+          use_case_table[usecase],
+          type, pcm_id);
     pcm_device_table[usecase][type] = pcm_id;
 done:
     return ret;
@@ -3748,7 +3761,8 @@ static int init_be_dai_name_table(struct audio_device *adev)
         goto done;
     }
 
-    posix_memalign((void **)&be_dai_name_table, 32, size);
+    be_dai_name_table =
+            (const struct be_dai_name_struct *)calloc(1, size);
     if (be_dai_name_table == NULL) {
         ALOGE("%s: Failed to allocate memory for %s\n",
                __func__, mixer_ctl_name);
@@ -3821,7 +3835,7 @@ int platform_get_snd_device_backend_index(snd_device_t device)
 
     ALOGV("%s: enter with device %d\n", __func__, device);
 
-    if ((device <= SND_DEVICE_MIN) || (device >= SND_DEVICE_MAX)) {
+    if ((device < SND_DEVICE_MIN) || (device >= SND_DEVICE_MAX)) {
         ALOGE("%s: Invalid snd_device = %d",
               __func__, device);
         be_dai_id = -EINVAL;
@@ -3885,7 +3899,9 @@ void platform_check_and_update_copp_sample_rate(void* platform, snd_device_t snd
 }
 
 // called from info parser
-void platform_add_app_type(int bw, const char *uc_type,
+void platform_add_app_type(const char *uc_type,
+                           const char *mode,
+                           int bw,
                            int app_type, int max_rate) {
     struct app_type_entry *ap =
             (struct app_type_entry *)calloc(1, sizeof(struct app_type_entry));
@@ -3908,11 +3924,12 @@ void platform_add_app_type(int bw, const char *uc_type,
         return;
     }
 
-    ALOGI("%s bw %d uc %s app_type %d max_rate %d",
-          __func__, bw, uc_type, app_type, max_rate);
+    ALOGI("%s uc %s mode %s bw %d app_type %d max_rate %d",
+          __func__, uc_type, mode, bw, app_type, max_rate);
     ap->bit_width = bw;
     ap->app_type = app_type;
     ap->max_rate = max_rate;
+    ap->mode = strdup(mode);
     list_add_tail(&app_type_entry_list, &ap->node);
 }
 
@@ -3928,23 +3945,35 @@ int platform_get_default_app_type_v2(void *platform __unused,
     return 0;
 }
 
-int platform_get_app_type_v2(void *platform, usecase_type_t uc_type,
+int platform_get_app_type_v2(void *platform,
+                             usecase_type_t uc_type,
+                             const char *mode,
                              int bw, int sr __unused,
                              int *app_type)
 {
     struct listnode *node;
     struct app_type_entry *entry;
     *app_type = -1;
+
+    ALOGV("%s find match for uc %d mode %s bw %d rate %d",
+          __func__, uc_type, mode, bw, sr);
     list_for_each(node, &app_type_entry_list) {
         entry = node_to_item(node, struct app_type_entry, node);
+        ALOGV("%s uc %d mode %s bw %d app_type %d max_rate %d",
+              __func__, entry->uc_type, entry->mode, entry->bit_width,
+              entry->app_type, entry->max_rate);
         if (entry->bit_width == bw &&
-            entry->uc_type == uc_type) {
+            entry->uc_type == uc_type &&
+            sr <= entry->max_rate &&
+            entry->mode && !strcmp(mode, entry->mode)) {
+            ALOGV("%s found match %d", __func__, entry->app_type);
             *app_type = entry->app_type;
             break;
         }
     }
 
     if (*app_type == -1) {
+        ALOGV("%s no match found, return default", __func__);
         return platform_get_default_app_type_v2(platform, uc_type, app_type);
     }
     return 0;

@@ -320,22 +320,28 @@ static void process_app_type(const XML_Char **attr)
         goto done;
     }
 
-    if (strcmp(attr[2], "bit_width")) {
+    if (strcmp(attr[2], "mode")) {
+        ALOGE("%s: mode not found", __func__);
+        goto done;
+    }
+
+    if (strcmp(attr[4], "bit_width")) {
         ALOGE("%s: bit_width not found", __func__);
         goto done;
     }
 
-    if (strcmp(attr[4], "id")) {
+    if (strcmp(attr[6], "id")) {
         ALOGE("%s: id not found", __func__);
         goto done;
     }
 
-    if (strcmp(attr[6], "max_rate")) {
+    if (strcmp(attr[8], "max_rate")) {
         ALOGE("%s: max rate not found", __func__);
         goto done;
     }
 
-    platform_add_app_type(atoi(attr[3]), attr[1], atoi(attr[5]), atoi(attr[7]));
+    platform_add_app_type(attr[1], attr[3], atoi(attr[5]), atoi(attr[7]),
+                          atoi(attr[9]));
 done:
     return;
 }
