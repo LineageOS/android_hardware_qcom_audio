@@ -1153,11 +1153,19 @@ int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *use
 
 bool platform_supports_app_type_cfg() { return false; }
 
-void platform_add_app_type(int bw, const char *uc_type,
-                           int app_type, int max_sr) {}
+void platform_add_app_type(const char *uc_type __unused,
+                           const char *mode __unused,
+                           int bw __unused, int app_type __unused,
+                           int max_sr __unused) {}
 
+int platform_get_app_type_v2(void *platform __unused,
+                             enum usecase_type_t type __unused,
+                             const char *mode __unused,
+                             int bw __unused, int sr __unused,
+                             int *app_type __unused) {
+    return -ENOSYS;
+}
 
-int platform_get_app_type_v2(void *platform, enum usecase_type_t type,
-                             int bw, int sr, int *app_type) {
+int platform_get_snd_device_backend_index(snd_device_t snd_device) {
     return -ENOSYS;
 }
