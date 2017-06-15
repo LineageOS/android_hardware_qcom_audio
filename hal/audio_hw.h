@@ -177,6 +177,7 @@ struct stream_app_type_cfg {
     uint32_t bit_width; // unused
     const char *mode;
     int app_type;
+    int gain[2];
 };
 
 struct stream_out {
