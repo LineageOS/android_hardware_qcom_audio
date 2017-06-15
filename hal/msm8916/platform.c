@@ -2322,12 +2322,16 @@ int platform_get_snd_device_backend_index(snd_device_t snd_device __unused)
 
 bool platform_supports_app_type_cfg() { return false; }
 
-void platform_add_app_type(int bw __unused, const char *uc_type __unused,
-                           int app_type __unused, int max_sr __unused) {}
+void platform_add_app_type(const char *uc_type __unused,
+                           const char *mode __unused,
+                           int bw __unused, int app_type __unused,
+                           int max_sr __unused) {}
 
 int platform_get_app_type_v2(void *platform __unused,
                              enum usecase_type_t type __unused,
+                             const char *mode __unused,
                              int bw __unused, int sr __unused,
                              int *app_type __unused) {
     return -ENOSYS;
 }
+
