@@ -27,8 +27,7 @@ libOmxQcelp13Enc-inc       += $(TARGET_OUT_HEADERS)/mm-core/omxcore
 
 LOCAL_MODULE             := libOmxQcelp13Enc
 LOCAL_MODULE_TAGS        := optional
-LOCAL_MODULE_OWNER       := qti
-LOCAL_PROPRIETARY_MODULE := true
+LOCAL_VENDOR_MODULE      := true
 LOCAL_CFLAGS            := $(libOmxQcelp13Enc-def)
 LOCAL_C_INCLUDES        := $(libOmxQcelp13Enc-inc)
 LOCAL_PRELINK_MODULE    := false
