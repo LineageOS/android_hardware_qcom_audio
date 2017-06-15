@@ -218,7 +218,7 @@ static int derive_capture_app_type_cfg(struct audio_device *adev,
     struct stream_app_type_cfg *app_type_cfg = &in->app_type_cfg;
 
     *sample_rate = DEFAULT_INPUT_SAMPLING_RATE;
-    if (in->device & AUDIO_DEVICE_IN_USB_DEVICE) {
+    if (audio_is_usb_in_device(in->device)) {
         platform_check_and_update_copp_sample_rate(adev->platform,
                                                    usecase->in_snd_device,
                                                    in->sample_rate,
@@ -271,7 +271,7 @@ static int derive_playback_app_type_cfg(struct audio_device *adev,
 
     // add speaker prot changes if needed
     // and use that to check for device
-    if (out->devices & AUDIO_DEVICE_OUT_USB_DEVICE) {
+    if (audio_is_usb_out_device(out->devices)) {
         platform_check_and_update_copp_sample_rate(adev->platform,
                                                    usecase->out_snd_device,
                                                    out->sample_rate,
@@ -383,6 +383,28 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
                                    usecase->type == PCM_PLAYBACK ? usecase->out_snd_device :
                                                                    usecase->in_snd_device);
     return 0;
+}
+
+int audio_extn_utils_send_app_type_gain(struct audio_device *adev,
+                                        int app_type,
+                                        int *gain)
+{
+    int gain_cfg[4];
+    const char *mixer_ctl_name = "App Type Gain";
+    struct mixer_ctl *ctl;
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get volume ctl mixer %s", __func__,
+              mixer_ctl_name);
+        return -EINVAL;
+    }
+    gain_cfg[0] = 0;
+    gain_cfg[1] = app_type;
+    gain_cfg[2] = gain[0];
+    gain_cfg[3] = gain[1];
+    ALOGV("%s app_type %d l(%d) r(%d)", __func__,  app_type, gain[0], gain[1]);
+    return mixer_ctl_set_array(ctl, gain_cfg,
+                               sizeof(gain_cfg)/sizeof(gain_cfg[0]));
 }
 
 // this assumes correct app_type and sample_rate fields

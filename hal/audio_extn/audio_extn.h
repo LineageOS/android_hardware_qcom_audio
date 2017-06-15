@@ -145,6 +145,9 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
                                        struct audio_usecase *usecase);
 void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
                                              struct audio_usecase *usecase);
+int audio_extn_utils_send_app_type_gain(struct audio_device *adev,
+                                        int app_type,
+                                        int *gain);
 #ifndef HWDEP_CAL_ENABLED
 #define  audio_extn_hwdep_cal_send(snd_card, acdb_handle) (0)
 #else
