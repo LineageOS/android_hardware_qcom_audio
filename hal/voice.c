@@ -68,7 +68,13 @@ static bool voice_is_sidetone_device(snd_device_t out_device,
     case SND_DEVICE_OUT_VOICE_HEADPHONES:
         strlcpy(mixer_path, "sidetone-headphones", MIXER_PATH_MAX_LENGTH);
         break;
+    case SND_DEVICE_OUT_VOICE_USB_HEADSET:
+    case SND_DEVICE_OUT_USB_HEADSET:
+        // USB does not use a QC mixer.
+        mixer_path[0] = '\0';
+        break;
     default:
+        ALOGW("%s: %d is not a sidetone device", __func__, out_device);
         is_sidetone_dev = false;
         break;
     }
@@ -86,21 +92,8 @@ void voice_set_sidetone(struct audio_device *adev,
           __func__, (enable ? "enable" : "disable"),
           out_snd_device);
 
-    is_sidetone_dev = voice_is_sidetone_device(out_snd_device, mixer_path);
-
-    if (!is_sidetone_dev) {
-        ALOGD("%s: device %d does not support sidetone\n",
-              __func__, out_snd_device);
-        return;
-    }
-
-    ALOGD("%s: sidetone out device = %s\n",
-          __func__, mixer_path);
-
-    if (enable)
-        audio_route_apply_and_update_path(adev->audio_route, mixer_path);
-    else
-        audio_route_reset_and_update_path(adev->audio_route, mixer_path);
+    if (voice_is_sidetone_device(out_snd_device, mixer_path))
+        platform_set_sidetone(adev, out_snd_device, enable, mixer_path);
 
     return;
 }

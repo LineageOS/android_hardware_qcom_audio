@@ -142,4 +142,7 @@ void platform_add_app_type(const char *uc_type,
                            const char *mode,
                            int bw, int app_type, int max_sr);
 int platform_get_snd_device_backend_index(snd_device_t snd_device);
+int platform_set_sidetone(struct audio_device *adev,
+                          snd_device_t out_snd_device,
+                          bool enable, char * str);
 #endif // AUDIO_PLATFORM_API_H
