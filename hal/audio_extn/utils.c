@@ -214,6 +214,9 @@ static int derive_capture_app_type_cfg(struct audio_device *adev,
                                        int *app_type,
                                        int *sample_rate)
 {
+    if (usecase->stream.in == NULL) {
+        return -1;
+    }
     struct stream_in *in = usecase->stream.in;
     struct stream_app_type_cfg *app_type_cfg = &in->app_type_cfg;
 
@@ -264,6 +267,9 @@ static int derive_playback_app_type_cfg(struct audio_device *adev,
                                         int *app_type,
                                         int *sample_rate)
 {
+    if (usecase->stream.out == NULL) {
+        return -1;
+    }
     struct stream_out *out = usecase->stream.out;
     struct stream_app_type_cfg *app_type_cfg = &out->app_type_cfg;
 
