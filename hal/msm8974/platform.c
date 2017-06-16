@@ -1240,6 +1240,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_OUT_AFE_PROXY] = strdup("afe-proxy");
     backend_tag_table[SND_DEVICE_OUT_USB_HEADSET] = strdup("usb-headset");
     backend_tag_table[SND_DEVICE_OUT_USB_HEADPHONES] = strdup("usb-headphones");
+    backend_tag_table[SND_DEVICE_OUT_VOICE_TTY_FULL_USB] = strdup("usb-headset");
+    backend_tag_table[SND_DEVICE_OUT_VOICE_TTY_VCO_USB] = strdup("usb-headphones");
     backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] =
         strdup("speaker-and-usb-headphones");
     backend_tag_table[SND_DEVICE_IN_USB_HEADSET_MIC] = strdup("usb-headset-mic");
@@ -1290,6 +1292,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = strdup("SLIMBUS_6_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = strdup("SLIMBUS_6_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = strdup("SLIMBUS_0_RX");
+    hw_interface_table[SND_DEVICE_OUT_VOICE_TTY_FULL_USB] = strdup("USB_AUDIO_RX");
+    hw_interface_table[SND_DEVICE_OUT_VOICE_TTY_VCO_USB] = strdup("USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TX] = strdup("RT_PROXY_DAI_001_RX");
     hw_interface_table[SND_DEVICE_OUT_AFE_PROXY] = strdup("RT_PROXY_DAI_001_RX");
     hw_interface_table[SND_DEVICE_OUT_USB_HEADSET] = strdup("USB_AUDIO_RX");
@@ -1345,6 +1349,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_VOICE_TTY_FULL_USB_MIC] = strdup("USB_AUDIO_TX");
+    hw_interface_table[SND_DEVICE_IN_VOICE_TTY_HCO_USB_MIC] = strdup("USB_AUDIO_TX");
     hw_interface_table[SND_DEVICE_IN_VOICE_REC_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_VOICE_REC_MIC_NS] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_VOICE_REC_DMIC_STEREO] = strdup("SLIMBUS_0_TX");
