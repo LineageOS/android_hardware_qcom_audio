@@ -49,7 +49,6 @@
 #include <audio_effects/effect_aec.h>
 #include <audio_effects/effect_ns.h>
 #include <audio_utils/clock.h>
-#include <audio_utils/power.h>
 #include "audio_hw.h"
 #include "audio_extn.h"
 #include "platform_api.h"
@@ -98,6 +97,7 @@ static unsigned int configured_low_latency_capture_period_size =
 #define MMAP_PERIOD_COUNT_MAX 512
 #define MMAP_PERIOD_COUNT_DEFAULT (MMAP_PERIOD_COUNT_MAX)
 
+static const int64_t NANOS_PER_SECOND = 1000000000;
 
 /* This constant enables extended precision handling.
  * TODO The flag is off until more testing is done.
@@ -309,14 +309,6 @@ static pthread_mutex_t adev_init_lock = PTHREAD_MUTEX_INITIALIZER;
 static unsigned int audio_device_ref_count;
 //cache last MBDRC cal step level
 static int last_known_cal_step = -1 ;
-
-// TODO: Consider moving this to a pthread_once() if we have more
-// static initialization required.
-static bool is_userdebug_or_eng_build() {
-    char value[PROPERTY_VALUE_MAX];
-    (void)property_get("ro.build.type", value, "unknown"); // ignore actual length
-    return strcmp(value, "userdebug") == 0 || strcmp(value, "eng") == 0;
-}
 
 static bool may_use_noirq_mode(struct audio_device *adev, audio_usecase_t uc_id,
                                int flags __unused)
@@ -2070,9 +2062,7 @@ static int out_dump(const struct audio_stream *stream, int fd)
     // dump error info
     (void)error_log_dump(
             out->error_log, fd, "      " /* prefix */, 0 /* lines */, 0 /* limit_ns */);
-    // dump power info (out->power_log may be null)
-    (void)power_log_dump(
-            out->power_log, fd, "      " /* prefix */, POWER_LOG_LINES, 0 /* limit_ns */);
+
     return 0;
 }
 
@@ -2468,7 +2458,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
     lock_output_stream(out);
     // this is always nonzero
-    const int frame_size = audio_stream_out_frame_size(stream);
+    const size_t frame_size = audio_stream_out_frame_size(stream);
+    const size_t frames = bytes / frame_size;
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
         error_code = ERROR_CODE_WRITE;
@@ -2559,22 +2550,16 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 exit:
     // For PCM we always consume the buffer and return #bytes regardless of ret.
     if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
-        out->written += bytes / (out->config.channels * sizeof(short));
+        out->written += frames;
     }
     long long sleeptime_us = 0;
 
-    // only get time if needed for logging, as it is a system call on 32 bit devices.
-    // TODO: Consider always enabling for 64 bit vDSO using compile time check on __LP64__.
-    const int64_t now_ns = out->power_log != 0 || (ret != 0 && out->error_log != 0)
-            ? audio_utils_get_real_time_ns() : 0;
-
     if (ret != 0) {
-        error_log_log(out->error_log, error_code, now_ns);
+        error_log_log(out->error_log, error_code, audio_utils_get_real_time_ns());
         if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
             ALOGE_IF(out->pcm != NULL,
                     "%s: error %zd - %s", __func__, ret, pcm_get_error(out->pcm));
-            sleeptime_us = bytes * 1000000LL / frame_size /
-                out_get_sample_rate(&out->stream.common);
+            sleeptime_us = frames * 1000000LL / out_get_sample_rate(&out->stream.common);
             // usleep not guaranteed for values over 1 second but we don't limit here.
         }
     }
@@ -2585,9 +2570,6 @@ exit:
         out_on_error(&out->stream.common);
         if (sleeptime_us != 0)
             usleep(sleeptime_us);
-    } else {
-        // only log if the data is properly written (out->power_log may be null)
-        power_log_log(out->power_log, buffer, bytes / frame_size, now_ns);
     }
     return bytes;
 }
@@ -2997,8 +2979,25 @@ static int in_standby(struct audio_stream *stream)
     return status;
 }
 
-static int in_dump(const struct audio_stream *stream __unused, int fd __unused)
+static int in_dump(const struct audio_stream *stream, int fd)
 {
+    struct stream_in *in = (struct stream_in *)stream;
+
+    // We try to get the lock for consistency,
+    // but it isn't necessary for these variables.
+    // If we're not in standby, we may be blocked on a read.
+    const bool locked = (pthread_mutex_trylock(&in->lock) == 0);
+    dprintf(fd, "      Standby: %s\n", in->standby ? "yes" : "no");
+    dprintf(fd, "      Frames read: %lld\n", (long long)in->frames_read);
+    dprintf(fd, "      Frames muted: %lld\n", (long long)in->frames_muted);
+
+    if (locked) {
+        pthread_mutex_unlock(&in->lock);
+    }
+
+    // dump error info
+    (void)error_log_dump(
+            in->error_log, fd, "      " /* prefix */, 0 /* lines */, 0 /* limit_ns */);
     return 0;
 }
 
@@ -3131,8 +3130,11 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     struct audio_device *adev = in->dev;
     int i, ret = -1;
     int *int_buf_stream = NULL;
+    int error_code = ERROR_CODE_STANDBY; // initial errors are considered coming out of standby.
 
     lock_input_stream(in);
+    const size_t frame_size = audio_stream_in_frame_size(stream);
+    const size_t frames = bytes / frame_size;
 
     if (in->is_st_session) {
         ALOGVV(" %s: reading on st session bytes=%zu", __func__, bytes);
@@ -3156,6 +3158,9 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         }
         in->standby = 0;
     }
+
+    // errors that occur here are read errors.
+    error_code = ERROR_CODE_READ;
 
     //what's the duration requested by the client?
     long ns = pcm_bytes_to_frames(in->pcm, bytes)*1000000000LL/
@@ -3195,21 +3200,24 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
      * to always provide zeroes when muted.
      * No need to acquire adev->lock to read mic_muted here as we don't change its state.
      */
-    if (ret == 0 && adev->mic_muted && in->usecase != USECASE_AUDIO_RECORD_AFE_PROXY)
+    if (ret == 0 && adev->mic_muted && in->usecase != USECASE_AUDIO_RECORD_AFE_PROXY) {
         memset(buffer, 0, bytes);
+        in->frames_muted += frames;
+    }
 
 exit:
     pthread_mutex_unlock(&in->lock);
 
     if (ret != 0) {
+        error_log_log(in->error_log, error_code, audio_utils_get_real_time_ns());
         in_standby(&in->stream.common);
         ALOGV("%s: read failed - sleeping for buffer duration", __func__);
-        usleep(bytes * 1000000 / audio_stream_in_frame_size(stream) /
-               in_get_sample_rate(&in->stream.common));
+        usleep(frames * 1000000LL / in_get_sample_rate(&in->stream.common));
         memset(buffer, 0, bytes); // clear return data
+        in->frames_muted += frames;
     }
     if (bytes > 0) {
-        in->frames_read += bytes / audio_stream_in_frame_size(stream);
+        in->frames_read += frames;
     }
     return bytes;
 }
@@ -3743,20 +3751,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             ERROR_LOG_ENTRIES,
             1000000000 /* aggregate consecutive identical errors within one second in ns */);
 
-    // power_log may be null if the format is not supported
-    // or not a userdebug or eng build.
-    if (is_userdebug_or_eng_build()) {
-        const size_t POWER_LOG_FRAMES_PER_ENTRY =
-                (long long)config->sample_rate * POWER_LOG_SAMPLING_INTERVAL_MS / 1000;
-
-        out->power_log = power_log_create(
-                config->sample_rate,
-                audio_channel_count_from_out_mask(config->channel_mask),
-                config->format,
-                POWER_LOG_ENTRIES,
-                POWER_LOG_FRAMES_PER_ENTRY);
-    }
-
     /*
        By locking output stream before registering, we allow the callback
        to update stream's state only after stream's initial state is set to
@@ -3804,9 +3798,6 @@ static void adev_close_output_stream(struct audio_hw_device *dev __unused,
 
     if (adev->voice_tx_output == out)
         adev->voice_tx_output = NULL;
-
-    power_log_destroy(out->power_log);
-    out->power_log = NULL;
 
     error_log_destroy(out->error_log);
     out->error_log = NULL;
@@ -4300,6 +4291,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->config.channels = channel_count;
     in->sample_rate  = in->config.rate;
 
+    in->error_log = error_log_create(
+            ERROR_LOG_ENTRIES,
+            NANOS_PER_SECOND /* aggregate consecutive identical errors within one second */);
+
     /* This stream could be for sound trigger lab,
        get sound trigger pcm if present */
     audio_extn_sound_trigger_check_and_get_session(in);
@@ -4326,12 +4321,17 @@ err_open:
 static void adev_close_input_stream(struct audio_hw_device *dev __unused,
                                     struct audio_stream_in *stream)
 {
+    struct stream_in *in = (struct stream_in *)stream;
     ALOGV("%s", __func__);
 
     // must deregister from sndmonitor first to prevent races
     // between the callback and close_stream
     audio_extn_snd_mon_unregister_listener(stream);
     in_standby(&stream->common);
+
+    error_log_destroy(in->error_log);
+    in->error_log = NULL;
+
     free(stream);
 
     return;
