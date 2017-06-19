@@ -450,6 +450,17 @@ static void update_hardware_info_8226(struct hardware_info *hw_info, const char 
     }
 }
 
+static void update_hardware_info_bear(struct hardware_info *hw_info, const char *snd_card_name)
+{
+    if (!strcmp(snd_card_name, "sdm660-snd-card")) {
+        strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "sdm660-tavil-snd-card")) {
+        strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
+    } else {
+        ALOGW("%s: Not an SDM device", __func__);
+    }
+}
+
 void *hw_info_init(const char *snd_card_name)
 {
     struct hardware_info *hw_info;
@@ -492,6 +503,9 @@ void *hw_info_init(const char *snd_card_name)
     } else if(strstr(snd_card_name, "sdm845")) {
         ALOGV("SDM845 - variant soundcard");
         update_hardware_info_sdm845(hw_info, snd_card_name);
+    } else if (strstr(snd_card_name, "sdm660")) {
+        ALOGV("Bear - variant soundcard");
+        update_hardware_info_bear(hw_info, snd_card_name);
     } else {
         ALOGE("%s: Unsupported target %s:",__func__, snd_card_name);
         free(hw_info);
