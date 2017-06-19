@@ -1523,7 +1523,9 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         } else if (voice_extn_compress_voip_is_active(adev)) {
             bool out_snd_device_backend_match = true;
             voip_usecase = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
-            if (usecase->stream.out != NULL) {
+            if ((voip_usecase != NULL) &&
+                (usecase->type == PCM_PLAYBACK) &&
+                (usecase->stream.out != NULL)) {
                 out_snd_device_backend_match = platform_check_backends_match(
                                                    voip_usecase->out_snd_device,
                                                    platform_get_output_snd_device(
@@ -3247,7 +3249,26 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                                  out->config.channels *
                                  format_to_bitwidth_table[out->hal_op_format]));
             } else {
-                ret = pcm_write(out->pcm, (void *)buffer, bytes);
+                /*
+                 * To avoid underrun in DSP when the application is not pumping
+                 * data at required rate, check for the no. of bytes and ignore
+                 * pcm_write if it is less than actual buffer size.
+                 * It is a work around to a change in compress VOIP driver.
+                 */
+                if ((out->flags & AUDIO_OUTPUT_FLAG_VOIP_RX) &&
+                    bytes < (out->config.period_size * out->config.channels *
+                    audio_bytes_per_sample(out->format))) {
+                    size_t voip_buf_size =
+                        out->config.period_size * out->config.channels *
+                        audio_bytes_per_sample(out->format);
+                    ALOGE("%s:VOIP underrun: bytes received %zu, required:%zu\n",
+                            __func__, bytes, voip_buf_size);
+                    usleep(((uint64_t)voip_buf_size - bytes) *
+                           1000000 / audio_stream_out_frame_size(stream) /
+                           out_get_sample_rate(&out->stream.common));
+                    ret = 0;
+                } else
+                    ret = pcm_write(out->pcm, (void *)buffer, bytes);
             }
 
             release_out_focus(out);
