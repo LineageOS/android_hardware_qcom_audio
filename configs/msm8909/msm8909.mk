@@ -53,19 +53,19 @@ PRODUCT_COPY_FILES += \
 endif
 PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msm8909/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
-    hardware/qcom/audio/configs/msm8909/mixer_paths_qrd_skuh.xml:system/etc/mixer_paths_qrd_skuh.xml \
-    hardware/qcom/audio/configs/msm8909/mixer_paths_qrd_skui.xml:system/etc/mixer_paths_qrd_skui.xml \
-    hardware/qcom/audio/configs/msm8909/mixer_paths.xml:system/etc/mixer_paths.xml \
-    hardware/qcom/audio/configs/msm8909/mixer_paths_msm8909_pm8916.xml:system/etc/mixer_paths_msm8909_pm8916.xml \
-    hardware/qcom/audio/configs/msm8909/mixer_paths_wcd9326_i2s.xml:system/etc/mixer_paths_wcd9326_i2s.xml \
-    hardware/qcom/audio/configs/msm8909/mixer_paths_skua.xml:system/etc/mixer_paths_skua.xml \
-    hardware/qcom/audio/configs/msm8909/mixer_paths_skuc.xml:system/etc/mixer_paths_skuc.xml \
-    hardware/qcom/audio/configs/msm8909/mixer_paths_skue.xml:system/etc/mixer_paths_skue.xml \
-    hardware/qcom/audio/configs/msm8909/mixer_paths_qrd_skut.xml:system/etc/mixer_paths_qrd_skut.xml \
-    hardware/qcom/audio/configs/msm8909/sound_trigger_mixer_paths.xml:system/etc/sound_trigger_mixer_paths.xml \
-    hardware/qcom/audio/configs/msm8909/sound_trigger_mixer_paths_wcd9326.xml:system/etc/sound_trigger_mixer_paths_wcd9326.xml \
-    hardware/qcom/audio/configs/msm8909/sound_trigger_platform_info.xml:system/etc/sound_trigger_platform_info.xml \
-    hardware/qcom/audio/configs/msm8909/audio_platform_info.xml:system/etc/audio_platform_info.xml
+    hardware/qcom/audio/configs/msm8909/mixer_paths_qrd_skuh.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd_skuh.xml \
+    hardware/qcom/audio/configs/msm8909/mixer_paths_qrd_skui.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd_skui.xml \
+    hardware/qcom/audio/configs/msm8909/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
+    hardware/qcom/audio/configs/msm8909/mixer_paths_msm8909_pm8916.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_msm8909_pm8916.xml \
+    hardware/qcom/audio/configs/msm8909/mixer_paths_wcd9326_i2s.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wcd9326_i2s.xml \
+    hardware/qcom/audio/configs/msm8909/mixer_paths_skua.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_skua.xml \
+    hardware/qcom/audio/configs/msm8909/mixer_paths_skuc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_skuc.xml \
+    hardware/qcom/audio/configs/msm8909/mixer_paths_skue.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_skue.xml \
+    hardware/qcom/audio/configs/msm8909/mixer_paths_qrd_skut.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd_skut.xml \
+    hardware/qcom/audio/configs/msm8909/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
+    hardware/qcom/audio/configs/msm8909/sound_trigger_mixer_paths_wcd9326.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9326.xml \
+    hardware/qcom/audio/configs/msm8909/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
+    hardware/qcom/audio/configs/msm8909/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
