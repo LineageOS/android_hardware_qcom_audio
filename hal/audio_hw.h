@@ -258,6 +258,7 @@ struct stream_out {
     struct listnode qaf_offload_cmd_list;
     uint32_t platform_latency;
     audio_offload_info_t info;
+    int started;
 };
 
 struct stream_in {
@@ -429,6 +430,7 @@ struct audio_device {
     bool asrc_mode_enabled;
     qahwi_device_t qahwi_dev;
     bool vr_audio_mode_enabled;
+    bool bt_sco_on;
 };
 
 int select_devices(struct audio_device *adev,
