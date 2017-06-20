@@ -865,9 +865,10 @@ void *start_stream_playback (void* stream_data)
         fprintf(log_file, "stream %d: writing to hal %zd bytes, offset %d, write length %zd\n",
                 params->stream_index, bytes_remaining, offset, write_length);
         bytes_written = write_to_hal(params->out_handle, data_ptr+offset, bytes_remaining, params);
-        if (bytes_written == -1) {
-            fprintf(stderr, "proxy_write failed in usb hal");
-            break;
+        if (bytes_written < 0) {
+            fprintf(stderr, "write failed %d", bytes_written);
+            exit = true;
+            continue;
         }
         bytes_remaining -= bytes_written;
 
@@ -926,12 +927,9 @@ void *start_stream_playback (void* stream_data)
         pthread_join(drift_query_thread, NULL);
     }
     if ((params->flags & AUDIO_OUTPUT_FLAG_MAIN) && is_assoc_active()) {
-        fprintf(log_file, "Closing Associated as Main Stream reached EOF %d \n", params->stream_index, rc);
-        rc = qahw_close_output_stream(stream_param[get_assoc_index()].out_handle);
-        if (rc) {
-            fprintf(log_file, "stream %d: could not close output stream, error - %d \n", params->stream_index, rc);
-            fprintf(stderr, "stream %d: could not close output stream, error - %d \n", params->stream_index, rc);
-        }
+        fprintf(log_file, "Closing Associated as Main Stream reached EOF %d \n",
+                params->stream_index, rc);
+        stop_playback = true;
     }
     rc = qahw_out_standby(params->out_handle);
     if (rc) {
