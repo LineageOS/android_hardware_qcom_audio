@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -30,6 +30,12 @@
 #include "platform_api.h"
 #include <stdlib.h>
 #include <cutils/str_parms.h>
+
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_FM
+#include <log_utils.h>
+#endif
 
 #ifdef FM_POWER_OPT
 #define AUDIO_PARAMETER_KEY_HANDLE_FM "handle_fm"

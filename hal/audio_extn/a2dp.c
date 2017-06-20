@@ -41,6 +41,12 @@
 #include <hardware/hardware.h>
 #include <cutils/properties.h>
 
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_A2DP
+#include <log_utils.h>
+#endif
+
 #ifdef SPLIT_A2DP_ENABLED
 #define AUDIO_PARAMETER_A2DP_STARTED "A2dpStarted"
 #define BT_IPC_LIB_NAME  "libbthost_if.so"
@@ -68,7 +74,6 @@
 #define MIXER_ENC_FMT_APTX         "APTX"
 #define MIXER_ENC_FMT_APTXHD       "APTXHD"
 #define MIXER_ENC_FMT_NONE         "NONE"
-
 
 typedef int (*audio_stream_open_t)(void);
 typedef int (*audio_stream_close_t)(void);
@@ -171,6 +176,46 @@ struct custom_enc_cfg_aptx_t
     uint8_t       channel_mapping[8];
     uint32_t      custom_size;
 };
+
+/* TODO: Define the following structures only for O using PLATFORM_VERSION */
+/* Information about BT SBC encoder configuration
+ * This data is used between audio HAL module and
+ * BT IPC library to configure DSP encoder
+ */
+typedef struct {
+    uint32_t subband;    /* 4, 8 */
+    uint32_t blk_len;    /* 4, 8, 12, 16 */
+    uint16_t sampling_rate; /*44.1khz,48khz*/
+    uint8_t  channels;      /*0(Mono),1(Dual_mono),2(Stereo),3(JS)*/
+    uint8_t  alloc;         /*0(Loudness),1(SNR)*/
+    uint8_t  min_bitpool;   /* 2 */
+    uint8_t  max_bitpool;   /*53(44.1khz),51 (48khz) */
+    uint32_t bitrate;      /* 320kbps to 512kbps */
+} audio_sbc_encoder_config;
+
+
+/* Information about BT APTX encoder configuration
+ * This data is used between audio HAL module and
+ * BT IPC library to configure DSP encoder
+ */
+typedef struct {
+    uint16_t sampling_rate;
+    uint8_t  channels;
+    uint32_t bitrate;
+} audio_aptx_encoder_config;
+
+
+/* Information about BT AAC encoder configuration
+ * This data is used between audio HAL module and
+ * BT IPC library to configure DSP encoder
+ */
+typedef struct {
+    uint32_t enc_mode; /* LC, SBR, PS */
+    uint16_t format_flag; /* RAW, ADTS */
+    uint16_t channels; /* 1-Mono, 2-Stereo */
+    uint32_t sampling_rate;
+    uint32_t bitrate;
+} audio_aac_encoder_config;
 
 /*********** END of DSP configurable structures ********************/
 

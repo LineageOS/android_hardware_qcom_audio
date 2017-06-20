@@ -2234,6 +2234,31 @@
         <path name="unprocessed-handset-mic" />
     </path>
 
+    <!-- USB TTY start -->
+
+    <!-- full: both end tty -->
+    <path name="voice-tty-full-usb">
+        <ctl name="TTY Mode" value="FULL" />
+        <path name="usb-headphones" />
+    </path>
+
+    <path name="voice-tty-full-usb-mic">
+        <path name="usb-headset-mic" />
+    </path>
+
+    <!-- vco, in: handset mic use existing, out: tty -->
+    <path name="voice-tty-vco-usb">
+        <ctl name="TTY Mode" value="VCO" />
+        <path name="usb-headphones" />
+    </path>
+
+    <!-- hco, in: tty, out: speaker, use existing handset -->
+    <path name="voice-tty-hco-usb-mic">
+        <path name="voice-tty-full-usb-mic" />
+    </path>
+
+    <!-- USB TTY end   -->
+
     <!-- Added for ADSP testfwk -->
     <path name="ADSP testfwk">
         <ctl name="SLIMBUS_DL_HL Switch" value="1" />

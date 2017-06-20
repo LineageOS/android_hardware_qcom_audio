@@ -44,6 +44,12 @@
 #include "sound/compress_params.h"
 #include "sound/msmcal-hwdep.h"
 
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_PLATFORM
+#include <log_utils.h>
+#endif
+
 #define SOUND_TRIGGER_DEVICE_HANDSET_MONO_LOW_POWER_ACDB_ID (100)
 #define MIXER_FILE_DELIMITER "_"
 #define MIXER_FILE_EXT ".xml"
@@ -56,12 +62,12 @@
 #define MIXER_XML_PATH_I2S "/etc/mixer_paths_i2s.xml"
 #define PLATFORM_INFO_XML_PATH_I2S "/etc/audio_platform_info_i2s.xml"
 #else
-#define MIXER_XML_BASE_STRING "/system/etc/mixer_paths"
-#define MIXER_XML_DEFAULT_PATH "/system/etc/mixer_paths.xml"
-#define PLATFORM_INFO_XML_PATH "/system/etc/audio_platform_info.xml"
-#define MIXER_XML_PATH_AUXPCM "/system/etc/mixer_paths_auxpcm.xml"
-#define MIXER_XML_PATH_I2S "/system/etc/mixer_paths_i2s.xml"
-#define PLATFORM_INFO_XML_PATH_I2S "/system/etc/audio_platform_info_i2s.xml"
+#define MIXER_XML_BASE_STRING "/vendor/etc/mixer_paths"
+#define MIXER_XML_DEFAULT_PATH "/vendor/etc/mixer_paths.xml"
+#define PLATFORM_INFO_XML_PATH "/vendor/etc/audio_platform_info.xml"
+#define MIXER_XML_PATH_AUXPCM "/vendor/etc/mixer_paths_auxpcm.xml"
+#define MIXER_XML_PATH_I2S "/vendor/etc/mixer_paths_i2s.xml"
+#define PLATFORM_INFO_XML_PATH_I2S "/vendor/etc/audio_platform_info_i2s.xml"
 #endif
 
 #include <linux/msm_audio.h>
@@ -133,6 +139,11 @@
 #define EVENT_EXTERNAL_MIC   "qc_ext_mic"
 #define MAX_CAL_NAME 20
 #define MAX_MIME_TYPE_LENGTH 30
+
+#ifdef DYNAMIC_LOG_ENABLED
+extern void log_utils_init(void);
+extern void log_utils_deinit(void);
+#endif
 
 char cal_name_info[WCD9XXX_MAX_CAL][MAX_CAL_NAME] = {
         [WCD9XXX_ANC_CAL] = "anc_cal",
@@ -371,6 +382,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = "voice-tty-full-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = "voice-tty-vco-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = "voice-tty-hco-handset",
+    [SND_DEVICE_OUT_VOICE_TTY_FULL_USB] = "voice-tty-full-usb",
+    [SND_DEVICE_OUT_VOICE_TTY_VCO_USB] = "voice-tty-vco-usb",
     [SND_DEVICE_OUT_VOICE_TX] = "voice-tx",
     [SND_DEVICE_OUT_AFE_PROXY] = "afe-proxy",
     [SND_DEVICE_OUT_USB_HEADSET] = "usb-headset",
@@ -430,6 +443,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = "voice-tty-full-headset-mic",
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = "voice-tty-vco-handset-mic",
     [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = "voice-tty-hco-headset-mic",
+    [SND_DEVICE_IN_VOICE_TTY_FULL_USB_MIC] = "voice-tty-full-usb-mic",
+    [SND_DEVICE_IN_VOICE_TTY_HCO_USB_MIC] = "voice-tty-hco-usb-mic",
     [SND_DEVICE_IN_VOICE_RX] = "voice-rx",
 
     [SND_DEVICE_IN_VOICE_REC_MIC] = "voice-rec-mic",
@@ -507,6 +522,8 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = 37,
+    [SND_DEVICE_OUT_VOICE_TTY_FULL_USB] = 17,
+    [SND_DEVICE_OUT_VOICE_TTY_VCO_USB] = 17,
     [SND_DEVICE_OUT_VOICE_TX] = 45,
     [SND_DEVICE_OUT_AFE_PROXY] = 0,
     [SND_DEVICE_OUT_USB_HEADSET] = 45,
@@ -561,6 +578,8 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = 16,
     [SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC] = 36,
     [SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC] = 16,
+    [SND_DEVICE_IN_VOICE_TTY_FULL_USB_MIC] = 16,
+    [SND_DEVICE_IN_VOICE_TTY_HCO_USB_MIC] = 16,
     [SND_DEVICE_IN_VOICE_RX] = 44,
 
     [SND_DEVICE_IN_VOICE_REC_MIC] = 4,
@@ -638,6 +657,8 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_FULL_USB)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_VCO_USB)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_AFE_PROXY)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_USB_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_USB_HEADPHONES)},
@@ -691,6 +712,8 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_TTY_FULL_USB_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_TTY_HCO_USB_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_MIC_NS)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_REC_DMIC_STEREO)},
@@ -2029,7 +2052,9 @@ void *platform_init(struct audio_device *adev)
 
     /* init keep-alive for compress passthru */
     audio_extn_keep_alive_init(adev);
-
+#ifdef DYNAMIC_LOG_ENABLED
+    log_utils_init();
+#endif
 acdb_init_fail:
 
 
@@ -2230,6 +2255,9 @@ void platform_deinit(void *platform)
     /* deinit usb */
     audio_extn_usb_deinit();
     audio_extn_dap_hal_deinit();
+#ifdef DYNAMIC_LOG_ENABLED
+    log_utils_deinit();
+#endif
 }
 
 static int platform_is_acdb_initialized(void *platform)
@@ -3353,6 +3381,24 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
             } else {
                 snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
             }
+        } else if (devices & AUDIO_DEVICE_OUT_USB_DEVICE) {
+            if (voice_is_in_call(adev)) {
+                switch (adev->voice.tty_mode) {
+                    case TTY_MODE_FULL:
+                        snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_USB;
+                        break;
+                    case TTY_MODE_VCO:
+                       snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_USB;
+                        break;
+                    case TTY_MODE_HCO:
+                        // since Hearing will be on handset\speaker, use existing device
+                        snd_device = SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET;
+                        break;
+                    default:
+                        ALOGE("%s: Invalid TTY mode (%#x)",
+                              __func__, adev->voice.tty_mode);
+                }
+            }
         } else if (devices & AUDIO_DEVICE_OUT_ALL_SCO) {
             if (adev->bt_wb_speech_enabled)
                 snd_device = SND_DEVICE_OUT_BT_SCO_WB;
@@ -3523,17 +3569,33 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
                 out_device & AUDIO_DEVICE_OUT_LINE) {
                 switch (adev->voice.tty_mode) {
-                case TTY_MODE_FULL:
-                    snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC;
-                    break;
-                case TTY_MODE_VCO:
-                    snd_device = SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC;
-                    break;
-                case TTY_MODE_HCO:
-                    snd_device = SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC;
-                    break;
-                default:
-                    ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->voice.tty_mode);
+                    case TTY_MODE_FULL:
+                        snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC;
+                        break;
+                    case TTY_MODE_VCO:
+                        snd_device = SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC;
+                        break;
+                    case TTY_MODE_HCO:
+                        snd_device = SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC;
+                        break;
+                    default:
+                        ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->voice.tty_mode);
+                }
+                goto exit;
+            } else if (out_device & AUDIO_DEVICE_OUT_USB_DEVICE) {
+                switch (adev->voice.tty_mode) {
+                    case TTY_MODE_FULL:
+                        snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_USB_MIC;
+                        break;
+                    case TTY_MODE_VCO:
+                        // since voice will be captured from handset mic, use existing device
+                        snd_device = SND_DEVICE_IN_VOICE_TTY_VCO_HANDSET_MIC;
+                        break;
+                    case TTY_MODE_HCO:
+                        snd_device = SND_DEVICE_IN_VOICE_TTY_HCO_USB_MIC;
+                        break;
+                    default:
+                        ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->voice.tty_mode);
                 }
                 goto exit;
             }
@@ -5140,11 +5202,20 @@ static void platform_check_hdmi_backend_cfg(struct audio_device* adev,
             channels = max_supported_channels;
 
     } else {
-        /*During pass through set default bit width and channels*/
-        channels = DEFAULT_HDMI_OUT_CHANNELS;
+        /*During pass through set default bit width */
+        if (usecase->stream.out->format == AUDIO_FORMAT_DOLBY_TRUEHD)
+            channels = 8;
+        else
+            channels = DEFAULT_HDMI_OUT_CHANNELS;
+
         if ((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
-            (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC))
-            sample_rate = sample_rate * 4 ;
+            (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC) ||
+            (usecase->stream.out->format == AUDIO_FORMAT_DOLBY_TRUEHD)) {
+
+            sample_rate = sample_rate * 4;
+            if (sample_rate > HDMI_PASSTHROUGH_MAX_SAMPLE_RATE)
+                sample_rate = HDMI_PASSTHROUGH_MAX_SAMPLE_RATE;
+        }
 
         bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         /* We force route so that the BE format can be set to Compr */
@@ -5594,6 +5665,26 @@ done:
     return ret;
 }
 
+const char *platform_get_snd_device_backend_interface(snd_device_t device)
+{
+    const char *hw_interface_name = NULL;
+
+    if ((device < SND_DEVICE_MIN) || (device >= SND_DEVICE_MAX)) {
+        ALOGE("%s: Invalid snd_device = %d",
+            __func__, device);
+        goto done;
+    }
+
+    /* Get string value of necessary backend for device */
+    hw_interface_name = hw_interface_table[device];
+    if (hw_interface_name == NULL)
+        ALOGE("%s: no hw_interface set for device %d\n", __func__, device);
+    else
+        ALOGD("%s: hw_interface set for device %s\n", __func__, hw_interface_name);
+done:
+    return hw_interface_name;
+}
+
 int platform_get_snd_device_backend_index(snd_device_t device)
 {
     int i, be_dai_id;
@@ -5662,94 +5753,101 @@ void platform_get_device_to_be_id_map(int **device_to_be_id, int *length)
      *device_to_be_id = (int*) msm_device_to_be_id;
      *length = msm_be_id_array_len;
 }
-int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask, int snd_id)
+
+int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask,
+                                               int snd_id, uint8_t *input_channel_map)
 {
-    int ret = 0;
+    int ret = 0, i = 0;
     int channels = audio_channel_count_from_out_mask(channel_mask);
 
-    char channel_map[8];
+    char channel_map[AUDIO_CHANNEL_COUNT_MAX];
     memset(channel_map, 0, sizeof(channel_map));
-    /* Following are all most common standard WAV channel layouts
-       overridden by channel mask if its allowed and different */
-    switch (channels) {
-        case 1:
-            /* AUDIO_CHANNEL_OUT_MONO */
-            channel_map[0] = PCM_CHANNEL_FC;
-            break;
-        case 2:
-            /* AUDIO_CHANNEL_OUT_STEREO */
-            channel_map[0] = PCM_CHANNEL_FL;
-            channel_map[1] = PCM_CHANNEL_FR;
-            break;
-        case 3:
-            /* AUDIO_CHANNEL_OUT_2POINT1 */
-            channel_map[0] = PCM_CHANNEL_FL;
-            channel_map[1] = PCM_CHANNEL_FR;
-            channel_map[2] = PCM_CHANNEL_FC;
-            break;
-        case 4:
-            /* AUDIO_CHANNEL_OUT_QUAD_SIDE */
-            channel_map[0] = PCM_CHANNEL_FL;
-            channel_map[1] = PCM_CHANNEL_FR;
-            channel_map[2] = PCM_CHANNEL_LS;
-            channel_map[3] = PCM_CHANNEL_RS;
-            if (channel_mask == AUDIO_CHANNEL_OUT_QUAD_BACK)
-            {
-                channel_map[2] = PCM_CHANNEL_LB;
-                channel_map[3] = PCM_CHANNEL_RB;
-            }
-            if (channel_mask == AUDIO_CHANNEL_OUT_SURROUND)
-            {
+    if (*input_channel_map) {
+        for (i = 0; i < channels; i++) {
+             ALOGV("%s:: Channel Map channel_map[%d] - %d", __func__, i, *input_channel_map);
+             channel_map[i] = *input_channel_map;
+             input_channel_map++;
+        }
+    } else {
+        /* Following are all most common standard WAV channel layouts
+           overridden by channel mask if its allowed and different */
+        switch (channels) {
+            case 1:
+                /* AUDIO_CHANNEL_OUT_MONO */
+                channel_map[0] = PCM_CHANNEL_FC;
+                break;
+            case 2:
+                /* AUDIO_CHANNEL_OUT_STEREO */
+                channel_map[0] = PCM_CHANNEL_FL;
+                channel_map[1] = PCM_CHANNEL_FR;
+                break;
+            case 3:
+                /* AUDIO_CHANNEL_OUT_2POINT1 */
+                channel_map[0] = PCM_CHANNEL_FL;
+                channel_map[1] = PCM_CHANNEL_FR;
                 channel_map[2] = PCM_CHANNEL_FC;
-                channel_map[3] = PCM_CHANNEL_CS;
-            }
-            break;
-        case 5:
-            /* AUDIO_CHANNEL_OUT_PENTA */
-            channel_map[0] = PCM_CHANNEL_FL;
-            channel_map[1] = PCM_CHANNEL_FR;
-            channel_map[2] = PCM_CHANNEL_FC;
-            channel_map[3] = PCM_CHANNEL_LB;
-            channel_map[4] = PCM_CHANNEL_RB;
-            break;
-        case 6:
-            /* AUDIO_CHANNEL_OUT_5POINT1 */
-            channel_map[0] = PCM_CHANNEL_FL;
-            channel_map[1] = PCM_CHANNEL_FR;
-            channel_map[2] = PCM_CHANNEL_FC;
-            channel_map[3] = PCM_CHANNEL_LFE;
-            channel_map[4] = PCM_CHANNEL_LB;
-            channel_map[5] = PCM_CHANNEL_RB;
-            if (channel_mask == AUDIO_CHANNEL_OUT_5POINT1_SIDE)
-            {
-                channel_map[4] = PCM_CHANNEL_LS;
-                channel_map[5] = PCM_CHANNEL_RS;
-            }
-            break;
-        case 7:
-            /* AUDIO_CHANNEL_OUT_6POINT1 */
-            channel_map[0] = PCM_CHANNEL_FL;
-            channel_map[1] = PCM_CHANNEL_FR;
-            channel_map[2] = PCM_CHANNEL_FC;
-            channel_map[3] = PCM_CHANNEL_LFE;
-            channel_map[4] = PCM_CHANNEL_LB;
-            channel_map[5] = PCM_CHANNEL_RB;
-            channel_map[6] = PCM_CHANNEL_CS;
-            break;
-        case 8:
-            /* AUDIO_CHANNEL_OUT_7POINT1 */
-            channel_map[0] = PCM_CHANNEL_FL;
-            channel_map[1] = PCM_CHANNEL_FR;
-            channel_map[2] = PCM_CHANNEL_FC;
-            channel_map[3] = PCM_CHANNEL_LFE;
-            channel_map[4] = PCM_CHANNEL_LB;
-            channel_map[5] = PCM_CHANNEL_RB;
-            channel_map[6] = PCM_CHANNEL_LS;
-            channel_map[7] = PCM_CHANNEL_RS;
-            break;
-        default:
-            ALOGE("unsupported channels %d for setting channel map", channels);
-            return -1;
+                break;
+            case 4:
+                /* AUDIO_CHANNEL_OUT_QUAD_SIDE */
+                channel_map[0] = PCM_CHANNEL_FL;
+                channel_map[1] = PCM_CHANNEL_FR;
+                channel_map[2] = PCM_CHANNEL_LS;
+                channel_map[3] = PCM_CHANNEL_RS;
+                if (channel_mask == AUDIO_CHANNEL_OUT_QUAD_BACK) {
+                    channel_map[2] = PCM_CHANNEL_LB;
+                    channel_map[3] = PCM_CHANNEL_RB;
+                }
+                if (channel_mask == AUDIO_CHANNEL_OUT_SURROUND) {
+                    channel_map[2] = PCM_CHANNEL_FC;
+                    channel_map[3] = PCM_CHANNEL_CS;
+                }
+                break;
+            case 5:
+                /* AUDIO_CHANNEL_OUT_PENTA */
+                channel_map[0] = PCM_CHANNEL_FL;
+                channel_map[1] = PCM_CHANNEL_FR;
+                channel_map[2] = PCM_CHANNEL_FC;
+                channel_map[3] = PCM_CHANNEL_LB;
+                channel_map[4] = PCM_CHANNEL_RB;
+                break;
+            case 6:
+                /* AUDIO_CHANNEL_OUT_5POINT1 */
+                channel_map[0] = PCM_CHANNEL_FL;
+                channel_map[1] = PCM_CHANNEL_FR;
+                channel_map[2] = PCM_CHANNEL_FC;
+                channel_map[3] = PCM_CHANNEL_LFE;
+                channel_map[4] = PCM_CHANNEL_LB;
+                channel_map[5] = PCM_CHANNEL_RB;
+                if (channel_mask == AUDIO_CHANNEL_OUT_5POINT1_SIDE) {
+                    channel_map[4] = PCM_CHANNEL_LS;
+                    channel_map[5] = PCM_CHANNEL_RS;
+                }
+                break;
+            case 7:
+                /* AUDIO_CHANNEL_OUT_6POINT1 */
+                channel_map[0] = PCM_CHANNEL_FL;
+                channel_map[1] = PCM_CHANNEL_FR;
+                channel_map[2] = PCM_CHANNEL_FC;
+                channel_map[3] = PCM_CHANNEL_LFE;
+                channel_map[4] = PCM_CHANNEL_LB;
+                channel_map[5] = PCM_CHANNEL_RB;
+                channel_map[6] = PCM_CHANNEL_CS;
+                break;
+            case 8:
+                /* AUDIO_CHANNEL_OUT_7POINT1 */
+                channel_map[0] = PCM_CHANNEL_FL;
+                channel_map[1] = PCM_CHANNEL_FR;
+                channel_map[2] = PCM_CHANNEL_FC;
+                channel_map[3] = PCM_CHANNEL_LFE;
+                channel_map[4] = PCM_CHANNEL_LB;
+                channel_map[5] = PCM_CHANNEL_RB;
+                channel_map[6] = PCM_CHANNEL_LS;
+                channel_map[7] = PCM_CHANNEL_RS;
+                break;
+            default:
+                ALOGE("unsupported channels %d for setting channel map", channels);
+                return -1;
+        }
     }
     ret = platform_set_channel_map(platform, channels, channel_map, snd_id);
     return ret;
@@ -5935,6 +6033,10 @@ unsigned char platform_map_to_edid_format(int audio_format)
         ALOGV("%s:E_AC3", __func__);
         format = DOLBY_DIGITAL_PLUS;
         break;
+    case AUDIO_FORMAT_DOLBY_TRUEHD:
+        ALOGV("%s:MAT", __func__);
+        format = MAT;
+        break;
     case AUDIO_FORMAT_DTS:
         ALOGV("%s:DTS", __func__);
         format = DTS;
@@ -5949,9 +6051,13 @@ unsigned char platform_map_to_edid_format(int audio_format)
         ALOGV("%s:PCM", __func__);
         format = LPCM;
         break;
+    case AUDIO_FORMAT_IEC61937:
+        ALOGV("%s:IEC61937", __func__);
+        format = 0;
+        break;
     default:
         format =  -1;
-        ALOGE("%s:invalid format:%d", __func__,format);
+        ALOGE("%s:invalid format: 0x%x", __func__, audio_format);
         break;
     }
     return format;
@@ -5961,9 +6067,18 @@ uint32_t platform_get_compress_passthrough_buffer_size(
                                           audio_offload_info_t* info)
 {
     uint32_t fragment_size = MIN_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE;
+    char value[PROPERTY_VALUE_MAX] = {0};
+
+    if (((info->format == AUDIO_FORMAT_DOLBY_TRUEHD) ||
+            (info->format == AUDIO_FORMAT_IEC61937)) &&
+            property_get("audio.truehd.buffer.size.kb", value, "") &&
+            atoi(value)) {
+        fragment_size = atoi(value) * 1024;
+        goto done;
+    }
     if (!info->has_video)
         fragment_size = MIN_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE;
-
+done:
     return fragment_size;
 }
 
@@ -6011,6 +6126,9 @@ bool platform_is_edid_supported_format(void *platform, int format)
     int i, ret;
     unsigned char format_id = platform_map_to_edid_format(format);
 
+    if (format == AUDIO_FORMAT_IEC61937)
+        return true;
+
     if (format_id <= 0) {
         ALOGE("%s invalid edid format mappting for :%x" ,__func__, format);
         return false;
@@ -6052,6 +6170,20 @@ bool platform_is_edid_supported_sample_rate(void *platform, int sample_rate)
     return false;
 }
 
+int platform_edid_get_highest_supported_sr(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    edid_audio_info *info = NULL;
+    int ret = 0;
+
+    ret = platform_get_edid_info(platform);
+    info = (edid_audio_info *)my_data->edid_info;
+    if (ret == 0 && info != NULL) {
+        return edid_get_highest_supported_sr(info);
+    }
+
+    return 0;
+}
 
 int platform_set_edid_channels_configuration(void *platform, int channels) {
 

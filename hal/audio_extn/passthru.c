@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -40,13 +40,20 @@
 #include <cutils/properties.h>
 
 #include "sound/compress_params.h"
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_PASSTH
+#include <log_utils.h>
+#endif
 
 static const audio_format_t audio_passthru_formats[] = {
     AUDIO_FORMAT_AC3,
     AUDIO_FORMAT_E_AC3,
     AUDIO_FORMAT_E_AC3_JOC,
     AUDIO_FORMAT_DTS,
-    AUDIO_FORMAT_DTS_HD
+    AUDIO_FORMAT_DTS_HD,
+    AUDIO_FORMAT_DOLBY_TRUEHD,
+    AUDIO_FORMAT_IEC61937
 };
 
 /*
@@ -216,6 +223,8 @@ bool audio_extn_passthru_is_passt_supported(struct audio_device *adev,
     bool passt = false;
     switch (out->format) {
     case AUDIO_FORMAT_E_AC3:
+    case AUDIO_FORMAT_DTS_HD:
+    case AUDIO_FORMAT_DOLBY_TRUEHD:
         if (platform_is_edid_supported_format(adev->platform, out->format)) {
             ALOGV("%s:PASSTHROUGH supported for format %x",
                    __func__, out->format);
@@ -249,13 +258,6 @@ bool audio_extn_passthru_is_passt_supported(struct audio_device *adev,
             passt = true;
         }
         break;
-    case AUDIO_FORMAT_DTS_HD:
-        if (platform_is_edid_supported_format(adev->platform, out->format)) {
-            ALOGV("%s:PASSTHROUGH supported for format %x",
-                   __func__, out->format);
-            passt = true;
-        }
-        break;
     default:
         ALOGV("%s:Passthrough not supported", __func__);
     }
@@ -268,9 +270,12 @@ void audio_extn_passthru_update_stream_configuration(
     if (audio_extn_passthru_is_passt_supported(adev, out)) {
         ALOGV("%s:PASSTHROUGH", __func__);
         out->compr_config.codec->compr_passthr = PASSTHROUGH;
-    } else if (audio_extn_passthru_is_convert_supported(adev, out)){
+    } else if (audio_extn_passthru_is_convert_supported(adev, out)) {
         ALOGV("%s:PASSTHROUGH CONVERT", __func__);
         out->compr_config.codec->compr_passthr = PASSTHROUGH_CONVERT;
+    } else if (out->format == AUDIO_FORMAT_IEC61937) {
+        ALOGV("%s:PASSTHROUGH IEC61937", __func__);
+        out->compr_config.codec->compr_passthr = PASSTHROUGH_IEC61937;
     } else {
         ALOGV("%s:NO PASSTHROUGH", __func__);
         out->compr_config.codec->compr_passthr = LEGACY_PCM;

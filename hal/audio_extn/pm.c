@@ -34,6 +34,12 @@
 #include <cutils/log.h>
 #include <cutils/str_parms.h>
 
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_PM
+#include <log_utils.h>
+#endif
+
 /* Device state*/
 #define AUDIO_PARAMETER_KEY_DEV_SHUTDOWN "dev_shutdown"
 

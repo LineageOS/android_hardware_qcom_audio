@@ -29,12 +29,19 @@
 
 #define LOG_TAG "keep_alive"
 /*#define LOG_NDEBUG 0*/
+
 #include <stdlib.h>
 #include <cutils/log.h>
 #include "audio_hw.h"
 #include "audio_extn.h"
 #include "platform_api.h"
 #include <platform.h>
+
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_KEEP_ALIVE
+#include <log_utils.h>
+#endif
 
 #define SILENCE_INTERVAL 2 /*In secs*/
 

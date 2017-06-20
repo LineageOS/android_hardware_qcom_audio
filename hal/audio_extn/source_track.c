@@ -41,6 +41,12 @@
 #include <stdlib.h>
 #include <cutils/str_parms.h>
 
+#ifdef DYNAMIC_LOG_ENABLED
+#include <log_xml_parser.h>
+#define LOG_MASK HAL_MOD_FILE_SRC_TRACK
+#include <log_utils.h>
+#endif
+
 #ifdef SOURCE_TRACKING_ENABLED
 /* Audio Paramater Key to identify the list of start angles.
  * Starting angle (in degrees) defines the boundary starting angle for each sector.

@@ -80,7 +80,7 @@
     <ctl name="EAR_S Switch" value="0" />
     <ctl name="HPHL" value="ZERO" />
     <ctl name="HPHR" value="ZERO" />
-    <ctl name="SPK DAC Switch" value="0" />
+    <ctl name="SPK" value="ZERO" />
     <ctl name="Speaker Boost" value="DISABLE" />
     <ctl name="EAR PA Boost" value="DISABLE" />
     <ctl name="EAR PA Gain" value="POS_6_DB" />
@@ -589,7 +589,7 @@
 
     <path name="speaker">
         <ctl name="RX3 MIX1 INP1" value="RX1" />
-        <ctl name="SPK DAC Switch" value="1" />
+        <ctl name="SPK" value="Switch" />
         <ctl name="Speaker Boost" value="ENABLE" />
     </path>
 
