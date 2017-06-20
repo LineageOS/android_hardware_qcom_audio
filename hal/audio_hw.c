@@ -1258,7 +1258,7 @@ int select_devices(struct audio_device *adev,
     /* Enable new sound devices */
     if (out_snd_device != SND_DEVICE_NONE) {
         if ((usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
-            (usecase->devices & AUDIO_DEVICE_OUT_USB_DEVICE))
+            (usecase->devices & (AUDIO_DEVICE_OUT_USB_DEVICE|AUDIO_DEVICE_OUT_USB_HEADSET)))
             check_and_route_playback_usecases(adev, usecase, out_snd_device);
         enable_snd_device(adev, out_snd_device);
     }
@@ -3876,17 +3876,17 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value, sizeof(value));
     if (ret >= 0) {
         audio_devices_t device = (audio_devices_t)strtoul(value, NULL, 10);
-        if (device == AUDIO_DEVICE_OUT_USB_DEVICE) {
+        if (audio_is_usb_out_device(device)) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
                 const int card = atoi(value);
-                audio_extn_usb_add_device(AUDIO_DEVICE_OUT_USB_DEVICE, card);
+                audio_extn_usb_add_device(device, card);
             }
-        } else if (device == AUDIO_DEVICE_IN_USB_DEVICE) {
+        } else if (audio_is_usb_in_device(device)) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
                 const int card = atoi(value);
-                audio_extn_usb_add_device(AUDIO_DEVICE_IN_USB_DEVICE, card);
+                audio_extn_usb_add_device(device, card);
             }
         }
     }
@@ -3894,18 +3894,18 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value, sizeof(value));
     if (ret >= 0) {
         audio_devices_t device = (audio_devices_t)strtoul(value, NULL, 10);
-        if (device == AUDIO_DEVICE_OUT_USB_DEVICE) {
+        if (audio_is_usb_out_device(device)) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
                 const int card = atoi(value);
 
-                audio_extn_usb_remove_device(AUDIO_DEVICE_OUT_USB_DEVICE, card);
+                audio_extn_usb_remove_device(device, card);
             }
-        } else if (device == AUDIO_DEVICE_IN_USB_DEVICE) {
+        } else if (audio_is_usb_in_device(device)) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
                 const int card = atoi(value);
-                audio_extn_usb_remove_device(AUDIO_DEVICE_IN_USB_DEVICE, card);
+                audio_extn_usb_remove_device(device, card);
             }
         }
     }
