@@ -143,11 +143,21 @@ int init_patch_database(patch_db_t* patch_db)
     return patch_init_rc;
 }
 
+bool is_supported_sink_device(audio_devices_t sink_device_mask)
+{
+    if((sink_device_mask & AUDIO_DEVICE_OUT_SPEAKER) ||
+       (sink_device_mask & AUDIO_DEVICE_OUT_WIRED_HEADSET) ||
+       (sink_device_mask & AUDIO_DEVICE_OUT_WIRED_HEADPHONE)) {
+           return true;
+       }
+    return false;
+}
+
 /* Get patch type based on source and sink ports configuration */
 /* Only ports of type 'DEVICE' are supported */
 patch_handle_type_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
 {
-    bool is_source_hdmi=false, is_sink_spkr=false;
+    bool is_source_hdmi=false, is_sink_supported=false;
     if (loopback_patch->patch_handle_id != PATCH_HANDLE_INVALID) {
         ALOGE("%s, Patch handle already exists", __func__);
         return loopback_patch->patch_handle_id;
@@ -178,30 +188,31 @@ patch_handle_type_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
     }
     if (loopback_patch->loopback_sink.role == AUDIO_PORT_ROLE_SINK) {
         switch (loopback_patch->loopback_sink.type) {
-            case AUDIO_PORT_TYPE_DEVICE :
-                if ((loopback_patch->loopback_sink.config_mask &
-                    AUDIO_PORT_CONFIG_FORMAT) &&
-                    (loopback_patch->loopback_sink.ext.device.type &
-                     AUDIO_DEVICE_OUT_SPEAKER)) {
-                       switch (loopback_patch->loopback_sink.format) {
-                           case AUDIO_FORMAT_PCM:
-                           case AUDIO_FORMAT_PCM_16_BIT:
-                           case AUDIO_FORMAT_PCM_32_BIT:
-                           case AUDIO_FORMAT_PCM_8_24_BIT:
-                           case AUDIO_FORMAT_PCM_24_BIT_PACKED:
-                              is_sink_spkr = true;
-			      break;
-                           default:
-                              break;
+        case AUDIO_PORT_TYPE_DEVICE :
+            if ((loopback_patch->loopback_sink.config_mask &
+                AUDIO_PORT_CONFIG_FORMAT) &&
+                (is_supported_sink_device(loopback_patch->loopback_sink.ext.device.type))) {
+                    switch (loopback_patch->loopback_sink.format) {
+                    case AUDIO_FORMAT_PCM:
+                    case AUDIO_FORMAT_PCM_16_BIT:
+                    case AUDIO_FORMAT_PCM_32_BIT:
+                    case AUDIO_FORMAT_PCM_8_24_BIT:
+                    case AUDIO_FORMAT_PCM_24_BIT_PACKED:
+                        is_sink_supported = true;
+                        break;
+                    default:
+                        break;
                     }
-                }
-                break;
-            default :
-                break;
-                //Unsupported as of now, need to extend for other sink types
+            } else {
+                ALOGE("%s, Unsupported sink port device %d", __func__,loopback_patch->loopback_sink.ext.device.type);
+            }
+            break;
+        default :
+            break;
+            //Unsupported as of now, need to extend for other sink types
         }
     }
-    if (is_source_hdmi && is_sink_spkr) {
+    if (is_source_hdmi && is_sink_supported) {
         return AUDIO_PATCH_HDMI_IN_SPKR_OUT;
     }
     ALOGE("%s, Unsupported source or sink port config", __func__);
@@ -403,6 +414,7 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
         active_loopback_patch->source_stream)) {
         ALOGE("%s: %s", __func__, compress_get_error(active_loopback_patch->
         source_stream));
+        active_loopback_patch->source_stream = NULL;
         ret = -EIO;
         goto exit;
     } else if (active_loopback_patch->source_stream == NULL) {
@@ -429,6 +441,7 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
         active_loopback_patch->sink_stream)) {
         ALOGE("%s: %s", __func__, compress_get_error(active_loopback_patch->
                 sink_stream));
+        active_loopback_patch->sink_stream = NULL;
         ret = -EIO;
         goto exit;
     } else if (active_loopback_patch->sink_stream == NULL) {
@@ -525,6 +538,8 @@ int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,
                                 audio_loopback_mod->patch_db.num_patches]);
     active_loopback_patch->patch_handle_id = PATCH_HANDLE_INVALID;
     active_loopback_patch->patch_state = PATCH_INACTIVE;
+    active_loopback_patch->patch_stream.ip_hdlr_handle = NULL;
+    active_loopback_patch->patch_stream.adsp_hdlr_stream_handle = NULL;
     memcpy(&active_loopback_patch->loopback_source, &sources[0], sizeof(struct
     audio_port_config));
     memcpy(&active_loopback_patch->loopback_sink, &sinks[0], sizeof(struct

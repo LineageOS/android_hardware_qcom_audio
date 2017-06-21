@@ -31,6 +31,7 @@
 /*#define LOG_NDEBUG 0*/
 #include <fcntl.h>
 #include <linux/netlink.h>
+#include <getopt.h>
 #include <pthread.h>
 #include <poll.h>
 #include <stdlib.h>
@@ -91,9 +92,15 @@ const char *log_filename = NULL;
 #define TRANSCODE_LOOPBACK_SOURCE_PORT_ID 0x4C00
 #define TRANSCODE_LOOPBACK_SINK_PORT_ID 0x4D00
 
+#define DEVICE_SOURCE 0
+#define DEVICE_SINK 1
+
 #define MAX_MODULE_NAME_LENGTH  100
 
 #define DEV_NODE_CHECK(node_name,node_id) strncmp(node_name,node_id,strlen(node_name))
+
+/* Function declarations */
+void usage();
 
 typedef enum source_port_type {
     SOURCE_PORT_NONE,
@@ -502,29 +509,85 @@ void process_loopback_data(void *ptr)
     pthread_exit(0);
 }
 
+bool is_device_supported(uint32_t device_id)
+{
+    switch(device_id)
+    {
+        case AUDIO_DEVICE_OUT_SPEAKER :
+        case AUDIO_DEVICE_OUT_WIRED_HEADSET :
+        case AUDIO_DEVICE_OUT_WIRED_HEADPHONE :
+            return true;
+        default :
+            return false;
+    }
+}
+
+void set_device(uint32_t device_type, uint32_t device_id)
+{
+    transcode_loopback_config_t *transcode_loopback_config = &g_trnscode_loopback_config;
+    device_id = is_device_supported(device_id) ? device_id : AUDIO_DEVICE_OUT_SPEAKER;
+    switch( device_type )
+    {
+        case DEVICE_SINK:
+            transcode_loopback_config->sink_config.ext.device.type = device_id;
+        break;
+        case DEVICE_SOURCE:
+            transcode_loopback_config->source_config.ext.device.type = device_id;
+        break;
+    }
+}
+
 int main(int argc, char *argv[]) {
 
     int status = 0;
-    uint32_t play_duration_in_seconds = 30,play_duration_elapsed_msec = 0,play_duration_in_msec = 0;
+    uint32_t play_duration_in_seconds = 600,play_duration_elapsed_msec = 0,play_duration_in_msec = 0, sink_device = 2;
     source_port_type_t source_port_type = SOURCE_PORT_NONE;
     log_file = stdout;
-
-    fprintf(log_file,"\nUsage : trans_loopback_test <optional : duration_in_seconds>\n");
-    fprintf(log_file,"\nTranscode loopback test begin\n");
-    play_duration_in_seconds = 600;
-    if (argc == 2) {
-        play_duration_in_seconds = atoi(argv[1]);
-        if (play_duration_in_seconds < 0 | play_duration_in_seconds > 3600) {
-            fprintf(log_file,
-                    "\nPlayback duration %s invalid or unsupported(range : 1 to 3600, defaulting to 600 seconds )\n",
-                    argv[1]);
-            play_duration_in_seconds = 600;
-        }
-    }
-    play_duration_in_msec = play_duration_in_seconds * 1000;
-
     transcode_loopback_config_t    *transcode_loopback_config = NULL;
     transcode_loopback_config_t *temp = NULL;
+
+    struct option long_options[] = {
+        /* These options set a flag. */
+        {"sink-device", required_argument,    0, 'd'},
+        {"play-duration",  required_argument,    0, 'p'},
+        {"help",          no_argument,          0, 'h'},
+        {0, 0, 0, 0}
+    };
+
+    int opt = 0;
+    int option_index = 0;
+
+    while ((opt = getopt_long(argc,
+                              argv,
+                              "-d:p:h",
+                              long_options,
+                              &option_index)) != -1) {
+
+        fprintf(log_file, "for argument %c, value is %s\n", opt, optarg);
+
+        switch (opt) {
+        case 'd':
+            sink_device = atoi(optarg);
+            break;
+        case 'p':
+            play_duration_in_seconds = atoi(optarg);
+            break;
+        case 'h':
+        default :
+            usage();
+            return 0;
+            break;
+        }
+    }
+
+    fprintf(log_file,"\nTranscode loopback test begin\n");
+    if (play_duration_in_seconds < 0 | play_duration_in_seconds > 3600) {
+            fprintf(log_file,
+                    "\nPlayback duration %d invalid or unsupported(range : 1 to 3600, defaulting to 600 seconds )\n",
+                    play_duration_in_seconds);
+            play_duration_in_seconds = 600;
+    }
+    play_duration_in_msec = play_duration_in_seconds * 1000;
 
     /* Register the SIGINT to close the App properly */
     if (signal(SIGINT, break_signal_handler) == SIG_ERR) {
@@ -535,6 +598,9 @@ int main(int argc, char *argv[]) {
     /* Initialize global transcode loopback struct */
     init_transcode_loopback_config(&temp);
     transcode_loopback_config = &g_trnscode_loopback_config;
+
+    /* Set devices */
+    set_device(DEVICE_SINK,sink_device);
 
     /* Load HAL */
     fprintf(log_file,"\nLoading HAL for loopback usecase begin\n");
@@ -581,11 +647,12 @@ exit_transcode_loopback_test:
 
     fprintf(log_file,"\nTranscode loopback test end\n");
     return 0;
-usage:
-    fprintf(log_file,"\nInvald arguments\n");
-    fprintf(log_file,"\nUsage : trans_loopback_test <duration_in_seconds>\n");
-    fprintf(log_file,"\nExample to play for 1 minute : trans_loopback_test 60\n");
-    return 0;
 }
 
-
+void usage()
+{
+    fprintf(log_file,"\nUsage : trans_loopback_test -p <duration_in_seconds> -d <sink_device_id>\n");
+    fprintf(log_file,"\nExample to play for 1 minute on speaker device: trans_loopback_test -p 60 -d 2\n");
+    fprintf(log_file,"\nExample to play for 5 minutes on headphone device: trans_loopback_test -p 300 -d 8\n");
+    fprintf(log_file,"\nHelp : trans_loopback_test -h\n");
+ }
