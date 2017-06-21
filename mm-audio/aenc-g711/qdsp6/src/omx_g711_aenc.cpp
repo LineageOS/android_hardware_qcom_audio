@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010, 2014, 2016 The Linux Foundation. All rights reserved.
+Copyright (c) 2010, 2014, 2016-2017 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -3567,7 +3567,6 @@ OMX_ERRORTYPE  omx_g711_aenc::use_input_buffer
     OMX_ERRORTYPE         eRet = OMX_ErrorNone;
     OMX_BUFFERHEADERTYPE  *bufHdr;
     unsigned              nBufSize = MAX(bytes, input_buffer_size);
-    char                  *buf_ptr;
 
     if(hComp == NULL)
     {
@@ -3583,11 +3582,10 @@ OMX_ERRORTYPE  omx_g711_aenc::use_input_buffer
     }
     if (m_inp_current_buf_count < m_inp_act_buf_count)
     {
-        buf_ptr = (char *) calloc(sizeof(OMX_BUFFERHEADERTYPE), 1);
+        bufHdr = (OMX_BUFFERHEADERTYPE *) calloc(sizeof(OMX_BUFFERHEADERTYPE), 1);
 
-        if (buf_ptr != NULL)
+        if (bufHdr != NULL)
         {
-            bufHdr = (OMX_BUFFERHEADERTYPE *) buf_ptr;
             *bufferHdr = bufHdr;
             memset(bufHdr,0,sizeof(OMX_BUFFERHEADERTYPE));
 
@@ -3652,7 +3650,6 @@ OMX_ERRORTYPE  omx_g711_aenc::use_output_buffer
     OMX_ERRORTYPE         eRet = OMX_ErrorNone;
     OMX_BUFFERHEADERTYPE  *bufHdr;
     unsigned              nBufSize = MAX(bytes,output_buffer_size);
-    char                  *buf_ptr;
 
     if(hComp == NULL)
     {
@@ -3671,11 +3668,10 @@ OMX_ERRORTYPE  omx_g711_aenc::use_output_buffer
     if (m_out_current_buf_count < m_out_act_buf_count)
     {
 
-        buf_ptr = (char *) calloc(sizeof(OMX_BUFFERHEADERTYPE), 1);
+        bufHdr = (OMX_BUFFERHEADERTYPE *) calloc(sizeof(OMX_BUFFERHEADERTYPE), 1);
 
-        if (buf_ptr != NULL)
+        if (bufHdr != NULL)
         {
-            bufHdr = (OMX_BUFFERHEADERTYPE *) buf_ptr;
             OMX_LOGV("BufHdr=%p buffer=%p\n",bufHdr,buffer);
             *bufferHdr = bufHdr;
             memset(bufHdr,0,sizeof(OMX_BUFFERHEADERTYPE));
@@ -4016,6 +4012,9 @@ OMX_ERRORTYPE  omx_g711_aenc::empty_this_buffer_proxy
         }
         memcpy(data,&meta_in, meta_in.offsetVal);
         OMX_LOGV("meta_in.nFlags = 0x%8x\n",meta_in.nFlags);
+    } else {
+        DEBUG_PRINT_ERROR("temp meta is null buf\n");
+            return OMX_ErrorInsufficientResources;
     }
 
     memcpy(&data[sizeof(META_IN)],buffer->pBuffer,buffer->nFilledLen);
