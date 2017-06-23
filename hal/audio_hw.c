@@ -3344,7 +3344,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
     if (audio_extn_passthru_should_drop_data(out)) {
         ALOGV(" %s : Drop data as compress passthrough session is going on", __func__);
-        if (audio_bytes_per_sample(out->format) != 0)
+        if ((audio_bytes_per_sample(out->format) != 0) && (out->config.channels != 0))
             out->written += bytes / (out->config.channels * audio_bytes_per_sample(out->format));
         ret = -EIO;
         goto exit;
