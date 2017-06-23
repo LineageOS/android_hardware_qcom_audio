@@ -214,6 +214,10 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
 
     [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = "afe-proxy-playback",
     [USECASE_AUDIO_RECORD_AFE_PROXY] = "afe-proxy-record",
+
+    [USECASE_INCALL_REC_UPLINK] = "incall-rec-uplink",
+    [USECASE_INCALL_REC_DOWNLINK] = "incall-rec-downlink",
+    [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK] = "incall-rec-uplink-and-downlink",
 };
 
 
@@ -1260,6 +1264,13 @@ int start_input_stream(struct stream_in *in)
     struct audio_device *adev = in->dev;
 
     ALOGV("%s: enter: usecase(%d)", __func__, in->usecase);
+
+    /* Check if source matches incall recording usecase criteria */
+    ret = voice_check_and_set_incall_rec_usecase(adev, in);
+    if (ret)
+        goto error_config;
+    else
+        ALOGV("%s: usecase(%d)", __func__, in->usecase);
 
     if (audio_extn_tfa_98xx_is_supported() && !audio_ssr_status(adev))
         return -EIO;
