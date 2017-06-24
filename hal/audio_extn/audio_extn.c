@@ -758,7 +758,7 @@ static int get_active_offload_usecases(const struct audio_device *adev,
     return ret;
 }
 
-void audio_extn_init(struct audio_device *adev)
+void audio_extn_init(struct audio_device *adev __unused)
 {
     aextnmod.anc_enabled = 0;
     aextnmod.aanc_enabled = 0;
