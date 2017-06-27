@@ -732,8 +732,8 @@ bool platform_send_gain_dep_cal(void *platform, int level)
     int mode = CAL_MODE_RTAC;
     struct listnode *node;
     struct audio_usecase *usecase;
-    bool valid_uc_type = false;
-    bool valid_dev = false;
+    bool valid_uc_type;
+    bool valid_dev;
 
     if (my_data->acdb_send_gain_dep_cal == NULL) {
         ALOGE("%s: dlsym error for acdb_send_gain_dep_cal", __func__);
@@ -748,12 +748,17 @@ bool platform_send_gain_dep_cal(void *platform, int level)
         // find the current active sound device
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            valid_uc_type =  usecase->type == PCM_PLAYBACK;
-            audio_devices_t dev = usecase->stream.out->devices;
-            valid_dev = (dev == AUDIO_DEVICE_OUT_SPEAKER ||
-                         dev == AUDIO_DEVICE_OUT_WIRED_HEADSET ||
-                         dev == AUDIO_DEVICE_OUT_WIRED_HEADPHONE);
-             if (usecase != NULL && valid_uc_type && valid_dev) {
+            LOG_ALWAYS_FATAL_IF(usecase == NULL,
+                                "unxpected NULL usecase in usecase_list");
+            valid_uc_type = usecase->type == PCM_PLAYBACK;
+            valid_dev = false;
+            if (valid_uc_type) {
+                audio_devices_t dev = usecase->stream.out->devices;
+                valid_dev = (dev == AUDIO_DEVICE_OUT_SPEAKER ||
+                             dev == AUDIO_DEVICE_OUT_WIRED_HEADSET ||
+                             dev == AUDIO_DEVICE_OUT_WIRED_HEADPHONE);
+            }
+            if (valid_dev) {
                  ALOGV("%s: out device is %d", __func__,  usecase->out_snd_device);
                  if (audio_extn_spkr_prot_is_enabled()) {
                     acdb_dev_id = audio_extn_spkr_prot_get_acdb_id(usecase->out_snd_device);
