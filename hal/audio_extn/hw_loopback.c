@@ -382,7 +382,8 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
         goto exit;
     }
     if (audio_extn_ip_hdlr_intf_supported(source_patch_config->format, false)) {
-        ret = audio_extn_ip_hdlr_intf_init(&inout->ip_hdlr_handle, NULL, NULL);
+        ret = audio_extn_ip_hdlr_intf_init(&inout->ip_hdlr_handle, NULL, NULL, adev,
+                                           USECASE_AUDIO_TRANSCODE_LOOPBACK);
         if (ret < 0) {
             ALOGE("%s: audio_extn_ip_hdlr_intf_init failed %d", __func__, ret);
             inout->ip_hdlr_handle = NULL;

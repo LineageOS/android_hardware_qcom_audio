@@ -5506,7 +5506,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         }
     }
     if (audio_extn_ip_hdlr_intf_supported(config->format, audio_extn_passthru_is_direct_passthrough(out))) {
-        ret = audio_extn_ip_hdlr_intf_init(&out->ip_hdlr_handle, NULL, NULL);
+        ret = audio_extn_ip_hdlr_intf_init(&out->ip_hdlr_handle, NULL, NULL, adev, out->usecase);
         if (ret < 0) {
             ALOGE("%s: audio_extn_ip_hdlr_intf_init failed %d",__func__, ret);
             out->ip_hdlr_handle = NULL;

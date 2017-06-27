@@ -70,6 +70,7 @@ struct ip_hdlr_intf {
     int (*deinit)(void *handle);
     int (*open)(void *handle, bool is_dsp_decode, void *aud_sess_handle);
     int (*shm_info)(void *handle, int *fd);
+    int (*get_lib_fd)(void *handle, int *lib_fd);
     int (*close)(void *handle);
     int (*event)(void *handle, void *payload);
     int (*reg_cb)(void *handle, void *ack_cb, void *fail_cb);
@@ -416,9 +417,13 @@ int audio_extn_ip_hdlr_intf_close(void *handle, bool is_dsp_decode, void *aud_se
     return ret;
 }
 
-int audio_extn_ip_hdlr_intf_init(void **handle, char *lib_path, void **lib_handle)
+int audio_extn_ip_hdlr_intf_init(void **handle, char *lib_path, void **lib_handle,
+                                 struct audio_device *dev, audio_usecase_t usecase)
 {
-    int ret = 0;
+    int ret = 0, pcm_device_id;
+    int lib_fd;
+    struct mixer_ctl *ctl = NULL;
+    char mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = {0};
 
     if (!ip_hdlr) {
         ip_hdlr = (struct ip_hdlr_intf *)calloc(1, sizeof(struct ip_hdlr_intf));
@@ -444,11 +449,13 @@ int audio_extn_ip_hdlr_intf_init(void **handle, char *lib_path, void **lib_handl
                                   void *fail_cb))dlsym(ip_hdlr->lib_hdl, "audio_ip_hdlr_reg_cb");
         ip_hdlr->shm_info =(int (*)(void *handle, int *fd))dlsym(ip_hdlr->lib_hdl,
                                                                  "audio_ip_hdlr_shm_info");
+        ip_hdlr->get_lib_fd =(int (*)(void *handle, int *fd))dlsym(ip_hdlr->lib_hdl,
+                                                                 "audio_ip_hdlr_lib_fd");
         ip_hdlr->event =(int (*)(void *handle, void *payload))dlsym(ip_hdlr->lib_hdl,
                                                                     "audio_ip_hdlr_event");
         if (!ip_hdlr->init || !ip_hdlr->deinit || !ip_hdlr->open ||
             !ip_hdlr->close || !ip_hdlr->reg_cb || !ip_hdlr->shm_info ||
-            !ip_hdlr->event) {
+            !ip_hdlr->event || !ip_hdlr->get_lib_fd) {
             ALOGE("%s: failed to get symbols", __func__);
             ret = -EINVAL;
             goto dlclose;
@@ -461,6 +468,32 @@ int audio_extn_ip_hdlr_intf_init(void **handle, char *lib_path, void **lib_handl
         ALOGE("%s:[%d] init failed ret = %d", __func__, ip_hdlr->ref_cnt, ret);
         ret = -EINVAL;
         goto dlclose;
+    }
+    if (!lib_path) {
+        ip_hdlr->get_lib_fd(*handle, &lib_fd);
+
+        pcm_device_id = platform_get_pcm_device_id(usecase, PCM_PLAYBACK);
+        ret = snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+                       "Playback ION LIB FD %d", pcm_device_id);
+        if (ret < 0) {
+            ALOGE("%s:[%d] snprintf failed",__func__, ip_hdlr->ref_cnt, ret);
+            goto dlclose;
+        }
+        ALOGV("%s: fd = %d  pcm_id = %d", __func__, lib_fd, pcm_device_id);
+
+        ctl = mixer_get_ctl_by_name(dev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s:[%d] Could not get ctl for mixer cmd - %s", __func__,
+                  ip_hdlr->ref_cnt, mixer_ctl_name);
+            ret = -EINVAL;
+            goto dlclose;
+        }
+        ret = mixer_ctl_set_array(ctl, &lib_fd, sizeof(lib_fd));
+        if (ret < 0) {
+            ALOGE("%s:[%d] Could not set ctl for mixer cmd - %s, ret %d", __func__, ip_hdlr->ref_cnt,
+                  mixer_ctl_name, ret);
+            goto dlclose;
+        }
     }
     ip_hdlr->ref_cnt++;
     ALOGD("%s:[%d] init done", __func__, ip_hdlr->ref_cnt);
