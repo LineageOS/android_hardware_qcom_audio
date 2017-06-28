@@ -68,6 +68,15 @@ get_sound_trigger_info(int capture_handle)
     return NULL;
 }
 
+static void stdev_snd_mon_cb(void * stream __unused, struct str_parms * parms)
+{
+    if (!parms)
+        return;
+
+    audio_extn_sound_trigger_set_parameters(NULL, parms);
+    return;
+}
+
 int audio_hw_call_back(sound_trigger_event_type_t event,
                        sound_trigger_event_info_t* config)
 {
@@ -333,6 +342,7 @@ int audio_extn_sound_trigger_init(struct audio_device *adev)
 
     st_dev->adev = adev;
     list_init(&st_dev->st_ses_list);
+    audio_extn_snd_mon_register_listener(st_dev, stdev_snd_mon_cb);
 
     return 0;
 
@@ -349,6 +359,7 @@ void audio_extn_sound_trigger_deinit(struct audio_device *adev)
 {
     ALOGV("%s: Enter", __func__);
     if (st_dev && (st_dev->adev == adev) && st_dev->lib_handle) {
+        audio_extn_snd_mon_unregister_listener(st_dev);
         dlclose(st_dev->lib_handle);
         free(st_dev);
         st_dev = NULL;
