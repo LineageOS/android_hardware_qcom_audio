@@ -3678,19 +3678,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->config = pcm_config_low_latency;
         }
         if (config->format != audio_format_from_pcm_format(out->config.format)) {
-            if (k_enable_extended_precision
-                    && pcm_params_format_test(adev->use_case_table[out->usecase],
-                            pcm_format_from_audio_format(config->format))) {
-                out->config.format = pcm_format_from_audio_format(config->format);
-                /* out->format already set to config->format */
-            } else {
-                /* deny the externally proposed config format
-                 * and use the one specified in audio_hw layer configuration.
-                 * Note: out->format is returned by out->stream.common.get_format()
-                 * and is used to set config->format in the code several lines below.
-                 */
-                out->format = audio_format_from_pcm_format(out->config.format);
-            }
+            out->config.format = pcm_format_from_audio_format(config->format);
         }
         out->sample_rate = out->config.rate;
     }
