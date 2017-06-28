@@ -81,9 +81,6 @@
 #define DEFAULT_HDMI_OUT_SAMPLE_RATE 48000
 #define DEFAULT_HDMI_OUT_FORMAT AUDIO_FORMAT_PCM_16_BIT
 
-#define SND_CARD_STATE_OFFLINE 0
-#define SND_CARD_STATE_ONLINE 1
-
 #define MAX_PERF_LOCK_OPTS 20
 
 #define MAX_STREAM_PROFILE_STR_LEN 32
@@ -260,6 +257,7 @@ struct stream_out {
     bool realtime;
     int af_period_multiplier;
     struct audio_device *dev;
+    card_status_t card_status;
 
     void* qaf_stream_handle;
     pthread_cond_t qaf_offload_cond;
@@ -303,6 +301,7 @@ struct stream_in {
     qahwi_stream_in_t qahwi_in;
 
     struct audio_device *dev;
+    card_status_t card_status;
 };
 
 typedef enum {
@@ -328,11 +327,6 @@ struct audio_usecase {
     struct stream_app_type_cfg out_app_type_cfg;
     struct stream_app_type_cfg in_app_type_cfg;
     union stream_ptr stream;
-};
-
-struct sound_card_status {
-    pthread_mutex_t lock;
-    int state;
 };
 
 struct stream_format {
@@ -402,6 +396,7 @@ struct audio_device {
     bool allow_afe_proxy_usage;
 
     int snd_card;
+    card_status_t card_status;
     unsigned int cur_codec_backend_samplerate;
     unsigned int cur_codec_backend_bit_width;
     bool is_channel_status_set;
@@ -414,7 +409,6 @@ struct audio_device {
     int (*offload_effects_start_output)(audio_io_handle_t, int, struct mixer *);
     int (*offload_effects_stop_output)(audio_io_handle_t, int);
 
-    struct sound_card_status snd_card_status;
     int (*offload_effects_set_hpx_state)(bool);
 
     void *adm_data;
@@ -470,7 +464,6 @@ bool audio_is_dsd_native_stream_active(struct audio_device *adev);
 
 int pcm_ioctl(struct pcm *pcm, int request, ...);
 
-int get_snd_card_state(struct audio_device *adev);
 audio_usecase_t get_usecase_id_from_usecase_type(const struct audio_device *adev,
                                                  usecase_type_t type);
 

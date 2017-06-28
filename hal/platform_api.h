@@ -149,7 +149,7 @@ const char * platform_get_snd_device_backend_interface(snd_device_t device);
 /* From platform_info.c */
 int platform_info_init(const char *filename, void *, caller_t);
 
-void platform_snd_card_update(void *platform, int snd_scard_state);
+void platform_snd_card_update(void *platform, card_status_t scard_status);
 
 struct audio_offload_info_t;
 uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info);
