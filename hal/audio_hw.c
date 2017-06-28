@@ -4483,19 +4483,17 @@ static int adev_close(hw_device_t *device)
     if (!adev)
         return 0;
 
-    audio_extn_snd_mon_unregister_listener(adev);
-    audio_extn_snd_mon_deinit();
-
-    audio_extn_tfa_98xx_deinit();
-
     pthread_mutex_lock(&adev_init_lock);
 
     if ((--audio_device_ref_count) == 0) {
+        audio_extn_snd_mon_unregister_listener(adev);
+        audio_extn_tfa_98xx_deinit();
         audio_route_free(adev->audio_route);
         free(adev->snd_dev_ref_cnt);
         platform_deinit(adev->platform);
         audio_extn_extspk_deinit(adev->extspk);
         audio_extn_sound_trigger_deinit(adev);
+        audio_extn_snd_mon_deinit();
         for (i = 0; i < ARRAY_SIZE(adev->use_case_table); ++i) {
             pcm_params_free(adev->use_case_table[i]);
         }
@@ -4621,7 +4619,6 @@ static int adev_open(const hw_module_t *module, const char *name,
         return -EINVAL;
     }
     adev->extspk = audio_extn_extspk_init(adev);
-    audio_extn_sound_trigger_init(adev);
 
     adev->visualizer_lib = dlopen(VISUALIZER_LIBRARY_PATH, RTLD_NOW);
     if (adev->visualizer_lib == NULL) {
@@ -4733,6 +4730,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     audio_extn_snd_mon_register_listener(NULL, adev_snd_mon_cb);
     adev->card_status = CARD_STATUS_ONLINE;
     pthread_mutex_unlock(&adev->lock);
+    audio_extn_sound_trigger_init(adev);/* dependent on snd_mon_init() */
 
     ALOGD("%s: exit", __func__);
     return 0;
