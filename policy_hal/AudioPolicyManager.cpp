@@ -91,8 +91,8 @@ audio_output_flags_t AudioPolicyManagerCustom::getFallBackPath()
             flag = AUDIO_OUTPUT_FLAG_FAST;
         }
         else {
-            ALOGD("voice_conc:not a recognised path(%s) in prop
-                   vendor.voice.conc.fallbackpath", propValue);
+            ALOGD("voice_conc:not a recognised path(%s) in prop vendor.voice.conc.fallbackpath",
+                 propValue);
         }
     }
     else {
