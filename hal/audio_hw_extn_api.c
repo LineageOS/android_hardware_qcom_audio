@@ -35,6 +35,7 @@
 #include <errno.h>
 #include <log/log.h>
 #include <cutils/atomic.h>
+#include <pthread.h>
 
 #include <hardware/audio.h>
 #include "sound/compress_params.h"
