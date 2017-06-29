@@ -1073,7 +1073,20 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_IN_HEADSET_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_UNPROCESSED_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_CAMCORDER_MIC] = strdup("SLIMBUS_0_TX");
-
+    hw_interface_table[SND_DEVICE_IN_VOICE_REC_MIC] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_VOICE_REC_MIC_NS] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_VOICE_REC_DMIC_STEREO] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_SPEAKER_MIC] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_SPEAKER_MIC_AEC] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_SPEAKER_MIC_NS] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_SPEAKER_MIC_AEC_NS] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_SPEAKER_DMIC] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_SPEAKER_DMIC_AEC] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_SPEAKER_DMIC_NS] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_VOICE_SPEAKER_MIC] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_VOICE_HEADSET_MIC] = strdup("SLIMBUS_0_TX");
     my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
 }
 
@@ -3015,6 +3028,8 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         ALOGV("%s: max_mic_count %s/%d", __func__, value, my_data->max_mic_count);
     }
 
+    // to-do: disable setting sidetone gain, will revist this later
+    // audio_extn_usb_set_sidetone_gain(parms, value, len);
 done:
     ALOGV("%s: exit with code(%d)", __func__, ret);
     if (kv_pairs != NULL)
@@ -3997,6 +4012,28 @@ int platform_get_app_type_v2(void *platform,
     if (*app_type == -1) {
         ALOGV("%s no match found, return default", __func__);
         return platform_get_default_app_type_v2(platform, uc_type, app_type);
+    }
+    return 0;
+}
+
+int platform_set_sidetone(struct audio_device *adev,
+                          snd_device_t out_snd_device,
+                          bool enable, char *str)
+{
+    int ret;
+    if (out_snd_device == SND_DEVICE_OUT_USB_HEADSET ||
+        out_snd_device == SND_DEVICE_OUT_VOICE_USB_HEADSET) {
+            ret = audio_extn_usb_enable_sidetone(out_snd_device, enable);
+            if (ret)
+                ALOGI("%s: usb device %d does not support device sidetone\n",
+                  __func__, out_snd_device);
+    } else {
+        ALOGV("%s: sidetone out device(%d) mixer cmd = %s\n",
+              __func__, out_snd_device, str);
+        if (enable)
+            audio_route_apply_and_update_path(adev->audio_route, str);
+        else
+            audio_route_reset_and_update_path(adev->audio_route, str);
     }
     return 0;
 }
