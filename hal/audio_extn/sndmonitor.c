@@ -50,6 +50,7 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <sys/poll.h>
+#include <pthread.h>
 #include <cutils/list.h>
 #include <cutils/hashmap.h>
 #include <log/log.h>
