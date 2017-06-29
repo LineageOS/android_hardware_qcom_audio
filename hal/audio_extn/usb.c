@@ -505,9 +505,12 @@ static void usb_get_sidetone_mixer(struct usb_card_config *usb_card_info)
             usb_card_info->usb_sidetone_index[USB_SIDETONE_ENABLE_INDEX] = index;
             /* Disable device sidetone by default */
             mixer_ctl_set_value(ctl, 0, false);
+            ALOGV("%s:: sidetone mixer Control found(%s) ... disabling by default",
+                   __func__, usb_sidetone_enable_str[index]);
             break;
         }
     }
+#ifdef USB_SIDETONE_VOLUME
     for (index = 0;
          index < sizeof(usb_sidetone_volume_str)/sizeof(usb_sidetone_volume_str[0]);
          index++) {
@@ -520,7 +523,7 @@ static void usb_get_sidetone_mixer(struct usb_card_config *usb_card_info)
             break;
         }
     }
-
+#endif // USB_SIDETONE_VOLUME
     if ((usb_card_info->usb_snd_mixer != NULL) && (usb_audio_debug_enable))
         usb_soundcard_list_controls(usb_card_info->usb_snd_mixer);
 
@@ -848,6 +851,7 @@ int audio_extn_usb_enable_sidetone(int device, bool enable)
                 else
                     break;
 
+#ifdef USB_SIDETONE_VOLUME
                 if ((i = card_info->usb_sidetone_index[USB_SIDETONE_VOLUME_INDEX]) != -1) {
                     ctl = mixer_get_ctl_by_name(
                                 card_info->usb_snd_mixer,
@@ -859,6 +863,7 @@ int audio_extn_usb_enable_sidetone(int device, bool enable)
                         mixer_ctl_set_value(ctl, 0,
                                             usb_get_sidetone_gain(card_info));
                 }
+#endif // USB_SIDETONE_VOLUME
                 ret = 0;
                 break;
             }
