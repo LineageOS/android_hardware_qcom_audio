@@ -27,6 +27,7 @@
 #include <cutils/log.h>
 #include <cutils/str_parms.h>
 #include <sys/ioctl.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <system/audio.h>
