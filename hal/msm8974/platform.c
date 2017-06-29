@@ -19,6 +19,8 @@
 
 #include <stdlib.h>
 #include <dlfcn.h>
+#include <pthread.h>
+#include <unistd.h>
 #include <cutils/log.h>
 #include <cutils/str_parms.h>
 #include <cutils/properties.h>
