@@ -165,6 +165,7 @@ struct qaf_module {
     audio_session_handle_t session_handle;
     void *qaf_lib;
     int (*qaf_audio_session_open)(audio_session_handle_t* session_handle,
+                                  audio_session_type_t s_type,
                                   void *p_data,
                                   void* license_data);
     int (*qaf_audio_session_close)(audio_session_handle_t session_handle);
@@ -1816,6 +1817,7 @@ static int audio_extn_qaf_session_open(mm_module_type mod_type)
     }
 
     ret = qaf_mod->qaf_audio_session_open(&qaf_mod->session_handle,
+                                          AUDIO_SESSION_BROADCAST,
                                           (void *)(qaf_mod),
                                           (void *)&lic_config);
     if (ret < 0) {
@@ -2808,7 +2810,8 @@ int audio_extn_qaf_init(struct audio_device *adev)
 
         DEBUG_MSG("DLOPEN successful for %s", lib_name);
         qaf_mod->qaf_audio_session_open =
-                    (int (*)(audio_session_handle_t* session_handle, void *p_data, void* license_data))dlsym(qaf_mod->qaf_lib,
+                    (int (*)(audio_session_handle_t* session_handle, audio_session_type_t s_type,
+                                  void *p_data, void* license_data))dlsym(qaf_mod->qaf_lib,
                                                                      "audio_session_open");
         qaf_mod->qaf_audio_session_close =
                     (int (*)(audio_session_handle_t session_handle))dlsym(qaf_mod->qaf_lib,
