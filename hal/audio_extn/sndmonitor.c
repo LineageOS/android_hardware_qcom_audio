@@ -49,6 +49,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/poll.h>
+#include <pthread.h>
 #include <cutils/list.h>
 #include <cutils/hashmap.h>
 #include <cutils/log.h>
