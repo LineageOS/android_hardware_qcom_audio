@@ -80,6 +80,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_USB_TUNNEL)),true)
     LOCAL_SRC_FILES += audio_extn/usb.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_USB_SIDETONE_VOLUME)),true)
+    LOCAL_CFLAGS += -DUSB_SIDETONE_VOLUME
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	libaudioutils \
 	liblog \
