@@ -31,6 +31,8 @@
 //#define LOG_NDEBUG 0
 #include <stdlib.h>
 #include <dlfcn.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #include <cutils/list.h>
 #include <cutils/log.h>
