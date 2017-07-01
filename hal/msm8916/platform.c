@@ -2365,3 +2365,9 @@ int platform_set_sidetone(struct audio_device *adev,
     }
     return 0;
 }
+
+int platform_get_mmap_data_fd(void *platform __unused, int fe_dev __unused, int dir __unused,
+                              int *fd __unused, uint32_t *size __unused)
+{
+    return -ENOSYS;
+}

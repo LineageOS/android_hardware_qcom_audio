@@ -2819,6 +2819,8 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
     unsigned int offset1;
     unsigned int frames1;
     const char *step = "";
+    uint32_t mmap_size;
+    uint32_t buffer_size;
 
     ALOGV("%s", __func__);
     pthread_mutex_lock(&adev->lock);
@@ -2858,11 +2860,24 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
         goto exit;
     }
     info->buffer_size_frames = pcm_get_buffer_size(out->pcm);
+    buffer_size = pcm_frames_to_bytes(out->pcm, info->buffer_size_frames);
     info->burst_size_frames = out->config.period_size;
-    info->shared_memory_fd = pcm_get_poll_fd(out->pcm);
-
-    memset(info->shared_memory_address, 0, pcm_frames_to_bytes(out->pcm,
-                                                                info->buffer_size_frames));
+    ret = platform_get_mmap_data_fd(adev->platform,
+                                    out->pcm_device_id, 0 /*playback*/,
+                                    &info->shared_memory_fd,
+                                    &mmap_size);
+    if (ret < 0) {
+        // Fall back to non exclusive mode
+        info->shared_memory_fd = pcm_get_poll_fd(out->pcm);
+    } else {
+        if (mmap_size < buffer_size) {
+            step = "mmap";
+            goto exit;
+        }
+        // FIXME: indicate exclusive mode support by returning a negative buffer size
+        info->buffer_size_frames *= -1;
+    }
+    memset(info->shared_memory_address, 0, buffer_size);
 
     ret = pcm_mmap_commit(out->pcm, 0, MMAP_PERIOD_SIZE);
     if (ret < 0) {
@@ -3356,6 +3371,8 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
     unsigned int offset1;
     unsigned int frames1;
     const char *step = "";
+    uint32_t mmap_size;
+    uint32_t buffer_size;
 
     pthread_mutex_lock(&adev->lock);
     ALOGV("%s in %p", __func__, in);
@@ -3397,11 +3414,25 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
         goto exit;
     }
     info->buffer_size_frames = pcm_get_buffer_size(in->pcm);
+    buffer_size = pcm_frames_to_bytes(in->pcm, info->buffer_size_frames);
     info->burst_size_frames = in->config.period_size;
-    info->shared_memory_fd = pcm_get_poll_fd(in->pcm);
+    ret = platform_get_mmap_data_fd(adev->platform,
+                                    in->pcm_device_id, 1 /*capture*/,
+                                    &info->shared_memory_fd,
+                                    &mmap_size);
+    if (ret < 0) {
+        // Fall back to non exclusive mode
+        info->shared_memory_fd = pcm_get_poll_fd(in->pcm);
+    } else {
+        if (mmap_size < buffer_size) {
+            step = "mmap";
+            goto exit;
+        }
+        // FIXME: indicate exclusive mode support by returning a negative buffer size
+        info->buffer_size_frames *= -1;
+    }
 
-    memset(info->shared_memory_address, 0, pcm_frames_to_bytes(in->pcm,
-                                                                info->buffer_size_frames));
+    memset(info->shared_memory_address, 0, buffer_size);
 
     ret = pcm_mmap_commit(in->pcm, 0, MMAP_PERIOD_SIZE);
     if (ret < 0) {
