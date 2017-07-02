@@ -18,7 +18,7 @@
 #define AUDIO_PLATFORM_API_H
 
 #include "voice.h"
-#define MAX_VOLUME_CAL_STEPS 25
+#define MAX_VOLUME_CAL_STEPS 15
 #define CODEC_BACKEND_DEFAULT_SAMPLE_RATE 48000
 #define CODEC_BACKEND_DEFAULT_BIT_WIDTH 16
 #define CODEC_BACKEND_DEFAULT_CHANNELS 2
@@ -145,4 +145,6 @@ int platform_get_snd_device_backend_index(snd_device_t snd_device);
 int platform_set_sidetone(struct audio_device *adev,
                           snd_device_t out_snd_device,
                           bool enable, char * str);
+int platform_get_mmap_data_fd(void *platform, int dev, int dir,
+                              int *fd, uint32_t *size);
 #endif // AUDIO_PLATFORM_API_H

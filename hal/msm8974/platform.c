@@ -19,6 +19,8 @@
 
 #include <stdlib.h>
 #include <dlfcn.h>
+#include <pthread.h>
+#include <unistd.h>
 #include <cutils/log.h>
 #include <cutils/str_parms.h>
 #include <cutils/properties.h>
@@ -28,6 +30,9 @@
 #include "platform.h"
 #include "audio_extn.h"
 #include <linux/msm_audio.h>
+#if defined (PLATFORM_MSM8996) || (PLATFORM_MSM8998)
+#include <sound/devdep_params.h>
+#endif
 
 #define MIXER_XML_DEFAULT_PATH "mixer_paths.xml"
 #define MIXER_XML_BASE_STRING "mixer_paths"
@@ -4036,4 +4041,36 @@ int platform_set_sidetone(struct audio_device *adev,
             audio_route_reset_and_update_path(adev->audio_route, str);
     }
     return 0;
+}
+
+int platform_get_mmap_data_fd(void *platform __unused, int fe_dev __unused, int dir __unused,
+                              int *fd __unused, uint32_t *size __unused)
+{
+#if defined (PLATFORM_MSM8996) || (PLATFORM_MSM8998)
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    int hw_fd = -1;
+    char dev_name[128];
+    struct snd_pcm_mmap_fd mmap_fd;
+    memset(&mmap_fd, 0, sizeof(mmap_fd));
+    mmap_fd.dir = dir;
+    snprintf(dev_name, sizeof(dev_name), "/dev/snd/hwC%uD%u",
+             adev->snd_card, HWDEP_FE_BASE+fe_dev);
+    hw_fd = open(dev_name, O_RDONLY);
+    if (hw_fd < 0) {
+        ALOGE("fe hw dep node open %d/%d failed", adev->snd_card, fe_dev);
+        return -1;
+    }
+    if (ioctl(hw_fd, SNDRV_PCM_IOCTL_MMAP_DATA_FD, &mmap_fd) < 0) {
+        ALOGE("fe hw dep node ioctl failed");
+        close(hw_fd);
+        return -1;
+    }
+    *fd = mmap_fd.fd;
+    *size = mmap_fd.size;
+    close(hw_fd); // mmap_fd should still be valid
+    return 0;
+#else
+    return -1;
+#endif
 }
