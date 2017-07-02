@@ -27,7 +27,7 @@ BOARD_USES_SRS_TRUEMEDIA := false
 DTS_CODEC_M_ := true
 MM_AUDIO_ENABLED_SAFX := true
 AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS := false
-AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := true
+AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := false
 AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 DOLBY_ENABLE := false
 endif
@@ -150,8 +150,8 @@ vendor.audio.offload.multiaac.enable=true
 
 #Enable DS2, Hardbypass feature for Dolby
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.dolby.ds2.enabled=true\
-vendor.audio.dolby.ds2.hardbypass=true
+vendor.audio.dolby.ds2.enabled=false\
+vendor.audio.dolby.ds2.hardbypass=false
 
 #Disable Multiple offload sesison
 PRODUCT_PROPERTY_OVERRIDES += \
