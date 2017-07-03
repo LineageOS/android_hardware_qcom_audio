@@ -2169,10 +2169,6 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
     } else {
         voice_extn_out_get_parameters(out, query, reply);
         str = str_parms_to_str(reply);
-        if (str && !strncmp(str, "", sizeof(""))) {
-            free(str);
-            str = strdup(keys);
-        }
     }
 
 
@@ -2182,7 +2178,7 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
         if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT &&
             !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
             ALOGV("in direct_pcm");
-            strlcat(value, "true", sizeof(value ));
+            strlcat(value, "true", sizeof(value));
         } else {
             ALOGV("not in direct_pcm");
             strlcat(value, "false", sizeof(value));
@@ -2505,7 +2501,7 @@ static int out_remove_audio_effect(const struct audio_stream *stream __unused,
 static int out_get_next_write_timestamp(const struct audio_stream_out *stream __unused,
                                         int64_t *timestamp __unused)
 {
-    return -EINVAL;
+    return -ENOSYS;
 }
 
 static int out_get_presentation_position(const struct audio_stream_out *stream,
