@@ -118,7 +118,10 @@ struct rtic_event {
 
 bool audio_extn_ip_hdlr_intf_supported(audio_format_t format)
 {
-    if ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_DOLBY_TRUEHD)
+    if (((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_DOLBY_TRUEHD) ||
+        ((!property_get_bool("audio.offload.passthrough", false)) &&
+         (((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_E_AC3) ||
+         ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AC3))))
         return true;
     else
         return false;
@@ -492,7 +495,7 @@ int audio_extn_ip_hdlr_intf_deinit(void *handle)
 
         pthread_mutex_destroy(&ip_hdlr->stream_list_lock);
         free(ip_hdlr);
-        ip_hdlr == NULL;
+        ip_hdlr = NULL;
     }
     return ret;
 }
