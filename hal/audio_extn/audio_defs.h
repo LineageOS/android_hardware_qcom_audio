@@ -221,6 +221,21 @@ struct audio_out_channel_map_param {
    uint8_t       channel_map[AUDIO_CHANNEL_COUNT_MAX];  /* Input Channel Map */
 };
 
+struct audio_device_cfg_param {
+   uint32_t   sample_rate;
+   uint32_t   channels;
+   uint32_t   bit_width;
+   audio_format_t format;
+   audio_devices_t device;
+   uint8_t    channel_map[AUDIO_CHANNEL_COUNT_MAX];
+   uint16_t   channel_allocation;
+};
+
+struct audio_device_config_param {
+   bool use_client_dev_cfg;
+   struct audio_device_cfg_param dev_cfg_params;
+};
+
 typedef union {
     struct source_tracking_param st_params;
     struct sound_focus_param sf_params;
@@ -232,6 +247,7 @@ typedef union {
     struct audio_out_correct_drift drift_correction_param;
     struct audio_adsp_event adsp_event_params;
     struct audio_out_channel_map_param channel_map_param;
+    struct audio_device_cfg_param device_cfg;
 } audio_extn_param_payload;
 
 typedef enum {
@@ -247,7 +263,8 @@ typedef enum {
     AUDIO_EXTN_PARAM_OUT_CORRECT_DRIFT,
     AUDIO_EXTN_PARAM_ADSP_STREAM_CMD,
     /* param to set input channel map for playback stream */
-    AUDIO_EXTN_PARAM_OUT_CHANNEL_MAP
+    AUDIO_EXTN_PARAM_OUT_CHANNEL_MAP,
+    AUDIO_EXTN_PARAM_DEVICE_CONFIG
 } audio_extn_param_id;
 
 #endif /* AUDIO_DEFS_H */
