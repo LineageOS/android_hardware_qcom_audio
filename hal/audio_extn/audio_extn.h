@@ -867,7 +867,8 @@ int audio_extn_out_set_param_data(struct stream_out *out,
 int audio_extn_out_get_param_data(struct stream_out *out,
                              audio_extn_param_id param_id,
                              audio_extn_param_payload *payload);
-
+int audio_extn_set_device_cfg_params(struct audio_device *adev,
+                                     struct audio_device_cfg_param *payload);
 int audio_extn_utils_get_avt_device_drift(
                 struct audio_usecase *usecase,
                 struct audio_avt_device_drift_param *drift_param);

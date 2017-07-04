@@ -471,6 +471,7 @@ struct audio_device {
     qahwi_device_t qahwi_dev;
     bool vr_audio_mode_enabled;
     bool bt_sco_on;
+    struct audio_device_config_param *device_cfg_params;
 };
 
 int select_devices(struct audio_device *adev,
