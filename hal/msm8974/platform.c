@@ -2310,8 +2310,10 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
                 (devices == (AUDIO_DEVICE_OUT_USB_HEADSET |
                                                AUDIO_DEVICE_OUT_SPEAKER))) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET;
-        } else if (devices == (AUDIO_DEVICE_OUT_USB_DEVICE |
-                               AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
+        } else if ((devices == (AUDIO_DEVICE_OUT_USB_DEVICE |
+                               AUDIO_DEVICE_OUT_SPEAKER_SAFE)) ||
+                (devices == (AUDIO_DEVICE_OUT_USB_HEADSET |
+                                               AUDIO_DEVICE_OUT_SPEAKER_SAFE))) {
             snd_device = SND_DEVICE_OUT_SPEAKER_SAFE_AND_USB_HEADSET;
         } else {
             ALOGE("%s: Invalid combo device(%#x)", __func__, devices);
