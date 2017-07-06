@@ -3254,8 +3254,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
            (out->config.rate);
     }
 
-    if ((AUDIO_DEVICE_OUT_ALL_A2DP & out->devices) &&
-            !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD))
+    if (AUDIO_DEVICE_OUT_ALL_A2DP & out->devices)
         latency += audio_extn_a2dp_get_encoder_latency();
 
     ALOGV("%s: Latency %d", __func__, latency);
@@ -3693,6 +3692,13 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
     if (is_offload_usecase(out->usecase) && out->compr != NULL && out->non_blocking) {
         ret = compress_get_tstamp(out->compr, &dsp_frames,
                  &out->sample_rate);
+        // Adjustment accounts for A2dp encoder latency with offload usecases
+        // Note: Encoder latency is returned in ms.
+        if (AUDIO_DEVICE_OUT_ALL_A2DP & out->devices) {
+            unsigned long offset =
+                        (audio_extn_a2dp_get_encoder_latency() * out->sample_rate / 1000);
+            dsp_frames = (dsp_frames > offset) ? (dsp_frames - offset) : 0;
+        }
         ALOGVV("%s rendered frames %ld sample_rate %d",
                __func__, dsp_frames, out->sample_rate);
         *frames = dsp_frames;
