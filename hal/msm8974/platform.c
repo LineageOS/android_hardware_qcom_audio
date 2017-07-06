@@ -348,6 +348,22 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
 
     [USECASE_AUDIO_PLAYBACK_VOIP] = {AUDIO_PLAYBACK_VOIP_PCM_DEVICE, AUDIO_PLAYBACK_VOIP_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_VOIP] = {AUDIO_RECORD_VOIP_PCM_DEVICE, AUDIO_RECORD_VOIP_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM1] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE1, PLAYBACK_INTERACTIVE_STRM_DEVICE1},
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM2] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE2, PLAYBACK_INTERACTIVE_STRM_DEVICE2},
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM3] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE3, PLAYBACK_INTERACTIVE_STRM_DEVICE3},
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM4] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE4, PLAYBACK_INTERACTIVE_STRM_DEVICE4},
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM5] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE5, PLAYBACK_INTERACTIVE_STRM_DEVICE5},
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM6] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE6, PLAYBACK_INTERACTIVE_STRM_DEVICE6},
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM7] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE7, PLAYBACK_INTERACTIVE_STRM_DEVICE7},
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM8] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE8, PLAYBACK_INTERACTIVE_STRM_DEVICE8},
 
 };
 
@@ -6005,6 +6021,145 @@ void platform_get_device_to_be_id_map(int **device_to_be_id, int *length)
 {
      *device_to_be_id = (int*) msm_device_to_be_id;
      *length = msm_be_id_array_len;
+}
+
+int platform_set_stream_pan_scale_params(void *platform,
+                                         int snd_id,
+                                         struct mix_matrix_params mm_params)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    struct mixer_ctl *ctl = NULL;
+    char mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = {0};
+    int ret = 0;
+    int iter_i = 0;
+    int iter_j = 0;
+    int length = 0;
+    int pan_scale_data[MAX_LENGTH_MIXER_CONTROL_IN_INT] = {0};
+
+    if (sizeof(mm_params) > MAX_LENGTH_MIXER_CONTROL_IN_INT) {
+        ret = -EINVAL;
+        goto end;
+    }
+
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+                          "Audio Stream %d Pan Scale Control", snd_id);
+    ALOGD("%s mixer_ctl_name:%s", __func__, mixer_ctl_name);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        ret = -EINVAL;
+        goto end;
+    }
+    pan_scale_data[length++] = mm_params.num_output_channels;
+    pan_scale_data[length++] = mm_params.num_input_channels;
+
+    pan_scale_data[length++] = mm_params.has_output_channel_map;
+    if (mm_params.has_output_channel_map &&
+        mm_params.num_output_channels <= MAX_CHANNELS_SUPPORTED &&
+        mm_params.num_output_channels > 0)
+        for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++)
+            pan_scale_data[length++] = mm_params.output_channel_map[iter_i];
+    else {
+        ret = -EINVAL;
+        goto end;
+    }
+
+    pan_scale_data[length++] = mm_params.has_input_channel_map;
+    if (mm_params.has_input_channel_map &&
+        mm_params.num_input_channels <= MAX_CHANNELS_SUPPORTED &&
+        mm_params.num_input_channels > 0)
+        for (iter_i = 0; iter_i < mm_params.num_input_channels; iter_i++)
+            pan_scale_data[length++] = mm_params.input_channel_map[iter_i];
+    else {
+        ret = -EINVAL;
+        goto end;
+    }
+    pan_scale_data[length++] = mm_params.has_mixer_coeffs;
+    if (mm_params.has_mixer_coeffs)
+        for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++)
+            for (iter_j = 0; iter_j < mm_params.num_input_channels; iter_j++)
+                pan_scale_data[length++] =
+                                    mm_params.mixer_coeffs[iter_i][iter_j];
+
+    ret = mixer_ctl_set_array(ctl, pan_scale_data, length);
+end:
+    return ret;
+}
+
+int platform_set_stream_downmix_params(void *platform,
+                                       int snd_id,
+                                       snd_device_t snd_device,
+                                       struct mix_matrix_params mm_params)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    struct mixer_ctl *ctl;
+    char mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = {0};
+    int downmix_param_data[MAX_LENGTH_MIXER_CONTROL_IN_INT] = {0};
+    int ret = 0;
+    int iter_i = 0;
+    int iter_j = 0;
+    int length = 0;
+    int be_idx = 0;
+
+    if ((sizeof(mm_params) +
+         sizeof(be_idx)) >
+        MAX_LENGTH_MIXER_CONTROL_IN_INT) {
+        ret = -EINVAL;
+        goto end;
+    }
+
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+                          "Audio Device %d Downmix Control", snd_id);
+    ALOGD("%s mixer_ctl_name:%s", __func__, mixer_ctl_name);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        ret = -EINVAL;
+    }
+
+    be_idx = platform_get_snd_device_backend_index(snd_device);
+    downmix_param_data[length]   = be_idx;
+    downmix_param_data[length++] = mm_params.num_output_channels;
+    downmix_param_data[length++] = mm_params.num_input_channels;
+
+    downmix_param_data[length++] = mm_params.has_output_channel_map;
+    if (mm_params.has_output_channel_map &&
+        mm_params.num_output_channels <= MAX_CHANNELS_SUPPORTED &&
+        mm_params.num_output_channels > 0)
+        for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++)
+            downmix_param_data[length++] = mm_params.output_channel_map[iter_i];
+    else {
+        ret = -EINVAL;
+        goto end;
+    }
+
+    downmix_param_data[length++] = mm_params.has_input_channel_map;
+    if (mm_params.has_input_channel_map &&
+        mm_params.num_input_channels <= MAX_CHANNELS_SUPPORTED &&
+        mm_params.num_input_channels > 0)
+        for (iter_i = 0; iter_i < mm_params.num_input_channels; iter_i++)
+            downmix_param_data[length++] = mm_params.input_channel_map[iter_i];
+    else {
+        ret = -EINVAL;
+        goto end;
+    }
+
+    downmix_param_data[length++] = mm_params.has_mixer_coeffs;
+    if (mm_params.has_mixer_coeffs)
+        for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++)
+            for (iter_j = 0; iter_j < mm_params.num_input_channels; iter_j++)
+                downmix_param_data[length++] =
+                                       mm_params.mixer_coeffs[iter_i][iter_j];
+
+    ret = mixer_ctl_set_array(ctl, downmix_param_data, length);
+end:
+    return ret;
 }
 
 int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask,

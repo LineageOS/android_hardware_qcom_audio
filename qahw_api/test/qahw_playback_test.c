@@ -22,6 +22,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
@@ -52,7 +53,7 @@
 #define FORMAT_PCM 1
 #define WAV_HEADER_LENGTH_MAX 46
 
-#define MAX_PLAYBACK_STREAMS   3
+#define MAX_PLAYBACK_STREAMS   9
 #define PRIMARY_STREAM_INDEX   0
 
 #define KVPAIRS_MAX 100
@@ -194,6 +195,7 @@ typedef struct {
     pthread_mutex_t write_lock;
     pthread_cond_t drain_cond;
     pthread_mutex_t drain_lock;
+    bool interactive_strm;
 }stream_config;
 
 /* Lock for dual main usecase */
@@ -263,6 +265,9 @@ audio_io_handle_t stream_handle = 0x999;
 #define AUDIO_OUTPUT_FLAG_ASSOCIATED 0x8000
 #endif
 
+#ifndef AUDIO_OUTPUT_FLAG_INTERACTIVE
+#define AUDIO_OUTPUT_FLAG_INTERACTIVE 0x40000
+#endif
 
 static bool request_wake_lock(bool wakelock_acquired, bool enable)
 {
@@ -683,6 +688,12 @@ void *start_stream_playback (void* stream_data)
             fprintf(log_file, "stream %d: after the dual main signal\n", params->stream_index);
             pthread_mutex_unlock(&dual_main_lock);
     }
+
+    if (params->interactive_strm) {
+        params->flags = AUDIO_OUTPUT_FLAG_INTERACTIVE;
+        fprintf(stderr, "stream %s %d: Interactive stream\n", __func__, params->stream_index);
+    }
+
     rc = qahw_open_output_stream(params->qahw_out_hal_handle,
                              params->handle,
                              params->output_device,
@@ -1066,7 +1077,10 @@ static void get_file_format(stream_config *stream_info)
     int rc = 0;
 
     if (!(stream_info->flags_set)) {
-        stream_info->flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING;
+        if (stream_info->interactive_strm)
+            stream_info->flags = AUDIO_OUTPUT_FLAG_INTERACTIVE;
+        else
+            stream_info->flags = AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING;
         stream_info->flags |= AUDIO_OUTPUT_FLAG_DIRECT;
     }
 
@@ -1458,6 +1472,10 @@ static int detect_stream_params(stream_config *stream) {
     else
         direction = PCM_OUT;
 
+    if (direction == PCM_OUT && stream->interactive_strm) {
+        stream->flags = AUDIO_OUTPUT_FLAG_INTERACTIVE;
+        fprintf(stderr, "stream %d: Interactive stream\n", stream->stream_index);
+    }
     fprintf(log_file, "%s: opening %s stream\n", __func__, ((direction == PCM_IN)? "input":"output"));
 
     if (PCM_IN == direction)
@@ -1595,6 +1613,10 @@ void usage() {
     printf(" -m  --mode                                - usb operating mode(Device Mode is default)\n");
     printf("                                             0:Device Mode(host drives the stream and its params and so no need to give params as input)\n");
     printf("                                             1:Host Mode(user can give stream and stream params via a stream(SD card file) or setup loopback with given params\n");
+    printf(" -O  --output-ch-map                       - output channel map");
+    printf(" -I  --input-ch-map                        - input channel map");
+    printf(" -M  --mixer-coeffs                        - mixer coefficient matrix");
+    printf(" -i  --intr-strm                           - interactive stream indicator");
     printf(" \n Examples \n");
     printf(" hal_play_test -f /data/Anukoledenadu.wav  -> plays Wav stream with default params\n\n");
     printf(" hal_play_test -f /data/MateRani.mp3 -t 2 -d 2 -v 0.01 -r 44100 -c 2 \n");
@@ -1852,15 +1874,146 @@ static int unload_hals() {
     return 1;
 }
 
+audio_channel_mask_t get_channel_mask_for_name(char *name) {
+    audio_channel_mask_t channel_type = AUDIO_CHANNEL_INVALID;
+    if (NULL == name)
+        return channel_type;
+    else if (strncmp(name, "fl", 2) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_FRONT_LEFT;
+    else if (strncmp(name, "fr", 2) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_FRONT_RIGHT;
+    else if (strncmp(name, "fc", 2) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_FRONT_CENTER;
+    else if (strncmp(name, "lfe", 2) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_LOW_FREQUENCY;
+    else if (strncmp(name, "bl", 2) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_BACK_LEFT;
+    else if (strncmp(name, "br", 2) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_BACK_RIGHT;
+    else if (strncmp(name, "flc", 3) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_FRONT_LEFT_OF_CENTER;
+    else if (strncmp(name, "frc", 3) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_FRONT_RIGHT_OF_CENTER;
+    else if (strncmp(name, "bc", 2) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_BACK_CENTER;
+    else if (strncmp(name, "sl", 2) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_SIDE_LEFT;
+    else if (strncmp(name, "sr", 2) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_SIDE_RIGHT;
+    else if (strncmp(name, "tc", 2) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_TOP_CENTER;
+    else if (strncmp(name, "tfl", 3) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_TOP_FRONT_LEFT;
+    else if (strncmp(name, "tfc", 3) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_TOP_FRONT_CENTER;
+    else if (strncmp(name, "tfr", 3) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_TOP_FRONT_RIGHT;
+    else if (strncmp(name, "tbl", 3) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_TOP_BACK_LEFT;
+    else if (strncmp(name, "tbc", 3) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_TOP_BACK_CENTER;
+    else if (strncmp(name, "tbr", 3) == 0)
+        channel_type = AUDIO_CHANNEL_OUT_TOP_BACK_RIGHT;
+
+    return channel_type;
+}
+
+int extract_channel_mapping(uint32_t *channel_map, const char * arg_string){
+
+    char *token_string = NULL;
+    char *init_ptr = NULL;
+    char *token = NULL;
+    char *saveptr = NULL;
+
+    if (NULL == channel_map)
+        return -EINVAL;
+
+    if (NULL == arg_string)
+        return EINVAL;
+
+    token_string = strdup(arg_string);
+
+    if(token_string != NULL) {
+        init_ptr = token_string;
+        token = strtok_r(token_string, ",", &saveptr);
+        int index = 0;
+        if (NULL == token)
+            return -EINVAL;
+        else
+            channel_map[index++] = get_channel_mask_for_name(token);
+
+        while(NULL !=(token = strtok_r(NULL,",",&saveptr)))
+            channel_map[index++] = get_channel_mask_for_name(token);
+
+        free(init_ptr);
+        init_ptr = NULL;
+        token_string = NULL;
+    } else
+        return -EINVAL;
+    return 0;
+}
+
+int extract_mixer_coeffs(qahw_mix_matrix_params_t * mm_params, const char * arg_string){
+
+    char *token_string = NULL;
+    char *init_ptr = NULL;
+    char *token = NULL;
+    char *saveptr = NULL;
+    int i = 0;
+    int j = 0;
+
+    if (NULL == mm_params)
+        return -EINVAL;
+
+    if (NULL == arg_string)
+        return -EINVAL;
+
+    token_string = strdup(arg_string);
+
+    if(token_string != NULL) {
+        init_ptr = token_string;
+        token = strtok_r(token_string, ",", &saveptr);
+        int index = 0;
+        if (NULL == token)
+            return -EINVAL;
+        else {
+            mm_params->mixer_coeffs[i][j] = atof(token);
+            j++;
+        }
+
+        while(NULL !=(token = strtok_r(NULL,",",&saveptr))) {
+            if(j == mm_params->num_input_channels) {
+                j=0;
+                i++;
+            }
+            if(i == mm_params->num_output_channels)
+                break;
+            mm_params->mixer_coeffs[i][j++] = atof(token);
+        }
+        free(init_ptr);
+        init_ptr = NULL;
+        token_string = NULL;
+    } else
+        return -EINVAL;
+    return 0;
+}
 
 int main(int argc, char* argv[]) {
     char *ba = NULL;
+    char *temp_input_channel_map = NULL;
+    char *temp_output_channel_map = NULL;
+    char *temp_mixer_coeffs = NULL;
     qahw_param_payload payload;
     qahw_param_id param_id;
     struct qahw_aptx_dec_param aptx_params;
+    qahw_mix_matrix_params_t mm_params;
     int rc = 0;
     int i = 0;
+    int iter_i = 0;
+    int iter_j = 0;
     kpi_mode = false;
+    char mixer_ctrl_name[64] = {0};
+    int mixer_ctrl_type = 0;
     event_trigger = false;
     bool wakelock_acquired = false;
 
@@ -1899,6 +2052,11 @@ int main(int argc, char* argv[]) {
         {"effect-preset",   required_argument,    0, 'p'},
         {"effect-strength", required_argument,    0, 'S'},
         {"help",          no_argument,          0, 'h'},
+        {"output-ch-map", required_argument,    0, 'O'},
+        {"input-ch-map",  required_argument,    0, 'I'},
+        {"mixer-coeffs",  required_argument,    0, 'M'},
+        {"num-out-ch",    required_argument,    0, 'o'},
+        {"intr-strm",    required_argument,    0, 'i'},
         {0, 0, 0, 0}
     };
 
@@ -1921,7 +2079,7 @@ int main(int argc, char* argv[]) {
 
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:s:v:l:t:a:w:k:PD:KF:Ee:A:u:m:S:p:qQh",
+                              "-f:r:c:b:d:s:v:l:t:a:w:k:PD:KF:Ee:A:u:m:S:p:qQhI:O:M:o:i:",
                               long_options,
                               &option_index)) != -1) {
 
@@ -1938,6 +2096,7 @@ int main(int argc, char* argv[]) {
         case 'c':
             stream_param[i].channels = atoi(optarg);
             stream_param[i].config.channel_mask = audio_channel_out_mask_from_count(atoi(optarg));
+            mm_params.num_input_channels = stream_param[i].channels;
             break;
         case 'b':
             stream_param[i].config.offload_info.bit_width = atoi(optarg);
@@ -1962,6 +2121,9 @@ int main(int argc, char* argv[]) {
                 log_file = stdout;
             }
             break;
+        case 'i':
+            stream_param[i].interactive_strm = atoi(optarg);
+            break;
         case 't':
             stream_param[i].filetype = atoi(optarg);
             break;
@@ -1972,7 +2134,15 @@ int main(int argc, char* argv[]) {
             stream_param[i].wma_fmt_type = atoi(optarg);
             break;
         case 'k':
-            stream_param[i].kvpair_values = optarg;
+            get_kvpairs_string(optarg, "mixer_ctrl", mixer_ctrl_name);
+            if(strncmp(mixer_ctrl_name, "downmix", 7) == 0) {
+                mixer_ctrl_type = QAHW_PARAM_CH_MIX_MATRIX_PARAMS;
+            } else if(strncmp(mixer_ctrl_name, "pan_scale", 9) == 0) {
+                mixer_ctrl_type = QAHW_PARAM_OUT_MIX_MATRIX_PARAMS;
+            } else {
+                mixer_ctrl_type = 0;
+                stream_param[i].kvpair_values = optarg;
+            }
             break;
         case 'D':
             proxy_params.acp.file_name = optarg;
@@ -2033,11 +2203,66 @@ int main(int argc, char* argv[]) {
         case 'm':
             stream_param[i].usb_mode = atoi(optarg);
             break;
+        case 'O':
+            temp_output_channel_map = strdup(optarg);
+            break;
+        case 'I':
+            temp_input_channel_map = strdup(optarg);
+            break;
+        case 'M':
+            temp_mixer_coeffs = strdup(optarg);
+            break;
+        case 'o':
+            mm_params.num_output_channels = atoi(optarg);
+            break;
         case 'h':
             usage();
             return 0;
             break;
 
+        }
+    }
+
+    /*
+     * Process Input channel map's input
+     */
+    if (NULL != temp_input_channel_map) {
+        extract_channel_mapping(mm_params.input_channel_map, temp_input_channel_map);
+        mm_params.has_input_channel_map = 1;
+        fprintf(log_file, "\nInput channel mapping: ");
+        for (iter_i= 0; iter_i < mm_params.num_input_channels; iter_i++) {
+            fprintf(log_file, "0x%x, ", mm_params.input_channel_map[iter_i]);
+        }
+        free(temp_input_channel_map);
+        temp_input_channel_map = NULL;
+    }
+
+    /*
+     * Process Output channel map's input
+     */
+    if (NULL != temp_output_channel_map) {
+        extract_channel_mapping(mm_params.output_channel_map, temp_output_channel_map);
+        mm_params.has_output_channel_map = 1;
+        fprintf(log_file, "\nOutput channel mapping: ");
+        for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++)
+            fprintf(log_file, "0x%x, ", mm_params.output_channel_map[iter_i]);
+
+        free(temp_output_channel_map);
+        temp_output_channel_map = NULL;
+    }
+
+    /*
+     * Process mixer-coeffs input
+     */
+    if (NULL != temp_mixer_coeffs) {
+        extract_mixer_coeffs(&mm_params, temp_mixer_coeffs);
+        mm_params.has_mixer_coeffs = 1;
+        fprintf(log_file, "\nmixer coeffs:\n");
+        for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++){
+            for (iter_j = 0; iter_j < mm_params.num_input_channels; iter_j++){
+                fprintf(log_file, "%.2f ",mm_params.mixer_coeffs[iter_i][iter_j]);
+            }
+            fprintf(log_file, "\n");
         }
     }
 
@@ -2085,7 +2310,7 @@ int main(int argc, char* argv[]) {
     for (i = 0; i < num_of_streams; i++) {
         stream = &stream_param[i];
 
-        if ((kpi_mode == false) && 
+        if ((kpi_mode == false) &&
             (AUDIO_DEVICE_NONE == stream->input_device)){
             if (stream_param[PRIMARY_STREAM_INDEX].filename == nullptr) {
                 fprintf(log_file, "Primary file name is must for non kpi-mode\n");
@@ -2189,7 +2414,6 @@ int main(int argc, char* argv[]) {
             fprintf(log_file, "stream %d: play_later = %d\n", i, stream_param[i].play_later);
         }
 
-
         rc = pthread_create(&playback_thread[i], NULL, start_stream_playback, (void *)&stream_param[i]);
         if (rc) {
             fprintf(log_file, "stream %d: failed to create thread\n", stream->stream_index);
@@ -2198,7 +2422,23 @@ int main(int argc, char* argv[]) {
         }
 
         thread_active[i] = true;
-
+        usleep(500000); //Wait until stream is created
+        if(mixer_ctrl_type == QAHW_PARAM_OUT_MIX_MATRIX_PARAMS) {
+            payload = (qahw_param_payload) mm_params;
+            param_id = QAHW_PARAM_OUT_MIX_MATRIX_PARAMS;
+            rc = qahw_out_set_param_data(stream->out_handle, param_id, &payload);
+            if (rc != 0) {
+                fprintf(log_file, "QAHW_PARAM_OUT_MIX_MATRIX_PARAMS could not be sent!\n");
+            }
+        }
+        if(mixer_ctrl_type == QAHW_PARAM_CH_MIX_MATRIX_PARAMS) {
+            payload = (qahw_param_payload) mm_params;
+            param_id = QAHW_PARAM_CH_MIX_MATRIX_PARAMS;
+            rc = qahw_out_set_param_data(stream->out_handle, param_id, &payload);
+            if (rc != 0) {
+                fprintf(log_file, "QAHW_PARAM_CH_MIX_MATRIX_PARAMS could not be sent!\n");
+            }
+        }
     }
 
 exit:
