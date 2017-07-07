@@ -672,9 +672,15 @@ int disable_snd_device(struct audio_device *adev,
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
         audio_extn_dsm_feedback_enable(adev, snd_device, false);
         if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
+            snd_device == SND_DEVICE_OUT_SPEAKER_REVERSE ||
             snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
             audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing(snd_device);
+
+            // when speaker device is disabled, reset swap.
+            // will be renabled on usecase start
+            platform_set_swap_channels(adev, false);
+
         } else if (platform_can_split_snd_device(snd_device,
                                                  &num_devices,
                                                  new_snd_devices) == 0) {
@@ -1863,6 +1869,14 @@ int start_output_stream(struct stream_out *out)
     audio_extn_utils_send_app_type_gain(out->dev,
                                         out->app_type_cfg.app_type,
                                         &out->app_type_cfg.gain[0]);
+
+    // consider a scenario where on pause lower layers are tear down.
+    // so on resume, swap mixer control need to be sent only when
+    // backend is active, hence rather than sending from enable device
+    // sending it from start of streamtream
+
+    platform_set_swap_channels(adev, true);
+
     ALOGV("%s: exit", __func__);
     return 0;
 error_open:
@@ -2182,6 +2196,12 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 }
                 select_devices(adev, out->usecase);
                 audio_extn_tfa_98xx_update();
+
+                // on device switch force swap, lower functions will make sure
+                // to check if swap is allowed or not.
+
+                if (!same_dev)
+                    platform_set_swap_channels(adev, true);
             }
 
         }
@@ -3895,7 +3915,10 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             status = -EINVAL;
         }
         if (status == 0) {
-            platform_swap_lr_channels(adev, reverse_speakers);
+            // check and set swap
+            //   - check if orientation changed and speaker active
+            //   - set rotation and cache the rotation value
+            platform_check_and_set_swap_lr_channels(adev, reverse_speakers);
         }
     }
 

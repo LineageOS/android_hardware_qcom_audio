@@ -169,7 +169,6 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
 
     [USECASE_AUDIO_RECORD_MMAP] = {MMAP_RECORD_PCM_DEVICE,
             MMAP_RECORD_PCM_DEVICE},
-
     [USECASE_AUDIO_RECORD_HIFI] = {MULTIMEDIA2_PCM_DEVICE,
                                    MULTIMEDIA2_PCM_DEVICE},
 
@@ -3174,54 +3173,93 @@ int ramp_speaker_gain(struct audio_device *adev, bool ramp_up, int target_ramp_u
     return start_gain;
 }
 
-int platform_swap_lr_channels(struct audio_device *adev, bool swap_channels)
+int platform_set_swap_mixer(struct audio_device *adev, bool swap_channels)
+{
+    const char *mixer_ctl_name = "Swap channel";
+    struct mixer_ctl *ctl;
+    const char *mixer_path;
+    struct platform_data *my_data = (struct platform_data *)adev->platform;
+
+    // forced to set to swap, but device not rotated ... ignore set
+    if (swap_channels && !my_data->speaker_lr_swap)
+        return 0;
+
+    ALOGV("%s:", __func__);
+
+    if (swap_channels) {
+        mixer_path = platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER_REVERSE);
+        audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+    } else {
+        mixer_path = platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER);
+        audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+    }
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",__func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    if (mixer_ctl_set_value(ctl, 0, swap_channels) < 0) {
+        ALOGE("%s: Could not set reverse cotrol %d",__func__, swap_channels);
+        return -EINVAL;
+    }
+
+    ALOGV("platfor_force_swap_channel :: Channel orientation ( %s ) ",
+           swap_channels?"R --> L":"L --> R");
+
+    return 0;
+}
+
+int platform_check_and_set_swap_lr_channels(struct audio_device *adev, bool swap_channels)
 {
     // only update if there is active pcm playback on speaker
     struct audio_usecase *usecase;
     struct listnode *node;
     struct platform_data *my_data = (struct platform_data *)adev->platform;
 
-    if (my_data->speaker_lr_swap != swap_channels) {
+    my_data->speaker_lr_swap = swap_channels;
 
-        // do not swap channels in audio modes with concurrent capture and playback
-        // as this may break the echo reference
-        if ((adev->mode == AUDIO_MODE_IN_COMMUNICATION) || (adev->mode == AUDIO_MODE_IN_CALL)) {
-            ALOGV("%s: will not swap due to audio mode %d", __func__, adev->mode);
-            return 0;
-        }
+    return platform_set_swap_channels(adev, swap_channels);
+}
 
-        my_data->speaker_lr_swap = swap_channels;
+int platform_set_swap_channels(struct audio_device *adev, bool swap_channels)
+{
+    // only update if there is active pcm playback on speaker
+    struct audio_usecase *usecase;
+    struct listnode *node;
+    struct platform_data *my_data = (struct platform_data *)adev->platform;
 
-        list_for_each(node, &adev->usecase_list) {
-            usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase->type == PCM_PLAYBACK &&
-                    usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
-                /*
-                 * If acdb tuning is different for SPEAKER_REVERSE, it is must
-                 * to perform device switch to disable the current backend to
-                 * enable it with new acdb data.
-                 */
-                if (acdb_device_table[SND_DEVICE_OUT_SPEAKER] !=
-                    acdb_device_table[SND_DEVICE_OUT_SPEAKER_REVERSE]) {
-                    const int initial_skpr_gain = ramp_speaker_gain(adev, false /*ramp_up*/, -1);
-                    select_devices(adev, usecase->id);
-                    if (initial_skpr_gain != -EINVAL) {
-                        ramp_speaker_gain(adev, true /*ramp_up*/, initial_skpr_gain);
-                    }
-                } else {
-                    const char *mixer_path;
-                    if (swap_channels) {
-                        mixer_path = platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER_REVERSE);
-                        audio_route_apply_and_update_path(adev->audio_route, mixer_path);
-                    } else {
-                        mixer_path = platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER);
-                        audio_route_apply_and_update_path(adev->audio_route, mixer_path);
-                    }
-                }
-                break;
+    // do not swap channels in audio modes with concurrent capture and playback
+    // as this may break the echo reference
+    if ((adev->mode == AUDIO_MODE_IN_COMMUNICATION) || (adev->mode == AUDIO_MODE_IN_CALL)) {
+        ALOGV("%s: will not swap due to audio mode %d", __func__, adev->mode);
+        return 0;
+    }
+
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type == PCM_PLAYBACK &&
+                usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
+            /*
+             * If acdb tuning is different for SPEAKER_REVERSE, it is must
+             * to perform device switch to disable the current backend to
+             * enable it with new acdb data.
+             */
+            if (acdb_device_table[SND_DEVICE_OUT_SPEAKER] !=
+                acdb_device_table[SND_DEVICE_OUT_SPEAKER_REVERSE]) {
+                const int initial_skpr_gain = ramp_speaker_gain(adev, false /*ramp_up*/, -1);
+                select_devices(adev, usecase->id);
+                if (initial_skpr_gain != -EINVAL)
+                    ramp_speaker_gain(adev, true /*ramp_up*/, initial_skpr_gain);
+
+            } else {
+                platform_set_swap_mixer(adev, swap_channels);
             }
+            break;
         }
     }
+
     return 0;
 }
 
