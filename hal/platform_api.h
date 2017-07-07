@@ -113,7 +113,8 @@ int snd_card_info_init(const char *filename, void *, set_parameters_fn);
 int platform_get_usecase_index(const char * usecase);
 int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
 void platform_set_echo_reference(struct audio_device *adev, bool enable, audio_devices_t out_device);
-int platform_swap_lr_channels(struct audio_device *adev, bool swap_channels);
+int platform_check_and_set_swap_lr_channels(struct audio_device *adev, bool swap_channels);
+int platform_set_swap_channels(struct audio_device *adev, bool swap_channels);
 
 int platform_can_split_snd_device(snd_device_t in_snd_device,
                                   int *num_devices,
