@@ -25,6 +25,7 @@
 #include <audio_hw.h>
 #include <platform_api.h>
 #include "platform.h"
+#include "audio_extn.h"
 
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define LIB_CSD_CLIENT "libcsd-client.so"
@@ -104,7 +105,7 @@ struct platform_data {
 static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {0, 0},
     [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = {14, 14},
-    [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {1, 1},
+    [USECASE_AUDIO_PLAYBACK_HIFI] = {1, 1},
     [USECASE_AUDIO_RECORD] = {0, 0},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {14, 14},
     [USECASE_VOICE_CALL] = {12, 12},
@@ -430,7 +431,7 @@ int platform_set_snd_device_acdb_id(snd_device_t snd_device __unused,
     return -ENODEV;
 }
 
-int platform_get_default_app_type_v2(void *platform, usecase_type_t type __unused,
+int platform_get_default_app_type_v2(void *platform __unused, usecase_type_t type __unused,
                                      int *app_type __unused)
 {
     ALOGE("%s: Not implemented", __func__);
@@ -1121,7 +1122,7 @@ bool platform_check_and_set_playback_backend_cfg(struct audio_device* adev __unu
 }
 
 bool platform_check_and_set_capture_backend_cfg(struct audio_device* adev __unused,
-                                              struct audio_usecase *usecase __unused)
+    struct audio_usecase *usecase __unused, snd_device_t snd_device __unused)
 {
     return false;
 }
@@ -1143,19 +1144,19 @@ int platform_snd_card_update(void *platform __unused,
     return -1;
 }
 
-int platform_get_snd_device_backend_index(snd_device_t snd_device)
+int platform_get_snd_device_backend_index(snd_device_t snd_device __unused)
 {
     return -ENOSYS;
 }
 
-void platform_check_and_update_copp_sample_rate(void* platform, snd_device_t snd_device,
-                                                unsigned int stream_sr, int* sample_rate)
+void platform_check_and_update_copp_sample_rate(void* platform __unused, snd_device_t snd_device __unused,
+                                                unsigned int stream_sr __unused, int* sample_rate __unused)
 {
 
 }
 
-int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *usecase,
-                                       int app_type, int sample_rate)
+int platform_send_audio_calibration_v2(void *platform __unused, struct audio_usecase *usecase __unused,
+                                       int app_type __unused, int sample_rate __unused)
 {
     return -ENOSYS;
 }
@@ -1172,10 +1173,6 @@ int platform_get_app_type_v2(void *platform __unused,
                              const char *mode __unused,
                              int bw __unused, int sr __unused,
                              int *app_type __unused) {
-    return -ENOSYS;
-}
-
-int platform_get_snd_device_backend_index(snd_device_t snd_device) {
     return -ENOSYS;
 }
 
