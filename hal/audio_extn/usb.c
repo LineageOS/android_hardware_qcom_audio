@@ -573,7 +573,7 @@ static void usb_print_active_device(void){
     }
 }
 
-static bool usb_get_best_match_for_bit_width(
+static bool usb_get_best_bit_width(
                             struct listnode *dev_list,
                             unsigned int stream_bit_width,
                             unsigned int *bit_width)
@@ -588,29 +588,17 @@ static bool usb_get_best_match_for_bit_width(
                  "%s: USB bw(%d), stream bw(%d), candidate(%d)",
                  __func__, dev_info->bit_width,
                  stream_bit_width, candidate);
-        if (dev_info->bit_width == stream_bit_width) {
-            *bit_width = dev_info->bit_width;
-            ALOGV("%s: Found match bit-width (%d)",
+        if (candidate == 0) {
+            ALOGV("%s: candidate bit-width (%d)",
                   __func__, dev_info->bit_width);
-            goto exit;
-        } else if (candidate == 0) {
-                candidate = dev_info->bit_width;
-        }
-        /*
-        * If stream bit is 24, USB supports both 16 bit and 32 bit, then
-        *  higher bit width 32 is picked up instead of 16-bit
-        */
-        else if (ABS_SUB(stream_bit_width, dev_info->bit_width) <
-                 ABS_SUB(stream_bit_width, candidate)) {
             candidate = dev_info->bit_width;
-        }
-        else if ((ABS_SUB(stream_bit_width, dev_info->bit_width) ==
-                  ABS_SUB(stream_bit_width, candidate)) &&
-                 (dev_info->bit_width > candidate)) {
+        } else if (dev_info->bit_width > candidate) {
             candidate = dev_info->bit_width;
+            ALOGV("%s: Found better candidate bit-width (%d)",
+                  __func__, dev_info->bit_width);
         }
     }
-    ALOGV("%s: No match found, use the best candidate bw(%d)",
+    ALOGV("%s: Use the best candidate bw(%d)",
           __func__, candidate);
     *bit_width = candidate;
 exit:
@@ -788,7 +776,7 @@ static bool usb_audio_backend_apply_policy(struct listnode *dev_list,
         ALOGE("%s: list is empty,fall back to default setting", __func__);
         goto exit;
     }
-    usb_get_best_match_for_bit_width(dev_list, *bit_width, bit_width);
+    usb_get_best_bit_width(dev_list, *bit_width, bit_width);
     usb_get_best_match_for_channels(dev_list,
                                     *bit_width,
                                     *channel_count,
