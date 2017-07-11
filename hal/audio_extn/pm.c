@@ -133,7 +133,7 @@ void audio_extn_pm_event_notifier(void *client_data __unused, enum pm_event even
     case EVENT_PERIPH_IS_ONLINE:
         ALOGV("%s: %s is online", __func__, audio_ss.img_name);
 
-        if (property_get("sys.audio.init", halPropVal, NULL)) {
+        if (property_get("vendor.audio.sys.init", halPropVal, NULL)) {
            prop_unload_image = !(strncmp("false", halPropVal, sizeof("false")));
         }
         /*
@@ -149,7 +149,7 @@ void audio_extn_pm_event_notifier(void *client_data __unused, enum pm_event even
                ALOGD("%s: write to sysfs to unload image", __func__);
                err = write(intfd, UNLOAD_IMAGE, 1);
                close(intfd);
-               property_set("sys.audio.init", "true");
+               property_set("vendor.audio.sys.init", "true");
           }
         }
     break;

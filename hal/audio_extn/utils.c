@@ -678,7 +678,7 @@ void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
         ALOGI("%s Allowing 24-bit playback on speaker ONLY at default sampling rate", __func__);
     }
 
-    property_get("audio.playback.mch.downsample",value,"");
+    property_get("vendor.audio.playback.mch.downsample",value,"");
     if (!strncmp("true", value, sizeof("true"))) {
         if ((popcount(channel_mask) > 2) &&
                 (sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
@@ -879,7 +879,7 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
 
     if ((usecase->type == PCM_PLAYBACK) && (usecase->stream.out != NULL)) {
 
-        property_get("audio.playback.mch.downsample",value,"");
+        property_get("vendor.audio.playback.mch.downsample",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             if ((popcount(usecase->stream.out->channel_mask) > 2) &&
                    (usecase->stream.out->app_type_cfg.sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
@@ -1692,7 +1692,7 @@ int audio_extn_utils_compress_get_dsp_latency(struct stream_out *out)
     struct snd_compr_metadata metadata;
     int delay_ms = COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
 
-    if (property_get_bool("audio.playback.dsp.pathdelay", false)) {
+    if (property_get_bool("vendor.audio.playback.dsp.pathdelay", false)) {
         ALOGD("%s:: Quering DSP delay %d",__func__, __LINE__);
         if (!(is_offload_usecase(out->usecase))) {
             ALOGE("%s:: not supported for non offload session", __func__);

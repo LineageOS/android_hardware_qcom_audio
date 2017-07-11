@@ -930,7 +930,7 @@ void audio_extn_usb_add_device(audio_devices_t device, int card)
     char check_debug_enable[PROPERTY_VALUE_MAX];
     struct listnode *node_i;
 
-    property_get("audio.usb.enable.debug", check_debug_enable, NULL);
+    property_get("vendor.audio.usb.enable.debug", check_debug_enable, NULL);
     if (atoi(check_debug_enable)) {
         usb_audio_debug_enable = true;
     }
