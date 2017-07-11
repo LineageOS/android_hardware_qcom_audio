@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "33596657_ff566aae",
+        "filename": "policy_hal/AudioPolicyManager.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 2313,
+      "author": {
+        "id": 3671
+      },
+      "writtenOn": "2017-07-11T15:28:13Z",
+      "side": 1,
+      "message": "why have the else here? just wrap       mPrevFMVolumeDb(0.0f),\n      mFMIsActive(false) in the ifdef",
+      "range": {
+        "startLine": 2307,
+        "startChar": 0,
+        "endLine": 2313,
+        "endChar": 6
+      },
+      "revId": "4380dda43ee6f1392363a9baed1ecd260b2a7502",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
