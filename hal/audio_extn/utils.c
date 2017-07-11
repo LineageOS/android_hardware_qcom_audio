@@ -286,9 +286,13 @@ static int derive_playback_app_type_cfg(struct audio_device *adev,
 
     app_type_cfg->mode = flags_to_mode(0 /*playback*/, out->flags);
     if (!audio_is_linear_pcm(out->format)) {
-        platform_get_default_app_type_v2(adev->platform,
-                                         PCM_PLAYBACK,
-                                         app_type);
+        platform_get_app_type_v2(adev->platform,
+                                 PCM_PLAYBACK,
+                                 app_type_cfg->mode,
+                                 24,
+                                 *sample_rate,
+                                 app_type);
+        ALOGV("Non pcm got app type %d", *app_type);
     } else if (out->format == AUDIO_FORMAT_PCM_16_BIT) {
         platform_get_app_type_v2(adev->platform,
                                  PCM_PLAYBACK,
