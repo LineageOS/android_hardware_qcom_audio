@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "782b3113_46f59827",
+        "filename": "policy_hal/AudioPolicyManager.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 2311,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2017-07-11T16:58:28Z",
+      "side": 1,
+      "message": "don\u0027t change the order",
+      "range": {
+        "startLine": 2307,
+        "startChar": 0,
+        "endLine": 2311,
+        "endChar": 24
+      },
+      "revId": "1415c96fb9d19a757db3b4c2735071d9049c6e3d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
