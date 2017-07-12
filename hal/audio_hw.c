@@ -86,6 +86,7 @@
 #define XSTR(x) STR(x)
 #define STR(x) #x
 #endif
+#define MAX_HIFI_CHANNEL_COUNT 8
 
 #define ULL_PERIOD_SIZE (DEFAULT_OUTPUT_SAMPLING_RATE/1000)
 
@@ -299,8 +300,17 @@ static const struct string_to_enum channels_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_CHANNEL_OUT_STEREO),
     STRING_TO_ENUM(AUDIO_CHANNEL_OUT_5POINT1),
     STRING_TO_ENUM(AUDIO_CHANNEL_OUT_7POINT1),
+    STRING_TO_ENUM(AUDIO_CHANNEL_IN_MONO),
     STRING_TO_ENUM(AUDIO_CHANNEL_IN_STEREO),
-    //TBD - string values for channel_in > 2?
+    STRING_TO_ENUM(AUDIO_CHANNEL_IN_FRONT_BACK),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_1),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_2),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_3),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_4),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_5),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_6),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_7),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_8),
 };
 
 static int set_voice_volume_l(struct audio_device *adev, float volume);
@@ -1011,19 +1021,39 @@ static ssize_t read_usb_sup_sample_rates(bool is_playback __unused,
 
 static int read_usb_sup_channel_masks(bool is_playback,
                                       audio_channel_mask_t *supported_channel_masks,
-                                      uint32_t max_masks __unused)
+                                      uint32_t max_masks)
 {
     int channels = audio_extn_usb_get_max_channels(is_playback);
-    if (is_playback) {
-        supported_channel_masks[0] =
-                channels < 3 ? audio_channel_out_mask_from_count(channels) :
-                               audio_channel_mask_for_index_assignment_from_count(channels);
-    } else {
-        supported_channel_masks[0] = audio_channel_in_mask_from_count(channels);
+    int channel_count;
+    uint32_t num_masks = 0;
+    if (channels > MAX_HIFI_CHANNEL_COUNT) {
+        channels = MAX_HIFI_CHANNEL_COUNT;
     }
-    ALOGV("%s: %s supported ch %d", __func__,
-          is_playback ? "P" : "C", channels);
-    return 1;
+    if (is_playback) {
+        // For playback we never report mono because the framework always outputs stereo
+        channel_count = DEFAULT_CHANNEL_COUNT;
+        // audio_channel_out_mask_from_count() does return positional masks for channel counts
+        // above 2 but we want indexed masks here. So we
+        for ( ; channel_count <= channels && num_masks < max_masks; channel_count++) {
+            supported_channel_masks[num_masks++] = audio_channel_out_mask_from_count(channel_count);
+        }
+        for ( ; channel_count <= channels && num_masks < max_masks; channel_count++) {
+            supported_channel_masks[num_masks++] =
+                    audio_channel_mask_for_index_assignment_from_count(channel_count);
+        }
+    } else {
+        // For capture we report all supported channel masks from 1 channel up.
+        channel_count = MIN_CHANNEL_COUNT;
+        // audio_channel_in_mask_from_count() does the right conversion to either positional or
+        // indexed mask
+        for ( ; channel_count <= channels && num_masks < max_masks; channel_count++) {
+            supported_channel_masks[num_masks++] =
+                    audio_channel_in_mask_from_count(channel_count);
+        }
+    }
+    ALOGV("%s: %s supported ch %d supported_channel_masks[0] %08x num_masks %d", __func__,
+          is_playback ? "P" : "C", channels, supported_channel_masks[0], num_masks);
+    return num_masks;
 }
 
 static int read_usb_sup_formats(bool is_playback __unused,
@@ -1069,6 +1099,7 @@ static int read_usb_sup_params_and_compare(bool is_playback,
                                        max_formats);
     num_masks = read_usb_sup_channel_masks(is_playback, supported_channel_masks,
                                            max_masks);
+
     num_rates = read_usb_sup_sample_rates(is_playback,
                                           supported_sample_rates, max_rates);
 
@@ -1896,18 +1927,20 @@ error_config:
 
 static int check_input_parameters(uint32_t sample_rate,
                                   audio_format_t format,
-                                  int channel_count)
+                                  int channel_count, bool is_usb_hifi)
 {
     if ((format != AUDIO_FORMAT_PCM_16_BIT) &&
         (format != AUDIO_FORMAT_PCM_8_24_BIT) &&
-        (format != AUDIO_FORMAT_PCM_24_BIT_PACKED)) {
+        (format != AUDIO_FORMAT_PCM_24_BIT_PACKED) &&
+        !(is_usb_hifi && (format == AUDIO_FORMAT_PCM_32_BIT))) {
         ALOGE("%s: unsupported AUDIO FORMAT (%d) ", __func__, format);
         return -EINVAL;
     }
 
-    if ((channel_count < MIN_CHANNEL_COUNT) || (channel_count > MAX_CHANNEL_COUNT)) {
+    int max_channel_count = is_usb_hifi ? MAX_HIFI_CHANNEL_COUNT : MAX_CHANNEL_COUNT;
+    if ((channel_count < MIN_CHANNEL_COUNT) || (channel_count > max_channel_count)) {
         ALOGE("%s: unsupported channel count (%d) passed  Min / Max (%d / %d)", __func__,
-               channel_count, MIN_CHANNEL_COUNT, MAX_CHANNEL_COUNT);
+               channel_count, MIN_CHANNEL_COUNT, max_channel_count);
         return -EINVAL;
     }
 
@@ -1938,9 +1971,6 @@ static size_t get_stream_buffer_size(size_t duration_ms,
                                      bool is_low_latency)
 {
     size_t size = 0;
-
-    if (check_input_parameters(sample_rate, format, channel_count) != 0)
-        return 0;
 
     size = (sample_rate * duration_ms) / 1000;
     if (is_low_latency)
@@ -3698,19 +3728,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->config = pcm_config_low_latency;
         }
         if (config->format != audio_format_from_pcm_format(out->config.format)) {
-            if (k_enable_extended_precision
-                    && pcm_params_format_test(adev->use_case_table[out->usecase],
-                            pcm_format_from_audio_format(config->format))) {
-                out->config.format = pcm_format_from_audio_format(config->format);
-                /* out->format already set to config->format */
-            } else {
-                /* deny the externally proposed config format
-                 * and use the one specified in audio_hw layer configuration.
-                 * Note: out->format is returned by out->stream.common.get_format()
-                 * and is used to set config->format in the code several lines below.
-                 */
-                out->format = audio_format_from_pcm_format(out->config.format);
-            }
+            out->config.format = pcm_format_from_audio_format(config->format);
         }
         out->sample_rate = out->config.rate;
     }
@@ -4091,6 +4109,11 @@ static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev __unu
 {
     int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
 
+    /* Don't know if USB HIFI in this context so use true to be conservative */
+    if (check_input_parameters(config->sample_rate, config->format, channel_count,
+                               true /*is_usb_hifi */) != 0)
+        return 0;
+
     return get_stream_buffer_size(AUDIO_CAPTURE_PERIOD_DURATION_MSEC,
                                  config->sample_rate, config->format,
                                  channel_count,
@@ -4145,25 +4168,29 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_in *in;
     int ret = 0, buffer_size, frame_size;
-    int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
+    int channel_count;
     bool is_low_latency = false;
     bool is_usb_dev = audio_is_usb_in_device(devices);
     bool may_use_hifi_record = adev_input_allow_hifi_record(adev,
                                                             devices,
                                                             flags,
                                                             source);
-    ALOGE("%s: enter", __func__);
+    ALOGV("%s: enter", __func__);
     *stream_in = NULL;
 
-    if (config->sample_rate == 0)
-        config->sample_rate = DEFAULT_INPUT_SAMPLING_RATE;
-    if (config->channel_mask == AUDIO_CHANNEL_NONE)
-        config->channel_mask = AUDIO_CHANNEL_IN_MONO;
-    if (config->format == AUDIO_FORMAT_DEFAULT)
-        config->format = AUDIO_FORMAT_PCM_16_BIT;
+    if (!(is_usb_dev && may_use_hifi_record)) {
+        if (config->sample_rate == 0)
+            config->sample_rate = DEFAULT_INPUT_SAMPLING_RATE;
+        if (config->channel_mask == AUDIO_CHANNEL_NONE)
+            config->channel_mask = AUDIO_CHANNEL_IN_MONO;
+        if (config->format == AUDIO_FORMAT_DEFAULT)
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
 
-    if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0)
-        return -EINVAL;
+        channel_count = audio_channel_count_from_in_mask(config->channel_mask);
+
+        if (check_input_parameters(config->sample_rate, config->format, channel_count, false) != 0)
+            return -EINVAL;
+    }
 
     if (audio_extn_tfa_98xx_is_supported() &&
         (audio_extn_hfp_is_active(adev) || voice_is_in_call(adev)))
@@ -4195,7 +4222,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->source = source;
     in->dev = adev;
     in->standby = 1;
-    in->channel_mask = config->channel_mask;
     in->capture_handle = handle;
     in->flags = flags;
 
@@ -4216,6 +4242,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             ret = -EINVAL;
             goto err_open;
         }
+        channel_count = audio_channel_count_from_in_mask(config->channel_mask);
     } else if (config->format == AUDIO_FORMAT_DEFAULT) {
         config->format = AUDIO_FORMAT_PCM_16_BIT;
     } else if (config->format == AUDIO_FORMAT_PCM_FLOAT ||
@@ -4246,6 +4273,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     }
 
     in->format = config->format;
+    in->channel_mask = config->channel_mask;
 
     /* Update config params with the requested sample rate and channels */
     if (in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) {
