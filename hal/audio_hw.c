@@ -3616,7 +3616,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->config = is_hdmi ? pcm_config_hdmi_multi : pcm_config_hifi;
         out->config.rate = config->sample_rate;
         out->config.channels = audio_channel_count_from_out_mask(out->channel_mask);
-        out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels * 2);
+        out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels *
+                                                         audio_bytes_per_sample(config->format));
         out->config.format = pcm_format_from_audio_format(out->format);
     } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         pthread_mutex_lock(&adev->lock);
