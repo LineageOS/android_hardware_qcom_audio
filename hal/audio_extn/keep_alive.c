@@ -114,6 +114,11 @@ static void send_cmd_l(request_t r)
     struct keep_alive_cmd *cmd =
         (struct keep_alive_cmd *)calloc(1, sizeof(struct keep_alive_cmd));
 
+    if (cmd == NULL) {
+        ALOGE("%s: cmd is NULL", __func__);
+        return -ENOMEM;
+    }
+
     cmd->req = r;
     list_add_tail(&ka.cmd_list, &cmd->node);
     pthread_cond_signal(&ka.cond);
@@ -271,6 +276,12 @@ void audio_extn_keep_alive_start()
 
     /*send calibration*/
     usecase = calloc(1, sizeof(struct audio_usecase));
+
+    if (usecase == NULL) {
+        ALOGE("%s: usecase is NULL", __func__);
+        rc = -ENOMEM;
+        goto exit;
+    }
     usecase->type = PCM_PLAYBACK;
     usecase->out_snd_device = snd_device;
 
