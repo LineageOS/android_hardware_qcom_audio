@@ -6699,6 +6699,7 @@ bool platform_send_gain_dep_cal(void *platform,
 
                 ALOGV("%s: out device is %d", __func__,  usecase->out_snd_device);
                 app_type = usecase->stream.out->app_type_cfg.app_type;
+                acdb_dev_id = acdb_device_table[usecase->out_snd_device];
 
                 if (platform_split_snd_device(my_data, usecase->out_snd_device,
                                               &num_devices, new_snd_device) < 0)
