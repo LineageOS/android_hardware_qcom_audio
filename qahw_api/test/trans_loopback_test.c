@@ -237,6 +237,8 @@ int read_and_set_source_config(source_port_type_t source_port_type,
 {
     int rc=0;
     tlb_hdmi_config_t hdmi_config = {0};
+    transcode_loopback_config_t *transcode_loopback_config = &g_trnscode_loopback_config;
+    transcode_loopback_config->source_port_config.source_port_state = SOURCE_PORT_INACTIVE;
     switch(source_port_type)
     {
         case SOURCE_PORT_HDMI :
@@ -491,8 +493,9 @@ void process_loopback_data(void *ptr)
                     }
                     j++;
                 }
-                fprintf(log_file,"devpath = %s, switch_name = %s \n",
-                                         dev_path, switch_name);
+
+                if ((dev_path != NULL) && (switch_name != NULL)) 
+                    fprintf(log_file,"devpath = %s, switch_name = %s \n",dev_path, switch_name);
 
                 if((DEV_NODE_CHECK(tlb_hdmi_in_audio_dev_path, dev_path) == 0)  || (DEV_NODE_CHECK(tlb_hdmi_in_audio_sample_rate_dev_path, dev_path) == 0)
                 || (DEV_NODE_CHECK(tlb_hdmi_in_audio_state_dev_path, dev_path) == 0)
