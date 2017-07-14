@@ -1539,9 +1539,9 @@ OMX_ERRORTYPE  omx_qcelp13_aenc::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
             {
                 DEBUG_PRINT("SCP-->Executing to Idle \n");
                 if(pcm_input)
-                    execute_omx_flush(-1,false);
+                    execute_omx_flush(-1);
                 else
-                    execute_omx_flush(1,false);
+                    execute_omx_flush(1);
 
 
             } else if (OMX_StatePause == eState)
@@ -1615,9 +1615,9 @@ OMX_ERRORTYPE  omx_qcelp13_aenc::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
                 m_flush_cnt = 2;
                 pthread_mutex_unlock(&m_flush_lock);
                 if(pcm_input)
-                    execute_omx_flush(-1,false);
+                    execute_omx_flush(-1);
                 else
-                    execute_omx_flush(1,false);
+                    execute_omx_flush(1);
 
             } else if ( eState == OMX_StateLoaded )
             {
@@ -1737,7 +1737,7 @@ OMX_ERRORTYPE  omx_qcelp13_aenc::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
              param1 == OMX_CORE_OUTPUT_PORT_INDEX ||
             (signed)param1 == -1 )
         {
-            execute_omx_flush(param1);
+            execute_omx_flush(param1,true);
         } else
         {
             eRet = OMX_ErrorBadPortIndex;
@@ -4296,9 +4296,9 @@ void  omx_qcelp13_aenc::deinit_encoder()
                                                                 m_state);
         // Get back any buffers from driver
         if(pcm_input)
-            execute_omx_flush(-1,false);
+            execute_omx_flush(-1);
         else
-            execute_omx_flush(1,false);
+            execute_omx_flush(1);
         // force state change to loaded so that all threads can be exited
         pthread_mutex_lock(&m_state_lock);
         m_state = OMX_StateLoaded;
