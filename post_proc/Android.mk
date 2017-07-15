@@ -49,6 +49,7 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_C_INCLUDES := \
         external/tinyalsa/include \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
+	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
         $(call include-path-for, audio-effects)
 
 include $(BUILD_SHARED_LIBRARY)
@@ -106,6 +107,7 @@ LOCAL_VENDOR_MODULE := true
 LOCAL_C_INCLUDES := \
         hardware/qcom/audio/hal \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
+	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
         external/tinyalsa/include \
         $(call include-path-for, audio-effects) \
         $(call include-path-for, audio-route) \
