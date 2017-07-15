@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2009 The Android Open Source Project
@@ -1090,6 +1090,7 @@ status_t AudioPolicyManagerCustom::stopSource(sp<AudioOutputDescriptor> outputDe
                         if (!force) {
                             applyStreamVolumes(desc, dev, delayMs);
                         }
+
                 }
             }
             // update the outputs if stopping one with a stream that can affect notification routing
