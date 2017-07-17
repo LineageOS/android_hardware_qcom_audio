@@ -4858,7 +4858,7 @@ unsigned char* platform_get_license(void *platform, int *size)
     }
     cal.acdb_dev_id = (uint32_t) atoi (value);
     param_len = MAX_SET_CAL_BYTE_SIZE;
-    dptr = (unsigned char*) calloc(param_len, sizeof(unsigned char*));
+    dptr = (unsigned char*) calloc(param_len, sizeof(unsigned char));
     if (dptr == NULL) {
         ALOGE("[%s] Memory allocation failed for length %d",__func__,param_len);
         ret = -ENOMEM;
