@@ -1088,9 +1088,13 @@ void audio_extn_usb_remove_device(audio_devices_t device, int card)
             free(node_to_item(node_i, struct usb_card_config, list));
         }
     }
-    usbmod->is_capture_supported = false;
-    supported_sample_rates_mask[USB_PLAYBACK] = 0;
-    supported_sample_rates_mask[USB_CAPTURE] = 0;
+    if (audio_is_usb_in_device(device)) { // XXX not sure if we need to check for card
+        usbmod->is_capture_supported = false;
+        supported_sample_rates_mask[USB_CAPTURE] = 0;
+    } else {
+        supported_sample_rates_mask[USB_PLAYBACK] = 0;
+    }
+
 exit:
     if (usb_audio_debug_enable)
         usb_print_active_device();

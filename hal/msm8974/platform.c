@@ -64,6 +64,7 @@
 
 #define DEFAULT_APP_TYPE_RX_PATH  69936
 #define DEFAULT_APP_TYPE_TX_PATH  69938
+#define DEFAULT_RX_BACKEND "SLIMBUS_0_RX"
 
 #define TOSTRING_(x) #x
 #define TOSTRING(x) TOSTRING_(x)
@@ -1644,8 +1645,6 @@ void platform_add_backend_name(void *platform, char *mixer_path,
 
 bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_device2)
 {
-    bool result = true;
-
     ALOGV("%s: snd_device1 = %s, snd_device2 = %s", __func__,
                 platform_get_snd_device_name(snd_device1),
                 platform_get_snd_device_name(snd_device2));
@@ -1660,16 +1659,24 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
                 platform_get_snd_device_name(snd_device2));
         return false;
     }
+
     const char * be_itf1 = hw_interface_table[snd_device1];
     const char * be_itf2 = hw_interface_table[snd_device2];
-
-    if (NULL != be_itf1 && NULL != be_itf2) {
-        if ((NULL == strstr(be_itf2, be_itf1)) && (NULL == strstr(be_itf1, be_itf2)))
-            result = false;
+    /*
+      hw_interface_table has overrides for a snd_device.
+      if there is no entry for a device, assume DEFAULT_RX_BACKEND
+    */
+    if (be_itf1 == NULL) {
+        be_itf1 = DEFAULT_RX_BACKEND;
     }
-
-    ALOGV("%s: be_itf1 = %s, be_itf2 = %s, match %d", __func__, be_itf1, be_itf2, result);
-    return result;
+    if (be_itf2 == NULL) {
+        be_itf2 = DEFAULT_RX_BACKEND;
+    }
+    ALOGV("%s: be_itf1 = %s, be_itf2 = %s", __func__, be_itf1, be_itf2);
+    /*
+      this takes care of finding a device within a combo device pair as well
+     */
+    return strstr(be_itf1, be_itf2) != NULL || strstr(be_itf2, be_itf1) != NULL;
 }
 
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
