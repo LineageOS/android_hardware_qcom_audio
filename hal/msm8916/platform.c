@@ -60,6 +60,7 @@
 /* fallback app type if the default app type from acdb loader fails */
 #define DEFAULT_APP_TYPE_RX_PATH  0x11130
 #define DEFAULT_APP_TYPE_TX_PATH  0x11132
+#define DEFAULT_RX_BACKEND "SLIMBUS_0_RX"
 
 /* Retry for delay in FW loading*/
 #define RETRY_NUMBER 20
@@ -1174,6 +1175,10 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
     if (NULL != be_itf1 && NULL != be_itf2) {
         if ((NULL == strstr(be_itf2, be_itf1)) && (NULL == strstr(be_itf1, be_itf2)))
             result = false;
+    } else if (NULL != be_itf2 && (NULL == strstr(be_itf2, DEFAULT_RX_BACKEND))) {
+        result = false;
+    } else if (NULL != be_itf1 && (NULL == strstr(be_itf1, DEFAULT_RX_BACKEND))) {
+        result = false;
     }
 
     ALOGV("%s: be_itf1 = %s, be_itf2 = %s, match %d", __func__, be_itf1, be_itf2, result);

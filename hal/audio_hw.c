@@ -866,7 +866,8 @@ static void check_and_route_playback_usecases(struct audio_device *adev,
 
         if (force_routing ||
             (usecase->out_snd_device != snd_device &&
-             usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND &&
+             (usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND ||
+              usecase->devices & (AUDIO_DEVICE_OUT_USB_DEVICE|AUDIO_DEVICE_OUT_USB_HEADSET)) &&
              platform_check_backends_match(snd_device, usecase->out_snd_device))) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
