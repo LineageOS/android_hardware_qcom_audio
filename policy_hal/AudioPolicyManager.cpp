@@ -999,10 +999,16 @@ void AudioPolicyManagerCustom::setForceUse(audio_policy_force_use_t usage,
     checkOutputForAllStrategies();
     updateDevicesAndOutputs();
 
-    if (mEngine->getPhoneState() == AUDIO_MODE_IN_CALL && hasPrimaryOutput()) {
+    if (hasPrimaryOutput()) {
         audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, true /*fromCache*/);
-        updateCallRouting(newDevice);
+        if (mEngine->getPhoneState() == AUDIO_MODE_IN_CALL) {
+            updateCallRouting(newDevice);
+        } else if (mPrimaryOutput->isStreamActive(AUDIO_STREAM_MUSIC)) {
+            ALOGV("Routing Music on Primary Output: newDevice %d", newDevice);
+            setOutputDevice(mPrimaryOutput, newDevice, (newDevice != AUDIO_DEVICE_NONE));
+        }
     }
+
     // Use reverse loop to make sure any low latency usecases (generally tones)
     // are not routed before non LL usecases (generally music).
     // We can safely assume that LL output would always have lower index,
