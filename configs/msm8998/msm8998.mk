@@ -48,7 +48,7 @@ AUDIO_FEATURE_ENABLED_HDMI_EDID := true
 AUDIO_FEATURE_ENABLED_HDMI_PASSTHROUGH := true
 #AUDIO_FEATURE_ENABLED_KEEP_ALIVE := true
 AUDIO_FEATURE_ENABLED_DISPLAY_PORT := true
-AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := true
+AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := false
 AUDIO_FEATURE_ENABLED_HFP := true
 AUDIO_FEATURE_ENABLED_INCALL_MUSIC := false
 AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS := true
@@ -168,8 +168,8 @@ vendor.audio.offload.multiaac.enable=true
 
 #Enable DS2, Hardbypass feature for Dolby
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.dolby.ds2.enabled=true\
-vendor.audio.dolby.ds2.hardbypass=true
+vendor.audio.dolby.ds2.enabled=false\
+vendor.audio.dolby.ds2.hardbypass=false
 
 #Disable Multiple offload sesison
 PRODUCT_PROPERTY_OVERRIDES += \
