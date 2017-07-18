@@ -559,7 +559,6 @@ int set_config(effect_context_t *context, effect_config_t *config)
     if (config->inputCfg.samplingRate != config->outputCfg.samplingRate) return -EINVAL;
     if (config->inputCfg.channels != config->outputCfg.channels) return -EINVAL;
     if (config->inputCfg.format != config->outputCfg.format) return -EINVAL;
-    if (config->inputCfg.channels != AUDIO_CHANNEL_OUT_STEREO) return -EINVAL;
     if (config->outputCfg.accessMode != EFFECT_BUFFER_ACCESS_WRITE &&
             config->outputCfg.accessMode != EFFECT_BUFFER_ACCESS_ACCUMULATE) return -EINVAL;
     if (config->inputCfg.format != AUDIO_FORMAT_PCM_16_BIT) return -EINVAL;
