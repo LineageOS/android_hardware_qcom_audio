@@ -770,9 +770,7 @@ static int vol_prc_lib_release(effect_handle_t handle)
     if (recv_contex->desc == NULL) {
         ALOGE("%s: Got NULL descriptor, session %u, stream type %u",
                 __func__, session_id, stream_type);
-        if (dumping_enabled) {
-            dump_list_l();
-        }
+        dump_list_l();
         pthread_mutex_unlock(&vol_listner_init_lock);
         return status;
     }
