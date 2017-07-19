@@ -3235,7 +3235,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
            (out->config.rate);
     }
 
-    if ((AUDIO_DEVICE_OUT_BLUETOOTH_A2DP == out->devices) &&
+    if ((AUDIO_DEVICE_OUT_ALL_A2DP & out->devices) &&
             !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD))
         latency += audio_extn_a2dp_get_encoder_latency();
 
@@ -3667,6 +3667,13 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
                 // It is based on estimated DSP latency per use case, rather than exact.
                 signed_frames -=
                     (platform_render_latency(out->usecase) * out->sample_rate / 1000000LL);
+
+                // Adjustment accounts for A2dp encoder latency with non offload usecases
+                // Note: Encoder latency is returned in ms, while platform_render_latency in us.
+                if (AUDIO_DEVICE_OUT_ALL_A2DP & out->devices) {
+                    signed_frames -=
+                        (audio_extn_a2dp_get_encoder_latency() * out->sample_rate / 1000);
+                }
 
                 // It would be unusual for this value to be negative, but check just in case ...
                 if (signed_frames >= 0) {
