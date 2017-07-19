@@ -210,6 +210,10 @@ static const snd_device_t tasha_liquid_variant_devices[] = {
     SND_DEVICE_IN_SPEAKER_STEREO_DMIC,
 };
 
+static const snd_device_t tavil_qrd_variant_devices[] = {
+    SND_DEVICE_OUT_SPEAKER
+};
+
 static void  update_hardware_info_8084(struct hardware_info *hw_info, const char *snd_card_name)
 {
     if (!strcmp(snd_card_name, "apq8084-taiko-mtp-snd-card") ||
@@ -366,9 +370,18 @@ static void  update_hardware_info_msm8998(struct hardware_info *hw_info, const c
     }
 }
 
-static void  update_hardware_info_sdm845(struct hardware_info *hw_info __unused, const char *snd_card_name __unused)
+static void  update_hardware_info_sdm845(struct hardware_info *hw_info, const char *snd_card_name)
 {
+    if (!strcmp(snd_card_name, "sdm845-tavil-qrd-snd-card")) {
+        strlcpy(hw_info->type, " qrd", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "sdm845", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)tavil_qrd_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tavil_qrd_variant_devices);
+        hw_info->is_stereo_spkr = false;
+        strlcpy(hw_info->dev_extn, "-qrd", sizeof(hw_info->dev_extn));
+    } else {
         ALOGW("%s: Not a sdm845 device", __func__);
+    }
 }
 
 static void  update_hardware_info_8974(struct hardware_info *hw_info, const char *snd_card_name)
