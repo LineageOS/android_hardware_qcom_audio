@@ -35,6 +35,7 @@
 #include <poll.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -124,9 +125,9 @@ void get_hdmi_status()
     read_data_from_fd(hdmi_in_audio_channel_sys_path, &hdmi_num_channels);
 
     ALOGI("HDMI In state: %d, audio_state: %d, audio_format: %d,",
-		hdmi_conn_state, hdmi_audio_state, hdmi_audio_format);
+           hdmi_conn_state, hdmi_audio_state, hdmi_audio_format);
     ALOGI(" hdmi_sample_rate: %d, hdmi_num_channels: %d\n",
-		hdmi_sample_rate, hdmi_num_channels);
+            hdmi_sample_rate, hdmi_num_channels);
 }
 
 int poll_event_init()
@@ -157,7 +158,7 @@ int poll_event_init()
     return (soc > 0);
 }
 
-void listen_uevent(void *ptr)
+void listen_uevent(void *ptr __unused)
 {
     char buffer[64*1024];
     struct pollfd fds;
