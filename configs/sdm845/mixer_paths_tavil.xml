@@ -1642,6 +1642,10 @@
         <ctl name="SpkrRight SWR DAC_Port Switch" value="1" />
     </path>
 
+    <path name="speaker-qrd">
+        <path name="speaker-mono-2" />
+    </path>
+
     <path name="speaker-fluid">
         <path name="speaker-mono" />
     </path>
