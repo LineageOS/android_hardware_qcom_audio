@@ -1363,6 +1363,146 @@ exit:
      return ret;
 }
 
+/* Creates an audio patch between several source and sink ports.
+ * The handle is allocated by the HAL and should be unique for this
+ * audio HAL module.
+ */
+int qahw_create_audio_patch(qahw_module_handle_t *hw_module,
+                        unsigned int num_sources,
+                        const struct audio_port_config *sources,
+                        unsigned int num_sinks,
+                        const struct audio_port_config *sinks,
+                        audio_patch_handle_t *handle)
+{
+    int ret = 0;
+    qahw_module_t *qahw_module = (qahw_module_t *)hw_module;
+    qahw_module_t *qahw_module_temp;
+
+    pthread_mutex_lock(&qahw_module_init_lock);
+    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    pthread_mutex_unlock(&qahw_module_init_lock);
+    if (qahw_module_temp == NULL) {
+        ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
+        goto exit;
+    }
+
+    pthread_mutex_lock(&qahw_module->lock);
+    if (qahw_module->audio_device->create_audio_patch) {
+        ret = qahw_module->audio_device->create_audio_patch(
+                        qahw_module->audio_device,
+                        num_sources,
+                        sources,
+                        num_sinks,
+                        sinks,
+                        handle);
+    } else {
+         ret = -ENOSYS;
+         ALOGE("%s not supported\n",__func__);
+    }
+    pthread_mutex_unlock(&qahw_module->lock);
+
+exit:
+     return ret;
+}
+
+/* Release an audio patch */
+int qahw_release_audio_patch(qahw_module_handle_t *hw_module,
+                        audio_patch_handle_t handle)
+{
+    int ret = 0;
+    qahw_module_t *qahw_module = (qahw_module_t *)hw_module;
+    qahw_module_t *qahw_module_temp;
+
+    pthread_mutex_lock(&qahw_module_init_lock);
+    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    pthread_mutex_unlock(&qahw_module_init_lock);
+    if (qahw_module_temp == NULL) {
+        ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
+        goto exit;
+    }
+
+    pthread_mutex_lock(&qahw_module->lock);
+    if (qahw_module->audio_device->release_audio_patch) {
+        ret = qahw_module->audio_device->release_audio_patch(
+                        qahw_module->audio_device,
+                        handle);
+    } else {
+         ret = -ENOSYS;
+         ALOGE("%s not supported\n",__func__);
+    }
+    pthread_mutex_unlock(&qahw_module->lock);
+
+exit:
+     return ret;
+}
+
+/* Fills the list of supported attributes for a given audio port.
+ * As input, "port" contains the information (type, role, address etc...)
+ * needed by the HAL to identify the port.
+ * As output, "port" contains possible attributes (sampling rates, formats,
+ * channel masks, gain controllers...) for this port.
+ */
+int qahw_get_audio_port(qahw_module_handle_t *hw_module,
+                      struct audio_port *port)
+{
+    int ret = 0;
+    qahw_module_t *qahw_module = (qahw_module_t *)hw_module;
+    qahw_module_t *qahw_module_temp;
+
+    pthread_mutex_lock(&qahw_module_init_lock);
+    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    pthread_mutex_unlock(&qahw_module_init_lock);
+    if (qahw_module_temp == NULL) {
+        ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
+        goto exit;
+    }
+
+    pthread_mutex_lock(&qahw_module->lock);
+    if (qahw_module->audio_device->get_audio_port) {
+        ret = qahw_module->audio_device->get_audio_port(
+                    qahw_module->audio_device,
+                    port);
+    } else {
+         ret = -ENOSYS;
+         ALOGE("%s not supported\n",__func__);
+    }
+    pthread_mutex_unlock(&qahw_module->lock);
+
+exit:
+     return ret;
+}
+
+/* Set audio port configuration */
+int qahw_set_audio_port_config(qahw_module_handle_t *hw_module,
+                     const struct audio_port_config *config)
+{
+    int ret = 0;
+    qahw_module_t *qahw_module = (qahw_module_t *)hw_module;
+    qahw_module_t *qahw_module_temp;
+
+    pthread_mutex_lock(&qahw_module_init_lock);
+    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    pthread_mutex_unlock(&qahw_module_init_lock);
+    if (qahw_module_temp == NULL) {
+        ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
+        goto exit;
+    }
+
+    pthread_mutex_lock(&qahw_module->lock);
+    if (qahw_module->audio_device->set_audio_port_config) {
+        ret = qahw_module->audio_device->set_audio_port_config(
+                    qahw_module->audio_device,
+                        config);
+    } else {
+         ret = -ENOSYS;
+         ALOGE("%s not supported\n",__func__);
+    }
+    pthread_mutex_unlock(&qahw_module->lock);
+
+exit:
+     return ret;
+}
+
 /* Returns audio input buffer size according to parameters passed or
  * 0 if one of the parameters is not supported.
  * See also get_buffer_size which is for a particular stream.

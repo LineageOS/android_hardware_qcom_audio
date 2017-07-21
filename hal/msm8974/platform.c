@@ -349,6 +349,7 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_RECORD_AFE_PROXY] = {AFE_PROXY_PLAYBACK_PCM_DEVICE,
                                         AFE_PROXY_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE] = {MULTIMEDIA9_PCM_DEVICE, -1},
+    [USECASE_AUDIO_TRANSCODE_LOOPBACK] = {TRANSCODE_LOOPBACK_RX_DEV_ID, TRANSCODE_LOOPBACK_TX_DEV_ID},
 
 };
 
@@ -1221,7 +1222,9 @@ static bool platform_is_i2s_ext_modem(const char *snd_card_name,
     if (!strncmp(snd_card_name, "apq8084-taiko-i2s-mtp-snd-card",
                  sizeof("apq8084-taiko-i2s-mtp-snd-card")) ||
         !strncmp(snd_card_name, "apq8084-taiko-i2s-cdp-snd-card",
-                 sizeof("apq8084-taiko-i2s-cdp-snd-card"))) {
+                 sizeof("apq8084-taiko-i2s-cdp-snd-card")) ||
+        !strncmp(snd_card_name, "apq8096-tasha-i2c-snd-card",
+                 sizeof("apq8096-tasha-i2c-snd-card"))) {
         plat_data->is_i2s_ext_modem = true;
     }
     ALOGV("%s, is_i2s_ext_modem:%d soundcard name is %s",__func__,
@@ -2132,7 +2135,8 @@ acdb_init_fail:
      */
     property_get("ro.board.platform", platform, "");
     property_get("ro.baseband", baseband, "");
-    if (!strncmp("apq8084", platform, sizeof("apq8084")) &&
+    if ((!strncmp("apq8084", platform, sizeof("apq8084")) ||
+        !strncmp("msm8996", platform, sizeof("msm8996"))) &&
         !strncmp("mdm", baseband, (sizeof("mdm")-1))) {
          my_data->csd = open_csd_client(my_data->is_i2s_ext_modem);
     } else {
@@ -2347,6 +2351,8 @@ void platform_deinit(void *platform)
     /* deinit usb */
     audio_extn_usb_deinit();
     audio_extn_dap_hal_deinit();
+    if (audio_extn_spkr_prot_is_enabled())
+        audio_extn_spkr_prot_deinit();
 #ifdef DYNAMIC_LOG_ENABLED
     log_utils_deinit();
 #endif
@@ -5580,10 +5586,19 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
 
     backend_idx = platform_get_backend_index(snd_device);
 
-    backend_cfg.bit_width = usecase->stream.out->bit_width;
-    backend_cfg.sample_rate = usecase->stream.out->sample_rate;
-    backend_cfg.format = usecase->stream.out->format;
-    backend_cfg.channels = audio_channel_count_from_out_mask(usecase->stream.out->channel_mask);
+    if (usecase->type == TRANSCODE_LOOPBACK) {
+        backend_cfg.bit_width = usecase->stream.inout->out_config.bit_width;
+        backend_cfg.sample_rate = usecase->stream.inout->out_config.sample_rate;
+        backend_cfg.format = usecase->stream.inout->out_config.format;
+        backend_cfg.channels = audio_channel_count_from_out_mask(
+                usecase->stream.inout->out_config.channel_mask);
+    } else {
+        backend_cfg.bit_width = usecase->stream.out->bit_width;
+        backend_cfg.sample_rate = usecase->stream.out->sample_rate;
+        backend_cfg.format = usecase->stream.out->format;
+        backend_cfg.channels = audio_channel_count_from_out_mask(usecase->stream.out->channel_mask);
+    }
+
     /*this is populated by check_codec_backend_cfg hence set default value to false*/
     backend_cfg.passthrough_enabled = false;
 
@@ -5713,7 +5728,14 @@ bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev,
     struct audio_backend_cfg backend_cfg;
 
     backend_cfg.passthrough_enabled = false;
-    if(usecase->type == PCM_CAPTURE) {
+
+    if (usecase->type == TRANSCODE_LOOPBACK) {
+        backend_cfg.bit_width = usecase->stream.inout->in_config.bit_width;
+        backend_cfg.sample_rate = usecase->stream.inout->in_config.sample_rate;
+        backend_cfg.format = usecase->stream.inout->in_config.format;
+        backend_cfg.channels = audio_channel_count_from_out_mask(
+                usecase->stream.inout->in_config.channel_mask);
+    } else if (usecase->type == PCM_CAPTURE) {
         backend_cfg.sample_rate= usecase->stream.in->sample_rate;
         backend_cfg.bit_width= usecase->stream.in->bit_width;
         backend_cfg.format= usecase->stream.in->format;

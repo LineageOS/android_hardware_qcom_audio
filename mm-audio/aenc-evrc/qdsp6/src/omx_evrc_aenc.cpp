@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010, 2014-2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2010, 2014-2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -1543,9 +1543,9 @@ OMX_ERRORTYPE  omx_evrc_aenc::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
             {
                 DEBUG_PRINT("SCP-->Executing to Idle \n");
                 if(pcm_input)
-                    execute_omx_flush(-1,false);
+                    execute_omx_flush(-1);
                 else
-                    execute_omx_flush(1,false);
+                    execute_omx_flush(1);
 
 
             } else if (OMX_StatePause == eState)
@@ -1619,9 +1619,9 @@ OMX_ERRORTYPE  omx_evrc_aenc::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
                 m_flush_cnt = 2;
                 pthread_mutex_unlock(&m_flush_lock);
                 if(pcm_input)
-                    execute_omx_flush(-1,false);
+                    execute_omx_flush(-1);
                 else
-                    execute_omx_flush(1,false);
+                    execute_omx_flush(1);
 
             } else if ( eState == OMX_StateLoaded )
             {
@@ -1741,7 +1741,7 @@ OMX_ERRORTYPE  omx_evrc_aenc::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
              param1 == OMX_CORE_OUTPUT_PORT_INDEX ||
             (signed)param1 == -1 )
         {
-            execute_omx_flush(param1);
+            execute_omx_flush(param1,true);
         } else
         {
             eRet = OMX_ErrorBadPortIndex;
@@ -3563,7 +3563,6 @@ OMX_ERRORTYPE  omx_evrc_aenc::use_input_buffer
     OMX_ERRORTYPE         eRet = OMX_ErrorNone;
     OMX_BUFFERHEADERTYPE  *bufHdr;
     unsigned              nBufSize = MAX(bytes, input_buffer_size);
-    char                  *buf_ptr;
 
     if(hComp == NULL)
     {
@@ -3579,11 +3578,10 @@ OMX_ERRORTYPE  omx_evrc_aenc::use_input_buffer
     }
     if (m_inp_current_buf_count < m_inp_act_buf_count)
     {
-        buf_ptr = (char *) calloc(sizeof(OMX_BUFFERHEADERTYPE), 1);
+        bufHdr = (OMX_BUFFERHEADERTYPE *) calloc(sizeof(OMX_BUFFERHEADERTYPE), 1);
 
-        if (buf_ptr != NULL)
+        if (bufHdr != NULL)
         {
-            bufHdr = (OMX_BUFFERHEADERTYPE *) buf_ptr;
             *bufferHdr = bufHdr;
             memset(bufHdr,0,sizeof(OMX_BUFFERHEADERTYPE));
 
@@ -3648,7 +3646,6 @@ OMX_ERRORTYPE  omx_evrc_aenc::use_output_buffer
     OMX_ERRORTYPE         eRet = OMX_ErrorNone;
     OMX_BUFFERHEADERTYPE  *bufHdr;
     unsigned              nBufSize = MAX(bytes,output_buffer_size);
-    char                  *buf_ptr;
 
     if(hComp == NULL)
     {
@@ -3667,11 +3664,10 @@ OMX_ERRORTYPE  omx_evrc_aenc::use_output_buffer
     if (m_out_current_buf_count < m_out_act_buf_count)
     {
 
-        buf_ptr = (char *) calloc(sizeof(OMX_BUFFERHEADERTYPE), 1);
+        bufHdr = (OMX_BUFFERHEADERTYPE *) calloc(sizeof(OMX_BUFFERHEADERTYPE), 1);
 
-        if (buf_ptr != NULL)
+        if (bufHdr != NULL)
         {
-            bufHdr = (OMX_BUFFERHEADERTYPE *) buf_ptr;
             DEBUG_PRINT("BufHdr=%p buffer=%p\n",bufHdr,buffer);
             *bufferHdr = bufHdr;
             memset(bufHdr,0,sizeof(OMX_BUFFERHEADERTYPE));
@@ -4011,6 +4007,9 @@ OMX_ERRORTYPE  omx_evrc_aenc::empty_this_buffer_proxy
         }
         memcpy(data,&meta_in, meta_in.offsetVal);
         DEBUG_PRINT("meta_in.nFlags = %d\n",meta_in.nFlags);
+    } else {
+        DEBUG_PRINT_ERROR("temp meta is null buf\n");
+            return OMX_ErrorInsufficientResources;
     }
 
     memcpy(&data[sizeof(META_IN)],buffer->pBuffer,buffer->nFilledLen);
@@ -4297,9 +4296,9 @@ void  omx_evrc_aenc::deinit_encoder()
                                                                 m_state);
         // Get back any buffers from driver
         if(pcm_input)
-            execute_omx_flush(-1,false);
+            execute_omx_flush(-1);
         else
-            execute_omx_flush(1,false);
+            execute_omx_flush(1);
         // force state change to loaded so that all threads can be exited
         pthread_mutex_lock(&m_state_lock);
         m_state = OMX_StateLoaded;

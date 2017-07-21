@@ -423,6 +423,7 @@ int audio_extn_adsp_hdlr_stream_deregister_event(void *handle, void *data)
     pthread_mutex_lock(&adsp_hdlr_inst->event_list_lock);
     if (list_empty(&adsp_hdlr_inst->event_list)) {
         ALOGD("%s: event list is empty", __func__);
+        pthread_mutex_unlock(&adsp_hdlr_inst->event_list_lock);
         return 0;
     }
     list_for_each_safe(node, tempnode, &adsp_hdlr_inst->event_list) {
