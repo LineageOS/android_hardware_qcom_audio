@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <cutils/str_parms.h>
 #include "audio_extn/tfa_98xx.h"
+#include "audio_extn.h"
 
 #define AUDIO_PARAMETER_HFP_ENABLE            "hfp_enable"
 #define AUDIO_PARAMETER_HFP_SET_SAMPLING_RATE "hfp_set_sampling_rate"
@@ -247,6 +248,11 @@ static int32_t start_hfp(struct audio_device *adev,
     int32_t pcm_dev_rx_id, pcm_dev_tx_id, pcm_dev_asm_rx_id, pcm_dev_asm_tx_id;
 
     ALOGD("%s: enter", __func__);
+
+    if (adev->enable_hfp == true) {
+        ALOGD("%s: HFP is already active!\n", __func__);
+        return 0;
+    }
     adev->enable_hfp = true;
     platform_set_mic_mute(adev->platform, false);
 
