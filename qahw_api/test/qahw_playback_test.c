@@ -158,11 +158,11 @@ audio_io_handle_t stream_handle = 0x999;
                    "music_offload_wma_format_tag=%d;"
 
 #ifndef AUDIO_OUTPUT_FLAG_ASSOCIATED
-#define AUDIO_OUTPUT_FLAG_ASSOCIATED 0x8000
+#define AUDIO_OUTPUT_FLAG_ASSOCIATED 0x10000000
 #endif
 
 #ifndef AUDIO_OUTPUT_FLAG_INTERACTIVE
-#define AUDIO_OUTPUT_FLAG_INTERACTIVE 0x40000
+#define AUDIO_OUTPUT_FLAG_INTERACTIVE 0x80000000
 #endif
 
 static bool request_wake_lock(bool wakelock_acquired, bool enable)
@@ -2002,11 +2002,9 @@ int main(int argc, char* argv[]) {
         {"mode",          required_argument,    0, 'm'},
         {"effect-preset",   required_argument,    0, 'p'},
         {"effect-strength", required_argument,    0, 'S'},
-#ifdef QAP
         {"render-format", required_argument,    0, 'x'},
         {"timestamp-file", required_argument,    0, 'y'},
         {"framesize-file", required_argument,    0, 'z'},
-#endif
         {"output-ch-map", required_argument,    0, 'O'},
         {"input-ch-map",  required_argument,    0, 'I'},
         {"mixer-coeffs",  required_argument,    0, 'M'},
@@ -2036,11 +2034,7 @@ int main(int argc, char* argv[]) {
 
     while ((opt = getopt_long(argc,
                               argv,
-#ifdef QAP
                               "-f:r:c:b:d:s:v:V:l:t:a:w:k:PD:KF:Ee:A:u:m:S:C:p::x:y:z:qQhI:O:M:o:i:h:",
-#else
-                              "-f:r:c:b:d:s:v:V:l:t:a:w:k:PD:KF:Ee:A:u:m:S:C:p:qQhI:O:M:o:i:h:",
-#endif
                               long_options,
                               &option_index)) != -1) {
 
@@ -2179,7 +2173,6 @@ int main(int argc, char* argv[]) {
         case 'o':
             mm_params.num_output_channels = atoi(optarg);
             break;
-#ifdef QAP
         case 'x':
             render_format = atoi(optarg);
             break;
@@ -2190,7 +2183,6 @@ int main(int argc, char* argv[]) {
             stream_param[i].framesize_filename = optarg;
             fprintf(stderr, "file name is %s\n", stream_param[i].framesize_filename);
             break;
-#endif
         case 'C':
             fprintf(log_file, " In Device config \n");
             fprintf(stderr, " In Device config \n");
@@ -2254,9 +2246,7 @@ int main(int argc, char* argv[]) {
             break;
         case 'h':
             usage();
-#ifdef QAP
             hal_test_qap_usage();
-#endif
             return 0;
             break;
 
