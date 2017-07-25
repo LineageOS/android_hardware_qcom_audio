@@ -48,6 +48,7 @@ LOCAL_SRC_FILES += audio_extn/audio_extn.c \
                    audio_extn/utils.c
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+LOCAL_CFLAGS += -DUSE_VENDOR_EXTN
 
 ifneq ($(filter msm8994 msm8992,$(TARGET_BOARD_PLATFORM)),)
     LOCAL_SRC_FILES += edid.c
@@ -224,7 +225,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libcutils \
 	libhardware \
 	libtinyalsa \
-	libtinycompress \
+	libtinycompress_vendor \
 	libaudioroute \
 	libdl \
 	libexpat
