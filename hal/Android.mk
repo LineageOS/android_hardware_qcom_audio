@@ -36,6 +36,7 @@ LOCAL_SRC_FILES += audio_extn/audio_extn.c
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+LOCAL_CFLAGS += -DUSE_VENDOR_EXTN
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_ANC_HEADSET)),true)
     LOCAL_CFLAGS += -DANC_HEADSET_ENABLED
@@ -188,7 +189,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libcutils \
 	libhardware \
 	libtinyalsa \
-	libtinycompress \
+	libtinycompress_vendor \
 	libaudioroute \
 	libdl \
 	libexpat
