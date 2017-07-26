@@ -3694,9 +3694,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->usecase = USECASE_AUDIO_PLAYBACK_AFE_PROXY;
         out->config = pcm_config_afe_proxy_playback;
         adev->voice_tx_output = out;
-    } else if ((out->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
-               (out->flags == (AUDIO_OUTPUT_FLAG_DIRECT |
-                               AUDIO_OUTPUT_FLAG_VOIP_RX))) {
+    } else if (out->flags == (AUDIO_OUTPUT_FLAG_DIRECT |
+                              AUDIO_OUTPUT_FLAG_VOIP_RX)) {
         uint32_t buffer_size, frame_size;
         out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_MONO;
         out->channel_mask = AUDIO_CHANNEL_OUT_MONO;
@@ -4338,7 +4337,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             in->af_period_multiplier = 1;
             ALOGV("%s: USECASE_AUDIO_RECORD_MMAP", __func__);
         } else if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
-                   in->dev->mode == AUDIO_MODE_IN_COMMUNICATION &&
                    in->flags & AUDIO_INPUT_FLAG_VOIP_TX &&
                    (config->sample_rate == 8000 ||
                     config->sample_rate == 16000 ||
