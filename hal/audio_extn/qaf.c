@@ -1656,12 +1656,14 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
         }
         DEBUG_MSG_VV("Bytes written = %d", ret);
     }
-    else if (event_id == AUDIO_EOS_MAIN_DD_DDP_EVENT
+    else if (event_id == AUDIO_EOS_EVENT
+               || event_id == AUDIO_EOS_MAIN_DD_DDP_EVENT
                || event_id == AUDIO_EOS_MAIN_2_DD_DDP_EVENT
                || event_id == AUDIO_EOS_MAIN_AAC_EVENT
                || event_id == AUDIO_EOS_MAIN_AC4_EVENT
                || event_id == AUDIO_EOS_ASSOC_DD_DDP_EVENT) {
         struct stream_out *out = qaf_mod->stream_in[QAF_IN_MAIN];
+        struct stream_out *out_pcm = qaf_mod->stream_in[QAF_IN_PCM];
         struct stream_out *out_main2 = qaf_mod->stream_in[QAF_IN_MAIN_2];
         struct stream_out *out_assoc = qaf_mod->stream_in[QAF_IN_ASSOC];
 
@@ -1669,7 +1671,16 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
          * TODO:: Only DD/DDP Associate Eos is handled, need to add support
          * for other formats.
          */
-        if (event_id == AUDIO_EOS_ASSOC_DD_DDP_EVENT
+        if (event_id == AUDIO_EOS_EVENT
+                && (out_pcm != NULL)
+                && (check_stream_state(out_pcm, STOPPING))) {
+
+            lock_output_stream(out_pcm);
+            out_pcm->client_callback(STREAM_CBK_EVENT_DRAIN_READY, NULL, out_pcm->client_cookie);
+            set_stream_state(out_pcm, STOPPED);
+            unlock_output_stream(out_pcm);
+            DEBUG_MSG("sent pcm DRAIN_READY");
+        } else if (event_id == AUDIO_EOS_ASSOC_DD_DDP_EVENT
                 && (out_assoc != NULL)
                 && (check_stream_state(out_assoc, STOPPING))) {
 
