@@ -3150,7 +3150,7 @@ static char* in_get_parameters(const struct audio_stream *stream,
     if (replied) {
         str = str_parms_to_str(reply);
     } else {
-        str = strdup(keys);
+        str = strdup("");
     }
     str_parms_destroy(query);
     str_parms_destroy(reply);
