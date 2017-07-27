@@ -1340,10 +1340,20 @@ static int stop_input_stream(struct stream_in *in)
     struct audio_usecase *uc_info;
     struct audio_device *adev = in->dev;
 
-    adev->active_input = NULL;
-
     ALOGV("%s: enter: usecase(%d: %s)", __func__,
           in->usecase, use_case_table[in->usecase]);
+
+    if (adev->active_input) {
+        if (adev->active_input->usecase == in->usecase) {
+            adev->active_input = NULL;
+        } else {
+            ALOGW("%s adev->active_input->usecase %s, v/s in->usecase %s",
+                __func__,
+                use_case_table[adev->active_input->usecase],
+                use_case_table[in->usecase]);
+        }
+    }
+
     uc_info = get_usecase_from_list(adev, in->usecase);
     if (uc_info == NULL) {
         ALOGE("%s: Could not find the usecase (%d) in the list",
@@ -3097,7 +3107,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
     if (ret >= 0) {
         val = atoi(value);
-        if (((int)in->device != val) && (val != 0)) {
+        if (((int)in->device != val) && (val != 0) && audio_is_input_device(val) ) {
             in->device = val;
             /* If recording is in progress, change the tx device to new device */
             if (!in->standby) {
@@ -3139,7 +3149,7 @@ static char* in_get_parameters(const struct audio_stream *stream,
     if (replied) {
         str = str_parms_to_str(reply);
     } else {
-        str = strdup(keys);
+        str = strdup("");
     }
     str_parms_destroy(query);
     str_parms_destroy(reply);
@@ -3694,9 +3704,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->usecase = USECASE_AUDIO_PLAYBACK_AFE_PROXY;
         out->config = pcm_config_afe_proxy_playback;
         adev->voice_tx_output = out;
-    } else if ((out->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
-               (out->flags == (AUDIO_OUTPUT_FLAG_DIRECT |
-                               AUDIO_OUTPUT_FLAG_VOIP_RX))) {
+    } else if (out->flags == (AUDIO_OUTPUT_FLAG_DIRECT |
+                              AUDIO_OUTPUT_FLAG_VOIP_RX)) {
         uint32_t buffer_size, frame_size;
         out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_MONO;
         out->channel_mask = AUDIO_CHANNEL_OUT_MONO;
@@ -4338,7 +4347,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             in->af_period_multiplier = 1;
             ALOGV("%s: USECASE_AUDIO_RECORD_MMAP", __func__);
         } else if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
-                   in->dev->mode == AUDIO_MODE_IN_COMMUNICATION &&
                    in->flags & AUDIO_INPUT_FLAG_VOIP_TX &&
                    (config->sample_rate == 8000 ||
                     config->sample_rate == 16000 ||
