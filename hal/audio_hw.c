@@ -1340,10 +1340,20 @@ static int stop_input_stream(struct stream_in *in)
     struct audio_usecase *uc_info;
     struct audio_device *adev = in->dev;
 
-    adev->active_input = NULL;
-
     ALOGV("%s: enter: usecase(%d: %s)", __func__,
           in->usecase, use_case_table[in->usecase]);
+
+    if (adev->active_input) {
+        if (adev->active_input->usecase == in->usecase) {
+            adev->active_input = NULL;
+        } else {
+            ALOGW("%s adev->active_input->usecase %s, v/s in->usecase %s",
+                __func__,
+                use_case_table[adev->active_input->usecase],
+                use_case_table[in->usecase]);
+        }
+    }
+
     uc_info = get_usecase_from_list(adev, in->usecase);
     if (uc_info == NULL) {
         ALOGE("%s: Could not find the usecase (%d) in the list",
@@ -3097,7 +3107,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
     if (ret >= 0) {
         val = atoi(value);
-        if (((int)in->device != val) && (val != 0)) {
+        if (((int)in->device != val) && (val != 0) && audio_is_input_device(val) ) {
             in->device = val;
             /* If recording is in progress, change the tx device to new device */
             if (!in->standby) {
