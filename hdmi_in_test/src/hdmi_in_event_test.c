@@ -158,7 +158,7 @@ int poll_event_init()
     return (soc > 0);
 }
 
-void listen_uevent(void *ptr __unused)
+void* listen_uevent()
 {
     char buffer[64*1024];
     struct pollfd fds;
