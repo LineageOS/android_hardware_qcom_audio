@@ -2004,7 +2004,6 @@ int main(int argc, char* argv[]) {
         {"effect-strength", required_argument,    0, 'S'},
         {"render-format", required_argument,    0, 'x'},
         {"timestamp-file", required_argument,    0, 'y'},
-        {"framesize-file", required_argument,    0, 'z'},
         {"output-ch-map", required_argument,    0, 'O'},
         {"input-ch-map",  required_argument,    0, 'I'},
         {"mixer-coeffs",  required_argument,    0, 'M'},
@@ -2034,7 +2033,7 @@ int main(int argc, char* argv[]) {
 
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:s:v:V:l:t:a:w:k:PD:KF:Ee:A:u:m:S:C:p::x:y:z:qQhI:O:M:o:i:h:",
+                              "-f:r:c:b:d:s:v:V:l:t:a:w:k:PD:KF:Ee:A:u:m:S:C:p::x:y:qQhI:O:M:o:i:h:",
                               long_options,
                               &option_index)) != -1) {
 
@@ -2178,10 +2177,6 @@ int main(int argc, char* argv[]) {
             break;
         case 'y':
             stream_param[i].timestamp_filename = optarg;
-            break;
-        case 'z':
-            stream_param[i].framesize_filename = optarg;
-            fprintf(stderr, "file name is %s\n", stream_param[i].framesize_filename);
             break;
         case 'C':
             fprintf(log_file, " In Device config \n");

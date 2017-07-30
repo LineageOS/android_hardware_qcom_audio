@@ -102,7 +102,6 @@ typedef struct {
     FILE* file_stream;
     char* timestamp_filename;
     FILE* timestamp_file_ptr;
-    char* framesize_filename;
     FILE* framesize_file_ptr;
     int filetype;
     int stream_index;
