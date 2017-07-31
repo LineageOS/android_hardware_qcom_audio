@@ -268,6 +268,74 @@ static OMX_ERRORTYPE FillBufferDone(OMX_IN OMX_HANDLETYPE hComponent,
                                      OMX_IN OMX_PTR pAppData,
                                      OMX_IN OMX_BUFFERHEADERTYPE* pBuffer);
 static OMX_ERRORTYPE  parse_pcm_header();
+
+typedef enum {
+    UINTMAX = 1,
+    UCHARMAX,
+    USHRTMAX
+}datatype;
+
+int get_input_and_validate(char *input, datatype type)
+{
+    unsigned long int value = 0;
+    char *ptr = NULL;
+    int status = 0;
+
+    errno = 0;
+    ptr = (char *)malloc(strlen(input) + 1);
+    if (ptr == NULL) {
+        DEBUG_PRINT("Low memory\n");
+        status = -1;
+        goto exit;
+    }
+    if (input == NULL){
+        DEBUG_PRINT("No input is given\n");
+        status = -1;
+        goto exit;
+    }
+    /* Check for negative input */
+    if (*input == '-') {
+        DEBUG_PRINT("Negative Number is not allowed\n");
+        status = -1;
+        goto exit;
+    }
+    /* Convert string to unsigned long int */
+    value = strtoul(input, &ptr, 10);
+    if (errno != 0){
+        perror("strtoul");
+        status = errno;
+        goto exit;
+    }
+    /* check if number input is zero or string or string##number or viceversa */
+    if (value == 0 || *ptr != '\0'){
+        DEBUG_PRINT("Input is string+number or Zero or string = %s\n", input);
+        status = -1;
+        goto exit;
+    }
+    /* check for out of range */
+    switch(type) {
+    case 1 :if (value > UINT_MAX) {
+                DEBUG_PRINT("Input is Out of range\n");
+                status = -1;
+            }
+            break;
+    case 2 :if (value > UCHAR_MAX) {
+                DEBUG_PRINT("Input is Out of range\n");
+                status = -1;
+            }
+            break;
+    case 3 :if (value > USHRT_MAX) {
+                DEBUG_PRINT("Input is Out of range\n");
+                status = -1;
+            }
+            break;
+    }
+exit:
+    if (status != 0)
+        exit(0);
+    return value;
+}
+
 void wait_for_event(void)
 {
     pthread_mutex_lock(&lock);
@@ -525,7 +593,7 @@ int main(int argc, char **argv)
       aac_samplerate = (uint32_t)atoi(argv[3]);
       aac_channels = (uint32_t)atoi(argv[4]);
       tunnel  = (uint32_t)atoi(argv[5]);
-      rectime = (uint32_t)atoi(argv[6]);
+      rectime = (uint32_t)get_input_and_validate(argv[6], UINTMAX);
       bitrate = (uint32_t)atoi(argv[7]);
       format =  (uint32_t)atoi(argv[8]);
       profile = (uint32_t)atoi(argv[9]);
