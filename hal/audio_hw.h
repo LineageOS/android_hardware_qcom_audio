@@ -119,6 +119,7 @@ enum {
     USECASE_AUDIO_PLAYBACK_OFFLOAD9,
     USECASE_AUDIO_PLAYBACK_ULL,
     USECASE_AUDIO_PLAYBACK_MMAP,
+    USECASE_AUDIO_PLAYBACK_HIFI,
 
     /* FM usecase */
     USECASE_AUDIO_PLAYBACK_FM,
@@ -135,6 +136,7 @@ enum {
     USECASE_AUDIO_RECORD_COMPRESS4,
     USECASE_AUDIO_RECORD_LOW_LATENCY,
     USECASE_AUDIO_RECORD_FM_VIRTUAL,
+    USECASE_AUDIO_RECORD_HIFI,
 
     USECASE_AUDIO_PLAYBACK_VOIP,
     USECASE_AUDIO_RECORD_VOIP,
@@ -356,6 +358,11 @@ struct stream_in {
     struct audio_device *dev;
     card_status_t card_status;
     int capture_started;
+
+    /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
+    audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
+    audio_format_t supported_formats[MAX_SUPPORTED_FORMATS + 1];
+    uint32_t supported_sample_rates[MAX_SUPPORTED_SAMPLE_RATES + 1];
 };
 
 typedef enum {
