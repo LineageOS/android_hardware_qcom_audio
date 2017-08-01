@@ -1802,16 +1802,16 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
                     }
                 }
             }
-            if (flags == AUDIO_OUTPUT_FLAG_DIRECT &&
-                direct_pcm_already_in_use == true &&
-                session != outputDesc->mDirectClientSession) {
-                ALOGV("getOutput() do not reuse direct pcm output because current client (%d) "
-                      "is not the same as requesting client (%d) for different output conf",
-                      outputDesc->mDirectClientSession, session);
-                goto non_direct_output;
-            }
             // close direct output if currently open and configured with different parameters
             if (outputDesc != NULL) {
+                if (flags == AUDIO_OUTPUT_FLAG_DIRECT &&
+                    direct_pcm_already_in_use == true &&
+                    session != outputDesc->mDirectClientSession) {
+                    ALOGV("getOutput() do not reuse direct pcm output because current client (%d) "
+                          "is not the same as requesting client (%d) for different output conf",
+                    outputDesc->mDirectClientSession, session);
+                    goto non_direct_output;
+                }
                 closeOutput(outputDesc->mIoHandle);
             }
         }
