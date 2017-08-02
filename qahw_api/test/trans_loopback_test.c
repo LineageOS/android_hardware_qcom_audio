@@ -138,6 +138,34 @@ void break_signal_handler(int signal __attribute__((unused)))
    stop_loopback = true;
 }
 
+int poll_data_event_init()
+{
+    struct sockaddr_nl sock_addr;
+    int sz = (64*1024);
+    int soc;
+
+    memset(&sock_addr, 0, sizeof(sock_addr));
+    sock_addr.nl_family = AF_NETLINK;
+    sock_addr.nl_pid = getpid();
+    sock_addr.nl_groups = 0xffffffff;
+
+    soc = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_KOBJECT_UEVENT);
+    if (soc < 0) {
+        return 0;
+    }
+
+    setsockopt(soc, SOL_SOCKET, SO_RCVBUFFORCE, &sz, sizeof(sz));
+
+    if (bind(soc, (struct sockaddr*) &sock_addr, sizeof(sock_addr)) < 0) {
+        close(soc);
+        return 0;
+    }
+
+    sock_event_fd = soc;
+
+    return (soc > 0);
+}
+
 void init_transcode_loopback_config(transcode_loopback_config_t **p_transcode_loopback_config)
 {
     fprintf(log_file,"\nInitializing global transcode loopback config\n");
@@ -395,34 +423,6 @@ static int unload_hals(void) {
     return 1;
 }
 
-
-int poll_data_event_init()
-{
-    struct sockaddr_nl sock_addr;
-    int sz = (64*1024);
-    int soc;
-
-    memset(&sock_addr, 0, sizeof(sock_addr));
-    sock_addr.nl_family = AF_NETLINK;
-    sock_addr.nl_pid = getpid();
-    sock_addr.nl_groups = 0xffffffff;
-
-    soc = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_KOBJECT_UEVENT);
-    if (soc < 0) {
-        return 0;
-    }
-
-    setsockopt(soc, SOL_SOCKET, SO_RCVBUFFORCE, &sz, sizeof(sz));
-
-    if (bind(soc, (struct sockaddr*) &sock_addr, sizeof(sock_addr)) < 0) {
-        close(soc);
-        return 0;
-    }
-
-    sock_event_fd = soc;
-
-    return (soc > 0);
-}
 
 void source_data_event_handler(transcode_loopback_config_t *transcode_loopback_config)
 {
