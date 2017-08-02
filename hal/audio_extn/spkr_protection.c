@@ -73,7 +73,7 @@
 #define MAX_RESISTANCE_SPKR_Q24 (40 * (1 << 24))
 
 /*Path where the calibration file will be stored*/
-#define CALIB_FILE "/data/misc/audio/audio.cal"
+#define CALIB_FILE "/data/vendor/misc/audio/audio.cal"
 
 /*Time between retries for calibartion or intial wait time
   after boot up*/
@@ -160,6 +160,8 @@ struct speaker_prot_session {
     bool trigger_cal;
     pthread_mutex_t cal_wait_cond_mutex;
     pthread_cond_t cal_wait_condition;
+    bool init_check;
+    volatile bool thread_exit;
 };
 
 static struct pcm_config pcm_config_skr_prot = {
@@ -378,7 +380,7 @@ static int set_spkr_prot_cal(int cal_fd,
     cal_data.cal_type.cal_info.t0[SP_V2_SPKR_1] = protCfg->t0[SP_V2_SPKR_1];
     cal_data.cal_type.cal_info.t0[SP_V2_SPKR_2] = protCfg->t0[SP_V2_SPKR_2];
     cal_data.cal_type.cal_info.mode = protCfg->mode;
-    property_get("persist.spkr.cal.duration", value, "0");
+    property_get("persist.vendor.audio.spkr.cal.duration", value, "0");
     if (atoi(value) > 0) {
         ALOGD("%s: quick calibration enabled", __func__);
         cal_data.cal_type.cal_info.quick_calib_flag = 1;
@@ -691,12 +693,12 @@ static void* spkr_calibration_thread()
     int ret;
 
     memset(&protCfg, 0, sizeof(protCfg));
-    /* If the value of this persist.spkr.cal.duration is 0
+    /* If the value of this persist.vendor.audio.spkr.cal.duration is 0
      * then it means it will take 30min to calibrate
      * and if the value is greater than zero then it would take
      * that much amount of time to calibrate.
      */
-    property_get("persist.spkr.cal.duration", value, "0");
+    property_get("persist.vendor.audio.spkr.cal.duration", value, "0");
     if (atoi(value) > 0)
         min_idle_time = atoi(value);
     handle.speaker_prot_threadid = pthread_self();
@@ -756,11 +758,12 @@ static void* spkr_calibration_thread()
             pthread_exit(0);
             return NULL;
         }
-        close(acdb_fd);
     }
+    if (acdb_fd > 0)
+        close(acdb_fd);
 
     ALOGV("%s: start calibration", __func__);
-    while (1) {
+    while (!handle.thread_exit) {
         if (handle.wsa_found) {
             spk_1_tzn = handle.spkr_1_tzn;
             spk_2_tzn = handle.spkr_2_tzn;
@@ -1268,14 +1271,17 @@ int audio_extn_fbsp_get_parameters(struct str_parms *query,
 void audio_extn_spkr_prot_init(void *adev)
 {
     char value[PROPERTY_VALUE_MAX];
+    int result = 0;
     ALOGD("%s: Initialize speaker protection module", __func__);
     memset(&handle, 0, sizeof(handle));
     if (!adev) {
         ALOGE("%s: Invalid params", __func__);
         return;
     }
-    property_get("persist.speaker.prot.enable", value, "");
+    property_get("persist.vendor.audio.speaker.prot.enable", value, "");
     handle.spkr_prot_enable = false;
+    handle.init_check = false;
+    handle.thread_exit = false;
     if (!strncmp("true", value, 4))
        handle.spkr_prot_enable = true;
     if (!handle.spkr_prot_enable) {
@@ -1302,9 +1308,19 @@ void audio_extn_spkr_prot_init(void *adev)
         pthread_mutex_init(&handle.mutex_spkr_prot, NULL);
         pthread_mutex_init(&handle.spkr_calib_cancelack_mutex, NULL);
         ALOGD("%s:WSA Create calibration thread", __func__);
-        (void)pthread_create(&handle.spkr_calibration_thread,
+        result = pthread_create(&handle.spkr_calibration_thread,
         (const pthread_attr_t *) NULL, spkr_calibration_thread, &handle);
-        return;
+        if (result == 0) {
+            handle.init_check = true;
+        } else {
+            ALOGE("%s: speaker calibration thread creation failed", __func__);
+            pthread_mutex_destroy(&handle.mutex_spkr_prot);
+            pthread_mutex_destroy(&handle.spkr_calib_cancelack_mutex);
+            pthread_mutex_destroy(&handle.cal_wait_cond_mutex);
+            pthread_cond_destroy(&handle.spkr_calib_cancel);
+            pthread_cond_destroy(&handle.spkr_calibcancel_ack);
+        }
+    return;
     } else {
         ALOGD("%s: WSA spkr calibration thread is not created", __func__);
     }
@@ -1344,8 +1360,20 @@ void audio_extn_spkr_prot_init(void *adev)
     }
     if (handle.thermal_client_request) {
         ALOGD("%s: Create calibration thread", __func__);
-        (void)pthread_create(&handle.spkr_calibration_thread,
+        result = pthread_create(&handle.spkr_calibration_thread,
         (const pthread_attr_t *) NULL, spkr_calibration_thread, &handle);
+        if (result == 0) {
+            handle.init_check = true;
+        } else {
+            ALOGE("%s: speaker calibration thread creation failed", __func__);
+            pthread_mutex_destroy(&handle.mutex_spkr_prot);
+            pthread_mutex_destroy(&handle.spkr_calib_cancelack_mutex);
+            pthread_mutex_destroy(&handle.cal_wait_cond_mutex);
+            pthread_cond_destroy(&handle.spkr_calib_cancel);
+            pthread_cond_destroy(&handle.spkr_calibcancel_ack);
+            pthread_mutex_destroy(&handle.spkr_prot_thermalsync_mutex);
+            pthread_cond_destroy(&handle.spkr_prot_thermalsync);
+        }
     } else {
         ALOGE("%s: thermal_client_request failed", __func__);
         if (handle.thermal_client_handle &&
@@ -1366,6 +1394,34 @@ void audio_extn_spkr_prot_init(void *adev)
                                             "SLIMBUS_0_RX");
         }
     }
+}
+
+int audio_extn_spkr_prot_deinit()
+{
+    int result = 0;
+
+    ALOGD("%s: Entering deinit init_check :%d", __func__, handle.init_check);
+    if(!handle.init_check)
+        return -1;
+
+    handle.thread_exit = true;
+    spkr_calibrate_signal();
+    result = pthread_join(handle.spkr_calibration_thread, (void **) NULL);
+    if (result < 0) {
+        ALOGE("%s:Unable to join the calibration thread", __func__);
+        return -1;
+    }
+    pthread_mutex_destroy(&handle.mutex_spkr_prot);
+    pthread_mutex_destroy(&handle.spkr_calib_cancelack_mutex);
+    pthread_mutex_destroy(&handle.cal_wait_cond_mutex);
+    pthread_cond_destroy(&handle.spkr_calib_cancel);
+    pthread_cond_destroy(&handle.spkr_calibcancel_ack);
+    if(!handle.wsa_found) {
+        pthread_mutex_destroy(&handle.spkr_prot_thermalsync_mutex);
+        pthread_cond_destroy(&handle.spkr_prot_thermalsync);
+    }
+    memset(&handle, 0, sizeof(handle));
+    return 0;
 }
 
 int audio_extn_select_spkr_prot_cal_data(snd_device_t snd_device)

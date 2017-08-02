@@ -251,10 +251,10 @@ static void update_offload_codec_capabilities()
 {
     char value[PROPERTY_VALUE_MAX] = {'\0'};
 
-    property_get("persist.bt.a2dp_offload_cap", value, "false");
+    property_get("persist.vendor.bt.a2dp_offload_cap", value, "false");
     ALOGD("get_offload_codec_capabilities = %s",value);
     a2dp.is_a2dp_offload_supported =
-            property_get_bool("persist.bt.a2dp_offload_cap", false);
+            property_get_bool("persist.vendor.bt.a2dp_offload_cap", false);
     if (strcmp(value, "false") != 0)
         a2dp_offload_codec_cap_parser(value);
     ALOGD("%s: codec cap = %s",__func__,value);
@@ -794,6 +794,8 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
                    a2dp.audio_suspend_stream();
             } else if (a2dp.a2dp_suspended == true) {
                 ALOGD("Resetting a2dp suspend state");
+                struct audio_usecase *uc_info;
+                struct listnode *node;
                 if(a2dp.clear_a2dpsuspend_flag)
                     a2dp.clear_a2dpsuspend_flag();
                 a2dp.a2dp_suspended = false;
@@ -817,6 +819,13 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
                             a2dp.a2dp_started = false;
                         }
                     }
+                }
+                // restore A2DP device for active usecases
+                list_for_each(node, &a2dp.adev->usecase_list) {
+                    uc_info = node_to_item(node, struct audio_usecase, list);
+                    if ((uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
+                            (uc_info->out_snd_device != SND_DEVICE_OUT_BT_A2DP))
+                        select_devices(a2dp.adev, uc_info->id);
                 }
             }
         }
@@ -883,7 +892,7 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
     char value[PROPERTY_VALUE_MAX];
 
     memset(value, '\0', sizeof(char)*PROPERTY_VALUE_MAX);
-    avsync_runtime_prop = property_get("audio.a2dp.codec.latency", value, NULL);
+    avsync_runtime_prop = property_get("vendor.audio.a2dp.codec.latency", value, NULL);
     if (avsync_runtime_prop > 0) {
         if (sscanf(value, "%d/%d/%d/%d",
                   &sbc_offset, &aptx_offset, &aptxhd_offset, &aac_offset) != 4) {

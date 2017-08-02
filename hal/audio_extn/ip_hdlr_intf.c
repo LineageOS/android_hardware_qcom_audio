@@ -42,6 +42,7 @@
 #define LIB_PATH "/system/vendor/lib/libaudio_ip_handler.so"
 #endif
 
+#include <pthread.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <dlfcn.h>
@@ -57,6 +58,12 @@
 #define ADSP_EVENT_ID_RTIC            0x00013239
 #define ADSP_EVENT_ID_RTIC_FAIL       0x0001323A
 
+struct ip_hdlr_stream {
+    struct listnode list;
+    void *stream;
+    audio_usecase_t usecase;
+};
+
 struct ip_hdlr_intf {
     void *lib_hdl;
     int (*init)(void **handle, char *lib_path, void **lib_handle);
@@ -67,6 +74,8 @@ struct ip_hdlr_intf {
     int (*event)(void *handle, void *payload);
     int (*reg_cb)(void *handle, void *ack_cb, void *fail_cb);
 
+    struct listnode stream_list;
+    pthread_mutex_t stream_list_lock;
     int ref_cnt;
 };
 static struct ip_hdlr_intf *ip_hdlr = NULL;
@@ -109,9 +118,7 @@ struct rtic_event {
 
 bool audio_extn_ip_hdlr_intf_supported(audio_format_t format)
 {
-    if ((format & AUDIO_FORMAT_MAIN_MASK == AUDIO_FORMAT_AC3) ||
-        (format & AUDIO_FORMAT_MAIN_MASK == AUDIO_FORMAT_E_AC3) ||
-        (format & AUDIO_FORMAT_MAIN_MASK == AUDIO_FORMAT_DOLBY_TRUEHD))
+    if ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_DOLBY_TRUEHD)
         return true;
     else
         return false;
@@ -132,8 +139,37 @@ int audio_extn_ip_hdlr_intf_rtic_ack(void *aud_sess_handle, struct rtic_ack_info
     struct mixer_ctl *ctl = NULL;
     struct stream_out *out = (struct stream_out *)aud_sess_handle;
     struct rtic_ack_param param;
+    struct listnode *node, *tempnode;
+    struct ip_hdlr_stream *stream_info;
+    struct audio_device *adev = NULL;
+    audio_usecase_t usecase = 0;
 
-    pcm_device_id = platform_get_pcm_device_id(out->usecase, PCM_PLAYBACK);
+    pthread_mutex_lock(&ip_hdlr->stream_list_lock);
+    list_for_each_safe(node, tempnode, &ip_hdlr->stream_list) {
+        stream_info = node_to_item(node, struct ip_hdlr_stream, list);
+        /* send the error if rtic failure notifcation is received */
+        if ((stream_info->stream == aud_sess_handle) &&
+            (stream_info->usecase == USECASE_AUDIO_TRANSCODE_LOOPBACK)) {
+            struct stream_inout *inout = (struct stream_inout *)aud_sess_handle;
+            usecase = stream_info->usecase;
+            adev = inout->dev;
+            break;
+        } else if (stream_info->stream == aud_sess_handle) {
+            struct stream_out *out = (struct stream_out *)aud_sess_handle;
+            usecase = stream_info->usecase;
+            adev = out->dev;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&ip_hdlr->stream_list_lock);
+
+    if (adev == NULL) {
+        ALOGE("%s:[%d] Invalid adev", __func__, ip_hdlr->ref_cnt);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    pcm_device_id = platform_get_pcm_device_id(usecase, PCM_PLAYBACK);
 
     ALOGVV("%s:[%d] token = %d, info->status = %d, pcm_id = %d",__func__,
           ip_hdlr->ref_cnt, info->token, info->status, pcm_device_id);
@@ -146,7 +182,7 @@ int audio_extn_ip_hdlr_intf_rtic_ack(void *aud_sess_handle, struct rtic_ack_info
         ret = -EINVAL;
         goto done;
     }
-    ctl = mixer_get_ctl_by_name(out->dev->mixer, mixer_ctl_name);
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
         ALOGE("%s:[%d] Could not get ctl for mixer cmd - %s", __func__,
               ip_hdlr->ref_cnt, mixer_ctl_name);
@@ -167,37 +203,56 @@ done:
     return ret;
 }
 
-/* Acquire Mutex lock on output stream */
-static void lock_output_stream(struct stream_out *out)
-{
-    pthread_mutex_lock(&out->pre_lock);
-    pthread_mutex_lock(&out->lock);
-    pthread_mutex_unlock(&out->pre_lock);
-}
-
 int audio_extn_ip_hdlr_intf_rtic_fail(void *aud_sess_handle)
 {
-    struct stream_out *out = (struct stream_out *)aud_sess_handle;
+    struct listnode *node, *tempnode;
+    struct ip_hdlr_stream *stream_info;
 
     ALOGD("%s:[%d] sess_handle = %p",__func__, ip_hdlr->ref_cnt, aud_sess_handle);
 
-    /* send the error if rtic fail notifcation is received */
-    lock_output_stream(out);
-    if (out && out->client_callback)
-        out->client_callback(AUDIO_EXTN_STREAM_CBK_EVENT_ERROR, NULL, out->client_cookie);
-    pthread_mutex_unlock(&out->lock);
+    pthread_mutex_lock(&ip_hdlr->stream_list_lock);
+    list_for_each_safe(node, tempnode, &ip_hdlr->stream_list) {
+        stream_info = node_to_item(node, struct ip_hdlr_stream, list);
+        /* send the error if rtic failure notifcation is received */
+        if ((stream_info->stream == aud_sess_handle) &&
+            (stream_info->usecase == USECASE_AUDIO_TRANSCODE_LOOPBACK)) {
+            struct stream_inout *inout = (struct stream_inout *)aud_sess_handle;
+            pthread_mutex_lock(&inout->pre_lock);
+            pthread_mutex_lock(&inout->lock);
+            pthread_mutex_unlock(&inout->pre_lock);
+            ALOGVV("%s:[%d] calling client callback", __func__, ip_hdlr->ref_cnt);
+            if (inout && inout->client_callback)
+                inout->client_callback(AUDIO_EXTN_STREAM_CBK_EVENT_ERROR, NULL, inout->client_cookie);
+            pthread_mutex_unlock(&inout->lock);
+            break;
+        } else if (stream_info->stream == aud_sess_handle) {
+            struct stream_out *out = (struct stream_out *)aud_sess_handle;
+            pthread_mutex_lock(&out->pre_lock);
+            pthread_mutex_lock(&out->lock);
+            pthread_mutex_unlock(&out->pre_lock);
+            ALOGVV("%s:[%d] calling client callback", __func__, ip_hdlr->ref_cnt);
+            if (out && out->client_callback)
+                out->client_callback(AUDIO_EXTN_STREAM_CBK_EVENT_ERROR, NULL, out->client_cookie);
+            pthread_mutex_unlock(&out->lock);
+            break;
+        }
+    }
+    pthread_mutex_unlock(&ip_hdlr->stream_list_lock);
 
     return 0;
 }
 
-static int audio_extn_ip_hdlr_intf_open_dsp(void *handle, void *stream_handle)
+static int audio_extn_ip_hdlr_intf_open_dsp(void *handle, void *stream_handle, audio_usecase_t usecase)
 {
     int ret = 0, fd = 0, pcm_device_id = 0;
     struct audio_adsp_event *param;
     struct reg_event *reg_ev;
     size_t shm_size;
     void  *shm_buf;;
-    struct stream_out *out = (struct stream_out *)stream_handle;
+    struct stream_out *out;
+    struct stream_inout *inout;
+    void *adsp_hdlr_stream_handle;
+    struct audio_device *dev = NULL;
     struct mixer_ctl *ctl = NULL;
     char mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = {0};
 
@@ -220,8 +275,18 @@ static int audio_extn_ip_hdlr_intf_open_dsp(void *handle, void *stream_handle)
     param->payload_length = sizeof(struct reg_event);
     param->payload = reg_ev;
 
+    if (usecase == USECASE_AUDIO_TRANSCODE_LOOPBACK) {
+        inout = (struct stream_inout *)stream_handle;
+        adsp_hdlr_stream_handle = inout->adsp_hdlr_stream_handle;
+        dev = inout->dev;
+    } else {
+        out = (struct stream_out *)stream_handle;
+        adsp_hdlr_stream_handle = out->adsp_hdlr_stream_handle;
+        dev = out->dev;
+    }
+
     /* Register for event and its callback */
-    ret = audio_extn_adsp_hdlr_stream_register_event(out->adsp_hdlr_stream_handle, param,
+    ret = audio_extn_adsp_hdlr_stream_register_event(adsp_hdlr_stream_handle, param,
                                                      audio_extn_ip_hdlr_intf_event,
                                                      handle);
     if (ret < 0) {
@@ -231,16 +296,17 @@ static int audio_extn_ip_hdlr_intf_open_dsp(void *handle, void *stream_handle)
 
     ip_hdlr->reg_cb(handle, &audio_extn_ip_hdlr_intf_rtic_ack, &audio_extn_ip_hdlr_intf_rtic_fail);
     ip_hdlr->shm_info(handle, &fd);
-    ALOGV("%s: fd = %d", __func__, fd);
 
-    pcm_device_id = platform_get_pcm_device_id(out->usecase, PCM_PLAYBACK);
+    pcm_device_id = platform_get_pcm_device_id(usecase, PCM_PLAYBACK);
     ret = snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
                    "Playback ION FD %d", pcm_device_id);
     if (ret < 0) {
         ALOGE("%s:[%d] snprintf failed",__func__, ip_hdlr->ref_cnt, ret);
         goto done;
     }
-    ctl = mixer_get_ctl_by_name(out->dev->mixer, mixer_ctl_name);
+    ALOGV("%s: fd = %d  pcm_id = %d", __func__, fd, pcm_device_id);
+
+    ctl = mixer_get_ctl_by_name(dev->mixer, mixer_ctl_name);
     if (!ctl) {
         ALOGE("%s:[%d] Could not get ctl for mixer cmd - %s", __func__,
               ip_hdlr->ref_cnt, mixer_ctl_name);
@@ -260,28 +326,39 @@ done:
     return ret;
 }
 
-int audio_extn_ip_hdlr_intf_open(void *handle, bool is_dsp_decode, void *aud_sess_handle)
+int audio_extn_ip_hdlr_intf_open(void *handle, bool is_dsp_decode,
+                                 void *aud_sess_handle, audio_usecase_t usecase)
 {
     int ret = 0;
+    struct ip_hdlr_stream *stream_info;
 
     if (!handle || !aud_sess_handle) {
         ALOGE("%s:[%d] Invalid arguments, handle %p", __func__, ip_hdlr->ref_cnt, handle);
         return -EINVAL;
     }
 
+    stream_info = (struct ip_hdlr_stream *)calloc(1, sizeof(struct ip_hdlr_stream));
+    if (!stream_info)
+        return -ENOMEM;
+    stream_info->stream = aud_sess_handle;
+    stream_info->usecase = usecase;
+
     ret = ip_hdlr->open(handle, is_dsp_decode, aud_sess_handle);
     if (ret < 0) {
         ALOGE("%s:[%d] open failed", __func__, ip_hdlr->ref_cnt);
         return -EINVAL;
     }
-    ALOGD("%s:[%d] handle = %p, sess_handle = %p, is_dsp_decode = %d",__func__,
-          ip_hdlr->ref_cnt, handle, aud_sess_handle, is_dsp_decode);
+    ALOGD("%s:[%d] handle = %p, sess_handle = %p, is_dsp_decode = %d, usecase = %d",
+          __func__, ip_hdlr->ref_cnt, handle, aud_sess_handle, is_dsp_decode, usecase);
     if (is_dsp_decode) {
-        ret = audio_extn_ip_hdlr_intf_open_dsp(handle, aud_sess_handle);
+        ret = audio_extn_ip_hdlr_intf_open_dsp(handle, aud_sess_handle, usecase);
         if (ret < 0)
             ip_hdlr->close(handle);
     }
 
+    pthread_mutex_lock(&ip_hdlr->stream_list_lock);
+    list_add_tail(&ip_hdlr->stream_list, &stream_info->list);
+    pthread_mutex_unlock(&ip_hdlr->stream_list_lock);
 done:
     return ret;
 }
@@ -289,24 +366,46 @@ done:
 int audio_extn_ip_hdlr_intf_close(void *handle, bool is_dsp_decode, void *aud_sess_handle)
 {
     struct audio_adsp_event param;
+    void *adsp_hdlr_stream_handle;
+    struct listnode *node, *tempnode;
+    struct ip_hdlr_stream *stream_info;
+    audio_usecase_t usecase = 0;
     int ret = 0;
 
     if (!handle) {
         ALOGE("%s:[%d] handle is NULL", __func__, ip_hdlr->ref_cnt);
         return -EINVAL;
     }
-    ALOGD("%s:[%d] handle = %p",__func__, ip_hdlr->ref_cnt, handle);
 
     ret = ip_hdlr->close(handle);
     if (ret < 0)
         ALOGE("%s:[%d] close failed", __func__, ip_hdlr->ref_cnt);
 
+    pthread_mutex_lock(&ip_hdlr->stream_list_lock);
+    list_for_each_safe(node, tempnode, &ip_hdlr->stream_list) {
+        stream_info = node_to_item(node, struct ip_hdlr_stream, list);
+        if (stream_info->stream == aud_sess_handle) {
+            usecase = stream_info->usecase;
+            list_remove(node);
+            free(stream_info);
+            break;
+        }
+    }
+    pthread_mutex_unlock(&ip_hdlr->stream_list_lock);
+    ALOGD("%s:[%d] handle = %p, usecase = %d",__func__, ip_hdlr->ref_cnt, handle, usecase);
+
     if (is_dsp_decode) {
-        struct stream_out *out = (struct stream_out *)aud_sess_handle;
+        if (usecase == USECASE_AUDIO_TRANSCODE_LOOPBACK) {
+            struct stream_inout *inout = (struct stream_inout *)aud_sess_handle;
+            adsp_hdlr_stream_handle = inout->adsp_hdlr_stream_handle;
+        } else {
+            struct stream_out *out = (struct stream_out *)aud_sess_handle;
+            adsp_hdlr_stream_handle = out->adsp_hdlr_stream_handle;
+        }
         param.event_type = AUDIO_STREAM_ENCDEC_EVENT;
         param.payload_length = 0;
         /* Deregister the event */
-        ret = audio_extn_adsp_hdlr_stream_deregister_event(out->adsp_hdlr_stream_handle, &param);
+        ret = audio_extn_adsp_hdlr_stream_deregister_event(adsp_hdlr_stream_handle, &param);
         if (ret < 0)
             ALOGE("%s:[%d] event deregister failed", __func__, ip_hdlr->ref_cnt);
     }
@@ -322,6 +421,9 @@ int audio_extn_ip_hdlr_intf_init(void **handle, char *lib_path, void **lib_handl
         ip_hdlr = (struct ip_hdlr_intf *)calloc(1, sizeof(struct ip_hdlr_intf));
         if (!ip_hdlr)
             return -ENOMEM;
+
+        list_init(&ip_hdlr->stream_list);
+        pthread_mutex_init(&ip_hdlr->stream_list_lock, (const pthread_mutexattr_t *) NULL);
 
         ip_hdlr->lib_hdl = dlopen(LIB_PATH, RTLD_NOW);
         if (ip_hdlr->lib_hdl == NULL) {
@@ -365,6 +467,7 @@ int audio_extn_ip_hdlr_intf_init(void **handle, char *lib_path, void **lib_handl
 dlclose:
     dlclose(ip_hdlr->lib_hdl);
 err:
+    pthread_mutex_destroy(&ip_hdlr->stream_list_lock);
     free(ip_hdlr);
     ip_hdlr = NULL;
     return ret;
@@ -387,6 +490,7 @@ int audio_extn_ip_hdlr_intf_deinit(void *handle)
         if (ip_hdlr->lib_hdl)
             dlclose(ip_hdlr->lib_hdl);
 
+        pthread_mutex_destroy(&ip_hdlr->stream_list_lock);
         free(ip_hdlr);
         ip_hdlr == NULL;
     }

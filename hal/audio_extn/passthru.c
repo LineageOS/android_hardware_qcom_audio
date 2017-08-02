@@ -285,7 +285,7 @@ void audio_extn_passthru_update_stream_configuration(
 bool audio_extn_passthru_is_passthrough_stream(struct stream_out *out)
 {
     //check passthrough system property
-    if (!property_get_bool("audio.offload.passthrough", false)) {
+    if (!property_get_bool("vendor.audio.offload.passthrough", false)) {
         return false;
     }
 

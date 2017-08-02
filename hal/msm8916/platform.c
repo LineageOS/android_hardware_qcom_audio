@@ -370,6 +370,8 @@ int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_RECORD_AFE_PROXY] = {AFE_PROXY_PLAYBACK_PCM_DEVICE,
                                         AFE_PROXY_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE] = {MULTIMEDIA9_PCM_DEVICE, -1},
+    [USECASE_AUDIO_TRANSCODE_LOOPBACK] = {TRANSCODE_LOOPBACK_RX_DEV_ID, TRANSCODE_LOOPBACK_TX_DEV_ID},
+
 };
 
 /* Array to store sound devices */
@@ -1564,14 +1566,14 @@ static void set_platform_defaults(struct platform_data * my_data)
         if (!strncmp(MEDIA_MIMETYPE_AUDIO_ALAC, dsp_only_decoders_mime[count],
              strlen(dsp_only_decoders_mime[count]))) {
 
-            if(property_get_bool("use.qti.sw.alac.decoder", false)) {
+            if(property_get_bool("vendor.audio.use.sw.alac.decoder", false)) {
                 ALOGD("Alac software decoder is available...removing alac from DSP decoder list");
                 strlcpy(dsp_only_decoders_mime[count],"none",5);
             }
         } else if (!strncmp(MEDIA_MIMETYPE_AUDIO_APE, dsp_only_decoders_mime[count],
              strlen(dsp_only_decoders_mime[count]))) {
 
-            if(property_get_bool("use.qti.sw.ape.decoder", false)) {
+            if(property_get_bool("vendor.audio.use.sw.ape.decoder", false)) {
                 ALOGD("APE software decoder is available...removing ape from DSP decoder list");
                 strlcpy(dsp_only_decoders_mime[count],"none",5);
            }
@@ -2125,7 +2127,7 @@ void *platform_init(struct audio_device *adev)
 
     be_dai_name_table = NULL;
 
-    property_get("ro.qc.sdk.audio.fluencetype", my_data->fluence_cap, "");
+    property_get("ro.vendor.audio.sdk.fluencetype", my_data->fluence_cap, "");
     if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro"))) {
         my_data->fluence_type = FLUENCE_QUAD_MIC | FLUENCE_DUAL_MIC;
     } else if (!strncmp("fluence", my_data->fluence_cap, sizeof("fluence"))) {
@@ -2135,32 +2137,32 @@ void *platform_init(struct audio_device *adev)
     }
 
     if (my_data->fluence_type != FLUENCE_NONE) {
-        property_get("persist.audio.fluence.voicecall",value,"");
+        property_get("persist.vendor.audio.fluence.voicecall",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_call = true;
         }
 
-        property_get("persist.audio.fluence.voicerec",value,"");
+        property_get("persist.vendor.audio.fluence.voicerec",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_rec = true;
         }
 
-        property_get("persist.audio.fluence.audiorec",value,"");
+        property_get("persist.vendor.audio.fluence.audiorec",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_audio_rec = true;
         }
 
-        property_get("persist.audio.fluence.speaker",value,"");
+        property_get("persist.vendor.audio.fluence.speaker",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_spkr_mode = true;
         }
 
-        property_get("persist.audio.fluence.mode",value,"");
+        property_get("persist.vendor.audio.fluence.mode",value,"");
         if (!strncmp("broadside", value, sizeof("broadside"))) {
             my_data->fluence_mode = FLUENCE_BROADSIDE;
         }
 
-        property_get("persist.audio.fluence.hfpcall",value,"");
+        property_get("persist.vendor.audio.fluence.hfpcall",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_hfp_call = true;
         }
@@ -2181,7 +2183,7 @@ void *platform_init(struct audio_device *adev)
 
     }
 
-    property_get("persist.audio.FFSP.enable", ffspEnable, "");
+    property_get("persist.vendor.audio.FFSP.enable", ffspEnable, "");
     if (!strncmp("true", ffspEnable, sizeof("true"))) {
         acdb_device_table[SND_DEVICE_OUT_SPEAKER] = 131;
         acdb_device_table[SND_DEVICE_OUT_SPEAKER_WSA] = 131;
@@ -2342,7 +2344,7 @@ void *platform_init(struct audio_device *adev)
 acdb_init_fail:
 
     if (audio_extn_can_use_ras()) {
-        if (property_get_bool("persist.speaker.prot.enable", false)) {
+        if (property_get_bool("persist.vendor.audio.speaker.prot.enable", false)) {
             platform_set_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED,
                            acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED_RAS]);
             platform_set_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT,
@@ -2567,6 +2569,8 @@ void platform_deinit(void *platform)
     /* deinit usb */
     audio_extn_usb_deinit();
     audio_extn_dap_hal_deinit();
+    if (audio_extn_spkr_prot_is_enabled())
+        audio_extn_spkr_prot_deinit();
 #ifdef DYNAMIC_LOG_ENABLED
     log_utils_deinit();
 #endif
@@ -3359,10 +3363,11 @@ int platform_set_voice_volume(void *platform, int volume)
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
               __func__, mixer_ctl_name);
-        return -EINVAL;
+        ret = -EINVAL;
+    } else {
+        ALOGV("%s Setting voice volume index: %d",__func__, set_values[0]);
+        mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
     }
-    ALOGV("Setting voice volume index: %d", set_values[0]);
-    mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
 
     if (my_data->csd != NULL) {
         ret = my_data->csd->volume(ALL_SESSION_VSID, volume,
@@ -3390,10 +3395,11 @@ int platform_set_mic_mute(void *platform, bool state)
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
               __func__, mixer_ctl_name);
-        return -EINVAL;
+        ret = -EINVAL;
+    } else {
+        ALOGV("%s: Setting voice mute state: %d",__func__, state);
+        mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
     }
-    ALOGV("Setting voice mute state: %d", state);
-    mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
 
     if (my_data->csd != NULL) {
         ret = my_data->csd->mic_mute(ALL_SESSION_VSID, state,
@@ -3585,7 +3591,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     bool prop_rec_play_enabled = false;
     char recConcPropValue[PROPERTY_VALUE_MAX];
 
-    if (property_get("rec.playback.conc.disabled", recConcPropValue, NULL)) {
+    if (property_get("vendor.audio.rec.playback.conc.disabled", recConcPropValue, NULL)) {
         prop_rec_play_enabled = atoi(recConcPropValue) || !strncmp("true", recConcPropValue, 4);
     }
     use_voip_out_devices =  prop_rec_play_enabled &&
@@ -4909,7 +4915,7 @@ void platform_get_parameters(void *platform,
     if (ret >= 0) {
         int isallowed = 1; /*true*/
 
-        if (property_get("voice.playback.conc.disabled", propValue, NULL)) {
+        if (property_get("vendor.voice.playback.conc.disabled", propValue, NULL)) {
             prop_playback_enabled = atoi(propValue) ||
                 !strncmp("true", propValue, 4);
         }
@@ -5113,7 +5119,7 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
 {
     char value[PROPERTY_VALUE_MAX] = {0};
     uint32_t fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-    if((property_get("audio.offload.buffer.size.kb", value, "")) &&
+    if((property_get("vendor.audio.offload.buffer.size.kb", value, "")) &&
             atoi(value)) {
         fragment_size =  atoi(value) * 1024;
     }
@@ -5136,7 +5142,7 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
             ALOGV("FLAC fragment size %d", fragment_size);
         } else if (info->format == AUDIO_FORMAT_DSD) {
             fragment_size = MAX_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-            if((property_get("audio.native.dsd.buffer.size.kb", value, "")) &&
+            if((property_get("vendor.audio.native.dsd.buffer.size.kb", value, "")) &&
                     atoi(value))
                 fragment_size =  atoi(value) * 1024;
             ALOGV("DSD fragment size %d", fragment_size);
@@ -5664,7 +5670,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     }
 
     //check if mulitchannel clip needs to be down sampled to 48k
-    property_get("audio.playback.mch.downsample",value,"");
+    property_get("vendor.audio.playback.mch.downsample",value,"");
     if (!strncmp("true", value, sizeof("true"))) {
         out = usecase->stream.out;
         if ((popcount(out->channel_mask) > 2) &&
@@ -5730,10 +5736,19 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
 
     backend_idx = platform_get_backend_index(snd_device);
 
-    backend_cfg.bit_width = usecase->stream.out->bit_width;
-    backend_cfg.sample_rate = usecase->stream.out->sample_rate;
-    backend_cfg.format = usecase->stream.out->format;
-    backend_cfg.channels = audio_channel_count_from_out_mask(usecase->stream.out->channel_mask);
+    if (usecase->type == TRANSCODE_LOOPBACK) {
+        backend_cfg.bit_width = usecase->stream.inout->out_config.bit_width;
+        backend_cfg.sample_rate = usecase->stream.inout->out_config.sample_rate;
+        backend_cfg.format = usecase->stream.inout->out_config.format;
+        backend_cfg.channels = audio_channel_count_from_out_mask(
+                usecase->stream.inout->out_config.channel_mask);
+    } else {
+        backend_cfg.bit_width = usecase->stream.out->bit_width;
+        backend_cfg.sample_rate = usecase->stream.out->sample_rate;
+        backend_cfg.format = usecase->stream.out->format;
+        backend_cfg.channels = audio_channel_count_from_out_mask(usecase->stream.out->channel_mask);
+    }
+
     /*this is populated by check_codec_backend_cfg hence set default value to false*/
     backend_cfg.passthrough_enabled = false;
 
@@ -5864,7 +5879,14 @@ bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev,
     struct audio_backend_cfg backend_cfg;
 
     backend_cfg.passthrough_enabled = false;
-    if(usecase->type == PCM_CAPTURE) {
+
+    if (usecase->type == TRANSCODE_LOOPBACK) {
+        backend_cfg.bit_width = usecase->stream.inout->in_config.bit_width;
+        backend_cfg.sample_rate = usecase->stream.inout->in_config.sample_rate;
+        backend_cfg.format = usecase->stream.inout->in_config.format;
+        backend_cfg.channels = audio_channel_count_from_out_mask(
+                usecase->stream.inout->in_config.channel_mask);
+    } else if (usecase->type == PCM_CAPTURE) {
         backend_cfg.sample_rate= usecase->stream.in->sample_rate;
         backend_cfg.bit_width= usecase->stream.in->bit_width;
         backend_cfg.format= usecase->stream.in->format;
@@ -6360,7 +6382,7 @@ uint32_t platform_get_compress_passthrough_buffer_size(
 
     if (((info->format == AUDIO_FORMAT_DOLBY_TRUEHD) ||
             (info->format == AUDIO_FORMAT_IEC61937)) &&
-            property_get("audio.truehd.buffer.size.kb", value, "") &&
+            property_get("vendor.audio.truehd.buffer.size.kb", value, "") &&
             atoi(value)) {
         fragment_size = atoi(value) * 1024;
         goto done;
@@ -6699,6 +6721,7 @@ bool platform_send_gain_dep_cal(void *platform,
 
                 ALOGV("%s: out device is %d", __func__,  usecase->out_snd_device);
                 app_type = usecase->stream.out->app_type_cfg.app_type;
+                acdb_dev_id = acdb_device_table[usecase->out_snd_device];
 
                 if (platform_split_snd_device(my_data, usecase->out_snd_device,
                                               &num_devices, new_snd_device) < 0)
@@ -6833,7 +6856,7 @@ int platform_set_sidetone(struct audio_device *adev,
     int ret;
     if ((out_snd_device == SND_DEVICE_OUT_USB_HEADSET) ||
          (out_snd_device == SND_DEVICE_OUT_USB_HEADPHONES)) {
-        if (property_get_bool("audio.usb.disable.sidetone", 0)) {
+        if (property_get_bool("vendor.audio.usb.disable.sidetone", 0)) {
             ALOGI("Debug: Disable sidetone");
         } else {
             ret = audio_extn_usb_enable_sidetone(out_snd_device, enable);
