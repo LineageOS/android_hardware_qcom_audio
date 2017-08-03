@@ -385,6 +385,7 @@ static void send_app_type_cfg(void *platform, struct mixer *mixer,
     struct mixer_ctl *ctl = NULL;
     const char *mixer_ctl_name = "App Type Config";
     struct streams_io_cfg *s_info = NULL;
+    uint32_t target_bit_width = 0;
 
     if (!mixer) {
         ALOGE("%s: mixer is null",__func__);
@@ -410,6 +411,9 @@ static void send_app_type_cfg(void *platform, struct mixer *mixer,
         num_app_types += 1;
     }
 
+    /* get target bit width for ADM enforce mode */
+    target_bit_width = adev_get_dsp_bit_width_enforce_mode();
+
     list_for_each(node, streams_output_cfg_list) {
         s_info = node_to_item(node, struct streams_io_cfg, list);
         update = true;
@@ -421,6 +425,11 @@ static void send_app_type_cfg(void *platform, struct mixer *mixer,
                     app_type_cfg[i+2] = s_info->app_type_cfg.sample_rate;
                 if (app_type_cfg[i+3] < (size_t)s_info->app_type_cfg.bit_width)
                     app_type_cfg[i+3] = s_info->app_type_cfg.bit_width;
+                /* ADM bit width = max(enforce_bit_width, bit_width from s_info */
+                if (audio_extn_is_dsp_bit_width_enforce_mode_supported(s_info->flags.out_flags) &&
+                    (target_bit_width > app_type_cfg[i+3]))
+                    app_type_cfg[i+3] = target_bit_width;
+
                 update = false;
                 break;
             }
@@ -429,7 +438,12 @@ static void send_app_type_cfg(void *platform, struct mixer *mixer,
             num_app_types += 1;
             app_type_cfg[length++] = s_info->app_type_cfg.app_type;
             app_type_cfg[length++] = s_info->app_type_cfg.sample_rate;
-            app_type_cfg[length++] = s_info->app_type_cfg.bit_width;
+            app_type_cfg[length] = s_info->app_type_cfg.bit_width;
+            if (audio_extn_is_dsp_bit_width_enforce_mode_supported(s_info->flags.out_flags) &&
+                (target_bit_width > app_type_cfg[length]))
+                app_type_cfg[length] = target_bit_width;
+
+            length++;
         }
     }
     list_for_each(node, streams_input_cfg_list) {
@@ -759,6 +773,28 @@ static bool audio_is_this_native_usecase(struct audio_usecase *uc)
     return native_usecase;
 }
 
+bool audio_extn_is_dsp_bit_width_enforce_mode_supported(audio_output_flags_t flags)
+{
+    /* DSP bitwidth enforce mode for ADM and AFE:
+    * includes:
+    *     deep buffer, low latency, direct pcm and offload.
+    * excludes:
+    *     ull(raw+fast), VOIP.
+    */
+    if ((flags & AUDIO_OUTPUT_FLAG_VOIP_RX) ||
+            ((flags & AUDIO_OUTPUT_FLAG_RAW) &&
+            (flags & AUDIO_OUTPUT_FLAG_FAST)))
+        return false;
+
+
+    if ((flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) ||
+            (flags & AUDIO_OUTPUT_FLAG_DIRECT) ||
+            (flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) ||
+            (flags & AUDIO_OUTPUT_FLAG_PRIMARY))
+        return true;
+    else
+        return false;
+}
 
 static inline bool audio_is_vr_mode_on(struct audio_device *(__attribute__((unused)) adev))
 {

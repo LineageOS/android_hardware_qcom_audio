@@ -594,6 +594,7 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
                                   struct audio_device *adev,
                                   struct audio_usecase *usecase);
 int audio_extn_utils_get_snd_card_num();
+bool audio_extn_is_dsp_bit_width_enforce_mode_supported(audio_output_flags_t flags);
 
 #ifdef DS2_DOLBY_DAP_ENABLED
 #define LIB_DS2_DAP_HAL "vendor/lib/libhwdaphal.so"

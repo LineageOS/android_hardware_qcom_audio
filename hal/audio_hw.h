@@ -466,6 +466,7 @@ struct audio_device {
     bool asrc_mode_enabled;
     qahwi_device_t qahwi_dev;
     bool vr_audio_mode_enabled;
+    uint32_t dsp_bit_width_enforce_mode;
     bool bt_sco_on;
 };
 
@@ -491,6 +492,8 @@ bool is_offload_usecase(audio_usecase_t uc_id);
 bool audio_is_true_native_stream_active(struct audio_device *adev);
 
 bool audio_is_dsd_native_stream_active(struct audio_device *adev);
+
+uint32_t adev_get_dsp_bit_width_enforce_mode();
 
 int pcm_ioctl(struct pcm *pcm, int request, ...);
 
