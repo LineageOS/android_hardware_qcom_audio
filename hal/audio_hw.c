@@ -3053,7 +3053,10 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     format = out->format = config->format;
     out->sample_rate = config->sample_rate;
     out->channel_mask = config->channel_mask;
-    out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_STEREO;
+    if (out->channel_mask == AUDIO_CHANNEL_NONE)
+        out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_STEREO;
+    else
+        out->supported_channel_masks[0] = out->channel_mask;
     out->handle = handle;
     out->bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     out->non_blocking = 0;
