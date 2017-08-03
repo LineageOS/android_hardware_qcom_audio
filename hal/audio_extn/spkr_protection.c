@@ -430,6 +430,20 @@ error:
      return -EINVAL;
 }
 
+void destroy_thread_params()
+{
+    pthread_mutex_destroy(&handle.mutex_spkr_prot);
+    pthread_mutex_destroy(&handle.spkr_calib_cancelack_mutex);
+    pthread_mutex_destroy(&handle.cal_wait_cond_mutex);
+    pthread_cond_destroy(&handle.cal_wait_condition);
+    pthread_cond_destroy(&handle.spkr_calib_cancel);
+    pthread_cond_destroy(&handle.spkr_calibcancel_ack);
+    if(!handle.wsa_found) {
+        pthread_mutex_destroy(&handle.spkr_prot_thermalsync_mutex);
+        pthread_cond_destroy(&handle.spkr_prot_thermalsync);
+    }
+}
+
 static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
 {
     struct audio_device *adev = handle.adev_handle;
@@ -443,6 +457,7 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
     bool acquire_device = false;
 
     status.status = 0;
+    memset(&protCfg, 0, sizeof(protCfg));
     if (!adev) {
         ALOGE("%s: Invalid params", __func__);
         return -EINVAL;
@@ -1314,11 +1329,7 @@ void audio_extn_spkr_prot_init(void *adev)
             handle.init_check = true;
         } else {
             ALOGE("%s: speaker calibration thread creation failed", __func__);
-            pthread_mutex_destroy(&handle.mutex_spkr_prot);
-            pthread_mutex_destroy(&handle.spkr_calib_cancelack_mutex);
-            pthread_mutex_destroy(&handle.cal_wait_cond_mutex);
-            pthread_cond_destroy(&handle.spkr_calib_cancel);
-            pthread_cond_destroy(&handle.spkr_calibcancel_ack);
+            destroy_thread_params();
         }
     return;
     } else {
@@ -1366,13 +1377,7 @@ void audio_extn_spkr_prot_init(void *adev)
             handle.init_check = true;
         } else {
             ALOGE("%s: speaker calibration thread creation failed", __func__);
-            pthread_mutex_destroy(&handle.mutex_spkr_prot);
-            pthread_mutex_destroy(&handle.spkr_calib_cancelack_mutex);
-            pthread_mutex_destroy(&handle.cal_wait_cond_mutex);
-            pthread_cond_destroy(&handle.spkr_calib_cancel);
-            pthread_cond_destroy(&handle.spkr_calibcancel_ack);
-            pthread_mutex_destroy(&handle.spkr_prot_thermalsync_mutex);
-            pthread_cond_destroy(&handle.spkr_prot_thermalsync);
+            destroy_thread_params();
         }
     } else {
         ALOGE("%s: thermal_client_request failed", __func__);
@@ -1400,7 +1405,8 @@ int audio_extn_spkr_prot_deinit()
 {
     int result = 0;
 
-    ALOGD("%s: Entering deinit init_check :%d", __func__, handle.init_check);
+    ALOGD("%s: Entering deinit init_check :%d",
+          __func__, handle.init_check);
     if(!handle.init_check)
         return -1;
 
@@ -1411,15 +1417,7 @@ int audio_extn_spkr_prot_deinit()
         ALOGE("%s:Unable to join the calibration thread", __func__);
         return -1;
     }
-    pthread_mutex_destroy(&handle.mutex_spkr_prot);
-    pthread_mutex_destroy(&handle.spkr_calib_cancelack_mutex);
-    pthread_mutex_destroy(&handle.cal_wait_cond_mutex);
-    pthread_cond_destroy(&handle.spkr_calib_cancel);
-    pthread_cond_destroy(&handle.spkr_calibcancel_ack);
-    if(!handle.wsa_found) {
-        pthread_mutex_destroy(&handle.spkr_prot_thermalsync_mutex);
-        pthread_cond_destroy(&handle.spkr_prot_thermalsync);
-    }
+    destroy_thread_params();
     memset(&handle, 0, sizeof(handle));
     return 0;
 }
