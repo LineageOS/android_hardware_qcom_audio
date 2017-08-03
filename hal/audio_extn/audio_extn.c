@@ -1161,6 +1161,7 @@ int audio_extn_perf_lock_init(void)
                                                        "perf_lock_acq");
             if (perf_lock_acq == NULL) {
                 ALOGE("%s: Perf lock Acquire NULL \n", __func__);
+                dlclose(qcopt_handle);
                 ret = -EINVAL;
                 goto err;
             }
@@ -1168,6 +1169,7 @@ int audio_extn_perf_lock_init(void)
                                                        "perf_lock_rel");
             if (perf_lock_rel == NULL) {
                 ALOGE("%s: Perf lock Release NULL \n", __func__);
+                dlclose(qcopt_handle);
                 ret = -EINVAL;
                 goto err;
             }
