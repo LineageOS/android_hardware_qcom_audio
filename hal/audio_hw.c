@@ -1116,6 +1116,22 @@ static int read_usb_sup_params_and_compare(bool is_playback,
     return ret < 0 ? -EINVAL : 0; // HACK TBD
 }
 
+static bool is_usb_ready(struct audio_device *adev, bool is_playback)
+{
+    // Check if usb is ready.
+    // The usb device may have been removed quickly after insertion and hence
+    // no longer available.  This will show up as empty channel masks, or rates.
+
+    pthread_mutex_lock(&adev->lock);
+    uint32_t supported_sample_rate;
+
+    // we consider usb ready if we can fetch at least one sample rate.
+    const bool ready = read_usb_sup_sample_rates(
+            is_playback, &supported_sample_rate, 1 /* max_rates */) > 0;
+    pthread_mutex_unlock(&adev->lock);
+    return ready;
+}
+
 static audio_usecase_t get_voice_usecase_id_from_list(struct audio_device *adev)
 {
     struct audio_usecase *usecase;
@@ -3563,6 +3579,10 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                       (devices != AUDIO_DEVICE_OUT_USB_ACCESSORY);
     bool direct_dev = is_hdmi || is_usb_dev;
 
+    if (is_usb_dev && !is_usb_ready(adev, true /* is_playback */)) {
+        return -ENOSYS;
+    }
+
     ALOGV("%s: enter: sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)",
           __func__, config->sample_rate, config->channel_mask, devices, flags);
     *stream_out = NULL;
@@ -4189,6 +4209,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                                             source);
     ALOGV("%s: enter", __func__);
     *stream_in = NULL;
+
+    if (is_usb_dev && !is_usb_ready(adev, false /* is_playback */)) {
+        return -ENOSYS;
+    }
 
     if (!(is_usb_dev && may_use_hifi_record)) {
         if (config->sample_rate == 0)
