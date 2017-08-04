@@ -765,8 +765,7 @@ static ssize_t qaf_out_write(struct audio_stream_out *stream, const void *buffer
     DEBUG_MSG_VV("ret [%d]", (int)ret);
 
     if (ret >= 0) {
-        bytes = ret;
-        out->written += bytes / ((popcount(out->channel_mask) * sizeof(short)));
+        out->written += ret / ((popcount(out->channel_mask) * sizeof(short)));
     }
 
 
@@ -786,6 +785,11 @@ exit:
                    / audio_stream_out_frame_size(stream)
                    / out->stream.common.get_sample_rate(&out->stream.common));
         }
+    } else if (ret < bytes) {
+        //partial buffer copied to the module.
+        DEBUG_MSG_VV("Not enough space available in mm module, post msg to cb thread");
+        (void)qaf_send_offload_cmd_l(out, OFFLOAD_CMD_WAIT_FOR_BUFFER);
+        bytes = ret;
     }
     return bytes;
 }
@@ -2136,7 +2140,7 @@ static void *qaf_offload_thread_loop(void *context)
                         parms = str_parms_create_str(kvpairs);
                         ret = str_parms_get_int(parms, "buf_available", &value);
                         if (ret >= 0) {
-                            if (value >= (int)out->compr_config.fragment_size) {
+                            if (value > 0) {
                                 DEBUG_MSG_VV("buffer available");
                                 str_parms_destroy(parms);
                                 parms = NULL;
