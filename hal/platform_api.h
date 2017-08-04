@@ -100,6 +100,12 @@ int platform_get_fluence_type(void *platform, char *value, uint32_t len);
 int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id);
 int platform_get_snd_device_acdb_id(snd_device_t snd_device);
 int platform_set_snd_device_bit_width(snd_device_t snd_device, unsigned int bit_width);
+int platform_set_effect_config_data(snd_device_t snd_device,
+                                      struct audio_effect_config effect_config,
+                                      effect_type_t effect_type);
+int platform_get_effect_config_data(snd_device_t snd_device,
+                                      struct audio_effect_config *effect_config,
+                                      effect_type_t effect_type);
 int platform_get_snd_device_bit_width(snd_device_t snd_device);
 int platform_set_acdb_metainfo_key(void *platform, char *name, int key);
 int platform_get_meta_info_key_from_list(void *platform, char *mod_name);

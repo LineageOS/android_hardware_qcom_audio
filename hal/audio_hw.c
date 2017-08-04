@@ -803,6 +803,126 @@ static void check_and_set_asrc_mode(struct audio_device *adev,
     }
 }
 
+#ifdef DYNAMIC_ECNS_ENABLED
+static int send_effect_enable_disable_mixer_ctl(struct audio_device *adev,
+                          struct audio_effect_config effect_config,
+                          unsigned int param_value)
+{
+    char mixer_ctl_name[] = "Audio Effect";
+    struct mixer_ctl *ctl;
+    long set_values[6];
+    struct stream_in *in = adev->active_input;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get mixer ctl - %s",
+               __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    set_values[0] = 1; //0:Rx 1:Tx
+    set_values[1] = in->app_type_cfg.app_type;
+    set_values[2] = (long)effect_config.module_id;
+    set_values[3] = (long)effect_config.instance_id;
+    set_values[4] = (long)effect_config.param_id;
+    set_values[5] = param_value;
+
+    mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+
+    return 0;
+
+}
+
+static int update_effect_param_ecns(struct audio_device *adev, unsigned int module_id,
+                               int effect_type, unsigned int *param_value)
+{
+    int ret = 0;
+    struct audio_effect_config other_effect_config;
+    struct audio_usecase *usecase = NULL;
+    struct stream_in *in = adev->active_input;
+
+    usecase = get_usecase_from_list(adev, in->usecase);
+    if (!usecase)
+        return -EINVAL;
+
+    ret = platform_get_effect_config_data(usecase->in_snd_device, &other_effect_config,
+                                            effect_type == EFFECT_AEC ? EFFECT_NS : EFFECT_AEC);
+    if (ret < 0) {
+        ALOGE("%s Failed to get effect params %d", __func__, ret);
+        return ret;
+    }
+
+    if (module_id == other_effect_config.module_id) {
+            //Same module id for AEC/NS. Values need to be combined
+            if (((effect_type == EFFECT_AEC) && (in->enable_ns)) ||
+                ((effect_type == EFFECT_NS) && (in->enable_aec))) {
+                *param_value |= other_effect_config.param_value;
+            }
+    }
+
+    return ret;
+}
+
+static int enable_disable_effect(struct audio_device *adev, int effect_type, bool enable)
+{
+    struct audio_effect_config effect_config;
+    struct audio_usecase *usecase = NULL;
+    int ret = 0;
+    unsigned int param_value = 0;
+    struct stream_in *in = adev->active_input;
+
+    if (!in) {
+        ALOGE("%s: Invalid input stream", __func__);
+        return -EINVAL;
+    }
+
+    ALOGD("%s: effect_type:%d enable:%d", __func__, effect_type, enable);
+
+    usecase = get_usecase_from_list(adev, in->usecase);
+
+    ret = platform_get_effect_config_data(usecase->in_snd_device, &effect_config, effect_type);
+    if (ret < 0) {
+        ALOGE("%s Failed to get module id %d", __func__, ret);
+        return ret;
+    }
+    ALOGV("%s: %d %d usecase->id:%d usecase->in_snd_device:%d", __func__, effect_config.module_id,
+           in->app_type_cfg.app_type, usecase->id, usecase->in_snd_device);
+
+    if(enable)
+        param_value = effect_config.param_value;
+
+    /*Special handling for AEC & NS effects Param values need to be
+      updated if module ids are same*/
+
+    if ((effect_type == EFFECT_AEC) || (effect_type == EFFECT_NS)) {
+        ret = update_effect_param_ecns(adev, effect_config.module_id, effect_type, &param_value);
+        if (ret < 0)
+            return ret;
+    }
+
+    ret = send_effect_enable_disable_mixer_ctl(adev, effect_config, param_value);
+
+    return ret;
+}
+
+static void check_and_enable_effect(struct audio_device *adev)
+{
+
+    if (adev->active_input->enable_aec) {
+        enable_disable_effect(adev, EFFECT_AEC, true);
+    }
+
+    if (adev->active_input->enable_ns &&
+        adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
+        enable_disable_effect(adev, EFFECT_NS, true);
+    }
+}
+#else
+#define enable_disable_effect(x, y, z) ENOSYS
+#define check_and_enable_effect(x) ENOSYS
+#endif
+
+
 int pcm_ioctl(struct pcm *pcm, int request, ...)
 {
     va_list ap;
@@ -2110,6 +2230,11 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     }
     enable_audio_route(adev, usecase);
 
+    /* If input stream is already running then effect needs to be
+       applied on the new input device that's being enabled here.  */
+    if ((in_snd_device != SND_DEVICE_NONE) && (!adev->active_input->standby))
+        check_and_enable_effect(adev);
+
     if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL) {
         /* Enable aanc only if voice call exists */
         if (voice_is_call_state_active(adev))
@@ -2341,6 +2466,8 @@ int start_input_stream(struct stream_in *in)
             }
         }
     }
+
+    check_and_enable_effect(adev);
 
 done_open:
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
@@ -5091,6 +5218,8 @@ static int add_remove_audio_effect(const struct audio_stream *stream,
     effect_descriptor_t desc;
 
     status = (*effect)->get_descriptor(effect, &desc);
+    ALOGV("%s: status %d in->standby %d enable:%d", __func__, status, in->standby, enable);
+
     if (status != 0)
         return status;
 
@@ -5100,14 +5229,22 @@ static int add_remove_audio_effect(const struct audio_stream *stream,
             in->enable_aec != enable &&
             (memcmp(&desc.type, FX_IID_AEC, sizeof(effect_uuid_t)) == 0)) {
         in->enable_aec = enable;
-        if (!in->standby)
-            select_devices(in->dev, in->usecase);
+        if (!in->standby) {
+            if (enable_disable_effect(in->dev, EFFECT_AEC, enable) == ENOSYS)
+                select_devices(in->dev, in->usecase);
+        }
+
     }
     if (in->enable_ns != enable &&
             (memcmp(&desc.type, FX_IID_NS, sizeof(effect_uuid_t)) == 0)) {
         in->enable_ns = enable;
-        if (!in->standby)
-            select_devices(in->dev, in->usecase);
+        if (!in->standby) {
+            if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
+                if (enable_disable_effect(in->dev, EFFECT_NS, enable) == ENOSYS)
+                    select_devices(in->dev, in->usecase);
+            } else
+                select_devices(in->dev, in->usecase);
+        }
     }
     pthread_mutex_unlock(&in->dev->lock);
     pthread_mutex_unlock(&in->lock);
