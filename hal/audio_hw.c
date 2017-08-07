@@ -3440,6 +3440,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ALOGE("copl %s: received sound card offline state on compress write", __func__);
             out->card_status = CARD_STATUS_OFFLINE;
             pthread_mutex_unlock(&out->lock);
+            out_on_error(&out->stream.common);
             return ret;
         }
         if ( ret == (ssize_t)bytes && !out->non_blocking)
