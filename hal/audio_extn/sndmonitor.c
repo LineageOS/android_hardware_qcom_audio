@@ -153,9 +153,10 @@ static int add_new_sndcard(int card, int fd)
 
     char *state = read_state(fd);
 
-    if (!state)
+    if (!state) {
+        free(s);
         return -1;
-
+    }
     bool online = state && !strcmp(state, "ONLINE");
 
     ALOGV("card %d initial state %s %d", card, state, online);
@@ -547,7 +548,8 @@ void *monitor_thread_loop(void *args __unused)
             ++i;
         }
     }
-
+    if (pfd)
+        free(pfd);
     return NULL;
 }
 
