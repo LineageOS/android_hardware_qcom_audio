@@ -755,7 +755,7 @@ void *asphere_thread_func(void* data) {
     int                      reply_data;
     uint32_t                 reply_size = sizeof(int);
     uint32_t array_size = sizeof(qahw_effect_param_t) + 2 * sizeof(int32_t);
-    uint32_t      buf32[array_size];
+    uint32_t      buf32[array_size], buf32_2[array_size];
     qahw_effect_param_t *values;
     int enable;
 
@@ -794,6 +794,8 @@ void *asphere_thread_func(void* data) {
             }
             if (thr_ctxt->cmd_code == QAHW_EFFECT_CMD_ENABLE || thr_ctxt->cmd_code == QAHW_EFFECT_CMD_DISABLE) {
                 enable = ((thr_ctxt->cmd_code == QAHW_EFFECT_CMD_ENABLE) ? 1 : 0);
+
+                values = (qahw_effect_param_t *)buf32_2;
                 values->psize = 2 * sizeof(int32_t);
                 values->vsize = sizeof(int32_t);
                 *(int32_t *)values->data = ASPHERE_PARAM_ENABLE;
