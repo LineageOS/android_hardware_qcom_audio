@@ -5454,6 +5454,10 @@ static int adev_close(hw_device_t *device)
         audio_extn_adsp_hdlr_deinit();
         audio_extn_snd_mon_deinit();
         audio_extn_loopback_deinit(adev);
+        if (adev->device_cfg_params) {
+            free(adev->device_cfg_params);
+            adev->device_cfg_params = NULL;
+        }
         free(device);
         adev = NULL;
     }
@@ -5754,6 +5758,12 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->card_status = CARD_STATUS_ONLINE;
     pthread_mutex_unlock(&adev->lock);
     audio_extn_sound_trigger_init(adev); /* dependent on snd_mon_init() */
+    /* Allocate memory for Device config params */
+    adev->device_cfg_params = (struct audio_device_config_param*)
+                                  calloc(platform_get_max_codec_backend(),
+                                  sizeof(struct audio_device_config_param));
+    if (adev->device_cfg_params == NULL)
+        ALOGE("%s: Memory allocation failed for Device config params", __func__);
 
     ALOGV("%s: exit", __func__);
     return 0;

@@ -313,6 +313,16 @@ struct qahw_out_channel_map_param {
    uint8_t       channel_map[AUDIO_CHANNEL_COUNT_MAX];   /* Input Channel Map */
 };
 
+struct qahw_device_cfg_param {
+   uint32_t   sample_rate;
+   uint32_t   channels;
+   uint32_t   bit_width;
+   audio_format_t format;
+   audio_devices_t device;
+   uint8_t    channel_map[AUDIO_CHANNEL_COUNT_MAX];
+   uint16_t   channel_allocation;
+};
+
 typedef union {
     struct qahw_source_tracking_param st_params;
     struct qahw_sound_focus_param sf_params;
@@ -324,6 +334,7 @@ typedef union {
     struct qahw_out_correct_drift drift_correction_param;
     struct qahw_adsp_event adsp_event_params;
     struct qahw_out_channel_map_param channel_map_params;
+    struct qahw_device_cfg_param device_cfg_params;
 } qahw_param_payload;
 
 typedef enum {
@@ -338,7 +349,8 @@ typedef enum {
     /* param to set drift value to be adjusted by dsp */
     QAHW_PARAM_OUT_CORRECT_DRIFT,
     QAHW_PARAM_ADSP_STREAM_CMD,
-    QAHW_PARAM_OUT_CHANNEL_MAP    /* PARAM to set i/p channel map */
+    QAHW_PARAM_OUT_CHANNEL_MAP,    /* PARAM to set i/p channel map */
+    QAHW_PARAM_DEVICE_CONFIG      /* PARAM to set device config */
 } qahw_param_id;
 
 __END_DECLS

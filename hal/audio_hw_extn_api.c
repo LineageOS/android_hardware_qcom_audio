@@ -173,6 +173,11 @@ int qahwi_set_param_data(struct audio_hw_device *adev,
         case AUDIO_EXTN_PARAM_APTX_DEC:
               audio_extn_set_aptx_dec_params((struct aptx_dec_param *)payload);
               break;
+        case AUDIO_EXTN_PARAM_DEVICE_CONFIG:
+              ALOGV("%s:: Calling audio_extn_set_device_cfg_params", __func__);
+              audio_extn_set_device_cfg_params(dev,
+                               (struct audio_device_cfg_param *)payload);
+              break;
        default:
              ALOGE("%s::INVALID PARAM ID:%d\n",__func__,param_id);
              ret = -EINVAL;
