@@ -2346,7 +2346,7 @@ static int stop_output_stream(struct stream_out *out)
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
         audio_extn_keep_alive_start();
 
-    if (audio_extn_ip_hdlr_intf_supported(out->format) && out->ip_hdlr_handle) {
+    if (audio_extn_ip_hdlr_intf_supported(out->format, audio_extn_passthru_is_direct_passthrough(out)) && out->ip_hdlr_handle) {
         ret = audio_extn_ip_hdlr_intf_close(out->ip_hdlr_handle, true, out);
         if (ret < 0)
             ALOGE("%s: audio_extn_ip_hdlr_intf_close failed %d",__func__, ret);
@@ -2587,7 +2587,7 @@ int start_output_stream(struct stream_out *out)
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
     ALOGD("%s: exit", __func__);
 
-    if (audio_extn_ip_hdlr_intf_supported(out->format) && out->ip_hdlr_handle) {
+    if (audio_extn_ip_hdlr_intf_supported(out->format, audio_extn_passthru_is_direct_passthrough(out)) && out->ip_hdlr_handle) {
         ret = audio_extn_ip_hdlr_intf_open(out->ip_hdlr_handle, true, out, out->usecase);
         if (ret < 0)
             ALOGE("%s: audio_extn_ip_hdlr_intf_open failed %d",__func__, ret);
@@ -4914,7 +4914,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     /* setup a channel for client <--> adsp communication for stream events */
     if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) ||
             (out->flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) ||
-            (audio_extn_ip_hdlr_intf_supported(config->format))) {
+            (audio_extn_ip_hdlr_intf_supported(config->format, audio_extn_passthru_is_direct_passthrough(out)))) {
         hdlr_stream_cfg.pcm_device_id = platform_get_pcm_device_id(
                 out->usecase, PCM_PLAYBACK);
         hdlr_stream_cfg.flags = out->flags;
@@ -4926,7 +4926,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
             out->adsp_hdlr_stream_handle = NULL;
         }
     }
-    if (audio_extn_ip_hdlr_intf_supported(config->format)) {
+    if (audio_extn_ip_hdlr_intf_supported(config->format, audio_extn_passthru_is_direct_passthrough(out))) {
         ret = audio_extn_ip_hdlr_intf_init(&out->ip_hdlr_handle, NULL, NULL);
         if (ret < 0) {
             ALOGE("%s: audio_extn_ip_hdlr_intf_init failed %d",__func__, ret);
@@ -4966,7 +4966,7 @@ void adev_close_output_stream(struct audio_hw_device *dev __unused,
         out->adsp_hdlr_stream_handle = NULL;
     }
 
-    if (audio_extn_ip_hdlr_intf_supported(out->format) && out->ip_hdlr_handle) {
+    if (audio_extn_ip_hdlr_intf_supported(out->format, audio_extn_passthru_is_direct_passthrough(out)) && out->ip_hdlr_handle) {
         audio_extn_ip_hdlr_intf_deinit(out->ip_hdlr_handle);
         out->ip_hdlr_handle = NULL;
     }

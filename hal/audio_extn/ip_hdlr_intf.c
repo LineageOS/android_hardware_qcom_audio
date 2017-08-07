@@ -116,10 +116,10 @@ struct rtic_event {
     uint8_t payload[0];
 };
 
-bool audio_extn_ip_hdlr_intf_supported(audio_format_t format)
+bool audio_extn_ip_hdlr_intf_supported(audio_format_t format,bool is_direct_passthru)
 {
     if (((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_DOLBY_TRUEHD) ||
-        ((!property_get_bool("audio.offload.passthrough", false)) &&
+        ((!is_direct_passthru) &&
          (((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_E_AC3) ||
          ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AC3))))
         return true;

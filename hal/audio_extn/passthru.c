@@ -417,6 +417,19 @@ void audio_extn_passthru_update_stream_configuration(
 
 }
 
+bool audio_extn_passthru_is_direct_passthrough(struct stream_out *out)
+{
+    //check passthrough system property
+    if (!property_get_bool("audio.offload.passthrough", false)) {
+        return false;
+    }
+
+    if ((out != NULL) && (out->compr_config.codec->compr_passthr == PASSTHROUGH || out->compr_config.codec->compr_passthr == PASSTHROUGH_IEC61937))
+        return true;
+    else
+        return false;
+}
+
 bool audio_extn_passthru_is_passthrough_stream(struct stream_out *out)
 {
     //check passthrough system property
