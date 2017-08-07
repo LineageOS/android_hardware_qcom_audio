@@ -153,7 +153,6 @@ void platform_snd_card_update(void *platform, card_status_t scard_status);
 
 struct audio_offload_info_t;
 uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info);
-uint32_t platform_get_compress_passthrough_buffer_size(audio_offload_info_t* info);
 
 bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
                    struct audio_usecase *usecase, snd_device_t snd_device);
