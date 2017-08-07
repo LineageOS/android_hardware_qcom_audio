@@ -5060,8 +5060,8 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
         fragment_size = info->offload_buffer_size;
     }
 
-    if (info != NULL && !info->has_video) {
-        if (info->is_streaming) {
+    if (info != NULL) {
+        if (info->is_streaming && info->has_video) {
             fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE_FOR_AV_STREAMING;
             ALOGV("%s: offload fragment size reduced for AV streaming to %d",
                    __func__, fragment_size);
