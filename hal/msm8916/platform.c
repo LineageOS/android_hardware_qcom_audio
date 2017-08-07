@@ -365,6 +365,8 @@ int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                         AFE_PROXY_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE] = {MULTIMEDIA9_PCM_DEVICE, -1},
     [USECASE_AUDIO_TRANSCODE_LOOPBACK] = {TRANSCODE_LOOPBACK_RX_DEV_ID, TRANSCODE_LOOPBACK_TX_DEV_ID},
+    [USECASE_AUDIO_PLAYBACK_VOIP] = {AUDIO_PLAYBACK_VOIP_PCM_DEVICE, AUDIO_PLAYBACK_VOIP_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD_VOIP] = {AUDIO_RECORD_VOIP_PCM_DEVICE, AUDIO_RECORD_VOIP_PCM_DEVICE},
 
 };
 
@@ -6793,9 +6795,7 @@ bool platform_send_gain_dep_cal(void *platform,
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
 
-            if (usecase != NULL &&
-                usecase->type == PCM_PLAYBACK &&
-                usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
+            if (usecase != NULL && usecase->type == PCM_PLAYBACK) {
                 int new_snd_device[2] = {0};
                 int i, num_devices = 1;
 
