@@ -2966,7 +2966,7 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
     struct stream_out *out = (struct stream_out *)stream;
 
     if (is_interactive_usecase(out->usecase)) {
-        return out->config.period_size;
+        return out->config.period_size * out->config.period_count;
     } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         if (out->flags & AUDIO_OUTPUT_FLAG_TIMESTAMP)
             return out->compr_config.fragment_size - sizeof(struct snd_codec_metadata);

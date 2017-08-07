@@ -38,7 +38,7 @@
 #define FORMAT_PCM 1
 #define WAV_HEADER_LENGTH_MAX 46
 
-#define MAX_PLAYBACK_STREAMS   9
+#define MAX_PLAYBACK_STREAMS   105 //This value is changed to suppport 100 clips in playlist
 #define PRIMARY_STREAM_INDEX   0
 
 #define KVPAIRS_MAX 100
@@ -964,7 +964,7 @@ audio_format_t get_aac_format(int filetype, aac_format_type_t format_type)
     return aac_format;
 }
 
-static void get_file_format(stream_config *stream_info)
+void get_file_format(stream_config *stream_info)
 {
     int rc = 0;
 
@@ -1895,7 +1895,7 @@ int extract_mixer_coeffs(qahw_mix_matrix_params_t * mm_params, const char * arg_
 }
 
 #ifdef QAP
-int start_playback_through_qap(char * kvp_string, int num_of_streams) {
+int start_playback_through_qap(char * kvp_string, int num_of_streams,  qahw_module_handle_t *hal_handle) {
     stream_config *stream = NULL;
     int rc = 0;
     int i;
@@ -1914,7 +1914,7 @@ int start_playback_through_qap(char * kvp_string, int num_of_streams) {
         fprintf(stdout, "Playing from:%s\n", stream->filename);
         qap_module_handle_t qap_module_handle = NULL;
         if (!qap_wrapper_session_active) {
-            rc = qap_wrapper_session_open(kvp_string, stream, num_of_streams);
+            rc = qap_wrapper_session_open(kvp_string, stream, num_of_streams, hal_handle);
             if (rc != 0) {
                 fprintf(stderr, "Session Open failed\n");
                 return -EINVAL;
@@ -2010,6 +2010,7 @@ int main(int argc, char* argv[]) {
         {"num-out-ch",    required_argument,    0, 'o'},
         {"intr-strm",    required_argument,    0, 'i'},
         {"device-config", required_argument,    0, 'C'},
+        {"play-list",    required_argument,    0, 'g'},
         {"help",          no_argument,          0, 'h'},
         {0, 0, 0, 0}
     };
@@ -2033,7 +2034,7 @@ int main(int argc, char* argv[]) {
 
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:s:v:V:l:t:a:w:k:PD:KF:Ee:A:u:m:S:C:p::x:y:qQhI:O:M:o:i:h:",
+                              "-f:r:c:b:d:s:v:V:l:t:a:w:k:PD:KF:Ee:A:u:m:S:C:p::x:y:qQhI:O:M:o:i:h:g:",
                               long_options,
                               &option_index)) != -1) {
 
@@ -2239,6 +2240,8 @@ int main(int argc, char* argv[]) {
                  fprintf(stderr, " Device config :::: channel_allocation - %d \n", device_cfg_params.channel_allocation);
             }
             break;
+        case 'g':
+            break;
         case 'h':
             usage();
             hal_test_qap_usage();
@@ -2333,9 +2336,41 @@ int main(int argc, char* argv[]) {
     }
 
     if (is_qap_session_active(argc, argv, kvp_string)) {
-        rc = start_playback_through_qap(kvp_string, num_of_streams);
-        if (rc != 0) {
-            fprintf(stderr, "QAP playback failed\n");
+        char *file_name = NULL;
+        char *file_name_tmp = NULL;
+        char *cmd_kvp_str[100] = {NULL};
+        char *play_list_kvp_str[100] = {NULL};
+        int i = 0, j = 0;
+        qahw_module_handle_t *qap_out_hal_handle = NULL;
+
+        stream = &stream_param[i];
+        qap_out_hal_handle = load_hal(stream->output_device);
+        if (qap_out_hal_handle == NULL) {
+            fprintf(stderr, "Failed log load HAL\n");
+            return;
+        }
+
+        file_name = (char*) check_for_playlist(kvp_string);
+        fprintf(stderr, "%s file_name is %s \n", __FUNCTION__, file_name);
+        if (file_name != NULL) {
+            FILE *fp = fopen(file_name, "r+");
+            if (fp != NULL) {
+                get_play_list(fp, &stream_param, &num_of_streams, cmd_kvp_str);
+                for (j = 0; j < num_of_streams; j++) {
+                     play_list_kvp_str[j] = strdup(cmd_kvp_str[j]);
+                }
+                rc = start_playback_through_qap_playlist(play_list_kvp_str, num_of_streams, kvp_string, stream_param, qap_wrapper_session_active, qap_out_hal_handle);
+                if (rc != 0) {
+                    fprintf(stderr, "QAP playback failed\n");
+                }
+            } else {
+                fprintf(stderr, "%s file open failed\nnd errno is %d", __FUNCTION__, errno);
+            }
+        } else {
+            rc = start_playback_through_qap(kvp_string, num_of_streams, qap_out_hal_handle);
+            if (rc != 0) {
+                fprintf(stderr, "QAP playback failed\n");
+            }
         }
         goto exit;
     }

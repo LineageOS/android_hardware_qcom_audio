@@ -145,22 +145,35 @@ int get_wav_header_length (FILE* file_stream);
 #ifndef QAP
 #define hal_test_qap_usage()                                             (0)
 #define qap_wrapper_get_single_kvp(key, kv_pairs, status)                (0)
-#define qap_wrapper_session_open(kv_pairs, stream_data, num_of_streams)  (0)
+#define qap_wrapper_session_open(kv_pairs, stream_data, num_of_streams,\
+                              qap_out_hal_handle_t)                      (0)
 #define qap_wrapper_session_close()                                      (0)
 #define qap_wrapper_stream_open(stream_data)                             (0)
 #define qap_wrapper_get_cmd_string_from_arg_array(argc, argv, status)    (0)
 #define qap_wrapper_start_stream (stream_data)                           (0)
 #define is_qap_session_active(argc, argv, kvp_string)                    (0)
-#define start_playback_through_qap(kvp_string, num_of_streams)           (0)
+#define check_for_playlist(kvp_string)                                   (0)
+#define start_playback_through_qap(kvp_string, num_of_streams,\
+                                         qap_out_hal_handle_t)           (0)
+#define start_playback_through_qap_playlist(cmd_kvp_str, num_of_streams,\
+                   kvp_string, stream_param, qap_wrapper_session_active,\
+                   qap_out_hal_handle_t)                                 (0)
 #else
 void hal_test_qap_usage();
 char * qap_wrapper_get_single_kvp(const char *key, const char *kv_pairs, int *status);
-int qap_wrapper_session_open(char *kv_pairs, void* stream_data, int num_of_streams);
+int qap_wrapper_session_open(char *kv_pairs, void* stream_data, int num_of_streams,\
+                              qahw_module_handle_t *qap_out_hal_handle_t);
 int qap_wrapper_session_close();
 qap_module_handle_t qap_wrapper_stream_open(void* stream_data);
 char * qap_wrapper_get_cmd_string_from_arg_array(int argc, char * argv[], int *status);
 void *qap_wrapper_start_stream (void* stream_data);
+void get_file_format(stream_config *stream_info);
 bool is_qap_session_active(int argc, char* argv[], char *kvp_string);
-int start_playback_through_qap(char * kvp_string, int num_of_streams);
+char* check_for_playlist(char *kvp_string);
+int start_playback_through_qap(char * kvp_string, int num_of_streams,\
+                                qahw_module_handle_t *qap_out_hal_handle_t);
+int start_playback_through_qap_playlist(char *cmd_kvp_str[], int num_of_streams,\
+    char *kvp_string, stream_config stream_param[], bool qap_wrapper_session_active,\
+    qahw_module_handle_t *qap_out_hal_handle_t);
 #endif
 #endif /* QAHW_PLAYBACK_TEST_H */
