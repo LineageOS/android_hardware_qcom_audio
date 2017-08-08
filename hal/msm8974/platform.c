@@ -2548,9 +2548,15 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (out_device & AUDIO_DEVICE_OUT_TELEPHONY_TX) {
             snd_device = SND_DEVICE_IN_VOICE_RX;
         } else if (out_device & (AUDIO_DEVICE_OUT_USB_DEVICE|AUDIO_DEVICE_OUT_USB_HEADSET)) {
-          if (audio_extn_usb_is_capture_supported()) {
-            snd_device = SND_DEVICE_IN_VOICE_USB_HEADSET_MIC;
-          }
+            if (audio_extn_usb_is_capture_supported()) {
+              snd_device = SND_DEVICE_IN_VOICE_USB_HEADSET_MIC;
+            } else if (my_data->fluence_in_voice_call && my_data->fluence_in_spkr_mode) {
+                if (my_data->source_mic_type & SOURCE_DUAL_MIC) {
+                    snd_device = SND_DEVICE_IN_VOICE_SPEAKER_DMIC;
+                } else {
+                    snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
+                }
+            }
         }
     } else if (source == AUDIO_SOURCE_CAMCORDER) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
@@ -2632,8 +2638,12 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         }
     } else if (source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
                mode == AUDIO_MODE_IN_COMMUNICATION) {
-        if (out_device & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE))
+        if (out_device & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE) ||
+            out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
+            (out_device & (AUDIO_DEVICE_OUT_USB_DEVICE | AUDIO_DEVICE_OUT_USB_HEADSET) &&
+                !audio_extn_usb_is_capture_supported())) {
             in_device = AUDIO_DEVICE_IN_BACK_MIC;
+        }
         if (adev->active_input) {
             if (adev->active_input->enable_aec &&
                     adev->active_input->enable_ns) {
