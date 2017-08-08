@@ -845,6 +845,19 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
                                                 &usecase->stream.in->app_type_cfg);
         ALOGV("%s Selected apptype: %d", __func__, usecase->stream.in->app_type_cfg.app_type);
         break;
+    case TRANSCODE_LOOPBACK :
+        audio_extn_utils_update_stream_output_app_type_cfg(adev->platform,
+                                                &adev->streams_output_cfg_list,
+                                                usecase->stream.inout->out_config.devices,
+                                                0,
+                                                usecase->stream.inout->out_config.format,
+                                                usecase->stream.inout->out_config.sample_rate,
+                                                usecase->stream.inout->out_config.bit_width,
+                                                usecase->stream.inout->out_config.channel_mask,
+                                                usecase->stream.inout->profile,
+                                                &usecase->stream.inout->out_app_type_cfg);
+        ALOGV("%s Selected apptype: %d", __func__, usecase->stream.inout->out_app_type_cfg.app_type);
+        break;
     default:
         ALOGE("%s: app type cfg not supported for usecase type (%d)",
             __func__, usecase->type);
@@ -872,7 +885,8 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
           platform_get_snd_device_name(usecase->in_snd_device),
           platform_get_snd_device_name(split_snd_device));
 
-    if (usecase->type != PCM_PLAYBACK && usecase->type != PCM_CAPTURE) {
+    if (usecase->type != PCM_PLAYBACK && usecase->type != PCM_CAPTURE &&
+        usecase->type != TRANSCODE_LOOPBACK) {
         ALOGE("%s: not a playback/capture path, no need to cfg app type", __func__);
         rc = 0;
         goto exit_send_app_type_cfg;
@@ -882,6 +896,7 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         (usecase->id != USECASE_AUDIO_PLAYBACK_MULTI_CH) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_ULL) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_VOIP) &&
+        (usecase->id != USECASE_AUDIO_TRANSCODE_LOOPBACK) &&
         (!is_interactive_usecase(usecase->id)) &&
         (!is_offload_usecase(usecase->id)) &&
         (usecase->type != PCM_CAPTURE)) {
@@ -897,7 +912,7 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
             goto exit_send_app_type_cfg;
     }
 
-    if (usecase->type == PCM_PLAYBACK) {
+    if (usecase->type == PCM_PLAYBACK || usecase->type == TRANSCODE_LOOPBACK) {
         pcm_device_id = platform_get_pcm_device_id(usecase->id, PCM_PLAYBACK);
         snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
             "Audio Stream %d App Type Cfg", pcm_device_id);
@@ -1006,6 +1021,10 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
            __func__, app_type, acdb_dev_id, sample_rate, snd_device_be_idx);
     } else {
         app_type = platform_get_default_app_type_v2(adev->platform, usecase->type);
+        if(usecase->type == TRANSCODE_LOOPBACK) {
+            sample_rate = usecase->stream.inout->out_config.sample_rate;
+            app_type = usecase->stream.inout->out_app_type_cfg.app_type;
+        }
         app_type_cfg[len++] = app_type;
         app_type_cfg[len++] = acdb_dev_id;
         app_type_cfg[len++] = sample_rate;
@@ -1015,7 +1034,8 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
               __func__, app_type, acdb_dev_id, sample_rate, snd_device_be_idx);
     }
 
-    mixer_ctl_set_array(ctl, app_type_cfg, len);
+    if(ctl)
+        mixer_ctl_set_array(ctl, app_type_cfg, len);
     rc = 0;
 exit_send_app_type_cfg:
     return rc;
@@ -1030,6 +1050,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
 
     switch (usecase->type) {
     case PCM_PLAYBACK:
+    case TRANSCODE_LOOPBACK:
         ALOGD("%s: usecase->out_snd_device %s",
               __func__, platform_get_snd_device_name(usecase->out_snd_device));
         /* check for out combo device */
@@ -1369,6 +1390,13 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
         platform_send_audio_calibration(adev->platform, usecase,
                          platform_get_default_app_type_v2(adev->platform, usecase->type),
                          48000);
+    } else if (type == TRANSCODE_LOOPBACK && usecase->stream.inout != NULL) {
+        int snd_device = usecase->out_snd_device;
+        snd_device = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
+                     platform_get_spkr_prot_snd_device(snd_device) : snd_device;
+        platform_send_audio_calibration(adev->platform, usecase,
+                         platform_get_default_app_type_v2(adev->platform, usecase->type),
+                         usecase->stream.inout->out_config.sample_rate);
     } else {
         /* No need to send audio calibration for voice and voip call usecases */
         if ((type != VOICE_CALL) && (type != VOIP_CALL))
