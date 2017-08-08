@@ -1133,6 +1133,13 @@ exit:
     return;
 }
 
+bool audio_extn_usb_alive(int card) {
+    char path[PATH_MAX] = {0};
+    // snprintf should never fail
+    (void) snprintf(path, sizeof(path), "/proc/asound/card%u/stream0", card);
+    return access(path, F_OK) == 0;
+}
+
 void audio_extn_usb_init(void *adev)
 {
     if (usbmod == NULL) {
