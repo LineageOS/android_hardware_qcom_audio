@@ -1919,13 +1919,16 @@ static int qaf_stream_open(struct stream_out *out,
     struct qaf_module* qaf_mod = NULL;
     DEBUG_MSG("Flags 0x%x, Device 0x%x", flags, devices);
 
-    if (mmtype >= MAX_MM_MODULE_TYPE
-        || p_qaf->qaf_mod[mmtype].qaf_audio_session_open == NULL
-        || p_qaf->qaf_mod[mmtype].qaf_audio_stream_open == NULL) {
+    if (mmtype >= MAX_MM_MODULE_TYPE) {
         ERROR_MSG("Unsupported Stream");
         return -ENOTSUP;
     }
 
+    if (p_qaf->qaf_mod[mmtype].qaf_audio_session_open == NULL ||
+        p_qaf->qaf_mod[mmtype].qaf_audio_stream_open == NULL) {
+        ERROR_MSG("Session or Stream is NULL");
+        return status;
+    }
     //Open the module session, if not opened already.
     status = audio_extn_qaf_session_open(mmtype, out);
     qaf_mod = &(p_qaf->qaf_mod[mmtype]);
