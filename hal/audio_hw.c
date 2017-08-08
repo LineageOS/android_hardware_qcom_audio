@@ -1725,10 +1725,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             voice_check_and_update_aanc_path(adev, usecase->out_snd_device, false);
     }
 
-    if ((usecase->out_snd_device == SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP) &&
+    if ((out_snd_device == SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP) &&
         (!audio_extn_a2dp_is_ready())) {
         ALOGW("%s: A2DP profile is not ready, routing to speaker only", __func__);
-        usecase->out_snd_device = SND_DEVICE_OUT_SPEAKER;
+        out_snd_device = SND_DEVICE_OUT_SPEAKER;
     }
 
     /* Disable current sound devices */
@@ -3098,7 +3098,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                     audio_extn_perf_lock_release(&adev->perf_lock_handle);
                 if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
                     out->a2dp_compress_mute &&
-                    (!(out->devices & AUDIO_DEVICE_OUT_ALL_A2DP))) {
+                    (!(out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) || audio_extn_a2dp_is_ready())) {
                     pthread_mutex_lock(&out->compr_mute_lock);
                     out->a2dp_compress_mute = false;
                     out_set_compr_volume(&out->stream, out->volume_l, out->volume_r);

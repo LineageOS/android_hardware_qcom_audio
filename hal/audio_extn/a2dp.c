@@ -793,7 +793,8 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
                 a2dp.a2dp_suspended = true;
                 list_for_each(node, &a2dp.adev->usecase_list) {
                     uc_info = node_to_item(node, struct audio_usecase, list);
-                    if (uc_info->type == PCM_PLAYBACK) {
+                    if (uc_info->type == PCM_PLAYBACK &&
+                         (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
                         pthread_mutex_unlock(&a2dp.adev->lock);
                         check_a2dp_restore(a2dp.adev, uc_info->stream.out, false);
                         pthread_mutex_lock(&a2dp.adev->lock);
@@ -832,7 +833,8 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
                 }
                 list_for_each(node, &a2dp.adev->usecase_list) {
                     uc_info = node_to_item(node, struct audio_usecase, list);
-                    if (uc_info->type == PCM_PLAYBACK) {
+                    if (uc_info->type == PCM_PLAYBACK &&
+                         (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
                         pthread_mutex_unlock(&a2dp.adev->lock);
                         check_a2dp_restore(a2dp.adev, uc_info->stream.out, true);
                         pthread_mutex_lock(&a2dp.adev->lock);
