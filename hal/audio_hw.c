@@ -3903,6 +3903,7 @@ static void adev_close_output_stream(struct audio_hw_device *dev __unused,
     out->error_log = NULL;
 
     pthread_cond_destroy(&out->cond);
+    pthread_mutex_destroy(&out->pre_lock);
     pthread_mutex_destroy(&out->lock);
     free(stream);
     ALOGV("%s: exit", __func__);
@@ -4448,6 +4449,9 @@ static void adev_close_input_stream(struct audio_hw_device *dev __unused,
     error_log_destroy(in->error_log);
     in->error_log = NULL;
 
+    pthread_mutex_destroy(&in->pre_lock);
+    pthread_mutex_destroy(&in->lock);
+
     free(stream);
 
     return;
@@ -4615,6 +4619,7 @@ static int adev_close(hw_device_t *device)
         }
         if (adev->adm_deinit)
             adev->adm_deinit(adev->adm_data);
+        pthread_mutex_destroy(&adev->lock);
         free(device);
     }
 
