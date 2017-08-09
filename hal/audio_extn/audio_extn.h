@@ -222,6 +222,7 @@ bool audio_extn_usb_is_capture_supported();
 #define audio_extn_a2dp_get_apptype_params(sample_rate,bit_width)    (0)
 #define audio_extn_a2dp_get_encoder_latency()            (0)
 #define audio_extn_a2dp_is_ready()                       (0)
+#define audio_extn_a2dp_is_suspended()                   (0)
 #else
 void audio_extn_a2dp_init(void *adev);
 int audio_extn_a2dp_start_playback();
@@ -233,6 +234,7 @@ void audio_extn_a2dp_get_apptype_params(uint32_t *sample_rate,
                                         uint32_t *bit_width);
 uint32_t audio_extn_a2dp_get_encoder_latency();
 bool audio_extn_a2dp_is_ready();
+bool audio_extn_a2dp_is_suspended();
 #endif
 
 #ifndef SSR_ENABLED
