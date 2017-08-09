@@ -3944,6 +3944,11 @@ exit:
         if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD))
             usleep((uint64_t)bytes * 1000000 / audio_stream_out_frame_size(stream) /
                             out_get_sample_rate(&out->stream.common));
+
+        if (audio_extn_passthru_is_passthrough_stream(out)) {
+                ALOGE("%s: write error, ret = %d", __func__, ret);
+                return ret;
+        }
     }
     return bytes;
 }

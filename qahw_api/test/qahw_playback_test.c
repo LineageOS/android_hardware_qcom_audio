@@ -563,7 +563,7 @@ void *start_stream_playback (void* stream_data)
     size_t bytes_wanted = 0;
     size_t write_length = 0;
     size_t bytes_remaining = 0;
-    size_t bytes_written = 0;
+    ssize_t bytes_written = 0;
 
     size_t bytes_read = 0;
     char  *data_ptr = NULL;
