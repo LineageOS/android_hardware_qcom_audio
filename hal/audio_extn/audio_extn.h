@@ -81,7 +81,7 @@ int audio_extn_hfp_set_mic_mute(struct audio_device *adev, bool state);
 #define audio_extn_usb_is_capture_supported()                          (false)
 #define audio_extn_usb_get_max_channels(dir)                           (0)
 #define audio_extn_usb_get_max_bit_width(dir)                          (0)
-#define audio_extn_usb_sup_sample_rates(t, s, l)                       (0)
+#define audio_extn_usb_sup_sample_rates(t, s, l)        ((t), (s), (l), 0) /* fix unused warn */
 #define audio_extn_usb_alive(adev)                                     (false)
 #else
 void audio_extn_usb_init(void *adev);

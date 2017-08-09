@@ -996,9 +996,9 @@ static int read_hdmi_channel_masks(struct stream_out *out)
     return ret;
 }
 
-static ssize_t read_usb_sup_sample_rates(bool is_playback __unused,
-                                         uint32_t *supported_sample_rates __unused,
-                                         uint32_t max_rates __unused)
+static ssize_t read_usb_sup_sample_rates(bool is_playback,
+                                         uint32_t *supported_sample_rates,
+                                         uint32_t max_rates)
 {
     ssize_t count = audio_extn_usb_sup_sample_rates(is_playback,
                                                     supported_sample_rates,
