@@ -2207,6 +2207,19 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             val = AUDIO_DEVICE_OUT_SPEAKER;
         }
 
+        audio_devices_t new_dev = val;
+
+        // Workaround: If routing to an non existing usb device, fail gracefully
+        // The routing request will otherwise block during 10 second
+        if (audio_is_usb_out_device(new_dev) && !audio_extn_usb_alive(adev->snd_card)) {
+            ALOGW("out_set_parameters() ignoring rerouting to non existing USB card %d",
+                  adev->snd_card);
+            pthread_mutex_unlock(&adev->lock);
+            pthread_mutex_unlock(&out->lock);
+            status = -ENOSYS;
+            goto routing_fail;
+        }
+
         /*
          * select_devices() call below switches all the usecases on the same
          * backend to the new device. Refer to check_and_route_playback_usecases() in
@@ -2225,7 +2238,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
          *       Because select_devices() must be called to switch back the music
          *       playback to headset.
          */
-        audio_devices_t new_dev = val;
         if (new_dev != AUDIO_DEVICE_NONE) {
             bool same_dev = out->devices == new_dev;
             out->devices = new_dev;
@@ -2269,6 +2281,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         /*handles device and call state changes*/
         audio_extn_extspk_update(adev->extspk);
     }
+    routing_fail:
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
         parse_compress_metadata(out, parms);
@@ -3124,16 +3137,26 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     if (ret >= 0) {
         val = atoi(value);
         if (((int)in->device != val) && (val != 0) && audio_is_input_device(val) ) {
-            in->device = val;
-            /* If recording is in progress, change the tx device to new device */
-            if (!in->standby) {
-                ALOGV("update input routing change");
-                // inform adm before actual routing to prevent glitches.
-                if (adev->adm_on_routing_change) {
-                    adev->adm_on_routing_change(adev->adm_data,
-                                                in->capture_handle);
+
+            // Workaround: If routing to an non existing usb device, fail gracefully
+            // The routing request will otherwise block during 10 second
+            if (audio_is_usb_in_device(val) && !audio_extn_usb_alive(adev->snd_card)) {
+                ALOGW("in_set_parameters() ignoring rerouting to non existing USB card %d",
+                      adev->snd_card);
+                status = -ENOSYS;
+            } else {
+
+                in->device = val;
+                /* If recording is in progress, change the tx device to new device */
+                if (!in->standby) {
+                    ALOGV("update input routing change");
+                    // inform adm before actual routing to prevent glitches.
+                    if (adev->adm_on_routing_change) {
+                        adev->adm_on_routing_change(adev->adm_data,
+                                                    in->capture_handle);
+                    }
+                    select_devices(adev, in->usecase);
                 }
-                select_devices(adev, in->usecase);
             }
         }
     }
