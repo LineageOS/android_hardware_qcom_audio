@@ -289,7 +289,6 @@ static bool __unused voice_extn_compress_voip_is_started(
     return false;
 }
 
-#define AUDIO_OUTPUT_FLAG_VOIP_RX 0x800
 #endif
 
 #endif //VOICE_EXTN_H

@@ -64,7 +64,12 @@
 
 #define DEFAULT_PRESET_STRENGTH -1
 
+#define DTSHD_CHUNK_HEADER_KEYWORD "DTSHDHDR"
+#define DTSHD_CHUNK_STREAM_KEYWORD "STRMDATA"
+#define DTSHD_META_KEYWORD_SIZE 8 /*in bytes */
+
 static int get_wav_header_length (FILE* file_stream);
+static ssize_t get_bytes_to_read(FILE* file, int filetype);
 static void init_streams(void);
 int pthread_cancel(pthread_t thread);
 
@@ -652,6 +657,21 @@ void *start_stream_playback (void* stream_data)
     pthread_t drift_query_thread;
     struct drift_data drift_params;
 
+    int offset = 0;
+    bool is_offload = params->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD;
+    size_t bytes_wanted = 0;
+    size_t write_length = 0;
+    size_t bytes_remaining = 0;
+    size_t bytes_written = 0;
+
+    size_t bytes_read = 0;
+    char  *data_ptr = NULL;
+    bool exit = false;
+    bool read_complete_file = true;
+    ssize_t bytes_to_read = 0;
+    int32_t latency;
+
+
     memset(&drift_params, 0, sizeof(struct drift_data));
 
     fprintf(log_file, "stream %d: play_later %d \n", params->stream_index, params->play_later);
@@ -710,21 +730,12 @@ void *start_stream_playback (void* stream_data)
             }
             fprintf(log_file, "stream %d: kvpairs are set\n", params->stream_index);
             break;
-        default:
+    case FILE_DTS:
+            read_complete_file = false;
+            break;
+    default:
             break;
     }
-
-    int offset = 0;
-    bool is_offload = params->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD;
-    size_t bytes_wanted = 0;
-    size_t write_length = 0;
-    size_t bytes_remaining = 0;
-    size_t bytes_written = 0;
-    size_t bytes_read = 0;
-    char  *data_ptr = NULL;
-    bool exit = false;
-    int32_t latency;
-
 
     if (is_offload) {
         fprintf(log_file, "stream %d: set callback for offload stream for playback usecase\n", params->stream_index);
@@ -835,28 +846,37 @@ void *start_stream_playback (void* stream_data)
     if (event_trigger == true)
         tigger_event(params->out_handle);
 
+    bytes_to_read = get_bytes_to_read(params->file_stream, params->filetype);
+    if (bytes_to_read <= 0)
+        read_complete_file = true;
+
     while (!exit && !stop_playback) {
         if (!bytes_remaining) {
             fprintf(log_file, "\nstream %d: reading bytes %zd\n", params->stream_index, bytes_wanted);
             bytes_read = read_bytes(params, data_ptr, bytes_wanted);
             fprintf(log_file, "stream %d: read bytes %zd\n", params->stream_index, bytes_read);
-            if (bytes_read <= 0) {
-                if (is_eof(params)) {
-                    fprintf(log_file, "stream %d: end of file\n", params->stream_index);
-                    if (is_offload) {
-                        pthread_mutex_lock(&params->drain_lock);
-                        qahw_out_drain(params->out_handle, QAHW_DRAIN_ALL);
-                        pthread_cond_wait(&params->drain_cond, &params->drain_lock);
-                        fprintf(log_file, "stream %d: out of compress drain\n", params->stream_index);
-                        pthread_mutex_unlock(&params->drain_lock);
-                    }
-            /* Caution: Below ADL log shouldnt be altered without notifying automation APT since
-             * it used for automation testing
-             */
-                    fprintf(log_file, "ADL: stream %d: playback completed successfully\n", params->stream_index);
+            if ((!read_complete_file && (bytes_to_read <= 0)) || (bytes_read <= 0)) {
+                fprintf(log_file, "stream %d: end of file\n", params->stream_index);
+                if (is_offload) {
+                    pthread_mutex_lock(&params->drain_lock);
+                    qahw_out_drain(params->out_handle, QAHW_DRAIN_ALL);
+                    pthread_cond_wait(&params->drain_cond, &params->drain_lock);
+                    fprintf(log_file, "stream %d: out of compress drain\n", params->stream_index);
+                    pthread_mutex_unlock(&params->drain_lock);
                 }
+                /*
+                 * Caution: Below ADL log shouldnt be altered without notifying
+                 * automation APT since it used for automation testing
+                 */
+                fprintf(log_file, "ADL: stream %d: playback completed successfully\n", params->stream_index);
                 exit = true;
                 continue;
+            } else {
+                if (!read_complete_file) {
+                    bytes_to_read -= bytes_read;
+                    if ((bytes_to_read > 0) && (bytes_to_read < bytes_wanted))
+                        bytes_wanted = bytes_to_read;
+                }
             }
             bytes_remaining = write_length = bytes_read;
         }
@@ -864,10 +884,14 @@ void *start_stream_playback (void* stream_data)
         offset = write_length - bytes_remaining;
         fprintf(log_file, "stream %d: writing to hal %zd bytes, offset %d, write length %zd\n",
                 params->stream_index, bytes_remaining, offset, write_length);
+
+
+        bytes_written = bytes_remaining;
         bytes_written = write_to_hal(params->out_handle, data_ptr+offset, bytes_remaining, params);
-        if (bytes_written == -1) {
-            fprintf(stderr, "proxy_write failed in usb hal");
-            break;
+        if (bytes_written < 0) {
+            fprintf(stderr, "write failed %d", bytes_written);
+            exit = true;
+            continue;
         }
         bytes_remaining -= bytes_written;
 
@@ -875,6 +899,7 @@ void *start_stream_playback (void* stream_data)
         fprintf(log_file, "stream %d: bytes_written %zd, bytes_remaining %zd latency %d\n",
                 params->stream_index, bytes_written, bytes_remaining, latency);
     }
+
 
     if (params->ethread_data != nullptr) {
         fprintf(log_file, "stream %d: un-loading effects\n", params->stream_index);
@@ -926,12 +951,9 @@ void *start_stream_playback (void* stream_data)
         pthread_join(drift_query_thread, NULL);
     }
     if ((params->flags & AUDIO_OUTPUT_FLAG_MAIN) && is_assoc_active()) {
-        fprintf(log_file, "Closing Associated as Main Stream reached EOF %d \n", params->stream_index, rc);
-        rc = qahw_close_output_stream(stream_param[get_assoc_index()].out_handle);
-        if (rc) {
-            fprintf(log_file, "stream %d: could not close output stream, error - %d \n", params->stream_index, rc);
-            fprintf(stderr, "stream %d: could not close output stream, error - %d \n", params->stream_index, rc);
-        }
+        fprintf(log_file, "Closing Associated as Main Stream reached EOF %d \n",
+                params->stream_index, rc);
+        stop_playback = true;
     }
     rc = qahw_out_standby(params->out_handle);
     if (rc) {
@@ -1657,6 +1679,104 @@ static int get_wav_header_length (FILE* file_stream)
          wav_header_len = FORMAT_DESCRIPTOR_SIZE + SUBCHUNK1_SIZE(subchunk_size) + SUBCHUNK2_SIZE;
     }
     return wav_header_len;
+}
+
+/* convert big-endian to little-endian */
+uint64_t convert_BE_to_LE( uint64_t in)
+{
+    uint64_t out;
+    char *p_in = (char *) &in;
+    char *p_out = (char *) &out;
+    p_out[0] = p_in[7];
+    p_out[1] = p_in[6];
+    p_out[2] = p_in[5];
+    p_out[3] = p_in[4];
+    p_out[4] = p_in[3];
+    p_out[5] = p_in[2];
+    p_out[6] = p_in[1];
+    p_out[7] = p_in[0];
+    return out;
+}
+
+static ssize_t  get_bytes_to_read(FILE* file, int file_type)
+{
+     char keyword[DTSHD_META_KEYWORD_SIZE + 1];
+     bool is_dtshd_stream =false;
+     uint64_t read_chunk_size = 0;
+     uint64_t chunk_size = 0;
+     ssize_t file_read_size = -1;
+     ssize_t header_read_size = -1;
+     long int pos;
+     int ret = 0;
+
+     if (file_type == FILE_DTS) {
+
+         //first locate the ASCII header "DTSHDHDR"identifier
+         while (!feof(file) && (header_read_size < 1024) &
+                (fread(&keyword, sizeof(char), DTSHD_META_KEYWORD_SIZE, file)
+                                 == DTSHD_META_KEYWORD_SIZE)) {
+             //update the number of bytes was read for identifying the header
+             header_read_size = ftell(file);
+
+             if (strncmp(keyword, DTSHD_CHUNK_HEADER_KEYWORD,
+                         DTSHD_META_KEYWORD_SIZE) == 0) {
+                 // read the 8-byte size field
+                 if (fread(&read_chunk_size, sizeof(char),
+                     DTSHD_META_KEYWORD_SIZE, file) == DTSHD_META_KEYWORD_SIZE) {
+                     is_dtshd_stream = true;
+                     chunk_size = convert_BE_to_LE(read_chunk_size);
+                     pos = ftell(file);
+                     fseek(file, chunk_size, SEEK_CUR);
+                     fprintf(stderr,"DTS header chunk offset:%lu and chunk_size:%llu \n",
+                             pos, chunk_size);
+                     break;
+                 }
+                 else {
+                     printf(" file read error \n");
+                     break;
+                 } //end reading chunk size
+             }
+         }
+
+         if (!is_dtshd_stream)  {
+             fprintf(stderr, "raw dts hd stream");
+             fseek(file, 0, SEEK_SET);
+             return file_read_size;
+         }
+         /* parsing each chunk data */
+         while (!feof(file) &&
+               fread(&keyword, sizeof(uint8_t), DTSHD_META_KEYWORD_SIZE, file)
+                                     == DTSHD_META_KEYWORD_SIZE) {
+            /* check for the stream audio data */
+            ret  = strncmp(keyword,
+                        DTSHD_CHUNK_STREAM_KEYWORD,
+                        DTSHD_META_KEYWORD_SIZE);
+            if (!ret) {
+                ret = fread(&read_chunk_size, 1, DTSHD_META_KEYWORD_SIZE, file);
+                chunk_size = convert_BE_to_LE(read_chunk_size);
+                if (ret != DTSHD_META_KEYWORD_SIZE) {
+                    fprintf(stderr,"%s %d file read error ret %\n",
+                            __func__, __LINE__, ret);
+                    file_read_size = -EINVAL;
+                    break;
+                }
+                file_read_size =  chunk_size;
+                fprintf(stderr, "DTS read_chunk_size %llu and file_read_size: %zd\n",
+                        chunk_size,
+                        file_read_size);
+                break;
+            } else {
+                fprintf(log_file, "Identified chunk of %c %c %c %c %c %c %c %c \n",
+                        keyword[0], keyword[1], keyword[2], keyword[3],
+                        keyword[4], keyword[5], keyword[6], keyword[7] );
+                ret = fread(&read_chunk_size, 1, DTSHD_META_KEYWORD_SIZE, file);
+                pos = ftell(file);
+                chunk_size = convert_BE_to_LE(read_chunk_size);
+                fseek(file, chunk_size, SEEK_CUR);
+            }
+        }
+     }
+     return file_read_size;
 }
 
 static qahw_module_handle_t * load_hal(audio_devices_t dev) {

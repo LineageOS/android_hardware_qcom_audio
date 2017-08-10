@@ -480,7 +480,7 @@ enum {
 #define HDMI_PASSTHROUGH_MAX_SAMPLE_RATE 192000
 
 #ifndef HDMI_PASSTHROUGH_ENABLED
-#define audio_extn_passthru_update_stream_configuration(adev, out)            (0)
+#define audio_extn_passthru_update_stream_configuration(adev, out, buffer, bytes)  (0)
 #define audio_extn_passthru_is_convert_supported(adev, out)                   (0)
 #define audio_extn_passthru_is_passt_supported(adev, out)                     (0)
 #define audio_extn_passthru_is_passthrough_stream(out)                        (0)
@@ -497,13 +497,15 @@ enum {
 #define audio_extn_passthru_set_parameters(a, p) (-ENOSYS)
 #define audio_extn_passthru_init(a) do {} while(0)
 #define audio_extn_passthru_should_standby(o) (1)
+#define audio_extn_passthru_get_channel_count(out) (0)
 #else
 bool audio_extn_passthru_is_convert_supported(struct audio_device *adev,
                                                  struct stream_out *out);
 bool audio_extn_passthru_is_passt_supported(struct audio_device *adev,
                                          struct stream_out *out);
-void audio_extn_passthru_update_stream_configuration(struct audio_device *adev,
-                                                 struct stream_out *out);
+void audio_extn_passthru_update_stream_configuration(
+        struct audio_device *adev, struct stream_out *out,
+        const void *buffer, size_t bytes);
 bool audio_extn_passthru_is_passthrough_stream(struct stream_out *out);
 int audio_extn_passthru_get_buffer_size(audio_offload_info_t* info);
 int audio_extn_passthru_set_volume(struct stream_out *out, int mute);
@@ -519,6 +521,7 @@ bool audio_extn_passthru_is_enabled();
 bool audio_extn_passthru_is_active();
 void audio_extn_passthru_init(struct audio_device *adev);
 bool audio_extn_passthru_should_standby(struct stream_out *out);
+int audio_extn_passthru_get_channel_count(struct stream_out *out);
 #endif
 
 #ifndef HFP_ENABLED
@@ -864,7 +867,8 @@ int audio_extn_out_set_param_data(struct stream_out *out,
 int audio_extn_out_get_param_data(struct stream_out *out,
                              audio_extn_param_id param_id,
                              audio_extn_param_payload *payload);
-
+int audio_extn_set_device_cfg_params(struct audio_device *adev,
+                                     struct audio_device_cfg_param *payload);
 int audio_extn_utils_get_avt_device_drift(
                 struct audio_usecase *usecase,
                 struct audio_avt_device_drift_param *drift_param);

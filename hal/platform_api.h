@@ -153,7 +153,6 @@ void platform_snd_card_update(void *platform, card_status_t scard_status);
 
 struct audio_offload_info_t;
 uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info);
-uint32_t platform_get_compress_passthrough_buffer_size(audio_offload_info_t* info);
 
 bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
                    struct audio_usecase *usecase, snd_device_t snd_device);
@@ -229,4 +228,5 @@ unsigned char* platform_get_license(void* platform, int* size);
 int platform_get_max_mic_count(void *platform);
 void platform_check_and_update_copp_sample_rate(void *platform, snd_device_t snd_device,
      unsigned int stream_sr,int *sample_rate);
+int platform_get_max_codec_backend();
 #endif // AUDIO_PLATFORM_API_H

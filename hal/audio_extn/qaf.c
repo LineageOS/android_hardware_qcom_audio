@@ -161,10 +161,18 @@ typedef enum {
     MAX_QAF_MODULE_IN
 } mm_module_input_type;
 
+typedef enum {
+    STOPPED,    /*Stream is in stop state. */
+    STOPPING,   /*Stream is stopping, waiting for EOS. */
+    RUN,        /*Stream is in run state. */
+    MAX_STATES
+} qaf_stream_state;
+
 struct qaf_module {
     audio_session_handle_t session_handle;
     void *qaf_lib;
     int (*qaf_audio_session_open)(audio_session_handle_t* session_handle,
+                                  audio_session_type_t s_type,
                                   void *p_data,
                                   void* license_data);
     int (*qaf_audio_session_close)(audio_session_handle_t session_handle);
@@ -208,7 +216,7 @@ struct qaf_module {
     float vol_left;
     float vol_right;
     bool is_vol_set;
-    bool drain_received[MAX_QAF_MODULE_IN];
+    qaf_stream_state stream_state[MAX_QAF_MODULE_IN];
 };
 
 struct qaf {
@@ -278,6 +286,21 @@ static int get_input_stream_index(struct stream_out *out)
     }
 
     return index;
+}
+
+static void set_stream_state(struct stream_out *out, int state)
+{
+    struct qaf_module *qaf_mod = get_qaf_module_for_input_stream(out);
+    int index = get_input_stream_index(out);
+    if (qaf_mod && index >= 0) qaf_mod->stream_state[index] = state;
+}
+
+static bool check_stream_state(struct stream_out *out, int state)
+{
+    struct qaf_module *qaf_mod = get_qaf_module_for_input_stream(out);
+    int index = get_input_stream_index(out);
+    if (qaf_mod && index >= 0) return (qaf_mod->stream_state[index] == state);
+    return false;
 }
 
 /* Finds the right mm module for the QAF input stream format. */
@@ -554,6 +577,8 @@ static int audio_extn_qaf_stream_stop(struct stream_out *out)
     int ret = 0;
     DEBUG_MSG("Output Stream 0x%x", out);
 
+    if (!check_stream_state(out, RUN)) return ret;
+
     struct qaf_module *qaf_mod = get_qaf_module_for_input_stream(out);
     if ((!qaf_mod) || (!qaf_mod->qaf_audio_stream_stop)) {
         return ret;
@@ -584,9 +609,14 @@ static int qaf_out_standby(struct audio_stream *stream)
             status = p_qaf->passthrough_out->stream.common.standby(
                     (struct audio_stream *)p_qaf->passthrough_out);
         }
-    } else {
+    } else if (check_stream_state(out, RUN)) {
         //If QAF passthrough stream is not active then stop the QAF module stream.
         status = audio_extn_qaf_stream_stop(out);
+
+        if (status == 0) {
+            //Setting state to stopped as client not expecting drain_ready event.
+            set_stream_state(out, STOPPED);
+        }
     }
 
     if (!out->standby) {
@@ -684,6 +714,7 @@ static int qaf_module_write_input_buffer(struct stream_out *out, const void *buf
 
     if (out->qaf_stream_handle) {
         ret = qaf_mod->qaf_audio_stream_write(out->qaf_stream_handle, buffer, bytes);
+        if(ret > 0) set_stream_state(out, RUN);
     }
     return ret;
 }
@@ -1026,16 +1057,19 @@ static int qaf_out_drain(struct audio_stream_out* stream, audio_drain_type_t typ
                     (struct audio_stream_out *)p_qaf->passthrough_out, type);
         }
         pthread_mutex_unlock(&p_qaf->lock);
+    } else if (check_stream_state(out, STOPPED)) {
+        //If stream is already stopped then send the drain ready.
+        out->client_callback(STREAM_CBK_EVENT_DRAIN_READY, NULL, out->client_cookie);
     } else {
+
         //Drain the module input stream.
         /* Stream stop will trigger EOS and on EOS_EVENT received
          from callback DRAIN_READY command is sent */
         status = audio_extn_qaf_stream_stop(out);
 
         if (status == 0) {
-            struct qaf_module *qaf_mod = get_qaf_module_for_input_stream(out);
-            int index = get_input_stream_index(out);
-            if (qaf_mod && index >= 0) qaf_mod->drain_received[index] = true;
+            //Setting state to stopping as client is expecting drain_ready event.
+            set_stream_state(out, STOPPING);
         }
     }
 
@@ -1160,6 +1194,21 @@ static bool check_and_get_compressed_device_format(int device, int *format)
     }
 }
 
+static void set_out_stream_channel_map(struct stream_out *out, audio_qaf_media_format_t *media_fmt)
+{
+    if (media_fmt == NULL || out == NULL) {
+        return;
+    }
+    struct audio_out_channel_map_param chmap = {0};
+    int i = 0;
+    chmap.channels = media_fmt->channels;
+    for (i = 0; i < chmap.channels && i < AUDIO_CHANNEL_COUNT_MAX && i < AUDIO_QAF_MAX_CHANNELS;
+            i++) {
+        chmap.channel_map[i] = media_fmt->ch_map[i];
+    }
+    audio_extn_utils_set_channel_map(out, &chmap);
+}
+
 /* Call back function for mm module. */
 static void notify_event_callback(audio_session_handle_t session_handle /*__unused*/,
                                   void *prv_data,
@@ -1187,6 +1236,7 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
     uint32_t buffer_size = 0;
     bool need_to_recreate_stream = false;
     struct audio_config config;
+    audio_qaf_media_format_t *media_fmt = NULL;
 
     DEBUG_MSG_VV("Device 0x%X, Event = 0x%X, Bytes to write %d", device, event_id, size);
     pthread_mutex_lock(&p_qaf->lock);
@@ -1205,7 +1255,6 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
     } else if (event_id == AUDIO_DATA_EVENT_V2) {
         audio_qaf_out_buffer_t *buf_payload = (audio_qaf_out_buffer_t*)buf;
         int index = -1;
-        audio_qaf_media_format_t *p_cached_fmt = NULL;
 
         if (size < sizeof(audio_qaf_out_buffer_t)) {
             ERROR_MSG("AUDIO_DATA_EVENT_V2 payload size is not sufficient.");
@@ -1221,49 +1270,29 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
             /*If media format is not received then switch to default values.*/
             event_id = AUDIO_DATA_EVENT;
         } else {
-            p_cached_fmt = &qaf_mod->out_stream_fmt[index];
+            media_fmt = &qaf_mod->out_stream_fmt[index];
             need_to_recreate_stream = qaf_mod->is_media_fmt_changed[index];
             qaf_mod->is_media_fmt_changed[index] = false;
 
-            config.sample_rate = config.offload_info.sample_rate = p_cached_fmt->sample_rate;
+            config.sample_rate = config.offload_info.sample_rate = media_fmt->sample_rate;
             config.offload_info.version = AUDIO_INFO_INITIALIZER.version;
             config.offload_info.size = AUDIO_INFO_INITIALIZER.size;
-            config.format = config.offload_info.format = p_cached_fmt->format;
-            config.offload_info.bit_width = p_cached_fmt->bit_width;
+            config.format = config.offload_info.format = media_fmt->format;
+            config.offload_info.bit_width = media_fmt->bit_width;
 
-            if (p_cached_fmt->format == AUDIO_FORMAT_PCM) {
-                if (p_cached_fmt->bit_width == 16)
+            if (media_fmt->format == AUDIO_FORMAT_PCM) {
+                if (media_fmt->bit_width == 16)
                     config.format = config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
-                else if (p_cached_fmt->bit_width == 24)
+                else if (media_fmt->bit_width == 24)
                     config.format = config.offload_info.format = AUDIO_FORMAT_PCM_24_BIT_PACKED;
                 else
                     config.format = config.offload_info.format = AUDIO_FORMAT_PCM_32_BIT;
             }
 
-            device |= (p_cached_fmt->format & AUDIO_FORMAT_MAIN_MASK);
+            device |= (media_fmt->format & AUDIO_FORMAT_MAIN_MASK);
 
-            switch (p_cached_fmt->channels) {
-                case 1:
-                    config.offload_info.channel_mask = config.channel_mask =
-                            AUDIO_CHANNEL_OUT_MONO;
-                break;
-                case 2:
-                    config.offload_info.channel_mask = config.channel_mask =
-                            AUDIO_CHANNEL_OUT_STEREO;
-                break;
-                case 6:
-                    config.offload_info.channel_mask = config.channel_mask =
-                            AUDIO_CHANNEL_OUT_5POINT1;
-                break;
-                case 8:
-                    config.offload_info.channel_mask = config.channel_mask =
-                            AUDIO_CHANNEL_OUT_7POINT1;
-                break;
-                default:
-                    config.offload_info.channel_mask = config.channel_mask =
-                            AUDIO_CHANNEL_OUT_5POINT1;
-                break;
-            }
+            config.channel_mask = audio_channel_out_mask_from_count(media_fmt->channels);
+            config.offload_info.channel_mask = config.channel_mask;
         }
     }
 
@@ -1434,6 +1463,7 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
                     pthread_mutex_unlock(&p_qaf->lock);
                     return;
                 }
+                set_out_stream_channel_map(qaf_mod->stream_out[QAF_OUT_OFFLOAD_MCH], media_fmt);
 
                 qaf_mod->stream_out[QAF_OUT_OFFLOAD_MCH]->compr_config.fragments =
                         COMPRESS_OFFLOAD_NUM_FRAGMENTS;
@@ -1550,6 +1580,7 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
                     pthread_mutex_unlock(&p_qaf->lock);
                     return;
                 }
+                set_out_stream_channel_map(qaf_mod->stream_out[QAF_OUT_OFFLOAD], media_fmt);
 
                 if ((qaf_mod->stream_in[QAF_IN_MAIN]
                     && qaf_mod->stream_in[QAF_IN_MAIN]->client_callback != NULL) ||
@@ -1633,9 +1664,6 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
         struct stream_out *out = qaf_mod->stream_in[QAF_IN_MAIN];
         struct stream_out *out_main2 = qaf_mod->stream_in[QAF_IN_MAIN_2];
         struct stream_out *out_assoc = qaf_mod->stream_in[QAF_IN_ASSOC];
-        bool *main_drain_received = &qaf_mod->drain_received[QAF_IN_MAIN];
-        bool *main2_drain_received = &qaf_mod->drain_received[QAF_IN_MAIN_2];
-        bool *assoc_drain_received = &qaf_mod->drain_received[QAF_IN_ASSOC];
 
         /**
          * TODO:: Only DD/DDP Associate Eos is handled, need to add support
@@ -1643,46 +1671,43 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
          */
         if (event_id == AUDIO_EOS_ASSOC_DD_DDP_EVENT
                 && (out_assoc != NULL)
-                && (*assoc_drain_received)) {
+                && (check_stream_state(out_assoc, STOPPING))) {
 
             lock_output_stream(out_assoc);
             out_assoc->client_callback(STREAM_CBK_EVENT_DRAIN_READY, NULL, out_assoc->client_cookie);
-            *assoc_drain_received = false;
+            set_stream_state(out_assoc, STOPPED);
             unlock_output_stream(out_assoc);
             DEBUG_MSG("sent associated DRAIN_READY");
         } else if (event_id == AUDIO_EOS_MAIN_2_DD_DDP_EVENT
                 && (out_main2 != NULL)
-                && (*main2_drain_received)) {
+                && (check_stream_state(out_main2, STOPPING))) {
 
             lock_output_stream(out_main2);
             out_main2->client_callback(STREAM_CBK_EVENT_DRAIN_READY, NULL, out_main2->client_cookie);
-            *main2_drain_received = false;
+            set_stream_state(out_main2, STOPPED);
             unlock_output_stream(out_main2);
             DEBUG_MSG("sent main2 DRAIN_READY");
-        } else if ((out != NULL) && (*main_drain_received)) {
+        } else if ((out != NULL) && (check_stream_state(out, STOPPING))) {
             lock_output_stream(out);
             out->client_callback(STREAM_CBK_EVENT_DRAIN_READY, NULL, out->client_cookie);
-            *main_drain_received = false;
+            set_stream_state(out, STOPPED);
             unlock_output_stream(out);
             DEBUG_MSG("sent main DRAIN_READY");
         }
     }
     else if (event_id == AUDIO_MAIN_EOS_EVENT || event_id == AUDIO_ASSOC_EOS_EVENT) {
         struct stream_out *out = NULL;
-        bool *drain_received = NULL;
 
         if (event_id == AUDIO_MAIN_EOS_EVENT) {
             out = qaf_mod->stream_in[QAF_IN_MAIN];
-            drain_received = &qaf_mod->drain_received[QAF_IN_MAIN];
         } else {
             out = qaf_mod->stream_in[QAF_IN_ASSOC];
-            drain_received = &qaf_mod->drain_received[QAF_IN_ASSOC];
         }
 
-        if ((out != NULL) && (*drain_received)) {
+        if ((out != NULL) && (check_stream_state(out, STOPPING))) {
             lock_output_stream(out);
             out->client_callback(STREAM_CBK_EVENT_DRAIN_READY, NULL, out->client_cookie);
-            *drain_received = false;
+            set_stream_state(out, STOPPED);
             unlock_output_stream(out);
             DEBUG_MSG("sent DRAIN_READY");
         }
@@ -1711,7 +1736,7 @@ static int qaf_session_close(struct qaf_module* qaf_mod)
         qaf_mod->qaf_audio_session_close(qaf_mod->session_handle);
         qaf_mod->session_handle = NULL;
         qaf_mod->is_vol_set = false;
-        memset(qaf_mod->drain_received, 0, sizeof(qaf_mod->drain_received));
+        memset(qaf_mod->stream_state, 0, sizeof(qaf_mod->stream_state));
     }
 
     for (j = 0; j < MAX_QAF_MODULE_OUT; j++) {
@@ -1745,6 +1770,7 @@ static int qaf_stream_close(struct stream_out *out)
         return -EINVAL;
     }
 
+    set_stream_state(out,STOPPED);
     qaf_mod->stream_in[index] = NULL;
     memset(&qaf_mod->adsp_hdlr_config[index], 0, sizeof(struct qaf_adsp_hdlr_config_state));
 
@@ -1816,6 +1842,7 @@ static int audio_extn_qaf_session_open(mm_module_type mod_type)
     }
 
     ret = qaf_mod->qaf_audio_session_open(&qaf_mod->session_handle,
+                                          AUDIO_SESSION_BROADCAST,
                                           (void *)(qaf_mod),
                                           (void *)&lic_config);
     if (ret < 0) {
@@ -2808,7 +2835,8 @@ int audio_extn_qaf_init(struct audio_device *adev)
 
         DEBUG_MSG("DLOPEN successful for %s", lib_name);
         qaf_mod->qaf_audio_session_open =
-                    (int (*)(audio_session_handle_t* session_handle, void *p_data, void* license_data))dlsym(qaf_mod->qaf_lib,
+                    (int (*)(audio_session_handle_t* session_handle, audio_session_type_t s_type,
+                                  void *p_data, void* license_data))dlsym(qaf_mod->qaf_lib,
                                                                      "audio_session_open");
         qaf_mod->qaf_audio_session_close =
                     (int (*)(audio_session_handle_t session_handle))dlsym(qaf_mod->qaf_lib,

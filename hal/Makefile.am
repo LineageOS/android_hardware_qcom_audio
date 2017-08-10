@@ -134,6 +134,13 @@ AM_CFLAGS += -DHDMI_PASSTHROUGH_ENABLED
 c_sources += audio_extn/passthru.c
 endif
 
+if AUDIO_PARSER
+AM_CFLAGS += -I ${WORKSPACE}/audio/mm-audio/audio-parsers/inc/
+if DTSHD_PARSER
+AM_CFLAGS += -DDTSHD_PARSER_ENABLED
+endif
+endif
+
 if KEEP_ALIVE
 AM_CFLAGS += -DKEEP_ALIVE_ENABLED
 c_sources += audio_extn/keep_alive.c
@@ -194,6 +201,9 @@ lib_LTLIBRARIES = audio.primary.default.la
 audio_primary_default_la_SOURCES = $(c_sources)
 audio_primary_default_la_LIBADD = $(GLIB_LIBS) -llog -lcutils -ltinyalsa
 audio_primary_default_la_LIBADD += -ltinycompress -laudioroute -ldl -lexpat -laudioutils
+if AUDIO_PARSER
+audio_primary_default_la_LIBADD += -laudioparsers
+endif
 audio_primary_default_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 audio_primary_default_la_CFLAGS += -Dstrlcat=g_strlcat
 audio_primary_default_la_CFLAGS += -DINT_MAX=0x7fffffff

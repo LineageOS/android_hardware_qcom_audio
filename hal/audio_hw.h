@@ -133,6 +133,8 @@ enum {
     USECASE_AUDIO_RECORD_LOW_LATENCY,
     USECASE_AUDIO_RECORD_FM_VIRTUAL,
 
+    USECASE_AUDIO_PLAYBACK_VOIP,
+    USECASE_AUDIO_RECORD_VOIP,
     /* Voice usecase */
     USECASE_VOICE_CALL,
 
@@ -297,6 +299,8 @@ struct stream_out {
     audio_offload_info_t info;
     int started;
     qahwi_stream_out_t qahwi_out;
+
+    bool is_iec61937_info_available;
 };
 
 struct stream_in {
@@ -467,6 +471,7 @@ struct audio_device {
     qahwi_device_t qahwi_dev;
     bool vr_audio_mode_enabled;
     bool bt_sco_on;
+    struct audio_device_config_param *device_cfg_params;
 };
 
 int select_devices(struct audio_device *adev,

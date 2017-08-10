@@ -68,10 +68,6 @@
 #include "DolbyAudioPolicy_impl.h"
 #endif // DOLBY_END
 
-#ifndef AUDIO_OUTPUT_FLAG_VOIP_RX
-#define AUDIO_OUTPUT_FLAG_VOIP_RX 0x800
-#endif
-
 namespace android {
 /*audio policy: workaround for truncated touch sounds*/
 //FIXME: workaround for truncated touch sounds
@@ -1485,6 +1481,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         return 0;
        }
 
+#ifdef COMPRESS_VOIP_ENABLED
     if ((stream == AUDIO_STREAM_VOICE_CALL) &&
         (channelMask == 1) &&
         (samplingRate == 8000 || samplingRate == 16000 ||
@@ -1495,7 +1492,6 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         // requested sample rate matches with that of voip input stream (if opened already)
         int value = 0;
         uint32_t mode = 0, voipOutCount = 1, voipSampleRate = 1;
-        bool is_vr_mode_on = false;
         String8 valueStr = mpClientInterface->getParameters((audio_io_handle_t)0,
                                                            String8("audio_mode"));
         AudioParameter result = AudioParameter(valueStr);
@@ -1533,13 +1529,24 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
                 }
             }
         }
+#else
+    if (stream == AUDIO_STREAM_VOICE_CALL &&
+        audio_is_linear_pcm(format)) {
+        flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_VOIP_RX |
+                                       AUDIO_OUTPUT_FLAG_DIRECT);
+        ALOGV("Set VoIP and Direct output flags for PCM format");
+#endif
         //IF VOIP is going to be started at the same time as when
         //vr is enabled, get VOIP to fallback to low latency
         String8 vr_value;
-        valueStr =  mpClientInterface->getParameters((audio_io_handle_t)0,
+        String8 value_Str;
+        bool is_vr_mode_on = false;
+        AudioParameter ret;
+
+        value_Str =  mpClientInterface->getParameters((audio_io_handle_t)0,
                                               String8("vr_audio_mode_on"));
-        result = AudioParameter(valueStr);
-        if (result.get(String8("vr_audio_mode_on"), vr_value) == NO_ERROR) {
+        ret = AudioParameter(value_Str);
+        if (ret.get(String8("vr_audio_mode_on"), vr_value) == NO_ERROR) {
             is_vr_mode_on = vr_value.contains("true");
             ALOGI("VR mode is %d, switch to primary output if request is for fast|raw",
                 is_vr_mode_on);
@@ -1802,16 +1809,16 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
                     }
                 }
             }
-            if (flags == AUDIO_OUTPUT_FLAG_DIRECT &&
-                direct_pcm_already_in_use == true &&
-                session != outputDesc->mDirectClientSession) {
-                ALOGV("getOutput() do not reuse direct pcm output because current client (%d) "
-                      "is not the same as requesting client (%d) for different output conf",
-                      outputDesc->mDirectClientSession, session);
-                goto non_direct_output;
-            }
             // close direct output if currently open and configured with different parameters
             if (outputDesc != NULL) {
+                if (flags == AUDIO_OUTPUT_FLAG_DIRECT &&
+                    direct_pcm_already_in_use == true &&
+                    session != outputDesc->mDirectClientSession) {
+                    ALOGV("getOutput() do not reuse direct pcm output because current client (%d) "
+                          "is not the same as requesting client (%d) for different output conf",
+                    outputDesc->mDirectClientSession, session);
+                    goto non_direct_output;
+                }
                 closeOutput(outputDesc->mIoHandle);
             }
         }

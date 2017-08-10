@@ -86,6 +86,7 @@
 /*DIRECT PCM has same buffer sizes as DEEP Buffer*/
 #define DIRECT_PCM_NUM_FRAGMENTS 2
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
+#define VOIP_PLAYBACK_VOLUME_MAX 0x2000
 #define DSD_VOLUME_MIN_DB (-110)
 
 #define PROXY_OPEN_RETRY_COUNT           100
@@ -100,6 +101,19 @@
 #endif
 
 #define ULL_PERIOD_SIZE (DEFAULT_OUTPUT_SAMPLING_RATE/1000)
+#define DEFAULT_VOIP_BUF_DURATION_MS 20
+#define DEFAULT_VOIP_BIT_DEPTH_BYTE sizeof(int16_t)
+#define DEFAULT_VOIP_SAMP_RATE 48000
+
+#define VOIP_IO_BUF_SIZE(SR, DURATION_MS, BIT_DEPTH) (SR)/1000 * DURATION_MS * BIT_DEPTH
+
+struct pcm_config default_pcm_config_voip_copp = {
+    .channels = 1,
+    .rate = DEFAULT_VOIP_SAMP_RATE, /* changed when the stream is opened */
+    .period_size = VOIP_IO_BUF_SIZE(DEFAULT_VOIP_SAMP_RATE, DEFAULT_VOIP_BUF_DURATION_MS, DEFAULT_VOIP_BIT_DEPTH_BYTE)/2,
+    .period_count = 2,
+    .format = PCM_FORMAT_S16_LE,
+};
 
 static unsigned int configured_low_latency_capture_period_size =
         LOW_LATENCY_CAPTURE_PERIOD_SIZE;
@@ -263,8 +277,12 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = "afe-proxy-playback",
     [USECASE_AUDIO_RECORD_AFE_PROXY] = "afe-proxy-record",
     [USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE] = "silence-playback",
+
     /* Transcode loopback cases */
     [USECASE_AUDIO_TRANSCODE_LOOPBACK] = "audio-transcode-loopback",
+
+    [USECASE_AUDIO_PLAYBACK_VOIP] = "audio-playback-voip",
+    [USECASE_AUDIO_RECORD_VOIP] = "audio-record-voip",
 };
 
 static const audio_usecase_t offload_usecases[] = {
@@ -2407,7 +2425,6 @@ int start_output_stream(struct stream_out *out)
         if (audio_extn_passthru_is_enabled() &&
             audio_extn_passthru_is_passthrough_stream(out)) {
             audio_extn_passthru_on_start(out);
-            audio_extn_passthru_update_stream_configuration(adev, out);
         }
     }
 
@@ -2715,6 +2732,8 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
             return out->compr_config.fragment_size;
     } else if(out->usecase == USECASE_COMPRESS_VOIP_CALL)
         return voice_extn_compress_voip_out_get_buffer_size(out);
+    else if(out->usecase == USECASE_AUDIO_PLAYBACK_VOIP)
+        return VOIP_IO_BUF_SIZE(out->config.rate, DEFAULT_VOIP_BUF_DURATION_MS, DEFAULT_VOIP_BIT_DEPTH_BYTE);
     else if (is_offload_usecase(out->usecase) &&
              out->flags == AUDIO_OUTPUT_FLAG_DIRECT)
         return out->hal_fragment_size;
@@ -3235,7 +3254,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
            (out->config.rate);
     }
 
-    if ((AUDIO_DEVICE_OUT_BLUETOOTH_A2DP == out->devices) &&
+    if ((AUDIO_DEVICE_OUT_ALL_A2DP & out->devices) &&
             !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD))
         latency += audio_extn_a2dp_get_encoder_latency();
 
@@ -3306,6 +3325,26 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
             mixer_ctl_set_array(ctl, volume, sizeof(volume)/sizeof(volume[0]));
             return 0;
         }
+    } else if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP) {
+        char mixer_ctl_name[] = "App Type Gain";
+        struct audio_device *adev = out->dev;
+        struct mixer_ctl *ctl;
+        uint32_t set_values[4];
+
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                   __func__, mixer_ctl_name);
+            return -EINVAL;
+        }
+
+        set_values[0] = 0; //0: Rx Session 1:Tx Session
+        set_values[1] = out->app_type_cfg.app_type;
+        set_values[2] = (int)(left * VOIP_PLAYBACK_VOLUME_MAX);
+        set_values[3] = (int)(right * VOIP_PLAYBACK_VOLUME_MAX);
+
+        mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+        return 0;
     }
 
     return -ENOSYS;
@@ -3344,12 +3383,21 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
     if (audio_extn_passthru_should_drop_data(out)) {
         ALOGV(" %s : Drop data as compress passthrough session is going on", __func__);
-        if (audio_bytes_per_sample(out->format) != 0)
+        if ((audio_bytes_per_sample(out->format) != 0) && (out->config.channels != 0))
             out->written += bytes / (out->config.channels * audio_bytes_per_sample(out->format));
         ret = -EIO;
         goto exit;
     }
 
+    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        /*ADD audio_extn_passthru_is_passthrough_stream(out) check*/
+        if ((audio_extn_passthru_is_enabled()) &&
+                (!out->is_iec61937_info_available)) {
+            audio_extn_passthru_update_stream_configuration(adev, out,
+                    buffer, bytes);
+            out->is_iec61937_info_available = true;
+        }
+    }
     if (out->standby) {
         out->standby = false;
         pthread_mutex_lock(&adev->lock);
@@ -3432,6 +3480,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ALOGE("copl %s: received sound card offline state on compress write", __func__);
             out->card_status = CARD_STATUS_OFFLINE;
             pthread_mutex_unlock(&out->lock);
+            out_on_error(&out->stream.common);
             return ret;
         }
         if ( ret == (ssize_t)bytes && !out->non_blocking)
@@ -3668,6 +3717,13 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
                 signed_frames -=
                     (platform_render_latency(out->usecase) * out->sample_rate / 1000000LL);
 
+                // Adjustment accounts for A2dp encoder latency with non offload usecases
+                // Note: Encoder latency is returned in ms, while platform_render_latency in us.
+                if (AUDIO_DEVICE_OUT_ALL_A2DP & out->devices) {
+                    signed_frames -=
+                        (audio_extn_a2dp_get_encoder_latency() * out->sample_rate / 1000);
+                }
+
                 // It would be unusual for this value to be negative, but check just in case ...
                 if (signed_frames >= 0) {
                     *frames = signed_frames;
@@ -3817,6 +3873,8 @@ static size_t in_get_buffer_size(const struct audio_stream *stream)
 
     if(in->usecase == USECASE_COMPRESS_VOIP_CALL)
         return voice_extn_compress_voip_in_get_buffer_size(in);
+    else if(in->usecase == USECASE_AUDIO_RECORD_VOIP)
+        return VOIP_IO_BUF_SIZE(in->config.rate, DEFAULT_VOIP_BUF_DURATION_MS, DEFAULT_VOIP_BIT_DEPTH_BYTE);
     else if(audio_extn_compr_cap_usecase_supported(in->usecase))
         return audio_extn_compr_cap_get_buffer_size(in->config.format);
     else if(audio_extn_cin_attached_usecase(in->usecase))
@@ -4257,6 +4315,19 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     }
 
     /* Init use case and pcm_config */
+#ifndef COMPRESS_VOIP_ENABLED
+    if (out->flags == (AUDIO_OUTPUT_FLAG_DIRECT | AUDIO_OUTPUT_FLAG_VOIP_RX) &&
+        (out->sample_rate == 8000 || out->sample_rate == 16000 ||
+         out->sample_rate == 32000 || out->sample_rate == 48000)) {
+        out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_MONO;
+        out->channel_mask = AUDIO_CHANNEL_OUT_MONO;
+        out->usecase = USECASE_AUDIO_PLAYBACK_VOIP;
+
+        out->config = default_pcm_config_voip_copp;
+        out->config.period_size = VOIP_IO_BUF_SIZE(out->sample_rate, DEFAULT_VOIP_BUF_DURATION_MS, DEFAULT_VOIP_BIT_DEPTH_BYTE)/2;
+        out->config.rate = out->sample_rate;
+
+#else
     if ((out->dev->mode == AUDIO_MODE_IN_COMMUNICATION || voice_extn_compress_voip_is_active(out->dev)) &&
                (out->flags == (AUDIO_OUTPUT_FLAG_DIRECT | AUDIO_OUTPUT_FLAG_VOIP_RX)) &&
                (voice_extn_compress_voip_is_config_supported(config))) {
@@ -4266,6 +4337,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                   __func__, ret);
             goto error_open;
         }
+#endif
     } else if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) ||
                (out->flags == AUDIO_OUTPUT_FLAG_DIRECT)) {
         pthread_mutex_lock(&adev->lock);
@@ -5304,6 +5376,17 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             in->config.period_size = buffer_size / frame_size;
         }
 
+#ifndef COMPRESS_VOIP_ENABLED
+        if ((in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) &&
+            (in->config.rate == 8000 || in->config.rate == 16000 ||
+             in->config.rate == 32000 || in->config.rate == 48000) &&
+            (audio_channel_count_from_in_mask(in->channel_mask) == 1)) {
+
+            in->usecase = USECASE_AUDIO_RECORD_VOIP;
+            in->config = default_pcm_config_voip_copp;
+            in->config.period_size = VOIP_IO_BUF_SIZE(in->sample_rate, DEFAULT_VOIP_BUF_DURATION_MS, DEFAULT_VOIP_BIT_DEPTH_BYTE)/2;
+            in->config.rate = in->sample_rate;
+#else
         if ((in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) &&
                (in->dev->mode == AUDIO_MODE_IN_COMMUNICATION || voice_extn_compress_voip_is_active(in->dev)) &&
                (voice_extn_compress_voip_is_format_supported(in->format)) &&
@@ -5311,6 +5394,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                 in->config.rate == 32000 || in->config.rate == 48000) &&
                (audio_channel_count_from_in_mask(in->channel_mask) == 1)) {
             voice_extn_compress_voip_open_input_stream(in);
+#endif
         }
     }
 
@@ -5454,6 +5538,10 @@ static int adev_close(hw_device_t *device)
         audio_extn_adsp_hdlr_deinit();
         audio_extn_snd_mon_deinit();
         audio_extn_loopback_deinit(adev);
+        if (adev->device_cfg_params) {
+            free(adev->device_cfg_params);
+            adev->device_cfg_params = NULL;
+        }
         free(device);
         adev = NULL;
     }
@@ -5754,6 +5842,12 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->card_status = CARD_STATUS_ONLINE;
     pthread_mutex_unlock(&adev->lock);
     audio_extn_sound_trigger_init(adev); /* dependent on snd_mon_init() */
+    /* Allocate memory for Device config params */
+    adev->device_cfg_params = (struct audio_device_config_param*)
+                                  calloc(platform_get_max_codec_backend(),
+                                  sizeof(struct audio_device_config_param));
+    if (adev->device_cfg_params == NULL)
+        ALOGE("%s: Memory allocation failed for Device config params", __func__);
 
     ALOGV("%s: exit", __func__);
     return 0;
