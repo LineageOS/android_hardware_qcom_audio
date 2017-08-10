@@ -20,5 +20,6 @@ libqahw_la_SOURCES = src/qahw.c \
 libqahw_la_CFLAGS = -Dstrlcpy=g_strlcpy $(GLIB_CFLAGS) -include glib.h $(AM_CFLAGS) -include stddef.h
 libqahw_la_CFLAGS += -D__unused=__attribute__\(\(__unused__\)\)
 libqahw_la_CFLAGS += -Wno-sign-compare -Werror
-libqahw_la_LIBADD = $(GLIB_LIBS) -llog -lcutils -lhardware
+libqahw_la_CFLAGS += -Dstrlcat=g_strlcat -Dstrlcpy=g_strlcpy -include glib.h $(GLIB_CFLAGS)
+libqahw_la_LIBADD = $(GLIB_LIBS) -llog -lcutils -lhardware -ldl
 libqahw_la_LDFLAGS = -module -shared -avoid-version

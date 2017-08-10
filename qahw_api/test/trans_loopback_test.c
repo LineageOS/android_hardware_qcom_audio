@@ -103,6 +103,7 @@ const char *log_filename = NULL;
 
 /* Function declarations */
 void usage();
+int poll_data_event_init();
 
 typedef enum source_port_type {
     SOURCE_PORT_NONE,
