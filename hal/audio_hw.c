@@ -1793,6 +1793,15 @@ static int stop_output_stream(struct stream_out *out)
     /* Must be called after removing the usecase from list */
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
         check_and_set_hdmi_channels(adev, DEFAULT_HDMI_OUT_CHANNELS);
+    else if (out->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) {
+        struct listnode *node;
+        struct audio_usecase *usecase;
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (usecase->devices & AUDIO_DEVICE_OUT_SPEAKER)
+                select_devices(adev, usecase->id);
+        }
+    }
 
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
@@ -2174,6 +2183,15 @@ static bool output_drives_call(struct audio_device *adev, struct stream_out *out
     return out == adev->primary_output || out == adev->voice_tx_output;
 }
 
+static int get_alive_usb_card(struct str_parms* parms) {
+    int card;
+    if ((str_parms_get_int(parms, "card", &card) >= 0) &&
+        !audio_extn_usb_alive(card)) {
+        return card;
+    }
+    return -ENODEV;
+}
+
 static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 {
     struct stream_out *out = (struct stream_out *)stream;
@@ -2211,9 +2229,11 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
         // Workaround: If routing to an non existing usb device, fail gracefully
         // The routing request will otherwise block during 10 second
-        if (audio_is_usb_out_device(new_dev) && !audio_extn_usb_alive(adev->snd_card)) {
-            ALOGW("out_set_parameters() ignoring rerouting to non existing USB card %d",
-                  adev->snd_card);
+        int card;
+        if (audio_is_usb_out_device(new_dev) &&
+            (card = get_alive_usb_card(parms)) >= 0) {
+
+            ALOGW("out_set_parameters() ignoring rerouting to non existing USB card %d", card);
             pthread_mutex_unlock(&adev->lock);
             pthread_mutex_unlock(&out->lock);
             status = -ENOSYS;
@@ -3140,9 +3160,11 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
             // Workaround: If routing to an non existing usb device, fail gracefully
             // The routing request will otherwise block during 10 second
-            if (audio_is_usb_in_device(val) && !audio_extn_usb_alive(adev->snd_card)) {
-                ALOGW("in_set_parameters() ignoring rerouting to non existing USB card %d",
-                      adev->snd_card);
+            int card;
+            if (audio_is_usb_in_device(val) &&
+                (card = get_alive_usb_card(parms)) >= 0) {
+
+                ALOGW("in_set_parameters() ignoring rerouting to non existing USB card %d", card);
                 status = -ENOSYS;
             } else {
 
@@ -3926,6 +3948,7 @@ static void adev_close_output_stream(struct audio_hw_device *dev __unused,
     out->error_log = NULL;
 
     pthread_cond_destroy(&out->cond);
+    pthread_mutex_destroy(&out->pre_lock);
     pthread_mutex_destroy(&out->lock);
     free(stream);
     ALOGV("%s: exit", __func__);
@@ -4471,6 +4494,9 @@ static void adev_close_input_stream(struct audio_hw_device *dev __unused,
     error_log_destroy(in->error_log);
     in->error_log = NULL;
 
+    pthread_mutex_destroy(&in->pre_lock);
+    pthread_mutex_destroy(&in->lock);
+
     free(stream);
 
     return;
@@ -4638,6 +4664,7 @@ static int adev_close(hw_device_t *device)
         }
         if (adev->adm_deinit)
             adev->adm_deinit(adev->adm_data);
+        pthread_mutex_destroy(&adev->lock);
         free(device);
     }
 
