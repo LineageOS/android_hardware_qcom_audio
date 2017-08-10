@@ -19,3 +19,13 @@ hal_rec_test_SOURCES = qahw_multi_record_test.c
 hal_rec_test_CPPFLAGS = -Dstrlcat=g_strlcat $(GLIB_CFLAGS) -include glib.h
 hal_rec_test_CPPFLAGS += $(REC_CPPFLAGS) $(REC_INCLUDES)
 hal_rec_test_LDADD = -lutils ../libqahw.la $(GLIB_LIBS)
+
+bin_PROGRAMS += trans_loopback_test
+
+trans_loopback_test_INCLUDES = -I $(top_srcdir)/qahw_api/inc
+
+trans_loopback_test_SOURCES = trans_loopback_test.c
+
+trans_loopback_test_CFLAGS  = $(CFLAGS) -Wno-sign-compare -Werror
+trans_loopback_test_CFLAGS  += $(trans_loopback_test_INCLUDES)
+trans_loopback_test_LDADD = -llog  -lutils ../libqahw.la -lcutils

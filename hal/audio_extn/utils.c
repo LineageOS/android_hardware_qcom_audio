@@ -2004,14 +2004,19 @@ int audio_extn_utils_get_snd_card_num()
         ALOGE("%s: Failed to init hardware info", __func__);
         retry_num = 0;
         snd_card_num++;
-        free(snd_card_name);
-        mixer_close(mixer);
-    }
 
-    mixer_close(mixer);
-    hw_info_deinit(hw_info);
+        free(snd_card_name);
+        snd_card_name = NULL;
+
+        mixer_close(mixer);
+        mixer = NULL;
+    }
     if (snd_card_name)
         free(snd_card_name);
+    if (mixer)
+        mixer_close(mixer);
+    if (hw_info)
+        hw_info_deinit(hw_info);
 
     if (snd_card_num >= MAX_SND_CARD) {
         ALOGE("%s: Unable to find correct sound card, aborting.", __func__);

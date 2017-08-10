@@ -359,6 +359,7 @@ int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,
 #endif /* AUXPCM_BT_ENABLED */
 #ifndef SPKR_PROT_ENABLED
 #define audio_extn_spkr_prot_init(adev)       (0)
+#define audio_extn_spkr_prot_deinit()         (0)
 #define audio_extn_spkr_prot_start_processing(snd_device)    (-EINVAL)
 #define audio_extn_spkr_prot_calib_cancel(adev) (0)
 #define audio_extn_spkr_prot_stop_processing(snd_device)     (0)
@@ -368,6 +369,7 @@ int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,
 #define audio_extn_fbsp_get_parameters(query, reply)   (0)
 #else
 void audio_extn_spkr_prot_init(void *adev);
+int audio_extn_spkr_prot_deinit();
 int audio_extn_spkr_prot_start_processing(snd_device_t snd_device);
 void audio_extn_spkr_prot_stop_processing(snd_device_t snd_device);
 bool audio_extn_spkr_prot_is_enabled();
@@ -884,4 +886,55 @@ int audio_extn_utils_compress_correct_drift(
 int audio_extn_utils_set_channel_map(
             struct stream_out *out,
             struct audio_out_channel_map_param *channel_map_param);
+#ifdef AUDIO_HW_LOOPBACK_ENABLED
+/* API to create audio patch */
+int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,
+                                     unsigned int num_sources,
+                                     const struct audio_port_config *sources,
+                                     unsigned int num_sinks,
+                                     const struct audio_port_config *sinks,
+                                     audio_patch_handle_t *handle);
+/* API to release audio patch */
+int audio_extn_hw_loopback_release_audio_patch(struct audio_hw_device *dev,
+                                             audio_patch_handle_t handle);
+
+int audio_extn_hw_loopback_set_audio_port_config(struct audio_hw_device *dev,
+                                    const struct audio_port_config *config);
+int audio_extn_hw_loopback_get_audio_port(struct audio_hw_device *dev,
+                                    struct audio_port *port_in);
+int audio_extn_loopback_init(struct audio_device *adev);
+void audio_extn_loopback_deinit(struct audio_device *adev);
+#else
+static int __unused audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev __unused,
+                                     unsigned int num_sources __unused,
+                                     const struct audio_port_config *sources __unused,
+                                     unsigned int num_sinks __unused,
+                                     const struct audio_port_config *sinks __unused,
+                                     audio_patch_handle_t *handle __unused)
+{
+    return -ENOSYS;
+}
+static int __unused audio_extn_hw_loopback_release_audio_patch(struct audio_hw_device *dev __unused,
+                                             audio_patch_handle_t handle __unused)
+{
+    return -ENOSYS;
+}
+static int __unused audio_extn_hw_loopback_set_audio_port_config(struct audio_hw_device *dev __unused,
+                                    const struct audio_port_config *config __unused)
+{
+    return -ENOSYS;
+}
+static int __unused audio_extn_hw_loopback_get_audio_port(struct audio_hw_device *dev __unused,
+                                    struct audio_port *port_in __unused)
+{
+    return -ENOSYS;
+}
+static int __unused audio_extn_loopback_init(struct audio_device *adev __unused)
+{
+    return -ENOSYS;
+}
+static void __unused audio_extn_loopback_deinit(struct audio_device *adev __unused)
+{
+}
+#endif
 #endif /* AUDIO_EXTN_H */

@@ -49,7 +49,7 @@ AUDIO_FEATURE_ENABLED_HDMI_EDID := true
 AUDIO_FEATURE_ENABLED_HDMI_PASSTHROUGH := true
 #AUDIO_FEATURE_ENABLED_KEEP_ALIVE := true
 AUDIO_FEATURE_ENABLED_DISPLAY_PORT := true
-AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := true
+AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := false
 AUDIO_FEATURE_ENABLED_HFP := true
 AUDIO_FEATURE_ENABLED_INCALL_MUSIC := false
 AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS := true
@@ -103,19 +103,17 @@ PRODUCT_COPY_FILES += \
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
-ifeq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
+ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)hardware/qcom/audio/configs/common/audio_policy_configuration.xml:/system/etc/audio_policy_configuration.xml
-else
-PRODUCT_COPY_FILES += \
-    $(TOPDIR)hardware/qcom/audio/configs/sdm660/audio_policy_configuration.xml:system/etc/audio_policy_configuration.xml
+    $(TOPDIR)hardware/qcom/audio/configs/sdm660/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml
 endif
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:/system/etc/a2dp_audio_policy_configuration.xml \
-    $(TOPDIR)frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:/system/etc/audio_policy_volumes.xml \
-    $(TOPDIR)frameworks/av/services/audiopolicy/config/default_volume_tables.xml:/system/etc/default_volume_tables.xml \
-    $(TOPDIR)frameworks/av/services/audiopolicy/config/r_submix_audio_policy_configuration.xml:/system/etc/r_submix_audio_policy_configuration.xml \
-    $(TOPDIR)frameworks/av/services/audiopolicy/config/usb_audio_policy_configuration.xml:/system/etc/usb_audio_policy_configuration.xml
+    $(TOPDIR)hardware/qcom/audio/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_volumes.xml \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/default_volume_tables.xml:$(TARGET_COPY_OUT_VENDOR)/etc/default_volume_tables.xml \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/r_submix_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/r_submix_audio_policy_configuration.xml \
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/usb_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usb_audio_policy_configuration.xml
 endif
 
 # Listen configuration file
@@ -128,26 +126,26 @@ PRODUCT_PROPERTY_OVERRIDES += \
 
 # Low latency audio buffer size in frames
 PRODUCT_PROPERTY_OVERRIDES += \
-    audio_hal.period_size=192
+    vendor.audio_hal.period_size=192
 
 ##fluencetype can be "fluence" or "fluencepro" or "none"
 PRODUCT_PROPERTY_OVERRIDES += \
-ro.qc.sdk.audio.fluencetype=none\
-persist.audio.fluence.voicecall=true\
-persist.audio.fluence.voicerec=false\
-persist.audio.fluence.speaker=true
+ro.vendor.audio.sdk.fluencetype=none\
+persist.vendor.audio.fluence.voicecall=true\
+persist.vendor.audio.fluence.voicerec=false\
+persist.vendor.audio.fluence.speaker=true
 
 #disable tunnel encoding
 PRODUCT_PROPERTY_OVERRIDES += \
-tunnel.audio.encode=false
+vendor.audio.tunnel.encode=false
 
 #Disable RAS Feature by default
 PRODUCT_PROPERTY_OVERRIDES += \
-persist.audio.ras.enabled=false
+persist.vendor.audio.ras.enabled=false
 
 #Buffer size in kbytes for compress offload playback
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.buffer.size.kb=64
+vendor.audio.offload.buffer.size.kb=64
 
 #Minimum duration for offload playback in secs
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -157,96 +155,84 @@ audio.offload.min.duration.secs=30
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.offload.video=true
 
-#Enable 16 bit PCM offload by default
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.pcm.16bit.enable=true
-
-#Enable 24 bit PCM offload by default
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.pcm.24bit.enable=true
-
 #Enable audio track offload by default
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.track.enable=true
+vendor.audio.offload.track.enable=true
 
 #Enable music through deep buffer
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.deep_buffer.media=true
 
-#QC property used when calculating client heap size in audio flinger
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.heap.size.multiplier=7
-
 #enable voice path for PCM VoIP by default
 PRODUCT_PROPERTY_OVERRIDES += \
-use.voice.path.for.pcm.voip=true
+vendor.voice.path.for.pcm.voip=true
 
 #Enable multi channel aac through offload
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.multiaac.enable=true
+vendor.audio.offload.multiaac.enable=true
 
 #Enable DS2, Hardbypass feature for Dolby
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.dolby.ds2.enabled=true\
-audio.dolby.ds2.hardbypass=true
+vendor.audio.dolby.ds2.enabled=false\
+vendor.audio.dolby.ds2.hardbypass=false
 
 #Disable Multiple offload sesison
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.multiple.enabled=false
+vendor.audio.offload.multiple.enabled=false
 
 #Disable Compress passthrough playback
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.passthrough=false
+vendor.audio.offload.passthrough=false
 
 #Disable surround sound recording
 PRODUCT_PROPERTY_OVERRIDES += \
-ro.qc.sdk.audio.ssr=false
+ro.vendor.audio.sdk.ssr=false
 
 #enable dsp gapless mode by default
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.gapless.enabled=true
+vendor.audio.offload.gapless.enabled=true
 
 #enable pbe effects
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.safx.pbe.enabled=true
+vendor.audio.safx.pbe.enabled=true
 
 #parser input buffer size(256kb) in byte stream mode
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.parser.ip.buffer.size=262144
+vendor.audio.parser.ip.buffer.size=262144
 
 #flac sw decoder 24 bit decode capability
 PRODUCT_PROPERTY_OVERRIDES += \
-flac.sw.decoder.24bit.support=true
+vendor.audio.flac.sw.decoder.24bit=true
 
 #split a2dp DSP supported encoder list
 PRODUCT_PROPERTY_OVERRIDES += \
-persist.bt.a2dp_offload_cap=sbc-aptx-aptxhd-aac
+persist.vendor.bt.a2dp_offload_cap=sbc-aptx-aptxhd-aac
 
 #enable software decoders for ALAC and APE
 PRODUCT_PROPERTY_OVERRIDES += \
-use.qti.sw.alac.decoder=true
+vendor.audio.use.sw.alac.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
-use.qti.sw.ape.decoder=true
+vendor.audio.use.sw.ape.decoder=true
 
 #enable hw aac encoder by default
 PRODUCT_PROPERTY_OVERRIDES += \
-qcom.hw.aac.encoder=true
+vendor.audio.hw.aac.encoder=true
 
 #Disable FM a2dp concurrency
 PRODUCT_PROPERTY_OVERRIDES += \
-fm.a2dp.conc.disabled=true
+vendor.fm.a2dp.conc.disabled=true
 
 #audio becoming noisy intent broadcast delay
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.noisy.broadcast.delay=600
+vendor.audio.noisy.broadcast.delay=600
 
 #Enable HIFI audio support for internal codec
 PRODUCT_PROPERTY_OVERRIDES += \
-persist.audio.hifi.int_codec=true
+persist.vendor.audio.hifi.int_codec=true
 
 #offload pausetime out duration to 3 secs to inline with other outputs
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.pstimeout.secs=3
+vendor.audio.offload.pstimeout.secs=3
 
 # for HIDL related packages
 PRODUCT_PACKAGES += \

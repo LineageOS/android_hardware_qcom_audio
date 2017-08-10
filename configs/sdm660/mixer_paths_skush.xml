@@ -403,6 +403,10 @@
         <ctl name="AUDIO_REF_EC_UL1 MUX" value="INT4_MI2S_RX" />
     </path>
 
+   <path name="echo-reference handset">
+       <ctl name="AUDIO_REF_EC_UL1 MUX" value="INT0_MI2S_RX" />
+   </path>
+
     <path name="echo-reference headphones">
         <ctl name="AUDIO_REF_EC_UL1 MUX" value="INT0_MI2S_RX" />
     </path>
@@ -1462,6 +1466,11 @@
 
     <path name="compress-voip-call">
         <ctl name="INT4_MI2S_RX_Voice Mixer Voip" value="1" />
+        <ctl name="Voip_Tx Mixer INT3_MI2S_TX_Voip" value="1" />
+    </path>
+
+    <path name="compress-voip-call bt-a2dp">
+        <ctl name="SLIM_7_RX_Voice Mixer Voip" value="1" />
         <ctl name="Voip_Tx Mixer INT3_MI2S_TX_Voip" value="1" />
     </path>
 
