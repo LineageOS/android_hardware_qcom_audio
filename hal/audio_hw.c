@@ -1793,6 +1793,15 @@ static int stop_output_stream(struct stream_out *out)
     /* Must be called after removing the usecase from list */
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
         check_and_set_hdmi_channels(adev, DEFAULT_HDMI_OUT_CHANNELS);
+    else if (out->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) {
+        struct listnode *node;
+        struct audio_usecase *usecase;
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (usecase->devices & AUDIO_DEVICE_OUT_SPEAKER)
+                select_devices(adev, usecase->id);
+        }
+    }
 
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
