@@ -2184,6 +2184,15 @@ static bool output_drives_call(struct audio_device *adev, struct stream_out *out
     return out == adev->primary_output || out == adev->voice_tx_output;
 }
 
+static int get_alive_usb_card(struct str_parms* parms) {
+    int card;
+    if ((str_parms_get_int(parms, "card", &card) >= 0) &&
+        !audio_extn_usb_alive(card)) {
+        return card;
+    }
+    return -ENODEV;
+}
+
 static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 {
     struct stream_out *out = (struct stream_out *)stream;
@@ -2221,9 +2230,11 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
         // Workaround: If routing to an non existing usb device, fail gracefully
         // The routing request will otherwise block during 10 second
-        if (audio_is_usb_out_device(new_dev) && !audio_extn_usb_alive(adev->snd_card)) {
-            ALOGW("out_set_parameters() ignoring rerouting to non existing USB card %d",
-                  adev->snd_card);
+        int card;
+        if (audio_is_usb_out_device(new_dev) &&
+            (card = get_alive_usb_card(parms)) >= 0) {
+
+            ALOGW("out_set_parameters() ignoring rerouting to non existing USB card %d", card);
             pthread_mutex_unlock(&adev->lock);
             pthread_mutex_unlock(&out->lock);
             status = -ENOSYS;
@@ -3141,9 +3152,11 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
             // Workaround: If routing to an non existing usb device, fail gracefully
             // The routing request will otherwise block during 10 second
-            if (audio_is_usb_in_device(val) && !audio_extn_usb_alive(adev->snd_card)) {
-                ALOGW("in_set_parameters() ignoring rerouting to non existing USB card %d",
-                      adev->snd_card);
+            int card;
+            if (audio_is_usb_in_device(val) &&
+                (card = get_alive_usb_card(parms)) >= 0) {
+
+                ALOGW("in_set_parameters() ignoring rerouting to non existing USB card %d", card);
                 status = -ENOSYS;
             } else {
 
