@@ -91,6 +91,8 @@
 
 #define MAX_STREAM_PROFILE_STR_LEN 32
 
+#define MAX_MIXER_PATH_LEN 64
+
 typedef enum card_status_t {
     CARD_STATUS_OFFLINE,
     CARD_STATUS_ONLINE
@@ -305,6 +307,9 @@ struct stream_out {
     bool a2dp_compress_mute;
     float volume_l;
     float volume_r;
+
+    char pm_qos_mixer_path[MAX_MIXER_PATH_LEN];
+    int dynamic_pm_qos_enabled;
 };
 
 struct stream_in {

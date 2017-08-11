@@ -3158,6 +3158,37 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         pthread_mutex_unlock(&out->lock);
     }
 
+    //suspend, resume handling block
+    if (out->dynamic_pm_qos_enabled) {
+        //check suspend parameter only for low latency and if the property
+        //is enabled
+        if (str_parms_get_str(parms, "suspend_playback", value, sizeof(value)) >= 0) {
+            ALOGI("%s: got suspend_playback %s", __func__, value);
+            lock_output_stream(out);
+            if (!strncmp(value, "false", 5)) {
+                //suspend_playback=false is supposed to set QOS value back to 75%
+                //the mixer control sent with value Enable will achieve that
+                ret = audio_route_apply_and_update_path(adev->audio_route, out->pm_qos_mixer_path);
+            } else if (!strncmp (value, "true", 4)) {
+                //suspend_playback=true is supposed to remove QOS value
+                //resetting the mixer control will set the default value
+                //for the mixer control which is Disable and this removes the QOS vote
+                ret = audio_route_reset_and_update_path(adev->audio_route, out->pm_qos_mixer_path);
+            } else {
+                ALOGE("%s: Wrong value sent for suspend_playback, expected true/false,"
+                       " got %s", __func__, value);
+                ret = -1;
+            }
+
+            if (ret != 0) {
+                ALOGE("%s: %s mixer ctl failed with %d, ignore suspend/resume setparams",
+                        __func__, out->pm_qos_mixer_path, ret);
+            }
+
+            pthread_mutex_unlock(&out->lock);
+        }
+    }
+    //end suspend, resume handling block
     str_parms_destroy(parms);
 error:
     ALOGV("%s: exit: code(%d)", __func__, ret);
@@ -3276,6 +3307,16 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
             free(str);
         str = str_parms_to_str(reply);
     }
+
+    if (str_parms_get_str(query, "supports_hw_suspend", value, sizeof(value)) >= 0) {
+        //only low latency track supports suspend_resume
+        str_parms_add_int(reply, "supports_hw_suspend",
+                (out->dynamic_pm_qos_enabled));
+        if (str)
+            free(str);
+        str = str_parms_to_str(reply);
+    }
+
 
     str_parms_destroy(query);
     str_parms_destroy(reply);
@@ -4394,6 +4435,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     out->convert_buffer = NULL;
     out->started = 0;
     out->a2dp_compress_mute = false;
+    out->dynamic_pm_qos_enabled = 0;
 
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL &&
         (flags & AUDIO_OUTPUT_FLAG_DIRECT)) {
@@ -4737,6 +4779,18 @@ int adev_open_output_stream(struct audio_hw_device *dev,
             out->config = out->realtime ? pcm_config_rt : pcm_config_low_latency;
         } else if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
             out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
+            out->dynamic_pm_qos_enabled = property_get_bool("vendor.audio.dynamic.qos.enable", false);
+            if (!out->dynamic_pm_qos_enabled) {
+                ALOGI("%s: dynamic qos voting not enabled for platform", __func__);
+            } else {
+                ALOGI("%s: dynamic qos voting enabled for platform", __func__);
+                //the mixer path will be a string similar to "low-latency-playback resume"
+                strlcpy(out->pm_qos_mixer_path, use_case_table[out->usecase], MAX_MIXER_PATH_LEN);
+                strlcat(out->pm_qos_mixer_path,
+                            " resume", MAX_MIXER_PATH_LEN);
+                ALOGI("%s: created %s pm_qos_mixer_path" , __func__,
+                        out->pm_qos_mixer_path);
+            }
             out->config = pcm_config_low_latency;
         } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
             out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
