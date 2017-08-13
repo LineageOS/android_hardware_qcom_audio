@@ -62,7 +62,8 @@
 #include <system/thread_defs.h>
 #include <cutils/sched_policy.h>
 #include "audio_extn.h"
-#include "sound/compress_params.h"
+#include <sound/compress_params.h>
+#include <sound/compress_offload.h>
 #include <system/audio.h>
 
 /*
@@ -336,6 +337,27 @@ int loopback_stream_cb(stream_callback_event_t event, void *param, void *cookie)
     return 0;
 }
 
+#if defined SNDRV_COMPRESS_LATENCY_MODE
+static void transcode_loopback_util_set_latency_mode(
+                             loopback_patch_t *active_loopback_patch,
+                             uint32_t latency_mode)
+{
+    struct snd_compr_metadata metadata;
+
+    metadata.key = SNDRV_COMPRESS_LATENCY_MODE;
+    metadata.value[0] = latency_mode;
+    ALOGV("%s: Setting latency mode %d",__func__, latency_mode);
+    compress_set_metadata(active_loopback_patch->source_stream,&metadata);
+}
+#else
+static void transcode_loopback_util_set_latency_mode(
+                            loopback_patch_t *active_loopback_patch __unused,
+                            uint32_t latency_mode __unused)
+{
+    ALOGD("%s:: Latency mode configuration not supported", __func__);
+}
+#endif
+
 /* Create a loopback session based on active loopback patch selected */
 int create_loopback_session(loopback_patch_t *active_loopback_patch)
 {
@@ -353,6 +375,7 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
     struct stream_inout *inout =  &active_loopback_patch->patch_stream;
     struct adsp_hdlr_stream_cfg hdlr_stream_cfg;
     struct stream_in loopback_source_stream;
+    char prop_value[PROPERTY_VALUE_MAX] = {0};
 
     ALOGD("%s: Create loopback session begin", __func__);
 
@@ -464,6 +487,14 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
     sink_config.fragment_size = 1024;
     sink_config.fragments = 1;
     sink_config.codec = &codec;
+
+    /* Do not alter the location of sending latency mode property */
+    /* Mode set on any stream but before both streams are open */
+    if(property_get("audio.transcode.latency.mode", prop_value, "")) {
+        uint32_t latency_mode = atoi(prop_value);
+        transcode_loopback_util_set_latency_mode(active_loopback_patch,
+                                                 latency_mode);
+    }
 
     /* Open compress stream in playback path */
     active_loopback_patch->sink_stream = compress_open(adev->snd_card,
