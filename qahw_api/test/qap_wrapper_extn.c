@@ -1342,8 +1342,7 @@ void *qap_wrapper_start_stream (void* stream_data)
             }
             ALOGV("%s %d feeding Input of size %d  and bytes_cosumed is %d",
                       __FUNCTION__, __LINE__,bytes_read, bytes_consumed);
-            if ((format == QAP_AUDIO_FORMAT_DTS) ||
-                 (format == QAP_AUDIO_FORMAT_DTS_HD)) {
+            if (stream_info->filetype == FILE_DTS) {
                   if (bytes_consumed < 0) {
                       while (!is_buffer_available) {
                           usleep(1000);
@@ -1428,7 +1427,10 @@ qap_module_handle_t qap_wrapper_stream_open(void* stream_data)
     input_config->channels = stream_info->channels;
     input_config->bit_width = stream_info->config.offload_info.bit_width;
 
-    stream_info->bytes_to_read = 1024;
+    if (stream_info->filetype == FILE_DTS)
+        stream_info->bytes_to_read = 10*1024;
+    else
+        stream_info->bytes_to_read = 1024;
     input_streams_count++;
     if (input_streams_count == 2) {
         if (stream_info->filetype == FILE_WAV) {
