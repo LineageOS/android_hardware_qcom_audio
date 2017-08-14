@@ -135,9 +135,9 @@ static void passthru_update_stream_configuration_from_dts_parser( struct stream_
     }
 
     if (!is_valid_transmission_rate) {
-        ALOGE("%s:: Invalid dts transmission rate %d\n using default sample rate 192000",
+        ALOGE("%s:: Invalid dts transmission rate %d\n using default sample rate 48000",
                dtshd_tr_info.sample_rate);
-        out->sample_rate = 192000;
+        out->sample_rate = 48000;
         out->compr_config.codec->sample_rate = out->sample_rate;
     }
 
