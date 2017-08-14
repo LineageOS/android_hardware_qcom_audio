@@ -21,6 +21,9 @@ endif
 ifneq ($(filter apq8084,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_APQ8084
 endif
+ifneq ($(filter msm8974,$(TARGET_BOARD_PLATFORM)),)
+  LOCAL_CFLAGS := -DPLATFORM_MSM8974
+endif
 ifneq ($(filter msm8994,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSM8994
 endif
@@ -49,7 +52,7 @@ LOCAL_SRC_FILES += audio_extn/audio_extn.c \
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
-ifneq ($(filter msm8994 msm8992,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8994 msm8992 msm8974,$(TARGET_BOARD_PLATFORM)),)
     LOCAL_SRC_FILES += edid.c
 endif
 
@@ -257,7 +260,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUXPCM_BT)),true)
     LOCAL_CFLAGS += -DAUXPCM_BT_ENABLED
 endif
 
-LOCAL_CFLAGS += -Wall -Werror
+LOCAL_CFLAGS += -Wall
 
 LOCAL_COPY_HEADERS_TO   := mm-audio
 LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
