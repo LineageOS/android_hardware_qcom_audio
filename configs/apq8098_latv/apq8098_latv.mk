@@ -148,6 +148,14 @@ vendor.audio.offload.buffer.size.kb=32
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.offload.video=true
 
+#Enable 16 bit PCM offload by default
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.pcm.16bit.enable=true
+
+#Enable 24 bit PCM offload by default
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.pcm.24bit.enable=true
+
 #Enable audio track offload by default
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.track.enable=true
@@ -155,6 +163,10 @@ vendor.audio.offload.track.enable=true
 #Enable music through deep buffer
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.deep_buffer.media=true
+
+#QC property used when calculating client heap size in audio flinger
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.heap.size.multiplier=7
 
 #enable voice path for PCM VoIP by default
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -175,7 +187,7 @@ vendor.audio.offload.multiple.enabled=false
 
 #Disable Compress passthrough playback
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.offload.passthrough=false
+vendor.audio.offload.passthrough=true
 
 #Disable surround sound recording
 PRODUCT_PROPERTY_OVERRIDES += \
