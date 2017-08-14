@@ -117,12 +117,20 @@ struct rtic_event {
     uint8_t payload[0];
 };
 
-bool audio_extn_ip_hdlr_intf_supported(audio_format_t format,bool is_direct_passthru)
+bool audio_extn_ip_hdlr_intf_supported(audio_format_t format,
+                    bool is_direct_passthrough,
+                    bool is_transcode_loopback)
 {
-    if (((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_DOLBY_TRUEHD) ||
-        ((!is_direct_passthru) &&
-         (((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_E_AC3) ||
-         ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AC3))))
+
+    if ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_DOLBY_TRUEHD)
+        return true;
+    else if (!is_direct_passthrough && !audio_extn_qaf_is_enabled() &&
+            (((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_E_AC3) ||
+             ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AC3)))
+        return true;
+    else if (is_transcode_loopback &&
+            (((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_E_AC3) ||
+             ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AC3)))
         return true;
     else
         return false;
