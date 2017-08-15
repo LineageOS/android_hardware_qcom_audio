@@ -2059,16 +2059,13 @@ static int out_set_format(struct audio_stream *stream __unused, audio_format_t f
     return -ENOSYS;
 }
 
-static int out_standby(struct audio_stream *stream)
+/* must be called with out->lock locked */
+static int out_standby_l(struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
     struct audio_device *adev = out->dev;
     bool do_stop = true;
 
-    ALOGV("%s: enter: usecase(%d: %s)", __func__,
-          out->usecase, use_case_table[out->usecase]);
-
-    lock_output_stream(out);
     if (!out->standby) {
         if (adev->adm_deregister_stream)
             adev->adm_deregister_stream(adev->adm_data, out->handle);
@@ -2097,6 +2094,18 @@ static int out_standby(struct audio_stream *stream)
         }
         pthread_mutex_unlock(&adev->lock);
     }
+    return 0;
+}
+
+static int out_standby(struct audio_stream *stream)
+{
+    struct stream_out *out = (struct stream_out *)stream;
+
+    ALOGV("%s: enter: usecase(%d: %s)", __func__,
+          out->usecase, use_case_table[out->usecase]);
+
+    lock_output_stream(out);
+    out_standby_l(stream);
     pthread_mutex_unlock(&out->lock);
     ALOGV("%s: exit", __func__);
     return 0;
@@ -2210,7 +2219,19 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
     if (ret >= 0) {
         val = atoi(value);
+
         lock_output_stream(out);
+
+        // The usb driver needs to be closed after usb device disconnection
+        // otherwise audio is no longer played on the new usb devices.
+        // By forcing the stream in standby, the usb stack refcount drops to 0
+        // and the driver is closed.
+        if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD && val == AUDIO_DEVICE_NONE &&
+                audio_is_usb_out_device(out->devices)) {
+            ALOGD("%s() putting the usb device in standby after disconnection", __func__);
+            out_standby_l(&out->stream.common);
+        }
+
         pthread_mutex_lock(&adev->lock);
 
         /*
