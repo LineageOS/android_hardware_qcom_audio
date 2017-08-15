@@ -2330,9 +2330,11 @@ int audio_extn_utils_set_downmix_params(
 
     out->downmix_params.has_mixer_coeffs = mm_params->has_mixer_coeffs;
     for (i = 0; i < mm_params->num_output_channels; i++)
-        for (j = 0; j < mm_params->num_input_channels; j++)
+        for (j = 0; j < mm_params->num_input_channels; j++) {
+            //Convert the channel coefficient gains in Q14 format
             out->downmix_params.mixer_coeffs[i][j] =
-                               mm_params->mixer_coeffs[i][j];
+                               mm_params->mixer_coeffs[i][j] * (2 << 13);
+    }
 
     ret = platform_set_stream_downmix_params(out->dev->platform,
                                              out->pcm_device_id,

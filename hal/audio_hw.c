@@ -5026,7 +5026,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     }
 
     /* Init use case and pcm_config */
-#ifndef COMPRESS_VOIP_ENABLED
+#ifndef COMPRES_ENABLED
     if (out->flags == (AUDIO_OUTPUT_FLAG_DIRECT | AUDIO_OUTPUT_FLAG_VOIP_RX) &&
         (out->sample_rate == 8000 || out->sample_rate == 16000 ||
          out->sample_rate == 32000 || out->sample_rate == 48000)) {
@@ -5039,7 +5039,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->config.rate = out->sample_rate;
 
 #else
-    if ((out->dev->mode == AUDIO_MODE_IN_COMMUNICATION || voice_extn_compress_voip_is_active(out->dev)) &&
+    } else if ((out->dev->mode == AUDIO_MODE_IN_COMMUNICATION || voice_extn_compress_voip_is_active(out->dev)) &&
                (out->flags == (AUDIO_OUTPUT_FLAG_DIRECT | AUDIO_OUTPUT_FLAG_VOIP_RX)) &&
                (voice_extn_compress_voip_is_config_supported(config))) {
         ret = voice_extn_compress_voip_open_output_stream(out);
