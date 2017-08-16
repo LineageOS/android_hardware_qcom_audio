@@ -3733,9 +3733,9 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     }
 
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-        /*ADD audio_extn_passthru_is_passthrough_stream(out) check*/
-        if ((audio_extn_passthru_is_enabled()) &&
-                (!out->is_iec61937_info_available)) {
+        if (audio_extn_passthru_is_enabled() &&
+            !out->is_iec61937_info_available &&
+            audio_extn_passthru_is_passthrough_stream(out)) {
             audio_extn_passthru_update_stream_configuration(adev, out,
                     buffer, bytes);
             out->is_iec61937_info_available = true;
