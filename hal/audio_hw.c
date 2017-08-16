@@ -3407,6 +3407,20 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
     return -ENOSYS;
 }
 
+static void update_frames_written(struct stream_out *out, size_t bytes)
+{
+    size_t bpf = 0;
+
+    if (is_offload_usecase(out->usecase) && !out->non_blocking &&
+        !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD))
+        bpf = 1;
+    else if (!is_offload_usecase(out->usecase))
+        bpf = audio_bytes_per_sample(out->format) *
+             audio_channel_count_from_out_mask(out->channel_mask);
+    if (bpf != 0)
+        out->written += bytes / bpf;
+}
+
 static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                          size_t bytes)
 {
@@ -3424,14 +3438,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             pthread_mutex_unlock(&out->lock);
             return -ENETRESET;
         } else {
-            /* increase written size during SSR to avoid mismatch
-             * with the written frames count in AF
-             */
-            // bytes per frame
-            size_t bpf = audio_bytes_per_sample(out->format) *
-                         audio_channel_count_from_out_mask(out->channel_mask);
-            if (bpf != 0)
-                out->written += bytes / bpf;
             ALOGD(" %s: sound card is not active/SSR state", __func__);
             ret= -EIO;
             goto exit;
@@ -3440,8 +3446,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
     if (audio_extn_passthru_should_drop_data(out)) {
         ALOGV(" %s : Drop data as compress passthrough session is going on", __func__);
-        if ((audio_bytes_per_sample(out->format) != 0) && (out->config.channels != 0))
-            out->written += bytes / (out->config.channels * audio_bytes_per_sample(out->format));
         ret = -EIO;
         goto exit;
     }
@@ -3460,10 +3464,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         (audio_extn_a2dp_is_suspended())) {
         if (!(out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
             if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
-                size_t bpf = audio_bytes_per_sample(out->format) *
-                    audio_channel_count_from_out_mask(out->channel_mask);
-                if (bpf != 0)
-                    out->written += bytes / bpf;
                 ret = -EIO;
                 goto exit;
             }
@@ -3541,6 +3541,9 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         } else
             ret = compress_write(out->compr, buffer, bytes);
 
+        if ((ret < 0 || ret == (ssize_t)bytes) && !out->non_blocking)
+            update_frames_written(out, bytes);
+
         if (ret < 0)
             ret = -errno;
         ALOGVV("%s: writing buffer (%zu bytes) to compress device returned %zd", __func__, bytes, ret);
@@ -3555,8 +3558,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             out_on_error(&out->stream.common);
             return ret;
         }
-        if ( ret == (ssize_t)bytes && !out->non_blocking)
-            out->written += bytes;
 
         /* Call compr start only when non-zero bytes of data is there to be rendered */
         if (!out->playback_started && ret > 0) {
@@ -3635,14 +3636,13 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
             if (ret < 0)
                 ret = -errno;
-            else if (ret == 0 && (audio_bytes_per_sample(out->format) != 0))
-                out->written += bytes / (out->config.channels * audio_bytes_per_sample(out->format));
-            else
+            else if (ret > 0)
                 ret = -EINVAL;
         }
     }
 
 exit:
+    update_frames_written(out, bytes);
     if (-ENETRESET == ret) {
         out->card_status = CARD_STATUS_OFFLINE;
     }
