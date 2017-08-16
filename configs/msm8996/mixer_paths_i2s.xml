@@ -123,12 +123,16 @@
     </path>
 
     <path name="voicemmode2-call">
-        <ctl name="Voice2 Stub Tx Mixer TERT_MI2S_TX" value="1" />
-        <ctl name="QUAT_MI2S_RX_Voice Mixer Voice2 Stub" value="1" />
-        <ctl name="Voice2 Stub Tx Mixer QUAT_MI2S_TX" value="1" />
-        <ctl name="TERT_MI2S_RX_Voice Mixer Voice2 Stub" value="1" />
-        <ctl name="QUAT_MI2S_RX Port Mixer TERT_MI2S_TX" value="1" />
-        <ctl name="TERT_MI2S_RX Port Mixer QUAT_MI2S_TX" value="1" />
+        <ctl name="Voice Stub Tx Mixer PRI_MI2S_TX" value="1" />
+        <ctl name="QUAT_MI2S_RX_Voice Mixer Voice Stub" value="1" />
+        <ctl name="Voice Stub Tx Mixer QUAT_MI2S_TX" value="1" />
+        <ctl name="PRI_MI2S_RX_Voice Mixer Voice Stub" value="1" />
+        <ctl name="QUAT_MI2S_RX Port Mixer PRI_MI2S_TX" value="1" />
+        <ctl name="PRI_MI2S_RX Port Mixer QUAT_MI2S_TX" value="1" />
+    </path>
+
+    <path name="gsm-mode">
+        <ctl name="GSM mode Enable" value="ON" />
     </path>
 
     <!-- These are actual sound device specific mixer settings -->

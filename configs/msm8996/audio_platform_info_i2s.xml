@@ -34,4 +34,10 @@
         <device name="SND_DEVICE_OUT_SPEAKER" acdb_id="10" />
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER" acdb_id="10" />
     </acdb_ids>
+    <pcm_ids>
+        <usecase name="USECASE_VOICEMMODE1_CALL" type="in" id="2"/>
+        <usecase name="USECASE_VOICEMMODE1_CALL" type="out" id="2"/>
+        <usecase name="USECASE_VOICEMMODE2_CALL" type="in" id="2"/>
+        <usecase name="USECASE_VOICEMMODE2_CALL" type="out" id="2"/>
+    </pcm_ids>
 </audio_platform_info_i2s>
