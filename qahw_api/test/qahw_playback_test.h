@@ -152,6 +152,7 @@ int get_wav_header_length (FILE* file_stream);
 #define qap_wrapper_get_cmd_string_from_arg_array(argc, argv, status)    (0)
 #define qap_wrapper_start_stream (stream_data)                           (0)
 #define is_qap_session_active(argc, argv, kvp_string)                    (0)
+#define get_play_list(fp, stream_param, num_of_streams, kvp_str)         (0)
 #define check_for_playlist(kvp_string)                                   (0)
 #define start_playback_through_qap(kvp_string, num_of_streams,\
                                          qap_out_hal_handle_t)           (0)
@@ -169,6 +170,7 @@ char * qap_wrapper_get_cmd_string_from_arg_array(int argc, char * argv[], int *s
 void *qap_wrapper_start_stream (void* stream_data);
 void get_file_format(stream_config *stream_info);
 bool is_qap_session_active(int argc, char* argv[], char *kvp_string);
+void get_play_list(FILE *fp, stream_config (*stream_param)[], int *num_of_streams, char *kvp_str[]);
 char* check_for_playlist(char *kvp_string);
 int start_playback_through_qap(char * kvp_string, int num_of_streams,\
                                 qahw_module_handle_t *qap_out_hal_handle_t);

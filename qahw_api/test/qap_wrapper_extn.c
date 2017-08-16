@@ -108,6 +108,7 @@ double data_callback_st_arr[TIMESTAMP_ARRAY_SIZE];
 bool has_system_input = false;
 char session_kv_pairs[256];
 bool stream_close = false;
+uint32_t dsp_latency = 0;
 
 
 static void update_combo_dev_kvpairs()
@@ -229,6 +230,8 @@ static void qap_wrapper_measure_kpi_values(double cold_start, double cold_stop)
     fprintf(stdout, "cold time latency %lf ms, avg cont time latency %lf ms,"
             "total cont time latency %f ms, total count %d\n",
             cold_time_latency, cont_time_latency, total_lat, cnt);
+    if (dsp_latency)
+        fprintf(stdout, "Dsp latency = %lu ms \n", dsp_latency);
 }
 
 static void qap_wrapper_read_frame_size_from_file(qap_audio_buffer_t *buffer, FILE *fp_framesize)
@@ -831,6 +834,8 @@ void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, 
                                 if (bytes_written == -1) {
                                     ALOGE("%s::%d write failed in hal", __func__, __LINE__);
                                 }
+                            if (kpi_mode && data_callback_count == 6)
+                                dsp_latency = qahw_out_get_latency(qap_out_hdmi_handle);
                         }
                         if (kpi_mode && data_callback_count == 1) {
                              gettimeofday(&tcold_stop, NULL);
@@ -893,6 +898,8 @@ void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, 
                                 if (bytes_written == -1) {
                                     ALOGE("%s::%d write failed in hal", __func__, __LINE__);
                                 }
+                            if (kpi_mode && data_callback_count == 6)
+                                dsp_latency = qahw_out_get_latency(qap_out_hp_handle);
                         }
                         if (kpi_mode && data_callback_count == 1) {
                              gettimeofday(&tcold_stop, NULL);
@@ -968,6 +975,8 @@ void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, 
                                 if (bytes_written == -1) {
                                     ALOGE("%s::%d write failed in hal", __func__, __LINE__);
                                 }
+                            if (kpi_mode && data_callback_count == 6)
+                                dsp_latency = qahw_out_get_latency(qap_out_spk_handle);
                         }
                         if (kpi_mode && data_callback_count == 1) {
                              gettimeofday(&tcold_stop, NULL);

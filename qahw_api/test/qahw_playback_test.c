@@ -2347,7 +2347,7 @@ int main(int argc, char* argv[]) {
         qap_out_hal_handle = load_hal(stream->output_device);
         if (qap_out_hal_handle == NULL) {
             fprintf(stderr, "Failed log load HAL\n");
-            return;
+            goto exit;
         }
 
         file_name = (char*) check_for_playlist(kvp_string);
