@@ -103,9 +103,9 @@
 
 #define MAX_PATH             (256)
 #define MAX_STR_SIZE         (1024)
-#define THERMAL_SYSFS "/sys/class/thermal"
-#define TZ_TYPE "/sys/class/thermal/thermal_zone%d/type"
-#define TZ_WSA "/sys/class/thermal/thermal_zone%d/temp"
+#define THERMAL_SYSFS "/sys/devices/virtual/thermal"
+#define TZ_TYPE "/sys/devices/virtual/thermal/thermal_zone%d/type"
+#define TZ_WSA "/sys/devices/virtual/thermal/thermal_zone%d/temp"
 
 #define AUDIO_PARAMETER_KEY_SPKR_TZ_1     "spkr_1_tz_name"
 #define AUDIO_PARAMETER_KEY_SPKR_TZ_2     "spkr_2_tz_name"
