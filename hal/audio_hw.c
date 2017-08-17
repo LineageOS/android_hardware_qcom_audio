@@ -1483,7 +1483,9 @@ static inline ssize_t read_usb_sup_sample_rates(bool is_playback __unused,
     ssize_t count = audio_extn_usb_get_sup_sample_rates(is_playback,
                                                         supported_sample_rates,
                                                         max_rates);
-    for (ssize_t i=0; i<count; i++) {
+    ssize_t i = 0;
+
+    for (i=0; i<count; i++) {
         ALOGV("%s %s %d", __func__, is_playback ? "P" : "C",
               supported_sample_rates[i]);
     }
@@ -5467,8 +5469,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->stream.pause = out_pause;
         out->stream.resume = out_resume;
         out->stream.flush = out_flush;
+        out->stream.set_callback = out_set_callback;
         if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
-            out->stream.set_callback = out_set_callback;
             out->stream.drain = out_drain;
             out->usecase = get_offload_usecase(adev, true /* is_compress */);
             ALOGV("Compress Offload usecase .. usecase selected %d", out->usecase);
