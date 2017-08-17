@@ -995,7 +995,8 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC) ||
             (usecase->stream.out->format == AUDIO_FORMAT_DOLBY_TRUEHD))
-            && audio_extn_passthru_is_passthrough_stream(usecase->stream.out)) {
+            && audio_extn_passthru_is_passthrough_stream(usecase->stream.out)
+            && !audio_extn_passthru_is_convert_supported(adev, usecase->stream.out)) {
 
             sample_rate = sample_rate * 4;
             if (sample_rate > HDMI_PASSTHROUGH_MAX_SAMPLE_RATE)

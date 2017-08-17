@@ -5476,10 +5476,10 @@ static void platform_check_hdmi_backend_cfg(struct audio_device* adev,
                   __func__, DEFAULT_HDMI_OUT_CHANNELS);
             channels = DEFAULT_HDMI_OUT_CHANNELS;
         }
-        if ((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
+        if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
             (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC) ||
-            (usecase->stream.out->format == AUDIO_FORMAT_DOLBY_TRUEHD)) {
-
+            (usecase->stream.out->format == AUDIO_FORMAT_DOLBY_TRUEHD))
+            && (usecase->stream.out->compr_config.codec->compr_passthr == PASSTHROUGH)) {
             sample_rate = sample_rate * 4;
             if (sample_rate > HDMI_PASSTHROUGH_MAX_SAMPLE_RATE)
                 sample_rate = HDMI_PASSTHROUGH_MAX_SAMPLE_RATE;

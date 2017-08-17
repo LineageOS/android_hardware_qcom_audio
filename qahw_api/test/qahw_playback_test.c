@@ -36,7 +36,7 @@
 #define KV_PAIR_MAX_LENGTH  1000
 
 #define FORMAT_PCM 1
-#define WAV_HEADER_LENGTH_MAX 46
+#define WAV_HEADER_LENGTH_MAX 128
 
 #define MAX_PLAYBACK_STREAMS   105 //This value is changed to suppport 100 clips in playlist
 #define PRIMARY_STREAM_INDEX   0
