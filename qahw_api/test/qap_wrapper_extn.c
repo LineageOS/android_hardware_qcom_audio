@@ -56,6 +56,7 @@
 #define TIMESTAMP_ARRAY_SIZE 2048
 #define DOLBY 1
 #define DTS   2
+#define FRAME_SIZE_FOR_2CH_PCM 6144 /* For 48k samplerate, 2 ch, 2 bytes */
 
 qap_lib_handle_t ms12_lib_handle = NULL;
 qap_lib_handle_t m8_lib_handle = NULL;
@@ -296,7 +297,7 @@ char* check_for_playlist(char *kvp_string) {
     char *play_list = NULL;
     int len = 0;
 
-    tmp_str = strstr(kvp_string, "g=");
+    tmp_str = strstr(kvp_string, "g=/");
     if (tmp_str != NULL) {
         file_str = strstr(kvp_string, ".txt");
         len = file_str - tmp_str;
@@ -503,7 +504,7 @@ char * qap_wrapper_get_cmd_string_from_arg_array(int argc, char * argv[], int *s
     }
 
     if (mem > 0)
-        kvps = malloc(mem * sizeof(char));
+        kvps = calloc(1, mem * sizeof(char));
     else {
         *status = -EINVAL;
         fprintf(stdout, "%s %d returning EINVAL\n", __func__, __LINE__);
@@ -1293,6 +1294,10 @@ void *qap_wrapper_start_stream (void* stream_data)
                 int wav_header_len = get_wav_header_length(stream_info->file_stream);
                 fseek(fp_input, wav_header_len, SEEK_SET);
             }
+            if (stream_info->channels > 6)
+                stream_info->bytes_to_read = (FRAME_SIZE_FOR_2CH_PCM * 4);
+            else
+                stream_info->bytes_to_read = (FRAME_SIZE_FOR_2CH_PCM * 3);
         }
         buffer->buffer_parms.input_buf_params.flags = QAP_BUFFER_NO_TSTAMP;
         buffer->common_params.timestamp = QAP_BUFFER_NO_TSTAMP;
