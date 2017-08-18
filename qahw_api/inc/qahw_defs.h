@@ -180,6 +180,23 @@ __BEGIN_DECLS
 #define MAX_OUT_CHANNELS 8
 #define MAX_INP_CHANNELS 8
 
+#define QAHW_PCM_CHANNEL_FL    1  /* Front left channel.                           */
+#define QAHW_PCM_CHANNEL_FR    2  /* Front right channel.                          */
+#define QAHW_PCM_CHANNEL_FC    3  /* Front center channel.                         */
+#define QAHW_PCM_CHANNEL_LS    4  /* Left surround channel.                        */
+#define QAHW_PCM_CHANNEL_RS    5  /* Right surround channel.                       */
+#define QAHW_PCM_CHANNEL_LFE   6  /* Low frequency effect channel.                 */
+#define QAHW_PCM_CHANNEL_CS    7  /* Center surround channel; Rear center channel. */
+#define QAHW_PCM_CHANNEL_LB    8  /* Left back channel; Rear left channel.         */
+#define QAHW_PCM_CHANNEL_RB    9  /* Right back channel; Rear right channel.       */
+#define QAHW_PCM_CHANNEL_TS   10  /* Top surround channel.                         */
+#define QAHW_PCM_CHANNEL_CVH  11  /* Center vertical height channel.               */
+#define QAHW_PCM_CHANNEL_MS   12  /* Mono surround channel.                        */
+#define QAHW_PCM_CHANNEL_FLC  13  /* Front left of center.                         */
+#define QAHW_PCM_CHANNEL_FRC  14  /* Front right of center.                        */
+#define QAHW_PCM_CHANNEL_RLC  15  /* Rear left of center.                          */
+#define QAHW_PCM_CHANNEL_RRC  16  /* Rear right of center.                         */
+
 /* type of asynchronous write callback events. Mutually exclusive */
 typedef enum {
     QAHW_STREAM_CBK_EVENT_WRITE_READY, /* non blocking write completed */

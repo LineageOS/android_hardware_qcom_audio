@@ -1776,41 +1776,37 @@ audio_channel_mask_t get_channel_mask_for_name(char *name) {
     if (NULL == name)
         return channel_type;
     else if (strncmp(name, "fl", 2) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_FRONT_LEFT;
+        channel_type = QAHW_PCM_CHANNEL_FL;
     else if (strncmp(name, "fr", 2) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_FRONT_RIGHT;
+        channel_type = QAHW_PCM_CHANNEL_FR;
     else if (strncmp(name, "fc", 2) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_FRONT_CENTER;
+        channel_type = QAHW_PCM_CHANNEL_FC;
     else if (strncmp(name, "lfe", 2) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_LOW_FREQUENCY;
+        channel_type = QAHW_PCM_CHANNEL_LFE;
     else if (strncmp(name, "bl", 2) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_BACK_LEFT;
+        channel_type = QAHW_PCM_CHANNEL_LB;
     else if (strncmp(name, "br", 2) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_BACK_RIGHT;
+        channel_type = QAHW_PCM_CHANNEL_RB;
     else if (strncmp(name, "flc", 3) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_FRONT_LEFT_OF_CENTER;
+        channel_type = QAHW_PCM_CHANNEL_FLC;
     else if (strncmp(name, "frc", 3) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_FRONT_RIGHT_OF_CENTER;
-    else if (strncmp(name, "bc", 2) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_BACK_CENTER;
-    else if (strncmp(name, "sl", 2) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_SIDE_LEFT;
-    else if (strncmp(name, "sr", 2) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_SIDE_RIGHT;
-    else if (strncmp(name, "tc", 2) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_TOP_CENTER;
-    else if (strncmp(name, "tfl", 3) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_TOP_FRONT_LEFT;
-    else if (strncmp(name, "tfc", 3) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_TOP_FRONT_CENTER;
-    else if (strncmp(name, "tfr", 3) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_TOP_FRONT_RIGHT;
-    else if (strncmp(name, "tbl", 3) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_TOP_BACK_LEFT;
-    else if (strncmp(name, "tbc", 3) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_TOP_BACK_CENTER;
-    else if (strncmp(name, "tbr", 3) == 0)
-        channel_type = AUDIO_CHANNEL_OUT_TOP_BACK_RIGHT;
+        channel_type = QAHW_PCM_CHANNEL_FRC;
+    else if (strncmp(name, "cs", 2) == 0)
+        channel_type = QAHW_PCM_CHANNEL_CS;
+    else if (strncmp(name, "ls", 2) == 0)
+        channel_type = QAHW_PCM_CHANNEL_LS;
+    else if (strncmp(name, "rs", 2) == 0)
+        channel_type = QAHW_PCM_CHANNEL_RS;
+    else if (strncmp(name, "ts", 2) == 0)
+        channel_type = QAHW_PCM_CHANNEL_TS;
+    else if (strncmp(name, "cvh", 3) == 0)
+        channel_type = QAHW_PCM_CHANNEL_CVH;
+    else if (strncmp(name, "ms", 3) == 0)
+        channel_type = QAHW_PCM_CHANNEL_MS;
+    else if (strncmp(name, "rlc", 3) == 0)
+        channel_type = QAHW_PCM_CHANNEL_RLC;
+    else if (strncmp(name, "rrc", 3) == 0)
+        channel_type = QAHW_PCM_CHANNEL_RRC;
 
     return channel_type;
 }
@@ -1958,7 +1954,8 @@ int main(int argc, char* argv[]) {
 
     kpi_mode = false;
     char mixer_ctrl_name[64] = {0};
-    int mixer_ctrl_type = 0;
+    int pan_scal_ctrl = 0;
+    int mix_ctrl = 0;
     event_trigger = false;
     bool wakelock_acquired = false;
 
@@ -2094,11 +2091,11 @@ int main(int argc, char* argv[]) {
         case 'k':
             get_kvpairs_string(optarg, "mixer_ctrl", mixer_ctrl_name);
             if(strncmp(mixer_ctrl_name, "downmix", 7) == 0) {
-                mixer_ctrl_type = QAHW_PARAM_CH_MIX_MATRIX_PARAMS;
+                mix_ctrl = QAHW_PARAM_CH_MIX_MATRIX_PARAMS;
             } else if(strncmp(mixer_ctrl_name, "pan_scale", 9) == 0) {
-                mixer_ctrl_type = QAHW_PARAM_OUT_MIX_MATRIX_PARAMS;
+                pan_scal_ctrl = QAHW_PARAM_OUT_MIX_MATRIX_PARAMS;
             } else {
-                mixer_ctrl_type = 0;
+                mix_ctrl = pan_scal_ctrl = 0;
                 stream_param[i].kvpair_values = optarg;
             }
             break;
@@ -2509,7 +2506,7 @@ int main(int argc, char* argv[]) {
 
         thread_active[i] = true;
         usleep(500000); //Wait until stream is created
-        if(mixer_ctrl_type == QAHW_PARAM_OUT_MIX_MATRIX_PARAMS) {
+        if(pan_scal_ctrl == QAHW_PARAM_OUT_MIX_MATRIX_PARAMS) {
             payload = (qahw_param_payload) mm_params;
             param_id = QAHW_PARAM_OUT_MIX_MATRIX_PARAMS;
             rc = qahw_out_set_param_data(stream->out_handle, param_id, &payload);
@@ -2517,7 +2514,7 @@ int main(int argc, char* argv[]) {
                 fprintf(log_file, "QAHW_PARAM_OUT_MIX_MATRIX_PARAMS could not be sent!\n");
             }
         }
-        if(mixer_ctrl_type == QAHW_PARAM_CH_MIX_MATRIX_PARAMS) {
+        if(mix_ctrl == QAHW_PARAM_CH_MIX_MATRIX_PARAMS) {
             payload = (qahw_param_payload) mm_params;
             param_id = QAHW_PARAM_CH_MIX_MATRIX_PARAMS;
             rc = qahw_out_set_param_data(stream->out_handle, param_id, &payload);
