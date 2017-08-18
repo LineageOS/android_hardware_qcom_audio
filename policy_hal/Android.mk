@@ -25,6 +25,7 @@ LOCAL_SHARED_LIBRARIES := \
     libserviceutility
 
 LOCAL_STATIC_LIBRARIES := \
+    libbase \
     libmedia_helper \
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HDMI_SPK)),true)
