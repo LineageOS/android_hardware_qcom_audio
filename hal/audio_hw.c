@@ -1645,6 +1645,10 @@ static bool force_device_switch(struct audio_usecase *usecase)
          ret = true;
      }
 
+     if (usecase->stream.out->stream_config_changed) {
+         ALOGD("Force stream_config_changed to update iec61937 transmission config");
+         return true;
+     }
     return ret;
 }
 
@@ -3739,6 +3743,29 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             audio_extn_passthru_update_stream_configuration(adev, out,
                     buffer, bytes);
             out->is_iec61937_info_available = true;
+
+            if((out->format == AUDIO_FORMAT_DTS) ||
+               (out->format == AUDIO_FORMAT_DTS_HD)) {
+                ret = audio_extn_passthru_update_dts_stream_configuration(out,
+                                                                buffer, bytes);
+                if (ret) {
+                    if (ret != -ENOSYS) {
+                        out->is_iec61937_info_available = false;
+                        ALOGD("iec61937 transmission info not yet updated retry");
+                    }
+                } else {
+                    /* if stream has started and after that there is
+                     * stream config change (iec transmission config)
+                     * then trigger select_device to update backend configuration.
+                     */
+                    out->stream_config_changed = true;
+                    pthread_mutex_lock(&adev->lock);
+                    select_devices(adev, out->usecase);
+                    pthread_mutex_unlock(&adev->lock);
+                    out->stream_config_changed = false;
+                    out->is_iec61937_info_available = true;
+                }
+            }
         }
     }
 

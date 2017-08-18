@@ -90,7 +90,7 @@ static const audio_format_t audio_passthru_formats[] = {
 static volatile int32_t compress_passthru_active;
 
 #ifdef DTSHD_PARSER_ENABLED
-static void passthru_update_stream_configuration_from_dts_parser( struct stream_out *out,
+int audio_extn_passthru_update_dts_stream_configuration(struct stream_out *out,
         const void *buffer, size_t bytes)
 {
     struct audio_parser_codec_info codec_info;
@@ -99,6 +99,27 @@ static void passthru_update_stream_configuration_from_dts_parser( struct stream_
     int ret;
     bool is_valid_transmission_rate = false;
     bool is_valid_transmission_channels = false;
+
+    if (!out) {
+        ALOGE("Invalid session");
+        return -EINVAL;
+    }
+
+    if ((out->format != AUDIO_FORMAT_DTS) &&
+        (out->format != AUDIO_FORMAT_DTS_HD)) {
+        ALOGE("Non DTS format %d", out->format);
+        return -EINVAL;
+    }
+
+    if (!buffer || bytes <= 0) {
+        ALOGD("Invalid buffer %p size %d skipping dts stream conf update",
+                buffer, bytes);
+        out->sample_rate = 48000;
+        out->compr_config.codec->sample_rate = out->sample_rate;
+        out->compr_config.codec->ch_in = 2;
+        out->channel_mask = audio_channel_out_mask_from_count(2);
+        return -EINVAL;
+    }
 
     /* codec format is AUDIO_PARSER_CODEC_DTSHD for both DTS and DTSHD as
      *  DTSHD parser can support both DTS and DTSHD
@@ -147,14 +168,15 @@ static void passthru_update_stream_configuration_from_dts_parser( struct stream_
         out->compr_config.codec->ch_in = 2;
         out->channel_mask = audio_channel_out_mask_from_count(2);
     }
+    return 0;
 }
 #else
-static void passthru_update_stream_configuration_from_dts_parser(
+int audio_extn_passthru_update_dts_stream_configuration(
                         struct stream_out *out __unused,
                         const void *buffer __unused,
                         size_t bytes __unused)
 {
-    return;
+    return -ENOSYS;
 }
 #endif
 
@@ -406,15 +428,6 @@ void audio_extn_passthru_update_stream_configuration(
         ALOGV("%s:NO PASSTHROUGH", __func__);
         out->compr_config.codec->compr_passthr = LEGACY_PCM;
     }
-
-    /*
-     * for DTS passthrough, need to get sample rate from bitstream,
-     * based on this sample rate hdmi backend will be configured
-     */
-    if ((out->format == AUDIO_FORMAT_DTS) ||
-        (out->format == AUDIO_FORMAT_DTS_HD))
-        passthru_update_stream_configuration_from_dts_parser(out, buffer, bytes);
-
 }
 
 bool audio_extn_passthru_is_passthrough_stream(struct stream_out *out)
