@@ -263,7 +263,7 @@ static void qap_wrapper_read_frame_size_from_file(qap_audio_buffer_t *buffer, FI
 static void read_bytes_timestamps_from_file(qap_audio_buffer_t *buffer, FILE *fp_timestamp, FILE *fp_input_file)
 {
     if (NULL != fp_timestamp) {
-        char tempstr[100];
+        char tempstr[100] = {0};
         int seek_offset = 0;
         fgets(tempstr, sizeof(tempstr), fp_timestamp);
         printf("%s and tempstr is %s \n", __FUNCTION__,  tempstr);
@@ -283,6 +283,9 @@ static void read_bytes_timestamps_from_file(qap_audio_buffer_t *buffer, FILE *fp
                         fseek(fp_input_file, seek_offset, SEEK_CUR);
                 }
             }
+        } else {
+            buffer->common_params.timestamp = CONTIGUOUS_TIMESTAMP;
+            buffer->common_params.size = 0;
         }
     }
 }
@@ -1410,6 +1413,7 @@ void *qap_wrapper_start_stream (void* stream_data)
         reply_data = (char*) calloc(1, 100);
         is_buffer_available = 0;
         temp_ptr = buffer->common_params.data;
+        int time_index = data_write_count;
         if (kpi_mode) {
             if (data_write_count > 5 && data_write_count < TIMESTAMP_ARRAY_SIZE) {
                 gettimeofday(&tcont_ts1, NULL);
@@ -1430,28 +1434,33 @@ void *qap_wrapper_start_stream (void* stream_data)
             ALOGV("%s %d feeding Input of size %d  and bytes_cosumed is %d",
                       __FUNCTION__, __LINE__,bytes_read, bytes_consumed);
             if (stream_info->filetype == FILE_DTS) {
-                  if (bytes_consumed < 0) {
-                      while (!is_buffer_available) {
-                          usleep(1000);
-                          ret = qap_module_cmd(qap_module_handle, QAP_MODULE_CMD_GET_PARAM,
-                                 sizeof(QAP_MODULE_CMD_GET_PARAM), "buf_available", NULL, reply_data
-                          );
-                          if (reply_data)
-                              temp_str = get_string_value(reply_data, &status);
-                           if (temp_str) {
-                               is_buffer_available = atoi(temp_str);
-                               free(temp_str);
-                           }
-                           ALOGV("%s : %d, dts clip reply_data is %d buffer availabale is %d",
-                                 __FUNCTION__, __LINE__, reply_data, is_buffer_available);
-                       }
-                  }
-             }
+                if (bytes_consumed < 0) {
+                    while (!is_buffer_available) {
+                        usleep(1000);
+                        ret = qap_module_cmd(qap_module_handle, QAP_MODULE_CMD_GET_PARAM,
+                                             sizeof(QAP_MODULE_CMD_GET_PARAM), "buf_available", NULL, reply_data
+                        );
+                        if (reply_data)
+                            temp_str = get_string_value(reply_data, &status);
+                        if (temp_str) {
+                            is_buffer_available = atoi(temp_str);
+                            free(temp_str);
+                        }
+                        ALOGV("%s : %d, dts clip reply_data is %d buffer availabale is %d",
+                              __FUNCTION__, __LINE__, reply_data, is_buffer_available);
+                    }
+
+                    if(kpi_mode && time_index > 5) {
+                        gettimeofday(&tcont_ts1, NULL);
+                        data_input_st_arr[time_index] = (tcont_ts1.tv_sec) * 1000 + (tcont_ts1.tv_usec) / 1000;
+                    }
+                }
+            }
         } while (buffer->common_params.size > 0);
         if (reply_data)
             free(reply_data);
         buffer->common_params.data = temp_ptr;
-        if (!(stream_info->system_input || stream_info->sec_input)) {
+        if (!(stream_info->system_input || stream_info->sec_input) && !(kpi_mode)) {
             usleep(5000); //To swtich between main and secondary threads incase of dual input
         }
     } while (1);
