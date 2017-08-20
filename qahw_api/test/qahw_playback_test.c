@@ -1506,9 +1506,6 @@ void usage() {
     printf(" -m  --mode                                - usb operating mode(Device Mode is default)\n");
     printf("                                             0:Device Mode(host drives the stream and its params and so no need to give params as input)\n");
     printf("                                             1:Host Mode(user can give stream and stream params via a stream(SD card file) or setup loopback with given params\n");
-    printf(" -O  --output-ch-map                       - output channel map\n");
-    printf(" -I  --input-ch-map                        - input channel map\n");
-    printf(" -M  --mixer-coeffs                        - mixer coefficient matrix\n");
     printf(" -i  --intr-strm                           - interactive stream indicator\n");
     printf(" -C  --Device Config                       - Device Configuration params\n");
     printf("                                             Params should be in the order defined in struct qahw_device_cfg_param. Order is: \n");
@@ -1579,6 +1576,8 @@ void usage() {
     printf("                                          ->full duplex, setup both primary to usb and usb to primary loopbacks\n");
     printf("                                          ->Note:-P separates the steam params for both the loopbacks\n");
     printf("                                          ->Note:all the USB device commmands(above) should be accompanied with the host side commands\n\n");
+    printf("hal_play_test -f interactive_audio.wav -d 2 -l out.txt -k \"mixer_ctrl=pan_scale;c=1;o=6;I=fc;O=fl,fr,fc,lfe,bl,br;M=0.5,0.5,0,0,0,0\" -i 1\n");
+    printf("                                          ->kv_pair for downmix or pan_scale should folow the above sequence, one can pass downmix & pan_scale params/coeff matrices. For each control params should be sent separately \n");
 }
 
 int get_wav_header_length (FILE* file_stream)
@@ -1939,13 +1938,9 @@ int start_playback_through_qap(char * kvp_string, int num_of_streams,  qahw_modu
 
 int main(int argc, char* argv[]) {
     char *ba = NULL;
-    char *temp_input_channel_map = NULL;
-    char *temp_output_channel_map = NULL;
-    char *temp_mixer_coeffs = NULL;
     qahw_param_payload payload;
     qahw_param_id param_id;
     struct qahw_aptx_dec_param aptx_params;
-    qahw_mix_matrix_params_t mm_params;
     int rc = 0;
     int i = 0;
     int iter_i = 0;
@@ -1954,8 +1949,11 @@ int main(int argc, char* argv[]) {
 
     kpi_mode = false;
     char mixer_ctrl_name[64] = {0};
-    int pan_scal_ctrl = 0;
-    int mix_ctrl = 0;
+    char input_ch[64] = {0};
+    char output_ch[64] = {0};
+    char input_ch_map[64] = {0};
+    char output_ch_map[64] = {0};
+    char mixer_coeff[64] = {0};
     event_trigger = false;
     bool wakelock_acquired = false;
 
@@ -2001,10 +1999,6 @@ int main(int argc, char* argv[]) {
         {"effect-strength", required_argument,    0, 'S'},
         {"render-format", required_argument,    0, 'x'},
         {"timestamp-file", required_argument,    0, 'y'},
-        {"output-ch-map", required_argument,    0, 'O'},
-        {"input-ch-map",  required_argument,    0, 'I'},
-        {"mixer-coeffs",  required_argument,    0, 'M'},
-        {"num-out-ch",    required_argument,    0, 'o'},
         {"intr-strm",    required_argument,    0, 'i'},
         {"device-config", required_argument,    0, 'C'},
         {"play-list",    required_argument,    0, 'g'},
@@ -2031,7 +2025,7 @@ int main(int argc, char* argv[]) {
 
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:s:v:V:l:t:a:w:k:PD:KF:Ee:A:u:m:S:C:p::x:y:qQhI:O:M:o:i:h:g:",
+                              "-f:r:c:b:d:s:v:V:l:t:a:w:k:PD:KF:Ee:A:u:m:S:C:p::x:y:qQh:i:h:g:",
                               long_options,
                               &option_index)) != -1) {
 
@@ -2048,7 +2042,6 @@ int main(int argc, char* argv[]) {
         case 'c':
             stream_param[i].channels = atoi(optarg);
             stream_param[i].config.channel_mask = audio_channel_out_mask_from_count(atoi(optarg));
-            mm_params.num_input_channels = stream_param[i].channels;
             break;
         case 'b':
             stream_param[i].config.offload_info.bit_width = atoi(optarg);
@@ -2090,12 +2083,77 @@ int main(int argc, char* argv[]) {
             break;
         case 'k':
             get_kvpairs_string(optarg, "mixer_ctrl", mixer_ctrl_name);
+            printf("%s, mixer_ctrl_name- %s\n", __func__, mixer_ctrl_name);
             if(strncmp(mixer_ctrl_name, "downmix", 7) == 0) {
-                mix_ctrl = QAHW_PARAM_CH_MIX_MATRIX_PARAMS;
+                stream_param[i].mix_ctrl = QAHW_PARAM_CH_MIX_MATRIX_PARAMS;
+
+                get_kvpairs_string(optarg, "c", input_ch);
+                stream_param[i].mm_params_downmix.num_input_channels = atoi(input_ch);
+                get_kvpairs_string(optarg, "o", output_ch);
+                stream_param[i].mm_params_downmix.num_output_channels = atoi(output_ch);
+                get_kvpairs_string(optarg, "I", input_ch_map);
+                get_kvpairs_string(optarg, "O", output_ch_map);
+                get_kvpairs_string(optarg, "M", mixer_coeff);
+
+                extract_channel_mapping(stream_param[i].mm_params_downmix.input_channel_map, input_ch_map);
+                stream_param[i].mm_params_downmix.has_input_channel_map = 1;
+                fprintf(log_file, "\ndownmix Input channel mapping: ");
+                for (iter_i= 0; iter_i < stream_param[i].mm_params_downmix.num_input_channels; iter_i++) {
+                    fprintf(log_file, "0x%x, ", stream_param[i].mm_params_downmix.input_channel_map[iter_i]);
+                }
+
+                extract_channel_mapping(stream_param[i].mm_params_downmix.output_channel_map, output_ch_map);
+                stream_param[i].mm_params_downmix.has_output_channel_map = 1;
+                fprintf(log_file, "\ndownmix Output channel mapping: ");
+                for (iter_i = 0; iter_i < stream_param[i].mm_params_downmix.num_output_channels; iter_i++)
+                    fprintf(log_file, "0x%x, ", stream_param[i].mm_params_downmix.output_channel_map[iter_i]);
+
+
+                extract_mixer_coeffs(&stream_param[i].mm_params_downmix, mixer_coeff);
+                stream_param[i].mm_params_downmix.has_mixer_coeffs = 1;
+                fprintf(log_file, "\ndownmix mixer coeffs:\n");
+                for (iter_i = 0; iter_i < stream_param[i].mm_params_downmix.num_output_channels; iter_i++){
+                    for (iter_j = 0; iter_j < stream_param[i].mm_params_downmix.num_input_channels; iter_j++){
+                        fprintf(log_file, "%.2f ",stream_param[i].mm_params_downmix.mixer_coeffs[iter_i][iter_j]);
+                    }
+                    fprintf(log_file, "\n");
+                }
+
             } else if(strncmp(mixer_ctrl_name, "pan_scale", 9) == 0) {
-                pan_scal_ctrl = QAHW_PARAM_OUT_MIX_MATRIX_PARAMS;
+                stream_param[i].pan_scale_ctrl = QAHW_PARAM_OUT_MIX_MATRIX_PARAMS;
+
+                get_kvpairs_string(optarg, "c", input_ch);
+                stream_param[i].mm_params_pan_scale.num_input_channels = atoi(input_ch);
+                get_kvpairs_string(optarg, "o", output_ch);
+                stream_param[i].mm_params_pan_scale.num_output_channels = atoi(output_ch);
+                get_kvpairs_string(optarg, "I", input_ch_map);
+                get_kvpairs_string(optarg, "O", output_ch_map);
+                get_kvpairs_string(optarg, "M", mixer_coeff);
+
+                extract_channel_mapping(stream_param[i].mm_params_pan_scale.input_channel_map, input_ch_map);
+                stream_param[i].mm_params_pan_scale.has_input_channel_map = 1;
+                fprintf(log_file, "\n pan_sclae Input channel mapping: ");
+                for (iter_i= 0; iter_i < stream_param[i].mm_params_pan_scale.num_input_channels; iter_i++) {
+                    fprintf(log_file, "0x%x, ", stream_param[i].mm_params_pan_scale.input_channel_map[iter_i]);
+                }
+
+                extract_channel_mapping(stream_param[i].mm_params_pan_scale.output_channel_map, output_ch_map);
+                stream_param[i].mm_params_pan_scale.has_output_channel_map = 1;
+                fprintf(log_file, "\n pan_scale Output channel mapping: ");
+                for (iter_i = 0; iter_i < stream_param[i].mm_params_pan_scale.num_output_channels; iter_i++)
+                    fprintf(log_file, "0x%x, ", stream_param[i].mm_params_pan_scale.output_channel_map[iter_i]);
+
+                extract_mixer_coeffs(&stream_param[i].mm_params_pan_scale, mixer_coeff);
+                stream_param[i].mm_params_pan_scale.has_mixer_coeffs = 1;
+                fprintf(log_file, "\n pan_scale mixer coeffs:\n");
+                for (iter_i = 0; iter_i < stream_param[i].mm_params_pan_scale.num_output_channels; iter_i++){
+                    for (iter_j = 0; iter_j < stream_param[i].mm_params_pan_scale.num_input_channels; iter_j++){
+                        fprintf(log_file, "%.2f ",stream_param[i].mm_params_pan_scale.mixer_coeffs[iter_i][iter_j]);
+                    }
+                    fprintf(log_file, "\n");
+                }
+
             } else {
-                mix_ctrl = pan_scal_ctrl = 0;
                 stream_param[i].kvpair_values = optarg;
             }
             break;
@@ -2157,18 +2215,6 @@ int main(int argc, char* argv[]) {
             break;
         case 'm':
             stream_param[i].usb_mode = atoi(optarg);
-            break;
-        case 'O':
-            temp_output_channel_map = strdup(optarg);
-            break;
-        case 'I':
-            temp_input_channel_map = strdup(optarg);
-            break;
-        case 'M':
-            temp_mixer_coeffs = strdup(optarg);
-            break;
-        case 'o':
-            mm_params.num_output_channels = atoi(optarg);
             break;
         case 'x':
             render_format = atoi(optarg);
@@ -2245,49 +2291,6 @@ int main(int argc, char* argv[]) {
             return 0;
             break;
 
-        }
-    }
-
-    /*
-     * Process Input channel map's input
-     */
-    if (NULL != temp_input_channel_map) {
-        extract_channel_mapping(mm_params.input_channel_map, temp_input_channel_map);
-        mm_params.has_input_channel_map = 1;
-        fprintf(log_file, "\nInput channel mapping: ");
-        for (iter_i= 0; iter_i < mm_params.num_input_channels; iter_i++) {
-            fprintf(log_file, "0x%x, ", mm_params.input_channel_map[iter_i]);
-        }
-        free(temp_input_channel_map);
-        temp_input_channel_map = NULL;
-    }
-
-    /*
-     * Process Output channel map's input
-     */
-    if (NULL != temp_output_channel_map) {
-        extract_channel_mapping(mm_params.output_channel_map, temp_output_channel_map);
-        mm_params.has_output_channel_map = 1;
-        fprintf(log_file, "\nOutput channel mapping: ");
-        for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++)
-            fprintf(log_file, "0x%x, ", mm_params.output_channel_map[iter_i]);
-
-        free(temp_output_channel_map);
-        temp_output_channel_map = NULL;
-    }
-
-    /*
-     * Process mixer-coeffs input
-     */
-    if (NULL != temp_mixer_coeffs) {
-        extract_mixer_coeffs(&mm_params, temp_mixer_coeffs);
-        mm_params.has_mixer_coeffs = 1;
-        fprintf(log_file, "\nmixer coeffs:\n");
-        for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++){
-            for (iter_j = 0; iter_j < mm_params.num_input_channels; iter_j++){
-                fprintf(log_file, "%.2f ",mm_params.mixer_coeffs[iter_i][iter_j]);
-            }
-            fprintf(log_file, "\n");
         }
     }
 
@@ -2506,16 +2509,16 @@ int main(int argc, char* argv[]) {
 
         thread_active[i] = true;
         usleep(500000); //Wait until stream is created
-        if(pan_scal_ctrl == QAHW_PARAM_OUT_MIX_MATRIX_PARAMS) {
-            payload = (qahw_param_payload) mm_params;
+        if(stream_param[i].pan_scale_ctrl == QAHW_PARAM_OUT_MIX_MATRIX_PARAMS) {
+            payload = (qahw_param_payload) stream_param[i].mm_params_pan_scale;
             param_id = QAHW_PARAM_OUT_MIX_MATRIX_PARAMS;
             rc = qahw_out_set_param_data(stream->out_handle, param_id, &payload);
             if (rc != 0) {
                 fprintf(log_file, "QAHW_PARAM_OUT_MIX_MATRIX_PARAMS could not be sent!\n");
             }
         }
-        if(mix_ctrl == QAHW_PARAM_CH_MIX_MATRIX_PARAMS) {
-            payload = (qahw_param_payload) mm_params;
+        if(stream_param[i].mix_ctrl == QAHW_PARAM_CH_MIX_MATRIX_PARAMS) {
+            payload = (qahw_param_payload) stream_param[i].mm_params_downmix;
             param_id = QAHW_PARAM_CH_MIX_MATRIX_PARAMS;
             rc = qahw_out_set_param_data(stream->out_handle, param_id, &payload);
             if (rc != 0) {

@@ -135,6 +135,10 @@ typedef struct {
     pthread_cond_t drain_cond;
     pthread_mutex_t drain_lock;
     bool interactive_strm;
+    qahw_mix_matrix_params_t mm_params_pan_scale;
+    qahw_mix_matrix_params_t mm_params_downmix;
+    int mix_ctrl;
+    int pan_scale_ctrl;
 }stream_config;
 
 
