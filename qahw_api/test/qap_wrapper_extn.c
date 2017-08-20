@@ -50,13 +50,19 @@
 #define SESSION_BLURAY   1
 #define SESSION_BROADCAST 2
 #define MAX_OUTPUT_CHANNELS 8
-#define FRAME_SIZE 30000
-#define MAX_BUFFER_SIZE 30000
+#define FRAME_SIZE 32768 /* 32k size */
+#define MAX_BUFFER_SIZE 32768 /* 32k size */
 #define CONTIGUOUS_TIMESTAMP 0x7fffffff
 #define TIMESTAMP_ARRAY_SIZE 2048
 #define DOLBY 1
 #define DTS   2
 #define FRAME_SIZE_FOR_2CH_PCM 6144 /* For 48k samplerate, 2 ch, 2 bytes */
+
+#define MAX_QAP_MODULE_OUT 3
+
+qap_output_config_t qap_out_configs[MAX_QAP_MODULE_OUT];
+bool is_media_fmt_changed[MAX_QAP_MODULE_OUT];
+int new_output_conf_index = 0;
 
 qap_lib_handle_t ms12_lib_handle = NULL;
 qap_lib_handle_t m8_lib_handle = NULL;
@@ -111,6 +117,16 @@ char session_kv_pairs[256];
 bool stream_close = false;
 uint32_t dsp_latency = 0;
 
+static int get_qap_out_config_index_for_id(int32_t out_id)
+{
+    int index = -1, i;
+
+    for (i = 0; i < MAX_QAP_MODULE_OUT; i++)
+        if (qap_out_configs[i].id == out_id)
+            index = i;
+
+    return index;
+}
 
 static void update_combo_dev_kvpairs()
 {
@@ -714,7 +730,35 @@ void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, 
         case QAP_CALLBACK_EVENT_SUCCESS:
             break;
         case QAP_CALLBACK_EVENT_METADATA:
+            break;
         case QAP_CALLBACK_EVENT_OUTPUT_CFG_CHANGE:
+            if (data != NULL) {
+                qap_audio_buffer_t *buffer = (qap_audio_buffer_t *) data;
+                qap_output_config_t *new_conf = &buffer->buffer_parms.output_buf_params.output_config;
+                qap_output_config_t *cached_conf = NULL;
+                int index = -1;
+
+                ALOGV("%s %d Received Output cfg change", __func__, __LINE__);
+                if (buffer) {
+                    index = get_qap_out_config_index_for_id(
+                              buffer->buffer_parms.output_buf_params.output_id);
+                    if (index < 0 && new_output_conf_index < MAX_QAP_MODULE_OUT) {
+                        index = new_output_conf_index;
+                        cached_conf = &qap_out_configs[index];
+                        new_output_conf_index++;
+                    }
+                }
+
+                if (cached_conf == NULL) {
+                    ALOGE("Maximum output from QAP is reached");
+                    return;
+                }
+                if (memcmp(cached_conf, new_conf, sizeof(qap_output_config_t)) != 0) {
+                    memcpy(cached_conf, new_conf, sizeof(qap_output_config_t));
+                    cached_conf->id = buffer->buffer_parms.output_buf_params.output_id;
+                    is_media_fmt_changed[index] = true;
+                }
+            }
             break;
         case QAP_CALLBACK_EVENT_DATA:
             if (data != NULL) {
@@ -753,6 +797,17 @@ void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, 
                 }
 
                 if (buffer && buffer->common_params.data) {
+                    int index = -1;
+                    bool is_reopen_stream = false;
+                    index = get_qap_out_config_index_for_id(buffer->buffer_parms.output_buf_params.output_id);
+                    if (index > -1 && is_media_fmt_changed[index]) {
+                        session_output_config.output_config->sample_rate = qap_out_configs[index].sample_rate;
+                        session_output_config.output_config->bit_width = qap_out_configs[index].bit_width;
+                        session_output_config.output_config->channels = qap_out_configs[index].channels;
+                        is_reopen_stream = true;
+                        is_media_fmt_changed[index] = false;
+                    }
+
                     if (buffer->buffer_parms.output_buf_params.output_id &
                             AUDIO_DEVICE_OUT_HDMI) {
                         if (!hdmi_connected) {
@@ -782,9 +837,16 @@ void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, 
                             fflush(fp_output_writer_hdmi);
                         }
 
+                        if (is_reopen_stream && qap_out_hdmi_handle) {
+                            qahw_close_output_stream(qap_out_hdmi_handle);
+                            qap_out_hdmi_handle = NULL;
+                            is_reopen_stream = false;
+                        }
+
                         if (hdmi_connected && qap_out_hdmi_handle == NULL) {
                             struct audio_config config;
                             audio_devices_t devices;
+
                             config.offload_info.version = AUDIO_INFO_INITIALIZER.version;
                             config.offload_info.size = AUDIO_INFO_INITIALIZER.size;
                             config.sample_rate = config.offload_info.sample_rate =
@@ -861,6 +923,12 @@ void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, 
                                           buffer->common_params.size, fp_output_writer_hp);
                             fflush(fp_output_writer_hp);
                         }
+                        if (is_reopen_stream && qap_out_hp_handle) {
+                            qahw_close_output_stream(qap_out_hp_handle);
+                            qap_out_hp_handle = NULL;
+                            is_reopen_stream = false;
+                        }
+
                         if (qap_out_hp_handle == NULL) {
                             struct audio_config config;
                             audio_devices_t devices;
@@ -929,6 +997,11 @@ void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, 
                             ret = fwrite((unsigned char *)buffer->common_params.data, sizeof(unsigned char),
                                           buffer->common_params.size, fp_output_writer_spk);
                             fflush(fp_output_writer_spk);
+                        }
+                        if (is_reopen_stream && qap_out_spk_handle) {
+                            qahw_close_output_stream(qap_out_spk_handle);
+                            qap_out_spk_handle = NULL;
+                            is_reopen_stream = false;
                         }
                         if (qap_out_spk_handle == NULL) {
                             struct audio_config config;
@@ -1442,7 +1515,7 @@ qap_module_handle_t qap_wrapper_stream_open(void* stream_data)
     input_config->bit_width = stream_info->config.offload_info.bit_width;
 
     if (stream_info->filetype == FILE_DTS)
-        stream_info->bytes_to_read = 10*1024;
+        stream_info->bytes_to_read = FRAME_SIZE;
     else
         stream_info->bytes_to_read = 1024;
     input_streams_count++;
