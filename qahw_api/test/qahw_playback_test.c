@@ -2337,7 +2337,6 @@ int main(int argc, char* argv[]) {
 
     if (is_qap_session_active(argc, argv, kvp_string)) {
         char *file_name = NULL;
-        char *file_name_tmp = NULL;
         char *cmd_kvp_str[100] = {NULL};
         char *play_list_kvp_str[100] = {NULL};
         int i = 0, j = 0;
