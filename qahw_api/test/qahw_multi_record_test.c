@@ -279,6 +279,14 @@ void *start_input(void *thread_param)
       pthread_exit(0);
   }
 
+  /* Turn BT_SCO on if bt_sco recording */
+  if(audio_is_bluetooth_sco_device(params->input_device)) {
+      int ret = -1;
+      const char * bt_sco_on = "BT_SCO=on";
+      ret = qahw_set_parameters(qahw_mod_handle, bt_sco_on);
+      fprintf(log_file, " param %s set to hal with return value %d\n", bt_sco_on, ret);
+  }
+
   /* setup debug node if in kpi mode */
   if (kpi_mode) {
       fdLatencyNode = fopen(LATENCY_NODE,"r+");
