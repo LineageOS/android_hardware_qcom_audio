@@ -350,6 +350,8 @@ enum {
 #define VOLTE_CALL_PCM_DEVICE 15
 #define QCHAT_CALL_PCM_DEVICE 37
 #define VOWLAN_CALL_PCM_DEVICE 16
+#define MMAP_PLAYBACK_PCM_DEVICE 2 // XXX: This must be overwritten
+#define MMAP_RECORD_PCM_DEVICE 2 // XXX: This must be overwritten
 
 #define AFE_PROXY_PLAYBACK_PCM_DEVICE 7
 #define AFE_PROXY_RECORD_PCM_DEVICE 8

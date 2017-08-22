@@ -75,6 +75,9 @@
 #endif
 
 #include <linux/msm_audio.h>
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845)
+#include <sound/devdep_params.h>
+#endif
 
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define CVD_VERSION_MIXER_CTL "CVD Version"
@@ -311,6 +314,10 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_HFP_SCO] = {HFP_PCM_RX, HFP_SCO_RX},
     [USECASE_AUDIO_HFP_SCO_WB] = {HFP_PCM_RX, HFP_SCO_RX},
     [USECASE_VOICE_CALL] = {VOICE_CALL_PCM_DEVICE, VOICE_CALL_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_MMAP] = {MMAP_PLAYBACK_PCM_DEVICE,
+            MMAP_PLAYBACK_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD_MMAP] = {MMAP_RECORD_PCM_DEVICE,
+            MMAP_RECORD_PCM_DEVICE},
     [USECASE_VOICE2_CALL] = {VOICE2_CALL_PCM_DEVICE, VOICE2_CALL_PCM_DEVICE},
     [USECASE_VOLTE_CALL] = {VOLTE_CALL_PCM_DEVICE, VOLTE_CALL_PCM_DEVICE},
     [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE, QCHAT_CALL_PCM_DEVICE},
@@ -806,12 +813,14 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD7)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD8)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD9)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_MMAP)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS2)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS3)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS4)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_LOW_LATENCY)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_MMAP)},
     {TO_NAME_INDEX(USECASE_VOICE_CALL)},
     {TO_NAME_INDEX(USECASE_VOICE2_CALL)},
     {TO_NAME_INDEX(USECASE_VOLTE_CALL)},
@@ -945,11 +954,11 @@ static int msm_device_to_be_id [][NO_COLS] = {
 static int msm_be_id_array_len  =
     sizeof(msm_device_to_be_id) / sizeof(msm_device_to_be_id[0]);
 
-
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define PCM_OFFLOAD_PLATFORM_DELAY (30*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 #define ULL_PLATFORM_DELAY         (6*1000LL)
+#define MMAP_PLATFORM_DELAY        (3*1000LL)
 
 static void update_codec_type_and_interface(struct platform_data * my_data, const char *snd_card_name) {
 
@@ -4970,6 +4979,8 @@ int64_t platform_render_latency(audio_usecase_t usecase)
              return PCM_OFFLOAD_PLATFORM_DELAY;
         case USECASE_AUDIO_PLAYBACK_ULL:
              return ULL_PLATFORM_DELAY;
+        case USECASE_AUDIO_PLAYBACK_MMAP:
+             return MMAP_PLATFORM_DELAY;
         default:
             return 0;
     }
@@ -7155,3 +7166,40 @@ int platform_get_max_codec_backend() {
 
     return MAX_CODEC_BACKENDS;
 }
+
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845)
+int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
+                              uint32_t *size)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    int hw_fd = -1;
+    char dev_name[128];
+    struct snd_pcm_mmap_fd mmap_fd;
+    memset(&mmap_fd, 0, sizeof(mmap_fd));
+    mmap_fd.dir = dir;
+    snprintf(dev_name, sizeof(dev_name), "/dev/snd/hwC%uD%u",
+             adev->snd_card, HWDEP_FE_BASE+fe_dev);
+    hw_fd = open(dev_name, O_RDONLY);
+    if (hw_fd < 0) {
+        ALOGE("fe hw dep node open %d/%d failed", adev->snd_card, fe_dev);
+        return -1;
+    }
+    if (ioctl(hw_fd, SNDRV_PCM_IOCTL_MMAP_DATA_FD, &mmap_fd) < 0) {
+        ALOGE("fe hw dep node ioctl failed");
+        close(hw_fd);
+        return -1;
+    }
+    *fd = mmap_fd.fd;
+    *size = mmap_fd.size;
+    close(hw_fd); // mmap_fd should still be valid
+    return 0;
+}
+#else
+int platform_get_mmap_data_fd(void *platform __unused, int fe_dev __unused,
+                              int dir __unused, int *fd __unused,
+                              uint32_t *size __unused)
+{
+    return -1;
+}
+#endif
