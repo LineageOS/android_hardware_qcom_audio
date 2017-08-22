@@ -283,6 +283,15 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
 
     [USECASE_AUDIO_PLAYBACK_VOIP] = "audio-playback-voip",
     [USECASE_AUDIO_RECORD_VOIP] = "audio-record-voip",
+    /* For Interactive Audio Streams */
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM1] = "audio-interactive-stream1",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM2] = "audio-interactive-stream2",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM3] = "audio-interactive-stream3",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM4] = "audio-interactive-stream4",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM5] = "audio-interactive-stream5",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM6] = "audio-interactive-stream6",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM7] = "audio-interactive-stream7",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM8] = "audio-interactive-stream8",
 };
 
 static const audio_usecase_t offload_usecases[] = {
@@ -295,6 +304,17 @@ static const audio_usecase_t offload_usecases[] = {
     USECASE_AUDIO_PLAYBACK_OFFLOAD7,
     USECASE_AUDIO_PLAYBACK_OFFLOAD8,
     USECASE_AUDIO_PLAYBACK_OFFLOAD9,
+};
+
+static const audio_usecase_t interactive_usecases[] = {
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM1,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM2,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM3,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM4,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM5,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM6,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM7,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM8,
 };
 
 #define STRING_TO_ENUM(string) { #string, string }
@@ -2099,6 +2119,50 @@ static void stop_compressed_output_l(struct stream_out *out)
     }
 }
 
+bool is_interactive_usecase(audio_usecase_t uc_id)
+{
+    unsigned int i;
+    for (i = 0; i < sizeof(interactive_usecases)/sizeof(interactive_usecases[0]); i++) {
+        if (uc_id == interactive_usecases[i])
+            return true;
+    }
+    return false;
+}
+
+static audio_usecase_t get_interactive_usecase(struct audio_device *adev)
+{
+    audio_usecase_t ret_uc = USECASE_INVALID;
+    unsigned int intract_uc_index;
+    unsigned int num_usecase = sizeof(interactive_usecases)/sizeof(interactive_usecases[0]);
+
+    ALOGV("%s: num_usecase: %d", __func__, num_usecase);
+    for (intract_uc_index = 0; intract_uc_index < num_usecase; intract_uc_index++) {
+        if (!(adev->interactive_usecase_state & (0x1 << intract_uc_index))) {
+            adev->interactive_usecase_state |= 0x1 << intract_uc_index;
+            ret_uc = interactive_usecases[intract_uc_index];
+            break;
+        }
+    }
+
+    ALOGV("%s: Interactive usecase is %d", __func__, ret_uc);
+    return ret_uc;
+}
+
+static void free_interactive_usecase(struct audio_device *adev,
+                                 audio_usecase_t uc_id)
+{
+    unsigned int interact_uc_index;
+    unsigned int num_usecase = sizeof(interactive_usecases)/sizeof(interactive_usecases[0]);
+
+    for (interact_uc_index = 0; interact_uc_index < num_usecase; interact_uc_index++) {
+        if (interactive_usecases[interact_uc_index] == uc_id) {
+            adev->interactive_usecase_state &= ~(0x1 << interact_uc_index);
+            break;
+        }
+    }
+    ALOGV("%s: free Interactive usecase %d", __func__, uc_id);
+}
+
 bool is_offload_usecase(audio_usecase_t uc_id)
 {
     unsigned int i;
@@ -2753,7 +2817,9 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
 
-    if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
+    if (is_interactive_usecase(out->usecase)) {
+        return out->config.period_size;
+    } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         if (out->flags & AUDIO_OUTPUT_FLAG_TIMESTAMP)
             return out->compr_config.fragment_size - sizeof(struct snd_codec_metadata);
         else
@@ -4772,7 +4838,10 @@ int adev_open_output_stream(struct audio_hw_device *dev,
 
         channels = audio_channel_count_from_out_mask(out->channel_mask);
 
-        if (out->flags & AUDIO_OUTPUT_FLAG_RAW) {
+        if (out->flags & AUDIO_OUTPUT_FLAG_INTERACTIVE) {
+            out->usecase = get_interactive_usecase(adev);
+            out->config = pcm_config_low_latency;
+        } else if (out->flags & AUDIO_OUTPUT_FLAG_RAW) {
             out->usecase = USECASE_AUDIO_PLAYBACK_ULL;
             out->realtime = may_use_noirq_mode(adev, USECASE_AUDIO_PLAYBACK_ULL,
                                                out->flags);
@@ -4991,6 +5060,9 @@ void adev_close_output_stream(struct audio_hw_device *dev __unused,
     }
 
     out->a2dp_compress_mute = false;
+
+    if (is_interactive_usecase(out->usecase))
+        free_interactive_usecase(adev, out->usecase);
 
     if (out->convert_buffer != NULL) {
         free(out->convert_buffer);

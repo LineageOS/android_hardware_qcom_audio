@@ -1377,6 +1377,14 @@ int audio_extn_out_set_param_data(struct stream_out *out,
             ret = audio_extn_utils_set_channel_map(out,
                     (struct audio_out_channel_map_param *)(payload));
             break;
+        case AUDIO_EXTN_PARAM_OUT_MIX_MATRIX_PARAMS:
+            ret = audio_extn_utils_set_pan_scale_params(out,
+                    (struct mix_matrix_params *)(payload));
+            break;
+        case AUDIO_EXTN_PARAM_CH_MIX_MATRIX_PARAMS:
+            ret = audio_extn_utils_set_downmix_params(out,
+                    (struct mix_matrix_params *)(payload));
+            break;
         default:
             ALOGE("%s:: unsupported param_id %d", __func__, param_id);
             break;

@@ -103,6 +103,10 @@
 #define AUDIO_OUTPUT_FLAG_TIMESTAMP 0x10000
 #endif
 
+#ifndef AUDIO_OUTPUT_FLAG_INTERACTIVE
+#define AUDIO_OUTPUT_FLAG_INTERACTIVE 0x40000
+#endif
+
 #ifndef COMPRESS_METADATA_NEEDED
 #define audio_extn_parse_compress_metadata(out, parms) (0)
 #else
@@ -892,6 +896,12 @@ int audio_extn_utils_compress_correct_drift(
 int audio_extn_utils_set_channel_map(
             struct stream_out *out,
             struct audio_out_channel_map_param *channel_map_param);
+int audio_extn_utils_set_pan_scale_params(
+            struct stream_out *out,
+            struct mix_matrix_params *mm_params);
+int audio_extn_utils_set_downmix_params(
+            struct stream_out *out,
+            struct mix_matrix_params *mm_params);
 #ifdef AUDIO_HW_LOOPBACK_ENABLED
 /* API to create audio patch */
 int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,
