@@ -961,11 +961,6 @@ void *start_stream_playback (void* stream_data)
         drift_params.thread_exit = true;
         pthread_join(drift_query_thread, NULL);
     }
-    if ((params->flags & AUDIO_OUTPUT_FLAG_MAIN) && is_assoc_active()) {
-        fprintf(log_file, "Closing Associated as Main Stream reached EOF %d \n",
-                params->stream_index, rc);
-        stop_playback = true;
-    }
     rc = qahw_out_standby(params->out_handle);
     if (rc) {
         fprintf(log_file, "stream %d: out standby failed %d \n", params->stream_index, rc);
