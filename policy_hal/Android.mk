@@ -30,6 +30,7 @@ LOCAL_C_INCLUDES := $(TOPDIR)frameworks/av/services \
 
 
 LOCAL_SHARED_LIBRARIES := \
+    libbase \
     libcutils \
     libutils \
     liblog \
