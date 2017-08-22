@@ -49,6 +49,7 @@ typedef enum {
     STATE_DEINIT = -1,
     STATE_IDLE,
     STATE_ACTIVE,
+    STATE_DISABLED,
 } state_t;
 
 typedef enum {
@@ -93,6 +94,13 @@ void audio_extn_keep_alive_init(struct audio_device *adev)
     ka.userdata = adev;
     ka.state = STATE_IDLE;
     ka.pcm = NULL;
+
+    if (property_get_bool("audio.keep_alive.disabled", false)) {
+        ALOGE("keep alive disabled");
+        ka.state = STATE_DISABLED;
+        return;
+    }
+
     pthread_mutex_init(&ka.lock, (const pthread_mutexattr_t *) NULL);
     pthread_cond_init(&ka.cond, (const pthread_condattr_t *) NULL);
     pthread_cond_init(&ka.wake_up_cond, (const pthread_condattr_t *) NULL);
@@ -108,7 +116,7 @@ void audio_extn_keep_alive_init(struct audio_device *adev)
 
 static void send_cmd_l(request_t r)
 {
-    if (ka.state == STATE_DEINIT)
+    if (ka.state == STATE_DEINIT || ka.state == STATE_DISABLED)
         return;
 
     struct keep_alive_cmd *cmd =
@@ -192,6 +200,9 @@ void audio_extn_keep_alive_start()
     struct listnode *node;
     struct audio_usecase *usecase;
     int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+
+    if (ka.state == STATE_DISABLED)
+        return;
 
     pthread_mutex_lock(&ka.lock);
 
@@ -317,6 +328,9 @@ void audio_extn_keep_alive_stop()
 {
     struct audio_device * adev = (struct audio_device *)ka.userdata;
 
+    if (ka.state == STATE_DISABLED)
+        return;
+
     pthread_mutex_lock(&ka.lock);
 
     if ((ka.state == STATE_DEINIT) || (ka.state == STATE_IDLE))
@@ -358,6 +372,9 @@ int audio_extn_keep_alive_set_parameters(struct audio_device *adev __unused,
 {
     char value[32];
     int ret;
+
+    if (ka.state == STATE_DISABLED)
+        return;
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value, sizeof(value));
     if (ret >= 0) {
