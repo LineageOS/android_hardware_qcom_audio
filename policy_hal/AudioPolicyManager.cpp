@@ -718,15 +718,16 @@ void AudioPolicyManagerCustom::setForceUse(audio_policy_force_use_t usage,
         }
     }
 
-    audio_io_handle_t activeInput = mInputs.getActiveInput();
-    if (activeInput != 0) {
-        sp<AudioInputDescriptor> activeDesc = mInputs.valueFor(activeInput);
-        audio_devices_t newDevice = getNewInputDevice(activeInput);
+    Vector<sp <AudioInputDescriptor>> activeInputs = mInputs.getActiveInputs();
+    for (size_t i = 0; i < activeInputs.size(); i++) {
+        sp<AudioInputDescriptor> activeDesc = activeInputs[i];
+        audio_devices_t newDevice = getNewInputDevice(activeDesc);
         // Force new input selection if the new device can not be reached via current input
-        if (activeDesc->mProfile->getSupportedDevices().types() & (newDevice & ~AUDIO_DEVICE_BIT_IN)) {
-            setInputDevice(activeInput, newDevice);
+        if (activeDesc->mProfile->getSupportedDevices().types()
+                & (newDevice & ~AUDIO_DEVICE_BIT_IN)) {
+            setInputDevice(activeDesc->mIoHandle, newDevice);
         } else {
-            closeInput(activeInput);
+            closeInput(activeDesc->mIoHandle);
         }
     }
 
