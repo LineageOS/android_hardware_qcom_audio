@@ -531,23 +531,9 @@ void process_loopback_data(void *ptr)
     pthread_exit(0);
 }
 
-bool is_device_supported(uint32_t device_id)
-{
-    switch(device_id)
-    {
-        case AUDIO_DEVICE_OUT_SPEAKER :
-        case AUDIO_DEVICE_OUT_WIRED_HEADSET :
-        case AUDIO_DEVICE_OUT_WIRED_HEADPHONE :
-            return true;
-        default :
-            return false;
-    }
-}
-
 void set_device(uint32_t device_type, uint32_t device_id)
 {
     transcode_loopback_config_t *transcode_loopback_config = &g_trnscode_loopback_config;
-    device_id = is_device_supported(device_id) ? device_id : AUDIO_DEVICE_OUT_SPEAKER;
     switch( device_type )
     {
         case DEVICE_SINK:

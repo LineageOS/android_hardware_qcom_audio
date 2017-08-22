@@ -179,7 +179,8 @@ bool is_supported_sink_device(audio_devices_t sink_device_mask)
 {
     if((sink_device_mask & AUDIO_DEVICE_OUT_SPEAKER) ||
        (sink_device_mask & AUDIO_DEVICE_OUT_WIRED_HEADSET) ||
-       (sink_device_mask & AUDIO_DEVICE_OUT_WIRED_HEADPHONE)) {
+       (sink_device_mask & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
+       (sink_device_mask & AUDIO_DEVICE_OUT_LINE)) {
            return true;
        }
     return false;
