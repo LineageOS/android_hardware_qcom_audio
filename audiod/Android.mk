@@ -12,7 +12,9 @@ LOCAL_SHARED_LIBRARIES := \
 	libcutils \
 	libutils \
 	libbinder \
-	libmedia
+	libmedia \
+        liblog \
+        libaudioclient
 
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
