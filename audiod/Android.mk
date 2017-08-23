@@ -9,6 +9,8 @@ LOCAL_SRC_FILES:= \
 LOCAL_CFLAGS += -DGL_GLEXT_PROTOTYPES -DEGL_EGLEXT_PROTOTYPES
 
 LOCAL_SHARED_LIBRARIES := \
+	libaudioclient \
+	liblog \
 	libcutils \
 	libutils \
 	libbinder \
