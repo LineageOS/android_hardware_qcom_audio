@@ -1132,11 +1132,18 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
         offloadInfo = &tOffloadInfo;
     }
 
+    audio_port_handle_t portId = AUDIO_PORT_HANDLE_NONE;
+
+    audio_config_t config = AUDIO_CONFIG_INITIALIZER;
+    config.sample_rate = (uint32_t)samplingRate;
+    config.channel_mask = (audio_channel_mask_t)channelMask;
+    config.format = format;
+    config.offload_info = *offloadInfo;
+
     return AudioPolicyManager::getOutputForAttr(attr, output, session, stream,
-                                                (uid_t)uid, (uint32_t)samplingRate,
-                                                format, (audio_channel_mask_t)channelMask,
-                                                flags, (audio_port_handle_t)selectedDeviceId,
-                                                offloadInfo);
+                                                (uid_t)uid, &config, flags,
+                                                (audio_port_handle_t)selectedDeviceId,
+                                                &portId);
 }
 
 audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
