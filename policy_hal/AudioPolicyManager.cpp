@@ -1871,16 +1871,22 @@ status_t AudioPolicyManagerCustom::getInputForAttr(const audio_attributes_t *att
 
 #endif
 
+    audio_port_handle_t portId = AUDIO_PORT_HANDLE_NONE;
+
+    audio_config_base_t config;
+    config.sample_rate = (uint32_t)samplingRate;
+    config.channel_mask = (audio_channel_mask_t)channelMask;
+    config.format = format;
+
     return AudioPolicyManager::getInputForAttr(attr,
                                                input,
                                                session,
                                                uid,
-                                               samplingRate,
-                                               format,
-                                               channelMask,
+                                               &config,
                                                flags,
                                                selectedDeviceId,
-                                               inputType);
+                                               inputType,
+                                               &portId);
 }
 status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
                                         audio_session_t session)
