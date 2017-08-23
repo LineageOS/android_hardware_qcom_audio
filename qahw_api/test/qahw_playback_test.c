@@ -738,6 +738,21 @@ void *start_stream_playback (void* stream_data)
         fprintf(stderr, "stream %d: unable to set volume\n", params->stream_index);
     }
 
+    if (params->pan_scale_ctrl == QAHW_PARAM_OUT_MIX_MATRIX_PARAMS) {
+        rc = qahw_out_set_param_data(params->out_handle, QAHW_PARAM_OUT_MIX_MATRIX_PARAMS,
+                                     (qahw_param_payload *) &params->mm_params_pan_scale);
+        if (rc != 0) {
+            fprintf(log_file, "QAHW_PARAM_OUT_MIX_MATRIX_PARAMS could not be sent!\n");
+        }
+    }
+    if (params->mix_ctrl == QAHW_PARAM_CH_MIX_MATRIX_PARAMS) {
+        rc = qahw_out_set_param_data(params->out_handle, QAHW_PARAM_CH_MIX_MATRIX_PARAMS,
+                                     (qahw_param_payload *) &params->mm_params_downmix);
+        if (rc != 0) {
+            fprintf(log_file, "QAHW_PARAM_CH_MIX_MATRIX_PARAMS could not be sent!\n");
+        }
+    }
+
     bytes_wanted = qahw_out_get_buffer_size(params->out_handle);
     data_ptr = (char *) malloc (bytes_wanted);
     if (data_ptr == NULL) {
@@ -2507,23 +2522,6 @@ int main(int argc, char* argv[]) {
         }
 
         thread_active[i] = true;
-        usleep(500000); //Wait until stream is created
-        if(stream_param[i].pan_scale_ctrl == QAHW_PARAM_OUT_MIX_MATRIX_PARAMS) {
-            payload = (qahw_param_payload) stream_param[i].mm_params_pan_scale;
-            param_id = QAHW_PARAM_OUT_MIX_MATRIX_PARAMS;
-            rc = qahw_out_set_param_data(stream->out_handle, param_id, &payload);
-            if (rc != 0) {
-                fprintf(log_file, "QAHW_PARAM_OUT_MIX_MATRIX_PARAMS could not be sent!\n");
-            }
-        }
-        if(stream_param[i].mix_ctrl == QAHW_PARAM_CH_MIX_MATRIX_PARAMS) {
-            payload = (qahw_param_payload) stream_param[i].mm_params_downmix;
-            param_id = QAHW_PARAM_CH_MIX_MATRIX_PARAMS;
-            rc = qahw_out_set_param_data(stream->out_handle, param_id, &payload);
-            if (rc != 0) {
-                fprintf(log_file, "QAHW_PARAM_CH_MIX_MATRIX_PARAMS could not be sent!\n");
-            }
-        }
 
     }
 
