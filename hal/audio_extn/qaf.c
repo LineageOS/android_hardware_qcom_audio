@@ -31,12 +31,11 @@
 /*#define LOG_NDEBUG 0*/
 /*#define VERY_VERY_VERBOSE_LOGGING*/
 #ifdef VERY_VERY_VERBOSE_LOGGING
-#define ALOGVV ALOGV
+#define DEBUG_MSG_VV DEBUG_MSG
 #else
-#define ALOGVV(a...) do { } while(0)
+#define DEBUG_MSG_VV(a...) do { } while(0)
 #endif
 
-#define DEBUG_MSG_VV(arg,...) ALOGVV("%s: %d:  " arg, __func__, __LINE__, ##__VA_ARGS__)
 #define DEBUG_MSG(arg,...) ALOGV("%s: %d:  " arg, __func__, __LINE__, ##__VA_ARGS__)
 #define ERROR_MSG(arg,...) ALOGE("%s: %d:  " arg, __func__, __LINE__, ##__VA_ARGS__)
 
@@ -1383,7 +1382,8 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
 
                 flags = (AUDIO_OUTPUT_FLAG_NON_BLOCKING
                          | AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD
-                         | AUDIO_OUTPUT_FLAG_DIRECT);
+                         | AUDIO_OUTPUT_FLAG_DIRECT
+                         | AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH);
                 devices = AUDIO_DEVICE_OUT_AUX_DIGITAL;
 
                 ret = adev_open_output_stream((struct audio_hw_device *)p_qaf->adev,
@@ -1399,7 +1399,7 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
                     return;
                 }
 
-                if (format & AUDIO_FORMAT_E_AC3) {
+                if (format == AUDIO_FORMAT_E_AC3) {
                     qaf_mod->stream_out[QAF_OUT_TRANSCODE_PASSTHROUGH]->compr_config.fragment_size =
                             COMPRESS_PASSTHROUGH_DDP_FRAGMENT_SIZE;
                 }

@@ -747,7 +747,9 @@ void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, 
                 if (buffer) {
                     index = get_qap_out_config_index_for_id(
                               buffer->buffer_parms.output_buf_params.output_id);
-                    if (index < 0 && new_output_conf_index < MAX_QAP_MODULE_OUT) {
+                    if (index >= 0) {
+                        cached_conf = &qap_out_configs[index];
+                    } else if (index < 0 && new_output_conf_index < MAX_QAP_MODULE_OUT) {
                         index = new_output_conf_index;
                         cached_conf = &qap_out_configs[index];
                         new_output_conf_index++;
