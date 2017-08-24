@@ -1676,7 +1676,7 @@ void audio_utils_set_hdmi_channel_status(struct stream_out *out, char * buffer, 
     struct mixer_ctl *ctl;
     ALOGV("%s: buffer %s bytes %zd", __func__, buffer, bytes);
 #ifdef HDMI_PASSTHROUGH_ENABLED
-    if (audio_extn_is_dolby_format(out->format) &&
+    if (audio_extn_utils_is_dolby_format(out->format) &&
         /*TODO:Extend code to support DTS passthrough*/
         /*set compressed channel status bits*/
         audio_extn_passthru_is_passthrough_stream(out)){
@@ -2351,3 +2351,15 @@ int audio_extn_utils_set_downmix_params(
 exit:
     return ret;
 }
+
+bool audio_extn_utils_is_dolby_format(audio_format_t format)
+{
+    if (format == AUDIO_FORMAT_AC3 ||
+            format == AUDIO_FORMAT_E_AC3 ||
+            format == AUDIO_FORMAT_E_AC3_JOC)
+        return true;
+    else
+        return false;
+}
+
+

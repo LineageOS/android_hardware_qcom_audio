@@ -5439,6 +5439,32 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
 }
 
 /*
+ * Get the backend configuration for current snd device
+ */
+int platform_get_codec_backend_cfg(struct audio_device* adev,
+                         snd_device_t snd_device,
+                         struct audio_backend_cfg *backend_cfg)
+{
+    int backend_idx = platform_get_backend_index(snd_device);
+    struct platform_data *my_data = (struct platform_data *)adev->platform;
+
+    backend_cfg->bit_width = my_data->current_backend_cfg[backend_idx].bit_width;
+    backend_cfg->sample_rate =
+                       my_data->current_backend_cfg[backend_idx].sample_rate;
+    backend_cfg->channels =
+                       my_data->current_backend_cfg[backend_idx].channels;
+    backend_cfg->format =
+                       my_data->current_backend_cfg[backend_idx].format;
+
+    ALOGV("%s:becf: afe: bitwidth %d, samplerate %d channels %d format %d"
+          ", backend_idx %d device (%s)", __func__,  backend_cfg->bit_width,
+          backend_cfg->sample_rate, backend_cfg->channels, backend_cfg->format,
+          backend_idx, platform_get_snd_device_name(snd_device));
+
+   return 0;
+}
+
+/*
  *Validate the selected bit_width, sample_rate and channels using the edid
  *of the connected sink device.
  */

@@ -362,19 +362,6 @@ void audio_extn_ddp_set_parameters(struct audio_device *adev,
 }
 #endif /* DS1_DOLBY_DDP_ENABLED */
 
-#if defined(DS1_DOLBY_DDP_ENABLED) || defined(DS2_DOLBY_DAP_ENABLED)
-bool audio_extn_is_dolby_format(audio_format_t format)
-{
-    if (format == AUDIO_FORMAT_AC3 ||
-            format == AUDIO_FORMAT_E_AC3 ||
-            format == AUDIO_FORMAT_E_AC3_JOC)
-        return true;
-    else
-        return false;
-}
-#endif /* DS1_DOLBY_DDP_ENABLED || DS2_DOLBY_DAP_ENABLED */
-
-
 #ifdef DS1_DOLBY_DAP_ENABLED
 void audio_extn_dolby_set_endpoint(struct audio_device *adev)
 {

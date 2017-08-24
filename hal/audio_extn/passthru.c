@@ -348,11 +348,13 @@ bool audio_extn_passthru_is_convert_supported(struct audio_device *adev,
     switch (out->format) {
     case AUDIO_FORMAT_E_AC3:
     case AUDIO_FORMAT_E_AC3_JOC:
-    case AUDIO_FORMAT_DTS_HD:
         if (!platform_is_edid_supported_format(adev->platform,
-            out->format)) {
-            ALOGD("%s:PASSTHROUGH_CONVERT supported", __func__);
-            convert = true;
+                                               out->format)) {
+            if (platform_is_edid_supported_format(adev->platform,
+                                                  AUDIO_FORMAT_AC3)) {
+                ALOGD("%s:PASSTHROUGH_CONVERT supported", __func__);
+                convert = true;
+            }
         }
         break;
     default:
@@ -449,7 +451,7 @@ bool audio_extn_passthru_is_passthrough_stream(struct stream_out *out)
                         out->format)) {
                     ALOGV("%s : return true",__func__);
                     return true;
-                } else if (audio_extn_is_dolby_format(out->format) &&
+                } else if (audio_extn_utils_is_dolby_format(out->format) &&
                             platform_is_edid_supported_format(out->dev->platform,
                                 AUDIO_FORMAT_AC3)){
                     //return true for EAC3/EAC3_JOC formats
@@ -503,4 +505,45 @@ int audio_extn_passthru_set_volume(struct stream_out *out,  int mute)
 int audio_extn_passthru_set_latency(struct stream_out *out, int latency)
 {
     return platform_set_device_params(out, DEVICE_PARAM_LATENCY_ID, latency);
+}
+
+bool audio_extn_passthru_is_supported_backend_edid_cfg(struct audio_device *adev,
+                                                   struct stream_out *out)
+{
+    struct audio_backend_cfg backend_cfg;
+    snd_device_t out_snd_device = SND_DEVICE_NONE;
+    int max_edid_channels = platform_edid_get_max_channels(out->dev->platform);
+
+    out_snd_device = platform_get_output_snd_device(adev->platform, out);
+
+    if (platform_get_codec_backend_cfg(adev, out_snd_device, &backend_cfg)) {
+        ALOGE("%s: ERROR: Unable to get current backend config!!!", __func__);
+        return false;
+    }
+
+    ALOGV("%s:becf: afe: bitwidth %d, samplerate %d channels %d format %d"
+          ", device (%s)", __func__,  backend_cfg.bit_width,
+          backend_cfg.sample_rate, backend_cfg.channels, backend_cfg.format,
+          platform_get_snd_device_name(out_snd_device));
+
+    /* Check if the channels are supported */
+    if (max_edid_channels < backend_cfg.channels) {
+
+        ALOGE("%s: ERROR: Unsupported channels in passthru mode!!!"
+              " max_edid_channels - %d backend_channels - %d",
+              __func__, max_edid_channels, backend_cfg.channels);
+        return false;
+    }
+
+    /* Check if the sample rate supported */
+    if (!platform_is_edid_supported_sample_rate(adev->platform,
+                                       backend_cfg.sample_rate)) {
+
+        ALOGE("%s: ERROR: Unsupported sample rate in passthru mode!!!"
+              " backend_samplerate - %d",
+              __func__, backend_cfg.sample_rate);
+        return false;
+    }
+
+    return true;
 }
