@@ -91,6 +91,8 @@
 
 #define MAX_STREAM_PROFILE_STR_LEN 32
 
+#define MAX_MIXER_PATH_LEN 64
+
 typedef enum card_status_t {
     CARD_STATUS_OFFLINE,
     CARD_STATUS_ONLINE
@@ -133,6 +135,8 @@ enum {
     USECASE_AUDIO_RECORD_LOW_LATENCY,
     USECASE_AUDIO_RECORD_FM_VIRTUAL,
 
+    USECASE_AUDIO_PLAYBACK_VOIP,
+    USECASE_AUDIO_RECORD_VOIP,
     /* Voice usecase */
     USECASE_VOICE_CALL,
 
@@ -234,6 +238,7 @@ struct stream_out {
     struct audio_stream_out stream;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
     pthread_mutex_t pre_lock; /* acquire before lock to avoid DOS by playback thread */
+    pthread_mutex_t compr_mute_lock; /* acquire before setting compress volume */
     pthread_cond_t  cond;
     struct pcm_config config;
     struct compr_config compr_config;
@@ -297,6 +302,14 @@ struct stream_out {
     audio_offload_info_t info;
     int started;
     qahwi_stream_out_t qahwi_out;
+
+    bool is_iec61937_info_available;
+    bool a2dp_compress_mute;
+    float volume_l;
+    float volume_r;
+
+    char pm_qos_mixer_path[MAX_MIXER_PATH_LEN];
+    int dynamic_pm_qos_enabled;
 };
 
 struct stream_in {
@@ -467,6 +480,7 @@ struct audio_device {
     qahwi_device_t qahwi_dev;
     bool vr_audio_mode_enabled;
     bool bt_sco_on;
+    struct audio_device_config_param *device_cfg_params;
 };
 
 int select_devices(struct audio_device *adev,
@@ -496,6 +510,8 @@ int pcm_ioctl(struct pcm *pcm, int request, ...);
 
 audio_usecase_t get_usecase_id_from_usecase_type(const struct audio_device *adev,
                                                  usecase_type_t type);
+
+int check_a2dp_restore(struct audio_device *adev, struct stream_out *out, bool restore);
 
 int adev_open_output_stream(struct audio_hw_device *dev,
                             audio_io_handle_t handle,

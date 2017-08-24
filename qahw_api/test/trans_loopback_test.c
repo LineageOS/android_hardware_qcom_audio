@@ -31,10 +31,15 @@
 /*#define LOG_NDEBUG 0*/
 #include <fcntl.h>
 #include <linux/netlink.h>
+#include <getopt.h>
 #include <pthread.h>
 #include <poll.h>
+#include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
+#include <signal.h>
+#include <errno.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -42,17 +47,20 @@
 #include <utils/Log.h>
 
 #include <cutils/list.h>
-#include <hardware/audio.h>
-#include <system/audio.h>
 #include "qahw_api.h"
 #include "qahw_defs.h"
 
+static int sock_event_fd = -1;
+
+pthread_t data_event_th = -1;
+pthread_attr_t data_event_attr;
 
 typedef struct tlb_hdmi_config {
     int hdmi_conn_state;
     int hdmi_audio_state;
     int hdmi_sample_rate;
     int hdmi_num_channels;
+    int hdmi_data_format;
 } tlb_hdmi_config_t;
 
 const char tlb_hdmi_in_audio_sys_path[] =
@@ -70,17 +78,29 @@ const char tlb_hdmi_in_audio_channel_sys_path[] =
 "/sys/devices/virtual/switch/channels/state";
 const char tlb_hdmi_in_audio_channel_dev_path[] =
 "/devices/virtual/switch/channels";
+const char tlb_hdmi_in_audio_format_sys_path[] =
+"/sys/devices/virtual/switch/audio_format/state";
+const char tlb_hdmi_in_audio_format_dev_path[] =
+"/devices/virtual/switch/audio_format";
 
 qahw_module_handle_t *primary_hal_handle = NULL;
 
 FILE * log_file = NULL;
-volatile bool stop_playback = false;
+volatile bool stop_loopback = false;
 const char *log_filename = NULL;
 
 #define TRANSCODE_LOOPBACK_SOURCE_PORT_ID 0x4C00
 #define TRANSCODE_LOOPBACK_SINK_PORT_ID 0x4D00
 
+#define DEVICE_SOURCE 0
+#define DEVICE_SINK 1
+
 #define MAX_MODULE_NAME_LENGTH  100
+
+#define DEV_NODE_CHECK(node_name,node_id) strncmp(node_name,node_id,strlen(node_name))
+
+/* Function declarations */
+void usage();
 
 typedef enum source_port_type {
     SOURCE_PORT_NONE,
@@ -89,16 +109,34 @@ typedef enum source_port_type {
     SOURCE_PORT_MIC
 } source_port_type_t;
 
+typedef enum source_port_state {
+    SOURCE_PORT_INACTIVE=0,
+    SOURCE_PORT_ACTIVE,
+    SOURCE_PORT_CONFIG_CHANGED
+} source_port_state_t;
+
+typedef struct source_port_config {
+    source_port_type_t source_port_type;
+    source_port_state_t source_port_state;
+    union {
+        tlb_hdmi_config_t hdmi_in_port_config;
+    } port_config;
+} source_port_config_t;
 typedef struct trnscode_loopback_config {
     qahw_module_handle_t *hal_handle;
     audio_devices_t devices;
     struct audio_port_config source_config;
     struct audio_port_config sink_config;
     audio_patch_handle_t patch_handle;
+    source_port_config_t source_port_config;
 } transcode_loopback_config_t;
 
 transcode_loopback_config_t g_trnscode_loopback_config;
 
+void break_signal_handler(int signal __attribute__((unused)))
+{
+   stop_loopback = true;
+}
 
 void init_transcode_loopback_config(transcode_loopback_config_t **p_transcode_loopback_config)
 {
@@ -143,6 +181,11 @@ void init_transcode_loopback_config(transcode_loopback_config_t **p_transcode_lo
     /* Init patch handle */
     g_trnscode_loopback_config.patch_handle = AUDIO_PATCH_HANDLE_NONE;
 
+    memset(&g_trnscode_loopback_config.source_port_config,0,sizeof(source_port_config_t));
+    g_trnscode_loopback_config.source_port_config.source_port_type = SOURCE_PORT_HDMI;
+    g_trnscode_loopback_config.source_port_config.source_port_state = SOURCE_PORT_INACTIVE;
+
+    poll_data_event_init();
     *p_transcode_loopback_config = &g_trnscode_loopback_config;
 
     fprintf(log_file,"\nDone Initializing global transcode loopback config\n");
@@ -192,62 +235,102 @@ int actual_channels_from_audio_infoframe(int infoframe_channels)
 int read_and_set_source_config(source_port_type_t source_port_type,
                                struct audio_port_config *dest_port_config)
 {
-    int rc=0, channels = 2;
+    int rc=0;
     tlb_hdmi_config_t hdmi_config = {0};
     switch(source_port_type)
     {
-    case SOURCE_PORT_HDMI :
-    read_data_from_fd(tlb_hdmi_in_audio_sys_path, &hdmi_config.hdmi_conn_state);
-    read_data_from_fd(tlb_hdmi_in_audio_state_sys_path,
-                      &hdmi_config.hdmi_audio_state);
-    read_data_from_fd(tlb_hdmi_in_audio_sample_rate_sys_path,
-                      &hdmi_config.hdmi_sample_rate);
-    read_data_from_fd(tlb_hdmi_in_audio_channel_sys_path,
-                      &hdmi_config.hdmi_num_channels);
-
-    channels = actual_channels_from_audio_infoframe(hdmi_config.hdmi_num_channels);
-    fprintf(log_file,"\nHDMI In state: %d, audio_state: %d, samplerate: %d, channels: %d\n",
-            hdmi_config.hdmi_conn_state, hdmi_config.hdmi_audio_state,
-            hdmi_config.hdmi_sample_rate, channels);
-
-    ALOGD("HDMI In state: %d, audio_state: %d, samplerate: %d, channels: %d",
-           hdmi_config.hdmi_conn_state, hdmi_config.hdmi_audio_state,
-           hdmi_config.hdmi_sample_rate, channels);
-
-        dest_port_config->sample_rate = hdmi_config.hdmi_sample_rate;
-        switch(channels) {
-        case 2 :
-            dest_port_config->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
-            break;
-        case 3 :
-            dest_port_config->channel_mask = AUDIO_CHANNEL_OUT_2POINT1;
-            break;
-        case 4 :
-            dest_port_config->channel_mask = AUDIO_CHANNEL_OUT_QUAD;
-            break;
-        case 5 :
-            dest_port_config->channel_mask = AUDIO_CHANNEL_OUT_PENTA;
-            break;
-        case 6 :
-            dest_port_config->channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
-            break;
-        case 7 :
-            dest_port_config->channel_mask = AUDIO_CHANNEL_OUT_6POINT1;
-            break;
-        case 8 :
-            dest_port_config->channel_mask = AUDIO_CHANNEL_OUT_7POINT1;
-            break;
+        case SOURCE_PORT_HDMI :
+            read_data_from_fd(tlb_hdmi_in_audio_sys_path, &hdmi_config.hdmi_conn_state);
+            read_data_from_fd(tlb_hdmi_in_audio_state_sys_path,
+                              &hdmi_config.hdmi_audio_state);
+            read_data_from_fd(tlb_hdmi_in_audio_sample_rate_sys_path,
+                              &hdmi_config.hdmi_sample_rate);
+            read_data_from_fd(tlb_hdmi_in_audio_channel_sys_path,
+                              &hdmi_config.hdmi_num_channels);
+            read_data_from_fd(tlb_hdmi_in_audio_format_sys_path,
+                              &hdmi_config.hdmi_data_format);
+        break;
         default :
-            fprintf(log_file,"\nUnsupported number of channels in source port %d\n",
-                    channels);
+            fprintf(log_file,"\nUnsupported port type, cannot set configuration\n");
             rc = -1;
-            break;
-        }
+        break;
+    }
+
+    hdmi_config.hdmi_num_channels = actual_channels_from_audio_infoframe(hdmi_config.hdmi_num_channels);
+
+    if(hdmi_config.hdmi_data_format) {
+        if(!( hdmi_config.hdmi_num_channels == 2 || hdmi_config.hdmi_num_channels == 8 )) {
+                transcode_loopback_config->source_port_config.source_port_state = SOURCE_PORT_INACTIVE;
+                return rc;
+            }
+    }
+    dest_port_config->sample_rate = hdmi_config.hdmi_sample_rate;
+    switch(hdmi_config.hdmi_num_channels) {
+    case 2 :
+        dest_port_config->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+        break;
+    case 3 :
+        dest_port_config->channel_mask = AUDIO_CHANNEL_OUT_2POINT1;
+        break;
+    case 4 :
+        dest_port_config->channel_mask = AUDIO_CHANNEL_OUT_QUAD;
+        break;
+    case 5 :
+        dest_port_config->channel_mask = AUDIO_CHANNEL_OUT_PENTA;
+        break;
+    case 6 :
+        dest_port_config->channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
+        break;
+    case 7 :
+        dest_port_config->channel_mask = AUDIO_CHANNEL_OUT_6POINT1;
+        break;
+    case 8 :
+        dest_port_config->channel_mask = AUDIO_CHANNEL_OUT_7POINT1;
         break;
     default :
-        fprintf(log_file,"\nUnsupported port type, cannot set configuration\n");
+        fprintf(log_file,"\nUnsupported number of channels in source port %d\n",
+                hdmi_config.hdmi_num_channels);
         rc = -1;
         break;
+    }
+    switch(hdmi_config.hdmi_data_format) {
+    case 0 :
+        // TODO : HDMI driver detecting as 0 for compressed also as of now
+        //dest_port_config->format = AUDIO_FORMAT_AC3;
+        dest_port_config->format = AUDIO_FORMAT_PCM_16_BIT;
+        break;
+    case 1 :
+        dest_port_config->format = AUDIO_FORMAT_AC3;
+        break;
+    default :
+        fprintf(log_file,"\nUnsupported data format in source port %d\n",
+                hdmi_config.hdmi_data_format);
+        rc = -1;
+        break;
+    }
+
+    fprintf(log_file,"\nExisting HDMI In state: %d, audio_state: %d, samplerate: %d, channels: %d, format: %d\n",
+            transcode_loopback_config->source_port_config.port_config.hdmi_in_port_config.hdmi_conn_state, transcode_loopback_config->source_port_config.port_config.hdmi_in_port_config.hdmi_audio_state,
+            transcode_loopback_config->source_port_config.port_config.hdmi_in_port_config.hdmi_sample_rate, transcode_loopback_config->source_port_config.port_config.hdmi_in_port_config.hdmi_num_channels,
+            transcode_loopback_config->source_port_config.port_config.hdmi_in_port_config.hdmi_data_format);
+
+    fprintf(log_file,"\nSource port connection_state: %d, audio_state: %d, samplerate: %d, channels: %d, format: %d\n",
+            hdmi_config.hdmi_conn_state, hdmi_config.hdmi_audio_state,
+            hdmi_config.hdmi_sample_rate, hdmi_config.hdmi_num_channels,
+            hdmi_config.hdmi_data_format);
+
+    if( rc == 0 ) {
+        if(hdmi_config.hdmi_audio_state)
+        {
+            if(memcmp(&hdmi_config,&(transcode_loopback_config->source_port_config.port_config.hdmi_in_port_config),sizeof(tlb_hdmi_config_t))) {
+                transcode_loopback_config->source_port_config.source_port_state = SOURCE_PORT_CONFIG_CHANGED;
+            } else {
+                    transcode_loopback_config->source_port_config.source_port_state = SOURCE_PORT_ACTIVE;
+            }
+        } else {
+                transcode_loopback_config->source_port_config.source_port_state = SOURCE_PORT_INACTIVE;
+        }
+        memcpy(&(transcode_loopback_config->source_port_config.port_config.hdmi_in_port_config),&hdmi_config,sizeof(tlb_hdmi_config_t));
     }
     return rc;
 }
@@ -255,8 +338,11 @@ int read_and_set_source_config(source_port_type_t source_port_type,
 void stop_transcode_loopback(
             transcode_loopback_config_t *transcode_loopback_config)
 {
-    qahw_release_audio_patch(transcode_loopback_config->hal_handle,
-                             transcode_loopback_config->patch_handle);
+    fprintf(log_file,"\nStopping current loopback session\n");
+    if(transcode_loopback_config->patch_handle != AUDIO_PATCH_HANDLE_NONE)
+        qahw_release_audio_patch(transcode_loopback_config->hal_handle,
+                                 transcode_loopback_config->patch_handle);
+    transcode_loopback_config->patch_handle = AUDIO_PATCH_HANDLE_NONE;
 }
 
 int create_run_transcode_loopback(
@@ -267,6 +353,10 @@ int create_run_transcode_loopback(
 
 
     fprintf(log_file,"\nCreating audio patch\n");
+    if (transcode_loopback_config->patch_handle != AUDIO_PATCH_HANDLE_NONE) {
+        fprintf(log_file,"\nPatch already existing, release the patch before opening a new patch\n");
+        return rc;
+    }
     rc = qahw_create_audio_patch(module_handle,
                         1,
                         &transcode_loopback_config->source_config,
@@ -277,14 +367,14 @@ int create_run_transcode_loopback(
     return rc;
 }
 
-static audio_hw_device_t *load_hal(audio_devices_t dev)
+static qahw_module_handle_t *load_hal(audio_devices_t dev)
 {
     if (primary_hal_handle == NULL) {
         primary_hal_handle = qahw_load_module(QAHW_MODULE_ID_PRIMARY);
         if (primary_hal_handle == NULL) {
             fprintf(stderr,"failure in Loading primary HAL\n");
             goto exit;
-		}
+        }
     }
 
 exit:
@@ -303,31 +393,214 @@ static int unload_hals(void) {
     return 1;
 }
 
-int main(int argc, char *argv[]) {
 
-    int status = 0,play_duration_in_seconds = 30;
-    source_port_type_t source_port_type = SOURCE_PORT_NONE;
-    log_file = stdout;
+int poll_data_event_init()
+{
+    struct sockaddr_nl sock_addr;
+    int sz = (64*1024);
+    int soc;
 
-    fprintf(log_file,"\nTranscode loopback test begin\n");
-    if (argc == 2) {
-        play_duration_in_seconds = atoi(argv[1]);
-        if (play_duration_in_seconds < 0 | play_duration_in_seconds > 3600) {
-            fprintf(log_file,
-                    "\nPlayback duration %s invalid or unsupported(range : 1 to 3600 )\n",
-                    argv[1]);
-            goto usage;
-        }
-    } else {
-        goto usage;
+    memset(&sock_addr, 0, sizeof(sock_addr));
+    sock_addr.nl_family = AF_NETLINK;
+    sock_addr.nl_pid = getpid();
+    sock_addr.nl_groups = 0xffffffff;
+
+    soc = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_KOBJECT_UEVENT);
+    if (soc < 0) {
+        return 0;
     }
 
+    setsockopt(soc, SOL_SOCKET, SO_RCVBUFFORCE, &sz, sizeof(sz));
+
+    if (bind(soc, (struct sockaddr*) &sock_addr, sizeof(sock_addr)) < 0) {
+        close(soc);
+        return 0;
+    }
+
+    sock_event_fd = soc;
+
+    return (soc > 0);
+}
+
+void source_data_event_handler(transcode_loopback_config_t *transcode_loopback_config)
+{
+    int status =0;
+    source_port_type_t source_port_type = transcode_loopback_config->source_port_config.source_port_type;
+    status = read_and_set_source_config(source_port_type,&transcode_loopback_config->source_config);
+
+    if ( status )
+    {
+        fprintf(log_file,"\nFailure in source port configuration with status: %d\n", status);
+        return;
+    }
+
+    fprintf(log_file,"\nSource port state : %d\n", transcode_loopback_config->source_port_config.source_port_state);
+
+    if(transcode_loopback_config->source_port_config.source_port_state == SOURCE_PORT_CONFIG_CHANGED) {
+        fprintf(log_file,"\nAudio state changed, Create and start transcode loopback session begin\n");
+        stop_transcode_loopback(transcode_loopback_config);
+        status = create_run_transcode_loopback(transcode_loopback_config);
+        if(status)
+        {
+            fprintf(log_file,"\nCreate audio patch failed with status %d\n",status);
+            stop_transcode_loopback(transcode_loopback_config);
+        }
+    } else if(transcode_loopback_config->source_port_config.source_port_state == SOURCE_PORT_INACTIVE) {
+        stop_transcode_loopback(transcode_loopback_config);
+    }
+}
+
+void process_loopback_data(void *ptr)
+{
+    char buffer[64*1024];
+    struct pollfd fds;
+    int i, count, status;
+    int j;
+    char *dev_path = NULL;
+    char *switch_state = NULL;
+    char *switch_name = NULL;
+    transcode_loopback_config_t *transcode_loopback_config = &g_trnscode_loopback_config;
+
+    fprintf(log_file,"\nEvent thread loop\n");
+    source_data_event_handler(transcode_loopback_config);
+    while(1) {
+
+        fds.fd = sock_event_fd;
+        fds.events = POLLIN;
+        fds.revents = 0;
+        i = poll(&fds, 1, -1);
+
+        if (i > 0 && (fds.revents & POLLIN)) {
+            count = recv(sock_event_fd, buffer, (64*1024), 0 );
+            if (count > 0) {
+                buffer[count] = '\0';
+                j = 0;
+                while(j < count) {
+                    if (strncmp(&buffer[j], "DEVPATH=", 8) == 0) {
+                        dev_path = &buffer[j+8];
+                        j += 8;
+                        continue;
+                    } else if (strncmp(&buffer[j], "SWITCH_NAME=", 12) == 0) {
+                        switch_name = &buffer[j+12];
+                        j += 12;
+                        continue;
+                    } else if (strncmp(&buffer[j], "SWITCH_STATE=", 13) == 0) {
+                        switch_state = &buffer[j+13];
+                        j += 13;
+                        continue;
+                    }
+                    j++;
+                }
+                fprintf(log_file,"devpath = %s, switch_name = %s \n",
+                                         dev_path, switch_name);
+
+                if((DEV_NODE_CHECK(tlb_hdmi_in_audio_dev_path, dev_path) == 0)  || (DEV_NODE_CHECK(tlb_hdmi_in_audio_sample_rate_dev_path, dev_path) == 0)
+                || (DEV_NODE_CHECK(tlb_hdmi_in_audio_state_dev_path, dev_path) == 0)
+                || (DEV_NODE_CHECK(tlb_hdmi_in_audio_channel_dev_path, dev_path) == 0)
+                || (DEV_NODE_CHECK(tlb_hdmi_in_audio_format_dev_path, dev_path) == 0)) {
+                    source_data_event_handler(transcode_loopback_config);
+                }
+            }
+        } else {
+            ALOGD("NO Data\n");
+        }
+    }
+    fprintf(log_file,"\nEvent thread loop exit\n");
+    pthread_exit(0);
+}
+
+bool is_device_supported(uint32_t device_id)
+{
+    switch(device_id)
+    {
+        case AUDIO_DEVICE_OUT_SPEAKER :
+        case AUDIO_DEVICE_OUT_WIRED_HEADSET :
+        case AUDIO_DEVICE_OUT_WIRED_HEADPHONE :
+            return true;
+        default :
+            return false;
+    }
+}
+
+void set_device(uint32_t device_type, uint32_t device_id)
+{
+    transcode_loopback_config_t *transcode_loopback_config = &g_trnscode_loopback_config;
+    device_id = is_device_supported(device_id) ? device_id : AUDIO_DEVICE_OUT_SPEAKER;
+    switch( device_type )
+    {
+        case DEVICE_SINK:
+            transcode_loopback_config->sink_config.ext.device.type = device_id;
+        break;
+        case DEVICE_SOURCE:
+            transcode_loopback_config->source_config.ext.device.type = device_id;
+        break;
+    }
+}
+
+int main(int argc, char *argv[]) {
+
+    int status = 0;
+    uint32_t play_duration_in_seconds = 600,play_duration_elapsed_msec = 0,play_duration_in_msec = 0, sink_device = 2;
+    source_port_type_t source_port_type = SOURCE_PORT_NONE;
+    log_file = stdout;
     transcode_loopback_config_t    *transcode_loopback_config = NULL;
     transcode_loopback_config_t *temp = NULL;
+
+    struct option long_options[] = {
+        /* These options set a flag. */
+        {"sink-device", required_argument,    0, 'd'},
+        {"play-duration",  required_argument,    0, 'p'},
+        {"help",          no_argument,          0, 'h'},
+        {0, 0, 0, 0}
+    };
+
+    int opt = 0;
+    int option_index = 0;
+
+    while ((opt = getopt_long(argc,
+                              argv,
+                              "-d:p:h",
+                              long_options,
+                              &option_index)) != -1) {
+
+        fprintf(log_file, "for argument %c, value is %s\n", opt, optarg);
+
+        switch (opt) {
+        case 'd':
+            sink_device = atoi(optarg);
+            break;
+        case 'p':
+            play_duration_in_seconds = atoi(optarg);
+            break;
+        case 'h':
+        default :
+            usage();
+            return 0;
+            break;
+        }
+    }
+
+    fprintf(log_file,"\nTranscode loopback test begin\n");
+    if (play_duration_in_seconds < 0 | play_duration_in_seconds > 3600) {
+            fprintf(log_file,
+                    "\nPlayback duration %d invalid or unsupported(range : 1 to 3600, defaulting to 600 seconds )\n",
+                    play_duration_in_seconds);
+            play_duration_in_seconds = 600;
+    }
+    play_duration_in_msec = play_duration_in_seconds * 1000;
+
+    /* Register the SIGINT to close the App properly */
+    if (signal(SIGINT, break_signal_handler) == SIG_ERR) {
+        fprintf(log_file, "Failed to register SIGINT:%d\n",errno);
+        fprintf(stderr, "Failed to register SIGINT:%d\n",errno);
+    }
 
     /* Initialize global transcode loopback struct */
     init_transcode_loopback_config(&temp);
     transcode_loopback_config = &g_trnscode_loopback_config;
+
+    /* Set devices */
+    set_device(DEVICE_SINK,sink_device);
 
     /* Load HAL */
     fprintf(log_file,"\nLoading HAL for loopback usecase begin\n");
@@ -339,39 +612,32 @@ int main(int argc, char *argv[]) {
     transcode_loopback_config->hal_handle = primary_hal_handle;
     fprintf(log_file,"\nLoading HAL for loopback usecase done\n");
 
-    /* Configuration assuming source port is HDMI */
-    {
-        source_port_type = SOURCE_PORT_HDMI;
-        fprintf(log_file,"\nSet port config being\n");
-        status = read_and_set_source_config(source_port_type,&transcode_loopback_config->source_config);
-        fprintf(log_file,"\nSet port config end\n");
+    pthread_attr_init(&data_event_attr);
+    fprintf(log_file,"\nData thread init done\n");
+    pthread_attr_setdetachstate(&data_event_attr, PTHREAD_CREATE_JOINABLE);
+    fprintf(log_file,"\nData thread setdetachstate done\n");
 
-        if (status != 0) {
-            fprintf(log_file,"\nFailed to set port config, exiting\n");
-            goto exit_transcode_loopback_test;
+    fprintf(log_file,"\nData thread create\n");
+    pthread_create(&data_event_th, &data_event_attr,
+                       (void *) process_loopback_data, NULL);
+    fprintf(log_file,"\nMain thread loop\n");
+    while(!stop_loopback) {
+        usleep(100*1000);
+        play_duration_elapsed_msec += 100;
+        if(play_duration_in_msec <= play_duration_elapsed_msec)
+        {
+            fprintf(log_file,"\nElapsed set playback duration %d seconds, exiting test\n",play_duration_in_msec/1000);
+            break;
         }
     }
-
-    /* Open transcode loopback session */
-    fprintf(log_file,"\nCreate and start transcode loopback session begin\n");
-    status = create_run_transcode_loopback(transcode_loopback_config);
-    fprintf(log_file,"\nCreate and start transcode loopback session end\n");
-
-    /* If session opened successfully, run for a duration and close session */
-    if (status == 0) {
-        fprintf(log_file,"\nSleeping for %d seconds for loopback session to run\n",
-                play_duration_in_seconds);
-        usleep(play_duration_in_seconds*1000*1000);
-
-        fprintf(log_file,"\nStop transcode loopback session begin\n");
-        stop_transcode_loopback(transcode_loopback_config);
-        fprintf(log_file,"\nStop transcode loopback session end\n");
-    } else {
-        fprintf(log_file,"\nEncountered error %d in creating transcode loopback session\n",
-              status);
-    }
+    fprintf(log_file,"\nMain thread loop exit\n");
 
 exit_transcode_loopback_test:
+    stop_transcode_loopback(transcode_loopback_config);
+    fprintf(log_file,"\nCancelling loopback thread\n");
+    pthread_cancel(data_event_th);
+    fprintf(log_file,"\nJoining loopback thread\n");
+    pthread_join(data_event_th, NULL);
     fprintf(log_file,"\nUnLoading HAL for loopback usecase begin\n");
     unload_hals();
     fprintf(log_file,"\nUnLoading HAL for loopback usecase end\n");
@@ -381,11 +647,12 @@ exit_transcode_loopback_test:
 
     fprintf(log_file,"\nTranscode loopback test end\n");
     return 0;
-usage:
-    fprintf(log_file,"\nInvald arguments\n");
-    fprintf(log_file,"\nUsage : trans_loopback_test <duration_in_seconds>\n");
-    fprintf(log_file,"\nExample to play for 1 minute : trans_loopback_test 60\n");
-    return 0;
 }
 
-
+void usage()
+{
+    fprintf(log_file,"\nUsage : trans_loopback_test -p <duration_in_seconds> -d <sink_device_id>\n");
+    fprintf(log_file,"\nExample to play for 1 minute on speaker device: trans_loopback_test -p 60 -d 2\n");
+    fprintf(log_file,"\nExample to play for 5 minutes on headphone device: trans_loopback_test -p 300 -d 8\n");
+    fprintf(log_file,"\nHelp : trans_loopback_test -h\n");
+ }

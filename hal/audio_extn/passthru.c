@@ -40,11 +40,34 @@
 #include <cutils/properties.h>
 
 #include "sound/compress_params.h"
+
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
 #define LOG_MASK HAL_MOD_FILE_PASSTH
 #include <log_utils.h>
 #endif
+/*
+ * Offload buffer size for compress passthrough
+ */
+
+#ifdef DTSHD_PARSER_ENABLED
+#include "audio_parsers.h"
+
+/* list of all supported DTS transmission sample rates */
+static const int dts_transmission_sample_rates[] = {
+    44100, 48000, 88200, 96000, 176400, 192000
+};
+
+ /*
+ * for DTSHD stream one frame size can be upto 36kb and to extract iec61937
+ * info for parsing usecase  minimum one frame needs to be sent to dts parser
+ */
+#define MAX_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE (36 * 1024)
+#else
+#define MAX_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE (8 * 1024)
+#endif
+
+#define MIN_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE (2 * 1024)
 
 static const audio_format_t audio_passthru_formats[] = {
     AUDIO_FORMAT_AC3,
@@ -65,6 +88,108 @@ static const audio_format_t audio_passthru_formats[] = {
  * of PCM or compressed.
  */
 static volatile int32_t compress_passthru_active;
+
+#ifdef DTSHD_PARSER_ENABLED
+static void passthru_update_stream_configuration_from_dts_parser( struct stream_out *out,
+        const void *buffer, size_t bytes)
+{
+    struct audio_parser_codec_info codec_info;
+    struct dtshd_iec61937_info dtshd_tr_info;
+    int i;
+    int ret;
+    bool is_valid_transmission_rate = false;
+    bool is_valid_transmission_channels = false;
+
+    /* codec format is AUDIO_PARSER_CODEC_DTSHD for both DTS and DTSHD as
+     *  DTSHD parser can support both DTS and DTSHD
+     */
+    memset(&codec_info, 0, sizeof(struct audio_parser_codec_info));
+    memset(&dtshd_tr_info, 0, sizeof(struct dtshd_iec61937_info));
+
+    init_audio_parser((unsigned char *)buffer, bytes, AUDIO_PARSER_CODEC_DTSHD);
+    codec_info.codec_type = AUDIO_PARSER_CODEC_DTSHD;
+    if (!(ret = get_iec61937_info(&codec_info))) {
+        dtshd_tr_info = codec_info.codec_config.dtshd_tr_info;
+        ALOGD("dts new sample rate %d and channels %d\n",
+               dtshd_tr_info.sample_rate,
+               dtshd_tr_info.num_channels);
+        for (i = 0; i < sizeof(dts_transmission_sample_rates); i++) {
+            if (dts_transmission_sample_rates[i] ==
+                    dtshd_tr_info.sample_rate) {
+                out->sample_rate = dtshd_tr_info.sample_rate;
+                out->compr_config.codec->sample_rate = out->sample_rate;
+                is_valid_transmission_rate = true;
+                break;
+            }
+        }
+        /* DTS transmission channels should be 2 or 8*/
+        if ((dtshd_tr_info.num_channels == 2) ||
+                (dtshd_tr_info.num_channels == 8)) {
+            out->compr_config.codec->ch_in = dtshd_tr_info.num_channels;
+            out->channel_mask = audio_channel_out_mask_from_count
+                (dtshd_tr_info.num_channels);
+            is_valid_transmission_channels = true;
+        }
+    } else {
+        ALOGE("%s:: get_iec61937_info failed %d", __func__, ret);
+    }
+
+    if (!is_valid_transmission_rate) {
+        ALOGE("%s:: Invalid dts transmission rate %d\n using default sample rate 192000",
+               dtshd_tr_info.sample_rate);
+        out->sample_rate = 192000;
+        out->compr_config.codec->sample_rate = out->sample_rate;
+    }
+
+    if (!is_valid_transmission_channels) {
+        ALOGE("%s:: Invalid transmission channels %d using default transmission"
+              " channels as 2", __func__, dtshd_tr_info.num_channels);
+        out->compr_config.codec->ch_in = 2;
+        out->channel_mask = audio_channel_out_mask_from_count(2);
+    }
+}
+#else
+static void passthru_update_stream_configuration_from_dts_parser(
+                        struct stream_out *out __unused,
+                        const void *buffer __unused,
+                        size_t bytes __unused)
+{
+    return;
+}
+#endif
+
+int audio_extn_passthru_get_channel_count(struct stream_out *out)
+{
+    int channel_count = DEFAULT_HDMI_OUT_CHANNELS;
+
+    if (!out) {
+        ALOGE("%s:: Invalid param out %p", __func__, out);
+        return -EINVAL;
+    }
+
+    if (!audio_extn_passthru_is_supported_format(out->format)) {
+        ALOGE("%s:: not a passthrough format %d", __func__, out->format);
+        return -EINVAL;
+    }
+
+    switch(out->format) {
+    case AUDIO_FORMAT_DOLBY_TRUEHD:
+       channel_count = 8;
+       break;
+    case AUDIO_FORMAT_DTS:
+    case AUDIO_FORMAT_DTS_HD:
+#ifdef DTSHD_PARSER_ENABLED
+       /* taken channel count from parser*/
+       channel_count = audio_channel_count_from_out_mask(out->channel_mask);
+#endif
+       break;
+   default:
+       break;
+   }
+
+   ALOGE("%s: pass through channel count %d\n", __func__, channel_count);
+   return channel_count;
+}
 
 bool audio_extn_passthru_is_supported_format(audio_format_t format)
 {
@@ -265,7 +390,8 @@ bool audio_extn_passthru_is_passt_supported(struct audio_device *adev,
 }
 
 void audio_extn_passthru_update_stream_configuration(
-        struct audio_device *adev, struct stream_out *out)
+        struct audio_device *adev, struct stream_out *out,
+        const void *buffer, size_t bytes)
 {
     if (audio_extn_passthru_is_passt_supported(adev, out)) {
         ALOGV("%s:PASSTHROUGH", __func__);
@@ -280,6 +406,15 @@ void audio_extn_passthru_update_stream_configuration(
         ALOGV("%s:NO PASSTHROUGH", __func__);
         out->compr_config.codec->compr_passthr = LEGACY_PCM;
     }
+
+    /*
+     * for DTS passthrough, need to get sample rate from bitstream,
+     * based on this sample rate hdmi backend will be configured
+     */
+    if ((out->format == AUDIO_FORMAT_DTS) ||
+        (out->format == AUDIO_FORMAT_DTS_HD))
+        passthru_update_stream_configuration_from_dts_parser(out, buffer, bytes);
+
 }
 
 bool audio_extn_passthru_is_passthrough_stream(struct stream_out *out)
@@ -318,7 +453,24 @@ bool audio_extn_passthru_is_passthrough_stream(struct stream_out *out)
 
 int audio_extn_passthru_get_buffer_size(audio_offload_info_t* info)
 {
-    return platform_get_compress_passthrough_buffer_size(info);
+    uint32_t fragment_size = MIN_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE;
+    char value[PROPERTY_VALUE_MAX] = {0};
+
+    if (((info->format == AUDIO_FORMAT_DOLBY_TRUEHD) ||
+            (info->format == AUDIO_FORMAT_IEC61937)) &&
+            property_get("audio.truehd.buffer.size.kb", value, "") &&
+            atoi(value)) {
+        fragment_size = atoi(value) * 1024;
+        goto done;
+    } else if ((info->format == AUDIO_FORMAT_DTS) ||
+               (info->format == AUDIO_FORMAT_DTS_HD)) {
+        fragment_size = MAX_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE;
+        goto done;
+    }
+
+done:
+    return fragment_size;
+
 }
 
 int audio_extn_passthru_set_volume(struct stream_out *out,  int mute)
