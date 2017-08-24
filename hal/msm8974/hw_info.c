@@ -211,7 +211,11 @@ static const snd_device_t tasha_liquid_variant_devices[] = {
 };
 
 static const snd_device_t tavil_qrd_variant_devices[] = {
-    SND_DEVICE_OUT_SPEAKER
+    SND_DEVICE_OUT_SPEAKER,
+    SND_DEVICE_OUT_VOICE_SPEAKER,
+    SND_DEVICE_OUT_HANDSET,
+    SND_DEVICE_OUT_VOICE_HANDSET,
+    SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET,
 };
 
 static void  update_hardware_info_8084(struct hardware_info *hw_info, const char *snd_card_name)
