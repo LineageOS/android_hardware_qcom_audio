@@ -100,6 +100,7 @@ typedef enum {
     ENC_CODEC_TYPE_SBC = 520093696u, // 0x1F000000UL
     ENC_CODEC_TYPE_APTX = 536870912u, // 0x20000000UL
     ENC_CODEC_TYPE_APTX_HD = 553648128u, // 0x21000000UL
+    ENC_CODEC_TYPE_APTX_DUAL_MONO = 570425344u, // 0x22000000UL
     ENC_CODEC_TYPE_CELT = 603979776u, // 0x24000000UL
 }enc_codec_t;
 
@@ -147,6 +148,7 @@ struct a2dp_data {
     int  a2dp_total_active_session_request;
     bool is_a2dp_offload_supported;
     bool is_handoff_in_progress;
+    bool is_aptx_dual_mono_supported;
 };
 
 struct a2dp_data a2dp;
@@ -169,7 +171,7 @@ struct aac_enc_cfg_t {
     uint16_t      aac_fmt_flag;
     uint16_t      channel_cfg;
     uint32_t      sample_rate;
-} ;
+} __packed;
 
 /* SBC encoder configuration structure. */
 typedef struct sbc_enc_cfg_t sbc_enc_cfg_t;
@@ -189,14 +191,14 @@ struct sbc_enc_cfg_t{
     uint32_t      alloc_method;
     uint32_t      bit_rate;
     uint32_t      sample_rate;
-};
+} __packed;
 
 
 /* supported num_channels are Mono/Stereo
  * supported channel_mapping for mono is CHANNEL_C
  * supported channel mapping for stereo is CHANNEL_L and CHANNEL_R
  * custom size and reserved are not used(for future enhancement)
-  */
+ */
 struct custom_enc_cfg_t
 {
     uint32_t      enc_format;
@@ -205,7 +207,7 @@ struct custom_enc_cfg_t
     uint16_t      reserved;
     uint8_t       channel_mapping[8];
     uint32_t      custom_size;
-};
+} __packed;
 
 struct celt_specific_enc_cfg_t
 {
@@ -214,13 +216,31 @@ struct celt_specific_enc_cfg_t
     uint16_t      complexity;
     uint16_t      prediction_mode;
     uint16_t      vbr_flag;
-};
+} __packed;
 
 struct celt_enc_cfg_t
 {
     struct custom_enc_cfg_t  custom_cfg;
     struct celt_specific_enc_cfg_t celt_cfg;
-};
+} __packed;
+
+/* sync_mode introduced with APTX V2 libraries
+ * sync mode: 0x0 = stereo sync mode
+ *            0x01 = dual mono sync mode
+ *            0x02 = dual mono with no sync on either L or R codewords
+ */
+struct aptx_v2_enc_cfg_ext_t
+{
+    uint32_t       sync_mode;
+} __packed;
+
+/* APTX struct for combining custom enc and V2 fields */
+struct aptx_enc_cfg_t
+{
+    struct custom_enc_cfg_t  custom_cfg;
+    struct aptx_v2_enc_cfg_ext_t aptx_v2_cfg;
+} __packed;
+
 /* In LE BT source code uses system/audio.h for below
  * structure definition. To avoid multiple definition
  * compilation error for audiohal in LE , masking structure
@@ -252,8 +272,19 @@ typedef struct {
     uint16_t sampling_rate;
     uint8_t  channels;
     uint32_t bitrate;
-} audio_aptx_encoder_config;
+} audio_aptx_default_config;
 
+typedef struct {
+    uint16_t sampling_rate;
+    uint8_t  channels;
+    uint32_t bitrate;
+    uint32_t sync_mode;
+} audio_aptx_dual_mono_config;
+
+typedef union {
+    audio_aptx_default_config *default_cfg;
+    audio_aptx_dual_mono_config *dual_mono_cfg;
+} audio_aptx_encoder_config;
 
 /* Information about BT AAC encoder configuration
  * This data is used between audio HAL module and
@@ -297,6 +328,10 @@ static void a2dp_offload_codec_cap_parser(char *value)
             break;
         } else if (strcmp(tok, "aptx") == 0) {
             ALOGD("%s: aptx offload supported\n",__func__);
+            a2dp.is_a2dp_offload_supported = true;
+            break;
+        } else if (strcmp(tok, "aptxtws") == 0) {
+            ALOGD("%s: aptx dual mono offload supported\n",__func__);
             a2dp.is_a2dp_offload_supported = true;
             break;
         } else if (strcmp(tok, "aptxhd") == 0) {
@@ -489,7 +524,7 @@ fail:
 bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
 {
     struct mixer_ctl *ctl_enc_data = NULL, *ctrl_bit_format = NULL;
-    struct custom_enc_cfg_t aptx_dsp_cfg;
+    struct aptx_enc_cfg_t aptx_dsp_cfg;
     bool is_configured = false;
     int ret = 0;
 
@@ -502,22 +537,31 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         is_configured = false;
         goto fail;
     }
-    memset(&aptx_dsp_cfg, 0x0, sizeof(struct custom_enc_cfg_t));
-    aptx_dsp_cfg.enc_format = ENC_MEDIA_FMT_APTX;
-    aptx_dsp_cfg.sample_rate = aptx_bt_cfg->sampling_rate;
-    aptx_dsp_cfg.num_channels = aptx_bt_cfg->channels;
-    switch(aptx_dsp_cfg.num_channels) {
+
+    memset(&aptx_dsp_cfg, 0x0, sizeof(struct aptx_enc_cfg_t));
+    aptx_dsp_cfg.custom_cfg.enc_format = ENC_MEDIA_FMT_APTX;
+
+    if (!a2dp.is_aptx_dual_mono_supported) {
+        aptx_dsp_cfg.custom_cfg.sample_rate = aptx_bt_cfg->default_cfg->sampling_rate;
+        aptx_dsp_cfg.custom_cfg.num_channels = aptx_bt_cfg->default_cfg->channels;
+    } else {
+        aptx_dsp_cfg.custom_cfg.sample_rate = aptx_bt_cfg->dual_mono_cfg->sampling_rate;
+        aptx_dsp_cfg.custom_cfg.num_channels = aptx_bt_cfg->dual_mono_cfg->channels;
+        aptx_dsp_cfg.aptx_v2_cfg.sync_mode = aptx_bt_cfg->dual_mono_cfg->sync_mode;
+    }
+
+    switch(aptx_dsp_cfg.custom_cfg.num_channels) {
         case 1:
-            aptx_dsp_cfg.channel_mapping[0] = PCM_CHANNEL_C;
+            aptx_dsp_cfg.custom_cfg.channel_mapping[0] = PCM_CHANNEL_C;
             break;
         case 2:
         default:
-            aptx_dsp_cfg.channel_mapping[0] = PCM_CHANNEL_L;
-            aptx_dsp_cfg.channel_mapping[1] = PCM_CHANNEL_R;
+            aptx_dsp_cfg.custom_cfg.channel_mapping[0] = PCM_CHANNEL_L;
+            aptx_dsp_cfg.custom_cfg.channel_mapping[1] = PCM_CHANNEL_R;
             break;
     }
     ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_dsp_cfg,
-                              sizeof(struct custom_enc_cfg_t));
+                              sizeof(struct aptx_enc_cfg_t));
     if (ret != 0) {
         ALOGE("%s: Failed to set APTX encoder config", __func__);
         is_configured = false;
@@ -539,16 +583,26 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
     }
     is_configured = true;
     a2dp.bt_encoder_format = ENC_CODEC_TYPE_APTX;
-    a2dp.enc_sampling_rate = aptx_bt_cfg->sampling_rate;
-    ALOGV("Successfully updated APTX enc format with samplingrate: %d channels:%d",
-           aptx_dsp_cfg.sample_rate, aptx_dsp_cfg.num_channels);
+    if (!a2dp.is_aptx_dual_mono_supported) {
+        a2dp.enc_sampling_rate = aptx_bt_cfg->default_cfg->sampling_rate;
+        ALOGV("Successfully updated APTX enc format with samplingrate: %d \
+               channels:%d", aptx_dsp_cfg.custom_cfg.sample_rate,
+               aptx_dsp_cfg.custom_cfg.num_channels);
+    } else {
+        a2dp.enc_sampling_rate = aptx_bt_cfg->dual_mono_cfg->sampling_rate;
+        ALOGV("Successfully updated APTX dual mono enc format with \
+               samplingrate: %d channels:%d syncmode %d",
+               aptx_dsp_cfg.custom_cfg.sample_rate,
+               aptx_dsp_cfg.custom_cfg.num_channels,
+               aptx_dsp_cfg.aptx_v2_cfg.sync_mode);
+    }
 fail:
     return is_configured;
 }
 
 /* API to configure APTX HD DSP encoder
  */
-bool configure_aptx_hd_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
+bool configure_aptx_hd_enc_format(audio_aptx_default_config *aptx_bt_cfg)
 {
     struct mixer_ctl *ctl_enc_data = NULL, *ctrl_bit_format = NULL;
     struct custom_enc_cfg_t aptx_dsp_cfg;
@@ -743,6 +797,7 @@ bool configure_a2dp_encoder_format()
     uint8_t multi_cast = 0, num_dev = 1;
     enc_codec_t codec_type = ENC_CODEC_TYPE_INVALID;
     bool is_configured = false;
+    audio_aptx_encoder_config aptx_encoder_cfg;
 
     if (!a2dp.audio_get_codec_config) {
         ALOGE(" a2dp handle is not identified, ignoring a2dp encoder config");
@@ -756,17 +811,26 @@ bool configure_a2dp_encoder_format()
         case ENC_CODEC_TYPE_SBC:
             ALOGD(" Received SBC encoder supported BT device");
             is_configured =
-               configure_sbc_enc_format((audio_sbc_encoder_config *)codec_info);
+              configure_sbc_enc_format((audio_sbc_encoder_config *)codec_info);
             break;
         case ENC_CODEC_TYPE_APTX:
             ALOGD(" Received APTX encoder supported BT device");
+            a2dp.is_aptx_dual_mono_supported = false;
+            aptx_encoder_cfg.default_cfg = (audio_aptx_default_config *)codec_info;
             is_configured =
-              configure_aptx_enc_format((audio_aptx_encoder_config *)codec_info);
+              configure_aptx_enc_format(&aptx_encoder_cfg);
             break;
         case ENC_CODEC_TYPE_APTX_HD:
             ALOGD(" Received APTX HD encoder supported BT device");
             is_configured =
-             configure_aptx_hd_enc_format((audio_aptx_encoder_config *)codec_info);
+              configure_aptx_hd_enc_format((audio_aptx_default_config *)codec_info);
+            break;
+        case ENC_CODEC_TYPE_APTX_DUAL_MONO:
+            ALOGD(" Received APTX dual mono encoder supported BT device");
+            a2dp.is_aptx_dual_mono_supported = true;
+            aptx_encoder_cfg.dual_mono_cfg = (audio_aptx_dual_mono_config *)codec_info;
+            is_configured =
+              configure_aptx_enc_format(&aptx_encoder_cfg);
             break;
         case ENC_CODEC_TYPE_AAC:
             ALOGD(" Received AAC encoder supported BT device");
@@ -1044,6 +1108,7 @@ void audio_extn_a2dp_init (void *adev)
   a2dp.enc_sampling_rate = 48000;
   a2dp.is_a2dp_offload_supported = false;
   a2dp.is_handoff_in_progress = false;
+  a2dp.is_aptx_dual_mono_supported = false;
   reset_a2dp_enc_config_params();
   update_offload_codec_capabilities();
 }
