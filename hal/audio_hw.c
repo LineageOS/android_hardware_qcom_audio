@@ -3680,18 +3680,17 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 {
     struct audio_device *adev = (struct audio_device *)dev;
     struct stream_out *out;
-    int i, ret;
+    int i, ret = 0;
     bool is_hdmi = devices & AUDIO_DEVICE_OUT_AUX_DIGITAL;
     bool is_usb_dev = audio_is_usb_out_device(devices) &&
                       (devices != AUDIO_DEVICE_OUT_USB_ACCESSORY);
-    bool direct_dev = is_hdmi || is_usb_dev;
 
     if (is_usb_dev && !is_usb_ready(adev, true /* is_playback */)) {
         return -ENOSYS;
     }
 
-    ALOGV("%s: enter: sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)",
-          __func__, config->sample_rate, config->channel_mask, devices, flags);
+    ALOGV("%s: enter: format(%#x) sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)",
+          __func__, config->format, config->sample_rate, config->channel_mask, devices, flags);
     *stream_out = NULL;
     out = (struct stream_out *)calloc(1, sizeof(struct stream_out));
 
@@ -3701,16 +3700,14 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->flags = flags;
     out->devices = devices;
     out->dev = adev;
-    out->format = config->format;
-    out->sample_rate = config->sample_rate;
-    out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
     out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_STEREO;
     out->handle = handle;
 
     /* Init use case and pcm_config */
-    if (audio_is_linear_pcm(out->format) &&
-        (out->flags == AUDIO_OUTPUT_FLAG_NONE ||
-         out->flags == AUDIO_OUTPUT_FLAG_DIRECT) && direct_dev) {
+    if ((is_hdmi || is_usb_dev) &&
+        (audio_is_linear_pcm(config->format) || config->format == AUDIO_FORMAT_DEFAULT) &&
+        (flags == AUDIO_OUTPUT_FLAG_NONE ||
+        (flags & AUDIO_OUTPUT_FLAG_DIRECT) != 0)) {
         pthread_mutex_lock(&adev->lock);
         if (is_hdmi) {
             ret = read_hdmi_channel_masks(out);
@@ -3732,25 +3729,38 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                                                   &out->supported_sample_rates[0],
                                                   MAX_SUPPORTED_SAMPLE_RATES);
             ALOGV("plugged dev USB ret %d", ret);
-        } else {
-            ret = -1;
         }
         pthread_mutex_unlock(&adev->lock);
         if (ret != 0)
             goto error_open;
 
-        out->channel_mask = config->channel_mask;
+
         out->sample_rate = config->sample_rate;
+        out->channel_mask = config->channel_mask;
         out->format = config->format;
-        out->usecase = USECASE_AUDIO_PLAYBACK_HIFI;
-        // does this change?
-        out->config = is_hdmi ? pcm_config_hdmi_multi : pcm_config_hifi;
-        out->config.rate = config->sample_rate;
+        if (is_hdmi) {
+            out->usecase = USECASE_AUDIO_PLAYBACK_HIFI;
+            out->config = pcm_config_hdmi_multi;
+        } else if (flags & AUDIO_OUTPUT_FLAG_MMAP_NOIRQ) {
+            out->usecase = USECASE_AUDIO_PLAYBACK_MMAP;
+            out->config = pcm_config_mmap_playback;
+            out->stream.start = out_start;
+            out->stream.stop = out_stop;
+            out->stream.create_mmap_buffer = out_create_mmap_buffer;
+            out->stream.get_mmap_position = out_get_mmap_position;
+        } else {
+            out->usecase = USECASE_AUDIO_PLAYBACK_HIFI;
+            out->config = pcm_config_hifi;
+        }
+
+        out->config.rate = out->sample_rate;
         out->config.channels = audio_channel_count_from_out_mask(out->channel_mask);
-        out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels *
-                                                         audio_bytes_per_sample(config->format));
+        if (is_hdmi) {
+            out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels *
+                                                         audio_bytes_per_sample(out->format));
+        }
         out->config.format = pcm_format_from_audio_format(out->format);
-    } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
+    } else if (flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         pthread_mutex_lock(&adev->lock);
         bool offline = (adev->card_status == CARD_STATUS_OFFLINE);
         pthread_mutex_unlock(&adev->lock);
@@ -3773,17 +3783,20 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             ret = -EINVAL;
             goto error_open;
         }
+        out->sample_rate = config->offload_info.sample_rate;
+        if (config->offload_info.channel_mask != AUDIO_CHANNEL_NONE)
+            out->channel_mask = config->offload_info.channel_mask;
+        else if (config->channel_mask != AUDIO_CHANNEL_NONE)
+            out->channel_mask = config->channel_mask;
+        else
+            out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+
+        out->format = config->offload_info.format;
 
         out->compr_config.codec = (struct snd_codec *)
                                     calloc(1, sizeof(struct snd_codec));
 
         out->usecase = USECASE_AUDIO_PLAYBACK_OFFLOAD;
-        if (config->offload_info.channel_mask)
-            out->channel_mask = config->offload_info.channel_mask;
-        else if (config->channel_mask)
-            out->channel_mask = config->channel_mask;
-        out->format = config->offload_info.format;
-        out->sample_rate = config->offload_info.sample_rate;
 
         out->stream.set_callback = out_set_callback;
         out->stream.pause = out_pause;
@@ -3795,11 +3808,11 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                 get_snd_codec_id(config->offload_info.format);
         out->compr_config.fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
         out->compr_config.fragments = COMPRESS_OFFLOAD_NUM_FRAGMENTS;
-        out->compr_config.codec->sample_rate = config->offload_info.sample_rate;
+        out->compr_config.codec->sample_rate = out->sample_rate;
         out->compr_config.codec->bit_rate =
                     config->offload_info.bit_rate;
         out->compr_config.codec->ch_in =
-                audio_channel_count_from_out_mask(config->channel_mask);
+                audio_channel_count_from_out_mask(out->channel_mask);
         out->compr_config.codec->ch_out = out->compr_config.codec->ch_in;
 
         if (flags & AUDIO_OUTPUT_FLAG_NON_BLOCKING)
@@ -3812,46 +3825,136 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                 config->offload_info.bit_rate);
     } else  if (out->devices == AUDIO_DEVICE_OUT_TELEPHONY_TX) {
         switch (config->sample_rate) {
+            case 0:
+                out->sample_rate = AFE_PROXY_SAMPLING_RATE;
+                break;
             case 8000:
             case 16000:
             case 48000:
                 out->sample_rate = config->sample_rate;
                 break;
             default:
-                out->sample_rate = AFE_PROXY_SAMPLING_RATE;
+                ALOGE("%s: Unsupported sampling rate %d for Telephony TX", __func__,
+                      config->sample_rate);
+                config->sample_rate = AFE_PROXY_SAMPLING_RATE;
+                ret = -EINVAL;
+                break;
         }
-        out->format = AUDIO_FORMAT_PCM_16_BIT;
+        //FIXME: add support for MONO stream configuration when audioflinger mixer supports it
+        switch (config->channel_mask) {
+            case AUDIO_CHANNEL_NONE:
+                out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+                break;
+            case AUDIO_CHANNEL_OUT_STEREO:
+                out->channel_mask = config->channel_mask;
+                break;
+            default:
+                ALOGE("%s: Unsupported channel mask %#x for Telephony TX", __func__,
+                      config->channel_mask);
+                config->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+                ret = -EINVAL;
+                break;
+        }
+        switch (config->format) {
+            case AUDIO_FORMAT_DEFAULT:
+                out->format = AUDIO_FORMAT_PCM_16_BIT;
+                break;
+            case AUDIO_FORMAT_PCM_16_BIT:
+                out->format = config->format;
+                break;
+            default:
+                ALOGE("%s: Unsupported format %#x for Telephony TX", __func__,
+                      config->format);
+                config->format = AUDIO_FORMAT_PCM_16_BIT;
+                ret = -EINVAL;
+                break;
+        }
+        if (ret != 0)
+            goto error_open;
+
         out->usecase = USECASE_AUDIO_PLAYBACK_AFE_PROXY;
         out->config = pcm_config_afe_proxy_playback;
+        out->config.rate = out->sample_rate;
+        out->config.channels =
+                audio_channel_count_from_out_mask(out->channel_mask);
+        out->config.format = pcm_format_from_audio_format(out->format);
         adev->voice_tx_output = out;
-    } else if (out->flags == AUDIO_OUTPUT_FLAG_VOIP_RX) {
+    } else if (flags == AUDIO_OUTPUT_FLAG_VOIP_RX) {
+        switch (config->sample_rate) {
+            case 0:
+                out->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+                break;
+            case 8000:
+            case 16000:
+            case 32000:
+            case 48000:
+                out->sample_rate = config->sample_rate;
+                break;
+            default:
+                ALOGE("%s: Unsupported sampling rate %d for Voip RX", __func__,
+                      config->sample_rate);
+                config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+                ret = -EINVAL;
+                break;
+        }
         //FIXME: add support for MONO stream configuration when audioflinger mixer supports it
+        switch (config->channel_mask) {
+            case AUDIO_CHANNEL_NONE:
+                out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+                break;
+            case AUDIO_CHANNEL_OUT_STEREO:
+                out->channel_mask = config->channel_mask;
+                break;
+            default:
+                ALOGE("%s: Unsupported channel mask %#x for Voip RX", __func__,
+                      config->channel_mask);
+                config->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+                ret = -EINVAL;
+                break;
+        }
+        switch (config->format) {
+            case AUDIO_FORMAT_DEFAULT:
+                out->format = AUDIO_FORMAT_PCM_16_BIT;
+                break;
+            case AUDIO_FORMAT_PCM_16_BIT:
+                out->format = config->format;
+                break;
+            default:
+                ALOGE("%s: Unsupported format %#x for Voip RX", __func__,
+                      config->format);
+                config->format = AUDIO_FORMAT_PCM_16_BIT;
+                ret = -EINVAL;
+                break;
+        }
+        if (ret != 0)
+            goto error_open;
+
         uint32_t buffer_size, frame_size;
         out->usecase = USECASE_AUDIO_PLAYBACK_VOIP;
         out->config = pcm_config_voip;
-        out->config.format = pcm_format_from_audio_format(config->format);
-        out->config.rate = config->sample_rate;
+        out->config.rate = out->sample_rate;
+        out->config.format = pcm_format_from_audio_format(out->format);
         buffer_size = get_stream_buffer_size(VOIP_PLAYBACK_PERIOD_DURATION_MSEC,
-                                             config->sample_rate,
-                                             config->format,
+                                             out->sample_rate,
+                                             out->format,
                                              out->config.channels,
                                              false /*is_low_latency*/);
-        frame_size = audio_bytes_per_sample(config->format) * out->config.channels;
+        frame_size = audio_bytes_per_sample(out->format) * out->config.channels;
         out->config.period_size = buffer_size / frame_size;
         out->config.period_count = VOIP_PLAYBACK_PERIOD_COUNT;
         out->af_period_multiplier = 1;
     } else {
-        if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
+        if (flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
             out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
             out->config = pcm_config_deep_buffer;
-        } else if (out->flags & AUDIO_OUTPUT_FLAG_TTS) {
+        } else if (flags & AUDIO_OUTPUT_FLAG_TTS) {
             out->usecase = USECASE_AUDIO_PLAYBACK_TTS;
             out->config = pcm_config_deep_buffer;
-        } else if (out->flags & AUDIO_OUTPUT_FLAG_RAW) {
+        } else if (flags & AUDIO_OUTPUT_FLAG_RAW) {
             out->usecase = USECASE_AUDIO_PLAYBACK_ULL;
             out->realtime = may_use_noirq_mode(adev, USECASE_AUDIO_PLAYBACK_ULL, out->flags);
             out->config = out->realtime ? pcm_config_rt : pcm_config_low_latency;
-        } else if (out->flags & AUDIO_OUTPUT_FLAG_MMAP_NOIRQ) {
+        } else if (flags & AUDIO_OUTPUT_FLAG_MMAP_NOIRQ) {
             out->usecase = USECASE_AUDIO_PLAYBACK_MMAP;
             out->config = pcm_config_mmap_playback;
             out->stream.start = out_start;
@@ -3862,15 +3965,38 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
             out->config = pcm_config_low_latency;
         }
-        if (config->format != audio_format_from_pcm_format(out->config.format)) {
-            out->config.format = pcm_format_from_audio_format(config->format);
+
+        if (config->sample_rate == 0) {
+            out->sample_rate = out->config.rate;
+        } else {
+            out->sample_rate = config->sample_rate;
         }
-        out->sample_rate = out->config.rate;
+        if (config->channel_mask == AUDIO_CHANNEL_NONE) {
+            out->channel_mask = audio_channel_out_mask_from_count(out->config.channels);
+        } else {
+            out->channel_mask = config->channel_mask;
+        }
+        if (config->format == AUDIO_FORMAT_DEFAULT)
+            out->format = audio_format_from_pcm_format(out->config.format);
+        else if (!audio_is_linear_pcm(config->format)) {
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
+            ret = -EINVAL;
+            goto error_open;
+        } else {
+            out->format = config->format;
+        }
+
+        out->config.rate = out->sample_rate;
+        out->config.channels =
+                audio_channel_count_from_out_mask(out->channel_mask);
+        if (out->format != audio_format_from_pcm_format(out->config.format)) {
+            out->config.format = pcm_format_from_audio_format(out->format);
+        }
     }
 
     if ((config->sample_rate != 0 && config->sample_rate != out->sample_rate) ||
         (config->format != AUDIO_FORMAT_DEFAULT && config->format != out->format) ||
-        (config->channel_mask != 0 && config->channel_mask != out->channel_mask)) {
+        (config->channel_mask != AUDIO_CHANNEL_NONE && config->channel_mask != out->channel_mask)) {
         ALOGI("%s: Unsupported output config. sample_rate:%u format:%#x channel_mask:%#x",
               __func__, config->sample_rate, config->format, config->channel_mask);
         config->sample_rate = out->sample_rate;
