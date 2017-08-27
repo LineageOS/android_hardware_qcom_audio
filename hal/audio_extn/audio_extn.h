@@ -222,6 +222,7 @@ bool audio_extn_usb_is_capture_supported();
 #define audio_extn_a2dp_get_apptype_params(sample_rate,bit_width)    (0)
 #define audio_extn_a2dp_get_encoder_latency()            (0)
 #define audio_extn_a2dp_is_ready()                       (0)
+#define audio_extn_a2dp_is_suspended()                   (0)
 #else
 void audio_extn_a2dp_init(void *adev);
 int audio_extn_a2dp_start_playback();
@@ -233,6 +234,7 @@ void audio_extn_a2dp_get_apptype_params(uint32_t *sample_rate,
                                         uint32_t *bit_width);
 uint32_t audio_extn_a2dp_get_encoder_latency();
 bool audio_extn_a2dp_is_ready();
+bool audio_extn_a2dp_is_suspended();
 #endif
 
 #ifndef SSR_ENABLED
@@ -906,8 +908,8 @@ int audio_extn_hw_loopback_set_audio_port_config(struct audio_hw_device *dev,
                                     const struct audio_port_config *config);
 int audio_extn_hw_loopback_get_audio_port(struct audio_hw_device *dev,
                                     struct audio_port *port_in);
-int audio_extn_loopback_init(struct audio_device *adev);
-void audio_extn_loopback_deinit(struct audio_device *adev);
+int audio_extn_hw_loopback_init(struct audio_device *adev);
+void audio_extn_hw_loopback_deinit(struct audio_device *adev);
 #else
 static int __unused audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev __unused,
                                      unsigned int num_sources __unused,
@@ -933,11 +935,11 @@ static int __unused audio_extn_hw_loopback_get_audio_port(struct audio_hw_device
 {
     return -ENOSYS;
 }
-static int __unused audio_extn_loopback_init(struct audio_device *adev __unused)
+static int __unused audio_extn_hw_loopback_init(struct audio_device *adev __unused)
 {
     return -ENOSYS;
 }
-static void __unused audio_extn_loopback_deinit(struct audio_device *adev __unused)
+static void __unused audio_extn_hw_loopback_deinit(struct audio_device *adev __unused)
 {
 }
 #endif
