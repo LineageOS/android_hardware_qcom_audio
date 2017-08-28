@@ -230,4 +230,6 @@ int platform_get_max_mic_count(void *platform);
 void platform_check_and_update_copp_sample_rate(void *platform, snd_device_t snd_device,
      unsigned int stream_sr,int *sample_rate);
 int platform_get_max_codec_backend();
+int platform_get_mmap_data_fd(void *platform, int dev, int dir,
+                               int *fd, uint32_t *size);
 #endif // AUDIO_PLATFORM_API_H
