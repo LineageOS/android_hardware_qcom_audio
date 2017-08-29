@@ -2107,12 +2107,14 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ALOGD("copl(%x):send new gapless metadata", (unsigned int)out);
             compress_set_gapless_metadata(out->compr, &out->gapless_mdata);
             out->send_new_metadata = 0;
+#if defined(SNDRV_COMPRESS_SET_NEXT_TRACK_PARAM)
             if (out->send_next_track_params && out->is_compr_metadata_avail) {
                 ALOGD("copl(%p):send next track params in gapless", out);
                 compress_set_next_track_param(out->compr, &(out->compr_config.codec->options));
                 out->send_next_track_params = false;
                 out->is_compr_metadata_avail = false;
             }
+#endif
         }
 
         ret = compress_write(out->compr, buffer, bytes);
