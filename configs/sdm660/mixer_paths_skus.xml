@@ -2516,7 +2516,7 @@
         <ctl name="DMIC MUX7" value="DMIC5" />
         <ctl name="SLIM TX8 MUX" value="DEC8" />
         <ctl name="ADC MUX8" value="DMIC" />
-        <ctl name="DMIC MUX8" value="DMIC1" />
+        <ctl name="DMIC MUX8" value="DMIC5" />
     </path>
 
     <path name="speaker-qmic-liquid">
