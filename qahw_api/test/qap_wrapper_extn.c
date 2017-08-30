@@ -115,7 +115,7 @@ double data_callback_st_arr[TIMESTAMP_ARRAY_SIZE];
 bool has_system_input = false;
 char session_kv_pairs[256];
 bool primary_stream_close = false;
-uint8_t stream_cnt = 0;
+int8_t stream_cnt = 0;
 uint32_t dsp_latency = 0;
 
 static int get_qap_out_config_index_for_id(int32_t out_id)
@@ -705,7 +705,8 @@ void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, 
     switch (event_id) {
         case QAP_CALLBACK_EVENT_EOS:
             ALOGV("%s %d Received Main Input EOS", __func__, __LINE__);
-            stream_cnt --;
+            if (stream_cnt > 0)
+                stream_cnt--;
             pthread_mutex_lock(&main_eos_lock);
             pthread_cond_signal(&main_eos_cond);
             pthread_mutex_unlock(&main_eos_lock);
@@ -720,7 +721,8 @@ void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, 
             break;
         case QAP_CALLBACK_EVENT_EOS_ASSOC:
         case QAP_CALLBACK_EVENT_MAIN_2_EOS:
-            stream_cnt --;
+            if (stream_cnt > 0)
+                stream_cnt--;
             if (!has_system_input){
                 ALOGV("%s %d Received Secondary Input EOS", __func__, __LINE__);
                 pthread_mutex_lock(&sec_eos_lock);
@@ -1502,16 +1504,14 @@ exit:
         free( buffer);
         buffer = NULL;
     }
+    qap_module_deinit(qap_module_handle);
     if ((true == play_list) && (0 == play_list_cnt) && qap_out_hal_handle) {
-         ALOGV("%s %d QAP_CALLBACK_EVENT_EOS for play list received and unload_hals", __func__, __LINE__);
-         unload_hals();
+         ALOGV("%s %d QAP_CALLBACK_EVENT_EOS for play list received", __func__, __LINE__);
          qap_out_hal_handle = NULL;
     } else if (!play_list && qap_out_hal_handle) {
-         ALOGV("%s %d QAP_CALLBACK_EVENT_EOS and unload_hals", __func__, __LINE__);
-         unload_hals();
+         ALOGV("%s %d QAP_CALLBACK_EVENT_EOS received", __func__, __LINE__);
          qap_out_hal_handle = NULL;
     }
-    qap_module_deinit(qap_module_handle);
     if (kpi_mode) {
         qap_wrapper_measure_kpi_values(cold_start, cold_stop);
     }
@@ -1587,7 +1587,7 @@ qap_module_handle_t qap_wrapper_stream_open(void* stream_data)
     }
 
     primary_stream_close = false;
-    stream_cnt ++;
+    stream_cnt++;
     return qap_module_handle;
 
 }
