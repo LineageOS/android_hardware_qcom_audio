@@ -354,6 +354,22 @@ static bool is_dual_main_active(struct qaf_module* qaf_mod)
    return (qaf_mod->stream_in[QAF_IN_MAIN] && qaf_mod->stream_in[QAF_IN_MAIN_2]);
 }
 
+//Checks if any main or pcm stream is running in the session.
+static bool is_any_stream_running(struct qaf_module* qaf_mod)
+{
+    //Not checking associated stream.
+    struct stream_out *out = qaf_mod->stream_in[QAF_IN_MAIN];
+    struct stream_out *out_pcm = qaf_mod->stream_in[QAF_IN_PCM];
+    struct stream_out *out_main2 = qaf_mod->stream_in[QAF_IN_MAIN_2];
+
+    if ((out == NULL || (out != NULL && check_stream_state(out, STOPPED)))
+        && (out_main2 == NULL || (out_main2 != NULL && check_stream_state(out_main2, STOPPED)))
+        && (out_pcm == NULL || (out_pcm != NULL && check_stream_state(out_pcm, STOPPED)))) {
+        return false;
+    }
+    return true;
+}
+
 /* Gets the pcm output buffer size(in samples) for the mm module. */
 static uint32_t get_pcm_output_buffer_size_samples(struct qaf_module *qaf_mod)
 {
@@ -713,6 +729,10 @@ static int qaf_module_write_input_buffer(struct stream_out *out, const void *buf
         return ret;
     }
 
+    //If data received on associated stream when all other stream are stopped then drop the data.
+    if (out == qaf_mod->stream_in[QAF_IN_ASSOC] && !is_any_stream_running(qaf_mod))
+        return bytes;
+
     if (out->qaf_stream_handle) {
         ret = qaf_mod->qaf_audio_stream_write(out->qaf_stream_handle, buffer, bytes);
         if(ret > 0) set_stream_state(out, RUN);
@@ -1049,6 +1069,9 @@ static int qaf_out_drain(struct audio_stream_out* stream, audio_drain_type_t typ
 {
     struct stream_out *out = (struct stream_out *)stream;
     int status = 0;
+    struct qaf_module *qaf_mod = NULL;
+
+    qaf_mod = get_qaf_module_for_input_stream(out);
     DEBUG_MSG("Output Stream %p", out);
 
     lock_output_stream(out);
@@ -1062,11 +1085,11 @@ static int qaf_out_drain(struct audio_stream_out* stream, audio_drain_type_t typ
                     (struct audio_stream_out *)p_qaf->passthrough_out, type);
         }
         pthread_mutex_unlock(&p_qaf->lock);
-    } else if (check_stream_state(out, STOPPED)) {
+    } else if (!is_any_stream_running(qaf_mod)) {
         //If stream is already stopped then send the drain ready.
         out->client_callback(STREAM_CBK_EVENT_DRAIN_READY, NULL, out->client_cookie);
+        set_stream_state(out, STOPPED);
     } else {
-
         //Drain the module input stream.
         /* Stream stop will trigger EOS and on EOS_EVENT received
          from callback DRAIN_READY command is sent */
@@ -1244,6 +1267,8 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
     audio_qaf_media_format_t *media_fmt = NULL;
 
     DEBUG_MSG_VV("Device 0x%X, Event = 0x%X, Bytes to write %d", device, event_id, size);
+
+
     pthread_mutex_lock(&p_qaf->lock);
 
     /* Default config initialization. */
@@ -1674,7 +1699,9 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
                || event_id == AUDIO_EOS_MAIN_2_DD_DDP_EVENT
                || event_id == AUDIO_EOS_MAIN_AAC_EVENT
                || event_id == AUDIO_EOS_MAIN_AC4_EVENT
-               || event_id == AUDIO_EOS_ASSOC_DD_DDP_EVENT) {
+               || event_id == AUDIO_EOS_ASSOC_DD_DDP_EVENT
+               || event_id == AUDIO_EOS_ASSOC_AAC_EVENT
+               || event_id == AUDIO_EOS_ASSOC_AC4_EVENT) {
         struct stream_out *out = qaf_mod->stream_in[QAF_IN_MAIN];
         struct stream_out *out_pcm = qaf_mod->stream_in[QAF_IN_PCM];
         struct stream_out *out_main2 = qaf_mod->stream_in[QAF_IN_MAIN_2];
@@ -1693,7 +1720,9 @@ static void notify_event_callback(audio_session_handle_t session_handle /*__unus
             set_stream_state(out_pcm, STOPPED);
             unlock_output_stream(out_pcm);
             DEBUG_MSG("sent pcm DRAIN_READY");
-        } else if (event_id == AUDIO_EOS_ASSOC_DD_DDP_EVENT
+        } else if ( (event_id == AUDIO_EOS_ASSOC_DD_DDP_EVENT
+                || event_id == AUDIO_EOS_ASSOC_AAC_EVENT
+                || event_id == AUDIO_EOS_ASSOC_AC4_EVENT)
                 && (out_assoc != NULL)
                 && (check_stream_state(out_assoc, STOPPING))) {
 
@@ -1799,6 +1828,8 @@ static int qaf_stream_close(struct stream_out *out)
         return -EINVAL;
     }
 
+    pthread_mutex_lock(&p_qaf->lock);
+
     set_stream_state(out,STOPPED);
     qaf_mod->stream_in[index] = NULL;
     memset(&qaf_mod->adsp_hdlr_config[index], 0, sizeof(struct qaf_adsp_hdlr_config_state));
@@ -1812,6 +1843,8 @@ static int qaf_stream_close(struct stream_out *out)
 
     //If all streams are closed then close the session.
     qaf_session_close(qaf_mod);
+
+    pthread_mutex_unlock(&p_qaf->lock);
 
     DEBUG_MSG();
     return ret;

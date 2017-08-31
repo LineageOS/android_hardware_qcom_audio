@@ -322,6 +322,7 @@ int async_callback(qahw_stream_callback_event_t event, void *param,
     case QAHW_STREAM_CBK_EVENT_DRAIN_READY:
         fprintf(log_file, "stream %d: received event - QAHW_STREAM_CBK_EVENT_DRAIN_READY\n", params->stream_index);
         pthread_mutex_lock(&params->drain_lock);
+        params->drain_received = true;
         pthread_cond_signal(&params->drain_cond);
         pthread_mutex_unlock(&params->drain_lock);
         break;
@@ -780,11 +781,14 @@ void *start_stream_playback (void* stream_data)
             if ((!read_complete_file && (bytes_to_read <= 0)) || (bytes_read <= 0)) {
                 fprintf(log_file, "stream %d: end of file\n", params->stream_index);
                 if (is_offload) {
-                    pthread_mutex_lock(&params->drain_lock);
+                    params->drain_received = false;
                     qahw_out_drain(params->out_handle, QAHW_DRAIN_ALL);
-                    pthread_cond_wait(&params->drain_cond, &params->drain_lock);
+                    if(!params->drain_received) {
+                        pthread_mutex_lock(&params->drain_lock);
+                        pthread_cond_wait(&params->drain_cond, &params->drain_lock);
+                        pthread_mutex_unlock(&params->drain_lock);
+                    }
                     fprintf(log_file, "stream %d: out of compress drain\n", params->stream_index);
-                    pthread_mutex_unlock(&params->drain_lock);
                 }
                 /*
                  * Caution: Below ADL log shouldnt be altered without notifying
