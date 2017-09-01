@@ -69,6 +69,8 @@ static const int dts_transmission_sample_rates[] = {
 
 #define MIN_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE (2 * 1024)
 
+#define DDP_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE (10 * 1024)
+
 static const audio_format_t audio_passthru_formats[] = {
     AUDIO_FORMAT_AC3,
     AUDIO_FORMAT_E_AC3,
@@ -490,8 +492,14 @@ int audio_extn_passthru_get_buffer_size(audio_offload_info_t* info)
                (info->format == AUDIO_FORMAT_DTS_HD)) {
         fragment_size = MAX_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE;
         goto done;
+    } else if (info->format == AUDIO_FORMAT_E_AC3) {
+        fragment_size = DDP_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE;
+        if(property_get("audio.ddp.buffer.size.kb", value, "") &&
+                atoi(value)) {
+            fragment_size = atoi(value) * 1024;
+        }
+        goto done;
     }
-
 done:
     return fragment_size;
 

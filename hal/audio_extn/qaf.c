@@ -2007,7 +2007,11 @@ static int qaf_stream_open(struct stream_out *out,
                                                 input_config,
                                                 devices,
                                                 AUDIO_STREAM_SYSTEM_TONE);
-        qaf_mod->stream_in[QAF_IN_PCM] = out;
+        if (status == 0) {
+            qaf_mod->stream_in[QAF_IN_PCM] = out;
+        } else {
+            ERROR_MSG("System tone stream open failed with QAF module !!!");
+        }
     } else if ((flags & AUDIO_OUTPUT_FLAG_MAIN) && (flags & AUDIO_OUTPUT_FLAG_ASSOCIATED)) {
         if (is_main_active(qaf_mod) || is_dual_main_active(qaf_mod)) {
             ERROR_MSG("Dual Main or Main already active. So, Cannot open main and associated stream");
