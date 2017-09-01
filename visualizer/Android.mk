@@ -27,6 +27,14 @@ LOCAL_SHARED_LIBRARIES := \
 	libdl \
 	libtinyalsa
 
+# HACK to set the right record proxy effect card number.
+# It should be retrieved from the primary hal USECASE_AUDIO_RECORD_AFE_PROXY.
+ifneq ($(filter msm8998,$(TARGET_BOARD_PLATFORM)),)
+  LOCAL_CFLAGS := -DCAPTURE_DEVICE=7
+else
+  LOCAL_CFLAGS := -DCAPTURE_DEVICE=8
+endif
+
 LOCAL_HEADER_LIBRARIES := libhardware_headers
 
 LOCAL_MODULE_RELATIVE_PATH := soundfx
