@@ -531,7 +531,7 @@ status_t AudioPolicyManagerCustom::getInputForAttr(const audio_attributes_t *att
                                              audio_format_t format,
                                              audio_channel_mask_t channelMask,
                                              audio_input_flags_t flags,
-                                             audio_port_handle_t selectedDeviceId,
+                                             audio_port_handle_t *selectedDeviceId,
                                              input_type_t *inputType)
 {
     ALOGV("getInputForAttr() source %d, samplingRate %d, format %d, channelMask %x,"
@@ -556,7 +556,7 @@ status_t AudioPolicyManagerCustom::getInputForAttr(const audio_attributes_t *att
     // Explicit routing?
     sp<DeviceDescriptor> deviceDesc;
     for (size_t i = 0; i < mAvailableInputDevices.size(); i++) {
-        if (mAvailableInputDevices[i]->getId() == selectedDeviceId) {
+        if (mAvailableInputDevices[i]->getId() == *selectedDeviceId) {
             deviceDesc = mAvailableInputDevices[i];
             break;
         }
