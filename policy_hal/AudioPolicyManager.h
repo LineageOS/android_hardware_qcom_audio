@@ -130,7 +130,7 @@ private:
                 audio_format_t format,
                 audio_channel_mask_t channelMask,
                 audio_output_flags_t flags,
-                audio_port_handle_t selectedDeviceId,
+                audio_port_handle_t *selectedDeviceId,
                 const audio_offload_info_t *offloadInfo);
         // Used for voip + voice concurrency usecase
         int mPrevPhoneState;
