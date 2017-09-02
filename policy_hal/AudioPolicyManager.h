@@ -122,7 +122,7 @@ private:
                 uid_t uid,
                 const audio_config_t *config,
                 audio_output_flags_t flags,
-                audio_port_handle_t selectedDeviceId,
+                audio_port_handle_t *selectedDeviceId,
                 audio_port_handle_t *portId);
         // Used for voip + voice concurrency usecase
         int mPrevPhoneState;
