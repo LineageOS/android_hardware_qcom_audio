@@ -65,7 +65,7 @@ public:
                                          uid_t uid,
                                          const audio_config_base_t *config,
                                          audio_input_flags_t flags,
-                                         audio_port_handle_t selectedDeviceId,
+                                         audio_port_handle_t *selectedDeviceId,
                                          input_type_t *inputType,
                                          audio_port_handle_t *portId);
         // indicates to the audio policy manager that the input starts being used.
@@ -136,7 +136,7 @@ private:
                 uid_t uid,
                 const audio_config_t *config,
                 audio_output_flags_t flags,
-                audio_port_handle_t selectedDeviceId,
+                audio_port_handle_t *selectedDeviceId,
                 audio_port_handle_t *portId);
         // Used for voip + voice concurrency usecase
         int mPrevPhoneState;
