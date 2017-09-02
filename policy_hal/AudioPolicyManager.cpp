@@ -1729,7 +1729,7 @@ status_t AudioPolicyManagerCustom::getInputForAttr(const audio_attributes_t *att
                                              audio_format_t format,
                                              audio_channel_mask_t channelMask,
                                              audio_input_flags_t flags,
-                                             audio_port_handle_t selectedDeviceId,
+                                             audio_port_handle_t *selectedDeviceId,
                                              input_type_t *inputType)
 {
     audio_source_t inputSource;
