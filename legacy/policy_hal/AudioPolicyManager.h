@@ -51,7 +51,7 @@ public:
                                          audio_format_t format,
                                          audio_channel_mask_t channelMask,
                                          audio_input_flags_t flags,
-                                         audio_port_handle_t selectedDeviceId,
+                                         audio_port_handle_t *selectedDeviceId,
                                          input_type_t *inputType);
         virtual void setPhoneState(audio_mode_t state);
         virtual void setForceUse(audio_policy_force_use_t usage,
