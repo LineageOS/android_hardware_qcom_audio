@@ -40,6 +40,10 @@
 #include <dirent.h>
 #include <linux/msm_audio.h>
 
+#if defined(PLATFORM_MSMFALCON)
+#include <sound/devdep_params.h>
+#endif
+
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
 #define LOG_MASK HAL_MOD_FILE_PLATFORM
@@ -336,6 +340,10 @@ int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_HFP_SCO_WB] = {HFP_PCM_RX, HFP_SCO_RX},
     [USECASE_VOICE_CALL] = {VOICE_CALL_PCM_DEVICE, VOICE_CALL_PCM_DEVICE},
     [USECASE_VOICE2_CALL] = {VOICE2_CALL_PCM_DEVICE, VOICE2_CALL_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_MMAP] = {MMAP_PLAYBACK_PCM_DEVICE,
+                                     MMAP_PLAYBACK_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD_MMAP] = {MMAP_RECORD_PCM_DEVICE,
+                                   MMAP_RECORD_PCM_DEVICE},
     [USECASE_VOLTE_CALL] = {VOLTE_CALL_PCM_DEVICE, VOLTE_CALL_PCM_DEVICE},
     [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE, QCHAT_CALL_PCM_DEVICE},
     [USECASE_VOWLAN_CALL] = {VOWLAN_CALL_PCM_DEVICE, VOWLAN_CALL_PCM_DEVICE},
@@ -368,6 +376,23 @@ int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_TRANSCODE_LOOPBACK] = {TRANSCODE_LOOPBACK_RX_DEV_ID, TRANSCODE_LOOPBACK_TX_DEV_ID},
     [USECASE_AUDIO_PLAYBACK_VOIP] = {AUDIO_PLAYBACK_VOIP_PCM_DEVICE, AUDIO_PLAYBACK_VOIP_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_VOIP] = {AUDIO_RECORD_VOIP_PCM_DEVICE, AUDIO_RECORD_VOIP_PCM_DEVICE},
+
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM1] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE1, PLAYBACK_INTERACTIVE_STRM_DEVICE1},
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM2] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE2, PLAYBACK_INTERACTIVE_STRM_DEVICE2},
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM3] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE3, PLAYBACK_INTERACTIVE_STRM_DEVICE3},
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM4] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE4, PLAYBACK_INTERACTIVE_STRM_DEVICE4},
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM5] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE5, PLAYBACK_INTERACTIVE_STRM_DEVICE5},
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM6] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE6, PLAYBACK_INTERACTIVE_STRM_DEVICE6},
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM7] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE7, PLAYBACK_INTERACTIVE_STRM_DEVICE7},
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM8] =
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE8, PLAYBACK_INTERACTIVE_STRM_DEVICE8},
 
 };
 
@@ -812,6 +837,7 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD7)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD8)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD9)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_MMAP)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_ULL)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS)},
@@ -819,6 +845,7 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS3)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS4)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_LOW_LATENCY)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_MMAP)},
     {TO_NAME_INDEX(USECASE_VOICE_CALL)},
     {TO_NAME_INDEX(USECASE_VOICE2_CALL)},
     {TO_NAME_INDEX(USECASE_VOLTE_CALL)},
@@ -902,6 +929,7 @@ static int msm_device_to_be_id_external_codec [][NO_COLS] = {
 #define PCM_OFFLOAD_PLATFORM_DELAY (30*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 #define ULL_PLATFORM_DELAY (6*1000LL)
+#define MMAP_PLATFORM_DELAY (3*1000LL)
 
 static void update_interface(const char *snd_card_name) {
      if (!strncmp(snd_card_name, "apq8009-tashalite-snd-card",
@@ -5024,6 +5052,8 @@ int64_t platform_render_latency(audio_usecase_t usecase)
             return PCM_OFFLOAD_PLATFORM_DELAY;
         case USECASE_AUDIO_PLAYBACK_ULL:
             return ULL_PLATFORM_DELAY;
+        case USECASE_AUDIO_PLAYBACK_MMAP:
+            return MMAP_PLATFORM_DELAY;
         default:
             return 0;
     }
@@ -6161,6 +6191,147 @@ void platform_get_device_to_be_id_map(int **device_to_be_id, int *length)
      *length = msm_be_id_array_len;
 }
 
+int platform_set_stream_pan_scale_params(void *platform,
+                                         int snd_id,
+                                         struct mix_matrix_params mm_params)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    struct mixer_ctl *ctl = NULL;
+    char mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = {0};
+    int ret = 0;
+    int iter_i = 0;
+    int iter_j = 0;
+    int length = 0;
+    int pan_scale_data[MAX_LENGTH_MIXER_CONTROL_IN_INT] = {0};
+
+    if (sizeof(mm_params) > MAX_LENGTH_MIXER_CONTROL_IN_INT) {
+        ret = -EINVAL;
+        goto end;
+    }
+
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+                          "Audio Stream %d Pan Scale Control", snd_id);
+    ALOGD("%s mixer_ctl_name:%s", __func__, mixer_ctl_name);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        ret = -EINVAL;
+        goto end;
+    }
+    pan_scale_data[length++] = mm_params.num_output_channels;
+    pan_scale_data[length++] = mm_params.num_input_channels;
+
+    pan_scale_data[length++] = mm_params.has_output_channel_map;
+    if (mm_params.has_output_channel_map &&
+        mm_params.num_output_channels <= MAX_CHANNELS_SUPPORTED &&
+        mm_params.num_output_channels > 0)
+        for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++)
+            pan_scale_data[length++] = mm_params.output_channel_map[iter_i];
+    else {
+        ret = -EINVAL;
+        goto end;
+    }
+
+    pan_scale_data[length++] = mm_params.has_input_channel_map;
+    if (mm_params.has_input_channel_map &&
+        mm_params.num_input_channels <= MAX_CHANNELS_SUPPORTED &&
+        mm_params.num_input_channels > 0)
+        for (iter_i = 0; iter_i < mm_params.num_input_channels; iter_i++)
+            pan_scale_data[length++] = mm_params.input_channel_map[iter_i];
+    else {
+        ret = -EINVAL;
+        goto end;
+    }
+
+    pan_scale_data[length++] = mm_params.has_mixer_coeffs;
+    if (mm_params.has_mixer_coeffs)
+        for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++)
+            for (iter_j = 0; iter_j < mm_params.num_input_channels; iter_j++)
+                pan_scale_data[length++] =
+                                    mm_params.mixer_coeffs[iter_i][iter_j];
+
+    ret = mixer_ctl_set_array(ctl, pan_scale_data, length);
+end:
+    return ret;
+}
+
+int platform_set_stream_downmix_params(void *platform,
+                                       int snd_id,
+                                       snd_device_t snd_device,
+                                       struct mix_matrix_params mm_params)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    struct mixer_ctl *ctl;
+    char mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = {0};
+    int downmix_param_data[MAX_LENGTH_MIXER_CONTROL_IN_INT] = {0};
+    int ret = 0;
+    int iter_i = 0;
+    int iter_j = 0;
+    int length = 0;
+    int be_idx = 0;
+
+    if ((sizeof(mm_params) +
+         sizeof(be_idx)) >
+        MAX_LENGTH_MIXER_CONTROL_IN_INT) {
+        ret = -EINVAL;
+        goto end;
+    }
+
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+                          "Audio Device %d Downmix Control", snd_id);
+    ALOGD("%s mixer_ctl_name:%s", __func__, mixer_ctl_name);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        ret = -EINVAL;
+        goto end;
+    }
+
+    be_idx = platform_get_snd_device_backend_index(snd_device);
+    downmix_param_data[length]   = be_idx;
+    downmix_param_data[length++] = mm_params.num_output_channels;
+    downmix_param_data[length++] = mm_params.num_input_channels;
+
+    downmix_param_data[length++] = mm_params.has_output_channel_map;
+    if (mm_params.has_output_channel_map &&
+        mm_params.num_output_channels <= MAX_CHANNELS_SUPPORTED &&
+        mm_params.num_output_channels > 0)
+        for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++)
+            downmix_param_data[length++] = mm_params.output_channel_map[iter_i];
+    else {
+        ret = -EINVAL;
+        goto end;
+    }
+
+    downmix_param_data[length++] = mm_params.has_input_channel_map;
+    if (mm_params.has_input_channel_map &&
+        mm_params.num_input_channels <= MAX_CHANNELS_SUPPORTED &&
+        mm_params.num_input_channels > 0)
+        for (iter_i = 0; iter_i < mm_params.num_input_channels; iter_i++)
+            downmix_param_data[length++] = mm_params.input_channel_map[iter_i];
+    else {
+        ret = -EINVAL;
+        goto end;
+    }
+
+    downmix_param_data[length++] = mm_params.has_mixer_coeffs;
+    if (mm_params.has_mixer_coeffs)
+        for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++)
+            for (iter_j = 0; iter_j < mm_params.num_input_channels; iter_j++)
+                downmix_param_data[length++] =
+                                       mm_params.mixer_coeffs[iter_i][iter_j];
+
+    ret = mixer_ctl_set_array(ctl, downmix_param_data, length);
+end:
+    return ret;
+}
+
 int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask,
                                                int snd_id, uint8_t *input_channel_map)
 {
@@ -7220,3 +7391,40 @@ int platform_get_max_codec_backend() {
 
     return MAX_CODEC_BACKENDS;
 }
+
+#if defined(PLATFORM_MSMFALCON)
+int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
+                              uint32_t *size)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    int hw_fd = -1;
+    char dev_name[128];
+    struct snd_pcm_mmap_fd mmap_fd;
+    memset(&mmap_fd, 0, sizeof(mmap_fd));
+    mmap_fd.dir = dir;
+    snprintf(dev_name, sizeof(dev_name), "/dev/snd/hwC%uD%u",
+             adev->snd_card, HWDEP_FE_BASE+fe_dev);
+    hw_fd = open(dev_name, O_RDONLY);
+    if (hw_fd < 0) {
+        ALOGE("fe hw dep node open %d/%d failed", adev->snd_card, fe_dev);
+        return -1;
+    }
+    if (ioctl(hw_fd, SNDRV_PCM_IOCTL_MMAP_DATA_FD, &mmap_fd) < 0) {
+        ALOGE("fe hw dep node ioctl failed");
+        close(hw_fd);
+        return -1;
+    }
+    *fd = mmap_fd.fd;
+    *size = mmap_fd.size;
+    close(hw_fd); // mmap_fd should still be valid
+    return 0;
+}
+#else
+int platform_get_mmap_data_fd(void *platform __unused, int fe_dev __unused,
+                              int dir __unused, int *fd __unused,
+                              uint32_t *size __unused)
+{
+    return -1;
+}
+#endif
