@@ -104,10 +104,12 @@ LOCAL_MODULE_RELATIVE_PATH := soundfx
 LOCAL_MODULE:= libvolumelistener
 LOCAL_VENDOR_MODULE := true
 
+LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+
 LOCAL_C_INCLUDES := \
         hardware/qcom/audio/hal \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
-	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
+        $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
         external/tinyalsa/include \
         $(call include-path-for, audio-effects) \
         $(call include-path-for, audio-route) \
