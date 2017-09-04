@@ -55,6 +55,7 @@
 #define ENC_MEDIA_FMT_APTX                                 0x000131ff
 #define ENC_MEDIA_FMT_APTX_HD                              0x00013200
 #define ENC_MEDIA_FMT_SBC                                  0x00010BF2
+#define ENC_MEDIA_FMT_CELT                                 0x00013221
 #define MEDIA_FMT_AAC_AOT_LC                               2
 #define MEDIA_FMT_AAC_AOT_SBR                              5
 #define MEDIA_FMT_AAC_AOT_PS                               29
@@ -78,10 +79,29 @@
 #define ENCODER_LATENCY_APTX       40
 #define ENCODER_LATENCY_APTX_HD    20
 #define ENCODER_LATENCY_AAC        70
+//To Do: Fine Tune Encoder CELT latency.
+#define ENCODER_LATENCY_CELT       40
 #define DEFAULT_SINK_LATENCY_SBC       140
 #define DEFAULT_SINK_LATENCY_APTX      160
 #define DEFAULT_SINK_LATENCY_APTX_HD   180
 #define DEFAULT_SINK_LATENCY_AAC       180
+//To Do: Fine Tune Default CELT Latency.
+#define DEFAULT_SINK_LATENCY_CELT      180
+
+/*
+ * Below enum values are extended from audio_base.h to
+ * to keep encoder codec type local to bthost_ipc
+ * and audio_hal as these are intended only for handshake
+ * between IPC lib and Audio HAL.
+ */
+typedef enum {
+    ENC_CODEC_TYPE_INVALID = 4294967295u, // 0xFFFFFFFFUL
+    ENC_CODEC_TYPE_AAC = 67108864u, // 0x04000000UL
+    ENC_CODEC_TYPE_SBC = 520093696u, // 0x1F000000UL
+    ENC_CODEC_TYPE_APTX = 536870912u, // 0x20000000UL
+    ENC_CODEC_TYPE_APTX_HD = 553648128u, // 0x21000000UL
+    ENC_CODEC_TYPE_CELT = 603979776u, // 0x24000000UL
+}enc_codec_t;
 
 typedef int (*audio_stream_open_t)(void);
 typedef int (*audio_stream_close_t)(void);
@@ -91,7 +111,7 @@ typedef int (*audio_suspend_stream_t)(void);
 typedef void (*audio_handoff_triggered_t)(void);
 typedef void (*clear_a2dpsuspend_flag_t)(void);
 typedef void * (*audio_get_codec_config_t)(uint8_t *multicast_status,uint8_t *num_dev,
-                               audio_format_t *codec_type);
+                               enc_codec_t *codec_type);
 typedef int (*audio_check_a2dp_ready_t)(void);
 typedef uint16_t (*audio_get_a2dp_sink_latency_t)(void);
 
@@ -120,7 +140,7 @@ struct a2dp_data {
     audio_check_a2dp_ready_t audio_check_a2dp_ready;
     audio_get_a2dp_sink_latency_t audio_get_a2dp_sink_latency;
     enum A2DP_STATE bt_state;
-    audio_format_t bt_encoder_format;
+    enc_codec_t bt_encoder_format;
     uint32_t enc_sampling_rate;
     bool a2dp_started;
     bool a2dp_suspended;
@@ -177,7 +197,7 @@ struct sbc_enc_cfg_t{
  * supported channel mapping for stereo is CHANNEL_L and CHANNEL_R
  * custom size and reserved are not used(for future enhancement)
   */
-struct custom_enc_cfg_aptx_t
+struct custom_enc_cfg_t
 {
     uint32_t      enc_format;
     uint32_t      sample_rate;
@@ -187,20 +207,35 @@ struct custom_enc_cfg_aptx_t
     uint32_t      custom_size;
 };
 
+struct celt_specific_enc_cfg_t
+{
+    uint32_t      bit_rate;
+    uint16_t      frame_size;
+    uint16_t      complexity;
+    uint16_t      prediction_mode;
+    uint16_t      vbr_flag;
+};
+
+struct celt_enc_cfg_t
+{
+    struct custom_enc_cfg_t  custom_cfg;
+    struct celt_specific_enc_cfg_t celt_cfg;
+};
+
 /* TODO: Define the following structures only for O using PLATFORM_VERSION */
 /* Information about BT SBC encoder configuration
  * This data is used between audio HAL module and
  * BT IPC library to configure DSP encoder
  */
 typedef struct {
-    uint32_t subband;    /* 4, 8 */
-    uint32_t blk_len;    /* 4, 8, 12, 16 */
-    uint16_t sampling_rate; /*44.1khz,48khz*/
-    uint8_t  channels;      /*0(Mono),1(Dual_mono),2(Stereo),3(JS)*/
-    uint8_t  alloc;         /*0(Loudness),1(SNR)*/
-    uint8_t  min_bitpool;   /* 2 */
-    uint8_t  max_bitpool;   /*53(44.1khz),51 (48khz) */
-    uint32_t bitrate;      /* 320kbps to 512kbps */
+    uint32_t subband;        /* 4, 8 */
+    uint32_t blk_len;        /* 4, 8, 12, 16 */
+    uint16_t sampling_rate;  /*44.1khz,48khz*/
+    uint8_t  channels;       /*0(Mono),1(Dual_mono),2(Stereo),3(JS)*/
+    uint8_t  alloc;          /*0(Loudness),1(SNR)*/
+    uint8_t  min_bitpool;    /* 2 */
+    uint8_t  max_bitpool;    /*53(44.1khz),51 (48khz) */
+    uint32_t bitrate;        /* 320kbps to 512kbps */
 } audio_sbc_encoder_config;
 
 
@@ -227,6 +262,20 @@ typedef struct {
     uint32_t bitrate;
 } audio_aac_encoder_config;
 
+/* Information about BT CELT encoder configuration
+ * This data is used between audio HAL module and
+ * BT IPC library to configure DSP encoder
+ */
+typedef struct {
+    uint32_t sampling_rate; /* 32000 - 48000, 48000 */
+    uint16_t channels; /* 1-Mono, 2-Stereo, 2*/
+    uint16_t frame_size; /* 64-128-256-512, 512 */
+    uint16_t complexity; /* 0-10, 1 */
+    uint16_t prediction_mode; /* 0-1-2, 0 */
+    uint16_t vbr_flag; /* 0-1, 0*/
+    uint32_t bitrate; /*32000 - 1536000, 139500*/
+} audio_celt_encoder_config;
+
 /*********** END of DSP configurable structures ********************/
 
 /* API to identify DSP encoder captabilities */
@@ -250,6 +299,10 @@ static void a2dp_offload_codec_cap_parser(char *value)
             break;
         } else if (strcmp(tok, "aac") == 0) {
             ALOGD("%s: aac offload supported\n",__func__);
+            a2dp.is_a2dp_offload_supported = true;
+            break;
+        } else if (strcmp(tok, "celt") == 0) {
+            ALOGD("%s: celt offload supported\n",__func__);
             a2dp.is_a2dp_offload_supported = true;
             break;
         }
@@ -348,7 +401,7 @@ static int close_a2dp_output()
     a2dp.a2dp_started = false;
     a2dp.a2dp_total_active_session_request = 0;
     a2dp.a2dp_suspended = false;
-    a2dp.bt_encoder_format = AUDIO_FORMAT_INVALID;
+    a2dp.bt_encoder_format = ENC_CODEC_TYPE_INVALID;
     a2dp.enc_sampling_rate = 48000;
     a2dp.bt_state = A2DP_STATE_DISCONNECTED;
 
@@ -372,7 +425,6 @@ bool configure_sbc_enc_format(audio_sbc_encoder_config *sbc_bt_cfg)
         is_configured = false;
         goto fail;
     }
-    a2dp.bt_encoder_format = AUDIO_FORMAT_SBC;
     memset(&sbc_dsp_cfg, 0x0, sizeof(struct sbc_enc_cfg_t));
     sbc_dsp_cfg.enc_format = ENC_MEDIA_FMT_SBC;
     sbc_dsp_cfg.num_subbands = sbc_bt_cfg->subband;
@@ -419,6 +471,7 @@ bool configure_sbc_enc_format(audio_sbc_encoder_config *sbc_bt_cfg)
         goto fail;
     }
     is_configured = true;
+    a2dp.bt_encoder_format = ENC_CODEC_TYPE_SBC;
     a2dp.enc_sampling_rate = sbc_bt_cfg->sampling_rate;
     ALOGV("Successfully updated SBC enc format with samplingrate: %d channelmode:%d",
            sbc_dsp_cfg.sample_rate, sbc_dsp_cfg.channel_mode);
@@ -430,7 +483,7 @@ fail:
 bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
 {
     struct mixer_ctl *ctl_enc_data = NULL, *ctrl_bit_format = NULL;
-    struct custom_enc_cfg_aptx_t aptx_dsp_cfg;
+    struct custom_enc_cfg_t aptx_dsp_cfg;
     bool is_configured = false;
     int ret = 0;
 
@@ -443,8 +496,7 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         is_configured = false;
         goto fail;
     }
-    a2dp.bt_encoder_format = AUDIO_FORMAT_APTX;
-    memset(&aptx_dsp_cfg, 0x0, sizeof(struct custom_enc_cfg_aptx_t));
+    memset(&aptx_dsp_cfg, 0x0, sizeof(struct custom_enc_cfg_t));
     aptx_dsp_cfg.enc_format = ENC_MEDIA_FMT_APTX;
     aptx_dsp_cfg.sample_rate = aptx_bt_cfg->sampling_rate;
     aptx_dsp_cfg.num_channels = aptx_bt_cfg->channels;
@@ -459,7 +511,7 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
             break;
     }
     ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_dsp_cfg,
-                              sizeof(struct custom_enc_cfg_aptx_t));
+                              sizeof(struct custom_enc_cfg_t));
     if (ret != 0) {
         ALOGE("%s: Failed to set APTX encoder config", __func__);
         is_configured = false;
@@ -480,6 +532,7 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         }
     }
     is_configured = true;
+    a2dp.bt_encoder_format = ENC_CODEC_TYPE_APTX;
     a2dp.enc_sampling_rate = aptx_bt_cfg->sampling_rate;
     ALOGV("Successfully updated APTX enc format with samplingrate: %d channels:%d",
            aptx_dsp_cfg.sample_rate, aptx_dsp_cfg.num_channels);
@@ -492,7 +545,7 @@ fail:
 bool configure_aptx_hd_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
 {
     struct mixer_ctl *ctl_enc_data = NULL, *ctrl_bit_format = NULL;
-    struct custom_enc_cfg_aptx_t aptx_dsp_cfg;
+    struct custom_enc_cfg_t aptx_dsp_cfg;
     bool is_configured = false;
     int ret = 0;
 
@@ -506,8 +559,7 @@ bool configure_aptx_hd_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         goto fail;
     }
 
-    a2dp.bt_encoder_format = AUDIO_FORMAT_APTX_HD;
-    memset(&aptx_dsp_cfg, 0x0, sizeof(struct custom_enc_cfg_aptx_t));
+    memset(&aptx_dsp_cfg, 0x0, sizeof(struct custom_enc_cfg_t));
     aptx_dsp_cfg.enc_format = ENC_MEDIA_FMT_APTX_HD;
     aptx_dsp_cfg.sample_rate = aptx_bt_cfg->sampling_rate;
     aptx_dsp_cfg.num_channels = aptx_bt_cfg->channels;
@@ -522,7 +574,7 @@ bool configure_aptx_hd_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
             break;
     }
     ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_dsp_cfg,
-                              sizeof(struct custom_enc_cfg_aptx_t));
+                              sizeof(struct custom_enc_cfg_t));
     if (ret != 0) {
         ALOGE("%s: Failed to set APTX HD encoder config", __func__);
         is_configured = false;
@@ -541,6 +593,7 @@ bool configure_aptx_hd_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         goto fail;
     }
     is_configured = true;
+    a2dp.bt_encoder_format = ENC_CODEC_TYPE_APTX_HD;
     a2dp.enc_sampling_rate = aptx_bt_cfg->sampling_rate;
     ALOGV("Successfully updated APTX HD encformat with samplingrate: %d channels:%d",
            aptx_dsp_cfg.sample_rate, aptx_dsp_cfg.num_channels);
@@ -565,7 +618,6 @@ bool configure_aac_enc_format(audio_aac_encoder_config *aac_bt_cfg)
         is_configured = false;
         goto fail;
     }
-    a2dp.bt_encoder_format = AUDIO_FORMAT_AAC;
     memset(&aac_dsp_cfg, 0x0, sizeof(struct aac_enc_cfg_t));
     aac_dsp_cfg.enc_format = ENC_MEDIA_FMT_AAC;
     aac_dsp_cfg.bit_rate = aac_bt_cfg->bitrate;
@@ -605,6 +657,7 @@ bool configure_aac_enc_format(audio_aac_encoder_config *aac_bt_cfg)
         goto fail;
     }
     is_configured = true;
+    a2dp.bt_encoder_format = ENC_CODEC_TYPE_AAC;
     a2dp.enc_sampling_rate = aac_bt_cfg->sampling_rate;
     ALOGV("Successfully updated AAC enc format with samplingrate: %d channels:%d",
            aac_dsp_cfg.sample_rate, aac_dsp_cfg.channel_cfg);
@@ -612,11 +665,77 @@ fail:
     return is_configured;
 }
 
+bool configure_celt_enc_format(audio_celt_encoder_config *celt_bt_cfg)
+{
+    struct mixer_ctl *ctl_enc_data = NULL, *ctrl_bit_format = NULL;
+    struct celt_enc_cfg_t celt_dsp_cfg;
+    bool is_configured = false;
+    int ret = 0;
+    if(celt_bt_cfg == NULL)
+        return false;
+
+    ctl_enc_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_CONFIG_BLOCK);
+    if (!ctl_enc_data) {
+        ALOGE(" ERROR  a2dp encoder CONFIG data mixer control not identifed");
+        is_configured = false;
+        goto fail;
+    }
+    memset(&celt_dsp_cfg, 0x0, sizeof(struct celt_enc_cfg_t));
+
+    celt_dsp_cfg.custom_cfg.enc_format = ENC_MEDIA_FMT_CELT;
+    celt_dsp_cfg.custom_cfg.sample_rate = celt_bt_cfg->sampling_rate;
+    celt_dsp_cfg.custom_cfg.num_channels = celt_bt_cfg->channels;
+    switch(celt_dsp_cfg.custom_cfg.num_channels) {
+        case 1:
+            celt_dsp_cfg.custom_cfg.channel_mapping[0] = PCM_CHANNEL_C;
+            break;
+        case 2:
+        default:
+            celt_dsp_cfg.custom_cfg.channel_mapping[0] = PCM_CHANNEL_L;
+            celt_dsp_cfg.custom_cfg.channel_mapping[1] = PCM_CHANNEL_R;
+            break;
+    }
+
+    celt_dsp_cfg.custom_cfg.custom_size = sizeof(struct celt_enc_cfg_t);
+
+    celt_dsp_cfg.celt_cfg.frame_size = celt_bt_cfg->frame_size;
+    celt_dsp_cfg.celt_cfg.complexity = celt_bt_cfg->complexity;
+    celt_dsp_cfg.celt_cfg.prediction_mode = celt_bt_cfg->prediction_mode;
+    celt_dsp_cfg.celt_cfg.vbr_flag = celt_bt_cfg->vbr_flag;
+    celt_dsp_cfg.celt_cfg.bit_rate = celt_bt_cfg->bitrate;
+
+    ret = mixer_ctl_set_array(ctl_enc_data, (void *)&celt_dsp_cfg,
+                              sizeof(struct celt_enc_cfg_t));
+    if (ret != 0) {
+        ALOGE("%s: Failed to set CELT encoder config", __func__);
+        is_configured = false;
+        goto fail;
+    }
+    ctrl_bit_format = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_BIT_FORMAT);
+    if (!ctrl_bit_format) {
+        ALOGE(" ERROR  bit format CONFIG data mixer control not identifed");
+        is_configured = false;
+        goto fail;
+    }
+    ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S16_LE");
+    if (ret != 0) {
+        ALOGE("%s: Failed to set bit format to encoder", __func__);
+        is_configured = false;
+        goto fail;
+    }
+    is_configured = true;
+    a2dp.bt_encoder_format = ENC_CODEC_TYPE_CELT;
+    a2dp.enc_sampling_rate = celt_bt_cfg->sampling_rate;
+    ALOGV("Successfully updated CELT encformat with samplingrate: %d channels:%d",
+           celt_dsp_cfg.custom_cfg.sample_rate, celt_dsp_cfg.custom_cfg.num_channels);
+fail:
+    return is_configured;
+}
 bool configure_a2dp_encoder_format()
 {
     void *codec_info = NULL;
     uint8_t multi_cast = 0, num_dev = 1;
-    audio_format_t codec_type = AUDIO_FORMAT_INVALID;
+    enc_codec_t codec_type = ENC_CODEC_TYPE_INVALID;
     bool is_configured = false;
 
     if (!a2dp.audio_get_codec_config) {
@@ -628,25 +747,30 @@ bool configure_a2dp_encoder_format()
                                &codec_type);
 
     switch(codec_type) {
-        case AUDIO_FORMAT_SBC:
+        case ENC_CODEC_TYPE_SBC:
             ALOGD(" Received SBC encoder supported BT device");
             is_configured =
                configure_sbc_enc_format((audio_sbc_encoder_config *)codec_info);
             break;
-        case AUDIO_FORMAT_APTX:
+        case ENC_CODEC_TYPE_APTX:
             ALOGD(" Received APTX encoder supported BT device");
             is_configured =
               configure_aptx_enc_format((audio_aptx_encoder_config *)codec_info);
             break;
-        case AUDIO_FORMAT_APTX_HD:
+        case ENC_CODEC_TYPE_APTX_HD:
             ALOGD(" Received APTX HD encoder supported BT device");
             is_configured =
              configure_aptx_hd_enc_format((audio_aptx_encoder_config *)codec_info);
             break;
-        case AUDIO_FORMAT_AAC:
+        case ENC_CODEC_TYPE_AAC:
             ALOGD(" Received AAC encoder supported BT device");
             is_configured =
               configure_aac_enc_format((audio_aac_encoder_config *)codec_info);
+            break;
+        case ENC_CODEC_TYPE_CELT:
+            ALOGD(" Received CELT encoder supported BT device");
+            is_configured =
+              configure_celt_enc_format((audio_celt_encoder_config *)codec_info);
             break;
         default:
             ALOGD(" Received Unsupported encoder formar");
@@ -874,7 +998,7 @@ bool audio_extn_a2dp_is_force_device_switch()
 void audio_extn_a2dp_get_apptype_params(uint32_t *sample_rate,
                                         uint32_t *bit_width)
 {
-    if(a2dp.bt_encoder_format == AUDIO_FORMAT_APTX_HD)
+    if(a2dp.bt_encoder_format == ENC_CODEC_TYPE_APTX_HD)
         *bit_width = 24;
     else
         *bit_width = 16;
@@ -908,7 +1032,7 @@ void audio_extn_a2dp_init (void *adev)
   a2dp.bt_state = A2DP_STATE_DISCONNECTED;
   a2dp.a2dp_total_active_session_request = 0;
   a2dp.a2dp_suspended = false;
-  a2dp.bt_encoder_format = AUDIO_FORMAT_INVALID;
+  a2dp.bt_encoder_format = ENC_CODEC_TYPE_INVALID;
   a2dp.enc_sampling_rate = 48000;
   a2dp.is_a2dp_offload_supported = false;
   a2dp.is_handoff_in_progress = false;
@@ -919,14 +1043,14 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
 {
     uint32_t latency = 0;
     int avsync_runtime_prop = 0;
-    int sbc_offset = 0, aptx_offset = 0, aptxhd_offset = 0, aac_offset = 0;
+    int sbc_offset = 0, aptx_offset = 0, aptxhd_offset = 0, aac_offset = 0, celt_offset = 0;
     char value[PROPERTY_VALUE_MAX];
 
     memset(value, '\0', sizeof(char)*PROPERTY_VALUE_MAX);
     avsync_runtime_prop = property_get("vendor.audio.a2dp.codec.latency", value, NULL);
     if (avsync_runtime_prop > 0) {
-        if (sscanf(value, "%d/%d/%d/%d",
-                  &sbc_offset, &aptx_offset, &aptxhd_offset, &aac_offset) != 4) {
+        if (sscanf(value, "%d/%d/%d/%d/%d",
+                  &sbc_offset, &aptx_offset, &aptxhd_offset, &aac_offset, &celt_offset) != 5) {
             ALOGI("Failed to parse avsync offset params from '%s'.", value);
             avsync_runtime_prop = 0;
         }
@@ -938,21 +1062,25 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
     }
 
     switch(a2dp.bt_encoder_format) {
-        case AUDIO_FORMAT_SBC:
+        case ENC_CODEC_TYPE_SBC:
             latency = (avsync_runtime_prop > 0) ? sbc_offset : ENCODER_LATENCY_SBC;
             latency += (slatency <= 0) ? DEFAULT_SINK_LATENCY_SBC : slatency;
             break;
-        case AUDIO_FORMAT_APTX:
+        case ENC_CODEC_TYPE_APTX:
             latency = (avsync_runtime_prop > 0) ? aptx_offset : ENCODER_LATENCY_APTX;
             latency += (slatency <= 0) ? DEFAULT_SINK_LATENCY_APTX : slatency;
             break;
-        case AUDIO_FORMAT_APTX_HD:
+        case ENC_CODEC_TYPE_APTX_HD:
             latency = (avsync_runtime_prop > 0) ? aptxhd_offset : ENCODER_LATENCY_APTX_HD;
             latency += (slatency <= 0) ? DEFAULT_SINK_LATENCY_APTX_HD : slatency;
             break;
-        case AUDIO_FORMAT_AAC:
+        case ENC_CODEC_TYPE_AAC:
             latency = (avsync_runtime_prop > 0) ? aac_offset : ENCODER_LATENCY_AAC;
             latency += (slatency <= 0) ? DEFAULT_SINK_LATENCY_AAC : slatency;
+            break;
+        case ENC_CODEC_TYPE_CELT:
+            latency = (avsync_runtime_prop > 0) ? celt_offset : ENCODER_LATENCY_CELT;
+            latency += (slatency <= 0) ? DEFAULT_SINK_LATENCY_CELT : slatency;
             break;
         default:
             latency = 200;
