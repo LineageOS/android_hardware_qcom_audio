@@ -5858,6 +5858,10 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
         backend_cfg.format = usecase->stream.out->format;
         backend_cfg.channels = audio_channel_count_from_out_mask(usecase->stream.out->channel_mask);
     }
+    /* enforce AFE bitwidth mode via backend_cfg */
+    if (audio_extn_is_dsp_bit_width_enforce_mode_supported(usecase->stream.out->flags) &&
+                (adev->dsp_bit_width_enforce_mode > backend_cfg.bit_width))
+        backend_cfg.bit_width = adev->dsp_bit_width_enforce_mode;
 
     /*this is populated by check_codec_backend_cfg hence set default value to false*/
     backend_cfg.passthrough_enabled = false;

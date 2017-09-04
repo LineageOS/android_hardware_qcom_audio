@@ -1460,6 +1460,84 @@ exit:
     return active;
 }
 
+uint32_t adev_get_dsp_bit_width_enforce_mode()
+{
+    if (adev == NULL) {
+        ALOGE("%s: adev is null. Disable DSP bit width enforce mode.\n", __func__);
+        return 0;
+    }
+    return adev->dsp_bit_width_enforce_mode;
+}
+
+static uint32_t adev_init_dsp_bit_width_enforce_mode(struct mixer *mixer)
+{
+    char value[PROPERTY_VALUE_MAX];
+    int trial;
+    uint32_t dsp_bit_width_enforce_mode = 0;
+
+    if (!mixer) {
+        ALOGE("%s: adev mixer is null. cannot update DSP bitwidth.\n",
+                __func__);
+        return 0;
+    }
+
+    if (property_get("persist.vendor.audio_hal.dsp_bit_width_enforce_mode",
+                        value, NULL) > 0) {
+        trial = atoi(value);
+        switch (trial) {
+        case 16:
+            dsp_bit_width_enforce_mode = 16;
+            break;
+        case 24:
+            dsp_bit_width_enforce_mode = 24;
+            break;
+        case 32:
+            dsp_bit_width_enforce_mode = 32;
+            break;
+       default:
+            dsp_bit_width_enforce_mode = 0;
+            ALOGD("%s Dynamic DSP bitwidth config is disabled.", __func__);
+            break;
+        }
+    }
+
+    return dsp_bit_width_enforce_mode;
+}
+
+static void audio_enable_asm_bit_width_enforce_mode(struct mixer *mixer,
+                                                uint32_t enforce_mode,
+                                                bool enable)
+{
+    struct mixer_ctl *ctl = NULL;
+    const char *mixer_ctl_name = "ASM Bit Width";
+    uint32_t asm_bit_width_mode = 0;
+
+    if (enforce_mode == 0) {
+        ALOGD("%s: DSP bitwidth feature is disabled.", __func__);
+        return;
+    }
+
+    ctl = mixer_get_ctl_by_name(mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                __func__, mixer_ctl_name);
+        return;
+    }
+
+    if (enable)
+        asm_bit_width_mode = enforce_mode;
+    else
+        asm_bit_width_mode = 0;
+
+    ALOGV("%s DSP bit width feature status is %d width=%d",
+        __func__, enable, asm_bit_width_mode);
+    if (mixer_ctl_set_value(ctl, 0, asm_bit_width_mode) < 0)
+        ALOGE("%s: Could not set ASM biwidth %d", __func__,
+                asm_bit_width_mode);
+
+    return;
+}
+
 /*
  * if native DSD playback active
  */
@@ -2330,6 +2408,12 @@ static int stop_output_stream(struct stream_out *out)
     /* 2. Disable the rx device */
     disable_snd_device(adev, uc_info->out_snd_device);
 
+    if (is_offload_usecase(out->usecase)) {
+        audio_enable_asm_bit_width_enforce_mode(adev->mixer,
+                                                adev->dsp_bit_width_enforce_mode,
+                                                false);
+    }
+
     list_remove(&uc_info->list);
     free(uc_info);
     out->started = 0;
@@ -2528,6 +2612,9 @@ int start_output_stream(struct stream_out *out)
     } else {
         platform_set_stream_channel_map(adev->platform, out->channel_mask,
                    out->pcm_device_id, &out->channel_map_param.channel_map[0]);
+        audio_enable_asm_bit_width_enforce_mode(adev->mixer,
+                                                adev->dsp_bit_width_enforce_mode,
+                                                true);
         out->pcm = NULL;
         out->compr = compress_open(adev->snd_card,
                                    out->pcm_device_id,
@@ -5908,6 +5995,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->perf_lock_opts[0] = 0x101;
     adev->perf_lock_opts[1] = 0x20E;
     adev->perf_lock_opts_size = 2;
+    adev->dsp_bit_width_enforce_mode = 0;
 
     /* Loads platform specific libraries dynamically */
     adev->platform = platform_init(adev);
@@ -6020,6 +6108,8 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     audio_extn_ds2_enable(adev);
     *device = &adev->device.common;
+    adev->dsp_bit_width_enforce_mode =
+        adev_init_dsp_bit_width_enforce_mode(adev->mixer);
 
     audio_extn_utils_update_streams_cfg_lists(adev->platform, adev->mixer,
                                              &adev->streams_output_cfg_list,
