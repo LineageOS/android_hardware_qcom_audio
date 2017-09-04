@@ -1950,6 +1950,14 @@
         <ctl name="EAR SPKR PA Gain" value="G_6_DB" />
     </path>
 
+    <path name="handset-qrd">
+        <ctl name="SLIM RX0 MUX" value="AIF1_PB" />
+        <ctl name="CDC_IF RX0 MUX" value="SLIM RX0" />
+        <ctl name="SLIM_0_RX Channels" value="One" />
+        <ctl name="RX INT0_1 MIX1 INP0" value="RX0" />
+        <ctl name="EAR PA Gain" value="G_6_DB" />
+    </path>
+
     <path name="handset-mic">
         <path name="dmic3" />
     </path>
@@ -2065,8 +2073,20 @@
         <path name="handset" />
     </path>
 
+    <path name="voice-handset-qrd">
+        <path name="handset-qrd" />
+    </path>
+
+    <path name="voice-handset-tmus-qrd">
+        <path name="handset-qrd" />
+    </path>
+
     <path name="voice-speaker">
         <path name="speaker-mono" />
+    </path>
+
+    <path name="voice-speaker-qrd">
+        <path name="speaker-mono-2" />
     </path>
 
     <path name="voice-speaker-2">
@@ -2403,6 +2423,11 @@
     <path name="voice-tty-hco-handset">
         <ctl name="TTY Mode" value="HCO" />
         <path name="handset" />
+    </path>
+
+    <path name="voice-tty-hco-handset-qrd">
+        <ctl name="TTY Mode" value="HCO" />
+        <path name="handset-qrd" />
     </path>
 
     <path name="voice-tty-full-headset-mic">
