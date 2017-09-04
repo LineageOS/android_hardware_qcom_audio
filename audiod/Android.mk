@@ -16,7 +16,9 @@ LOCAL_SHARED_LIBRARIES := \
 	libcutils \
 	libutils \
 	libbinder \
-	libmedia
+	libaudioclient \
+	libmedia \
+	liblog
 
 ifneq (,$(findstring $(PLATFORM_VERSION), 5.0 5.1 5.1.1))
 LOCAL_SHARED_LIBRARIES += libstlport
