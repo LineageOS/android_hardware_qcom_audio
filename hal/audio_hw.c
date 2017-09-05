@@ -1206,13 +1206,20 @@ int select_devices(struct audio_device *adev,
             usecase->devices = usecase->stream.out->devices;
             in_snd_device = SND_DEVICE_NONE;
             if (out_snd_device == SND_DEVICE_NONE) {
+                struct stream_out *voip_out = adev->primary_output;
+                struct audio_usecase *voip_usecase = get_usecase_from_list(adev,
+                                                         USECASE_AUDIO_PLAYBACK_VOIP);
+
                 out_snd_device = platform_get_output_snd_device(adev->platform,
                                             usecase->stream.out->devices);
-                if (usecase->stream.out == adev->primary_output &&
+
+                if (voip_usecase)
+                    voip_out = voip_usecase->stream.out;
+
+                if (usecase->stream.out == voip_out &&
                         adev->active_input &&
                         (adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
-                            adev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
-                        out_snd_device != usecase->out_snd_device) {
+                            adev->mode == AUDIO_MODE_IN_COMMUNICATION)) {
                     select_devices(adev, adev->active_input->usecase);
                 }
             }
@@ -1224,9 +1231,15 @@ int select_devices(struct audio_device *adev,
                 if (adev->active_input &&
                         (adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
                             adev->mode == AUDIO_MODE_IN_COMMUNICATION)) {
+
+                    struct audio_usecase *voip_usecase = get_usecase_from_list(adev,
+                                                             USECASE_AUDIO_PLAYBACK_VOIP);
+
                     platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
                     if (usecase->id == USECASE_AUDIO_RECORD_AFE_PROXY) {
                         out_device = AUDIO_DEVICE_OUT_TELEPHONY_TX;
+                    } else if (voip_usecase) {
+                        out_device = voip_usecase->stream.out->devices;
                     } else if (adev->primary_output) {
                         out_device = adev->primary_output->devices;
                     }
