@@ -74,6 +74,7 @@
 #include <platform.h>
 #include "audio_extn.h"
 #include "voice_extn.h"
+#include "ip_hdlr_intf.h"
 
 #include "sound/compress_params.h"
 #include "sound/asound.h"

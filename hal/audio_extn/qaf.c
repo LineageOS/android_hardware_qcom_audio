@@ -115,6 +115,7 @@
 #include "audio_extn.h"
 #include <qti_audio.h>
 #include "sound/compress_params.h"
+#include "ip_hdlr_intf.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
@@ -936,14 +937,20 @@ static int qaf_get_rendered_frames(struct stream_out *out, uint64_t *frames)
     if ((qaf_mod->stream_out[QAF_OUT_OFFLOAD] != NULL)
         || (qaf_mod->stream_out[QAF_OUT_OFFLOAD_MCH] != NULL)) {
         unsigned int sample_rate = 0;
+        audio_usecase_t platform_latency = 0;
 
         if (qaf_mod->stream_out[QAF_OUT_OFFLOAD])
             sample_rate = qaf_mod->stream_out[QAF_OUT_OFFLOAD]->sample_rate;
         else if (qaf_mod->stream_out[QAF_OUT_OFFLOAD_MCH])
             sample_rate = qaf_mod->stream_out[QAF_OUT_OFFLOAD_MCH]->sample_rate;
 
-        audio_usecase_t platform_latency =
+        if (qaf_mod->stream_out[QAF_OUT_OFFLOAD])
+            platform_latency =
                 platform_render_latency(qaf_mod->stream_out[QAF_OUT_OFFLOAD]->usecase);
+        else
+            platform_latency =
+                platform_render_latency(qaf_mod->stream_out[QAF_OUT_OFFLOAD_MCH]->usecase);
+
         dsp_latency = (platform_latency * sample_rate) / 1000000LL;
     } else if (qaf_mod->stream_out[QAF_OUT_TRANSCODE_PASSTHROUGH] != NULL) {
         unsigned int sample_rate = 0;
@@ -1283,7 +1290,7 @@ static void notify_event_callback(audio_session_handle_t session_handle __unused
     config.offload_info.channel_mask = config.channel_mask = AUDIO_CHANNEL_OUT_STEREO;
 
     if (event_id == AUDIO_SEC_FAIL_EVENT) {
-        DEBUG_MSG("%s Security failed, closing session");
+        DEBUG_MSG("%s Security failed, closing session", __func__);
         qaf_session_close(qaf_mod);
         pthread_mutex_unlock(&p_qaf->lock);
         return;
@@ -1857,9 +1864,9 @@ static int audio_extn_qaf_session_open(mm_module_type mod_type, struct stream_ou
 {
     ALOGV("%s %d", __func__, __LINE__);
     unsigned char* license_data = NULL;
-    device_license_config_t lic_config = {NULL, 0, 0};
-    int ret = -ENOSYS, size = 0;
-    char value[PROPERTY_VALUE_MAX] = {0};
+    device_license_config_t lic_config = {0};
+    int ret = -ENOSYS;
+
     struct qaf_module *qaf_mod = NULL;
 
     if (mod_type >= MAX_MM_MODULE_TYPE || !(p_qaf->qaf_mod[mod_type].qaf_audio_session_open))
@@ -1877,6 +1884,9 @@ static int audio_extn_qaf_session_open(mm_module_type mod_type, struct stream_ou
     }
 
 #ifndef AUDIO_EXTN_IP_HDLR_ENABLED
+ {
+    int size=0;
+    char value[PROPERTY_VALUE_MAX] = {0};
     if (mod_type == MS12) {
         //Getting the license
         license_data = platform_get_license((struct audio_hw_device *)(p_qaf->adev->platform),
@@ -1905,6 +1915,7 @@ static int audio_extn_qaf_session_open(mm_module_type mod_type, struct stream_ou
             goto exit;
         }
     }
+}
 #endif
 
     ret = qaf_mod->qaf_audio_session_open(&qaf_mod->session_handle,
@@ -1934,7 +1945,7 @@ static int audio_extn_qaf_session_open(mm_module_type mod_type, struct stream_ou
     if (mod_type == MS12) {
         ret = audio_extn_ip_hdlr_intf_open(qaf_mod->ip_hdlr_hdl, false, qaf_mod->session_handle, out->usecase);
         if (ret < 0) {
-            ERROR_MSG("audio_extn_ip_hdlr_intf_open failed, ret = %d", __func__, ret);
+            ERROR_MSG("%s audio_extn_ip_hdlr_intf_open failed, ret = %d", __func__, ret);
             goto exit;
         }
     }
@@ -2921,7 +2932,7 @@ int audio_extn_qaf_init(struct audio_device *adev)
         }
 }
 #else
-        qaf_mod->qaf_lib = dlopen(lib_name, RTLD_NOW);
+       qaf_mod->qaf_lib = dlopen(lib_name, RTLD_NOW);
         if (qaf_mod->qaf_lib == NULL) {
             ERROR_MSG("DLOPEN failed for %s", lib_name);
             continue;
