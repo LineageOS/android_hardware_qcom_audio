@@ -226,10 +226,6 @@ vendor.audio.qaf.hdmi.out=ddp
 PRODUCT_PROPERTY_OVERRIDES += \
 av.streaming.offload.enable=true
 
-#Enable multi offload
-PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.offload.multiple.enabled=true
-
 #parser input buffer size(256kb) in byte stream mode
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.parser.ip.buffer.size=262144
