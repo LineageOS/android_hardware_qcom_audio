@@ -298,7 +298,7 @@ enum {
 
 
 /* Used in calculating fragment size for pcm offload */
-#define PCM_OFFLOAD_BUFFER_DURATION 40 /* 40 millisecs */
+#define PCM_OFFLOAD_BUFFER_DURATION 80 /* 80 millisecs */
 
 /* MAX PCM fragment size cannot be increased  further due
  * to flinger's cblk size of 1mb,and it has to be a multiple of
