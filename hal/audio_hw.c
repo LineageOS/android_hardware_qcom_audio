@@ -4501,6 +4501,7 @@ static int in_standby(struct audio_stream *stream)
         pthread_mutex_lock(&adev->lock);
         in->standby = true;
         if (in->usecase == USECASE_COMPRESS_VOIP_CALL) {
+            do_stop = false;
             voice_extn_compress_voip_close_input_stream(stream);
             ALOGD("VOIP input entered standby");
         } else if (in->usecase == USECASE_AUDIO_RECORD_MMAP) {
@@ -4509,18 +4510,13 @@ static int in_standby(struct audio_stream *stream)
         } else {
             if (audio_extn_cin_attached_usecase(in->usecase))
                 audio_extn_cin_stop_input_stream(in);
+        }
+
+        if (do_stop) {
             if (in->pcm) {
                 pcm_close(in->pcm);
                 in->pcm = NULL;
             }
-            status = stop_input_stream(in);
-        }
-        if (in->pcm) {
-            pcm_close(in->pcm);
-            in->pcm = NULL;
-        }
-
-        if (do_stop) {
             status = stop_input_stream(in);
         }
         pthread_mutex_unlock(&adev->lock);
