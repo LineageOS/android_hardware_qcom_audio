@@ -443,6 +443,12 @@ static int parse_snd_card_status(struct str_parms * parms, int * card,
     return 0;
 }
 
+// always call with adev lock held
+void send_gain_dep_calibration_l() {
+    if (last_known_cal_step >= 0)
+        platform_send_gain_dep_cal(adev->platform, last_known_cal_step);
+}
+
 __attribute__ ((visibility ("default")))
 bool audio_hw_send_gain_dep_calibration(int level) {
     bool ret_val = false;
@@ -452,15 +458,9 @@ bool audio_hw_send_gain_dep_calibration(int level) {
 
     if (adev != NULL && adev->platform != NULL) {
         pthread_mutex_lock(&adev->lock);
-        ret_val = platform_send_gain_dep_cal(adev->platform, level);
+        last_known_cal_step = level;
+        send_gain_dep_calibration_l();
         pthread_mutex_unlock(&adev->lock);
-
-        // if cal set fails, cache level info
-        // if cal set succeds, reset known last cal set
-        if (!ret_val)
-            last_known_cal_step = level;
-        else if (last_known_cal_step != -1)
-            last_known_cal_step = -1;
     } else {
         ALOGE("%s: %s is NULL", __func__, adev == NULL ? "adev" : "adev->platform");
     }
@@ -2613,17 +2613,19 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         out->standby = false;
         pthread_mutex_lock(&adev->lock);
         ret = start_output_stream(out);
-        pthread_mutex_unlock(&adev->lock);
+
         /* ToDo: If use case is compress offload should return 0 */
         if (ret != 0) {
             out->standby = true;
+            pthread_mutex_unlock(&adev->lock);
             goto exit;
         }
 
-        if (last_known_cal_step != -1) {
-            ALOGD("%s: retry previous failed cal level set", __func__);
-            audio_hw_send_gain_dep_calibration(last_known_cal_step);
-        }
+        // after standby always force set last known cal step
+        // dont change level anywhere except at the audio_hw_send_gain_dep_calibration
+        ALOGD("%s: retry previous failed cal level set", __func__);
+        send_gain_dep_calibration_l();
+        pthread_mutex_unlock(&adev->lock);
     }
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {

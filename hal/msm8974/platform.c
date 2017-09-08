@@ -748,7 +748,6 @@ bool platform_send_gain_dep_cal(void *platform, int level)
     if (!voice_is_in_call(adev)) {
         ALOGV("%s: Not Voice call usecase, apply new cal for level %d",
                __func__, level);
-        app_type = DEFAULT_APP_TYPE_RX_PATH;
 
         // find the current active sound device
         list_for_each(node, &adev->usecase_list) {
@@ -760,18 +759,23 @@ bool platform_send_gain_dep_cal(void *platform, int level)
             if (valid_uc_type) {
                 audio_devices_t dev = usecase->stream.out->devices;
                 valid_dev = (dev == AUDIO_DEVICE_OUT_SPEAKER ||
+                             dev == AUDIO_DEVICE_OUT_SPEAKER_SAFE ||
                              dev == AUDIO_DEVICE_OUT_WIRED_HEADSET ||
                              dev == AUDIO_DEVICE_OUT_WIRED_HEADPHONE);
             }
             if (valid_dev) {
-                 ALOGV("%s: out device is %d", __func__,  usecase->out_snd_device);
-                 if (audio_extn_spkr_prot_is_enabled()) {
-                    acdb_dev_id = audio_extn_spkr_prot_get_acdb_id(usecase->out_snd_device);
-                 } else {
-                     acdb_dev_id = acdb_device_table[usecase->out_snd_device];
-                 }
+                ALOGV("%s: out device is %d", __func__,  usecase->out_snd_device);
+                if (platform_supports_app_type_cfg())
+                    app_type = usecase->stream.out->app_type_cfg.app_type;
+                else
+                    app_type = DEFAULT_APP_TYPE_RX_PATH;
 
-                 if (!my_data->acdb_send_gain_dep_cal(acdb_dev_id, app_type,
+                if (audio_extn_spkr_prot_is_enabled())
+                    acdb_dev_id = audio_extn_spkr_prot_get_acdb_id(usecase->out_snd_device);
+                else
+                    acdb_dev_id = acdb_device_table[usecase->out_snd_device];
+
+                if (!my_data->acdb_send_gain_dep_cal(acdb_dev_id, app_type,
                                                      acdb_dev_type, mode, level)) {
                     // set ret_val true if at least one calibration is set successfully
                     ret_val = true;
