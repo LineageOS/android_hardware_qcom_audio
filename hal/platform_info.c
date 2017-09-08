@@ -216,6 +216,9 @@ static void process_gain_db_to_level_map(const XML_Char **attr)
     tbl_entry.amp = exp(tbl_entry.db * 0.115129f);
     tbl_entry.level = atoi(attr[3]);
 
+    //custome level should be > 0. Level 0 is fixed for default
+    CHECK(tbl_entry.level > 0);
+
     ALOGV("%s: amp [%f]  db [%f] level [%d]", __func__,
            tbl_entry.amp, tbl_entry.db, tbl_entry.level);
     platform_add_gain_level_mapping(&tbl_entry);
