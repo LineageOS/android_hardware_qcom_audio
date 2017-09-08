@@ -1038,6 +1038,7 @@ void audio_extn_a2dp_init (void *adev)
   a2dp.enc_sampling_rate = 48000;
   a2dp.is_a2dp_offload_supported = false;
   a2dp.is_handoff_in_progress = false;
+  reset_a2dp_enc_config_params();
   update_offload_codec_capabilities();
 }
 
