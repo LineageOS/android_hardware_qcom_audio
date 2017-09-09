@@ -321,7 +321,7 @@ int pcm_device_table[AUDIO_USECASE_MAX][2] = {
 };
 
 /* Array to store sound devices */
-static const char * const device_table[SND_DEVICE_MAX] = {
+static const char * device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_NONE] = "none",
     /* Playback sound devices */
     [SND_DEVICE_OUT_HANDSET] = "handset",
@@ -1121,6 +1121,15 @@ static void query_platform(const char *snd_card_name,
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
 
     }
+
+    char platvalue[PROPERTY_VALUE_MAX];
+
+    property_get("ro.audio.customplatform",platvalue,"0");
+    if (strncmp(platvalue,"0", 1)) {
+        snprintf(mixer_xml_path, MAX_MIXER_XML_PATH,
+                   "/system/etc/mixer_paths_%s.xml",
+                   platvalue);
+    }
 }
 
 void platform_set_echo_reference(struct audio_device *adev, bool enable,
@@ -1823,8 +1832,7 @@ void *platform_init(struct audio_device *adev)
         my_data->acdb_reload = (acdb_reload_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_reload_acdb_files");
         if (my_data->acdb_reload == NULL) {
-            ALOGE("%s: dlsym error %s for acdb_loader_reload_acdb_files", __func__, dlerror());
-            goto acdb_init_fail;
+            ALOGW("%s: dlsym error %s for acdb_loader_reload_acdb_files, reloading will not be available", __func__, dlerror());
         }
         platform_acdb_init(my_data);
     }
@@ -3639,7 +3647,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_RELOAD_ACDB,
                             value, sizeof(value));
-    if (err >= 0) {
+    if (err >= 0 && my_data->acdb_reload != NULL) {
         str_parms_del(parms, AUDIO_PARAMETER_KEY_RELOAD_ACDB);
 
         my_data->acdb_reload(value, my_data->snd_card_name,
@@ -5386,6 +5394,21 @@ int platform_get_spkr_prot_snd_device(snd_device_t snd_device)
         default:
              return snd_device;
     }
+}
+
+int platform_set_snd_device_name(snd_device_t device, const char *name)
+{
+    int ret = 0;
+
+    if ((device < SND_DEVICE_MIN) || (device >= SND_DEVICE_MAX)) {
+        ALOGE("%s:: Invalid snd_device = %d", __func__, device);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    device_table[device] = strdup(name);
+done:
+    return ret;
 }
 
 int platform_set_sidetone(struct audio_device *adev,

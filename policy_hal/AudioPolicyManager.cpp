@@ -512,11 +512,35 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
         return false;
     }
 
-    if ((((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA) && (offloadInfo.bit_rate > MAX_BITRATE_WMA)) ||
-        (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA_PRO) && (offloadInfo.bit_rate > MAX_BITRATE_WMA_PRO)) ||
-        (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA_PRO) && (offloadInfo.bit_rate > MAX_BITRATE_WMA_LOSSLESS))){
-        //Safely choose the min bitrate as threshold and leave the restriction to NT decoder as we can't distinguish wma pro and wma lossless here.
-        ALOGD("offload disabled for WMA/WMA_PRO/WMA_LOSSLESS clips with bit rate over maximum supported value");
+    // check against wma std bit rate restriction
+    if ((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA) {
+        int32_t sr_id = -1;
+        uint32_t min_bitrate, max_bitrate;
+        for (int i = 0; i < WMA_STD_NUM_FREQ; i++) {
+            if (offloadInfo.sample_rate == wmaStdSampleRateTbl[i]) {
+                sr_id = i;
+                break;
+            }
+        }
+        if ((sr_id < 0) || (popcount(offloadInfo.channel_mask) > 2)
+                || (popcount(offloadInfo.channel_mask) <= 0)) {
+            ALOGE("invalid sample rate or channel count");
+            return false;
+        }
+
+        min_bitrate = wmaStdMinAvgByteRateTbl[sr_id][popcount(offloadInfo.channel_mask) - 1];
+        max_bitrate = wmaStdMaxAvgByteRateTbl[sr_id][popcount(offloadInfo.channel_mask) - 1];
+        if ((offloadInfo.bit_rate > max_bitrate) || (offloadInfo.bit_rate < min_bitrate)) {
+            ALOGD("offload disabled for WMA clips with unsupported bit rate");
+            ALOGD("bit_rate %d, max_bitrate %d, min_bitrate %d", offloadInfo.bit_rate, max_bitrate, min_bitrate);
+            return false;
+        }
+    }
+
+    // Safely choose the min bitrate as threshold and leave the restriction to NT decoder as we can't distinguish wma pro and wma lossless here.
+    if ((((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA_PRO) && (offloadInfo.bit_rate > MAX_BITRATE_WMA_PRO)) ||
+        (((offloadInfo.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_WMA_PRO) && (offloadInfo.bit_rate > MAX_BITRATE_WMA_LOSSLESS))) {
+        ALOGD("offload disabled for WMA_PRO/WMA_LOSSLESS clips with bit rate over maximum supported value");
         return false;
     }
 #endif
@@ -1420,7 +1444,11 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
         } else {
             ALOGI("%s:: attribute is NULL .. no usage set", __func__);
         }
-        offloadInfo = &tOffloadInfo;
+
+        if (isOffloadSupported(tOffloadInfo)) {
+            ALOGV("inferred offload information not supported, disabling offload.");
+            offloadInfo = &tOffloadInfo;
+        }
     }
 
     return AudioPolicyManager::getOutputForAttr(attr, output, session, stream,
@@ -2097,7 +2125,7 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
         audio_devices_t device = getNewInputDevice(input);
         audio_devices_t primaryInputDevices = availablePrimaryInputDevices();
         if (((device & primaryInputDevices & ~AUDIO_DEVICE_BIT_IN) != 0) &&
-                mInputs.activeInputsCountOnDevices() == 0) {
+                mInputs.activeInputsCountOnDevices(primaryInputDevices) == 0) {
             SoundTrigger::setCaptureState(true);
         }
         setInputDevice(input, device, true /* force */);
