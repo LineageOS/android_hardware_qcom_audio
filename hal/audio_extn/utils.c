@@ -188,13 +188,18 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
 /* payload structure avt_device drift query */
 struct audio_avt_device_drift_stats {
     uint32_t       minor_version;
+
     /* Indicates the device interface direction as either
      * source (Tx) or sink (Rx).
     */
     uint16_t        device_direction;
-    /*params exposed to client */
+
+    /* Reference timer for drift accumulation and time stamp information.
+     * currently it only support AFE_REF_TIMER_TYPE_AVTIMER
+     */
+    uint16_t        reference_timer;
     struct audio_avt_device_drift_param drift_param;
-};
+} __attribute__((packed));
 
 static char bTable[BASE_TABLE_SIZE] = {
             'A','B','C','D','E','F','G','H','I','J','K','L',

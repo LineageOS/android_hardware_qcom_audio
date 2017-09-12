@@ -177,8 +177,8 @@ static int bassboost_send_params(eff_mode_t mode, void *ctl,
                                   struct bass_boost_params *bassboost,
                                  unsigned param_send_flags)
 {
-    int param_values[128] = {0};
-    int *p_param_values = param_values;
+    long param_values[128] = {0};
+    long *p_param_values = param_values;
 
     ALOGV("%s: flags 0x%x", __func__, param_send_flags);
     *p_param_values++ = BASS_BOOST_MODULE;
@@ -260,8 +260,9 @@ static int pbe_send_params(eff_mode_t mode, void *ctl,
                             struct pbe_params *pbe,
                             unsigned param_send_flags)
 {
-    int param_values[128] = {0};
-    int i, *p_param_values = param_values, *cfg = NULL;
+    long  param_values[128] = {0};
+    long *p_param_values = param_values;
+    int i, *cfg = NULL;
 
     ALOGV("%s: enabled=%d", __func__, pbe->enable_flag);
     *p_param_values++ = PBE_MODULE;
@@ -366,8 +367,8 @@ static int virtualizer_send_params(eff_mode_t mode, void *ctl,
                                     struct virtualizer_params *virtualizer,
                                    unsigned param_send_flags)
 {
-    int param_values[128] = {0};
-    int *p_param_values = param_values;
+    long param_values[128] = {0};
+    long *p_param_values = param_values;
 
     ALOGV("%s: flags 0x%x", __func__, param_send_flags);
     *p_param_values++ = VIRTUALIZER_MODULE;
@@ -486,8 +487,8 @@ void offload_eq_set_bands_level(struct eq_params *eq, int num_bands,
 static int eq_send_params(eff_mode_t mode, void *ctl, struct eq_params *eq,
                           unsigned param_send_flags)
 {
-    int param_values[128] = {0};
-    int *p_param_values = param_values;
+    long param_values[128] = {0};
+    long *p_param_values = param_values;
     uint32_t i;
 
     ALOGV("%s: flags 0x%x", __func__, param_send_flags);
@@ -675,8 +676,8 @@ static int reverb_send_params(eff_mode_t mode, void *ctl,
                                struct reverb_params *reverb,
                               unsigned param_send_flags)
 {
-    int param_values[128] = {0};
-    int *p_param_values = param_values;
+    long param_values[128] = {0};
+    long *p_param_values = param_values;
 
     ALOGV("%s: flags 0x%x", __func__, param_send_flags);
     *p_param_values++ = REVERB_MODULE;
@@ -855,8 +856,8 @@ int offload_soft_volume_send_params(struct mixer_ctl *ctl,
                                     struct soft_volume_params vol,
                                     unsigned param_send_flags)
 {
-    int param_values[128] = {0};
-    int *p_param_values = param_values;
+    long param_values[128] = {0};
+    long *p_param_values = param_values;
     uint32_t i;
 
     ALOGV("%s", __func__);
@@ -921,8 +922,8 @@ int offload_transition_soft_volume_send_params(struct mixer_ctl *ctl,
                                                struct soft_volume_params vol,
                                                unsigned param_send_flags)
 {
-    int param_values[128] = {0};
-    int *p_param_values = param_values;
+    long param_values[128] = {0};
+    long *p_param_values = param_values;
     uint32_t i;
 
     ALOGV("%s", __func__);
@@ -964,8 +965,8 @@ int offload_transition_soft_volume_send_params(struct mixer_ctl *ctl,
 static int hpx_send_params(eff_mode_t mode, void *ctl,
                            unsigned param_send_flags)
 {
-    int param_values[128] = {0};
-    int *p_param_values = param_values;
+    long param_values[128] = {0};
+    long *p_param_values = param_values;
     uint32_t i;
 
     ALOGV("%s", __func__);

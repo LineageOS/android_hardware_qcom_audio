@@ -101,7 +101,8 @@ static int asphere_notify_app(void)
 
 static int asphere_get_values_from_mixer(void)
 {
-    int ret = 0, val[2] = {-1, -1};
+    int ret = 0;
+    long val[2] = {-1, -1};
     struct mixer_ctl *ctl = NULL;
     struct mixer *mixer = mixer_open(MIXER_CARD);
     if (mixer)
@@ -124,7 +125,8 @@ static int asphere_get_values_from_mixer(void)
 
 static int asphere_set_values_to_mixer(void)
 {
-    int ret = 0, val[2] = {-1, -1};
+    int ret = 0;
+    long val[2] = {-1, -1};
     struct mixer_ctl *ctl = NULL;
     struct mixer *mixer = mixer_open(MIXER_CARD);
     if (mixer)

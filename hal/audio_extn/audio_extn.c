@@ -611,7 +611,7 @@ static int32_t afe_proxy_set_channel_mapping(struct audio_device *adev,
 {
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Playback Device Channel Map";
-    int set_values[8] = {0};
+    long set_values[8] = {0};
     int ret;
     ALOGV("%s channel_count:%d",__func__, channel_count);
 
@@ -650,7 +650,7 @@ static int32_t afe_proxy_set_channel_mapping(struct audio_device *adev,
               __func__, mixer_ctl_name);
         return -EINVAL;
     }
-    ALOGV("AFE: set mapping(%d %d %d %d %d %d %d %d) for channel:%d",
+    ALOGV("AFE: set mapping(%ld %ld %ld %ld %ld %ld %ld %ld) for channel:%d",
         set_values[0], set_values[1], set_values[2], set_values[3], set_values[4],
         set_values[5], set_values[6], set_values[7], channel_count);
     ret = mixer_ctl_set_array(ctl, set_values, channel_count);

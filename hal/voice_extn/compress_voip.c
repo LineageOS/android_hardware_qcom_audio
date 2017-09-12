@@ -134,8 +134,8 @@ static int voip_set_volume(struct audio_device *adev, int volume)
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voip Rx Gain";
     int vol_index = 0;
-    uint32_t set_values[ ] = {0,
-                              DEFAULT_VOLUME_RAMP_DURATION_MS};
+    long set_values[ ] = {0,
+                          DEFAULT_VOLUME_RAMP_DURATION_MS};
 
     ALOGV("%s: enter", __func__);
 
@@ -152,7 +152,7 @@ static int voip_set_volume(struct audio_device *adev, int volume)
               __func__, mixer_ctl_name);
         return -EINVAL;
     }
-    ALOGV("%s: Setting voip volume index: %d", __func__, set_values[0]);
+    ALOGV("%s: Setting voip volume index: %ld", __func__, set_values[0]);
     mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
 
     ALOGV("%s: exit", __func__);
@@ -163,8 +163,8 @@ static int voip_set_mic_mute(struct audio_device *adev, bool state)
 {
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voip Tx Mute";
-    uint32_t set_values[ ] = {0,
-                              DEFAULT_VOLUME_RAMP_DURATION_MS};
+    long set_values[ ] = {0,
+                          DEFAULT_VOLUME_RAMP_DURATION_MS};
 
     ALOGV("%s: enter, state=%d", __func__, state);
 
@@ -187,7 +187,7 @@ static int voip_set_mode(struct audio_device *adev, int format)
 {
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voip Mode Config";
-    uint32_t set_values[ ] = {0};
+    long set_values[ ] = {0};
     int mode;
 
     ALOGD("%s: enter, format=%d", __func__, format);
@@ -212,7 +212,7 @@ static int voip_set_rate(struct audio_device *adev, int rate)
 {
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voip Rate Config";
-    uint32_t set_values[ ] = {0};
+    long set_values[ ] = {0};
 
     ALOGD("%s: enter, rate=%d", __func__, rate);
 
@@ -233,7 +233,7 @@ static int voip_set_dtx(struct audio_device *adev, bool enable)
 {
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voip Dtx Mode";
-    uint32_t set_values[ ] = {0};
+    long set_values[ ] = {0};
 
     ALOGD("%s: enter, enable=%d", __func__, enable);
 
