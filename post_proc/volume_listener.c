@@ -827,7 +827,7 @@ static int vol_prc_lib_get_descriptor(const effect_uuid_t *uuid,
 {
     int i = 0;
 
-    if (property_get_bool("audio.vol_based_mbdrc.enabled", 0)) {
+    if (property_get_bool("vendor.audio.vol_based_mbdrc.enabled", 0)) {
         ALOGW("Volume based MBDRC not enabled ... bailingout");
         return -EINVAL;
     }
