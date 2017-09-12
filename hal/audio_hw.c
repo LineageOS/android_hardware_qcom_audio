@@ -318,6 +318,15 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
 
     [USECASE_AUDIO_PLAYBACK_VOIP] = "audio-playback-voip",
     [USECASE_AUDIO_RECORD_VOIP] = "audio-record-voip",
+    /* For Interactive Audio Streams */
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM1] = "audio-interactive-stream1",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM2] = "audio-interactive-stream2",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM3] = "audio-interactive-stream3",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM4] = "audio-interactive-stream4",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM5] = "audio-interactive-stream5",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM6] = "audio-interactive-stream6",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM7] = "audio-interactive-stream7",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM8] = "audio-interactive-stream8",
 };
 
 static const audio_usecase_t offload_usecases[] = {
@@ -330,6 +339,17 @@ static const audio_usecase_t offload_usecases[] = {
     USECASE_AUDIO_PLAYBACK_OFFLOAD7,
     USECASE_AUDIO_PLAYBACK_OFFLOAD8,
     USECASE_AUDIO_PLAYBACK_OFFLOAD9,
+};
+
+static const audio_usecase_t interactive_usecases[] = {
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM1,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM2,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM3,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM4,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM5,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM6,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM7,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM8,
 };
 
 #define STRING_TO_ENUM(string) { #string, string }
@@ -1766,10 +1786,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             voice_check_and_update_aanc_path(adev, usecase->out_snd_device, false);
     }
 
-    if ((usecase->out_snd_device == SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP) &&
+    if ((out_snd_device == SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP) &&
         (!audio_extn_a2dp_is_ready())) {
         ALOGW("%s: A2DP profile is not ready, routing to speaker only", __func__);
-        usecase->out_snd_device = SND_DEVICE_OUT_SPEAKER;
+        out_snd_device = SND_DEVICE_OUT_SPEAKER;
     }
 
     /* Disable current sound devices */
@@ -2147,6 +2167,50 @@ static void stop_compressed_output_l(struct stream_out *out)
             pthread_cond_wait(&out->cond, &out->lock);
         }
     }
+}
+
+bool is_interactive_usecase(audio_usecase_t uc_id)
+{
+    unsigned int i;
+    for (i = 0; i < sizeof(interactive_usecases)/sizeof(interactive_usecases[0]); i++) {
+        if (uc_id == interactive_usecases[i])
+            return true;
+    }
+    return false;
+}
+
+static audio_usecase_t get_interactive_usecase(struct audio_device *adev)
+{
+    audio_usecase_t ret_uc = USECASE_INVALID;
+    unsigned int intract_uc_index;
+    unsigned int num_usecase = sizeof(interactive_usecases)/sizeof(interactive_usecases[0]);
+
+    ALOGV("%s: num_usecase: %d", __func__, num_usecase);
+    for (intract_uc_index = 0; intract_uc_index < num_usecase; intract_uc_index++) {
+        if (!(adev->interactive_usecase_state & (0x1 << intract_uc_index))) {
+            adev->interactive_usecase_state |= 0x1 << intract_uc_index;
+            ret_uc = interactive_usecases[intract_uc_index];
+            break;
+        }
+    }
+
+    ALOGV("%s: Interactive usecase is %d", __func__, ret_uc);
+    return ret_uc;
+}
+
+static void free_interactive_usecase(struct audio_device *adev,
+                                 audio_usecase_t uc_id)
+{
+    unsigned int interact_uc_index;
+    unsigned int num_usecase = sizeof(interactive_usecases)/sizeof(interactive_usecases[0]);
+
+    for (interact_uc_index = 0; interact_uc_index < num_usecase; interact_uc_index++) {
+        if (interactive_usecases[interact_uc_index] == uc_id) {
+            adev->interactive_usecase_state &= ~(0x1 << interact_uc_index);
+            break;
+        }
+    }
+    ALOGV("%s: free Interactive usecase %d", __func__, uc_id);
 }
 
 bool is_offload_usecase(audio_usecase_t uc_id)
@@ -2814,7 +2878,9 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
 
-    if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
+    if (is_interactive_usecase(out->usecase)) {
+        return out->config.period_size;
+    } else if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         if (out->flags & AUDIO_OUTPUT_FLAG_TIMESTAMP)
             return out->compr_config.fragment_size - sizeof(struct snd_codec_metadata);
         else
@@ -3181,7 +3247,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                     audio_extn_perf_lock_release(&adev->perf_lock_handle);
                 if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
                     out->a2dp_compress_mute &&
-                    (!(out->devices & AUDIO_DEVICE_OUT_ALL_A2DP))) {
+                    (!(out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) || audio_extn_a2dp_is_ready())) {
                     pthread_mutex_lock(&out->compr_mute_lock);
                     out->a2dp_compress_mute = false;
                     out_set_compr_volume(&out->stream, out->volume_l, out->volume_r);
@@ -3531,6 +3597,20 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
     return -ENOSYS;
 }
 
+static void update_frames_written(struct stream_out *out, size_t bytes)
+{
+    size_t bpf = 0;
+
+    if (is_offload_usecase(out->usecase) && !out->non_blocking &&
+        !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD))
+        bpf = 1;
+    else if (!is_offload_usecase(out->usecase))
+        bpf = audio_bytes_per_sample(out->format) *
+             audio_channel_count_from_out_mask(out->channel_mask);
+    if (bpf != 0)
+        out->written += bytes / bpf;
+}
+
 static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                          size_t bytes)
 {
@@ -3548,14 +3628,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             pthread_mutex_unlock(&out->lock);
             return -ENETRESET;
         } else {
-            /* increase written size during SSR to avoid mismatch
-             * with the written frames count in AF
-             */
-            // bytes per frame
-            size_t bpf = audio_bytes_per_sample(out->format) *
-                         audio_channel_count_from_out_mask(out->channel_mask);
-            if (bpf != 0)
-                out->written += bytes / bpf;
             ALOGD(" %s: sound card is not active/SSR state", __func__);
             ret= -EIO;
             goto exit;
@@ -3564,8 +3636,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
     if (audio_extn_passthru_should_drop_data(out)) {
         ALOGV(" %s : Drop data as compress passthrough session is going on", __func__);
-        if ((audio_bytes_per_sample(out->format) != 0) && (out->config.channels != 0))
-            out->written += bytes / (out->config.channels * audio_bytes_per_sample(out->format));
         ret = -EIO;
         goto exit;
     }
@@ -3589,10 +3659,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         (audio_extn_a2dp_is_suspended())) {
         if (!(out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
             if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
-                size_t bpf = audio_bytes_per_sample(out->format) *
-                    audio_channel_count_from_out_mask(out->channel_mask);
-                if (bpf != 0)
-                    out->written += bytes / bpf;
                 ret = -EIO;
                 goto exit;
             }
@@ -3670,6 +3736,9 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         } else
             ret = compress_write(out->compr, buffer, bytes);
 
+        if ((ret < 0 || ret == (ssize_t)bytes) && !out->non_blocking)
+            update_frames_written(out, bytes);
+
         if (ret < 0)
             ret = -errno;
         ALOGVV("%s: writing buffer (%zu bytes) to compress device returned %zd", __func__, bytes, ret);
@@ -3684,8 +3753,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             out_on_error(&out->stream.common);
             return ret;
         }
-        if ( ret == (ssize_t)bytes && !out->non_blocking)
-            out->written += bytes;
 
         /* Call compr start only when non-zero bytes of data is there to be rendered */
         if (!out->playback_started && ret > 0) {
@@ -3764,14 +3831,13 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
             if (ret < 0)
                 ret = -errno;
-            else if (ret == 0 && (audio_bytes_per_sample(out->format) != 0))
-                out->written += bytes / (out->config.channels * audio_bytes_per_sample(out->format));
-            else
+            else if (ret > 0)
                 ret = -EINVAL;
         }
     }
 
 exit:
+    update_frames_written(out, bytes);
     if (-ENETRESET == ret) {
         out->card_status = CARD_STATUS_OFFLINE;
     }
@@ -5180,7 +5246,10 @@ int adev_open_output_stream(struct audio_hw_device *dev,
 
         channels = audio_channel_count_from_out_mask(out->channel_mask);
 
-        if (out->flags & AUDIO_OUTPUT_FLAG_RAW) {
+        if (out->flags & AUDIO_OUTPUT_FLAG_INTERACTIVE) {
+            out->usecase = get_interactive_usecase(adev);
+            out->config = pcm_config_low_latency;
+        } else if (out->flags & AUDIO_OUTPUT_FLAG_RAW) {
             out->usecase = USECASE_AUDIO_PLAYBACK_ULL;
             out->realtime = may_use_noirq_mode(adev, USECASE_AUDIO_PLAYBACK_ULL,
                                                out->flags);
@@ -5410,6 +5479,9 @@ void adev_close_output_stream(struct audio_hw_device *dev __unused,
     }
 
     out->a2dp_compress_mute = false;
+
+    if (is_interactive_usecase(out->usecase))
+        free_interactive_usecase(adev, out->usecase);
 
     if (out->convert_buffer != NULL) {
         free(out->convert_buffer);
