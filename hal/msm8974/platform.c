@@ -6123,7 +6123,7 @@ int platform_set_stream_pan_scale_params(void *platform,
     int iter_i = 0;
     int iter_j = 0;
     int length = 0;
-    int *pan_scale_data = NULL;
+    char *pan_scale_data = NULL;
 
     snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
                           "Audio Stream %d Pan Scale Control", snd_id);
@@ -6136,41 +6136,55 @@ int platform_set_stream_pan_scale_params(void *platform,
         ret = -EINVAL;
         goto end;
     }
-    pan_scale_data = (int* ) calloc(1, sizeof(mm_params));
+    pan_scale_data = (char *) calloc(1, sizeof(mm_params));
     if (!pan_scale_data) {
         ret = -ENOMEM;
         goto end;
     }
-    pan_scale_data[length++] = mm_params.num_output_channels;
-    pan_scale_data[length++] = mm_params.num_input_channels;
+    memcpy(&pan_scale_data[length], &mm_params.num_output_channels,
+                              sizeof(mm_params.num_output_channels));
+    length += sizeof(mm_params.num_output_channels);
+    memcpy(&pan_scale_data[length], &mm_params.num_input_channels,
+                              sizeof(mm_params.num_input_channels));
+    length += sizeof(mm_params.num_input_channels);
 
-    pan_scale_data[length++] = mm_params.has_output_channel_map;
+    memcpy(&pan_scale_data[length], &mm_params.has_output_channel_map,
+                              sizeof(mm_params.has_output_channel_map));
+    length += sizeof(mm_params.has_output_channel_map);
     if (mm_params.has_output_channel_map &&
         mm_params.num_output_channels <= MAX_CHANNELS_SUPPORTED &&
-        mm_params.num_output_channels > 0)
-        for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++)
-            pan_scale_data[length++] = mm_params.output_channel_map[iter_i];
-    else {
+        mm_params.num_output_channels > 0) {
+        memcpy(&pan_scale_data[length], mm_params.output_channel_map,
+                (mm_params.num_output_channels * sizeof(mm_params.output_channel_map[0])));
+        length += (mm_params.num_output_channels * sizeof(mm_params.output_channel_map[0]));
+    } else {
         ret = -EINVAL;
         goto end;
     }
 
-    pan_scale_data[length++] = mm_params.has_input_channel_map;
+    memcpy(&pan_scale_data[length], &mm_params.has_input_channel_map,
+                                sizeof(mm_params.has_input_channel_map));
+    length += sizeof(mm_params.has_input_channel_map);
     if (mm_params.has_input_channel_map &&
         mm_params.num_input_channels <= MAX_CHANNELS_SUPPORTED &&
-        mm_params.num_input_channels > 0)
-        for (iter_i = 0; iter_i < mm_params.num_input_channels; iter_i++)
-            pan_scale_data[length++] = mm_params.input_channel_map[iter_i];
-    else {
+        mm_params.num_input_channels > 0) {
+        memcpy(&pan_scale_data[length], mm_params.input_channel_map,
+               (mm_params.num_input_channels * sizeof(mm_params.input_channel_map[0])));
+            length += (mm_params.num_input_channels * sizeof(mm_params.input_channel_map[0]));
+    } else {
         ret = -EINVAL;
         goto end;
     }
-    pan_scale_data[length++] = mm_params.has_mixer_coeffs;
+    pan_scale_data[length] = mm_params.has_mixer_coeffs;
+    length += sizeof(mm_params.has_mixer_coeffs);
     if (mm_params.has_mixer_coeffs)
         for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++)
-            for (iter_j = 0; iter_j < mm_params.num_input_channels; iter_j++)
-                pan_scale_data[length++] =
-                                    mm_params.mixer_coeffs[iter_i][iter_j];
+            for (iter_j = 0; iter_j < mm_params.num_input_channels; iter_j++) {
+                 memcpy(&pan_scale_data[length],
+                        &mm_params.mixer_coeffs[iter_i][iter_j],
+                        (sizeof(mm_params.mixer_coeffs[0][0])));
+                 length += (sizeof(mm_params.mixer_coeffs[0][0]));
+            }
 
     ret = mixer_ctl_set_array(ctl, pan_scale_data, length);
 end:
@@ -6188,7 +6202,7 @@ int platform_set_stream_downmix_params(void *platform,
     struct audio_device *adev = my_data->adev;
     struct mixer_ctl *ctl;
     char mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = {0};
-    int *downmix_param_data = NULL;
+    char *downmix_param_data = NULL;
     int ret = 0;
     int iter_i = 0;
     int iter_j = 0;
@@ -6206,44 +6220,59 @@ int platform_set_stream_downmix_params(void *platform,
         ret = -EINVAL;
     }
 
-    downmix_param_data = (int* ) calloc(1, sizeof(mm_params) + sizeof(be_idx));
+    downmix_param_data = (char *) calloc(1, sizeof(mm_params) + sizeof(be_idx));
     if (!downmix_param_data) {
         ret = -ENOMEM;
         goto end;
     }
     be_idx = platform_get_snd_device_backend_index(snd_device);
-    downmix_param_data[length++] = be_idx;
-    downmix_param_data[length++] = mm_params.num_output_channels;
-    downmix_param_data[length++] = mm_params.num_input_channels;
+    memcpy(&downmix_param_data[length], &be_idx, sizeof(be_idx));
+    length += sizeof(be_idx);
+    memcpy(&downmix_param_data[length], &mm_params.num_output_channels,
+                                    sizeof(mm_params.num_output_channels));
+    length += sizeof(mm_params.num_output_channels);
+    memcpy(&downmix_param_data[length], &mm_params.num_input_channels,
+                                    sizeof(mm_params.num_input_channels));
+    length += sizeof(mm_params.num_input_channels);
 
-    downmix_param_data[length++] = mm_params.has_output_channel_map;
+    memcpy(&downmix_param_data[length], &mm_params.has_output_channel_map,
+                                   sizeof(mm_params.has_output_channel_map));
+    length += sizeof(mm_params.has_output_channel_map);
     if (mm_params.has_output_channel_map &&
         mm_params.num_output_channels <= MAX_CHANNELS_SUPPORTED &&
-        mm_params.num_output_channels > 0)
-        for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++)
-            downmix_param_data[length++] = mm_params.output_channel_map[iter_i];
-    else {
+        mm_params.num_output_channels > 0) {
+        memcpy(&downmix_param_data[length], mm_params.output_channel_map,
+                (mm_params.num_output_channels * sizeof(mm_params.output_channel_map[0])));
+        length += (mm_params.num_output_channels * sizeof(mm_params.output_channel_map[0]));
+    } else {
         ret = -EINVAL;
         goto end;
     }
 
-    downmix_param_data[length++] = mm_params.has_input_channel_map;
+    memcpy(&downmix_param_data[length], &mm_params.has_input_channel_map,
+                                   sizeof(mm_params.has_input_channel_map));
+    length += sizeof(mm_params.has_input_channel_map);
     if (mm_params.has_input_channel_map &&
         mm_params.num_input_channels <= MAX_CHANNELS_SUPPORTED &&
-        mm_params.num_input_channels > 0)
-        for (iter_i = 0; iter_i < mm_params.num_input_channels; iter_i++)
-            downmix_param_data[length++] = mm_params.input_channel_map[iter_i];
-    else {
+        mm_params.num_input_channels > 0) {
+        memcpy(&downmix_param_data[length], mm_params.input_channel_map,
+                (mm_params.num_input_channels * sizeof(mm_params.input_channel_map[0])));
+            length += (mm_params.num_input_channels * sizeof(mm_params.input_channel_map[0]));
+    } else {
         ret = -EINVAL;
         goto end;
     }
-
-    downmix_param_data[length++] = mm_params.has_mixer_coeffs;
+    memcpy(&downmix_param_data[length], &mm_params.has_mixer_coeffs,
+                                    sizeof(mm_params.has_mixer_coeffs));
+    length += sizeof(mm_params.has_mixer_coeffs);
     if (mm_params.has_mixer_coeffs)
         for (iter_i = 0; iter_i < mm_params.num_output_channels; iter_i++)
-            for (iter_j = 0; iter_j < mm_params.num_input_channels; iter_j++)
-                downmix_param_data[length++] =
-                                       mm_params.mixer_coeffs[iter_i][iter_j];
+            for (iter_j = 0; iter_j < mm_params.num_input_channels; iter_j++) {
+                memcpy((uint32_t *) &downmix_param_data[length],
+                        &mm_params.mixer_coeffs[iter_i][iter_j],
+                        (sizeof(mm_params.mixer_coeffs[0][0])));
+                length += (sizeof(mm_params.mixer_coeffs[0][0]));
+            }
 
     ret = mixer_ctl_set_array(ctl, downmix_param_data, length);
 end:
