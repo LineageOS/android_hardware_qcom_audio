@@ -20,6 +20,10 @@ enum audio_event_type {
     AUDIO_EVENT_SSR,
     AUDIO_EVENT_NUM_ST_SESSIONS,
     AUDIO_EVENT_READ_SAMPLES,
+    AUDIO_EVENT_DEVICE_CONNECT,
+    AUDIO_EVENT_DEVICE_DISCONNECT,
+    AUDIO_EVENT_SVA_EXEC_MODE,
+    AUDIO_EVENT_SVA_EXEC_MODE_STATUS,
 };
 
 enum sound_trigger_event_type {
@@ -50,6 +54,7 @@ struct audio_event_info {
     union {
         enum ssr_event_status status;
         int value;
+        void *str_value;
         struct sound_trigger_session_info ses_info;
         struct audio_read_samples_info aud_info;
     }u;
