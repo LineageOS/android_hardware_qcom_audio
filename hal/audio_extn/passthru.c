@@ -413,7 +413,7 @@ bool audio_extn_passthru_is_passt_supported(struct audio_device *adev,
 
 void audio_extn_passthru_update_stream_configuration(
         struct audio_device *adev, struct stream_out *out,
-        const void *buffer, size_t bytes)
+        const void *buffer __unused, size_t bytes __unused)
 {
     if (audio_extn_passthru_is_passt_supported(adev, out)) {
         ALOGV("%s:PASSTHROUGH", __func__);

@@ -3769,7 +3769,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                 }
             }
 
-            if ((channels < audio_channel_count_from_out_mask(out->channel_mask)) &&
+            if ((channels < (int)audio_channel_count_from_out_mask(out->channel_mask)) &&
                 (out->compr_config.codec->compr_passthr == PASSTHROUGH) &&
                 (out->is_iec61937_info_available == true)) {
                     ALOGE("%s: ERROR: Unsupported channel config in passthrough mode", __func__);
@@ -3983,7 +3983,7 @@ exit:
                             out_get_sample_rate(&out->stream.common));
 
         if (audio_extn_passthru_is_passthrough_stream(out)) {
-                ALOGE("%s: write error, ret = %d", __func__, ret);
+                ALOGE("%s: write error, ret = %ld", __func__, ret);
                 return ret;
         }
     }
