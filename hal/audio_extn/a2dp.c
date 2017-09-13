@@ -221,7 +221,13 @@ struct celt_enc_cfg_t
     struct custom_enc_cfg_t  custom_cfg;
     struct celt_specific_enc_cfg_t celt_cfg;
 };
-
+/* In LE BT source code uses system/audio.h for below
+ * structure definition. To avoid multiple definition
+ * compilation error for audiohal in LE , masking structure
+ * definition under "LINUX_ENABLED" which is defined only
+ * in LE
+ */
+#ifndef LINUX_ENABLED
 /* TODO: Define the following structures only for O using PLATFORM_VERSION */
 /* Information about BT SBC encoder configuration
  * This data is used between audio HAL module and
@@ -237,7 +243,6 @@ typedef struct {
     uint8_t  max_bitpool;    /*53(44.1khz),51 (48khz) */
     uint32_t bitrate;        /* 320kbps to 512kbps */
 } audio_sbc_encoder_config;
-
 
 /* Information about BT APTX encoder configuration
  * This data is used between audio HAL module and
@@ -261,6 +266,7 @@ typedef struct {
     uint32_t sampling_rate;
     uint32_t bitrate;
 } audio_aac_encoder_config;
+#endif
 
 /* Information about BT CELT encoder configuration
  * This data is used between audio HAL module and
