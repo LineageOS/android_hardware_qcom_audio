@@ -28,6 +28,10 @@ ifneq ($(filter msm8960,$(TARGET_BOARD_PLATFORM)),)
   AUDIO_PLATFORM = msm8960
 endif
 
+ifeq ($(BOARD_HAVE_AUDIENCE_A2220),true)
+    LOCAL_CFLAGS += -DUSE_A2220
+endif
+
 LOCAL_SRC_FILES := \
 	audio_hw.c \
 	voice.c \

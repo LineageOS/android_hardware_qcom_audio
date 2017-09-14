@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <dlfcn.h>
+#include <fcntl.h>
 #include <sys/resource.h>
 #include <sys/prctl.h>
 
@@ -54,6 +55,10 @@
 
 #include "sound/compress_params.h"
 #include "sound/asound.h"
+
+#ifdef USE_A2220
+#include <sound/a2220.h>
+#endif
 
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /* ToDo: Check and update a proper value in msec */
@@ -442,6 +447,34 @@ int pcm_ioctl(struct pcm *pcm, int request, ...)
 
     return ioctl(pcm_fd, request, arg);
 }
+
+#ifdef USE_A2220
+int setA2220Mode(int mode)
+{
+    int rc = -1;
+    if (mA2220Mode != mode) {
+       pthread_mutex_lock(&mA2220Lock);
+       if (mA2220Fd < 0) {
+          mA2220Fd = open("/dev/audience_a2220", O_RDWR);
+          if (!mA2220Fd) {
+             ALOGE("%s: unable to open a2220 device!", __func__);
+             return rc;
+          } else {
+             ALOGI("%s: device opened, fd=%d", __func__, mA2220Fd);
+          }
+       }
+       rc = ioctl(mA2220Fd, A2220_SET_CONFIG, mode);
+       if (rc < 0)
+          ALOGE("%s: ioctl failed, errno=%d", __func__, errno);
+       else {
+          mA2220Mode = mode;
+          ALOGD("%s: Audience A2220 mode is set to %d.", __func__, mode);
+       }
+       pthread_mutex_unlock(&mA2220Lock);
+    }
+    return rc;
+}
+#endif
 
 int enable_audio_route(struct audio_device *adev,
                        struct audio_usecase *usecase)
@@ -946,6 +979,17 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         status = platform_switch_voice_call_usecase_route_post(adev->platform,
                                                                out_snd_device,
                                                                in_snd_device);
+
+#ifdef USE_A2220
+    if (out_snd_device != SND_DEVICE_NONE 
+     && in_snd_device != SND_DEVICE_NONE
+     && out_snd_device == SND_DEVICE_OUT_VOICE_HANDSET    
+     && in_snd_device == SND_DEVICE_IN_HANDSET_MIC) {
+        setA2220Mode(A2220_PATH_INCALL_RECEIVER_NSON);
+    } else {
+        setA2220Mode(A2220_PATH_INCALL_RECEIVER_NSOFF);
+    }
+#endif
 
     ALOGD("%s: done",__func__);
 
@@ -3453,6 +3497,12 @@ static int adev_open(const hw_module_t *module, const char *name,
     }
 
     pthread_mutex_unlock(&adev_init_lock);
+
+#ifdef USE_A2220
+    ALOGI("%s: Initialize Audience A2220 globals, assuming it is off", __func__);
+    mA2220Fd = -1;
+    mA2220Mode = A2220_PATH_INCALL_RECEIVER_NSOFF;
+#endif
 
     ALOGV("%s: exit", __func__);
     return 0;

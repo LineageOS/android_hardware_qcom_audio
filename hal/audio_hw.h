@@ -54,6 +54,12 @@
 #define SND_CARD_STATE_OFFLINE 0
 #define SND_CARD_STATE_ONLINE 1
 
+#ifdef USE_A2220
+int mA2220Fd;
+int mA2220Mode;
+pthread_mutex_t mA2220Lock;
+#endif
+
 typedef int snd_device_t;
 
 /* These are the supported use cases by the hardware.
