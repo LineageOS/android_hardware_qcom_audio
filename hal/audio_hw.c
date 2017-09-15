@@ -3453,10 +3453,8 @@ static int add_remove_audio_effect(const struct audio_stream *stream,
             struct listnode *node;
             list_for_each(node, &adev->usecase_list) {
                 usecase = node_to_item(node, struct audio_usecase, list);
-                if (usecase->type == PCM_PLAYBACK) {
+                if (usecase->type == PCM_PLAYBACK)
                     select_devices(adev, usecase->id);
-                    break;
-                }
             }
         }
         if (!in->standby)
