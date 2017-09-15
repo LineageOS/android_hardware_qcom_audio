@@ -2235,7 +2235,7 @@ int audio_extn_utils_set_downmix_params(
     int ret = -EINVAL, i = 0, j = 0;
     struct audio_usecase *usecase = NULL;
 
-    if (mm_params == NULL && out != NULL) {
+    if (mm_params == NULL || out == NULL) {
         ALOGE("%s:: Invalid mix matrix params", __func__);
         goto exit;
     }
@@ -2247,6 +2247,11 @@ int audio_extn_utils_set_downmix_params(
         goto exit;
 
     usecase = get_usecase_from_list(out->dev, out->usecase);
+    if (usecase == NULL) {
+        ALOGE("%s: Invalid usecase", __func__);
+        goto exit;
+    }
+
     out->downmix_params.num_output_channels = mm_params->num_output_channels;
     out->downmix_params.num_input_channels = mm_params->num_input_channels;
 

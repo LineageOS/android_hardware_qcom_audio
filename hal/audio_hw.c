@@ -2845,6 +2845,10 @@ int start_output_stream(struct stream_out *out)
     if (ret == 0) {
         register_out_stream(out);
         if (out->realtime) {
+            if (out->pcm == NULL || !pcm_is_ready(out->pcm)) {
+                ALOGE("%s: pcm stream not ready", __func__);
+                goto error_open;
+            }
             ret = pcm_start(out->pcm);
             if (ret < 0)
                 goto error_open;
@@ -5000,8 +5004,8 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
     struct stream_in *in = (struct stream_in *)stream;
     struct audio_device *adev = in->dev;
     int ret = 0;
-    unsigned int offset1;
-    unsigned int frames1;
+    unsigned int offset1 = 0;
+    unsigned int frames1 = 0;
     const char *step = "";
 
     pthread_mutex_lock(&adev->lock);
