@@ -461,8 +461,8 @@ int32_t audio_extn_ffv_stream_init(struct stream_in *in)
 
     num_ec_ref_ch = ffvmod.ec_ref_config.channels;
     num_tx_in_ch = ffvmod.split_ec_ref_data ?
-      (ffvmod.capture_config.channels - num_ec_ref_ch) :
-      ffvmod.capture_config.channels;
+        (ffvmod.capture_config.channels - num_ec_ref_ch) :
+        ffvmod.capture_config.channels;
     num_out_ch = ffvmod.out_config.channels;
     frame_len = ffvmod.capture_config.period_size;
     sample_rate = ffvmod.capture_config.rate;
@@ -548,6 +548,7 @@ int32_t audio_extn_ffv_stream_deinit()
     if (ffvmod.buffers_allocated)
         deallocate_buffers();
 
+    ffvmod.handle = NULL;
     ffvmod.in = NULL;
     ALOGV("%s: exit", __func__);
     return 0;
@@ -614,6 +615,9 @@ int audio_extn_ffv_init_ec_ref_loopback(struct audio_device *adev,
         goto exit;
     }
 
+    ALOGV("%s: Opening PCM device card_id(%d) device_id(%d), channels %d format %d",
+          __func__, adev->snd_card, ffvmod.ec_ref_pcm_id, ffvmod.ec_ref_config.channels,
+          ffvmod.ec_ref_config.format);
     ffvmod.ec_ref_pcm = pcm_open(adev->snd_card,
                              ffvmod.ec_ref_pcm_id,
                              PCM_IN, &ffvmod.ec_ref_config);
@@ -623,6 +627,7 @@ int audio_extn_ffv_init_ec_ref_loopback(struct audio_device *adev,
         goto exit;
     }
 
+    ALOGV("%s: pcm_prepare", __func__);
     if (pcm_prepare(ffvmod.ec_ref_pcm) < 0) {
         ALOGE("%s: pcm prepare for ec ref loopback failed", __func__);
         ret = -EINVAL;
