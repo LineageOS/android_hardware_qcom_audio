@@ -12,10 +12,11 @@ LOCAL_SHARED_LIBRARIES := \
 	libcutils \
 	libutils \
 	libbinder \
-	libmedia
+	libmedia \
+	liblog
 
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_MODULE:= audiod
 
-include $(BUILD_EXECUTABLE)
+#include $(BUILD_EXECUTABLE)
