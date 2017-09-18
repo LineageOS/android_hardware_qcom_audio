@@ -106,6 +106,11 @@
 #define MAX_CHANNELS_SUPPORTED 8
 #endif
 
+typedef struct {
+    const char *id_string;
+    const int value;
+} mixer_config_lookup;
+
 struct string_to_enum {
     const char *name;
     uint32_t value;
@@ -2363,4 +2368,63 @@ bool audio_extn_utils_is_dolby_format(audio_format_t format)
         return false;
 }
 
+int audio_extn_utils_get_bit_width_from_string(const char *id_string)
+{
+    int i;
+    const mixer_config_lookup mixer_bitwidth_config[] = {{"S24_3LE", 24},
+                                                         {"S32_LE", 32},
+                                                         {"S24_LE", 24},
+                                                         {"S16_LE", 16}};
+    int num_configs = sizeof(mixer_bitwidth_config) / sizeof(mixer_bitwidth_config[0]);
 
+    for (i = 0; i < num_configs; i++) {
+        if (!strcmp(id_string, mixer_bitwidth_config[i].id_string))
+            return mixer_bitwidth_config[i].value;
+    }
+
+    return -EINVAL;
+}
+
+int audio_extn_utils_get_sample_rate_from_string(const char *id_string)
+{
+    int i;
+    const mixer_config_lookup mixer_samplerate_config[] = {{"KHZ_32", 32000},
+                                                           {"KHZ_48", 48000},
+                                                           {"KHZ_96", 96000},
+                                                           {"KHZ_144", 144000},
+                                                           {"KHZ_192", 192000},
+                                                           {"KHZ_384", 384000},
+                                                           {"KHZ_44P1", 44100},
+                                                           {"KHZ_88P2", 88200},
+                                                           {"KHZ_176P4", 176400},
+                                                           {"KHZ_352P8", 352800}};
+    int num_configs = sizeof(mixer_samplerate_config) / sizeof(mixer_samplerate_config[0]);
+
+    for (i = 0; i < num_configs; i++) {
+        if (!strcmp(id_string, mixer_samplerate_config[i].id_string))
+            return mixer_samplerate_config[i].value;
+    }
+
+    return -EINVAL;
+}
+
+int audio_extn_utils_get_channels_from_string(const char *id_string)
+{
+    int i;
+    const mixer_config_lookup mixer_channels_config[] = {{"One", 1},
+                                                         {"Two", 2},
+                                                         {"Three",3},
+                                                         {"Four", 4},
+                                                         {"Five", 5},
+                                                         {"Six", 6},
+                                                         {"Seven", 7},
+                                                         {"Eight", 8}};
+    int num_configs = sizeof(mixer_channels_config) / sizeof(mixer_channels_config[0]);
+
+    for (i = 0; i < num_configs; i++) {
+        if (!strcmp(id_string, mixer_channels_config[i].id_string))
+            return mixer_channels_config[i].value;
+    }
+
+    return -EINVAL;
+}
