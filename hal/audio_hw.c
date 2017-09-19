@@ -3830,6 +3830,7 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     } else
         in_standby(&stream->common);
 
+    pthread_mutex_lock(&adev->lock);
     if (audio_extn_ssr_get_stream() == in) {
         audio_extn_ssr_deinit();
     }
@@ -3843,6 +3844,7 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
         audio_extn_sound_trigger_stop_lab(in);
     }
     free(stream);
+    pthread_mutex_unlock(&adev->lock);
     return;
 }
 
