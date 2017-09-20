@@ -234,6 +234,10 @@ persist.vendor.audio.hifi.int_codec=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.pstimeout.secs=3
 
+#Set AudioFlinger client heap size
+PRODUCT_PROPERTY_OVERRIDES += \
+ro.af.client_heap_size_kbyte=7168
+
 # for HIDL related packages
 PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-service \

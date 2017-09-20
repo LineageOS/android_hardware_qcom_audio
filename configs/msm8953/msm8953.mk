@@ -223,6 +223,10 @@ vendor.audio.hw.aac.encoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.flac.sw.decoder.24bit=true
 
+#Set AudioFlinger client heap size
+PRODUCT_PROPERTY_OVERRIDES += \
+ro.af.client_heap_size_kbyte=7168
+
 # for HIDL related packages
 PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-service \
