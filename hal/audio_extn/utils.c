@@ -1244,7 +1244,8 @@ uint32_t get_alsa_fragment_size(uint32_t bytes_per_sample,
      *be multiple of (number of channels * bytes per sample)
      *For writes to succeed, the buffer must be written at address which is multiple of 32
      */
-    fragment_size = ALIGN(fragment_size, (bytes_per_sample * noOfChannels * 32));
+    fragment_size = ALIGN(fragment_size, (bytes_per_sample * noOfChannels));
+    fragment_size = ALIGN(fragment_size, 32);
 
     ALOGI("PCM offload Fragment size to %d bytes", fragment_size);
     return fragment_size;
