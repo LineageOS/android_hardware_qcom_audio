@@ -403,6 +403,7 @@ static int last_known_cal_step = -1 ;
 
 static int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool restore);
 static int out_set_compr_volume(struct audio_stream_out *stream, float left, float right);
+static int out_set_voip_volume(struct audio_stream_out *stream, float left, float right);
 
 static bool may_use_noirq_mode(struct audio_device *adev, audio_usecase_t uc_id,
                                int flags __unused)
@@ -2737,7 +2738,9 @@ int start_output_stream(struct stream_out *out)
         }
         platform_set_stream_channel_map(adev->platform, out->channel_mask,
                    out->pcm_device_id, &out->channel_map_param.channel_map[0]);
-
+        // apply volume for voip playback after path is set up
+        if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP)
+            out_set_voip_volume(&out->stream, out->volume_l, out->volume_r);
     } else {
         platform_set_stream_channel_map(adev->platform, out->channel_mask,
                    out->pcm_device_id, &out->channel_map_param.channel_map[0]);
@@ -3620,6 +3623,31 @@ static int out_set_compr_volume(struct audio_stream_out *stream, float left,
     return 0;
 }
 
+static int out_set_voip_volume(struct audio_stream_out *stream, float left,
+                          float right)
+{
+    struct stream_out *out = (struct stream_out *)stream;
+    char mixer_ctl_name[] = "App Type Gain";
+    struct audio_device *adev = out->dev;
+    struct mixer_ctl *ctl;
+    uint32_t set_values[4];
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+               __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    set_values[0] = 0; //0: Rx Session 1:Tx Session
+    set_values[1] = out->app_type_cfg.app_type;
+    set_values[2] = (int)(left * VOIP_PLAYBACK_VOLUME_MAX);
+    set_values[3] = (int)(right * VOIP_PLAYBACK_VOLUME_MAX);
+
+    mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+    return 0;
+}
+
 static int out_set_volume(struct audio_stream_out *stream, float left,
                           float right)
 {
@@ -3664,25 +3692,11 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
             return ret;
         }
     } else if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP) {
-        char mixer_ctl_name[] = "App Type Gain";
-        struct audio_device *adev = out->dev;
-        struct mixer_ctl *ctl;
-        uint32_t set_values[4];
-
-        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
-        if (!ctl) {
-            ALOGE("%s: Could not get ctl for mixer cmd - %s",
-                   __func__, mixer_ctl_name);
-            return -EINVAL;
-        }
-
-        set_values[0] = 0; //0: Rx Session 1:Tx Session
-        set_values[1] = out->app_type_cfg.app_type;
-        set_values[2] = (int)(left * VOIP_PLAYBACK_VOLUME_MAX);
-        set_values[3] = (int)(right * VOIP_PLAYBACK_VOLUME_MAX);
-
-        mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
-        return 0;
+        if (!out->standby)
+            ret = out_set_voip_volume(stream, left, right);
+        out->volume_l = left;
+        out->volume_r = right;
+        return ret;
     }
 
     return -ENOSYS;
