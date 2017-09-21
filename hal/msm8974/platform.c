@@ -75,7 +75,7 @@
 #endif
 
 #include <linux/msm_audio.h>
-#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845)
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM670)
 #include <sound/devdep_params.h>
 #endif
 
@@ -1671,6 +1671,11 @@ const char * get_snd_card_name_for_acdb_loader(const char *snd_card_name) {
         ALOGD("using tasha ACDB files for tasha-lite");
         return "sdm660-tasha-snd-card";
     }
+    if(!strncmp(snd_card_name, "sdm670-tashalite-snd-card",
+             sizeof("sdm670-tashalite-snd-card"))) {
+        ALOGD("using tasha ACDB files for tasha-lite");
+        return "sdm670-tasha-snd-card";
+    }
     return snd_card_name;
 }
 
@@ -2257,7 +2262,8 @@ acdb_init_fail:
         strdup("SLIM_5_RX SampleRate");
 
     if (!my_data->is_slimbus_interface) {
-        if (!strncmp(snd_card_name, "sdm660", strlen("sdm660"))) {
+        if (!strncmp(snd_card_name, "sdm660", strlen("sdm660")) ||
+               !strncmp(snd_card_name, "sdm670", strlen("sdm670"))) {
 
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("INT4_MI2S_RX Format");
@@ -7195,7 +7201,7 @@ int platform_get_max_codec_backend() {
     return MAX_CODEC_BACKENDS;
 }
 
-#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845)
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM670)
 int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
                               uint32_t *size)
 {
