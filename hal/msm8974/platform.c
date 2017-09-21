@@ -59,6 +59,7 @@
 #define MIXER_XML_DEFAULT_PATH "/etc/mixer_paths.xml"
 #define PLATFORM_INFO_XML_PATH_INTCODEC  "/etc/audio_platform_info_intcodec.xml"
 #define PLATFORM_INFO_XML_PATH_SKUSH  "/etc/audio_platform_info_skush.xml"
+#define PLATFORM_INFO_XML_PATH_SKUW  "/etc/audio_platform_info_skuw.xml"
 #define PLATFORM_INFO_XML_PATH "/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_AUXPCM "/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_I2S "/etc/mixer_paths_i2s.xml"
@@ -68,6 +69,7 @@
 #define MIXER_XML_DEFAULT_PATH "/vendor/etc/mixer_paths.xml"
 #define PLATFORM_INFO_XML_PATH_INTCODEC  "/vendor/etc/audio_platform_info_intcodec.xml"
 #define PLATFORM_INFO_XML_PATH_SKUSH "/vendor/etc/audio_platform_info_skush.xml"
+#define PLATFORM_INFO_XML_PATH_SKUW "/vendor/etc/audio_platform_info_skuw.xml"
 #define PLATFORM_INFO_XML_PATH "/vendor/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_AUXPCM "/vendor/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_I2S "/vendor/etc/mixer_paths_i2s.xml"
@@ -990,10 +992,12 @@ static int msm_be_id_array_len  =
 
 static void update_codec_type_and_interface(struct platform_data * my_data, const char *snd_card_name) {
 
-     if (!strncmp(snd_card_name, "sdm660-snd-card-skush",
-                  sizeof("sdm660-snd-card-skush")) ||
+     if (!strncmp(snd_card_name, "sdm670-skuw-snd-card",
+                  sizeof("sdm670-skuw-snd-card")) ||
          !strncmp(snd_card_name, "sdm660-snd-card-skush",
-                  sizeof("sdm660-snd-card-mtp"))   ||
+                  sizeof("sdm660-snd-card-skush")) ||
+         !strncmp(snd_card_name, "sdm660-snd-card-mtp",
+                  sizeof("sdm660-snd-card-mtp")) ||
          !strncmp(snd_card_name, "sdm670-mtp-snd-card",
                    sizeof("sdm670-mtp-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
@@ -2069,11 +2073,14 @@ void *platform_init(struct audio_device *adev)
     /* Initialize ACDB ID's */
     if (my_data->is_i2s_ext_modem)
         platform_info_init(PLATFORM_INFO_XML_PATH_I2S, my_data, PLATFORM);
-    else if (my_data->is_internal_codec)
-        platform_info_init(PLATFORM_INFO_XML_PATH_INTCODEC, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "sdm660-snd-card-skush",
                sizeof("sdm660-snd-card-skush")))
         platform_info_init(PLATFORM_INFO_XML_PATH_SKUSH, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "sdm670-skuw-snd-card",
+               sizeof("sdm670-skuw-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_SKUW, my_data, PLATFORM);
+    else if (my_data->is_internal_codec)
+        platform_info_init(PLATFORM_INFO_XML_PATH_INTCODEC, my_data, PLATFORM);
     else
         platform_info_init(PLATFORM_INFO_XML_PATH, my_data, PLATFORM);
 

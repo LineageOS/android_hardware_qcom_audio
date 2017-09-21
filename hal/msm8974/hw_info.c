@@ -483,13 +483,17 @@ static void update_hardware_info_8226(struct hardware_info *hw_info, const char 
 
 static void update_hardware_info_bear(struct hardware_info *hw_info, const char *snd_card_name)
 {
-    if (!strcmp(snd_card_name, "sdm660-snd-card")) {
+    if (!strncmp(snd_card_name, "sdm660-snd-card",
+                 sizeof("sdm660-snd-card")))
         strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
-    } else if (!strcmp(snd_card_name, "sdm660-tavil-snd-card")) {
+    else if (!strncmp(snd_card_name, "sdm660-tavil-snd-card",
+                      sizeof("sdm660-tavil-snd-card")))
         strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
-    } else {
+    else if (!strncmp(snd_card_name, "sdm670-skuw-snd-card",
+                      sizeof("sdm670-skuw-snd-card")))
+        hw_info->is_stereo_spkr = false;
+    else
         ALOGW("%s: Not an SDM device", __func__);
-    }
 }
 
 void *hw_info_init(const char *snd_card_name)
