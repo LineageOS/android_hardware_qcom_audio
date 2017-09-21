@@ -2672,20 +2672,35 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     } else {
         error_code = ERROR_CODE_WRITE;
         if (out->pcm) {
+            size_t bytes_to_write = bytes;
+
             if (out->muted)
                 memset((void *)buffer, 0, bytes);
+            // FIXME: this can be removed once audio flinger mixer supports mono output
+            if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP) {
+                size_t channel_count = audio_channel_count_from_out_mask(out->channel_mask);
+                int16_t *src = (int16_t *)buffer;
+                int16_t *dst = (int16_t *)buffer;
 
-            ALOGVV("%s: writing buffer (%zu bytes) to pcm device", __func__, bytes);
+                LOG_ALWAYS_FATAL_IF(out->config.channels != 1 || channel_count != 2 ||
+                                    out->format != AUDIO_FORMAT_PCM_16_BIT,
+                                    "out_write called for VOIP use case with wrong properties");
 
-            long ns = pcm_bytes_to_frames(out->pcm, bytes)*1000000000LL/
-                                                out->config.rate;
+                for (size_t i = 0; i < frames ; i++, dst++, src += 2) {
+                    *dst = (int16_t)(((int32_t)src[0] + (int32_t)src[1]) >> 1);
+                }
+                bytes_to_write /= 2;
+            }
+            ALOGVV("%s: writing buffer (%zu bytes) to pcm device", __func__, bytes_to_write);
+
+            long ns = (frames * NANOS_PER_SECOND) / out->config.rate;
             request_out_focus(out, ns);
 
             bool use_mmap = is_mmap_usecase(out->usecase) || out->realtime;
             if (use_mmap)
-                ret = pcm_mmap_write(out->pcm, (void *)buffer, bytes);
+                ret = pcm_mmap_write(out->pcm, (void *)buffer, bytes_to_write);
             else
-                ret = pcm_write(out->pcm, (void *)buffer, bytes);
+                ret = pcm_write(out->pcm, (void *)buffer, bytes_to_write);
 
             release_out_focus(out, ns);
         } else {
@@ -3803,17 +3818,13 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->usecase = USECASE_AUDIO_PLAYBACK_AFE_PROXY;
         out->config = pcm_config_afe_proxy_playback;
         adev->voice_tx_output = out;
-    } else if (out->flags == (AUDIO_OUTPUT_FLAG_DIRECT |
-                              AUDIO_OUTPUT_FLAG_VOIP_RX)) {
+    } else if (out->flags == AUDIO_OUTPUT_FLAG_VOIP_RX) {
+        //FIXME: add support for MONO stream configuration when audioflinger mixer supports it
         uint32_t buffer_size, frame_size;
-        out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_MONO;
-        out->channel_mask = AUDIO_CHANNEL_OUT_MONO;
         out->usecase = USECASE_AUDIO_PLAYBACK_VOIP;
         out->config = pcm_config_voip;
         out->config.format = pcm_format_from_audio_format(config->format);
         out->config.rate = config->sample_rate;
-        out->config.channels =
-                audio_channel_count_from_out_mask(config->channel_mask);
         buffer_size = get_stream_buffer_size(VOIP_PLAYBACK_PERIOD_DURATION_MSEC,
                                              config->sample_rate,
                                              config->format,
