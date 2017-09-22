@@ -1164,6 +1164,8 @@ int select_devices(struct audio_device *adev,
     audio_usecase_t hfp_ucid;
     struct listnode *node;
     int status = 0;
+    struct audio_usecase *voip_usecase = get_usecase_from_list(adev,
+                                             USECASE_AUDIO_PLAYBACK_VOIP);
 
     usecase = get_usecase_from_list(adev, uc_id);
     if (usecase == NULL) {
@@ -1207,8 +1209,6 @@ int select_devices(struct audio_device *adev,
             in_snd_device = SND_DEVICE_NONE;
             if (out_snd_device == SND_DEVICE_NONE) {
                 struct stream_out *voip_out = adev->primary_output;
-                struct audio_usecase *voip_usecase = get_usecase_from_list(adev,
-                                                         USECASE_AUDIO_PLAYBACK_VOIP);
 
                 out_snd_device = platform_get_output_snd_device(adev->platform,
                                             usecase->stream.out->devices);
@@ -1360,6 +1360,12 @@ int select_devices(struct audio_device *adev,
             voice_set_sidetone(adev, out_snd_device, true);
     }
 
+    if (usecase == voip_usecase) {
+        struct stream_out *voip_out = voip_usecase->stream.out;
+        audio_extn_utils_send_app_type_gain(adev,
+                                            voip_out->app_type_cfg.app_type,
+                                            &voip_out->app_type_cfg.gain[0]);
+    }
     return status;
 }
 
@@ -1946,9 +1952,6 @@ int start_output_stream(struct stream_out *out)
     register_out_stream(out);
     audio_extn_perf_lock_release();
     audio_extn_tfa_98xx_enable_speaker();
-    audio_extn_utils_send_app_type_gain(out->dev,
-                                        out->app_type_cfg.app_type,
-                                        &out->app_type_cfg.gain[0]);
 
     // consider a scenario where on pause lower layers are tear down.
     // so on resume, swap mixer control need to be sent only when
