@@ -1003,6 +1003,10 @@ int disable_snd_device(struct audio_device *adev,
         if (platform_can_enable_spkr_prot_on_device(snd_device) &&
              audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing(snd_device);
+
+            // when speaker device is disabled, reset swap.
+            // will be renabled on usecase start
+            platform_set_swap_channels(adev, false);
         } else if (platform_split_snd_device(adev->platform,
                                              snd_device,
                                              &num_devices,
@@ -2978,6 +2982,13 @@ int start_output_stream(struct stream_out *out)
             ALOGE("%s: audio_extn_ip_hdlr_intf_open failed %d",__func__, ret);
     }
 
+    // consider a scenario where on pause lower layers are tear down.
+    // so on resume, swap mixer control need to be sent only when
+    // backend is active, hence rather than sending from enable device
+    // sending it from start of streamtream
+
+    platform_set_swap_channels(adev, true);
+
     return ret;
 error_open:
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
@@ -3504,8 +3515,13 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                     select_devices(adev, out->usecase);
                     out->devices = new_dev;
                 }
-                if (!same_dev)
+
+                if (!same_dev) {
+                    // on device switch force swap, lower functions will make sure
+                    // to check if swap is allowed or not.
+                    platform_set_swap_channels(adev, true);
                     audio_extn_perf_lock_release(&adev->perf_lock_handle);
+                }
                 if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
                     out->a2dp_compress_mute &&
                     (!(out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) || audio_extn_a2dp_is_ready())) {
@@ -6030,19 +6046,10 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             status = -EINVAL;
         }
         if (status == 0) {
-            if (adev->speaker_lr_swap != reverse_speakers) {
-                adev->speaker_lr_swap = reverse_speakers;
-                // only update the selected device if there is active pcm playback
-                struct audio_usecase *usecase;
-                struct listnode *node;
-                list_for_each(node, &adev->usecase_list) {
-                    usecase = node_to_item(node, struct audio_usecase, list);
-                    if (usecase->type == PCM_PLAYBACK) {
-                        select_devices(adev, usecase->id);
-                        break;
-                    }
-                }
-            }
+            // check and set swap
+            //   - check if orientation changed and speaker active
+            //   - set rotation and cache the rotation value
+            platform_check_and_set_swap_lr_channels(adev, reverse_speakers);
         }
     }
 

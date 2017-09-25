@@ -222,6 +222,7 @@ struct platform_data {
     bool external_spk_1;
     bool external_spk_2;
     bool external_mic;
+    bool speaker_lr_swap;
     int  fluence_type;
     int  fluence_mode;
     char fluence_cap[PROPERTY_VALUE_MAX];
@@ -6840,6 +6841,7 @@ bool platform_can_enable_spkr_prot_on_device(snd_device_t snd_device)
     bool ret = false;
 
     if (snd_device == SND_DEVICE_OUT_SPEAKER ||
+        snd_device == SND_DEVICE_OUT_SPEAKER_REVERSE ||
         snd_device == SND_DEVICE_OUT_SPEAKER_VBAT ||
         snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
         snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT ||
@@ -7193,6 +7195,151 @@ ERROR_RETURN:
 int platform_get_max_mic_count(void *platform) {
     struct platform_data *my_data = (struct platform_data *)platform;
     return my_data->max_mic_count;
+}
+
+#define DEFAULT_NOMINAL_SPEAKER_GAIN 20
+int ramp_speaker_gain(struct audio_device *adev, bool ramp_up, int target_ramp_up_gain) {
+    // backup_gain: gain to try to set in case of an error during ramp
+    int start_gain, end_gain, step, backup_gain, i;
+    bool error = false;
+    const char *mixer_ctl_name_gain_left = "Left Speaker Gain";
+    const char *mixer_ctl_name_gain_right = "Right Speaker Gain";
+    struct mixer_ctl *ctl_left = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name_gain_left);
+    struct mixer_ctl *ctl_right = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name_gain_right);
+    if (!ctl_left || !ctl_right) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s or %s, not applying speaker gain ramp",
+                      __func__, mixer_ctl_name_gain_left, mixer_ctl_name_gain_right);
+        return -EINVAL;
+    } else if ((mixer_ctl_get_num_values(ctl_left) != 1)
+            || (mixer_ctl_get_num_values(ctl_right) != 1)) {
+        ALOGE("%s: Unexpected num values for mixer cmd - %s or %s, not applying speaker gain ramp",
+                              __func__, mixer_ctl_name_gain_left, mixer_ctl_name_gain_right);
+        return -EINVAL;
+    }
+    if (ramp_up) {
+        start_gain = 0;
+        end_gain = target_ramp_up_gain > 0 ? target_ramp_up_gain : DEFAULT_NOMINAL_SPEAKER_GAIN;
+        step = +1;
+        backup_gain = end_gain;
+    } else {
+        // using same gain on left and right
+        const int left_gain = mixer_ctl_get_value(ctl_left, 0);
+        start_gain = left_gain > 0 ? left_gain : DEFAULT_NOMINAL_SPEAKER_GAIN;
+        end_gain = 0;
+        step = -1;
+        backup_gain = start_gain;
+    }
+    for (i = start_gain ; i != (end_gain + step) ; i += step) {
+        if (mixer_ctl_set_value(ctl_left, 0, i)) {
+            ALOGE("%s: error setting %s to %d during gain ramp",
+                    __func__, mixer_ctl_name_gain_left, i);
+            error = true;
+            break;
+        }
+        if (mixer_ctl_set_value(ctl_right, 0, i)) {
+            ALOGE("%s: error setting %s to %d during gain ramp",
+                    __func__, mixer_ctl_name_gain_right, i);
+            error = true;
+            break;
+        }
+        usleep(1000);
+    }
+    if (error) {
+        // an error occured during the ramp, let's still try to go back to a safe volume
+        if (mixer_ctl_set_value(ctl_left, 0, backup_gain)) {
+            ALOGE("%s: error restoring left gain to %d", __func__, backup_gain);
+        }
+        if (mixer_ctl_set_value(ctl_right, 0, backup_gain)) {
+            ALOGE("%s: error restoring right gain to %d", __func__, backup_gain);
+        }
+    }
+    return start_gain;
+}
+
+int platform_set_swap_mixer(struct audio_device *adev, bool swap_channels)
+{
+    const char *mixer_ctl_name = "Swap channel";
+    struct mixer_ctl *ctl;
+    const char *mixer_path;
+    struct platform_data *my_data = (struct platform_data *)adev->platform;
+
+    // forced to set to swap, but device not rotated ... ignore set
+    if (swap_channels && !my_data->speaker_lr_swap)
+        return 0;
+
+    ALOGV("%s:", __func__);
+
+    if (swap_channels)
+        mixer_path = platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER_REVERSE);
+    else
+        mixer_path = platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER);
+
+    audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",__func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    if (mixer_ctl_set_value(ctl, 0, swap_channels) < 0) {
+        ALOGE("%s: Could not set reverse cotrol %d",__func__, swap_channels);
+        return -EINVAL;
+    }
+
+    ALOGV("platfor_force_swap_channel :: Channel orientation ( %s ) ",
+           swap_channels?"R --> L":"L --> R");
+
+    return 0;
+}
+
+int platform_check_and_set_swap_lr_channels(struct audio_device *adev, bool swap_channels)
+{
+    // only update if there is active pcm playback on speaker
+    struct platform_data *my_data = (struct platform_data *)adev->platform;
+
+    my_data->speaker_lr_swap = swap_channels;
+
+    return platform_set_swap_channels(adev, swap_channels);
+}
+
+int platform_set_swap_channels(struct audio_device *adev, bool swap_channels)
+{
+    // only update if there is active pcm playback on speaker
+    struct audio_usecase *usecase;
+    struct listnode *node;
+
+    // do not swap channels in audio modes with concurrent capture and playback
+    // as this may break the echo reference
+    if ((adev->mode == AUDIO_MODE_IN_COMMUNICATION) || (adev->mode == AUDIO_MODE_IN_CALL)) {
+        ALOGV("%s: will not swap due to audio mode %d", __func__, adev->mode);
+        return 0;
+    }
+
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type == PCM_PLAYBACK &&
+                usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
+            /*
+             * If acdb tuning is different for SPEAKER_REVERSE, it is must
+             * to perform device switch to disable the current backend to
+             * enable it with new acdb data.
+             */
+            if (acdb_device_table[SND_DEVICE_OUT_SPEAKER] !=
+                acdb_device_table[SND_DEVICE_OUT_SPEAKER_REVERSE]) {
+                const int initial_skpr_gain = ramp_speaker_gain(adev, false /*ramp_up*/, -1);
+                select_devices(adev, usecase->id);
+                if (initial_skpr_gain != -EINVAL)
+                    ramp_speaker_gain(adev, true /*ramp_up*/, initial_skpr_gain);
+
+            } else {
+                platform_set_swap_mixer(adev, swap_channels);
+            }
+            break;
+        }
+    }
+
+    return 0;
 }
 
 static struct amp_db_and_gain_table tbl_mapping[MAX_VOLUME_CAL_STEPS];
