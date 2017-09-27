@@ -3383,7 +3383,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         lock_output_stream(out);
         audio_extn_utils_update_stream_output_app_type_cfg(adev->platform,
                                                           &adev->streams_output_cfg_list,
-                                                          out->devices, out->flags, out->format,
+                                                          out->devices, out->flags, out->hal_op_format,
                                                           out->sample_rate, out->bit_width,
                                                           out->channel_mask, out->profile,
                                                           &out->app_type_cfg);
@@ -5040,7 +5040,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     out->flags = flags;
     out->devices = devices;
     out->dev = adev;
-    format = out->format = config->format;
+    out->hal_op_format = out->hal_ip_format = format = out->format = config->format;
     out->sample_rate = config->sample_rate;
     out->channel_mask = config->channel_mask;
     if (out->channel_mask == AUDIO_CHANNEL_NONE)
@@ -5469,7 +5469,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->bit_width = 16;
     audio_extn_utils_update_stream_output_app_type_cfg(adev->platform,
                                                 &adev->streams_output_cfg_list,
-                                                devices, out->flags, format, out->sample_rate,
+                                                devices, out->flags, out->hal_op_format, out->sample_rate,
                                                 out->bit_width, out->channel_mask, out->profile,
                                                 &out->app_type_cfg);
     if ((out->usecase == USECASE_AUDIO_PLAYBACK_PRIMARY) ||

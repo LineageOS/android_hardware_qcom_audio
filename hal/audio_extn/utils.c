@@ -822,7 +822,7 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
                                                 &adev->streams_output_cfg_list,
                                                 usecase->stream.out->devices,
                                                 usecase->stream.out->flags,
-                                                usecase->stream.out->format,
+                                                usecase->stream.out->hal_op_format,
                                                 usecase->stream.out->sample_rate,
                                                 usecase->stream.out->bit_width,
                                                 usecase->stream.out->channel_mask,
