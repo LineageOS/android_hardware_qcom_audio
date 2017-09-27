@@ -358,15 +358,14 @@ int audio_extn_ssr_set_usecase(struct stream_in *in,
                   audio_channel_mask_get_representation(in->channel_mask);
     *update_params = false;
 
-//if (audio_extn_ssr_check_usecase(in)) {
-
-  //    if (representation == AUDIO_CHANNEL_REPRESENTATION_INDEX) {
+    if (audio_extn_ssr_check_usecase(in)) {
+        if (representation == AUDIO_CHANNEL_REPRESENTATION_INDEX) {
             /* update params in case channel representation index.
              * on returning error, flinger will retry with supported representation passed
              */
-    /*      ALOGD("%s: SSR supports only channel representation position, channel_mask(%#x)"
+            ALOGD("%s: SSR supports only channel representation position, channel_mask(%#x)"
                               ,__func__, config->channel_mask);
-            config->channel_mask = AUDIO_CHANNEL_IN_5POINT1;
+            config->channel_mask = AUDIO_CHANNEL_IN_6;
             ret = 0;
             *update_params = true;
         } else {
@@ -377,7 +376,7 @@ int audio_extn_ssr_set_usecase(struct stream_in *in,
                 ALOGE("%s: Unable to start SSR record session", __func__);
             }
         }
-    }*/
+    }
     return ret;
 }
 
