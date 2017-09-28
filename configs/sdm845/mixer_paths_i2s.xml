@@ -68,14 +68,29 @@
     <ctl name="SLIM RX3 MUX" value="AIF1_PB" />
     <ctl name="CLASS_H_DSM MUX" value="ZERO" />
 
+    <!-- Multimode Voice1 -->
+    <ctl name="Voice Stub Tx Mixer TERT_MI2S_TX" value="0" />
+    <ctl name="QUAT_MI2S_RX_Voice Mixer Voice Stub" value="0" />
+    <ctl name="Voice Stub Tx Mixer QUAT_MI2S_TX" value="0" />
+    <ctl name="TERT_MI2S_RX_Voice Mixer Voice Stub" value="0" />
+    <ctl name="QUAT_MI2S_RX Port Mixer TERT_MI2S_TX" value="0" />
+    <ctl name="TERT_MI2S_RX Port Mixer QUAT_MI2S_TX" value="0" />
+    <!-- Multimode Voice1 end -->
+
+    <!-- Multimode Voice2 -->
+    <ctl name="Voice2 Stub Tx Mixer TERT_MI2S_TX" value="0" />
+    <ctl name="QUAT_MI2S_RX_Voice Mixer Voice2 Stub" value="0" />
+    <ctl name="Voice2 Stub Tx Mixer QUAT_MI2S_TX" value="0" />
+    <ctl name="TERT_MI2S_RX_Voice Mixer Voice2 Stub" value="0" />
+    <ctl name="QUAT_MI2S_RX Port Mixer TERT_MI2S_TX" value="0" />
+    <ctl name="TERT_MI2S_RX Port Mixer QUAT_MI2S_TX" value="0" />
+    <!-- Multimode Voice2 end -->
+
+
     <!-- RT Proxy Cal -->
     <ctl name="RT_PROXY_1_RX SetCalMode" value="CAL_MODE_NONE" />
     <ctl name="RT_PROXY_1_TX SetCalMode" value="CAL_MODE_NONE" />
     <!-- RT Proxy Cal end -->
-
-    <!-- mixer control to disable lowlatency qos voting -->
-    <ctl name="MultiMedia5_RX QOS Vote" value="Disable" />
-    <!-- mixer control to disable lowlatency qos voting end -->
 
     <!-- These are audio route (FE to BE) specific mixer settings -->
     <path name="deep-buffer-playback">
@@ -84,10 +99,6 @@
 
     <path name="low-latency-playback">
         <ctl name="AUX_PCM_RX Audio Mixer MultiMedia5" value="1" />
-    </path>
-
-    <path name="low-latency-playback resume">
-        <ctl name="MultiMedia5_RX QOS Vote" value="Enable" />
     </path>
 
     <path name="compress-offload-playback">
@@ -102,6 +113,28 @@
         <ctl name="MultiMedia8 Mixer AUX_PCM_UL_TX" value="1" />
     </path>
 
+    <path name="voicemmode1-call">
+        <ctl name="Voice Stub Tx Mixer TERT_MI2S_TX" value="1" />
+        <ctl name="QUAT_MI2S_RX_Voice Mixer Voice Stub" value="1" />
+        <ctl name="Voice Stub Tx Mixer QUAT_MI2S_TX" value="1" />
+        <ctl name="TERT_MI2S_RX_Voice Mixer Voice Stub" value="1" />
+        <ctl name="QUAT_MI2S_RX Port Mixer TERT_MI2S_TX" value="1" />
+        <ctl name="TERT_MI2S_RX Port Mixer QUAT_MI2S_TX" value="1" />
+    </path>
+
+    <path name="voicemmode2-call">
+        <ctl name="Voice2 Stub Tx Mixer TERT_MI2S_TX" value="1" />
+        <ctl name="QUAT_MI2S_RX_Voice Mixer Voice2 Stub" value="1" />
+        <ctl name="Voice2 Stub Tx Mixer QUAT_MI2S_TX" value="1" />
+        <ctl name="TERT_MI2S_RX_Voice Mixer Voice2 Stub" value="1" />
+        <ctl name="QUAT_MI2S_RX Port Mixer TERT_MI2S_TX" value="1" />
+        <ctl name="TERT_MI2S_RX Port Mixer QUAT_MI2S_TX" value="1" />
+    </path>
+
+    <path name="gsm-mode">
+        <ctl name="GSM mode Enable" value="ON" />
+    </path>
+
     <!-- These are actual sound device specific mixer settings -->
     <path name="adc1">
         <ctl name="AIF1_CAP Mixer SLIM TX9" value="1"/>
@@ -111,10 +144,11 @@
     </path>
 
     <path name="adc2">
-        <ctl name="AIF1_CAP Mixer SLIM TX9" value="1"/>
-        <ctl name="QUAT_MI2S_TX Channels" value="One" />
-        <ctl name="SLIM TX9 MUX" value="DEC5" />
-        <ctl name="DEC5 MUX" value="ADC2" />
+        <ctl name="MI2S_TX Channels" value="One" />
+        <ctl name="AIF1_CAP Mixer SLIM TX8" value="1"/>
+        <ctl name="SLIM TX8 MUX" value="DEC8" />
+        <ctl name="ADC MUX8" value="AMIC" />
+        <ctl name="AMIC MUX8" value="ADC2" />
     </path>
 
     <path name="dmic1">
@@ -176,23 +210,20 @@
     </path>
 
     <path name="headphones">
+        <ctl name="SLIM RX2 MUX" value="AIF1_PB" />
         <ctl name="SLIM RX3 MUX" value="AIF1_PB" />
-        <ctl name="SLIM RX4 MUX" value="AIF1_PB" />
-        <ctl name="QUAT_MI2S_RX Channels" value="Two" />
-        <ctl name="RX1 MIX1 INP1" value="RX3" />
-        <ctl name="RX2 MIX1 INP1" value="RX4" />
-        <ctl name="CLASS_H_DSM MUX" value="DSM_HPHL_RX1" />
-        <ctl name="HPHL DAC Switch" value="1" />
+        <ctl name="MI2S_RX Channels" value="Two" />
+        <ctl name="RX INT1_1 MIX1 INP0" value="RX2" />
+        <ctl name="RX INT2_1 MIX1 INP0" value="RX3" />
+        <ctl name="RX INT1 DEM MUX" value="CLSH_DSM_OUT" />
+        <ctl name="RX INT2 DEM MUX" value="CLSH_DSM_OUT" />
         <ctl name="COMP1 Switch" value="1" />
-    </path>
-
-    <path name="line">
-        <path name="headphones" />
+        <ctl name="COMP2 Switch" value="1" />
     </path>
 
     <path name="headset-mic">
         <path name="adc2" />
-        <ctl name="ADC2 Volume" value="13" />
+        <ctl name="DEC8 Volume" value="84" />
     </path>
 
     <path name="voice-handset">
@@ -215,10 +246,6 @@
         <path name="headphones" />
     </path>
 
-    <path name="voice-line">
-        <path name="voice-headphones" />
-    </path>
-
     <path name="voice-headset-mic">
         <path name="headset-mic" />
         <path name="sidetone-headphones" />
@@ -229,10 +256,6 @@
         <path name="headphones" />
         <ctl name="RX7 MIX1 INP1" value="RX1" />
         <ctl name="COMP0 Switch" value="1" />
-    </path>
-
-    <path name="speaker-and-line">
-        <path name="speaker-and-headphones" />
     </path>
 
     <path name="voice-rec-mic">
