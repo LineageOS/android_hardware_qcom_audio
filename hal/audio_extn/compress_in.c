@@ -82,7 +82,9 @@ static unsigned int cin_usecases_state;
 static const audio_usecase_t cin_usecases[] = {
     USECASE_AUDIO_RECORD_COMPRESS2,
     USECASE_AUDIO_RECORD_COMPRESS3,
-    USECASE_AUDIO_RECORD_COMPRESS4
+    USECASE_AUDIO_RECORD_COMPRESS4,
+    USECASE_AUDIO_RECORD_COMPRESS5,
+    USECASE_AUDIO_RECORD_COMPRESS6
 };
 
 static pthread_mutex_t cin_lock = PTHREAD_MUTEX_INITIALIZER;
