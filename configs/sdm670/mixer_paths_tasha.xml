@@ -530,6 +530,13 @@
     <!-- ssr qmic -->
     <ctl name="AIF1_CAP Mixer SLIM TX10" value="0" />
     <!-- ssr qmic end-->
+    <!-- vbat related data -->
+    <ctl name="GSM mode Enable" value="OFF" />
+    <ctl name="RX INT5 VBAT LO3 VBAT Enable" value="0" />
+    <ctl name="RX INT6 VBAT LO4 VBAT Enable" value="0" />
+    <ctl name="RX INT7 VBAT SPKRL VBAT Enable" value="0" />
+    <ctl name="RX INT8 VBAT SPKRR VBAT Enable" value="0" />
+    <!-- vbat related data end-->
     <!-- audio record compress-->
     <ctl name="MultiMedia8 Mixer SLIM_0_TX" value="0" />
     <ctl name="MultiMedia8 Mixer SLIM_7_TX" value="0" />
@@ -562,6 +569,33 @@
     <!-- These are audio route (FE to BE) specific mixer settings -->
     <path name="gsm-mode">
         <ctl name="GSM mode Enable" value="ON" />
+    </path>
+
+    <path name="echo-reference speaker-vbat-mono">
+        <ctl name="AIF3_CAP Mixer SLIM TX1" value="1" />
+        <ctl name="SLIM TX1 MUX" value="RX_MIX_TX1" />
+        <ctl name="RX MIX TX1 MUX" value="RX_MIX_VBAT7" />
+        <ctl name="SLIM_1_TX Channels" value="One" />
+        <ctl name="VOC_EXT_EC MUX" value="SLIM_1_TX" />
+   </path>
+
+    <path name="echo-reference speaker-vbat-mono-2">
+        <ctl name="AIF3_CAP Mixer SLIM TX2" value="1" />
+        <ctl name="SLIM TX2 MUX" value="RX_MIX_TX2" />
+        <ctl name="RX MIX TX2 MUX" value="RX_MIX_VBAT8" />
+        <ctl name="SLIM_1_TX Channels" value="One" />
+        <ctl name="VOC_EXT_EC MUX" value="SLIM_1_TX" />
+   </path>
+
+   <path name="echo-reference speaker-vbat">
+        <ctl name="AIF3_CAP Mixer SLIM TX1" value="1" />
+        <ctl name="AIF3_CAP Mixer SLIM TX2" value="1" />
+        <ctl name="SLIM TX1 MUX" value="RX_MIX_TX1" />
+        <ctl name="SLIM TX2 MUX" value="RX_MIX_TX2" />
+        <ctl name="RX MIX TX1 MUX" value="RX_MIX_VBAT7" />
+        <ctl name="RX MIX TX2 MUX" value="RX_MIX_VBAT8" />
+        <ctl name="SLIM_1_TX Channels" value="Two" />
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="SLIM_1_TX" />
     </path>
 
     <path name="echo-reference">
@@ -1536,6 +1570,16 @@
         <ctl name="Voip_Tx Mixer USB_AUDIO_TX_Voip" value="1" />
     </path>
 
+    <path name="compress-voip-call voice-speaker-vbat">
+        <path name="echo-reference speaker-vbat-mono" />
+        <path name="compress-voip-call"/>
+    </path>
+
+    <path name="compress-voip-call voice-speaker-2-vbat">
+        <path name="echo-reference speaker-vbat-mono-2" />
+        <path name="compress-voip-call"/>
+    </path>
+
     <path name="vowlan-call">
         <ctl name="SLIM_0_RX_Voice Mixer VoWLAN" value="1" />
         <ctl name="VoWLAN_Tx Mixer SLIM_0_TX_VoWLAN" value="1" />
@@ -1569,6 +1613,16 @@
     <path name="vowlan-call usb-headset">
         <ctl name="USB_AUDIO_RX_Voice Mixer VoWLAN" value="1" />
         <ctl name="VoWLAN_Tx Mixer USB_AUDIO_TX_VoWLAN" value="1" />
+    </path>
+
+    <path name="vowlan-call voice-speaker-vbat">
+        <path name="echo-reference speaker-vbat-mono" />
+        <path name="vowlan-call"/>
+    </path>
+
+    <path name="vowlan-call voice-speaker-2-vbat">
+        <path name="echo-reference speaker-vbat-mono-2" />
+        <path name="vowlan-call"/>
     </path>
 
     <path name="voicemmode1-call">
@@ -1606,6 +1660,16 @@
         <ctl name="VoiceMMode1_Tx Mixer USB_AUDIO_TX_MMode1" value="1" />
     </path>
 
+    <path name="voicemmode1-call voice-speaker-vbat">
+        <path name="echo-reference speaker-vbat-mono" />
+        <path name="voicemmode1-call"/>
+    </path>
+
+    <path name="voicemmode1-call voice-speaker-2-vbat">
+        <path name="echo-reference speaker-vbat-mono-2" />
+        <path name="voicemmode1-call"/>
+    </path>
+
     <path name="voicemmode2-call">
         <ctl name="SLIM_0_RX_Voice Mixer VoiceMMode2" value="1" />
         <ctl name="VoiceMMode2_Tx Mixer SLIM_0_TX_MMode2" value="1" />
@@ -1639,6 +1703,16 @@
     <path name="voicemmode2-call usb-headset">
         <ctl name="USB_AUDIO_RX_Voice Mixer VoiceMMode2" value="1" />
         <ctl name="VoiceMMode2_Tx Mixer USB_AUDIO_TX_MMode2" value="1" />
+    </path>
+
+    <path name="voicemmode2-call voice-speaker-vbat">
+        <path name="echo-reference speaker-vbat-mono" />
+        <path name="voicemmode2-call"/>
+    </path>
+
+    <path name="voicemmode2-call voice-speaker-2-vbat">
+        <path name="echo-reference speaker-vbat-mono-2" />
+        <path name="voicemmode2-call"/>
     </path>
 
     <path name="listen-voice-wakeup-1">
@@ -1828,6 +1902,22 @@
         <path name="speaker" />
     </path>
 
+   <path name="speaker-vbat-mono">
+       <path name="speaker-mono" />
+       <ctl name="RX INT7 VBAT SPKRL VBAT Enable" value="1" />
+   </path>
+
+   <path name="speaker-vbat-mono-2">
+       <path name="speaker-mono-2" />
+       <ctl name="RX INT8 VBAT SPKRL VBAT Enable" value="1" />
+   </path>
+
+   <path name="speaker-vbat">
+       <path name="speaker" />
+       <ctl name="RX INT7 VBAT SPKRL VBAT Enable" value="1" />
+       <ctl name="RX INT8 VBAT SPKRR VBAT Enable" value="1" />
+   </path>
+
    <path name="sidetone-iir">
         <ctl name="IIR0 Enable Band1" value="1" />
         <ctl name="IIR0 Enable Band2" value="1" />
@@ -1896,6 +1986,22 @@
     </path>
 
     <path name="vi-feedback-mono-2">
+    </path>
+
+    <path name="speaker-protected-vbat">
+        <path name="speaker-protected" />
+        <ctl name="RX INT7 VBAT SPKRL VBAT Enable" value="1" />
+        <ctl name="RX INT8 VBAT SPKRR VBAT Enable" value="1" />
+    </path>
+
+    <path name="voice-speaker-protected-vbat">
+        <path name="voice-speaker-protected" />
+        <ctl name="RX INT7 VBAT SPKRL VBAT Enable" value="1" />
+    </path>
+
+    <path name="voice-speaker-2-protected-vbat">
+        <path name="voice-speaker-2-protected" />
+        <ctl name="RX INT8 VBAT SPKRL VBAT Enable" value="1" />
     </path>
 
     <path name="handset">
@@ -2034,6 +2140,14 @@
 
     <path name="voice-speaker-mic">
         <path name="speaker-mic" />
+    </path>
+
+    <path name="voice-speaker-vbat">
+        <path name="speaker-vbat-mono" />
+    </path>
+
+    <path name="voice-speaker-2-vbat">
+        <path name="speaker-vbat-mono-2" />
     </path>
 
     <path name="voice-headphones">
@@ -2246,9 +2360,31 @@
     </path>
 
     <path name="aanc-path">
+        <ctl name="ADC MUX10" value="DMIC" />
+        <ctl name="DMIC MUX10" value="DMIC4" />
+        <ctl name="ANC0 FB MUX" value="ANC_IN_EAR_SPKR" />
     </path>
 
     <path name="aanc-handset-mic">
+        <ctl name="AIF1_CAP Mixer SLIM TX6" value="1" />
+        <ctl name="AIF1_CAP Mixer SLIM TX8" value="1" />
+        <ctl name="AIF1_CAP Mixer SLIM TX9" value="1" />
+        <ctl name="SLIM_0_TX Channels" value="Three" />
+        <ctl name="AANC_SLIM_0_RX MUX" value="SLIMBUS_0_TX" />
+        <ctl name="SLIM TX6 MUX" value="DEC6" />
+        <ctl name="ADC MUX6" value="DMIC" />
+        <ctl name="DMIC MUX6" value="DMIC2" />
+        <ctl name="SLIM TX8 MUX" value="DEC8" />
+        <ctl name="ADC MUX8" value="DMIC" />
+        <ctl name="DMIC MUX8" value="DMIC4" />
+        <ctl name="SLIM TX9 MUX" value="DEC7" />
+        <ctl name="ADC MUX7" value="DMIC" />
+        <ctl name="DMIC MUX7" value="DMIC0" />
+        <ctl name="IIR0 INP0 MUX" value="DEC6" />
+    </path>
+
+    <path name="aanc-fluence-dmic-handset">
+        <path name="aanc-handset-mic" />
     </path>
 
     <!-- Dual MIC devices -->
@@ -2614,4 +2750,5 @@
         <path name="audio-ull-playback bt-a2dp" />
         <path name="audio-ull-playback" />
     </path>
+
 </mixer>
