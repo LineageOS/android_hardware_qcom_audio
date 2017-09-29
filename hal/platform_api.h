@@ -239,4 +239,5 @@ void platform_check_and_update_copp_sample_rate(void *platform, snd_device_t snd
 int platform_get_max_codec_backend();
 int platform_get_mmap_data_fd(void *platform, int dev, int dir,
                                int *fd, uint32_t *size);
+int platform_get_ec_ref_loopback_snd_device(int channel_count);
 #endif // AUDIO_PLATFORM_API_H

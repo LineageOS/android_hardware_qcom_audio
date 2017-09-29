@@ -327,6 +327,8 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM6] = "audio-interactive-stream6",
     [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM7] = "audio-interactive-stream7",
     [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM8] = "audio-interactive-stream8",
+
+    [USECASE_AUDIO_EC_REF_LOOPBACK] = "ec-ref-audio-capture"
 };
 
 static const audio_usecase_t offload_usecases[] = {
@@ -930,6 +932,11 @@ int enable_snd_device(struct audio_device *adev,
                                               "true-native-mode");
             adev->native_playback_enabled = true;
         }
+        if ((snd_device == SND_DEVICE_IN_HANDSET_6MIC) &&
+            (audio_extn_ffv_get_stream() == adev->active_input)) {
+            ALOGD("%s: init ec ref loopback", __func__);
+            audio_extn_ffv_init_ec_ref_loopback(adev, snd_device);
+        }
     }
     return 0;
 }
@@ -993,7 +1000,11 @@ int disable_snd_device(struct audio_device *adev,
             disable_asrc_mode(adev);
             audio_route_apply_and_update_path(adev->audio_route, "hph-lowpower-mode");
         }
-
+        if ((snd_device == SND_DEVICE_IN_HANDSET_6MIC) &&
+            (audio_extn_ffv_get_stream() == adev->active_input)) {
+            ALOGD("%s: deinit ec ref loopback", __func__);
+            audio_extn_ffv_deinit_ec_ref_loopback(adev, snd_device);
+        }
         audio_extn_dev_arbi_release(snd_device);
         audio_extn_sound_trigger_update_device_status(snd_device,
                                         ST_EVENT_SND_DEVICE_FREE);
@@ -2049,13 +2060,16 @@ int start_input_stream(struct stream_in *in)
     int ret = 0;
     struct audio_usecase *uc_info;
     struct audio_device *adev = in->dev;
+    int snd_card_status;
+    struct pcm_config config = in->config;
+    int usecase;
 
-    int usecase = platform_update_usecase_from_source(in->source,in->usecase);
+    snd_card_status = get_snd_card_state(adev);
+    usecase = platform_update_usecase_from_source(in->source,in->usecase);
     if (get_usecase_from_list(adev, usecase) == NULL)
         in->usecase = usecase;
     ALOGD("%s: enter: stream(%p)usecase(%d: %s)",
           __func__, &in->stream, in->usecase, use_case_table[in->usecase]);
-
 
     if (CARD_STATUS_OFFLINE == in->card_status||
         CARD_STATUS_OFFLINE == adev->card_status) {
@@ -2143,6 +2157,10 @@ int start_input_stream(struct stream_in *in)
             flags |= PCM_MMAP | PCM_NOIRQ;
         }
 
+        if (audio_extn_ffv_get_stream() == in) {
+           ALOGD("%s: ffv stream, update pcm config", __func__);
+           audio_extn_ffv_update_pcm_config(&config);
+        }
         ALOGV("%s: Opening PCM device card_id(%d) device_id(%d), channels %d",
               __func__, adev->snd_card, in->pcm_device_id, in->config.channels);
 
@@ -4771,6 +4789,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             ret = audio_extn_compr_cap_read(in, buffer, bytes);
         } else if (use_mmap) {
             ret = pcm_mmap_read(in->pcm, buffer, bytes);
+        } else if (audio_extn_ffv_get_stream() == in) {
+            ret = audio_extn_ffv_read(stream, buffer, bytes);
         } else {
             ret = pcm_read(in->pcm, buffer, bytes);
             /* data from DSP comes in 24_8 format, convert it to 8_24 */
@@ -6178,7 +6198,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             ret = -EINVAL;
             goto err_open;
         }
-        ALOGD("%s: created surround sound session succesfully",__func__);
+        ALOGD("%s: created multi-channel session succesfully",__func__);
     } else if (audio_extn_compr_cap_enabled() &&
             audio_extn_compr_cap_format_supported(config->format) &&
             (in->dev->mode != AUDIO_MODE_IN_COMMUNICATION)) {
@@ -6278,6 +6298,10 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
         audio_extn_ssr_deinit();
     }
 
+    if (audio_extn_ffv_get_stream() == in) {
+        audio_extn_ffv_stream_deinit();
+    }
+
     if (audio_extn_compr_cap_enabled() &&
             audio_extn_compr_cap_format_supported(in->config.format))
         audio_extn_compr_cap_deinit();
@@ -6362,6 +6386,7 @@ static int adev_close(hw_device_t *device)
         audio_extn_adsp_hdlr_deinit();
         audio_extn_snd_mon_deinit();
         audio_extn_hw_loopback_deinit(adev);
+        audio_extn_ffv_deinit();
         if (adev->device_cfg_params) {
             free(adev->device_cfg_params);
             adev->device_cfg_params = NULL;
@@ -6625,6 +6650,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     audio_extn_listen_init(adev, adev->snd_card);
     audio_extn_gef_init(adev);
     audio_extn_hw_loopback_init(adev);
+    audio_extn_ffv_init(adev);
 
     if (access(OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH, R_OK) == 0) {
         adev->offload_effects_lib = dlopen(OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH, RTLD_NOW);

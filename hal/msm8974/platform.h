@@ -25,6 +25,7 @@ enum {
     FLUENCE_NONE,
     FLUENCE_DUAL_MIC = 0x1,
     FLUENCE_QUAD_MIC = 0x2,
+    FLUENCE_HEX_MIC = 0x4,
 };
 
 enum {
@@ -37,6 +38,7 @@ enum {
     SOURCE_DUAL_MIC  = 0x2,            /* Target contains 2 mics */
     SOURCE_THREE_MIC = 0x4,            /* Target contains 3 mics */
     SOURCE_QUAD_MIC  = 0x8,            /* Target contains 4 mics */
+    SOURCE_HEX_MIC   = 0x16,           /* Target contains 6 mics */
 };
 
 enum {
@@ -222,6 +224,10 @@ enum {
     SND_DEVICE_IN_UNPROCESSED_THREE_MIC,
     SND_DEVICE_IN_UNPROCESSED_QUAD_MIC,
     SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC,
+    SND_DEVICE_IN_HANDSET_6MIC,
+    SND_DEVICE_IN_HANDSET_8MIC,
+    SND_DEVICE_IN_EC_REF_LOOPBACK_MONO,
+    SND_DEVICE_IN_EC_REF_LOOPBACK_STEREO,
     SND_DEVICE_IN_END,
 
     SND_DEVICE_MAX = SND_DEVICE_IN_END,

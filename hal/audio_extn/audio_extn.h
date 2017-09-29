@@ -973,4 +973,44 @@ static void __unused audio_extn_hw_loopback_deinit(struct audio_device *adev __u
 {
 }
 #endif
+
+#ifndef FFV_ENABLED
+#define audio_extn_ffv_init(adev) (0)
+#define audio_extn_ffv_deinit() (0)
+#define audio_extn_ffv_check_usecase(in) (0)
+#define audio_extn_ffv_set_usecase(in) (0)
+#define audio_extn_ffv_stream_init(in) (0)
+#define audio_extn_ffv_stream_deinit() (0)
+#define audio_extn_ffv_update_enabled() (0)
+#define audio_extn_ffv_get_enabled() (0)
+#define audio_extn_ffv_read(stream, buffer, bytes) (0)
+#define audio_extn_ffv_set_parameters(adev, parms) (0)
+#define audio_extn_ffv_get_stream() (0)
+#define audio_extn_ffv_update_pcm_config(config) (0)
+#define audio_extn_ffv_init_ec_ref_loopback(adev, snd_device) (0)
+#define audio_extn_ffv_deinit_ec_ref_loopback(adev, snd_device) (0)
+#define audio_extn_ffv_check_and_append_ec_ref_dev(device_name) (0)
+#define audio_extn_ffv_get_capture_snd_device() (0)
+#else
+int32_t audio_extn_ffv_init(struct audio_device *adev);
+int32_t audio_extn_ffv_deinit();
+bool audio_extn_ffv_check_usecase(struct stream_in *in);
+int audio_extn_ffv_set_usecase(struct stream_in *in);
+int32_t audio_extn_ffv_stream_init(struct stream_in *in);
+int32_t audio_extn_ffv_stream_deinit();
+void audio_extn_ffv_update_enabled();
+bool audio_extn_ffv_get_enabled();
+int32_t audio_extn_ffv_read(struct audio_stream_in *stream,
+                       void *buffer, size_t bytes);
+void audio_extn_ffv_set_parameters(struct audio_device *adev,
+                                   struct str_parms *parms);
+struct stream_in *audio_extn_ffv_get_stream();
+void audio_extn_ffv_update_pcm_config(struct pcm_config *config);
+int audio_extn_ffv_init_ec_ref_loopback(struct audio_device *adev,
+                                        snd_device_t snd_device);
+int audio_extn_ffv_deinit_ec_ref_loopback(struct audio_device *adev,
+                                          snd_device_t snd_device);
+void audio_extn_ffv_check_and_append_ec_ref_dev(char *device_name);
+snd_device_t audio_extn_ffv_get_capture_snd_device();
+#endif
 #endif /* AUDIO_EXTN_H */

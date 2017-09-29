@@ -73,6 +73,7 @@ struct audio_config_params {
     double record_delay;
     double record_length;
     char profile[50];
+    char kvpairs[256];
 };
 
 struct timed_params {
@@ -573,6 +574,7 @@ void usage() {
     printf(" -i  --interactive-mode                    - Use this flag if prefer configuring streams using interactive mode\n");
     printf("                                             All other flags passed would be ignore if this flag is used\n\n");
     printf(" -S  --source-tracking                     - Use this flag to show capture source tracking params for recordings\n\n");
+    printf(" -k --kvpairs                              - kvpairs to be set globally\n");
     printf(" -h  --help                                - Show this help\n\n");
     printf(" \n Examples \n");
     printf(" hal_rec_test     -> start a recording stream with default configurations\n\n");
@@ -584,6 +586,8 @@ void usage() {
     printf(" hal_rec_test -S -c 1 -r 48000 -t 30 -> Enable Sourcetracking\n");
     printf("                                      For mono channel 48kHz rate for 30seconds\n\n");
     printf(" hal_rec_test -F 1 --kpi-mode -> start a recording with low latency input flag and calculate latency KPIs\n\n");
+    printf(" hal_rec_test -c 1 -r 16000 -t 30 -k ffvOn=true;ffv_ec_ref_ch_cnt=2 -> Enable FFV with stereo ec ref\n");
+    printf("                                               For mono channel 16kHz rate for 30seconds\n\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -615,6 +619,7 @@ int main(int argc, char* argv[]) {
         {"kpi-mode",        no_argument,          0, 'K'},
         {"interactive",     no_argument,          0, 'i'},
         {"source-tracking", no_argument,          0, 'S'},
+        {"kvpairs",         required_argument,    0, 'k'},
         {"help",            no_argument,          0, 'h'},
         {0, 0, 0, 0}
     };
@@ -623,7 +628,7 @@ int main(int argc, char* argv[]) {
     int option_index = 0;
     while ((opt = getopt_long(argc,
                               argv,
-                              "-d:f:F:r:c:s:p:t:D:l:KiSh",
+                              "-d:f:F:r:c:s:p:t:D:l:k:KiSh",
                               long_options,
                               &option_index)) != -1) {
             switch (opt) {
@@ -665,6 +670,9 @@ int main(int argc, char* argv[]) {
                 break;
             case 'S':
                 source_tracking = true;
+                break;
+            case 'k':
+                snprintf(params[0].kvpairs, sizeof(params[0].kvpairs), "%s", optarg);
                 break;
             case 'h':
                 usage();
@@ -774,6 +782,20 @@ int main(int argc, char* argv[]) {
 
             list_add_tail(&param_list, &param->list);
         }
+    }
+
+    /* set global setparams entered by user.
+     * Also other global setparams can be concatenated if required.
+     */
+    if (params[0].kvpairs != NULL) {
+        size_t len;
+        len = strcspn(params[0].kvpairs, ",");
+        while (len < strlen(params[0].kvpairs)) {
+            params[0].kvpairs[len] = ';';
+            len = strcspn(params[0].kvpairs, ",");
+        }
+        printf("param %s set to hal\n", params[0].kvpairs);
+        qahw_set_parameters(qahw_mod_handle, params[0].kvpairs);
     }
 
     pthread_t tid[4];

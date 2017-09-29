@@ -838,6 +838,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    if (adev->offload_effects_set_parameters != NULL)
        adev->offload_effects_set_parameters(parms);
    audio_extn_set_aptx_dec_bt_addr(adev, parms);
+   audio_extn_ffv_set_parameters(adev, parms);
 }
 
 void audio_extn_get_parameters(const struct audio_device *adev,
@@ -1254,6 +1255,8 @@ int audio_extn_check_and_set_multichannel_usecase(struct audio_device *adev,
     ssr_supported = audio_extn_ssr_check_usecase(in);
     if (ssr_supported) {
         return audio_extn_ssr_set_usecase(in, config, update_params);
+    } else if (audio_extn_ffv_check_usecase(in)) {
+        return audio_extn_ffv_set_usecase(in);
     } else {
         return audio_extn_set_multichannel_mask(adev, in, config,
                                                 update_params);
