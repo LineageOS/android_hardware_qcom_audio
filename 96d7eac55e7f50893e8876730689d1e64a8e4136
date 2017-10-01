@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "74f9d761_1ce9fb5e",
+        "filename": "audiod/Android.mk",
+        "patchSetId": 2
+      },
+      "lineNbr": 16,
+      "author": {
+        "id": 13274
+      },
+      "writtenOn": "2017-10-01T20:09:52Z",
+      "side": 1,
+      "message": "should probably be using tabs here",
+      "range": {
+        "startLine": 16,
+        "startChar": 0,
+        "endLine": 16,
+        "endChar": 8
+      },
+      "revId": "96d7eac55e7f50893e8876730689d1e64a8e4136",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
