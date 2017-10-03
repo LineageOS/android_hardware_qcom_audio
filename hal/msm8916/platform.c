@@ -5383,49 +5383,68 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             char *rate_str = NULL;
             struct  mixer_ctl *ctl = NULL;
 
-            switch (sample_rate) {
-            case 32000:
-                if (passthrough_enabled) {
-                    rate_str = "KHZ_32";
+            if (backend_idx == USB_AUDIO_RX_BACKEND ||
+                    backend_idx == USB_AUDIO_TX_BACKEND) {
+                switch (sample_rate) {
+                case 32000:
+                        rate_str = "KHZ_32";
+                        break;
+                case 8000:
+                        rate_str = "KHZ_8";
+                        break;
+                case 11025:
+                        rate_str = "HZ_11P025";
+                        break;
+                case 16000:
+                        rate_str = "KHZ_16";
+                        break;
+                case 22050:
+                        rate_str = "KHZ_22P05";
+                        break;
+                }
+            }
+
+            if (rate_str == NULL) {
+                switch (sample_rate) {
+                case 32000:
+                    if (passthrough_enabled) {
+                        rate_str = "KHZ_32";
+                        break;
+                    }
+                case 48000:
+                    rate_str = "KHZ_48";
+                    break;
+                case 44100:
+                    rate_str = "KHZ_44P1";
+                    break;
+                case 64000:
+                case 96000:
+                    rate_str = "KHZ_96";
+                    break;
+                case 88200:
+                    rate_str = "KHZ_88P2";
+                    break;
+                case 176400:
+                    rate_str = "KHZ_176P4";
+                    break;
+                case 192000:
+                    rate_str = "KHZ_192";
+                    break;
+                case 352800:
+                    rate_str = "KHZ_352P8";
+                    break;
+                case 384000:
+                    rate_str = "KHZ_384";
+                    break;
+                case 144000:
+                    if (passthrough_enabled) {
+                        rate_str = "KHZ_144";
+                        break;
+                    }
+                default:
+                    rate_str = "KHZ_48";
                     break;
                 }
-            case 8000:
-            case 11025:
-            case 16000:
-            case 22050:
-            case 48000:
-                rate_str = "KHZ_48";
-                break;
-            case 44100:
-                rate_str = "KHZ_44P1";
-                break;
-            case 64000:
-            case 96000:
-                rate_str = "KHZ_96";
-                break;
-            case 88200:
-                rate_str = "KHZ_88P2";
-            break;
-            case 176400:
-                rate_str = "KHZ_176P4";
-                break;
-            case 192000:
-                rate_str = "KHZ_192";
-                break;
-            case 352800:
-                rate_str = "KHZ_352P8";
-                break;
-            case 384000:
-                rate_str = "KHZ_384";
-                break;
-            case 144000:
-                if (passthrough_enabled) {
-                    rate_str = "KHZ_144";
-                    break;
-                }
-            default:
-                rate_str = "KHZ_48";
-                break;
             }
 
             ctl = mixer_get_ctl_by_name(adev->mixer,
