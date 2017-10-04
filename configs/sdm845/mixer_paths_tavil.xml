@@ -1659,7 +1659,7 @@
     </path>
 
     <path name="audio-playback-voip bt-sco">
-        <ctl name="SLIMBUS_7_RX Mixer MultiMedia10" value="1" />
+        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia10" value="1" />
     </path>
 
     <path name="audio-playback-voip bt-sco-wb">
@@ -1668,15 +1668,15 @@
     </path>
 
     <path name="audio-playback-voip afe-proxy">
-        <ctl name="AFE_PCM_RX Mixer MultiMedia10" value="1" />
+        <ctl name="AFE_PCM_RX Audio Mixer MultiMedia10" value="1" />
     </path>
 
     <path name="audio-playback-voip usb-headphones">
-        <ctl name="USB_AUDIO_RX Mixer MultiMedia10" value="1" />
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia10" value="1" />
     </path>
 
     <path name="audio-playback-voip usb-headset">
-        <ctl name="USB_AUDIO_RX Mixer MultiMedia10" value="1" />
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia10" value="1" />
     </path>
 
     <path name="audio-playback-voip display-port">
