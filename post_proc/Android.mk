@@ -110,6 +110,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DTS_EAGLE)), true)
 LOCAL_CFLAGS += -DHW_ACC_HPX
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INSTANCE_ID)), true)
+    LOCAL_CFLAGS += -DINSTANCE_ID_ENABLED
+endif
+
 LOCAL_MODULE:= libhwacceffectswrapper
 LOCAL_VENDOR_MODULE := true
 
