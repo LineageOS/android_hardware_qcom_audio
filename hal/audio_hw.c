@@ -2449,8 +2449,10 @@ int start_input_stream(struct stream_in *in)
               __func__, adev->snd_card, in->pcm_device_id, in->config.channels);
 
         while (1) {
+            ATRACE_BEGIN("pcm_in_open");
             in->pcm = pcm_open(adev->snd_card, in->pcm_device_id,
                                flags, &config);
+            ATRACE_END();
             if (in->pcm == NULL || !pcm_is_ready(in->pcm)) {
                 ALOGE("%s: %s", __func__, pcm_get_error(in->pcm));
                 if (in->pcm != NULL) {
@@ -2468,7 +2470,9 @@ int start_input_stream(struct stream_in *in)
         }
 
         ALOGV("%s: pcm_prepare", __func__);
+        ATRACE_BEGIN("pcm_in_prepare");
         ret = pcm_prepare(in->pcm);
+        ATRACE_END();
         if (ret < 0) {
             ALOGE("%s: pcm_prepare returned %d", __func__, ret);
             pcm_close(in->pcm);
@@ -2477,7 +2481,9 @@ int start_input_stream(struct stream_in *in)
         }
         register_in_stream(in);
         if (in->realtime) {
+            ATRACE_BEGIN("pcm_in_start");
             ret = pcm_start(in->pcm);
+            ATRACE_END();
             if (ret < 0) {
                 ALOGE("%s: RT pcm_start failed ret %d", __func__, ret);
                 pcm_close(in->pcm);
@@ -2873,6 +2879,7 @@ int start_output_stream(struct stream_out *out)
     char* perf_mode[] = {"ULL", "ULL_PP", "LL"};
     bool a2dp_combo = false;
 
+    ATRACE_BEGIN("start_output_stream");
     if ((out->usecase < 0) || (out->usecase >= AUDIO_USECASE_MAX)) {
         ret = -EINVAL;
         goto error_config;
@@ -3012,8 +3019,10 @@ int start_output_stream(struct stream_out *out)
         }
 
         while (1) {
+            ATRACE_BEGIN("pcm_open");
             out->pcm = pcm_open(adev->snd_card, out->pcm_device_id,
                                flags, &out->config);
+            ATRACE_END();
             if (out->pcm == NULL || !pcm_is_ready(out->pcm)) {
                 ALOGE("%s: %s", __func__, pcm_get_error(out->pcm));
                 if (out->pcm != NULL) {
@@ -3032,7 +3041,9 @@ int start_output_stream(struct stream_out *out)
 
         ALOGV("%s: pcm_prepare", __func__);
         if (pcm_is_ready(out->pcm)) {
+            ATRACE_BEGIN("pcm_prepare");
             ret = pcm_prepare(out->pcm);
+            ATRACE_END();
             if (ret < 0) {
                 ALOGE("%s: pcm_prepare returned %d", __func__, ret);
                 pcm_close(out->pcm);
@@ -3052,9 +3063,11 @@ int start_output_stream(struct stream_out *out)
                                                 adev->dsp_bit_width_enforce_mode,
                                                 true);
         out->pcm = NULL;
+        ATRACE_BEGIN("compress_open");
         out->compr = compress_open(adev->snd_card,
                                    out->pcm_device_id,
                                    COMPRESS_IN, &out->compr_config);
+        ATRACE_END();
         if (out->compr && !is_compress_ready(out->compr)) {
             ALOGE("%s: %s", __func__, compress_get_error(out->compr));
             compress_close(out->compr);
@@ -3105,7 +3118,9 @@ int start_output_stream(struct stream_out *out)
                 ALOGE("%s: pcm stream not ready", __func__);
                 goto error_open;
             }
+            ATRACE_BEGIN("pcm_start");
             ret = pcm_start(out->pcm);
+            ATRACE_END();
             if (ret < 0)
                 goto error_open;
         }
@@ -3127,6 +3142,7 @@ int start_output_stream(struct stream_out *out)
 
     platform_set_swap_channels(adev, true);
 
+    ATRACE_END();
     return ret;
 error_open:
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
@@ -3137,6 +3153,7 @@ error_config:
      * drivers to recover incases like SSR.
      */
     usleep(50000);
+    ATRACE_END();
     return ret;
 }
 
@@ -3426,6 +3443,7 @@ int out_standby_l(struct audio_stream *stream)
           stream, out->usecase, use_case_table[out->usecase]);
 
     if (!out->standby) {
+        ATRACE_BEGIN("out_standby_l");
         if (adev->adm_deregister_stream)
             adev->adm_deregister_stream(adev->adm_data, out->handle);
 
@@ -3437,6 +3455,7 @@ int out_standby_l(struct audio_stream *stream)
             voice_extn_compress_voip_close_output_stream(stream);
             out->started = 0;
             ALOGD("VOIP output entered standby");
+            ATRACE_END();
             return 0;
         } else if (!is_offload_usecase(out->usecase)) {
             if (out->pcm) {
@@ -3455,6 +3474,7 @@ int out_standby_l(struct audio_stream *stream)
             }
         }
         stop_output_stream(out);
+        ATRACE_END();
     }
     ALOGD("%s: exit", __func__);
     return 0;
@@ -4142,6 +4162,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     ssize_t ret = 0;
     int channels = 0;
 
+    ATRACE_BEGIN("out_write");
     lock_output_stream(out);
 
     if (CARD_STATUS_OFFLINE == out->card_status) {
@@ -4150,6 +4171,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             /*during SSR for compress usecase we should return error to flinger*/
             ALOGD(" copl %s: sound card is not active/SSR state", __func__);
             pthread_mutex_unlock(&out->lock);
+            ATRACE_END();
             return -ENETRESET;
         } else {
             ALOGD(" %s: sound card is not active/SSR state", __func__);
@@ -4278,6 +4300,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                 ALOGW("Error written bytes %zu > %d (fragment_size)",
                        bytes, out->hal_fragment_size);
                 pthread_mutex_unlock(&out->lock);
+                ATRACE_END();
                 return -EINVAL;
             } else {
                 audio_format_t dst_format = out->hal_op_format;
@@ -4318,6 +4341,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             out->card_status = CARD_STATUS_OFFLINE;
             pthread_mutex_unlock(&out->lock);
             out_on_error(&out->stream.common);
+            ATRACE_END();
             return ret;
         }
 
@@ -4338,6 +4362,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                                                      out->playback_started);
         }
         pthread_mutex_unlock(&out->lock);
+        ATRACE_END();
         return ret;
     } else {
         if (out->pcm) {
@@ -4427,9 +4452,11 @@ exit:
 
         if (audio_extn_passthru_is_passthrough_stream(out)) {
                 ALOGE("%s: write error, ret = %ld", __func__, ret);
+                ATRACE_END();
                 return ret;
         }
     }
+    ATRACE_END();
     return bytes;
 }
 
@@ -4960,7 +4987,9 @@ static int in_standby(struct audio_stream *stream)
 
         if (do_stop) {
             if (in->pcm) {
+                ATRACE_BEGIN("pcm_in_close");
                 pcm_close(in->pcm);
+                ATRACE_END();
                 in->pcm = NULL;
             }
             status = stop_input_stream(in);
