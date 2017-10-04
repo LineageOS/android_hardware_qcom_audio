@@ -34,6 +34,7 @@
 #define nullptr NULL
 #define LATENCY_NODE "/sys/kernel/debug/audio_in_latency_measurement_node"
 #define LATENCY_NODE_INIT_STR "1"
+#define MAX_RECORD_SESSIONS 6
 
 static bool kpi_mode;
 FILE * log_file = NULL;
@@ -543,15 +544,7 @@ void fill_default_params(struct audio_config_params *thread_param, int rec_sessi
     thread_param->record_length = 8 /*sec*/;
     thread_param->record_delay = 0 /*sec*/;
 
-    if (rec_session == 1) {
-        thread_param->handle = 0x999;
-    } else if (rec_session == 2) {
-        thread_param->handle = 0x998;
-    } else if (rec_session == 3) {
-        thread_param->handle = 0x997;
-    } else if (rec_session == 4) {
-        thread_param->handle = 0x996;
-    }
+    thread_param->handle = 0x99A - rec_session;
 }
 
 void usage() {
@@ -592,14 +585,16 @@ void usage() {
 
 int main(int argc, char* argv[]) {
     int max_recordings_requested = 0, status = 0;
-    int thread_active[4] = {0};
+    int thread_active[MAX_RECORD_SESSIONS] = {0};
     qahw_module_handle_t *qahw_mod_handle;
     const  char *mod_name = "audio.primary";
-    struct audio_config_params params[4];
+    struct audio_config_params params[MAX_RECORD_SESSIONS];
     bool interactive_mode = false, source_tracking = false;
     struct listnode param_list;
     char log_filename[256] = "stdout";
     bool wakelock_acquired = false;
+    int i;
+    const char *recording_session[MAX_RECORD_SESSIONS] = {"first", "second", "third", "fourth", "fifth", "sixth"};
 
     log_file = stdout;
     list_init(&param_list);
@@ -692,8 +687,16 @@ int main(int argc, char* argv[]) {
         printf(" Enter logfile path (stdout or 1 for console out)::: \n");
         scanf(" %s", log_filename);
         printf(" Enter number of record sessions to be started \n");
-        printf("             (Maximum of 4 record sessions are allowed)::::  ");
+        printf("             (Maximum of %d record sessions are allowed)::::  ", MAX_RECORD_SESSIONS);
         scanf(" %d", &max_recordings_requested);
+        if (max_recordings_requested > MAX_RECORD_SESSIONS) {
+            fprintf(log_file, " INVALID input -- Max record sessions supported is %d -exit \n",
+                                                                                 MAX_RECORD_SESSIONS);
+            if (log_file != stdout)
+                fprintf(stdout, " INVALID input -- Max record sessions supported is %d -exit \n",
+                                                                                 MAX_RECORD_SESSIONS);
+            return -1;
+        }
     } else {
         max_recordings_requested = 1;
     }
@@ -705,51 +708,17 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    switch (max_recordings_requested) {
-        case 4:
-            if (interactive_mode) {
-                printf(" Enter the config params for fourth record session \n");
-                fill_default_params(&params[3], 4);
-                read_config_params_from_user(&params[3]);
-            }
-            params[3].qahw_mod_handle = qahw_mod_handle;
-            thread_active[3] = 1;
-            printf(" \n");
-        case 3:
-            if (interactive_mode) {
-                printf(" Enter the config params for third record session \n");
-                fill_default_params(&params[2], 3);
-                read_config_params_from_user(&params[2]);
-            }
-            params[2].qahw_mod_handle = qahw_mod_handle;
-            thread_active[2] = 1;
-            printf(" \n");
-        case 2:
-            if (interactive_mode) {
-                printf(" Enter the config params for second record session \n");
-                fill_default_params(&params[1], 2);
-                read_config_params_from_user(&params[1]);
-            }
-            params[1].qahw_mod_handle = qahw_mod_handle;
-            thread_active[1] = 1;
-            printf(" \n");
-        case 1:
-            if (interactive_mode) {
-                printf(" Enter the config params for first record session \n");
-                fill_default_params(&params[0], 1);
-                read_config_params_from_user(&params[0]);
-            }
-            params[0].qahw_mod_handle = qahw_mod_handle;
-            thread_active[0] = 1;
-            printf(" \n");
-            break;
-        default:
-            fprintf(log_file, " INVALID input -- Max record sessions supported is 4 -exit \n");
-            if (log_file != stdout)
-                fprintf(stdout, " INVALID input -- Max record sessions supported is 4 -exit \n");
-            status = -1;
-            break;
+    for (i = max_recordings_requested; i > 0;  i--) {
+        if (interactive_mode) {
+            printf("Enter the config params for %s record session \n", recording_session[i - 1]);
+            fill_default_params(&params[i - 1], i);
+            read_config_params_from_user(&params[i - 1]);
+        }
+        params[i - 1].qahw_mod_handle = qahw_mod_handle;
+        thread_active[i - 1] = 1;
+        printf(" \n");
     }
+
     if (interactive_mode && status == 0) {
         int option = 0;
 
@@ -798,7 +767,7 @@ int main(int argc, char* argv[]) {
         qahw_set_parameters(qahw_mod_handle, params[0].kvpairs);
     }
 
-    pthread_t tid[4];
+    pthread_t tid[MAX_RECORD_SESSIONS];
     pthread_t sourcetrack_thread;
     int ret = -1;
 
@@ -829,50 +798,20 @@ int main(int argc, char* argv[]) {
     if (signal(SIGINT, stop_signal_handler) == SIG_ERR)
         fprintf(log_file, "Failed to register SIGINT:%d\n",errno);
 
-    if (thread_active[0] == 1) {
-        fprintf(log_file, "\n Create first record thread \n");
-        ret = pthread_create(&tid[0], NULL, start_input, (void *)&params[0]);
-        if (ret) {
-            status = -1;
-            fprintf(log_file, " Failed to create first record thread \n ");
-            if (log_file != stdout)
-                fprintf(stdout, " Failed to create first record thread \n ");
-            thread_active[0] = 0;
+    for (i = 0; i < MAX_RECORD_SESSIONS; i++) {
+        if (thread_active[i] == 1) {
+            fprintf(log_file, "\n Create %s record thread \n", recording_session[i]);
+            ret = pthread_create(&tid[i], NULL, start_input, (void *)&params[i]);
+            if (ret) {
+                status = -1;
+                fprintf(log_file, " Failed to create %s record thread \n", recording_session[i]);
+                if (log_file != stdout)
+                    fprintf(stdout, " Failed to create %s record thread \n", recording_session[i]);
+                thread_active[i] = 0;
+            }
         }
     }
-    if (thread_active[1] == 1) {
-        fprintf(log_file, "Create second record thread \n");
-        ret = pthread_create(&tid[1], NULL, start_input, (void *)&params[1]);
-        if (ret) {
-            status = -1;
-            fprintf(log_file, " Failed to create second record thread \n ");
-            if (log_file != stdout)
-                fprintf(stdout, " Failed to create second record thread \n ");
-            thread_active[1] = 0;
-        }
-    }
-    if (thread_active[2] == 1) {
-        fprintf(log_file, "Create third record thread \n");
-        ret = pthread_create(&tid[2], NULL, start_input, (void *)&params[2]);
-        if (ret) {
-            status = -1;
-            fprintf(log_file, " Failed to create third record thread \n ");
-            if (log_file != stdout)
-                fprintf(stdout, " Failed to create third record thread \n ");
-            thread_active[2] = 0;
-        }
-    }
-    if (thread_active[3] == 1) {
-        fprintf(log_file, "Create fourth record thread \n");
-        ret = pthread_create(&tid[3], NULL, start_input, (void *)&params[3]);
-        if (ret) {
-            status = -1;
-            fprintf(log_file, " Failed to create fourth record thread \n ");
-            if (log_file != stdout)
-                fprintf(stdout, " Failed to create fourth record thread \n ");
-            thread_active[3] = 0;
-        }
-    }
+
     fprintf(log_file, " All threads started \n");
     if (log_file != stdout)
         fprintf(stdout, " All threads started \n");
@@ -901,21 +840,12 @@ int main(int argc, char* argv[]) {
     fprintf(log_file, " Waiting for threads exit \n");
     if (log_file != stdout)
         fprintf(stdout, " Waiting for threads exit \n");
-    if (thread_active[0] == 1) {
-        pthread_join(tid[0], NULL);
-        fprintf(log_file, " after first record thread exit \n");
-    }
-    if (thread_active[1] == 1) {
-        pthread_join(tid[1], NULL);
-        fprintf(log_file, " after second record thread exit \n");
-    }
-    if (thread_active[2] == 1) {
-        pthread_join(tid[2], NULL);
-        fprintf(log_file, " after third record thread exit \n");
-    }
-    if (thread_active[3] == 1) {
-        pthread_join(tid[3], NULL);
-        fprintf(log_file, " after fourth record thread exit \n");
+
+    for (i = 0; i < MAX_RECORD_SESSIONS; i++) {
+        if (thread_active[i] == 1) {
+            pthread_join(tid[i], NULL);
+            fprintf(log_file, " after %s record thread exit \n", recording_session[i]);
+        }
     }
 
 sourcetrack_error:
