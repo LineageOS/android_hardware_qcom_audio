@@ -2060,12 +2060,9 @@ int start_input_stream(struct stream_in *in)
     int ret = 0;
     struct audio_usecase *uc_info;
     struct audio_device *adev = in->dev;
-    int snd_card_status;
     struct pcm_config config = in->config;
-    int usecase;
+    int usecase = platform_update_usecase_from_source(in->source,in->usecase);
 
-    snd_card_status = get_snd_card_state(adev);
-    usecase = platform_update_usecase_from_source(in->source,in->usecase);
     if (get_usecase_from_list(adev, usecase) == NULL)
         in->usecase = usecase;
     ALOGD("%s: enter: stream(%p)usecase(%d: %s)",
@@ -2166,7 +2163,7 @@ int start_input_stream(struct stream_in *in)
 
         while (1) {
             in->pcm = pcm_open(adev->snd_card, in->pcm_device_id,
-                               flags, &in->config);
+                               flags, &config);
             if (in->pcm == NULL || !pcm_is_ready(in->pcm)) {
                 ALOGE("%s: %s", __func__, pcm_get_error(in->pcm));
                 if (in->pcm != NULL) {
@@ -3773,13 +3770,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         goto exit;
     }
 
-    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-        channels = platform_edid_get_max_channels(out->dev->platform);
-        if (audio_extn_passthru_is_enabled() &&
-            !out->is_iec61937_info_available &&
-            audio_extn_passthru_is_passthrough_stream(out)) {
-            audio_extn_passthru_update_stream_configuration(adev, out,
-                    buffer, bytes);
     if ((out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
          !out->is_iec61937_info_available) {
 
@@ -3824,7 +3814,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                     goto exit;
             }
         }
-       }
     }
 
     if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&

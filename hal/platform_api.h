@@ -37,6 +37,14 @@ typedef enum {
     ACDB_EXTN,
 } caller_t;
 
+struct audio_backend_cfg {
+    unsigned int   sample_rate;
+    unsigned int   channels;
+    unsigned int   bit_width;
+    bool           passthrough_enabled;
+    audio_format_t format;
+};
+
 struct amp_db_and_gain_table {
     float amp;
     float db;
@@ -153,6 +161,9 @@ void platform_snd_card_update(void *platform, card_status_t scard_status);
 
 struct audio_offload_info_t;
 uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info);
+int platform_get_codec_backend_cfg(struct audio_device* adev,
+                                   snd_device_t snd_device,
+                                   struct audio_backend_cfg *backend_cfg);
 
 bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
                    struct audio_usecase *usecase, snd_device_t snd_device);

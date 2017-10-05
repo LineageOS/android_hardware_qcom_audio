@@ -535,7 +535,7 @@ bool audio_extn_passthru_is_supported_backend_edid_cfg(struct audio_device *adev
           platform_get_snd_device_name(out_snd_device));
 
     /* Check if the channels are supported */
-    if (max_edid_channels < backend_cfg.channels) {
+    if (max_edid_channels < (int)backend_cfg.channels) {
 
         ALOGE("%s: ERROR: Unsupported channels in passthru mode!!!"
               " max_edid_channels - %d backend_channels - %d",
