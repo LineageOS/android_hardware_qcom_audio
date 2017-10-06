@@ -39,7 +39,7 @@ BININSTALLDIR := $(DESTDIR)usr/bin
 # ---------------------------------------------------------------------------------
 #					BUILD
 # ---------------------------------------------------------------------------------
-all: libOmxAmrEnc.so.$(LIBVER)
+all: libOmxAmrEnc.so.$(LIBVER) mm-aenc-omxamr-test
 
 install:
 	echo "intalling aenc-amr in $(DESTDIR)"
@@ -49,7 +49,8 @@ install:
 	install -m 555 libOmxAmrEnc.so.$(LIBVER) $(LIBINSTALLDIR)
 	cd $(LIBINSTALLDIR) && ln -s libOmxAmrEnc.so.$(LIBVER) libOmxAmrEnc.so.$(LIBMAJOR)
 	cd $(LIBINSTALLDIR) && ln -s libOmxAmrEnc.so.$(LIBMAJOR) libOmxAmrEnc.so
-
+	install -m 555 mm-aenc-omxamr-test $(BININSTALLDIR)
+	
 # ---------------------------------------------------------------------------------
 #				COMPILE LIBRARY
 # ---------------------------------------------------------------------------------
@@ -62,6 +63,18 @@ SRCS += src/aenc_svr.c
 
 libOmxAmrEnc.so.$(LIBVER): $(SRCS)
 	$(CC) $(CPPFLAGS) $(CFLAGS_SO) $(LDFLAGS_SO) -Wl,-soname,libOmxAmrEnc.so.$(LIBMAJOR) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
+# ---------------------------------------------------------------------------------
+#				COMPILE TEST APP
+# ---------------------------------------------------------------------------------
+TEST_LDLIBS := -lpthread
+TEST_LDLIBS += -ldl
+TEST_LDLIBS += -lOmxCore
+
+TEST_SRCS := test/omx_amr_enc_test.c
+
+mm-aenc-omxamr-test: libOmxAmrEnc.so.$(LIBVER) $(TEST_SRCS)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^ $(TEST_LDLIBS)
 
 # ---------------------------------------------------------------------------------
 #					END
