@@ -36,7 +36,7 @@ enum effect_id
 {
     AEC_ID,        // Acoustic Echo Canceler
     NS_ID,         // Noise Suppressor
-//ENABLE_AGC    AGC_ID,        // Automatic Gain Control
+    AGC_ID,        // Automatic Gain Control
     NUM_ID
 };
 
@@ -108,23 +108,22 @@ static const effect_descriptor_t qcom_default_ns_descriptor = {
         "Qualcomm Fluence"
 };
 
-//ENABLE_AGC
 // Automatic Gain Control
-//static const effect_descriptor_t qcom_default_agc_descriptor = {
-//        { 0x0a8abfe0, 0x654c, 0x11e0, 0xba26, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } }, // type
-//        { 0x0dd49521, 0x8c59, 0x40b1, 0xb403, { 0xe0, 0x8d, 0x5f, 0x01, 0x87, 0x5e } }, // uuid
-//        EFFECT_CONTROL_API_VERSION,
-//        (EFFECT_FLAG_TYPE_PRE_PROC|EFFECT_FLAG_DEVICE_IND),
-//        0,
-//        0,
-//        "Automatic Gain Control",
-//        "Qualcomm Fluence"
-//};
+static const effect_descriptor_t qcom_default_agc_descriptor = {
+        { 0x0a8abfe0, 0x654c, 0x11e0, 0xba26, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } }, // type
+        { 0x0dd49521, 0x8c59, 0x40b1, 0xb403, { 0xe0, 0x8d, 0x5f, 0x01, 0x87, 0x5e } }, // uuid
+        EFFECT_CONTROL_API_VERSION,
+        (EFFECT_FLAG_TYPE_PRE_PROC|EFFECT_FLAG_DEVICE_IND),
+        0,
+        0,
+        "Automatic Gain Control",
+        "Qualcomm Fluence"
+};
 
 const effect_descriptor_t *descriptors[NUM_ID] = {
         &qcom_default_aec_descriptor,
         &qcom_default_ns_descriptor,
-//ENABLE_AGC       &qcom_default_agc_descriptor,
+        &qcom_default_agc_descriptor,
 };
 
 
@@ -445,17 +444,16 @@ static int init() {
             if (desc)
                 descriptors[NS_ID] = desc;
 
-//ENABLE_AGC
-//            desc = (const effect_descriptor_t *)dlsym(lib_handle,
-//                                                        "qcom_product_agc_descriptor");
-//            if (desc)
-//                descriptors[AGC_ID] = desc;
+            desc = (const effect_descriptor_t *)dlsym(lib_handle,
+                                                        "qcom_product_agc_descriptor");
+            if (desc)
+                descriptors[AGC_ID] = desc;
         }
     }
 
     uuid_to_id_table[AEC_ID] = FX_IID_AEC;
     uuid_to_id_table[NS_ID] = FX_IID_NS;
-//ENABLE_AGC uuid_to_id_table[AGC_ID] = FX_IID_AGC;
+    uuid_to_id_table[AGC_ID] = FX_IID_AGC;
 
     list_init(&session_list);
 
