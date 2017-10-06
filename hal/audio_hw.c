@@ -687,9 +687,12 @@ int disable_snd_device(struct audio_device *adev,
             audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing(snd_device);
 
+            // FIXME b/65363602: bullhead is the only Nexus with audio_extn_spkr_prot_is_enabled()
+            // and does not use speaker swap. As this code causes a problem with device enable ref
+            // counting we remove it for now.
             // when speaker device is disabled, reset swap.
             // will be renabled on usecase start
-            platform_set_swap_channels(adev, false);
+            // platform_set_swap_channels(adev, false);
 
         } else if (platform_can_split_snd_device(snd_device,
                                                  &num_devices,
