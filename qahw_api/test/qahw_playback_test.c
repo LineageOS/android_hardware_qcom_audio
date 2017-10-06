@@ -172,6 +172,7 @@ static bool request_wake_lock(bool wakelock_acquired, bool enable)
    if (enable) {
        if (!wakelock_acquired) {
            system_ret = system("echo audio_services > /sys/power/wake_lock");
+           if (system_ret < 0) {
                fprintf(stderr, "%s.Failed to acquire audio_service lock\n", __func__);
                fprintf(log_file, "%s.Failed to acquire audio_service lock\n", __func__);
            } else {
@@ -1029,7 +1030,7 @@ void get_file_format(stream_config *stream_info)
             else
                 stream_info->config.offload_info.format = AUDIO_FORMAT_PCM_16_BIT;
             if (!(stream_info->flags_set))
-                stream_info->flags = AUDIO_OUTPUT_FLAG_DIRECT_PCM|AUDIO_OUTPUT_FLAG_DIRECT;
+                stream_info->flags = AUDIO_OUTPUT_FLAG_DIRECT;
             break;
 
         case FILE_MP3:

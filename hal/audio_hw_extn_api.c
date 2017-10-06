@@ -376,6 +376,9 @@ static int qahwi_open_output_stream(struct audio_hw_device *dev,
         return -EINVAL;
     }
 
+    if (flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM)
+        flags = (flags & ~AUDIO_OUTPUT_FLAG_DIRECT_PCM ) | AUDIO_OUTPUT_FLAG_DIRECT;
+
     ret = adev->qahwi_dev.base.open_output_stream(dev, handle, devices, flags,
                                                  config, stream_out, address);
     if (ret)
