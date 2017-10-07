@@ -524,6 +524,17 @@ static int parse_snd_card_status(struct str_parms *parms, int *card,
     return 0;
 }
 
+static inline void adjust_frames_for_device_delay(struct stream_out *out,
+                                                  uint32_t *dsp_frames) {
+    // Adjustment accounts for A2dp encoder latency with offload usecases
+    // Note: Encoder latency is returned in ms.
+    if (AUDIO_DEVICE_OUT_ALL_A2DP & out->devices) {
+        unsigned long offset =
+                (audio_extn_a2dp_get_encoder_latency() * out->sample_rate / 1000);
+        *dsp_frames = (*dsp_frames > offset) ? (*dsp_frames - offset) : 0;
+    }
+}
+
 __attribute__ ((visibility ("default")))
 bool audio_hw_send_gain_dep_calibration(int level) {
     bool ret_val = false;
@@ -4052,6 +4063,7 @@ static int out_get_render_position(const struct audio_stream_out *stream,
         if (!out->non_blocking && !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
             *dsp_frames = get_actual_pcm_frames_rendered(out);
              ALOGVV("dsp_frames %d sampleRate %d",(int)*dsp_frames,out->sample_rate);
+             adjust_frames_for_device_delay(out, dsp_frames);
              return 0;
         }
 
@@ -4080,11 +4092,13 @@ static int out_get_render_position(const struct audio_stream_out *stream,
             ret = -EINVAL;
         } else {
             ret = 0;
+            adjust_frames_for_device_delay(out, dsp_frames);
         }
         pthread_mutex_unlock(&out->lock);
         return ret;
     } else if (audio_is_linear_pcm(out->format)) {
         *dsp_frames = out->written;
+        adjust_frames_for_device_delay(out, dsp_frames);
         return 0;
     } else
         return -EINVAL;
