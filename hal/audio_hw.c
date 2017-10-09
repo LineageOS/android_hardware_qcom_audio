@@ -3488,9 +3488,9 @@ static bool stream_get_parameter_channels(struct str_parms *query,
             for (j = 0; j < ARRAY_SIZE(channels_name_to_enum_table); j++) {
                 if (channels_name_to_enum_table[j].value == supported_channel_masks[i]) {
                     if (!first)
-                        strcat(value, "|");
+                        strlcat(value, "|", sizeof(value));
 
-                    strcat(value, channels_name_to_enum_table[j].name);
+                    strlcat(value, channels_name_to_enum_table[j].name, sizeof(value));
                     first = false;
                     break;
                 }
@@ -3518,9 +3518,9 @@ static bool stream_get_parameter_formats(struct str_parms *query,
             for (j = 0; j < ARRAY_SIZE(formats_name_to_enum_table); j++) {
                 if (formats_name_to_enum_table[j].value == supported_formats[i]) {
                     if (!first) {
-                        strcat(value, "|");
+                        strlcat(value, "|", sizeof(value));
                     }
-                    strcat(value, formats_name_to_enum_table[j].name);
+                    strlcat(value, formats_name_to_enum_table[j].name, sizeof(value));
                     first = false;
                     break;
                 }
