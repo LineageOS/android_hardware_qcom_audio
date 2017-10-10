@@ -31,7 +31,7 @@
 
 #include <system/audio.h>
 
-#include "qahw_api.h"
+#include "qahw.h"
 
 __BEGIN_DECLS
 
