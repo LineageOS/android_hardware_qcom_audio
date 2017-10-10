@@ -62,6 +62,7 @@
 #define DEFAULT_SAMPLE_RATE 48000
 #define MAX_QAP_MODULE_OUT 3
 
+extern bool stop_playback;
 bool is_media_fmt_changed[MAX_QAP_MODULE_OUT];
 int new_output_conf_index = 0;
 
@@ -1491,9 +1492,12 @@ void *qap_wrapper_start_stream (void* stream_data)
         buffer->common_params.offset = 0;
         buffer->common_params.size = bytes_read;
         memcpy(buffer->common_params.data, data_buf, bytes_read);
-        if (bytes_read <= 0) {
+        if (bytes_read <= 0 || stop_playback) {
             buffer->buffer_parms.input_buf_params.flags = QAP_BUFFER_EOS;
             bytes_consumed = qap_module_process(qap_module_handle, buffer);
+            if (stop_playback)
+                qap_module_cmd(qap_module_handle, QAP_MODULE_CMD_FLUSH, sizeof(QAP_MODULE_CMD_FLUSH), NULL, NULL, NULL);
+
             ret = qap_module_cmd(qap_module_handle, QAP_MODULE_CMD_STOP, sizeof(QAP_MODULE_CMD_STOP), NULL, NULL, NULL);
             fprintf(stdout, "Stopped feeding input %s : %p\n", stream_info->filename, fp_input);
             ALOGV("Stopped feeding input %s : %p", stream_info->filename, fp_input);
@@ -1546,7 +1550,7 @@ void *qap_wrapper_start_stream (void* stream_data)
                     }
                 }
             }
-        } while (buffer->common_params.size > 0);
+        } while (buffer->common_params.size > 0 && !stop_playback);
         if (reply_data)
             free(reply_data);
         buffer->common_params.data = temp_ptr;
