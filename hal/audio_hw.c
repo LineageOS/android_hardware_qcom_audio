@@ -1776,8 +1776,12 @@ static bool force_device_switch(struct audio_usecase *usecase)
     bool ret = false;
     bool is_it_true_mode = false;
 
+    if(usecase->stream.out == NULL) {
+        ALOGE("%s: stream.out is NULL", __func__);
+        return false;
+    }
+
     if (is_offload_usecase(usecase->id) &&
-        (usecase->stream.out) &&
         (usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) &&
         (usecase->stream.out->devices == AUDIO_DEVICE_OUT_WIRED_HEADSET ||
          usecase->stream.out->devices == AUDIO_DEVICE_OUT_WIRED_HEADPHONE)) {
@@ -1792,8 +1796,7 @@ static bool force_device_switch(struct audio_usecase *usecase)
     // Force all a2dp output devices to reconfigure for proper AFE encode format
     //Also handle a case where in earlier a2dp start failed as A2DP stream was
     //in suspended state, hence try to trigger a retry when we again get a routing request.
-    if((usecase->stream.out) &&
-       (usecase->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
+    if((usecase->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
         audio_extn_a2dp_is_force_device_switch()) {
          ALOGD("Force a2dp device switch to update new encoder config");
          ret = true;
