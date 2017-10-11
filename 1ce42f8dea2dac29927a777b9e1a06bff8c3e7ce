@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "36b517f6_bf57115f",
+        "filename": "policy_hal/AudioPolicyManager.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1296,
+      "author": {
+        "id": 2165
+      },
+      "writtenOn": "2017-10-11T12:28:35Z",
+      "side": 1,
+      "message": "this comma is causing the following error\nAudioPolicyManager.cpp:1302:1: error: expected class member or base class name",
+      "revId": "1ce42f8dea2dac29927a777b9e1a06bff8c3e7ce",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
