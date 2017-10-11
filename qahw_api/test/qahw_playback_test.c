@@ -162,7 +162,7 @@ audio_io_handle_t stream_handle = 0x999;
 #endif
 
 #ifndef AUDIO_OUTPUT_FLAG_INTERACTIVE
-#define AUDIO_OUTPUT_FLAG_INTERACTIVE 0x80000000
+#define AUDIO_OUTPUT_FLAG_INTERACTIVE 0x4000000
 #endif
 
 static bool request_wake_lock(bool wakelock_acquired, bool enable)
