@@ -61,7 +61,7 @@
         <param library="libsmwrapper.so" />
         <param max_cpe_phrases="6" />
         <param max_cpe_users="3" />
-        <param max_ape_phrases="10" />
+        <param max_ape_phrases="20" />
         <param max_ape_users="10" />
         <!-- Profile specific data which the algorithm can support -->
         <param sample_rate="16000" />
