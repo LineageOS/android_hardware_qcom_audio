@@ -16,6 +16,24 @@
       "revId": "1ce42f8dea2dac29927a777b9e1a06bff8c3e7ce",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4c38b20d_0eb75abb",
+        "filename": "policy_hal/AudioPolicyManager.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1296,
+      "author": {
+        "id": 444
+      },
+      "writtenOn": "2017-10-11T17:14:29Z",
+      "side": 1,
+      "message": "Good catch.",
+      "parentUuid": "36b517f6_bf57115f",
+      "revId": "1ce42f8dea2dac29927a777b9e1a06bff8c3e7ce",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
