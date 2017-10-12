@@ -1830,7 +1830,7 @@ audio_channel_mask_t get_channel_mask_for_name(char *name) {
     return channel_type;
 }
 
-int extract_channel_mapping(uint32_t *channel_map, const char * arg_string){
+int extract_channel_mapping(uint16_t *channel_map, const char * arg_string){
 
     char *token_string = NULL;
     char *init_ptr = NULL;
