@@ -53,6 +53,7 @@ AUDIO_FEATURE_ENABLED_KPI_OPTIMIZE := true
 AUDIO_FEATURE_ENABLED_SPKR_PROTECTION := true
 AUDIO_FEATURE_ENABLED_ACDB_LICENSE := false
 AUDIO_FEATURE_ENABLED_DEV_ARBI := false
+AUDIO_FEATURE_ENABLED_DYNAMIC_LOG := true
 MM_AUDIO_ENABLED_FTM := true
 TARGET_USES_QCOM_MM_AUDIO := true
 AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
@@ -86,7 +87,8 @@ PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/sdm845/sound_trigger_mixer_paths_wcd9340.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9340.xml \
     hardware/qcom/audio/configs/sdm845/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
     hardware/qcom/audio/configs/sdm845/graphite_ipc_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/graphite_ipc_platform_info.xml \
-    hardware/qcom/audio/configs/sdm845/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml
+    hardware/qcom/audio/configs/sdm845/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
+    vendor/qcom/proprietary/mm-audio/audio-log-utils/audio_dynamic_log.xml:$(TARGET_COPY_OUT_VENDOR)/data/vendor/misc/audio/audio_dynamic_log.xml
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
