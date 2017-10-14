@@ -34,10 +34,10 @@
 #include "audio_extn/tfa_98xx.h"
 #include <dirent.h>
 #define MAX_MIXER_XML_PATH  100
-#define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
-#define MIXER_XML_PATH_MTP "/system/etc/mixer_paths_mtp.xml"
-#define MIXER_XML_PATH_MSM8909_PM8916 "/system/etc/mixer_paths_msm8909_pm8916.xml"
-#define MIXER_XML_PATH_L9300 "/system/etc/mixer_paths_l9300.xml"
+#define MIXER_XML_PATH "mixer_paths.xml"
+#define MIXER_XML_PATH_MTP "mixer_paths_mtp.xml"
+#define MIXER_XML_PATH_MSM8909_PM8916 "mixer_paths_msm8909_pm8916.xml"
+#define MIXER_XML_PATH_L9300 "mixer_paths_l9300.xml"
 
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
@@ -837,6 +837,28 @@ int platform_acdb_init(void *platform)
     return result;
 }
 
+// Treblized config files will be located in /odm/etc or /vendor/etc.
+static const char *kConfigLocationList[] =
+        {"/odm/etc", "/vendor/etc", "/system/etc"};
+static const int kConfigLocationListSize =
+        (sizeof(kConfigLocationList) / sizeof(kConfigLocationList[0]));
+
+bool resolve_config_file(char file_name[MIXER_PATH_MAX_LENGTH]) {
+    char full_config_path[MIXER_PATH_MAX_LENGTH];
+    for (int i = 0; i < kConfigLocationListSize; i++) {
+        snprintf(full_config_path,
+                 MIXER_PATH_MAX_LENGTH,
+                 "%s/%s",
+                 kConfigLocationList[i],
+                 file_name);
+        if (F_OK == access(full_config_path, 0)) {
+            strcpy(file_name, full_config_path);
+            return true;
+        }
+    }
+    return false;
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char platform[PROPERTY_VALUE_MAX] = {0};
@@ -846,6 +868,7 @@ void *platform_init(struct audio_device *adev)
     int retry_num = 0, snd_card_num = 0, key = 0;
     const char *snd_card_name;
     char mixer_xml_path[MAX_MIXER_XML_PATH] = {0};
+    char platform_info_path[MAX_MIXER_XML_PATH] = {0};
     char ffspEnable[PROPERTY_VALUE_MAX] = {0};
     char *cvd_version = NULL;
     int idx;
@@ -898,6 +921,11 @@ void *platform_init(struct audio_device *adev)
             ALOGE("%s: Failed to init hardware info", __func__);
         } else {
             query_platform(snd_card_name, mixer_xml_path);
+            if (!resolve_config_file(mixer_xml_path)) {
+                memset(mixer_xml_path, 0, sizeof(mixer_xml_path));
+                strlcpy(mixer_xml_path, MIXER_XML_PATH, MAX_MIXER_XML_PATH);
+                resolve_config_file(mixer_xml_path);
+            }
             ALOGD("%s: mixer path file is %s", __func__,
                                     mixer_xml_path);
             adev->audio_route = audio_route_init(snd_card_num,
@@ -1021,7 +1049,9 @@ acdb_init_fail:
     set_platform_defaults();
 
     /* Initialize ACDB and PCM ID's */
-    platform_info_init(PLATFORM_INFO_XML_PATH, my_data);
+    strlcpy(platform_info_path, PLATFORM_INFO_XML_PATH, MAX_MIXER_XML_PATH);
+    resolve_config_file(platform_info_path);
+    platform_info_init(platform_info_path, my_data);
 
 
     /* Read one time ssr property */
