@@ -90,6 +90,19 @@
 #define MAX_PERF_LOCK_OPTS 20
 
 #define MAX_STREAM_PROFILE_STR_LEN 32
+typedef enum {
+    EFFECT_NONE = 0,
+    EFFECT_AEC,
+    EFFECT_NS,
+    EFFECT_MAX
+} effect_type_t;
+
+struct audio_effect_config {
+    uint32_t module_id;
+    uint32_t instance_id;
+    uint32_t param_id;
+    uint32_t param_value;
+};
 
 #define MAX_MIXER_PATH_LEN 64
 
