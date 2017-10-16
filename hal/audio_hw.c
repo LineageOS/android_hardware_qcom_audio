@@ -5543,7 +5543,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     }
 
     /* Init use case and pcm_config */
-#ifndef COMPRES_ENABLED
+#ifndef COMPRESS_VOIP_ENABLED
     if (out->flags == (AUDIO_OUTPUT_FLAG_DIRECT | AUDIO_OUTPUT_FLAG_VOIP_RX) &&
         (out->sample_rate == 8000 || out->sample_rate == 16000 ||
          out->sample_rate == 32000 || out->sample_rate == 48000)) {
