@@ -653,7 +653,7 @@ exit:
 
 void audio_extn_ffv_append_ec_ref_dev_name(char *device_name)
 {
-    if (ffvmod.ec_ref_dev == AUDIO_DEVICE_OUT_AUX_LINE)
+    if (ffvmod.ec_ref_dev == AUDIO_DEVICE_OUT_LINE)
         strlcat(device_name, " lineout",  DEVICE_NAME_MAX_SIZE);
     ALOGD("%s: ec ref dev name %s", __func__, device_name);
 }
@@ -878,9 +878,9 @@ void audio_extn_ffv_set_parameters(struct audio_device *adev __unused,
             if (val & AUDIO_DEVICE_OUT_SPEAKER) {
                 ALOGD("%s: capture ec ref from speaker", __func__);
                 ffvmod.ec_ref_dev = AUDIO_DEVICE_OUT_SPEAKER;
-            } else if (val & AUDIO_DEVICE_OUT_AUX_LINE) {
+            } else if (val & AUDIO_DEVICE_OUT_LINE) {
                 ALOGD("%s: capture ec ref from line out", __func__);
-                ffvmod.ec_ref_dev = AUDIO_DEVICE_OUT_AUX_LINE;
+                ffvmod.ec_ref_dev = AUDIO_DEVICE_OUT_LINE;
             } else {
                 ALOGE("%s: Invalid ec ref out device", __func__);
             }
