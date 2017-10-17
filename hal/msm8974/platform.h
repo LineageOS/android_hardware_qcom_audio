@@ -491,7 +491,7 @@ enum {
 #define FM_RX_VOLUME "PRI MI2S LOOPBACK Volume"
 #elif PLATFORM_MSM8996
 #define FM_RX_VOLUME "Tert MI2S LOOPBACK Volume"
-#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_MSMFALCON)
+#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM670)
 #define FM_RX_VOLUME "SLIMBUS_8 LOOPBACK Volume"
 #else
 #define FM_RX_VOLUME "Internal FM RX Volume"
