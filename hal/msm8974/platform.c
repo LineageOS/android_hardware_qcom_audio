@@ -969,7 +969,9 @@ static void update_codec_type_and_interface(struct platform_data * my_data, cons
      if (!strncmp(snd_card_name, "sdm660-snd-card-skush",
                   sizeof("sdm660-snd-card-skush")) ||
          !strncmp(snd_card_name, "sdm660-snd-card-skush",
-                  sizeof("sdm660-snd-card-mtp"))) {
+                  sizeof("sdm660-snd-card-mtp"))   ||
+         !strncmp(snd_card_name, "sdm670-mtp-snd-card",
+                   sizeof("sdm670-mtp-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -1946,6 +1948,7 @@ void *platform_init(struct audio_device *adev)
                             MIXER_XML_PATH_AUXPCM) == -ENOSYS)
                 adev->audio_route = audio_route_init(adev->snd_card,
                                                mixer_xml_file);
+                update_codec_type_and_interface(my_data, snd_card_name);
         } else {
             ALOGD("%s: Loading default mixer file", __func__);
             if (audio_extn_read_xml(adev, adev->snd_card, MIXER_XML_DEFAULT_PATH,
