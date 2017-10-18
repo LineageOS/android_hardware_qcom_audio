@@ -109,69 +109,63 @@ static acdb_device_type make_acdb_device_type_from_gef_cal_type
 
 void audio_extn_gef_init(struct audio_device *adev)
 {
-    int ret = 0;
     const char* error = NULL;
 
     ALOGV("%s: Enter with error", __func__);
 
     memset(&gef_hal_handle, 0, sizeof(gef_data));
 
-    ret = access(GEF_LIBRARY, R_OK);
-    if (ret == 0) {
-        //: check error for dlopen
-        gef_hal_handle.handle = dlopen(GEF_LIBRARY, RTLD_LAZY);
-        if (gef_hal_handle.handle == NULL) {
-            ALOGE("%s: DLOPEN failed for %s with error %s",
-                __func__, GEF_LIBRARY, dlerror());
-            goto ERROR_RETURN;
-        } else {
-            ALOGV("%s: DLOPEN successful for %s", __func__, GEF_LIBRARY);
-
-            //call dlerror to clear the error
-            dlerror();
-            gef_hal_handle.init =
-                (gef_init_t)dlsym(gef_hal_handle.handle, "gef_init");
-            error = dlerror();
-
-            if(error != NULL) {
-                ALOGE("%s: dlsym of %s failed with error %s",
-                     __func__, "gef_init", error);
-                goto ERROR_RETURN;
-            }
-
-            //call dlerror to clear the error
-            dlerror();
-            gef_hal_handle.deinit =
-                (gef_deinit_t)dlsym(gef_hal_handle.handle, "gef_deinit");
-            error = dlerror();
-
-            if(error != NULL) {
-                ALOGE("%s: dlsym of %s failed with error %s",
-                     __func__, "gef_deinit", error);
-                goto ERROR_RETURN;
-            }
-
-            //call dlerror to clear the error
-            error = dlerror();
-            gef_hal_handle.device_config_cb =
-                 (gef_device_config_cb_t)dlsym(gef_hal_handle.handle,
-                 "gef_device_config_cb");
-            error = dlerror();
-
-            if(error != NULL) {
-                ALOGE("%s: dlsym of %s failed with error %s",
-                     __func__, "gef_device_config_cb", error);
-                goto ERROR_RETURN;
-            }
-
-            gef_hal_handle.gef_ptr = gef_hal_handle.init((void*)adev);
-        }
+    //: check error for dlopen
+    gef_hal_handle.handle = dlopen(GEF_LIBRARY, RTLD_LAZY);
+    if (gef_hal_handle.handle == NULL) {
+        ALOGE("%s: DLOPEN failed for %s with error %s",
+            __func__, GEF_LIBRARY, dlerror());
+        goto ERROR_RETURN;
     } else {
-        ALOGE("%s: %s access failed", __func__, GEF_LIBRARY);
+        ALOGV("%s: DLOPEN successful for %s", __func__, GEF_LIBRARY);
+
+        //call dlerror to clear the error
+        dlerror();
+        gef_hal_handle.init =
+            (gef_init_t)dlsym(gef_hal_handle.handle, "gef_init");
+        error = dlerror();
+
+        if(error != NULL) {
+            ALOGE("%s: dlsym of %s failed with error %s",
+                 __func__, "gef_init", error);
+            goto ERROR_RETURN;
+        }
+
+        //call dlerror to clear the error
+        dlerror();
+        gef_hal_handle.deinit =
+            (gef_deinit_t)dlsym(gef_hal_handle.handle, "gef_deinit");
+        error = dlerror();
+
+        if(error != NULL) {
+            ALOGE("%s: dlsym of %s failed with error %s",
+                 __func__, "gef_deinit", error);
+            goto ERROR_RETURN;
+        }
+
+        //call dlerror to clear the error
+        error = dlerror();
+        gef_hal_handle.device_config_cb =
+            (gef_device_config_cb_t)dlsym(gef_hal_handle.handle,
+             "gef_device_config_cb");
+        error = dlerror();
+
+        if(error != NULL) {
+            ALOGE("%s: dlsym of %s failed with error %s",
+                 __func__, "gef_device_config_cb", error);
+            goto ERROR_RETURN;
+        }
+
+        gef_hal_handle.gef_ptr = gef_hal_handle.init((void*)adev);
     }
 
 ERROR_RETURN:
-    ALOGV("%s: Exit with error %d", __func__, ret);
+    ALOGV("%s: Exit with error ", __func__);
     return;
 }
 
