@@ -955,7 +955,9 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
                sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         }
 
-        if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
+        if (usecase->id == USECASE_AUDIO_PLAYBACK_VOIP) {
+            usecase->stream.out->app_type_cfg.sample_rate = usecase->stream.out->sample_rate;
+        } else if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         } else if ((snd_device == SND_DEVICE_OUT_HDMI ||
                     snd_device == SND_DEVICE_OUT_USB_HEADSET ||
@@ -1016,6 +1018,8 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         app_type = usecase->stream.in->app_type_cfg.app_type;
         app_type_cfg[len++] = app_type;
         app_type_cfg[len++] = acdb_dev_id;
+        if (usecase->id == USECASE_AUDIO_RECORD_VOIP)
+            usecase->stream.in->app_type_cfg.sample_rate = usecase->stream.in->sample_rate;
         sample_rate = usecase->stream.in->app_type_cfg.sample_rate;
         app_type_cfg[len++] = sample_rate;
         if (snd_device_be_idx > 0)
