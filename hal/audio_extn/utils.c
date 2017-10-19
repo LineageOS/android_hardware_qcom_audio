@@ -705,7 +705,7 @@ void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
     if (!strncmp("true", value, sizeof("true"))) {
         if ((popcount(channel_mask) > 2) &&
                 (sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
-                !(flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))  {
+                !(flags & (audio_output_flags_t)AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))  {
                     sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
                     ALOGD("%s: MCH session defaulting sample rate to %d",
                                __func__, sample_rate);
@@ -717,7 +717,7 @@ void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
      * Set Bit Width to 16. output will be 16 bit
      * post DoP in ASM.
      */
-    if ((flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH) &&
+    if ((flags & (audio_output_flags_t)AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH) &&
         (format == AUDIO_FORMAT_DSD)) {
         bit_width = 16;
         if (sample_rate == INPUT_SAMPLING_RATE_DSD64)
@@ -951,7 +951,8 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         if (!strncmp("true", value, sizeof("true"))) {
             if ((popcount(usecase->stream.out->channel_mask) > 2) &&
                    (usecase->stream.out->app_type_cfg.sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
-                   !(usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
+                   !(usecase->stream.out->flags &
+                            (audio_output_flags_t)AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
                sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         }
 
@@ -985,12 +986,12 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
          */
         list_for_each(node, &adev->streams_output_cfg_list) {
             s_info = node_to_item(node, struct streams_io_cfg, list);
-            if (s_info->flags.out_flags == (AUDIO_OUTPUT_FLAG_BD |
+            if (s_info->flags.out_flags == (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_BD |
                                             AUDIO_OUTPUT_FLAG_DIRECT_PCM |
                                             AUDIO_OUTPUT_FLAG_DIRECT))
                 bd_app_type = s_info->app_type_cfg.app_type;
         }
-        if (usecase->stream.out->flags == AUDIO_OUTPUT_FLAG_INTERACTIVE)
+        if (usecase->stream.out->flags == (audio_output_flags_t)AUDIO_OUTPUT_FLAG_INTERACTIVE)
             app_type = bd_app_type;
         else
             app_type = usecase->stream.out->app_type_cfg.app_type;
