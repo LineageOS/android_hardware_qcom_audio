@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -72,6 +72,12 @@
 
 #define SND_CARD_STATE_OFFLINE 0
 #define SND_CARD_STATE_ONLINE 1
+
+
+typedef enum card_status_t {
+    CARD_STATUS_OFFLINE,
+    CARD_STATUS_ONLINE
+} card_status_t;
 
 /* These are the supported use cases by the hardware.
  * Each usecase is mapped to a specific PCM device.
@@ -157,6 +163,7 @@ enum {
     OFFLOAD_CMD_DRAIN,              /* send a full drain request to DSP */
     OFFLOAD_CMD_PARTIAL_DRAIN,      /* send a partial drain request to DSP */
     OFFLOAD_CMD_WAIT_FOR_BUFFER,    /* wait for buffer released by DSP */
+    OFFLOAD_CMD_ERROR,              /* offload playback hit some error */
 };
 
 enum {
