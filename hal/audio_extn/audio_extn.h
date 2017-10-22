@@ -534,4 +534,10 @@ int audio_extn_snd_mon_register_listener(void *stream, snd_mon_cb cb);
 int audio_extn_snd_mon_unregister_listener(void *stream);
 #endif
 
+#ifndef FM_POWER_OPT
+#define audio_extn_fm_set_parameters(adev, parms) (0)
+#else
+void audio_extn_fm_set_parameters(struct audio_device *adev,
+                                   struct str_parms *parms);
+#endif
 #endif /* AUDIO_EXTN_H */
