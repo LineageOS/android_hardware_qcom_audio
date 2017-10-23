@@ -5628,12 +5628,10 @@ int adev_open_output_stream(struct audio_hw_device *dev,
             goto error_open;
         }
 
-        if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-            if(config->offload_info.format == 0)
-                config->offload_info.format = out->supported_formats[0];
-            if (config->offload_info.sample_rate == 0)
-                config->offload_info.sample_rate = out->supported_sample_rates[0];
-        }
+        if (config->offload_info.format == 0)
+            config->offload_info.format = config->format;
+        if (config->offload_info.sample_rate == 0)
+            config->offload_info.sample_rate = config->sample_rate;
 
         if (!is_supported_format(config->offload_info.format) &&
                 !audio_extn_passthru_is_supported_format(config->offload_info.format)) {
