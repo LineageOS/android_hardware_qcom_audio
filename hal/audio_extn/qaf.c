@@ -219,6 +219,7 @@ struct qaf_module {
     float vol_right;
     bool is_vol_set;
     qaf_stream_state stream_state[MAX_QAF_MODULE_IN];
+    bool is_session_closing;
 };
 
 struct qaf {
@@ -1269,10 +1270,14 @@ static void notify_event_callback(audio_session_handle_t session_handle __unused
     struct audio_config config;
     audio_qaf_media_format_t *media_fmt = NULL;
 
+    if (qaf_mod->is_session_closing) {
+        DEBUG_MSG("Dropping event as session is closing."
+                "Device 0x%X, Event = 0x%X, Bytes to write %d", device, event_id, size);
+        return;
+    }
+
     DEBUG_MSG_VV("Device 0x%X, Event = 0x%X, Bytes to write %d", device, event_id, size);
 
-
-    pthread_mutex_lock(&p_qaf->lock);
 
     /* Default config initialization. */
     config.sample_rate = config.offload_info.sample_rate = QAF_OUTPUT_SAMPLING_RATE;
@@ -1285,9 +1290,10 @@ static void notify_event_callback(audio_session_handle_t session_handle __unused
     if (event_id == AUDIO_SEC_FAIL_EVENT) {
         DEBUG_MSG("%s Security failed, closing session");
         qaf_session_close(qaf_mod);
-        pthread_mutex_unlock(&p_qaf->lock);
         return;
     }
+
+    pthread_mutex_lock(&p_qaf->lock);
 
     if (event_id == AUDIO_DATA_EVENT) {
         data_buffer_p = (int8_t*)buf;
@@ -1777,6 +1783,8 @@ static int qaf_session_close(struct qaf_module* qaf_mod)
 {
     int j;
 
+    DEBUG_MSG("Closing Session.");
+
     //Check if all streams are closed or not.
     for (j = 0; j < MAX_QAF_MODULE_IN; j++) {
         if (qaf_mod->stream_in[j] != NULL) {
@@ -1786,6 +1794,9 @@ static int qaf_session_close(struct qaf_module* qaf_mod)
     if (j != MAX_QAF_MODULE_IN) {
         return 0; //Some stream is already active, Can not close session.
     }
+
+    qaf_mod->is_session_closing = true;
+    pthread_mutex_lock(&p_qaf->lock);
 
     if (qaf_mod->session_handle != NULL && qaf_mod->qaf_audio_session_close) {
 #ifdef AUDIO_EXTN_IP_HDLR_ENABLED
@@ -1810,6 +1821,8 @@ static int qaf_session_close(struct qaf_module* qaf_mod)
     }
     qaf_mod->new_out_format_index = 0;
 
+    pthread_mutex_unlock(&p_qaf->lock);
+    qaf_mod->is_session_closing = false;
     DEBUG_MSG("Session Closed.");
 
     return 0;
@@ -1843,10 +1856,10 @@ static int qaf_stream_close(struct stream_out *out)
     }
     unlock_output_stream(out);
 
+    pthread_mutex_unlock(&p_qaf->lock);
+
     //If all streams are closed then close the session.
     qaf_session_close(qaf_mod);
-
-    pthread_mutex_unlock(&p_qaf->lock);
 
     DEBUG_MSG();
     return ret;
