@@ -2541,7 +2541,12 @@ void audio_extn_qaf_close_output_stream(struct audio_hw_device *dev,
     struct stream_out *out = (struct stream_out *)stream;
     struct qaf_module* qaf_mod = get_qaf_module_for_input_stream(out);
 
-    if (!qaf_mod) return;
+    if (!qaf_mod) {
+        DEBUG_MSG("qaf module is NULL, by passing qaf on close output stream");
+        /*closing non-MS12/default output stream opened with qaf */
+        adev_close_output_stream(dev, stream);
+        return;
+    }
 
     DEBUG_MSG("stream_handle(%p) format = %x", out, out->format);
 
