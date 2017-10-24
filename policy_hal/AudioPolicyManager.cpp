@@ -1211,41 +1211,13 @@ bool AudioPolicyManagerCustom::isDirectOutput(audio_io_handle_t output) {
     return false;
 }
 
-bool static tryForDirectPCM(int bitWidth, audio_output_flags_t *flags, uint32_t samplingRate)
+bool static tryForDirectPCM(audio_output_flags_t flags)
 {
-    bool playerDirectPCM = false; // Output request for Track created by mediaplayer
     bool trackDirectPCM = false;  // Output request for track created by other apps
-    bool offloadDisabled = property_get_bool("audio.offload.disable", false);
-
-    // Direct PCM is allowed only if
-    // In case of mediaPlayer playback
-    // 16 bit direct pcm or 24bit direct PCM property is set and
-    // the FLAG requested is DIRECT_PCM ( NuPlayer case) or
-    // In case of AudioTracks created by apps
-    // track offload is enabled and FLAG requested is FLAG_NONE.
-
-    if (offloadDisabled) {
-        ALOGI("offload disabled by audio.offload.disable=%d", offloadDisabled);
-    }
-
-    if (*flags == AUDIO_OUTPUT_FLAG_DIRECT_PCM) {
-       if (bitWidth == 24 || bitWidth == 32)
-           playerDirectPCM =
-                property_get_bool("audio.offload.pcm.24bit.enable", false);
-       else
-           playerDirectPCM =
-                property_get_bool("audio.offload.pcm.16bit.enable", false);
-       // Reset flag to NONE so that we can still reuse direct pcm criteria check
-       // in getOutputforDevice
-       *flags = AUDIO_OUTPUT_FLAG_NONE;
-    } else if ((*flags == AUDIO_OUTPUT_FLAG_NONE) && (samplingRate % SAMPLE_RATE_8000 == 0)) {
+    if (flags == AUDIO_OUTPUT_FLAG_NONE) {
         trackDirectPCM = property_get_bool("audio.offload.track.enable", true);
     }
-
-    ALOGI("Direct PCM %s for this request",
-       (!offloadDisabled && (trackDirectPCM || playerDirectPCM))?"can be enabled":"is disabled");
-
-    return (!offloadDisabled && (trackDirectPCM || playerDirectPCM));
+    return trackDirectPCM;
 }
 
 status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *attr,
@@ -1265,7 +1237,7 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
     uint32_t bitWidth = (audio_bytes_per_sample(format) * 8);
 
 
-    if (tryForDirectPCM(bitWidth, &flags, samplingRate) &&
+    if (flags == AUDIO_OUTPUT_FLAG_DIRECT || tryForDirectPCM(flags) &&
         (offloadInfo == NULL)) {
 
         tOffloadInfo.sample_rate  = samplingRate;
@@ -1523,6 +1495,20 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         flags = (audio_output_flags_t)(flags | AUDIO_OUTPUT_FLAG_DIRECT);
     }
 
+    // Do internal direct magic here
+    bool offload_disabled = property_get_bool("audio.offload.disable", false);
+    if ((flags == AUDIO_OUTPUT_FLAG_NONE) &&
+        (stream == AUDIO_STREAM_MUSIC) &&
+        (offloadInfo != NULL) && !offload_disabled &&
+        ((offloadInfo->usage == AUDIO_USAGE_MEDIA) || (offloadInfo->usage == AUDIO_USAGE_GAME))) {
+        audio_output_flags_t old_flags = flags;
+        flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_DIRECT);
+        ALOGD("AudioCustomHAL --> Force Direct Flag .. old flags(0x%x)", old_flags);
+    } else if (flags == AUDIO_OUTPUT_FLAG_DIRECT && offload_disabled) {
+        ALOGD("AudioCustomHAL --> offloading is disabled: Force Remove Direct Flag");
+        flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_NONE);
+    }
+
     bool forced_deep = false;
     // only allow deep buffering for music stream type
     if (stream != AUDIO_STREAM_MUSIC) {
@@ -1536,31 +1522,11 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         flags = AUDIO_OUTPUT_FLAG_TTS;
     }
 
-    // check if direct output for track offload already exits
-    bool is_track_offload_active = false;
-    for (size_t i = 0; i < mOutputs.size(); i++) {
-        sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
-        if (desc->mFlags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) {
-            is_track_offload_active = true;
-            ALOGD("Track offload already active");
-            break;
-        }
-    }
-
-    // Do offload magic here
-    if ((flags == AUDIO_OUTPUT_FLAG_NONE) &&
-        (stream == AUDIO_STREAM_MUSIC) &&
-        (offloadInfo != NULL) && !is_track_offload_active &&
-        ((offloadInfo->usage == AUDIO_USAGE_MEDIA) || (offloadInfo->usage == AUDIO_USAGE_GAME))) {
-        flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_DIRECT_PCM);
-        ALOGD("AudioCustomHAL --> Force Direct Flag .. flag (0x%x)", flags);
-    }
-
     sp<IOProfile> profile;
 
     // skip direct output selection if the request can obviously be attached to a mixed output
     // and not explicitly requested
-    if (((flags & (AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_DIRECT_PCM)) == 0) &&
+    if (((flags & AUDIO_OUTPUT_FLAG_DIRECT) == 0) &&
             audio_is_linear_pcm(format) && samplingRate <= SAMPLE_RATE_HZ_MAX &&
             audio_channel_count_from_out_mask(channelMask) <= 2) {
         goto non_direct_output;
@@ -1573,7 +1539,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     // This may prevent offloading in rare situations where effects are left active by apps
     // in the background.
 
-    if (((flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) == 0) ||
+    if ((flags & (AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_DIRECT)) ||
             !(mEffects.isNonOffloadableEffectEnabled() || mMasterMono)) {
         profile = getProfileForDirectOutput(device,
                                            samplingRate,
@@ -1584,9 +1550,9 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
 
     if (profile != 0) {
 
-        if (!(flags & AUDIO_OUTPUT_FLAG_DIRECT_PCM) &&
-             (profile->getFlags() & AUDIO_OUTPUT_FLAG_DIRECT_PCM)) {
-            ALOGI("got Direct_PCM without requesting ... reject ");
+        if (!(flags & AUDIO_OUTPUT_FLAG_DIRECT) &&
+             (profile->getFlags() & AUDIO_OUTPUT_FLAG_DIRECT)) {
+            ALOGI("got Direct without requesting ... reject ");
             profile = NULL;
             goto non_direct_output;
         }
