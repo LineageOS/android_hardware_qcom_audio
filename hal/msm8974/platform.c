@@ -6739,8 +6739,10 @@ void platform_check_and_update_copp_sample_rate(void* platform, snd_device_t snd
      } else
          *sample_rate = stream_sr;
 
-     ALOGI("sn_device %d device sr %d stream sr %d copp sr %d", snd_device, device_sr, stream_sr
-, *sample_rate);
+    if (snd_device == SND_DEVICE_OUT_HDMI)
+        *sample_rate = platform_get_supported_sampling_rate_on_hdmi(stream_sr);
+
+     ALOGI("sn_device %d device sr %d stream sr %d copp sr %d", snd_device, device_sr, stream_sr, *sample_rate);
 
 }
 
@@ -7547,6 +7549,47 @@ int platform_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl,
 int platform_get_max_codec_backend() {
 
     return MAX_CODEC_BACKENDS;
+}
+int platform_get_supported_sampling_rate_on_hdmi(uint32_t stream_sr)
+{
+    int sample_rate;
+    switch (stream_sr){
+        case 8000:
+        case 11025:
+        case 16000:
+        case 22050:
+        case 32000:
+        case 48000:
+            sample_rate = 48000;
+            break;
+        case 44100:
+            sample_rate = 44100;
+            break;
+        case 64000:
+        case 96000:
+            sample_rate = 96000;
+            break;
+        case 88200:
+            sample_rate = 88200;
+            break;
+        case 176400:
+            sample_rate = 176400;
+            break;
+        case 192000:
+            sample_rate = 192000;
+            break;
+        case 352800:
+            sample_rate = 352800;
+            break;
+        case 384000:
+            sample_rate = 384000;
+            break;
+        case 144000:
+        default:
+            sample_rate = 48000;
+            break;
+    }
+    return sample_rate;
 }
 
 #if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM670)
