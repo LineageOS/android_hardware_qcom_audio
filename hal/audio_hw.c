@@ -6498,8 +6498,9 @@ static bool adev_input_allow_hifi_record(struct audio_device *adev,
 
     switch (flags) {
         case AUDIO_INPUT_FLAG_NONE:
-        case AUDIO_INPUT_FLAG_FAST: // just fast, not fast|raw || fast|mmap
             break;
+        case AUDIO_INPUT_FLAG_FAST: // disallow hifi record for FAST as
+                                    // it affects RTD numbers over USB
         default:
             return !allowed;
     }
