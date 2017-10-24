@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2009 The Android Open Source Project
@@ -74,7 +74,7 @@ audio_output_flags_t AudioPolicyManagerCustom::getFallBackPath()
     audio_output_flags_t flag = AUDIO_OUTPUT_FLAG_FAST;
     char propValue[PROPERTY_VALUE_MAX];
 
-    if (property_get("voice.conc.fallbackpath", propValue, NULL)) {
+    if (property_get("vendor.voice.conc.fallbackpath", propValue, NULL)) {
         if (!strncmp(propValue, "deep-buffer", 11)) {
             flag = AUDIO_OUTPUT_FLAG_DEEP_BUFFER;
         }
@@ -452,7 +452,7 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
 
 #ifdef VOICE_CONCURRENCY
     char concpropValue[PROPERTY_VALUE_MAX];
-    if (property_get("voice.playback.conc.disabled", concpropValue, NULL)) {
+    if (property_get("vendor.voice.playback.conc.disabled", concpropValue, NULL)) {
          bool propenabled = atoi(concpropValue) || !strncmp("true", concpropValue, 4);
          if (propenabled) {
             if (isInCall())
@@ -467,7 +467,7 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
     char recConcPropValue[PROPERTY_VALUE_MAX];
     bool prop_rec_play_enabled = false;
 
-    if (property_get("rec.playback.conc.disabled", recConcPropValue, NULL)) {
+    if (property_get("vendor.audio.rec.playback.conc.disabled", recConcPropValue, NULL)) {
         prop_rec_play_enabled = atoi(recConcPropValue) || !strncmp("true", recConcPropValue, 4);
     }
 
@@ -519,10 +519,10 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
         return false;
     }
 
-    const bool allowOffloadStreamingWithVideo = property_get_bool("av.streaming.offload.enable",
+    const bool allowOffloadStreamingWithVideo = property_get_bool("vendor.audio.av.streaming.offload.enable",
                                                                false /*default value*/);
     if (offloadInfo.has_video && offloadInfo.is_streaming && !allowOffloadStreamingWithVideo) {
-        ALOGW("offload disabled by av.streaming.offload.enable %d",allowOffloadStreamingWithVideo);
+        ALOGW("offload disabled by vendor.audio.av.streaming.offload.enable %d",allowOffloadStreamingWithVideo);
         return false;
     }
 
@@ -618,15 +618,15 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
     char propValue[PROPERTY_VALUE_MAX];
     bool prop_playback_enabled = false, prop_rec_enabled=false, prop_voip_enabled = false;
 
-    if(property_get("voice.playback.conc.disabled", propValue, NULL)) {
+    if(property_get("vendor.voice.playback.conc.disabled", propValue, NULL)) {
         prop_playback_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
     }
 
-    if(property_get("voice.record.conc.disabled", propValue, NULL)) {
+    if(property_get("vendor.voice.record.conc.disabled", propValue, NULL)) {
         prop_rec_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
     }
 
-    if(property_get("voice.voip.conc.disabled", propValue, NULL)) {
+    if(property_get("vendor.voice.voip.conc.disabled", propValue, NULL)) {
         prop_voip_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
     }
 
@@ -776,7 +776,7 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
     char recConcPropValue[PROPERTY_VALUE_MAX];
     bool prop_rec_play_enabled = false;
 
-    if (property_get("rec.playback.conc.disabled", recConcPropValue, NULL)) {
+    if (property_get("vendor.audio.rec.playback.conc.disabled", recConcPropValue, NULL)) {
         prop_rec_play_enabled = atoi(recConcPropValue) || !strncmp("true", recConcPropValue, 4);
     }
     if (prop_rec_play_enabled) {
@@ -1285,7 +1285,7 @@ bool static tryForDirectPCM(audio_output_flags_t flags)
 {
     bool trackDirectPCM = false;  // Output request for track created by other apps
     if (flags == AUDIO_OUTPUT_FLAG_NONE) {
-        trackDirectPCM = property_get_bool("audio.offload.track.enable", true);
+        trackDirectPCM = property_get_bool("vendor.audio.offload.track.enable", true);
     }
     return trackDirectPCM;
 }
@@ -1423,7 +1423,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
             ((voipSampleRate == 0) || (voipSampleRate == samplingRate))) {
             if (audio_is_linear_pcm(format)) {
                 char propValue[PROPERTY_VALUE_MAX] = {0};
-                property_get("use.voice.path.for.pcm.voip", propValue, "0");
+                property_get("vendor.voice.path.for.pcm.voip", propValue, "0");
                 bool voipPcmSysPropEnabled = !strncmp("true", propValue, sizeof("true"));
                 if (voipPcmSysPropEnabled && (format == AUDIO_FORMAT_PCM_16_BIT)) {
                     flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_VOIP_RX |
@@ -1438,11 +1438,11 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     char propValue[PROPERTY_VALUE_MAX];
     bool prop_play_enabled=false, prop_voip_enabled = false;
 
-    if(property_get("voice.playback.conc.disabled", propValue, NULL)) {
+    if(property_get("vendor.voice.playback.conc.disabled", propValue, NULL)) {
        prop_play_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
     }
 
-    if(property_get("voice.voip.conc.disabled", propValue, NULL)) {
+    if(property_get("vendor.voice.voip.conc.disabled", propValue, NULL)) {
        prop_voip_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
     }
 
@@ -1502,7 +1502,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     char recConcPropValue[PROPERTY_VALUE_MAX];
     bool prop_rec_play_enabled = false;
 
-    if (property_get("rec.playback.conc.disabled", recConcPropValue, NULL)) {
+    if (property_get("vendor.audio.rec.playback.conc.disabled", recConcPropValue, NULL)) {
         prop_rec_play_enabled = atoi(recConcPropValue) || !strncmp("true", recConcPropValue, 4);
     }
     if ((prop_rec_play_enabled) &&
@@ -1801,11 +1801,11 @@ status_t AudioPolicyManagerCustom::getInputForAttr(const audio_attributes_t *att
     char propValue[PROPERTY_VALUE_MAX];
     bool prop_rec_enabled=false, prop_voip_enabled = false;
 
-    if(property_get("voice.record.conc.disabled", propValue, NULL)) {
+    if(property_get("vendor.voice.record.conc.disabled", propValue, NULL)) {
         prop_rec_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
     }
 
-    if(property_get("voice.voip.conc.disabled", propValue, NULL)) {
+    if(property_get("vendor.voice.voip.conc.disabled", propValue, NULL)) {
         prop_voip_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
      }
 
@@ -1933,7 +1933,7 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
     char getPropValue[PROPERTY_VALUE_MAX];
     bool prop_rec_play_enabled = false;
 
-    if (property_get("rec.playback.conc.disabled", getPropValue, NULL)) {
+    if (property_get("vendor.audio.rec.playback.conc.disabled", getPropValue, NULL)) {
         prop_rec_play_enabled = atoi(getPropValue) || !strncmp("true", getPropValue, 4);
     }
 
@@ -2024,7 +2024,7 @@ status_t AudioPolicyManagerCustom::stopInput(audio_io_handle_t input,
     char propValue[PROPERTY_VALUE_MAX];
     bool prop_rec_play_enabled = false;
 
-    if (property_get("rec.playback.conc.disabled", propValue, NULL)) {
+    if (property_get("vendor.audio.rec.playback.conc.disabled", propValue, NULL)) {
         prop_rec_play_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
     }
 
