@@ -999,14 +999,14 @@ static void set_platform_defaults(struct platform_data * my_data)
          if (!strncmp(MEDIA_MIMETYPE_AUDIO_ALAC, dsp_only_decoders_mime[count],
               strlen(dsp_only_decoders_mime[count]))) {
 
-             if(property_get_bool("use.qti.sw.alac.decoder", false)) {
+             if(property_get_bool("vendor.audio.use.sw.alac.decoder", false)) {
                  ALOGD("Alac software decoder is available...removing alac from DSP decoder list");
                  strncpy(dsp_only_decoders_mime[count],"none",5);
              }
          } else if (!strncmp(MEDIA_MIMETYPE_AUDIO_APE, dsp_only_decoders_mime[count],
               strlen(dsp_only_decoders_mime[count]))) {
 
-             if(property_get_bool("use.qti.sw.ape.decoder", false)) {
+             if(property_get_bool("vendor.audio.use.sw.ape.decoder", false)) {
                  ALOGD("APE software decoder is available...removing ape from DSP decoder list");
                  strncpy(dsp_only_decoders_mime[count],"none",5);
              }
@@ -1332,7 +1332,7 @@ void *platform_init(struct audio_device *adev)
     my_data->hw_dep_fd = -1;
     my_data->mono_speaker = SPKR_1;
 
-    property_get("ro.qc.sdk.audio.fluencetype", my_data->fluence_cap, "");
+    property_get("ro.vendor.audio.sdk.fluencetype", my_data->fluence_cap, "");
     if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro"))) {
         my_data->fluence_type = FLUENCE_QUAD_MIC | FLUENCE_DUAL_MIC;
     } else if (!strncmp("fluence", my_data->fluence_cap, sizeof("fluence"))) {
@@ -1342,27 +1342,27 @@ void *platform_init(struct audio_device *adev)
     }
 
     if (my_data->fluence_type != FLUENCE_NONE) {
-        property_get("persist.audio.fluence.voicecall",value,"");
+        property_get("persist.vendor.audio.fluence.voicecall",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_call = true;
         }
 
-        property_get("persist.audio.fluence.voicerec",value,"");
+        property_get("persist.vendor.audio.fluence.voicerec",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_rec = true;
         }
 
-        property_get("persist.audio.fluence.audiorec",value,"");
+        property_get("persist.vendor.audio.fluence.audiorec",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_audio_rec = true;
         }
 
-        property_get("persist.audio.fluence.speaker",value,"");
+        property_get("persist.vendor.audio.fluence.speaker",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_spkr_mode = true;
         }
 
-        property_get("persist.audio.fluence.mode",value,"");
+        property_get("persist.vendor.audio.fluence.mode",value,"");
         if (!strncmp("broadside", value, sizeof("broadside"))) {
             my_data->fluence_mode = FLUENCE_BROADSIDE;
         }
@@ -3416,7 +3416,7 @@ void platform_get_parameters(void *platform,
     if (ret >= 0) {
         int isallowed = 1; /*true*/
 
-        if (property_get("voice.playback.conc.disabled", propValue, NULL)) {
+        if (property_get("vendor.voice.playback.conc.disabled", propValue, NULL)) {
             prop_playback_enabled = atoi(propValue) ||
                 !strncmp("true", propValue, 4);
         }
@@ -3519,7 +3519,7 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
 {
     char value[PROPERTY_VALUE_MAX] = {0};
     uint32_t fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-    if((property_get("audio.offload.buffer.size.kb", value, "")) &&
+    if((property_get("vendor.audio.offload.buffer.size.kb", value, "")) &&
             atoi(value)) {
         fragment_size =  atoi(value) * 1024;
     }
@@ -3761,7 +3761,7 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
         }
 
         //check if mulitchannel clip needs to be down sampled  to 48k
-        property_get("audio.playback.mch.downsample",value,"");
+        property_get("vendor.audio.playback.mch.downsample",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             out = usecase->stream.out;
             if ((popcount(out->channel_mask) > 2) &&

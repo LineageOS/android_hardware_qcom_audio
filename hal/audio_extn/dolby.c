@@ -710,7 +710,7 @@ int audio_extn_ds2_enable(struct audio_device *adev) {
     const char *mixer_ctl_name = "DS2 OnOff";
     struct mixer_ctl *ctl;
 
-    property_get("audio.dolby.ds2.enabled", value, NULL);
+    property_get("vendor.audio.dolby.ds2.enabled", value, NULL);
     ds2_enabled = atoi(value) || !strncmp("true", value, 4);
 
     ALOGV("%s:", __func__);
