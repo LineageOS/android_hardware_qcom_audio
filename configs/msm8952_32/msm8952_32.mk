@@ -222,3 +222,18 @@ vendor.audio.parser.ip.buffer.size=262144
 #Audio VoIP / playback record concurrency flags
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.rec.playback.conc.disabled=false
+
+#enable hw aac encoder by default
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.hw.aac.encoder=true
+
+#Property to enable FBSP
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.audio.speaker.prot.enable=false
+
+# for HIDL related packages
+PRODUCT_PACKAGES += \
+    android.hardware.audio@2.0-service \
+    android.hardware.audio@2.0-impl \
+    android.hardware.audio.effect@2.0-impl \
+    android.hardware.soundtrigger@2.0-impl
