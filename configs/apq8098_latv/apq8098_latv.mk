@@ -63,6 +63,9 @@ AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
 AUDIO_FEATURE_ENABLED_GEF_SUPPORT := true
 BOARD_SUPPORTS_QAHW := true
 AUDIO_FEATURE_ENABLED_QAF := true
+AUDIO_FEATURE_IP_HDLR_ENABLED := true
+MM_AUDIO_IP_HDLR_ENABLED := true
+AUDIO_FEATURE_ENABLED_MS12_SECURITY := true
 AUDIO_FEATURE_ENABLED_RAS := true
 AUDIO_FEATURE_ENABLED_DYNAMIC_LOG := true
 AUDIO_FEATURE_ENABLED_SND_MONITOR := true
@@ -144,7 +147,7 @@ persist.vendor.audio.ras.enabled=false
 
 #Buffer size in kbytes for compress offload playback
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.offload.buffer.size.kb=32
+vendor.audio.offload.buffer.size.kb=2
 
 #Enable offload audio video playback by default
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -202,6 +205,30 @@ vendor.audio.offload.gapless.enabled=true
 #enable pbe effects
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.safx.pbe.enabled=true
+
+#enable QAF
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.qaf.enabled=true
+
+#QAF Library
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.qaf.library=/vendor/lib/libdolby_ms12_wrapper.so
+
+#Disable reencode
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.qaf.reencode=false
+
+#HDMI passthrough out
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.qaf.hdmi.out=ddp
+
+#AV streaming offload
+PRODUCT_PROPERTY_OVERRIDES += \
+av.streaming.offload.enable=true
+
+#Enable multi offload
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.offload.multiple.enabled=true
 
 #parser input buffer size(256kb) in byte stream mode
 PRODUCT_PROPERTY_OVERRIDES += \
