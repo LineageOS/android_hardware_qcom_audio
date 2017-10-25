@@ -25,11 +25,19 @@
 <!-- OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN -->
 <!-- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                          -->
 <audio_platform_info_i2s>
-    <device name="SND_DEVICE_IN_HANDSET_MIC" acdb_id="8" />
-    <device name="SND_DEVICE_IN_SPEAKER_MIC" acdb_id="8" />
-    <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC" acdb_id="8" />
-    <device name="SND_DEVICE_OUT_HANDSET" acdb_id="10" />
-    <device name="SND_DEVICE_OUT_VOICE_HANDSET" acdb_id="10" />
-    <device name="SND_DEVICE_OUT_SPEAKER" acdb_id="10" />
-    <device name="SND_DEVICE_OUT_VOICE_SPEAKER" acdb_id="10" />
+    <acdb_ids>
+        <device name="SND_DEVICE_IN_HANDSET_MIC" acdb_id="8" />
+        <device name="SND_DEVICE_IN_SPEAKER_MIC" acdb_id="8" />
+        <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC" acdb_id="8" />
+        <device name="SND_DEVICE_OUT_HANDSET" acdb_id="10" />
+        <device name="SND_DEVICE_OUT_VOICE_HANDSET" acdb_id="10" />
+        <device name="SND_DEVICE_OUT_SPEAKER" acdb_id="10" />
+        <device name="SND_DEVICE_OUT_VOICE_SPEAKER" acdb_id="10" />
+    </acdb_ids>
+    <pcm_ids>
+        <usecase name="USECASE_VOICEMMODE1_CALL" type="in" id="2"/>
+        <usecase name="USECASE_VOICEMMODE1_CALL" type="out" id="2"/>
+        <usecase name="USECASE_VOICEMMODE2_CALL" type="in" id="3"/>
+        <usecase name="USECASE_VOICEMMODE2_CALL" type="out" id="3"/>
+    </pcm_ids>
 </audio_platform_info_i2s>
