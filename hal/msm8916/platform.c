@@ -3989,6 +3989,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_HEADPHONES_44_1;
         } else if (out->format == AUDIO_FORMAT_DSD) {
                 snd_device = SND_DEVICE_OUT_HEADPHONES_DSD;
+        } else if (devices & AUDIO_DEVICE_OUT_LINE) {
+                snd_device = SND_DEVICE_OUT_LINE;
         }  else {
 #ifdef RECORD_PLAY_CONCURRENCY
             if (use_voip_out_devices)
