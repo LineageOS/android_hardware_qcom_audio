@@ -33,6 +33,7 @@
 #include <qap_api.h>
 #include <qti_audio.h>
 #include "qahw_playback_test.h"
+#include <dolby_ms12.h>
 
 #undef LOG_TAG
 #define LOG_TAG "HAL_TEST"
@@ -105,6 +106,8 @@ pthread_mutex_t main_eos_lock;
 pthread_cond_t sec_eos_cond;
 pthread_mutex_t sec_eos_lock;
 
+dlb_ms12_session_param_t dlb_param;
+dlb_ms12_session_param_t dlb_param_hp;
 qap_session_outputs_config_t session_output_config;
 bool session_output_configured = false;
 struct timeval tcold_start, tcold_stop;
@@ -1171,13 +1174,13 @@ void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, 
     }
 }
 
-static void qap_wrapper_is_dap_enabled(char *kv_pairs, int out_device_id) {
+static void qap_wrapper_is_dap_enabled(char *kv_pairs, int out_device_id, qap_session_handle_t handle) {
     int status = 0;
     int temp = 0;
     char *dap_kvp = NULL;
     int *dap_value = NULL;
     int dap_enable = 0;
-
+    qap_session_pp_configs_t dap_pp_config;
     dap_kvp = qap_wrapper_get_single_kvp("dap_enable", kv_pairs, &status);
     if (dap_kvp != NULL) {
         dap_value = qap_wrapper_get_int_value_array(dap_kvp, &temp, &status);
@@ -1186,7 +1189,7 @@ static void qap_wrapper_is_dap_enabled(char *kv_pairs, int out_device_id) {
         if (dap_enable) {
             fprintf(stdout, "dap enable %d and device id %d\n", dap_enable, out_device_id);
             char *dev_kvp = NULL;
-            if (out_device_id == AUDIO_DEVICE_OUT_SPEAKER) {
+            if ((out_device_id & AUDIO_DEVICE_OUT_SPEAKER) == AUDIO_DEVICE_OUT_SPEAKER) {
                 dev_kvp = (char *) calloc(1, status + strlen("o_device=1; "));
                 if (dev_kvp != NULL) {
                     strcat(dev_kvp, "o_device=1;");
@@ -1195,8 +1198,13 @@ static void qap_wrapper_is_dap_enabled(char *kv_pairs, int out_device_id) {
                     free(dev_kvp);
                     dev_kvp = NULL;
                 }
-            } else if ((out_device_id == AUDIO_DEVICE_OUT_LINE)||
-                       (out_device_id == AUDIO_DEVICE_OUT_WIRED_HEADPHONE)) {
+                dap_pp_config.pp_config[dap_pp_config.num_confs].id = AUDIO_DEVICE_OUT_SPEAKER;
+                dlb_param = MS12_SESSION_CFG_DAP_ENABLE_SPEAKER;
+                dap_pp_config.pp_config[dap_pp_config.num_confs].pp_type = (void *) &dlb_param;
+                dap_pp_config.num_confs++;
+            }
+            if (((out_device_id & AUDIO_DEVICE_OUT_LINE) == AUDIO_DEVICE_OUT_LINE) ||
+                ((out_device_id & AUDIO_DEVICE_OUT_WIRED_HEADPHONE) == AUDIO_DEVICE_OUT_WIRED_HEADPHONE)) {
                 dev_kvp = (char *) calloc(1, status + strlen("o_device=2; "));
                 if (dev_kvp != NULL) {
                     strcat(dev_kvp, "o_device=2;");
@@ -1205,7 +1213,18 @@ static void qap_wrapper_is_dap_enabled(char *kv_pairs, int out_device_id) {
                     free(dev_kvp);
                     dev_kvp = NULL;
                 }
+                if ((out_device_id & AUDIO_DEVICE_OUT_LINE) == AUDIO_DEVICE_OUT_LINE)
+                dap_pp_config.pp_config[dap_pp_config.num_confs].id = AUDIO_DEVICE_OUT_LINE;
+                else
+                dap_pp_config.pp_config[dap_pp_config.num_confs].id = AUDIO_DEVICE_OUT_WIRED_HEADPHONE;
+                dlb_param_hp = MS12_SESSION_CFG_DAP_ENABLE_HEADPHONE;
+                dap_pp_config.pp_config[dap_pp_config.num_confs].pp_type = (void *) &dlb_param_hp;
+                dap_pp_config.num_confs++;
             }
+            status = qap_session_cmd(qap_session_handle, QAP_SESSION_CMD_SET_PP_OUTPUTS,
+                                          sizeof(qap_session_pp_configs_t), &dap_pp_config, NULL, NULL);
+            if (status != QAP_STATUS_OK)
+                fprintf(stderr, "Output config failed\n");
         }
         free(dap_kvp);
         dap_kvp = NULL;
@@ -1289,7 +1308,6 @@ int qap_wrapper_session_open(char *kv_pairs, void* stream_data, int num_of_strea
         dolby_formats = true;
     }
 
-    qap_wrapper_is_dap_enabled(kv_pairs, stream->output_device);
 
     // To-Do - Need to check SPDIF out also when SPDIF out is supported
     ALOGD("%s::%d output device %d", __func__, __LINE__, stream->output_device);
@@ -1363,6 +1381,7 @@ int qap_wrapper_session_open(char *kv_pairs, void* stream_data, int num_of_strea
             fprintf(stderr, "Output config failed\n");
             return -EINVAL;
         }
+        qap_wrapper_is_dap_enabled(kv_pairs, stream->output_device, qap_session_handle);
 
         bitwidth_kvp = qap_wrapper_get_single_kvp("k", kv_pairs, &status);
         if (bitwidth_kvp && strncmp(bitwidth_kvp, "k=", 2) == 0) {
