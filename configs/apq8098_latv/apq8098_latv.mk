@@ -169,7 +169,7 @@ vendor.audio.offload.track.enable=true
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.deep_buffer.media=true
 
-#QC property used when calculating client heap size in audio flinger
+#QTI property used when calculating client heap size in audio flinger
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.heap.size.multiplier=7
 
