@@ -41,8 +41,8 @@
 /*#define LOG_NDEBUG 0*/
 
 #if LINUX_ENABLED
-#define QAC_LIB_MS12 "/usr/lib/libdolby_ms12_wrapper.so"
-#define QAC_LIB_M8   "/usr/lib/libdts_m8_wrapper.so"
+#define QAC_LIB_MS12 "libdolby_ms12_wrapper.so"
+#define QAC_LIB_M8   "libdts_m8_wrapper.so"
 #else
 #define QAC_LIB_MS12 "/system/lib/libdolby_ms12_wrapper.so"
 #define QAC_LIB_M8   "/system/lib/libdts_m8_wrapper.so"
@@ -1579,7 +1579,7 @@ void *qap_wrapper_start_stream (void* stream_data)
     } while (1);
 
 wait_for_eos:
-    if (stream_info->sec_input && !stream_info->aac_fmt_type) {
+    if (stream_info->sec_input) {
         pthread_mutex_lock(&sec_eos_lock);
         pthread_cond_wait(&sec_eos_cond, &sec_eos_lock);
         pthread_mutex_unlock(&sec_eos_lock);
