@@ -366,7 +366,7 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
     equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
     int voffset = ((p->psize - 1) / sizeof(int32_t) + 1) * sizeof(int32_t);
     void *value = p->data + voffset;
-    int32_t vsize = (int32_t) p->vsize;
+    uint32_t vsize = p->vsize;
     int32_t *param_tmp = (int32_t *)p->data;
     int32_t param = *param_tmp++;
     int32_t preset;
@@ -424,8 +424,8 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
         } else {
             if (vsize < (2 + NUM_EQ_BANDS) * sizeof(int16_t)) {
                 android_errorWriteLog(0x534e4554, "37563371");
-                ALOGE("\tERROR EQ_PARAM_PROPERTIES valueSize %d < %d",
-                                  vsize, (2 + NUM_EQ_BANDS) * sizeof(int16_t));
+                ALOGE("\tERROR EQ_PARAM_PROPERTIES valueSize %u < %u",
+                                  vsize, (unsigned int)((2 + NUM_EQ_BANDS) * sizeof(int16_t)));
                 p->status = -EINVAL;
                 break;
             }
