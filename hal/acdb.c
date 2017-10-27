@@ -18,6 +18,7 @@
 //#define LOG_NDEBUG 0
 #define LOG_NDDEBUG 0
 
+#include <errno.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <dlfcn.h>
