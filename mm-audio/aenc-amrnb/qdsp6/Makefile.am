@@ -19,7 +19,7 @@ AM_CPPFLAGS += -DFEATURE_DSM_DUP_ITEMS
 AM_CPPFLAGS += -I ${WORKSPACE}/hardware/qcom/media/mm-core/inc/
 
 AM_CPPFLAGS += -g
-AM_CPPFLAGS += -D_DEBUG
+AM_CPPFLAGS += -DNDEBUG
 AM_CPPFLAGS += -Iinc
 
 c_sources = src/omx_amr_aenc.cpp \

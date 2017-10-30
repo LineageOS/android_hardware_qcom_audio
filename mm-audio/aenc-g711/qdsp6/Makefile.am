@@ -8,7 +8,7 @@ AM_CFLAGS = -Wall \
             -D_ANDROID_ \
             -D_ENABLE_QC_MSG_LOG_ \
             -DVERBOSE \
-            -D_DEBUG \
+            -DNDEBUG \
             -DAUDIOV2 \
             -I inc \
             -I ${WORKSPACE}/hardware/qcom/media/mm-core/inc/
