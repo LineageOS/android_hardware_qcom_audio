@@ -56,9 +56,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <pthread.h>
 #include "QOMX_AudioExtensions.h"
 #include "QOMX_AudioIndexExtensions.h"
-#ifdef AUDIOV2 
-#include "control.h" 
-#endif
 #include <linux/ioctl.h>
 
 typedef unsigned char uint8;
@@ -81,14 +78,6 @@ void audaac_rec_install_bits
 #define AUDAAC_MAX_ADTS_HEADER_LENGTH 7
 void audaac_rec_install_adts_header_variable (uint16  byte_num);
 void Release_Encoder();
-
-#ifdef AUDIOV2
-unsigned short session_id;
-int device_id;
-int control = 0;
-const char *device="handset_tx";
-#define DIR_TX 2
-#endif
 
 #define AACHDR_LAYER_SIZE             2
 #define AACHDR_CRC_SIZE               1
@@ -705,22 +694,6 @@ int main(int argc, char **argv)
                 DEBUG_PRINT ("\nOMX_FreeHandle error. Error code: %d\n", result);
             }
             /* Deinit OpenMAX */
-            if(tunnel)
-            {
-                #ifdef AUDIOV2
-                if (msm_route_stream(DIR_TX,session_id,device_id, 0))
-                {
-                    DEBUG_PRINT("\ncould not set stream routing\n");
-                    return -1;
-                }
-                if (msm_en_device(device_id, 0))
-                {
-                    DEBUG_PRINT("\ncould not enable device\n");
-                    return -1;
-                }
-                msm_mixer_close();
-                #endif
-            }
             OMX_Deinit();
             ebd_cnt=0;
             bOutputEosReached = false;
@@ -898,29 +871,6 @@ int Play_Encoder()
     OMX_SetParameter(aac_enc_handle,OMX_IndexParamAudioAac,&aacparam);
     OMX_GetExtensionIndex(aac_enc_handle,"OMX.Qualcomm.index.audio.sessionId",&index);
     OMX_GetParameter(aac_enc_handle,index,&streaminfoparam);
-    if(tunnel)
-    {
-    #ifdef AUDIOV2
-    session_id = streaminfoparam.sessionId;
-    control = msm_mixer_open("/dev/snd/controlC0", 0);
-    if(control < 0)
-    printf("ERROR opening the device\n");
-    device_id = msm_get_device(device);
-    DEBUG_PRINT ("\ndevice_id = %d\n",device_id);
-    DEBUG_PRINT("\nsession_id = %d\n",session_id);
-    if (msm_en_device(device_id, 1))
-    {
-        perror("could not enable device\n");
-        return -1;
-    }
-
-    if (msm_route_stream(DIR_TX,session_id,device_id, 1))
-    {
-        perror("could not set stream routing\n");
-        return -1;
-    }
-    #endif
-    }
     DEBUG_PRINT ("\nOMX_SendCommand Encoder -> IDLE\n");
     OMX_SendCommand(aac_enc_handle, OMX_CommandStateSet, OMX_StateIdle,0);
     /* wait_for_event(); should not wait here event complete status will

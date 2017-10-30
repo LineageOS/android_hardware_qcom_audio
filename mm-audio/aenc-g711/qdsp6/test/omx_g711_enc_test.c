@@ -68,14 +68,6 @@ QOMX_AUDIO_STREAM_INFO_DATA streaminfoparam;
 
 void Release_Encoder();
 
-#ifdef AUDIOV2
-unsigned short session_id;
-int device_id;
-int control = 0;
-const char *device="handset_tx";
-#define DIR_TX 2
-#endif
-
 #define MIN(A,B)    (((A) < (B))?(A):(B))
 
 FILE *F1 = NULL;

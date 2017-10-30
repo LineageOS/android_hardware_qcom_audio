@@ -52,7 +52,6 @@ mm-amr-enc-test-inc    := $(LOCAL_PATH)/inc
 mm-amr-enc-test-inc    += $(LOCAL_PATH)/test
 
 mm-amr-enc-test-inc    += $(TARGET_OUT_HEADERS)/mm-core/omxcore
-mm-amr-enc-test-inc    += $(TARGET_OUT_HEADERS)/mm-audio/audio-alsa
 LOCAL_MODULE            := mm-aenc-omxamr-test
 LOCAL_MODULE_TAGS       := optional
 LOCAL_CFLAGS            := $(libOmxAmrEnc-def)
@@ -60,7 +59,6 @@ LOCAL_C_INCLUDES        := $(mm-amr-enc-test-inc)
 LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := libmm-omxcore
 LOCAL_SHARED_LIBRARIES  += libOmxAmrEnc
-LOCAL_SHARED_LIBRARIES  += libaudioalsa
 LOCAL_SRC_FILES         := test/omx_amr_enc_test.c
 
 include $(BUILD_EXECUTABLE)
