@@ -81,7 +81,7 @@ extern "C" {
 
 
 #define PrintFrameHdr(i,bufHdr) \
-                           DEBUG_PRINT("i=%d OMX bufHdr[%p]buf[%p]size[%d]TS[%lld]nFlags[0x%x]\n",\
+                           DEBUG_DETAIL("i=%d OMX bufHdr[%p]buf[%p]size[%d]TS[%lld]nFlags[0x%x]\n",\
                            i,\
                            bufHdr,                                     \
                            ((OMX_BUFFERHEADERTYPE *)bufHdr)->pBuffer,   \
