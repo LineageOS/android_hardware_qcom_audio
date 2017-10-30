@@ -1841,6 +1841,10 @@
         <path name="speaker-mono-2" />
     </path>
 
+    <path name="speaker-hdk">
+        <path name="speaker-mono" />
+    </path>
+
     <path name="speaker-fluid">
         <path name="speaker-mono" />
     </path>
@@ -2063,12 +2067,24 @@
         <path name="handset-qrd" />
     </path>
 
+    <path name="voice-handset-hdk">
+        <path name="handset-qrd" />
+    </path>
+
+    <path name="voice-handset-tmus-hdk">
+        <path name="handset-qrd" />
+    </path>
+
     <path name="voice-speaker">
         <path name="speaker-mono" />
     </path>
 
     <path name="voice-speaker-qrd">
         <path name="speaker-mono-2" />
+    </path>
+
+    <path name="voice-speaker-hdk">
+        <path name="speaker-mono" />
     </path>
 
     <path name="voice-speaker-2">
@@ -2408,6 +2424,11 @@
     </path>
 
     <path name="voice-tty-hco-handset-qrd">
+        <ctl name="TTY Mode" value="HCO" />
+        <path name="handset-qrd" />
+    </path>
+
+    <path name="voice-tty-hco-handset-hdk">
         <ctl name="TTY Mode" value="HCO" />
         <path name="handset-qrd" />
     </path>
