@@ -312,7 +312,7 @@ int hfp_set_mic_mute(struct audio_device *adev, bool state)
 {
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "HFP TX Mute";
-    uint32_t set_values[ ] = {0};
+    long set_values[ ] = {0};
 
     ALOGI("%s: enter, state=%d", __func__, state);
 

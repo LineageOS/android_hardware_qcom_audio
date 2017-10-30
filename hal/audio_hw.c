@@ -4038,7 +4038,7 @@ static int out_set_compr_volume(struct audio_stream_out *stream, float left,
                           float right)
 {
     struct stream_out *out = (struct stream_out *)stream;
-    int volume[2];
+    long volume[2];
     char mixer_ctl_name[128];
     struct audio_device *adev = out->dev;
     struct mixer_ctl *ctl;
@@ -4069,7 +4069,7 @@ static int out_set_voip_volume(struct audio_stream_out *stream, float left,
     char mixer_ctl_name[] = "App Type Gain";
     struct audio_device *adev = out->dev;
     struct mixer_ctl *ctl;
-    uint32_t set_values[4];
+    long set_values[4];
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
@@ -4080,8 +4080,8 @@ static int out_set_voip_volume(struct audio_stream_out *stream, float left,
 
     set_values[0] = 0; //0: Rx Session 1:Tx Session
     set_values[1] = out->app_type_cfg.app_type;
-    set_values[2] = (int)(left * VOIP_PLAYBACK_VOLUME_MAX);
-    set_values[3] = (int)(right * VOIP_PLAYBACK_VOLUME_MAX);
+    set_values[2] = (long)(left * VOIP_PLAYBACK_VOLUME_MAX);
+    set_values[3] = (long)(right * VOIP_PLAYBACK_VOLUME_MAX);
 
     mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
     return 0;
@@ -4116,8 +4116,8 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
                       __func__, mixer_ctl_name);
                 return -EINVAL;
             }
-            volume[0] = (int)(AmpToDb(left));
-            volume[1] = (int)(AmpToDb(right));
+            volume[0] = (long)(AmpToDb(left));
+            volume[1] = (long)(AmpToDb(right));
             mixer_ctl_set_array(ctl, volume, sizeof(volume)/sizeof(volume[0]));
             return 0;
         } else {

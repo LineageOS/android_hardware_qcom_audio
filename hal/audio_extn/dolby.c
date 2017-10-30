@@ -196,7 +196,7 @@ void send_ddp_endp_params_stream(struct stream_out *out,
                                  bool set_cache __unused)
 {
     int idx, i;
-    int ddp_endp_params_data[2*DDP_ENDP_NUM_PARAMS + 1];
+    long ddp_endp_params_data[2*DDP_ENDP_NUM_PARAMS + 1];
     int length = 0;
     for(idx=0; idx<DDP_ENDP_NUM_DEVICES; idx++) {
         if(ddp_endp_params[idx].device & device) {

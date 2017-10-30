@@ -194,7 +194,8 @@ void audio_extn_keep_alive_start()
 {
     struct audio_device * adev = (struct audio_device *)ka.userdata;
     char mixer_ctl_name[MAX_LENGTH_MIXER_CONTROL_IN_INT];
-    int app_type_cfg[MAX_LENGTH_MIXER_CONTROL_IN_INT], len = 0, rc;
+    long app_type_cfg[MAX_LENGTH_MIXER_CONTROL_IN_INT];
+    int len = 0, rc;
     struct mixer_ctl *ctl;
     int acdb_dev_id, snd_device;
     struct listnode *node;
