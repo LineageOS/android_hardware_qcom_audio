@@ -105,6 +105,8 @@ pthread_cond_t main_eos_cond;
 pthread_mutex_t main_eos_lock;
 pthread_cond_t sec_eos_cond;
 pthread_mutex_t sec_eos_lock;
+bool main_eos_received = false;
+bool sec_eos_received = false;
 
 dlb_ms12_session_param_t dlb_param;
 dlb_ms12_session_param_t dlb_param_hp;
@@ -802,6 +804,7 @@ void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, 
                 stream_cnt--;
             pthread_mutex_lock(&main_eos_lock);
             pthread_cond_signal(&main_eos_cond);
+            main_eos_received = true;
             pthread_mutex_unlock(&main_eos_lock);
 
             ALOGE("%s %d Received Main Input EOS ", __func__, __LINE__);
@@ -820,6 +823,7 @@ void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, 
                 ALOGV("%s %d Received Secondary Input EOS", __func__, __LINE__);
                 pthread_mutex_lock(&sec_eos_lock);
                 pthread_cond_signal(&sec_eos_cond);
+                sec_eos_received = true;
                 pthread_mutex_unlock(&sec_eos_lock);
             }
             if (!stream_cnt)
@@ -1580,16 +1584,22 @@ void *qap_wrapper_start_stream (void* stream_data)
 
 wait_for_eos:
     if (stream_info->sec_input) {
-        pthread_mutex_lock(&sec_eos_lock);
-        pthread_cond_wait(&sec_eos_cond, &sec_eos_lock);
-        pthread_mutex_unlock(&sec_eos_lock);
+        if (!sec_eos_received) {
+            pthread_mutex_lock(&sec_eos_lock);
+            pthread_cond_wait(&sec_eos_cond, &sec_eos_lock);
+            pthread_mutex_unlock(&sec_eos_lock);
+        }
+        sec_eos_received = false;
         fprintf(stdout, "Received EOS event for secondary input\n");
         ALOGV("Received EOS event for secondary input\n");
     }
     if (!(stream_info->system_input || stream_info->sec_input)){
-        pthread_mutex_lock(&main_eos_lock);
-        pthread_cond_wait(&main_eos_cond, &main_eos_lock);
-        pthread_mutex_unlock(&main_eos_lock);
+        if (!main_eos_received) {
+            pthread_mutex_lock(&main_eos_lock);
+            pthread_cond_wait(&main_eos_cond, &main_eos_lock);
+            pthread_mutex_unlock(&main_eos_lock);
+        }
+        main_eos_received = false;
         fprintf(stdout, "Received EOS event for main input\n");
         ALOGV("Received EOS event for main input\n");
     }
