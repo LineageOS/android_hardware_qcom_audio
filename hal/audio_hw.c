@@ -3358,7 +3358,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             out->devices = new_dev;
 
             if (output_drives_call(adev, out)) {
-                if(!voice_is_in_call(adev)) {
+                if (!voice_is_call_state_active(adev)) {
                     if (adev->mode == AUDIO_MODE_IN_CALL) {
                         adev->current_call_output = out;
                         ret = voice_start_call(adev);
