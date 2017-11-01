@@ -1100,7 +1100,7 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
                                               audio_format_t format,
                                               audio_channel_mask_t channelMask,
                                               audio_output_flags_t flags,
-                                              audio_port_handle_t selectedDeviceId,
+                                              audio_port_handle_t *selectedDeviceId,
                                               const audio_offload_info_t *offloadInfo)
 {
     audio_offload_info_t tOffloadInfo = AUDIO_INFO_INITIALIZER;
@@ -1142,7 +1142,7 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
 
     return AudioPolicyManager::getOutputForAttr(attr, output, session, stream,
                                                 (uid_t)uid, &config, flags,
-                                                (audio_port_handle_t)selectedDeviceId,
+                                                selectedDeviceId,
                                                 &portId);
 }
 
