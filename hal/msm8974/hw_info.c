@@ -390,6 +390,8 @@ static void  update_hardware_info_sdm845(struct hardware_info *hw_info, const ch
         hw_info->num_snd_devices = ARRAY_SIZE(tavil_qrd_variant_devices);
         hw_info->is_stereo_spkr = false;
         strlcpy(hw_info->dev_extn, "-hdk", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "sdm845-qvr-tavil-snd-card")) {
+        hw_info->is_stereo_spkr = false;
     } else {
         ALOGW("%s: Not a sdm845 device", __func__);
     }
