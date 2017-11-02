@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -56,7 +56,7 @@ struct fm_module {
     bool is_fm_muted;
     float fm_volume;
     bool restart_fm;
-    int scard_state;
+    card_status_t card_status;
 };
 
 static struct fm_module fmmod = {
@@ -66,7 +66,7 @@ static struct fm_module fmmod = {
   .is_fm_running = 0,
   .is_fm_muted = 0,
   .restart_fm = 0,
-  .scard_state = SND_CARD_STATE_ONLINE,
+  .card_status = CARD_STATUS_ONLINE,
 };
 
 static int32_t fm_set_volume(struct audio_device *adev, float value, bool persist)
@@ -236,14 +236,14 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
     if (ret >= 0) {
         char *snd_card_status = value+2;
         if (strstr(snd_card_status, "OFFLINE")) {
-            fmmod.scard_state = SND_CARD_STATE_OFFLINE;
+            fmmod.card_status = CARD_STATUS_OFFLINE;
         }
         else if (strstr(snd_card_status, "ONLINE")) {
-            fmmod.scard_state = SND_CARD_STATE_ONLINE;
+            fmmod.card_status = CARD_STATUS_ONLINE;
         }
     }
     if(fmmod.is_fm_running) {
-        if (fmmod.scard_state == SND_CARD_STATE_OFFLINE) {
+        if (fmmod.card_status == CARD_STATUS_OFFLINE) {
             ALOGD("sound card is OFFLINE, stop FM");
             fm_stop(adev);
             fmmod.restart_fm = 1;
@@ -257,7 +257,7 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
                 select_devices(adev, USECASE_AUDIO_PLAYBACK_FM);
         }
     }
-    if (fmmod.restart_fm && (fmmod.scard_state == SND_CARD_STATE_ONLINE)) {
+    if (fmmod.restart_fm && (fmmod.card_status == CARD_STATUS_ONLINE)) {
         ALOGD("sound card is ONLINE, restart FM");
         fmmod.restart_fm = 0;
         fm_start(adev);

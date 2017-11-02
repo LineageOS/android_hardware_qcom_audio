@@ -45,6 +45,7 @@ AUDIO_FEATURE_ENABLED_NT_PAUSE_TIMEOUT := true
 MM_AUDIO_ENABLED_FTM := true
 AUDIO_FEATURE_ENABLED_ACDB_LICENSE := true
 TARGET_USES_QCOM_MM_AUDIO := true
+AUDIO_FEATURE_ENABLED_SND_MONITOR := true
 #AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS := true
 DTS_CODEC_M_ := true
 #AUDIO_FEATURE_ENABLED_DTS_EAGLE := true
@@ -71,6 +72,10 @@ PRODUCT_PROPERTY_OVERRIDES += \
 use.qti.sw.alac.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 use.qti.sw.ape.decoder=true
+
+#split  a2dp
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.bt.enable.splita2dp=false
 
 USE_XML_AUDIO_POLICY_CONF := 1
 
@@ -140,3 +145,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
 # Low latency audio buffer size in frames
 PRODUCT_PROPERTY_OVERRIDES += \
     audio_hal.period_size=192
+
+#split  a2dp
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.bt.enable.splita2dp=false

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -519,5 +519,25 @@ void audio_extn_perf_lock_release(void);
 #define setChannelStatus(out, buffer, bytes) (0)
 #else
 void setChannelStatus(struct stream_out *out, char * buffer, size_t bytes);
+#endif
+
+typedef void (* snd_mon_cb)(void * stream, struct str_parms * parms);
+#ifndef SND_MONITOR_ENABLED
+#define audio_extn_snd_mon_init()           (0)
+#define audio_extn_snd_mon_deinit()         (0)
+#define audio_extn_snd_mon_register_listener(stream, cb) (0)
+#define audio_extn_snd_mon_unregister_listener(stream) (0)
+#else
+int audio_extn_snd_mon_init();
+int audio_extn_snd_mon_deinit();
+int audio_extn_snd_mon_register_listener(void *stream, snd_mon_cb cb);
+int audio_extn_snd_mon_unregister_listener(void *stream);
+#endif
+
+#ifndef FM_POWER_OPT
+#define audio_extn_fm_set_parameters(adev, parms) (0)
+#else
+void audio_extn_fm_set_parameters(struct audio_device *adev,
+                                   struct str_parms *parms);
 #endif
 #endif /* AUDIO_EXTN_H */

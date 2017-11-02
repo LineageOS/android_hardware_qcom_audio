@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -1550,6 +1550,20 @@ int platform_is_acdb_initialized(void *platform)
     struct platform_data *my_data = (struct platform_data *)platform;
     ALOGD("%s: acdb initialized %d\n", __func__, my_data->is_acdb_initialized);
     return my_data->is_acdb_initialized;
+}
+
+void platform_snd_card_update(void *platform, card_status_t card_status)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (card_status == CARD_STATUS_ONLINE) {
+        if (!platform_is_acdb_initialized(my_data)) {
+            if(platform_acdb_init(my_data))
+                ALOGE("%s: acdb initialization is failed", __func__);
+        } else if (my_data->acdb_send_common_top() < 0) {
+                ALOGD("%s: acdb did not set common topology", __func__);
+        }
+    }
 }
 
 const char *platform_get_snd_device_name(snd_device_t snd_device)
@@ -3401,8 +3415,8 @@ void platform_get_parameters(void *platform,
                 !strncmp("true", propValue, 4);
         }
 
-        if (prop_playback_enabled && (voice_is_in_call(my_data->adev) ||
-             (SND_CARD_STATE_OFFLINE == get_snd_card_state(my_data->adev)))) {
+        if ((prop_playback_enabled && (voice_is_in_call(my_data->adev))) ||
+             (CARD_STATUS_OFFLINE == my_data->adev->card_status)) {
             char *decoder_mime_type = value;
 
             //check if unsupported mime type or not

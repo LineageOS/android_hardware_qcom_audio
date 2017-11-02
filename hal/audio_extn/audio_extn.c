@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -82,12 +82,6 @@ static struct audio_extn_module aextnmod = {
 #define AUDIO_PARAMETER_OFFLOAD_NUM_ACTIVE "offload_num_active"
 #define AUDIO_PARAMETER_HPX            "HPX"
 
-#ifndef FM_POWER_OPT
-#define audio_extn_fm_set_parameters(adev, parms) (0)
-#else
-void audio_extn_fm_set_parameters(struct audio_device *adev,
-                                   struct str_parms *parms);
-#endif
 #ifndef HFP_ENABLED
 #define audio_extn_hfp_set_parameters(adev, parms) (0)
 #else
@@ -1019,7 +1013,11 @@ int audio_extn_check_and_set_multichannel_usecase(struct audio_device *adev,
     bool ssr_supported = false;
     ssr_supported = audio_extn_ssr_check_usecase(in);
     if (ssr_supported) {
-        return audio_extn_ssr_set_usecase(in, config, update_params);
+        int ret;
+        pthread_mutex_lock(&adev->lock);
+        ret = audio_extn_ssr_set_usecase(in, config, update_params);
+        pthread_mutex_unlock(&adev->lock);
+        return ret;
     } else {
         return audio_extn_set_multichannel_usecase(adev, in, config, update_params);
     }

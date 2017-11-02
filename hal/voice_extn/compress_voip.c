@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2017, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -482,11 +482,11 @@ int voice_extn_compress_voip_start_output_stream(struct stream_out *out)
     int ret = 0;
     struct audio_device *adev = out->dev;
     struct audio_usecase *uc_info;
-    int snd_card_status = get_snd_card_state(adev);
 
     ALOGD("%s: enter", __func__);
 
-    if (SND_CARD_STATE_OFFLINE == snd_card_status) {
+    if (CARD_STATUS_OFFLINE == out->card_status ||
+        CARD_STATUS_OFFLINE == adev->card_status) {
         ret = -ENETRESET;
         ALOGE("%s: sound card is not active/SSR returning error %d ", __func__, ret);
         goto error;
@@ -516,11 +516,11 @@ int voice_extn_compress_voip_start_input_stream(struct stream_in *in)
 {
     int ret = 0;
     struct audio_device *adev = in->dev;
-    int snd_card_status = get_snd_card_state(adev);
 
     ALOGD("%s: enter", __func__);
 
-    if (SND_CARD_STATE_OFFLINE == snd_card_status) {
+    if (CARD_STATUS_OFFLINE == in->card_status ||
+        CARD_STATUS_OFFLINE == adev->card_status) {
         ret = -ENETRESET;
         ALOGE("%s: sound card is not active/SSR returning error %d ", __func__, ret);
         goto error;

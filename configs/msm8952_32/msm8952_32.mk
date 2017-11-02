@@ -51,6 +51,7 @@ AUDIO_FEATURE_ENABLED_HDMI_SPK := true
 #AUDIO_FEATURE_ENABLED_HDMI_EDID := true
 AUDIO_FEATURE_ENABLED_EXT_HDMI := true
 #
+AUDIO_FEATURE_ENABLED_SND_MONITOR := true
 ###not supported feature
 ##AUDIO_FEATURE_ENABLED_LISTEN := true
 ##DOLBY_DAP := true
@@ -69,6 +70,10 @@ PRODUCT_PROPERTY_OVERRIDES += \
 use.qti.sw.alac.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 use.qti.sw.ape.decoder=true
+
+#split  a2dp
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.bt.enable.splita2dp=false
 
 USE_XML_AUDIO_POLICY_CONF := 1
 
@@ -134,3 +139,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
 # Low latency audio buffer size in frames
 PRODUCT_PROPERTY_OVERRIDES += \
     audio_hal.period_size=192
+
+#split  a2dp
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.bt.enable.splita2dp=false
