@@ -56,7 +56,7 @@
 #ifdef AUDIO_GENERIC_EFFECT_FRAMEWORK_ENABLED
 
 #if LINUX_ENABLED
-#define GEF_LIBRARY "/usr/lib/libqtigef.so"
+#define GEF_LIBRARY "libqtigef.so"
 #else
 #define GEF_LIBRARY "/vendor/lib/libqtigef.so"
 #endif

@@ -37,7 +37,7 @@
 #endif
 
 #ifdef LINUX_ENABLED
-#define LIB_PATH "/usr/lib/libaudio_ip_handler.so"
+#define LIB_PATH "libaudio_ip_handler.so"
 #else
 #define LIB_PATH "/system/vendor/lib/libaudio_ip_handler.so"
 #endif

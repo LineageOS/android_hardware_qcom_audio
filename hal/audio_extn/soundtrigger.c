@@ -71,7 +71,7 @@ static struct sound_trigger_audio_device *st_dev;
 static void get_library_path(char *lib_path)
 {
     snprintf(lib_path, MAX_LIBRARY_PATH,
-             "/usr/lib/sound_trigger.primary.default.so");
+             "sound_trigger.primary.default.so");
 }
 #else
 static void get_library_path(char *lib_path)
