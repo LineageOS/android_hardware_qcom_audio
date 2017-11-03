@@ -2799,7 +2799,6 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
     int status = 0, val = 0, k;
     char *format_params, *kv_parirs;
     struct str_parms *qaf_params;
-    char value[32];
 
     DEBUG_MSG("Entry");
 
@@ -2807,10 +2806,9 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
         return -EINVAL;
     }
 
-    status = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value, sizeof(value));
+    status = str_parms_get_int(parms, AUDIO_PARAMETER_DEVICE_CONNECT, &val);
 
-    if (status >= 0) {
-        val = atoi(value);
+    if ((status >= 0) && audio_is_output_device(val)) {
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) { //HDMI is connected.
 
             p_qaf->hdmi_connect = 1;
@@ -2847,9 +2845,8 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
         //TODO else if: Need to consider other devices.
     }
 
-    status = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value, sizeof(value));
-    if (status >= 0) {
-        val = atoi(value);
+    status = str_parms_get_int(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, &val);
+    if ((status >= 0) && audio_is_output_device(val)) {
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) { //HDMI is disconnected.
 
             qaf_params = str_parms_create();

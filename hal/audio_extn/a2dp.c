@@ -969,9 +969,9 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
 
      ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value,
                             sizeof(value));
-     if( ret >= 0) {
+     if (ret >= 0) {
          val = atoi(value);
-         if (val & AUDIO_DEVICE_OUT_ALL_A2DP) {
+         if (audio_is_a2dp_out_device(val)) {
              ALOGV("Received device connect request for A2DP");
              open_a2dp_output();
          }
@@ -981,9 +981,9 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
      ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value,
                          sizeof(value));
 
-     if( ret >= 0) {
+     if (ret >= 0) {
          val = atoi(value);
-         if (val & AUDIO_DEVICE_OUT_ALL_A2DP) {
+         if (audio_is_a2dp_out_device(val)) {
              ALOGV("Received device dis- connect request");
              reset_a2dp_enc_config_params();
              close_a2dp_output();

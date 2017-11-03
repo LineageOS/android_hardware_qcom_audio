@@ -380,7 +380,8 @@ int audio_extn_keep_alive_set_parameters(struct audio_device *adev __unused,
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value, sizeof(value));
     if (ret >= 0) {
         int val = atoi(value);
-        if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        if (audio_is_output_devices(val) &&
+            (val & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
             if (!audio_extn_passthru_is_active()) {
                 ALOGV("start keep alive");
                 audio_extn_keep_alive_start();
@@ -392,7 +393,8 @@ int audio_extn_keep_alive_set_parameters(struct audio_device *adev __unused,
                             sizeof(value));
     if (ret >= 0) {
         int val = atoi(value);
-        if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        if (audio_is_output_devices(val) &&
+            (val & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
             ALOGV("stop keep_alive");
             audio_extn_keep_alive_stop();
         }
