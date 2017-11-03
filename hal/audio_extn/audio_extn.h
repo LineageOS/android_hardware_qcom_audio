@@ -629,6 +629,9 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
 int audio_extn_utils_get_snd_card_num();
 bool audio_extn_is_dsp_bit_width_enforce_mode_supported(audio_output_flags_t flags);
 bool audio_extn_utils_is_dolby_format(audio_format_t format);
+int audio_extn_utils_get_bit_width_from_string(const char *);
+int audio_extn_utils_get_sample_rate_from_string(const char *);
+int audio_extn_utils_get_channels_from_string(const char *);
 
 #ifdef DS2_DOLBY_DAP_ENABLED
 #define LIB_DS2_DAP_HAL "vendor/lib/libhwdaphal.so"

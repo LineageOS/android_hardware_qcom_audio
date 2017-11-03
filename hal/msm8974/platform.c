@@ -1024,6 +1024,8 @@ static bool can_enable_mbdrc_on_device(snd_device_t snd_device)
     return ret;
 }
 
+static const char *platform_get_mixer_control(struct mixer_ctl *);
+
 bool platform_send_gain_dep_cal(void *platform, int level) {
     bool ret_val = false;
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -1886,6 +1888,9 @@ void *platform_init(struct audio_device *adev)
     char *tmp = NULL;
     char mixer_xml_file[MIXER_PATH_MAX_LENGTH]= {0};
     int idx;
+    struct mixer_ctl *ctl = NULL;
+    const char *id_string = NULL;
+    int cfg_value = -1;
 
     adev->snd_card = audio_extn_utils_get_snd_card_num();
     if (adev->snd_card < 0) {
@@ -2349,6 +2354,41 @@ acdb_init_fail:
         strdup("QUAT_MI2S_TX SampleRate");
     my_data->current_backend_cfg[HDMI_TX_BACKEND].channels_mixer_ctl =
         strdup("QUAT_MI2S_TX Channels");
+
+    for (idx = 0; idx < MAX_CODEC_BACKENDS; idx++) {
+        if (my_data->current_backend_cfg[idx].bitwidth_mixer_ctl) {
+            ctl = mixer_get_ctl_by_name(adev->mixer,
+                         my_data->current_backend_cfg[idx].bitwidth_mixer_ctl);
+            id_string = platform_get_mixer_control(ctl);
+            if (id_string) {
+                cfg_value = audio_extn_utils_get_bit_width_from_string(id_string);
+                if (cfg_value > 0)
+                    my_data->current_backend_cfg[idx].bit_width = cfg_value;
+            }
+        }
+
+        if (my_data->current_backend_cfg[idx].samplerate_mixer_ctl) {
+            ctl = mixer_get_ctl_by_name(adev->mixer,
+                         my_data->current_backend_cfg[idx].samplerate_mixer_ctl);
+            id_string = platform_get_mixer_control(ctl);
+            if (id_string) {
+                cfg_value = audio_extn_utils_get_sample_rate_from_string(id_string);
+                if (cfg_value > 0)
+                    my_data->current_backend_cfg[idx].sample_rate = cfg_value;
+            }
+        }
+
+        if (my_data->current_backend_cfg[idx].channels_mixer_ctl) {
+            ctl = mixer_get_ctl_by_name(adev->mixer,
+                         my_data->current_backend_cfg[idx].channels_mixer_ctl);
+            id_string = platform_get_mixer_control(ctl);
+            if (id_string) {
+                cfg_value = audio_extn_utils_get_channels_from_string(id_string);
+                if (cfg_value > 0)
+                    my_data->current_backend_cfg[idx].channels = cfg_value;
+            }
+        }
+    }
 
     ret = audio_extn_utils_get_codec_version(snd_card_name,
                                              my_data->adev->snd_card,
@@ -7636,3 +7676,20 @@ int platform_get_mmap_data_fd(void *platform __unused, int fe_dev __unused,
     return -1;
 }
 #endif
+
+static const char *platform_get_mixer_control(struct mixer_ctl *ctl)
+{
+    int id = -1;
+    const char *id_string = NULL;
+
+    if (!ctl) {
+        ALOGD("%s: mixer ctl not obtained", __func__);
+    } else {
+        id = mixer_ctl_get_value(ctl, 0);
+        if (id >= 0) {
+            id_string = mixer_ctl_get_enum_string(ctl, id);
+        }
+    }
+
+    return id_string;
+}
