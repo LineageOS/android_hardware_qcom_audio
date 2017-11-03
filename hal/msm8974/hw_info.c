@@ -397,6 +397,11 @@ static void  update_hardware_info_sdm845(struct hardware_info *hw_info, const ch
     }
 }
 
+static void  update_hardware_info_sdx(struct hardware_info *hw_info __unused, const char *snd_card_name __unused)
+{
+    ALOGW("%s: Not a sdx device", __func__);
+}
+
 static void  update_hardware_info_8974(struct hardware_info *hw_info, const char *snd_card_name)
 {
     if (!strcmp(snd_card_name, "msm8974-taiko-mtp-snd-card")) {
@@ -553,6 +558,9 @@ void *hw_info_init(const char *snd_card_name)
     } else if (strstr(snd_card_name, "sdm660") || strstr(snd_card_name, "sdm670")) {
         ALOGV("Bear - variant soundcard");
         update_hardware_info_bear(hw_info, snd_card_name);
+    } else if (strncmp(snd_card_name, "sdx", sizeof("sdx"))) {
+        ALOGV("SDX - variant soundcard");
+        update_hardware_info_sdx(hw_info, snd_card_name);
     } else {
         ALOGE("%s: Unsupported target %s:",__func__, snd_card_name);
         free(hw_info);
