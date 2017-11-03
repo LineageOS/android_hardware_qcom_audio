@@ -51,7 +51,7 @@
 #endif
 
 #ifndef INCALL_MUSIC_ENABLED
-#define AUDIO_OUTPUT_FLAG_INCALL_MUSIC 0x8000
+#define AUDIO_OUTPUT_FLAG_INCALL_MUSIC 0x80000000 //0x8000
 #endif
 
 #ifndef AUDIO_DEVICE_OUT_FM_TX
@@ -101,6 +101,10 @@
 
 #ifndef AUDIO_OUTPUT_FLAG_TIMESTAMP
 #define AUDIO_OUTPUT_FLAG_TIMESTAMP 0x10000
+#endif
+
+#ifndef AUDIO_OUTPUT_FLAG_INTERACTIVE
+#define AUDIO_OUTPUT_FLAG_INTERACTIVE 0x40000
 #endif
 
 #ifndef COMPRESS_METADATA_NEEDED
@@ -197,6 +201,9 @@ int32_t audio_extn_get_afe_proxy_channel_count();
 #define audio_extn_usb_enable_sidetone(device, enable)                 (0)
 #define audio_extn_usb_set_sidetone_gain(parms, value, len)            (0)
 #define audio_extn_usb_is_capture_supported()                          (0)
+#define audio_extn_usb_get_max_channels(p)                             (0)
+#define audio_extn_usb_get_max_bit_width(p)                            (0)
+#define audio_extn_usb_get_sup_sample_rates(t, s, l)                   (0)
 #else
 void audio_extn_usb_init(void *adev);
 void audio_extn_usb_deinit();
@@ -210,6 +217,9 @@ int audio_extn_usb_enable_sidetone(int device, bool enable);
 int audio_extn_usb_set_sidetone_gain(struct str_parms *parms,
                                      char *value, int len);
 bool audio_extn_usb_is_capture_supported();
+int audio_extn_usb_get_max_channels(bool playback);
+int audio_extn_usb_get_max_bit_width(bool playback);
+int audio_extn_usb_get_sup_sample_rates(int type, uint32_t *sr, uint32_t l);
 #endif
 
 #ifndef SPLIT_A2DP_ENABLED
@@ -892,6 +902,12 @@ int audio_extn_utils_compress_correct_drift(
 int audio_extn_utils_set_channel_map(
             struct stream_out *out,
             struct audio_out_channel_map_param *channel_map_param);
+int audio_extn_utils_set_pan_scale_params(
+            struct stream_out *out,
+            struct mix_matrix_params *mm_params);
+int audio_extn_utils_set_downmix_params(
+            struct stream_out *out,
+            struct mix_matrix_params *mm_params);
 #ifdef AUDIO_HW_LOOPBACK_ENABLED
 /* API to create audio patch */
 int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,
