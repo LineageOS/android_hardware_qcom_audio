@@ -46,6 +46,7 @@
 #include <cutils/properties.h>
 #include "audio_extn.h"
 #include <linux/msm_audio_calibration.h>
+#include <linux/msm_audio.h>
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
@@ -59,7 +60,29 @@
 #define MIN_SPKR_TEMP_Q6 (-30 * (1 << 6))
 #define MAX_SPKR_TEMP_Q6 (80 * (1 << 6))
 #define VI_FEED_CHANNEL "VI_FEED_TX Channels"
+#define WSA8815_NAME_LEFT "wsatz.13"
+#define WSA8815_NAME_RIGHT "wsatz.14"
+#define WCD_LEFT_BOOST_MAX_STATE "SPKR Left Boost Max State"
+#define WCD_RIGHT_BOOST_MAX_STATE "SPKR Right Boost Max State"
+#define WSA_LEFT_BOOST_LEVEL "SpkrLeft Boost Level"
+#define WSA_RIGHT_BOOST_LEVEL "SpkrRight Boost Level"
+/* Min and max resistance value in lookup table. */
+#define MIN_RESISTANCE_LOOKUP (3.2)
+#define MAX_RESISTANCE_LOOKUP (8)
+#define SPV3_LOOKUP_TABLE_ROWS (49)
+/* default limiter threshold is 0dB */
+#define DEFAULT_LIMITER_TH (0x0)
+#define AFE_API_VERSION_SUPPORT_SPV3 (0x2)
+enum spv3_boost_max_state {
+    BOOST_NO_MAX_STATE,
+    BOOST_MAX_STATE_1,
+    BOOST_MAX_STATE_2,
+};
 
+enum sp_version {
+    SP_V2 = 0x1,
+    SP_V3 = AFE_API_VERSION_SUPPORT_SPV3,
+};
 /*Set safe temp value to 40C*/
 #define SAFE_SPKR_TEMP 40
 #define SAFE_SPKR_TEMP_Q6 (SAFE_SPKR_TEMP * (1 << 6))
@@ -162,6 +185,8 @@ struct speaker_prot_session {
     pthread_cond_t cal_wait_condition;
     bool init_check;
     volatile bool thread_exit;
+    unsigned int sp_version;
+    int limiter_th[SP_V2_NUM_MAX_SPKRS];
 };
 
 static struct pcm_config pcm_config_skr_prot = {
@@ -180,6 +205,86 @@ struct spkr_tz_names {
     char *spkr_2_name;
 };
 
+struct spv3_boost {
+    /* bit7-4: first stage; bit 3-0: second stage */
+    int boost_value;
+    int max_state;
+};
+
+#define SPV3_BOOST_VALUE_STATE(value, state) \
+{    .boost_value = (value), .max_state = (state) }
+
+static struct spv3_boost spv3_boost_lookup_table[SPV3_LOOKUP_TABLE_ROWS] = {
+    SPV3_BOOST_VALUE_STATE(0xc7, BOOST_MAX_STATE_1),
+    SPV3_BOOST_VALUE_STATE(0xd7, BOOST_MAX_STATE_1),
+    SPV3_BOOST_VALUE_STATE(0xd7, BOOST_MAX_STATE_1),
+    SPV3_BOOST_VALUE_STATE(0xe7, BOOST_MAX_STATE_1),
+    SPV3_BOOST_VALUE_STATE(0xe7, BOOST_MAX_STATE_1),
+    SPV3_BOOST_VALUE_STATE(0xf7, BOOST_MAX_STATE_1),
+    SPV3_BOOST_VALUE_STATE(0x70, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x70, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x71, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x71, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x72, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x72, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x73, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x73, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x74, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x75, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x75, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x76, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x76, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x77, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x77, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x78, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x78, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x79, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x79, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7a, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7a, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7a, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7b, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7b, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7c, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7c, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7d, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7d, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7e, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7e, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+};
+
+/* 3.2 ohm in q24 format: (3.2 * (1 << 24)) */
+#define MIN_LOOKUP_RESISTANCE_SPKR_Q24    (53687091)
+/* 8 ohm in q24 format: (8 * (1 << 24)) */
+#define MAX_LOOKUP_RESISTANCE_SPKR_Q24    (134217728)
+/* 0.1 ohm in q24 format: (0.1 * (1 <<24)) */
+#define LOOKUP_RESISTANCE_GAP_SPKR_Q24    (1677722)
+
+/* 3.2ohm : 0.1ohm : 8ohm lookup table */
+static int spv3_limiter_th_q27_table[SPV3_LOOKUP_TABLE_ROWS] = {
+    -526133494, -508685189, -491236884, -473788580, -457682452, -441576325,
+    -426812375, -410706248, -395942298, -382520525, -367756575, -354334802,
+    -340913029, -327491256, -315411661, -301989888, -289910292, -277830697,
+    -265751101, -255013683, -242934088, -232196669, -221459251, -210721833,
+    -199984415, -190589174, -179851756, -170456515, -159719096, -150323855,
+    -140928614, -131533373, -122138132, -114085069, -104689828, -95294587,
+    -87241523,  -79188460,  -69793219,  -61740155,  -53687091,  -45634028,
+    -37580964,  -29527900,  -22817014,  -14763950,  -6710886,   0,
+    0
+};
 static struct speaker_prot_session handle;
 static int vi_feed_no_channels;
 static struct spkr_tz_names tz_names;
@@ -380,6 +485,11 @@ static int set_spkr_prot_cal(int cal_fd,
     cal_data.cal_type.cal_info.t0[SP_V2_SPKR_1] = protCfg->t0[SP_V2_SPKR_1];
     cal_data.cal_type.cal_info.t0[SP_V2_SPKR_2] = protCfg->t0[SP_V2_SPKR_2];
     cal_data.cal_type.cal_info.mode = protCfg->mode;
+#ifdef MSM_SPKR_PROT_SPV3
+    cal_data.cal_type.cal_info.sp_version = protCfg->sp_version;
+    cal_data.cal_type.cal_info.limiter_th[SP_V2_SPKR_1] = protCfg->limiter_th[SP_V2_SPKR_1];
+    cal_data.cal_type.cal_info.limiter_th[SP_V2_SPKR_2] = protCfg->limiter_th[SP_V2_SPKR_2];
+#endif
     property_get("persist.vendor.audio.spkr.cal.duration", value, "0");
     if (atoi(value) > 0) {
         ALOGD("%s: quick calibration enabled", __func__);
@@ -441,6 +551,179 @@ void destroy_thread_params()
     if(!handle.wsa_found) {
         pthread_mutex_destroy(&handle.spkr_prot_thermalsync_mutex);
         pthread_cond_destroy(&handle.spkr_prot_thermalsync);
+    }
+}
+
+static bool is_wsa_present(void)
+{
+   ALOGD("%s: tz1: %s, tz2: %s", __func__,
+          tz_names.spkr_1_name, tz_names.spkr_2_name);
+   handle.spkr_1_tzn = get_tzn(tz_names.spkr_1_name);
+   handle.spkr_2_tzn = get_tzn(tz_names.spkr_2_name);
+   if ((handle.spkr_1_tzn >= 0) || (handle.spkr_2_tzn >= 0))
+        handle.wsa_found = true;
+
+   return handle.wsa_found;
+}
+
+static void audio_extn_check_wsa_support_sp_v3(struct audio_device *adev,
+                unsigned int num_of_spkrs, bool *wsa_support_spv3)
+{
+    unsigned int i = 0;
+    if (!is_wsa_present() ||
+        platform_spkr_prot_is_wsa_analog_mode(adev)){
+        for (i = 0; i < num_of_spkrs; i++)
+            wsa_support_spv3[i] = false;
+
+        return;
+    }
+
+    if (!strncmp(WSA8815_NAME_LEFT, tz_names.spkr_1_name,
+            sizeof(WSA8815_NAME_LEFT)) ||
+            !strncmp(WSA8815_NAME_RIGHT, tz_names.spkr_1_name,
+                sizeof(WSA8815_NAME_RIGHT))) {
+        wsa_support_spv3[SP_V2_SPKR_1] = true;
+    } else {
+        wsa_support_spv3[SP_V2_SPKR_1] = false;
+        ALOGI("%s: Speaker1(%s) is not wsa8815.", __func__, tz_names.spkr_1_name);
+    }
+
+    if (num_of_spkrs == SP_V2_NUM_MAX_SPKRS &&
+        (!strncmp(WSA8815_NAME_RIGHT, tz_names.spkr_2_name,
+                    sizeof(WSA8815_NAME_RIGHT)) ||
+            !strncmp(WSA8815_NAME_LEFT, tz_names.spkr_2_name,
+                    sizeof(WSA8815_NAME_LEFT)))) {
+        wsa_support_spv3[SP_V2_SPKR_2] = true;
+    } else {
+        wsa_support_spv3[SP_V2_SPKR_2] = false;
+        ALOGI("%s: Speaker2(%s) is not wsa8815.", __func__, tz_names.spkr_2_name);
+    }
+
+}
+
+int audio_extn_set_wcd_boost_max_state(struct audio_device *adev,
+                int boost_max_state, int wsa_num)
+{
+    struct mixer_ctl *ctl = NULL;
+    const char *mixer_ctl_name[] = {
+        WCD_LEFT_BOOST_MAX_STATE,
+        WCD_RIGHT_BOOST_MAX_STATE
+    };
+    int status = 0;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name[wsa_num]);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                __func__, mixer_ctl_name[wsa_num]);
+        return -EINVAL;
+    }
+
+    status = mixer_ctl_set_value(ctl, 0, boost_max_state);
+    if (status < 0) {
+        ALOGE("%s: failed to set WCD boost state.\n", __func__);
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+int audio_extn_set_wsa_boost_level(struct audio_device *adev,
+                int wsa_num, int boost_table_index)
+{
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name_boost_level[] = {
+        WSA_LEFT_BOOST_LEVEL,
+        WSA_RIGHT_BOOST_LEVEL
+    };
+    int status = 0;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer,
+        mixer_ctl_name_boost_level[wsa_num]);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                __func__, mixer_ctl_name_boost_level[wsa_num]);
+        return -EINVAL;
+    }
+
+    status = mixer_ctl_set_value(ctl, 0,
+                    spv3_boost_lookup_table[boost_table_index].boost_value);
+
+    if (status < 0) {
+        ALOGE("%s: Could not set ctl for mixer %s\n", __func__,
+                mixer_ctl_name_boost_level[wsa_num]);
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+static int audio_extn_config_spv3(struct audio_device *adev, unsigned int wsa_num)
+{
+    float dcr = 0;
+    unsigned int r0_index = 0;
+    int boost_max_state = 0;
+    int ret = 0;
+
+    /* get R0 value */
+    dcr = ((float)handle.sp_r0t0_cal.r0[wsa_num] / MIN_RESISTANCE_SPKR_Q24 * 2);
+    if (dcr < MIN_RESISTANCE_LOOKUP) {
+        ALOGV("%s: resistance %f changes to min value of 3.2.",
+                __func__, dcr);
+        dcr = MIN_RESISTANCE_LOOKUP;
+    }
+
+    if (dcr > MAX_RESISTANCE_LOOKUP) {
+        ALOGV("%s: resistance %f changes to max value of 8.",
+                __func__, dcr);
+        dcr = MAX_RESISTANCE_LOOKUP;
+    }
+
+    r0_index = (int)((dcr - MIN_RESISTANCE_LOOKUP) * 10);
+    if (r0_index >= SPV3_LOOKUP_TABLE_ROWS) {
+        ALOGE("%s: r0_index=%d overflows.", __func__, r0_index);
+        return -EINVAL;
+    }
+
+    boost_max_state = spv3_boost_lookup_table[r0_index].max_state;
+    ret = audio_extn_set_wcd_boost_max_state(adev, boost_max_state, wsa_num);
+    if (ret < 0) {
+        ALOGE("%s: failed to set wcd max boost state.",
+            __func__);
+        return -EINVAL;
+    }
+
+    ret = audio_extn_set_wsa_boost_level(adev, wsa_num, r0_index);
+    if (ret < 0) {
+        ALOGE("%s: failed to set wsa boost level.",
+            __func__);
+        return -EINVAL;
+    }
+
+    handle.limiter_th[wsa_num] = spv3_limiter_th_q27_table[r0_index];
+
+    return 0;
+}
+
+static void audio_extn_check_config_sp_v3(struct audio_device *adev,
+                bool spv3_enable, unsigned int afe_api_version)
+{
+    int chn = 0;
+    bool wsa_support_spv3[SP_V2_NUM_MAX_SPKRS] = {false, false};
+
+    if (spv3_enable && afe_api_version >= AFE_API_VERSION_SUPPORT_SPV3) {
+        handle.sp_version = SP_V2;
+        audio_extn_check_wsa_support_sp_v3(adev, vi_feed_no_channels, wsa_support_spv3);
+        /*
+         * In case of WSA8815+8810, invalid limiter threshold is sent to DSP
+         * for WSA8810 speaker. DSP ignores the invalid value and use default one.
+         * The approach let spv3 apply on 8815 and spv2 on 8810 respectively.
+         */
+        for (chn = 0; chn < vi_feed_no_channels; chn++) {
+            if (wsa_support_spv3[chn] && !audio_extn_config_spv3(adev, chn))
+                handle.sp_version = SP_V3;
+            else
+                handle.limiter_th[chn] = DEFAULT_LIMITER_TH;
+        }
     }
 }
 
@@ -706,6 +989,8 @@ static void* spkr_calibration_thread()
     int spk_1_tzn, spk_2_tzn;
     char buf[32] = {0};
     int ret;
+    bool spv3_enable = false;
+    unsigned int afe_api_version = 0;
 
     memset(&protCfg, 0, sizeof(protCfg));
     /* If the value of this persist.vendor.audio.spkr.cal.duration is 0
@@ -737,6 +1022,9 @@ static void* spkr_calibration_thread()
         pthread_exit(0);
         return NULL;
     }
+
+    spv3_enable = property_get_bool("persist.vendor.audio.spv3.enable", false);
+    afe_api_version = property_get_int32("persist.vendor.audio.avs.afe_api_version", 0);
 
     fp = fopen(CALIB_FILE,"rb");
     if (fp) {
@@ -770,6 +1058,9 @@ static void* spkr_calibration_thread()
             } else
                 handle.spkr_prot_mode = MSM_SPKR_PROT_CALIBRATED;
             close(acdb_fd);
+
+            audio_extn_check_config_sp_v3(adev, spv3_enable, vi_feed_no_channels);
+
             pthread_exit(0);
             return NULL;
         }
@@ -921,6 +1212,9 @@ static void* spkr_calibration_thread()
     if (handle.thermal_handle)
         dlclose(handle.thermal_handle);
     handle.thermal_handle = NULL;
+
+    audio_extn_check_config_sp_v3(adev, spv3_enable, vi_feed_no_channels);
+
     pthread_exit(0);
     return NULL;
 }
@@ -934,17 +1228,6 @@ static int thermal_client_callback(int temp)
     pthread_cond_signal(&handle.spkr_prot_thermalsync);
     pthread_mutex_unlock(&handle.spkr_prot_thermalsync_mutex);
     return 0;
-}
-
-static bool is_wsa_present(void)
-{
-   ALOGD("%s: tz1: %s, tz2: %s", __func__,
-          tz_names.spkr_1_name, tz_names.spkr_2_name);
-   handle.spkr_1_tzn = get_tzn(tz_names.spkr_1_name);
-   handle.spkr_2_tzn = get_tzn(tz_names.spkr_2_name);
-   if ((handle.spkr_1_tzn >= 0) || (handle.spkr_2_tzn >= 0))
-        handle.wsa_found = true;
-   return handle.wsa_found;
 }
 
 void audio_extn_spkr_prot_set_parameters(struct str_parms *parms,
@@ -1449,6 +1732,11 @@ int audio_extn_select_spkr_prot_cal_data(snd_device_t snd_device)
             break;
     }
     protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
+#ifdef MSM_SPKR_PROT_SPV3
+    protCfg.sp_version = handle.sp_version;
+    protCfg.limiter_th[SP_V2_SPKR_1] = handle.limiter_th[SP_V2_SPKR_1];
+    protCfg.limiter_th[SP_V2_SPKR_2] = handle.limiter_th[SP_V2_SPKR_2];
+#endif
     ret = set_spkr_prot_cal(acdb_fd, &protCfg);
     if (ret)
         ALOGE("%s: speaker protection cal data swap failed", __func__);
