@@ -1004,6 +1004,8 @@ static void update_codec_type_and_interface(struct platform_data * my_data, cons
                   sizeof("sdm670-skuw-snd-card")) ||
          !strncmp(snd_card_name, "sdm660-snd-card-skush",
                   sizeof("sdm660-snd-card-skush")) ||
+         !strncmp(snd_card_name, "sdm670-360cam-snd-card",
+                  sizeof("sdm670-360cam-snd-card")) ||
          !strncmp(snd_card_name, "sdm660-snd-card-mtp",
                   sizeof("sdm660-snd-card-mtp")) ||
          !strncmp(snd_card_name, "sdm670-mtp-snd-card",
