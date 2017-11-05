@@ -1989,7 +1989,7 @@ static bool output_drives_call(struct audio_device *adev, struct stream_out *out
 
 // note: this call is safe only if the stream_cb is
 // removed first in close_output_stream (as is done now).
-static void out_snd_mon_cb(void * stream, struct str_parms * parms)
+__attribute__ ((unused)) static void out_snd_mon_cb(void * stream, struct str_parms * parms)
 {
     if (!stream || !parms)
         return;
@@ -2752,7 +2752,7 @@ static int in_dump(const struct audio_stream *stream __unused,
     return 0;
 }
 
-static void in_snd_mon_cb(void * stream, struct str_parms * parms)
+__attribute__ ((unused)) static void in_snd_mon_cb(void * stream, struct str_parms * parms)
 {
     if (!stream || !parms)
         return;
@@ -3948,7 +3948,7 @@ static int period_size_is_plausible_for_low_latency(int period_size)
     }
 }
 
-static void adev_snd_mon_cb(void *cookie, struct str_parms *parms)
+__attribute__ ((unused)) static void adev_snd_mon_cb(void *cookie, struct str_parms *parms)
 {
     bool is_snd_card_status = false;
     bool is_ext_device_status = false;
