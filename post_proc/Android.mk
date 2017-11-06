@@ -1,6 +1,12 @@
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_POST_PROC)),true)
 LOCAL_PATH:= $(call my-dir)
 
+qcom_post_proc_common_cflags := \
+    -O2 -fvisibility=hidden \
+    -Wall -Werror \
+    -Wno-unused-function \
+    -Wno-unused-variable
+
 include $(CLEAR_VARS)
 
 ifneq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),false)
@@ -15,7 +21,7 @@ LOCAL_SRC_FILES:= \
 	reverb.c \
 	effect_api.c
 
-LOCAL_CFLAGS+= -O2 -fvisibility=hidden
+LOCAL_CFLAGS += $(qcom_post_proc_common_cflags)
 
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
