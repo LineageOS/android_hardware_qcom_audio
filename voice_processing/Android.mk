@@ -11,6 +11,12 @@ LOCAL_MODULE_RELATIVE_PATH := soundfx
 LOCAL_SRC_FILES:= \
     voice_processing.c
 
+LOCAL_CFLAGS += \
+    -Wall \
+    -Werror \
+    -Wno-unused-function \
+    -Wno-unused-variable \
+
 LOCAL_C_INCLUDES += \
     $(call include-path-for, audio-effects)
 
