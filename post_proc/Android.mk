@@ -1,6 +1,12 @@
 
 LOCAL_PATH:= $(call my-dir)
 
+qcom_post_proc_common_cflags := \
+    -O2 -fvisibility=hidden \
+    -Wall -Werror \
+    -Wno-unused-function \
+    -Wno-unused-variable \
+
 include $(CLEAR_VARS)
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
@@ -26,7 +32,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUDIOSPHERE)),true)
     LOCAL_SRC_FILES += asphere.c
 endif
 
-LOCAL_CFLAGS+= -O2 -fvisibility=hidden
+LOCAL_CFLAGS += $(qcom_post_proc_common_cflags)
 
 ifneq ($(strip $(AUDIO_FEATURE_DISABLED_DTS_EAGLE)),true)
     LOCAL_CFLAGS += -DDTS_EAGLE
@@ -98,7 +104,7 @@ LOCAL_CFLAGS := -DLIB_AUDIO_HAL="/vendor/lib/hw/audio.primary."$(TARGET_BOARD_PL
 LOCAL_SRC_FILES:= \
         volume_listener.c
 
-LOCAL_CFLAGS+= -O2 -fvisibility=hidden
+LOCAL_CFLAGS += $(qcom_post_proc_common_cflags)
 
 LOCAL_SHARED_LIBRARIES := \
         libcutils \
