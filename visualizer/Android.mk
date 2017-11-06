@@ -25,6 +25,11 @@ ifneq ($(filter sdm660 sdm845 msm8998 apq8098_latv,$(TARGET_BOARD_PLATFORM)),)
     LOCAL_CFLAGS += -DCAPTURE_DEVICE=7
 endif
 
+LOCAL_CFLAGS += \
+    -Wall \
+    -Werror \
+    -Wno-unused-variable \
+
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
 	liblog \
