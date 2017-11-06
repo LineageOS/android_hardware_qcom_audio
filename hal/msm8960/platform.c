@@ -1374,3 +1374,9 @@ int platform_set_acdb_metainfo_key(void *platform __unused, char *name __unused,
 {
     return 0;
 }
+
+int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
+                              uint32_t *size)
+{
+    return -ENOSYS;
+}

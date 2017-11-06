@@ -102,6 +102,10 @@
 /* ToDo: Check and update a proper value in msec */
 #define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 50
 
+#ifndef MAX_CHANNELS_SUPPORTED
+#define MAX_CHANNELS_SUPPORTED 8
+#endif
+
 struct string_to_enum {
     const char *name;
     uint32_t value;
@@ -122,6 +126,7 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_TIMESTAMP),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_VOIP_RX),
+    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_INTERACTIVE),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_NONE),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_FAST),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_HW_HOTWORD),
@@ -821,6 +826,9 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
     int snd_device = split_snd_device, snd_device_be_idx = -1;
     int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
     char value[PROPERTY_VALUE_MAX] = {0};
+    struct streams_io_cfg *s_info = NULL;
+    struct listnode *node = NULL;
+    int direct_app_type = 0;
 
     ALOGV("%s: usecase->out_snd_device %s, usecase->in_snd_device %s, split_snd_device %s",
           __func__, platform_get_snd_device_name(usecase->out_snd_device),
@@ -837,6 +845,7 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         (usecase->id != USECASE_AUDIO_PLAYBACK_MULTI_CH) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_ULL) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_VOIP) &&
+        (!is_interactive_usecase(usecase->id)) &&
         (!is_offload_usecase(usecase->id)) &&
         (usecase->type != PCM_CAPTURE)) {
         ALOGV("%s: a rx/tx/loopback path where app type cfg is not required %d", __func__, usecase->id);
@@ -917,7 +926,18 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         }
         sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
 
-        app_type = usecase->stream.out->app_type_cfg.app_type;
+        /* Interactive streams are supported with only direct app type id.
+         * Get Direct profile app type and use it for interactive streams
+         */
+        list_for_each(node, &adev->streams_output_cfg_list) {
+            s_info = node_to_item(node, struct streams_io_cfg, list);
+            if (s_info->flags.out_flags == AUDIO_OUTPUT_FLAG_DIRECT)
+                direct_app_type = s_info->app_type_cfg.app_type;
+        }
+        if (usecase->stream.out->flags == (audio_output_flags_t) AUDIO_OUTPUT_FLAG_INTERACTIVE)
+            app_type = direct_app_type;
+        else
+            app_type = usecase->stream.out->app_type_cfg.app_type;
         app_type_cfg[len++] = app_type;
         app_type_cfg[len++] = acdb_dev_id;
         if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
@@ -2157,6 +2177,103 @@ int audio_extn_utils_set_channel_map(
         out->channel_map_param.channel_map[i] = channel_map_param->channel_map[i];
     }
     ret = 0;
+exit:
+    return ret;
+}
+
+int audio_extn_utils_set_pan_scale_params(
+            struct stream_out *out,
+            struct mix_matrix_params *mm_params)
+{
+    int ret = -EINVAL, i = 0, j = 0;
+
+    if (mm_params == NULL && out != NULL) {
+        ALOGE("%s:: Invalid mix matrix params", __func__);
+        goto exit;
+    }
+
+    if (mm_params->num_output_channels > MAX_CHANNELS_SUPPORTED ||
+        mm_params->num_output_channels <= 0 ||
+        mm_params->num_input_channels > MAX_CHANNELS_SUPPORTED ||
+        mm_params->num_input_channels <= 0)
+        goto exit;
+
+    out->pan_scale_params.num_output_channels = mm_params->num_output_channels;
+    out->pan_scale_params.num_input_channels = mm_params->num_input_channels;
+    out->pan_scale_params.has_output_channel_map =
+                                        mm_params->has_output_channel_map;
+    for (i = 0; i < mm_params->num_output_channels; i++)
+        out->pan_scale_params.output_channel_map[i] =
+                                         mm_params->output_channel_map[i];
+
+    out->pan_scale_params.has_input_channel_map =
+                                         mm_params->has_input_channel_map;
+    for (i = 0; i < mm_params->num_input_channels; i++)
+        out->pan_scale_params.input_channel_map[i] =
+                                         mm_params->input_channel_map[i];
+
+    out->pan_scale_params.has_mixer_coeffs = mm_params->has_mixer_coeffs;
+    for (i = 0; i < mm_params->num_output_channels; i++)
+        for (j = 0; j < mm_params->num_input_channels; j++) {
+            //Convert the channel coefficient gains in Q14 format
+            out->pan_scale_params.mixer_coeffs[i][j] =
+                               mm_params->mixer_coeffs[i][j] * (2 << 13);
+        }
+
+    ret = platform_set_stream_pan_scale_params(out->dev->platform,
+                                               out->pcm_device_id,
+                                               out->pan_scale_params);
+
+exit:
+    return ret;
+}
+
+int audio_extn_utils_set_downmix_params(
+            struct stream_out *out,
+            struct mix_matrix_params *mm_params)
+{
+    int ret = -EINVAL, i = 0, j = 0;
+    struct audio_usecase *usecase = NULL;
+
+    if (mm_params == NULL && out != NULL) {
+        ALOGE("%s:: Invalid mix matrix params", __func__);
+        goto exit;
+    }
+
+    if (mm_params->num_output_channels > MAX_CHANNELS_SUPPORTED ||
+        mm_params->num_output_channels <= 0 ||
+        mm_params->num_input_channels > MAX_CHANNELS_SUPPORTED ||
+        mm_params->num_input_channels <= 0)
+        goto exit;
+
+    usecase = get_usecase_from_list(out->dev, out->usecase);
+    out->downmix_params.num_output_channels = mm_params->num_output_channels;
+    out->downmix_params.num_input_channels = mm_params->num_input_channels;
+
+    out->downmix_params.has_output_channel_map =
+                                        mm_params->has_output_channel_map;
+    for (i = 0; i < mm_params->num_output_channels; i++) {
+        out->downmix_params.output_channel_map[i] =
+                                          mm_params->output_channel_map[i];
+    }
+
+    out->downmix_params.has_input_channel_map =
+                                        mm_params->has_input_channel_map;
+    for (i = 0; i < mm_params->num_input_channels; i++)
+        out->downmix_params.input_channel_map[i] =
+                                          mm_params->input_channel_map[i];
+
+    out->downmix_params.has_mixer_coeffs = mm_params->has_mixer_coeffs;
+    for (i = 0; i < mm_params->num_output_channels; i++)
+        for (j = 0; j < mm_params->num_input_channels; j++)
+            out->downmix_params.mixer_coeffs[i][j] =
+                               mm_params->mixer_coeffs[i][j];
+
+    ret = platform_set_stream_downmix_params(out->dev->platform,
+                                             out->pcm_device_id,
+                                             usecase->out_snd_device,
+                                             out->downmix_params);
+
 exit:
     return ret;
 }
