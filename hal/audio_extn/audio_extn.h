@@ -216,6 +216,7 @@ int32_t audio_extn_get_afe_proxy_channel_count();
 #define audio_extn_usb_get_max_channels(p)                             (0)
 #define audio_extn_usb_get_max_bit_width(p)                            (0)
 #define audio_extn_usb_get_sup_sample_rates(t, s, l)                   (0)
+#define audio_extn_usb_is_tunnel_supported()                           (0)
 #else
 void audio_extn_usb_init(void *adev);
 void audio_extn_usb_deinit();
@@ -232,6 +233,7 @@ bool audio_extn_usb_is_capture_supported();
 int audio_extn_usb_get_max_channels(bool playback);
 int audio_extn_usb_get_max_bit_width(bool playback);
 int audio_extn_usb_get_sup_sample_rates(int type, uint32_t *sr, uint32_t l);
+bool audio_extn_usb_is_tunnel_supported();
 #endif
 
 #ifndef SPLIT_A2DP_ENABLED

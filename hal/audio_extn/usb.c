@@ -1005,6 +1005,11 @@ bool audio_extn_usb_is_capture_supported()
     return usbmod->is_capture_supported;
 }
 
+bool audio_extn_usb_is_tunnel_supported()
+{
+    return true;
+}
+
 void audio_extn_usb_add_device(audio_devices_t device, int card)
 {
     struct usb_card_config *usb_card_info;
