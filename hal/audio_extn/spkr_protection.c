@@ -51,7 +51,7 @@
 #define MAX_RESISTANCE_SPKR_Q24 (40 * (1 << 24))
 
 /*Path where the calibration file will be stored*/
-#define CALIB_FILE "/data/misc/audio/audio.cal"
+#define CALIB_FILE "/data/vendor/audio/audio.cal"
 
 /*Time between retries for calibartion or intial wait time
   after boot up*/
