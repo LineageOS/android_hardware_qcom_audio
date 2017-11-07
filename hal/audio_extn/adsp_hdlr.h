@@ -66,7 +66,7 @@ int audio_extn_adsp_hdlr_stream_deregister_event(void *handle, void *param);
 #define audio_extn_adsp_hdlr_stream_close(handle)                            (0)
 #define audio_extn_adsp_hdlr_stream_set_callback(handle, callback, cookie)   (0)
 #define audio_extn_adsp_hdlr_stream_set_param(handle, cmd, param)            (0)
-#define audio_extn_adsp_hdlr_stream_register_event(stream_data, param, cb)   (0)
+#define audio_extn_adsp_hdlr_stream_register_event(handle, param, cb, cookie) (0)
 #define audio_extn_adsp_hdlr_stream_deregister_event(handle, param)          (0)
 #endif
 

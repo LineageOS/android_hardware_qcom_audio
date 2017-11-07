@@ -53,6 +53,9 @@
 #include "audio_hw.h"
 #include "audio_defs.h"
 #include "platform.h"
+#include "audio_extn.h"
+#include "platform_api.h"
+#include "adsp_hdlr.h"
 
 /* These values defined by ADSP */
 #define ADSP_DEC_SERVICE_ID 1
@@ -482,7 +485,7 @@ int audio_extn_ip_hdlr_intf_init(void **handle, char *lib_path, void **lib_handl
         ret = snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
                        "Playback ION LIB FD %d", pcm_device_id);
         if (ret < 0) {
-            ALOGE("%s:[%d] snprintf failed",__func__, ip_hdlr->ref_cnt, ret);
+            ALOGE("%s:[%d] snprintf failed %d", __func__, ip_hdlr->ref_cnt, ret);
             goto dlclose;
         }
         ALOGV("%s: fd = %d  pcm_id = %d", __func__, lib_fd, pcm_device_id);
