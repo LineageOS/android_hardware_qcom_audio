@@ -164,7 +164,8 @@ void audio_extn_gef_init(struct audio_device *adev)
                 goto ERROR_RETURN;
             }
 
-            gef_hal_handle.gef_ptr = gef_hal_handle.init((void*)adev);
+            if (gef_hal_handle.init != NULL)
+                gef_hal_handle.gef_ptr = gef_hal_handle.init((void*)adev);
         }
     } else {
         ALOGE("%s: %s access failed", __func__, GEF_LIBRARY);
