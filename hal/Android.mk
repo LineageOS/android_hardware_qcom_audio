@@ -150,6 +150,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SPKR_PROTECTION)),true)
     LOCAL_SRC_FILES += audio_extn/spkr_protection.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_CIRRUS_SPKR_PROTECTION)),true)
+    LOCAL_CFLAGS += -DSPKR_PROT_ENABLED
+    LOCAL_SRC_FILES += audio_extn/cirrus_playback.c
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DSM_FEEDBACK)),true)
     LOCAL_CFLAGS += -DDSM_FEEDBACK_ENABLED
     LOCAL_SRC_FILES += audio_extn/dsm_feedback.c
