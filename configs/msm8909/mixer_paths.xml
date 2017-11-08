@@ -295,6 +295,19 @@
     <path name="audio-record">
         <ctl name="MultiMedia1 Mixer TERT_MI2S_TX" value="1" />
     </path>
+
+    <path name="audio-record-compress2">
+        <ctl name="MultiMedia17 Mixer TERT_MI2S_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress3">
+        <ctl name="MultiMedia18 Mixer TERT_MI2S_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress4">
+        <ctl name="MultiMedia19 Mixer TERT_MI2S_TX" value="1" />
+    </path>
+
     <!-- listen -->
     <ctl name="LSM1 MUX" value="None" />
     <ctl name="LSM2 MUX" value="None" />

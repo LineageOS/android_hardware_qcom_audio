@@ -182,14 +182,14 @@ struct platform_data {
 };
 
 static bool is_external_codec = false;
-static const int pcm_device_table_of_ext_codec[AUDIO_USECASE_MAX][2] = {
+static int pcm_device_table_of_ext_codec[AUDIO_USECASE_MAX][2] = {
    [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE_OF_EXT_CODEC, QCHAT_CALL_PCM_DEVICE_OF_EXT_CODEC}
 };
 
 /* List of use cases that has different PCM device ID's for internal and external codecs */
 static const int misc_usecase[AUDIO_USECASE_MAX] = { USECASE_QCHAT_CALL };
 
-static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
+static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {DEEP_BUFFER_PCM_DEVICE,
                                             DEEP_BUFFER_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
@@ -200,6 +200,9 @@ static const int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                      {PLAYBACK_OFFLOAD_DEVICE, PLAYBACK_OFFLOAD_DEVICE},
     [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_COMPRESS] = {COMPRESS_CAPTURE_DEVICE, COMPRESS_CAPTURE_DEVICE},
+    [USECASE_AUDIO_RECORD_COMPRESS2] = {-1, -1},
+    [USECASE_AUDIO_RECORD_COMPRESS3] = {-1, -1},
+    [USECASE_AUDIO_RECORD_COMPRESS4] = {-1, -1},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
                                           LOWLATENCY_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_FM_VIRTUAL] = {MULTIMEDIA2_PCM_DEVICE,
@@ -437,7 +440,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = 147,
 };
 
-struct snd_device_index {
+struct name_to_index {
     char name[100];
     unsigned int index;
 };
@@ -445,7 +448,7 @@ struct snd_device_index {
 #define TO_NAME_INDEX(X)   #X, X
 
 /* Used to get index from parsed sting */
-struct snd_device_index snd_device_name_index[SND_DEVICE_MAX] = {
+struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_WSA)},
@@ -535,6 +538,34 @@ struct snd_device_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_QUAD_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC)},
 };
+
+static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
+    /* TODO: This is not the complete list. Add new entries as
+       and when required
+    */
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_DEEP_BUFFER)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_LOW_LATENCY)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_MULTI_CH)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_LOW_LATENCY)},
+    {TO_NAME_INDEX(USECASE_VOICE_CALL)},
+    {TO_NAME_INDEX(USECASE_VOICE2_CALL)},
+    {TO_NAME_INDEX(USECASE_VOLTE_CALL)},
+    {TO_NAME_INDEX(USECASE_QCHAT_CALL)},
+    {TO_NAME_INDEX(USECASE_VOWLAN_CALL)},
+    {TO_NAME_INDEX(USECASE_VOICEMMODE1_CALL)},
+    {TO_NAME_INDEX(USECASE_VOICEMMODE2_CALL)},
+    {TO_NAME_INDEX(USECASE_INCALL_REC_UPLINK)},
+    {TO_NAME_INDEX(USECASE_INCALL_REC_DOWNLINK)},
+    {TO_NAME_INDEX(USECASE_INCALL_REC_UPLINK_AND_DOWNLINK)},
+    {TO_NAME_INDEX(USECASE_AUDIO_HFP_SCO)},
+    {TO_NAME_INDEX(USECASE_AUDIO_SPKR_CALIB_TX)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS2)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS3)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS4)},
+};
+
 
 #define NO_COLS 2
 static int msm_be_id_array_len;
@@ -1638,7 +1669,8 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
             app_type = APP_TYPE_SYSTEM_SOUNDS;
     } else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE)) {
         snd_device = usecase->in_snd_device;
-        app_type = APP_TYPE_GENERAL_RECORDING;
+        if (usecase->type == PCM_HFP_CALL)
+            app_type = APP_TYPE_GENERAL_RECORDING;
     }
 
     acdb_dev_id = acdb_device_table[snd_device];
@@ -2333,7 +2365,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
             if (audio_extn_ssr_get_enabled() && channel_count == 6)
                 snd_device = SND_DEVICE_IN_QUAD_MIC;
-            else if (channel_count == 2)
+            else if ((my_data->fluence_type & (FLUENCE_DUAL_MIC | FLUENCE_QUAD_MIC)) && channel_count == 2)
                 snd_device = SND_DEVICE_IN_HANDSET_STEREO_DMIC;
             else
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
@@ -3022,15 +3054,64 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev __unused
     return false;
 }
 
-int platform_get_usecase_index(const char * usecase __unused)
+static int find_index(struct name_to_index * table, int32_t len, const char * name)
 {
-    return -ENOSYS;
+    int ret = 0;
+    int32_t i;
+
+    if (table == NULL) {
+        ALOGE("%s: table is NULL", __func__);
+        ret = -ENODEV;
+        goto done;
+    }
+
+    if (name == NULL) {
+        ALOGE("null key");
+        ret = -ENODEV;
+        goto done;
+    }
+
+    for (i=0; i < len; i++) {
+        const char* tn = table[i].name;
+        size_t len = strlen(tn);
+        if (strncmp(tn, name, len) == 0) {
+            if (strlen(name) != len) {
+                continue; // substring
+            }
+            ret = table[i].index;
+            goto done;
+        }
+    }
+    ALOGE("%s: Could not find index for name = %s",
+            __func__, name);
+    ret = -ENODEV;
+done:
+    return ret;
 }
 
-int platform_set_usecase_pcm_id(audio_usecase_t usecase __unused, int32_t type __unused,
-                                int32_t pcm_id __unused)
+int platform_get_usecase_index(const char * usecase)
 {
-    return -ENOSYS;
+    return find_index(usecase_name_index, AUDIO_USECASE_MAX, usecase);
+}
+
+int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type,
+                                int32_t pcm_id)
+{
+    int ret = 0;
+    if ((usecase <= USECASE_INVALID) || (usecase >= AUDIO_USECASE_MAX)) {
+        ALOGE("%s: invalid usecase case idx %d", __func__, usecase);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    if ((type != 0) && (type != 1)) {
+        ALOGE("%s: invalid usecase type", __func__);
+        ret = -EINVAL;
+    }
+    ALOGV("%s: pcm_device_table[%d][%d] = %d", __func__, usecase, type, pcm_id);
+    pcm_device_table[usecase][type] = pcm_id;
+done:
+    return ret;
 }
 
 int platform_set_snd_device_backend(snd_device_t snd_device __unused,
