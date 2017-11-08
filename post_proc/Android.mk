@@ -52,7 +52,7 @@ LOCAL_C_INCLUDES := \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
         $(call include-path-for, audio-effects)
 
-ifneq ($(filter sdm670,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm670 qcs605,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
   LOCAL_ADDITIONAL_DEPENDENCIES += $(BOARD_VENDOR_KERNEL_MODULES)
 endif
@@ -89,7 +89,7 @@ endif
 
 ################################################################################
 
-ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm660 sdm845 apq8098_latv sdm670,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm660 sdm845 apq8098_latv sdm670 qcs605,$(TARGET_BOARD_PLATFORM)),)
 
 include $(CLEAR_VARS)
 
@@ -121,7 +121,7 @@ LOCAL_C_INCLUDES := \
         hardware/qcom/audio/hal/audio_extn \
         external/tinycompress/include
 
-ifneq ($(filter sdm670,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm670 qcs605,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
   LOCAL_ADDITIONAL_DEPENDENCIES += $(BOARD_VENDOR_KERNEL_MODULES)
 endif
