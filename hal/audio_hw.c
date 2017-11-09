@@ -6728,6 +6728,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         channel_count = audio_channel_count_from_in_mask(config->channel_mask);
     } else if (config->format == AUDIO_FORMAT_DEFAULT) {
         config->format = AUDIO_FORMAT_PCM_16_BIT;
+    } else if (property_get_bool("vendor.audio.capture.pcm.32bit.enable", false)
+                                 && config->format == AUDIO_FORMAT_PCM_32_BIT) {
+            in->config.format = PCM_FORMAT_S32_LE;
+            in->bit_width = 32;
     } else if ((config->format == AUDIO_FORMAT_PCM_FLOAT) ||
                (config->format == AUDIO_FORMAT_PCM_32_BIT) ||
                (config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED) ||
