@@ -1997,7 +1997,7 @@ static int qaf_stream_open(struct stream_out *out,
     if (p_qaf->qaf_mod[mmtype].qaf_audio_session_open == NULL ||
         p_qaf->qaf_mod[mmtype].qaf_audio_stream_open == NULL) {
         ERROR_MSG("Session or Stream is NULL");
-        return status;
+        return -ENOTSUP;
     }
     //Open the module session, if not opened already.
     status = audio_extn_qaf_session_open(mmtype, out);
@@ -2098,7 +2098,7 @@ static int qaf_stream_open(struct stream_out *out,
     if (status != 0) {
         //If no stream is active then close the session.
         qaf_session_close(qaf_mod);
-        return status;
+        return 0;
     }
 
     //If Device is HDMI, QAF passthrough is enabled and there is no previous QAF passthrough input stream.
@@ -2515,13 +2515,10 @@ int audio_extn_qaf_open_output_stream(struct audio_hw_device *dev,
     out = (struct stream_out *)*stream_out;
 
     ret = qaf_stream_open(out, config, flags, devices);
-    if (ret == -ENOTSUP) {
+    if (ret < 0) {
+        ERROR_MSG("Error opening QAF stream err[%d]! QAF bypassed.", ret);
         //Stream not supported by QAF, Bypass QAF.
         return 0;
-    } else if (ret < 0) {
-        ERROR_MSG("Error opening QAF stream err[%d]!", ret);
-        adev_close_output_stream(dev, *stream_out);
-        return ret;
     }
 
     /* Override function pointers based on qaf definitions */
@@ -2566,7 +2563,7 @@ void audio_extn_qaf_close_output_stream(struct audio_hw_device *dev,
     struct qaf_module* qaf_mod = get_qaf_module_for_input_stream(out);
 
     if (!qaf_mod) {
-        DEBUG_MSG("qaf module is NULL, by passing qaf on close output stream");
+        DEBUG_MSG("qaf module is NULL, bypassing qaf on close output stream");
         /*closing non-MS12/default output stream opened with qaf */
         adev_close_output_stream(dev, stream);
         return;
