@@ -30,6 +30,7 @@
 #define LOG_TAG "keep_alive"
 /*#define LOG_NDEBUG 0*/
 
+#include <cutils/properties.h>
 #include <stdlib.h>
 #include <cutils/log.h>
 #include "audio_hw.h"
@@ -375,7 +376,7 @@ int audio_extn_keep_alive_set_parameters(struct audio_device *adev __unused,
     int ret;
 
     if (ka.state == STATE_DISABLED)
-        return;
+        return 0;
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value, sizeof(value));
     if (ret >= 0) {

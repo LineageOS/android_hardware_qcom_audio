@@ -808,7 +808,7 @@ exit:
                    / audio_stream_out_frame_size(stream)
                    / out->stream.common.get_sample_rate(&out->stream.common));
         }
-    } else if (ret < bytes) {
+    } else if (ret < (ssize_t)bytes) {
         //partial buffer copied to the module.
         DEBUG_MSG_VV("Not enough space available in mm module, post msg to cb thread");
         (void)qaf_send_offload_cmd_l(out, OFFLOAD_CMD_WAIT_FOR_BUFFER);
@@ -1877,7 +1877,7 @@ static int audio_extn_qaf_session_open(mm_module_type mod_type, struct stream_ou
 {
     ALOGV("%s %d", __func__, __LINE__);
     unsigned char* license_data = NULL;
-    device_license_config_t lic_config = {0};
+    device_license_config_t lic_config = {NULL, 0, 0};
     int ret = -ENOSYS;
 
     struct qaf_module *qaf_mod = NULL;
