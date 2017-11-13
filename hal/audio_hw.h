@@ -339,7 +339,8 @@ struct stream_out {
     float volume_r;
 
     char pm_qos_mixer_path[MAX_MIXER_PATH_LEN];
-    int dynamic_pm_qos_enabled;
+    int hal_output_suspend_supported;
+    int dynamic_pm_qos_config_supported;
     bool stream_config_changed;
     mix_matrix_params_t pan_scale_params;
     mix_matrix_params_t downmix_params;

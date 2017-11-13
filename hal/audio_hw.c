@@ -3728,7 +3728,9 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     }
 
     //suspend, resume handling block
-    if (out->dynamic_pm_qos_enabled) {
+    //remove QOS only if vendor.audio.hal.dynamic.qos.config.supported is set to true
+    // and vendor.audio.hal.output.suspend.supported is set to true
+    if (out->hal_output_suspend_supported && out->dynamic_pm_qos_config_supported) {
         //check suspend parameter only for low latency and if the property
         //is enabled
         if (str_parms_get_str(parms, "suspend_playback", value, sizeof(value)) >= 0) {
@@ -3977,7 +3979,7 @@ static char* out_get_parameters(const struct audio_stream *stream, const char *k
     if (str_parms_get_str(query, "supports_hw_suspend", value, sizeof(value)) >= 0) {
         //only low latency track supports suspend_resume
         str_parms_add_int(reply, "supports_hw_suspend",
-                (out->dynamic_pm_qos_enabled));
+                (out->hal_output_suspend_supported));
         if (str)
             free(str);
         str = str_parms_to_str(reply);
@@ -5532,7 +5534,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     out->convert_buffer = NULL;
     out->started = 0;
     out->a2dp_compress_mute = false;
-    out->dynamic_pm_qos_enabled = 0;
+    out->hal_output_suspend_supported = 0;
+    out->dynamic_pm_qos_config_supported = 0;
 
     if ((flags & AUDIO_OUTPUT_FLAG_BD) &&
         (property_get_bool("audio.matrix.limiter.enable", false)))
@@ -5917,8 +5920,11 @@ int adev_open_output_stream(struct audio_hw_device *dev,
             out->stream.get_mmap_position = out_get_mmap_position;
         } else if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
             out->usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
-            out->dynamic_pm_qos_enabled = property_get_bool("vendor.audio.dynamic.qos.enable", false);
-            if (!out->dynamic_pm_qos_enabled) {
+            out->hal_output_suspend_supported =
+                property_get_bool("vendor.audio.hal.output.suspend.supported", false);
+            out->dynamic_pm_qos_config_supported =
+                property_get_bool("vendor.audio.hal.dynamic.qos.config.supported", false);
+            if (!out->dynamic_pm_qos_config_supported) {
                 ALOGI("%s: dynamic qos voting not enabled for platform", __func__);
             } else {
                 ALOGI("%s: dynamic qos voting enabled for platform", __func__);
