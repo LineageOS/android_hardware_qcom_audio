@@ -4179,7 +4179,7 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
                                    uint64_t *frames, struct timespec *timestamp)
 {
     struct stream_out *out = (struct stream_out *)stream;
-    int ret = -1;
+    int ret = -ENODATA;
     unsigned long dsp_frames;
 
     /* below piece of code is not guarded against any lock because audioFliner serializes
