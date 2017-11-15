@@ -566,6 +566,10 @@
     <ctl name="SLIMBUS6_DL_HL Switch" value="0" />
     <!-- ADSP testfwk end-->
 
+    <!-- mixer control to disable lowlatency qos voting -->
+    <ctl name="MultiMedia5_RX QOS Vote" value="Disable" />
+    <!-- mixer control to disable lowlatency qos voting end -->
+
     <ctl name="AFE_PCM_RX Audio Mixer MultiMedia3" value="0" />
 
     <!-- These are audio route (FE to BE) specific mixer settings -->
@@ -734,6 +738,10 @@
     <path name="low-latency-playback speaker-and-headphones">
         <path name="low-latency-playback headphones" />
         <path name="low-latency-playback" />
+    </path>
+
+    <path name="low-latency-playback resume">
+        <ctl name="MultiMedia5_RX QOS Vote" value="Enable" />
     </path>
 
     <path name="low-latency-playback speaker-and-bt-sco">
