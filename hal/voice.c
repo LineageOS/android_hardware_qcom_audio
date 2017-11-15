@@ -134,6 +134,14 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     uc_info->type = VOICE_CALL;
     uc_info->stream.out = adev->current_call_output;
     uc_info->devices = adev->current_call_output->devices;
+
+    if (popcount(uc_info->devices) == 2) {
+        ALOGE("%s: Invalid combo device(%#x) for voice call", __func__,
+              uc_info->devices);
+        ret = -EIO;
+        goto error_start_voice;
+    }
+
     uc_info->in_snd_device = SND_DEVICE_NONE;
     uc_info->out_snd_device = SND_DEVICE_NONE;
 
