@@ -4616,6 +4616,7 @@ static void set_audiocal(void *platform, struct str_parms *parms, char *value, i
         goto done_key_audcal;
     }
 
+    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
     /* parse audio calibration keys */
     ret = parse_audiocal_cfg(parms, &cal);
 
@@ -4992,6 +4993,8 @@ static void get_audiocal(void *platform, void *keys, void *pReply) {
         ret=-EINVAL;
         goto done;
     }
+
+    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
     /* parse audiocal configuration keys */
     ret = parse_audiocal_cfg(query, &cal);
     if(ret == 0) {
