@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!--
-    Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+    Copyright (c) 2014, 2016, The Linux Foundation. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are
@@ -80,9 +80,8 @@
     <ctl name="EAR_S" value="ZERO" />
     <ctl name="HPHL" value="ZERO" />
     <ctl name="HPHR" value="ZERO" />
-    <ctl name="SPK" value="ZERO" />
+    <ctl name="SPK DAC Switch" value="0" />
     <ctl name="Speaker Boost" value="ENABLE" />
-    <ctl name="MICBIAS CAPLESS Switch" value="0" />
     <ctl name="EAR PA Boost" value="ENABLE" />
     <ctl name="EAR PA Gain" value="POS_1P5_DB" />
     <ctl name="MI2S_RX Channels" value="One" />
@@ -90,9 +89,6 @@
 
     <ctl name="PRI_MI2S_RX Audio Mixer MultiMedia1" value="0" />
     <ctl name="INTERNAL_BT_SCO_RX Audio Mixer MultiMedia1" value="0" />
-    <ctl name="PRI_MI2S_RX Audio Mixer MultiMedia3" value="0" />
-    <ctl name="INTERNAL_BT_SCO_RX Audio Mixer MultiMedia3" value="0" />
-    <ctl name="AFE_PCM_RX Audio Mixer MultiMedia3" value="0" />
     <ctl name="PRI_MI2S_RX Audio Mixer MultiMedia4" value="0" />
     <ctl name="INTERNAL_BT_SCO_RX Audio Mixer MultiMedia4" value="0" />
     <ctl name="AFE_PCM_RX Audio Mixer MultiMedia4" value="0" />
@@ -100,12 +96,13 @@
     <ctl name="PRI_MI2S_RX Audio Mixer MultiMedia5" value="0" />
     <ctl name="INTERNAL_BT_SCO_RX Audio Mixer MultiMedia5" value="0" />
     <ctl name="MultiMedia1 Mixer TERT_MI2S_TX" value="0" />
+    <ctl name="MultiMedia5 Mixer TERT_MI2S_TX" value="0" />
     <ctl name="MultiMedia1 Mixer INTERNAL_BT_SCO_TX" value="0" />
     <ctl name="PRI_MI2S_RX_Voice Mixer CSVoice" value="0" />
     <ctl name="Voice_Tx Mixer TERT_MI2S_TX_Voice" value="0" />
     <ctl name="PRI_MI2S_RX Port Mixer INT_BT_SCO_TX" value="0" />
     <!-- Voice BTSCO -->
-    <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_8KHZ" />
+    <ctl name="Internal BTSCO SampleRate" value="8000" />
     <ctl name="INTERNAL_BT_SCO_RX_Voice Mixer CSVoice" value="0" />
     <ctl name="Voice_Tx Mixer INTERNAL_BT_SCO_TX_Voice" value="0" />
     <ctl name="INTERNAL_BT_SCO_RX Audio Mixer Multimedia6" value="0" />
@@ -133,7 +130,7 @@
     <!-- Voip -->
     <ctl name="PRI_MI2S_RX_Voice Mixer Voip" value="0" />
     <ctl name="Voip_Tx Mixer TERT_MI2S_TX_Voip" value="0" />
-    <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_8KHZ" />
+    <ctl name="Internal BTSCO SampleRate" value="8000" />
     <ctl name="INTERNAL_BT_SCO_RX_Voice Mixer Voip" value="0" />
     <ctl name="Voip_Tx Mixer INTERNAL_BT_SCO_TX_Voip" value="0" />
     <!-- Voip end -->
@@ -206,7 +203,7 @@
     <!-- ADSP testfwk end-->
 
     <path name="bt-sco-wb-samplerate">
-        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <ctl name="Internal BTSCO SampleRate" value="16000" />
     </path>
 
     <!-- These are audio route (FE to BE) specific mixer settings -->
@@ -268,36 +265,6 @@
         <ctl name="INTERNAL_FM_RX Audio Mixer MultiMedia5" value="1" />
     </path>
 
-    <path name="audio-ull-playback">
-        <ctl name="PRI_MI2S_RX Audio Mixer MultiMedia3" value="1" />
-    </path>
-
-    <path name="audio-ull-playback headphones">
-        <path name="audio-ull-playback" />
-    </path>
-
-    <path name="audio-ull-playback speaker-protected">
-        <path name="audio-ull-playback" />
-    </path>
-
-    <path name="audio-ull-playback bt-sco">
-        <ctl name="INTERNAL_BT_SCO_RX Audio Mixer MultiMedia3" value="1" />
-    </path>
-
-    <path name="audio-ull-playback bt-sco-wb">
-        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
-        <path name="audio-ull-playback bt-sco" />
-    </path>
-
-    <path name="audio-ull-playback afe-proxy">
-        <ctl name="AFE_PCM_RX Audio Mixer MultiMedia3" value="1" />
-    </path>
-
-    <path name="audio-ull-playback usb-headphones">
-        <path name="audio-ull-playback afe-proxy" />
-        <path name="audio-ull-playback" />
-    </path>
-
     <path name="compress-offload-playback">
         <ctl name="PRI_MI2S_RX Audio Mixer MultiMedia4" value="1" />
     </path>
@@ -307,7 +274,7 @@
     </path>
 
     <path name="compress-offload-playback bt-sco-wb">
-        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <ctl name="Internal BTSCO SampleRate" value="16000" />
         <path name="compress-offload-playback bt-sco" />
     </path>
 
@@ -345,7 +312,7 @@
     </path>
 
     <path name="audio-record bt-sco-wb">
-        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <ctl name="Internal BTSCO SampleRate" value="16000" />
         <path name="audio-record bt-sco" />
     </path>
 
@@ -355,6 +322,10 @@
 
     <path name="audio-record capture-fm">
         <ctl name="MultiMedia1 Mixer INTERNAL_FM_TX" value="1" />
+    </path>
+
+    <path name="low-latency-record">
+        <ctl name="MultiMedia5 Mixer TERT_MI2S_TX" value="1" />
     </path>
 
     <path name="fm-virtual-record capture-fm">
@@ -372,7 +343,7 @@
     </path>
 
     <path name="voice-call bt-sco-wb">
-        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <ctl name="Internal BTSCO SampleRate" value="16000" />
         <path name="voice-call bt-sco" />
     </path>
 
@@ -392,7 +363,7 @@
     </path>
 
     <path name="voice2-call bt-sco-wb">
-        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <ctl name="Internal BTSCO SampleRate" value="16000" />
         <path name="voice2-call bt-sco" />
     </path>
 
@@ -423,7 +394,7 @@
     </path>
 
     <path name="vowlan-call bt-sco-wb">
-        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <ctl name="Internal BTSCO SampleRate" value="16000" />
         <path name="vowlan-call bt-sco" />
     </path>
 
@@ -440,7 +411,7 @@
     </path>
 
     <path name="hfp-sco-wb">
-        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <ctl name="Internal BTSCO SampleRate" value="16000" />
         <path name="hfp-sco" />
     </path>
 
@@ -505,7 +476,7 @@
     </path>
 
    <path name="volte-call bt-sco-wb">
-        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <ctl name="Internal BTSCO SampleRate" value="16000" />
         <path name="volte-call bt-sco" />
     </path>
 
@@ -525,7 +496,7 @@
     </path>
 
     <path name="compress-voip-call bt-sco-wb">
-        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <ctl name="Internal BTSCO SampleRate" value="16000" />
         <path name="compress-voip-call bt-sco" />
     </path>
 
@@ -561,7 +532,7 @@
     </path>
 
     <path name="qchat-call bt-sco-wb">
-        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <ctl name="Internal BTSCO SampleRate" value="16000" />
         <path name="qchat-call bt-sco" />
     </path>
 
@@ -572,7 +543,6 @@
 
     <path name="adc2">
         <ctl name="DEC1 MUX" value="ADC2" />
-        <ctl name="MICBIAS CAPLESS Switch" value="1" />
     </path>
 
     <path name="adc3">
@@ -582,7 +552,7 @@
 
     <path name="speaker">
         <ctl name="RX3 MIX1 INP1" value="RX1" />
-        <ctl name="SPK" value="Switch" />
+        <ctl name="SPK DAC Switch" value="1" />
     </path>
 
     <path name="speaker-mic">
@@ -803,20 +773,16 @@
         <path name="adc1" />
     </path>
 
+    <path name="unprocessed-handset-mic">
+        <path name="handset-mic" />
+    </path>
+
+    <path name="unprocessed-mic">
+        <path name="unprocessed-handset-mic" />
+    </path>
+
     <path name="ADSP testfwk">
         <ctl name="MI2S_DL_HL Switch" value="1" />
-    </path>
-
-    <path name="line">
-          <path name="headphones" />
-    </path>
-
-    <path name="voice-line">
-          <path name="voice-headphones" />
-    </path>
-
-    <path name="speaker-and-line">
-          <path name="speaker-and-headphones" />
     </path>
 
 </mixer>
