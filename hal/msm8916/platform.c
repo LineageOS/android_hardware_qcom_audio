@@ -1166,14 +1166,14 @@ static void set_platform_defaults(struct platform_data * my_data)
         if (!strncmp(MEDIA_MIMETYPE_AUDIO_ALAC, dsp_only_decoders_mime[count],
              strlen(dsp_only_decoders_mime[count]))) {
 
-            if(property_get_bool("use.qti.sw.alac.decoder", false)) {
+            if(property_get_bool("vendor.audio.use.sw.alac.decoder", false)) {
                 ALOGD("Alac software decoder is available...removing alac from DSP decoder list");
                 strncpy(dsp_only_decoders_mime[count],"none",5);
             }
         } else if (!strncmp(MEDIA_MIMETYPE_AUDIO_APE, dsp_only_decoders_mime[count],
              strlen(dsp_only_decoders_mime[count]))) {
 
-            if(property_get_bool("use.qti.sw.ape.decoder", false)) {
+            if(property_get_bool("vendor.audio.use.sw.ape.decoder", false)) {
                 ALOGD("APE software decoder is available...removing ape from DSP decoder list");
                 strncpy(dsp_only_decoders_mime[count],"none",5);
            }
@@ -1565,7 +1565,7 @@ void *platform_init(struct audio_device *adev)
     my_data->hw_dep_fd = -1;
     my_data->mono_speaker = SPKR_1;
 
-    property_get("ro.qc.sdk.audio.fluencetype", my_data->fluence_cap, "");
+    property_get("ro.vendor.audio.sdk.fluencetype", my_data->fluence_cap, "");
     if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro"))) {
         my_data->fluence_type = FLUENCE_QUAD_MIC | FLUENCE_DUAL_MIC;
     } else if (!strncmp("fluence", my_data->fluence_cap, sizeof("fluence"))) {
@@ -1575,27 +1575,27 @@ void *platform_init(struct audio_device *adev)
     }
 
     if (my_data->fluence_type != FLUENCE_NONE) {
-        property_get("persist.audio.fluence.voicecall",value,"");
+        property_get("persist.vendor.audio.fluence.voicecall",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_call = true;
         }
 
-        property_get("persist.audio.fluence.voicerec",value,"");
+        property_get("persist.vendor.audio.fluence.voicerec",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_rec = true;
         }
 
-        property_get("persist.audio.fluence.audiorec",value,"");
+        property_get("persist.vendor.audio.fluence.audiorec",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_audio_rec = true;
         }
 
-        property_get("persist.audio.fluence.speaker",value,"");
+        property_get("persist.vendor.audio.fluence.speaker",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_spkr_mode = true;
         }
 
-        property_get("persist.audio.fluence.mode",value,"");
+        property_get("persist.vendor.audio.fluence.mode",value,"");
         if (!strncmp("broadside", value, sizeof("broadside"))) {
             my_data->fluence_mode = FLUENCE_BROADSIDE;
         }
@@ -1611,7 +1611,7 @@ void *platform_init(struct audio_device *adev)
         my_data->is_wsa_speaker = true;
     }
 
-    property_get("persist.audio.FFSP.enable", ffspEnable, "");
+    property_get("persist.vendor.audio.FFSP.enable", ffspEnable, "");
     if (!strncmp("true", ffspEnable, sizeof("true"))) {
         acdb_device_table[SND_DEVICE_OUT_SPEAKER] = 131;
         acdb_device_table[SND_DEVICE_OUT_SPEAKER_WSA] = 131;
@@ -2521,7 +2521,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     bool prop_rec_play_enabled = false;
     char recConcPropValue[PROPERTY_VALUE_MAX];
 
-    if (property_get("rec.playback.conc.disabled", recConcPropValue, NULL)) {
+    if (property_get("vendor.audio.rec.playback.conc.disabled", recConcPropValue, NULL)) {
         prop_rec_play_enabled = atoi(recConcPropValue) || !strncmp("true", recConcPropValue, 4);
     }
     use_voip_out_devices =  prop_rec_play_enabled &&
@@ -3475,7 +3475,7 @@ void platform_get_parameters(void *platform,
     if (ret >= 0) {
         int isallowed = 1; /*true*/
 
-        if (property_get("voice.playback.conc.disabled", propValue, NULL)) {
+        if (property_get("vendor.voice.playback.conc.disabled", propValue, NULL)) {
             prop_playback_enabled = atoi(propValue) ||
                 !strncmp("true", propValue, 4);
         }
@@ -3669,7 +3669,7 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
 {
     char value[PROPERTY_VALUE_MAX] = {0};
     uint32_t fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-    if((property_get("audio.offload.buffer.size.kb", value, "")) &&
+    if((property_get("vendor.audio.offload.buffer.size.kb", value, "")) &&
             atoi(value)) {
         fragment_size =  atoi(value) * 1024;
     }
@@ -3972,7 +3972,7 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
 
     //check if mulitchannel clip needs to be down sampled to 48k
-    property_get("audio.playback.mch.downsample",value,"");
+    property_get("vendor.audio.playback.mch.downsample",value,"");
     if (!strncmp("true", value, sizeof("true"))) {
         out = usecase->stream.out;
         if ((popcount(out->channel_mask) > 2) &&
@@ -4260,12 +4260,12 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
     char mixer_ctl_name[44]; // max length of name is 44 as defined
     int ret;
     unsigned int i;
-    int set_values[8] = {0};
+    int set_values[FCC_8] = {0};
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     ALOGV("%s channel_count:%d",__func__, ch_count);
-    if (NULL == ch_map) {
-        ALOGE("%s: Invalid channel mapping used", __func__);
+    if (NULL == ch_map || (ch_count < 1) || (ch_count > FCC_8)) {
+        ALOGE("%s: Invalid channel mapping or channel count value", __func__);
         return -EINVAL;
     }
 
@@ -4287,7 +4287,7 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
               __func__, mixer_ctl_name);
         return -EINVAL;
     }
-    for (i = 0; i< ARRAY_SIZE(set_values); i++) {
+    for (i = 0; i < (unsigned int)ch_count; i++) {
         set_values[i] = ch_map[i];
     }
 
@@ -4295,7 +4295,7 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
         set_values[0], set_values[1], set_values[2], set_values[3], set_values[4],
         set_values[5], set_values[6], set_values[7], ch_count);
 
-    ret = mixer_ctl_set_array(ctl, set_values, ch_count);
+    ret = mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
     if (ret < 0) {
         ALOGE("%s: Could not set ctl, error:%d ch_count:%d",
               __func__, ret, ch_count);

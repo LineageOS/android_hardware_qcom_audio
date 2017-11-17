@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, 2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -37,7 +37,8 @@ const effect_descriptor_t bassboost_descriptor = {
         {0x0634f220, 0xddd4, 0x11db, 0xa0fc, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b }},
         {0x2c4a8c24, 0x1581, 0x487f, 0x94f6, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}}, // uuid
         EFFECT_CONTROL_API_VERSION,
-        (EFFECT_FLAG_TYPE_INSERT | EFFECT_FLAG_DEVICE_IND | EFFECT_FLAG_HW_ACC_TUNNEL),
+        (EFFECT_FLAG_TYPE_INSERT | EFFECT_FLAG_DEVICE_IND | EFFECT_FLAG_HW_ACC_TUNNEL |
+         EFFECT_FLAG_VOLUME_CTRL),
         0, /* TODO */
         1,
         "MSM offload bassboost",
@@ -503,7 +504,7 @@ int pbe_set_device(effect_context_t *context, uint32_t device)
     ALOGV("%s: device: %d", __func__, device);
     pbe_ctxt->device = device;
 
-    if (property_get("audio.safx.pbe.enabled", propValue, NULL)) {
+    if (property_get("vendor.audio.safx.pbe.enabled", propValue, NULL)) {
         pbe_enabled_by_prop = atoi(propValue) ||
                               !strncmp("true", propValue, 4);
     }
@@ -680,7 +681,8 @@ static int pbe_load_config(struct pbe_params *params)
     char                 propValueStr[PROPERTY_VALUE_MAX];
     void                 *acdb_handle = NULL;
     acdb_get_audio_cal_t acdb_get_audio_cal = NULL;
-    acdb_audio_cal_cfg_t cal_cfg = {0};
+    acdb_audio_cal_cfg_t cal_cfg;
+    memset(&cal_cfg, 0, sizeof(acdb_audio_cal_cfg_t));
 
     acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
     if (acdb_handle == NULL) {
@@ -695,7 +697,7 @@ static int pbe_load_config(struct pbe_params *params)
         ALOGE("%s error resolving acdb func symbols", __func__);
         return -EFAULT;
     }
-    if (property_get("audio.safx.pbe.app.type", propValueStr, "0")) {
+    if (property_get("vendor.audio.safx.pbe.app.type", propValueStr, "0")) {
         propValue = atoll(propValueStr);
         if (propValue != 0) {
             pbe_app_type = propValue;
