@@ -1615,15 +1615,21 @@ static int find_index(struct name_to_index * table, int32_t len, const char * na
         ret = -ENODEV;
         goto done;
     }
+    	ALOGE("%s: Try find index for name = %s",
+            __func__, name);
 
     for (i=0; i < len; i++) {
         const char* tn = table[i].name;
         unsigned int len = strlen(tn);
+    	ALOGE("%s: strcmp = %s",
+            __func__, tn);
         if (strncmp(tn, name, len) == 0) {
             if (strlen(name) != len) {
                 continue; // substring
             }
+
             ret = table[i].index;
+	    ALOGE("%s: index = %d", __func__,ret);
             goto done;
         }
     }
