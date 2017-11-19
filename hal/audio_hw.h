@@ -118,6 +118,8 @@ enum {
     USECASE_AUDIO_PLAYBACK_OFFLOAD8,
     USECASE_AUDIO_PLAYBACK_OFFLOAD9,
     USECASE_AUDIO_PLAYBACK_ULL,
+    USECASE_AUDIO_PLAYBACK_MMAP,
+    USECASE_AUDIO_PLAYBACK_HIFI,
 
     /* FM usecase */
     USECASE_AUDIO_PLAYBACK_FM,
@@ -134,11 +136,13 @@ enum {
     USECASE_AUDIO_RECORD_COMPRESS4,
     USECASE_AUDIO_RECORD_LOW_LATENCY,
     USECASE_AUDIO_RECORD_FM_VIRTUAL,
+    USECASE_AUDIO_RECORD_HIFI,
 
     USECASE_AUDIO_PLAYBACK_VOIP,
     USECASE_AUDIO_RECORD_VOIP,
     /* Voice usecase */
     USECASE_VOICE_CALL,
+    USECASE_AUDIO_RECORD_MMAP,
 
     /* Voice extension usecases */
     USECASE_VOICE2_CALL,
@@ -168,6 +172,15 @@ enum {
     USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE,
 
     USECASE_AUDIO_TRANSCODE_LOOPBACK,
+
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM1,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM2,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM3,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM4,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM5,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM6,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM7,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM8,
     AUDIO_USECASE_MAX
 };
 
@@ -310,6 +323,8 @@ struct stream_out {
 
     char pm_qos_mixer_path[MAX_MIXER_PATH_LEN];
     int dynamic_pm_qos_enabled;
+    mix_matrix_params_t pan_scale_params;
+    mix_matrix_params_t downmix_params;
 };
 
 struct stream_in {
@@ -342,6 +357,12 @@ struct stream_in {
 
     struct audio_device *dev;
     card_status_t card_status;
+    int capture_started;
+
+    /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
+    audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
+    audio_format_t supported_formats[MAX_SUPPORTED_FORMATS + 1];
+    uint32_t supported_sample_rates[MAX_SUPPORTED_SAMPLE_RATES + 1];
 };
 
 typedef enum {
@@ -481,6 +502,7 @@ struct audio_device {
     bool vr_audio_mode_enabled;
     bool bt_sco_on;
     struct audio_device_config_param *device_cfg_params;
+    unsigned int interactive_usecase_state;
 };
 
 int select_devices(struct audio_device *adev,
@@ -522,6 +544,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                             const char *address __unused);
 void adev_close_output_stream(struct audio_hw_device *dev __unused,
                               struct audio_stream_out *stream);
+
+bool is_interactive_usecase(audio_usecase_t uc_id);
 
 #define LITERAL_TO_STRING(x) #x
 #define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\

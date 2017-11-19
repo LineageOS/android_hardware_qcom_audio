@@ -677,7 +677,7 @@ static void init_once()
 
     // check system property to see if dumping is required
     char check_dump_val[PROPERTY_VALUE_MAX];
-    property_get("audio.volume.listener.dump", check_dump_val, "0");
+    property_get("vendor.audio.volume.listener.dump", check_dump_val, "0");
     if (atoi(check_dump_val)) {
         dumping_enabled = true;
     }

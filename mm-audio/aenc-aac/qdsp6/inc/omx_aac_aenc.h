@@ -53,6 +53,7 @@ This module contains the class definition for openMAX encoder component.
 #include "QOMX_AudioIndexExtensions.h"
 #include "OMX_Core.h"
 #include "OMX_Audio.h"
+#include "OMX_IndexExt.h"
 #include "aenc_svr.h"
 #include "qc_omx_component.h"
 #include "Map.h"
