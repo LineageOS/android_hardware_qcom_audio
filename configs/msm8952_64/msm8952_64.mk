@@ -231,7 +231,7 @@ vendor.audio.rec.playback.conc.disabled=false
 
 #enable hw aac encoder by default
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.hw.aac.encoder=true
+vendor.audio.hw.aac.encoder=false
 
 #Property to enable FBSP
 PRODUCT_PROPERTY_OVERRIDES += \
