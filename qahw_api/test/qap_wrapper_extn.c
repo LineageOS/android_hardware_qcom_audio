@@ -41,7 +41,11 @@
 /*#define LOG_NDEBUG 0*/
 
 #if LINUX_ENABLED
-#define QAC_LIB_MS12 "libdolby_ms12_wrapper.so"
+#if defined(__LP64__)
+#define QAC_LIB_MS12 "/usr/lib64/libdolby_ms12_wrapper.so"
+#else
+#define QAC_LIB_MS12 "/usr/lib/libdolby_ms12_wrapper.so"
+#endif
 #define QAC_LIB_M8   "libdts_m8_wrapper.so"
 #else
 #define QAC_LIB_MS12 "/system/lib/libdolby_ms12_wrapper.so"
