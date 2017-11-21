@@ -2736,10 +2736,11 @@ static void *offload_thread_loop(void *context)
                     ret = -errno;
             }
             else if (ret == -ETIMEDOUT)
-                compress_drain(out->compr);
+                ret = compress_drain(out->compr);
             else
                 ALOGE("%s: Next track returned error %d",__func__, ret);
-            if (ret != -ENETRESET) {
+            if (-ENETRESET != ret && !(-EINTR == ret &&
+                        CARD_STATUS_OFFLINE == out->card_status)) {
                 send_callback = true;
                 pthread_mutex_lock(&out->lock);
                 out->send_new_metadata = 1;
@@ -2752,10 +2753,15 @@ static void *offload_thread_loop(void *context)
             break;
         case OFFLOAD_CMD_DRAIN:
             ALOGD("copl(%p):calling compress_drain", out);
-            compress_drain(out->compr);
-            ALOGD("copl(%p):calling compress_drain", out);
-            send_callback = true;
-            event = STREAM_CBK_EVENT_DRAIN_READY;
+            ret = compress_drain(out->compr);
+            ALOGD("copl(%p):out of compress_drain", out);
+            // EINTR check avoids drain interruption due to SSR
+            if (-ENETRESET != ret && !(-EINTR == ret &&
+                        CARD_STATUS_OFFLINE == out->card_status)) {
+                send_callback = true;
+                event = STREAM_CBK_EVENT_DRAIN_READY;
+            } else
+                ALOGI("%s: Block drain ready event during SSR", __func__);
             break;
         case OFFLOAD_CMD_ERROR:
             ALOGD("copl(%p): sending error callback to AF", out);
