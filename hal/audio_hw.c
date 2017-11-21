@@ -116,6 +116,8 @@ struct pcm_config default_pcm_config_voip_copp = {
     .period_size = VOIP_IO_BUF_SIZE(DEFAULT_VOIP_SAMP_RATE, DEFAULT_VOIP_BUF_DURATION_MS, DEFAULT_VOIP_BIT_DEPTH_BYTE)/2,
     .period_count = 2,
     .format = PCM_FORMAT_S16_LE,
+    .avail_min = VOIP_IO_BUF_SIZE(DEFAULT_VOIP_SAMP_RATE, DEFAULT_VOIP_BUF_DURATION_MS, DEFAULT_VOIP_BIT_DEPTH_BYTE)/2,
+    .stop_threshold = INT_MAX,
 };
 
 #define MIN_CHANNEL_COUNT                1
