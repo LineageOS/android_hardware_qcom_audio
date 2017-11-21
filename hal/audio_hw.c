@@ -6262,8 +6262,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 goto done;
             }
             platform_cache_edid(adev->platform);
-        } else if ((audio_is_output_device(val) && (val & AUDIO_DEVICE_OUT_USB_DEVICE)) ||
-                   (audio_is_input_device(val) && ((uint32_t)val & AUDIO_DEVICE_IN_USB_DEVICE))) {
+        } else if (((audio_devices_t)val == AUDIO_DEVICE_OUT_USB_DEVICE) ||
+                   ((audio_devices_t)val == AUDIO_DEVICE_IN_USB_DEVICE)) {
             /*
              * Do not allow AFE proxy port usage by WFD source when USB headset is connected.
              * Per AudioPolicyManager, USB device is higher priority than WFD.
@@ -6278,8 +6278,10 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 else
                     audio_extn_usb_add_device(AUDIO_DEVICE_IN_USB_DEVICE, atoi(value));
             }
-            ALOGV("detected USB connect .. disable proxy");
-            adev->allow_afe_proxy_usage = false;
+            if (!audio_extn_usb_is_tunnel_supported()) {
+                ALOGV("detected USB connect .. disable proxy");
+                adev->allow_afe_proxy_usage = false;
+            }
         }
     }
 
@@ -6292,8 +6294,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
          * invalidated prior to updating sysfs of the disconnect event
          * Invalidate will be handled by audio_extn_ext_disp_set_parameters()
          */
-        if ((audio_is_output_device(val) && (val & AUDIO_DEVICE_OUT_USB_DEVICE)) ||
-            (audio_is_input_device(val) && ((uint32_t)val == AUDIO_DEVICE_IN_USB_DEVICE))) {
+        if (((audio_devices_t)val == AUDIO_DEVICE_OUT_USB_DEVICE) ||
+            ((audio_devices_t)val == AUDIO_DEVICE_IN_USB_DEVICE)) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
                 if (audio_is_output_device(val))
@@ -6301,8 +6303,10 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 else
                     audio_extn_usb_remove_device(AUDIO_DEVICE_IN_USB_DEVICE, atoi(value));
             }
-            ALOGV("detected USB disconnect .. enable proxy");
-            adev->allow_afe_proxy_usage = true;
+            if (!audio_extn_usb_is_tunnel_supported()) {
+                ALOGV("detected USB disconnect .. enable proxy");
+                adev->allow_afe_proxy_usage = true;
+            }
         }
     }
 
