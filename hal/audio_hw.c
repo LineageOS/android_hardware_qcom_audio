@@ -51,6 +51,7 @@
 #include <audio_utils/clock.h>
 #include "audio_hw.h"
 #include "audio_extn.h"
+#include "audio_perf.h"
 #include "platform_api.h"
 #include <platform.h>
 #include "voice_extn.h"
@@ -1460,6 +1461,7 @@ int start_input_stream(struct stream_in *in)
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
+    audio_streaming_hint_start();
     audio_extn_perf_lock_acquire();
 
     select_devices(adev, in->usecase);
@@ -1526,6 +1528,7 @@ int start_input_stream(struct stream_in *in)
         }
     }
     register_in_stream(in);
+    audio_streaming_hint_end();
     audio_extn_perf_lock_release();
     ALOGV("%s: exit", __func__);
 
@@ -1533,6 +1536,7 @@ int start_input_stream(struct stream_in *in)
 
 error_open:
     stop_input_stream(in);
+    audio_streaming_hint_end();
     audio_extn_perf_lock_release();
 
 error_config:
@@ -1867,6 +1871,7 @@ int start_output_stream(struct stream_out *out)
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
+    audio_streaming_hint_start();
     audio_extn_perf_lock_acquire();
 
     select_devices(adev, out->usecase);
@@ -1953,6 +1958,7 @@ int start_output_stream(struct stream_out *out)
         }
     }
     register_out_stream(out);
+    audio_streaming_hint_end();
     audio_extn_perf_lock_release();
     audio_extn_tfa_98xx_enable_speaker();
 
@@ -1966,6 +1972,7 @@ int start_output_stream(struct stream_out *out)
     ALOGV("%s: exit", __func__);
     return 0;
 error_open:
+    audio_streaming_hint_end();
     audio_extn_perf_lock_release();
     stop_output_stream(out);
 error_config:
