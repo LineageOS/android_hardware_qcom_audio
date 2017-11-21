@@ -1307,7 +1307,9 @@ static bool platform_is_i2s_ext_modem(const char *snd_card_name,
         !strncmp(snd_card_name, "apq8084-taiko-i2s-cdp-snd-card",
                  sizeof("apq8084-taiko-i2s-cdp-snd-card")) ||
         !strncmp(snd_card_name, "apq8096-tasha-i2c-snd-card",
-                 sizeof("apq8096-tasha-i2c-snd-card"))) {
+                 sizeof("apq8096-tasha-i2c-snd-card")) ||
+        !strncmp(snd_card_name, "sdx-tavil-i2s-snd-card",
+                 sizeof("sdx-tavil-i2s-snd-card"))){
         plat_data->is_i2s_ext_modem = true;
     }
     ALOGV("%s, is_i2s_ext_modem:%d soundcard name is %s",__func__,
@@ -2243,7 +2245,8 @@ acdb_init_fail:
     property_get("ro.board.platform", platform, "");
     property_get("ro.baseband", baseband, "");
     if ((!strncmp("apq8084", platform, sizeof("apq8084")) ||
-        !strncmp("msm8996", platform, sizeof("msm8996"))) &&
+        !strncmp("msm8996", platform, sizeof("msm8996")) ||
+        !strncmp("sdx", platform, sizeof("sdx"))) &&
         !strncmp("mdm", baseband, (sizeof("mdm")-1))) {
          my_data->csd = open_csd_client(my_data->is_i2s_ext_modem);
     } else {
