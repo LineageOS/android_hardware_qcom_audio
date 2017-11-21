@@ -1067,13 +1067,8 @@ bool audio_extn_a2dp_is_force_device_switch()
     return a2dp.is_handoff_in_progress || !a2dp.a2dp_started;
 }
 
-void audio_extn_a2dp_get_apptype_params(uint32_t *sample_rate,
-                                        uint32_t *bit_width)
+void audio_extn_a2dp_get_sample_rate(int *sample_rate)
 {
-    if(a2dp.bt_encoder_format == ENC_CODEC_TYPE_APTX_HD)
-        *bit_width = 24;
-    else
-        *bit_width = 16;
     *sample_rate = a2dp.enc_sampling_rate;
 }
 

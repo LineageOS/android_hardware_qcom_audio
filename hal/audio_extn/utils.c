@@ -737,12 +737,6 @@ void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
             sample_rate = OUTPUT_SAMPLING_RATE_DSD128;
     }
 
-    if(devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
-        //TODO: Handle fractional sampling rate configuration for LL
-        audio_extn_a2dp_get_apptype_params(&sample_rate, &bit_width);
-        ALOGI("%s using %d sampling rate %d bit width for A2DP CoPP",
-              __func__, sample_rate, bit_width);
-    }
 
     ALOGV("%s: flags: %x, format: %x sample_rate %d, profile %s, app_type %d",
            __func__, flags, format, sample_rate, profile, app_type_cfg->app_type);
@@ -989,6 +983,14 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
             (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
             /* Reset to default if no native stream is active*/
             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        } else if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
+                 /*
+                  * For a2dp playback get encoder sampling rate and set copp sampling rate,
+                  * for bit width use the stream param only.
+                  */
+                   audio_extn_a2dp_get_sample_rate(&usecase->stream.out->app_type_cfg.sample_rate);
+                   ALOGI("%s using %d sample rate rate for A2DP CoPP",
+                        __func__, usecase->stream.out->app_type_cfg.sample_rate);
         }
         sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
 

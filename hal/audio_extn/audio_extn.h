@@ -243,7 +243,7 @@ bool audio_extn_usb_is_tunnel_supported();
 #define audio_extn_a2dp_set_parameters(parms)            (0)
 #define audio_extn_a2dp_is_force_device_switch()         (0)
 #define audio_extn_a2dp_set_handoff_mode(is_on)          (0)
-#define audio_extn_a2dp_get_apptype_params(sample_rate,bit_width)    (0)
+#define audio_extn_a2dp_get_sample_rate(sample_rate)     (0)
 #define audio_extn_a2dp_get_encoder_latency()            (0)
 #define audio_extn_a2dp_is_ready()                       (0)
 #define audio_extn_a2dp_is_suspended()                   (0)
@@ -254,8 +254,7 @@ int audio_extn_a2dp_stop_playback();
 void audio_extn_a2dp_set_parameters(struct str_parms *parms);
 bool audio_extn_a2dp_is_force_device_switch();
 void audio_extn_a2dp_set_handoff_mode(bool is_on);
-void audio_extn_a2dp_get_apptype_params(uint32_t *sample_rate,
-                                        uint32_t *bit_width);
+void audio_extn_a2dp_get_sample_rate(int *sample_rate);
 uint32_t audio_extn_a2dp_get_encoder_latency();
 bool audio_extn_a2dp_is_ready();
 bool audio_extn_a2dp_is_suspended();
