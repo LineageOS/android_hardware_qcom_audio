@@ -119,7 +119,7 @@ endif
 
 ################################################################################
 
-ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm660 sdm845 apq8098_latv sdm670 qcs605,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm660 sdm845 apq8098_latv sdm670 qcs605 msmnile,$(TARGET_BOARD_PLATFORM)),)
 
 include $(CLEAR_VARS)
 

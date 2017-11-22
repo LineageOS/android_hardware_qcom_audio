@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -420,6 +420,11 @@ static void  update_hardware_info_sdm845(struct hardware_info *hw_info, const ch
     }
 }
 
+static void  update_hardware_info_msmnile(struct hardware_info *hw_info __unused, const char *snd_card_name __unused)
+{
+    ALOGW("%s: Not a msmnile device", __func__);
+}
+
 static void  update_hardware_info_sdx(struct hardware_info *hw_info __unused, const char *snd_card_name __unused)
 {
     ALOGW("%s: Not a sdx device", __func__);
@@ -584,6 +589,9 @@ void *hw_info_init(const char *snd_card_name)
     } else if (strstr(snd_card_name, "sdx")) {
         ALOGV("SDX - variant soundcard");
         update_hardware_info_sdx(hw_info, snd_card_name);
+    } else if (strstr(snd_card_name, "pahu")) {
+        ALOGV("MSMNILE - variant soundcard");
+        update_hardware_info_msmnile(hw_info, snd_card_name);
     } else {
         ALOGE("%s: Unsupported target %s:",__func__, snd_card_name);
         free(hw_info);

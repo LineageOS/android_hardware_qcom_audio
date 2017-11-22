@@ -77,7 +77,7 @@
 #endif
 
 #include <linux/msm_audio.h>
-#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM670) || defined (PLATFORM_QCS605)
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM670) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE)
 #include <sound/devdep_params.h>
 #endif
 
@@ -7801,7 +7801,7 @@ int platform_get_supported_copp_sampling_rate(uint32_t stream_sr)
     return sample_rate;
 }
 
-#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM670) || defined (PLATFORM_QCS605)
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM670) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE)
 int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
                               uint32_t *size)
 {
