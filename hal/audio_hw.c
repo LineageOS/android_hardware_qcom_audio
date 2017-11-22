@@ -2705,7 +2705,13 @@ static void *offload_thread_loop(void *context)
             break;
         }
 
-        if (out->compr == NULL) {
+        // allow OFFLOAD_CMD_ERROR reporting during standby
+        // this is needed to handle failures during compress_open
+        // Note however that on a pause timeout, the stream is closed
+        // and no offload usecase will be active. Therefore this
+        // special case is needed for compress_open failures alone
+        if (cmd->cmd != OFFLOAD_CMD_ERROR &&
+            out->compr == NULL) {
             ALOGE("%s: Compress handle is NULL", __func__);
             free(cmd);
             pthread_cond_signal(&out->cond);
@@ -3069,7 +3075,7 @@ int start_output_stream(struct stream_out *out)
                                    COMPRESS_IN, &out->compr_config);
         ATRACE_END();
         if (out->compr && !is_compress_ready(out->compr)) {
-            ALOGE("%s: %s", __func__, compress_get_error(out->compr));
+            ALOGE("%s: failed /w error %s", __func__, compress_get_error(out->compr));
             compress_close(out->compr);
             out->compr = NULL;
             ret = -EIO;
@@ -3412,16 +3418,22 @@ static int out_standby(struct audio_stream *stream)
 static int out_on_error(struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
-    bool do_standby = false;
 
     lock_output_stream(out);
-    if (!out->standby) {
-        if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
-            stop_compressed_output_l(out);
-            send_offload_cmd_l(out, OFFLOAD_CMD_ERROR);
-        } else
-            do_standby = true;
+
+    // always send CMD_ERROR for offload streams, this
+    // is needed e.g. when SSR happens within compress_open
+    // since the stream is active, offload_callback_thread is also active.
+    if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
+        stop_compressed_output_l(out);
+        send_offload_cmd_l(out, OFFLOAD_CMD_ERROR);
     }
+
+    // for compress streams , if the stream is not in standby
+    // it will be triggered eventually from AF.
+    bool do_standby = !out->standby &&
+                      !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD);
+
     pthread_mutex_unlock(&out->lock);
 
     if (do_standby)
