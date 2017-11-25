@@ -3597,7 +3597,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
          * Avoid this by routing audio to speaker until standby.
          */
         if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
-                (val == AUDIO_DEVICE_NONE)) {
+                (val == AUDIO_DEVICE_NONE) &&
+                !audio_extn_a2dp_is_ready()) {
                 val = AUDIO_DEVICE_OUT_SPEAKER;
         }
         /* To avoid a2dp to sco overlapping / BT device improper state
