@@ -37,7 +37,7 @@
 #include <cutils/list.h>
 
 #include <hardware/audio.h>
-#include "qahw_api.h"
+#include "qahw.h"
 
 #define NO_ERROR 0
 #define MAX_MODULE_NAME_LENGTH  100
@@ -119,7 +119,7 @@ static pthread_mutex_t qahw_module_init_lock = PTHREAD_MUTEX_INITIALIZER;
 /******************************************************************************/
 
 /* call this function without anylock held */
-static bool is_valid_qahw_stream(void *qahw_stream,
+static bool is_valid_qahw_stream_l(void *qahw_stream,
                                  qahw_stream_direction_t dir)
 {
 
@@ -174,7 +174,7 @@ exit:
 }
 
 /* call this fucntion with ahw_module_init_lock held*/
-static qahw_module_t* get_qahw_module_by_ptr(qahw_module_t *qahw_module)
+static qahw_module_t* get_qahw_module_by_ptr_l(qahw_module_t *qahw_module)
 {
     struct listnode *node = NULL;
     qahw_module_t *module = NULL, *module_temp = NULL;
@@ -194,7 +194,7 @@ exit:
 }
 
 /* call this function with qahw_module_init_lock held*/
-static qahw_module_t* get_qahw_module_by_name(const char *qahw_name)
+static qahw_module_t* get_qahw_module_by_name_l(const char *qahw_name)
 {
     struct listnode *node = NULL;
     qahw_module_t *module = NULL, *module_temp = NULL;
@@ -217,13 +217,13 @@ exit:
 /*
  * Return the sampling rate in Hz - eg. 44100.
  */
-uint32_t qahw_out_get_sample_rate(const qahw_stream_handle_t *out_handle)
+uint32_t qahw_out_get_sample_rate_l(const qahw_stream_handle_t *out_handle)
 {
     uint32_t rate = 0;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGV("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -244,13 +244,13 @@ exit:
  * currently unused - use set_parameters with key
  *    AUDIO_PARAMETER_STREAM_SAMPLING_RATE
  */
-int qahw_out_set_sample_rate(qahw_stream_handle_t *out_handle, uint32_t rate)
+int qahw_out_set_sample_rate_l(qahw_stream_handle_t *out_handle, uint32_t rate)
 {
     int32_t rc = -EINVAL;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -267,13 +267,13 @@ exit:
     return rc;
 }
 
-size_t qahw_out_get_buffer_size(const qahw_stream_handle_t *out_handle)
+size_t qahw_out_get_buffer_size_l(const qahw_stream_handle_t *out_handle)
 {
     size_t buf_size = 0;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -290,13 +290,13 @@ exit:
     return buf_size;
 }
 
-audio_channel_mask_t qahw_out_get_channels(const qahw_stream_handle_t *out_handle)
+audio_channel_mask_t qahw_out_get_channels_l(const qahw_stream_handle_t *out_handle)
 {
     audio_channel_mask_t ch_mask = 0;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -313,13 +313,13 @@ exit:
     return ch_mask;
 }
 
-audio_format_t qahw_out_get_format(const qahw_stream_handle_t *out_handle)
+audio_format_t qahw_out_get_format_l(const qahw_stream_handle_t *out_handle)
 {
     audio_format_t format = AUDIO_FORMAT_INVALID;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -336,13 +336,13 @@ exit:
     return format;
 }
 
-int qahw_out_standby(qahw_stream_handle_t *out_handle)
+int qahw_out_standby_l(qahw_stream_handle_t *out_handle)
 {
     int32_t rc = -EINVAL;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -361,13 +361,13 @@ exit:
     return rc;
 }
 
-int qahw_out_set_parameters(qahw_stream_handle_t *out_handle, const char *kv_pairs)
+int qahw_out_set_parameters_l(qahw_stream_handle_t *out_handle, const char *kv_pairs)
 {
     int rc = NO_ERROR;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         rc = -EINVAL;
         goto exit;
@@ -387,14 +387,14 @@ exit:
     return rc;
 }
 
-char *qahw_out_get_parameters(const qahw_stream_handle_t *out_handle,
+char *qahw_out_get_parameters_l(const qahw_stream_handle_t *out_handle,
                                const char *keys)
 {
     char *str_param = NULL;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -413,7 +413,7 @@ exit:
 }
 
 /* API to get playback stream specific config parameters */
-int qahw_out_set_param_data(qahw_stream_handle_t *out_handle,
+int qahw_out_set_param_data_l(qahw_stream_handle_t *out_handle,
                             qahw_param_id param_id,
                             qahw_param_payload *payload)
 {
@@ -426,7 +426,7 @@ int qahw_out_set_param_data(qahw_stream_handle_t *out_handle,
         goto exit;
     }
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -446,7 +446,7 @@ exit:
 }
 
 /* API to get playback stream specific config parameters */
-int qahw_out_get_param_data(qahw_stream_handle_t *out_handle,
+int qahw_out_get_param_data_l(qahw_stream_handle_t *out_handle,
                             qahw_param_id param_id,
                             qahw_param_payload *payload)
 {
@@ -454,7 +454,7 @@ int qahw_out_get_param_data(qahw_stream_handle_t *out_handle,
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -473,13 +473,13 @@ exit:
     return rc;
 }
 
-uint32_t qahw_out_get_latency(const qahw_stream_handle_t *out_handle)
+uint32_t qahw_out_get_latency_l(const qahw_stream_handle_t *out_handle)
 {
     uint32_t latency = 0;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -497,13 +497,13 @@ exit:
     return latency;
 }
 
-int qahw_out_set_volume(qahw_stream_handle_t *out_handle, float left, float right)
+int qahw_out_set_volume_l(qahw_stream_handle_t *out_handle, float left, float right)
 {
     int rc = -EINVAL;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -522,7 +522,7 @@ exit:
    return rc;
 }
 
-ssize_t qahw_out_write(qahw_stream_handle_t *out_handle,
+ssize_t qahw_out_write_l(qahw_stream_handle_t *out_handle,
         qahw_out_buffer_t *out_buf)
 {
     int rc = -EINVAL;
@@ -534,7 +534,7 @@ ssize_t qahw_out_write(qahw_stream_handle_t *out_handle,
         goto exit;
     }
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -557,14 +557,14 @@ exit:
     return rc;
 }
 
-int qahw_out_get_render_position(const qahw_stream_handle_t *out_handle,
+int qahw_out_get_render_position_l(const qahw_stream_handle_t *out_handle,
                                  uint32_t *dsp_frames)
 {
     int rc = -EINVAL;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -582,7 +582,7 @@ exit:
     return rc;
 }
 
-int qahw_out_set_callback(qahw_stream_handle_t *out_handle,
+int qahw_out_set_callback_l(qahw_stream_handle_t *out_handle,
                           qahw_stream_callback_t callback,
                           void *cookie)
 {
@@ -591,7 +591,7 @@ int qahw_out_set_callback(qahw_stream_handle_t *out_handle,
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -610,14 +610,14 @@ exit:
     return rc;
 }
 
-int qahw_out_pause(qahw_stream_handle_t *out_handle)
+int qahw_out_pause_l(qahw_stream_handle_t *out_handle)
 {
     /*TBD:load hal func pointer and call */
     int rc = -EINVAL;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -636,14 +636,14 @@ exit:
     return rc;
 }
 
-int qahw_out_resume(qahw_stream_handle_t *out_handle)
+int qahw_out_resume_l(qahw_stream_handle_t *out_handle)
 {
     /*TBD:load hal func pointer and call */
     int rc = -EINVAL;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -662,14 +662,14 @@ exit:
     return rc;
 }
 
-int qahw_out_drain(qahw_stream_handle_t *out_handle, qahw_drain_type_t type )
+int qahw_out_drain_l(qahw_stream_handle_t *out_handle, qahw_drain_type_t type )
 {
     /*TBD:load hal func pointer and call */
     int rc = -EINVAL;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -688,13 +688,13 @@ exit:
     return rc;
 }
 
-int qahw_out_flush(qahw_stream_handle_t *out_handle)
+int qahw_out_flush_l(qahw_stream_handle_t *out_handle)
 {
     int rc = -EINVAL;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -713,14 +713,14 @@ exit:
     return rc;
 }
 
-int qahw_out_get_presentation_position(const qahw_stream_handle_t *out_handle,
+int qahw_out_get_presentation_position_l(const qahw_stream_handle_t *out_handle,
                            uint64_t *frames, struct timespec *timestamp)
 {
     int rc = -EINVAL;
     qahw_stream_out_t *qahw_stream_out = (qahw_stream_out_t *)out_handle;
     audio_stream_out_t *out = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         goto exit;
     }
@@ -740,13 +740,13 @@ exit:
 }
 
 /* Input stream specific APIs */
-uint32_t qahw_in_get_sample_rate(const qahw_stream_handle_t *in_handle)
+uint32_t qahw_in_get_sample_rate_l(const qahw_stream_handle_t *in_handle)
 {
     uint32_t rate = 0;
     qahw_stream_in_t *qahw_stream_in = (qahw_stream_in_t *)in_handle;
     audio_stream_in_t *in = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_in, STREAM_DIR_IN)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_in, STREAM_DIR_IN)) {
         ALOGV("%s::Invalid in handle %p", __func__, in_handle);
         goto exit;
     }
@@ -768,13 +768,13 @@ exit:
  * currently unused - use set_parameters with key
  *    AUDIO_PARAMETER_STREAM_SAMPLING_RATE
  */
-int qahw_in_set_sample_rate(qahw_stream_handle_t *in_handle, uint32_t rate)
+int qahw_in_set_sample_rate_l(qahw_stream_handle_t *in_handle, uint32_t rate)
 {
     int rc = -EINVAL;
     qahw_stream_in_t *qahw_stream_in = (qahw_stream_in_t *)in_handle;
     audio_stream_in_t *in = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_in, STREAM_DIR_IN)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_in, STREAM_DIR_IN)) {
         ALOGV("%s::Invalid in handle %p", __func__, in_handle);
         goto exit;
     }
@@ -793,13 +793,13 @@ exit:
     return rc;
 }
 
-size_t qahw_in_get_buffer_size(const qahw_stream_handle_t *in_handle)
+size_t qahw_in_get_buffer_size_l(const qahw_stream_handle_t *in_handle)
 {
     size_t buf_size = 0;
     qahw_stream_in_t *qahw_stream_in = (qahw_stream_in_t *)in_handle;
     audio_stream_in_t *in = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_in, STREAM_DIR_IN)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_in, STREAM_DIR_IN)) {
         ALOGV("%s::Invalid in handle %p", __func__, in_handle);
         goto exit;
     }
@@ -818,13 +818,13 @@ exit:
 }
 
 
-audio_channel_mask_t qahw_in_get_channels(const qahw_stream_handle_t *in_handle)
+audio_channel_mask_t qahw_in_get_channels_l(const qahw_stream_handle_t *in_handle)
 {
     audio_channel_mask_t ch_mask = 0;;
     qahw_stream_in_t *qahw_stream_in = (qahw_stream_in_t *)in_handle;
     audio_stream_in_t *in = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_in, STREAM_DIR_IN)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_in, STREAM_DIR_IN)) {
         ALOGV("%s::Invalid in handle %p", __func__, in_handle);
         goto exit;
     }
@@ -842,13 +842,13 @@ exit:
     return ch_mask;
 }
 
-audio_format_t qahw_in_get_format(const qahw_stream_handle_t *in_handle)
+audio_format_t qahw_in_get_format_l(const qahw_stream_handle_t *in_handle)
 {
     audio_format_t format = AUDIO_FORMAT_INVALID;
     qahw_stream_in_t *qahw_stream_in = (qahw_stream_in_t *)in_handle;
     audio_stream_in_t *in = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_in, STREAM_DIR_IN)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_in, STREAM_DIR_IN)) {
         ALOGV("%s::Invalid in handle %p", __func__, in_handle);
         goto exit;
     }
@@ -870,13 +870,13 @@ exit:
  * currently unused - use set_parameters with key
  *     AUDIO_PARAMETER_STREAM_FORMAT
  */
-int qahw_in_set_format(qahw_stream_handle_t *in_handle, audio_format_t format)
+int qahw_in_set_format_l(qahw_stream_handle_t *in_handle, audio_format_t format)
 {
     int rc = -EINVAL;
     qahw_stream_in_t *qahw_stream_in = (qahw_stream_in_t *)in_handle;
     audio_stream_in_t *in = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_in, STREAM_DIR_IN)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_in, STREAM_DIR_IN)) {
         ALOGV("%s::Invalid in handle %p", __func__, in_handle);
         goto exit;
     }
@@ -895,13 +895,13 @@ exit:
     return rc;
 }
 
-int qahw_in_standby(qahw_stream_handle_t *in_handle)
+int qahw_in_standby_l(qahw_stream_handle_t *in_handle)
 {
     int rc = -EINVAL;
     qahw_stream_in_t *qahw_stream_in = (qahw_stream_in_t *)in_handle;
     audio_stream_in_t *in = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_in, STREAM_DIR_IN)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_in, STREAM_DIR_IN)) {
         ALOGV("%s::Invalid in handle %p", __func__, in_handle);
         goto exit;
     }
@@ -933,13 +933,13 @@ exit:
  * The audio flinger will put the stream in standby and then change the
  * parameter value.
  */
-int qahw_in_set_parameters(qahw_stream_handle_t *in_handle, const char *kv_pairs)
+int qahw_in_set_parameters_l(qahw_stream_handle_t *in_handle, const char *kv_pairs)
 {
     int rc = -EINVAL;
     qahw_stream_in_t *qahw_stream_in = (qahw_stream_in_t *)in_handle;
     audio_stream_in_t *in = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_in, STREAM_DIR_IN)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_in, STREAM_DIR_IN)) {
         ALOGV("%s::Invalid in handle %p", __func__, in_handle);
         goto exit;
     }
@@ -961,14 +961,14 @@ exit:
  * Returns a pointer to a heap allocated string. The caller is responsible
  * for freeing the memory for it using free().
  */
-char * qahw_in_get_parameters(const qahw_stream_handle_t *in_handle,
+char * qahw_in_get_parameters_l(const qahw_stream_handle_t *in_handle,
                               const char *keys)
 {
     char *str_param = NULL;
     qahw_stream_in_t *qahw_stream_in = (qahw_stream_in_t *)in_handle;
     audio_stream_in_t *in = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_in, STREAM_DIR_IN)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_in, STREAM_DIR_IN)) {
         ALOGV("%s::Invalid in handle %p", __func__, in_handle);
         goto exit;
     }
@@ -991,7 +991,7 @@ exit:
  *  negative status_t. If at least one frame was read prior to the error,
  *  read should return that byte count and then return an error in the subsequent call.
  */
-ssize_t qahw_in_read(qahw_stream_handle_t *in_handle,
+ssize_t qahw_in_read_l(qahw_stream_handle_t *in_handle,
                      qahw_in_buffer_t *in_buf)
 {
     int rc = -EINVAL;
@@ -1003,7 +1003,7 @@ ssize_t qahw_in_read(qahw_stream_handle_t *in_handle,
         goto exit;
     }
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_in, STREAM_DIR_IN)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_in, STREAM_DIR_IN)) {
         ALOGV("%s::Invalid in handle %p", __func__, in_handle);
         goto exit;
     }
@@ -1037,13 +1037,13 @@ exit:
  *
  * Unit: the number of input audio frames
  */
-uint32_t qahw_in_get_input_frames_lost(qahw_stream_handle_t *in_handle)
+uint32_t qahw_in_get_input_frames_lost_l(qahw_stream_handle_t *in_handle)
 {
     uint32_t rc = 0;
     qahw_stream_in_t *qahw_stream_in = (qahw_stream_in_t *)in_handle;
     audio_stream_in_t *in = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_in, STREAM_DIR_IN)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_in, STREAM_DIR_IN)) {
         ALOGV("%s::Invalid in handle %p", __func__, in_handle);
         goto exit;
     }
@@ -1076,7 +1076,7 @@ exit:
  * The status returned is 0 on success, -ENOSYS if the device is not
  * ready/available, or -EINVAL if the arguments are null or otherwise invalid.
  */
-int qahw_in_get_capture_position(const qahw_stream_handle_t *in_handle __unused,
+int qahw_in_get_capture_position_l(const qahw_stream_handle_t *in_handle __unused,
                                  int64_t *frames __unused, int64_t *time __unused)
 {
     /*TBD:: do we need this*/
@@ -1087,14 +1087,14 @@ int qahw_in_get_capture_position(const qahw_stream_handle_t *in_handle __unused,
  * check to see if the audio hardware interface has been initialized.
  * returns 0 on success, -ENODEV on failure.
  */
-int qahw_init_check(const qahw_module_handle_t *hw_module)
+int qahw_init_check_l(const qahw_module_handle_t *hw_module)
 {
     int rc = -EINVAL;
     qahw_module_t *qahw_module = (qahw_module_t *)hw_module;
     qahw_module_t *qahw_module_temp;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1114,14 +1114,14 @@ exit:
     return rc;
 }
 /* set the audio volume of a voice call. Range is between 0.0 and 1.0 */
-int qahw_set_voice_volume(qahw_module_handle_t *hw_module, float volume)
+int qahw_set_voice_volume_l(qahw_module_handle_t *hw_module, float volume)
 {
     int rc = -EINVAL;
     qahw_module_t *qahw_module = (qahw_module_t *)hw_module;
     qahw_module_t *qahw_module_temp;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1147,14 +1147,14 @@ exit:
  * is for standard audio playback, AUDIO_MODE_RINGTONE when a ringtone is
  * playing, and AUDIO_MODE_IN_CALL when a call is in progress.
  */
-int qahw_set_mode(qahw_module_handle_t *hw_module, audio_mode_t mode)
+int qahw_set_mode_l(qahw_module_handle_t *hw_module, audio_mode_t mode)
 {
     int rc = -EINVAL;
     qahw_module_t *qahw_module = (qahw_module_t *)hw_module;
     qahw_module_t *qahw_module_temp;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1175,14 +1175,14 @@ exit:
     return rc;
 }
 
-int qahw_set_mic_mute(qahw_module_handle_t *hw_module, bool state)
+int qahw_set_mic_mute_l(qahw_module_handle_t *hw_module, bool state)
 {
     int rc = -EINVAL;
     qahw_module_t *qahw_module = (qahw_module_t *)hw_module;
     qahw_module_t *qahw_module_temp;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1203,7 +1203,7 @@ exit:
     return rc;
 }
 
-int qahw_get_mic_mute(qahw_module_handle_t *hw_module, bool *state)
+int qahw_get_mic_mute_l(qahw_module_handle_t *hw_module, bool *state)
 {
     size_t rc = 0;
     qahw_module_t *qahw_module = (qahw_module_t *)hw_module;
@@ -1211,7 +1211,7 @@ int qahw_get_mic_mute(qahw_module_handle_t *hw_module, bool *state)
     audio_hw_device_t *audio_device;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1233,7 +1233,7 @@ exit:
 }
 
 /* set/get global audio parameters */
-int qahw_set_parameters(qahw_module_handle_t *hw_module, const char *kv_pairs)
+int qahw_set_parameters_l(qahw_module_handle_t *hw_module, const char *kv_pairs)
 {
     int rc = -EINVAL;
     qahw_module_t *qahw_module = (qahw_module_t *)hw_module;
@@ -1241,7 +1241,7 @@ int qahw_set_parameters(qahw_module_handle_t *hw_module, const char *kv_pairs)
     audio_hw_device_t *audio_device;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1266,7 +1266,7 @@ exit:
  * Returns a pointer to a heap allocated string. The caller is responsible
  * for freeing the memory for it using free().
  */
-char * qahw_get_parameters(const qahw_module_handle_t *hw_module,
+char * qahw_get_parameters_l(const qahw_module_handle_t *hw_module,
                            const char *keys)
 {
     char *str_param = NULL;
@@ -1275,7 +1275,7 @@ char * qahw_get_parameters(const qahw_module_handle_t *hw_module,
     audio_hw_device_t *audio_device;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1298,7 +1298,7 @@ exit:
 /* Api to implement get parameters  based on keyword param_id
  * and store data in payload.
  */
-int qahw_get_param_data(const qahw_module_handle_t *hw_module,
+int qahw_get_param_data_l(const qahw_module_handle_t *hw_module,
                         qahw_param_id param_id,
                         qahw_param_payload *payload)
 {
@@ -1307,7 +1307,7 @@ int qahw_get_param_data(const qahw_module_handle_t *hw_module,
     qahw_module_t *qahw_module_temp;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1332,7 +1332,7 @@ exit:
 /* Api to implement set parameters  based on keyword param_id
  * and data present in payload.
  */
-int qahw_set_param_data(const qahw_module_handle_t *hw_module,
+int qahw_set_param_data_l(const qahw_module_handle_t *hw_module,
                         qahw_param_id param_id,
                         qahw_param_payload *payload)
 {
@@ -1341,7 +1341,7 @@ int qahw_set_param_data(const qahw_module_handle_t *hw_module,
     qahw_module_t *qahw_module_temp;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1367,7 +1367,7 @@ exit:
  * The handle is allocated by the HAL and should be unique for this
  * audio HAL module.
  */
-int qahw_create_audio_patch(qahw_module_handle_t *hw_module,
+int qahw_create_audio_patch_l(qahw_module_handle_t *hw_module,
                         unsigned int num_sources,
                         const struct audio_port_config *sources,
                         unsigned int num_sinks,
@@ -1379,7 +1379,7 @@ int qahw_create_audio_patch(qahw_module_handle_t *hw_module,
     qahw_module_t *qahw_module_temp;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1406,7 +1406,7 @@ exit:
 }
 
 /* Release an audio patch */
-int qahw_release_audio_patch(qahw_module_handle_t *hw_module,
+int qahw_release_audio_patch_l(qahw_module_handle_t *hw_module,
                         audio_patch_handle_t handle)
 {
     int ret = 0;
@@ -1414,7 +1414,7 @@ int qahw_release_audio_patch(qahw_module_handle_t *hw_module,
     qahw_module_t *qahw_module_temp;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1442,7 +1442,7 @@ exit:
  * As output, "port" contains possible attributes (sampling rates, formats,
  * channel masks, gain controllers...) for this port.
  */
-int qahw_get_audio_port(qahw_module_handle_t *hw_module,
+int qahw_get_audio_port_l(qahw_module_handle_t *hw_module,
                       struct audio_port *port)
 {
     int ret = 0;
@@ -1450,7 +1450,7 @@ int qahw_get_audio_port(qahw_module_handle_t *hw_module,
     qahw_module_t *qahw_module_temp;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1473,7 +1473,7 @@ exit:
 }
 
 /* Set audio port configuration */
-int qahw_set_audio_port_config(qahw_module_handle_t *hw_module,
+int qahw_set_audio_port_config_l(qahw_module_handle_t *hw_module,
                      const struct audio_port_config *config)
 {
     int ret = 0;
@@ -1481,7 +1481,7 @@ int qahw_set_audio_port_config(qahw_module_handle_t *hw_module,
     qahw_module_t *qahw_module_temp;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1507,7 +1507,7 @@ exit:
  * 0 if one of the parameters is not supported.
  * See also get_buffer_size which is for a particular stream.
  */
-size_t qahw_get_input_buffer_size(const qahw_module_handle_t *hw_module,
+size_t qahw_get_input_buffer_size_l(const qahw_module_handle_t *hw_module,
                                   const struct audio_config *config)
 {
     size_t rc = 0;
@@ -1516,7 +1516,7 @@ size_t qahw_get_input_buffer_size(const qahw_module_handle_t *hw_module,
     audio_hw_device_t *audio_device;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1546,7 +1546,7 @@ exit:
  * - USB devices use the ALSA card and device numbers in the form  "card=X;device=Y"
  * - Other devices may use a number or any other string.
  */
-int qahw_open_output_stream(qahw_module_handle_t *hw_module,
+int qahw_open_output_stream_l(qahw_module_handle_t *hw_module,
                             audio_io_handle_t handle,
                             audio_devices_t devices,
                             audio_output_flags_t flags,
@@ -1561,7 +1561,7 @@ int qahw_open_output_stream(qahw_module_handle_t *hw_module,
     qahw_stream_out_t *qahw_stream_out = NULL;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1634,7 +1634,7 @@ exit:
     return rc;
 }
 
-int qahw_close_output_stream(qahw_stream_handle_t *out_handle)
+int qahw_close_output_stream_l(qahw_stream_handle_t *out_handle)
 {
 
     int rc = 0;
@@ -1642,7 +1642,7 @@ int qahw_close_output_stream(qahw_stream_handle_t *out_handle)
     qahw_module_t *qahw_module = NULL;
     audio_hw_device_t *audio_device = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_out, STREAM_DIR_OUT)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_out, STREAM_DIR_OUT)) {
         ALOGE("%s::Invalid out handle %p", __func__, out_handle);
         rc = -EINVAL;
         goto exit;
@@ -1669,7 +1669,7 @@ exit:
 }
 
 /* This method creates and opens the audio hardware input stream */
-int qahw_open_input_stream(qahw_module_handle_t *hw_module,
+int qahw_open_input_stream_l(qahw_module_handle_t *hw_module,
                            audio_io_handle_t handle,
                            audio_devices_t devices,
                            struct audio_config *config,
@@ -1685,7 +1685,7 @@ int qahw_open_input_stream(qahw_module_handle_t *hw_module,
     qahw_stream_in_t *qahw_stream_in = NULL;
 
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     pthread_mutex_unlock(&qahw_module_init_lock);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
@@ -1738,14 +1738,14 @@ exit:
     return rc;
 }
 
-int qahw_close_input_stream(qahw_stream_handle_t *in_handle)
+int qahw_close_input_stream_l(qahw_stream_handle_t *in_handle)
 {
     int rc = 0;
     qahw_stream_in_t *qahw_stream_in = (qahw_stream_in_t *)in_handle;
     qahw_module_t *qahw_module = NULL;
     audio_hw_device_t *audio_device = NULL;
 
-    if (!is_valid_qahw_stream((void *)qahw_stream_in, STREAM_DIR_IN)) {
+    if (!is_valid_qahw_stream_l((void *)qahw_stream_in, STREAM_DIR_IN)) {
         ALOGV("%s::Invalid in handle %p", __func__, in_handle);
         rc = -EINVAL;
         goto exit;
@@ -1772,13 +1772,13 @@ exit:
 }
 
 /*returns current QTI HAL verison */
-int qahw_get_version() {
+int qahw_get_version_l() {
     return QAHW_MODULE_API_VERSION_CURRENT;
 }
 
 /* convenience API for opening and closing an audio HAL module */
 
-qahw_module_handle_t *qahw_load_module(const char *hw_module_id)
+qahw_module_handle_t *qahw_load_module_l(const char *hw_module_id)
 {
     int rc = -EINVAL;
     qahw_module_handle_t *qahw_mod_handle = NULL;
@@ -1806,7 +1806,7 @@ qahw_module_handle_t *qahw_load_module(const char *hw_module_id)
     /* return exiting module ptr if already loaded */
     pthread_mutex_lock(&qahw_module_init_lock);
     if (qahw_list_count > 0) {
-        qahw_module = get_qahw_module_by_name(hw_module_id);
+        qahw_module = get_qahw_module_by_name_l(hw_module_id);
         if(qahw_module != NULL) {
             qahw_mod_handle = (void *)qahw_module;
             pthread_mutex_lock(&qahw_module->lock);
@@ -1876,7 +1876,7 @@ exit:
     return qahw_mod_handle;
 }
 
-int qahw_unload_module(qahw_module_handle_t *hw_module)
+int qahw_unload_module_l(qahw_module_handle_t *hw_module)
 {
     int rc = -EINVAL;
     bool is_empty = false;
@@ -1887,7 +1887,7 @@ int qahw_unload_module(qahw_module_handle_t *hw_module)
      * it is closed
     */
     pthread_mutex_lock(&qahw_module_init_lock);
-    qahw_module_temp = get_qahw_module_by_ptr(qahw_module);
+    qahw_module_temp = get_qahw_module_by_ptr_l(qahw_module);
     if (qahw_module_temp == NULL) {
         ALOGE("%s:: invalid hw module %p", __func__, qahw_module);
         goto error_exit;

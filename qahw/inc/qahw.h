@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#ifndef QTI_AUDIO_QAHW_API_H
-#define QTI_AUDIO_QAHW_API_H
+#ifndef QTI_AUDIO_QAHW_H
+#define QTI_AUDIO_QAHW_H
 
 #include <stdint.h>
 #include <strings.h>
@@ -61,8 +61,11 @@ __BEGIN_DECLS
 
 typedef void qahw_module_handle_t;
 typedef void qahw_stream_handle_t;
-typedef void (*audio_error_callback)(void* context);
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 /**************************************/
 /* Output stream specific APIs **/
 
@@ -75,7 +78,7 @@ typedef void (*audio_error_callback)(void* context);
  * - Other devices may use a number or any other string.
  */
 
-int qahw_open_output_stream(qahw_module_handle_t *hw_module,
+int qahw_open_output_stream_l(qahw_module_handle_t *hw_module,
                             audio_io_handle_t handle,
                             audio_devices_t devices,
                             audio_output_flags_t flags,
@@ -83,42 +86,41 @@ int qahw_open_output_stream(qahw_module_handle_t *hw_module,
                             qahw_stream_handle_t **out_handle,
                             const char *address);
 
-int qahw_close_output_stream(qahw_stream_handle_t *out_handle);
-
+int qahw_close_output_stream_l(qahw_stream_handle_t *out_handle);
 
 /*
  * Return the sampling rate in Hz - eg. 44100.
  */
-uint32_t qahw_out_get_sample_rate(const qahw_stream_handle_t *stream);
+uint32_t qahw_out_get_sample_rate_l(const qahw_stream_handle_t *stream);
 
 /*
  *  use set_parameters with key QAHW_PARAMETER_STREAM_SAMPLING_RATE
  */
-int qahw_out_set_sample_rate(qahw_stream_handle_t *stream, uint32_t rate);
+int qahw_out_set_sample_rate_l(qahw_stream_handle_t *stream, uint32_t rate);
 
 /*
  * Return size of input/output buffer in bytes for this stream - eg. 4800.
  * It should be a multiple of the frame size.  See also get_input_buffer_size.
  */
-size_t qahw_out_get_buffer_size(const qahw_stream_handle_t *stream);
+size_t qahw_out_get_buffer_size_l(const qahw_stream_handle_t *stream);
 
 /*
  * Return the channel mask -
  *  e.g. AUDIO_CHANNEL_OUT_STEREO or AUDIO_CHANNEL_IN_STEREO
  */
-audio_channel_mask_t qahw_out_get_channels(const qahw_stream_handle_t *stream);
+audio_channel_mask_t qahw_out_get_channels_l(const qahw_stream_handle_t *stream);
 
 /*
  * Return the audio format - e.g. AUDIO_FORMAT_PCM_16_BIT
  */
-audio_format_t qahw_out_get_format(const qahw_stream_handle_t *stream);
+audio_format_t qahw_out_get_format_l(const qahw_stream_handle_t *stream);
 
 /*
  * Put the audio hardware input/output into standby mode.
  * Driver should exit from standby mode at the next I/O operation.
  * Returns 0 on success and <0 on failure.
  */
-int qahw_out_standby(qahw_stream_handle_t *stream);
+int qahw_out_standby_l(qahw_stream_handle_t *stream);
 
 /*
  * set/get audio stream parameters. The function accepts a list of
@@ -133,29 +135,29 @@ int qahw_out_standby(qahw_stream_handle_t *stream);
  * The audio flinger will put the stream in standby and then change the
  * parameter value.
  */
-int qahw_out_set_parameters(qahw_stream_handle_t *stream, const char*kv_pairs);
+int qahw_out_set_parameters_l(qahw_stream_handle_t *stream, const char*kv_pairs);
 
 /*
  * Returns a pointer to a heap allocated string. The caller is responsible
  * for freeing the memory for it using free().
  */
-char* qahw_out_get_parameters(const qahw_stream_handle_t *stream,
+char* qahw_out_get_parameters_l(const qahw_stream_handle_t *stream,
                                const char *keys);
 
 /* API to set playback stream specific config parameters */
-int qahw_out_set_param_data(qahw_stream_handle_t *out_handle,
+int qahw_out_set_param_data_l(qahw_stream_handle_t *out_handle,
                             qahw_param_id param_id,
                             qahw_param_payload *payload);
 
 /* API to get playback stream specific config parameters */
-int qahw_out_get_param_data(qahw_stream_handle_t *out_handle,
+int qahw_out_get_param_data_l(qahw_stream_handle_t *out_handle,
                             qahw_param_id param_id,
                             qahw_param_payload *payload);
 
 /*
  * Return the audio hardware driver estimated latency in milliseconds.
  */
-uint32_t qahw_out_get_latency(const qahw_stream_handle_t *stream);
+uint32_t qahw_out_get_latency_l(const qahw_stream_handle_t *stream);
 
 /*
  * Use this method in situations where audio mixing is done in the
@@ -164,7 +166,7 @@ uint32_t qahw_out_get_latency(const qahw_stream_handle_t *stream);
  * This method might produce multiple PCM outputs or hardware accelerated
  * codecs, such as MP3 or AAC.
  */
-int qahw_out_set_volume(qahw_stream_handle_t *stream, float left, float right);
+int qahw_out_set_volume_l(qahw_stream_handle_t *stream, float left, float right);
 
 /*
  * Write audio buffer present in meta_data starting from offset
@@ -182,14 +184,14 @@ int qahw_out_set_volume(qahw_stream_handle_t *stream, float left, float right);
  * callback function must be called when more space is available in the
  * driver/hardware buffer.
  */
-ssize_t qahw_out_write(qahw_stream_handle_t *stream,
+ssize_t qahw_out_write_l(qahw_stream_handle_t *stream,
                        qahw_out_buffer_t *out_buf);
 
 /*
  * return the number of audio frames written by the audio dsp to DAC since
  * the output has exited standby
  */
-int qahw_out_get_render_position(const qahw_stream_handle_t *stream,
+int qahw_out_get_render_position_l(const qahw_stream_handle_t *stream,
                                  uint32_t *dsp_frames);
 
 /*
@@ -198,7 +200,7 @@ int qahw_out_get_render_position(const qahw_stream_handle_t *stream,
  * Calling this function implies that all future rite() and drain()
  * must be non-blocking and use the callback to signal completion.
  */
-int qahw_out_set_callback(qahw_stream_handle_t *stream,
+int qahw_out_set_callback_l(qahw_stream_handle_t *stream,
                           qahw_stream_callback_t callback,
                           void *cookie);
 
@@ -211,7 +213,7 @@ int qahw_out_set_callback(qahw_stream_handle_t *stream,
  *
  * Implementation of this function is mandatory for offloaded playback.
  */
-int qahw_out_pause(qahw_stream_handle_t *out_handle);
+int qahw_out_pause_l(qahw_stream_handle_t *out_handle);
 
 /*
  * Notifies to the audio driver to resume playback following a pause.
@@ -219,7 +221,7 @@ int qahw_out_pause(qahw_stream_handle_t *out_handle);
  *
  * Implementation of this function is mandatory for offloaded playback.
  */
-int qahw_out_resume(qahw_stream_handle_t *out_handle);
+int qahw_out_resume_l(qahw_stream_handle_t *out_handle);
 
 /*
  * Requests notification when data buffered by the driver/hardware has
@@ -238,7 +240,7 @@ int qahw_out_resume(qahw_stream_handle_t *out_handle);
  *
  * Implementation of this function is mandatory for offloaded playback.
  */
-int qahw_out_drain(qahw_stream_handle_t *out_handle, qahw_drain_type_t type);
+int qahw_out_drain_l(qahw_stream_handle_t *out_handle, qahw_drain_type_t type);
 
 /*
  * Notifies to the audio driver to flush the queued data. Stream must already
@@ -246,7 +248,7 @@ int qahw_out_drain(qahw_stream_handle_t *out_handle, qahw_drain_type_t type);
  *
  * Implementation of this function is mandatory for offloaded playback.
  */
-int qahw_out_flush(qahw_stream_handle_t *out_handle);
+int qahw_out_flush_l(qahw_stream_handle_t *out_handle);
 
 /*
  * Return a recent count of the number of audio frames presented to an external observer.
@@ -264,13 +266,13 @@ int qahw_out_flush(qahw_stream_handle_t *out_handle);
  *
  * 3.0 and higher only.
  */
-int qahw_out_get_presentation_position(const qahw_stream_handle_t *out_handle,
+int qahw_out_get_presentation_position_l(const qahw_stream_handle_t *out_handle,
                                        uint64_t *frames, struct timespec *timestamp);
 
 /* Input stream specific APIs */
 
 /* This method creates and opens the audio hardware input stream */
-int qahw_open_input_stream(qahw_module_handle_t *hw_module,
+int qahw_open_input_stream_l(qahw_module_handle_t *hw_module,
                            audio_io_handle_t handle,
                            audio_devices_t devices,
                            struct audio_config *config,
@@ -279,48 +281,48 @@ int qahw_open_input_stream(qahw_module_handle_t *hw_module,
                            const char *address,
                            audio_source_t source);
 
-int qahw_close_input_stream(qahw_stream_handle_t *in_handle);
+int qahw_close_input_stream_l(qahw_stream_handle_t *in_handle);
 
 /*
  * Return the sampling rate in Hz - eg. 44100.
  */
-uint32_t qahw_in_get_sample_rate(const qahw_stream_handle_t *in_handle);
+uint32_t qahw_in_get_sample_rate_l(const qahw_stream_handle_t *in_handle);
 
 /*
  * currently unused - use set_parameters with key
  *    QAHW_PARAMETER_STREAM_SAMPLING_RATE
  */
-int qahw_in_set_sample_rate(qahw_stream_handle_t *in_handle, uint32_t rate);
+int qahw_in_set_sample_rate_l(qahw_stream_handle_t *in_handle, uint32_t rate);
 
 /*
  * Return size of input/output buffer in bytes for this stream - eg. 4800.
  * It should be a multiple of the frame size.  See also get_input_buffer_size.
  */
-size_t qahw_in_get_buffer_size(const qahw_stream_handle_t *in_handle);
+size_t qahw_in_get_buffer_size_l(const qahw_stream_handle_t *in_handle);
 
 /*
  * Return the channel mask -
  *  e.g. AUDIO_CHANNEL_OUT_STEREO or AUDIO_CHANNEL_IN_STEREO
  */
-audio_channel_mask_t qahw_in_get_channels(const qahw_stream_handle_t *in_handle);
+audio_channel_mask_t qahw_in_get_channels_l(const qahw_stream_handle_t *in_handle);
 
 /*
  * Return the audio format - e.g. AUDIO_FORMAT_PCM_16_BIT
  */
-audio_format_t qahw_in_get_format(const qahw_stream_handle_t *in_handle);
+audio_format_t qahw_in_get_format_l(const qahw_stream_handle_t *in_handle);
 
 /*
  * currently unused - use set_parameters with key
  *     QAHW_PARAMETER_STREAM_FORMAT
  */
-int qahw_in_set_format(qahw_stream_handle_t *in_handle, audio_format_t format);
+int qahw_in_set_format_l(qahw_stream_handle_t *in_handle, audio_format_t format);
 
 /*
  * Put the audio hardware input/output into standby mode.
  * Driver should exit from standby mode at the next I/O operation.
  * Returns 0 on success and <0 on failure.
  */
-int qahw_in_standby(qahw_stream_handle_t *in_handle);
+int qahw_in_standby_l(qahw_stream_handle_t *in_handle);
 
 /*
  * set/get audio stream parameters. The function accepts a list of
@@ -335,13 +337,13 @@ int qahw_in_standby(qahw_stream_handle_t *in_handle);
  * The audio flinger will put the stream in standby and then change the
  * parameter value.
  */
-int qahw_in_set_parameters(qahw_stream_handle_t *in_handle, const char *kv_pairs);
+int qahw_in_set_parameters_l(qahw_stream_handle_t *in_handle, const char *kv_pairs);
 
 /*
  * Returns a pointer to a heap allocated string. The caller is responsible
  * for freeing the memory for it using free().
  */
-char* qahw_in_get_parameters(const qahw_stream_handle_t *in_handle,
+char* qahw_in_get_parameters_l(const qahw_stream_handle_t *in_handle,
                               const char *keys);
 /*
  * Read audio buffer in from audio driver. Returns number of bytes read, or a
@@ -351,7 +353,7 @@ char* qahw_in_get_parameters(const qahw_stream_handle_t *in_handle,
  * read should return that byte count and then return an error in the
  * subsequent call.
  */
-ssize_t qahw_in_read(qahw_stream_handle_t *in_handle,
+ssize_t qahw_in_read_l(qahw_stream_handle_t *in_handle,
                      qahw_in_buffer_t *in_buf);
 /*
  * Return the amount of input frames lost in the audio driver since the
@@ -363,7 +365,7 @@ ssize_t qahw_in_read(qahw_stream_handle_t *in_handle,
  *
  * Unit: the number of input audio frames
  */
-uint32_t qahw_in_get_input_frames_lost(qahw_stream_handle_t *in_handle);
+uint32_t qahw_in_get_input_frames_lost_l(qahw_stream_handle_t *in_handle);
 
 /*
  * Return a recent count of the number of audio frames received and
@@ -379,69 +381,69 @@ uint32_t qahw_in_get_input_frames_lost(qahw_stream_handle_t *in_handle);
  * The status returned is 0 on success, -ENOSYS if the device is not
  * ready/available, or -EINVAL if the arguments are null or otherwise invalid.
  */
-int qahw_in_get_capture_position(const qahw_stream_handle_t *in_handle,
+int qahw_in_get_capture_position_l(const qahw_stream_handle_t *in_handle,
                                  int64_t *frames, int64_t *time);
 
 /* Module specific APIs */
 
 /* convenience API for opening and closing an audio HAL module */
-qahw_module_handle_t *qahw_load_module(const char *hw_module_id);
+qahw_module_handle_t *qahw_load_module_l(const char *hw_module_id);
 
-int qahw_unload_module(qahw_module_handle_t *hw_module);
+int qahw_unload_module_l(qahw_module_handle_t *hw_module);
 
 /*
  * check to see if the audio hardware interface has been initialized.
  * returns 0 on success, -ENODEV on failure.
  */
-int qahw_init_check(const qahw_module_handle_t *hw_module);
+int qahw_init_check_l(const qahw_module_handle_t *hw_module);
 
 /* set the audio volume of a voice call. Range is between 0.0 and 1.0 */
-int qahw_set_voice_volume(qahw_module_handle_t *hw_module, float volume);
+int qahw_set_voice_volume_l(qahw_module_handle_t *hw_module, float volume);
 
 /*
  * set_mode is called when the audio mode changes. AUDIO_MODE_NORMAL mode
  * is for standard audio playback, AUDIO_MODE_RINGTONE when a ringtone is
  * playing, and AUDIO_MODE_IN_CALL when a call is in progress.
  */
-int qahw_set_mode(qahw_module_handle_t *hw_module, audio_mode_t mode);
+int qahw_set_mode_l(qahw_module_handle_t *hw_module, audio_mode_t mode);
 
 /* Mute/unmute mic during voice/voip/HFP call */
-int qahw_set_mic_mute(qahw_module_handle_t *hw_module, bool state);
+int qahw_set_mic_mute_l(qahw_module_handle_t *hw_module, bool state);
 
 /* Get mute/unmute status of mic during voice call */
-int qahw_get_mic_mute(qahw_module_handle_t *hw_module, bool *state);
+int qahw_get_mic_mute_l(qahw_module_handle_t *hw_module, bool *state);
 
 /* set/get global audio parameters */
-int qahw_set_parameters(qahw_module_handle_t *hw_module, const char *kv_pairs);
+int qahw_set_parameters_l(qahw_module_handle_t *hw_module, const char *kv_pairs);
 
 /*
  * Returns a pointer to a heap allocated string. The caller is responsible
  * for freeing the memory for it using free().
  */
-char* qahw_get_parameters(const qahw_module_handle_t *hw_module,
+char* qahw_get_parameters_l(const qahw_module_handle_t *hw_module,
                            const char *keys);
 
 /* Returns audio input buffer size according to parameters passed or
  * 0 if one of the parameters is not supported.
  * See also get_buffer_size which is for a particular stream.
  */
-size_t qahw_get_input_buffer_size(const qahw_module_handle_t *hw_module,
+size_t qahw_get_input_buffer_size_l(const qahw_module_handle_t *hw_module,
                                   const struct audio_config *config);
 
 /*returns current QTI HAL version */
-int qahw_get_version();
+int qahw_get_version_l();
 
 /* Api to implement get parameters based on keyword param_id
  * and store data in payload.
  */
-int qahw_get_param_data(const qahw_module_handle_t *hw_module,
+int qahw_get_param_data_l(const qahw_module_handle_t *hw_module,
                         qahw_param_id param_id,
                         qahw_param_payload *payload);
 
 /* Api to implement set parameters based on keyword param_id
  * and data present in payload.
  */
-int qahw_set_param_data(const qahw_module_handle_t *hw_module,
+int qahw_set_param_data_l(const qahw_module_handle_t *hw_module,
                         qahw_param_id param_id,
                         qahw_param_payload *payload);
 
@@ -449,7 +451,7 @@ int qahw_set_param_data(const qahw_module_handle_t *hw_module,
  * The handle is allocated by the HAL and should be unique for this
  * audio HAL module.
  */
-int qahw_create_audio_patch(qahw_module_handle_t *hw_module,
+int qahw_create_audio_patch_l(qahw_module_handle_t *hw_module,
                         unsigned int num_sources,
                         const struct audio_port_config *sources,
                         unsigned int num_sinks,
@@ -457,7 +459,7 @@ int qahw_create_audio_patch(qahw_module_handle_t *hw_module,
                         audio_patch_handle_t *handle);
 
 /* Release an audio patch */
-int qahw_release_audio_patch(qahw_module_handle_t *hw_module,
+int qahw_release_audio_patch_l(qahw_module_handle_t *hw_module,
                         audio_patch_handle_t handle);
 /* Fills the list of supported attributes for a given audio port.
  * As input, "port" contains the information (type, role, address etc...)
@@ -465,15 +467,16 @@ int qahw_release_audio_patch(qahw_module_handle_t *hw_module,
  * As output, "port" contains possible attributes (sampling rates, formats,
  * channel masks, gain controllers...) for this port.
  */
-int qahw_get_audio_port(qahw_module_handle_t *hw_module,
+int qahw_get_audio_port_l(qahw_module_handle_t *hw_module,
                       struct audio_port *port);
 
 /* Set audio port configuration */
-int qahw_set_audio_port_config(qahw_module_handle_t *hw_module,
+int qahw_set_audio_port_config_l(qahw_module_handle_t *hw_module,
                      const struct audio_port_config *config);
-
-void qahw_register_qas_death_notify_cb(audio_error_callback cb, void* context);
+#ifdef __cplusplus
+}
+#endif
 
 __END_DECLS
 
-#endif  // QTI_AUDIO_QAHW_API_H
+#endif  // QTI_AUDIO_QAHW_H
