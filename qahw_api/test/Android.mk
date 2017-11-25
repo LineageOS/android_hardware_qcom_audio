@@ -8,6 +8,7 @@ LOCAL_SRC_FILES := qahw_playback_test.c \
 LOCAL_MODULE := hal_play_test
 
 hal-play-inc     = $(TARGET_OUT_HEADERS)/mm-audio/qahw_api/inc
+hal-play-inc    += $(TARGET_OUT_HEADERS)/mm-audio/qahw/inc
 hal-play-inc    += external/tinyalsa/include
 
 LOCAL_CFLAGS += -Wall -Werror -Wno-sign-compare
@@ -15,6 +16,7 @@ LOCAL_CFLAGS += -Wall -Werror -Wno-sign-compare
 LOCAL_SHARED_LIBRARIES := \
     libaudioutils\
     libqahw \
+    libqahwwrapper \
     libutils \
     libcutils
 

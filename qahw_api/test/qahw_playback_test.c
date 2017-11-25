@@ -54,6 +54,10 @@
 #define DTSHD_CHUNK_STREAM_KEYWORD "STRMDATA"
 #define DTSHD_META_KEYWORD_SIZE 8 /*in bytes */
 
+#ifndef AUDIO_OUTPUT_FLAG_MAIN
+#define AUDIO_OUTPUT_FLAG_MAIN 0x8000000
+#endif
+
 static ssize_t get_bytes_to_read(FILE* file, int filetype);
 static void init_streams(void);
 int pthread_cancel(pthread_t thread);
@@ -351,7 +355,7 @@ void *proxy_read (void* data)
     struct proxy_data* params = (struct proxy_data*) data;
     qahw_module_handle_t *qahw_mod_handle = params->acp.qahw_mod_handle;
     qahw_in_buffer_t in_buf;
-    char *buffer;
+    char *buffer = NULL;
     int rc = 0;
     int bytes_to_read, bytes_written = 0, bytes_wrote = 0;
     FILE *fp = NULL;
@@ -378,6 +382,7 @@ void *proxy_read (void* data)
         if ((fp = fopen(params->acp.file_name,"w"))== NULL) {
             fprintf(log_file, "Cannot open file to dump proxy data\n");
             fprintf(stderr, "Cannot open file to dump proxy data\n");
+            free(buffer);
             pthread_exit(0);
         }
         else {
@@ -420,6 +425,7 @@ void *proxy_read (void* data)
             fprintf(stderr, "could not close input stream %d \n", rc);
         }
         fprintf(log_file, "pcm data saved to file %s", params->acp.file_name);
+        free(buffer);
     }
     return 0;
 }
@@ -463,7 +469,7 @@ void *drift_read(void* data)
     return NULL;
 }
 
-static int is_eof(stream_config *stream) {
+static int __unused is_eof (stream_config *stream) {
     if (stream->filename) {
         if (feof(stream->file_stream)) {
             fprintf(log_file, "stream %d: error in fread, error %d\n", stream->stream_index, ferror(stream->file_stream));
@@ -505,7 +511,7 @@ int write_to_hal(qahw_stream_handle_t* out_handle, char *data, size_t bytes, voi
     ret = qahw_out_write(out_handle, &out_buf);
     if (ret < 0) {
         fprintf(log_file, "stream %d: writing data to hal failed (ret = %zd)\n", stream_params->stream_index, ret);
-    } else if (ret != bytes) {
+    } else if ((ret != bytes) && (!stop_playback)) {
         fprintf(log_file, "stream %d: provided bytes %zd, written bytes %d\n",stream_params->stream_index, bytes, ret);
         fprintf(log_file, "stream %d: waiting for event write ready\n", stream_params->stream_index);
         pthread_cond_wait(&stream_params->write_cond, &stream_params->write_lock);
@@ -516,7 +522,7 @@ int write_to_hal(qahw_stream_handle_t* out_handle, char *data, size_t bytes, voi
     return ret;
 }
 
-static bool is_assoc_active()
+static bool __unused is_assoc_active()
 {
     int i = 0;
     bool is_assoc_active = false;
@@ -530,7 +536,7 @@ static bool is_assoc_active()
     return is_assoc_active;
 }
 
-static int get_assoc_index()
+static int __unused get_assoc_index()
 {
     int i = 0;
 
@@ -1132,6 +1138,7 @@ int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
     if (data == NULL) {
         fprintf(log_file, "calloc failed!!\n");
         fprintf(stderr, "calloc failed!!\n");
+        fclose(fd_latency_node);
         return -ENOMEM;
     }
 
@@ -1144,7 +1151,8 @@ int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
             if (ret) {
                 fprintf(log_file, "error(%d) fetching start time for cold latency", ret);
                 fprintf(stderr, "error(%d) fetching start time for cold latency", ret);
-                return -1;
+                rc = -1;
+                goto exit;
             }
         } else if (count == 16) {
             int *d = (int *)data;
@@ -1153,7 +1161,8 @@ int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
             if (ret) {
                 fprintf(log_file, "error(%d) fetching start time for continuous latency", ret);
                 fprintf(stderr, "error(%d) fetching start time for continuous latency", ret);
-                return -1;
+                rc = -1;
+                goto exit;
             }
         }
 
@@ -1179,6 +1188,9 @@ int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
     fprintf(log_file, "\n values from debug node %s\n", latency_buf);
     fprintf(log_file, " cold latency %llums, continuous latency %llums,\n", tcold, tcont);
     fprintf(log_file, " **Note: please add DSP Pipe/PP latency numbers to this, for final latency values\n");
+exit:
+    fclose(fd_latency_node);
+    free(data);
     return rc;
 }
 
@@ -1221,7 +1233,7 @@ done:
 
 void parse_aptx_dec_bt_addr(char *value, struct qahw_aptx_dec_param *aptx_cfg)
 {
-    int ba[6];
+    int ba[6] = {0, 0, 0, 0, 0, 0};
     char *str, *tok;
     uint32_t addr[3];
     int i = 0;
@@ -1693,7 +1705,7 @@ static ssize_t  get_bytes_to_read(FILE* file, int file_type)
                 ret = fread(&read_chunk_size, 1, DTSHD_META_KEYWORD_SIZE, file);
                 chunk_size = convert_BE_to_LE(read_chunk_size);
                 if (ret != DTSHD_META_KEYWORD_SIZE) {
-                    fprintf(stderr,"%s %d file read error ret %\n",
+                    fprintf(stderr,"%s %d file read error ret %d \n",
                             __func__, __LINE__, ret);
                     file_read_size = -EINVAL;
                     break;
@@ -1836,6 +1848,7 @@ int extract_channel_mapping(uint16_t *channel_map, const char * arg_string){
     char *init_ptr = NULL;
     char *token = NULL;
     char *saveptr = NULL;
+    int rc = 0;
 
     if (NULL == channel_map)
         return -EINVAL;
@@ -1849,20 +1862,24 @@ int extract_channel_mapping(uint16_t *channel_map, const char * arg_string){
         init_ptr = token_string;
         token = strtok_r(token_string, ",", &saveptr);
         int index = 0;
-        if (NULL == token)
-            return -EINVAL;
+        if (NULL == token) {
+            rc = -EINVAL;
+            goto exit;
+        }
         else
             channel_map[index++] = get_channel_mask_for_name(token);
 
         while(NULL !=(token = strtok_r(NULL,",",&saveptr)))
             channel_map[index++] = get_channel_mask_for_name(token);
 
-        free(init_ptr);
-        init_ptr = NULL;
-        token_string = NULL;
+        goto exit;
     } else
         return -EINVAL;
-    return 0;
+exit:
+    free(init_ptr);
+    init_ptr = NULL;
+    token_string = NULL;
+    return rc;
 }
 
 int extract_mixer_coeffs(qahw_mix_matrix_params_t * mm_params, const char * arg_string){
@@ -1872,7 +1889,7 @@ int extract_mixer_coeffs(qahw_mix_matrix_params_t * mm_params, const char * arg_
     char *token = NULL;
     char *saveptr = NULL;
     int i = 0;
-    int j = 0;
+    int j = 0, rc = 0;
 
     if (NULL == mm_params)
         return -EINVAL;
@@ -1885,9 +1902,10 @@ int extract_mixer_coeffs(qahw_mix_matrix_params_t * mm_params, const char * arg_
     if(token_string != NULL) {
         init_ptr = token_string;
         token = strtok_r(token_string, ",", &saveptr);
-        int index = 0;
-        if (NULL == token)
-            return -EINVAL;
+        if (NULL == token) {
+            rc = -EINVAL;
+            goto exit;
+        }
         else {
             mm_params->mixer_coeffs[i][j] = atof(token);
             j++;
@@ -1902,11 +1920,14 @@ int extract_mixer_coeffs(qahw_mix_matrix_params_t * mm_params, const char * arg_
                 break;
             mm_params->mixer_coeffs[i][j++] = atof(token);
         }
-        free(init_ptr);
-        init_ptr = NULL;
-        token_string = NULL;
+        goto exit;
     } else
         return -EINVAL;
+exit:
+    free(init_ptr);
+    init_ptr = NULL;
+    token_string = NULL;
+    return rc;
 }
 
 #ifdef QAP
@@ -1955,6 +1976,16 @@ int start_playback_through_qap(char * kvp_string, int num_of_streams,  qahw_modu
     return 0;
 }
 #endif
+
+static void qti_audio_server_death_notify_cb(void *ctxt) {
+    fprintf(log_file, "qas died\n");
+    fprintf(stderr, "qas died\n");
+
+    stream_config *s_params = (stream_config*) ctxt;
+    pthread_cond_signal(&s_params->write_cond);
+    pthread_cond_signal(&s_params->drain_cond);
+    stop_playback = true;
+}
 
 int main(int argc, char* argv[]) {
     char *ba = NULL;
@@ -2115,14 +2146,14 @@ int main(int argc, char* argv[]) {
                 get_kvpairs_string(optarg, "O", output_ch_map);
                 get_kvpairs_string(optarg, "M", mixer_coeff);
 
-                extract_channel_mapping(stream_param[i].mm_params_downmix.input_channel_map, input_ch_map);
+                extract_channel_mapping((uint16_t *)(stream_param[i].mm_params_downmix.input_channel_map), input_ch_map);
                 stream_param[i].mm_params_downmix.has_input_channel_map = 1;
                 fprintf(log_file, "\ndownmix Input channel mapping: ");
                 for (iter_i= 0; iter_i < stream_param[i].mm_params_downmix.num_input_channels; iter_i++) {
                     fprintf(log_file, "0x%x, ", stream_param[i].mm_params_downmix.input_channel_map[iter_i]);
                 }
 
-                extract_channel_mapping(stream_param[i].mm_params_downmix.output_channel_map, output_ch_map);
+                extract_channel_mapping((uint16_t *)(stream_param[i].mm_params_downmix.output_channel_map), output_ch_map);
                 stream_param[i].mm_params_downmix.has_output_channel_map = 1;
                 fprintf(log_file, "\ndownmix Output channel mapping: ");
                 for (iter_i = 0; iter_i < stream_param[i].mm_params_downmix.num_output_channels; iter_i++)
@@ -2150,14 +2181,14 @@ int main(int argc, char* argv[]) {
                 get_kvpairs_string(optarg, "O", output_ch_map);
                 get_kvpairs_string(optarg, "M", mixer_coeff);
 
-                extract_channel_mapping(stream_param[i].mm_params_pan_scale.input_channel_map, input_ch_map);
+                extract_channel_mapping((uint16_t *)(stream_param[i].mm_params_pan_scale.input_channel_map), input_ch_map);
                 stream_param[i].mm_params_pan_scale.has_input_channel_map = 1;
                 fprintf(log_file, "\n pan_sclae Input channel mapping: ");
                 for (iter_i= 0; iter_i < stream_param[i].mm_params_pan_scale.num_input_channels; iter_i++) {
                     fprintf(log_file, "0x%x, ", stream_param[i].mm_params_pan_scale.input_channel_map[iter_i]);
                 }
 
-                extract_channel_mapping(stream_param[i].mm_params_pan_scale.output_channel_map, output_ch_map);
+                extract_channel_mapping((uint16_t *)(stream_param[i].mm_params_pan_scale.output_channel_map), output_ch_map);
                 stream_param[i].mm_params_pan_scale.has_output_channel_map = 1;
                 fprintf(log_file, "\n pan_scale Output channel mapping: ");
                 for (iter_i = 0; iter_i < stream_param[i].mm_params_pan_scale.num_output_channels; iter_i++)
@@ -2313,6 +2344,8 @@ int main(int argc, char* argv[]) {
 
         }
     }
+    fprintf(log_file, "registering qas callback");
+    qahw_register_qas_death_notify_cb((audio_error_callback)qti_audio_server_death_notify_cb, &stream_param);
 
     wakelock_acquired = request_wake_lock(wakelock_acquired, true);
     num_of_streams = i+1;

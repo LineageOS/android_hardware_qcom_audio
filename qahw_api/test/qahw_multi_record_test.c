@@ -90,6 +90,7 @@ static volatile int tests_completed;
 int sourcetrack_done = 0;
 static pthread_mutex_t sourcetrack_lock;
 struct qahw_sound_focus_param sound_focus_data;
+void *context = NULL;
 
 static bool request_wake_lock(bool wakelock_acquired, bool enable)
 {
@@ -129,7 +130,6 @@ void stop_signal_handler(int signal __unused)
 {
    stop_record = true;
 }
-
 
 void read_soundfocus_param(void)
 {
@@ -249,7 +249,9 @@ void *start_input(void *thread_param)
 {
   int rc = 0, ret = 0, count = 0;
   FILE *fdLatencyNode = nullptr;
-  struct timespec tsColdI, tsColdF, tsCont;
+  struct timespec tsColdI = { 0, 0 };
+  struct timespec tsColdF = { 0, 0 };
+  struct timespec tsCont = { 0, 0 };
   uint64_t tCold, tCont, tsec, tusec;
   char latencyBuf[200] = {0};
   time_t start_time = time(0);
@@ -352,6 +354,7 @@ void *start_input(void *thread_param)
       fprintf(log_file, "File open failed \n");
       if (log_file != stdout)
           fprintf(stdout, "File open failed \n");
+      free(buffer);
       test_end();
       pthread_exit(0);
   }
@@ -442,6 +445,7 @@ void *start_input(void *thread_param)
   hdr.riff_sz = data_sz + 44 - 8;
   fseek(fd, 0, SEEK_SET);
   fwrite(&hdr, 1, sizeof(hdr), fd);
+  free(buffer);
   fclose(fd);
 
   /* capture latency kpis if required */
@@ -450,7 +454,8 @@ void *start_input(void *thread_param)
               tsColdF.tv_nsec/1000000 - tsColdI.tv_nsec/1000000;
 
       fread((void *) latencyBuf, 100, 1, fdLatencyNode);
-      fclose(fdLatencyNode);
+      if (fdLatencyNode)
+          fclose(fdLatencyNode);
       sscanf(latencyBuf, " %llu,%llu", &tsec, &tusec);
       tCont = ((uint64_t)tsCont.tv_sec)*1000 - tsec*1000 + ((uint64_t)tsCont.tv_nsec)/1000000 - tusec/1000;
       if (log_file != stdout) {
@@ -583,6 +588,12 @@ void usage() {
     printf("                                               For mono channel 16kHz rate for 30seconds\n\n");
 }
 
+static void qti_audio_server_death_notify_cb(void *ctxt) {
+    fprintf(log_file, "qas died\n");
+    fprintf(stderr, "qas died\n");
+    stop_record = true;
+}
+
 int main(int argc, char* argv[]) {
     int max_recordings_requested = 0, status = 0;
     int thread_active[MAX_RECORD_SESSIONS] = {0};
@@ -675,6 +686,8 @@ int main(int argc, char* argv[]) {
                 break;
          }
     }
+    fprintf(log_file, "registering qas callback");
+    qahw_register_qas_death_notify_cb((audio_error_callback)qti_audio_server_death_notify_cb, context);
 
     wakelock_acquired = request_wake_lock(wakelock_acquired, true);
     qahw_mod_handle = qahw_load_module(mod_name);
