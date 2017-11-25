@@ -40,4 +40,4 @@ trans_loopback_test_SOURCES = trans_loopback_test.c
 
 trans_loopback_test_CFLAGS  = $(AM_CFLAGS) -Wno-sign-compare -Werror
 trans_loopback_test_CFLAGS  += $(trans_loopback_test_INCLUDES)
-trans_loopback_test_LDADD = -llog  -lutils ../libqahw.la -lcutils
+trans_loopback_test_LDADD = -llog  -lutils ../libqahw.la -lcutils -lm
