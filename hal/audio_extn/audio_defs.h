@@ -236,6 +236,17 @@ struct audio_device_config_param {
    struct audio_device_cfg_param dev_cfg_params;
 };
 
+typedef struct mix_matrix_params {
+    uint16_t num_output_channels;
+    uint16_t num_input_channels;
+    uint8_t has_output_channel_map;
+    uint32_t output_channel_map[AUDIO_CHANNEL_COUNT_MAX];
+    uint8_t has_input_channel_map;
+    uint32_t input_channel_map[AUDIO_CHANNEL_COUNT_MAX];
+    uint8_t has_mixer_coeffs;
+    float mixer_coeffs[AUDIO_CHANNEL_COUNT_MAX][AUDIO_CHANNEL_COUNT_MAX];
+} mix_matrix_params_t;
+
 typedef union {
     struct source_tracking_param st_params;
     struct sound_focus_param sf_params;
@@ -248,6 +259,7 @@ typedef union {
     struct audio_adsp_event adsp_event_params;
     struct audio_out_channel_map_param channel_map_param;
     struct audio_device_cfg_param device_cfg;
+    struct mix_matrix_params mm_params;
 } audio_extn_param_payload;
 
 typedef enum {
@@ -264,7 +276,11 @@ typedef enum {
     AUDIO_EXTN_PARAM_ADSP_STREAM_CMD,
     /* param to set input channel map for playback stream */
     AUDIO_EXTN_PARAM_OUT_CHANNEL_MAP,
-    AUDIO_EXTN_PARAM_DEVICE_CONFIG
+    AUDIO_EXTN_PARAM_DEVICE_CONFIG,
+    /* Pan/scale params to be set on ASM */
+    AUDIO_EXTN_PARAM_OUT_MIX_MATRIX_PARAMS,
+    /* Downmix params to be set on ADM */
+    AUDIO_EXTN_PARAM_CH_MIX_MATRIX_PARAMS
 } audio_extn_param_id;
 
 #endif /* AUDIO_DEFS_H */

@@ -177,6 +177,9 @@ __BEGIN_DECLS
 /* Query if a2dp  is supported */
 #define QAHW_PARAMETER_KEY_HANDLE_A2DP_DEVICE "isA2dpDeviceSupported"
 
+#define MAX_OUT_CHANNELS 8
+#define MAX_INP_CHANNELS 8
+
 /* type of asynchronous write callback events. Mutually exclusive */
 typedef enum {
     QAHW_STREAM_CBK_EVENT_WRITE_READY, /* non blocking write completed */
@@ -323,6 +326,17 @@ struct qahw_device_cfg_param {
    uint16_t   channel_allocation;
 };
 
+typedef struct qahw_mix_matrix_params {
+    uint16_t num_output_channels;
+    uint16_t num_input_channels;
+    uint8_t has_output_channel_map;
+    uint32_t output_channel_map[AUDIO_CHANNEL_COUNT_MAX];
+    uint8_t has_input_channel_map;
+    uint32_t input_channel_map[AUDIO_CHANNEL_COUNT_MAX];
+    uint8_t has_mixer_coeffs;
+    float mixer_coeffs[AUDIO_CHANNEL_COUNT_MAX][AUDIO_CHANNEL_COUNT_MAX];
+} qahw_mix_matrix_params_t;
+
 typedef union {
     struct qahw_source_tracking_param st_params;
     struct qahw_sound_focus_param sf_params;
@@ -335,6 +349,7 @@ typedef union {
     struct qahw_adsp_event adsp_event_params;
     struct qahw_out_channel_map_param channel_map_params;
     struct qahw_device_cfg_param device_cfg_params;
+    struct qahw_mix_matrix_params mix_matrix_params;
 } qahw_param_payload;
 
 typedef enum {
@@ -350,7 +365,9 @@ typedef enum {
     QAHW_PARAM_OUT_CORRECT_DRIFT,
     QAHW_PARAM_ADSP_STREAM_CMD,
     QAHW_PARAM_OUT_CHANNEL_MAP,    /* PARAM to set i/p channel map */
-    QAHW_PARAM_DEVICE_CONFIG      /* PARAM to set device config */
+    QAHW_PARAM_DEVICE_CONFIG,      /* PARAM to set device config */
+    QAHW_PARAM_OUT_MIX_MATRIX_PARAMS,
+    QAHW_PARAM_CH_MIX_MATRIX_PARAMS,
 } qahw_param_id;
 
 __END_DECLS

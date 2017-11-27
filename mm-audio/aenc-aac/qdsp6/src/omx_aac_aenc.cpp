@@ -45,6 +45,14 @@ using namespace std;
 
 #define SLEEP_MS 100
 
+static const OMX_U32 supported_profiles[] = {
+    OMX_AUDIO_AACObjectLC,
+    OMX_AUDIO_AACObjectHE,
+    OMX_AUDIO_AACObjectHE_PS,
+};
+
+static const int num_profiles = sizeof(supported_profiles) / sizeof(supported_profiles[0]);
+
 // omx_cmd_queue destructor
 omx_aac_aenc::omx_cmd_queue::~omx_cmd_queue()
 {
@@ -2777,6 +2785,25 @@ OMX_ERRORTYPE  omx_aac_aenc::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 break;
 
             }
+        case OMX_IndexParamAudioProfileQuerySupported:
+        {
+            DEBUG_PRINT("OMX_IndexParamAudioProfileQuerySupported");
+            OMX_AUDIO_PARAM_ANDROID_PROFILETYPE *profileParams =
+                    (OMX_AUDIO_PARAM_ANDROID_PROFILETYPE *)paramData;
+
+            if (profileParams->nPortIndex != 1) {
+                return OMX_ErrorUndefined;
+            }
+
+            if (profileParams->nProfileIndex >= num_profiles) {
+                return OMX_ErrorNoMore;
+            }
+
+            profileParams->eProfile =
+                    supported_profiles[profileParams->nProfileIndex];
+
+            return OMX_ErrorNone;
+        }
         default:
             {
                 DEBUG_PRINT_ERROR("unknown param %08x\n", paramIndex);
