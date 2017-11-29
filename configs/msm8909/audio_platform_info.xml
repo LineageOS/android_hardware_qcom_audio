@@ -39,5 +39,18 @@
         <device name="AUDIO_DEVICE_IN_BUILTIN_MIC" interface="TERT_MI2S" codec_type="internal"/>
         <device name="AUDIO_DEVICE_IN_BACK_MIC" interface="TERT_MI2S" codec_type="internal"/>
     </interface_names>
+
+    <backend_names>
+        <device name="SND_DEVICE_OUT_HEADPHONES"  interface="PRI_MI2S_RX"/>
+        <device name="SND_DEVICE_OUT_LINE"  interface="PRI_MI2S_RX"/>
+        <device name="SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES"  interface="PRI_MI2S_RX-and-PRI_MI2S_RX"/>
+        <device name="SND_DEVICE_OUT_SPEAKER_AND_LINE"  interface="PRI_MI2S_RX-and-PRI_MI2S_RX"/>
+        <device name="SND_DEVICE_OUT_VOICE_HEADPHONES"  interface="PRI_MI2S_RX"/>
+        <device name="SND_DEVICE_OUT_VOICE_LINE"  interface="PRI_MI2S_RX"/>
+        <device name="SND_DEVICE_OUT_HANDSET"  interface="PRI_MI2S_RX"/>
+        <device name="SND_DEVICE_OUT_SPEAKER"  interface="PRI_MI2S_RX"/>
+        <device name="SND_DEVICE_OUT_VOICE_HANDSET"  interface="PRI_MI2S_RX"/>
+        <device name="SND_DEVICE_OUT_VOICE_SPEAKER"  interface="PRI_MI2S_RX"/>
+    </backend_names>
 </audio_platform_info>
 
