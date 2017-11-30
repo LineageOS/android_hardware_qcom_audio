@@ -184,7 +184,7 @@ void platform_get_device_to_be_id_map(int **be_id_map, int *length);
 
 int platform_set_channel_allocation(void *platform, int channel_alloc);
 int platform_get_edid_info(void *platform);
-int platform_get_supported_sampling_rate_on_hdmi(uint32_t stream_sr);
+int platform_get_supported_copp_sampling_rate(uint32_t stream_sr);
 int platform_set_channel_map(void *platform, int ch_count, char *ch_map,
                              int snd_id);
 int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask,
