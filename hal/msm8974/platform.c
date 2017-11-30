@@ -2334,12 +2334,17 @@ acdb_init_fail:
         my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
             strdup("INT0_MI2S_RX SampleRate");
 
-    }
+    } else {
 
-    my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
-        strdup("SLIM_0_TX Format");
-    my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
-        strdup("SLIM_0_TX SampleRate");
+        my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
+            strdup("SLIM_0_TX Format");
+        my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
+            strdup("SLIM_0_TX SampleRate");
+        my_data->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
+            strdup("SLIM_6_RX Format");
+        my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
+            strdup("SLIM_6_RX SampleRate");
+    }
 
     my_data->current_backend_cfg[USB_AUDIO_TX_BACKEND].bitwidth_mixer_ctl =
         strdup("USB_AUDIO_TX Format");
@@ -2414,10 +2419,6 @@ acdb_init_fail:
         }
     }
 
-    my_data->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
-        strdup("SLIM_6_RX Format");
-    my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
-        strdup("SLIM_6_RX SampleRate");
     my_data->current_backend_cfg[HDMI_RX_BACKEND].bitwidth_mixer_ctl =
         strdup("HDMI_RX Bit Format");
     my_data->current_backend_cfg[HDMI_RX_BACKEND].samplerate_mixer_ctl =
