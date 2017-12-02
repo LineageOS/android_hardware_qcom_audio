@@ -38,7 +38,7 @@
 #include "platform_api.h"
 #include <platform.h>
 
-#define PLATFORM_INFO_XML_PATH      "/system/etc/audio_platform_info.xml"
+#define PLATFORM_INFO_XML_PATH      "audio_platform_info.xml"
 #define BUF_SIZE                    1024
 
 typedef enum {
@@ -179,25 +179,49 @@ done:
     return;
 }
 
+// Treblized config files will be located in /odm/etc or /vendor/etc.
+static const char *kConfigLocationList[] =
+        {"/odm/etc", "/vendor/etc", "/system/etc"};
+static const int kConfigLocationListSize =
+        (sizeof(kConfigLocationList) / sizeof(kConfigLocationList[0]));
+
+bool resolvePlatformConfigFile(char file_name[MIXER_PATH_MAX_LENGTH]) {
+    char full_config_path[MIXER_PATH_MAX_LENGTH];
+    for (int i = 0; i < kConfigLocationListSize; i++) {
+        snprintf(full_config_path,
+                 MIXER_PATH_MAX_LENGTH,
+                 "%s/%s",
+                 kConfigLocationList[i],
+                 file_name);
+        if (F_OK == access(full_config_path, 0)) {
+            strcpy(file_name, full_config_path);
+            return true;
+        }
+    }
+    return false;
+}
+
 static void process_acdb_id(const XML_Char **attr)
 {
     int index;
+    char platform_xml_file[MIXER_PATH_MAX_LENGTH] = PLATFORM_INFO_XML_PATH;
 
     if (strcmp(attr[0], "name") != 0) {
         ALOGE("%s: 'name' not found, no ACDB ID set!", __func__);
         goto done;
     }
 
+    resolvePlatformConfigFile(platform_xml_file);
     index = platform_get_snd_device_index((char *)attr[1]);
     if (index < 0) {
         ALOGE("%s: Device %s in %s not found, no ACDB ID set!",
-              __func__, attr[1], PLATFORM_INFO_XML_PATH);
+              __func__, attr[1], platform_xml_file);
         goto done;
     }
 
     if (strcmp(attr[2], "acdb_id") != 0) {
         ALOGE("%s: Device %s in %s has no acdb_id, no ACDB ID set!",
-              __func__, attr[1], PLATFORM_INFO_XML_PATH);
+              __func__, attr[1], platform_xml_file);
         goto done;
     }
 
@@ -214,22 +238,24 @@ done:
 static void process_device_name(const XML_Char **attr)
 {
     int index;
+    char platform_xml_file[MIXER_PATH_MAX_LENGTH] = PLATFORM_INFO_XML_PATH;
 
     if (strcmp(attr[0], "name") != 0) {
         ALOGE("%s: 'name' not found, no alias set!", __func__);
         goto done;
     }
 
+    resolvePlatformConfigFile(platform_xml_file);
     index = platform_get_snd_device_index((char *)attr[1]);
     if (index < 0) {
         ALOGE("%s: Device %s in %s not found, no alias set!",
-              __func__, attr[1], PLATFORM_INFO_XML_PATH);
+              __func__, attr[1], platform_xml_file);
         goto done;
     }
 
     if (strcmp(attr[2], "alias") != 0) {
         ALOGE("%s: Device %s in %s has no alias, no alias set!",
-              __func__, attr[1], PLATFORM_INFO_XML_PATH);
+              __func__, attr[1], platform_xml_file);
         goto done;
     }
 
@@ -301,13 +327,15 @@ int platform_info_init(void)
     int             ret = 0;
     int             bytes_read;
     void            *buf;
+    char platform_xml_file[MIXER_PATH_MAX_LENGTH] = PLATFORM_INFO_XML_PATH;
 
-    file = fopen(PLATFORM_INFO_XML_PATH, "r");
+    resolvePlatformConfigFile(platform_xml_file);
+    file = fopen(platform_xml_file, "r");
     section = ROOT;
 
     if (!file) {
         ALOGD("%s: Failed to open %s, using defaults.",
-            __func__, PLATFORM_INFO_XML_PATH);
+            __func__, platform_xml_file);
         ret = -ENODEV;
         goto done;
     }
@@ -339,7 +367,7 @@ int platform_info_init(void)
         if (XML_ParseBuffer(parser, bytes_read,
                             bytes_read == 0) == XML_STATUS_ERROR) {
             ALOGE("%s: XML_ParseBuffer failed, for %s",
-                __func__, PLATFORM_INFO_XML_PATH);
+                __func__, platform_xml_file);
             ret = -EINVAL;
             goto err_free_parser;
         }
