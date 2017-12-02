@@ -40,7 +40,7 @@
 
 #define UNUSED(a) ((void)(a))
 
-#define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
+#define MIXER_XML_PATH "mixer_paths.xml"
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
 
@@ -731,6 +731,28 @@ static void set_platform_defaults(struct platform_data * my_data __unused)
     backend_table[SND_DEVICE_OUT_TRANSMISSION_FM] = strdup("transmission-fm");
 }
 
+// Treblized config files will be located in /odm/etc or /vendor/etc.
+static const char *kConfigLocationList[] =
+        {"/odm/etc", "/vendor/etc", "/system/etc"};
+static const int kConfigLocationListSize =
+        (sizeof(kConfigLocationList) / sizeof(kConfigLocationList[0]));
+
+bool resolveMixerConfigFile(char file_name[MIXER_PATH_MAX_LENGTH]) {
+    char full_config_path[MIXER_PATH_MAX_LENGTH];
+    for (int i = 0; i < kConfigLocationListSize; i++) {
+        snprintf(full_config_path,
+                 MIXER_PATH_MAX_LENGTH,
+                 "%s/%s",
+                 kConfigLocationList[i],
+                 file_name);
+        if (F_OK == access(full_config_path, 0)) {
+            strcpy(file_name, full_config_path);
+            return true;
+        }
+    }
+    return false;
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char platform[PROPERTY_VALUE_MAX];
@@ -740,6 +762,7 @@ void *platform_init(struct audio_device *adev)
     struct platform_data *my_data = NULL;
     int retry_num = 0, snd_card_num = 0;
     const char *snd_card_name;
+    char mixer_xml_file[MIXER_PATH_MAX_LENGTH] = MIXER_XML_PATH;
 
     my_data = calloc(1, sizeof(struct platform_data));
 
@@ -770,8 +793,9 @@ void *platform_init(struct audio_device *adev)
 
         my_data->hw_info = hw_info_init(snd_card_name);
 
+        resolveMixerConfigFile(mixer_xml_file);
         adev->audio_route = audio_route_init(snd_card_num,
-                                         MIXER_XML_PATH);
+                                         mixer_xml_file);
         if (!adev->audio_route) {
             ALOGE("%s: Failed to init audio route controls, aborting.",
                    __func__);
