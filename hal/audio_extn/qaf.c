@@ -998,6 +998,36 @@ static int qaf_get_rendered_frames(struct stream_out *out, uint64_t *frames)
     return ret;
 }
 
+static int qaf_out_get_render_position(const struct audio_stream_out *stream,
+                                   uint32_t *dsp_frames)
+{
+    struct stream_out *out = (struct stream_out *)stream;
+    int ret = 0;
+    uint64_t frames=0;
+    struct qaf_module* qaf_mod = NULL;
+    ALOGV("%s, Output Stream %p,dsp frames %d",__func__, stream, (int)dsp_frames);
+
+    qaf_mod = get_qaf_module_for_input_stream(out);
+    if (!qaf_mod) {
+        ret = out->stream.get_render_position(stream, dsp_frames);
+        ALOGV("%s, non qaf_MOD DSP FRAMES %d",__func__, (int)dsp_frames);
+        return ret;
+    }
+
+    if (p_qaf->passthrough_out) {
+        pthread_mutex_lock(&p_qaf->lock);
+        ret = p_qaf->passthrough_out->stream.get_render_position((struct audio_stream_out *)p_qaf->passthrough_out, dsp_frames);
+        pthread_mutex_unlock(&p_qaf->lock);
+        ALOGV("%s, PASS THROUGH DSP FRAMES %p",__func__, dsp_frames);
+        return ret;
+        }
+    frames=*dsp_frames;
+    ret = qaf_get_rendered_frames(out, &frames);
+    *dsp_frames = (uint32_t)frames;
+    ALOGV("%s, DSP FRAMES %d",__func__, (int)dsp_frames);
+    return ret;
+}
+
 static int qaf_out_get_presentation_position(const struct audio_stream_out *stream,
                                              uint64_t *frames,
                                              struct timespec *timestamp)
@@ -2545,6 +2575,7 @@ int audio_extn_qaf_open_output_stream(struct audio_hw_device *dev,
     out->stream.common.standby = qaf_out_standby;
     out->stream.common.set_parameters = qaf_out_set_parameters;
     out->stream.get_latency = qaf_out_get_latency;
+    out->stream.get_render_position = qaf_out_get_render_position;
     out->stream.write = qaf_out_write;
     out->stream.get_presentation_position = qaf_out_get_presentation_position;
     out->platform_latency = 0;
