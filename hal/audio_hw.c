@@ -4848,7 +4848,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         }
     }
 
-    ret = str_parms_get_int(parms, "ultrasound_enable", &val);
+    ret = str_parms_get_int(parms, "ultrasound-sensor", &val);
     if (ret >= 0) {
         if (val == 1) {
             us_start();
