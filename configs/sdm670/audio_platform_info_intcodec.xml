@@ -42,7 +42,6 @@
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD6" type="out" id="30"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD7" type="out" id="31"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD8" type="out" id="32"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD9" type="out" id="33"/>
         <usecase name="USECASE_VOICEMMODE1_CALL" type="in" id="2"/>
         <usecase name="USECASE_VOICEMMODE1_CALL" type="out" id="2"/>
         <usecase name="USECASE_VOICEMMODE2_CALL" type="in" id="19"/>
@@ -58,6 +57,8 @@
         <usecase name="USECASE_AUDIO_RECORD_LOW_LATENCY" type="in" id="17" />
         <usecase name="USECASE_AUDIO_PLAYBACK_ULL" type="out" id="17" />
         <usecase name="USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE" type="out" id="27" />
+        <usecase name="USECASE_AUDIO_PLAYBACK_MMAP" type="out" id="33" />
+        <usecase name="USECASE_AUDIO_RECORD_MMAP" type="in" id="33" />
         <usecase name="USECASE_AUDIO_HFP_SCO" type="in" id="12" />
         <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="in" id="12" />
         <usecase name="USECASE_AUDIO_PLAYBACK_VOIP" type="out" id="16" />
@@ -76,6 +77,7 @@
     </config_params>
     <acdb_ids>
         <device name="SND_DEVICE_OUT_SPEAKER" acdb_id="15"/>
+        <device name="SND_DEVICE_OUT_SPEAKER_REVERSE" acdb_id="15"/>
         <device name="SND_DEVICE_OUT_SPEAKER_PROTECTED" acdb_id="124"/>
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED" acdb_id="101"/>
         <device name="SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT" acdb_id="124"/>
@@ -90,6 +92,11 @@
         <device name="SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1" acdb_id="10"/>
         <device name="SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2" acdb_id="10"/>
         <device name="SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET" acdb_id="45"/>
+        <device name="SND_DEVICE_IN_UNPROCESSED_MIC" acdb_id="143"/>
+        <device name="SND_DEVICE_IN_UNPROCESSED_STEREO_MIC" acdb_id="144"/>
+        <device name="SND_DEVICE_IN_UNPROCESSED_THREE_MIC" acdb_id="145"/>
+        <device name="SND_DEVICE_IN_UNPROCESSED_QUAD_MIC" acdb_id="146"/>
+        <device name="SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC" acdb_id="147"/>
     </acdb_ids>
     <backend_names>
         <device name="SND_DEVICE_OUT_HEADPHONES" backend="headphones" interface="INT0_MI2S_RX"/>
@@ -199,6 +206,8 @@
         <device name="SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC" interface="INT3_MI2S_TX"/>
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES" backend="speaker-and-headphones" interface="INT4_MI2S_RX-and-INT0_MI2S_RX"/>
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_ANC_HEADSET" backend="speaker-and-headphones" interface="INT4_MI2S_RX-and-INT0_MI2S_RX"/>
+        <device name="SND_DEVICE_OUT_SPEAKER_AND_BT_SCO" backend="speaker-and-bt-sco" interface="INT4_MI2S_RX-and-SLIMBUS_7_RX"/>
+        <device name="SND_DEVICE_OUT_SPEAKER_AND_BT_SCO_WB" backend="speaker-and-bt-sco-wb" interface="INT4_MI2S_RX-and-SLIMBUS_7_RX"/>
         </backend_names>
 </audio_platform_info>
 
