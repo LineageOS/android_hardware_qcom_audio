@@ -2964,7 +2964,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->config = PCM_CONFIG_AUDIO_PLAYBACK_PRIMARY;
         }
 
-        if (config->format != audio_format_from_pcm_format(out->config.format)) {
+        if (config->format <= AUDIO_FORMAT_PCM_24_BIT_PACKED && config->format >= AUDIO_FORMAT_PCM_16_BIT
+            && config->format != audio_format_from_pcm_format(out->config.format)) {
             if (k_enable_extended_precision
                     && pcm_params_format_test(adev->use_case_table[out->usecase],
                             pcm_format_from_audio_format(config->format))) {
