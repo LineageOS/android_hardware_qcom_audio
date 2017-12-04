@@ -1049,6 +1049,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
     snd_device_t derive_snd_device[AUDIO_USECASE_MAX];
     int i, num_uc_to_switch = 0;
     int status = 0;
+    int match = 0;
     bool force_restart_session = false;
     /*
      * This function is to make sure that all the usecases that are active on
@@ -1088,13 +1089,14 @@ static void check_usecases_codec_backend(struct audio_device *adev,
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
+        match = platform_check_backends_match(snd_device, usecase->out_snd_device);
 
         ALOGD("%s:becf: (%d) check_usecases curr device: %s, usecase device:%s "
             "backends match %d",__func__, i,
               platform_get_snd_device_name(snd_device),
               platform_get_snd_device_name(usecase->out_snd_device),
-              platform_check_backends_match(snd_device, usecase->out_snd_device));
-        if ((usecase->type != PCM_CAPTURE) && (usecase != uc_info)) {
+              match);
+        if (match && (usecase->type != PCM_CAPTURE) && (usecase != uc_info)) {
             uc_derive_snd_device = derive_playback_snd_device(adev->platform,
                                                usecase, uc_info, snd_device);
             if (((uc_derive_snd_device != usecase->out_snd_device) || force_routing) &&
