@@ -136,6 +136,11 @@
 /* Query external audio device connection status */
 #define AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE "ext_audio_device"
 
+/* Query whether it is ok to select display-port as output
+ * device for voice usecase
+ */
+#define AUDIO_PARAMETER_KEY_DP_FOR_VOICE_USECASE "dp_for_voice"
+
 #define EVENT_EXTERNAL_SPK_1 "qc_ext_spk_1"
 #define EVENT_EXTERNAL_SPK_2 "qc_ext_spk_2"
 #define EVENT_EXTERNAL_MIC   "qc_ext_mic"
@@ -1135,6 +1140,9 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
         else if (adev->snd_dev_ref_cnt[SND_DEVICE_OUT_SPEAKER_VBAT] > 0)
             strlcpy(my_data->ec_ref_mixer_path, "echo-reference speaker-vbat",
                     sizeof(my_data->ec_ref_mixer_path));
+        else if (adev->snd_dev_ref_cnt[SND_DEVICE_OUT_DISPLAY_PORT] > 0)
+            strlcpy(my_data->ec_ref_mixer_path, "echo-reference display-port",
+                    sizeof(my_data->ec_ref_mixer_path));
         else
             strlcpy(my_data->ec_ref_mixer_path, "echo-reference",
                     sizeof(my_data->ec_ref_mixer_path));
@@ -2015,6 +2023,9 @@ void *platform_init(struct audio_device *adev)
         return NULL;
     }
 
+    adev->dp_allowed_for_voice =
+        property_get_bool("vendor.audio.enable.dp.for.voice", false);
+
     my_data->adev = adev;
     my_data->fluence_in_spkr_mode = false;
     my_data->fluence_in_voice_call = false;
@@ -2580,6 +2591,18 @@ void platform_add_backend_name(char *mixer_path, snd_device_t snd_device,
     if (suffix != NULL) {
         strlcat(mixer_path, " ", MIXER_PATH_MAX_LENGTH);
         strlcat(mixer_path, suffix, MIXER_PATH_MAX_LENGTH);
+
+        /* if we can use display-port for voice call and usb mic
+         * is connected, choose dp_rx, usb_tx audio route
+         */
+        if (usecase->type == VOICE_CALL) {
+            struct audio_device *adev = usecase->stream.out->dev;
+            if ((snd_device == SND_DEVICE_OUT_DISPLAY_PORT) &&
+                adev->dp_allowed_for_voice &&
+                (usecase->in_snd_device == SND_DEVICE_IN_VOICE_USB_HEADSET_MIC)) {
+                strlcat(mixer_path, "-and-usb-headset-mic", MIXER_PATH_MAX_LENGTH);
+            }
+        }
     }
 }
 
@@ -3771,6 +3794,17 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
                    devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
             snd_device = SND_DEVICE_OUT_USB_HEADSET;
+        } else if ((devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+                   adev->dp_allowed_for_voice) {
+            switch(my_data->ext_disp_type) {
+                case EXT_DISPLAY_TYPE_DP:
+                    snd_device = SND_DEVICE_OUT_DISPLAY_PORT;
+                    break;
+                default:
+                    ALOGE("%s: Invalid disp_type %d", __func__,
+                           my_data->ext_disp_type);
+                    goto exit;
+            }
         } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
             snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
         } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
@@ -4125,6 +4159,15 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 else
                     snd_device = SND_DEVICE_IN_BT_SCO_MIC;
             }
+        } else if ((out_device & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+                   adev->dp_allowed_for_voice) {
+            if (audio_extn_usb_is_capture_supported())
+                snd_device = SND_DEVICE_IN_VOICE_USB_HEADSET_MIC;
+            else
+                snd_device = SND_DEVICE_IN_HANDSET_MIC;
+
+            if (voice_is_in_call(adev))
+                platform_set_echo_reference(adev, true, out_device);
         } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER) {
             if (my_data->fluence_type != FLUENCE_NONE &&
                 (my_data->fluence_in_voice_call ||
@@ -5081,6 +5124,7 @@ void platform_get_parameters(void *platform,
                             struct str_parms *reply)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
     char value[512] = {0};
     int ret;
     char *kv_pairs = NULL;
@@ -5111,6 +5155,19 @@ void platform_get_parameters(void *platform,
         }
 
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_VOLUME_BOOST, value);
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_DP_FOR_VOICE_USECASE,
+                            value, sizeof(value));
+
+    if (ret >= 0) {
+        if (my_data->ext_disp_type == EXT_DISPLAY_TYPE_DP &&
+            adev->dp_allowed_for_voice)
+            strlcpy(value, "true", sizeof(value));
+        else
+            strlcpy(value, "false", sizeof(value));
+
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_DP_FOR_VOICE_USECASE, value);
     }
 
     /* Handle audio calibration keys */
