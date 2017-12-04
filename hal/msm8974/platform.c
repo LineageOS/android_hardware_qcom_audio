@@ -963,6 +963,7 @@ bool platform_send_gain_dep_cal(void *platform, int level) {
 
             if (usecase != NULL &&
                 usecase->type == PCM_PLAYBACK &&
+                usecase->stream.out != NULL &&
                 usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
                 int new_snd_device[2] = {0};
                 int i, num_devices = 1;
