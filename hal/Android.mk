@@ -4,6 +4,20 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
+LOCAL_MODULE := libqcaudioperf
+
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
+LOCAL_SHARED_LIBRARIES += libbase libhidlbase libhwbinder libutils android.hardware.power@1.2 liblog
+LOCAL_SRC_FILES := audio_perf.cpp
+LOCAL_MODULE_RELATIVE_PATH := hw
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_OWNER := qcom
+LOCAL_PROPRIETARY_MODULE := true
+
+include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+
 LOCAL_ARM_MODE := arm
 
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
@@ -44,7 +58,6 @@ endif
 ifneq ($(filter msm8998,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSM8998
   LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="4"
-  LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
   MULTIPLE_HW_VARIANTS_ENABLED := true
 endif
 ifneq ($(filter sdm845,$(TARGET_BOARD_PLATFORM)),)
@@ -171,6 +184,8 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SND_MONITOR)), true)
     LOCAL_CFLAGS += -DSND_MONITOR_ENABLED
     LOCAL_SRC_FILES += audio_extn/sndmonitor.c
 endif
+
+LOCAL_SHARED_LIBRARIES += libqcaudioperf
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 

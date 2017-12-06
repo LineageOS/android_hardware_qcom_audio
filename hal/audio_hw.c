@@ -51,6 +51,7 @@
 #include <audio_utils/clock.h>
 #include "audio_hw.h"
 #include "audio_extn.h"
+#include "audio_perf.h"
 #include "platform_api.h"
 #include <platform.h>
 #include "voice_extn.h"
@@ -1460,6 +1461,7 @@ int start_input_stream(struct stream_in *in)
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
+    audio_streaming_hint_start();
     audio_extn_perf_lock_acquire();
 
     select_devices(adev, in->usecase);
@@ -1526,6 +1528,7 @@ int start_input_stream(struct stream_in *in)
         }
     }
     register_in_stream(in);
+    audio_streaming_hint_end();
     audio_extn_perf_lock_release();
     ALOGV("%s: exit", __func__);
 
@@ -1533,6 +1536,7 @@ int start_input_stream(struct stream_in *in)
 
 error_open:
     stop_input_stream(in);
+    audio_streaming_hint_end();
     audio_extn_perf_lock_release();
 
 error_config:
@@ -1799,6 +1803,9 @@ static int stop_output_stream(struct stream_out *out)
             adev->visualizer_stop_output(out->handle, out->pcm_device_id);
         if (adev->offload_effects_stop_output != NULL)
             adev->offload_effects_stop_output(out->handle, out->pcm_device_id);
+    } else if (out->usecase == USECASE_AUDIO_PLAYBACK_ULL ||
+               out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
+        audio_low_latency_hint_end();
     }
 
     /* 1. Get and set stream specific mixer controls */
@@ -1867,6 +1874,7 @@ int start_output_stream(struct stream_out *out)
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
+    audio_streaming_hint_start();
     audio_extn_perf_lock_acquire();
 
     select_devices(adev, out->usecase);
@@ -1953,8 +1961,14 @@ int start_output_stream(struct stream_out *out)
         }
     }
     register_out_stream(out);
+    audio_streaming_hint_end();
     audio_extn_perf_lock_release();
     audio_extn_tfa_98xx_enable_speaker();
+
+    if (out->usecase == USECASE_AUDIO_PLAYBACK_ULL ||
+        out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
+        audio_low_latency_hint_start();
+    }
 
     // consider a scenario where on pause lower layers are tear down.
     // so on resume, swap mixer control need to be sent only when
@@ -1966,6 +1980,7 @@ int start_output_stream(struct stream_out *out)
     ALOGV("%s: exit", __func__);
     return 0;
 error_open:
+    audio_streaming_hint_end();
     audio_extn_perf_lock_release();
     stop_output_stream(out);
 error_config:
