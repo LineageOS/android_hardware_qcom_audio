@@ -38,6 +38,7 @@
 #include <hardware/audio_effect.h>
 #include <stdlib.h>
 
+#include "qahw.h"
 #include "qahw_effect_api.h"
 
 // The current effect API version.

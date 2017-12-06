@@ -1199,7 +1199,7 @@ exit:
 int tigger_event(qahw_stream_handle_t* out_handle)
 {
     qahw_param_payload payload;
-    struct event_data event_payload = {0};
+    struct event_data event_payload = {0, 0, 0, 0, 0, 0, 0};
     int ret = 0;
 
     event_payload.num_events = 1;
