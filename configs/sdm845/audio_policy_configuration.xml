@@ -323,7 +323,7 @@
                 <route type="mix" sink="Line"
                        sources="primary output,raw,deep_buffer,direct_pcm,compressed_offload,dsd_compress_passthrough,voip_rx,mmap_no_irq_out"/>
                 <route type="mix" sink="HDMI"
-                       sources="primary output,raw,deep_buffer,direct_pcm,compressed_offload,compress_passthrough"/>
+                       sources="primary output,raw,deep_buffer,direct_pcm,compressed_offload,compress_passthrough,voip_rx"/>
                 <route type="mix" sink="Proxy"
                        sources="primary output,raw,deep_buffer,direct_pcm,compressed_offload"/>
                 <route type="mix" sink="FM"

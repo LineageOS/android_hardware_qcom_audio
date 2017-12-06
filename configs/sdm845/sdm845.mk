@@ -231,6 +231,9 @@ vendor.audio_hal.period_multiplier=3
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.adm.buffering.ms=2
 
+#enable use of display-port for voice usecases
+vendor.audio.enable.dp.for.voice=false
+
 # for HIDL related packages
 PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-service \
