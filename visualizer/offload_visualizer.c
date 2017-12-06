@@ -17,12 +17,14 @@
 #define LOG_TAG "offload_visualizer"
 /*#define LOG_NDEBUG 0*/
 #include <assert.h>
+#include <dlfcn.h>
 #include <math.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <sys/prctl.h>
-#include <dlfcn.h>
+#include <time.h>
+#include <unistd.h>
 
 #include <cutils/list.h>
 #include <cutils/log.h>
@@ -179,7 +181,6 @@ int thread_status;
 
 #define MIXER_CARD 0
 #define SOUND_CARD 0
-#define CAPTURE_DEVICE 8
 
 /* Proxy port supports only MMAP read and those fixed parameters*/
 #define AUDIO_CAPTURE_CHANNEL_COUNT 2

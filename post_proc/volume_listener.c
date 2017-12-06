@@ -19,6 +19,8 @@
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <math.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #include <cutils/list.h>
 #include <cutils/log.h>
@@ -239,7 +241,8 @@ static void dump_list_l()
 
 static inline bool valid_dev_in_context(struct vol_listener_context_s *context)
 {
-    if (context->dev_id == AUDIO_DEVICE_OUT_SPEAKER)
+    if (context->dev_id == AUDIO_DEVICE_OUT_SPEAKER ||
+        context->dev_id == AUDIO_DEVICE_OUT_SPEAKER_SAFE)
         return true;
 
     if (context->stream_type == VC_CALL && headset_cal_enabled &&
@@ -318,20 +321,22 @@ static void check_and_set_gain_dep_cal()
                     // decision made .. send new level now
                     if (!send_gain_dep_cal(gain_dep_cal_level)) {
                         ALOGE("%s: Failed to set gain dep cal level", __func__);
-                    } else {
-                        // Success in setting the gain dep cal level, store new level and Volume
-                        if (dumping_enabled) {
-                            ALOGW("%s: (old/new) Volume (%f/%f) (old/new) level (%d/%d)",
-                                  __func__, current_vol, new_vol, current_gain_dep_cal_level,
-                                  gain_dep_cal_level);
-                        } else {
-                            ALOGV("%s: Change in Cal::(old/new) Volume (%f/%f) (old/new) level (%d/%d)",
-                                  __func__, current_vol, new_vol, current_gain_dep_cal_level,
-                                  gain_dep_cal_level);
-                        }
-                        current_gain_dep_cal_level = gain_dep_cal_level;
-                        current_vol = new_vol;
                     }
+
+                    if (dumping_enabled) {
+                        ALOGW("%s: (old/new) Volume (%f/%f) (old/new) level (%d/%d)",
+                              __func__, current_vol, new_vol, current_gain_dep_cal_level,
+                              gain_dep_cal_level);
+                    } else {
+                        ALOGV("%s: Change in Cal::(old/new) Volume (%f/%f) (old/new) level (%d/%d)",
+                              __func__, current_vol, new_vol, current_gain_dep_cal_level,
+                              gain_dep_cal_level);
+                    }
+
+                    // Gain level change info send to lower layer that has logic to re-apply on
+                    // failure, so change current gain level to reflect new level
+                    current_gain_dep_cal_level = gain_dep_cal_level;
+                    current_vol = new_vol;
                 } else {
                     if (dumping_enabled) {
                         ALOGW("%s: volume changed but gain dep cal level is still the same",
@@ -515,7 +520,8 @@ static int vol_effect_command(effect_handle_t self,
 
         // check if old or new device is speaker
         if (valid_dev_in_context(context) ||
-            new_device == AUDIO_DEVICE_OUT_SPEAKER) {
+            new_device == AUDIO_DEVICE_OUT_SPEAKER ||
+            new_device == AUDIO_DEVICE_OUT_SPEAKER_SAFE) {
             recompute_gain_dep_cal_Level = true;
         }
 
