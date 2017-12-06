@@ -26,7 +26,6 @@
 
 #include <audio_route/audio_route.h>
 #include <audio_utils/ErrorLog.h>
-#include <audio_utils/PowerLog.h>
 #include "voice.h"
 
 // dlopen() does not go through default library path search if there is a "/" in the library name.
@@ -57,15 +56,11 @@
 
 #define ERROR_LOG_ENTRIES 16
 
-#define POWER_LOG_LINES 40
-#define POWER_LOG_SAMPLING_INTERVAL_MS 50
-#define POWER_LOG_ENTRIES (1 /* minutes */ * 60 /* seconds */ * 1000 /* msec */ \
-                           / POWER_LOG_SAMPLING_INTERVAL_MS)
-
 /* Error types for the error log */
 enum {
     ERROR_CODE_STANDBY = 1,
     ERROR_CODE_WRITE,
+    ERROR_CODE_READ,
 };
 
 typedef enum card_status_t {
@@ -223,7 +218,6 @@ struct stream_out {
     card_status_t card_status;
 
     error_log_t *error_log;
-    power_log_t *power_log;
 
     struct stream_app_type_cfg app_type_cfg;
 };
@@ -244,6 +238,7 @@ struct stream_in {
     bool enable_aec;
     bool enable_ns;
     int64_t frames_read; /* total frames read, not cleared when entering standby */
+    int64_t frames_muted; /* total frames muted, not cleared when entering standby */
 
     audio_io_handle_t capture_handle;
     audio_input_flags_t flags;
@@ -263,6 +258,8 @@ struct stream_in {
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
     audio_format_t supported_formats[MAX_SUPPORTED_FORMATS + 1];
     uint32_t supported_sample_rates[MAX_SUPPORTED_SAMPLE_RATES + 1];
+
+    error_log_t *error_log;
 };
 
 typedef enum usecase_type_t {
