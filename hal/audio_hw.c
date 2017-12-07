@@ -6792,45 +6792,52 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->config.channels = channel_count;
         in->config.rate = config->sample_rate;
         in->sample_rate = config->sample_rate;
-    } else if (!audio_extn_check_and_set_multichannel_usecase(adev,
-                in, config, &channel_mask_updated)) {
-        if (channel_mask_updated == true) {
-            ALOGD("%s: return error to retry with updated channel mask (%#x)",
-                   __func__, config->channel_mask);
-            ret = -EINVAL;
-            goto err_open;
-        }
-        ALOGD("%s: created multi-channel session succesfully",__func__);
-    } else if (audio_extn_compr_cap_enabled() &&
-            audio_extn_compr_cap_format_supported(config->format) &&
-            (in->dev->mode != AUDIO_MODE_IN_COMMUNICATION)) {
-        audio_extn_compr_cap_init(in);
-    } else if (audio_extn_cin_applicable_stream(in)) {
-        ret = audio_extn_cin_configure_input_stream(in);
-        if (ret)
-            goto err_open;
     } else {
-        in->config = pcm_config_audio_capture;
-        in->config.rate = config->sample_rate;
-        in->config.format = pcm_format_from_audio_format(config->format);
-        in->config.channels = channel_count;
-        in->sample_rate = config->sample_rate;
-        in->format = config->format;
-        frame_size = audio_stream_in_frame_size(&in->stream);
-        buffer_size = get_input_buffer_size(config->sample_rate,
+        int ret_val;
+        pthread_mutex_lock(&adev->lock);
+        ret_val = audio_extn_check_and_set_multichannel_usecase(adev,
+               in, config, &channel_mask_updated);
+        pthread_mutex_unlock(&adev->lock);
+
+        if (!ret_val) {
+           if (channel_mask_updated == true) {
+               ALOGD("%s: return error to retry with updated channel mask (%#x)",
+                   __func__, config->channel_mask);
+               ret = -EINVAL;
+               goto err_open;
+           }
+           ALOGD("%s: created multi-channel session succesfully",__func__);
+        } else if (audio_extn_compr_cap_enabled() &&
+                   audio_extn_compr_cap_format_supported(config->format) &&
+                   (in->dev->mode != AUDIO_MODE_IN_COMMUNICATION)) {
+            audio_extn_compr_cap_init(in);
+        } else if (audio_extn_cin_applicable_stream(in)) {
+            ret = audio_extn_cin_configure_input_stream(in);
+            if (ret)
+                goto err_open;
+        } else {
+            in->config = pcm_config_audio_capture;
+            in->config.rate = config->sample_rate;
+            in->config.format = pcm_format_from_audio_format(config->format);
+            in->config.channels = channel_count;
+            in->sample_rate = config->sample_rate;
+            in->format = config->format;
+            frame_size = audio_stream_in_frame_size(&in->stream);
+            buffer_size = get_input_buffer_size(config->sample_rate,
                                             config->format,
                                             channel_count,
                                             is_low_latency);
-        in->config.period_size = buffer_size / frame_size;
+            in->config.period_size = buffer_size / frame_size;
 
-        if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
-            /* optionally use VOIP usecase depending on config(s) */
-            ret = adev_update_voice_comm_input_stream(in, config);
-        }
+            if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
+                /* optionally use VOIP usecase depending on config(s) */
+                ret = adev_update_voice_comm_input_stream(in, config);
+            }
 
-        if (ret) {
-            ALOGE("%s AUDIO_SOURCE_VOICE_COMMUNICATION invalid args", __func__);
-            goto err_open;
+            if (ret) {
+                ALOGE("%s AUDIO_SOURCE_VOICE_COMMUNICATION invalid args", __func__);
+                goto err_open;
+            }
         }
     }
     audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
@@ -6886,6 +6893,7 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     } else
         in_standby(&stream->common);
 
+    pthread_mutex_lock(&adev->lock);
     if (audio_extn_ssr_get_stream() == in) {
         audio_extn_ssr_deinit();
     }
@@ -6906,6 +6914,7 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
         audio_extn_sound_trigger_stop_lab(in);
     }
     free(stream);
+    pthread_mutex_unlock(&adev->lock);
     return;
 }
 
