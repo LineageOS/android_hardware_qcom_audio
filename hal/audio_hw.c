@@ -1564,6 +1564,7 @@ static int check_input_parameters(uint32_t sample_rate,
     switch (channel_count) {
     case 1:
     case 2:
+    case 4:
     case 6:
         break;
     default:
