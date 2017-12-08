@@ -854,10 +854,12 @@ void *start_stream_playback (void* stream_data)
         // destory effect command thread
         params->cmd_data.exit = true;
         usleep(100000);  // give a chance for thread to exit gracefully
-        rc = pthread_cancel(params->cmd_data.cmd_thread);
+
+        //Send signal for input command_thread_func to stop
+        rc = pthread_kill(params->cmd_data.cmd_thread, SIGUSR1);
         if (rc != 0) {
-            fprintf(log_file, "Fail to cancel thread!\n");
-            fprintf(stderr, "Fail to cancel thread!\n");
+            fprintf(log_file, "Fail to kill effect command thread!\n");
+            fprintf(stderr, "Fail to kill effect command thread!\n");
         }
         rc = pthread_join(params->cmd_data.cmd_thread, NULL);
         if (rc < 0) {
