@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -54,6 +54,10 @@
 #define SND_CARD_STATE_ONLINE 1
 typedef int snd_device_t;
 
+#define MAX_PERF_LOCK_OPTS 20
+
+#define MAX_STREAM_PROFILE_STR_LEN 32
+
 /* These are the supported use cases by the hardware.
  * Each usecase is mapped to a specific PCM device.
  * Refer to pcm_device_table[].
@@ -86,6 +90,9 @@ enum {
     /* Capture usecases */
     USECASE_AUDIO_RECORD,
     USECASE_AUDIO_RECORD_COMPRESS,
+    USECASE_AUDIO_RECORD_COMPRESS2,
+    USECASE_AUDIO_RECORD_COMPRESS3,
+    USECASE_AUDIO_RECORD_COMPRESS4,
     USECASE_AUDIO_RECORD_LOW_LATENCY,
     USECASE_AUDIO_RECORD_FM_VIRTUAL,
 
@@ -174,6 +181,7 @@ struct stream_out {
     audio_format_t format;
     audio_devices_t devices;
     audio_output_flags_t flags;
+    char profile[MAX_STREAM_PROFILE_STR_LEN];
     audio_usecase_t usecase;
     /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
@@ -215,7 +223,16 @@ struct stream_in {
     bool enable_ns;
     audio_format_t format;
     audio_io_handle_t capture_handle;
+    audio_input_flags_t flags;
+    char profile[MAX_STREAM_PROFILE_STR_LEN];
     bool is_st_session;
+    bool is_st_session_active;
+    int sample_rate;
+    int bit_width;
+    bool realtime;
+    int af_period_multiplier;
+    struct stream_app_type_cfg app_type_cfg;
+    void *cin_extn;
 
     struct audio_device *dev;
 };
@@ -240,6 +257,8 @@ struct audio_usecase {
     audio_devices_t devices;
     snd_device_t out_snd_device;
     snd_device_t in_snd_device;
+    struct stream_app_type_cfg out_app_type_cfg;
+    struct stream_app_type_cfg in_app_type_cfg;
     union stream_ptr stream;
 };
 
@@ -258,9 +277,15 @@ struct stream_sample_rate {
     uint32_t sample_rate;
 };
 
-struct streams_output_cfg {
+typedef union {
+    audio_output_flags_t out_flags;
+    audio_input_flags_t in_flags;
+} audio_io_flags_t;
+
+struct streams_io_cfg {
     struct listnode list;
-    audio_output_flags_t flags;
+    audio_io_flags_t flags;
+    char profile[MAX_STREAM_PROFILE_STR_LEN];
     struct listnode format_list;
     struct listnode sample_rate_list;
     struct stream_app_type_cfg app_type_cfg;
@@ -281,6 +306,7 @@ struct audio_device {
     int *snd_dev_ref_cnt;
     struct listnode usecase_list;
     struct listnode streams_output_cfg_list;
+    struct listnode streams_input_cfg_list;
     struct audio_route *audio_route;
     int acdb_settings;
     bool speaker_lr_swap;

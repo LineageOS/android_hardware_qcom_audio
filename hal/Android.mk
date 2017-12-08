@@ -207,6 +207,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUDIOSPHERE)),true)
     LOCAL_CFLAGS += -DAUDIOSPHERE_ENABLED
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_INPUT)),true)
+    LOCAL_CFLAGS += -DCOMPRESS_INPUT_ENABLED
+    LOCAL_SRC_FILES += audio_extn/compress_in.c
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \

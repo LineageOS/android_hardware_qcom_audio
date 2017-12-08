@@ -45,6 +45,7 @@ ifneq ($(TARGET_SUPPORTS_WEARABLES),true)
 endif
 AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := true
 AUDIO_FEATURE_ENABLED_ACDB_LICENSE := true
+AUDIO_FEATURE_ENABLED_COMPRESS_INPUT := true
 #DOLBY_DAP_HW_QDSP_HAL_API := true
 #DOLBY_UDC_MULTICHANNEL_PCM_OFFLOAD := false
 MM_AUDIO_ENABLED_FTM := true
@@ -89,7 +90,8 @@ PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msm8909/sound_trigger_mixer_paths.xml:system/etc/sound_trigger_mixer_paths.xml \
     hardware/qcom/audio/configs/msm8909/sound_trigger_mixer_paths_wcd9326.xml:system/etc/sound_trigger_mixer_paths_wcd9326.xml \
     hardware/qcom/audio/configs/msm8909/sound_trigger_platform_info.xml:system/etc/sound_trigger_platform_info.xml \
-    hardware/qcom/audio/configs/msm8909/audio_platform_info.xml:system/etc/audio_platform_info.xml
+    hardware/qcom/audio/configs/msm8909/audio_platform_info.xml:system/etc/audio_platform_info.xml \
+    hardware/qcom/audio/configs/msm8909/audio_io_policy.conf:system/vendor/etc/audio_io_policy.conf
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
