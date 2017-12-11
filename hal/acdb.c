@@ -143,10 +143,12 @@ cleanup:
         if (my_data->acdb_handle)
             dlclose(my_data->acdb_handle);
 
-        struct listnode *node;
-        struct meta_key_list *key_info;
-        list_for_each(node, &my_data->acdb_meta_key_list) {
+        struct listnode *node = NULL;
+        struct meta_key_list *key_info = NULL;
+        struct listnode *tempnode = NULL;
+        list_for_each_safe(node, tempnode, &my_data->acdb_meta_key_list) {
             key_info = node_to_item(node, struct meta_key_list, list);
+            list_remove(node);
             free(key_info);
         }
         free(my_data);
