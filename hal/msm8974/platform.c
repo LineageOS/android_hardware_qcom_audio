@@ -63,7 +63,7 @@
 #define PLATFORM_INFO_XML_PATH "/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_AUXPCM "/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_I2S "/etc/mixer_paths_i2s.xml"
-#define PLATFORM_INFO_XML_PATH_I2S "/etc/audio_platform_info_i2s.xml"
+#define PLATFORM_INFO_XML_PATH_I2S "/etc/audio_platform_info_extcodec.xml"
 #else
 #define MIXER_XML_BASE_STRING "/vendor/etc/mixer_paths"
 #define MIXER_XML_DEFAULT_PATH "/vendor/etc/mixer_paths.xml"
