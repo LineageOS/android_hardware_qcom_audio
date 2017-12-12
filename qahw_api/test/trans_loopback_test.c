@@ -88,6 +88,7 @@ qahw_module_handle_t *primary_hal_handle = NULL;
 
 FILE * log_file = NULL;
 volatile bool stop_loopback = false;
+volatile bool exit_process_thread = false;
 static float loopback_gain = 1.0;
 const char *log_filename = NULL;
 
@@ -485,12 +486,14 @@ void process_loopback_data(void *ptr)
 
     fprintf(log_file,"\nEvent thread loop\n");
     source_data_event_handler(transcode_loopback_config);
-    while(1) {
+    while (!stop_loopback) {
 
         fds.fd = sock_event_fd;
         fds.events = POLLIN;
         fds.revents = 0;
-        i = poll(&fds, 1, -1);
+        /* poll wait time modified from wait forever to 5 msec to
+           avoid keeping the thread in hang state */
+        i = poll(&fds, 1, 5);
 
         if (i > 0 && (fds.revents & POLLIN)) {
             count = recv(sock_event_fd, buffer, (64*1024), 0 );
@@ -529,7 +532,12 @@ void process_loopback_data(void *ptr)
         }
     }
     fprintf(log_file,"\nEvent thread loop exit\n");
-    pthread_exit(0);
+
+    stop_transcode_loopback(transcode_loopback_config);
+
+    fprintf(log_file,"\nStop transcode loopback done\n");
+
+    exit_process_thread = true;
 }
 
 void set_device(uint32_t device_type, uint32_t device_id)
@@ -620,6 +628,8 @@ int main(int argc, char *argv[]) {
     primary_hal_handle = load_hal(transcode_loopback_config->devices);
     if (primary_hal_handle == NULL) {
         fprintf(log_file,"\n Failure in Loading HAL, exiting\n");
+        /* Set the exit_process_thread flag for exiting test */
+        exit_process_thread = true;
         goto exit_transcode_loopback_test;
     }
     transcode_loopback_config->hal_handle = primary_hal_handle;
@@ -639,6 +649,7 @@ int main(int argc, char *argv[]) {
         play_duration_elapsed_msec += 100;
         if(play_duration_in_msec <= play_duration_elapsed_msec)
         {
+            stop_loopback = true;
             fprintf(log_file,"\nElapsed set playback duration %d seconds, exiting test\n",play_duration_in_msec/1000);
             break;
         }
@@ -646,11 +657,15 @@ int main(int argc, char *argv[]) {
     fprintf(log_file,"\nMain thread loop exit\n");
 
 exit_transcode_loopback_test:
-    stop_transcode_loopback(transcode_loopback_config);
-    fprintf(log_file,"\nCancelling loopback thread\n");
-    pthread_cancel(data_event_th);
+    /* Wait for process thread to exit */
+    while (!exit_process_thread) {
+        usleep(10*1000);
+    }
     fprintf(log_file,"\nJoining loopback thread\n");
-    pthread_join(data_event_th, NULL);
+    status = pthread_join(data_event_th, NULL);
+    fprintf(log_file, "\n thread join completed, status:%d \n", status);
+    exit_process_thread = false;
+
     fprintf(log_file,"\nUnLoading HAL for loopback usecase begin\n");
     unload_hals();
     fprintf(log_file,"\nUnLoading HAL for loopback usecase end\n");

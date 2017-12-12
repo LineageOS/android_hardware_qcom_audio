@@ -5547,7 +5547,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             if (rate_str == NULL) {
                 switch (sample_rate) {
                 case 32000:
-                    if (passthrough_enabled) {
+                    if (passthrough_enabled || (backend_idx == HDMI_TX_BACKEND )) {
                         rate_str = "KHZ_32";
                         break;
                     }
