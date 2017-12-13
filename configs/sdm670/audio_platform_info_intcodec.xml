@@ -197,7 +197,11 @@
         <device name="SND_DEVICE_IN_SPEAKER_QMIC_NS" interface="INT3_MI2S_TX"/>
         <device name="SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS" interface="INT3_MI2S_TX"/>
         <device name="SND_DEVICE_IN_THREE_MIC" interface="INT3_MI2S_TX"/>
+        <device name="SND_DEVICE_IN_HANDSET_TMIC_FLUENCE_PRO" interface="INT3_MI2S_TX"/>
         <device name="SND_DEVICE_IN_HANDSET_TMIC" interface="INT3_MI2S_TX"/>
+        <device name="SND_DEVICE_IN_HANDSET_TMIC_AEC" interface="INT3_MI2S_TX"/>
+        <device name="SND_DEVICE_IN_HANDSET_TMIC_NS" interface="INT3_MI2S_TX"/>
+        <device name="SND_DEVICE_IN_HANDSET_TMIC_AEC_NS" interface="INT3_MI2S_TX"/>
         <device name="SND_DEVICE_IN_VOICE_REC_TMIC" interface="INT3_MI2S_TX"/>
         <device name="SND_DEVICE_IN_UNPROCESSED_MIC" interface="INT3_MI2S_TX"/>
         <device name="SND_DEVICE_IN_UNPROCESSED_STEREO_MIC" interface="INT3_MI2S_TX"/>
