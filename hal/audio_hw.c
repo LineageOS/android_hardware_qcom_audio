@@ -3446,6 +3446,14 @@ static int in_get_capture_position(const struct audio_stream_in *stream,
     int ret = -ENOSYS;
 
     lock_input_stream(in);
+    // note: ST sessions do not close the alsa pcm driver synchronously
+    // on standby. Therefore, we may return an error even though the
+    // pcm stream is still opened.
+    if (in->standby) {
+        ALOGE_IF(in->pcm != NULL && !in->is_st_session,
+                 "%s stream in standby but pcm not NULL for non ST session", __func__);
+        goto exit;
+    }
     if (in->pcm) {
         struct timespec timestamp;
         unsigned int avail;
@@ -3455,6 +3463,7 @@ static int in_get_capture_position(const struct audio_stream_in *stream,
             ret = 0;
         }
     }
+exit:
     pthread_mutex_unlock(&in->lock);
     return ret;
 }
