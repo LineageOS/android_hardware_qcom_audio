@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -47,6 +47,7 @@
 #include <sys/resource.h>
 
 #include "audio_hw.h"
+#include "audio_extn.h"
 #include "platform.h"
 #include "platform_api.h"
 
@@ -497,7 +498,9 @@ int32_t audio_extn_ffv_stream_init(struct stream_in *in)
     }
 
     ffvmod.in = in;
-
+#ifdef RUN_KEEP_ALIVE_IN_ARM_FFV
+    audio_extn_keep_alive_start(KEEP_ALIVE_OUT_PRIMARY);
+#endif
 #ifdef FFV_PCM_DUMP
     if (!ffvmod.fp_input) {
         ALOGD("%s: Opening input dump file \n", __func__);
@@ -547,7 +550,9 @@ int32_t audio_extn_ffv_stream_deinit()
 
     if (ffvmod.buffers_allocated)
         deallocate_buffers();
-
+#ifdef RUN_KEEP_ALIVE_IN_ARM_FFV
+    audio_extn_keep_alive_stop(KEEP_ALIVE_OUT_PRIMARY);
+#endif
     ffvmod.handle = NULL;
     ffvmod.in = NULL;
     ALOGV("%s: exit", __func__);
