@@ -169,6 +169,7 @@ static bool is_stt_supported_snd_device(snd_device_t snd_device)
     case SND_DEVICE_IN_VOICE_SPEAKER_DMIC:
     case SND_DEVICE_IN_VOICE_SPEAKER_DMIC_BROADSIDE:
     case SND_DEVICE_IN_VOICE_SPEAKER_QMIC:
+    case SND_DEVICE_IN_HANDSET_GENERIC_QMIC:
         ret = true;
         break;
     default:

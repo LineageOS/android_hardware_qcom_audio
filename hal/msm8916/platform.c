@@ -179,6 +179,7 @@ struct platform_data {
 #endif
     void *hw_info;
     struct csd_data *csd;
+    bool use_generic_handset;
 };
 
 static bool is_external_codec = false;
@@ -339,6 +340,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = "three-mic",
     [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = "quad-mic",
     [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = "headset-mic",
+    [SND_DEVICE_IN_HANDSET_GENERIC_QMIC] = "quad-mic",
 };
 
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
@@ -438,6 +440,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = 145,
     [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = 146,
     [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = 147,
+    [SND_DEVICE_IN_HANDSET_GENERIC_QMIC] = 152,
 };
 
 struct name_to_index {
@@ -537,6 +540,7 @@ struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_THREE_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_QUAD_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_GENERIC_QMIC)},
 };
 
 static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
@@ -1418,6 +1422,9 @@ acdb_init_fail:
     audio_extn_dolby_set_license(adev);
     audio_hwdep_send_cal(my_data);
 
+    if (property_get_bool("audio.use.generic.handset.qmic", false))
+        my_data->use_generic_handset = true;
+
     return my_data;
 }
 
@@ -2212,6 +2219,20 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 if (audio_extn_hfp_is_active(adev))
                     platform_set_echo_reference(adev->platform, true);
             }
+        }
+    } else if (my_data->use_generic_handset == true &&
+                ((in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) ||
+                (in_device & AUDIO_DEVICE_IN_BACK_MIC)) &&
+                (source == AUDIO_SOURCE_CAMCORDER ||
+                source == AUDIO_SOURCE_UNPROCESSED ||
+                source == AUDIO_SOURCE_MIC)){
+        ALOGD(" snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC");
+        if ((my_data->fluence_in_audio_rec) && (channel_count == 1) &&
+            (my_data->fluence_type & FLUENCE_QUAD_MIC)) {
+            snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
+            platform_set_echo_reference(adev->platform, true);
+        } else {
+            snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
         }
     } else if (source == AUDIO_SOURCE_CAMCORDER) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
