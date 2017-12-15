@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "c56075c1_59204b4b",
+        "filename": "audiod/Android.mk",
+        "patchSetId": 3
+      },
+      "lineNbr": 17,
+      "author": {
+        "id": 9392
+      },
+      "writtenOn": "2017-12-15T19:21:53Z",
+      "side": 1,
+      "message": "Could be sorted though",
+      "range": {
+        "startLine": 12,
+        "startChar": 0,
+        "endLine": 17,
+        "endChar": 15
+      },
+      "revId": "dbdc327ed9e0d42b1db32c22219182b8381e39d7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
