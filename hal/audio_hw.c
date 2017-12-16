@@ -6539,6 +6539,47 @@ static bool adev_input_allow_hifi_record(struct audio_device *adev,
     return allowed;
 }
 
+static int adev_update_voice_comm_input_stream(struct stream_in *in,
+                                               struct audio_config *config)
+{
+    bool valid_rate = (config->sample_rate == 8000 ||
+                       config->sample_rate == 16000 ||
+                       config->sample_rate == 32000 ||
+                       config->sample_rate == 48000);
+    bool valid_ch = audio_channel_count_from_in_mask(in->channel_mask) == 1;
+
+#ifndef COMPRESS_VOIP_ENABLED
+    if (valid_rate && valid_ch) {
+        in->usecase = USECASE_AUDIO_RECORD_VOIP;
+        in->config = default_pcm_config_voip_copp;
+        in->config.period_size = VOIP_IO_BUF_SIZE(in->sample_rate,
+                                                  DEFAULT_VOIP_BUF_DURATION_MS,
+                                                  DEFAULT_VOIP_BIT_DEPTH_BYTE)/2;
+    } else {
+        if (!valid_ch) config->channel_mask = 1;
+        if (!valid_rate) config->sample_rate = 48000;
+        return -EINVAL;
+    }
+    in->config.rate = config->sample_rate;
+    in->sample_rate = config->sample_rate;
+#else
+    //XXX needed for voice_extn_compress_voip_open_input_stream
+    in->config.rate = config->sample_rate;
+    if ((in->dev->mode == AUDIO_MODE_IN_COMMUNICATION ||
+         voice_extn_compress_voip_is_active(in->dev)) &&
+        (voice_extn_compress_voip_is_format_supported(in->format)) &&
+        valid_rate && valid_ch) {
+        voice_extn_compress_voip_open_input_stream(in);
+        // update rate entries to match config from AF
+        in->config.rate = config->sample_rate;
+        in->sample_rate = config->sample_rate;
+    } else {
+        ALOGW("%s compress voip not active, use defaults", __func__);
+    }
+#endif
+    return 0;
+}
+
 static int adev_open_input_stream(struct audio_hw_device *dev,
                                   audio_io_handle_t handle,
                                   audio_devices_t devices,
@@ -6621,9 +6662,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         goto err_open;
     }
 
-    /* restrict 24 bit capture for unprocessed source only
-     * for other sources if 24 bit requested reject 24 and set 16 bit capture only
-     */
     if (is_usb_dev && may_use_hifi_record) {
         /* HiFi record selects an appropriate format, channel, rate combo
            depending on sink capabilities*/
@@ -6642,9 +6680,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             goto err_open;
         }
         channel_count = audio_channel_count_from_in_mask(config->channel_mask);
-    }
-
-    if (config->format == AUDIO_FORMAT_DEFAULT) {
+    } else if (config->format == AUDIO_FORMAT_DEFAULT) {
         config->format = AUDIO_FORMAT_PCM_16_BIT;
     } else if ((config->format == AUDIO_FORMAT_PCM_FLOAT) ||
                (config->format == AUDIO_FORMAT_PCM_32_BIT) ||
@@ -6706,6 +6742,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     } else if (in->realtime) {
         in->config = pcm_config_audio_capture_rt;
         in->config.format = pcm_format_from_audio_format(config->format);
+        in->config.channels = channel_count;
         in->sample_rate = in->config.rate;
         in->af_period_multiplier = af_period_multiplier;
     } else if (is_usb_dev && may_use_hifi_record) {
@@ -6760,40 +6797,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         ret = audio_extn_cin_configure_input_stream(in);
         if (ret)
             goto err_open;
-    } else if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
-        bool valid_rate = (config->sample_rate == 8000 ||
-                           config->sample_rate == 16000 ||
-                           config->sample_rate == 32000 ||
-                           config->sample_rate == 48000);
-        bool valid_ch = audio_channel_count_from_in_mask(in->channel_mask) == 1;
-        //XXX needed for voice_extn_compress_voip_open_input_stream
-        in->config.rate = config->sample_rate;
-#ifndef COMPRESS_VOIP_ENABLED
-        if (valid_rate && valid_ch) {
-            in->usecase = USECASE_AUDIO_RECORD_VOIP;
-            in->config = default_pcm_config_voip_copp;
-            in->config.period_size = VOIP_IO_BUF_SIZE(in->sample_rate,
-                                                      DEFAULT_VOIP_BUF_DURATION_MS,
-                                                      DEFAULT_VOIP_BIT_DEPTH_BYTE)/2;
-        }
-#else
-        if ((in->dev->mode == AUDIO_MODE_IN_COMMUNICATION ||
-             voice_extn_compress_voip_is_active(in->dev)) &&
-            (voice_extn_compress_voip_is_format_supported(in->format)) &&
-            valid_rate && valid_ch) {
-            voice_extn_compress_voip_open_input_stream(in);
-        }
-#endif
-        else {
-            ALOGE("%s AUDIO_SOURCE_VOICE_COMMUNICATION invalid args", __func__);
-            ret = -EINVAL;
-            if (!valid_ch) config->channel_mask = 1;
-            if (!valid_rate) config->sample_rate = 48000;
-            goto err_open;
-        }
-        // update back to whatever was overwritten
-        in->config.rate = config->sample_rate;
-        in->sample_rate = config->sample_rate;
     } else {
         in->config = pcm_config_audio_capture;
         in->config.rate = config->sample_rate;
@@ -6807,11 +6810,22 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                             channel_count,
                                             is_low_latency);
         in->config.period_size = buffer_size / frame_size;
+
+        if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
+            /* optionally use VOIP usecase depending on config(s) */
+            ret = adev_update_voice_comm_input_stream(in, config);
+        }
+
+        if (ret) {
+            ALOGE("%s AUDIO_SOURCE_VOICE_COMMUNICATION invalid args", __func__);
+            goto err_open;
+        }
     }
     audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
                                                 &adev->streams_input_cfg_list,
-                                                devices, flags, in->format, in->sample_rate,
-                                                in->bit_width, in->profile, &in->app_type_cfg);
+                                                devices, flags, in->format,
+                                                in->sample_rate, in->bit_width,
+                                                in->profile, &in->app_type_cfg);
 
     /* This stream could be for sound trigger lab,
        get sound trigger pcm if present */
