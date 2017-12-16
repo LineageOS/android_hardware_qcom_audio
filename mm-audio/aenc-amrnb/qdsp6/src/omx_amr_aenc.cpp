@@ -512,13 +512,13 @@ void omx_amr_aenc::frame_done_cb(OMX_BUFFERHEADERTYPE *bufHdr)
         m_amr_pb_stats.fbd_cnt++;
         pthread_mutex_lock(&out_buf_count_lock);
         nNumOutputBuf--;
-        DEBUG_PRINT("FBD CB:: nNumOutputBuf=%d out_buf_len=%u fbd_cnt=%u\n",\
+        DEBUG_DETAIL("FBD CB:: nNumOutputBuf=%d out_buf_len=%u fbd_cnt=%u\n",\
                     nNumOutputBuf,
                     m_amr_pb_stats.tot_out_buf_len,
                     m_amr_pb_stats.fbd_cnt);
         m_amr_pb_stats.tot_out_buf_len += bufHdr->nFilledLen;
         m_amr_pb_stats.tot_pb_time     = bufHdr->nTimeStamp;
-        DEBUG_PRINT("FBD:in_buf_len=%u out_buf_len=%u\n",
+        DEBUG_DETAIL("FBD:in_buf_len=%u out_buf_len=%u\n",
                     m_amr_pb_stats.tot_in_buf_len,
                     m_amr_pb_stats.tot_out_buf_len);
 
@@ -3233,7 +3233,7 @@ OMX_ERRORTYPE  omx_amr_aenc::get_state(OMX_IN OMX_HANDLETYPE  hComp,
         return OMX_ErrorBadParameter;
     }
     *state = m_state;
-    DEBUG_PRINT("Returning the state %d\n",*state);
+    DEBUG_DETAIL("Returning the state %d\n",*state);
     return OMX_ErrorNone;
 }
 
@@ -3975,12 +3975,12 @@ OMX_ERRORTYPE  omx_amr_aenc::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
  @return error status
  */
 OMX_ERRORTYPE  omx_amr_aenc::empty_this_buffer(
-				OMX_IN OMX_HANDLETYPE         hComp,
-				OMX_IN OMX_BUFFERHEADERTYPE* buffer)
+                                OMX_IN OMX_HANDLETYPE         hComp,
+                                OMX_IN OMX_BUFFERHEADERTYPE* buffer)
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
 
-    DEBUG_PRINT("ETB:Buf:%p Len %u TS %lld numInBuf=%d\n", \
+    DEBUG_DETAIL("ETB:Buf:%p Len %u TS %lld numInBuf=%d\n", \
                 buffer, buffer->nFilledLen, buffer->nTimeStamp, (nNumInputBuf));
     if (m_state == OMX_StateInvalid)
     {
@@ -4076,7 +4076,7 @@ OMX_ERRORTYPE  omx_amr_aenc::empty_this_buffer_proxy
             meta_in.nFlags  |= OMX_BUFFERFLAG_EOS;
         }
         memcpy(data,&meta_in, meta_in.offsetVal);
-        DEBUG_PRINT("meta_in.nFlags = %d\n",meta_in.nFlags);
+        DEBUG_DETAIL("meta_in.nFlags = %d\n",meta_in.nFlags);
     } else {
         DEBUG_PRINT_ERROR("temp meta is null buf\n");
             return OMX_ErrorInsufficientResources;
@@ -4119,7 +4119,7 @@ OMX_ERRORTYPE  omx_amr_aenc::fill_this_buffer_proxy
 
     if (true == search_output_bufhdr(buffer))
     {
-          DEBUG_PRINT("\nBefore Read..m_drv_fd = %d,\n",m_drv_fd);
+          DEBUG_DETAIL("\nBefore Read..m_drv_fd = %d,\n",m_drv_fd);
           nReadbytes = read(m_drv_fd,buffer->pBuffer,output_buffer_size );
           DEBUG_DETAIL("FTBP->Al_len[%lu]buf[%p]size[%d]numOutBuf[%d]\n",\
                          buffer->nAllocLen,buffer->pBuffer,
@@ -4131,7 +4131,7 @@ OMX_ERRORTYPE  omx_amr_aenc::fill_this_buffer_proxy
              frame_done_cb((OMX_BUFFERHEADERTYPE *)buffer);
                   return OMX_ErrorNone;
       } else
-              DEBUG_PRINT("Read bytes %d\n",nReadbytes);
+              DEBUG_DETAIL("Read bytes %d\n",nReadbytes);
       // Buffer from Driver will have
       // 1 byte => Nr of frame field
       // (sizeof(ENC_META_OUT) * Nr of frame) bytes => meta_out->offset_to_frame
@@ -4139,7 +4139,7 @@ OMX_ERRORTYPE  omx_amr_aenc::fill_this_buffer_proxy
 
           meta_out = (ENC_META_OUT *)(buffer->pBuffer + sizeof(unsigned char));
           buffer->nTimeStamp = (((OMX_TICKS)meta_out->msw_ts << 32)+
-					meta_out->lsw_ts);
+                                        meta_out->lsw_ts);
           buffer->nFlags |= meta_out->nflags;
           buffer->nOffset = (OMX_U32)(meta_out->offset_to_frame +
                                     sizeof(unsigned char));
@@ -4147,9 +4147,9 @@ OMX_ERRORTYPE  omx_amr_aenc::fill_this_buffer_proxy
           ts += FRAMEDURATION;
           buffer->nTimeStamp = ts;
           nTimestamp = buffer->nTimeStamp;
-          DEBUG_PRINT("nflags %d frame_size %d offset_to_frame %d \
-		timestamp %lld\n", meta_out->nflags, meta_out->frame_size,
-		meta_out->offset_to_frame, buffer->nTimeStamp);
+          DEBUG_DETAIL("nflags %d frame_size %d offset_to_frame %d \
+                timestamp %lld\n", meta_out->nflags, meta_out->frame_size,
+                meta_out->offset_to_frame, buffer->nTimeStamp);
 
           if ((buffer->nFlags & OMX_BUFFERFLAG_EOS) == OMX_BUFFERFLAG_EOS )
           {
@@ -4168,7 +4168,7 @@ OMX_ERRORTYPE  omx_amr_aenc::fill_this_buffer_proxy
 
               return OMX_ErrorNone;
           }
-          DEBUG_PRINT("nState %d \n",nState );
+          DEBUG_DETAIL("nState %d \n",nState );
 
           pthread_mutex_lock(&m_state_lock);
           get_state(&m_cmp, &state);
@@ -4588,7 +4588,7 @@ RETURN VALUE
 ========================================================================== */
 bool omx_amr_aenc::release_done(OMX_U32 param1)
 {
-    DEBUG_PRINT("Inside omx_amr_aenc::release_done");
+    DEBUG_DETAIL("Inside omx_amr_aenc::release_done");
     OMX_BOOL bRet = OMX_FALSE;
 
     if (param1 == OMX_ALL)
