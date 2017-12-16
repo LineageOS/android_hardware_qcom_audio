@@ -232,6 +232,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.adm.buffering.ms=2
 
 #enable use of display-port for voice usecases
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.enable.dp.for.voice=false
 
 # for HIDL related packages
