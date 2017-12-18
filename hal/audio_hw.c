@@ -2987,6 +2987,7 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
     uint32_t buffer_size;
 
     ALOGV("%s", __func__);
+    lock_output_stream(out);
     pthread_mutex_lock(&adev->lock);
 
     if (info == NULL || min_size_frames == 0) {
@@ -3066,32 +3067,36 @@ exit:
         }
     }
     pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&out->lock);
     return ret;
 }
 
 static int out_get_mmap_position(const struct audio_stream_out *stream,
                                   struct audio_mmap_position *position)
 {
+    int ret = 0;
     struct stream_out *out = (struct stream_out *)stream;
     ALOGVV("%s", __func__);
     if (position == NULL) {
         return -EINVAL;
     }
-    if (out->usecase != USECASE_AUDIO_PLAYBACK_MMAP) {
-        return -ENOSYS;
-    }
-    if (out->pcm == NULL) {
-        return -ENOSYS;
+    lock_output_stream(out);
+    if (out->usecase != USECASE_AUDIO_PLAYBACK_MMAP ||
+        out->pcm == NULL) {
+        ret = -ENOSYS;
+        goto exit;
     }
 
     struct timespec ts = { 0, 0 };
-    int ret = pcm_mmap_get_hw_ptr(out->pcm, (unsigned int *)&position->position_frames, &ts);
+    ret = pcm_mmap_get_hw_ptr(out->pcm, (unsigned int *)&position->position_frames, &ts);
     if (ret < 0) {
         ALOGE("%s: %s", __func__, pcm_get_error(out->pcm));
-        return ret;
+        goto exit;
     }
     position->time_nanoseconds = audio_utils_ns_from_timespec(&ts);
-    return 0;
+exit:
+    pthread_mutex_unlock(&out->lock);
+    return ret;
 }
 
 
@@ -3583,6 +3588,7 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
     uint32_t mmap_size;
     uint32_t buffer_size;
 
+    lock_input_stream(in);
     pthread_mutex_lock(&adev->lock);
     ALOGV("%s in %p", __func__, in);
 
@@ -3666,31 +3672,35 @@ exit:
         }
     }
     pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&in->lock);
     return ret;
 }
 
 static int in_get_mmap_position(const struct audio_stream_in *stream,
                                   struct audio_mmap_position *position)
 {
+    int ret = 0;
     struct stream_in *in = (struct stream_in *)stream;
     ALOGVV("%s", __func__);
     if (position == NULL) {
         return -EINVAL;
     }
-    if (in->usecase != USECASE_AUDIO_RECORD_MMAP) {
-        return -ENOSYS;
-    }
-    if (in->pcm == NULL) {
-        return -ENOSYS;
+    lock_input_stream(in);
+    if (in->usecase != USECASE_AUDIO_RECORD_MMAP ||
+        in->pcm == NULL) {
+        ret = -ENOSYS;
+        goto exit;
     }
     struct timespec ts = { 0, 0 };
-    int ret = pcm_mmap_get_hw_ptr(in->pcm, (unsigned int *)&position->position_frames, &ts);
+    ret = pcm_mmap_get_hw_ptr(in->pcm, (unsigned int *)&position->position_frames, &ts);
     if (ret < 0) {
         ALOGE("%s: %s", __func__, pcm_get_error(in->pcm));
-        return ret;
+        goto exit;
     }
     position->time_nanoseconds = audio_utils_ns_from_timespec(&ts);
-    return 0;
+exit:
+    pthread_mutex_unlock(&in->lock);
+    return ret;
 }
 
 
