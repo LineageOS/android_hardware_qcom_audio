@@ -31,6 +31,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <fcntl.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include <aenc_svr.h>
 
