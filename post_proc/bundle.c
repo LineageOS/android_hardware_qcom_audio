@@ -40,6 +40,7 @@
 
 #include <pthread.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <cutils/list.h>
 #include <cutils/log.h>
