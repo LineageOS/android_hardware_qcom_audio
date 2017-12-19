@@ -23,13 +23,14 @@
 
 #include <errno.h>
 #include <math.h>
-#include <cutils/log.h>
+#include <log/log.h>
 
 #include "audio_hw.h"
 #include "platform.h"
 #include "platform_api.h"
 #include <stdlib.h>
 #include <cutils/str_parms.h>
+#include <unistd.h>
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
