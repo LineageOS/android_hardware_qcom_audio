@@ -33,7 +33,7 @@
 
 #include <errno.h>
 #include <math.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <fcntl.h>
 #include <dirent.h>
 #include "audio_hw.h"
@@ -46,6 +46,8 @@
 #include <cutils/properties.h>
 #include "audio_extn.h"
 #include <linux/msm_audio_calibration.h>
+#include <unistd.h>
+#include <pthread.h>
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>

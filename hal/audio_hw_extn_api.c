@@ -33,6 +33,7 @@
 
 #include <inttypes.h>
 #include <errno.h>
+#include <pthread.h>
 #include <cutils/log.h>
 
 #include <hardware/audio.h>
