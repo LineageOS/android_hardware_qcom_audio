@@ -3420,7 +3420,9 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
      * to always provide zeroes when muted.
      * No need to acquire adev->lock to read mic_muted here as we don't change its state.
      */
-    if (ret == 0 && adev->mic_muted && in->usecase != USECASE_AUDIO_RECORD_AFE_PROXY) {
+    if (ret == 0 && adev->mic_muted &&
+        !voice_is_in_call_rec_stream(in) &&
+        in->usecase != USECASE_AUDIO_RECORD_AFE_PROXY) {
         memset(buffer, 0, bytes);
         in->frames_muted += frames;
     }
