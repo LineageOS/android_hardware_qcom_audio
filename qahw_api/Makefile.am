@@ -22,8 +22,8 @@ libqahw_la_CPPFLAGS := $(AM_CPPFLAGS)
 libqahw_la_CPPFLAGS += -std=c++11 -DHAVE_PTHREADS -DHAVE_ANDROID_OS
 libqahw_la_CPPFLAGS += -DDEBUG_REFS_CALLSTACK_ENABLED=0
 libqahw_la_CPPFLAGS += -DNDEBUG
-libqahw_la_LDFLAGS   = -ltinyalsa -lhardware -lexpat -lcutils -llog -ldl -lbinder -shared -avoid-version -llog -lcutils -lpthread -lutils
+libqahw_la_LDFLAGS   = -ltinyalsa -lhardware -lexpat -lcutils -llog -ldl -shared -avoid-version -lpthread -lutils
 if QTI_AUDIO_SERVER_ENABLED
 AM_CPPFLAGS += -DQTI_AUDIO_SERVER_ENABLED
-libqahw_la_LDFLAGS +=  -lqtiaudioserver
+libqahw_la_LDFLAGS +=  -lqtiaudioserver -lbinder
 endif
