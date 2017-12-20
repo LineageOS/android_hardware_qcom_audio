@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "a1dcddbc_786d18d7",
+        "filename": "hal/msm8960/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 295,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2017-12-20T18:38:31Z",
+      "side": 1,
+      "message": "missing space before \u003d",
+      "range": {
+        "startLine": 295,
+        "startChar": 46,
+        "endLine": 295,
+        "endChar": 47
+      },
+      "revId": "00e6995641ee768734555feb79d6478251c2b99a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
