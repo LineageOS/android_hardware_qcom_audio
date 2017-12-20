@@ -588,7 +588,7 @@ void usage() {
     printf("                                               For mono channel 16kHz rate for 30seconds\n\n");
 }
 
-static void qti_audio_server_death_notify_cb(void *ctxt) {
+static void qti_audio_server_death_notify_cb(void *ctxt __unused) {
     fprintf(log_file, "qas died\n");
     fprintf(stderr, "qas died\n");
     stop_record = true;
@@ -769,7 +769,7 @@ int main(int argc, char* argv[]) {
     /* set global setparams entered by user.
      * Also other global setparams can be concatenated if required.
      */
-    if (params[0].kvpairs != NULL) {
+    if (params[0].kvpairs[0] != 0) {
         size_t len;
         len = strcspn(params[0].kvpairs, ",");
         while (len < strlen(params[0].kvpairs)) {

@@ -27,6 +27,7 @@ LOCAL_COPY_HEADERS      := inc/qahw.h
 LOCAL_COPY_HEADERS      += inc/qahw_effect_api.h
 
 LOCAL_PRELINK_MODULE    := false
+LOCAL_VENDOR_MODULE     := true
 
 include $(BUILD_SHARED_LIBRARY)
 

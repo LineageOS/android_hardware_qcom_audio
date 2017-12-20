@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <signal.h>
 
 #include "qahw_api.h"
 #include "qahw_defs.h"
@@ -110,6 +111,12 @@ const char * effect_str[EFFECT_MAX] = {
 // placing non-standard EQ stuff here rather than in header file
 #define NUM_EQ_BANDS 5
 const uint16_t qahw_equalizer_band_freqs[NUM_EQ_BANDS] = {60, 230, 910, 3600, 14000}; /* frequencies in HZ */
+
+/* Handler to handle input command_thread_func signal */
+void stop_effect_command_thread_handler(int signal __unused)
+{
+   pthread_exit(NULL);
+}
 
 /* THREAD BODY OF BASSBOOST */
 void *bassboost_thread_func(void* data) {
@@ -488,6 +495,12 @@ void *command_thread_func(void* data) {
     uint16_t      band_idx;
     qahw_effect_param_t *param = (qahw_effect_param_t *)buf32;
     qahw_effect_param_t *param_2 = (qahw_effect_param_t *)buf32_2;
+
+    /* Register the SIGUSR1 to close this thread properly
+       as it is waiting for input in while loop */
+    if (signal(SIGUSR1, stop_effect_command_thread_handler) == SIG_ERR) {
+        fprintf(stderr, "Failed to register SIGUSR1:%d\n",errno);
+    }
 
     while(!thr_ctxt->exit) {
         if (fgets(cmd_str, sizeof(cmd_str), stdin) == NULL) {

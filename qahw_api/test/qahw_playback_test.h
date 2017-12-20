@@ -159,8 +159,12 @@ int get_wav_header_length (FILE* file_stream);
 #define is_qap_session_active(argc, argv, kvp_string)                    (0)
 #define get_play_list(fp, stream_param, num_of_streams, kvp_str)         (0)
 #define check_for_playlist(kvp_string)                                   (0)
-#define start_playback_through_qap(kvp_string, num_of_streams,\
-                                         qap_out_hal_handle_t)           (0)
+inline int start_playback_through_qap(char * kvp_string __unused,
+                                      int num_of_streams __unused,
+                                      qahw_module_handle_t *qap_out_hal_handle_t __unused)
+{
+    return 0;
+}
 #define start_playback_through_qap_playlist(cmd_kvp_str, num_of_streams,\
                    kvp_string, stream_param, qap_wrapper_session_active,\
                    qap_out_hal_handle_t)                                 (0)

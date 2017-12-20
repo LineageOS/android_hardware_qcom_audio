@@ -31,8 +31,6 @@
 
 #include <system/audio.h>
 
-#include "qahw.h"
-
 __BEGIN_DECLS
 
 #define QAHW_EFFECT_API_VERSION_0_0 QAHW_MAKE_API_VERSION(0, 0)
