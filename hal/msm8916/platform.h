@@ -277,7 +277,7 @@ struct csd_data {
     stop_record_t stop_record;
 };
 
-#define PLATFORM_INFO_XML_PATH          "/system/etc/audio_platform_info.xml"
-#define PLATFORM_INFO_XML_BASE_STRING   "/system/etc/audio_platform_info"
+#define PLATFORM_INFO_XML_PATH          "audio_platform_info.xml"
+#define PLATFORM_INFO_XML_BASE_STRING   "audio_platform_info"
 
 #endif // QCOM_AUDIO_PLATFORM_H

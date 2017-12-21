@@ -34,10 +34,10 @@
 #include "audio_extn/tfa_98xx.h"
 #include <dirent.h>
 #define MAX_MIXER_XML_PATH  100
-#define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
-#define MIXER_XML_PATH_MTP "/system/etc/mixer_paths_mtp.xml"
-#define MIXER_XML_PATH_MSM8909_PM8916 "/system/etc/mixer_paths_msm8909_pm8916.xml"
-#define MIXER_XML_PATH_L9300 "/system/etc/mixer_paths_l9300.xml"
+#define MIXER_XML_PATH "mixer_paths.xml"
+#define MIXER_XML_PATH_MTP "mixer_paths_mtp.xml"
+#define MIXER_XML_PATH_MSM8909_PM8916 "mixer_paths_msm8909_pm8916.xml"
+#define MIXER_XML_PATH_L9300 "mixer_paths_l9300.xml"
 
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define AUDIO_DATA_BLOCK_MIXER_CTL "HDMI EDID"
@@ -491,28 +491,48 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 
+// Treblized config files will be located in /odm/etc or /vendor/etc.
+static const char *kConfigLocationList[] =
+        {"/odm/etc", "/vendor/etc", "/system/etc"};
+static const int kConfigLocationListSize =
+        (sizeof(kConfigLocationList) / sizeof(kConfigLocationList[0]));
+
+void resolveConfigFile(char file_name[MIXER_PATH_MAX_LENGTH], char *full_config_path) {
+    char temp_config_path[MIXER_PATH_MAX_LENGTH];
+    for (int i = 0; i < kConfigLocationListSize; i++) {
+        snprintf(temp_config_path,
+                 MIXER_PATH_MAX_LENGTH,
+                 "%s/%s",
+                 kConfigLocationList[i],
+                 file_name);
+        if (F_OK == access(temp_config_path, 0)) {
+            strcpy(full_config_path, temp_config_path);
+            return;
+        }
+    }
+    // if no file was found, copy file_name to full_config_path
+    // that way, crashes due to empty full_config_path are avoided
+    strcpy(full_config_path, file_name);
+    ALOGE("%s: could not find the file %s under any valid location!", __func__, file_name);
+}
+
 static void query_platform(const char *snd_card_name,
                                       char *mixer_xml_path)
 {
     if (!strncmp(snd_card_name, "msm8x16-snd-card-mtp",
                  sizeof("msm8x16-snd-card-mtp"))) {
-        strlcpy(mixer_xml_path, MIXER_XML_PATH_MTP,
-                sizeof(MIXER_XML_PATH_MTP));
+        resolveConfigFile(MIXER_XML_PATH_MTP, mixer_xml_path);
     } else if (!strncmp(snd_card_name, "msm8909-pm8916-snd-card",
                  sizeof("msm8909-pm8916-snd-card"))) {
-        strlcpy(mixer_xml_path, MIXER_XML_PATH_MSM8909_PM8916,
-                sizeof(MIXER_XML_PATH_MSM8909_PM8916));
+        resolveConfigFile(MIXER_XML_PATH_MSM8909_PM8916, mixer_xml_path);
     } else if (!strncmp(snd_card_name, "msm8952-snd-card-mtp",
                  sizeof("msm8952-snd-card-mtp"))) {
-        strlcpy(mixer_xml_path, MIXER_XML_PATH_MTP,
-                sizeof(MIXER_XML_PATH_MTP));
+        resolveConfigFile(MIXER_XML_PATH_MTP, mixer_xml_path);
     } else if (!strncmp(snd_card_name, "msm8952-l9300-snd-card",
                  sizeof("msm8952-l9300-snd-card"))) {
-        strlcpy(mixer_xml_path, MIXER_XML_PATH_L9300,
-                sizeof(MIXER_XML_PATH_L9300));
+        resolveConfigFile(MIXER_XML_PATH_L9300, mixer_xml_path);
     } else {
-        strlcpy(mixer_xml_path, MIXER_XML_PATH,
-                sizeof(MIXER_XML_PATH));
+        resolveConfigFile(MIXER_XML_PATH, mixer_xml_path);
     }
 }
 
@@ -845,6 +865,7 @@ void *platform_init(struct audio_device *adev)
     int retry_num = 0, snd_card_num = 0, key = 0;
     const char *snd_card_name;
     char mixer_xml_path[MAX_MIXER_XML_PATH] = {0};
+    char platform_info_xml_path[MIXER_PATH_MAX_LENGTH] = {0};
     char ffspEnable[PROPERTY_VALUE_MAX] = {0};
     char *cvd_version = NULL;
     int idx;
@@ -1019,8 +1040,11 @@ acdb_init_fail:
 
     set_platform_defaults();
 
+    /* locate platform info xml */
+    resolveConfigFile(PLATFORM_INFO_XML_PATH, platform_info_xml_path);
+
     /* Initialize ACDB and PCM ID's */
-    platform_info_init(PLATFORM_INFO_XML_PATH, my_data);
+    platform_info_init(platform_info_xml_path, my_data);
 
 
     /* Read one time ssr property */
