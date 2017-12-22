@@ -2845,6 +2845,10 @@ int start_output_stream(struct stream_out *out)
     if (ret == 0) {
         register_out_stream(out);
         if (out->realtime) {
+            if (out->pcm == NULL || !pcm_is_ready(out->pcm)) {
+                ALOGE("%s: pcm stream not ready", __func__);
+                goto error_open;
+            }
             ret = pcm_start(out->pcm);
             if (ret < 0)
                 goto error_open;
@@ -3358,7 +3362,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             out->devices = new_dev;
 
             if (output_drives_call(adev, out)) {
-                if(!voice_is_in_call(adev)) {
+                if (!voice_is_call_state_active(adev)) {
                     if (adev->mode == AUDIO_MODE_IN_CALL) {
                         adev->current_call_output = out;
                         ret = voice_start_call(adev);
@@ -4179,7 +4183,7 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
                                    uint64_t *frames, struct timespec *timestamp)
 {
     struct stream_out *out = (struct stream_out *)stream;
-    int ret = -1;
+    int ret = -ENODATA;
     unsigned long dsp_frames;
 
     /* below piece of code is not guarded against any lock because audioFliner serializes
@@ -4431,8 +4435,8 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
     struct stream_out *out = (struct stream_out *)stream;
     struct audio_device *adev = out->dev;
     int ret = 0;
-    unsigned int offset1;
-    unsigned int frames1;
+    unsigned int offset1 = 0;
+    unsigned int frames1 = 0;
     const char *step = "";
     uint32_t mmap_size;
 
@@ -5000,8 +5004,8 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
     struct stream_in *in = (struct stream_in *)stream;
     struct audio_device *adev = in->dev;
     int ret = 0;
-    unsigned int offset1;
-    unsigned int frames1;
+    unsigned int offset1 = 0;
+    unsigned int frames1 = 0;
     const char *step = "";
 
     pthread_mutex_lock(&adev->lock);
