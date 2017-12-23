@@ -1039,6 +1039,60 @@
         <ctl name="MultiMedia8 Mixer AFE_PCM_TX" value="1" />
     </path>
 
+    <path name="audio-record-compress2">
+        <ctl name="MultiMedia17 Mixer QUAT_MI2S_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress2 bt-sco">
+        <ctl name="MultiMedia17 Mixer INTERNAL_BT_SCO_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress2 bt-sco-wb">
+        <path name="bt-sco-wb-samplerate" />
+        <ctl name="SLIM_1 SampleRate" value="16000" />
+        <path name="audio-record-compress2 bt-sco" />
+    </path>
+
+    <path name="audio-record-compress2 usb-headset-mic">
+        <ctl name="MultiMedia17 Mixer AFE_PCM_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress3">
+        <ctl name="MultiMedia18 Mixer QUAT_MI2S_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress3 bt-sco">
+        <ctl name="MultiMedia18 Mixer INTERNAL_BT_SCO_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress3 bt-sco-wb">
+        <path name="bt-sco-wb-samplerate" />
+        <ctl name="SLIM_1 SampleRate" value="16000" />
+        <path name="audio-record-compress3 bt-sco" />
+    </path>
+
+    <path name="audio-record-compress3 usb-headset-mic">
+        <ctl name="MultiMedia18 Mixer AFE_PCM_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress4">
+        <ctl name="MultiMedia19 Mixer QUAT_MI2S_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress4 bt-sco">
+        <ctl name="MultiMedia19 Mixer INTERNAL_BT_SCO_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress4 bt-sco-wb">
+        <path name="bt-sco-wb-samplerate" />
+        <ctl name="SLIM_1 SampleRate" value="16000" />
+        <path name="audio-record-compress4 bt-sco" />
+    </path>
+
+    <path name="audio-record-compress4 usb-headset-mic">
+        <ctl name="MultiMedia19 Mixer AFE_PCM_TX" value="1" />
+    </path>
+
     <path name="low-latency-record">
         <ctl name="MultiMedia5 Mixer SLIM_0_TX" value="1" />
     </path>
@@ -1789,7 +1843,7 @@
         <ctl name="AIF1_CAP Mixer SLIM TX6" value="1" />
         <ctl name="AIF1_CAP Mixer SLIM TX7" value="1" />
         <ctl name="AIF1_CAP Mixer SLIM TX8" value="1" />
-        <ctl name="MI2S_TX Channels" value="Three" />
+        <ctl name="MI2S_TX Channels" value="Four" />
         <ctl name="SLIM TX6 MUX" value="DEC6" />
         <ctl name="ADC MUX6" value="DMIC" />
         <ctl name="DMIC MUX6" value="DMIC0" />

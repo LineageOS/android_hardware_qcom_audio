@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2015, 2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -102,4 +102,16 @@
 
 #define AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED  "is_hw_dec_session_allowed"
 
+/* Set or Query stream profile type */
+#define AUDIO_PARAMETER_STREAM_PROFILE "audio_stream_profile"
+
+/* audio inout flag for timestamp mode.
+ * check other input flags defined in audio.h for conflicts
+ */
+#define AUDIO_INPUT_FLAG_TIMESTAMP 0x80000000
+
+/* audio input flag for compressed mode.
+ * check other input flags defined in audio.h for conflicts
+ */
+#define AUDIO_INPUT_FLAG_COMPRESS 0x40000000
 #endif /* AUDIO_DEFS_H */

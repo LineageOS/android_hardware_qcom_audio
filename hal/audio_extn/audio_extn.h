@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -346,24 +346,42 @@ int audio_extn_pm_vote (void);
 void audio_extn_pm_unvote(void);
 #endif
 
-void audio_extn_utils_update_streams_output_cfg_list(void *platform,
+void audio_extn_utils_update_streams_cfg_lists(void *platform,
                                   struct mixer *mixer,
-                                  struct listnode *streams_output_cfg_list);
-void audio_extn_utils_dump_streams_output_cfg_list(
-                                  struct listnode *streams_output_cfg_list);
-void audio_extn_utils_release_streams_output_cfg_list(
-                                  struct listnode *streams_output_cfg_list);
-void audio_extn_utils_update_stream_app_type_cfg(void *platform,
+                                  struct listnode *streams_output_cfg_list,
+                                  struct listnode *streams_input_cfg_list);
+void audio_extn_utils_dump_streams_cfg_lists(
+                                  struct listnode *streams_output_cfg_list,
+                                  struct listnode *streams_input_cfg_list);
+void audio_extn_utils_release_streams_cfg_lists(
+                                  struct listnode *streams_output_cfg_list,
+                                  struct listnode *streams_input_cfg_list);
+void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
                                   struct listnode *streams_output_cfg_list,
                                   audio_devices_t devices,
                                   audio_output_flags_t flags,
                                   audio_format_t format,
                                   uint32_t sample_rate,
                                   uint32_t bit_width,
+                                  audio_channel_mask_t channel_mask,
+                                  char *profile,
                                   struct stream_app_type_cfg *app_type_cfg);
-int audio_extn_utils_send_app_type_cfg(struct audio_device *adev, struct audio_usecase *usecase);
+void audio_extn_utils_update_stream_input_app_type_cfg(void *platform,
+                                  struct listnode *streams_input_cfg_list,
+                                  audio_devices_t devices,
+                                  audio_input_flags_t flags,
+                                  audio_format_t format,
+                                  uint32_t sample_rate,
+                                  uint32_t bit_width,
+                                  char *profile,
+                                  struct stream_app_type_cfg *app_type_cfg);
+int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
+                                       struct audio_usecase *usecase);
 void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
                                              struct audio_usecase *usecase);
+void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
+                                  struct audio_device *adev,
+                                  struct audio_usecase *usecase);
 #ifdef DS2_DOLBY_DAP_ENABLED
 #define LIB_DS2_DAP_HAL "vendor/lib/libhwdaphal.so"
 #define SET_HW_INFO_FUNC "dap_hal_set_hw_info"
@@ -409,6 +427,7 @@ typedef enum {
 #endif
 
 int read_line_from_file(const char *path, char *buf, size_t count);
+int get_snd_codec_id(audio_format_t format);
 
 #ifndef KPI_OPTIMIZE_ENABLED
 #define audio_extn_perf_lock_init() (0)
@@ -419,4 +438,26 @@ int audio_extn_perf_lock_init(void);
 void audio_extn_perf_lock_acquire(void);
 void audio_extn_perf_lock_release(void);
 #endif /* KPI_OPTIMIZE_ENABLED */
+
+#ifdef COMPRESS_INPUT_ENABLED
+bool audio_extn_cin_applicable_stream(struct stream_in *in);
+bool audio_extn_cin_attached_usecase(audio_usecase_t uc_id);
+size_t audio_extn_cin_get_buffer_size(struct stream_in *in);
+int audio_extn_cin_start_input_stream(struct stream_in *in);
+void audio_extn_cin_stop_input_stream(struct stream_in *in);
+void audio_extn_cin_close_input_stream(struct stream_in *in);
+int audio_extn_cin_read(struct stream_in *in, void *buffer,
+                        size_t bytes, size_t *bytes_read);
+int audio_extn_cin_configure_input_stream(struct stream_in *in);
+#else
+#define audio_extn_cin_applicable_stream(in) (false)
+#define audio_extn_cin_attached_usecase(uc_id) (false)
+#define audio_extn_cin_get_buffer_size(in) (0)
+#define audio_extn_cin_start_input_stream(in) (0)
+#define audio_extn_cin_stop_input_stream(in) (0)
+#define audio_extn_cin_close_input_stream(in) (0)
+#define audio_extn_cin_read(in, buffer, bytes, bytes_read) (0)
+#define audio_extn_cin_configure_input_stream(in) (0)
+#endif
+
 #endif /* AUDIO_EXTN_H */

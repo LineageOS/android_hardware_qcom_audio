@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, 2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -204,6 +204,9 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
 #endif
     [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_COMPRESS] = {COMPRESS_CAPTURE_DEVICE, COMPRESS_CAPTURE_DEVICE},
+    [USECASE_AUDIO_RECORD_COMPRESS2] = {-1, -1},
+    [USECASE_AUDIO_RECORD_COMPRESS3] = {-1, -1},
+    [USECASE_AUDIO_RECORD_COMPRESS4] = {-1, -1},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
                                           LOWLATENCY_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_FM_VIRTUAL] = {MULTIMEDIA2_PCM_DEVICE,
@@ -550,6 +553,10 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_MULTI_CH)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS2)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS3)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS4)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_LOW_LATENCY)},
     {TO_NAME_INDEX(USECASE_VOICE_CALL)},
     {TO_NAME_INDEX(USECASE_VOICE2_CALL)},
@@ -1480,7 +1487,7 @@ int platform_send_audio_calibration(void *platform, snd_device_t snd_device,
     if (usecase->type == PCM_PLAYBACK)
         snd_device = platform_get_output_snd_device(adev->platform,
                                             usecase->stream.out->devices);
-    else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE))
+    else if (usecase->type == PCM_HFP_CALL)
         snd_device = platform_get_input_snd_device(adev->platform,
                                             adev->primary_output->devices);
     acdb_dev_id = acdb_device_table[audio_extn_get_spkr_prot_snd_device(snd_device)];

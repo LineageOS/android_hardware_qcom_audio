@@ -181,10 +181,11 @@ struct platform_data {
 #endif
     void *hw_info;
     struct csd_data *csd;
+    bool use_generic_handset;
 };
 
 static bool is_external_codec = false;
-static const int pcm_device_table_of_ext_codec[AUDIO_USECASE_MAX][2] = {
+static int pcm_device_table_of_ext_codec[AUDIO_USECASE_MAX][2] = {
    [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE_OF_EXT_CODEC, QCHAT_CALL_PCM_DEVICE_OF_EXT_CODEC}
 };
 
@@ -202,6 +203,9 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                      {PLAYBACK_OFFLOAD_DEVICE, PLAYBACK_OFFLOAD_DEVICE},
     [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_COMPRESS] = {COMPRESS_CAPTURE_DEVICE, COMPRESS_CAPTURE_DEVICE},
+    [USECASE_AUDIO_RECORD_COMPRESS2] = {-1, -1},
+    [USECASE_AUDIO_RECORD_COMPRESS3] = {-1, -1},
+    [USECASE_AUDIO_RECORD_COMPRESS4] = {-1, -1},
     [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
                                           LOWLATENCY_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_FM_VIRTUAL] = {MULTIMEDIA2_PCM_DEVICE,
@@ -341,6 +345,7 @@ static char * device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = "three-mic",
     [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = "quad-mic",
     [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = "headset-mic",
+    [SND_DEVICE_IN_HANDSET_GENERIC_QMIC] = "quad-mic",
 };
 
 // Platform specific backend bit width table
@@ -446,6 +451,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = 145,
     [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = 146,
     [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = 147,
+    [SND_DEVICE_IN_HANDSET_GENERIC_QMIC] = 152,
 };
 
 struct name_to_index {
@@ -548,7 +554,37 @@ struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_THREE_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_QUAD_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_GENERIC_QMIC)},
 };
+
+static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
+    /* TODO: This is not the complete list. Add new entries as
+       and when required
+    */
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_DEEP_BUFFER)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_LOW_LATENCY)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_MULTI_CH)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_LOW_LATENCY)},
+    {TO_NAME_INDEX(USECASE_VOICE_CALL)},
+    {TO_NAME_INDEX(USECASE_VOICE2_CALL)},
+    {TO_NAME_INDEX(USECASE_VOLTE_CALL)},
+    {TO_NAME_INDEX(USECASE_QCHAT_CALL)},
+    {TO_NAME_INDEX(USECASE_VOWLAN_CALL)},
+    {TO_NAME_INDEX(USECASE_VOICEMMODE1_CALL)},
+    {TO_NAME_INDEX(USECASE_VOICEMMODE2_CALL)},
+    {TO_NAME_INDEX(USECASE_INCALL_REC_UPLINK)},
+    {TO_NAME_INDEX(USECASE_INCALL_REC_DOWNLINK)},
+    {TO_NAME_INDEX(USECASE_INCALL_REC_UPLINK_AND_DOWNLINK)},
+    {TO_NAME_INDEX(USECASE_AUDIO_HFP_SCO)},
+    {TO_NAME_INDEX(USECASE_AUDIO_SPKR_CALIB_TX)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS2)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS3)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS4)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_FM)},
+};
+
 
 #define NO_COLS 2
 static int msm_be_id_array_len;
@@ -614,25 +650,6 @@ static int msm_device_to_be_id_external_codec [][NO_COLS] = {
 };
 
 static char * backend_table[SND_DEVICE_MAX] = {0};
-
-static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
-    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_DEEP_BUFFER)},
-    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_LOW_LATENCY)},
-    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_MULTI_CH)},
-    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD)},
-    {TO_NAME_INDEX(USECASE_AUDIO_RECORD)},
-    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_LOW_LATENCY)},
-    {TO_NAME_INDEX(USECASE_VOICE_CALL)},
-    {TO_NAME_INDEX(USECASE_VOICE2_CALL)},
-    {TO_NAME_INDEX(USECASE_VOLTE_CALL)},
-    {TO_NAME_INDEX(USECASE_QCHAT_CALL)},
-    {TO_NAME_INDEX(USECASE_VOWLAN_CALL)},
-    {TO_NAME_INDEX(USECASE_INCALL_REC_UPLINK)},
-    {TO_NAME_INDEX(USECASE_INCALL_REC_DOWNLINK)},
-    {TO_NAME_INDEX(USECASE_INCALL_REC_UPLINK_AND_DOWNLINK)},
-    {TO_NAME_INDEX(USECASE_AUDIO_HFP_SCO)},
-    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_FM)},
-};
 
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
@@ -1511,6 +1528,9 @@ acdb_init_fail:
     audio_extn_dolby_set_license(adev);
     audio_hwdep_send_cal(my_data);
 
+    if (property_get_bool("audio.use.generic.handset.qmic", false))
+        my_data->use_generic_handset = true;
+
     return my_data;
 }
 
@@ -1602,7 +1622,7 @@ int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
 static int find_index(struct name_to_index * table, int32_t len, const char * name)
 {
     int ret = 0;
-    int i;
+    int32_t i;
 
     if (table == NULL) {
         ALOGE("%s: table is NULL", __func__);
@@ -1618,7 +1638,7 @@ static int find_index(struct name_to_index * table, int32_t len, const char * na
 
     for (i=0; i < len; i++) {
         const char* tn = table[i].name;
-        unsigned int len = strlen(tn);
+        size_t len = strlen(tn);
         if (strncmp(tn, name, len) == 0) {
             if (strlen(name) != len) {
                 continue; // substring
@@ -1779,7 +1799,8 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
             app_type = APP_TYPE_SYSTEM_SOUNDS;
     } else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE)) {
         snd_device = usecase->in_snd_device;
-        app_type = APP_TYPE_GENERAL_RECORDING;
+        if (usecase->type == PCM_HFP_CALL)
+            app_type = APP_TYPE_GENERAL_RECORDING;
     }
 
     acdb_dev_id = acdb_device_table[snd_device];
@@ -2333,6 +2354,20 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                     platform_set_echo_reference(adev->platform, true);
             }
         }
+    } else if (my_data->use_generic_handset == true &&
+                ((in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) ||
+                (in_device & AUDIO_DEVICE_IN_BACK_MIC)) &&
+                (source == AUDIO_SOURCE_CAMCORDER ||
+                source == AUDIO_SOURCE_UNPROCESSED ||
+                source == AUDIO_SOURCE_MIC)){
+        ALOGD(" snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC");
+        if ((my_data->fluence_in_audio_rec) && (channel_count == 1) &&
+            (my_data->fluence_type & FLUENCE_QUAD_MIC)) {
+            snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
+            platform_set_echo_reference(adev->platform, true);
+        } else {
+            snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
+        }
     } else if (source == AUDIO_SOURCE_CAMCORDER) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
             in_device & AUDIO_DEVICE_IN_BACK_MIC) {
@@ -2485,7 +2520,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
             if (audio_extn_ssr_get_enabled() && channel_count == 6)
                 snd_device = SND_DEVICE_IN_QUAD_MIC;
-            else if (channel_count == 2)
+            else if ((my_data->fluence_type & (FLUENCE_DUAL_MIC | FLUENCE_QUAD_MIC)) && channel_count == 2)
                 snd_device = SND_DEVICE_IN_HANDSET_STEREO_DMIC;
             else
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
@@ -3196,6 +3231,7 @@ int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type,
         ALOGE("%s: invalid usecase type", __func__);
         ret = -EINVAL;
     }
+    ALOGV("%s: pcm_device_table[%d][%d] = %d", __func__, usecase, type, pcm_id);
     pcm_device_table[usecase][type] = pcm_id;
 done:
     return ret;

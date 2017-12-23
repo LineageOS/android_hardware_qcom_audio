@@ -47,6 +47,16 @@
     <ctl name="QUAT_MI2S_TX LSM Function" value="None" />
     <ctl name="MADONOFF Switch" value="0"/>
     <ctl name="MAD Input" value="DMIC1" />
+    <ctl name="ADC MUX6" value="AMIC" />
+    <ctl name="ADC MUX7" value="AMIC" />
+    <ctl name="ADC MUX8" value="AMIC" />
+    <ctl name="DMIC MUX6" value="ZERO" />
+    <ctl name="DMIC MUX7" value="ZERO" />
+    <ctl name="DMIC MUX8" value="ZERO" />
+    <ctl name="IIR0 INP0 MUX" value="ZERO" />
+    <ctl name="AIF1_CAP Mixer SLIM TX6" value="0" />
+    <ctl name="AIF1_CAP Mixer SLIM TX7" value="0" />
+    <ctl name="AIF1_CAP Mixer SLIM TX8" value="0" />
 
     <path name="listen-voice-wakeup-1">
         <ctl name="QUAT_MI2S_TX LSM Function" value="SWAUDIO" />
@@ -90,6 +100,38 @@
         <ctl name="LSM8 Mixer QUAT_MI2S_TX" value="1" />
     </path>
 
+    <path name="listen-voice-wakeup-1 preproc">
+        <path name="listen-voice-wakeup-1" />
+    </path>
+
+    <path name="listen-voice-wakeup-2 preproc">
+        <path name="listen-voice-wakeup-2" />
+    </path>
+
+    <path name="listen-voice-wakeup-3 preproc">
+        <path name="listen-voice-wakeup-3" />
+    </path>
+
+    <path name="listen-voice-wakeup-4 preproc">
+        <path name="listen-voice-wakeup-4" />
+    </path>
+
+    <path name="listen-voice-wakeup-5 preproc">
+        <path name="listen-voice-wakeup-5" />
+    </path>
+
+    <path name="listen-voice-wakeup-6 preproc">
+        <path name="listen-voice-wakeup-6" />
+    </path>
+
+    <path name="listen-voice-wakeup-7 preproc">
+        <path name="listen-voice-wakeup-7" />
+    </path>
+
+    <path name="listen-voice-wakeup-8 preproc">
+        <path name="listen-voice-wakeup-8" />
+    </path>
+
     <path name="listen-ape-handset-mic">
         <ctl name="MI2S TX SampleRate" value="KHZ_16"/>
         <ctl name="AIF1_CAP Mixer SLIM TX6" value="1"/>
@@ -103,6 +145,33 @@
     <path name="listen-cpe-handset-mic">
         <ctl name="MADONOFF Switch" value="1"/>
         <ctl name="MAD Input" value="DMIC0" />
+    </path>
+
+    <path name="listen-ape-handset-mic-preproc">
+        <path name="listen-ape-handset-mic" />
+    </path>
+
+    <path name="listen-ape-handset-qmic">
+        <ctl name="AIF1_CAP Mixer SLIM TX6" value="1" />
+        <ctl name="AIF1_CAP Mixer SLIM TX7" value="1" />
+        <ctl name="AIF1_CAP Mixer SLIM TX8" value="1" />
+        <ctl name="MI2S_TX Channels" value="Four" />
+        <ctl name="SLIM TX6 MUX" value="DEC6" />
+        <ctl name="ADC MUX6" value="DMIC" />
+        <ctl name="DMIC MUX6" value="DMIC2" />
+        <ctl name="SLIM TX7 MUX" value="DEC7" />
+        <ctl name="ADC MUX7" value="DMIC" />
+        <ctl name="DMIC MUX7" value="DMIC1" />
+        <ctl name="SLIM TX8 MUX" value="DEC8" />
+        <ctl name="ADC MUX8" value="DMIC" />
+        <ctl name="DMIC MUX8" value="DMIC3" />
+    </path>
+
+    <path name="echo-reference">
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="I2S_RX" />
+        <ctl name="EC Reference Channels" value="Two"/>
+        <ctl name="EC Reference Bit Format" value="S16_LE"/>
+        <ctl name="EC Reference SampleRate" value="48000"/>
     </path>
 
 </mixer>
