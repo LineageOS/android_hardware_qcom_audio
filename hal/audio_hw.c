@@ -2734,7 +2734,7 @@ int start_output_stream(struct stream_out *out)
             flags |= PCM_MMAP | PCM_NOIRQ;
             pcm_open_retry_count = PROXY_OPEN_RETRY_COUNT;
         } else if (out->realtime) {
-            flags |= PCM_MMAP | PCM_NOIRQ;
+            flags |= PCM_MMAP | PCM_NOIRQ | PCM_MONOTONIC;
         } else
             flags |= PCM_MONOTONIC;
 
@@ -4226,27 +4226,43 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
         clock_gettime(CLOCK_MONOTONIC, timestamp);
     } else {
         if (out->pcm) {
-            unsigned int avail;
-            if (pcm_get_htimestamp(out->pcm, &avail, timestamp) == 0) {
-                size_t kernel_buffer_size = out->config.period_size * out->config.period_count;
-                int64_t signed_frames = out->written - kernel_buffer_size + avail;
-                // This adjustment accounts for buffering after app processor.
-                // It is based on estimated DSP latency per use case, rather than exact.
+            int64_t signed_frames = -1;
+            // XXX it might be better to identify these
+            // as realtime usecases?
+            if (out->usecase == USECASE_AUDIO_PLAYBACK_MMAP ||
+                out->usecase == USECASE_AUDIO_PLAYBACK_ULL) {
+                unsigned int hw_ptr;
+                if (pcm_mmap_get_hw_ptr(out->pcm, &hw_ptr, timestamp) == 0) {
+                    signed_frames = hw_ptr;
+                }
+                ALOGV("%s frames %lld", __func__, (long long)signed_frames);
+            } else {
+                unsigned int avail;
+                if (pcm_get_htimestamp(out->pcm, &avail, timestamp) == 0) {
+                    size_t kernel_buffer_size =
+                            out->config.period_size * out->config.period_count;
+                     signed_frames =
+                            out->written - kernel_buffer_size + avail;
+                }
+            }
+
+            // This adjustment accounts for buffering after app processor.
+            // It is based on estimated DSP latency per use case, rather than exact.
+            signed_frames -=
+                    (platform_render_latency(out->usecase) *
+                     out->sample_rate / 1000000LL);
+
+            // Adjustment accounts for A2dp encoder latency with non offload usecases
+            // Note: Encoder latency is returned in ms, while platform_render_latency in us.
+            if (AUDIO_DEVICE_OUT_ALL_A2DP & out->devices) {
                 signed_frames -=
-                    (platform_render_latency(out->usecase) * out->sample_rate / 1000000LL);
-
-                // Adjustment accounts for A2dp encoder latency with non offload usecases
-                // Note: Encoder latency is returned in ms, while platform_render_latency in us.
-                if (AUDIO_DEVICE_OUT_ALL_A2DP & out->devices) {
-                    signed_frames -=
                         (audio_extn_a2dp_get_encoder_latency() * out->sample_rate / 1000);
-                }
+            }
 
-                // It would be unusual for this value to be negative, but check just in case ...
-                if (signed_frames >= 0) {
-                    *frames = signed_frames;
-                    ret = 0;
-                }
+            // It would be unusual for this value to be negative, but check just in case ...
+            if (signed_frames >= 0) {
+                *frames = signed_frames;
+                ret = 0;
             }
         } else if (out->card_status == CARD_STATUS_OFFLINE) {
             *frames = out->written;
@@ -4525,6 +4541,7 @@ static int out_get_mmap_position(const struct audio_stream_out *stream,
         return -EINVAL;
     }
     if (out->usecase != USECASE_AUDIO_PLAYBACK_MMAP) {
+        ALOGE("%s: called on %s", __func__, use_case_table[out->usecase]);
         return -ENOSYS;
     }
     if (out->pcm == NULL) {
