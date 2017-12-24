@@ -2107,6 +2107,7 @@ int platform_set_voice_volume(void *platform, int volume)
     struct audio_device *adev = my_data->adev;
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "Voice Rx Gain";
+    const char *mute_mixer_ctl_name = "Voice Rx Device Mute";
     int vol_index = 0, ret = 0;
     uint32_t set_values[ ] = {0,
                               ALL_SESSION_VSID,
@@ -2125,6 +2126,24 @@ int platform_set_voice_volume(void *platform, int volume)
         return -EINVAL;
     }
     ALOGV("Setting voice volume index: %d", set_values[0]);
+    mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+
+    // Send mute command in case volume index is max since indexes are inverted
+    // for mixer controls.
+    if (vol_index == my_data->max_vol_index) {
+        set_values[0] = 1;
+    }
+    else {
+        set_values[0] = 0;
+    }
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mute_mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mute_mixer_ctl_name);
+        return -EINVAL;
+    }
+    ALOGV("%s: Setting RX Device Mute to: %d", __func__, set_values[0]);
     mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
 
     if (my_data->csd != NULL) {
