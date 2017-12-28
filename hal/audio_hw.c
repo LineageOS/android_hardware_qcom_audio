@@ -3421,7 +3421,6 @@ static int out_on_error(struct audio_stream *stream)
     struct stream_out *out = (struct stream_out *)stream;
 
     lock_output_stream(out);
-
     // always send CMD_ERROR for offload streams, this
     // is needed e.g. when SSR happens within compress_open
     // since the stream is active, offload_callback_thread is also active.
@@ -3429,18 +3428,9 @@ static int out_on_error(struct audio_stream *stream)
         stop_compressed_output_l(out);
         send_offload_cmd_l(out, OFFLOAD_CMD_ERROR);
     }
-
-    // for compress streams , if the stream is not in standby
-    // it will be triggered eventually from AF.
-    bool do_standby = !out->standby &&
-                      !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD);
-
     pthread_mutex_unlock(&out->lock);
 
-    if (do_standby)
-        return out_standby(&out->stream.common);
-
-    return 0;
+    return out_standby(&out->stream.common);
 }
 
 /*
