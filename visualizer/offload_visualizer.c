@@ -71,11 +71,11 @@ struct effect_context_s {
     effect_ops_t ops;
 };
 
-typedef struct output_context_s {
+struct output_context_s {
     struct listnode outputs_list_node;  /* node in active_outputs_list */
     audio_io_handle_t handle; /* io handle */
     struct listnode effects_list; /* list of effects attached to this output */
-} output_context_t;
+};
 
 
 /* maximum time since last capture buffer update before resetting capture buffer. This means
@@ -1289,11 +1289,11 @@ const struct effect_interface_s effect_interface = {
 
 __attribute__ ((visibility ("default")))
 audio_effect_library_t AUDIO_EFFECT_LIBRARY_INFO_SYM = {
-    tag : AUDIO_EFFECT_LIBRARY_TAG,
-    version : EFFECT_LIBRARY_API_VERSION,
-    name : "Visualizer Library",
-    implementor : "The Android Open Source Project",
-    create_effect : effect_lib_create,
-    release_effect : effect_lib_release,
-    get_descriptor : effect_lib_get_descriptor,
+    .tag = AUDIO_EFFECT_LIBRARY_TAG,
+    .version = EFFECT_LIBRARY_API_VERSION,
+    .name = "Visualizer Library",
+    .implementor = "The Android Open Source Project",
+    .create_effect = effect_lib_create,
+    .release_effect = effect_lib_release,
+    .get_descriptor = effect_lib_get_descriptor,
 };

@@ -17,6 +17,7 @@
 #define LOG_TAG "voice_processing"
 /*#define LOG_NDEBUG 0*/
 #include <dlfcn.h>
+#include <stdlib.h>
 #include <cutils/log.h>
 #include <cutils/list.h>
 #include <hardware/audio_effect.h>
@@ -757,11 +758,11 @@ static int lib_get_descriptor(const effect_uuid_t *uuid,
 // This is the only symbol that needs to be exported
 __attribute__ ((visibility ("default")))
 audio_effect_library_t AUDIO_EFFECT_LIBRARY_INFO_SYM = {
-    tag : AUDIO_EFFECT_LIBRARY_TAG,
-    version : EFFECT_LIBRARY_API_VERSION,
-    name : "MSM8960 Audio Preprocessing Library",
-    implementor : "The Android Open Source Project",
-    create_effect : lib_create,
-    release_effect : lib_release,
-    get_descriptor : lib_get_descriptor
+    .tag = AUDIO_EFFECT_LIBRARY_TAG,
+    .version = EFFECT_LIBRARY_API_VERSION,
+    .name = "MSM8960 Audio Preprocessing Library",
+    .implementor = "The Android Open Source Project",
+    .create_effect = lib_create,
+    .release_effect = lib_release,
+    .get_descriptor = lib_get_descriptor
 };

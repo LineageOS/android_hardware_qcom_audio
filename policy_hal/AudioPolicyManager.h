@@ -67,7 +67,7 @@ public:
 
 protected:
 
-         status_t checkAndSetVolume(audio_stream_type_t stream,
+        status_t checkAndSetVolume(audio_stream_type_t stream,
                                                    int index,
                                                    const sp<AudioOutputDescriptor>& outputDesc,
                                                    audio_devices_t device,
@@ -78,12 +78,12 @@ protected:
 
         // if argument "device" is different from AUDIO_DEVICE_NONE,  startSource() will force
         // the re-evaluation of the output device.
-        status_t startSource(const sp<AudioOutputDescriptor>& outputDesc,
+        virtual status_t startSource(const sp<AudioOutputDescriptor>& outputDesc,
                              audio_stream_type_t stream,
                              audio_devices_t device,
                              const char *address,
                              uint32_t *delayMs);
-         status_t stopSource(const sp<AudioOutputDescriptor>& outputDesc,
+        virtual status_t stopSource(const sp<AudioOutputDescriptor>& outputDesc,
                             audio_stream_type_t stream,
                             bool forceDeviceUpdate);
 
@@ -115,7 +115,7 @@ private:
                 audio_output_flags_t flags,
                 const audio_offload_info_t *offloadInfo);
         // internal method to fill offload info in case of Direct PCM
-        status_t getOutputForAttr(const audio_attributes_t *attr,
+        virtual status_t getOutputForAttr(const audio_attributes_t *attr,
                 audio_io_handle_t *output,
                 audio_session_t session,
                 audio_stream_type_t *stream,

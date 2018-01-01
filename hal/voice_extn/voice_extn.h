@@ -77,8 +77,8 @@ static void voice_extn_get_parameters(const struct audio_device *adev __unused,
 {
 }
 
-static int voice_extn_is_call_state_active(struct audio_device *adev,
-                                           bool *is_call_active)
+static int voice_extn_is_call_state_active(struct audio_device *adev __unused,
+                                           bool *is_call_active __unused)
 {
     return -ENOSYS;
 }
