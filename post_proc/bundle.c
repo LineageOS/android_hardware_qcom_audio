@@ -20,6 +20,7 @@
 #define LOG_TAG "offload_effect_bundle"
 #define LOG_NDEBUG 0
 
+#include <stdlib.h>
 #include <cutils/list.h>
 #include <cutils/log.h>
 #include <system/thread_defs.h>
@@ -253,7 +254,7 @@ exit:
 __attribute__ ((visibility ("default")))
 int offload_effects_bundle_hal_stop_output(audio_io_handle_t output, int pcm_id)
 {
-    int ret;
+    int ret = 0;
     struct listnode *node;
     struct listnode *fx_node;
     output_context_t *out_ctxt;
@@ -770,11 +771,11 @@ const struct effect_interface_s effect_interface = {
 
 __attribute__ ((visibility ("default")))
 audio_effect_library_t AUDIO_EFFECT_LIBRARY_INFO_SYM = {
-    tag : AUDIO_EFFECT_LIBRARY_TAG,
-    version : EFFECT_LIBRARY_API_VERSION,
-    name : "Offload Effects Bundle Library",
-    implementor : "The Linux Foundation",
-    create_effect : effect_lib_create,
-    release_effect : effect_lib_release,
-    get_descriptor : effect_lib_get_descriptor,
+    .tag = AUDIO_EFFECT_LIBRARY_TAG,
+    .version = EFFECT_LIBRARY_API_VERSION,
+    .name = "Offload Effects Bundle Library",
+    .implementor = "The Linux Foundation",
+    .create_effect = effect_lib_create,
+    .release_effect = effect_lib_release,
+    .get_descriptor = effect_lib_get_descriptor,
 };
