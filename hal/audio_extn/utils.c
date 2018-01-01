@@ -78,7 +78,6 @@ struct string_to_enum {
 
 const struct string_to_enum s_flag_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_DIRECT),
-    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_DIRECT_PCM),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_PRIMARY),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_FAST),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_DEEP_BUFFER),
@@ -721,6 +720,10 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
         platform_send_audio_calibration(adev->platform, usecase,
                                         platform_get_default_app_type(adev->platform),
                                         48000);
+    } else {
+        /* No need to send audio calibration for voice and voip call usecases */
+        if ((type != VOICE_CALL) && (type != VOIP_CALL))
+            ALOGW("%s: No audio calibration for usecase type = %d",  __func__, type);
     }
 }
 
@@ -988,3 +991,66 @@ void setChannelStatus(struct stream_out *out, char * buffer, size_t bytes)
 
 }
 #endif
+
+#define MAX_SND_CARD 8
+#define RETRY_US 500000
+#define RETRY_NUMBER 10
+
+int audio_extn_utils_get_snd_card_num()
+{
+
+    void *hw_info = NULL;
+    struct mixer *mixer = NULL;
+    int retry_num = 0;
+    int snd_card_num = 0;
+    char* snd_card_name = NULL;
+
+    while (snd_card_num < MAX_SND_CARD) {
+        mixer = mixer_open(snd_card_num);
+
+        while (!mixer && retry_num < RETRY_NUMBER) {
+            usleep(RETRY_US);
+            mixer = mixer_open(snd_card_num);
+            retry_num++;
+        }
+
+        if (!mixer) {
+            ALOGE("%s: Unable to open the mixer card: %d", __func__,
+                   snd_card_num);
+            retry_num = 0;
+            snd_card_num++;
+            continue;
+        }
+
+        snd_card_name = strdup(mixer_get_name(mixer));
+        if (!snd_card_name) {
+            ALOGE("failed to allocate memory for snd_card_name\n");
+            mixer_close(mixer);
+            return -1;
+        }
+        ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
+
+        hw_info = hw_info_init(snd_card_name);
+        if (hw_info) {
+            ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
+            break;
+        }
+        ALOGE("%s: Failed to init hardware info", __func__);
+        retry_num = 0;
+        snd_card_num++;
+        free(snd_card_name);
+        mixer_close(mixer);
+    }
+
+    mixer_close(mixer);
+    hw_info_deinit(hw_info);
+    if (snd_card_name)
+        free(snd_card_name);
+
+    if (snd_card_num >= MAX_SND_CARD) {
+        ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
+        return -1;
+    }
+
+    return snd_card_num;
+}

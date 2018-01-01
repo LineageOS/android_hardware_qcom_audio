@@ -69,13 +69,9 @@ AUDIO_FEATURE_ENABLED_HDMI_EDID := true
 DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
 #enable software decoders for ALAC and APE
 PRODUCT_PROPERTY_OVERRIDES += \
-use.qti.sw.alac.decoder=true
+vendor.audio.use.sw.alac.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
-use.qti.sw.ape.decoder=true
-
-#split  a2dp
-PRODUCT_PROPERTY_OVERRIDES += \
-persist.vendor.bt.enable.splita2dp=false
+vendor.audio.use.sw.ape.decoder=true
 
 USE_XML_AUDIO_POLICY_CONF := 1
 
@@ -149,3 +145,101 @@ PRODUCT_PROPERTY_OVERRIDES += \
 #split  a2dp
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.bt.enable.splita2dp=false
+
+#Disable surround sound recording
+PRODUCT_PROPERTY_OVERRIDES += \
+ro.vendor.audio.sdk.ssr=false
+
+#fluencetype can be "fluence" or "fluencepro" or "none"
+PRODUCT_PROPERTY_OVERRIDES += \
+ro.vendor.audio.sdk.fluencetype=none\
+persist.vendor.audio.fluence.voicecall=true\
+persist.vendor.audio.fluence.voicerec=false\
+persist.vendor.audio.fluence.speaker=true
+
+#disable tunnel encoding
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.tunnel.encode = false
+
+#Buffer size in kbytes for compress offload playback
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.offload.buffer.size.kb=64
+
+#Minimum duration for offload playback in secs
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.min.duration.secs=30
+
+#Enable offload audio video playback by default
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.video=true
+
+#Enable audio track offload by default
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.offload.track.enable=true
+
+#Enable music through deep buffer
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.deep_buffer.media=true
+
+#Enable downsampling for multi-channel content > 48Khz
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.playback.mch.downsample=true
+
+#Enable voice path for PCM VoIP by default
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.voice.path.for.pcm.voip=true
+
+#Enable dsp gapless mode by default
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.offload.gapless.enabled=true
+
+#Disable Multiple offload sesison
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.offload.multiple.enabled=false
+
+#enable pbe effects
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.safx.pbe.enabled=true
+
+#property for AudioSphere Post processing
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.pp.asphere.enabled=false
+
+#parser input buffer size(256kb) in byte stream mode
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.parser.ip.buffer.size=262144
+
+#property to enable DS2 dap
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.dolby.ds2.enabled=true
+
+#Audio voice concurrency related flags
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.voice.playback.conc.disabled=true\
+vendor.voice.record.conc.disabled=false\
+vendor.voice.voip.conc.disabled=false
+
+#Decides the audio fallback path during voice call,
+#deep-buffer and fast are the two allowed
+#fallback paths now.
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.voice.conc.fallbackpath=deep-buffer
+
+#Audio VoIP / playback record concurrency flags
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.rec.playback.conc.disabled=false
+
+#enable hw aac encoder by default
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.hw.aac.encoder=false
+
+#Property to enable FBSP
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.audio.speaker.prot.enable=false
+
+# for HIDL related packages
+PRODUCT_PACKAGES += \
+    android.hardware.audio@2.0-service \
+    android.hardware.audio@2.0-impl \
+    android.hardware.audio.effect@2.0-impl \
+    android.hardware.soundtrigger@2.0-impl

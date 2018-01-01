@@ -38,6 +38,7 @@
 #include <platform_api.h>
 #include "platform.h"
 #include "audio_extn.h"
+#include "acdb.h"
 #include "voice_extn.h"
 #include "edid.h"
 #include "sound/compress_params.h"
@@ -99,11 +100,6 @@
 
 /* fallback app type if the default app type from acdb loader fails */
 #define DEFAULT_APP_TYPE  0x11130
-
-/* Retry for delay in FW loading*/
-#define RETRY_NUMBER 10
-#define RETRY_US 500000
-#define MAX_SND_CARD 8
 
 #define SAMPLE_RATE_8KHZ  8000
 #define SAMPLE_RATE_16KHZ 16000
@@ -169,17 +165,13 @@ typedef struct acdb_audio_cal_cfg {
     uint32_t             param_id;
 } acdb_audio_cal_cfg_t;
 
-/* Audio calibration related functions */
-typedef void (*acdb_deallocate_t)();
-typedef int  (*acdb_init_t)(const char *, char *, int);
-typedef void (*acdb_send_audio_cal_t)(int, int, int , int);
-typedef void (*acdb_send_voice_cal_t)(int, int);
-typedef int (*acdb_reload_vocvoltable_t)(int);
-typedef int  (*acdb_get_default_app_type_t)(void);
-typedef int (*acdb_loader_get_calibration_t)(char *attr, int size, void *data);
+enum {
+    CAL_MODE_SEND           = 0x1,
+    CAL_MODE_PERSIST        = 0x2,
+    CAL_MODE_RTAC           = 0x4
+};
+
 acdb_loader_get_calibration_t acdb_loader_get_calibration;
-typedef int (*acdb_set_audio_cal_t) (void *, void *, uint32_t);
-typedef int (*acdb_get_audio_cal_t) (void *, void *, uint32_t*);
 
 typedef struct codec_backend_cfg {
     uint32_t sample_rate;
@@ -1007,14 +999,14 @@ static void set_platform_defaults(struct platform_data * my_data)
          if (!strncmp(MEDIA_MIMETYPE_AUDIO_ALAC, dsp_only_decoders_mime[count],
               strlen(dsp_only_decoders_mime[count]))) {
 
-             if(property_get_bool("use.qti.sw.alac.decoder", false)) {
+             if(property_get_bool("vendor.audio.use.sw.alac.decoder", false)) {
                  ALOGD("Alac software decoder is available...removing alac from DSP decoder list");
                  strncpy(dsp_only_decoders_mime[count],"none",5);
              }
          } else if (!strncmp(MEDIA_MIMETYPE_AUDIO_APE, dsp_only_decoders_mime[count],
               strlen(dsp_only_decoders_mime[count]))) {
 
-             if(property_get_bool("use.qti.sw.ape.decoder", false)) {
+             if(property_get_bool("vendor.audio.use.sw.ape.decoder", false)) {
                  ALOGD("APE software decoder is available...removing ape from DSP decoder list");
                  strncpy(dsp_only_decoders_mime[count],"none",5);
              }
@@ -1213,107 +1205,114 @@ void *platform_init(struct audio_device *adev)
     struct mixer_ctl *ctl = NULL;
     int idx;
 
-    my_data = calloc(1, sizeof(struct platform_data));
+    adev->snd_card = audio_extn_utils_get_snd_card_num();
+    if (adev->snd_card < 0) {
+        ALOGE("%s: Unable to find correct sound card", __func__);
+        return NULL;
+    }
+    ALOGD("%s: Opened sound card:%d", __func__, adev->snd_card);
 
-    if (!my_data) {
-        ALOGE("failed to allocate platform data");
+    adev->mixer = mixer_open(adev->snd_card);
+    if (!adev->mixer) {
+        ALOGE("%s: Unable to open the mixer card: %d", __func__,
+               adev->snd_card);
         return NULL;
     }
 
-    while (snd_card_num < MAX_SND_CARD) {
-        adev->mixer = mixer_open(snd_card_num);
-
-        while (!adev->mixer && retry_num < RETRY_NUMBER) {
-            usleep(RETRY_US);
-            adev->mixer = mixer_open(snd_card_num);
-            retry_num++;
-        }
-
-        if (!adev->mixer) {
-            ALOGE("%s: Unable to open the mixer card: %d", __func__,
-                   snd_card_num);
-            retry_num = 0;
-            snd_card_num++;
-            continue;
-        }
-
-        snd_card_name = mixer_get_name(adev->mixer);
-        ALOGV("%s: snd_card_name: %s", __func__, snd_card_name);
-
-        my_data->hw_info = hw_info_init(snd_card_name);
-        if (!my_data->hw_info) {
-            ALOGE("%s: Failed to init hardware info", __func__);
-        } else {
-            if (platform_is_i2s_ext_modem(snd_card_name, my_data)) {
-                ALOGD("%s: Call MIXER_XML_PATH_I2S", __func__);
-
-                adev->audio_route = audio_route_init(snd_card_num,
-                                                     MIXER_XML_PATH_I2S);
-            } else {
-                /* Get the codec internal name from the sound card name
-                 * and form the mixer paths file name dynamically. This
-                 * is generic way of picking any codec name based mixer
-                 * files in future with no code change. This code
-                 * assumes mixer files are formed with format as
-                 * mixer_paths_internalcodecname.xml
-
-                 * If this dynamically read mixer files fails to open then it
-                 * falls back to default mixer file i.e mixer_paths.xml. This is
-                 * done to preserve backward compatibility but not mandatory as
-                 * long as the mixer files are named as per above assumption.
-                */
-
-                snd_internal_name = strtok_r(snd_card_name, "-", &tmp);
-                if (snd_internal_name != NULL)
-                    snd_internal_name = strtok_r(NULL, "-", &tmp);
-
-                if (snd_internal_name != NULL) {
-                    strlcpy(mixer_xml_file, MIXER_XML_BASE_STRING,
-                        MIXER_PATH_MAX_LENGTH);
-                    strlcat(mixer_xml_file, MIXER_FILE_DELIMITER,
-                        MIXER_PATH_MAX_LENGTH);
-                    strlcat(mixer_xml_file, snd_internal_name,
-                        MIXER_PATH_MAX_LENGTH);
-                    strlcat(mixer_xml_file, MIXER_FILE_EXT,
-                        MIXER_PATH_MAX_LENGTH);
-                } else {
-                    strlcpy(mixer_xml_file, MIXER_XML_DEFAULT_PATH,
-                        MIXER_PATH_MAX_LENGTH);
-                }
-
-                if (F_OK == access(mixer_xml_file, 0)) {
-                    ALOGD("%s: Loading mixer file: %s", __func__, mixer_xml_file);
-                    if (audio_extn_read_xml(adev, snd_card_num, mixer_xml_file,
-                                    MIXER_XML_PATH_AUXPCM) == -ENOSYS)
-                        adev->audio_route = audio_route_init(snd_card_num,
-                                                       mixer_xml_file);
-                } else {
-                    ALOGD("%s: Loading default mixer file", __func__);
-                    if(audio_extn_read_xml(adev, snd_card_num, MIXER_XML_DEFAULT_PATH,
-                                    MIXER_XML_PATH_AUXPCM) == -ENOSYS)
-                        adev->audio_route = audio_route_init(snd_card_num,
-                                                       MIXER_XML_DEFAULT_PATH);
-                }
-            }
-            if (!adev->audio_route) {
-                ALOGE("%s: Failed to init audio route controls, aborting.",
-                       __func__);
-                free(my_data);
-                mixer_close(adev->mixer);
-                return NULL;
-            }
-            adev->snd_card = snd_card_num;
-            ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
-            break;
-        }
-        retry_num = 0;
-        snd_card_num++;
+    snd_card_name = strdup(mixer_get_name(adev->mixer));
+    if (!snd_card_name) {
+        ALOGE("failed to allocate memory for snd_card_name\n");
         mixer_close(adev->mixer);
+        return NULL;
     }
 
-    if (snd_card_num >= MAX_SND_CARD) {
-        ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
-        free(my_data);
+    my_data = calloc(1, sizeof(struct platform_data));
+    if (!my_data) {
+        ALOGE("failed to allocate platform data");
+        if (snd_card_name)
+            free(snd_card_name);
+        mixer_close(adev->mixer);
+        return NULL;
+    }
+
+    my_data->is_slimbus_interface = true;
+    my_data->is_internal_codec = false;
+
+    my_data->hw_info = hw_info_init(snd_card_name);
+    if (!my_data->hw_info) {
+        ALOGE("failed to init hw_info");
+        mixer_close(adev->mixer);
+        if (my_data)
+            free(my_data);
+
+        if (snd_card_name)
+            free(snd_card_name);
+        return NULL;
+    }
+
+    if (platform_is_i2s_ext_modem(snd_card_name, my_data)) {
+        ALOGD("%s: Call MIXER_XML_PATH_I2S", __func__);
+
+        adev->audio_route = audio_route_init(adev->snd_card,
+                                             MIXER_XML_PATH_I2S);
+    } else {
+        /* Get the codec internal name from the sound card name
+         * and form the mixer paths file name dynamically. This
+         * is generic way of picking any codec name based mixer
+         * files in future with no code change. This code
+         * assumes mixer files are formed with format as
+         * mixer_paths_internalcodecname.xml
+
+         * If this dynamically read mixer files fails to open then it
+         * falls back to default mixer file i.e mixer_paths.xml. This is
+         * done to preserve backward compatibility but not mandatory as
+         * long as the mixer files are named as per above assumption.
+        */
+        snd_card_name_t = strdup(snd_card_name);
+        snd_internal_name = strtok_r(snd_card_name_t, "-", &tmp);
+
+        if (snd_internal_name != NULL) {
+            snd_internal_name = strtok_r(NULL, "-", &tmp);
+        }
+        if (snd_internal_name != NULL) {
+            strlcpy(mixer_xml_file, MIXER_XML_BASE_STRING,
+                MIXER_PATH_MAX_LENGTH);
+            strlcat(mixer_xml_file, MIXER_FILE_DELIMITER,
+                MIXER_PATH_MAX_LENGTH);
+            strlcat(mixer_xml_file, snd_internal_name,
+                MIXER_PATH_MAX_LENGTH);
+            strlcat(mixer_xml_file, MIXER_FILE_EXT,
+                MIXER_PATH_MAX_LENGTH);
+        } else {
+            strlcpy(mixer_xml_file, MIXER_XML_DEFAULT_PATH,
+                MIXER_PATH_MAX_LENGTH);
+        }
+
+        if (F_OK == access(mixer_xml_file, 0)) {
+            ALOGD("%s: Loading mixer file: %s", __func__, mixer_xml_file);
+            if (audio_extn_read_xml(adev, adev->snd_card, mixer_xml_file,
+                            MIXER_XML_PATH_AUXPCM) == -ENOSYS)
+                adev->audio_route = audio_route_init(adev->snd_card,
+                                               mixer_xml_file);
+        } else {
+            ALOGD("%s: Loading default mixer file", __func__);
+            if (audio_extn_read_xml(adev, adev->snd_card, MIXER_XML_DEFAULT_PATH,
+                            MIXER_XML_PATH_AUXPCM) == -ENOSYS)
+                adev->audio_route = audio_route_init(adev->snd_card,
+                                               MIXER_XML_DEFAULT_PATH);
+                update_codec_type_and_interface(my_data, snd_card_name);
+        }
+    }
+    if (!adev->audio_route) {
+        ALOGE("%s: Failed to init audio route controls, aborting.",
+               __func__);
+        if (my_data)
+            free(my_data);
+        if (snd_card_name)
+            free(snd_card_name);
+        if (snd_card_name_t)
+            free(snd_card_name_t);
+        mixer_close(adev->mixer);
         return NULL;
     }
 
@@ -1333,7 +1332,7 @@ void *platform_init(struct audio_device *adev)
     my_data->hw_dep_fd = -1;
     my_data->mono_speaker = SPKR_1;
 
-    property_get("ro.qc.sdk.audio.fluencetype", my_data->fluence_cap, "");
+    property_get("ro.vendor.audio.sdk.fluencetype", my_data->fluence_cap, "");
     if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro"))) {
         my_data->fluence_type = FLUENCE_QUAD_MIC | FLUENCE_DUAL_MIC;
     } else if (!strncmp("fluence", my_data->fluence_cap, sizeof("fluence"))) {
@@ -1343,32 +1342,31 @@ void *platform_init(struct audio_device *adev)
     }
 
     if (my_data->fluence_type != FLUENCE_NONE) {
-        property_get("persist.audio.fluence.voicecall",value,"");
+        property_get("persist.vendor.audio.fluence.voicecall",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_call = true;
         }
 
-        property_get("persist.audio.fluence.voicerec",value,"");
+        property_get("persist.vendor.audio.fluence.voicerec",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_rec = true;
         }
 
-        property_get("persist.audio.fluence.audiorec",value,"");
+        property_get("persist.vendor.audio.fluence.audiorec",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_audio_rec = true;
         }
 
-        property_get("persist.audio.fluence.speaker",value,"");
+        property_get("persist.vendor.audio.fluence.speaker",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_spkr_mode = true;
         }
 
-        property_get("persist.audio.fluence.mode",value,"");
+        property_get("persist.vendor.audio.fluence.mode",value,"");
         if (!strncmp("broadside", value, sizeof("broadside"))) {
             my_data->fluence_mode = FLUENCE_BROADSIDE;
         }
     }
-
     my_data->voice_feature_set = VOICE_FEATURE_SET_DEFAULT;
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
     if (my_data->acdb_handle == NULL) {
@@ -1425,7 +1423,15 @@ void *platform_init(struct audio_device *adev)
             goto acdb_init_fail;
         }
 
-        platform_acdb_init(my_data);
+        int result = acdb_init(adev->snd_card);
+        if (!result) {
+            my_data->is_acdb_initialized = true;
+            ALOGD("ACDB initialized");
+            audio_hwdep_send_cal(my_data);
+        } else {
+            my_data->is_acdb_initialized = false;
+            ALOGD("ACDB initialization failed");
+        }
     }
 
     /* Configure active back end for HPX*/
@@ -3410,7 +3416,7 @@ void platform_get_parameters(void *platform,
     if (ret >= 0) {
         int isallowed = 1; /*true*/
 
-        if (property_get("voice.playback.conc.disabled", propValue, NULL)) {
+        if (property_get("vendor.voice.playback.conc.disabled", propValue, NULL)) {
             prop_playback_enabled = atoi(propValue) ||
                 !strncmp("true", propValue, 4);
         }
@@ -3513,7 +3519,7 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
 {
     char value[PROPERTY_VALUE_MAX] = {0};
     uint32_t fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-    if((property_get("audio.offload.buffer.size.kb", value, "")) &&
+    if((property_get("vendor.audio.offload.buffer.size.kb", value, "")) &&
             atoi(value)) {
         fragment_size =  atoi(value) * 1024;
     }
@@ -3755,7 +3761,7 @@ bool platform_check_codec_backend_cfg(struct audio_device* adev,
         }
 
         //check if mulitchannel clip needs to be down sampled  to 48k
-        property_get("audio.playback.mch.downsample",value,"");
+        property_get("vendor.audio.playback.mch.downsample",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             out = usecase->stream.out;
             if ((popcount(out->channel_mask) > 2) &&
@@ -4055,13 +4061,12 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
     char mixer_ctl_name[44] = {0}; // max length of name is 44 as defined
     int ret;
     unsigned int i;
-    int set_values[8] = {0};
-    char device_num[13]; // device number up to 2 digit
+    int set_values[FCC_8] = {0};
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     ALOGV("%s channel_count:%d",__func__, ch_count);
-    if (NULL == ch_map) {
-        ALOGE("%s: Invalid channel mapping used", __func__);
+    if (NULL == ch_map || (ch_count < 1) || (ch_count > FCC_8)) {
+        ALOGE("%s: Invalid channel mapping or channel count value", __func__);
         return -EINVAL;
     }
 
@@ -4083,7 +4088,7 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
               __func__, mixer_ctl_name);
         return -EINVAL;
     }
-    for (i = 0; i< ARRAY_SIZE(set_values); i++) {
+    for (i = 0; i < (unsigned int)ch_count; i++) {
         set_values[i] = ch_map[i];
     }
 
@@ -4091,7 +4096,7 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
         set_values[0], set_values[1], set_values[2], set_values[3], set_values[4],
         set_values[5], set_values[6], set_values[7], ch_count);
 
-    ret = mixer_ctl_set_array(ctl, set_values, ch_count);
+    ret = mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
     if (ret < 0) {
         ALOGE("%s: Could not set ctl, error:%d ch_count:%d",
               __func__, ret, ch_count);
