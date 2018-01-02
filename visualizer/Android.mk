@@ -21,11 +21,6 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 
-LOCAL_CFLAGS+= \
-    -Wall \
-    -Werror \
-    -Wno-unused-variable \
-
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
 	liblog \
@@ -39,6 +34,11 @@ ifneq ($(filter msm8998,$(TARGET_BOARD_PLATFORM)),)
 else
   LOCAL_CFLAGS := -DCAPTURE_DEVICE=8
 endif
+
+LOCAL_CFLAGS += \
+    -Wall \
+    -Werror \
+    -Wno-unused-variable \
 
 LOCAL_HEADER_LIBRARIES := libhardware_headers
 
