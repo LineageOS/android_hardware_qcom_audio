@@ -22,6 +22,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS)),true)
 endif
 
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
+LOCAL_CFLAGS+= -Wno-error
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DTS_EAGLE)), true)
     LOCAL_CFLAGS += -DDTS_EAGLE
