@@ -39,7 +39,6 @@
 #include <stdlib.h>
 
 #include "qahw.h"
-#include "qahw_effect_api.h"
 
 // The current effect API version.
 #define QAHW_EFFECT_API_VERSION_CURRENT QAHW_EFFECT_API_VERSION_0_0
@@ -97,7 +96,7 @@ exit:
 }
 
 
-qahw_effect_lib_handle_t qahw_effect_load_library(const char *lib_path) {
+qahw_effect_lib_handle_t qahw_effect_load_library_l(const char *lib_path) {
     audio_effect_library_t *desc;
     qahw_effect_lib_t      *qahw_effect_lib;
     void                   *handle;
@@ -175,7 +174,7 @@ error:
 }
 
 
-int32_t qahw_effect_unload_library(qahw_effect_lib_handle_t handle) {
+int32_t qahw_effect_unload_library_l(qahw_effect_lib_handle_t handle) {
     qahw_effect_lib_t *qahw_effect_lib;
 
     pthread_mutex_lock(&effect_libraries_lock);
@@ -214,7 +213,7 @@ done:
 }
 
 
-int32_t qahw_effect_create(qahw_effect_lib_handle_t handle,
+int32_t qahw_effect_create_l(qahw_effect_lib_handle_t handle,
                            const qahw_effect_uuid_t *uuid,
                            int32_t io_handle,
                            qahw_effect_handle_t *effect_handle) {
@@ -230,7 +229,7 @@ int32_t qahw_effect_create(qahw_effect_lib_handle_t handle,
 }
 
 
-int32_t qahw_effect_release(qahw_effect_lib_handle_t handle,
+int32_t qahw_effect_release_l(qahw_effect_lib_handle_t handle,
                             qahw_effect_handle_t effect_handle) {
     int32_t rc = -EINVAL;
     audio_effect_library_t *desc = (audio_effect_library_t *)handle;
@@ -243,7 +242,7 @@ int32_t qahw_effect_release(qahw_effect_lib_handle_t handle,
 }
 
 
-int32_t qahw_effect_get_descriptor(qahw_effect_lib_handle_t handle,
+int32_t qahw_effect_get_descriptor_l(qahw_effect_lib_handle_t handle,
                                    const qahw_effect_uuid_t *uuid,
                                    qahw_effect_descriptor_t *effect_desc) {
     int32_t rc = -EINVAL;
@@ -257,12 +256,12 @@ int32_t qahw_effect_get_descriptor(qahw_effect_lib_handle_t handle,
 }
 
 
-int32_t qahw_effect_get_version() {
+int32_t qahw_effect_get_version_l() {
     return QAHW_EFFECT_API_VERSION_CURRENT;
 }
 
 
-int32_t qahw_effect_process(qahw_effect_handle_t self,
+int32_t qahw_effect_process_l(qahw_effect_handle_t self,
                             qahw_audio_buffer_t *in_buffer,
                             qahw_audio_buffer_t *out_buffer) {
     int32_t rc = -EINVAL;
@@ -281,7 +280,7 @@ int32_t qahw_effect_process(qahw_effect_handle_t self,
 }
 
 
-int32_t qahw_effect_command(qahw_effect_handle_t self,
+int32_t qahw_effect_command_l(qahw_effect_handle_t self,
                             uint32_t cmd_code,
                             uint32_t cmd_size,
                             void *cmd_data,
@@ -302,7 +301,7 @@ int32_t qahw_effect_command(qahw_effect_handle_t self,
 }
 
 
-int32_t qahw_effect_process_reverse(qahw_effect_handle_t self,
+int32_t qahw_effect_process_reverse_l(qahw_effect_handle_t self,
                                     qahw_audio_buffer_t *in_buffer,
                                     qahw_audio_buffer_t *out_buffer) {
     int32_t rc = -EINVAL;

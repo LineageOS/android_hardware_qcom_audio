@@ -64,14 +64,23 @@ audio_error_callback g_audio_err_cb = NULL;
 /* Flag to indicate qas status */
 bool g_qas_died = false;
 /* Count how many times hal is loaded */
-static unsigned int g_qas_load_count;
+static unsigned int g_qas_load_count = 0;
 /* Store HAL handle */
 qahw_module_handle_t *g_qas_handle = NULL;
 
+inline int qas_status(sp<Iqti_audio_server> server)
+{
+    if (server == 0) {
+        ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
+        return -1;
+    }
+    return 1;
+}
+
 void death_notifier::binderDied(const wp<IBinder>& who)
 {
-    struct listnode *node;
-    p_stream_handle *handle;
+    struct listnode *node = NULL;
+    p_stream_handle *handle = NULL;
 
     if (g_audio_err_cb) {
         ALOGD("%s %d", __func__, __LINE__);
@@ -151,10 +160,8 @@ uint32_t qahw_out_get_sample_rate(const qahw_stream_handle_t *out_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_get_sample_rate(out_handle);
         } else {
             return -ENODEV;
@@ -170,10 +177,8 @@ int qahw_out_set_sample_rate(qahw_stream_handle_t *out_handle, uint32_t rate)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_set_sample_rate(out_handle, rate);
         } else {
             return -ENODEV;
@@ -189,10 +194,8 @@ size_t qahw_out_get_buffer_size(const qahw_stream_handle_t *out_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_get_buffer_size(out_handle);
         } else {
             return -ENODEV;
@@ -209,10 +212,8 @@ audio_channel_mask_t qahw_out_get_channels(const qahw_stream_handle_t
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return (audio_channel_mask_t)(-ENODEV);
-            }
+            if (qas_status(qas) == -1)
+                return (audio_channel_mask_t)(-ENODEV);
             return qas->qahw_out_get_channels(out_handle);
         } else {
             return (audio_channel_mask_t)(-ENODEV);
@@ -228,10 +229,8 @@ audio_format_t qahw_out_get_format(const qahw_stream_handle_t *out_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return AUDIO_FORMAT_INVALID;
-            }
+            if (qas_status(qas) == -1)
+                return AUDIO_FORMAT_INVALID;
             return qas->qahw_out_get_format(out_handle);
         } else {
             return AUDIO_FORMAT_INVALID;;
@@ -247,10 +246,8 @@ int qahw_out_standby(qahw_stream_handle_t *out_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_standby(out_handle);
         } else {
             return -ENODEV;
@@ -267,10 +264,8 @@ int qahw_out_set_parameters(qahw_stream_handle_t *out_handle,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_set_parameters(out_handle, kv_pairs);
         } else {
             return -ENODEV;
@@ -287,10 +282,8 @@ char *qahw_out_get_parameters(const qahw_stream_handle_t *out_handle,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return NULL;
-            }
+            if (qas_status(qas) == -1)
+                return NULL;
             return qas->qahw_out_get_parameters(out_handle, keys);
         } else {
             return NULL;
@@ -308,10 +301,8 @@ int qahw_out_set_param_data(qahw_stream_handle_t *out_handle,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_set_param_data(out_handle, param_id, payload);
         } else {
             return -ENODEV;
@@ -329,10 +320,8 @@ int qahw_out_get_param_data(qahw_stream_handle_t *out_handle,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_get_param_data(out_handle, param_id, payload);
         } else {
             return -ENODEV;
@@ -348,10 +337,8 @@ uint32_t qahw_out_get_latency(const qahw_stream_handle_t *out_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_get_latency(out_handle);
         } else {
             return -ENODEV;
@@ -367,10 +354,8 @@ int qahw_out_set_volume(qahw_stream_handle_t *out_handle, float left, float righ
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_set_volume(out_handle, left, right);
         } else {
             return -ENODEV;
@@ -386,10 +371,8 @@ ssize_t qahw_out_write(qahw_stream_handle_t *out_handle,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_write(out_handle, out_buf);
         } else {
             return -ENODEV;
@@ -406,10 +389,8 @@ int qahw_out_get_render_position(const qahw_stream_handle_t *out_handle,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_get_render_position(out_handle, dsp_frames);
         } else {
             return -ENODEV;
@@ -427,10 +408,8 @@ int qahw_out_set_callback(qahw_stream_handle_t *out_handle,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_set_callback(out_handle, callback, cookie);
         } else {
             return -ENODEV;
@@ -446,10 +425,8 @@ int qahw_out_pause(qahw_stream_handle_t *out_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_pause(out_handle);
         } else {
             return -ENODEV;
@@ -465,10 +442,8 @@ int qahw_out_resume(qahw_stream_handle_t *out_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_resume(out_handle);
         } else {
             return -ENODEV;
@@ -484,10 +459,8 @@ int qahw_out_drain(qahw_stream_handle_t *out_handle, qahw_drain_type_t type )
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-                ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
+            if (qas_status(qas) == -1)
                 return -ENODEV;
-            }
             return qas->qahw_out_drain(out_handle, type);
         } else {
             return -EINVAL;
@@ -503,10 +476,8 @@ int qahw_out_flush(qahw_stream_handle_t *out_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_flush(out_handle);
         } else {
             return -ENODEV;
@@ -523,10 +494,8 @@ int qahw_out_get_presentation_position(const qahw_stream_handle_t *out_handle,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_out_get_presentation_position(out_handle,
                                                  frames, timestamp);
         } else {
@@ -544,10 +513,8 @@ uint32_t qahw_in_get_sample_rate(const qahw_stream_handle_t *in_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_in_get_sample_rate(in_handle);
         } else {
             return -ENODEV;
@@ -563,10 +530,8 @@ int qahw_in_set_sample_rate(qahw_stream_handle_t *in_handle, uint32_t rate)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_in_set_sample_rate(in_handle, rate);
         } else {
             return -ENODEV;
@@ -582,10 +547,8 @@ size_t qahw_in_get_buffer_size(const qahw_stream_handle_t *in_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_in_get_buffer_size(in_handle);
         } else {
             return -ENODEV;
@@ -601,10 +564,8 @@ audio_channel_mask_t qahw_in_get_channels(const qahw_stream_handle_t *in_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_in_get_channels(in_handle);
         } else {
             return -ENODEV;
@@ -620,10 +581,8 @@ audio_format_t qahw_in_get_format(const qahw_stream_handle_t *in_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return (audio_format_t)-ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return (audio_format_t)(-ENODEV);
             return qas->qahw_in_get_format(in_handle);
         } else {
             return (audio_format_t)-ENODEV;
@@ -639,10 +598,8 @@ int qahw_in_set_format(qahw_stream_handle_t *in_handle, audio_format_t format)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return (audio_format_t)-ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_in_set_format(in_handle, format);
         } else {
             return (audio_format_t)-ENODEV;
@@ -658,10 +615,8 @@ int qahw_in_standby(qahw_stream_handle_t *in_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_in_standby(in_handle);
         } else {
             return -EINVAL;
@@ -677,10 +632,8 @@ int qahw_in_set_parameters(qahw_stream_handle_t *in_handle, const char *kv_pairs
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_in_set_parameters(in_handle, kv_pairs);
         } else {
             return -ENODEV;
@@ -697,10 +650,8 @@ char* qahw_in_get_parameters(const qahw_stream_handle_t *in_handle,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return NULL;
-            }
+            if (qas_status(qas) == -1)
+                return NULL;
             return qas->qahw_in_get_parameters(in_handle, keys);
         } else {
             return NULL;
@@ -716,10 +667,8 @@ ssize_t qahw_in_read(qahw_stream_handle_t *in_handle,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_in_read(in_handle, in_buf);
         } else {
             return -ENODEV;
@@ -735,10 +684,8 @@ uint32_t qahw_in_get_input_frames_lost(qahw_stream_handle_t *in_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_in_get_input_frames_lost(in_handle);
         } else {
             return -ENODEV;
@@ -755,10 +702,8 @@ int qahw_in_get_capture_position(const qahw_stream_handle_t *in_handle,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_in_get_capture_position(in_handle, frames, time);
         } else {
             return -ENODEV;
@@ -774,10 +719,8 @@ int qahw_init_check(const qahw_module_handle_t *hw_module)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_init_check(hw_module);
         } else {
             return -ENODEV;
@@ -793,10 +736,8 @@ int qahw_set_voice_volume(qahw_module_handle_t *hw_module, float volume)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_set_voice_volume(hw_module, volume);
         } else {
             return -ENODEV;
@@ -812,10 +753,8 @@ int qahw_set_mode(qahw_module_handle_t *hw_module, audio_mode_t mode)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_set_mode(hw_module, mode);;
         } else {
             return -ENODEV;
@@ -831,10 +770,8 @@ int qahw_set_mic_mute(qahw_module_handle_t *hw_module, bool state)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_set_mic_mute(hw_module, state);
         } else {
             return -ENODEV;
@@ -850,10 +787,8 @@ int qahw_get_mic_mute(qahw_module_handle_t *hw_module, bool *state)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_get_mic_mute(hw_module, state);
         } else {
             return -ENODEV;
@@ -869,10 +804,8 @@ int qahw_set_parameters(qahw_module_handle_t *hw_module, const char *kv_pairs)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_set_parameters(hw_module, kv_pairs);
         } else {
             return -ENODEV;
@@ -889,10 +822,8 @@ char* qahw_get_parameters(const qahw_module_handle_t *hw_module,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return NULL;
-            }
+            if (qas_status(qas) == -1)
+                return NULL;
             return qas->qahw_get_parameters(hw_module, keys);;
         } else {
             return NULL;
@@ -910,10 +841,8 @@ int qahw_get_param_data(const qahw_module_handle_t *hw_module,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_get_param_data(hw_module, param_id, payload);
         } else {
             return -ENODEV;
@@ -931,10 +860,8 @@ int qahw_set_param_data(const qahw_module_handle_t *hw_module,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_set_param_data(hw_module, param_id, payload);
         } else {
             return -ENODEV;
@@ -955,10 +882,8 @@ int qahw_create_audio_patch(qahw_module_handle_t *hw_module,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_create_audio_patch(hw_module, num_sources,
                                          sources, num_sinks, sinks,
                                          handle);
@@ -979,10 +904,8 @@ int qahw_release_audio_patch(qahw_module_handle_t *hw_module,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_release_audio_patch(hw_module, handle);
         } else {
             return -ENODEV;
@@ -999,10 +922,8 @@ int qahw_get_audio_port(qahw_module_handle_t *hw_module,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_get_audio_port(hw_module, port);
         } else {
             return -ENODEV;
@@ -1019,10 +940,8 @@ int qahw_set_audio_port_config(qahw_module_handle_t *hw_module,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_set_audio_port_config(hw_module, config);
         } else {
             return -ENODEV;
@@ -1039,10 +958,8 @@ size_t qahw_get_input_buffer_size(const qahw_module_handle_t *hw_module,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_get_input_buffer_size(hw_module, config);
         } else {
             return -ENODEV;
@@ -1064,10 +981,8 @@ int qahw_open_output_stream(qahw_module_handle_t *hw_module,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_open_output_stream(hw_module, handle, devices,
                                                  flags, config, out_handle,
                                                  address);
@@ -1088,14 +1003,13 @@ int qahw_close_output_stream(qahw_stream_handle_t *out_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_close_output_stream(out_handle);
         } else {
-            p_stream_handle *handle;
-            struct listnode *node, *tempnode;
+            p_stream_handle *handle = NULL;
+            struct listnode *node = NULL;
+            struct listnode *tempnode = NULL;
             pthread_mutex_lock(&list_lock);
             list_for_each_safe(node, tempnode, &stream_list) {
                 handle = node_to_item(node, p_stream_handle, list);
@@ -1105,10 +1019,9 @@ int qahw_close_output_stream(qahw_stream_handle_t *out_handle)
                     ALOGD("%s %d: clear memory of handle %p &handle %p", __func__, __LINE__, handle, &handle);
                     handle->sh_mem_dealer.clear();
                     handle->sh_mem_handle.clear();
+                    list_remove(node);
+                    free(node_to_item(node, p_stream_handle, list));
                 }
-                list_remove(node);
-                free(node_to_item(node, p_stream_handle, list));
-                ALOGD("%s %d: Freed node", __func__, __LINE__);
             }
             pthread_mutex_unlock(&list_lock);
             return -ENODEV;
@@ -1131,10 +1044,8 @@ int qahw_open_input_stream(qahw_module_handle_t *hw_module,
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_open_input_stream(hw_module, handle, devices,
                                            config, in_handle, flags,
                                            address, source);
@@ -1154,14 +1065,13 @@ int qahw_close_input_stream(qahw_stream_handle_t *in_handle)
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_close_input_stream(in_handle);
         } else {
-            p_stream_handle *handle;
-            struct listnode *node, *tempnode;
+            p_stream_handle *handle = NULL;
+            struct listnode *node = NULL;
+            struct listnode *tempnode = NULL;
             pthread_mutex_lock(&list_lock);
             list_for_each_safe(node, tempnode, &stream_list) {
                 ALOGD("%s %d", __func__, __LINE__);
@@ -1169,13 +1079,12 @@ int qahw_close_input_stream(qahw_stream_handle_t *in_handle)
                 p_stream_handle *p_stream = (p_stream_handle *)in_handle;
                 if (handle != NULL && handle == p_stream) {
                     sh_mem_data *shmem_data = handle->shmem_data;
-                    ALOGD("%s %d: clear memory of handle %p &handle %p", __func__, __LINE__, handle, &handle);
+                    ALOGV("%s %d: clear memory of handle %p", __func__, __LINE__, handle);
                     handle->sh_mem_dealer.clear();
                     handle->sh_mem_handle.clear();
+                    list_remove(node);
+                    free(node_to_item(node, p_stream_handle, list));
                 }
-                list_remove(node);
-                free(node_to_item(node, p_stream_handle, list));
-                ALOGD("%s %d: Freed node", __func__, __LINE__);
             }
             pthread_mutex_unlock(&list_lock);
             return -EINVAL;
@@ -1191,10 +1100,8 @@ int qahw_get_version()
     if (g_binder_enabled) {
         if (!g_qas_died) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
             return qas->qahw_get_version();
         } else {
             return -ENODEV;
@@ -1208,12 +1115,11 @@ int qahw_unload_module(qahw_module_handle_t *hw_module)
 {
     ALOGV("%d:%s",__LINE__, __func__);
     if (g_binder_enabled) {
-        if (!g_qas_died && (--g_qas_load_count == 0)) {
+        if (!g_qas_died && ((g_qas_load_count > 0) && (--g_qas_load_count == 0))) {
             sp<Iqti_audio_server> qas = get_qti_audio_server();
-            if (qas == 0) {
-               ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-               return -ENODEV;
-            }
+            if (qas_status(qas) == -1)
+                return -ENODEV;
+            pthread_mutex_destroy(&list_lock);
             return qas->qahw_unload_module(hw_module);
         } else {
             return -ENODEV;
@@ -1232,10 +1138,8 @@ qahw_module_handle_t *qahw_load_module(const char *hw_module_id)
     ALOGV("%d:%s: g_binder_enabled %d",__LINE__, __func__, g_binder_enabled);
     if (g_binder_enabled) {
         sp<Iqti_audio_server> qas = get_qti_audio_server();
-        if (qas == 0) {
-           ALOGE("%d:%s: invalid HAL handle",__LINE__, __func__);
-           return (void*)(-ENODEV);
-        }
+        if (qas_status(qas) == -1)
+            return (void*)(-ENODEV);
         g_qas_handle = qas->qahw_load_module(hw_module_id);
         if (g_qas_handle == NULL) {
             ALOGE("%s: HAL loading failed", __func__);
@@ -1254,6 +1158,178 @@ qahw_module_handle_t *qahw_load_module(const char *hw_module_id)
     }
     return g_qas_handle;
 }
+
+/* Audio effects API */
+qahw_effect_lib_handle_t qahw_effect_load_library(const char *lib_name)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    if (g_binder_enabled) {
+        if (!g_qas_died) {
+            sp<Iqti_audio_server> qas = get_qti_audio_server();
+            if (qas_status(qas) == -1)
+                return NULL;
+            return qas->qahw_effect_load_library(lib_name);
+        } else {
+            return NULL;
+        }
+    } else {
+        return qahw_effect_load_library_l(lib_name);
+    }
+}
+
+int32_t qahw_effect_unload_library(qahw_effect_lib_handle_t handle)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    if (g_binder_enabled) {
+        if (!g_qas_died) {
+            sp<Iqti_audio_server> qas = get_qti_audio_server();
+            if (qas_status(qas) == -1)
+                return -ENODEV;
+            return qas->qahw_effect_unload_library(handle);
+        } else {
+            return -ENODEV;
+        }
+    } else {
+        return qahw_effect_unload_library_l(handle);
+    }
+}
+
+int32_t qahw_effect_create(qahw_effect_lib_handle_t handle,
+                           const qahw_effect_uuid_t *uuid,
+                           int32_t io_handle,
+                           qahw_effect_handle_t *effect_handle)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    if (g_binder_enabled) {
+        if (!g_qas_died) {
+            sp<Iqti_audio_server> qas = get_qti_audio_server();
+            if (qas_status(qas) == -1)
+                return -ENODEV;
+            return qas->qahw_effect_create(handle, uuid, io_handle, effect_handle);
+        } else {
+            return -ENODEV;
+        }
+    } else {
+        return qahw_effect_create_l(handle, uuid, io_handle, effect_handle);
+    }
+}
+
+int32_t qahw_effect_release(qahw_effect_lib_handle_t handle,
+                            qahw_effect_handle_t effect_handle)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    if (g_binder_enabled) {
+        if (!g_qas_died) {
+            sp<Iqti_audio_server> qas = get_qti_audio_server();
+            if (qas_status(qas) == -1)
+                return -ENODEV;
+            return qas->qahw_effect_release(handle, effect_handle);
+        } else {
+            return -ENODEV;
+        }
+    } else {
+        return qahw_effect_release_l(handle, effect_handle);
+    }
+}
+
+int32_t qahw_effect_get_descriptor(qahw_effect_lib_handle_t handle,
+                                   const qahw_effect_uuid_t *uuid,
+                                   qahw_effect_descriptor_t *effect_desc)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    if (g_binder_enabled) {
+        if (!g_qas_died) {
+            sp<Iqti_audio_server> qas = get_qti_audio_server();
+            if (qas_status(qas) == -1)
+                return -ENODEV;
+            return qas->qahw_effect_get_descriptor(handle, uuid, effect_desc);
+        } else {
+            return -ENODEV;
+        }
+    } else {
+        return qahw_effect_get_descriptor_l(handle, uuid, effect_desc);
+    }
+}
+
+int32_t qahw_effect_get_version()
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    if (g_binder_enabled) {
+        if (!g_qas_died) {
+            sp<Iqti_audio_server> qas = get_qti_audio_server();
+            if (qas_status(qas) == -1)
+                return -ENODEV;
+            return qas->qahw_effect_get_version();
+        } else {
+            return -ENODEV;
+        }
+    } else {
+        return qahw_effect_get_version_l();
+    }
+}
+
+int32_t qahw_effect_process(qahw_effect_handle_t self,
+                            qahw_audio_buffer_t *in_buffer,
+                            qahw_audio_buffer_t *out_buffer)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    if (g_binder_enabled) {
+        if (!g_qas_died) {
+            sp<Iqti_audio_server> qas = get_qti_audio_server();
+            if (qas_status(qas) == -1)
+                return -ENODEV;
+            return qas->qahw_effect_process(self, in_buffer, out_buffer);
+        } else {
+            return -ENODEV;
+        }
+    } else {
+        return qahw_effect_process_l(self, in_buffer, out_buffer);
+    }
+}
+
+int32_t qahw_effect_command(qahw_effect_handle_t self,
+                            uint32_t cmd_code,
+                            uint32_t cmd_size,
+                            void *cmd_data,
+                            uint32_t *reply_size,
+                            void *reply_data)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    if (g_binder_enabled) {
+        if (!g_qas_died) {
+            sp<Iqti_audio_server> qas = get_qti_audio_server();
+            if (qas_status(qas) == -1)
+                return -ENODEV;
+            return qas->qahw_effect_command(self, cmd_code, cmd_size, cmd_data,
+                                            reply_size, reply_data);
+        } else {
+            return -ENODEV;
+        }
+    } else {
+        return qahw_effect_command_l(self, cmd_code, cmd_size, cmd_data,
+                                     reply_size, reply_data);
+    }
+}
+
+int32_t qahw_effect_process_reverse(qahw_effect_handle_t self,
+                                    qahw_audio_buffer_t *in_buffer,
+                                    qahw_audio_buffer_t *out_buffer)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    if (g_binder_enabled) {
+        if (!g_qas_died) {
+            sp<Iqti_audio_server> qas = get_qti_audio_server();
+            if (qas_status(qas) == -1)
+                return -ENODEV;
+            return qas->qahw_effect_process_reverse(self, in_buffer, out_buffer);
+        } else {
+            return -ENODEV;
+        }
+    } else {
+        return qahw_effect_process_reverse_l(self, in_buffer, out_buffer);
+    }
+}
+
 #else
 void qahw_register_qas_death_notify_cb(audio_error_callback cb __unused, void* context __unused)
 {
@@ -1522,6 +1598,78 @@ int qahw_set_param_data(const qahw_module_handle_t *hw_module,
 {
     ALOGV("%d:%s",__LINE__, __func__);
     return qahw_set_param_data_l(hw_module, param_id, payload);
+}
+
+/* Audio effects API */
+qahw_effect_lib_handle_t qahw_effect_load_library(const char *lib_path)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    return qahw_effect_load_library_l(lib_path);
+}
+
+int32_t qahw_effect_unload_library(qahw_effect_lib_handle_t handle)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    return qahw_effect_unload_library_l(handle);
+}
+
+int32_t qahw_effect_create(qahw_effect_lib_handle_t handle,
+                           const qahw_effect_uuid_t *uuid,
+                           int32_t io_handle,
+                           qahw_effect_handle_t *effect_handle)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    return qahw_effect_create_l(handle, uuid, io_handle, effect_handle);
+}
+
+int32_t qahw_effect_release(qahw_effect_lib_handle_t handle,
+                            qahw_effect_handle_t effect_handle)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    return qahw_effect_release_l(handle, effect_handle);
+}
+
+int32_t qahw_effect_get_descriptor(qahw_effect_lib_handle_t handle,
+                                   const qahw_effect_uuid_t *uuid,
+                                   qahw_effect_descriptor_t *effect_desc)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    return qahw_effect_get_descriptor_l(handle, uuid, effect_desc);
+}
+
+int32_t qahw_effect_get_version()
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    return qahw_effect_get_version_l();
+}
+
+int32_t qahw_effect_process(qahw_effect_handle_t self,
+                            qahw_audio_buffer_t *in_buffer,
+                            qahw_audio_buffer_t *out_buffer)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    return qahw_effect_process_l(self, in_buffer, out_buffer);
+}
+
+int32_t qahw_effect_command(qahw_effect_handle_t self,
+                            uint32_t cmd_code,
+                            uint32_t cmd_size,
+                            void *cmd_data,
+                            uint32_t *reply_size,
+                            void *reply_data)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    return qahw_effect_command_l(self, cmd_code, cmd_size,
+                                 cmd_data, reply_size, reply_data);
+}
+
+int32_t qahw_effect_process_reverse(qahw_effect_handle_t self,
+                                    qahw_audio_buffer_t *in_buffer,
+                                    qahw_audio_buffer_t *out_buffer)
+{
+    ALOGV("%d:%s",__LINE__, __func__);
+    return qahw_effect_process_reverse_l(self, in_buffer,
+                                         out_buffer);
 }
 
 int qahw_create_audio_patch(qahw_module_handle_t *hw_module,

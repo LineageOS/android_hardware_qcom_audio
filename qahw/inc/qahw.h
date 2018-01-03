@@ -27,8 +27,10 @@
 #include <cutils/bitops.h>
 #include <system/audio.h>
 #include "qahw_defs.h"
+#include "qahw_effect_api.h"
 
 __BEGIN_DECLS
+
 /*
  * Helper macros for module implementors.
  *
@@ -473,6 +475,41 @@ int qahw_get_audio_port_l(qahw_module_handle_t *hw_module,
 /* Set audio port configuration */
 int qahw_set_audio_port_config_l(qahw_module_handle_t *hw_module,
                      const struct audio_port_config *config);
+
+/* Audio effects API */
+qahw_effect_lib_handle_t qahw_effect_load_library_l(const char *lib_path);
+
+int32_t qahw_effect_unload_library_l(qahw_effect_lib_handle_t handle);
+
+int32_t qahw_effect_create_l(qahw_effect_lib_handle_t handle,
+                           const qahw_effect_uuid_t *uuid,
+                           int32_t io_handle,
+                           qahw_effect_handle_t *effect_handle);
+
+int32_t qahw_effect_release_l(qahw_effect_lib_handle_t handle,
+                            qahw_effect_handle_t effect_handle);
+
+int32_t qahw_effect_get_descriptor_l(qahw_effect_lib_handle_t handle,
+                                   const qahw_effect_uuid_t *uuid,
+                                   qahw_effect_descriptor_t *effect_desc);
+
+int32_t qahw_effect_get_version_l();
+
+int32_t qahw_effect_process_l(qahw_effect_handle_t self,
+                            qahw_audio_buffer_t *in_buffer,
+                            qahw_audio_buffer_t *out_buffer);
+
+int32_t qahw_effect_command_l(qahw_effect_handle_t self,
+                            uint32_t cmd_code,
+                            uint32_t cmd_size,
+                            void *cmd_data,
+                            uint32_t *reply_size,
+                            void *reply_data);
+
+int32_t qahw_effect_process_reverse_l(qahw_effect_handle_t self,
+                                    qahw_audio_buffer_t *in_buffer,
+                                    qahw_audio_buffer_t *out_buffer);
+
 #ifdef __cplusplus
 }
 #endif
