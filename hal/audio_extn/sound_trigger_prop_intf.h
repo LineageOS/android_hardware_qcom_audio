@@ -54,9 +54,9 @@ struct audio_event_info {
     union {
         enum ssr_event_status status;
         int value;
-        void *str_value;
         struct sound_trigger_session_info ses_info;
         struct audio_read_samples_info aud_info;
+        char str_value[32];
     }u;
 };
 typedef struct audio_event_info audio_event_info_t;
