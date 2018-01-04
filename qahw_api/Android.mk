@@ -39,5 +39,5 @@ LOCAL_PRELINK_MODULE    := false
 include $(BUILD_SHARED_LIBRARY)
 
 #test app compilation
-include $(LOCAL_PATH)/test/Android.mk
+#include $(LOCAL_PATH)/test/Android.mk
 endif
