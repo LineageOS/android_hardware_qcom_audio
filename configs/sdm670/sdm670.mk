@@ -6,6 +6,7 @@ BOARD_USES_ALSA_AUDIO := true
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 USE_CUSTOM_AUDIO_POLICY := 1
 AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE := false
+AUDIO_FEATURE_ENABLED_COMPRESS_INPUT := true
 AUDIO_FEATURE_ENABLED_COMPRESS_VOIP := false
 AUDIO_FEATURE_ENABLED_DYNAMIC_ECNS := false
 AUDIO_FEATURE_ENABLED_EXTN_FORMATS := true
@@ -140,7 +141,13 @@ ro.vendor.audio.sdk.fluencetype=none\
 persist.vendor.audio.fluence.voicecall=true\
 persist.vendor.audio.fluence.voicerec=false\
 persist.vendor.audio.fluence.speaker=true\
+persist.vendor.audio.fluence.audiorec=false\
 persist.vendor.audio.fluence.tmic.enabled=false
+
+# Mutlirec Apptype
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.audio.apptype.multirec.enabled=false \
+    vendor.audio.record.multiple.enabled=false
 
 ##speaker protection v3 switch and ADSP AFE API version
 PRODUCT_PROPERTY_OVERRIDES += \
