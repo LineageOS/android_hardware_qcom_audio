@@ -1027,14 +1027,16 @@ static int read_usb_sup_channel_masks(bool is_playback,
         channels = MAX_HIFI_CHANNEL_COUNT;
     }
     if (is_playback) {
-        // For playback we never report mono because the framework always outputs stereo
-        channel_count = DEFAULT_CHANNEL_COUNT;
-        // audio_channel_out_mask_from_count() does return positional masks for channel counts
-        // above 2 but we want indexed masks here. So we
-        for ( ; channel_count <= channels && num_masks < max_masks; channel_count++) {
+        // start from 2 channels as framework currently doesn't support mono.
+        // TODO: consider only supporting channel index masks beyond stereo here.
+        for (channel_count = FCC_2;
+                channel_count <= channels && num_masks < max_masks;
+                ++channel_count) {
             supported_channel_masks[num_masks++] = audio_channel_out_mask_from_count(channel_count);
         }
-        for ( ; channel_count <= channels && num_masks < max_masks; channel_count++) {
+        for (channel_count = FCC_2;
+                channel_count <= channels && num_masks < max_masks;
+                ++channel_count) {
             supported_channel_masks[num_masks++] =
                     audio_channel_mask_for_index_assignment_from_count(channel_count);
         }
@@ -1048,8 +1050,12 @@ static int read_usb_sup_channel_masks(bool is_playback,
                     audio_channel_in_mask_from_count(channel_count);
         }
     }
-    ALOGV("%s: %s supported ch %d supported_channel_masks[0] %08x num_masks %d", __func__,
-          is_playback ? "P" : "C", channels, supported_channel_masks[0], num_masks);
+#ifdef NDEBUG
+    for (size_t i = 0; i < num_masks; ++i) {
+        ALOGV("%s: %s supported ch %d supported_channel_masks[%zu] %08x num_masks %d", __func__,
+              is_playback ? "P" : "C", channels, i, supported_channel_masks[i], num_masks);
+    }
+#endif
     return num_masks;
 }
 
