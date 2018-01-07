@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "477db29e_5c6da4b1",
+        "filename": "hal/msm8916/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 987,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-01-07T06:28:53Z",
+      "side": 0,
+      "message": "wat, really?",
+      "range": {
+        "startLine": 987,
+        "startChar": 25,
+        "endLine": 987,
+        "endChar": 65
+      },
+      "revId": "b644ee799412362ab7312de38700f50ba4dd0648",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
