@@ -49,7 +49,7 @@
 #define ACDB_DEV_TYPE_OUT 1
 #define ACDB_DEV_TYPE_IN 2
 
-#define MAX_SUPPORTED_CHANNEL_MASKS 8
+#define MAX_SUPPORTED_CHANNEL_MASKS (2 * FCC_8) /* support positional and index masks to 8ch */
 #define MAX_SUPPORTED_FORMATS 15
 #define MAX_SUPPORTED_SAMPLE_RATES 7
 #define DEFAULT_HDMI_OUT_CHANNELS   2
