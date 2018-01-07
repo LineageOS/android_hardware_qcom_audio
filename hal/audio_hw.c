@@ -295,7 +295,7 @@ static int check_and_set_gapless_mode(struct audio_device *adev, bool enable_gap
     struct mixer_ctl *ctl;
 
     ALOGV("%s:", __func__);
-    gapless_enabled = property_get_bool("audio.offload.gapless.enabled", false);
+    gapless_enabled = property_get_bool("vendor.audio.offload.gapless.enabled", false);
 
     /*Disable gapless if its AV playback*/
     gapless_enabled = gapless_enabled && enable_gapless;
@@ -4127,7 +4127,7 @@ static int adev_open(const hw_module_t *module, const char *name,
         }
     }
 
-    adev->multi_offload_enable = property_get_bool("audio.offload.multiple.enabled", false);
+    adev->multi_offload_enable = property_get_bool("vendor.audio.offload.multiple.enabled", false);
 
     pthread_mutex_unlock(&adev_init_lock);
 
