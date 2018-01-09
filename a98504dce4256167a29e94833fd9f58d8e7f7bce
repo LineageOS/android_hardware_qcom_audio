@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "a4f7f833_87938457",
+        "filename": "post_proc/equalizer.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 368,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-01-09T05:35:02Z",
+      "side": 1,
+      "message": "Why not just declare vsize as something that is unsigned and cast to unsigned here?",
+      "range": {
+        "startLine": 368,
+        "startChar": 20,
+        "endLine": 368,
+        "endChar": 29
+      },
+      "revId": "a98504dce4256167a29e94833fd9f58d8e7f7bce",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
