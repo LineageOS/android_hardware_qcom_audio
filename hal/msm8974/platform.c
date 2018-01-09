@@ -2061,6 +2061,7 @@ void *platform_init(struct audio_device *adev)
     my_data->ext_disp_type = EXT_DISPLAY_TYPE_NONE;
     my_data->hw_dep_fd = -1;
     my_data->mono_speaker = SPKR_1;
+    my_data->speaker_lr_swap = false;
 
     be_dai_name_table = NULL;
 
