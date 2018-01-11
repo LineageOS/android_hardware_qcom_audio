@@ -62,6 +62,7 @@ LOCAL_C_INCLUDES        := $(mm-evrc-enc-test-inc)
 LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := libmm-omxcore
 LOCAL_SHARED_LIBRARIES  += libOmxEvrcEnc
+LOCAL_VENDOR_MODULE     := true
 LOCAL_SRC_FILES         := test/omx_evrc_enc_test.c
 
 include $(BUILD_EXECUTABLE)
