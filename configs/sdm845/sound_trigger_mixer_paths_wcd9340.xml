@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--- Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.       -->
+<!--- Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.       -->
 <!---                                                                           -->
 <!--- Redistribution and use in source and binary forms, with or without        -->
 <!--- modification, are permitted provided that the following conditions are    -->
@@ -191,6 +191,21 @@
         <ctl name="MAD_SEL MUX" value="SPE" />
         <ctl name="MAD_INP MUX" value="MAD" />
         <ctl name="MAD_CPE1 Switch" value="1" />
+    </path>
+
+    <path name="listen-cpe-handset-dmic">
+        <ctl name="CLK MODE" value="INTERNAL" />
+        <ctl name= "ADC MUX0" value="DMIC" />
+        <ctl name= "DMIC MUX0" value="DMIC2" />
+        <ctl name= "DEC0 Volume" value="84" />
+        <ctl name= "ADC MUX1" value="DMIC" />
+        <ctl name= "DMIC MUX1" value="DMIC0" />
+        <ctl name= "DEC1 Volume" value="84" />
+        <ctl name= "WDMA3 PORT0 MUX" value="DEC0" />
+        <ctl name= "WDMA3 PORT1 MUX" value="DEC1" />
+        <ctl name= "WDMA3 CH0 MUX" value="PORT_0" />
+        <ctl name= "WDMA3 CH1 MUX" value="PORT_1" />
+        <ctl name= "WDMA3_ON_OFF Switch" value="1" />
     </path>
 
     <path name="listen-cpe-handset-tmic">
