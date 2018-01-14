@@ -629,6 +629,7 @@ int enable_snd_device(struct audio_device *adev,
     audio_extn_dsm_feedback_enable(adev, snd_device, true);
 
     if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
+        snd_device == SND_DEVICE_OUT_SPEAKER_SAFE ||
         snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
         audio_extn_spkr_prot_is_enabled()) {
         if (audio_extn_spkr_prot_get_acdb_id(snd_device) < 0) {
@@ -683,6 +684,7 @@ int disable_snd_device(struct audio_device *adev,
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
         audio_extn_dsm_feedback_enable(adev, snd_device, false);
         if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
+            snd_device == SND_DEVICE_OUT_SPEAKER_SAFE ||
             snd_device == SND_DEVICE_OUT_SPEAKER_REVERSE ||
             snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
             audio_extn_spkr_prot_is_enabled()) {
