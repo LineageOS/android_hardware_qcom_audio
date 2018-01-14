@@ -1369,7 +1369,7 @@ void *platform_init(struct audio_device *adev)
         dual_mic_config = true;
     }
 
-    my_data->source_mic_type = SOURCE_DUAL_MIC;
+    my_data->source_mic_type = 0;
 
     my_data->fluence_in_spkr_mode = false;
     my_data->fluence_in_voice_call = false;
