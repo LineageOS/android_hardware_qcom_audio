@@ -140,8 +140,10 @@ typedef struct {
     qahw_mix_matrix_params_t mm_params_downmix;
     int mix_ctrl;
     int pan_scale_ctrl;
+    pthread_cond_t input_buffer_available_cond;
+    pthread_mutex_t input_buffer_available_lock;
+    uint32_t input_buffer_available_size;
 }stream_config;
-
 
 qahw_module_handle_t * load_hal(audio_devices_t dev);
 int unload_hals();

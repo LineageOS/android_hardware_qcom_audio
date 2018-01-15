@@ -256,12 +256,29 @@ static void init_streams(void)
         pthread_cond_init(&stream_param[i].write_cond, (const pthread_condattr_t *) NULL);
         pthread_mutex_init(&stream_param[i].drain_lock, (const pthread_mutexattr_t *)NULL);
         pthread_cond_init(&stream_param[i].drain_cond, (const pthread_condattr_t *) NULL);
+        pthread_mutex_init(&stream_param[i].input_buffer_available_lock, (const pthread_mutexattr_t *)NULL);
+        pthread_cond_init(&stream_param[i].input_buffer_available_cond, (const pthread_condattr_t *) NULL);
 
         stream_param[i].handle                              =   stream_handle;
         stream_handle--;
     }
     pthread_mutex_init(&dual_main_lock, (const pthread_mutexattr_t *)NULL);
     pthread_cond_init(&dual_main_cond, (const pthread_condattr_t *) NULL);
+}
+
+static void deinit_streams(void)
+{
+    int i = 0;
+    for ( i = 0; i < MAX_PLAYBACK_STREAMS; i++) {
+        pthread_cond_destroy(&stream_param[i].write_cond);
+        pthread_mutex_destroy(&stream_param[i].write_lock);
+        pthread_cond_destroy(&stream_param[i].drain_cond);
+        pthread_mutex_destroy(&stream_param[i].drain_lock);
+        pthread_cond_destroy(&stream_param[i].input_buffer_available_cond);
+        pthread_mutex_destroy(&stream_param[i].input_buffer_available_lock);
+    }
+    pthread_cond_destroy(&dual_main_cond);
+    pthread_mutex_destroy(&dual_main_lock);
 }
 
 void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
@@ -2600,6 +2617,7 @@ exit:
         }
     }
 
+    deinit_streams();
     rc = unload_hals();
 
     if ((log_file != stdout) && (log_file != nullptr))

@@ -790,7 +790,36 @@ static void close_output_streams()
     primary_stream_close = true;
 }
 
-void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, void* priv_data __unused, qap_callback_event_t event_id, int size __unused, void *data)
+void qap_wrapper_module_callback(qap_module_handle_t module_handle, void* priv_data, qap_module_callback_event_t event_id, int size, void *data)
+{
+    stream_config *p_stream_param = (stream_config*)priv_data;
+    if(p_stream_param == NULL) {
+        ALOGE("%s %d, callback handle is null.",__func__,__LINE__);
+    }
+    ALOGV("%s %d Received event id %d\n", __func__, __LINE__, event_id);
+
+    switch (event_id) {
+        case QAP_MODULE_CALLBACK_EVENT_SEND_INPUT_BUFFER:
+        {
+            if (size < sizeof(qap_send_buffer_t)) {
+                ALOGE("%s %d event id %d, wrong payload size %d\n",
+                      __func__, __LINE__, event_id, size);
+                break;
+            }
+            qap_send_buffer_t *p_send_buffer_event = (qap_send_buffer_t*)data;
+            pthread_mutex_lock(&p_stream_param->input_buffer_available_lock);
+            p_stream_param->input_buffer_available_size = p_send_buffer_event->bytes_available;
+            pthread_cond_signal(&p_stream_param->input_buffer_available_cond);
+            pthread_mutex_unlock(&p_stream_param->input_buffer_available_lock);
+
+            break;
+        }
+        default:
+        break;
+    }
+}
+
+void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, void* priv_data __unused, qap_callback_event_t event_id, int size, void *data)
 {
     int ret = 0;
     int bytes_written = 0;
@@ -1368,7 +1397,7 @@ int qap_wrapper_session_open(char *kv_pairs, void* stream_data, int num_of_strea
         }
     }
 
-    ret = qap_session_set_callback(qap_session_handle, &qap_wrapper_session_callback);
+    ret = qap_session_set_callback(qap_session_handle, &qap_wrapper_session_callback, NULL);
     if (ret != QAP_STATUS_OK) {
         fprintf(stderr, "!!!! Please specify appropriate Session\n");
         return -EINVAL;
@@ -1556,6 +1585,7 @@ void *qap_wrapper_start_stream (void* stream_data)
                       __FUNCTION__, __LINE__,bytes_read, bytes_consumed);
             if (stream_info->filetype == FILE_DTS) {
                 if (bytes_consumed < 0) {
+#if 0
                     while (!is_buffer_available) {
                         usleep(1000);
                         ret = qap_module_cmd(qap_module_handle, QAP_MODULE_CMD_GET_PARAM,
@@ -1570,7 +1600,24 @@ void *qap_wrapper_start_stream (void* stream_data)
                         ALOGV("%s : %d, dts clip reply_data is %d buffer availabale is %d",
                               __FUNCTION__, __LINE__, reply_data, is_buffer_available);
                     }
+#else
+                    pthread_mutex_lock(&stream_info->input_buffer_available_lock);
+                    stream_info->input_buffer_available_size = 0;
+                    pthread_mutex_unlock(&stream_info->input_buffer_available_lock);
 
+                    while (buffer->common_params.size > stream_info->input_buffer_available_size) {
+                        ALOGV("%s %d: %s waiting for input buffer availability.",
+                                     __FUNCTION__, __LINE__, stream_info->filename);
+                        pthread_mutex_lock(&stream_info->input_buffer_available_lock);
+                        pthread_cond_wait(&stream_info->input_buffer_available_cond,
+                                          &stream_info->input_buffer_available_lock);
+                        pthread_mutex_unlock(&stream_info->input_buffer_available_lock);
+                        ALOGV("%s %d: %s input buffer available, size %lu.",
+                                     __FUNCTION__, __LINE__,
+                                     stream_info->filename,
+                                     stream_info->input_buffer_available_size);
+                    }
+#endif
                     if(kpi_mode && time_index > 5) {
                         gettimeofday(&tcont_ts1, NULL);
                         data_input_st_arr[time_index] = (tcont_ts1.tv_sec) * 1000 + (tcont_ts1.tv_usec) / 1000;
@@ -1633,20 +1680,15 @@ exit:
 
 qap_module_handle_t qap_wrapper_stream_open(void* stream_data)
 {
-    qap_module_config_t *input_config = NULL;
+    qap_module_config_t input_config = {0};
     int ret = 0;
     int i = 0;
     stream_config *stream_info = (stream_config *)stream_data;
     qap_module_handle_t qap_module_handle = NULL;
 
-    input_config = (qap_module_config_t *) calloc(1, sizeof(qap_module_config_t));
-    if (input_config == NULL) {
-        fprintf(stderr, "%s::%d Memory Alloc Error\n", __func__, __LINE__);
-        return NULL;
-    }
-    input_config->sample_rate = stream_info->config.sample_rate;
-    input_config->channels = stream_info->channels;
-    input_config->bit_width = stream_info->config.offload_info.bit_width;
+    input_config.sample_rate = stream_info->config.sample_rate;
+    input_config.channels = stream_info->channels;
+    input_config.bit_width = stream_info->config.offload_info.bit_width;
 
     if (stream_info->filetype == FILE_DTS)
         stream_info->bytes_to_read = FRAME_SIZE;
@@ -1655,18 +1697,18 @@ qap_module_handle_t qap_wrapper_stream_open(void* stream_data)
     input_streams_count++;
     if (input_streams_count == 2) {
         if (stream_info->filetype == FILE_WAV) {
-            input_config->flags = QAP_MODULE_FLAG_SYSTEM_SOUND;
+            input_config.flags = QAP_MODULE_FLAG_SYSTEM_SOUND;
             stream_info->system_input = true;
             has_system_input = true;
             ALOGV("%s::%d Set Secondary System Sound Flag", __func__, __LINE__);
         } else if (stream_info->filetype != FILE_WAV) {
             if (stream_info->flags & AUDIO_OUTPUT_FLAG_ASSOCIATED) {
                  ALOGV("%s::%d Set Secondary Assoc Input Flag", __func__, __LINE__);
-                 input_config->flags = QAP_MODULE_FLAG_SECONDARY;
+                 input_config.flags = QAP_MODULE_FLAG_SECONDARY;
                  stream_info->sec_input = true;
             } else {
                 ALOGV("%s::%d Set Secondary Main Input Flag", __func__, __LINE__);
-                input_config->flags = QAP_MODULE_FLAG_PRIMARY;
+                input_config.flags = QAP_MODULE_FLAG_PRIMARY;
                 stream_info->sec_input = true;
             }
         }
@@ -1674,28 +1716,30 @@ qap_module_handle_t qap_wrapper_stream_open(void* stream_data)
     } else {
         if (stream_info->filetype == FILE_WAV) {
             ALOGV("%s::%d Set Secondary System Sound Flag", __func__, __LINE__);
-            input_config->flags = QAP_MODULE_FLAG_SYSTEM_SOUND;
+            input_config.flags = QAP_MODULE_FLAG_SYSTEM_SOUND;
             stream_info->system_input = true;
         } else {
             ALOGV("%s::%d Set Primary Main Input Flag", __func__, __LINE__);
-            input_config->flags = QAP_MODULE_FLAG_PRIMARY;
+            input_config.flags = QAP_MODULE_FLAG_PRIMARY;
         }
     }
 
     if (!encode)
-        input_config->module_type = QAP_MODULE_DECODER;
+        input_config.module_type = QAP_MODULE_DECODER;
     else
-        input_config->module_type = QAP_MODULE_ENCODER;
+        input_config.module_type = QAP_MODULE_ENCODER;
 
-    ret = qap_wrapper_map_input_format(stream_info->config.offload_info.format, &input_config->format);
+    ret = qap_wrapper_map_input_format(stream_info->config.offload_info.format, &input_config.format);
     if (ret == -EINVAL)
         return NULL;
 
-    ret = qap_module_init(qap_session_handle, input_config, &qap_module_handle);
+    ret = qap_module_init(qap_session_handle, &input_config, &qap_module_handle);
     if (qap_module_handle == NULL) {
         fprintf(stderr, "%s Module Handle is Null\n", __func__);
         return NULL;
     }
+
+    qap_module_set_callback(qap_module_handle, &qap_wrapper_module_callback, stream_info);
 
     primary_stream_close = false;
     stream_cnt++;
