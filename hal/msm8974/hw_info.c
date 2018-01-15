@@ -210,12 +210,17 @@ static const snd_device_t tasha_liquid_variant_devices[] = {
     SND_DEVICE_IN_SPEAKER_STEREO_DMIC,
 };
 
+
 static const snd_device_t tavil_qrd_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_VOICE_SPEAKER,
     SND_DEVICE_OUT_HANDSET,
     SND_DEVICE_OUT_VOICE_HANDSET,
     SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET,
+};
+
+static const snd_device_t auto_variant_devices[] = {
+    SND_DEVICE_OUT_SPEAKER
 };
 
 static void  update_hardware_info_8084(struct hardware_info *hw_info, const char *snd_card_name)
@@ -271,6 +276,24 @@ static void  update_hardware_info_8096(struct hardware_info *hw_info, const char
         hw_info->snd_devices = NULL;
         hw_info->num_snd_devices = 0;
         strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "apq8096-auto-snd-card")) {
+        strlcpy(hw_info->type, " dragon-board", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "apq8096", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)auto_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(auto_variant_devices);
+        strlcpy(hw_info->dev_extn, "-db", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "apq8096-adp-agave-snd-card")) {
+        strlcpy(hw_info->type, " agave", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "apq8096", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)auto_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(auto_variant_devices);
+        strlcpy(hw_info->dev_extn, "-agave", sizeof(hw_info->dev_extn));
+    } else if (!strcmp(snd_card_name, "apq8096-adp-mmxf-snd-card")) {
+        strlcpy(hw_info->type, " mmxf", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "apq8096", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)auto_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(auto_variant_devices);
+        strlcpy(hw_info->dev_extn, "-mmxf", sizeof(hw_info->dev_extn));
     } else {
         ALOGW("%s: Not an 8096 device", __func__);
     }
