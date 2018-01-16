@@ -2316,6 +2316,12 @@ static int stop_input_stream(struct stream_in *in)
 {
     int ret = 0;
     struct audio_usecase *uc_info;
+
+    if (in == NULL) {
+        ALOGE("%s: stream_in ptr is NULL", __func__);
+        return -EINVAL;
+    }
+
     struct audio_device *adev = in->dev;
 
     ALOGV("%s: enter: usecase(%d: %s)", __func__,
@@ -5197,6 +5203,12 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
                        size_t bytes)
 {
     struct stream_in *in = (struct stream_in *)stream;
+
+    if (in == NULL) {
+        ALOGE("%s: stream_in ptr is NULL", __func__);
+        return -EINVAL;
+    }
+
     struct audio_device *adev = in->dev;
     int ret = -1;
     size_t bytes_read = 0;
@@ -6900,6 +6912,11 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
 
     /* Disable echo reference while closing input stream */
     platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
+
+    if (in == NULL) {
+        ALOGE("%s: audio_stream_in ptr is NULL", __func__);
+        return;
+    }
 
     if (in->usecase == USECASE_COMPRESS_VOIP_CALL) {
         pthread_mutex_lock(&adev->lock);
