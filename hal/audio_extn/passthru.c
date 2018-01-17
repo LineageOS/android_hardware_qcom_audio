@@ -393,18 +393,20 @@ void audio_extn_passthru_update_stream_configuration(
         struct audio_device *adev, struct stream_out *out,
         const void *buffer, size_t bytes)
 {
-    if (audio_extn_passthru_is_passt_supported(adev, out)) {
-        ALOGV("%s:PASSTHROUGH", __func__);
-        out->compr_config.codec->compr_passthr = PASSTHROUGH;
-    } else if (audio_extn_passthru_is_convert_supported(adev, out)) {
-        ALOGV("%s:PASSTHROUGH CONVERT", __func__);
-        out->compr_config.codec->compr_passthr = PASSTHROUGH_CONVERT;
-    } else if (out->format == AUDIO_FORMAT_IEC61937) {
-        ALOGV("%s:PASSTHROUGH IEC61937", __func__);
-        out->compr_config.codec->compr_passthr = PASSTHROUGH_IEC61937;
-    } else {
-        ALOGV("%s:NO PASSTHROUGH", __func__);
-        out->compr_config.codec->compr_passthr = LEGACY_PCM;
+    if(out->compr_config.codec != NULL) {
+        if (audio_extn_passthru_is_passt_supported(adev, out)) {
+            ALOGV("%s:PASSTHROUGH", __func__);
+            out->compr_config.codec->compr_passthr = PASSTHROUGH;
+        } else if (audio_extn_passthru_is_convert_supported(adev, out)) {
+            ALOGV("%s:PASSTHROUGH CONVERT", __func__);
+            out->compr_config.codec->compr_passthr = PASSTHROUGH_CONVERT;
+        } else if (out->format == AUDIO_FORMAT_IEC61937) {
+            ALOGV("%s:PASSTHROUGH IEC61937", __func__);
+            out->compr_config.codec->compr_passthr = PASSTHROUGH_IEC61937;
+        } else {
+            ALOGV("%s:NO PASSTHROUGH", __func__);
+            out->compr_config.codec->compr_passthr = LEGACY_PCM;
+       }
     }
 
     /*
