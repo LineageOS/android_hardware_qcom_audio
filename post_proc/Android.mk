@@ -34,10 +34,10 @@ LOCAL_MODULE:= libqcompostprocbundle
 
 LOCAL_C_INCLUDES := \
 	external/tinyalsa/include \
-	$(call include-path-for, audio-effects)
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+LOCAL_HEADER_LIBRARIES += android.hardware.audio.effect.legacy@2.0
 include $(BUILD_SHARED_LIBRARY)
 endif
 
@@ -66,10 +66,10 @@ LOCAL_PROPRIETARY_MODULE := true
 
 LOCAL_C_INCLUDES := \
         hardware/qcom/audio/hal \
-	$(call include-path-for, audio-effects)
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+LOCAL_HEADER_LIBRARIES += android.hardware.audio.effect.legacy@2.0
 include $(BUILD_SHARED_LIBRARY)
 
 endif

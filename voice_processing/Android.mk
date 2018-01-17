@@ -18,9 +18,6 @@ LOCAL_CFLAGS += \
     -Wno-unused-function \
     -Wno-unused-variable \
 
-LOCAL_C_INCLUDES += \
-    $(call include-path-for, audio-effects)
-
 LOCAL_SHARED_LIBRARIES := \
     liblog \
     libcutils
@@ -29,5 +26,8 @@ LOCAL_SHARED_LIBRARIES += libdl
 
 LOCAL_CFLAGS += -fvisibility=hidden
 
-LOCAL_HEADER_LIBRARIES += libhardware_headers
+LOCAL_HEADER_LIBRARIES += \
+    libhardware_headers \
+    android.hardware.audio.effect.legacy@2.0 \
+
 include $(BUILD_SHARED_LIBRARY)

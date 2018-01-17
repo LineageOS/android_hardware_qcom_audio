@@ -103,7 +103,6 @@ LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
 	external/tinycompress/include \
 	$(call include-path-for, audio-route) \
-	$(call include-path-for, audio-effects) \
 	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \
 	$(LOCAL_PATH)/audio_extn \
 	$(LOCAL_PATH)/voice_extn \
@@ -175,7 +174,11 @@ LOCAL_SHARED_LIBRARIES += libbase libhidlbase libhwbinder libutils android.hardw
 
 LOCAL_SRC_FILES += audio_perf.cpp
 
-LOCAL_HEADER_LIBRARIES += libhardware_headers
+LOCAL_HEADER_LIBRARIES += \
+    libhardware_headers \
+    android.hardware.audio.common.legacy@2.0 \
+    android.hardware.audio.effect.legacy@2.0 \
+    android.hardware.soundtrigger.legacy@2.0 \
 
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
