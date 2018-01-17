@@ -22,6 +22,30 @@
       "revId": "a98504dce4256167a29e94833fd9f58d8e7f7bce",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "86e1e78e_8d8289fd",
+        "filename": "post_proc/equalizer.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 368,
+      "author": {
+        "id": 11801
+      },
+      "writtenOn": "2018-01-17T14:44:05Z",
+      "side": 1,
+      "message": "That would probably work, but I don\u0027t care enough to finish up mm-audio right now.",
+      "parentUuid": "a4f7f833_87938457",
+      "range": {
+        "startLine": 368,
+        "startChar": 20,
+        "endLine": 368,
+        "endChar": 29
+      },
+      "revId": "a98504dce4256167a29e94833fd9f58d8e7f7bce",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
