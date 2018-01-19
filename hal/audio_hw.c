@@ -3213,7 +3213,9 @@ static int check_input_parameters(uint32_t sample_rate,
     case 32000:
     case 44100:
     case 48000:
+    case 88200:
     case 96000:
+    case 176400:
     case 192000:
         break;
     default:
