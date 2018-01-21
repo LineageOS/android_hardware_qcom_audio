@@ -515,6 +515,9 @@ int audio_extn_spkr_prot_get_acdb_id(snd_device_t snd_device) {
     case SND_DEVICE_OUT_SPEAKER:
         acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED);
         break;
+    case SND_DEVICE_OUT_SPEAKER_SAFE:
+        acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_SAFE);
+        break;
     case SND_DEVICE_OUT_VOICE_SPEAKER:
         acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED);
         break;
@@ -529,6 +532,8 @@ int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device) {
     switch(snd_device) {
     case SND_DEVICE_OUT_SPEAKER:
         return SND_DEVICE_OUT_SPEAKER_PROTECTED;
+    case SND_DEVICE_OUT_SPEAKER_SAFE:
+        return SND_DEVICE_OUT_SPEAKER_SAFE;
     case SND_DEVICE_OUT_VOICE_SPEAKER:
         return SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED;
     default:
