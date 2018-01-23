@@ -38,9 +38,9 @@
 
 struct cirrus_playback_session {
     void *adev_handle;
-    pthread_mutex_t mutex_fb_prot;
-    pthread_mutex_t mutex_pcm_stream;
-    pthread_t pcm_stream_thread;
+    pthread_mutex_t fb_prot_mutex;
+    pthread_mutex_t calibration_mutex;
+    pthread_t calibration_thread;
     struct pcm *pcm_rx;
     struct pcm *pcm_tx;
     bool spkr_prot_enable;
@@ -127,7 +127,7 @@ static struct pcm_config pcm_config_cirrus_tx = {
 static struct pcm_config pcm_config_cirrus_rx = {
     .channels = 2,
     .rate = 48000,
-    .period_size = 320,
+    .period_size = 256,
     .period_count = 4,
     .format = PCM_FORMAT_S16_LE,
     .start_threshold = 0,
@@ -137,7 +137,7 @@ static struct pcm_config pcm_config_cirrus_rx = {
 
 static struct cirrus_playback_session handle;
 
-static void *audio_extn_cirrus_run_calibration() {
+static int audio_extn_cirrus_run_calibration() {
     struct audio_device *adev = handle.adev_handle;
     struct crus_sp_ioctl_header header;
     struct cirrus_cal_result_t result;
@@ -146,12 +146,10 @@ static void *audio_extn_cirrus_run_calibration() {
     int ret = 0, dev_file;
     char *buffer = NULL;
     uint32_t option = 1;
-    struct timespec timeout;
+    char value[PROPERTY_VALUE_MAX];
+    bool store_calib_data = false;
 
     ALOGI("%s: Calibration thread", __func__);
-
-    timeout.tv_sec = 10;
-    timeout.tv_nsec = 0;
 
     dev_file = open(CRUS_SP_FILE, O_RDWR | O_NONBLOCK);
     if (dev_file < 0) {
@@ -228,9 +226,41 @@ static void *audio_extn_cirrus_run_calibration() {
             goto exit;
         }
 
-        result.atemp = CRUS_SP_DEFAULT_AMBIENT_TEMP;
+        property_get("vendor.audio.cirrus_spkr.cal.store_calib_data", value, "none");
+        if (!strncmp("true", value, 4)) {
+            store_calib_data = true;
+            property_get("vendor.audio.cirrus_spkr.cal.atemp", value, "0");
+            if(atoi(value) > 0)
+                result.atemp = atoi(value);
+            else
+                result.atemp = CRUS_SP_DEFAULT_AMBIENT_TEMP;
+        } else {
+            result.atemp = CRUS_SP_DEFAULT_AMBIENT_TEMP;
+        }
 
-        // TODO: Save calibrated data to file
+        if(store_calib_data) {
+            cal_file = fopen(CRUS_CAL_FILE, "wb");
+            if (!cal_file) {
+                ALOGE("%s: Cannot create Cirrus SP calibration file (%s)",
+                      __func__, strerror(errno));
+                ret = -EINVAL;
+                goto exit;
+            }
+
+            ret = fwrite(&result, 1, sizeof(result), cal_file);
+            if (ret < 0) {
+                ALOGE("%s: Unable to save Cirrus SP calibration data (%d)",
+                      __func__, ret);
+                fclose(cal_file);
+                ret = -EINVAL;
+                goto exit;
+            }
+
+            fclose(cal_file);
+
+            ALOGI("%s: Cirrus calibration file successfully written",
+                  __func__);
+        }
     }
 
     header.size = sizeof(header);
@@ -281,11 +311,34 @@ exit:
     free(buffer);
     ALOGV("%s: Exit", __func__);
 
-    return NULL;
+    return ret;
 }
 
+static int audio_extn_cirrus_set_default_tuning()
+{
+    struct audio_device *adev = handle.adev_handle;
+    struct mixer_ctl *ctl;
+    int ret = 0;
 
-static void *audio_extn_cirrus_pcm_stream_thread() {
+    ALOGI("%s: Setting default tuning config", __func__);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, CRUS_SP_EXT_CONFIG_MIXER);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+            __func__, CRUS_SP_EXT_CONFIG_MIXER);
+            ret = -EINVAL;
+            goto exit;
+    }
+
+    mixer_ctl_set_value(ctl, 0, 1); // Set TX external firmware config
+    mixer_ctl_set_value(ctl, 0, 0); // Set RX external firmware config
+
+exit:
+    return ret;
+}
+
+void *audio_extn_cirrus_calibration_thread()
+{
     struct audio_device *adev = handle.adev_handle;
     struct audio_usecase *uc_info_rx = NULL;
     int ret = 0;
@@ -293,7 +346,7 @@ static void *audio_extn_cirrus_pcm_stream_thread() {
     uint32_t rx_use_case = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
     uint32_t retries = 5;
 
-    pthread_mutex_lock(&handle.mutex_pcm_stream);
+    pthread_mutex_lock(&handle.calibration_mutex);
 
     ALOGI("%s: PCM Stream thread", __func__);
 
@@ -338,7 +391,15 @@ static void *audio_extn_cirrus_pcm_stream_thread() {
 
     ALOGV("%s: PCM thread streaming", __func__);
 
-    audio_extn_cirrus_run_calibration();
+    ret = audio_extn_cirrus_run_calibration();
+    if (ret < 0) {
+        ALOGE("%s: Calibration procedure failed (%d)", __func__, ret);
+    }
+
+    ret = audio_extn_cirrus_set_default_tuning();
+    if (ret < 0) {
+        ALOGE("%s: Set tuning configs failed (%d)", __func__, ret);
+    }
 
 close_stream:
     if (handle.pcm_rx) {
@@ -353,7 +414,7 @@ close_stream:
     free(uc_info_rx);
 
 exit:
-    pthread_mutex_unlock(&handle.mutex_pcm_stream);
+    pthread_mutex_unlock(&handle.calibration_mutex);
     ALOGV("%s: Exit", __func__);
 
     pthread_exit(0);
@@ -383,12 +444,12 @@ void audio_extn_spkr_prot_init(void *adev) {
 
     handle.adev_handle = adev;
 
-    pthread_mutex_init(&handle.mutex_fb_prot, NULL);
-    pthread_mutex_init(&handle.mutex_pcm_stream, NULL);
+    pthread_mutex_init(&handle.fb_prot_mutex, NULL);
+    pthread_mutex_init(&handle.calibration_mutex, NULL);
 
-    (void)pthread_create(&handle.pcm_stream_thread,
+    (void)pthread_create(&handle.calibration_thread,
                          (const pthread_attr_t *) NULL,
-                         audio_extn_cirrus_pcm_stream_thread, &handle);
+                         audio_extn_cirrus_calibration_thread, &handle);
 }
 
 int audio_extn_spkr_prot_start_processing(snd_device_t snd_device) {
@@ -411,7 +472,7 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device) {
     audio_route_apply_and_update_path(adev->audio_route,
                                       platform_get_snd_device_name(snd_device));
 
-    pthread_mutex_lock(&handle.mutex_fb_prot);
+    pthread_mutex_lock(&handle.fb_prot_mutex);
     uc_info_tx->id = USECASE_AUDIO_SPKR_CALIB_TX;
     uc_info_tx->type = PCM_CAPTURE;
     uc_info_tx->in_snd_device = SND_DEVICE_IN_CAPTURE_VI_FEEDBACK;
@@ -468,7 +529,7 @@ exit:
         free(uc_info_tx);
     }
 
-    pthread_mutex_unlock(&handle.mutex_fb_prot);
+    pthread_mutex_unlock(&handle.fb_prot_mutex);
     ALOGV("%s: Exit", __func__);
     return ret;
 }
@@ -479,7 +540,7 @@ void audio_extn_spkr_prot_stop_processing(snd_device_t snd_device) {
 
     ALOGV("%s: Entry", __func__);
 
-    pthread_mutex_lock(&handle.mutex_fb_prot);
+    pthread_mutex_lock(&handle.fb_prot_mutex);
 
     uc_info_tx = get_usecase_from_list(adev, USECASE_AUDIO_SPKR_CALIB_TX);
 
@@ -499,7 +560,7 @@ void audio_extn_spkr_prot_stop_processing(snd_device_t snd_device) {
                                platform_get_snd_device_name(snd_device));
     }
 
-    pthread_mutex_unlock(&handle.mutex_fb_prot);
+    pthread_mutex_unlock(&handle.fb_prot_mutex);
 
     ALOGV("%s: Exit", __func__);
 }
