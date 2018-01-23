@@ -2132,9 +2132,9 @@ void *platform_init(struct audio_device *adev)
         }
 
         my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
-                                                     "acdb_loader_init_v3");
+                                                     "acdb_loader_init_v2");
         if (my_data->acdb_init == NULL) {
-            ALOGE("%s: dlsym error %s for acdb_loader_init_v3", __func__, dlerror());
+            ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__, dlerror());
             goto acdb_init_fail;
         }
 
