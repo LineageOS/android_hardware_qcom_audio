@@ -3281,7 +3281,7 @@ static size_t get_output_period_size(uint32_t sample_rate,
     return (size/(channel_count * bytes_per_sample));
 }
 
-static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out)
+static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out, struct timespec *timestamp)
 {
     uint64_t actual_frames_rendered = 0;
     size_t kernel_buffer_size = out->compr_config.fragment_size * out->compr_config.fragments;
@@ -3292,6 +3292,7 @@ static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out)
     int64_t platform_latency =  platform_render_latency(out->usecase) *
                                 out->sample_rate / 1000000LL;
 
+    pthread_mutex_lock(&out->position_query_lock);
     /* not querying actual state of buffering in kernel as it would involve an ioctl call
      * which then needs protection, this causes delay in TS query for pcm_offload usecase
      * hence only estimate.
@@ -3300,8 +3301,14 @@ static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out)
 
     signed_frames = signed_frames / (audio_bytes_per_sample(out->format) * popcount(out->channel_mask)) - platform_latency;
 
-    if (signed_frames > 0)
+    if (signed_frames > 0) {
         actual_frames_rendered = signed_frames;
+        if (timestamp != NULL )
+            *timestamp = out->writeAt;
+    } else if (timestamp != NULL) {
+        clock_gettime(CLOCK_MONOTONIC, timestamp);
+    }
+    pthread_mutex_unlock(&out->position_query_lock);
 
     ALOGVV("%s signed frames %lld out_written %lld kernel_buffer_size %d"
             "bytes/sample %zu channel count %d", __func__,(long long int)signed_frames,
@@ -4164,8 +4171,13 @@ static void update_frames_written(struct stream_out *out, size_t bytes)
     else if (!is_offload_usecase(out->usecase))
         bpf = audio_bytes_per_sample(out->format) *
              audio_channel_count_from_out_mask(out->channel_mask);
-    if (bpf != 0)
+
+    pthread_mutex_lock(&out->position_query_lock);
+    if (bpf != 0) {
         out->written += bytes / bpf;
+        clock_gettime(CLOCK_MONOTONIC, &out->writeAt);
+    }
+    pthread_mutex_unlock(&out->position_query_lock);
 }
 
 static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
@@ -4490,7 +4502,7 @@ static int out_get_render_position(const struct audio_stream_out *stream,
          * this operation and adev_close_output_stream(where out gets reset).
          */
         if (!out->non_blocking && !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
-            *dsp_frames = get_actual_pcm_frames_rendered(out);
+            *dsp_frames = get_actual_pcm_frames_rendered(out, NULL);
              ALOGVV("dsp_frames %d sampleRate %d",(int)*dsp_frames,out->sample_rate);
              adjust_frames_for_device_delay(out, dsp_frames);
              return 0;
@@ -4563,9 +4575,7 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
      */
     if (is_offload_usecase(out->usecase) && !out->non_blocking &&
         !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
-        *frames = get_actual_pcm_frames_rendered(out);
-        /* this is the best we can do */
-        clock_gettime(CLOCK_MONOTONIC, timestamp);
+        *frames = get_actual_pcm_frames_rendered(out, timestamp);
         ALOGVV("frames %lld playedat %lld",(long long int)*frames,
              timestamp->tv_sec * 1000000LL + timestamp->tv_nsec / 1000);
         return 0;
@@ -5548,6 +5558,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     pthread_mutex_init(&out->lock, (const pthread_mutexattr_t *) NULL);
     pthread_mutex_init(&out->pre_lock, (const pthread_mutexattr_t *) NULL);
     pthread_mutex_init(&out->compr_mute_lock, (const pthread_mutexattr_t *) NULL);
+    pthread_mutex_init(&out->position_query_lock, (const pthread_mutexattr_t *) NULL);
     pthread_cond_init(&out->cond, (const pthread_condattr_t *) NULL);
 
     if (devices == AUDIO_DEVICE_NONE)
@@ -5855,6 +5866,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->is_compr_metadata_avail = false;
         out->offload_state = OFFLOAD_STATE_IDLE;
         out->playback_started = 0;
+        out->writeAt.tv_sec = 0;
+        out->writeAt.tv_nsec = 0;
 
         audio_extn_dts_create_state_notifier_node(out->usecase);
 

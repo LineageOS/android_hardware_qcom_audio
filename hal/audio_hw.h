@@ -274,6 +274,7 @@ struct stream_out {
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
     pthread_mutex_t pre_lock; /* acquire before lock to avoid DOS by playback thread */
     pthread_mutex_t compr_mute_lock; /* acquire before setting compress volume */
+    pthread_mutex_t position_query_lock; /* acquire before updating/getting position of track offload*/
     pthread_cond_t  cond;
     struct pcm_config config;
     struct compr_config compr_config;
@@ -304,6 +305,7 @@ struct stream_out {
     pthread_t offload_thread;
     struct listnode offload_cmd_list;
     bool offload_thread_blocked;
+    struct timespec writeAt;
 
     void *adsp_hdlr_stream_handle;
     void *ip_hdlr_handle;
