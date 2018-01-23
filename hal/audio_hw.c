@@ -287,6 +287,8 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
 
     [USECASE_AUDIO_PLAYBACK_VOIP] = "audio-playback-voip",
     [USECASE_AUDIO_RECORD_VOIP] = "audio-record-voip",
+
+    [USECASE_INCALL_MUSIC_UPLINK] = "incall-music-uplink",
 };
 
 
@@ -2706,7 +2708,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             if (out->muted)
                 memset((void *)buffer, 0, bytes);
             // FIXME: this can be removed once audio flinger mixer supports mono output
-            if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP) {
+            if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP || out->usecase == USECASE_INCALL_MUSIC_UPLINK) {
                 size_t channel_count = audio_channel_count_from_out_mask(out->channel_mask);
                 int16_t *src = (int16_t *)buffer;
                 int16_t *dst = (int16_t *)buffer;
@@ -3867,6 +3869,50 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         ALOGV("%s: offloaded output offload_info version %04x bit rate %d",
                 __func__, config->offload_info.version,
                 config->offload_info.bit_rate);
+    } else if (out->flags & AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
+        switch (config->sample_rate) {
+            case 0:
+                out->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+                break;
+            case 8000:
+            case 16000:
+            case 48000:
+                out->sample_rate = config->sample_rate;
+                break;
+            default:
+                ALOGE("%s: Unsupported sampling rate %d for Incall Music", __func__,
+                      config->sample_rate);
+                config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+                ret = -EINVAL;
+                goto error_open;
+        }
+        //FIXME: add support for MONO stream configuration when audioflinger mixer supports it
+        switch (config->channel_mask) {
+            case AUDIO_CHANNEL_NONE:
+            case AUDIO_CHANNEL_OUT_STEREO:
+                out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+                break;
+            default:
+                ALOGE("%s: Unsupported channel mask %#x for Incall Music", __func__,
+                      config->channel_mask);
+                config->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+                ret = -EINVAL;
+                goto error_open;
+        }
+        switch (config->format) {
+            case AUDIO_FORMAT_DEFAULT:
+            case AUDIO_FORMAT_PCM_16_BIT:
+                out->format = AUDIO_FORMAT_PCM_16_BIT;
+                break;
+            default:
+                ALOGE("%s: Unsupported format %#x for Incall Music", __func__,
+                      config->format);
+                config->format = AUDIO_FORMAT_PCM_16_BIT;
+                ret = -EINVAL;
+                goto error_open;
+        }
+
+        voice_extn_check_and_set_incall_music_usecase(adev, out);
     } else  if (out->devices == AUDIO_DEVICE_OUT_TELEPHONY_TX) {
         switch (config->sample_rate) {
             case 0:
