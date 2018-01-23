@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -36,6 +36,7 @@
 #define AUDIO_PARAMETER_KEY_FM_VOLUME "fm_volume"
 #define AUDIO_PARAMETER_KEY_REC_PLAY_CONC "rec_play_conc_on"
 #define AUDIO_PARAMETER_KEY_FM_MUTE "fm_mute"
+#define AUDIO_PARAMETER_KEY_FM_RESTORE_VOLUME "fm_restore_volume"
 #define FM_LOOPBACK_DRAIN_TIME_MS 2
 
 static struct pcm_config pcm_config_fm = {
@@ -305,6 +306,14 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
             fmmod.is_fm_muted = false;
         ALOGV("%s: set_fm_volume from param mute", __func__);
         fm_set_volume(adev, fmmod.fm_volume, false);
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FM_RESTORE_VOLUME,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        if (value[0] == '1')
+            fm_set_volume(adev, fmmod.fm_volume, false);
+        ALOGV("%s: set_fm_volume from param restore volume", __func__);
     }
 
 #ifdef RECORD_PLAY_CONCURRENCY
