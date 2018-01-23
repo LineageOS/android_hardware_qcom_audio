@@ -27,6 +27,20 @@
 #define SAMPLE_RATE_11025 11025
 #define sample_rate_multiple(sr, base) ((sr % base)== 0?true:false)
 
+typedef enum {
+    EFFECT_NONE = 0,
+    EFFECT_AEC,
+    EFFECT_NS,
+    EFFECT_COUNT
+} effect_type_t;
+
+struct audio_effect_config {
+    uint32_t module_id;
+    uint32_t instance_id;
+    uint32_t param_id;
+    uint32_t param_value;
+};
+
 struct amp_db_and_gain_table {
     float amp;
     float db;
@@ -56,6 +70,12 @@ int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type);
 int platform_get_snd_device_index(char *snd_device_index_name);
 int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id);
 int platform_get_snd_device_acdb_id(snd_device_t snd_device);
+int platform_set_effect_config_data(snd_device_t snd_device,
+                                      struct audio_effect_config effect_config,
+                                      effect_type_t effect_type);
+int platform_get_effect_config_data(snd_device_t snd_device,
+                                      struct audio_effect_config *effect_config,
+                                      effect_type_t effect_type);
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device);
 int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *usecase,
                                        int app_type, int sample_rate);
