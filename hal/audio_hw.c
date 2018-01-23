@@ -732,8 +732,14 @@ static void check_usecases_codec_backend(struct audio_device *adev,
             /* Update the out_snd_device only before enabling the audio route */
             if (switch_device[usecase->id] ) {
                 usecase->out_snd_device = snd_device;
-                if (usecase->type != VOICE_CALL && usecase->type != VOIP_CALL)
+                if (usecase->type != VOICE_CALL && usecase->type != VOIP_CALL) {
                     enable_audio_route(adev, usecase);
+                    if (usecase->id == USECASE_AUDIO_PLAYBACK_FM) {
+                        struct str_parms *parms = str_parms_create_str("fm_restore_volume=1");
+                        if (parms)
+                            audio_extn_fm_set_parameters(adev, parms);
+                    }
+                }
             }
         }
     }
