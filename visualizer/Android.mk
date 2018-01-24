@@ -40,9 +40,7 @@ LOCAL_CFLAGS += \
     -Werror \
     -Wno-unused-variable \
 
-LOCAL_HEADER_LIBRARIES := \
-    libhardware_headers \
-    android.hardware.audio.effect.legacy@2.0
+LOCAL_HEADER_LIBRARIES := libhardware_headers
 
 LOCAL_MODULE_RELATIVE_PATH := soundfx
 LOCAL_MODULE:= libqcomvisualizer
@@ -51,6 +49,7 @@ LOCAL_PROPRIETARY_MODULE := true
 
 LOCAL_C_INCLUDES := \
 	external/tinyalsa/include \
+	$(call include-path-for, audio-effects)
 
 LOCAL_HEADER_LIBRARIES += libsystem_headers
 include $(BUILD_SHARED_LIBRARY)
