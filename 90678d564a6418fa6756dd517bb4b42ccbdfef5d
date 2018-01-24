@@ -40,6 +40,24 @@
       "revId": "90678d564a6418fa6756dd517bb4b42ccbdfef5d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c3dd2fb2_a34d1ce9",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2134,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2018-01-24T11:14:12Z",
+      "side": 0,
+      "message": "Also if you take a look at platform_acdb_init() it checks for v3 and uses v2 as a fallback if v3 is unavailable.",
+      "parentUuid": "c6f06a65_94592766",
+      "revId": "90678d564a6418fa6756dd517bb4b42ccbdfef5d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
