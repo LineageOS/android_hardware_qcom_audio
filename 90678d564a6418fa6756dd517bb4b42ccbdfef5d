@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "40fa3fce_77f69a5a",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2134,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-01-24T04:29:55Z",
+      "side": 0,
+      "message": "This looks wrong if we\u0027re loading the loader_init_v3 symbol like above...?",
+      "range": {
+        "startLine": 2134,
+        "startChar": 30,
+        "endLine": 2134,
+        "endChar": 41
+      },
+      "revId": "90678d564a6418fa6756dd517bb4b42ccbdfef5d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
