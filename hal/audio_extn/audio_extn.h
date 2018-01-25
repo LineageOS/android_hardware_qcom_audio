@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -769,15 +769,17 @@ int audio_extn_bt_hal_get_latency(void *handle);
 #endif
 
 #ifndef KEEP_ALIVE_ENABLED
-#define audio_extn_keep_alive_init(a) do {} while(0)
-#define audio_extn_keep_alive_start() do {} while(0)
-#define audio_extn_keep_alive_stop() do {} while(0)
+#define audio_extn_keep_alive_init(adev) do {} while(0)
+#define audio_extn_keep_alive_deinit() do {} while(0)
+#define audio_extn_keep_alive_start(ka_mode) do {} while(0)
+#define audio_extn_keep_alive_stop(ka_mode) do {} while(0)
 #define audio_extn_keep_alive_is_active() (false)
 #define audio_extn_keep_alive_set_parameters(adev, parms) (0)
 #else
 void audio_extn_keep_alive_init(struct audio_device *adev);
-void audio_extn_keep_alive_start();
-void audio_extn_keep_alive_stop();
+void audio_extn_keep_alive_deinit();
+void audio_extn_keep_alive_start(ka_mode_t ka_mode);
+void audio_extn_keep_alive_stop(ka_mode_t ka_mode);
 bool audio_extn_keep_alive_is_active();
 int audio_extn_keep_alive_set_parameters(struct audio_device *adev,
                                          struct str_parms *parms);

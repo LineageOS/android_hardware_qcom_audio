@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -187,7 +187,7 @@ enum {
     USECASE_AUDIO_PLAYBACK_AFE_PROXY,
     USECASE_AUDIO_RECORD_AFE_PROXY,
 
-    USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE,
+    USECASE_AUDIO_PLAYBACK_SILENCE,
 
     USECASE_AUDIO_TRANSCODE_LOOPBACK,
 

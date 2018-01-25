@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2015, 2017-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -189,6 +189,13 @@ struct audio_out_correct_drift {
      */
     int64_t        adjust_time;
 };
+
+/* Device playback mode passed to keep_alive_start & keep_alive_stop*/
+typedef enum {
+    KEEP_ALIVE_OUT_NONE = 0,
+    KEEP_ALIVE_OUT_PRIMARY,
+    KEEP_ALIVE_OUT_HDMI,
+} ka_mode_t;
 
 /* type of asynchronous write callback events. Mutually exclusive
  * event enums append those defined for stream_callback_event_t in audio.h */

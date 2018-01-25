@@ -367,7 +367,7 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                           AFE_PROXY_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_AFE_PROXY] = {AFE_PROXY_PLAYBACK_PCM_DEVICE,
                                         AFE_PROXY_RECORD_PCM_DEVICE},
-    [USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE] = {MULTIMEDIA9_PCM_DEVICE, -1},
+    [USECASE_AUDIO_PLAYBACK_SILENCE] = {MULTIMEDIA9_PCM_DEVICE, -1},
     [USECASE_AUDIO_TRANSCODE_LOOPBACK] = {TRANSCODE_LOOPBACK_RX_DEV_ID, TRANSCODE_LOOPBACK_TX_DEV_ID},
 
     [USECASE_AUDIO_PLAYBACK_VOIP] = {AUDIO_PLAYBACK_VOIP_PCM_DEVICE, AUDIO_PLAYBACK_VOIP_PCM_DEVICE},
@@ -894,7 +894,7 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_SPKR_CALIB_TX)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_AFE_PROXY)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_AFE_PROXY)},
-    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_SILENCE)},
 };
 
 #define NO_COLS 2
@@ -2496,6 +2496,9 @@ acdb_init_fail:
     if (property_get_bool("vendor.audio.apptype.multirec.enabled", false))
         my_data->use_generic_handset = true;
 
+    /* Initialize keep alive for HDMI/loopback silence */
+    audio_extn_keep_alive_init(adev);
+
     my_data->edid_info = NULL;
     free(snd_card_name);
     free(snd_card_name_t);
@@ -2505,6 +2508,8 @@ acdb_init_fail:
 void platform_deinit(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
+
+    audio_extn_keep_alive_deinit();
 
     if (my_data->edid_info) {
         free(my_data->edid_info);

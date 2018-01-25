@@ -334,7 +334,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
 
     [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = "afe-proxy-playback",
     [USECASE_AUDIO_RECORD_AFE_PROXY] = "afe-proxy-record",
-    [USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE] = "silence-playback",
+    [USECASE_AUDIO_PLAYBACK_SILENCE] = "silence-playback",
 
     /* Transcode loopback cases */
     [USECASE_AUDIO_TRANSCODE_LOOPBACK] = "audio-transcode-loopback",
@@ -2879,7 +2879,7 @@ static int stop_output_stream(struct stream_out *out)
 
     /* Must be called after removing the usecase from list */
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
-        audio_extn_keep_alive_start();
+        audio_extn_keep_alive_start(KEEP_ALIVE_OUT_HDMI);
 
     if (out->ip_hdlr_handle) {
         ret = audio_extn_ip_hdlr_intf_close(out->ip_hdlr_handle, true, out);
@@ -2973,7 +2973,7 @@ int start_output_stream(struct stream_out *out)
                                  adev->perf_lock_opts_size);
 
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-        audio_extn_keep_alive_stop();
+        audio_extn_keep_alive_stop(KEEP_ALIVE_OUT_HDMI);
         if (audio_extn_passthru_is_enabled() &&
             audio_extn_passthru_is_passthrough_stream(out)) {
             audio_extn_passthru_on_start(out);

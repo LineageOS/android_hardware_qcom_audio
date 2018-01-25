@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -833,6 +833,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_source_track_set_parameters(adev, parms);
    audio_extn_fbsp_set_parameters(parms);
    audio_extn_keep_alive_set_parameters(adev, parms);
+   audio_extn_passthru_set_parameters(adev, parms);
    audio_extn_ext_disp_set_parameters(adev, parms);
    audio_extn_qaf_set_parameters(adev, parms);
    if (adev->offload_effects_set_parameters != NULL)

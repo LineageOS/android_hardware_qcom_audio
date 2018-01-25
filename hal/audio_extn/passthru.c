@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -309,8 +309,8 @@ void audio_extn_passthru_on_stop(struct stream_out * out)
     }
 
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-        ALOGI("passthru on aux digital, start keep alive");
-        audio_extn_keep_alive_start();
+        ALOGD("%s: passthru on aux digital, start keep alive", __func__);
+        audio_extn_keep_alive_start(KEEP_ALIVE_OUT_HDMI);
     }
 }
 
@@ -321,8 +321,30 @@ void audio_extn_passthru_on_pause(struct stream_out * out __unused)
 }
 
 int audio_extn_passthru_set_parameters(struct audio_device *adev __unused,
-                                       struct str_parms *parms __unused)
+                                       struct str_parms *parms)
 {
+    char value[32];
+    int ret;
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value, sizeof(value));
+    if (ret >= 0) {
+        int val = atoi(value);
+        if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            if (!audio_extn_passthru_is_active()) {
+                ALOGV("%s: start keep alive on aux digital", __func__);
+                audio_extn_keep_alive_start(KEEP_ALIVE_OUT_HDMI);
+            }
+        }
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value,
+                            sizeof(value));
+    if (ret >= 0) {
+        int val = atoi(value);
+        if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            ALOGV("%s: stop keep_alive on aux digital on device", __func__);
+            audio_extn_keep_alive_stop(KEEP_ALIVE_OUT_HDMI);
+        }
+    }
     return 0;
 }
 
