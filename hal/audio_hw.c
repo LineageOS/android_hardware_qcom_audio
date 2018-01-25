@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -6296,6 +6296,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value, sizeof(value));
     if (ret >= 0) {
         val = atoi(value);
+        audio_devices_t device = (audio_devices_t) val;
         if (audio_is_output_device(val) &&
             (val & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
             ALOGV("cache new ext disp type and edid");
@@ -6306,8 +6307,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 goto done;
             }
             platform_cache_edid(adev->platform);
-        } else if (((audio_devices_t)val == AUDIO_DEVICE_OUT_USB_DEVICE) ||
-                   ((audio_devices_t)val == AUDIO_DEVICE_IN_USB_DEVICE)) {
+        } else if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
             /*
              * Do not allow AFE proxy port usage by WFD source when USB headset is connected.
              * Per AudioPolicyManager, USB device is higher priority than WFD.
@@ -6316,12 +6316,9 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
              * starting voice call on USB
              */
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
-            if (ret >= 0) {
-                if (audio_is_output_device(val))
-                    audio_extn_usb_add_device(AUDIO_DEVICE_OUT_USB_DEVICE, atoi(value));
-                else
-                    audio_extn_usb_add_device(AUDIO_DEVICE_IN_USB_DEVICE, atoi(value));
-            }
+            if (ret >= 0)
+                audio_extn_usb_add_device(device, atoi(value));
+
             if (!audio_extn_usb_is_tunnel_supported()) {
                 ALOGV("detected USB connect .. disable proxy");
                 adev->allow_afe_proxy_usage = false;
@@ -6332,21 +6329,18 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value, sizeof(value));
     if (ret >= 0) {
         val = atoi(value);
+        audio_devices_t device = (audio_devices_t) val;
         /*
          * The HDMI / Displayport disconnect handling has been moved to
          * audio extension to ensure that its parameters are not
          * invalidated prior to updating sysfs of the disconnect event
          * Invalidate will be handled by audio_extn_ext_disp_set_parameters()
          */
-        if (((audio_devices_t)val == AUDIO_DEVICE_OUT_USB_DEVICE) ||
-            ((audio_devices_t)val == AUDIO_DEVICE_IN_USB_DEVICE)) {
+        if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
-            if (ret >= 0) {
-                if (audio_is_output_device(val))
-                    audio_extn_usb_remove_device(AUDIO_DEVICE_OUT_USB_DEVICE, atoi(value));
-                else
-                    audio_extn_usb_remove_device(AUDIO_DEVICE_IN_USB_DEVICE, atoi(value));
-            }
+            if (ret >= 0)
+                audio_extn_usb_remove_device(device, atoi(value));
+
             if (!audio_extn_usb_is_tunnel_supported()) {
                 ALOGV("detected USB disconnect .. enable proxy");
                 adev->allow_afe_proxy_usage = true;
