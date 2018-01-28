@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "e99b6a3e_3b7649e3",
+        "filename": "hal/msm8974/platform.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 428,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-01-28T01:55:55Z",
+      "side": 1,
+      "message": "ifdef PLATFORM_MSM8996?",
+      "revId": "097989b100211ecc8c0002a38594537168f6d130",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
