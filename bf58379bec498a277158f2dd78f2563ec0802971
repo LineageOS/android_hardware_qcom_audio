@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ebffdb51_4656be30",
+        "filename": "hal/audio_extn/ultrasound.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 21,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-01-28T01:52:55Z",
+      "side": 1,
+      "message": "I\u0027d prefer to ifdef ELLIPTIC_ULTRASOUND_ENABLED, checking for the flag if enabled, rather than checking the else condition.",
+      "revId": "bf58379bec498a277158f2dd78f2563ec0802971",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
