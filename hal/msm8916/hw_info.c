@@ -52,8 +52,12 @@ static void update_hardware_info_8x16(struct hardware_info *hw_info, const char 
         strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
     }  else if (!strcmp(snd_card_name, "msm8952-l9300-snd-card")) {
         strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    }  else if (!strcmp(snd_card_name, "sdm660-snd-card")) {
+        strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
+    }  else if (!strcmp(snd_card_name, "sdm660-tasha-snd-card")) {
+        strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
     } else {
-        ALOGW("%s: Not an  8x16/8909/8952 device", __func__);
+        ALOGW("%s: Not an  8x16/8909/8952/sdm660 device", __func__);
     }
 }
 
@@ -68,7 +72,7 @@ void *hw_info_init(const char *snd_card_name)
     }
 
     if (strstr(snd_card_name, "msm8x16") || strstr(snd_card_name, "msm8909")
-        || strstr(snd_card_name, "msm8952")) {
+        || strstr(snd_card_name, "msm8952") || strstr(snd_card_name, "sdm660")) {
         ALOGV("8x16 - variant soundcard");
 
         strlcpy(hw_info->type, "", sizeof(hw_info->type));
