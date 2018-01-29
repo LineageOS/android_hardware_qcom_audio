@@ -2734,7 +2734,7 @@ int start_output_stream(struct stream_out *out)
             flags |= PCM_MMAP | PCM_NOIRQ;
             pcm_open_retry_count = PROXY_OPEN_RETRY_COUNT;
         } else if (out->realtime) {
-            flags |= PCM_MMAP | PCM_NOIRQ;
+            flags |= PCM_MMAP | PCM_NOIRQ | PCM_MONOTONIC;
         } else
             flags |= PCM_MONOTONIC;
 
@@ -4226,27 +4226,43 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
         clock_gettime(CLOCK_MONOTONIC, timestamp);
     } else {
         if (out->pcm) {
-            unsigned int avail;
-            if (pcm_get_htimestamp(out->pcm, &avail, timestamp) == 0) {
-                size_t kernel_buffer_size = out->config.period_size * out->config.period_count;
-                int64_t signed_frames = out->written - kernel_buffer_size + avail;
-                // This adjustment accounts for buffering after app processor.
-                // It is based on estimated DSP latency per use case, rather than exact.
+            int64_t signed_frames = -1;
+            // XXX it might be better to identify these
+            // as realtime usecases?
+            if (out->usecase == USECASE_AUDIO_PLAYBACK_MMAP ||
+                out->usecase == USECASE_AUDIO_PLAYBACK_ULL) {
+                unsigned int hw_ptr;
+                if (pcm_mmap_get_hw_ptr(out->pcm, &hw_ptr, timestamp) == 0) {
+                    signed_frames = hw_ptr;
+                }
+                ALOGV("%s frames %lld", __func__, (long long)signed_frames);
+            } else {
+                unsigned int avail;
+                if (pcm_get_htimestamp(out->pcm, &avail, timestamp) == 0) {
+                    size_t kernel_buffer_size =
+                            out->config.period_size * out->config.period_count;
+                     signed_frames =
+                            out->written - kernel_buffer_size + avail;
+                }
+            }
+
+            // This adjustment accounts for buffering after app processor.
+            // It is based on estimated DSP latency per use case, rather than exact.
+            signed_frames -=
+                    (platform_render_latency(out->usecase) *
+                     out->sample_rate / 1000000LL);
+
+            // Adjustment accounts for A2dp encoder latency with non offload usecases
+            // Note: Encoder latency is returned in ms, while platform_render_latency in us.
+            if (AUDIO_DEVICE_OUT_ALL_A2DP & out->devices) {
                 signed_frames -=
-                    (platform_render_latency(out->usecase) * out->sample_rate / 1000000LL);
-
-                // Adjustment accounts for A2dp encoder latency with non offload usecases
-                // Note: Encoder latency is returned in ms, while platform_render_latency in us.
-                if (AUDIO_DEVICE_OUT_ALL_A2DP & out->devices) {
-                    signed_frames -=
                         (audio_extn_a2dp_get_encoder_latency() * out->sample_rate / 1000);
-                }
+            }
 
-                // It would be unusual for this value to be negative, but check just in case ...
-                if (signed_frames >= 0) {
-                    *frames = signed_frames;
-                    ret = 0;
-                }
+            // It would be unusual for this value to be negative, but check just in case ...
+            if (signed_frames >= 0) {
+                *frames = signed_frames;
+                ret = 0;
             }
         } else if (out->card_status == CARD_STATUS_OFFLINE) {
             *frames = out->written;
@@ -4525,6 +4541,7 @@ static int out_get_mmap_position(const struct audio_stream_out *stream,
         return -EINVAL;
     }
     if (out->usecase != USECASE_AUDIO_PLAYBACK_MMAP) {
+        ALOGE("%s: called on %s", __func__, use_case_table[out->usecase]);
         return -ENOSYS;
     }
     if (out->pcm == NULL) {
@@ -5875,6 +5892,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value, sizeof(value));
     if (ret >= 0) {
         val = atoi(value);
+        audio_devices_t device = (audio_devices_t) val;
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             ALOGV("cache new ext disp type and edid");
             ret = platform_get_ext_disp_type(adev->platform);
@@ -5884,8 +5902,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 goto done;
             }
             platform_cache_edid(adev->platform);
-        } else if ((val & AUDIO_DEVICE_OUT_USB_DEVICE) ||
-                   !(val ^ AUDIO_DEVICE_IN_USB_DEVICE)) {
+        } else if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
             /*
              * Do not allow AFE proxy port usage by WFD source when USB headset is connected.
              * Per AudioPolicyManager, USB device is higher priority than WFD.
@@ -5895,8 +5912,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
              */
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
-                audio_extn_usb_add_device(AUDIO_DEVICE_OUT_USB_DEVICE, atoi(value));
-                audio_extn_usb_add_device(AUDIO_DEVICE_IN_USB_DEVICE, atoi(value));
+                audio_extn_usb_add_device(device, atoi(value));
             }
             ALOGV("detected USB connect .. disable proxy");
             adev->allow_afe_proxy_usage = false;
@@ -5906,18 +5922,17 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value, sizeof(value));
     if (ret >= 0) {
         val = atoi(value);
+        audio_devices_t device = (audio_devices_t) val;
         /*
          * The HDMI / Displayport disconnect handling has been moved to
          * audio extension to ensure that its parameters are not
          * invalidated prior to updating sysfs of the disconnect event
          * Invalidate will be handled by audio_extn_ext_disp_set_parameters()
          */
-        if ((val & AUDIO_DEVICE_OUT_USB_DEVICE) ||
-                   !(val ^ AUDIO_DEVICE_IN_USB_DEVICE)) {
+        if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
-                audio_extn_usb_remove_device(AUDIO_DEVICE_OUT_USB_DEVICE, atoi(value));
-                audio_extn_usb_remove_device(AUDIO_DEVICE_IN_USB_DEVICE, atoi(value));
+                audio_extn_usb_remove_device(device, atoi(value));
             }
             ALOGV("detected USB disconnect .. enable proxy");
             adev->allow_afe_proxy_usage = true;

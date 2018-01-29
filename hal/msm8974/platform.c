@@ -868,6 +868,7 @@ static int msm_device_to_be_id [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET              ,       9},
        {AUDIO_DEVICE_OUT_USB_ACCESSORY                  ,       -1},
        {AUDIO_DEVICE_OUT_USB_DEVICE                     ,       -1},
+       {AUDIO_DEVICE_OUT_USB_HEADSET                    ,       -1},
        {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
        {AUDIO_DEVICE_OUT_PROXY                          ,       9},
        {AUDIO_DEVICE_OUT_FM                             ,       7},
@@ -893,6 +894,7 @@ static int msm_device_to_be_id [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET              ,       9},
        {AUDIO_DEVICE_OUT_USB_ACCESSORY                  ,       -1},
        {AUDIO_DEVICE_OUT_USB_DEVICE                     ,       -1},
+       {AUDIO_DEVICE_OUT_USB_HEADSET                    ,       -1},
        {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
        {AUDIO_DEVICE_OUT_PROXY                          ,       9},
 /* Add the correct be ids */
@@ -919,6 +921,7 @@ static int msm_device_to_be_id [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET              ,       9},
        {AUDIO_DEVICE_OUT_USB_ACCESSORY                  ,       -1},
        {AUDIO_DEVICE_OUT_USB_DEVICE                     ,       -1},
+       {AUDIO_DEVICE_OUT_USB_HEADSET                    ,       -1},
        {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
        {AUDIO_DEVICE_OUT_PROXY                          ,       9},
 /* Add the correct be ids */
@@ -945,6 +948,7 @@ static int msm_device_to_be_id [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET              ,       9},
        {AUDIO_DEVICE_OUT_USB_ACCESSORY                  ,       -1},
        {AUDIO_DEVICE_OUT_USB_DEVICE                     ,       -1},
+       {AUDIO_DEVICE_OUT_USB_HEADSET                    ,       -1},
        {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
        {AUDIO_DEVICE_OUT_PROXY                          ,       9},
 /* Add the correct be ids */
@@ -3518,8 +3522,10 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         } else if (devices == (AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET;
-        } else if (devices == (AUDIO_DEVICE_OUT_USB_DEVICE |
-                               AUDIO_DEVICE_OUT_SPEAKER)) {
+        } else if ((devices == (AUDIO_DEVICE_OUT_USB_DEVICE |
+                               AUDIO_DEVICE_OUT_SPEAKER)) ||
+                   (devices == (AUDIO_DEVICE_OUT_USB_HEADSET |
+                               AUDIO_DEVICE_OUT_SPEAKER))) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET;
         } else if ((devices & AUDIO_DEVICE_OUT_SPEAKER) &&
                    (devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
@@ -3575,7 +3581,9 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
             } else {
                 snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
             }
-        } else if (devices & AUDIO_DEVICE_OUT_USB_DEVICE) {
+        } else if (devices &
+                    (AUDIO_DEVICE_OUT_USB_DEVICE |
+                     AUDIO_DEVICE_OUT_USB_HEADSET)) {
             if (voice_is_in_call(adev)) {
                 switch (adev->voice.tty_mode) {
                     case TTY_MODE_FULL:
@@ -3700,7 +3708,9 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         ALOGD("%s: setting USB hadset channel capability(2) for Proxy", __func__);
         audio_extn_set_afe_proxy_channel_mixer(adev, 2);
         snd_device = SND_DEVICE_OUT_USB_HEADSET;
-    } else if (devices & AUDIO_DEVICE_OUT_USB_DEVICE) {
+    } else if (devices &
+                (AUDIO_DEVICE_OUT_USB_DEVICE |
+                 AUDIO_DEVICE_OUT_USB_HEADSET)) {
         if (audio_extn_usb_is_capture_supported())
             snd_device = SND_DEVICE_OUT_USB_HEADSET;
         else
@@ -3783,7 +3793,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                         ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->voice.tty_mode);
                 }
                 goto exit;
-            } else if (out_device & AUDIO_DEVICE_OUT_USB_DEVICE) {
+            } else if (out_device &
+                        (AUDIO_DEVICE_OUT_USB_DEVICE |
+                         AUDIO_DEVICE_OUT_USB_HEADSET)) {
                 switch (adev->voice.tty_mode) {
                     case TTY_MODE_FULL:
                         snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_USB_MIC;
@@ -3865,7 +3877,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             }
         } else if (out_device & AUDIO_DEVICE_OUT_TELEPHONY_TX) {
             snd_device = SND_DEVICE_IN_VOICE_RX;
-        } else if (out_device & AUDIO_DEVICE_OUT_USB_DEVICE) {
+        } else if (out_device &
+                    (AUDIO_DEVICE_OUT_USB_DEVICE |
+                     AUDIO_DEVICE_OUT_USB_HEADSET)) {
           if (audio_extn_usb_is_capture_supported()) {
             snd_device = SND_DEVICE_IN_VOICE_USB_HEADSET_MIC;
           }
@@ -3933,7 +3947,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 else
                     snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
             }
-        } else if (in_device & AUDIO_DEVICE_IN_USB_DEVICE) {
+        } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
               snd_device = SND_DEVICE_IN_VOICE_RECOG_USB_HEADSET_MIC;
         }
     } else if (source == AUDIO_SOURCE_UNPROCESSED) {
@@ -3953,7 +3967,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
              }
          } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
                  snd_device = SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC;
-         } else if (in_device & AUDIO_DEVICE_IN_USB_DEVICE) {
+         } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
                  snd_device = SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_MIC;
          }
     } else if ((source == AUDIO_SOURCE_VOICE_COMMUNICATION) ||
@@ -3988,7 +4002,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                         snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC_NS;
                 } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
                     snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
-                } else if (in_device & AUDIO_DEVICE_IN_USB_DEVICE) {
+                } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
                     snd_device = SND_DEVICE_IN_USB_HEADSET_MIC_AEC;
                 }
                 platform_set_echo_reference(adev, true, out_device);
@@ -4018,7 +4032,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                         snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC;
                 } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
                     snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
-               } else if (in_device & AUDIO_DEVICE_IN_USB_DEVICE) {
+               } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
                     snd_device = SND_DEVICE_IN_USB_HEADSET_MIC_AEC;
                 }
                 platform_set_echo_reference(adev, true, out_device);
@@ -4118,7 +4132,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_FM_TUNER) {
             snd_device = SND_DEVICE_IN_CAPTURE_FM;
-        } else if (in_device & AUDIO_DEVICE_IN_USB_DEVICE ) {
+        } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else {
             ALOGE("%s: Unknown input device(s) %#x", __func__, in_device);
@@ -4163,7 +4177,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (out_device & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
                    out_device & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
-        } else if (out_device & AUDIO_DEVICE_OUT_USB_DEVICE) {
+        } else if (out_device &
+                    (AUDIO_DEVICE_OUT_USB_DEVICE |
+                     AUDIO_DEVICE_OUT_USB_HEADSET)) {
             if (audio_extn_usb_is_capture_supported())
               snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
             else
