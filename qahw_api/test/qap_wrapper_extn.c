@@ -1719,8 +1719,14 @@ qap_module_handle_t qap_wrapper_stream_open(void* stream_data)
             input_config.flags = QAP_MODULE_FLAG_SYSTEM_SOUND;
             stream_info->system_input = true;
         } else {
-            ALOGV("%s::%d Set Primary Main Input Flag", __func__, __LINE__);
-            input_config.flags = QAP_MODULE_FLAG_PRIMARY;
+            if (stream_info->flags & AUDIO_OUTPUT_FLAG_ASSOCIATED) {
+                ALOGV("%s::%d Set Secondary Assoc Input Flag", __func__, __LINE__);
+                input_config.flags = QAP_MODULE_FLAG_SECONDARY;
+                stream_info->sec_input = true;
+            } else {
+                ALOGV("%s::%d Set Primary Main Input Flag", __func__, __LINE__);
+                input_config.flags = QAP_MODULE_FLAG_PRIMARY;
+            }
         }
     }
 
