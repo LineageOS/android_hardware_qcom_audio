@@ -21,6 +21,8 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 
+LOCAL_CFLAGS += -Wno-unused-variable -Wno-unused-parameter -Wno-gnu-designator -Wno-unused-value -Wno-typedef-redefinition
+
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
 	liblog \
