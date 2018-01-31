@@ -20,6 +20,7 @@ LOCAL_SRC_FILES:= \
 	offload_visualizer.c
 
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
+LOCAL_CFLAGS += -Wno-unused-variable
 
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
