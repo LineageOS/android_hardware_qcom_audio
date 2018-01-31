@@ -16,6 +16,8 @@ libOmxG711Enc-def += -D_DEBUG
 libOmxG711Enc-def += -Wconversion
 libOmxG711Enc-def += -DAUDIOV2
 
+libOmxG711Enc-def += -Wno-sign-conversion -Wno-shorten-64-to-32 -Wno-self-assign -Wno-parentheses-equality -Wno-format -Wno-sign-compare -Wno-tautological-compare -Wno-shorten-64-to-32 -Wno-unused-local-typedef
+
 # ---------------------------------------------------------------------------------
 #             Make the Shared library (libOmxG711Enc)
 # ---------------------------------------------------------------------------------
