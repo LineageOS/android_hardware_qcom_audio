@@ -16,6 +16,8 @@ libOmxAmrEnc-def += -D_DEBUG
 libOmxAmrEnc-def += -Wconversion
 libOmxAmrEnc-def += -DAUDIOV2
 
+libOmxAmrEnc-def += -Wno-sign-conversion -Wno-self-assign -Wno-parentheses-equality -Wno-format
+
 # ---------------------------------------------------------------------------------
 #             Make the Shared library (libOmxAmrEnc)
 # ---------------------------------------------------------------------------------
