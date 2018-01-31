@@ -373,6 +373,11 @@
     <ctl name="IIR1 INP3 Volume" value="53" />
     <ctl name="IIR1 INP4 Volume" value="53" />
     <ctl name="IIR1 INP1 MUX" value="ZERO" />
+    <ctl name="MultiMedia17 Mixer INT3_MI2S_TX" value="0" />
+    <ctl name="MultiMedia18 Mixer INT3_MI2S_TX" value="0" />
+    <ctl name="MultiMedia19 Mixer INT3_MI2S_TX" value="0" />
+    <ctl name="MultiMedia28 Mixer INT3_MI2S_TX" value="0" />
+    <ctl name="MultiMedia29 Mixer INT3_MI2S_TX" value="0" />
 
     <!-- anc related -->
 
@@ -1268,6 +1273,26 @@
 
     <path name="audio-record-compress">
         <ctl name="MultiMedia8 Mixer INT3_MI2S_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress2">
+        <ctl name="MultiMedia17 Mixer INT3_MI2S_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress3">
+        <ctl name="MultiMedia18 Mixer INT3_MI2S_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress4">
+        <ctl name="MultiMedia19 Mixer INT3_MI2S_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress5">
+        <ctl name="MultiMedia28 Mixer INT3_MI2S_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress6">
+        <ctl name="MultiMedia29 Mixer INT3_MI2S_TX" value="1" />
     </path>
 
     <path name="audio-record-compress bt-sco">
