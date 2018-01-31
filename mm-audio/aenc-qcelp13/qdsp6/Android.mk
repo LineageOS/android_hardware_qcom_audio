@@ -16,6 +16,8 @@ libOmxQcelp13Enc-def += -D_DEBUG
 libOmxQcelp13Enc-def += -Wconversion
 libOmxQcelp13Enc-def += -DAUDIOV2
 
+libOmxQcelp13Enc-def += -Wno-sign-conversion -Wno-format
+
 # ---------------------------------------------------------------------------------
 #             Make the Shared library (libOmxQcelp13Enc)
 # ---------------------------------------------------------------------------------
