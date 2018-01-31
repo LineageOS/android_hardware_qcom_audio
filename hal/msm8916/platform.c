@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -85,6 +85,7 @@
 #define PLATFORM_INFO_XML_PATH_SKUSH  "/etc/audio_platform_info_skush.xml"
 #define PLATFORM_INFO_XML_PATH      "/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_WCD9326_I2S "/etc/mixer_paths_wcd9326_i2s.xml"
+#define MIXER_XML_PATH_WCD9326_I2S_TDM "/etc/mixer_paths_wcd9326_i2s_tdm.xml"
 #define MIXER_XML_PATH_WCD9330_I2S "/etc/mixer_paths_wcd9330_i2s.xml"
 #define MIXER_XML_PATH_WCD9335_I2S "/etc/mixer_paths_wcd9335_i2s.xml"
 #define MIXER_XML_PATH_SBC "/etc/mixer_paths_sbc.xml"
@@ -100,6 +101,7 @@
 #define MIXER_XML_PATH_SKUN "/vendor/etc/mixer_paths_qrd_skun.xml"
 #define PLATFORM_INFO_XML_PATH      "/vendor/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_WCD9326_I2S "/vendor/etc/mixer_paths_wcd9326_i2s.xml"
+#define MIXER_XML_PATH_WCD9326_I2S_TDM "/vendor/etc/mixer_paths_wcd9326_i2s_tdm.xml"
 #define MIXER_XML_PATH_WCD9330_I2S "/vendor/etc/mixer_paths_wcd9330_i2s.xml"
 #define MIXER_XML_PATH_WCD9335_I2S "/vendor/etc/mixer_paths_wcd9335_i2s.xml"
 #define MIXER_XML_PATH_SBC "/vendor/etc/mixer_paths_sbc.xml"
@@ -1026,6 +1028,8 @@ static void update_codec_type(const char *snd_card_name) {
                   sizeof("sdm660-tasha-snd-card")) ||
          !strncmp(snd_card_name, "apq8009-tashalite-snd-card",
                   sizeof("apq8009-tashalite-snd-card")) ||
+         !strncmp(snd_card_name, "apq8009-tashalite-snd-card-tdm",
+                  sizeof("apq8009-tashalite-snd-card-tdm")) ||
          !strncmp(snd_card_name, "mdm9607-tomtom-i2s-snd-card",
                   sizeof("mdm9607-tomtom-i2s-snd-card")) ||
          !strncmp(snd_card_name, "mdm-tasha-i2s-snd-card",
@@ -1397,6 +1401,13 @@ static void query_platform(const char *snd_card_name,
    } else if (!strncmp(snd_card_name, "apq8009-tashalite-snd-card",
                  sizeof("apq8009-tashalite-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9326_I2S,
+               MAX_MIXER_XML_PATH);
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+   } else if (!strncmp(snd_card_name, "apq8009-tashalite-snd-card-tdm",
+                 sizeof("apq8009-tashalite-snd-card-tdm"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9326_I2S_TDM,
                MAX_MIXER_XML_PATH);
         msm_device_to_be_id = msm_device_to_be_id_external_codec;
         msm_be_id_array_len  =
