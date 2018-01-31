@@ -36,6 +36,7 @@ extern "C" {
 #include <utils/Log.h>
 
 #ifdef _ANDROID_
+#undef LOG_TAG
 #define LOG_TAG "QC_AACENC"
 #endif
 
