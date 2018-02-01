@@ -162,6 +162,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DSM_FEEDBACK)),true)
     LOCAL_SRC_FILES += audio_extn/dsm_feedback.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_A2DP_OFFLOAD)),true)
+    LOCAL_CFLAGS += -DA2DP_OFFLOAD_ENABLED
+    LOCAL_SRC_FILES += audio_extn/a2dp.c
+endif
+
 ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm845,$(TARGET_BOARD_PLATFORM)),)
   # push codec/mad calibration to HW dep node
   # applicable to msm8992/8994 or newer platforms
