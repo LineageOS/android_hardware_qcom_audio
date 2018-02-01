@@ -31,4 +31,4 @@ int audio_low_latency_hint_end();
 }
 #endif
 
-#endif //__QCAMREAPERF_H__
+#endif //__QAUDIOPERF_H__
