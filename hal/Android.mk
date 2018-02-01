@@ -56,6 +56,8 @@ ifneq ($(filter sdm660,$(TARGET_BOARD_PLATFORM)),)
 endif
 endif
 
+LOCAL_CFLAGS += -Wno-macro-redefined
+
 LOCAL_SRC_FILES := \
 	audio_hw.c \
 	voice.c \
