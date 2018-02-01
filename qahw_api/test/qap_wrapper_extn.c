@@ -1446,22 +1446,22 @@ void *qap_wrapper_start_stream (void* stream_data)
 
     if (fp_input == NULL) {
         fprintf(stderr, "Open File Failed for %s\n", stream_info->filename);
-        pthread_exit(0);
+        return NULL;
     }
     qap_module_handle = stream_info->qap_module_handle;
     buffer = (qap_audio_buffer_t *) calloc(1, sizeof(qap_audio_buffer_t));
     if (buffer == NULL) {
         fprintf(stderr, "%s::%d: Memory Alloc Error\n", __func__, __LINE__);
-        pthread_exit(0);
+        return NULL;
     }
     buffer->common_params.data = calloc(1, FRAME_SIZE);
     if (buffer->common_params.data == NULL) {
         fprintf(stderr, "%s::%d: Memory Alloc Error\n", __func__, __LINE__);
-        pthread_exit(0);
         if (NULL != buffer) {
             free( buffer);
             buffer = NULL;
         }
+        return NULL;
     }
     buffer->buffer_parms.output_buf_params.output_id = output_device_id;
     fprintf(stdout, "%s::%d: output device id %d\n",
@@ -1472,13 +1472,13 @@ void *qap_wrapper_start_stream (void* stream_data)
     ret = qap_module_cmd(qap_module_handle, QAP_MODULE_CMD_START, sizeof(QAP_MODULE_CMD_START), NULL, NULL, NULL);
     if (ret != QAP_STATUS_OK) {
         fprintf(stderr, "START failed\n");
-        pthread_exit(0);
         if (NULL != buffer &&  NULL != buffer->common_params.data) {
             free( buffer->common_params.data);
             buffer->common_params.data = NULL;
             free( buffer);
             buffer = NULL;
         }
+        return NULL;
     }
 
     do {
