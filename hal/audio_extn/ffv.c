@@ -324,7 +324,7 @@ void audio_extn_ffv_update_enabled()
 {
     char ffv_enabled[PROPERTY_VALUE_MAX] = "false";
 
-    property_get("ro.qc.sdk.audio.ffv", ffv_enabled, "0");
+    property_get("ro.vendor.audio.sdk.ffv", ffv_enabled, "0");
     if (!strncmp("true", ffv_enabled, 4)) {
         ALOGD("%s: ffv is supported", __func__);
         ffvmod.is_ffv_enabled = true;
