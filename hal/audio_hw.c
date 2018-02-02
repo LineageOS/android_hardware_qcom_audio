@@ -5584,7 +5584,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     out->dynamic_pm_qos_config_supported = 0;
 
     if ((flags & AUDIO_OUTPUT_FLAG_BD) &&
-        (property_get_bool("audio.matrix.limiter.enable", false)))
+        (property_get_bool("vendor.audio.matrix.limiter.enable", false)))
         platform_set_device_params(out, DEVICE_PARAM_LIMITER_ID, 1);
 
     if (audio_is_linear_pcm(out->format) &&

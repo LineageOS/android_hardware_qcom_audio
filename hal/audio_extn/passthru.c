@@ -506,7 +506,7 @@ int audio_extn_passthru_get_buffer_size(audio_offload_info_t* info)
 
     if (((info->format == AUDIO_FORMAT_DOLBY_TRUEHD) ||
             (info->format == AUDIO_FORMAT_IEC61937)) &&
-            property_get("audio.truehd.buffer.size.kb", value, "") &&
+            property_get("vendor.audio.truehd.buffer.size.kb", value, "") &&
             atoi(value)) {
         fragment_size = atoi(value) * 1024;
         goto done;
@@ -516,7 +516,7 @@ int audio_extn_passthru_get_buffer_size(audio_offload_info_t* info)
         goto done;
     } else if (info->format == AUDIO_FORMAT_E_AC3) {
         fragment_size = DDP_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE;
-        if(property_get("audio.ddp.buffer.size.kb", value, "") &&
+        if(property_get("vendor.audio.ddp.buffer.size.kb", value, "") &&
                 atoi(value)) {
             fragment_size = atoi(value) * 1024;
         }

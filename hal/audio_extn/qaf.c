@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -3046,7 +3046,7 @@ int audio_extn_qaf_init(struct audio_device *adev)
         DEBUG_MSG("DLOPEN successful for %s", lib_name);
 #endif
         } else if (i == DTS_M8) {
-            property_get("audio.qaf.m8.library", value, NULL);
+            property_get("vendor.audio.qaf.m8.library", value, NULL);
             snprintf(lib_name, PROPERTY_VALUE_MAX, "%s", value);
             qaf_mod->qaf_lib = dlopen(lib_name, RTLD_NOW);
             if (qaf_mod->qaf_lib == NULL) {
