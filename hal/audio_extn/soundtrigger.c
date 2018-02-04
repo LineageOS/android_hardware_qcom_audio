@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, 2016-2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016-2018 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -135,6 +135,13 @@ int audio_hw_call_back(sound_trigger_event_type_t event,
         list_add_tail(&st_dev->st_ses_list, &st_ses_info->list);
         break;
 
+    case ST_EVENT_START_KEEP_ALIVE:
+        pthread_mutex_unlock(&st_dev->lock);
+        pthread_mutex_lock(&st_dev->adev->lock);
+        audio_extn_keep_alive_start(KEEP_ALIVE_OUT_PRIMARY);
+        pthread_mutex_unlock(&st_dev->adev->lock);
+        goto done;
+
     case ST_EVENT_SESSION_DEREGISTER:
         if (!config) {
             ALOGE("%s: NULL config", __func__);
@@ -152,11 +159,20 @@ int audio_hw_call_back(sound_trigger_event_type_t event,
         list_remove(&st_ses_info->list);
         free(st_ses_info);
         break;
+
+    case ST_EVENT_STOP_KEEP_ALIVE:
+        pthread_mutex_unlock(&st_dev->lock);
+        pthread_mutex_lock(&st_dev->adev->lock);
+        audio_extn_keep_alive_stop(KEEP_ALIVE_OUT_PRIMARY);
+        pthread_mutex_unlock(&st_dev->adev->lock);
+        goto done;
+
     default:
         ALOGW("%s: Unknown event %d", __func__, event);
         break;
     }
     pthread_mutex_unlock(&st_dev->lock);
+done:
     return status;
 }
 
