@@ -3068,8 +3068,6 @@ static int out_standby(struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
     struct audio_device *adev = out->dev;
-    struct audio_usecase *uc_info;
-    struct listnode *node;
     bool do_stop = true;
 
     ALOGD("%s: enter: stream (%p) usecase(%d: %s)", __func__,
@@ -3114,13 +3112,6 @@ static int out_standby(struct audio_stream *stream)
         }
         if (do_stop) {
             stop_output_stream(out);
-        }
-        //restore output device for active usecase when current snd device and output device mismatch
-        list_for_each(node, &adev->usecase_list) {
-            uc_info = node_to_item(node, struct audio_usecase, list);
-            if ((uc_info->type == PCM_PLAYBACK) &&
-                (uc_info->out_snd_device != platform_get_output_snd_device(adev->platform, uc_info->stream.out)))
-                select_devices(adev, uc_info->id);
         }
         pthread_mutex_unlock(&adev->lock);
     }
