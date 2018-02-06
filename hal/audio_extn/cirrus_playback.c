@@ -436,7 +436,8 @@ void audio_extn_spkr_prot_init(void *adev) {
     snd_split_handle = audio_extn_get_snd_card_split();
 
     /* FIXME: REMOVE THIS AFTER B1C1 P1.0 SUPPORT */
-    if (!strcmp(snd_split_handle->form_factor, "tdm")) {
+    if (!strcmp(snd_split_handle->form_factor, "tdm") ||
+        !strcmp(snd_split_handle->form_factor, "c1")) {
         handle.spkr_prot_enable = true;
     } else {
         handle.spkr_prot_enable = false;
