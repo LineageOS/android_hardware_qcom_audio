@@ -311,7 +311,7 @@ int get_tzn(const char *sensor_name)
     char name[MAX_PATH] = {0};
     char cwd[MAX_PATH] = {0};
 
-    if (!sensor_name)
+    if (!sensor_name || (strlen(sensor_name) == 0))
         return found;
 
     if (!getcwd(cwd, sizeof(cwd)))
