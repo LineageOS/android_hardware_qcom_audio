@@ -1031,7 +1031,10 @@ bool platform_send_gain_dep_cal(void *platform, int level) {
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
 
-            if (usecase != NULL && usecase->type == PCM_PLAYBACK) {
+            if (usecase != NULL &&
+                usecase->type == PCM_PLAYBACK &&
+                usecase->stream.out != NULL &&
+                usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
                 int new_snd_device[2] = {0};
                 int i, num_devices = 1;
 
@@ -1408,6 +1411,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_WSA] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_SPEAKER_WSA] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_SPEAKER_2_WSA] = strdup("SLIMBUS_0_RX");
+    hw_interface_table[SND_DEVICE_OUT_ULTRASOUND_HANDSET] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_IN_HANDSET_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_HANDSET_MIC_EXTERNAL] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_HANDSET_MIC_AEC] = strdup("SLIMBUS_0_TX");
@@ -1476,6 +1480,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_ULTRASOUND_MIC] = strdup("SLIMBUS_0_TX");
 
     my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
 
