@@ -158,6 +158,9 @@ static void update_hardware_info_8x16(struct hardware_info *hw_info, const char 
         strlcpy(hw_info->name, "msm8917", sizeof(hw_info->name));
      } else if (!strcmp(snd_card_name, "msm8940-sku6-snd-card")) {
         strlcpy(hw_info->name, "msm8940", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8953-sku4-snd-card")) {
+        hw_info->is_stereo_spkr = false;
+        strlcpy(hw_info->name, "msm8953", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "sdm660-snd-card")) {
         strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "sdm660-snd-card-mtp")) {
