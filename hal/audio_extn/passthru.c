@@ -207,6 +207,8 @@ int audio_extn_passthru_get_channel_count(struct stream_out *out)
        channel_count = audio_channel_count_from_out_mask(out->channel_mask);
 #endif
        break;
+    case AUDIO_FORMAT_IEC61937:
+       channel_count = audio_channel_count_from_out_mask(out->channel_mask);
    default:
        break;
    }
