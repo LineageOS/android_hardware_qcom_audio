@@ -62,7 +62,6 @@ struct cirrus_cal_result_t {
     int32_t status_r;
     int32_t checksum_r;
     int32_t z_r;
-    int32_t atemp;
 };
 
 /* Payload struct for setting the RX and TX use cases */
@@ -74,7 +73,6 @@ struct crus_rx_run_case_ctrl_t {
     int32_t status_r;
     int32_t checksum_r;
     int32_t z_r;
-    int32_t atemp;
 };
 
 #define CRUS_SP_FILE "/dev/msm_cirrus_playback"
@@ -125,11 +123,11 @@ static struct pcm_config pcm_config_cirrus_tx = {
 };
 
 static struct pcm_config pcm_config_cirrus_rx = {
-    .channels = 2,
+    .channels = 8,
     .rate = 48000,
-    .period_size = 256,
+    .period_size = 320,
     .period_count = 4,
-    .format = PCM_FORMAT_S16_LE,
+    .format = PCM_FORMAT_S32_LE,
     .start_threshold = 0,
     .stop_threshold = INT_MAX,
     .avail_min = 0,
@@ -224,18 +222,6 @@ static int audio_extn_cirrus_run_calibration() {
                   __func__, ret);
             ret = -EINVAL;
             goto exit;
-        }
-
-        property_get("vendor.audio.cirrus_spkr.cal.store_calib_data", value, "none");
-        if (!strncmp("true", value, 4)) {
-            store_calib_data = true;
-            property_get("vendor.audio.cirrus_spkr.cal.atemp", value, "0");
-            if(atoi(value) > 0)
-                result.atemp = atoi(value);
-            else
-                result.atemp = CRUS_SP_DEFAULT_AMBIENT_TEMP;
-        } else {
-            result.atemp = CRUS_SP_DEFAULT_AMBIENT_TEMP;
         }
 
         if(store_calib_data) {
@@ -436,7 +422,8 @@ void audio_extn_spkr_prot_init(void *adev) {
     snd_split_handle = audio_extn_get_snd_card_split();
 
     /* FIXME: REMOVE THIS AFTER B1C1 P1.0 SUPPORT */
-    if (!strcmp(snd_split_handle->form_factor, "tdm")) {
+    if (!strcmp(snd_split_handle->form_factor, "tdm") ||
+        !strcmp(snd_split_handle->form_factor, "c1")) {
         handle.spkr_prot_enable = true;
     } else {
         handle.spkr_prot_enable = false;
