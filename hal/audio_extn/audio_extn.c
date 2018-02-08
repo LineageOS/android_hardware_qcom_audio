@@ -1254,6 +1254,7 @@ int audio_extn_check_and_set_multichannel_usecase(struct audio_device *adev,
 {
     bool ssr_supported = false;
     in->config.rate = config->sample_rate;
+    in->sample_rate = config->sample_rate;
     ssr_supported = audio_extn_ssr_check_usecase(in);
     if (ssr_supported) {
         return audio_extn_ssr_set_usecase(in, config, update_params);
