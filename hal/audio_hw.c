@@ -6009,16 +6009,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         }
     }
 
-    ret = str_parms_get_int(parms, "ultrasound_set_manual_calibration", &val);
-    if (ret >= 0) {
-        us_set_manual_cal(val);
-    }
-
-    ret = str_parms_get_int(parms, "ultrasound_set_sensitivity", &val);
-    if (ret >= 0) {
-        us_set_sensitivity(val);
-    }
-
     amplifier_set_parameters(parms);
     audio_extn_set_parameters(adev, parms);
 done:
