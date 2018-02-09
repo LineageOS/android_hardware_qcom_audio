@@ -3731,8 +3731,9 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                     out->a2dp_compress_mute = false;
                     out_set_compr_volume(&out->stream, out->volume_l, out->volume_r);
                     pthread_mutex_unlock(&out->compr_mute_lock);
+                } else if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP) {
+                    out_set_voip_volume(&out->stream, out->volume_l, out->volume_r);
                 }
-
             }
         }
 
