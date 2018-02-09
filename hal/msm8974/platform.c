@@ -920,6 +920,7 @@ static int msm_be_id_array_len  =
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 #define ULL_PLATFORM_DELAY         (6*1000LL)
 
+#if 0
 static bool can_enable_mbdrc_on_device(snd_device_t snd_device)
 {
     bool ret = false;
@@ -937,9 +938,11 @@ static bool can_enable_mbdrc_on_device(snd_device_t snd_device)
     }
     return ret;
 }
+#endif
 
-bool platform_send_gain_dep_cal(void *platform, int level) {
+bool platform_send_gain_dep_cal(void *platform __unused, int level __unused) {
     bool ret_val = false;
+#if 0
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     int acdb_dev_id, app_type;
@@ -997,6 +1000,7 @@ bool platform_send_gain_dep_cal(void *platform, int level) {
         ALOGW("%s: Voice call in progress .. ignore setting new cal",
               __func__);
     }
+#endif
     return ret_val;
 }
 
