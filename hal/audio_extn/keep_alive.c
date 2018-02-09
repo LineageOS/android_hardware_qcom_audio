@@ -119,7 +119,7 @@ void audio_extn_keep_alive_init(struct audio_device *adev)
     ka.userdata = adev;
     ka.state = STATE_IDLE;
     ka.pcm = NULL;
-    if (property_get_bool("audio.keep_alive.disabled", false)) {
+    if (property_get_bool("vendor.audio.keep_alive.disabled", false)) {
         ALOGE("keep alive disabled");
         ka.state = STATE_DISABLED;
         return;
