@@ -16,6 +16,24 @@
       "revId": "bf58379bec498a277158f2dd78f2563ec0802971",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c0e43731_1b8e36d8",
+        "filename": "hal/audio_extn/ultrasound.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 21,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2018-02-09T21:21:11Z",
+      "side": 1,
+      "message": "It\u0027s set up this way because all things in audio_extn are ifdeffed like this",
+      "parentUuid": "ebffdb51_4656be30",
+      "revId": "bf58379bec498a277158f2dd78f2563ec0802971",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
