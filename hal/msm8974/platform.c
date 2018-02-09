@@ -5962,7 +5962,11 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                             bit_width = out->bit_width;
                         if (sample_rate < out->sample_rate)
                             sample_rate = out->sample_rate;
-                        if (out->sample_rate < OUTPUT_SAMPLING_RATE_44100)
+                        /*
+                         * TODO: Add Support for Backend configuration for devices which support
+                         * sample rate less than 44.1
+                         */
+                        if (sample_rate < OUTPUT_SAMPLING_RATE_44100)
                             sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
                         if (channels < out_channels)
                             channels = out_channels;
