@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "85b76b8f_f969e1a0",
+        "filename": "hal/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 374,
+      "author": {
+        "id": 13559
+      },
+      "writtenOn": "2018-02-11T06:42:46Z",
+      "side": 1,
+      "message": "could we actually have it  as opt-in instead of opt-out since all devices dont need it",
+      "range": {
+        "startLine": 374,
+        "startChar": 0,
+        "endLine": 374,
+        "endChar": 61
+      },
+      "revId": "7e46afcacefac1a2655e80a9223e60ed001abf5f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
