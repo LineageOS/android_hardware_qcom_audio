@@ -22,6 +22,30 @@
       "revId": "7e46afcacefac1a2655e80a9223e60ed001abf5f",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "97b34339_59798e9e",
+        "filename": "hal/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 374,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2018-02-11T10:52:08Z",
+      "side": 1,
+      "message": "It\u0027s fine as is: https://github.com/LineageOS/android_hardware_qcom_audio/blob/1eafbe760ae29c1905c1f5bed2f827d0c76e8262/hal/audio_extn/audio_amplifier.h#L20-L32",
+      "parentUuid": "85b76b8f_f969e1a0",
+      "range": {
+        "startLine": 374,
+        "startChar": 0,
+        "endLine": 374,
+        "endChar": 61
+      },
+      "revId": "7e46afcacefac1a2655e80a9223e60ed001abf5f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
