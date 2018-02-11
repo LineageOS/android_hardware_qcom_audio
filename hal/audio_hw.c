@@ -99,8 +99,6 @@ static unsigned int configured_low_latency_capture_period_size =
 #define MMAP_PERIOD_COUNT_MAX 512
 #define MMAP_PERIOD_COUNT_DEFAULT (MMAP_PERIOD_COUNT_MAX)
 
-static const int64_t NANOS_PER_SECOND = 1000000000;
-
 /* This constant enables extended precision handling.
  * TODO The flag is off until more testing is done.
  */
