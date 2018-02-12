@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -85,6 +85,7 @@
 #define PLATFORM_INFO_XML_PATH_SKUSH  "/etc/audio_platform_info_skush.xml"
 #define PLATFORM_INFO_XML_PATH      "/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_WCD9326_I2S "/etc/mixer_paths_wcd9326_i2s.xml"
+#define MIXER_XML_PATH_WCD9326_I2S_TDM "/etc/mixer_paths_wcd9326_i2s_tdm.xml"
 #define MIXER_XML_PATH_WCD9330_I2S "/etc/mixer_paths_wcd9330_i2s.xml"
 #define MIXER_XML_PATH_WCD9335_I2S "/etc/mixer_paths_wcd9335_i2s.xml"
 #define MIXER_XML_PATH_SBC "/etc/mixer_paths_sbc.xml"
@@ -100,6 +101,7 @@
 #define MIXER_XML_PATH_SKUN "/vendor/etc/mixer_paths_qrd_skun.xml"
 #define PLATFORM_INFO_XML_PATH      "/vendor/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_WCD9326_I2S "/vendor/etc/mixer_paths_wcd9326_i2s.xml"
+#define MIXER_XML_PATH_WCD9326_I2S_TDM "/vendor/etc/mixer_paths_wcd9326_i2s_tdm.xml"
 #define MIXER_XML_PATH_WCD9330_I2S "/vendor/etc/mixer_paths_wcd9330_i2s.xml"
 #define MIXER_XML_PATH_WCD9335_I2S "/vendor/etc/mixer_paths_wcd9335_i2s.xml"
 #define MIXER_XML_PATH_SBC "/vendor/etc/mixer_paths_sbc.xml"
@@ -940,6 +942,7 @@ static int msm_device_to_be_id_internal_codec [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET              ,       9},
        {AUDIO_DEVICE_OUT_USB_ACCESSORY                  ,       -1},
        {AUDIO_DEVICE_OUT_USB_DEVICE                     ,       -1},
+       {AUDIO_DEVICE_OUT_USB_HEADSET                    ,       -1},
        {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
        {AUDIO_DEVICE_OUT_PROXY                          ,       9},
        {AUDIO_DEVICE_OUT_FM                             ,       7},
@@ -965,6 +968,7 @@ static int msm_device_to_be_id_external_codec [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET              ,       9},
        {AUDIO_DEVICE_OUT_USB_ACCESSORY                  ,       -1},
        {AUDIO_DEVICE_OUT_USB_DEVICE                     ,       -1},
+       {AUDIO_DEVICE_OUT_USB_HEADSET                    ,       -1},
        {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
        {AUDIO_DEVICE_OUT_PROXY                          ,       9},
        {AUDIO_DEVICE_OUT_FM                             ,       7},
@@ -1026,6 +1030,8 @@ static void update_codec_type(const char *snd_card_name) {
                   sizeof("sdm660-tasha-snd-card")) ||
          !strncmp(snd_card_name, "apq8009-tashalite-snd-card",
                   sizeof("apq8009-tashalite-snd-card")) ||
+         !strncmp(snd_card_name, "apq8009-tashalite-snd-card-tdm",
+                  sizeof("apq8009-tashalite-snd-card-tdm")) ||
          !strncmp(snd_card_name, "mdm9607-tomtom-i2s-snd-card",
                   sizeof("mdm9607-tomtom-i2s-snd-card")) ||
          !strncmp(snd_card_name, "mdm-tasha-i2s-snd-card",
@@ -1397,6 +1403,13 @@ static void query_platform(const char *snd_card_name,
    } else if (!strncmp(snd_card_name, "apq8009-tashalite-snd-card",
                  sizeof("apq8009-tashalite-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9326_I2S,
+               MAX_MIXER_XML_PATH);
+        msm_device_to_be_id = msm_device_to_be_id_external_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_external_codec) / sizeof(msm_device_to_be_id_external_codec[0]);
+   } else if (!strncmp(snd_card_name, "apq8009-tashalite-snd-card-tdm",
+                 sizeof("apq8009-tashalite-snd-card-tdm"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9326_I2S_TDM,
                MAX_MIXER_XML_PATH);
         msm_device_to_be_id = msm_device_to_be_id_external_codec;
         msm_be_id_array_len  =
@@ -1851,7 +1864,7 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
     plat_data->hw_dep_fd = fd;
 }
 
-const char * get_snd_card_name_for_acdb_loader(const char *snd_card_name) {
+const char * platform_get_snd_card_name_for_acdb_loader(const char *snd_card_name) {
 
     if(snd_card_name == NULL)
         return NULL;
@@ -1905,7 +1918,7 @@ int platform_acdb_init(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     char *cvd_version = NULL;
-    const char *snd_card_name, *acdb_snd_card_name;
+    const char *snd_card_name;
     int result = -1;
     struct listnode *node;
     struct meta_key_list *key_info;
@@ -1920,21 +1933,21 @@ int platform_acdb_init(void *platform)
     }
 
     snd_card_name = mixer_get_name(my_data->adev->mixer);
-    acdb_snd_card_name = get_snd_card_name_for_acdb_loader(snd_card_name);
+    snd_card_name = platform_get_snd_card_name_for_acdb_loader(snd_card_name);
 
     if (my_data->acdb_init_v3) {
-        result = my_data->acdb_init_v3(acdb_snd_card_name, cvd_version,
+        result = my_data->acdb_init_v3(snd_card_name, cvd_version,
                                            &my_data->acdb_meta_key_list);
     } else if (my_data->acdb_init) {
         node = list_head(&my_data->acdb_meta_key_list);
         key_info = node_to_item(node, struct meta_key_list, list);
         key = key_info->cal_info.nKey;
-        result = my_data->acdb_init(acdb_snd_card_name, cvd_version, key);
+        result = my_data->acdb_init(snd_card_name, cvd_version, key);
     }
     /* Save these variables in platform_data. These will be used
        while reloading ACDB files during run time. */
     strlcpy(my_data->cvd_version, cvd_version, MAX_CVD_VERSION_STRING_SIZE);
-    strlcpy(my_data->snd_card_name, acdb_snd_card_name,
+    strlcpy(my_data->snd_card_name, snd_card_name,
                                                MAX_SND_CARD_STRING_SIZE);
 
     if (cvd_version)
@@ -3904,8 +3917,10 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         } else if (devices == (AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET |
                                AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET;
-        } else if (devices == (AUDIO_DEVICE_OUT_USB_DEVICE |
-                               AUDIO_DEVICE_OUT_SPEAKER)) {
+        } else if ((devices == (AUDIO_DEVICE_OUT_USB_DEVICE |
+                               AUDIO_DEVICE_OUT_SPEAKER)) ||
+                    (devices == (AUDIO_DEVICE_OUT_USB_HEADSET |
+                               AUDIO_DEVICE_OUT_SPEAKER))){
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET;
         } else if ((devices & AUDIO_DEVICE_OUT_SPEAKER) &&
                    (devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
@@ -3961,7 +3976,9 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
             } else {
                 snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
             }
-        } else if (devices & AUDIO_DEVICE_OUT_USB_DEVICE) {
+        } else if (devices &
+                    (AUDIO_DEVICE_OUT_USB_DEVICE |
+                     AUDIO_DEVICE_OUT_USB_HEADSET)) {
             if (snd_device == SND_DEVICE_NONE) {
                     snd_device = audio_extn_usb_is_capture_supported() ?
                              SND_DEVICE_OUT_VOICE_USB_HEADSET :
@@ -4096,7 +4113,9 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         ALOGD("%s: setting USB hadset channel capability(2) for Proxy", __func__);
         audio_extn_set_afe_proxy_channel_mixer(adev, 2);
         snd_device = SND_DEVICE_OUT_USB_HEADSET;
-    } else if (devices & AUDIO_DEVICE_OUT_USB_DEVICE) {
+    } else if (devices &
+                (AUDIO_DEVICE_OUT_USB_DEVICE |
+                 AUDIO_DEVICE_OUT_USB_HEADSET)) {
         if (audio_extn_usb_is_capture_supported())
            snd_device = SND_DEVICE_OUT_USB_HEADSET;
         else
@@ -4196,7 +4215,7 @@ static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
                 snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC_NS;
         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
-        } else if (in_device & AUDIO_DEVICE_IN_USB_DEVICE) {
+        } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC_AEC;
         }
         platform_set_echo_reference(adev, true, out_device);
@@ -4226,7 +4245,7 @@ static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
                 snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC;
         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
-       } else if (in_device & AUDIO_DEVICE_IN_USB_DEVICE) {
+       } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC_AEC;
         }
         platform_set_echo_reference(adev, true, out_device);
@@ -4394,7 +4413,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             }
         } else if (out_device & AUDIO_DEVICE_OUT_TELEPHONY_TX) {
             snd_device = SND_DEVICE_IN_VOICE_RX;
-        } else if (out_device & AUDIO_DEVICE_OUT_USB_DEVICE) {
+        } else if (out_device &
+                    (AUDIO_DEVICE_OUT_USB_DEVICE |
+                     AUDIO_DEVICE_OUT_USB_HEADSET)) {
             if (audio_extn_usb_is_capture_supported()) {
                 snd_device = SND_DEVICE_IN_VOICE_USB_HEADSET_MIC;
             }
@@ -4473,7 +4494,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 else
                     snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
             }
-        } else if (in_device & AUDIO_DEVICE_IN_USB_DEVICE) {
+        } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
             snd_device = SND_DEVICE_IN_VOICE_RECOG_USB_HEADSET_MIC;
         }
     } else if (source == AUDIO_SOURCE_UNPROCESSED) {
@@ -4493,7 +4514,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             }
         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC;
-        } else if (in_device & AUDIO_DEVICE_IN_USB_DEVICE) {
+        } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
             snd_device = SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_MIC;
         }
     } else if ((source == AUDIO_SOURCE_VOICE_COMMUNICATION) ||
@@ -4572,7 +4593,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_FM_TUNER) {
             snd_device = SND_DEVICE_IN_CAPTURE_FM;
-        } else if (in_device & AUDIO_DEVICE_IN_USB_DEVICE ) {
+        } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else {
             ALOGE("%s: Unknown input device(s) %#x", __func__, in_device);
@@ -4609,7 +4630,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (out_device & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
                    out_device & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
-        } else if (out_device & AUDIO_DEVICE_OUT_USB_DEVICE) {
+        } else if (out_device &
+                    (AUDIO_DEVICE_OUT_USB_DEVICE |
+                     AUDIO_DEVICE_OUT_USB_HEADSET)) {
             if (audio_extn_usb_is_capture_supported())
                 snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
             else

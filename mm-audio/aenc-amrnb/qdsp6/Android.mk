@@ -63,6 +63,7 @@ LOCAL_C_INCLUDES        := $(mm-amr-enc-test-inc)
 LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := libmm-omxcore
 LOCAL_SHARED_LIBRARIES  += libOmxAmrEnc
+LOCAL_VENDOR_MODULE     := true
 LOCAL_SRC_FILES         := test/omx_amr_enc_test.c
 
 include $(BUILD_EXECUTABLE)

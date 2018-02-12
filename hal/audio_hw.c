@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -2316,6 +2316,12 @@ static int stop_input_stream(struct stream_in *in)
 {
     int ret = 0;
     struct audio_usecase *uc_info;
+
+    if (in == NULL) {
+        ALOGE("%s: stream_in ptr is NULL", __func__);
+        return -EINVAL;
+    }
+
     struct audio_device *adev = in->dev;
 
     ALOGV("%s: enter: usecase(%d: %s)", __func__,
@@ -3207,7 +3213,9 @@ static int check_input_parameters(uint32_t sample_rate,
     case 32000:
     case 44100:
     case 48000:
+    case 88200:
     case 96000:
+    case 176400:
     case 192000:
         break;
     default:
@@ -3273,7 +3281,7 @@ static size_t get_output_period_size(uint32_t sample_rate,
     return (size/(channel_count * bytes_per_sample));
 }
 
-static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out)
+static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out, struct timespec *timestamp)
 {
     uint64_t actual_frames_rendered = 0;
     size_t kernel_buffer_size = out->compr_config.fragment_size * out->compr_config.fragments;
@@ -3284,6 +3292,7 @@ static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out)
     int64_t platform_latency =  platform_render_latency(out->usecase) *
                                 out->sample_rate / 1000000LL;
 
+    pthread_mutex_lock(&out->position_query_lock);
     /* not querying actual state of buffering in kernel as it would involve an ioctl call
      * which then needs protection, this causes delay in TS query for pcm_offload usecase
      * hence only estimate.
@@ -3292,8 +3301,14 @@ static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out)
 
     signed_frames = signed_frames / (audio_bytes_per_sample(out->format) * popcount(out->channel_mask)) - platform_latency;
 
-    if (signed_frames > 0)
+    if (signed_frames > 0) {
         actual_frames_rendered = signed_frames;
+        if (timestamp != NULL )
+            *timestamp = out->writeAt;
+    } else if (timestamp != NULL) {
+        clock_gettime(CLOCK_MONOTONIC, timestamp);
+    }
+    pthread_mutex_unlock(&out->position_query_lock);
 
     ALOGVV("%s signed frames %lld out_written %lld kernel_buffer_size %d"
             "bytes/sample %zu channel count %d", __func__,(long long int)signed_frames,
@@ -3421,7 +3436,6 @@ static int out_on_error(struct audio_stream *stream)
     struct stream_out *out = (struct stream_out *)stream;
 
     lock_output_stream(out);
-
     // always send CMD_ERROR for offload streams, this
     // is needed e.g. when SSR happens within compress_open
     // since the stream is active, offload_callback_thread is also active.
@@ -3429,18 +3443,9 @@ static int out_on_error(struct audio_stream *stream)
         stop_compressed_output_l(out);
         send_offload_cmd_l(out, OFFLOAD_CMD_ERROR);
     }
-
-    // for compress streams , if the stream is not in standby
-    // it will be triggered eventually from AF.
-    bool do_standby = !out->standby &&
-                      !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD);
-
     pthread_mutex_unlock(&out->lock);
 
-    if (do_standby)
-        return out_standby(&out->stream.common);
-
-    return 0;
+    return out_standby(&out->stream.common);
 }
 
 /*
@@ -4166,8 +4171,13 @@ static void update_frames_written(struct stream_out *out, size_t bytes)
     else if (!is_offload_usecase(out->usecase))
         bpf = audio_bytes_per_sample(out->format) *
              audio_channel_count_from_out_mask(out->channel_mask);
-    if (bpf != 0)
+
+    pthread_mutex_lock(&out->position_query_lock);
+    if (bpf != 0) {
         out->written += bytes / bpf;
+        clock_gettime(CLOCK_MONOTONIC, &out->writeAt);
+    }
+    pthread_mutex_unlock(&out->position_query_lock);
 }
 
 static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
@@ -4492,7 +4502,7 @@ static int out_get_render_position(const struct audio_stream_out *stream,
          * this operation and adev_close_output_stream(where out gets reset).
          */
         if (!out->non_blocking && !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
-            *dsp_frames = get_actual_pcm_frames_rendered(out);
+            *dsp_frames = get_actual_pcm_frames_rendered(out, NULL);
              ALOGVV("dsp_frames %d sampleRate %d",(int)*dsp_frames,out->sample_rate);
              adjust_frames_for_device_delay(out, dsp_frames);
              return 0;
@@ -4565,9 +4575,7 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
      */
     if (is_offload_usecase(out->usecase) && !out->non_blocking &&
         !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
-        *frames = get_actual_pcm_frames_rendered(out);
-        /* this is the best we can do */
-        clock_gettime(CLOCK_MONOTONIC, timestamp);
+        *frames = get_actual_pcm_frames_rendered(out, timestamp);
         ALOGVV("frames %lld playedat %lld",(long long int)*frames,
              timestamp->tv_sec * 1000000LL + timestamp->tv_nsec / 1000);
         return 0;
@@ -5197,6 +5205,12 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
                        size_t bytes)
 {
     struct stream_in *in = (struct stream_in *)stream;
+
+    if (in == NULL) {
+        ALOGE("%s: stream_in ptr is NULL", __func__);
+        return -EINVAL;
+    }
+
     struct audio_device *adev = in->dev;
     int ret = -1;
     size_t bytes_read = 0;
@@ -5544,6 +5558,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     pthread_mutex_init(&out->lock, (const pthread_mutexattr_t *) NULL);
     pthread_mutex_init(&out->pre_lock, (const pthread_mutexattr_t *) NULL);
     pthread_mutex_init(&out->compr_mute_lock, (const pthread_mutexattr_t *) NULL);
+    pthread_mutex_init(&out->position_query_lock, (const pthread_mutexattr_t *) NULL);
     pthread_cond_init(&out->cond, (const pthread_condattr_t *) NULL);
 
     if (devices == AUDIO_DEVICE_NONE)
@@ -5851,6 +5866,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->is_compr_metadata_avail = false;
         out->offload_state = OFFLOAD_STATE_IDLE;
         out->playback_started = 0;
+        out->writeAt.tv_sec = 0;
+        out->writeAt.tv_nsec = 0;
 
         audio_extn_dts_create_state_notifier_node(out->usecase);
 
@@ -6279,6 +6296,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value, sizeof(value));
     if (ret >= 0) {
         val = atoi(value);
+        audio_devices_t device = (audio_devices_t) val;
         if (audio_is_output_device(val) &&
             (val & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
             ALOGV("cache new ext disp type and edid");
@@ -6289,8 +6307,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 goto done;
             }
             platform_cache_edid(adev->platform);
-        } else if (((audio_devices_t)val == AUDIO_DEVICE_OUT_USB_DEVICE) ||
-                   ((audio_devices_t)val == AUDIO_DEVICE_IN_USB_DEVICE)) {
+        } else if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
             /*
              * Do not allow AFE proxy port usage by WFD source when USB headset is connected.
              * Per AudioPolicyManager, USB device is higher priority than WFD.
@@ -6299,12 +6316,9 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
              * starting voice call on USB
              */
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
-            if (ret >= 0) {
-                if (audio_is_output_device(val))
-                    audio_extn_usb_add_device(AUDIO_DEVICE_OUT_USB_DEVICE, atoi(value));
-                else
-                    audio_extn_usb_add_device(AUDIO_DEVICE_IN_USB_DEVICE, atoi(value));
-            }
+            if (ret >= 0)
+                audio_extn_usb_add_device(device, atoi(value));
+
             if (!audio_extn_usb_is_tunnel_supported()) {
                 ALOGV("detected USB connect .. disable proxy");
                 adev->allow_afe_proxy_usage = false;
@@ -6315,21 +6329,18 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value, sizeof(value));
     if (ret >= 0) {
         val = atoi(value);
+        audio_devices_t device = (audio_devices_t) val;
         /*
          * The HDMI / Displayport disconnect handling has been moved to
          * audio extension to ensure that its parameters are not
          * invalidated prior to updating sysfs of the disconnect event
          * Invalidate will be handled by audio_extn_ext_disp_set_parameters()
          */
-        if (((audio_devices_t)val == AUDIO_DEVICE_OUT_USB_DEVICE) ||
-            ((audio_devices_t)val == AUDIO_DEVICE_IN_USB_DEVICE)) {
+        if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
-            if (ret >= 0) {
-                if (audio_is_output_device(val))
-                    audio_extn_usb_remove_device(AUDIO_DEVICE_OUT_USB_DEVICE, atoi(value));
-                else
-                    audio_extn_usb_remove_device(AUDIO_DEVICE_IN_USB_DEVICE, atoi(value));
-            }
+            if (ret >= 0)
+                audio_extn_usb_remove_device(device, atoi(value));
+
             if (!audio_extn_usb_is_tunnel_supported()) {
                 ALOGV("detected USB disconnect .. enable proxy");
                 adev->allow_afe_proxy_usage = true;
@@ -6900,6 +6911,11 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
 
     /* Disable echo reference while closing input stream */
     platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
+
+    if (in == NULL) {
+        ALOGE("%s: audio_stream_in ptr is NULL", __func__);
+        return;
+    }
 
     if (in->usecase == USECASE_COMPRESS_VOIP_CALL) {
         pthread_mutex_lock(&adev->lock);

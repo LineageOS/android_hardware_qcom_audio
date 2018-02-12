@@ -558,7 +558,7 @@ void *hw_info_init(const char *snd_card_name)
     } else if (strstr(snd_card_name, "sdm660") || strstr(snd_card_name, "sdm670")) {
         ALOGV("Bear - variant soundcard");
         update_hardware_info_bear(hw_info, snd_card_name);
-    } else if (strncmp(snd_card_name, "sdx", sizeof("sdx"))) {
+    } else if (strstr(snd_card_name, "sdx")) {
         ALOGV("SDX - variant soundcard");
         update_hardware_info_sdx(hw_info, snd_card_name);
     } else {
