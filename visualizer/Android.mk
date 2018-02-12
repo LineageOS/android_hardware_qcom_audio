@@ -21,6 +21,8 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 
+LOCAL_CFLAGS += -Wno-unused-variable -Wno-unused-parameter -Wno-gnu-designator -Wno-unused-value -Wno-typedef-redefinition
+
 ifneq ($(filter sdm660 sdm845 msm8998 apq8098_latv sdm670 qcs605,$(TARGET_BOARD_PLATFORM)),)
     LOCAL_CFLAGS += -DCAPTURE_DEVICE=7
 endif
