@@ -1038,7 +1038,9 @@ static void update_codec_type_and_interface(struct platform_data * my_data, cons
          !strncmp(snd_card_name, "sdm660-snd-card-mtp",
                   sizeof("sdm660-snd-card-mtp")) ||
          !strncmp(snd_card_name, "sdm670-mtp-snd-card",
-                   sizeof("sdm670-mtp-snd-card"))) {
+                   sizeof("sdm670-mtp-snd-card")) ||
+         !strncmp(snd_card_name, "qcs605-lc-snd-card",
+                   sizeof("qcs605-lc-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -2373,7 +2375,8 @@ acdb_init_fail:
 
     if (!my_data->is_slimbus_interface) {
         if (!strncmp(snd_card_name, "sdm660", strlen("sdm660")) ||
-               !strncmp(snd_card_name, "sdm670", strlen("sdm670"))) {
+               !strncmp(snd_card_name, "sdm670", strlen("sdm670")) ||
+               !strncmp(snd_card_name, "qcs605", strlen("qcs605"))) {
 
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("INT4_MI2S_RX Format");
