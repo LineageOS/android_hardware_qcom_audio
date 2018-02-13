@@ -2350,6 +2350,12 @@ int start_input_stream(struct stream_in *in)
     /* 1. Enable output device and stream routing controls */
     int ret = 0;
     struct audio_usecase *uc_info;
+
+    if (in == NULL) {
+        ALOGE("%s: stream_in ptr is NULL", __func__);
+        return -EINVAL;
+    }
+
     struct audio_device *adev = in->dev;
     struct pcm_config config = in->config;
     int usecase = platform_update_usecase_from_source(in->source,in->usecase);
