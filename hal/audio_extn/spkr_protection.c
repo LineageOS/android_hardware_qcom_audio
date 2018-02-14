@@ -846,9 +846,8 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
         goto exit;
     }
     cleanup = true;
-    clock_gettime(CLOCK_REALTIME, &ts);
+    clock_gettime(CLOCK_MONOTONIC, &ts);
     ts.tv_sec += (SLEEP_AFTER_CALIB_START/1000);
-    ts.tv_nsec = 0;
     pthread_mutex_lock(&handle.mutex_spkr_prot);
     pthread_mutex_unlock(&adev->lock);
     acquire_device = true;
@@ -963,9 +962,8 @@ static void spkr_calibrate_wait()
 {
     struct timespec ts;
 
-    clock_gettime(CLOCK_REALTIME, &ts);
+    clock_gettime(CLOCK_MONOTONIC, &ts);
     ts.tv_sec += WAKEUP_MIN_IDLE_CHECK;
-    ts.tv_nsec = 0;
     pthread_mutex_lock(&handle.cal_wait_cond_mutex);
     pthread_cond_timedwait(&handle.cal_wait_condition,
                            &handle.cal_wait_cond_mutex, &ts);
@@ -1570,6 +1568,7 @@ void audio_extn_spkr_prot_init(void *adev)
 {
     char value[PROPERTY_VALUE_MAX];
     int result = 0;
+    pthread_condattr_t attr;
     ALOGD("%s: Initialize speaker protection module", __func__);
     memset(&handle, 0, sizeof(handle));
     if (!adev) {
@@ -1593,15 +1592,18 @@ void audio_extn_spkr_prot_init(void *adev)
     handle.trigger_cal = false;
     /* HAL for speaker protection is always calibrating for stereo usecase*/
     vi_feed_no_channels = spkr_vi_channels(adev);
-    pthread_cond_init(&handle.cal_wait_condition, NULL);
-    pthread_mutex_init(&handle.cal_wait_cond_mutex, NULL);
 
+    pthread_condattr_init(&attr);
+    pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+    pthread_cond_init(&handle.cal_wait_condition, &attr);
+    pthread_mutex_init(&handle.cal_wait_cond_mutex, NULL);
+    pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
     if (is_wsa_present()) {
         if (platform_spkr_prot_is_wsa_analog_mode(adev) == 1) {
             ALOGD("%s: WSA analog mode", __func__);
             pcm_config_skr_prot.channels = WSA_ANALOG_MODE_CHANNELS;
         }
-        pthread_cond_init(&handle.spkr_calib_cancel, NULL);
+        pthread_cond_init(&handle.spkr_calib_cancel, &attr);
         pthread_cond_init(&handle.spkr_calibcancel_ack, NULL);
         pthread_mutex_init(&handle.mutex_spkr_prot, NULL);
         pthread_mutex_init(&handle.spkr_calib_cancelack_mutex, NULL);
@@ -1619,7 +1621,7 @@ void audio_extn_spkr_prot_init(void *adev)
         ALOGD("%s: WSA spkr calibration thread is not created", __func__);
     }
     pthread_cond_init(&handle.spkr_prot_thermalsync, NULL);
-    pthread_cond_init(&handle.spkr_calib_cancel, NULL);
+    pthread_cond_init(&handle.spkr_calib_cancel, &attr);
     pthread_cond_init(&handle.spkr_calibcancel_ack, NULL);
     pthread_mutex_init(&handle.mutex_spkr_prot, NULL);
     pthread_mutex_init(&handle.spkr_calib_cancelack_mutex, NULL);

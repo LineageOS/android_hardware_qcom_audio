@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2015 The Android Open Source Project *
@@ -1166,7 +1166,7 @@ int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
             bytes_remaining = write_length = bytes_wanted;
         }
         if (count == 0) {
-            ret = clock_gettime(CLOCK_REALTIME, &ts_cold);
+            ret = clock_gettime(CLOCK_MONOTONIC, &ts_cold);
             if (ret) {
                 fprintf(log_file, "error(%d) fetching start time for cold latency", ret);
                 fprintf(stderr, "error(%d) fetching start time for cold latency", ret);
@@ -1176,7 +1176,7 @@ int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
         } else if (count == 16) {
             int *d = (int *)data;
             d[0] = 0x01010000;
-            ret = clock_gettime(CLOCK_REALTIME, &ts_cont);
+            ret = clock_gettime(CLOCK_MONOTONIC, &ts_cont);
             if (ret) {
                 fprintf(log_file, "error(%d) fetching start time for continuous latency", ret);
                 fprintf(stderr, "error(%d) fetching start time for continuous latency", ret);
