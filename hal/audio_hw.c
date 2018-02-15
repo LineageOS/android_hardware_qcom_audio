@@ -1423,6 +1423,11 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                                                                         usecase->out_snd_device,
                                                                         platform_get_input_snd_device(adev->platform, uc_info->devices));
                     enable_audio_route(adev, usecase);
+                    if (usecase->id == USECASE_AUDIO_PLAYBACK_FM) {
+                        struct str_parms *parms = str_parms_create_str("fm_restore_volume=1");
+                        if (parms)
+                            audio_extn_fm_set_parameters(adev, parms);
+                    }
                 }
             }
         }
