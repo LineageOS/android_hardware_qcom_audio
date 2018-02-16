@@ -240,4 +240,5 @@ void platform_check_and_update_copp_sample_rate(void *platform, snd_device_t snd
 int platform_get_max_codec_backend();
 int platform_get_mmap_data_fd(void *platform, int dev, int dir,
                                int *fd, uint32_t *size);
+const char * platform_get_snd_card_name_for_acdb_loader(const char *snd_card_name);
 #endif // AUDIO_PLATFORM_API_H
