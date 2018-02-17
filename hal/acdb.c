@@ -34,7 +34,7 @@ int acdb_init(int snd_card_num)
     int result = -1;
     char *cvd_version = NULL;
 
-    char *snd_card_name = NULL;
+    const char *snd_card_name = NULL;
     struct mixer *mixer = NULL;
     struct acdb_platform_data *my_data = NULL;
 
@@ -115,13 +115,14 @@ int acdb_init(int snd_card_num)
     }
 
     /* Get Sound card name */
-    snd_card_name = strdup(mixer_get_name(mixer));
+    snd_card_name = mixer_get_name(mixer);
     if (!snd_card_name) {
         ALOGE("failed to allocate memory for snd_card_name");
         result = -1;
         goto cleanup;
     }
 
+    snd_card_name = platform_get_snd_card_name_for_acdb_loader(snd_card_name);
     int key = 0;
     struct listnode *node = NULL;
     struct meta_key_list *key_info = NULL;
@@ -157,9 +158,6 @@ cleanup:
 
     if (cvd_version)
         free(cvd_version);
-
-    if (snd_card_name)
-        free(snd_card_name);
 
     return result;
 }
