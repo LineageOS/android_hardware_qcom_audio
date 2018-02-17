@@ -199,13 +199,14 @@ LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
 	external/tinycompress/include \
 	external/expat/lib \
-	hardware/libhardware/include \
 	$(call include-path-for, audio-route) \
 	$(call include-path-for, audio-effects) \
 	$(LOCAL_PATH)/$(AUDIO_PLATFORM) \
 	$(LOCAL_PATH)/audio_extn \
 	$(LOCAL_PATH)/voice_extn \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+
+LOCAL_HEADER_LIBRARIES := libhardware_headers
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_LISTEN)),true)
     LOCAL_CFLAGS += -DAUDIO_LISTEN_ENABLED
