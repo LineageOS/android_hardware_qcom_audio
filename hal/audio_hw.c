@@ -1922,6 +1922,11 @@ static bool force_device_switch(struct audio_usecase *usecase)
     bool ret = false;
     bool is_it_true_mode = false;
 
+    if (usecase->type == PCM_CAPTURE ||
+        usecase->type == TRANSCODE_LOOPBACK) {
+        return false;
+    }
+
     if(usecase->stream.out == NULL) {
         ALOGE("%s: stream.out is NULL", __func__);
         return false;
