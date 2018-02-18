@@ -57,6 +57,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <pthread.h>
 #include "QOMX_AudioExtensions.h"
 #include "QOMX_AudioIndexExtensions.h"
+#include <errno.h>
 
 #include <linux/ioctl.h>
 
