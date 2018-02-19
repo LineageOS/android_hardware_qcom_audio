@@ -1,6 +1,6 @@
 
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2014, 2017 The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2014, 2017-2018 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -284,14 +284,15 @@ int get_input_and_validate(char *input, datatype type)
     int status = 0;
 
     errno = 0;
-    ptr = (char *)malloc(strlen(input) + 1);
-    if (ptr == NULL) {
-        DEBUG_PRINT("Low memory\n");
+
+    if (input == NULL){
+        DEBUG_PRINT("No input is given\n");
         status = -1;
         goto exit;
     }
-    if (input == NULL){
-        DEBUG_PRINT("No input is given\n");
+    ptr = (char *)malloc(strlen(input) + 1);
+    if (ptr == NULL) {
+        DEBUG_PRINT("Low memory\n");
         status = -1;
         goto exit;
     }
@@ -333,6 +334,8 @@ int get_input_and_validate(char *input, datatype type)
             break;
     }
 exit:
+    if (ptr != NULL)
+        free(ptr);
     if (status != 0)
         exit(0);
     return value;
