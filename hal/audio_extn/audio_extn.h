@@ -367,6 +367,7 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev);
 #define audio_extn_dolby_get_passt_buffer_size(info)                       (0)
 #define audio_extn_dolby_set_passt_volume(out, mute)                       (0)
 #define audio_extn_dolby_set_passt_latency(out, latency)                   (0)
+#define AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH  0x4000
 #else
 int audio_extn_dolby_update_passt_formats(struct audio_device *adev,
                                           struct stream_out *out);
