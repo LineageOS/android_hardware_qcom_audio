@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5c810608_54cd83c0",
+        "filename": "visualizer/offload_visualizer.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 896,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-02-19T19:55:30Z",
+      "side": 1,
+      "message": "This is still broken because you always dereference replySize in the if check.",
+      "range": {
+        "startLine": 896,
+        "startChar": 17,
+        "endLine": 896,
+        "endChar": 26
+      },
+      "revId": "e558ff558af27a57dc402ae2325323aead573540",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
