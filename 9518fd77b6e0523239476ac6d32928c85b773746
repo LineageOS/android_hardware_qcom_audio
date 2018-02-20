@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fd19df75_3d513641",
+        "filename": "hal/audio_extn/spkr_protection.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1010,
+      "author": {
+        "id": 8859
+      },
+      "writtenOn": "2018-02-20T07:56:03Z",
+      "side": 1,
+      "message": "Hi Ethan, after his we started getting member not found in struct error shown here\nhttps://hastebin.com/gukokoxuqi.coffeescript",
+      "revId": "9518fd77b6e0523239476ac6d32928c85b773746",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
