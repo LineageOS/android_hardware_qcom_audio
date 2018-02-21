@@ -57,6 +57,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "QOMX_AudioExtensions.h"
 #include "QOMX_AudioIndexExtensions.h"
 #include <linux/ioctl.h>
+#include <errno.h>
 
 typedef unsigned char uint8;
 typedef unsigned char byte;
