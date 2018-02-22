@@ -2722,7 +2722,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             }
             ALOGVV("%s: writing buffer (%zu bytes) to pcm device", __func__, bytes_to_write);
 
-            long ns = (frames * NANOS_PER_SECOND) / out->config.rate;
+            long ns = (frames * (int64_t) NANOS_PER_SECOND) / out->config.rate;
             request_out_focus(out, ns);
 
             bool use_mmap = is_mmap_usecase(out->usecase) || out->realtime;
