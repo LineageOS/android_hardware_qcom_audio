@@ -281,6 +281,9 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
         goto error_start_voice;
     }
 
+    if(adev->mic_break_enabled)
+        platform_set_mic_break_det(adev->platform, true);
+
     pcm_start(session->pcm_tx);
     pcm_start(session->pcm_rx);
 

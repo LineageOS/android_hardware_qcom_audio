@@ -3510,6 +3510,26 @@ int platform_stop_voice_call(void *platform, uint32_t vsid)
     return ret;
 }
 
+int platform_set_mic_break_det(void *platform, bool enable)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    const char *mixer_ctl_name = "Voice Mic Break Enable";
+    struct mixer_ctl *ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    ret = mixer_ctl_set_value(ctl, 0, enable);
+    if(ret)
+        ALOGE("%s: Failed to set mixer ctl: %s", __func__, mixer_ctl_name);
+
+    return ret;
+}
+
 int platform_get_sample_rate(void *platform, uint32_t *rate)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
