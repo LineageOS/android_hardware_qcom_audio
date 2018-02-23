@@ -7342,7 +7342,8 @@ int platform_spkr_prot_is_wsa_analog_mode(void *adev)
         (!strcmp(snd_card_name, "msm8952-snd-card")) ||
         (!strcmp(snd_card_name, "msm8952-snd-card-mtp")) ||
         (!strcmp(snd_card_name, "msm8976-skun-snd-card")) ||
-        (!strcmp(snd_card_name, "msm8953-snd-card-mtp")))
+        (!strcmp(snd_card_name, "msm8953-snd-card-mtp")) ||
+        (!strcmp(snd_card_name, "msm8953-sku4-snd-card")))
         return 1;
     else
         return 0;
