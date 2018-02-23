@@ -32,7 +32,7 @@
 #define LOG_NDDEBUG 0
 
 #include <errno.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <fcntl.h>
 #include "audio_hw.h"
 #include "platform.h"
