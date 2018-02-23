@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <fcntl.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <sys/ioctl.h>
 #include <cutils/properties.h>
 #include <cutils/str_parms.h>
