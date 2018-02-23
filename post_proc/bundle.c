@@ -39,7 +39,7 @@
 //#define LOG_NDEBUG 0
 
 #include <cutils/list.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <stdlib.h>
 #include <system/thread_defs.h>
 #include <tinyalsa/asoundlib.h>
