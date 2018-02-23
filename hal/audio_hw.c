@@ -35,7 +35,7 @@
 #include <sys/prctl.h>
 #include <limits.h>
 
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/trace.h>
 #include <cutils/str_parms.h>
 #include <cutils/properties.h>

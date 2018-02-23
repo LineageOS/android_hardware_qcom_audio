@@ -25,7 +25,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <audio_hw.h>
 #include "audio_extn.h"
 #include "sound/msmcal-hwdep.h"

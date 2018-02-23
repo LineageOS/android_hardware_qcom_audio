@@ -16,7 +16,7 @@
 
 #define LOG_TAG "ext_speaker"
 /*#define LOG_NDEBUG 0*/
-#include <cutils/log.h>
+#include <log/log.h>
 
 #include <stdlib.h>
 #include <audio_hw.h>
