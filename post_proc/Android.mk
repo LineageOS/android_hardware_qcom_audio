@@ -65,8 +65,10 @@ LOCAL_C_INCLUDES := \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
         $(call include-path-for, audio-effects)
 
-ifneq ($(filter sdm670 qcs605 msmnile,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msmnile,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_HEADER_LIBRARIES := audio_kernel_headers
+endif
+ifneq ($(filter sdm670 qcs605 msmnile,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
   LOCAL_ADDITIONAL_DEPENDENCIES += $(BOARD_VENDOR_KERNEL_MODULES)
 endif
@@ -163,8 +165,10 @@ LOCAL_C_INCLUDES := \
         hardware/qcom/audio/hal/audio_extn \
         external/tinycompress/include
 
-ifneq ($(filter sdm670 qcs605 msmnile,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msmnile,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_HEADER_LIBRARIES := audio_kernel_headers
+endif
+ifneq ($(filter sdm670 qcs605 msmnile,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
   LOCAL_ADDITIONAL_DEPENDENCIES += $(BOARD_VENDOR_KERNEL_MODULES)
 endif
