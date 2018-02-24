@@ -40,8 +40,10 @@ LOCAL_SRC_FILES         += src/omx_aac_aenc.cpp
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
-ifneq ($(filter sdm670 qcs605 msmnile,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msmnile,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_HEADER_LIBRARIES := audio_kernel_headers
+endif
+ifneq ($(filter sdm670 qcs605 msmnile,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
   LOCAL_ADDITIONAL_DEPENDENCIES += $(BOARD_VENDOR_KERNEL_MODULES)
 endif
