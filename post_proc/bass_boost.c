@@ -46,7 +46,11 @@ const effect_descriptor_t bassboost_descriptor = {
 };
 
 #define LIB_ACDB_LOADER "libacdbloader.so"
+#ifdef PLATFORM_MSM8916
+#define PBE_CONF_APP_ID 0x00011130
+#else
 #define PBE_CONF_APP_ID 0x00011134
+#endif
 
 enum {
         AUDIO_DEVICE_CAL_TYPE = 0,

@@ -31,6 +31,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DTS_EAGLE)), true)
     LOCAL_CFLAGS += -DDTS_EAGLE
 endif
 
+ifneq ($(filter msm8916,$(TARGET_BOARD_PLATFORM)),)
+    LOCAL_CFLAGS += -DPLATFORM_MSM8916
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
 	liblog \
