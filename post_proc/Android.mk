@@ -50,9 +50,7 @@ LOCAL_C_INCLUDES := \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
 	$(call include-path-for, audio-effects)
 
-ifneq ($(call is-board-platform-in-list, msm8916),true)
- include $(BUILD_SHARED_LIBRARY)
-endif
+include $(BUILD_SHARED_LIBRARY)
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS)),true)
 include $(CLEAR_VARS)
