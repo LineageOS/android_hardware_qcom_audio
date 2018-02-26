@@ -1423,6 +1423,11 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                                                                         usecase->out_snd_device,
                                                                         platform_get_input_snd_device(adev->platform, uc_info->devices));
                     enable_audio_route(adev, usecase);
+                    if (usecase->id == USECASE_AUDIO_PLAYBACK_FM) {
+                        struct str_parms *parms = str_parms_create_str("fm_restore_volume=1");
+                        if (parms)
+                            audio_extn_fm_set_parameters(adev, parms);
+                    }
                 }
             }
         }
@@ -1917,6 +1922,11 @@ static bool force_device_switch(struct audio_usecase *usecase)
     bool ret = false;
     bool is_it_true_mode = false;
 
+    if (usecase->type == PCM_CAPTURE ||
+        usecase->type == TRANSCODE_LOOPBACK) {
+        return false;
+    }
+
     if(usecase->stream.out == NULL) {
         ALOGE("%s: stream.out is NULL", __func__);
         return false;
@@ -2356,6 +2366,12 @@ int start_input_stream(struct stream_in *in)
     /* 1. Enable output device and stream routing controls */
     int ret = 0;
     struct audio_usecase *uc_info;
+
+    if (in == NULL) {
+        ALOGE("%s: stream_in ptr is NULL", __func__);
+        return -EINVAL;
+    }
+
     struct audio_device *adev = in->dev;
     struct pcm_config config = in->config;
     int usecase = platform_update_usecase_from_source(in->source,in->usecase);
@@ -3573,6 +3589,15 @@ static void out_snd_mon_cb(void * stream, struct str_parms * parms)
     return;
 }
 
+static int get_alive_usb_card(struct str_parms* parms) {
+    int card;
+    if ((str_parms_get_int(parms, "card", &card) >= 0) &&
+        !audio_extn_usb_alive(card)) {
+        return card;
+    }
+    return -ENODEV;
+}
+
 static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 {
     struct stream_out *out = (struct stream_out *)stream;
@@ -3640,6 +3665,22 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 }
             }
         }
+
+        audio_devices_t new_dev = val;
+
+        // Workaround: If routing to an non existing usb device, fail gracefully
+        // The routing request will otherwise block during 10 second
+        int card;
+        if (audio_is_usb_out_device(new_dev) &&
+            (card = get_alive_usb_card(parms)) >= 0) {
+
+            ALOGW("out_set_parameters() ignoring rerouting to non existing USB card %d", card);
+            pthread_mutex_unlock(&adev->lock);
+            pthread_mutex_unlock(&out->lock);
+            ret = -ENOSYS;
+            goto routing_fail;
+        }
+
         /*
          * select_devices() call below switches all the usecases on the same
          * backend to the new device. Refer to check_usecases_codec_backend() in
@@ -3706,14 +3747,16 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                     out->a2dp_compress_mute = false;
                     out_set_compr_volume(&out->stream, out->volume_l, out->volume_r);
                     pthread_mutex_unlock(&out->compr_mute_lock);
+                } else if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP) {
+                    out_set_voip_volume(&out->stream, out->volume_l, out->volume_r);
                 }
-
             }
         }
 
         pthread_mutex_unlock(&adev->lock);
         pthread_mutex_unlock(&out->lock);
     }
+    routing_fail:
 
     if (out == adev->primary_output) {
         pthread_mutex_lock(&adev->lock);
@@ -5125,15 +5168,29 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
     if (err >= 0) {
         val = atoi(value);
-        if (((int)in->device != val) && (val != 0)) {
-            in->device = val;
-            /* If recording is in progress, change the tx device to new device */
-            if (!in->standby && !in->is_st_session) {
-                ALOGV("update input routing change");
-                if (adev->adm_on_routing_change)
+        if (((int)in->device != val) && (val != 0) && audio_is_input_device(val) ) {
+
+            // Workaround: If routing to an non existing usb device, fail gracefully
+            // The routing request will otherwise block during 10 second
+            int card;
+            if (audio_is_usb_in_device(val) &&
+                (card = get_alive_usb_card(parms)) >= 0) {
+
+                ALOGW("in_set_parameters() ignoring rerouting to non existing USB card %d", card);
+                ret = -ENOSYS;
+            } else {
+
+                in->device = val;
+                /* If recording is in progress, change the tx device to new device */
+                if (!in->standby && !in->is_st_session) {
+                    ALOGV("update input routing change");
+                    // inform adm before actual routing to prevent glitches.
+                    if (adev->adm_on_routing_change) {
                         adev->adm_on_routing_change(adev->adm_data,
                                                     in->capture_handle);
-                ret = select_devices(adev, in->usecase);
+                        ret = select_devices(adev, in->usecase);
+                    }
+                }
             }
         }
     }

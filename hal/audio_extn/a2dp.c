@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -788,6 +788,10 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
     bool is_configured = false;
     int ret = 0;
     int sample_rate_backup;
+
+    if(aptx_bt_cfg == NULL)
+        return false;
+
 #ifndef LINUX_ENABLED
     struct aptx_enc_cfg_t aptx_dsp_cfg;
     mixer_size = sizeof(struct aptx_enc_cfg_t);
@@ -797,9 +801,6 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
     mixer_size = sizeof(struct custom_enc_cfg_t);
     sample_rate_backup = aptx_bt_cfg->sampling_rate;
 #endif
-
-    if(aptx_bt_cfg == NULL)
-        return false;
 
     ctl_enc_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_CONFIG_BLOCK);
     if (!ctl_enc_data) {
@@ -1325,8 +1326,9 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
          val = atoi(value);
          if (audio_is_a2dp_out_device(val)) {
              ALOGV("Received device dis- connect request");
-             reset_a2dp_enc_config_params();
              close_a2dp_output();
+             reset_a2dp_enc_config_params();
+             a2dp_reset_backend_cfg();
          }
          goto param_handled;
      }

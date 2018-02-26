@@ -36,6 +36,14 @@
     <ctl name="LSM6 Mixer SLIMBUS_5_TX" value="0" />
     <ctl name="LSM7 Mixer SLIMBUS_5_TX" value="0" />
     <ctl name="LSM8 Mixer SLIMBUS_5_TX" value="0" />
+    <ctl name="LSM1 Mixer SLIMBUS_0_TX" value="0" />
+    <ctl name="LSM2 Mixer SLIMBUS_0_TX" value="0" />
+    <ctl name="LSM3 Mixer SLIMBUS_0_TX" value="0" />
+    <ctl name="LSM4 Mixer SLIMBUS_0_TX" value="0" />
+    <ctl name="LSM5 Mixer SLIMBUS_0_TX" value="0" />
+    <ctl name="LSM6 Mixer SLIMBUS_0_TX" value="0" />
+    <ctl name="LSM7 Mixer SLIMBUS_0_TX" value="0" />
+    <ctl name="LSM8 Mixer SLIMBUS_0_TX" value="0" />
     <ctl name="LSM1 Port" value="None" />
     <ctl name="LSM2 Port" value="None" />
     <ctl name="LSM3 Port" value="None" />
@@ -45,6 +53,7 @@
     <ctl name="LSM7 Port" value="None" />
     <ctl name="LSM8 Port" value="None" />
     <ctl name="SLIMBUS_5_TX LSM Function" value="None" />
+    <ctl name="SLIMBUS_0_TX LSM Function" value="None" />
     <ctl name="MADONOFF Switch" value="0" />
     <ctl name="MAD Input" value="DMIC1" />
     <ctl name="MAD_SEL MUX" value="SPE" />
@@ -89,6 +98,7 @@
     <ctl name= "WDMA3 CH1 MUX" value="PORT_0" />
     <ctl name= "WDMA3 CH2 MUX" value="PORT_0" />
     <ctl name= "WDMA3_ON_OFF Switch" value="0" />
+    <ctl name="SLIM_0_TX Channels" value="One" />
 
     <path name="listen-voice-wakeup-1">
         <ctl name="SLIMBUS_5_TX LSM Function" value="AUDIO" />
