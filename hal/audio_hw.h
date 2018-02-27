@@ -50,9 +50,15 @@
 #include "audio_hw_extn_api.h"
 
 #if LINUX_ENABLED
-#define VISUALIZER_LIBRARY_PATH "libqcomvisualizer.so"
-#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "libqcompostprocbundle.so"
-#define ADM_LIBRARY_PATH "libadm.so"
+#if defined(__LP64__)
+#define VISUALIZER_LIBRARY_PATH "/usr/lib64/libqcomvisualizer.so"
+#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/usr/lib64/libqcompostprocbundle.so"
+#define ADM_LIBRARY_PATH "/usr/lib64/libadm.so"
+#else
+#define VISUALIZER_LIBRARY_PATH "/usr/lib/libqcomvisualizer.so"
+#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/usr/lib/libqcompostprocbundle.so"
+#define ADM_LIBRARY_PATH "/usr/lib/libadm.so"
+#endif
 #else
 #define VISUALIZER_LIBRARY_PATH "/vendor/lib/soundfx/libqcomvisualizer.so"
 #define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/vendor/lib/soundfx/libqcompostprocbundle.so"
