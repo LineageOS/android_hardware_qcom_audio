@@ -4163,3 +4163,49 @@ int platform_get_mmap_data_fd(void *platform __unused, int fe_dev __unused, int 
     return -1;
 #endif
 }
+
+bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id)
+{
+    bool needs_event = false;
+
+    switch (uc_id) {
+    /* concurrent capture usecases which needs event */
+    case USECASE_AUDIO_RECORD:
+    case USECASE_AUDIO_RECORD_LOW_LATENCY:
+    case USECASE_AUDIO_RECORD_MMAP:
+    case USECASE_AUDIO_RECORD_HIFI:
+    case USECASE_AUDIO_RECORD_VOIP:
+    case USECASE_VOICEMMODE1_CALL:
+    case USECASE_VOICEMMODE2_CALL:
+    /* concurrent playback usecases that needs event */
+    case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
+    case USECASE_AUDIO_PLAYBACK_OFFLOAD:
+        needs_event = true;
+        break;
+    default:
+        ALOGV("%s:usecase_id[%d] no need to raise event.", __func__, uc_id);
+    }
+    return needs_event;
+}
+
+bool platform_snd_device_has_speaker(snd_device_t dev) {
+    int num_devs = 2;
+    snd_device_t split_devs[2] = {SND_DEVICE_NONE, SND_DEVICE_NONE};
+    if (platform_can_split_snd_device(dev, &num_devs, split_devs) == 0) {
+        return platform_snd_device_has_speaker(split_devs[0]) ||
+                platform_snd_device_has_speaker(split_devs[1]);
+    }
+
+    switch (dev) {
+        case SND_DEVICE_OUT_SPEAKER:
+        case SND_DEVICE_OUT_SPEAKER_SAFE:
+        case SND_DEVICE_OUT_SPEAKER_REVERSE:
+        case SND_DEVICE_OUT_SPEAKER_PROTECTED:
+        case SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED:
+        case SND_DEVICE_OUT_VOICE_SPEAKER_HFP:
+            return true;
+        default:
+            break;
+    }
+    return false;
+}

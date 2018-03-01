@@ -563,11 +563,11 @@ int enable_audio_route(struct audio_device *adev,
         snd_device = usecase->in_snd_device;
     else
         snd_device = usecase->out_snd_device;
-
     audio_extn_utils_send_app_type_cfg(adev, usecase);
     audio_extn_utils_send_audio_calibration(adev, usecase);
     strcpy(mixer_path, use_case_table[usecase->id]);
     platform_add_backend_name(adev->platform, mixer_path, snd_device);
+    audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_BUSY);
     ALOGD("%s: usecase(%d) apply and update mixer path: %s", __func__,  usecase->id, mixer_path);
     audio_route_apply_and_update_path(adev->audio_route, mixer_path);
 
@@ -593,6 +593,7 @@ int disable_audio_route(struct audio_device *adev,
     platform_add_backend_name(adev->platform, mixer_path, snd_device);
     ALOGD("%s: usecase(%d) reset and update mixer path: %s", __func__, usecase->id, mixer_path);
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
+    audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_FREE);
 
     ALOGV("%s: exit", __func__);
     return 0;
