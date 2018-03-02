@@ -589,7 +589,7 @@ void *hw_info_init(const char *snd_card_name)
     } else if (strstr(snd_card_name, "sdx")) {
         ALOGV("SDX - variant soundcard");
         update_hardware_info_sdx(hw_info, snd_card_name);
-    } else if (strstr(snd_card_name, "pahu")) {
+    } else if (strstr(snd_card_name, "pahu") || strstr(snd_card_name, "tavil")) {
         ALOGV("MSMNILE - variant soundcard");
         update_hardware_info_msmnile(hw_info, snd_card_name);
     } else {
