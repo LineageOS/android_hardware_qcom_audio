@@ -19,7 +19,7 @@
 
 #include <errno.h>
 #include <math.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <fcntl.h>
 #include "../audio_hw.h"
 #include "platform.h"
@@ -43,7 +43,6 @@ struct cirrus_playback_session {
     pthread_t calibration_thread;
     struct pcm *pcm_rx;
     struct pcm *pcm_tx;
-    bool spkr_prot_enable;
 };
 
 struct crus_sp_ioctl_header {
@@ -421,14 +420,6 @@ void audio_extn_spkr_prot_init(void *adev) {
 
     snd_split_handle = audio_extn_get_snd_card_split();
 
-    /* FIXME: REMOVE THIS AFTER B1C1 P1.0 SUPPORT */
-    if (!strcmp(snd_split_handle->form_factor, "tdm") ||
-        !strcmp(snd_split_handle->form_factor, "c1")) {
-        handle.spkr_prot_enable = true;
-    } else {
-        handle.spkr_prot_enable = false;
-    }
-
     handle.adev_handle = adev;
 
     pthread_mutex_init(&handle.fb_prot_mutex, NULL);
@@ -553,7 +544,7 @@ void audio_extn_spkr_prot_stop_processing(snd_device_t snd_device) {
 }
 
 bool audio_extn_spkr_prot_is_enabled() {
-    return handle.spkr_prot_enable;
+    return true;
 }
 
 int audio_extn_spkr_prot_get_acdb_id(snd_device_t snd_device) {

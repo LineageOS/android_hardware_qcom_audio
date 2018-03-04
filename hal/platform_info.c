@@ -20,7 +20,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <expat.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <audio_hw.h>
 #include "platform_api.h"
 #include <platform.h>

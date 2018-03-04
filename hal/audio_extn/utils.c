@@ -24,7 +24,7 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include <cutils/str_parms.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/misc.h>
 
 #include "acdb.h"

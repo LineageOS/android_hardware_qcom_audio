@@ -21,7 +21,7 @@
 #include <dlfcn.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/str_parms.h>
 #include <cutils/properties.h>
 #include <audio_hw.h>
