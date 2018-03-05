@@ -137,7 +137,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
 
 ##Ambisonic Capture
 PRODUCT_PROPERTY_OVERRIDES += \
-persist.vendor.audio.ambisonic.capture=false
+persist.vendor.audio.ambisonic.capture=false \
 persist.vendor.audio.ambisonic.auto.profile=false
 
 ##fluencetype can be "fluence" or "fluencepro" or "none"

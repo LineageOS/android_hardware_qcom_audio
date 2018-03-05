@@ -4284,13 +4284,14 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 source == AUDIO_SOURCE_MIC)) {
                 snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
                 platform_set_echo_reference(adev, true, out_device);
-    } else if (my_data->use_generic_handset == true &&  //  system prop is enabled
-               (my_data->ambisonic_capture == true) && // Enable Ambisonic capture
+    } else if (my_data->use_generic_handset == true &&          // System prop is enabled
+               (my_data->ambisonic_capture == true) &&          // Enable Ambisonic capture
                (my_data->source_mic_type & SOURCE_QUAD_MIC) &&  // AND 4mic is available
-               ((in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) || // AND device is buit-in or back mic
-               (in_device & AUDIO_DEVICE_IN_BACK_MIC)) &&
-               (source == AUDIO_SOURCE_MIC) &&  // AND source is MIC
-               (int)channel_mask == (int)AUDIO_CHANNEL_INDEX_MASK_4) { // AND input channel is 4
+               ((in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) ||    // AND device is Built-in
+               (in_device & AUDIO_DEVICE_IN_BACK_MIC)) &&       // OR Back-mic
+               (source == AUDIO_SOURCE_MIC ||                   // AND source is MIC for 16bit
+                source == AUDIO_SOURCE_UNPROCESSED ||           // OR unprocessed for 24bit
+                source == AUDIO_SOURCE_CAMCORDER)) {            // OR camera usecase
                 snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
                 /* Below check is true only in LA build to set
                    ambisonic profile. In LE hal client will set profile
@@ -4298,6 +4299,19 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 if (my_data->ambisonic_profile == true) {
                     strlcpy(adev->active_input->profile, "record_ambisonic",
                             sizeof(adev->active_input->profile));
+                }
+
+                if (!strncmp(adev->active_input->profile, "record_ambisonic",
+                            strlen("record_ambisonic"))) {
+                    /* Validate input stream configuration for
+                       Ambisonic capture.
+                     */
+                    if (((int)channel_mask != (int)AUDIO_CHANNEL_INDEX_MASK_4) ||
+                         (adev->active_input->sample_rate != 48000)) {
+                          snd_device = SND_DEVICE_NONE;
+                          ALOGW("Unsupported Input configuration for ambisonic capture");
+                          goto exit;
+                    }
                 }
     } else if (source == AUDIO_SOURCE_CAMCORDER) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
