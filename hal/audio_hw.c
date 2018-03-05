@@ -6019,8 +6019,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         us_set_sensitivity(val);
     }
 
-    audio_extn_set_parameters(adev, parms);
     amplifier_set_parameters(parms);
+    audio_extn_set_parameters(adev, parms);
 done:
     str_parms_destroy(parms);
     pthread_mutex_unlock(&adev->lock);
