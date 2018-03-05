@@ -13,6 +13,10 @@ lib_LTLIBRARIES = libqahwwrapper.la
 libqahwwrapper_la_SOURCES = src/qahw.c \
                      src/qahw_effect.c
 
+if SVA_AUDIO_CONCURRENCY
+AM_CFLAGS += -DSVA_AUDIO_CONC
+endif
+
 libqahwwrapper_la_CFLAGS  = $(AM_CFLAGS)
 libqahwwrapper_la_CFLAGS += -include stddef.h
 libqahwwrapper_la_CFLAGS += -Dstrlcpy=g_strlcpy $(GLIB_CFLAGS) -include glib.h

@@ -29,6 +29,7 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 PKG_PROG_PKG_CONFIG
 
+AM_CONDITIONAL([SVA_AUDIO_CONCURRENCY],[test x$BOARD_SUPPORTS_SVA_AUDIO_CONCURRENCY = xtrue])
 AC_ARG_WITH([glib],
       AC_HELP_STRING([--with-glib],
          [enable glib, Build against glib. Use this when building for HLOS systems which use glib]))
