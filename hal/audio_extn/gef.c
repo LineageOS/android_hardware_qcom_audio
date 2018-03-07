@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -170,25 +170,31 @@ ERROR_RETURN:
 }
 
 
+#ifdef INSTANCE_ID_ENABLED
 //this will be called from GEF to exchange calibration using acdb
 int audio_extn_gef_send_audio_cal(void* dev, int acdb_dev_id,
     int gef_cal_type, int app_type, int topology_id, int sample_rate,
-    uint32_t module_id, uint32_t param_id, void* data, int length, bool persist)
+    uint32_t module_id, uint16_t instance_id, uint32_t param_id,
+    void* data, int length, bool persist)
 {
     int ret = 0;
     struct audio_device *adev = (struct audio_device*)dev;
+    acdb_audio_cal_cfg_t cal;
     int acdb_device_type =
         make_acdb_device_type_from_gef_cal_type(gef_cal_type);
 
     ALOGV("%s: Enter", __func__);
+    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
 
     //lock adev
     pthread_mutex_lock(&adev->lock);
 
-    //send cal
-    ret = platform_send_audio_cal(adev->platform, acdb_dev_id,
+    //pack cal
+    platform_make_cal_cfg(&cal, acdb_dev_id,
         acdb_device_type, app_type, topology_id, sample_rate,
-        module_id, param_id, data, length, persist);
+        module_id, instance_id, param_id, true);
+
+    ret = platform_send_audio_cal(adev->platform, &cal, data, length, persist);
 
     pthread_mutex_unlock(&adev->lock);
 
@@ -200,21 +206,154 @@ int audio_extn_gef_send_audio_cal(void* dev, int acdb_dev_id,
 //this will be called from GEF to exchange calibration using acdb
 int audio_extn_gef_get_audio_cal(void* dev, int acdb_dev_id,
     int gef_cal_type, int app_type, int topology_id, int sample_rate,
-    uint32_t module_id, uint32_t param_id, void* data, int* length, bool persist)
+    uint32_t module_id, uint16_t instance_id, uint32_t param_id,
+    void* data, int* length, bool persist)
 {
     int ret = 0;
     struct audio_device *adev = (struct audio_device*)dev;
+    acdb_audio_cal_cfg_t cal;
     int acdb_device_type =
         make_acdb_device_type_from_gef_cal_type(gef_cal_type);
 
     ALOGV("%s: Enter", __func__);
+    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
 
     //lock adev
     pthread_mutex_lock(&adev->lock);
 
-    ret = platform_get_audio_cal(adev->platform, acdb_dev_id,
+    //pack cal
+    platform_make_cal_cfg(&cal, acdb_dev_id,
         acdb_device_type, app_type, topology_id, sample_rate,
-        module_id, param_id, data, length, persist);
+        module_id, instance_id, param_id, false);
+
+    ret = platform_get_audio_cal(adev->platform, &cal, data, length, persist);
+
+    pthread_mutex_unlock(&adev->lock);
+
+    ALOGV("%s: Exit with error %d", __func__, ret);
+
+    return ret;
+}
+
+//this will be called from GEF to store into acdb
+int audio_extn_gef_store_audio_cal(void* dev, int acdb_dev_id,
+    int gef_cal_type, int app_type, int topology_id, int sample_rate,
+    uint32_t module_id, uint16_t instance_id,
+    uint32_t param_id, void* data, int length)
+{
+    int ret = 0;
+    struct audio_device *adev = (struct audio_device*)dev;
+    acdb_audio_cal_cfg_t cal;
+    int acdb_device_type =
+        make_acdb_device_type_from_gef_cal_type(gef_cal_type);
+
+    ALOGV("%s: Enter", __func__);
+    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
+
+    //lock adev
+    pthread_mutex_lock(&adev->lock);
+
+    //pack cal
+    platform_make_cal_cfg(&cal, acdb_dev_id,
+        acdb_device_type, app_type, topology_id, sample_rate,
+        module_id, instance_id, param_id, true);
+
+    ret = platform_store_audio_cal(adev->platform, &cal, data, length);
+
+    pthread_mutex_unlock(&adev->lock);
+
+    ALOGV("%s: Exit with error %d", __func__, ret);
+
+    return ret;
+}
+
+//this will be called from GEF to retrieve calibration using acdb
+int audio_extn_gef_retrieve_audio_cal(void* dev, int acdb_dev_id,
+    int gef_cal_type, int app_type, int topology_id, int sample_rate,
+    uint32_t module_id, uint16_t instance_id, uint32_t param_id, void* data, int* length)
+{
+    int ret = 0;
+    struct audio_device *adev = (struct audio_device*)dev;
+    acdb_audio_cal_cfg_t cal;
+    int acdb_device_type =
+        make_acdb_device_type_from_gef_cal_type(gef_cal_type);
+
+    ALOGV("%s: Enter", __func__);
+    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
+
+    //lock adev
+    pthread_mutex_lock(&adev->lock);
+
+    //pack cal
+    platform_make_cal_cfg(&cal, acdb_dev_id,
+        acdb_device_type, app_type, topology_id, sample_rate,
+        module_id, instance_id, param_id, true);
+
+    ret = platform_retrieve_audio_cal(adev->platform, &cal, data, length);
+
+    pthread_mutex_unlock(&adev->lock);
+
+    ALOGV("%s: Exit with error %d", __func__, ret);
+
+    return ret;
+}
+#else
+//this will be called from GEF to exchange calibration using acdb
+int audio_extn_gef_send_audio_cal(void* dev, int acdb_dev_id,
+    int gef_cal_type, int app_type, int topology_id, int sample_rate,
+    uint32_t module_id, uint32_t param_id, void* data, int length,
+    bool persist)
+{
+    int ret = 0;
+    struct audio_device *adev = (struct audio_device*)dev;
+    acdb_audio_cal_cfg_t cal;
+    int acdb_device_type =
+        make_acdb_device_type_from_gef_cal_type(gef_cal_type);
+
+    ALOGV("%s: Enter", __func__);
+    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
+
+    //lock adev
+    pthread_mutex_lock(&adev->lock);
+
+    //pack cal
+    platform_make_cal_cfg(&cal, acdb_dev_id,
+        acdb_device_type, app_type, topology_id, sample_rate,
+        module_id, param_id, true);
+
+    ret = platform_send_audio_cal(adev->platform, &cal, data, length, persist);
+
+    pthread_mutex_unlock(&adev->lock);
+
+    ALOGV("%s: Exit with error %d", __func__, ret);
+
+    return ret;
+}
+
+//this will be called from GEF to exchange calibration using acdb
+int audio_extn_gef_get_audio_cal(void* dev, int acdb_dev_id,
+    int gef_cal_type, int app_type, int topology_id, int sample_rate,
+    uint32_t module_id, uint32_t param_id, void* data, int* length,
+    bool persist)
+{
+    int ret = 0;
+    struct audio_device *adev = (struct audio_device*)dev;
+    acdb_audio_cal_cfg_t cal;
+    int acdb_device_type =
+        make_acdb_device_type_from_gef_cal_type(gef_cal_type);
+
+    ALOGV("%s: Enter", __func__);
+    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
+
+    //lock adev
+    pthread_mutex_lock(&adev->lock);
+
+    //pack cal
+    platform_make_cal_cfg(&cal, acdb_dev_id,
+        acdb_device_type, app_type, topology_id, sample_rate,
+        module_id, param_id, false);
+
+    ret = platform_get_audio_cal(adev->platform, &cal, data, length, persist);
 
     pthread_mutex_unlock(&adev->lock);
 
@@ -230,17 +369,22 @@ int audio_extn_gef_store_audio_cal(void* dev, int acdb_dev_id,
 {
     int ret = 0;
     struct audio_device *adev = (struct audio_device*)dev;
+    acdb_audio_cal_cfg_t cal;
     int acdb_device_type =
         make_acdb_device_type_from_gef_cal_type(gef_cal_type);
 
     ALOGV("%s: Enter", __func__);
+    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
 
     //lock adev
     pthread_mutex_lock(&adev->lock);
 
-    ret = platform_store_audio_cal(adev->platform, acdb_dev_id,
+    //pack cal
+    platform_make_cal_cfg(&cal, acdb_dev_id,
         acdb_device_type, app_type, topology_id, sample_rate,
-        module_id, param_id, data, length);
+        module_id, param_id, true);
+
+    ret = platform_store_audio_cal(adev->platform, &cal, data, length);
 
     pthread_mutex_unlock(&adev->lock);
 
@@ -256,17 +400,22 @@ int audio_extn_gef_retrieve_audio_cal(void* dev, int acdb_dev_id,
 {
     int ret = 0;
     struct audio_device *adev = (struct audio_device*)dev;
+    acdb_audio_cal_cfg_t cal;
     int acdb_device_type =
         make_acdb_device_type_from_gef_cal_type(gef_cal_type);
 
     ALOGV("%s: Enter", __func__);
+    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
 
     //lock adev
     pthread_mutex_lock(&adev->lock);
 
-    ret = platform_retrieve_audio_cal(adev->platform, acdb_dev_id,
+    //pack cal
+    platform_make_cal_cfg(&cal, acdb_dev_id,
         acdb_device_type, app_type, topology_id, sample_rate,
-        module_id, param_id, data, length);
+        module_id, param_id, true);
+
+    ret = platform_retrieve_audio_cal(adev->platform, &cal, data, length);
 
     pthread_mutex_unlock(&adev->lock);
 
@@ -274,6 +423,7 @@ int audio_extn_gef_retrieve_audio_cal(void* dev, int acdb_dev_id,
 
     return ret;
 }
+#endif
 
 //this will be called from HAL to notify GEF of new device configuration
 void audio_extn_gef_notify_device_config(audio_devices_t audio_device,

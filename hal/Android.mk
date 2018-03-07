@@ -393,6 +393,10 @@ ifeq ($(strip $($AUDIO_FEATURE_ENABLED_DYNAMIC_ECNS)),true)
     LOCAL_CFLAGS += -DDYNAMIC_ECNS_ENABLED
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INSTANCE_ID)), true)
+    LOCAL_CFLAGS += -DINSTANCE_ID_ENABLED
+endif
+
 LOCAL_CFLAGS += -Wall -Werror
 
 LOCAL_COPY_HEADERS_TO   := mm-audio
