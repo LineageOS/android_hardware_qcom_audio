@@ -1296,6 +1296,13 @@ static void query_platform(const char *snd_card_name,
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+    } else if (!strncmp(snd_card_name, "msm8953-sku4-snd-card",
+                 sizeof("msm8953-sku4-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_MTP,
+                sizeof(MIXER_XML_PATH_MTP));
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
     } else if (!strncmp(snd_card_name, "sdm660-snd-card",
                   sizeof("sdm660-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH,
@@ -7014,7 +7021,8 @@ int platform_spkr_prot_is_wsa_analog_mode(void *adev)
         (!strcmp(snd_card_name, "msm8952-snd-card")) ||
         (!strcmp(snd_card_name, "msm8952-snd-card-mtp")) ||
         (!strcmp(snd_card_name, "msm8976-skun-snd-card")) ||
-        (!strcmp(snd_card_name, "msm8953-snd-card-mtp")))
+        (!strcmp(snd_card_name, "msm8953-snd-card-mtp")) ||
+        (!strcmp(snd_card_name, "msm8953-sku4-snd-card")))
         return 1;
     else
         return 0;
