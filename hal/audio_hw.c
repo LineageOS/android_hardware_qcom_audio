@@ -3139,6 +3139,7 @@ static int out_standby(struct audio_stream *stream)
         list_for_each(node, &adev->usecase_list) {
             uc_info = node_to_item(node, struct audio_usecase, list);
             if ((uc_info->type == PCM_PLAYBACK) &&
+                (uc_info->stream.out != NULL) &&
                 (uc_info->out_snd_device != platform_get_output_snd_device(adev->platform, uc_info->stream.out)))
                 select_devices(adev, uc_info->id);
         }
