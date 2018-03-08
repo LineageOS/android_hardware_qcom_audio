@@ -425,6 +425,20 @@ static void  update_hardware_info_msmnile(struct hardware_info *hw_info __unused
     ALOGW("%s: Not a msmnile device", __func__);
 }
 
+static void  update_hardware_info_sda845(struct hardware_info *hw_info, const char *snd_card_name)
+{
+    if (!strncmp(snd_card_name, "sda845-tavil-i2s-snd-card", sizeof("sda845-tavil-i2s-snd-card"))) {
+        strlcpy(hw_info->type, " mtp", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "sda845", sizeof(hw_info->name));
+        hw_info->snd_devices = NULL;
+        hw_info->num_snd_devices = 0;
+        hw_info->is_stereo_spkr = false;
+        strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
+    } else {
+        ALOGW("%s: Not a sda845 device", __func__);
+    }
+}
+
 static void  update_hardware_info_sdx(struct hardware_info *hw_info __unused, const char *snd_card_name __unused)
 {
     ALOGW("%s: Not a sdx device", __func__);
@@ -592,6 +606,9 @@ void *hw_info_init(const char *snd_card_name)
     } else if (strstr(snd_card_name, "pahu")) {
         ALOGV("MSMNILE - variant soundcard");
         update_hardware_info_msmnile(hw_info, snd_card_name);
+    } else if (strstr(snd_card_name, "sda845")) {
+        ALOGV("SDA845 - variant soundcard");
+        update_hardware_info_sda845(hw_info, snd_card_name);
     } else {
         ALOGE("%s: Unsupported target %s:",__func__, snd_card_name);
         free(hw_info);
