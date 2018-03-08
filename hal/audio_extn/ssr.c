@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -552,16 +552,16 @@ int32_t audio_extn_ssr_init(struct stream_in *in, int num_out_chan)
           otherwise, fopen may fail */
         if ( !ssrmod.fp_input) {
             ALOGD("%s: Opening ssr input dump file \n", __func__);
-            ssrmod.fp_input = fopen("/data/vendor/misc/audio/ssr_input_3ch.pcm", "wb");
+            ssrmod.fp_input = fopen("/data/vendor/audio/ssr_input_3ch.pcm", "wb");
         }
 
         if ( !ssrmod.fp_output) {
             if(ssrmod.num_out_chan == 6) {
                 ALOGD("%s: Opening ssr input dump file for 6 channel\n", __func__);
-                ssrmod.fp_output = fopen("/data/vendor/misc/audio/ssr_output_6ch.pcm", "wb");
+                ssrmod.fp_output = fopen("/data/vendor/audio/ssr_output_6ch.pcm", "wb");
             } else {
                 ALOGD("%s: Opening ssr input dump file for 2 channel\n", __func__);
-                ssrmod.fp_output = fopen("/data/vendor/misc/audio/ssr_output_2ch.pcm", "wb");
+                ssrmod.fp_output = fopen("/data/vendor/audio/ssr_output_2ch.pcm", "wb");
             }
         }
 
