@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5df35b10_abc500e2",
+        "filename": "hal/acdb.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 104,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-03-12T01:47:39Z",
+      "side": 1,
+      "message": "I\u0027m really confused by this logic. If acdb_init is valid, you want to clean up, otherwise skip ahead to card_name ? card_name is still doing actual setup stuff... instead of the de-initialization I would think would need to be done.",
+      "range": {
+        "startLine": 101,
+        "startChar": 12,
+        "endLine": 104,
+        "endChar": 31
+      },
+      "revId": "96dd445ddd585dfe4a7fe6194b19d5e99d2a97f1",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
