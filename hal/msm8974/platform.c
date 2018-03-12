@@ -235,6 +235,8 @@ struct platform_data {
     int  fluence_type;
     int  fluence_mode;
     char fluence_cap[PROPERTY_VALUE_MAX];
+    bool ambisonic_capture;
+    bool ambisonic_profile;
     bool slowtalk;
     bool hd_voice;
     bool ec_ref_enabled;
@@ -2059,6 +2061,8 @@ void *platform_init(struct audio_device *adev)
     my_data->external_mic = false;
     my_data->fluence_type = FLUENCE_NONE;
     my_data->fluence_mode = FLUENCE_ENDFIRE;
+    my_data->ambisonic_capture = false;
+    my_data->ambisonic_profile = false;
     my_data->slowtalk = false;
     my_data->hd_voice = false;
     my_data->edid_info = NULL;
@@ -2117,6 +2121,13 @@ void *platform_init(struct audio_device *adev)
             my_data->fluence_in_hfp_call = true;
         }
     }
+    /* Check for Ambisonic Capture Enablement */
+    if (property_get_bool("persist.vendor.audio.ambisonic.capture",false))
+        my_data->ambisonic_capture = true;
+
+    /* Check for Ambisonic Profile Assignment*/
+    if (property_get_bool("persist.vendor.audio.ambisonic.auto.profile",false))
+        my_data->ambisonic_profile = true;
 
     /* Check if Vbat speaker enabled property is set, this should be done before acdb init */
     bool ret = false;
@@ -4273,6 +4284,21 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 source == AUDIO_SOURCE_MIC)) {
                 snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
                 platform_set_echo_reference(adev, true, out_device);
+    } else if (my_data->use_generic_handset == true &&  //  system prop is enabled
+               (my_data->ambisonic_capture == true) && // Enable Ambisonic capture
+               (my_data->source_mic_type & SOURCE_QUAD_MIC) &&  // AND 4mic is available
+               ((in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) || // AND device is buit-in or back mic
+               (in_device & AUDIO_DEVICE_IN_BACK_MIC)) &&
+               (source == AUDIO_SOURCE_MIC) &&  // AND source is MIC
+               (int)channel_mask == (int)AUDIO_CHANNEL_INDEX_MASK_4) { // AND input channel is 4
+                snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
+                /* Below check is true only in LA build to set
+                   ambisonic profile. In LE hal client will set profile
+                 */
+                if (my_data->ambisonic_profile == true) {
+                    strlcpy(adev->active_input->profile, "record_ambisonic",
+                            sizeof(adev->active_input->profile));
+                }
     } else if (source == AUDIO_SOURCE_CAMCORDER) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
             in_device & AUDIO_DEVICE_IN_BACK_MIC) {
@@ -5962,7 +5988,11 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                             bit_width = out->bit_width;
                         if (sample_rate < out->sample_rate)
                             sample_rate = out->sample_rate;
-                        if (out->sample_rate < OUTPUT_SAMPLING_RATE_44100)
+                        /*
+                         * TODO: Add Support for Backend configuration for devices which support
+                         * sample rate less than 44.1
+                         */
+                        if (sample_rate < OUTPUT_SAMPLING_RATE_44100)
                             sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
                         if (channels < out_channels)
                             channels = out_channels;
