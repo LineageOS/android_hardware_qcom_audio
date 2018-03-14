@@ -1007,7 +1007,6 @@ void audio_extn_spkr_prot_init(void *adev)
             ALOGE("%s: speaker calibration thread creation failed", __func__);
             pthread_mutex_destroy(&handle.mutex_spkr_prot);
             pthread_mutex_destroy(&handle.spkr_calib_cancelack_mutex);
-            pthread_mutex_destroy(&handle.cal_wait_cond_mutex);
             pthread_cond_destroy(&handle.spkr_calib_cancel);
             pthread_cond_destroy(&handle.spkr_calibcancel_ack);
         }
@@ -1057,7 +1056,6 @@ void audio_extn_spkr_prot_init(void *adev)
             ALOGE("%s: speaker calibration thread creation failed", __func__);
             pthread_mutex_destroy(&handle.mutex_spkr_prot);
             pthread_mutex_destroy(&handle.spkr_calib_cancelack_mutex);
-            pthread_mutex_destroy(&handle.cal_wait_cond_mutex);
             pthread_cond_destroy(&handle.spkr_calib_cancel);
             pthread_cond_destroy(&handle.spkr_calibcancel_ack);
             pthread_mutex_destroy(&handle.spkr_prot_thermalsync_mutex);
@@ -1093,7 +1091,6 @@ int audio_extn_spkr_prot_deinit()
         return -1;
 
     handle.thread_exit = true;
-    spkr_calibrate_signal();
     result = pthread_join(handle.spkr_calibration_thread, (void **) NULL);
     if (result < 0) {
         ALOGE("%s:Unable to join the calibration thread", __func__);
@@ -1101,7 +1098,6 @@ int audio_extn_spkr_prot_deinit()
     }
     pthread_mutex_destroy(&handle.mutex_spkr_prot);
     pthread_mutex_destroy(&handle.spkr_calib_cancelack_mutex);
-    pthread_mutex_destroy(&handle.cal_wait_cond_mutex);
     pthread_cond_destroy(&handle.spkr_calib_cancel);
     pthread_cond_destroy(&handle.spkr_calibcancel_ack);
     if(!handle.wsa_found) {
