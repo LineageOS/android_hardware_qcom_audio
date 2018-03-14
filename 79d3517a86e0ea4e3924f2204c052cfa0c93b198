@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "596b94f2_ff71136c",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1109,
+      "author": {
+        "id": 18958
+      },
+      "writtenOn": "2018-03-14T20:48:30Z",
+      "side": 1,
+      "message": "This check is useless and should be removed. If \u0027match\u0027 is not true, code will never reach this branch.",
+      "range": {
+        "startLine": 1109,
+        "startChar": 16,
+        "endLine": 1109,
+        "endChar": 21
+      },
+      "revId": "79d3517a86e0ea4e3924f2204c052cfa0c93b198",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
