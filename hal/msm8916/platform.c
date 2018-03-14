@@ -1808,7 +1808,7 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
     plat_data->hw_dep_fd = fd;
 }
 
-const char * get_snd_card_name_for_acdb_loader(const char *snd_card_name) {
+const char * platform_get_snd_card_name_for_acdb_loader(const char *snd_card_name) {
 
     if(snd_card_name == NULL)
         return NULL;
@@ -1862,7 +1862,7 @@ int platform_acdb_init(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     char *cvd_version = NULL;
-    const char *snd_card_name, *acdb_snd_card_name;
+    const char *snd_card_name;
     int result = -1;
     struct listnode *node;
     struct meta_key_list *key_info;
@@ -1877,21 +1877,21 @@ int platform_acdb_init(void *platform)
     }
 
     snd_card_name = mixer_get_name(my_data->adev->mixer);
-    acdb_snd_card_name = get_snd_card_name_for_acdb_loader(snd_card_name);
+    snd_card_name = platform_get_snd_card_name_for_acdb_loader(snd_card_name);
 
     if (my_data->acdb_init_v3) {
-        result = my_data->acdb_init_v3(acdb_snd_card_name, cvd_version,
+        result = my_data->acdb_init_v3(snd_card_name, cvd_version,
                                            &my_data->acdb_meta_key_list);
     } else if (my_data->acdb_init) {
         node = list_head(&my_data->acdb_meta_key_list);
         key_info = node_to_item(node, struct meta_key_list, list);
         key = key_info->cal_info.nKey;
-        result = my_data->acdb_init(acdb_snd_card_name, cvd_version, key);
+        result = my_data->acdb_init(snd_card_name, cvd_version, key);
     }
     /* Save these variables in platform_data. These will be used
        while reloading ACDB files during run time. */
     strlcpy(my_data->cvd_version, cvd_version, MAX_CVD_VERSION_STRING_SIZE);
-    strlcpy(my_data->snd_card_name, acdb_snd_card_name,
+    strlcpy(my_data->snd_card_name, snd_card_name,
                                                MAX_SND_CARD_STRING_SIZE);
 
     if (cvd_version)
