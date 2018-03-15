@@ -81,6 +81,30 @@
       "revId": "96dd445ddd585dfe4a7fe6194b19d5e99d2a97f1",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0ec45929_c64c060a",
+        "filename": "hal/acdb.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 104,
+      "author": {
+        "id": 3075
+      },
+      "writtenOn": "2018-03-15T22:23:17Z",
+      "side": 1,
+      "message": "Yeah it\u0027s a little unintuitive to read.  Perhaps insert a comment like:\n/* cvd is required for acdb v2 and v3 so fail fully\n * in this case.  For acdb v1, it can be skipped.\n */\n\nBut, otherwise, I\u0027m +1",
+      "parentUuid": "ea1de5c0_d55bbf60",
+      "range": {
+        "startLine": 101,
+        "startChar": 12,
+        "endLine": 104,
+        "endChar": 31
+      },
+      "revId": "96dd445ddd585dfe4a7fe6194b19d5e99d2a97f1",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
