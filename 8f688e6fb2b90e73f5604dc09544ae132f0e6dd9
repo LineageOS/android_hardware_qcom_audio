@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "e2516112_14765c65",
+        "filename": "policy_hal/AudioPolicyManager.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1090,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2018-03-15T19:24:38Z",
+      "side": 1,
+      "message": "Wow\nThey fixed this mismerge only now",
+      "range": {
+        "startLine": 1090,
+        "startChar": 37,
+        "endLine": 1090,
+        "endChar": 47
+      },
+      "revId": "8f688e6fb2b90e73f5604dc09544ae132f0e6dd9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
