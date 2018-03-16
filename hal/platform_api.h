@@ -104,6 +104,8 @@ int platform_stop_incall_music_usecase(void *platform);
 int platform_set_snd_device_backend(snd_device_t snd_device, const char * backend,
                                     const char * hw_interface);
 
+bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id);
+
 /* From platform_info.c */
 int platform_info_init(const char *filename, void *);
 
@@ -148,4 +150,6 @@ int platform_set_sidetone(struct audio_device *adev,
                           bool enable, char * str);
 int platform_get_mmap_data_fd(void *platform, int dev, int dir,
                               int *fd, uint32_t *size);
+bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id);
+bool platform_snd_device_has_speaker(snd_device_t dev);
 #endif // AUDIO_PLATFORM_API_H
