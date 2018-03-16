@@ -107,6 +107,7 @@ bool audio_extn_usb_alive(int card);
 #define audio_extn_sound_trigger_init(adev)                            (0)
 #define audio_extn_sound_trigger_deinit(adev)                          (0)
 #define audio_extn_sound_trigger_update_device_status(snd_dev, event)  (0)
+#define audio_extn_sound_trigger_update_stream_status(uc_info, event)  (0)
 #define audio_extn_sound_trigger_set_parameters(adev, parms)           (0)
 #define audio_extn_sound_trigger_check_and_get_session(in)             (0)
 #define audio_extn_sound_trigger_stop_lab(in)                          (0)
@@ -125,6 +126,8 @@ typedef enum st_event_type st_event_type_t;
 int audio_extn_sound_trigger_init(struct audio_device *adev);
 void audio_extn_sound_trigger_deinit(struct audio_device *adev);
 void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
+                                     st_event_type_t event);
+void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info,
                                      st_event_type_t event);
 void audio_extn_sound_trigger_set_parameters(struct audio_device *adev,
                                              struct str_parms *parms);
