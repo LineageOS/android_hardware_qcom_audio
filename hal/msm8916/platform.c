@@ -2040,6 +2040,8 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
         if(snd_card_name) {
             if ((!strncmp(snd_card_name, "msm8953-snd-card-mtp",
                     sizeof("msm8953-snd-card-mtp")) ||
+                (!strncmp(snd_card_name, "msm8953-sku4-snd-card",
+                    sizeof("msm8953-sku4-snd-card"))) ||
                 (!strncmp(snd_card_name, "msm8952-skum-snd-card",
                     sizeof("msm8952-skum-snd-card"))))) {
                 *is_wsa_combo_supported = true;
