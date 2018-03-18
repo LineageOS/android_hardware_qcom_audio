@@ -774,10 +774,8 @@ bool platform_send_gain_dep_cal(void *platform, int level)
                 else
                     app_type = DEFAULT_APP_TYPE_RX_PATH;
 
-                if (audio_extn_spkr_prot_is_enabled())
-                    acdb_dev_id = audio_extn_spkr_prot_get_acdb_id(usecase->out_snd_device);
-                else
-                    acdb_dev_id = acdb_device_table[usecase->out_snd_device];
+                acdb_dev_id =
+                    acdb_device_table[audio_extn_get_spkr_prot_snd_device(usecase->out_snd_device)];
 
                 if (!my_data->acdb_send_gain_dep_cal(acdb_dev_id, app_type,
                                                      acdb_dev_type, mode, level)) {
@@ -1864,20 +1862,18 @@ int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *use
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_dev_id, acdb_dev_type;
-    int snd_device = SND_DEVICE_OUT_SPEAKER;
+    int snd_device = usecase->out_snd_device;
     int new_snd_device[SND_DEVICE_OUT_END] = {0};
     int i, num_devices = 1;
 
     if (!platform_supports_app_type_cfg()) // use v1 instead
         return -ENOSYS;
 
-    if (usecase->type == PCM_PLAYBACK)
-        snd_device = usecase->out_snd_device;
-    else if (usecase->type == PCM_CAPTURE)
+    if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE))
         snd_device = usecase->in_snd_device;
 
     // skipped over get_spkr_prot_device
-    acdb_dev_id = acdb_device_table[snd_device];
+    acdb_dev_id = acdb_device_table[audio_extn_get_spkr_prot_snd_device(snd_device)];
     if (acdb_dev_id < 0) {
         ALOGE("%s: Could not find acdb id for device(%d)",
               __func__, snd_device);
@@ -1890,7 +1886,7 @@ int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *use
     }
 
     for (i = 0; i < num_devices; i++) {
-        acdb_dev_id = acdb_device_table[new_snd_device[i]];
+        acdb_dev_id = acdb_device_table[audio_extn_get_spkr_prot_snd_device(new_snd_device[i])];
         if (acdb_dev_id < 0) {
             ALOGE("%s: Could not find acdb id for device(%d)",
                   __func__, new_snd_device[i]);
@@ -4162,4 +4158,50 @@ int platform_get_mmap_data_fd(void *platform __unused, int fe_dev __unused, int 
 #else
     return -1;
 #endif
+}
+
+bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id)
+{
+    bool needs_event = false;
+
+    switch (uc_id) {
+    /* concurrent capture usecases which needs event */
+    case USECASE_AUDIO_RECORD:
+    case USECASE_AUDIO_RECORD_LOW_LATENCY:
+    case USECASE_AUDIO_RECORD_MMAP:
+    case USECASE_AUDIO_RECORD_HIFI:
+    case USECASE_AUDIO_RECORD_VOIP:
+    case USECASE_VOICEMMODE1_CALL:
+    case USECASE_VOICEMMODE2_CALL:
+    /* concurrent playback usecases that needs event */
+    case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
+    case USECASE_AUDIO_PLAYBACK_OFFLOAD:
+        needs_event = true;
+        break;
+    default:
+        ALOGV("%s:usecase_id[%d] no need to raise event.", __func__, uc_id);
+    }
+    return needs_event;
+}
+
+bool platform_snd_device_has_speaker(snd_device_t dev) {
+    int num_devs = 2;
+    snd_device_t split_devs[2] = {SND_DEVICE_NONE, SND_DEVICE_NONE};
+    if (platform_can_split_snd_device(dev, &num_devs, split_devs) == 0) {
+        return platform_snd_device_has_speaker(split_devs[0]) ||
+                platform_snd_device_has_speaker(split_devs[1]);
+    }
+
+    switch (dev) {
+        case SND_DEVICE_OUT_SPEAKER:
+        case SND_DEVICE_OUT_SPEAKER_SAFE:
+        case SND_DEVICE_OUT_SPEAKER_REVERSE:
+        case SND_DEVICE_OUT_SPEAKER_PROTECTED:
+        case SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED:
+        case SND_DEVICE_OUT_VOICE_SPEAKER_HFP:
+            return true;
+        default:
+            break;
+    }
+    return false;
 }
