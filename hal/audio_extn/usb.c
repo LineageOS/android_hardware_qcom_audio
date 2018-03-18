@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013, 2016-2018 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -51,6 +51,7 @@
 #define ABS_SUB(A, B) (((A) > (B)) ? ((A) - (B)):((B) - (A)))
 #define SAMPLE_RATE_8000          8000
 #define SAMPLE_RATE_11025         11025
+#define SAMPLE_RATE_192000        192000
 // Supported sample rates for USB
 static uint32_t supported_sample_rates[] =
     {384000, 352800, 192000, 176400, 96000, 88200, 64000, 48000, 44100, 32000, 22050, 16000, 11025, 8000};
@@ -280,6 +281,10 @@ static int usb_get_sample_rates(int type, char *rates_str,
         for (i = 0; i < MAX_SAMPLE_RATE_SIZE; i++) {
             if (supported_sample_rates[i] >= min_sr &&
                 supported_sample_rates[i] <= max_sr) {
+                // FIXME: we don't support >192KHz in recording path for now
+                if ((supported_sample_rates[i] > SAMPLE_RATE_192000) &&
+                        (type == USB_CAPTURE))
+                    continue;
                 config->rates[sr_size++] = supported_sample_rates[i];
                 supported_sample_rates_mask[type] |= (1<<i);
                 ALOGI_IF(usb_audio_debug_enable,
@@ -290,6 +295,12 @@ static int usb_get_sample_rates(int type, char *rates_str,
     } else {
         do {
             sr = (uint32_t)atoi(next_sr_string);
+            // FIXME: we don't support >192KHz in recording path for now
+            if ((sr > SAMPLE_RATE_192000) && (type == USB_CAPTURE)) {
+                next_sr_string = strtok_r(NULL, " ,.-", &temp_ptr);
+                continue;
+            }
+
             for (i = 0; i < MAX_SAMPLE_RATE_SIZE; i++) {
                 if (supported_sample_rates[i] == sr) {
                     ALOGI_IF(usb_audio_debug_enable,
