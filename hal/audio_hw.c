@@ -3714,6 +3714,36 @@ exit:
     return ret;
 }
 
+static int in_get_active_microphones(const struct audio_stream_in *stream,
+                                     struct audio_microphone_characteristic_t *mic_array,
+                                     size_t *mic_count) {
+    struct stream_in *in = (struct stream_in *)stream;
+    struct audio_device *adev = in->dev;
+    ALOGVV("%s", __func__);
+
+    lock_input_stream(in);
+    pthread_mutex_lock(&adev->lock);
+    int ret = platform_get_active_microphones(adev->platform, in->device,
+                                              audio_channel_count_from_in_mask(in->channel_mask),
+                                              in->source, in->usecase, mic_array, mic_count);
+    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&in->lock);
+
+    return ret;
+}
+
+static int adev_get_microphones(const struct audio_hw_device *dev,
+                                struct audio_microphone_characteristic_t *mic_array,
+                                size_t *mic_count) {
+    struct audio_device *adev = (struct audio_device *)dev;
+    ALOGVV("%s", __func__);
+
+    pthread_mutex_lock(&adev->lock);
+    int ret = platform_get_microphones(adev->platform, mic_array, mic_count);
+    pthread_mutex_unlock(&adev->lock);
+
+    return ret;
+}
 
 static int adev_open_output_stream(struct audio_hw_device *dev,
                                    audio_io_handle_t handle,
@@ -4555,6 +4585,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->stream.read = in_read;
     in->stream.get_input_frames_lost = in_get_input_frames_lost;
     in->stream.get_capture_position = in_get_capture_position;
+    in->stream.get_active_microphones = in_get_active_microphones;
 
     in->device = devices;
     in->source = source;
@@ -5026,6 +5057,7 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     adev->device.close_input_stream = adev_close_input_stream;
     adev->device.dump = adev_dump;
+    adev->device.get_microphones = adev_get_microphones;
 
     /* Set the default route before the PCM stream is opened */
     pthread_mutex_lock(&adev->lock);

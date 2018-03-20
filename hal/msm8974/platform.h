@@ -201,7 +201,6 @@ enum {
     MAX_CODEC_BACKENDS
 };
 
-
 #define DEVICE_NAME_MAX_SIZE   128
 #define HW_INFO_ARRAY_MAX_SIZE 32
 
@@ -335,6 +334,8 @@ enum {
 #define PLATFORM_CONFIG_KEY_SOUNDCARD_NAME "snd_card_name"
 #define PLATFORM_CONFIG_KEY_MAX_MIC_COUNT "input_mic_max_count"
 #define PLATFORM_DEFAULT_MIC_COUNT 2
+
+#define AUDIO_MAKE_STRING_FROM_ENUM(X)   { #X, X }
 
 /* CSD-CLIENT related functions */
 typedef int (*init_t)(bool);

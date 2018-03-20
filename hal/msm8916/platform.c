@@ -2466,3 +2466,23 @@ bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id __unused)
 bool platform_snd_device_has_speaker(snd_device_t dev __unused) {
     return false;
 }
+
+bool platform_set_microphone_characteristic(void *platform __unused,
+                                            struct audio_microphone_characteristic_t mic __unused) {
+    return -ENOSYS;
+}
+
+int platform_get_microphones(void *platform __unused,
+                             struct audio_microphone_characteristic_t *mic_array __unused,
+                             size_t *mic_count __unused) {
+    return -ENOSYS;
+}
+
+int platform_get_active_microphones(void *platform __unused,
+                                    audio_devices_t device __unused,
+                                    unsigned int channels __unused,
+                                    int source __unused, audio_usecase_t usecase __unused,
+                                    struct audio_microphone_characteristic_t *mic_array __unused,
+                                    size_t *mic_count __unused) {
+    return -ENOSYS;
+}

@@ -145,5 +145,7 @@ enum {
 
 #define DEVICE_NAME_MAX_SIZE 128
 
+#define AUDIO_MAKE_STRING_FROM_ENUM(X)   { #X, X }
+
 
 #endif // QCOM_AUDIO_PLATFORM_H
