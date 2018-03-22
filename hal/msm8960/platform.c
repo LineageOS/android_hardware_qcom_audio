@@ -1326,3 +1326,12 @@ int platform_get_mmap_data_fd(void *platform __unused, int fe_dev __unused, int 
 {
     return -ENOSYS;
 }
+
+bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id __unused)
+{
+    return false;
+}
+
+bool platform_snd_device_has_speaker(snd_device_t dev __unused) {
+    return false;
+}
