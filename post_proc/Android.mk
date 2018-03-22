@@ -72,7 +72,7 @@ LOCAL_C_INCLUDES := \
 ifneq ($(filter msmnile,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_HEADER_LIBRARIES += audio_kernel_headers
 endif
-ifneq ($(filter sdm710 qcs605 msmnile,$(TARGET_BOARD_PLATFORM)),)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES := audio_kernel_headers
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
   LOCAL_ADDITIONAL_DEPENDENCIES += $(BOARD_VENDOR_KERNEL_MODULES)
@@ -135,7 +135,7 @@ endif
 
 ################################################################################
 
-ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm660 sdm845 apq8098_latv sdm710 qcs605 msmnile,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm660 sdm845 apq8098_latv sdm670 msm8953 msm8937 qcs605 msmnile,$(TARGET_BOARD_PLATFORM)),)
 
 include $(CLEAR_VARS)
 
@@ -185,7 +185,7 @@ LOCAL_C_INCLUDES := \
 ifneq ($(filter msmnile,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_HEADER_LIBRARIES += audio_kernel_headers
 endif
-ifneq ($(filter sdm710 qcs605 msmnile,$(TARGET_BOARD_PLATFORM)),)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES := audio_kernel_headers
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
   LOCAL_ADDITIONAL_DEPENDENCIES += $(BOARD_VENDOR_KERNEL_MODULES)
