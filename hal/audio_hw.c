@@ -5676,6 +5676,8 @@ static int adev_open(const hw_module_t *module, const char *name,
         }
     }
 
+    adev->mic_break_enabled = property_get_bool("vendor.audio.mic_break", false);
+
     // commented as full set of app type cfg is sent from platform
     // audio_extn_utils_send_default_app_type_cfg(adev->platform, adev->mixer);
     audio_device_ref_count++;
