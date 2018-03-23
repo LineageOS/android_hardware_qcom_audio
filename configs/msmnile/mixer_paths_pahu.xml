@@ -1719,6 +1719,10 @@
     </path>
 
     <path name="speaker">
+        <path name="speaker-mono" />
+    </path>
+
+    <path name="speaker-cdp">
         <ctl name="SLIM RX0 MUX" value="AIF1_PB" />
         <ctl name="CDC_IF RX0 MUX" value="SLIM RX0" />
         <ctl name="SLIM RX1 MUX" value="AIF1_PB" />
