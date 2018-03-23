@@ -78,6 +78,7 @@
 #define MIXER_XML_PATH "/etc/mixer_paths.xml"
 #define MIXER_XML_PATH_MSM8909_PM8916 "/etc/mixer_paths_msm8909_pm8916.xml"
 #define MIXER_XML_PATH_MTP "/etc/mixer_paths_mtp.xml"
+#define MIXER_XML_PATH_SDM439_PM8953 "/etc/mixer_paths_sdm439_pm8953.xml"
 #define MIXER_XML_PATH_SKU2 "/etc/mixer_paths_qrd_sku2.xml"
 #define MIXER_XML_PATH_WCD9326 "/etc/mixer_paths_wcd9326.xml"
 #define MIXER_XML_PATH_WCD9335 "/etc/mixer_paths_wcd9335.xml"
@@ -93,6 +94,7 @@
 #define MIXER_XML_PATH "/vendor/etc/mixer_paths.xml"
 #define MIXER_XML_PATH_MSM8909_PM8916 "/vendor/etc/mixer_paths_msm8909_pm8916.xml"
 #define MIXER_XML_PATH_MTP "/vendor/etc/mixer_paths_mtp.xml"
+#define MIXER_XML_PATH_SDM439_PM8953 "/vendor/etc/mixer_paths_sdm439_pm8953.xml"
 #define MIXER_XML_PATH_SKU2 "/vendor/etc/mixer_paths_qrd_sku2.xml"
 #define PLATFORM_INFO_XML_PATH_EXTCODEC  "/vendor/etc/audio_platform_info_extcodec.xml"
 #define PLATFORM_INFO_XML_PATH_SKUSH "/vendor/etc/audio_platform_info_skush.xml"
@@ -1222,6 +1224,13 @@ static void query_platform(const char *snd_card_name,
                  sizeof("msm8952-snd-card-mtp"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_MTP,
                 sizeof(MIXER_XML_PATH_MTP));
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+    } else if (!strncmp(snd_card_name, "sdm439-snd-card-mtp",
+                 sizeof("sdm439-snd-card-mtp"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_SDM439_PM8953,
+                sizeof(MIXER_XML_PATH_SDM439_PM8953));
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
@@ -7376,7 +7385,9 @@ int platform_spkr_prot_is_wsa_analog_mode(void *adev)
         (!strcmp(snd_card_name, "msm8952-snd-card")) ||
         (!strcmp(snd_card_name, "msm8952-snd-card-mtp")) ||
         (!strcmp(snd_card_name, "msm8976-skun-snd-card")) ||
-        (!strcmp(snd_card_name, "msm8953-snd-card-mtp")))
+        (!strcmp(snd_card_name, "msm8953-snd-card-mtp")) ||
+        (!strcmp(snd_card_name, "msm8953-sku4-snd-card")) ||
+        (!strcmp(snd_card_name, "sdm439-snd-card-mtp")))
         return 1;
     else
         return 0;
