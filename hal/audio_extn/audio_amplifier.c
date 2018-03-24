@@ -135,6 +135,22 @@ int amplifier_set_parameters(struct str_parms *parms)
     return 0;
 }
 
+int amplifier_out_set_parameters(struct str_parms *parms)
+{
+    if (amp.hw && amp.hw->out_set_parameters)
+        return amp.hw->out_set_parameters(amp.hw, parms);
+
+    return 0;
+}
+
+int amplifier_in_set_parameters(struct str_parms *parms)
+{
+    if (amp.hw && amp.hw->in_set_parameters)
+        return amp.hw->in_set_parameters(amp.hw, parms);
+
+    return 0;
+}
+
 int amplifier_close(void)
 {
     if (amp.hw)
