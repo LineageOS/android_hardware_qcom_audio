@@ -137,6 +137,30 @@ int audio_extn_sound_trigger_read(struct stream_in *in, void *buffer,
                                   size_t bytes);
 #endif
 
+#ifndef A2DP_OFFLOAD_ENABLED
+#define audio_extn_a2dp_init(adev)                       (0)
+#define audio_extn_a2dp_start_playback()                 (0)
+#define audio_extn_a2dp_stop_playback()                  (0)
+#define audio_extn_a2dp_set_parameters(parms)            (0)
+#define audio_extn_a2dp_is_force_device_switch()         (0)
+#define audio_extn_a2dp_set_handoff_mode(is_on)          (0)
+#define audio_extn_a2dp_get_sample_rate(sample_rate)     (0)
+#define audio_extn_a2dp_get_encoder_latency()            (0)
+#define audio_extn_a2dp_is_ready()                       (0)
+#define audio_extn_a2dp_is_suspended()                   (0)
+#else
+void audio_extn_a2dp_init(void *adev);
+int audio_extn_a2dp_start_playback();
+int audio_extn_a2dp_stop_playback();
+void audio_extn_a2dp_set_parameters(struct str_parms *parms);
+bool audio_extn_a2dp_is_force_device_switch();
+void audio_extn_a2dp_set_handoff_mode(bool is_on);
+void audio_extn_a2dp_get_sample_rate(int *sample_rate);
+uint32_t audio_extn_a2dp_get_encoder_latency();
+bool audio_extn_a2dp_is_ready();
+bool audio_extn_a2dp_is_suspended();
+#endif
+
 #ifndef DSM_FEEDBACK_ENABLED
 #define audio_extn_dsm_feedback_enable(adev, snd_device, benable)                (0)
 #else

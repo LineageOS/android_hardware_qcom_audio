@@ -181,6 +181,7 @@ struct stream_out {
     struct audio_stream_out stream;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
     pthread_mutex_t pre_lock; /* acquire before lock to avoid DOS by playback thread */
+    pthread_mutex_t compr_mute_lock; /* acquire before setting compress volume */
     pthread_cond_t  cond;
     struct pcm_config config;
     struct compr_config compr_config;
@@ -218,6 +219,9 @@ struct stream_out {
     int af_period_multiplier;
     struct audio_device *dev;
     card_status_t card_status;
+    bool a2dp_compress_mute;
+    float volume_l;
+    float volume_r;
 
     error_log_t *error_log;
 
@@ -379,6 +383,8 @@ int enable_audio_route(struct audio_device *adev,
 
 struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
                                             audio_usecase_t uc_id);
+
+int check_a2dp_restore(struct audio_device *adev, struct stream_out *out, bool restore);
 
 #define LITERAL_TO_STRING(x) #x
 #define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\
