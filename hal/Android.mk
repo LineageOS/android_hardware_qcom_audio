@@ -395,6 +395,15 @@ ifeq ($(strip $($AUDIO_FEATURE_ENABLED_DYNAMIC_ECNS)),true)
     LOCAL_CFLAGS += -DDYNAMIC_ECNS_ENABLED
 endif
 
+ifeq ($(strip $($AUDIO_FEATURE_ENABLED_KEEP_ALIVE_ARM_FFV)), true)
+    LOCAL_CFLAGS += -DRUN_KEEP_ALIVE_IN_ARM_FFV
+endif
+
+ifeq ($(strip $($AUDIO_FEATURE_ENABLED_FFV_FFV)), true)
+    LOCAL_CFLAGS += -DFFV_ENABLED
+    LOCAL_SRC_FILES += audio_extn/ffv.c
+endif
+
 LOCAL_CFLAGS += -Wall -Werror
 
 LOCAL_COPY_HEADERS_TO   := mm-audio

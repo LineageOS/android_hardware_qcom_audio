@@ -34,6 +34,10 @@ endif
 
 USE_XML_AUDIO_POLICY_CONF := 1
 BOARD_SUPPORTS_SOUND_TRIGGER := true
+BOARD_SUPPORTS_SOUND_TRIGGER_ARM: = true
+AUDIO_FEATURE_ENABLED_FFV: = true
+AUDIO_FEATURE_ENABLED_KEEP_ALIVE_ARM_FFV: = true
+AUDIO_FEATURE_ENABLED_KEEP_ALIVE: = true
 AUDIO_USE_LL_AS_PRIMARY_OUTPUT := true
 AUDIO_FEATURE_ENABLED_HIFI_AUDIO := true
 AUDIO_FEATURE_ENABLED_VBAT_MONITOR := true
@@ -120,7 +124,10 @@ af.fast_track_multiplier=1
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio_hal.period_size=192
 
-##fluencetype can be "fluence" or "fluencepro" or "none"
+PRODUCT_PROPERTY_OVERRIDES += \
+ro.vendor.audio.sdk.ffv=false
+
+##fluencetype can be "fluence" or "fluencepro" or "fluenceffv" or "none"
 PRODUCT_PROPERTY_OVERRIDES += \
 ro.vendor.audio.sdk.fluencetype=none\
 persist.vendor.audio.fluence.voicecall=true\
