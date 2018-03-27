@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <dlfcn.h>
 #include <math.h>
+#include <pthread.h>
 #include <time.h>
 #include <unistd.h>
 #include <cutils/properties.h>
