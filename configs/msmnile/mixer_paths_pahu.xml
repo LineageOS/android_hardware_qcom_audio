@@ -1718,10 +1718,6 @@
         <ctl name="IIR0 INP0 MUX" value="DEC7" />
     </path>
 
-    <path name="speaker">
-        <path name="speaker-mono" />
-    </path>
-
     <path name="speaker-cdp">
         <ctl name="SLIM RX0 MUX" value="AIF1_PB" />
         <ctl name="CDC_IF RX0 MUX" value="SLIM RX0" />
@@ -1764,6 +1760,10 @@
         <ctl name="SpkrRight BOOST Switch" value="1" />
         <ctl name="SpkrRight VISENSE Switch" value="1" />
         <ctl name="SpkrRight SWR DAC_Port Switch" value="1" />
+    </path>
+
+    <path name="speaker">
+        <path name="speaker-mono" />
     </path>
 
     <path name="speaker-qrd">
