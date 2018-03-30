@@ -3951,12 +3951,16 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         (audio_is_linear_pcm(config->format) || config->format == AUDIO_FORMAT_DEFAULT) &&
         (flags == AUDIO_OUTPUT_FLAG_NONE ||
         (flags & AUDIO_OUTPUT_FLAG_DIRECT) != 0)) {
+        audio_format_t req_format = config->format;
+        audio_channel_mask_t req_channel_mask = config->channel_mask;
+        uint32_t req_sample_rate = config->sample_rate;
+
         pthread_mutex_lock(&adev->lock);
         if (is_hdmi) {
             ret = read_hdmi_channel_masks(out);
             if (config->sample_rate == 0)
                 config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-            if (config->channel_mask == 0)
+            if (config->channel_mask == AUDIO_CHANNEL_NONE)
                 config->channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
             if (config->format == AUDIO_FORMAT_DEFAULT)
                 config->format = AUDIO_FORMAT_PCM_16_BIT;
@@ -3974,9 +3978,18 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             ALOGV("plugged dev USB ret %d", ret);
         }
         pthread_mutex_unlock(&adev->lock);
-        if (ret != 0)
-            goto error_open;
+        if (ret != 0) {
+            // For MMAP NO IRQ, allow conversions in ADSP
+            if (is_hdmi || (flags & AUDIO_OUTPUT_FLAG_MMAP_NOIRQ) == 0)
+                goto error_open;
 
+            if (req_sample_rate != 0 && config->sample_rate != req_sample_rate)
+                config->sample_rate = req_sample_rate;
+            if (req_channel_mask != AUDIO_CHANNEL_NONE && config->channel_mask != req_channel_mask)
+                config->channel_mask = req_channel_mask;
+            if (req_format != AUDIO_FORMAT_DEFAULT && config->format != req_format)
+                config->format = req_format;
+        }
 
         out->sample_rate = config->sample_rate;
         out->channel_mask = config->channel_mask;
