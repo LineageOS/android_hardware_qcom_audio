@@ -488,6 +488,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SND_MONITOR)), true)
     LOCAL_SRC_FILES += audio_extn/sndmonitor.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MAXX_AUDIO)), true)
+    LOCAL_CFLAGS += -DMAXXAUDIO_QDSP_ENABLED
+    LOCAL_SRC_FILES += audio_extn/maxxaudio.c
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GCOV)),true)
     LOCAL_CFLAGS += --coverage -fprofile-arcs -ftest-coverage
     LOCAL_CPPFLAGS += --coverage -fprofile-arcs -ftest-coverage
