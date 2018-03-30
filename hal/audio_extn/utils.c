@@ -333,7 +333,8 @@ static int derive_acdb_dev_id(struct audio_device *adev __unused,
     struct stream_in *in;
 
     if (usecase->type == PCM_PLAYBACK) {
-        return platform_get_snd_device_acdb_id(usecase->out_snd_device);
+        return platform_get_snd_device_acdb_id(
+                audio_extn_get_spkr_prot_snd_device(usecase->out_snd_device));
     } else if(usecase->type == PCM_CAPTURE) {
         return platform_get_snd_device_acdb_id(usecase->in_snd_device);
     }
