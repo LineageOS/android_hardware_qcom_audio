@@ -245,6 +245,8 @@ enum {
 #define AFE_PROXY_PLAYBACK_PCM_DEVICE 7
 #define AFE_PROXY_RECORD_PCM_DEVICE 8
 
+#define AUDIO_MAKE_STRING_FROM_ENUM(X)   { #X, X }
+
 #define LIB_CSD_CLIENT "libcsd-client.so"
 /* CSD-CLIENT related functions */
 typedef int (*init_t)();
