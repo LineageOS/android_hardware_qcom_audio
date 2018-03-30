@@ -6081,7 +6081,9 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
      * Check if the device is speaker or handset,assumption handset shares
      * backend with speaker, and these devices are restricited to 48kHz.
      */
-    if (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device)) {
+    if (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device) &&
+        !(codec_device_supports_native_playback(usecase->devices) &&
+          my_data->hifi_audio && !check_hdset_combo_device(snd_device))) {
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
 
         if (bit_width >= 24) {
