@@ -18,7 +18,7 @@ LOCAL_SHARED_LIBRARIES := \
     libutils \
     libcutils
 
-LOCAL_LDLIBS := -lpthread
+#LOCAL_LDLIBS := -lpthread
 LOCAL_32_BIT_ONLY := true
 
 LOCAL_C_INCLUDES += $(hal-play-inc)
