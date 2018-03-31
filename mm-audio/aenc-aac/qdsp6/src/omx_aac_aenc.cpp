@@ -436,8 +436,6 @@ omx_aac_aenc::~omx_aac_aenc()
 
     pthread_mutexattr_destroy(&m_out_th_attr_1);
     pthread_mutex_destroy(&m_out_th_lock_1);
-    pthread_mutex_destroy(&out_buf_count_lock);
-    pthread_mutex_destroy(&in_buf_count_lock);
     pthread_cond_destroy(&cond);
     pthread_cond_destroy(&in_cond);
     pthread_cond_destroy(&out_cond);
