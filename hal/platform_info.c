@@ -35,6 +35,7 @@ typedef enum {
     OPERATOR_SPECIFIC,
     GAIN_LEVEL_MAPPING,
     APP_TYPE,
+    MICROPHONE_CHARACTERISTIC,
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
@@ -47,6 +48,7 @@ static void process_root(const XML_Char **attr);
 static void process_operator_specific(const XML_Char **attr);
 static void process_gain_db_to_level_map(const XML_Char **attr);
 static void process_app_type(const XML_Char **attr);
+static void process_microphone_characteristic(const XML_Char **attr);
 
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
@@ -57,6 +59,7 @@ static section_process_fn section_table[] = {
     [OPERATOR_SPECIFIC] = process_operator_specific,
     [GAIN_LEVEL_MAPPING] = process_gain_db_to_level_map,
     [APP_TYPE] = process_app_type,
+    [MICROPHONE_CHARACTERISTIC] = process_microphone_characteristic,
 };
 
 static set_parameters_fn set_parameters = &platform_set_parameters;
@@ -70,6 +73,79 @@ struct platform_info {
 };
 
 static struct platform_info my_data = {true, NULL, NULL};
+
+struct audio_string_to_enum {
+    const char* name;
+    unsigned int value;
+};
+
+static const struct audio_string_to_enum mic_locations[AUDIO_MICROPHONE_LOCATION_CNT] = {
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_LOCATION_UNKNOWN),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_LOCATION_MAINBODY),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_LOCATION_MAINBODY_MOVABLE),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_LOCATION_PERIPHERAL),
+};
+
+static const struct audio_string_to_enum mic_directionalities[AUDIO_MICROPHONE_DIRECTIONALITY_CNT] = {
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_DIRECTIONALITY_OMNI),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_DIRECTIONALITY_BI_DIRECTIONAL),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_DIRECTIONALITY_UNKNOWN),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_DIRECTIONALITY_CARDIOID),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_DIRECTIONALITY_HYPER_CARDIOID),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_DIRECTIONALITY_SUPER_CARDIOID),
+};
+
+static const struct audio_string_to_enum device_in_types[] = {
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_AMBIENT),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_COMMUNICATION),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_BUILTIN_MIC),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_WIRED_HEADSET),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_AUX_DIGITAL),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_HDMI),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_VOICE_CALL),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_TELEPHONY_RX),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_BACK_MIC),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_REMOTE_SUBMIX),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_DGTL_DOCK_HEADSET),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_USB_ACCESSORY),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_USB_DEVICE),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_FM_TUNER),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_TV_TUNER),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_LINE),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_SPDIF),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_BLUETOOTH_A2DP),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_LOOPBACK),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_IP),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_BUS),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_PROXY),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_USB_HEADSET),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_BLUETOOTH_BLE),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_DEFAULT),
+};
+
+static bool find_enum_by_string(const struct audio_string_to_enum * table, const char * name,
+                                int32_t len, unsigned int *value)
+{
+    if (table == NULL) {
+        ALOGE("%s: table is NULL", __func__);
+        return false;
+    }
+
+    if (name == NULL) {
+        ALOGE("null key");
+        return false;
+    }
+
+    for (int i = 0; i < len; i++) {
+        if (!strcmp(table[i].name, name)) {
+            *value = table[i].value;
+            return true;
+        }
+    }
+    return false;
+}
 
 /*
  * <audio_platform_info>
@@ -349,6 +425,230 @@ done:
     return;
 }
 
+static void process_microphone_characteristic(const XML_Char **attr) {
+    struct audio_microphone_characteristic_t microphone;
+    uint32_t curIdx = 0;
+
+    if (strcmp(attr[curIdx++], "valid_mask")) {
+        ALOGE("%s: valid_mask not found", __func__);
+        goto done;
+    }
+    microphone.valid_mask = atoi(attr[curIdx++]);
+
+    if (strcmp(attr[curIdx++], "device_id")) {
+        ALOGE("%s: device_id not found", __func__);
+        goto done;
+    }
+    if (strlen(attr[curIdx]) > AUDIO_MICROPHONE_ID_MAX_LEN) {
+        ALOGE("%s: device_id %s is too long", __func__, attr[curIdx]);
+        goto done;
+    }
+    strcpy(microphone.device_id, attr[curIdx++]);
+
+    if (strcmp(attr[curIdx++], "type")) {
+        ALOGE("%s: device not found", __func__);
+        goto done;
+    }
+    if (!find_enum_by_string(device_in_types, (char*)attr[curIdx++],
+            ARRAY_SIZE(device_in_types), &microphone.device)) {
+        ALOGE("%s: type %s in %s not found!",
+              __func__, attr[--curIdx], PLATFORM_INFO_XML_PATH);
+        goto done;
+    }
+
+    if (strcmp(attr[curIdx++], "address")) {
+        ALOGE("%s: address not found", __func__);
+        goto done;
+    }
+    if (strlen(attr[curIdx]) > AUDIO_DEVICE_MAX_ADDRESS_LEN) {
+        ALOGE("%s, address %s is too long", __func__, attr[curIdx]);
+        goto done;
+    }
+    strcpy(microphone.address, attr[curIdx++]);
+    if (strlen(microphone.address) == 0) {
+        // If the address is empty, populate the address according to device type.
+        if (microphone.device == AUDIO_DEVICE_IN_BUILTIN_MIC) {
+            strcpy(microphone.address, AUDIO_BOTTOM_MICROPHONE_ADDRESS);
+        } else if (microphone.device == AUDIO_DEVICE_IN_BACK_MIC) {
+            strcpy(microphone.address, AUDIO_BACK_MICROPHONE_ADDRESS);
+        }
+    }
+
+    if (strcmp(attr[curIdx++], "location")) {
+        ALOGE("%s: location not found", __func__);
+        goto done;
+    }
+    if (!find_enum_by_string(mic_locations, (char*)attr[curIdx++],
+            AUDIO_MICROPHONE_LOCATION_CNT, &microphone.location)) {
+        ALOGE("%s: location %s in %s not found!",
+              __func__, attr[--curIdx], PLATFORM_INFO_XML_PATH);
+        goto done;
+    }
+
+    if (strcmp(attr[curIdx++], "group")) {
+        ALOGE("%s: group not found", __func__);
+        goto done;
+    }
+    microphone.group = atoi(attr[curIdx++]);
+
+    if (strcmp(attr[curIdx++], "index_in_the_group")) {
+        ALOGE("%s: index_in_the_group not found", __func__);
+        goto done;
+    }
+    microphone.index_in_the_group = atoi(attr[curIdx++]);
+
+    if (strcmp(attr[curIdx++], "directionality")) {
+        ALOGE("%s: directionality not found", __func__);
+        goto done;
+    }
+    if (!find_enum_by_string(mic_directionalities, (char*)attr[curIdx++],
+                AUDIO_MICROPHONE_DIRECTIONALITY_CNT, &microphone.directionality)) {
+        ALOGE("%s: directionality %s in %s not found!",
+              __func__, attr[--curIdx], PLATFORM_INFO_XML_PATH);
+        goto done;
+    }
+
+    if (strcmp(attr[curIdx++], "num_frequency_responses")) {
+        ALOGE("%s: num_frequency_responses not found", __func__);
+        goto done;
+    }
+    microphone.num_frequency_responses = atoi(attr[curIdx++]);
+    if (microphone.num_frequency_responses > AUDIO_MICROPHONE_MAX_FREQUENCY_RESPONSES) {
+        ALOGE("%s: num_frequency_responses is too large", __func__);
+        goto done;
+    }
+    if (microphone.num_frequency_responses > 0) {
+        if (strcmp(attr[curIdx++], "frequencies")) {
+            ALOGE("%s: frequencies not found", __func__);
+            goto done;
+        }
+        char *token = strtok((char *)attr[curIdx++], ",");
+        uint32_t num_frequencies = 0;
+        while (token) {
+            microphone.frequency_responses[0][num_frequencies++] = atof(token);
+            if (num_frequencies > AUDIO_MICROPHONE_MAX_FREQUENCY_RESPONSES) {
+                ALOGE("%s: num %u of frequency is too large", __func__, num_frequencies);
+                goto done;
+            }
+            token = strtok(NULL, ",");
+        }
+
+        if (strcmp(attr[curIdx++], "responses")) {
+            ALOGE("%s: responses not found", __func__);
+            goto done;
+        }
+        token = strtok((char *)attr[curIdx++], ",");
+        uint32_t num_responses = 0;
+        while (token) {
+            microphone.frequency_responses[1][num_responses++] = atof(token);
+            if (num_responses > AUDIO_MICROPHONE_MAX_FREQUENCY_RESPONSES) {
+                ALOGE("%s: num %u of response is too large", __func__, num_responses);
+                goto done;
+            }
+            token = strtok(NULL, ",");
+        }
+
+        if (num_frequencies != num_responses
+                || num_frequencies != microphone.num_frequency_responses) {
+            ALOGE("%s: num of frequency and response not match: %u, %u, %u",
+                  __func__, num_frequencies, num_responses, microphone.num_frequency_responses);
+            goto done;
+        }
+    }
+
+    if (microphone.valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_SENSITIVITY) {
+        if (strcmp(attr[curIdx++], "sensitivity")) {
+            ALOGE("%s: sensitivity not found", __func__);
+            goto done;
+        }
+        microphone.sensitivity = atof(attr[curIdx++]);
+    } else {
+        microphone.sensitivity = AUDIO_MICROPHONE_SENSITIVITY_UNKNOWN;
+    }
+
+    if (microphone.valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_MAX_SPL) {
+        if (strcmp(attr[curIdx++], "max_spl")) {
+            ALOGE("%s: max_spl not found", __func__);
+            goto done;
+        }
+        microphone.max_spl = atof(attr[curIdx++]);
+    } else {
+        microphone.max_spl = AUDIO_MICROPHONE_SPL_UNKNOWN;
+    }
+
+    if (microphone.valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_MIN_SPL) {
+        if (strcmp(attr[curIdx++], "min_spl")) {
+            ALOGE("%s: min_spl not found", __func__);
+            goto done;
+        }
+        microphone.min_spl = atof(attr[curIdx++]);
+    } else {
+        microphone.min_spl = AUDIO_MICROPHONE_SPL_UNKNOWN;
+    }
+
+    if (microphone.valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_ORIENTATION) {
+        if (strcmp(attr[curIdx++], "orientation")) {
+            ALOGE("%s: orientation not found", __func__);
+            goto done;
+        }
+        char *token = strtok((char *)attr[curIdx++], ",");
+        float orientation[3];
+        uint32_t idx = 0;
+        while (token) {
+            orientation[idx++] = atof(token);
+            if (idx > 3) {
+                ALOGE("%s: orientation invalid", __func__);
+                goto done;
+            }
+            token = strtok(NULL, ",");
+        }
+        if (idx != 3) {
+            ALOGE("%s: orientation invalid", __func__);
+            goto done;
+        }
+        microphone.orientation.x = orientation[0];
+        microphone.orientation.y = orientation[1];
+        microphone.orientation.z = orientation[2];
+    } else {
+        microphone.orientation.x = 0.0f;
+        microphone.orientation.y = 0.0f;
+        microphone.orientation.z = 0.0f;
+    }
+
+    if (microphone.valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_GEOMETRIC_LOCATION) {
+        if (strcmp(attr[curIdx++], "geometric_location")) {
+            ALOGE("%s: geometric_location not found", __func__);
+            goto done;
+        }
+        char *token = strtok((char *)attr[curIdx++], ",");
+        float geometric_location[3];
+        uint32_t idx = 0;
+        while (token) {
+            geometric_location[idx++] = atof(token);
+            if (idx > 3) {
+                ALOGE("%s: geometric_location invalid", __func__);
+                goto done;
+            }
+            token = strtok(NULL, ",");
+        }
+        if (idx != 3) {
+            ALOGE("%s: geometric_location invalid", __func__);
+            goto done;
+        }
+        microphone.geometric_location.x = geometric_location[0];
+        microphone.geometric_location.y = geometric_location[1];
+        microphone.geometric_location.z = geometric_location[2];
+    } else {
+        microphone.geometric_location.x = AUDIO_MICROPHONE_COORDINATE_UNKNOWN;
+        microphone.geometric_location.y = AUDIO_MICROPHONE_COORDINATE_UNKNOWN;
+        microphone.geometric_location.z = AUDIO_MICROPHONE_COORDINATE_UNKNOWN;
+    }
+
+    platform_set_microphone_characteristic(my_data.platform, microphone);
+done:
+    return;
+}
+
 static void start_tag(void *userdata __unused, const XML_Char *tag_name,
                       const XML_Char **attr)
 {
@@ -372,6 +672,8 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
             section = GAIN_LEVEL_MAPPING;
         } else if (strcmp(tag_name, "app_types") == 0) {
             section = APP_TYPE;
+        } else if (strcmp(tag_name, "microphone_characteristics") == 0) {
+            section = MICROPHONE_CHARACTERISTIC;
         } else if (strcmp(tag_name, "device") == 0) {
             if ((section != ACDB) && (section != BACKEND_NAME) && (section != OPERATOR_SPECIFIC)) {
                 ALOGE("device tag only supported for acdb/backend names");
@@ -399,7 +701,7 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
             fn(attr);
         } else if (strcmp(tag_name, "gain_level_map") == 0) {
             if (section != GAIN_LEVEL_MAPPING) {
-                ALOGE("usecase tag only supported with GAIN_LEVEL_MAPPING section");
+                ALOGE("gain_level_map tag only supported with GAIN_LEVEL_MAPPING section");
                 return;
             }
 
@@ -412,6 +714,13 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
             }
 
             section_process_fn fn = section_table[APP_TYPE];
+            fn(attr);
+        } else if (strcmp(tag_name, "microphone") == 0) {
+            if (section != MICROPHONE_CHARACTERISTIC) {
+                ALOGE("microphone tag only supported with MICROPHONE_CHARACTERISTIC section");
+                return;
+            }
+            section_process_fn fn = section_table[MICROPHONE_CHARACTERISTIC];
             fn(attr);
         }
     } else {
@@ -446,6 +755,8 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
     } else if (strcmp(tag_name, "gain_db_to_level_mapping") == 0) {
         section = ROOT;
     } else if (strcmp(tag_name, "app_types") == 0) {
+        section = ROOT;
+    } else if (strcmp(tag_name, "microphone_characteristics") == 0) {
         section = ROOT;
     }
 }

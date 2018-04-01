@@ -152,4 +152,14 @@ int platform_get_mmap_data_fd(void *platform, int dev, int dir,
                               int *fd, uint32_t *size);
 bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id);
 bool platform_snd_device_has_speaker(snd_device_t dev);
+
+bool platform_set_microphone_characteristic(void *platform,
+                                            struct audio_microphone_characteristic_t mic);
+int platform_get_microphones(void *platform,
+                             struct audio_microphone_characteristic_t *mic_array,
+                             size_t *mic_count);
+int platform_get_active_microphones(void *platform, audio_devices_t device,
+                                    unsigned int channels, int source, audio_usecase_t usecase,
+                                    struct audio_microphone_characteristic_t *mic_array,
+                                    size_t *mic_count);
 #endif // AUDIO_PLATFORM_API_H
