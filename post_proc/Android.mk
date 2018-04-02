@@ -45,6 +45,10 @@ ifneq ($(strip $(AUDIO_FEATURE_DISABLED_DTS_EAGLE)),true)
     LOCAL_CFLAGS += -DDTS_EAGLE
 endif
 
+LOCAL_HEADER_LIBRARIES := libhardware_headers \
+                          libsystem_headers \
+                          libutils_headers
+
 LOCAL_SHARED_LIBRARIES := \
         libcutils \
         liblog \
@@ -66,7 +70,7 @@ LOCAL_C_INCLUDES := \
         $(call include-path-for, audio-effects)
 
 ifneq ($(filter msmnile,$(TARGET_BOARD_PLATFORM)),)
-  LOCAL_HEADER_LIBRARIES := audio_kernel_headers
+  LOCAL_HEADER_LIBRARIES += audio_kernel_headers
 endif
 ifneq ($(filter sdm670 qcs605 msmnile,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
@@ -99,6 +103,10 @@ LOCAL_SRC_FILES := EffectsHwAcc.cpp
 
 LOCAL_C_INCLUDES := \
     $(call include-path-for, audio-effects)
+
+LOCAL_HEADER_LIBRARIES := libhardware_headers \
+                          libsystem_headers \
+                          libutils_headers
 
 LOCAL_SHARED_LIBRARIES := \
     liblog \
@@ -148,6 +156,10 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 
+LOCAL_HEADER_LIBRARIES := libhardware_headers \
+                          libsystem_headers \
+                          libutils_headers
+
 LOCAL_SHARED_LIBRARIES := \
         libcutils \
         liblog \
@@ -170,7 +182,7 @@ LOCAL_C_INCLUDES := \
         external/tinycompress/include
 
 ifneq ($(filter msmnile,$(TARGET_BOARD_PLATFORM)),)
-  LOCAL_HEADER_LIBRARIES := audio_kernel_headers
+  LOCAL_HEADER_LIBRARIES += audio_kernel_headers
 endif
 ifneq ($(filter sdm670 qcs605 msmnile,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include

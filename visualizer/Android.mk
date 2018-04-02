@@ -27,6 +27,8 @@ ifneq ($(filter sdm660 sdm845 msm8998 apq8098_latv sdm670 qcs605 msmnile,$(TARGE
     LOCAL_CFLAGS += -DCAPTURE_DEVICE=7
 endif
 
+LOCAL_HEADER_LIBRARIES := libsystem_headers \
+                          libhardware_headers
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
 	liblog \
