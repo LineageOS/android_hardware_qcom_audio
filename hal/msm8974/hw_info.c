@@ -437,6 +437,9 @@ static void  update_hardware_info_msmnile(struct hardware_info *hw_info, const c
         hw_info->num_snd_devices = ARRAY_SIZE(pahu_qrd_variant_devices);
         hw_info->is_stereo_spkr = false;
         strlcpy(hw_info->dev_extn, "-qrd", sizeof(hw_info->dev_extn));
+    } else if (strstr(snd_card_name, "pahu")) {
+        strlcpy(hw_info->name, "msmnile", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
     } else {
         ALOGW("%s: Not a msmnile device", __func__);
     }
