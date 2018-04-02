@@ -1258,6 +1258,13 @@ static void query_platform(const char *snd_card_name,
         msm_device_to_be_id = msm_device_to_be_id_internal_codec;
         msm_be_id_array_len  =
             sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
+    } else if (!strncmp(snd_card_name, "sdm439-sku1-snd-card",
+                 sizeof("sdm439-sku1-snd-card"))) {
+        strlcpy(mixer_xml_path, MIXER_XML_PATH_SDM439_PM8953,
+                sizeof(MIXER_XML_PATH_SDM439_PM8953));
+        msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+        msm_be_id_array_len  =
+            sizeof(msm_device_to_be_id_internal_codec) / sizeof(msm_device_to_be_id_internal_codec[0]);
     }  else if (!strncmp(snd_card_name, "msm8952-tomtom-snd-card",
                  sizeof("msm8952-tomtom-snd-card"))) {
         strlcpy(mixer_xml_path, MIXER_XML_PATH_WCD9330,
@@ -2085,6 +2092,10 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
                     sizeof("msm8953-snd-card-mtp")) ||
                 (!strncmp(snd_card_name, "msm8953-sku4-snd-card",
                     sizeof("msm8953-sku4-snd-card"))) ||
+                (!strncmp(snd_card_name, "sdm439-sku1-snd-card",
+                    sizeof("sdm439-sku1-snd-card"))) ||
+                (!strncmp(snd_card_name, "sdm439-snd-card-mtp",
+                    sizeof("sdm439-snd-card-mtp"))) ||
                 (!strncmp(snd_card_name, "msm8952-skum-snd-card",
                     sizeof("msm8952-skum-snd-card"))))) {
                 *is_wsa_combo_supported = true;
