@@ -46,6 +46,7 @@
         <device name="SND_DEVICE_IN_UNPROCESSED_THREE_MIC" acdb_id="145"/>
         <device name="SND_DEVICE_IN_UNPROCESSED_QUAD_MIC" acdb_id="146"/>
         <device name="SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC" acdb_id="147"/>
+        <device name="SND_DEVICE_IN_HANDSET_GENERIC_QMIC" acdb_id="148"/>
     </acdb_ids>
     <module_ids>
         <aec>
@@ -99,6 +100,11 @@
         <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="in" id="35" />
         <usecase name="USECASE_AUDIO_PLAYBACK_VOIP" type="out" id="16" />
         <usecase name="USECASE_AUDIO_RECORD_VOIP" type="in" id="16" />
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS2" type="in" id="40"/>
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS3" type="in" id="41"/>
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS4" type="in" id="42"/>
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS5" type="in" id="43"/>
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS6" type="in" id="44"/>
     </pcm_ids>
     <config_params>
         <param key="spkr_1_tz_name" value="wsatz.13"/>
