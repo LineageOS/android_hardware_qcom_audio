@@ -88,7 +88,7 @@
         <usecase name="USECASE_AUDIO_PLAYBACK_FM" type="out" id="5"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_FM" type="in" id="34"/>
         <usecase name="USECASE_AUDIO_SPKR_CALIB_RX" type="out" id="5"/>
-        <usecase name="USECASE_AUDIO_SPKR_CALIB_TX" type="in" id="37"/>
+        <usecase name="USECASE_AUDIO_SPKR_CALIB_TX" type="in" id="42"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_AFE_PROXY" type="out" id="6"/>
         <usecase name="USECASE_AUDIO_RECORD_AFE_PROXY" type="in" id="7"/>
         <usecase name="USECASE_AUDIO_RECORD_LOW_LATENCY" type="in" id="17" />
@@ -100,11 +100,11 @@
         <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="in" id="35" />
         <usecase name="USECASE_AUDIO_PLAYBACK_VOIP" type="out" id="16" />
         <usecase name="USECASE_AUDIO_RECORD_VOIP" type="in" id="16" />
-        <usecase name="USECASE_AUDIO_RECORD_COMPRESS2" type="in" id="40"/>
-        <usecase name="USECASE_AUDIO_RECORD_COMPRESS3" type="in" id="41"/>
-        <usecase name="USECASE_AUDIO_RECORD_COMPRESS4" type="in" id="42"/>
-        <usecase name="USECASE_AUDIO_RECORD_COMPRESS5" type="in" id="43"/>
-        <usecase name="USECASE_AUDIO_RECORD_COMPRESS6" type="in" id="44"/>
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS2" type="in" id="37"/>
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS3" type="in" id="38"/>
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS4" type="in" id="39"/>
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS5" type="in" id="40"/>
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS6" type="in" id="41"/>
     </pcm_ids>
     <config_params>
         <param key="spkr_1_tz_name" value="wsatz.13"/>
