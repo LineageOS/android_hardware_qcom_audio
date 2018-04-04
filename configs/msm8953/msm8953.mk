@@ -227,6 +227,10 @@ vendor.audio.flac.sw.decoder.24bit=true
 PRODUCT_PROPERTY_OVERRIDES += \
 ro.af.client_heap_size_kbyte=7168
 
+#Disable split a2dp
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.bt.enable.splita2dp=false
+
 # for HIDL related packages
 PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-service \
