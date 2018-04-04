@@ -78,7 +78,8 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 ifneq ($(filter msmnile,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_HEADER_LIBRARIES += audio_kernel_headers
 endif
-ifneq ($(filter sdm710 qcs605 msmnile,$(TARGET_BOARD_PLATFORM)),)
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES := audio_kernel_headers
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
   LOCAL_ADDITIONAL_DEPENDENCIES += $(BOARD_VENDOR_KERNEL_MODULES)
