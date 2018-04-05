@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5580ef57_9c95246d",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1038,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2018-04-05T08:57:19Z",
+      "side": 1,
+      "message": "This might not be needed, needs more testing",
+      "range": {
+        "startLine": 1035,
+        "startChar": 0,
+        "endLine": 1038,
+        "endChar": 6
+      },
+      "revId": "eac6b0b53be4cc332d1b52a2c70afd820b5462e7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
