@@ -2005,7 +2005,6 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
     }
 
     while ((tdirent = readdir(tdir))) {
-        char buf[50];
         struct dirent *tzdirent;
         DIR *tzdir = NULL;
 
@@ -2013,6 +2012,7 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
         if (!tzdir)
             continue;
         while ((tzdirent = readdir(tzdir))) {
+            char buf[50] = {0};
             if (strcmp(tzdirent->d_name, "type"))
                 continue;
             snprintf(name, MAX_PATH, TZ_TYPE, tzn);
@@ -2020,11 +2020,11 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
             read_line_from_file(name, buf, sizeof(buf));
             if (strstr(buf, file)) {
                 wsa_count++;
-                /*We support max only two WSA speakers*/
-                if (wsa_count == 2)
-                    break;
             }
             tzn++;
+            /*We support max only two WSA speakers*/
+            if (wsa_count == 2)
+                break;
         }
         closedir(tzdir);
     }
