@@ -75,6 +75,8 @@ struct audio_config_params {
     double record_length;
     char profile[50];
     char kvpairs[256];
+    bool timestamp_mode;
+    char timestamp_file_in[256];
 };
 
 struct timed_params {
@@ -261,6 +263,7 @@ void *start_input(void *thread_param)
   char file_name[256] = "/data/rec";
   int data_sz = 0, name_len = strlen(file_name);
   qahw_in_buffer_t in_buf;
+  static int64_t timestamp = 1;
 
   struct audio_config_params* params = (struct audio_config_params*) thread_param;
   qahw_module_handle_t *qahw_mod_handle = params->qahw_mod_handle;
@@ -358,6 +361,17 @@ void *start_input(void *thread_param)
       test_end();
       pthread_exit(0);
   }
+
+  FILE *fd_in_ts;
+  if (*(params->timestamp_file_in))
+      fd_in_ts = fopen(params->timestamp_file_in, "w+");
+      if (fd_in_ts == NULL) {
+          fprintf(log_file, "playback timestamps file open failed \n");
+          if (log_file != stdout)
+              fprintf(stdout, "playback timestamps file open failed \n");
+          test_end();
+          pthread_exit(0);
+      }
   int bps = 16;
 
   switch(params->config.format) {
@@ -411,8 +425,12 @@ void *start_input(void *thread_param)
 
       in_buf.buffer = buffer;
       in_buf.bytes = buffer_size;
+      if (params->timestamp_mode)
+          in_buf.timestamp = &timestamp;
       bytes_read = qahw_in_read(in_handle, &in_buf);
 
+      if (params->timestamp_mode)
+          fprintf(fd_in_ts, "timestamp:%lu\n", timestamp);
       if (kpi_mode) {
           if (count == 0) {
               ret = clock_gettime(CLOCK_REALTIME, &tsColdF);
@@ -437,6 +455,7 @@ void *start_input(void *thread_param)
       }
       data_sz += buffer_size;
   }
+  fclose(fd_in_ts);
   /*Stopping sourcetracking thread*/
   sourcetrack_done = 1;
 
@@ -548,6 +567,7 @@ void fill_default_params(struct audio_config_params *thread_param, int rec_sessi
     thread_param->source = 1;
     thread_param->record_length = 8 /*sec*/;
     thread_param->record_delay = 0 /*sec*/;
+    thread_param->timestamp_mode = false;
 
     thread_param->handle = 0x99A - rec_session;
 }
@@ -568,6 +588,7 @@ void usage() {
     printf(" -D --recording-delay <in seconds>         - Delay in seconds after which recording should be started\n\n");
     printf(" -l  --log-file <FILEPATH>                 - File path for debug msg, to print\n");
     printf("                                             on console use stdout or 1 \n\n");
+    printf(" -m --timestamp-mode <FILEPATH>            - Use this flag to support timestamp-mode and timestamp file path for debug msg\n");
     printf(" -K  --kpi-mode                            - Use this flag to measure latency KPIs for this recording\n\n");
     printf(" -i  --interactive-mode                    - Use this flag if prefer configuring streams using interactive mode\n");
     printf("                                             All other flags passed would be ignore if this flag is used\n\n");
@@ -586,6 +607,8 @@ void usage() {
     printf(" hal_rec_test -F 1 --kpi-mode -> start a recording with low latency input flag and calculate latency KPIs\n\n");
     printf(" hal_rec_test -c 1 -r 16000 -t 30 -k ffvOn=true;ffv_ec_ref_ch_cnt=2 -> Enable FFV with stereo ec ref\n");
     printf("                                               For mono channel 16kHz rate for 30seconds\n\n");
+    printf(" hal_rec_test -d 2 -f 1 -r 44100 -c 2 -t 8 -D 2 -m <FILEPATH> -F 2147483648 --> enable timestamp mode and\n");
+    printf("                                           print timestamp debug msg in specified FILEPATH\n");
 }
 
 static void qti_audio_server_death_notify_cb(void *ctxt __unused) {
@@ -622,6 +645,7 @@ int main(int argc, char* argv[]) {
         {"recording-time",  required_argument,    0, 't'},
         {"recording-delay", required_argument,    0, 'D'},
         {"log-file",        required_argument,    0, 'l'},
+        {"timestamp-file",  required_argument,    0, 'm'},
         {"kpi-mode",        no_argument,          0, 'K'},
         {"interactive",     no_argument,          0, 'i'},
         {"source-tracking", no_argument,          0, 'S'},
@@ -634,7 +658,7 @@ int main(int argc, char* argv[]) {
     int option_index = 0;
     while ((opt = getopt_long(argc,
                               argv,
-                              "-d:f:F:r:c:s:p:t:D:l:k:KiSh",
+                              "-d:f:F:r:c:s:p:t:D:l:m:k:KiSh",
                               long_options,
                               &option_index)) != -1) {
             switch (opt) {
@@ -667,6 +691,10 @@ int main(int argc, char* argv[]) {
                 break;
             case 'l':
                 snprintf(log_filename, sizeof(log_filename), "%s", optarg);
+                break;
+            case 'm':
+                params[0].timestamp_mode = true;
+                snprintf(params[0].timestamp_file_in, sizeof(params[0].timestamp_file_in), "%s", optarg);
                 break;
             case 'K':
                 kpi_mode = true;
