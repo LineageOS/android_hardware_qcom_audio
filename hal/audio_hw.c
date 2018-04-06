@@ -2115,8 +2115,13 @@ int start_output_stream(struct stream_out *out)
         if (out->offload_callback)
             compress_nonblock(out->compr, out->non_blocking);
 
-        if (adev->visualizer_start_output != NULL)
-            adev->visualizer_start_output(out->handle, out->pcm_device_id);
+        if (adev->visualizer_start_output != NULL) {
+            int capture_device_id =
+                platform_get_pcm_device_id(USECASE_AUDIO_RECORD_AFE_PROXY,
+                                           PCM_CAPTURE);
+            adev->visualizer_start_output(out->handle, out->pcm_device_id,
+                                          adev->snd_card, capture_device_id);
+        }
         if (adev->offload_effects_start_output != NULL)
             adev->offload_effects_start_output(out->handle, out->pcm_device_id);
     } else if (out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
@@ -5618,7 +5623,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     } else {
         ALOGV("%s: DLOPEN successful for %s", __func__, VISUALIZER_LIBRARY_PATH);
         adev->visualizer_start_output =
-                    (int (*)(audio_io_handle_t, int))dlsym(adev->visualizer_lib,
+                    (int (*)(audio_io_handle_t, int, int, int))dlsym(adev->visualizer_lib,
                                                     "visualizer_hal_start_output");
         adev->visualizer_stop_output =
                     (int (*)(audio_io_handle_t, int))dlsym(adev->visualizer_lib,
