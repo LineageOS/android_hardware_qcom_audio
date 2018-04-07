@@ -279,7 +279,8 @@ void audio_extn_usb_set_reconfig(bool is_required);
 #define audio_extn_a2dp_init(adev)                       (0)
 #define audio_extn_a2dp_start_playback()                 (0)
 #define audio_extn_a2dp_stop_playback()                  (0)
-#define audio_extn_a2dp_set_parameters(parms)            (0)
+#define audio_extn_a2dp_set_parameters(parms, reconfig)  (0)
+#define audio_extn_a2dp_get_parameters(query, reply)     (0)
 #define audio_extn_a2dp_is_force_device_switch()         (0)
 #define audio_extn_a2dp_set_handoff_mode(is_on)          (0)
 #define audio_extn_a2dp_get_sample_rate(sample_rate)     (0)
@@ -290,7 +291,9 @@ void audio_extn_usb_set_reconfig(bool is_required);
 void audio_extn_a2dp_init(void *adev);
 int audio_extn_a2dp_start_playback();
 int audio_extn_a2dp_stop_playback();
-void audio_extn_a2dp_set_parameters(struct str_parms *parms);
+int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig);
+int audio_extn_a2dp_get_parameters(struct str_parms *query,
+                                   struct str_parms *reply);
 bool audio_extn_a2dp_is_force_device_switch();
 void audio_extn_a2dp_set_handoff_mode(bool is_on);
 void audio_extn_a2dp_get_sample_rate(int *sample_rate);

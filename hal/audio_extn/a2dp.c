@@ -1721,7 +1721,6 @@ int audio_extn_a2dp_start_playback()
         ALOGD("calling BT module stream start");
         /* This call indicates BT IPC lib to start playback */
         ret =  a2dp.audio_start_stream();
-        ALOGE("BT controller start return = %d",ret);
         if (ret != 0 ) {
            ALOGE("BT controller start failed");
            a2dp.a2dp_started = false;
@@ -1839,16 +1838,17 @@ int audio_extn_a2dp_stop_playback()
     return 0;
 }
 
-void audio_extn_a2dp_set_parameters(struct str_parms *parms)
+int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
 {
-     int ret, val;
+     int ret = 0, val;
      char value[32]={0};
      struct audio_usecase *uc_info;
      struct listnode *node;
 
      if(a2dp.is_a2dp_offload_supported == false) {
         ALOGV("no supported encoders identified,ignoring a2dp setparam");
-        return;
+        ret = -EINVAL;
+        goto param_handled;
      }
 
      ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value,
@@ -1937,8 +1937,20 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
         }
         goto param_handled;
      }
+
+     ret = str_parms_get_str(parms, AUDIO_PARAMETER_RECONFIG_A2DP, value,
+                         sizeof(value));
+     if (ret >= 0) {
+         if (a2dp.is_a2dp_offload_enabled &&
+                a2dp.bt_state != A2DP_STATE_DISCONNECTED) {
+             *reconfig = true;
+         }
+         goto param_handled;
+     }
+
 param_handled:
      ALOGV("end of a2dp setparam");
+     return ret;
 }
 
 void audio_extn_a2dp_set_handoff_mode(bool is_on)
@@ -2054,5 +2066,22 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
             break;
     }
     return latency;
+}
+
+int audio_extn_a2dp_get_parameters(struct str_parms *query,
+                                   struct str_parms *reply)
+{
+    int ret, val = 0;
+    char value[32]={0};
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_A2DP_RECONFIG_SUPPORTED,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        val = a2dp.is_a2dp_offload_enabled;
+        str_parms_add_int(reply, AUDIO_PARAMETER_A2DP_RECONFIG_SUPPORTED, val);
+        ALOGV("%s: called ... isReconfigA2dpSupported %d", __func__, val);
+    }
+
+    return 0;
 }
 #endif // SPLIT_A2DP_ENABLED

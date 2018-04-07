@@ -6481,6 +6481,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     int val;
     int ret;
     int status = 0;
+    bool a2dp_reconfig = false;
 
     ALOGD("%s: enter: %s", __func__, kvpairs);
     parms = str_parms_create_str(kvpairs);
@@ -6611,8 +6612,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         }
     }
 
-    ret = str_parms_get_str(parms,"reconfigA2dp", value, sizeof(value));
-    if (ret >= 0) {
+    status = audio_extn_a2dp_set_parameters(parms, &a2dp_reconfig);
+    if (status >= 0 && a2dp_reconfig) {
         struct audio_usecase *usecase;
         struct listnode *node;
         list_for_each(node, &adev->usecase_list) {
@@ -6709,6 +6710,7 @@ static char* adev_get_parameters(const struct audio_hw_device *dev,
     pthread_mutex_lock(&adev->lock);
     audio_extn_get_parameters(adev, query, reply);
     voice_get_parameters(adev, query, reply);
+    audio_extn_a2dp_get_parameters(query, reply);
     platform_get_parameters(adev->platform, query, reply);
     pthread_mutex_unlock(&adev->lock);
 
