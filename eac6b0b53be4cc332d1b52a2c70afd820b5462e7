@@ -2,6 +2,121 @@
   "comments": [
     {
       "key": {
+        "uuid": "0b1312e2_f5210bb4",
+        "filename": "hal/audio_extn/ultrasound.h",
+        "patchSetId": 3
+      },
+      "lineNbr": 30,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-04-07T08:15:40Z",
+      "side": 1,
+      "message": "You could also expose a single function us_start(bool start) and keep the us_start/us_stop as internal functions.",
+      "range": {
+        "startLine": 29,
+        "startChar": 0,
+        "endLine": 30,
+        "endChar": 18
+      },
+      "revId": "eac6b0b53be4cc332d1b52a2c70afd820b5462e7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9ee0a41f_09460bd9",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1219,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-04-07T08:15:40Z",
+      "side": 1,
+      "message": "Maybe something like backends_match, for ease of reading?",
+      "range": {
+        "startLine": 1219,
+        "startChar": 8,
+        "endLine": 1219,
+        "endChar": 13
+      },
+      "revId": "eac6b0b53be4cc332d1b52a2c70afd820b5462e7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5d1c59ae_bb2048e9",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1226,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-04-07T08:15:40Z",
+      "side": 1,
+      "message": "Isn\u0027t is a slight logic change to move this into the outer if statement?",
+      "range": {
+        "startLine": 1226,
+        "startChar": 12,
+        "endLine": 1226,
+        "endChar": 17
+      },
+      "revId": "eac6b0b53be4cc332d1b52a2c70afd820b5462e7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "450394b6_8b562d00",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 3141,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-04-07T08:15:40Z",
+      "side": 1,
+      "message": "Is this necessary too? Or just an extra fix?",
+      "range": {
+        "startLine": 3141,
+        "startChar": 16,
+        "endLine": 3141,
+        "endChar": 48
+      },
+      "revId": "eac6b0b53be4cc332d1b52a2c70afd820b5462e7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1edb0f64_99e67171",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 6026,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-04-07T08:15:40Z",
+      "side": 1,
+      "message": "Could also ternary this",
+      "range": {
+        "startLine": 6022,
+        "startChar": 8,
+        "endLine": 6026,
+        "endChar": 9
+      },
+      "revId": "eac6b0b53be4cc332d1b52a2c70afd820b5462e7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5580ef57_9c95246d",
         "filename": "hal/msm8974/platform.c",
         "patchSetId": 3
