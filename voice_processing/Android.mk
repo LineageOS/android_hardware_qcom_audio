@@ -22,6 +22,7 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_SHARED_LIBRARIES += libdl
 
+LOCAL_HEADER_LIBRARIES := libhardware_headers
 LOCAL_CFLAGS += -fvisibility=hidden
 
 LOCAL_CFLAGS += -Wno-unused-variable
