@@ -231,6 +231,10 @@ vendor.audio_hal.period_multiplier=3
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.adm.buffering.ms=2
 
+#enable keytone FR
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.hal.output.suspend.supported=true
+
 #enable use of display-port for voice usecases
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.enable.dp.for.voice=false
