@@ -6959,7 +6959,7 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
         set_values[i] = ch_map[i];
     }
 
-    ALOGD("%s: set mapping(%ld %ld %ld %ld %ld %ld %ld %d) for channel:%d", __func__,
+    ALOGD("%s: set mapping(%ld %ld %ld %ld %ld %ld %ld %ld) for channel:%d", __func__,
         set_values[0], set_values[1], set_values[2], set_values[3], set_values[4],
         set_values[5], set_values[6], set_values[7], ch_count);
 
