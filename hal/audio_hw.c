@@ -5377,7 +5377,8 @@ static int add_remove_audio_effect(const struct audio_stream *stream,
 
     lock_input_stream(in);
     pthread_mutex_lock(&in->dev->lock);
-    if ((in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) &&
+    if ((in->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
+         in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
             in->enable_aec != enable &&
             (memcmp(&desc.type, FX_IID_AEC, sizeof(effect_uuid_t)) == 0)) {
         in->enable_aec = enable;
@@ -5391,7 +5392,8 @@ static int add_remove_audio_effect(const struct audio_stream *stream,
             (memcmp(&desc.type, FX_IID_NS, sizeof(effect_uuid_t)) == 0)) {
         in->enable_ns = enable;
         if (!in->standby) {
-            if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
+            if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
+                in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) {
                 if (enable_disable_effect(in->dev, EFFECT_NS, enable) == ENOSYS)
                     select_devices(in->dev, in->usecase);
             } else
@@ -6630,7 +6632,8 @@ static int adev_update_voice_comm_input_stream(struct stream_in *in,
     bool valid_ch = audio_channel_count_from_in_mask(in->channel_mask) == 1;
 
 #ifndef COMPRESS_VOIP_ENABLED
-    if (valid_rate && valid_ch) {
+    if (valid_rate && valid_ch &&
+        in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) {
         in->usecase = USECASE_AUDIO_RECORD_VOIP;
         in->config = default_pcm_config_voip_copp;
         in->config.period_size = VOIP_IO_BUF_SIZE(in->sample_rate,
