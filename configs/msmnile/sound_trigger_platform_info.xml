@@ -50,6 +50,7 @@
         <param DEVICE_HANDSET_MIC_CPE="128" />
         <param DEVICE_HANDSET_MIC_ECPP_CPE="128" />
         <param DEVICE_HANDSET_TMIC_CPE="130" />
+        <param DEVICE_HANDSET_TMIC_APE="157" />
         <param DEVICE_HANDSET_MIC_PP_APE="135" />
         <param DEVICE_HANDSET_QMIC_APE="137" />
         <param DEVICE_HEADSET_MIC_CPE="139" />
