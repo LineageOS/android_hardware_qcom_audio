@@ -73,6 +73,10 @@
 /* treat as unsigned Q1.13 */
 #define VOIP_PLAYBACK_VOLUME_MAX 0x2000
 
+#define RECORD_GAIN_MIN 0.0f
+#define RECORD_GAIN_MAX 1.0f
+#define RECORD_VOLUME_CTL_MAX 0x2000
+
 #define PROXY_OPEN_RETRY_COUNT           100
 #define PROXY_OPEN_WAIT_TIME             20
 
@@ -3499,9 +3503,39 @@ static char* in_get_parameters(const struct audio_stream *stream,
     return str;
 }
 
-static int in_set_gain(struct audio_stream_in *stream __unused, float gain __unused)
+static int in_set_gain(struct audio_stream_in *stream, float gain)
 {
-    return -ENOSYS;
+    struct stream_in *in = (struct stream_in *)stream;
+    char mixer_ctl_name[128];
+    struct mixer_ctl *ctl;
+    int ctl_value;
+
+    ALOGV("%s: gain %f", __func__, gain);
+
+    if (stream == NULL)
+        return -EINVAL;
+
+    /* in_set_gain() only used to silence MMAP capture for now */
+    if (in->usecase != USECASE_AUDIO_RECORD_MMAP)
+        return -ENOSYS;
+
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name), "Capture %d Volume", in->pcm_device_id);
+
+    ctl = mixer_get_ctl_by_name(in->dev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGW("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -ENOSYS;
+    }
+
+    if (gain < RECORD_GAIN_MIN)
+        gain  = RECORD_GAIN_MIN;
+    else if (gain > RECORD_GAIN_MAX)
+         gain = RECORD_GAIN_MAX;
+    ctl_value = (int)(RECORD_VOLUME_CTL_MAX * gain);
+
+    mixer_ctl_set_value(ctl, 0, ctl_value);
+    return 0;
 }
 
 static void in_snd_mon_cb(void * stream, struct str_parms * parms)
