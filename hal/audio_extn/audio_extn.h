@@ -41,6 +41,7 @@
 #include <cutils/str_parms.h>
 #include "adsp_hdlr.h"
 #include "ip_hdlr_intf.h"
+#include "battery_listener.h"
 
 #ifndef AFE_PROXY_ENABLED
 #define AUDIO_DEVICE_OUT_PROXY 0x40000
