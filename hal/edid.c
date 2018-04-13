@@ -388,7 +388,9 @@ static void update_channel_map_lpass(edid_audio_info* info)
 {
     if (!info)
         return;
-    if (info->channel_allocation < 0 || info->channel_allocation > 0x1f) {
+    if (((info->channel_allocation < 0) ||
+         (info->channel_allocation > 0x1f)) &&
+         (info->channel_allocation != 0x2f)) {
         ALOGE("Channel allocation out of supported range");
         return;
     }
@@ -631,6 +633,16 @@ static void update_channel_map_lpass(edid_audio_info* info)
         info->channel_map[6] = PCM_CHANNEL_FLC;
         info->channel_map[7] = PCM_CHANNEL_FRC;
         break;
+    case 0x2f:
+        info->channel_map[0] = PCM_CHANNEL_FL;
+        info->channel_map[1] = PCM_CHANNEL_FR;
+        info->channel_map[2] = PCM_CHANNEL_LFE;
+        info->channel_map[3] = PCM_CHANNEL_FC;
+        info->channel_map[4] = PCM_CHANNEL_LS;
+        info->channel_map[5] = PCM_CHANNEL_RS;
+        info->channel_map[6] = 0; // PCM_CHANNEL_TFL; but not defined by LPASS
+        info->channel_map[7] = 0; // PCM_CHANNEL_TFR; but not defined by LPASS
+        break;
     default:
         break;
     }
@@ -638,6 +650,180 @@ static void update_channel_map_lpass(edid_audio_info* info)
         , info->channel_map[0], info->channel_map[1], info->channel_map[2]
         , info->channel_map[3], info->channel_map[4], info->channel_map[5]
         , info->channel_map[6], info->channel_map[7]);
+}
+
+
+static void update_channel_mask(edid_audio_info* info)
+{
+    if (!info)
+        return;
+    if (((info->channel_allocation < 0) ||
+         (info->channel_allocation > 0x1f)) &&
+         (info->channel_allocation != 0x2f)) {
+        ALOGE("Channel allocation out of supported range");
+        return;
+    }
+    ALOGV("channel_allocation 0x%x", info->channel_allocation);
+    // Don't distinguish channel mask below?
+    // AUDIO_CHANNEL_OUT_5POINT1 and AUDIO_CHANNEL_OUT_5POINT1_SIDE
+    // AUDIO_CHANNEL_OUT_QUAD and AUDIO_CHANNEL_OUT_QUAD_SIDE
+    switch(info->channel_allocation) {
+    case 0x0:
+        info->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+        break;
+    case 0x1:
+        info->channel_mask = AUDIO_CHANNEL_OUT_2POINT1;
+        break;
+    case 0x2:
+        info->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_CENTER;
+        break;
+    case 0x3:
+        info->channel_mask = AUDIO_CHANNEL_OUT_2POINT1;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_CENTER;
+        break;
+    case 0x4:
+        info->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_BACK_CENTER;
+        break;
+    case 0x5:
+        info->channel_mask = AUDIO_CHANNEL_OUT_2POINT1;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_LOW_FREQUENCY;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_BACK_CENTER;
+        break;
+    case 0x6:
+        info->channel_mask = AUDIO_CHANNEL_OUT_SURROUND;
+        break;
+    case 0x7:
+        info->channel_mask = AUDIO_CHANNEL_OUT_SURROUND;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_LOW_FREQUENCY;
+        break;
+    case 0x8:
+        info->channel_mask = AUDIO_CHANNEL_OUT_QUAD;
+        break;
+    case 0x9:
+        info->channel_mask = AUDIO_CHANNEL_OUT_QUAD;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_LOW_FREQUENCY;
+        break;
+    case 0xa:
+        info->channel_mask = AUDIO_CHANNEL_OUT_PENTA;
+        break;
+    case 0xb:
+        info->channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
+        break;
+    case 0xc:
+        info->channel_mask = AUDIO_CHANNEL_OUT_QUAD;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_BACK_CENTER;
+        break;
+    case 0xd:
+        info->channel_mask = AUDIO_CHANNEL_OUT_QUAD;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_LOW_FREQUENCY;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_BACK_CENTER;
+        break;
+    case 0xe:
+        info->channel_mask = AUDIO_CHANNEL_OUT_PENTA;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_BACK_CENTER;
+        break;
+    case 0xf:
+        info->channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_BACK_CENTER;
+        break;
+    case 0x10:
+        info->channel_mask = AUDIO_CHANNEL_OUT_QUAD;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_SIDE_LEFT;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_SIDE_RIGHT;
+        break;
+    case 0x11:
+        info->channel_mask = AUDIO_CHANNEL_OUT_QUAD;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_LOW_FREQUENCY;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_SIDE_LEFT;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_SIDE_RIGHT;
+        break;
+    case 0x12:
+        info->channel_mask = AUDIO_CHANNEL_OUT_QUAD;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_SIDE_LEFT;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_SIDE_RIGHT;
+        break;
+    case 0x13:
+        info->channel_mask = AUDIO_CHANNEL_OUT_7POINT1;
+        break;
+    case 0x14:
+        info->channel_mask = AUDIO_CHANNEL_OUT_FRONT_LEFT;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_RIGHT;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_LEFT_OF_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_RIGHT_OF_CENTER;
+        break;
+    case 0x15:
+        info->channel_mask = AUDIO_CHANNEL_OUT_2POINT1;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_LEFT_OF_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_RIGHT_OF_CENTER;
+        break;
+    case 0x16:
+        info->channel_mask = AUDIO_CHANNEL_OUT_FRONT_LEFT;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_RIGHT;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_LEFT_OF_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_RIGHT_OF_CENTER;
+        break;
+    case 0x17:
+        info->channel_mask = AUDIO_CHANNEL_OUT_2POINT1;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_LEFT_OF_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_RIGHT_OF_CENTER;
+        break;
+    case 0x18:
+        info->channel_mask = AUDIO_CHANNEL_OUT_FRONT_LEFT;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_RIGHT;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_BACK_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_LEFT_OF_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_RIGHT_OF_CENTER;
+        break;
+    case 0x19:
+        info->channel_mask = AUDIO_CHANNEL_OUT_2POINT1;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_BACK_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_LEFT_OF_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_RIGHT_OF_CENTER;
+        break;
+    case 0x1a:
+        info->channel_mask = AUDIO_CHANNEL_OUT_SURROUND;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_LEFT_OF_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_RIGHT_OF_CENTER;
+        break;
+    case 0x1b:
+        info->channel_mask = AUDIO_CHANNEL_OUT_SURROUND;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_LOW_FREQUENCY;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_LEFT_OF_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_RIGHT_OF_CENTER;
+        break;
+    case 0x1c:
+        info->channel_mask = AUDIO_CHANNEL_OUT_QUAD;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_LEFT_OF_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_RIGHT_OF_CENTER;
+        break;
+    case 0x1d:
+        info->channel_mask = AUDIO_CHANNEL_OUT_QUAD;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_LOW_FREQUENCY;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_LEFT_OF_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_RIGHT_OF_CENTER;
+        break;
+    case 0x1e:
+        info->channel_mask = AUDIO_CHANNEL_OUT_PENTA;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_LEFT_OF_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_RIGHT_OF_CENTER;
+        break;
+    case 0x1f:
+        info->channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_LEFT_OF_CENTER;
+        info->channel_mask |= AUDIO_CHANNEL_OUT_FRONT_RIGHT_OF_CENTER;
+        break;
+    case 0x2f:
+        info->channel_mask = AUDIO_CHANNEL_OUT_5POINT1POINT2;
+        break;
+    default:
+        break;
+    }
+    ALOGD("%s channel mask updated to %d", __func__, info->channel_mask);
 }
 
 static void dump_edid_data(edid_audio_info *info)
@@ -715,6 +901,7 @@ bool edid_get_sink_caps(edid_audio_info* info, char *edid_data)
     update_channel_map(info);
     update_channel_allocation(info);
     update_channel_map_lpass(info);
+    update_channel_mask(info);
 
     for (i=0; i<info->audio_blocks; i++) {
         ALOGV("AUDIO DESC BLOCK # %d\n",i);
