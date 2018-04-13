@@ -363,15 +363,17 @@ void *start_input(void *thread_param)
   }
 
   FILE *fd_in_ts;
-  if (*(params->timestamp_file_in))
-      fd_in_ts = fopen(params->timestamp_file_in, "w+");
-      if (fd_in_ts == NULL) {
-          fprintf(log_file, "playback timestamps file open failed \n");
-          if (log_file != stdout)
-              fprintf(stdout, "playback timestamps file open failed \n");
-          test_end();
-          pthread_exit(0);
-      }
+  if (params->timestamp_mode) {
+      if (*(params->timestamp_file_in))
+          fd_in_ts = fopen(params->timestamp_file_in, "w+");
+          if (fd_in_ts == NULL) {
+              fprintf(log_file, "playback timestamps file open failed \n");
+              if (log_file != stdout)
+                  fprintf(stdout, "playback timestamps file open failed \n");
+              test_end();
+              pthread_exit(0);
+          }
+  }
   int bps = 16;
 
   switch(params->config.format) {
@@ -455,7 +457,9 @@ void *start_input(void *thread_param)
       }
       data_sz += buffer_size;
   }
-  fclose(fd_in_ts);
+  if (params->timestamp_mode)
+      fclose(fd_in_ts);
+
   /*Stopping sourcetracking thread*/
   sourcetrack_done = 1;
 
