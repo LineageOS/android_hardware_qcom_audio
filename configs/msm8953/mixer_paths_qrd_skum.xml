@@ -253,6 +253,10 @@
         <path name="deep-buffer-playback" />
     </path>
 
+    <path name="deep-buffer-playback speaker-and-headphones">
+        <path name="deep-buffer-playback" />
+    </path>
+
     <path name="deep-buffer-playback transmission-fm">
         <ctl name="INTERNAL_FM_RX Audio Mixer MultiMedia1" value="1" />
     </path>
@@ -291,6 +295,10 @@
         <ctl name="INTERNAL_FM_RX Audio Mixer MultiMedia5" value="1" />
     </path>
 
+    <path name="low-latency-playback speaker-and-headphones">
+        <path name="low-latency-playback" />
+    </path>
+
     <path name="audio-ull-playback">
         <ctl name="PRI_MI2S_RX Audio Mixer MultiMedia3" value="1" />
     </path>
@@ -325,6 +333,10 @@
         <path name="audio-ull-playback" />
     </path>
 
+    <path name="audio-ull-playback speaker-and-headphones">
+        <path name="audio-ull-playback" />
+    </path>
+
     <path name="compress-offload-playback">
         <ctl name="PRI_MI2S_RX Audio Mixer MultiMedia4" value="1" />
     </path>
@@ -351,6 +363,10 @@
 
     <path name="compress-offload-playback speaker-and-usb-headphones">
         <path name="compress-offload-playback usb-headphones" />
+        <path name="compress-offload-playback" />
+    </path>
+
+    <path name="compress-offload-playback speaker-and-headphones">
         <path name="compress-offload-playback" />
     </path>
 
@@ -388,6 +404,10 @@
         <path name="compress-offload-playback2" />
     </path>
 
+    <path name="compress-offload-playback2 speaker-and-headphones">
+        <path name="compress-offload-playback2" />
+    </path>
+
     <path name="compress-offload-playback3">
         <ctl name="PRI_MI2S_RX Audio Mixer MultiMedia10" value="1" />
     </path>
@@ -404,12 +424,20 @@
         <ctl name="INTERNAL_BT_SCO_RX Audio Mixer MultiMedia11" value="1" />
     </path>
 
+    <path name="compress-offload-playback4 speaker-and-headphones">
+        <path name="compress-offload-playback4" />
+    </path>
+
     <path name="compress-offload-playback5">
         <ctl name="PRI_MI2S_RX Audio Mixer MultiMedia12" value="1" />
     </path>
 
     <path name="compress-offload-playback5 bt-sco">
         <ctl name="INTERNAL_BT_SCO_RX Audio Mixer MultiMedia12" value="1" />
+    </path>
+
+    <path name="compress-offload-playback5 speaker-and-headphones">
+        <path name="compress-offload-playback5" />
     </path>
 
     <path name="compress-offload-playback6">
@@ -420,12 +448,20 @@
         <ctl name="INTERNAL_BT_SCO_RX Audio Mixer MultiMedia13" value="1" />
     </path>
 
+    <path name="compress-offload-playback6 speaker-and-headphones">
+        <path name="compress-offload-playback6" />
+    </path>
+
     <path name="compress-offload-playback7">
         <ctl name="PRI_MI2S_RX Audio Mixer MultiMedia14" value="1" />
     </path>
 
     <path name="compress-offload-playback7 bt-sco">
         <ctl name="INTERNAL_BT_SCO_RX Audio Mixer MultiMedia14" value="1" />
+    </path>
+
+    <path name="compress-offload-playback7 speaker-and-headphones">
+        <path name="compress-offload-playback7" />
     </path>
 
     <path name="audio-record">
@@ -534,6 +570,10 @@
 
     <path name="voicemmode1-call afe-proxy">
        <path name="voicemmode1-call usb-headphones" />
+    </path>
+
+    <path name="voicemmode1-call speaker-and-headphones">
+        <path name="voicemmode1-call" />
     </path>
 
     <path name="voicemmode2-call">
@@ -645,6 +685,10 @@
        <path name="volte-call usb-headphones" />
     </path>
 
+    <path name="volte-call speaker-and-headphones">
+        <path name="volte-call" />
+    </path>
+
     <path name="compress-voip-call">
         <ctl name="PRI_MI2S_RX_Voice Mixer Voip" value="1" />
         <ctl name="Voip_Tx Mixer TERT_MI2S_TX_Voip" value="1" />
@@ -669,6 +713,10 @@
     </path>
 
     <path name="afe-proxy-record afe-proxy">
+    </path>
+
+    <path name="compress-voip-call speaker-and-headphones">
+        <path name="compress-voip-call" />
     </path>
 
     <path name="qchat-call">
