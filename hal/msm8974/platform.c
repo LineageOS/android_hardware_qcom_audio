@@ -2266,7 +2266,6 @@ void *platform_init(struct audio_device *adev)
             ALOGD("ACDB initialization failed");
         }
     }
-
     /* init keep-alive for compress passthru */
     audio_extn_keep_alive_init(adev);
 #ifdef DYNAMIC_LOG_ENABLED
@@ -5952,6 +5951,8 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     unsigned int bit_width;
     unsigned int sample_rate;
     unsigned int channels;
+    unsigned long service_interval = 0;
+    bool service_interval_update = false;
     bool passthrough_enabled = false;
     bool voice_call_active = false;
     int backend_idx = DEFAULT_CODEC_BACKEND;
@@ -6100,6 +6101,27 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         audio_extn_usb_is_config_supported(&bit_width, &sample_rate, &channels, true);
         ALOGV("%s: USB BE configured as bit_width(%d)sample_rate(%d)channels(%d)",
                    __func__, bit_width, sample_rate, channels);
+
+        if (audio_extn_usb_get_service_interval(true,
+                                                &service_interval) == 0) {
+            /* overwrite with best altset for this service interval */
+            int ret =
+                    audio_extn_usb_altset_for_service_interval(true /*playback*/,
+                                                               service_interval,
+                                                               &bit_width,
+                                                               &sample_rate,
+                                                               &channels);
+            ALOGD("%s: Override USB BE configured as bit_width(%d)sample_rate(%d)channels(%d)SI(%lu)",
+           __func__, bit_width, sample_rate, channels, service_interval);
+            if (ret < 0) {
+                ALOGW("Failed to find altset for service interval %lu, skip reconfig",
+                      service_interval);
+                return false;
+            }
+            service_interval_update = audio_extn_usb_is_reconfig_req();
+            audio_extn_usb_set_reconfig(false);
+        }
+
         if (channels != my_data->current_backend_cfg[backend_idx].channels)
             channels_updated = true;
     }
@@ -6138,7 +6160,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     // is not same as current backend comfiguration
     if ((bit_width != my_data->current_backend_cfg[backend_idx].bit_width) ||
         (sample_rate != my_data->current_backend_cfg[backend_idx].sample_rate) ||
-         passthrough_enabled || channels_updated) {
+         passthrough_enabled || channels_updated || service_interval_update ) {
         backend_cfg->bit_width = bit_width;
         backend_cfg->sample_rate = sample_rate;
         backend_cfg->channels = channels;
