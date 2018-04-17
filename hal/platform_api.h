@@ -104,6 +104,8 @@ int64_t platform_render_latency(audio_usecase_t usecase);
 
 int platform_set_incall_recording_session_id(void *platform,
                                              uint32_t session_id, int rec_mode);
+int platform_set_incall_recording_session_channels(void *platform,
+                                                   uint32_t session_channels);
 int platform_stop_incall_recording_usecase(void *platform);
 int platform_start_incall_music_usecase(void *platform);
 int platform_stop_incall_music_usecase(void *platform);
