@@ -6828,6 +6828,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->stream.stop = in_stop;
         in->stream.create_mmap_buffer = in_create_mmap_buffer;
         in->stream.get_mmap_position = in_get_mmap_position;
+        in->sample_rate = in->config.rate;
         ALOGV("%s: USECASE_AUDIO_RECORD_MMAP", __func__);
     } else if (in->realtime) {
         in->config = pcm_config_audio_capture_rt;
@@ -6847,6 +6848,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->config.rate = config->sample_rate;
         in->config.format = pcm_format_from_audio_format(config->format);
         in->config.channels = channel_count;
+        in->sample_rate = in->config.rate;
     } else if ((in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) ||
              (in->device == AUDIO_DEVICE_IN_PROXY)) {
         if (config->sample_rate == 0)
