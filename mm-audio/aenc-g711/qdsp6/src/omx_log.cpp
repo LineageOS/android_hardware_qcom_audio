@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2016 The Linux Foundation. All rights reserved.
+Copyright (c) 2016, 2018 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -40,7 +40,7 @@ uint32_t gOmxLogLevel;
 void updateLogLevel() {
     char level[PROPERTY_VALUE_MAX];
 #ifdef ANDROID
-    property_get("persist.debug.omx.logs.level", level, "0");
+    property_get("persist.vendor.audio.debug.omx.logs.level", level, "0");
     gOmxLogLevel = atoi(level);
 #else
     gOmxLogLevel = atoi("0");
