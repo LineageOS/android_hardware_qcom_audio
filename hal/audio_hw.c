@@ -291,6 +291,8 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_RECORD_VOIP] = "audio-record-voip",
 
     [USECASE_INCALL_MUSIC_UPLINK] = "incall-music-uplink",
+
+    [USECASE_AUDIO_A2DP_ABR_FEEDBACK] = "a2dp-abr-feedback",
 };
 
 
