@@ -600,6 +600,7 @@ static const struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_VOIP)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_VOIP)},
     {TO_NAME_INDEX(USECASE_INCALL_MUSIC_UPLINK)},
+    {TO_NAME_INDEX(USECASE_AUDIO_A2DP_ABR_FEEDBACK)},
 };
 
 static const struct name_to_index usecase_type_index[USECASE_TYPE_MAX] = {
