@@ -33,7 +33,6 @@
 #include "platform_api.h"
 
 #ifdef A2DP_OFFLOAD_ENABLED
-#define AUDIO_PARAMETER_A2DP_STARTED "A2dpStarted"
 #define BT_IPC_LIB_NAME  "libbthost_if.so"
 
 // Media format definitions
@@ -60,10 +59,14 @@
 
 // Mixer controls sent to ALSA
 #define MIXER_ENC_CONFIG_BLOCK     "SLIM_7_RX Encoder Config"
+#define MIXER_DEC_CONFIG_BLOCK     "SLIM_7_TX Decoder Config"
 #define MIXER_ENC_BIT_FORMAT       "AFE Input Bit Format"
 #define MIXER_SCRAMBLER_MODE       "AFE Scrambler Mode"
-#define MIXER_SAMPLE_RATE          "BT SampleRate"
+#define MIXER_SAMPLE_RATE_RX       "BT SampleRate RX"
+#define MIXER_SAMPLE_RATE_TX       "BT SampleRate TX"
 #define MIXER_AFE_IN_CHANNELS      "AFE Input Channels"
+#define MIXER_ABR_TX_FEEDBACK_PATH "A2DP_SLIM7_UL_HL Switch"
+#define MIXER_SET_FEEDBACK_CHANNEL "BT set feedback channel"
 
 // Encoder format strings
 #define ENC_FMT_AAC                "aac"
@@ -95,6 +98,18 @@
 #define DEFAULT_SINK_LATENCY_APTX_HD   180
 #define DEFAULT_SINK_LATENCY_LDAC      180
 #define DEFAULT_SINK_LATENCY_SBC       140
+
+// Slimbus Tx sample rate for ABR feedback channel
+#define ABR_TX_SAMPLE_RATE             "KHZ_8"
+
+// Purpose ID for Inter Module Communication (IMC) in AFE
+#define IMC_PURPOSE_ID_BT_INFO         0x000132E2
+
+// Maximum quality levels for ABR
+#define MAX_ABR_QUALITY_LEVELS             5
+
+// Instance identifier for A2DP
+#define MAX_INSTANCE_ID                (UINT32_MAX / 2)
 
 /*
  * Below enum values are extended from audio-base.h to
@@ -129,6 +144,42 @@ enum A2DP_STATE {
     A2DP_STATE_STOPPED,
     A2DP_STATE_DISCONNECTED,
 };
+
+typedef enum {
+    IMC_TRANSMIT,
+    IMC_RECEIVE,
+} imc_direction_t;
+
+typedef enum {
+    IMC_DISABLE,
+    IMC_ENABLE,
+} imc_status_t;
+
+/* PCM config for ABR Feedback hostless front end */
+static struct pcm_config pcm_config_abr = {
+    .channels = 1,
+    .rate = 8000,
+    .period_size = 240,
+    .period_count = 2,
+    .format = PCM_FORMAT_S16_LE,
+    .start_threshold = 0,
+    .stop_threshold = INT_MAX,
+    .avail_min = 0,
+};
+
+/* Adaptive bitrate config for A2DP codecs */
+struct a2dp_abr_config {
+    /* Flag to denote whether Adaptive bitrate is enabled for codec */
+    bool is_abr_enabled;
+    /* Flag to denote whether front end has been opened for ABR */
+    bool abr_started;
+    /* ABR Tx path pcm handle */
+    struct pcm *abr_tx_handle;
+    /* ABR Inter Module Communication (IMC) instance ID */
+    uint32_t imc_instance;
+};
+
+static uint32_t instance_id = MAX_INSTANCE_ID;
 
 /* Data structure used to:
  * - Update the A2DP state machine
@@ -181,9 +232,75 @@ struct a2dp_data {
     bool is_handoff_in_progress;
     /* Flag to denote whether APTX Dual Mono encoder is supported */
     bool is_aptx_dual_mono_supported;
+    /* Adaptive bitrate config for A2DP codecs */
+    struct a2dp_abr_config abr_config;
 };
 
 struct a2dp_data a2dp;
+
+/* Adaptive bitrate (ABR) is supported by certain Bluetooth codecs.
+ * Structures sent to configure DSP for ABR are defined below.
+ * This data helps DSP configure feedback path (BTSoC to LPASS)
+ * for link quality levels and mapping quality levels to codec
+ * specific bitrate.
+ */
+
+/* Key value pair for link quality level to bitrate mapping. */
+struct bit_rate_level_map_t {
+    uint32_t link_quality_level;
+    uint32_t bitrate;
+};
+
+/* Link quality level to bitrate mapping info sent to DSP. */
+struct quality_level_to_bitrate_info {
+    /* Number of quality levels being mapped.
+     * This will be equal to the size of mapping table.
+     */
+    uint32_t num_levels;
+    /* Quality level to bitrate mapping table */
+    struct bit_rate_level_map_t bit_rate_level_map[MAX_ABR_QUALITY_LEVELS];
+};
+
+/* Structure to set up Inter Module Communication (IMC) between
+ * AFE Decoder and Encoder.
+ */
+struct imc_dec_enc_info {
+    /* Decoder to encoder communication direction.
+     * Transmit = 0 / Receive = 1
+     */
+    uint32_t direction;
+    /* Enable / disable IMC between decoder and encoder */
+    uint32_t enable;
+    /* Purpose of IMC being set up between decoder and encoder.
+     * IMC_PURPOSE_ID_BT_INFO defined for link quality feedback
+     * is the default value to be sent as purpose.
+     */
+    uint32_t purpose;
+    /* Unique communication instance ID.
+     * purpose and comm_instance together form the actual key
+     * used in IMC registration, which must be the same for
+     * encoder and decoder for which IMC is being set up.
+     */
+    uint32_t comm_instance;
+};
+
+/* Structure used for ABR config of AFE encoder and decoder. */
+struct abr_enc_cfg_t {
+    /* Link quality level to bitrate mapping info sent to DSP. */
+    struct quality_level_to_bitrate_info mapping_info;
+    /* Information to set up IMC between decoder and encoder */
+    struct imc_dec_enc_info imc_info;
+}  __attribute__ ((packed));
+
+/* Structure to send configuration for decoder introduced
+ * on AFE Tx path for ABR link quality feedback to BT encoder.
+ */
+struct abr_dec_cfg_t {
+    /* Decoder media format */
+    uint32_t dec_format;
+    /* Information to set up IMC between decoder and encoder */
+    struct imc_dec_enc_info imc_info;
+} __attribute__ ((packed));
 
 /* START of DSP configurable structures
  * These values should match with DSP interface defintion
@@ -319,6 +436,7 @@ struct ldac_specific_enc_cfg_t {
 struct ldac_enc_cfg_t {
     struct custom_enc_cfg_t  custom_cfg;
     struct ldac_specific_enc_cfg_t ldac_cfg;
+    struct abr_enc_cfg_t abr_cfg;
 } __attribute__ ((packed));
 
 /* Information about Bluetooth SBC encoder configuration
@@ -383,6 +501,8 @@ typedef struct {
     uint16_t channel_mode; /* 0, 4, 2, 1 */
     uint16_t mtu;
     uint32_t bits_per_sample; /* 16, 24, 32 (bits) */
+    bool is_abr_enabled;
+    struct quality_level_to_bitrate_info level_to_bitrate_map;
 } audio_ldac_encoder_config;
 
 /*********** END of DSP configurable structures ********************/
@@ -394,15 +514,129 @@ static void a2dp_common_init()
     a2dp.a2dp_suspended = false;
     a2dp.bt_encoder_format = ENC_CODEC_TYPE_INVALID;
     a2dp.bt_state = A2DP_STATE_DISCONNECTED;
+    a2dp.abr_config.is_abr_enabled = false;
+    a2dp.abr_config.abr_started = false;
+    a2dp.abr_config.imc_instance = 0;
+    a2dp.abr_config.abr_tx_handle = NULL;
 }
 
 static void update_offload_codec_support()
 {
-    char value[PROPERTY_VALUE_MAX] = {'\0'};
-
     a2dp.is_a2dp_offload_supported =
             property_get_bool(SYSPROP_A2DP_OFFLOAD_ENABLED, false);
-    ALOGD("%s: A2DP offload supported = %s", __func__, value);
+    ALOGD("%s: A2DP offload supported = %d",
+                   __func__, a2dp.is_a2dp_offload_supported);
+}
+
+static int stop_abr()
+{
+    struct mixer_ctl *ctl_abr_tx_path = NULL;
+    struct mixer_ctl *ctl_set_bt_feedback_channel = NULL;
+
+    /* This function can be used if !abr_started for clean up */
+    ALOGV("%s: enter", __func__);
+
+    // Close hostless front end
+    if (a2dp.abr_config.abr_tx_handle != NULL) {
+        pcm_close(a2dp.abr_config.abr_tx_handle);
+        a2dp.abr_config.abr_tx_handle = NULL;
+    }
+    a2dp.abr_config.abr_started = false;
+    a2dp.abr_config.imc_instance = 0;
+
+    // Reset BT driver mixer control for ABR usecase
+    ctl_set_bt_feedback_channel = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                        MIXER_SET_FEEDBACK_CHANNEL);
+    if (!ctl_set_bt_feedback_channel) {
+        ALOGE("%s: ERROR Set usecase mixer control not identifed", __func__);
+        return -ENOSYS;
+    }
+    if (mixer_ctl_set_value(ctl_set_bt_feedback_channel, 0, 0) != 0) {
+        ALOGE("%s: Failed to set BT usecase", __func__);
+        return -ENOSYS;
+    }
+
+    // Reset ABR Tx feedback path
+    ALOGV("%s: Disable ABR Tx feedback path", __func__);
+    ctl_abr_tx_path = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                        MIXER_ABR_TX_FEEDBACK_PATH);
+    if (!ctl_abr_tx_path) {
+        ALOGE("%s: ERROR ABR Tx feedback path mixer control not identifed", __func__);
+        return -ENOSYS;
+    }
+    if (mixer_ctl_set_value(ctl_abr_tx_path, 0, 0) != 0) {
+        ALOGE("%s: Failed to set ABR Tx feedback path", __func__);
+        return -ENOSYS;
+    }
+
+   return 0;
+}
+
+static int start_abr()
+{
+    struct mixer_ctl *ctl_abr_tx_path = NULL;
+    struct mixer_ctl *ctl_set_bt_feedback_channel = NULL;
+    int abr_device_id;
+    int ret = 0;
+
+    if (!a2dp.abr_config.is_abr_enabled) {
+        ALOGE("%s: Cannot start if ABR is not enabled", __func__);
+        return -ENOSYS;
+    }
+
+    if (a2dp.abr_config.abr_started) {
+        ALOGI("%s: ABR has already started", __func__);
+        return ret;
+    }
+
+    // Enable Slimbus 7 Tx feedback path
+    ALOGV("%s: Enable ABR Tx feedback path", __func__);
+    ctl_abr_tx_path = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                        MIXER_ABR_TX_FEEDBACK_PATH);
+    if (!ctl_abr_tx_path) {
+        ALOGE("%s: ERROR ABR Tx feedback path mixer control not identifed", __func__);
+        return -ENOSYS;
+    }
+    if (mixer_ctl_set_value(ctl_abr_tx_path, 0, 1) != 0) {
+        ALOGE("%s: Failed to set ABR Tx feedback path", __func__);
+        return -ENOSYS;
+    }
+
+    // Notify ABR usecase information to BT driver to distinguish
+    // between SCO and feedback usecase
+    ctl_set_bt_feedback_channel = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                        MIXER_SET_FEEDBACK_CHANNEL);
+    if (!ctl_set_bt_feedback_channel) {
+        ALOGE("%s: ERROR Set usecase mixer control not identifed", __func__);
+        return -ENOSYS;
+    }
+    if (mixer_ctl_set_value(ctl_set_bt_feedback_channel, 0, 1) != 0) {
+        ALOGE("%s: Failed to set BT usecase", __func__);
+        return -ENOSYS;
+    }
+
+    // Open hostless front end and prepare ABR Tx path
+    abr_device_id = platform_get_pcm_device_id(USECASE_AUDIO_A2DP_ABR_FEEDBACK,
+                                               PCM_CAPTURE);
+    if (!a2dp.abr_config.abr_tx_handle) {
+        a2dp.abr_config.abr_tx_handle = pcm_open(a2dp.adev->snd_card,
+                                                 abr_device_id, PCM_IN,
+                                                 &pcm_config_abr);
+        if (a2dp.abr_config.abr_tx_handle == NULL ||
+            !pcm_is_ready(a2dp.abr_config.abr_tx_handle))
+            goto fail;
+    }
+    ret = pcm_start(a2dp.abr_config.abr_tx_handle);
+    if (ret < 0)
+        goto fail;
+    a2dp.abr_config.abr_started = true;
+
+    return ret;
+
+fail:
+    ALOGE("%s: %s", __func__, pcm_get_error(a2dp.abr_config.abr_tx_handle));
+    stop_abr();
+    return -ENOSYS;
 }
 
 /* API to open Bluetooth IPC library to start IPC communication */
@@ -484,6 +718,8 @@ static int close_a2dp_output()
         if (a2dp.audio_stream_close() == false)
             ALOGE("%s: failed close A2DP control path from Bluetooth IPC library", __func__);
     }
+    if (a2dp.abr_config.is_abr_enabled && a2dp.abr_config.abr_started)
+        stop_abr();
     a2dp_common_init();
     a2dp.enc_sampling_rate = 0;
     a2dp.enc_channels = 0;
@@ -519,25 +755,23 @@ static int a2dp_check_and_set_scrambler()
     return 0;
 }
 
-static void a2dp_set_backend_cfg()
+static int a2dp_set_backend_cfg()
 {
     const char *rate_str = NULL, *in_channels = NULL;
-    uint32_t sampling_rate = a2dp.enc_sampling_rate;
+    uint32_t sampling_rate_rx = a2dp.enc_sampling_rate;
     struct mixer_ctl *ctl_sample_rate = NULL, *ctrl_in_channels = NULL;
 
     // For LDAC encoder open slimbus port at 96Khz for 48Khz input
     // and 88.2Khz for 44.1Khz input.
     if ((a2dp.bt_encoder_format == ENC_CODEC_TYPE_LDAC) &&
-        (sampling_rate == 48000 || sampling_rate == 44100 )) {
-        sampling_rate = sampling_rate * 2;
+        (sampling_rate_rx == 48000 || sampling_rate_rx == 44100 )) {
+        sampling_rate_rx *= 2;
     }
-    // Configure backend sampling rate
-    switch (sampling_rate) {
+
+    // Set Rx backend sample rate
+    switch (sampling_rate_rx) {
     case 44100:
         rate_str = "KHZ_44P1";
-        break;
-    case 48000:
-        rate_str = "KHZ_48";
         break;
     case 88200:
         rate_str = "KHZ_88P2";
@@ -545,22 +779,39 @@ static void a2dp_set_backend_cfg()
     case 96000:
         rate_str = "KHZ_96";
         break;
+    case 48000:
     default:
         rate_str = "KHZ_48";
         break;
     }
 
-    ALOGD("%s: set backend sample rate =%s", __func__, rate_str);
+    ALOGV("%s: set backend rx sample rate = %s", __func__, rate_str);
     ctl_sample_rate = mixer_get_ctl_by_name(a2dp.adev->mixer,
-                                        MIXER_SAMPLE_RATE);
+                                        MIXER_SAMPLE_RATE_RX);
     if (!ctl_sample_rate) {
         ALOGE("%s: ERROR backend sample rate mixer control not identifed", __func__);
-        return;
-    } else {
-        if (mixer_ctl_set_enum_by_string(ctl_sample_rate, rate_str) != 0) {
-            ALOGE("%s: Failed to set backend sample rate =%s", __func__, rate_str);
-            return;
-        }
+        return -ENOSYS;
+    }
+    if (mixer_ctl_set_enum_by_string(ctl_sample_rate, rate_str) != 0) {
+        ALOGE("%s: Failed to set backend sample rate = %s", __func__, rate_str);
+        return -ENOSYS;
+    }
+
+    // Set Tx backend sample rate
+    if (a2dp.abr_config.is_abr_enabled)
+        rate_str = ABR_TX_SAMPLE_RATE;
+
+    ALOGV("%s: set backend tx sample rate = %s", __func__, rate_str);
+    ctl_sample_rate = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                        MIXER_SAMPLE_RATE_TX);
+    if (!ctl_sample_rate) {
+        ALOGE("%s: ERROR backend sample rate mixer control not identifed", __func__);
+        return -ENOSYS;
+    }
+    if (mixer_ctl_set_enum_by_string(ctl_sample_rate, rate_str) != 0) {
+        ALOGE("%s: Failed to set backend sample rate = %s",
+                                    __func__, rate_str);
+        return -ENOSYS;
     }
 
     // Configure AFE input channels
@@ -574,18 +825,19 @@ static void a2dp_set_backend_cfg()
         break;
     }
 
-    ALOGD("%s: set AFE input channels =%d", __func__, a2dp.enc_channels);
+    ALOGV("%s: set AFE input channels = %d", __func__, a2dp.enc_channels);
     ctrl_in_channels = mixer_get_ctl_by_name(a2dp.adev->mixer,
                                         MIXER_AFE_IN_CHANNELS);
     if (!ctrl_in_channels) {
         ALOGE("%s: ERROR AFE input channels mixer control not identifed", __func__);
-        return;
-    } else {
-        if (mixer_ctl_set_enum_by_string(ctrl_in_channels, in_channels) != 0) {
-            ALOGE("%s: Failed to set AFE in channels =%d", __func__, a2dp.enc_channels);
-            return;
-        }
+        return -ENOSYS;
     }
+    if (mixer_ctl_set_enum_by_string(ctrl_in_channels, in_channels) != 0) {
+        ALOGE("%s: Failed to set AFE in channels = %d", __func__, a2dp.enc_channels);
+        return -ENOSYS;
+    }
+
+    return 0;
 }
 
 static int a2dp_set_bit_format(uint32_t enc_bit_format)
@@ -621,38 +873,81 @@ static int a2dp_set_bit_format(uint32_t enc_bit_format)
     return 0;
 }
 
-static void a2dp_reset_backend_cfg()
+static int a2dp_reset_backend_cfg()
 {
     const char *rate_str = "KHZ_8", *in_channels = "Zero";
-    struct mixer_ctl *ctl_sample_rate = NULL, *ctrl_in_channels = NULL;
+    struct mixer_ctl *ctl_sample_rate_rx = NULL, *ctl_sample_rate_tx = NULL;
+    struct mixer_ctl *ctrl_in_channels = NULL;
 
     // Reset backend sampling rate
-    ALOGD("%s: reset backend sample rate = %s", __func__, rate_str);
-    ctl_sample_rate = mixer_get_ctl_by_name(a2dp.adev->mixer,
-                                        MIXER_SAMPLE_RATE);
-    if (!ctl_sample_rate) {
-        ALOGE("%s: ERROR backend sample rate mixer control not identifed", __func__);
-        return;
-    } else {
-        if (mixer_ctl_set_enum_by_string(ctl_sample_rate, rate_str) != 0) {
-            ALOGE("%s: Failed to reset backend sample rate = %s", __func__, rate_str);
-            return;
-        }
+    ALOGV("%s: reset backend sample rate = %s", __func__, rate_str);
+    ctl_sample_rate_rx = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                        MIXER_SAMPLE_RATE_RX);
+    if (!ctl_sample_rate_rx) {
+        ALOGE("%s: ERROR Rx backend sample rate mixer control not identifed", __func__);
+        return -ENOSYS;
+    }
+    if (mixer_ctl_set_enum_by_string(ctl_sample_rate_rx, rate_str) != 0) {
+        ALOGE("%s: Failed to reset Rx backend sample rate = %s", __func__, rate_str);
+        return -ENOSYS;
+    }
+
+    ctl_sample_rate_tx = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                        MIXER_SAMPLE_RATE_TX);
+    if (!ctl_sample_rate_tx) {
+        ALOGE("%s: ERROR Tx backend sample rate mixer control not identifed", __func__);
+        return -ENOSYS;
+    }
+    if (mixer_ctl_set_enum_by_string(ctl_sample_rate_tx, rate_str) != 0) {
+        ALOGE("%s: Failed to reset Tx backend sample rate = %s", __func__, rate_str);
+        return -ENOSYS;
     }
 
     // Reset AFE input channels
-    ALOGD("%s: reset AFE input channels = %s", __func__, in_channels);
+    ALOGV("%s: reset AFE input channels = %s", __func__, in_channels);
     ctrl_in_channels = mixer_get_ctl_by_name(a2dp.adev->mixer,
                                         MIXER_AFE_IN_CHANNELS);
     if (!ctrl_in_channels) {
         ALOGE("%s: ERROR AFE input channels mixer control not identifed", __func__);
-        return;
-    } else {
-        if (mixer_ctl_set_enum_by_string(ctrl_in_channels, in_channels) != 0) {
-            ALOGE("%s: Failed to reset AFE in channels =%d", __func__, a2dp.enc_channels);
-            return;
+        return -ENOSYS;
+    }
+    if (mixer_ctl_set_enum_by_string(ctrl_in_channels, in_channels) != 0) {
+        ALOGE("%s: Failed to reset AFE in channels = %d", __func__, a2dp.enc_channels);
+        return -ENOSYS;
+    }
+
+    return 0;
+}
+
+/* API to configure AFE decoder in DSP */
+static bool configure_a2dp_decoder_format(int dec_format)
+{
+    struct mixer_ctl *ctl_dec_data = NULL;
+    struct abr_dec_cfg_t dec_cfg;
+    int ret = 0;
+
+    if (a2dp.abr_config.is_abr_enabled) {
+        ctl_dec_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_DEC_CONFIG_BLOCK);
+        if (!ctl_dec_data) {
+            ALOGE("%s: ERROR A2DP codec config data mixer control not identifed", __func__);
+            return false;
+        }
+        memset(&dec_cfg, 0x0, sizeof(dec_cfg));
+        dec_cfg.dec_format = dec_format;
+        dec_cfg.imc_info.direction = IMC_TRANSMIT;
+        dec_cfg.imc_info.enable = IMC_ENABLE;
+        dec_cfg.imc_info.purpose = IMC_PURPOSE_ID_BT_INFO;
+        dec_cfg.imc_info.comm_instance = a2dp.abr_config.imc_instance;
+
+        ret = mixer_ctl_set_array(ctl_dec_data, (void *)&dec_cfg,
+                                  sizeof(dec_cfg));
+        if (ret != 0) {
+            ALOGE("%s: Failed to set decoder config", __func__);
+            return false;
         }
     }
+
+    return true;
 }
 
 /* API to configure SBC DSP encoder */
@@ -912,7 +1207,7 @@ static bool configure_aac_enc_format(audio_aac_encoder_config *aac_bt_cfg)
     is_configured = true;
     a2dp.bt_encoder_format = ENC_CODEC_TYPE_AAC;
     a2dp.enc_sampling_rate = aac_bt_cfg->sampling_rate;
-    a2dp.enc_channels = aac_bt_cfg->channels;;
+    a2dp.enc_channels = aac_bt_cfg->channels;
     ALOGV("%s: Successfully updated AAC enc format with sampling rate: %d channels:%d",
            __func__, aac_dsp_cfg.sample_rate, aac_dsp_cfg.channel_cfg);
 exit:
@@ -959,6 +1254,14 @@ static bool configure_ldac_enc_format(audio_ldac_encoder_config *ldac_bt_cfg)
     ldac_dsp_cfg.custom_cfg.custom_size = sizeof(ldac_dsp_cfg);
     ldac_dsp_cfg.ldac_cfg.mtu = ldac_bt_cfg->mtu;
     ldac_dsp_cfg.ldac_cfg.bit_rate = ldac_bt_cfg->bit_rate;
+    if (ldac_bt_cfg->is_abr_enabled) {
+        ldac_dsp_cfg.abr_cfg.mapping_info = ldac_bt_cfg->level_to_bitrate_map;
+        ldac_dsp_cfg.abr_cfg.imc_info.direction = IMC_RECEIVE;
+        ldac_dsp_cfg.abr_cfg.imc_info.enable = IMC_ENABLE;
+        ldac_dsp_cfg.abr_cfg.imc_info.purpose = IMC_PURPOSE_ID_BT_INFO;
+        ldac_dsp_cfg.abr_cfg.imc_info.comm_instance = a2dp.abr_config.imc_instance;
+    }
+
     ret = mixer_ctl_set_array(ldac_enc_data, (void *)&ldac_dsp_cfg,
                               sizeof(ldac_dsp_cfg));
     if (ret != 0) {
@@ -975,6 +1278,7 @@ static bool configure_ldac_enc_format(audio_ldac_encoder_config *ldac_bt_cfg)
     a2dp.bt_encoder_format = ENC_CODEC_TYPE_LDAC;
     a2dp.enc_sampling_rate = ldac_bt_cfg->sampling_rate;
     a2dp.enc_channels = ldac_dsp_cfg.custom_cfg.num_channels;
+    a2dp.abr_config.is_abr_enabled = ldac_bt_cfg->is_abr_enabled;
     ALOGV("%s: Successfully updated LDAC encformat with sampling rate: %d channels:%d",
            __func__, ldac_dsp_cfg.custom_cfg.sample_rate,
            ldac_dsp_cfg.custom_cfg.num_channels);
@@ -997,6 +1301,9 @@ bool configure_a2dp_encoder_format()
     ALOGD("%s: start", __func__);
     codec_info = a2dp.audio_get_codec_config(&multi_cast, &num_dev,
                                &codec_type);
+
+    // ABR disabled by default for all codecs
+    a2dp.abr_config.is_abr_enabled = false;
 
     switch (codec_type) {
         case ENC_CODEC_TYPE_SBC:
@@ -1023,8 +1330,12 @@ bool configure_a2dp_encoder_format()
             break;
         case ENC_CODEC_TYPE_LDAC:
             ALOGD("%s: Received LDAC encoder supported Bluetooth device", __func__);
+            if (!instance_id || instance_id > MAX_INSTANCE_ID)
+                instance_id = MAX_INSTANCE_ID;
+            a2dp.abr_config.imc_instance = instance_id--;
             is_configured =
-              configure_ldac_enc_format((audio_ldac_encoder_config *)codec_info);
+                (configure_ldac_enc_format((audio_ldac_encoder_config *)codec_info) &&
+                 configure_a2dp_decoder_format(ENC_CODEC_TYPE_LDAC));
             break;
         default:
             ALOGD("%s: Received unsupported encoder format", __func__);
@@ -1077,6 +1388,8 @@ int audio_extn_a2dp_start_playback()
         a2dp.a2dp_total_active_session_request++;
         a2dp_check_and_set_scrambler();
         a2dp_set_backend_cfg();
+        if (a2dp.abr_config.is_abr_enabled)
+            start_abr();
     }
 
     ALOGD("%s: start A2DP playback total active sessions :%d", __func__,
@@ -1131,6 +1444,9 @@ int audio_extn_a2dp_stop_playback()
             ALOGV("%s: stop steam to Bluetooth IPC lib successful", __func__);
         reset_a2dp_enc_config_params();
         a2dp_reset_backend_cfg();
+        if (a2dp.abr_config.is_abr_enabled && a2dp.abr_config.abr_started)
+            stop_abr();
+        a2dp.abr_config.is_abr_enabled = false;
         a2dp.a2dp_started = false;
     }
     ALOGD("%s: Stop A2DP playback total active sessions :%d", __func__,
