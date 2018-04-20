@@ -59,8 +59,22 @@
 #define AUDIO_PARAMETER_FFV_EC_REF_DEVICE "ffv_ec_ref_dev"
 #define AUDIO_PARAMETER_FFV_CHANNEL_INDEX "ffv_channel_index"
 
-#define FFV_LIB "libffv.so"
-#define FFV_CONFIG_FILE_PATH "/etc/BF_1out.cfg"
+#if LINUX_ENABLED
+#define ST_FFV_CONFIG_FILE_PATH "/etc/BF_1out.cfg"
+#ifdef __LP64__
+#define FFV_LIB "/usr/lib64/libffv.so"
+#else
+#define FFV_LIB "/usr/lib/libffv.so"
+#endif
+#else
+#define ST_FFV_CONFIG_FILE_PATH "/vendor/etc/BF_1out.cfg"
+#ifdef __LP64__
+#define FFV_LIB "/vendor/lib64/libffv.so"
+#else
+#define FFV_LIB "/vendor/lib/libffv.so"
+#endif
+#endif
+
 #define FFV_SAMPLING_RATE_16000 16000
 #define FFV_EC_REF_LOOPBACK_DEVICE_MONO "ec-ref-loopback-mono"
 #define FFV_EC_REF_LOOPBACK_DEVICE_STEREO "ec-ref-loopback-stereo"
