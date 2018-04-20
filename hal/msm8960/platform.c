@@ -697,7 +697,13 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
         snd_device = SND_DEVICE_OUT_HEADPHONES;
     } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
-        if (my_data->speaker_lr_swap)
+        /*
+         * Perform device switch only if acdb tuning is different between SPEAKER & SPEAKER_REVERSE,
+         * Or there will be a small pause while performing device switch.
+         */
+        if (my_data->speaker_lr_swap &&
+            (acdb_device_table[SND_DEVICE_OUT_SPEAKER] !=
+            acdb_device_table[SND_DEVICE_OUT_SPEAKER_REVERSE]))
             snd_device = SND_DEVICE_OUT_SPEAKER_REVERSE;
         else
             snd_device = SND_DEVICE_OUT_SPEAKER;
