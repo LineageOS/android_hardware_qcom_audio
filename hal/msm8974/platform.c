@@ -1312,6 +1312,44 @@ platform_backend_app_type_cfg_init(struct platform_data *pdata,
     return 0;
 }
 
+static void configure_flicker_sensor_input(struct mixer *mixer)
+{
+    struct mixer_ctl *ctl;
+    const char* ctl1 = "AIF3_CAP Mixer SLIM TX2";
+    int setting1 = 1;
+    const char* ctl2 = "CDC_IF TX2 MUX";
+    const char* setting2 = "DEC2";
+    const char* ctl3 = "SLIM_1_TX Channels";
+    const char* setting3 = "One";
+    const char* ctl4 = "ADC MUX2";
+    const char* setting4 = "AMIC";
+    const char* ctl5 = "AMIC MUX2";
+    const char* setting5 = "ADC1";
+    const char* ctl6 = "DEC2 Volume";
+    int setting6 = 84;
+    const char* ctl7 = "MultiMedia2 Mixer SLIM_1_TX";
+    int setting7 = 1;
+    const char* ctl8 = "SLIM_1_TX SampleRate";
+    const char* setting8 = "KHZ_8";
+
+    ctl = mixer_get_ctl_by_name(mixer, ctl1);
+    mixer_ctl_set_value(ctl, 0, setting1);
+    ctl = mixer_get_ctl_by_name(mixer, ctl2);
+    mixer_ctl_set_enum_by_string(ctl, setting2);
+    ctl = mixer_get_ctl_by_name(mixer, ctl3);
+    mixer_ctl_set_enum_by_string(ctl, setting3);
+    ctl = mixer_get_ctl_by_name(mixer, ctl4);
+    mixer_ctl_set_enum_by_string(ctl, setting4);
+    ctl = mixer_get_ctl_by_name(mixer, ctl5);
+    mixer_ctl_set_enum_by_string(ctl, setting5);
+    ctl = mixer_get_ctl_by_name(mixer, ctl6);
+    mixer_ctl_set_value(ctl, 0, setting6);
+    ctl = mixer_get_ctl_by_name(mixer, ctl7);
+    mixer_ctl_set_value(ctl, 0, setting7);
+    ctl = mixer_get_ctl_by_name(mixer, ctl8);
+    mixer_ctl_set_enum_by_string(ctl, setting8);
+}
+
 void *platform_init(struct audio_device *adev)
 {
     char value[PROPERTY_VALUE_MAX];
@@ -1522,6 +1560,10 @@ void *platform_init(struct audio_device *adev)
         if (!my_data->acdb_send_gain_dep_cal)
             ALOGV("%s: Could not find the symbol acdb_loader_send_gain_dep_cal from %s",
                   __func__, LIB_ACDB_LOADER);
+
+#if defined (FLICKER_SENSOR_INPUT)
+        configure_flicker_sensor_input(adev->mixer);
+#endif
 
 #if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845)
         acdb_init_v2_cvd_t acdb_init_local;
