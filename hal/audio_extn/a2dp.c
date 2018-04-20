@@ -76,7 +76,8 @@
 #define ENC_FMT_SBC                "sbc"
 
 // System properties used for A2DP Offload
-#define SYSPROP_A2DP_OFFLOAD_ENABLED   "persist.vendor.bluetooth.a2dp_offload.enable"
+#define SYSPROP_A2DP_OFFLOAD_SUPPORTED "ro.bluetooth.a2dp_offload.supported"
+#define SYSPROP_A2DP_OFFLOAD_DISABLED  "persist.bluetooth.a2dp_offload.disabled"
 #define SYSPROP_A2DP_CODEC_LATENCIES   "vendor.audio.a2dp.codec.latency"
 
 // Default encoder bit width
@@ -226,8 +227,8 @@ struct a2dp_data {
     bool a2dp_suspended;
     /* Number of active sessions on A2DP output */
     int  a2dp_total_active_session_request;
-    /* Flag to denote whether A2DP offload is supported */
-    bool is_a2dp_offload_supported;
+    /* Flag to denote whether A2DP offload is enabled */
+    bool is_a2dp_offload_enabled;
     /* Flag to denote whether codec reconfiguration/soft handoff is in progress */
     bool is_handoff_in_progress;
     /* Flag to denote whether APTX Dual Mono encoder is supported */
@@ -522,10 +523,12 @@ static void a2dp_common_init()
 
 static void update_offload_codec_support()
 {
-    a2dp.is_a2dp_offload_supported =
-            property_get_bool(SYSPROP_A2DP_OFFLOAD_ENABLED, false);
-    ALOGD("%s: A2DP offload supported = %d",
-                   __func__, a2dp.is_a2dp_offload_supported);
+    a2dp.is_a2dp_offload_enabled =
+            property_get_bool(SYSPROP_A2DP_OFFLOAD_SUPPORTED, false) &&
+            !property_get_bool(SYSPROP_A2DP_OFFLOAD_DISABLED, false);
+
+    ALOGD("%s: A2DP offload enabled = %d", __func__,
+          a2dp.is_a2dp_offload_enabled);
 }
 
 static int stop_abr()
@@ -1461,7 +1464,7 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
      struct audio_usecase *uc_info;
      struct listnode *node;
 
-     if (a2dp.is_a2dp_offload_supported == false) {
+     if (a2dp.is_a2dp_offload_enabled == false) {
         ALOGV("%s: No supported encoders identified,ignoring A2DP setparam", __func__);
         return;
      }
@@ -1579,7 +1582,7 @@ bool audio_extn_a2dp_is_ready()
         goto exit;
 
     if ((a2dp.bt_state != A2DP_STATE_DISCONNECTED) &&
-        (a2dp.is_a2dp_offload_supported) &&
+        (a2dp.is_a2dp_offload_enabled) &&
         (a2dp.audio_check_a2dp_ready))
            ret = a2dp.audio_check_a2dp_ready();
 
@@ -1598,7 +1601,7 @@ void audio_extn_a2dp_init(void *adev)
   a2dp.bt_lib_handle = NULL;
   a2dp_common_init();
   a2dp.enc_sampling_rate = 48000;
-  a2dp.is_a2dp_offload_supported = false;
+  a2dp.is_a2dp_offload_enabled = false;
   a2dp.is_handoff_in_progress = false;
   a2dp.is_aptx_dual_mono_supported = false;
   reset_a2dp_enc_config_params();
