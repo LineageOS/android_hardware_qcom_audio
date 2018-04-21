@@ -219,14 +219,6 @@ static const snd_device_t tavil_qrd_variant_devices[] = {
     SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET,
 };
 
-static const snd_device_t pahu_qrd_variant_devices[] = {
-    SND_DEVICE_OUT_SPEAKER,
-    SND_DEVICE_OUT_VOICE_SPEAKER,
-    SND_DEVICE_OUT_HANDSET,
-    SND_DEVICE_OUT_VOICE_HANDSET,
-    SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET,
-};
-
 static const snd_device_t auto_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER
 };
@@ -433,10 +425,13 @@ static void  update_hardware_info_msmnile(struct hardware_info *hw_info, const c
     if (strstr(snd_card_name, "qrd")) {
         strlcpy(hw_info->type, " qrd", sizeof(hw_info->type));
         strlcpy(hw_info->name, "msmnile", sizeof(hw_info->name));
-        hw_info->snd_devices = (snd_device_t *)pahu_qrd_variant_devices;
-        hw_info->num_snd_devices = ARRAY_SIZE(pahu_qrd_variant_devices);
+        hw_info->snd_devices = (snd_device_t *)tavil_qrd_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tavil_qrd_variant_devices);
         hw_info->is_stereo_spkr = false;
         strlcpy(hw_info->dev_extn, "-qrd", sizeof(hw_info->dev_extn));
+    } else if (strstr(snd_card_name, "pahu")) {
+        strlcpy(hw_info->name, "msmnile", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
     } else {
         ALOGW("%s: Not a msmnile device", __func__);
     }
