@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016,2018, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -101,4 +101,5 @@ void voice_check_and_update_aanc_path(struct audio_device *adev,
                                       snd_device_t out_snd_device,
                                       bool enable);
 bool voice_is_call_state_active(struct audio_device *adev);
+snd_device_t voice_get_incall_rec_backend_device(struct stream_in *in);
 #endif //VOICE_H
