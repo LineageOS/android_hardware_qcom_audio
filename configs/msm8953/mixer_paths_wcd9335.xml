@@ -563,12 +563,15 @@
     <ctl name="SLIMBUS_DL_HL Switch" value="0" />
     <ctl name="SLIMBUS6_DL_HL Switch" value="0" />
     <!-- ADSP testfwk end-->
-    <ctl name="MultiMedia5 Mixer SLIM_2_TX" value="0" />
-    <ctl name="PCM_Dev 12 Topology Capture" value="DTS" />
 
     <!-- These are audio route (FE to BE) specific mixer settings -->
     <path name="deep-buffer-playback">
         <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia1" value="1" />
+    </path>
+
+    <path name="silence-playback">
+        <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia9" value="1" />
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="SLIM_RX" />
     </path>
 
     <path name="deep-buffer-playback speaker-protected">
@@ -2485,10 +2488,9 @@
           <path name="speaker-and-headphones" />
     </path>
 
-
     <path name="ec-ref-audio-capture">
-        <ctl name="PCM_Dev 12 Topology Capture" value="LEGACY" />
-        <ctl name="MultiMedia5 Mixer SLIM_2_TX" value="1" />
+        <ctl name="MultiMedia9 Mixer AFE_LOOPBACK_TX" value="1" />
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="SLIM_RX" />
     </path>
 
     <path name="handset-6mic">
@@ -2567,37 +2569,15 @@
     </path>
 
     <path name="ec-ref-loopback-mono">
-        <ctl name="SLIM_2_TX Channels" value="One" />
-        <ctl name="AIF4_CAP Mixer SLIM TX7" value ="1"/>
-        <ctl name="SLIM TX7 MUX" value="RX_MIX_TX7"/>
-        <ctl name="RX MIX TX7 MUX" value="RX_MIX7"/>
     </path>
 
     <path name="ec-ref-loopback-stereo">
-        <ctl name="SLIM_2_TX Channels" value="Two" />
-        <ctl name="AIF4_CAP Mixer SLIM TX7" value ="1"/>
-        <ctl name="SLIM TX7 MUX" value="RX_MIX_TX7"/>
-        <ctl name="RX MIX TX7 MUX" value="RX_MIX7"/>
-        <ctl name="AIF4_CAP Mixer SLIM TX8" value ="1"/>
-        <ctl name="SLIM TX8 MUX" value="RX_MIX_TX8"/>
-        <ctl name="RX MIX TX8 MUX" value="RX_MIX8"/>
     </path>
 
     <path name="ec-ref-loopback-mono lineout">
-        <ctl name="SLIM_2_TX Channels" value="One" />
-        <ctl name="AIF4_CAP Mixer SLIM TX7" value ="1"/>
-        <ctl name="SLIM TX7 MUX" value="RX_MIX_TX7"/>
-        <ctl name="RX MIX TX7 MUX" value="RX_MIX5"/>
     </path>
 
     <path name="ec-ref-loopback-stereo lineout">
-        <ctl name="SLIM_2_TX Channels" value="Two" />
-        <ctl name="AIF4_CAP Mixer SLIM TX7" value ="1"/>
-        <ctl name="SLIM TX7 MUX" value="RX_MIX_TX7"/>
-        <ctl name="RX MIX TX7 MUX" value="RX_MIX5"/>
-        <ctl name="AIF4_CAP Mixer SLIM TX8" value ="1"/>
-        <ctl name="SLIM TX8 MUX" value="RX_MIX_TX8"/>
-        <ctl name="RX MIX TX8 MUX" value="RX_MIX6"/>
     </path>
 
 </mixer>

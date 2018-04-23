@@ -41,6 +41,14 @@
         <param backend_dai_name="TERT_MI2S_TX" /-->
         <param backend_port_name="SLIM_0_TX" />
         <param backend_dai_name="SLIMBUS_0_TX" />
+        <param sw_mad="false"/>
+        <!-- Enable concurrent VA & audio capture excluding voip/voice call     -->
+        <!-- using concurrent_capture param.                                    -->
+        <!-- Enable VA & voip/voice call concurrency using concurrent_capture   -->
+        <!-- param along with concurrent_voip_call/concurrent_voice_call params -->
+        <param concurrent_capture="false" />
+        <param concurrent_voip_call="false" />
+        <param concurrent_voice_call="false" />
     </common_config>
 
     <acdb_ids>
@@ -69,15 +77,7 @@
         <param max_cpe_users="3" />
         <param max_ape_phrases="10" />
         <param max_ape_users="10" />
-        <param sample_rate="16000" />
-        <param bit_width="16" />
-        <param channel_count="1"/>
-        <!-- adm_cfg_profile should match with the one defined under adm_config -->
-        <!-- Set it to NONE if LSM directly connects to AFE -->
-        <param adm_cfg_profile="NONE" />
-        <!-- fluence_type: "FLUENCE", "FLUENCE_DMIC", "FLUENCE_TMIC", -->
-        <!-- "FLUENCE_QMIC". param value is valid when adm_cfg_profile="FLUENCE"-->
-        <param fluence_type="NONE" />
+        <param event_timestamp_mode="false" />
 
         <!-- Module and param ids with which the algorithm is integrated in firmware -->
         <lsm_usecase>
@@ -93,6 +93,17 @@
         <!--  kw_duration is in milli seconds. It is valid only for FTRT transfer mode -->
         <param capture_keyword="PCM_packet, RT, 2000" />
         <param client_capture_read_delay="2000" />
+
+        <!-- Profile specific data which the algorithm can support -->
+        <param sample_rate="16000" />
+        <param bit_width="16" />
+        <param channel_count="1"/>
+        <!-- adm_cfg_profile should match with the one defined under adm_config -->
+        <!-- Set it to NONE if LSM directly connects to AFE -->
+        <param adm_cfg_profile="NONE" />
+        <!-- fluence_type: "FLUENCE", FLUENCE_DMIC", FLUENCE_QMIC" -->
+        <!-- param value is valid when profile type is fluence -->
+        <param fluence_type="FLUENCE_QMIC" />
     </sound_model_config>
 
     <!-- ARM based SVA sound_model_config -->

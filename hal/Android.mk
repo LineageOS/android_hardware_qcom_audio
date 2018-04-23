@@ -395,12 +395,13 @@ ifeq ($(strip $($AUDIO_FEATURE_ENABLED_DYNAMIC_ECNS)),true)
     LOCAL_CFLAGS += -DDYNAMIC_ECNS_ENABLED
 endif
 
-ifeq ($(strip $($AUDIO_FEATURE_ENABLED_KEEP_ALIVE_ARM_FFV)), true)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_KEEP_ALIVE_ARM_FFV)), true)
     LOCAL_CFLAGS += -DRUN_KEEP_ALIVE_IN_ARM_FFV
 endif
 
-ifeq ($(strip $($AUDIO_FEATURE_ENABLED_FFV_FFV)), true)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FFV)), true)
     LOCAL_CFLAGS += -DFFV_ENABLED
+    LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio-noship/include/ffv
     LOCAL_SRC_FILES += audio_extn/ffv.c
 endif
 
