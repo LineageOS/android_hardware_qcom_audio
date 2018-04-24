@@ -6658,9 +6658,9 @@ static int adev_update_voice_comm_input_stream(struct stream_in *in,
                                                   DEFAULT_VOIP_BUF_DURATION_MS,
                                                   DEFAULT_VOIP_BIT_DEPTH_BYTE)/2;
     } else {
-        if (!valid_ch) config->channel_mask = 1;
-        if (!valid_rate) config->sample_rate = 48000;
-        return -EINVAL;
+        ALOGW("%s No valid input in voip, use defaults"
+               "sample rate %u, channel mask 0x%X",
+               __func__, config->sample_rate, in->channel_mask);
     }
     in->config.rate = config->sample_rate;
     in->sample_rate = config->sample_rate;
