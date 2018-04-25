@@ -541,6 +541,11 @@
     <!-- vbat related data end-->
     <!-- audio record compress-->
     <ctl name="MultiMedia8 Mixer SLIM_0_TX" value="0" />
+    <ctl name="MultiMedia17 Mixer SLIM_0_TX" value="0" />
+    <ctl name="MultiMedia18 Mixer SLIM_0_TX" value="0" />
+    <ctl name="MultiMedia19 Mixer SLIM_0_TX" value="0" />
+    <ctl name="MultiMedia28 Mixer SLIM_0_TX" value="0" />
+    <ctl name="MultiMedia29 Mixer SLIM_0_TX" value="0" />
     <ctl name="MultiMedia8 Mixer SLIM_7_TX" value="0" />
     <ctl name="MultiMedia8 Mixer AFE_PCM_TX" value="0" />
     <!-- audio record compress end-->
@@ -1459,6 +1464,26 @@
 
     <path name="audio-record-compress">
         <ctl name="MultiMedia8 Mixer SLIM_0_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress2">
+        <ctl name="MultiMedia17 Mixer SLIM_0_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress3">
+        <ctl name="MultiMedia18 Mixer SLIM_0_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress4">
+        <ctl name="MultiMedia19 Mixer SLIM_0_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress5">
+        <ctl name="MultiMedia28 Mixer SLIM_0_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress6">
+        <ctl name="MultiMedia29 Mixer SLIM_0_TX" value="1" />
     </path>
 
     <path name="audio-record-compress bt-sco">
