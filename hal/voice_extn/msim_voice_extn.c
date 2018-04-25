@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2015 The CyanogenMod Project
+ * Copyright (C) 2015-2016 The CyanogenMod Project
+ * Copyright (C) 2018 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,13 +41,19 @@
 extern int start_call(struct audio_device *adev, audio_usecase_t usecase_id);
 extern int stop_call(struct audio_device *adev, audio_usecase_t usecase_id);
 
-static int msim_phone_type = 1;
+typedef enum {
+    MSIM_SIM1,
+    MSIM_SIM2,
+    MSIM_SIMMAX
+} msim_phone_t
+
+static msim_phone_t msim_phone = MSIM_SIM1;
 
 int msim_voice_extn_start_call(struct audio_device *adev)
 {
     audio_usecase_t usecase_id;
 
-    usecase_id = msim_phone_type == 1 ? USECASE_VOICE_CALL : USECASE_VOICE2_CALL;
+    usecase_id = msim_phone == MSIM_SIM2 ? USECASE_VOICE2_CALL : USECASE_VOICE_CALL;
     return start_call(adev, usecase_id);
 }
 
@@ -54,7 +61,7 @@ int msim_voice_extn_stop_call(struct audio_device *adev)
 {
     audio_usecase_t usecase_id;
 
-    usecase_id = msim_phone_type == 1 ? USECASE_VOICE_CALL : USECASE_VOICE2_CALL;
+    usecase_id = msim_phone == MSIM_SIM2 ? USECASE_VOICE2_CALL : USECASE_VOICE_CALL;
     return stop_call(adev, usecase_id);
 }
 
@@ -64,7 +71,7 @@ int msim_voice_extn_get_session_from_use_case(struct audio_device *adev,
 {
     int idx;
 
-    idx = msim_phone_type == 1 ? VOICE_SESS_IDX : VOICE2_SESS_IDX;
+    idx = msim_phone == MSIM_SIM2 ? VOICE2_SESS_IDX : VOICE_SESS_IDX;
     *session = &adev->voice.session[idx];
     return 0;
 }
@@ -79,8 +86,8 @@ int msim_voice_extn_set_parameters(struct audio_device *adev __unused,
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_PHONETYPE, value,
                             sizeof(value));
     if (ret >= 0) {
-        msim_phone_type = strcmp(value, AUDIO_PARAMETER_VALUE_CP2) ? 1 : 2;
-        ALOGV("%s: phone_type: %d", __func__, msim_phone_type);
+        msim_phone = !strcmp(value, AUDIO_PARAMETER_VALUE_CP2) ? MSIM_SIM2 : MSIM_SIM1;
+        ALOGV("%s: phone_type: %d", __func__, msim_phone);
     }
 
     return 0;
@@ -91,7 +98,7 @@ int msim_voice_extn_is_call_state_active(struct audio_device *adev,
 {
     int idx;
 
-    idx = msim_phone_type == 1 ? VOICE_SESS_IDX : VOICE2_SESS_IDX;
+    idx = msim_phone == MSIM_SIM2 ? VOICE2_SESS_IDX : VOICE_SESS_IDX;
     *is_call_active = (adev->voice.session[idx].state.current == CALL_ACTIVE) ? true : false;
     return 0;
 }
@@ -99,6 +106,6 @@ int msim_voice_extn_is_call_state_active(struct audio_device *adev,
 int msim_voice_extn_get_active_session_id(struct audio_device *adev __unused,
                                          uint32_t *session_id)
 {
-    *session_id = msim_phone_type == 1 ? VOICE_VSID : VOICE2_VSID;
+    *session_id = msim_phone == MSIM_SIM2 ? VOICE2_VSID : VOICE_VSID;
     return 0;
 }
