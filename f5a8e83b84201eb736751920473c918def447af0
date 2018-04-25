@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "54dad257_e2daf41b",
+        "filename": "hal/voice_extn/msim_voice_extn.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 99,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-04-25T04:02:45Z",
+      "side": 0,
+      "message": "The HTC variant looks like it will always be 0/1, not 1/2.",
+      "range": {
+        "startLine": 99,
+        "startChar": 12,
+        "endLine": 99,
+        "endChar": 54
+      },
+      "revId": "f5a8e83b84201eb736751920473c918def447af0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
