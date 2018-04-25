@@ -1006,6 +1006,7 @@ static void* spkr_calibration_thread()
     int ret;
     bool spv3_enable = false;
     unsigned int afe_api_version = 0;
+    struct mixer_ctl *ctl;
 
     memset(&protCfg, 0, sizeof(protCfg));
     /* If the value of this persist.vendor.audio.spkr.cal.duration is 0
@@ -1113,9 +1114,18 @@ static void* spkr_calibration_thread()
            }
            if (goahead) {
                if (spk_1_tzn >= 0) {
+                   const char *mixer_ctl_name = "SpkrLeft WSA T0 Init";
                    snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_1_tzn);
                    ALOGV("%s: wsa_path: %s\n", __func__, wsa_path);
                    thermal_fd = -1;
+
+                   ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+                   if (ctl) {
+                       ALOGD("%s: Got ctl for mixer cmd %s",
+                                             __func__, mixer_ctl_name);
+                       mixer_ctl_set_value(ctl, 0, 1);
+                   }
+
                    thermal_fd = open(wsa_path, O_RDONLY);
                    if (thermal_fd > 0) {
                        if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0)
@@ -1125,6 +1135,9 @@ static void* spkr_calibration_thread()
                        close(thermal_fd);
                    } else {
                        ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
+                   }
+                   if (ctl) {
+                       mixer_ctl_set_value(ctl, 0, 0);
                    }
                    if (t0_spk_1 < TZ_TEMP_MIN_THRESHOLD ||
                        t0_spk_1 > TZ_TEMP_MAX_THRESHOLD) {
@@ -1137,8 +1150,15 @@ static void* spkr_calibration_thread()
                    t0_spk_1 = (t0_spk_1 * (1 << 6));
                }
                if (spk_2_tzn >= 0) {
+                   const char *mixer_ctl_name = "SpkrRight WSA T0 Init";
                    snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_2_tzn);
                    ALOGV("%s: wsa_path: %s\n", __func__, wsa_path);
+                   ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+                   if (ctl) {
+                       ALOGD("%s: Got ctl for mixer cmd %s",
+                                             __func__, mixer_ctl_name);
+                       mixer_ctl_set_value(ctl, 0, 1);
+                   }
                    thermal_fd = open(wsa_path, O_RDONLY);
                    if (thermal_fd > 0) {
                        if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0)
@@ -1148,6 +1168,9 @@ static void* spkr_calibration_thread()
                        close(thermal_fd);
                    } else {
                        ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
+                   }
+                   if (ctl) {
+                       mixer_ctl_set_value(ctl, 0, 0);
                    }
                    if (t0_spk_2 < TZ_TEMP_MIN_THRESHOLD ||
                        t0_spk_2 > TZ_TEMP_MAX_THRESHOLD) {
