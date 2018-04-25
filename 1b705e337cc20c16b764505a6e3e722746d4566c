@@ -1,0 +1,96 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3e452291_c0867ea7",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 849,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-04-25T05:37:17Z",
+      "side": 1,
+      "message": "Is there any case you ever want to send calibration if usecase-\u003eid \u003d\u003d USECASE_AUDIO_ULTRASOUND_TX ? If not, maybe move this check into audio_extn_utils_send_audio_calibration?",
+      "range": {
+        "startLine": 849,
+        "startChar": 4,
+        "endLine": 849,
+        "endChar": 43
+      },
+      "revId": "1b705e337cc20c16b764505a6e3e722746d4566c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fef1feb2_7004cd75",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1229,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-04-25T05:37:17Z",
+      "side": 1,
+      "message": "if (usecase-\u003eid \u003d\u003d USECASE_AUDIO_ULTRASOUND_RX) continue; ?",
+      "range": {
+        "startLine": 1229,
+        "startChar": 8,
+        "endLine": 1229,
+        "endChar": 55
+      },
+      "revId": "1b705e337cc20c16b764505a6e3e722746d4566c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "975531db_a1ebfaec",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1341,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-04-25T05:37:17Z",
+      "side": 1,
+      "message": "if (usecase-\u003eid \u003d\u003d USECASE_AUDIO_ULTRASOUND_RX) continue; ?",
+      "range": {
+        "startLine": 1341,
+        "startChar": 8,
+        "endLine": 1341,
+        "endChar": 55
+      },
+      "revId": "1b705e337cc20c16b764505a6e3e722746d4566c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5c2b0138_71a06124",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1036,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-04-25T05:37:17Z",
+      "side": 1,
+      "message": "Why not if (usecase-\u003eid \u003d\u003d USECASE_AUDIO_ULTRASOUND_TX) continue; ?",
+      "range": {
+        "startLine": 1036,
+        "startChar": 16,
+        "endLine": 1036,
+        "endChar": 61
+      },
+      "revId": "1b705e337cc20c16b764505a6e3e722746d4566c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
