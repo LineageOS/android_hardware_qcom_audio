@@ -22,6 +22,30 @@
       "revId": "f5a8e83b84201eb736751920473c918def447af0",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a6c67a59_d9e8b70a",
+        "filename": "hal/voice_extn/msim_voice_extn.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 99,
+      "author": {
+        "id": 11801
+      },
+      "writtenOn": "2018-04-25T11:17:34Z",
+      "side": 0,
+      "message": "As this is a static variable, what matters is how the rest of the code interprets the variable in this file. It checks for \u003d\u003d 1 for sim1 afaict. It doesn\u0027t check the value against 2, so we could really make it whatever we wanted.",
+      "parentUuid": "54dad257_e2daf41b",
+      "range": {
+        "startLine": 99,
+        "startChar": 12,
+        "endLine": 99,
+        "endChar": 54
+      },
+      "revId": "f5a8e83b84201eb736751920473c918def447af0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
