@@ -784,8 +784,7 @@ bool platform_send_gain_dep_cal(void *platform, int level)
                 else
                     app_type = DEFAULT_APP_TYPE_RX_PATH;
 
-                acdb_dev_id =
-                    acdb_device_table[audio_extn_get_spkr_prot_snd_device(usecase->out_snd_device)];
+                acdb_dev_id = platform_get_snd_device_acdb_id(usecase->out_snd_device);
 
                 if (!my_data->acdb_send_gain_dep_cal(acdb_dev_id, app_type,
                                                      acdb_dev_type, mode, level)) {
@@ -1886,6 +1885,12 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device)
         return -EINVAL;
     }
 
+    /*
+     * If speaker protection is enabled, function returns supported
+     * sound device for speaker. Else same sound device is returned.
+     */
+    snd_device = audio_extn_get_spkr_prot_snd_device(snd_device);
+
     if (operator_specific_device_table[snd_device] != NULL)
         return get_operator_specific_device_acdb_id(snd_device);
     else
@@ -1932,7 +1937,7 @@ int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
     if (platform_supports_app_type_cfg()) // use v2 instead
         return -ENOSYS;
 
-    acdb_dev_id = acdb_device_table[audio_extn_get_spkr_prot_snd_device(snd_device)];
+    acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
     if (acdb_dev_id < 0) {
         ALOGE("%s: Could not find acdb id for device(%d)",
               __func__, snd_device);
@@ -1967,7 +1972,7 @@ int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *use
         snd_device = usecase->in_snd_device;
 
     // skipped over get_spkr_prot_device
-    acdb_dev_id = acdb_device_table[audio_extn_get_spkr_prot_snd_device(snd_device)];
+    acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
     if (acdb_dev_id < 0) {
         ALOGE("%s: Could not find acdb id for device(%d)",
               __func__, snd_device);
@@ -1980,7 +1985,7 @@ int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *use
     }
 
     for (i = 0; i < num_devices; i++) {
-        acdb_dev_id = acdb_device_table[audio_extn_get_spkr_prot_snd_device(new_snd_device[i])];
+        acdb_dev_id = platform_get_snd_device_acdb_id(new_snd_device[i]);
         if (acdb_dev_id < 0) {
             ALOGE("%s: Could not find acdb id for device(%d)",
                   __func__, new_snd_device[i]);
@@ -2034,12 +2039,7 @@ int platform_switch_voice_call_enable_device_config(void *platform,
     if (my_data->csd == NULL)
         return ret;
 
-    if (out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER &&
-        audio_extn_spkr_prot_is_enabled())
-        acdb_rx_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED);
-    else
-        acdb_rx_id = platform_get_snd_device_acdb_id(out_snd_device);
-
+    acdb_rx_id = platform_get_snd_device_acdb_id(out_snd_device);
     acdb_tx_id = platform_get_snd_device_acdb_id(in_snd_device);
 
     if (acdb_rx_id > 0 && acdb_tx_id > 0) {
@@ -2066,10 +2066,6 @@ int platform_switch_voice_call_device_post(void *platform,
     if (my_data->acdb_send_voice_cal == NULL) {
         ALOGE("%s: dlsym error for acdb_send_voice_call", __func__);
     } else {
-        if (out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER &&
-            audio_extn_spkr_prot_is_enabled())
-            out_snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED;
-
         acdb_rx_id = platform_get_snd_device_acdb_id(out_snd_device);
         acdb_tx_id = platform_get_snd_device_acdb_id(in_snd_device);
 
@@ -2094,12 +2090,7 @@ int platform_switch_voice_call_usecase_route_post(void *platform,
     if (my_data->csd == NULL)
         return ret;
 
-    if (out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER &&
-        audio_extn_spkr_prot_is_enabled())
-        acdb_rx_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED);
-    else
-        acdb_rx_id = platform_get_snd_device_acdb_id(out_snd_device);
-
+    acdb_rx_id = platform_get_snd_device_acdb_id(out_snd_device);
     acdb_tx_id = platform_get_snd_device_acdb_id(in_snd_device);
 
     if (acdb_rx_id > 0 && acdb_tx_id > 0) {
