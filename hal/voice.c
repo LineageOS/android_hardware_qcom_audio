@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -426,6 +426,27 @@ int voice_check_and_stop_incall_rec_usecase(struct audio_device *adev,
     }
 
     return ret;
+}
+
+snd_device_t voice_get_incall_rec_backend_device(struct stream_in *in)
+{
+   snd_device_t incall_record_device = {0};
+
+   switch(in->source) {
+    case AUDIO_SOURCE_VOICE_UPLINK:
+        incall_record_device = SND_DEVICE_IN_INCALL_REC_TX;
+        break;
+    case AUDIO_SOURCE_VOICE_DOWNLINK:
+         incall_record_device = SND_DEVICE_IN_INCALL_REC_RX;
+         break;
+    case AUDIO_SOURCE_VOICE_CALL:
+         incall_record_device = SND_DEVICE_IN_INCALL_REC_RX_TX;
+         break;
+    default:
+        ALOGI("Invalid source %d", in->source);
+    }
+
+   return incall_record_device;
 }
 
 snd_device_t voice_get_incall_rec_snd_device(snd_device_t in_snd_device)
