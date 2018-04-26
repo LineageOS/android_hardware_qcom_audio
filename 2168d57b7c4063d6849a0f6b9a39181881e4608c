@@ -1,0 +1,73 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "d527736b_a23a9e52",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 6
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2018-04-26T16:18:37Z",
+      "side": 1,
+      "message": "nit: SIM",
+      "range": {
+        "startLine": 9,
+        "startChar": 47,
+        "endLine": 9,
+        "endChar": 50
+      },
+      "revId": "2168d57b7c4063d6849a0f6b9a39181881e4608c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "79835212_bc55050a",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 6
+      },
+      "lineNbr": 10,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2018-04-26T16:18:37Z",
+      "side": 1,
+      "message": "SIM2",
+      "range": {
+        "startLine": 10,
+        "startChar": 8,
+        "endLine": 10,
+        "endChar": 12
+      },
+      "revId": "2168d57b7c4063d6849a0f6b9a39181881e4608c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "81cb80a6_6cbfca66",
+        "filename": "hal/voice_extn/msim_voice_extn.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 109,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2018-04-26T16:18:37Z",
+      "side": 1,
+      "message": "You can move to the line above.",
+      "range": {
+        "startLine": 109,
+        "startChar": 16,
+        "endLine": 109,
+        "endChar": 59
+      },
+      "revId": "2168d57b7c4063d6849a0f6b9a39181881e4608c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
