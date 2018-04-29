@@ -1350,6 +1350,12 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device)
         return -EINVAL;
     }
 
+    /*
+     * If speaker protection is enabled, function returns supported
+     * sound device for speaker. Else same sound device is returned.
+     */
+    snd_device = audio_extn_get_spkr_prot_snd_device(snd_device);
+
     if (operator_specific_device_table[snd_device] != NULL)
         return get_operator_specific_device_acdb_id(snd_device);
     else
@@ -1362,7 +1368,7 @@ int platform_send_audio_calibration(void *platform, snd_device_t snd_device)
     int acdb_dev_id, acdb_dev_type;
     int sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
 
-    acdb_dev_id = acdb_device_table[audio_extn_get_spkr_prot_snd_device(snd_device)];
+    acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
     if (acdb_dev_id < 0) {
         ALOGE("%s: Could not find acdb id for device(%d)",
               __func__, snd_device);
@@ -1421,10 +1427,6 @@ int platform_switch_voice_call_device_post(void *platform,
     if (my_data->acdb_send_voice_cal == NULL) {
         ALOGE("%s: dlsym error for acdb_send_voice_call", __func__);
     } else {
-        if (out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER &&
-            audio_extn_spkr_prot_is_enabled())
-            out_snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED;
-
         acdb_rx_id = platform_get_snd_device_acdb_id(out_snd_device);
         acdb_tx_id = platform_get_snd_device_acdb_id(in_snd_device);
 
@@ -1701,7 +1703,13 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
     } else if (devices & AUDIO_DEVICE_OUT_LINE) {
         snd_device = SND_DEVICE_OUT_LINE;
     } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
-        if (my_data->speaker_lr_swap)
+        /*
+         * Perform device switch only if acdb tuning is different between SPEAKER & SPEAKER_REVERSE,
+         * Or there will be a small pause while performing device switch.
+         */
+        if (my_data->speaker_lr_swap &&
+            (acdb_device_table[SND_DEVICE_OUT_SPEAKER] !=
+            acdb_device_table[SND_DEVICE_OUT_SPEAKER_REVERSE]))
             snd_device = SND_DEVICE_OUT_SPEAKER_REVERSE;
         else
             snd_device = SND_DEVICE_OUT_SPEAKER;
