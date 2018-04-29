@@ -30,6 +30,7 @@
 #include <cutils/str_parms.h>
 #include <audio_hw.h>
 #include <platform_api.h>
+#include <unistd.h>
 #include "platform.h"
 #include "audio_extn.h"
 #include "voice_extn.h"
