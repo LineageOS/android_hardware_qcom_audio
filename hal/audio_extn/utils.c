@@ -29,6 +29,7 @@
 #include <cutils/str_parms.h>
 #include <cutils/log.h>
 #include <cutils/misc.h>
+#include <unistd.h>
 
 
 #include "audio_hw.h"
