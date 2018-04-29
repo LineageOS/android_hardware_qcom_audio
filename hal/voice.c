@@ -226,15 +226,16 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
         goto error_start_voice;
     }
 
-    uc_info->in_snd_device = SND_DEVICE_NONE;
-    uc_info->out_snd_device = SND_DEVICE_NONE;
-
-    if (audio_is_bluetooth_sco_device(uc_info->devices) && !adev->bt_sco_on) {
-        ALOGE("start_call: couldn't find BT SCO, SCO is not ready");
+    if ((audio_is_bluetooth_sco_device(uc_info->devices) && !adev->bt_sco_on) ||
+        audio_is_a2dp_out_device(uc_info->devices)) {
+        ALOGE("start_call: BT SCO is chosen but SCO is not ready, or A2DP is selected");
         adev->voice.in_call = false;
         ret = -EIO;
         goto error_start_voice;
     }
+
+    uc_info->in_snd_device = SND_DEVICE_NONE;
+    uc_info->out_snd_device = SND_DEVICE_NONE;
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
