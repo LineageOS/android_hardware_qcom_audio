@@ -662,6 +662,7 @@ int enable_snd_device(struct audio_device *adev,
 
     if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
         snd_device == SND_DEVICE_OUT_SPEAKER_SAFE ||
+        snd_device == SND_DEVICE_OUT_SPEAKER_REVERSE ||
         snd_device == SND_DEVICE_OUT_VOICE_SPEAKER) &&
         audio_extn_spkr_prot_is_enabled()) {
         if (platform_get_snd_device_acdb_id(snd_device) < 0) {
