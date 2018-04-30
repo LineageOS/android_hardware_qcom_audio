@@ -828,7 +828,7 @@ int32_t audio_extn_ffv_read(struct audio_stream_in *stream __unused,
     bytes_to_copy = (bytes <= out_buf_size) ? bytes : out_buf_size;
     memcpy(buffer, process_out_ptr, bytes_to_copy);
     if (bytes_to_copy != out_buf_size)
-        ALOGD("%s: out buffer data dropped, copied %d bytes",
+        ALOGD("%s: out buffer data dropped, copied %zd bytes",
                __func__, bytes_to_copy);
 
 #ifdef FFV_PCM_DUMP
@@ -893,18 +893,30 @@ void audio_extn_ffv_set_parameters(struct audio_device *adev __unused,
                 ALOGE("%s: Invalid ec ref", __func__);
             }
         }
-
-        ret = str_parms_get_int(parms, AUDIO_PARAMETER_FFV_EC_REF_DEVICE, &val);
-        if (ret >= 0) {
+        ret = -1;
+        if (str_parms_get_int(parms, AUDIO_PARAMETER_FFV_EC_REF_DEVICE, &val) >= 0) {
+            ret = 1;
             str_parms_del(parms, AUDIO_PARAMETER_FFV_EC_REF_DEVICE);
+        } else if (str_parms_get_int(parms, AUDIO_PARAMETER_DEVICE_CONNECT, &val) >= 0) {
+            ret = 1;
+            str_parms_del(parms, AUDIO_PARAMETER_DEVICE_CONNECT);
+        }
+        if (ret == 1) {
             if (val & AUDIO_DEVICE_OUT_SPEAKER) {
                 ALOGD("%s: capture ec ref from speaker", __func__);
                 ffvmod.ec_ref_dev = AUDIO_DEVICE_OUT_SPEAKER;
             } else if (val & AUDIO_DEVICE_OUT_LINE) {
                 ALOGD("%s: capture ec ref from line out", __func__);
                 ffvmod.ec_ref_dev = AUDIO_DEVICE_OUT_LINE;
-            } else {
-                ALOGE("%s: Invalid ec ref out device", __func__);
+            }
+        }
+
+        ret = str_parms_get_int(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, &val);
+        if (ret >= 0) {
+            str_parms_del(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT);
+            if (val & AUDIO_DEVICE_OUT_LINE) {
+                ALOGD("%s: capture ec ref from speaker", __func__);
+                ffvmod.ec_ref_dev = AUDIO_DEVICE_OUT_SPEAKER;
             }
         }
 

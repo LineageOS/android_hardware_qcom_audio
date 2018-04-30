@@ -1099,7 +1099,8 @@ int enable_snd_device(struct audio_device *adev,
                                               "true-native-mode");
             adev->native_playback_enabled = true;
         }
-        if ((snd_device == SND_DEVICE_IN_HANDSET_6MIC) &&
+        if (((snd_device == SND_DEVICE_IN_HANDSET_6MIC) ||
+            (snd_device == SND_DEVICE_IN_HANDSET_QMIC)) &&
             (audio_extn_ffv_get_stream() == adev->active_input)) {
             ALOGD("%s: init ec ref loopback", __func__);
             audio_extn_ffv_init_ec_ref_loopback(adev, snd_device);
