@@ -151,10 +151,9 @@ typedef int (*sound_trigger_hw_call_back_t)(audio_event_type_t,
 
 #define DLSYM(handle, ptr, symbol, err) \
 do {\
-    const char* error; \
-    *(void**)&ptr = dlsym(handle, #symbol); \
-    if ((error = dlerror())) {\
-        ALOGE("%s: ERROR. %s", __func__, error);\
+    ptr = dlsym(handle, #symbol); \
+    if (ptr == NULL) {\
+        ALOGW("%s: %s not found. %s", __func__, #symbol, dlerror());\
         err = -ENODEV;\
     }\
 } while(0)
@@ -633,7 +632,6 @@ int audio_extn_sound_trigger_init(struct audio_device *adev)
     }
     ALOGI("%s: DLOPEN successful for %s", __func__, sound_trigger_lib);
 
-    dlerror();
     DLSYM(st_dev->lib_handle, st_dev->st_callback, sound_trigger_hw_call_back,
           status);
     if (status)
