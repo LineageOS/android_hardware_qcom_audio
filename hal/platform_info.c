@@ -36,6 +36,11 @@ typedef enum {
     GAIN_LEVEL_MAPPING,
     APP_TYPE,
     MICROPHONE_CHARACTERISTIC,
+    SND_DEVICES,
+    INPUT_SND_DEVICE,
+    INPUT_SND_DEVICE_TO_MIC_MAPPING,
+    SND_DEV,
+    MIC_INFO,
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
@@ -49,6 +54,8 @@ static void process_operator_specific(const XML_Char **attr);
 static void process_gain_db_to_level_map(const XML_Char **attr);
 static void process_app_type(const XML_Char **attr);
 static void process_microphone_characteristic(const XML_Char **attr);
+static void process_snd_dev(const XML_Char **attr);
+static void process_mic_info(const XML_Char **attr);
 
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
@@ -60,6 +67,8 @@ static section_process_fn section_table[] = {
     [GAIN_LEVEL_MAPPING] = process_gain_db_to_level_map,
     [APP_TYPE] = process_app_type,
     [MICROPHONE_CHARACTERISTIC] = process_microphone_characteristic,
+    [SND_DEV] = process_snd_dev,
+    [MIC_INFO] = process_mic_info,
 };
 
 static set_parameters_fn set_parameters = &platform_set_parameters;
@@ -79,6 +88,8 @@ struct audio_string_to_enum {
     unsigned int value;
 };
 
+static snd_device_t in_snd_device;
+
 static const struct audio_string_to_enum mic_locations[AUDIO_MICROPHONE_LOCATION_CNT] = {
     AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_LOCATION_UNKNOWN),
     AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_LOCATION_MAINBODY),
@@ -93,6 +104,12 @@ static const struct audio_string_to_enum mic_directionalities[AUDIO_MICROPHONE_D
     AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_DIRECTIONALITY_CARDIOID),
     AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_DIRECTIONALITY_HYPER_CARDIOID),
     AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_DIRECTIONALITY_SUPER_CARDIOID),
+};
+
+static const struct audio_string_to_enum mic_channel_mapping[AUDIO_MICROPHONE_CHANNEL_MAPPING_CNT] = {
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_CHANNEL_MAPPING_UNUSED),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_CHANNEL_MAPPING_DIRECT),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_CHANNEL_MAPPING_PROCESSED),
 };
 
 static const struct audio_string_to_enum device_in_types[] = {
@@ -660,6 +677,66 @@ done:
     return;
 }
 
+static void process_snd_dev(const XML_Char **attr)
+{
+    uint32_t curIdx = 0;
+    in_snd_device = SND_DEVICE_NONE;
+
+    if (strcmp(attr[curIdx++], "in_snd_device")) {
+        ALOGE("%s: snd_device not found", __func__);
+        return;
+    }
+    in_snd_device = platform_get_snd_device_index((char *)attr[curIdx++]);
+    if (in_snd_device < SND_DEVICE_IN_BEGIN ||
+            in_snd_device >= SND_DEVICE_IN_END) {
+        ALOGE("%s: Sound device not valid", __func__);
+        in_snd_device = SND_DEVICE_NONE;
+    }
+
+    return;
+}
+
+static void process_mic_info(const XML_Char **attr)
+{
+    uint32_t curIdx = 0;
+    struct mic_info microphone;
+
+    memset(&microphone.channel_mapping, AUDIO_MICROPHONE_CHANNEL_MAPPING_UNUSED,
+               sizeof(microphone.channel_mapping));
+
+    if (strcmp(attr[curIdx++], "mic_device_id")) {
+        ALOGE("%s: mic_device_id not found", __func__);
+        goto on_error;
+    }
+    strlcpy(microphone.device_id,
+                (char *)attr[curIdx++], AUDIO_MICROPHONE_ID_MAX_LEN);
+
+    if (strcmp(attr[curIdx++], "channel_mapping")) {
+        ALOGE("%s: channel_mapping not found", __func__);
+        goto on_error;
+    }
+    const char *token = strtok((char *)attr[curIdx++], " ");
+    uint32_t idx = 0;
+    while (token) {
+        if (!find_enum_by_string(mic_channel_mapping, token,
+                AUDIO_MICROPHONE_CHANNEL_MAPPING_CNT,
+                &microphone.channel_mapping[idx++])) {
+            ALOGE("%s: channel_mapping %s in %s not found!",
+                      __func__, attr[--curIdx], PLATFORM_INFO_XML_PATH);
+            goto on_error;
+        }
+        token = strtok(NULL, " ");
+    }
+    microphone.channel_count = idx;
+
+    platform_set_microphone_map(my_data.platform, in_snd_device,
+                                    &microphone);
+    return;
+on_error:
+    in_snd_device = SND_DEVICE_NONE;
+    return;
+}
+
 static void start_tag(void *userdata __unused, const XML_Char *tag_name,
                       const XML_Char **attr)
 {
@@ -685,6 +762,8 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
             section = APP_TYPE;
         } else if (strcmp(tag_name, "microphone_characteristics") == 0) {
             section = MICROPHONE_CHARACTERISTIC;
+        } else if (strcmp(tag_name, "snd_devices") == 0) {
+            section = SND_DEVICES;
         } else if (strcmp(tag_name, "device") == 0) {
             if ((section != ACDB) && (section != BACKEND_NAME) && (section != OPERATOR_SPECIFIC)) {
                 ALOGE("device tag only supported for acdb/backend names");
@@ -733,6 +812,36 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
             }
             section_process_fn fn = section_table[MICROPHONE_CHARACTERISTIC];
             fn(attr);
+        } else if (strcmp(tag_name, "input_snd_device") == 0) {
+            if (section != SND_DEVICES) {
+                ALOGE("input_snd_device tag only supported with SND_DEVICES section");
+                return;
+            }
+            section = INPUT_SND_DEVICE;
+        } else if (strcmp(tag_name, "input_snd_device_mic_mapping") == 0) {
+            if (section != INPUT_SND_DEVICE) {
+                ALOGE("input_snd_device_mic_mapping tag only supported with INPUT_SND_DEVICE section");
+                return;
+            }
+            section = INPUT_SND_DEVICE_TO_MIC_MAPPING;
+        } else if (strcmp(tag_name, "snd_dev") == 0) {
+            if (section != INPUT_SND_DEVICE_TO_MIC_MAPPING) {
+                ALOGE("snd_dev tag only supported with INPUT_SND_DEVICE_TO_MIC_MAPPING section");
+                return;
+            }
+            section_process_fn fn = section_table[SND_DEV];
+            fn(attr);
+        } else if (strcmp(tag_name, "mic_info") == 0) {
+            if (section != INPUT_SND_DEVICE_TO_MIC_MAPPING) {
+                ALOGE("mic_info tag only supported with INPUT_SND_DEVICE_TO_MIC_MAPPING section");
+                return;
+            }
+            if (in_snd_device == SND_DEVICE_NONE) {
+                ALOGE("%s: Error in previous tags, do not process mic info", __func__);
+                return;
+            }
+            section_process_fn fn = section_table[MIC_INFO];
+            fn(attr);
         }
     } else {
         if(strcmp(tag_name, "config_params") == 0) {
@@ -769,6 +878,12 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
         section = ROOT;
     } else if (strcmp(tag_name, "microphone_characteristics") == 0) {
         section = ROOT;
+    } else if (strcmp(tag_name, "snd_devices") == 0) {
+        section = ROOT;
+    } else if (strcmp(tag_name, "input_snd_device") == 0) {
+        section = SND_DEVICES;
+    } else if (strcmp(tag_name, "input_snd_device_mic_mapping") == 0) {
+        section = INPUT_SND_DEVICE;
     }
 }
 

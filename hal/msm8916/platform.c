@@ -2504,6 +2504,11 @@ int platform_get_microphones(void *platform __unused,
     return -ENOSYS;
 }
 
+bool platform_set_microphone_map(void *platform __unused, snd_device_t in_snd_device __unused,
+                                 const struct mic_info *info __unused) {
+    return false;
+}
+
 int platform_get_active_microphones(void *platform __unused,
                                     audio_devices_t device __unused,
                                     unsigned int channels __unused,
