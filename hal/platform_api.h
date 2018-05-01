@@ -108,6 +108,7 @@ int platform_get_effect_config_data(snd_device_t snd_device,
                                       effect_type_t effect_type);
 int platform_get_snd_device_bit_width(snd_device_t snd_device);
 int platform_set_acdb_metainfo_key(void *platform, char *name, int key);
+void platform_release_acdb_metainfo_key(void *platform);
 int platform_get_meta_info_key_from_list(void *platform, char *mod_name);
 int platform_set_native_support(int na_mode);
 int platform_get_native_support();
