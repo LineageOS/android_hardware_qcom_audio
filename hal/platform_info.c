@@ -522,7 +522,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
             ALOGE("%s: frequencies not found", __func__);
             goto done;
         }
-        char *token = strtok((char *)attr[curIdx++], ",");
+        char *token = strtok((char *)attr[curIdx++], " ");
         uint32_t num_frequencies = 0;
         while (token) {
             microphone.frequency_responses[0][num_frequencies++] = atof(token);
@@ -530,14 +530,14 @@ static void process_microphone_characteristic(const XML_Char **attr) {
                 ALOGE("%s: num %u of frequency is too large", __func__, num_frequencies);
                 goto done;
             }
-            token = strtok(NULL, ",");
+            token = strtok(NULL, " ");
         }
 
         if (strcmp(attr[curIdx++], "responses")) {
             ALOGE("%s: responses not found", __func__);
             goto done;
         }
-        token = strtok((char *)attr[curIdx++], ",");
+        token = strtok((char *)attr[curIdx++], " ");
         uint32_t num_responses = 0;
         while (token) {
             microphone.frequency_responses[1][num_responses++] = atof(token);
@@ -545,7 +545,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
                 ALOGE("%s: num %u of response is too large", __func__, num_responses);
                 goto done;
             }
-            token = strtok(NULL, ",");
+            token = strtok(NULL, " ");
         }
 
         if (num_frequencies != num_responses
@@ -591,7 +591,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
             ALOGE("%s: orientation not found", __func__);
             goto done;
         }
-        char *token = strtok((char *)attr[curIdx++], ",");
+        char *token = strtok((char *)attr[curIdx++], " ");
         float orientation[3];
         uint32_t idx = 0;
         while (token) {
@@ -600,7 +600,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
                 ALOGE("%s: orientation invalid", __func__);
                 goto done;
             }
-            token = strtok(NULL, ",");
+            token = strtok(NULL, " ");
         }
         if (idx != 3) {
             ALOGE("%s: orientation invalid", __func__);
@@ -620,7 +620,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
             ALOGE("%s: geometric_location not found", __func__);
             goto done;
         }
-        char *token = strtok((char *)attr[curIdx++], ",");
+        char *token = strtok((char *)attr[curIdx++], " ");
         float geometric_location[3];
         uint32_t idx = 0;
         while (token) {
@@ -629,7 +629,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
                 ALOGE("%s: geometric_location invalid", __func__);
                 goto done;
             }
-            token = strtok(NULL, ",");
+            token = strtok(NULL, " ");
         }
         if (idx != 3) {
             ALOGE("%s: geometric_location invalid", __func__);
