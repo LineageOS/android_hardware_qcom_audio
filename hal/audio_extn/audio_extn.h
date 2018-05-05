@@ -42,6 +42,8 @@
 #include "adsp_hdlr.h"
 #include "ip_hdlr_intf.h"
 
+#define AUDIO_PARAMETER_DUAL_MONO  "dual_mono"
+
 #ifndef AFE_PROXY_ENABLED
 #define AUDIO_DEVICE_OUT_PROXY 0x40000
 #endif
@@ -1034,5 +1036,11 @@ int audio_extn_ffv_deinit_ec_ref_loopback(struct audio_device *adev,
 void audio_extn_ffv_check_and_append_ec_ref_dev(char *device_name);
 snd_device_t audio_extn_ffv_get_capture_snd_device();
 void audio_extn_ffv_append_ec_ref_dev_name(char *device_name);
+#endif
+
+#ifndef CUSTOM_STEREO_ENABLED
+#define audio_extn_send_dual_mono_mixing_coefficients(out) (0)
+#else
+void audio_extn_send_dual_mono_mixing_coefficients(struct stream_out *out);
 #endif
 #endif /* AUDIO_EXTN_H */
