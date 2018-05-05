@@ -284,10 +284,9 @@ static int audio_extn_cirrus_run_calibration() {
 
         cal_file = fopen(CRUS_CAL_FILE, "wb");
         if (cal_file == NULL) {
-            ALOGE("%s: Cannot create Cirrus SP calibration file (%s)",
+            ALOGE("%s: Cannot create Cirrus SP calibration file (%s), write cal value to dsp",
                   __func__, strerror(errno));
-            ret = -EINVAL;
-            goto exit;
+            goto write_dsp;
         }
 
         ret = fwrite(&result, sizeof(result), 1, cal_file);
@@ -306,6 +305,7 @@ static int audio_extn_cirrus_run_calibration() {
               __func__);
     }
 
+write_dsp:
     header.size = sizeof(header);
     header.module_id = CRUS_MODULE_ID_TX;
     header.param_id = 0;
