@@ -3479,9 +3479,9 @@ int platform_snd_card_update(void *platform, card_status_t status)
 /*
  * configures afe with bit width and Sample Rate
  */
-static int platform_set_backend_cfg(const struct audio_device* adev,
-                                          snd_device_t snd_device,
-                                          const struct audio_backend_cfg *backend_cfg)
+int platform_set_backend_cfg(const struct audio_device* adev,
+                             snd_device_t snd_device,
+                             const struct audio_backend_cfg *backend_cfg)
 {
 
     int ret = 0;
@@ -3806,6 +3806,7 @@ static bool platform_check_playback_backend_cfg(struct audio_device* adev,
     unsigned int sample_rate;
     unsigned int channels;
     int backend_idx = DEFAULT_CODEC_BACKEND;
+    unsigned long service_interval = 0; // 0 is invalid
     struct platform_data *my_data = (struct platform_data *)adev->platform;
 
     if (snd_device == SND_DEVICE_OUT_BT_SCO ||
@@ -3850,6 +3851,21 @@ static bool platform_check_playback_backend_cfg(struct audio_device* adev,
         case USB_AUDIO_RX_BACKEND:
             audio_extn_usb_is_config_supported(&bit_width,
                                                &sample_rate, &channels, true);
+            if (platform_get_usb_service_interval(adev->platform, true,
+                                                  &service_interval) == 0) {
+                /* overwrite with best altset for this service interval */
+                int ret =
+                        audio_extn_usb_altset_for_service_interval(true /*playback*/,
+                                                                   service_interval,
+                                                                   &bit_width,
+                                                                   &sample_rate,
+                                                                   &channels);
+                if (ret < 0) {
+                    ALOGE("Failed to find altset for service interval %lu, skip reconfig",
+                          service_interval);
+                    return false;
+                }
+            }
             ALOGV("%s: USB BE configured as bit_width(%d)sample_rate(%d)channels(%d)",
                   __func__, bit_width, sample_rate, channels);
             break;
@@ -4386,4 +4402,64 @@ int platform_get_active_microphones(void *platform, audio_devices_t device, unsi
     }
     *mic_count = actual_mic_count;
     return 0;
+}
+
+int platform_set_usb_service_interval(void *platform,
+                                      bool playback,
+                                      unsigned long service_interval,
+                                      bool *reconfig)
+{
+#if defined (USB_SERVICE_INTERVAL_ENABLED)
+    struct platform_data *_platform = (struct platform_data *)platform;
+    *reconfig = false;
+    if (!playback) {
+        ALOGE("%s not valid for capture", __func__);
+        return -1;
+    }
+    const char *ctl_name = "USB_AUDIO_RX service_interval";
+    struct mixer_ctl *ctl = mixer_get_ctl_by_name(_platform->adev->mixer,
+                                                  ctl_name);
+    if (!ctl) {
+        ALOGV("%s: could not get mixer %s", __func__, ctl_name);
+        return -1;
+    }
+    if (mixer_ctl_get_value(ctl, 0) != (int)service_interval) {
+        mixer_ctl_set_value(ctl, 0, service_interval);
+        *reconfig = true;
+    }
+    return 0;
+#else
+    *reconfig = false;
+    (void)platform;
+    (void)playback;
+    (void)service_interval;
+    return -1;
+#endif
+}
+
+int platform_get_usb_service_interval(void *platform,
+                                      bool playback,
+                                      unsigned long *service_interval)
+{
+#if defined (USB_SERVICE_INTERVAL_ENABLED)
+    struct platform_data *_platform = (struct platform_data *)platform;
+    if (!playback) {
+        ALOGE("%s not valid for capture", __func__);
+        return -1;
+    }
+    const char *ctl_name = "USB_AUDIO_RX service_interval";
+    struct mixer_ctl *ctl = mixer_get_ctl_by_name(_platform->adev->mixer,
+                                                  ctl_name);
+    if (!ctl) {
+        ALOGV("%s: could not get mixer %s", __func__, ctl_name);
+        return -1;
+    }
+    *service_interval = mixer_ctl_get_value(ctl, 0);
+    return 0;
+#else
+    (void)platform;
+    (void)playback;
+    (void)service_interval;
+    return -1;
+#endif
 }
