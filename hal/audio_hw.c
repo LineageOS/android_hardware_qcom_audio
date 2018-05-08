@@ -1869,6 +1869,54 @@ static int check_and_set_hdmi_channels(struct audio_device *adev,
     return 0;
 }
 
+static int check_and_set_usb_service_interval(struct audio_device *adev,
+                                              struct audio_usecase *uc_info,
+                                              bool min)
+{
+    struct listnode *node;
+    struct audio_usecase *usecase;
+    bool switch_usecases = false;
+    bool reconfig = false;
+
+    if ((uc_info->id != USECASE_AUDIO_PLAYBACK_MMAP) &&
+        (uc_info->id != USECASE_AUDIO_PLAYBACK_ULL))
+        return -1;
+
+    /* set if the valid usecase do not already exist */
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type == PCM_PLAYBACK &&
+            (audio_is_usb_out_device(usecase->devices & AUDIO_DEVICE_OUT_ALL_USB))) {
+            switch (usecase->id) {
+                case USECASE_AUDIO_PLAYBACK_MMAP:
+                case USECASE_AUDIO_PLAYBACK_ULL:
+                    // cannot reconfig while mmap/ull is present.
+                    return -1;
+                default:
+                    switch_usecases = true;
+                    break;
+            }
+        }
+        if (switch_usecases)
+            break;
+    }
+    /*
+     * client can try to set service interval in start_output_stream
+     * to min or to 0 (i.e reset) in stop_output_stream .
+     */
+    unsigned long service_interval =
+            audio_extn_usb_find_service_interval(min, true /*playback*/);
+    int ret = platform_set_usb_service_interval(adev->platform,
+                                                true /*playback*/,
+                                                service_interval,
+                                                &reconfig);
+    /* no change or not supported or no active usecases */
+    if (ret || !reconfig || !switch_usecases)
+        return -1;
+    return 0;
+#undef VALID_USECASE
+}
+
 static int stop_output_stream(struct stream_out *out)
 {
     int i, ret = 0;
@@ -1901,7 +1949,6 @@ static int stop_output_stream(struct stream_out *out)
     disable_snd_device(adev, uc_info->out_snd_device);
 
     list_remove(&uc_info->list);
-    free(uc_info);
 
     audio_extn_extspk_update(adev->extspk);
 
@@ -1916,8 +1963,17 @@ static int stop_output_stream(struct stream_out *out)
             if (usecase->devices & AUDIO_DEVICE_OUT_SPEAKER)
                 select_devices(adev, usecase->id);
         }
+    } else if (audio_is_usb_out_device(out->devices & AUDIO_DEVICE_OUT_ALL_USB)) {
+        ret = check_and_set_usb_service_interval(adev, uc_info, false /*min*/);
+        if (ret == 0) {
+            /* default service interval was successfully updated,
+               reopen USB backend with new service interval */
+            check_and_route_playback_usecases(adev, uc_info, uc_info->out_snd_device);
+        }
+        ret = 0;
     }
 
+    free(uc_info);
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
@@ -1971,6 +2027,11 @@ int start_output_stream(struct stream_out *out)
     /* This must be called before adding this usecase to the list */
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
         check_and_set_hdmi_channels(adev, out->config.channels);
+    else if (audio_is_usb_out_device(out->devices & AUDIO_DEVICE_OUT_ALL_USB)) {
+        check_and_set_usb_service_interval(adev, uc_info, true /*min*/);
+        /* USB backend is not reopened immediately.
+           This is eventually done as part of select_devices */
+    }
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
