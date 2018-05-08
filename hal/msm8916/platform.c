@@ -2522,9 +2522,9 @@ int platform_set_usb_service_interval(void *platform __unused,
     return 0;
 }
 
-int platform_set_backend_cfg(const struct audio_device* adev,
-                             snd_device_t snd_device,
-                             const struct audio_backend_cfg *backend_cfg)
+int platform_set_backend_cfg(const struct audio_device* adev __unused,
+                             snd_device_t snd_device __unused,
+                             const struct audio_backend_cfg *backend_cfg __unused)
 {
     return -1;
 }
