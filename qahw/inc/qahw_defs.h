@@ -354,6 +354,14 @@ typedef struct qahw_mix_matrix_params {
     float mixer_coeffs[AUDIO_CHANNEL_COUNT_MAX][AUDIO_CHANNEL_COUNT_MAX];
 } qahw_mix_matrix_params_t;
 
+#define QAHW_LICENCE_STR_MAX_LENGTH (64)
+#define QAHW_PRODUCT_STR_MAX_LENGTH (64)
+typedef struct qahw_license_params {
+    char product[QAHW_PRODUCT_STR_MAX_LENGTH + 1];
+    int key;
+    char license[QAHW_LICENCE_STR_MAX_LENGTH + 1];
+} qahw_license_params_t;
+
 typedef union {
     struct qahw_source_tracking_param st_params;
     struct qahw_sound_focus_param sf_params;
@@ -367,6 +375,7 @@ typedef union {
     struct qahw_out_channel_map_param channel_map_params;
     struct qahw_device_cfg_param device_cfg_params;
     struct qahw_mix_matrix_params mix_matrix_params;
+    struct qahw_license_params license_params;
 } qahw_param_payload;
 
 typedef enum {
@@ -385,6 +394,7 @@ typedef enum {
     QAHW_PARAM_DEVICE_CONFIG,      /* PARAM to set device config */
     QAHW_PARAM_OUT_MIX_MATRIX_PARAMS,
     QAHW_PARAM_CH_MIX_MATRIX_PARAMS,
+    QAHW_PARAM_LICENSE_PARAMS,
 } qahw_param_id;
 
 __END_DECLS

@@ -998,8 +998,8 @@ static void __unused audio_extn_hw_loopback_deinit(struct audio_device *adev __u
 #define audio_extn_ffv_init(adev) (0)
 #define audio_extn_ffv_deinit() (0)
 #define audio_extn_ffv_check_usecase(in) (0)
-#define audio_extn_ffv_set_usecase(in) (0)
-#define audio_extn_ffv_stream_init(in) (0)
+#define audio_extn_ffv_set_usecase(in, key, lic) (0)
+#define audio_extn_ffv_stream_init(in, key, lic) (0)
 #define audio_extn_ffv_stream_deinit() (0)
 #define audio_extn_ffv_update_enabled() (0)
 #define audio_extn_ffv_get_enabled() (0)
@@ -1016,8 +1016,8 @@ static void __unused audio_extn_hw_loopback_deinit(struct audio_device *adev __u
 int32_t audio_extn_ffv_init(struct audio_device *adev);
 int32_t audio_extn_ffv_deinit();
 bool audio_extn_ffv_check_usecase(struct stream_in *in);
-int audio_extn_ffv_set_usecase(struct stream_in *in);
-int32_t audio_extn_ffv_stream_init(struct stream_in *in);
+int audio_extn_ffv_set_usecase( struct stream_in *in, int key, char* lic);
+int32_t audio_extn_ffv_stream_init(struct stream_in *in, int key, char* lic);
 int32_t audio_extn_ffv_stream_deinit();
 void audio_extn_ffv_update_enabled();
 bool audio_extn_ffv_get_enabled();
@@ -1041,4 +1041,5 @@ void audio_extn_ffv_append_ec_ref_dev_name(char *device_name);
 #else
 void audio_extn_send_dual_mono_mixing_coefficients(struct stream_out *out);
 #endif
+int audio_extn_utils_get_license_params(const struct audio_device *adev,  struct audio_license_params *lic_params);
 #endif /* AUDIO_EXTN_H */

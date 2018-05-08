@@ -117,6 +117,10 @@
 /* MAX SECTORS for sourcetracking feature */
 #define MAX_SECTORS 8
 
+/* Max length for license string */
+#define AUDIO_PRODUCT_STR_MAX_LENGTH (64)
+#define AUDIO_LICENSE_STR_MAX_LENGTH (64)
+
 struct source_tracking_param {
     uint8_t   vad[MAX_SECTORS];
     uint16_t  doa_speech;
@@ -255,6 +259,13 @@ typedef struct mix_matrix_params {
     uint32_t mixer_coeffs[AUDIO_CHANNEL_COUNT_MAX][AUDIO_CHANNEL_COUNT_MAX];
 } mix_matrix_params_t;
 
+
+typedef struct audio_license_params {
+    char product[AUDIO_PRODUCT_STR_MAX_LENGTH + 1];
+    int  key;
+    char license[AUDIO_LICENSE_STR_MAX_LENGTH + 1];
+} audio_license_params_t;
+
 typedef union {
     struct source_tracking_param st_params;
     struct sound_focus_param sf_params;
@@ -268,6 +279,7 @@ typedef union {
     struct audio_out_channel_map_param channel_map_param;
     struct audio_device_cfg_param device_cfg;
     struct mix_matrix_params mm_params;
+    struct audio_license_params license_params;
 } audio_extn_param_payload;
 
 typedef enum {
@@ -288,7 +300,9 @@ typedef enum {
     /* Pan/scale params to be set on ASM */
     AUDIO_EXTN_PARAM_OUT_MIX_MATRIX_PARAMS,
     /* Downmix params to be set on ADM */
-    AUDIO_EXTN_PARAM_CH_MIX_MATRIX_PARAMS
+    AUDIO_EXTN_PARAM_CH_MIX_MATRIX_PARAMS,
+    /* License information */
+    AUDIO_EXTN_PARAM_LICENSE_PARAMS,
 } audio_extn_param_id;
 
 #endif /* AUDIO_DEFS_H */

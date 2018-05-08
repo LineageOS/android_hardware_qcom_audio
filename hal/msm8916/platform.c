@@ -3073,6 +3073,59 @@ int platform_set_acdb_metainfo_key(void *platform, char *name, int key)
     return 0;
 }
 
+int platform_get_license_by_product
+(
+    void *platform,
+    const char* product_name,
+    int* product_id,
+    char* product_license
+)
+{
+    int ret = 0;
+    int id = 0;
+    acdb_audio_cal_cfg_t cal;
+    uint32_t param_len = LICENSE_STR_MAX_LEN;
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if ((NULL == platform) || (NULL == product_name) || (NULL == product_id)) {
+        ALOGE("[%s] Invalid input parameters",__func__);
+        ret = -EINVAL;
+        goto on_error;
+    }
+
+    id =  platform_get_meta_info_key_from_list(platform, (char*)product_name);
+    if(0 == id)
+    {
+        ALOGE("%s:Id not found for %s", __func__, product_name);
+        ret = -EINVAL;
+        goto on_error;
+    }
+
+    ALOGD("%s: Found Id[%d] for %s", __func__, id, product_name);
+    if(NULL == my_data->acdb_get_audio_cal){
+        ALOGE("[%s] acdb_get_audio_cal is NULL.",__func__);
+        ret = -ENOSYS;
+        goto on_error;
+    }
+
+    memset(&cal, 0, sizeof(cal));
+    cal.persist = 1;
+    cal.cal_type = AUDIO_CORE_METAINFO_CAL_TYPE;
+    cal.acdb_dev_id = (uint32_t) id;
+    ret = my_data->acdb_get_audio_cal((void*)&cal, (void*)product_license, &param_len);
+
+    if (0 == ret) {
+        ALOGD("%s: Got Length[%d] License[%s]", __func__, param_len, product_license );
+        *product_id = id;
+        return 0;
+    }
+    ALOGD("%s: License not found for %s", __func__, product_name);
+
+on_error:
+    *product_id = 0;
+    return ret;
+}
+
 int platform_get_meta_info_key_from_list(void *platform, char *mod_name)
 {
     struct listnode *node;

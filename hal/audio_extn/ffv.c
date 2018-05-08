@@ -100,7 +100,8 @@ do {\
 static FfvStatusType (*ffv_init_fn)(void** handle, int num_tx_in_ch,
     int num_out_ch, int num_ec_ref_ch, int frame_len, int sample_rate,
     const char *config_file_name, char *svaModelBuffer,
-    uint32_t svaModelSize, int* totMemSize);
+    uint32_t svaModelSize, int* totMemSize,
+    int product_id, const char* prduct_license);
 static void (*ffv_deinit_fn)(void* handle);
 static void (*ffv_process_fn)(void *handle, const int16_t *in_pcm,
     int16_t *out_pcm, const int16_t *ec_ref_pcm);
@@ -365,12 +366,12 @@ bool  audio_extn_ffv_check_usecase(struct stream_in *in) {
     return ret;
 }
 
-int audio_extn_ffv_set_usecase(struct stream_in *in)
+int audio_extn_ffv_set_usecase(struct stream_in *in, int ffv_key, char* ffv_lic)
 {
     int ret = -EINVAL;
 
     if (audio_extn_ffv_check_usecase(in)) {
-        if (!audio_extn_ffv_stream_init(in)) {
+        if (!audio_extn_ffv_stream_init(in, ffv_key, ffv_lic)) {
             ALOGD("%s: Created FFV session succesfully", __func__);
             ret = 0;
         } else {
@@ -414,7 +415,7 @@ int32_t audio_extn_ffv_deinit()
     return 0;
 }
 
-int32_t audio_extn_ffv_stream_init(struct stream_in *in)
+int32_t audio_extn_ffv_stream_init(struct stream_in *in, int key, char* lic)
 {
     uint32_t ret = -EINVAL;
     int num_tx_in_ch, num_out_ch, num_ec_ref_ch;
@@ -473,7 +474,7 @@ int32_t audio_extn_ffv_stream_init(struct stream_in *in)
     ALOGD("%s: config file path %s", __func__, config_file_path);
     status_type = ffv_init_fn(&ffvmod.handle, num_tx_in_ch, num_out_ch, num_ec_ref_ch,
                       frame_len, sample_rate, config_file_path, sm_buffer, 0,
-                      &total_mem_size);
+                      &total_mem_size, key, lic);
     if (status_type) {
         ALOGE("%s: ERROR. ffv_init returned %d", __func__, status_type);
         ret = -EINVAL;
