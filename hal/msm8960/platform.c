@@ -1361,3 +1361,19 @@ int platform_get_active_microphones(void *platform __unused,
                                     size_t *mic_count __unused) {
     return -ENOSYS;
 }
+
+int platform_set_usb_service_interval(void *platform __unused,
+                                      bool playback __unused,
+                                      unsigned long service_interval __unused,
+                                      bool *reconfig)
+{
+    *reconfig = false;
+    return 0;
+}
+
+int platform_set_backend_cfg(const struct audio_device* adev,
+                             snd_device_t snd_device,
+                             const struct audio_backend_cfg *backend_cfg)
+{
+    return -1;
+}
