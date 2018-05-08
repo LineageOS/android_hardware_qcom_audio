@@ -183,6 +183,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SND_MONITOR)), true)
     LOCAL_SRC_FILES += audio_extn/sndmonitor.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_USB_SERVICE_INTERVAL)), true)
+    LOCAL_CFLAGS += -DUSB_SERVICE_INTERVAL_ENABLED
+endif
+
 LOCAL_SHARED_LIBRARIES += libbase libhidlbase libhwbinder libutils android.hardware.power@1.2 liblog
 
 LOCAL_SRC_FILES += audio_perf.cpp

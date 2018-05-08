@@ -36,6 +36,7 @@ struct amp_db_and_gain_table {
 enum card_status_t;
 struct audio_usecase;
 enum usecase_type_t;
+struct audio_backend_cfg;
 
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
@@ -162,4 +163,11 @@ int platform_get_active_microphones(void *platform, audio_devices_t device,
                                     unsigned int channels, int source, audio_usecase_t usecase,
                                     struct audio_microphone_characteristic_t *mic_array,
                                     size_t *mic_count);
+int platform_set_usb_service_interval(void *platform,
+                                      bool playback,
+                                      unsigned long service_interval,
+                                      bool *reconfig);
+int platform_get_usb_service_interval(void *platform,
+                                      bool playback,
+                                      unsigned long *service_interval);
 #endif // AUDIO_PLATFORM_API_H
