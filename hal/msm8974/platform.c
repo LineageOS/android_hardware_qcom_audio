@@ -34,6 +34,7 @@
 #include <sound/devdep_params.h>
 #endif
 
+#include "maxxaudio.h"
 #include <resolv.h>
 
 #define MIXER_XML_DEFAULT_PATH "mixer_paths.xml"
@@ -266,6 +267,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_USB_HEADSET] = "usb-headset",
     [SND_DEVICE_OUT_VOICE_USB_HEADSET] = "usb-headset",
     [SND_DEVICE_OUT_USB_HEADPHONES] = "usb-headphones",
+    [SND_DEVICE_OUT_USB_HEADSET_SPEC] = "usb-headset",
     [SND_DEVICE_OUT_VOICE_USB_HEADPHONES] = "usb-headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = "speaker-and-usb-headphones",
     [SND_DEVICE_OUT_SPEAKER_SAFE_AND_USB_HEADSET] = "speaker-safe-and-usb-headphones",
@@ -382,6 +384,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_USB_HEADSET] = 45,
     [SND_DEVICE_OUT_VOICE_USB_HEADSET] = 45,
     [SND_DEVICE_OUT_USB_HEADPHONES] = 45,
+    [SND_DEVICE_OUT_USB_HEADSET_SPEC] = 45,
     [SND_DEVICE_OUT_VOICE_USB_HEADPHONES] = 45,
     [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 14,
     [SND_DEVICE_OUT_SPEAKER_SAFE_AND_USB_HEADSET] = 14,
@@ -511,6 +514,7 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_SAFE_AND_USB_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_USB_HEADSET_SPEC)},
 
     /* in */
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC)},
@@ -1200,6 +1204,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_IN_USB_HEADSET_MIC_AEC] = strdup("usb-headset-mic");
     backend_tag_table[SND_DEVICE_OUT_BT_A2DP] = strdup("bt-a2dp");
     backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP] = strdup("speaker-and-bt-a2dp");
+    backend_tag_table[SND_DEVICE_OUT_USB_HEADSET_SPEC] = strdup("usb-headset");
 
     hw_interface_table[SND_DEVICE_OUT_HANDSET] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER] = strdup("SLIMBUS_0_RX");
@@ -1233,6 +1238,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_VOICE_USB_HEADSET] = strdup("USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_USB_HEADPHONES] = strdup("USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_USB_HEADPHONES] = strdup("USB_AUDIO_RX");
+    hw_interface_table[SND_DEVICE_OUT_USB_HEADSET_SPEC] = strdup("USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = strdup("SLIMBUS_0_RX-and-USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_SAFE_AND_USB_HEADSET] = strdup("SLIMBUS_0_RX-and-USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TX] = strdup("AFE_PCM_RX");
@@ -2718,7 +2724,9 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
     } else if (devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
         snd_device = SND_DEVICE_OUT_HDMI ;
     } else if (audio_is_usb_out_device(devices)) {
-        if (audio_extn_usb_is_capture_supported())
+        if (audio_extn_ma_supported_usb())
+            snd_device = SND_DEVICE_OUT_USB_HEADSET_SPEC;
+        else if (audio_extn_usb_is_capture_supported())
             snd_device = SND_DEVICE_OUT_USB_HEADSET;
         else
             snd_device = SND_DEVICE_OUT_USB_HEADPHONES;
