@@ -92,6 +92,7 @@
 #define ENCODER_LATENCY_APTX_HD    20
 #define ENCODER_LATENCY_LDAC       40
 #define ENCODER_LATENCY_SBC        10
+#define ENCODER_LATENCY_PCM        50
 
 // Default A2DP sink latency offset
 #define DEFAULT_SINK_LATENCY_AAC       180
@@ -99,6 +100,7 @@
 #define DEFAULT_SINK_LATENCY_APTX_HD   180
 #define DEFAULT_SINK_LATENCY_LDAC      180
 #define DEFAULT_SINK_LATENCY_SBC       140
+#define DEFAULT_SINK_LATENCY_PCM       140
 
 // Slimbus Tx sample rate for ABR feedback channel
 #define ABR_TX_SAMPLE_RATE             "KHZ_8"
@@ -125,6 +127,7 @@ typedef enum {
     ENC_CODEC_TYPE_APTX = AUDIO_FORMAT_APTX, // 0x20000000UL
     ENC_CODEC_TYPE_APTX_HD = AUDIO_FORMAT_APTX_HD, // 0x21000000UL
     ENC_CODEC_TYPE_LDAC = AUDIO_FORMAT_LDAC, // 0x23000000UL
+    ENC_CODEC_TYPE_PCM = AUDIO_FORMAT_PCM_16_BIT, // 0x1u
 } enc_codec_t;
 
 typedef int (*audio_stream_open_t)(void);
@@ -770,7 +773,10 @@ static int a2dp_set_backend_cfg()
         (sampling_rate_rx == 48000 || sampling_rate_rx == 44100 )) {
         sampling_rate_rx *= 2;
     }
-
+    // No need to configure backend for PCM format.
+    if (a2dp.bt_encoder_format == ENC_CODEC_TYPE_PCM) {
+        return 0;
+    }
     // Set Rx backend sample rate
     switch (sampling_rate_rx) {
     case 44100:
@@ -1340,6 +1346,11 @@ bool configure_a2dp_encoder_format()
                 (configure_ldac_enc_format((audio_ldac_encoder_config *)codec_info) &&
                  configure_a2dp_decoder_format(ENC_CODEC_TYPE_LDAC));
             break;
+        case ENC_CODEC_TYPE_PCM:
+            ALOGD("Received PCM format for BT device");
+            a2dp.bt_encoder_format = ENC_CODEC_TYPE_PCM;
+            is_configured = true;
+            break;
         default:
             ALOGD("%s: Received unsupported encoder format", __func__);
             is_configured = false;
@@ -1697,6 +1708,10 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
         case ENC_CODEC_TYPE_LDAC:
             latency = (avsync_runtime_prop > 0) ? ldac_offset : ENCODER_LATENCY_LDAC;
             latency += DEFAULT_SINK_LATENCY_LDAC;
+            break;
+        case ENC_CODEC_TYPE_PCM:
+            latency = ENCODER_LATENCY_PCM;
+            latency += DEFAULT_SINK_LATENCY_PCM;
             break;
         default:
             latency = DEFAULT_ENCODER_LATENCY;
