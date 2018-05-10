@@ -125,6 +125,17 @@ static const struct audio_string_to_enum device_in_types[] = {
     AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_DEFAULT),
 };
 
+enum {
+    AUDIO_MICROPHONE_CHARACTERISTIC_NONE = 0u, // 0x0
+    AUDIO_MICROPHONE_CHARACTERISTIC_SENSITIVITY = 1u, // 0x1
+    AUDIO_MICROPHONE_CHARACTERISTIC_MAX_SPL = 2u, // 0x2
+    AUDIO_MICROPHONE_CHARACTERISTIC_MIN_SPL = 4u, // 0x4
+    AUDIO_MICROPHONE_CHARACTERISTIC_ORIENTATION = 8u, // 0x8
+    AUDIO_MICROPHONE_CHARACTERISTIC_GEOMETRIC_LOCATION = 16u, // 0x10
+    AUDIO_MICROPHONE_CHARACTERISTIC_ALL = 31u, /* ((((SENSITIVITY | MAX_SPL) | MIN_SPL)
+                                                  | ORIENTATION) | GEOMETRIC_LOCATION) */
+};
+
 static bool find_enum_by_string(const struct audio_string_to_enum * table, const char * name,
                                 int32_t len, unsigned int *value)
 {
@@ -433,7 +444,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
         ALOGE("%s: valid_mask not found", __func__);
         goto done;
     }
-    microphone.valid_mask = atoi(attr[curIdx++]);
+    uint32_t valid_mask = atoi(attr[curIdx++]);
 
     if (strcmp(attr[curIdx++], "device_id")) {
         ALOGE("%s: device_id not found", __func__);
@@ -556,7 +567,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
         }
     }
 
-    if (microphone.valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_SENSITIVITY) {
+    if (valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_SENSITIVITY) {
         if (strcmp(attr[curIdx++], "sensitivity")) {
             ALOGE("%s: sensitivity not found", __func__);
             goto done;
@@ -566,7 +577,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
         microphone.sensitivity = AUDIO_MICROPHONE_SENSITIVITY_UNKNOWN;
     }
 
-    if (microphone.valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_MAX_SPL) {
+    if (valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_MAX_SPL) {
         if (strcmp(attr[curIdx++], "max_spl")) {
             ALOGE("%s: max_spl not found", __func__);
             goto done;
@@ -576,7 +587,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
         microphone.max_spl = AUDIO_MICROPHONE_SPL_UNKNOWN;
     }
 
-    if (microphone.valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_MIN_SPL) {
+    if (valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_MIN_SPL) {
         if (strcmp(attr[curIdx++], "min_spl")) {
             ALOGE("%s: min_spl not found", __func__);
             goto done;
@@ -586,7 +597,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
         microphone.min_spl = AUDIO_MICROPHONE_SPL_UNKNOWN;
     }
 
-    if (microphone.valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_ORIENTATION) {
+    if (valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_ORIENTATION) {
         if (strcmp(attr[curIdx++], "orientation")) {
             ALOGE("%s: orientation not found", __func__);
             goto done;
@@ -615,7 +626,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
         microphone.orientation.z = 0.0f;
     }
 
-    if (microphone.valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_GEOMETRIC_LOCATION) {
+    if (valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_GEOMETRIC_LOCATION) {
         if (strcmp(attr[curIdx++], "geometric_location")) {
             ALOGE("%s: geometric_location not found", __func__);
             goto done;

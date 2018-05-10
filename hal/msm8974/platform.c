@@ -3311,17 +3311,17 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
 
     if (kv_pairs == NULL) {
         ret = -EINVAL;
-        ALOGE("%s: key-value pair is NULL",__func__);
+        ALOGE("%s: key-value pair is NULL", __func__);
         goto done;
     }
 
     ALOGV("%s: enter: %s", __func__, kv_pairs);
 
     len = strlen(kv_pairs);
-    value = (char*)calloc(len+1, sizeof(char));
+    value = (char*)calloc(len + 1, sizeof(char));
     if (value == NULL) {
         ret = -ENOMEM;
-        ALOGE("[%s] failed to allocate memory",__func__);
+        ALOGE("[%s] failed to allocate memory", __func__);
         goto done;
     }
 
@@ -3350,7 +3350,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         ALOGV("%s: add operator[%s] mccmnc[%s]", __func__, info->name, info->mccmnc);
     }
 
-    memset(value, 0, sizeof(value));
+    memset(value, 0, len + 1);
     err = str_parms_get_str(parms, PLATFORM_CONFIG_KEY_MAX_MIC_COUNT,
                             value, len);
     if (err >= 0) {
