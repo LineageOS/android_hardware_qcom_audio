@@ -2486,3 +2486,15 @@ int audio_extn_utils_get_channels_from_string(const char *id_string)
 
     return -EINVAL;
 }
+
+int audio_extn_utils_get_license_params
+(
+const struct audio_device *adev,
+struct audio_license_params *license_params
+)
+{
+    if(!license_params)
+        return -EINVAL;
+    return platform_get_license_by_product(adev->platform, (const char*)license_params->product, &license_params->key, license_params->license);
+}
+

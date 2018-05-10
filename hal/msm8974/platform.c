@@ -7927,3 +7927,8 @@ static const char *platform_get_mixer_control(struct mixer_ctl *ctl)
 
     return id_string;
 }
+
+int platform_get_license_by_product(void *platform, const char* product_name, int *product_id, char* product_license)
+{
+    return -ENOSYS;
+}

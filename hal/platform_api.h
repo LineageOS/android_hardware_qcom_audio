@@ -31,6 +31,9 @@
 #define SAMPLE_RATE_11025 11025
 #define sample_rate_multiple(sr, base) ((sr % base)== 0?true:false)
 #define MAX_VOLUME_CAL_STEPS 15
+#define LICENSE_STR_MAX_LEN  (64)
+#define PRODUCT_FFV      "ffv"
+#define PRODUCT_ALLPLAY  "allplay"
 
 typedef enum {
     PLATFORM,
@@ -261,4 +264,5 @@ int platform_get_mmap_data_fd(void *platform, int dev, int dir,
                                int *fd, uint32_t *size);
 int platform_get_ec_ref_loopback_snd_device(int channel_count);
 const char * platform_get_snd_card_name_for_acdb_loader(const char *snd_card_name);
+int platform_get_license_by_product(void *platform, const char* product_name, int *product_id, char* product_license);
 #endif // AUDIO_PLATFORM_API_H

@@ -140,6 +140,10 @@ int qahwi_get_param_data(const struct audio_hw_device *adev,
               ret = audio_extn_get_sourcetrack_data(dev,
                      (struct source_tracking_param*)payload);
               break;
+        case AUDIO_EXTN_PARAM_LICENSE_PARAMS:
+              ret = audio_extn_utils_get_license_params(dev,
+                     (struct audio_license_params *)(payload));
+              break;
        default:
              ALOGE("%s::INVALID PARAM ID:%d\n",__func__,param_id);
              ret = -EINVAL;

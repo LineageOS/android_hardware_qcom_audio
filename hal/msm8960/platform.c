@@ -1374,3 +1374,8 @@ int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
 {
     return -ENOSYS;
 }
+
+int platform_get_license_by_product(void *platform, const char* product_name, int *product_id, char* product_license)
+{
+    return -ENOSYS;
+}

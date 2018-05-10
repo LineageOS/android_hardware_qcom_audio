@@ -1329,7 +1329,15 @@ int audio_extn_check_and_set_multichannel_usecase(struct audio_device *adev,
     if (ssr_supported) {
         return audio_extn_ssr_set_usecase(in, config, update_params);
     } else if (audio_extn_ffv_check_usecase(in)) {
-        return audio_extn_ffv_set_usecase(in);
+        char ffv_lic[LICENSE_STR_MAX_LEN + 1] = {0};
+        int ffv_key = 0;
+        if(platform_get_license_by_product(adev->platform, PRODUCT_FFV, &ffv_key, ffv_lic))
+        {
+            ALOGD("%s: Valid licence not availble for %s ", __func__, PRODUCT_FFV);
+            return -EINVAL;
+        }
+        ALOGD("%s: KEY: %d LICENSE: %s ", __func__, ffv_key, ffv_lic);
+        return audio_extn_ffv_set_usecase(in, ffv_key, ffv_lic);
     } else {
         return audio_extn_set_multichannel_mask(adev, in, config,
                                                 update_params);
