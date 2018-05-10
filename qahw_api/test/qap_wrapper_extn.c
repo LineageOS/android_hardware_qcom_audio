@@ -814,6 +814,22 @@ void qap_wrapper_module_callback(qap_module_handle_t module_handle, void* priv_d
 
             break;
         }
+        case QAP_MODULE_CALLBACK_EVENT_INPUT_CFG_CHANGE:
+        {
+            if (size < sizeof(qap_input_config_t)) {
+                ALOGE("%s %d event id %d, wrong payload size %d\n",
+                      __func__, __LINE__, event_id, size);
+                break;
+            }
+            qap_input_config_t *p_stream_format = (qap_input_config_t*)data;
+
+            ALOGV(" %s %d Input format updated; sample_rate %lu, channels %lu, bitwidth %lu",
+                  __func__, __LINE__,
+                  p_stream_format->sample_rate,
+                  p_stream_format->channels,
+                  p_stream_format->bit_width);
+            break;
+        }
         default:
         break;
     }
