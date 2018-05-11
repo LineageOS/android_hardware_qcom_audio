@@ -1113,6 +1113,7 @@ int qahw_get_version()
 
 int qahw_unload_module(qahw_module_handle_t *hw_module)
 {
+    int rc = -EINVAL;
     ALOGV("%d:%s",__LINE__, __func__);
     if (g_binder_enabled) {
         if (!g_qas_died && ((g_qas_load_count > 0) && (--g_qas_load_count == 0))) {
@@ -1120,7 +1121,13 @@ int qahw_unload_module(qahw_module_handle_t *hw_module)
             if (qas_status(qas) == -1)
                 return -ENODEV;
             pthread_mutex_destroy(&list_lock);
-            return qas->qahw_unload_module(hw_module);
+            rc = qas->qahw_unload_module(hw_module);
+            if (g_death_notifier != NULL) {
+                IInterface::asBinder(qas)->unlinkToDeath(g_death_notifier);
+                g_death_notifier.clear();
+            }
+            g_qas = NULL;
+            return rc;
         } else {
             return -ENODEV;
         }
