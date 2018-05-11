@@ -194,6 +194,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MAXX_AUDIO)), true)
     LOCAL_SRC_FILES += audio_extn/maxxaudio.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_BG_CAL)),true)
+    LOCAL_CFLAGS += -DBG_CODEC_CAL
+endif
+
 LOCAL_SHARED_LIBRARIES += libbase libhidlbase libhwbinder libutils android.hardware.power@1.2 liblog
 
 LOCAL_SRC_FILES += audio_perf.cpp

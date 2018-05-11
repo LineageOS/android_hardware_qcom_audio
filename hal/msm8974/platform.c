@@ -4703,3 +4703,10 @@ int platform_get_usb_service_interval(void *platform,
     return -1;
 #endif
 }
+
+int platform_set_acdb_metainfo_key(void *platform __unused,
+                                   char *name __unused,
+                                   int key __unused)
+{
+    return -ENOSYS;
+}
