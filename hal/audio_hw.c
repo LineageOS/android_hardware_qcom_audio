@@ -58,6 +58,7 @@
 
 #include "sound/compress_params.h"
 #include "audio_extn/tfa_98xx.h"
+#include "audio_extn/maxxaudio.h"
 
 /* COMPRESS_OFFLOAD_FRAGMENT_SIZE must be more than 8KB and a multiple of 32KB if more than 32KB.
  * COMPRESS_OFFLOAD_FRAGMENT_SIZE * COMPRESS_OFFLOAD_NUM_FRAGMENTS must be less than 8MB. */
@@ -480,6 +481,29 @@ bool audio_hw_send_gain_dep_calibration(int level) {
     ALOGV("%s: exit with ret_val %d ", __func__, ret_val);
     return ret_val;
 }
+
+#ifdef MAXXAUDIO_QDSP_ENABLED
+bool audio_hw_send_ma_parameter(int stream_type, float vol, bool active)
+{
+    bool ret = false;
+    ALOGV("%s: enter ...", __func__);
+
+    pthread_mutex_lock(&adev_init_lock);
+
+    if (adev != NULL && adev->platform != NULL) {
+        pthread_mutex_lock(&adev->lock);
+        ret = audio_extn_ma_set_state(adev, stream_type, vol, active);
+        pthread_mutex_unlock(&adev->lock);
+    }
+
+    pthread_mutex_unlock(&adev_init_lock);
+
+    ALOGV("%s: exit with ret %d", __func__, ret);
+    return ret;
+}
+#else
+#define audio_hw_send_ma_parameter(stream_type, vol, active) (0)
+#endif
 
 __attribute__ ((visibility ("default")))
 int audio_hw_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl,
@@ -1436,6 +1460,8 @@ int select_devices(struct audio_device *adev,
     audio_extn_tfa_98xx_set_mode();
 
     enable_audio_route(adev, usecase);
+
+    audio_extn_ma_set_device(adev, usecase);
 
     /* Applicable only on the targets that has external modem.
      * Enable device command should be sent to modem only after
@@ -4060,9 +4086,9 @@ static int in_get_active_microphones(const struct audio_stream_in *stream,
 
     lock_input_stream(in);
     pthread_mutex_lock(&adev->lock);
-    int ret = platform_get_active_microphones(adev->platform, in->device,
+    int ret = platform_get_active_microphones(adev->platform,
                                               audio_channel_count_from_in_mask(in->channel_mask),
-                                              in->source, in->usecase, mic_array, mic_count);
+                                              in->usecase, mic_array, mic_count);
     pthread_mutex_unlock(&adev->lock);
     pthread_mutex_unlock(&in->lock);
 
@@ -4645,6 +4671,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             adev->screen_off = true;
     }
 
+#ifndef MAXXAUDIO_QDSP_ENABLED
     ret = str_parms_get_int(parms, "rotation", &val);
     if (ret >= 0) {
         bool reverse_speakers = false;
@@ -4670,6 +4697,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             platform_check_and_set_swap_lr_channels(adev, reverse_speakers);
         }
     }
+#endif
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_SCO_WB, value, sizeof(value));
     if (ret >= 0) {
@@ -4701,7 +4729,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
                 const int card = atoi(value);
-
                 audio_extn_usb_remove_device(device, card);
             }
         } else if (audio_is_usb_in_device(device)) {
@@ -4715,6 +4742,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 
     audio_extn_hfp_set_parameters(adev, parms);
     audio_extn_a2dp_set_parameters(parms);
+    audio_extn_ma_set_parameters(adev, parms);
+
     // reconfigure should be done only after updating A2DP state in audio extension
     ret = str_parms_get_str(parms,"reconfigA2dp", value, sizeof(value));
     if (ret >= 0) {
@@ -5338,6 +5367,7 @@ static int adev_close(hw_device_t *device)
     if ((--audio_device_ref_count) == 0) {
         audio_extn_snd_mon_unregister_listener(adev);
         audio_extn_tfa_98xx_deinit();
+        audio_extn_ma_deinit();
         audio_route_free(adev->audio_route);
         free(adev->snd_dev_ref_cnt);
         platform_deinit(adev->platform);
@@ -5645,6 +5675,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     }
 
     audio_extn_tfa_98xx_init(adev);
+    audio_extn_ma_init(adev->platform);
 
     pthread_mutex_unlock(&adev_init_lock);
 

@@ -2504,6 +2504,11 @@ int platform_get_microphones(void *platform __unused,
     return -ENOSYS;
 }
 
+bool platform_set_microphone_map(void *platform __unused, snd_device_t in_snd_device __unused,
+                                 const struct mic_info *info __unused) {
+    return false;
+}
+
 int platform_get_active_microphones(void *platform __unused,
                                     audio_devices_t device __unused,
                                     unsigned int channels __unused,
@@ -2522,9 +2527,9 @@ int platform_set_usb_service_interval(void *platform __unused,
     return 0;
 }
 
-int platform_set_backend_cfg(const struct audio_device* adev,
-                             snd_device_t snd_device,
-                             const struct audio_backend_cfg *backend_cfg)
+int platform_set_backend_cfg(const struct audio_device* adev __unused,
+                             snd_device_t snd_device __unused,
+                             const struct audio_backend_cfg *backend_cfg __unused)
 {
     return -1;
 }

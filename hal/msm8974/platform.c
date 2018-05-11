@@ -34,6 +34,9 @@
 #include <sound/devdep_params.h>
 #endif
 
+#include "maxxaudio.h"
+#include <resolv.h>
+
 #define MIXER_XML_DEFAULT_PATH "mixer_paths.xml"
 #define MIXER_XML_BASE_STRING "mixer_paths"
 #define TOMTOM_8226_SND_CARD_NAME "msm8226-tomtom-snd-card"
@@ -102,8 +105,28 @@ struct be_dai_name_struct {
     char be_name[BE_DAI_NAME_MAX_LENGTH];
 };
 
+struct snd_device_to_mic_map {
+    struct mic_info microphones[AUDIO_MICROPHONE_MAX_COUNT];
+    size_t mic_count;
+};
+
 static struct listnode operator_info_list;
 static struct listnode *operator_specific_device_table[SND_DEVICE_MAX];
+
+#define AUDIO_PARAMETER_KEY_AUD_CALDATA "cal_data"
+
+typedef struct acdb_audio_cal_cfg {
+    uint32_t             persist;
+    uint32_t             snd_dev_id;
+    audio_devices_t      dev_id;
+    int32_t              acdb_dev_id;
+    uint32_t             app_type;
+    uint32_t             topo_id;
+    uint32_t             sampling_rate;
+    uint32_t             cal_type;
+    uint32_t             module_id;
+    uint32_t             param_id;
+} acdb_audio_cal_cfg_t;
 
 /* Audio calibration related functions */
 typedef void (*acdb_send_audio_cal_v3_t)(int, int, int, int, int);
@@ -130,6 +153,7 @@ struct platform_data {
     acdb_deallocate_t          acdb_deallocate;
     acdb_send_audio_cal_t      acdb_send_audio_cal;
     acdb_send_audio_cal_v3_t   acdb_send_audio_cal_v3;
+    acdb_set_audio_cal_t       acdb_set_audio_cal;
     acdb_send_voice_cal_t      acdb_send_voice_cal;
     acdb_reload_vocvoltable_t  acdb_reload_vocvoltable;
     acdb_send_gain_dep_cal_t   acdb_send_gain_dep_cal;
@@ -148,6 +172,7 @@ struct platform_data {
 
     uint32_t declared_mic_count;
     struct audio_microphone_characteristic_t microphones[AUDIO_MICROPHONE_MAX_COUNT];
+    struct snd_device_to_mic_map mic_map[SND_DEVICE_MAX];
 };
 
 static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -248,6 +273,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_USB_HEADSET] = "usb-headset",
     [SND_DEVICE_OUT_VOICE_USB_HEADSET] = "usb-headset",
     [SND_DEVICE_OUT_USB_HEADPHONES] = "usb-headphones",
+    [SND_DEVICE_OUT_USB_HEADSET_SPEC] = "usb-headset",
     [SND_DEVICE_OUT_VOICE_USB_HEADPHONES] = "usb-headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = "speaker-and-usb-headphones",
     [SND_DEVICE_OUT_SPEAKER_SAFE_AND_USB_HEADSET] = "speaker-safe-and-usb-headphones",
@@ -364,6 +390,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_USB_HEADSET] = 45,
     [SND_DEVICE_OUT_VOICE_USB_HEADSET] = 45,
     [SND_DEVICE_OUT_USB_HEADPHONES] = 45,
+    [SND_DEVICE_OUT_USB_HEADSET_SPEC] = 45,
     [SND_DEVICE_OUT_VOICE_USB_HEADPHONES] = 45,
     [SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = 14,
     [SND_DEVICE_OUT_SPEAKER_SAFE_AND_USB_HEADSET] = 14,
@@ -493,6 +520,7 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_SAFE_AND_USB_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_USB_HEADSET_SPEC)},
 
     /* in */
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC)},
@@ -739,6 +767,139 @@ inline bool platform_supports_app_type_cfg()
 #else
     return false;
 #endif
+}
+
+static int parse_audiocal_cfg(struct str_parms *parms, acdb_audio_cal_cfg_t *cal)
+{
+    int err;
+    char value[64];
+    int ret = 0;
+
+    if (parms == NULL || cal == NULL)
+        return ret;
+
+    err = str_parms_get_str(parms, "cal_persist", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_persist");
+        cal->persist = (uint32_t)strtoul(value, NULL, 0);
+        ret = ret | 0x1;
+    }
+    err = str_parms_get_str(parms, "cal_apptype", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_apptype");
+        cal->app_type = (uint32_t)strtoul(value, NULL, 0);
+        ret = ret | 0x2;
+    }
+    err = str_parms_get_str(parms, "cal_caltype", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_caltype");
+        cal->cal_type = (uint32_t)strtoul(value, NULL, 0);
+        ret = ret | 0x4;
+    }
+    err = str_parms_get_str(parms, "cal_samplerate", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_samplerate");
+        cal->sampling_rate = (uint32_t)strtoul(value, NULL, 0);
+        ret = ret | 0x8;
+    }
+    err = str_parms_get_str(parms, "cal_devid", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_devid");
+        cal->dev_id = (uint32_t)strtoul(value, NULL, 0);
+        ret = ret | 0x10;
+    }
+    err = str_parms_get_str(parms, "cal_snddevid", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_snddevid");
+        cal->snd_dev_id = (uint32_t)strtoul(value, NULL, 0);
+        ret = ret | 0x20;
+    }
+    err = str_parms_get_str(parms, "cal_topoid", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_topoid");
+        cal->topo_id = (uint32_t)strtoul(value, NULL, 0);
+        ret = ret | 0x40;
+    }
+    err = str_parms_get_str(parms, "cal_moduleid", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_moduleid");
+        cal->module_id = (uint32_t)strtoul(value, NULL, 0);
+        ret = ret | 0x80;
+    }
+    err = str_parms_get_str(parms, "cal_paramid", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_paramid");
+        cal->param_id = (uint32_t)strtoul(value, NULL, 0);
+        ret = ret | 0x100;
+    }
+    return ret;
+}
+
+static void set_audiocal(void *platform, struct str_parms *parms, char *value, int len)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    acdb_audio_cal_cfg_t cal;
+    uint8_t *dptr = NULL;
+    int32_t dlen = 0;
+    int err ,ret;
+
+    if (value == NULL || platform == NULL || parms == NULL) {
+        ALOGE("[%s] received null pointer, failed", __func__);
+        goto done_key_audcal;
+    }
+
+    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
+    /* parse audio calibration keys */
+    ret = parse_audiocal_cfg(parms, &cal);
+
+    /* handle audio calibration data now */
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_AUD_CALDATA, value, len);
+    if (err >= 0) {
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_AUD_CALDATA);
+        dlen = strlen(value);
+        if (dlen <= 0) {
+            ALOGE("[%s] null data received", __func__);
+            goto done_key_audcal;
+        }
+        /*
+           The base64 encoded string is always larger than the binary data,
+           so b64_pton will always output less data than provided (around 1/3
+           less than the input data). That's why we can allocate input buffer
+           length and then get function work.
+        */
+        dptr = (uint8_t *)calloc(dlen, sizeof(uint8_t));
+        if (dptr == NULL) {
+            ALOGE("[%s] memory allocation failed for %d", __func__, dlen);
+            goto done_key_audcal;
+        }
+        dlen = b64_pton(value, dptr, dlen);
+        if (dlen <= 0) {
+            ALOGE("[%s] data decoding failed %d", __func__, dlen);
+            goto done_key_audcal;
+        }
+
+        if (cal.dev_id) {
+            if (audio_is_input_device(cal.dev_id)) {
+                cal.snd_dev_id = platform_get_input_snd_device(platform, cal.dev_id);
+            } else {
+                cal.snd_dev_id = platform_get_output_snd_device(platform, cal.dev_id);
+            }
+        }
+        cal.acdb_dev_id = platform_get_snd_device_acdb_id(cal.snd_dev_id);
+        ALOGD("Setting audio calibration for snd_device(%d) acdb_id(%d)",
+                cal.snd_dev_id, cal.acdb_dev_id);
+        if (cal.acdb_dev_id == -EINVAL) {
+            ALOGE("[%s] Invalid acdb_device id %d for snd device id %d",
+                       __func__, cal.acdb_dev_id, cal.snd_dev_id);
+            goto done_key_audcal;
+        }
+        if (my_data->acdb_set_audio_cal) {
+            ret = my_data->acdb_set_audio_cal((void *)&cal, (void *)dptr, dlen);
+        }
+    }
+done_key_audcal:
+    if (dptr != NULL)
+        free(dptr);
 }
 
 bool platform_send_gain_dep_cal(void *platform, int level)
@@ -1049,6 +1210,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_IN_USB_HEADSET_MIC_AEC] = strdup("usb-headset-mic");
     backend_tag_table[SND_DEVICE_OUT_BT_A2DP] = strdup("bt-a2dp");
     backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP] = strdup("speaker-and-bt-a2dp");
+    backend_tag_table[SND_DEVICE_OUT_USB_HEADSET_SPEC] = strdup("usb-headset");
 
     hw_interface_table[SND_DEVICE_OUT_HANDSET] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER] = strdup("SLIMBUS_0_RX");
@@ -1082,6 +1244,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_VOICE_USB_HEADSET] = strdup("USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_USB_HEADPHONES] = strdup("USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_USB_HEADPHONES] = strdup("USB_AUDIO_RX");
+    hw_interface_table[SND_DEVICE_OUT_USB_HEADSET_SPEC] = strdup("USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET] = strdup("SLIMBUS_0_RX-and-USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_SAFE_AND_USB_HEADSET] = strdup("SLIMBUS_0_RX-and-USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TX] = strdup("AFE_PCM_RX");
@@ -1596,6 +1759,12 @@ void *platform_init(struct audio_device *adev)
 
         if (!my_data->acdb_send_custom_top)
             ALOGE("%s: Could not find the symbol acdb_get_default_app_type from %s",
+                  __func__, LIB_ACDB_LOADER);
+
+        my_data->acdb_set_audio_cal = (acdb_set_audio_cal_t)dlsym(my_data->acdb_handle,
+                                                    "acdb_loader_set_audio_cal_v2");
+        if (!my_data->acdb_set_audio_cal)
+            ALOGE("%s: Could not find the symbol acdb_set_audio_cal_v2 from %s",
                   __func__, LIB_ACDB_LOADER);
 
         int result = acdb_init(adev->snd_card);
@@ -2561,7 +2730,9 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
     } else if (devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
         snd_device = SND_DEVICE_OUT_HDMI ;
     } else if (audio_is_usb_out_device(devices)) {
-        if (audio_extn_usb_is_capture_supported())
+        if (audio_extn_ma_supported_usb())
+            snd_device = SND_DEVICE_OUT_USB_HEADSET_SPEC;
+        else if (audio_extn_usb_is_capture_supported())
             snd_device = SND_DEVICE_OUT_USB_HEADSET;
         else
             snd_device = SND_DEVICE_OUT_USB_HEADPHONES;
@@ -3139,20 +3310,29 @@ int platform_stop_incall_music_usecase(void *platform)
 int platform_set_parameters(void *platform, struct str_parms *parms)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
-    char value[128];
+    char *value = NULL;
     char *kv_pairs = str_parms_to_str(parms);
+    int len;
     int ret = 0, err;
 
     if (kv_pairs == NULL) {
         ret = -EINVAL;
-        ALOGE("%s: key-value pair is NULL",__func__);
+        ALOGE("%s: key-value pair is NULL", __func__);
         goto done;
     }
 
     ALOGV("%s: enter: %s", __func__, kv_pairs);
 
+    len = strlen(kv_pairs);
+    value = (char*)calloc(len + 1, sizeof(char));
+    if (value == NULL) {
+        ret = -ENOMEM;
+        ALOGE("[%s] failed to allocate memory", __func__);
+        goto done;
+    }
+
     err = str_parms_get_str(parms, PLATFORM_CONFIG_KEY_SOUNDCARD_NAME,
-                            value, sizeof(value));
+                            value, len);
     if (err >= 0) {
         str_parms_del(parms, PLATFORM_CONFIG_KEY_SOUNDCARD_NAME);
         my_data->snd_card_name = strdup(value);
@@ -3160,7 +3340,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     }
 
     err = str_parms_get_str(parms, PLATFORM_CONFIG_KEY_OPERATOR_INFO,
-                            value, sizeof(value));
+                            value, len);
     if (err >= 0) {
         struct operator_info *info;
         char *str = value;
@@ -3176,14 +3356,17 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         ALOGV("%s: add operator[%s] mccmnc[%s]", __func__, info->name, info->mccmnc);
     }
 
-    memset(value, 0, sizeof(value));
+    memset(value, 0, len + 1);
     err = str_parms_get_str(parms, PLATFORM_CONFIG_KEY_MAX_MIC_COUNT,
-                            value, sizeof(value));
+                            value, len);
     if (err >= 0) {
         str_parms_del(parms, PLATFORM_CONFIG_KEY_MAX_MIC_COUNT);
         my_data->max_mic_count = atoi(value);
         ALOGV("%s: max_mic_count %s/%d", __func__, value, my_data->max_mic_count);
     }
+
+    /* handle audio calibration parameters */
+    set_audiocal(platform, parms, value, len);
 
     // to-do: disable setting sidetone gain, will revist this later
     // audio_extn_usb_set_sidetone_gain(parms, value, len);
@@ -3191,6 +3374,8 @@ done:
     ALOGV("%s: exit with code(%d)", __func__, ret);
     if (kv_pairs != NULL)
         free(kv_pairs);
+    if (value != NULL)
+        free(value);
 
     return ret;
 }
@@ -4368,38 +4553,64 @@ int platform_get_microphones(void *platform,
     return 0;
 }
 
-int platform_get_active_microphones(void *platform, audio_devices_t device, unsigned int channels,
-                                    int source __unused, audio_usecase_t usecase __unused,
+bool platform_set_microphone_map(void *platform, snd_device_t in_snd_device,
+                                 const struct mic_info *info) {
+    struct platform_data *my_data = (struct platform_data *)platform;
+    if (in_snd_device < SND_DEVICE_IN_BEGIN || in_snd_device >= SND_DEVICE_IN_END) {
+        ALOGE("%s: Sound device not valid", __func__);
+        return false;
+    }
+    size_t m_count = my_data->mic_map[in_snd_device].mic_count++;
+    if (m_count >= AUDIO_MICROPHONE_MAX_COUNT) {
+        ALOGE("%s: Microphone count is greater than max allowed value", __func__);
+        my_data->mic_map[in_snd_device].mic_count--;
+        return false;
+    }
+    my_data->mic_map[in_snd_device].microphones[m_count] = *info;
+    return true;
+}
+
+int platform_get_active_microphones(void *platform, unsigned int channels,
+                                    audio_usecase_t uc_id,
                                     struct audio_microphone_characteristic_t *mic_array,
                                     size_t *mic_count) {
     struct platform_data *my_data = (struct platform_data *)platform;
-    if (mic_count == NULL) {
+    struct audio_usecase *usecase = get_usecase_from_list(my_data->adev, uc_id);
+    if (mic_count == NULL || mic_array == NULL || usecase == NULL) {
         return -EINVAL;
     }
-    if (mic_array == NULL) {
-        return -EINVAL;
-    }
-
-    if (*mic_count == 0) {
-        // TODO: return declared mic count as a preliminary implementation, the final
-        // implementation will derive mic count and channel mapping from use case, source and device
-        *mic_count = my_data->declared_mic_count;
-        return 0;
-    }
-
-    size_t max_mic_count = *mic_count;
+    size_t max_mic_count = my_data->declared_mic_count;
     size_t actual_mic_count = 0;
-    for (size_t i = 0; i < max_mic_count && i < my_data->declared_mic_count; i++) {
-        // TODO: get actual microphone and channel mapping type.
-        if ((my_data->microphones[i].device & device) == device) {
-            mic_array[actual_mic_count] = my_data->microphones[i];
-            for (size_t ch = 0; ch < channels; ch++) {
-                mic_array[actual_mic_count].channel_mapping[ch] =
-                        AUDIO_MICROPHONE_CHANNEL_MAPPING_DIRECT;
+
+    snd_device_t active_input_snd_device =
+            platform_get_input_snd_device(platform, usecase->stream.in->device);
+    if (active_input_snd_device == SND_DEVICE_NONE) {
+        ALOGI("%s: No active microphones found", __func__);
+        goto end;
+    }
+
+    size_t  active_mic_count = my_data->mic_map[active_input_snd_device].mic_count;
+    struct mic_info *m_info = my_data->mic_map[active_input_snd_device].microphones;
+
+    for (size_t i = 0; i < active_mic_count; i++) {
+        unsigned int channels_for_active_mic = channels;
+        if (channels_for_active_mic > m_info[i].channel_count) {
+            channels_for_active_mic = m_info[i].channel_count;
+        }
+        for (size_t j = 0; j < max_mic_count; j++) {
+            if (strcmp(my_data->microphones[j].device_id,
+                       m_info[i].device_id) == 0) {
+                mic_array[actual_mic_count] = my_data->microphones[j];
+                for (size_t ch = 0; ch < channels_for_active_mic; ch++) {
+                     mic_array[actual_mic_count].channel_mapping[ch] =
+                             m_info[i].channel_mapping[ch];
+                }
+                actual_mic_count++;
+                break;
             }
-            actual_mic_count++;
         }
     }
+end:
     *mic_count = actual_mic_count;
     return 0;
 }
