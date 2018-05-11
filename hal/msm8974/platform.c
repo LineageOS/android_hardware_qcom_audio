@@ -105,6 +105,11 @@ struct be_dai_name_struct {
     char be_name[BE_DAI_NAME_MAX_LENGTH];
 };
 
+struct snd_device_to_mic_map {
+    struct mic_info microphones[AUDIO_MICROPHONE_MAX_COUNT];
+    size_t mic_count;
+};
+
 static struct listnode operator_info_list;
 static struct listnode *operator_specific_device_table[SND_DEVICE_MAX];
 
@@ -167,6 +172,7 @@ struct platform_data {
 
     uint32_t declared_mic_count;
     struct audio_microphone_characteristic_t microphones[AUDIO_MICROPHONE_MAX_COUNT];
+    struct snd_device_to_mic_map mic_map[SND_DEVICE_MAX];
 };
 
 static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
@@ -4547,38 +4553,64 @@ int platform_get_microphones(void *platform,
     return 0;
 }
 
-int platform_get_active_microphones(void *platform, audio_devices_t device, unsigned int channels,
-                                    int source __unused, audio_usecase_t usecase __unused,
+bool platform_set_microphone_map(void *platform, snd_device_t in_snd_device,
+                                 const struct mic_info *info) {
+    struct platform_data *my_data = (struct platform_data *)platform;
+    if (in_snd_device < SND_DEVICE_IN_BEGIN || in_snd_device >= SND_DEVICE_IN_END) {
+        ALOGE("%s: Sound device not valid", __func__);
+        return false;
+    }
+    size_t m_count = my_data->mic_map[in_snd_device].mic_count++;
+    if (m_count >= AUDIO_MICROPHONE_MAX_COUNT) {
+        ALOGE("%s: Microphone count is greater than max allowed value", __func__);
+        my_data->mic_map[in_snd_device].mic_count--;
+        return false;
+    }
+    my_data->mic_map[in_snd_device].microphones[m_count] = *info;
+    return true;
+}
+
+int platform_get_active_microphones(void *platform, unsigned int channels,
+                                    audio_usecase_t uc_id,
                                     struct audio_microphone_characteristic_t *mic_array,
                                     size_t *mic_count) {
     struct platform_data *my_data = (struct platform_data *)platform;
-    if (mic_count == NULL) {
+    struct audio_usecase *usecase = get_usecase_from_list(my_data->adev, uc_id);
+    if (mic_count == NULL || mic_array == NULL || usecase == NULL) {
         return -EINVAL;
     }
-    if (mic_array == NULL) {
-        return -EINVAL;
-    }
-
-    if (*mic_count == 0) {
-        // TODO: return declared mic count as a preliminary implementation, the final
-        // implementation will derive mic count and channel mapping from use case, source and device
-        *mic_count = my_data->declared_mic_count;
-        return 0;
-    }
-
-    size_t max_mic_count = *mic_count;
+    size_t max_mic_count = my_data->declared_mic_count;
     size_t actual_mic_count = 0;
-    for (size_t i = 0; i < max_mic_count && i < my_data->declared_mic_count; i++) {
-        // TODO: get actual microphone and channel mapping type.
-        if ((my_data->microphones[i].device & device) == device) {
-            mic_array[actual_mic_count] = my_data->microphones[i];
-            for (size_t ch = 0; ch < channels; ch++) {
-                mic_array[actual_mic_count].channel_mapping[ch] =
-                        AUDIO_MICROPHONE_CHANNEL_MAPPING_DIRECT;
+
+    snd_device_t active_input_snd_device =
+            platform_get_input_snd_device(platform, usecase->stream.in->device);
+    if (active_input_snd_device == SND_DEVICE_NONE) {
+        ALOGI("%s: No active microphones found", __func__);
+        goto end;
+    }
+
+    size_t  active_mic_count = my_data->mic_map[active_input_snd_device].mic_count;
+    struct mic_info *m_info = my_data->mic_map[active_input_snd_device].microphones;
+
+    for (size_t i = 0; i < active_mic_count; i++) {
+        unsigned int channels_for_active_mic = channels;
+        if (channels_for_active_mic > m_info[i].channel_count) {
+            channels_for_active_mic = m_info[i].channel_count;
+        }
+        for (size_t j = 0; j < max_mic_count; j++) {
+            if (strcmp(my_data->microphones[j].device_id,
+                       m_info[i].device_id) == 0) {
+                mic_array[actual_mic_count] = my_data->microphones[j];
+                for (size_t ch = 0; ch < channels_for_active_mic; ch++) {
+                     mic_array[actual_mic_count].channel_mapping[ch] =
+                             m_info[i].channel_mapping[ch];
+                }
+                actual_mic_count++;
+                break;
             }
-            actual_mic_count++;
         }
     }
+end:
     *mic_count = actual_mic_count;
     return 0;
 }
