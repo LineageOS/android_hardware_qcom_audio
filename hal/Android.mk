@@ -384,6 +384,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ELLIPTIC_ULTRASOUND_SUPPORT)),true)
     LOCAL_SRC_FILES += audio_extn/ultrasound.c
 endif
 
+ifeq ($(strip $(AUDIO_DEVICE_BQ_MSM8953_SUPPORT)),true)
+    LOCAL_CFLAGS += -DBQ_MSM8953_SUPPORT
+    LOCAL_SRC_FILES += hal/bqmsm8953.c
+endif
+
 LOCAL_CFLAGS += -Wall -Werror
 LOCAL_CLANG_CFLAGS += -Wno-unused-variable -Wno-unused-function -Wno-missing-field-initializers
 
