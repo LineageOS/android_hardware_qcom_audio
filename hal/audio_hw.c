@@ -678,12 +678,6 @@ int enable_snd_device(struct audio_device *adev,
 
     audio_extn_dsm_feedback_enable(adev, snd_device, true);
 
-    if (is_a2dp_device(snd_device) &&
-        (audio_extn_a2dp_start_playback() < 0)) {
-           ALOGE("%s: failed to configure A2DP control path", __func__);
-           goto on_error;
-    }
-
     if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
         snd_device == SND_DEVICE_OUT_SPEAKER_SAFE ||
         snd_device == SND_DEVICE_OUT_SPEAKER_REVERSE ||
@@ -711,6 +705,13 @@ int enable_snd_device(struct audio_device *adev,
         }
 
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
+
+        if (is_a2dp_device(snd_device) &&
+            (audio_extn_a2dp_start_playback() < 0)) {
+               ALOGE("%s: failed to configure A2DP control path", __func__);
+               goto on_error;
+        }
+
         audio_route_apply_and_update_path(adev->audio_route, device_name);
     }
 on_success:
