@@ -1496,7 +1496,11 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
      ret = str_parms_get_str(parms, "A2dpSuspended", value, sizeof(value));
      if (ret >= 0) {
          if (a2dp.bt_lib_handle && (a2dp.bt_state != A2DP_STATE_DISCONNECTED)) {
-             if ((!strncmp(value, "true", sizeof(value))) && !a2dp.a2dp_suspended) {
+             if (strncmp(value, "true", sizeof(value)) == 0) {
+                if (a2dp.a2dp_suspended) {
+                    ALOGD("%s: A2DP is already suspended", __func__);
+                    goto param_handled;
+                }
                 ALOGD("%s: Setting A2DP to suspend state", __func__);
                 a2dp.a2dp_suspended = true;
                 list_for_each(node, &a2dp.adev->usecase_list) {
@@ -1509,14 +1513,20 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
                     }
                 }
                 reset_a2dp_enc_config_params();
-                if (a2dp.audio_stream_suspend)
+                if (a2dp.audio_stream_suspend) {
                    a2dp.audio_stream_suspend();
-            } else if (a2dp.a2dp_suspended) {
+                }
+            } else {
+                if (!a2dp.a2dp_suspended) {
+                    ALOGD("%s: A2DP is already unsuspended", __func__);
+                    goto param_handled;
+                }
                 ALOGD("%s: Resetting A2DP suspend state", __func__);
                 struct audio_usecase *uc_info;
                 struct listnode *node;
-                if (a2dp.clear_a2dp_suspend_flag)
+                if (a2dp.clear_a2dp_suspend_flag) {
                     a2dp.clear_a2dp_suspend_flag();
+                }
                 a2dp.a2dp_suspended = false;
                 /*
                  * It is possible that before suspend, A2DP sessions can be active.
