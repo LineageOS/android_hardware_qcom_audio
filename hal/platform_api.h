@@ -33,6 +33,12 @@ struct amp_db_and_gain_table {
     uint32_t level;
 };
 
+struct mic_info {
+    char device_id[AUDIO_MICROPHONE_ID_MAX_LEN];
+    size_t channel_count;
+    audio_microphone_channel_mapping_t channel_mapping[AUDIO_CHANNEL_COUNT_MAX];
+};
+
 enum card_status_t;
 struct audio_usecase;
 enum usecase_type_t;
@@ -156,11 +162,13 @@ bool platform_snd_device_has_speaker(snd_device_t dev);
 
 bool platform_set_microphone_characteristic(void *platform,
                                             struct audio_microphone_characteristic_t mic);
+bool platform_set_microphone_map(void *platform, snd_device_t in_snd_device,
+                                 const struct mic_info *info);
 int platform_get_microphones(void *platform,
                              struct audio_microphone_characteristic_t *mic_array,
                              size_t *mic_count);
-int platform_get_active_microphones(void *platform, audio_devices_t device,
-                                    unsigned int channels, int source, audio_usecase_t usecase,
+int platform_get_active_microphones(void *platform, unsigned int channels,
+                                    audio_usecase_t usecase,
                                     struct audio_microphone_characteristic_t *mic_array,
                                     size_t *mic_count);
 int platform_set_usb_service_interval(void *platform,

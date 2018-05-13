@@ -61,7 +61,7 @@ struct ma_state {
 
 static const audio_stream_type_t MIN_STREAM_TYPES = AUDIO_STREAM_VOICE_CALL;
 static const audio_stream_type_t MAX_STREAM_TYPES = AUDIO_STREAM_NOTIFICATION;
-static struct ma_state g_cur_state[MAX_STREAM_TYPES];
+static struct ma_state g_cur_state[MAX_STREAM_TYPES + 1];
 
 struct ma_listener_context_s {
     const struct effect_interface_s *itfe;
@@ -211,6 +211,8 @@ static void check_and_set_ma_parameter(uint32_t stream_type)
     else if (max_vol > 1.0) max_vol = 1.0;
 
     if (send_ma_parameter != NULL &&
+        stream_type >= MIN_STREAM_TYPES &&
+        stream_type <= MAX_STREAM_TYPES &&
         (g_cur_state[stream_type].vol != max_vol ||
          g_cur_state[stream_type].active != active)) {
 

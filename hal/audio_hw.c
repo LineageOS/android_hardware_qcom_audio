@@ -4086,9 +4086,9 @@ static int in_get_active_microphones(const struct audio_stream_in *stream,
 
     lock_input_stream(in);
     pthread_mutex_lock(&adev->lock);
-    int ret = platform_get_active_microphones(adev->platform, in->device,
+    int ret = platform_get_active_microphones(adev->platform,
                                               audio_channel_count_from_in_mask(in->channel_mask),
-                                              in->source, in->usecase, mic_array, mic_count);
+                                              in->usecase, mic_array, mic_count);
     pthread_mutex_unlock(&adev->lock);
     pthread_mutex_unlock(&in->lock);
 
