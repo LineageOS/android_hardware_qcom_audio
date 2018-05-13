@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <cutils/log.h>
 #include <cutils/list.h>
+#include <unistd.h>
 #include <hardware/audio_effect.h>
 #include <audio_effects/effect_aec.h>
 #include <audio_effects/effect_agc.h>
