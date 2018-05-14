@@ -64,6 +64,7 @@ AUDIO_FEATURE_ENABLED_GEF_SUPPORT := true
 BOARD_SUPPORTS_QAHW := false
 AUDIO_FEATURE_ENABLED_RAS := true
 AUDIO_FEATURE_ENABLED_SND_MONITOR := true
+AUDIO_FEATURE_ENABLED_DLKM := true
 ##AUDIO_FEATURE_FLAGS
 
 #Audio Specific device overlays
@@ -220,6 +221,10 @@ vendor.audio_hal.period_multiplier=3
 #ADM Buffering size in ms
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.adm.buffering.ms=2
+
+#enable mirror-link feature
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.enable.mirrorlink=false
 
 # for HIDL related packages
 PRODUCT_PACKAGES += \

@@ -36,14 +36,17 @@
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER_2_PROTECTED_VBAT" acdb_id="150"/>
         <device name="SND_DEVICE_IN_CAPTURE_VI_FEEDBACK_MONO_1" acdb_id="151"/>
         <device name="SND_DEVICE_IN_CAPTURE_VI_FEEDBACK_MONO_2" acdb_id="152"/>
-        <device name="SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_MIC" acdb_id="133"/>
+        <device name="SND_DEVICE_OUT_SPEAKER_EXTERNAL_1" acdb_id="14"/>
+        <device name="SND_DEVICE_OUT_SPEAKER_EXTERNAL_2" acdb_id="14"/>
+        <device name="SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1" acdb_id="10"/>
+        <device name="SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2" acdb_id="10"/>
+        <device name="SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET" acdb_id="45"/>
         <device name="SND_DEVICE_IN_UNPROCESSED_MIC" acdb_id="143"/>
         <device name="SND_DEVICE_IN_UNPROCESSED_STEREO_MIC" acdb_id="144"/>
         <device name="SND_DEVICE_IN_UNPROCESSED_THREE_MIC" acdb_id="145"/>
         <device name="SND_DEVICE_IN_UNPROCESSED_QUAD_MIC" acdb_id="146"/>
         <device name="SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC" acdb_id="147"/>
     </acdb_ids>
-
     <module_ids>
         <aec>
             <device name="SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS" module_id="0x10F17" instance_id="0x0" param_id="0x10EAF" param_value="0x01"/>
@@ -62,7 +65,6 @@
             <device name="SND_DEVICE_IN_HANDSET_MIC_AEC_NS" module_id="0x10F09" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
         </ns>
     </module_ids>
-
     <bit_width_configs>
         <device name="SND_DEVICE_OUT_SPEAKER" bit_width="24"/>
     </bit_width_configs>
@@ -85,16 +87,18 @@
         <usecase name="USECASE_AUDIO_PLAYBACK_FM" type="out" id="5"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_FM" type="in" id="34"/>
         <usecase name="USECASE_AUDIO_SPKR_CALIB_RX" type="out" id="5"/>
-        <usecase name="USECASE_AUDIO_SPKR_CALIB_TX" type="in" id="35"/>
+        <usecase name="USECASE_AUDIO_SPKR_CALIB_TX" type="in" id="37"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_AFE_PROXY" type="out" id="6"/>
         <usecase name="USECASE_AUDIO_RECORD_AFE_PROXY" type="in" id="7"/>
         <usecase name="USECASE_AUDIO_RECORD_LOW_LATENCY" type="in" id="17" />
         <usecase name="USECASE_AUDIO_PLAYBACK_ULL" type="out" id="17" />
-        <usecase name="USECASE_AUDIO_PLAYBACK_EXT_DISP_SILENCE" type="out" id="27" />
-        <usecase name="USECASE_AUDIO_PLAYBACK_VOIP" type="out" id="16" />
-        <usecase name="USECASE_AUDIO_RECORD_VOIP" type="in" id="16" />
+        <usecase name="USECASE_AUDIO_PLAYBACK_SILENCE" type="out" id="27" />
         <usecase name="USECASE_AUDIO_PLAYBACK_MMAP" type="out" id="33" />
         <usecase name="USECASE_AUDIO_RECORD_MMAP" type="in" id="33" />
+        <usecase name="USECASE_AUDIO_HFP_SCO" type="in" id="35" />
+        <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="in" id="35" />
+        <usecase name="USECASE_AUDIO_PLAYBACK_VOIP" type="out" id="16" />
+        <usecase name="USECASE_AUDIO_RECORD_VOIP" type="in" id="16" />
         <usecase name="USECASE_AUDIO_A2DP_ABR_FEEDBACK" type="in" id="40" />
     </pcm_ids>
     <config_params>
@@ -111,6 +115,7 @@
         <param key="true_32_bit" value="true"/>
         <!-- In the below value string, the value indicates sidetone gain in dB -->
         <param key="usb_sidetone_gain" value="35"/>
+        <param key="hfp_pcm_dev_id" value="36"/>
     </config_params>
     <gain_db_to_level_mapping>
         <gain_level_map db="-59" level="5"/>

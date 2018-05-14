@@ -77,7 +77,7 @@
 #endif
 
 #include <linux/msm_audio.h>
-#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM670) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE)
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE)
 #include <sound/devdep_params.h>
 #endif
 
@@ -884,6 +884,7 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_AFE_PROXY)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_AFE_PROXY)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_SILENCE)},
+    {TO_NAME_INDEX(USECASE_AUDIO_A2DP_ABR_FEEDBACK)},
 };
 
 #define NO_COLS 2
@@ -7814,7 +7815,7 @@ int platform_get_supported_copp_sampling_rate(uint32_t stream_sr)
     return sample_rate;
 }
 
-#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM670) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE)
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE)
 int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
                               uint32_t *size)
 {
