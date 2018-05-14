@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.      -->
+<!-- Copyright (c) 2015-2016, 2018, The Linux Foundation. All rights reserved.      -->
 <!--                                                                        -->
 <!-- Redistribution and use in source and binary forms, with or without     -->
 <!-- modification, are permitted provided that the following conditions are -->
@@ -316,6 +316,24 @@
         <path name="deep-buffer-playback bt-sco" />
     </path>
 
+    <path name="deep-buffer-playback speaker-and-bt-sco">
+        <path name="deep-buffer-playback bt-sco" />
+        <path name="deep-buffer-playback" />
+    </path>
+
+    <path name="deep-buffer-playback speaker-and-bt-sco-wb">
+        <path name="deep-buffer-playback bt-sco-wb" />
+        <path name="deep-buffer-playback" />
+    </path>
+
+    <path name="deep-buffer-playback wsa-speaker-and-bt-sco">
+        <path name="deep-buffer-playback speaker-and-bt-sco" />
+    </path>
+
+    <path name="deep-buffer-playback wsa-speaker-and-bt-sco-wb">
+        <path name="deep-buffer-playback speaker-and-bt-sco-wb" />
+    </path>
+
     <path name="deep-buffer-playback afe-proxy">
         <ctl name="AFE_PCM_RX Audio Mixer MultiMedia1" value="1" />
     </path>
@@ -348,6 +366,24 @@
     <path name="low-latency-playback bt-sco-wb">
         <ctl name="Internal BTSCO SampleRate" value="16000" />
         <path name="low-latency-playback bt-sco" />
+    </path>
+
+    <path name="low-latency-playback speaker-and-bt-sco">
+        <path name="low-latency-playback bt-sco" />
+        <path name="low-latency-playback" />
+    </path>
+
+    <path name="low-latency-playback speaker-and-bt-sco-wb">
+        <path name="low-latency-playback bt-sco-wb" />
+        <path name="low-latency-playback" />
+    </path>
+
+    <path name="low-latency-playback wsa-speaker-and-bt-sco">
+        <path name="low-latency-playback speaker-and-bt-sco" />
+    </path>
+
+    <path name="low-latency-playback wsa-speaker-and-bt-sco-wb">
+        <path name="low-latency-playback speaker-and-bt-sco-wb" />
     </path>
 
     <path name="low-latency-playback speaker-and-hdmi">
@@ -401,6 +437,24 @@
         <path name="audio-ull-playback bt-sco" />
     </path>
 
+    <path name="audio-ull-playback speaker-and-bt-sco">
+        <path name="audio-ull-playback bt-sco" />
+        <path name="audio-ull-playback" />
+    </path>
+
+    <path name="audio-ull-playback speaker-and-bt-sco-wb">
+        <path name="audio-ull-playback bt-sco-wb" />
+        <path name="audio-ull-playback" />
+    </path>
+
+    <path name="audio-ull-playback wsa-speaker-and-bt-sco">
+        <path name="audio-ull-playback speaker-and-bt-sco" />
+    </path>
+
+    <path name="audio-ull-playback wsa-speaker-and-bt-sco-wb">
+        <path name="audio-ull-playback speaker-and-bt-sco-wb" />
+    </path>
+
     <path name="audio-ull-playback afe-proxy">
         <ctl name="AFE_PCM_RX Audio Mixer MultiMedia3" value="1" />
     </path>
@@ -425,6 +479,24 @@
     <path name="compress-offload-playback bt-sco-wb">
         <ctl name="Internal BTSCO SampleRate" value="16000" />
         <path name="compress-offload-playback bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback speaker-and-bt-sco">
+        <path name="compress-offload-playback bt-sco" />
+        <path name="compress-offload-playback" />
+    </path>
+
+    <path name="compress-offload-playback speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback bt-sco-wb" />
+        <path name="compress-offload-playback" />
+    </path>
+
+    <path name="compress-offload-playback wsa-speaker-and-bt-sco">
+        <path name="compress-offload-playback speaker-and-bt-sco" />
+    </path>
+
+    <path name="audio-ull-playback wsa-speaker-and-bt-sco-wb">
+        <path name="audio-ull-playback speaker-and-bt-sco-wb" />
     </path>
 
     <path name="compress-offload-playback afe-proxy">
