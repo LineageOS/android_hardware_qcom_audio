@@ -2264,7 +2264,7 @@
 
     <path name="aanc-path">
         <ctl name="ADC MUX10" value="DMIC" />
-        <ctl name="DMIC MUX10" value="DMIC4" />
+        <ctl name="DMIC MUX10" value="DMIC5" />
         <ctl name="ANC0 FB MUX" value="ANC_IN_EAR_SPKR" />
     </path>
 
@@ -2279,7 +2279,7 @@
         <ctl name="DMIC MUX6" value="DMIC2" />
         <ctl name="CDC_IF TX8 MUX" value="DEC8" />
         <ctl name="ADC MUX8" value="DMIC" />
-        <ctl name="DMIC MUX8" value="DMIC4" />
+        <ctl name="DMIC MUX8" value="DMIC5" />
         <ctl name="CDC_IF TX9 MUX" value="DEC7" />
         <ctl name="ADC MUX7" value="DMIC" />
         <ctl name="DMIC MUX7" value="DMIC0" />
@@ -2295,7 +2295,7 @@
         <ctl name="DMIC MUX7" value="DMIC2" />
         <ctl name="CDC_IF TX8 MUX" value="DEC8" />
         <ctl name="ADC MUX8" value="DMIC" />
-        <ctl name="DMIC MUX8" value="DMIC4" />
+        <ctl name="DMIC MUX8" value="DMIC5" />
         <ctl name="SLIM_0_TX Channels" value="Two" />
     </path>
 
@@ -2304,7 +2304,7 @@
         <ctl name="AIF1_CAP Mixer SLIM TX8" value="1" />
         <ctl name="CDC_IF TX7 MUX" value="DEC7" />
         <ctl name="ADC MUX7" value="DMIC" />
-        <ctl name="DMIC MUX7" value="DMIC1" />
+        <ctl name="DMIC MUX7" value="DMIC0" />
         <ctl name="CDC_IF TX8 MUX" value="DEC8" />
         <ctl name="ADC MUX8" value="DMIC" />
         <ctl name="DMIC MUX8" value="DMIC5" />
@@ -2379,7 +2379,7 @@
         <ctl name="SLIM_0_TX Channels" value="Two" />
         <ctl name="CDC_IF TX7 MUX" value="DEC7" />
         <ctl name="ADC MUX7" value="DMIC" />
-        <ctl name="DMIC MUX7" value="DMIC1" />
+        <ctl name="DMIC MUX7" value="DMIC0" />
         <ctl name="CDC_IF TX8 MUX" value="DEC8" />
         <ctl name="ADC MUX8" value="DMIC" />
         <ctl name="DMIC MUX8" value="DMIC2" />
