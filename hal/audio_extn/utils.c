@@ -2078,6 +2078,17 @@ int audio_extn_utils_compress_set_start_delay(
 
 int audio_extn_utils_get_snd_card_num()
 {
+    int snd_card_num = 0;
+    struct mixer *mixer = NULL;
+
+    snd_card_num = audio_extn_utils_open_snd_mixer(&mixer);
+    if (mixer)
+        mixer_close(mixer);
+    return snd_card_num;
+}
+
+int audio_extn_utils_open_snd_mixer(struct mixer **mixer_handle)
+{
 
     void *hw_info = NULL;
     struct mixer *mixer = NULL;
@@ -2085,6 +2096,11 @@ int audio_extn_utils_get_snd_card_num()
     int snd_card_num = 0, min_snd_card_num = 0;
     char* snd_card_name = NULL;
 
+    if (!mixer_handle) {
+        ALOGE("invalid mixer handle");
+        return -1;
+    }
+    *mixer_handle = NULL;
     /*
     * Try with all the sound cards ( 0 to 8 ) and if none of them were detected
     * sleep for 1 sec and try detections with sound card 0 again.
@@ -2138,9 +2154,6 @@ int audio_extn_utils_get_snd_card_num()
     if (snd_card_name)
         free(snd_card_name);
 
-    if (mixer)
-        mixer_close(mixer);
-
     if (hw_info)
         hw_info_deinit(hw_info);
 
@@ -2149,7 +2162,16 @@ int audio_extn_utils_get_snd_card_num()
         return -1;
     }
 
+    if (mixer)
+        *mixer_handle = mixer;
+
     return snd_card_num;
+}
+
+void audio_extn_utils_close_snd_mixer(struct mixer *mixer)
+{
+    if (mixer)
+        mixer_close(mixer);
 }
 
 #ifdef SNDRV_COMPRESS_ENABLE_ADJUST_SESSION_CLOCK
