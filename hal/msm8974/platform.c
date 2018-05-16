@@ -1489,7 +1489,7 @@ static void configure_flicker_sensor_input(struct mixer *mixer)
     const char* setting5 = "ADC1";
     const char* ctl6 = "DEC2 Volume";
     int setting6 = 84;
-    const char* ctl7 = "MultiMedia2 Mixer SLIM_1_TX";
+    const char* ctl7 = "MultiMedia9 Mixer SLIM_1_TX";
     int setting7 = 1;
     const char* ctl8 = "SLIM_1_TX SampleRate";
     const char* setting8 = "KHZ_8";
