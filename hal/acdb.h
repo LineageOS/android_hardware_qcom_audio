@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -33,6 +33,7 @@
 #define PLATFORM_INFO_XML_PATH "/vendor/etc/audio_platform_info.xml"
 #endif
 
+struct mixer;
 /* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
 typedef int  (*acdb_init_t)();
@@ -68,6 +69,7 @@ struct acdb_platform_data {
 };
 
 int acdb_init(int);
+int acdb_init_v2(struct mixer *);
 
 int acdb_set_metainfo_key(void *platform, char *name, int key);
 #endif //ACDB_H

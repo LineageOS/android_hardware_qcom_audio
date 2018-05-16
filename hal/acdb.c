@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -32,11 +32,7 @@ int acdb_init(int snd_card_num)
 {
 
     int result = -1;
-    char *cvd_version = NULL;
-
-    const char *snd_card_name = NULL;
     struct mixer *mixer = NULL;
-    struct acdb_platform_data *my_data = NULL;
 
     if(snd_card_num < 0) {
         ALOGE("invalid sound card number");
@@ -47,7 +43,25 @@ int acdb_init(int snd_card_num)
     if (!mixer) {
         ALOGE("%s: Unable to open the mixer card: %d", __func__,
                snd_card_num);
-        goto cleanup;
+        return result;
+    }
+    result = acdb_init_v2(mixer);
+    mixer_close(mixer);
+    return result;
+}
+
+int acdb_init_v2(struct mixer *mixer)
+{
+
+    int result = -1;
+    char *cvd_version = NULL;
+
+    const char *snd_card_name = NULL;
+    struct acdb_platform_data *my_data = NULL;
+
+    if (!mixer) {
+       ALOGE("Invalid mixer handle");
+       return result;
     }
 
     my_data = calloc(1, sizeof(struct acdb_platform_data));
@@ -154,9 +168,6 @@ cleanup:
         }
         free(my_data);
     }
-
-    if (mixer)
-        mixer_close(mixer);
 
     if (cvd_version)
         free(cvd_version);
