@@ -35,6 +35,7 @@
 #include <cutils/properties.h>
 #include <ctype.h>
 #include <math.h>
+#include <unistd.h>
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>

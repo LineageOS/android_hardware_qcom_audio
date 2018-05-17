@@ -45,6 +45,7 @@
 #include <fcntl.h>
 #include <cutils/properties.h>
 #include <cutils/log.h>
+#include <unistd.h>
 
 #include "audio_hw.h"
 #include "audio_extn.h"

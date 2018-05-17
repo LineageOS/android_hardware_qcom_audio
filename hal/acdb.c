@@ -25,6 +25,7 @@
 #include <dlfcn.h>
 #include <cutils/log.h>
 #include <cutils/list.h>
+#include <time.h>
 #include "acdb.h"
 #include "platform_api.h"
 

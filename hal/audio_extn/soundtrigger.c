@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <cutils/log.h>
+#include <unistd.h>
 #include "audio_hw.h"
 #include "audio_extn.h"
 #include "platform.h"
@@ -512,7 +513,7 @@ void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info
                 ALOGW("%s:invalid event %d, for usecase %d",
                                       __func__, event, uc_info->id);
             }
-        } else if (uc_info->type == PCM_CAPTURE) {
+        } else if ((uc_info->type == PCM_CAPTURE) || (uc_info->type == VOICE_CALL)) {
             if (event == ST_EVENT_STREAM_BUSY)
                 ev = AUDIO_EVENT_CAPTURE_STREAM_ACTIVE;
             else
