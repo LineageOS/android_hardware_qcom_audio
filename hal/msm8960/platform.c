@@ -1375,3 +1375,9 @@ int platform_set_backend_cfg(const struct audio_device* adev __unused,
 {
     return -1;
 }
+
+int platform_set_acdb_metainfo_key(void *platform __unused,
+                                   char *name __unused,
+                                   int key __unused) {
+    return -ENOSYS;
+}
