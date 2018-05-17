@@ -2146,6 +2146,13 @@ int platform_set_incall_recording_session_id(void *platform,
     return ret;
 }
 
+int platform_set_incall_recording_session_channels(void *platform __unused,
+                                             uint32_t channel_count __unused)
+{
+    return 0;
+}
+
+
 int platform_stop_incall_recording_usecase(void *platform __unused)
 {
     return 0;
