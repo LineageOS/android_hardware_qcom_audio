@@ -4643,6 +4643,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     int val;
     int ret;
     int status = 0;
+    bool a2dp_reconfig = false;
 
     ALOGV("%s: enter: %s", __func__, kvpairs);
 
@@ -4741,18 +4742,16 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     }
 
     audio_extn_hfp_set_parameters(adev, parms);
-    audio_extn_a2dp_set_parameters(parms);
     audio_extn_ma_set_parameters(adev, parms);
 
-    // reconfigure should be done only after updating A2DP state in audio extension
-    ret = str_parms_get_str(parms,"reconfigA2dp", value, sizeof(value));
-    if (ret >= 0) {
+    status = audio_extn_a2dp_set_parameters(parms, &a2dp_reconfig);
+    if (status >= 0 && a2dp_reconfig) {
         struct audio_usecase *usecase;
         struct listnode *node;
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
             if ((usecase->type == PCM_PLAYBACK) &&
-                (usecase->devices & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP)) {
+                (usecase->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
                 ALOGD("%s: reconfigure A2DP... forcing device switch", __func__);
 
                 pthread_mutex_unlock(&adev->lock);
@@ -4786,6 +4785,8 @@ static char* adev_get_parameters(const struct audio_hw_device *dev,
     pthread_mutex_lock(&adev->lock);
 
     voice_get_parameters(adev, query, reply);
+    audio_extn_a2dp_get_parameters(query, reply);
+
     str = str_parms_to_str(reply);
     str_parms_destroy(query);
     str_parms_destroy(reply);
