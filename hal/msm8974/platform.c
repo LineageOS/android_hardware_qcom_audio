@@ -7771,6 +7771,18 @@ int platform_set_swap_channels(struct audio_device *adev, bool swap_channels)
     struct audio_usecase *usecase;
     struct listnode *node;
 
+    //swap channels only for stereo spkr
+    struct platform_data *my_data = (struct platform_data *)adev->platform;
+    if (my_data) {
+        if (!hw_info_is_stereo_spkr(my_data->hw_info)) {
+            ALOGV("%s: will not swap due to it is not stereo spkr", __func__);
+            return 0;
+        }
+    } else {
+        ALOGE("%s: failed to allocate platform data", __func__);
+        return -EINVAL;
+    }
+
     // do not swap channels in audio modes with concurrent capture and playback
     // as this may break the echo reference
     if ((adev->mode == AUDIO_MODE_IN_COMMUNICATION) || (adev->mode == AUDIO_MODE_IN_CALL)) {
@@ -7787,8 +7799,9 @@ int platform_set_swap_channels(struct audio_device *adev, bool swap_channels)
              * to perform device switch to disable the current backend to
              * enable it with new acdb data.
              */
-            if (acdb_device_table[SND_DEVICE_OUT_SPEAKER] !=
-                acdb_device_table[SND_DEVICE_OUT_SPEAKER_REVERSE]) {
+            if (my_data->speaker_lr_swap &&
+                (acdb_device_table[SND_DEVICE_OUT_SPEAKER] !=
+                acdb_device_table[SND_DEVICE_OUT_SPEAKER_REVERSE])) {
                 const int initial_skpr_gain = ramp_speaker_gain(adev, false /*ramp_up*/, -1);
                 select_devices(adev, usecase->id);
                 if (initial_skpr_gain != -EINVAL)
