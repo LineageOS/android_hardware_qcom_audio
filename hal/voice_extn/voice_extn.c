@@ -24,9 +24,10 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <math.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/str_parms.h>
 #include <sys/ioctl.h>
+#include <time.h>
 #include <sound/voice_params.h>
 
 #include "audio_hw.h"

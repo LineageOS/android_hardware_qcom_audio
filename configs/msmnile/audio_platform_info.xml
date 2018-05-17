@@ -95,6 +95,7 @@
         <usecase name="USECASE_AUDIO_RECORD_VOIP" type="in" id="16" />
         <usecase name="USECASE_AUDIO_PLAYBACK_MMAP" type="out" id="33" />
         <usecase name="USECASE_AUDIO_RECORD_MMAP" type="in" id="33" />
+        <usecase name="USECASE_AUDIO_A2DP_ABR_FEEDBACK" type="in" id="40" />
     </pcm_ids>
     <config_params>
         <param key="spkr_1_tz_name" value="wsatz.13"/>

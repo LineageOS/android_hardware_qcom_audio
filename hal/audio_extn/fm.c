@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <math.h>
 #include <cutils/log.h>
+#include <unistd.h>
 
 #include "audio_hw.h"
 #include "platform.h"

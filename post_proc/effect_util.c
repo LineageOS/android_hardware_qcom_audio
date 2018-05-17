@@ -19,6 +19,8 @@
 #include <string.h>
 #include "effect_util.h"
 #include <string.h>
+#include <unistd.h>
+#include <stdio.h>
 
 #ifdef LOG_TAG
 #undef LOG_TAG

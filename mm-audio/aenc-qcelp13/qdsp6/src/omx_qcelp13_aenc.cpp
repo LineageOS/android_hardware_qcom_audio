@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010, 2014-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2010, 2014-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -149,9 +149,14 @@ void omx_qcelp13_aenc::wait_for_event()
     pthread_mutex_lock(&m_event_lock);
     while (0 == m_is_event_done)
     {
-       clock_gettime(CLOCK_REALTIME, &ts);
+       clock_gettime(CLOCK_MONOTONIC, &ts);
        ts.tv_sec += (SLEEP_MS/1000);
        ts.tv_nsec += ((SLEEP_MS%1000) * 1000000);
+       if (ts.tv_nsec >= 1000000000)
+       {
+          ts.tv_nsec -= 1000000000;
+          ts.tv_sec += 1;
+       }
        rc = pthread_cond_timedwait(&cond, &m_event_lock, &ts);
        if (rc == ETIMEDOUT && !m_is_event_done) {
           DEBUG_PRINT("Timed out waiting for flush");
@@ -296,6 +301,7 @@ omx_qcelp13_aenc::omx_qcelp13_aenc(): m_tmp_meta_buf(NULL),
 {
     int cond_ret = 0;
     component_Role.nSize = 0;
+    pthread_condattr_t attr;
     memset(&m_cmp, 0, sizeof(m_cmp));
     memset(&m_cb, 0, sizeof(m_cb));
     memset(&m_qcelp13_pb_stats, 0, sizeof(m_qcelp13_pb_stats));
@@ -341,7 +347,10 @@ omx_qcelp13_aenc::omx_qcelp13_aenc(): m_tmp_meta_buf(NULL),
 
     pthread_mutexattr_init(&in_buf_count_lock_attr);
     pthread_mutex_init(&in_buf_count_lock, &in_buf_count_lock_attr);
-    if ((cond_ret = pthread_cond_init (&cond, NULL)) != 0)
+
+    pthread_condattr_init(&attr);
+    pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+    if ((cond_ret = pthread_cond_init (&cond, &attr)) != 0)
     {
        DEBUG_PRINT_ERROR("pthread_cond_init returns non zero for cond\n");
        if (cond_ret == EAGAIN)

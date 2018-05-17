@@ -23,6 +23,8 @@
 #include <time.h>
 #include <sys/prctl.h>
 #include <dlfcn.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #include <cutils/list.h>
 #include <cutils/log.h>
