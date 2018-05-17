@@ -907,7 +907,8 @@ static void check_and_route_playback_usecases(struct audio_device *adev,
      * with new AFE encoder format based on a2dp state
      */
     if ((SND_DEVICE_OUT_BT_A2DP == snd_device ||
-         SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device) &&
+         SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device ||
+         SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP == snd_device) &&
          audio_extn_a2dp_is_force_device_switch()) {
          force_routing = true;
     }
@@ -1361,7 +1362,8 @@ int select_devices(struct audio_device *adev,
           return 0;
     }
 
-    if ((out_snd_device == SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP) &&
+    if ((out_snd_device == SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP ||
+         out_snd_device == SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP) &&
         (!audio_extn_a2dp_is_ready())) {
         ALOGW("%s: A2DP profile is not ready, routing to speaker only", __func__);
         out_snd_device = SND_DEVICE_OUT_SPEAKER;

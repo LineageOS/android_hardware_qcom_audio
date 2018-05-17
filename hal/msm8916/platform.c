@@ -213,6 +213,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_BT_SCO_WB] = "bt-sco-headset-wb",
     [SND_DEVICE_OUT_BT_A2DP] = "bt-a2dp",
     [SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP] = "speaker-and-bt-a2dp",
+    [SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP] = "speaker-safe-and-bt-a2dp",
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = "voice-tty-full-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = "voice-tty-vco-headphones",
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = "voice-tty-hco-handset",
@@ -306,6 +307,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_BT_SCO_WB] = 39,
     [SND_DEVICE_OUT_BT_A2DP] = 20,
     [SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP] = 14,
+    [SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP] = 14,
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = 37,
@@ -406,6 +408,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_BT_SCO_WB)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_BT_A2DP)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET)},
@@ -680,6 +683,8 @@ static void set_platform_defaults()
     backend_table[SND_DEVICE_OUT_BT_SCO_WB] = strdup("bt-sco-wb");
     backend_table[SND_DEVICE_OUT_BT_A2DP] = strdup("bt-a2dp");
     backend_table[SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP] = strdup("speaker-and-bt-a2dp");
+    backend_table[SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP] =
+        strdup("speaker-safe-and-bt-a2dp");
     backend_table[SND_DEVICE_OUT_HDMI] = strdup("hdmi");
     backend_table[SND_DEVICE_OUT_SPEAKER_AND_HDMI] = strdup("speaker-and-hdmi");
     backend_table[SND_DEVICE_OUT_VOICE_TX] = strdup("afe-proxy");
@@ -1634,6 +1639,9 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         } else if ((devices & AUDIO_DEVICE_OUT_SPEAKER) &&
                    (devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP;
+        } else if ((devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) &&
+                   (devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
+            snd_device = SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP;
         } else {
             ALOGE("%s: Invalid combo device(%#x)", __func__, devices);
             goto exit;
