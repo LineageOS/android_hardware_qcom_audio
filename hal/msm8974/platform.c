@@ -3259,6 +3259,35 @@ int platform_set_incall_recording_session_id(void *platform,
     return ret;
 }
 
+int platform_set_incall_recording_session_channels(void *platform,
+                                             uint32_t channel_count)
+{
+    int ret = 0;
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+    const char *mixer_ctl_name = "Voc Rec Config";
+    int num_ctl_values;
+    int i;
+    struct mixer_ctl *ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        ret = -EINVAL;
+    } else {
+        num_ctl_values = mixer_ctl_get_num_values(ctl);
+        for (i = 0; i < num_ctl_values; i++) {
+            if (mixer_ctl_set_value(ctl, i, channel_count)) {
+                ALOGE("Error: invalid channel count: %x", channel_count);
+                ret = -EINVAL;
+                break;
+            }
+        }
+    }
+
+    return ret;
+}
+
 int platform_stop_incall_recording_usecase(void *platform)
 {
     int ret = 0;

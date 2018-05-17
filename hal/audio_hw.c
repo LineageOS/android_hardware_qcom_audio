@@ -5006,6 +5006,18 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->capture_handle = handle;
     in->flags = flags;
 
+    ALOGV("%s: source = %d, config->channel_mask = %d", __func__, source, config->channel_mask);
+    if (source == AUDIO_SOURCE_VOICE_UPLINK ||
+         source == AUDIO_SOURCE_VOICE_DOWNLINK) {
+        /* Force channel config requested to mono if incall
+           record is being requested for only uplink/downlink */
+        if (config->channel_mask != AUDIO_CHANNEL_IN_MONO) {
+            config->channel_mask = AUDIO_CHANNEL_IN_MONO;
+            ret = -EINVAL;
+            goto err_open;
+        }
+    }
+
     if (is_usb_dev && may_use_hifi_record) {
         /* HiFi record selects an appropriate format, channel, rate combo
            depending on sink capabilities*/
