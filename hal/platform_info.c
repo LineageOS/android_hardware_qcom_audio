@@ -41,6 +41,7 @@ typedef enum {
     INPUT_SND_DEVICE_TO_MIC_MAPPING,
     SND_DEV,
     MIC_INFO,
+    ACDB_METAINFO_KEY,
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
@@ -56,6 +57,7 @@ static void process_app_type(const XML_Char **attr);
 static void process_microphone_characteristic(const XML_Char **attr);
 static void process_snd_dev(const XML_Char **attr);
 static void process_mic_info(const XML_Char **attr);
+static void process_acdb_metainfo_key(const XML_Char **attr);
 
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
@@ -69,6 +71,7 @@ static section_process_fn section_table[] = {
     [MICROPHONE_CHARACTERISTIC] = process_microphone_characteristic,
     [SND_DEV] = process_snd_dev,
     [MIC_INFO] = process_mic_info,
+    [ACDB_METAINFO_KEY] = process_acdb_metainfo_key,
 };
 
 static set_parameters_fn set_parameters = &platform_set_parameters;
@@ -737,6 +740,28 @@ on_error:
     return;
 }
 
+/* process acdb meta info key value */
+static void process_acdb_metainfo_key(const XML_Char **attr)
+{
+    if (strcmp(attr[0], "name") != 0) {
+        ALOGE("%s: 'name' not found", __func__);
+        goto done;
+    }
+    if (strcmp(attr[2], "value") != 0) {
+        ALOGE("%s: 'value' not found", __func__);
+        goto done;
+    }
+
+    int key = atoi((char *)attr[3]);
+    if (platform_set_acdb_metainfo_key(my_data.platform,
+                                       (char*)attr[1], key) < 0) {
+        ALOGE("%s: key %d was not set!", __func__, key);
+    }
+
+done:
+    return;
+}
+
 static void start_tag(void *userdata __unused, const XML_Char *tag_name,
                       const XML_Char **attr)
 {
@@ -764,6 +789,8 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
             section = MICROPHONE_CHARACTERISTIC;
         } else if (strcmp(tag_name, "snd_devices") == 0) {
             section = SND_DEVICES;
+        } else if(strcmp(tag_name, "acdb_metainfo_key") == 0) {
+            section = ACDB_METAINFO_KEY;
         } else if (strcmp(tag_name, "device") == 0) {
             if ((section != ACDB) && (section != BACKEND_NAME) && (section != OPERATOR_SPECIFIC)) {
                 ALOGE("device tag only supported for acdb/backend names");
@@ -782,7 +809,7 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
             section_process_fn fn = section_table[PCM_ID];
             fn(attr);
         } else if (strcmp(tag_name, "param") == 0) {
-            if (section != CONFIG_PARAMS) {
+            if ((section != CONFIG_PARAMS) && (section != ACDB_METAINFO_KEY)) {
                 ALOGE("param tag only supported with CONFIG_PARAMS section");
                 return;
             }
@@ -884,6 +911,8 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
         section = SND_DEVICES;
     } else if (strcmp(tag_name, "input_snd_device_mic_mapping") == 0) {
         section = INPUT_SND_DEVICE;
+    } else if (strcmp(tag_name, "acdb_metainfo_key") == 0) {
+        section = ROOT;
     }
 }
 
