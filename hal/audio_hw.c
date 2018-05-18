@@ -907,7 +907,8 @@ static void check_and_route_playback_usecases(struct audio_device *adev,
      * with new AFE encoder format based on a2dp state
      */
     if ((SND_DEVICE_OUT_BT_A2DP == snd_device ||
-         SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device) &&
+         SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device ||
+         SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP == snd_device) &&
          audio_extn_a2dp_is_force_device_switch()) {
          force_routing = true;
     }
@@ -1361,7 +1362,8 @@ int select_devices(struct audio_device *adev,
           return 0;
     }
 
-    if ((out_snd_device == SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP) &&
+    if ((out_snd_device == SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP ||
+         out_snd_device == SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP) &&
         (!audio_extn_a2dp_is_ready())) {
         ALOGW("%s: A2DP profile is not ready, routing to speaker only", __func__);
         out_snd_device = SND_DEVICE_OUT_SPEAKER;
@@ -4643,6 +4645,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     int val;
     int ret;
     int status = 0;
+    bool a2dp_reconfig = false;
 
     ALOGV("%s: enter: %s", __func__, kvpairs);
 
@@ -4741,18 +4744,16 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     }
 
     audio_extn_hfp_set_parameters(adev, parms);
-    audio_extn_a2dp_set_parameters(parms);
     audio_extn_ma_set_parameters(adev, parms);
 
-    // reconfigure should be done only after updating A2DP state in audio extension
-    ret = str_parms_get_str(parms,"reconfigA2dp", value, sizeof(value));
-    if (ret >= 0) {
+    status = audio_extn_a2dp_set_parameters(parms, &a2dp_reconfig);
+    if (status >= 0 && a2dp_reconfig) {
         struct audio_usecase *usecase;
         struct listnode *node;
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
             if ((usecase->type == PCM_PLAYBACK) &&
-                (usecase->devices & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP)) {
+                (usecase->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
                 ALOGD("%s: reconfigure A2DP... forcing device switch", __func__);
 
                 pthread_mutex_unlock(&adev->lock);
@@ -4786,6 +4787,8 @@ static char* adev_get_parameters(const struct audio_hw_device *dev,
     pthread_mutex_lock(&adev->lock);
 
     voice_get_parameters(adev, query, reply);
+    audio_extn_a2dp_get_parameters(query, reply);
+
     str = str_parms_to_str(reply);
     str_parms_destroy(query);
     str_parms_destroy(reply);
@@ -5005,6 +5008,18 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->standby = 1;
     in->capture_handle = handle;
     in->flags = flags;
+
+    ALOGV("%s: source = %d, config->channel_mask = %d", __func__, source, config->channel_mask);
+    if (source == AUDIO_SOURCE_VOICE_UPLINK ||
+         source == AUDIO_SOURCE_VOICE_DOWNLINK) {
+        /* Force channel config requested to mono if incall
+           record is being requested for only uplink/downlink */
+        if (config->channel_mask != AUDIO_CHANNEL_IN_MONO) {
+            config->channel_mask = AUDIO_CHANNEL_IN_MONO;
+            ret = -EINVAL;
+            goto err_open;
+        }
+    }
 
     if (is_usb_dev && may_use_hifi_record) {
         /* HiFi record selects an appropriate format, channel, rate combo
