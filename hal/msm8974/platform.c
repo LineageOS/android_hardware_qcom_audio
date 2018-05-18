@@ -1899,6 +1899,7 @@ int platform_get_snd_device_name_extn(void *platform, snd_device_t snd_device,
         hw_info_append_hw_type(my_data->hw_info, snd_device, device_name);
     } else {
         strlcpy(device_name, "none", DEVICE_NAME_MAX_SIZE);
+        return -EINVAL;
     }
 
     return 0;
