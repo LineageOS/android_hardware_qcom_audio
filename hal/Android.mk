@@ -395,6 +395,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SND_MONITOR)), true)
     LOCAL_SRC_FILES += audio_extn/sndmonitor.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_A2DP_DECODERS)), true)
+    LOCAL_CFLAGS += -DAPTX_DECODER_ENABLED
+endif
+
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
 LOCAL_MODULE_RELATIVE_PATH := hw
