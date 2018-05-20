@@ -59,6 +59,7 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device);
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device);
 int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *usecase,
                                        int app_type, int sample_rate);
+int platform_set_acdb_metainfo_key(void *platform, char *name, int key);
 int platform_get_default_app_type_v2(void *platform, enum usecase_type_t type, int *app_type);
 int platform_switch_voice_call_device_pre(void *platform);
 int platform_switch_voice_call_enable_device_config(void *platform,

@@ -51,7 +51,6 @@ endif
 ifneq ($(filter sdm845,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_SDM845
   LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="4"
-  LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
   LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
   LOCAL_CFLAGS += -DINCALL_STEREO_CAPTURE_ENABLED
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -192,6 +191,10 @@ endif
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MAXX_AUDIO)), true)
     LOCAL_CFLAGS += -DMAXXAUDIO_QDSP_ENABLED
     LOCAL_SRC_FILES += audio_extn/maxxaudio.c
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_BG_CAL)),true)
+    LOCAL_CFLAGS += -DBG_CODEC_CAL
 endif
 
 LOCAL_SHARED_LIBRARIES += libbase libhidlbase libhwbinder libutils android.hardware.power@1.2 liblog
