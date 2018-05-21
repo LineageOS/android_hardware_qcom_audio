@@ -15,7 +15,9 @@ LOCAL_C_INCLUDES += \
     $(call include-path-for, audio-effects)
 
 LOCAL_SHARED_LIBRARIES := \
-    libcutils liblog
+    liblog \
+    libhardware \
+    libcutils
 
 LOCAL_SHARED_LIBRARIES += libdl
 
