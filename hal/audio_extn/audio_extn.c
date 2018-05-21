@@ -23,6 +23,7 @@
 
 #include <stdlib.h>
 #include <errno.h>
+#include <unistd.h>
 #include <dlfcn.h>
 #include <cutils/properties.h>
 #include <cutils/log.h>
