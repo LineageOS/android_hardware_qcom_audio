@@ -16,6 +16,7 @@ LOCAL_C_INCLUDES += \
 
 LOCAL_SHARED_LIBRARIES := \
     liblog \
+    libhardware \
     libcutils
 
 LOCAL_SHARED_LIBRARIES += libdl
