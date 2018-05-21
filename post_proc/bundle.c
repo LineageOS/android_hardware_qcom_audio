@@ -21,6 +21,8 @@
 #define LOG_NDEBUG 0
 
 #include <cutils/list.h>
+#include <pthread.h>
+#include <stdlib.h>
 #include <cutils/log.h>
 #include <system/thread_defs.h>
 #include <tinyalsa/asoundlib.h>
