@@ -23,6 +23,7 @@
 
 #include <stdlib.h>
 #include <dlfcn.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <cutils/log.h>
 #include <sys/ioctl.h>

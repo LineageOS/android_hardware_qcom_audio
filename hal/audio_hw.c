@@ -29,11 +29,14 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <sys/time.h>
+#include <time.h>
 #include <stdlib.h>
 #include <math.h>
+#include <unistd.h>
 #include <dlfcn.h>
 #include <sys/resource.h>
 #include <sys/prctl.h>
+#include <sys/ioctl.h>
 
 #include <cutils/log.h>
 #include <cutils/str_parms.h>
