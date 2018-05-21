@@ -31,7 +31,7 @@ AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS := false
 AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 AUDIO_FEATURE_ENABLED_USB_TUNNEL_AUDIO := true
 AUDIO_FEATURE_ENABLED_SPLIT_A2DP := true
-AUDIO_FEATURE_ENABLED_3D_AUDIO := false
+AUDIO_FEATURE_ENABLED_3D_AUDIO := true
 DOLBY_ENABLE := false
 TARGET_USES_QCOM_MM_AUDIO := true
 endif
@@ -230,6 +230,10 @@ vendor.audio_hal.period_multiplier=3
 #ADM Buffering size in ms
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.adm.buffering.ms=2
+
+#enable keytone FR
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.hal.output.suspend.supported=true
 
 #enable use of display-port for voice usecases
 PRODUCT_PROPERTY_OVERRIDES += \
