@@ -43,6 +43,7 @@
 
 #include "effect_api.h"
 #include <errno.h>
+#include <stdio.h>
 
 #define ARRAY_SIZE(array) (sizeof array / sizeof array[0])
 
