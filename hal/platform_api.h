@@ -73,6 +73,7 @@ int platform_switch_voice_call_usecase_route_post(void *platform,
                                                   snd_device_t in_snd_device);
 int platform_start_voice_call(void *platform, uint32_t vsid);
 int platform_stop_voice_call(void *platform, uint32_t vsid);
+int platform_set_mic_break_det(void *platform, bool enable);
 int platform_set_voice_volume(void *platform, int volume);
 void platform_set_speaker_gain_in_combo(struct audio_device *adev,
                                         snd_device_t snd_device,
