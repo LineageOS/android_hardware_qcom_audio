@@ -1422,6 +1422,30 @@ static int reset_a2dp_enc_config_params()
     return ret;
 }
 
+static int reset_a2dp_dec_config_params()
+{
+    struct mixer_ctl *ctl_dec_data = NULL;
+    struct abr_dec_cfg_t dummy_reset_cfg;
+    int ret = 0;
+
+    if (a2dp.abr_config.is_abr_enabled) {
+        ctl_dec_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_DEC_CONFIG_BLOCK);
+        if (!ctl_dec_data) {
+            ALOGE("%s: ERROR A2DP decoder config mixer control not identifed", __func__);
+            return -EINVAL;
+        }
+        memset(&dummy_reset_cfg, 0x0, sizeof(dummy_reset_cfg));
+        ret = mixer_ctl_set_array(ctl_dec_data, (void *)&dummy_reset_cfg,
+                                  sizeof(dummy_reset_cfg));
+        if (ret != 0) {
+            ALOGE("%s: Failed to set dummy decoder config", __func__);
+            return ret;
+        }
+    }
+
+    return ret;
+}
+
 int audio_extn_a2dp_stop_playback()
 {
     int ret = 0;
@@ -1445,6 +1469,7 @@ int audio_extn_a2dp_stop_playback()
         else
             ALOGV("%s: stop steam to Bluetooth IPC lib successful", __func__);
         reset_a2dp_enc_config_params();
+        reset_a2dp_dec_config_params();
         a2dp_reset_backend_cfg();
         if (a2dp.abr_config.is_abr_enabled && a2dp.abr_config.abr_started)
             stop_abr();
@@ -1488,6 +1513,7 @@ int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
          if (audio_is_a2dp_out_device(val)) {
              ALOGV("%s: Received device disconnect request", __func__);
              reset_a2dp_enc_config_params();
+             reset_a2dp_dec_config_params();
              close_a2dp_output();
          }
          goto param_handled;
@@ -1513,6 +1539,7 @@ int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
                     }
                 }
                 reset_a2dp_enc_config_params();
+                reset_a2dp_dec_config_params();
                 if (a2dp.audio_stream_suspend) {
                    a2dp.audio_stream_suspend();
                 }
@@ -1627,6 +1654,7 @@ void audio_extn_a2dp_init(void *adev)
   a2dp.is_handoff_in_progress = false;
   a2dp.is_aptx_dual_mono_supported = false;
   reset_a2dp_enc_config_params();
+  reset_a2dp_dec_config_params();
   update_offload_codec_support();
 }
 
