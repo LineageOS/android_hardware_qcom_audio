@@ -1464,7 +1464,7 @@ int select_devices(struct audio_device *adev,
 
     enable_audio_route(adev, usecase);
 
-    audio_extn_ma_set_device(adev, usecase);
+    audio_extn_ma_set_device(usecase);
 
     /* Applicable only on the targets that has external modem.
      * Enable device command should be sent to modem only after
