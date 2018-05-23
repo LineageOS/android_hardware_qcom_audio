@@ -328,6 +328,7 @@ struct audio_device {
     bool mic_muted;
     bool enable_voicerx;
     bool enable_hfp;
+    bool mic_break_enabled;
 
     int snd_card;
     void *platform;

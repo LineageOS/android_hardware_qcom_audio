@@ -1464,7 +1464,7 @@ int select_devices(struct audio_device *adev,
 
     enable_audio_route(adev, usecase);
 
-    audio_extn_ma_set_device(adev, usecase);
+    audio_extn_ma_set_device(usecase);
 
     /* Applicable only on the targets that has external modem.
      * Enable device command should be sent to modem only after
@@ -2602,7 +2602,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             out->devices = new_dev;
 
             if (output_drives_call(adev, out)) {
-                if (!voice_is_in_call(adev)) {
+                if (!voice_is_call_state_active(adev)) {
                     if (adev->mode == AUDIO_MODE_IN_CALL) {
                         adev->current_call_output = out;
                         ret = voice_start_call(adev);
@@ -5675,6 +5675,8 @@ static int adev_open(const hw_module_t *module, const char *name,
             configured_low_latency_capture_period_size = trial;
         }
     }
+
+    adev->mic_break_enabled = property_get_bool("vendor.audio.mic_break", false);
 
     // commented as full set of app type cfg is sent from platform
     // audio_extn_utils_send_default_app_type_cfg(adev->platform, adev->mixer);
