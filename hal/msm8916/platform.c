@@ -2172,7 +2172,7 @@ void *platform_init(struct audio_device *adev)
     const char *id_string = NULL;
     int cfg_value = -1;
 
-    snd_card_num = audio_extn_utils_get_snd_card_num();
+    snd_card_num = audio_extn_utils_open_snd_mixer(&adev->mixer);
     if(snd_card_num < 0) {
         ALOGE("%s: Unable to find correct sound card", __func__);
         return NULL;
@@ -2180,13 +2180,6 @@ void *platform_init(struct audio_device *adev)
 
     adev->snd_card = snd_card_num;
     ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
-
-    adev->mixer = mixer_open(snd_card_num);
-    if (!adev->mixer) {
-        ALOGE("%s: Unable to open the mixer card: %d", __func__,
-               snd_card_num);
-        return NULL;
-    }
 
     snd_card_name = mixer_get_name(adev->mixer);
     ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
@@ -2217,7 +2210,7 @@ void *platform_init(struct audio_device *adev)
         ALOGE("%s: Failed to init audio route controls, aborting.",
                __func__);
         free(my_data);
-        mixer_close(adev->mixer);
+        audio_extn_utils_close_snd_mixer(adev->mixer);
         return NULL;
     }
     update_codec_type(snd_card_name);
@@ -2445,7 +2438,7 @@ void *platform_init(struct audio_device *adev)
             goto acdb_init_fail;
         }
 
-        int result = acdb_init(adev->snd_card);
+        int result = acdb_init_v2(adev->mixer);
         if (!result) {
             my_data->is_acdb_initialized = true;
             ALOGD("ACDB initialized");
@@ -2740,7 +2733,7 @@ void platform_deinit(void *platform)
     }
 
     if (my_data->adev->mixer) {
-        mixer_close(my_data->adev->mixer);
+        audio_extn_utils_close_snd_mixer(my_data->adev->mixer);
         my_data->adev->mixer = NULL;
     }
 

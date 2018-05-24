@@ -2015,6 +2015,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     struct stream_out stream_out;
     audio_usecase_t hfp_ucid;
     int status = 0;
+    audio_devices_t audio_device;
+    audio_channel_mask_t channel_mask;
+    int sample_rate;
+    int acdb_id;
 
     ALOGD("%s for use case (%s)", __func__, use_case_table[uc_id]);
 
@@ -2255,14 +2259,11 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         }
 
-        /* Notify device change info to effect clients registered */
-        pthread_mutex_unlock(&adev->lock);
-        audio_extn_gef_notify_device_config(
-                usecase->stream.out->devices,
-                usecase->stream.out->channel_mask,
-                usecase->stream.out->app_type_cfg.sample_rate,
-                platform_get_snd_device_acdb_id(usecase->out_snd_device));
-        pthread_mutex_lock(&adev->lock);
+        /* Cache stream information to be notified to gef clients */
+        audio_device = usecase->stream.out->devices;
+        channel_mask = usecase->stream.out->channel_mask;
+        sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
+        acdb_id = platform_get_snd_device_acdb_id(usecase->out_snd_device);
     }
     enable_audio_route(adev, usecase);
 
@@ -2317,6 +2318,16 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                   out_standby_l(&usecase->stream.out->stream.common);
               }
          }
+    }
+
+    /* Notify device change info to effect clients registered
+     * NOTE: device lock has to be unlock temporarily here.
+     * To the worst case, we notify stale info to clients.
+     */
+    if (usecase->type == PCM_PLAYBACK) {
+        pthread_mutex_unlock(&adev->lock);
+        audio_extn_gef_notify_device_config(audio_device, channel_mask, sample_rate, acdb_id);
+        pthread_mutex_lock(&adev->lock);
     }
 
     ALOGD("%s: done",__func__);
@@ -6639,9 +6650,9 @@ static int adev_update_voice_comm_input_stream(struct stream_in *in,
                                                   DEFAULT_VOIP_BUF_DURATION_MS,
                                                   DEFAULT_VOIP_BIT_DEPTH_BYTE)/2;
     } else {
-        if (!valid_ch) config->channel_mask = 1;
-        if (!valid_rate) config->sample_rate = 48000;
-        return -EINVAL;
+        ALOGW("%s No valid input in voip, use defaults"
+               "sample rate %u, channel mask 0x%X",
+               __func__, config->sample_rate, in->channel_mask);
     }
     in->config.rate = config->sample_rate;
     in->sample_rate = config->sample_rate;
@@ -6825,6 +6836,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->stream.stop = in_stop;
         in->stream.create_mmap_buffer = in_create_mmap_buffer;
         in->stream.get_mmap_position = in_get_mmap_position;
+        in->sample_rate = in->config.rate;
         ALOGV("%s: USECASE_AUDIO_RECORD_MMAP", __func__);
     } else if (in->realtime) {
         in->config = pcm_config_audio_capture_rt;
@@ -6844,6 +6856,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->config.rate = config->sample_rate;
         in->config.format = pcm_format_from_audio_format(config->format);
         in->config.channels = channel_count;
+        in->sample_rate = in->config.rate;
     } else if ((in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) ||
              (in->device == AUDIO_DEVICE_IN_PROXY)) {
         if (config->sample_rate == 0)
