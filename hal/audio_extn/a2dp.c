@@ -92,6 +92,7 @@
 #define ENCODER_LATENCY_APTX_HD    20
 #define ENCODER_LATENCY_LDAC       40
 #define ENCODER_LATENCY_SBC        10
+#define ENCODER_LATENCY_PCM        50
 
 // Default A2DP sink latency offset
 #define DEFAULT_SINK_LATENCY_AAC       180
@@ -99,6 +100,7 @@
 #define DEFAULT_SINK_LATENCY_APTX_HD   180
 #define DEFAULT_SINK_LATENCY_LDAC      180
 #define DEFAULT_SINK_LATENCY_SBC       140
+#define DEFAULT_SINK_LATENCY_PCM       140
 
 // Slimbus Tx sample rate for ABR feedback channel
 #define ABR_TX_SAMPLE_RATE             "KHZ_8"
@@ -125,6 +127,7 @@ typedef enum {
     ENC_CODEC_TYPE_APTX = AUDIO_FORMAT_APTX, // 0x20000000UL
     ENC_CODEC_TYPE_APTX_HD = AUDIO_FORMAT_APTX_HD, // 0x21000000UL
     ENC_CODEC_TYPE_LDAC = AUDIO_FORMAT_LDAC, // 0x23000000UL
+    ENC_CODEC_TYPE_PCM = AUDIO_FORMAT_PCM_16_BIT, // 0x1u
 } enc_codec_t;
 
 typedef int (*audio_stream_open_t)(void);
@@ -770,7 +773,10 @@ static int a2dp_set_backend_cfg()
         (sampling_rate_rx == 48000 || sampling_rate_rx == 44100 )) {
         sampling_rate_rx *= 2;
     }
-
+    // No need to configure backend for PCM format.
+    if (a2dp.bt_encoder_format == ENC_CODEC_TYPE_PCM) {
+        return 0;
+    }
     // Set Rx backend sample rate
     switch (sampling_rate_rx) {
     case 44100:
@@ -1340,6 +1346,11 @@ bool configure_a2dp_encoder_format()
                 (configure_ldac_enc_format((audio_ldac_encoder_config *)codec_info) &&
                  configure_a2dp_decoder_format(ENC_CODEC_TYPE_LDAC));
             break;
+        case ENC_CODEC_TYPE_PCM:
+            ALOGD("Received PCM format for BT device");
+            a2dp.bt_encoder_format = ENC_CODEC_TYPE_PCM;
+            is_configured = true;
+            break;
         default:
             ALOGD("%s: Received unsupported encoder format", __func__);
             is_configured = false;
@@ -1422,6 +1433,30 @@ static int reset_a2dp_enc_config_params()
     return ret;
 }
 
+static int reset_a2dp_dec_config_params()
+{
+    struct mixer_ctl *ctl_dec_data = NULL;
+    struct abr_dec_cfg_t dummy_reset_cfg;
+    int ret = 0;
+
+    if (a2dp.abr_config.is_abr_enabled) {
+        ctl_dec_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_DEC_CONFIG_BLOCK);
+        if (!ctl_dec_data) {
+            ALOGE("%s: ERROR A2DP decoder config mixer control not identifed", __func__);
+            return -EINVAL;
+        }
+        memset(&dummy_reset_cfg, 0x0, sizeof(dummy_reset_cfg));
+        ret = mixer_ctl_set_array(ctl_dec_data, (void *)&dummy_reset_cfg,
+                                  sizeof(dummy_reset_cfg));
+        if (ret != 0) {
+            ALOGE("%s: Failed to set dummy decoder config", __func__);
+            return ret;
+        }
+    }
+
+    return ret;
+}
+
 int audio_extn_a2dp_stop_playback()
 {
     int ret = 0;
@@ -1445,6 +1480,7 @@ int audio_extn_a2dp_stop_playback()
         else
             ALOGV("%s: stop steam to Bluetooth IPC lib successful", __func__);
         reset_a2dp_enc_config_params();
+        reset_a2dp_dec_config_params();
         a2dp_reset_backend_cfg();
         if (a2dp.abr_config.is_abr_enabled && a2dp.abr_config.abr_started)
             stop_abr();
@@ -1488,6 +1524,7 @@ int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
          if (audio_is_a2dp_out_device(val)) {
              ALOGV("%s: Received device disconnect request", __func__);
              reset_a2dp_enc_config_params();
+             reset_a2dp_dec_config_params();
              close_a2dp_output();
          }
          goto param_handled;
@@ -1513,6 +1550,7 @@ int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
                     }
                 }
                 reset_a2dp_enc_config_params();
+                reset_a2dp_dec_config_params();
                 if (a2dp.audio_stream_suspend) {
                    a2dp.audio_stream_suspend();
                 }
@@ -1627,6 +1665,7 @@ void audio_extn_a2dp_init(void *adev)
   a2dp.is_handoff_in_progress = false;
   a2dp.is_aptx_dual_mono_supported = false;
   reset_a2dp_enc_config_params();
+  reset_a2dp_dec_config_params();
   update_offload_codec_support();
 }
 
@@ -1669,6 +1708,10 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
         case ENC_CODEC_TYPE_LDAC:
             latency = (avsync_runtime_prop > 0) ? ldac_offset : ENCODER_LATENCY_LDAC;
             latency += DEFAULT_SINK_LATENCY_LDAC;
+            break;
+        case ENC_CODEC_TYPE_PCM:
+            latency = ENCODER_LATENCY_PCM;
+            latency += DEFAULT_SINK_LATENCY_PCM;
             break;
         default:
             latency = DEFAULT_ENCODER_LATENCY;

@@ -162,7 +162,6 @@ static int update_calls(struct audio_device *adev)
     struct voice_session *session = NULL;
     int fd = 0;
     int ret = 0;
-    bool is_voice_sess_active = false;
 
     ALOGD("%s: enter:", __func__);
 
@@ -223,12 +222,6 @@ static int update_calls(struct audio_device *adev)
                           __func__, usecase_id);
                 } else {
                     session->state.current = session->state.new;
-
-                    // The flag is not reset if another voice session is active as routing/mode is
-                    // set globally instead of per session.
-                    voice_extn_is_call_state_active(adev, &is_voice_sess_active);
-                    if (!is_voice_sess_active)
-                        adev->voice.in_call = false;
                 }
                 break;
 

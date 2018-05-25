@@ -1621,6 +1621,11 @@ int platform_stop_voice_call(void *platform __unused, uint32_t vsid __unused)
     return 0;
 }
 
+int platform_set_mic_break_det(void *platform __unused, bool enable __unused)
+{
+    return 0;
+}
+
 int platform_get_sample_rate(void *platform __unused, uint32_t *rate __unused)
 {
     return 0;
