@@ -249,7 +249,7 @@ struct pcm_config pcm_config_afe_proxy_record = {
     .period_count = AFE_PROXY_RECORD_PERIOD_COUNT,
     .format = PCM_FORMAT_S16_LE,
     .start_threshold = AFE_PROXY_RECORD_PERIOD_SIZE,
-    .stop_threshold = INT_MAX,
+    .stop_threshold = AFE_PROXY_RECORD_PERIOD_SIZE * AFE_PROXY_RECORD_PERIOD_COUNT,
     .avail_min = AFE_PROXY_RECORD_PERIOD_SIZE,
 };
 
