@@ -36,6 +36,7 @@
 #include <cutils/str_parms.h>
 #include <audio_hw.h>
 #include <platform_api.h>
+#include <unistd.h>
 #include "platform.h"
 #include "audio_extn.h"
 #include "acdb.h"
@@ -77,7 +78,7 @@
 #endif
 
 #include <linux/msm_audio.h>
-#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE)
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE)
 #include <sound/devdep_params.h>
 #endif
 
@@ -884,6 +885,7 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_AFE_PROXY)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_AFE_PROXY)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_SILENCE)},
+    {TO_NAME_INDEX(USECASE_AUDIO_A2DP_ABR_FEEDBACK)},
 };
 
 #define NO_COLS 2
@@ -1927,24 +1929,17 @@ void *platform_init(struct audio_device *adev)
     const char *id_string = NULL;
     int cfg_value = -1;
 
-    adev->snd_card = audio_extn_utils_get_snd_card_num();
+    adev->snd_card = audio_extn_utils_open_snd_mixer(&adev->mixer);
     if (adev->snd_card < 0) {
         ALOGE("%s: Unable to find correct sound card", __func__);
         return NULL;
     }
     ALOGD("%s: Opened sound card:%d", __func__, adev->snd_card);
 
-    adev->mixer = mixer_open(adev->snd_card);
-    if (!adev->mixer) {
-        ALOGE("%s: Unable to open the mixer card: %d", __func__,
-               adev->snd_card);
-        return NULL;
-    }
-
     snd_card_name = strdup(mixer_get_name(adev->mixer));
     if (!snd_card_name) {
         ALOGE("failed to allocate memory for snd_card_name\n");
-        mixer_close(adev->mixer);
+        audio_extn_utils_close_snd_mixer(adev->mixer);
         return NULL;
     }
 
@@ -1953,7 +1948,7 @@ void *platform_init(struct audio_device *adev)
         ALOGE("failed to allocate platform data");
         if (snd_card_name)
             free(snd_card_name);
-        mixer_close(adev->mixer);
+        audio_extn_utils_close_snd_mixer(adev->mixer);
         return NULL;
     }
 
@@ -1963,7 +1958,7 @@ void *platform_init(struct audio_device *adev)
     my_data->hw_info = hw_info_init(snd_card_name);
     if (!my_data->hw_info) {
         ALOGE("failed to init hw_info");
-        mixer_close(adev->mixer);
+        audio_extn_utils_close_snd_mixer(adev->mixer);
         if (my_data)
             free(my_data);
 
@@ -2035,7 +2030,7 @@ void *platform_init(struct audio_device *adev)
             free(snd_card_name);
         if (snd_card_name_t)
             free(snd_card_name_t);
-        mixer_close(adev->mixer);
+        audio_extn_utils_close_snd_mixer(adev->mixer);
         return NULL;
     }
 
@@ -2244,7 +2239,7 @@ void *platform_init(struct audio_device *adev)
             goto acdb_init_fail;
         }
 
-        int result = acdb_init(adev->snd_card);
+        int result = acdb_init_v2(adev->mixer);
         if (!result) {
             my_data->is_acdb_initialized = true;
             ALOGD("ACDB initialized");
@@ -2548,7 +2543,7 @@ void platform_deinit(void *platform)
     }
 
     if (my_data->adev->mixer) {
-        mixer_close(my_data->adev->mixer);
+        audio_extn_utils_close_snd_mixer(my_data->adev->mixer);
         my_data->adev->mixer = NULL;
     }
 

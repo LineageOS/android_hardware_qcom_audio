@@ -119,6 +119,7 @@ void audio_extn_keep_alive_init(struct audio_device *adev)
     ka.userdata = adev;
     ka.state = STATE_IDLE;
     ka.pcm = NULL;
+    pthread_condattr_t attr;
     if (property_get_bool("vendor.audio.keep_alive.disabled", false)) {
         ALOGE("keep alive disabled");
         ka.state = STATE_DISABLED;
@@ -127,9 +128,12 @@ void audio_extn_keep_alive_init(struct audio_device *adev)
     ka.done = false;
     ka.prev_mode = KEEP_ALIVE_OUT_NONE;
     ka.active_devices = AUDIO_DEVICE_NONE;
+
     pthread_mutex_init(&ka.lock, (const pthread_mutexattr_t *) NULL);
     pthread_cond_init(&ka.cond, (const pthread_condattr_t *) NULL);
-    pthread_cond_init(&ka.wake_up_cond, (const pthread_condattr_t *) NULL);
+    pthread_condattr_init(&attr);
+    pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+    pthread_cond_init(&ka.wake_up_cond, &attr);
     pthread_mutex_init(&ka.sleep_lock, (const pthread_mutexattr_t *) NULL);
     list_init(&ka.cmd_list);
     if (pthread_create(&ka.thread,  (const pthread_attr_t *) NULL,
@@ -434,9 +438,8 @@ static void * keep_alive_loop(void * context __unused)
              * Hence a short burst of silence periodically.
              */
             pthread_mutex_lock(&ka.sleep_lock);
-            clock_gettime(CLOCK_REALTIME, &ts);
+            clock_gettime(CLOCK_MONOTONIC, &ts);
             ts.tv_sec += SILENCE_INTERVAL;
-            ts.tv_nsec = 0;
 
             if (!ka.done)
               pthread_cond_timedwait(&ka.wake_up_cond,
