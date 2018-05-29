@@ -136,11 +136,8 @@ vendor.audio.sys.init=false
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.dolby.ds2.enabled=true
 
-ifneq ($(strip $(TARGET_HAS_LOW_RAM)),true)
-PRODUCT_PACKAGES += android.hardware.audio@2.0-service
-endif
-
 PRODUCT_PACKAGES += \
+    android.hardware.audio@2.0-service \
     android.hardware.audio@2.0-impl \
     android.hardware.audio.effect@2.0-impl \
     android.hardware.soundtrigger@2.0-impl
