@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -515,6 +515,11 @@ void process_loopback_data(void *ptr)
                         continue;
                     }
                     j++;
+                }
+
+                if (dev_path == NULL) {
+                    fprintf(log_file, "NULL dev_path!");
+                    continue;
                 }
 
                 if ((dev_path != NULL) && (switch_name != NULL))
