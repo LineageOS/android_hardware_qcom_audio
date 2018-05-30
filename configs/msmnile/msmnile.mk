@@ -76,6 +76,7 @@ endif
 PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msmnile/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
     hardware/qcom/audio/configs/msmnile/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
+    hardware/qcom/audio/configs/msmnile/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
     hardware/qcom/audio/configs/msmnile/mixer_paths_tavil.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tavil.xml \
     hardware/qcom/audio/configs/msmnile/audio_tuning_mixer_tavil.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer_tavil.txt \
     hardware/qcom/audio/configs/msmnile/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
