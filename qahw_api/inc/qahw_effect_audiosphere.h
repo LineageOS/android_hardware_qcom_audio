@@ -1,4 +1,4 @@
-/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,7 +32,7 @@
 
 #include <qahw_effect_api.h>
 
-#if __cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -54,7 +54,7 @@ typedef enum
     ASPHERE_PARAM_STATUS,
 } qahw_asphere_params;
 
-#if __cplusplus
+#ifdef __cplusplus
 }  // extern "C"
 #endif
 
