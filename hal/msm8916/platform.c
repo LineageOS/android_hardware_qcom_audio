@@ -3177,7 +3177,8 @@ int platform_get_license_by_product
     ALOGD("%s: License not found for %s", __func__, product_name);
 
 on_error:
-    *product_id = 0;
+    if (product_id)
+        *product_id = 0;
     return ret;
 }
 
