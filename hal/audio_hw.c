@@ -1370,6 +1370,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                 ((usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
                 (usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) ||
                 (usecase->devices & AUDIO_DEVICE_OUT_USB_DEVICE) ||
+                (usecase->devices &  AUDIO_DEVICE_OUT_USB_HEADSET) ||
                 (usecase->devices & AUDIO_DEVICE_OUT_ALL_A2DP) ||
                 (usecase->devices & AUDIO_DEVICE_OUT_ALL_SCO)) &&
                 ((force_restart_session) ||
