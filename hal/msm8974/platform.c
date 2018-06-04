@@ -141,6 +141,7 @@
  * device for voice usecase
  */
 #define AUDIO_PARAMETER_KEY_DP_FOR_VOICE_USECASE "dp_for_voice"
+#define AUDIO_PARAMETER_KEY_DP_CHANNEL_MASK "dp_channel_mask"
 
 #define EVENT_EXTERNAL_SPK_1 "qc_ext_spk_1"
 #define EVENT_EXTERNAL_SPK_2 "qc_ext_spk_2"
@@ -5247,6 +5248,16 @@ void platform_get_parameters(void *platform,
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_DP_FOR_VOICE_USECASE, value);
     }
 
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_DP_CHANNEL_MASK,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        ret = platform_get_edid_info(platform);
+        edid_audio_info *info = (edid_audio_info *)my_data->edid_info;
+        if (ret == 0 && info != NULL) {
+            str_parms_add_int(reply, AUDIO_PARAMETER_KEY_DP_CHANNEL_MASK, info->channel_mask);
+        }
+    }
+
     /* Handle audio calibration keys */
     get_audiocal(platform, query, reply);
     native_audio_get_params(query, reply, value, sizeof(value));
@@ -5716,8 +5727,9 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
         mixer_ctl_set_enum_by_string(ctl, channel_cnt_str);
         my_data->current_backend_cfg[backend_idx].channels = channels;
 
-        if (backend_idx == HDMI_RX_BACKEND)
-            platform_set_edid_channels_configuration(adev->platform, channels);
+        if ((backend_idx == HDMI_RX_BACKEND) ||
+                (backend_idx == DISP_PORT_RX_BACKEND))
+            platform_set_edid_channels_configuration(adev->platform, channels, backend_idx);
 
         ALOGD("%s:becf: afe: %s set to %s ", __func__,
                my_data->current_backend_cfg[backend_idx].channels_mixer_ctl,
@@ -6710,8 +6722,13 @@ int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel
                 channel_map[3] = PCM_CHANNEL_LFE;
                 channel_map[4] = PCM_CHANNEL_LB;
                 channel_map[5] = PCM_CHANNEL_RB;
-                channel_map[6] = PCM_CHANNEL_LS;
-                channel_map[7] = PCM_CHANNEL_RS;
+                if (channel_mask == AUDIO_CHANNEL_OUT_5POINT1POINT2) {
+                    channel_map[6] = PCM_CHANNEL_TFL;
+                    channel_map[7] = PCM_CHANNEL_TFR;
+                } else {
+                    channel_map[6] = PCM_CHANNEL_LS;
+                    channel_map[7] = PCM_CHANNEL_RS;
+                }
                 break;
             default:
                 ALOGE("unsupported channels %d for setting channel map", channels);
@@ -7038,7 +7055,7 @@ int platform_edid_get_highest_supported_sr(void *platform)
     return 0;
 }
 
-int platform_set_edid_channels_configuration(void *platform, int channels) {
+int platform_set_edid_channels_configuration(void *platform, int channels, int backend_idx) {
 
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
@@ -7048,13 +7065,18 @@ int platform_set_edid_channels_configuration(void *platform, int channels) {
     char default_channelMap[MAX_CHANNELS_SUPPORTED] = {0};
     struct audio_device_config_param *adev_device_cfg_ptr = adev->device_cfg_params;
 
+    if ((backend_idx != HDMI_RX_BACKEND) &&
+            (backend_idx != DISP_PORT_RX_BACKEND)) {
+        ALOGE("%s: Invalid backend idx %d", __func__, backend_idx);
+        return -EINVAL;
+    }
+
     ret = platform_get_edid_info(platform);
     info = (edid_audio_info *)my_data->edid_info;
-    adev_device_cfg_ptr += HDMI_RX_BACKEND;
+    adev_device_cfg_ptr += backend_idx;
     if(ret == 0 && info != NULL) {
         if (channels > 2) {
-
-            ALOGV("%s:able to get HDMI sink capabilities multi channel playback",
+            ALOGV("%s:able to get HDMI/DP sink capabilities multi channel playback",
                    __func__);
             for (i = 0; i < info->audio_blocks && i < MAX_EDID_BLOCKS; i++) {
                 if (info->audio_blocks_array[i].format_id == LPCM &&

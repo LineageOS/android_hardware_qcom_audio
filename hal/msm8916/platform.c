@@ -5759,7 +5759,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
         my_data->current_backend_cfg[backend_idx].channels = channels;
 
         if (backend_idx == HDMI_RX_BACKEND)
-            platform_set_edid_channels_configuration(adev->platform, channels);
+            platform_set_edid_channels_configuration(adev->platform, channels, HDMI_RX_BACKEND);
 
         ALOGD("%s:becf: afe: %s set to %s", __func__,
                my_data->current_backend_cfg[backend_idx].channels_mixer_ctl, channel_cnt_str);
@@ -7091,7 +7091,7 @@ bool platform_is_edid_supported_sample_rate(void *platform, int sample_rate)
     return false;
 }
 
-int platform_set_edid_channels_configuration(void *platform, int channels) {
+int platform_set_edid_channels_configuration(void *platform, int channels, int backend_idx __unused) {
 
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
