@@ -1367,7 +1367,10 @@ int select_devices(struct audio_device *adev,
          out_snd_device == SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP) &&
         (!audio_extn_a2dp_is_ready())) {
         ALOGW("%s: A2DP profile is not ready, routing to speaker only", __func__);
-        out_snd_device = SND_DEVICE_OUT_SPEAKER;
+        if (out_snd_device == SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP)
+            out_snd_device = SND_DEVICE_OUT_SPEAKER_SAFE;
+        else
+            out_snd_device = SND_DEVICE_OUT_SPEAKER;
     }
 
     if (out_snd_device != SND_DEVICE_NONE &&
@@ -2026,7 +2029,7 @@ int start_output_stream(struct stream_out *out)
 
     if (out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
         if (!audio_extn_a2dp_is_ready()) {
-            if (out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
+            if (out->devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
                 a2dp_combo = true;
             } else {
                 if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
@@ -2073,7 +2076,10 @@ int start_output_stream(struct stream_out *out)
             check_a2dp_restore_l(adev, out, false);
         } else {
             audio_devices_t dev = out->devices;
-            out->devices = AUDIO_DEVICE_OUT_SPEAKER;
+            if (dev & AUDIO_DEVICE_OUT_SPEAKER_SAFE)
+                out->devices = AUDIO_DEVICE_OUT_SPEAKER_SAFE;
+            else
+                out->devices = AUDIO_DEVICE_OUT_SPEAKER;
             select_devices(adev, out->usecase);
             out->devices = dev;
         }
@@ -2545,7 +2551,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
          */
         if (val & AUDIO_DEVICE_OUT_ALL_A2DP) {
             if (!audio_extn_a2dp_is_ready()) {
-                if (val & AUDIO_DEVICE_OUT_SPEAKER) {
+                if (val & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
                     //combo usecase just by pass a2dp
                     ALOGW("%s: A2DP profile is not ready,routing to speaker only", __func__);
                     bypass_a2dp = true;
@@ -2625,7 +2631,10 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 if (!bypass_a2dp) {
                     select_devices(adev, out->usecase);
                 } else {
-                    out->devices = AUDIO_DEVICE_OUT_SPEAKER;
+                    if (new_dev & AUDIO_DEVICE_OUT_SPEAKER_SAFE)
+                        out->devices = AUDIO_DEVICE_OUT_SPEAKER_SAFE;
+                    else
+                        out->devices = AUDIO_DEVICE_OUT_SPEAKER;
                     select_devices(adev, out->usecase);
                     out->devices = new_dev;
                 }
@@ -2953,7 +2962,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
     if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
         (audio_extn_a2dp_is_suspended())) {
-        if (!(out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
+        if (!(out->devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE))) {
             if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
                 ret = -EIO;
                 goto exit;
