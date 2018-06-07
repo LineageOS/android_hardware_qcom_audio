@@ -1832,6 +1832,10 @@
         <ctl name="SLIM0_RX_VI_FB_LCH_MUX" value="SLIM4_TX" />
     </path>
 
+    <path name="voice-speaker-stereo-protected">
+        <path name="speaker-protected" />
+    </path>
+
     <path name="voice-speaker-2-protected">
         <ctl name="AIF4_VI Mixer SPKR_VI_2" value="1" />
         <ctl name="SLIM_4_TX Format" value="PACKED_16B" />
@@ -1969,6 +1973,10 @@
 
     <path name="voice-speaker">
         <path name="speaker-mono" />
+    </path>
+
+    <path name="voice-speaker-stereo">
+        <path name="speaker" />
     </path>
 
     <path name="voice-speaker-qrd">

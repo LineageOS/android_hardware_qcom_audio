@@ -227,6 +227,10 @@ vendor.audio.adm.buffering.ms=2
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.enable.mirrorlink=false
 
+#enable voicecall speaker stereo
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.audio.voicecall.speaker.stereo=true
+
 # for HIDL related packages
 PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-service \
