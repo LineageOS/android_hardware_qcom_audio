@@ -85,6 +85,10 @@ if (test x$TARGET_SUPPORT = xqcs605); then
          AC_SUBST([TARGET_PLATFORM], ["msm8974"])
          TARGET_CFLAGS=" -DPLATFORM_QCS605"
 fi
+if (test x$TARGET_SUPPORT = xqcs40x); then
+         AC_SUBST([TARGET_PLATFORM], ["msm8974"])
+         TARGET_CFLAGS=" -DPLATFORM_QCS405"
+fi
 
 AC_SUBST([TARGET_CFLAGS])
 
