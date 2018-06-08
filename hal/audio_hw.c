@@ -437,7 +437,7 @@ static const struct string_to_enum out_sample_rates_name_to_enum_table[] = {
 };
 
 static struct audio_device *adev = NULL;
-static pthread_mutex_t adev_init_lock;
+static pthread_mutex_t adev_init_lock = PTHREAD_MUTEX_INITIALIZER;
 static unsigned int audio_device_ref_count;
 //cache last MBDRC cal step level
 static int last_known_cal_step = -1 ;
