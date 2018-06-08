@@ -20,7 +20,7 @@
 
 #include <errno.h>
 #include <math.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <fcntl.h>
 #include "audio_hw.h"
 #include "platform.h"
@@ -51,7 +51,7 @@
 #define MAX_RESISTANCE_SPKR_Q24 (40 * (1 << 24))
 
 /*Path where the calibration file will be stored*/
-#define CALIB_FILE "/data/misc/audio/audio.cal"
+#define CALIB_FILE "/data/vendor/audio/audio.cal"
 
 /*Time between retries for calibartion or intial wait time
   after boot up*/
@@ -304,6 +304,7 @@ static int spkr_calibrate(int t0)
     int32_t pcm_dev_rx_id = -1, pcm_dev_tx_id = -1;
     struct timespec ts;
     int retry_duration;
+    int app_type = 0;
 
     if (!adev) {
         ALOGE("%s: Invalid params", __func__);
@@ -472,7 +473,20 @@ exit:
     handle.pcm_tx = NULL;
 
     /* Clear TX calibration to handset mic */
-    platform_send_audio_calibration(adev->platform, SND_DEVICE_IN_HANDSET_MIC);
+    if (platform_supports_app_type_cfg()) {
+        ALOGD("%s: Platform supports APP type configuration, using V2\n", __func__);
+        if (uc_info_tx != NULL) {
+            ALOGD("%s: UC Info TX is not NULL, updating and sending calibration\n", __func__);
+            uc_info_tx->in_snd_device = SND_DEVICE_IN_HANDSET_MIC;
+            uc_info_tx->out_snd_device = SND_DEVICE_NONE;
+            platform_get_default_app_type_v2(adev->platform, PCM_CAPTURE, &app_type);
+            platform_send_audio_calibration_v2(adev->platform, uc_info_tx,
+                                               app_type, 8000);
+        }
+    } else {
+        ALOGW("%s: Platform does NOT support APP type configuration, using V1\n", __func__);
+        platform_send_audio_calibration(adev->platform, SND_DEVICE_IN_HANDSET_MIC);
+    }
     if (!status.status) {
         protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
         protCfg.r0[SP_V2_SPKR_1] = status.r0[SP_V2_SPKR_1];
@@ -766,24 +780,6 @@ void audio_extn_spkr_prot_init(void *adev)
     }
 }
 
-int audio_extn_spkr_prot_get_acdb_id(snd_device_t snd_device)
-{
-    int acdb_id;
-
-    switch(snd_device) {
-    case SND_DEVICE_OUT_SPEAKER:
-        acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_SPEAKER_PROTECTED);
-        break;
-    case SND_DEVICE_OUT_VOICE_SPEAKER:
-        acdb_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED);
-        break;
-    default:
-        acdb_id = -EINVAL;
-        break;
-    }
-    return acdb_id;
-}
-
 int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device)
 {
     if (!handle.spkr_prot_enable)
@@ -804,6 +800,7 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
     struct audio_usecase *uc_info_tx;
     struct audio_device *adev = handle.adev_handle;
     int32_t pcm_dev_tx_id = -1, ret = 0;
+    int app_type = 0;
 
     ALOGV("%s: Entry", __func__);
     if (!adev) {
@@ -855,7 +852,20 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
 
 exit:
     /* Clear VI feedback cal and replace with handset MIC  */
-    platform_send_audio_calibration(adev->platform, SND_DEVICE_IN_HANDSET_MIC);
+    if (platform_supports_app_type_cfg()) {
+        ALOGD("%s: Platform supports APP type configuration, using V2\n", __func__);
+        if (uc_info_tx != NULL) {
+            ALOGD("%s: UC Info TX is not NULL, updating and sending calibration\n", __func__);
+            uc_info_tx->in_snd_device = SND_DEVICE_IN_HANDSET_MIC;
+            uc_info_tx->out_snd_device = SND_DEVICE_NONE;
+            platform_get_default_app_type_v2(adev->platform, PCM_CAPTURE, &app_type);
+            platform_send_audio_calibration_v2(adev->platform, uc_info_tx,
+                                               app_type, 8000);
+        }
+    } else {
+        ALOGW("%s: Platform does not support APP type configuration, using V1\n", __func__);
+        platform_send_audio_calibration(adev->platform, SND_DEVICE_IN_HANDSET_MIC);
+    }
     if (ret) {
         if (handle.pcm_tx)
             pcm_close(handle.pcm_tx);

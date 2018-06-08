@@ -49,7 +49,7 @@
 #define ACDB_DEV_TYPE_OUT 1
 #define ACDB_DEV_TYPE_IN 2
 
-#define MAX_SUPPORTED_CHANNEL_MASKS 8
+#define MAX_SUPPORTED_CHANNEL_MASKS (2 * FCC_8) /* support positional and index masks to 8ch */
 #define MAX_SUPPORTED_FORMATS 15
 #define MAX_SUPPORTED_SAMPLE_RATES 7
 #define DEFAULT_HDMI_OUT_CHANNELS   2
@@ -131,6 +131,10 @@ enum {
     USECASE_AUDIO_PLAYBACK_VOIP,
     USECASE_AUDIO_RECORD_VOIP,
 
+    USECASE_INCALL_MUSIC_UPLINK,
+
+    USECASE_AUDIO_A2DP_ABR_FEEDBACK,
+
     AUDIO_USECASE_MAX
 };
 
@@ -179,6 +183,7 @@ struct stream_out {
     struct audio_stream_out stream;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
     pthread_mutex_t pre_lock; /* acquire before lock to avoid DOS by playback thread */
+    pthread_mutex_t compr_mute_lock; /* acquire before setting compress volume */
     pthread_cond_t  cond;
     struct pcm_config config;
     struct compr_config compr_config;
@@ -216,6 +221,9 @@ struct stream_out {
     int af_period_multiplier;
     struct audio_device *dev;
     card_status_t card_status;
+    bool a2dp_compress_mute;
+    float volume_l;
+    float volume_r;
 
     error_log_t *error_log;
 
@@ -320,6 +328,7 @@ struct audio_device {
     bool mic_muted;
     bool enable_voicerx;
     bool enable_hfp;
+    bool mic_break_enabled;
 
     int snd_card;
     void *platform;
@@ -377,6 +386,8 @@ int enable_audio_route(struct audio_device *adev,
 
 struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
                                             audio_usecase_t uc_id);
+
+int check_a2dp_restore(struct audio_device *adev, struct stream_out *out, bool restore);
 
 #define LITERAL_TO_STRING(x) #x
 #define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\

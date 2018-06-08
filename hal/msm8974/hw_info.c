@@ -19,7 +19,7 @@
 #define LOG_NDDEBUG 0
 
 #include <stdlib.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include "audio_hw.h"
 #include "platform.h"
 #include "audio_extn.h"

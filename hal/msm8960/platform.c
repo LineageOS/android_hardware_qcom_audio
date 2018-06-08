@@ -20,7 +20,7 @@
 
 #include <stdlib.h>
 #include <dlfcn.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/properties.h>
 #include <audio_hw.h>
 #include <platform_api.h>
@@ -118,6 +118,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_HANDSET] = "handset",
     [SND_DEVICE_OUT_SPEAKER] = "speaker",
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = "speaker-reverse",
+    [SND_DEVICE_OUT_SPEAKER_SAFE] = "speaker-safe",
     [SND_DEVICE_OUT_HEADPHONES] = "headphones",
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = "speaker-and-headphones",
     [SND_DEVICE_OUT_VOICE_SPEAKER] = "voice-speaker",
@@ -172,6 +173,7 @@ static const int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_HANDSET] = 7,
     [SND_DEVICE_OUT_SPEAKER] = 14,
     [SND_DEVICE_OUT_SPEAKER_REVERSE] = 14,
+    [SND_DEVICE_OUT_SPEAKER_SAFE] = 14,
     [SND_DEVICE_OUT_HEADPHONES] = 10,
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = 10,
     [SND_DEVICE_OUT_VOICE_SPEAKER] = 14,
@@ -695,7 +697,13 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
         devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
         snd_device = SND_DEVICE_OUT_HEADPHONES;
     } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
-        if (my_data->speaker_lr_swap)
+        /*
+         * Perform device switch only if acdb tuning is different between SPEAKER & SPEAKER_REVERSE,
+         * Or there will be a small pause while performing device switch.
+         */
+        if (my_data->speaker_lr_swap &&
+            (acdb_device_table[SND_DEVICE_OUT_SPEAKER] !=
+            acdb_device_table[SND_DEVICE_OUT_SPEAKER_REVERSE]))
             snd_device = SND_DEVICE_OUT_SPEAKER_REVERSE;
         else
             snd_device = SND_DEVICE_OUT_SPEAKER;
@@ -1322,5 +1330,54 @@ int platform_set_sidetone(struct audio_device *adev,
 int platform_get_mmap_data_fd(void *platform __unused, int fe_dev __unused, int dir __unused,
                               int *fd __unused, uint32_t *size __unused)
 {
+    return -ENOSYS;
+}
+
+bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id __unused)
+{
+    return false;
+}
+
+bool platform_snd_device_has_speaker(snd_device_t dev __unused) {
+    return false;
+}
+
+bool platform_set_microphone_characteristic(void *platform __unused,
+                                            struct audio_microphone_characteristic_t mic __unused) {
+    return -ENOSYS;
+}
+
+int platform_get_microphones(void *platform __unused,
+                             struct audio_microphone_characteristic_t *mic_array __unused,
+                             size_t *mic_count __unused) {
+    return -ENOSYS;
+}
+
+int platform_get_active_microphones(void *platform __unused, unsigned int channels __unused,
+                                    audio_usecase_t usecase __unused,
+                                    struct audio_microphone_characteristic_t *mic_array __unused,
+                                    size_t *mic_count __unused) {
+    return -ENOSYS;
+}
+
+int platform_set_usb_service_interval(void *platform __unused,
+                                      bool playback __unused,
+                                      unsigned long service_interval __unused,
+                                      bool *reconfig)
+{
+    *reconfig = false;
+    return 0;
+}
+
+int platform_set_backend_cfg(const struct audio_device* adev __unused,
+                             snd_device_t snd_device __unused,
+                             const struct audio_backend_cfg *backend_cfg __unused)
+{
+    return -1;
+}
+
+int platform_set_acdb_metainfo_key(void *platform __unused,
+                                   char *name __unused,
+                                   int key __unused) {
     return -ENOSYS;
 }
