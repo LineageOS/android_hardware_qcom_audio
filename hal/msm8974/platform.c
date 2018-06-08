@@ -7539,12 +7539,12 @@ int platform_send_audio_cal(void* platform, acdb_audio_cal_cfg_t* cal,
     if (my_data->acdb_set_audio_cal) {
         // persist audio cal in local cache
         if (persist) {
-            ret = my_data->acdb_set_audio_cal((void*)&cal, data, (uint32_t)length);
+            ret = my_data->acdb_set_audio_cal((void*)cal, data, (uint32_t)length);
         }
         // send audio cal to dsp
         if (ret == 0) {
             cal->persist = false;
-            ret = my_data->acdb_set_audio_cal((void*)&cal, data, (uint32_t)length);
+            ret = my_data->acdb_set_audio_cal((void*)cal, data, (uint32_t)length);
             if (persist && (ret != 0)) {
                 ALOGV("[%s] audio cal stored with success, ignore set cal failure", __func__);
                 ret = 0;
@@ -7569,11 +7569,11 @@ int platform_get_audio_cal(void* platform, acdb_audio_cal_cfg_t* cal,
 
     if (my_data->acdb_get_audio_cal) {
         // get cal from dsp
-        ret = my_data->acdb_get_audio_cal((void*)&cal, data, (uint32_t*)length);
+        ret = my_data->acdb_get_audio_cal((void*)cal, data, (uint32_t*)length);
         // get cached cal if prevoius attempt fails and persist flag is set
         if ((ret != 0) && persist) {
             cal->persist = true;
-            ret = my_data->acdb_get_audio_cal((void*)&cal, data, (uint32_t*)length);
+            ret = my_data->acdb_get_audio_cal((void*)cal, data, (uint32_t*)length);
         }
     }
 
@@ -7593,7 +7593,7 @@ int platform_store_audio_cal(void* platform, acdb_audio_cal_cfg_t* cal,
     }
 
     if (my_data->acdb_set_audio_cal) {
-        ret = my_data->acdb_set_audio_cal((void*)&cal, data, (uint32_t)length);
+        ret = my_data->acdb_set_audio_cal((void*)cal, data, (uint32_t)length);
     }
 
 ERROR_RETURN:
@@ -7612,7 +7612,7 @@ int platform_retrieve_audio_cal(void* platform, acdb_audio_cal_cfg_t* cal,
     }
 
     if (my_data->acdb_get_audio_cal) {
-        ret = my_data->acdb_get_audio_cal((void*)&cal, data, (uint32_t*)length);
+        ret = my_data->acdb_get_audio_cal((void*)cal, data, (uint32_t*)length);
     }
 
 ERROR_RETURN:
