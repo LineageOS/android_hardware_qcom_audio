@@ -3644,8 +3644,6 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                     } else
                             snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
                 }
-        } else if (devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
-            snd_device = SND_DEVICE_OUT_BT_A2DP;
         } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
                    devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
             snd_device = SND_DEVICE_OUT_USB_HEADSET;

@@ -3849,8 +3849,6 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_BT_SCO_WB;
             else
                 snd_device = SND_DEVICE_OUT_BT_SCO;
-        } else if (devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
-                snd_device = SND_DEVICE_OUT_BT_A2DP;
         } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
                 if (my_data->is_vbat_speaker) {
                     if (my_data->mono_speaker == SPKR_1)
@@ -5813,7 +5811,9 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
      * Check if the device is speaker or handset,assumption handset shares
      * backend with speaker, and these devices are restricited to 48kHz.
      */
-    if (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device)) {
+    if (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device) &&
+        !(codec_device_supports_native_playback(usecase->devices) &&
+          my_data->hifi_audio && !check_hdset_combo_device(snd_device))) {
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
 
         if (bit_width >= 24) {
