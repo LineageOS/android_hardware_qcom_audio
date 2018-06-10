@@ -7308,23 +7308,25 @@ static int adev_open(const hw_module_t *module, const char *name,
     /* Loads platform specific libraries dynamically */
     adev->platform = platform_init(adev);
     if (!adev->platform) {
+        pthread_mutex_destroy(&adev->lock);
         free(adev->snd_dev_ref_cnt);
         free(adev);
+        adev = NULL;
         ALOGE("%s: Failed to init platform data, aborting.", __func__);
         *device = NULL;
         pthread_mutex_unlock(&adev_init_lock);
-        pthread_mutex_destroy(&adev->lock);
         return -EINVAL;
     }
 
     if (audio_extn_qaf_is_enabled()) {
         ret = audio_extn_qaf_init(adev);
         if (ret < 0) {
+            pthread_mutex_destroy(&adev->lock);
             free(adev);
+            adev = NULL;
             ALOGE("%s: Failed to init platform data, aborting.", __func__);
             *device = NULL;
             pthread_mutex_unlock(&adev_init_lock);
-            pthread_mutex_destroy(&adev->lock);
             return ret;
         }
 
