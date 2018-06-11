@@ -81,6 +81,23 @@
         <!-- wdsp_fluence_type: fluence disabled: "NONE" -->
         <!-- fluence enabled: "FLUENCE_DMIC", "FLUENCE_TMIC", "FLUENCE_QMIC" -->
         <param wdsp_fluence_type="NONE" />
+        <arm_ss_usecase>
+            <!-- Options are "KEYWORD_DETECTION", "USER_VERIFICATION", "CUSTOM_DETECTION"  -->
+            <param sm_detection_type= "KEYWORD_DETECTION" />
+            <param sm_id="0x2" />
+            <param module_lib="libcapiv2svacnn.so"/>
+            <param sample_rate="16000"/>
+            <param bit_wdith="16"/>
+            <param channel_count="1"/>
+        </arm_ss_usecase>
+        <arm_ss_usecase>
+            <param sm_detection_type= "USER_VERIFICATION" />
+            <param sm_id="0x4" />
+            <param module_lib="libcapiv2vop.so"/>
+            <param sample_rate="16000"/>
+            <param bit_wdith="16"/>
+            <param channel_count="1"/>
+        </arm_ss_usecase>
         <gcs_usecase>
             <param uid="0x1" />
             <param acdb_devices="DEVICE_HANDSET_MIC_CPE, DEVICE_HANDSET_TMIC_CPE, DEVICE_HEADSET_MIC_CPE" />

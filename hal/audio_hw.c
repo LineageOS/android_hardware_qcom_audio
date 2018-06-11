@@ -437,7 +437,7 @@ static const struct string_to_enum out_sample_rates_name_to_enum_table[] = {
 };
 
 static struct audio_device *adev = NULL;
-static pthread_mutex_t adev_init_lock;
+static pthread_mutex_t adev_init_lock = PTHREAD_MUTEX_INITIALIZER;
 static unsigned int audio_device_ref_count;
 //cache last MBDRC cal step level
 static int last_known_cal_step = -1 ;
@@ -1425,6 +1425,11 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                                                                         usecase->out_snd_device,
                                                                         platform_get_input_snd_device(adev->platform, uc_info->devices));
                     enable_audio_route(adev, usecase);
+                    if (usecase->id == USECASE_AUDIO_PLAYBACK_VOIP) {
+                        out_set_voip_volume(&usecase->stream.out->stream,
+                                            usecase->stream.out->volume_l,
+                                            usecase->stream.out->volume_r);
+                    }
                     if (usecase->id == USECASE_AUDIO_PLAYBACK_FM) {
                         struct str_parms *parms = str_parms_create_str("fm_restore_volume=1");
                         if (parms)

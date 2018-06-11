@@ -70,11 +70,11 @@
 /* Min and max resistance value in lookup table. */
 #define MIN_RESISTANCE_LOOKUP (3.2)
 #define MAX_RESISTANCE_LOOKUP (8)
-#define SPV3_LOOKUP_TABLE_ROWS (49)
+#define SPKR_PROT_LOOKUP_TABLE_ROWS (49)
 /* default limiter threshold is 0dB(0x7FFFFFF in natural value) */
 #define DEFAULT_LIMITER_TH (0x07FFFFFF)
 #define AFE_API_VERSION_SUPPORT_SPV3 (0x2)
-enum spv3_boost_max_state {
+enum wcd_boost_max_state {
     BOOST_NO_MAX_STATE,
     BOOST_MAX_STATE_1,
     BOOST_MAX_STATE_2,
@@ -206,65 +206,65 @@ struct spkr_tz_names {
     char *spkr_2_name;
 };
 
-struct spv3_boost {
+struct spkr_prot_boost {
     /* bit7-4: first stage; bit 3-0: second stage */
     int boost_value;
     int max_state;
 };
 
-#define SPV3_BOOST_VALUE_STATE(value, state) \
+#define SPKR_PROT_BOOST_VALUE_STATE(value, state) \
 {    .boost_value = (value), .max_state = (state) }
 
-static struct spv3_boost spv3_boost_lookup_table[SPV3_LOOKUP_TABLE_ROWS] = {
-    SPV3_BOOST_VALUE_STATE(0xc7, BOOST_MAX_STATE_1),
-    SPV3_BOOST_VALUE_STATE(0xd7, BOOST_MAX_STATE_1),
-    SPV3_BOOST_VALUE_STATE(0xd7, BOOST_MAX_STATE_1),
-    SPV3_BOOST_VALUE_STATE(0xe7, BOOST_MAX_STATE_1),
-    SPV3_BOOST_VALUE_STATE(0xe7, BOOST_MAX_STATE_1),
-    SPV3_BOOST_VALUE_STATE(0xf7, BOOST_MAX_STATE_1),
-    SPV3_BOOST_VALUE_STATE(0x70, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x70, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x71, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x71, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x72, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x72, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x73, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x73, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x74, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x75, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x75, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x76, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x76, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x77, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x77, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x78, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x78, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x79, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x79, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7a, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7a, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7a, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7b, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7b, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7c, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7c, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7d, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7d, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7e, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7e, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
-    SPV3_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+static struct spkr_prot_boost spkr_prot_boost_lookup_table[SPKR_PROT_LOOKUP_TABLE_ROWS] = {
+    SPKR_PROT_BOOST_VALUE_STATE(0xc7, BOOST_MAX_STATE_1),
+    SPKR_PROT_BOOST_VALUE_STATE(0xd7, BOOST_MAX_STATE_1),
+    SPKR_PROT_BOOST_VALUE_STATE(0xd7, BOOST_MAX_STATE_1),
+    SPKR_PROT_BOOST_VALUE_STATE(0xe7, BOOST_MAX_STATE_1),
+    SPKR_PROT_BOOST_VALUE_STATE(0xe7, BOOST_MAX_STATE_1),
+    SPKR_PROT_BOOST_VALUE_STATE(0xf7, BOOST_MAX_STATE_1),
+    SPKR_PROT_BOOST_VALUE_STATE(0x70, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x70, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x71, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x71, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x72, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x72, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x73, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x73, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x74, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x75, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x75, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x76, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x76, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x77, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x77, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x78, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x78, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x79, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x79, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7a, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7a, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7a, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7b, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7b, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7c, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7c, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7d, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7d, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7e, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7e, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
+    SPKR_PROT_BOOST_VALUE_STATE(0x7f, BOOST_MAX_STATE_2),
 };
 
 /* 3.2 ohm in q24 format: (3.2 * (1 << 24)) */
@@ -275,7 +275,7 @@ static struct spv3_boost spv3_boost_lookup_table[SPV3_LOOKUP_TABLE_ROWS] = {
 #define LOOKUP_RESISTANCE_GAP_SPKR_Q24    (1677722)
 
 /* 3.2ohm : 0.1ohm : 8ohm lookup table */
-static int spv3_limiter_th_q27_table[SPV3_LOOKUP_TABLE_ROWS] = {
+static int spv3_limiter_th_q27_table[SPKR_PROT_LOOKUP_TABLE_ROWS] = {
     85469248, 86758070, 88066327, 89394311, 90637910, 91898809,
     93070036, 94364769, 95567425, 96674043, 97906130, 99039829,
     100186656, 101346763, 102402340, 103588104, 104667026, 105757185,
@@ -311,7 +311,7 @@ int get_tzn(const char *sensor_name)
     char name[MAX_PATH] = {0};
     char cwd[MAX_PATH] = {0};
 
-    if (!sensor_name)
+    if (!sensor_name || (strlen(sensor_name) == 0))
         return found;
 
     if (!getcwd(cwd, sizeof(cwd)))
@@ -567,14 +567,14 @@ static bool is_wsa_present(void)
    return handle.wsa_found;
 }
 
-static void audio_extn_check_wsa_support_sp_v3(struct audio_device *adev,
-                unsigned int num_of_spkrs, bool *wsa_support_spv3)
+static void audio_extn_check_wsa(struct audio_device *adev,
+                unsigned int num_of_spkrs, bool *wsa_is_8815)
 {
     unsigned int i = 0;
     if (!is_wsa_present() ||
         platform_spkr_prot_is_wsa_analog_mode(adev)){
         for (i = 0; i < num_of_spkrs; i++)
-            wsa_support_spv3[i] = false;
+            wsa_is_8815[i] = false;
 
         return;
     }
@@ -583,9 +583,9 @@ static void audio_extn_check_wsa_support_sp_v3(struct audio_device *adev,
             sizeof(WSA8815_NAME_LEFT)) ||
             !strncmp(WSA8815_NAME_RIGHT, tz_names.spkr_1_name,
                 sizeof(WSA8815_NAME_RIGHT))) {
-        wsa_support_spv3[SP_V2_SPKR_1] = true;
+        wsa_is_8815[SP_V2_SPKR_1] = true;
     } else {
-        wsa_support_spv3[SP_V2_SPKR_1] = false;
+        wsa_is_8815[SP_V2_SPKR_1] = false;
         ALOGI("%s: Speaker1(%s) is not wsa8815.", __func__, tz_names.spkr_1_name);
     }
 
@@ -594,9 +594,9 @@ static void audio_extn_check_wsa_support_sp_v3(struct audio_device *adev,
                     sizeof(WSA8815_NAME_RIGHT)) ||
             !strncmp(WSA8815_NAME_LEFT, tz_names.spkr_2_name,
                     sizeof(WSA8815_NAME_LEFT)))) {
-        wsa_support_spv3[SP_V2_SPKR_2] = true;
+        wsa_is_8815[SP_V2_SPKR_2] = true;
     } else {
-        wsa_support_spv3[SP_V2_SPKR_2] = false;
+        wsa_is_8815[SP_V2_SPKR_2] = false;
         ALOGI("%s: Speaker2(%s) is not wsa8815.", __func__, tz_names.spkr_2_name);
     }
 
@@ -647,7 +647,7 @@ int audio_extn_set_wsa_boost_level(struct audio_device *adev,
     }
 
     status = mixer_ctl_set_value(ctl, 0,
-                    spv3_boost_lookup_table[boost_table_index].boost_value);
+                    spkr_prot_boost_lookup_table[boost_table_index].boost_value);
 
     if (status < 0) {
         ALOGE("%s: Could not set ctl for mixer %s\n", __func__,
@@ -658,7 +658,8 @@ int audio_extn_set_wsa_boost_level(struct audio_device *adev,
     return 0;
 }
 
-static int audio_extn_config_spv3(struct audio_device *adev, unsigned int wsa_num)
+static int audio_extn_spkr_boost_update(struct audio_device *adev,
+                unsigned int wsa_num, unsigned int *index )
 {
     float dcr = 0;
     unsigned int r0_index = 0;
@@ -680,12 +681,12 @@ static int audio_extn_config_spv3(struct audio_device *adev, unsigned int wsa_nu
     }
 
     r0_index = (int)((dcr - MIN_RESISTANCE_LOOKUP) * 10);
-    if (r0_index >= SPV3_LOOKUP_TABLE_ROWS) {
+    if (r0_index >= SPKR_PROT_LOOKUP_TABLE_ROWS) {
         ALOGE("%s: r0_index=%d overflows.", __func__, r0_index);
         return -EINVAL;
     }
 
-    boost_max_state = spv3_boost_lookup_table[r0_index].max_state;
+    boost_max_state = spkr_prot_boost_lookup_table[r0_index].max_state;
     ret = audio_extn_set_wcd_boost_max_state(adev, boost_max_state, wsa_num);
     if (ret < 0) {
         ALOGE("%s: failed to set wcd max boost state.",
@@ -700,32 +701,47 @@ static int audio_extn_config_spv3(struct audio_device *adev, unsigned int wsa_nu
         return -EINVAL;
     }
 
-    handle.limiter_th[wsa_num] = spv3_limiter_th_q27_table[r0_index];
+    *index = r0_index;
 
     return 0;
 }
 
-static void audio_extn_check_config_sp_v3(struct audio_device *adev,
+static void audio_extn_set_boost_and_limiter(struct audio_device *adev,
                 bool spv3_enable, unsigned int afe_api_version)
 {
     int chn = 0;
-    bool wsa_support_spv3[SP_V2_NUM_MAX_SPKRS] = {false, false};
+    bool wsa_is_8815[SP_V2_NUM_MAX_SPKRS] = {false, false};
+    unsigned int r0_index = 0;
 
-    if (spv3_enable && afe_api_version >= AFE_API_VERSION_SUPPORT_SPV3) {
-        handle.sp_version = SP_V2;
-        audio_extn_check_wsa_support_sp_v3(adev, vi_feed_no_channels, wsa_support_spv3);
-        /*
-         * In case of WSA8815+8810, invalid limiter threshold is sent to DSP
-         * for WSA8810 speaker. DSP ignores the invalid value and use default one.
-         * The approach let spv3 apply on 8815 and spv2 on 8810 respectively.
-         */
-        for (chn = 0; chn < vi_feed_no_channels; chn++) {
-            if (wsa_support_spv3[chn] && !audio_extn_config_spv3(adev, chn))
-                handle.sp_version = SP_V3;
-            else
-                handle.limiter_th[chn] = DEFAULT_LIMITER_TH;
+    handle.sp_version = SP_V2;
+
+    /*
+     * As long as speaker protection is enabled, WCD and WSA
+     * follow lookup table based on R0 impediance regardless
+     * of spv2 or spv3.
+     */
+    audio_extn_check_wsa(adev, vi_feed_no_channels, wsa_is_8815);
+    /*
+     * In case of WSA8815+8810, invalid limiter threshold is sent to DSP
+     * for WSA8810 speaker. DSP ignores the invalid value and use default one.
+     * The approach let spv3 apply on 8815 and spv2 on 8810 respectively.
+     */
+    for (chn = 0; chn < vi_feed_no_channels; chn++) {
+        if (wsa_is_8815[chn] && !audio_extn_spkr_boost_update(adev, chn, &r0_index)) {
+            handle.limiter_th[chn] = spv3_limiter_th_q27_table[r0_index];
+            handle.sp_version = SP_V3;
+        }
+        else {
+            handle.limiter_th[chn] = DEFAULT_LIMITER_TH;
         }
     }
+
+    /*
+     * If spv3 is disabld or ADSP version doesn't comply,
+     * ADSP works with SP_V2 version.
+     */
+    if (!spv3_enable || afe_api_version < AFE_API_VERSION_SUPPORT_SPV3)
+        handle.sp_version = SP_V2;
 }
 
 static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
@@ -1058,7 +1074,7 @@ static void* spkr_calibration_thread()
                 handle.spkr_prot_mode = MSM_SPKR_PROT_CALIBRATED;
             close(acdb_fd);
 
-            audio_extn_check_config_sp_v3(adev, spv3_enable, vi_feed_no_channels);
+            audio_extn_set_boost_and_limiter(adev, spv3_enable, vi_feed_no_channels);
 
             pthread_exit(0);
             return NULL;
@@ -1212,7 +1228,7 @@ static void* spkr_calibration_thread()
         dlclose(handle.thermal_handle);
     handle.thermal_handle = NULL;
 
-    audio_extn_check_config_sp_v3(adev, spv3_enable, vi_feed_no_channels);
+    audio_extn_set_boost_and_limiter(adev, spv3_enable, vi_feed_no_channels);
 
     pthread_exit(0);
     return NULL;
