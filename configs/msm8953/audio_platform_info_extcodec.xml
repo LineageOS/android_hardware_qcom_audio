@@ -40,11 +40,6 @@
         <device name="AUDIO_DEVICE_IN_BUILTIN_MIC" interface="TERT_MI2S" codec_type="internal"/>
         <device name="AUDIO_DEVICE_IN_BACK_MIC" interface="TERT_MI2S" codec_type="internal"/>
     </interface_names>
-    <config_params>
-        <param key="input_mic_max_count" value="6"/>
-        <param key="ffv_split_ec_ref_data" value="false"/>
-        <param key="ffv_ec_ref_channel_count" value="1"/>
-    </config_params>
     <pcm_ids>
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD2" type="out" id="24"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD3" type="out" id="29"/>
@@ -61,14 +56,16 @@
         <usecase name="USECASE_AUDIO_SPKR_CALIB_TX" type="in" id="37"/>
         <usecase name="USECASE_QCHAT_CALL" type="in" id="42"/>
         <usecase name="USECASE_QCHAT_CALL" type="out" id="42"/>
-        <usecase name="USECASE_AUDIO_EC_REF_LOOPBACK" type="in" id="12"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_SILENCE" type="out" id="12"/>
+        <usecase name="USECASE_AUDIO_EC_REF_LOOPBACK" type="in" id="14"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_SILENCE" type="out" id="14"/>
     </pcm_ids>
     <config_params>
         <param key="spkr_1_tz_name" value="wsatz.11"/>
         <param key="spkr_2_tz_name" value="wsatz.12"/>
         <param key="native_audio_mode" value="src"/>
-        <param key="input_mic_max_count" value="4"/>
+        <param key="input_mic_max_count" value="6"/>
+        <param key="ffv_split_ec_ref_data" value="false"/>
+        <param key="ffv_ec_ref_channel_count" value="1"/>
     </config_params>
     <backend_names>
         <device name="SND_DEVICE_OUT_HEADPHONES" backend="headphones" interface="SLIMBUS_6_RX"/>
