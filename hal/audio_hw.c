@@ -2899,9 +2899,18 @@ static int stop_output_stream(struct stream_out *out)
                                                 adev->dsp_bit_width_enforce_mode,
                                                 false);
     }
+    if (audio_is_usb_out_device(out->devices & AUDIO_DEVICE_OUT_ALL_USB)) {
+        ret = audio_extn_usb_check_and_set_svc_int(uc_info,
+                                                   false);
+
+        if (ret != 0)
+            check_usecases_codec_backend(adev, uc_info, uc_info->out_snd_device);
+            /* default service interval was successfully updated,
+            reopen USB backend with new service interval */
+        ret = 0;
+    }
 
     list_remove(&uc_info->list);
-    free(uc_info);
     out->started = 0;
     if (is_offload_usecase(out->usecase) &&
         (audio_extn_passthru_is_passthrough_stream(out))) {
@@ -2922,6 +2931,7 @@ static int stop_output_stream(struct stream_out *out)
             ALOGE("%s: audio_extn_ip_hdlr_intf_close failed %d",__func__, ret);
     }
 
+    free(uc_info);
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
@@ -3001,6 +3011,14 @@ int start_output_stream(struct stream_out *out)
     uc_info->devices = out->devices;
     uc_info->in_snd_device = SND_DEVICE_NONE;
     uc_info->out_snd_device = SND_DEVICE_NONE;
+
+    /* This must be called before adding this usecase to the list */
+    if (audio_is_usb_out_device(out->devices & AUDIO_DEVICE_OUT_ALL_USB)) {
+       audio_extn_usb_check_and_set_svc_int(uc_info, true);
+       /* USB backend is not reopened immediately.
+       This is eventually done as part of select_devices */
+    }
+
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
     audio_extn_perf_lock_acquire(&adev->perf_lock_handle, 0,
@@ -3625,6 +3643,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     char value[32];
     int ret = 0, val = 0, err;
     bool bypass_a2dp = false;
+    bool reconfig = false;
+    unsigned long service_interval = 0;
 
     ALOGD("%s: enter: usecase(%d: %s) kvpairs: %s",
           __func__, out->usecase, use_case_table[out->usecase], kvpairs);
@@ -3727,7 +3747,14 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 if (!voice_is_call_state_active(adev)) {
                     if (adev->mode == AUDIO_MODE_IN_CALL) {
                         adev->current_call_output = out;
-                        ret = voice_start_call(adev);
+                        if (audio_is_usb_out_device(out->devices & AUDIO_DEVICE_OUT_ALL_USB)) {
+                            service_interval = audio_extn_usb_find_service_interval(true, true /*playback*/);
+                            audio_extn_usb_set_service_interval(true /*playback*/,
+                                                                service_interval,
+                                                                &reconfig);
+                            ALOGD("%s, svc_int(%ld),reconfig(%d)",__func__,service_interval, reconfig);
+                         }
+                         ret = voice_start_call(adev);
                     }
                 } else {
                     adev->current_call_output = out;
@@ -6560,12 +6587,32 @@ static int adev_get_master_mute(struct audio_hw_device *dev __unused,
 static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 {
     struct audio_device *adev = (struct audio_device *)dev;
-
+    struct listnode *node;
+    struct audio_usecase *usecase = NULL;
+    int ret = 0;
     pthread_mutex_lock(&adev->lock);
     if (adev->mode != mode) {
         ALOGD("%s: mode %d\n", __func__, mode);
         adev->mode = mode;
         if ((mode == AUDIO_MODE_NORMAL) && voice_is_in_call(adev)) {
+            list_for_each(node, &adev->usecase_list) {
+                usecase = node_to_item(node, struct audio_usecase, list);
+                if (usecase->type == VOICE_CALL)
+                    break;
+            }
+            if (usecase &&
+                audio_is_usb_out_device(usecase->out_snd_device & AUDIO_DEVICE_OUT_ALL_USB)) {
+                ret = audio_extn_usb_check_and_set_svc_int(usecase,
+                                                           true);
+                if (ret != 0) {
+                    /* default service interval was successfully updated,
+                       reopen USB backend with new service interval */
+                    check_usecases_codec_backend(adev,
+                                                 usecase,
+                                                 usecase->out_snd_device);
+                }
+            }
+
             voice_stop_call(adev);
             platform_set_gsm_mode(adev->platform, false);
             adev->current_call_output = NULL;
