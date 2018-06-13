@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2015 The Android Open Source Project *
@@ -362,7 +362,7 @@ void *start_input(void *thread_param)
       pthread_exit(0);
   }
 
-  FILE *fd_in_ts;
+  FILE *fd_in_ts = NULL;
   if (params->timestamp_mode) {
       if (*(params->timestamp_file_in))
           fd_in_ts = fopen(params->timestamp_file_in, "w+");
@@ -457,8 +457,10 @@ void *start_input(void *thread_param)
       }
       data_sz += buffer_size;
   }
-  if (params->timestamp_mode)
+  if  ((params->timestamp_mode) && fd_in_ts) {
       fclose(fd_in_ts);
+      fd_in_ts = NULL;
+  }
 
   /*Stopping sourcetracking thread*/
   sourcetrack_done = 1;
@@ -470,15 +472,18 @@ void *start_input(void *thread_param)
   fwrite(&hdr, 1, sizeof(hdr), fd);
   free(buffer);
   fclose(fd);
+  fd = NULL;
 
   /* capture latency kpis if required */
   if (kpi_mode) {
       tCold = tsColdF.tv_sec*1000 - tsColdI.tv_sec*1000 +
               tsColdF.tv_nsec/1000000 - tsColdI.tv_nsec/1000000;
 
-      fread((void *) latencyBuf, 100, 1, fdLatencyNode);
-      if (fdLatencyNode)
+      if (fdLatencyNode) {
+          fread((void *) latencyBuf, 100, 1, fdLatencyNode);
           fclose(fdLatencyNode);
+          fdLatencyNode = NULL;
+      }
       sscanf(latencyBuf, " %llu,%llu", &tsec, &tusec);
       tCont = ((uint64_t)tsCont.tv_sec)*1000 - tsec*1000 + ((uint64_t)tsCont.tv_nsec)/1000000 - tusec/1000;
       if (log_file != stdout) {
@@ -910,7 +915,10 @@ sourcetrack_error:
     fprintf(log_file, "\n ADL: Done with hal record test \n");
     if (log_file != stdout) {
         fprintf(stdout, "\n ADL: Done with hal record test \n");
-        fclose(log_file);
+        if (log_file) {
+          fclose(log_file);
+          log_file = NULL;
+        }
     }
     wakelock_acquired = request_wake_lock(wakelock_acquired, false);
     return 0;
