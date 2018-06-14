@@ -33,6 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <errno.h>
 
 #include <aenc_svr.h>
+#include <unistd.h>
 
 /**
  @brief This function processes posted messages

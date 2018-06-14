@@ -62,6 +62,8 @@
 #include <sound/devdep_params.h>
 #include <linux/msm_audio.h>
 #include <errno.h>
+#include <unistd.h>
+#include <stdio.h>
 #include "effect_api.h"
 
 #ifdef DTS_EAGLE

@@ -41,6 +41,7 @@ enum {
         ACDB_LOADER_INIT_V4,
 };
 
+struct mixer;
 /* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
 typedef int  (*acdb_init_t)();
@@ -86,6 +87,7 @@ struct acdb_platform_data {
 };
 
 int acdb_init(int);
+int acdb_init_v2(struct mixer *);
 
 int acdb_set_metainfo_key(void *platform, char *name, int key);
 #endif //ACDB_H

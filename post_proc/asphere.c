@@ -40,6 +40,7 @@
 #include <cutils/str_parms.h>
 #include <cutils/properties.h>
 #include <hardware/audio_effect.h>
+#include <pthread.h>
 #include "bundle.h"
 #include "equalizer.h"
 #include "bass_boost.h"
