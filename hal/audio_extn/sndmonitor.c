@@ -51,6 +51,11 @@
 #define MAX_CPE_SLEEP_RETRY 2
 #define CPE_SLEEP_WAIT 100
 
+#define SPLI_STATE_PATH "/proc/wcd-spi-ac/svc-state"
+#define SLPI_MAGIC_NUM 0x3000
+#define MAX_SLPI_SLEEP_RETRY 2
+#define SLPI_SLEEP_WAIT_MS 100
+
 #define MAX_SLEEP_RETRY 100
 #define AUDIO_INIT_SLEEP_WAIT 100 /* 100 ms */
 
@@ -245,6 +250,31 @@ static int enum_sndcards()
     if (line)
         free(line);
     fclose(fp);
+
+    /* Add fd to query for SLPI status */
+    if (access(SPLI_STATE_PATH, R_OK) < 0) {
+        ALOGV("access to %s failed: %s", SPLI_STATE_PATH, strerror(errno));
+    } else {
+        tries = MAX_SLPI_SLEEP_RETRY;
+        ALOGV("Open %s", SPLI_STATE_PATH);
+        while (tries--) {
+            if ((fd = open(SPLI_STATE_PATH, O_RDONLY)) < 0) {
+                ALOGW("Open %s failed %s, retry", SPLI_STATE_PATH,
+                      strerror(errno));
+                usleep(SLPI_SLEEP_WAIT_MS * 1000);
+                continue;
+            }
+            break;
+        }
+        if (fd >= 0) {
+            ret = add_new_sndcard(SLPI_MAGIC_NUM, fd);
+            if (ret != 0)
+                close(fd);
+            else
+                num_cards++;
+        }
+    }
+
     ALOGV("sndmonitor registerer num_cards %d", num_cards);
     sndmonitor.num_cards = num_cards;
     return num_cards ? 0 : -1;
@@ -383,7 +413,6 @@ bool on_sndcard_state_update(sndcard_t * s)
 
     ALOGV("card num %d, new state %s", s->card, rd_buf);
 
-    bool is_cpe = (s->card >= CPE_MAGIC_NUM);
     if (strstr(rd_buf, "OFFLINE"))
         status = CARD_STATUS_OFFLINE;
     else if (strstr(rd_buf, "ONLINE"))
@@ -404,11 +433,18 @@ bool on_sndcard_state_update(sndcard_t * s)
         return -1;
 
     char val[32] = {0};
-    // cpe actual card num is (card - MAGIC_NUM). so subtract accordingly
-    snprintf(val, sizeof(val), "%d,%s", s->card - (is_cpe ? CPE_MAGIC_NUM : 0),
+    bool is_cpe = ((s->card >= CPE_MAGIC_NUM) && (s->card < SLPI_MAGIC_NUM));
+    bool is_slpi = (s->card == SLPI_MAGIC_NUM);
+    /*
+     * cpe actual card num is (card - CPE_MAGIC_NUM), so subtract accordingly.
+     * SLPI actual fd num is (card - SLPI_MAGIC_NUM), so subtract accordingly.
+     */
+    snprintf(val, sizeof(val), "%d,%s",
+        s->card - (is_cpe ? CPE_MAGIC_NUM : (is_slpi ? SLPI_MAGIC_NUM : 0)),
                  status == CARD_STATUS_ONLINE ? "ONLINE" : "OFFLINE");
 
-    if (str_parms_add_str(params, is_cpe ? "CPE_STATUS" : "SND_CARD_STATUS",
+    if (str_parms_add_str(params,
+            is_cpe ? "CPE_STATUS" : (is_slpi ? "SLPI_STATUS" : "SND_CARD_STATUS"),
                           val) < 0)
         return -1;
 
