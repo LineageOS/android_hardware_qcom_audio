@@ -88,6 +88,7 @@ PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/sdm710/mixer_paths_tavil.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tavil.xml \
     hardware/qcom/audio/configs/sdm710/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
     hardware/qcom/audio/configs/sdm710/mixer_paths_mtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_mtp.xml \
+    hardware/qcom/audio/configs/sdm710/mixer_paths_lc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_lc.xml \
     hardware/qcom/audio/configs/sdm710/mixer_paths_tasha.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tasha.xml \
     hardware/qcom/audio/configs/sdm710/mixer_paths_tashalite.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tashalite.xml \
     hardware/qcom/audio/configs/sdm710/mixer_paths_i2s.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_i2s.xml \

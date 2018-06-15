@@ -1038,7 +1038,9 @@ static void update_codec_type_and_interface(struct platform_data * my_data, cons
          !strncmp(snd_card_name, "sdm660-snd-card-mtp",
                   sizeof("sdm660-snd-card-mtp")) ||
          !strncmp(snd_card_name, "sdm670-mtp-snd-card",
-                   sizeof("sdm670-mtp-snd-card"))) {
+                   sizeof("sdm670-mtp-snd-card")) ||
+         !strncmp(snd_card_name, "qcs605-lc-snd-card",
+                   sizeof("qcs605-lc-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -2373,7 +2375,8 @@ acdb_init_fail:
 
     if (!my_data->is_slimbus_interface) {
         if (!strncmp(snd_card_name, "sdm660", strlen("sdm660")) ||
-               !strncmp(snd_card_name, "sdm670", strlen("sdm670"))) {
+               !strncmp(snd_card_name, "sdm670", strlen("sdm670")) ||
+               !strncmp(snd_card_name, "qcs605", strlen("qcs605"))) {
 
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("INT4_MI2S_RX Format");
@@ -6203,6 +6206,13 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
     /*this is populated by check_codec_backend_cfg hence set default value to false*/
     backend_cfg.passthrough_enabled = false;
 
+     /*check if the stream sample 44.1Khz rate is supported of configured device sample rate. If not
+       open afe at default sample rate.
+      */
+    if (backend_idx != HEADPHONE_44_1_BACKEND &&
+        usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100)
+        backend_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+
     /* Set Backend sampling rate to 176.4 for DSD64 and
      * 352.8Khz for DSD128.
      * Set Bit Width to 16
@@ -6226,7 +6236,8 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
     for (i = 0; i < num_devices; i++) {
         ALOGI("%s: new_snd_devices[%d] is %d", __func__, i, new_snd_devices[i]);
         if ((platform_check_codec_backend_cfg(adev, usecase, new_snd_devices[i],
-                                             &backend_cfg))) {
+                                             &backend_cfg)) ||
+             (!platform_check_backends_match(usecase->out_snd_device, snd_device))) {
             ret = platform_set_codec_backend_cfg(adev, new_snd_devices[i],
                                            backend_cfg);
             if (!ret) {
