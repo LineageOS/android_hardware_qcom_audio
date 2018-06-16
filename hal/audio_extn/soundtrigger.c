@@ -364,9 +364,6 @@ void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
     if (!st_dev)
        return;
 
-    if (st_dev->sthal_prop_api_version >= STHAL_PROP_API_VERSION_1_0)
-        return;
-
     if (snd_device >= SND_DEVICE_OUT_BEGIN &&
         snd_device < SND_DEVICE_OUT_END) {
         device_type = PCM_PLAYBACK;
