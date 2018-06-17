@@ -77,7 +77,7 @@
 #endif
 
 #include <linux/msm_audio.h>
-#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM670) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE)
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM670) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_QCS405)
 #include <sound/devdep_params.h>
 #endif
 
@@ -2408,11 +2408,22 @@ acdb_init_fail:
             strdup("INT0_MI2S_RX SampleRate");
 
     } else {
+        if (!strncmp(snd_card_name, "qcs405", strlen("qcs405"))) {
+            my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
+                strdup("WSA_CDC_DMA_RX_0 Format");
+            my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
+                strdup("WSA_CDC_DMA_RX_0 SampleRate");
 
-        my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
-            strdup("SLIM_0_TX Format");
-        my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
-            strdup("SLIM_0_TX SampleRate");
+            my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
+                strdup("VA_CDC_DMA_TX_0 Format");
+            my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
+                strdup("VA_CDC_DMA_TX_0 SampleRate");
+        } else {
+            my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
+                strdup("SLIM_0_TX Format");
+            my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
+                strdup("SLIM_0_TX SampleRate");
+        }
         my_data->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
             strdup("SLIM_6_RX Format");
         my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
@@ -7913,7 +7924,7 @@ int platform_get_supported_copp_sampling_rate(uint32_t stream_sr)
     return sample_rate;
 }
 
-#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM670) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE)
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM670) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_QCS405)
 int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
                               uint32_t *size)
 {
