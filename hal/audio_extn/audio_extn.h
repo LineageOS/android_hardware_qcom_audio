@@ -222,6 +222,7 @@ int32_t audio_extn_get_afe_proxy_channel_count();
 #define audio_extn_usb_get_sup_sample_rates(t, s, l)                   (0)
 #define audio_extn_usb_is_tunnel_supported()                           (0)
 #define audio_extn_usb_alive(adev)                                     (false)
+#undef USB_BURST_MODE_ENABLED
 #else
 void audio_extn_usb_init(void *adev);
 void audio_extn_usb_deinit();
@@ -240,6 +241,32 @@ int audio_extn_usb_get_max_bit_width(bool playback);
 int audio_extn_usb_get_sup_sample_rates(int type, uint32_t *sr, uint32_t l);
 bool audio_extn_usb_is_tunnel_supported();
 bool audio_extn_usb_alive(int card);
+#endif
+
+#ifndef USB_BURST_MODE_ENABLED
+#define audio_extn_usb_find_service_interval(m, p)                     (0)
+#define audio_extn_usb_altset_for_service_interval(p, si, bw, sr, ch)  (-1)
+#define audio_extn_usb_set_service_interval(p, si, recfg)              (-1)
+#define audio_extn_usb_get_service_interval(p, si)                     (-1)
+#define audio_extn_usb_check_and_set_svc_int(uc,ss)                    (0)
+#define audio_extn_usb_is_reconfig_req()                               (0)
+#define audio_extn_usb_set_reconfig(isreq)                             (0)
+#else
+unsigned long audio_extn_usb_find_service_interval(bool min, bool playback);
+int audio_extn_usb_altset_for_service_interval(bool is_playback,
+                                               unsigned long service_interval,
+                                               uint32_t *bit_width,
+                                               uint32_t *sample_rate,
+                                               uint32_t *channel_count);
+int audio_extn_usb_set_service_interval(bool playback,
+                                        unsigned long service_interval,
+                                        bool *reconfig);
+int audio_extn_usb_get_service_interval(bool playback,
+                                        unsigned long *service_interval);
+int audio_extn_usb_check_and_set_svc_int(struct audio_usecase *uc_info,
+                                         bool starting_output_stream);
+bool audio_extn_usb_is_reconfig_req();
+void audio_extn_usb_set_reconfig(bool is_required);
 #endif
 
 #ifndef SPLIT_A2DP_ENABLED

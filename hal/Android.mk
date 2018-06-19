@@ -401,6 +401,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INSTANCE_ID)), true)
     LOCAL_CFLAGS += -DINSTANCE_ID_ENABLED
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_USB_BURST_MODE)), true)
+    LOCAL_CFLAGS += -DUSB_BURST_MODE_ENABLED
+endif
+
 LOCAL_CFLAGS += -Wall -Werror
 
 LOCAL_COPY_HEADERS_TO   := mm-audio

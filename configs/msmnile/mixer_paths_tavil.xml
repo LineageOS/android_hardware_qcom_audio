@@ -1923,6 +1923,10 @@
     <path name="speaker-mic-sbc">
     </path>
 
+    <path name="speaker-mic-qrd">
+        <path name="dmic1" />
+    </path>
+
     <path name="speaker-protected">
         <ctl name="AIF4_VI Mixer SPKR_VI_1" value="1" />
         <ctl name="AIF4_VI Mixer SPKR_VI_2" value="1" />

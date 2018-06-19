@@ -65,10 +65,13 @@ BOARD_SUPPORTS_QAHW := false
 AUDIO_FEATURE_ENABLED_RAS := true
 AUDIO_FEATURE_ENABLED_SND_MONITOR := true
 AUDIO_FEATURE_ENABLED_DLKM := true
+AUDIO_FEATURE_ENABLED_USB_BURST_MODE := true
 ##AUDIO_FEATURE_FLAGS
 
+ifneq ($(strip $(TARGET_USES_QSSI)), true)
 #Audio Specific device overlays
 DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
+endif
 
 PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msmnile/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
