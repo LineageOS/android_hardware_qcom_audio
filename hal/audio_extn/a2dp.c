@@ -159,6 +159,11 @@ typedef enum {
     IMC_ENABLE,
 } imc_status_t;
 
+typedef enum {
+    MTU_SIZE,
+    PEAK_BIT_RATE,
+} frame_control_type_t;
+
 /* PCM config for ABR Feedback hostless front end */
 static struct pcm_config pcm_config_abr = {
     .channels = 1,
@@ -288,6 +293,17 @@ struct imc_dec_enc_info {
     uint32_t comm_instance;
 };
 
+/* Structure to control frame size of AAC encoded frames. */
+struct aac_frame_size_control_t {
+    /* Type of frame size control: MTU_SIZE / PEAK_BIT_RATE*/
+    uint32_t ctl_type;
+    /* Control value
+     * MTU_SIZE: MTU size in bytes
+     * PEAK_BIT_RATE: Peak bitrate in bits per second.
+     */
+    uint32_t ctl_value;
+};
+
 /* Structure used for ABR config of AFE encoder and decoder. */
 struct abr_enc_cfg_t {
     /* Link quality level to bitrate mapping info sent to DSP. */
@@ -310,10 +326,7 @@ struct abr_dec_cfg_t {
  * These values should match with DSP interface defintion
  */
 
-/* AAC encoder configuration structure. */
-typedef struct aac_enc_cfg_t aac_enc_cfg_t;
-
-struct aac_enc_cfg_t {
+struct aac_cfg_blk_t {
     /* Encoder media format for AAC */
     uint32_t      enc_format;
 
@@ -331,6 +344,14 @@ struct aac_enc_cfg_t {
 
     /* Number of samples per second */
     uint32_t      sample_rate;
+} __attribute__ ((packed));
+
+/* AAC encoder configuration structure. */
+typedef struct aac_enc_cfg_t aac_enc_cfg_t;
+
+struct aac_enc_cfg_t {
+    struct aac_cfg_blk_t aac_cfg;
+    struct aac_frame_size_control_t frame_ctl;
 } __attribute__ ((packed));
 
 /* SBC encoder configuration structure. */
@@ -493,6 +514,7 @@ typedef struct {
     uint32_t sampling_rate;
     uint32_t bitrate;
     uint32_t bits_per_sample;
+    struct aac_frame_size_control_t frame_ctl;
 } audio_aac_encoder_config;
 
 /* Information about Bluetooth LDAC encoder configuration
@@ -1187,23 +1209,25 @@ static bool configure_aac_enc_format(audio_aac_encoder_config *aac_bt_cfg)
         goto exit;
     }
     memset(&aac_dsp_cfg, 0x0, sizeof(aac_dsp_cfg));
-    aac_dsp_cfg.enc_format = ENC_MEDIA_FMT_AAC;
-    aac_dsp_cfg.bit_rate = aac_bt_cfg->bitrate;
-    aac_dsp_cfg.sample_rate = aac_bt_cfg->sampling_rate;
+    aac_dsp_cfg.aac_cfg.enc_format = ENC_MEDIA_FMT_AAC;
+    aac_dsp_cfg.aac_cfg.bit_rate = aac_bt_cfg->bitrate;
+    aac_dsp_cfg.aac_cfg.sample_rate = aac_bt_cfg->sampling_rate;
     switch (aac_bt_cfg->enc_mode) {
         case 0:
-            aac_dsp_cfg.enc_mode = MEDIA_FMT_AAC_AOT_LC;
+            aac_dsp_cfg.aac_cfg.enc_mode = MEDIA_FMT_AAC_AOT_LC;
             break;
         case 2:
-            aac_dsp_cfg.enc_mode = MEDIA_FMT_AAC_AOT_PS;
+            aac_dsp_cfg.aac_cfg.enc_mode = MEDIA_FMT_AAC_AOT_PS;
             break;
         case 1:
         default:
-            aac_dsp_cfg.enc_mode = MEDIA_FMT_AAC_AOT_SBR;
+            aac_dsp_cfg.aac_cfg.enc_mode = MEDIA_FMT_AAC_AOT_SBR;
             break;
     }
-    aac_dsp_cfg.aac_fmt_flag = aac_bt_cfg->format_flag;
-    aac_dsp_cfg.channel_cfg = aac_bt_cfg->channels;
+    aac_dsp_cfg.aac_cfg.aac_fmt_flag = aac_bt_cfg->format_flag;
+    aac_dsp_cfg.aac_cfg.channel_cfg = aac_bt_cfg->channels;
+    aac_dsp_cfg.frame_ctl.ctl_type = aac_bt_cfg->frame_ctl.ctl_type;
+    aac_dsp_cfg.frame_ctl.ctl_value = aac_bt_cfg->frame_ctl.ctl_value;
     ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aac_dsp_cfg,
                               sizeof(aac_dsp_cfg));
     if (ret != 0) {
@@ -1221,7 +1245,7 @@ static bool configure_aac_enc_format(audio_aac_encoder_config *aac_bt_cfg)
     a2dp.enc_sampling_rate = aac_bt_cfg->sampling_rate;
     a2dp.enc_channels = aac_bt_cfg->channels;
     ALOGV("%s: Successfully updated AAC enc format with sampling rate: %d channels:%d",
-           __func__, aac_dsp_cfg.sample_rate, aac_dsp_cfg.channel_cfg);
+           __func__, aac_dsp_cfg.aac_cfg.sample_rate, aac_dsp_cfg.aac_cfg.channel_cfg);
 exit:
     return is_configured;
 }
