@@ -807,20 +807,21 @@ static int a2dp_set_backend_cfg()
     }
 
     // Set Tx backend sample rate
-    if (a2dp.abr_config.is_abr_enabled)
+    if (a2dp.abr_config.is_abr_enabled) {
         rate_str = ABR_TX_SAMPLE_RATE;
 
-    ALOGV("%s: set backend tx sample rate = %s", __func__, rate_str);
-    ctl_sample_rate = mixer_get_ctl_by_name(a2dp.adev->mixer,
-                                        MIXER_SAMPLE_RATE_TX);
-    if (!ctl_sample_rate) {
-        ALOGE("%s: ERROR backend sample rate mixer control not identifed", __func__);
-        return -ENOSYS;
-    }
-    if (mixer_ctl_set_enum_by_string(ctl_sample_rate, rate_str) != 0) {
-        ALOGE("%s: Failed to set backend sample rate = %s",
-                                    __func__, rate_str);
-        return -ENOSYS;
+        ALOGV("%s: set backend tx sample rate = %s", __func__, rate_str);
+        ctl_sample_rate = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                            MIXER_SAMPLE_RATE_TX);
+        if (!ctl_sample_rate) {
+            ALOGE("%s: ERROR backend sample rate mixer control not identifed", __func__);
+            return -ENOSYS;
+        }
+        if (mixer_ctl_set_enum_by_string(ctl_sample_rate, rate_str) != 0) {
+            ALOGE("%s: Failed to set backend sample rate = %s",
+                                        __func__, rate_str);
+            return -ENOSYS;
+        }
     }
 
     // Configure AFE input channels
@@ -901,15 +902,17 @@ static int a2dp_reset_backend_cfg()
         return -ENOSYS;
     }
 
-    ctl_sample_rate_tx = mixer_get_ctl_by_name(a2dp.adev->mixer,
-                                        MIXER_SAMPLE_RATE_TX);
-    if (!ctl_sample_rate_tx) {
-        ALOGE("%s: ERROR Tx backend sample rate mixer control not identifed", __func__);
-        return -ENOSYS;
-    }
-    if (mixer_ctl_set_enum_by_string(ctl_sample_rate_tx, rate_str) != 0) {
-        ALOGE("%s: Failed to reset Tx backend sample rate = %s", __func__, rate_str);
-        return -ENOSYS;
+    if (a2dp.abr_config.is_abr_enabled) {
+        ctl_sample_rate_tx = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                            MIXER_SAMPLE_RATE_TX);
+        if (!ctl_sample_rate_tx) {
+            ALOGE("%s: ERROR Tx backend sample rate mixer control not identifed", __func__);
+            return -ENOSYS;
+        }
+        if (mixer_ctl_set_enum_by_string(ctl_sample_rate_tx, rate_str) != 0) {
+            ALOGE("%s: Failed to reset Tx backend sample rate = %s", __func__, rate_str);
+            return -ENOSYS;
+        }
     }
 
     // Reset AFE input channels
@@ -1457,6 +1460,15 @@ static int reset_a2dp_dec_config_params()
     return ret;
 }
 
+static void reset_a2dp_config() {
+    reset_a2dp_enc_config_params();
+    reset_a2dp_dec_config_params();
+    a2dp_reset_backend_cfg();
+    if (a2dp.abr_config.is_abr_enabled && a2dp.abr_config.abr_started)
+        stop_abr();
+    a2dp.abr_config.is_abr_enabled = false;
+}
+
 int audio_extn_a2dp_stop_playback()
 {
     int ret = 0;
@@ -1479,12 +1491,8 @@ int audio_extn_a2dp_stop_playback()
             ALOGE("%s: stop stream to Bluetooth IPC lib failed", __func__);
         else
             ALOGV("%s: stop steam to Bluetooth IPC lib successful", __func__);
-        reset_a2dp_enc_config_params();
-        reset_a2dp_dec_config_params();
-        a2dp_reset_backend_cfg();
-        if (a2dp.abr_config.is_abr_enabled && a2dp.abr_config.abr_started)
-            stop_abr();
-        a2dp.abr_config.is_abr_enabled = false;
+        if (!a2dp.a2dp_suspended)
+            reset_a2dp_config();
         a2dp.a2dp_started = false;
     }
     ALOGD("%s: Stop A2DP playback total active sessions :%d", __func__,
@@ -1549,8 +1557,7 @@ int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
                         pthread_mutex_lock(&a2dp.adev->lock);
                     }
                 }
-                reset_a2dp_enc_config_params();
-                reset_a2dp_dec_config_params();
+                reset_a2dp_config();
                 if (a2dp.audio_stream_suspend) {
                    a2dp.audio_stream_suspend();
                 }
@@ -1584,7 +1591,18 @@ int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
                         if (ret != 0) {
                             ALOGE("%s: Bluetooth controller start failed", __func__);
                             a2dp.a2dp_started = false;
+                        } else {
+                            if (!configure_a2dp_encoder_format()) {
+                                ALOGE("%s: Encoder params configuration failed post suspend", __func__);
+                                a2dp.a2dp_started = false;
+                                ret = -ETIMEDOUT;
+                            }
                         }
+                    }
+                    if (a2dp.a2dp_started) {
+                        a2dp_set_backend_cfg();
+                        if (a2dp.abr_config.is_abr_enabled)
+                            start_abr();
                     }
                 }
                 list_for_each(node, &a2dp.adev->usecase_list) {
