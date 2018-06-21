@@ -877,20 +877,21 @@ static int a2dp_set_backend_cfg()
         }
 
         /* Set Tx backend sample rate */
-        if (a2dp.abr_config.is_abr_enabled)
-        rate_str = ABR_TX_SAMPLE_RATE;
+        if (a2dp.abr_config.is_abr_enabled) {
+            rate_str = ABR_TX_SAMPLE_RATE;
 
-        ALOGD("%s: set backend tx sample rate = %s", __func__, rate_str);
-        ctl_sample_rate = mixer_get_ctl_by_name(a2dp.adev->mixer,
-                                            MIXER_SAMPLE_RATE_TX);
-        if (!ctl_sample_rate) {
+            ALOGD("%s: set backend tx sample rate = %s", __func__, rate_str);
+            ctl_sample_rate = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                                MIXER_SAMPLE_RATE_TX);
+            if (!ctl_sample_rate) {
                 ALOGE("%s: ERROR backend sample rate mixer control not identifed", __func__);
                 return -ENOSYS;
-        }
+            }
 
-        if (mixer_ctl_set_enum_by_string(ctl_sample_rate, rate_str) != 0) {
-            ALOGE("%s: Failed to set backend sample rate = %s", __func__, rate_str);
-            return -ENOSYS;
+            if (mixer_ctl_set_enum_by_string(ctl_sample_rate, rate_str) != 0) {
+                ALOGE("%s: Failed to set backend sample rate = %s", __func__, rate_str);
+                return -ENOSYS;
+            }
         }
     } else {
         /* Fallback to legacy approch if MIXER_SAMPLE_RATE_RX and
@@ -984,16 +985,18 @@ static int a2dp_reset_backend_cfg()
             return -ENOSYS;
         }
 
-        ctl_sample_rate_tx = mixer_get_ctl_by_name(a2dp.adev->mixer,
-                                        MIXER_SAMPLE_RATE_TX);
-        if (!ctl_sample_rate_tx) {
+        if (a2dp.abr_config.is_abr_enabled) {
+            ctl_sample_rate_tx = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                            MIXER_SAMPLE_RATE_TX);
+            if (!ctl_sample_rate_tx) {
                 ALOGE("%s: ERROR Tx backend sample rate mixer control not identifed", __func__);
                 return -ENOSYS;
-        }
+            }
 
-        if (mixer_ctl_set_enum_by_string(ctl_sample_rate_tx, rate_str) != 0) {
-            ALOGE("%s: Failed to reset Tx backend sample rate = %s", __func__, rate_str);
-            return -ENOSYS;
+            if (mixer_ctl_set_enum_by_string(ctl_sample_rate_tx, rate_str) != 0) {
+                ALOGE("%s: Failed to reset Tx backend sample rate = %s", __func__, rate_str);
+                return -ENOSYS;
+            }
         }
     } else {
 
@@ -1802,6 +1805,15 @@ static int reset_a2dp_dec_config_params()
     return ret;
 }
 
+static void reset_a2dp_config() {
+    reset_a2dp_enc_config_params();
+    reset_a2dp_dec_config_params();
+    a2dp_reset_backend_cfg();
+    if (a2dp.abr_config.is_abr_enabled && a2dp.abr_config.abr_started)
+        stop_abr();
+    a2dp.abr_config.is_abr_enabled = false;
+}
+
 int audio_extn_a2dp_stop_playback()
 {
     int ret =0;
@@ -1821,13 +1833,9 @@ int audio_extn_a2dp_stop_playback()
         if (ret < 0)
             ALOGE("stop stream to BT IPC lib failed");
         else
-            ALOGV("stop steam to BT IPC lib successful");
-        reset_a2dp_enc_config_params();
-        reset_a2dp_dec_config_params();
-        a2dp_reset_backend_cfg();
-        if (a2dp.abr_config.is_abr_enabled && a2dp.abr_config.abr_started)
-            stop_abr();
-        a2dp.abr_config.is_abr_enabled = false;
+            ALOGV("stop stream to BT IPC lib successful");
+        if (!a2dp.a2dp_suspended)
+            reset_a2dp_config();
         a2dp.a2dp_started = false;
     }
     if(!a2dp.a2dp_total_active_session_request)
@@ -1892,15 +1900,14 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
                         pthread_mutex_lock(&a2dp.adev->lock);
                     }
                 }
-                reset_a2dp_enc_config_params();
-                reset_a2dp_dec_config_params();
-                if(a2dp.audio_suspend_stream)
+                reset_a2dp_config();
+                if (a2dp.audio_suspend_stream)
                    a2dp.audio_suspend_stream();
             } else if (a2dp.a2dp_suspended == true) {
                 ALOGD("Resetting a2dp suspend state");
                 struct audio_usecase *uc_info;
                 struct listnode *node;
-                if(a2dp.clear_a2dpsuspend_flag)
+                if (a2dp.clear_a2dpsuspend_flag)
                     a2dp.clear_a2dpsuspend_flag();
                 a2dp.a2dp_suspended = false;
                 /*
@@ -1921,7 +1928,18 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
                         if (ret != 0) {
                             ALOGE("BT controller start failed");
                             a2dp.a2dp_started = false;
+                        } else {
+                            if (!configure_a2dp_encoder_format()) {
+                                ALOGE("%s: Encoder params configuration failed post suspend", __func__);
+                                a2dp.a2dp_started = false;
+                                ret = -ETIMEDOUT;
+                            }
                         }
+                    }
+                    if (a2dp.a2dp_started) {
+                        a2dp_set_backend_cfg();
+                        if (a2dp.abr_config.is_abr_enabled)
+                            start_abr();
                     }
                 }
                 list_for_each(node, &a2dp.adev->usecase_list) {
