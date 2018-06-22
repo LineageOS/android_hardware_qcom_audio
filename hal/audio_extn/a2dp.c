@@ -1581,6 +1581,30 @@ static void reset_a2dp_enc_config_params()
     }
 }
 
+static int reset_a2dp_dec_config_params()
+{
+    struct mixer_ctl *ctl_dec_data = NULL;
+    struct abr_dec_cfg_t dummy_reset_cfg;
+    int ret = 0;
+
+    if (a2dp.abr_config.is_abr_enabled) {
+        ctl_dec_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_DEC_CONFIG_BLOCK);
+        if (!ctl_dec_data) {
+            ALOGE("%s: ERROR A2DP decoder config mixer control not identifed", __func__);
+            return -EINVAL;
+        }
+        memset(&dummy_reset_cfg, 0x0, sizeof(dummy_reset_cfg));
+        ret = mixer_ctl_set_array(ctl_dec_data, (void *)&dummy_reset_cfg,
+                                  sizeof(dummy_reset_cfg));
+        if (ret != 0) {
+            ALOGE("%s: Failed to set dummy decoder config", __func__);
+            return ret;
+        }
+    }
+
+    return ret;
+}
+
 int audio_extn_a2dp_stop_playback()
 {
     int ret =0;
@@ -1602,6 +1626,7 @@ int audio_extn_a2dp_stop_playback()
         else
             ALOGV("stop steam to BT IPC lib successful");
         reset_a2dp_enc_config_params();
+        reset_a2dp_dec_config_params();
         a2dp_reset_backend_cfg();
         if (a2dp.abr_config.is_abr_enabled && a2dp.abr_config.abr_started)
             stop_abr();
@@ -1647,6 +1672,7 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
              ALOGV("Received device dis- connect request");
              close_a2dp_output();
              reset_a2dp_enc_config_params();
+             reset_a2dp_dec_config_params();
              a2dp_reset_backend_cfg();
          }
          goto param_handled;
@@ -1668,6 +1694,7 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
                     }
                 }
                 reset_a2dp_enc_config_params();
+                reset_a2dp_dec_config_params();
                 if(a2dp.audio_suspend_stream)
                    a2dp.audio_suspend_stream();
             } else if (a2dp.a2dp_suspended == true) {
@@ -1770,6 +1797,7 @@ void audio_extn_a2dp_init (void *adev)
   a2dp.abr_config.imc_instance = 0;
   a2dp.abr_config.abr_tx_handle = NULL;
   reset_a2dp_enc_config_params();
+  reset_a2dp_dec_config_params();
   update_offload_codec_capabilities();
 }
 

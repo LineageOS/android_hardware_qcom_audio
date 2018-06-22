@@ -23,7 +23,7 @@ AUDIO_FEATURE_ENABLED_ALAC_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_APE_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_AAC_ADTS_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_PROXY_DEVICE := true
-AUDIO_FEATURE_ENABLED_SSR := false
+AUDIO_FEATURE_ENABLED_SSR := true
 AUDIO_FEATURE_ENABLED_DTS_EAGLE := false
 BOARD_USES_SRS_TRUEMEDIA := false
 DTS_CODEC_M_ := false
@@ -65,14 +65,18 @@ BOARD_SUPPORTS_QAHW := false
 AUDIO_FEATURE_ENABLED_RAS := true
 AUDIO_FEATURE_ENABLED_SND_MONITOR := true
 AUDIO_FEATURE_ENABLED_DLKM := true
+AUDIO_FEATURE_ENABLED_USB_BURST_MODE := true
 ##AUDIO_FEATURE_FLAGS
 
+ifneq ($(strip $(TARGET_USES_QSSI)), true)
 #Audio Specific device overlays
 DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
+endif
 
 PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msmnile/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
     hardware/qcom/audio/configs/msmnile/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
+    hardware/qcom/audio/configs/msmnile/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
     hardware/qcom/audio/configs/msmnile/mixer_paths_tavil.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tavil.xml \
     hardware/qcom/audio/configs/msmnile/audio_tuning_mixer_tavil.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer_tavil.txt \
     hardware/qcom/audio/configs/msmnile/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
@@ -113,7 +117,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
 ro.vendor.audio.sdk.fluencetype=none\
 persist.vendor.audio.fluence.voicecall=true\
 persist.vendor.audio.fluence.voicerec=false\
-persist.vendor.audio.fluence.speaker=true
+persist.vendor.audio.fluence.speaker=true\
+persist.vendor.audio.fluence.tmic.enabled=false
 
 #disable tunnel encoding
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -182,7 +187,7 @@ vendor.audio.flac.sw.decoder.24bit=true
 
 #split a2dp DSP supported encoder list
 PRODUCT_PROPERTY_OVERRIDES += \
-persist.vendor.bt.a2dp_offload_cap=sbc-aptx-aptxtws-aptxhd-aac
+persist.vendor.bt.a2dp_offload_cap=sbc-aptx-aptxtws-aptxhd-aac-ldac
 
 #enable software decoders for ALAC and APE
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -226,9 +231,13 @@ vendor.audio.adm.buffering.ms=2
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.enable.mirrorlink=false
 
+#enable voicecall speaker stereo
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.audio.voicecall.speaker.stereo=true
+
 # for HIDL related packages
 PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-service \
     android.hardware.audio@2.0-impl \
     android.hardware.audio.effect@2.0-impl \
-    android.hardware.soundtrigger@2.0-impl
+    android.hardware.soundtrigger@2.1-impl

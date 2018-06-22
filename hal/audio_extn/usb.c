@@ -48,6 +48,7 @@
 #define CHANNEL_NUMBER_STR      "Channels: "
 #define PLAYBACK_PROFILE_STR    "Playback:"
 #define CAPTURE_PROFILE_STR     "Capture:"
+#define DATA_PACKET_INTERVAL_STR "Data packet interval:"
 #define USB_SIDETONE_GAIN_STR   "usb_sidetone_gain"
 #define ABS_SUB(A, B) (((A) > (B)) ? ((A) - (B)):((B) - (A)))
 #define SAMPLE_RATE_8000          8000
@@ -60,13 +61,15 @@ static uint32_t supported_sample_rates_mask[2];
 
 #define  MAX_SAMPLE_RATE_SIZE  sizeof(supported_sample_rates)/sizeof(supported_sample_rates[0])
 
+#define DEFAULT_SERVICE_INTERVAL_US    0
+
 #define _MAX(x, y) (((x) >= (y)) ? (x) : (y))
 #define _MIN(x, y) (((x) <= (y)) ? (x) : (y))
 
-enum usb_usecase_type{
+typedef enum usb_usecase_type{
     USB_PLAYBACK = 0,
     USB_CAPTURE,
-};
+} usb_usecase_type_t;
 
 enum {
     USB_SIDETONE_ENABLE_INDEX = 0,
@@ -80,6 +83,8 @@ struct usb_device_config {
     unsigned int channels;
     unsigned int rate_size;
     unsigned int rates[MAX_SAMPLE_RATE_SIZE];
+    unsigned long service_interval_us;
+    usb_usecase_type_t type;
 };
 
 struct usb_card_config {
@@ -99,6 +104,7 @@ struct usb_module {
     struct audio_device *adev;
     int sidetone_gain;
     bool is_capture_supported;
+    bool usb_reconfig;
 };
 
 static struct usb_module *usbmod = NULL;
@@ -318,6 +324,43 @@ static int usb_get_sample_rates(int type, char *rates_str,
     return 0;
 }
 
+static int usb_get_service_interval(const char *interval_str_start,
+                                    struct usb_device_config *usb_device_info)
+{
+    unsigned long interval = 0;
+    char time_unit[8] = {0};
+    int multiplier = 0;
+
+    char *eol = strchr(interval_str_start, '\n');
+    if (!eol) {
+        ALOGE("%s: No EOL found", __func__);
+        return -1;
+    }
+    char *tmp = (char *)calloc(1, eol-interval_str_start+1);
+    if (!tmp) {
+        ALOGE("%s: failed to allocate tmp", __func__);
+        return -1;
+    }
+    memcpy(tmp, interval_str_start, eol-interval_str_start);
+    sscanf(tmp, "%lu %2s", &interval, &time_unit[0]);
+    if (!strcmp(time_unit, "us")) {
+        multiplier = 1;
+    } else if (!strcmp(time_unit, "ms")) {
+        multiplier = 1000;
+    } else if (!strcmp(time_unit, "s")) {
+        multiplier = 1000000;
+    } else {
+        ALOGE("%s: unknown time_unit %s, assume default", __func__, time_unit);
+        interval = DEFAULT_SERVICE_INTERVAL_US;
+        multiplier = 1;
+    }
+    interval *= multiplier;
+    ALOGD("%s: set service_interval_us %lu", __func__, interval);
+    usb_device_info->service_interval_us = interval;
+    free(tmp);
+    return 0;
+}
+
 static int usb_get_capability(int type,
                               struct usb_card_config *usb_card_info,
                               int card)
@@ -333,6 +376,7 @@ static int usb_get_capability(int type,
     char *target = NULL;
     char *read_buf = NULL;
     char *rates_str = NULL;
+    char *interval_str_start = NULL;
     char path[128];
     int ret = 0;
     char *bit_width_str = NULL;
@@ -402,6 +446,7 @@ static int usb_get_capability(int type,
             ret = -ENOMEM;
             break;
         }
+        usb_device_info->type = type;
         /* Bit bit_width parsing */
         bit_width_start = strstr(str_start, "Format: ");
         if (bit_width_start == NULL) {
@@ -481,6 +526,19 @@ static int usb_get_capability(int type,
                   __func__);
             free(usb_device_info);
             continue;
+        }
+        // Data packet interval is an optional field.
+        // Assume 0ms interval if this cannot be read
+        // LPASS USB and HLOS USB will figure out the default to use
+        usb_device_info->service_interval_us = DEFAULT_SERVICE_INTERVAL_US;
+        interval_str_start = strstr(str_start, DATA_PACKET_INTERVAL_STR);
+        if (interval_str_start != NULL) {
+            interval_str_start += strlen(DATA_PACKET_INTERVAL_STR);
+            ret = usb_get_service_interval(interval_str_start, usb_device_info);
+            if (ret < 0) {
+                ALOGE("%s: error unable to get service interval, assume default",
+                      __func__);
+            }
         }
         /* Add to list if every field is valid */
         list_add_tail(&usb_card_info->usb_device_conf_list,
@@ -750,7 +808,9 @@ static bool usb_get_best_match_for_sample_rate(
                             unsigned int bit_width,
                             unsigned int ch,
                             unsigned int stream_sample_rate,
-                            unsigned int *sr)
+                            unsigned int *sr,
+                            unsigned int service_interval,
+                            bool do_service_interval_check)
 {
     struct listnode *node_i;
     struct usb_device_config *dev_info;
@@ -768,7 +828,11 @@ static bool usb_get_best_match_for_sample_rate(
                  "%s: USB ch(%d)bw(%d), stm ch(%d)bw(%d)sr(%d), candidate(%d)",
                  __func__, dev_info->channels, dev_info->bit_width,
                  ch, bit_width, stream_sample_rate, candidate);
-        if ((dev_info->bit_width != bit_width) || dev_info->channels != ch)
+
+        if ((dev_info->bit_width != bit_width) ||
+            (dev_info->channels != ch) ||
+            (do_service_interval_check && (dev_info->service_interval_us !=
+                                           service_interval)))
             continue;
 
         candidate = 0;
@@ -837,7 +901,9 @@ static bool usb_audio_backend_apply_policy(struct listnode *dev_list,
                                        *bit_width,
                                        *ch,
                                        *sample_rate,
-                                       sample_rate);
+                                       sample_rate,
+                                       0 /*service int*/,
+                                       false /*do service int check*/);
 exit:
     ALOGV("%s: Updated sample rate per profile: bit-width(%d) rate(%d) chs(%d)",
            __func__, *bit_width, *sample_rate, *ch);
@@ -1152,6 +1218,218 @@ bool audio_extn_usb_alive(int card) {
     return access(path, F_OK) == 0;
 }
 
+unsigned long audio_extn_usb_find_service_interval(bool min,
+                                                   bool playback) {
+    struct usb_card_config *card_info = NULL;
+    struct usb_device_config *dev_info = NULL;
+    struct listnode *node_i = NULL;
+    struct listnode *node_j = NULL;
+    unsigned long interval_us = min ? UINT_MAX : 0;
+    list_for_each(node_i, &usbmod->usb_card_conf_list) {
+        card_info = node_to_item(node_i, struct usb_card_config, list);
+        list_for_each(node_j, &card_info->usb_device_conf_list) {
+            dev_info = node_to_item(node_j, struct usb_device_config, list);
+            bool match = (playback && (dev_info->type == USB_PLAYBACK)) ||
+                    (!playback && (dev_info->type == USB_CAPTURE));
+            if (match) {
+                interval_us = min ?
+                        _MIN(interval_us, dev_info->service_interval_us) :
+                        _MAX(interval_us, dev_info->service_interval_us);
+            }
+        }
+        break;
+    }
+    return interval_us;
+}
+
+int audio_extn_usb_altset_for_service_interval(bool playback,
+                                               unsigned long service_interval,
+                                               uint32_t *bit_width,
+                                               uint32_t *sample_rate,
+                                               uint32_t *channels)
+{
+    struct usb_card_config *card_info = NULL;
+    struct usb_device_config *dev_info = NULL;;
+    struct listnode *node_i = NULL;;
+    struct listnode *node_j = NULL;;
+    uint32_t bw = 0;
+    uint32_t ch = 0;
+    uint32_t sr = 0;
+
+    if (service_interval == 0)
+        return 0;
+        /* not a valid service interval to search for */
+
+#define FIND_BEST_MATCH(local_var, field, cond)                                      \
+    list_for_each(node_i, &usbmod->usb_card_conf_list) {                             \
+            /* Currently only apply the first playback sound card configuration */   \
+            card_info = node_to_item(node_i, struct usb_card_config, list);          \
+            list_for_each(node_j, &card_info->usb_device_conf_list) {                \
+                    dev_info = node_to_item(node_j, struct usb_device_config, list); \
+                    bool match = (playback && (dev_info->type == USB_PLAYBACK)) ||   \
+                            (!playback && (dev_info->type == USB_CAPTURE));          \
+                    if (match && (cond)) {                                           \
+                        local_var = _MAX(local_var, dev_info->field);                \
+                    }                                                                \
+            }                                                                        \
+            break;                                                                   \
+    }
+
+    FIND_BEST_MATCH(bw, bit_width, dev_info->service_interval_us == service_interval);
+    FIND_BEST_MATCH(ch, channels, \
+                    dev_info->service_interval_us == service_interval && \
+                    dev_info->bit_width == bw);
+    list_for_each(node_i, &usbmod->usb_card_conf_list) {
+        /* Currently only apply the first playback sound card configuration */
+        card_info = node_to_item(node_i, struct usb_card_config, list);
+        if ((playback && usb_output_device(card_info->usb_device_type)) ||
+            (!playback && usb_input_device(card_info->usb_device_type))) {
+            usb_get_best_match_for_sample_rate(&card_info->usb_device_conf_list,
+                                               bw, ch, sr, &sr,
+                                               service_interval,
+                                               true);
+        }
+        break;
+    }
+
+#define SET_OR_RETURN_ON_ERROR(arg, local_var, cond) \
+    if (local_var != (cond)) arg = local_var; else return -1;
+
+    SET_OR_RETURN_ON_ERROR(*bit_width, bw, 0);
+    SET_OR_RETURN_ON_ERROR(*sample_rate, sr, 0);
+    SET_OR_RETURN_ON_ERROR(*channels, ch, 0);
+    return 0;
+#undef FIND_BEST_MATCH
+#undef SET_OR_RETURN_ON_ERROR
+}
+
+int audio_extn_usb_get_service_interval(bool playback,
+                                        unsigned long *service_interval)
+{
+    const char *ctl_name = "USB_AUDIO_RX service_interval";
+    struct mixer_ctl *ctl = mixer_get_ctl_by_name(usbmod->adev->mixer,
+                                                  ctl_name);
+
+    if (!playback) {
+        ALOGE("%s not valid for capture", __func__);
+        return -1;
+    }
+
+    if (!ctl) {
+        ALOGV("%s: could not get mixer %s", __func__, ctl_name);
+        return -1;
+    }
+
+    *service_interval = mixer_ctl_get_value(ctl, 0);
+    return 0;
+}
+
+int audio_extn_usb_set_service_interval(bool playback,
+                                        unsigned long service_interval,
+                                        bool *reconfig)
+{
+    *reconfig = false;
+    unsigned long current_service_interval = 0;
+    const char *ctl_name = "USB_AUDIO_RX service_interval";
+    struct mixer_ctl *ctl = mixer_get_ctl_by_name(usbmod->adev->mixer,
+                                                  ctl_name);
+
+    if (!playback) {
+        ALOGE("%s not valid for capture", __func__);
+        return -1;
+    }
+
+    if (!ctl) {
+        ALOGV("%s: could not get mixer %s", __func__, ctl_name);
+        return -1;
+    }
+
+    if (audio_extn_usb_get_service_interval(playback,
+                                            &current_service_interval) != 0) {
+        ALOGE("%s Unable to get current service interval", __func__);
+        return -1;
+    }
+
+    if (current_service_interval != service_interval) {
+        mixer_ctl_set_value(ctl, 0, service_interval);
+        *reconfig = usbmod->usb_reconfig = true;
+    }
+    else
+        *reconfig = usbmod->usb_reconfig = false;
+    return 0;
+}
+
+int audio_extn_usb_check_and_set_svc_int(struct audio_usecase *uc_info,
+                                         bool starting_output_stream)
+{
+    struct listnode *node = NULL;
+    struct audio_usecase *usecase = uc_info;
+    bool reconfig = false;
+    bool burst_mode = true;
+    unsigned long service_interval = 0;
+    struct audio_device *adev = usbmod->adev;
+
+    ALOGV("%s: enter:", __func__);
+
+    if ((starting_output_stream == true &&
+        ((uc_info->id == USECASE_AUDIO_PLAYBACK_MMAP) ||
+        (uc_info->id == USECASE_AUDIO_PLAYBACK_ULL))) ||
+        (voice_is_call_state_active(usbmod->adev))) {
+        burst_mode = false;
+    } else {
+    /* set if the valid usecase do not already exist */
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (usecase->type == PCM_PLAYBACK &&
+                audio_is_usb_out_device(usecase->devices & AUDIO_DEVICE_OUT_ALL_USB )) {
+                switch (usecase->id) {
+                    case USECASE_AUDIO_PLAYBACK_MMAP:
+                    case USECASE_AUDIO_PLAYBACK_ULL:
+                    {
+                        if (uc_info != usecase) {
+                            //another ULL stream exists
+                            ALOGV("%s: another ULL Stream in active use-case list burst mode = false.", __func__);
+                            burst_mode = false;
+                        } else {
+                            ALOGV("%s:current ULL uc is the same as incoming uc_info \
+                                   which means we are stopping the output stream, \
+                                   we don't want to set burst mode to false", __func__);
+                        }
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    ALOGV("%s: burst mode(%d).", __func__,burst_mode);
+
+    service_interval =
+            audio_extn_usb_find_service_interval(!burst_mode, true /*playback*/);
+
+    if (service_interval != 0)
+        audio_extn_usb_set_service_interval(true /*playback*/,
+                                            service_interval,
+                                            &reconfig);
+
+    /* no change or not supported or no active usecases */
+    if (reconfig)
+        return -1;
+    return 0;
+}
+
+bool audio_extn_usb_is_reconfig_req()
+{
+    return usbmod->usb_reconfig;
+}
+
+void audio_extn_usb_set_reconfig(bool is_required)
+{
+    usbmod->usb_reconfig = is_required;
+}
+
 void audio_extn_usb_init(void *adev)
 {
     if (usbmod == NULL) {
@@ -1165,6 +1443,7 @@ void audio_extn_usb_init(void *adev)
     usbmod->adev = (struct audio_device*)adev;
     usbmod->sidetone_gain = usb_sidetone_gain;
     usbmod->is_capture_supported = false;
+    usbmod->usb_reconfig = false;
 exit:
     return;
 }

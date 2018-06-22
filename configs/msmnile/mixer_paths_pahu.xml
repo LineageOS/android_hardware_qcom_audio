@@ -1832,6 +1832,10 @@
         <ctl name="SLIM0_RX_VI_FB_LCH_MUX" value="SLIM4_TX" />
     </path>
 
+    <path name="voice-speaker-stereo-protected">
+        <path name="speaker-protected" />
+    </path>
+
     <path name="voice-speaker-2-protected">
         <ctl name="AIF4_VI Mixer SPKR_VI_2" value="1" />
         <ctl name="SLIM_4_TX Format" value="PACKED_16B" />
@@ -1969,6 +1973,10 @@
 
     <path name="voice-speaker">
         <path name="speaker-mono" />
+    </path>
+
+    <path name="voice-speaker-stereo">
+        <path name="speaker" />
     </path>
 
     <path name="voice-speaker-qrd">
@@ -2227,6 +2235,27 @@
 
     <path name="voice-speaker-dmic-broadside">
         <path name="dmic-broadside" />
+    </path>
+
+    <!-- Tri MIC devices -->
+    <path name="speaker-tmic">
+        <ctl name="AIF1_CAP Mixer SLIM TX5" value="1" />
+        <ctl name="AIF1_CAP Mixer SLIM TX6" value="1" />
+        <ctl name="AIF1_CAP Mixer SLIM TX7" value="1" />
+        <ctl name="SLIM_0_TX Channels" value="Three" />
+        <ctl name="CDC_IF TX5 MUX" value="DEC5" />
+        <ctl name="ADC MUX5" value="DMIC" />
+        <ctl name="DMIC MUX5" value="DMIC0" />
+        <ctl name="CDC_IF TX6 MUX" value="DEC6" />
+        <ctl name="ADC MUX6" value="DMIC" />
+        <ctl name="DMIC MUX6" value="DMIC2" />
+        <ctl name="CDC_IF TX7 MUX" value="DEC7" />
+        <ctl name="ADC MUX7" value="DMIC" />
+        <ctl name="DMIC MUX7" value="DMIC5" />
+    </path>
+
+    <path name="voice-speaker-tmic">
+        <path name="speaker-tmic" />
     </path>
 
     <!-- Quad MIC devices -->

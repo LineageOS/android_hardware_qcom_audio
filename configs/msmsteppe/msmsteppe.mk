@@ -71,19 +71,19 @@ AUDIO_FEATURE_ENABLED_SND_MONITOR := true
 DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
 
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/$(MSMSTEPPE)/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
-    hardware/qcom/audio/configs/$(MSMSTEPPE)/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
-    hardware/qcom/audio/configs/$(MSMSTEPPE)/audio_tuning_mixer_tavil.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer_tavil.txt \
-    hardware/qcom/audio/configs/$(MSMSTEPPE)/sound_trigger_mixer_paths_wcd9340.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9340.xml \
-    hardware/qcom/audio/configs/$(MSMSTEPPE)/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
-    hardware/qcom/audio/configs/$(MSMSTEPPE)/graphite_ipc_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/graphite_ipc_platform_info.xml \
-    hardware/qcom/audio/configs/$(MSMSTEPPE)/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
-    hardware/qcom/audio/configs/$(MSMSTEPPE)/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml
+    hardware/qcom/audio/configs/msmsteppe/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
+    hardware/qcom/audio/configs/msmsteppe/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
+    hardware/qcom/audio/configs/msmsteppe/audio_tuning_mixer_tavil.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer_tavil.txt \
+    hardware/qcom/audio/configs/msmsteppe/sound_trigger_mixer_paths_wcd9340.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9340.xml \
+    hardware/qcom/audio/configs/msmsteppe/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
+    hardware/qcom/audio/configs/msmsteppe/graphite_ipc_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/graphite_ipc_platform_info.xml \
+    hardware/qcom/audio/configs/msmsteppe/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
+    hardware/qcom/audio/configs/msmsteppe/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml
 
 #XML Audio configuration files
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)hardware/qcom/audio/configs/$(MSMSTEPPE)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml
+    $(TOPDIR)hardware/qcom/audio/configs/msmsteppe/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml
 endif
 PRODUCT_COPY_FILES += \
     $(TOPDIR)hardware/qcom/audio/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
@@ -95,7 +95,7 @@ PRODUCT_COPY_FILES += \
 
 # Listen configuration file
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/$(MSMSTEPPE)/listen_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/listen_platform_info.xml
+    hardware/qcom/audio/configs/msmsteppe/listen_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/listen_platform_info.xml
 
 # Reduce client buffer size for fast audio output tracks
 PRODUCT_PROPERTY_OVERRIDES += \

@@ -71,8 +71,10 @@ AUDIO_FEATURE_ENABLED_SND_MONITOR := true
 AUDIO_FEATURE_ENABLED_DLKM := true
 ##AUDIO_FEATURE_FLAGS
 
+ifneq ($(strip $(TARGET_USES_QSSI)), true)
 #Audio Specific device overlays
 DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
+endif
 
 # Audio configuration file
 ifeq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
@@ -86,6 +88,7 @@ endif
 PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/sdm710/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
     hardware/qcom/audio/configs/sdm710/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
+    hardware/qcom/audio/configs/sdm710/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
     hardware/qcom/audio/configs/sdm710/mixer_paths_tavil.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tavil.xml \
     hardware/qcom/audio/configs/sdm710/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
     hardware/qcom/audio/configs/sdm710/mixer_paths_mtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_mtp.xml \
