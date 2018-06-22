@@ -540,6 +540,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = "quad-mic",
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = "quad-mic",
     [SND_DEVICE_IN_THREE_MIC] = "three-mic",
+    [SND_DEVICE_IN_HANDSET_TMIC_FLUENCE_PRO] = "three-mic",
     [SND_DEVICE_IN_HANDSET_TMIC] = "three-mic",
     [SND_DEVICE_IN_SPEAKER_TMIC_AEC] = "speaker-tmic",
     [SND_DEVICE_IN_SPEAKER_TMIC_NS] = "speaker-tmic",
@@ -712,6 +713,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = 127,
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = 129,
     [SND_DEVICE_IN_THREE_MIC] = 46, /* for APSS Surround Sound Recording */
+    [SND_DEVICE_IN_HANDSET_TMIC_FLUENCE_PRO] = 125,
     [SND_DEVICE_IN_HANDSET_TMIC] = 125, /* for 3mic recording with fluence */
     [SND_DEVICE_IN_SPEAKER_TMIC_AEC] = 158,
     [SND_DEVICE_IN_SPEAKER_TMIC_NS] = 159,
@@ -866,6 +868,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_SPEAKER_QMIC_NS)},
     {TO_NAME_INDEX(SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS)},
     {TO_NAME_INDEX(SND_DEVICE_IN_THREE_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_TMIC_FLUENCE_PRO)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_TMIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_SPEAKER_TMIC_AEC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_SPEAKER_TMIC_NS)},
@@ -1694,6 +1697,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_IN_SPEAKER_QMIC_NS] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_THREE_MIC] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_HANDSET_TMIC_FLUENCE_PRO] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_HANDSET_TMIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_SPEAKER_TMIC_AEC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_SPEAKER_TMIC_NS] = strdup("SLIMBUS_0_TX");
