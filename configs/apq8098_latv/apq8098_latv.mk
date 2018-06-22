@@ -253,10 +253,6 @@ vendor.audio.use.sw.ape.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=true
 
-#Disable FM a2dp concurrency
-PRODUCT_PROPERTY_OVERRIDES += \
-vendor.fm.a2dp.conc.disabled=true
-
 #audio becoming noisy intent broadcast delay
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.noisy.broadcast.delay=600
