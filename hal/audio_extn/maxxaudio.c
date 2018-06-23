@@ -37,7 +37,7 @@
 #define PRESET_PATH "/vendor/etc"
 #define MPS_BASE_STRING "default"
 #define USER_PRESET_PATH ""
-#define CONFIG_PATH "/vendor/etc/maxx_conf.ini"
+#define CONFIG_BASE_STRING "maxx_conf"
 #define CAL_PRESIST_STR "cal_persist"
 #define CAL_SAMPLERATE_STR "cal_samplerate"
 
@@ -344,6 +344,7 @@ void audio_extn_ma_init(void *platform)
     int ret = 0;
     char lib_path[128] = {0};
     char mps_path[128] = {0};
+    char cnf_path[128] = {0};
     struct snd_card_split *snd_split_handle = NULL;
     snd_split_handle = audio_extn_get_snd_card_split();
 
@@ -427,8 +428,17 @@ void audio_extn_ma_init(void *platform)
                  PRESET_PATH, MPS_BASE_STRING, snd_split_handle->form_factor);
     }
 
+    /* get config files */
+    if (snd_split_handle == NULL) {
+        snprintf(cnf_path, sizeof(cnf_path), "%s/%s.ini",
+                 PRESET_PATH, CONFIG_BASE_STRING);
+    } else {
+        snprintf(cnf_path, sizeof(cnf_path), "%s/%s_%s.ini",
+                 PRESET_PATH, CONFIG_BASE_STRING, snd_split_handle->form_factor);
+    }
+
     /* check file */
-    if (access(mps_path, F_OK) < 0) {
+    if (access(mps_path, R_OK) < 0) {
         ALOGW("%s: file %s isn't existed.", __func__, mps_path);
         goto error;
     } else
@@ -440,16 +450,18 @@ void audio_extn_ma_init(void *platform)
         goto error;
     }
     */
-    if (access(CONFIG_PATH, F_OK) < 0) {
-        ALOGW("%s: file %s isn't existed.", __func__, CONFIG_PATH);
+
+    if (access(cnf_path, R_OK) < 0) {
+        ALOGW("%s: file %s isn't existed.", __func__, cnf_path);
         goto error;
-    }
+    } else
+        ALOGD("%s: Loading ini file: %s", __func__, cnf_path);
 
     /* init ma parameter */
     if (my_data->ma_param_init(&g_ma_audio_cal_handle,
                                mps_path,
                                USER_PRESET_PATH, /* unused */
-                               CONFIG_PATH,
+                               cnf_path,
                                &set_audio_cal)) {
         if (!g_ma_audio_cal_handle) {
             ALOGE("%s: ma parameters initialize failed", __func__);
