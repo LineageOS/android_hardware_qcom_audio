@@ -828,7 +828,7 @@ int32_t audio_extn_ffv_read(struct audio_stream_in *stream __unused,
     bytes_to_copy = (bytes <= out_buf_size) ? bytes : out_buf_size;
     memcpy(buffer, process_out_ptr, bytes_to_copy);
     if (bytes_to_copy != out_buf_size)
-        ALOGD("%s: out buffer data dropped, copied %zd bytes",
+        ALOGD("%s: out buffer data dropped, copied %zu bytes",
                __func__, bytes_to_copy);
 
 #ifdef FFV_PCM_DUMP
