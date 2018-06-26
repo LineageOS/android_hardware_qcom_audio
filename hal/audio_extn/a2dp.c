@@ -30,7 +30,7 @@
 /*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
 #include <errno.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <dlfcn.h>
 #include "audio_hw.h"
 #include "platform.h"
@@ -40,6 +40,8 @@
 #include <hardware/audio.h>
 #include <hardware/hardware.h>
 #include <cutils/properties.h>
+#include <unistd.h>
+#include <pthread.h>
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
