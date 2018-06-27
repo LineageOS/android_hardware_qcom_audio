@@ -3278,6 +3278,51 @@ static int check_input_parameters(uint32_t sample_rate,
     return ret;
 }
 
+
+/** Add a value in a list if not already present.
+ * @return true if value was successfully inserted or already present,
+ *         false if the list is full and does not contain the value.
+ */
+static bool register_uint(uint32_t value, uint32_t* list, size_t list_length) {
+    for (size_t i = 0; i < list_length; i++) {
+        if (list[i] == value) return true; // value is already present
+        if (list[i] == 0) { // no values in this slot
+            list[i] = value;
+            return true; // value inserted
+        }
+    }
+    return false; // could not insert value
+}
+
+/** Add channel_mask in supported_channel_masks if not already present.
+ * @return true if channel_mask was successfully inserted or already present,
+ *         false if supported_channel_masks is full and does not contain channel_mask.
+ */
+static void register_channel_mask(audio_channel_mask_t channel_mask,
+            audio_channel_mask_t supported_channel_masks[static MAX_SUPPORTED_CHANNEL_MASKS]) {
+    ALOGE_IF(!register_uint(channel_mask, supported_channel_masks, MAX_SUPPORTED_CHANNEL_MASKS),
+        "%s: stream can not declare supporting its channel_mask %x", __func__, channel_mask);
+}
+
+/** Add format in supported_formats if not already present.
+ * @return true if format was successfully inserted or already present,
+ *         false if supported_formats is full and does not contain format.
+ */
+static void register_format(audio_format_t format,
+            audio_format_t supported_formats[static MAX_SUPPORTED_FORMATS]) {
+    ALOGE_IF(!register_uint(format, supported_formats, MAX_SUPPORTED_FORMATS),
+             "%s: stream can not declare supporting its format %x", __func__, format);
+}
+/** Add sample_rate in supported_sample_rates if not already present.
+ * @return true if sample_rate was successfully inserted or already present,
+ *         false if supported_sample_rates is full and does not contain sample_rate.
+ */
+static void register_sample_rate(uint32_t sample_rate,
+            uint32_t supported_sample_rates[static MAX_SUPPORTED_SAMPLE_RATES]) {
+    ALOGE_IF(!register_uint(sample_rate, supported_sample_rates, MAX_SUPPORTED_SAMPLE_RATES),
+             "%s: stream can not declare supporting its sample rate %x", __func__, sample_rate);
+}
+
 static size_t get_input_buffer_size(uint32_t sample_rate,
                                     audio_format_t format,
                                     int channel_count,
@@ -6206,6 +6251,9 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     config->format = out->stream.common.get_format(&out->stream.common);
     config->channel_mask = out->stream.common.get_channels(&out->stream.common);
     config->sample_rate = out->stream.common.get_sample_rate(&out->stream.common);
+    register_format(out->format, out->supported_formats);
+    register_channel_mask(out->channel_mask, out->supported_channel_masks);
+    register_sample_rate(out->sample_rate, out->supported_sample_rates);
 
     /*
        By locking output stream before registering, we allow the callback
@@ -7021,6 +7069,9 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                                 devices, flags, in->format,
                                                 in->sample_rate, in->bit_width,
                                                 in->profile, &in->app_type_cfg);
+    register_format(in->format, in->supported_formats);
+    register_channel_mask(in->channel_mask, in->supported_channel_masks);
+    register_sample_rate(in->sample_rate, in->supported_sample_rates);
 
     /* This stream could be for sound trigger lab,
        get sound trigger pcm if present */
