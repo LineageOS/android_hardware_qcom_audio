@@ -8115,3 +8115,26 @@ static const char *platform_get_mixer_control(struct mixer_ctl *ctl)
 
     return id_string;
 }
+
+bool platform_set_microphone_characteristic(void *platform __unused,
+                                            struct audio_microphone_characteristic_t mic __unused) {
+    return -ENOSYS;
+}
+
+int platform_get_microphones(void *platform __unused,
+                             struct audio_microphone_characteristic_t *mic_array __unused,
+                             size_t *mic_count __unused) {
+    return -ENOSYS;
+}
+
+bool platform_set_microphone_map(void *platform __unused, snd_device_t in_snd_device __unused,
+                                 const struct mic_info *info __unused) {
+    return false;
+}
+
+int platform_get_active_microphones(void *platform __unused, unsigned int channels __unused,
+                                    audio_usecase_t usecase __unused,
+                                    struct audio_microphone_characteristic_t *mic_array __unused,
+                                    size_t *mic_count __unused) {
+    return -ENOSYS;
+}

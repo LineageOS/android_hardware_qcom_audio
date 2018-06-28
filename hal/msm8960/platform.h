@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2018 The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -165,5 +165,8 @@ enum {
 #define AFE_PROXY_RECORD_PCM_DEVICE 8
 
 #define DEVICE_NAME_MAX_SIZE 128
+
+#define AUDIO_MAKE_STRING_FROM_ENUM(X)   { #X, X }
+
 
 #endif // QCOM_AUDIO_PLATFORM_H
