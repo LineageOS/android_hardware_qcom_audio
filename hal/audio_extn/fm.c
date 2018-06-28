@@ -182,6 +182,7 @@ static int32_t fm_start(struct audio_device *adev, audio_devices_t outputDevices
     fm_out->usecase = USECASE_AUDIO_PLAYBACK_FM;
     fm_out->config = pcm_config_fm;
     fm_out->devices = outputDevices;
+    fmmod.is_fm_running = true;
 
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
 
@@ -238,9 +239,7 @@ static int32_t fm_start(struct audio_device *adev, audio_devices_t outputDevices
     pcm_start(fmmod.fm_pcm_rx);
     pcm_start(fmmod.fm_pcm_tx);
 
-    fmmod.is_fm_running = true;
     fmmod.fm_device = fm_out->devices;
-    fm_set_volume(adev, fmmod.fm_volume, false);
 
     ALOGD("%s: exit: status(%d)", __func__, ret);
     return 0;
