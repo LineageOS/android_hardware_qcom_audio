@@ -555,7 +555,7 @@ static void update_hardware_info_bear(struct hardware_info *hw_info, const char 
                       sizeof("sdm670-skuw-snd-card"))) {
         hw_info->is_stereo_spkr = false;
     } else if ( !strncmp(snd_card_name, "sdm670-tavil-hdk-snd-card",
-                      sizeof("sdm670-tavil-hdk-snd-card")) {
+                      sizeof("sdm670-tavil-hdk-snd-card"))) {
         strlcpy(hw_info->type, " hdk", sizeof(hw_info->type));
         strlcpy(hw_info->name, "sdm670", sizeof(hw_info->name));
         hw_info->snd_devices = (snd_device_t *)tavil_qrd_variant_devices;
