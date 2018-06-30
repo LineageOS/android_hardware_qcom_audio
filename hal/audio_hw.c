@@ -1482,7 +1482,7 @@ int select_devices(struct audio_device *adev,
             voice_set_sidetone(adev, out_snd_device, true);
     }
 
-    if (usecase == voip_usecase) {
+    if (usecase->type != PCM_CAPTURE && voip_usecase) {
         struct stream_out *voip_out = voip_usecase->stream.out;
         audio_extn_utils_send_app_type_gain(adev,
                                             voip_out->app_type_cfg.app_type,
