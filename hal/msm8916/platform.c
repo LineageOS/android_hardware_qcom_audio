@@ -1518,7 +1518,7 @@ static void initialize_huawei_sound_param_path(void *acdb_handle)
             fclose(f);
         }
 
-        snprintf(path, sizeof(path), "/system/etc/sound_param/%s/", product);
+        snprintf(path, sizeof(path), "/vendor/etc/sound_param/%s/", product);
         ALOGI("%s: Using param_path %s", __func__, path);
 
         set_param_path(path);
