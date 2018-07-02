@@ -436,9 +436,6 @@ void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
     if (!st_dev)
        return;
 
-    if (st_dev->sthal_prop_api_version >= STHAL_PROP_API_VERSION_1_0)
-        return;
-
     if (snd_device >= SND_DEVICE_OUT_BEGIN &&
         snd_device < SND_DEVICE_OUT_END)
         device_type = PCM_PLAYBACK;
@@ -481,13 +478,14 @@ void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info
     if (!st_dev)
        return;
 
-    if (st_dev->sthal_prop_api_version < STHAL_PROP_API_VERSION_1_0)
-        return;
-
     if (uc_info == NULL) {
         ALOGE("%s: usecase is NULL!!!", __func__);
         return;
     }
+
+    if ((st_dev->sthal_prop_api_version < STHAL_PROP_API_VERSION_1_0) &&
+        (uc_info->type != PCM_PLAYBACK))
+        return;
 
     if ((uc_info->in_snd_device >= SND_DEVICE_IN_BEGIN &&
         uc_info->in_snd_device < SND_DEVICE_IN_END)) {
