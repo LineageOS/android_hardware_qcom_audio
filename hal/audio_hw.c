@@ -3074,6 +3074,10 @@ int start_output_stream(struct stream_out *out)
             }
         }
 
+        if (out->realtime)
+            platform_set_stream_channel_map(adev->platform, out->channel_mask,
+                   out->pcm_device_id, &out->channel_map_param.channel_map[0]);
+
         while (1) {
             ATRACE_BEGIN("pcm_open");
             out->pcm = pcm_open(adev->snd_card, out->pcm_device_id,
@@ -3094,7 +3098,8 @@ int start_output_stream(struct stream_out *out)
             }
             break;
         }
-        platform_set_stream_channel_map(adev->platform, out->channel_mask,
+        if (!out->realtime)
+            platform_set_stream_channel_map(adev->platform, out->channel_mask,
                    out->pcm_device_id, &out->channel_map_param.channel_map[0]);
 
         ALOGV("%s: pcm_prepare", __func__);
