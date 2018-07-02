@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -543,6 +543,9 @@ static const char * device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = "three-mic",
     [SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = "quad-mic",
     [SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = "headset-mic",
+    [SND_DEVICE_IN_INCALL_REC_RX] = "incall-rec-rx",
+    [SND_DEVICE_IN_INCALL_REC_TX] = "incall-rec-tx",
+    [SND_DEVICE_IN_INCALL_REC_RX_TX] = "incall-rec-rx-tx",
 };
 
 // Platform specific backend bit width table
@@ -829,6 +832,9 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_THREE_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_QUAD_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_INCALL_REC_RX)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_INCALL_REC_TX)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_INCALL_REC_RX_TX)},
 };
 
 static char * backend_tag_table[SND_DEVICE_MAX] = {0};
@@ -1628,6 +1634,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_IN_UNPROCESSED_THREE_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_UNPROCESSED_QUAD_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_INCALL_REC_RX] = strdup("INCALL_RECORD_RX");
+    hw_interface_table[SND_DEVICE_IN_INCALL_REC_TX] = strdup("INCALL_RECORD_TX");
 
     my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
     /*remove ALAC & APE from DSP decoder list based on software decoder availability*/
@@ -1986,6 +1994,8 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
         if(snd_card_name) {
             if ((!strncmp(snd_card_name, "msm8953-snd-card-mtp",
                     sizeof("msm8953-snd-card-mtp")) ||
+                (!strncmp(snd_card_name, "msm8953-sku4-snd-card",
+                    sizeof("msm8953-sku4-snd-card"))) ||
                 (!strncmp(snd_card_name, "msm8952-skum-snd-card",
                     sizeof("msm8952-skum-snd-card"))))) {
                 *is_wsa_combo_supported = true;
@@ -3628,6 +3638,11 @@ int platform_split_snd_device(void *platform,
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_BT_A2DP;
         ret = 0;
+    } else if (SND_DEVICE_IN_INCALL_REC_RX_TX == snd_device) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_IN_INCALL_REC_RX;
+        new_snd_devices[1] = SND_DEVICE_IN_INCALL_REC_TX;
+        ret = 0;
     }
 
     ALOGD("%s: snd_device(%d) num devices(%d) new_snd_devices(%d)", __func__,
@@ -3836,8 +3851,6 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_BT_SCO_WB;
             else
                 snd_device = SND_DEVICE_OUT_BT_SCO;
-        } else if (devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
-                snd_device = SND_DEVICE_OUT_BT_A2DP;
         } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
                 if (my_data->is_vbat_speaker) {
                     if (my_data->mono_speaker == SPKR_1)
@@ -5800,7 +5813,9 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
      * Check if the device is speaker or handset,assumption handset shares
      * backend with speaker, and these devices are restricited to 48kHz.
      */
-    if (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device)) {
+    if (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device) &&
+        !(codec_device_supports_native_playback(usecase->devices) &&
+          my_data->hifi_audio && !check_hdset_combo_device(snd_device))) {
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
 
         if (bit_width >= 24) {
