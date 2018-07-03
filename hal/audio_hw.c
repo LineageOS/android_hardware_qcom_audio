@@ -3253,7 +3253,8 @@ static int check_input_parameters(uint32_t sample_rate,
         (format != AUDIO_FORMAT_PCM_24_BIT_PACKED) && (format != AUDIO_FORMAT_PCM_32_BIT) &&
         (format != AUDIO_FORMAT_PCM_FLOAT)) &&
         !voice_extn_compress_voip_is_format_supported(format) &&
-        !audio_extn_compr_cap_format_supported(format))
+        !audio_extn_compr_cap_format_supported(format) &&
+        !audio_extn_cin_format_supported(format))
             ret = -EINVAL;
 
     switch (channel_count) {
@@ -3262,6 +3263,7 @@ static int check_input_parameters(uint32_t sample_rate,
     case 3:
     case 4:
     case 6:
+    case 8:
         break;
     default:
         ret = -EINVAL;

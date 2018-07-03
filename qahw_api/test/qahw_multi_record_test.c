@@ -279,6 +279,9 @@ void *start_input(void *thread_param)
   case 4:
       params->config.channel_mask = AUDIO_CHANNEL_INDEX_MASK_4;
       break;
+  case 8:
+      params->config.channel_mask = AUDIO_CHANNEL_INDEX_MASK_8;
+      break;
   default:
       fprintf(log_file, "ERROR :::: channle count %d not supported, handle(%d)", params->channels, params->handle);
       if (log_file != stdout)
@@ -351,7 +354,11 @@ void *start_input(void *thread_param)
   if (log_file != stdout)
       fprintf(stdout, "\n ADL: Please speak into the microphone for %lf seconds, handle(%d)\n", params->record_length, params->handle);
 
-  snprintf(file_name + name_len, sizeof(file_name) - name_len, "%d.wav", (0x99A - params->handle));
+  if (audio_is_linear_pcm(params->config.format))
+      snprintf(file_name + name_len, sizeof(file_name) - name_len, "%d.wav", (0x99A - params->handle));
+  else
+      snprintf(file_name + name_len, sizeof(file_name) - name_len, "%d.raw", (0x99A - params->handle));
+
   FILE *fd = fopen(file_name,"w");
   if (fd == NULL) {
       fprintf(log_file, "File open failed \n");
@@ -403,7 +410,8 @@ void *start_input(void *thread_param)
   hdr.bits_per_sample = bps;
   hdr.data_id = ID_DATA;
   hdr.data_sz = 0;
-  fwrite(&hdr, 1, sizeof(hdr), fd);
+  if (audio_is_linear_pcm(params->config.format))
+      fwrite(&hdr, 1, sizeof(hdr), fd);
 
   memset(&in_buf,0, sizeof(qahw_in_buffer_t));
   start_time = time(0);
@@ -450,12 +458,12 @@ void *start_input(void *thread_param)
       }
 
       time_elapsed = difftime(time(0), start_time);
-      written_size = fwrite(in_buf.buffer, 1, buffer_size, fd);
-      if (written_size < buffer_size) {
+      written_size = fwrite(in_buf.buffer, 1, bytes_read, fd);
+      if (written_size < bytes_read) {
          printf("Error in fwrite(%d)=%s\n",ferror(fd), strerror(ferror(fd)));
          break;
       }
-      data_sz += buffer_size;
+      data_sz += bytes_read;
   }
   if  ((params->timestamp_mode) && fd_in_ts) {
       fclose(fd_in_ts);
@@ -465,11 +473,13 @@ void *start_input(void *thread_param)
   /*Stopping sourcetracking thread*/
   sourcetrack_done = 1;
 
-  /* update lengths in header */
-  hdr.data_sz = data_sz;
-  hdr.riff_sz = data_sz + 44 - 8;
-  fseek(fd, 0, SEEK_SET);
-  fwrite(&hdr, 1, sizeof(hdr), fd);
+  if (audio_is_linear_pcm(params->config.format)) {
+      /* update lengths in header */
+      hdr.data_sz = data_sz;
+      hdr.riff_sz = data_sz + 44 - 8;
+      fseek(fd, 0, SEEK_SET);
+      fwrite(&hdr, 1, sizeof(hdr), fd);
+  }
   free(buffer);
   fclose(fd);
   fd = NULL;

@@ -1722,7 +1722,8 @@ int qahw_open_input_stream_l(qahw_module_handle_t *hw_module,
     }
 
     /* dlsym qahwi_in_read_v2 if timestamp flag is used */
-    if (!rc && (flags & QAHW_INPUT_FLAG_TIMESTAMP)) {
+    if (!rc && ((flags & QAHW_INPUT_FLAG_TIMESTAMP) ||
+                (flags & QAHW_INPUT_FLAG_PASSTHROUGH))) {
         const char *error;
 
         /* clear any existing errors */

@@ -204,7 +204,8 @@ ssize_t qahwi_in_read_v2(struct audio_stream_in *stream, void* buffer,
         return -EINVAL;
     }
     if (COMPRESSED_TIMESTAMP_FLAG &&
-        (in->flags & AUDIO_INPUT_FLAG_TIMESTAMP)) {
+        ((in->flags & AUDIO_INPUT_FLAG_TIMESTAMP) ||
+         (in->flags & AUDIO_INPUT_FLAG_PASSTHROUGH))) {
         if (bytes != in->stream.common.get_buffer_size(&stream->common)) {
             ALOGE("%s: bytes requested must be fragment size in timestamp mode!", __func__);
             return -EINVAL;
@@ -213,10 +214,15 @@ ssize_t qahwi_in_read_v2(struct audio_stream_in *stream, void* buffer,
         buf = (char *) in->qahwi_in.ibuf;
         ret = in->qahwi_in.base.read(&in->stream, (void *)buf, bytes + mdata_size);
         if (ret == bytes + mdata_size) {
-           bytes_read = bytes;
-           memcpy(buffer, buf + mdata_size, bytes);
+           mdata = (struct snd_codec_metadata *) buf;
+           bytes_read = mdata->length;
+           if (bytes_read > bytes) {
+              ALOGE("%s: bytes requested to small (given %zu, required %zu)",
+                 __func__, bytes, bytes_read);
+              return -EINVAL;
+           }
+           memcpy(buffer, buf + mdata_size, bytes_read);
            if (timestamp) {
-               mdata = (struct snd_codec_metadata *) buf;
                *timestamp = mdata->timestamp;
            }
         } else {
@@ -281,7 +287,8 @@ static int qahwi_open_input_stream(struct audio_hw_device *dev,
     in->qahwi_in.is_inititalized = true;
 
     if (COMPRESSED_TIMESTAMP_FLAG &&
-        (flags & AUDIO_INPUT_FLAG_TIMESTAMP)) {
+        ((in->flags & AUDIO_INPUT_FLAG_TIMESTAMP) ||
+         (in->flags & AUDIO_INPUT_FLAG_PASSTHROUGH))) {
         // set read to NULL as this is not supported in timestamp mode
         in->stream.read = NULL;
 
