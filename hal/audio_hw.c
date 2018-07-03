@@ -3278,6 +3278,51 @@ static int check_input_parameters(uint32_t sample_rate,
     return ret;
 }
 
+
+/** Add a value in a list if not already present.
+ * @return true if value was successfully inserted or already present,
+ *         false if the list is full and does not contain the value.
+ */
+static bool register_uint(uint32_t value, uint32_t* list, size_t list_length) {
+    for (size_t i = 0; i < list_length; i++) {
+        if (list[i] == value) return true; // value is already present
+        if (list[i] == 0) { // no values in this slot
+            list[i] = value;
+            return true; // value inserted
+        }
+    }
+    return false; // could not insert value
+}
+
+/** Add channel_mask in supported_channel_masks if not already present.
+ * @return true if channel_mask was successfully inserted or already present,
+ *         false if supported_channel_masks is full and does not contain channel_mask.
+ */
+static void register_channel_mask(audio_channel_mask_t channel_mask,
+            audio_channel_mask_t supported_channel_masks[static MAX_SUPPORTED_CHANNEL_MASKS]) {
+    ALOGE_IF(!register_uint(channel_mask, supported_channel_masks, MAX_SUPPORTED_CHANNEL_MASKS),
+        "%s: stream can not declare supporting its channel_mask %x", __func__, channel_mask);
+}
+
+/** Add format in supported_formats if not already present.
+ * @return true if format was successfully inserted or already present,
+ *         false if supported_formats is full and does not contain format.
+ */
+static void register_format(audio_format_t format,
+            audio_format_t supported_formats[static MAX_SUPPORTED_FORMATS]) {
+    ALOGE_IF(!register_uint(format, supported_formats, MAX_SUPPORTED_FORMATS),
+             "%s: stream can not declare supporting its format %x", __func__, format);
+}
+/** Add sample_rate in supported_sample_rates if not already present.
+ * @return true if sample_rate was successfully inserted or already present,
+ *         false if supported_sample_rates is full and does not contain sample_rate.
+ */
+static void register_sample_rate(uint32_t sample_rate,
+            uint32_t supported_sample_rates[static MAX_SUPPORTED_SAMPLE_RATES]) {
+    ALOGE_IF(!register_uint(sample_rate, supported_sample_rates, MAX_SUPPORTED_SAMPLE_RATES),
+             "%s: stream can not declare supporting its sample rate %x", __func__, sample_rate);
+}
+
 static size_t get_input_buffer_size(uint32_t sample_rate,
                                     audio_format_t format,
                                     int channel_count,
@@ -3682,6 +3727,18 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 !audio_extn_a2dp_is_ready()) {
                 val = AUDIO_DEVICE_OUT_SPEAKER;
         }
+        /*
+        * When USB headset is disconnected the music platback paused
+        * and the policy manager send routing=0. But if the USB is connected
+        * back before the standby time, AFE is not closed and opened
+        * when USB is connected back. So routing to speker will guarantee
+        * AFE reconfiguration and AFE will be opend once USB is connected again
+        */
+        if ((out->devices & AUDIO_DEVICE_OUT_ALL_USB) &&
+                (val == AUDIO_DEVICE_NONE) &&
+                 !audio_extn_usb_connected(parms)) {
+                 val = AUDIO_DEVICE_OUT_SPEAKER;
+         }
         /* To avoid a2dp to sco overlapping / BT device improper state
          * check with BT lib about a2dp streaming support before routing
          */
@@ -5612,6 +5669,36 @@ static int in_get_mmap_position(const struct audio_stream_in *stream,
     return 0;
 }
 
+static int in_get_active_microphones(const struct audio_stream_in *stream,
+                                     struct audio_microphone_characteristic_t *mic_array,
+                                     size_t *mic_count) {
+    struct stream_in *in = (struct stream_in *)stream;
+    struct audio_device *adev = in->dev;
+    ALOGVV("%s", __func__);
+
+    lock_input_stream(in);
+    pthread_mutex_lock(&adev->lock);
+    int ret = platform_get_active_microphones(adev->platform,
+                                              audio_channel_count_from_in_mask(in->channel_mask),
+                                              in->usecase, mic_array, mic_count);
+    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&in->lock);
+
+    return ret;
+}
+
+static int adev_get_microphones(const struct audio_hw_device *dev,
+                                struct audio_microphone_characteristic_t *mic_array,
+                                size_t *mic_count) {
+    struct audio_device *adev = (struct audio_device *)dev;
+    ALOGVV("%s", __func__);
+
+    pthread_mutex_lock(&adev->lock);
+    int ret = platform_get_microphones(adev->platform, mic_array, mic_count);
+    pthread_mutex_unlock(&adev->lock);
+
+    return ret;
+}
 int adev_open_output_stream(struct audio_hw_device *dev,
                             audio_io_handle_t handle,
                             audio_devices_t devices,
@@ -6176,6 +6263,9 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     config->format = out->stream.common.get_format(&out->stream.common);
     config->channel_mask = out->stream.common.get_channels(&out->stream.common);
     config->sample_rate = out->stream.common.get_sample_rate(&out->stream.common);
+    register_format(out->format, out->supported_formats);
+    register_channel_mask(out->channel_mask, out->supported_channel_masks);
+    register_sample_rate(out->sample_rate, out->supported_sample_rates);
 
     /*
        By locking output stream before registering, we allow the callback
@@ -6795,6 +6885,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->stream.set_gain = in_set_gain;
     in->stream.read = in_read;
     in->stream.get_input_frames_lost = in_get_input_frames_lost;
+    in->stream.get_active_microphones = in_get_active_microphones;
 
     in->device = devices;
     in->source = source;
@@ -6990,6 +7081,9 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                                 devices, flags, in->format,
                                                 in->sample_rate, in->bit_width,
                                                 in->profile, &in->app_type_cfg);
+    register_format(in->format, in->supported_formats);
+    register_channel_mask(in->channel_mask, in->supported_channel_masks);
+    register_sample_rate(in->sample_rate, in->supported_sample_rates);
 
     /* This stream could be for sound trigger lab,
        get sound trigger pcm if present */
@@ -7334,6 +7428,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->device.get_audio_port = adev_get_audio_port;
     adev->device.set_audio_port_config = adev_set_audio_port_config;
     adev->device.dump = adev_dump;
+    adev->device.get_microphones = adev_get_microphones;
 
     /* Set the default route before the PCM stream is opened */
     adev->mode = AUDIO_MODE_NORMAL;

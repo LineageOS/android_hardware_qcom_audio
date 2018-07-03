@@ -30,6 +30,7 @@
 #include <cutils/str_parms.h>
 #include <audio_hw.h>
 #include <platform_api.h>
+#include <unistd.h>
 #include "platform.h"
 #include "audio_extn.h"
 #include "acdb.h"
@@ -6154,6 +6155,11 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
             ALOGD("%s:becf: afe: napb not active - set non fractional rate",
                        __func__);
         }
+        /*ensure AFE set to 48khz when sample rate less than 44.1khz*/
+        if (sample_rate < OUTPUT_SAMPLING_RATE_44100) {
+            sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+            ALOGD("%s:becf: afe: napb set sample rate to default Sample Rate(48k)",__func__);
+        }
     }
 
     /*
@@ -7908,7 +7914,6 @@ int platform_set_swap_mixer(struct audio_device *adev, bool swap_channels)
 {
     const char *mixer_ctl_name = "Swap channel";
     struct mixer_ctl *ctl;
-    const char *mixer_path;
     struct platform_data *my_data = (struct platform_data *)adev->platform;
 
     // forced to set to swap, but device not rotated ... ignore set
@@ -7916,13 +7921,6 @@ int platform_set_swap_mixer(struct audio_device *adev, bool swap_channels)
         return 0;
 
     ALOGV("%s:", __func__);
-
-    if (swap_channels)
-        mixer_path = platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER_REVERSE);
-    else
-        mixer_path = platform_get_snd_device_name(SND_DEVICE_OUT_SPEAKER);
-
-    audio_route_apply_and_update_path(adev->audio_route, mixer_path);
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
@@ -7957,6 +7955,18 @@ int platform_set_swap_channels(struct audio_device *adev, bool swap_channels)
     struct audio_usecase *usecase;
     struct listnode *node;
 
+    //swap channels only for stereo spkr
+    struct platform_data *my_data = (struct platform_data *)adev->platform;
+    if (my_data) {
+        if (!hw_info_is_stereo_spkr(my_data->hw_info)) {
+            ALOGV("%s: will not swap due to it is not stereo spkr", __func__);
+            return 0;
+        }
+    } else {
+        ALOGE("%s: failed to allocate platform data", __func__);
+        return -EINVAL;
+    }
+
     // do not swap channels in audio modes with concurrent capture and playback
     // as this may break the echo reference
     if ((adev->mode == AUDIO_MODE_IN_COMMUNICATION) || (adev->mode == AUDIO_MODE_IN_CALL)) {
@@ -7973,8 +7983,9 @@ int platform_set_swap_channels(struct audio_device *adev, bool swap_channels)
              * to perform device switch to disable the current backend to
              * enable it with new acdb data.
              */
-            if (acdb_device_table[SND_DEVICE_OUT_SPEAKER] !=
-                acdb_device_table[SND_DEVICE_OUT_SPEAKER_REVERSE]) {
+            if (my_data->speaker_lr_swap &&
+                (acdb_device_table[SND_DEVICE_OUT_SPEAKER] !=
+                acdb_device_table[SND_DEVICE_OUT_SPEAKER_REVERSE])) {
                 const int initial_skpr_gain = ramp_speaker_gain(adev, false /*ramp_up*/, -1);
                 select_devices(adev, usecase->id);
                 if (initial_skpr_gain != -EINVAL)
@@ -8100,4 +8111,27 @@ static const char *platform_get_mixer_control(struct mixer_ctl *ctl)
     }
 
     return id_string;
+}
+
+bool platform_set_microphone_characteristic(void *platform __unused,
+                                            struct audio_microphone_characteristic_t mic __unused) {
+    return -ENOSYS;
+}
+
+int platform_get_microphones(void *platform __unused,
+                             struct audio_microphone_characteristic_t *mic_array __unused,
+                             size_t *mic_count __unused) {
+    return -ENOSYS;
+}
+
+bool platform_set_microphone_map(void *platform __unused, snd_device_t in_snd_device __unused,
+                                 const struct mic_info *info __unused) {
+    return false;
+}
+
+int platform_get_active_microphones(void *platform __unused, unsigned int channels __unused,
+                                    audio_usecase_t usecase __unused,
+                                    struct audio_microphone_characteristic_t *mic_array __unused,
+                                    size_t *mic_count __unused) {
+    return -ENOSYS;
 }
