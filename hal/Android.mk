@@ -393,7 +393,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DYNAMIC_LOG)), true)
     LOCAL_SHARED_LIBRARIES += libaudio_log_utils
 endif
 
-ifeq ($(strip $($AUDIO_FEATURE_ENABLED_DYNAMIC_ECNS)),true)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DYNAMIC_ECNS)),true)
     LOCAL_CFLAGS += -DDYNAMIC_ECNS_ENABLED
 endif
 
