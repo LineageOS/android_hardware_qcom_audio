@@ -722,6 +722,7 @@ int audio_extn_parse_compress_VORBIS_metadata(struct stream_out *out,
                                        struct str_parms *parms)
 {
     int ret = 0;
+    char value[32];
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_VORBIS_BITSTREAM_FMT, value, sizeof(value));
     if (ret >= 0) {
         // transcoded bitstream mode
