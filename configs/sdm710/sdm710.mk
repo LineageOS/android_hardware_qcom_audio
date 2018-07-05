@@ -69,6 +69,7 @@ BOARD_SUPPORTS_QSTHW_API := true
 AUDIO_FEATURE_ENABLED_RAS := true
 AUDIO_FEATURE_ENABLED_SND_MONITOR := true
 AUDIO_FEATURE_ENABLED_DLKM := true
+AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
 ##AUDIO_FEATURE_FLAGS
 
 ifneq ($(strip $(TARGET_USES_QSSI)), true)
@@ -266,4 +267,4 @@ PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-service \
     android.hardware.audio@2.0-impl \
     android.hardware.audio.effect@2.0-impl \
-    android.hardware.soundtrigger@2.0-impl
+    android.hardware.soundtrigger@2.1-impl
