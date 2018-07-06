@@ -5770,6 +5770,14 @@ int adev_open_output_stream(struct audio_hw_device *dev,
            ALOGV("AUDIO_DEVICE_OUT_AUX_DIGITAL and DIRECT|OFFLOAD, check hdmi caps");
            ret = read_hdmi_sink_caps(out);
        } else if (is_usb_dev) {
+            /* Check against usb headset connection state */
+            if (!audio_extn_usb_connected(NULL)) {
+                ALOGD("%s: usb headset unplugged", __func__);
+                ret = -EINVAL;
+                pthread_mutex_unlock(&adev->lock);
+                goto error_open;
+            }
+
             ret = read_usb_sup_params_and_compare(true /*is_playback*/,
                                                   &config->format,
                                                   &out->supported_formats[0],
@@ -6904,6 +6912,16 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     }
 
     if (is_usb_dev && may_use_hifi_record) {
+        /* Check against usb headset connection state */
+        pthread_mutex_lock(&adev->lock);
+        if (!audio_extn_usb_connected(NULL)) {
+            ALOGD("%s: usb headset unplugged", __func__);
+            ret = -EINVAL;
+            pthread_mutex_unlock(&adev->lock);
+            goto err_open;
+        }
+        pthread_mutex_unlock(&adev->lock);
+
         /* HiFi record selects an appropriate format, channel, rate combo
            depending on sink capabilities*/
         ret = read_usb_sup_params_and_compare(false /*is_playback*/,
