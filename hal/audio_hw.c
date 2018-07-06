@@ -2498,7 +2498,7 @@ int start_input_stream(struct stream_in *in)
             in->pcm = pcm_open(adev->snd_card, in->pcm_device_id,
                                flags, &config);
             ATRACE_END();
-            if (errno == ENETRESET) {
+            if (errno == ENETRESET && !pcm_is_ready(in->pcm)) {
                 ALOGE("%s: pcm_open failed errno:%d\n", __func__, errno);
                 adev->card_status = CARD_STATUS_OFFLINE;
                 in->card_status = CARD_STATUS_OFFLINE;
@@ -3092,7 +3092,7 @@ int start_output_stream(struct stream_out *out)
             out->pcm = pcm_open(adev->snd_card, out->pcm_device_id,
                                flags, &out->config);
             ATRACE_END();
-            if (errno == ENETRESET) {
+            if (errno == ENETRESET && !pcm_is_ready(out->pcm)) {
                 ALOGE("%s: pcm_open failed errno:%d\n", __func__, errno);
                 out->card_status = CARD_STATUS_OFFLINE;
                 adev->card_status = CARD_STATUS_OFFLINE;
@@ -3146,7 +3146,7 @@ int start_output_stream(struct stream_out *out)
                                    out->pcm_device_id,
                                    COMPRESS_IN, &out->compr_config);
         ATRACE_END();
-        if (errno == ENETRESET) {
+        if (errno == ENETRESET && !is_compress_ready(out->compr)) {
                 ALOGE("%s: compress_open failed errno:%d\n", __func__, errno);
                 adev->card_status = CARD_STATUS_OFFLINE;
                 out->card_status = CARD_STATUS_OFFLINE;
@@ -4970,7 +4970,7 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
           __func__, adev->snd_card, out->pcm_device_id, out->config.channels);
     out->pcm = pcm_open(adev->snd_card, out->pcm_device_id,
                         (PCM_OUT | PCM_MMAP | PCM_NOIRQ | PCM_MONOTONIC), &out->config);
-    if (errno == ENETRESET) {
+    if (errno == ENETRESET && !pcm_is_ready(out->pcm)) {
         ALOGE("%s: pcm_open failed errno:%d\n", __func__, errno);
         out->card_status = CARD_STATUS_OFFLINE;
         adev->card_status = CARD_STATUS_OFFLINE;
@@ -5592,7 +5592,7 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
           __func__, adev->snd_card, in->pcm_device_id, in->config.channels);
     in->pcm = pcm_open(adev->snd_card, in->pcm_device_id,
                         (PCM_IN | PCM_MMAP | PCM_NOIRQ | PCM_MONOTONIC), &in->config);
-    if (errno == ENETRESET) {
+    if (errno == ENETRESET && !pcm_is_ready(in->pcm)) {
         ALOGE("%s: pcm_open failed errno:%d\n", __func__, errno);
         in->card_status = CARD_STATUS_OFFLINE;
         adev->card_status = CARD_STATUS_OFFLINE;
