@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.    -->
+<!-- Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.    -->
 <!--                                                                        -->
 <!-- Redistribution and use in source and binary forms, with or without     -->
 <!-- modification, are permitted provided that the following conditions are -->
@@ -1863,6 +1863,10 @@
         <path name="speaker-mono-2" />
     </path>
 
+    <path name="speaker-hdk">
+        <path name="speaker-mono" />
+    </path>
+
     <path name="speaker-fluid">
         <path name="speaker-mono" />
     </path>
@@ -1952,6 +1956,14 @@
         <ctl name="SpkrLeft BOOST Switch" value="1" />
         <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
         <ctl name="EAR SPKR PA Gain" value="G_6_DB" />
+    </path>
+
+    <path name="handset-hdk">
+        <ctl name="SLIM RX0 MUX" value="AIF1_PB" />
+        <ctl name="CDC_IF RX0 MUX" value="SLIM RX0" />
+        <ctl name="SLIM_0_RX Channels" value="One" />
+        <ctl name="RX INT0_1 MIX1 INP0" value="RX0" />
+        <ctl name="EAR PA Gain" value="G_6_DB" />
     </path>
 
     <path name="handset-mic">
@@ -2069,7 +2081,19 @@
         <path name="handset" />
     </path>
 
+    <path name="voice-handset-hdk">
+        <path name="handset-hdk" />
+    </path>
+
+    <path name="voice-handset-tmus-hdk">
+        <path name="handset-hdk" />
+    </path>
+
     <path name="voice-speaker">
+        <path name="speaker-mono" />
+    </path>
+
+    <path name="voice-speaker-hdk">
         <path name="speaker-mono" />
     </path>
 
@@ -2410,6 +2434,11 @@
     <path name="voice-tty-hco-handset">
         <ctl name="TTY Mode" value="HCO" />
         <path name="handset" />
+    </path>
+
+    <path name="voice-tty-hco-handset-hdk">
+        <ctl name="TTY Mode" value="HCO" />
+        <path name="handset-hdk" />
     </path>
 
     <path name="voice-tty-full-headset-mic">
