@@ -163,6 +163,7 @@
 /* Query external audio device connection status */
 #define AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE "ext_audio_device"
 
+#define AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP "spkr_device_chmap"
 #define EVENT_EXTERNAL_SPK_1 "qc_ext_spk_1"
 #define EVENT_EXTERNAL_SPK_2 "qc_ext_spk_2"
 #define EVENT_EXTERNAL_MIC   "qc_ext_mic"
@@ -307,6 +308,12 @@ struct platform_data {
     bool is_asrc_supported;
     struct listnode acdb_meta_key_list;
     bool use_generic_handset;
+    struct  spkr_device_chmap *spkr_ch_map;
+};
+
+struct  spkr_device_chmap {
+    int num_ch;
+    char chmap[AUDIO_CHANNEL_COUNT_MAX];
 };
 
 static bool is_external_codec = false;
@@ -2281,6 +2288,7 @@ void *platform_init(struct audio_device *adev)
     my_data->is_wsa_speaker = false;
     my_data->hw_dep_fd = -1;
     my_data->mono_speaker = SPKR_1;
+    my_data->spkr_ch_map = NULL;
 
     be_dai_name_table = NULL;
 
@@ -2787,6 +2795,11 @@ void platform_deinit(void *platform)
     if (my_data->adev->mixer) {
         audio_extn_utils_close_snd_mixer(my_data->adev->mixer);
         my_data->adev->mixer = NULL;
+    }
+
+    if (my_data->spkr_ch_map) {
+        free(my_data->spkr_ch_map);
+        my_data->spkr_ch_map = NULL;
     }
 
     int32_t idx;
@@ -5050,6 +5063,46 @@ done_key_audcal:
     if(dptr != NULL)
         free(dptr);
 }
+static void platform_spkr_device_set_params(struct platform_data *platform,
+                                            struct str_parms *parms,
+                                            char *value, int len)
+{
+    int err = 0, i = 0, num_ch = 0;
+    char *test_r = NULL;
+    char *opts = NULL;
+    char *ch_count = NULL;
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP,
+                            value, len);
+    if (err >= 0) {
+        platform->spkr_ch_map = calloc(1, sizeof(struct spkr_device_chmap));
+        if (!platform->spkr_ch_map) {
+            ALOGE("%s: failed to allocate mem for adm channel map\n", __func__);
+            str_parms_del(parms, AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP);
+            return ;
+        }
+
+        ch_count = strtok_r(value, ", ", &test_r);
+        if (ch_count == NULL) {
+            ALOGE("%s: incorrect ch_map\n", __func__);
+            free(platform->spkr_ch_map);
+            platform->spkr_ch_map = NULL;
+            str_parms_del(parms, AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP);
+            return;
+        }
+
+        num_ch = atoi(ch_count);
+        if ((num_ch > 0) && (num_ch <= AUDIO_CHANNEL_COUNT_MAX) ) {
+            platform->spkr_ch_map->num_ch = num_ch;
+            for (i = 0; i < num_ch; i++) {
+                opts = strtok_r(NULL, ", ", &test_r);
+                platform->spkr_ch_map->chmap[i] = strtoul(opts, NULL, 16);
+            }
+        }
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP);
+    }
+}
+
 int platform_set_parameters(void *platform, struct str_parms *parms)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -5174,6 +5227,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     audio_extn_hfp_set_parameters(my_data->adev, parms);
     true_32_bit_set_params(parms, value, len);
     audio_extn_ffv_set_parameters(my_data->adev, parms);
+    platform_spkr_device_set_params(platform, parms, value, len);
     ALOGV("%s: exit with code(%d)", __func__, ret);
     return ret;
 }
@@ -6346,6 +6400,7 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
     int i, num_devices = 1;
     struct audio_backend_cfg backend_cfg;
     bool ret = false;
+    struct platform_data *my_data = (struct platform_data *)adev->platform;
 
     backend_idx = platform_get_backend_index(snd_device);
 
@@ -6384,6 +6439,11 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
           ", backend_idx %d usecase = %d device (%s)", __func__, backend_cfg.bit_width,
           backend_cfg.sample_rate,  backend_cfg.channels, backend_idx, usecase->id,
           platform_get_snd_device_name(snd_device));
+
+    if ((my_data->spkr_ch_map != NULL) &&
+        (platform_get_backend_index(snd_device) == DEFAULT_CODEC_BACKEND))
+        platform_set_channel_map(my_data, my_data->spkr_ch_map->num_ch,
+                                 my_data->spkr_ch_map->chmap, -1);
 
     if (platform_split_snd_device(adev->platform, snd_device,
                                   &num_devices, new_snd_devices) < 0)
