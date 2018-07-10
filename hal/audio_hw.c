@@ -2275,7 +2275,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 
     /* If input stream is already running then effect needs to be
        applied on the new input device that's being enabled here.  */
-    if ((in_snd_device != SND_DEVICE_NONE) && (!adev->active_input->standby))
+    if ((in_snd_device != SND_DEVICE_NONE) && (adev->active_input != NULL) &&
+        (!adev->active_input->standby))
         check_and_enable_effect(adev);
 
     if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL) {
