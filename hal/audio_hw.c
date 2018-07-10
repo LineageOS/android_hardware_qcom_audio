@@ -3727,6 +3727,18 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 !audio_extn_a2dp_is_ready()) {
                 val = AUDIO_DEVICE_OUT_SPEAKER;
         }
+        /*
+        * When USB headset is disconnected the music platback paused
+        * and the policy manager send routing=0. But if the USB is connected
+        * back before the standby time, AFE is not closed and opened
+        * when USB is connected back. So routing to speker will guarantee
+        * AFE reconfiguration and AFE will be opend once USB is connected again
+        */
+        if ((out->devices & AUDIO_DEVICE_OUT_ALL_USB) &&
+                (val == AUDIO_DEVICE_NONE) &&
+                 !audio_extn_usb_connected(parms)) {
+                 val = AUDIO_DEVICE_OUT_SPEAKER;
+         }
         /* To avoid a2dp to sco overlapping / BT device improper state
          * check with BT lib about a2dp streaming support before routing
          */
@@ -5758,6 +5770,14 @@ int adev_open_output_stream(struct audio_hw_device *dev,
            ALOGV("AUDIO_DEVICE_OUT_AUX_DIGITAL and DIRECT|OFFLOAD, check hdmi caps");
            ret = read_hdmi_sink_caps(out);
        } else if (is_usb_dev) {
+            /* Check against usb headset connection state */
+            if (!audio_extn_usb_connected(NULL)) {
+                ALOGD("%s: usb headset unplugged", __func__);
+                ret = -EINVAL;
+                pthread_mutex_unlock(&adev->lock);
+                goto error_open;
+            }
+
             ret = read_usb_sup_params_and_compare(true /*is_playback*/,
                                                   &config->format,
                                                   &out->supported_formats[0],
@@ -6892,6 +6912,16 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     }
 
     if (is_usb_dev && may_use_hifi_record) {
+        /* Check against usb headset connection state */
+        pthread_mutex_lock(&adev->lock);
+        if (!audio_extn_usb_connected(NULL)) {
+            ALOGD("%s: usb headset unplugged", __func__);
+            ret = -EINVAL;
+            pthread_mutex_unlock(&adev->lock);
+            goto err_open;
+        }
+        pthread_mutex_unlock(&adev->lock);
+
         /* HiFi record selects an appropriate format, channel, rate combo
            depending on sink capabilities*/
         ret = read_usb_sup_params_and_compare(false /*is_playback*/,
