@@ -71,8 +71,10 @@ AUDIO_FEATURE_ENABLED_SND_MONITOR := true
 AUDIO_FEATURE_ENABLED_DLKM := true
 ##AUDIO_FEATURE_FLAGS
 
+ifneq ($(strip $(TARGET_USES_QSSI)), true)
 #Audio Specific device overlays
 DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
+endif
 
 # Audio configuration file
 ifeq ($(TARGET_USES_AOSP_FOR_AUDIO), true)

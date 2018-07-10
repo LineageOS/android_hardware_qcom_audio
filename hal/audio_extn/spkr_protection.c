@@ -916,14 +916,6 @@ exit:
         if (handle.pcm_tx)
             pcm_close(handle.pcm_tx);
         handle.pcm_tx = NULL;
-        /* Clear TX calibration to handset mic */
-        if (disable_tx) {
-            uc_info_tx->in_snd_device = SND_DEVICE_IN_HANDSET_MIC;
-            uc_info_tx->out_snd_device = SND_DEVICE_NONE;
-            platform_send_audio_calibration(adev->platform,
-              uc_info_tx,
-              platform_get_default_app_type(adev->platform), 8000);
-        }
         if (!status.status) {
             protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
             protCfg.r0[SP_V2_SPKR_1] = status.r0[SP_V2_SPKR_1];
@@ -1006,6 +998,7 @@ static void* spkr_calibration_thread()
     int ret;
     bool spv3_enable = false;
     unsigned int afe_api_version = 0;
+    struct mixer_ctl *ctl;
 
     memset(&protCfg, 0, sizeof(protCfg));
     /* If the value of this persist.vendor.audio.spkr.cal.duration is 0
@@ -1113,9 +1106,18 @@ static void* spkr_calibration_thread()
            }
            if (goahead) {
                if (spk_1_tzn >= 0) {
+                   const char *mixer_ctl_name = "SpkrLeft WSA T0 Init";
                    snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_1_tzn);
                    ALOGV("%s: wsa_path: %s\n", __func__, wsa_path);
                    thermal_fd = -1;
+
+                   ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+                   if (ctl) {
+                       ALOGD("%s: Got ctl for mixer cmd %s",
+                                             __func__, mixer_ctl_name);
+                       mixer_ctl_set_value(ctl, 0, 1);
+                   }
+
                    thermal_fd = open(wsa_path, O_RDONLY);
                    if (thermal_fd > 0) {
                        if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0)
@@ -1125,6 +1127,9 @@ static void* spkr_calibration_thread()
                        close(thermal_fd);
                    } else {
                        ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
+                   }
+                   if (ctl) {
+                       mixer_ctl_set_value(ctl, 0, 0);
                    }
                    if (t0_spk_1 < TZ_TEMP_MIN_THRESHOLD ||
                        t0_spk_1 > TZ_TEMP_MAX_THRESHOLD) {
@@ -1137,8 +1142,15 @@ static void* spkr_calibration_thread()
                    t0_spk_1 = (t0_spk_1 * (1 << 6));
                }
                if (spk_2_tzn >= 0) {
+                   const char *mixer_ctl_name = "SpkrRight WSA T0 Init";
                    snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_2_tzn);
                    ALOGV("%s: wsa_path: %s\n", __func__, wsa_path);
+                   ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+                   if (ctl) {
+                       ALOGD("%s: Got ctl for mixer cmd %s",
+                                             __func__, mixer_ctl_name);
+                       mixer_ctl_set_value(ctl, 0, 1);
+                   }
                    thermal_fd = open(wsa_path, O_RDONLY);
                    if (thermal_fd > 0) {
                        if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0)
@@ -1148,6 +1160,9 @@ static void* spkr_calibration_thread()
                        close(thermal_fd);
                    } else {
                        ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
+                   }
+                   if (ctl) {
+                       mixer_ctl_set_value(ctl, 0, 0);
                    }
                    if (t0_spk_2 < TZ_TEMP_MIN_THRESHOLD ||
                        t0_spk_2 > TZ_TEMP_MAX_THRESHOLD) {
@@ -1769,7 +1784,6 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
     struct audio_usecase *uc_info_tx;
     struct audio_device *adev = handle.adev_handle;
     int32_t pcm_dev_tx_id = -1, ret = 0;
-    bool disable_tx = false;
     snd_device_t in_snd_device;
 
     ALOGV("%s: Entry", __func__);
@@ -1806,7 +1820,6 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
         uc_info_tx->out_snd_device = SND_DEVICE_NONE;
         handle.pcm_tx = NULL;
         list_add_tail(&adev->usecase_list, &uc_info_tx->list);
-        disable_tx = true;
         enable_snd_device(adev, in_snd_device);
         enable_audio_route(adev, uc_info_tx);
 
@@ -1832,14 +1845,6 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
     }
 
 exit:
-   /* Clear VI feedback cal and replace with handset MIC  */
-    if (disable_tx) {
-        uc_info_tx->in_snd_device = SND_DEVICE_IN_HANDSET_MIC;
-        uc_info_tx->out_snd_device = SND_DEVICE_NONE;
-        platform_send_audio_calibration(adev->platform,
-          uc_info_tx,
-          platform_get_default_app_type(adev->platform), 8000);
-     }
      if (ret) {
         if (handle.pcm_tx)
             pcm_close(handle.pcm_tx);

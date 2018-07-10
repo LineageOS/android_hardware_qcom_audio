@@ -80,6 +80,7 @@ struct audio_extn_module {
 
 static struct audio_extn_module aextnmod;
 
+#define AUDIO_PARAMETER_KEY_AANC_NOISE_LEVEL "aanc_noise_level"
 #define AUDIO_PARAMETER_KEY_ANC        "anc_enabled"
 #define AUDIO_PARAMETER_KEY_WFD        "wfd_channel_cap"
 #define AUDIO_PARAMETER_CAN_OPEN_PROXY "can_open_proxy"
@@ -467,6 +468,26 @@ bool audio_extn_should_use_fb_anc(void)
   return false;
 }
 
+void audio_extn_set_aanc_noise_level(struct audio_device *adev,
+                                     struct str_parms *parms)
+{
+    int ret;
+    char value[32] = {0};
+    struct mixer_ctl *ctl = NULL;
+    const char *mixer_ctl_name = "AANC Noise Level";
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_AANC_NOISE_LEVEL, value,
+                            sizeof(value));
+    if (ret >= 0) {
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (ctl)
+            mixer_ctl_set_value(ctl, 0, atoi(value));
+        else
+            ALOGW("%s: Not able to get mixer ctl: %s",
+                  __func__, mixer_ctl_name);
+    }
+}
+
 void audio_extn_set_anc_parameters(struct audio_device *adev,
                                    struct str_parms *parms)
 {
@@ -816,6 +837,7 @@ void audio_extn_init(struct audio_device *adev)
 void audio_extn_set_parameters(struct audio_device *adev,
                                struct str_parms *parms)
 {
+   audio_extn_set_aanc_noise_level(adev, parms);
    audio_extn_set_anc_parameters(adev, parms);
    audio_extn_set_fluence_parameters(adev, parms);
    audio_extn_set_afe_proxy_parameters(adev, parms);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -1361,5 +1361,23 @@ int platform_set_acdb_metainfo_key(void *platform __unused, char *name __unused,
 int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
                               uint32_t *size)
 {
+    return -ENOSYS;
+}
+
+bool platform_set_microphone_characteristic(void *platform __unused,
+                                            struct audio_microphone_characteristic_t mic __unused) {
+    return -ENOSYS;
+}
+
+int platform_get_microphones(void *platform __unused,
+                             struct audio_microphone_characteristic_t *mic_array __unused,
+                             size_t *mic_count __unused) {
+    return -ENOSYS;
+}
+
+int platform_get_active_microphones(void *platform __unused, unsigned int channels __unused,
+                                    audio_usecase_t usecase __unused,
+                                    struct audio_microphone_characteristic_t *mic_array __unused,
+                                    size_t *mic_count __unused) {
     return -ENOSYS;
 }
