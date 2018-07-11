@@ -190,6 +190,18 @@ void audio_extn_spkr_prot_init(void *adev) {
 #endif
 }
 
+void audio_extn_spkr_prot_deinit(void *adev __unused) {
+    ALOGV("%s: Entry", __func__);
+
+#ifdef ENABLE_CIRRUS_DETECTION
+    pthread_join(handle.failure_detect_thread, NULL);
+#endif
+    pthread_join(handle.calibration_thread, NULL);
+    pthread_mutex_destroy(&handle.fb_prot_mutex);
+
+    ALOGV("%s: Exit", __func__);
+}
+
 #ifdef CIRRUS_FACTORY_CALIBRATION
 static int audio_extn_cirrus_run_calibration() {
     struct audio_device *adev = handle.adev_handle;
