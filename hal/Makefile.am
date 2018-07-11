@@ -204,6 +204,10 @@ if CUSTOM_STEREO
 AM_CFLAGS += -DCUSTOM_STEREO_ENABLED
 endif
 
+if INSTANCE_ID
+AM_CFLAGS += -DINSTANCE_ID_ENABLED
+endif
+
 h_sources = audio_extn/audio_defs.h \
             audio_extn/audio_extn.h \
             audio_hw.h \
