@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2015 The Android Open Source Project *
@@ -2403,8 +2403,14 @@ int main(int argc, char* argv[]) {
 
     /* Register the SIGINT to close the App properly */
     if (signal(SIGINT, stop_signal_handler) == SIG_ERR) {
-        fprintf(log_file, "Failed to register SIGINT:%d\n",errno);
-        fprintf(stderr, "Failed to register SIGINT:%d\n",errno);
+        fprintf(log_file, "Failed to register SIGINT:%d\n", errno);
+        fprintf(stderr, "Failed to register SIGINT:%d\n", errno);
+    }
+
+    /* Register the SIGTERM to close the App properly */
+    if (signal(SIGTERM, stop_signal_handler) == SIG_ERR) {
+        fprintf(log_file, "Failed to register SIGTERM:%d\n", errno);
+        fprintf(stderr, "Failed to register SIGTERM:%d\n", errno);
     }
 
     /* Check for Dual main content */
