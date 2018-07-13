@@ -1503,13 +1503,14 @@ int audio_extn_a2dp_stop_playback()
 int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
 {
      int ret = 0, val;
+     int status = 0;
      char value[32] = {0};
      struct audio_usecase *uc_info;
      struct listnode *node;
 
      if (a2dp.is_a2dp_offload_enabled == false) {
         ALOGV("%s: No supported encoders identified,ignoring A2DP setparam", __func__);
-        ret = -EINVAL;
+        status = -EINVAL;
         goto param_handled;
      }
 
@@ -1587,15 +1588,15 @@ int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
                 if (a2dp.a2dp_total_active_session_request > 0) {
                     ALOGD("%s: Calling Bluetooth IPC lib start post suspend state", __func__);
                     if (a2dp.audio_stream_start) {
-                        ret =  a2dp.audio_stream_start();
-                        if (ret != 0) {
+                        status =  a2dp.audio_stream_start();
+                        if (status != 0) {
                             ALOGE("%s: Bluetooth controller start failed", __func__);
                             a2dp.a2dp_started = false;
                         } else {
                             if (!configure_a2dp_encoder_format()) {
                                 ALOGE("%s: Encoder params configuration failed post suspend", __func__);
                                 a2dp.a2dp_started = false;
-                                ret = -ETIMEDOUT;
+                                status = -ETIMEDOUT;
                             }
                         }
                     }
@@ -1631,7 +1632,7 @@ int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
 
 param_handled:
      ALOGV("%s: end of A2DP setparam", __func__);
-     return ret;
+     return status;
 }
 
 void audio_extn_a2dp_set_handoff_mode(bool is_on)
