@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, 2017-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -63,6 +63,10 @@ typedef struct acdb_audio_cal_cfg {
         uint32_t sampling_rate;
         uint32_t cal_type;
         uint32_t module_id;
+#ifdef INSTANCE_ID_ENABLED
+        uint16_t instance_id;
+        uint16_t reserved;
+#endif
         uint32_t param_id;
 } acdb_audio_cal_cfg_t;
 
