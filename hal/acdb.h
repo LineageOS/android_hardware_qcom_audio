@@ -20,6 +20,7 @@
 #ifndef ACDB_H
 #define ACDB_H
 
+#include <stdbool.h>
 #include <linux/msm_audio_calibration.h>
 
 #define MAX_CVD_VERSION_STRING_SIZE 100
@@ -34,11 +35,19 @@
 #endif
 
 struct mixer;
+enum {
+        ACDB_LOADER_INIT_V1 = 1,
+        ACDB_LOADER_INIT_V2,
+        ACDB_LOADER_INIT_V3,
+        ACDB_LOADER_INIT_V4,
+};
+
 /* Audio calibration related functions */
 typedef void (*acdb_deallocate_t)();
 typedef int  (*acdb_init_t)();
 typedef int  (*acdb_init_v2_t)(const char *, char *, int);
 typedef int  (*acdb_init_v3_t)(const char *, char *, struct listnode *);
+typedef int  (*acdb_init_v4_t)(void *, int);
 typedef void (*acdb_send_audio_cal_t)(int, int, int , int);
 typedef void (*acdb_send_audio_cal_v3_t)(int, int, int, int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
@@ -59,13 +68,22 @@ struct meta_key_list {
     char name[ACDB_METAINFO_KEY_MODULE_NAME_LEN];
 };
 
+struct acdb_init_data_v4 {
+        char                   *cvd_version;
+        char                   *snd_card_name;
+        struct listnode        *meta_key_list;
+        bool                   *is_instance_id_supported;
+};
+
 struct acdb_platform_data {
     /* Audio calibration related functions */
     void                       *acdb_handle;
     acdb_init_t                acdb_init;
     acdb_init_v2_t             acdb_init_v2;
     acdb_init_v3_t             acdb_init_v3;
+    acdb_init_v4_t             acdb_init_v4;
     struct listnode acdb_meta_key_list;
+    struct acdb_init_data_v4   acdb_init_data;
 };
 
 int acdb_init(int);

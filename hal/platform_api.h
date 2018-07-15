@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -72,6 +72,23 @@ struct be_dai_name_struct {
     unsigned int be_id;
     char be_name[BE_DAI_NAME_MAX_LENGTH];
 };
+
+typedef struct acdb_audio_cal_cfg {
+    uint32_t             persist;
+    uint32_t             snd_dev_id;
+    audio_devices_t      dev_id;
+    int32_t              acdb_dev_id;
+    uint32_t             app_type;
+    uint32_t             topo_id;
+    uint32_t             sampling_rate;
+    uint32_t             cal_type;
+    uint32_t             module_id;
+#ifdef INSTANCE_ID_ENABLED
+    uint16_t             instance_id;
+    uint16_t             reserved;
+#endif
+    uint32_t             param_id;
+} acdb_audio_cal_cfg_t;
 
 enum card_status_t;
 
@@ -240,20 +257,27 @@ int platform_get_ext_disp_type(void *platform);
 void platform_invalidate_hdmi_config(void *platform);
 void platform_invalidate_backend_config(void * platform,snd_device_t snd_device);
 
-int platform_send_audio_cal(void* platform, int acdb_dev_id, int acdb_device_type,
-    int app_type, int topology_id, int sample_rate, uint32_t module_id, uint32_t param_id,
+#ifdef INSTANCE_ID_ENABLED
+void platform_make_cal_cfg(acdb_audio_cal_cfg_t* cal, int acdb_dev_id,
+        int acdb_device_type, int app_type, int topology_id,
+        int sample_rate, uint32_t module_id, uint16_t instance_id,
+        uint32_t param_id, bool persist);
+#else
+void platform_make_cal_cfg(acdb_audio_cal_cfg_t* cal, int acdb_dev_id,
+        int acdb_device_type, int app_type, int topology_id,
+        int sample_rate, uint32_t module_id, uint32_t param_id, bool persist);
+#endif
+
+int platform_send_audio_cal(void* platform, acdb_audio_cal_cfg_t* cal,
     void* data, int length, bool persist);
 
-int platform_get_audio_cal(void* platform, int acdb_dev_id, int acdb_device_type,
-    int app_type, int topology_id, int sample_rate, uint32_t module_id, uint32_t param_id,
+int platform_get_audio_cal(void* platform, acdb_audio_cal_cfg_t* cal,
     void* data, int* length, bool persist);
 
-int platform_store_audio_cal(void* platform, int acdb_dev_id, int acdb_device_type,
-    int app_type, int topology_id, int sample_rate, uint32_t module_id, uint32_t param_id,
+int platform_store_audio_cal(void* platform, acdb_audio_cal_cfg_t* cal,
     void* data, int length);
 
-int platform_retrieve_audio_cal(void* platform, int acdb_dev_id, int acdb_device_type,
-    int app_type, int topology_id, int sample_rate, uint32_t module_id, uint32_t param_id,
+int platform_retrieve_audio_cal(void* platform, acdb_audio_cal_cfg_t* cal,
     void* data, int* length);
 
 unsigned char* platform_get_license(void* platform, int* size);

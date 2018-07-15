@@ -28,6 +28,34 @@
 #include "acdb.h"
 #include "platform_api.h"
 
+#ifdef INSTANCE_ID_ENABLED
+int check_and_set_instance_id_support(struct mixer* mixer, bool acdb_support)
+{
+    const char *mixer_ctl_name = "Instance ID Support";
+    struct mixer_ctl* ctl;
+
+    ALOGV("%s", __func__);
+
+    /* Check for ACDB and property instance ID support and issue mixer control */
+    ctl = mixer_get_ctl_by_name(mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                               __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    ALOGD("%s: Final Instance ID support:%d\n", __func__, acdb_support);
+    if (mixer_ctl_set_value(ctl, 0, acdb_support) < 0) {
+        ALOGE("%s: Could not set Instance ID support %d", __func__,
+              acdb_support);
+        return -EINVAL;
+    }
+    return 0;
+}
+#else
+#define check_and_set_instance_id_support(x, y) -ENOSYS
+#endif
+
 int acdb_init(int snd_card_num)
 {
 
@@ -83,6 +111,11 @@ int acdb_init_v2(struct mixer *mixer)
 
     ALOGV("%s: DLOPEN successful for %s", __func__, LIB_ACDB_LOADER);
 
+    my_data->acdb_init_v4 = (acdb_init_v4_t)dlsym(my_data->acdb_handle,
+                                                     "acdb_loader_init_v4");
+    if (my_data->acdb_init_v4 == NULL)
+        ALOGE("%s: dlsym error %s for acdb_loader_init_v4", __func__, dlerror());
+
     my_data->acdb_init_v3 = (acdb_init_v3_t)dlsym(my_data->acdb_handle,
                                                      "acdb_loader_init_v3");
     if (my_data->acdb_init_v3 == NULL)
@@ -96,7 +129,7 @@ int acdb_init_v2(struct mixer *mixer)
     my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
                                                  "acdb_loader_init_ACDB");
     if (my_data->acdb_init == NULL && my_data->acdb_init_v2 == NULL
-                                                 && my_data->acdb_init_v3 == NULL) {
+        && my_data->acdb_init_v3 == NULL && my_data->acdb_init_v4 == NULL) {
         ALOGE("%s: dlsym error %s for acdb_loader_init_ACDB", __func__, dlerror());
         goto cleanup;
     }
@@ -140,8 +173,16 @@ int acdb_init_v2(struct mixer *mixer)
     int key = 0;
     struct listnode *node = NULL;
     struct meta_key_list *key_info = NULL;
+    static bool acdb_instance_id_support = false;
 
-    if (my_data->acdb_init_v3) {
+    my_data->acdb_init_data.cvd_version = cvd_version;
+    my_data->acdb_init_data.snd_card_name = strdup(snd_card_name);
+    my_data->acdb_init_data.meta_key_list = &my_data->acdb_meta_key_list;
+    my_data->acdb_init_data.is_instance_id_supported = &acdb_instance_id_support;
+
+    if (my_data->acdb_init_v4) {
+        result = my_data->acdb_init_v4(&my_data->acdb_init_data, ACDB_LOADER_INIT_V4);
+    } else if (my_data->acdb_init_v3) {
         result = my_data->acdb_init_v3(snd_card_name, cvd_version,
                                        &my_data->acdb_meta_key_list);
     } else if (my_data->acdb_init_v2) {
@@ -152,6 +193,9 @@ int acdb_init_v2(struct mixer *mixer)
     } else {
         result = my_data->acdb_init();
     }
+    ALOGD("%s: ACDB Instance ID support after ACDB init:%d\n",
+          __func__, acdb_instance_id_support);
+    check_and_set_instance_id_support(mixer, acdb_instance_id_support);
 
 cleanup:
     if (NULL != my_data) {
