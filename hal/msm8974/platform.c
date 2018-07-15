@@ -704,7 +704,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = 129,
     [SND_DEVICE_IN_VOICE_REC_QMIC_FLUENCE] = 125,
     [SND_DEVICE_IN_THREE_MIC] = 46, /* for APSS Surround Sound Recording */
-    [SND_DEVICE_IN_HANDSET_TMIC_FLUENCE_PRO] = 125,
+    [SND_DEVICE_IN_HANDSET_TMIC_FLUENCE_PRO] = 138,
     [SND_DEVICE_IN_HANDSET_TMIC] = 153,
     [SND_DEVICE_IN_HANDSET_TMIC_AEC] = 154,
     [SND_DEVICE_IN_HANDSET_TMIC_NS] = 155,
@@ -5535,7 +5535,6 @@ bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id)
     case USECASE_VOICEMMODE1_CALL:
     case USECASE_VOICEMMODE2_CALL:
     case USECASE_COMPRESS_VOIP_CALL:
-    case USECASE_AUDIO_RECORD_FM_VIRTUAL:
     case USECASE_INCALL_REC_UPLINK:
     case USECASE_INCALL_REC_DOWNLINK:
     case USECASE_INCALL_REC_UPLINK_AND_DOWNLINK:
@@ -5544,8 +5543,6 @@ bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id)
     case USECASE_INCALL_REC_UPLINK_AND_DOWNLINK_COMPRESS:
     case USECASE_INCALL_MUSIC_UPLINK:
     case USECASE_INCALL_MUSIC_UPLINK2:
-    case USECASE_AUDIO_SPKR_CALIB_RX:
-    case USECASE_AUDIO_SPKR_CALIB_TX:
     case USECASE_AUDIO_RECORD_VOIP:
         needs_event = true;
         break;
