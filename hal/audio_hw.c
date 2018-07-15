@@ -2528,10 +2528,13 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         // otherwise audio is no longer played on the new usb devices.
         // By forcing the stream in standby, the usb stack refcount drops to 0
         // and the driver is closed.
-        if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD && val == AUDIO_DEVICE_NONE &&
+        if (val == AUDIO_DEVICE_NONE &&
                 audio_is_usb_out_device(out->devices)) {
-            ALOGD("%s() putting the usb device in standby after disconnection", __func__);
-            out_standby_l(&out->stream.common);
+            if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+                ALOGD("%s() putting the usb device in standby after disconnection", __func__);
+                out_standby_l(&out->stream.common);
+            }
+            val = AUDIO_DEVICE_OUT_SPEAKER;
         }
 
         pthread_mutex_lock(&adev->lock);
