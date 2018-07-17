@@ -262,6 +262,8 @@ int32_t release_loopback_session(loopback_patch_t *active_loopback_patch)
     struct stream_inout *inout =  &active_loopback_patch->patch_stream;
     struct audio_port_config *source_patch_config = &active_loopback_patch->
                                                     loopback_source;
+    int32_t pcm_dev_asm_rx_id = platform_get_pcm_device_id(USECASE_AUDIO_TRANSCODE_LOOPBACK,
+                                                           PCM_PLAYBACK);
 
     /* 1. Close the PCM devices */
     if (active_loopback_patch->source_stream) {
@@ -285,6 +287,9 @@ int32_t release_loopback_session(loopback_patch_t *active_loopback_patch)
             __func__, active_loopback_patch->patch_handle_id);
         return -EINVAL;
     }
+
+    if (adev->offload_effects_stop_output != NULL)
+            adev->offload_effects_stop_output(active_loopback_patch->patch_handle_id, pcm_dev_asm_rx_id);
 
     active_loopback_patch->patch_state = PATCH_INACTIVE;
 
@@ -542,6 +547,11 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
     /* Move patch state to running, now that session is set up */
     active_loopback_patch->patch_state = PATCH_RUNNING;
     ALOGD("%s: Create loopback session end: status(%d)", __func__, ret);
+
+    if (adev->offload_effects_start_output != NULL)
+        adev->offload_effects_start_output(active_loopback_patch->patch_handle_id,
+                                           pcm_dev_asm_rx_id, adev->mixer);
+
     return ret;
 
 exit:
