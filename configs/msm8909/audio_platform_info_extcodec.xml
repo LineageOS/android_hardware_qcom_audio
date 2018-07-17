@@ -50,6 +50,9 @@
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD2" type="out" id="24"/>
         <usecase name="USECASE_AUDIO_EC_REF_LOOPBACK" type="in" id="14"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_SILENCE" type="out" id="14"/>
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS2" type="in" id="43"/>
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS3" type="in" id="44"/>
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS4" type="in" id="45"/>
     </pcm_ids>
     <acdb_metainfo_key>
         <param name="aptx" value="456"/>

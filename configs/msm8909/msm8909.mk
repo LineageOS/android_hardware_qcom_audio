@@ -43,6 +43,7 @@ AUDIO_FEATURE_ENABLED_SND_MONITOR := true
 BOARD_SUPPORTS_QAHW := true
 BOARD_SUPPORTS_QSTHW_API := true
 AUDIO_FEATURE_DISABLED_SOUND_TRIGGER_LEGACY_HAL := true
+AUDIO_FEATURE_ENABLED_COMPRESS_INPUT := true
 
 ##AUDIO_FEATURE_FLAGS
 
@@ -75,7 +76,8 @@ PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msm8909/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
     hardware/qcom/audio/configs/msm8909/sound_trigger_mixer_paths_wcd9335.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9335.xml \
     hardware/qcom/audio/configs/msm8909/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
-    hardware/qcom/audio/configs/msm8909/audio_platform_info_extcodec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_extcodec.xml
+    hardware/qcom/audio/configs/msm8909/audio_platform_info_extcodec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_extcodec.xml \
+    hardware/qcom/audio/configs/msm8909/audio_io_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_io_policy.conf
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
