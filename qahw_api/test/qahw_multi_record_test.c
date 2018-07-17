@@ -432,7 +432,7 @@ void *start_input(void *thread_param)
       bytes_read = qahw_in_read(in_handle, &in_buf);
 
       if (params->timestamp_mode)
-          fprintf(fd_in_ts, "timestamp:%lu\n", timestamp);
+          fprintf(fd_in_ts, "timestamp:%lld\n", timestamp);
       if (kpi_mode) {
           if (count == 0) {
               ret = clock_gettime(CLOCK_REALTIME, &tsColdF);
