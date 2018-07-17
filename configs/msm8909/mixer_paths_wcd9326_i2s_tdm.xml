@@ -1019,7 +1019,7 @@
     </path>
 
     <path name="audio-record-compress">
-        <ctl name="MultiMedia8 Mixer SLIM_0_TX" value="1" />
+        <ctl name="MultiMedia8 Mixer PRI_TDM_TX_0" value="1" />
     </path>
 
     <path name="audio-record-compress bt-sco">
@@ -1036,8 +1036,62 @@
         <ctl name="MultiMedia8 Mixer AFE_PCM_TX" value="1" />
     </path>
 
+    <path name="audio-record-compress2">
+        <ctl name="MultiMedia17 Mixer PRI_TDM_TX_0" value="1" />
+    </path>
+
+    <path name="audio-record-compress2 bt-sco">
+        <ctl name="MultiMedia17 Mixer INTERNAL_BT_SCO_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress2 bt-sco-wb">
+        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <ctl name="SLIM_1 SampleRate" value="16000" />
+        <path name="audio-record-compress2 bt-sco" />
+    </path>
+
+    <path name="audio-record-compress2 usb-headset-mic">
+        <ctl name="MultiMedia8 Mixer AFE_PCM_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress3">
+        <ctl name="MultiMedia18 Mixer PRI_TDM_TX_0" value="1" />
+    </path>
+
+    <path name="audio-record-compress3 bt-sco">
+        <ctl name="MultiMedia18 Mixer INTERNAL_BT_SCO_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress3 bt-sco-wb">
+        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <ctl name="SLIM_1 SampleRate" value="16000" />
+        <path name="audio-record-compress3 bt-sco" />
+    </path>
+
+    <path name="audio-record-compress3 usb-headset-mic">
+        <ctl name="MultiMedia8 Mixer AFE_PCM_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress4">
+        <ctl name="MultiMedia19 Mixer PRI_TDM_TX_0" value="1" />
+    </path>
+
+    <path name="audio-record-compress4 bt-sco">
+        <ctl name="MultiMedia19 Mixer INTERNAL_BT_SCO_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress4 bt-sco-wb">
+        <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
+        <ctl name="SLIM_1 SampleRate" value="16000" />
+        <path name="audio-record-compress4 bt-sco" />
+    </path>
+
+    <path name="audio-record-compress4 usb-headset-mic">
+        <ctl name="MultiMedia8 Mixer AFE_PCM_TX" value="1" />
+    </path>
+
     <path name="low-latency-record">
-        <ctl name="MultiMedia5 Mixer SLIM_0_TX" value="1" />
+        <ctl name="MultiMedia5 Mixer PRI_TDM_TX_0" value="1" />
     </path>
 
     <path name="low-latency-record bt-sco">
