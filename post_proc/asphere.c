@@ -33,9 +33,10 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <sys/stat.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/list.h>
 #include <cutils/str_parms.h>
 #include <cutils/properties.h>
