@@ -17,15 +17,19 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES:= \
-	offload_visualizer.c
+    offload_visualizer.c
 
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 
 LOCAL_SHARED_LIBRARIES := \
-	libcutils \
-	liblog \
-	libdl \
-	libtinyalsa
+    libcutils \
+    liblog \
+    libdl \
+    libtinyalsa
+
+LOCAL_HEADER_LIBRARIES := \
+    libhardware_headers \
+    libsystem_headers \
 
 LOCAL_CFLAGS += \
     -Wall \
@@ -37,7 +41,7 @@ LOCAL_MODULE:= libqcomvisualizer
 LOCAL_VENDOR_MODULE := true
 
 LOCAL_C_INCLUDES := \
-	external/tinyalsa/include \
-	$(call include-path-for, audio-effects)
+    external/tinyalsa/include \
+    $(call include-path-for, audio-effects)
 
 include $(BUILD_SHARED_LIBRARY)
