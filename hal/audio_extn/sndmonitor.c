@@ -51,7 +51,7 @@
 #include <sys/poll.h>
 #include <cutils/list.h>
 #include <cutils/hashmap.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/str_parms.h>
 #include <ctype.h>
 

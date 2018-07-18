@@ -47,6 +47,8 @@
 #include <audio_route/audio_route.h>
 #include "audio_defs.h"
 #include "voice.h"
+#include <sys/ioctl.h>
+#include <unistd.h>
 
 #define VISUALIZER_LIBRARY_PATH "/system/lib/soundfx/libqcomvisualizer.so"
 #define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/system/lib/soundfx/libqcompostprocbundle.so"
