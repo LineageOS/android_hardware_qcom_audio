@@ -33,6 +33,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <sys/stat.h>
 #include <log/log.h>

@@ -54,8 +54,10 @@
 #define ALOGVV(a...) do { } while(0)
 #endif
 
+#include <stdio.h>
 #include <stdbool.h>
 #include <log/log.h>
+#include <sys/ioctl.h>
 #include <tinyalsa/asoundlib.h>
 #include <sound/audio_effects.h>
 #include <sound/devdep_params.h>

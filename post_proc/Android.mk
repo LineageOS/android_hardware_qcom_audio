@@ -14,13 +14,13 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
 endif
 
 LOCAL_SRC_FILES:= \
-	bundle.c \
-	equalizer.c \
-	bass_boost.c \
-	virtualizer.c \
-	reverb.c \
-	effect_api.c \
-	effect_util.c
+    bundle.c \
+    equalizer.c \
+    bass_boost.c \
+    virtualizer.c \
+    reverb.c \
+    effect_api.c \
+    effect_util.c
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS)),true)
     LOCAL_CFLAGS += -DHW_ACCELERATED_EFFECTS
@@ -39,10 +39,11 @@ ifneq ($(strip $(AUDIO_FEATURE_DISABLED_DTS_EAGLE)),true)
 endif
 
 LOCAL_SHARED_LIBRARIES := \
-	libcutils \
-	liblog \
-	libtinyalsa \
-	libdl
+    libcutils \
+    libutils \
+    liblog \
+    libtinyalsa \
+    libdl
 
 LOCAL_MODULE_TAGS := optional
 
@@ -53,9 +54,12 @@ LOCAL_VENDOR_MODULE := true
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_C_INCLUDES := \
-	external/tinyalsa/include \
-        $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
-	$(call include-path-for, audio-effects)
+    external/tinyalsa/include \
+    $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
+    $(call include-path-for, audio-effects)
+
+LOCAL_HEADER_LIBRARIES := \
+    libaudioeffects \
 
 ifneq ($(call is-board-platform-in-list, msm8916),true)
  include $(BUILD_SHARED_LIBRARY)
@@ -71,7 +75,8 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_SHARED_LIBRARIES := \
     liblog \
-    libeffects
+    libeffects \
+    libutils
 
 LOCAL_MODULE_TAGS := optional
 
