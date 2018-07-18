@@ -25,7 +25,9 @@
 #include <dlfcn.h>
 
 #include <cutils/list.h>
-#include <cutils/log.h>
+#include <log/log.h>
+#include <pthread.h>
+#include <unistd.h>
 #include <system/thread_defs.h>
 #include <tinyalsa/asoundlib.h>
 #include <audio_effects/effect_visualizer.h>
