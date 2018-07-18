@@ -18,6 +18,8 @@
 #include <stdlib.h>
 #include "effect_util.h"
 #include <string.h>
+#include <linux/limits.h>
+#include <unistd.h>
 
 #ifdef LOG_TAG
 #undef LOG_TAG

@@ -40,6 +40,7 @@ endif
 
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
+	libutils \
 	liblog \
 	libtinyalsa \
 	libdl
@@ -57,6 +58,9 @@ LOCAL_C_INCLUDES := \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
 	$(call include-path-for, audio-effects)
 
+LOCAL_HEADER_LIBRARIES := \
+	libaudioeffects \
+
 ifneq ($(call is-board-platform-in-list, msm8916),true)
  include $(BUILD_SHARED_LIBRARY)
 endif
@@ -71,7 +75,8 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_SHARED_LIBRARIES := \
     liblog \
-    libeffects
+    libeffects \
+    libutils \
 
 LOCAL_MODULE_TAGS := optional
 
