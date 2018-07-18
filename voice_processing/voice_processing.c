@@ -18,6 +18,7 @@
 /*#define LOG_NDEBUG 0*/
 #include <dlfcn.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <log/log.h>
 #include <cutils/list.h>
 #include <hardware/audio_effect.h>

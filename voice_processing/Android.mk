@@ -25,6 +25,9 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_SHARED_LIBRARIES += libdl
 
+LOCAL_HEADER_LIBRARIES := \
+    libhardware_headers
+
 LOCAL_CFLAGS += -fvisibility=hidden
 
 include $(BUILD_SHARED_LIBRARY)
