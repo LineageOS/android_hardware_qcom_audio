@@ -27,6 +27,10 @@ LOCAL_SHARED_LIBRARIES := \
 	libdl \
 	libtinyalsa
 
+LOCAL_HEADER_LIBRARIES := \
+	libhardware_headers \
+	libsystem_headers \
+
 LOCAL_CFLAGS += \
     -Wall \
     -Werror \
