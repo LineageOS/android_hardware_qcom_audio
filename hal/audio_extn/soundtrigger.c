@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <log/log.h>
+#include <pthread.h>
 #include "audio_hw.h"
 #include "audio_extn.h"
 #include "platform.h"

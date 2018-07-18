@@ -46,6 +46,7 @@
 #include <cutils/properties.h>
 #include "audio_extn.h"
 #include <linux/msm_audio_calibration.h>
+#include <pthread.h>
 
 #ifdef SPKR_PROT_ENABLED
 
