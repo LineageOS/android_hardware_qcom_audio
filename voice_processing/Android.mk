@@ -21,9 +21,10 @@ LOCAL_C_INCLUDES += \
     $(call include-path-for, audio-effects)
 
 LOCAL_SHARED_LIBRARIES := \
-    libcutils liblog
+    libcutils liblog libdl
 
-LOCAL_SHARED_LIBRARIES += libdl
+LOCAL_HEADER_LIBRARIES := \
+    libhardware_headers
 
 LOCAL_CFLAGS += -fvisibility=hidden
 
