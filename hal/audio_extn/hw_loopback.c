@@ -77,9 +77,9 @@ typedef enum patch_state {
 typedef struct loopback_patch {
     audio_patch_handle_t patch_handle_id;            /* patch unique ID */
     struct audio_port_config loopback_source;        /* Source port config */
-    struct audio_port_config loopback_sink;          /* Source port config */
+    struct audio_port_config loopback_sink;          /* Sink port config */
     struct compress *source_stream;                  /* Source stream */
-    struct compress *sink_stream;                    /* Source stream */
+    struct compress *sink_stream;                    /* Sink stream */
     struct stream_inout patch_stream;                /* InOut type stream */
     patch_state_t patch_state;                       /* Patch operation state */
 } loopback_patch_t;
@@ -195,7 +195,9 @@ audio_patch_handle_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
             case AUDIO_PORT_TYPE_DEVICE :
                 if ((loopback_patch->loopback_source.config_mask & AUDIO_PORT_CONFIG_FORMAT)) {
                     if ((loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_HDMI) ||
-                        (loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_SPDIF)) {
+                        (loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_SPDIF) ||
+                        (loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_BLUETOOTH_A2DP)) {
+
                        switch (loopback_patch->loopback_source.format) {
                            case AUDIO_FORMAT_PCM:
                            case AUDIO_FORMAT_PCM_16_BIT:
@@ -204,6 +206,10 @@ audio_patch_handle_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
                            case AUDIO_FORMAT_IEC61937:
                            case AUDIO_FORMAT_AC3:
                            case AUDIO_FORMAT_E_AC3:
+                           case AUDIO_FORMAT_AAC_LATM_LC:
+                           case AUDIO_FORMAT_AAC_LATM_HE_V1:
+                           case AUDIO_FORMAT_AAC_LATM_HE_V2:
+                           case AUDIO_FORMAT_SBC:
                               is_source_supported = true;
                            break;
                        }
@@ -213,8 +219,8 @@ audio_patch_handle_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
                 }
             break;
             default :
-            break;
-            //Unsupported as of now, need to extend for other source types
+                //Unsupported as of now, need to extend for other source types
+                break;
         }
     }
 
@@ -240,14 +246,13 @@ audio_patch_handle_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
             }
             break;
         default :
-            break;
             //Unsupported as of now, need to extend for other sink types
+            break;
         }
     }
     if (is_source_supported && is_sink_supported) {
         return source_device | sink_device;
     }
-
     ALOGE("%s, Unsupported source or sink port config", __func__);
     return loopback_patch->patch_handle_id;
 }
