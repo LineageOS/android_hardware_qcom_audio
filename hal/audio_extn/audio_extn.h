@@ -222,6 +222,7 @@ int32_t audio_extn_get_afe_proxy_channel_count();
 #define audio_extn_usb_get_sup_sample_rates(t, s, l)                   (0)
 #define audio_extn_usb_is_tunnel_supported()                           (0)
 #define audio_extn_usb_alive(adev)                                     (false)
+#define audio_extn_usb_connected(parms)                                (0)
 #undef USB_BURST_MODE_ENABLED
 #else
 void audio_extn_usb_init(void *adev);
@@ -241,6 +242,7 @@ int audio_extn_usb_get_max_bit_width(bool playback);
 int audio_extn_usb_get_sup_sample_rates(int type, uint32_t *sr, uint32_t l);
 bool audio_extn_usb_is_tunnel_supported();
 bool audio_extn_usb_alive(int card);
+bool audio_extn_usb_connected(struct str_parms *parms);
 #endif
 
 #ifndef USB_BURST_MODE_ENABLED
