@@ -1430,6 +1430,26 @@ void audio_extn_usb_set_reconfig(bool is_required)
     usbmod->usb_reconfig = is_required;
 }
 
+bool audio_extn_usb_connected(struct str_parms *parms) {
+    int card = -1;
+    struct listnode *node_i = NULL;
+    struct usb_card_config *usb_card_info = NULL;
+    bool usb_connected = false;
+
+    if ((parms != NULL) && str_parms_get_int(parms, "card", &card) >= 0) {
+        usb_connected = audio_extn_usb_alive(card);
+    } else {
+        list_for_each(node_i, &usbmod->usb_card_conf_list) {
+            usb_card_info = node_to_item(node_i, struct usb_card_config, list);
+            if (audio_extn_usb_alive(usb_card_info->usb_card)) {
+                usb_connected = true;
+                break;
+            }
+        }
+    }
+    return usb_connected;
+}
+
 void audio_extn_usb_init(void *adev)
 {
     if (usbmod == NULL) {

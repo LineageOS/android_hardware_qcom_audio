@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -223,6 +223,7 @@ enum {
     SND_DEVICE_IN_SPEAKER_QMIC_NS,
     SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS,
     SND_DEVICE_IN_THREE_MIC,
+    SND_DEVICE_IN_HANDSET_TMIC_FLUENCE_PRO,
     SND_DEVICE_IN_HANDSET_TMIC,
     SND_DEVICE_IN_SPEAKER_TMIC_AEC,
     SND_DEVICE_IN_SPEAKER_TMIC_NS,
@@ -397,6 +398,8 @@ enum {
 #define TX_VOICE_DM_FV5_BROADSIDE 0x10F18
 #define TX_VOICE_FV5ECNS_SM 0x10F09
 #define TX_VOICE_FV5ECNS_DM 0x10F0A
+
+#define AUDIO_MAKE_STRING_FROM_ENUM(X)   { #X, X }
 
 #define LIB_CSD_CLIENT "libcsd-client.so"
 /* CSD-CLIENT related functions */

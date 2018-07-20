@@ -226,6 +226,31 @@ static const snd_device_t tavil_qrd_msmnile_variant_devices[] = {
     SND_DEVICE_OUT_VOICE_HANDSET,
     SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET,
     SND_DEVICE_IN_SPEAKER_MIC,
+    SND_DEVICE_IN_VOICE_SPEAKER_MIC,
+    SND_DEVICE_IN_VOICE_DMIC,
+    SND_DEVICE_IN_HANDSET_DMIC,
+    SND_DEVICE_IN_HANDSET_STEREO_DMIC,
+    SND_DEVICE_IN_SPEAKER_STEREO_DMIC,
+    SND_DEVICE_IN_VOICE_SPEAKER_DMIC,
+    SND_DEVICE_IN_THREE_MIC,
+    SND_DEVICE_IN_HANDSET_TMIC,
+    SND_DEVICE_IN_HANDSET_TMIC_FLUENCE_PRO,
+    SND_DEVICE_IN_HANDSET_TMIC_AEC,
+    SND_DEVICE_IN_HANDSET_TMIC_NS,
+    SND_DEVICE_IN_HANDSET_TMIC_AEC_NS,
+    SND_DEVICE_IN_VOICE_SPEAKER_TMIC,
+    SND_DEVICE_IN_SPEAKER_TMIC_AEC,
+    SND_DEVICE_IN_SPEAKER_TMIC_NS,
+    SND_DEVICE_IN_SPEAKER_TMIC_AEC_NS,
+    SND_DEVICE_IN_QUAD_MIC,
+    SND_DEVICE_IN_HANDSET_QMIC,
+    SND_DEVICE_IN_SPEAKER_QMIC_AEC,
+    SND_DEVICE_IN_SPEAKER_QMIC_NS,
+    SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS,
+    SND_DEVICE_IN_VOICE_SPEAKER_QMIC,
+    SND_DEVICE_IN_AANC_HANDSET_MIC,
+    SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET,
+    SND_DEVICE_IN_VOICE_FLUENCE_DMIC_AANC,
 };
 
 
@@ -548,16 +573,25 @@ static void update_hardware_info_8226(struct hardware_info *hw_info, const char 
 static void update_hardware_info_bear(struct hardware_info *hw_info, const char *snd_card_name)
 {
     if (!strncmp(snd_card_name, "sdm660-snd-card",
-                 sizeof("sdm660-snd-card")))
+                 sizeof("sdm660-snd-card"))) {
         strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
-    else if (!strncmp(snd_card_name, "sdm660-tavil-snd-card",
-                      sizeof("sdm660-tavil-snd-card")))
+    } else if (!strncmp(snd_card_name, "sdm660-tavil-snd-card",
+                      sizeof("sdm660-tavil-snd-card"))) {
         strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
-    else if (!strncmp(snd_card_name, "sdm670-skuw-snd-card",
-                      sizeof("sdm670-skuw-snd-card")))
+    } else if (!strncmp(snd_card_name, "sdm670-skuw-snd-card",
+                      sizeof("sdm670-skuw-snd-card"))) {
         hw_info->is_stereo_spkr = false;
-    else
+    } else if ( !strncmp(snd_card_name, "sdm670-tavil-hdk-snd-card",
+                      sizeof("sdm670-tavil-hdk-snd-card"))) {
+        strlcpy(hw_info->type, " hdk", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "sdm670", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)tavil_qrd_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(tavil_qrd_variant_devices);
+        hw_info->is_stereo_spkr = false;
+        strlcpy(hw_info->dev_extn, "-hdk", sizeof(hw_info->dev_extn));
+    } else {
         ALOGW("%s: Not an SDM device", __func__);
+    }
 }
 
 void *hw_info_init(const char *snd_card_name)
