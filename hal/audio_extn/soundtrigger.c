@@ -80,6 +80,7 @@ typedef enum {
     AUDIO_EVENT_SVA_EXEC_MODE_STATUS,
     AUDIO_EVENT_CAPTURE_STREAM_INACTIVE,
     AUDIO_EVENT_CAPTURE_STREAM_ACTIVE,
+    AUDIO_EVENT_BATTERY_STATUS_CHANGED,
 } audio_event_type_t;
 
 typedef enum {
@@ -500,12 +501,16 @@ void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info
         __func__, uc_info->id, uc_info->type, event, raise_event);
     if (raise_event) {
         if (uc_info->type == PCM_PLAYBACK) {
+            if (uc_info->stream.out)
+                ev_info.device_info.device = uc_info->stream.out->devices;
+            else
+                ev_info.device_info.device = AUDIO_DEVICE_OUT_SPEAKER;
             switch(event) {
             case ST_EVENT_STREAM_FREE:
-                st_dev->st_callback(AUDIO_EVENT_PLAYBACK_STREAM_INACTIVE, NULL);
+                st_dev->st_callback(AUDIO_EVENT_PLAYBACK_STREAM_INACTIVE, &ev_info);
                 break;
             case ST_EVENT_STREAM_BUSY:
-                st_dev->st_callback(AUDIO_EVENT_PLAYBACK_STREAM_ACTIVE, NULL);
+                st_dev->st_callback(AUDIO_EVENT_PLAYBACK_STREAM_ACTIVE, &ev_info);
                 break;
             default:
                 ALOGW("%s:invalid event %d, for usecase %d",
@@ -524,6 +529,18 @@ void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info
         }
     }
 }
+
+void audio_extn_sound_trigger_update_battery_status(bool charging)
+{
+    struct audio_event_info ev_info;
+
+    if (!st_dev || st_dev->sthal_prop_api_version < STHAL_PROP_API_VERSION_1_0)
+        return;
+
+    ev_info.u.value = charging;
+    st_dev->st_callback(AUDIO_EVENT_BATTERY_STATUS_CHANGED, &ev_info);
+}
+
 
 void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
                                struct str_parms *params)

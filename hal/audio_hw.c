@@ -7390,6 +7390,15 @@ int check_a2dp_restore(struct audio_device *adev, struct stream_out *out, bool r
     return ret;
 }
 
+void adev_on_battery_status_changed(bool charging)
+{
+    pthread_mutex_lock(&adev->lock);
+    ALOGI("%s: battery status changed to %scharging", __func__, charging ? "" : "not ");
+    adev->is_charging = charging;
+    audio_extn_sound_trigger_update_battery_status(charging);
+    pthread_mutex_unlock(&adev->lock);
+}
+
 static int adev_open(const hw_module_t *module, const char *name,
                      hw_device_t **device)
 {
@@ -7635,8 +7644,16 @@ static int adev_open(const hw_module_t *module, const char *name,
     pthread_mutex_lock(&adev->lock);
     audio_extn_snd_mon_register_listener(adev, adev_snd_mon_cb);
     adev->card_status = CARD_STATUS_ONLINE;
-    pthread_mutex_unlock(&adev->lock);
+    audio_extn_battery_properties_listener_init(adev_on_battery_status_changed);
+    /*
+     * if the battery state callback happens before charging can be queried,
+     * it will be guarded with the adev->lock held in the cb function and so
+     * the callback value will reflect the latest state
+     */
+    adev->is_charging = audio_extn_battery_properties_is_charging();
     audio_extn_sound_trigger_init(adev); /* dependent on snd_mon_init() */
+    audio_extn_sound_trigger_update_battery_status(adev->is_charging);
+    pthread_mutex_unlock(&adev->lock);
     /* Allocate memory for Device config params */
     adev->device_cfg_params = (struct audio_device_config_param*)
                                   calloc(platform_get_max_codec_backend(),

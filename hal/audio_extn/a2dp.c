@@ -55,6 +55,7 @@
 #define ENC_MEDIA_FMT_AAC                                  0x00010DA6
 #define ENC_MEDIA_FMT_APTX                                 0x000131ff
 #define ENC_MEDIA_FMT_APTX_HD                              0x00013200
+#define ENC_MEDIA_FMT_APTX_AD                              0x00013204
 #define ENC_MEDIA_FMT_SBC                                  0x00010BF2
 #define ENC_MEDIA_FMT_CELT                                 0x00013221
 #define ENC_MEDIA_FMT_LDAC                                 0x00013224
@@ -112,6 +113,10 @@
 // Instance identifier for A2DP
 #define MAX_INSTANCE_ID                (UINT32_MAX / 2)
 
+#define SAMPLING_RATE_48K               48000
+#define SAMPLING_RATE_441K              44100
+#define CH_STEREO                       2
+#define CH_MONO                         1
 /*
  * Below enum values are extended from audio_base.h to
  * to keep encoder codec type local to bthost_ipc
@@ -129,7 +134,32 @@ typedef enum {
 #endif
     ENC_CODEC_TYPE_LDAC = AUDIO_FORMAT_LDAC, // 0x23000000UL
     ENC_CODEC_TYPE_CELT = 603979776u, // 0x24000000UL
+    ENC_CODEC_TYPE_APTX_AD = 620756992u, // 0x25000000UL
 }enc_codec_t;
+
+/*
+ * enums which describes the APTX Adaptive
+ * channel mode, these values are used by encoder
+ */
+ typedef enum {
+    APTX_AD_CHANNEL_UNCHANGED = -1,
+    APTX_AD_CHANNEL_JOINT_STEREO = 0, // default
+    APTX_AD_CHANNEL_MONO = 1,
+    APTX_AD_CHANNEL_DUAL_MONO = 2,
+    APTX_AD_CHANNEL_STEREO_TWS = 4,
+    APTX_AD_CHANNEL_EARBUD = 8,
+} enc_aptx_ad_channel_mode;
+
+/*
+ * enums which describes the APTX Adaptive
+ * sampling frequency, these values are used
+ * by encoder
+ */
+typedef enum {
+    APTX_AD_SR_UNCHANGED = 0x0,
+    APTX_AD_48 = 0x1,  // 48 KHz default
+    APTX_AD_44_1 = 0x2, // 44.1kHz
+} enc_aptx_ad_s_rate;
 
 typedef int (*audio_stream_open_t)(void);
 typedef int (*audio_stream_close_t)(void);
@@ -215,6 +245,7 @@ struct a2dp_data {
     bool is_a2dp_offload_supported;
     bool is_handoff_in_progress;
     bool is_aptx_dual_mono_supported;
+    bool is_aptx_adaptive;
     /* Adaptive bitrate config for A2DP codecs */
     struct a2dp_abr_config abr_config;
 };
@@ -373,6 +404,27 @@ struct aptx_enc_cfg_t
     struct aptx_v2_enc_cfg_ext_t aptx_v2_cfg;
 } __attribute__ ((packed));
 
+/* APTX AD structure */
+struct aptx_ad_enc_cfg_ext_t
+{
+    uint32_t  sampling_freq;
+    uint32_t  mtu;
+    uint32_t  channel_mode;
+    uint32_t  min_sink_modeA;
+    uint32_t  max_sink_modeA;
+    uint32_t  min_sink_modeB;
+    uint32_t  max_sink_modeB;
+    uint32_t  min_sink_modeC;
+    uint32_t  max_sink_modeC;
+} __attribute__ ((packed));
+
+struct aptx_ad_enc_cfg_t
+{
+    struct custom_enc_cfg_t  custom_cfg;
+    struct aptx_ad_enc_cfg_ext_t aptx_ad_cfg;
+    struct abr_enc_cfg_t abr_cfg;
+} __attribute__ ((packed));
+
 struct ldac_specific_enc_cfg_t
 {
     uint32_t      bit_rate;
@@ -421,6 +473,22 @@ typedef struct {
 } audio_aptx_default_config;
 
 typedef struct {
+    uint8_t  sampling_rate;
+    uint8_t  channel_mode;
+    uint16_t mtu;
+    uint8_t  min_sink_modeA;
+    uint8_t  max_sink_modeA;
+    uint8_t  min_sink_modeB;
+    uint8_t  max_sink_modeB;
+    uint8_t  min_sink_modeC;
+    uint8_t  max_sink_modeC;
+    uint8_t  TTP_modeA_low;
+    uint8_t  TTP_modeA_high;
+    uint8_t  TTP_modeB_low;
+    uint8_t  TTP_modeB_high;
+} audio_aptx_ad_config;
+
+typedef struct {
     uint16_t sampling_rate;
     uint8_t  channels;
     uint32_t bitrate;
@@ -430,6 +498,7 @@ typedef struct {
 typedef union {
     audio_aptx_default_config *default_cfg;
     audio_aptx_dual_mono_config *dual_mono_cfg;
+    audio_aptx_ad_config *ad_cfg;
 } audio_aptx_encoder_config;
 
 /* Information about BT AAC encoder configuration
@@ -509,6 +578,9 @@ static void a2dp_offload_codec_cap_parser(char *value)
             ALOGD("%s: ldac offload supported\n",__func__);
             a2dp.is_a2dp_offload_supported = true;
             break;
+        } else if( strcmp(tok, "aptxadaptive") == 0) {
+            ALOGD("%s: aptx adaptive offload supported\n",__func__);
+            a2dp.is_a2dp_offload_supported = true;
         }
         tok = strtok_r(NULL, "-", &saveptr);
     };
@@ -1021,6 +1093,73 @@ fail:
 }
 
 #ifndef LINUX_ENABLED
+static int update_aptx_ad_dsp_config(struct aptx_ad_enc_cfg_t *aptx_dsp_cfg,
+                                     audio_aptx_encoder_config *aptx_bt_cfg)
+{
+    int ret = 0;
+
+    if(aptx_dsp_cfg == NULL || aptx_bt_cfg == NULL) {
+        ALOGE("Invalid param, aptx_dsp_cfg %p aptx_bt_cfg %p",
+              aptx_dsp_cfg, aptx_bt_cfg);
+        return -EINVAL;
+    }
+
+    memset(aptx_dsp_cfg, 0x0, sizeof(struct aptx_ad_enc_cfg_t));
+    aptx_dsp_cfg->custom_cfg.enc_format = ENC_MEDIA_FMT_APTX_AD;
+
+
+    aptx_dsp_cfg->aptx_ad_cfg.sampling_freq = aptx_bt_cfg->ad_cfg->sampling_rate;
+    aptx_dsp_cfg->aptx_ad_cfg.mtu = aptx_bt_cfg->ad_cfg->mtu;
+    aptx_dsp_cfg->aptx_ad_cfg.channel_mode = aptx_bt_cfg->ad_cfg->channel_mode;
+    aptx_dsp_cfg->aptx_ad_cfg.min_sink_modeA = aptx_bt_cfg->ad_cfg->min_sink_modeA;
+    aptx_dsp_cfg->aptx_ad_cfg.max_sink_modeA = aptx_bt_cfg->ad_cfg->max_sink_modeA;
+    aptx_dsp_cfg->aptx_ad_cfg.min_sink_modeB = aptx_bt_cfg->ad_cfg->min_sink_modeB;
+    aptx_dsp_cfg->aptx_ad_cfg.max_sink_modeB = aptx_bt_cfg->ad_cfg->max_sink_modeB;
+    aptx_dsp_cfg->aptx_ad_cfg.min_sink_modeC = aptx_bt_cfg->ad_cfg->min_sink_modeC;
+    aptx_dsp_cfg->aptx_ad_cfg.max_sink_modeC = aptx_bt_cfg->ad_cfg->max_sink_modeC;
+    aptx_dsp_cfg->abr_cfg.imc_info.direction = IMC_RECEIVE;
+    aptx_dsp_cfg->abr_cfg.imc_info.enable = IMC_ENABLE;
+    aptx_dsp_cfg->abr_cfg.imc_info.purpose = IMC_PURPOSE_ID_BT_INFO;
+    aptx_dsp_cfg->abr_cfg.imc_info.comm_instance = a2dp.abr_config.imc_instance;
+
+
+    switch(aptx_dsp_cfg->aptx_ad_cfg.channel_mode) {
+        case APTX_AD_CHANNEL_UNCHANGED:
+        case APTX_AD_CHANNEL_JOINT_STEREO:
+        case APTX_AD_CHANNEL_DUAL_MONO:
+        case APTX_AD_CHANNEL_STEREO_TWS:
+        case APTX_AD_CHANNEL_EARBUD:
+        default:
+             a2dp.enc_channels = CH_STEREO;
+             aptx_dsp_cfg->custom_cfg.num_channels = CH_STEREO;
+             aptx_dsp_cfg->custom_cfg.channel_mapping[0] = PCM_CHANNEL_L;
+             aptx_dsp_cfg->custom_cfg.channel_mapping[1] = PCM_CHANNEL_R;
+             break;
+        case APTX_AD_CHANNEL_MONO:
+             a2dp.enc_channels = CH_MONO;
+             aptx_dsp_cfg->custom_cfg.num_channels = CH_MONO;
+             aptx_dsp_cfg->custom_cfg.channel_mapping[0] = PCM_CHANNEL_C;
+            break;
+    }
+    switch(aptx_dsp_cfg->aptx_ad_cfg.sampling_freq) {
+        case APTX_AD_SR_UNCHANGED:
+        case APTX_AD_48:
+        default:
+            a2dp.enc_sampling_rate = SAMPLING_RATE_48K;
+            aptx_dsp_cfg->custom_cfg.sample_rate = SAMPLING_RATE_48K;
+            break;
+        case APTX_AD_44_1:
+            a2dp.enc_sampling_rate = SAMPLING_RATE_441K;
+            aptx_dsp_cfg->custom_cfg.sample_rate = SAMPLING_RATE_441K;
+        break;
+    }
+    ALOGV("Successfully updated APTX AD enc format with \
+               samplingrate: %d channels:%d",
+               aptx_dsp_cfg->custom_cfg.sample_rate,
+               aptx_dsp_cfg->custom_cfg.num_channels);
+
+    return ret;
+}
 static int update_aptx_dsp_config_v2(struct aptx_enc_cfg_t *aptx_dsp_cfg,
                                      audio_aptx_encoder_config *aptx_bt_cfg)
 {
@@ -1118,8 +1257,13 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
 
 #ifndef LINUX_ENABLED
     struct aptx_enc_cfg_t aptx_dsp_cfg;
-    mixer_size = sizeof(struct aptx_enc_cfg_t);
-    sample_rate_backup = aptx_bt_cfg->default_cfg->sampling_rate;
+    struct aptx_ad_enc_cfg_t aptx_ad_dsp_cfg;
+    if(a2dp.is_aptx_adaptive)
+       mixer_size = sizeof(struct aptx_ad_enc_cfg_t);
+    else {
+        mixer_size = sizeof(struct aptx_enc_cfg_t);
+        sample_rate_backup = aptx_bt_cfg->default_cfg->sampling_rate;
+    }
 #else
     struct custom_enc_cfg_t aptx_dsp_cfg;
     mixer_size = sizeof(struct custom_enc_cfg_t);
@@ -1134,7 +1278,11 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
     }
 
 #ifndef LINUX_ENABLED
-    ret = update_aptx_dsp_config_v2(&aptx_dsp_cfg, aptx_bt_cfg);
+    if(a2dp.is_aptx_adaptive) {
+        ret = update_aptx_ad_dsp_config(&aptx_ad_dsp_cfg, aptx_bt_cfg);
+        sample_rate_backup = aptx_ad_dsp_cfg.custom_cfg.sample_rate;
+    } else
+        ret = update_aptx_dsp_config_v2(&aptx_dsp_cfg, aptx_bt_cfg);
 #else
     ret = update_aptx_dsp_config_v1(&aptx_dsp_cfg, aptx_bt_cfg);
 #endif
@@ -1143,7 +1291,11 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         is_configured = false;
         goto fail;
     }
-    ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_dsp_cfg,
+    if(a2dp.is_aptx_adaptive)
+        ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_ad_dsp_cfg,
+                             mixer_size);
+    else
+        ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_dsp_cfg,
                               mixer_size);
     if (ret != 0) {
         ALOGE("%s: Failed to set APTX encoder config", __func__);
@@ -1157,7 +1309,10 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         is_configured = false;
         goto fail;
     } else {
-        ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S16_LE");
+        if (a2dp.is_aptx_adaptive)
+            ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S24_LE");
+        else
+            ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S16_LE");
         if (ret != 0) {
             ALOGE("%s: Failed to set bit format to encoder", __func__);
             is_configured = false;
@@ -1165,7 +1320,10 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         }
     }
     is_configured = true;
-    a2dp.bt_encoder_format = ENC_CODEC_TYPE_APTX;
+    if (a2dp.is_aptx_adaptive)
+        a2dp.bt_encoder_format = ENC_CODEC_TYPE_APTX_AD;
+    else
+        a2dp.bt_encoder_format = ENC_CODEC_TYPE_APTX;
 fail:
     /*restore sample rate */
     if(!is_configured)
@@ -1465,6 +1623,7 @@ bool configure_a2dp_encoder_format()
 
     // ABR disabled by default for all codecs
     a2dp.abr_config.is_abr_enabled = false;
+    a2dp.is_aptx_adaptive = false;
 
     switch(codec_type) {
         case ENC_CODEC_TYPE_SBC:
@@ -1518,6 +1677,18 @@ bool configure_a2dp_encoder_format()
             is_configured =
                 (configure_ldac_enc_format((audio_ldac_encoder_config *)codec_info) &&
                  configure_a2dp_decoder_format(ENC_CODEC_TYPE_LDAC));
+            break;
+         case ENC_CODEC_TYPE_APTX_AD:
+             ALOGD(" Received APTX AD encoder supported BT device");
+             if (!instance_id || instance_id > MAX_INSTANCE_ID)
+                 instance_id = MAX_INSTANCE_ID;
+              a2dp.abr_config.imc_instance = instance_id--;
+              a2dp.abr_config.is_abr_enabled = true; // for APTX Adaptive ABR is Always on
+              a2dp.is_aptx_adaptive = true;
+              aptx_encoder_cfg.ad_cfg = (audio_aptx_ad_config *)codec_info;
+              is_configured =
+                (configure_aptx_enc_format(&aptx_encoder_cfg) &&
+                 configure_a2dp_decoder_format(ENC_MEDIA_FMT_APTX_AD));
             break;
         default:
             ALOGD(" Received Unsupported encoder formar");
@@ -1819,6 +1990,7 @@ void audio_extn_a2dp_init (void *adev)
   a2dp.is_a2dp_offload_supported = false;
   a2dp.is_handoff_in_progress = false;
   a2dp.is_aptx_dual_mono_supported = false;
+  a2dp.is_aptx_adaptive = false;
   a2dp.abr_config.is_abr_enabled = false;
   a2dp.abr_config.abr_started = false;
   a2dp.abr_config.imc_instance = 0;
