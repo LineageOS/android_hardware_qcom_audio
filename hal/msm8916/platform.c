@@ -5746,7 +5746,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
                         rate_str = "KHZ_8";
                         break;
                 case 11025:
-                        rate_str = "HZ_11P025";
+                        rate_str = "KHZ_11P025";
                         break;
                 case 16000:
                         rate_str = "KHZ_16";
