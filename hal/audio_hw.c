@@ -5687,6 +5687,13 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                       (devices != AUDIO_DEVICE_OUT_USB_ACCESSORY);
     bool direct_dev = is_hdmi || is_usb_dev;
 
+    if (is_usb_dev && (audio_extn_usb_connected(NULL))) {
+        is_usb_dev = false;
+        devices = AUDIO_DEVICE_OUT_SPEAKER;
+        ALOGW("%s: ignore set device to non existing USB card, use output device(%#x)",
+              __func__, devices);
+    }
+
     *stream_out = NULL;
 
     out = (struct stream_out *)calloc(1, sizeof(struct stream_out));
@@ -6787,6 +6794,13 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                                             devices,
                                                             flags,
                                                             source);
+
+    if (is_usb_dev && (audio_extn_usb_connected(NULL))) {
+        is_usb_dev = false;
+        devices = AUDIO_DEVICE_IN_BUILTIN_MIC;
+        ALOGW("%s: ignore set device to non existing USB card, use input device(%#x)",
+              __func__, devices);
+    }
 
     *stream_in = NULL;
 
