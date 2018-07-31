@@ -297,19 +297,19 @@
         <ctl name="SLIM TX5 MUX" value="DEC5" />
         <ctl name="ADC MUX5" value="DMIC" />
         <ctl name="DMIC MUX5" value="DMIC0" />
-        <ctl name="DEC5 Volume" value="96" />
+        <ctl name="DEC5 Volume" value="86" />
         <ctl name="SLIM TX6 MUX" value="DEC6" />
         <ctl name="ADC MUX6" value="DMIC" />
         <ctl name="DMIC MUX6" value="DMIC2" />
-        <ctl name="DEC6 Volume" value="96" />
+        <ctl name="DEC6 Volume" value="86" />
         <ctl name="SLIM TX7 MUX" value="DEC7" />
         <ctl name="ADC MUX7" value="DMIC" />
         <ctl name="DMIC MUX7" value="DMIC1" />
-        <ctl name="DEC7 Volume" value="96" />
+        <ctl name="DEC7 Volume" value="86" />
         <ctl name="SLIM TX8 MUX" value="DEC8" />
         <ctl name="ADC MUX8" value="DMIC" />
         <ctl name="DMIC MUX8" value="DMIC3" />
-        <ctl name="DEC8 Volume" value="96" />
+        <ctl name="DEC8 Volume" value="86" />
     </path>
 
     <path name="listen-handset-6mic">
@@ -323,27 +323,27 @@
         <ctl name="SLIM TX1 MUX" value="DEC1" />
         <ctl name="ADC MUX1" value="DMIC" />
         <ctl name="DMIC MUX1" value="DMIC2" />
-        <ctl name="DEC1 Volume" value="96" />
+        <ctl name="DEC1 Volume" value="86" />
         <ctl name="SLIM TX2 MUX" value="DEC2" />
         <ctl name="ADC MUX2" value="DMIC" />
         <ctl name="DMIC MUX2" value="DMIC1" />
-        <ctl name="DEC2 Volume" value="96" />
+        <ctl name="DEC2 Volume" value="86" />
         <ctl name="SLIM TX3 MUX" value="DEC3" />
         <ctl name="ADC MUX3" value="DMIC" />
         <ctl name="DMIC MUX3" value="DMIC5" />
-        <ctl name="DEC3 Volume" value="96" />
+        <ctl name="DEC3 Volume" value="86" />
         <ctl name="SLIM TX4 MUX" value="DEC4" />
         <ctl name="ADC MUX4" value="DMIC" />
         <ctl name="DMIC MUX4" value="DMIC0" />
-        <ctl name="DEC4 Volume" value="96" />
+        <ctl name="DEC4 Volume" value="86" />
         <ctl name="SLIM TX5 MUX" value="DEC5" />
         <ctl name="ADC MUX5" value="DMIC" />
         <ctl name="DMIC MUX5" value="DMIC4" />
-        <ctl name="DEC5 Volume" value="96" />
+        <ctl name="DEC5 Volume" value="86" />
         <ctl name="SLIM TX6 MUX" value="DEC6" />
         <ctl name="ADC MUX6" value="DMIC" />
         <ctl name="DMIC MUX6" value="DMIC3" />
-        <ctl name="DEC6 Volume" value="96" />
+        <ctl name="DEC6 Volume" value="86" />
     </path>
 
     <path name="listen-handset-8mic">
@@ -359,27 +359,27 @@
         <ctl name="SLIM TX1 MUX" value="DEC1" />
         <ctl name="ADC MUX1" value="DMIC" />
         <ctl name="DMIC MUX1" value="DMIC2" />
-        <ctl name="DEC1 Volume" value="96" />
+        <ctl name="DEC1 Volume" value="86" />
         <ctl name="SLIM TX2 MUX" value="DEC2" />
         <ctl name="ADC MUX2" value="DMIC" />
         <ctl name="DMIC MUX2" value="DMIC1" />
-        <ctl name="DEC2 Volume" value="96" />
+        <ctl name="DEC2 Volume" value="86" />
         <ctl name="SLIM TX3 MUX" value="DEC3" />
         <ctl name="ADC MUX3" value="DMIC" />
         <ctl name="DMIC MUX3" value="DMIC5" />
-        <ctl name="DEC3 Volume" value="96" />
+        <ctl name="DEC3 Volume" value="86" />
         <ctl name="SLIM TX4 MUX" value="DEC4" />
         <ctl name="ADC MUX4" value="DMIC" />
         <ctl name="DMIC MUX4" value="DMIC0" />
-        <ctl name="DEC4 Volume" value="96" />
+        <ctl name="DEC4 Volume" value="86" />
         <ctl name="SLIM TX5 MUX" value="DEC5" />
         <ctl name="ADC MUX5" value="DMIC" />
         <ctl name="DMIC MUX5" value="DMIC4" />
-        <ctl name="DEC5 Volume" value="96" />
+        <ctl name="DEC5 Volume" value="86" />
         <ctl name="SLIM TX6 MUX" value="DEC6" />
         <ctl name="ADC MUX6" value="DMIC" />
         <ctl name="DMIC MUX6" value="DMIC3" />
-        <ctl name="DEC6 Volume" value="96" />
+        <ctl name="DEC6 Volume" value="86" />
 
         <ctl name="SLIM TX7 MUX" value="RX_MIX_TX7"/>
         <ctl name="RX MIX TX7 MUX" value="RX_MIX7"/>
