@@ -876,6 +876,7 @@ int audio_extn_snd_mon_unregister_listener(void *stream);
 #ifdef COMPRESS_INPUT_ENABLED
 bool audio_extn_cin_applicable_stream(struct stream_in *in);
 bool audio_extn_cin_attached_usecase(audio_usecase_t uc_id);
+bool audio_extn_cin_format_supported(audio_format_t format);
 size_t audio_extn_cin_get_buffer_size(struct stream_in *in);
 int audio_extn_cin_start_input_stream(struct stream_in *in);
 void audio_extn_cin_stop_input_stream(struct stream_in *in);
@@ -886,6 +887,7 @@ int audio_extn_cin_configure_input_stream(struct stream_in *in);
 #else
 #define audio_extn_cin_applicable_stream(in) (false)
 #define audio_extn_cin_attached_usecase(uc_id) (false)
+#define audio_extn_cin_format_supported(format) (false)
 #define audio_extn_cin_get_buffer_size(in) (0)
 #define audio_extn_cin_start_input_stream(in) (0)
 #define audio_extn_cin_stop_input_stream(in) (0)

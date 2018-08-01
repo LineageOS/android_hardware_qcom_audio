@@ -140,6 +140,7 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_SYNC),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_TIMESTAMP),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_COMPRESS),
+    STRING_TO_ENUM(AUDIO_INPUT_FLAG_PASSTHROUGH),
 };
 
 const struct string_to_enum s_format_name_to_enum_table[] = {

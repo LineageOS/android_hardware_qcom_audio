@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2011 The Android Open Source Project *
@@ -170,6 +170,7 @@ __BEGIN_DECLS
  */
 #define QAHW_INPUT_FLAG_TIMESTAMP 0x80000000
 #define QAHW_INPUT_FLAG_COMPRESS  0x40000000
+#define QAHW_INPUT_FLAG_PASSTHROUGH 0x20000000
 
 /* Query fm volume */
 #define QAHW_PARAMETER_KEY_FM_VOLUME "fm_volume"
