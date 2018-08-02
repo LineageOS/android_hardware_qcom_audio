@@ -225,7 +225,7 @@ struct pcm_config pcm_config_voip = {
 #define AFE_PROXY_CHANNEL_COUNT 2
 #define AFE_PROXY_SAMPLING_RATE 48000
 
-#define AFE_PROXY_PLAYBACK_PERIOD_SIZE  768
+#define AFE_PROXY_PLAYBACK_PERIOD_SIZE  256
 #define AFE_PROXY_PLAYBACK_PERIOD_COUNT 4
 
 struct pcm_config pcm_config_afe_proxy_playback = {
@@ -239,7 +239,7 @@ struct pcm_config pcm_config_afe_proxy_playback = {
     .avail_min = AFE_PROXY_PLAYBACK_PERIOD_SIZE,
 };
 
-#define AFE_PROXY_RECORD_PERIOD_SIZE  768
+#define AFE_PROXY_RECORD_PERIOD_SIZE  256
 #define AFE_PROXY_RECORD_PERIOD_COUNT 4
 
 struct pcm_config pcm_config_afe_proxy_record = {
