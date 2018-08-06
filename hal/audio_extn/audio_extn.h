@@ -41,14 +41,12 @@ void audio_extn_set_snd_card_split(const char* in_snd_card_name);
 #define audio_extn_spkr_prot_calib_cancel(adev) (0)
 #define audio_extn_spkr_prot_stop_processing(snd_device)     (0)
 #define audio_extn_spkr_prot_is_enabled() (false)
-#define audio_extn_spkr_prot_get_acdb_id(snd_device)         (-EINVAL)
 #define audio_extn_get_spkr_prot_snd_device(snd_device) (snd_device)
 #else
 void audio_extn_spkr_prot_init(void *adev);
 int audio_extn_spkr_prot_start_processing(snd_device_t snd_device);
 void audio_extn_spkr_prot_stop_processing(snd_device_t snd_device);
 bool audio_extn_spkr_prot_is_enabled();
-int audio_extn_spkr_prot_get_acdb_id(snd_device_t snd_device);
 int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device);
 void audio_extn_spkr_prot_calib_cancel(void *adev);
 #endif
@@ -81,8 +79,10 @@ int audio_extn_hfp_set_mic_mute(struct audio_device *adev, bool state);
 #define audio_extn_usb_is_capture_supported()                          (false)
 #define audio_extn_usb_get_max_channels(dir)                           (0)
 #define audio_extn_usb_get_max_bit_width(dir)                          (0)
-#define audio_extn_usb_sup_sample_rates(t, s, l)                       (0)
+#define audio_extn_usb_sup_sample_rates(t, s, l)        ((t), (s), (l), 0) /* fix unused warn */
 #define audio_extn_usb_alive(adev)                                     (false)
+#define audio_extn_usb_find_service_interval(m, p)      ((m), (p), 0) /* fix unused warn */
+#define audio_extn_usb_altset_for_service_interval(p, si, bw, sr, ch) (-1)
 #else
 void audio_extn_usb_init(void *adev);
 void audio_extn_usb_deinit();
@@ -100,6 +100,12 @@ int audio_extn_usb_get_max_channels(bool is_playback);
 int audio_extn_usb_get_max_bit_width(bool is_playback);
 int audio_extn_usb_sup_sample_rates(bool is_playback, uint32_t *sr, uint32_t l);
 bool audio_extn_usb_alive(int card);
+unsigned long audio_extn_usb_find_service_interval(bool min, bool playback);
+int audio_extn_usb_altset_for_service_interval(bool is_playback,
+                                               unsigned long service_interval,
+                                               uint32_t *bit_width,
+                                               uint32_t *sample_rate,
+                                               uint32_t *channel_count);
 #endif
 
 
@@ -107,6 +113,7 @@ bool audio_extn_usb_alive(int card);
 #define audio_extn_sound_trigger_init(adev)                            (0)
 #define audio_extn_sound_trigger_deinit(adev)                          (0)
 #define audio_extn_sound_trigger_update_device_status(snd_dev, event)  (0)
+#define audio_extn_sound_trigger_update_stream_status(uc_info, event)  (0)
 #define audio_extn_sound_trigger_set_parameters(adev, parms)           (0)
 #define audio_extn_sound_trigger_check_and_get_session(in)             (0)
 #define audio_extn_sound_trigger_stop_lab(in)                          (0)
@@ -126,12 +133,41 @@ int audio_extn_sound_trigger_init(struct audio_device *adev);
 void audio_extn_sound_trigger_deinit(struct audio_device *adev);
 void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
                                      st_event_type_t event);
+void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info,
+                                     st_event_type_t event);
 void audio_extn_sound_trigger_set_parameters(struct audio_device *adev,
                                              struct str_parms *parms);
 void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in);
 void audio_extn_sound_trigger_stop_lab(struct stream_in *in);
 int audio_extn_sound_trigger_read(struct stream_in *in, void *buffer,
                                   size_t bytes);
+#endif
+
+#ifndef A2DP_OFFLOAD_ENABLED
+#define audio_extn_a2dp_init(adev)                       (0)
+#define audio_extn_a2dp_start_playback()                 (0)
+#define audio_extn_a2dp_stop_playback()                  (0)
+#define audio_extn_a2dp_set_parameters(parms, reconfig)  (0)
+#define audio_extn_a2dp_get_parameters(query, reply)     (0)
+#define audio_extn_a2dp_is_force_device_switch()         (0)
+#define audio_extn_a2dp_set_handoff_mode(is_on)          (0)
+#define audio_extn_a2dp_get_sample_rate(sample_rate)     (0)
+#define audio_extn_a2dp_get_encoder_latency()            (0)
+#define audio_extn_a2dp_is_ready()                       (0)
+#define audio_extn_a2dp_is_suspended()                   (0)
+#else
+void audio_extn_a2dp_init(void *adev);
+int audio_extn_a2dp_start_playback();
+int audio_extn_a2dp_stop_playback();
+int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig);
+int audio_extn_a2dp_get_parameters(struct str_parms *query,
+                                   struct str_parms *reply);
+bool audio_extn_a2dp_is_force_device_switch();
+void audio_extn_a2dp_set_handoff_mode(bool is_on);
+void audio_extn_a2dp_get_sample_rate(int *sample_rate);
+uint32_t audio_extn_a2dp_get_encoder_latency();
+bool audio_extn_a2dp_is_ready();
+bool audio_extn_a2dp_is_suspended();
 #endif
 
 #ifndef DSM_FEEDBACK_ENABLED
