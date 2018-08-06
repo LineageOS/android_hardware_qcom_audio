@@ -310,6 +310,8 @@ struct abr_enc_cfg_t {
     struct quality_level_to_bitrate_info mapping_info;
     /* Information to set up IMC between decoder and encoder */
     struct imc_dec_enc_info imc_info;
+    /* Flag to indicate whether ABR is enabled */
+    bool is_abr_enabled;
 }  __attribute__ ((packed));
 
 /* Structure to send configuration for decoder introduced
@@ -1296,6 +1298,7 @@ static bool configure_ldac_enc_format(audio_ldac_encoder_config *ldac_bt_cfg)
         ldac_dsp_cfg.abr_cfg.imc_info.enable = IMC_ENABLE;
         ldac_dsp_cfg.abr_cfg.imc_info.purpose = IMC_PURPOSE_ID_BT_INFO;
         ldac_dsp_cfg.abr_cfg.imc_info.comm_instance = a2dp.abr_config.imc_instance;
+        ldac_dsp_cfg.abr_cfg.is_abr_enabled = ldac_bt_cfg->is_abr_enabled;
     }
 
     ret = mixer_ctl_set_array(ldac_enc_data, (void *)&ldac_dsp_cfg,
