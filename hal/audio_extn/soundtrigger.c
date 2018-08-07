@@ -23,21 +23,125 @@
 #include <dlfcn.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include "audio_hw.h"
 #include "audio_extn.h"
 #include "platform.h"
 #include "platform_api.h"
-#include "sound_trigger_prop_intf.h"
+
+/*-------------------- Begin: AHAL-STHAL Interface ---------------------------*/
+/*
+ * Maintain the proprietary interface between AHAL and STHAL locally to avoid
+ * the compilation dependency of interface header file from STHAL.
+ */
+
+#define MAKE_HAL_VERSION(maj, min) ((((maj) & 0xff) << 8) | ((min) & 0xff))
+#define MAJOR_VERSION(ver) (((ver) & 0xff00) >> 8)
+#define MINOR_VERSION(ver) ((ver) & 0x00ff)
+
+/* Proprietary interface version used for compatibility with STHAL */
+#define STHAL_PROP_API_VERSION_1_0 MAKE_HAL_VERSION(1, 0)
+#define STHAL_PROP_API_CURRENT_VERSION STHAL_PROP_API_VERSION_1_0
+
+#define ST_EVENT_CONFIG_MAX_STR_VALUE 32
+
+typedef enum {
+    ST_EVENT_SESSION_REGISTER,
+    ST_EVENT_SESSION_DEREGISTER
+} sound_trigger_event_type_t;
+
+typedef enum {
+    AUDIO_EVENT_CAPTURE_DEVICE_INACTIVE,
+    AUDIO_EVENT_CAPTURE_DEVICE_ACTIVE,
+    AUDIO_EVENT_PLAYBACK_STREAM_INACTIVE,
+    AUDIO_EVENT_PLAYBACK_STREAM_ACTIVE,
+    AUDIO_EVENT_STOP_LAB,
+    AUDIO_EVENT_SSR,
+    AUDIO_EVENT_NUM_ST_SESSIONS,
+    AUDIO_EVENT_READ_SAMPLES,
+    AUDIO_EVENT_DEVICE_CONNECT,
+    AUDIO_EVENT_DEVICE_DISCONNECT,
+    AUDIO_EVENT_SVA_EXEC_MODE,
+    AUDIO_EVENT_SVA_EXEC_MODE_STATUS,
+    AUDIO_EVENT_CAPTURE_STREAM_INACTIVE,
+    AUDIO_EVENT_CAPTURE_STREAM_ACTIVE,
+} audio_event_type_t;
+
+typedef enum {
+    USECASE_TYPE_PCM_PLAYBACK,
+    USECASE_TYPE_PCM_CAPTURE,
+    USECASE_TYPE_VOICE_CALL,
+    USECASE_TYPE_VOIP_CALL,
+} audio_stream_usecase_type_t;
+
+typedef enum {
+    SND_CARD_STATUS_OFFLINE,
+    SND_CARD_STATUS_ONLINE,
+    CPE_STATUS_OFFLINE,
+    CPE_STATUS_ONLINE
+} ssr_event_status_t;
+
+struct sound_trigger_session_info {
+    void* p_ses; /* opaque pointer to st_session obj */
+    int capture_handle;
+    struct pcm *pcm;
+    struct pcm_config config;
+};
+
+struct audio_read_samples_info {
+    struct sound_trigger_session_info *ses_info;
+    void *buf;
+    size_t num_bytes;
+};
+
+struct audio_hal_usecase {
+    audio_stream_usecase_type_t type;
+};
+
+struct sound_trigger_event_info {
+    struct sound_trigger_session_info st_ses;
+};
+
+struct audio_event_info {
+    union {
+        ssr_event_status_t status;
+        int value;
+        struct sound_trigger_session_info ses_info;
+        struct audio_read_samples_info aud_info;
+        char str_value[ST_EVENT_CONFIG_MAX_STR_VALUE];
+        struct audio_hal_usecase usecase;
+    }u;
+};
+
+/* STHAL callback which is called by AHAL */
+typedef int (*sound_trigger_hw_call_back_t)(audio_event_type_t,
+                                  struct audio_event_info*);
+
+/*---------------- End: AHAL-STHAL Interface ----------------------------------*/
 
 #define XSTR(x) STR(x)
 #define STR(x) #x
 
+#define DLSYM(handle, ptr, symbol, err)                                   \
+do {                                                                      \
+    ptr = dlsym(handle, #symbol);                                         \
+    if (ptr == NULL) {                                                    \
+        ALOGE("%s: dlsym %s failed . %s", __func__, #symbol, dlerror());  \
+        err = -ENODEV;                                                    \
+    }                                                                     \
+} while(0)
+
 #ifdef __LP64__
-#define SOUND_TRIGGER_LIBRARY_PATH "/system/vendor/lib64/hw/sound_trigger.primary.%s.so"
+#define SOUND_TRIGGER_LIBRARY_PATH "/vendor/lib64/hw/sound_trigger.primary.%s.so"
 #else
-#define SOUND_TRIGGER_LIBRARY_PATH "/system/vendor/lib/hw/sound_trigger.primary.%s.so"
+#define SOUND_TRIGGER_LIBRARY_PATH "/vendor/lib/hw/sound_trigger.primary.%s.so"
 #endif
+
+/*
+ * Current proprietary API version used by AHAL. Queried by STHAL
+ * for compatibility check with AHAL
+ */
+const unsigned int sthal_prop_api_version = STHAL_PROP_API_CURRENT_VERSION;
 
 struct sound_trigger_info  {
     struct sound_trigger_session_info st_ses;
@@ -51,6 +155,7 @@ struct sound_trigger_audio_device {
     sound_trigger_hw_call_back_t st_callback;
     struct listnode st_ses_list;
     pthread_mutex_t lock;
+    unsigned int sthal_prop_api_version;
 };
 
 static struct sound_trigger_audio_device *st_dev;
@@ -60,7 +165,7 @@ get_sound_trigger_info(int capture_handle)
 {
     struct sound_trigger_info  *st_ses_info = NULL;
     struct listnode *node;
-    ALOGV("%s: list %d capture_handle %d", __func__,
+    ALOGV("%s: list empty %d capture_handle %d", __func__,
            list_empty(&st_dev->st_ses_list), capture_handle);
     list_for_each(node, &st_dev->st_ses_list) {
         st_ses_info = node_to_item(node, struct sound_trigger_info , list);
@@ -68,6 +173,37 @@ get_sound_trigger_info(int capture_handle)
             return st_ses_info;
     }
     return NULL;
+}
+
+static int populate_usecase(struct audio_hal_usecase *usecase,
+                       struct audio_usecase *uc_info)
+{
+    int status  = 0;
+
+    switch (uc_info->type) {
+    case PCM_PLAYBACK:
+        if (uc_info->id == USECASE_AUDIO_PLAYBACK_VOIP)
+            usecase->type = USECASE_TYPE_VOIP_CALL;
+        else
+            usecase->type = USECASE_TYPE_PCM_PLAYBACK;
+        break;
+
+    case PCM_CAPTURE:
+        if (uc_info->id == USECASE_AUDIO_RECORD_VOIP)
+            usecase->type = USECASE_TYPE_VOIP_CALL;
+        else
+            usecase->type = USECASE_TYPE_PCM_CAPTURE;
+        break;
+
+    case VOICE_CALL:
+        usecase->type = USECASE_TYPE_VOICE_CALL;
+        break;
+
+    default:
+        ALOGE("%s: unsupported usecase type %d", __func__, uc_info->type);
+        status = -EINVAL;
+    }
+    return status;
 }
 
 static void stdev_snd_mon_cb(void * stream __unused, struct str_parms * parms)
@@ -80,7 +216,7 @@ static void stdev_snd_mon_cb(void * stream __unused, struct str_parms * parms)
 }
 
 int audio_hw_call_back(sound_trigger_event_type_t event,
-                       sound_trigger_event_info_t* config)
+                       struct sound_trigger_event_info* config)
 {
     int status = 0;
     struct sound_trigger_info  *st_ses_info;
@@ -138,7 +274,7 @@ int audio_extn_sound_trigger_read(struct stream_in *in, void *buffer,
 {
     int ret = -1;
     struct sound_trigger_info  *st_info = NULL;
-    audio_event_info_t event;
+    struct audio_event_info event;
 
     if (!st_dev)
        return ret;
@@ -174,11 +310,10 @@ exit:
 
 void audio_extn_sound_trigger_stop_lab(struct stream_in *in)
 {
-    int status = 0;
     struct sound_trigger_info  *st_ses_info = NULL;
-    audio_event_info_t event;
+    struct audio_event_info event;
 
-    if (!st_dev || !in)
+    if (!st_dev || !in || !in->is_st_session_active)
        return;
 
     pthread_mutex_lock(&st_dev->lock);
@@ -188,8 +323,10 @@ void audio_extn_sound_trigger_stop_lab(struct stream_in *in)
         event.u.ses_info = st_ses_info->st_ses;
         ALOGV("%s: AUDIO_EVENT_STOP_LAB pcm %p", __func__, st_ses_info->st_ses.pcm);
         st_dev->st_callback(AUDIO_EVENT_STOP_LAB, &event);
+        in->is_st_session_active = false;
     }
 }
+
 void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in)
 {
     struct sound_trigger_info  *st_ses_info = NULL;
@@ -225,6 +362,9 @@ void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
     if (!st_dev)
        return;
 
+    if (st_dev->sthal_prop_api_version >= STHAL_PROP_API_VERSION_1_0)
+        return;
+
     if (snd_device >= SND_DEVICE_OUT_BEGIN &&
         snd_device < SND_DEVICE_OUT_END) {
         device_type = PCM_PLAYBACK;
@@ -256,10 +396,52 @@ void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
     }/*Events for output device, if required can be placed here in else*/
 }
 
+void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info,
+                                     st_event_type_t event)
+{
+    bool raise_event = false;
+    struct audio_event_info ev_info;
+    audio_event_type_t ev;
+
+    if (!st_dev)
+       return;
+
+    if (st_dev->sthal_prop_api_version < STHAL_PROP_API_VERSION_1_0)
+        return;
+
+    if (uc_info == NULL) {
+        ALOGE("%s: null usecase", __func__);
+        return;
+    }
+
+    bool valid_type =
+            (uc_info->type == PCM_PLAYBACK &&
+             platform_snd_device_has_speaker(uc_info->out_snd_device)) ||
+            (uc_info->type == PCM_CAPTURE) ||
+            (uc_info->type == VOICE_CALL);
+
+    if (valid_type && platform_sound_trigger_usecase_needs_event(uc_info->id)) {
+        ALOGV("%s: uc_id %d of type %d for Event %d, with Raise=%d",
+              __func__, uc_info->id, uc_info->type, event, raise_event);
+        if (uc_info->type == PCM_CAPTURE) {
+            ev = (event == ST_EVENT_STREAM_BUSY) ? AUDIO_EVENT_CAPTURE_STREAM_ACTIVE :
+                                                   AUDIO_EVENT_CAPTURE_STREAM_INACTIVE;
+        } else {
+            ev = (event == ST_EVENT_STREAM_BUSY) ? AUDIO_EVENT_PLAYBACK_STREAM_ACTIVE :
+                                                   AUDIO_EVENT_PLAYBACK_STREAM_INACTIVE;
+        }
+        if (!populate_usecase(&ev_info.u.usecase, uc_info)) {
+            ALOGI("%s: send event %d: usecase id %d, type %d",
+                  __func__, ev, uc_info->id, uc_info->type);
+            st_dev->st_callback(ev, &ev_info);
+        }
+    }
+}
+
 void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
                                struct str_parms *params)
 {
-    audio_event_info_t event;
+    struct audio_event_info event;
     char value[32];
     int ret, val;
 
@@ -308,7 +490,7 @@ int audio_extn_sound_trigger_init(struct audio_device *adev)
 {
     int status = 0;
     char sound_trigger_lib[100];
-    void *lib_handle;
+    void *sthal_prop_api_version;
 
     ALOGV("%s: Enter", __func__);
 
@@ -326,20 +508,33 @@ int audio_extn_sound_trigger_init(struct audio_device *adev)
     st_dev->lib_handle = dlopen(sound_trigger_lib, RTLD_NOW);
 
     if (st_dev->lib_handle == NULL) {
-        ALOGE("%s: DLOPEN failed for %s. error = %s", __func__, sound_trigger_lib,
-                dlerror());
-        status = -EINVAL;
+        ALOGE("%s: error %s", __func__, dlerror());
+        status = -ENODEV;
         goto cleanup;
     }
     ALOGV("%s: DLOPEN successful for %s", __func__, sound_trigger_lib);
 
-    st_dev->st_callback = (sound_trigger_hw_call_back_t)
-              dlsym(st_dev->lib_handle, "sound_trigger_hw_call_back");
+    DLSYM(st_dev->lib_handle, st_dev->st_callback, sound_trigger_hw_call_back,
+          status);
+    if (status)
+        goto cleanup;
 
-    if (st_dev->st_callback == NULL) {
-       ALOGE("%s: ERROR. dlsym Error:%s sound_trigger_hw_call_back", __func__,
-               dlerror());
-       goto cleanup;
+    DLSYM(st_dev->lib_handle, sthal_prop_api_version,
+          sthal_prop_api_version, status);
+    if (status) {
+        st_dev->sthal_prop_api_version = 0;
+        status  = 0; /* passthru for backward compability */
+    } else {
+        st_dev->sthal_prop_api_version = *(int*)sthal_prop_api_version;
+        if (MAJOR_VERSION(st_dev->sthal_prop_api_version) !=
+            MAJOR_VERSION(STHAL_PROP_API_CURRENT_VERSION)) {
+            ALOGE("%s: Incompatible API versions ahal:0x%x != sthal:0x%x",
+                  __func__, STHAL_PROP_API_CURRENT_VERSION,
+                  st_dev->sthal_prop_api_version);
+            goto cleanup;
+        }
+        ALOGD("%s: sthal is using proprietary API version 0x%04x", __func__,
+              st_dev->sthal_prop_api_version);
     }
 
     st_dev->adev = adev;
@@ -354,7 +549,6 @@ cleanup:
     free(st_dev);
     st_dev = NULL;
     return status;
-
 }
 
 void audio_extn_sound_trigger_deinit(struct audio_device *adev)

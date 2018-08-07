@@ -20,7 +20,7 @@
 
 #include <errno.h>
 #include <math.h>
-#include <cutils/log.h>
+#include <log/log.h>
 
 #include "audio_hw.h"
 #include "platform.h"
@@ -438,10 +438,17 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_ENABLE, value,
                             sizeof(value));
     if (ret >= 0) {
-           if (!strncmp(value,"true",sizeof(value)))
-               ret = start_hfp(adev,parms);
-           else
-               stop_hfp(adev);
+           if (!strncmp(value,"true",sizeof(value))) {
+               if (!hfpmod.is_hfp_running)
+                   start_hfp(adev,parms);
+               else
+                   ALOGW("%s: HFP is already active.", __func__);
+           } else {
+               if (hfpmod.is_hfp_running)
+                   stop_hfp(adev);
+               else
+                   ALOGW("%s: ignore STOP, HFC not active", __func__);
+           }
     }
     memset(value, 0, sizeof(value));
     ret = str_parms_get_str(parms,AUDIO_PARAMETER_HFP_SET_SAMPLING_RATE, value,

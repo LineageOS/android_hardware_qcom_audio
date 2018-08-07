@@ -24,7 +24,7 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include <cutils/str_parms.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/misc.h>
 
 #include "acdb.h"
@@ -141,8 +141,6 @@ static int audio_extn_utils_send_app_type_cfg_hfp(struct audio_device *adev,
     snd_device = usecase->out_snd_device;
     pcm_device_id = platform_get_pcm_device_id(usecase->id, PCM_PLAYBACK);
 
-    snd_device = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
-                 audio_extn_get_spkr_prot_snd_device(snd_device) : snd_device;
     acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
     if (acdb_dev_id < 0) {
         ALOGE("%s: Couldn't get the acdb dev id", __func__);

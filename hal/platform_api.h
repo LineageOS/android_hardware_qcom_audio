@@ -33,9 +33,16 @@ struct amp_db_and_gain_table {
     uint32_t level;
 };
 
+struct mic_info {
+    char device_id[AUDIO_MICROPHONE_ID_MAX_LEN];
+    size_t channel_count;
+    audio_microphone_channel_mapping_t channel_mapping[AUDIO_CHANNEL_COUNT_MAX];
+};
+
 enum card_status_t;
 struct audio_usecase;
 enum usecase_type_t;
+struct audio_backend_cfg;
 
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
@@ -52,6 +59,7 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device);
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device);
 int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *usecase,
                                        int app_type, int sample_rate);
+int platform_set_acdb_metainfo_key(void *platform, char *name, int key);
 int platform_get_default_app_type_v2(void *platform, enum usecase_type_t type, int *app_type);
 int platform_switch_voice_call_device_pre(void *platform);
 int platform_switch_voice_call_enable_device_config(void *platform,
@@ -65,6 +73,7 @@ int platform_switch_voice_call_usecase_route_post(void *platform,
                                                   snd_device_t in_snd_device);
 int platform_start_voice_call(void *platform, uint32_t vsid);
 int platform_stop_voice_call(void *platform, uint32_t vsid);
+int platform_set_mic_break_det(void *platform, bool enable);
 int platform_set_voice_volume(void *platform, int volume);
 void platform_set_speaker_gain_in_combo(struct audio_device *adev,
                                         snd_device_t snd_device,
@@ -97,12 +106,16 @@ int64_t platform_render_latency(audio_usecase_t usecase);
 
 int platform_set_incall_recording_session_id(void *platform,
                                              uint32_t session_id, int rec_mode);
+int platform_set_incall_recording_session_channels(void *platform,
+                                                   uint32_t session_channels);
 int platform_stop_incall_recording_usecase(void *platform);
 int platform_start_incall_music_usecase(void *platform);
 int platform_stop_incall_music_usecase(void *platform);
 
 int platform_set_snd_device_backend(snd_device_t snd_device, const char * backend,
                                     const char * hw_interface);
+
+bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id);
 
 /* From platform_info.c */
 int platform_info_init(const char *filename, void *);
@@ -148,4 +161,25 @@ int platform_set_sidetone(struct audio_device *adev,
                           bool enable, char * str);
 int platform_get_mmap_data_fd(void *platform, int dev, int dir,
                               int *fd, uint32_t *size);
+bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id);
+bool platform_snd_device_has_speaker(snd_device_t dev);
+
+bool platform_set_microphone_characteristic(void *platform,
+                                            struct audio_microphone_characteristic_t mic);
+bool platform_set_microphone_map(void *platform, snd_device_t in_snd_device,
+                                 const struct mic_info *info);
+int platform_get_microphones(void *platform,
+                             struct audio_microphone_characteristic_t *mic_array,
+                             size_t *mic_count);
+int platform_get_active_microphones(void *platform, unsigned int channels,
+                                    audio_usecase_t usecase,
+                                    struct audio_microphone_characteristic_t *mic_array,
+                                    size_t *mic_count);
+int platform_set_usb_service_interval(void *platform,
+                                      bool playback,
+                                      unsigned long service_interval,
+                                      bool *reconfig);
+int platform_get_usb_service_interval(void *platform,
+                                      bool playback,
+                                      unsigned long *service_interval);
 #endif // AUDIO_PLATFORM_API_H

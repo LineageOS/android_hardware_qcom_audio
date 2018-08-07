@@ -21,7 +21,7 @@
 #include <errno.h>
 #include <math.h>
 #include <stdlib.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/str_parms.h>
 #include <sys/ioctl.h>
 #include <sound/voice_params.h>
@@ -576,22 +576,14 @@ void voice_extn_get_parameters(const struct audio_device *adev,
 int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
                                                   struct stream_out *out)
 {
-    uint32_t session_id = 0;
-
-    session_id = get_session_id_with_state(adev, CALL_LOCAL_HOLD);
-    if (session_id == VOICE_VSID) {
-        out->usecase = USECASE_INCALL_MUSIC_UPLINK;
-    } else if (session_id == VOICE2_VSID) {
-        out->usecase = USECASE_INCALL_MUSIC_UPLINK2;
-    } else {
-        ALOGE("%s: Invalid session id %x", __func__, session_id);
-        return -EINVAL;
-    }
-
+    out->usecase = USECASE_INCALL_MUSIC_UPLINK;
     out->config = pcm_config_incall_music;
-    out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_MONO;
-    out->channel_mask = AUDIO_CHANNEL_OUT_MONO;
+    //FIXME: add support for MONO stream configuration when audioflinger mixer supports it
+    out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_STEREO;
+    out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+    out->config.rate = out->sample_rate;
 
+    ALOGV("%s: mode=%d, usecase id=%d", __func__, adev->mode, out->usecase);
     return 0;
 }
 #endif

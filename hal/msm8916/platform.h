@@ -56,6 +56,7 @@ enum {
     SND_DEVICE_OUT_HANDSET = SND_DEVICE_OUT_BEGIN,
     SND_DEVICE_OUT_SPEAKER,
     SND_DEVICE_OUT_SPEAKER_REVERSE,
+    SND_DEVICE_OUT_SPEAKER_SAFE,
     SND_DEVICE_OUT_LINE,
     SND_DEVICE_OUT_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
@@ -70,6 +71,9 @@ enum {
     SND_DEVICE_OUT_SPEAKER_AND_HDMI,
     SND_DEVICE_OUT_BT_SCO,
     SND_DEVICE_OUT_BT_SCO_WB,
+    SND_DEVICE_OUT_BT_A2DP,
+    SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP,
+    SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP,
     SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES,
     SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES,
     SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET,
@@ -242,6 +246,8 @@ enum {
 #define AFE_PROXY_PLAYBACK_PCM_DEVICE 7
 #define AFE_PROXY_RECORD_PCM_DEVICE 8
 
+#define AUDIO_MAKE_STRING_FROM_ENUM(X)   { #X, X }
+
 #define LIB_CSD_CLIENT "libcsd-client.so"
 /* CSD-CLIENT related functions */
 typedef int (*init_t)();
@@ -277,7 +283,7 @@ struct csd_data {
     stop_record_t stop_record;
 };
 
-#define PLATFORM_INFO_XML_PATH          "/system/etc/audio_platform_info.xml"
-#define PLATFORM_INFO_XML_BASE_STRING   "/system/etc/audio_platform_info"
+#define PLATFORM_INFO_XML_PATH          "audio_platform_info.xml"
+#define PLATFORM_INFO_XML_BASE_STRING   "audio_platform_info"
 
 #endif // QCOM_AUDIO_PLATFORM_H

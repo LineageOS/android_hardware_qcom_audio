@@ -10,7 +10,7 @@ AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 ifneq ($(filter msm8960,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="2"
 endif
-ifneq ($(filter msm8974 msm8226 msm8084 msm8992 msm8994 msm8996 msm8998,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8974 msm8226 msm8084 msm8992 msm8994 msm8996 msm8998 sdm845,$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM = msm8974
 ifneq ($(filter msm8974,$(TARGET_BOARD_PLATFORM)),)
@@ -39,12 +39,20 @@ ifneq ($(filter msm8996,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSM8996
   LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="4"
   LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
+  LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
   MULTIPLE_HW_VARIANTS_ENABLED := true
 endif
 ifneq ($(filter msm8998,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSM8998
   LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="4"
-  LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
+  LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
+  MULTIPLE_HW_VARIANTS_ENABLED := true
+endif
+ifneq ($(filter sdm845,$(TARGET_BOARD_PLATFORM)),)
+  LOCAL_CFLAGS := -DPLATFORM_SDM845
+  LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="4"
+  LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
+  LOCAL_CFLAGS += -DINCALL_STEREO_CAPTURE_ENABLED
   MULTIPLE_HW_VARIANTS_ENABLED := true
 endif
 endif
@@ -124,6 +132,10 @@ ifeq ($(strip $(AUDIO_FEATURE_SUPPORTED_EXTERNAL_BT)),true)
     LOCAL_CFLAGS += -DEXTERNAL_BT_SUPPORTED
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_FLICKER_SENSOR_INPUT)),true)
+    LOCAL_CFLAGS += -DFLICKER_SENSOR_INPUT
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_NO_AUDIO_OUT)),true)
     LOCAL_CFLAGS += -DNO_AUDIO_OUT
 endif
@@ -144,12 +156,22 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SPKR_PROTECTION)),true)
     LOCAL_SRC_FILES += audio_extn/spkr_protection.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_CIRRUS_SPKR_PROTECTION)),true)
+    LOCAL_CFLAGS += -DSPKR_PROT_ENABLED
+    LOCAL_SRC_FILES += audio_extn/cirrus_playback.c
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DSM_FEEDBACK)),true)
     LOCAL_CFLAGS += -DDSM_FEEDBACK_ENABLED
     LOCAL_SRC_FILES += audio_extn/dsm_feedback.c
 endif
 
-ifneq ($(filter msm8992 msm8994 msm8996 msm8998,$(TARGET_BOARD_PLATFORM)),)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_A2DP_OFFLOAD)),true)
+    LOCAL_CFLAGS += -DA2DP_OFFLOAD_ENABLED
+    LOCAL_SRC_FILES += audio_extn/a2dp.c
+endif
+
+ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm845,$(TARGET_BOARD_PLATFORM)),)
   # push codec/mad calibration to HW dep node
   # applicable to msm8992/8994 or newer platforms
   LOCAL_CFLAGS += -DHWDEP_CAL_ENABLED
@@ -160,6 +182,24 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SND_MONITOR)), true)
     LOCAL_CFLAGS += -DSND_MONITOR_ENABLED
     LOCAL_SRC_FILES += audio_extn/sndmonitor.c
 endif
+
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_USB_SERVICE_INTERVAL)), true)
+    LOCAL_CFLAGS += -DUSB_SERVICE_INTERVAL_ENABLED
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MAXX_AUDIO)), true)
+    LOCAL_CFLAGS += -DMAXXAUDIO_QDSP_ENABLED
+    LOCAL_SRC_FILES += audio_extn/maxxaudio.c
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_BG_CAL)),true)
+    LOCAL_CFLAGS += -DBG_CODEC_CAL
+endif
+
+LOCAL_SHARED_LIBRARIES += libbase libhidlbase libhwbinder libutils android.hardware.power@1.2 liblog
+
+LOCAL_SRC_FILES += audio_perf.cpp
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 
