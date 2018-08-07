@@ -15,6 +15,7 @@ libOmxG711Enc-def += -DVERBOSE
 libOmxG711Enc-def += -D_DEBUG
 libOmxG711Enc-def += -Wconversion
 libOmxG711Enc-def += -DAUDIOV2
+libOmxG711Enc-def += -Wno-sign-conversion -Wno-self-assign -Wno-format -Wno-macro-redefined
 
 # ---------------------------------------------------------------------------------
 #             Make the Shared library (libOmxG711Enc)
