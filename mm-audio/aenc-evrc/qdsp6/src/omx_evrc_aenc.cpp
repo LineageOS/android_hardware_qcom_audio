@@ -925,7 +925,7 @@ loopback_in:
         pThis->get_state(&pThis->m_cmp, &state);
         pthread_mutex_unlock(&pThis->m_state_lock);
     }
-    else if ((state == OMX_StatePause))
+    else if (state == OMX_StatePause)
     {
         if(!(pThis->m_input_ctrl_cmd_q.m_size))
         {
