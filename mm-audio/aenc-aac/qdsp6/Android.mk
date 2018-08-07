@@ -15,6 +15,7 @@ libOmxAacEnc-def += -DVERBOSE
 libOmxAacEnc-def += -D_DEBUG
 libOmxAacEnc-def += -Wconversion
 libOmxAacEnc-def += -DAUDIOV2
+libOmxAacEnc-def += -Wno-sign-conversion -Wno-self-assign -Wno-format -Wno-macro-redefined -Wno-sign-compare
 
 # ---------------------------------------------------------------------------------
 #             Make the Shared library (libOmxAacEnc)

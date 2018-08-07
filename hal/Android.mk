@@ -6,8 +6,6 @@ include $(CLEAR_VARS)
 
 LOCAL_ARM_MODE := arm
 
-LOCAL_CFLAGS := -Wno-error -Wno-sign-compare
-
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
 ifneq ($(filter msm8974 msm8226 msm8610 apq8084 msm8994 msm8992 msm8996,$(TARGET_BOARD_PLATFORM)),)
@@ -301,7 +299,7 @@ ifneq ($(strip $(AUDIO_FEATURE_ENABLED_EXT_AMPLIFIER)),false)
     LOCAL_SRC_FILES += audio_extn/audio_amplifier.c
 endif
 
-LOCAL_CFLAGS += -Wall -Wno-unused-parameter
+LOCAL_CFLAGS += -Werror
 
 LOCAL_COPY_HEADERS_TO   := mm-audio
 LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
