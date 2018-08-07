@@ -5076,7 +5076,7 @@ static int out_get_mmap_position(const struct audio_stream_out *stream,
         ALOGE("%s: %s", __func__, pcm_get_error(out->pcm));
         return ret;
     }
-    position->time_nanoseconds = ts.tv_sec*1000000000L + ts.tv_nsec;
+    position->time_nanoseconds = ts.tv_sec*1000000000LL + ts.tv_nsec;
     return 0;
 }
 
