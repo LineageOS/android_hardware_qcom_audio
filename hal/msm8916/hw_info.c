@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -117,6 +117,9 @@ static void update_hardware_info_8x16(struct hardware_info *hw_info, const char 
     }  else if (!strcmp(snd_card_name, "msm8952-snd-card")) {
         strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "msm8952-snd-card-mtp")) {
+        strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "sdm439-sku1-snd-card")) {
+        hw_info->is_stereo_spkr = false;
         strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "sdm439-snd-card-mtp")) {
         strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
