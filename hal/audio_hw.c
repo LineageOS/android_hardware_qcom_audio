@@ -6491,10 +6491,9 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             ret = platform_get_ext_disp_type(adev->platform);
             if (ret < 0) {
                 ALOGE("%s: Failed to query disp type, ret:%d", __func__, ret);
-                status = ret;
-                goto done;
+            } else {
+                platform_cache_edid(adev->platform);
             }
-            platform_cache_edid(adev->platform);
         } else if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
             /*
              * Do not allow AFE proxy port usage by WFD source when USB headset is connected.
