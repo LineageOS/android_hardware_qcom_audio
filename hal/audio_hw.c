@@ -1246,6 +1246,11 @@ case 7
 
   resolution: no need to switch
 
+case 8
+  uc->dev d1 (a1)                B1
+  new_uc->dev d11 (a1), d2 (a2)  B1, B2
+  resolution: compared to case 1, for this case, d1 and d11 are related
+  then need to do the same as case 2 to siwtch to new uc
 */
 static snd_device_t derive_playback_snd_device(void * platform,
                                                struct audio_usecase *uc,
@@ -1293,7 +1298,11 @@ static snd_device_t derive_playback_snd_device(void * platform,
         if (platform_check_backends_match(d3[0], d3[1])) {
             return d2; // case 5
         } else {
-            return d1; // case 1
+            // check if d1 and d3[1] are related
+            if (d1 == d3[1])
+                return d1; // case 1
+            else
+                return d3[1]; // case 8
         }
     } else {
         if (platform_check_backends_match(d1, d2)) {
