@@ -405,6 +405,15 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_USB_BURST_MODE)), true)
     LOCAL_CFLAGS += -DUSB_BURST_MODE_ENABLED
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_BATTERY_LISTENER)), true)
+    LOCAL_CFLAGS += -DBATTERY_LISTENER_ENABLED
+    LOCAL_SRC_FILES += audio_extn/battery_listener.cpp
+    LOCAL_SHARED_LIBRARIES += android.hardware.health@1.0 android.hardware.health@2.0 \
+                              libhidltransport libbase libhidlbase libhwbinder \
+                              libutils android.hardware.power@1.2
+    LOCAL_STATIC_LIBRARIES := libhealthhalutils
+endif
+
 LOCAL_CFLAGS += -Wall -Werror
 
 LOCAL_COPY_HEADERS_TO   := mm-audio
