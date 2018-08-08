@@ -6422,7 +6422,8 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
         ALOGI("%s: new_snd_devices[%d] is %d", __func__, i, new_snd_devices[i]);
         if ((platform_check_codec_backend_cfg(adev, usecase, new_snd_devices[i],
                                              &backend_cfg)) ||
-             (!platform_check_backends_match(usecase->out_snd_device, snd_device))) {
+            ((usecase->out_snd_device != SND_DEVICE_NONE) &&
+             !platform_check_backends_match(usecase->out_snd_device, snd_device))) {
             ret = platform_set_codec_backend_cfg(adev, new_snd_devices[i],
                                            backend_cfg);
             if (!ret) {
