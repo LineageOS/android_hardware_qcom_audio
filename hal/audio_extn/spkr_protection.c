@@ -22,6 +22,7 @@
 #include <math.h>
 #include <log/log.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include "audio_hw.h"
 #include "platform.h"
 #include "platform_api.h"
