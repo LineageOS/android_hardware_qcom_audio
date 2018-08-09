@@ -599,6 +599,9 @@ int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,
     /* Use an empty patch from patch database and initialze */
     active_loopback_patch = &(audio_loopback_mod->patch_db.loopback_patch[
                                 audio_loopback_mod->patch_db.num_patches]);
+
+    memset(active_loopback_patch, 0, sizeof(loopback_patch_t));
+
     active_loopback_patch->patch_handle_id = PATCH_HANDLE_INVALID;
     active_loopback_patch->patch_state = PATCH_INACTIVE;
     active_loopback_patch->patch_stream.ip_hdlr_handle = NULL;
