@@ -26,6 +26,10 @@ DOLBY_ENABLE := false
 endif
 USE_XML_AUDIO_POLICY_CONF := 1
 BOARD_SUPPORTS_SOUND_TRIGGER := true
+BOARD_SUPPORTS_SOUND_TRIGGER_ARM := true
+AUDIO_FEATURE_ENABLED_FFV := true
+AUDIO_FEATURE_ENABLED_KEEP_ALIVE_ARM_FFV := true
+AUDIO_FEATURE_ENABLED_KEEP_ALIVE := true
 AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
 AUDIO_FEATURE_ENABLED_FLUENCE := true
 AUDIO_FEATURE_ENABLED_HFP := true
@@ -36,6 +40,10 @@ AUDIO_FEATURE_ENABLED_DYNAMIC_LOG := true
 MM_AUDIO_ENABLED_FTM := true
 TARGET_USES_QCOM_MM_AUDIO := true
 AUDIO_FEATURE_ENABLED_SND_MONITOR := true
+BOARD_SUPPORTS_QAHW := true
+BOARD_SUPPORTS_QSTHW_API := true
+AUDIO_FEATURE_DISABLED_SOUND_TRIGGER_LEGACY_HAL := true
+AUDIO_FEATURE_ENABLED_COMPRESS_INPUT := true
 
 ##AUDIO_FEATURE_FLAGS
 
@@ -59,6 +67,7 @@ PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msm8909/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
     hardware/qcom/audio/configs/msm8909/mixer_paths_msm8909_pm8916.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_msm8909_pm8916.xml \
     hardware/qcom/audio/configs/msm8909/mixer_paths_wcd9326_i2s.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wcd9326_i2s.xml \
+    hardware/qcom/audio/configs/msm8909/mixer_paths_wcd9326_i2s_tdm.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wcd9326_i2s_tdm.xml \
     hardware/qcom/audio/configs/msm8909/mixer_paths_skua.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_skua.xml \
     hardware/qcom/audio/configs/msm8909/mixer_paths_skuc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_skuc.xml \
     hardware/qcom/audio/configs/msm8909/mixer_paths_skue.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_skue.xml \
@@ -66,7 +75,10 @@ PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msm8909/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
     hardware/qcom/audio/configs/msm8909/sound_trigger_mixer_paths_wcd9326.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9326.xml \
     hardware/qcom/audio/configs/msm8909/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
-    hardware/qcom/audio/configs/msm8909/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml
+    hardware/qcom/audio/configs/msm8909/sound_trigger_mixer_paths_wcd9335.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9335.xml \
+    hardware/qcom/audio/configs/msm8909/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
+    hardware/qcom/audio/configs/msm8909/audio_platform_info_extcodec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_extcodec.xml \
+    hardware/qcom/audio/configs/msm8909/audio_io_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_io_policy.conf
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
@@ -87,7 +99,10 @@ endif
 PRODUCT_PROPERTY_OVERRIDES += \
 ro.vendor.audio.sdk.ssr=false
 
-##fluencetype can be "fluence" or "fluencepro" or "none"
+PRODUCT_PROPERTY_OVERRIDES += \
+ro.vendor.audio.sdk.ffv=false
+
+##fluencetype can be "fluence" or "fluencepro" or "fluenceffv" or "none"
 PRODUCT_PROPERTY_OVERRIDES += \
 ro.vendor.audio.sdk.fluencetype=none\
 persist.vendor.audio.fluence.voicecall=true\
