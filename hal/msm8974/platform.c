@@ -6147,11 +6147,12 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     }
 
     /*
-     * Check if the device is speaker or handset,assumption handset shares
-     * backend with speaker, and these devices are restricited to 48kHz.
+     * Handset and speaker may have diffrent backend. Check if the device is speaker or handset,
+     * and these devices are restricited to 48kHz.
      */
-    if (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device)) {
-
+    if ((platform_get_backend_index(snd_device) == DEFAULT_CODEC_BACKEND) &&
+        (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device) ||
+         platform_check_backends_match(SND_DEVICE_OUT_HANDSET, snd_device))) {
         if (bit_width >= 24) {
             bit_width = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
             ALOGD("%s:becf: afe: reset bitwidth to %d (based on supported"
