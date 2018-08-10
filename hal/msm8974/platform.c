@@ -6254,10 +6254,11 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
             ALOGD("%s:becf: afe: napb not active - set non fractional rate",
                        __func__);
         }
-        /*ensure AFE set to 48khz when sample rate less than 44.1khz*/
-        if (sample_rate < OUTPUT_SAMPLING_RATE_44100) {
-            sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-            ALOGD("%s:becf: afe: napb set sample rate to default Sample Rate(48k)",__func__);
+        /*reset sample rate to 48khz if sample rate less than 44.1khz, or device backend dose not support 44.1 khz*/
+        if ((sample_rate == OUTPUT_SAMPLING_RATE_44100 && backend_idx != HEADPHONE_44_1_BACKEND)
+            || sample_rate < OUTPUT_SAMPLING_RATE_44100) {
+                sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+            ALOGD("%s:becf: afe: reset sample rate to default Sample Rate(48k)",__func__);
         }
     }
 
@@ -6384,13 +6385,6 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
     /*this is populated by check_codec_backend_cfg hence set default value to false*/
     backend_cfg.passthrough_enabled = false;
 
-     /*check if the stream sample 44.1Khz rate is supported of configured device sample rate. If not
-       open afe at default sample rate.
-      */
-    if (backend_idx != HEADPHONE_44_1_BACKEND &&
-        usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100)
-        backend_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-
     /* Set Backend sampling rate to 176.4 for DSD64 and
      * 352.8Khz for DSD128.
      * Set Bit Width to 16
@@ -6419,9 +6413,7 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
     for (i = 0; i < num_devices; i++) {
         ALOGI("%s: new_snd_devices[%d] is %d", __func__, i, new_snd_devices[i]);
         if ((platform_check_codec_backend_cfg(adev, usecase, new_snd_devices[i],
-                                             &backend_cfg)) ||
-            ((usecase->out_snd_device != SND_DEVICE_NONE) &&
-             !platform_check_backends_match(usecase->out_snd_device, snd_device))) {
+                                             &backend_cfg))) {
             ret = platform_set_codec_backend_cfg(adev, new_snd_devices[i],
                                            backend_cfg);
             if (!ret) {
