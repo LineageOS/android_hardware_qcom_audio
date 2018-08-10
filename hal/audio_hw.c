@@ -897,6 +897,11 @@ static int enable_disable_effect(struct audio_device *adev, int effect_type, boo
     ALOGD("%s: effect_type:%d enable:%d", __func__, effect_type, enable);
 
     usecase = get_usecase_from_list(adev, in->usecase);
+    if (usecase == NULL) {
+        ALOGE("%s: Could not find the usecase (%d) in the list",
+              __func__, in->usecase);
+        return -EINVAL;
+    }
 
     ret = platform_get_effect_config_data(usecase->in_snd_device, &effect_config, effect_type);
     if (ret < 0) {
