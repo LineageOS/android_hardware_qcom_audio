@@ -70,7 +70,9 @@ public:
                                          audio_port_handle_t *portId);
         // indicates to the audio policy manager that the input starts being used.
         virtual status_t startInput(audio_io_handle_t input,
-                                    audio_session_t session);
+                                    audio_session_t session,
+                                    bool silenced,
+                                    concurrency_type__mask_t *concurrency);
         // indicates to the audio policy manager that the input stops being used.
         virtual status_t stopInput(audio_io_handle_t input,
                                    audio_session_t session);
@@ -92,6 +94,7 @@ protected:
         status_t startSource(const sp<AudioOutputDescriptor>& outputDesc,
                              audio_stream_type_t stream,
                              audio_devices_t device,
+                             const char *address,
                              uint32_t *delayMs);
          status_t stopSource(const sp<AudioOutputDescriptor>& outputDesc,
                             audio_stream_type_t stream,
@@ -123,11 +126,8 @@ private:
                 audio_devices_t device,
                 audio_session_t session,
                 audio_stream_type_t stream,
-                uint32_t samplingRate,
-                audio_format_t format,
-                audio_channel_mask_t channelMask,
-                audio_output_flags_t flags,
-                const audio_offload_info_t *offloadInfo);
+                const audio_config_t *config,
+                audio_output_flags_t *flags);
         // internal method to fill offload info in case of Direct PCM
         status_t getOutputForAttr(const audio_attributes_t *attr,
                 audio_io_handle_t *output,
@@ -135,7 +135,7 @@ private:
                 audio_stream_type_t *stream,
                 uid_t uid,
                 const audio_config_t *config,
-                audio_output_flags_t flags,
+                audio_output_flags_t *flags,
                 audio_port_handle_t *selectedDeviceId,
                 audio_port_handle_t *portId);
         // Used for voip + voice concurrency usecase
