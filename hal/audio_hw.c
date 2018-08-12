@@ -3098,7 +3098,7 @@ exit:
         error_log_log(out->error_log, error_code, audio_utils_get_real_time_ns());
         if (out->usecase != USECASE_AUDIO_PLAYBACK_OFFLOAD) {
             ALOGE_IF(out->pcm != NULL,
-                    "%s: error %zd - %s", __func__, ret, pcm_get_error(out->pcm));
+                    "%s: error %ld - %s", __func__, ret, pcm_get_error(out->pcm));
             sleeptime_us = frames * 1000000LL / out_get_sample_rate(&out->stream.common);
             // usleep not guaranteed for values over 1 second but we don't limit here.
         }
