@@ -265,7 +265,7 @@ struct platform_data {
     void *edid_info;
     bool edid_valid;
     int ext_disp_type;
-    char ec_ref_mixer_path[64];
+    char ec_ref_mixer_path[MIXER_PATH_MAX_LENGTH];
     codec_backend_cfg_t current_backend_cfg[MAX_CODEC_BACKENDS];
     char codec_version[CODEC_VERSION_MAX_LENGTH];
     int hw_dep_fd;
@@ -1172,6 +1172,7 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
                                  audio_devices_t out_device __unused)
 {
     struct platform_data *my_data = (struct platform_data *)adev->platform;
+    char ec_ref_mixer_path[MIXER_PATH_MAX_LENGTH] = "echo-reference";
 
     if (strcmp(my_data->ec_ref_mixer_path, "")) {
         ALOGV("%s: disabling %s", __func__, my_data->ec_ref_mixer_path);
@@ -1180,22 +1181,26 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
     }
 
     if (enable) {
+#ifndef COMPRESS_VOIP_ENABLED
+        if (adev->mode == AUDIO_MODE_IN_COMMUNICATION)
+            strlcat(ec_ref_mixer_path, "-voip", MIXER_PATH_MAX_LENGTH);
+#endif
         /*
          * If native audio device reference count > 0, then apply codec EC otherwise
          * fallback to Speakers with VBat if enabled or default
          */
         if (adev->snd_dev_ref_cnt[SND_DEVICE_OUT_HEADPHONES_44_1] > 0)
-            strlcpy(my_data->ec_ref_mixer_path, "echo-reference headphones-44.1",
-                    sizeof(my_data->ec_ref_mixer_path));
+            strlcat(ec_ref_mixer_path, " headphones-44.1",
+                    MIXER_PATH_MAX_LENGTH);
         else if (adev->snd_dev_ref_cnt[SND_DEVICE_OUT_SPEAKER_VBAT] > 0)
-            strlcpy(my_data->ec_ref_mixer_path, "echo-reference speaker-vbat",
-                    sizeof(my_data->ec_ref_mixer_path));
+            strlcat(ec_ref_mixer_path, " speaker-vbat",
+                    MIXER_PATH_MAX_LENGTH);
         else if (adev->snd_dev_ref_cnt[SND_DEVICE_OUT_DISPLAY_PORT] > 0)
-            strlcpy(my_data->ec_ref_mixer_path, "echo-reference display-port",
-                    sizeof(my_data->ec_ref_mixer_path));
-        else
-            strlcpy(my_data->ec_ref_mixer_path, "echo-reference",
-                    sizeof(my_data->ec_ref_mixer_path));
+            strlcat(ec_ref_mixer_path, " display-port",
+                    MIXER_PATH_MAX_LENGTH);
+
+        strlcpy(my_data->ec_ref_mixer_path, ec_ref_mixer_path,
+                MIXER_PATH_MAX_LENGTH);
 
         ALOGD("%s: enabling %s", __func__, my_data->ec_ref_mixer_path);
         audio_route_apply_and_update_path(adev->audio_route, my_data->ec_ref_mixer_path);
