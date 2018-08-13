@@ -780,6 +780,11 @@ void audio_extn_spkr_prot_init(void *adev)
     }
 }
 
+void audio_extn_spkr_prot_deinit(void *adev __unused)
+{
+    ALOGV("%s: Entry", __func__);
+}
+
 int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device)
 {
     if (!handle.spkr_prot_enable)

@@ -42,6 +42,7 @@ void audio_extn_set_snd_card_split(const char* in_snd_card_name);
 #define audio_extn_spkr_prot_stop_processing(snd_device)     (0)
 #define audio_extn_spkr_prot_is_enabled() (false)
 #define audio_extn_get_spkr_prot_snd_device(snd_device) (snd_device)
+#define audio_extn_spkr_prot_deinit(adev)       (0)
 #else
 void audio_extn_spkr_prot_init(void *adev);
 int audio_extn_spkr_prot_start_processing(snd_device_t snd_device);
@@ -49,6 +50,8 @@ void audio_extn_spkr_prot_stop_processing(snd_device_t snd_device);
 bool audio_extn_spkr_prot_is_enabled();
 int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device);
 void audio_extn_spkr_prot_calib_cancel(void *adev);
+void audio_extn_spkr_prot_deinit(void *adev);
+
 #endif
 
 #ifndef HFP_ENABLED
