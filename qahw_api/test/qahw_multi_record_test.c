@@ -454,8 +454,7 @@ void *start_input(void *thread_param)
               tsColdF.tv_nsec/1000000 - tsColdI.tv_nsec/1000000;
 
       fread((void *) latencyBuf, 100, 1, fdLatencyNode);
-      if (fdLatencyNode)
-          fclose(fdLatencyNode);
+      fclose(fdLatencyNode);
       sscanf(latencyBuf, " %llu,%llu", &tsec, &tusec);
       tCont = ((uint64_t)tsCont.tv_sec)*1000 - tsec*1000 + ((uint64_t)tsCont.tv_nsec)/1000000 - tusec/1000;
       if (log_file != stdout) {

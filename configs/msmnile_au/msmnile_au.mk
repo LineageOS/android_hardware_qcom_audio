@@ -73,14 +73,14 @@ DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
 PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msmnile_au/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
     hardware/qcom/audio/configs/msmnile_au/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
-    hardware/qcom/audio/configs/msmnile_au/mixer_paths_tavil.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tavil.xml \
+    hardware/qcom/audio/configs/msmnile_au/mixer_paths_adp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_adp.xml \
     hardware/qcom/audio/configs/msmnile_au/audio_tuning_mixer_tavil.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer_tavil.txt \
     hardware/qcom/audio/configs/msmnile_au/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
     hardware/qcom/audio/configs/msmnile_au/sound_trigger_mixer_paths_wcd9340.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9340.xml \
     hardware/qcom/audio/configs/msmnile_au/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
     hardware/qcom/audio/configs/msmnile_au/graphite_ipc_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/graphite_ipc_platform_info.xml \
     hardware/qcom/audio/configs/msmnile_au/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
-    hardware/qcom/audio/configs/msmnile_au/mixer_paths_pahu.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_pahu.xml \
+    hardware/qcom/audio/configs/msmnile_au/mixer_paths_custom.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_custom.xml \
     hardware/qcom/audio/configs/msmnile_au/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml
 
 #XML Audio configuration files
@@ -194,10 +194,6 @@ vendor.audio.use.sw.ape.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=true
 
-#Disable FM a2dp concurrency
-PRODUCT_PROPERTY_OVERRIDES += \
-vendor.fm.a2dp.conc.disabled=true
-
 #audio becoming noisy intent broadcast delay
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.noisy.broadcast.delay=600
@@ -232,3 +228,14 @@ PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-impl \
     android.hardware.audio.effect@2.0-impl \
     android.hardware.soundtrigger@2.0-impl
+
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.audio.calfile0=/vendor/etc/acdbdata/adsp_avs_config.acdb\
+persist.audio.calfile1=/vendor/etc/acdbdata/ADP/Bluetooth_cal.acdb\
+persist.audio.calfile2=/vendor/etc/acdbdata/ADP/Codec_cal.acdb\
+persist.audio.calfile3=/vendor/etc/acdbdata/ADP/General_cal.acdb\
+persist.audio.calfile4=/vendor/etc/acdbdata/ADP/Global_cal.acdb\
+persist.audio.calfile5=/vendor/etc/acdbdata/ADP/Handset_cal.acdb\
+persist.audio.calfile6=/vendor/etc/acdbdata/ADP/Hdmi_cal.acdb\
+persist.audio.calfile7=/vendor/etc/acdbdata/ADP/Headset_cal.acdb\
+persist.audio.calfile8=/vendor/etc/acdbdata/ADP/Speaker_cal.acdb

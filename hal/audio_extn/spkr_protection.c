@@ -61,8 +61,8 @@
 #define MIN_SPKR_TEMP_Q6 (-30 * (1 << 6))
 #define MAX_SPKR_TEMP_Q6 (80 * (1 << 6))
 #define VI_FEED_CHANNEL "VI_FEED_TX Channels"
-#define WSA8815_NAME_LEFT "wsatz.13"
-#define WSA8815_NAME_RIGHT "wsatz.14"
+#define WSA8815_SPK1_NAME "wsatz.13"
+#define WSA8815_SPK2_NAME "wsatz.14"
 #define WCD_LEFT_BOOST_MAX_STATE "SPKR Left Boost Max State"
 #define WCD_RIGHT_BOOST_MAX_STATE "SPKR Right Boost Max State"
 #define WSA_LEFT_BOOST_LEVEL "SpkrLeft Boost Level"
@@ -555,23 +555,11 @@ void destroy_thread_params()
     }
 }
 
-static bool is_wsa_present(void)
-{
-   ALOGD("%s: tz1: %s, tz2: %s", __func__,
-          tz_names.spkr_1_name, tz_names.spkr_2_name);
-   handle.spkr_1_tzn = get_tzn(tz_names.spkr_1_name);
-   handle.spkr_2_tzn = get_tzn(tz_names.spkr_2_name);
-   if ((handle.spkr_1_tzn >= 0) || (handle.spkr_2_tzn >= 0))
-        handle.wsa_found = true;
-
-   return handle.wsa_found;
-}
-
 static void audio_extn_check_wsa(struct audio_device *adev,
                 unsigned int num_of_spkrs, bool *wsa_is_8815)
 {
     unsigned int i = 0;
-    if (!is_wsa_present() ||
+    if (!handle.wsa_found ||
         platform_spkr_prot_is_wsa_analog_mode(adev)){
         for (i = 0; i < num_of_spkrs; i++)
             wsa_is_8815[i] = false;
@@ -579,27 +567,13 @@ static void audio_extn_check_wsa(struct audio_device *adev,
         return;
     }
 
-    if (!strncmp(WSA8815_NAME_LEFT, tz_names.spkr_1_name,
-            sizeof(WSA8815_NAME_LEFT)) ||
-            !strncmp(WSA8815_NAME_RIGHT, tz_names.spkr_1_name,
-                sizeof(WSA8815_NAME_RIGHT))) {
+    if (handle.spkr_1_tzn >= 0 &&
+        !strncmp(WSA8815_SPK1_NAME, tz_names.spkr_1_name, sizeof(WSA8815_SPK1_NAME)))
         wsa_is_8815[SP_V2_SPKR_1] = true;
-    } else {
-        wsa_is_8815[SP_V2_SPKR_1] = false;
-        ALOGI("%s: Speaker1(%s) is not wsa8815.", __func__, tz_names.spkr_1_name);
-    }
 
-    if (num_of_spkrs == SP_V2_NUM_MAX_SPKRS &&
-        (!strncmp(WSA8815_NAME_RIGHT, tz_names.spkr_2_name,
-                    sizeof(WSA8815_NAME_RIGHT)) ||
-            !strncmp(WSA8815_NAME_LEFT, tz_names.spkr_2_name,
-                    sizeof(WSA8815_NAME_LEFT)))) {
+    if (handle.spkr_2_tzn >= 0 &&
+        !strncmp(WSA8815_SPK2_NAME, tz_names.spkr_2_name, sizeof(WSA8815_SPK2_NAME)))
         wsa_is_8815[SP_V2_SPKR_2] = true;
-    } else {
-        wsa_is_8815[SP_V2_SPKR_2] = false;
-        ALOGI("%s: Speaker2(%s) is not wsa8815.", __func__, tz_names.spkr_2_name);
-    }
-
 }
 
 int audio_extn_set_wcd_boost_max_state(struct audio_device *adev,
@@ -659,10 +633,10 @@ int audio_extn_set_wsa_boost_level(struct audio_device *adev,
 }
 
 static int audio_extn_spkr_boost_update(struct audio_device *adev,
-                unsigned int wsa_num, unsigned int *index )
+                unsigned int wsa_num, unsigned int *index, bool spkr2_is_mono)
 {
     float dcr = 0;
-    unsigned int r0_index = 0;
+    unsigned int r0_index = 0, wsa_to_set = wsa_num;
     int boost_max_state = 0;
     int ret = 0;
 
@@ -687,14 +661,22 @@ static int audio_extn_spkr_boost_update(struct audio_device *adev,
     }
 
     boost_max_state = spkr_prot_boost_lookup_table[r0_index].max_state;
-    ret = audio_extn_set_wcd_boost_max_state(adev, boost_max_state, wsa_num);
+
+    /* In case of wsatz.14 as the only speaker on target, prefix of corresponding
+     * mixer ctl in dirver is named SpkrRight. As a result, we have to fixup the
+     * WSA number.
+     */
+    if (spkr2_is_mono)
+        wsa_to_set = SP_V2_SPKR_2;
+
+    ret = audio_extn_set_wcd_boost_max_state(adev, boost_max_state, wsa_to_set);
     if (ret < 0) {
         ALOGE("%s: failed to set wcd max boost state.",
             __func__);
         return -EINVAL;
     }
 
-    ret = audio_extn_set_wsa_boost_level(adev, wsa_num, r0_index);
+    ret = audio_extn_set_wsa_boost_level(adev, wsa_to_set, r0_index);
     if (ret < 0) {
         ALOGE("%s: failed to set wsa boost level.",
             __func__);
@@ -710,7 +692,9 @@ static void audio_extn_set_boost_and_limiter(struct audio_device *adev,
                 bool spv3_enable, unsigned int afe_api_version)
 {
     int chn = 0;
+    int chn_in_use = 0;
     bool wsa_is_8815[SP_V2_NUM_MAX_SPKRS] = {false, false};
+    bool spkr2_is_mono_speaker = false;
     unsigned int r0_index = 0;
 
     handle.sp_version = SP_V2;
@@ -721,13 +705,20 @@ static void audio_extn_set_boost_and_limiter(struct audio_device *adev,
      * of spv2 or spv3.
      */
     audio_extn_check_wsa(adev, vi_feed_no_channels, wsa_is_8815);
+    if (vi_feed_no_channels == 1 && wsa_is_8815[SP_V2_SPKR_2])
+        spkr2_is_mono_speaker = true;
     /*
      * In case of WSA8815+8810, invalid limiter threshold is sent to DSP
      * for WSA8810 speaker. DSP ignores the invalid value and use default one.
      * The approach let spv3 apply on 8815 and spv2 on 8810 respectively.
      */
     for (chn = 0; chn < vi_feed_no_channels; chn++) {
-        if (wsa_is_8815[chn] && !audio_extn_spkr_boost_update(adev, chn, &r0_index)) {
+        chn_in_use = chn;
+        if (spkr2_is_mono_speaker)
+            chn_in_use = SP_V2_SPKR_2;
+        if (wsa_is_8815[chn_in_use] &&
+            !audio_extn_spkr_boost_update(adev, chn,
+                                    &r0_index, spkr2_is_mono_speaker)) {
             handle.limiter_th[chn] = spv3_limiter_th_q27_table[r0_index];
             handle.sp_version = SP_V3;
         }
@@ -1067,7 +1058,7 @@ static void* spkr_calibration_thread()
                 handle.spkr_prot_mode = MSM_SPKR_PROT_CALIBRATED;
             close(acdb_fd);
 
-            audio_extn_set_boost_and_limiter(adev, spv3_enable, vi_feed_no_channels);
+            audio_extn_set_boost_and_limiter(adev, spv3_enable, afe_api_version);
 
             pthread_exit(0);
             return NULL;
@@ -1223,7 +1214,15 @@ static void* spkr_calibration_thread()
         }
         if (goahead) {
                 int status;
-                status = spkr_calibrate(t0_spk_1, t0_spk_2);
+                /* DSP always calibrates 1st channel data in mono case.
+                 * When wsatz14 is the only speaker on target, temperature
+                 * sensor data comes in 2nd channel. Therefore, we have to swap
+                 * sensor channel to fix the mismatch.
+                 */
+                if ( handle.spkr_1_tzn <= 0 && handle.spkr_2_tzn > 0)
+                     status = spkr_calibrate(t0_spk_2, t0_spk_1);
+                else
+                     status = spkr_calibrate(t0_spk_1, t0_spk_2);
                 pthread_mutex_unlock(&adev->lock);
                 if (status == -EAGAIN) {
                     ALOGE("%s: failed to calibrate try again %s",
@@ -1243,7 +1242,7 @@ static void* spkr_calibration_thread()
         dlclose(handle.thermal_handle);
     handle.thermal_handle = NULL;
 
-    audio_extn_set_boost_and_limiter(adev, spv3_enable, vi_feed_no_channels);
+    audio_extn_set_boost_and_limiter(adev, spv3_enable, afe_api_version);
 
     pthread_exit(0);
     return NULL;
@@ -1285,7 +1284,7 @@ void audio_extn_spkr_prot_set_parameters(struct str_parms *parms,
 
 static int spkr_vi_channels(struct audio_device *adev)
 {
-    int vi_channels;
+    int vi_channels, vi_channel_num_by_wsa = 0;
 
     vi_channels = vi_feed_get_channels(adev);
     ALOGD("%s: vi_channels %d", __func__, vi_channels);
@@ -1293,6 +1292,24 @@ static int spkr_vi_channels(struct audio_device *adev)
         /* limit the number of channels to SP_V2_NUM_MAX_SPKRS */
         vi_channels = SP_V2_NUM_MAX_SPKRS;
     }
+
+    ALOGD("%s: tz1: %s, tz2: %s", __func__,
+           tz_names.spkr_1_name, tz_names.spkr_2_name);
+    handle.spkr_1_tzn = get_tzn(tz_names.spkr_1_name);
+    handle.spkr_2_tzn = get_tzn(tz_names.spkr_2_name);
+    /* Update VI channel number by WSA number */
+    if (handle.spkr_1_tzn >= 0)
+        vi_channel_num_by_wsa++;
+
+    if (handle.spkr_2_tzn >= 0)
+        vi_channel_num_by_wsa++;
+
+    if (vi_channel_num_by_wsa > 0)
+        handle.wsa_found = true;
+
+    if (vi_channel_num_by_wsa < vi_channels)
+        vi_channels = vi_channel_num_by_wsa;
+
     return vi_channels;
 }
 
@@ -1630,7 +1647,7 @@ void audio_extn_spkr_prot_init(void *adev)
     pthread_cond_init(&handle.cal_wait_condition, &attr);
     pthread_mutex_init(&handle.cal_wait_cond_mutex, NULL);
     pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
-    if (is_wsa_present()) {
+    if (handle.wsa_found) {
         if (platform_spkr_prot_is_wsa_analog_mode(adev) == 1) {
             ALOGD("%s: WSA analog mode", __func__);
             pcm_config_skr_prot.channels = WSA_ANALOG_MODE_CHANNELS;
@@ -1785,6 +1802,7 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
     struct audio_device *adev = handle.adev_handle;
     int32_t pcm_dev_tx_id = -1, ret = 0;
     snd_device_t in_snd_device;
+    char device_name[DEVICE_NAME_MAX_SIZE] = {0};
 
     ALOGV("%s: Entry", __func__);
     /* cancel speaker calibration */
@@ -1807,10 +1825,15 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
     if (!uc_info_tx) {
         return -ENOMEM;
     }
-    ALOGD("%s: snd_device(%d: %s)", __func__, snd_device,
-           platform_get_snd_device_name(snd_device));
+
+    if (platform_get_snd_device_name_extn(adev->platform, snd_device, device_name) < 0) {
+        ALOGE("%s: Invalid sound device returned", __func__);
+        return -EINVAL;
+    }
+    ALOGD("%s: spkr snd_device(%d: %s)", __func__, snd_device,
+           device_name);
     audio_route_apply_and_update_path(adev->audio_route,
-           platform_get_snd_device_name(snd_device));
+           device_name);
 
     pthread_mutex_lock(&handle.mutex_spkr_prot);
     if (handle.spkr_processing_state == SPKR_PROCESSING_IN_IDLE) {

@@ -157,10 +157,13 @@ void audio_extn_get_parameters(const struct audio_device *adev,
 #define audio_extn_get_anc_enabled()                     (0)
 #define audio_extn_should_use_fb_anc()                   (0)
 #define audio_extn_should_use_handset_anc(in_channels)   (0)
+#define audio_extn_set_aanc_noise_level(adev, parms)     (0)
 #else
 bool audio_extn_get_anc_enabled(void);
 bool audio_extn_should_use_fb_anc(void);
 bool audio_extn_should_use_handset_anc(int in_channels);
+void audio_extn_set_aanc_noise_level(struct audio_device *adev,
+                                     struct str_parms *parms);
 #endif
 
 #ifndef VBAT_MONITOR_ENABLED
