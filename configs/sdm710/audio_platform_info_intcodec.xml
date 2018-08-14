@@ -68,6 +68,7 @@
         <usecase name="USECASE_AUDIO_RECORD_COMPRESS4" type="in" id="43"/>
         <usecase name="USECASE_AUDIO_RECORD_COMPRESS5" type="in" id="44"/>
         <usecase name="USECASE_AUDIO_RECORD_COMPRESS6" type="in" id="45"/>
+        <usecase name="USECASE_AUDIO_A2DP_ABR_FEEDBACK" type="in" id="12"/>
     </pcm_ids>
     <config_params>
         <!-- In the below value string, the value indicates default mono -->
