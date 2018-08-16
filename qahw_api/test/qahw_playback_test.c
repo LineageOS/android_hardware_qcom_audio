@@ -161,6 +161,18 @@ audio_io_handle_t stream_handle = 0x999;
                    "music_offload_wma_encode_option2=%d;" \
                    "music_offload_wma_format_tag=%d;"
 
+#define APE_KVPAIR "music_offload_ape_bits_per_sample=%d;" \
+                   "music_offload_ape_blocks_per_frame=%d;" \
+                   "music_offload_ape_compatible_version=%d;" \
+                   "music_offload_ape_compression_level=%d;" \
+                   "music_offload_ape_final_frame_blocks=%d;" \
+                   "music_offload_ape_format_flags=%d;" \
+                   "music_offload_ape_num_channels=%d;" \
+                   "music_offload_ape_sample_rate=%d;" \
+                   "music_offload_ape_total_frames=%d;" \
+                   "music_offload_sample_rate=%d;" \
+                   "music_offload_seek_table_present=%d;"
+
 #ifndef AUDIO_OUTPUT_FLAG_ASSOCIATED
 #define AUDIO_OUTPUT_FLAG_ASSOCIATED 0x10000000
 #endif
@@ -302,6 +314,9 @@ void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
         break;
     case FILE_WMA:
         kvpair_type = WMA_KVPAIR;
+        break;
+    case FILE_APE:
+        kvpair_type = APE_KVPAIR;
         break;
     default:
         break;
@@ -648,6 +663,7 @@ void *start_stream_playback (void* stream_data)
         case FILE_VORBIS:
         case FILE_ALAC:
         case FILE_FLAC:
+        case FILE_APE:
             fprintf(log_file, "%s:calling setparam for kvpairs\n", __func__);
             if (!(params->kvpair_values)) {
                fprintf(log_file, "stream %d: error!!No metadata for the clip\n", params->stream_index);
@@ -1117,6 +1133,9 @@ void get_file_format(stream_config *stream_info)
             break;
         case FILE_IEC61937:
             stream_info->config.offload_info.format = AUDIO_FORMAT_IEC61937;
+            break;
+        case FILE_APE:
+            stream_info->config.offload_info.format = AUDIO_FORMAT_APE;
             break;
         default:
            fprintf(log_file, "Does not support given filetype\n");
@@ -1638,6 +1657,9 @@ void usage() {
     printf("                                          ->Note:all the USB device commmands(above) should be accompanied with the host side commands\n\n");
     printf("hal_play_test -f interactive_audio.wav -d 2 -l out.txt -k \"mixer_ctrl=pan_scale;c=1;o=6;I=fc;O=fl,fr,fc,lfe,bl,br;M=0.5,0.5,0,0,0,0\" -i 1\n");
     printf("                                          ->kv_pair for downmix or pan_scale should folow the above sequence, one can pass downmix & pan_scale params/coeff matrices. For each control params should be sent separately \n");
+    printf("hal_play_test -f /data/ape_dsp.isf.0x152E.bitstream.0x10100400.0x2.0x12F32.rx.bin -k 16,73728,3990,2000,53808,32,2,44100,157,44100,1 -t 18 -r 48000 -c 2 -v 0.5 -d 131072");
+    printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
+    printf("                                          ->bits_per_sample,blocks_per_frame,compatible_version,compression_level,final_frame_blocks,format_flags,num_channels,sample_rate,total_frames,sample_rate,seek_table_present \n");
 }
 
 int get_wav_header_length (FILE* file_stream)

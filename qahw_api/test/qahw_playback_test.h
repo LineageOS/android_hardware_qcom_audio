@@ -60,7 +60,8 @@ enum {
     FILE_MP2,
     FILE_APTX,
     FILE_TRUEHD,
-    FILE_IEC61937
+    FILE_IEC61937,
+    FILE_APE
 };
 
 typedef enum {
