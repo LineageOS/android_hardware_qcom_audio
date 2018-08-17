@@ -107,7 +107,16 @@ PRODUCT_PROPERTY_OVERRIDES += \
 ro.vendor.audio.sdk.fluencetype=none\
 persist.vendor.audio.fluence.voicecall=true\
 persist.vendor.audio.fluence.voicerec=false\
-persist.vendor.audio.fluence.speaker=true
+persist.vendor.audio.fluence.speaker=true\
+persist.vendor.audio.fluence.audiorec=false
+
+#enable generic handset mic
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.apptype.multirec.enabled=false
+
+#enable multi record
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.record.multiple.enabled=true
 
 #disable tunnel encoding
 PRODUCT_PROPERTY_OVERRIDES += \
