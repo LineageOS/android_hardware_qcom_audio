@@ -1255,53 +1255,54 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
     if(aptx_bt_cfg == NULL)
         return false;
 
+    ctl_enc_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_CONFIG_BLOCK);
+    if (!ctl_enc_data) {
+        ALOGE(" ERROR a2dp encoder CONFIG data mixer control not identifed");
+        return false;
+    }
+
 #ifndef LINUX_ENABLED
     struct aptx_enc_cfg_t aptx_dsp_cfg;
     struct aptx_ad_enc_cfg_t aptx_ad_dsp_cfg;
-    if(a2dp.is_aptx_adaptive)
-       mixer_size = sizeof(struct aptx_ad_enc_cfg_t);
-    else {
+    if(a2dp.is_aptx_adaptive) {
+        mixer_size = sizeof(struct aptx_ad_enc_cfg_t);
+        ret = update_aptx_ad_dsp_config(&aptx_ad_dsp_cfg, aptx_bt_cfg);
+        sample_rate_backup = aptx_ad_dsp_cfg.custom_cfg.sample_rate;
+    } else {
         mixer_size = sizeof(struct aptx_enc_cfg_t);
         sample_rate_backup = aptx_bt_cfg->default_cfg->sampling_rate;
+        ret = update_aptx_dsp_config_v2(&aptx_dsp_cfg, aptx_bt_cfg);
+    }
+    if (ret) {
+        is_configured = false;
+        goto fail;
+    }
+
+    if(a2dp.is_aptx_adaptive) {
+        ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_ad_dsp_cfg,
+                              mixer_size);
+    } else {
+        ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_dsp_cfg,
+                              mixer_size);
     }
 #else
     struct custom_enc_cfg_t aptx_dsp_cfg;
     mixer_size = sizeof(struct custom_enc_cfg_t);
     sample_rate_backup = aptx_bt_cfg->sampling_rate;
-#endif
-
-    ctl_enc_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_CONFIG_BLOCK);
-    if (!ctl_enc_data) {
-        ALOGE(" ERROR  a2dp encoder CONFIG data mixer control not identifed");
-        is_configured = false;
-        goto fail;
-    }
-
-#ifndef LINUX_ENABLED
-    if(a2dp.is_aptx_adaptive) {
-        ret = update_aptx_ad_dsp_config(&aptx_ad_dsp_cfg, aptx_bt_cfg);
-        sample_rate_backup = aptx_ad_dsp_cfg.custom_cfg.sample_rate;
-    } else
-        ret = update_aptx_dsp_config_v2(&aptx_dsp_cfg, aptx_bt_cfg);
-#else
     ret = update_aptx_dsp_config_v1(&aptx_dsp_cfg, aptx_bt_cfg);
-#endif
-
     if (ret) {
         is_configured = false;
         goto fail;
     }
-    if(a2dp.is_aptx_adaptive)
-        ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_ad_dsp_cfg,
-                             mixer_size);
-    else
-        ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_dsp_cfg,
-                              mixer_size);
+    ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_dsp_cfg,
+                          mixer_size);
+#endif
     if (ret != 0) {
         ALOGE("%s: Failed to set APTX encoder config", __func__);
         is_configured = false;
         goto fail;
     }
+
     ctrl_bit_format = mixer_get_ctl_by_name(a2dp.adev->mixer,
                                             MIXER_ENC_BIT_FORMAT);
     if (!ctrl_bit_format) {

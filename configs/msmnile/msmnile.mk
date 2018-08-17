@@ -70,7 +70,7 @@ AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
 AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := true
 ##AUDIO_FEATURE_FLAGS
 
-ifneq ($(strip $(TARGET_USES_QSSI)), true)
+ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays
 DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
 endif
@@ -224,6 +224,10 @@ vendor.audio_hal.period_multiplier=3
 #ADM Buffering size in ms
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.adm.buffering.ms=2
+
+#enable keytone FR
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.hal.output.suspend.supported=true
 
 #enable mirror-link feature
 PRODUCT_PROPERTY_OVERRIDES += \
