@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9044da97_751a89aa",
+        "filename": "post_proc/bundle.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 466,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2018-08-19T07:55:42Z",
+      "side": 1,
+      "message": "¯\\_(ツ)_/¯",
+      "revId": "8701fce3d8b03e0821db1b3da98b9f824550d4b4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
