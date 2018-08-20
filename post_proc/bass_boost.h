@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, 2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -19,6 +19,8 @@
 
 #ifndef OFFLOAD_EFFECT_BASS_BOOST_H_
 #define OFFLOAD_EFFECT_BASS_BOOST_H_
+
+#define BASSBOOST_PARAM_LATENCY 0x80000000
 
 #include "bundle.h"
 

@@ -40,7 +40,9 @@ static const qahw_effect_uuid_t * const SL_IID_BASSBOOST_UUID = &SL_IID_BASSBOOS
 typedef enum
 {
     BASSBOOST_PARAM_STRENGTH_SUPPORTED,
-    BASSBOOST_PARAM_STRENGTH
+    BASSBOOST_PARAM_STRENGTH,
+    BASSBOOST_PARAM_LATENCY = 0x80000000 // Internal paramter specific to qahw.
+                                         // Used to get latency introduced by bassboost effect.
 } qahw_bassboost_params;
 
 #ifdef __cplusplus

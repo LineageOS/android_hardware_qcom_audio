@@ -50,7 +50,9 @@ typedef enum
     EQ_PARAM_CUR_PRESET,            // Gets/Sets the current preset.
     EQ_PARAM_GET_NUM_OF_PRESETS,    // Gets the total number of presets the equalizer supports.
     EQ_PARAM_GET_PRESET_NAME,       // Gets the preset name based on the index.
-    EQ_PARAM_PROPERTIES             // Gets/Sets all parameters at a time.
+    EQ_PARAM_PROPERTIES,            // Gets/Sets all parameters at a time.
+    EQ_PARAM_LATENCY = 0x80000000   // Internal paramter specific to qahw.
+                                    // Used to get latency introduced by equalizer effect.
 } qahw_equalizer_params;
 
 enum

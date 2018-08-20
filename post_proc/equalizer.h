@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -25,6 +25,8 @@
 #define NUM_EQ_BANDS              5
 #define INVALID_PRESET		 -2
 #define PRESET_CUSTOM		 -1
+
+#define EQ_PARAM_LATENCY 0x80000000
 
 extern const effect_descriptor_t equalizer_descriptor;
 

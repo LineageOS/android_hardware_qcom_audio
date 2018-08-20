@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2011 The Android Open Source Project
@@ -22,7 +22,7 @@
 
 #include <qahw_effect_api.h>
 
-#if __cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -55,7 +55,9 @@ typedef enum
     REVERB_PARAM_DIFFUSION,             // in permilles,    range 0 to 1000
     REVERB_PARAM_DENSITY,               // in permilles,    range 0 to 1000
     REVERB_PARAM_PROPERTIES,
-    REVERB_PARAM_BYPASS
+    REVERB_PARAM_BYPASS,
+    REVERB_PARAM_LATENCY = 0x80000000   // Internal paramter specific to qahw.
+                                        // Used to get latency introduced by reverb effect.
 } qahw_env_reverb_params;
 
 //qahw_reverb_settings is equal to SLEnvironmentalReverbSettings defined in OpenSL ES specification.
@@ -73,7 +75,7 @@ typedef struct s_reverb_settings {
 } __attribute__((packed)) qahw_reverb_settings;
 
 
-#if __cplusplus
+#ifdef __cplusplus
 }  // extern "C"
 #endif
 

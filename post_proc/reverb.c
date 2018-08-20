@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2014, 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2014, 2017-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -29,6 +29,8 @@
 
 #include "effect_api.h"
 #include "reverb.h"
+
+#define REVERB_MAX_LATENCY 100
 
 /* Offload auxiliary environmental reverb UUID: 79a18026-18fd-4185-8233-0002a5d5c51b */
 const effect_descriptor_t aux_env_reverb_descriptor = {
@@ -522,6 +524,11 @@ int reverb_get_parameter(effect_context_t *context, effect_param_t *p,
            p->status = -EINVAL;
         p->vsize = sizeof(reverb_settings_t);
         break;
+    case REVERB_PARAM_LATENCY:
+        if (p->vsize < sizeof(uint32_t))
+            return -EINVAL;
+        p->vsize = sizeof(uint32_t);
+        break;
     default:
         p->status = -EINVAL;
     }
@@ -574,6 +581,9 @@ int reverb_get_parameter(effect_context_t *context, effect_param_t *p,
         reverb_settings->reflectionsDelay = reverb_get_reflections_delay(reverb_ctxt);
         reverb_settings->diffusion = reverb_get_diffusion(reverb_ctxt);
         reverb_settings->density = reverb_get_density(reverb_ctxt);
+        break;
+    case REVERB_PARAM_LATENCY:
+        *(uint16_t *)value = REVERB_MAX_LATENCY;
         break;
     default:
         p->status = -EINVAL;
