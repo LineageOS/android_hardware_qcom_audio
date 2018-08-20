@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, 2017-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -28,6 +28,8 @@
 
 #include "effect_api.h"
 #include "virtualizer.h"
+
+#define VIRUALIZER_MAX_LATENCY 30
 
 /* Offload Virtualizer UUID: 509a4498-561a-4bea-b3b1-0002a5d5c51b */
 const effect_descriptor_t virtualizer_descriptor = {
@@ -304,6 +306,11 @@ int virtualizer_get_parameter(effect_context_t *context, effect_param_t *p,
            p->status = -EINVAL;
         p->vsize = sizeof(uint32_t);
         break;
+    case VIRTUALIZER_PARAM_LATENCY:
+        if (p->vsize < sizeof(uint32_t))
+            p->status = -EINVAL;
+        p->vsize = sizeof(uint32_t);
+        break;
     default:
         p->status = -EINVAL;
     }
@@ -345,6 +352,10 @@ int virtualizer_get_parameter(effect_context_t *context, effect_param_t *p,
 
     case VIRTUALIZER_PARAM_VIRTUALIZATION_MODE:
         *(uint32_t *)value  = (uint32_t) virtualizer_get_virtualization_mode(virt_ctxt);
+        break;
+
+    case VIRTUALIZER_PARAM_LATENCY:
+        *(uint32_t *)value = VIRUALIZER_MAX_LATENCY;
         break;
 
     default:
