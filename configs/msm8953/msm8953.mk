@@ -57,6 +57,7 @@ AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
 BOARD_SUPPORTS_QAHW := false
 AUDIO_FEATURE_ENABLED_DYNAMIC_LOG := true
 AUDIO_FEATURE_ENABLED_SND_MONITOR := true
+AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
 ifeq ($(TARGET_KERNEL_VERSION), 3.18)
     AUDIO_FEATURE_ENABLED_DLKM := false
 else
@@ -233,9 +234,18 @@ vendor.audio.flac.sw.decoder.24bit=true
 PRODUCT_PROPERTY_OVERRIDES += \
 ro.af.client_heap_size_kbyte=7168
 
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.audio.hw.binder.size_kbyte=1024
+
 # for HIDL related packages
 PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-service \
     android.hardware.audio@2.0-impl \
     android.hardware.audio.effect@2.0-impl \
-    android.hardware.soundtrigger@2.0-impl
+    android.hardware.soundtrigger@2.1-impl \
+    android.hardware.audio@4.0 \
+    android.hardware.audio.common@4.0 \
+    android.hardware.audio.common@4.0-util \
+    android.hardware.audio@4.0-impl \
+    android.hardware.audio.effect@4.0 \
+    android.hardware.audio.effect@4.0-impl

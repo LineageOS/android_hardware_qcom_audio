@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- Copyright (c) 2015-16, The Linux Foundation. All rights reserved.      -->
+<!-- Copyright (c) 2015-2016, 2018, The Linux Foundation. All rights reserved.      -->
 <!--                                                                        -->
 <!-- Redistribution and use in source and binary forms, with or without     -->
 <!-- modification, are permitted provided that the following conditions are -->
@@ -606,6 +606,24 @@
         <path name="deep-buffer-playback bt-sco" />
     </path>
 
+    <path name="deep-buffer-playback speaker-and-bt-sco">
+        <path name="deep-buffer-playback bt-sco" />
+        <path name="deep-buffer-playback" />
+    </path>
+
+    <path name="deep-buffer-playback speaker-and-bt-sco-wb">
+        <path name="deep-buffer-playback bt-sco-wb" />
+        <path name="deep-buffer-playback" />
+    </path>
+
+    <path name="deep-buffer-playback wsa-speaker-and-bt-sco">
+        <path name="deep-buffer-playback speaker-and-bt-sco" />
+    </path>
+
+    <path name="deep-buffer-playback wsa-speaker-and-bt-sco-wb">
+        <path name="deep-buffer-playback speaker-and-bt-sco-wb" />
+    </path>
+
     <path name="deep-buffer-playback afe-proxy">
         <ctl name="AFE_PCM_RX Audio Mixer MultiMedia1" value="1" />
     </path>
@@ -652,6 +670,24 @@
         <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
         <ctl name="SLIM_1 SampleRate" value="16000" />
         <path name="low-latency-playback bt-sco" />
+    </path>
+
+    <path name="low-latency-playback speaker-and-bt-sco">
+        <path name="low-latency-playback bt-sco" />
+        <path name="low-latency-playback" />
+    </path>
+
+    <path name="low-latency-playback speaker-and-bt-sco-wb">
+        <path name="low-latency-playback bt-sco-wb" />
+        <path name="low-latency-playback" />
+    </path>
+
+    <path name="low-latency-playback wsa-speaker-and-bt-sco">
+        <path name="low-latency-playback speaker-and-bt-sco" />
+    </path>
+
+    <path name="low-latency-playback wsa-speaker-and-bt-sco-wb">
+        <path name="low-latency-playback speaker-and-bt-sco-wb" />
     </path>
 
     <path name="low-latency-playback speaker-and-hdmi">
@@ -723,6 +759,24 @@
         <path name="audio-ull-playback bt-sco" />
     </path>
 
+    <path name="audio-ull-playback speaker-and-bt-sco">
+        <path name="audio-ull-playback bt-sco" />
+        <path name="audio-ull-playback" />
+    </path>
+
+    <path name="audio-ull-playback speaker-and-bt-sco-wb">
+        <path name="audio-ull-playback bt-sco-wb" />
+        <path name="audio-ull-playback" />
+    </path>
+
+    <path name="audio-ull-playback wsa-speaker-and-bt-sco">
+        <path name="audio-ull-playback speaker-and-bt-sco" />
+    </path>
+
+    <path name="audio-ull-playback wsa-speaker-and-bt-sco-wb">
+        <path name="audio-ull-playback speaker-and-bt-sco-wb" />
+    </path>
+
     <path name="audio-ull-playback afe-proxy">
         <ctl name="AFE_PCM_RX Audio Mixer MultiMedia3" value="1" />
     </path>
@@ -765,6 +819,24 @@
         <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
         <ctl name="SLIM_1 SampleRate" value="16000" />
         <path name="compress-offload-playback bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback speaker-and-bt-sco">
+        <path name="compress-offload-playback bt-sco" />
+        <path name="compress-offload-playback" />
+    </path>
+
+    <path name="compress-offload-playback speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback bt-sco-wb" />
+        <path name="compress-offload-playback" />
+    </path>
+
+    <path name="compress-offload-playback wsa-speaker-and-bt-sco">
+        <path name="compress-offload-playback speaker-and-bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback wsa-speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback speaker-and-bt-sco-wb" />
     </path>
 
     <path name="compress-offload-playback speaker-and-hdmi">
@@ -820,6 +892,24 @@
         <path name="compress-offload-playback2 bt-sco" />
     </path>
 
+    <path name="compress-offload-playback2 speaker-and-bt-sco">
+        <path name="compress-offload-playback2 bt-sco" />
+        <path name="compress-offload-playback2" />
+    </path>
+
+    <path name="compress-offload-playback2 speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback2 bt-sco-wb" />
+        <path name="compress-offload-playback2" />
+    </path>
+
+    <path name="compress-offload-playback2 wsa-speaker-and-bt-sco">
+        <path name="compress-offload-playback2 speaker-and-bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback2 wsa-speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback2 speaker-and-bt-sco-wb" />
+    </path>
+
     <path name="compress-offload-playback2 speaker-and-hdmi">
         <path name="compress-offload-playback2 hdmi" />
         <path name="compress-offload-playback2" />
@@ -867,6 +957,24 @@
         <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
         <ctl name="SLIM_1 SampleRate" value="16000" />
         <path name="compress-offload-playback3 bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback3 speaker-and-bt-sco">
+        <path name="compress-offload-playback3 bt-sco" />
+        <path name="compress-offload-playback3" />
+    </path>
+
+    <path name="compress-offload-playback3 speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback3 bt-sco-wb" />
+        <path name="compress-offload-playback3" />
+    </path>
+
+    <path name="compress-offload-playback3 wsa-speaker-and-bt-sco">
+        <path name="compress-offload-playback3 speaker-and-bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback3 wsa-speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback3 speaker-and-bt-sco-wb" />
     </path>
 
     <path name="compress-offload-playback3 speaker-and-hdmi">
@@ -918,6 +1026,24 @@
         <path name="compress-offload-playback4 bt-sco" />
     </path>
 
+    <path name="compress-offload-playback4 speaker-and-bt-sco">
+        <path name="compress-offload-playback4 bt-sco" />
+        <path name="compress-offload-playback4" />
+    </path>
+
+    <path name="compress-offload-playback4 speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback4 bt-sco-wb" />
+        <path name="compress-offload-playback4" />
+    </path>
+
+    <path name="compress-offload-playback4 wsa-speaker-and-bt-sco">
+        <path name="compress-offload-playback4 speaker-and-bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback4 wsa-speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback4 speaker-and-bt-sco-wb" />
+    </path>
+
     <path name="compress-offload-playback4 speaker-and-hdmi">
         <path name="compress-offload-playback4 hdmi" />
         <path name="compress-offload-playback4" />
@@ -965,6 +1091,24 @@
         <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
         <ctl name="SLIM_1 SampleRate" value="16000" />
         <path name="compress-offload-playback5 bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback5 speaker-and-bt-sco">
+        <path name="compress-offload-playback5 bt-sco" />
+        <path name="compress-offload-playback5" />
+    </path>
+
+    <path name="compress-offload-playback5 speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback5 bt-sco-wb" />
+        <path name="compress-offload-playback5" />
+    </path>
+
+    <path name="compress-offload-playback5 wsa-speaker-and-bt-sco">
+        <path name="compress-offload-playback5 speaker-and-bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback5 wsa-speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback5 speaker-and-bt-sco-wb" />
     </path>
 
     <path name="compress-offload-playback5 speaker-and-hdmi">
@@ -1016,6 +1160,24 @@
         <path name="compress-offload-playback6 bt-sco" />
     </path>
 
+    <path name="compress-offload-playback6 speaker-and-bt-sco">
+        <path name="compress-offload-playback6 bt-sco" />
+        <path name="compress-offload-playback6" />
+    </path>
+
+    <path name="compress-offload-playback6 speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback6 bt-sco-wb" />
+        <path name="compress-offload-playback6" />
+    </path>
+
+    <path name="compress-offload-playback6 wsa-speaker-and-bt-sco">
+        <path name="compress-offload-playback6 speaker-and-bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback6 wsa-speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback6 speaker-and-bt-sco-wb" />
+    </path>
+
     <path name="compress-offload-playback6 speaker-and-hdmi">
         <path name="compress-offload-playback6 hdmi" />
         <path name="compress-offload-playback6" />
@@ -1063,6 +1225,24 @@
         <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
         <ctl name="SLIM_1 SampleRate" value="16000" />
         <path name="compress-offload-playback7 bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback7 speaker-and-bt-sco">
+        <path name="compress-offload-playback7 bt-sco" />
+        <path name="compress-offload-playback7" />
+    </path>
+
+    <path name="compress-offload-playback7 speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback7 bt-sco-wb" />
+        <path name="compress-offload-playback7" />
+    </path>
+
+    <path name="compress-offload-playback7 wsa-speaker-and-bt-sco">
+        <path name="compress-offload-playback7 speaker-and-bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback7 wsa-speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback7 speaker-and-bt-sco-wb" />
     </path>
 
     <path name="compress-offload-playback7 speaker-and-hdmi">
@@ -1114,6 +1294,24 @@
         <path name="compress-offload-playback8 bt-sco" />
     </path>
 
+    <path name="compress-offload-playback8 speaker-and-bt-sco">
+        <path name="compress-offload-playback8 bt-sco" />
+        <path name="compress-offload-playback8" />
+    </path>
+
+    <path name="compress-offload-playback8 speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback8 bt-sco-wb" />
+        <path name="compress-offload-playback8" />
+    </path>
+
+    <path name="compress-offload-playback8 wsa-speaker-and-bt-sco">
+        <path name="compress-offload-playback8 speaker-and-bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback8 wsa-speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback8 speaker-and-bt-sco-wb" />
+    </path>
+
     <path name="compress-offload-playback8 speaker-and-hdmi">
         <path name="compress-offload-playback8 hdmi" />
         <path name="compress-offload-playback8" />
@@ -1161,6 +1359,24 @@
         <ctl name="Internal BTSCO SampleRate" value="BTSCO_RATE_16KHZ" />
         <ctl name="SLIM_1 SampleRate" value="16000" />
         <path name="compress-offload-playback9 bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback9 speaker-and-bt-sco">
+        <path name="compress-offload-playback9 bt-sco" />
+        <path name="compress-offload-playback9" />
+    </path>
+
+    <path name="compress-offload-playback9 speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback9 bt-sco-wb" />
+        <path name="compress-offload-playback9" />
+    </path>
+
+    <path name="compress-offload-playback9 wsa-speaker-and-bt-sco">
+        <path name="compress-offload-playback9 speaker-and-bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback9 wsa-speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback9 speaker-and-bt-sco-wb" />
     </path>
 
     <path name="compress-offload-playback9 speaker-and-hdmi">
