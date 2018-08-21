@@ -58,7 +58,7 @@ ifeq ($(strip $(AUDIO_USE_LL_AS_PRIMARY_OUTPUT)),true)
     LOCAL_CFLAGS += -DUSE_LL_AS_PRIMARY_OUTPUT
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_PCM_OFFLOAD)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PCM_OFFLOAD)),true)
     LOCAL_CFLAGS += -DPCM_OFFLOAD_ENABLED
 endif
 
@@ -66,11 +66,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_ANC_HEADSET)),true)
     LOCAL_CFLAGS += -DANC_HEADSET_ENABLED
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_FLUENCE)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FLUENCE)),true)
     LOCAL_CFLAGS += -DFLUENCE_ENABLED
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
 endif
 
@@ -88,7 +88,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_USBAUDIO)),true)
     LOCAL_SRC_FILES += audio_extn/usb.c
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_HFP)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HFP)),true)
     LOCAL_CFLAGS += -DHFP_ENABLED
     LOCAL_SRC_FILES += audio_extn/hfp.c
 endif
@@ -111,14 +111,14 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS)),true)
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),true)
     LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
 endif
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),true)
     LOCAL_CFLAGS += -DCOMPRESS_VOIP_ENABLED
     LOCAL_SRC_FILES += voice_extn/compress_voip.c
 endif
 
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FORMATS)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FORMATS)),true)
 LOCAL_CFLAGS += -DAUDIO_EXTN_FORMATS_ENABLED
 endif
 
@@ -189,7 +189,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_APE_OFFLOAD)),true)
     LOCAL_CFLAGS += -DCOMPRESS_METADATA_NEEDED
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_PCM_OFFLOAD_24)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PCM_OFFLOAD_24)),true)
        LOCAL_CFLAGS += -DPCM_OFFLOAD_ENABLED_24
 endif
 
