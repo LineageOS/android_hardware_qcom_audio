@@ -42,11 +42,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_ANC_HEADSET)),true)
     LOCAL_CFLAGS += -DANC_HEADSET_ENABLED
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_FLUENCE)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FLUENCE)),true)
     LOCAL_CFLAGS += -DFLUENCE_ENABLED
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
 endif
 
@@ -60,7 +60,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_USBAUDIO)),true)
     LOCAL_SRC_FILES += audio_extn/usb.c
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_HFP)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HFP)),true)
     LOCAL_CFLAGS += -DHFP_ENABLED
     LOCAL_SRC_FILES += audio_extn/hfp.c
 endif
@@ -96,13 +96,13 @@ endif
 endif
 
 ifneq ($(filter apq8084 msm8974 msm8226 msm8610,$(TARGET_BOARD_PLATFORM)),)
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),true)
     LOCAL_CFLAGS += -DCOMPRESS_VOIP_ENABLED
     LOCAL_SRC_FILES += voice_extn/compress_voip.c
 endif
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FORMATS)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FORMATS)),true)
 LOCAL_CFLAGS += -DAUDIO_EXTN_FORMATS_ENABLED
 endif
 

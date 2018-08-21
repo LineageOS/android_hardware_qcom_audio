@@ -1,9 +1,9 @@
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_POST_PROC)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_POST_PROC)),true)
 LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
 endif
 
