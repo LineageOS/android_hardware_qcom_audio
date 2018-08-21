@@ -51,11 +51,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_ANC_HEADSET)),true)
     LOCAL_CFLAGS += -DANC_HEADSET_ENABLED
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_FLUENCE)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FLUENCE)),true)
     LOCAL_CFLAGS += -DFLUENCE_ENABLED
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
 endif
 
@@ -87,12 +87,12 @@ endif
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS)),true)
     LOCAL_CFLAGS += -DMULTI_VOICE_SESSION_ENABLED
     LOCAL_SRC_FILES += voice_extn/voice_extn.c
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),false)
-    LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
-endif
+    ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INCALL_MUSIC)),true)
+        LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
+    endif
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),false)
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_VOIP)),true)
     LOCAL_CFLAGS += -DCOMPRESS_VOIP_ENABLED
     LOCAL_SRC_FILES += voice_extn/compress_voip.c
 endif
