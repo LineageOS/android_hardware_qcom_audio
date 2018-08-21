@@ -748,8 +748,6 @@ static int close_a2dp_output()
         if (a2dp.audio_stream_close() == false)
             ALOGE("%s: failed close A2DP control path from Bluetooth IPC library", __func__);
     }
-    if (a2dp.abr_config.is_abr_enabled && a2dp.abr_config.abr_started)
-        stop_abr();
     a2dp_common_init();
     a2dp.enc_sampling_rate = 0;
     a2dp.enc_channels = 0;
@@ -1559,8 +1557,7 @@ int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
          val = atoi(value);
          if (audio_is_a2dp_out_device(val)) {
              ALOGV("%s: Received device disconnect request", __func__);
-             reset_a2dp_enc_config_params();
-             reset_a2dp_dec_config_params();
+             reset_a2dp_config();
              close_a2dp_output();
          }
          goto param_handled;
