@@ -6144,10 +6144,11 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
             ALOGD("%s:becf: afe: napb not active - set non fractional rate",
                        __func__);
         }
-        /*ensure AFE set to 48khz when sample rate less than 44.1khz*/
-        if (sample_rate < OUTPUT_SAMPLING_RATE_44100) {
-            sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-            ALOGD("%s:becf: afe: napb set sample rate to default Sample Rate(48k)",__func__);
+        /*reset sample rate to 48khz if sample rate less than 44.1khz, or device backend dose not support 44.1 khz*/
+        if ((sample_rate == OUTPUT_SAMPLING_RATE_44100 && backend_idx != HEADPHONE_44_1_BACKEND)
+            || sample_rate < OUTPUT_SAMPLING_RATE_44100) {
+                sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+            ALOGD("%s:becf: afe: reset sample rate to default Sample Rate(48k)",__func__);
         }
     }
 
