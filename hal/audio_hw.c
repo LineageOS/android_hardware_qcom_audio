@@ -897,6 +897,11 @@ static int enable_disable_effect(struct audio_device *adev, int effect_type, boo
     ALOGD("%s: effect_type:%d enable:%d", __func__, effect_type, enable);
 
     usecase = get_usecase_from_list(adev, in->usecase);
+    if (usecase == NULL) {
+        ALOGE("%s: Could not find the usecase (%d) in the list",
+              __func__, in->usecase);
+        return -EINVAL;
+    }
 
     ret = platform_get_effect_config_data(usecase->in_snd_device, &effect_config, effect_type);
     if (ret < 0) {
@@ -5076,7 +5081,7 @@ static int out_get_mmap_position(const struct audio_stream_out *stream,
         ALOGE("%s: %s", __func__, pcm_get_error(out->pcm));
         return ret;
     }
-    position->time_nanoseconds = ts.tv_sec*1000000000L + ts.tv_nsec;
+    position->time_nanoseconds = ts.tv_sec*1000000000LL + ts.tv_nsec;
     return 0;
 }
 
@@ -5728,6 +5733,13 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                       (devices != AUDIO_DEVICE_OUT_USB_ACCESSORY);
     bool direct_dev = is_hdmi || is_usb_dev;
 
+    if (is_usb_dev && (audio_extn_usb_connected(NULL))) {
+        is_usb_dev = false;
+        devices = AUDIO_DEVICE_OUT_SPEAKER;
+        ALOGW("%s: ignore set device to non existing USB card, use output device(%#x)",
+              __func__, devices);
+    }
+
     *stream_out = NULL;
 
     out = (struct stream_out *)calloc(1, sizeof(struct stream_out));
@@ -5780,14 +5792,6 @@ int adev_open_output_stream(struct audio_hw_device *dev,
            ALOGV("AUDIO_DEVICE_OUT_AUX_DIGITAL and DIRECT|OFFLOAD, check hdmi caps");
            ret = read_hdmi_sink_caps(out);
        } else if (is_usb_dev) {
-            /* Check against usb headset connection state */
-            if (!audio_extn_usb_connected(NULL)) {
-                ALOGD("%s: usb headset unplugged", __func__);
-                ret = -EINVAL;
-                pthread_mutex_unlock(&adev->lock);
-                goto error_open;
-            }
-
             ret = read_usb_sup_params_and_compare(true /*is_playback*/,
                                                   &config->format,
                                                   &out->supported_formats[0],
@@ -6500,10 +6504,9 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             ret = platform_get_ext_disp_type(adev->platform);
             if (ret < 0) {
                 ALOGE("%s: Failed to query disp type, ret:%d", __func__, ret);
-                status = ret;
-                goto done;
+            } else {
+                platform_cache_edid(adev->platform);
             }
-            platform_cache_edid(adev->platform);
         } else if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
             /*
              * Do not allow AFE proxy port usage by WFD source when USB headset is connected.
@@ -6859,6 +6862,13 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                                             flags,
                                                             source);
 
+    if (is_usb_dev && (audio_extn_usb_connected(NULL))) {
+        is_usb_dev = false;
+        devices = AUDIO_DEVICE_IN_BUILTIN_MIC;
+        ALOGW("%s: ignore set device to non existing USB card, use input device(%#x)",
+              __func__, devices);
+    }
+
     *stream_in = NULL;
 
     if (!(is_usb_dev && may_use_hifi_record)) {
@@ -6922,16 +6932,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     }
 
     if (is_usb_dev && may_use_hifi_record) {
-        /* Check against usb headset connection state */
-        pthread_mutex_lock(&adev->lock);
-        if (!audio_extn_usb_connected(NULL)) {
-            ALOGD("%s: usb headset unplugged", __func__);
-            ret = -EINVAL;
-            pthread_mutex_unlock(&adev->lock);
-            goto err_open;
-        }
-        pthread_mutex_unlock(&adev->lock);
-
         /* HiFi record selects an appropriate format, channel, rate combo
            depending on sink capabilities*/
         ret = read_usb_sup_params_and_compare(false /*is_playback*/,
