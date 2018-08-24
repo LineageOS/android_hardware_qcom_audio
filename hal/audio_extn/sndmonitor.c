@@ -55,6 +55,7 @@
 #include <cutils/log.h>
 #include <cutils/str_parms.h>
 #include <ctype.h>
+#include <pthread.h>
 
 #include "audio_hw.h"
 #include "audio_extn.h"
