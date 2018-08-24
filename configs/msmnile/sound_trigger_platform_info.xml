@@ -166,6 +166,7 @@
             <param operation_mode_ids="0x00012C1C, 0x00012C02" />
             <param polling_enable_ids="0x00012C1C, 0x00012C1B" />
             <param custom_config_ids="0x00012C1C, 0x00012C20" />
+            <param det_event_type_ids="0x00012C1C, 0x00012C2C" />
         </lsm_usecase>
 
         <!-- format: "ADPCM_packet" or "PCM_packet" !-->
