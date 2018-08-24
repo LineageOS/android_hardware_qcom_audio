@@ -334,7 +334,7 @@ ssize_t qahwi_out_write_v2(struct audio_stream_out *stream, const void* buffer,
               __func__, out->flags, bytes, bytes_written, ret, timestamp == NULL ? 0 : *timestamp);
     } else {
         bytes_written = out->qahwi_out.base.write(&out->stream, buffer, bytes);
-        ALOGV("%s: flag 0x%x, bytes %zd, read %zd, ret %zd",
+        ALOGV("%s: flag 0x%x, bytes %zd, read %zd, ret %zu",
               __func__, out->flags, bytes, bytes_written, ret);
     }
     return bytes_written;
