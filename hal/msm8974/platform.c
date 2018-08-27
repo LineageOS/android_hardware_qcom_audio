@@ -1062,7 +1062,9 @@ static void update_codec_type_and_interface(struct platform_data * my_data, cons
          !strncmp(snd_card_name, "sdm660-snd-card-mtp",
                   sizeof("sdm660-snd-card-mtp")) ||
          !strncmp(snd_card_name, "sdm670-mtp-snd-card",
-                   sizeof("sdm670-mtp-snd-card"))) {
+                   sizeof("sdm670-mtp-snd-card")) ||
+         !strncmp(snd_card_name, "sm6150-idp-snd-card",
+                   sizeof("sm6150-idp-snd-card"))   ) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -2409,7 +2411,27 @@ acdb_init_fail:
         strdup("SLIM_5_RX SampleRate");
 
     if (!my_data->is_slimbus_interface) {
-        if (!strncmp(snd_card_name, "sdm660", strlen("sdm660")) ||
+        //TODO:: make generic interfaceface to check Slimbus/I2S/CDC_DMA
+        if (!strncmp(snd_card_name, "sm6150", strlen("sm6150"))) {
+            my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
+                strdup("WSA_CDC_DMA_RX_0 Format");
+            my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
+                strdup("WSA_CDC_DMA_RX_0 SampleRate");
+            my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].channels_mixer_ctl =
+                strdup("WSA_CDC_DMA_RX_0 Channels");
+            my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
+                strdup("TX_CDC_DMA_TX_3 Format");
+            my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
+                strdup("TX_CDC_DMA_TX_3 SampleRate");
+            my_data->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
+                strdup("RX_CDC_DMA_RX_0 Format");
+            my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
+                strdup("RX_CDC_DMA_RX_0 SampleRate");
+
+            if (default_rx_backend)
+                free(default_rx_backend);
+            default_rx_backend = strdup("WSA_CDC_DMA_RX_0");
+        } else if (!strncmp(snd_card_name, "sdm660", strlen("sdm660")) ||
                !strncmp(snd_card_name, "sdm670", strlen("sdm670"))) {
 
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
@@ -2421,11 +2443,14 @@ acdb_init_fail:
                 strdup("INT3_MI2S_TX Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
                 strdup("INT3_MI2S_TX SampleRate");
+            my_data->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
+                strdup("INT0_MI2S_RX Format");
+            my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
+                strdup("INT0_MI2S_RX SampleRate");
 
             if (default_rx_backend)
                 free(default_rx_backend);
             default_rx_backend = strdup("INT4_MI2S_RX");
-
         } else {
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("MI2S_RX Format");
@@ -2433,17 +2458,15 @@ acdb_init_fail:
                 strdup("MI2S_RX SampleRate");
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].channels_mixer_ctl =
                 strdup("MI2S_RX Channels");
-
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
                 strdup("MI2S_TX Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
                 strdup("MI2S_TX SampleRate");
+            my_data->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
+                strdup("INT0_MI2S_RX Format");
+            my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
+                strdup("INT0_MI2S_RX SampleRate");
         }
-        my_data->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
-            strdup("INT0_MI2S_RX Format");
-        my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
-            strdup("INT0_MI2S_RX SampleRate");
-
     } else {
 
         my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
