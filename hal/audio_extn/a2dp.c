@@ -460,6 +460,7 @@ typedef struct {
     uint8_t  min_bitpool;    /* 2 */
     uint8_t  max_bitpool;    /*53(44.1khz),51 (48khz) */
     uint32_t bitrate;        /* 320kbps to 512kbps */
+    uint32_t bits_per_sample;
 } audio_sbc_encoder_config;
 
 /* Information about BT APTX encoder configuration
@@ -470,6 +471,7 @@ typedef struct {
     uint16_t sampling_rate;
     uint8_t  channels;
     uint32_t bitrate;
+    uint32_t bits_per_sample;
 } audio_aptx_default_config;
 
 typedef struct {
@@ -486,6 +488,7 @@ typedef struct {
     uint8_t  TTP_modeA_high;
     uint8_t  TTP_modeB_low;
     uint8_t  TTP_modeB_high;
+    uint32_t bits_per_sample;
 } audio_aptx_ad_config;
 
 typedef struct {
@@ -493,6 +496,7 @@ typedef struct {
     uint8_t  channels;
     uint32_t bitrate;
     uint32_t sync_mode;
+    uint32_t bits_per_sample;
 } audio_aptx_dual_mono_config;
 
 typedef union {
@@ -511,6 +515,7 @@ typedef struct {
     uint16_t channels; /* 1-Mono, 2-Stereo */
     uint32_t sampling_rate;
     uint32_t bitrate;
+    uint32_t bits_per_sample;
 } audio_aac_encoder_config;
 #endif
 
@@ -526,6 +531,7 @@ typedef struct {
     uint16_t prediction_mode; /* 0-1-2, 0 */
     uint16_t vbr_flag; /* 0-1, 0*/
     uint32_t bitrate; /*32000 - 1536000, 139500*/
+    uint32_t bits_per_sample;
 } audio_celt_encoder_config;
 
 /* Information about BT LDAC encoder configuration
@@ -539,6 +545,7 @@ typedef struct {
     uint16_t mtu; /*679*/
     bool is_abr_enabled;
     struct quality_level_to_bitrate_info level_to_bitrate_map;
+    uint32_t bits_per_sample;
 } audio_ldac_encoder_config;
 
 /*********** END of DSP configurable structures ********************/
@@ -925,6 +932,39 @@ static int a2dp_set_backend_cfg()
     return 0;
 }
 
+static int a2dp_set_bit_format(uint32_t enc_bit_format)
+{
+    const char *bit_format = NULL;
+    struct mixer_ctl *ctrl_bit_format = NULL;
+
+    // Configure AFE Input Bit Format
+    switch (enc_bit_format) {
+    case 32:
+        bit_format = "S32_LE";
+        break;
+    case 24:
+        bit_format = "S24_LE";
+        break;
+    case 16:
+    default:
+        bit_format = "S16_LE";
+        break;
+    }
+
+    ALOGD("%s: set AFE input bit format = %d", __func__, enc_bit_format);
+    ctrl_bit_format = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                        MIXER_ENC_BIT_FORMAT);
+    if (!ctrl_bit_format) {
+        ALOGE("%s: ERROR AFE input bit format mixer control not identifed", __func__);
+        return -ENOSYS;
+    }
+    if (mixer_ctl_set_enum_by_string(ctrl_bit_format, bit_format) != 0) {
+        ALOGE("%s: Failed to set AFE input bit format = %d", __func__, enc_bit_format);
+        return -ENOSYS;
+    }
+    return 0;
+}
+
 static int a2dp_reset_backend_cfg()
 {
     const char *rate_str = "KHZ_8", *in_channels = "Zero";
@@ -1018,7 +1058,7 @@ static bool configure_a2dp_decoder_format(int dec_format)
 /* API to configure SBC DSP encoder */
 bool configure_sbc_enc_format(audio_sbc_encoder_config *sbc_bt_cfg)
 {
-    struct mixer_ctl *ctl_enc_data = NULL, *ctrl_bit_format = NULL;
+    struct mixer_ctl *ctl_enc_data = NULL;
     struct sbc_enc_cfg_t sbc_dsp_cfg;
     bool is_configured = false;
     int ret = 0;
@@ -1064,16 +1104,8 @@ bool configure_sbc_enc_format(audio_sbc_encoder_config *sbc_bt_cfg)
         is_configured = false;
         goto fail;
     }
-    ctrl_bit_format = mixer_get_ctl_by_name(a2dp.adev->mixer,
-                                            MIXER_ENC_BIT_FORMAT);
-    if (!ctrl_bit_format) {
-        ALOGE(" ERROR bit format CONFIG data mixer control not identifed");
-        is_configured = false;
-        goto fail;
-    }
-    ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S16_LE");
+    ret = a2dp_set_bit_format(sbc_bt_cfg->bits_per_sample);
     if (ret != 0) {
-        ALOGE("%s: Failed to set bit format to encoder", __func__);
         is_configured = false;
         goto fail;
     }
@@ -1246,7 +1278,7 @@ static int update_aptx_dsp_config_v1(struct custom_enc_cfg_t *aptx_dsp_cfg,
 /* API to configure APTX DSP encoder */
 bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
 {
-    struct mixer_ctl *ctl_enc_data = NULL, *ctrl_bit_format = NULL;
+    struct mixer_ctl *ctl_enc_data = NULL;
     int mixer_size;
     bool is_configured = false;
     int ret = 0;
@@ -1302,23 +1334,15 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         is_configured = false;
         goto fail;
     }
-
-    ctrl_bit_format = mixer_get_ctl_by_name(a2dp.adev->mixer,
-                                            MIXER_ENC_BIT_FORMAT);
-    if (!ctrl_bit_format) {
-        ALOGE("ERROR bit format CONFIG data mixer control not identifed");
+    if(a2dp.is_aptx_adaptive)
+        ret = a2dp_set_bit_format(aptx_bt_cfg->ad_cfg->bits_per_sample);
+    else if(a2dp.is_aptx_dual_mono_supported)
+        ret = a2dp_set_bit_format(aptx_bt_cfg->dual_mono_cfg->bits_per_sample);
+    else
+        ret = a2dp_set_bit_format(aptx_bt_cfg->default_cfg->bits_per_sample);
+    if (ret != 0) {
         is_configured = false;
         goto fail;
-    } else {
-        if (a2dp.is_aptx_adaptive)
-            ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S24_LE");
-        else
-            ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S16_LE");
-        if (ret != 0) {
-            ALOGE("%s: Failed to set bit format to encoder", __func__);
-            is_configured = false;
-            goto fail;
-        }
     }
     is_configured = true;
     if (a2dp.is_aptx_adaptive)
@@ -1340,7 +1364,7 @@ bool configure_aptx_hd_enc_format(audio_aptx_default_config *aptx_bt_cfg)
 bool configure_aptx_hd_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
 #endif
 {
-    struct mixer_ctl *ctl_enc_data = NULL, *ctrl_bit_format = NULL;
+    struct mixer_ctl *ctl_enc_data = NULL;
     struct custom_enc_cfg_t aptx_dsp_cfg;
     bool is_configured = false;
     int ret = 0;
@@ -1376,15 +1400,8 @@ bool configure_aptx_hd_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         is_configured = false;
         goto fail;
     }
-    ctrl_bit_format = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_BIT_FORMAT);
-    if (!ctrl_bit_format) {
-        ALOGE(" ERROR  bit format CONFIG data mixer control not identifed");
-        is_configured = false;
-        goto fail;
-    }
-    ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S24_LE");
+    ret = a2dp_set_bit_format(aptx_bt_cfg->bits_per_sample);
     if (ret != 0) {
-        ALOGE("%s: Failed to set APTX HD encoder config", __func__);
         is_configured = false;
         goto fail;
     }
@@ -1401,7 +1418,7 @@ fail:
 /* API to configure AAC DSP encoder */
 bool configure_aac_enc_format(audio_aac_encoder_config *aac_bt_cfg)
 {
-    struct mixer_ctl *ctl_enc_data = NULL, *ctrl_bit_format = NULL;
+    struct mixer_ctl *ctl_enc_data = NULL;
     struct aac_enc_cfg_t aac_dsp_cfg;
     bool is_configured = false;
     int ret = 0;
@@ -1440,16 +1457,8 @@ bool configure_aac_enc_format(audio_aac_encoder_config *aac_bt_cfg)
         is_configured = false;
         goto fail;
     }
-    ctrl_bit_format = mixer_get_ctl_by_name(a2dp.adev->mixer,
-                                            MIXER_ENC_BIT_FORMAT);
-    if (!ctrl_bit_format) {
-        is_configured = false;
-        ALOGE(" ERROR  bit format CONFIG data mixer control not identifed");
-        goto fail;
-    }
-    ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S16_LE");
+    ret = a2dp_set_bit_format(aac_bt_cfg->bits_per_sample);
     if (ret != 0) {
-        ALOGE("%s: Failed to set bit format to encoder", __func__);
         is_configured = false;
         goto fail;
     }
@@ -1465,7 +1474,7 @@ fail:
 
 bool configure_celt_enc_format(audio_celt_encoder_config *celt_bt_cfg)
 {
-    struct mixer_ctl *ctl_enc_data = NULL, *ctrl_bit_format = NULL;
+    struct mixer_ctl *ctl_enc_data = NULL;
     struct celt_enc_cfg_t celt_dsp_cfg;
     bool is_configured = false;
     int ret = 0;
@@ -1509,15 +1518,8 @@ bool configure_celt_enc_format(audio_celt_encoder_config *celt_bt_cfg)
         is_configured = false;
         goto fail;
     }
-    ctrl_bit_format = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_BIT_FORMAT);
-    if (!ctrl_bit_format) {
-        ALOGE(" ERROR  bit format CONFIG data mixer control not identifed");
-        is_configured = false;
-        goto fail;
-    }
-    ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S16_LE");
+    ret = a2dp_set_bit_format(celt_bt_cfg->bits_per_sample);
     if (ret != 0) {
-        ALOGE("%s: Failed to set bit format to encoder", __func__);
         is_configured = false;
         goto fail;
     }
@@ -1533,7 +1535,7 @@ fail:
 
 bool configure_ldac_enc_format(audio_ldac_encoder_config *ldac_bt_cfg)
 {
-    struct mixer_ctl *ldac_enc_data = NULL, *ctrl_bit_format = NULL;
+    struct mixer_ctl *ldac_enc_data = NULL;
     struct ldac_enc_cfg_t ldac_dsp_cfg;
     bool is_configured = false;
     int ret = 0;
@@ -1583,15 +1585,8 @@ bool configure_ldac_enc_format(audio_ldac_encoder_config *ldac_bt_cfg)
         is_configured = false;
         goto fail;
     }
-    ctrl_bit_format = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_BIT_FORMAT);
-    if (!ctrl_bit_format) {
-        ALOGE(" ERROR  bit format CONFIG data mixer control not identifed");
-        is_configured = false;
-        goto fail;
-    }
-    ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S16_LE");
+    ret = a2dp_set_bit_format(ldac_bt_cfg->bits_per_sample);
     if (ret != 0) {
-        ALOGE("%s: Failed to set bit format to encoder", __func__);
         is_configured = false;
         goto fail;
     }

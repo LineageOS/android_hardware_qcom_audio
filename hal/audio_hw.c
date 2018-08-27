@@ -4518,7 +4518,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
         if (ret < 0)
             ret = -errno;
-        ALOGVV("%s: writing buffer (%zu bytes) to compress device returned %zd", __func__, bytes, ret);
+        ALOGVV("%s: writing buffer (%zu bytes) to compress device returned %d", __func__, bytes, (int)ret);
         /*msg to cb thread only if non blocking write is enabled*/
         if (ret >= 0 && ret < (ssize_t)bytes && out->non_blocking) {
             ALOGD("No space available in compress driver, post msg to cb thread");
@@ -5733,7 +5733,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                       (devices != AUDIO_DEVICE_OUT_USB_ACCESSORY);
     bool direct_dev = is_hdmi || is_usb_dev;
 
-    if (is_usb_dev && (audio_extn_usb_connected(NULL))) {
+    if (is_usb_dev && (!audio_extn_usb_connected(NULL))) {
         is_usb_dev = false;
         devices = AUDIO_DEVICE_OUT_SPEAKER;
         ALOGW("%s: ignore set device to non existing USB card, use output device(%#x)",
@@ -6862,7 +6862,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                                             flags,
                                                             source);
 
-    if (is_usb_dev && (audio_extn_usb_connected(NULL))) {
+    if (is_usb_dev && (!audio_extn_usb_connected(NULL))) {
         is_usb_dev = false;
         devices = AUDIO_DEVICE_IN_BUILTIN_MIC;
         ALOGW("%s: ignore set device to non existing USB card, use input device(%#x)",
