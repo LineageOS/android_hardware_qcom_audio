@@ -1063,6 +1063,8 @@ static void update_codec_type_and_interface(struct platform_data * my_data, cons
                   sizeof("sdm660-snd-card-mtp")) ||
          !strncmp(snd_card_name, "sdm670-mtp-snd-card",
                    sizeof("sdm670-mtp-snd-card")) ||
+         !strncmp(snd_card_name, "sm6150-qrd-snd-card",
+                   sizeof("sm6150-qrd-snd-card")) ||
          !strncmp(snd_card_name, "sm6150-idp-snd-card",
                    sizeof("sm6150-idp-snd-card"))   ) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
