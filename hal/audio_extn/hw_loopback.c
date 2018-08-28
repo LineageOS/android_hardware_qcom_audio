@@ -103,8 +103,10 @@ typedef struct patch_db_struct {
 typedef struct audio_loopback {
     struct audio_device *adev;
     patch_db_t patch_db;
-    audio_usecase_t uc_id;
-    usecase_type_t  uc_type;
+    audio_usecase_t uc_id_rx;
+    audio_usecase_t uc_id_tx;
+    usecase_type_t  uc_type_rx;
+    usecase_type_t  uc_type_tx;
     pthread_mutex_t lock;
 } audio_loopback_t;
 
@@ -257,7 +259,7 @@ patch_handle_type_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
 int32_t release_loopback_session(loopback_patch_t *active_loopback_patch)
 {
     int32_t ret = 0;
-    struct audio_usecase *uc_info;
+    struct audio_usecase *uc_info_rx, *uc_info_tx;
     struct audio_device *adev = audio_loopback_mod->adev;
     struct stream_inout *inout =  &active_loopback_patch->patch_stream;
     struct audio_port_config *source_patch_config = &active_loopback_patch->
@@ -265,7 +267,7 @@ int32_t release_loopback_session(loopback_patch_t *active_loopback_patch)
     int32_t pcm_dev_asm_rx_id = platform_get_pcm_device_id(USECASE_AUDIO_TRANSCODE_LOOPBACK,
                                                            PCM_PLAYBACK);
 
-    /* 1. Close the PCM devices */
+    /* Close the PCM devices */
     if (active_loopback_patch->source_stream) {
         compress_close(active_loopback_patch->source_stream);
         active_loopback_patch->source_stream = NULL;
@@ -281,8 +283,26 @@ int32_t release_loopback_session(loopback_patch_t *active_loopback_patch)
             __func__);
     }
 
-    uc_info = get_usecase_from_list(adev, audio_loopback_mod->uc_id);
-    if (uc_info == NULL) {
+    uc_info_tx = get_usecase_from_list(adev, audio_loopback_mod->uc_id_tx);
+    if (uc_info_tx == NULL) {
+        ALOGE("%s: Could not find the loopback usecase (%d) in the list",
+            __func__, active_loopback_patch->patch_handle_id);
+        return -EINVAL;
+    }
+
+    disable_audio_route(adev, uc_info_tx);
+
+    /* Disable tx device */
+    disable_snd_device(adev, uc_info_tx->in_snd_device);
+
+    /* Reset backend device to default state */
+    platform_invalidate_backend_config(adev->platform,uc_info_tx->in_snd_device);
+
+    list_remove(&uc_info_tx->list);
+    free(uc_info_tx);
+
+    uc_info_rx = get_usecase_from_list(adev, audio_loopback_mod->uc_id_rx);
+    if (uc_info_rx == NULL) {
         ALOGE("%s: Could not find the loopback usecase (%d) in the list",
             __func__, active_loopback_patch->patch_handle_id);
         return -EINVAL;
@@ -293,18 +313,14 @@ int32_t release_loopback_session(loopback_patch_t *active_loopback_patch)
 
     active_loopback_patch->patch_state = PATCH_INACTIVE;
 
-    /* 2. Get and set stream specific mixer controls */
-    disable_audio_route(adev, uc_info);
+    /* Get and set stream specific mixer controls */
+    disable_audio_route(adev, uc_info_rx);
 
-    /* 3. Disable the rx and tx devices */
-    disable_snd_device(adev, uc_info->out_snd_device);
-    disable_snd_device(adev, uc_info->in_snd_device);
+    /* Disable the rx device */
+    disable_snd_device(adev, uc_info_rx->out_snd_device);
 
-    /* 4. Reset backend device to default state */
-    platform_invalidate_backend_config(adev->platform,uc_info->in_snd_device);
-
-    list_remove(&uc_info->list);
-    free(uc_info);
+    list_remove(&uc_info_rx->list);
+    free(uc_info_rx);
 
     adev->active_input = get_next_active_input(adev);
 
@@ -368,7 +384,7 @@ static void transcode_loopback_util_set_latency_mode(
 int create_loopback_session(loopback_patch_t *active_loopback_patch)
 {
     int32_t ret = 0, bits_per_sample;
-    struct audio_usecase *uc_info;
+    struct audio_usecase *uc_info_rx, *uc_info_tx;
     int32_t pcm_dev_asm_rx_id, pcm_dev_asm_tx_id;
     char dummy_write_buf[64];
     struct audio_device *adev = audio_loopback_mod->adev;
@@ -385,21 +401,38 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
 
     ALOGD("%s: Create loopback session begin", __func__);
 
-    uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
+    uc_info_rx = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
 
-    if (!uc_info) {
+    if (!uc_info_rx) {
         ALOGE("%s: Failure to open loopback session", __func__);
         return -ENOMEM;
     }
 
-    uc_info->id = USECASE_AUDIO_TRANSCODE_LOOPBACK;
-    uc_info->type = audio_loopback_mod->uc_type;
-    uc_info->stream.inout = &active_loopback_patch->patch_stream;
-    uc_info->devices = active_loopback_patch->patch_stream.out_config.devices;
-    uc_info->in_snd_device = SND_DEVICE_NONE;
-    uc_info->out_snd_device = SND_DEVICE_NONE;
+    uc_info_tx = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
 
-    list_add_tail(&adev->usecase_list, &uc_info->list);
+    if (!uc_info_tx) {
+        free(uc_info_rx);
+        ALOGE("%s: Failure to open loopback session", __func__);
+        return -ENOMEM;
+    }
+
+    uc_info_rx->id = USECASE_AUDIO_TRANSCODE_LOOPBACK_RX;
+    uc_info_rx->type = audio_loopback_mod->uc_type_rx;
+    uc_info_rx->stream.inout = &active_loopback_patch->patch_stream;
+    uc_info_rx->devices = active_loopback_patch->patch_stream.out_config.devices;
+    uc_info_rx->in_snd_device = SND_DEVICE_NONE;
+    uc_info_rx->out_snd_device = SND_DEVICE_NONE;
+
+
+    uc_info_tx->id = USECASE_AUDIO_TRANSCODE_LOOPBACK_TX;
+    uc_info_tx->type = audio_loopback_mod->uc_type_tx;
+    uc_info_tx->stream.inout = &active_loopback_patch->patch_stream;
+    uc_info_tx->devices = active_loopback_patch->patch_stream.in_config.devices;
+    uc_info_tx->in_snd_device = SND_DEVICE_NONE;
+    uc_info_tx->out_snd_device = SND_DEVICE_NONE;
+
+    list_add_tail(&adev->usecase_list, &uc_info_rx->list);
+    list_add_tail(&adev->usecase_list, &uc_info_tx->list);
 
     loopback_source_stream.source = AUDIO_SOURCE_UNPROCESSED;
     loopback_source_stream.device = inout->in_config.devices;
@@ -408,23 +441,24 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
     loopback_source_stream.sample_rate = inout->in_config.sample_rate;
     loopback_source_stream.format = inout->in_config.format;
 
-    memcpy(&loopback_source_stream.usecase, uc_info,
+    memcpy(&loopback_source_stream.usecase, uc_info_rx,
            sizeof(struct audio_usecase));
     adev->active_input = &loopback_source_stream;
-    select_devices(adev, uc_info->id);
+    select_devices(adev, uc_info_rx->id);
+    select_devices(adev, uc_info_tx->id);
 
-    pcm_dev_asm_rx_id = platform_get_pcm_device_id(uc_info->id, PCM_PLAYBACK);
-    pcm_dev_asm_tx_id = platform_get_pcm_device_id(uc_info->id, PCM_CAPTURE);
+    pcm_dev_asm_rx_id = platform_get_pcm_device_id(uc_info_rx->id, PCM_PLAYBACK);
+    pcm_dev_asm_tx_id = platform_get_pcm_device_id(uc_info_tx->id, PCM_CAPTURE);
 
     if (pcm_dev_asm_rx_id < 0 || pcm_dev_asm_tx_id < 0 ) {
-        ALOGE("%s: Invalid PCM devices (asm: rx %d tx %d) for the usecase(%d)",
-            __func__, pcm_dev_asm_rx_id, pcm_dev_asm_tx_id, uc_info->id);
+        ALOGE("%s: Invalid PCM devices (asm: rx %d tx %d) for the RX usecase(%d), TX usecase(%d)",
+            __func__, pcm_dev_asm_rx_id, pcm_dev_asm_tx_id, uc_info_rx->id, uc_info_tx->id);
         ret = -EIO;
         goto exit;
     }
 
-    ALOGD("%s: LOOPBACK PCM devices (rx: %d tx: %d) usecase(%d)",
-        __func__, pcm_dev_asm_rx_id, pcm_dev_asm_tx_id, uc_info->id);
+    ALOGD("%s: LOOPBACK PCM devices (rx: %d tx: %d) RX usecase(%d) TX usecase(%d)",
+        __func__, pcm_dev_asm_rx_id, pcm_dev_asm_tx_id, uc_info_rx->id, uc_info_tx->id);
 
     /* setup a channel for client <--> adsp communication for stream events */
     inout->dev = adev;
@@ -442,7 +476,7 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
     }
     if (audio_extn_ip_hdlr_intf_supported(source_patch_config->format,false, true)) {
         ret = audio_extn_ip_hdlr_intf_init(&inout->ip_hdlr_handle, NULL, NULL, adev,
-                                           USECASE_AUDIO_TRANSCODE_LOOPBACK);
+                                           USECASE_AUDIO_TRANSCODE_LOOPBACK_RX);
         if (ret < 0) {
             ALOGE("%s: audio_extn_ip_hdlr_intf_init failed %d", __func__, ret);
             inout->ip_hdlr_handle = NULL;
@@ -537,7 +571,7 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
     }
     if (inout->ip_hdlr_handle) {
         ret = audio_extn_ip_hdlr_intf_open(inout->ip_hdlr_handle, true, inout,
-                                           USECASE_AUDIO_TRANSCODE_LOOPBACK);
+                                           USECASE_AUDIO_TRANSCODE_LOOPBACK_RX);
         if (ret < 0) {
             ALOGE("%s: audio_extn_ip_hdlr_intf_open failed %d",__func__, ret);
             goto exit;
@@ -878,8 +912,10 @@ int audio_extn_hw_loopback_init(struct audio_device *adev)
 
     ret = init_patch_database(&audio_loopback_mod->patch_db);
 
-    audio_loopback_mod->uc_id = USECASE_AUDIO_TRANSCODE_LOOPBACK;
-    audio_loopback_mod->uc_type = TRANSCODE_LOOPBACK;
+    audio_loopback_mod->uc_id_rx = USECASE_AUDIO_TRANSCODE_LOOPBACK_RX;
+    audio_loopback_mod->uc_id_tx = USECASE_AUDIO_TRANSCODE_LOOPBACK_TX;
+    audio_loopback_mod->uc_type_rx = TRANSCODE_LOOPBACK_RX;
+    audio_loopback_mod->uc_type_tx = TRANSCODE_LOOPBACK_TX;
 
 loopback_done:
     if (ret != 0) {
