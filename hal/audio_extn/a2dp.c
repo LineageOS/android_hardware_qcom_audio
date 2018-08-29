@@ -1867,9 +1867,9 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
          val = atoi(value);
          if (audio_is_a2dp_out_device(val)) {
              ALOGV("Received device dis- connect request");
-             close_a2dp_output();
              reset_a2dp_enc_config_params();
              reset_a2dp_dec_config_params();
+             close_a2dp_output();
              a2dp_reset_backend_cfg();
          }
          goto param_handled;
