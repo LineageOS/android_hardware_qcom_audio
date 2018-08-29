@@ -540,6 +540,20 @@ static bool is_supported_format(audio_format_t format)
     return false;
 }
 
+static bool is_supported_24bits_audiosource(audio_source_t source)
+{
+    switch (source) {
+        case AUDIO_SOURCE_UNPROCESSED:
+#ifdef ENABLED_24BITS_CAMCORDER
+        case AUDIO_SOURCE_CAMCORDER:
+#endif
+            return true;
+        default:
+            break;
+    }
+    return false;
+}
+
 static inline bool is_mmap_usecase(audio_usecase_t uc_id)
 {
     return (uc_id == USECASE_AUDIO_RECORD_AFE_PROXY) ||
@@ -5083,7 +5097,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
            on error flinger will retry with supported format passed
          */
-        if (source != AUDIO_SOURCE_UNPROCESSED) {
+        if (!is_supported_24bits_audiosource(source)) {
             config->format = AUDIO_FORMAT_PCM_16_BIT;
             ret_error = true;
         } else if (config->format != AUDIO_FORMAT_PCM_8_24_BIT) {
