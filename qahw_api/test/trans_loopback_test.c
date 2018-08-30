@@ -95,9 +95,6 @@ const char *log_filename = NULL;
 #define TRANSCODE_LOOPBACK_SOURCE_PORT_ID 0x4C00
 #define TRANSCODE_LOOPBACK_SINK_PORT_ID 0x4D00
 
-#define DEVICE_SOURCE 0
-#define DEVICE_SINK 1
-
 #define MAX_MODULE_NAME_LENGTH  100
 
 #define DEV_NODE_CHECK(node_name,node_id) strncmp(node_name,node_id,strlen(node_name))
@@ -110,7 +107,8 @@ typedef enum source_port_type {
     SOURCE_PORT_NONE,
     SOURCE_PORT_HDMI,
     SOURCE_PORT_SPDIF,
-    SOURCE_PORT_MIC
+    SOURCE_PORT_MIC,
+    SOURCE_PORT_BT
 } source_port_type_t;
 
 typedef enum source_port_state {
@@ -449,12 +447,15 @@ void source_data_event_handler(transcode_loopback_config_t *transcode_loopback_c
 {
     int status =0;
     source_port_type_t source_port_type = transcode_loopback_config->source_port_config.source_port_type;
-    status = read_and_set_source_config(source_port_type,&transcode_loopback_config->source_config);
 
-    if ( status )
-    {
-        fprintf(log_file,"\nFailure in source port configuration with status: %d\n", status);
-        return;
+    if (source_port_type == SOURCE_PORT_HDMI) {
+        status = read_and_set_source_config(source_port_type,&transcode_loopback_config->source_config);
+        if (status) {
+            fprintf(log_file,"\nFailure in source port configuration with status: %d\n", status);
+            return;
+        }
+    } else {
+        transcode_loopback_config->source_port_config.source_port_state = SOURCE_PORT_CONFIG_CHANGED;
     }
 
     fprintf(log_file,"\nSource port state : %d\n", transcode_loopback_config->source_port_config.source_port_state);
@@ -545,17 +546,27 @@ void process_loopback_data(void *ptr)
     exit_process_thread = true;
 }
 
-void set_device(uint32_t device_type, uint32_t device_id)
+void set_device(uint32_t source_device, uint32_t sink_device)
 {
     transcode_loopback_config_t *transcode_loopback_config = &g_trnscode_loopback_config;
-    switch( device_type )
-    {
-        case DEVICE_SINK:
-            transcode_loopback_config->sink_config.ext.device.type = device_id;
-        break;
-        case DEVICE_SOURCE:
-            transcode_loopback_config->source_config.ext.device.type = device_id;
-        break;
+
+    transcode_loopback_config->sink_config.ext.device.type = sink_device;
+    transcode_loopback_config->source_config.ext.device.type = source_device;
+
+    switch (source_device) {
+        case AUDIO_DEVICE_IN_SPDIF:
+            g_trnscode_loopback_config.source_port_config.source_port_type = SOURCE_PORT_SPDIF;
+            break;
+        case AUDIO_DEVICE_IN_BLUETOOTH_A2DP:
+            g_trnscode_loopback_config.source_port_config.source_port_type = SOURCE_PORT_BT;
+            break;
+        case AUDIO_DEVICE_IN_LINE:
+            g_trnscode_loopback_config.source_port_config.source_port_type = SOURCE_PORT_MIC;
+            break;
+        case AUDIO_DEVICE_IN_HDMI:
+        default:
+            g_trnscode_loopback_config.source_port_config.source_port_type = SOURCE_PORT_HDMI;
+            break;
     }
 }
 
@@ -563,6 +574,7 @@ int main(int argc, char *argv[]) {
 
     int status = 0;
     uint32_t play_duration_in_seconds = 600,play_duration_elapsed_msec = 0,play_duration_in_msec = 0, sink_device = 2, volume_in_millibels = 0;
+    uint32_t source_device = AUDIO_DEVICE_IN_HDMI;
     source_port_type_t source_port_type = SOURCE_PORT_NONE;
     log_file = stdout;
     transcode_loopback_config_t    *transcode_loopback_config = NULL;
@@ -570,7 +582,8 @@ int main(int argc, char *argv[]) {
 
     struct option long_options[] = {
         /* These options set a flag. */
-        {"sink-device", required_argument,    0, 'd'},
+        {"sink-device", required_argument,    0, 'o'},
+        {"source-device", required_argument,    0, 'i'},
         {"play-duration",  required_argument,    0, 'p'},
         {"play-volume",  required_argument,    0, 'v'},
         {"help",          no_argument,          0, 'h'},
@@ -582,15 +595,18 @@ int main(int argc, char *argv[]) {
 
     while ((opt = getopt_long(argc,
                               argv,
-                              "-d:p:v:h",
+                              "-o:i:p:v:h",
                               long_options,
                               &option_index)) != -1) {
 
         fprintf(log_file, "for argument %c, value is %s\n", opt, optarg);
 
         switch (opt) {
-        case 'd':
-            sink_device = atoi(optarg);
+        case 'o':
+            sink_device = atoll(optarg);
+            break;
+        case 'i':
+            source_device = atoll(optarg);
             break;
         case 'p':
             play_duration_in_seconds = atoi(optarg);
@@ -606,6 +622,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    fprintf(log_file, "source %#x sink %#x\n", source_device, sink_device);
     fprintf(log_file,"\nTranscode loopback test begin\n");
     if (play_duration_in_seconds < 0 | play_duration_in_seconds > 360000) {
             fprintf(log_file,
@@ -626,7 +643,7 @@ int main(int argc, char *argv[]) {
     transcode_loopback_config = &g_trnscode_loopback_config;
 
     /* Set devices */
-    set_device(DEVICE_SINK,sink_device);
+    set_device(source_device, sink_device);
 
     /* Load HAL */
     fprintf(log_file,"\nLoading HAL for loopback usecase begin\n");
