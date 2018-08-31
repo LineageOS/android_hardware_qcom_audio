@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "73fbb9b6_c53b58ed",
+        "filename": "hal/audio_hw_extn_api.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 329,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-08-31T06:31:33Z",
+      "side": 1,
+      "message": "ssize_t is %zd\n\nit\u0027s only %ld on 64-bit devices.",
+      "range": {
+        "startLine": 329,
+        "startChar": 46,
+        "endLine": 329,
+        "endChar": 48
+      },
+      "revId": "3bf987e5994617713690f59fe8d6639989292ff6",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
