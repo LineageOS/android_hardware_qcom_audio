@@ -381,8 +381,8 @@ int32_t audio_extn_get_afe_proxy_channel_count()
 
 #endif /* AFE_PROXY_ENABLED */
 
-void audio_extn_set_parameters(struct audio_device *adev,
-                               struct str_parms *parms)
+void audio_extn_set_parameters(struct audio_device *adev __unused,
+                               struct str_parms *parms __unused)
 {
    audio_extn_set_anc_parameters(adev, parms);
    audio_extn_set_fluence_parameters(adev, parms);
@@ -393,8 +393,8 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_ddp_set_parameters(adev, parms);
 }
 
-void audio_extn_get_parameters(const struct audio_device *adev,
-                              struct str_parms *query,
+void audio_extn_get_parameters(const struct audio_device *adev __unused,
+                              struct str_parms *query __unused,
                               struct str_parms *reply)
 {
     char *kv_pairs = NULL;
