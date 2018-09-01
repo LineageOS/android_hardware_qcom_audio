@@ -381,6 +381,16 @@ int32_t audio_extn_get_afe_proxy_channel_count()
 
 #endif /* AFE_PROXY_ENABLED */
 
+#ifndef ANC_HEADSET_ENABLED
+#ifndef FLUENCE_ENABLED
+#ifndef AFE_PROXY_ENABLED
+#ifndef FM_POWER_OPT
+#ifndef AUDIO_LISTEN_ENABLED
+#ifndef HFP_ENABLED
+#ifndef DS1_DOLBY_DDP_ENABLED
+
+#define audio_extn_set_parameters(adev,parms)	(0)
+#else
 void audio_extn_set_parameters(struct audio_device *adev,
                                struct str_parms *parms)
 {
@@ -392,7 +402,18 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_hfp_set_parameters(adev, parms);
    audio_extn_ddp_set_parameters(adev, parms);
 }
+#endif /* DS1_DOLBY_DDP_ENABLED */
+#endif /* HFP_ENABLED */
+#endif /* AUDIO_LISTEN_ENABLED */
+#endif /* FM_POWER_OPT */
+#endif /* AFE_PROXY_ENABLED */
+#endif /* FLUENCE_ENABLED */
+#endif /* ANC_HEADSET_ENABLED */
 
+#ifndef AFE_PROXY_ENABLED
+#ifndef FLUENCE_ENABLED
+#define audio_extn_get_parameters(adev,parms,reply)	(0)
+#else
 void audio_extn_get_parameters(const struct audio_device *adev,
                               struct str_parms *query,
                               struct str_parms *reply)
@@ -405,6 +426,8 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);
     free(kv_pairs);
 }
+#endif /* FLUENCE_ENABLED */
+#endif /* ANC_HEADSET_ENABLED */
 
 #ifdef AUXPCM_BT_ENABLED
 int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,

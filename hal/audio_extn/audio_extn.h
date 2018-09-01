@@ -45,12 +45,37 @@
 
 #define MAX_LENGTH_MIXER_CONTROL_IN_INT                  (128)
 
+#ifndef ANC_HEADSET_ENABLED
+#ifndef FLUENCE_ENABLED
+#ifndef AFE_PROXY_ENABLED
+#ifndef FM_POWER_OPT
+#ifndef AUDIO_LISTEN_ENABLED
+#ifndef HFP_ENABLED
+#ifndef DS1_DOLBY_DDP_ENABLED
+
+#define audio_extn_set_parameters(adev,parms)	(0)
+#else
+
 void audio_extn_set_parameters(struct audio_device *adev,
                                struct str_parms *parms);
+#endif /* DS1_DOLBY_DDP_ENABLED */
+#endif /* HFP_ENABLED */
+#endif /* AUDIO_LISTEN_ENABLED */
+#endif /* FM_POWER_OPT */
+#endif /* AFE_PROXY_ENABLED */
+#endif /* FLUENCE_ENABLED */
+#endif /* ANC_HEADSET_ENABLED */
 
+
+#ifndef AFE_PROXY_ENABLED
+#ifndef FLUENCE_ENABLED
+#define audio_extn_get_parameters(adev,parms,reply)	(0)
+#else
 void audio_extn_get_parameters(const struct audio_device *adev,
                                struct str_parms *query,
                                struct str_parms *reply);
+#endif /* FLUENCE_ENABLED */
+#endif /* ANC_HEADSET_ENABLED */
 
 #ifndef ANC_HEADSET_ENABLED
 #define audio_extn_get_anc_enabled()                     (0)
