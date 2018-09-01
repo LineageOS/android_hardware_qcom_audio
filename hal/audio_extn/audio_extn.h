@@ -45,11 +45,11 @@
 
 #define MAX_LENGTH_MIXER_CONTROL_IN_INT                  (128)
 
-void audio_extn_set_parameters(struct audio_device *adev,
-                               struct str_parms *parms);
+void audio_extn_set_parameters(struct audio_device *adev __unused,
+                               struct str_parms *parms __unused);
 
-void audio_extn_get_parameters(const struct audio_device *adev,
-                               struct str_parms *query,
+void audio_extn_get_parameters(const struct audio_device *adev __unused,
+                               struct str_parms *query __unused,
                                struct str_parms *reply);
 
 #ifndef ANC_HEADSET_ENABLED
