@@ -102,7 +102,7 @@
         <!-- transfer_mode: "FTRT" or "RT" -->
         <!--  kw_duration is in milli seconds. It is valid only for FTRT transfer mode -->
         <param capture_keyword="PCM_packet, RT, 2000" />
-        <param client_capture_read_delay="2000" />
+        <param client_capture_read_delay="2500" />
         <arm_ss_usecase>
             <!-- Options are "KEYWORD_DETECTION", "USER_VERIFICATION", "CUSTOM_DETECTION"  -->
             <param sm_detection_type= "KEYWORD_DETECTION" />
