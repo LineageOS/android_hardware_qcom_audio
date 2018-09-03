@@ -444,6 +444,7 @@ struct aptx_ad_enc_cfg_ext_t
     uint32_t  max_sink_modeB;
     uint32_t  min_sink_modeC;
     uint32_t  max_sink_modeC;
+    uint32_t  mode;
 } __attribute__ ((packed));
 
 struct aptx_ad_enc_cfg_t
@@ -517,6 +518,7 @@ typedef struct {
     uint8_t  TTP_modeB_low;
     uint8_t  TTP_modeB_high;
     uint32_t bits_per_sample;
+    uint16_t  encoder_mode;
 } audio_aptx_ad_config;
 
 typedef struct {
@@ -1184,6 +1186,7 @@ static int update_aptx_ad_dsp_config(struct aptx_ad_enc_cfg_t *aptx_dsp_cfg,
     aptx_dsp_cfg->aptx_ad_cfg.max_sink_modeB = aptx_bt_cfg->ad_cfg->max_sink_modeB;
     aptx_dsp_cfg->aptx_ad_cfg.min_sink_modeC = aptx_bt_cfg->ad_cfg->min_sink_modeC;
     aptx_dsp_cfg->aptx_ad_cfg.max_sink_modeC = aptx_bt_cfg->ad_cfg->max_sink_modeC;
+    aptx_dsp_cfg->aptx_ad_cfg.mode = aptx_bt_cfg->ad_cfg->encoder_mode;
     aptx_dsp_cfg->abr_cfg.imc_info.direction = IMC_RECEIVE;
     aptx_dsp_cfg->abr_cfg.imc_info.enable = IMC_ENABLE;
     aptx_dsp_cfg->abr_cfg.imc_info.purpose = IMC_PURPOSE_ID_BT_INFO;
@@ -2202,6 +2205,8 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
             latency = (avsync_runtime_prop > 0) ? ldac_offset : ENCODER_LATENCY_LDAC;
             latency += (slatency <= 0) ? DEFAULT_SINK_LATENCY_LDAC : slatency;
             break;
+        case ENC_CODEC_TYPE_APTX_AD: // for aptx adaptive the latency depends on the mode (HQ/LL) and
+            latency = slatency;      // BT IPC will take care of accomodating the mode factor and return latency
         default:
             latency = 200;
             break;
