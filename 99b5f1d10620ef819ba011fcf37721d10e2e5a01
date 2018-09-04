@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "df3a4502_c8a5a60e",
+        "filename": "hal/audio_hw_extn_api.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 328,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-09-04T01:45:31Z",
+      "side": 0,
+      "message": "z is already supposed to handle this, something is super weird with ssize_t handling in Pie.",
+      "range": {
+        "startLine": 328,
+        "startChar": 46,
+        "endLine": 328,
+        "endChar": 48
+      },
+      "revId": "99b5f1d10620ef819ba011fcf37721d10e2e5a01",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
