@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "6a388ab3_619111f8",
+        "filename": "post_proc/bundle.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 460,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-09-04T16:03:09Z",
+      "side": 1,
+      "message": "Just delete the \u0027query\u0027 parameter name instead",
+      "range": {
+        "startLine": 460,
+        "startChar": 61,
+        "endLine": 460,
+        "endChar": 66
+      },
+      "revId": "dc9a485052efa066c5ac14c6d217405bf39103b9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
