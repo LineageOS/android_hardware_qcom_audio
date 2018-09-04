@@ -66,17 +66,6 @@
 #include <sound/compress_offload.h>
 #include <system/audio.h>
 
-/*
-* Unique patch handle ID = (unique_patch_handle_type << 8 | patch_handle_num)
-* Eg : HDMI_IN_SPKR_OUT handles can be 0x1000, 0x1001 and so on..
-*/
-typedef enum patch_handle_type {
-    AUDIO_PATCH_HDMI_IN_SPKR_OUT=0x10,
-    AUDIO_PATCH_SPDIF_IN_SPKR_OUT,
-    AUDIO_PATCH_MIC_IN_SPKR_OUT,
-    AUDIO_PATCH_MIC_IN_HDMI_OUT
-} patch_handle_type_t;
-
 typedef enum patch_state {
     PATCH_INACTIVE,// Patch is not created yet
     PATCH_CREATED, // Patch created but not in running state yet, probably due
@@ -190,9 +179,12 @@ bool is_supported_sink_device(audio_devices_t sink_device_mask)
 
 /* Get patch type based on source and sink ports configuration */
 /* Only ports of type 'DEVICE' are supported */
-patch_handle_type_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
+audio_patch_handle_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
 {
-    bool is_source_hdmi=false, is_sink_supported=false;
+    bool is_source_supported = false, is_sink_supported = false;
+    audio_devices_t source_device = loopback_patch->loopback_source.ext.device.type;
+    audio_devices_t sink_device = loopback_patch->loopback_sink.ext.device.type;
+
     if (loopback_patch->patch_handle_id != PATCH_HANDLE_INVALID) {
         ALOGE("%s, Patch handle already exists", __func__);
         return loopback_patch->patch_handle_id;
@@ -201,8 +193,8 @@ patch_handle_type_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
     if (loopback_patch->loopback_source.role == AUDIO_PORT_ROLE_SOURCE) {
         switch (loopback_patch->loopback_source.type) {
             case AUDIO_PORT_TYPE_DEVICE :
-                if ((loopback_patch->loopback_source.config_mask &
-                   AUDIO_PORT_CONFIG_FORMAT) && (loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_HDMI)) {
+                if ((loopback_patch->loopback_source.config_mask & AUDIO_PORT_CONFIG_FORMAT)) {
+                    if (loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_HDMI) {
                        switch (loopback_patch->loopback_source.format) {
                            case AUDIO_FORMAT_PCM:
                            case AUDIO_FORMAT_PCM_16_BIT:
@@ -211,10 +203,13 @@ patch_handle_type_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
                            case AUDIO_FORMAT_IEC61937:
                            case AUDIO_FORMAT_AC3:
                            case AUDIO_FORMAT_E_AC3:
-                              is_source_hdmi = true;
+                              is_source_supported = true;
                            break;
+                       }
+                    } else if (loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_LINE) {
+                       is_source_supported = true;
+                    }
                 }
-            }
             break;
             default :
             break;
@@ -247,8 +242,8 @@ patch_handle_type_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
             //Unsupported as of now, need to extend for other sink types
         }
     }
-    if (is_source_hdmi && is_sink_supported) {
-        return AUDIO_PATCH_HDMI_IN_SPKR_OUT;
+    if (is_source_supported && is_sink_supported) {
+        return source_device | sink_device;
     }
     ALOGE("%s, Unsupported source or sink port config", __func__);
     return loopback_patch->patch_handle_id;
@@ -613,7 +608,7 @@ int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,
                                      audio_patch_handle_t *handle)
 {
     int status = 0;
-    patch_handle_type_t loopback_patch_type=0x0;
+    audio_patch_handle_t loopback_patch_id = 0x0;
     loopback_patch_t loopback_patch, *active_loopback_patch = NULL;
 
     ALOGV("%s : Create audio patch begin", __func__);
@@ -656,9 +651,9 @@ int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,
     audio_port_config));
 
     /* Get loopback patch type based on source and sink ports configuration */
-    loopback_patch_type = get_loopback_patch_type(active_loopback_patch);
+    loopback_patch_id = get_loopback_patch_type(active_loopback_patch);
 
-    if (loopback_patch_type == PATCH_HANDLE_INVALID) {
+    if (loopback_patch_id == PATCH_HANDLE_INVALID) {
         ALOGE("%s, Unsupported patch type", __func__);
         status = -EINVAL;
         goto exit_create_patch;
@@ -670,8 +665,7 @@ int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,
                                 &active_loopback_patch->loopback_sink);
     // Lock patch database, create patch handle and add patch handle to the list
 
-    active_loopback_patch->patch_handle_id = (loopback_patch_type << 8 |
-                                audio_loopback_mod->patch_db.num_patches);
+    active_loopback_patch->patch_handle_id = loopback_patch_id;
 
     /* Is usecase transcode loopback? If yes, invoke loopback driver */
     if ((active_loopback_patch->loopback_source.type == AUDIO_PORT_TYPE_DEVICE)
