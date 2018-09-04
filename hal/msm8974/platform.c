@@ -61,6 +61,7 @@
 #define PLATFORM_INFO_XML_PATH_INTCODEC  "/etc/audio_platform_info_intcodec.xml"
 #define PLATFORM_INFO_XML_PATH_SKUSH  "/etc/audio_platform_info_skush.xml"
 #define PLATFORM_INFO_XML_PATH_SKUW  "/etc/audio_platform_info_skuw.xml"
+#define PLATFORM_INFO_XML_PATH_QRD  "/etc/audio_platform_info_qrd.xml"
 #define PLATFORM_INFO_XML_PATH "/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_AUXPCM "/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_I2S "/etc/mixer_paths_i2s.xml"
@@ -71,6 +72,7 @@
 #define PLATFORM_INFO_XML_PATH_INTCODEC  "/vendor/etc/audio_platform_info_intcodec.xml"
 #define PLATFORM_INFO_XML_PATH_SKUSH "/vendor/etc/audio_platform_info_skush.xml"
 #define PLATFORM_INFO_XML_PATH_SKUW "/vendor/etc/audio_platform_info_skuw.xml"
+#define PLATFORM_INFO_XML_PATH_QRD "/vendor/etc/audio_platform_info_qrd.xml"
 #define PLATFORM_INFO_XML_PATH "/vendor/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_AUXPCM "/vendor/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_I2S "/vendor/etc/mixer_paths_i2s.xml"
@@ -2192,6 +2194,9 @@ void *platform_init(struct audio_device *adev)
     else if (!strncmp(snd_card_name, "sdm670-skuw-snd-card",
                sizeof("sdm670-skuw-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_SKUW, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "sm6150-qrd-snd-card",
+               sizeof("sm6150-qrd-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
     else if (my_data->is_internal_codec)
         platform_info_init(PLATFORM_INFO_XML_PATH_INTCODEC, my_data, PLATFORM);
     else
