@@ -4379,7 +4379,7 @@ static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
                 snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC_NS;
         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
-        } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
+        } else if (audio_extn_usb_connected(NULL) && audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC_AEC;
         }
         platform_set_echo_reference(adev, true, out_device);
@@ -4409,7 +4409,7 @@ static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
                 snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC;
         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
-       } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
+       } else if (audio_extn_usb_connected(NULL) && audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC_AEC;
         }
         platform_set_echo_reference(adev, true, out_device);
@@ -4759,7 +4759,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_FM_TUNER) {
             snd_device = SND_DEVICE_IN_CAPTURE_FM;
-        } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
+        } else if (audio_extn_usb_connected(NULL) && audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else {
             ALOGE("%s: Unknown input device(s) %#x", __func__, in_device);
@@ -4799,7 +4799,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (out_device &
                     (AUDIO_DEVICE_OUT_USB_DEVICE |
                      AUDIO_DEVICE_OUT_USB_HEADSET)) {
-            if (audio_extn_usb_is_capture_supported())
+            if (audio_extn_usb_is_capture_supported() && audio_extn_usb_connected(NULL))
                 snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
             else
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
