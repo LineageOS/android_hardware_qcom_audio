@@ -600,7 +600,6 @@ static bool is_a2dp_device(snd_device_t out_snd_device)
 int enable_audio_route(struct audio_device *adev,
                        struct audio_usecase *usecase)
 {
-    snd_device_t snd_device;
     char mixer_path[50];
 
     if (usecase == NULL)
@@ -608,15 +607,21 @@ int enable_audio_route(struct audio_device *adev,
 
     ALOGV("%s: enter: usecase(%d)", __func__, usecase->id);
 
-    if (usecase->type == PCM_CAPTURE)
-        snd_device = usecase->in_snd_device;
-    else
-        snd_device = usecase->out_snd_device;
     audio_extn_utils_send_app_type_cfg(adev, usecase);
     audio_extn_utils_send_audio_calibration(adev, usecase);
-    strcpy(mixer_path, use_case_table[usecase->id]);
-    platform_add_backend_name(adev->platform, mixer_path, snd_device);
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_BUSY);
+    strcpy(mixer_path, use_case_table[usecase->id]);
+
+    if (usecase->type == VOICE_CALL) {
+        platform_add_backend_name(adev->platform, mixer_path, usecase->in_snd_device);
+        if (!strstr(mixer_path, " "))
+            platform_add_backend_name(adev->platform, mixer_path, usecase->out_snd_device);
+    } else if (usecase->type == PCM_CAPTURE) {
+        platform_add_backend_name(adev->platform, mixer_path, usecase->in_snd_device);
+    } else {
+        platform_add_backend_name(adev->platform, mixer_path, usecase->out_snd_device);
+    }
+
     ALOGD("%s: usecase(%d) apply and update mixer path: %s", __func__,  usecase->id, mixer_path);
     audio_route_apply_and_update_path(adev->audio_route, mixer_path);
 
@@ -627,19 +632,24 @@ int enable_audio_route(struct audio_device *adev,
 int disable_audio_route(struct audio_device *adev,
                         struct audio_usecase *usecase)
 {
-    snd_device_t snd_device;
     char mixer_path[50];
 
     if (usecase == NULL)
         return -EINVAL;
 
     ALOGV("%s: enter: usecase(%d)", __func__, usecase->id);
-    if (usecase->type == PCM_CAPTURE)
-        snd_device = usecase->in_snd_device;
-    else
-        snd_device = usecase->out_snd_device;
     strcpy(mixer_path, use_case_table[usecase->id]);
-    platform_add_backend_name(adev->platform, mixer_path, snd_device);
+
+    if (usecase->type == VOICE_CALL) {
+        platform_add_backend_name(adev->platform, mixer_path, usecase->in_snd_device);
+        if (!strstr(mixer_path, " "))
+            platform_add_backend_name(adev->platform, mixer_path, usecase->out_snd_device);
+    } else if (usecase->type == PCM_CAPTURE) {
+        platform_add_backend_name(adev->platform, mixer_path, usecase->in_snd_device);
+    } else {
+        platform_add_backend_name(adev->platform, mixer_path, usecase->out_snd_device);
+    }
+
     ALOGD("%s: usecase(%d) reset and update mixer path: %s", __func__, usecase->id, mixer_path);
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_FREE);
