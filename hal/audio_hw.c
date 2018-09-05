@@ -2021,10 +2021,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     struct stream_out stream_out;
     audio_usecase_t hfp_ucid;
     int status = 0;
-    audio_devices_t audio_device;
-    audio_channel_mask_t channel_mask;
-    int sample_rate;
-    int acdb_id;
+    audio_devices_t audio_device = AUDIO_DEVICE_NONE;
+    audio_channel_mask_t channel_mask = AUDIO_CHANNEL_NONE;
+    int sample_rate = 0;
+    int acdb_id = 0;
 
     ALOGD("%s for use case (%s)", __func__, use_case_table[uc_id]);
 

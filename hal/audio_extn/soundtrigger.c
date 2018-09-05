@@ -677,7 +677,9 @@ int audio_extn_sound_trigger_init(struct audio_device *adev)
         st_dev->sthal_prop_api_version = 0;
         status  = 0; /* passthru for backward compability */
     } else {
-        st_dev->sthal_prop_api_version = *(int*)sthal_prop_api_version;
+        if (sthal_prop_api_version != NULL) {
+            st_dev->sthal_prop_api_version = *(int*)sthal_prop_api_version;
+        }
         if (MAJOR_VERSION(st_dev->sthal_prop_api_version) !=
             MAJOR_VERSION(STHAL_PROP_API_CURRENT_VERSION)) {
             ALOGE("%s: Incompatible API versions ahal:0x%x != sthal:0x%x",

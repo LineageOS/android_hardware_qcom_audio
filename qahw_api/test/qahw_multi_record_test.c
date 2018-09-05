@@ -926,10 +926,10 @@ sourcetrack_error:
     /* Caution: Below ADL log shouldnt be altered without notifying automation APT since it used
      * for automation testing
      */
-    fprintf(log_file, "\n ADL: Done with hal record test \n");
-    if (log_file != stdout) {
-        fprintf(stdout, "\n ADL: Done with hal record test \n");
-        if (log_file) {
+    if (log_file != NULL) {
+        fprintf(log_file, "\n ADL: Done with hal record test \n");
+        if (log_file != stdout) {
+          fprintf(stdout, "\n ADL: Done with hal record test \n");
           fclose(log_file);
           log_file = NULL;
         }
