@@ -42,9 +42,18 @@ void handle_asphere_on_effect_enabled(bool enable,
                                       effect_context_t *context,
                                       struct listnode *created_effects);
 #else
-#define asphere_get_parameters(query, reply) (0)
-#define asphere_set_parameters(parms)  (0)
-#define handle_asphere_on_effect_enabled(enable, context, created_effects) (0)
+static void asphere_get_parameters(struct str_parms *query __unused,
+                                   struct str_parms *reply __unused)
+{
+}
+static void asphere_set_parameters(struct str_parms *reply __unused)
+{
+}
+static void handle_asphere_on_effect_enabled(bool enable __unused,
+                                             effect_context_t *context __unused,
+                                             struct listnode *created_effects __unused)
+{
+}
 #endif /* AUDIOSPHERE_ENABLED */
 
 #endif /* OFFLOAD_ASPHERE_H_ */
