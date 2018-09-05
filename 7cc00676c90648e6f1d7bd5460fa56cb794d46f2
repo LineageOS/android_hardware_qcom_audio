@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "f7998cef_c4633e76",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2433,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-09-05T07:17:45Z",
+      "side": 0,
+      "message": "changing this is wrong",
+      "range": {
+        "startLine": 2433,
+        "startChar": 30,
+        "endLine": 2433,
+        "endChar": 32
+      },
+      "revId": "7cc00676c90648e6f1d7bd5460fa56cb794d46f2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
