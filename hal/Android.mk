@@ -327,7 +327,7 @@ LOCAL_SHARED_LIBRARIES := \
         liblog \
         libcutils \
         libtinyalsa \
-        libtinycompress_vendor \
+        libtinycompress \
         libaudioroute \
         libdl \
         libaudioutils \
@@ -343,11 +343,7 @@ LOCAL_HEADER_LIBRARIES += audio_qaf_headers
 LOCAL_SHARED_LIBRARIES += libqap_wrapper liblog
 endif
 
-ifneq ($(strip $(TARGET_USES_AOSP_FOR_AUDIO)),true)
-    LOCAL_SHARED_LIBRARIES += libtinycompress_vendor
-else
-    LOCAL_SHARED_LIBRARIES += libtinycompress
-endif
+LOCAL_SHARED_LIBRARIES += libtinycompress
 
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
