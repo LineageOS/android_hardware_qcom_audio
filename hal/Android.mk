@@ -327,7 +327,7 @@ LOCAL_SHARED_LIBRARIES := \
         liblog \
         libcutils \
         libtinyalsa \
-        libtinycompress_vendor \
+        libtinycompress \
         libaudioroute \
         libdl \
         libaudioutils \
@@ -341,12 +341,6 @@ LOCAL_SRC_FILES += audio_extn/qap.c
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/qap_wrapper/
 LOCAL_HEADER_LIBRARIES += audio_qaf_headers
 LOCAL_SHARED_LIBRARIES += libqap_wrapper liblog
-endif
-
-ifneq ($(strip $(TARGET_USES_AOSP_FOR_AUDIO)),true)
-    LOCAL_SHARED_LIBRARIES += libtinycompress_vendor
-else
-    LOCAL_SHARED_LIBRARIES += libtinycompress
 endif
 
 LOCAL_C_INCLUDES += \
