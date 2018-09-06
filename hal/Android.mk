@@ -189,7 +189,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libcutils \
 	libhardware \
 	libtinyalsa \
-	libtinycompress_vendor \
+	libtinycompress \
 	libaudioroute \
 	libdl \
 	libexpat
