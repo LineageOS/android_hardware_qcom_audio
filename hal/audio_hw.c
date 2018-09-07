@@ -2701,7 +2701,7 @@ static bool stream_get_parameter_channels(struct str_parms *query,
                                           struct str_parms *reply,
                                           audio_channel_mask_t *supported_channel_masks) {
     int ret = -1;
-    char value[256];
+    char value[ARRAY_SIZE(channels_name_to_enum_table) * 32 /* max channel name size */];
     bool first = true;
     size_t i, j;
 
