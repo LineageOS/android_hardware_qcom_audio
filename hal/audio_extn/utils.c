@@ -990,7 +990,14 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         if (usecase->id == USECASE_AUDIO_PLAYBACK_VOIP) {
             usecase->stream.out->app_type_cfg.sample_rate = usecase->stream.out->sample_rate;
         } else if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
-            usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+            if (platform_spkr_use_default_sample_rate(adev->platform)) {
+                 usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+            } else {
+                 platform_check_and_update_copp_sample_rate(adev->platform, snd_device,
+                                      usecase->stream.out->sample_rate,
+                                      &usecase->stream.out->app_type_cfg.sample_rate);
+            }
+
         } else if ((snd_device == SND_DEVICE_OUT_HDMI ||
                     snd_device == SND_DEVICE_OUT_USB_HEADSET ||
                     snd_device == SND_DEVICE_OUT_DISPLAY_PORT) &&

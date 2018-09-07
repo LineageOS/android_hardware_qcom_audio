@@ -4502,6 +4502,15 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                 audio_format_t dst_format = out->hal_op_format;
                 audio_format_t src_format = out->hal_ip_format;
 
+                /* prevent division-by-zero */
+                uint32_t bitwidth_src = format_to_bitwidth_table[src_format];
+                uint32_t bitwidth_dst = format_to_bitwidth_table[dst_format];
+                if ((bitwidth_src == 0) || (bitwidth_dst == 0)) {
+                    ALOGE("%s: Error bitwidth == 0", __func__);
+                    ATRACE_END();
+                    return -EINVAL;
+                }
+
                 uint32_t frames = bytes / format_to_bitwidth_table[src_format];
                 uint32_t bytes_to_write = frames * format_to_bitwidth_table[dst_format];
 
@@ -4642,10 +4651,18 @@ exit:
             out->standby = true;
         }
         out_on_error(&out->stream.common);
-        if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD))
-            usleep((uint64_t)bytes * 1000000 / audio_stream_out_frame_size(stream) /
-                            out_get_sample_rate(&out->stream.common));
+        if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
+            /* prevent division-by-zero */
+            uint32_t stream_size = audio_stream_out_frame_size(stream);
+            uint32_t srate = out_get_sample_rate(&out->stream.common);
 
+            if ((stream_size == 0) || (srate == 0)) {
+                ALOGE("%s: stream_size= %d, srate = %d", __func__, stream_size, srate);
+                ATRACE_END();
+                return -EINVAL;
+             }
+             usleep((uint64_t)bytes * 1000000 / stream_size / srate);
+        }
         if (audio_extn_passthru_is_passthrough_stream(out)) {
                 ALOGE("%s: write error, ret = %zd", __func__, ret);
                 ATRACE_END();
@@ -7079,6 +7096,13 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                             config->format,
                                             channel_count,
                                             is_low_latency);
+            /* prevent division-by-zero */
+            if (frame_size == 0) {
+                ALOGE("%s: Error frame_size==0", __func__);
+                ret = -EINVAL;
+                goto err_open;
+            }
+
             in->config.period_size = buffer_size / frame_size;
 
             if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
