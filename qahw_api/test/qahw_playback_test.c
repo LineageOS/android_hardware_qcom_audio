@@ -2571,6 +2571,7 @@ int main(int argc, char* argv[]) {
         fprintf(log_file, "stream %d: Output Flags:%d\n", stream->stream_index, stream->flags);
         fprintf(log_file, "stream %d: Sample Rate:%d\n", stream->stream_index, stream->config.offload_info.sample_rate);
         fprintf(log_file, "stream %d: Channels:%d\n", stream->stream_index, stream->channels);
+        fprintf(log_file, "stream %d: Channel Mask:%x\n", stream->stream_index, stream->config.channel_mask);
         fprintf(log_file, "stream %d: Bitwidth:%d\n", stream->stream_index, stream->config.offload_info.bit_width);
         fprintf(log_file, "stream %d: AAC Format Type:%d\n", stream->stream_index, stream->aac_fmt_type);
         fprintf(log_file, "stream %d: Kvpair Values:%s\n", stream->stream_index, stream->kvpair_values);
