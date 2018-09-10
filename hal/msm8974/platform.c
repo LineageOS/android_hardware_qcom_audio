@@ -649,9 +649,9 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_HEADSET_MIC_FLUENCE] = 47,
     [SND_DEVICE_IN_VOICE_SPEAKER_MIC] = 11,
     [SND_DEVICE_IN_VOICE_HEADSET_MIC] = 8,
-    [SND_DEVICE_IN_SPDIF] = 4,
-    [SND_DEVICE_IN_HDMI_MIC] = 4,
-    [SND_DEVICE_IN_HDMI_ARC] = 4,
+    [SND_DEVICE_IN_SPDIF] = 143,
+    [SND_DEVICE_IN_HDMI_MIC] = 143,
+    [SND_DEVICE_IN_HDMI_ARC] = 143,
     [SND_DEVICE_IN_BT_SCO_MIC] = 21,
     [SND_DEVICE_IN_BT_SCO_MIC_NREC] = 122,
     [SND_DEVICE_IN_BT_SCO_MIC_WB] = 38,
@@ -4591,8 +4591,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             snd_device = SND_DEVICE_IN_SPDIF;
         } else if (in_device & AUDIO_DEVICE_IN_AUX_DIGITAL) {
             snd_device = SND_DEVICE_IN_HDMI_MIC;
-        } else if (in_device & AUDIO_DEVICE_IN_TV_TUNER) {
-            /* add separate AUDIO_DEVICE for this? */
+        } else if (in_device & AUDIO_DEVICE_IN_HDMI_ARC) {
             snd_device = SND_DEVICE_IN_HDMI_ARC;
         } else if (in_device & AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET ||
                    in_device & AUDIO_DEVICE_IN_DGTL_DOCK_HEADSET) {
