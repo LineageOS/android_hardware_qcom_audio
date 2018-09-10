@@ -197,6 +197,25 @@ __BEGIN_DECLS
 #define QAHW_PCM_CHANNEL_FRC  14  /* Front right of center.                        */
 #define QAHW_PCM_CHANNEL_RLC  15  /* Rear left of center.                          */
 #define QAHW_PCM_CHANNEL_RRC  16  /* Rear right of center.                         */
+#define QAHW_PCM_CHANNEL_LFE2 17  /* Secondary low frequency effect channel.       */
+#define QAHW_PCM_CHANNEL_SL   18  /*  Side left channel.                           */
+#define QAHW_PCM_CHANNEL_SR   19  /* Side right channel.                           */
+#define QAHW_PCM_CHANNEL_TFL  20  /* Top front left channel.                       */
+#define QAHW_PCM_CHANNEL_LVH  QAHW_PCM_CHANNEL_TFL /* Left vertical height channel.*/
+#define QAHW_PCM_CHANNEL_TFR 21   /* Top front right channel.                      */
+#define QAHW_PCM_CHANNEL_RVH QAHW_PCM_CHANNEL_TFR /* Right vertical height channel.*/
+#define QAHW_PCM_CHANNEL_TC   22  /* Top center channel.                           */
+#define QAHW_PCM_CHANNEL_TBL  23  /* Top back left channel.                        */
+#define QAHW_PCM_CHANNEL_TBR  24  /* Top back right channel.                       */
+#define QAHW_PCM_CHANNEL_TSL  25  /* Top side left channel.                        */
+#define QAHW_PCM_CHANNEL_TSR  26  /* Top side right channel.                       */
+#define QAHW_PCM_CHANNEL_TBC  27  /* Top back center channel.                      */
+#define QAHW_PCM_CHANNEL_BFC  28  /* Bottom front center channel.                  */
+#define QAHW_PCM_CHANNEL_BFL  29  /* Bottom front left channel.                    */
+#define QAHW_PCM_CHANNEL_BFR  30  /* Bottom front right channel.                   */
+#define QAHW_PCM_CHANNEL_LW   31  /* Left wide channel.                            */
+#define QAHW_PCM_CHANNEL_RW   32  /* Right wide channel.                           */
+#define QAHW_PCM_CHANNEL_RSD  34  /* Right side direct channel.                    */
 
 /* type of asynchronous write callback events. Mutually exclusive */
 typedef enum {
