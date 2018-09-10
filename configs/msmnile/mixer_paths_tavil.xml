@@ -1915,7 +1915,7 @@
 
     <path name="sidetone-headphones">
         <path name="sidetone-iir" />
-        <ctl name="IIR0 INP0 Volume" value="54" />
+        <ctl name="IIR0 INP0 Volume" value="0" />
         <ctl name="RX INT1 MIX2 INP" value="SRC0" />
         <ctl name="RX INT2 MIX2 INP" value="SRC0" />
     </path>
@@ -2146,6 +2146,7 @@
 
     <path name="headset-mic">
         <path name="amic2" />
+        <ctl name="DEC0 Volume" value="84" />
     </path>
 
     <path name="headset-mic-liquid">
@@ -2217,7 +2218,7 @@
     </path>
 
     <path name="voice-headset-mic">
-        <path name="headset-mic" />
+        <path name="amic2" />
     </path>
 
     <path name="speaker-and-headphones">
@@ -2739,7 +2740,7 @@
     </path>
 
     <path name="unprocessed-headset-mic">
-        <path name="headset-mic" />
+        <path name="amic2" />
     </path>
 
     <!-- USB TTY start -->
