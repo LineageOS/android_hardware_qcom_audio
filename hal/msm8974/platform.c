@@ -6267,11 +6267,14 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
      * backend with speaker, and these devices are restricited to 48kHz.
      */
     if (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device)) {
-
-        if (bit_width >= 24) {
-            bit_width = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
+        int bw = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
+        if ((-ENOSYS != bw) && (bit_width > (uint32_t)bw)) {
+            bit_width = (uint32_t)bw;
             ALOGD("%s:becf: afe: reset bitwidth to %d (based on supported"
-                   " value for this platform)", __func__, bit_width);
+                  " value for this platform)", __func__, bit_width);
+        } else if (-ENOSYS == bw) {
+            bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+            ALOGD("%s:becf: afe: reset to default bitwidth %d", __func__, bit_width);
         }
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         ALOGD("%s:becf: afe: playback on codec device not supporting native playback set "
