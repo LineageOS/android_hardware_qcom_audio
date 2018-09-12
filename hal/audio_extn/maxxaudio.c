@@ -62,8 +62,8 @@ struct ma_state {
 };
 
 typedef enum MA_STREAM_TYPE {
-    STREAM_MIN_STREAM_TYPES,
-    STREAM_VOICE = STREAM_MIN_STREAM_TYPES,
+    STREAM_MIN_TYPES = 0,
+    STREAM_VOICE = STREAM_MIN_TYPES,
     STREAM_SYSTEM,
     STREAM_RING,
     STREAM_MUSIC,
@@ -509,21 +509,28 @@ bool audio_extn_ma_set_state(struct audio_device *adev, int stream_type,
                              float vol, bool active)
 {
     bool ret = false;
-    ma_stream_type_t stype = (ma_stream_type_t)stream_type;
+    ma_stream_type_t stype;
 
-    ALOGV("%s: stream[%d] vol[%f] active[%s]",
-          __func__, stream_type, vol, active ? "true" : "false");
+    if (stream_type >= STREAM_MAX_TYPES ||
+        stream_type < STREAM_MIN_TYPES) {
+        ALOGE("%s: stream_type %d out of range.", __func__, stream_type);
+        return ret;
+    }
 
     if (!my_data) {
         ALOGV("%s: maxxaudio isn't initialized.", __func__);
         return ret;
     }
 
+    ALOGV("%s: stream[%d] vol[%f] active[%s]",
+          __func__, stream_type, vol, active ? "true" : "false");
+
     // update condition
     // 1. start track: active and volume isn't zero
     // 2. stop track: no tracks are active
     if ((active && vol != 0) ||
         (!active)) {
+        stype = (ma_stream_type_t)stream_type;
         pthread_mutex_lock(&my_data->lock);
 
         ma_cur_state_table[stype].vol = vol;
