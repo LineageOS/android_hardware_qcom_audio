@@ -2944,7 +2944,8 @@ static int stop_output_stream(struct stream_out *out)
             adev->offload_effects_stop_output(out->handle, out->pcm_device_id);
     }
 
-    if (out->usecase == USECASE_INCALL_MUSIC_UPLINK)
+    if (out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
+                out->usecase == USECASE_INCALL_MUSIC_UPLINK2)
         voice_set_device_mute_flag(adev, false);
 
     /* 1. Get and set stream specific mixer controls */
@@ -3020,6 +3021,16 @@ int start_output_stream(struct stream_out *out)
         ALOGW("out->card_status or adev->card_status offline, try again");
         ret = -EIO;
         goto error_config;
+    }
+
+    //Update incall music usecase to reflect correct voice session
+    if (out->flags & AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
+        ret = voice_extn_check_and_set_incall_music_usecase(adev, out);
+        if (ret != 0) {
+            ALOGE("%s: Incall music delivery usecase cannot be set error:%d",
+                __func__, ret);
+            goto error_config;
+        }
     }
 
     if (out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
@@ -3106,7 +3117,8 @@ int start_output_stream(struct stream_out *out)
          select_devices(adev, out->usecase);
     }
 
-    if (out->usecase == USECASE_INCALL_MUSIC_UPLINK)
+    if (out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
+                out->usecase == USECASE_INCALL_MUSIC_UPLINK2)
         voice_set_device_mute_flag(adev, true);
 
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d) format(%#x)",
@@ -4660,7 +4672,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ALOGV("%s: frames=%zu, frame_size=%zu, bytes_to_write=%zu",
                      __func__, frames, frame_size, bytes_to_write);
 
-            if (out->usecase == USECASE_INCALL_MUSIC_UPLINK) {
+            if (out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
+                        out->usecase == USECASE_INCALL_MUSIC_UPLINK2) {
                 size_t channel_count = audio_channel_count_from_out_mask(out->channel_mask);
                 int16_t *src = (int16_t *)buffer;
                 int16_t *dst = (int16_t *)buffer;
