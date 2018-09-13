@@ -3275,6 +3275,7 @@ static int check_input_parameters(uint32_t sample_rate,
     case 3:
     case 4:
     case 6:
+    case 8:
         break;
     default:
         ret = -EINVAL;
@@ -7039,6 +7040,17 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->config.period_size = buffer_size / frame_size;
         in->config.rate = config->sample_rate;
         in->config.format = pcm_format_from_audio_format(config->format);
+        switch (config->format) {
+        case AUDIO_FORMAT_PCM_32_BIT:
+            in->bit_width = 32;
+            break;
+        case AUDIO_FORMAT_PCM_24_BIT_PACKED:
+        case AUDIO_FORMAT_PCM_8_24_BIT:
+            in->bit_width = 24;
+            break;
+        default:
+            in->bit_width = 16;
+        }
         in->config.channels = channel_count;
         in->sample_rate = in->config.rate;
     } else if ((in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) ||
