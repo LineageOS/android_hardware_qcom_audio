@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2014 The Android Open Source Project
@@ -101,7 +101,10 @@
 #endif
 
 /* ToDo: Check and update a proper value in msec */
-#define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 50
+#define COMPRESS_OFFLOAD_PLAYBACK_LATENCY  50
+#define PCM_OFFLOAD_PLAYBACK_DSP_PATHDELAY 62
+#define PCM_OFFLOAD_PLAYBACK_LATENCY \
+    (PCM_OFFLOAD_BUFFER_DURATION + PCM_OFFLOAD_PLAYBACK_DSP_PATHDELAY)
 
 #ifndef MAX_CHANNELS_SUPPORTED
 #define MAX_CHANNELS_SUPPORTED 8
@@ -1805,6 +1808,12 @@ int audio_extn_utils_compress_get_dsp_latency(struct stream_out *out)
     int ret = -EINVAL;
     struct snd_compr_metadata metadata;
     int delay_ms = COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
+
+    /* override the latency for pcm offload use case */
+    if ((out->flags & AUDIO_OUTPUT_FLAG_DIRECT) &&
+        !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
+        delay_ms = PCM_OFFLOAD_PLAYBACK_LATENCY;
+    }
 
     if (property_get_bool("vendor.audio.playback.dsp.pathdelay", false)) {
         ALOGD("%s:: Quering DSP delay %d",__func__, __LINE__);
