@@ -7726,6 +7726,8 @@ static int adev_open(const hw_module_t *module, const char *name,
         }
     }
 
+    adev->mic_break_enabled = property_get_bool("vendor.audio.mic_break", false);
+
     if (property_get("vendor.audio_hal.period_multiplier", value, NULL) > 0) {
         af_period_multiplier = atoi(value);
         if (af_period_multiplier < 0)
