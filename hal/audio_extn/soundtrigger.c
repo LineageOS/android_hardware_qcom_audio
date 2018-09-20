@@ -511,12 +511,17 @@ void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info
         __func__, uc_info->id, uc_info->type, event, raise_event);
     if (raise_event) {
         if (uc_info->type == PCM_PLAYBACK) {
+            if (uc_info->stream.out)
+                ev_info.device_info.device = uc_info->stream.out->devices;
+            else
+                ev_info.device_info.device = AUDIO_DEVICE_OUT_SPEAKER;
+
             switch(event) {
             case ST_EVENT_STREAM_FREE:
-                st_dev->st_callback(AUDIO_EVENT_PLAYBACK_STREAM_INACTIVE, NULL);
+                st_dev->st_callback(AUDIO_EVENT_PLAYBACK_STREAM_INACTIVE, &ev_info);
                 break;
             case ST_EVENT_STREAM_BUSY:
-                st_dev->st_callback(AUDIO_EVENT_PLAYBACK_STREAM_ACTIVE, NULL);
+                st_dev->st_callback(AUDIO_EVENT_PLAYBACK_STREAM_ACTIVE, &ev_info);
                 break;
             default:
                 ALOGW("%s:invalid event %d, for usecase %d",
