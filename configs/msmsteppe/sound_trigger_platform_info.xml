@@ -26,11 +26,13 @@
 <!--- OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN    -->
 <!--- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                             -->
 <sound_trigger_platform_info>
-    <param version="0x0102" /> <!-- this must be the first param -->
+    <param version="0x0103" /> <!-- this must be the first param -->
 <!--- Version History:                                                          -->
 <!--- 0x0101: Legacy version.                                                   -->
 <!--- 0x0102: Includes acdb_ids param with the gcs_usecase tag. This matches    -->
 <!--- the gcs_usecase with the acdb device that uses it.                        -->
+<!--- 0x0103: app_type and in_channels added to <lsm usecase> and out_channels  -->
+<!--- added to <adm_config>                                                     -->
     <common_config>
         <param max_cpe_sessions="1" />
         <param max_wdsp_sessions="2" />
@@ -62,7 +64,6 @@
     <sound_model_config>
         <param vendor_uuid="68ab2d40-e860-11e3-95ef-0002a5d5c51b" />
         <param execution_type="WDSP" /> <!-- value: "WDSP" "ADSP" "DYNAMIC" -->
-        <param app_type="2" /> <!-- app type used in ACDB -->
         <param library="libsmwrapper.so" />
         <param max_cpe_phrases="6" />
         <param max_cpe_users="3" />
@@ -71,7 +72,7 @@
         <!-- Profile specific data which the algorithm can support -->
         <param sample_rate="16000" />
         <param bit_width="16" />
-        <param channel_count="1"/>
+        <param out_channels="1"/> <!-- Module output channels -->
         <!-- adm_cfg_profile should match with the one defined under adm_config -->
         <!-- Set it to NONE if LSM directly connects to AFE -->
         <param adm_cfg_profile="NONE" />
@@ -81,6 +82,23 @@
         <!-- wdsp_fluence_type: fluence disabled: "NONE" -->
         <!-- fluence enabled: "FLUENCE_DMIC", "FLUENCE_TMIC", "FLUENCE_QMIC" -->
         <param wdsp_fluence_type="NONE" />
+        <arm_ss_usecase>
+            <!-- Options are "KEYWORD_DETECTION", "USER_VERIFICATION", "CUSTOM_DETECTION"  -->
+            <param sm_detection_type= "KEYWORD_DETECTION" />
+            <param sm_id="0x2" />
+            <param module_lib="libcapiv2svacnn.so"/>
+            <param sample_rate="16000"/>
+            <param bit_wdith="16"/>
+            <param channel_count="1"/>
+        </arm_ss_usecase>
+        <arm_ss_usecase>
+            <param sm_detection_type= "USER_VERIFICATION" />
+            <param sm_id="0x4" />
+            <param module_lib="libcapiv2vop.so"/>
+            <param sample_rate="16000"/>
+            <param bit_wdith="16"/>
+            <param channel_count="1"/>
+        </arm_ss_usecase>
         <gcs_usecase>
             <param uid="0x1" />
             <param acdb_devices="DEVICE_HANDSET_MIC_CPE, DEVICE_HANDSET_TMIC_CPE, DEVICE_HEADSET_MIC_CPE" />
@@ -108,12 +126,14 @@
             valid execution_type values: "WDSP" "ADSP" -->
         <lsm_usecase>
             <param execution_mode="ADSP" />
-            <param load_sound_model_ids="0x00012C0D, 0x00012C14" />
-            <param unload_sound_model_ids="0x00012C0D, 0x00012C15" />
-            <param confidence_levels_ids="0x00012C0D, 0x00012C07" />
-            <param operation_mode_ids="0x00012C0D, 0x00012C02" />
-            <param polling_enable_ids="0x00012C0D, 0x00012C1B" />
-            <param custom_config_ids="0x00012C0D, 0x00012C20" />
+            <param app_type="2" /> <!-- app type used in ACDB -->
+            <param in_channels="1"/> <!-- Module input channels -->
+            <param load_sound_model_ids="0x00012C1C, 0x00012C14" />
+            <param unload_sound_model_ids="0x00012C1C, 0x00012C15" />
+            <param confidence_levels_ids="0x00012C1C, 0x00012C07" />
+            <param operation_mode_ids="0x00012C1C, 0x00012C02" />
+            <param polling_enable_ids="0x00012C1C, 0x00012C1B" />
+            <param custom_config_ids="0x00012C1C, 0x00012C20" />
         </lsm_usecase>
 
         <lsm_usecase>
@@ -137,7 +157,6 @@
     <sound_model_config>
         <param vendor_uuid="7038ddc8-30f2-11e6-b0ac-40a8f03d3f15" />
         <param execution_type="WDSP" /> <!-- value: "WDSP" "ADSP" "DYNAMIC" -->
-        <param app_type="3" /> <!-- app type used in ACDB -->
         <param library="none" />
         <param max_cpe_phrases="1" />
         <param max_cpe_users="1" />
@@ -146,7 +165,7 @@
         <!-- Profile specific data which the algorithm can support -->
         <param sample_rate="16000" />
         <param bit_width="16" />
-        <param channel_count="1"/>
+        <param out_channels="1"/> <!-- Module output channels -->
         <!-- adm_cfg_profile should match with the one defined under adm_config -->
         <!-- Set it to NONE if LSM directly connects to AFE -->
         <param adm_cfg_profile="NONE" />
@@ -182,6 +201,8 @@
             valid execution_type values: "WDSP" "ADSP" -->
         <lsm_usecase>
             <param execution_mode="ADSP" />
+            <param app_type="3" /> <!-- app type used in ACDB -->
+            <param in_channels="1"/> <!-- Module input channels -->
             <param load_sound_model_ids="0x18000001, 0x00012C14" />
             <param unload_sound_model_ids="0x18000001, 0x00012C15" />
             <param confidence_levels_ids="0x18000001, 0x00012C07" />

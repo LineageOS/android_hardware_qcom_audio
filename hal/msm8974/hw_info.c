@@ -615,6 +615,17 @@ static void update_hardware_info_bear(struct hardware_info *hw_info, const char 
         hw_info->num_snd_devices = ARRAY_SIZE(tavil_qrd_variant_devices);
         hw_info->is_stereo_spkr = false;
         strlcpy(hw_info->dev_extn, "-hdk", sizeof(hw_info->dev_extn));
+    } else if (!strncmp(snd_card_name, "sm6150-idp-snd-card",
+                 sizeof("sm6150-idp-snd-card"))) {
+        strlcpy(hw_info->name, "sm6150", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "sm6150-qrd-snd-card",
+                 sizeof("sm6150-qrd-snd-card"))) {
+        hw_info->is_stereo_spkr = false;
+        strlcpy(hw_info->name, "sm6150", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "sm6150-tavil-snd-card",
+                 sizeof("sm6150-tavil-snd-card"))) {
+        strlcpy(hw_info->name, "sm6150", sizeof(hw_info->name));
+
     } else {
         ALOGW("%s: Not an SDM device", __func__);
     }
@@ -665,7 +676,8 @@ void *hw_info_init(const char *snd_card_name)
     } else if(strstr(snd_card_name, "sdm845")) {
         ALOGV("SDM845 - variant soundcard");
         update_hardware_info_sdm845(hw_info, snd_card_name);
-    } else if (strstr(snd_card_name, "sdm660") || strstr(snd_card_name, "sdm670")) {
+    } else if (strstr(snd_card_name, "sdm660") || strstr(snd_card_name, "sdm670")
+               || strstr(snd_card_name, "sm6150")) {
         ALOGV("Bear - variant soundcard");
         update_hardware_info_bear(hw_info, snd_card_name);
     } else if (strstr(snd_card_name, "sdx")) {

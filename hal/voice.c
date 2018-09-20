@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -228,6 +228,7 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 
     uc_info->in_snd_device = SND_DEVICE_NONE;
     uc_info->out_snd_device = SND_DEVICE_NONE;
+    adev->voice.use_device_mute = false;
 
     if (audio_is_bluetooth_sco_device(uc_info->devices) && !adev->bt_sco_on) {
         ALOGE("start_call: couldn't find BT SCO, SCO is not ready");
@@ -280,6 +281,9 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
         ret = -EIO;
         goto error_start_voice;
     }
+
+    if(adev->mic_break_enabled)
+        platform_set_mic_break_det(adev->platform, true);
 
     pcm_start(session->pcm_tx);
     pcm_start(session->pcm_rx);
@@ -338,10 +342,10 @@ bool voice_is_in_call_rec_stream(const struct stream_in *in)
        return in_call_rec;
     }
 
-    if(in->source == AUDIO_SOURCE_VOICE_DOWNLINK ||
-       in->source == AUDIO_SOURCE_VOICE_UPLINK ||
-       in->source == AUDIO_SOURCE_VOICE_CALL) {
-       in_call_rec = true;
+    if (in->source == AUDIO_SOURCE_VOICE_DOWNLINK ||
+        in->source == AUDIO_SOURCE_VOICE_UPLINK ||
+        in->source == AUDIO_SOURCE_VOICE_CALL) {
+            in_call_rec = true;
     }
 
     return in_call_rec;
@@ -476,19 +480,48 @@ int voice_set_mic_mute(struct audio_device *adev, bool state)
     int err = 0;
 
     adev->voice.mic_mute = state;
+
     if (audio_extn_hfp_is_active(adev)) {
         err = hfp_set_mic_mute(adev, state);
     } else if (adev->mode == AUDIO_MODE_IN_CALL) {
-        err = platform_set_mic_mute(adev->platform, state);
+       /* Use device mute if incall music delivery usecase is in progress */
+        if (adev->voice.use_device_mute)
+            err = platform_set_device_mute(adev->platform, state, "tx");
+        else
+            err = platform_set_mic_mute(adev->platform, state);
+        ALOGV("%s: voice mute status=%d, use_device_mute flag=%d",
+            __func__, state, adev->voice.use_device_mute);
     } else if (adev->mode == AUDIO_MODE_IN_COMMUNICATION) {
         err = voice_extn_compress_voip_set_mic_mute(adev, state);
     }
+
     return err;
 }
 
 bool voice_get_mic_mute(struct audio_device *adev)
 {
     return adev->voice.mic_mute;
+}
+
+/*
+ * Following function is called when incall music uplink usecase is
+ * created or destroyed while mic is muted. If incall music uplink
+ * usecase is active, apply voice device mute to mute only voice Tx
+ * path and not the mixed voice Tx + inncall-music path. Revert to
+ * voice stream mute once incall music uplink usecase is inactive
+ */
+void voice_set_device_mute_flag(struct audio_device *adev, bool state)
+{
+    if (adev->voice.mic_mute) {
+        if (state) {
+            platform_set_device_mute(adev->platform, true, "tx");
+            platform_set_mic_mute(adev->platform, false);
+        } else {
+            platform_set_mic_mute(adev->platform, true);
+            platform_set_device_mute(adev->platform, false, "tx");
+        }
+    }
+    adev->voice.use_device_mute = state;
 }
 
 int voice_set_volume(struct audio_device *adev, float volume)
