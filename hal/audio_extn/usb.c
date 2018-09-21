@@ -1157,7 +1157,7 @@ bool audio_extn_usb_connected(struct str_parms *parms) {
     struct usb_card_config *usb_card_info;
     bool usb_connected = false;
 
-    if (str_parms_get_int(parms, "card", &card) >= 0) {
+    if ((parms != NULL) && str_parms_get_int(parms, "card", &card) >= 0) {
         usb_connected = audio_extn_usb_alive(card);
     } else {
         list_for_each(node_i, &usbmod->usb_card_conf_list) {
