@@ -238,6 +238,7 @@ struct platform_data {
     bool is_acdb_initialized;
     /* Vbat monitor related flags */
     bool is_vbat_speaker;
+    bool is_bcl_speaker;
     bool gsm_mode_enabled;
     bool is_slimbus_interface;
     bool is_internal_codec;
@@ -1751,6 +1752,9 @@ static void send_codec_cal(acdb_loader_get_calibration_t acdb_loader_get_calibra
         ret = 0;
 
         if ((plat_data->is_vbat_speaker) && (WCD9XXX_VBAT_CAL == type)) {
+           /* VBAT BCL speaker does not need tuning data */
+           if (!plat_data->is_bcl_speaker)
+               return;
            ret = send_vbat_adc_data_to_acdb(plat_data, cal_name_info[type]);
            if (ret < 0)
                ALOGE("%s error in sending vbat adc data to acdb", __func__);
@@ -2217,6 +2221,10 @@ void *platform_init(struct audio_device *adev)
     ret = audio_extn_can_use_vbat();
     if (ret)
         my_data->is_vbat_speaker = true;
+
+    ret = audio_extn_can_use_bcl();
+    if (ret)
+        my_data->is_bcl_speaker = true;
 
     list_init(&my_data->acdb_meta_key_list);
 
@@ -3408,7 +3416,7 @@ int platform_switch_voice_call_enable_device_config(void *platform,
          out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
          out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT) &&
          audio_extn_spkr_prot_is_enabled()) {
-        if (my_data->is_vbat_speaker)
+        if (my_data->is_vbat_speaker || my_data->is_bcl_speaker)
             acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT];
         else
             acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED];
@@ -3483,7 +3491,7 @@ int platform_switch_voice_call_usecase_route_post(void *platform,
          out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
          out_snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT) &&
          audio_extn_spkr_prot_is_enabled()) {
-        if (my_data->is_vbat_speaker)
+        if (my_data->is_vbat_speaker || my_data->is_bcl_speaker)
             acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT];
          else
             acdb_rx_id = acdb_device_table[SND_DEVICE_OUT_SPEAKER_PROTECTED];
@@ -4005,7 +4013,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
             else
                 snd_device = SND_DEVICE_OUT_BT_SCO;
         } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
-                if (my_data->is_vbat_speaker) {
+                if (my_data->is_vbat_speaker || my_data->is_bcl_speaker) {
                     if (hw_info_is_stereo_spkr(my_data->hw_info)) {
                         if (my_data->mono_speaker == SPKR_1)
                             snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_VBAT;
@@ -4089,7 +4097,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
             snd_device = SND_DEVICE_OUT_SPEAKER_EXTERNAL_2;
         else if (adev->speaker_lr_swap)
             snd_device = SND_DEVICE_OUT_SPEAKER_REVERSE;
-        else if (my_data->is_vbat_speaker)
+        else if (my_data->is_vbat_speaker || my_data->is_bcl_speaker)
             snd_device = SND_DEVICE_OUT_SPEAKER_VBAT;
         else
             snd_device = SND_DEVICE_OUT_SPEAKER;

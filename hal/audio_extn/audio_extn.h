@@ -169,9 +169,13 @@ void audio_extn_set_aanc_noise_level(struct audio_device *adev,
 #ifndef VBAT_MONITOR_ENABLED
 #define audio_extn_is_vbat_enabled()                     (0)
 #define audio_extn_can_use_vbat()                        (0)
+#define audio_extn_is_bcl_enabled()                     (0)
+#define audio_extn_can_use_bcl()                        (0)
 #else
 bool audio_extn_is_vbat_enabled(void);
 bool audio_extn_can_use_vbat(void);
+bool audio_extn_is_bcl_enabled(void);
+bool audio_extn_can_use_bcl(void);
 #endif
 
 #ifndef RAS_ENABLED
