@@ -264,7 +264,7 @@ int32_t release_loopback_session(loopback_patch_t *active_loopback_patch)
     struct stream_inout *inout =  &active_loopback_patch->patch_stream;
     struct audio_port_config *source_patch_config = &active_loopback_patch->
                                                     loopback_source;
-    int32_t pcm_dev_asm_rx_id = platform_get_pcm_device_id(USECASE_AUDIO_TRANSCODE_LOOPBACK,
+    int32_t pcm_dev_asm_rx_id = platform_get_pcm_device_id(USECASE_AUDIO_TRANSCODE_LOOPBACK_RX,
                                                            PCM_PLAYBACK);
 
     /* Close the PCM devices */
