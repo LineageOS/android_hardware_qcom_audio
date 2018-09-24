@@ -704,13 +704,14 @@ void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
     struct stream_format *sf_info;
     char value[PROPERTY_VALUE_MAX] = {0};
 
-    if ((bit_width >= 24) &&
-        (devices & AUDIO_DEVICE_OUT_SPEAKER)) {
-        int32_t bw = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
-        if (-ENOSYS != bw)
+    if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
+        int bw = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
+        if ((-ENOSYS != bw) && (bit_width > (uint32_t)bw))
             bit_width = (uint32_t)bw;
+        else if (-ENOSYS == bw)
+            bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        ALOGI("%s Allowing 24-bit playback on speaker ONLY at default sampling rate", __func__);
+        ALOGI("%s Allowing 24 and above bits playback on speaker ONLY at default sampling rate", __func__);
     }
 
     property_get("vendor.audio.playback.mch.downsample",value,"");
