@@ -337,7 +337,8 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_SILENCE] = "silence-playback",
 
     /* Transcode loopback cases */
-    [USECASE_AUDIO_TRANSCODE_LOOPBACK] = "audio-transcode-loopback",
+    [USECASE_AUDIO_TRANSCODE_LOOPBACK_RX] = "audio-transcode-loopback-rx",
+    [USECASE_AUDIO_TRANSCODE_LOOPBACK_TX] = "audio-transcode-loopback-tx",
 
     [USECASE_AUDIO_PLAYBACK_VOIP] = "audio-playback-voip",
     [USECASE_AUDIO_RECORD_VOIP] = "audio-record-voip",
@@ -963,7 +964,7 @@ int enable_audio_route(struct audio_device *adev,
 
     ALOGV("%s: enter: usecase(%d)", __func__, usecase->id);
 
-    if (usecase->type == PCM_CAPTURE)
+    if (usecase->type == PCM_CAPTURE || usecase->type == TRANSCODE_LOOPBACK_TX)
         snd_device = usecase->in_snd_device;
     else
         snd_device = usecase->out_snd_device;
@@ -1001,7 +1002,7 @@ int disable_audio_route(struct audio_device *adev,
         return -EINVAL;
 
     ALOGV("%s: enter: usecase(%d)", __func__, usecase->id);
-    if (usecase->type == PCM_CAPTURE)
+    if (usecase->type == PCM_CAPTURE || usecase->type == TRANSCODE_LOOPBACK_TX)
         snd_device = usecase->in_snd_device;
     else
         snd_device = usecase->out_snd_device;
@@ -1257,7 +1258,7 @@ static snd_device_t derive_playback_snd_device(void * platform,
     snd_device_t d2 = new_snd_device;
 
     switch (uc->type) {
-        case TRANSCODE_LOOPBACK :
+        case TRANSCODE_LOOPBACK_RX :
             a1 = uc->stream.inout->out_config.devices;
             a2 = new_uc->stream.inout->out_config.devices;
             break;
@@ -1929,7 +1930,8 @@ static bool force_device_switch(struct audio_usecase *usecase)
     bool is_it_true_mode = false;
 
     if (usecase->type == PCM_CAPTURE ||
-        usecase->type == TRANSCODE_LOOPBACK) {
+        usecase->type == TRANSCODE_LOOPBACK_RX ||
+        usecase->type == TRANSCODE_LOOPBACK_TX) {
         return false;
     }
 
@@ -2043,7 +2045,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                                         usecase->stream.out);
         in_snd_device = platform_get_input_snd_device(adev->platform, usecase->stream.out->devices);
         usecase->devices = usecase->stream.out->devices;
-    } else if (usecase->type == TRANSCODE_LOOPBACK ) {
+    } else if (usecase->type == TRANSCODE_LOOPBACK_RX) {
         if (usecase->stream.inout == NULL) {
             ALOGE("%s: stream.inout is NULL", __func__);
             return -EINVAL;
@@ -2054,8 +2056,14 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         stream_out.channel_mask = usecase->stream.inout->out_config.channel_mask;
         out_snd_device = platform_get_output_snd_device(adev->platform,
                                                         &stream_out);
+        usecase->devices = out_snd_device;
+    } else if (usecase->type == TRANSCODE_LOOPBACK_TX ) {
+        if (usecase->stream.inout == NULL) {
+            ALOGE("%s: stream.inout is NULL", __func__);
+            return -EINVAL;
+        }
         in_snd_device = platform_get_input_snd_device(adev->platform, AUDIO_DEVICE_NONE);
-        usecase->devices = (out_snd_device | in_snd_device);
+        usecase->devices = in_snd_device;
     } else {
         /*
          * If the voice call is active, use the sound devices of voice call usecase
