@@ -65,6 +65,7 @@
 #define MIXER_XML_PATH_I2S "/etc/mixer_paths_i2s.xml"
 #define PLATFORM_INFO_XML_PATH_I2S "/etc/audio_platform_info_extcodec.xml"
 #define PLATFORM_INFO_XML_PATH_WSA  "/etc/audio_platform_info_wsa.xml"
+#define PLATFORM_INFO_XML_PATH_TDM  "/etc/audio_platform_info_tdm.xml"
 #else
 #define MIXER_XML_BASE_STRING "/vendor/etc/mixer_paths"
 #define MIXER_XML_DEFAULT_PATH "/vendor/etc/mixer_paths.xml"
@@ -76,6 +77,7 @@
 #define MIXER_XML_PATH_I2S "/vendor/etc/mixer_paths_i2s.xml"
 #define PLATFORM_INFO_XML_PATH_I2S "/vendor/etc/audio_platform_info_i2s.xml"
 #define PLATFORM_INFO_XML_PATH_WSA  "/vendor/etc/audio_platform_info_wsa.xml"
+#define PLATFORM_INFO_XML_PATH_TDM  "/vendor/etc/audio_platform_info_tdm.xml"
 #endif
 
 #include <linux/msm_audio.h>
@@ -2177,6 +2179,9 @@ void *platform_init(struct audio_device *adev)
     else if (!strncmp(snd_card_name, "qcs405-wsa-snd-card",
                sizeof("qcs405-wsa-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_WSA, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "qcs405-tdm-snd-card",
+               sizeof("qcs405-tdm-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_TDM, my_data, PLATFORM);
     else if (my_data->is_internal_codec)
         platform_info_init(PLATFORM_INFO_XML_PATH_INTCODEC, my_data, PLATFORM);
     else
