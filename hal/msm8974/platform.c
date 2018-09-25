@@ -30,7 +30,7 @@
 #include "platform.h"
 #include "audio_extn.h"
 #include <linux/msm_audio.h>
-#if defined (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710)
+#if defined (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || (PLATFORM_SM8150)
 #include <sound/devdep_params.h>
 #endif
 
@@ -143,7 +143,7 @@ struct platform_data {
     bool speaker_lr_swap;
 
     void *acdb_handle;
-#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710)
+#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || (PLATFORM_SM8150)
     acdb_init_v2_cvd_t acdb_init;
 #elif defined (PLATFORM_MSM8084)
     acdb_init_v2_t acdb_init;
@@ -773,7 +773,7 @@ static const char *get_operator_specific_device_mixer_path(snd_device_t snd_devi
 
 inline bool platform_supports_app_type_cfg()
 {
-#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710)
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || (PLATFORM_SM8150)
     return true;
 #else
     return false;
@@ -1379,7 +1379,7 @@ static int platform_acdb_init(void *platform)
         return 0;
     }
 
-#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710)
+#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || (PLATFORM_SM8150)
     char *cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
     if (!cvd_version)
         ALOGE("failed to allocate cvd_version");
@@ -1748,7 +1748,7 @@ void *platform_init(struct audio_device *adev)
         configure_flicker_sensor_input(adev->mixer);
 #endif
 
-#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710)
+#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || (PLATFORM_SM8150)
         acdb_init_v2_cvd_t acdb_init_local;
         acdb_init_local = (acdb_init_v2_cvd_t)dlsym(my_data->acdb_handle,
                                               "acdb_loader_init_v2");
@@ -4540,7 +4540,7 @@ int platform_set_sidetone(struct audio_device *adev,
 int platform_get_mmap_data_fd(void *platform __unused, int fe_dev __unused, int dir __unused,
                               int *fd __unused, uint32_t *size __unused)
 {
-#if defined (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710)
+#if defined (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || (PLATFORM_SM8150)
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     int hw_fd = -1;
