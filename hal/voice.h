@@ -95,4 +95,6 @@ void voice_set_sidetone(struct audio_device *adev,
                        snd_device_t out_snd_device,
                        bool enable);
 bool voice_is_call_state_active(struct audio_device *adev);
+void voice_set_device_mute_flag (struct audio_device *adev, bool state);
+
 #endif //VOICE_H

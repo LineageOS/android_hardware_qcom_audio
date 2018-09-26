@@ -2479,7 +2479,7 @@ int platform_set_mic_mute(void *platform, bool state)
               __func__, mixer_ctl_name);
         return -EINVAL;
     }
-    ALOGV("Setting voice mute state: %d", state);
+    ALOGV("%s: Setting voice mute state: %d", __func__, state);
     mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
 
     if (my_data->csd != NULL) {
