@@ -194,7 +194,8 @@ audio_patch_handle_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
         switch (loopback_patch->loopback_source.type) {
             case AUDIO_PORT_TYPE_DEVICE :
                 if ((loopback_patch->loopback_source.config_mask & AUDIO_PORT_CONFIG_FORMAT)) {
-                    if (loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_HDMI) {
+                    if ((loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_HDMI) ||
+                        (loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_SPDIF)) {
                        switch (loopback_patch->loopback_source.format) {
                            case AUDIO_FORMAT_PCM:
                            case AUDIO_FORMAT_PCM_16_BIT:
@@ -216,6 +217,7 @@ audio_patch_handle_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
             //Unsupported as of now, need to extend for other source types
         }
     }
+
     if (loopback_patch->loopback_sink.role == AUDIO_PORT_ROLE_SINK) {
         switch (loopback_patch->loopback_sink.type) {
         case AUDIO_PORT_TYPE_DEVICE :
@@ -245,6 +247,7 @@ audio_patch_handle_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
     if (is_source_supported && is_sink_supported) {
         return source_device | sink_device;
     }
+
     ALOGE("%s, Unsupported source or sink port config", __func__);
     return loopback_patch->patch_handle_id;
 }
