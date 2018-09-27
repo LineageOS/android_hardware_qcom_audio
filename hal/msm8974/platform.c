@@ -2534,10 +2534,6 @@ acdb_init_fail:
                 strdup("RX_CDC_DMA_RX_0 Format");
             my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
                 strdup("RX_CDC_DMA_RX_0 SampleRate");
-            my_data->current_backend_cfg[HEADPHONE_44_1_BACKEND].bitwidth_mixer_ctl =
-                strdup("RX_CDC_DMA_RX_0 Format");
-            my_data->current_backend_cfg[HEADPHONE_44_1_BACKEND].samplerate_mixer_ctl =
-                strdup("RX_CDC_DMA_RX_0 SampleRate");
 
             if (default_rx_backend)
                 free(default_rx_backend);
@@ -2559,10 +2555,6 @@ acdb_init_fail:
             my_data->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
                 strdup("INT0_MI2S_RX Format");
             my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
-                strdup("INT0_MI2S_RX SampleRate");
-            my_data->current_backend_cfg[HEADPHONE_44_1_BACKEND].bitwidth_mixer_ctl =
-                strdup("INT0_MI2S_RX Format");
-            my_data->current_backend_cfg[HEADPHONE_44_1_BACKEND].samplerate_mixer_ctl =
                 strdup("INT0_MI2S_RX SampleRate");
 
             if (default_rx_backend)
@@ -4217,9 +4209,6 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 else
                     snd_device = SND_DEVICE_OUT_ANC_HEADSET;
         } else if (NATIVE_AUDIO_MODE_SRC == na_mode &&
-                   OUTPUT_SAMPLING_RATE_44100 == sample_rate) {
-                snd_device = SND_DEVICE_OUT_HEADPHONES_44_1;
-        } else if (NATIVE_AUDIO_MODE_TRUE_44_1 == na_mode &&
                    OUTPUT_SAMPLING_RATE_44100 == sample_rate) {
                 snd_device = SND_DEVICE_OUT_HEADPHONES_44_1;
         } else if (NATIVE_AUDIO_MODE_MULTIPLE_44_1 == na_mode &&
@@ -6520,11 +6509,13 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                        __func__);
         }
         /*reset sample rate to 48khz if sample rate less than 44.1khz, or device backend dose not support 44.1 khz*/
-        if ((sample_rate == OUTPUT_SAMPLING_RATE_44100 && backend_idx != HEADPHONE_44_1_BACKEND &&
-             backend_idx != USB_AUDIO_RX_BACKEND)
-            || sample_rate < OUTPUT_SAMPLING_RATE_44100) {
-                sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-            ALOGD("%s:becf: afe: reset sample rate to default Sample Rate(48k)",__func__);
+        if ((sample_rate == OUTPUT_SAMPLING_RATE_44100 &&
+             backend_idx != HEADPHONE_44_1_BACKEND &&
+             backend_idx != HEADPHONE_BACKEND &&
+             backend_idx != USB_AUDIO_RX_BACKEND) ||
+            sample_rate < OUTPUT_SAMPLING_RATE_44100) {
+            sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+            ALOGD("%s:becf: afe: set sample rate to default Sample Rate(48k)",__func__);
         }
     }
 
@@ -6655,15 +6646,6 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
     struct audio_backend_cfg backend_cfg;
 
     backend_idx = platform_get_backend_index(snd_device);
-
-
-    //initialize backend config if current snd_device is SND_DEVICE_NONE
-    if (usecase->out_snd_device == SND_DEVICE_NONE) {
-        my_data->current_backend_cfg[backend_idx].sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-        my_data->current_backend_cfg[backend_idx].bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-        my_data->current_backend_cfg[backend_idx].channels = CODEC_BACKEND_DEFAULT_CHANNELS;
-    }
-
 
     if (usecase->type == TRANSCODE_LOOPBACK_RX) {
         backend_cfg.bit_width = usecase->stream.inout->out_config.bit_width;
