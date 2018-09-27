@@ -1980,6 +1980,9 @@ static int stop_output_stream(struct stream_out *out)
         audio_low_latency_hint_end();
     }
 
+    if (out->usecase == USECASE_INCALL_MUSIC_UPLINK)
+        voice_set_device_mute_flag(adev, false);
+
     /* 1. Get and set stream specific mixer controls */
     disable_audio_route(adev, uc_info);
 
@@ -2102,6 +2105,9 @@ int start_output_stream(struct stream_out *out)
     }
 
     audio_extn_extspk_update(adev->extspk);
+
+    if (out->usecase == USECASE_INCALL_MUSIC_UPLINK)
+        voice_set_device_mute_flag(adev, true);
 
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d) format(%#x)",
           __func__, adev->snd_card, out->pcm_device_id, out->config.format);
