@@ -69,6 +69,10 @@ typedef int (*qahwi_out_get_param_data_t)(struct audio_stream_out *out,
                                       qahw_param_id param_id,
                                       qahw_param_payload *payload);
 
+typedef int (*qahwi_loopback_set_param_data_t)(audio_patch_handle_t patch_handle,
+                                               qahw_param_id param_id,
+                                               qahw_param_payload *payload);
+
 typedef struct {
     audio_hw_device_t *audio_device;
     char module_name[MAX_MODULE_NAME_LENGTH];
@@ -80,6 +84,7 @@ typedef struct {
     const hw_module_t* module;
     qahwi_get_param_data_t qahwi_get_param_data;
     qahwi_set_param_data_t qahwi_set_param_data;
+    qahwi_loopback_set_param_data_t qahwi_loopback_set_param_data;
 } qahw_module_t;
 
 typedef struct {
@@ -1438,6 +1443,34 @@ exit:
      return ret;
 }
 
+int qahw_loopback_set_param_data_l(qahw_module_handle_t *hw_module,
+                                   audio_patch_handle_t handle,
+                                   qahw_loopback_param_id param_id,
+                                   qahw_loopback_param_payload *payload)
+
+{
+    int ret = -EINVAL;
+    qahw_module_t *qahw_module = (qahw_module_t *)hw_module;
+
+    if (!payload) {
+        ALOGE("%s:: invalid param", __func__);
+        goto exit;
+    }
+
+    if (qahw_module->qahwi_loopback_set_param_data) {
+        ret = qahw_module->qahwi_loopback_set_param_data(handle,
+                                                         param_id,
+                                                         (void *)payload);
+    } else {
+        ret = -ENOSYS;
+        ALOGE("%s not supported\n", __func__);
+    }
+
+exit:
+    return ret;
+
+}
+
 /* Fills the list of supported attributes for a given audio port.
  * As input, "port" contains the information (type, role, address etc...)
  * needed by the HAL to identify the port.
@@ -1888,6 +1921,12 @@ qahw_module_handle_t *qahw_load_module_l(const char *hw_module_id)
                             "qahwi_set_param_data");
     if (!qahw_module->qahwi_set_param_data)
          ALOGD("%s::qahwi_set_param_data api is not defined\n",__func__);
+
+    qahw_module->qahwi_loopback_set_param_data = (qahwi_loopback_set_param_data_t)
+                                                  dlsym(module->dso,
+                                                  "qahwi_loopback_set_param_data");
+    if (!qahw_module->qahwi_loopback_set_param_data)
+         ALOGD("%s::qahwi_loopback_set_param_data api is not defined\n", __func__);
 
     if (!qahw_list_count)
         list_init(&qahw_module_list);

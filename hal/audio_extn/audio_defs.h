@@ -306,4 +306,12 @@ typedef enum {
     AUDIO_EXTN_PARAM_LICENSE_PARAMS,
 } audio_extn_param_id;
 
+typedef union {
+    struct audio_out_render_window_param render_window_params;
+} audio_extn_loopback_param_payload;
+
+typedef enum {
+    AUDIO_EXTN_PARAM_LOOPBACK_RENDER_WINDOW /* PARAM to set render window */
+} audio_extn_loopback_param_id;
+
 #endif /* AUDIO_DEFS_H */
