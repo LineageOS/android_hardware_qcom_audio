@@ -357,6 +357,78 @@ int loopback_stream_cb(stream_callback_event_t event, void *param, void *cookie)
     return 0;
 }
 
+#ifdef SNDRV_COMPRESS_RENDER_WINDOW
+static loopback_patch_t *get_active_loopback_patch(audio_patch_handle_t handle)
+{
+    int n = 0;
+    int patch_index = -1;
+    loopback_patch_t *active_loopback_patch = NULL;
+
+    for (n=0; n < MAX_NUM_PATCHES; n++) {
+        if (audio_loopback_mod->patch_db.num_patches > 0) {
+            if (audio_loopback_mod->patch_db.loopback_patch[n].patch_handle_id == handle) {
+                patch_index = n;
+                break;
+            }
+        } else {
+            ALOGE("%s, No active audio loopback patch", __func__);
+            return active_loopback_patch;
+        }
+    }
+
+    if ((patch_index > -1) && (patch_index < MAX_NUM_PATCHES))
+        active_loopback_patch = &(audio_loopback_mod->patch_db.loopback_patch[
+                                patch_index]);
+    else
+        ALOGE("%s, Requested Patch handle does not exist", __func__);
+
+    return active_loopback_patch;
+}
+
+int audio_extn_hw_loopback_set_render_window(audio_patch_handle_t handle,
+                      struct audio_out_render_window_param *render_window)
+{
+    struct snd_compr_metadata metadata = {0};
+    int ret = 0;
+    loopback_patch_t *active_loopback_patch = get_active_loopback_patch(handle);
+
+    if (active_loopback_patch == NULL) {
+        ALOGE("%s: Invalid patch handle", __func__);
+        ret = -EINVAL;
+        goto exit;
+    }
+
+    if (render_window == NULL) {
+        ALOGE("%s: Invalid render_window", __func__);
+        ret = -EINVAL;
+        goto exit;
+    }
+
+    metadata.key = SNDRV_COMPRESS_RENDER_WINDOW;
+    /*render window start value */
+    metadata.value[0] = 0xFFFFFFFF & render_window->render_ws; /* lsb */
+    metadata.value[1] = \
+            (0xFFFFFFFF00000000 & render_window->render_ws) >> 32; /* msb*/
+    /*render window end value */
+    metadata.value[2] = 0xFFFFFFFF & render_window->render_we; /* lsb */
+    metadata.value[3] = \
+            (0xFFFFFFFF00000000 & render_window->render_we) >> 32; /* msb*/
+
+    ret = compress_set_metadata(active_loopback_patch->sink_stream, &metadata);
+
+exit:
+    return ret;
+}
+#else
+int audio_extn_hw_loopback_set_render_window(struct audio_hw_device *dev,
+                      audio_patch_handle_t handle __unused,
+                      struct audio_out_render_window_param *render_window __unused)
+{
+    ALOGD("%s:: configuring render window not supported", __func__);
+    return 0;
+}
+#endif
+
 #if defined SNDRV_COMPRESS_LATENCY_MODE
 static void transcode_loopback_util_set_latency_mode(
                              loopback_patch_t *active_loopback_patch,

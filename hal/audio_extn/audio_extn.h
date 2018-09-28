@@ -999,6 +999,14 @@ int audio_extn_hw_loopback_set_audio_port_config(struct audio_hw_device *dev,
                                     const struct audio_port_config *config);
 int audio_extn_hw_loopback_get_audio_port(struct audio_hw_device *dev,
                                     struct audio_port *port_in);
+
+int audio_extn_hw_loopback_set_param_data(audio_patch_handle_t handle,
+                                          audio_extn_loopback_param_id param_id,
+                                          audio_extn_loopback_param_payload *payload);
+
+int audio_extn_hw_loopback_set_render_window(audio_patch_handle_t handle,
+                                             struct audio_out_render_window_param *render_window);
+
 int audio_extn_hw_loopback_init(struct audio_device *adev);
 void audio_extn_hw_loopback_deinit(struct audio_device *adev);
 #else
@@ -1023,6 +1031,18 @@ static int __unused audio_extn_hw_loopback_set_audio_port_config(struct audio_hw
 }
 static int __unused audio_extn_hw_loopback_get_audio_port(struct audio_hw_device *dev __unused,
                                     struct audio_port *port_in __unused)
+{
+    return -ENOSYS;
+}
+static int __unused audio_extn_hw_loopback_set_param_data(audio_patch_handle_t handle __unused,
+                                               audio_extn_loopback_param_id param_id __unused,
+                                               audio_extn_loopback_param_payload *payload __unused)
+{
+    return -ENOSYS;
+}
+
+static int __unused audio_extn_hw_loopback_set_render_window(audio_patch_handle_t handle __unused,
+                                     struct audio_out_render_window_param *render_window __unused)
 {
     return -ENOSYS;
 }

@@ -1478,6 +1478,33 @@ int audio_extn_out_set_param_data(struct stream_out *out,
     return ret;
 }
 
+#ifdef AUDIO_HW_LOOPBACK_ENABLED
+int audio_extn_hw_loopback_set_param_data(audio_patch_handle_t handle,
+                                          audio_extn_loopback_param_id param_id,
+                                          audio_extn_loopback_param_payload *payload) {
+    int ret = -EINVAL;
+
+    if (!payload) {
+        ALOGE("%s:: Invalid Param",__func__);
+        return ret;
+    }
+
+    ALOGD("%d: %s: param id is %d\n", __LINE__, __func__, param_id);
+
+    switch(param_id) {
+        case AUDIO_EXTN_PARAM_LOOPBACK_RENDER_WINDOW:
+            ret = audio_extn_hw_loopback_set_render_window(handle, payload);
+            break;
+        default:
+            ALOGE("%s: unsupported param id %d", __func__, param_id);
+            break;
+    }
+
+    return ret;
+}
+#endif
+
+
 /* API to get playback stream specific config parameters */
 int audio_extn_out_get_param_data(struct stream_out *out,
                              audio_extn_param_id param_id,
