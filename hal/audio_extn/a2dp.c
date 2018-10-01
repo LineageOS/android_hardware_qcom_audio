@@ -844,10 +844,16 @@ static int a2dp_set_backend_cfg()
     uint32_t sampling_rate_rx = a2dp.enc_sampling_rate;
     struct mixer_ctl *ctl_sample_rate = NULL, *ctrl_in_channels = NULL;
 
-    //For LDAC encoder open slimbus port at 96Khz for 48Khz input
-    //and 88.2Khz for 44.1Khz input.
+    /* For LDAC encoder open slimbus port at 96Khz for 48Khz input
+     * and 88.2Khz for 44.1Khz input.
+     * For APTX AD encoder, open slimbus port at 96Khz for 48Khz input.
+     */
     if ((a2dp.bt_encoder_format == ENC_CODEC_TYPE_LDAC) &&
-        (sampling_rate_rx == 48000 || sampling_rate_rx == 44100 )) {
+        (sampling_rate_rx == SAMPLING_RATE_48K ||
+         sampling_rate_rx == SAMPLING_RATE_441K)) {
+        sampling_rate_rx *= 2;
+    } else if (a2dp.bt_encoder_format == ENC_CODEC_TYPE_APTX_AD &&
+               sampling_rate_rx == SAMPLING_RATE_48K) {
         sampling_rate_rx *= 2;
     }
 
