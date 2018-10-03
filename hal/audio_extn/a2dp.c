@@ -1877,10 +1877,12 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
 
      ret = str_parms_get_str(parms, "A2dpSuspended", value, sizeof(value));
      if (ret >= 0) {
-         if (a2dp.bt_lib_handle && (a2dp.bt_state != A2DP_STATE_DISCONNECTED) ) {
+         if (a2dp.bt_lib_handle) {
              if ((!strncmp(value,"true",sizeof(value)))) {
                 ALOGD("Setting a2dp to suspend state");
                 a2dp.a2dp_suspended = true;
+                if (a2dp.bt_state == A2DP_STATE_DISCONNECTED)
+                    goto param_handled;
                 list_for_each(node, &a2dp.adev->usecase_list) {
                     uc_info = node_to_item(node, struct audio_usecase, list);
                     if (uc_info->type == PCM_PLAYBACK &&

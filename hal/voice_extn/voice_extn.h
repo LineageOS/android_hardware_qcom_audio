@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2016-2018, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -101,13 +101,8 @@ static void __unused voice_extn_out_get_parameters(struct stream_out *out __unus
 }
 #endif
 
-#ifdef INCALL_MUSIC_ENABLED
 int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
                                                   struct stream_out *out);
-#else
-#define voice_extn_check_and_set_incall_music_usecase(adev, out) -ENOSYS
-#endif
-
 #ifdef COMPRESS_VOIP_ENABLED
 int voice_extn_compress_voip_close_output_stream(struct audio_stream *stream);
 int voice_extn_compress_voip_open_output_stream(struct stream_out *out);
