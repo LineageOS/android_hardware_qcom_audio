@@ -40,6 +40,9 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+
+LOCAL_HEADER_LIBRARIES += generated_kernel_headers
+
 include $(BUILD_SHARED_LIBRARY)
 endif
 
@@ -74,6 +77,9 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+
+LOCAL_HEADER_LIBRARIES += generated_kernel_headers
+
 include $(BUILD_SHARED_LIBRARY)
 
 endif
@@ -109,6 +115,9 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+
+LOCAL_HEADER_LIBRARIES += generated_kernel_headers
+
 include $(BUILD_SHARED_LIBRARY)
 
 endif
