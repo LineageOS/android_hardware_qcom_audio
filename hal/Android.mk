@@ -233,6 +233,8 @@ LOCAL_SRC_FILES += audio_perf.cpp
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 
+LOCAL_HEADER_LIBRARIES += generated_kernel_headers
+
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
 LOCAL_MODULE_RELATIVE_PATH := hw
