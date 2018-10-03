@@ -233,6 +233,8 @@ LOCAL_SRC_FILES += audio_perf.cpp
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 
+LOCAL_HEADER_LIBRARIES += generated_kernel_headers
+
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 LOCAL_LICENSE_KINDS := SPDX-license-identifier-Apache-2.0
 LOCAL_LICENSE_CONDITIONS := notice
