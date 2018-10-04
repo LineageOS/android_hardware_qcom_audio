@@ -2331,6 +2331,8 @@ int main(int argc, char* argv[]) {
             fprintf(stderr, " In Device config \n");
             send_device_config = true;
 
+            memset(&device_cfg_params, 0, sizeof(struct qahw_device_cfg_param));
+
             //Read Sample Rate
             if (optind < argc && *argv[optind] != '-') {
                  device_cfg_params.sample_rate = atoi(optarg);
