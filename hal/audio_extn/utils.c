@@ -281,6 +281,10 @@ static int derive_playback_app_type_cfg(struct audio_device *adev,
                                                    usecase->out_snd_device,
                                                    out->sample_rate,
                                                    sample_rate);
+    } else if (out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
+        audio_extn_a2dp_get_sample_rate(sample_rate);
+        ALOGI("%s: Using sample rate %d for A2DP CoPP", __func__,
+               *sample_rate);
     }
 
     app_type_cfg->mode = flags_to_mode(0 /*playback*/, out->flags);
