@@ -1303,8 +1303,8 @@ static snd_device_t derive_playback_snd_device(void * platform,
         if (platform_check_backends_match(d3[0], d3[1])) {
             return d2; // case 5
         } else {
-            // check if d1 and d3[1] are related
-            if (d1 == d3[1])
+            // check if d1 is related to any of d3's
+            if (d1 == d3[0] || d1 == d3[1])
                 return d1; // case 1
             else
                 return d3[1]; // case 8
@@ -3563,6 +3563,7 @@ static int out_standby(struct audio_stream *stream)
 static int out_on_error(struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
+    int status = 0;
 
     lock_output_stream(out);
     // always send CMD_ERROR for offload streams, this
@@ -3570,11 +3571,18 @@ static int out_on_error(struct audio_stream *stream)
     // since the stream is active, offload_callback_thread is also active.
     if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         stop_compressed_output_l(out);
+    }
+    pthread_mutex_unlock(&out->lock);
+
+    status = out_standby(&out->stream.common);
+
+    lock_output_stream(out);
+    if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         send_offload_cmd_l(out, OFFLOAD_CMD_ERROR);
     }
     pthread_mutex_unlock(&out->lock);
 
-    return out_standby(&out->stream.common);
+    return status;
 }
 
 /*
