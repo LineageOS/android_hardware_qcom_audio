@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -386,11 +386,21 @@ enum {
 #define PLAYBACK_OFFLOAD_DEVICE 9
 
 // Direct_PCM
-#if defined (PLATFORM_MSM8994) || defined (PLATFORM_MSM8996) || defined (PLATFORM_APQ8084) || defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_SDM710) ||defined (PLATFORM_QCS605) ||defined (PLATFORM_SDX24) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_TRINKET)
+#if defined (PLATFORM_MSM8994) || defined (PLATFORM_MSM8996) || \
+    defined (PLATFORM_APQ8084) || defined (PLATFORM_MSM8998) || \
+    defined (PLATFORM_SDM845) || defined (PLATFORM_SDM710) || \
+    defined (PLATFORM_QCS605) ||defined (PLATFORM_SDX24) || \
+    defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || \
+    defined (PLATFORM_TRINKET) || defined (PLATFORM_KONA)
 #define PLAYBACK_OFFLOAD_DEVICE2 17
 #endif
 
-#if defined (PLATFORM_APQ8084) || defined (PLATFORM_MSM8996) || defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_SDM710) || defined(PLATFORM_QCS605) || defined (PLATFORM_SDX24) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_TRINKET)
+#if defined (PLATFORM_APQ8084) || defined (PLATFORM_MSM8996) || \
+    defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || \
+    defined (PLATFORM_SDM710) || defined(PLATFORM_QCS605) || \
+    defined (PLATFORM_SDX24) || defined (PLATFORM_MSMNILE) || \
+    defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_TRINKET) || \
+    defined (PLATFORM_KONA)
 #define PLAYBACK_OFFLOAD_DEVICE3 18
 #define PLAYBACK_OFFLOAD_DEVICE4 34
 #define PLAYBACK_OFFLOAD_DEVICE5 35
@@ -516,9 +526,12 @@ enum {
 #define FM_RX_VOLUME "Quat MI2S FM RX Volume"
 #elif PLATFORM_MSM8994
 #define FM_RX_VOLUME "PRI MI2S LOOPBACK Volume"
-#elif PLATFORM_MSM8996
+#elif defined (PLATFORM_MSM8996) || defined (PLATFORM_KONA)
 #define FM_RX_VOLUME "Tert MI2S LOOPBACK Volume"
-#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_TRINKET)
+#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || \
+      defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM710) || \
+      defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || \
+      defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_TRINKET)
 #define FM_RX_VOLUME "SLIMBUS_8 LOOPBACK Volume"
 #else
 #define FM_RX_VOLUME "Internal FM RX Volume"
