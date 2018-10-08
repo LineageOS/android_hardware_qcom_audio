@@ -84,7 +84,10 @@
 #endif
 
 #include <linux/msm_audio.h>
-#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405)
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || \
+    defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || \
+    defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
+    defined (PLATFORM_QCS405)
 #include <sound/devdep_params.h>
 #endif
 
@@ -1321,8 +1324,9 @@ static const char *get_operator_specific_device_mixer_path(snd_device_t snd_devi
     return ret;
 }
 
-static void update_codec_type_and_interface(struct platform_data * my_data, const char *snd_card_name) {
-
+static void update_codec_type_and_interface(struct platform_data * my_data,
+     const char *snd_card_name)
+{
      if (!strncmp(snd_card_name, "sdm670-skuw-snd-card",
                   sizeof("sdm670-skuw-snd-card")) ||
          !strncmp(snd_card_name, "sdm660-snd-card-skush",
@@ -1338,8 +1342,12 @@ static void update_codec_type_and_interface(struct platform_data * my_data, cons
          !strncmp(snd_card_name, "sm6150-idp-snd-card",
                    sizeof("sm6150-idp-snd-card")) ||
          !strncmp(snd_card_name, "qcs605-lc-snd-card",
-                   sizeof("qcs605-lc-snd-card"))) {
-         ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
+                   sizeof("qcs605-lc-snd-card")) ||
+         !strncmp(snd_card_name, "kona-mtp-snd-card",
+                   sizeof("kona-mtp-snd-card")) ||
+         !strncmp(snd_card_name, "kona-qrd-snd-card",
+                   sizeof("kona-qrd-snd-card"))) {
+         ALOGI("%s: snd_card_name: %s", __func__, snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
      }
@@ -2616,6 +2624,9 @@ void *platform_init(struct audio_device *adev)
     else if (!strncmp(snd_card_name, "sm6150-qrd-snd-card",
                sizeof("sm6150-qrd-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "kona-qrd-snd-card",
+               sizeof("kona-qrd-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "qcs405-wsa-snd-card",
                sizeof("qcs405-wsa-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_WSA, my_data, PLATFORM);
@@ -2864,7 +2875,8 @@ acdb_init_fail:
 
     if (!my_data->is_slimbus_interface) {
         //TODO:: make generic interfaceface to check Slimbus/I2S/CDC_DMA
-        if (!strncmp(snd_card_name, "sm6150", strlen("sm6150"))) {
+        if (!strncmp(snd_card_name, "sm6150", strlen("sm6150")) ||
+            !strncmp(snd_card_name, "kona", strlen("kona"))) {
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("WSA_CDC_DMA_RX_0 Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
@@ -9266,7 +9278,10 @@ int platform_get_supported_copp_sampling_rate(uint32_t stream_sr)
     return sample_rate;
 }
 
-#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405)
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || \
+    defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || \
+    defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
+    defined (PLATFORM_QCS405)
 
 int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
                               uint32_t *size)

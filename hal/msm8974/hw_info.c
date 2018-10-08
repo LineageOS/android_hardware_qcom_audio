@@ -504,6 +504,22 @@ static void  update_hardware_info_msmnile(struct hardware_info *hw_info, const c
     }
 }
 
+static void update_hardware_info_kona(
+          struct hardware_info *hw_info,
+          const char *snd_card_name)
+{
+    if (!strncmp(snd_card_name, "kona-mtp-snd-card",
+                 sizeof("kona-mtp-snd-card"))) {
+        strlcpy(hw_info->name, "kona", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "kona-qrd-snd-card",
+                 sizeof("kona-qrd-snd-card"))) {
+        strlcpy(hw_info->name, "kona", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
+    } else {
+        ALOGW("%s: Not a kona device", __func__);
+    }
+}
+
 static void  update_hardware_info_sda845(struct hardware_info *hw_info, const char *snd_card_name)
 {
     if (!strncmp(snd_card_name, "sda845-tavil-i2s-snd-card", sizeof("sda845-tavil-i2s-snd-card"))) {
@@ -728,6 +744,9 @@ void *hw_info_init(const char *snd_card_name)
     } else if (strstr(snd_card_name, "sda845")) {
         ALOGV("SDA845 - variant soundcard");
         update_hardware_info_sda845(hw_info, snd_card_name);
+    } else if (strstr(snd_card_name, "kona")) {
+        ALOGV("KONA - variant soundcard");
+        update_hardware_info_kona(hw_info, snd_card_name);
     } else {
         ALOGE("%s: Unsupported target %s:",__func__, snd_card_name);
         free(hw_info);
