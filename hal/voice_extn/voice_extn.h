@@ -42,6 +42,8 @@ void voice_extn_in_get_parameters(struct stream_in *in,
 void voice_extn_out_get_parameters(struct stream_out *out,
                                    struct str_parms *query,
                                    struct str_parms *reply);
+int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
+                                                  struct stream_out *out);
 #else
 static int __unused voice_extn_start_call(struct audio_device *adev __unused)
 {
@@ -99,10 +101,15 @@ static void __unused voice_extn_out_get_parameters(struct stream_out *out __unus
                                           struct str_parms *reply __unused)
 {
 }
+
+static int __unused voice_extn_check_and_set_incall_music_usecase(
+                                          struct audio_device *adev __unused,
+                                          struct stream_out *out __unused)
+{
+    return -ENOSYS;
+}
 #endif
 
-int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
-                                                  struct stream_out *out);
 #ifdef COMPRESS_VOIP_ENABLED
 int voice_extn_compress_voip_close_output_stream(struct audio_stream *stream);
 int voice_extn_compress_voip_open_output_stream(struct stream_out *out);
