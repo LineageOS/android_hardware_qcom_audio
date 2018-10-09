@@ -1303,8 +1303,8 @@ static snd_device_t derive_playback_snd_device(void * platform,
         if (platform_check_backends_match(d3[0], d3[1])) {
             return d2; // case 5
         } else {
-            // check if d1 and d3[1] are related
-            if (d1 == d3[1])
+            // check if d1 is related to any of d3's
+            if (d1 == d3[0] || d1 == d3[1])
                 return d1; // case 1
             else
                 return d3[1]; // case 8
@@ -1330,7 +1330,8 @@ static void check_usecases_codec_backend(struct audio_device *adev,
     bool switch_device[AUDIO_USECASE_MAX];
     snd_device_t uc_derive_snd_device;
     snd_device_t derive_snd_device[AUDIO_USECASE_MAX];
-    int i, num_uc_to_switch = 0;
+    snd_device_t split_snd_devices[SND_DEVICE_OUT_END];
+    int i, num_uc_to_switch = 0, num_devices = 0;
     int status = 0;
     bool force_restart_session = false;
     /*
@@ -1412,7 +1413,20 @@ static void check_usecases_codec_backend(struct audio_device *adev,
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
             if (switch_device[usecase->id]) {
-                disable_snd_device(adev, usecase->out_snd_device);
+                /* Check if sound device to be switched can be split and if any
+                   of the split devices match with derived sound device */
+                platform_split_snd_device(adev->platform, usecase->out_snd_device,
+                                          &num_devices, split_snd_devices);
+                if (num_devices > 1) {
+                    for (i = 0; i < num_devices; i++) {
+                        /* Disable devices that do not match with derived sound device */
+                        if (split_snd_devices[i] != derive_snd_device[usecase->id]) {
+                            disable_snd_device(adev, split_snd_devices[i]);
+                        }
+                    }
+                } else {
+                    disable_snd_device(adev, usecase->out_snd_device);
+                }
             }
         }
 
@@ -3563,6 +3577,7 @@ static int out_standby(struct audio_stream *stream)
 static int out_on_error(struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
+    int status = 0;
 
     lock_output_stream(out);
     // always send CMD_ERROR for offload streams, this
@@ -3570,11 +3585,18 @@ static int out_on_error(struct audio_stream *stream)
     // since the stream is active, offload_callback_thread is also active.
     if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         stop_compressed_output_l(out);
+    }
+    pthread_mutex_unlock(&out->lock);
+
+    status = out_standby(&out->stream.common);
+
+    lock_output_stream(out);
+    if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         send_offload_cmd_l(out, OFFLOAD_CMD_ERROR);
     }
     pthread_mutex_unlock(&out->lock);
 
-    return out_standby(&out->stream.common);
+    return status;
 }
 
 /*
