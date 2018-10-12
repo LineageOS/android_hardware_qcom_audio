@@ -164,6 +164,7 @@
 /* Query external audio device connection status */
 #define AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE "ext_audio_device"
 
+#define AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP "spkr_device_chmap"
 #define EVENT_EXTERNAL_SPK_1 "qc_ext_spk_1"
 #define EVENT_EXTERNAL_SPK_2 "qc_ext_spk_2"
 #define EVENT_EXTERNAL_MIC   "qc_ext_mic"
@@ -306,6 +307,12 @@ struct platform_data {
     uint32_t declared_mic_count;
     struct audio_microphone_characteristic_t microphones[AUDIO_MICROPHONE_MAX_COUNT];
     struct snd_device_to_mic_map mic_map[SND_DEVICE_MAX];
+    struct  spkr_device_chmap *spkr_ch_map;
+};
+
+struct  spkr_device_chmap {
+    int num_ch;
+    char chmap[AUDIO_CHANNEL_COUNT_MAX];
 };
 
 static bool is_external_codec = false;
@@ -387,7 +394,8 @@ int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_RECORD_AFE_PROXY] = {AFE_PROXY_PLAYBACK_PCM_DEVICE,
                                         AFE_PROXY_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_SILENCE] = {MULTIMEDIA9_PCM_DEVICE, -1},
-    [USECASE_AUDIO_TRANSCODE_LOOPBACK] = {TRANSCODE_LOOPBACK_RX_DEV_ID, TRANSCODE_LOOPBACK_TX_DEV_ID},
+    [USECASE_AUDIO_TRANSCODE_LOOPBACK_RX] = {TRANSCODE_LOOPBACK_RX_DEV_ID, -1},
+    [USECASE_AUDIO_TRANSCODE_LOOPBACK_TX] = {-1, TRANSCODE_LOOPBACK_TX_DEV_ID},
     [USECASE_AUDIO_PLAYBACK_VOIP] = {AUDIO_PLAYBACK_VOIP_PCM_DEVICE, AUDIO_PLAYBACK_VOIP_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_VOIP] = {AUDIO_RECORD_VOIP_PCM_DEVICE, AUDIO_RECORD_VOIP_PCM_DEVICE},
 
@@ -570,6 +578,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_INCALL_REC_RX] = "incall-rec-rx",
     [SND_DEVICE_IN_INCALL_REC_TX] = "incall-rec-tx",
     [SND_DEVICE_IN_INCALL_REC_RX_TX] = "incall-rec-rx-tx",
+    [SND_DEVICE_IN_LINE] = "line-in",
 };
 
 // Platform specific backend bit width table
@@ -744,7 +753,8 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_HANDSET_8MIC] = 4,
     [SND_DEVICE_IN_EC_REF_LOOPBACK_MONO] = 4,
     [SND_DEVICE_IN_EC_REF_LOOPBACK_STEREO] = 4,
-    [SND_DEVICE_IN_HANDSET_GENERIC_QMIC] = 150
+    [SND_DEVICE_IN_HANDSET_GENERIC_QMIC] = 150,
+    [SND_DEVICE_IN_LINE] = 4,
 };
 
 struct name_to_index {
@@ -818,6 +828,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_2_PROTECTED_VBAT)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED_RAS)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT_RAS)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES)},
 #ifdef RECORD_PLAY_CONCURRENCY
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOIP_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOIP_SPEAKER)},
@@ -905,6 +916,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_INCALL_REC_RX)},
     {TO_NAME_INDEX(SND_DEVICE_IN_INCALL_REC_TX)},
     {TO_NAME_INDEX(SND_DEVICE_IN_INCALL_REC_RX_TX)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_LINE)},
 };
 
 static char * backend_tag_table[SND_DEVICE_MAX] = {0};
@@ -958,6 +970,8 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_A2DP_ABR_FEEDBACK)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_VOIP)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_VOIP)},
+    {TO_NAME_INDEX(USECASE_AUDIO_TRANSCODE_LOOPBACK_RX)},
+    {TO_NAME_INDEX(USECASE_AUDIO_TRANSCODE_LOOPBACK_TX)},
 };
 
 #define NO_COLS 2
@@ -1749,6 +1763,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_IN_HANDSET_GENERIC_QMIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_INCALL_REC_RX] = strdup("INCALL_RECORD_RX");
     hw_interface_table[SND_DEVICE_IN_INCALL_REC_TX] = strdup("INCALL_RECORD_TX");
+    hw_interface_table[SND_DEVICE_IN_LINE] = strdup("SLIMBUS_0_TX");
 
     my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
     /*remove ALAC & APE from DSP decoder list based on software decoder availability*/
@@ -2077,7 +2092,6 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
     }
 
     while ((tdirent = readdir(tdir))) {
-        char buf[50];
         struct dirent *tzdirent;
         DIR *tzdir = NULL;
 
@@ -2085,6 +2099,7 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
         if (!tzdir)
             continue;
         while ((tzdirent = readdir(tzdir))) {
+            char buf[50] = {0};
             if (strcmp(tzdirent->d_name, "type"))
                 continue;
             snprintf(name, MAX_PATH, TZ_TYPE, tzn);
@@ -2092,11 +2107,11 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
             read_line_from_file(name, buf, sizeof(buf));
             if (strstr(buf, file)) {
                 wsa_count++;
-                /*We support max only two WSA speakers*/
-                if (wsa_count == 2)
-                    break;
             }
             tzn++;
+            /*We support max only two WSA speakers*/
+            if (wsa_count == 2)
+                break;
         }
         closedir(tzdir);
     }
@@ -2326,6 +2341,7 @@ void *platform_init(struct audio_device *adev)
     my_data->mono_speaker = SPKR_1;
     my_data->voice_speaker_stereo = false;
     my_data->declared_mic_count = 0;
+    my_data->spkr_ch_map = NULL;
 
     be_dai_name_table = NULL;
 
@@ -2783,6 +2799,17 @@ acdb_init_fail:
     return my_data;
 }
 
+void platform_release_acdb_metainfo_key(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct listnode *node, *tempnode;
+
+    list_for_each_safe(node, tempnode, &my_data->acdb_meta_key_list) {
+        list_remove(node);
+        free(node_to_item(node, struct meta_key_list, list));
+    }
+}
+
 void platform_deinit(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -2830,6 +2857,33 @@ void platform_deinit(void *platform)
         audio_extn_utils_close_snd_mixer(my_data->adev->mixer);
         my_data->adev->mixer = NULL;
     }
+
+    if (my_data->spkr_ch_map) {
+        free(my_data->spkr_ch_map);
+        my_data->spkr_ch_map = NULL;
+    }
+
+    int32_t idx;
+
+    for (idx = 0; idx < MAX_CODEC_BACKENDS; idx++) {
+         if (my_data->current_backend_cfg[idx].bitwidth_mixer_ctl) {
+             free(my_data->current_backend_cfg[idx].bitwidth_mixer_ctl);
+             my_data->current_backend_cfg[idx].bitwidth_mixer_ctl = NULL;
+         }
+
+         if (my_data->current_backend_cfg[idx].samplerate_mixer_ctl) {
+             free(my_data->current_backend_cfg[idx].samplerate_mixer_ctl);
+             my_data->current_backend_cfg[idx].samplerate_mixer_ctl = NULL;
+         }
+
+         if (my_data->current_backend_cfg[idx].channels_mixer_ctl) {
+             free(my_data->current_backend_cfg[idx].channels_mixer_ctl);
+             my_data->current_backend_cfg[idx].channels_mixer_ctl = NULL;
+         }
+    }
+
+    /* free acdb_meta_key_list */
+    platform_release_acdb_metainfo_key(platform);
 
     free(platform);
     /* deinit usb */
@@ -3154,6 +3208,60 @@ int platform_set_acdb_metainfo_key(void *platform, char *name, int key)
     return 0;
 }
 
+int platform_get_license_by_product
+(
+    void *platform,
+    const char* product_name,
+    int* product_id,
+    char* product_license
+)
+{
+    int ret = 0;
+    int id = 0;
+    acdb_audio_cal_cfg_t cal;
+    uint32_t param_len = LICENSE_STR_MAX_LEN;
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if ((NULL == platform) || (NULL == product_name) || (NULL == product_id)) {
+        ALOGE("[%s] Invalid input parameters",__func__);
+        ret = -EINVAL;
+        goto on_error;
+    }
+
+    id =  platform_get_meta_info_key_from_list(platform, (char*)product_name);
+    if(0 == id)
+    {
+        ALOGE("%s:Id not found for %s", __func__, product_name);
+        ret = -EINVAL;
+        goto on_error;
+    }
+
+    ALOGD("%s: Found Id[%d] for %s", __func__, id, product_name);
+    if(NULL == my_data->acdb_get_audio_cal){
+        ALOGE("[%s] acdb_get_audio_cal is NULL.",__func__);
+        ret = -ENOSYS;
+        goto on_error;
+    }
+
+    memset(&cal, 0, sizeof(cal));
+    cal.persist = 1;
+    cal.cal_type = AUDIO_CORE_METAINFO_CAL_TYPE;
+    cal.acdb_dev_id = (uint32_t) id;
+    ret = my_data->acdb_get_audio_cal((void*)&cal, (void*)product_license, &param_len);
+
+    if (0 == ret) {
+        ALOGD("%s: Got Length[%d] License[%s]", __func__, param_len, product_license );
+        *product_id = id;
+        return 0;
+    }
+    ALOGD("%s: License not found for %s", __func__, product_name);
+
+on_error:
+    if (product_id)
+        *product_id = 0;
+    return ret;
+}
+
 int platform_get_meta_info_key_from_list(void *platform, char *mod_name)
 {
     struct listnode *node;
@@ -3466,7 +3574,7 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
         snd_device = voice_get_incall_rec_snd_device(usecase->in_snd_device);
     else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE))
         snd_device = usecase->in_snd_device;
-    else if (usecase->type == TRANSCODE_LOOPBACK)
+    else if (usecase->type == TRANSCODE_LOOPBACK_RX)
         snd_device = usecase->out_snd_device;
 
     acdb_dev_id = acdb_device_table[platform_get_spkr_prot_snd_device(snd_device)];
@@ -4734,6 +4842,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
             snd_device = SND_DEVICE_IN_SPEAKER_MIC;
+        } else if (in_device & AUDIO_DEVICE_IN_LINE) {
+            snd_device = SND_DEVICE_IN_LINE;
         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
             snd_device = SND_DEVICE_IN_HEADSET_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
@@ -5073,6 +5183,47 @@ done_key_audcal:
     if(dptr != NULL)
         free(dptr);
 }
+static void platform_spkr_device_set_params(struct platform_data *platform,
+                                            struct str_parms *parms,
+                                            char *value, int len)
+{
+    int err = 0, i = 0, num_ch = 0;
+    char *test_r = NULL;
+    char *opts = NULL;
+    char *ch_count = NULL;
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP,
+                            value, len);
+    if (err >= 0) {
+        platform->spkr_ch_map = calloc(1, sizeof(struct spkr_device_chmap));
+        if (!platform->spkr_ch_map) {
+            ALOGE("%s: failed to allocate mem for adm channel map\n", __func__);
+            str_parms_del(parms, AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP);
+            return ;
+        }
+
+        ch_count = strtok_r(value, ", ", &test_r);
+        if (ch_count == NULL) {
+            ALOGE("%s: incorrect ch_map\n", __func__);
+            free(platform->spkr_ch_map);
+            platform->spkr_ch_map = NULL;
+            str_parms_del(parms, AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP);
+            return;
+        }
+
+        num_ch = atoi(ch_count);
+        if ((num_ch > 0) && (num_ch <= AUDIO_CHANNEL_COUNT_MAX) ) {
+            platform->spkr_ch_map->num_ch = num_ch;
+            for (i = 0; i < num_ch; i++) {
+                opts = strtok_r(NULL, ", ", &test_r);
+                if (opts != NULL)
+                    platform->spkr_ch_map->chmap[i] = strtoul(opts, NULL, 16);
+            }
+        }
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP);
+    }
+}
+
 int platform_set_parameters(void *platform, struct str_parms *parms)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -5197,6 +5348,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     audio_extn_hfp_set_parameters(my_data->adev, parms);
     true_32_bit_set_params(parms, value, len);
     audio_extn_ffv_set_parameters(my_data->adev, parms);
+    platform_spkr_device_set_params(platform, parms, value, len);
     ALOGV("%s: exit with code(%d)", __func__, ret);
     return ret;
 }
@@ -6179,7 +6331,11 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                             bit_width = out->bit_width;
                         if (sample_rate < out->sample_rate)
                             sample_rate = out->sample_rate;
-                        if (out->sample_rate < OUTPUT_SAMPLING_RATE_44100)
+                        /*
+                         * TODO: Add Support for Backend configuration for devices which support
+                         * sample rate less than 44.1
+                         */
+                        if (sample_rate < OUTPUT_SAMPLING_RATE_44100)
                             sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
                         if (channels < out_channels)
                             channels = out_channels;
@@ -6370,10 +6526,11 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
     int i, num_devices = 1;
     struct audio_backend_cfg backend_cfg;
     bool ret = false;
+    struct platform_data *my_data = (struct platform_data *)adev->platform;
 
     backend_idx = platform_get_backend_index(snd_device);
 
-    if (usecase->type == TRANSCODE_LOOPBACK) {
+    if (usecase->type == TRANSCODE_LOOPBACK_RX) {
         backend_cfg.bit_width = usecase->stream.inout->out_config.bit_width;
         backend_cfg.sample_rate = usecase->stream.inout->out_config.sample_rate;
         backend_cfg.format = usecase->stream.inout->out_config.format;
@@ -6408,6 +6565,11 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
           ", backend_idx %d usecase = %d device (%s)", __func__, backend_cfg.bit_width,
           backend_cfg.sample_rate,  backend_cfg.channels, backend_idx, usecase->id,
           platform_get_snd_device_name(snd_device));
+
+    if ((my_data->spkr_ch_map != NULL) &&
+        (platform_get_backend_index(snd_device) == DEFAULT_CODEC_BACKEND))
+        platform_set_channel_map(my_data, my_data->spkr_ch_map->num_ch,
+                                 my_data->spkr_ch_map->chmap, -1);
 
     if (platform_split_snd_device(adev->platform, snd_device,
                                   &num_devices, new_snd_devices) < 0)
@@ -6529,7 +6691,7 @@ bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev,
 
     backend_cfg.passthrough_enabled = false;
 
-    if (usecase->type == TRANSCODE_LOOPBACK) {
+    if (usecase->type == TRANSCODE_LOOPBACK_TX) {
         backend_cfg.bit_width = usecase->stream.inout->in_config.bit_width;
         backend_cfg.sample_rate = usecase->stream.inout->in_config.sample_rate;
         backend_cfg.format = usecase->stream.inout->in_config.format;

@@ -66,17 +66,6 @@
 #include <sound/compress_offload.h>
 #include <system/audio.h>
 
-/*
-* Unique patch handle ID = (unique_patch_handle_type << 8 | patch_handle_num)
-* Eg : HDMI_IN_SPKR_OUT handles can be 0x1000, 0x1001 and so on..
-*/
-typedef enum patch_handle_type {
-    AUDIO_PATCH_HDMI_IN_SPKR_OUT=0x10,
-    AUDIO_PATCH_SPDIF_IN_SPKR_OUT,
-    AUDIO_PATCH_MIC_IN_SPKR_OUT,
-    AUDIO_PATCH_MIC_IN_HDMI_OUT
-} patch_handle_type_t;
-
 typedef enum patch_state {
     PATCH_INACTIVE,// Patch is not created yet
     PATCH_CREATED, // Patch created but not in running state yet, probably due
@@ -103,8 +92,10 @@ typedef struct patch_db_struct {
 typedef struct audio_loopback {
     struct audio_device *adev;
     patch_db_t patch_db;
-    audio_usecase_t uc_id;
-    usecase_type_t  uc_type;
+    audio_usecase_t uc_id_rx;
+    audio_usecase_t uc_id_tx;
+    usecase_type_t  uc_type_rx;
+    usecase_type_t  uc_type_tx;
     pthread_mutex_t lock;
 } audio_loopback_t;
 
@@ -188,9 +179,12 @@ bool is_supported_sink_device(audio_devices_t sink_device_mask)
 
 /* Get patch type based on source and sink ports configuration */
 /* Only ports of type 'DEVICE' are supported */
-patch_handle_type_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
+audio_patch_handle_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
 {
-    bool is_source_hdmi=false, is_sink_supported=false;
+    bool is_source_supported = false, is_sink_supported = false;
+    audio_devices_t source_device = loopback_patch->loopback_source.ext.device.type;
+    audio_devices_t sink_device = loopback_patch->loopback_sink.ext.device.type;
+
     if (loopback_patch->patch_handle_id != PATCH_HANDLE_INVALID) {
         ALOGE("%s, Patch handle already exists", __func__);
         return loopback_patch->patch_handle_id;
@@ -199,8 +193,9 @@ patch_handle_type_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
     if (loopback_patch->loopback_source.role == AUDIO_PORT_ROLE_SOURCE) {
         switch (loopback_patch->loopback_source.type) {
             case AUDIO_PORT_TYPE_DEVICE :
-                if ((loopback_patch->loopback_source.config_mask &
-                   AUDIO_PORT_CONFIG_FORMAT) && (loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_HDMI)) {
+                if ((loopback_patch->loopback_source.config_mask & AUDIO_PORT_CONFIG_FORMAT)) {
+                    if ((loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_HDMI) ||
+                        (loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_SPDIF)) {
                        switch (loopback_patch->loopback_source.format) {
                            case AUDIO_FORMAT_PCM:
                            case AUDIO_FORMAT_PCM_16_BIT:
@@ -209,16 +204,20 @@ patch_handle_type_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
                            case AUDIO_FORMAT_IEC61937:
                            case AUDIO_FORMAT_AC3:
                            case AUDIO_FORMAT_E_AC3:
-                              is_source_hdmi = true;
+                              is_source_supported = true;
                            break;
+                       }
+                    } else if (loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_LINE) {
+                       is_source_supported = true;
+                    }
                 }
-            }
             break;
             default :
             break;
             //Unsupported as of now, need to extend for other source types
         }
     }
+
     if (loopback_patch->loopback_sink.role == AUDIO_PORT_ROLE_SINK) {
         switch (loopback_patch->loopback_sink.type) {
         case AUDIO_PORT_TYPE_DEVICE :
@@ -245,9 +244,10 @@ patch_handle_type_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
             //Unsupported as of now, need to extend for other sink types
         }
     }
-    if (is_source_hdmi && is_sink_supported) {
-        return AUDIO_PATCH_HDMI_IN_SPKR_OUT;
+    if (is_source_supported && is_sink_supported) {
+        return source_device | sink_device;
     }
+
     ALOGE("%s, Unsupported source or sink port config", __func__);
     return loopback_patch->patch_handle_id;
 }
@@ -257,13 +257,15 @@ patch_handle_type_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
 int32_t release_loopback_session(loopback_patch_t *active_loopback_patch)
 {
     int32_t ret = 0;
-    struct audio_usecase *uc_info;
+    struct audio_usecase *uc_info_rx, *uc_info_tx;
     struct audio_device *adev = audio_loopback_mod->adev;
     struct stream_inout *inout =  &active_loopback_patch->patch_stream;
     struct audio_port_config *source_patch_config = &active_loopback_patch->
                                                     loopback_source;
+    int32_t pcm_dev_asm_rx_id = platform_get_pcm_device_id(USECASE_AUDIO_TRANSCODE_LOOPBACK_RX,
+                                                           PCM_PLAYBACK);
 
-    /* 1. Close the PCM devices */
+    /* Close the PCM devices */
     if (active_loopback_patch->source_stream) {
         compress_close(active_loopback_patch->source_stream);
         active_loopback_patch->source_stream = NULL;
@@ -279,27 +281,44 @@ int32_t release_loopback_session(loopback_patch_t *active_loopback_patch)
             __func__);
     }
 
-    uc_info = get_usecase_from_list(adev, audio_loopback_mod->uc_id);
-    if (uc_info == NULL) {
+    uc_info_tx = get_usecase_from_list(adev, audio_loopback_mod->uc_id_tx);
+    if (uc_info_tx == NULL) {
         ALOGE("%s: Could not find the loopback usecase (%d) in the list",
             __func__, active_loopback_patch->patch_handle_id);
         return -EINVAL;
     }
 
+    disable_audio_route(adev, uc_info_tx);
+
+    /* Disable tx device */
+    disable_snd_device(adev, uc_info_tx->in_snd_device);
+
+    /* Reset backend device to default state */
+    platform_invalidate_backend_config(adev->platform,uc_info_tx->in_snd_device);
+
+    list_remove(&uc_info_tx->list);
+    free(uc_info_tx);
+
+    uc_info_rx = get_usecase_from_list(adev, audio_loopback_mod->uc_id_rx);
+    if (uc_info_rx == NULL) {
+        ALOGE("%s: Could not find the loopback usecase (%d) in the list",
+            __func__, active_loopback_patch->patch_handle_id);
+        return -EINVAL;
+    }
+
+    if (adev->offload_effects_stop_output != NULL)
+            adev->offload_effects_stop_output(active_loopback_patch->patch_handle_id, pcm_dev_asm_rx_id);
+
     active_loopback_patch->patch_state = PATCH_INACTIVE;
 
-    /* 2. Get and set stream specific mixer controls */
-    disable_audio_route(adev, uc_info);
+    /* Get and set stream specific mixer controls */
+    disable_audio_route(adev, uc_info_rx);
 
-    /* 3. Disable the rx and tx devices */
-    disable_snd_device(adev, uc_info->out_snd_device);
-    disable_snd_device(adev, uc_info->in_snd_device);
+    /* Disable the rx device */
+    disable_snd_device(adev, uc_info_rx->out_snd_device);
 
-    /* 4. Reset backend device to default state */
-    platform_invalidate_backend_config(adev->platform,uc_info->in_snd_device);
-
-    list_remove(&uc_info->list);
-    free(uc_info);
+    list_remove(&uc_info_rx->list);
+    free(uc_info_rx);
 
     adev->active_input = get_next_active_input(adev);
 
@@ -363,7 +382,7 @@ static void transcode_loopback_util_set_latency_mode(
 int create_loopback_session(loopback_patch_t *active_loopback_patch)
 {
     int32_t ret = 0, bits_per_sample;
-    struct audio_usecase *uc_info;
+    struct audio_usecase *uc_info_rx, *uc_info_tx;
     int32_t pcm_dev_asm_rx_id, pcm_dev_asm_tx_id;
     char dummy_write_buf[64];
     struct audio_device *adev = audio_loopback_mod->adev;
@@ -380,21 +399,38 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
 
     ALOGD("%s: Create loopback session begin", __func__);
 
-    uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
+    uc_info_rx = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
 
-    if (!uc_info) {
+    if (!uc_info_rx) {
         ALOGE("%s: Failure to open loopback session", __func__);
         return -ENOMEM;
     }
 
-    uc_info->id = USECASE_AUDIO_TRANSCODE_LOOPBACK;
-    uc_info->type = audio_loopback_mod->uc_type;
-    uc_info->stream.inout = &active_loopback_patch->patch_stream;
-    uc_info->devices = active_loopback_patch->patch_stream.out_config.devices;
-    uc_info->in_snd_device = SND_DEVICE_NONE;
-    uc_info->out_snd_device = SND_DEVICE_NONE;
+    uc_info_tx = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
 
-    list_add_tail(&adev->usecase_list, &uc_info->list);
+    if (!uc_info_tx) {
+        free(uc_info_rx);
+        ALOGE("%s: Failure to open loopback session", __func__);
+        return -ENOMEM;
+    }
+
+    uc_info_rx->id = USECASE_AUDIO_TRANSCODE_LOOPBACK_RX;
+    uc_info_rx->type = audio_loopback_mod->uc_type_rx;
+    uc_info_rx->stream.inout = &active_loopback_patch->patch_stream;
+    uc_info_rx->devices = active_loopback_patch->patch_stream.out_config.devices;
+    uc_info_rx->in_snd_device = SND_DEVICE_NONE;
+    uc_info_rx->out_snd_device = SND_DEVICE_NONE;
+
+
+    uc_info_tx->id = USECASE_AUDIO_TRANSCODE_LOOPBACK_TX;
+    uc_info_tx->type = audio_loopback_mod->uc_type_tx;
+    uc_info_tx->stream.inout = &active_loopback_patch->patch_stream;
+    uc_info_tx->devices = active_loopback_patch->patch_stream.in_config.devices;
+    uc_info_tx->in_snd_device = SND_DEVICE_NONE;
+    uc_info_tx->out_snd_device = SND_DEVICE_NONE;
+
+    list_add_tail(&adev->usecase_list, &uc_info_rx->list);
+    list_add_tail(&adev->usecase_list, &uc_info_tx->list);
 
     loopback_source_stream.source = AUDIO_SOURCE_UNPROCESSED;
     loopback_source_stream.device = inout->in_config.devices;
@@ -403,23 +439,24 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
     loopback_source_stream.sample_rate = inout->in_config.sample_rate;
     loopback_source_stream.format = inout->in_config.format;
 
-    memcpy(&loopback_source_stream.usecase, uc_info,
+    memcpy(&loopback_source_stream.usecase, uc_info_rx,
            sizeof(struct audio_usecase));
     adev->active_input = &loopback_source_stream;
-    select_devices(adev, uc_info->id);
+    select_devices(adev, uc_info_rx->id);
+    select_devices(adev, uc_info_tx->id);
 
-    pcm_dev_asm_rx_id = platform_get_pcm_device_id(uc_info->id, PCM_PLAYBACK);
-    pcm_dev_asm_tx_id = platform_get_pcm_device_id(uc_info->id, PCM_CAPTURE);
+    pcm_dev_asm_rx_id = platform_get_pcm_device_id(uc_info_rx->id, PCM_PLAYBACK);
+    pcm_dev_asm_tx_id = platform_get_pcm_device_id(uc_info_tx->id, PCM_CAPTURE);
 
     if (pcm_dev_asm_rx_id < 0 || pcm_dev_asm_tx_id < 0 ) {
-        ALOGE("%s: Invalid PCM devices (asm: rx %d tx %d) for the usecase(%d)",
-            __func__, pcm_dev_asm_rx_id, pcm_dev_asm_tx_id, uc_info->id);
+        ALOGE("%s: Invalid PCM devices (asm: rx %d tx %d) for the RX usecase(%d), TX usecase(%d)",
+            __func__, pcm_dev_asm_rx_id, pcm_dev_asm_tx_id, uc_info_rx->id, uc_info_tx->id);
         ret = -EIO;
         goto exit;
     }
 
-    ALOGD("%s: LOOPBACK PCM devices (rx: %d tx: %d) usecase(%d)",
-        __func__, pcm_dev_asm_rx_id, pcm_dev_asm_tx_id, uc_info->id);
+    ALOGD("%s: LOOPBACK PCM devices (rx: %d tx: %d) RX usecase(%d) TX usecase(%d)",
+        __func__, pcm_dev_asm_rx_id, pcm_dev_asm_tx_id, uc_info_rx->id, uc_info_tx->id);
 
     /* setup a channel for client <--> adsp communication for stream events */
     inout->dev = adev;
@@ -437,7 +474,7 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
     }
     if (audio_extn_ip_hdlr_intf_supported(source_patch_config->format,false, true)) {
         ret = audio_extn_ip_hdlr_intf_init(&inout->ip_hdlr_handle, NULL, NULL, adev,
-                                           USECASE_AUDIO_TRANSCODE_LOOPBACK);
+                                           USECASE_AUDIO_TRANSCODE_LOOPBACK_RX);
         if (ret < 0) {
             ALOGE("%s: audio_extn_ip_hdlr_intf_init failed %d", __func__, ret);
             inout->ip_hdlr_handle = NULL;
@@ -532,7 +569,7 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
     }
     if (inout->ip_hdlr_handle) {
         ret = audio_extn_ip_hdlr_intf_open(inout->ip_hdlr_handle, true, inout,
-                                           USECASE_AUDIO_TRANSCODE_LOOPBACK);
+                                           USECASE_AUDIO_TRANSCODE_LOOPBACK_RX);
         if (ret < 0) {
             ALOGE("%s: audio_extn_ip_hdlr_intf_open failed %d",__func__, ret);
             goto exit;
@@ -542,6 +579,11 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
     /* Move patch state to running, now that session is set up */
     active_loopback_patch->patch_state = PATCH_RUNNING;
     ALOGD("%s: Create loopback session end: status(%d)", __func__, ret);
+
+    if (adev->offload_effects_start_output != NULL)
+        adev->offload_effects_start_output(active_loopback_patch->patch_handle_id,
+                                           pcm_dev_asm_rx_id, adev->mixer);
+
     return ret;
 
 exit:
@@ -569,7 +611,7 @@ int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,
                                      audio_patch_handle_t *handle)
 {
     int status = 0;
-    patch_handle_type_t loopback_patch_type=0x0;
+    audio_patch_handle_t loopback_patch_id = 0x0;
     loopback_patch_t loopback_patch, *active_loopback_patch = NULL;
 
     ALOGV("%s : Create audio patch begin", __func__);
@@ -599,6 +641,9 @@ int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,
     /* Use an empty patch from patch database and initialze */
     active_loopback_patch = &(audio_loopback_mod->patch_db.loopback_patch[
                                 audio_loopback_mod->patch_db.num_patches]);
+
+    memset(active_loopback_patch, 0, sizeof(loopback_patch_t));
+
     active_loopback_patch->patch_handle_id = PATCH_HANDLE_INVALID;
     active_loopback_patch->patch_state = PATCH_INACTIVE;
     active_loopback_patch->patch_stream.ip_hdlr_handle = NULL;
@@ -609,9 +654,9 @@ int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,
     audio_port_config));
 
     /* Get loopback patch type based on source and sink ports configuration */
-    loopback_patch_type = get_loopback_patch_type(active_loopback_patch);
+    loopback_patch_id = get_loopback_patch_type(active_loopback_patch);
 
-    if (loopback_patch_type == PATCH_HANDLE_INVALID) {
+    if (loopback_patch_id == PATCH_HANDLE_INVALID) {
         ALOGE("%s, Unsupported patch type", __func__);
         status = -EINVAL;
         goto exit_create_patch;
@@ -623,8 +668,7 @@ int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,
                                 &active_loopback_patch->loopback_sink);
     // Lock patch database, create patch handle and add patch handle to the list
 
-    active_loopback_patch->patch_handle_id = (loopback_patch_type << 8 |
-                                audio_loopback_mod->patch_db.num_patches);
+    active_loopback_patch->patch_handle_id = loopback_patch_id;
 
     /* Is usecase transcode loopback? If yes, invoke loopback driver */
     if ((active_loopback_patch->loopback_source.type == AUDIO_PORT_TYPE_DEVICE)
@@ -865,8 +909,10 @@ int audio_extn_hw_loopback_init(struct audio_device *adev)
 
     ret = init_patch_database(&audio_loopback_mod->patch_db);
 
-    audio_loopback_mod->uc_id = USECASE_AUDIO_TRANSCODE_LOOPBACK;
-    audio_loopback_mod->uc_type = TRANSCODE_LOOPBACK;
+    audio_loopback_mod->uc_id_rx = USECASE_AUDIO_TRANSCODE_LOOPBACK_RX;
+    audio_loopback_mod->uc_id_tx = USECASE_AUDIO_TRANSCODE_LOOPBACK_TX;
+    audio_loopback_mod->uc_type_rx = TRANSCODE_LOOPBACK_RX;
+    audio_loopback_mod->uc_type_tx = TRANSCODE_LOOPBACK_TX;
 
 loopback_done:
     if (ret != 0) {

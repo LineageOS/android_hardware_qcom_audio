@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -164,7 +164,7 @@ int audio_extn_ip_hdlr_intf_rtic_ack(void *aud_sess_handle, struct rtic_ack_info
         stream_info = node_to_item(node, struct ip_hdlr_stream, list);
         /* send the error if rtic failure notifcation is received */
         if ((stream_info->stream == aud_sess_handle) &&
-            (stream_info->usecase == USECASE_AUDIO_TRANSCODE_LOOPBACK)) {
+            (stream_info->usecase == USECASE_AUDIO_TRANSCODE_LOOPBACK_RX)) {
             struct stream_inout *inout = (struct stream_inout *)aud_sess_handle;
             usecase = stream_info->usecase;
             adev = inout->dev;
@@ -230,7 +230,7 @@ int audio_extn_ip_hdlr_intf_rtic_fail(void *aud_sess_handle)
         stream_info = node_to_item(node, struct ip_hdlr_stream, list);
         /* send the error if rtic failure notifcation is received */
         if ((stream_info->stream == aud_sess_handle) &&
-            (stream_info->usecase == USECASE_AUDIO_TRANSCODE_LOOPBACK)) {
+            (stream_info->usecase == USECASE_AUDIO_TRANSCODE_LOOPBACK_RX)) {
             struct stream_inout *inout = (struct stream_inout *)aud_sess_handle;
             pthread_mutex_lock(&inout->pre_lock);
             pthread_mutex_lock(&inout->lock);
@@ -288,7 +288,7 @@ static int audio_extn_ip_hdlr_intf_open_dsp(void *handle, void *stream_handle, a
     param->payload_length = sizeof(struct reg_event);
     param->payload = reg_ev;
 
-    if (usecase == USECASE_AUDIO_TRANSCODE_LOOPBACK) {
+    if (usecase == USECASE_AUDIO_TRANSCODE_LOOPBACK_RX) {
         inout = (struct stream_inout *)stream_handle;
         adsp_hdlr_stream_handle = inout->adsp_hdlr_stream_handle;
         dev = inout->dev;
@@ -408,7 +408,7 @@ int audio_extn_ip_hdlr_intf_close(void *handle, bool is_dsp_decode, void *aud_se
     ALOGD("%s:[%d] handle = %p, usecase = %d",__func__, ip_hdlr->ref_cnt, handle, usecase);
 
     if (is_dsp_decode) {
-        if (usecase == USECASE_AUDIO_TRANSCODE_LOOPBACK) {
+        if (usecase == USECASE_AUDIO_TRANSCODE_LOOPBACK_RX) {
             struct stream_inout *inout = (struct stream_inout *)aud_sess_handle;
             adsp_hdlr_stream_handle = inout->adsp_hdlr_stream_handle;
         } else {

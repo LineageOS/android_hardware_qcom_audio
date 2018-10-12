@@ -161,6 +161,18 @@ audio_io_handle_t stream_handle = 0x999;
                    "music_offload_wma_encode_option2=%d;" \
                    "music_offload_wma_format_tag=%d;"
 
+#define APE_KVPAIR "music_offload_ape_bits_per_sample=%d;" \
+                   "music_offload_ape_blocks_per_frame=%d;" \
+                   "music_offload_ape_compatible_version=%d;" \
+                   "music_offload_ape_compression_level=%d;" \
+                   "music_offload_ape_final_frame_blocks=%d;" \
+                   "music_offload_ape_format_flags=%d;" \
+                   "music_offload_ape_num_channels=%d;" \
+                   "music_offload_ape_sample_rate=%d;" \
+                   "music_offload_ape_total_frames=%d;" \
+                   "music_offload_sample_rate=%d;" \
+                   "music_offload_seek_table_present=%d;"
+
 #ifndef AUDIO_OUTPUT_FLAG_ASSOCIATED
 #define AUDIO_OUTPUT_FLAG_ASSOCIATED 0x10000000
 #endif
@@ -204,7 +216,7 @@ static bool request_wake_lock(bool wakelock_acquired, bool enable)
 }
 
 #ifndef AUDIO_FORMAT_AAC_LATM
-#define AUDIO_FORMAT_AAC_LATM 0x23000000UL
+#define AUDIO_FORMAT_AAC_LATM 0x80000000UL
 #define AUDIO_FORMAT_AAC_LATM_LC (AUDIO_FORMAT_AAC_LATM | AUDIO_FORMAT_AAC_SUB_LC)
 #define AUDIO_FORMAT_AAC_LATM_HE_V1 (AUDIO_FORMAT_AAC_LATM | AUDIO_FORMAT_AAC_SUB_HE_V1)
 #define AUDIO_FORMAT_AAC_LATM_HE_V2 (AUDIO_FORMAT_AAC_LATM | AUDIO_FORMAT_AAC_SUB_HE_V2)
@@ -251,6 +263,7 @@ static void init_streams(void)
         stream_param[i].ethread_data                        =   nullptr;
         stream_param[i].device_url                          =   "stream";
         stream_param[i].play_later                          =   false;
+        stream_param[i].set_params                          =   nullptr;
 
         pthread_mutex_init(&stream_param[i].write_lock, (const pthread_mutexattr_t *)NULL);
         pthread_cond_init(&stream_param[i].write_cond, (const pthread_condattr_t *) NULL);
@@ -301,6 +314,9 @@ void read_kvpair(char *kvpair, char* kvpair_values, int filetype)
         break;
     case FILE_WMA:
         kvpair_type = WMA_KVPAIR;
+        break;
+    case FILE_APE:
+        kvpair_type = APE_KVPAIR;
         break;
     default:
         break;
@@ -647,6 +663,7 @@ void *start_stream_playback (void* stream_data)
         case FILE_VORBIS:
         case FILE_ALAC:
         case FILE_FLAC:
+        case FILE_APE:
             fprintf(log_file, "%s:calling setparam for kvpairs\n", __func__);
             if (!(params->kvpair_values)) {
                fprintf(log_file, "stream %d: error!!No metadata for the clip\n", params->stream_index);
@@ -796,6 +813,14 @@ void *start_stream_playback (void* stream_data)
     bytes_to_read = get_bytes_to_read(params->file_stream, params->filetype);
     if (bytes_to_read <= 0)
         read_complete_file = true;
+
+    if (params->set_params) {
+        rc = qahw_out_set_parameters(params->out_handle, params->set_params);
+        if (rc) {
+            fprintf(log_file, "stream %s: failed to set kvpairs\n", params->set_params);
+            fprintf(stderr, "stream %s: failed to set kvpairs\n", params->set_params);
+        }
+    }
 
     while (!exit && !stop_playback) {
         if (!bytes_remaining) {
@@ -1109,6 +1134,9 @@ void get_file_format(stream_config *stream_info)
         case FILE_IEC61937:
             stream_info->config.offload_info.format = AUDIO_FORMAT_IEC61937;
             break;
+        case FILE_APE:
+            stream_info->config.offload_info.format = AUDIO_FORMAT_APE;
+            break;
         default:
            fprintf(log_file, "Does not support given filetype\n");
            fprintf(stderr, "Does not support given filetype\n");
@@ -1200,7 +1228,6 @@ int measure_kpi_values(qahw_stream_handle_t* out_handle, bool is_offload) {
 
     char latency_buf[200] = {0};
     fread((void *) latency_buf, 100, 1, fd_latency_node);
-    fclose(fd_latency_node);
     sscanf(latency_buf, " %llu,%llu,%*llu,%*llu,%llu,%llu", &scold, &uscold, &scont, &uscont);
     tcold = scold*1000 - ((uint64_t)ts_cold.tv_sec)*1000 + uscold/1000 - ((uint64_t)ts_cold.tv_nsec)/1000000;
     tcont = scont*1000 - ((uint64_t)ts_cont.tv_sec)*1000 + uscont/1000 - ((uint64_t)ts_cont.tv_nsec)/1000000;
@@ -1629,6 +1656,9 @@ void usage() {
     printf("                                          ->Note:all the USB device commmands(above) should be accompanied with the host side commands\n\n");
     printf("hal_play_test -f interactive_audio.wav -d 2 -l out.txt -k \"mixer_ctrl=pan_scale;c=1;o=6;I=fc;O=fl,fr,fc,lfe,bl,br;M=0.5,0.5,0,0,0,0\" -i 1\n");
     printf("                                          ->kv_pair for downmix or pan_scale should folow the above sequence, one can pass downmix & pan_scale params/coeff matrices. For each control params should be sent separately \n");
+    printf("hal_play_test -f /data/ape_dsp.isf.0x152E.bitstream.0x10100400.0x2.0x12F32.rx.bin -k 16,73728,3990,2000,53808,32,2,44100,157,44100,1 -t 18 -r 48000 -c 2 -v 0.5 -d 131072");
+    printf("                                          -> kvpair(-k) values represent media-info of clip & values should be in below mentioned sequence\n");
+    printf("                                          ->bits_per_sample,blocks_per_frame,compatible_version,compression_level,final_frame_blocks,format_flags,num_channels,sample_rate,total_frames,sample_rate,seek_table_present \n");
 }
 
 int get_wav_header_length (FILE* file_stream)
@@ -2095,7 +2125,7 @@ int main(int argc, char* argv[]) {
 
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:s:v:V:l:t:a:w:k:PD:KF:Ee:A:u:m:S:C:p::x:y:qQh:i:h:g:",
+                              "-f:r:c:b:d:s:v:V:l:t:a:w:k:PD:KF:Ee:A:u:m:S:C:p::x:y:qQh:i:h:g:O:",
                               long_options,
                               &option_index)) != -1) {
 
@@ -2233,6 +2263,9 @@ int main(int argc, char* argv[]) {
         case 'K':
             kpi_mode = true;
             break;
+        case 'O':
+            stream_param[i].set_params = optarg;
+            break;
         case 'F':
             stream_param[i].flags = atoll(optarg);
             stream_param[i].flags_set = true;
@@ -2296,6 +2329,8 @@ int main(int argc, char* argv[]) {
             fprintf(log_file, " In Device config \n");
             fprintf(stderr, " In Device config \n");
             send_device_config = true;
+
+            memset(&device_cfg_params, 0, sizeof(struct qahw_device_cfg_param));
 
             //Read Sample Rate
             if (optind < argc && *argv[optind] != '-') {
@@ -2391,8 +2426,14 @@ int main(int argc, char* argv[]) {
 
     /* Register the SIGINT to close the App properly */
     if (signal(SIGINT, stop_signal_handler) == SIG_ERR) {
-        fprintf(log_file, "Failed to register SIGINT:%d\n",errno);
-        fprintf(stderr, "Failed to register SIGINT:%d\n",errno);
+        fprintf(log_file, "Failed to register SIGINT:%d\n", errno);
+        fprintf(stderr, "Failed to register SIGINT:%d\n", errno);
+    }
+
+    /* Register the SIGTERM to close the App properly */
+    if (signal(SIGTERM, stop_signal_handler) == SIG_ERR) {
+        fprintf(log_file, "Failed to register SIGTERM:%d\n", errno);
+        fprintf(stderr, "Failed to register SIGTERM:%d\n", errno);
     }
 
     /* Check for Dual main content */
@@ -2533,6 +2574,7 @@ int main(int argc, char* argv[]) {
         fprintf(log_file, "stream %d: Bitwidth:%d\n", stream->stream_index, stream->config.offload_info.bit_width);
         fprintf(log_file, "stream %d: AAC Format Type:%d\n", stream->stream_index, stream->aac_fmt_type);
         fprintf(log_file, "stream %d: Kvpair Values:%s\n", stream->stream_index, stream->kvpair_values);
+        fprintf(log_file, "stream %d: set params Values:%s\n", stream->stream_index, stream->set_params);
         fprintf(log_file, "Log file:%s\n", log_filename);
         fprintf(log_file, "Volume level:%f\n", vol_level);
 

@@ -50,9 +50,15 @@
 #include "audio_hw_extn_api.h"
 
 #if LINUX_ENABLED
-#define VISUALIZER_LIBRARY_PATH "libqcomvisualizer.so"
-#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "libqcompostprocbundle.so"
-#define ADM_LIBRARY_PATH "libadm.so"
+#if defined(__LP64__)
+#define VISUALIZER_LIBRARY_PATH "/usr/lib64/libqcomvisualizer.so"
+#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/usr/lib64/libqcompostprocbundle.so"
+#define ADM_LIBRARY_PATH "/usr/lib64/libadm.so"
+#else
+#define VISUALIZER_LIBRARY_PATH "/usr/lib/libqcomvisualizer.so"
+#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/usr/lib/libqcompostprocbundle.so"
+#define ADM_LIBRARY_PATH "/usr/lib/libadm.so"
+#endif
 #else
 #define VISUALIZER_LIBRARY_PATH "/vendor/lib/soundfx/libqcomvisualizer.so"
 #define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/vendor/lib/soundfx/libqcompostprocbundle.so"
@@ -189,7 +195,8 @@ enum {
 
     USECASE_AUDIO_PLAYBACK_SILENCE,
 
-    USECASE_AUDIO_TRANSCODE_LOOPBACK,
+    USECASE_AUDIO_TRANSCODE_LOOPBACK_RX,
+    USECASE_AUDIO_TRANSCODE_LOOPBACK_TX,
 
     USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM1,
     USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM2,
@@ -347,6 +354,7 @@ struct stream_out {
     bool a2dp_compress_mute;
     float volume_l;
     float volume_r;
+    bool apply_volume;
 
     char pm_qos_mixer_path[MAX_MIXER_PATH_LEN];
     int hal_output_suspend_supported;
@@ -354,6 +362,7 @@ struct stream_out {
     bool stream_config_changed;
     mix_matrix_params_t pan_scale_params;
     mix_matrix_params_t downmix_params;
+    bool set_dual_mono;
 };
 
 struct stream_in {
@@ -400,7 +409,8 @@ typedef enum {
     VOICE_CALL,
     VOIP_CALL,
     PCM_HFP_CALL,
-    TRANSCODE_LOOPBACK
+    TRANSCODE_LOOPBACK_RX,
+    TRANSCODE_LOOPBACK_TX
 } usecase_type_t;
 
 union stream_ptr {

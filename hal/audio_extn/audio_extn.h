@@ -43,12 +43,18 @@
 #include "ip_hdlr_intf.h"
 #include "battery_listener.h"
 
+#define AUDIO_PARAMETER_DUAL_MONO  "dual_mono"
+
 #ifndef AFE_PROXY_ENABLED
 #define AUDIO_DEVICE_OUT_PROXY 0x40000
 #endif
 
 #ifndef AUDIO_DEVICE_IN_PROXY
 #define AUDIO_DEVICE_IN_PROXY (AUDIO_DEVICE_BIT_IN | 0x1000000)
+#endif
+
+#ifndef AUDIO_DEVICE_IN_HDMI_ARC
+#define AUDIO_DEVICE_IN_HDMI_ARC (AUDIO_DEVICE_BIT_IN | 0x8000000)
 #endif
 
 #ifndef INCALL_MUSIC_ENABLED
@@ -912,6 +918,7 @@ int audio_extn_snd_mon_unregister_listener(void *stream);
 #ifdef COMPRESS_INPUT_ENABLED
 bool audio_extn_cin_applicable_stream(struct stream_in *in);
 bool audio_extn_cin_attached_usecase(audio_usecase_t uc_id);
+bool audio_extn_cin_format_supported(audio_format_t format);
 size_t audio_extn_cin_get_buffer_size(struct stream_in *in);
 int audio_extn_cin_start_input_stream(struct stream_in *in);
 void audio_extn_cin_stop_input_stream(struct stream_in *in);
@@ -922,6 +929,7 @@ int audio_extn_cin_configure_input_stream(struct stream_in *in);
 #else
 #define audio_extn_cin_applicable_stream(in) (false)
 #define audio_extn_cin_attached_usecase(uc_id) (false)
+#define audio_extn_cin_format_supported(format) (false)
 #define audio_extn_cin_get_buffer_size(in) (0)
 #define audio_extn_cin_start_input_stream(in) (0)
 #define audio_extn_cin_stop_input_stream(in) (0)
@@ -1069,8 +1077,8 @@ static void __unused audio_extn_hw_loopback_deinit(struct audio_device *adev __u
 #define audio_extn_ffv_init(adev) (0)
 #define audio_extn_ffv_deinit() (0)
 #define audio_extn_ffv_check_usecase(in) (0)
-#define audio_extn_ffv_set_usecase(in) (0)
-#define audio_extn_ffv_stream_init(in) (0)
+#define audio_extn_ffv_set_usecase(in, key, lic) (0)
+#define audio_extn_ffv_stream_init(in, key, lic) (0)
 #define audio_extn_ffv_stream_deinit() (0)
 #define audio_extn_ffv_update_enabled() (0)
 #define audio_extn_ffv_get_enabled() (0)
@@ -1087,8 +1095,8 @@ static void __unused audio_extn_hw_loopback_deinit(struct audio_device *adev __u
 int32_t audio_extn_ffv_init(struct audio_device *adev);
 int32_t audio_extn_ffv_deinit();
 bool audio_extn_ffv_check_usecase(struct stream_in *in);
-int audio_extn_ffv_set_usecase(struct stream_in *in);
-int32_t audio_extn_ffv_stream_init(struct stream_in *in);
+int audio_extn_ffv_set_usecase( struct stream_in *in, int key, char* lic);
+int32_t audio_extn_ffv_stream_init(struct stream_in *in, int key, char* lic);
 int32_t audio_extn_ffv_stream_deinit();
 void audio_extn_ffv_update_enabled();
 bool audio_extn_ffv_get_enabled();
@@ -1106,4 +1114,11 @@ void audio_extn_ffv_check_and_append_ec_ref_dev(char *device_name);
 snd_device_t audio_extn_ffv_get_capture_snd_device();
 void audio_extn_ffv_append_ec_ref_dev_name(char *device_name);
 #endif
+
+#ifndef CUSTOM_STEREO_ENABLED
+#define audio_extn_send_dual_mono_mixing_coefficients(out) (0)
+#else
+void audio_extn_send_dual_mono_mixing_coefficients(struct stream_out *out);
+#endif
+int audio_extn_utils_get_license_params(const struct audio_device *adev,  struct audio_license_params *lic_params);
 #endif /* AUDIO_EXTN_H */

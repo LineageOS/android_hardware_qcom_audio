@@ -4,6 +4,7 @@ AM_CFLAGS = -I ${WORKSPACE}/external/tinyalsa/include \
         -I $(top_srcdir)/hal \
         -I $(top_srcdir)/hal/audio_extn \
         -I $(top_srcdir)/hal/voice_extn \
+        -I $(PKG_CONFIG_SYSROOT_DIR)/usr/include/audio-kernel \
         -I $(top_srcdir)/hal/${TARGET_PLATFORM}
 
 c_sources = audio_hw.c \
@@ -201,6 +202,10 @@ endif
 
 if CUSTOM_STEREO
 AM_CFLAGS += -DCUSTOM_STEREO_ENABLED
+endif
+
+if INSTANCE_ID
+AM_CFLAGS += -DINSTANCE_ID_ENABLED
 endif
 
 h_sources = audio_extn/audio_defs.h \

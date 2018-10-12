@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2011 The Android Open Source Project
@@ -22,7 +22,7 @@
 
 #include <qahw_effect_api.h>
 
-#if __cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -78,7 +78,7 @@ typedef enum
     VIRTUALIZER_PARAM_VIRTUALIZATION_MODE
 } qahw_virtualizer_params;
 
-#if __cplusplus
+#ifdef __cplusplus
 }  // extern "C"
 #endif
 

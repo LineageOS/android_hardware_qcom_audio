@@ -238,6 +238,9 @@ ro.af.client_heap_size_kbyte=7168
 
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.audio.hw.binder.size_kbyte=1024
+#Disable split a2dp
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.bt.enable.splita2dp=false
 
 # for HIDL related packages
 PRODUCT_PACKAGES += \

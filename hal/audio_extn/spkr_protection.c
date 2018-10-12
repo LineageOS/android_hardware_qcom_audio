@@ -554,7 +554,6 @@ void destroy_thread_params()
         pthread_cond_destroy(&handle.spkr_prot_thermalsync);
     }
 }
-
 static void audio_extn_check_wsa(struct audio_device *adev,
                 unsigned int num_of_spkrs, bool *wsa_is_8815)
 {

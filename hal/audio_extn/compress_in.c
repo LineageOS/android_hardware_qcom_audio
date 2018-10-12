@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -157,13 +157,22 @@ static void free_cin_usecase(audio_usecase_t uc_id)
     pthread_mutex_unlock(&cin_lock);
 }
 
+bool audio_extn_cin_format_supported(audio_format_t format)
+{
+    if (format == AUDIO_FORMAT_IEC61937)
+        return true;
+    else
+        return false;
+}
+
 size_t audio_extn_cin_get_buffer_size(struct stream_in *in)
 {
     size_t sz = 0;
     cin_private_data_t *cin_data = (cin_private_data_t *) in->cin_extn;
 
     sz = cin_data->compr_config.fragment_size;
-    if (in->flags & AUDIO_INPUT_FLAG_TIMESTAMP)
+    if ((in->flags & AUDIO_INPUT_FLAG_TIMESTAMP) ||
+        (in->flags & AUDIO_INPUT_FLAG_PASSTHROUGH))
         sz -= sizeof(struct snd_codec_metadata);
 
     ALOGV("%s: in %p, flags 0x%x, cin_data %p, size %zd",
@@ -230,7 +239,7 @@ int audio_extn_cin_read(struct stream_in *in, void *buffer,
         if (!is_compress_running(cin_data->compr))
             compress_start(cin_data->compr);
 
-        if (!(in->flags & AUDIO_INPUT_FLAG_TIMESTAMP))
+        if (!(in->flags & (AUDIO_INPUT_FLAG_TIMESTAMP | AUDIO_INPUT_FLAG_PASSTHROUGH)))
             mdata_size = 0;
 
         if (buffer && read_size) {
@@ -265,7 +274,7 @@ int audio_extn_cin_configure_input_stream(struct stream_in *in)
     cin_private_data_t *cin_data = NULL;
 
     if (!COMPRESSED_TIMESTAMP_FLAG &&
-        (in->flags & AUDIO_INPUT_FLAG_TIMESTAMP)) {
+        (in->flags & (AUDIO_INPUT_FLAG_TIMESTAMP | AUDIO_INPUT_FLAG_PASSTHROUGH))) {
         ALOGE("%s: timestamp mode not supported!", __func__);
         return -EINVAL;
     }
@@ -305,7 +314,16 @@ int audio_extn_cin_configure_input_stream(struct stream_in *in)
     cin_data->compr_config.codec->ch_in = in->config.channels;
     cin_data->compr_config.codec->ch_out = in->config.channels;
     cin_data->compr_config.codec->format = hal_format_to_alsa(in->format);
-    if (in->flags & AUDIO_INPUT_FLAG_TIMESTAMP) {
+
+    if (cin_data->compr_config.codec->id == SND_AUDIOCODEC_PCM)
+        cin_data->compr_config.codec->compr_passthr = LEGACY_PCM;
+    else if (cin_data->compr_config.codec->id == SND_AUDIOCODEC_IEC61937)
+        cin_data->compr_config.codec->compr_passthr = PASSTHROUGH_IEC61937;
+    else
+        cin_data->compr_config.codec->compr_passthr = PASSTHROUGH_GEN;
+
+    if ((in->flags & AUDIO_INPUT_FLAG_TIMESTAMP) ||
+        (in->flags & AUDIO_INPUT_FLAG_PASSTHROUGH)) {
         compress_config_set_timstamp_flag(&cin_data->compr_config);
         cin_data->compr_config.fragment_size += meta_size;
     }

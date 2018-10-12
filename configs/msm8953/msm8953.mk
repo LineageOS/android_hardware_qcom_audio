@@ -34,6 +34,10 @@ endif
 
 USE_XML_AUDIO_POLICY_CONF := 1
 BOARD_SUPPORTS_SOUND_TRIGGER := true
+BOARD_SUPPORTS_SOUND_TRIGGER_ARM := true
+AUDIO_FEATURE_ENABLED_FFV := true
+AUDIO_FEATURE_ENABLED_KEEP_ALIVE_ARM_FFV := true
+AUDIO_FEATURE_ENABLED_KEEP_ALIVE := true
 AUDIO_USE_LL_AS_PRIMARY_OUTPUT := true
 AUDIO_FEATURE_ENABLED_HIFI_AUDIO := true
 AUDIO_FEATURE_ENABLED_VBAT_MONITOR := true
@@ -58,6 +62,8 @@ BOARD_SUPPORTS_QAHW := false
 AUDIO_FEATURE_ENABLED_DYNAMIC_LOG := true
 AUDIO_FEATURE_ENABLED_SND_MONITOR := true
 AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
+BOARD_SUPPORTS_SOUND_TRIGGER_CPU_AFFINITY_SET := true
+BOARD_SUPPORTS_FFV_EC_THREAD_RT_PRIORITY := true
 ifeq ($(TARGET_KERNEL_VERSION), 3.18)
     AUDIO_FEATURE_ENABLED_DLKM := false
 else
@@ -126,7 +132,10 @@ af.fast_track_multiplier=1
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio_hal.period_size=192
 
-##fluencetype can be "fluence" or "fluencepro" or "none"
+PRODUCT_PROPERTY_OVERRIDES += \
+ro.vendor.audio.sdk.ffv=false
+
+##fluencetype can be "fluence" or "fluencepro" or "fluenceffv" or "none"
 PRODUCT_PROPERTY_OVERRIDES += \
 ro.vendor.audio.sdk.fluencetype=none\
 persist.vendor.audio.fluence.voicecall=true\
@@ -236,6 +245,9 @@ ro.af.client_heap_size_kbyte=7168
 
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.audio.hw.binder.size_kbyte=1024
+#Disable split a2dp
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.bt.enable.splita2dp=false
 
 # for HIDL related packages
 PRODUCT_PACKAGES += \

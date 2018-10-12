@@ -31,6 +31,9 @@
 #define SAMPLE_RATE_11025 11025
 #define sample_rate_multiple(sr, base) ((sr % base)== 0?true:false)
 #define MAX_VOLUME_CAL_STEPS 15
+#define LICENSE_STR_MAX_LEN  (64)
+#define PRODUCT_FFV      "ffv"
+#define PRODUCT_ALLPLAY  "allplay"
 
 typedef enum {
     PLATFORM,
@@ -131,6 +134,7 @@ int platform_get_effect_config_data(snd_device_t snd_device,
                                       effect_type_t effect_type);
 int platform_get_snd_device_bit_width(snd_device_t snd_device);
 int platform_set_acdb_metainfo_key(void *platform, char *name, int key);
+void platform_release_acdb_metainfo_key(void *platform);
 int platform_get_meta_info_key_from_list(void *platform, char *mod_name);
 int platform_set_native_support(int na_mode);
 int platform_get_native_support();
@@ -304,4 +308,6 @@ int platform_get_active_microphones(void *platform, unsigned int channels,
                                     audio_usecase_t usecase,
                                     struct audio_microphone_characteristic_t *mic_array,
                                     size_t *mic_count);
+
+int platform_get_license_by_product(void *platform, const char* product_name, int *product_id, char* product_license);
 #endif // AUDIO_PLATFORM_API_H

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -37,6 +37,7 @@
 #include <cutils/list.h>
 
 #include <hardware/audio.h>
+#include <hardware/sound_trigger.h>
 #include "qahw.h"
 
 #define NO_ERROR 0
@@ -113,6 +114,7 @@ typedef enum {
 static struct listnode qahw_module_list;
 static int qahw_list_count;
 static pthread_mutex_t qahw_module_init_lock = PTHREAD_MUTEX_INITIALIZER;
+sound_trigger_hw_device_t *st_hw_device = NULL;
 
 
 /** Start of internal functions */
@@ -1720,7 +1722,8 @@ int qahw_open_input_stream_l(qahw_module_handle_t *hw_module,
     }
 
     /* dlsym qahwi_in_read_v2 if timestamp flag is used */
-    if (!rc && (flags & QAHW_INPUT_FLAG_TIMESTAMP)) {
+    if (!rc && ((flags & QAHW_INPUT_FLAG_TIMESTAMP) ||
+                (flags & QAHW_INPUT_FLAG_PASSTHROUGH))) {
         const char *error;
 
         /* clear any existing errors */
@@ -1774,6 +1777,45 @@ exit:
 /*returns current QTI HAL verison */
 int qahw_get_version_l() {
     return QAHW_MODULE_API_VERSION_CURRENT;
+}
+
+/* Load AHAL module to run audio and sva concurrency */
+static void load_st_hal()
+{
+#ifdef SVA_AUDIO_CONC
+    int rc = -EINVAL;
+    const hw_module_t* module = NULL;
+
+    rc = hw_get_module_by_class(SOUND_TRIGGER_HARDWARE_MODULE_ID, "primary", &module);
+    if (rc) {
+        ALOGE("%s: AHAL Loading failed %d", __func__, rc);
+        goto error;
+    }
+
+    rc = sound_trigger_hw_device_open(module, &st_hw_device);
+    if (rc) {
+        ALOGE("%s: AHAL Device open failed %d", __func__, rc);
+        st_hw_device = NULL;
+    }
+error:
+    return;
+#else
+    return;
+#endif /*SVA_AUDIO_CONC*/
+}
+
+static void unload_st_hal()
+{
+#ifdef SVA_AUDIO_CONC
+    if (st_hw_device == NULL) {
+        ALOGE("%s: audio device is NULL",__func__);
+        return;
+    }
+    sound_trigger_hw_device_close(st_hw_device);
+    st_hw_device = NULL;
+#else
+    return;
+#endif /*SVA_AUDIO_CONC*/
 }
 
 /* convenience API for opening and closing an audio HAL module */
@@ -1867,7 +1909,7 @@ qahw_module_handle_t *qahw_load_module_l(const char *hw_module_id)
 
     /* Add module list to global module list */
     list_add_tail(&qahw_module_list, &qahw_module->module_list);
-
+    load_st_hal();
 
 error_exit:
     pthread_mutex_unlock(&qahw_module_init_lock);
@@ -1924,6 +1966,7 @@ int qahw_unload_module_l(qahw_module_handle_t *hw_module)
                "is not closed", __func__);
         rc = -EINVAL;
     }
+    unload_st_hal();
 
 error_exit:
     pthread_mutex_unlock(&qahw_module_init_lock);
