@@ -2146,13 +2146,14 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                 out_snd_device = platform_get_output_snd_device(adev->platform,
                                             usecase->stream.out);
                 voip_usecase = get_usecase_from_list(adev, USECASE_AUDIO_PLAYBACK_VOIP);
-                if (voip_usecase == NULL)
+                if (voip_usecase == NULL && adev->primary_output && !adev->primary_output->standby)
                     voip_usecase = get_usecase_from_list(adev, adev->primary_output->usecase);
 
                 if ((usecase->stream.out != NULL &&
                      voip_usecase != NULL &&
                      usecase->stream.out->usecase == voip_usecase->id) &&
                     adev->active_input &&
+                    adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
                     out_snd_device != usecase->out_snd_device) {
                     select_devices(adev, adev->active_input->usecase);
                 }
