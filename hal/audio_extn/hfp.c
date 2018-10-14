@@ -55,7 +55,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #define HFP_RX_VOLUME     "SEC AUXPCM LOOPBACK Volume"
 #elif defined PLATFORM_MSM8996
 #define HFP_RX_VOLUME     "PRI AUXPCM LOOPBACK Volume"
-#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM845) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE)
+#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM845) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_TRINKET)
 #define HFP_RX_VOLUME     "SLIMBUS_7 LOOPBACK Volume"
 #else
 #define HFP_RX_VOLUME     "Internal HFP RX Volume"
