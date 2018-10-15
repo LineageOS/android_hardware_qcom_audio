@@ -1089,7 +1089,9 @@ static void update_codec_type_and_interface(struct platform_data * my_data, cons
          !strncmp(snd_card_name, "sm6150-idp-snd-card",
                    sizeof("sm6150-idp-snd-card")) ||
          !strncmp(snd_card_name, "sm6150-wcd9375-snd-card",
-                   sizeof("sm6150-wcd9375-snd-card"))   ) {
+                   sizeof("sm6150-wcd9375-snd-card")) ||
+         !strncmp(snd_card_name, "sm6150-wcd9375qrd-snd-card",
+                   sizeof("sm6150-wcd9375qrd-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -2251,6 +2253,9 @@ void *platform_init(struct audio_device *adev)
         platform_info_init(PLATFORM_INFO_XML_PATH_SKUW, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "sm6150-qrd-snd-card",
                sizeof("sm6150-qrd-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "sm6150-wcd9375qrd-snd-card",
+               sizeof("sm6150-wcd9375qrd-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
     else if (my_data->is_internal_codec)
         platform_info_init(PLATFORM_INFO_XML_PATH_INTCODEC, my_data, PLATFORM);
