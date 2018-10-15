@@ -3154,6 +3154,13 @@ int platform_get_fluence_type(void *platform, char *value, uint32_t len)
     return ret;
 }
 
+void platform_add_external_specific_device(snd_device_t snd_device __unused,
+                                           const char *name __unused,
+                                           unsigned int acdb_id __unused)
+{
+    return;
+}
+
 int platform_get_snd_device_index(char *device_name)
 {
     return find_index(snd_device_name_index, SND_DEVICE_MAX, device_name);

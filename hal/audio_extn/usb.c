@@ -55,6 +55,7 @@
 #define SAMPLE_RATE_11025         11025
 #define SAMPLE_RATE_192000        192000
 // Supported sample rates for USB
+#define USBID_SIZE                16
 static uint32_t supported_sample_rates[] =
     {384000, 352800, 192000, 176400, 96000, 88200, 64000, 48000, 44100, 32000, 22050, 16000, 11025, 8000};
 static uint32_t supported_sample_rates_mask[2];
@@ -97,6 +98,7 @@ struct usb_card_config {
     int usb_sidetone_vol_min;
     int usb_sidetone_vol_max;
     int endian;
+    char usbid[USBID_SIZE];
 };
 
 struct usb_module {
@@ -616,6 +618,48 @@ static int usb_get_device_pb_config(struct usb_card_config *usb_card_info,
     usb_set_dev_id_mixer_ctl(USB_PLAYBACK, card, "USB_AUDIO_RX dev_token");
     usb_set_endian_mixer_ctl(usb_card_info->endian, "USB_AUDIO_RX endian");
 exit:
+
+    return ret;
+}
+
+static int usb_get_usbid(struct usb_card_config *usb_card_info,
+                              int card)
+{
+    int32_t fd=-1;
+    char path[128];
+    int ret = 0;
+
+    memset(usb_card_info->usbid, 0, sizeof(usb_card_info->usbid));
+
+    ret = snprintf(path, sizeof(path), "/proc/asound/card%u/usbid",
+             card);
+
+    if (ret < 0) {
+        ALOGE("%s: failed on snprintf (%d) to path %s\n",
+          __func__, ret, path);
+        goto done;
+    }
+
+    fd = open(path, O_RDONLY);
+    if (fd < 0) {
+        ALOGE("%s: error failed to open file %s error: %d\n",
+              __func__, path, errno);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    if (read(fd, usb_card_info->usbid, USBID_SIZE - 1) < 0) {
+        ALOGE("file read error\n");
+        ret = -EINVAL;
+        usb_card_info->usbid[0] = '\0';
+        goto done;
+    }
+
+    strtok(usb_card_info->usbid, "\n");
+
+done:
+    if (fd >= 0)
+        close(fd);
 
     return ret;
 }
@@ -1164,6 +1208,10 @@ void usb_add_device(audio_devices_t device, int card)
     }
     list_init(&usb_card_info->usb_device_conf_list);
     if (usb_output_device(device)) {
+        if (usb_get_usbid(usb_card_info, card) < 0) {
+            ALOGE("parse card %d usbid fail", card);
+        }
+
         if (!usb_get_device_pb_config(usb_card_info, card)){
             usb_card_info->usb_card = card;
             usb_card_info->usb_device_type = device;
@@ -1172,6 +1220,10 @@ void usb_add_device(audio_devices_t device, int card)
             goto exit;
         }
     } else if (usb_input_device(device)) {
+        if (usb_get_usbid(usb_card_info, card) < 0) {
+            ALOGE("parse card %d usbid fail", card);
+        }
+
         if (!usb_get_device_cap_config(usb_card_info, card)) {
             usb_card_info->usb_card = card;
             usb_card_info->usb_device_type = device;
@@ -1483,6 +1535,22 @@ bool usb_connected(struct str_parms *parms) {
         }
     }
     return usb_connected;
+}
+
+char *usb_usbid()
+{
+    struct usb_card_config *card_info;
+
+    if (usbmod == NULL)
+        return NULL;
+
+    if (list_empty(&usbmod->usb_card_conf_list))
+        return NULL;
+
+    card_info = node_to_item(list_head(&usbmod->usb_card_conf_list),\
+                             struct usb_card_config, list);
+
+    return strdup(card_info->usbid);
 }
 
 void usb_init(void *adev)

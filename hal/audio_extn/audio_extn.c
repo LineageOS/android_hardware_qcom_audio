@@ -1105,6 +1105,7 @@ int usb_get_sup_sample_rates(bool type, uint32_t *sr, uint32_t l);
 bool usb_is_tunnel_supported();
 bool usb_alive(int card);
 bool usb_connected(struct str_parms *parms);
+char *usb_usbid(void);
 unsigned long usb_find_service_interval(bool min, bool playback);
 int usb_altset_for_service_interval(bool is_playback,
                                                unsigned long service_interval,
@@ -1261,6 +1262,15 @@ bool audio_extn_usb_connected(struct str_parms *parms)
     bool ret_val = false;
     if (is_usb_offload_enabled)
         ret_val = usb_connected(parms);
+
+    return ret_val;
+}
+
+char *audio_extn_usb_usbid(void)
+{
+    char *ret_val = NULL;
+    if (is_usb_offload_enabled)
+        ret_val = usb_usbid();
 
     return ret_val;
 }

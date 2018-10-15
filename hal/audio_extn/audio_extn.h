@@ -283,6 +283,7 @@ int audio_extn_usb_altset_for_service_interval(bool is_playback,
                                                uint32_t *bit_width,
                                                uint32_t *sample_rate,
                                                uint32_t *channel_count);
+char *audio_extn_usb_usbid(void);
 int audio_extn_usb_set_service_interval(bool playback,
                                         unsigned long service_interval,
                                         bool *reconfig);
