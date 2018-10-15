@@ -3309,6 +3309,8 @@ static size_t get_input_buffer_size(uint32_t sample_rate,
                                     int channel_count,
                                     bool is_low_latency)
 {
+    int i = 0;
+    size_t frame_size = 0;
     size_t size = 0;
 
     if (check_input_parameters(sample_rate, format, channel_count) != 0)
@@ -3318,15 +3320,23 @@ static size_t get_input_buffer_size(uint32_t sample_rate,
     if (is_low_latency)
         size = configured_low_latency_capture_period_size;
 
-    size *= audio_bytes_per_sample(format) * channel_count;
+    frame_size = audio_bytes_per_sample(format) * channel_count;
+    size *= frame_size;
 
-    /* make sure the size is multiple of 32 bytes
+    /* make sure the size is multiple of 32 bytes and additionally multiple of
+     * the frame_size (required for 24bit samples and non-power-of-2 channel counts)
      * At 48 kHz mono 16-bit PCM:
      *  5.000 ms = 240 frames = 15*16*1*2 = 480, a whole multiple of 32 (15)
      *  3.333 ms = 160 frames = 10*16*1*2 = 320, a whole multiple of 32 (10)
+     *
+     *  The loop reaches result within 32 iterations, as initial size is
+     *  already a multiple of frame_size
      */
-    size += 0x1f;
-    size &= ~0x1f;
+    for (i=0; i<32; i++) {
+        if ((size & 0x1f) == 0)
+            break;
+        size += frame_size;
+    }
 
     return size;
 }
