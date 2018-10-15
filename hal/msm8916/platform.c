@@ -298,6 +298,7 @@ struct platform_data {
     struct acdb_init_data_v4 acdb_init_data;
     bool use_generic_handset;
     struct  spkr_device_chmap *spkr_ch_map;
+    bool use_sprk_default_sample_rate;
 };
 
 struct  spkr_device_chmap {
@@ -2290,6 +2291,7 @@ void *platform_init(struct audio_device *adev)
     my_data->hw_dep_fd = -1;
     my_data->mono_speaker = SPKR_1;
     my_data->spkr_ch_map = NULL;
+    my_data->use_sprk_default_sample_rate = true;
 
     be_dai_name_table = NULL;
 
@@ -7383,6 +7385,11 @@ int platform_set_edid_channels_configuration(void *platform, int channels) {
 void platform_cache_edid(void * platform)
 {
     platform_get_edid_info(platform);
+}
+
+bool platform_spkr_use_default_sample_rate(void *platform) {
+    struct platform_data *my_data = (struct platform_data *)platform;
+    return my_data->use_sprk_default_sample_rate;
 }
 
 void platform_invalidate_backend_config(void * platform,snd_device_t snd_device)
