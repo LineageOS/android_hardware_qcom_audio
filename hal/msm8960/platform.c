@@ -453,6 +453,13 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device __unused)
     return -ENOSYS;
 }
 
+void platform_add_external_specific_device(snd_device_t snd_device __unused,
+                                           const char *name __unused,
+                                           unsigned int acdb_id __unused)
+{
+    return;
+}
+
 void platform_add_operator_specific_device(snd_device_t snd_device __unused,
                                            const char *operator __unused,
                                            const char *mixer_path __unused,

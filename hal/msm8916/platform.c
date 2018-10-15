@@ -1480,6 +1480,13 @@ done:
     return ret;
 }
 
+void platform_add_external_specific_device(snd_device_t snd_device __unused,
+                                           const char *name __unused,
+                                           unsigned int acdb_id __unused)
+{
+    return;
+}
+
 void platform_add_operator_specific_device(snd_device_t snd_device,
                                            const char *operator,
                                            const char *mixer_path,
