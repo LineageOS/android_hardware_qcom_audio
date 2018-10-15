@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2017-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -28,6 +28,8 @@
 
 #include "effect_api.h"
 #include "equalizer.h"
+
+#define EQUALIZER_MAX_LATENCY 0
 
 /* Offload equalizer UUID: a0dac280-401c-11e3-9379-0002a5d5c51b */
 const effect_descriptor_t equalizer_descriptor = {
@@ -253,6 +255,12 @@ int equalizer_get_parameter(effect_context_t *context, effect_param_t *p,
         p->vsize = (2 + NUM_EQ_BANDS) * sizeof(uint16_t);
         break;
 
+    case EQ_PARAM_LATENCY:
+        if (p->vsize < sizeof(uint32_t))
+           p->status = -EINVAL;
+        p->vsize = sizeof(uint32_t);
+        break;
+
     default:
         p->status = -EINVAL;
     }
@@ -351,6 +359,10 @@ int equalizer_get_parameter(effect_context_t *context, effect_param_t *p,
             prop[2 + i] = (int16_t)equalizer_get_band_level(eq_ctxt, i);
         }
     } break;
+
+    case EQ_PARAM_LATENCY:
+        *(uint32_t *)value = EQUALIZER_MAX_LATENCY;
+        break;
 
     default:
         p->status = -EINVAL;

@@ -75,7 +75,10 @@ typedef enum
     //                                   AUDIO_DEVICE_NONE when not virtualizing
     //   status     int -EINVAL if an error occurred
     //                  0       if the output value is successfully retrieved
-    VIRTUALIZER_PARAM_VIRTUALIZATION_MODE
+    VIRTUALIZER_PARAM_VIRTUALIZATION_MODE,
+    // Internal paramter specific to qahw.
+    // Used to get latency introduced by virtuaizer effect.
+    VIRTUALIZER_PARAM_LATENCY = 0x80000000
 } qahw_virtualizer_params;
 
 #ifdef __cplusplus
