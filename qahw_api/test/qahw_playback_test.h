@@ -144,6 +144,7 @@ typedef struct {
     pthread_mutex_t input_buffer_available_lock;
     uint32_t input_buffer_available_size;
     char *set_params;
+    unsigned int raw_data_len_in_bytes;
 }stream_config;
 
 qahw_module_handle_t * load_hal(audio_devices_t dev);
