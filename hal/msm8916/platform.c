@@ -2831,6 +2831,9 @@ void platform_deinit(void *platform)
         my_data->adev->mixer = NULL;
     }
 
+    if (my_data->acdb_deallocate)
+        my_data->acdb_deallocate();
+
     free(platform);
     /* deinit usb */
     audio_extn_usb_deinit();
