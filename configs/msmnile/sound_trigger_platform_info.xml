@@ -262,7 +262,7 @@
         <param wdsp_fluence_type="NONE" />
         <gcs_usecase>
             <param uid="0x3" />
-            <param acdb_devices="DEVICE_HANDSET_MIC_CPE" />
+            <param acdb_devices="DEVICE_HANDSET_MIC_CPE, DEVICE_HEADSET_MIC_CPE" />
             <param load_sound_model_ids="0x18000001, 0x4, 0x18000100" />
             <param start_engine_ids="0x18000001, 0x4, 0x18000101" />
             <param confidence_levels_ids="0x18000001, 0x4, 0x00012C28" />
