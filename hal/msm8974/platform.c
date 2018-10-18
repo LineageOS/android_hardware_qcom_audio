@@ -1437,10 +1437,17 @@ platform_backend_config_init(struct platform_data *pdata)
     pdata->current_backend_cfg[USB_AUDIO_TX_BACKEND].channels_mixer_ctl =
             strdup("USB_AUDIO_TX Channels");
 
-    pdata->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
-            strdup("SLIM_6_RX Format");
-    pdata->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
-            strdup("SLIM_6_RX SampleRate");
+    if (strstr(pdata->snd_card_name, "intcodec")) {
+        pdata->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
+                strdup("INT0_MI2S_RX Format");
+        pdata->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
+                strdup("INT0_MI2S_RX SampleRate");
+    } else {
+        pdata->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
+                strdup("SLIM_6_RX Format");
+        pdata->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
+                strdup("SLIM_6_RX SampleRate");
+    }
 
     pdata->current_backend_cfg[USB_AUDIO_RX_BACKEND].bitwidth_mixer_ctl =
             strdup("USB_AUDIO_RX Format");
