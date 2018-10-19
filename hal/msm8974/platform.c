@@ -1834,6 +1834,8 @@ void platform_deinit(void *platform)
     struct platform_data *my_data = (struct platform_data *)platform;
     close_csd_client(my_data->csd);
 
+    audio_extn_spkr_prot_deinit(my_data->adev);
+
     hw_info_deinit(my_data->hw_info);
 
     for (dev = 0; dev < SND_DEVICE_MAX; dev++) {

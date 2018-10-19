@@ -1205,6 +1205,8 @@ void platform_deinit(void *platform)
     struct operator_specific_device *device_item;
     struct listnode *node;
 
+    audio_extn_spkr_prot_deinit(my_data->adev);
+
     hw_info_deinit(my_data->hw_info);
 
     for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
