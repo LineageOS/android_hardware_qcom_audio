@@ -46,8 +46,7 @@ LOCAL_SRC_FILES := \
 
 LOCAL_SRC_FILES += audio_extn/audio_extn.c \
                    audio_extn/utils.c
-LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+
 LOCAL_CFLAGS += -DUSE_VENDOR_EXTN
 
 ifneq ($(filter msm8994 msm8992,$(TARGET_BOARD_PLATFORM)),)
@@ -241,6 +240,7 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/voice_extn
 
 LOCAL_HEADER_LIBRARIES := libhardware_headers
+LOCAL_HEADER_LIBRARIES += generated_kernel_headers
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_LISTEN)),true)
     LOCAL_CFLAGS += -DAUDIO_LISTEN_ENABLED
