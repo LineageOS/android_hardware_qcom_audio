@@ -35,8 +35,7 @@ LOCAL_C_INCLUDES := \
 	external/tinyalsa/include \
 	$(call include-path-for, audio-effects)
 
-LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers
 
 include $(BUILD_SHARED_LIBRARY)
 
