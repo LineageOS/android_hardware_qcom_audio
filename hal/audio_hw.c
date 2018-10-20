@@ -4717,20 +4717,24 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             adev->screen_off = true;
     }
 
-#ifndef MAXXAUDIO_QDSP_ENABLED
     ret = str_parms_get_int(parms, "rotation", &val);
     if (ret >= 0) {
         bool reverse_speakers = false;
+        int camera_rotation = CAMERA_ROTATION_LANDSCAPE;
         switch (val) {
         // FIXME: note that the code below assumes that the speakers are in the correct placement
         //   relative to the user when the device is rotated 90deg from its default rotation. This
         //   assumption is device-specific, not platform-specific like this code.
         case 270:
             reverse_speakers = true;
+            camera_rotation = CAMERA_ROTATION_INVERT_LANDSCAPE;
             break;
         case 0:
-        case 90:
         case 180:
+            camera_rotation = CAMERA_ROTATION_PORTRAIT;
+            break;
+        case 90:
+            camera_rotation = CAMERA_ROTATION_LANDSCAPE;
             break;
         default:
             ALOGE("%s: unexpected rotation of %d", __func__, val);
@@ -4740,10 +4744,13 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             // check and set swap
             //   - check if orientation changed and speaker active
             //   - set rotation and cache the rotation value
+            adev->camera_orientation =
+                           (adev->camera_orientation & ~CAMERA_ROTATION_MASK) | camera_rotation;
+#ifndef MAXXAUDIO_QDSP_ENABLED
             platform_check_and_set_swap_lr_channels(adev, reverse_speakers);
+#endif
         }
     }
-#endif
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_SCO_WB, value, sizeof(value));
     if (ret >= 0) {
@@ -4808,6 +4815,32 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 audio_extn_a2dp_set_handoff_mode(false);
                 pthread_mutex_unlock(&usecase->stream.out->lock);
                 break;
+            }
+        }
+    }
+
+    //FIXME: to be replaced by proper video capture properties API
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_CAMERA_FACING, value, sizeof(value));
+    if (ret >= 0) {
+        int camera_facing = CAMERA_FACING_BACK;
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_FRONT) == 0)
+            camera_facing = CAMERA_FACING_FRONT;
+        else if (strcmp(value, AUDIO_PARAMETER_VALUE_BACK) == 0)
+            camera_facing = CAMERA_FACING_BACK;
+        else {
+            ALOGW("%s: invalid camera facing value: %s", __func__, value);
+            goto done;
+        }
+        adev->camera_orientation =
+                       (adev->camera_orientation & ~CAMERA_FACING_MASK) | camera_facing;
+        struct audio_usecase *usecase;
+        struct listnode *node;
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            struct stream_in *in = usecase->stream.in;
+            if (usecase->type == PCM_CAPTURE && in != NULL &&
+                    in->source == AUDIO_SOURCE_CAMCORDER && !in->standby) {
+                select_devices(adev, in->usecase);
             }
         }
     }
@@ -5719,6 +5752,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     }
 
     adev->mic_break_enabled = property_get_bool("vendor.audio.mic_break", false);
+
+    adev->camera_orientation = CAMERA_DEFAULT;
 
     // commented as full set of app type cfg is sent from platform
     // audio_extn_utils_send_default_app_type_cfg(adev->platform, adev->mixer);
