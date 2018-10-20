@@ -51,15 +51,14 @@ LOCAL_MODULE_RELATIVE_PATH := soundfx
 LOCAL_MODULE:= libqcompostprocbundle
 LOCAL_VENDOR_MODULE := true
 
-LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
-
 LOCAL_C_INCLUDES := \
 	external/tinyalsa/include \
-        $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
 	$(call include-path-for, audio-effects)
 
 LOCAL_HEADER_LIBRARIES := \
 	libaudioeffects \
+
+LOCAL_HEADER_LIBRARIES += generated_kernel_headers
 
 ifneq ($(call is-board-platform-in-list, msm8916),true)
  include $(BUILD_SHARED_LIBRARY)
