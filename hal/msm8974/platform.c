@@ -600,7 +600,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_BT_SCO_MIC_SWB] = "bt-sco-mic-swb",
     [SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC] = "bt-sco-mic-swb",
     [SND_DEVICE_IN_BT_A2DP] = "bt-a2dp-cap",
-    [SND_DEVICE_IN_CAMCORDER_MIC] = "camcorder-mic",
+    [SND_DEVICE_IN_CAMCORDER_LANDSCAPE] = "camcorder-mic",
     [SND_DEVICE_IN_VOICE_DMIC] = "voice-dmic-ef",
     [SND_DEVICE_IN_VOICE_DMIC_SB] = "voice-dmic-ef",
     [SND_DEVICE_IN_VOICE_DMIC_TMUS] = "voice-dmic-ef-tmus",
@@ -674,6 +674,11 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_LINE] = "line-in",
     [SND_DEVICE_IN_HANDSET_6MIC] = "handset-6mic",
     [SND_DEVICE_IN_HANDSET_8MIC] = "handset-8mic",
+    [SND_DEVICE_IN_CAMCORDER_INVERT_LANDSCAPE] = "camcorder-mic",
+    [SND_DEVICE_IN_CAMCORDER_PORTRAIT] = "camcorder-mic",
+    [SND_DEVICE_IN_CAMCORDER_SELFIE_LANDSCAPE] = "camcorder-mic",
+    [SND_DEVICE_IN_CAMCORDER_SELFIE_INVERT_LANDSCAPE] = "camcorder-mic",
+    [SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT] = "camcorder-mic",
     [SND_DEVICE_OUT_VOIP_HANDSET] = "voip-handset",
     [SND_DEVICE_OUT_VOIP_SPEAKER] = "voip-speaker",
     [SND_DEVICE_OUT_VOIP_HEADPHONES] = "voip-headphones",
@@ -845,7 +850,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_BT_SCO_MIC_SWB] = 38,
     [SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC] = 123,
     [SND_DEVICE_IN_BT_A2DP] = 21,
-    [SND_DEVICE_IN_CAMCORDER_MIC] = 4,
+    [SND_DEVICE_IN_CAMCORDER_LANDSCAPE] = 4,
     [SND_DEVICE_IN_VOICE_DMIC] = 41,
     [SND_DEVICE_IN_VOICE_DMIC_SB] = 167,
     [SND_DEVICE_IN_VOICE_DMIC_TMUS] = 89,
@@ -918,6 +923,11 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOIP_HANDSET] = 133,
     [SND_DEVICE_OUT_VOIP_SPEAKER] = 132,
     [SND_DEVICE_OUT_VOIP_HEADPHONES] = 134,
+    [SND_DEVICE_IN_CAMCORDER_INVERT_LANDSCAPE] = 4,
+    [SND_DEVICE_IN_CAMCORDER_PORTRAIT] = 4,
+    [SND_DEVICE_IN_CAMCORDER_SELFIE_LANDSCAPE] = 4,
+    [SND_DEVICE_IN_CAMCORDER_SELFIE_INVERT_LANDSCAPE] = 4,
+    [SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT] = 4,
 };
 
 struct name_to_index {
@@ -1061,7 +1071,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_BT_SCO_MIC_SWB)},
     {TO_NAME_INDEX(SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_BT_A2DP)},
-    {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_LANDSCAPE)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_DMIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_DMIC_SB)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_DMIC_TMUS)},
@@ -1133,6 +1143,13 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_INCALL_REC_TX)},
     {TO_NAME_INDEX(SND_DEVICE_IN_INCALL_REC_RX_TX)},
     {TO_NAME_INDEX(SND_DEVICE_IN_LINE)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_INVERT_LANDSCAPE)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_PORTRAIT)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_SELFIE_LANDSCAPE)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_SELFIE_INVERT_LANDSCAPE)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT)},
+    /* For legacy xml file parsing */
+    {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_MIC)},
 };
 
 static char * backend_tag_table[SND_DEVICE_MAX] = {0};
@@ -2078,6 +2095,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_IN_HANDSET_DMIC_AEC_NS_SB] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_HANDSET_DMIC_STEREO] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_HEADSET_MIC_AEC] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_CAMCORDER_LANDSCAPE] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_SPEAKER_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_SPEAKER_MIC_SB] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_SPEAKER_MIC_AEC] = strdup("SLIMBUS_0_TX");
@@ -2179,7 +2197,11 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_VOIP_HANDSET] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOIP_SPEAKER] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOIP_HEADPHONES] = strdup("SLIMBUS_6_RX");
-
+    hw_interface_table[SND_DEVICE_IN_CAMCORDER_INVERT_LANDSCAPE] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_CAMCORDER_PORTRAIT] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_CAMCORDER_SELFIE_LANDSCAPE] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_CAMCORDER_SELFIE_INVERT_LANDSCAPE] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT] = strdup("SLIMBUS_0_TX");
     my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
 
      /*remove ALAC & APE from DSP decoder list based on software decoder availability*/
@@ -5932,7 +5954,30 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
     } else if (source == AUDIO_SOURCE_CAMCORDER) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
             in_device & AUDIO_DEVICE_IN_BACK_MIC) {
-
+            switch (adev->camera_orientation) {
+            case CAMERA_BACK_LANDSCAPE:
+                snd_device = SND_DEVICE_IN_CAMCORDER_LANDSCAPE;
+                break;
+            case CAMERA_BACK_INVERT_LANDSCAPE:
+                snd_device = SND_DEVICE_IN_CAMCORDER_INVERT_LANDSCAPE;
+                break;
+            case CAMERA_BACK_PORTRAIT:
+                snd_device = SND_DEVICE_IN_CAMCORDER_PORTRAIT;
+                break;
+            case CAMERA_FRONT_LANDSCAPE:
+                snd_device = SND_DEVICE_IN_CAMCORDER_SELFIE_LANDSCAPE;
+                break;
+            case CAMERA_FRONT_INVERT_LANDSCAPE:
+                snd_device = SND_DEVICE_IN_CAMCORDER_SELFIE_INVERT_LANDSCAPE;
+                break;
+            case CAMERA_FRONT_PORTRAIT:
+                snd_device = SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT;
+                break;
+            default:
+                ALOGW("%s: invalid camera orientation %08x", __func__, adev->camera_orientation);
+                snd_device = SND_DEVICE_IN_CAMCORDER_LANDSCAPE;
+                break;
+            }
             if (str_bitwidth == 16) {
                 if ((my_data->fluence_type & FLUENCE_DUAL_MIC) &&
                     (my_data->source_mic_type & SOURCE_DUAL_MIC) &&
