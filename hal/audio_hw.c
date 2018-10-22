@@ -2922,7 +2922,9 @@ static int stop_output_stream(struct stream_out *out)
             adev->offload_effects_stop_output(out->handle, out->pcm_device_id);
     } else if (out->usecase == USECASE_AUDIO_PLAYBACK_ULL ||
                out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
+#ifdef PERF_HINTS_ENABLED
         audio_low_latency_hint_end();
+#endif
     }
 
     /* 1. Get and set stream specific mixer controls */
@@ -3248,7 +3250,9 @@ int start_output_stream(struct stream_out *out)
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_ULL ||
         out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
+#ifdef PERF_HINTS_ENABLED
         audio_low_latency_hint_start();
+#endif
     }
 
     ALOGD("%s: exit", __func__);
