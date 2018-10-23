@@ -2833,6 +2833,9 @@ void platform_deinit(void *platform)
     /* free acdb_meta_key_list */
     platform_release_acdb_metainfo_key(platform);
 
+    if (my_data->acdb_deallocate)
+        my_data->acdb_deallocate();
+
     free(platform);
     /* deinit usb */
     audio_extn_usb_deinit();
