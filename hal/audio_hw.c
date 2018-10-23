@@ -1183,11 +1183,7 @@ int disable_snd_device(struct audio_device *adev,
             ALOGD("%s: deinit ec ref loopback", __func__);
             audio_extn_ffv_deinit_ec_ref_loopback(adev, snd_device);
         }
-        audio_extn_dev_arbi_release(snd_device);
-        audio_extn_sound_trigger_update_device_status(snd_device,
-                                        ST_EVENT_SND_DEVICE_FREE);
-        audio_extn_listen_update_device_status(snd_device,
-                                        LISTEN_EVENT_SND_DEVICE_FREE);
+        audio_extn_utils_release_snd_device(snd_device);
     }
 
     return 0;
@@ -1413,16 +1409,19 @@ static void check_usecases_codec_backend(struct audio_device *adev,
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
             if (switch_device[usecase->id]) {
-                /* Check if sound device to be switched can be split and if any
+                /* Check if output sound device to be switched can be split and if any
                    of the split devices match with derived sound device */
-                platform_split_snd_device(adev->platform, usecase->out_snd_device,
-                                          &num_devices, split_snd_devices);
-                if (num_devices > 1) {
-                    for (i = 0; i < num_devices; i++) {
-                        /* Disable devices that do not match with derived sound device */
-                        if (split_snd_devices[i] != derive_snd_device[usecase->id]) {
-                            disable_snd_device(adev, split_snd_devices[i]);
+                if (platform_split_snd_device(adev->platform, usecase->out_snd_device,
+                                               &num_devices, split_snd_devices) == 0) {
+                    adev->snd_dev_ref_cnt[usecase->out_snd_device]--;
+                    if (adev->snd_dev_ref_cnt[usecase->out_snd_device] == 0) {
+                        ALOGD("%s: disabling snd_device(%d)", __func__, usecase->out_snd_device);
+                        for (i = 0; i < num_devices; i++) {
+                            /* Disable devices that do not match with derived sound device */
+                            if (split_snd_devices[i] != derive_snd_device[usecase->id])
+                                disable_snd_device(adev, split_snd_devices[i]);
                         }
+                        audio_extn_utils_release_snd_device(usecase->out_snd_device);
                     }
                 } else {
                     disable_snd_device(adev, usecase->out_snd_device);
@@ -1433,7 +1432,23 @@ static void check_usecases_codec_backend(struct audio_device *adev,
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
             if (switch_device[usecase->id]) {
-                enable_snd_device(adev, derive_snd_device[usecase->id]);
+                if (platform_split_snd_device(adev->platform, usecase->out_snd_device,
+                                               &num_devices, split_snd_devices) == 0) {
+                        /* Enable derived sound device only if it does not match with
+                           one of the split sound devices. This is because the matching
+                           sound device was not disabled */
+                        bool should_enable = true;
+                        for (i = 0; i < num_devices; i++) {
+                            if (derive_snd_device[usecase->id] == split_snd_devices[i]) {
+                                 should_enable = false;
+                                 break;
+                            }
+                        }
+                        if (should_enable)
+                            enable_snd_device(adev, derive_snd_device[usecase->id]);
+                } else {
+                    enable_snd_device(adev, derive_snd_device[usecase->id]);
+                }
             }
         }
 
