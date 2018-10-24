@@ -548,6 +548,9 @@ static void update_hardware_info_bear(struct hardware_info *hw_info, const char 
     } else if (!strncmp(snd_card_name, "qcs605-lc-snd-card",
                  sizeof("qcs605-lc-snd-card"))) {
         strlcpy(hw_info->name, "qcs605-lc", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "qcs605-ipc-tavil-snd-card",
+                 sizeof("qcs605-ipc-tavil-snd-card"))) {
+        strlcpy(hw_info->name, "qcs605-ipc", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "sdm660-tavil-snd-card",
                       sizeof("sdm660-tavil-snd-card"))) {
         strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
@@ -613,7 +616,8 @@ void *hw_info_init(const char *snd_card_name)
         ALOGV("SDM845 - variant soundcard");
         update_hardware_info_sdm845(hw_info, snd_card_name);
     } else if (strstr(snd_card_name, "sdm660") || strstr(snd_card_name, "sdm670") ||
-        strstr(snd_card_name, "qcs605-lc") || strstr(snd_card_name, "qcs405")) {
+        strstr(snd_card_name, "qcs605-lc") || strstr(snd_card_name, "qcs405") ||
+        strstr(snd_card_name, "qcs605-ipc")) {
         ALOGV("Bear - variant soundcard");
         update_hardware_info_bear(hw_info, snd_card_name);
     } else if (strstr(snd_card_name, "sdx")) {
