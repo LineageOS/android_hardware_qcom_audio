@@ -254,6 +254,19 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
         // checkA2dpSuspend must run before checkOutputForAllStrategies so that A2DP
         // output is suspended before any tracks are moved to it
         checkA2dpSuspend();
+
+        if (!outputs.isEmpty()) {
+            for (size_t i = 0; i < outputs.size(); i++) {
+                sp<SwAudioOutputDescriptor> desc = mOutputs.valueFor(outputs[i]);
+                // close voip output before track invalidation to allow creation of
+                // new voip stream from restoreTrack
+                if((desc->mFlags == (AUDIO_OUTPUT_FLAG_DIRECT | AUDIO_OUTPUT_FLAG_VOIP_RX)) != 0) {
+                    closeOutput(outputs[i]);
+                    outputs.remove(outputs[i]);
+                }
+            }
+        }
+
         checkOutputForAllStrategies();
         // outputs must be closed after checkOutputForAllStrategies() is executed
         if (!outputs.isEmpty()) {
