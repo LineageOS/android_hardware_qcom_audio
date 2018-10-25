@@ -1087,7 +1087,9 @@ static void update_codec_type_and_interface(struct platform_data * my_data, cons
          !strncmp(snd_card_name, "sm6150-qrd-snd-card",
                    sizeof("sm6150-qrd-snd-card")) ||
          !strncmp(snd_card_name, "sm6150-idp-snd-card",
-                   sizeof("sm6150-idp-snd-card"))   ) {
+                   sizeof("sm6150-idp-snd-card")) ||
+         !strncmp(snd_card_name, "sm6150-wcd9375-snd-card",
+                   sizeof("sm6150-wcd9375-snd-card"))   ) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
