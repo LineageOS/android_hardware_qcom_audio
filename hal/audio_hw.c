@@ -89,6 +89,7 @@
 /*DIRECT PCM has same buffer sizes as DEEP Buffer*/
 #define DIRECT_PCM_NUM_FRAGMENTS 2
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
+#define MMAP_PLAYBACK_VOLUME_MAX 0x2000
 #define VOIP_PLAYBACK_VOLUME_MAX 0x2000
 #define DSD_VOLUME_MIN_DB (-110)
 
@@ -444,6 +445,7 @@ static int last_known_cal_step = -1 ;
 
 static int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool restore);
 static int out_set_compr_volume(struct audio_stream_out *stream, float left, float right);
+static int out_set_mmap_volume(struct audio_stream_out *stream, float left, float right);
 static int out_set_voip_volume(struct audio_stream_out *stream, float left, float right);
 
 static bool may_use_noirq_mode(struct audio_device *adev, audio_usecase_t uc_id,
@@ -3111,6 +3113,7 @@ int start_output_stream(struct stream_out *out)
           __func__, adev->snd_card, out->pcm_device_id, out->config.format);
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
+        ALOGD("%s: Starting MMAP stream", __func__);
         if (out->pcm == NULL || !pcm_is_ready(out->pcm)) {
             ALOGE("%s: pcm stream not ready", __func__);
             goto error_open;
@@ -3120,6 +3123,7 @@ int start_output_stream(struct stream_out *out)
             ALOGE("%s: MMAP pcm_start failed ret %d", __func__, ret);
             goto error_open;
         }
+        out_set_mmap_volume(&out->stream, out->volume_l, out->volume_r);
     } else if (!is_offload_usecase(out->usecase)) {
         unsigned int flags = PCM_OUT;
         unsigned int pcm_open_retry_count = 0;
@@ -4269,6 +4273,38 @@ static float AmpToDb(float amplification)
     return db;
 }
 
+static int out_set_mmap_volume(struct audio_stream_out *stream, float left,
+                          float right)
+{
+    struct stream_out *out = (struct stream_out *)stream;
+    long volume = 0;
+    char mixer_ctl_name[128] = "";
+    struct audio_device *adev = out->dev;
+    struct mixer_ctl *ctl = NULL;
+    int pcm_device_id = platform_get_pcm_device_id(out->usecase,
+                                               PCM_PLAYBACK);
+
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+             "Playback %d Volume", pcm_device_id);
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+    if (left != right)
+        ALOGW("%s: Left and right channel volume mismatch:%f,%f",
+                 __func__, left, right);
+    volume = (long)(left * (MMAP_PLAYBACK_VOLUME_MAX*1.0));
+    if (mixer_ctl_set_value(ctl, 0, volume) < 0){
+        ALOGE("%s:ctl for mixer cmd - %s, volume %ld returned error",
+           __func__, mixer_ctl_name, volume);
+        return -EINVAL;
+    }
+    return 0;
+}
+
+
 static int out_set_compr_volume(struct audio_stream_out *stream, float left,
                           float right)
 {
@@ -4329,6 +4365,8 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
     int volume[2];
     int ret = 0;
 
+    ALOGD("%s: called with left_vol=%f, right_vol=%f", __func__, left, right);
+
     if (out->usecase == USECASE_AUDIO_PLAYBACK_MULTI_CH) {
         /* only take left channel into account: the API is for stereo anyway */
         out->muted = (left == 0.0f);
@@ -4357,7 +4395,7 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
             return 0;
         } else {
             pthread_mutex_lock(&out->compr_mute_lock);
-            ALOGE("%s: compress mute %d", __func__, out->a2dp_compress_mute);
+            ALOGV("%s: compress mute %d", __func__, out->a2dp_compress_mute);
             if (!out->a2dp_compress_mute)
                 ret = out_set_compr_volume(stream, left, right);
             out->volume_l = left;
@@ -4368,6 +4406,13 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
     } else if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP) {
         if (!out->standby)
             ret = out_set_voip_volume(stream, left, right);
+        out->volume_l = left;
+        out->volume_r = right;
+        return ret;
+    } else if (out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
+        ALOGV("%s: MMAP set volume called", __func__);
+        if (!out->standby)
+            ret = out_set_mmap_volume(stream, left, right);
         out->volume_l = left;
         out->volume_r = right;
         return ret;
@@ -5064,8 +5109,9 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
     unsigned int frames1 = 0;
     const char *step = "";
     uint32_t mmap_size;
+    uint32_t buffer_size;
 
-    ALOGV("%s", __func__);
+    ALOGD("%s", __func__);
     pthread_mutex_lock(&adev->lock);
 
     if (info == NULL || min_size_frames == 0) {
@@ -5088,7 +5134,7 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
 
     adjust_mmap_period_count(&out->config, min_size_frames);
 
-    ALOGV("%s: Opening PCM device card_id(%d) device_id(%d), channels %d",
+    ALOGD("%s: Opening PCM device card_id(%d) device_id(%d), channels %d",
           __func__, adev->snd_card, out->pcm_device_id, out->config.channels);
     out->pcm = pcm_open(adev->snd_card, out->pcm_device_id,
                         (PCM_OUT | PCM_MMAP | PCM_NOIRQ | PCM_MONOTONIC), &out->config);
@@ -5103,17 +5149,24 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
         goto exit;
     }
     info->buffer_size_frames = pcm_get_buffer_size(out->pcm);
+    buffer_size = pcm_frames_to_bytes(out->pcm, info->buffer_size_frames);
     info->burst_size_frames = out->config.period_size;
     ret = platform_get_mmap_data_fd(adev->platform,
                                     out->pcm_device_id, 0 /*playback*/,
                                     &info->shared_memory_fd,
                                     &mmap_size);
     if (ret < 0) {
-        step = "get_mmap_fd";
-        goto exit;
+        // Fall back to non exclusive mode
+        info->shared_memory_fd = pcm_get_poll_fd(out->pcm);
+    } else {
+        if (mmap_size < buffer_size) {
+            step = "mmap";
+            goto exit;
+        }
+        // FIXME: indicate exclusive mode support by returning a negative buffer size
+        info->buffer_size_frames *= -1;
     }
-    memset(info->shared_memory_address, 0, pcm_frames_to_bytes(out->pcm,
-                                                               info->buffer_size_frames));
+    memset(info->shared_memory_address, 0, buffer_size);
 
     ret = pcm_mmap_commit(out->pcm, 0, MMAP_PERIOD_SIZE);
     if (ret < 0) {
@@ -5124,7 +5177,7 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
     out->standby = false;
     ret = 0;
 
-    ALOGV("%s: got mmap buffer address %p info->buffer_size_frames %d",
+    ALOGD("%s: got mmap buffer address %p info->buffer_size_frames %d",
           __func__, info->shared_memory_address, info->buffer_size_frames);
 
 exit:
@@ -5253,15 +5306,15 @@ static int in_standby(struct audio_stream *stream)
                 audio_extn_cin_stop_input_stream(in);
         }
 
-        if (do_stop) {
-            if (in->pcm) {
+        if (in->pcm) {
                 ATRACE_BEGIN("pcm_in_close");
                 pcm_close(in->pcm);
                 ATRACE_END();
                 in->pcm = NULL;
-            }
-            status = stop_input_stream(in);
         }
+
+        if (do_stop)
+            status = stop_input_stream(in);
         pthread_mutex_unlock(&adev->lock);
     }
     pthread_mutex_unlock(&in->lock);
@@ -5669,6 +5722,8 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
     unsigned int offset1 = 0;
     unsigned int frames1 = 0;
     const char *step = "";
+    uint32_t mmap_size = 0;
+    uint32_t buffer_size = 0;
 
     pthread_mutex_lock(&adev->lock);
     ALOGV("%s in %p", __func__, in);
@@ -5709,12 +5764,27 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
         step = "begin";
         goto exit;
     }
-    info->buffer_size_frames = pcm_get_buffer_size(in->pcm);
-    info->burst_size_frames = in->config.period_size;
-    info->shared_memory_fd = pcm_get_poll_fd(in->pcm);
 
-    memset(info->shared_memory_address, 0, pcm_frames_to_bytes(in->pcm,
-                                                                info->buffer_size_frames));
+    info->buffer_size_frames = pcm_get_buffer_size(in->pcm);
+    buffer_size = pcm_frames_to_bytes(in->pcm, info->buffer_size_frames);
+    info->burst_size_frames = in->config.period_size;
+    ret = platform_get_mmap_data_fd(adev->platform,
+                                    in->pcm_device_id, 1 /*capture*/,
+                                    &info->shared_memory_fd,
+                                    &mmap_size);
+    if (ret < 0) {
+        // Fall back to non exclusive mode
+        info->shared_memory_fd = pcm_get_poll_fd(in->pcm);
+    } else {
+        if (mmap_size < buffer_size) {
+            step = "mmap";
+            goto exit;
+        }
+        // FIXME: indicate exclusive mode support by returning a negative buffer size
+        info->buffer_size_frames *= -1;
+    }
+
+    memset(info->shared_memory_address, 0, buffer_size);
 
     ret = pcm_mmap_commit(in->pcm, 0, MMAP_PERIOD_SIZE);
     if (ret < 0) {
