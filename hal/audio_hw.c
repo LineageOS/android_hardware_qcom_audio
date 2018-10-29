@@ -1301,9 +1301,10 @@ static snd_device_t derive_playback_snd_device(void * platform,
         if (platform_check_backends_match(d3[0], d3[1])) {
             return d2; // case 5
         } else {
-            // check if d1 is related to any of d3's
-            if (d1 == d3[0] || d1 == d3[1])
-                return d1; // case 1
+            // check if d1 is related to any of d3's OR
+            // old uc is combo device but new_uc is one of the combo device
+            if (d1 == d3[0] || d1 == d3[1] || popcount(a1) > 1)
+                return d1; // case 1, 7
             else
                 return d3[1]; // case 8
         }
