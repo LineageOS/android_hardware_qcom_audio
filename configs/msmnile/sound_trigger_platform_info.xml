@@ -35,6 +35,7 @@
 <!--- added to <adm_config>                                                     -->
 
     <common_config>
+        <param implementer_version="0x0100" />
         <param max_cpe_sessions="1" />
         <param max_wdsp_sessions="2" />
         <param max_ape_sessions="8" />
