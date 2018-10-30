@@ -32,6 +32,7 @@ LOCAL_VENDOR_MODULE     := true
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
+LOCAL_USE_VNDK          := true
 LOCAL_COPY_HEADERS_TO   := mm-audio/qahw_api/inc
 LOCAL_COPY_HEADERS      := inc/qahw_defs.h
 
