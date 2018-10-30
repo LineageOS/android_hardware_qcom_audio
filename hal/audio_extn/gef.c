@@ -44,6 +44,7 @@
 #include <dlfcn.h>
 #include <math.h>
 #include <cutils/properties.h>
+#include <pthread.h>
 #include "audio_extn.h"
 #include "audio_hw.h"
 

@@ -48,6 +48,7 @@
 #include "audio_extn.h"
 #include <linux/msm_audio_calibration.h>
 #include <linux/msm_audio.h>
+#include <pthread.h>
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
