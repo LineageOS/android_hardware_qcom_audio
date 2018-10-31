@@ -412,21 +412,6 @@ void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in)
     pthread_mutex_unlock(&st_dev->lock);
 }
 
-bool is_same_as_st_device(snd_device_t snd_device)
-{
-    if (snd_device == SND_DEVICE_IN_HANDSET_MIC_AEC ||
-        snd_device == SND_DEVICE_IN_HANDSET_MIC ||
-        snd_device == SND_DEVICE_IN_HANDSET_MIC_AEC_NS ||
-        snd_device == SND_DEVICE_IN_SPEAKER_MIC ||
-        snd_device == SND_DEVICE_IN_VOICE_SPEAKER_MIC ||
-        snd_device == SND_DEVICE_IN_SPEAKER_MIC_AEC ||
-        snd_device == SND_DEVICE_IN_SPEAKER_MIC_AEC_NS ||
-        snd_device == SND_DEVICE_IN_SPEAKER_MIC_NS) {
-        ALOGD("audio HAL using same device %d as ST", snd_device);
-        return true;
-    }
-    return false;
-}
 
 void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
                                      st_event_type_t event)
@@ -488,14 +473,6 @@ void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info
         (uc_info->type != PCM_PLAYBACK))
         return;
 
-    if ((uc_info->in_snd_device >= SND_DEVICE_IN_BEGIN &&
-        uc_info->in_snd_device < SND_DEVICE_IN_END)) {
-        if (is_same_as_st_device(uc_info->in_snd_device))
-            ev_info.device_info.device = ST_DEVICE_HANDSET_MIC;
-    } else {
-        ALOGE("%s: invalid input device 0x%x, for event %d",
-                    __func__, uc_info->in_snd_device, event);
-    }
     raise_event = platform_sound_trigger_usecase_needs_event(uc_info->id);
     ALOGD("%s: uc_info->id %d of type %d for Event %d, with Raise=%d",
         __func__, uc_info->id, uc_info->type, event, raise_event);

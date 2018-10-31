@@ -329,7 +329,7 @@
         <ctl name="DMIC MUX0" value="DMIC0" />
         <ctl name="CDC_IF TX1 MUX" value="DEC1" />
         <ctl name="ADC MUX1" value="DMIC" />
-        <ctl name="DMIC MUX1" value="DMIC3" />
+        <ctl name="DMIC MUX1" value="DMIC2" />
         <ctl name="CDC_IF TX2 MUX" value="DEC2" />
         <ctl name="ADC MUX2" value="DMIC" />
         <ctl name="DMIC MUX2" value="DMIC5" />

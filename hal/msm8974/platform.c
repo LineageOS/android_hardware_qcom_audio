@@ -1087,7 +1087,9 @@ static void update_codec_type_and_interface(struct platform_data * my_data, cons
          !strncmp(snd_card_name, "sm6150-qrd-snd-card",
                    sizeof("sm6150-qrd-snd-card")) ||
          !strncmp(snd_card_name, "sm6150-idp-snd-card",
-                   sizeof("sm6150-idp-snd-card"))   ) {
+                   sizeof("sm6150-idp-snd-card")) ||
+         !strncmp(snd_card_name, "sm6150-wcd9375-snd-card",
+                   sizeof("sm6150-wcd9375-snd-card"))   ) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -3244,7 +3246,12 @@ static bool check_snd_device_is_speaker(snd_device_t snd_device)
         snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED ||
         snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT ||
         snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_RAS ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT_RAS) {
+        snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT_RAS ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_WSA ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT ) {
         ret = true;
     }
     return ret;
@@ -6234,6 +6241,9 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         }
     }
 
+    if (!(hw_info_is_stereo_spkr(my_data->hw_info)) && check_snd_device_is_speaker(snd_device))
+        channels = 1;
+
     /* Native playback is preferred for Headphone/HS device over 192Khz */
     if (!voice_call_active && codec_device_supports_native_playback(usecase->devices)) {
         if (audio_is_true_native_stream_active(adev)) {
@@ -6373,6 +6383,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     // Force routing if the expected bitwdith or samplerate
     // is not same as current backend comfiguration
     if ((bit_width != my_data->current_backend_cfg[backend_idx].bit_width) ||
+        (channels != my_data->current_backend_cfg[backend_idx].channels) ||
         (sample_rate != my_data->current_backend_cfg[backend_idx].sample_rate) ||
          passthrough_enabled || channels_updated || service_interval_update ) {
         backend_cfg->bit_width = bit_width;
@@ -6430,12 +6441,7 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
         backend_cfg.bit_width = usecase->stream.out->bit_width;
         backend_cfg.sample_rate = usecase->stream.out->sample_rate;
         backend_cfg.format = usecase->stream.out->format;
-        if (!(hw_info_is_stereo_spkr(my_data->hw_info)) &&
-             check_snd_device_is_speaker(snd_device))
-            backend_cfg.channels = 1;
-        else
-            backend_cfg.channels =
-                audio_channel_count_from_out_mask(usecase->stream.out->channel_mask);
+        backend_cfg.channels = audio_channel_count_from_out_mask(usecase->stream.out->channel_mask);
     }
     if (audio_extn_is_dsp_bit_width_enforce_mode_supported(usecase->stream.out->flags) &&
                 (adev->dsp_bit_width_enforce_mode > backend_cfg.bit_width))

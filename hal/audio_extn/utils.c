@@ -2518,3 +2518,12 @@ int audio_extn_utils_get_channels_from_string(const char *id_string)
 
     return -EINVAL;
 }
+
+void audio_extn_utils_release_snd_device(snd_device_t snd_device)
+{
+    audio_extn_dev_arbi_release(snd_device);
+    audio_extn_sound_trigger_update_device_status(snd_device,
+                                    ST_EVENT_SND_DEVICE_FREE);
+    audio_extn_listen_update_device_status(snd_device,
+                                    LISTEN_EVENT_SND_DEVICE_FREE);
+}
