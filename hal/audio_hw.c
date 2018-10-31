@@ -1130,8 +1130,14 @@ static int read_usb_sup_channel_masks(bool is_playback,
         // audio_channel_in_mask_from_count() does the right conversion to either positional or
         // indexed mask
         for ( ; channel_count <= channels && num_masks < max_masks; channel_count++) {
-            supported_channel_masks[num_masks++] =
+            const audio_channel_mask_t mask =
                     audio_channel_in_mask_from_count(channel_count);
+            supported_channel_masks[num_masks++] = mask;
+            const audio_channel_mask_t index_mask =
+                    audio_channel_mask_for_index_assignment_from_count(channel_count);
+            if (mask != index_mask && num_masks < max_masks) { // ensure index mask added.
+                supported_channel_masks[num_masks++] = index_mask;
+            }
         }
     }
 #ifdef NDEBUG
@@ -5002,7 +5008,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                                             devices,
                                                             flags,
                                                             source);
-    ALOGV("%s: enter", __func__);
+    ALOGV("%s: enter: flags %#x, is_usb_dev %d, may_use_hifi_record %d,"
+            " sample_rate %u, channel_mask %#x, format %#x",
+            __func__, flags, is_usb_dev, may_use_hifi_record,
+            config->sample_rate, config->channel_mask, config->format);
     *stream_in = NULL;
 
     if (is_usb_dev && !is_usb_ready(adev, false /* is_playback */)) {
@@ -5057,7 +5066,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->capture_handle = handle;
     in->flags = flags;
 
-    ALOGV("%s: source = %d, config->channel_mask = %d", __func__, source, config->channel_mask);
+    ALOGV("%s: source %d, config->channel_mask %#x", __func__, source, config->channel_mask);
     if (source == AUDIO_SOURCE_VOICE_UPLINK ||
          source == AUDIO_SOURCE_VOICE_DOWNLINK) {
         /* Force channel config requested to mono if incall
