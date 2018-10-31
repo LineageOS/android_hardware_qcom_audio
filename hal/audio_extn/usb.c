@@ -1414,10 +1414,9 @@ int audio_extn_usb_check_and_set_svc_int(struct audio_usecase *uc_info,
     service_interval =
             audio_extn_usb_find_service_interval(!burst_mode, true /*playback*/);
 
-    if (service_interval != 0)
-        audio_extn_usb_set_service_interval(true /*playback*/,
-                                            service_interval,
-                                            &reconfig);
+    audio_extn_usb_set_service_interval(true /*playback*/,
+                                        service_interval,
+                                        &reconfig);
 
     /* no change or not supported or no active usecases */
     if (reconfig)
