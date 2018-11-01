@@ -37,11 +37,12 @@
         <param transit_to_adsp_on_playback="false" />
         <!-- Below backend params must match with port used in mixer path file -->
         <!-- param used to configure backend sample rate, format and channels -->
+        <!-- uncomment INT3_MI2S_TX values for internal codec and comment SLIM_0_TX values -->
         <param backend_port_name="SLIM_0_TX" />
-        <param backend_port_name="INT3_MI2S_TX" />
+        <!-- <param backend_port_name="INT3_MI2S_TX" /> -->
         <!-- Param used to match and obtain device backend index -->
         <param backend_dai_name="SLIMBUS_0_TX" />
-        <param backend_dai_name="INT3_MI2S_TX" />
+        <!-- <param backend_dai_name="INT3_MI2S_TX" /> -->
     </common_config>
     <acdb_ids>
         <param DEVICE_HANDSET_MIC_APE="100" />

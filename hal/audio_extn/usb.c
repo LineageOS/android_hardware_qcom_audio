@@ -1269,6 +1269,10 @@ int audio_extn_usb_altset_for_service_interval(bool playback,
                     bool match = (playback && (dev_info->type == USB_PLAYBACK)) ||   \
                             (!playback && (dev_info->type == USB_CAPTURE));          \
                     if (match && (cond)) {                                           \
+                        if (dev_info->field == *field) {                             \
+                          local_var = dev_info->field;                               \
+                          break;                                                     \
+                        }                                                            \
                         local_var = _MAX(local_var, dev_info->field);                \
                     }                                                                \
             }                                                                        \
@@ -1279,6 +1283,7 @@ int audio_extn_usb_altset_for_service_interval(bool playback,
     FIND_BEST_MATCH(ch, channels, \
                     dev_info->service_interval_us == service_interval && \
                     dev_info->bit_width == bw);
+    sr = *sample_rate;
     list_for_each(node_i, &usbmod->usb_card_conf_list) {
         /* Currently only apply the first playback sound card configuration */
         card_info = node_to_item(node_i, struct usb_card_config, list);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -61,6 +61,7 @@ struct voice {
     struct voice_session session[MAX_VOICE_SESSIONS];
     int tty_mode;
     bool mic_mute;
+    bool use_device_mute;
     float volume;
     bool in_call;
 };
@@ -101,4 +102,6 @@ void voice_check_and_update_aanc_path(struct audio_device *adev,
                                       snd_device_t out_snd_device,
                                       bool enable);
 bool voice_is_call_state_active(struct audio_device *adev);
+void voice_set_device_mute_flag (struct audio_device *adev, bool state);
+snd_device_t voice_get_incall_rec_backend_device(struct stream_in *in);
 #endif //VOICE_H
