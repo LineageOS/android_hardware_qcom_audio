@@ -26,12 +26,12 @@
 <!-- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                          -->
 <audio_platform_info>
     <acdb_ids>
-        <device name="SND_DEVICE_OUT_HANDSET" acdb_id="41"/>
-        <device name="SND_DEVICE_OUT_SPEAKER" acdb_id="41"/>
-        <device name="SND_DEVICE_OUT_HEADPHONES" acdb_id="41"/>
+        <device name="SND_DEVICE_OUT_HANDSET" acdb_id="60"/>
+        <device name="SND_DEVICE_OUT_SPEAKER" acdb_id="60"/>
+        <device name="SND_DEVICE_OUT_HEADPHONES" acdb_id="60"/>
         <device name="SND_DEVICE_OUT_BT_SCO" acdb_id="94"/>
         <device name="SND_DEVICE_OUT_BT_SCO_WB" acdb_id="94"/>
-        <device name="SND_DEVICE_OUT_BT_A2DP" acdb_id="41"/>
+        <device name="SND_DEVICE_OUT_BT_A2DP" acdb_id="60"/>
         <device name="SND_DEVICE_OUT_VOICE_HANDSET" acdb_id="94"/>
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER" acdb_id="94"/>
         <device name="SND_DEVICE_IN_HANDSET_MIC" acdb_id="11"/>
@@ -96,10 +96,10 @@
         <usecase name="USECASE_AUDIO_PLAYBACK_MMAP" type="out" id="28" />
         <usecase name="USECASE_AUDIO_RECORD_MMAP" type="in" id="28" />
         <usecase name="USECASE_AUDIO_RECORD" type="in" id="0" />
-        <usecase name="USECASE_AUDIO_HFP_SCO" type="in" id="29" />
-        <usecase name="USECASE_AUDIO_HFP_SCO" type="out" id="29" />
-        <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="in" id="29" />
-        <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="out" id="29" />
+        <usecase name="USECASE_AUDIO_HFP_SCO" type="in" id="36" />
+        <usecase name="USECASE_AUDIO_HFP_SCO" type="out" id="36" />
+        <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="in" id="36" />
+        <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="out" id="36" />
     </pcm_ids>
 
     <config_params>
