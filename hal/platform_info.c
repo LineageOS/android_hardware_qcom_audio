@@ -647,7 +647,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
         goto done;
     }
     microphone.num_frequency_responses = atoi(attr[curIdx++]);
-    if (microphone.num_frequency_responses >= AUDIO_MICROPHONE_MAX_FREQUENCY_RESPONSES) {
+    if (microphone.num_frequency_responses > AUDIO_MICROPHONE_MAX_FREQUENCY_RESPONSES) {
         ALOGE("%s: num_frequency_responses is too large", __func__);
         goto done;
     }
@@ -662,8 +662,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
         while (token) {
             microphone.frequency_responses[0][num_frequencies++] = atof(token);
             if (num_frequencies >= AUDIO_MICROPHONE_MAX_FREQUENCY_RESPONSES) {
-                ALOGE("%s: num %u of frequency is too large", __func__, num_frequencies);
-                goto done;
+                break;
             }
             token = strtok_r(NULL, " ", &context);
         }
@@ -677,8 +676,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
         while (token) {
             microphone.frequency_responses[1][num_responses++] = atof(token);
             if (num_responses >= AUDIO_MICROPHONE_MAX_FREQUENCY_RESPONSES) {
-                ALOGE("%s: num %u of response is too large", __func__, num_responses);
-                goto done;
+                break;
             }
             token = strtok_r(NULL, " ", &context);
         }
@@ -733,12 +731,11 @@ static void process_microphone_characteristic(const XML_Char **attr) {
         while (token) {
             orientation[idx++] = atof(token);
             if (idx >= 3) {
-                ALOGE("%s: orientation invalid", __func__);
-                goto done;
+                break;
             }
             token = strtok_r(NULL, " ", &context);
         }
-        if (idx != 2) {
+        if (idx != 3) {
             ALOGE("%s: orientation invalid", __func__);
             goto done;
         }
@@ -763,12 +760,11 @@ static void process_microphone_characteristic(const XML_Char **attr) {
         while (token) {
             geometric_location[idx++] = atof(token);
             if (idx >= 3) {
-                ALOGE("%s: geometric_location invalid", __func__);
-                goto done;
+                break;
             }
             token = strtok_r(NULL, " ", &context);
         }
-        if (idx != 2) {
+        if (idx != 3) {
             ALOGE("%s: geometric_location invalid", __func__);
             goto done;
         }
