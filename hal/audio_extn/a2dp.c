@@ -84,6 +84,7 @@
 #define MIXER_ENC_FMT_SBC          "SBC"
 #define MIXER_ENC_FMT_AAC          "AAC"
 #define MIXER_ENC_FMT_APTX         "APTX"
+#define MIXER_FMT_TWS_CHANNEL_MODE "TWS Channel Mode"
 #define MIXER_ENC_FMT_APTXHD       "APTXHD"
 #define MIXER_ENC_FMT_NONE         "NONE"
 #define ENCODER_LATENCY_SBC        10
@@ -173,6 +174,7 @@ typedef void * (*audio_get_codec_config_t)(uint8_t *multicast_status,uint8_t *nu
 typedef int (*audio_check_a2dp_ready_t)(void);
 typedef uint16_t (*audio_get_a2dp_sink_latency_t)(void);
 typedef int (*audio_is_scrambling_enabled_t)(void);
+typedef bool (*audio_is_tws_mono_mode_enable_t)(void);
 
 enum A2DP_STATE {
     A2DP_STATE_CONNECTED,
@@ -235,6 +237,7 @@ struct a2dp_data {
     audio_check_a2dp_ready_t audio_check_a2dp_ready;
     audio_get_a2dp_sink_latency_t audio_get_a2dp_sink_latency;
     audio_is_scrambling_enabled_t audio_is_scrambling_enabled;
+    audio_is_tws_mono_mode_enable_t audio_is_tws_mono_mode_enable;
     enum A2DP_STATE bt_state;
     enc_codec_t bt_encoder_format;
     uint32_t enc_sampling_rate;
@@ -245,6 +248,8 @@ struct a2dp_data {
     bool is_a2dp_offload_supported;
     bool is_handoff_in_progress;
     bool is_aptx_dual_mono_supported;
+    /* Mono Mode support for TWS+ */
+    bool is_tws_mono_mode_on;
     bool is_aptx_adaptive;
     /* Adaptive bitrate config for A2DP codecs */
     struct a2dp_abr_config abr_config;
@@ -758,6 +763,8 @@ static void open_a2dp_output()
                         dlsym(a2dp.bt_lib_handle,"audio_get_a2dp_sink_latency");
             a2dp.audio_is_scrambling_enabled = (audio_is_scrambling_enabled_t)
                         dlsym(a2dp.bt_lib_handle,"audio_is_scrambling_enabled");
+           a2dp.audio_is_tws_mono_mode_enable = (audio_is_tws_mono_mode_enable_t)
+                        dlsym(a2dp.bt_lib_handle,"isTwsMonomodeEnable");
         }
     }
 
@@ -1206,6 +1213,26 @@ static int update_aptx_ad_dsp_config(struct aptx_ad_enc_cfg_t *aptx_dsp_cfg,
 
     return ret;
 }
+
+static void audio_a2dp_update_tws_channel_mode()
+{
+    char* channel_mode;
+    struct mixer_ctl *ctl_channel_mode;
+    if (a2dp.is_tws_mono_mode_on)
+       channel_mode = "One";
+    else
+       channel_mode = "Two";
+    ctl_channel_mode = mixer_get_ctl_by_name(a2dp.adev->mixer,MIXER_FMT_TWS_CHANNEL_MODE);
+    if (!ctl_channel_mode) {
+         ALOGE("failed to get tws mixer ctl");
+         return;
+    }
+    if (mixer_ctl_set_enum_by_string(ctl_channel_mode, channel_mode) != 0) {
+         ALOGE("%s: Failed to set the channel mode = %s", __func__, channel_mode);
+         return;
+    }
+}
+
 static int update_aptx_dsp_config_v2(struct aptx_enc_cfg_t *aptx_dsp_cfg,
                                      audio_aptx_encoder_config *aptx_bt_cfg)
 {
@@ -1235,8 +1262,15 @@ static int update_aptx_dsp_config_v2(struct aptx_enc_cfg_t *aptx_dsp_cfg,
             break;
         case 2:
         default:
-            aptx_dsp_cfg->custom_cfg.channel_mapping[0] = PCM_CHANNEL_L;
-            aptx_dsp_cfg->custom_cfg.channel_mapping[1] = PCM_CHANNEL_R;
+            if (!a2dp.is_tws_mono_mode_on) {
+               aptx_dsp_cfg->custom_cfg.channel_mapping[0] = PCM_CHANNEL_L;
+               aptx_dsp_cfg->custom_cfg.channel_mapping[1] = PCM_CHANNEL_R;
+            }
+            else {
+               a2dp.is_tws_mono_mode_on = true;
+               ALOGD("Update tws for mono_mode_on: %d",a2dp.is_tws_mono_mode_on);
+               audio_a2dp_update_tws_channel_mode();
+            }
             break;
     }
     a2dp.enc_channels = aptx_dsp_cfg->custom_cfg.num_channels;
@@ -1665,6 +1699,8 @@ bool configure_a2dp_encoder_format()
         case ENC_CODEC_TYPE_APTX_DUAL_MONO:
             ALOGD(" Received APTX dual mono encoder supported BT device");
             a2dp.is_aptx_dual_mono_supported = true;
+            if (a2dp.audio_is_tws_mono_mode_enable != NULL)
+                a2dp.is_tws_mono_mode_on = a2dp.audio_is_tws_mono_mode_enable();
             aptx_encoder_cfg.dual_mono_cfg = (audio_aptx_dual_mono_config *)codec_info;
             is_configured =
               configure_aptx_enc_format(&aptx_encoder_cfg);
@@ -1765,8 +1801,9 @@ static void reset_a2dp_enc_config_params()
 {
     int ret =0;
 
-    struct mixer_ctl *ctl_enc_config, *ctrl_bit_format;
+    struct mixer_ctl *ctl_enc_config, *ctrl_bit_format, *ctl_channel_mode;
     struct sbc_enc_cfg_t dummy_reset_config;
+    char* channel_mode;
 
     memset(&dummy_reset_config, 0x0, sizeof(struct sbc_enc_cfg_t));
     ctl_enc_config = mixer_get_ctl_by_name(a2dp.adev->mixer,
@@ -1787,6 +1824,17 @@ static void reset_a2dp_enc_config_params()
         if (ret != 0) {
             ALOGE("%s: Failed to set bit format to encoder", __func__);
         }
+    }
+    ctl_channel_mode = mixer_get_ctl_by_name(a2dp.adev->mixer,MIXER_FMT_TWS_CHANNEL_MODE);
+
+    if (!ctl_channel_mode) {
+        ALOGE("failed to get tws mixer ctl");
+    } else {
+        channel_mode = "Two";
+        if (mixer_ctl_set_enum_by_string(ctl_channel_mode, channel_mode) != 0) {
+            ALOGE("%s: Failed to set the channel mode = %s", __func__, channel_mode);
+        }
+        a2dp.is_tws_mono_mode_on = false;
     }
 }
 
@@ -1890,6 +1938,17 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
              a2dp_reset_backend_cfg();
          }
          goto param_handled;
+     }
+
+     ret = str_parms_get_str(parms, "TwsChannelConfig", value, sizeof(value));
+     if (ret>=0) {
+         ALOGD("Setting tws channel mode to %s",value);
+         if(!(strncmp(value,"mono",strlen(value))))
+            a2dp.is_tws_mono_mode_on = true;
+         else if(!(strncmp(value,"dual-mono",strlen(value))))
+            a2dp.is_tws_mono_mode_on = false;
+         audio_a2dp_update_tws_channel_mode();
+     goto param_handled;
      }
 
      ret = str_parms_get_str(parms, "A2dpSuspended", value, sizeof(value));
@@ -2023,6 +2082,7 @@ void audio_extn_a2dp_init (void *adev)
   a2dp.abr_config.abr_started = false;
   a2dp.abr_config.imc_instance = 0;
   a2dp.abr_config.abr_tx_handle = NULL;
+  a2dp.is_tws_mono_mode_on = false;
   reset_a2dp_enc_config_params();
   reset_a2dp_dec_config_params();
   update_offload_codec_capabilities();
