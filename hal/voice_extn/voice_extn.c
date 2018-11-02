@@ -597,7 +597,17 @@ void voice_extn_in_get_parameters(struct stream_in *in,
 int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
                                                   struct stream_out *out)
 {
-    out->usecase = USECASE_INCALL_MUSIC_UPLINK;
+    uint32_t session_id = session_id = get_session_id_with_state(adev,
+                                                                 CALL_ACTIVE);
+    if (session_id == VOICEMMODE1_VSID)
+        out->usecase = USECASE_INCALL_MUSIC_UPLINK;
+    else if (session_id == VOICEMMODE2_VSID)
+        out->usecase = USECASE_INCALL_MUSIC_UPLINK2;
+    else {
+        ALOGE("%s: Invalid session id %x", __func__, session_id);
+        out->usecase = USECASE_INCALL_MUSIC_UPLINK;
+    }
+
     out->config = pcm_config_incall_music;
     //FIXME: add support for MONO stream configuration when audioflinger mixer supports it
     out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_STEREO;
