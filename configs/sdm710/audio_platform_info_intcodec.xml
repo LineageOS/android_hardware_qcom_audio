@@ -27,6 +27,8 @@
 <audio_platform_info>
     <bit_width_configs>
         <device name="SND_DEVICE_OUT_SPEAKER" bit_width="24"/>
+        <device name="SND_DEVICE_IN_HANDSET_MIC" bit_width="24"/>
+        <device name="SND_DEVICE_IN_HANDSET_GENERIC_QMIC" bit_width="24"/>
     </bit_width_configs>
     <interface_names>
         <device name="AUDIO_DEVICE_IN_BUILTIN_MIC" interface="INT3_MI2S" codec_type="internal"/>
