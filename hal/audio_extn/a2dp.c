@@ -1336,12 +1336,14 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         is_configured = false;
         goto fail;
     }
+#ifndef LINUX_ENABLED //Temporarily disabled for LE, need to take care while doing VT FR
     if(a2dp.is_aptx_adaptive)
         ret = a2dp_set_bit_format(aptx_bt_cfg->ad_cfg->bits_per_sample);
     else if(a2dp.is_aptx_dual_mono_supported)
         ret = a2dp_set_bit_format(aptx_bt_cfg->dual_mono_cfg->bits_per_sample);
     else
         ret = a2dp_set_bit_format(aptx_bt_cfg->default_cfg->bits_per_sample);
+#endif
     if (ret != 0) {
         is_configured = false;
         goto fail;
@@ -1677,6 +1679,7 @@ bool configure_a2dp_encoder_format()
                 (configure_ldac_enc_format((audio_ldac_encoder_config *)codec_info) &&
                  configure_a2dp_decoder_format(ENC_CODEC_TYPE_LDAC));
             break;
+#ifndef LINUX_ENABLED //Temporarily disabled for LE, need to take care while doing VT FR
          case ENC_CODEC_TYPE_APTX_AD:
              ALOGD(" Received APTX AD encoder supported BT device");
              if (!instance_id || instance_id > MAX_INSTANCE_ID)
@@ -1689,6 +1692,7 @@ bool configure_a2dp_encoder_format()
                 (configure_aptx_enc_format(&aptx_encoder_cfg) &&
                  configure_a2dp_decoder_format(ENC_MEDIA_FMT_APTX_AD));
             break;
+#endif
         default:
             ALOGD(" Received Unsupported encoder formar");
             is_configured = false;
