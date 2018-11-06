@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -23,6 +23,8 @@
 #include "bundle.h"
 
 #define REVERB_DEFAULT_PRESET REVERB_PRESET_NONE
+
+#define REVERB_PARAM_LATENCY 0x80000000
 
 extern const effect_descriptor_t aux_env_reverb_descriptor;
 extern const effect_descriptor_t ins_env_reverb_descriptor;

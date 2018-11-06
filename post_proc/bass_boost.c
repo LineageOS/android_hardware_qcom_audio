@@ -32,6 +32,8 @@
 #include "effect_api.h"
 #include "bass_boost.h"
 
+#define BASSBOOST_MAX_LATENCY 30
+
 /* Offload bassboost UUID: 2c4a8c24-1581-487f-94f6-0002a5d5c51b */
 const effect_descriptor_t bassboost_descriptor = {
         {0x0634f220, 0xddd4, 0x11db, 0xa0fc, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b }},
@@ -101,6 +103,11 @@ int bass_get_parameter(effect_context_t *context, effect_param_t *p,
            p->status = -EINVAL;
         p->vsize = sizeof(int16_t);
         break;
+    case BASSBOOST_PARAM_LATENCY:
+        if (p->vsize < sizeof(uint32_t))
+           p->status = -EINVAL;
+        p->vsize = sizeof(uint32_t);
+        break;
     default:
         p->status = -EINVAL;
     }
@@ -125,6 +132,10 @@ int bass_get_parameter(effect_context_t *context, effect_param_t *p,
             *(int16_t *)value = bassboost_get_strength(&(bass_ctxt->bassboost_ctxt));
         else
             *(int16_t *)value = 0;
+        break;
+
+    case BASSBOOST_PARAM_LATENCY:
+        *(uint32_t *)value = BASSBOOST_MAX_LATENCY;
         break;
 
     default:
