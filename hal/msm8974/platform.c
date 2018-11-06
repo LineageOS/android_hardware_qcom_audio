@@ -3240,22 +3240,6 @@ int native_audio_set_params(struct platform_data *platform,
     return ret;
 }
 
-static bool check_snd_device_is_speaker(snd_device_t snd_device)
-{
-    bool ret = false;
-
-    if (snd_device == SND_DEVICE_OUT_SPEAKER ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_WSA ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_VBAT ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_RAS ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT_RAS) {
-        ret = true;
-    }
-    return ret;
-}
-
 int check_hdset_combo_device(snd_device_t snd_device)
 {
     int ret = false;
@@ -6436,12 +6420,7 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
         backend_cfg.bit_width = usecase->stream.out->bit_width;
         backend_cfg.sample_rate = usecase->stream.out->sample_rate;
         backend_cfg.format = usecase->stream.out->format;
-        if (!(hw_info_is_stereo_spkr(my_data->hw_info)) &&
-             check_snd_device_is_speaker(snd_device))
-            backend_cfg.channels = 1;
-        else
-            backend_cfg.channels =
-                audio_channel_count_from_out_mask(usecase->stream.out->channel_mask);
+        backend_cfg.channels = audio_channel_count_from_out_mask(usecase->stream.out->channel_mask);
     }
     if (audio_extn_is_dsp_bit_width_enforce_mode_supported(usecase->stream.out->flags) &&
                 (adev->dsp_bit_width_enforce_mode > backend_cfg.bit_width))
