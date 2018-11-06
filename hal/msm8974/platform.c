@@ -2485,8 +2485,6 @@ acdb_init_fail:
                 strdup("WSA_CDC_DMA_RX_0 Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
                 strdup("WSA_CDC_DMA_RX_0 SampleRate");
-            my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].channels_mixer_ctl =
-                strdup("WSA_CDC_DMA_RX_0 Channels");
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
                 strdup("TX_CDC_DMA_TX_3 Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
