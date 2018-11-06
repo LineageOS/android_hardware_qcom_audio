@@ -399,6 +399,15 @@ typedef enum {
     QAHW_PARAM_LICENSE_PARAMS,
 } qahw_param_id;
 
+
+typedef union {
+    struct qahw_out_render_window_param render_window_params;
+} qahw_loopback_param_payload;
+
+typedef enum {
+    QAHW_PARAM_LOOPBACK_RENDER_WINDOW /* PARAM to set render window */
+} qahw_loopback_param_id;
+
 __END_DECLS
 
 #endif  // QTI_AUDIO_HAL_DEFS_H

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -420,6 +420,19 @@ static int qahwi_open_output_stream(struct audio_hw_device *dev,
         ALOGD("%s: obuf %p, buff_size %zd",
               __func__, out->qahwi_out.obuf, buf_size);
     }
+    return ret;
+}
+
+int qahwi_loopback_set_param_data(audio_patch_handle_t handle,
+                                  audio_extn_loopback_param_id param_id,
+                                  void *payload) {
+    int ret = 0;
+
+    ret = audio_extn_hw_loopback_set_param_data(
+                                             handle,
+                                             param_id,
+                                             (audio_extn_loopback_param_payload *)payload);
+
     return ret;
 }
 
