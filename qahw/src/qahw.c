@@ -70,8 +70,8 @@ typedef int (*qahwi_out_get_param_data_t)(struct audio_stream_out *out,
                                       qahw_param_payload *payload);
 
 typedef int (*qahwi_loopback_set_param_data_t)(audio_patch_handle_t patch_handle,
-                                               qahw_param_id param_id,
-                                               qahw_param_payload *payload);
+                                               qahw_loopback_param_id param_id,
+                                               qahw_loopback_param_payload *payload);
 
 typedef struct {
     audio_hw_device_t *audio_device;
@@ -1460,7 +1460,7 @@ int qahw_loopback_set_param_data_l(qahw_module_handle_t *hw_module,
     if (qahw_module->qahwi_loopback_set_param_data) {
         ret = qahw_module->qahwi_loopback_set_param_data(handle,
                                                          param_id,
-                                                         (void *)payload);
+                                                         payload);
     } else {
         ret = -ENOSYS;
         ALOGE("%s not supported\n", __func__);

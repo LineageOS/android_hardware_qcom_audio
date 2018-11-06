@@ -425,13 +425,13 @@ static int qahwi_open_output_stream(struct audio_hw_device *dev,
 
 int qahwi_loopback_set_param_data(audio_patch_handle_t handle,
                                   audio_extn_loopback_param_id param_id,
-                                  void *payload) {
+                                  audio_extn_loopback_param_payload *payload) {
     int ret = 0;
 
     ret = audio_extn_hw_loopback_set_param_data(
                                              handle,
                                              param_id,
-                                             (audio_extn_loopback_param_payload *)payload);
+                                             payload);
 
     return ret;
 }
