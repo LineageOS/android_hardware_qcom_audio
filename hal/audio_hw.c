@@ -1072,7 +1072,13 @@ int enable_snd_device(struct audio_device *adev,
 
        if ((SND_DEVICE_OUT_BT_A2DP == snd_device) &&
            (audio_extn_a2dp_start_playback() < 0)) {
-           ALOGE(" fail to configure A2dp control path ");
+           ALOGE(" fail to configure A2dp Source control path ");
+           return -EINVAL;
+       }
+
+       if ((SND_DEVICE_IN_BT_A2DP == snd_device) &&
+           (audio_extn_a2dp_start_capture() < 0)) {
+           ALOGE(" fail to configure A2dp Sink control path ");
            return -EINVAL;
        }
 
@@ -1159,6 +1165,9 @@ int disable_snd_device(struct audio_device *adev,
 
         if (SND_DEVICE_OUT_BT_A2DP == snd_device)
             audio_extn_a2dp_stop_playback();
+
+        if (SND_DEVICE_IN_BT_A2DP == snd_device)
+            audio_extn_a2dp_stop_capture();
 
         if (snd_device == SND_DEVICE_OUT_HDMI || snd_device == SND_DEVICE_OUT_DISPLAY_PORT)
             adev->is_channel_status_set = false;
@@ -1961,12 +1970,12 @@ static bool force_device_switch(struct audio_usecase *usecase)
         audio_extn_a2dp_is_force_device_switch()) {
          ALOGD("Force a2dp device switch to update new encoder config");
          ret = true;
-     }
+    }
 
-     if (usecase->stream.out->stream_config_changed) {
+    if (usecase->stream.out->stream_config_changed) {
          ALOGD("Force stream_config_changed to update iec61937 transmission config");
          return true;
-     }
+    }
     return ret;
 }
 
@@ -2173,7 +2182,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     }
 
     if ((is_btsco_device(out_snd_device,in_snd_device) && !adev->bt_sco_on) ||
-         (is_a2dp_device(out_snd_device) && !audio_extn_a2dp_is_ready())) {
+         (is_a2dp_device(out_snd_device) && !audio_extn_a2dp_source_is_ready())) {
           ALOGD("SCO/A2DP is selected but they are not connected/ready hence dont route");
           return 0;
     }
@@ -2207,7 +2216,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     }
 
     if ((out_snd_device == SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP) &&
-        (!audio_extn_a2dp_is_ready())) {
+        (!audio_extn_a2dp_source_is_ready())) {
         ALOGW("%s: A2DP profile is not ready, routing to speaker only", __func__);
         out_snd_device = SND_DEVICE_OUT_SPEAKER;
     }
@@ -2980,7 +2989,7 @@ int start_output_stream(struct stream_out *out)
     }
 
     if (out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
-        if (!audio_extn_a2dp_is_ready()) {
+        if (!audio_extn_a2dp_source_is_ready()) {
             if (out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
                 a2dp_combo = true;
             } else {
@@ -3042,7 +3051,7 @@ int start_output_stream(struct stream_out *out)
     }
 
     if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
-        (!audio_extn_a2dp_is_ready())) {
+        (!audio_extn_a2dp_source_is_ready())) {
         if (!a2dp_combo) {
             check_a2dp_restore_l(adev, out, false);
         } else {
@@ -3717,13 +3726,13 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         /*
          * When A2DP is disconnected the
          * music playback is paused and the policy manager sends routing=0
-         * But the audioflingercontinues to write data until standby time
+         * But the audioflinger continues to write data until standby time
          * (3sec). As BT is turned off, the write gets blocked.
          * Avoid this by routing audio to speaker until standby.
          */
         if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
                 (val == AUDIO_DEVICE_NONE) &&
-                !audio_extn_a2dp_is_ready()) {
+                !audio_extn_a2dp_source_is_ready()) {
                 val = AUDIO_DEVICE_OUT_SPEAKER;
         }
         /*
@@ -3742,7 +3751,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
          * check with BT lib about a2dp streaming support before routing
          */
         if (val & AUDIO_DEVICE_OUT_ALL_A2DP) {
-            if (!audio_extn_a2dp_is_ready()) {
+            if (!audio_extn_a2dp_source_is_ready()) {
                 if (val & AUDIO_DEVICE_OUT_SPEAKER) {
                     //combo usecase just by pass a2dp
                     ALOGW("%s: A2DP profile is not ready,routing to speaker only", __func__);
@@ -3837,7 +3846,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 }
                 if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
                     out->a2dp_compress_mute &&
-                    (!(out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) || audio_extn_a2dp_is_ready())) {
+                    (!(out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) || audio_extn_a2dp_source_is_ready())) {
                     pthread_mutex_lock(&out->compr_mute_lock);
                     out->a2dp_compress_mute = false;
                     out_set_compr_volume(&out->stream, out->volume_l, out->volume_r);
@@ -4452,7 +4461,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     }
 
     if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
-        (audio_extn_a2dp_is_suspended())) {
+        (audio_extn_a2dp_source_is_suspended())) {
         if (!(out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
             if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
                 ret = -EIO;

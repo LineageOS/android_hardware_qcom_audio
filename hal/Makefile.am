@@ -187,6 +187,7 @@ endif
 
 if AUDIO_HW_LOOPBACK
 AM_CFLAGS += -DAUDIO_HW_LOOPBACK_ENABLED
+AM_CFLAGS += -DCOMPRESS_METADATA_NEEDED
 c_sources += audio_extn/hw_loopback.c
 endif
 
