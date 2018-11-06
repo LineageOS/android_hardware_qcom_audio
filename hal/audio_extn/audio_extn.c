@@ -884,6 +884,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
        adev->offload_effects_set_parameters(parms);
    audio_extn_set_aptx_dec_bt_addr(adev, parms);
    audio_extn_ffv_set_parameters(adev, parms);
+   audio_extn_ext_hw_plugin_set_parameters(adev->ext_hw_plugin, parms);
 }
 
 void audio_extn_get_parameters(const struct audio_device *adev,
@@ -902,6 +903,7 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     audio_extn_sound_trigger_get_parameters(adev, query, reply);
     if (adev->offload_effects_get_parameters != NULL)
         adev->offload_effects_get_parameters(query, reply);
+    audio_extn_ext_hw_plugin_get_parameters(adev->ext_hw_plugin, query, reply);
 
     kv_pairs = str_parms_to_str(reply);
     ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);

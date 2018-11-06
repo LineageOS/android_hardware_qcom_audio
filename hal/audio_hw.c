@@ -2422,6 +2422,11 @@ static int stop_input_stream(struct stream_in *in)
         return -EINVAL;
     }
 
+    if (uc_info->in_snd_device != SND_DEVICE_NONE) {
+        if (audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to stop ext hw plugin", __func__);
+    }
+
     /* Close in-call recording streams */
     voice_check_and_stop_incall_rec_usecase(adev, in);
 
@@ -2516,6 +2521,11 @@ int start_input_stream(struct stream_in *in)
                                  adev->perf_lock_opts,
                                  adev->perf_lock_opts_size);
     select_devices(adev, in->usecase);
+
+    if (uc_info->in_snd_device != SND_DEVICE_NONE) {
+        if (audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to start ext hw plugin", __func__);
+    }
 
     if (audio_extn_cin_attached_usecase(in->usecase)) {
        ret = audio_extn_cin_start_input_stream(in);
@@ -2937,6 +2947,11 @@ static int stop_output_stream(struct stream_out *out)
         return -EINVAL;
     }
 
+    if (uc_info->out_snd_device != SND_DEVICE_NONE) {
+        if (audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to stop ext hw plugin", __func__);
+    }
+
     if (is_offload_usecase(out->usecase) &&
         !(audio_extn_passthru_is_passthrough_stream(out))) {
         if (adev->visualizer_stop_output != NULL)
@@ -3124,6 +3139,11 @@ int start_output_stream(struct stream_out *out)
     if (out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
                 out->usecase == USECASE_INCALL_MUSIC_UPLINK2)
         voice_set_device_mute_flag(adev, true);
+
+    if (uc_info->out_snd_device != SND_DEVICE_NONE) {
+        if (audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to start ext hw plugin", __func__);
+    }
 
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d) format(%#x)",
           __func__, adev->snd_card, out->pcm_device_id, out->config.format);
@@ -6953,6 +6973,8 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
     pthread_mutex_lock(&adev->lock);
     ALOGD("%s state %d\n", __func__, state);
     ret = voice_set_mic_mute((struct audio_device *)dev, state);
+    if (adev->ext_hw_plugin)
+        ret = audio_extn_ext_hw_plugin_set_mic_mute(adev->ext_hw_plugin, state);
     pthread_mutex_unlock(&adev->lock);
 
     return ret;
@@ -7486,6 +7508,8 @@ static int adev_close(hw_device_t *device)
             free(adev->device_cfg_params);
             adev->device_cfg_params = NULL;
         }
+        if(adev->ext_hw_plugin)
+            audio_extn_ext_hw_plugin_deinit(adev->ext_hw_plugin);
         free(device);
         adev = NULL;
     }
@@ -7738,6 +7762,8 @@ static int adev_open(const hw_module_t *module, const char *name,
         adev->device.open_output_stream = audio_extn_qaf_open_output_stream;
         adev->device.close_output_stream = audio_extn_qaf_close_output_stream;
     }
+
+    adev->ext_hw_plugin = audio_extn_ext_hw_plugin_init(adev);
 
     if (access(VISUALIZER_LIBRARY_PATH, R_OK) == 0) {
         adev->visualizer_lib = dlopen(VISUALIZER_LIBRARY_PATH, RTLD_NOW);
