@@ -69,8 +69,8 @@ AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := false
 AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := false
 ##AUDIO_FEATURE_FLAGS
 
+AUDIO_FEATURE_ENABLED_AUTO_HAL := true
 AUDIO_FEATURE_ENABLED_EXT_HW_PLUGIN := true
-AUDIO_FEATURE_ENABLED_BUS_ADDRESS := true
 AUDIO_FEATURE_ENABLED_AUDIO_CONTROL_HAL := true
 ##AUTOMOTIVE_AUDIO_FEATURE_FLAGS
 
@@ -109,6 +109,10 @@ PRODUCT_COPY_FILES += \
 # Listen configuration file
 PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/listen_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/listen_platform_info.xml
+
+#Audio HAL version
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.hal.maj.version=3
 
 # Reduce client buffer size for fast audio output tracks
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -273,3 +277,8 @@ PRODUCT_PACKAGES += \
     android.hardware.audio@4.0-impl \
     android.hardware.audio.effect@4.0 \
     android.hardware.audio.effect@4.0-impl
+
+# for HIDL related audiocontrol packages
+PRODUCT_PACKAGES += \
+    vendor.qti.hardware.automotive.audiocontrol@1.0-service \
+    android.hardware.automotive.audiocontrol@1.0
