@@ -80,7 +80,7 @@
 #endif
 
 #include <linux/msm_audio.h>
-#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE)
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_TRINKET)
 #include <sound/devdep_params.h>
 #endif
 
@@ -945,6 +945,7 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_AFE_PROXY)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_SILENCE)},
     {TO_NAME_INDEX(USECASE_INCALL_MUSIC_UPLINK)},
+    {TO_NAME_INDEX(USECASE_INCALL_MUSIC_UPLINK2)},
     {TO_NAME_INDEX(USECASE_AUDIO_A2DP_ABR_FEEDBACK)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_VOIP)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_VOIP)},
@@ -1089,7 +1090,9 @@ static void update_codec_type_and_interface(struct platform_data * my_data, cons
          !strncmp(snd_card_name, "sm6150-idp-snd-card",
                    sizeof("sm6150-idp-snd-card")) ||
          !strncmp(snd_card_name, "sm6150-wcd9375-snd-card",
-                   sizeof("sm6150-wcd9375-snd-card"))   ) {
+                   sizeof("sm6150-wcd9375-snd-card")) ||
+         !strncmp(snd_card_name, "sm6150-wcd9375qrd-snd-card",
+                   sizeof("sm6150-wcd9375qrd-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -2252,6 +2255,9 @@ void *platform_init(struct audio_device *adev)
     else if (!strncmp(snd_card_name, "sm6150-qrd-snd-card",
                sizeof("sm6150-qrd-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "sm6150-wcd9375qrd-snd-card",
+               sizeof("sm6150-wcd9375qrd-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
     else if (my_data->is_internal_codec)
         platform_info_init(PLATFORM_INFO_XML_PATH_INTCODEC, my_data, PLATFORM);
     else
@@ -2555,6 +2561,26 @@ acdb_init_fail:
     my_data->current_backend_cfg[HDMI_TX_BACKEND].channels_mixer_ctl =
         strdup("QUAT_MI2S_TX Channels");
 
+    my_data->current_backend_cfg[HDMI_RX_BACKEND].bitwidth_mixer_ctl =
+        strdup("HDMI_RX Bit Format");
+    my_data->current_backend_cfg[HDMI_RX_BACKEND].samplerate_mixer_ctl =
+        strdup("HDMI_RX SampleRate");
+    my_data->current_backend_cfg[HDMI_RX_BACKEND].channels_mixer_ctl =
+        strdup("HDMI_RX Channels");
+    my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].bitwidth_mixer_ctl =
+        strdup("Display Port RX Bit Format");
+    my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].samplerate_mixer_ctl =
+        strdup("Display Port RX SampleRate");
+    my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].channels_mixer_ctl =
+        strdup("Display Port RX Channels");
+
+    my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].bitwidth_mixer_ctl =
+        strdup("USB_AUDIO_RX Format");
+    my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].samplerate_mixer_ctl =
+        strdup("USB_AUDIO_RX SampleRate");
+    my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].channels_mixer_ctl =
+        strdup("USB_AUDIO_RX Channels");
+
     for (idx = 0; idx < MAX_CODEC_BACKENDS; idx++) {
         if (my_data->current_backend_cfg[idx].bitwidth_mixer_ctl) {
             ctl = mixer_get_ctl_by_name(adev->mixer,
@@ -2613,26 +2639,6 @@ acdb_init_fail:
             platform_set_native_support(NATIVE_AUDIO_MODE_MULTIPLE_44_1);
         }
     }
-
-    my_data->current_backend_cfg[HDMI_RX_BACKEND].bitwidth_mixer_ctl =
-        strdup("HDMI_RX Bit Format");
-    my_data->current_backend_cfg[HDMI_RX_BACKEND].samplerate_mixer_ctl =
-        strdup("HDMI_RX SampleRate");
-    my_data->current_backend_cfg[HDMI_RX_BACKEND].channels_mixer_ctl =
-        strdup("HDMI_RX Channels");
-    my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].bitwidth_mixer_ctl =
-        strdup("Display Port RX Bit Format");
-    my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].samplerate_mixer_ctl =
-        strdup("Display Port RX SampleRate");
-    my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].channels_mixer_ctl =
-        strdup("Display Port RX Channels");
-
-    my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].bitwidth_mixer_ctl =
-        strdup("USB_AUDIO_RX Format");
-    my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].samplerate_mixer_ctl =
-        strdup("USB_AUDIO_RX SampleRate");
-    my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].channels_mixer_ctl =
-        strdup("USB_AUDIO_RX Channels");
 
     if (property_get_bool("vendor.audio.apptype.multirec.enabled", false))
         my_data->use_generic_handset = true;
@@ -3246,7 +3252,12 @@ static bool check_snd_device_is_speaker(snd_device_t snd_device)
         snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED ||
         snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT ||
         snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_RAS ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT_RAS) {
+        snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT_RAS ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_WSA ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED ||
+        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT ) {
         ret = true;
     }
     return ret;
@@ -6236,6 +6247,9 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         }
     }
 
+    if (!(hw_info_is_stereo_spkr(my_data->hw_info)) && check_snd_device_is_speaker(snd_device))
+        channels = 1;
+
     /* Native playback is preferred for Headphone/HS device over 192Khz */
     if (!voice_call_active && codec_device_supports_native_playback(usecase->devices)) {
         if (audio_is_true_native_stream_active(adev)) {
@@ -6375,6 +6389,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     // Force routing if the expected bitwdith or samplerate
     // is not same as current backend comfiguration
     if ((bit_width != my_data->current_backend_cfg[backend_idx].bit_width) ||
+        (channels != my_data->current_backend_cfg[backend_idx].channels) ||
         (sample_rate != my_data->current_backend_cfg[backend_idx].sample_rate) ||
          passthrough_enabled || channels_updated || service_interval_update ) {
         backend_cfg->bit_width = bit_width;
@@ -6432,12 +6447,7 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
         backend_cfg.bit_width = usecase->stream.out->bit_width;
         backend_cfg.sample_rate = usecase->stream.out->sample_rate;
         backend_cfg.format = usecase->stream.out->format;
-        if (!(hw_info_is_stereo_spkr(my_data->hw_info)) &&
-             check_snd_device_is_speaker(snd_device))
-            backend_cfg.channels = 1;
-        else
-            backend_cfg.channels =
-                audio_channel_count_from_out_mask(usecase->stream.out->channel_mask);
+        backend_cfg.channels = audio_channel_count_from_out_mask(usecase->stream.out->channel_mask);
     }
     if (audio_extn_is_dsp_bit_width_enforce_mode_supported(usecase->stream.out->flags) &&
                 (adev->dsp_bit_width_enforce_mode > backend_cfg.bit_width))
@@ -8119,7 +8129,7 @@ int platform_get_supported_copp_sampling_rate(uint32_t stream_sr)
     return sample_rate;
 }
 
-#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE)
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_TRINKET)
 int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
                               uint32_t *size)
 {
