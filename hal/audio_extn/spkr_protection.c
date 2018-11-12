@@ -1001,6 +1001,7 @@ static void* spkr_calibration_thread()
     struct audio_device *adev = handle.adev_handle;
     unsigned long min_idle_time = MIN_SPKR_IDLE_SEC;
     char value[PROPERTY_VALUE_MAX];
+    char afe_version_value[PROPERTY_VALUE_MAX];
     char wsa_path[MAX_PATH] = {0};
     int spk_1_tzn, spk_2_tzn;
     char buf[32] = {0};
@@ -1041,7 +1042,10 @@ static void* spkr_calibration_thread()
     }
 
     spv3_enable = property_get_bool("persist.vendor.audio.spv3.enable", false);
-    afe_api_version = property_get_int32("persist.vendor.audio.avs.afe_api_version", 0);
+    property_get("persist.vendor.audio.avs.afe_api_version", afe_version_value,
+                 "0");
+    if (atoi(afe_version_value) > 0)
+        afe_api_version = atoi(afe_version_value);
 
     fp = fopen(CALIB_FILE,"rb");
     if (fp) {
