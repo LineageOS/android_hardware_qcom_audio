@@ -214,28 +214,22 @@ struct aac_enc_cfg_t {
     uint32_t      sample_rate;
 } __attribute__ ((packed));
 
-/* Information about BT AAC decoder configuration
- * This data is used between audio HAL module and
- * BT IPC library to configure DSP decoder
- */
-typedef struct {
+typedef struct audio_aac_decoder_config_t audio_aac_decoder_config_t;
+struct audio_aac_decoder_config_t {
     uint16_t      aac_fmt_flag; /* LATM*/
     uint16_t      audio_object_type; /* LC */
     uint16_t      channels; /* Stereo */
     uint16_t      total_size_of_pce_bits; /* 0 - only for channel conf PCE */
     uint32_t      sampling_rate; /* 8k, 11.025k, 12k, 16k, 22.05k, 24k, 32k,
                                   44.1k, 48k, 64k, 88.2k, 96k */
-} audio_aac_decoder_config_t;
+} __attribute__ ((packed));
 
-/* Information about BT SBC decoder configuration
- * This data is used between audio HAL module and
- * BT IPC library to configure DSP decoder
- */
-typedef struct {
+typedef struct audio_sbc_decoder_config_t audio_sbc_decoder_config_t;
+struct audio_sbc_decoder_config_t {
     uint16_t      channels; /* Mono, Stereo */
     uint32_t      sampling_rate; /* 8k, 11.025k, 12k, 16k, 22.05k, 24k, 32k,
                                   44.1k, 48k, 64k, 88.2k, 96k */
-} audio_sbc_decoder_config_t;
+} __attribute__ ((packed));
 
 /* AAC decoder configuration structure. */
 typedef struct aac_dec_cfg_t aac_dec_cfg_t;
@@ -414,6 +408,29 @@ typedef struct {
     uint16_t channel_mode; /* 0, 4, 2, 1*/
     uint16_t mtu; /*679*/
 } audio_ldac_encoder_config;
+
+/* Information about BT AAC decoder configuration
+ * This data is used between audio HAL module and
+ * BT IPC library to configure DSP decoder
+ */
+typedef struct {
+    uint16_t      aac_fmt_flag; /* LATM*/
+    uint16_t      audio_object_type; /* LC */
+    uint16_t      channels; /* Stereo */
+    uint16_t      total_size_of_pce_bits; /* 0 - only for channel conf PCE */
+    uint32_t      sampling_rate; /* 8k, 11.025k, 12k, 16k, 22.05k, 24k, 32k,
+                                  44.1k, 48k, 64k, 88.2k, 96k */
+} audio_aac_dec_config_t;
+
+/* Information about BT SBC decoder configuration
+ * This data is used between audio HAL module and
+ * BT IPC library to configure DSP decoder
+ */
+typedef struct {
+    uint16_t      channels; /* Mono, Stereo */
+    uint32_t      sampling_rate; /* 8k, 11.025k, 12k, 16k, 22.05k, 24k, 32k,
+                                  44.1k, 48k, 64k, 88.2k, 96k */
+}audio_sbc_dec_config_t;
 
 /*********** END of DSP configurable structures ********************/
 
@@ -647,6 +664,7 @@ static bool a2dp_set_backend_cfg(uint8_t direction)
     //For LDAC encoder and AAC decoder open slimbus port at
     //96Khz for 48Khz input and 88.2Khz for 44.1Khz input.
     if (((a2dp.bt_encoder_format == CODEC_TYPE_LDAC) ||
+         (a2dp.bt_decoder_format == CODEC_TYPE_SBC) ||
          (a2dp.bt_decoder_format == AUDIO_FORMAT_AAC)) &&
         (sampling_rate == 48000 || sampling_rate == 44100 )) {
         sampling_rate = sampling_rate *2;
@@ -735,7 +753,7 @@ fail:
     return is_configured;
 }
 
-bool configure_aac_dec_format(audio_aac_decoder_config_t *aac_bt_cfg)
+bool configure_aac_dec_format(audio_aac_dec_config_t *aac_bt_cfg)
 {
     struct mixer_ctl *ctl_dec_data = NULL, *ctrl_bit_format = NULL;
     struct aac_dec_cfg_t aac_dsp_cfg;
@@ -802,7 +820,7 @@ fail:
     return is_configured;
 }
 
-bool configure_sbc_dec_format(audio_sbc_decoder_config_t *sbc_bt_cfg)
+bool configure_sbc_dec_format(audio_sbc_dec_config_t *sbc_bt_cfg)
 {
     struct mixer_ctl *ctl_dec_data = NULL, *ctrl_bit_format = NULL;
     struct sbc_dec_cfg_t sbc_dsp_cfg;
@@ -825,6 +843,7 @@ bool configure_sbc_dec_format(audio_sbc_decoder_config_t *sbc_bt_cfg)
     sbc_dsp_cfg.data.sampling_rate = sbc_bt_cfg->sampling_rate;
     ret = mixer_ctl_set_array(ctl_dec_data, (void *)&sbc_dsp_cfg,
                               sizeof(struct sbc_dec_cfg_t));
+
     if (ret != 0) {
         ALOGE("%s: failed to set SBC decoder config", __func__);
         is_configured = false;
@@ -923,12 +942,12 @@ static bool configure_a2dp_dsp_decoder_format()
     switch(codec_type) {
         case CODEC_TYPE_SBC:
             ALOGD(" SBC decoder supported BT device");
-            is_configured = configure_sbc_dec_format((audio_sbc_decoder_config_t *)codec_info);
+            is_configured = configure_sbc_dec_format((audio_sbc_dec_config_t *)codec_info);
             break;
         case CODEC_TYPE_AAC:
             ALOGD(" AAC decoder supported BT device");
             is_configured =
-              configure_aac_dec_format((audio_aac_decoder_config_t *)codec_info);
+              configure_aac_dec_format((audio_aac_dec_config_t *)codec_info);
             break;
         default:
             ALOGD(" Received Unsupported decoder format");
