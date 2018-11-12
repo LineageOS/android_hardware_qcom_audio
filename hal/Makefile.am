@@ -209,6 +209,10 @@ if INSTANCE_ID
 AM_CFLAGS += -DINSTANCE_ID_ENABLED
 endif
 
+if LL_AS_PRIMARY_OUTPUT
+AM_CFLAGS += -DUSE_LL_AS_PRIMARY_OUTPUT
+endif
+
 h_sources = audio_extn/audio_defs.h \
             audio_extn/audio_extn.h \
             audio_hw.h \
