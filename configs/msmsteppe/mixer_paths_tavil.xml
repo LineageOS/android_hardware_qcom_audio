@@ -2127,8 +2127,13 @@
         <path name="headphones" />
     </path>
 
+    <path name="headset-mic-default">
+        <path name="amic2" />
+    </path>
+
     <path name="headset-mic">
         <path name="amic2" />
+        <ctl name="DEC0 volume" value="84" />
     </path>
 
     <path name="headset-mic-liquid">
@@ -2200,7 +2205,7 @@
     </path>
 
     <path name="voice-headset-mic">
-        <path name="headset-mic" />
+        <path name="headset-mic-default" />
     </path>
 
     <path name="speaker-and-headphones">
@@ -2690,7 +2695,7 @@
     </path>
 
     <path name="unprocessed-headset-mic">
-        <path name="headset-mic" />
+        <path name="headset-mic-default" />
     </path>
 
     <!-- USB TTY start -->
