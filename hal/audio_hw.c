@@ -1373,6 +1373,10 @@ int select_devices(struct audio_device *adev,
             out_snd_device = SND_DEVICE_OUT_SPEAKER;
     }
 
+    if (usecase->id == USECASE_INCALL_MUSIC_UPLINK) {
+        out_snd_device = SND_DEVICE_OUT_VOICE_MUSIC_TX;
+    }
+
     if (out_snd_device != SND_DEVICE_NONE &&
             out_snd_device != adev->last_logged_snd_device[uc_id][0]) {
         ALOGD("%s: changing use case %s output device from(%d: %s, acdb %d) to (%d: %s, acdb %d)",
@@ -1954,6 +1958,8 @@ static int stop_output_stream(struct stream_out *out)
     int i, ret = 0;
     struct audio_usecase *uc_info;
     struct audio_device *adev = out->dev;
+    bool has_voip_usecase =
+        get_usecase_from_list(adev, USECASE_AUDIO_PLAYBACK_VOIP) != NULL;
 
     ALOGV("%s: enter: usecase(%d: %s)", __func__,
           out->usecase, use_case_table[out->usecase]);
@@ -1987,15 +1993,7 @@ static int stop_output_stream(struct stream_out *out)
     /* Must be called after removing the usecase from list */
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
         check_and_set_hdmi_channels(adev, DEFAULT_HDMI_OUT_CHANNELS);
-    else if (out->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) {
-        struct listnode *node;
-        struct audio_usecase *usecase;
-        list_for_each(node, &adev->usecase_list) {
-            usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase->devices & AUDIO_DEVICE_OUT_SPEAKER)
-                select_devices(adev, usecase->id);
-        }
-    } else if (audio_is_usb_out_device(out->devices & AUDIO_DEVICE_OUT_ALL_USB)) {
+    else if (audio_is_usb_out_device(out->devices & AUDIO_DEVICE_OUT_ALL_USB)) {
         ret = check_and_set_usb_service_interval(adev, uc_info, false /*min*/);
         if (ret == 0) {
             /* default service interval was successfully updated,
@@ -2003,6 +2001,22 @@ static int stop_output_stream(struct stream_out *out)
             check_and_route_playback_usecases(adev, uc_info, uc_info->out_snd_device);
         }
         ret = 0;
+    }
+
+    if (has_voip_usecase ||
+            out->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) {
+        struct listnode *node;
+        struct audio_usecase *usecase;
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (usecase->type == PCM_CAPTURE || usecase == uc_info)
+                continue;
+
+            ALOGD("%s: select_devices at usecase(%d: %s) after removing the usecase(%d: %s)",
+                __func__, usecase->id, use_case_table[usecase->id],
+                out->usecase, use_case_table[out->usecase]);
+            select_devices(adev, usecase->id);
+        }
     }
 
     free(uc_info);
@@ -2105,8 +2119,13 @@ int start_output_stream(struct stream_out *out)
         if (out->offload_callback)
             compress_nonblock(out->compr, out->non_blocking);
 
-        if (adev->visualizer_start_output != NULL)
-            adev->visualizer_start_output(out->handle, out->pcm_device_id);
+        if (adev->visualizer_start_output != NULL) {
+            int capture_device_id =
+                platform_get_pcm_device_id(USECASE_AUDIO_RECORD_AFE_PROXY,
+                                           PCM_CAPTURE);
+            adev->visualizer_start_output(out->handle, out->pcm_device_id,
+                                          adev->snd_card, capture_device_id);
+        }
         if (adev->offload_effects_start_output != NULL)
             adev->offload_effects_start_output(out->handle, out->pcm_device_id);
     } else if (out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
@@ -5608,7 +5627,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     } else {
         ALOGV("%s: DLOPEN successful for %s", __func__, VISUALIZER_LIBRARY_PATH);
         adev->visualizer_start_output =
-                    (int (*)(audio_io_handle_t, int))dlsym(adev->visualizer_lib,
+                    (int (*)(audio_io_handle_t, int, int, int))dlsym(adev->visualizer_lib,
                                                     "visualizer_hal_start_output");
         adev->visualizer_stop_output =
                     (int (*)(audio_io_handle_t, int))dlsym(adev->visualizer_lib,

@@ -345,6 +345,8 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
     int sample_rate;
     int app_type;
     int acdb_dev_id;
+    int new_snd_device[2] = {0};
+    int i = 0, num_devices = 1;
     size_t app_type_cfg[MAX_LENGTH_MIXER_CONTROL_IN_INT] = {0};
     char mixer_ctl_name[MAX_LENGTH_MIXER_CONTROL_IN_INT] = {0};
     int pcm_device_id;
@@ -379,18 +381,33 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
         return -1;
     }
 
-    acdb_dev_id = derive_acdb_dev_id(adev, usecase);
-    if (acdb_dev_id <= 0) {
-        ALOGE("%s: Couldn't get the acdb dev id", __func__);
-        return -1;
-    }
+    if (usecase->type == PCM_PLAYBACK) {
+        if (platform_can_split_snd_device(usecase->out_snd_device,
+                                          &num_devices, new_snd_device) < 0)
+            new_snd_device[0] = usecase->out_snd_device;
+
+    } else if (usecase->type == PCM_CAPTURE)
+        new_snd_device[0] = usecase->in_snd_device;
 
     pcm_device_id = platform_get_pcm_device_id(usecase->id, usecase->type);
-    set_stream_app_type_mixer_ctrl(adev, pcm_device_id, app_type, acdb_dev_id,
-                                   sample_rate,
-                                   usecase->type,
-                                   usecase->type == PCM_PLAYBACK ? usecase->out_snd_device :
-                                                                   usecase->in_snd_device);
+
+    for (i = 0; i < num_devices; i++) {
+        acdb_dev_id = platform_get_snd_device_acdb_id(new_snd_device[i]);
+
+        if (acdb_dev_id < 0) {
+            ALOGE("%s: Could not find acdb id for device(%d)",
+                  __func__, new_snd_device[i]);
+            return -EINVAL;
+        }
+        ALOGV("%s: sending app type for snd_device(%d) acdb_id(%d) i %d",
+              __func__, new_snd_device[i], acdb_dev_id, i);
+
+        set_stream_app_type_mixer_ctrl(adev, pcm_device_id, app_type, acdb_dev_id,
+                                       sample_rate,
+                                       usecase->type,
+                                       new_snd_device[i]);
+    }
+
     return 0;
 }
 
