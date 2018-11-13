@@ -1064,22 +1064,22 @@ static int __unused audio_extn_hw_loopback_create_audio_patch(struct audio_hw_de
                                      const struct audio_port_config *sinks __unused,
                                      audio_patch_handle_t *handle __unused)
 {
-    return -ENOSYS;
+    return 0;
 }
 static int __unused audio_extn_hw_loopback_release_audio_patch(struct audio_hw_device *dev __unused,
                                              audio_patch_handle_t handle __unused)
 {
-    return -ENOSYS;
+    return 0;
 }
 static int __unused audio_extn_hw_loopback_set_audio_port_config(struct audio_hw_device *dev __unused,
                                     const struct audio_port_config *config __unused)
 {
-    return -ENOSYS;
+    return 0;
 }
 static int __unused audio_extn_hw_loopback_get_audio_port(struct audio_hw_device *dev __unused,
                                     struct audio_port *port_in __unused)
 {
-    return -ENOSYS;
+    return 0;
 }
 static int __unused audio_extn_hw_loopback_set_param_data(audio_patch_handle_t handle __unused,
                                                audio_extn_loopback_param_id param_id __unused,
@@ -1151,11 +1151,22 @@ int audio_extn_utils_get_license_params(const struct audio_device *adev,  struct
 #define audio_extn_auto_hal_deinit()                  (0)
 #define audio_extn_auto_hal_enable_hostless()         (0)
 #define audio_extn_auto_hal_disable_hostless()        (0)
+#define audio_extn_auto_hal_create_audio_patch(dev, num_sources,\
+    sources, num_sinks, sinks, handle) (0)
+#define audio_extn_auto_hal_release_audio_patch(dev, handle) (0)
 #else
 int32_t audio_extn_auto_hal_init(struct audio_device *adev);
 void audio_extn_auto_hal_deinit(void);
 int32_t audio_extn_auto_hal_enable_hostless(void);
 void audio_extn_auto_hal_disable_hostless(void);
+int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
+                                unsigned int num_sources,
+                                const struct audio_port_config *sources,
+                                unsigned int num_sinks,
+                                const struct audio_port_config *sinks,
+                                audio_patch_handle_t *handle);
+int audio_extn_auto_hal_release_audio_patch(struct audio_hw_device *dev,
+                                audio_patch_handle_t handle);
 #endif
 
 #ifndef EXT_HW_PLUGIN_ENABLED
