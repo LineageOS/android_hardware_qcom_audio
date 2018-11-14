@@ -43,6 +43,18 @@ enum effect_id
     NUM_ID
 };
 
+#ifdef AUDIO_FEATURE_ENABLED_GCOV
+extern void  __gcov_flush();
+static void enable_gcov()
+{
+    __gcov_flush();
+}
+#else
+static void enable_gcov()
+{
+}
+#endif
+
 // Session state
 enum session_state {
     SESSION_STATE_INIT,        // initialized
@@ -711,6 +723,7 @@ static int lib_create(const effect_uuid_t *uuid,
         list_remove(&session->node);
         free(session);
     }
+    enable_gcov();
     return status;
 }
 
@@ -732,7 +745,7 @@ static int lib_release(effect_handle_t interface)
             return 0;
         }
     }
-
+    enable_gcov();
     return -EINVAL;
 }
 

@@ -40,6 +40,12 @@ LOCAL_SRC_FILES         := src/aenc_svr.c
 LOCAL_SRC_FILES         += src/omx_g711_aenc.cpp
 LOCAL_SRC_FILES         += src/omx_log.cpp
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GCOV)),true)
+LOCAL_CFLAGS += --coverage -fprofile-arcs -ftest-coverage
+LOCAL_CPPFLAGS += --coverage -fprofile-arcs -ftest-coverage
+LOCAL_STATIC_LIBRARIES += libprofile_rt
+endif
+
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr

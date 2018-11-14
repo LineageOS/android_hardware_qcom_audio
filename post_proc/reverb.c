@@ -32,6 +32,18 @@
 
 #define REVERB_MAX_LATENCY 100
 
+#ifdef AUDIO_FEATURE_ENABLED_GCOV
+extern void  __gcov_flush();
+static void enable_gcov()
+{
+    __gcov_flush();
+}
+#else
+static void enable_gcov()
+{
+}
+#endif
+
 /* Offload auxiliary environmental reverb UUID: 79a18026-18fd-4185-8233-0002a5d5c51b */
 const effect_descriptor_t aux_env_reverb_descriptor = {
         { 0xc2e5d5f0, 0x94bd, 0x4763, 0x9cac, { 0x4e, 0x23, 0x4d, 0x06, 0x83, 0x9e } },
@@ -728,7 +740,7 @@ int reverb_init(effect_context_t *context)
     if (reverb_ctxt->preset &&
         reverb_ctxt->next_preset != reverb_ctxt->cur_preset)
         reverb_load_preset(reverb_ctxt);
-
+    enable_gcov();
     return 0;
 }
 
@@ -750,6 +762,7 @@ int reverb_enable(effect_context_t *context)
 
     if (!offload_reverb_get_enable_flag(&(reverb_ctxt->offload_reverb)))
         offload_reverb_set_enable_flag(&(reverb_ctxt->offload_reverb), true);
+    enable_gcov();
     return 0;
 }
 
@@ -770,6 +783,7 @@ int reverb_disable(effect_context_t *context)
                                       &reverb_ctxt->offload_reverb,
                                       OFFLOAD_SEND_REVERB_ENABLE_FLAG);
     }
+    enable_gcov();
     return 0;
 }
 
@@ -792,7 +806,7 @@ int reverb_start(effect_context_t *context, output_context_t *output)
                                       OFFLOAD_SEND_REVERB_PRESET);
         }
     }
-
+    enable_gcov();
     return 0;
 }
 
@@ -809,6 +823,7 @@ int reverb_stop(effect_context_t *context, output_context_t *output __unused)
                                    OFFLOAD_SEND_REVERB_ENABLE_FLAG);
     }
     reverb_ctxt->ctl = NULL;
+    enable_gcov();
     return 0;
 }
 
