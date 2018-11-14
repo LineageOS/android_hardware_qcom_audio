@@ -40,6 +40,18 @@ static void* acdb_handle;
 
 typedef void (*acdb_send_audio_cal_t)(int, int);
 
+#ifdef AUDIO_FEATURE_ENABLED_GCOV
+extern void  __gcov_flush();
+static void enable_gcov()
+{
+    __gcov_flush();
+}
+#else
+static void enable_gcov()
+{
+}
+#endif
+
 acdb_send_audio_cal_t acdb_send_audio_cal;
 
 enum {
@@ -223,6 +235,7 @@ static void init_once() {
 
 int lib_init() {
     pthread_once(&once, init_once);
+    enable_gcov();
     return init_status;
 }
 

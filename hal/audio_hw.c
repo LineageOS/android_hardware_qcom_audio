@@ -448,6 +448,18 @@ static int out_set_compr_volume(struct audio_stream_out *stream, float left, flo
 static int out_set_mmap_volume(struct audio_stream_out *stream, float left, float right);
 static int out_set_voip_volume(struct audio_stream_out *stream, float left, float right);
 
+#ifdef AUDIO_FEATURE_ENABLED_GCOV
+extern void  __gcov_flush();
+static void enable_gcov()
+{
+    __gcov_flush();
+}
+#else
+static void enable_gcov()
+{
+}
+#endif
+
 static bool may_use_noirq_mode(struct audio_device *adev, audio_usecase_t uc_id,
                                int flags __unused)
 {
@@ -2437,7 +2449,7 @@ static int stop_input_stream(struct stream_in *in)
     free(uc_info);
 
     adev->active_input = get_next_active_input(adev);
-
+    enable_gcov();
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
@@ -2610,7 +2622,7 @@ int start_input_stream(struct stream_in *in)
 done_open:
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
     ALOGD("%s: exit", __func__);
-
+    enable_gcov();
     return ret;
 
 error_open:
@@ -2624,7 +2636,7 @@ error_config:
      */
     usleep(50000);
     ALOGD("%s: exit: status(%d)", __func__, ret);
-
+    enable_gcov();
     return ret;
 }
 
@@ -3315,6 +3327,7 @@ int start_output_stream(struct stream_out *out)
     platform_set_swap_channels(adev, true);
 
     ATRACE_END();
+    enable_gcov();
     return ret;
 error_open:
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
@@ -3326,6 +3339,7 @@ error_config:
      */
     usleep(50000);
     ATRACE_END();
+    enable_gcov();
     return ret;
 }
 
@@ -7560,7 +7574,7 @@ static int adev_close(hw_device_t *device)
         adev = NULL;
     }
     pthread_mutex_unlock(&adev_init_lock);
-
+    enable_gcov();
     return 0;
 }
 
