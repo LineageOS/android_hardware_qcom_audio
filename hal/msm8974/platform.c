@@ -2645,6 +2645,26 @@ acdb_init_fail:
     my_data->current_backend_cfg[HDMI_ARC_TX_BACKEND].channels_mixer_ctl =
         strdup("SEC_SPDIF_TX Channels");
 
+    my_data->current_backend_cfg[HDMI_RX_BACKEND].bitwidth_mixer_ctl =
+        strdup("HDMI_RX Bit Format");
+    my_data->current_backend_cfg[HDMI_RX_BACKEND].samplerate_mixer_ctl =
+        strdup("HDMI_RX SampleRate");
+    my_data->current_backend_cfg[HDMI_RX_BACKEND].channels_mixer_ctl =
+        strdup("HDMI_RX Channels");
+    my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].bitwidth_mixer_ctl =
+        strdup("Display Port RX Bit Format");
+    my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].samplerate_mixer_ctl =
+        strdup("Display Port RX SampleRate");
+    my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].channels_mixer_ctl =
+        strdup("Display Port RX Channels");
+
+    my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].bitwidth_mixer_ctl =
+        strdup("USB_AUDIO_RX Format");
+    my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].samplerate_mixer_ctl =
+        strdup("USB_AUDIO_RX SampleRate");
+    my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].channels_mixer_ctl =
+        strdup("USB_AUDIO_RX Channels");
+
     for (idx = 0; idx < MAX_CODEC_BACKENDS; idx++) {
         if (my_data->current_backend_cfg[idx].bitwidth_mixer_ctl) {
             ctl = mixer_get_ctl_by_name(adev->mixer,
@@ -2703,26 +2723,6 @@ acdb_init_fail:
             platform_set_native_support(NATIVE_AUDIO_MODE_MULTIPLE_44_1);
         }
     }
-
-    my_data->current_backend_cfg[HDMI_RX_BACKEND].bitwidth_mixer_ctl =
-        strdup("HDMI_RX Bit Format");
-    my_data->current_backend_cfg[HDMI_RX_BACKEND].samplerate_mixer_ctl =
-        strdup("HDMI_RX SampleRate");
-    my_data->current_backend_cfg[HDMI_RX_BACKEND].channels_mixer_ctl =
-        strdup("HDMI_RX Channels");
-    my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].bitwidth_mixer_ctl =
-        strdup("Display Port RX Bit Format");
-    my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].samplerate_mixer_ctl =
-        strdup("Display Port RX SampleRate");
-    my_data->current_backend_cfg[DISP_PORT_RX_BACKEND].channels_mixer_ctl =
-        strdup("Display Port RX Channels");
-
-    my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].bitwidth_mixer_ctl =
-        strdup("USB_AUDIO_RX Format");
-    my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].samplerate_mixer_ctl =
-        strdup("USB_AUDIO_RX SampleRate");
-    my_data->current_backend_cfg[USB_AUDIO_RX_BACKEND].channels_mixer_ctl =
-        strdup("USB_AUDIO_RX Channels");
 
     if (property_get_bool("vendor.audio.apptype.multirec.enabled", false))
         my_data->use_generic_handset = true;
