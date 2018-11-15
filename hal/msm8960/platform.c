@@ -729,20 +729,23 @@ exit:
     return snd_device;
 }
 
-snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_device)
+snd_device_t platform_get_input_snd_device(void *platform,
+                                           struct stream_in *in,
+                                           audio_devices_t out_device)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
-    audio_source_t  source = (adev->active_input == NULL) ?
-                                AUDIO_SOURCE_DEFAULT : adev->active_input->source;
-
-    audio_mode_t    mode   = adev->mode;
-    audio_devices_t in_device = ((adev->active_input == NULL) ?
-                                    AUDIO_DEVICE_NONE : adev->active_input->device)
-                                & ~AUDIO_DEVICE_BIT_IN;
-    audio_channel_mask_t channel_mask = (adev->active_input == NULL) ?
-                                AUDIO_CHANNEL_IN_MONO : adev->active_input->channel_mask;
+    audio_mode_t mode = adev->mode;
     snd_device_t snd_device = SND_DEVICE_NONE;
+
+    if (in == NULL) {
+        in = adev_get_active_input(adev);
+    }
+
+    audio_source_t source = (in == NULL) ? AUDIO_SOURCE_DEFAULT : in->source;
+    audio_devices_t in_device =
+        ((in == NULL) ? AUDIO_DEVICE_NONE : in->device) & ~AUDIO_DEVICE_BIT_IN;
+    audio_channel_mask_t channel_mask = (in == NULL) ? AUDIO_CHANNEL_IN_MONO : in->channel_mask;
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x)",
           __func__, out_device, in_device);
@@ -827,8 +830,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             mode == AUDIO_MODE_IN_COMMUNICATION) {
         if (out_device & AUDIO_DEVICE_OUT_SPEAKER)
             in_device = AUDIO_DEVICE_IN_BACK_MIC;
-        if (adev->active_input) {
-            if (adev->active_input->enable_aec) {
+        if (in) {
+            if (in != NULL && in->enable_aec) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     snd_device = SND_DEVICE_IN_SPEAKER_MIC_AEC;
                 } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
