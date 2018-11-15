@@ -1251,7 +1251,7 @@ OMX_ERRORTYPE  omx_aac_aenc::get_component_version
 OMX_ERRORTYPE  omx_aac_aenc::send_command(OMX_IN OMX_HANDLETYPE hComp,
                                            OMX_IN OMX_COMMANDTYPE  cmd,
                                            OMX_IN OMX_U32       param1,
-                                           OMX_IN OMX_PTR      cmdData)
+                                           OMX_IN OMX_PTR             )
 {
     int portIndex = (int)param1;
 
@@ -1290,7 +1290,7 @@ OMX_ERRORTYPE  omx_aac_aenc::send_command(OMX_IN OMX_HANDLETYPE hComp,
 OMX_ERRORTYPE  omx_aac_aenc::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
                                                  OMX_IN OMX_COMMANDTYPE  cmd,
                                                  OMX_IN OMX_U32       param1,
-                                                 OMX_IN OMX_PTR      cmdData)
+                                                 OMX_IN OMX_PTR             )
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     //   Handle only IDLE and executing
@@ -3268,9 +3268,9 @@ RETURN VALUE
 OMX_ERRORTYPE  omx_aac_aenc::component_tunnel_request
 (
     OMX_IN OMX_HANDLETYPE                hComp,
-    OMX_IN OMX_U32                        port,
+    OMX_IN OMX_U32                            ,
     OMX_IN OMX_HANDLETYPE        peerComponent,
-    OMX_IN OMX_U32                    peerPort,
+    OMX_IN OMX_U32                            ,
     OMX_INOUT OMX_TUNNELSETUPTYPE* tunnelSetup)
 {
     DEBUG_PRINT_ERROR("Error: component_tunnel_request Not Implemented\n");
@@ -3301,7 +3301,7 @@ OMX_ERRORTYPE  omx_aac_aenc::allocate_input_buffer
 (
     OMX_IN OMX_HANDLETYPE                hComp,
     OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
-    OMX_IN OMX_U32                        port,
+    OMX_IN OMX_U32                            ,
     OMX_IN OMX_PTR                     appData,
     OMX_IN OMX_U32                       bytes)
 {
@@ -3358,7 +3358,7 @@ OMX_ERRORTYPE  omx_aac_aenc::allocate_output_buffer
 (
     OMX_IN OMX_HANDLETYPE                hComp,
     OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
-    OMX_IN OMX_U32                        port,
+    OMX_IN OMX_U32                            ,
     OMX_IN OMX_PTR                     appData,
     OMX_IN OMX_U32                       bytes)
 {
@@ -3638,7 +3638,7 @@ OMX_ERRORTYPE  omx_aac_aenc::use_input_buffer
 (
     OMX_IN OMX_HANDLETYPE            hComp,
     OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
-    OMX_IN OMX_U32                   port,
+    OMX_IN OMX_U32                   ,
     OMX_IN OMX_PTR                   appData,
     OMX_IN OMX_U32                   bytes,
     OMX_IN OMX_U8*                   buffer)
@@ -3722,7 +3722,7 @@ OMX_ERRORTYPE  omx_aac_aenc::use_output_buffer
 (
     OMX_IN OMX_HANDLETYPE            hComp,
     OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
-    OMX_IN OMX_U32                   port,
+    OMX_IN OMX_U32                   ,
     OMX_IN OMX_PTR                   appData,
     OMX_IN OMX_U32                   bytes,
     OMX_IN OMX_U8*                   buffer)
@@ -4571,8 +4571,8 @@ RETURN VALUE
 OMX_ERRORTYPE  omx_aac_aenc::use_EGL_image
 (
     OMX_IN OMX_HANDLETYPE                hComp,
-    OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
-    OMX_IN OMX_U32                        port,
+    OMX_INOUT OMX_BUFFERHEADERTYPE**          ,
+    OMX_IN OMX_U32                            ,
     OMX_IN OMX_PTR                     appData,
     OMX_IN void*                      eglImage)
 {
