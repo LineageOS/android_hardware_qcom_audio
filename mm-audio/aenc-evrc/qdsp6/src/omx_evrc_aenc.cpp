@@ -1253,7 +1253,6 @@ OMX_ERRORTYPE  omx_evrc_aenc::send_command(OMX_IN OMX_HANDLETYPE hComp,
 
     if(hComp == NULL)
     {
-        cmdData = cmdData;
         DEBUG_PRINT_ERROR("Returning OMX_ErrorBadParameter\n");
         return OMX_ErrorBadParameter;
     }
@@ -1297,7 +1296,6 @@ OMX_ERRORTYPE  omx_evrc_aenc::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
 
     if(hComp == NULL)
     {
-        cmdData = cmdData;
         DEBUG_PRINT_ERROR("Returning OMX_ErrorBadParameter\n");
         return OMX_ErrorBadParameter;
     }
@@ -3182,8 +3180,6 @@ OMX_ERRORTYPE  omx_evrc_aenc::component_tunnel_request
 
     if((hComp == NULL) || (peerComponent == NULL) || (tunnelSetup == NULL))
     {
-        port = port;
-        peerPort = peerPort;
         DEBUG_PRINT_ERROR("Returning OMX_ErrorBadParameter\n");
         return OMX_ErrorBadParameter;
     }
@@ -3223,7 +3219,6 @@ OMX_ERRORTYPE  omx_evrc_aenc::allocate_input_buffer
 
     if(hComp == NULL)
     {
-        port = port;
         DEBUG_PRINT_ERROR("Returning OMX_ErrorBadParameter\n");
         free(buf_ptr);
         return OMX_ErrorBadParameter;
@@ -3277,7 +3272,6 @@ OMX_ERRORTYPE  omx_evrc_aenc::allocate_output_buffer
 
     if(hComp == NULL)
     {
-        port = port;
         DEBUG_PRINT_ERROR("Returning OMX_ErrorBadParameter\n");
         return OMX_ErrorBadParameter;
     }
@@ -3558,7 +3552,6 @@ OMX_ERRORTYPE  omx_evrc_aenc::use_input_buffer
 
     if(hComp == NULL)
     {
-        port = port;
         DEBUG_PRINT_ERROR("Returning OMX_ErrorBadParameter\n");
         return OMX_ErrorBadParameter;
     }
@@ -3643,7 +3636,6 @@ OMX_ERRORTYPE  omx_evrc_aenc::use_output_buffer
 
     if(hComp == NULL)
     {
-        port = port;
         DEBUG_PRINT_ERROR("Returning OMX_ErrorBadParameter\n");
         return OMX_ErrorBadParameter;
     }
@@ -4416,8 +4408,6 @@ OMX_ERRORTYPE  omx_evrc_aenc::use_EGL_image
 
     if((hComp == NULL) || (appData == NULL) || (eglImage == NULL))
     {
-        bufferHdr = bufferHdr;
-        port = port;
         DEBUG_PRINT_ERROR("Returning OMX_ErrorBadParameter\n");
         return OMX_ErrorBadParameter;
     }
