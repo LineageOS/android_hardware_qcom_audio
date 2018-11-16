@@ -4384,6 +4384,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     struct audio_device *adev = out->dev;
     ssize_t ret = 0;
     int channels = 0;
+    const size_t frame_size = audio_stream_out_frame_size(stream);
+    const size_t frames = (frame_size != 0) ? bytes / frame_size : bytes;
 
     ATRACE_BEGIN("out_write");
     lock_output_stream(out);
@@ -4600,8 +4602,35 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         return ret;
     } else {
         if (out->pcm) {
+            size_t bytes_to_write = bytes;
             if (out->muted)
                 memset((void *)buffer, 0, bytes);
+            ALOGV("%s: frames=%zu, frame_size=%zu, bytes_to_write=%zu",
+                     __func__, frames, frame_size, bytes_to_write);
+
+            if (out->usecase == USECASE_INCALL_MUSIC_UPLINK) {
+                size_t channel_count = audio_channel_count_from_out_mask(out->channel_mask);
+                int16_t *src = (int16_t *)buffer;
+                int16_t *dst = (int16_t *)buffer;
+
+                LOG_ALWAYS_FATAL_IF(out->config.channels != 1 || channel_count != 2 ||
+                                    out->format != AUDIO_FORMAT_PCM_16_BIT,
+                                    "out_write called for incall music use case with wrong properties");
+
+                /*
+                 * FIXME: this can be removed once audio flinger mixer supports
+                 * mono output
+                 */
+
+                /*
+                 * Code below goes over each frame in the buffer and adds both
+                 * L and R samples and then divides by 2 to convert to mono
+                 */
+                for (size_t i = 0; i < frames ; i++, dst++, src += 2) {
+                    *dst = (int16_t)(((int32_t)src[0] + (int32_t)src[1]) >> 1);
+                }
+                bytes_to_write /= 2;
+            }
 
             ALOGVV("%s: writing buffer (%zu bytes) to pcm device", __func__, bytes);
 
@@ -4611,12 +4640,11 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                 ns = pcm_bytes_to_frames(out->pcm, bytes)*1000000000LL/
                                                      out->config.rate;
 
+            request_out_focus(out, ns);
             bool use_mmap = is_mmap_usecase(out->usecase) || out->realtime;
 
-            request_out_focus(out, ns);
-
             if (use_mmap)
-                ret = pcm_mmap_write(out->pcm, (void *)buffer, bytes);
+                ret = pcm_mmap_write(out->pcm, (void *)buffer, bytes_to_write);
             else if (out->hal_op_format != out->hal_ip_format &&
                        out->convert_buffer != NULL) {
 
@@ -4650,7 +4678,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                            out_get_sample_rate(&out->stream.common));
                     ret = 0;
                 } else
-                    ret = pcm_write(out->pcm, (void *)buffer, bytes);
+                    ret = pcm_write(out->pcm, (void *)buffer, bytes_to_write);
             }
 
             release_out_focus(out);
@@ -6166,13 +6194,55 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         create_offload_callback_thread(out);
 
     } else if (out->flags & AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
+          switch (config->sample_rate) {
+            case 0:
+                out->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+                break;
+            case 8000:
+            case 16000:
+            case 48000:
+                out->sample_rate = config->sample_rate;
+                break;
+            default:
+                ALOGE("%s: Unsupported sampling rate %d for Incall Music", __func__,
+                      config->sample_rate);
+                config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+                ret = -EINVAL;
+                goto error_open;
+        }
+        //FIXME: add support for MONO stream configuration when audioflinger mixer supports it
+        switch (config->channel_mask) {
+            case AUDIO_CHANNEL_NONE:
+            case AUDIO_CHANNEL_OUT_STEREO:
+                out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+                break;
+            default:
+                ALOGE("%s: Unsupported channel mask %#x for Incall Music", __func__,
+                      config->channel_mask);
+                config->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+                ret = -EINVAL;
+                goto error_open;
+        }
+        switch (config->format) {
+            case AUDIO_FORMAT_DEFAULT:
+            case AUDIO_FORMAT_PCM_16_BIT:
+                out->format = AUDIO_FORMAT_PCM_16_BIT;
+                break;
+            default:
+                ALOGE("%s: Unsupported format %#x for Incall Music", __func__,
+                      config->format);
+                config->format = AUDIO_FORMAT_PCM_16_BIT;
+                ret = -EINVAL;
+                goto error_open;
+        }
+
         ret = voice_extn_check_and_set_incall_music_usecase(adev, out);
         if (ret != 0) {
             ALOGE("%s: Incall music delivery usecase cannot be set error:%d",
-                  __func__, ret);
+                __func__, ret);
             goto error_open;
         }
-    } else  if (out->devices == AUDIO_DEVICE_OUT_TELEPHONY_TX) {
+    } else if (out->devices == AUDIO_DEVICE_OUT_TELEPHONY_TX) {
         if (config->sample_rate == 0)
             config->sample_rate = AFE_PROXY_SAMPLING_RATE;
         if (config->sample_rate != 48000 && config->sample_rate != 16000 &&
