@@ -35,6 +35,7 @@
 <!--- added to <adm_config>                                                     -->
 
     <common_config>
+        <param implementer_version="0x0100" />
         <param max_cpe_sessions="1" />
         <param max_wdsp_sessions="2" />
         <param max_ape_sessions="8" />
@@ -60,6 +61,7 @@
         <param DEVICE_HANDSET_MIC_PP_APE="135" />
         <param DEVICE_HANDSET_QMIC_APE="137" />
         <param DEVICE_HEADSET_MIC_CPE="139" />
+        <param DEVICE_HEADSET_MIC_APE="141" />
         <param DEVICE_HANDSET_DMIC_APE="149" />
         <param DEVICE_HANDSET_DMIC_CPE="148" />
     </acdb_ids>
