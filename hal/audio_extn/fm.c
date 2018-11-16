@@ -166,6 +166,7 @@ static int32_t fm_start(struct audio_device *adev)
     int32_t pcm_dev_rx_id, pcm_dev_tx_id;
 
     ALOGD("%s: enter", __func__);
+    fmmod.is_fm_running = true;
 
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
 
@@ -219,9 +220,6 @@ static int32_t fm_start(struct audio_device *adev)
     }
     pcm_start(fmmod.fm_pcm_rx);
     pcm_start(fmmod.fm_pcm_tx);
-
-    fmmod.is_fm_running = true;
-    fm_set_volume(adev, fmmod.fm_volume, false);
 
     ALOGD("%s: exit: status(%d)", __func__, ret);
     return 0;

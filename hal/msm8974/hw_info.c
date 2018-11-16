@@ -237,9 +237,15 @@ static const snd_device_t tavil_qrd_msmnile_variant_devices[] = {
     SND_DEVICE_IN_SPEAKER_MIC_AEC_NS,
     SND_DEVICE_IN_VOICE_DMIC,
     SND_DEVICE_IN_HANDSET_DMIC,
+    SND_DEVICE_IN_HANDSET_DMIC_NS,
+    SND_DEVICE_IN_HANDSET_DMIC_AEC,
+    SND_DEVICE_IN_HANDSET_DMIC_AEC_NS,
     SND_DEVICE_IN_HANDSET_STEREO_DMIC,
     SND_DEVICE_IN_SPEAKER_STEREO_DMIC,
     SND_DEVICE_IN_VOICE_SPEAKER_DMIC,
+    SND_DEVICE_IN_SPEAKER_DMIC_AEC,
+    SND_DEVICE_IN_SPEAKER_DMIC_NS,
+    SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS,
     SND_DEVICE_IN_VOICE_SPEAKER_DMIC_BROADSIDE,
     SND_DEVICE_IN_SPEAKER_DMIC_AEC_BROADSIDE,
     SND_DEVICE_IN_SPEAKER_DMIC_NS_BROADSIDE,
@@ -621,6 +627,10 @@ static void update_hardware_info_bear(struct hardware_info *hw_info, const char 
         strlcpy(hw_info->name, "sm6150", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "sm6150-wcd9375-snd-card",
                  sizeof("sm6150-wcd9375-snd-card"))) {
+        strlcpy(hw_info->name, "sm6150", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "sm6150-wcd9375qrd-snd-card",
+                 sizeof("sm6150-wcd9375qrd-snd-card"))) {
+        hw_info->is_stereo_spkr = false;
         strlcpy(hw_info->name, "sm6150", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "sm6150-qrd-snd-card",
                  sizeof("sm6150-qrd-snd-card"))) {

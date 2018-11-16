@@ -966,6 +966,7 @@ int enable_audio_route(struct audio_device *adev,
     snd_device_t snd_device;
     char mixer_path[MIXER_PATH_MAX_LENGTH];
     struct stream_out *out = NULL;
+    int ret = 0;
 
     if (usecase == NULL)
         return -EINVAL;
@@ -995,7 +996,14 @@ int enable_audio_route(struct audio_device *adev,
     strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
     platform_add_backend_name(mixer_path, snd_device, usecase);
     ALOGD("%s: apply mixer and update path: %s", __func__, mixer_path);
-    audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+    ret = audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+    if (!ret && usecase->id == USECASE_AUDIO_PLAYBACK_FM) {
+        struct str_parms *parms = str_parms_create_str("fm_restore_volume=1");
+        if (parms) {
+            audio_extn_fm_set_parameters(adev, parms);
+            str_parms_destroy(parms);
+        }
+    }
     ALOGV("%s: exit", __func__);
     return 0;
 }
@@ -1476,11 +1484,6 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                         out_set_voip_volume(&usecase->stream.out->stream,
                                             usecase->stream.out->volume_l,
                                             usecase->stream.out->volume_r);
-                    }
-                    if (usecase->id == USECASE_AUDIO_PLAYBACK_FM) {
-                        struct str_parms *parms = str_parms_create_str("fm_restore_volume=1");
-                        if (parms)
-                            audio_extn_fm_set_parameters(adev, parms);
                     }
                 }
             }
@@ -2419,6 +2422,11 @@ static int stop_input_stream(struct stream_in *in)
         return -EINVAL;
     }
 
+    if (uc_info->in_snd_device != SND_DEVICE_NONE) {
+        if (audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to stop ext hw plugin", __func__);
+    }
+
     /* Close in-call recording streams */
     voice_check_and_stop_incall_rec_usecase(adev, in);
 
@@ -2513,6 +2521,11 @@ int start_input_stream(struct stream_in *in)
                                  adev->perf_lock_opts,
                                  adev->perf_lock_opts_size);
     select_devices(adev, in->usecase);
+
+    if (uc_info->in_snd_device != SND_DEVICE_NONE) {
+        if (audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to start ext hw plugin", __func__);
+    }
 
     if (audio_extn_cin_attached_usecase(in->usecase)) {
        ret = audio_extn_cin_start_input_stream(in);
@@ -2934,6 +2947,11 @@ static int stop_output_stream(struct stream_out *out)
         return -EINVAL;
     }
 
+    if (uc_info->out_snd_device != SND_DEVICE_NONE) {
+        if (audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to stop ext hw plugin", __func__);
+    }
+
     if (is_offload_usecase(out->usecase) &&
         !(audio_extn_passthru_is_passthrough_stream(out))) {
         if (adev->visualizer_stop_output != NULL)
@@ -2945,7 +2963,8 @@ static int stop_output_stream(struct stream_out *out)
             adev->offload_effects_stop_output(out->handle, out->pcm_device_id);
     }
 
-    if (out->usecase == USECASE_INCALL_MUSIC_UPLINK)
+    if (out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
+                out->usecase == USECASE_INCALL_MUSIC_UPLINK2)
         voice_set_device_mute_flag(adev, false);
 
     /* 1. Get and set stream specific mixer controls */
@@ -3021,6 +3040,16 @@ int start_output_stream(struct stream_out *out)
         ALOGW("out->card_status or adev->card_status offline, try again");
         ret = -EIO;
         goto error_config;
+    }
+
+    //Update incall music usecase to reflect correct voice session
+    if (out->flags & AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
+        ret = voice_extn_check_and_set_incall_music_usecase(adev, out);
+        if (ret != 0) {
+            ALOGE("%s: Incall music delivery usecase cannot be set error:%d",
+                __func__, ret);
+            goto error_config;
+        }
     }
 
     if (out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
@@ -3107,8 +3136,14 @@ int start_output_stream(struct stream_out *out)
          select_devices(adev, out->usecase);
     }
 
-    if (out->usecase == USECASE_INCALL_MUSIC_UPLINK)
+    if (out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
+                out->usecase == USECASE_INCALL_MUSIC_UPLINK2)
         voice_set_device_mute_flag(adev, true);
+
+    if (uc_info->out_snd_device != SND_DEVICE_NONE) {
+        if (audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to start ext hw plugin", __func__);
+    }
 
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d) format(%#x)",
           __func__, adev->snd_card, out->pcm_device_id, out->config.format);
@@ -4661,7 +4696,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ALOGV("%s: frames=%zu, frame_size=%zu, bytes_to_write=%zu",
                      __func__, frames, frame_size, bytes_to_write);
 
-            if (out->usecase == USECASE_INCALL_MUSIC_UPLINK) {
+            if (out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
+                        out->usecase == USECASE_INCALL_MUSIC_UPLINK2) {
                 size_t channel_count = audio_channel_count_from_out_mask(out->channel_mask);
                 int16_t *src = (int16_t *)buffer;
                 int16_t *dst = (int16_t *)buffer;
@@ -5833,7 +5869,7 @@ static int in_get_mmap_position(const struct audio_stream_in *stream,
         ALOGE("%s: %s", __func__, pcm_get_error(in->pcm));
         return ret;
     }
-    position->time_nanoseconds = ts.tv_sec*1000000000L + ts.tv_nsec;
+    position->time_nanoseconds = ts.tv_sec*1000000000LL + ts.tv_nsec;
     return 0;
 }
 
@@ -6937,6 +6973,8 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
     pthread_mutex_lock(&adev->lock);
     ALOGD("%s state %d\n", __func__, state);
     ret = voice_set_mic_mute((struct audio_device *)dev, state);
+    if (adev->ext_hw_plugin)
+        ret = audio_extn_ext_hw_plugin_set_mic_mute(adev->ext_hw_plugin, state);
     pthread_mutex_unlock(&adev->lock);
 
     return ret;
@@ -7470,6 +7508,8 @@ static int adev_close(hw_device_t *device)
             free(adev->device_cfg_params);
             adev->device_cfg_params = NULL;
         }
+        if(adev->ext_hw_plugin)
+            audio_extn_ext_hw_plugin_deinit(adev->ext_hw_plugin);
         free(device);
         adev = NULL;
     }
@@ -7722,6 +7762,8 @@ static int adev_open(const hw_module_t *module, const char *name,
         adev->device.open_output_stream = audio_extn_qaf_open_output_stream;
         adev->device.close_output_stream = audio_extn_qaf_close_output_stream;
     }
+
+    adev->ext_hw_plugin = audio_extn_ext_hw_plugin_init(adev);
 
     if (access(VISUALIZER_LIBRARY_PATH, R_OK) == 0) {
         adev->visualizer_lib = dlopen(VISUALIZER_LIBRARY_PATH, RTLD_NOW);
