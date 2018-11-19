@@ -612,6 +612,7 @@ void *start_stream_playback (void* stream_data)
     bool read_complete_file = true;
     ssize_t bytes_to_read = 0;
     int32_t latency;
+    char kvpair[KV_PAIR_MAX_LENGTH] = {0};
 
 
     memset(&drift_params, 0, sizeof(struct drift_data));
@@ -658,7 +659,6 @@ void *start_stream_playback (void* stream_data)
     }
 
     switch(params->filetype) {
-        char kvpair[KV_PAIR_MAX_LENGTH] = {0};
         case FILE_WMA:
         case FILE_VORBIS:
         case FILE_ALAC:
