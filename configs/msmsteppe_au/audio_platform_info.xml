@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- Copyright (c) 2014, 2016-2018, The Linux Foundation. All rights reserved. -->
+<!--                                                                        -->
+<!-- Redistribution and use in source and binary forms, with or without     -->
+<!-- modification, are permitted provided that the following conditions are -->
+<!-- met:                                                                   -->
+<!--     * Redistributions of source code must retain the above copyright   -->
+<!--       notice, this list of conditions and the following disclaimer.    -->
+<!--     * Redistributions in binary form must reproduce the above          -->
+<!--       copyright notice, this list of conditions and the following      -->
+<!--       disclaimer in the documentation and/or other materials provided  -->
+<!--       with the distribution.                                           -->
+<!--     * Neither the name of The Linux Foundation nor the names of its    -->
+<!--       contributors may be used to endorse or promote products derived  -->
+<!--       from this software without specific prior written permission.    -->
+<!--                                                                        -->
+<!-- THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED           -->
+<!-- WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF   -->
+<!-- MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT -->
+<!-- ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS -->
+<!-- BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR -->
+<!-- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF   -->
+<!-- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR        -->
+<!-- BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,  -->
+<!-- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE   -->
+<!-- OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN -->
+<!-- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                          -->
+<audio_platform_info>
+    <acdb_ids>
+        <device name="SND_DEVICE_OUT_HANDSET" acdb_id="41"/>
+        <device name="SND_DEVICE_OUT_SPEAKER" acdb_id="41"/>
+        <device name="SND_DEVICE_OUT_HEADPHONES" acdb_id="41"/>
+        <device name="SND_DEVICE_OUT_BT_SCO" acdb_id="94"/>
+        <device name="SND_DEVICE_OUT_BT_SCO_WB" acdb_id="94"/>
+        <device name="SND_DEVICE_OUT_BT_A2DP" acdb_id="41"/>
+        <device name="SND_DEVICE_OUT_VOICE_HANDSET" acdb_id="94"/>
+        <device name="SND_DEVICE_OUT_VOICE_SPEAKER" acdb_id="94"/>
+        <device name="SND_DEVICE_IN_HANDSET_MIC" acdb_id="11"/>
+        <device name="SND_DEVICE_IN_SPEAKER_MIC" acdb_id="11"/>
+        <device name="SND_DEVICE_IN_HEADSET_MIC" acdb_id="11"/>
+        <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC" acdb_id="95"/>
+        <device name="SND_DEVICE_IN_VOICE_HEADSET_MIC" acdb_id="95"/>
+        <device name="SND_DEVICE_IN_BT_SCO_MIC" acdb_id="95"/>
+        <device name="SND_DEVICE_IN_BT_SCO_MIC_WB" acdb_id="95"/>
+        <device name="SND_DEVICE_IN_HANDSET_DMIC" acdb_id="80"/>
+        <device name="SND_DEVICE_IN_SPEAKER_DMIC" acdb_id="80"/>
+        <device name="SND_DEVICE_IN_QUAD_MIC" acdb_id="47"/>
+        <device name="SND_DEVICE_IN_HANDSET_QMIC" acdb_id="47"/>
+    </acdb_ids>
+
+    <module_ids>
+        <aec>
+            <device name="SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS" module_id="0x10F17" instance_id="0x0" param_id="0x10EAF" param_value="0x01"/>
+            <device name="SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_BROADSIDE" module_id="0x10F18" instance_id="0x0" param_id="0x10EAF" param_value="0x01"/>
+            <device name="SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS" module_id="0x10F0A" instance_id="0x0" param_id="0x10EAF" param_value="0x01"/>
+            <device name="SND_DEVICE_IN_SPEAKER_MIC_AEC_NS" module_id="0x10F09" instance_id="0x0" param_id="0x10EAF" param_value="0x01"/>
+            <device name="SND_DEVICE_IN_HANDSET_DMIC_AEC_NS" module_id="0x10F0A" instance_id="0x0" param_id="0x10EAF" param_value="0x01"/>
+            <device name="SND_DEVICE_IN_HANDSET_MIC_AEC_NS" module_id="0x10F09" instance_id="0x0" param_id="0x10EAF" param_value="0x01"/>
+        </aec>
+        <ns>
+            <device name="SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS" module_id="0x10F17" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
+            <device name="SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_BROADSIDE" module_id="0x10F18" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
+            <device name="SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS" module_id="0x10F0A" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
+            <device name="SND_DEVICE_IN_SPEAKER_MIC_AEC_NS" module_id="0x10F09" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
+            <device name="SND_DEVICE_IN_HANDSET_DMIC_AEC_NS" module_id="0x10F0A" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
+            <device name="SND_DEVICE_IN_HANDSET_MIC_AEC_NS" module_id="0x10F09" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
+        </ns>
+    </module_ids>
+
+    <bit_width_configs>
+        <device name="SND_DEVICE_OUT_SPEAKER" bit_width="24"/>
+    </bit_width_configs>
+
+    <pcm_ids>
+        <usecase name="USECASE_AUDIO_PLAYBACK_LOW_LATENCY" type="out" id="9"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_DEEP_BUFFER" type="out" id="0"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD" type="out" id="7"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD2" type="out" id="11"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD3" type="out" id="12"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD4" type="out" id="21"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD5" type="out" id="22"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD6" type="out" id="23"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD7" type="out" id="24"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD8" type="out" id="25"/>
+        <usecase name="USECASE_VOICEMMODE1_CALL" type="in" id="2"/>
+        <usecase name="USECASE_VOICEMMODE1_CALL" type="out" id="2"/>
+        <usecase name="USECASE_VOICEMMODE2_CALL" type="in" id="15"/>
+        <usecase name="USECASE_VOICEMMODE2_CALL" type="out" id="15"/>
+        <usecase name="USECASE_VOWLAN_CALL" type="in" id="-1"/>
+        <usecase name="USECASE_VOWLAN_CALL" type="out" id="-1"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_AFE_PROXY" type="out" id="5"/>
+        <usecase name="USECASE_AUDIO_RECORD_AFE_PROXY" type="in" id="6"/>
+        <usecase name="USECASE_AUDIO_RECORD_LOW_LATENCY" type="in" id="13" />
+        <usecase name="USECASE_AUDIO_PLAYBACK_ULL" type="out" id="13" />
+        <usecase name="USECASE_AUDIO_PLAYBACK_VOIP" type="out" id="12" />
+        <usecase name="USECASE_AUDIO_RECORD_VOIP" type="in" id="12" />
+        <usecase name="USECASE_AUDIO_PLAYBACK_MMAP" type="out" id="28" />
+        <usecase name="USECASE_AUDIO_RECORD_MMAP" type="in" id="28" />
+        <usecase name="USECASE_AUDIO_RECORD" type="in" id="0" />
+        <usecase name="USECASE_AUDIO_HFP_SCO" type="in" id="29" />
+        <usecase name="USECASE_AUDIO_HFP_SCO" type="out" id="29" />
+        <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="in" id="29" />
+        <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="out" id="29" />
+    </pcm_ids>
+
+    <config_params>
+        <param key="spkr_1_tz_name" value="wsatz.13"/>
+        <param key="spkr_2_tz_name" value="wsatz.14"/>
+        <!-- In the below value string, the value indicates default mono -->
+        <!-- speaker. It can be set to either left or right              -->
+        <param key="mono_speaker" value="right"/>
+        <!-- In the below value string, first parameter indicates size -->
+        <!-- followed by perf lock options                             -->
+        <param key="perf_lock_opts" value="4, 0x40400000, 0x1, 0x40C00000, 0x1"/>
+        <param key="native_audio_mode" value="src"/>
+        <param key="input_mic_max_count" value="4"/>
+        <param key="true_32_bit" value="true"/>
+        <!-- In the below value string, the value indicates sidetone gain in dB -->
+        <param key="usb_sidetone_gain" value="35"/>
+    </config_params>
+
+    <gain_db_to_level_mapping>
+        <gain_level_map db="-59" level="5"/>
+        <gain_level_map db="-17.4" level="4"/>
+        <gain_level_map db="-13.8" level="3"/>
+        <gain_level_map db="-10.2" level="2"/>
+        <gain_level_map db="0" level="1"/>
+    </gain_db_to_level_mapping>
+
+    <backend_names>
+        <device name="SND_DEVICE_OUT_HANDSET" interface="TERT_TDM_RX_0"/>
+        <device name="SND_DEVICE_OUT_SPEAKER" interface="TERT_TDM_RX_0"/>
+        <device name="SND_DEVICE_OUT_HEADPHONES" interface="TERT_TDM_RX_0"/>
+        <device name="SND_DEVICE_OUT_BT_SCO" interface="TERT_TDM_RX_2"/>
+        <device name="SND_DEVICE_OUT_BT_SCO_WB" interface="TERT_TDM_RX_2"/>
+        <device name="SND_DEVICE_OUT_BT_A2DP" interface="TERT_TDM_RX_0"/>
+        <device name="SND_DEVICE_OUT_VOICE_HANDSET" interface="TERT_TDM_RX_2"/>
+        <device name="SND_DEVICE_OUT_VOICE_SPEAKER" interface="TERT_TDM_RX_2"/>
+        <device name="SND_DEVICE_IN_HANDSET_MIC" interface="TERT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_SPEAKER_MIC" interface="TERT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_HEADSET_MIC" interface="TERT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC" interface="TERT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_VOICE_HEADSET_MIC" interface="TERT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_BT_SCO_MIC" interface="TERT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_BT_SCO_MIC_WB" interface="TERT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_HANDSET_DMIC" interface="TERT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_SPEAKER_DMIC" interface="TERT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_QUAD_MIC" interface="TERT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_HANDSET_QMIC" interface="TERT_TDM_TX_0"/>
+    </backend_names>
+</audio_platform_info>
+
