@@ -96,7 +96,11 @@ enum sp_version {
 #define MAX_RESISTANCE_SPKR_Q24 (40 * (1 << 24))
 
 /*Path where the calibration file will be stored*/
+#ifdef LINUX_ENABLED
+#define CALIB_FILE "/data/audio/audio.cal"
+#else
 #define CALIB_FILE "/data/vendor/misc/audio/audio.cal"
+#endif
 
 /*Time between retries for calibartion or intial wait time
   after boot up*/
