@@ -1703,28 +1703,25 @@ static inline int read_usb_sup_channel_masks(bool is_playback,
     if (channels > MAX_HIFI_CHANNEL_COUNT)
         channels = MAX_HIFI_CHANNEL_COUNT;
 
+    channel_count = DEFAULT_CHANNEL_COUNT;
+
     if (is_playback) {
         // For playback we never report mono because the framework always outputs stereo
-        channel_count = DEFAULT_CHANNEL_COUNT;
         // audio_channel_out_mask_from_count() does return positional masks for channel counts
-        // above 2 but we want indexed masks here. So we
-        for ( ; channel_count <= channels && num_masks < max_masks; channel_count++) {
-            supported_channel_masks[num_masks++] = audio_channel_out_mask_from_count(channel_count);
-        }
-        for ( ; channel_count <= channels && num_masks < max_masks; channel_count++) {
-            supported_channel_masks[num_masks++] =
-                    audio_channel_mask_for_index_assignment_from_count(channel_count);
-        }
+        // above 2 but we want indexed masks here.
+        supported_channel_masks[num_masks++] = audio_channel_out_mask_from_count(channel_count);
     } else {
-        // For capture we report all supported channel masks from 1 channel up.
-        channel_count = MIN_CHANNEL_COUNT;
         // audio_channel_in_mask_from_count() does the right conversion to either positional or
         // indexed mask
-        for ( ; channel_count <= channels && num_masks < max_masks; channel_count++) {
-            supported_channel_masks[num_masks++] =
-                    audio_channel_in_mask_from_count(channel_count);
-        }
+        supported_channel_masks[num_masks++] = audio_channel_in_mask_from_count(channel_count);
     }
+
+    for (channel_count = channels; ((channel_count >= DEFAULT_CHANNEL_COUNT) &&
+                                    (num_masks < max_masks)); channel_count--) {
+            supported_channel_masks[num_masks++] =
+                    audio_channel_mask_for_index_assignment_from_count(channel_count);
+    }
+
     ALOGV("%s: %s supported ch %d supported_channel_masks[0] %08x num_masks %d", __func__,
           is_playback ? "P" : "C", channels, supported_channel_masks[0], num_masks);
     return num_masks;
