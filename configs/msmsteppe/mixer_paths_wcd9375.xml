@@ -371,8 +371,9 @@
     <ctl name="COMP7 Switch" value="0" />
     <ctl name="COMP8 Switch" value="0" />
 
-    <!-- Headphone Default mode - AB -->
-    <ctl name="RX HPH Mode" value="CLS_AB" />
+    <!-- Headphone class-H mode -->
+    <ctl name="RX_HPH_PWR_MODE" value="ULP" />
+    <ctl name="RX HPH Mode" value="CLS_H_ULP" />
 
     <!-- IIR/voice anc -->
     <ctl name="IIR0 Band1" id ="0" value="268435456" />
@@ -2130,9 +2131,13 @@
     </path>
 
     <path name="hph-highquality-mode">
+        <ctl name="RX_HPH_PWR_MODE" value="LOHIFI" />
+        <ctl name="RX HPH Mode" value="CLS_H_LOHIFI" />
     </path>
 
     <path name="hph-lowpower-mode">
+        <ctl name="RX_HPH_PWR_MODE" value="ULP" />
+        <ctl name="RX HPH Mode" value="CLS_H_ULP" />
     </path>
 
     <path name="true-native-mode">
