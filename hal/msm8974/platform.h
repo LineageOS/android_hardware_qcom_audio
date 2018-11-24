@@ -492,6 +492,9 @@ enum {
 #elif PLATFORM_BEAR_FAMILY
 #define HFP_SCO_RX 17
 #define HFP_ASM_RX_TX 18
+#elif PLATFORM_AUTO
+#define HFP_SCO_RX 36
+#define HFP_ASM_RX_TX 29
 #else
 #define HFP_SCO_RX 23
 #define HFP_ASM_RX_TX 24

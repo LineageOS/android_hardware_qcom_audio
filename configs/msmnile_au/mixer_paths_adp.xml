@@ -580,7 +580,7 @@
     </path>
 
     <path name="deep-buffer-playback">
-        <ctl name="TERT_TDM_RX_0 Channels" value="Two" />
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia1" value="1" />
     </path>
 
@@ -643,7 +643,7 @@
     </path>
 
     <path name="low-latency-playback">
-        <ctl name="TERT_TDM_RX_0 Channels" value="Two" />
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia5" value="1" />
     </path>
 
@@ -710,7 +710,7 @@
     </path>
 
     <path name="audio-ull-playback">
-        <ctl name="TERT_TDM_RX_0 Channels" value="Two" />
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia8" value="1" />
     </path>
 
@@ -776,7 +776,7 @@
     </path>
 
     <path name="compress-offload-playback">
-        <ctl name="TERT_TDM_RX_0 Channels" value="Two" />
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia4" value="1" />
     </path>
 
@@ -851,7 +851,7 @@
     </path>
 
     <path name="compress-offload-playback2">
-        <ctl name="TERT_TDM_RX_0 Channels" value="Two" />
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia7" value="1" />
     </path>
 
@@ -918,7 +918,7 @@
     </path>
 
     <path name="compress-offload-playback3">
-        <ctl name="TERT_TDM_RX_0 Channels" value="Two" />
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia10" value="1" />
     </path>
 
@@ -985,7 +985,7 @@
     </path>
 
     <path name="compress-offload-playback4">
-        <ctl name="TERT_TDM_RX_0 Channels" value="Two" />
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia11" value="1" />
     </path>
 
@@ -1053,7 +1053,7 @@
     </path>
 
     <path name="compress-offload-playback5">
-        <ctl name="TERT_TDM_RX_0 Channels" value="Two" />
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia12" value="1" />
     </path>
 
@@ -1120,7 +1120,7 @@
     </path>
 
     <path name="compress-offload-playback6">
-        <ctl name="TERT_TDM_RX_0 Channels" value="Two" />
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia13" value="1" />
     </path>
 
@@ -1187,7 +1187,7 @@
     </path>
 
     <path name="compress-offload-playback7">
-        <ctl name="TERT_TDM_RX_0 Channels" value="Two" />
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia14" value="1" />
     </path>
 
@@ -1254,7 +1254,7 @@
     </path>
 
     <path name="compress-offload-playback8">
-        <ctl name="TERT_TDM_RX_0 Channels" value="Two" />
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia15" value="1" />
     </path>
 
@@ -1321,7 +1321,7 @@
     </path>
 
     <path name="compress-offload-playback9">
-        <ctl name="TERT_TDM_RX_0 Channels" value="Two" />
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia16" value="1" />
     </path>
 
@@ -1757,6 +1757,7 @@
 
     <!-- VoIP Rx settings -->
     <path name="audio-playback-voip">
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia10" value="1" />
     </path>
 

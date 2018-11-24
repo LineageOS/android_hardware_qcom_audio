@@ -2485,8 +2485,6 @@ acdb_init_fail:
                 strdup("WSA_CDC_DMA_RX_0 Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
                 strdup("WSA_CDC_DMA_RX_0 SampleRate");
-            my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].channels_mixer_ctl =
-                strdup("WSA_CDC_DMA_RX_0 Channels");
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
                 strdup("TX_CDC_DMA_TX_3 Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
@@ -3242,27 +3240,6 @@ int native_audio_set_params(struct platform_data *platform,
     return ret;
 }
 
-static bool check_snd_device_is_speaker(snd_device_t snd_device)
-{
-    bool ret = false;
-
-    if (snd_device == SND_DEVICE_OUT_SPEAKER ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_WSA ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_VBAT ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_RAS ||
-        snd_device == SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT_RAS ||
-        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER ||
-        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_WSA ||
-        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
-        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED ||
-        snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT ) {
-        ret = true;
-    }
-    return ret;
-}
-
 int check_hdset_combo_device(snd_device_t snd_device)
 {
     int ret = false;
@@ -3284,7 +3261,8 @@ int codec_device_supports_native_playback(audio_devices_t out_device)
 
     if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
         out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
-        out_device & AUDIO_DEVICE_OUT_LINE)
+        out_device & AUDIO_DEVICE_OUT_LINE ||
+        out_device & AUDIO_DEVICE_OUT_USB_HEADSET)
         ret = true;
 
     return ret;
@@ -6247,9 +6225,6 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         }
     }
 
-    if (!(hw_info_is_stereo_spkr(my_data->hw_info)) && check_snd_device_is_speaker(snd_device))
-        channels = 1;
-
     /* Native playback is preferred for Headphone/HS device over 192Khz */
     if (!voice_call_active && codec_device_supports_native_playback(usecase->devices)) {
         if (audio_is_true_native_stream_active(adev)) {
@@ -6303,7 +6278,8 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         /*reset sample rate to 48khz if sample rate less than 44.1khz, or device backend dose not support 44.1 khz*/
         if ((sample_rate == OUTPUT_SAMPLING_RATE_44100 &&
              backend_idx != HEADPHONE_44_1_BACKEND &&
-             backend_idx != HEADPHONE_BACKEND) ||
+             backend_idx != HEADPHONE_BACKEND &&
+             backend_idx != USB_AUDIO_RX_BACKEND) ||
             sample_rate < OUTPUT_SAMPLING_RATE_44100) {
             sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
             ALOGD("%s:becf: afe: set sample rate to default Sample Rate(48k)",__func__);
@@ -6389,7 +6365,6 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     // Force routing if the expected bitwdith or samplerate
     // is not same as current backend comfiguration
     if ((bit_width != my_data->current_backend_cfg[backend_idx].bit_width) ||
-        (channels != my_data->current_backend_cfg[backend_idx].channels) ||
         (sample_rate != my_data->current_backend_cfg[backend_idx].sample_rate) ||
          passthrough_enabled || channels_updated || service_interval_update ) {
         backend_cfg->bit_width = bit_width;
