@@ -2521,6 +2521,10 @@ int audio_extn_utils_get_channels_from_string(const char *id_string)
 
 void audio_extn_utils_release_snd_device(snd_device_t snd_device)
 {
+    // HACK: avoid unused parameter 'snd_device' error if sound trigger is not enabled
+#ifndef SOUND_TRIGGER_ENABLED
+    (void)snd_device;
+#endif
     audio_extn_dev_arbi_release(snd_device);
     audio_extn_sound_trigger_update_device_status(snd_device,
                                     ST_EVENT_SND_DEVICE_FREE);
