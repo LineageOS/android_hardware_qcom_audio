@@ -1,3 +1,4 @@
+ifneq ($(AUDIO_USE_STUB_HAL), true)
 ifeq ($(strip $(BOARD_SUPPORTS_QAHW)),true)
 
 LOCAL_PATH := $(call my-dir)
@@ -36,4 +37,5 @@ LOCAL_COPY_HEADERS_TO   := mm-audio/qahw_api/inc
 LOCAL_COPY_HEADERS      := inc/qahw_defs.h
 
 include $(BUILD_COPY_HEADERS)
+endif
 endif
