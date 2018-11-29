@@ -1,4 +1,5 @@
 AM_CFLAGS = -I ${WORKSPACE}/external/tinyalsa/include \
+            -I $(PKG_CONFIG_SYSROOT_DIR)/usr/include/audio-kernel \
             -I ${WORKSPACE}/system/media/audio_effects/include
 
 c_sources = bundle.c \
