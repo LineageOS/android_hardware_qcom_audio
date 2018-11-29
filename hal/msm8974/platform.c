@@ -30,7 +30,7 @@
 #include "platform.h"
 #include "audio_extn.h"
 #include <linux/msm_audio.h>
-#if defined (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845)
+#if defined (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710)
 #include <sound/devdep_params.h>
 #endif
 
@@ -143,7 +143,7 @@ struct platform_data {
     bool speaker_lr_swap;
 
     void *acdb_handle;
-#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845)
+#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710)
     acdb_init_v2_cvd_t acdb_init;
 #elif defined (PLATFORM_MSM8084)
     acdb_init_v2_t acdb_init;
@@ -271,6 +271,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_FULL_USB] = "voice-tty-full-usb",
     [SND_DEVICE_OUT_VOICE_TTY_VCO_USB] = "voice-tty-vco-usb",
     [SND_DEVICE_OUT_VOICE_TX] = "voice-tx",
+    [SND_DEVICE_OUT_VOICE_MUSIC_TX] = "voice-music-tx",
     [SND_DEVICE_OUT_USB_HEADSET] = "usb-headset",
     [SND_DEVICE_OUT_VOICE_USB_HEADSET] = "usb-headset",
     [SND_DEVICE_OUT_USB_HEADPHONES] = "usb-headphones",
@@ -393,6 +394,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_TTY_FULL_USB] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_VCO_USB] = 17,
     [SND_DEVICE_OUT_VOICE_TX] = 45,
+    [SND_DEVICE_OUT_VOICE_MUSIC_TX] = 3,
     [SND_DEVICE_OUT_USB_HEADSET] = 45,
     [SND_DEVICE_OUT_VOICE_USB_HEADSET] = 45,
     [SND_DEVICE_OUT_USB_HEADPHONES] = 45,
@@ -771,7 +773,7 @@ static const char *get_operator_specific_device_mixer_path(snd_device_t snd_devi
 
 inline bool platform_supports_app_type_cfg()
 {
-#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845)
+#if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710)
     return true;
 #else
     return false;
@@ -1240,6 +1242,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_VOICE_HAC_HANDSET] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_SPEAKER] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_HEADPHONES] = strdup("SLIMBUS_0_RX");
+    hw_interface_table[SND_DEVICE_OUT_VOICE_MUSIC_TX] = strdup("VOICE_PLAYBACK_TX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_LINE] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_HDMI] = strdup("HDMI_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_HDMI] = strdup("SLIMBUS_0_RX-and-HDMI_RX");
@@ -1376,7 +1379,7 @@ static int platform_acdb_init(void *platform)
         return 0;
     }
 
-#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845)
+#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710)
     char *cvd_version = calloc(1, MAX_CVD_VERSION_STRING_SIZE);
     if (!cvd_version)
         ALOGE("failed to allocate cvd_version");
@@ -1745,7 +1748,7 @@ void *platform_init(struct audio_device *adev)
         configure_flicker_sensor_input(adev->mixer);
 #endif
 
-#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845)
+#if defined (PLATFORM_MSM8994) || (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710)
         acdb_init_v2_cvd_t acdb_init_local;
         acdb_init_local = (acdb_init_v2_cvd_t)dlsym(my_data->acdb_handle,
                                               "acdb_loader_init_v2");
@@ -1833,6 +1836,8 @@ void platform_deinit(void *platform)
 
     struct platform_data *my_data = (struct platform_data *)platform;
     close_csd_client(my_data->csd);
+
+    audio_extn_spkr_prot_deinit(my_data->adev);
 
     hw_info_deinit(my_data->hw_info);
 
@@ -4535,7 +4540,7 @@ int platform_set_sidetone(struct audio_device *adev,
 int platform_get_mmap_data_fd(void *platform __unused, int fe_dev __unused, int dir __unused,
                               int *fd __unused, uint32_t *size __unused)
 {
-#if defined (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845)
+#if defined (PLATFORM_MSM8996) || (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710)
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     int hw_fd = -1;
