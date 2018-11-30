@@ -579,6 +579,7 @@ int main(int argc, char *argv[]) {
     log_file = stdout;
     transcode_loopback_config_t    *transcode_loopback_config = NULL;
     transcode_loopback_config_t *temp = NULL;
+    char param[100] = {0};
 
     struct option long_options[] = {
         /* These options set a flag. */
@@ -654,6 +655,12 @@ int main(int argc, char *argv[]) {
         exit_process_thread = true;
         goto exit_transcode_loopback_test;
     }
+
+    if (sink_device == AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) {
+        snprintf(param, sizeof(param), "%s=%d", "connect", sink_device);
+        qahw_set_parameters(primary_hal_handle, param);
+    }
+
     transcode_loopback_config->hal_handle = primary_hal_handle;
     fprintf(log_file,"\nLoading HAL for loopback usecase done\n");
 
