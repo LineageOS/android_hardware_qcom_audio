@@ -117,11 +117,11 @@ int platform_set_snd_device_backend(snd_device_t snd_device, const char * backen
 
 bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id);
 
-/* From platform_info.c */
-int platform_info_init(const char *filename, void *);
-
 typedef int (*set_parameters_fn)(void *platform, struct str_parms *parms);
-int snd_card_info_init(const char *filename, void *, set_parameters_fn);
+
+/* From platform_info.c */
+int platform_info_init(const char *filename, void *,
+                       bool do_full_parse, set_parameters_fn);
 
 int platform_get_usecase_index(const char * usecase);
 int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);

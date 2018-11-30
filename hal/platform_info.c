@@ -25,6 +25,7 @@
 #include "platform_api.h"
 #include <platform.h>
 #include <math.h>
+#include <pthread.h>
 
 /*
  * Mandatory microphone characteristics include: device_id, type, address, location, group,
@@ -82,17 +83,19 @@ static section_process_fn section_table[] = {
     [ACDB_METAINFO_KEY] = process_acdb_metainfo_key,
 };
 
-static set_parameters_fn set_parameters = &platform_set_parameters;
-
 static section_t section;
 
 struct platform_info {
+    pthread_mutex_t   lock;
     bool              do_full_parse;
     void             *platform;
     struct str_parms *kvpairs;
+    set_parameters_fn set_parameters;
 };
 
-static struct platform_info my_data = {true, NULL, NULL};
+static struct platform_info my_data = {PTHREAD_MUTEX_INITIALIZER,
+                                       true, NULL, NULL,
+                                       &platform_set_parameters};
 
 struct audio_string_to_enum {
     const char* name;
@@ -415,7 +418,7 @@ static void process_config_params(const XML_Char **attr)
     }
 
     str_parms_add_str(my_data.kvpairs, (char*)attr[1], (char*)attr[3]);
-    set_parameters(my_data.platform, my_data.kvpairs);
+    my_data.set_parameters(my_data.platform, my_data.kvpairs);
 done:
     return;
 }
@@ -857,14 +860,8 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
     }
 }
 
-int snd_card_info_init(const char *filename, void *platform, set_parameters_fn fn)
-{
-    set_parameters = fn;
-    my_data.do_full_parse = false;
-    return platform_info_init(filename, platform);
-}
-
-int platform_info_init(const char *filename, void *platform)
+int platform_info_init(const char *filename, void *platform,
+                       bool do_full_parse, set_parameters_fn fn)
 {
     XML_Parser      parser;
     FILE            *file;
@@ -873,7 +870,6 @@ int platform_info_init(const char *filename, void *platform)
     void            *buf;
     static const uint32_t kBufSize = 1024;
     char   platform_info_file_name[MIXER_PATH_MAX_LENGTH]= {0};
-    section = ROOT;
 
     if (filename == NULL) {
         strlcpy(platform_info_file_name, PLATFORM_INFO_XML_PATH, MIXER_PATH_MAX_LENGTH);
@@ -899,8 +895,12 @@ int platform_info_init(const char *filename, void *platform)
         goto err_close_file;
     }
 
+    pthread_mutex_lock(&my_data.lock);
+    section = ROOT;
+    my_data.do_full_parse = do_full_parse;
     my_data.platform = platform;
     my_data.kvpairs = str_parms_create();
+    my_data.set_parameters = fn;
 
     XML_SetElementHandler(parser, start_tag, end_tag);
 
@@ -931,10 +931,12 @@ int platform_info_init(const char *filename, void *platform)
             break;
     }
 
-    set_parameters = &platform_set_parameters;
-    my_data.do_full_parse = true;
-
 err_free_parser:
+    if (my_data.kvpairs != NULL) {
+        str_parms_destroy(my_data.kvpairs);
+        my_data.kvpairs = NULL;
+    }
+    pthread_mutex_unlock(&my_data.lock);
     XML_ParserFree(parser);
 err_close_file:
     fclose(file);
