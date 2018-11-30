@@ -337,7 +337,7 @@ struct audio_device {
     card_status_t card_status;
 
     void *visualizer_lib;
-    int (*visualizer_start_output)(audio_io_handle_t, int);
+    int (*visualizer_start_output)(audio_io_handle_t, int, int, int);
     int (*visualizer_stop_output)(audio_io_handle_t, int);
 
     /* The pcm_params use_case_table is loaded by adev_verify_devices() upon
