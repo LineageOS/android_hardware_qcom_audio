@@ -145,6 +145,12 @@ const effect_descriptor_t *descriptors[] = {
         NULL,
 };
 
+struct pcm_capture_config {
+    int snd_card_num;
+    int capture_device_id;
+};
+
+struct pcm_capture_config capture_config;
 
 pthread_once_t once = PTHREAD_ONCE_INIT;
 int init_status;
@@ -172,15 +178,11 @@ bool exit_thread;
 /* 0 if the capture thread was created successfully */
 int thread_status;
 
-
 #define DSP_OUTPUT_LATENCY_MS 0 /* Fudge factor for latency after capture point in audio DSP */
 
 /* Retry for delay for mixer open */
 #define RETRY_NUMBER 10
 #define RETRY_US 500000
-
-#define MIXER_CARD 0
-#define SOUND_CARD 0
 
 /* Proxy port supports only MMAP read and those fixed parameters*/
 #define AUDIO_CAPTURE_CHANNEL_COUNT 2
@@ -338,10 +340,10 @@ void *capture_thread_loop(void *arg __unused)
 
     pthread_mutex_lock(&lock);
 
-    mixer = mixer_open(MIXER_CARD);
+    mixer = mixer_open(capture_config.snd_card_num);
     while (mixer == NULL && retry_num < RETRY_NUMBER) {
         usleep(RETRY_US);
-        mixer = mixer_open(MIXER_CARD);
+        mixer = mixer_open(capture_config.snd_card_num);
         retry_num++;
     }
     if (mixer == NULL) {
@@ -357,7 +359,8 @@ void *capture_thread_loop(void *arg __unused)
             if (!capture_enabled) {
                 ret = configure_proxy_capture(mixer, 1);
                 if (ret == 0) {
-                    pcm = pcm_open(SOUND_CARD, CAPTURE_DEVICE,
+                    pcm = pcm_open(capture_config.snd_card_num,
+                                   capture_config.capture_device_id,
                                    PCM_IN|PCM_MMAP|PCM_NOIRQ, &pcm_config_capture);
                     if (pcm && !pcm_is_ready(pcm)) {
                         ALOGW("%s: %s", __func__, pcm_get_error(pcm));
@@ -427,7 +430,8 @@ void *capture_thread_loop(void *arg __unused)
  */
 
 __attribute__ ((visibility ("default")))
-int visualizer_hal_start_output(audio_io_handle_t output, int pcm_id) {
+int visualizer_hal_start_output(audio_io_handle_t output, int pcm_id,
+                                int card_number, int pcm_capture_id) {
     int ret = 0;
     struct listnode *node;
 
@@ -443,6 +447,11 @@ int visualizer_hal_start_output(audio_io_handle_t output, int pcm_id) {
         ret = -ENOSYS;
         goto exit;
     }
+
+    ALOGV("%s card number %d pcm_capture_id %d",
+          __func__, card_number, pcm_capture_id);
+    capture_config.snd_card_num = card_number;
+    capture_config.capture_device_id = pcm_capture_id;
 
     output_context_t *out_ctxt = (output_context_t *)malloc(sizeof(output_context_t));
     out_ctxt->handle = output;

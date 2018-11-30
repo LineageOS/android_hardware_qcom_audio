@@ -155,7 +155,11 @@ static struct pcm_config pcm_config_cirrus_rx = {
 
 static struct cirrus_playback_session handle;
 
+#ifdef CIRRUS_FACTORY_CALIBRATION
 static void *audio_extn_cirrus_calibration_thread();
+#else
+static void *audio_extn_cirrus_config_thread();
+#endif
 
 #ifdef ENABLE_CIRRUS_DETECTION
 static void *audio_extn_cirrus_failure_detect_thread();
@@ -175,11 +179,30 @@ void audio_extn_spkr_prot_init(void *adev) {
 
     pthread_mutex_init(&handle.fb_prot_mutex, NULL);
 
+#ifdef CIRRUS_FACTORY_CALIBRATION
     (void)pthread_create(&handle.calibration_thread,
                 (const pthread_attr_t *) NULL,
                 audio_extn_cirrus_calibration_thread, &handle);
+#else
+    (void)pthread_create(&handle.calibration_thread,
+                (const pthread_attr_t *) NULL,
+                audio_extn_cirrus_config_thread, &handle);
+#endif
 }
 
+void audio_extn_spkr_prot_deinit(void *adev __unused) {
+    ALOGV("%s: Entry", __func__);
+
+#ifdef ENABLE_CIRRUS_DETECTION
+    pthread_join(handle.failure_detect_thread, NULL);
+#endif
+    pthread_join(handle.calibration_thread, NULL);
+    pthread_mutex_destroy(&handle.fb_prot_mutex);
+
+    ALOGV("%s: Exit", __func__);
+}
+
+#ifdef CIRRUS_FACTORY_CALIBRATION
 static int audio_extn_cirrus_run_calibration() {
     struct audio_device *adev = handle.adev_handle;
     struct crus_sp_ioctl_header header;
@@ -282,7 +305,6 @@ static int audio_extn_cirrus_run_calibration() {
         if (ret < 0)
             goto exit;
 
-#ifdef ENABLED_CIRRUS_WRITE_CAL_FILE
         cal_file = fopen(CRUS_CAL_FILE, "wb");
         if (cal_file == NULL) {
             ALOGE("%s: Cannot create Cirrus SP calibration file (%s)",
@@ -305,7 +327,6 @@ static int audio_extn_cirrus_run_calibration() {
 
         ALOGI("%s: Cirrus calibration file successfully written",
               __func__);
-#endif
     }
 
     header.size = sizeof(header);
@@ -530,6 +551,89 @@ exit:
     pthread_exit(0);
     return NULL;
 }
+
+#else
+static void *audio_extn_cirrus_config_thread(void) {
+    struct audio_device *adev = handle.adev_handle;
+    struct crus_sp_ioctl_header header;
+    struct cirrus_cal_result_t result;
+    struct mixer_ctl *ctl_config = NULL;
+    FILE *cal_file = NULL;
+    int ret = 0, dev_file = -1;
+
+    ALOGI("%s: ++", __func__);
+
+    memset(&result, 0, sizeof(result));
+
+    dev_file = open(CRUS_SP_FILE, O_RDWR | O_NONBLOCK);
+    if (dev_file < 0) {
+        ALOGE("%s: Failed to open Cirrus Playback IOCTL (%d)",
+              __func__, dev_file);
+        ret = -EINVAL;
+        goto exit;
+    }
+
+    cal_file = fopen(CRUS_CAL_FILE, "r");
+    if (cal_file) {
+        ret = fread(&result, sizeof(result), 1, cal_file);
+
+        if (ret != 1) {
+            ALOGE("%s: Cirrus SP calibration file cannot be read , read size: %lu file error: %d",
+                 __func__, (unsigned long)ret * sizeof(result), ferror(cal_file));
+            ret = -EINVAL;
+            goto exit;
+        }
+    }
+
+    header.size = sizeof(header);
+    header.module_id = CRUS_MODULE_ID_TX;
+    header.param_id = 0;
+    header.data_length = sizeof(result);
+    header.data = &result;
+
+    ret = ioctl(dev_file, CRUS_SP_IOCTL_SET_CALIB, &header);
+
+    if (ret < 0) {
+        ALOGE("%s: Cirrus SP calibration IOCTL failure", __func__);
+        goto exit;
+    }
+
+    ctl_config = mixer_get_ctl_by_name(adev->mixer,
+                       CRUS_SP_LOAD_CONF_MIXER);
+    if (!ctl_config) {
+        ALOGE("%s: Could not get ctl for mixer commands", __func__);
+        ret = -EINVAL;
+        goto exit;
+    }
+
+    ret = mixer_ctl_set_value(ctl_config, 0, 2);
+    if (ret < 0) {
+        ALOGE("%s load tx config failed", __func__);
+        goto exit;
+    }
+
+    ret = mixer_ctl_set_value(ctl_config, 0, 1);
+    if (ret < 0) {
+        ALOGE("%s load rx config failed", __func__);
+        goto exit;
+    }
+
+    ret = mixer_ctl_set_value(ctl_config, 0, 0);
+    if (ret < 0) {
+        ALOGE("%s set idle state failed", __func__);
+        goto exit;
+    }
+
+exit:
+    if (dev_file >= 0)
+        close(dev_file);
+    if (cal_file)
+        fclose(cal_file);
+
+    ALOGI("%s: ret: %d --", __func__, ret);
+    return NULL;
+}
+#endif
 
 #ifdef ENABLE_CIRRUS_DETECTION
 void *audio_extn_cirrus_failure_detect_thread() {
