@@ -125,6 +125,10 @@ typedef struct acdb_audio_cal_cfg {
     uint32_t             sampling_rate;
     uint32_t             cal_type;
     uint32_t             module_id;
+#ifdef PLATFORM_SM8150
+    uint16_t             instance_id;
+    uint16_t             reserved;
+#endif
     uint32_t             param_id;
 } acdb_audio_cal_cfg_t;
 
