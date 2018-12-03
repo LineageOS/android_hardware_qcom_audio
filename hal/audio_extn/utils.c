@@ -1073,7 +1073,7 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         } else {
             audio_extn_btsco_get_sample_rate(snd_device, &usecase->stream.in->app_type_cfg.sample_rate);
         }
-        if (usecase->stream.in->device & AUDIO_DEVICE_IN_BLUETOOTH_A2DP) {
+        if (usecase->stream.in->device & AUDIO_DEVICE_IN_BLUETOOTH_A2DP & ~AUDIO_DEVICE_BIT_IN) {
             audio_extn_a2dp_get_dec_sample_rate(&usecase->stream.in->app_type_cfg.sample_rate);
             ALOGI("%s using %d sample rate rate for A2DP dec CoPP",
                   __func__, usecase->stream.in->app_type_cfg.sample_rate);
