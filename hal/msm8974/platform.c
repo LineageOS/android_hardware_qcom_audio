@@ -231,6 +231,8 @@ struct platform_data {
     int  fluence_type;
     int  fluence_mode;
     char fluence_cap[PROPERTY_VALUE_MAX];
+    bool ambisonic_capture;
+    bool ambisonic_profile;
     bool slowtalk;
     bool hd_voice;
     bool ec_ref_enabled;
@@ -2165,6 +2167,8 @@ void *platform_init(struct audio_device *adev)
     my_data->external_mic = false;
     my_data->fluence_type = FLUENCE_NONE;
     my_data->fluence_mode = FLUENCE_ENDFIRE;
+    my_data->ambisonic_capture = false;
+    my_data->ambisonic_profile = false;
     my_data->slowtalk = false;
     my_data->hd_voice = false;
     my_data->edid_info = NULL;
@@ -2225,6 +2229,13 @@ void *platform_init(struct audio_device *adev)
             my_data->fluence_in_hfp_call = true;
         }
     }
+    /* Check for Ambisonic Capture Enablement */
+    if (property_get_bool("persist.vendor.audio.ambisonic.capture",false))
+        my_data->ambisonic_capture = true;
+
+    /* Check for Ambisonic Profile Assignment*/
+    if (property_get_bool("persist.vendor.audio.ambisonic.auto.profile",false))
+        my_data->ambisonic_profile = true;
 
     my_data->voice_speaker_stereo =
         property_get_bool("persist.vendor.audio.voicecall.speaker.stereo", false);
@@ -4488,6 +4499,33 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 source == AUDIO_SOURCE_MIC)) {
                 snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
                 platform_set_echo_reference(adev, true, out_device);
+    } else if (my_data->use_generic_handset == true &&          // System prop is enabled
+               (my_data->ambisonic_capture == true) &&          // Enable Ambisonic capture
+               (my_data->source_mic_type & SOURCE_QUAD_MIC) &&  // AND 4mic is available
+               ((in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) ||    // AND device is Built-in
+               (in_device & AUDIO_DEVICE_IN_BACK_MIC)) &&       // OR Back-mic
+               (source == AUDIO_SOURCE_MIC ||                   // AND source is MIC for 16bit
+                source == AUDIO_SOURCE_UNPROCESSED ||           // OR unprocessed for 24bit
+                source == AUDIO_SOURCE_CAMCORDER)) {            // OR camera usecase
+                snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
+                /* Below check is true only in LA build to set
+                   ambisonic profile. In LE hal client will set profile */
+                if (my_data->ambisonic_profile == true) {
+                    strlcpy(adev->active_input->profile, "record_ambisonic",
+                            sizeof(adev->active_input->profile));
+                }
+
+                if (!strncmp(adev->active_input->profile, "record_ambisonic",
+                            strlen("record_ambisonic"))) {
+                    /* Validate input stream configuration for
+                       Ambisonic capture. */
+                    if (((int)channel_mask != (int)AUDIO_CHANNEL_INDEX_MASK_4) ||
+                         (adev->active_input->sample_rate != 48000)) {
+                          snd_device = SND_DEVICE_NONE;
+                          ALOGW("Unsupported Input configuration for ambisonic capture");
+                          goto exit;
+                    }
+                }
     } else if (source == AUDIO_SOURCE_CAMCORDER) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
             in_device & AUDIO_DEVICE_IN_BACK_MIC) {
