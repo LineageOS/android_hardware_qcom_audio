@@ -546,6 +546,12 @@ bool audio_extn_passthru_is_supported_backend_edid_cfg(struct audio_device *adev
                                                    struct stream_out *out)
 {
     struct audio_backend_cfg backend_cfg;
+    backend_cfg.sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    backend_cfg.channels = CODEC_BACKEND_DEFAULT_CHANNELS;
+    backend_cfg.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    backend_cfg.format = AUDIO_FORMAT_PCM_16_BIT;
+    backend_cfg.passthrough_enabled = false;
+
     snd_device_t out_snd_device = SND_DEVICE_NONE;
     int max_edid_channels = platform_edid_get_max_channels(out->dev->platform);
 
