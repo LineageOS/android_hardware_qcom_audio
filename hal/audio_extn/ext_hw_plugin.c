@@ -62,6 +62,57 @@ struct ext_hw_plugin_data {
 /* This can be defined in platform specific file or use compile flag */
 #define LIB_PLUGIN_DRIVER "libaudiohalplugin.so"
 
+/* Note: Due to ADP H/W design, SoC TERT/SEC TDM CLK and FSYNC lines are both connected
+ * with CODEC and a single master is needed to provide consistent CLK and FSYNC to slaves,
+ * hence configuring SoC TERT TDM as single master and bring up a dummy hostless from TERT
+ * to SEC to ensure both slave SoC SEC TDM and CODEC are driven upon system boot. */
+static void audio_extn_ext_hw_plugin_enable_adev_hostless(struct audio_device *adev)
+{
+    ALOGI("%s: Enable TERT -> SEC Hostless", __func__);
+
+    char mixer_path[MIXER_PATH_MAX_LENGTH];
+    strlcpy(mixer_path, "dummy-hostless", MIXER_PATH_MAX_LENGTH);
+    ALOGD("%s: apply mixer and update path: %s", __func__, mixer_path);
+    audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+
+    /* TERT TDM TX 7 HOSTLESS to SEC TDM RX 7 HOSTLESS */
+    int pcm_dev_rx = 48, pcm_dev_tx = 49;
+    struct pcm_config pcm_config_lb = {
+        .channels = 1,
+        .rate = 48000,
+        .period_size = 240,
+        .period_count = 2,
+        .format = PCM_FORMAT_S16_LE,
+        .start_threshold = 0,
+        .stop_threshold = INT_MAX,
+        .avail_min = 0,
+    };
+
+    struct pcm *pcm_tx = pcm_open(adev->snd_card,
+                                   pcm_dev_tx,
+                                   PCM_IN, &pcm_config_lb);
+    if (pcm_tx && !pcm_is_ready(pcm_tx)) {
+        ALOGE("%s: %s", __func__, pcm_get_error(pcm_tx));
+        return;
+    }
+    struct pcm *pcm_rx = pcm_open(adev->snd_card,
+                                   pcm_dev_rx,
+                                   PCM_OUT, &pcm_config_lb);
+    if (pcm_rx && !pcm_is_ready(pcm_rx)) {
+        ALOGE("%s: %s", __func__, pcm_get_error(pcm_rx));
+        return;
+    }
+
+    if (pcm_start(pcm_tx) < 0) {
+        ALOGE("%s: pcm start for pcm tx failed", __func__);
+        return;
+    }
+    if (pcm_start(pcm_rx) < 0) {
+        ALOGE("%s: pcm start for pcm rx failed", __func__);
+        return;
+    }
+}
+
 void* audio_extn_ext_hw_plugin_init(struct audio_device *adev)
 {
     int32_t ret = 0;
@@ -113,6 +164,8 @@ void* audio_extn_ext_hw_plugin_init(struct audio_device *adev)
             goto plugin_init_fail;
         }
     }
+
+    audio_extn_ext_hw_plugin_enable_adev_hostless(adev);
 
     my_plugin->mic_mute = false;
     return my_plugin;

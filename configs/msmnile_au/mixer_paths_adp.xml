@@ -318,6 +318,10 @@
     <ctl name="SEC_TDM_RX_0 Audio Mixer MultiMedia9" value="0" />
     <ctl name="MultiMedia9 Mixer TERT_TDM_TX_0" value="0" />
 
+    <path name="dummy-hostless">
+        <ctl name="SEC_TDM_RX_7 Port Mixer TERT_TDM_TX_7" value="1" />
+    </path>
+
     <!-- Codec controls -->
     <!-- WSA controls -->
     <ctl name="SpkrLeft COMP Switch" value="0" />
