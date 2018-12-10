@@ -2422,6 +2422,11 @@ static int stop_input_stream(struct stream_in *in)
         return -EINVAL;
     }
 
+    if (uc_info->in_snd_device != SND_DEVICE_NONE) {
+        if (audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to stop ext hw plugin", __func__);
+    }
+
     /* Close in-call recording streams */
     voice_check_and_stop_incall_rec_usecase(adev, in);
 
@@ -2516,6 +2521,11 @@ int start_input_stream(struct stream_in *in)
                                  adev->perf_lock_opts,
                                  adev->perf_lock_opts_size);
     select_devices(adev, in->usecase);
+
+    if (uc_info->in_snd_device != SND_DEVICE_NONE) {
+        if (audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to start ext hw plugin", __func__);
+    }
 
     if (audio_extn_cin_attached_usecase(in->usecase)) {
        ret = audio_extn_cin_start_input_stream(in);
@@ -2937,6 +2947,11 @@ static int stop_output_stream(struct stream_out *out)
         return -EINVAL;
     }
 
+    if (uc_info->out_snd_device != SND_DEVICE_NONE) {
+        if (audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to stop ext hw plugin", __func__);
+    }
+
     if (is_offload_usecase(out->usecase) &&
         !(audio_extn_passthru_is_passthrough_stream(out))) {
         if (adev->visualizer_stop_output != NULL)
@@ -3124,6 +3139,11 @@ int start_output_stream(struct stream_out *out)
     if (out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
                 out->usecase == USECASE_INCALL_MUSIC_UPLINK2)
         voice_set_device_mute_flag(adev, true);
+
+    if (uc_info->out_snd_device != SND_DEVICE_NONE) {
+        if (audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to start ext hw plugin", __func__);
+    }
 
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d) format(%#x)",
           __func__, adev->snd_card, out->pcm_device_id, out->config.format);
@@ -3404,12 +3424,47 @@ static void register_sample_rate(uint32_t sample_rate,
              "%s: stream can not declare supporting its sample rate %x", __func__, sample_rate);
 }
 
+static inline uint32_t lcm(uint32_t num1, uint32_t num2)
+{
+    uint32_t high = num1, low = num2, temp = 0;
+
+    if (!num1 || !num2)
+        return 0;
+
+    if (num1 < num2) {
+         high = num2;
+         low = num1;
+    }
+
+    while (low != 0) {
+        temp = low;
+        low = high % low;
+        high = temp;
+    }
+    return (num1 * num2)/high;
+}
+
+static inline uint32_t nearest_multiple(uint32_t num, uint32_t multiplier)
+{
+    uint32_t remainder = 0;
+
+    if (!multiplier)
+        return num;
+
+    remainder = num % multiplier;
+    if (remainder)
+        num += (multiplier - remainder);
+
+    return num;
+}
+
 static size_t get_input_buffer_size(uint32_t sample_rate,
                                     audio_format_t format,
                                     int channel_count,
                                     bool is_low_latency)
 {
     size_t size = 0;
+    uint32_t bytes_per_period_sample = 0;
 
     if (check_input_parameters(sample_rate, format, channel_count) != 0)
         return 0;
@@ -3418,15 +3473,16 @@ static size_t get_input_buffer_size(uint32_t sample_rate,
     if (is_low_latency)
         size = configured_low_latency_capture_period_size;
 
-    size *= audio_bytes_per_sample(format) * channel_count;
+    bytes_per_period_sample = audio_bytes_per_sample(format) * channel_count;
+    size *= bytes_per_period_sample;
 
     /* make sure the size is multiple of 32 bytes
      * At 48 kHz mono 16-bit PCM:
      *  5.000 ms = 240 frames = 15*16*1*2 = 480, a whole multiple of 32 (15)
      *  3.333 ms = 160 frames = 10*16*1*2 = 320, a whole multiple of 32 (10)
+     * Also, make sure the size is multiple of bytes per period sample
      */
-    size += 0x1f;
-    size &= ~0x1f;
+    size = nearest_multiple(size, lcm(32, bytes_per_period_sample));
 
     return size;
 }
@@ -6953,6 +7009,8 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
     pthread_mutex_lock(&adev->lock);
     ALOGD("%s state %d\n", __func__, state);
     ret = voice_set_mic_mute((struct audio_device *)dev, state);
+    if (adev->ext_hw_plugin)
+        ret = audio_extn_ext_hw_plugin_set_mic_mute(adev->ext_hw_plugin, state);
     pthread_mutex_unlock(&adev->lock);
 
     return ret;
@@ -7218,6 +7276,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->usecase = USECASE_AUDIO_RECORD_MMAP;
         in->config = pcm_config_mmap_capture;
         in->config.format = pcm_format_from_audio_format(config->format);
+        in->config.channels = channel_count;
         in->stream.start = in_start;
         in->stream.stop = in_stop;
         in->stream.create_mmap_buffer = in_create_mmap_buffer;
@@ -7486,6 +7545,8 @@ static int adev_close(hw_device_t *device)
             free(adev->device_cfg_params);
             adev->device_cfg_params = NULL;
         }
+        if(adev->ext_hw_plugin)
+            audio_extn_ext_hw_plugin_deinit(adev->ext_hw_plugin);
         free(device);
         adev = NULL;
     }
@@ -7738,6 +7799,8 @@ static int adev_open(const hw_module_t *module, const char *name,
         adev->device.open_output_stream = audio_extn_qaf_open_output_stream;
         adev->device.close_output_stream = audio_extn_qaf_close_output_stream;
     }
+
+    adev->ext_hw_plugin = audio_extn_ext_hw_plugin_init(adev);
 
     if (access(VISUALIZER_LIBRARY_PATH, R_OK) == 0) {
         adev->visualizer_lib = dlopen(VISUALIZER_LIBRARY_PATH, RTLD_NOW);

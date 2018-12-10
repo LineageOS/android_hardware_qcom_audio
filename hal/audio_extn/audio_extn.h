@@ -1107,4 +1107,29 @@ void audio_extn_ffv_check_and_append_ec_ref_dev(char *device_name);
 snd_device_t audio_extn_ffv_get_capture_snd_device();
 void audio_extn_ffv_append_ec_ref_dev_name(char *device_name);
 #endif
+
+#ifndef EXT_HW_PLUGIN_ENABLED
+#define audio_extn_ext_hw_plugin_init(adev)                (0)
+#define audio_extn_ext_hw_plugin_deinit(plugin)              (0)
+#define audio_extn_ext_hw_plugin_usecase_start(plugin, usecase) (0)
+#define audio_extn_ext_hw_plugin_usecase_stop(plugin, usecase) (0)
+#define audio_extn_ext_hw_plugin_set_parameters(plugin, parms) (0)
+#define audio_extn_ext_hw_plugin_get_parameters(plugin, query, reply) (0)
+#define audio_extn_ext_hw_plugin_set_mic_mute(plugin, mute) (0)
+#define audio_extn_ext_hw_plugin_get_mic_mute(plugin, mute) (0)
+#define audio_extn_ext_hw_plugin_set_audio_gain(plugin, usecase, gain) (0)
+#else
+void* audio_extn_ext_hw_plugin_init(struct audio_device *adev);
+int audio_extn_ext_hw_plugin_deinit(void *plugin);
+int audio_extn_ext_hw_plugin_usecase_start(void *plugin, struct audio_usecase *usecase);
+int audio_extn_ext_hw_plugin_usecase_stop(void *plugin, struct audio_usecase *usecase);
+int audio_extn_ext_hw_plugin_set_parameters(void *plugin,
+                                           struct str_parms *parms);
+int audio_extn_ext_hw_plugin_get_parameters(void *plugin,
+                  struct str_parms *query, struct str_parms *reply);
+int audio_extn_ext_hw_plugin_set_mic_mute(void *plugin, bool mute);
+int audio_extn_ext_hw_plugin_get_mic_mute(void *plugin, bool *mute);
+int audio_extn_ext_hw_plugin_set_audio_gain(void *plugin,
+            struct audio_usecase *usecase, uint32_t gain);
+#endif
 #endif /* AUDIO_EXTN_H */

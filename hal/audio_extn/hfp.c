@@ -38,6 +38,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include "platform_api.h"
 #include <stdlib.h>
 #include <cutils/str_parms.h>
+#include "audio_extn.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
@@ -55,6 +56,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #define HFP_RX_VOLUME     "SEC AUXPCM LOOPBACK Volume"
 #elif defined PLATFORM_MSM8996
 #define HFP_RX_VOLUME     "PRI AUXPCM LOOPBACK Volume"
+#elif defined PLATFORM_AUTO
+#define HFP_RX_VOLUME     "Playback 36 Volume"
 #elif defined (PLATFORM_MSM8998) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM845) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_TRINKET)
 #define HFP_RX_VOLUME     "SLIMBUS_7 LOOPBACK Volume"
 #else
@@ -162,6 +165,12 @@ static int32_t start_hfp(struct audio_device *adev,
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
     select_devices(adev, hfpmod.ucid);
+
+    if ((uc_info->out_snd_device != SND_DEVICE_NONE) ||
+        (uc_info->in_snd_device != SND_DEVICE_NONE)) {
+        if (audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to start ext hw plugin", __func__);
+    }
 
     pcm_dev_rx_id = platform_get_pcm_device_id(uc_info->id, PCM_PLAYBACK);
     pcm_dev_tx_id = platform_get_pcm_device_id(uc_info->id, PCM_CAPTURE);
@@ -278,6 +287,12 @@ static int32_t stop_hfp(struct audio_device *adev)
         ALOGE("%s: Could not find the usecase (%d) in the list",
               __func__, hfpmod.ucid);
         return -EINVAL;
+    }
+
+    if ((uc_info->out_snd_device != SND_DEVICE_NONE) ||
+        (uc_info->in_snd_device != SND_DEVICE_NONE)) {
+        if (audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info))
+            ALOGE("%s: failed to stop ext hw plugin", __func__);
     }
 
     /* 2. Disable echo reference while stopping hfp */
