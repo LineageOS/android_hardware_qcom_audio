@@ -7428,8 +7428,10 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     // between the callback and close_stream
     audio_extn_snd_mon_unregister_listener(stream);
 
-    /* Disable echo reference while closing input stream */
-    platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
+    // Disable echo reference if there are no active input and hfp call
+    // while closing input stream
+    if (!adev->active_input && !audio_extn_hfp_is_active(adev))
+        platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
 
     if (in == NULL) {
         ALOGE("%s: audio_stream_in ptr is NULL", __func__);
