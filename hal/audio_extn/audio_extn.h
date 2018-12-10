@@ -1205,4 +1205,7 @@ void audio_extn_send_dual_mono_mixing_coefficients(struct stream_out *out);
 void audio_extn_set_cpu_affinity();
 bool audio_extn_is_record_play_concurrency_enabled();
 bool audio_extn_is_concurrent_capture_enabled();
+void audio_extn_set_custom_mtmx_params(struct audio_device *adev,
+                                        struct audio_usecase *usecase,
+                                        bool enable);
 #endif /* AUDIO_EXTN_H */
