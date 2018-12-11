@@ -66,7 +66,7 @@
         <!-- ec reference loopback params -->
         <!-- split_ec_ref_data - true if ec ref is packed with mic captured data -->
         <param split_ec_ref_data="false"/>
-        <param ec_ref_channel_count="2"/>
+        <param ec_ref_channel_count="4"/>
 
         <!-- Profile specific data which the algorithm can support -->
         <param sample_rate="16000" />
