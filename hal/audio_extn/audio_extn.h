@@ -43,6 +43,8 @@
 #include "ip_hdlr_intf.h"
 #include "battery_listener.h"
 
+#define AUDIO_PARAMETER_DUAL_MONO  "dual_mono"
+
 #ifndef AFE_PROXY_ENABLED
 #define AUDIO_DEVICE_OUT_PROXY 0x40000
 #endif
@@ -1131,5 +1133,10 @@ int audio_extn_ext_hw_plugin_set_mic_mute(void *plugin, bool mute);
 int audio_extn_ext_hw_plugin_get_mic_mute(void *plugin, bool *mute);
 int audio_extn_ext_hw_plugin_set_audio_gain(void *plugin,
             struct audio_usecase *usecase, uint32_t gain);
+#endif
+#ifndef CUSTOM_STEREO_ENABLED
+#define audio_extn_send_dual_mono_mixing_coefficients(out) (0)
+#else
+void audio_extn_send_dual_mono_mixing_coefficients(struct stream_out *out);
 #endif
 #endif /* AUDIO_EXTN_H */

@@ -3213,6 +3213,8 @@ int start_output_stream(struct stream_out *out)
             }
             break;
         }
+        platform_set_stream_channel_map(adev->platform, out->channel_mask,
+                   out->pcm_device_id, &out->channel_map_param.channel_map[0]);
 
         ALOGV("%s: pcm_prepare", __func__);
         if (pcm_is_ready(out->pcm)) {
@@ -3226,8 +3228,6 @@ int start_output_stream(struct stream_out *out)
                 goto error_open;
             }
         }
-        platform_set_stream_channel_map(adev->platform, out->channel_mask,
-                   out->pcm_device_id, &out->channel_map_param.channel_map[0]);
         // apply volume for voip playback after path is set up
         if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP)
             out_set_voip_volume(&out->stream, out->volume_l, out->volume_r);
@@ -4023,6 +4023,13 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         pthread_mutex_unlock(&out->lock);
     }
 
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_DUAL_MONO, value,
+                            sizeof(value));
+    if (err >= 0) {
+        if (!strncmp("true", value, sizeof("true")) || atoi(value))
+            audio_extn_send_dual_mono_mixing_coefficients(out);
+    }
+
     err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_PROFILE, value, sizeof(value));
     if (err >= 0) {
         strlcpy(out->profile, value, sizeof(out->profile));
@@ -4633,6 +4640,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ret = -EINVAL;
             goto exit;
         }
+        if (out->set_dual_mono)
+            audio_extn_send_dual_mono_mixing_coefficients(out);
     }
 
     if (adev->is_channel_status_set == false && (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)){
@@ -6005,6 +6014,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     out->a2dp_compress_mute = false;
     out->hal_output_suspend_supported = 0;
     out->dynamic_pm_qos_config_supported = 0;
+    out->set_dual_mono = false;
 
     if ((flags & AUDIO_OUTPUT_FLAG_BD) &&
         (property_get_bool("vendor.audio.matrix.limiter.enable", false)))
