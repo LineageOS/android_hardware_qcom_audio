@@ -747,7 +747,7 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
     struct timespec ts;
     bool acquire_device = false;
 
-    status.status = 0;
+    memset(&status, 0, sizeof(status));
     memset(&protCfg, 0, sizeof(protCfg));
     if (!adev) {
         ALOGE("%s: Invalid params", __func__);

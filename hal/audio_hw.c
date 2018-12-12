@@ -3213,6 +3213,8 @@ int start_output_stream(struct stream_out *out)
             }
             break;
         }
+        platform_set_stream_channel_map(adev->platform, out->channel_mask,
+                   out->pcm_device_id, &out->channel_map_param.channel_map[0]);
 
         ALOGV("%s: pcm_prepare", __func__);
         if (pcm_is_ready(out->pcm)) {
@@ -3226,8 +3228,6 @@ int start_output_stream(struct stream_out *out)
                 goto error_open;
             }
         }
-        platform_set_stream_channel_map(adev->platform, out->channel_mask,
-                   out->pcm_device_id, &out->channel_map_param.channel_map[0]);
         // apply volume for voip playback after path is set up
         if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP)
             out_set_voip_volume(&out->stream, out->volume_l, out->volume_r);
@@ -3424,12 +3424,47 @@ static void register_sample_rate(uint32_t sample_rate,
              "%s: stream can not declare supporting its sample rate %x", __func__, sample_rate);
 }
 
+static inline uint32_t lcm(uint32_t num1, uint32_t num2)
+{
+    uint32_t high = num1, low = num2, temp = 0;
+
+    if (!num1 || !num2)
+        return 0;
+
+    if (num1 < num2) {
+         high = num2;
+         low = num1;
+    }
+
+    while (low != 0) {
+        temp = low;
+        low = high % low;
+        high = temp;
+    }
+    return (num1 * num2)/high;
+}
+
+static inline uint32_t nearest_multiple(uint32_t num, uint32_t multiplier)
+{
+    uint32_t remainder = 0;
+
+    if (!multiplier)
+        return num;
+
+    remainder = num % multiplier;
+    if (remainder)
+        num += (multiplier - remainder);
+
+    return num;
+}
+
 static size_t get_input_buffer_size(uint32_t sample_rate,
                                     audio_format_t format,
                                     int channel_count,
                                     bool is_low_latency)
 {
     size_t size = 0;
+    uint32_t bytes_per_period_sample = 0;
 
     if (check_input_parameters(sample_rate, format, channel_count) != 0)
         return 0;
@@ -3438,15 +3473,16 @@ static size_t get_input_buffer_size(uint32_t sample_rate,
     if (is_low_latency)
         size = configured_low_latency_capture_period_size;
 
-    size *= audio_bytes_per_sample(format) * channel_count;
+    bytes_per_period_sample = audio_bytes_per_sample(format) * channel_count;
+    size *= bytes_per_period_sample;
 
     /* make sure the size is multiple of 32 bytes
      * At 48 kHz mono 16-bit PCM:
      *  5.000 ms = 240 frames = 15*16*1*2 = 480, a whole multiple of 32 (15)
      *  3.333 ms = 160 frames = 10*16*1*2 = 320, a whole multiple of 32 (10)
+     * Also, make sure the size is multiple of bytes per period sample
      */
-    size += 0x1f;
-    size &= ~0x1f;
+    size = nearest_multiple(size, lcm(32, bytes_per_period_sample));
 
     return size;
 }
@@ -3985,6 +4021,13 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                                                  out->playback_started);
 
         pthread_mutex_unlock(&out->lock);
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_DUAL_MONO, value,
+                            sizeof(value));
+    if (err >= 0) {
+        if (!strncmp("true", value, sizeof("true")) || atoi(value))
+            audio_extn_send_dual_mono_mixing_coefficients(out);
     }
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_PROFILE, value, sizeof(value));
@@ -4597,6 +4640,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ret = -EINVAL;
             goto exit;
         }
+        if (out->set_dual_mono)
+            audio_extn_send_dual_mono_mixing_coefficients(out);
     }
 
     if (adev->is_channel_status_set == false && (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)){
@@ -5969,6 +6014,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     out->a2dp_compress_mute = false;
     out->hal_output_suspend_supported = 0;
     out->dynamic_pm_qos_config_supported = 0;
+    out->set_dual_mono = false;
 
     if ((flags & AUDIO_OUTPUT_FLAG_BD) &&
         (property_get_bool("vendor.audio.matrix.limiter.enable", false)))
@@ -7240,6 +7286,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->usecase = USECASE_AUDIO_RECORD_MMAP;
         in->config = pcm_config_mmap_capture;
         in->config.format = pcm_format_from_audio_format(config->format);
+        in->config.channels = channel_count;
         in->stream.start = in_start;
         in->stream.stop = in_stop;
         in->stream.create_mmap_buffer = in_create_mmap_buffer;
@@ -7391,8 +7438,10 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     // between the callback and close_stream
     audio_extn_snd_mon_unregister_listener(stream);
 
-    /* Disable echo reference while closing input stream */
-    platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
+    // Disable echo reference if there are no active input and hfp call
+    // while closing input stream
+    if (!adev->active_input && !audio_extn_hfp_is_active(adev))
+        platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
 
     if (in == NULL) {
         ALOGE("%s: audio_stream_in ptr is NULL", __func__);
