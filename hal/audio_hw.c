@@ -2968,6 +2968,8 @@ static void *offload_thread_loop(void *context)
 
     ALOGV("%s", __func__);
     lock_output_stream(out);
+    out->offload_state = OFFLOAD_STATE_IDLE;
+    out->playback_started = 0;
     for (;;) {
         struct offload_cmd *cmd = NULL;
         stream_callback_event_t event;
