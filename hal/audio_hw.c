@@ -1743,15 +1743,15 @@ static void *offload_thread_loop(void *context)
     struct stream_out *out = (struct stream_out *) context;
     struct listnode *item;
 
-    out->offload_state = OFFLOAD_STATE_IDLE;
-    out->playback_started = 0;
-
     setpriority(PRIO_PROCESS, 0, ANDROID_PRIORITY_AUDIO);
     set_sched_policy(0, SP_FOREGROUND);
     prctl(PR_SET_NAME, (unsigned long)"Offload Callback", 0, 0, 0);
 
     ALOGV("%s", __func__);
+
     lock_output_stream(out);
+    out->offload_state = OFFLOAD_STATE_IDLE;
+    out->playback_started = 0;
     for (;;) {
         struct offload_cmd *cmd = NULL;
         stream_callback_event_t event;
