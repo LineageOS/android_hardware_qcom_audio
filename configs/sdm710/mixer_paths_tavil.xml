@@ -758,6 +758,25 @@
         <ctl name="DISPLAY_PORT Mixer MultiMedia4" value="1" />
     </path>
 
+    <path name="silence-playback">
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="SLIM_RX" />
+        <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia9" value="1" />
+    </path>
+
+    <path name="ec-ref-audio-capture">
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="SLIM_RX" />
+        <ctl name="MultiMedia9 Mixer AFE_LOOPBACK_TX" value="1" />
+    </path>
+
+    <path name="ec-ref-loopback-mono">
+    </path>
+
+    <path name="ec-ref-loopback-stereo">
+    </path>
+
+    <path name="ec-ref-loopback-quad">
+    </path>
+
     <path name="silence-playback display-port">
         <ctl name="DISPLAY_PORT Mixer MultiMedia9" value="1" />
     </path>
