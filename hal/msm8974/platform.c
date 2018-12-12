@@ -1653,7 +1653,8 @@ void *platform_init(struct audio_device *adev)
 
     my_data->declared_mic_count = 0;
     /* Initialize platform specific ids and/or backends*/
-    platform_info_init(platform_info_file, my_data);
+    platform_info_init(platform_info_file, my_data,
+                       true, &platform_set_parameters);
 
     ALOGD("%s: Loading mixer file: %s", __func__, mixer_xml_file);
     adev->audio_route = audio_route_init(snd_card_num, mixer_xml_file);
