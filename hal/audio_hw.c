@@ -1373,6 +1373,10 @@ int select_devices(struct audio_device *adev,
             out_snd_device = SND_DEVICE_OUT_SPEAKER;
     }
 
+    if (usecase->id == USECASE_INCALL_MUSIC_UPLINK) {
+        out_snd_device = SND_DEVICE_OUT_VOICE_MUSIC_TX;
+    }
+
     if (out_snd_device != SND_DEVICE_NONE &&
             out_snd_device != adev->last_logged_snd_device[uc_id][0]) {
         ALOGD("%s: changing use case %s output device from(%d: %s, acdb %d) to (%d: %s, acdb %d)",
