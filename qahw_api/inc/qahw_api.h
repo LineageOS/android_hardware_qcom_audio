@@ -354,6 +354,10 @@ char* qahw_in_get_parameters(const qahw_stream_handle_t *in_handle,
 ssize_t qahw_in_read(qahw_stream_handle_t *in_handle,
                      qahw_in_buffer_t *in_buf);
 /*
+ * Stop input stream. Returns zero on success.
+ */
+int qahw_in_stop(qahw_stream_handle_t *in_handle);
+/*
  * Return the amount of input frames lost in the audio driver since the
  * last call of this function.
  * Audio driver is expected to reset the value to 0 and restart counting

@@ -678,6 +678,22 @@ ssize_t qahw_in_read(qahw_stream_handle_t *in_handle,
     }
 }
 
+int qahw_in_stop(qahw_stream_handle_t *in_handle)
+{
+    if (g_binder_enabled) {
+        if (!g_qas_died) {
+            sp<Iqti_audio_server> qas = get_qti_audio_server();
+            if (qas_status(qas) == -1)
+                return -ENODEV;
+            return qas->qahw_in_stop(in_handle);
+        } else {
+            return -ENODEV;
+        }
+    } else {
+        return qahw_in_stop_l(in_handle);
+    }
+}
+
 uint32_t qahw_in_get_input_frames_lost(qahw_stream_handle_t *in_handle)
 {
     ALOGV("%d:%s",__LINE__, __func__);
@@ -1542,6 +1558,11 @@ ssize_t qahw_in_read(qahw_stream_handle_t *in_handle,
                      qahw_in_buffer_t *in_buf)
 {
     return qahw_in_read_l(in_handle, in_buf);
+}
+
+int qahw_in_stop(qahw_stream_handle_t *in_handle)
+{
+    return qahw_in_stop_l(in_handle);
 }
 
 uint32_t qahw_in_get_input_frames_lost(qahw_stream_handle_t *in_handle)

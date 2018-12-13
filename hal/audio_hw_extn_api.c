@@ -190,6 +190,27 @@ int qahwi_set_param_data(struct audio_hw_device *adev,
     return ret;
 }
 
+int qahwi_in_stop(struct audio_stream_in* stream) {
+    struct stream_in *in = (struct stream_in *)stream;
+    struct audio_device *adev = in->dev;
+
+    ALOGD("%s processing, in %p", __func__, in);
+
+    pthread_mutex_lock(&adev->lock);
+
+    if (!in->standby) {
+        if (in->pcm != NULL ) {
+            pcm_stop(in->pcm);
+        } else if (audio_extn_cin_format_supported(in->format)) {
+            audio_extn_cin_stop_input_stream(in);
+        }
+    }
+
+    pthread_mutex_unlock(&adev->lock);
+
+    return 0;
+}
+
 ssize_t qahwi_in_read_v2(struct audio_stream_in *stream, void* buffer,
                           size_t bytes, uint64_t *timestamp)
 {

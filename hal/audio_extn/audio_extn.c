@@ -98,9 +98,10 @@ bool cin_applicable_stream(struct stream_in *in);
 bool cin_attached_usecase(audio_usecase_t uc_id);
 bool cin_format_supported(audio_format_t format);
 size_t cin_get_buffer_size(struct stream_in *in);
-int cin_start_input_stream(struct stream_in *in);
+int cin_open_input_stream(struct stream_in *in);
 void cin_stop_input_stream(struct stream_in *in);
 void cin_close_input_stream(struct stream_in *in);
+void cin_free_input_stream_resources(struct stream_in *in);
 int cin_read(struct stream_in *in, void *buffer,
                         size_t bytes, size_t *bytes_read);
 int cin_configure_input_stream(struct stream_in *in);
@@ -5063,9 +5064,9 @@ size_t audio_extn_cin_get_buffer_size(struct stream_in *in)
 {
     return (audio_extn_compress_in_enabled? cin_get_buffer_size(in): 0);
 }
-int audio_extn_cin_start_input_stream(struct stream_in *in)
+int audio_extn_cin_open_input_stream(struct stream_in *in)
 {
-    return (audio_extn_compress_in_enabled? cin_start_input_stream(in): -1);
+    return (audio_extn_compress_in_enabled? cin_open_input_stream(in): -1);
 }
 void audio_extn_cin_stop_input_stream(struct stream_in *in)
 {
@@ -5074,6 +5075,10 @@ void audio_extn_cin_stop_input_stream(struct stream_in *in)
 void audio_extn_cin_close_input_stream(struct stream_in *in)
 {
     (audio_extn_compress_in_enabled? cin_close_input_stream(in): NULL);
+}
+void audio_extn_cin_free_input_stream_resources(struct stream_in *in)
+{
+    return (audio_extn_compress_in_enabled? cin_free_input_stream_resources(in): NULL);
 }
 int audio_extn_cin_read(struct stream_in *in, void *buffer,
                         size_t bytes, size_t *bytes_read)
