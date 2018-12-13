@@ -57,15 +57,17 @@
 #define PCM_CHANNEL_FRC  14  /* Front right of center.                        */
 #define PCM_CHANNEL_RLC  15  /* Rear left of center.                          */
 #define PCM_CHANNEL_RRC  16  /* Rear right of center.                         */
-#define PCM_CHANNEL_LFE2 17  /* Rear right of center.                         */
+#define PCM_CHANNEL_LFE2 17  /* Second low frequency channel.                 */
 #define PCM_CHANNEL_SL   18  /* Side left channel.                            */
-#define PCM_CHANNEL_SR   19  /* Side right channel                            */
+#define PCM_CHANNEL_SR   19  /* Side right channel.                           */
 #define PCM_CHANNEL_TFL  20  /* Top front left channel.                       */
+#define PCM_CHANNEL_LVH  20  /* Left vertical height channel.                 */
 #define PCM_CHANNEL_TFR  21  /* Top front right channel.                      */
+#define PCM_CHANNEL_RVH  21  /* Right vertical height channel.                */
 #define PCM_CHANNEL_TC   22  /* Top center channel.                           */
 #define PCM_CHANNEL_TBL  23  /* Top back left channel.                        */
 #define PCM_CHANNEL_TBR  24  /* Top back right channel.                       */
-#define PCM_CHANNEL_TSL  25  /* Top side left channel                         */
+#define PCM_CHANNEL_TSL  25  /* Top side left channel.                        */
 #define PCM_CHANNEL_TSR  26  /* Top side right channel.                       */
 #define PCM_CHANNEL_TBC  27  /* Top back center channel.                      */
 #define PCM_CHANNEL_BFC  28  /* Bottom front center channel.                  */

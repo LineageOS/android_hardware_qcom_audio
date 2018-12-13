@@ -67,6 +67,7 @@
 #define MIXER_XML_PATH_I2S "/etc/mixer_paths_i2s.xml"
 #define PLATFORM_INFO_XML_PATH_I2S "/etc/audio_platform_info_extcodec.xml"
 #define PLATFORM_INFO_XML_PATH_WSA  "/etc/audio_platform_info_wsa.xml"
+#define PLATFORM_INFO_XML_PATH_TDM  "/etc/audio_platform_info_tdm.xml"
 #else
 #define MIXER_XML_BASE_STRING "/vendor/etc/mixer_paths"
 #define MIXER_XML_DEFAULT_PATH "/vendor/etc/mixer_paths.xml"
@@ -79,6 +80,7 @@
 #define MIXER_XML_PATH_I2S "/vendor/etc/mixer_paths_i2s.xml"
 #define PLATFORM_INFO_XML_PATH_I2S "/vendor/etc/audio_platform_info_i2s.xml"
 #define PLATFORM_INFO_XML_PATH_WSA  "/vendor/etc/audio_platform_info_wsa.xml"
+#define PLATFORM_INFO_XML_PATH_TDM  "/vendor/etc/audio_platform_info_tdm.xml"
 #endif
 
 #include <linux/msm_audio.h>
@@ -124,7 +126,6 @@
 /* Mixer path names */
 #define AFE_SIDETONE_MIXER_PATH "afe-sidetone"
 
-#define AUDIO_PARAMETER_KEY_FLUENCE_TYPE  "fluence"
 #define AUDIO_PARAMETER_KEY_SLOWTALK      "st_enable"
 #define AUDIO_PARAMETER_KEY_HD_VOICE      "hd_voice"
 #define AUDIO_PARAMETER_KEY_VOLUME_BOOST  "volume_boost"
@@ -132,6 +133,15 @@
 #define AUDIO_PARAMETER_KEY_AUD_CALRESULT "cal_result"
 
 #define AUDIO_PARAMETER_KEY_MONO_SPEAKER "mono_speaker"
+
+#define AUDIO_PARAMETER_KEY_FLUENCE_TYPE        "fluence_type"
+#define AUDIO_PARAMETER_KEY_FLUENCE_VOICE_CALL  "fluence_voice"
+#define AUDIO_PARAMETER_KEY_FLUENCE_VOICE_REC   "fluence_voice_rec"
+#define AUDIO_PARAMETER_KEY_FLUENCE_AUDIO_REC   "fluence_audio_rec"
+#define AUDIO_PARAMETER_KEY_FLUENCE_SPEAKER     "fluence_speaker"
+#define AUDIO_PARAMETER_KEY_FLUENCE_MODE        "fluence_mode"
+#define AUDIO_PARAMETER_KEY_FLUENCE_HFPCALL     "fluence_hfp"
+#define AUDIO_PARAMETER_KEY_FLUENCE_TRI_MIC     "fluence_tri_mic"
 
 #define AUDIO_PARAMETER_KEY_PERF_LOCK_OPTS "perf_lock_opts"
 
@@ -290,6 +300,7 @@ struct platform_data {
     struct audio_microphone_characteristic_t microphones[AUDIO_MICROPHONE_MAX_COUNT];
     struct snd_device_to_mic_map mic_map[SND_DEVICE_MAX];
     struct  spkr_device_chmap *spkr_ch_map;
+    bool use_sprk_default_sample_rate;
 };
 
 struct  spkr_device_chmap {
@@ -507,6 +518,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_BT_SCO_MIC_NREC] = "bt-sco-mic",
     [SND_DEVICE_IN_BT_SCO_MIC_WB] = "bt-sco-mic-wb",
     [SND_DEVICE_IN_BT_SCO_MIC_WB_NREC] = "bt-sco-mic-wb",
+    [SND_DEVICE_IN_BT_A2DP] = "bt-a2dp-cap",
     [SND_DEVICE_IN_CAMCORDER_MIC] = "camcorder-mic",
     [SND_DEVICE_IN_VOICE_DMIC] = "voice-dmic-ef",
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC] = "voice-speaker-dmic-ef",
@@ -693,6 +705,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_BT_SCO_MIC_NREC] = 122,
     [SND_DEVICE_IN_BT_SCO_MIC_WB] = 38,
     [SND_DEVICE_IN_BT_SCO_MIC_WB_NREC] = 123,
+    [SND_DEVICE_IN_BT_A2DP] = 21,
     [SND_DEVICE_IN_CAMCORDER_MIC] = 4,
     [SND_DEVICE_IN_VOICE_DMIC] = 41,
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC] = 43,
@@ -853,6 +866,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_BT_SCO_MIC_NREC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_BT_SCO_MIC_WB)},
     {TO_NAME_INDEX(SND_DEVICE_IN_BT_SCO_MIC_WB_NREC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_BT_A2DP)},
     {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_DMIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_SPEAKER_DMIC)},
@@ -1511,6 +1525,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = strdup("voice-speaker-vbat");
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT] = strdup("voice-speaker-2-vbat");
     backend_tag_table[SND_DEVICE_OUT_BT_A2DP] = strdup("bt-a2dp");
+    backend_tag_table[SND_DEVICE_IN_BT_A2DP] = strdup("bt-a2dp-cap");
     backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP] = strdup("speaker-and-bt-a2dp");
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES] = strdup("speaker-and-headphones");
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_ANC_HEADSET] = strdup("speaker-and-headphones");
@@ -1612,6 +1627,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_IN_BT_SCO_MIC_NREC] = strdup("SLIMBUS_7_TX");
     hw_interface_table[SND_DEVICE_IN_BT_SCO_MIC_WB] = strdup("SLIMBUS_7_TX");
     hw_interface_table[SND_DEVICE_IN_BT_SCO_MIC_WB_NREC] = strdup("SLIMBUS_7_TX");
+    hw_interface_table[SND_DEVICE_IN_BT_A2DP] = strdup("SLIMBUS_7_TX");
     hw_interface_table[SND_DEVICE_IN_CAMCORDER_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_VOICE_DMIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_VOICE_SPEAKER_DMIC] = strdup("SLIMBUS_0_TX");
@@ -2204,7 +2220,7 @@ void *platform_init(struct audio_device *adev)
     my_data->voice_speaker_stereo = false;
     my_data->declared_mic_count = 0;
     my_data->spkr_ch_map = NULL;
-
+    my_data->use_sprk_default_sample_rate = true;
     be_dai_name_table = NULL;
 
     property_get("ro.vendor.audio.sdk.fluencetype", my_data->fluence_cap, "");
@@ -2295,10 +2311,22 @@ void *platform_init(struct audio_device *adev)
     else if (!strncmp(snd_card_name, "qcs405-wsa-snd-card",
                sizeof("qcs405-wsa-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_WSA, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "qcs405-tdm-snd-card",
+               sizeof("qcs405-tdm-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_TDM, my_data, PLATFORM);
     else if (my_data->is_internal_codec)
         platform_info_init(PLATFORM_INFO_XML_PATH_INTCODEC, my_data, PLATFORM);
     else
         platform_info_init(PLATFORM_INFO_XML_PATH, my_data, PLATFORM);
+
+    /* CSRA devices support multiple sample rates via I2S at spkr out */
+    if (!strncmp(snd_card_name, "qcs405-csra", strlen("qcs405-csra"))) {
+        ALOGE("%s: soundcard: %s supports multiple sample rates", __func__, snd_card_name);
+        my_data->use_sprk_default_sample_rate = false;
+    } else {
+        my_data->use_sprk_default_sample_rate = true;
+        ALOGE("%s: soundcard: %s supports only default sample rate", __func__, snd_card_name);
+    }
 
     my_data->voice_feature_set = VOICE_FEATURE_SET_DEFAULT;
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
@@ -2576,11 +2604,18 @@ acdb_init_fail:
         }
     } else {
         if (!strncmp(snd_card_name, "qcs405", strlen("qcs405"))) {
-            my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
-                strdup("WSA_CDC_DMA_RX_0 Format");
-            my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
-                strdup("WSA_CDC_DMA_RX_0 SampleRate");
 
+            if (!strncmp(snd_card_name, "qcs405-csra", strlen("qcs405-csra"))) {
+               my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
+                   strdup("PRIM_MI2S_RX Format");
+               my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
+                   strdup("PRIM_MI2S_RX SampleRate");
+            } else {
+               my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
+                   strdup("WSA_CDC_DMA_RX_0 Format");
+               my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
+                   strdup("WSA_CDC_DMA_RX_0 SampleRate");
+            }
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
                 strdup("VA_CDC_DMA_TX_0 Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
@@ -4811,6 +4846,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             }
         } else if (in_device & AUDIO_DEVICE_IN_SPDIF) {
             snd_device = SND_DEVICE_IN_SPDIF;
+        } else if (in_device & AUDIO_DEVICE_IN_BLUETOOTH_A2DP) {
+            snd_device = SND_DEVICE_IN_BT_A2DP;
         } else if (in_device & AUDIO_DEVICE_IN_AUX_DIGITAL) {
             snd_device = SND_DEVICE_IN_HDMI_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_HDMI_ARC) {
@@ -5273,10 +5310,103 @@ static void platform_spkr_device_set_params(struct platform_data *platform,
             platform->spkr_ch_map->num_ch = num_ch;
             for (i = 0; i < num_ch; i++) {
                 opts = strtok_r(NULL, ", ", &test_r);
-                platform->spkr_ch_map->chmap[i] = strtoul(opts, NULL, 16);
+                if (opts == NULL) {
+                    ALOGE("%s: incorrect ch_map\n", __func__);
+                    free(platform->spkr_ch_map);
+                    platform->spkr_ch_map = NULL;
+                    str_parms_del(parms, AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP);
+                    return;
+                } else {
+                    platform->spkr_ch_map->chmap[i] = strtoul(opts, NULL, 16);
+                }
             }
         }
         str_parms_del(parms, AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP);
+    }
+}
+
+static void platform_set_fluence_params(void *platform, struct str_parms *parms, char *value, int len)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    int err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FLUENCE_TYPE, value, len);
+
+    if (err >= 0) {
+        if (!strncmp("fluence", value, sizeof("fluence")))
+            my_data->fluence_type = FLUENCE_DUAL_MIC;
+        else if (!strncmp("fluencepro", value, sizeof("fluencepro")))
+                 my_data->fluence_type = FLUENCE_QUAD_MIC | FLUENCE_DUAL_MIC;
+        else if (!strncmp("none", value, sizeof("none")))
+                 my_data->fluence_type = FLUENCE_NONE;
+
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_FLUENCE_TYPE);
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FLUENCE_TRI_MIC, value, len);
+    if (err >= 0) {
+        if (!strncmp("true", value, sizeof("true")))
+            my_data->fluence_type |= FLUENCE_TRI_MIC;
+
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_FLUENCE_TRI_MIC);
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FLUENCE_VOICE_CALL, value, len);
+    if (err >= 0) {
+        if (!strncmp("true", value, sizeof("true")))
+            my_data->fluence_in_voice_call = true;
+        else
+            my_data->fluence_in_voice_call = false;
+
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_FLUENCE_VOICE_CALL);
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FLUENCE_VOICE_REC, value, len);
+    if (err >= 0) {
+        if (!strncmp("true", value, sizeof("true")))
+            my_data->fluence_in_voice_rec = true;
+        else
+            my_data->fluence_in_voice_rec = false;
+
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_FLUENCE_VOICE_REC);
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FLUENCE_AUDIO_REC, value, len);
+    if (err >= 0) {
+        if (!strncmp("true", value, sizeof("true")))
+            my_data->fluence_in_audio_rec = true;
+        else
+            my_data->fluence_in_audio_rec = false;
+
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_FLUENCE_AUDIO_REC);
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FLUENCE_SPEAKER, value, len);
+    if (err >= 0) {
+        if (!strncmp("true", value, sizeof("true")))
+            my_data->fluence_in_spkr_mode = true;
+        else
+            my_data->fluence_in_spkr_mode = false;
+
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_FLUENCE_SPEAKER);
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FLUENCE_MODE, value, len);
+    if (err >= 0) {
+        if (!strncmp("broadside", value, sizeof("broadside")))
+            my_data->fluence_mode = FLUENCE_BROADSIDE;
+        else if (!strncmp("endfire", value, sizeof("endfire")))
+            my_data->fluence_mode = FLUENCE_ENDFIRE;
+
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_FLUENCE_MODE);
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FLUENCE_HFPCALL, value, len);
+    if (err >= 0) {
+        if (!strncmp("true", value, sizeof("true")))
+            my_data->fluence_in_hfp_call = true;
+        else
+            my_data->fluence_in_hfp_call = false;
+
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_FLUENCE_HFPCALL);
     }
 }
 
@@ -5412,6 +5542,8 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         my_data->max_mic_count = atoi(value);
         ALOGV("%s: max_mic_count %d", __func__, my_data->max_mic_count);
     }
+
+    platform_set_fluence_params(platform, parms, value, len);
 
     /* handle audio calibration parameters */
     set_audiocal(platform, parms, value, len);
@@ -6372,6 +6504,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     if (snd_device == SND_DEVICE_OUT_BT_A2DP ||
         snd_device == SND_DEVICE_OUT_BT_SCO ||
         snd_device == SND_DEVICE_OUT_BT_SCO_WB ||
+        snd_device == SND_DEVICE_IN_BT_A2DP ||
         snd_device == SND_DEVICE_OUT_AFE_PROXY) {
         backend_change = false;
         return backend_change;
@@ -6515,9 +6648,15 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
             bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
             ALOGD("%s:becf: afe: reset to default bitwidth %d", __func__, bit_width);
         }
-        sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-        ALOGD("%s:becf: afe: playback on codec device not supporting native playback set "
+        /*
+         * In case of CSRA speaker out, all sample rates are supported, so
+         *  check platform here
+         */
+        if (platform_spkr_use_default_sample_rate(adev->platform)) {
+            sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+            ALOGD("%s:becf: afe: playback on codec device not supporting native playback set "
             "default Sample Rate(48k)", __func__);
+        }
     }
 
     if (backend_idx == USB_AUDIO_RX_BACKEND) {
@@ -7219,6 +7358,40 @@ int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel
                     channel_map[7] = PCM_CHANNEL_RS;
                 }
                 break;
+           case 12:
+                /* AUDIO_CHANNEL_OUT_7POINT1POINT4 */
+                channel_map[0] = PCM_CHANNEL_FL;
+                channel_map[1] = PCM_CHANNEL_FR;
+                channel_map[2] = PCM_CHANNEL_FC;
+                channel_map[3] = PCM_CHANNEL_LFE;
+                channel_map[4] = PCM_CHANNEL_LB;
+                channel_map[5] = PCM_CHANNEL_RB;
+                channel_map[6] = PCM_CHANNEL_LS;
+                channel_map[7] = PCM_CHANNEL_RS;
+                channel_map[8] = PCM_CHANNEL_TFL;
+                channel_map[9] = PCM_CHANNEL_TFR;
+                channel_map[10] = PCM_CHANNEL_TSL;
+                channel_map[11] = PCM_CHANNEL_TSR;
+                break;
+          case 16:
+                /* 16 channels */
+                channel_map[0] = PCM_CHANNEL_FL;
+                channel_map[1] = PCM_CHANNEL_FR;
+                channel_map[2] = PCM_CHANNEL_FC;
+                channel_map[3] = PCM_CHANNEL_LFE;
+                channel_map[4] = PCM_CHANNEL_LB;
+                channel_map[5] = PCM_CHANNEL_RB;
+                channel_map[6] = PCM_CHANNEL_LS;
+                channel_map[7] = PCM_CHANNEL_RS;
+                channel_map[8] = PCM_CHANNEL_TFL;
+                channel_map[9] = PCM_CHANNEL_TFR;
+                channel_map[10] = PCM_CHANNEL_TSL;
+                channel_map[11] = PCM_CHANNEL_TSR;
+                channel_map[12] = PCM_CHANNEL_FLC;
+                channel_map[13] = PCM_CHANNEL_FRC;
+                channel_map[14] = PCM_CHANNEL_RLC;
+                channel_map[15] = PCM_CHANNEL_RRC;
+                break;
             default:
                 ALOGE("unsupported channels %d for setting channel map", channels);
                 return -1;
@@ -7343,12 +7516,21 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
     struct mixer_ctl *ctl;
     char mixer_ctl_name[44] = {0}; // max length of name is 44 as defined
     int ret;
-    unsigned int i;
-    long set_values[FCC_8] = {0};
+    unsigned int i=0, n=0;
+    long set_values[AUDIO_MAX_DSP_CHANNELS];
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     ALOGV("%s channel_count:%d",__func__, ch_count);
-    if (NULL == ch_map || (ch_count < 1) || (ch_count > FCC_8)) {
+
+    /*
+     * FIXME:
+     * Currently the channel mask in audio.h is limited to 30 channels,
+     * (=AUDIO_CHANNEL_COUNT_MAX), whereas the mixer controls already
+     * allow up to AUDIO_MAX_DSP_CHANNELS channels as per final requirement.
+     * Until channel mask definition is not changed from a uint32_t value
+     * to something else, a sanity check is needed here.
+     */
+    if (NULL == ch_map || (ch_count < 1) || (ch_count > AUDIO_CHANNEL_COUNT_MAX)) {
         ALOGE("%s: Invalid channel mapping or channel count value", __func__);
         return -EINVAL;
     }
@@ -7366,12 +7548,34 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
     ALOGD("%s mixer_ctl_name:%s", __func__, mixer_ctl_name);
 
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
               __func__, mixer_ctl_name);
         return -EINVAL;
     }
-    for (i = 0; i < (unsigned int)ch_count; i++) {
+
+    /* find out how many values the control can set */
+    n = mixer_ctl_get_num_values(ctl);
+
+    if (n != ch_count)
+        ALOGV("%s chcnt %d != mixerctl elem size %d",__func__, ch_count, n);
+
+    if (n < ch_count) {
+        ALOGE("%s chcnt %d > mixerctl elem size %d",__func__, ch_count, n);
+        return -EINVAL;
+    }
+
+    if (n > AUDIO_MAX_DSP_CHANNELS) {
+        ALOGE("%s mixerctl elem size %d > AUDIO_MAX_DSP_CHANNELS %d",__func__, n, AUDIO_MAX_DSP_CHANNELS);
+        return -EINVAL;
+    }
+
+    /* initialize all set_values to zero */
+    memset (set_values, 0, sizeof(set_values));
+
+    /* copy only as many values as corresponding mixer_ctrl allows */
+    for (i = 0; i < ch_count; i++) {
         set_values[i] = ch_map[i];
     }
 
@@ -7379,7 +7583,8 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
         set_values[0], set_values[1], set_values[2], set_values[3], set_values[4],
         set_values[5], set_values[6], set_values[7], ch_count);
 
-    ret = mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+    ret = mixer_ctl_set_array(ctl, set_values, n);
+
     if (ret < 0) {
         ALOGE("%s: Could not set ctl, error:%d ch_count:%d",
               __func__, ret, ch_count);
@@ -7542,6 +7747,11 @@ int platform_edid_get_highest_supported_sr(void *platform)
     }
 
     return 0;
+}
+
+bool platform_spkr_use_default_sample_rate(void *platform) {
+    struct platform_data *my_data = (struct platform_data *)platform;
+    return my_data->use_sprk_default_sample_rate;
 }
 
 int platform_set_edid_channels_configuration(void *platform, int channels, int backend_idx) {
