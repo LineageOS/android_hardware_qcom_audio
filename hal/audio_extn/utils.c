@@ -581,7 +581,7 @@ int audio_extn_utils_get_snd_card_num()
         }
 
         /* Initialize snd card name specific ids and/or backends*/
-        if (snd_card_info_init(platform_info_file, my_data,
+        if (platform_info_init(platform_info_file, my_data, false,
                                &acdb_set_parameters) < 0) {
             ALOGE("Failed to find platform_info_file");
             goto cleanup;

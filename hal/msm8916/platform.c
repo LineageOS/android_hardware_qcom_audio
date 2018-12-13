@@ -1132,7 +1132,8 @@ void *platform_init(struct audio_device *adev)
     /* Initialize ACDB and PCM ID's */
     strlcpy(platform_info_path, PLATFORM_INFO_XML_PATH, MAX_MIXER_XML_PATH);
     resolve_config_file(platform_info_path);
-    platform_info_init(platform_info_path, my_data);
+    platform_info_init(platform_info_path, my_data,
+                       true, &platform_set_parameters);
 
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
     if (my_data->acdb_handle == NULL) {
