@@ -1286,6 +1286,44 @@ static bool force_device_switch(struct audio_usecase *usecase)
     return false;
 }
 
+struct stream_in *adev_get_active_input(const struct audio_device *adev)
+{
+    struct listnode *node;
+    struct stream_in *last_active_in = NULL;
+
+    /* Get last added active input.
+     * TODO: We may use a priority mechanism to pick highest priority active source */
+    list_for_each(node, &adev->usecase_list)
+    {
+        struct audio_usecase *usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type == PCM_CAPTURE && usecase->stream.in != NULL) {
+            last_active_in =  usecase->stream.in;
+        }
+    }
+
+    return last_active_in;
+}
+
+struct stream_in *get_voice_communication_input(const struct audio_device *adev)
+{
+    struct listnode *node;
+
+    /* First check active inputs with voice communication source and then
+     * any input if audio mode is in communication */
+    list_for_each(node, &adev->usecase_list)
+    {
+        struct audio_usecase *usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type == PCM_CAPTURE && usecase->stream.in != NULL &&
+            usecase->stream.in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
+            return usecase->stream.in;
+        }
+    }
+    if (adev->mode == AUDIO_MODE_IN_COMMUNICATION) {
+        return adev_get_active_input(adev);
+    }
+    return NULL;
+}
+
 int select_devices(struct audio_device *adev,
                    audio_usecase_t uc_id)
 {
@@ -1310,7 +1348,9 @@ int select_devices(struct audio_device *adev,
         (usecase->type == PCM_HFP_CALL)) {
         out_snd_device = platform_get_output_snd_device(adev->platform,
                                                         usecase->stream.out->devices);
-        in_snd_device = platform_get_input_snd_device(adev->platform, usecase->stream.out->devices);
+        in_snd_device = platform_get_input_snd_device(adev->platform,
+                                                      NULL,
+                                                      usecase->stream.out->devices);
         usecase->devices = usecase->stream.out->devices;
     } else {
         /*
@@ -1342,6 +1382,7 @@ int select_devices(struct audio_device *adev,
             in_snd_device = SND_DEVICE_NONE;
             if (out_snd_device == SND_DEVICE_NONE) {
                 struct stream_out *voip_out = adev->primary_output;
+                struct stream_in *voip_in = get_voice_communication_input(adev);
 
                 out_snd_device = platform_get_output_snd_device(adev->platform,
                                             usecase->stream.out->devices);
@@ -1349,11 +1390,8 @@ int select_devices(struct audio_device *adev,
                 if (voip_usecase)
                     voip_out = voip_usecase->stream.out;
 
-                if (usecase->stream.out == voip_out &&
-                        adev->active_input &&
-                        (adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
-                            adev->mode == AUDIO_MODE_IN_COMMUNICATION)) {
-                    select_devices(adev, adev->active_input->usecase);
+                if (usecase->stream.out == voip_out && voip_in != NULL) {
+                    select_devices(adev, voip_in->usecase);
                 }
             }
         } else if (usecase->type == PCM_CAPTURE) {
@@ -1361,9 +1399,9 @@ int select_devices(struct audio_device *adev,
             out_snd_device = SND_DEVICE_NONE;
             if (in_snd_device == SND_DEVICE_NONE) {
                 audio_devices_t out_device = AUDIO_DEVICE_NONE;
-                if (adev->active_input &&
-                        (adev->active_input->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
-                            adev->mode == AUDIO_MODE_IN_COMMUNICATION)) {
+                struct stream_in *voip_in = get_voice_communication_input(adev);
+
+                if (voip_in != NULL) {
 
                     struct audio_usecase *voip_usecase = get_usecase_from_list(adev,
                                                              USECASE_AUDIO_PLAYBACK_VOIP);
@@ -1377,7 +1415,9 @@ int select_devices(struct audio_device *adev,
                         out_device = adev->primary_output->devices;
                     }
                 }
-                in_snd_device = platform_get_input_snd_device(adev->platform, out_device);
+                in_snd_device = platform_get_input_snd_device(adev->platform,
+                                                              usecase->stream.in,
+                                                              out_device);
             }
         }
     }
@@ -1534,17 +1574,6 @@ static int stop_input_stream(struct stream_in *in)
     ALOGV("%s: enter: usecase(%d: %s)", __func__,
           in->usecase, use_case_table[in->usecase]);
 
-    if (adev->active_input) {
-        if (adev->active_input->usecase == in->usecase) {
-            adev->active_input = NULL;
-        } else {
-            ALOGW("%s adev->active_input->usecase %s, v/s in->usecase %s",
-                __func__,
-                use_case_table[adev->active_input->usecase],
-                use_case_table[in->usecase]);
-        }
-    }
-
     uc_info = get_usecase_from_list(adev, in->usecase);
     if (uc_info == NULL) {
         ALOGE("%s: Could not find the usecase (%d) in the list",
@@ -1602,7 +1631,6 @@ int start_input_stream(struct stream_in *in)
         goto error_config;
     }
 
-    adev->active_input = in;
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
     uc_info->id = in->usecase;
     uc_info->type = PCM_CAPTURE;
@@ -1692,7 +1720,6 @@ error_open:
     audio_extn_perf_lock_release();
 
 error_config:
-    adev->active_input = NULL;
     ALOGW("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
@@ -5429,13 +5456,10 @@ static int adev_verify_devices(struct audio_device *adev)
             uc_info.id = audio_usecase;
             uc_info.type = usecase_type;
             if (dir) {
-                adev->active_input = &in;
                 memset(&in, 0, sizeof(in));
                 in.device = audio_device;
                 in.source = AUDIO_SOURCE_VOICE_COMMUNICATION;
                 uc_info.stream.in = &in;
-            }  else {
-                adev->active_input = NULL;
             }
             memset(&out, 0, sizeof(out));
             out.devices = audio_device; /* only field needed in select_devices */
@@ -5469,7 +5493,6 @@ static int adev_verify_devices(struct audio_device *adev)
             list_remove(&uc_info.list);
         }
     }
-    adev->active_input = NULL; /* restore adev state */
     return 0;
 }
 
@@ -5674,7 +5697,6 @@ static int adev_open(const hw_module_t *module, const char *name,
     /* Set the default route before the PCM stream is opened */
     pthread_mutex_lock(&adev->lock);
     adev->mode = AUDIO_MODE_NORMAL;
-    adev->active_input = NULL;
     adev->primary_output = NULL;
     adev->bluetooth_nrec = true;
     adev->acdb_settings = TTY_MODE_OFF;
