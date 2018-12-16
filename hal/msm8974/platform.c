@@ -915,7 +915,9 @@ static void set_audiocal(void *platform, struct str_parms *parms, char *value, i
 
         if (cal.dev_id) {
             if (audio_is_input_device(cal.dev_id)) {
-                cal.snd_dev_id = platform_get_input_snd_device(platform, cal.dev_id);
+                // FIXME: why pass an input device whereas
+                // platform_get_input_snd_device() expects as an output device?
+                cal.snd_dev_id = platform_get_input_snd_device(platform, NULL, cal.dev_id);
             } else {
                 cal.snd_dev_id = platform_get_output_snd_device(platform, cal.dev_id);
             }
@@ -2863,24 +2865,28 @@ exit:
     return snd_device;
 }
 
-snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_device)
+snd_device_t platform_get_input_snd_device(void *platform,
+                                           struct stream_in *in,
+                                           audio_devices_t out_device)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
-    audio_source_t  source = (adev->active_input == NULL) ?
-                                AUDIO_SOURCE_DEFAULT : adev->active_input->source;
-
-    audio_mode_t    mode   = adev->mode;
-    audio_devices_t in_device = ((adev->active_input == NULL) ?
-                                    AUDIO_DEVICE_NONE : adev->active_input->device)
-                                & ~AUDIO_DEVICE_BIT_IN;
-    audio_channel_mask_t channel_mask = (adev->active_input == NULL) ?
-                                AUDIO_CHANNEL_IN_MONO : adev->active_input->channel_mask;
+    audio_mode_t mode = adev->mode;
     snd_device_t snd_device = SND_DEVICE_NONE;
-    int channel_count = popcount(channel_mask);
+
+    if (in == NULL) {
+        in = adev_get_active_input(adev);
+    }
+
+    audio_source_t source = (in == NULL) ? AUDIO_SOURCE_DEFAULT : in->source;
+    audio_devices_t in_device =
+        ((in == NULL) ? AUDIO_DEVICE_NONE : in->device) & ~AUDIO_DEVICE_BIT_IN;
+    audio_channel_mask_t channel_mask = (in == NULL) ? AUDIO_CHANNEL_IN_MONO : in->channel_mask;
+    int channel_count = audio_channel_count_from_in_mask(channel_mask);
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
           __func__, out_device, in_device, channel_count, channel_mask);
+
     if ((out_device != AUDIO_DEVICE_NONE) && (voice_is_in_call(adev) ||
         audio_extn_hfp_is_active(adev))) {
         if (adev->voice.tty_mode != TTY_MODE_OFF) {
@@ -3009,20 +3015,20 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             if (my_data->fluence_in_voice_rec && channel_count == 1) {
                 if ((my_data->fluence_type == FLUENCE_PRO_ENABLE) &&
                     (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
-                    if (adev->active_input->enable_aec)
+                    if (in->enable_aec)
                         snd_device = SND_DEVICE_IN_HANDSET_QMIC_AEC;
                     else
                         snd_device = SND_DEVICE_IN_HANDSET_QMIC;
                 } else if ((my_data->fluence_type == FLUENCE_PRO_ENABLE) &&
                     (my_data->source_mic_type & SOURCE_THREE_MIC)) {
-                    if (adev->active_input->enable_aec)
+                    if (in->enable_aec)
                         snd_device = SND_DEVICE_IN_HANDSET_TMIC_AEC;
                     else
                         snd_device = SND_DEVICE_IN_HANDSET_TMIC;
                 } else if (((my_data->fluence_type == FLUENCE_PRO_ENABLE) ||
                     (my_data->fluence_type == FLUENCE_ENABLE)) &&
                     (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
-                    if (adev->active_input->enable_aec)
+                    if (in->enable_aec)
                         snd_device = SND_DEVICE_IN_HANDSET_DMIC_AEC;
                     else
                         snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
@@ -3039,14 +3045,14 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_QUAD_MIC;
             }
             if (snd_device == SND_DEVICE_NONE) {
-                if (adev->active_input->enable_aec) {
-                    if (adev->active_input->enable_ns) {
+                if (in->enable_aec) {
+                    if (in->enable_ns) {
                         snd_device = SND_DEVICE_IN_VOICE_REC_MIC_AEC_NS;
                     } else {
                         snd_device = SND_DEVICE_IN_VOICE_REC_MIC_AEC;
                     }
                     platform_set_echo_reference(adev, true, out_device);
-                } else if (adev->active_input->enable_ns) {
+                } else if (in->enable_ns) {
                     snd_device = SND_DEVICE_IN_VOICE_REC_MIC_NS;
                 } else {
                     snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
@@ -3085,9 +3091,9 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 !audio_extn_usb_is_capture_supported())) {
             in_device = AUDIO_DEVICE_IN_BACK_MIC;
         }
-        if (adev->active_input) {
-            if (adev->active_input->enable_aec &&
-                    adev->active_input->enable_ns) {
+        if (in) {
+            if (in->enable_aec &&
+                    in->enable_ns) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     if (my_data->fluence_in_spkr_mode &&
                             my_data->fluence_in_voice_comm &&
@@ -3109,7 +3115,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                     snd_device = SND_DEVICE_IN_USB_HEADSET_MIC_AEC;
                 }
                 platform_set_echo_reference(adev, true, out_device);
-            } else if (adev->active_input->enable_aec) {
+            } else if (in->enable_aec) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     if (my_data->fluence_in_spkr_mode &&
                             my_data->fluence_in_voice_comm &&
@@ -3131,7 +3137,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                    snd_device = SND_DEVICE_IN_USB_HEADSET_MIC_AEC;
                }
                platform_set_echo_reference(adev, true, out_device);
-            } else if (adev->active_input->enable_ns) {
+            } else if (in->enable_ns) {
                 if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
                     if (my_data->fluence_in_spkr_mode &&
                             my_data->fluence_in_voice_comm &&
@@ -4748,7 +4754,7 @@ int platform_get_active_microphones(void *platform, unsigned int channels,
     size_t actual_mic_count = 0;
 
     snd_device_t active_input_snd_device =
-            platform_get_input_snd_device(platform, usecase->stream.in->device);
+            platform_get_input_snd_device(platform, usecase->stream.in, AUDIO_DEVICE_NONE);
     if (active_input_snd_device == SND_DEVICE_NONE) {
         ALOGI("%s: No active microphones found", __func__);
         goto end;
