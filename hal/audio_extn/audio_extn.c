@@ -426,6 +426,7 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     audio_extn_get_afe_proxy_parameters(query, reply);
     audio_extn_get_fluence_parameters(adev, query, reply);
     get_active_offload_usecases(adev, query, reply);
+    audio_extn_fm_get_parameters(query, reply);
 
     kv_pairs = str_parms_to_str(reply);
     ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);
