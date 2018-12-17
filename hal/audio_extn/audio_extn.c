@@ -64,6 +64,8 @@
 
 #define MAX_SLEEP_RETRY 100
 #define WIFI_INIT_WAIT_SLEEP 50
+#define MAX_NUM_CHANNELS 8
+#define Q14_GAIN_UNITY 0x4000
 
 struct audio_extn_module {
     bool anc_enabled;
@@ -300,6 +302,74 @@ void audio_extn_customstereo_set_parameters(struct audio_device *adev,
         aextnmod.custom_stereo_enabled = custom_stereo_state;
         ALOGV("%s: Setting custom stereo state success", __func__);
     }
+}
+
+void audio_extn_send_dual_mono_mixing_coefficients(struct stream_out *out)
+{
+    struct audio_device *adev = out->dev;
+    struct mixer_ctl *ctl;
+    char mixer_ctl_name[128];
+    int cust_ch_mixer_cfg[128], len = 0;
+    int ip_channel_cnt = audio_channel_count_from_out_mask(out->channel_mask);
+    int pcm_device_id = platform_get_pcm_device_id(out->usecase, PCM_PLAYBACK);
+    int op_channel_cnt = 2;
+    int i, j, err;
+
+    ALOGV("%s", __func__);
+    if (!out->started) {
+        out->set_dual_mono = true;
+        goto exit;
+    }
+
+    ALOGD("%s: i/p channel count %d, o/p channel count %d, pcm id %d", __func__,
+           ip_channel_cnt, op_channel_cnt, pcm_device_id);
+
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+             "Audio Stream %d Channel Mix Cfg", pcm_device_id);
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: ERROR. Could not get ctl for mixer cmd - %s",
+        __func__, mixer_ctl_name);
+        goto exit;
+    }
+
+    /* Output channel count corresponds to backend configuration channels.
+     * Input channel count corresponds to ASM session channels.
+     * Set params is called with channels that need to be selected from
+     * input to generate output.
+     * ex: "8,2" to downmix from 8 to 2 i.e. to downmix from 8 to 2,
+     *
+     * This mixer control takes values in the following sequence:
+     * - input channel count(m)
+     * - output channel count(n)
+     * - weight coeff for [out ch#1, in ch#1]
+     * ....
+     * - weight coeff for [out ch#1, in ch#m]
+     *
+     * - weight coeff for [out ch#2, in ch#1]
+     * ....
+     * - weight coeff for [out ch#2, in ch#m]
+     *
+     * - weight coeff for [out ch#n, in ch#1]
+     * ....
+     * - weight coeff for [out ch#n, in ch#m]
+     *
+     * To get dualmono ouptu weightage coeff is calculated as Unity gain
+     * divided by number of input channels.
+     */
+    cust_ch_mixer_cfg[len++] = ip_channel_cnt;
+    cust_ch_mixer_cfg[len++] = op_channel_cnt;
+    for (i = 0; i < op_channel_cnt; i++) {
+         for (j = 0; j < ip_channel_cnt; j++) {
+              cust_ch_mixer_cfg[len++] = Q14_GAIN_UNITY/ip_channel_cnt;
+         }
+    }
+
+    err = mixer_ctl_set_array(ctl, cust_ch_mixer_cfg, len);
+    if (err)
+        ALOGE("%s: ERROR. Mixer ctl set failed", __func__);
+exit:
+    return;
 }
 #endif /* CUSTOM_STEREO_ENABLED */
 
