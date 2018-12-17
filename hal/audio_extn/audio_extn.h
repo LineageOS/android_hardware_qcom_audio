@@ -259,9 +259,11 @@ void audio_extn_perf_lock_release(void);
 
 #ifndef FM_POWER_OPT
 #define audio_extn_fm_set_parameters(adev, parms) (0)
+#define audio_extn_fm_get_parameters(query, reply) (0)
 #else
 void audio_extn_fm_set_parameters(struct audio_device *adev,
                                    struct str_parms *parms);
+void audio_extn_fm_get_parameters(struct str_parms *query, struct str_parms *reply);
 #endif
 
 typedef void (* snd_mon_cb)(void * stream, struct str_parms * parms);
