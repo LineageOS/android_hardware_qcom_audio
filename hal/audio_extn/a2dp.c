@@ -604,12 +604,12 @@ typedef struct {
     uint32_t bitrate;
     uint32_t bits_per_sample;
 } audio_aac_encoder_config;
+#endif
 
 typedef struct {
     audio_aac_encoder_config audio_aac_enc_cfg;
     struct aac_frame_size_control_t frame_ctl;
 } audio_aac_encoder_config_v2;
-#endif
 
 /* Information about BT CELT encoder configuration
  * This data is used between audio HAL module and
@@ -1902,7 +1902,7 @@ bool configure_aac_enc_format_v2(audio_aac_encoder_config_v2 *aac_bt_cfg)
         goto fail;
     }
     memset(&aac_dsp_cfg, 0x0, sizeof(struct aac_enc_cfg_v2_t));
-    aac_dsp_cfg.aac_enc_cfg.enc_format = ENC_MEDIA_FMT_AAC;
+    aac_dsp_cfg.aac_enc_cfg.enc_format = MEDIA_FMT_AAC;
     aac_dsp_cfg.aac_enc_cfg.bit_rate = aac_bt_cfg->audio_aac_enc_cfg.bitrate;
     aac_dsp_cfg.aac_enc_cfg.sample_rate = aac_bt_cfg->audio_aac_enc_cfg.sampling_rate;
     switch (aac_bt_cfg->audio_aac_enc_cfg.enc_mode) {
@@ -1935,7 +1935,7 @@ bool configure_aac_enc_format_v2(audio_aac_encoder_config_v2 *aac_bt_cfg)
         goto fail;
     }
     is_configured = true;
-    a2dp.bt_encoder_format = ENC_CODEC_TYPE_AAC;
+    a2dp.bt_encoder_format = CODEC_TYPE_AAC;
     a2dp.enc_sampling_rate = aac_bt_cfg->audio_aac_enc_cfg.sampling_rate;
     a2dp.enc_channels = aac_bt_cfg->audio_aac_enc_cfg.channels;
     ALOGV("%s: Successfully updated AAC enc format with sampling rate: %d channels:%d",
