@@ -971,6 +971,7 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     audio_extn_source_track_get_parameters(adev, query, reply);
     audio_extn_fbsp_get_parameters(query, reply);
     audio_extn_sound_trigger_get_parameters(adev, query, reply);
+    audio_extn_fm_get_parameters(query, reply);
     if (adev->offload_effects_get_parameters != NULL)
         adev->offload_effects_get_parameters(query, reply);
     audio_extn_ext_hw_plugin_get_parameters(adev->ext_hw_plugin, query, reply);
