@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -24,7 +24,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <math.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/str_parms.h>
 
 #include "audio_hw.h"
@@ -78,10 +78,14 @@ static bool voice_is_sidetone_device(snd_device_t out_device,
         is_sidetone_dev = true;
         strlcpy(mixer_path, "sidetone-headphones", MIXER_PATH_MAX_LENGTH);
         break;
+    case SND_DEVICE_OUT_VOICE_USB_HEADSET:
     case SND_DEVICE_OUT_USB_HEADSET:
+        // USB does not use a QC mixer.
+        mixer_path[0] = '\0';
         is_sidetone_dev = true;
         break;
     default:
+        ALOGW("%s: %d is not a sidetone device", __func__, out_device);
         is_sidetone_dev = false;
         break;
     }
@@ -405,6 +409,8 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
         session_id = voice_get_active_session_id(adev);
         ret = platform_set_incall_recording_session_id(adev->platform,
                                                        session_id, rec_mode);
+        ret = platform_set_incall_recording_session_channels(adev->platform,
+                                                        in->config.channels);
         ALOGV("%s: Update usecase to %d",__func__, in->usecase);
     } else {
         /*
@@ -578,6 +584,9 @@ int voice_start_call(struct audio_device *adev)
     int ret = 0;
 
     adev->voice.in_call = true;
+
+    voice_set_mic_mute(adev, adev->voice.mic_mute);
+
     ret = voice_extn_start_call(adev);
     if (ret == -ENOSYS) {
         ret = voice_start_usecase(adev, USECASE_VOICE_CALL);
@@ -655,6 +664,21 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
         }
     }
 
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HAC,
+                            value, sizeof(value));
+    if (err >= 0) {
+        bool hac = false;
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_HAC);
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_HAC_ON) == 0)
+            hac = true;
+
+        if (hac != adev->voice.hac) {
+            adev->voice.hac = hac;
+            if (voice_is_in_call(adev))
+                voice_update_devices_for_all_voice_usecases(adev);
+        }
+    }
+
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_INCALLMUSIC,
                             value, sizeof(value));
     if (err >= 0) {
@@ -677,6 +701,7 @@ void voice_init(struct audio_device *adev)
 
     memset(&adev->voice, 0, sizeof(adev->voice));
     adev->voice.tty_mode = TTY_MODE_OFF;
+    adev->voice.hac = false;
     adev->voice.volume = 1.0f;
     adev->voice.mic_mute = false;
     adev->voice.in_call = false;

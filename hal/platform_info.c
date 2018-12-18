@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,7 +33,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <expat.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/str_parms.h>
 #include <audio_hw.h>
 #include "acdb.h"
@@ -60,7 +60,9 @@ typedef enum {
     BACKEND_NAME,
     INTERFACE_NAME,
     CONFIG_PARAMS,
+    OPERATOR_SPECIFIC,
     GAIN_LEVEL_MAPPING,
+    APP_TYPE,
     ACDB_METAINFO_KEY,
     MICROPHONE_CHARACTERISTIC,
     SND_DEVICES,
@@ -82,7 +84,9 @@ static void process_backend_name(const XML_Char **attr);
 static void process_interface_name(const XML_Char **attr);
 static void process_config_params(const XML_Char **attr);
 static void process_root(const XML_Char **attr);
+static void process_operator_specific(const XML_Char **attr);
 static void process_gain_db_to_level_map(const XML_Char **attr);
+static void process_app_type(const XML_Char **attr);
 static void process_acdb_metainfo_key(const XML_Char **attr);
 static void process_microphone_characteristic(const XML_Char **attr);
 static void process_snd_dev(const XML_Char **attr);
@@ -98,6 +102,8 @@ static section_process_fn section_table[] = {
     [BACKEND_NAME] = process_backend_name,
     [INTERFACE_NAME] = process_interface_name,
     [CONFIG_PARAMS] = process_config_params,
+    [OPERATOR_SPECIFIC] = process_operator_specific,
+    [APP_TYPE] = process_app_type,
     [GAIN_LEVEL_MAPPING] = process_gain_db_to_level_map,
     [ACDB_METAINFO_KEY] = process_acdb_metainfo_key,
     [MICROPHONE_CHARACTERISTIC] = process_microphone_characteristic,
@@ -236,9 +242,18 @@ static bool find_enum_by_string(const struct audio_string_to_enum * table, const
  * </interface_names>
  * <config_params>
  *      <param key="snd_card_name" value="msm8994-tomtom-mtp-snd-card"/>
+ *      <param key="operator_info" value="tmus;aa;bb;cc"/>
+ *      <param key="operator_info" value="sprint;xx;yy;zz"/>
  *      ...
  *      ...
  * </config_params>
+ *
+ * <operator_specific>
+ *      <device name="???" operator="???" mixer_path="???" acdb_id="???"/>
+ *      ...
+ *      ...
+ * </operator_specific>
+ *
  * </audio_platform_info>
  */
 
@@ -355,6 +370,9 @@ static void process_gain_db_to_level_map(const XML_Char **attr)
     tbl_entry.amp = exp(tbl_entry.db * 0.115129f);
     tbl_entry.level = atoi(attr[3]);
 
+    //custome level should be > 0. Level 0 is fixed for default
+    CHECK(tbl_entry.level > 0);
+
     ALOGV("%s: amp [%f]  db [%f] level [%d]", __func__,
            tbl_entry.amp, tbl_entry.db, tbl_entry.level);
     platform_add_gain_level_mapping(&tbl_entry);
@@ -391,6 +409,43 @@ static void process_acdb_id(const XML_Char **attr)
               __func__, attr[1], atoi((char *)attr[3]));
         goto done;
     }
+
+done:
+    return;
+}
+
+static void process_operator_specific(const XML_Char **attr)
+{
+    snd_device_t snd_device = SND_DEVICE_NONE;
+
+    if (strcmp(attr[0], "name") != 0) {
+        ALOGE("%s: 'name' not found", __func__);
+        goto done;
+    }
+
+    snd_device = platform_get_snd_device_index((char *)attr[1]);
+    if (snd_device < 0) {
+        ALOGE("%s: Device %s in %s not found, no ACDB ID set!",
+              __func__, (char *)attr[3], PLATFORM_INFO_XML_PATH);
+        goto done;
+    }
+
+    if (strcmp(attr[2], "operator") != 0) {
+        ALOGE("%s: 'operator' not found", __func__);
+        goto done;
+    }
+
+    if (strcmp(attr[4], "mixer_path") != 0) {
+        ALOGE("%s: 'mixer_path' not found", __func__);
+        goto done;
+    }
+
+    if (strcmp(attr[6], "acdb_id") != 0) {
+        ALOGE("%s: 'acdb_id' not found", __func__);
+        goto done;
+    }
+
+    platform_add_operator_specific_device(snd_device, (char *)attr[3], (char *)attr[5], atoi((char *)attr[7]));
 
 done:
     return;
@@ -547,6 +602,39 @@ static void process_config_params(const XML_Char **attr)
     }
 
     str_parms_add_str(my_data.kvpairs, (char*)attr[1], (char*)attr[3]);
+done:
+    return;
+}
+
+static void process_app_type(const XML_Char **attr)
+{
+    if (strcmp(attr[0], "uc_type")) {
+        ALOGE("%s: uc_type not found", __func__);
+        goto done;
+    }
+
+    if (strcmp(attr[2], "mode")) {
+        ALOGE("%s: mode not found", __func__);
+        goto done;
+    }
+
+    if (strcmp(attr[4], "bit_width")) {
+        ALOGE("%s: bit_width not found", __func__);
+        goto done;
+    }
+
+    if (strcmp(attr[6], "id")) {
+        ALOGE("%s: id not found", __func__);
+        goto done;
+    }
+
+    if (strcmp(attr[8], "max_rate")) {
+        ALOGE("%s: max rate not found", __func__);
+        goto done;
+    }
+
+    platform_add_app_type(attr[1], attr[3], atoi(attr[5]), atoi(attr[7]),
+                          atoi(attr[9]));
 done:
     return;
 }
@@ -899,10 +987,14 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
             section = BACKEND_NAME;
         } else if (strcmp(tag_name, "config_params") == 0) {
             section = CONFIG_PARAMS;
+        } else if (strcmp(tag_name, "operator_specific") == 0) {
+            section = OPERATOR_SPECIFIC;
         } else if (strcmp(tag_name, "interface_names") == 0) {
             section = INTERFACE_NAME;
         } else if (strcmp(tag_name, "gain_db_to_level_mapping") == 0) {
             section = GAIN_LEVEL_MAPPING;
+        } else if (strcmp(tag_name, "app_types") == 0) {
+            section = APP_TYPE;
         } else if(strcmp(tag_name, "acdb_metainfo_key") == 0) {
             section = ACDB_METAINFO_KEY;
         } else if (strcmp(tag_name, "microphone_characteristics") == 0) {
@@ -912,7 +1004,7 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
         } else if (strcmp(tag_name, "device") == 0) {
             if ((section != ACDB) && (section != AEC) && (section != NS) &&
                 (section != BACKEND_NAME) && (section != BITWIDTH) &&
-                (section != INTERFACE_NAME)) {
+                (section != INTERFACE_NAME) && (section != OPERATOR_SPECIFIC)) {
                 ALOGE("device tag only supported for acdb/backend names/bitwitdh/interface names");
                 return;
             }
@@ -956,6 +1048,22 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
                 return;
             }
             section = NS;
+        } else if (strcmp(tag_name, "gain_level_map") == 0) {
+            if (section != GAIN_LEVEL_MAPPING) {
+                ALOGE("gain_level_map tag only supported with GAIN_LEVEL_MAPPING section");
+                return;
+            }
+
+            section_process_fn fn = section_table[GAIN_LEVEL_MAPPING];
+            fn(attr);
+        } else if (!strcmp(tag_name, "app")) {
+            if (section != APP_TYPE) {
+                ALOGE("app tag only valid in section APP_TYPE");
+                return;
+            }
+
+            section_process_fn fn = section_table[APP_TYPE];
+            fn(attr);
         } else if (strcmp(tag_name, "microphone") == 0) {
             if (section != MICROPHONE_CHARACTERISTIC) {
                 ALOGE("microphone tag only supported with MICROPHONE_CHARACTERISTIC section");
@@ -995,7 +1103,17 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
             fn(attr);
       }
     } else {
-            ALOGE("%s: unknown caller!", __func__);
+        if(strcmp(tag_name, "config_params") == 0) {
+            section = CONFIG_PARAMS;
+        } else if (strcmp(tag_name, "param") == 0) {
+            if (section != CONFIG_PARAMS) {
+                ALOGE("param tag only supported with CONFIG_PARAMS section");
+                return;
+            }
+
+            section_process_fn fn = section_table[section];
+            fn(attr);
+        }
     }
     return;
 }
@@ -1021,9 +1139,13 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
         if (my_data.caller == PLATFORM) {
             platform_set_parameters(my_data.platform, my_data.kvpairs);
         }
+    } else if (strcmp(tag_name, "operator_specific") == 0) {
+        section = ROOT;
     } else if (strcmp(tag_name, "interface_names") == 0) {
         section = ROOT;
     } else if (strcmp(tag_name, "gain_db_to_level_mapping") == 0) {
+        section = ROOT;
+    } else if (strcmp(tag_name, "app_types") == 0) {
         section = ROOT;
     } else if (strcmp(tag_name, "acdb_metainfo_key") == 0) {
         section = ROOT;
@@ -1045,13 +1167,23 @@ int platform_info_init(const char *filename, void *platform, caller_t caller_typ
     int             ret = 0;
     int             bytes_read;
     void            *buf;
+    char            platform_info_file_name[MIXER_PATH_MAX_LENGTH]= {0};
 
-    file = fopen(filename, "r");
+    if (filename == NULL)
+        strlcpy(platform_info_file_name, PLATFORM_INFO_XML_PATH,
+                MIXER_PATH_MAX_LENGTH);
+    else
+        strlcpy(platform_info_file_name, filename, MIXER_PATH_MAX_LENGTH);
+
+    ALOGV("%s: platform info file name is %s", __func__,
+          platform_info_file_name);
+
+    file = fopen(platform_info_file_name, "r");
     section = ROOT;
 
     if (!file) {
         ALOGD("%s: Failed to open %s, using defaults.",
-            __func__, filename);
+            __func__, platform_info_file_name);
         ret = -ENODEV;
         goto done;
     }
@@ -1087,7 +1219,7 @@ int platform_info_init(const char *filename, void *platform, caller_t caller_typ
         if (XML_ParseBuffer(parser, bytes_read,
                             bytes_read == 0) == XML_STATUS_ERROR) {
             ALOGE("%s: XML_ParseBuffer failed, for %s",
-                __func__, filename);
+                __func__, platform_info_file_name);
             ret = -EINVAL;
             goto err_free_parser;
         }

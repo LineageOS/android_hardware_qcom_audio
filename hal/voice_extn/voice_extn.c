@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -436,12 +436,15 @@ int voice_extn_stop_call(struct audio_device *adev)
      * set routing with device BT A2DP profile. Hence end all voice calls when
      * set_mode(AUDIO_MODE_NORMAL) before BT A2DP profile is selected.
      */
-    ALOGD("%s: end all calls", __func__);
-    for (i = 0; i < MAX_VOICE_SESSIONS; i++) {
-        adev->voice.session[i].state.new = CALL_INACTIVE;
+    if (adev->mode == AUDIO_MODE_NORMAL) {
+        ALOGD("%s: end all calls", __func__);
+        for (i = 0; i < MAX_VOICE_SESSIONS; i++) {
+            adev->voice.session[i].state.new = CALL_INACTIVE;
+        }
+
+        ret = update_calls(adev);
     }
 
-    ret = update_calls(adev);
     return ret;
 }
 
@@ -594,6 +597,7 @@ void voice_extn_in_get_parameters(struct stream_in *in,
     voice_extn_compress_voip_in_get_parameters(in, query, reply);
 }
 
+#ifdef INCALL_MUSIC_ENABLED
 int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
                                                   struct stream_out *out)
 {
@@ -607,3 +611,4 @@ int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
     ALOGV("%s: mode=%d, usecase id=%d", __func__, adev->mode, out->usecase);
     return 0;
 }
+#endif

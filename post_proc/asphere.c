@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, 2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015, 2017, 2019 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -35,7 +35,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <sys/stat.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/list.h>
 #include <cutils/str_parms.h>
 #include <cutils/properties.h>
@@ -130,7 +130,7 @@ static int asphere_get_values_from_mixer(void)
         asphere.enabled = (val[0] == 0) ? false : true;
         asphere.strength = val[1];
     }
-    ALOGD("%s: returned %d, enabled:%d, strength:%d",
+    ALOGD("%s: returned %d, enabled:%ld, strength:%ld",
           __func__, ret, val[0], val[1]);
 
     return ret;
@@ -153,7 +153,7 @@ static int asphere_set_values_to_mixer(void)
     val[1] = asphere.strength;
 
     ret = mixer_ctl_set_array(ctl, val, sizeof(val)/sizeof(val[0]));
-    ALOGD("%s: returned %d, enabled:%d, strength:%d",
+    ALOGD("%s: returned %d, enabled:%ld, strength:%ld",
           __func__, ret, val[0], val[1]);
 
     return ret;
@@ -222,7 +222,7 @@ void asphere_get_parameters(struct str_parms *query,
 {
     char value[32] = {0};
     char propValue[PROPERTY_VALUE_MAX] = {0};
-    int get_status, get_enable, get_strength, ret;
+    int ret;
 
     if (!property_get("vendor.audio.pp.asphere.enabled", propValue, "false") ||
         (strncmp("true", propValue, 4) != 0)) {

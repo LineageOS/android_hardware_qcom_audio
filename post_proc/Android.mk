@@ -15,6 +15,8 @@ LOCAL_CFLAGS += -Wno-unused-function
 LOCAL_CFLAGS += -Wno-unused-local-typedef
 LOCAL_CFLAGS += -Wno-format
 LOCAL_CFLAGS += -Wno-unused-value
+LOCAL_CFLAGS += -Wall
+LOCAL_CFLAGS += -Werror
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
@@ -74,6 +76,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_RELATIVE_PATH := soundfx
 LOCAL_MODULE:= libqcompostprocbundle
 LOCAL_VENDOR_MODULE := true
+LOCAL_MODULE_OWNER := qti
 
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -158,6 +161,8 @@ LOCAL_CFLAGS += -Wno-tautological-compare
 LOCAL_CFLAGS += -Wno-unused-function
 LOCAL_CFLAGS += -Wno-unused-local-typedef
 LOCAL_CFLAGS += -Wno-format
+LOCAL_CFLAGS += -Wall
+LOCAL_CFLAGS += -Werror
 
 LOCAL_SRC_FILES:= \
         volume_listener.c
@@ -171,11 +176,13 @@ LOCAL_HEADER_LIBRARIES := libhardware_headers \
 LOCAL_SHARED_LIBRARIES := \
         libcutils \
         liblog \
-        libdl
+        libdl \
+        libaudioutils
 
 LOCAL_MODULE_RELATIVE_PATH := soundfx
 LOCAL_MODULE:= libvolumelistener
 LOCAL_VENDOR_MODULE := true
+LOCAL_MODULE_OWNER := qti
 
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -187,7 +194,8 @@ LOCAL_C_INCLUDES := \
         $(call include-path-for, audio-effects) \
         $(call include-path-for, audio-route) \
         vendor/qcom/opensource/audio-hal/primary-hal/hal/audio_extn \
-        external/tinycompress/include
+        external/tinycompress/include \
+        system/media/audio_utils/include
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES += audio_kernel_headers

@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, 2016-2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016-2019 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,7 +34,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <dlfcn.h>
-#include <cutils/log.h>
+#include <pthread.h>
+#include <log/log.h>
 #include <unistd.h>
 #include "audio_hw.h"
 #include "audio_extn.h"
@@ -95,7 +96,9 @@ typedef enum {
     SND_CARD_STATUS_OFFLINE,
     SND_CARD_STATUS_ONLINE,
     CPE_STATUS_OFFLINE,
-    CPE_STATUS_ONLINE
+    CPE_STATUS_ONLINE,
+    SLPI_STATUS_OFFLINE,
+    SLPI_STATUS_ONLINE
 } ssr_event_status_t;
 
 struct sound_trigger_session_info {
@@ -619,6 +622,18 @@ void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
     if (ret >= 0) {
         strlcpy(event.u.str_value, value, sizeof(event.u.str_value));
         st_dev->st_callback(AUDIO_EVENT_SVA_EXEC_MODE, &event);
+    }
+
+    ret = str_parms_get_str(params, "SLPI_STATUS", value, sizeof(value));
+    if (ret > 0) {
+        if (strstr(value, "OFFLINE")) {
+            event.u.status = SLPI_STATUS_OFFLINE;
+            st_dev->st_callback(AUDIO_EVENT_SSR, &event);
+        } else if (strstr(value, "ONLINE")) {
+            event.u.status = SLPI_STATUS_ONLINE;
+            st_dev->st_callback(AUDIO_EVENT_SSR, &event);
+        } else
+            ALOGE("%s: unknown SLPI status", __func__);
     }
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,7 +32,7 @@
 
 #include <errno.h>
 #include <math.h>
-#include <cutils/log.h>
+#include <log/log.h>
 
 #include "audio_hw.h"
 #include "platform.h"
@@ -143,7 +143,7 @@ static bool is_stt_supported_snd_device(snd_device_t snd_device)
     case SND_DEVICE_IN_HANDSET_DMIC_AEC:
     case SND_DEVICE_IN_HANDSET_DMIC_NS:
     case SND_DEVICE_IN_HANDSET_DMIC_AEC_NS:
-    case SND_DEVICE_IN_HANDSET_STEREO_DMIC:
+    case SND_DEVICE_IN_HANDSET_DMIC_STEREO:
     case SND_DEVICE_IN_HANDSET_QMIC:
     case SND_DEVICE_IN_HANDSET_TMIC_FLUENCE_PRO:
     case SND_DEVICE_IN_VOICE_DMIC:

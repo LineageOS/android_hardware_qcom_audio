@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, 2017-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -21,7 +21,7 @@
 //#define LOG_NDEBUG 0
 
 #include <cutils/list.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <tinyalsa/asoundlib.h>
 #include <sound/audio_effects.h>
 #include <audio_effects/effect_virtualizer.h>
@@ -292,7 +292,6 @@ int virtualizer_get_parameter(effect_context_t *context, effect_param_t *p,
     int32_t *param_tmp = (int32_t *)p->data;
     int32_t param = *param_tmp++;
     void *value = p->data + voffset;
-    int i;
 
     ALOGV("%s: ctxt %p, param %d", __func__, virt_ctxt, param);
 
@@ -461,10 +460,8 @@ int virtualizer_set_device(effect_context_t *context, uint32_t device)
     return 0;
 }
 
-int virtualizer_reset(effect_context_t *context)
+int virtualizer_reset(effect_context_t *context __unused)
 {
-    virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)context;
-
     return 0;
 }
 

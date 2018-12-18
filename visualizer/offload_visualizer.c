@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2013, 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@
 #include <unistd.h>
 
 #include <cutils/list.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <system/thread_defs.h>
 #include <tinyalsa/asoundlib.h>
 #include <audio_effects/effect_visualizer.h>

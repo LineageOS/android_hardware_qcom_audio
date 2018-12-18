@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -104,7 +104,7 @@
 #include <sys/prctl.h>
 #include <cutils/properties.h>
 #include <cutils/str_parms.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/atomic.h>
 #include "audio_utils/primitives.h"
 #include "audio_hw.h"
@@ -2350,7 +2350,7 @@ static int qaf_out_set_parameters(struct audio_stream *stream, const char *kvpai
      */
     out->devices = val;
 
-#ifndef SPLIT_A2DP_ENABLED
+#ifndef A2DP_OFFLOAD_ENABLED
     if (val == AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) {
         //If device is BT then open the BT stream if not already opened.
         if ( audio_extn_bt_hal_get_output_stream(qaf_mod->bt_hdl) == NULL
@@ -2919,7 +2919,7 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
         } else if (val & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) {
             p_qaf->bt_connect = 1;
             set_bt_configuration_to_module();
-#ifndef SPLIT_A2DP_ENABLED
+#ifndef A2DP_OFFLOAD_ENABLED
             for (k = 0; k < MAX_MM_MODULE_TYPE; k++) {
                 if (!p_qaf->qaf_mod[k].bt_hdl) {
                     DEBUG_MSG("Opening a2dp output...");
@@ -2970,7 +2970,7 @@ int audio_extn_qaf_set_parameters(struct audio_device *adev, struct str_parms *p
         //reconfig HDMI as end device (if connected)
         if(p_qaf->hdmi_connect)
             set_hdmi_configuration_to_module();
-#ifndef SPLIT_A2DP_ENABLED
+#ifndef A2DP_OFFLOAD_ENABLED
             DEBUG_MSG("Closing a2dp output...");
             for (k = 0; k < MAX_MM_MODULE_TYPE; k++) {
                 if (p_qaf->qaf_mod[k].bt_hdl) {

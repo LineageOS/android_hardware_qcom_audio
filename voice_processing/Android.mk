@@ -4,12 +4,19 @@ LOCAL_PATH:= $(call my-dir)
 # audio preprocessing wrapper
 include $(CLEAR_VARS)
 
-LOCAL_CFLAGS += -Wno-unused-variable -Wno-gnu-designator -Wno-unused-value -Wno-unused-function
+LOCAL_CFLAGS += \
+    -Wall \
+    -Werror \
+    -Wno-unused-variable \
+    -Wno-gnu-designator \
+    -Wno-unused-value \
+    -Wno-unused-function
 
 LOCAL_MODULE:= libqcomvoiceprocessing
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_RELATIVE_PATH := soundfx
 LOCAL_VENDOR_MODULE := true
+LOCAL_MODULE_OWNER := qti
 
 LOCAL_SRC_FILES:= \
     voice_processing.c

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -44,7 +44,7 @@
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <cutils/properties.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <unistd.h>
 
 #include "audio_hw.h"
@@ -66,6 +66,63 @@
 #define WIFI_INIT_WAIT_SLEEP 50
 #define MAX_NUM_CHANNELS 8
 #define Q14_GAIN_UNITY 0x4000
+
+struct snd_card_split cur_snd_card_split = {
+    .device = {0},
+    .snd_card = {0},
+    .form_factor = {0},
+};
+
+struct snd_card_split *audio_extn_get_snd_card_split()
+{
+    return &cur_snd_card_split;
+}
+
+void audio_extn_set_snd_card_split(const char* in_snd_card_name)
+{
+    /* sound card name follows below mentioned convention
+       <target name>-<sound card name>-<form factor>-snd-card
+       parse target name, sound card name and form factor
+    */
+    char *snd_card_name = strdup(in_snd_card_name);
+    char *tmp = NULL;
+    char *device = NULL;
+    char *snd_card = NULL;
+    char *form_factor = NULL;
+
+    if (in_snd_card_name == NULL) {
+        ALOGE("%s: snd_card_name passed is NULL", __func__);
+        goto on_error;
+    }
+
+    device = strtok_r(snd_card_name, "-", &tmp);
+    if (device == NULL) {
+        ALOGE("%s: called on invalid snd card name", __func__);
+        goto on_error;
+    }
+    strlcpy(cur_snd_card_split.device, device, HW_INFO_ARRAY_MAX_SIZE);
+
+    snd_card = strtok_r(NULL, "-", &tmp);
+    if (snd_card == NULL) {
+        ALOGE("%s: called on invalid snd card name", __func__);
+        goto on_error;
+    }
+    strlcpy(cur_snd_card_split.snd_card, snd_card, HW_INFO_ARRAY_MAX_SIZE);
+
+    form_factor = strtok_r(NULL, "-", &tmp);
+    if (form_factor == NULL) {
+        ALOGE("%s: called on invalid snd card name", __func__);
+        goto on_error;
+    }
+    strlcpy(cur_snd_card_split.form_factor, form_factor, HW_INFO_ARRAY_MAX_SIZE);
+
+    ALOGI("%s: snd_card_name(%s) device(%s) snd_card(%s) form_factor(%s)",
+               __func__, in_snd_card_name, device, snd_card, form_factor);
+
+on_error:
+    if (snd_card_name)
+        free(snd_card_name);
+}
 
 struct audio_extn_module {
     bool anc_enabled;
@@ -928,6 +985,8 @@ void audio_extn_init(struct audio_device *adev)
 void audio_extn_set_parameters(struct audio_device *adev,
                                struct str_parms *parms)
 {
+   bool a2dp_reconfig = false;
+
    audio_extn_set_aanc_noise_level(adev, parms);
    audio_extn_set_anc_parameters(adev, parms);
    audio_extn_set_fluence_parameters(adev, parms);
@@ -938,7 +997,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_ssr_set_parameters(adev, parms);
    audio_extn_hfp_set_parameters(adev, parms);
    audio_extn_dts_eagle_set_parameters(adev, parms);
-   audio_extn_a2dp_set_parameters(parms);
+   audio_extn_a2dp_set_parameters(parms, &a2dp_reconfig);
    audio_extn_ddp_set_parameters(adev, parms);
    audio_extn_ds2_set_parameters(adev, parms);
    audio_extn_customstereo_set_parameters(adev, parms);
@@ -1638,4 +1697,22 @@ int audio_extn_set_device_cfg_params(struct audio_device *adev,
     return 0;
 }
 
-
+// TODO: remove after ext spkr file added
+void *audio_extn_extspk_init(struct audio_device *adev __unused)
+{
+    return NULL;
+}
+void audio_extn_extspk_deinit(void *extn __unused)
+{
+}
+void audio_extn_extspk_update(void* extn __unused)
+{
+}
+void audio_extn_extspk_set_mode(void* extn __unused,
+                                audio_mode_t mode __unused)
+{
+}
+void audio_extn_extspk_set_voice_vol(void* extn __unused,
+                                     float vol __unused)
+{
+}

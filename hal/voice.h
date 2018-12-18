@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -60,6 +60,7 @@ struct voice_session {
 struct voice {
     struct voice_session session[MAX_VOICE_SESSIONS];
     int tty_mode;
+    bool hac;
     bool mic_mute;
     bool use_device_mute;
     float volume;

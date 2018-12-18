@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,9 +33,10 @@
 
 #include <errno.h>
 #include <math.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <pthread.h>
 #include "audio_hw.h"
 #include "platform.h"
 #include "platform_api.h"
@@ -116,7 +117,8 @@ enum sp_version {
 
 /*If calibration is in progress wait for 200 msec before querying
   for status again*/
-#define WAIT_FOR_GET_CALIB_STATUS (200 * 1000)
+#define WAIT_FOR_GET_CALIB_STATUS (200)
+#define GET_SPKR_PROT_CAL_TIMEOUT_MSEC (5000)
 
 /*Speaker states*/
 #define SPKR_NOT_CALIBRATED -1
@@ -500,8 +502,14 @@ static int set_spkr_prot_cal(int cal_fd,
         ALOGD("%s: quick calibration enabled", __func__);
         cal_data.cal_type.cal_info.quick_calib_flag = 1;
     } else {
-        ALOGD("%s: quick calibration disabled", __func__);
-        cal_data.cal_type.cal_info.quick_calib_flag = 0;
+        property_get("persist.spkr.cal.duration", value, "0");
+        if (atoi(value) > 0) {
+            ALOGD("%s: quick calibration enabled", __func__);
+            cal_data.cal_type.cal_info.quick_calib_flag = 1;
+        } else {
+            ALOGD("%s: quick calibration disabled", __func__);
+            cal_data.cal_type.cal_info.quick_calib_flag = 0;
+        }
     }
 
     cal_data.cal_type.cal_data.mem_handle = -1;
@@ -749,6 +757,8 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
     int32_t pcm_dev_rx_id = -1, pcm_dev_tx_id = -1;
     struct timespec ts;
     bool acquire_device = false;
+    int retry_duration;
+    int app_type = 0;
 
     memset(&status, 0, sizeof(status));
     memset(&protCfg, 0, sizeof(protCfg));
@@ -873,7 +883,9 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
     }
     if (acdb_fd > 0) {
         status.status = -EINVAL;
-        while (!get_spkr_prot_cal(acdb_fd, &status)) {
+        retry_duration = 0;
+        while (!get_spkr_prot_cal(acdb_fd, &status) &&
+                retry_duration < GET_SPKR_PROT_CAL_TIMEOUT_MSEC) {
             /*sleep for 200 ms to check for status check*/
             if (!status.status) {
                 ALOGD("%s: spkr_prot_thread calib Success R0 %d %d",
@@ -896,7 +908,8 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
                 break;
             } else if (status.status == -EAGAIN) {
                   ALOGV("%s: spkr_prot_thread try again", __func__);
-                  usleep(WAIT_FOR_GET_CALIB_STATUS);
+                  usleep(WAIT_FOR_GET_CALIB_STATUS * 1000);
+                  retry_duration += WAIT_FOR_GET_CALIB_STATUS;
             } else {
                 ALOGE("%s: spkr_prot_thread get failed status %d",
                 __func__, status.status);
@@ -910,6 +923,17 @@ exit:
         if (handle.pcm_tx)
             pcm_close(handle.pcm_tx);
         handle.pcm_tx = NULL;
+        /* Clear TX calibration to handset mic */
+        if (uc_info_tx != NULL) {
+            ALOGD("%s: UC Info TX is not NULL, updating and sending calibration",
+                  __func__);
+            uc_info_tx->in_snd_device = SND_DEVICE_IN_HANDSET_MIC;
+            uc_info_tx->out_snd_device = SND_DEVICE_NONE;
+            app_type = platform_get_default_app_type_v2(adev->platform,
+                                                PCM_CAPTURE);
+            platform_send_audio_calibration(adev->platform, uc_info_tx,
+                                                    app_type, 8000);
+        }
         if (!status.status) {
             protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
             protCfg.r0[SP_V2_SPKR_1] = status.r0[SP_V2_SPKR_1];
@@ -1004,6 +1028,11 @@ static void* spkr_calibration_thread()
     property_get("persist.vendor.audio.spkr.cal.duration", value, "0");
     if (atoi(value) > 0)
         min_idle_time = atoi(value);
+    else {
+        property_get("persist.spkr.cal.duration", value, "0");
+        if (atoi(value) > 0)
+            min_idle_time = atoi(value);
+    }
     handle.speaker_prot_threadid = pthread_self();
     ALOGD("spkr_prot_thread enable prot Entry");
     acdb_fd = open("/dev/msm_audio_cal",O_RDWR | O_NONBLOCK);
@@ -1631,12 +1660,16 @@ void audio_extn_spkr_prot_init(void *adev)
         ALOGE("%s: Invalid params", __func__);
         return;
     }
-    property_get("persist.vendor.audio.speaker.prot.enable", value, "");
     handle.spkr_prot_enable = false;
+    if ((property_get("persist.vendor.audio.speaker.prot.enable",
+                      value, NULL) > 0) ||
+        (property_get("persist.speaker.prot.enable",
+                      value, NULL) > 0)) {
+        if (!strncmp("true", value, 4))
+             handle.spkr_prot_enable = true;
+    }
     handle.init_check = false;
     handle.thread_exit = false;
-    if (!strncmp("true", value, 4))
-       handle.spkr_prot_enable = true;
     if (!handle.spkr_prot_enable) {
         ALOGD("%s: Speaker protection disabled", __func__);
         return;
@@ -1648,6 +1681,11 @@ void audio_extn_spkr_prot_init(void *adev)
     handle.trigger_cal = false;
     /* HAL for speaker protection is always calibrating for stereo usecase*/
     vi_feed_no_channels = spkr_vi_channels(adev);
+    if (vi_feed_no_channels < 0) {
+        ALOGE("%s: no of channels negative !!", __func__);
+        /* limit the number of channels to 2*/
+        vi_feed_no_channels = 2;
+    }
 
     pthread_condattr_init(&attr);
     pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
@@ -1810,6 +1848,7 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
     int32_t pcm_dev_tx_id = -1, ret = 0;
     snd_device_t in_snd_device;
     char device_name[DEVICE_NAME_MAX_SIZE] = {0};
+    int app_type = 0;
 
     ALOGV("%s: Entry", __func__);
     /* cancel speaker calibration */
@@ -1875,7 +1914,18 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device)
     }
 
 exit:
-     if (ret) {
+    /* Clear VI feedback cal and replace with handset MIC  */
+    if (uc_info_tx != NULL) {
+        ALOGD("%s: UC Info TX is not NULL, updating and sending calibration",
+              __func__);
+        uc_info_tx->in_snd_device = SND_DEVICE_IN_HANDSET_MIC;
+        uc_info_tx->out_snd_device = SND_DEVICE_NONE;
+        app_type = platform_get_default_app_type_v2(adev->platform,
+                                            PCM_CAPTURE);
+        platform_send_audio_calibration(adev->platform, uc_info_tx,
+                                                app_type, 8000);
+    }
+    if (ret) {
         if (handle.pcm_tx)
             pcm_close(handle.pcm_tx);
         handle.pcm_tx = NULL;
@@ -1929,5 +1979,9 @@ void audio_extn_spkr_prot_stop_processing(snd_device_t snd_device)
 bool audio_extn_spkr_prot_is_enabled()
 {
     return handle.spkr_prot_enable;
+}
+
+int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device) {
+    return snd_device;
 }
 #endif /*SPKR_PROT_ENABLED*/

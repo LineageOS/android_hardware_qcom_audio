@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,7 +33,7 @@
 
 #include <stdlib.h>
 #include <dlfcn.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/str_parms.h>
 #include "audio_hw.h"
 #include "platform.h"
@@ -85,8 +85,8 @@ static const snd_device_t taiko_liquid_variant_devices[] = {
     SND_DEVICE_IN_VOICE_REC_DMIC_STEREO,
     SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE,
     SND_DEVICE_IN_QUAD_MIC,
-    SND_DEVICE_IN_HANDSET_STEREO_DMIC,
-    SND_DEVICE_IN_SPEAKER_STEREO_DMIC,
+    SND_DEVICE_IN_HANDSET_DMIC_STEREO,
+    SND_DEVICE_IN_SPEAKER_DMIC_STEREO,
 };
 
 static const snd_device_t tomtom_msm8994_CDP_variant_devices[] = {
@@ -106,8 +106,8 @@ static const snd_device_t tomtom_liquid_variant_devices[] = {
     SND_DEVICE_IN_VOICE_REC_DMIC_STEREO,
     SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE,
     SND_DEVICE_IN_QUAD_MIC,
-    SND_DEVICE_IN_HANDSET_STEREO_DMIC,
-    SND_DEVICE_IN_SPEAKER_STEREO_DMIC,
+    SND_DEVICE_IN_HANDSET_DMIC_STEREO,
+    SND_DEVICE_IN_SPEAKER_DMIC_STEREO,
 };
 
 static const snd_device_t tomtom_stp_variant_devices[] = {
@@ -206,8 +206,8 @@ static const snd_device_t tasha_liquid_variant_devices[] = {
     SND_DEVICE_IN_VOICE_REC_DMIC_STEREO,
     SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE,
     SND_DEVICE_IN_QUAD_MIC,
-    SND_DEVICE_IN_HANDSET_STEREO_DMIC,
-    SND_DEVICE_IN_SPEAKER_STEREO_DMIC,
+    SND_DEVICE_IN_HANDSET_DMIC_STEREO,
+    SND_DEVICE_IN_SPEAKER_DMIC_STEREO,
 };
 
 
@@ -239,8 +239,8 @@ static const snd_device_t tavil_qrd_msmnile_variant_devices[] = {
     SND_DEVICE_IN_HANDSET_DMIC_NS,
     SND_DEVICE_IN_HANDSET_DMIC_AEC,
     SND_DEVICE_IN_HANDSET_DMIC_AEC_NS,
-    SND_DEVICE_IN_HANDSET_STEREO_DMIC,
-    SND_DEVICE_IN_SPEAKER_STEREO_DMIC,
+    SND_DEVICE_IN_HANDSET_DMIC_STEREO,
+    SND_DEVICE_IN_SPEAKER_DMIC_STEREO,
     SND_DEVICE_IN_VOICE_SPEAKER_DMIC,
     SND_DEVICE_IN_SPEAKER_DMIC_AEC,
     SND_DEVICE_IN_SPEAKER_DMIC_NS,
