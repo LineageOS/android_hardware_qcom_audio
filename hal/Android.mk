@@ -321,6 +321,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_QAF)),true)
     LOCAL_SRC_FILES += audio_extn/qaf.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_CONCURRENT_CAPTURE)),true)
+    LOCAL_CFLAGS += -DCONCURRENT_CAPTURE_ENABLED
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_COMPRESS_INPUT)),true)
     LOCAL_CFLAGS += -DCOMPRESS_INPUT_ENABLED
     LOCAL_SRC_FILES += audio_extn/compress_in.c
