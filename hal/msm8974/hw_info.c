@@ -679,6 +679,22 @@ static void update_hardware_info_bear(struct hardware_info *hw_info, const char 
         hw_info->num_snd_devices = ARRAY_SIZE(tavil_qrd_variant_devices);
         hw_info->is_stereo_spkr = false;
         strlcpy(hw_info->dev_extn, "-hdk", sizeof(hw_info->dev_extn));
+    } else if (!strncmp(snd_card_name, "trinket-idp-snd-card",
+                 sizeof("trinket-idp-snd-card"))) {
+        hw_info->is_stereo_spkr = false;
+        strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "trinket-tashalite-snd-card",
+                 sizeof("trinket-tashalite-snd-card"))) {
+        hw_info->is_stereo_spkr = false;
+        strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "trinket-tasha-snd-card",
+                 sizeof("trinket-tasha-snd-card"))) {
+        hw_info->is_stereo_spkr = false;
+        strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "trinket-tavil-snd-card",
+                 sizeof("trinket-tavil-snd-card"))) {
+        hw_info->is_stereo_spkr = false;
+        strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
     } else {
         ALOGW("%s: Not an SDM device", __func__);
     }
@@ -731,7 +747,8 @@ void *hw_info_init(const char *snd_card_name)
         update_hardware_info_sdm845(hw_info, snd_card_name);
     } else if (strstr(snd_card_name, "sdm660") || strstr(snd_card_name, "sdm670")
                || strstr(snd_card_name, "sm6150") || strstr(snd_card_name, "qcs605-lc")
-               || strstr(snd_card_name, "qcs405") || strstr(snd_card_name, "qcs605-ipc")) {
+               || strstr(snd_card_name, "qcs405") || strstr(snd_card_name, "qcs605-ipc")
+               || strstr(snd_card_name, "sm6150") || strstr(snd_card_name, "trinket")) {
         ALOGV("Bear - variant soundcard");
         update_hardware_info_bear(hw_info, snd_card_name);
     } else if (strstr(snd_card_name, "sdx")) {
