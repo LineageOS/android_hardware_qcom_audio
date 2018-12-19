@@ -3482,7 +3482,6 @@ static size_t get_input_buffer_size(uint32_t sample_rate,
                                     int channel_count,
                                     bool is_low_latency)
 {
-    int i = 0;
     size_t size = 0;
     uint32_t bytes_per_period_sample = 0;
 
@@ -4703,6 +4702,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                 uint32_t bitwidth_dst = format_to_bitwidth_table[dst_format];
                 if ((bitwidth_src == 0) || (bitwidth_dst == 0)) {
                     ALOGE("%s: Error bitwidth == 0", __func__);
+                    pthread_mutex_unlock(&out->lock);
                     ATRACE_END();
                     return -EINVAL;
                 }

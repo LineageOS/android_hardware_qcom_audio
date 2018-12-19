@@ -7516,7 +7516,7 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
     struct mixer_ctl *ctl;
     char mixer_ctl_name[44] = {0}; // max length of name is 44 as defined
     int ret;
-    unsigned int i=0, n=0;
+    int i=0, n=0;
     long set_values[AUDIO_MAX_DSP_CHANNELS];
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
