@@ -49,7 +49,7 @@
 #define MA_QDSP_SET_VOLT        "maxxaudio_qdsp_set_volume_table"
 #define MA_QDSP_SET_PARAM       "maxxaudio_qdsp_set_parameter"
 
-#define SUPPORT_DEV "Blackbird"
+#define SUPPORT_DEV "18d1:5033" // Blackbird usbid
 #define SUPPORTED_USB 0x01
 
 typedef unsigned int effective_scope_flag_t;
@@ -149,6 +149,7 @@ struct ma_platform_data {
     ma_set_volume_t          ma_set_volume;
     ma_set_volume_table_t    ma_set_volume_table;
     ma_set_param_t           ma_set_param;
+    bool speaker_lr_swap;
 };
 
 ma_audio_cal_handle_t g_ma_audio_cal_handle = NULL;
@@ -211,8 +212,10 @@ static inline bool valid_usecase(struct audio_usecase *usecase)
          (usecase->id == USECASE_AUDIO_PLAYBACK_OFFLOAD)) &&
         /* support devices */
         ((usecase->devices & AUDIO_DEVICE_OUT_SPEAKER) ||
-         (usecase->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE)))
-         /* TODO: enable A2DP/USB when it is ready */
+         (usecase->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) ||
+         (audio_is_usb_out_device(usecase->devices) &&
+          audio_extn_ma_supported_usb())))
+        /* TODO: enable A2DP when it is ready */
 
         return true;
 
@@ -281,11 +284,14 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
                     break;
 
                 case MA_CMD_SWAP_ENABLE:
-                    ret = ma_set_lr_swap_l(&ma_cal, true);
-                    if (ret)
-                        ALOGV("ma_set_lr_swap_l enable returned with success.");
-                    else
-                        ALOGE("ma_set_lr_swap_l enable returned with error.");
+                    /* lr swap only enable for speaker path */
+                    if (ma_cal.common.device & AUDIO_DEVICE_OUT_SPEAKER) {
+                        ret = ma_set_lr_swap_l(&ma_cal, true);
+                        if (ret)
+                            ALOGV("ma_set_lr_swap_l enable returned with success.");
+                        else
+                            ALOGE("ma_set_lr_swap_l enable returned with error.");
+                    }
                     break;
 
                 case MA_CMD_SWAP_DISABLE:
@@ -351,14 +357,6 @@ static bool find_sup_dev(char *name)
 
 static void ma_set_swap_l(struct audio_device *adev, bool enable)
 {
-    // do platform LR swap if it enables on Waves effect
-    // but there is no Waves implementation
-    if (!my_data) {
-        platform_check_and_set_swap_lr_channels(adev, enable);
-        ALOGV("%s: maxxaudio isn't initialized.", __func__);
-        return;
-    }
-
     if (enable)
         check_and_send_all_audio_cal(adev, MA_CMD_SWAP_ENABLE);
     else
@@ -374,7 +372,7 @@ static void ma_support_usb(bool enable, int card)
     char *idd;
 
     if (enable) {
-        ret = snprintf(path, sizeof(path), "/proc/asound/card%u/id", card);
+        ret = snprintf(path, sizeof(path), "/proc/asound/card%u/usbid", card);
         if (ret < 0) {
             ALOGE("%s: failed on snprintf (%d) to path %s\n",
                   __func__, ret, path);
@@ -394,10 +392,10 @@ static void ma_support_usb(bool enable, int card)
         idd = strtok(id, "\n");
 
         if (find_sup_dev(idd)) {
-            ALOGV("%s: support device name is %s", __func__, id);
+            ALOGV("%s: support usbid is %s", __func__, id);
             g_supported_dev |= SUPPORTED_USB;
         } else
-            ALOGV("%s: device %s isn't found from %s", __func__, id, SUPPORT_DEV);
+            ALOGV("%s: usbid %s isn't found from %s", __func__, id, SUPPORT_DEV);
     } else {
         g_supported_dev &= ~SUPPORTED_USB;
     }
@@ -556,6 +554,8 @@ void audio_extn_ma_init(void *platform)
         ma_cur_state_table[i].active = false;
     }
 
+    my_data->speaker_lr_swap = false;
+
     return;
 
 error:
@@ -657,6 +657,11 @@ void audio_extn_ma_set_device(struct audio_usecase *usecase)
     pthread_mutex_lock(&my_data->lock);
 
     if (is_active()) {
+        if (ma_cal.common.device & AUDIO_DEVICE_OUT_SPEAKER)
+            ma_set_swap_l(usecase->stream.out->dev, my_data->speaker_lr_swap);
+        else
+            ma_set_swap_l(usecase->stream.out->dev, false);
+
         ALOGV("%s: send volume table === Start", __func__);
         for (i = 0; i < STREAM_MAX_TYPES; i++)
             ALOGV("%s: stream(%d) volume(%f) active(%s)", __func__, i,
@@ -686,16 +691,22 @@ void audio_extn_ma_set_parameters(struct audio_device *adev,
     // do LR swap and usb recognition
     ret = str_parms_get_int(parms, "rotation", &val);
     if (ret >= 0) {
+        if (!my_data) {
+            ALOGV("%s: maxxaudio isn't initialized.", __func__);
+            return;
+        }
+
         switch (val) {
         case 270:
-            ma_set_swap_l(adev, true);
+            my_data->speaker_lr_swap = true;
             break;
         case 0:
         case 90:
         case 180:
-            ma_set_swap_l(adev, false);
+            my_data->speaker_lr_swap = false;
             break;
         }
+        ma_set_swap_l(adev, my_data->speaker_lr_swap);
     }
 
     // check connect status
