@@ -2727,7 +2727,7 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
             latency = (avsync_runtime_prop > 0) ? ldac_offset : ENCODER_LATENCY_LDAC;
             latency += (slatency <= 0) ? DEFAULT_SINK_LATENCY_LDAC : slatency;
             break;
-        case ENC_CODEC_TYPE_APTX_AD: // for aptx adaptive the latency depends on the mode (HQ/LL) and
+        case CODEC_TYPE_APTX_AD: // for aptx adaptive the latency depends on the mode (HQ/LL) and
             latency = slatency;      // BT IPC will take care of accomodating the mode factor and return latency
         default:
             latency = 200;
