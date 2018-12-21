@@ -250,6 +250,11 @@ enum {
 
 #define AUDIO_MAKE_STRING_FROM_ENUM(X)   { #X, X }
 
+#define TX_VOICE_FLUENCE_PROV2 0x10F17
+#define TX_VOICE_DM_FV5_BROADSIDE 0x10F18
+#define TX_VOICE_FV5ECNS_SM 0x10F09
+#define TX_VOICE_FV5ECNS_DM 0x10F0A
+
 #define LIB_CSD_CLIENT "libcsd-client.so"
 /* CSD-CLIENT related functions */
 typedef int (*init_t)();
