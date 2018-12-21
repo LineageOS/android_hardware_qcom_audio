@@ -1091,7 +1091,13 @@ int enable_snd_device(struct audio_device *adev,
 
        if ((SND_DEVICE_OUT_BT_A2DP == snd_device) &&
            (audio_extn_a2dp_start_playback() < 0)) {
-           ALOGE(" fail to configure A2dp control path ");
+           ALOGE(" fail to configure A2dp Source control path ");
+           return -EINVAL;
+       }
+
+       if ((SND_DEVICE_IN_BT_A2DP == snd_device) &&
+           (audio_extn_a2dp_start_capture() < 0)) {
+           ALOGE(" fail to configure A2dp Sink control path ");
            return -EINVAL;
        }
 
@@ -1178,6 +1184,9 @@ int disable_snd_device(struct audio_device *adev,
 
         if (SND_DEVICE_OUT_BT_A2DP == snd_device)
             audio_extn_a2dp_stop_playback();
+
+        if (SND_DEVICE_IN_BT_A2DP == snd_device)
+            audio_extn_a2dp_stop_capture();
 
         if (snd_device == SND_DEVICE_OUT_HDMI || snd_device == SND_DEVICE_OUT_DISPLAY_PORT)
             adev->is_channel_status_set = false;
@@ -1987,12 +1996,12 @@ static bool force_device_switch(struct audio_usecase *usecase)
         audio_extn_a2dp_is_force_device_switch()) {
          ALOGD("Force a2dp device switch to update new encoder config");
          ret = true;
-     }
+    }
 
-     if (usecase->stream.out->stream_config_changed) {
+    if (usecase->stream.out->stream_config_changed) {
          ALOGD("Force stream_config_changed to update iec61937 transmission config");
          return true;
-     }
+    }
     return ret;
 }
 
@@ -2199,7 +2208,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     }
 
     if ((is_btsco_device(out_snd_device,in_snd_device) && !adev->bt_sco_on) ||
-         (is_a2dp_device(out_snd_device) && !audio_extn_a2dp_is_ready())) {
+         (is_a2dp_device(out_snd_device) && !audio_extn_a2dp_source_is_ready())) {
           ALOGD("SCO/A2DP is selected but they are not connected/ready hence dont route");
           return 0;
     }
@@ -2233,7 +2242,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     }
 
     if ((out_snd_device == SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP) &&
-        (!audio_extn_a2dp_is_ready())) {
+        (!audio_extn_a2dp_source_is_ready())) {
         ALOGW("%s: A2DP profile is not ready, routing to speaker only", __func__);
         out_snd_device = SND_DEVICE_OUT_SPEAKER;
     }
@@ -3037,7 +3046,7 @@ int start_output_stream(struct stream_out *out)
     }
 
     if (out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
-        if (!audio_extn_a2dp_is_ready()) {
+        if (!audio_extn_a2dp_source_is_ready()) {
             if (out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
                 a2dp_combo = true;
             } else {
@@ -3107,7 +3116,7 @@ int start_output_stream(struct stream_out *out)
     }
 
     if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
-        (!audio_extn_a2dp_is_ready())) {
+        (!audio_extn_a2dp_source_is_ready())) {
         if (!a2dp_combo) {
             check_a2dp_restore_l(adev, out, false);
         } else {
@@ -3486,7 +3495,8 @@ static size_t get_input_buffer_size(uint32_t sample_rate,
     bytes_per_period_sample = audio_bytes_per_sample(format) * channel_count;
     size *= bytes_per_period_sample;
 
-    /* make sure the size is multiple of 32 bytes
+    /* make sure the size is multiple of 32 bytes and additionally multiple of
+     * the frame_size (required for 24bit samples and non-power-of-2 channel counts)
      * At 48 kHz mono 16-bit PCM:
      *  5.000 ms = 240 frames = 15*16*1*2 = 480, a whole multiple of 32 (15)
      *  3.333 ms = 160 frames = 10*16*1*2 = 320, a whole multiple of 32 (10)
@@ -3873,13 +3883,13 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         /*
          * When A2DP is disconnected the
          * music playback is paused and the policy manager sends routing=0
-         * But the audioflingercontinues to write data until standby time
+         * But the audioflinger continues to write data until standby time
          * (3sec). As BT is turned off, the write gets blocked.
          * Avoid this by routing audio to speaker until standby.
          */
         if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
                 (val == AUDIO_DEVICE_NONE) &&
-                !audio_extn_a2dp_is_ready()) {
+                !audio_extn_a2dp_source_is_ready()) {
                 val = AUDIO_DEVICE_OUT_SPEAKER;
         }
         /*
@@ -3898,7 +3908,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
          * check with BT lib about a2dp streaming support before routing
          */
         if (val & AUDIO_DEVICE_OUT_ALL_A2DP) {
-            if (!audio_extn_a2dp_is_ready()) {
+            if (!audio_extn_a2dp_source_is_ready()) {
                 if (val & AUDIO_DEVICE_OUT_SPEAKER) {
                     //combo usecase just by pass a2dp
                     ALOGW("%s: A2DP profile is not ready,routing to speaker only", __func__);
@@ -4000,7 +4010,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 }
                 if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
                     out->a2dp_compress_mute &&
-                    (!(out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) || audio_extn_a2dp_is_ready())) {
+                    (!(out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) || audio_extn_a2dp_source_is_ready())) {
                     pthread_mutex_lock(&out->compr_mute_lock);
                     out->a2dp_compress_mute = false;
                     out_set_compr_volume(&out->stream, out->volume_l, out->volume_r);
@@ -4617,7 +4627,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     }
 
     if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
-        (audio_extn_a2dp_is_suspended())) {
+        (audio_extn_a2dp_source_is_suspended())) {
         if (!(out->devices & AUDIO_DEVICE_OUT_SPEAKER)) {
             if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
                 ret = -EIO;
@@ -4686,6 +4696,16 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             } else {
                 audio_format_t dst_format = out->hal_op_format;
                 audio_format_t src_format = out->hal_ip_format;
+
+                /* prevent division-by-zero */
+                uint32_t bitwidth_src = format_to_bitwidth_table[src_format];
+                uint32_t bitwidth_dst = format_to_bitwidth_table[dst_format];
+                if ((bitwidth_src == 0) || (bitwidth_dst == 0)) {
+                    ALOGE("%s: Error bitwidth == 0", __func__);
+                    pthread_mutex_unlock(&out->lock);
+                    ATRACE_END();
+                    return -EINVAL;
+                }
 
                 uint32_t frames = bytes / format_to_bitwidth_table[src_format];
                 uint32_t bytes_to_write = frames * format_to_bitwidth_table[dst_format];
@@ -4853,10 +4873,18 @@ exit:
             out->standby = true;
         }
         out_on_error(&out->stream.common);
-        if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD))
-            usleep((uint64_t)bytes * 1000000 / audio_stream_out_frame_size(stream) /
-                            out_get_sample_rate(&out->stream.common));
+        if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
+            /* prevent division-by-zero */
+            uint32_t stream_size = audio_stream_out_frame_size(stream);
+            uint32_t srate = out_get_sample_rate(&out->stream.common);
 
+            if ((stream_size == 0) || (srate == 0)) {
+                ALOGE("%s: stream_size= %d, srate = %d", __func__, stream_size, srate);
+                ATRACE_END();
+                return -EINVAL;
+             }
+             usleep((uint64_t)bytes * 1000000 / stream_size / srate);
+        }
         if (audio_extn_passthru_is_passthrough_stream(out)) {
                 //ALOGE("%s: write error, ret = %zd", __func__, ret);
                 ATRACE_END();
@@ -7399,6 +7427,13 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                             config->format,
                                             channel_count,
                                             is_low_latency);
+            /* prevent division-by-zero */
+            if (frame_size == 0) {
+                ALOGE("%s: Error frame_size==0", __func__);
+                ret = -EINVAL;
+                goto err_open;
+            }
+
             in->config.period_size = buffer_size / frame_size;
 
             if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {

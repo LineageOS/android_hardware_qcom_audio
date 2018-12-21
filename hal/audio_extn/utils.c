@@ -994,7 +994,14 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         if (usecase->id == USECASE_AUDIO_PLAYBACK_VOIP) {
             usecase->stream.out->app_type_cfg.sample_rate = usecase->stream.out->sample_rate;
         } else if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
-            usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+            if (platform_spkr_use_default_sample_rate(adev->platform)) {
+                 usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+            } else {
+                 platform_check_and_update_copp_sample_rate(adev->platform, snd_device,
+                                      usecase->stream.out->sample_rate,
+                                      &usecase->stream.out->app_type_cfg.sample_rate);
+            }
+
         } else if ((snd_device == SND_DEVICE_OUT_HDMI ||
                     snd_device == SND_DEVICE_OUT_USB_HEADSET ||
                     snd_device == SND_DEVICE_OUT_DISPLAY_PORT) &&
@@ -1018,7 +1025,7 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
                   * For a2dp playback get encoder sampling rate and set copp sampling rate,
                   * for bit width use the stream param only.
                   */
-                   audio_extn_a2dp_get_sample_rate(&usecase->stream.out->app_type_cfg.sample_rate);
+                   audio_extn_a2dp_get_enc_sample_rate(&usecase->stream.out->app_type_cfg.sample_rate);
                    ALOGI("%s using %d sample rate rate for A2DP CoPP",
                         __func__, usecase->stream.out->app_type_cfg.sample_rate);
         }
@@ -1069,6 +1076,11 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
             audio_extn_btsco_get_sample_rate(usecase->in_snd_device, &usecase->stream.in->app_type_cfg.sample_rate);
         } else {
             audio_extn_btsco_get_sample_rate(snd_device, &usecase->stream.in->app_type_cfg.sample_rate);
+        }
+        if (usecase->stream.in->device & AUDIO_DEVICE_IN_BLUETOOTH_A2DP & ~AUDIO_DEVICE_BIT_IN) {
+            audio_extn_a2dp_get_dec_sample_rate(&usecase->stream.in->app_type_cfg.sample_rate);
+            ALOGI("%s using %d sample rate rate for A2DP dec CoPP",
+                  __func__, usecase->stream.in->app_type_cfg.sample_rate);
         }
         sample_rate = usecase->stream.in->app_type_cfg.sample_rate;
         app_type_cfg[len++] = sample_rate;

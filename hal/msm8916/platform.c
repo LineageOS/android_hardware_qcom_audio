@@ -308,6 +308,7 @@ struct platform_data {
     struct audio_microphone_characteristic_t microphones[AUDIO_MICROPHONE_MAX_COUNT];
     struct snd_device_to_mic_map mic_map[SND_DEVICE_MAX];
     struct  spkr_device_chmap *spkr_ch_map;
+    bool use_sprk_default_sample_rate;
 };
 
 struct  spkr_device_chmap {
@@ -2342,6 +2343,7 @@ void *platform_init(struct audio_device *adev)
     my_data->voice_speaker_stereo = false;
     my_data->declared_mic_count = 0;
     my_data->spkr_ch_map = NULL;
+    my_data->use_sprk_default_sample_rate = true;
 
     be_dai_name_table = NULL;
 
@@ -2884,6 +2886,9 @@ void platform_deinit(void *platform)
 
     /* free acdb_meta_key_list */
     platform_release_acdb_metainfo_key(platform);
+
+    if (my_data->acdb_deallocate)
+        my_data->acdb_deallocate();
 
     free(platform);
     /* deinit usb */
@@ -7486,6 +7491,11 @@ int platform_set_edid_channels_configuration(void *platform, int channels, int b
 void platform_cache_edid(void * platform)
 {
     platform_get_edid_info(platform);
+}
+
+bool platform_spkr_use_default_sample_rate(void *platform) {
+    struct platform_data *my_data = (struct platform_data *)platform;
+    return my_data->use_sprk_default_sample_rate;
 }
 
 void platform_invalidate_backend_config(void * platform,snd_device_t snd_device)
