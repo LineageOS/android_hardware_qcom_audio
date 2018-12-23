@@ -38,6 +38,9 @@
 typedef enum {
     ROOT,
     ACDB,
+    MODULE,
+    AEC,
+    NS,
     PCM_ID,
     BACKEND_NAME,
     CONFIG_PARAMS,
@@ -56,6 +59,9 @@ typedef enum {
 typedef void (* section_process_fn)(const XML_Char **attr);
 
 static void process_acdb_id(const XML_Char **attr);
+static void process_audio_effect(const XML_Char **attr, effect_type_t effect_type);
+static void process_effect_aec(const XML_Char **attr);
+static void process_effect_ns(const XML_Char **attr);
 static void process_pcm_id(const XML_Char **attr);
 static void process_backend_name(const XML_Char **attr);
 static void process_config_params(const XML_Char **attr);
@@ -71,6 +77,8 @@ static void process_acdb_metainfo_key(const XML_Char **attr);
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
     [ACDB] = process_acdb_id,
+    [AEC] = process_effect_aec,
+    [NS] = process_effect_ns,
     [PCM_ID] = process_pcm_id,
     [BACKEND_NAME] = process_backend_name,
     [CONFIG_PARAMS] = process_config_params,
@@ -185,6 +193,11 @@ static bool find_enum_by_string(const struct audio_string_to_enum * table, const
  * ...
  * ...
  * </acdb_ids>
+ * <module_ids>
+ * <device name="???" module_id="???"/>
+ * ...
+ * ...
+ * </module_ids>
  * <backend_names>
  * <device name="???" backend="???"/>
  * ...
@@ -214,6 +227,77 @@ static bool find_enum_by_string(const struct audio_string_to_enum * table, const
 
 static void process_root(const XML_Char **attr __unused)
 {
+}
+
+static void process_audio_effect(const XML_Char **attr, effect_type_t effect_type)
+{
+    int index;
+    struct audio_effect_config effect_config;
+
+    if (strncmp(attr[0], "name", strlen("name")) != 0) {
+        ALOGE("%s: 'name' not found, no MODULE ID set!", __func__);
+        goto done;
+    }
+
+    index = platform_get_snd_device_index((char *)attr[1]);
+    if (index < 0) {
+        ALOGE("%s: Device %s in platform info xml not found, no MODULE ID set!",
+              __func__, attr[1]);
+        goto done;
+    }
+
+    if (strncmp(attr[2], "module_id", strlen("module_id")) != 0) {
+        ALOGE("%s: Device %s in platform info xml has no module_id, no MODULE ID set!",
+              __func__, attr[2]);
+        goto done;
+    }
+
+    if (strncmp(attr[4], "instance_id", strlen("instance_id")) != 0) {
+        ALOGE("%s: Device %s in platform info xml has no instance_id, no INSTANCE ID set!",
+              __func__, attr[4]);
+        goto done;
+    }
+
+    if (strncmp(attr[6], "param_id", strlen("param_id")) != 0) {
+        ALOGE("%s: Device %s in platform info xml has no param_id, no PARAM ID set!",
+              __func__, attr[6]);
+        goto done;
+    }
+
+    if (strncmp(attr[8], "param_value", strlen("param_value")) != 0) {
+        ALOGE("%s: Device %s in platform info xml has no param_value, no PARAM VALUE set!",
+              __func__, attr[8]);
+        goto done;
+    }
+
+    effect_config = (struct audio_effect_config){strtol((char *)attr[3], NULL, 0),
+                                                 strtol((char *)attr[5], NULL, 0),
+                                                 strtol((char *)attr[7], NULL, 0),
+                                                 strtol((char *)attr[9], NULL, 0)};
+
+
+    if (platform_set_effect_config_data(index, effect_config, effect_type) < 0) {
+        ALOGE("%s: Effect = %d Device %s, MODULE/INSTANCE/PARAM ID %u %u %u %u was not set!",
+              __func__, effect_type, attr[1], effect_config.module_id,
+              effect_config.instance_id, effect_config.param_id,
+              effect_config.param_value);
+        goto done;
+    }
+
+done:
+    return;
+}
+
+static void process_effect_aec(const XML_Char **attr)
+{
+    process_audio_effect(attr, EFFECT_AEC);
+    return;
+}
+
+static void process_effect_ns(const XML_Char **attr)
+{
+    process_audio_effect(attr, EFFECT_NS);
+    return;
 }
 
 /* mapping from usecase to pcm dev id */
@@ -717,6 +801,8 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
     if (my_data.do_full_parse) {
         if (strcmp(tag_name, "acdb_ids") == 0) {
             section = ACDB;
+        } else if (strncmp(tag_name, "module_ids", strlen("module_ids")) == 0) {
+            section = MODULE;
         } else if (strcmp(tag_name, "pcm_ids") == 0) {
             section = PCM_ID;
         } else if (strcmp(tag_name, "backend_names") == 0) {
@@ -736,8 +822,9 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
         } else if(strcmp(tag_name, "acdb_metainfo_key") == 0) {
             section = ACDB_METAINFO_KEY;
         } else if (strcmp(tag_name, "device") == 0) {
-            if ((section != ACDB) && (section != BACKEND_NAME) && (section != OPERATOR_SPECIFIC)) {
-                ALOGE("device tag only supported for acdb/backend names");
+            if ((section != ACDB) && (section != AEC) && (section != NS) &&
+                (section != BACKEND_NAME) && (section != OPERATOR_SPECIFIC)) {
+                ALOGE("device tag only supported for acdb/backend/aec/ns/operator_specific names");
                 return;
             }
 
@@ -814,6 +901,20 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
             section_process_fn fn = section_table[MIC_INFO];
             fn(attr);
         }
+        else if (strncmp(tag_name, "aec", strlen("aec")) == 0) {
+            if (section != MODULE) {
+                ALOGE("aec tag only supported with MODULE section");
+                return;
+            }
+            section = AEC;
+        }
+        else if (strncmp(tag_name, "ns", strlen("ns")) == 0) {
+            if (section != MODULE) {
+                ALOGE("ns tag only supported with MODULE section");
+                return;
+            }
+            section = NS;
+        }
     } else {
         if(strcmp(tag_name, "config_params") == 0) {
             section = CONFIG_PARAMS;
@@ -835,6 +936,12 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
 {
     if (strcmp(tag_name, "acdb_ids") == 0) {
         section = ROOT;
+    } else if (strncmp(tag_name, "module_ids", strlen("module_ids")) == 0) {
+        section = ROOT;
+    } else if (strncmp(tag_name, "aec", strlen("aec")) == 0) {
+        section = MODULE;
+    } else if (strncmp(tag_name, "ns", strlen("ns")) == 0) {
+        section = MODULE;
     } else if (strcmp(tag_name, "pcm_ids") == 0) {
         section = ROOT;
     } else if (strcmp(tag_name, "backend_names") == 0) {
