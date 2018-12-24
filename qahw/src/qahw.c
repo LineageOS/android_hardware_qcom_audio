@@ -35,7 +35,7 @@
 #include <utils/Log.h>
 #include <stdlib.h>
 #include <cutils/list.h>
-
+#include <pthread.h>
 #include <hardware/audio.h>
 #include <hardware/sound_trigger.h>
 #include "qahw.h"
