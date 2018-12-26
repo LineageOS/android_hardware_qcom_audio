@@ -1,3 +1,4 @@
+ifneq ($(AUDIO_USE_STUB_HAL), true)
 LOCAL_PATH:= $(call my-dir)
 
 # audio preprocessing wrapper
@@ -43,3 +44,4 @@ LOCAL_CFLAGS += -Wno-unused-function
 LOCAL_CFLAGS += -Wno-unused-local-typedef
 
 include $(BUILD_SHARED_LIBRARY)
+endif
