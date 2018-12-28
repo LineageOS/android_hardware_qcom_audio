@@ -1478,6 +1478,8 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
     struct platform_data *my_data = (struct platform_data *)adev->platform;
     char ec_ref_mixer_path[MIXER_PATH_MAX_LENGTH] = "echo-reference";
 
+    audio_extn_sound_trigger_update_ec_ref_status(enable);
+
     if (strcmp(my_data->ec_ref_mixer_path, "")) {
         ALOGV("%s: disabling %s", __func__, my_data->ec_ref_mixer_path);
         audio_route_reset_and_update_path(adev->audio_route,
