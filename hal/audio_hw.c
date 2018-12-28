@@ -3234,8 +3234,8 @@ int start_output_stream(struct stream_out *out)
         // apply volume for voip playback after path is set up
         if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP)
             out_set_voip_volume(&out->stream, out->volume_l, out->volume_r);
-        else if ((out->usecase == USECASE_AUDIO_PLAYBACK_LOW_LATENCY || out->usecase == USECASE_AUDIO_PLAYBACK_DEEP_BUFFER) &&
-             (out->apply_volume)) {
+        else if ((out->usecase == USECASE_AUDIO_PLAYBACK_LOW_LATENCY || out->usecase == USECASE_AUDIO_PLAYBACK_DEEP_BUFFER ||
+                  out->usecase == USECASE_AUDIO_PLAYBACK_ULL) && (out->apply_volume)) {
                  out_set_pcm_volume(&out->stream, out->volume_l, out->volume_r);
                  out->apply_volume = false;
         }
@@ -4507,7 +4507,8 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
         out->volume_r = right;
         return ret;
     } else if (out->usecase == USECASE_AUDIO_PLAYBACK_LOW_LATENCY ||
-               out->usecase == USECASE_AUDIO_PLAYBACK_DEEP_BUFFER) {
+               out->usecase == USECASE_AUDIO_PLAYBACK_DEEP_BUFFER ||
+               out->usecase == USECASE_AUDIO_PLAYBACK_ULL) {
         /* Volume control for pcm playback */
         if (!out->standby)
             ret = out_set_pcm_volume(stream, left, right);
