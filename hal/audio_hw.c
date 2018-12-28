@@ -7506,14 +7506,20 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
 
     ALOGD("%s: enter:stream_handle(%p)",__func__, in);
 
-    // must deregister from sndmonitor first to prevent races
-    // between the callback and close_stream
+    /* must deregister from sndmonitor first to prevent races
+     * between the callback and close_stream
+     */
     audio_extn_snd_mon_unregister_listener(stream);
 
-    // Disable echo reference if there are no active input and hfp call
-    // while closing input stream
-    if (!adev->active_input && !audio_extn_hfp_is_active(adev))
+    /* Disable echo reference if there are no active input, hfp call
+     * and sound trigger while closing input stream
+     */
+    if (!adev->active_input &&
+        !audio_extn_hfp_is_active(adev) &&
+        !audio_extn_sound_trigger_check_ec_ref_enable())
         platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
+    else
+        audio_extn_sound_trigger_update_ec_ref_status(false);
 
     if (in == NULL) {
         ALOGE("%s: audio_stream_in ptr is NULL", __func__);
