@@ -255,6 +255,7 @@ static int voip_stop_call(struct audio_device *adev)
     int ret = 0;
     struct audio_usecase *uc_info;
     struct listnode *node;
+    struct stream_out *out = NULL;
 
     ALOGD("%s: enter, out_stream_count=%d, in_stream_count=%d",
            __func__, voip_data.out_stream_count, voip_data.in_stream_count);
@@ -292,6 +293,15 @@ static int voip_stop_call(struct audio_device *adev)
         // restore device for other active usecases
         list_for_each(node, &adev->usecase_list) {
             uc_info = node_to_item(node, struct audio_usecase, list);
+            out = uc_info->stream.out;
+            if (out && adev->adm_register_output_stream
+                    && adev->adm_on_routing_change) {
+                adev->adm_register_output_stream(adev->adm_data,
+                                                 out->handle,
+                                                 out->flags);
+                adev->adm_on_routing_change(adev->adm_data,
+                                            out->handle);
+            }
             select_devices(adev, uc_info->id);
         }
     } else {
