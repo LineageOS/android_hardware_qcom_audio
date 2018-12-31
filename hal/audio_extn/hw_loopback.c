@@ -186,6 +186,8 @@ audio_patch_handle_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
     audio_devices_t source_device = loopback_patch->loopback_source.ext.device.type;
     audio_devices_t sink_device = loopback_patch->loopback_sink.ext.device.type;
 
+    source_device &= ~AUDIO_DEVICE_BIT_IN;
+
     if (loopback_patch->patch_handle_id != PATCH_HANDLE_INVALID) {
         ALOGE("%s, Patch handle already exists", __func__);
         return loopback_patch->patch_handle_id;
@@ -195,9 +197,10 @@ audio_patch_handle_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
         switch (loopback_patch->loopback_source.type) {
             case AUDIO_PORT_TYPE_DEVICE :
                 if ((loopback_patch->loopback_source.config_mask & AUDIO_PORT_CONFIG_FORMAT)) {
-                    if ((loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_HDMI) ||
-                        (loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_SPDIF) ||
-                        (loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_BLUETOOTH_A2DP)) {
+                    if ((source_device & AUDIO_DEVICE_IN_HDMI) ||
+                        (source_device & AUDIO_DEVICE_IN_SPDIF) ||
+                        (source_device & AUDIO_DEVICE_IN_BLUETOOTH_A2DP) ||
+                        (source_device & AUDIO_DEVICE_IN_HDMI_ARC)) {
 
                        switch (loopback_patch->loopback_source.format) {
                            case AUDIO_FORMAT_PCM:
@@ -214,7 +217,7 @@ audio_patch_handle_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
                               is_source_supported = true;
                            break;
                        }
-                    } else if (loopback_patch->loopback_source.ext.device.type & AUDIO_DEVICE_IN_LINE) {
+                    } else if (source_device & AUDIO_DEVICE_IN_LINE) {
                        is_source_supported = true;
                     }
                 }
@@ -252,7 +255,7 @@ audio_patch_handle_t get_loopback_patch_type(loopback_patch_t*  loopback_patch)
         }
     }
     if (is_source_supported && is_sink_supported) {
-        return source_device | sink_device;
+        return AUDIO_DEVICE_BIT_IN | source_device | sink_device;
     }
     ALOGE("%s, Unsupported source or sink port config", __func__);
     return loopback_patch->patch_handle_id;
