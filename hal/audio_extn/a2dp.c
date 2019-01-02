@@ -2729,6 +2729,7 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
             break;
         case CODEC_TYPE_APTX_AD: // for aptx adaptive the latency depends on the mode (HQ/LL) and
             latency = slatency;      // BT IPC will take care of accomodating the mode factor and return latency
+            break;
         default:
             latency = 200;
             break;
