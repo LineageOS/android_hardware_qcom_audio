@@ -176,6 +176,8 @@ do {\
 
 #define SVA_PARAM_DIRECTION_OF_ARRIVAL "st_direction_of_arrival"
 #define SVA_PARAM_CHANNEL_INDEX "st_channel_index"
+#define MAX_STR_LENGTH_FFV_PARAMS 30
+#define MAX_FFV_SESSION_ID 100
 /*
  * Current proprietary API version used by AHAL. Queried by STHAL
  * for compatibility check with AHAL
@@ -620,12 +622,46 @@ void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
     }
 }
 
+static int extract_sm_handle(const char *keys, char *paramstr) {
+    char *tmpstr, *token;
+    char *inputstr = NULL;
+    int value = -EINVAL;
+
+    if (keys == NULL || paramstr == NULL)
+        goto exit;
+
+    inputstr = strdup(keys);
+    token =strtok_r(inputstr,":", &tmpstr);
+
+    if (token == NULL)
+        goto exit;
+
+    ALOGD("%s input string <%s> param string <%s>", __func__, keys,token);
+    strlcpy(paramstr, token, MAX_STR_LENGTH_FFV_PARAMS);
+    token =strtok_r(NULL,":=",&tmpstr);
+
+    if (token == NULL)
+        goto exit;
+
+    value = atoi(token);
+    if (value > 0 && value < MAX_FFV_SESSION_ID)
+        ALOGD(" %s SVA sm handle<=%d>",__func__, value);
+
+exit:
+    if (inputstr != NULL)
+        free(inputstr);
+
+    return value;
+}
 void audio_extn_sound_trigger_get_parameters(const struct audio_device *adev __unused,
-                       struct str_parms *query, struct str_parms *reply)
+                                             struct str_parms *query,
+                                             struct str_parms *reply)
 {
     audio_event_info_t event;
-    int ret, val;
-    char value[32];
+    int ret;
+    char value[32], paramstr[MAX_STR_LENGTH_FFV_PARAMS];
+
+    ALOGD("%s input string<%s>", __func__, str_parms_to_str(query));
 
     ret = str_parms_get_str(query, "SVA_EXEC_MODE_STATUS", value,
                                                   sizeof(value));
@@ -634,17 +670,17 @@ void audio_extn_sound_trigger_get_parameters(const struct audio_device *adev __u
         str_parms_add_int(reply, "SVA_EXEC_MODE_STATUS", event.u.value);
     }
 
-    ret = str_parms_get_int(query, SVA_PARAM_DIRECTION_OF_ARRIVAL, &val);
-    if (ret >= 0) {
-        event.u.st_get_param_data.sm_handle = val;
+    ret = extract_sm_handle(str_parms_to_str(query), paramstr);
+
+    if ((ret >= 0) && !strncmp(paramstr, SVA_PARAM_DIRECTION_OF_ARRIVAL,
+            MAX_STR_LENGTH_FFV_PARAMS)) {
+        event.u.st_get_param_data.sm_handle = ret;
         event.u.st_get_param_data.param = SVA_PARAM_DIRECTION_OF_ARRIVAL;
         event.u.st_get_param_data.reply = reply;
         st_dev->st_callback(AUDIO_EVENT_GET_PARAM, &event);
-    }
-
-    ret = str_parms_get_int(query, SVA_PARAM_CHANNEL_INDEX, &val);
-    if (ret >= 0) {
-        event.u.st_get_param_data.sm_handle = val;
+    } else if ((ret >=0) && !strncmp(paramstr, SVA_PARAM_CHANNEL_INDEX,
+            MAX_STR_LENGTH_FFV_PARAMS)) {
+        event.u.st_get_param_data.sm_handle = ret;
         event.u.st_get_param_data.param = SVA_PARAM_CHANNEL_INDEX;
         event.u.st_get_param_data.reply = reply;
         st_dev->st_callback(AUDIO_EVENT_GET_PARAM, &event);
