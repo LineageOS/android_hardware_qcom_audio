@@ -242,7 +242,7 @@ struct a2dp_data {
     bool a2dp_started;
     bool a2dp_suspended;
     int  a2dp_total_active_session_request;
-    bool is_a2dp_offload_supported;
+    bool is_a2dp_offload_enabled;
     bool is_handoff_in_progress;
     bool is_aptx_dual_mono_supported;
     bool is_aptx_adaptive;
@@ -552,35 +552,35 @@ static void a2dp_offload_codec_cap_parser(char *value)
     while (tok != NULL) {
         if (strcmp(tok, "sbc") == 0) {
             ALOGD("%s: SBC offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
+            a2dp.is_a2dp_offload_enabled = true;
             break;
         } else if (strcmp(tok, "aptx") == 0) {
             ALOGD("%s: aptx offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
+            a2dp.is_a2dp_offload_enabled = true;
             break;
         } else if (strcmp(tok, "aptxtws") == 0) {
             ALOGD("%s: aptx dual mono offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
+            a2dp.is_a2dp_offload_enabled = true;
             break;
         } else if (strcmp(tok, "aptxhd") == 0) {
             ALOGD("%s: aptx HD offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
+            a2dp.is_a2dp_offload_enabled = true;
             break;
         } else if (strcmp(tok, "aac") == 0) {
             ALOGD("%s: aac offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
+            a2dp.is_a2dp_offload_enabled = true;
             break;
         } else if (strcmp(tok, "celt") == 0) {
             ALOGD("%s: celt offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
+            a2dp.is_a2dp_offload_enabled = true;
             break;
         } else if (strcmp(tok, "ldac") == 0) {
             ALOGD("%s: ldac offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
+            a2dp.is_a2dp_offload_enabled = true;
             break;
         } else if( strcmp(tok, "aptxadaptive") == 0) {
             ALOGD("%s: aptx adaptive offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
+            a2dp.is_a2dp_offload_enabled = true;
         }
         tok = strtok_r(NULL, "-", &saveptr);
     };
@@ -590,10 +590,12 @@ static void update_offload_codec_capabilities()
 {
     char value[PROPERTY_VALUE_MAX] = {'\0'};
 
-    property_get("persist.vendor.bt.a2dp_offload_cap", value, "false");
+    property_get("persist.bluetooth.a2dp_offload.cap", value, "false");
     ALOGD("get_offload_codec_capabilities = %s",value);
-    a2dp.is_a2dp_offload_supported =
-            property_get_bool("persist.vendor.bt.a2dp_offload_cap", false);
+    a2dp.is_a2dp_offload_enabled =
+            property_get_bool("persist.bluetooth.a2dp_offload.cap", false) &&
+            property_get_bool("ro.bluetooth.a2dp_offload.supported", false) &&
+            !property_get_bool("persist.bluetooth.a2dp_offload.disabled", false);
     if (strcmp(value, "false") != 0)
         a2dp_offload_codec_cap_parser(value);
     ALOGD("%s: codec cap = %s",__func__,value);
@@ -1845,7 +1847,7 @@ int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
      struct audio_usecase *uc_info;
      struct listnode *node;
 
-     if(a2dp.is_a2dp_offload_supported == false) {
+     if(a2dp.is_a2dp_offload_enabled == false) {
         ALOGV("no supported encoders identified,ignoring a2dp setparam");
         ret = -EINVAL;
         goto param_handled;
@@ -1979,7 +1981,7 @@ bool audio_extn_a2dp_is_ready()
         return ret;
 
     if ((a2dp.bt_state != A2DP_STATE_DISCONNECTED) &&
-        (a2dp.is_a2dp_offload_supported) &&
+        (a2dp.is_a2dp_offload_enabled) &&
         (a2dp.audio_check_a2dp_ready))
            ret = a2dp.audio_check_a2dp_ready();
     return ret;
@@ -2000,7 +2002,7 @@ void audio_extn_a2dp_init (void *adev)
   a2dp.a2dp_suspended = false;
   a2dp.bt_encoder_format = ENC_CODEC_TYPE_INVALID;
   a2dp.enc_sampling_rate = 48000;
-  a2dp.is_a2dp_offload_supported = false;
+  a2dp.is_a2dp_offload_enabled = false;
   a2dp.is_handoff_in_progress = false;
   a2dp.is_aptx_dual_mono_supported = false;
   a2dp.is_aptx_adaptive = false;
