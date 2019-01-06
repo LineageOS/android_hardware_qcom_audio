@@ -45,6 +45,7 @@
 #define AUDIO_PARAMETER_KEY_FM_MUTE "fm_mute"
 #define AUDIO_PARAMETER_KEY_FM_RESTORE_VOLUME "fm_restore_volume"
 #define AUDIO_PARAMETER_KEY_FM_ROUTING "fm_routing"
+#define AUDIO_PARAMETER_KEY_FM_STATUS "fm_status"
 #define FM_LOOPBACK_DRAIN_TIME_MS 2
 
 static struct pcm_config pcm_config_fm = {
@@ -250,6 +251,19 @@ exit:
     fm_stop(adev);
     ALOGE("%s: Problem in FM start: status(%d)", __func__, ret);
     return ret;
+}
+
+void audio_extn_fm_get_parameters(struct str_parms *query, struct str_parms *reply)
+{
+    int ret, val;
+    char value[32]={0};
+
+    ALOGV("%s: enter", __func__);
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_FM_STATUS, value, sizeof(value));
+    if (ret >= 0) {
+        val = (fmmod.is_fm_running ? 1: 0);
+        str_parms_add_int(reply, AUDIO_PARAMETER_KEY_FM_STATUS, val);
+    }
 }
 
 void audio_extn_fm_set_parameters(struct audio_device *adev,
