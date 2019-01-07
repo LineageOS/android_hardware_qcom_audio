@@ -6928,9 +6928,12 @@ error:
 static char* adev_get_parameters(const struct audio_hw_device *dev,
                                  const char *keys)
 {
+    ALOGD("%s:%s", __func__, keys);
+
     struct audio_device *adev = (struct audio_device *)dev;
     struct str_parms *reply = str_parms_create();
     struct str_parms *query = str_parms_create_str(keys);
+
     char *str;
     char value[256] = {0};
     int ret = 0;
@@ -6982,7 +6985,7 @@ exit:
     str_parms_destroy(query);
     str_parms_destroy(reply);
 
-    ALOGV("%s: exit: returns - %s", __func__, str);
+    ALOGD("%s: exit: returns - %s", __func__, str);
     return str;
 }
 
