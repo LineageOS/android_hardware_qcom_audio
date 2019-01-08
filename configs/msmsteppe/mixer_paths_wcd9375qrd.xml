@@ -303,6 +303,7 @@
     <ctl name="HPHL_RDAC Switch" value="0" />
     <ctl name="HPHR_RDAC Switch" value="0" />
     <ctl name="RDAC3_MUX" value="ZERO" />
+    <ctl name="RX_EAR Mode" value="OFF" />
 
     <!-- TX Controls -->
     <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
@@ -2177,13 +2178,13 @@
     </path>
 
     <path name="handset">
-        <ctl name="RX HPH Mode" value="CLS_AB" />
         <ctl name="RX_MACRO RX0 MUX" value="AIF1_PB" />
         <ctl name="RX_CDC_DMA_RX_0 Channels" value="One" />
         <ctl name="RX INT0_1 MIX1 INP0" value="RX0" />
         <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT" />
         <ctl name="EAR_RDAC Switch" value="1" />
         <ctl name="RDAC3_MUX" value="RX1" />
+        <ctl name="RX_EAR Mode" value="ON" />
     </path>
 
     <path name="handset-mic">
