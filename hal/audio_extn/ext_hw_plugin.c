@@ -1,30 +1,31 @@
-/* ext_hw_plugin.c
-Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-    * Neither the name of The Linux Foundation nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
-ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
-BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
+/*
+* Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are
+* met:
+*     * Redistributions of source code must retain the above copyright
+*       notice, this list of conditions and the following disclaimer.
+*     * Redistributions in binary form must reproduce the above
+*       copyright notice, this list of conditions and the following
+*       disclaimer in the documentation and/or other materials provided
+*       with the distribution.
+*     * Neither the name of The Linux Foundation nor the names of its
+*       contributors may be used to endorse or promote products derived
+*       from this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+* ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 #define LOG_TAG "audio_ext_hw_plugin"
 #define LOG_NDEBUG 0
@@ -277,8 +278,9 @@ int32_t audio_extn_ext_hw_plugin_usecase_start(void *plugin, struct audio_usecas
             return 0;
         }
 
-        if ((usecase->type == PCM_CAPTURE) || (usecase->type == VOICE_CALL) ||
-            (usecase->type == VOIP_CALL) || (usecase->type == PCM_HFP_CALL)) {
+        if (((usecase->type == PCM_CAPTURE) || (usecase->type == VOICE_CALL) ||
+                (usecase->type == VOIP_CALL) || (usecase->type == PCM_HFP_CALL)) &&
+            (usecase->in_snd_device != SND_DEVICE_NONE)) {
             codec_enable.snd_dev = usecase->in_snd_device;
             /* TODO - below should be related with in_snd_dev */
             codec_enable.sample_rate = 48000;
@@ -347,8 +349,9 @@ int32_t audio_extn_ext_hw_plugin_usecase_start(void *plugin, struct audio_usecas
             }
         }
 
-        if ((usecase->type == PCM_PLAYBACK) || (usecase->type == VOICE_CALL) ||
-            (usecase->type == VOIP_CALL) || (usecase->type == PCM_HFP_CALL)) {
+        if (((usecase->type == PCM_PLAYBACK) || (usecase->type == VOICE_CALL) ||
+                (usecase->type == VOIP_CALL) || (usecase->type == PCM_HFP_CALL)) &&
+            (usecase->out_snd_device != SND_DEVICE_NONE)) {
             codec_enable.snd_dev = usecase->out_snd_device;
             /* TODO - below should be related with out_snd_dev */
             codec_enable.sample_rate = 48000;
@@ -414,8 +417,9 @@ int32_t audio_extn_ext_hw_plugin_usecase_stop(void *plugin, struct audio_usecase
             return -EINVAL;
         }
 
-        if ((usecase->type == PCM_PLAYBACK) || (usecase->type == VOICE_CALL) ||
-            (usecase->type == VOIP_CALL) || (usecase->type == PCM_HFP_CALL)) {
+        if (((usecase->type == PCM_PLAYBACK) || (usecase->type == VOICE_CALL) ||
+                (usecase->type == VOIP_CALL) || (usecase->type == PCM_HFP_CALL)) &&
+            (usecase->out_snd_device != SND_DEVICE_NONE)) {
             codec_disable.snd_dev = usecase->out_snd_device;
 
             ALOGD("%s: disable audio hal plugin output, %d, %d",
@@ -429,8 +433,9 @@ int32_t audio_extn_ext_hw_plugin_usecase_stop(void *plugin, struct audio_usecase
             }
             my_plugin->out_snd_dev[codec_disable.usecase] = 0;
         }
-        if ((usecase->type == PCM_CAPTURE) || (usecase->type == VOICE_CALL) ||
-            (usecase->type == VOIP_CALL) || (usecase->type == PCM_HFP_CALL)) {
+        if (((usecase->type == PCM_CAPTURE) || (usecase->type == VOICE_CALL) ||
+                (usecase->type == VOIP_CALL) || (usecase->type == PCM_HFP_CALL)) &&
+            (usecase->in_snd_device != SND_DEVICE_NONE)) {
             codec_disable.snd_dev = usecase->in_snd_device;
 
             ALOGD("%s: disable audio hal plugin input, %d, %d",
@@ -697,7 +702,7 @@ done_tunnel:
                 }
             } else {
                 str_parms_del(parms, AUDIO_PARAMETER_KEY_EXT_HW_PLUGIN_DIRECTION);
-    
+
                 switch(dir) {
                 case AUDIO_HAL_PLUGIN_DIRECTION_PLAYBACK:
                 {

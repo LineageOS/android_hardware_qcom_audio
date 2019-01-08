@@ -2512,10 +2512,8 @@ static int stop_input_stream(struct stream_in *in)
         return -EINVAL;
     }
 
-    if (uc_info->in_snd_device != SND_DEVICE_NONE) {
-        if (audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info))
-            ALOGE("%s: failed to stop ext hw plugin", __func__);
-    }
+    if (audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info))
+        ALOGE("%s: failed to stop ext hw plugin", __func__);
 
     /* Close in-call recording streams */
     voice_check_and_stop_incall_rec_usecase(adev, in);
@@ -2612,10 +2610,8 @@ int start_input_stream(struct stream_in *in)
                                  adev->perf_lock_opts_size);
     select_devices(adev, in->usecase);
 
-    if (uc_info->in_snd_device != SND_DEVICE_NONE) {
-        if (audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info))
-            ALOGE("%s: failed to start ext hw plugin", __func__);
-    }
+    if (audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info))
+        ALOGE("%s: failed to start ext hw plugin", __func__);
 
     if (audio_extn_cin_attached_usecase(in->usecase)) {
        ret = audio_extn_cin_start_input_stream(in);
@@ -3047,10 +3043,8 @@ static int stop_output_stream(struct stream_out *out)
         return -EINVAL;
     }
 
-    if (uc_info->out_snd_device != SND_DEVICE_NONE) {
-        if (audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info))
-            ALOGE("%s: failed to stop ext hw plugin", __func__);
-    }
+    if (audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info))
+        ALOGE("%s: failed to stop ext hw plugin", __func__);
 
     if (is_offload_usecase(out->usecase) &&
         !(audio_extn_passthru_is_passthrough_stream(out))) {
@@ -3250,10 +3244,8 @@ int start_output_stream(struct stream_out *out)
     if (out->usecase == USECASE_INCALL_MUSIC_UPLINK)
         voice_set_device_mute_flag(adev, true);
 
-    if (uc_info->out_snd_device != SND_DEVICE_NONE) {
-        if (audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info))
-            ALOGE("%s: failed to start ext hw plugin", __func__);
-    }
+    if (audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info))
+        ALOGE("%s: failed to start ext hw plugin", __func__);
 
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d) format(%#x)",
           __func__, adev->snd_card, out->pcm_device_id, out->config.format);
