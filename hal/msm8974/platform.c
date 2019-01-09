@@ -4560,9 +4560,14 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             } else if (my_data->fluence_type == FLUENCE_NONE ||
                 (my_data->fluence_in_voice_call == false &&
                  my_data->fluence_in_hfp_call == false)) {
-                snd_device = SND_DEVICE_IN_HANDSET_MIC;
-                if (audio_extn_hfp_is_active(adev))
-                    platform_set_echo_reference(adev, true, out_device);
+                 if (out_device & AUDIO_DEVICE_OUT_LINE &&
+                     audio_extn_hfp_is_active(adev)) {
+                     snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
+                 } else {
+                     snd_device = SND_DEVICE_IN_HANDSET_MIC;
+                 }
+                 if (audio_extn_hfp_is_active(adev))
+                     platform_set_echo_reference(adev, true, out_device);
             } else {
                 if ((my_data->fluence_type & FLUENCE_TRI_MIC) &&
                     (my_data->source_mic_type & SOURCE_THREE_MIC)) {
