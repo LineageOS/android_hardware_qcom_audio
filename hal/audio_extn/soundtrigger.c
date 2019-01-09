@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, 2016-2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016-2019 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -581,13 +581,15 @@ void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
     }
 
     ret = str_parms_get_int(params, AUDIO_PARAMETER_DEVICE_CONNECT, &val);
-    if ((ret >= 0) && audio_is_input_device(val)) {
+    if ((ret >= 0) && (audio_is_input_device(val) ||
+           (val == AUDIO_DEVICE_OUT_LINE))) {
         event.u.value = val;
         st_dev->st_callback(AUDIO_EVENT_DEVICE_CONNECT, &event);
     }
 
     ret = str_parms_get_int(params, AUDIO_PARAMETER_DEVICE_DISCONNECT, &val);
-    if ((ret >= 0) && audio_is_input_device(val)) {
+    if ((ret >= 0) && (audio_is_input_device(val) ||
+           (val == AUDIO_DEVICE_OUT_LINE))) {
         event.u.value = val;
         st_dev->st_callback(AUDIO_EVENT_DEVICE_DISCONNECT, &event);
     }
