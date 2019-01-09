@@ -251,6 +251,7 @@ static void init_streams(void)
         stream_param[i].ethread_data                        =   nullptr;
         stream_param[i].device_url                          =   "stream";
         stream_param[i].play_later                          =   false;
+        stream_param[i].set_params                          =   nullptr;
 
         pthread_mutex_init(&stream_param[i].write_lock, (const pthread_mutexattr_t *)NULL);
         pthread_cond_init(&stream_param[i].write_cond, (const pthread_condattr_t *) NULL);
@@ -796,6 +797,14 @@ void *start_stream_playback (void* stream_data)
     bytes_to_read = get_bytes_to_read(params->file_stream, params->filetype);
     if (bytes_to_read <= 0)
         read_complete_file = true;
+
+    if (params->set_params) {
+        rc = qahw_out_set_parameters(params->out_handle, params->set_params);
+        if (rc) {
+            fprintf(log_file, "stream %s: failed to set kvpairs\n", params->set_params);
+            fprintf(stderr, "stream %s: failed to set kvpairs\n", params->set_params);
+        }
+    }
 
     while (!exit && !stop_playback) {
         if (!bytes_remaining) {
@@ -2095,7 +2104,7 @@ int main(int argc, char* argv[]) {
 
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:s:v:V:l:t:a:w:k:PD:KF:Ee:A:u:m:S:C:p::x:y:qQh:i:h:g:",
+                              "-f:r:c:b:d:s:v:V:l:t:a:w:k:PD:KF:Ee:A:u:m:S:C:p::x:y:qQh:i:h:g:O:",
                               long_options,
                               &option_index)) != -1) {
 
@@ -2232,6 +2241,9 @@ int main(int argc, char* argv[]) {
             break;
         case 'K':
             kpi_mode = true;
+            break;
+        case 'O':
+            stream_param[i].set_params = optarg;
             break;
         case 'F':
             stream_param[i].flags = atoll(optarg);
@@ -2533,6 +2545,7 @@ int main(int argc, char* argv[]) {
         fprintf(log_file, "stream %d: Bitwidth:%d\n", stream->stream_index, stream->config.offload_info.bit_width);
         fprintf(log_file, "stream %d: AAC Format Type:%d\n", stream->stream_index, stream->aac_fmt_type);
         fprintf(log_file, "stream %d: Kvpair Values:%s\n", stream->stream_index, stream->kvpair_values);
+        fprintf(log_file, "stream %d: set params Values:%s\n", stream->stream_index, stream->set_params);
         fprintf(log_file, "Log file:%s\n", log_filename);
         fprintf(log_file, "Volume level:%f\n", vol_level);
 
