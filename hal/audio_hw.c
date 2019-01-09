@@ -979,6 +979,7 @@ int enable_audio_route(struct audio_device *adev,
     snd_device_t snd_device;
     char mixer_path[MIXER_PATH_MAX_LENGTH];
     struct stream_out *out = NULL;
+    int ret = 0;
 
     if (usecase == NULL)
         return -EINVAL;
@@ -1008,7 +1009,14 @@ int enable_audio_route(struct audio_device *adev,
     strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
     platform_add_backend_name(mixer_path, snd_device, usecase);
     ALOGD("%s: apply mixer and update path: %s", __func__, mixer_path);
-    audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+    ret = audio_route_apply_and_update_path(adev->audio_route, mixer_path);
+    if (!ret && usecase->id == USECASE_AUDIO_PLAYBACK_FM) {
+        struct str_parms *parms = str_parms_create_str("fm_restore_volume=1");
+        if (parms) {
+            audio_extn_fm_set_parameters(adev, parms);
+            str_parms_destroy(parms);
+        }
+    }
     ALOGV("%s: exit", __func__);
     return 0;
 }
@@ -1469,11 +1477,6 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                         out_set_voip_volume(&usecase->stream.out->stream,
                                             usecase->stream.out->volume_l,
                                             usecase->stream.out->volume_r);
-                    }
-                    if (usecase->id == USECASE_AUDIO_PLAYBACK_FM) {
-                        struct str_parms *parms = str_parms_create_str("fm_restore_volume=1");
-                        if (parms)
-                            audio_extn_fm_set_parameters(adev, parms);
                     }
                 }
             }
