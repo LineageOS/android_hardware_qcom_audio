@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--- Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.       -->
+<!--- Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.       -->
 <!---                                                                           -->
 <!--- Redistribution and use in source and binary forms, with or without        -->
 <!--- modification, are permitted provided that the following conditions are    -->
@@ -66,7 +66,7 @@
         <param DEVICE_HANDSET_QMIC_APE="137" />
         <param DEVICE_HEADSET_MIC_CPE="139" />
         <param DEVICE_HANDSET_DMIC_APE="149" />
-        <param DEVICE_HANDSET_DMIC_CPE="153" />
+        <param DEVICE_HANDSET_DMIC_CPE="148" />
         <param DEVICE_HANDSET_TMIC_APE="157" />
     </acdb_ids>
     <!-- Multiple sound_model_config tags can be listed, each with unique   -->
