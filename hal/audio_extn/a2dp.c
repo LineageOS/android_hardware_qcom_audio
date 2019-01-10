@@ -193,6 +193,11 @@ typedef enum {
     IMC_ENABLE,
 } imc_status_t;
 
+typedef enum {
+    MTU_SIZE,
+    PEAK_BIT_RATE,
+} frame_control_type_t;
+
 /* PCM config for ABR Feedback hostless front end */
 static struct pcm_config pcm_config_abr = {
     .channels = 1,
@@ -303,6 +308,17 @@ struct imc_dec_enc_info {
     uint32_t comm_instance;
 };
 
+/* Structure to control frame size of AAC encoded frames. */
+struct aac_frame_size_control_t {
+    /* Type of frame size control: MTU_SIZE / PEAK_BIT_RATE*/
+    uint32_t ctl_type;
+    /* Control value
+     * MTU_SIZE: MTU size in bytes
+     * PEAK_BIT_RATE: Peak bitrate in bits per second.
+     */
+    uint32_t ctl_value;
+};
+
 /* Structure used for ABR config of AFE encoder and decoder. */
 struct abr_enc_cfg_t {
     /* Link quality level to bitrate mapping info sent to DSP. */
@@ -341,6 +357,11 @@ struct aac_enc_cfg_t {
     uint16_t      aac_fmt_flag;
     uint16_t      channel_cfg;
     uint32_t      sample_rate;
+} __attribute__ ((packed));
+
+struct aac_enc_cfg_v2_t {
+    struct aac_enc_cfg_t aac_enc_cfg;
+    struct aac_frame_size_control_t frame_ctl;
 } __attribute__ ((packed));
 
 /* SBC encoder configuration structure. */
@@ -526,6 +547,11 @@ typedef struct {
     uint32_t bitrate;
     uint32_t bits_per_sample;
 } audio_aac_encoder_config;
+
+typedef struct {
+    audio_aac_encoder_config audio_aac_enc_cfg;
+    struct aac_frame_size_control_t frame_ctl;
+} audio_aac_encoder_config_v2;
 #endif
 
 /* Information about BT CELT encoder configuration
@@ -1471,7 +1497,7 @@ bool configure_aac_enc_format(audio_aac_encoder_config *aac_bt_cfg)
     bool is_configured = false;
     int ret = 0;
 
-    if(aac_bt_cfg == NULL)
+    if (aac_bt_cfg == NULL)
         return false;
 
     ctl_enc_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_CONFIG_BLOCK);
@@ -1484,7 +1510,7 @@ bool configure_aac_enc_format(audio_aac_encoder_config *aac_bt_cfg)
     aac_dsp_cfg.enc_format = ENC_MEDIA_FMT_AAC;
     aac_dsp_cfg.bit_rate = aac_bt_cfg->bitrate;
     aac_dsp_cfg.sample_rate = aac_bt_cfg->sampling_rate;
-    switch(aac_bt_cfg->enc_mode) {
+    switch (aac_bt_cfg->enc_mode) {
         case 0:
             aac_dsp_cfg.enc_mode = MEDIA_FMT_AAC_AOT_LC;
             break;
@@ -1498,10 +1524,11 @@ bool configure_aac_enc_format(audio_aac_encoder_config *aac_bt_cfg)
     }
     aac_dsp_cfg.aac_fmt_flag = aac_bt_cfg->format_flag;
     aac_dsp_cfg.channel_cfg = aac_bt_cfg->channels;
+
     ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aac_dsp_cfg,
                               sizeof(struct aac_enc_cfg_t));
     if (ret != 0) {
-        ALOGE("%s: failed to set SBC encoder config", __func__);
+        ALOGE("%s: Failed to set AAC encoder config", __func__);
         is_configured = false;
         goto fail;
     }
@@ -1514,8 +1541,67 @@ bool configure_aac_enc_format(audio_aac_encoder_config *aac_bt_cfg)
     a2dp.bt_encoder_format = ENC_CODEC_TYPE_AAC;
     a2dp.enc_sampling_rate = aac_bt_cfg->sampling_rate;
     a2dp.enc_channels = aac_bt_cfg->channels;
-    ALOGV("Successfully updated AAC enc format with samplingrate: %d channels:%d",
-           aac_dsp_cfg.sample_rate, aac_dsp_cfg.channel_cfg);
+    ALOGV("%s: Successfully updated AAC enc format with sampling rate: %d channels:%d",
+           __func__, aac_dsp_cfg.sample_rate, aac_dsp_cfg.channel_cfg);
+fail:
+    return is_configured;
+}
+
+bool configure_aac_enc_format_v2(audio_aac_encoder_config_v2 *aac_bt_cfg)
+{
+    struct mixer_ctl *ctl_enc_data = NULL;
+    struct aac_enc_cfg_v2_t aac_dsp_cfg;
+    bool is_configured = false;
+    int ret = 0;
+
+    if (aac_bt_cfg == NULL)
+        return false;
+
+    ctl_enc_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_CONFIG_BLOCK);
+    if (!ctl_enc_data) {
+        ALOGE(" ERROR  a2dp encoder CONFIG data mixer control not identifed");
+        is_configured = false;
+        goto fail;
+    }
+    memset(&aac_dsp_cfg, 0x0, sizeof(struct aac_enc_cfg_v2_t));
+    aac_dsp_cfg.aac_enc_cfg.enc_format = ENC_MEDIA_FMT_AAC;
+    aac_dsp_cfg.aac_enc_cfg.bit_rate = aac_bt_cfg->audio_aac_enc_cfg.bitrate;
+    aac_dsp_cfg.aac_enc_cfg.sample_rate = aac_bt_cfg->audio_aac_enc_cfg.sampling_rate;
+    switch (aac_bt_cfg->audio_aac_enc_cfg.enc_mode) {
+        case 0:
+            aac_dsp_cfg.aac_enc_cfg.enc_mode = MEDIA_FMT_AAC_AOT_LC;
+            break;
+        case 2:
+            aac_dsp_cfg.aac_enc_cfg.enc_mode = MEDIA_FMT_AAC_AOT_PS;
+            break;
+        case 1:
+        default:
+            aac_dsp_cfg.aac_enc_cfg.enc_mode = MEDIA_FMT_AAC_AOT_SBR;
+            break;
+    }
+    aac_dsp_cfg.aac_enc_cfg.aac_fmt_flag = aac_bt_cfg->audio_aac_enc_cfg.format_flag;
+    aac_dsp_cfg.aac_enc_cfg.channel_cfg = aac_bt_cfg->audio_aac_enc_cfg.channels;
+    aac_dsp_cfg.frame_ctl.ctl_type = aac_bt_cfg->frame_ctl.ctl_type;
+    aac_dsp_cfg.frame_ctl.ctl_value = aac_bt_cfg->frame_ctl.ctl_value;
+
+    ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aac_dsp_cfg,
+                              sizeof(struct aac_enc_cfg_v2_t));
+    if (ret != 0) {
+        ALOGE("%s: Failed to set AAC encoder config", __func__);
+        is_configured = false;
+        goto fail;
+    }
+    ret = a2dp_set_bit_format(aac_bt_cfg->audio_aac_enc_cfg.bits_per_sample);
+    if (ret != 0) {
+        is_configured = false;
+        goto fail;
+    }
+    is_configured = true;
+    a2dp.bt_encoder_format = ENC_CODEC_TYPE_AAC;
+    a2dp.enc_sampling_rate = aac_bt_cfg->audio_aac_enc_cfg.sampling_rate;
+    a2dp.enc_channels = aac_bt_cfg->audio_aac_enc_cfg.channels;
+    ALOGV("%s: Successfully updated AAC enc format with sampling rate: %d channels:%d",
+           __func__, aac_dsp_cfg.aac_enc_cfg.sample_rate, aac_dsp_cfg.aac_enc_cfg.channel_cfg);
 fail:
     return is_configured;
 }
@@ -1708,8 +1794,11 @@ bool configure_a2dp_encoder_format()
 #endif
         case ENC_CODEC_TYPE_AAC:
             ALOGD(" Received AAC encoder supported BT device");
-            is_configured =
-              configure_aac_enc_format((audio_aac_encoder_config *)codec_info);
+            bool is_aac_frame_ctl_enabled =
+                    property_get_bool("persist.vendor.bt.aac_frm_ctl.enabled", false);
+            is_configured = is_aac_frame_ctl_enabled ?
+                  configure_aac_enc_format_v2((audio_aac_encoder_config_v2 *) codec_info) :
+                  configure_aac_enc_format((audio_aac_encoder_config *) codec_info);
             break;
         case ENC_CODEC_TYPE_CELT:
             ALOGD(" Received CELT encoder supported BT device");
@@ -2138,6 +2227,7 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
             break;
         case ENC_CODEC_TYPE_APTX_AD: // for aptx adaptive the latency depends on the mode (HQ/LL) and
             latency = slatency;      // BT IPC will take care of accomodating the mode factor and return latency
+            break;
         default:
             latency = 200;
             break;

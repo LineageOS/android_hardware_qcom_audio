@@ -6471,7 +6471,8 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
  */
 static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
                                    int backend_idx,
-                                   struct audio_backend_cfg *backend_cfg)
+                                   struct audio_backend_cfg *backend_cfg,
+                                   snd_device_t snd_device)
 {
     bool backend_change = false;
     unsigned int bit_width;
@@ -6492,14 +6493,18 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
     // For voice calls use default configuration i.e. 16b/48K, only applicable to
     // default backend
     // force routing is not required here, caller will do it anyway
-    if ((voice_is_in_call(adev) || adev->mode == AUDIO_MODE_IN_COMMUNICATION)
-        || (my_data->is_internal_codec)) {
+    if ((voice_is_in_call(adev) || adev->mode == AUDIO_MODE_IN_COMMUNICATION)) {
 
         ALOGW("%s:txbecf: afe: Use default bw and sr for voice/voip calls and "
               "for unprocessed/camera source", __func__);
         bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         channels = CODEC_BACKEND_DEFAULT_TX_CHANNELS;
+    } else if (my_data->is_internal_codec && !audio_is_usb_in_device(snd_device)) {
+        sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+        channels = CODEC_BACKEND_DEFAULT_TX_CHANNELS;
+        if (adev->active_input->bit_width == 24)
+            bit_width = platform_get_snd_device_bit_width(snd_device);
     } else {
         struct listnode *node;
         struct audio_usecase *uc = NULL;
@@ -6591,7 +6596,7 @@ bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev,
           backend_idx, usecase->id,
           platform_get_snd_device_name(snd_device));
     if (platform_check_capture_codec_backend_cfg(adev, backend_idx,
-                                                 &backend_cfg)) {
+                                                 &backend_cfg, snd_device)) {
         ret = platform_set_codec_backend_cfg(adev, snd_device,
                                              backend_cfg);
         if(!ret)
