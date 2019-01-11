@@ -28,6 +28,7 @@
 <sound_trigger_platform_info>
     <param version="0x0101" /> <!-- this must be the first param -->
     <common_config>
+        <param implementer_version="0x0100" />
         <param max_cpe_sessions="1" />
         <param max_wdsp_sessions="2" />
         <param max_ape_sessions="8" />
@@ -37,11 +38,12 @@
         <param transit_to_adsp_on_playback="false" />
         <!-- Below backend params must match with port used in mixer path file -->
         <!-- param used to configure backend sample rate, format and channels -->
+        <!-- uncomment INT3_MI2S_TX values for internal codec and comment SLIM_0_TX values -->
         <param backend_port_name="SLIM_0_TX" />
-        <param backend_port_name="INT3_MI2S_TX" />
+        <!-- <param backend_port_name="INT3_MI2S_TX" /> -->
         <!-- Param used to match and obtain device backend index -->
         <param backend_dai_name="SLIMBUS_0_TX" />
-        <param backend_dai_name="INT3_MI2S_TX" />
+        <!-- <param backend_dai_name="INT3_MI2S_TX" /> -->
     </common_config>
     <acdb_ids>
         <param DEVICE_HANDSET_MIC_APE="100" />

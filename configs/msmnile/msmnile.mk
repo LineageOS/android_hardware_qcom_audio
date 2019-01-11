@@ -76,13 +76,14 @@ DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
 endif
 
 PRODUCT_COPY_FILES += \
-    hardware/qcom/audio/configs/msmnile/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
+    hardware/qcom/audio/configs/msmnile/audio_io_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_io_policy.conf \
     hardware/qcom/audio/configs/msmnile/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
     hardware/qcom/audio/configs/msmnile/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
     hardware/qcom/audio/configs/msmnile/mixer_paths_tavil.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tavil.xml \
     hardware/qcom/audio/configs/msmnile/audio_tuning_mixer_tavil.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer_tavil.txt \
     hardware/qcom/audio/configs/msmnile/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
     hardware/qcom/audio/configs/msmnile/sound_trigger_mixer_paths_wcd9340.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9340.xml \
+    hardware/qcom/audio/configs/msmnile/sound_trigger_mixer_paths_wcd9340_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9340_qrd.xml \
     hardware/qcom/audio/configs/msmnile/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
     hardware/qcom/audio/configs/msmnile/graphite_ipc_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/graphite_ipc_platform_info.xml \
     hardware/qcom/audio/configs/msmnile/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
@@ -228,6 +229,13 @@ vendor.audio.adm.buffering.ms=2
 #enable keytone FR
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hal.output.suspend.supported=true
+
+# Enable AAudio MMAP/NOIRQ data path.
+# 2 is AAUDIO_POLICY_AUTO so it will try MMAP then fallback to Legacy path.
+PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_policy=2
+# Allow EXCLUSIVE then fall back to SHARED.
+PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_exclusive_policy=2
+PRODUCT_PROPERTY_OVERRIDES += aaudio.hw_burst_min_usec=2000
 
 #enable mirror-link feature
 PRODUCT_PROPERTY_OVERRIDES += \

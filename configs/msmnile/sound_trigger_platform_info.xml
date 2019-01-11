@@ -35,6 +35,7 @@
 <!--- added to <adm_config>                                                     -->
 
     <common_config>
+        <param implementer_version="0x0100" />
         <param max_cpe_sessions="1" />
         <param max_wdsp_sessions="2" />
         <param max_ape_sessions="8" />
@@ -45,9 +46,11 @@
         <param transit_to_adsp_on_battery_charging="false" />
         <!-- Below backend params must match with port used in mixer path file -->
         <!-- param used to configure backend sample rate, format and channels -->
-        <param backend_port_name="SLIM_0_TX" />
+        <param backend_port_name="SLIM_1_TX" />
         <!-- Param used to match and obtain device backend index -->
-        <param backend_dai_name="SLIMBUS_0_TX" />
+        <param backend_dai_name="SLIMBUS_1_TX" />
+        <!-- Param used to indicate if SVA has dedicated SLIM ports -->
+        <param dedicated_sva_path="true" />
     </common_config>
     <acdb_ids>
         <param DEVICE_HANDSET_MIC_APE="100" />
@@ -58,6 +61,7 @@
         <param DEVICE_HANDSET_MIC_PP_APE="135" />
         <param DEVICE_HANDSET_QMIC_APE="137" />
         <param DEVICE_HEADSET_MIC_CPE="139" />
+        <param DEVICE_HEADSET_MIC_APE="141" />
         <param DEVICE_HANDSET_DMIC_APE="149" />
         <param DEVICE_HANDSET_DMIC_CPE="148" />
     </acdb_ids>
@@ -260,7 +264,7 @@
         <param wdsp_fluence_type="NONE" />
         <gcs_usecase>
             <param uid="0x3" />
-            <param acdb_devices="DEVICE_HANDSET_MIC_CPE" />
+            <param acdb_devices="DEVICE_HANDSET_MIC_CPE, DEVICE_HEADSET_MIC_CPE" />
             <param load_sound_model_ids="0x18000001, 0x4, 0x18000100" />
             <param start_engine_ids="0x18000001, 0x4, 0x18000101" />
             <param confidence_levels_ids="0x18000001, 0x4, 0x00012C28" />

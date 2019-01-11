@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2014 The Android Open Source Project
@@ -101,7 +101,10 @@
 #endif
 
 /* ToDo: Check and update a proper value in msec */
-#define COMPRESS_OFFLOAD_PLAYBACK_LATENCY 50
+#define COMPRESS_OFFLOAD_PLAYBACK_LATENCY  50
+#define PCM_OFFLOAD_PLAYBACK_DSP_PATHDELAY 62
+#define PCM_OFFLOAD_PLAYBACK_LATENCY \
+    (PCM_OFFLOAD_BUFFER_DURATION + PCM_OFFLOAD_PLAYBACK_DSP_PATHDELAY)
 
 #ifndef MAX_CHANNELS_SUPPORTED
 #define MAX_CHANNELS_SUPPORTED 8
@@ -870,6 +873,25 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
     }
 }
 
+void audio_extn_btsco_get_sample_rate(int snd_device, int *sample_rate)
+{
+    switch (snd_device) {
+    case SND_DEVICE_OUT_BT_SCO:
+    case SND_DEVICE_IN_BT_SCO_MIC:
+    case SND_DEVICE_IN_BT_SCO_MIC_NREC:
+        *sample_rate = 8000;
+        break;
+    case SND_DEVICE_OUT_BT_SCO_WB:
+    case SND_DEVICE_IN_BT_SCO_MIC_WB:
+    case SND_DEVICE_IN_BT_SCO_MIC_WB_NREC:
+        *sample_rate = 16000;
+        break;
+    default:
+        ALOGD("%s:Not a BT SCO device, need not update sampling rate\n", __func__);
+        break;
+    }
+}
+
 static int send_app_type_cfg_for_device(struct audio_device *adev,
                                         struct audio_usecase *usecase,
                                         int split_snd_device)
@@ -936,8 +958,13 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         goto exit_send_app_type_cfg;
     }
     snd_device = platform_get_spkr_prot_snd_device(snd_device);
-
-    acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
+    if (voice_is_in_call_rec_stream(usecase->stream.in) && usecase->type == PCM_CAPTURE) {
+        snd_device_t voice_device = voice_get_incall_rec_snd_device(usecase->in_snd_device);
+        acdb_dev_id = platform_get_snd_device_acdb_id(voice_device);
+        ALOGV("acdb id for voice call use case %d", acdb_dev_id);
+    } else {
+        acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
+    }
     if (acdb_dev_id <= 0) {
         ALOGE("%s: Couldn't get the acdb dev id", __func__);
         rc = -EINVAL;
@@ -993,6 +1020,7 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
                    ALOGI("%s using %d sample rate rate for A2DP CoPP",
                         __func__, usecase->stream.out->app_type_cfg.sample_rate);
         }
+        audio_extn_btsco_get_sample_rate(snd_device, &usecase->stream.out->app_type_cfg.sample_rate);
         sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
 
         /* Interactive streams are supported with only direct app type id.
@@ -1035,6 +1063,11 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         app_type_cfg[len++] = acdb_dev_id;
         if (usecase->id == USECASE_AUDIO_RECORD_VOIP)
             usecase->stream.in->app_type_cfg.sample_rate = usecase->stream.in->sample_rate;
+        if (voice_is_in_call_rec_stream(usecase->stream.in)) {
+            audio_extn_btsco_get_sample_rate(usecase->in_snd_device, &usecase->stream.in->app_type_cfg.sample_rate);
+        } else {
+            audio_extn_btsco_get_sample_rate(snd_device, &usecase->stream.in->app_type_cfg.sample_rate);
+        }
         sample_rate = usecase->stream.in->app_type_cfg.sample_rate;
         app_type_cfg[len++] = sample_rate;
         if (snd_device_be_idx > 0)
@@ -1068,6 +1101,7 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
 {
     int i, num_devices = 0;
     snd_device_t new_snd_devices[SND_DEVICE_OUT_END] = {0};
+    snd_device_t in_snd_device = usecase->in_snd_device;
     int rc = 0;
 
     switch (usecase->type) {
@@ -1086,11 +1120,14 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
     case PCM_CAPTURE:
         ALOGD("%s: usecase->in_snd_device %s",
               __func__, platform_get_snd_device_name(usecase->in_snd_device));
+        if (voice_is_in_call_rec_stream(usecase->stream.in)) {
+            in_snd_device = voice_get_incall_rec_backend_device(usecase->stream.in);
+        }
         /* check for in combo device */
         if (platform_split_snd_device(adev->platform,
-                                      usecase->in_snd_device,
+                                      in_snd_device,
                                       &num_devices, new_snd_devices)) {
-            new_snd_devices[0] = usecase->in_snd_device;
+            new_snd_devices[0] = in_snd_device;
             num_devices = 1;
         }
         break;
@@ -1806,6 +1843,12 @@ int audio_extn_utils_compress_get_dsp_latency(struct stream_out *out)
     struct snd_compr_metadata metadata;
     int delay_ms = COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
 
+    /* override the latency for pcm offload use case */
+    if ((out->flags & AUDIO_OUTPUT_FLAG_DIRECT) &&
+        !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
+        delay_ms = PCM_OFFLOAD_PLAYBACK_LATENCY;
+    }
+
     if (property_get_bool("vendor.audio.playback.dsp.pathdelay", false)) {
         ALOGD("%s:: Quering DSP delay %d",__func__, __LINE__);
         if (!(is_offload_usecase(out->usecase))) {
@@ -2474,4 +2517,13 @@ int audio_extn_utils_get_channels_from_string(const char *id_string)
     }
 
     return -EINVAL;
+}
+
+void audio_extn_utils_release_snd_device(snd_device_t snd_device)
+{
+    audio_extn_dev_arbi_release(snd_device);
+    audio_extn_sound_trigger_update_device_status(snd_device,
+                                    ST_EVENT_SND_DEVICE_FREE);
+    audio_extn_listen_update_device_status(snd_device,
+                                    LISTEN_EVENT_SND_DEVICE_FREE);
 }

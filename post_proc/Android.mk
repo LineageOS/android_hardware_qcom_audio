@@ -1,4 +1,3 @@
-
 LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
@@ -37,6 +36,10 @@ endif
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUDIOSPHERE)),true)
     LOCAL_CFLAGS += -DAUDIOSPHERE_ENABLED
     LOCAL_SRC_FILES += asphere.c
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INSTANCE_ID)), true)
+    LOCAL_CFLAGS += -DINSTANCE_ID_ENABLED
 endif
 
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
@@ -118,10 +121,6 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DTS_EAGLE)), true)
 LOCAL_CFLAGS += -DHW_ACC_HPX
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INSTANCE_ID)), true)
-    LOCAL_CFLAGS += -DINSTANCE_ID_ENABLED
-endif
-
 LOCAL_MODULE:= libhwacceffectswrapper
 LOCAL_VENDOR_MODULE := true
 
@@ -132,7 +131,7 @@ endif
 
 ################################################################################
 
-ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm660 sdm845 apq8098_latv sdm710 msm8953 msm8937 qcs605 msmnile $(MSMSTEPPE),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm660 sdm845 apq8098_latv sdm710 msm8953 msm8937 qcs605 msmnile $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
 
 include $(CLEAR_VARS)
 

@@ -44,6 +44,7 @@
 #define AUDIO_PARAMETER_KEY_REC_PLAY_CONC "rec_play_conc_on"
 #define AUDIO_PARAMETER_KEY_FM_MUTE "fm_mute"
 #define AUDIO_PARAMETER_KEY_FM_RESTORE_VOLUME "fm_restore_volume"
+#define AUDIO_PARAMETER_KEY_FM_ROUTING "fm_routing"
 #define FM_LOOPBACK_DRAIN_TIME_MS 2
 
 static struct pcm_config pcm_config_fm = {
@@ -64,6 +65,7 @@ struct fm_module {
     bool is_fm_muted;
     float fm_volume;
     bool restart_fm;
+    audio_devices_t fm_device;
     card_status_t card_status;
 };
 
@@ -74,6 +76,7 @@ static struct fm_module fmmod = {
   .is_fm_running = 0,
   .is_fm_muted = 0,
   .restart_fm = 0,
+  .fm_device = 0,
   .card_status = CARD_STATUS_ONLINE,
 };
 
@@ -153,29 +156,46 @@ static int32_t fm_stop(struct audio_device *adev)
     disable_snd_device(adev, uc_info->in_snd_device);
 
     list_remove(&uc_info->list);
+    free(uc_info->stream.out);
     free(uc_info);
 
     ALOGD("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
 
-static int32_t fm_start(struct audio_device *adev)
+
+static int32_t fm_start(struct audio_device *adev, audio_devices_t outputDevices)
 {
+    struct stream_out *fm_out;
     int32_t ret = 0;
     struct audio_usecase *uc_info;
     int32_t pcm_dev_rx_id, pcm_dev_tx_id;
 
-    ALOGD("%s: enter", __func__);
+
+    ALOGD("%s: Start FM over output device %d ", __func__, outputDevices);
+    fmmod.is_fm_running = true;
+
+    fm_out = (struct stream_out *)calloc(1, sizeof(struct stream_out));
+    if (!fm_out)
+        return -ENOMEM;
+
+    fm_out->sample_rate = 48000;
+    fm_out->format = AUDIO_FORMAT_PCM_16_BIT;
+    fm_out->usecase = USECASE_AUDIO_PLAYBACK_FM;
+    fm_out->config = pcm_config_fm;
+    fm_out->devices = outputDevices;
 
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
 
-    if (!uc_info)
+    if (!uc_info) {
+        free(fm_out);
         return -ENOMEM;
+    }
 
     uc_info->id = USECASE_AUDIO_PLAYBACK_FM;
     uc_info->type = PCM_PLAYBACK;
-    uc_info->stream.out = adev->primary_output;
-    uc_info->devices = adev->primary_output->devices;
+    uc_info->stream.out = fm_out;
+    uc_info->devices = outputDevices;
     uc_info->in_snd_device = SND_DEVICE_NONE;
     uc_info->out_snd_device = SND_DEVICE_NONE;
 
@@ -220,7 +240,7 @@ static int32_t fm_start(struct audio_device *adev)
     pcm_start(fmmod.fm_pcm_rx);
     pcm_start(fmmod.fm_pcm_tx);
 
-    fmmod.is_fm_running = true;
+    fmmod.fm_device = fm_out->devices;
     fm_set_volume(adev, fmmod.fm_volume, false);
 
     ALOGD("%s: exit: status(%d)", __func__, ret);
@@ -268,7 +288,7 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
     if (fmmod.restart_fm && (fmmod.card_status == CARD_STATUS_ONLINE)) {
         ALOGD("sound card is ONLINE, restart FM");
         fmmod.restart_fm = 0;
-        fm_start(adev);
+        fm_start(adev, fmmod.fm_device);
     }
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HANDLE_FM,
@@ -279,8 +299,8 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
         if (val != 0) {
             if(val & AUDIO_DEVICE_OUT_FM
                && fmmod.is_fm_running == false) {
-                adev->primary_output->devices = val & ~AUDIO_DEVICE_OUT_FM;
-                fm_start(adev);
+                audio_devices_t OutputDevice = val & ~AUDIO_DEVICE_OUT_FM;
+                fm_start(adev, OutputDevice);
             } else if (!(val & AUDIO_DEVICE_OUT_FM)
                      && fmmod.is_fm_running == true) {
                 fm_set_volume(adev, 0, false);
@@ -288,6 +308,21 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
                 fm_stop(adev);
             }
        }
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FM_ROUTING,
+                            value, sizeof(value));
+    if (ret >= 0 && fmmod.is_fm_running) {
+        val = atoi(value);
+        ALOGD("%s: FM usecase", __func__);
+        if (val != 0) {
+            if(val & AUDIO_DEVICE_OUT_FM) {
+                audio_devices_t OutputDevice = val & ~AUDIO_DEVICE_OUT_FM;
+                fm_set_volume(adev, 0, false);
+                fm_stop(adev);
+                fm_start(adev, OutputDevice);
+            }
+        }
     }
 
     memset(value, 0, sizeof(value));

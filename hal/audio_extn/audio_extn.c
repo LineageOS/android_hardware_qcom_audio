@@ -72,6 +72,7 @@ struct audio_extn_module {
     uint32_t proxy_channel_num;
     bool hpx_enabled;
     bool vbat_enabled;
+    bool bcl_enabled;
     bool hifi_audio_enabled;
     bool ras_enabled;
     struct aptx_dec_bt_addr addr;
@@ -413,6 +414,25 @@ bool audio_extn_can_use_vbat(void)
 
     ALOGD("%s: vbat.enabled property is set to %s", __func__, prop_vbat_enabled);
     return (aextnmod.vbat_enabled ? true: false);
+}
+
+bool audio_extn_is_bcl_enabled(void)
+{
+    ALOGD("%s: status: %d", __func__, aextnmod.bcl_enabled);
+    return (aextnmod.bcl_enabled ? true: false);
+}
+
+bool audio_extn_can_use_bcl(void)
+{
+    char prop_bcl_enabled[PROPERTY_VALUE_MAX] = "false";
+
+    property_get("persist.vendor.audio.bcl.enabled", prop_bcl_enabled, "0");
+    if (!strncmp("true", prop_bcl_enabled, 4)) {
+        aextnmod.bcl_enabled = 1;
+    }
+
+    ALOGD("%s: bcl.enabled property is set to %s", __func__, prop_bcl_enabled);
+    return (aextnmod.bcl_enabled ? true: false);
 }
 #endif
 
@@ -824,6 +844,7 @@ void audio_extn_init(struct audio_device *adev)
     aextnmod.proxy_channel_num = 2;
     aextnmod.hpx_enabled = 0;
     aextnmod.vbat_enabled = 0;
+    aextnmod.bcl_enabled = 0;
     aextnmod.hifi_audio_enabled = 0;
     aextnmod.addr.nap = 0;
     aextnmod.addr.uap = 0;
@@ -863,6 +884,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
        adev->offload_effects_set_parameters(parms);
    audio_extn_set_aptx_dec_bt_addr(adev, parms);
    audio_extn_ffv_set_parameters(adev, parms);
+   audio_extn_ext_hw_plugin_set_parameters(adev->ext_hw_plugin, parms);
 }
 
 void audio_extn_get_parameters(const struct audio_device *adev,
@@ -881,6 +903,7 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     audio_extn_sound_trigger_get_parameters(adev, query, reply);
     if (adev->offload_effects_get_parameters != NULL)
         adev->offload_effects_get_parameters(query, reply);
+    audio_extn_ext_hw_plugin_get_parameters(adev->ext_hw_plugin, query, reply);
 
     kv_pairs = str_parms_to_str(reply);
     ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);

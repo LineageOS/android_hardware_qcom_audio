@@ -169,9 +169,13 @@ void audio_extn_set_aanc_noise_level(struct audio_device *adev,
 #ifndef VBAT_MONITOR_ENABLED
 #define audio_extn_is_vbat_enabled()                     (0)
 #define audio_extn_can_use_vbat()                        (0)
+#define audio_extn_is_bcl_enabled()                     (0)
+#define audio_extn_can_use_bcl()                        (0)
 #else
 bool audio_extn_is_vbat_enabled(void);
 bool audio_extn_can_use_vbat(void);
+bool audio_extn_is_bcl_enabled(void);
+bool audio_extn_can_use_bcl(void);
 #endif
 
 #ifndef RAS_ENABLED
@@ -217,7 +221,8 @@ int32_t audio_extn_get_afe_proxy_channel_count();
 #define audio_extn_usb_deinit()                                        (0)
 #define audio_extn_usb_add_device(device, card)                        (0)
 #define audio_extn_usb_remove_device(device, card)                     (0)
-#define audio_extn_usb_is_config_supported(bit_width, sample_rate, ch, pb) (0)
+#define audio_extn_usb_is_config_supported(bit_width, sample_rate, ch, pb) \
+                        (*bit_width=0, *sample_rate=0, *ch=0, 0)
 #define audio_extn_usb_enable_sidetone(device, enable)                 (0)
 #define audio_extn_usb_set_sidetone_gain(parms, value, len)            (0)
 #define audio_extn_usb_is_capture_supported()                          (0)
@@ -676,6 +681,7 @@ bool audio_extn_utils_is_dolby_format(audio_format_t format);
 int audio_extn_utils_get_bit_width_from_string(const char *);
 int audio_extn_utils_get_sample_rate_from_string(const char *);
 int audio_extn_utils_get_channels_from_string(const char *);
+void audio_extn_utils_release_snd_device(snd_device_t snd_device);
 
 #ifdef DS2_DOLBY_DAP_ENABLED
 #define LIB_DS2_DAP_HAL "vendor/lib/libhwdaphal.so"
@@ -1100,5 +1106,30 @@ int audio_extn_ffv_deinit_ec_ref_loopback(struct audio_device *adev,
 void audio_extn_ffv_check_and_append_ec_ref_dev(char *device_name);
 snd_device_t audio_extn_ffv_get_capture_snd_device();
 void audio_extn_ffv_append_ec_ref_dev_name(char *device_name);
+#endif
+
+#ifndef EXT_HW_PLUGIN_ENABLED
+#define audio_extn_ext_hw_plugin_init(adev)                (0)
+#define audio_extn_ext_hw_plugin_deinit(plugin)              (0)
+#define audio_extn_ext_hw_plugin_usecase_start(plugin, usecase) (0)
+#define audio_extn_ext_hw_plugin_usecase_stop(plugin, usecase) (0)
+#define audio_extn_ext_hw_plugin_set_parameters(plugin, parms) (0)
+#define audio_extn_ext_hw_plugin_get_parameters(plugin, query, reply) (0)
+#define audio_extn_ext_hw_plugin_set_mic_mute(plugin, mute) (0)
+#define audio_extn_ext_hw_plugin_get_mic_mute(plugin, mute) (0)
+#define audio_extn_ext_hw_plugin_set_audio_gain(plugin, usecase, gain) (0)
+#else
+void* audio_extn_ext_hw_plugin_init(struct audio_device *adev);
+int audio_extn_ext_hw_plugin_deinit(void *plugin);
+int audio_extn_ext_hw_plugin_usecase_start(void *plugin, struct audio_usecase *usecase);
+int audio_extn_ext_hw_plugin_usecase_stop(void *plugin, struct audio_usecase *usecase);
+int audio_extn_ext_hw_plugin_set_parameters(void *plugin,
+                                           struct str_parms *parms);
+int audio_extn_ext_hw_plugin_get_parameters(void *plugin,
+                  struct str_parms *query, struct str_parms *reply);
+int audio_extn_ext_hw_plugin_set_mic_mute(void *plugin, bool mute);
+int audio_extn_ext_hw_plugin_get_mic_mute(void *plugin, bool *mute);
+int audio_extn_ext_hw_plugin_set_audio_gain(void *plugin,
+            struct audio_usecase *usecase, uint32_t gain);
 #endif
 #endif /* AUDIO_EXTN_H */
