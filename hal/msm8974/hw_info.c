@@ -505,6 +505,21 @@ static void  update_hardware_info_msmnile(struct hardware_info *hw_info, const c
     }
 }
 
+static void update_hardware_info_kona(struct hardware_info *hw_info,
+                                      const char *snd_card_name)
+{
+    if (!strncmp(snd_card_name, "kona-mtp-snd-card",
+                 sizeof("kona-mtp-snd-card"))) {
+        strlcpy(hw_info->name, "kona", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "kona-qrd-snd-card",
+                 sizeof("kona-qrd-snd-card"))) {
+        strlcpy(hw_info->name, "kona", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
+    } else {
+        ALOGW("%s: Not a kona device", __func__);
+    }
+}
+
 static void  update_hardware_info_sdx(struct hardware_info *hw_info __unused, const char *snd_card_name __unused)
 {
     ALOGW("%s: Not a sdx device", __func__);
@@ -701,6 +716,9 @@ void *hw_info_init(const char *snd_card_name)
             strstr(snd_card_name, "sa8155")) {
         ALOGV("MSMNILE - variant soundcard");
         update_hardware_info_msmnile(hw_info, snd_card_name);
+    } else if (strstr(snd_card_name, "kona")) {
+        ALOGV("KONA - variant soundcard");
+        update_hardware_info_kona(hw_info, snd_card_name);
     } else {
         ALOGE("%s: Unsupported target %s:",__func__, snd_card_name);
         free(hw_info);
