@@ -11,6 +11,7 @@ AM_CFLAGS = -Wall \
             -DNDEBUG \
             -DAUDIOV2 \
             -I inc \
+            -I $(PKG_CONFIG_SYSROOT_DIR)/usr/include/audio-kernel \
             -I ${WORKSPACE}/hardware/qcom/media/mm-core/inc/
 
 C_SOURCES = src/aenc_svr.c \
