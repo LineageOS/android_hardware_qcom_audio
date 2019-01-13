@@ -115,35 +115,35 @@
     </path>
 
     <path name="listen-voice-wakeup-1 preproc">
-        <path name="listen-voice-wakeup-1">
+        <path name="listen-voice-wakeup-1" />
     </path>
 
     <path name="listen-voice-wakeup-2 preproc">
-        <path name="listen-voice-wakeup-2">
+        <path name="listen-voice-wakeup-2" />
     </path>
 
     <path name="listen-voice-wakeup-3 preproc">
-        <path name="listen-voice-wakeup-3">
+        <path name="listen-voice-wakeup-3" />
     </path>
 
     <path name="listen-voice-wakeup-4 preproc">
-        <path name="listen-voice-wakeup-4">
+        <path name="listen-voice-wakeup-4" />
     </path>
 
     <path name="listen-voice-wakeup-5 preproc">
-        <path name="listen-voice-wakeup-5">
+        <path name="listen-voice-wakeup-5" />
     </path>
 
     <path name="listen-voice-wakeup-6 preproc">
-        <path name="listen-voice-wakeup-6">
+        <path name="listen-voice-wakeup-6" />
     </path>
 
     <path name="listen-voice-wakeup-7 preproc">
-        <path name="listen-voice-wakeup-7">
+        <path name="listen-voice-wakeup-7" />
     </path>
 
     <path name="listen-voice-wakeup-8 preproc">
-        <path name="listen-voice-wakeup-8">
+        <path name="listen-voice-wakeup-8" />
     </path>
 
     <path name="listen-voice-wakeup-1 port">
