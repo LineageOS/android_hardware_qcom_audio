@@ -18,6 +18,7 @@
 
 #include <sys/cdefs.h>
 #include <stdint.h>
+#include <system/audio.h>
 
 #ifndef QTI_AUDIO_HAL_DEFS_H
 #define QTI_AUDIO_HAL_DEFS_H
@@ -171,6 +172,9 @@ __BEGIN_DECLS
 #define QAHW_INPUT_FLAG_TIMESTAMP 0x80000000
 #define QAHW_INPUT_FLAG_COMPRESS  0x40000000
 #define QAHW_INPUT_FLAG_PASSTHROUGH 0x20000000
+#define QAHW_OUTPUT_FLAG_INCALL_MUSIC 0x80000000
+#define QAHW_AUDIO_FLAG_HPCM_TX 0x00020000
+#define QAHW_AUDIO_FLAG_HPCM_RX 0x00040000
 
 /* Query fm volume */
 #define QAHW_PARAMETER_KEY_FM_VOLUME "fm_volume"
@@ -244,6 +248,14 @@ typedef struct {
     int64_t *timestamp;    /* timestmap */
     uint32_t reserved[64]; /*reserved for future */
 } qahw_in_buffer_t;
+
+typedef struct {
+    void *buffer;    /* write buffer pointer */
+    size_t size;          /* size of buffer */
+    size_t offset;         /* offset in buffer from where valid byte starts */
+    int64_t *timestamp;    /* timestmap */
+    qahw_meta_data_flags_t flags; /* meta data flags */
+} qahw_buffer_t;
 
 #define MAX_SECTORS 8
 
@@ -370,6 +382,42 @@ typedef struct qahw_license_params {
     char license[QAHW_LICENCE_STR_MAX_LENGTH + 1];
 } qahw_license_params_t;
 
+typedef struct qahw_dtmf_gen_params {
+   bool enable;
+   uint16_t low_freq;
+   uint16_t high_freq;
+   uint16_t gain;
+} qahw_dtmf_gen_params_t;
+
+enum {
+    QAHW_TTY_MODE_OFF,
+    QAHW_TTY_MODE_FULL,
+    QAHW_TTY_MODE_VCO,
+    QAHW_TTY_MODE_HCO,
+    QAHW_TTY_MODE_MAX,
+};
+
+typedef struct qahw_tty_params {
+   uint32_t mode;
+} qahw_tty_params_t;
+
+typedef enum {
+    QAHW_HPCM_TAP_POINT_RX = 1,
+    QAHW_HPCM_TAP_POINT_TX = 2,
+    QAHW_HPCM_TAP_POINT_RX_TX = 3,
+} qahw_hpcm_tap_point;
+
+typedef enum {
+    QAHW_HPCM_DIRECTION_OUT,
+    QAHW_HPCM_DIRECTION_IN,
+    QAHW_HPCM_DIRECTION_OUT_IN,
+} qahw_hpcm_direction;
+
+typedef struct qahw_hpcm_params {
+   qahw_hpcm_tap_point tap_point;
+   qahw_hpcm_direction direction;
+} qahw_hpcm_params_t;
+
 typedef union {
     struct qahw_source_tracking_param st_params;
     struct qahw_sound_focus_param sf_params;
@@ -385,6 +433,9 @@ typedef union {
     struct qahw_mix_matrix_params mix_matrix_params;
     struct qahw_license_params license_params;
     struct qahw_out_presentation_position_param pos_param;
+    struct qahw_dtmf_gen_params dtmf_gen_params;
+    struct qahw_tty_params tty_mode_params;
+    struct qahw_hpcm_params hpcm_params;
 } qahw_param_payload;
 
 typedef enum {
@@ -405,6 +456,9 @@ typedef enum {
     QAHW_PARAM_CH_MIX_MATRIX_PARAMS,
     QAHW_PARAM_LICENSE_PARAMS,
     QAHW_PARAM_OUT_PRESENTATION_POSITION,
+    QAHW_PARAM_DTMF_GEN,
+    QAHW_PARAM_TTY_MODE,
+    QAHW_PARAM_HPCM,
 } qahw_param_id;
 
 
@@ -415,6 +469,94 @@ typedef union {
 typedef enum {
     QAHW_PARAM_LOOPBACK_RENDER_WINDOW /* PARAM to set render window */
 } qahw_loopback_param_id;
+
+/** stream direction enumeration */
+typedef enum {
+    QAHW_STREAM_INPUT,
+    QAHW_STREAM_OUTPUT,
+    QAHW_STREAM_INPUT_OUTPUT,
+} qahw_stream_direction;
+
+/** stream types */
+typedef enum {
+    QAHW_STREAM_TYPE_INVALID,
+    QAHW_AUDIO_PLAYBACK_LOW_LATENCY,      /**< low latency, higher power*/
+    QAHW_AUDIO_PLAYBACK_DEEP_BUFFER,          /**< low power, higher latency*/
+    QAHW_AUDIO_PLAYBACK_COMPRESSED,           /**< compresssed audio*/
+    QAHW_AUDIO_PLAYBACK_VOIP,                 /**< pcm voip audio*/
+    QAHW_AUDIO_PLAYBACK_VOICE_CALL_MUSIC,     /**< pcm voip audio*/
+
+    QAHW_AUDIO_CAPTURE_LOW_LATENCY,           /**< low latency, higher power*/
+    QAHW_AUDIO_CAPTURE_DEEP_BUFFER,           /**< low power, higher latency*/
+    QAHW_AUDIO_CAPTURE_COMPRESSED,            /**< compresssed audio*/
+    QAHW_AUDIO_CAPTURE_RAW,                   /**< pcm no post processing*/
+    QAHW_AUDIO_CAPTURE_VOIP,                  /**< pcm voip audio*/
+    QAHW_AUDIO_CAPTURE_VOICE_ACTIVATION,      /**< voice activation*/
+    QAHW_AUDIO_CAPTURE_VOICE_CALL_RX,         /**< incall record, downlink */
+    QAHW_AUDIO_CAPTURE_VOICE_CALL_TX,         /**< incall record, uplink */
+    QAHW_AUDIO_CAPTURE_VOICE_CALL_RX_TX,      /**< incall record, uplink & Downlink */
+
+    QAHW_VOICE_CALL,                          /**< voice call */
+
+    QAHW_AUDIO_TRANSCODE,                     /**< audio transcode */
+    QAHW_AUDIO_HOST_PCM_TX,
+    QAHW_AUDIO_HOST_PCM_RX,
+    QAHW_AUDIO_HOST_PCM_TX_RX,
+    QAHW_AUDIO_STREAM_TYPE_MAX,
+} qahw_audio_stream_type;
+
+typedef uint32_t qahw_device_t;
+
+/**< Key value pair to identify the topology of a usecase from default  */
+struct qahw_modifier_kv  {
+    uint32_t key;
+    uint32_t value;
+};
+
+struct qahw_shared_attributes{
+     audio_config_t config;
+};
+struct qahw_voice_attributes{
+     audio_config_t config;
+     const char *vsid;
+};
+
+struct qahw_audio_attributes{
+    audio_config_t config;
+};
+
+typedef union {
+    struct qahw_shared_attributes shared;
+    struct qahw_voice_attributes voice;
+    struct qahw_audio_attributes audio;
+} qahw_stream_attributes_config;
+
+struct qahw_stream_attributes {
+     qahw_audio_stream_type type;
+     qahw_stream_direction direction;
+     qahw_stream_attributes_config attr;
+};
+
+typedef enum {
+    QAHW_CHANNEL_L = 0, /*left channel*/
+    QAHW_CHANNEL_R = 1, /*right channel*/
+    QAHW_CHANNELS_MAX = 2, /*max number of supported streams*/
+} qahw_channel_map;
+
+struct qahw_channel_vol {
+    qahw_channel_map channel;
+    float vol;
+};
+
+struct qahw_volume_data {
+    uint32_t num_of_channels;
+    struct qahw_channel_vol *vol_pair;
+};
+
+struct qahw_mute_data {
+    bool enable;
+    qahw_stream_direction direction;
+};
 
 __END_DECLS
 
