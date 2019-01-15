@@ -301,7 +301,9 @@
     <ctl name="EAR_RDAC Switch" value="0" />
     <ctl name="HPHL_RDAC Switch" value="0" />
     <ctl name="HPHR_RDAC Switch" value="0" />
+    <ctl name="AUX_RDAC Switch" value="0" />
     <ctl name="RDAC3_MUX" value="ZERO" />
+    <ctl name="RX_EAR Mode" value="OFF" />
 
     <!-- TX Controls -->
     <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
@@ -370,8 +372,13 @@
     <ctl name="COMP7 Switch" value="0" />
     <ctl name="COMP8 Switch" value="0" />
 
-    <!-- Headphone Default mode - AB -->
-    <ctl name="RX HPH Mode" value="CLS_AB" />
+    <!-- Headphone class-H mode  -->
+    <ctl name="RX_HPH_PWR_MODE" value="ULP" />
+    <ctl name="RX HPH Mode" value="CLS_H_ULP" />
+
+    <!-- TX HDR AMIC Default connections -->
+    <ctl name="TX HDR12" value="0" />
+    <ctl name="TX HDR34" value="0" />
 
     <!-- IIR/voice anc -->
     <ctl name="IIR0 Band1" id ="0" value="268435456" />
@@ -2034,24 +2041,24 @@
 
     <path name="speaker">
         <ctl name="WSA_CDC_DMA_RX_0 Channels" value="One" />
-        <ctl name="WSA RX0 MUX" value="AIF1_PB" />
-        <ctl name="WSA_RX0 INP0" value="RX0" />
-        <ctl name="WSA_COMP1 Switch" value="1" />
-        <ctl name="SpkrLeft COMP Switch" value="1" />
-        <ctl name="SpkrLeft BOOST Switch" value="1" />
-        <ctl name="SpkrLeft VISENSE Switch" value="1" />
-        <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
+        <ctl name="WSA RX1 MUX" value="AIF1_PB" />
+        <ctl name="WSA_RX1 INP0" value="RX1" />
+        <ctl name="WSA_COMP2 Switch" value="1" />
+        <ctl name="SpkrRight COMP Switch" value="1" />
+        <ctl name="SpkrRight BOOST Switch" value="1" />
+        <ctl name="SpkrRight VISENSE Switch" value="1" />
+        <ctl name="SpkrRight SWR DAC_Port Switch" value="1" />
     </path>
 
     <path name="speaker-mono">
         <ctl name="WSA_CDC_DMA_RX_0 Channels" value="One" />
-        <ctl name="WSA RX0 MUX" value="AIF1_PB" />
-        <ctl name="WSA_RX0 INP0" value="RX0" />
-        <ctl name="WSA_COMP1 Switch" value="1" />
-        <ctl name="SpkrLeft COMP Switch" value="1" />
-        <ctl name="SpkrLeft BOOST Switch" value="1" />
-        <ctl name="SpkrLeft VISENSE Switch" value="1" />
-        <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
+        <ctl name="WSA RX1 MUX" value="AIF1_PB" />
+        <ctl name="WSA_RX1 INP0" value="RX1" />
+        <ctl name="WSA_COMP2 Switch" value="1" />
+        <ctl name="SpkrRight COMP Switch" value="1" />
+        <ctl name="SpkrRight BOOST Switch" value="1" />
+        <ctl name="SpkrRight VISENSE Switch" value="1" />
+        <ctl name="SpkrRight SWR DAC_Port Switch" value="1" />
     </path>
 
     <path name="speaker-mono-2">
@@ -2086,7 +2093,7 @@
     </path>
 
     <path name="speaker-mic">
-        <path name="amic3" />
+        <path name="dmic2" />
     </path>
 
     <path name="speaker-protected">
@@ -2106,7 +2113,11 @@
     </path>
 
     <path name="voice-speaker-2-protected">
-        <path name="voice-speaker-protected" />
+        <ctl name="WSA_AIF_VI Mixer WSA_SPKR_VI_2" value="1" />
+        <ctl name="WSA_CDC_DMA_0 TX Format" value="PACKED_16B" />
+        <path name="speaker-mono-2" />
+        <ctl name="VI_FEED_TX Channels" value="One" />
+        <ctl name="WSA_RX_0_VI_FB_RCH_MUX" value="WSA_CDC_DMA_TX_0" />
     </path>
 
     <path name="voice-speaker-stereo-protected">
@@ -2129,10 +2140,11 @@
         <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT" />
         <ctl name="EAR_RDAC Switch" value="1" />
         <ctl name="RDAC3_MUX" value="RX1" />
+        <ctl name="RX_EAR Mode" value="ON" />
     </path>
 
     <path name="handset-mic">
-        <path name="amic1" />
+        <path name="dmic2" />
     </path>
 
     <path name="headphones">
@@ -2157,9 +2169,13 @@
     </path>
 
     <path name="hph-highquality-mode">
+        <ctl name="RX_HPH_PWR_MODE" value="LOHIFI" />
+        <ctl name="RX HPH Mode" value="CLS_H_LOHIFI" />
     </path>
 
     <path name="hph-lowpower-mode">
+        <ctl name="RX_HPH_PWR_MODE" value="ULP" />
+        <ctl name="RX HPH Mode" value="CLS_H_ULP" />
     </path>
 
     <path name="true-native-mode">
@@ -2265,15 +2281,10 @@
     <!-- Dual MIC devices -->
     <path name="handset-dmic-endfire">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two" />
-        <ctl name="TX DEC0 MUX" value="SWR_MIC" />
-        <ctl name="TX SMIC MUX0" value="ADC0" />
         <ctl name="TX_AIF1_CAP Mixer DEC0" value="1" />
-        <ctl name="ADC1_MIXER Switch" value="1" />
-        <ctl name="TX DEC1 MUX" value="SWR_MIC" />
-        <ctl name="TX SMIC MUX1" value="ADC2" />
+        <ctl name="TX DMIC MUX0" value="DMIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="ADC2_MIXER Switch" value="1" />
-        <ctl name="ADC2 MUX" value="INP3" />
+        <ctl name="TX DMIC MUX0" value="DMIC3" />
     </path>
 
     <path name="speaker-dmic-endfire">
@@ -2333,6 +2344,7 @@
         <ctl name="RX INT0_1 MIX1 INP0" value="RX0" />
         <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT" />
         <ctl name="RX_COMP1 Switch" value="1" />
+        <ctl name="HPHL_COMP Switch" value="1" />
         <ctl name="HPHL_RDAC Switch" value="1" />
     </path>
 
@@ -2356,7 +2368,7 @@
     </path>
 
     <path name="voice-tty-vco-handset-mic">
-        <path name="amic3" />
+        <path name="dmic3" />
     </path>
 
     <path name="unprocessed-handset-mic">
