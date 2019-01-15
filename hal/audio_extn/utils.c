@@ -2136,8 +2136,9 @@ int audio_extn_utils_open_snd_mixer(struct mixer **mixer_handle)
     void *hw_info = NULL;
     struct mixer *mixer = NULL;
     int retry_num = 0;
-    int snd_card_num = 0, min_snd_card_num = 0;
+    int snd_card_num = 0;
     char* snd_card_name = NULL;
+    int snd_card_detection_info[MAX_SND_CARD] = {0};
 
     if (!mixer_handle) {
         ALOGE("invalid mixer handle");
@@ -2145,26 +2146,29 @@ int audio_extn_utils_open_snd_mixer(struct mixer **mixer_handle)
     }
     *mixer_handle = NULL;
     /*
-    * Try with all the sound cards ( 0 to 8 ) and if none of them were detected
+    * Try with all the sound cards ( 0 to 7 ) and if none of them were detected
     * sleep for 1 sec and try detections with sound card 0 again.
     * If sound card gets detected, check if it is relevant, if not check with the
     * other sound cards. To ensure that the irrelevant sound card is not check again,
     * we maintain it in min_snd_card_num.
     */
     while (retry_num < RETRY_NUMBER) {
-
-        while (snd_card_num <= MAX_SND_CARD) {
-           mixer = mixer_open(snd_card_num);
-           if (!mixer)
-              snd_card_num++;
-           else
-              break;
+        snd_card_num = 0;
+        while (snd_card_num < MAX_SND_CARD) {
+            if (snd_card_detection_info[snd_card_num] == 0) {
+                mixer = mixer_open(snd_card_num);
+                if (!mixer)
+                    snd_card_num++;
+                else
+                    break;
+            } else
+                snd_card_num++;
         }
 
         if (!mixer) {
            usleep(RETRY_US);
-           snd_card_num = min_snd_card_num;
            retry_num++;
+           ALOGD("%s: retry, retry_num %d", __func__, retry_num);
            continue;
         }
 
@@ -2175,18 +2179,13 @@ int audio_extn_utils_open_snd_mixer(struct mixer **mixer_handle)
             return -1;
         }
         ALOGD("%s: snd_card_name: %s", __func__, snd_card_name);
-
+        snd_card_detection_info[snd_card_num] = 1;
         hw_info = hw_info_init(snd_card_name);
         if (hw_info) {
             ALOGD("%s: Opened sound card:%d", __func__, snd_card_num);
             break;
         }
-        ALOGE("%s: Failed to init hardware info", __func__);
-        min_snd_card_num++;
-        snd_card_num = min_snd_card_num;
-
-        if (snd_card_num >= MAX_SND_CARD)
-            break;
+        ALOGE("%s: Failed to init hardware info, snd_card_num:%d", __func__, snd_card_num);
 
         free(snd_card_name);
         snd_card_name = NULL;
@@ -2200,7 +2199,7 @@ int audio_extn_utils_open_snd_mixer(struct mixer **mixer_handle)
     if (hw_info)
         hw_info_deinit(hw_info);
 
-    if ((snd_card_num >= MAX_SND_CARD) || (retry_num >= RETRY_NUMBER)) {
+    if (retry_num >= RETRY_NUMBER) {
         ALOGE("%s: Unable to find correct sound card, aborting.", __func__);
         return -1;
     }
