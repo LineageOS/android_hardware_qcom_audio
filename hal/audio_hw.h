@@ -159,6 +159,33 @@ enum {
     OFFLOAD_CMD_ERROR,              /* offload playback hit some error */
 };
 
+/*
+ * Camera selection indicated via set_parameters "cameraFacing=front|back and
+ * "rotation=0|90|180|270""
+ */
+enum {
+  CAMERA_FACING_BACK = 0x0,
+  CAMERA_FACING_FRONT = 0x1,
+  CAMERA_FACING_MASK = 0x0F,
+  CAMERA_ROTATION_LANDSCAPE = 0x0,
+  CAMERA_ROTATION_INVERT_LANDSCAPE = 0x10,
+  CAMERA_ROTATION_PORTRAIT = 0x20,
+  CAMERA_ROTATION_MASK = 0xF0,
+  CAMERA_BACK_LANDSCAPE = (CAMERA_FACING_BACK|CAMERA_ROTATION_LANDSCAPE),
+  CAMERA_BACK_INVERT_LANDSCAPE = (CAMERA_FACING_BACK|CAMERA_ROTATION_INVERT_LANDSCAPE),
+  CAMERA_BACK_PORTRAIT = (CAMERA_FACING_BACK|CAMERA_ROTATION_PORTRAIT),
+  CAMERA_FRONT_LANDSCAPE = (CAMERA_FACING_FRONT|CAMERA_ROTATION_LANDSCAPE),
+  CAMERA_FRONT_INVERT_LANDSCAPE = (CAMERA_FACING_FRONT|CAMERA_ROTATION_INVERT_LANDSCAPE),
+  CAMERA_FRONT_PORTRAIT = (CAMERA_FACING_FRONT|CAMERA_ROTATION_PORTRAIT),
+
+  CAMERA_DEFAULT = CAMERA_BACK_LANDSCAPE,
+};
+
+//FIXME: to be replaced by proper video capture properties API
+#define AUDIO_PARAMETER_KEY_CAMERA_FACING "cameraFacing"
+#define AUDIO_PARAMETER_VALUE_FRONT "front"
+#define AUDIO_PARAMETER_VALUE_BACK "back"
+
 enum {
     OFFLOAD_STATE_IDLE,
     OFFLOAD_STATE_PLAYING,
@@ -309,6 +336,7 @@ typedef void (*adm_on_routing_change_t)(void *, audio_io_handle_t);
 
 struct audio_device {
     struct audio_hw_device device;
+
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
     struct mixer *mixer;
     audio_mode_t mode;
@@ -367,6 +395,7 @@ struct audio_device {
 
     /* logging */
     snd_device_t last_logged_snd_device[AUDIO_USECASE_MAX][2]; /* [out, in] */
+    int camera_orientation; /* CAMERA_BACK_LANDSCAPE ... CAMERA_FRONT_PORTRAIT */
 };
 
 int select_devices(struct audio_device *adev,
