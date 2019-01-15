@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "f55440f1_7ba56473",
+        "filename": "post_proc/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-01-15T02:21:16Z",
+      "side": 1,
+      "message": "Don\u0027t reformat stuff you\u0027re not changing.",
+      "range": {
+        "startLine": 17,
+        "startChar": 0,
+        "endLine": 23,
+        "endChar": 17
+      },
+      "revId": "d832e2caa82e0c5a942a9202635cf767615c36f6",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
