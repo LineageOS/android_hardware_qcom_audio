@@ -685,15 +685,12 @@ static void update_hardware_info_bear(struct hardware_info *hw_info, const char 
         strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "trinket-tashalite-snd-card",
                  sizeof("trinket-tashalite-snd-card"))) {
-        hw_info->is_stereo_spkr = false;
         strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "trinket-tasha-snd-card",
                  sizeof("trinket-tasha-snd-card"))) {
-        hw_info->is_stereo_spkr = false;
         strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "trinket-tavil-snd-card",
                  sizeof("trinket-tavil-snd-card"))) {
-        hw_info->is_stereo_spkr = false;
         strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
     } else {
         ALOGW("%s: Not an SDM device", __func__);
