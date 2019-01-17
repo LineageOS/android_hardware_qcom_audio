@@ -4362,6 +4362,21 @@ static int adev_get_microphones(const struct audio_hw_device *dev,
     return ret;
 }
 
+static int in_set_microphone_direction(const struct audio_stream_in *stream,
+                                           audio_microphone_direction_t dir) {
+    (void)stream;
+    (void)dir;
+    ALOGVV("%s", __func__);
+    return -ENOSYS;
+}
+
+static int in_set_microphone_field_dimension(const struct audio_stream_in *stream, float zoom) {
+    (void)stream;
+    (void)zoom;
+    ALOGVV("%s", __func__);
+    return -ENOSYS;
+}
+
 static int adev_open_output_stream(struct audio_hw_device *dev,
                                    audio_io_handle_t handle,
                                    audio_devices_t devices,
@@ -5289,6 +5304,8 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->stream.get_input_frames_lost = in_get_input_frames_lost;
     in->stream.get_capture_position = in_get_capture_position;
     in->stream.get_active_microphones = in_get_active_microphones;
+    in->stream.set_microphone_direction = in_set_microphone_direction;
+    in->stream.set_microphone_field_dimension = in_set_microphone_field_dimension;
 
     in->device = devices;
     in->source = source;
