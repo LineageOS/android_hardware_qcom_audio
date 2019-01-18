@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "04644458_a1ee684d",
+        "filename": "hal/audio_extn/soundtrigger.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 38,
+      "author": {
+        "id": 17432
+      },
+      "writtenOn": "2019-01-18T07:40:35Z",
+      "side": 1,
+      "message": "Add `#include \u003cpthread.h\u003e` here to build it with `BOARD_VNDK_VERSION :\u003d current`",
+      "revId": "50bb23075bbafeee6fea7263ef9fe03d1e072fd3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
