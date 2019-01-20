@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "eeb4ab79_64726bbc",
+        "filename": "hal/audio_extn/utils.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2522,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-01-20T01:19:52Z",
+      "side": 1,
+      "message": "does deleting the parameter name work?",
+      "revId": "c6d9d3e1978d131696090ca0e924280575bceb23",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
