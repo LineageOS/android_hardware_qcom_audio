@@ -16,6 +16,47 @@
       "revId": "c6d9d3e1978d131696090ca0e924280575bceb23",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "db897121_d8559a98",
+        "filename": "hal/audio_extn/utils.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2522,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-01-20T02:19:26Z",
+      "side": 1,
+      "message": "Actually that makes no sense because in the case the functions below are actually selected by flags, this is still necessary.",
+      "parentUuid": "eeb4ab79_64726bbc",
+      "revId": "c6d9d3e1978d131696090ca0e924280575bceb23",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "765b73f0_5b5ee7c9",
+        "filename": "hal/audio_extn/utils.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2528,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-01-20T02:19:26Z",
+      "side": 1,
+      "message": "I think the correct course of action here is to fix the audio_extn_dev_arbi_release macros, no? The macro expands to nothing if SOUND_TRIGGER_ENABLED is enabled, but other functions use static inline function_name(...) instead.",
+      "range": {
+        "startLine": 2528,
+        "startChar": 32,
+        "endLine": 2528,
+        "endChar": 42
+      },
+      "revId": "c6d9d3e1978d131696090ca0e924280575bceb23",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
