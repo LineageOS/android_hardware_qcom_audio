@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "0ea49844_5298dbe8",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 16185
+      },
+      "writtenOn": "2019-01-20T04:47:21Z",
+      "side": 1,
+      "message": "nvm",
+      "parentUuid": "b2a006ca_e12b8025",
+      "range": {
+        "startLine": 9,
+        "startChar": 65,
+        "endLine": 9,
+        "endChar": 86
+      },
+      "revId": "c6d9d3e1978d131696090ca0e924280575bceb23",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "eeb4ab79_64726bbc",
         "filename": "hal/audio_extn/utils.c",
         "patchSetId": 1
