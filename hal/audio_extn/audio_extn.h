@@ -688,7 +688,12 @@ bool audio_extn_utils_is_dolby_format(audio_format_t format);
 int audio_extn_utils_get_bit_width_from_string(const char *);
 int audio_extn_utils_get_sample_rate_from_string(const char *);
 int audio_extn_utils_get_channels_from_string(const char *);
+
+#if !defined(DEV_ARBI_ENABLED) && !defined(SOUND_TRIGGER_ENABLED) && !defined(AUDIO_LISTEN_ENABLED)
+#define audio_extn_utils_release_snd_device(snd_device) (0)
+#else
 void audio_extn_utils_release_snd_device(snd_device_t snd_device);
+#endif
 int audio_extn_utils_get_app_sample_rate_for_device(struct audio_device *adev,
                                     struct audio_usecase *usecase, int snd_device);
 
