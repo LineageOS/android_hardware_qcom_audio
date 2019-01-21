@@ -6578,6 +6578,53 @@ static int adev_get_microphones(const struct audio_hw_device *dev,
 
     return ret;
 }
+
+static void in_update_sink_metadata(struct audio_stream_in *stream,
+                                    const struct sink_metadata *sink_metadata) {
+
+    if (stream == NULL
+            || sink_metadata == NULL
+            || sink_metadata->tracks == NULL) {
+        return;
+    }
+
+    int error = 0;
+    struct stream_in *in = (struct stream_in *)stream;
+    struct audio_device *adev = in->dev;
+    audio_devices_t device = AUDIO_DEVICE_NONE;
+
+    if (sink_metadata->track_count != 0)
+        device = sink_metadata->tracks->dest_device;
+
+    lock_input_stream(in);
+    pthread_mutex_lock(&adev->lock);
+    ALOGV("%s: in->usecase: %d, device: %x", __func__, in->usecase, device);
+
+    if (in->usecase == USECASE_AUDIO_RECORD_AFE_PROXY
+            && device != AUDIO_DEVICE_NONE
+            && adev->voice_tx_output != NULL) {
+        /* Use the rx device from afe-proxy record to route voice call because
+           there is no routing if tx device is on primary hal and rx device
+           is on other hal during voice call. */
+        adev->voice_tx_output->devices = device;
+
+        if (!voice_is_call_state_active(adev)) {
+            if (adev->mode == AUDIO_MODE_IN_CALL) {
+                adev->current_call_output = adev->voice_tx_output;
+                error = voice_start_call(adev);
+                if (error != 0)
+                    ALOGE("%s: start voice call failed %d", __func__, error);
+            }
+        } else {
+            adev->current_call_output = adev->voice_tx_output;
+            voice_update_devices_for_all_voice_usecases(adev);
+        }
+    }
+
+    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&in->lock);
+}
+
 int adev_open_output_stream(struct audio_hw_device *dev,
                             audio_io_handle_t handle,
                             audio_devices_t devices,
@@ -7998,6 +8045,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->stream.get_active_microphones = in_get_active_microphones;
     in->stream.set_microphone_direction = in_set_microphone_direction;
     in->stream.set_microphone_field_dimension = in_set_microphone_field_dimension;
+    in->stream.update_sink_metadata = in_update_sink_metadata;
 
     in->device = devices;
     in->source = source;
