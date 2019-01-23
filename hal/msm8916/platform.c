@@ -1401,6 +1401,11 @@ int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
     return device_id;
 }
 
+int platform_get_haptics_pcm_device_id()
+{
+    return -1;
+}
+
 static int find_index(struct name_to_index * table, int32_t len, const char * name)
 {
     int ret = 0;
