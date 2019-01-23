@@ -654,6 +654,10 @@ static void update_hardware_info_bear(struct hardware_info *hw_info, const char 
     } else if (!strncmp(snd_card_name, "sm6150-tavil-snd-card",
                  sizeof("sm6150-tavil-snd-card"))) {
         strlcpy(hw_info->name, "sm6150", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "trinket-qrd-snd-card",
+                 sizeof("trinket-qrd-snd-card"))) {
+        hw_info->is_stereo_spkr = false;
+        strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "trinket-idp-snd-card",
                  sizeof("trinket-idp-snd-card"))) {
         hw_info->is_stereo_spkr = false;

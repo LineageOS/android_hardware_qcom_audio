@@ -1116,6 +1116,8 @@ static void update_codec_type_and_interface(struct platform_data * my_data, cons
                    sizeof("kona-mtp-snd-card")) ||
          !strncmp(snd_card_name, "kona-qrd-snd-card",
                    sizeof("kona-qrd-snd-card")) ||
+         !strncmp(snd_card_name, "trinket-qrd-snd-card",
+                   sizeof("trinket-qrd-snd-card")) ||
          !strncmp(snd_card_name, "trinket-idp-snd-card",
                    sizeof("trinket-idp-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
