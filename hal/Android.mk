@@ -103,7 +103,6 @@ LOCAL_SHARED_LIBRARIES := \
 	libaudioutils \
 	liblog \
 	libcutils \
-	libprocessgroup \
 	libtinyalsa \
 	libtinycompress \
 	libaudioroute \
