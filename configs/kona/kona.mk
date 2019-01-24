@@ -32,7 +32,7 @@ AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS := false
 AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 AUDIO_FEATURE_ENABLED_USB_TUNNEL_AUDIO := true
 AUDIO_FEATURE_ENABLED_SPLIT_A2DP := true
-AUDIO_FEATURE_ENABLED_3D_AUDIO := false
+AUDIO_FEATURE_ENABLED_3D_AUDIO := true
 DOLBY_ENABLE := false
 endif
 
@@ -66,12 +66,15 @@ AUDIO_FEATURE_ENABLED_GEF_SUPPORT := true
 BOARD_SUPPORTS_QAHW := false
 AUDIO_FEATURE_ENABLED_RAS := true
 AUDIO_FEATURE_ENABLED_SND_MONITOR := true
+AUDIO_FEATURE_ENABLED_USB_BURST_MODE := true
 AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
 AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := true
 ##AUDIO_FEATURE_FLAGS
 
+ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays
 DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
+endif
 
 PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/kona/audio_io_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_io_policy.conf \
@@ -112,7 +115,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
 ro.vendor.audio.sdk.fluencetype=none\
 persist.vendor.audio.fluence.voicecall=true\
 persist.vendor.audio.fluence.voicerec=false\
-persist.vendor.audio.fluence.speaker=true
+persist.vendor.audio.fluence.speaker=true\
+persist.vendor.audio.fluence.tmic.enabled=false
 
 #disable tunnel encoding
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -181,7 +185,7 @@ vendor.audio.flac.sw.decoder.24bit=true
 
 #split a2dp DSP supported encoder list
 PRODUCT_PROPERTY_OVERRIDES += \
-persist.vendor.bt.a2dp_offload_cap=sbc-aptx-aptxtws-aptxhd-aac
+persist.vendor.bt.a2dp_offload_cap=sbc-aptx-aptxtws-aptxhd-aac-ldac
 
 #enable software decoders for ALAC and APE
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -216,6 +220,22 @@ vendor.audio_hal.period_multiplier=3
 #ADM Buffering size in ms
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.adm.buffering.ms=2
+
+#enable keytone FR
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.hal.output.suspend.supported=true
+
+#enable mirror-link feature
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.enable.mirrorlink=false
+
+#enable voicecall speaker stereo
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.audio.voicecall.speaker.stereo=true
+
+#enable AAC frame ctl for A2DP sinks
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.bt.aac_frm_ctl.enabled=true
 
 # for HIDL related packages
 PRODUCT_PACKAGES += \
