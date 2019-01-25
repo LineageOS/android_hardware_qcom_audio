@@ -105,8 +105,8 @@
         <usecase name="USECASE_INCALL_MUSIC_UPLINK" type="out" id="27" />
     </pcm_ids>
     <config_params>
-        <param key="spkr_1_tz_name" value="wsatz.13"/>
-        <param key="spkr_2_tz_name" value="wsatz.14"/>
+        <param key="spkr_1_tz_name" value="wsatz.11"/>
+        <param key="spkr_2_tz_name" value="wsatz.12"/>
         <!-- In the below value string, the value indicates default mono -->
         <!-- speaker. It can be set to either left or right              -->
         <param key="mono_speaker" value="right"/>
