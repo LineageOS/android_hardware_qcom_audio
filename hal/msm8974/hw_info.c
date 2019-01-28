@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -654,7 +654,19 @@ static void update_hardware_info_bear(struct hardware_info *hw_info, const char 
     } else if (!strncmp(snd_card_name, "sm6150-tavil-snd-card",
                  sizeof("sm6150-tavil-snd-card"))) {
         strlcpy(hw_info->name, "sm6150", sizeof(hw_info->name));
-
+    } else if (!strncmp(snd_card_name, "trinket-idp-snd-card",
+                 sizeof("trinket-idp-snd-card"))) {
+        hw_info->is_stereo_spkr = false;
+        strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "trinket-tashalite-snd-card",
+                 sizeof("trinket-tashalite-snd-card"))) {
+        strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "trinket-tasha-snd-card",
+                 sizeof("trinket-tasha-snd-card"))) {
+        strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "trinket-tavil-snd-card",
+                 sizeof("trinket-tavil-snd-card"))) {
+        strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
     } else {
         ALOGW("%s: Not an SDM device", __func__);
     }
@@ -706,7 +718,7 @@ void *hw_info_init(const char *snd_card_name)
         ALOGV("SDM845 - variant soundcard");
         update_hardware_info_sdm845(hw_info, snd_card_name);
     } else if (strstr(snd_card_name, "sdm660") || strstr(snd_card_name, "sdm670")
-               || strstr(snd_card_name, "sm6150")) {
+               || strstr(snd_card_name, "sm6150") || strstr(snd_card_name, "trinket")) {
         ALOGV("Bear - variant soundcard");
         update_hardware_info_bear(hw_info, snd_card_name);
     } else if (strstr(snd_card_name, "sdx")) {
