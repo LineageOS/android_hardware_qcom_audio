@@ -8391,6 +8391,8 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     pthread_mutex_init(&adev->lock, (const pthread_mutexattr_t *) NULL);
 
+    // register audio ext hidl at the earliest
+    audio_extn_hidl_init();
 #ifdef DYNAMIC_LOG_ENABLED
     register_for_dynamic_logging("hal");
 #endif

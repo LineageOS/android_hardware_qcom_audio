@@ -98,22 +98,22 @@ LOCAL_CFLAGS += -Wno-macro-redefined
 LOCAL_HEADER_LIBRARIES := libhardware_headers
 
 LOCAL_SRC_FILES := \
-	audio_hw.c \
-	voice.c \
-	platform_info.c \
-	$(AUDIO_PLATFORM)/platform.c \
-        acdb.c \
-        ahal_config_helper.cpp
+    audio_hw.c \
+    voice.c \
+    platform_info.c \
+    $(AUDIO_PLATFORM)/platform.c \
+    acdb.c \
+    ahal_config_helper.cpp
 
 LOCAL_SRC_FILES += audio_extn/audio_extn.c \
                    audio_extn/audio_feature_manager.c \
+                   audio_extn/audio_hidl.cpp \
                    audio_extn/utils.c \
                    audio_extn/source_track.c \
                    voice_extn/voice_extn.c \
                    audio_extn/fm.c \
                    voice_extn/compress_voip.c \
                    audio_extn/keep_alive.c
-
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
@@ -345,7 +345,10 @@ LOCAL_SHARED_LIBRARIES := \
     libdl \
     libaudioutils \
     libexpat \
-    libqti_vndfwk_detect
+    libqti_vndfwk_detect \
+    libhwbinder \
+    libhidlbase \
+    libhidltransport
 
 LOCAL_C_INCLUDES += \
     external/tinyalsa/include \
@@ -452,8 +455,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_BATTERY_LISTENER)), true)
     LOCAL_CFLAGS += -DBATTERY_LISTENER_ENABLED
     LOCAL_SRC_FILES += audio_extn/battery_listener.cpp
     LOCAL_SHARED_LIBRARIES += android.hardware.health@1.0 android.hardware.health@2.0 \
-                              libhidltransport libbase libhidlbase libhwbinder \
-                              libutils android.hardware.power@1.2
+                              libbase libutils android.hardware.power@1.2
     LOCAL_STATIC_LIBRARIES := libhealthhalutils
 endif
 
@@ -465,6 +467,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FFV)), true)
     LOCAL_CFLAGS += -DFFV_ENABLED
     LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio-noship/include/ffv
     LOCAL_SRC_FILES += audio_extn/ffv.c
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AHAL_EXT)),true)
+    LOCAL_CFLAGS += -DAHAL_EXT_ENABLED
+    LOCAL_SHARED_LIBRARIES += vendor.qti.hardware.audiohalext@1.0
 endif
 
 LOCAL_CFLAGS += -Wall -Werror
