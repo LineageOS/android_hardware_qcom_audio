@@ -78,7 +78,6 @@
 
 #include "sound/compress_params.h"
 #include "sound/asound.h"
-#include "audio_extn/maxxaudio.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>

@@ -17,40 +17,41 @@
 #define LOG_TAG "audio_hw_waves"
 /*#define LOG_NDEBUG 0*/
 
-#include <stdlib.h>
-#include <dlfcn.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <cutils/str_parms.h>
-#include <log/log.h>
 #include <audio_hw.h>
-#include <system/audio.h>
-#include <platform_api.h>
-#include <string.h>
+#include <cutils/str_parms.h>
+#include <dlfcn.h>
+#include <log/log.h>
 #include <math.h>
+#include <platform_api.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <string.h>
+#include <system/audio.h>
+#include <unistd.h>
+
 #include "audio_extn.h"
 #include "maxxaudio.h"
 
-#define LIB_MA_PARAM "libmaqdspparams.so"
+#define LIB_MA_PARAM "libmaxxaudioqdsp.so"
 #define LIB_MA_PATH "vendor/lib/"
-#define PRESET_PATH "/vendor/etc/default.mps"
+#define PRESET_PATH "/vendor/etc"
+#define MPS_BASE_STRING "default"
 #define USER_PRESET_PATH ""
-#define CONFIG_PATH "/vendor/etc/maxx_conf.ini"
+#define CONFIG_BASE_STRING "maxx_conf"
 #define CAL_PRESIST_STR "cal_persist"
 #define CAL_SAMPLERATE_STR "cal_samplerate"
 
-#define MA_QDSP_PARAM_INIT "maxxaudio_qdsp_parameters_initialize"
-#define MA_QDSP_PARAM_DEINIT "maxxaudio_qdsp_parameters_uninitialize"
+#define MA_QDSP_PARAM_INIT "maxxaudio_qdsp_initialize"
+#define MA_QDSP_PARAM_DEINIT "maxxaudio_qdsp_uninitialize"
 #define MA_QDSP_SET_LR_SWAP "maxxaudio_qdsp_set_lr_swap"
 #define MA_QDSP_SET_MODE "maxxaudio_qdsp_set_sound_mode"
 #define MA_QDSP_SET_VOL "maxxaudio_qdsp_set_volume"
 #define MA_QDSP_SET_VOLT "maxxaudio_qdsp_set_volume_table"
 
 #define SUPPORT_DEV "Blackbird"
-#define SUPPORTED_USB  0x01
+#define SUPPORTED_USB 0x01
 
 struct ma_audio_cal_settings {
-    void *platform;
     int app_type;
     audio_devices_t device;
 };
@@ -78,34 +79,30 @@ typedef enum MA_CMD {
 } ma_cmd_t;
 
 typedef void *ma_audio_cal_handle_t;
-typedef int (*set_audio_cal_t)(const struct ma_audio_cal_settings *, const char *);
+typedef int (*set_audio_cal_t)(const char *);
 
-typedef bool (*ma_param_init_t)(
-                ma_audio_cal_handle_t *,
-                void *, const char *, const char *,
-                const char *, set_audio_cal_t);
+typedef bool (*ma_param_init_t)(ma_audio_cal_handle_t *, const char *,
+                                const char *, const char *, set_audio_cal_t);
 
-typedef bool (*ma_param_deinit_t)(ma_audio_cal_handle_t);
+typedef bool (*ma_param_deinit_t)(ma_audio_cal_handle_t *);
 
-typedef bool (*ma_set_lr_swap_t)(
-                ma_audio_cal_handle_t,
-                const struct ma_audio_cal_settings *, bool);
+typedef bool (*ma_set_lr_swap_t)(ma_audio_cal_handle_t,
+                                 const struct ma_audio_cal_settings *, bool);
 
-typedef bool (*ma_set_sound_mode_t)(
-                ma_audio_cal_handle_t,
-                const struct ma_audio_cal_settings *, unsigned int);
+typedef bool (*ma_set_sound_mode_t)(ma_audio_cal_handle_t,
+                                    const struct ma_audio_cal_settings *,
+                                    unsigned int);
 
-typedef bool (*ma_set_volume_t)(
-                ma_audio_cal_handle_t,
-                const struct ma_audio_cal_settings *, double);
+typedef bool (*ma_set_volume_t)(ma_audio_cal_handle_t,
+                                const struct ma_audio_cal_settings *, double);
 
-typedef bool (*ma_set_volume_table_t)(
-                ma_audio_cal_handle_t,
-                const struct ma_audio_cal_settings *,
-                size_t, struct ma_state *);
+typedef bool (*ma_set_volume_table_t)(ma_audio_cal_handle_t,
+                                      const struct ma_audio_cal_settings *,
+                                      size_t, struct ma_state *);
 
 struct ma_platform_data {
     void *waves_handle;
+    void *platform;
     pthread_mutex_t lock;
     ma_param_init_t          ma_param_init;
     ma_param_deinit_t        ma_param_deinit;
@@ -120,49 +117,42 @@ static uint16_t g_supported_dev = 0;
 static struct ma_state ma_cur_state_table[STREAM_MAX_TYPES];
 static struct ma_platform_data *my_data = NULL;
 
-static int set_audio_cal(
-        const struct ma_audio_cal_settings *audio_cal_settings,
-        const char *audio_cal)
-
+static int set_audio_cal(const char *audio_cal)
 {
     ALOGV("set_audio_cal: %s", audio_cal);
 
-    return platform_set_parameters(audio_cal_settings->platform,
+    return platform_set_parameters(my_data->platform,
                                    str_parms_create_str(audio_cal));
 }
 
 static bool ma_set_lr_swap_l(
-        const struct ma_audio_cal_settings *audio_cal_settings,
-        bool swap)
+    const struct ma_audio_cal_settings *audio_cal_settings, bool swap)
 {
-    return my_data->ma_set_lr_swap(g_ma_audio_cal_handle, audio_cal_settings, swap);
+    return my_data->ma_set_lr_swap(g_ma_audio_cal_handle,
+                                   audio_cal_settings, swap);
 }
 
 static bool ma_set_sound_mode_l(
-        const struct ma_audio_cal_settings *audio_cal_settings,
-        int sound_mode)
+    const struct ma_audio_cal_settings *audio_cal_settings, int sound_mode)
 {
     return my_data->ma_set_sound_mode(g_ma_audio_cal_handle,
-                                        audio_cal_settings, sound_mode);
+                                      audio_cal_settings, sound_mode);
 }
 
 static bool ma_set_volume_l(
-        const struct ma_audio_cal_settings *audio_cal_settings,
-        double volume)
+    const struct ma_audio_cal_settings *audio_cal_settings, double volume)
 {
-    return my_data->ma_set_volume(g_ma_audio_cal_handle, audio_cal_settings, volume);
+    return my_data->ma_set_volume(g_ma_audio_cal_handle, audio_cal_settings,
+                                  volume);
 }
 
 static bool ma_set_volume_table_l(
-        const struct ma_audio_cal_settings *audio_cal_settings,
-        size_t num_streams, struct ma_state *volume_table)
+    const struct ma_audio_cal_settings *audio_cal_settings,
+    size_t num_streams, struct ma_state *volume_table)
 {
-    return my_data->ma_set_volume_table(
-                     g_ma_audio_cal_handle,
-                     audio_cal_settings,
-                     num_streams,
-                     volume_table);
-
+    return my_data->ma_set_volume_table(g_ma_audio_cal_handle,
+                                        audio_cal_settings, num_streams,
+                                        volume_table);
 }
 
 static inline bool valid_usecase(struct audio_usecase *usecase)
@@ -175,7 +165,7 @@ static inline bool valid_usecase(struct audio_usecase *usecase)
         /* support devices */
         ((usecase->devices & AUDIO_DEVICE_OUT_SPEAKER) ||
          (usecase->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) ||
-         (usecase->devices & AUDIO_DEVICE_OUT_ALL_A2DP) ||
+         /* TODO: enable A2DP when it is ready */
          (usecase->devices & AUDIO_DEVICE_OUT_ALL_USB)))
 
         return true;
@@ -219,7 +209,6 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
         if (valid_usecase(usecase)) {
-            ma_cal->platform = adev->platform;
             ma_cal->app_type = usecase->stream.out->app_type_cfg.app_type;
             ma_cal->device = usecase->stream.out->devices;
             ALOGV("%s: send usecase(%d) app_type(%d) device(%d)",
@@ -228,7 +217,7 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
             switch (cmd) {
                 case MA_CMD_VOL:
                     ret = ma_set_volume_table_l(ma_cal, STREAM_MAX_TYPES,
-                                                  ma_cur_state_table);
+                                                ma_cur_state_table);
                     if (ret)
                         ALOGV("Waves: ma_set_volume_table_l success");
                     else
@@ -236,9 +225,9 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
 
                     ALOGV("%s: send volume table === Start", __func__);
                     for (i = 0; i < STREAM_MAX_TYPES; i++)
-                        ALOGV("%s: stream(%d) volume(%f) active(%s)", __func__, i,
-                            ma_cur_state_table[i].vol,
-                            ma_cur_state_table[i].active ? "T" : "F");
+                        ALOGV("%s: stream(%d) volume(%f) active(%s)", __func__,
+                              i, ma_cur_state_table[i].vol,
+                              ma_cur_state_table[i].active ? "T" : "F");
                     ALOGV("%s: send volume table === End", __func__);
                     break;
                 case MA_CMD_SWAP_ENABLE:
@@ -258,7 +247,6 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
                 default:
                     ALOGE("%s: unsupported cmd %d", __func__, cmd);
             }
-
         }
     }
     free(ma_cal);
@@ -294,10 +282,14 @@ static bool find_sup_dev(char *name)
 
 static void ma_set_swap_l(struct audio_device *adev, bool enable)
 {
+    // do platform LR swap if it enables on Waves effect
+    // but there is no Waves implementation
     if (!my_data) {
-        ALOGE("%s: maxxaudio isn't initialized.", __func__);
+        platform_check_and_set_swap_lr_channels(adev, enable);
+        ALOGV("%s: maxxaudio isn't initialized.", __func__);
         return;
     }
+
     if (enable)
         check_and_send_all_audio_cal(adev, MA_CMD_SWAP_ENABLE);
     else
@@ -316,7 +308,7 @@ static void ma_support_usb(bool enable, int card)
         ret = snprintf(path, sizeof(path), "/proc/asound/card%u/id", card);
         if (ret < 0) {
             ALOGE("%s: failed on snprintf (%d) to path %s\n",
-              __func__, ret, path);
+                  __func__, ret, path);
             goto done;
         }
         fd = open(path, O_RDONLY);
@@ -350,7 +342,11 @@ void audio_extn_ma_init(void *platform)
 {
     ma_stream_type_t i = 0;
     int ret = 0;
-    char lib_path[256];
+    char lib_path[128] = {0};
+    char mps_path[128] = {0};
+    char cnf_path[128] = {0};
+    struct snd_card_split *snd_split_handle = NULL;
+    snd_split_handle = audio_extn_get_snd_card_split();
 
     if (platform == NULL) {
         ALOGE("%s: platform is NULL", __func__);
@@ -366,6 +362,7 @@ void audio_extn_ma_init(void *platform)
 
     pthread_mutex_init(&my_data->lock, NULL);
 
+    my_data->platform = platform;
     ret = snprintf(lib_path, sizeof(lib_path), "%s/%s", LIB_MA_PATH, LIB_MA_PARAM);
     if (ret < 0) {
         ALOGE("%s: snprintf failed for lib %s, ret %d", __func__, LIB_MA_PARAM, ret);
@@ -380,71 +377,92 @@ void audio_extn_ma_init(void *platform)
          ALOGV("%s: DLOPEN successful for %s", __func__, LIB_MA_PARAM);
 
          my_data->ma_param_init = (ma_param_init_t)dlsym(my_data->waves_handle,
-                                     MA_QDSP_PARAM_INIT);
+                                   MA_QDSP_PARAM_INIT);
          if (!my_data->ma_param_init) {
              ALOGE("%s: dlsym error %s for ma_param_init", __func__, dlerror());
              goto error;
          }
 
-         my_data->ma_param_deinit = (ma_param_deinit_t)dlsym(my_data->waves_handle,
-                                       MA_QDSP_PARAM_DEINIT);
+         my_data->ma_param_deinit = (ma_param_deinit_t)dlsym(
+                                     my_data->waves_handle, MA_QDSP_PARAM_DEINIT);
          if (!my_data->ma_param_deinit) {
              ALOGE("%s: dlsym error %s for ma_param_deinit", __func__, dlerror());
              goto error;
          }
 
          my_data->ma_set_lr_swap = (ma_set_lr_swap_t)dlsym(my_data->waves_handle,
-                                      MA_QDSP_SET_LR_SWAP);
+                                    MA_QDSP_SET_LR_SWAP);
          if (!my_data->ma_set_lr_swap) {
              ALOGE("%s: dlsym error %s for ma_set_lr_swap", __func__, dlerror());
              goto error;
          }
 
-         my_data->ma_set_sound_mode = (ma_set_sound_mode_t)dlsym(my_data->waves_handle,
-                                         MA_QDSP_SET_MODE);
+         my_data->ma_set_sound_mode = (ma_set_sound_mode_t)dlsym(
+                                       my_data->waves_handle, MA_QDSP_SET_MODE);
          if (!my_data->ma_set_sound_mode) {
              ALOGE("%s: dlsym error %s for ma_set_sound_mode", __func__, dlerror());
              goto error;
          }
 
          my_data->ma_set_volume = (ma_set_volume_t)dlsym(my_data->waves_handle,
-                                     MA_QDSP_SET_VOL);
+                                   MA_QDSP_SET_VOL);
          if (!my_data->ma_set_volume) {
              ALOGE("%s: dlsym error %s for ma_set_volume", __func__, dlerror());
              goto error;
          }
 
-         my_data->ma_set_volume_table = (ma_set_volume_table_t)dlsym(my_data->waves_handle,
-                                           MA_QDSP_SET_VOLT);
+         my_data->ma_set_volume_table = (ma_set_volume_table_t)dlsym(
+                                         my_data->waves_handle, MA_QDSP_SET_VOLT);
          if (!my_data->ma_set_volume_table) {
              ALOGE("%s: dlsym error %s for ma_set_volume_table", __func__, dlerror());
              goto error;
          }
     }
 
-    /* check file */
-    if (access(PRESET_PATH, F_OK) < 0) {
-        ALOGW("%s: file %s isn't existed.", __func__, PRESET_PATH);
-        goto error;
+    /* get preset table */
+    if (snd_split_handle == NULL) {
+        snprintf(mps_path, sizeof(mps_path), "%s/%s.mps",
+                 PRESET_PATH, MPS_BASE_STRING);
+    } else {
+        snprintf(mps_path, sizeof(mps_path), "%s/%s_%s.mps",
+                 PRESET_PATH, MPS_BASE_STRING, snd_split_handle->form_factor);
     }
+
+    /* get config files */
+    if (snd_split_handle == NULL) {
+        snprintf(cnf_path, sizeof(cnf_path), "%s/%s.ini",
+                 PRESET_PATH, CONFIG_BASE_STRING);
+    } else {
+        snprintf(cnf_path, sizeof(cnf_path), "%s/%s_%s.ini",
+                 PRESET_PATH, CONFIG_BASE_STRING, snd_split_handle->form_factor);
+    }
+
+    /* check file */
+    if (access(mps_path, R_OK) < 0) {
+        ALOGW("%s: file %s isn't existed.", __func__, mps_path);
+        goto error;
+    } else
+        ALOGD("%s: Loading mps file: %s", __func__, mps_path);
+
     /* TODO: check user preset table once the feature is enabled
     if (access(USER_PRESET_PATH, F_OK) < 0 ){
         ALOGW("%s: file %s isn't existed.", __func__, USER_PRESET_PATH);
         goto error;
     }
     */
-    if (access(CONFIG_PATH, F_OK) < 0) {
-        ALOGW("%s: file %s isn't existed.", __func__, CONFIG_PATH);
+
+    if (access(cnf_path, R_OK) < 0) {
+        ALOGW("%s: file %s isn't existed.", __func__, cnf_path);
         goto error;
-    }
+    } else
+        ALOGD("%s: Loading ini file: %s", __func__, cnf_path);
 
     /* init ma parameter */
     if (my_data->ma_param_init(&g_ma_audio_cal_handle,
-                                  platform, /* TODO: remove this on next version*/
-                                  PRESET_PATH,
-                                  USER_PRESET_PATH, /* useless */
-                                  CONFIG_PATH,
-                                  &set_audio_cal)) {
+                               mps_path,
+                               USER_PRESET_PATH, /* unused */
+                               cnf_path,
+                               &set_audio_cal)) {
         if (!g_ma_audio_cal_handle) {
             ALOGE("%s: ma parameters initialize failed", __func__);
             my_data->ma_param_deinit(&g_ma_audio_cal_handle);
@@ -487,8 +505,8 @@ void audio_extn_ma_deinit()
 }
 
 // adev_init and adev lock held
-bool audio_extn_ma_set_state(
-        struct audio_device *adev, int stream_type, float vol, bool active)
+bool audio_extn_ma_set_state(struct audio_device *adev, int stream_type,
+                             float vol, bool active)
 {
     bool ret = false;
     ma_stream_type_t stype = (ma_stream_type_t)stream_type;
@@ -497,7 +515,7 @@ bool audio_extn_ma_set_state(
           __func__, stream_type, vol, active ? "true" : "false");
 
     if (!my_data) {
-        ALOGE("%s: maxxaudio isn't initialized.", __func__);
+        ALOGV("%s: maxxaudio isn't initialized.", __func__);
         return ret;
     }
 
@@ -505,7 +523,7 @@ bool audio_extn_ma_set_state(
     // 1. start track: active and volume isn't zero
     // 2. stop track: no tracks are active
     if ((active && vol != 0) ||
-         (!active)) {
+        (!active)) {
         pthread_mutex_lock(&my_data->lock);
 
         ma_cur_state_table[stype].vol = vol;
@@ -519,7 +537,7 @@ bool audio_extn_ma_set_state(
     return ret;
 }
 
-void audio_extn_ma_set_device(struct audio_device *adev, struct audio_usecase *usecase)
+void audio_extn_ma_set_device(struct audio_usecase *usecase)
 {
     int i = 0;
     int u_index = -1;
@@ -540,7 +558,6 @@ void audio_extn_ma_set_device(struct audio_device *adev, struct audio_usecase *u
 
     /* update audio_cal and send it */
     if (ma_cal != NULL){
-        ma_cal->platform = adev->platform;
         ma_cal->app_type = usecase->stream.out->app_type_cfg.app_type;
         ma_cal->device = usecase->stream.out->devices;
         ALOGV("%s: send usecase(%d) app_type(%d) device(%d)",
@@ -557,8 +574,8 @@ void audio_extn_ma_set_device(struct audio_device *adev, struct audio_usecase *u
             ALOGV("%s: send volume table === End", __func__);
 
             if (!ma_set_volume_table_l(ma_cal,
-                                         STREAM_MAX_TYPES,
-                                         ma_cur_state_table))
+                                       STREAM_MAX_TYPES,
+                                       ma_cur_state_table))
                 ALOGE("Waves: ma_set_volume_table_l %f returned with error.", vol);
             else
                 ALOGV("Waves: ma_set_volume_table_l success");
@@ -571,7 +588,8 @@ void audio_extn_ma_set_device(struct audio_device *adev, struct audio_usecase *u
     }
 }
 
-void audio_extn_ma_set_parameters(struct audio_device *adev, struct str_parms *parms)
+void audio_extn_ma_set_parameters(struct audio_device *adev,
+                                  struct str_parms *parms)
 {
     int ret;
     bool ret_b;
@@ -594,7 +612,8 @@ void audio_extn_ma_set_parameters(struct audio_device *adev, struct str_parms *p
     }
 
     // check connect status
-    ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value,
+                            sizeof(value));
     if (ret >= 0) {
         audio_devices_t device = (audio_devices_t)strtoul(value, NULL, 10);
         if (audio_is_usb_out_device(device)) {
@@ -607,7 +626,8 @@ void audio_extn_ma_set_parameters(struct audio_device *adev, struct str_parms *p
     }
 
     // check disconnect status
-    ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value,
+                            sizeof(value));
     if (ret >= 0) {
         audio_devices_t device = (audio_devices_t)strtoul(value, NULL, 10);
         if (audio_is_usb_out_device(device)) {

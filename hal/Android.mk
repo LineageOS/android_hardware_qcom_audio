@@ -215,11 +215,6 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_BG_CAL)),true)
   LOCAL_CFLAGS += -DBG_CODEC_CAL
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_CIRRUS_SPKR_PROTECTION)),true)
-    LOCAL_CFLAGS += -DSPKR_PROT_ENABLED
-    LOCAL_SRC_FILES += audio_extn/cirrus_playback.c
-endif
-
 ifdef MULTIPLE_HW_VARIANTS_ENABLED
   LOCAL_CFLAGS += -DHW_VARIANTS_ENABLED
   LOCAL_SRC_FILES += $(AUDIO_PLATFORM)/hw_info.c
@@ -491,11 +486,6 @@ LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SND_MONITOR)), true)
     LOCAL_CFLAGS += -DSND_MONITOR_ENABLED
     LOCAL_SRC_FILES += audio_extn/sndmonitor.c
-endif
-
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MAXX_AUDIO)), true)
-    LOCAL_CFLAGS += -DMAXXAUDIO_QDSP_ENABLED
-    LOCAL_SRC_FILES += audio_extn/maxxaudio.c
 endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GCOV)),true)
