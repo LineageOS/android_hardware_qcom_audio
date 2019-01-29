@@ -317,6 +317,19 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_BT_HAL)),true)
     LOCAL_SRC_FILES += audio_extn/bt_hal.c
 endif
 
+ifeq ($(strip $(USE_LIB_PROCESS_GROUP)),true)
+LOCAL_SHARED_LIBRARIES := \
+        liblog \
+        libcutils \
+        libtinyalsa \
+        libtinycompress_vendor \
+        libaudioroute \
+        libdl \
+        libaudioutils \
+        libexpat \
+        libhidltransport \
+        libprocessgroup
+else
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
@@ -325,6 +338,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libdl \
 	libaudioutils \
 	libexpat
+endif
 
 ifneq ($(strip $(TARGET_USES_AOSP_FOR_AUDIO)),true)
     LOCAL_SHARED_LIBRARIES += libtinycompress_vendor
