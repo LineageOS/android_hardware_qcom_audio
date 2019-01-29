@@ -359,7 +359,8 @@ LOCAL_SHARED_LIBRARIES := \
     libqti_vndfwk_detect \
     libhwbinder \
     libhidlbase \
-    libhidltransport
+    libhidltransport \
+    libprocessgroup
 
 LOCAL_C_INCLUDES += \
     external/tinyalsa/include \
