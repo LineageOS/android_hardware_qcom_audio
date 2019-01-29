@@ -326,7 +326,8 @@ LOCAL_SHARED_LIBRARIES := \
 	libaudioroute \
 	libdl \
 	libaudioutils \
-	libexpat
+	libexpat \
+	libprocessgroup
 
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
