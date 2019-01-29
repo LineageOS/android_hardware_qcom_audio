@@ -27,44 +27,44 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AUDIO_FEATURE_MANAGER_H
-#define AUDIO_FEATURE_MANAGER_H
-
-#include <ahal_config_helper.h>
-
-enum audio_ext_feature_t {
-    SND_MONITOR = 0,
-    COMPRESS_CAPTURE,
-    SOURCE_TRACK,
-    SSREC,
-    AUDIOSPHERE,
-    AFE_PROXY,
-    USE_DEEP_BUFFER_AS_PRIMARY_OUTPUT,
-    HDMI_EDID,
-    KEEP_ALIVE,
-    HIFI_AUDIO,
-    RECEIVER_AIDED_STEREO,
-    KPI_OPTIMIZE,
-    DISPLAY_PORT,
-    FLUENCE,
-    CUSTOM_STEREO,
-    ANC_HEADSET,
-    DSM_FEEDBACK,
-    USB_OFFLOAD,
-    USB_OFFLOAD_BURST_MODE,
-    USB_OFFLOAD_SIDETONE_VOLM,
-    A2DP_OFFLOAD,
-    VBAT,
-    COMPRESS_METADATA_NEEDED,
-    VOICE_START = COMPRESS_METADATA_NEEDED,
-    COMPRESS_VOIP,
-    DYNAMIC_ECNS,
-    MAX_SUPPORTED_FEATURE
+// ToDo: This struct must be used only if config store is disabled.
+// Use AHalValues struct from config store once support is added.
+struct AHalValues_t {
+    bool snd_monitor_enabled;
+    bool compress_capture_enabled;
+    bool source_track_enabled;
+    bool ssrec_enabled;
+    bool audiosphere_enabled;
+    bool afe_proxy_enabled;
+    bool use_deep_buffer_as_primary_output;
+    bool hdmi_edid_enabled;
+    bool keep_alive_enabled;
+    bool hifi_audio_enabled;
+    bool receiver_aided_stereo;
+    bool kpi_optimize_enabled;
+    bool display_port_enabled;
+    bool fluence_enabled;
+    bool custom_stereo_enabled;
+    bool anc_headset_enabled;
+    bool dsm_feedback_enabled;
+    bool usb_offload_enabled;
+    bool usb_offload_burst_mode;
+    bool usb_offload_sidetone_vol_enabled;
+    bool a2dp_offload_enabled;
+    bool vbat_enabled;
+    bool compress_metadata_needed;
+    bool compress_voip_enabled;
+    bool dynamic_ecns_enabled;
 };
+typedef struct AHalValues_t AHalValues;
 
-typedef enum audio_ext_feature_t audio_ext_feature;
+#ifdef __cplusplus
+extern "C" {
+#endif
+void audio_extn_ahal_config_helper_init(bool isVendorEnhancedFwk);
+AHalValues* audio_extn_get_feature_values();
+bool audio_extn_is_config_from_remote();
+#ifdef __cplusplus
+}
+#endif
 
-void audio_feature_manager_init();
-bool audio_feature_manager_is_feature_enabled(audio_ext_feature feature);
-
-#endif /* AUDIO_FEATURE_MANAGER_H */

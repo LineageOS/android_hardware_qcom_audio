@@ -6303,7 +6303,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                       (devices != AUDIO_DEVICE_OUT_USB_ACCESSORY);
     bool direct_dev = is_hdmi || is_usb_dev;
     bool use_db_as_primary =
-                audio_feature_manager_is_feature_enabled(USE_DEEP_AS_PRIMARY_OUTPUT);
+                audio_feature_manager_is_feature_enabled(USE_DEEP_BUFFER_AS_PRIMARY_OUTPUT);
 
     if (is_usb_dev && (!audio_extn_usb_connected(NULL))) {
         is_usb_dev = false;
@@ -8434,6 +8434,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->bt_sco_on = false;
     /* adev->cur_hdmi_channels = 0;  by calloc() */
     adev->snd_dev_ref_cnt = calloc(SND_DEVICE_MAX, sizeof(int));
+    /* Init audio feature manager */
+    audio_feature_manager_init();
     voice_init(adev);
     list_init(&adev->usecase_list);
     adev->cur_wfd_channels = 2;

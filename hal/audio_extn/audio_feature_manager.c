@@ -27,9 +27,8 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+//#define LOG_NDEBUG 0
 #define LOG_TAG "audio_feature_manager"
-/*#define LOG_NDEBUG 0*/
-#define LOG_NDDEBUG 0
 
 #include <stdlib.h>
 #include <errno.h>
@@ -37,37 +36,83 @@
 #include <cutils/properties.h>
 #include <log/log.h>
 #include <unistd.h>
+#include <vndfwk-detect.h>
 #include "audio_feature_manager.h"
-#include <cutils/str_parms.h>
 
-static bool feature_bit_map[MAX_SUPPORTED_FEATURE] = {0};
+extern AHalValues* confValues;
 
-static void set_default_feature_flags() {
-    ALOGI(":: %s: Enter", __func__);
-    feature_bit_map[SND_MONITOR] = true;
+void audio_feature_manager_init()
+{
+    ALOGV("%s: Enter", __func__);
+    audio_extn_ahal_config_helper_init(
+                isRunningWithVendorEnhancedFramework());
+    confValues = audio_extn_get_feature_values();
 }
 
-static void set_dynamic_feature_flags() {
-    ALOGI(":: %s: Enter", __func__);
-    // TBD: Dynamically init feature bit
-}
+bool audio_feature_manager_is_feature_enabled(audio_ext_feature feature)
+{
+    ALOGV("%s: Enter", __func__);
 
-static void set_feature_flags() {
-    ALOGI(":: %s: Enter", __func__);
-    set_default_feature_flags();
-    set_dynamic_feature_flags();
-}
+#ifdef AHAL_EXT_ENABLED
+    if (!audio_extn_is_config_from_remote())
+        confValues = audio_extn_get_feature_values();
+#endif /* AHAL_EXT_ENABLED */
 
-void audio_feature_manager_init() {
-    ALOGI(":: %s: Enter", __func__);
-    set_feature_flags();
-}
+    if (!confValues)
+        return false;
 
-bool audio_feature_manager_is_feature_enabled(audio_ext_feature feature) {
-    bool ret_val = false;
-
-    if (feature >= 0 && feature < MAX_SUPPORTED_FEATURE)
-        ret_val = feature_bit_map[feature];
-
-    return ret_val;
+    switch (feature) {
+        case SND_MONITOR:
+            return confValues->snd_monitor_enabled;
+        case COMPRESS_CAPTURE:
+            return confValues->compress_capture_enabled;
+        case SOURCE_TRACK:
+            return confValues->source_track_enabled;
+        case SSREC:
+            return confValues->ssrec_enabled;
+        case AUDIOSPHERE:
+            return confValues->audiosphere_enabled;
+        case AFE_PROXY:
+            return confValues->afe_proxy_enabled;
+        case USE_DEEP_BUFFER_AS_PRIMARY_OUTPUT:
+            return confValues->use_deep_buffer_as_primary_output;
+        case HDMI_EDID:
+            return confValues->hdmi_edid_enabled;
+        case KEEP_ALIVE:
+            return confValues->keep_alive_enabled;
+        case HIFI_AUDIO:
+            return confValues->hifi_audio_enabled;
+        case RECEIVER_AIDED_STEREO:
+            return confValues->receiver_aided_stereo;
+        case KPI_OPTIMIZE:
+            return confValues->kpi_optimize_enabled;
+        case DISPLAY_PORT:
+            return confValues->display_port_enabled;
+        case FLUENCE:
+            return confValues->fluence_enabled;
+        case CUSTOM_STEREO:
+            return confValues->custom_stereo_enabled;
+        case ANC_HEADSET:
+            return confValues->anc_headset_enabled;
+        case DSM_FEEDBACK:
+            return confValues->dsm_feedback_enabled;
+        case USB_OFFLOAD:
+            return confValues->usb_offload_enabled;
+        case USB_OFFLOAD_BURST_MODE:
+            return confValues->usb_offload_burst_mode;
+        case USB_OFFLOAD_SIDETONE_VOLM:
+            return confValues->usb_offload_sidetone_vol_enabled;
+        case A2DP_OFFLOAD:
+            return confValues->a2dp_offload_enabled;
+        case VBAT:
+            return confValues->vbat_enabled;
+        case COMPRESS_METADATA_NEEDED:
+            return confValues->compress_metadata_needed;
+        case COMPRESS_VOIP:
+            return confValues->compress_voip_enabled;
+        case DYNAMIC_ECNS:
+            return confValues->dynamic_ecns_enabled;
+        default:
+            return false;
+    }
 }

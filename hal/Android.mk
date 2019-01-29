@@ -102,7 +102,8 @@ LOCAL_SRC_FILES := \
 	voice.c \
 	platform_info.c \
 	$(AUDIO_PLATFORM)/platform.c \
-        acdb.c
+        acdb.c \
+        ahal_config_helper.cpp
 
 LOCAL_SRC_FILES += audio_extn/audio_extn.c \
                    audio_extn/audio_feature_manager.c \
@@ -343,13 +344,15 @@ LOCAL_SHARED_LIBRARIES := \
     libaudioroute \
     libdl \
     libaudioutils \
-    libexpat
+    libexpat \
+    libqti_vndfwk_detect
 
 LOCAL_C_INCLUDES += \
     external/tinyalsa/include \
     external/tinycompress/include \
     system/media/audio_utils/include \
     external/expat/lib \
+    vendor/qcom/opensource/core-utils/fwk-detect \
     $(call include-path-for, audio-route) \
     $(call include-path-for, audio-effects) \
     $(LOCAL_PATH)/$(AUDIO_PLATFORM) \
