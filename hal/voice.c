@@ -450,6 +450,11 @@ snd_device_t voice_get_incall_rec_backend_device(struct stream_in *in)
 {
    snd_device_t incall_record_device = {0};
 
+    if (!in) {
+       ALOGE("%s: input stream is NULL", __func__);
+       return 0;
+    }
+
    switch(in->source) {
     case AUDIO_SOURCE_VOICE_UPLINK:
         incall_record_device = SND_DEVICE_IN_INCALL_REC_TX;
