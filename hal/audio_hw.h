@@ -517,6 +517,7 @@ struct audio_device {
     bool enable_hfp;
     bool mic_muted;
     bool enable_voicerx;
+    unsigned int num_va_sessions;
 
     int snd_card;
     card_status_t card_status;
