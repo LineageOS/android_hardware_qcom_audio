@@ -8829,7 +8829,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                    (in->dev->mode != AUDIO_MODE_IN_COMMUNICATION)) {
             audio_extn_compr_cap_init(in);
         } else if (audio_extn_cin_applicable_stream(in)) {
-            ret = audio_extn_cin_configure_input_stream(in);
+            ret = audio_extn_cin_configure_input_stream(in, config);
             if (ret)
                 goto err_open;
         } else {
@@ -8880,7 +8880,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                     ALOGV("%s: overriding usecase with USECASE_AUDIO_RECORD_COMPRESS2 and appending compress flag", __func__);
                     if (audio_extn_cin_applicable_stream(in)) {
                         in->sample_rate = config->sample_rate;
-                        ret = audio_extn_cin_configure_input_stream(in);
+                        ret = audio_extn_cin_configure_input_stream(in, config);
                         if (ret)
                             goto err_open;
                     }

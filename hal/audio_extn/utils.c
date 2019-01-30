@@ -37,6 +37,7 @@
 #include "platform.h"
 #include "platform_api.h"
 #include "audio_extn.h"
+#include "voice_extn.h"
 #include "voice.h"
 #include <sound/compress_params.h>
 #include <sound/compress_offload.h>
@@ -1247,6 +1248,88 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
     rc = 0;
 exit_send_app_type_cfg:
     return rc;
+}
+
+static int audio_extn_utils_check_input_parameters(uint32_t sample_rate,
+                                  audio_format_t format,
+                                  int channel_count)
+{
+    int ret = 0;
+
+    if (((format != AUDIO_FORMAT_PCM_16_BIT) && (format != AUDIO_FORMAT_PCM_8_24_BIT) &&
+        (format != AUDIO_FORMAT_PCM_24_BIT_PACKED) && (format != AUDIO_FORMAT_PCM_32_BIT) &&
+        (format != AUDIO_FORMAT_PCM_FLOAT)) &&
+        !voice_extn_compress_voip_is_format_supported(format) &&
+        !audio_extn_compr_cap_format_supported(format) &&
+        !audio_extn_cin_format_supported(format))
+            ret = -EINVAL;
+
+    switch (channel_count) {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 6:
+    case 8:
+        break;
+    default:
+        ret = -EINVAL;
+    }
+
+    switch (sample_rate) {
+    case 8000:
+    case 11025:
+    case 12000:
+    case 16000:
+    case 22050:
+    case 24000:
+    case 32000:
+    case 44100:
+    case 48000:
+    case 88200:
+    case 96000:
+    case 176400:
+    case 192000:
+        break;
+    default:
+        ret = -EINVAL;
+    }
+
+    return ret;
+}
+
+static inline uint32_t audio_extn_utils_nearest_multiple(uint32_t num, uint32_t multiplier)
+{
+    uint32_t remainder = 0;
+
+    if (!multiplier)
+        return num;
+
+    remainder = num % multiplier;
+    if (remainder)
+        num += (multiplier - remainder);
+
+    return num;
+}
+
+static inline uint32_t audio_extn_utils_lcm(uint32_t num1, uint32_t num2)
+{
+    uint32_t high = num1, low = num2, temp = 0;
+
+    if (!num1 || !num2)
+        return 0;
+
+    if (num1 < num2) {
+         high = num2;
+         low = num1;
+    }
+
+    while (low != 0) {
+        temp = low;
+        low = high % low;
+        high = temp;
+    }
+    return (num1 * num2)/high;
 }
 
 int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
@@ -2859,4 +2942,43 @@ int audio_extn_utils_is_vendor_enhanced_fwk()
     }
 
     return is_running_with_enhanced_fwk;
+}
+
+size_t audio_extn_utils_get_input_buffer_size(uint32_t sample_rate,
+                                            audio_format_t format,
+                                            int channel_count,
+                                            int64_t duration_ms,
+                                            bool is_low_latency)
+{
+    size_t size = 0;
+    size_t capture_duration = AUDIO_CAPTURE_PERIOD_DURATION_MSEC;
+    uint32_t bytes_per_period_sample = 0;
+
+
+    if (audio_extn_utils_check_input_parameters(sample_rate, format, channel_count) != 0)
+        return 0;
+
+    if (duration_ms >= MIN_OFFLOAD_BUFFER_DURATION_MS && duration_ms <= MAX_OFFLOAD_BUFFER_DURATION_MS)
+        capture_duration = duration_ms;
+
+    size = (sample_rate * capture_duration) / 1000;
+    if (is_low_latency)
+        size = LOW_LATENCY_CAPTURE_PERIOD_SIZE;
+
+
+    bytes_per_period_sample = audio_bytes_per_sample(format) * channel_count;
+    size *= bytes_per_period_sample;
+
+    /* make sure the size is multiple of 32 bytes and additionally multiple of
+     * the frame_size (required for 24bit samples and non-power-of-2 channel counts)
+     * At 48 kHz mono 16-bit PCM:
+     *  5.000 ms = 240 frames = 15*16*1*2 = 480, a whole multiple of 32 (15)
+     *  3.333 ms = 160 frames = 10*16*1*2 = 320, a whole multiple of 32 (10)
+     *
+     *  The loop reaches result within 32 iterations, as initial size is
+     *  already a multiple of frame_size
+     */
+    size = audio_extn_utils_nearest_multiple(size, audio_extn_utils_lcm(32, bytes_per_period_sample));
+
+    return size;
 }
