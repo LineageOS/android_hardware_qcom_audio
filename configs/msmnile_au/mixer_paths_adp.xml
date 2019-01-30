@@ -1616,9 +1616,11 @@
     <path name="hfp-sco headphones">
     </path>
 
-   <path name="hfp-sco-wb">
+    <path name="hfp-sco-wb">
+        <ctl name="PRIM_AUX_PCM_TX SampleRate" value="KHZ_16" />
+        <ctl name="PRIM_AUX_PCM_RX SampleRate" value="KHZ_16" />
         <path name="hfp-sco" />
-   </path>
+    </path>
 
     <path name="hfp-sco-wb headphones">
         <path name="hfp-sco headphones" />
