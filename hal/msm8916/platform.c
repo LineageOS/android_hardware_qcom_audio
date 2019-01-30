@@ -306,6 +306,7 @@ struct platform_data {
     uint32_t declared_mic_count;
     struct audio_microphone_characteristic_t microphones[AUDIO_MICROPHONE_MAX_COUNT];
     struct snd_device_to_mic_map mic_map[SND_DEVICE_MAX];
+    struct listnode custom_mtmx_params_list;
 };
 
 static bool is_external_codec = false;
@@ -2413,6 +2414,7 @@ void *platform_init(struct audio_device *adev)
         my_data->hifi_audio = true;
 
     list_init(&my_data->acdb_meta_key_list);
+    list_init(&my_data->custom_mtmx_params_list);
 
     set_platform_defaults(my_data);
 
@@ -2783,6 +2785,86 @@ acdb_init_fail:
     return my_data;
 }
 
+struct audio_custom_mtmx_params *
+    platform_get_custom_mtmx_params(void *platform,
+                                    struct audio_custom_mtmx_params_info *info)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct listnode *node = NULL;
+    struct audio_custom_mtmx_params *params = NULL;
+
+    list_for_each(node, &my_data->custom_mtmx_params_list) {
+        params = node_to_item(node, struct audio_custom_mtmx_params, list);
+        if (params &&
+            params->info.id == info->id &&
+            params->info.ip_channels == info->ip_channels &&
+            params->info.op_channels == info->op_channels &&
+            params->info.usecase_id == info->usecase_id &&
+            params->info.snd_device == info->snd_device) {
+            ALOGV("%s: found params with ip_ch %d op_ch %d uc_id %d snd_dev %d",
+                  __func__, info->ip_channels, info->op_channels,
+                  info->usecase_id, info->snd_device);
+            return params;
+        }
+    }
+    ALOGI("%s: no matching param with id %d ip_ch %d op_ch %d uc_id %d snd_dev %d",
+          __func__, info->id, info->ip_channels, info->op_channels,
+          info->usecase_id, info->snd_device);
+    return NULL;
+}
+
+int platform_add_custom_mtmx_params(void *platform,
+                                    struct audio_custom_mtmx_params_info *info)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_custom_mtmx_params *params = NULL;
+    uint32_t size = sizeof(*params);
+
+    if (info->ip_channels > AUDIO_CHANNEL_COUNT_MAX ||
+        info->op_channels > AUDIO_CHANNEL_COUNT_MAX) {
+        ALOGE("%s: unusupported channels in %d, out %d",
+              __func__, info->ip_channels, info->op_channels);
+        return -EINVAL;
+    }
+
+    size += sizeof(params->coeffs[0]) * info->ip_channels * info->op_channels;
+    params = (struct audio_custom_mtmx_params *) calloc(1, size);
+    if (!params) {
+        ALOGE("%s: failed to add custom mtmx params", __func__);
+        return -ENOMEM;
+    }
+
+    ALOGI("%s: adding mtmx params with id %d ip_ch %d op_ch %d uc_id %d snd_dev %d",
+          __func__, info->id, info->ip_channels, info->op_channels,
+          info->usecase_id, info->snd_device);
+
+    params->info = *info;
+    list_add_tail(&my_data->custom_mtmx_params_list, &params->list);
+    return 0;
+}
+
+static void platform_release_custom_mtmx_params(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct listnode *node = NULL, *tempnode = NULL;
+
+    list_for_each_safe(node, tempnode, &my_data->custom_mtmx_params_list) {
+        list_remove(node);
+        free(node_to_item(node, struct audio_custom_mtmx_params, list));
+    }
+}
+
+void platform_release_acdb_metainfo_key(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct listnode *node, *tempnode;
+
+    list_for_each_safe(node, tempnode, &my_data->acdb_meta_key_list) {
+        list_remove(node);
+        free(node_to_item(node, struct meta_key_list, list));
+    }
+}
+
 void platform_deinit(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -2830,6 +2912,27 @@ void platform_deinit(void *platform)
         audio_extn_utils_close_snd_mixer(my_data->adev->mixer);
         my_data->adev->mixer = NULL;
     }
+
+    int32_t idx;
+
+    for (idx = 0; idx < MAX_CODEC_BACKENDS; idx++) {
+         if (my_data->current_backend_cfg[idx].bitwidth_mixer_ctl) {
+             free(my_data->current_backend_cfg[idx].bitwidth_mixer_ctl);
+             my_data->current_backend_cfg[idx].bitwidth_mixer_ctl = NULL;
+         }
+
+         if (my_data->current_backend_cfg[idx].samplerate_mixer_ctl) {
+             free(my_data->current_backend_cfg[idx].samplerate_mixer_ctl);
+             my_data->current_backend_cfg[idx].samplerate_mixer_ctl = NULL;
+         }
+
+         if (my_data->current_backend_cfg[idx].channels_mixer_ctl) {
+             free(my_data->current_backend_cfg[idx].channels_mixer_ctl);
+             my_data->current_backend_cfg[idx].channels_mixer_ctl = NULL;
+         }
+    }
+
+    platform_release_custom_mtmx_params(platform);
 
     if (my_data->acdb_deallocate)
         my_data->acdb_deallocate();

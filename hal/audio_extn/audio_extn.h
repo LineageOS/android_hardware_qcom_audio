@@ -1141,4 +1141,7 @@ int audio_extn_ext_hw_plugin_set_audio_gain(void *plugin,
 #else
 void audio_extn_send_dual_mono_mixing_coefficients(struct stream_out *out);
 #endif
+void audio_extn_set_custom_mtmx_params(struct audio_device *adev,
+                                        struct audio_usecase *usecase,
+                                        bool enable);
 #endif /* AUDIO_EXTN_H */
