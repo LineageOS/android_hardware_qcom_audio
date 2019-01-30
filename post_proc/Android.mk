@@ -3,6 +3,7 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 
+LOCAL_CFLAGS := -DLIB_AUDIO_HAL="/vendor/lib/hw/audio.primary."$(TARGET_BOARD_PLATFORM)".so"
 LOCAL_CFLAGS += -Wno-unused-variable
 LOCAL_CFLAGS += -Wno-sign-compare
 LOCAL_CFLAGS += -Wno-unused-parameter
@@ -29,17 +30,13 @@ LOCAL_SRC_FILES:= \
         virtualizer.c \
         reverb.c \
         effect_api.c \
-        effect_util.c
+        effect_util.c \
+        asphere.c
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS)),true)
-    LOCAL_CFLAGS += -DHW_ACCELERATED_EFFECTS
-    LOCAL_SRC_FILES += hw_accelerator.c
-endif
-
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUDIOSPHERE)),true)
-    LOCAL_CFLAGS += -DAUDIOSPHERE_ENABLED
-    LOCAL_SRC_FILES += asphere.c
-endif
+# HW_ACCELERATED has been disabled by default since msm8996. File doesn't
+# compile cleanly on tip so don't want to include it, but keeping this
+# as a reference.
+# LOCAL_SRC_FILES += hw_accelerator.c
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INSTANCE_ID)), true)
     LOCAL_CFLAGS += -DINSTANCE_ID_ENABLED
@@ -84,7 +81,8 @@ LOCAL_C_INCLUDES := \
         external/tinyalsa/include \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
-        $(call include-path-for, audio-effects)
+        $(call include-path-for, audio-effects) \
+        vendor/qcom/opensource/audio-hal/primary-hal/hal/audio_extn/
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES += audio_kernel_headers

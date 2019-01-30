@@ -49,7 +49,6 @@
 #include <log_utils.h>
 #endif
 
-#ifdef A2DP_OFFLOAD_ENABLED
 #define AUDIO_PARAMETER_A2DP_STARTED "A2dpStarted"
 #define BT_IPC_SOURCE_LIB_NAME  "libbthost_if.so"
 #define BT_IPC_SINK_LIB_NAME    "libbthost_if_sink.so"
@@ -227,6 +226,10 @@ typedef enum {
     MTU_SIZE,
     PEAK_BIT_RATE,
 } frame_control_type_t;
+
+// --- external function dependency ---
+fp_platform_get_pcm_device_id_t fp_platform_get_pcm_device_id;
+fp_check_a2dp_restore_t fp_check_a2dp_restore;
 
 /* PCM config for ABR Feedback hostless front end */
 static struct pcm_config pcm_config_abr = {
@@ -782,7 +785,7 @@ static int start_abr()
     }
 
     // Open hostless front end and prepare ABR Tx path
-    abr_device_id = platform_get_pcm_device_id(USECASE_AUDIO_A2DP_ABR_FEEDBACK,
+    abr_device_id = fp_platform_get_pcm_device_id(USECASE_AUDIO_A2DP_ABR_FEEDBACK,
                                                PCM_CAPTURE);
     if (!a2dp.abr_config.abr_tx_handle) {
         a2dp.abr_config.abr_tx_handle = pcm_open(a2dp.adev->snd_card,
@@ -2157,11 +2160,11 @@ bool configure_a2dp_encoder_format()
     return is_configured;
 }
 
-int audio_extn_a2dp_start_playback()
+int a2dp_start_playback()
 {
     int ret = 0;
 
-    ALOGD("audio_extn_a2dp_start_playback start");
+    ALOGD("a2dp_start_playback start");
 
     if(!(a2dp.bt_lib_source_handle && a2dp.audio_source_start
        && a2dp.audio_get_enc_config)) {
@@ -2209,7 +2212,7 @@ int audio_extn_a2dp_start_playback()
     return ret;
 }
 
-uint64_t audio_extn_a2dp_get_decoder_latency()
+uint64_t a2dp_get_decoder_latency()
 {
     uint32_t latency = 0;
 
@@ -2232,7 +2235,7 @@ bool a2dp_send_sink_setup_complete(void) {
     uint64_t system_latency = 0;
     bool is_complete = false;
 
-    system_latency = audio_extn_a2dp_get_decoder_latency();
+    system_latency = a2dp_get_decoder_latency();
 
     if (a2dp.audio_sink_session_setup_complete(system_latency) == 0) {
         is_complete = true;
@@ -2240,11 +2243,22 @@ bool a2dp_send_sink_setup_complete(void) {
     return is_complete;
 }
 
-int audio_extn_a2dp_start_capture()
+bool a2dp_sink_is_ready()
+{
+    bool ret = false;
+
+    if ((a2dp.bt_state_sink != A2DP_STATE_DISCONNECTED) &&
+        (a2dp.is_a2dp_offload_supported) &&
+        (a2dp.audio_sink_check_a2dp_ready))
+           ret = a2dp.audio_sink_check_a2dp_ready();
+    return ret;
+}
+
+int a2dp_start_capture()
 {
     int ret = 0;
 
-    ALOGD("audio_extn_a2dp_start_capture start");
+    ALOGD("a2dp_start_capture start");
 
     if(!(a2dp.bt_lib_sink_handle && a2dp.audio_sink_start
        && a2dp.audio_get_dec_config)) {
@@ -2262,7 +2276,7 @@ int audio_extn_a2dp_start_capture()
            a2dp.a2dp_sink_started = false;
         } else {
 
-           if(!audio_extn_a2dp_sink_is_ready()) {
+           if(!a2dp_sink_is_ready()) {
                 ALOGD("Wait for capture ready not successful");
                 ret = -ETIMEDOUT;
            }
@@ -2382,11 +2396,11 @@ static void reset_a2dp_sink_dec_config_params()
     }
 }
 
-int audio_extn_a2dp_stop_playback()
+int a2dp_stop_playback()
 {
     int ret =0;
 
-    ALOGV("audio_extn_a2dp_stop_playback start");
+    ALOGV("a2dp_stop_playback start");
     if(!(a2dp.bt_lib_source_handle && a2dp.audio_source_stop)) {
         ALOGE("a2dp handle is not identified, Ignoring stop request");
         return -ENOSYS;
@@ -2420,11 +2434,11 @@ int audio_extn_a2dp_stop_playback()
     return 0;
 }
 
-int audio_extn_a2dp_stop_capture()
+int a2dp_stop_capture()
 {
     int ret =0;
 
-    ALOGV("audio_extn_a2dp_stop_capture start");
+    ALOGV("a2dp_stop_capture start");
     if(!(a2dp.bt_lib_sink_handle && a2dp.audio_sink_stop)) {
         ALOGE("a2dp handle is not identified, Ignoring stop request");
         return -ENOSYS;
@@ -2450,7 +2464,7 @@ int audio_extn_a2dp_stop_capture()
     return 0;
 }
 
-int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
+int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
 {
      int ret = 0, val, status = 0;
      char value[32]={0};
@@ -2522,7 +2536,7 @@ int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
                     if (uc_info->type == PCM_PLAYBACK &&
                          (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
                         pthread_mutex_unlock(&a2dp.adev->lock);
-                        check_a2dp_restore(a2dp.adev, uc_info->stream.out, false);
+                        fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, false);
                         pthread_mutex_lock(&a2dp.adev->lock);
                     }
                 }
@@ -2563,7 +2577,7 @@ int audio_extn_a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
                     if (uc_info->type == PCM_PLAYBACK &&
                          (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
                         pthread_mutex_unlock(&a2dp.adev->lock);
-                        check_a2dp_restore(a2dp.adev, uc_info->stream.out, true);
+                        fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, true);
                         pthread_mutex_lock(&a2dp.adev->lock);
                     }
                 }
@@ -2587,12 +2601,12 @@ param_handled:
      return status;
 }
 
-void audio_extn_a2dp_set_handoff_mode(bool is_on)
+void a2dp_set_handoff_mode(bool is_on)
 {
     a2dp.is_handoff_in_progress = is_on;
 }
 
-bool audio_extn_a2dp_is_force_device_switch()
+bool a2dp_is_force_device_switch()
 {
     //During encoder reconfiguration mode, force a2dp device switch
     // Or if a2dp device is selected but earlier start failed ( as a2dp
@@ -2600,17 +2614,17 @@ bool audio_extn_a2dp_is_force_device_switch()
     return a2dp.is_handoff_in_progress || !a2dp.a2dp_source_started;
 }
 
-void audio_extn_a2dp_get_enc_sample_rate(int *sample_rate)
+void a2dp_get_enc_sample_rate(int *sample_rate)
 {
     *sample_rate = a2dp.enc_sampling_rate;
 }
 
-void audio_extn_a2dp_get_dec_sample_rate(int *sample_rate)
+void a2dp_get_dec_sample_rate(int *sample_rate)
 {
     *sample_rate = a2dp.dec_sampling_rate;
 }
 
-bool audio_extn_a2dp_source_is_ready()
+bool a2dp_source_is_ready()
 {
     bool ret = false;
 
@@ -2624,23 +2638,13 @@ bool audio_extn_a2dp_source_is_ready()
     return ret;
 }
 
-bool audio_extn_a2dp_sink_is_ready()
-{
-    bool ret = false;
-
-    if ((a2dp.bt_state_sink != A2DP_STATE_DISCONNECTED) &&
-        (a2dp.is_a2dp_offload_supported) &&
-        (a2dp.audio_sink_check_a2dp_ready))
-           ret = a2dp.audio_sink_check_a2dp_ready();
-    return ret;
-}
-
-bool audio_extn_a2dp_source_is_suspended()
+bool a2dp_source_is_suspended()
 {
     return a2dp.a2dp_source_suspended;
 }
 
-void audio_extn_a2dp_init (void *adev)
+void a2dp_init(void *adev,
+               a2dp_offload_init_config_t *init_config)
 {
   a2dp.adev = (struct audio_device*)adev;
   a2dp.bt_lib_source_handle = NULL;
@@ -2658,6 +2662,12 @@ void audio_extn_a2dp_init (void *adev)
   a2dp.abr_config.imc_instance = 0;
   a2dp.abr_config.abr_tx_handle = NULL;
   a2dp.is_tws_mono_mode_on = false;
+
+  // init function pointers
+  fp_platform_get_pcm_device_id =
+              init_config->fp_platform_get_pcm_device_id;
+  fp_check_a2dp_restore = init_config->fp_check_a2dp_restore;
+
   reset_a2dp_enc_config_params();
   reset_a2dp_source_dec_config_params();
   reset_a2dp_sink_dec_config_params();
@@ -2672,7 +2682,7 @@ void audio_extn_a2dp_init (void *adev)
   update_offload_codec_capabilities();
 }
 
-uint32_t audio_extn_a2dp_get_encoder_latency()
+uint32_t a2dp_get_encoder_latency()
 {
     uint32_t latency = 0;
     int avsync_runtime_prop = 0;
@@ -2734,7 +2744,7 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
     return latency;
 }
 
-int audio_extn_a2dp_get_parameters(struct str_parms *query,
+int a2dp_get_parameters(struct str_parms *query,
                                    struct str_parms *reply)
 {
     int ret, val = 0;
@@ -2750,4 +2760,3 @@ int audio_extn_a2dp_get_parameters(struct str_parms *query,
 
     return 0;
 }
-#endif // A2DP_OFFLOAD_ENABLED

@@ -20,7 +20,6 @@ c_sources += hw_accelerator.c
 endif
 
 if AUDIOSPHERE
-AM_CFLAGS += -DAUDIOSPHERE_ENABLED
 c_sources += asphere.c
 endif
 

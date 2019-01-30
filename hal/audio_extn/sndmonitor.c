@@ -659,7 +659,7 @@ static int del_listener(void * stream)
 
 // --- public APIs --- //
 
-int audio_extn_snd_mon_deinit()
+int snd_mon_deinit()
 {
     if (!sndmonitor.initcheck)
         return -1;
@@ -675,7 +675,7 @@ int audio_extn_snd_mon_deinit()
     return 0;
 }
 
-int audio_extn_snd_mon_init()
+int snd_mon_init()
 {
     sndmonitor.notify = snd_mon_update;
     sndmonitor.target = NULL; // unused for now
@@ -717,7 +717,7 @@ pipe_error:
     return -ENODEV;
 }
 
-int audio_extn_snd_mon_register_listener(void *stream, snd_mon_cb cb)
+int snd_mon_register_listener(void *stream, snd_mon_cb cb)
 {
     if (!sndmonitor.initcheck) {
         ALOGW("sndmonitor initcheck failed, cannot register");
@@ -727,7 +727,7 @@ int audio_extn_snd_mon_register_listener(void *stream, snd_mon_cb cb)
     return add_listener(stream, cb);
 }
 
-int audio_extn_snd_mon_unregister_listener(void *stream)
+int snd_mon_unregister_listener(void *stream)
 {
     if (!sndmonitor.initcheck) {
         ALOGW("sndmonitor initcheck failed, cannot deregister");

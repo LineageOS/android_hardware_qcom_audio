@@ -37,6 +37,16 @@
 #include <cutils/properties.h>
 #include "audio_extn.h"
 
+// - external function dependency -
+static fp_platform_get_snd_device_name_t fp_platform_get_snd_device_name;
+static fp_platform_get_pcm_device_id_t fp_platform_get_pcm_device_id;
+static fp_get_usecase_from_list_t fp_get_usecase_from_list;
+static fp_enable_disable_snd_device_t fp_disable_snd_device;
+static fp_enable_disable_snd_device_t  fp_enable_snd_device;
+static fp_enable_disable_audio_route_t fp_disable_audio_route;
+static fp_enable_disable_audio_route_t fp_enable_audio_route;
+static fp_audio_extn_get_snd_card_split_t fp_audio_extn_get_snd_card_split;
+
 struct cirrus_playback_session {
     void *adev_handle;
     pthread_mutex_t fb_prot_mutex;
@@ -130,24 +140,23 @@ struct crus_rx_run_case_ctrl_t {
 #define CRUS_SP_IOCTL_SET_CALIB _IOWR(CRUS_SP_IOCTL_MAGIC, 222, void *)
 
 
-
-static struct pcm_config pcm_config_cirrus_tx = {
-    .channels = 2,
-    .rate = 48000,
-    .period_size = 320,
-    .period_count = 4,
-    .format = PCM_FORMAT_S16_LE,
-    .start_threshold = 0,
-    .stop_threshold = INT_MAX,
-    .avail_min = 0,
-};
-
-static struct pcm_config pcm_config_cirrus_rx = {
+struct pcm_config pcm_config_cirrus_rx = {
     .channels = 8,
     .rate = 48000,
     .period_size = 320,
     .period_count = 4,
     .format = PCM_FORMAT_S32_LE,
+    .start_threshold = 0,
+    .stop_threshold = INT_MAX,
+    .avail_min = 0,
+};
+
+struct pcm_config pcm_config_cirrus_tx = {
+    .channels = 2,
+    .rate = 48000,
+    .period_size = 320,
+    .period_count = 4,
+    .format = PCM_FORMAT_S16_LE,
     .start_threshold = 0,
     .stop_threshold = INT_MAX,
     .avail_min = 0,
@@ -165,7 +174,7 @@ static void *audio_extn_cirrus_config_thread();
 static void *audio_extn_cirrus_failure_detect_thread();
 #endif
 
-void audio_extn_spkr_prot_init(void *adev) {
+void spkr_prot_init(void *adev, spkr_prot_init_config_t spkr_prot_init_config_val) {
     ALOGI("%s: Initialize Cirrus Logic Playback module", __func__);
 
     memset(&handle, 0, sizeof(handle));
@@ -176,6 +185,16 @@ void audio_extn_spkr_prot_init(void *adev) {
 
     handle.adev_handle = adev;
     handle.state = INIT;
+
+    // init function pointers
+    fp_platform_get_snd_device_name = spkr_prot_init_config_val.fp_platform_get_snd_device_name;
+    fp_platform_get_pcm_device_id = spkr_prot_init_config_val.fp_platform_get_pcm_device_id;
+    fp_get_usecase_from_list =  spkr_prot_init_config_val.fp_get_usecase_from_list;
+    fp_disable_snd_device = spkr_prot_init_config_val.fp_disable_snd_device;
+    fp_enable_snd_device = spkr_prot_init_config_val.fp_enable_snd_device;
+    fp_disable_audio_route = spkr_prot_init_config_val.fp_disable_audio_route;
+    fp_enable_audio_route = spkr_prot_init_config_val.fp_enable_audio_route;
+    fp_audio_extn_get_snd_card_split = spkr_prot_init_config_val.fp_audio_extn_get_snd_card_split;
 
     pthread_mutex_init(&handle.fb_prot_mutex, NULL);
 
@@ -190,7 +209,7 @@ void audio_extn_spkr_prot_init(void *adev) {
 #endif
 }
 
-void audio_extn_spkr_prot_deinit(void *adev __unused) {
+int spkr_prot_deinit() {
     ALOGV("%s: Entry", __func__);
 
 #ifdef ENABLE_CIRRUS_DETECTION
@@ -200,6 +219,7 @@ void audio_extn_spkr_prot_deinit(void *adev __unused) {
     pthread_mutex_destroy(&handle.fb_prot_mutex);
 
     ALOGV("%s: Exit", __func__);
+    return 0;
 }
 
 #ifdef CIRRUS_FACTORY_CALIBRATION
@@ -390,7 +410,8 @@ static int audio_extn_cirrus_load_usecase_configs(void) {
     char *filename = NULL;
     int ret = 0, default_uc = 0;
     struct snd_card_split *snd_split_handle = NULL;
-    snd_split_handle = audio_extn_get_snd_card_split();
+
+    snd_split_handle = fp_audio_extn_get_snd_card_split();
 
     ALOGI("%s: Loading usecase tuning configs", __func__);
 
@@ -487,9 +508,9 @@ static void *audio_extn_cirrus_calibration_thread() {
     uc_info_rx->out_snd_device = SND_DEVICE_OUT_SPEAKER;
     list_add_tail(&adev->usecase_list, &uc_info_rx->list);
 
-    enable_snd_device(adev, SND_DEVICE_OUT_SPEAKER);
-    enable_audio_route(adev, uc_info_rx);
-    pcm_dev_rx_id = platform_get_pcm_device_id(uc_info_rx->id, PCM_PLAYBACK);
+    fp_enable_snd_device(adev, SND_DEVICE_OUT_SPEAKER);
+    fp_enable_audio_route(adev, uc_info_rx);
+    pcm_dev_rx_id = fp_platform_get_pcm_device_id(uc_info_rx->id, PCM_PLAYBACK);
 
     if (pcm_dev_rx_id < 0) {
         ALOGE("%s: Invalid pcm device for usecase (%d)",
@@ -530,8 +551,9 @@ close_stream:
         pcm_close(handle.pcm_rx);
         handle.pcm_rx = NULL;
     }
-    disable_audio_route(adev, uc_info_rx);
-    disable_snd_device(adev, SND_DEVICE_OUT_SPEAKER);
+
+    fp_disable_audio_route(adev, uc_info_rx);
+    fp_disable_snd_device(adev, SND_DEVICE_OUT_SPEAKER);
     list_remove(&uc_info_rx->list);
     free(uc_info_rx);
     pthread_mutex_unlock(&adev->lock);
@@ -798,7 +820,7 @@ exit:
 }
 #endif
 
-int audio_extn_spkr_prot_start_processing(snd_device_t snd_device) {
+int spkr_prot_start_processing(snd_device_t snd_device) {
     struct audio_usecase *uc_info_tx;
     struct audio_device *adev = handle.adev_handle;
     int32_t pcm_dev_tx_id = -1, ret = 0;
@@ -817,7 +839,7 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device) {
     }
 
     audio_route_apply_and_update_path(adev->audio_route,
-                                      platform_get_snd_device_name(snd_device));
+                                      fp_platform_get_snd_device_name(snd_device));
 
     pthread_mutex_lock(&handle.fb_prot_mutex);
     uc_info_tx->id = USECASE_AUDIO_SPKR_CALIB_TX;
@@ -828,10 +850,10 @@ int audio_extn_spkr_prot_start_processing(snd_device_t snd_device) {
 
     list_add_tail(&adev->usecase_list, &uc_info_tx->list);
 
-    enable_snd_device(adev, SND_DEVICE_IN_CAPTURE_VI_FEEDBACK);
-    enable_audio_route(adev, uc_info_tx);
+    fp_enable_snd_device(adev, SND_DEVICE_IN_CAPTURE_VI_FEEDBACK);
+    fp_enable_audio_route(adev, uc_info_tx);
 
-    pcm_dev_tx_id = platform_get_pcm_device_id(uc_info_tx->id, PCM_CAPTURE);
+    pcm_dev_tx_id = fp_platform_get_pcm_device_id(uc_info_tx->id, PCM_CAPTURE);
 
     if (pcm_dev_tx_id < 0) {
         ALOGE("%s: Invalid pcm device for usecase (%d)",
@@ -875,8 +897,8 @@ exit:
             handle.pcm_tx = NULL;
         }
 
-        disable_audio_route(adev, uc_info_tx);
-        disable_snd_device(adev, SND_DEVICE_IN_CAPTURE_VI_FEEDBACK);
+        fp_disable_audio_route(adev, uc_info_tx);
+        fp_disable_snd_device(adev, SND_DEVICE_IN_CAPTURE_VI_FEEDBACK);
         list_remove(&uc_info_tx->list);
         free(uc_info_tx);
     }
@@ -886,7 +908,7 @@ exit:
     return ret;
 }
 
-void audio_extn_spkr_prot_stop_processing(snd_device_t snd_device) {
+void spkr_prot_stop_processing(snd_device_t snd_device) {
     struct audio_usecase *uc_info_tx;
     struct audio_device *adev = handle.adev_handle;
 
@@ -895,7 +917,7 @@ void audio_extn_spkr_prot_stop_processing(snd_device_t snd_device) {
     pthread_mutex_lock(&handle.fb_prot_mutex);
 
     handle.state = IDLE;
-    uc_info_tx = get_usecase_from_list(adev, USECASE_AUDIO_SPKR_CALIB_TX);
+    uc_info_tx = fp_get_usecase_from_list(adev, USECASE_AUDIO_SPKR_CALIB_TX);
 
     if (uc_info_tx) {
         if (handle.pcm_tx) {
@@ -904,13 +926,13 @@ void audio_extn_spkr_prot_stop_processing(snd_device_t snd_device) {
             handle.pcm_tx = NULL;
         }
 
-        disable_audio_route(adev, uc_info_tx);
-        disable_snd_device(adev, SND_DEVICE_IN_CAPTURE_VI_FEEDBACK);
+        fp_disable_audio_route(adev, uc_info_tx);
+        fp_disable_snd_device(adev, SND_DEVICE_IN_CAPTURE_VI_FEEDBACK);
         list_remove(&uc_info_tx->list);
         free(uc_info_tx);
 
         audio_route_reset_path(adev->audio_route,
-                               platform_get_snd_device_name(snd_device));
+                               fp_platform_get_snd_device_name(snd_device));
     }
 
     pthread_mutex_unlock(&handle.fb_prot_mutex);
@@ -918,11 +940,11 @@ void audio_extn_spkr_prot_stop_processing(snd_device_t snd_device) {
     ALOGV("%s: Exit", __func__);
 }
 
-bool audio_extn_spkr_prot_is_enabled() {
+bool spkr_prot_is_enabled() {
     return true;
 }
 
-int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device) {
+int get_spkr_prot_snd_device(snd_device_t snd_device) {
     switch(snd_device) {
     case SND_DEVICE_OUT_SPEAKER:
     case SND_DEVICE_OUT_SPEAKER_REVERSE:
@@ -936,6 +958,6 @@ int audio_extn_get_spkr_prot_snd_device(snd_device_t snd_device) {
     }
 }
 
-void audio_extn_spkr_prot_calib_cancel(__unused void *adev) {
+void spkr_prot_calib_cancel(__unused void *adev) {
     // FIXME: wait or cancel audio_extn_cirrus_run_calibration
 }

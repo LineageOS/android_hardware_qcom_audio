@@ -113,30 +113,8 @@ typedef struct edid_audio_info {
     unsigned int  channel_mask;
 } edid_audio_info;
 
-#ifdef HDMI_EDID
 bool edid_is_supported_sr(edid_audio_info* info, int sr);
 bool edid_is_supported_bps(edid_audio_info* info, int bps);
 int edid_get_highest_supported_sr(edid_audio_info* info);
 bool edid_get_sink_caps(edid_audio_info* info, char *edid_data);
-#else
-static bool __unused edid_is_supported_sr(edid_audio_info* info __unused, int sr __unused)
-{
-    return false;
-}
-static bool __unused edid_is_supported_bps(edid_audio_info* info __unused, int bps __unused)
-{
-    return false;
-}
-
-static bool __unused edid_get_sink_caps(edid_audio_info* info __unused, char* edid_data __unused)
-{
-    return false;
-}
-
-static int __unused edid_get_highest_supported_sr(edid_audio_info* info __unused)
-{
-    return 0;
-}
-#endif
-
 #endif /* EDID_H */

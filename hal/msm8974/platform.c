@@ -1477,10 +1477,10 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
     }
 
     if (enable) {
-#ifndef COMPRESS_VOIP_ENABLED
-        if (adev->mode == AUDIO_MODE_IN_COMMUNICATION)
-            strlcat(ec_ref_mixer_path, "-voip", MIXER_PATH_MAX_LENGTH);
-#endif
+        if (!voice_extn_is_compress_voip_supported()) {
+            if (adev->mode == AUDIO_MODE_IN_COMMUNICATION)
+                strlcat(ec_ref_mixer_path, "-voip", MIXER_PATH_MAX_LENGTH);    
+        }        
         /*
          * If native audio device reference count > 0, then apply codec EC otherwise
          * fallback to Speakers with VBat if enabled or default
@@ -4473,27 +4473,26 @@ int platform_get_ext_disp_type(void *platform)
          return my_data->ext_disp_type;
     }
 
-#ifdef DISPLAY_PORT_ENABLED
-    struct audio_device *adev = my_data->adev;
-    struct mixer_ctl *ctl;
-    char *mixer_ctl_name = "External Display Type";
+    if (audio_extn_is_display_port_enabled()) {
+        struct audio_device *adev = my_data->adev;
+        struct mixer_ctl *ctl;
+        char *mixer_ctl_name = "External Display Type";
 
-    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
-    if (!ctl) {
-        ALOGE("%s: Could not get ctl for mixer cmd - %s",
-              __func__, mixer_ctl_name);
-        return -EINVAL;
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                  __func__, mixer_ctl_name);
+            return -EINVAL;
+        }
+
+        disp_type = mixer_ctl_get_value(ctl, 0);
+        if (disp_type == EXT_DISPLAY_TYPE_NONE) {
+             ALOGE("%s: Invalid external display type: %d", __func__, disp_type);
+             return -EINVAL;
+        }
+    } else {
+        disp_type = EXT_DISPLAY_TYPE_HDMI;
     }
-
-    disp_type = mixer_ctl_get_value(ctl, 0);
-    if (disp_type == EXT_DISPLAY_TYPE_NONE) {
-         ALOGE("%s: Invalid external display type: %d", __func__, disp_type);
-         return -EINVAL;
-    }
-#else
-    disp_type = EXT_DISPLAY_TYPE_HDMI;
-#endif
-
     my_data->ext_disp_type = disp_type;
     ALOGD("%s: ext disp type:%s", __func__, (disp_type == EXT_DISPLAY_TYPE_DP) ? "DisplayPort" : "HDMI");
     return disp_type;
@@ -4835,7 +4834,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     } else if (devices &
                 (AUDIO_DEVICE_OUT_USB_DEVICE |
                  AUDIO_DEVICE_OUT_USB_HEADSET)) {
-        if (audio_extn_ma_supported_usb())
+        if (audio_extn_qdsp_supported_usb())
             snd_device = SND_DEVICE_OUT_USB_HEADSET_SPEC;
         else if (audio_extn_usb_is_capture_supported())
             snd_device = SND_DEVICE_OUT_USB_HEADSET;
@@ -4862,8 +4861,7 @@ exit:
     return snd_device;
 }
 
-#ifdef DYNAMIC_ECNS_ENABLED
-static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
+static snd_device_t get_snd_device_for_voice_comm_ecns_enabled(struct platform_data *my_data,
                                                   audio_devices_t out_device,
                                                   audio_devices_t in_device)
 {
@@ -4906,8 +4904,8 @@ static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
 
     return snd_device;
 }
-#else
-static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
+
+static snd_device_t get_snd_device_for_voice_comm_ecns_disabled(struct platform_data *my_data,
                                                   audio_devices_t out_device,
                                                   audio_devices_t in_device)
 {
@@ -5032,7 +5030,16 @@ static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
 
     return snd_device;
 }
-#endif //DYNAMIC_ECNS_ENABLED
+
+static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
+                                                  audio_devices_t out_device,
+                                                  audio_devices_t in_device)
+{
+    if(voice_extn_is_dynamic_ecns_enabled())
+        return get_snd_device_for_voice_comm_ecns_enabled(my_data, out_device, in_device);
+    else
+        return get_snd_device_for_voice_comm_ecns_disabled(my_data, out_device, in_device);
+}
 
 snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_device)
 {
@@ -7098,17 +7105,17 @@ static void platform_check_hdmi_backend_cfg(struct audio_device* adev,
         max_supported_channels = platform_edid_get_max_channels(my_data);
 
         //Check EDID info for supported samplerate
-        if (!edid_is_supported_sr(edid_info,sample_rate)) {
+        if (!audio_extn_edid_is_supported_sr(edid_info,sample_rate)) {
             //check to see if current BE sample rate is supported by EDID
             //else assign the highest sample rate supported by EDID
-            if (edid_is_supported_sr(edid_info,my_data->current_backend_cfg[backend_idx].sample_rate))
+            if (audio_extn_edid_is_supported_sr(edid_info,my_data->current_backend_cfg[backend_idx].sample_rate))
                 sample_rate = my_data->current_backend_cfg[backend_idx].sample_rate;
             else
-                sample_rate = edid_get_highest_supported_sr(edid_info);
+                sample_rate = audio_extn_edid_get_highest_supported_sr(edid_info);
         }
 
         //Check EDID info for supported bit width
-        if (!edid_is_supported_bps(edid_info,bit_width)) {
+        if (!audio_extn_edid_is_supported_bps(edid_info,bit_width)) {
             //reset to current sample rate
             bit_width = my_data->current_backend_cfg[backend_idx].bit_width;
         }
@@ -8128,7 +8135,7 @@ int platform_get_edid_info(void *platform)
     edid_data[0] = count;
     memcpy(&edid_data[1], block, count);
 
-    if (!edid_get_sink_caps(info, edid_data)) {
+    if (!audio_extn_edid_get_sink_caps(info, edid_data)) {
         ALOGE("%s: Failed to get extn disp sink capabilities", __func__);
         goto fail;
     }
@@ -8433,7 +8440,7 @@ bool platform_is_edid_supported_sample_rate(void *platform, int sample_rate)
     ret = platform_get_edid_info(platform);
     info = (edid_audio_info *)my_data->edid_info;
     if (ret == 0 && info != NULL) {
-        return edid_is_supported_sr(info, sample_rate);
+        return audio_extn_edid_is_supported_sr(info, sample_rate);
     }
 
     return false;
@@ -8448,7 +8455,7 @@ int platform_edid_get_highest_supported_sr(void *platform)
     ret = platform_get_edid_info(platform);
     info = (edid_audio_info *)my_data->edid_info;
     if (ret == 0 && info != NULL) {
-        return edid_get_highest_supported_sr(info);
+        return audio_extn_edid_get_highest_supported_sr(info);
     }
 
     return 0;
@@ -9423,3 +9430,4 @@ int platform_get_license_by_product(void *platform __unused,
 {
     return -ENOSYS;
 }
+

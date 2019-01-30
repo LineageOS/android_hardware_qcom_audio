@@ -164,7 +164,6 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_DTS_HD),
     STRING_TO_ENUM(AUDIO_FORMAT_DOLBY_TRUEHD),
     STRING_TO_ENUM(AUDIO_FORMAT_IEC61937),
-#ifdef AUDIO_EXTN_FORMATS_ENABLED
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
     STRING_TO_ENUM(AUDIO_FORMAT_WMA),
     STRING_TO_ENUM(AUDIO_FORMAT_WMA_PRO),
@@ -179,7 +178,6 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_FLAC),
     STRING_TO_ENUM(AUDIO_FORMAT_ALAC),
     STRING_TO_ENUM(AUDIO_FORMAT_APE),
-    STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_LC),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_HE_V1),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_HE_V2),
@@ -193,7 +191,6 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_LATM_HE_V1),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_LATM_HE_V2),
     STRING_TO_ENUM(AUDIO_FORMAT_APTX),
-#endif
 };
 
 /* payload structure avt_device drift query */

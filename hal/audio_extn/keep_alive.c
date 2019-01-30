@@ -37,6 +37,7 @@
 #include "audio_extn.h"
 #include "platform_api.h"
 #include <platform.h>
+#include <pthread.h>
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
@@ -114,7 +115,7 @@ static void send_cmd_l(request_t r)
     pthread_cond_signal(&ka.cond);
 }
 
-void audio_extn_keep_alive_init(struct audio_device *adev)
+void keep_alive_init(struct audio_device *adev)
 {
     ka.userdata = adev;
     ka.state = STATE_IDLE;
@@ -146,7 +147,7 @@ void audio_extn_keep_alive_init(struct audio_device *adev)
     ALOGV("%s init done", __func__);
 }
 
-void audio_extn_keep_alive_deinit()
+void keep_alive_deinit()
 {
     if (ka.state == STATE_DEINIT || ka.state == STATE_DISABLED)
         return;
@@ -191,7 +192,7 @@ audio_devices_t get_device_id_from_mode(ka_mode_t ka_mode)
     return out_device;
 }
 
-void audio_extn_keep_alive_start(ka_mode_t ka_mode)
+void keep_alive_start(ka_mode_t ka_mode)
 {
     struct audio_device * adev = (struct audio_device *)ka.userdata;
     audio_devices_t out_devices = AUDIO_DEVICE_NONE;
@@ -300,7 +301,7 @@ exit:
     return rc;
 }
 
-void audio_extn_keep_alive_stop(ka_mode_t ka_mode)
+void keep_alive_stop(ka_mode_t ka_mode)
 {
     struct audio_device * adev = (struct audio_device *)ka.userdata;
     audio_devices_t out_devices;
@@ -365,7 +366,7 @@ static int keep_alive_cleanup()
     return 0;
 }
 
-int audio_extn_keep_alive_set_parameters(struct audio_device *adev __unused,
+int keep_alive_set_parameters(struct audio_device *adev __unused,
                                          struct str_parms *parms __unused)
 {
     char value[32];

@@ -35,6 +35,7 @@
 #include "platform.h"
 #include "platform_api.h"
 #include "voice_extn.h"
+#include "audio_feature_manager.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
@@ -83,7 +84,36 @@ struct pcm_config pcm_config_incall_music = {
     .avail_min = LOW_LATENCY_OUTPUT_PERIOD_SIZE / 4,
 };
 
+static bool voice_extn_compress_voip_enabled = false;
+static bool voice_extn_dynamic_ecns_feature_enabled = false;
+
 int voice_extn_is_call_state_active(struct audio_device *adev, bool *is_call_active);
+
+int compress_voip_set_parameters(struct audio_device *adev,
+                                             struct str_parms *parms);
+void compress_voip_get_parameters(struct str_parms *query,
+                                             struct str_parms *reply);
+void compress_voip_out_get_parameters(struct stream_out *out,
+                                                 struct str_parms *query,
+                                                 struct str_parms *reply);
+void compress_voip_in_get_parameters(struct stream_in *in,
+                                                struct str_parms *query,
+                                                struct str_parms *reply);
+int compress_voip_out_get_buffer_size(struct stream_out *out);
+int compress_voip_in_get_buffer_size(struct stream_in *in);
+int compress_voip_start_output_stream(struct stream_out *out);
+int compress_voip_start_input_stream(struct stream_in *in);
+int compress_voip_close_output_stream(struct audio_stream *stream);
+int compress_voip_open_output_stream(struct stream_out *out);
+int compress_voip_close_input_stream(struct audio_stream *stream);
+int compress_voip_open_input_stream(struct stream_in *in);
+int compress_voip_set_volume(struct audio_device *adev, float volume);
+int compress_voip_set_mic_mute(struct audio_device *adev, bool state);
+bool compress_voip_pcm_prop_check();
+bool compress_voip_is_active(const struct audio_device *adev);
+bool compress_voip_is_format_supported(audio_format_t format);
+bool compress_voip_is_config_supported(struct audio_config *config);
+bool compress_voip_is_started(struct audio_device *adev);
 
 static bool is_valid_call_state(int call_state)
 {
@@ -360,6 +390,36 @@ int voice_extn_is_call_state_active(struct audio_device *adev, bool *is_call_act
     return 0;
 }
 
+void dynamic_ecns_feature_init(bool is_feature_enabled)
+{
+    voice_extn_dynamic_ecns_feature_enabled = is_feature_enabled;
+    ALOGD(":: %s: ---- Feature DYNAMIC_ECNS is %s ----", __func__,
+                            is_feature_enabled? "ENABLED": " NOT ENABLED");
+}
+
+bool voice_extn_is_dynamic_ecns_enabled()
+{
+    return voice_extn_dynamic_ecns_feature_enabled;
+}
+
+void voice_extn_feature_init()
+{
+    for(int index = VOICE_START; index < MAX_SUPPORTED_FEATURE; index++)
+    {
+        bool enable = audio_feature_manager_is_feature_enabled(index);
+        switch (index) {
+            case COMPRESS_VOIP:
+                compr_voip_feature_init(enable);
+                break;
+            case DYNAMIC_ECNS:
+                dynamic_ecns_feature_init(enable);
+                break;
+            default:
+                break;
+        }
+    }
+}
+
 void voice_extn_init(struct audio_device *adev)
 {
     adev->voice.session[VOICE_SESS_IDX].vsid =  VOICE_VSID;
@@ -369,6 +429,18 @@ void voice_extn_init(struct audio_device *adev)
     adev->voice.session[VOWLAN_SESS_IDX].vsid = VOWLAN_VSID;
     adev->voice.session[MMODE1_SESS_IDX].vsid = VOICEMMODE1_VSID;
     adev->voice.session[MMODE2_SESS_IDX].vsid = VOICEMMODE2_VSID;
+    voice_extn_feature_init();
+}
+
+void compr_voip_feature_init(bool is_feature_enabled)
+{
+    voice_extn_compress_voip_enabled = is_feature_enabled;
+    ALOGD("%s:: ---- Feature COMPRESS_VOIP is %s ----", __func__, is_feature_enabled?"ENABLED":"NOT ENABLED");
+}
+
+bool voice_extn_is_compress_voip_supported()
+{
+    return voice_extn_compress_voip_enabled;
 }
 
 int voice_extn_get_session_from_use_case(struct audio_device *adev,
@@ -576,7 +648,10 @@ void voice_extn_get_parameters(const struct audio_device *adev,
         }
         str_parms_add_str(reply, AUDIO_PARAMETER_KEY_ALL_CALL_STATES, value);
     }
-    voice_extn_compress_voip_get_parameters(query, reply);
+    if(voice_extn_compress_voip_enabled)
+        voice_extn_compress_voip_get_parameters(query, reply);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
 
     str = str_parms_to_str(reply);
     ALOGV_IF(str != NULL, "%s: exit: returns \"%s\"", __func__, str);
@@ -587,14 +662,21 @@ void voice_extn_out_get_parameters(struct stream_out *out,
                                    struct str_parms *query,
                                    struct str_parms *reply)
 {
-    voice_extn_compress_voip_out_get_parameters(out, query, reply);
+    if(voice_extn_compress_voip_enabled)
+        voice_extn_compress_voip_out_get_parameters(out, query, reply);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
 }
 
 void voice_extn_in_get_parameters(struct stream_in *in,
                                   struct str_parms *query,
                                   struct str_parms *reply)
 {
-    voice_extn_compress_voip_in_get_parameters(in, query, reply);
+    if(voice_extn_compress_voip_enabled)
+        voice_extn_compress_voip_in_get_parameters(in, query, reply);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    
 }
 
 #ifdef INCALL_MUSIC_ENABLED
@@ -612,3 +694,199 @@ int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
     return 0;
 }
 #endif
+
+int voice_extn_compress_voip_set_parameters(struct audio_device *adev,
+                                             struct str_parms *parms) 
+{
+    int ret = -1;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_set_parameters(adev, parms);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+
+void voice_extn_compress_voip_get_parameters(struct str_parms *query,
+                                             struct str_parms *reply)
+{
+    if(voice_extn_compress_voip_enabled)
+        compress_voip_get_parameters(query, reply);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+}
+
+
+void voice_extn_compress_voip_out_get_parameters(struct stream_out *out,
+                                                 struct str_parms *query,
+                                                 struct str_parms *reply)
+{
+    if(voice_extn_compress_voip_enabled)
+        compress_voip_out_get_parameters(out, query, reply);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+}
+
+void voice_extn_compress_voip_in_get_parameters(struct stream_in *in,
+                                                struct str_parms *query,
+                                                struct str_parms *reply)
+{
+    if(voice_extn_compress_voip_enabled)
+        compress_voip_in_get_parameters(in, query, reply);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+}
+
+int voice_extn_compress_voip_out_get_buffer_size(struct stream_out *out)
+{
+    int ret = -1;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_out_get_buffer_size(out);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+
+int voice_extn_compress_voip_in_get_buffer_size(struct stream_in *in)
+{
+    int ret = -1;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_in_get_buffer_size(in);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+
+
+int voice_extn_compress_voip_start_output_stream(struct stream_out *out)
+{
+    int ret = -1;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_start_output_stream(out);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+
+
+int voice_extn_compress_voip_start_input_stream(struct stream_in *in)
+{
+    int ret = -1;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_start_input_stream(in);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+
+int voice_extn_compress_voip_close_output_stream(struct audio_stream *stream)
+{
+    int ret = -1;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_close_output_stream(stream);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+
+
+int voice_extn_compress_voip_close_input_stream(struct audio_stream *stream)
+{
+    int ret = -1;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_close_input_stream(stream);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+
+int voice_extn_compress_voip_open_output_stream(struct stream_out *out)
+{
+    int ret = -1;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_open_output_stream(out);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+
+
+int voice_extn_compress_voip_open_input_stream(struct stream_in *in)
+{
+    int ret = -1;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_open_input_stream(in);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+
+int voice_extn_compress_voip_set_volume(struct audio_device *adev, float volume)
+{
+    int ret = -1;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_set_volume(adev, volume);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+
+int voice_extn_compress_voip_set_mic_mute(struct audio_device *adev, bool state)
+{
+    int ret = -1;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_set_mic_mute(adev, state);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+
+bool voice_extn_compress_voip_pcm_prop_check()
+{
+    bool ret = false;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_pcm_prop_check();
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+
+bool voice_extn_compress_voip_is_active(const struct audio_device *adev)
+{
+    bool ret = false;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_is_active(adev);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+
+bool voice_extn_compress_voip_is_format_supported(audio_format_t format)
+{
+    bool ret = false;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_is_format_supported(format);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+
+bool voice_extn_compress_voip_is_config_supported(struct audio_config *config)
+{
+    bool ret = false;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_is_config_supported(config);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+
+bool voice_extn_compress_voip_is_started(struct audio_device *adev)
+{
+    bool ret = false;
+    if(voice_extn_compress_voip_enabled)
+        ret = compress_voip_is_started(adev);
+    else
+        ALOGE("%s: COMPRESS_VOIP feature is not enabled", __func__);
+    return ret;
+}
+

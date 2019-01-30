@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <cutils/str_parms.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <pthread.h>
 #include <cutils/sched_policy.h>
 #include <sys/resource.h>
@@ -44,7 +44,6 @@
 #include <log_utils.h>
 #endif
 
-#ifdef SSR_ENABLED
 #define COEFF_ARRAY_SIZE            4
 #define FILT_SIZE                   ((512+1)* 6)  /* # ((FFT bins)/2+1)*numOutputs */
 #define SSR_CHANNEL_OUTPUT_NUM      6
@@ -313,7 +312,7 @@ init_fail:
     return ret;
 }
 
-void audio_extn_ssr_update_enabled()
+void ssr_update_enabled()
 {
     char ssr_enabled[PROPERTY_VALUE_MAX] = "false";
 
@@ -327,7 +326,7 @@ void audio_extn_ssr_update_enabled()
     }
 }
 
-bool audio_extn_ssr_get_enabled()
+bool ssr_get_enabled()
 {
     ALOGV("%s: is_ssr_enabled:%d is_ssr_mode_on:%d ", __func__, ssrmod.is_ssr_enabled, ssrmod.is_ssr_mode_on);
 
@@ -337,13 +336,13 @@ bool audio_extn_ssr_get_enabled()
     return false;
 }
 
-bool  audio_extn_ssr_check_usecase(struct stream_in *in) {
+bool  ssr_check_usecase(struct stream_in *in) {
     int ret = false;
     int channel_count = audio_channel_count_from_in_mask(in->channel_mask);
     audio_devices_t devices = in->device;
     audio_source_t source = in->source;
 
-    if ((audio_extn_ssr_get_enabled()) &&
+    if ((ssr_get_enabled()) &&
             ((channel_count == 2) || (channel_count == 6)) &&
             ((AUDIO_SOURCE_MIC == source) || (AUDIO_SOURCE_CAMCORDER == source)) &&
             ((AUDIO_DEVICE_IN_BUILTIN_MIC == devices) || (AUDIO_DEVICE_IN_BACK_MIC == devices)) &&
@@ -351,39 +350,6 @@ bool  audio_extn_ssr_check_usecase(struct stream_in *in) {
         ALOGD("%s: SSR enabled with channel_count :%d",
                       __func__, channel_count);
         ret = true;
-    }
-    return ret;
-}
-
-int audio_extn_ssr_set_usecase(struct stream_in *in,
-                               struct audio_config *config,
-                               bool *update_params)
-{
-    int ret = -EINVAL;
-    int channel_count = audio_channel_count_from_in_mask(in->channel_mask);
-    audio_channel_representation_t representation =
-                  audio_channel_mask_get_representation(in->channel_mask);
-    *update_params = false;
-
-    if (audio_extn_ssr_check_usecase(in)) {
-
-        if (representation == AUDIO_CHANNEL_REPRESENTATION_INDEX) {
-            /* update params in case channel representation index.
-             * on returning error, flinger will retry with supported representation passed
-             */
-            ALOGD("%s: SSR supports only channel representation position, channel_mask(%#x)"
-                              ,__func__, config->channel_mask);
-            config->channel_mask = AUDIO_CHANNEL_IN_6;
-            ret = 0;
-            *update_params = true;
-        } else {
-            if (!audio_extn_ssr_init(in, channel_count)) {
-                ALOGD("%s: Created SSR session succesfully", __func__);
-                ret = 0;
-            } else {
-                ALOGE("%s: Unable to start SSR record session", __func__);
-            }
-        }
     }
     return ret;
 }
@@ -440,12 +406,58 @@ static void deinit_ssr_process_thread()
     }
 }
 
-struct stream_in *audio_extn_ssr_get_stream()
+struct stream_in *ssr_get_stream()
 {
     return ssrmod.in;
 }
 
-int32_t audio_extn_ssr_init(struct stream_in *in, int num_out_chan)
+int32_t ssr_deinit()
+{
+    ALOGV("%s: entry", __func__);
+    deinit_ssr_process_thread();
+
+    if (ssrmod.drc_obj) {
+        ssrmod.drc_deinit(ssrmod.drc_obj);
+        ssrmod.drc_obj = NULL;
+    }
+
+    if (ssrmod.surround_obj) {
+
+        if (ssrmod.ssr_3mic) {
+            ssrmod.surround_rec_deinit(ssrmod.surround_obj);
+            ssrmod.surround_obj = NULL;
+        }
+        if (ssrmod.surround_raw_buffer) {
+            free(ssrmod.surround_raw_buffer);
+            ssrmod.surround_raw_buffer = NULL;
+        }
+        if (ssrmod.fp_input)
+            fclose(ssrmod.fp_input);
+        if (ssrmod.fp_output)
+            fclose(ssrmod.fp_output);
+    }
+
+    if(ssrmod.drc_handle) {
+        dlclose(ssrmod.drc_handle);
+        ssrmod.drc_handle = NULL;
+    }
+
+    if(ssrmod.surround_rec_handle) {
+        dlclose(ssrmod.surround_rec_handle);
+        ssrmod.surround_rec_handle = NULL;
+    }
+
+    ssrmod.in = NULL;
+    //SSR session can be closed due to device switch
+    //Do not force reset ssr mode
+
+    //ssrmod.is_ssr_mode_on = false;
+    ALOGV("%s: exit", __func__);
+
+    return 0;
+}
+
+int32_t ssr_init(struct stream_in *in, int num_out_chan)
 {
     uint32_t ret = -1;
     char c_multi_ch_dump[128] = {0};
@@ -455,10 +467,10 @@ int32_t audio_extn_ssr_init(struct stream_in *in, int num_out_chan)
 
     if (ssrmod.surround_obj != NULL) {
         ALOGV("%s: reinitializing surround sound library", __func__);
-        audio_extn_ssr_deinit();
+        ssr_deinit();
     }
 
-    if (audio_extn_ssr_get_enabled()) {
+    if (ssr_get_enabled()) {
         ssrmod.ssr_3mic = 1;
     } else {
         ALOGE(" Rejecting SSR -- init is called without enabling SSR");
@@ -577,54 +589,41 @@ int32_t audio_extn_ssr_init(struct stream_in *in, int num_out_chan)
     return 0;
 
 fail:
-    (void) audio_extn_ssr_deinit();
+    (void) ssr_deinit();
     return ret;
 }
 
-int32_t audio_extn_ssr_deinit()
+int ssr_set_usecase(struct stream_in *in,
+                               struct audio_config *config,
+                               bool *update_params)
 {
-    ALOGV("%s: entry", __func__);
-    deinit_ssr_process_thread();
+    int ret = -EINVAL;
+    int channel_count = audio_channel_count_from_in_mask(in->channel_mask);
+    audio_channel_representation_t representation =
+                  audio_channel_mask_get_representation(in->channel_mask);
+    *update_params = false;
 
-    if (ssrmod.drc_obj) {
-        ssrmod.drc_deinit(ssrmod.drc_obj);
-        ssrmod.drc_obj = NULL;
-    }
+    if (ssr_check_usecase(in)) {
 
-    if (ssrmod.surround_obj) {
-
-        if (ssrmod.ssr_3mic) {
-            ssrmod.surround_rec_deinit(ssrmod.surround_obj);
-            ssrmod.surround_obj = NULL;
+        if (representation == AUDIO_CHANNEL_REPRESENTATION_INDEX) {
+            /* update params in case channel representation index.
+             * on returning error, flinger will retry with supported representation passed
+             */
+            ALOGD("%s: SSR supports only channel representation position, channel_mask(%#x)"
+                              ,__func__, config->channel_mask);
+            config->channel_mask = AUDIO_CHANNEL_IN_6;
+            ret = 0;
+            *update_params = true;
+        } else {
+            if (!ssr_init(in, channel_count)) {
+                ALOGD("%s: Created SSR session succesfully", __func__);
+                ret = 0;
+            } else {
+                ALOGE("%s: Unable to start SSR record session", __func__);
+            }
         }
-        if (ssrmod.surround_raw_buffer) {
-            free(ssrmod.surround_raw_buffer);
-            ssrmod.surround_raw_buffer = NULL;
-        }
-        if (ssrmod.fp_input)
-            fclose(ssrmod.fp_input);
-        if (ssrmod.fp_output)
-            fclose(ssrmod.fp_output);
     }
-
-    if(ssrmod.drc_handle) {
-        dlclose(ssrmod.drc_handle);
-        ssrmod.drc_handle = NULL;
-    }
-
-    if(ssrmod.surround_rec_handle) {
-        dlclose(ssrmod.surround_rec_handle);
-        ssrmod.surround_rec_handle = NULL;
-    }
-
-    ssrmod.in = NULL;
-    //SSR session can be closed due to device switch
-    //Do not force reset ssr mode
-
-    //ssrmod.is_ssr_mode_on = false;
-    ALOGV("%s: exit", __func__);
-
-    return 0;
+    return ret;
 }
 
 static void *ssr_process_thread(void *context __unused)
@@ -699,7 +698,7 @@ static void *ssr_process_thread(void *context __unused)
     pthread_exit(NULL);
 }
 
-int32_t audio_extn_ssr_read(struct audio_stream_in *stream,
+int32_t ssr_read(struct audio_stream_in *stream,
                        void *buffer, size_t bytes)
 {
     struct stream_in *in = (struct stream_in *)stream;
@@ -755,7 +754,7 @@ int32_t audio_extn_ssr_read(struct audio_stream_in *stream,
     return ret;
 }
 
-void audio_extn_ssr_set_parameters(struct audio_device *adev __unused,
+void ssr_set_parameters(struct audio_device *adev __unused,
                                    struct str_parms *parms)
 {
     int err;
@@ -791,7 +790,7 @@ void audio_extn_ssr_set_parameters(struct audio_device *adev __unused,
     }
 }
 
-void audio_extn_ssr_get_parameters(const struct audio_device *adev __unused,
+void ssr_get_parameters(const struct audio_device *adev __unused,
                                    struct str_parms *parms,
                                    struct str_parms *reply)
 {
@@ -822,4 +821,3 @@ void audio_extn_ssr_get_parameters(const struct audio_device *adev __unused,
     }
 }
 
-#endif /* SSR_ENABLED */

@@ -42,7 +42,8 @@
                                                             i == AUDIO_STREAM_NOTIFICATION ? "Notification":\
                                                             "--INVALID--"); \
 
-#define MA_SET_STATE "audio_hw_send_ma_parameter"
+
+#define MA_SET_STATE "audio_hw_send_qdsp_parameter"
 #define HAL_VENDOR_PATH "/vendor/lib/hw"
 
 enum {
