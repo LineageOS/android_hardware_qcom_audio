@@ -60,6 +60,7 @@
         <param DEVICE_HANDSET_TMIC_LPI_APE="157" />
         <param DEVICE_HANDSET_QMIC_APE="137" />
         <param DEVICE_HANDSET_QMIC_LPI_APE="137" />
+        <param DEVICE_HEADSET_MIC_APE="141" />
     </acdb_ids>
 
     <!-- Multiple sound_model_config tags can be listed, each with unique   -->
