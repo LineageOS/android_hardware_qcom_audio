@@ -1175,7 +1175,9 @@ int disable_snd_device(struct audio_device *adev,
 
             // when speaker device is disabled, reset swap.
             // will be renabled on usecase start
+#ifndef ELLIPTIC_ULTRASOUND_ENABLED
             platform_set_swap_channels(adev, false);
+#endif
         } else if (platform_split_snd_device(adev->platform,
                                              snd_device,
                                              &num_devices,
@@ -3377,7 +3379,9 @@ int start_output_stream(struct stream_out *out)
     // backend is active, hence rather than sending from enable device
     // sending it from start of streamtream
 
+#ifndef ELLIPTIC_ULTRASOUND_ENABLED
     platform_set_swap_channels(adev, true);
+#endif
 
     ATRACE_END();
     return ret;
@@ -4020,7 +4024,9 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 if (!same_dev) {
                     // on device switch force swap, lower functions will make sure
                     // to check if swap is allowed or not.
+#ifndef ELLIPTIC_ULTRASOUND_ENABLED
                     platform_set_swap_channels(adev, true);
+#endif
                     audio_extn_perf_lock_release(&adev->perf_lock_handle);
                 }
                 if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
@@ -6800,7 +6806,9 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             // check and set swap
             //   - check if orientation changed and speaker active
             //   - set rotation and cache the rotation value
+#ifndef ELLIPTIC_ULTRASOUND_ENABLED
             platform_check_and_set_swap_lr_channels(adev, reverse_speakers);
+#endif
         }
     }
 
