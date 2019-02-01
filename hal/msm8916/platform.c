@@ -248,7 +248,9 @@ struct platform_data {
     bool external_spk_1;
     bool external_spk_2;
     bool external_mic;
+#ifndef ELLIPTIC_ULTRASOUND_ENABLED
     bool speaker_lr_swap;
+#endif
     int  fluence_type;
     char fluence_cap[PROPERTY_VALUE_MAX];
     int  fluence_mode;
@@ -4221,10 +4223,12 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         } else
 #endif
         {
+#ifndef ELLIPTIC_ULTRASOUND_ENABLED
             if (adev->speaker_lr_swap)
                 snd_device = SND_DEVICE_OUT_SPEAKER_REVERSE;
             else
             {
+#endif
                 if (my_data->is_vbat_speaker)
                     snd_device = SND_DEVICE_OUT_SPEAKER_VBAT;
                 else if (my_data->is_wsa_speaker)
@@ -7609,7 +7613,9 @@ bool platform_can_enable_spkr_prot_on_device(snd_device_t snd_device)
     bool ret = false;
 
     if (snd_device == SND_DEVICE_OUT_SPEAKER ||
+#ifndef ELLIPTIC_ULTRASOUND_ENABLED
         snd_device == SND_DEVICE_OUT_SPEAKER_REVERSE ||
+#endif
         snd_device == SND_DEVICE_OUT_SPEAKER_WSA ||
         snd_device == SND_DEVICE_OUT_SPEAKER_VBAT ||
         snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_VBAT ||
@@ -7954,6 +7960,7 @@ int platform_get_max_mic_count(void *platform) {
     return my_data->max_mic_count;
 }
 
+#ifndef ELLIPTIC_ULTRASOUND_ENABLED
 #define DEFAULT_NOMINAL_SPEAKER_GAIN 20
 int ramp_speaker_gain(struct audio_device *adev, bool ramp_up, int target_ramp_up_gain) {
     // backup_gain: gain to try to set in case of an error during ramp
@@ -8103,6 +8110,7 @@ int platform_set_swap_channels(struct audio_device *adev, bool swap_channels)
 
     return 0;
 }
+#endif
 
 bool platform_add_gain_level_mapping(struct amp_db_and_gain_table *tbl_entry __unused)
 {
