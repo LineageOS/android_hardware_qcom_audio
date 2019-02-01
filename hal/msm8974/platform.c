@@ -8011,6 +8011,9 @@ int platform_set_swap_channels(struct audio_device *adev, bool swap_channels)
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+        if (usecase->id != USECASE_AUDIO_ULTRASOUND_RX)
+#endif
         if (usecase->type == PCM_PLAYBACK &&
                 usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
             /*
