@@ -1173,9 +1173,11 @@ int disable_snd_device(struct audio_device *adev,
              audio_extn_spkr_prot_is_enabled()) {
             audio_extn_spkr_prot_stop_processing(snd_device);
 
+#ifndef ELLIPTIC_ULTRASOUND_ENABLED
             // when speaker device is disabled, reset swap.
             // will be renabled on usecase start
             platform_set_swap_channels(adev, false);
+#endif
         } else if (platform_split_snd_device(adev->platform,
                                              snd_device,
                                              &num_devices,
@@ -3372,12 +3374,14 @@ int start_output_stream(struct stream_out *out)
             ALOGE("%s: audio_extn_ip_hdlr_intf_open failed %d",__func__, ret);
     }
 
+#ifndef ELLIPTIC_ULTRASOUND_ENABLED
     // consider a scenario where on pause lower layers are tear down.
     // so on resume, swap mixer control need to be sent only when
     // backend is active, hence rather than sending from enable device
     // sending it from start of streamtream
 
     platform_set_swap_channels(adev, true);
+#endif
 
     ATRACE_END();
     return ret;
@@ -4018,9 +4022,11 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 }
 
                 if (!same_dev) {
+#ifndef ELLIPTIC_ULTRASOUND_ENABLED
                     // on device switch force swap, lower functions will make sure
                     // to check if swap is allowed or not.
                     platform_set_swap_channels(adev, true);
+#endif
                     audio_extn_perf_lock_release(&adev->perf_lock_handle);
                 }
                 if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
