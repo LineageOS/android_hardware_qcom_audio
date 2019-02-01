@@ -6303,7 +6303,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                       (devices != AUDIO_DEVICE_OUT_USB_ACCESSORY);
     bool direct_dev = is_hdmi || is_usb_dev;
     bool use_db_as_primary =
-                audio_feature_manager_is_feature_enabled(USE_DEEP_BUFFER_AS_PRIMARY_OUTPUT);
+           audio_feature_manager_is_feature_enabled(USE_DEEP_BUFFER_AS_PRIMARY_OUTPUT);
 
     if (is_usb_dev && (!audio_extn_usb_connected(NULL))) {
         is_usb_dev = false;
@@ -6932,7 +6932,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                                                 devices, out->flags, out->hal_op_format, out->sample_rate,
                                                 out->bit_width, out->channel_mask, out->profile,
                                                 &out->app_type_cfg);
-    if ((out->usecase == GET_USECASE_AUDIO_PLAYBACK_PRIMARY(use_db_as_primary)) ||
+    if ((out->usecase == (audio_usecase_t)(GET_USECASE_AUDIO_PLAYBACK_PRIMARY(use_db_as_primary))) ||
         (flags & AUDIO_OUTPUT_FLAG_PRIMARY)) {
         /* Ensure the default output is not selected twice */
         if(adev->primary_output == NULL)

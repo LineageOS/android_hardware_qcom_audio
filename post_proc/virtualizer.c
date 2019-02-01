@@ -489,7 +489,7 @@ int virtualizer_init(effect_context_t *context)
         else {
             is_feature_enabled =
                      (bool (*)(audio_ext_feature))dlsym(hal_lib_pointer,
-                               "audio_feature_manager_is_feature_enable");
+                               "audio_feature_manager_is_feature_enabled");
             if (is_feature_enabled == NULL)
                 ALOGE("%s: dlsym failed", __func__);
         }

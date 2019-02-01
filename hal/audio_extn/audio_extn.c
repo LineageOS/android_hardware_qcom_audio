@@ -2330,7 +2330,6 @@ void audio_extn_init(struct audio_device *adev)
 {
     //fix-me: check running on vendor enhanced build
     //is_running_on_stock_version = !isRunningWithVendorEnhancedFramework();
-    audio_extn_feature_init();
     aextnmod.anc_enabled = 0;
     aextnmod.aanc_enabled = 0;
     aextnmod.custom_stereo_enabled = 0;
@@ -3478,7 +3477,7 @@ exit:
 
 static void *a2dp_lib_handle = NULL;
 
-typedef void (*a2dp_init_t)(void *, a2dp_offload_init_config_t *);
+typedef void (*a2dp_init_t)(void *, a2dp_offload_init_config_t);
 static a2dp_init_t a2dp_init;
 
 typedef int (*a2dp_start_playback_t)();
@@ -3609,9 +3608,9 @@ feature_disabled:
 void audio_extn_a2dp_init(void *adev)
 {
     if (a2dp_init) {
-        a2dp_offload_init_config_t *a2dp_init_config = NULL;
-        a2dp_init_config->fp_platform_get_pcm_device_id = platform_get_pcm_device_id;
-        a2dp_init_config->fp_check_a2dp_restore = check_a2dp_restore;
+        a2dp_offload_init_config_t a2dp_init_config;
+        a2dp_init_config.fp_platform_get_pcm_device_id = platform_get_pcm_device_id;
+        a2dp_init_config.fp_check_a2dp_restore = check_a2dp_restore;
 
         a2dp_init(adev, a2dp_init_config);
     }
