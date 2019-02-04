@@ -1,0 +1,96 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "afc6aca1_1a6742e8",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1177,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2019-02-04T14:41:35Z",
+      "side": 1,
+      "message": "Put this inside the ifndef since it\u0027s related to the code.",
+      "range": {
+        "startLine": 1176,
+        "startChar": 12,
+        "endLine": 1177,
+        "endChar": 48
+      },
+      "revId": "bea302c85fdbfd8b9144625269a9503c7074da00",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "9218e702_6803809f",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 3380,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2019-02-04T14:41:35Z",
+      "side": 1,
+      "message": "Same goes with this comment.",
+      "range": {
+        "startLine": 3377,
+        "startChar": 4,
+        "endLine": 3380,
+        "endChar": 43
+      },
+      "revId": "bea302c85fdbfd8b9144625269a9503c7074da00",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "dbeea73f_ad6ab341",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 4026,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2019-02-04T14:41:35Z",
+      "side": 1,
+      "message": "And this one.",
+      "range": {
+        "startLine": 4025,
+        "startChar": 20,
+        "endLine": 4026,
+        "endChar": 58
+      },
+      "revId": "bea302c85fdbfd8b9144625269a9503c7074da00",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "d2aa8b61_082fbb33",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 6808,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2019-02-04T14:41:35Z",
+      "side": 1,
+      "message": "And finally this one.",
+      "range": {
+        "startLine": 6806,
+        "startChar": 12,
+        "endLine": 6808,
+        "endChar": 60
+      },
+      "revId": "bea302c85fdbfd8b9144625269a9503c7074da00",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
