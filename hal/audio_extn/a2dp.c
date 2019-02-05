@@ -33,6 +33,7 @@
 #include <log/log.h>
 #include <dlfcn.h>
 #include <pthread.h>
+#include <vndfwk-detect.h>
 #include "audio_hw.h"
 #include "platform.h"
 #include "platform_api.h"
@@ -51,6 +52,7 @@
 
 #define AUDIO_PARAMETER_A2DP_STARTED "A2dpStarted"
 #define BT_IPC_SOURCE_LIB_NAME  "libbthost_if.so"
+#define BT_IPC_SOURCE_LIB_NAME_QTI "libbthost_if_qti.so"
 #define BT_IPC_SINK_LIB_NAME    "libbthost_if_sink.so"
 #define MEDIA_FMT_NONE                                     0
 #define MEDIA_FMT_AAC                                      0x00010DA6
@@ -814,41 +816,50 @@ static void open_a2dp_source()
     int ret = 0;
 
     ALOGD(" Open A2DP source start ");
-    if (a2dp.bt_lib_source_handle == NULL){
-        ALOGD(" Requesting for BT lib handle");
-        a2dp.bt_lib_source_handle = dlopen(BT_IPC_SOURCE_LIB_NAME, RTLD_NOW);
-
-        if (a2dp.bt_lib_source_handle == NULL) {
-            ALOGE("%s: DLOPEN failed for %s", __func__, BT_IPC_SOURCE_LIB_NAME);
-            ret = -ENOSYS;
-            goto init_fail;
+    if (a2dp.bt_lib_source_handle == NULL) {
+        if(!isRunningWithVendorEnhancedFramework()) {
+            ALOGD(" Requesting for BT lib handle");
+            a2dp.bt_lib_source_handle = dlopen(BT_IPC_SOURCE_LIB_NAME, RTLD_NOW);
+            if (a2dp.bt_lib_source_handle == NULL) {
+                ALOGE("%s: DLOPEN failed for %s", __func__, BT_IPC_SOURCE_LIB_NAME);
+                ret = -ENOSYS;
+                goto init_fail;
+            }
         } else {
-            a2dp.audio_source_open = (audio_source_open_t)
-                          dlsym(a2dp.bt_lib_source_handle, "audio_stream_open");
-            a2dp.audio_source_start = (audio_source_start_t)
-                          dlsym(a2dp.bt_lib_source_handle, "audio_stream_start");
-            a2dp.audio_get_enc_config = (audio_get_enc_config_t)
-                          dlsym(a2dp.bt_lib_source_handle, "audio_get_codec_config");
-            a2dp.audio_source_suspend = (audio_source_suspend_t)
-                          dlsym(a2dp.bt_lib_source_handle, "audio_stream_suspend");
-            a2dp.audio_source_handoff_triggered = (audio_source_handoff_triggered_t)
-                          dlsym(a2dp.bt_lib_source_handle, "audio_handoff_triggered");
-            a2dp.clear_source_a2dpsuspend_flag = (clear_source_a2dpsuspend_flag_t)
-                          dlsym(a2dp.bt_lib_source_handle, "clear_a2dpsuspend_flag");
-            a2dp.audio_source_stop = (audio_source_stop_t)
-                          dlsym(a2dp.bt_lib_source_handle, "audio_stream_stop");
-            a2dp.audio_source_close = (audio_source_close_t)
-                          dlsym(a2dp.bt_lib_source_handle, "audio_stream_close");
-            a2dp.audio_source_check_a2dp_ready = (audio_source_check_a2dp_ready_t)
-                        dlsym(a2dp.bt_lib_source_handle,"audio_check_a2dp_ready");
-            a2dp.audio_sink_get_a2dp_latency = (audio_sink_get_a2dp_latency_t)
-                        dlsym(a2dp.bt_lib_source_handle,"audio_sink_get_a2dp_latency");
-            a2dp.audio_is_source_scrambling_enabled = (audio_is_source_scrambling_enabled_t)
-                        dlsym(a2dp.bt_lib_source_handle,"audio_is_scrambling_enabled");
-           a2dp.audio_is_tws_mono_mode_enable = (audio_is_tws_mono_mode_enable_t)
-                        dlsym(a2dp.bt_lib_source_handle,"isTwsMonomodeEnable");
+            ALOGD(" Requesting for BT QTI lib handle");
+            a2dp.bt_lib_source_handle = dlopen(BT_IPC_SOURCE_LIB_NAME_QTI, RTLD_NOW);
+            if (a2dp.bt_lib_source_handle == NULL) {
+                ALOGE("%s: DLOPEN failed for %s", __func__, BT_IPC_SOURCE_LIB_NAME_QTI);
+                ret = -ENOSYS;
+                goto init_fail;
+            }
         }
     }
+
+    a2dp.audio_source_open = (audio_source_open_t)
+                  dlsym(a2dp.bt_lib_source_handle, "audio_stream_open");
+    a2dp.audio_source_start = (audio_source_start_t)
+                  dlsym(a2dp.bt_lib_source_handle, "audio_start_stream");
+    a2dp.audio_get_enc_config = (audio_get_enc_config_t)
+                  dlsym(a2dp.bt_lib_source_handle, "audio_get_codec_config");
+    a2dp.audio_source_suspend = (audio_source_suspend_t)
+                  dlsym(a2dp.bt_lib_source_handle, "audio_suspend_stream");
+    a2dp.audio_source_handoff_triggered = (audio_source_handoff_triggered_t)
+                  dlsym(a2dp.bt_lib_source_handle, "audio_handoff_triggered");
+    a2dp.clear_source_a2dpsuspend_flag = (clear_source_a2dpsuspend_flag_t)
+                  dlsym(a2dp.bt_lib_source_handle, "clear_a2dpsuspend_flag");
+    a2dp.audio_source_stop = (audio_source_stop_t)
+                   dlsym(a2dp.bt_lib_source_handle, "audio_stop_stream");
+    a2dp.audio_source_close = (audio_source_close_t)
+                  dlsym(a2dp.bt_lib_source_handle, "audio_stream_close");
+    a2dp.audio_source_check_a2dp_ready = (audio_source_check_a2dp_ready_t)
+                  dlsym(a2dp.bt_lib_source_handle,"audio_check_a2dp_ready");
+    a2dp.audio_sink_get_a2dp_latency = (audio_sink_get_a2dp_latency_t)
+                  dlsym(a2dp.bt_lib_source_handle,"audio_sink_get_a2dp_latency");
+    a2dp.audio_is_source_scrambling_enabled = (audio_is_source_scrambling_enabled_t)
+                  dlsym(a2dp.bt_lib_source_handle,"audio_is_scrambling_enabled");
+    a2dp.audio_is_tws_mono_mode_enable = (audio_is_tws_mono_mode_enable_t)
+                   dlsym(a2dp.bt_lib_source_handle,"isTwsMonomodeEnable");
 
     if (a2dp.bt_lib_source_handle && a2dp.audio_source_open) {
         if (a2dp.bt_state_source == A2DP_STATE_DISCONNECTED) {

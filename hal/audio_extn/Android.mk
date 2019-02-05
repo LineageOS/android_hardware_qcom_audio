@@ -373,7 +373,8 @@ LOCAL_SHARED_LIBRARIES := \
     libtinycompress \
     libaudioroute \
     libdl \
-    libexpat
+    libexpat \
+    libqti_vndfwk_detect
 
 LOCAL_C_INCLUDES := \
     $(PRIMARY_HAL_PATH) \
