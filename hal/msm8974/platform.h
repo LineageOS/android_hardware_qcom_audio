@@ -419,11 +419,21 @@ enum {
 #define QUAT_MI2S_PCM_DEVICE    44
 
 // Direct_PCM
-#if defined (PLATFORM_MSM8994) || defined (PLATFORM_MSM8996) || defined (PLATFORM_APQ8084) || defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_SDM710) ||defined (PLATFORM_QCS605) ||defined (PLATFORM_SDX24) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405)
+#if defined (PLATFORM_MSM8994) || defined (PLATFORM_MSM8996) || \
+    defined (PLATFORM_APQ8084) || defined (PLATFORM_MSM8998) || \
+    defined (PLATFORM_SDM845) || defined (PLATFORM_SDM710) || \
+    defined (PLATFORM_QCS605) ||defined (PLATFORM_SDX24) || \
+    defined (PLATFORM_MSMNILE) || defined (PLATFORM_KONA) || \
+    defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405)
 #define PLAYBACK_OFFLOAD_DEVICE2 17
 #endif
 
-#if defined (PLATFORM_APQ8084) || defined (PLATFORM_MSM8996) || defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_SDM710) || defined(PLATFORM_QCS605) || defined (PLATFORM_SDX24) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405)
+#if defined (PLATFORM_APQ8084) || defined (PLATFORM_MSM8996) || \
+    defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || \
+    defined (PLATFORM_SDM710) || defined(PLATFORM_QCS605) || \
+    defined (PLATFORM_SDX24) || defined (PLATFORM_MSMNILE) || \
+    defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
+    defined (PLATFORM_QCS405)
 #define PLAYBACK_OFFLOAD_DEVICE3 18
 #define PLAYBACK_OFFLOAD_DEVICE4 34
 #define PLAYBACK_OFFLOAD_DEVICE5 35
@@ -553,7 +563,7 @@ enum {
 #define FM_RX_VOLUME "Quat MI2S FM RX Volume"
 #elif PLATFORM_MSM8994
 #define FM_RX_VOLUME "PRI MI2S LOOPBACK Volume"
-#elif PLATFORM_MSM8996
+#elif defined (PLATFORM_MSM8996) || defined (PLATFORM_KONA)
 #define FM_RX_VOLUME "Tert MI2S LOOPBACK Volume"
 #elif defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405)
 #define FM_RX_VOLUME "SLIMBUS_8 LOOPBACK Volume"
