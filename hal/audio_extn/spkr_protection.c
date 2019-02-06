@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -135,6 +135,7 @@ enum sp_version {
 #define AUDIO_PARAMETER_KEY_SPKR_TZ_2     "spkr_2_tz_name"
 
 #define AUDIO_PARAMETER_KEY_FBSP_TRIGGER_SPKR_CAL   "trigger_spkr_cal"
+#define AUDIO_PARAMETER_KEY_FBSP_APPLY_SPKR_CAL   "apply_spkr_cal"
 #define AUDIO_PARAMETER_KEY_FBSP_GET_SPKR_CAL       "get_spkr_cal"
 #define AUDIO_PARAMETER_KEY_FBSP_CFG_WAIT_TIME      "fbsp_cfg_wait_time"
 #define AUDIO_PARAMETER_KEY_FBSP_CFG_FTM_TIME       "fbsp_cfg_ftm_time"
@@ -182,12 +183,14 @@ struct speaker_prot_session {
     int spkr_1_tzn;
     int spkr_2_tzn;
     bool trigger_cal;
+    bool apply_cal;
     pthread_mutex_t cal_wait_cond_mutex;
     pthread_cond_t cal_wait_condition;
-    bool init_check;
+    bool spkr_cal_dynamic;
     volatile bool thread_exit;
     unsigned int sp_version;
     int limiter_th[SP_V2_NUM_MAX_SPKRS];
+    bool cal_thrd_created;
 };
 
 static struct pcm_config pcm_config_skr_prot = {
@@ -873,8 +876,18 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
         while (!get_spkr_prot_cal(acdb_fd, &status)) {
             /*sleep for 200 ms to check for status check*/
             if (!status.status) {
+                int i;
+
                 ALOGD("%s: spkr_prot_thread calib Success R0 %d %d",
                  __func__, status.r0[SP_V2_SPKR_1], status.r0[SP_V2_SPKR_2]);
+                for (i = 0; i < vi_feed_no_channels; i++) {
+                    if (!((status.r0[i] >= MIN_RESISTANCE_SPKR_Q24)
+                         && (status.r0[i] < MAX_RESISTANCE_SPKR_Q24))) {
+                         ALOGE("%s R0 not in range, retry R0:%d\n", __func__, status.r0[i]);
+                         status.status = -EINVAL;
+                         break;
+                   }
+                }
                 FILE *fp;
                 fp = fopen(CALIB_FILE,"wb");
                 if (!fp) {
@@ -924,7 +937,7 @@ exit:
         if (acdb_fd > 0)
             close(acdb_fd);
 
-        if (!handle.cancel_spkr_calib && cleanup) {
+        if (!handle.cancel_spkr_calib && cleanup && !handle.spkr_cal_dynamic) {
             pthread_mutex_unlock(&handle.spkr_calib_cancelack_mutex);
             pthread_cond_wait(&handle.spkr_calib_cancel,
             &handle.mutex_spkr_prot);
@@ -1025,41 +1038,46 @@ static void* spkr_calibration_thread()
     spv3_enable = property_get_bool("persist.vendor.audio.spv3.enable", false);
     afe_api_version = property_get_int32("persist.vendor.audio.avs.afe_api_version", 0);
 
-    fp = fopen(CALIB_FILE,"rb");
-    if (fp) {
-        int i;
-        bool spkr_calibrated = true;
-        for (i = 0; i < vi_feed_no_channels; i++) {
-            fread(&protCfg.r0[i], sizeof(protCfg.r0[i]), 1, fp);
-            fread(&protCfg.t0[i], sizeof(protCfg.t0[i]), 1, fp);
-        }
-        ALOGD("%s: spkr_prot_thread r0 value %d %d",
-               __func__, protCfg.r0[SP_V2_SPKR_1], protCfg.r0[SP_V2_SPKR_2]);
-        ALOGD("%s: spkr_prot_thread t0 value %d %d",
-               __func__, protCfg.t0[SP_V2_SPKR_1], protCfg.t0[SP_V2_SPKR_2]);
-        fclose(fp);
-        /*Valid tempature range: -30C to 80C(in q6 format)
-          Valid Resistance range: 2 ohms to 40 ohms(in q24 format)*/
-        for (i = 0; i < vi_feed_no_channels; i++) {
-            if (!((protCfg.t0[i] > MIN_SPKR_TEMP_Q6) && (protCfg.t0[i] < MAX_SPKR_TEMP_Q6)
-                && (protCfg.r0[i] >= MIN_RESISTANCE_SPKR_Q24)
-                && (protCfg.r0[i] < MAX_RESISTANCE_SPKR_Q24))) {
-                spkr_calibrated = false;
-                break;
+    if (!handle.spkr_cal_dynamic || handle.apply_cal) {
+        bool spkr_calibrated = false;
+        fp = fopen(CALIB_FILE,"rb");
+        if (fp) {
+            int i;
+            spkr_calibrated = true;
+            for (i = 0; i < vi_feed_no_channels; i++) {
+                 fread(&protCfg.r0[i], sizeof(protCfg.r0[i]), 1, fp);
+                 fread(&protCfg.t0[i], sizeof(protCfg.t0[i]), 1, fp);
+            }
+            ALOGD("%s: spkr_prot_thread r0 value %d %d",
+                  __func__, protCfg.r0[SP_V2_SPKR_1], protCfg.r0[SP_V2_SPKR_2]);
+            ALOGD("%s: spkr_prot_thread t0 value %d %d",
+                   __func__, protCfg.t0[SP_V2_SPKR_1], protCfg.t0[SP_V2_SPKR_2]);
+            fclose(fp);
+            /*Valid tempature range: -30C to 80C(in q6 format)
+              Valid Resistance range: 2 ohms to 40 ohms(in q24 format)*/
+            for (i = 0; i < vi_feed_no_channels; i++) {
+                 if (!((protCfg.t0[i] > MIN_SPKR_TEMP_Q6) && (protCfg.t0[i] < MAX_SPKR_TEMP_Q6)
+                     && (protCfg.r0[i] >= MIN_RESISTANCE_SPKR_Q24)
+                     && (protCfg.r0[i] < MAX_RESISTANCE_SPKR_Q24))) {
+                     spkr_calibrated = false;
+                     break;
+                 }
+            }
+            if (spkr_calibrated) {
+                ALOGD("%s: Spkr calibrated", __func__);
+                protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
+                if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
+                    ALOGE("%s: enable prot failed", __func__);
+                    handle.spkr_prot_mode = MSM_SPKR_PROT_DISABLED;
+                } else
+                    handle.spkr_prot_mode = MSM_SPKR_PROT_CALIBRATED;
+
+                audio_extn_set_boost_and_limiter(adev, spv3_enable, afe_api_version);
             }
         }
-        if (spkr_calibrated) {
-            ALOGD("%s: Spkr calibrated", __func__);
-            protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
-            if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
-                ALOGE("%s: enable prot failed", __func__);
-                handle.spkr_prot_mode = MSM_SPKR_PROT_DISABLED;
-            } else
-                handle.spkr_prot_mode = MSM_SPKR_PROT_CALIBRATED;
+        if (handle.spkr_cal_dynamic || spkr_calibrated) {
             close(acdb_fd);
-
-            audio_extn_set_boost_and_limiter(adev, spv3_enable, afe_api_version);
-
+            handle.apply_cal = false;
             pthread_exit(0);
             return NULL;
         }
@@ -1232,6 +1250,7 @@ static void* spkr_calibration_thread()
                     ALOGE("%s: calibrate status %s", __func__, strerror(status));
                 }
                 ALOGD("%s: spkr_prot_thread end calibration", __func__);
+                handle.trigger_cal = false;
                 break;
         }
     }
@@ -1498,6 +1517,32 @@ static void spkr_calibrate_signal()
     pthread_mutex_unlock(&handle.cal_wait_cond_mutex);
 }
 
+static void spkr_calib_thread_create()
+{
+    int result = 0;
+
+    if (!handle.spkr_prot_enable) {
+        ALOGD("%s: Speaker protection disabled", __func__);
+        return;
+    }
+    if (handle.cal_thrd_created) {
+           result = pthread_join(handle.spkr_calibration_thread, (void **) NULL);
+           if (result < 0) {
+               ALOGE("%s:Unable to join the calibration thread", __func__);
+               return;
+           }
+           handle.cal_thrd_created = false;
+    }
+
+    result = pthread_create(&handle.spkr_calibration_thread,
+               (const pthread_attr_t *) NULL, spkr_calibration_thread, &handle);
+    if (result == 0) {
+        handle.cal_thrd_created = true;
+    } else {
+        ALOGE("%s: speaker calibration thread creation failed", __func__);
+    }
+}
+
 int audio_extn_fbsp_set_parameters(struct str_parms *parms)
 {
     int ret= 0 , err;
@@ -1532,12 +1577,28 @@ int audio_extn_fbsp_set_parameters(struct str_parms *parms)
     if (err >= 0) {
         str_parms_del(parms, AUDIO_PARAMETER_KEY_FBSP_TRIGGER_SPKR_CAL);
         if ((strcmp(value, "true") == 0) || (strcmp(value, "yes") == 0)) {
+            if (handle.trigger_cal)
+                goto done;
             handle.trigger_cal = true;
             spkr_calibrate_signal();
+            if (handle.spkr_cal_dynamic)
+                spkr_calib_thread_create();
         }
         goto done;
     }
-
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FBSP_APPLY_SPKR_CAL, value,
+                            len);
+    if (err >= 0) {
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_FBSP_APPLY_SPKR_CAL);
+        if ((strcmp(value, "true") == 0) || (strcmp(value, "yes") == 0)) {
+            if (handle.apply_cal)
+                goto done;
+            handle.apply_cal = true;
+            if (handle.spkr_cal_dynamic)
+                spkr_calib_thread_create();
+        }
+        goto done;
+    }
     /* Expected key value pair is in below format:
      * AUDIO_PARAM_FBSP_CFG_WAIT_TIME=waittime;AUDIO_PARAM_FBSP_CFG_FTM_TIME=ftmtime;
      * Parse waittime and ftmtime from it.
@@ -1625,9 +1686,10 @@ void audio_extn_spkr_prot_init(void *adev)
         return;
     }
     property_get("persist.vendor.audio.speaker.prot.enable", value, "");
+    handle.spkr_cal_dynamic = property_get_bool("persist.vendor.audio.spkr.cal.dynamic", false);
     handle.spkr_prot_enable = false;
-    handle.init_check = false;
     handle.thread_exit = false;
+    handle.cal_thrd_created = false;
     if (!strncmp("true", value, 4))
        handle.spkr_prot_enable = true;
     if (!handle.spkr_prot_enable) {
@@ -1656,14 +1718,9 @@ void audio_extn_spkr_prot_init(void *adev)
         pthread_cond_init(&handle.spkr_calibcancel_ack, NULL);
         pthread_mutex_init(&handle.mutex_spkr_prot, NULL);
         pthread_mutex_init(&handle.spkr_calib_cancelack_mutex, NULL);
-        ALOGD("%s:WSA Create calibration thread", __func__);
-        result = pthread_create(&handle.spkr_calibration_thread,
-        (const pthread_attr_t *) NULL, spkr_calibration_thread, &handle);
-        if (result == 0) {
-            handle.init_check = true;
-        } else {
-            ALOGE("%s: speaker calibration thread creation failed", __func__);
-            destroy_thread_params();
+        if (!handle.spkr_cal_dynamic) {
+            ALOGD("%s:WSA Create calibration thread", __func__);
+            spkr_calib_thread_create();
         }
     return;
     } else {
@@ -1708,7 +1765,7 @@ void audio_extn_spkr_prot_init(void *adev)
         result = pthread_create(&handle.spkr_calibration_thread,
         (const pthread_attr_t *) NULL, spkr_calibration_thread, &handle);
         if (result == 0) {
-            handle.init_check = true;
+            handle.cal_thrd_created = true;
         } else {
             ALOGE("%s: speaker calibration thread creation failed", __func__);
             destroy_thread_params();
@@ -1739,17 +1796,19 @@ int audio_extn_spkr_prot_deinit()
 {
     int result = 0;
 
-    ALOGD("%s: Entering deinit init_check :%d",
-          __func__, handle.init_check);
-    if(!handle.init_check)
-        return -1;
+    ALOGD("%s: Entering deinit cal_thrd_created :%d",
+          __func__, handle.cal_thrd_created);
 
     handle.thread_exit = true;
     spkr_calibrate_signal();
-    result = pthread_join(handle.spkr_calibration_thread, (void **) NULL);
-    if (result < 0) {
-        ALOGE("%s:Unable to join the calibration thread", __func__);
-        return -1;
+    if (handle.cal_thrd_created) {
+        result = pthread_join(handle.spkr_calibration_thread,
+                              (void **) NULL);
+        if (result < 0) {
+            ALOGE("%s:Unable to join the calibration thread", __func__);
+            return -1;
+        }
+        handle.cal_thrd_created = false;
     }
     destroy_thread_params();
     memset(&handle, 0, sizeof(handle));
