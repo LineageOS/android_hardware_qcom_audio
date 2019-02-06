@@ -175,7 +175,7 @@ static void asphere_init_once() {
         if (hal_lib_pointer == NULL)
             ALOGE("%s: DLOPEN failed for %s", __func__, PRIMARY_HAL_PATH);
         else if ((is_feature_enabled = (bool (*)(audio_ext_feature))dlsym(hal_lib_pointer,
-                                     "audio_feature_manager_is_feature_enable")) != NULL) {
+                                     "audio_feature_manager_is_feature_enabled")) != NULL) {
             if (is_feature_enabled(AUDIOSPHERE)) {
                 asphere.init_status = 1;
                 asphere_get_values_from_mixer();

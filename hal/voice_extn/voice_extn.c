@@ -429,7 +429,6 @@ void voice_extn_init(struct audio_device *adev)
     adev->voice.session[VOWLAN_SESS_IDX].vsid = VOWLAN_VSID;
     adev->voice.session[MMODE1_SESS_IDX].vsid = VOICEMMODE1_VSID;
     adev->voice.session[MMODE2_SESS_IDX].vsid = VOICEMMODE2_VSID;
-    voice_extn_feature_init();
 }
 
 void compr_voip_feature_init(bool is_feature_enabled)
@@ -698,7 +697,7 @@ int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
 int voice_extn_compress_voip_set_parameters(struct audio_device *adev,
                                              struct str_parms *parms) 
 {
-    int ret = -1;
+    int ret = -ENOSYS;
     if(voice_extn_compress_voip_enabled)
         ret = compress_voip_set_parameters(adev, parms);
     else

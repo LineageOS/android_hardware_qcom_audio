@@ -2655,7 +2655,7 @@ bool a2dp_source_is_suspended()
 }
 
 void a2dp_init(void *adev,
-               a2dp_offload_init_config_t *init_config)
+               a2dp_offload_init_config_t init_config)
 {
   a2dp.adev = (struct audio_device*)adev;
   a2dp.bt_lib_source_handle = NULL;
@@ -2676,8 +2676,8 @@ void a2dp_init(void *adev,
 
   // init function pointers
   fp_platform_get_pcm_device_id =
-              init_config->fp_platform_get_pcm_device_id;
-  fp_check_a2dp_restore = init_config->fp_check_a2dp_restore;
+              init_config.fp_platform_get_pcm_device_id;
+  fp_check_a2dp_restore = init_config.fp_check_a2dp_restore;
 
   reset_a2dp_enc_config_params();
   reset_a2dp_source_dec_config_params();
@@ -2687,7 +2687,8 @@ void a2dp_init(void *adev,
   a2dp.a2dp_sink_started = false;
   a2dp.bt_state_sink = A2DP_STATE_DISCONNECTED;
   a2dp.a2dp_sink_total_active_session_requests = 0;
-  open_a2dp_sink();
+  if (isRunningWithVendorEnhancedFramework())
+      open_a2dp_sink();
 
   a2dp.is_a2dp_offload_supported = false;
   update_offload_codec_capabilities();
