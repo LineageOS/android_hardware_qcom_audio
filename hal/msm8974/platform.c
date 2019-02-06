@@ -2959,6 +2959,14 @@ acdb_init_fail:
             strdup("SLIM_6_RX Format");
         my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
             strdup("SLIM_6_RX SampleRate");
+        //TODO: enable CONCURRENT_CAPTURE_ENABLED flag only if separate backend is defined
+        //for headset-mic. This is to capture separate data from headset-mic and handset-mic.
+#ifdef CONCURRENT_CAPTURE_ENABLED
+        my_data->current_backend_cfg[HEADSET_TX_BACKEND].bitwidth_mixer_ctl =
+            strdup("SLIM_1_RX Format");
+        my_data->current_backend_cfg[HEADSET_TX_BACKEND].samplerate_mixer_ctl =
+            strdup("SLIM_1_RX SampleRate");
+#endif
     }
 
     my_data->current_backend_cfg[USB_AUDIO_TX_BACKEND].bitwidth_mixer_ctl =
@@ -3876,6 +3884,8 @@ int platform_get_backend_index(snd_device_t snd_device)
                         port = HDMI_TX_BACKEND;
                 else if (strcmp(backend_tag_table[snd_device], "hdmi-arc-in") == 0)
                         port = HDMI_ARC_TX_BACKEND;
+                else if (strcmp(backend_tag_table[snd_device], "headset-mic") == 0)
+                        port = HEADSET_TX_BACKEND;
         }
     } else {
         ALOGW("%s:napb: Invalid device - %d ", __func__, snd_device);
