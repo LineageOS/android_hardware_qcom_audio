@@ -41,6 +41,17 @@
 #include "effect_api.h"
 #include "hw_accelerator.h"
 
+#ifdef AUDIO_FEATURE_ENABLED_GCOV
+extern void  __gcov_flush();
+static void enable_gcov()
+{
+    __gcov_flush();
+}
+#else
+static void enable_gcov()
+{
+}
+#endif
 
 /* hw_accelerator UUID: 7d1580bd-297f-4683-9239-e475b6d1d69f */
 const effect_descriptor_t hw_accelerator_descriptor = {
@@ -163,7 +174,7 @@ int hw_accelerator_init(effect_context_t *context)
 
     hw_acc_ctxt->fd = -1;
     memset(&(hw_acc_ctxt->cfg), 0, sizeof(struct msm_hwacc_effects_config));
-
+    enable_gcov();
     return 0;
 }
 
@@ -243,6 +254,7 @@ int hw_accelerator_enable(effect_context_t *context)
         hw_acc_ctxt->fd = -1;
         return -EFAULT;
     }
+    enable_gcov();
     return 0;
 }
 
@@ -255,6 +267,7 @@ int hw_accelerator_disable(effect_context_t *context)
         if (close(hw_acc_ctxt->fd) < 0)
             ALOGE("releasing hardware accelerated effects driver failed");
     hw_acc_ctxt->fd = -1;
+    enable_gcov();
     return 0;
 }
 
@@ -267,6 +280,7 @@ int hw_accelerator_release(effect_context_t *context)
         if (close(hw_acc_ctxt->fd) < 0)
             ALOGE("releasing hardware accelerated effects driver failed");
     hw_acc_ctxt->fd = -1;
+    enable_gcov();
     return 0;
 }
 

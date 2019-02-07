@@ -63,6 +63,18 @@
 #define AHAL_GAIN_DEPENDENT_INTERFACE_FUNCTION "audio_hw_send_gain_dep_calibration"
 #define AHAL_GAIN_GET_MAPPING_TABLE "audio_hw_get_gain_level_mapping"
 
+#ifdef AUDIO_FEATURE_ENABLED_GCOV
+extern void  __gcov_flush();
+static void enable_gcov()
+{
+    __gcov_flush();
+}
+#else
+static void enable_gcov()
+{
+}
+#endif
+
 enum {
     VOL_LISTENER_STATE_UNINITIALIZED,
     VOL_LISTENER_STATE_INITIALIZED,
@@ -755,6 +767,7 @@ static int vol_prc_lib_create(const effect_uuid_t *uuid,
     pthread_mutex_unlock(&vol_listner_init_lock);
 
     *p_handle = (effect_handle_t)context;
+    enable_gcov();
     return 0;
 }
 
@@ -821,6 +834,7 @@ static int vol_prc_lib_release(effect_handle_t handle)
         dump_list_l();
     }
     pthread_mutex_unlock(&vol_listner_init_lock);
+    enable_gcov();
     return status;
 }
 

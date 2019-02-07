@@ -454,6 +454,12 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXT_HW_PLUGIN)),true)
     LOCAL_SRC_FILES += audio_extn/ext_hw_plugin.c
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GCOV)),true)
+    LOCAL_CFLAGS += --coverage -fprofile-arcs -ftest-coverage
+    LOCAL_CPPFLAGS += --coverage -fprofile-arcs -ftest-coverage
+    LOCAL_STATIC_LIBRARIES += libprofile_rt
+endif
+
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
 LOCAL_MODULE_RELATIVE_PATH := hw
