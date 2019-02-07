@@ -1525,10 +1525,14 @@ uint32_t hal_format_to_pcm(audio_format_t hal_format)
 
 uint32_t get_alsa_fragment_size(uint32_t bytes_per_sample,
                                   uint32_t sample_rate,
-                                  uint32_t noOfChannels)
+                                  uint32_t noOfChannels,
+                                  int64_t duration_ms)
 {
     uint32_t fragment_size = 0;
     uint32_t pcm_offload_time = PCM_OFFLOAD_BUFFER_DURATION;
+
+    if (duration_ms >= MIN_OFFLOAD_BUFFER_DURATION_MS && duration_ms <= MAX_OFFLOAD_BUFFER_DURATION_MS)
+        pcm_offload_time = duration_ms;
 
     fragment_size = (pcm_offload_time
                      * sample_rate
@@ -1564,7 +1568,8 @@ void audio_extn_utils_update_direct_pcm_fragment_size(struct stream_out *out)
     out->compr_config.fragment_size =
              get_alsa_fragment_size(hal_op_bytes_per_sample,
                                       out->sample_rate,
-                                      popcount(out->channel_mask));
+                                      popcount(out->channel_mask),
+                                      out->info.duration_us / 1000);
 
     if ((src_format != dst_format) &&
          hal_op_bytes_per_sample != hal_ip_bytes_per_sample) {

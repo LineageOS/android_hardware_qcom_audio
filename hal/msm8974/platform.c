@@ -7948,6 +7948,9 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
 {
     char value[PROPERTY_VALUE_MAX] = {0};
     uint32_t fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+    uint32_t new_fragment_size = 0;
+    int32_t duration_ms = 0;
+    int channel_count = 0;
     if((property_get("vendor.audio.offload.buffer.size.kb", value, "")) &&
             atoi(value)) {
         fragment_size =  atoi(value) * 1024;
@@ -7959,6 +7962,17 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
               fragment_size,
               info->offload_buffer_size);
         fragment_size = info->offload_buffer_size;
+    }
+
+    /* Use client specified buffer size if mentioned */
+    if ((info != NULL) && (info->duration_us > 0)) {
+        duration_ms = info->duration_us / 1000;
+        channel_count = audio_channel_count_from_in_mask(info->channel_mask);
+
+        new_fragment_size = (duration_ms * info->sample_rate * channel_count * audio_bytes_per_sample(info->format)) / 1000;
+        ALOGI("%s:: Overwriting offload buffer size with client requested size old:%d new:%d", __func__, fragment_size, new_fragment_size);
+
+        fragment_size = new_fragment_size;
     }
 
     if (info != NULL) {
