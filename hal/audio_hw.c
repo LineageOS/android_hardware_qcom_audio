@@ -8286,6 +8286,7 @@ static int adev_close(hw_device_t *device)
         }
         if(adev->ext_hw_plugin)
             audio_extn_ext_hw_plugin_deinit(adev->ext_hw_plugin);
+        audio_extn_auto_hal_deinit();
         free(device);
         adev = NULL;
     }
@@ -8546,6 +8547,7 @@ static int adev_open(const hw_module_t *module, const char *name,
         adev->device.close_output_stream = audio_extn_qaf_close_output_stream;
     }
 
+    audio_extn_auto_hal_init(adev);
     adev->ext_hw_plugin = audio_extn_ext_hw_plugin_init(adev);
 
     if (access(VISUALIZER_LIBRARY_PATH, R_OK) == 0) {
